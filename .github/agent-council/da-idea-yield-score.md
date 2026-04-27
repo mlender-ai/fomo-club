@@ -2,10 +2,10 @@
 
 - Item: 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.
 - Owner: DA
-- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/31
+- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/36
 - Branch: codex/agent-council/da-idea-yield-score
-- Generated At: 2026-04-27T16:47:27.971Z
-- Status: ready
+- Generated At: 2026-04-27T18:01:42.256Z
+- Status: queued
 
 ## Detail
 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.
