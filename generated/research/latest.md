@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-04-27T16:47:27.971Z
+- Generated At: 2026-04-27T18:03:18.862Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- AMD Is Up 65% in April: It’s Not Just Intel Momentum
+- Stock Market Today: Dow Dips While Intel Gains; Google Stock Clears Entry, But Note This (Live Coverage)
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
 - Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "AMD Is Up 65% in April: It’s Not Just Intel Momentum"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia, live-semiconductors-the-1-number-that-shows-why-nvidia-is-not-done-growing, live-semiconductors-nvidia-adding-to-5-trillion-market-cap-with-big-tech-spending-in-focus-is-nvidia
+메인 헤드라인을 "Stock Market Today: Dow Dips While Intel Gains; Google Stock Clears Entry, But Note This (Live Coverage)"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-stock-market-today-dow-dips-while-intel-gains-google-stock-clears-entry-but-note, live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia, live-semiconductors-the-1-number-that-shows-why-nvidia-is-not-done-growing
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia, live-energy-oil-week-ahead-big-tech-earnings-fed-decision-and-an-oil-crisis-set-up-wall-street-s
+References: live-semiconductors-stock-market-today-dow-dips-while-intel-gains-google-stock-clears-entry-but-note, live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-energy-oil-exxonmobil-s-latest-move-shows-a-shift-by-the-global-oil-giant
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia, live-semiconductors-the-1-number-that-shows-why-nvidia-is-not-done-growing
+References: NVDA, live-semiconductors-stock-market-today-dow-dips-while-intel-gains-google-stock-clears-entry-but-note, live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia, live-semiconductors-the-1-number-that-shows-why-nvidia-is-not-done-growing, live-semiconductors-nvidia-adding-to-5-trillion-market-cap-with-big-tech-spending-in-focus-is-nvidia
+References: NVDA, live-semiconductors-amd-is-up-65-in-april-it-s-not-just-intel-momentum, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia, live-semiconductors-the-1-number-that-shows-why-nvidia-is-not-done-growing
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
@@ -55,7 +55,7 @@ References: NVDA, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia
   Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.
   Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css
   Verify: npm run typecheck | npm run build:web
-  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/27
+  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37
   Branch: codex/agent-council/trader-entry-condition-ladder
   PR: https://github.com/mlender-ai/auto-trading-bot/pull/16
   Plan: .github/agent-council/trader-entry-condition-ladder.md
@@ -68,7 +68,7 @@ References: NVDA, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia
   Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.
   Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx
   Verify: npm run typecheck | npm run research:generate | npm run build:web
-  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/28
+  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38
   Branch: codex/agent-council/cto-live-data-health-check
   PR: https://github.com/mlender-ai/auto-trading-bot/pull/18
   Plan: .github/agent-council/cto-live-data-health-check.md
@@ -81,7 +81,7 @@ References: NVDA, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia
   Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.
   Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts
   Verify: npm run typecheck | npm run research:newsletter
-  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/29
+  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39
   Branch: codex/agent-council/pm-newsletter-web-parity
   PR: https://github.com/mlender-ai/auto-trading-bot/pull/20
   Plan: .github/agent-council/pm-newsletter-web-parity.md
@@ -94,7 +94,7 @@ References: NVDA, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia
   Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.
   Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts
   Verify: npm run typecheck | npm run build:web
-  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/30
+  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40
   Branch: codex/agent-council/qa-fallback-visibility
   PR: https://github.com/mlender-ai/auto-trading-bot/pull/22
   Plan: .github/agent-council/qa-fallback-visibility.md
@@ -107,7 +107,7 @@ References: NVDA, live-semiconductors-why-amd-can-stay-hotter-longer-than-nvidia
   Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.
   Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts
   Verify: npm run typecheck | npm run research:issues
-  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/31
+  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41
   Branch: codex/agent-council/da-idea-yield-score
   PR: https://github.com/mlender-ai/auto-trading-bot/pull/24
   Plan: .github/agent-council/da-idea-yield-score.md
