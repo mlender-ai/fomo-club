@@ -2,10 +2,10 @@
 
 - Item: fallback 데이터 사용 시 사용자에게 명확히 표시합니다.
 - Owner: QA
-- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/21
+- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/30
 - Branch: codex/agent-council/qa-fallback-visibility
-- Generated At: 2026-04-27T16:46:11.831Z
-- Status: ready
+- Generated At: 2026-04-27T16:47:27.971Z
+- Status: queued
 
 ## Detail
 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.
