@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-04-27T08:10:13.435Z
+- Generated At: 2026-04-27T10:55:59.187Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS
 
 ## Main Headline
-- AMD’s French AI Deal Adds European Public Sector Growth Questions
+- PATEO and NVIDIA Partner to Debut Pioneering Software-Hardware Integrated AI Box Solution
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
-- Action: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
+- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "AMD’s French AI Deal Adds European Public Sector Growth Questions"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-amd-s-french-ai-deal-adds-european-public-sector-growth-questions, live-semiconductors-nvidia-trades-at-half-amd-s-multiple-but-here-s-the-real-story-the-market-is-mis, live-semiconductors-5-big-analyst-ai-moves-palo-alto-and-reddit-get-fresh-buy-calls-amd-upgraded, live-semiconductors-how-oracle-s-canceled-nvidia-server-order-at-supermicro-smci-has-changed-its-ai-
+메인 헤드라인을 "PATEO and NVIDIA Partner to Debut Pioneering Software-Hardware Integrated AI Box Solution"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-pateo-and-nvidia-partner-to-debut-pioneering-software-hardware-integrated-ai-box, live-semiconductors-intel-stock-is-on-a-tear-why-its-earnings-power-is-a-worry, live-semiconductors-nvidia-stock-rises-after-record-high-this-is-the-next-catalyst, live-semiconductors-taiwan-court-sentences-ex-tokyo-electron-staff-to-10-years-in-tsmc-trade-secrets
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-amd-s-french-ai-deal-adds-european-public-sector-growth-questions, live-semiconductors-nvidia-trades-at-half-amd-s-multiple-but-here-s-the-real-story-the-market-is-mis, live-energy-oil-exxon-stock-and-chevron-stock-are-up-20-ytd-why-the-long-oil-trade-is-stalling-o
+References: live-semiconductors-pateo-and-nvidia-partner-to-debut-pioneering-software-hardware-integrated-ai-box, live-semiconductors-intel-stock-is-on-a-tear-why-its-earnings-power-is-a-worry
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-amd-s-french-ai-deal-adds-european-public-sector-growth-questions, live-semiconductors-nvidia-trades-at-half-amd-s-multiple-but-here-s-the-real-story-the-market-is-mis, live-semiconductors-5-big-analyst-ai-moves-palo-alto-and-reddit-get-fresh-buy-calls-amd-upgraded
+References: NVDA, live-semiconductors-pateo-and-nvidia-partner-to-debut-pioneering-software-hardware-integrated-ai-box, live-semiconductors-intel-stock-is-on-a-tear-why-its-earnings-power-is-a-worry, live-semiconductors-nvidia-stock-rises-after-record-high-this-is-the-next-catalyst
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-nvidia-trades-at-half-amd-s-multiple-but-here-s-the-real-story-the-market-is-mis, live-semiconductors-5-big-analyst-ai-moves-palo-alto-and-reddit-get-fresh-buy-calls-amd-upgraded, live-semiconductors-how-oracle-s-canceled-nvidia-server-order-at-supermicro-smci-has-changed-its-ai-
+References: NVDA, live-semiconductors-intel-stock-is-on-a-tear-why-its-earnings-power-is-a-worry, live-semiconductors-nvidia-stock-rises-after-record-high-this-is-the-next-catalyst, live-semiconductors-taiwan-court-sentences-ex-tokyo-electron-staff-to-10-years-in-tsmc-trade-secrets
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.
