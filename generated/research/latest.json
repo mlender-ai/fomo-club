@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-04-27T12:18:36.672Z",
+    "generatedAt": "2026-04-27T15:01:20.544Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-        "title": "Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster",
-        "summary": "NVIDIA Blackwell Cluster Launch Target of May 8, 2026; Additional Three-Cluster Deployment is Roadmap to $72 million in Annual Recurring RevenueROAD TOWN, British Virgin Islands, April 27, 2026 (GLOBE NEWSWIRE) -- Alpha Compute Corp. (NASDAQ: ALP), a pioneering technology leader in AI GPU-as-a-service (GPUaaS) and AI Confidential Compute, today provided an update on the deployment status of its NVIDIA Blackwell GPU infrastructure. The Company confirms that its first large-scale GPU cluster, a 50",
+        "id": "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+        "title": "Jim Cramer Discusses NVIDIA (NVDA) Shares",
+        "summary": "We have recently published Jim Cramer Discussed AI Circular Deals, Top Quantum Plays & These 22 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI chip giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well over the past month, as they are up by 16.5%. During this period, Cramer has wondered […]",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/alpha-compute-ai-gpu-launch-120000297.html?.tsrc=rss",
-        "publishedAt": "2026-04-27T12:00:00.000Z",
-        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/P4fNZNekVEYZ7.Ks9fozPA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD00MTM-/https://media.zenfs.com/en/globenewswire.com/aab9c10cc4f7ebe351732d8c06ea4ba5",
+        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-discusses-nvidia-nvda-142050782.html?.tsrc=rss",
+        "publishedAt": "2026-04-27T14:20:50.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/094ee83d0d34849418ab9a78e4d78acc",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,13 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-          "title": "Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.",
-          "summary": "Nvidia stock reached a record close on Friday. Technology earnings are likely to be the next catalyst.",
+          "id": "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+          "title": "COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem",
+          "summary": "COPLUS (2254.TW), a global leader in custom performance lighting holding over 1,000 patents, recently announced its strategic integration into the NVIDIA Developer Program. This milestone marks COPLUS's evolution from a hardware manufacturer into a high-growth AIoT Mobility Tech pioneer, strategically positioned to capture the rapidly expanding smart-vehicle infrastructure market.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/de550873-4e1a-3480-a1a6-78ea57cd1ce4/nvidia-stock-rises-after.html?.tsrc=rss",
-          "publishedAt": "2026-04-27T11:41:00.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/CfCV0OjXCabNn_dcFKaHoQ--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/8b8ff1ecb127e7d18766f89de607ab0c",
+          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/coplus-accelerates-aiot-transition-capturing-133000730.html?.tsrc=rss",
+          "publishedAt": "2026-04-27T13:30:00.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/prnewswire.com/95414eeb8841078607983b290837a9b5",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -263,16 +263,16 @@
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners",
-          "title": "This Week In AI Chips - WeRide Advances Multi-Chip Integration With Major Partnerships",
-          "summary": "WeRide Inc. has announced the multi-chip compatibility of its WeRide Driving (WRD 3.0) ADAS solution, achieving integration across leading computing platforms like NVIDIA, Qualcomm, and SiEngine. This development enables original equipment manufacturers (OEMs) to deploy an extended range of L2++ ADAS solutions, from high-performance to cost-efficient models, signaling a significant shift toward the democratization of these advanced driving technologies. At Auto China 2026, WeRide solidified...",
+          "id": "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated",
+          "title": "Intel Stock Rally Rages On. What UBS Says It Underestimated.",
+          "summary": "STOCKSTOWATCHTODAY BLOG Intel was rising Monday as it built upon its huge rally from the previous week. Everything looks to be going great for the chip company but UBS analysts are skeptical of further gains.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/week-ai-chips-weride-advances-113801632.html?.tsrc=rss",
-          "publishedAt": "2026-04-27T11:38:01.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/simply_wall_st__316/ce92e7ae6d602b61807a836f4291633e",
+          "sourceUrl": "https://finance.yahoo.com/m/dba53e99-ad37-38b1-b364-5ca59c476a26/intel-stock-rally-rages-on..html?.tsrc=rss",
+          "publishedAt": "2026-04-27T13:25:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/FSsvLzTJhKn5zroSnNzGxg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/3cf557c4e882c08f3275965247b08bb8",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -285,13 +285,13 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec",
-          "title": "Tech stocks today: Qualcomm stock soars, Nvidia tops $5 trillion again, with Big Tech Q1 updates on deck",
-          "summary": "Tech stocks are in focus amid an earnings bonanza, layoffs, and AI spending plans.",
+          "id": "live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom",
+          "title": "Zacks.com featured highlights include NVIDIA and Broadcom",
+          "summary": "NVIDIA and Broadcom stand out as the only stocks driving explosive earnings growth in 2026, fueled by strong AI demand and rising estimates.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/live/tech-stocks-today-nvidia-magnificent-seven-113535737.html?.tsrc=rss",
-          "publishedAt": "2026-04-27T11:35:35.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/dbru7QmDoxMC59ZCEiCWxg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA-/https://d29szjachogqwa.cloudfront.net/images/2026-04/bc51f65f-9e17-4d44-8ae9-840701b66e9f",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/zacks-com-featured-highlights-nvidia-131900066.html?.tsrc=rss",
+          "publishedAt": "2026-04-27T13:19:00.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/zacks.com/b40efcbfab527ad36d9e9706df6ddabb",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-            "title": "Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.",
-            "summary": "Nvidia stock reached a record close on Friday. Technology earnings are likely to be the next catalyst.",
+            "id": "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+            "title": "COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem",
+            "summary": "COPLUS (2254.TW), a global leader in custom performance lighting holding over 1,000 patents, recently announced its strategic integration into the NVIDIA Developer Program. This milestone marks COPLUS's evolution from a hardware manufacturer into a high-growth AIoT Mobility Tech pioneer, strategically positioned to capture the rapidly expanding smart-vehicle infrastructure market.",
             "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/m/de550873-4e1a-3480-a1a6-78ea57cd1ce4/nvidia-stock-rises-after.html?.tsrc=rss",
-            "publishedAt": "2026-04-27T11:41:00.000Z",
-            "imageUrl": "https://s.yimg.com/ny/api/res/1.2/CfCV0OjXCabNn_dcFKaHoQ--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/8b8ff1ecb127e7d18766f89de607ab0c",
+            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/coplus-accelerates-aiot-transition-capturing-133000730.html?.tsrc=rss",
+            "publishedAt": "2026-04-27T13:30:00.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/prnewswire.com/95414eeb8841078607983b290837a9b5",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -325,7 +325,7 @@
             "importanceScore": 98,
             "priority": "critical",
             "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-            "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+            "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
           }
         }
       ]
@@ -340,7 +340,7 @@
         "tradingViewSymbol": "NASDAQ:NVDA",
         "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $164.27 / $164.27, 저항은 $210.95 / $210.95입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $164.27 / $164.27, 저항은 $211.95 / $211.95입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
             "name": "상승 추세 내 눌림 후 재가속",
@@ -353,21 +353,17 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-          "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-          "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners"
+          "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+          "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+          "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated"
         ],
-        "latestPrice": 208.27000427246094,
-        "priceChange": 8.6300048828125,
-        "priceChangePercent": 4.322783464835042,
+        "latestPrice": 209.60989379882812,
+        "priceChange": 1.3398895263671875,
+        "priceChangePercent": 0.6433425355935224,
         "chartSeries": [
-          {
-            "date": "2025-12-15T14:30:00.000Z",
-            "close": 176.2899932861328
-          },
           {
             "date": "2025-12-16T14:30:00.000Z",
             "close": 177.72000122070312
@@ -723,6 +719,10 @@
           {
             "date": "2026-04-24T13:30:00.000Z",
             "close": 208.27000427246094
+          },
+          {
+            "date": "2026-04-27T13:30:00.000Z",
+            "close": 209.60989379882812
           }
         ]
       },
@@ -738,26 +738,22 @@
         "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $192.87 / $188.22, 저항은 $352.99 / $352.99입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
-            "name": "상승 추세 내 눌림 후 재가속",
-            "detail": "20일선 위에서 가격이 버티고 있어, 고점 재시험이 실패하지 않으면 추세 지속 확률이 높습니다.",
-            "confidence": "high"
+            "name": "뚜렷한 패턴 없음",
+            "detail": "지금은 강한 패턴보다 지지/저항 반응 확인이 더 중요합니다.",
+            "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-          "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-          "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners"
+          "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+          "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+          "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated"
         ],
-        "latestPrice": 347.80999755859375,
-        "priceChange": 42.480010986328125,
-        "priceChangePercent": 13.912819852128719,
+        "latestPrice": 335.8699951171875,
+        "priceChange": -11.94000244140625,
+        "priceChangePercent": -3.4329094980643218,
         "chartSeries": [
-          {
-            "date": "2025-12-15T14:30:00.000Z",
-            "close": 207.5800018310547
-          },
           {
             "date": "2025-12-16T14:30:00.000Z",
             "close": 209.1699981689453
@@ -1113,6 +1109,10 @@
           {
             "date": "2026-04-24T13:30:00.000Z",
             "close": 347.80999755859375
+          },
+          {
+            "date": "2026-04-27T13:30:00.000Z",
+            "close": 335.8699951171875
           }
         ]
       },
@@ -1125,30 +1125,29 @@
         "tradingViewSymbol": "KRX:005930",
         "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $167000.00 / $150400.00, 저항은 $229500.00 / $229500.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $167000.00 / $149200.00, 저항은 $229500.00 / $229500.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
-          {
-            "name": "상승 추세 내 눌림 후 재가속",
-            "detail": "20일선 위에서 가격이 버티고 있어, 고점 재시험이 실패하지 않으면 추세 지속 확률이 높습니다.",
-            "confidence": "high"
-          },
           {
             "name": "AB=CD 반등형",
             "detail": "직전 상승파와 최근 반등파 길이가 유사해 209000.00 부근에서 과열 해소 여부를 봐야 합니다.",
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-          "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-          "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners"
+          "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+          "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+          "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated"
         ],
-        "latestPrice": 224500,
-        "priceChange": 5000,
-        "priceChangePercent": 2.277904328018223,
+        "latestPrice": 219500,
+        "priceChange": -5000,
+        "priceChangePercent": -2.2271714922048997,
         "chartSeries": [
+          {
+            "date": "2025-12-11T00:00:00.000Z",
+            "close": 107300
+          },
           {
             "date": "2025-12-12T00:00:00.000Z",
             "close": 108900
@@ -1504,396 +1503,6 @@
           {
             "date": "2026-04-24T00:00:00.000Z",
             "close": 219500
-          },
-          {
-            "date": "2026-04-27T00:00:00.000Z",
-            "close": 224500
-          }
-        ]
-      },
-      {
-        "ticker": "XOM",
-        "company": "ExxonMobil",
-        "sectorTag": "energy-oil",
-        "market": "US",
-        "exchange": "NYSE",
-        "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 71,
-        "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
-        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $137.83, 저항은 $176.41 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
-        "patternAnalysis": [
-          {
-            "name": "뚜렷한 패턴 없음",
-            "detail": "지금은 강한 패턴보다 지지/저항 반응 확인이 더 중요합니다.",
-            "confidence": "low"
-          }
-        ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
-        "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [],
-        "latestPrice": 148.91000366210938,
-        "priceChange": -1.6199951171875,
-        "priceChangePercent": -1.0761942007072585,
-        "chartSeries": [
-          {
-            "date": "2025-12-15T14:30:00.000Z",
-            "close": 117.76000213623047
-          },
-          {
-            "date": "2025-12-16T14:30:00.000Z",
-            "close": 114.68000030517578
-          },
-          {
-            "date": "2025-12-17T14:30:00.000Z",
-            "close": 117.41000366210938
-          },
-          {
-            "date": "2025-12-18T14:30:00.000Z",
-            "close": 116.54000091552734
-          },
-          {
-            "date": "2025-12-19T14:30:00.000Z",
-            "close": 116.69000244140625
-          },
-          {
-            "date": "2025-12-22T14:30:00.000Z",
-            "close": 118.1500015258789
-          },
-          {
-            "date": "2025-12-23T14:30:00.000Z",
-            "close": 119.41999816894531
-          },
-          {
-            "date": "2025-12-24T14:30:00.000Z",
-            "close": 119.22000122070312
-          },
-          {
-            "date": "2025-12-26T14:30:00.000Z",
-            "close": 119.11000061035156
-          },
-          {
-            "date": "2025-12-29T14:30:00.000Z",
-            "close": 120.52999877929688
-          },
-          {
-            "date": "2025-12-30T14:30:00.000Z",
-            "close": 120.98999786376953
-          },
-          {
-            "date": "2025-12-31T14:30:00.000Z",
-            "close": 120.33999633789062
-          },
-          {
-            "date": "2026-01-02T14:30:00.000Z",
-            "close": 122.6500015258789
-          },
-          {
-            "date": "2026-01-05T14:30:00.000Z",
-            "close": 125.36000061035156
-          },
-          {
-            "date": "2026-01-06T14:30:00.000Z",
-            "close": 121.05000305175781
-          },
-          {
-            "date": "2026-01-07T14:30:00.000Z",
-            "close": 118.48999786376953
-          },
-          {
-            "date": "2026-01-08T14:30:00.000Z",
-            "close": 122.91000366210938
-          },
-          {
-            "date": "2026-01-09T14:30:00.000Z",
-            "close": 124.61000061035156
-          },
-          {
-            "date": "2026-01-12T14:30:00.000Z",
-            "close": 124.02999877929688
-          },
-          {
-            "date": "2026-01-13T14:30:00.000Z",
-            "close": 126.54000091552734
-          },
-          {
-            "date": "2026-01-14T14:30:00.000Z",
-            "close": 130.1999969482422
-          },
-          {
-            "date": "2026-01-15T14:30:00.000Z",
-            "close": 129.1300048828125
-          },
-          {
-            "date": "2026-01-16T14:30:00.000Z",
-            "close": 129.88999938964844
-          },
-          {
-            "date": "2026-01-20T14:30:00.000Z",
-            "close": 130.4600067138672
-          },
-          {
-            "date": "2026-01-21T14:30:00.000Z",
-            "close": 133.61000061035156
-          },
-          {
-            "date": "2026-01-22T14:30:00.000Z",
-            "close": 133.63999938964844
-          },
-          {
-            "date": "2026-01-23T14:30:00.000Z",
-            "close": 134.97000122070312
-          },
-          {
-            "date": "2026-01-26T14:30:00.000Z",
-            "close": 134.83999633789062
-          },
-          {
-            "date": "2026-01-27T14:30:00.000Z",
-            "close": 136.8300018310547
-          },
-          {
-            "date": "2026-01-28T14:30:00.000Z",
-            "close": 137.5800018310547
-          },
-          {
-            "date": "2026-01-29T14:30:00.000Z",
-            "close": 140.50999450683594
-          },
-          {
-            "date": "2026-01-30T14:30:00.000Z",
-            "close": 141.39999389648438
-          },
-          {
-            "date": "2026-02-02T14:30:00.000Z",
-            "close": 138.39999389648438
-          },
-          {
-            "date": "2026-02-03T14:30:00.000Z",
-            "close": 143.72999572753906
-          },
-          {
-            "date": "2026-02-04T14:30:00.000Z",
-            "close": 147.58999633789062
-          },
-          {
-            "date": "2026-02-05T14:30:00.000Z",
-            "close": 146.0800018310547
-          },
-          {
-            "date": "2026-02-06T14:30:00.000Z",
-            "close": 149.0500030517578
-          },
-          {
-            "date": "2026-02-09T14:30:00.000Z",
-            "close": 151.2100067138672
-          },
-          {
-            "date": "2026-02-10T14:30:00.000Z",
-            "close": 151.58999633789062
-          },
-          {
-            "date": "2026-02-11T14:30:00.000Z",
-            "close": 155.55999755859375
-          },
-          {
-            "date": "2026-02-12T14:30:00.000Z",
-            "close": 149.92999267578125
-          },
-          {
-            "date": "2026-02-13T14:30:00.000Z",
-            "close": 148.4499969482422
-          },
-          {
-            "date": "2026-02-17T14:30:00.000Z",
-            "close": 146.19000244140625
-          },
-          {
-            "date": "2026-02-18T14:30:00.000Z",
-            "close": 150.67999267578125
-          },
-          {
-            "date": "2026-02-19T14:30:00.000Z",
-            "close": 150.97000122070312
-          },
-          {
-            "date": "2026-02-20T14:30:00.000Z",
-            "close": 147.27999877929688
-          },
-          {
-            "date": "2026-02-23T14:30:00.000Z",
-            "close": 150.75999450683594
-          },
-          {
-            "date": "2026-02-24T14:30:00.000Z",
-            "close": 149.25999450683594
-          },
-          {
-            "date": "2026-02-25T14:30:00.000Z",
-            "close": 149.05999755859375
-          },
-          {
-            "date": "2026-02-26T14:30:00.000Z",
-            "close": 148.5399932861328
-          },
-          {
-            "date": "2026-02-27T14:30:00.000Z",
-            "close": 152.5
-          },
-          {
-            "date": "2026-03-02T14:30:00.000Z",
-            "close": 154.22000122070312
-          },
-          {
-            "date": "2026-03-03T14:30:00.000Z",
-            "close": 151.8300018310547
-          },
-          {
-            "date": "2026-03-04T14:30:00.000Z",
-            "close": 149.82000732421875
-          },
-          {
-            "date": "2026-03-05T14:30:00.000Z",
-            "close": 150.75999450683594
-          },
-          {
-            "date": "2026-03-06T14:30:00.000Z",
-            "close": 151.2100067138672
-          },
-          {
-            "date": "2026-03-09T13:30:00.000Z",
-            "close": 150.44000244140625
-          },
-          {
-            "date": "2026-03-10T13:30:00.000Z",
-            "close": 148.1300048828125
-          },
-          {
-            "date": "2026-03-11T13:30:00.000Z",
-            "close": 151.5800018310547
-          },
-          {
-            "date": "2026-03-12T13:30:00.000Z",
-            "close": 153.52999877929688
-          },
-          {
-            "date": "2026-03-13T13:30:00.000Z",
-            "close": 156.1199951171875
-          },
-          {
-            "date": "2026-03-16T13:30:00.000Z",
-            "close": 157.22999572753906
-          },
-          {
-            "date": "2026-03-17T13:30:00.000Z",
-            "close": 158.80999755859375
-          },
-          {
-            "date": "2026-03-18T13:30:00.000Z",
-            "close": 157.58999633789062
-          },
-          {
-            "date": "2026-03-19T13:30:00.000Z",
-            "close": 158.16000366210938
-          },
-          {
-            "date": "2026-03-20T13:30:00.000Z",
-            "close": 159.6699981689453
-          },
-          {
-            "date": "2026-03-23T13:30:00.000Z",
-            "close": 161.1300048828125
-          },
-          {
-            "date": "2026-03-24T13:30:00.000Z",
-            "close": 165.3800048828125
-          },
-          {
-            "date": "2026-03-25T13:30:00.000Z",
-            "close": 163.25999450683594
-          },
-          {
-            "date": "2026-03-26T13:30:00.000Z",
-            "close": 165.42999267578125
-          },
-          {
-            "date": "2026-03-27T13:30:00.000Z",
-            "close": 170.99000549316406
-          },
-          {
-            "date": "2026-03-30T13:30:00.000Z",
-            "close": 171.47000122070312
-          },
-          {
-            "date": "2026-03-31T13:30:00.000Z",
-            "close": 169.66000366210938
-          },
-          {
-            "date": "2026-04-01T13:30:00.000Z",
-            "close": 160.77999877929688
-          },
-          {
-            "date": "2026-04-02T13:30:00.000Z",
-            "close": 160.69000244140625
-          },
-          {
-            "date": "2026-04-06T13:30:00.000Z",
-            "close": 163.3699951171875
-          },
-          {
-            "date": "2026-04-07T13:30:00.000Z",
-            "close": 163.91000366210938
-          },
-          {
-            "date": "2026-04-08T13:30:00.000Z",
-            "close": 156.22000122070312
-          },
-          {
-            "date": "2026-04-09T13:30:00.000Z",
-            "close": 155.0399932861328
-          },
-          {
-            "date": "2026-04-10T13:30:00.000Z",
-            "close": 152.50999450683594
-          },
-          {
-            "date": "2026-04-13T13:30:00.000Z",
-            "close": 152.63999938964844
-          },
-          {
-            "date": "2026-04-14T13:30:00.000Z",
-            "close": 149.24000549316406
-          },
-          {
-            "date": "2026-04-15T13:30:00.000Z",
-            "close": 149.00999450683594
-          },
-          {
-            "date": "2026-04-16T13:30:00.000Z",
-            "close": 151.97999572753906
-          },
-          {
-            "date": "2026-04-17T13:30:00.000Z",
-            "close": 146.44000244140625
-          },
-          {
-            "date": "2026-04-20T13:30:00.000Z",
-            "close": 147.67999267578125
-          },
-          {
-            "date": "2026-04-21T13:30:00.000Z",
-            "close": 148.36000061035156
-          },
-          {
-            "date": "2026-04-22T13:30:00.000Z",
-            "close": 149.5
-          },
-          {
-            "date": "2026-04-23T13:30:00.000Z",
-            "close": 150.52999877929688
-          },
-          {
-            "date": "2026-04-24T13:30:00.000Z",
-            "close": 148.91000366210938
           }
         ]
       },
@@ -1904,9 +1513,9 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 71,
-        "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
-        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $104700.00 / $94600.00, 저항은 $124500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
+        "importanceScore": 80,
+        "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $104700.00 / $94600.00, 저항은 $124500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
             "name": "뚜렷한 패턴 없음",
@@ -1915,12 +1524,16 @@
           }
         ],
         "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
-        "recommendation": "010950.KS는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
+        "recommendation": "010950.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [],
-        "latestPrice": 115400,
-        "priceChange": -4000,
-        "priceChangePercent": -3.350083752093802,
+        "latestPrice": 119400,
+        "priceChange": -1400,
+        "priceChangePercent": -1.1589403973509933,
         "chartSeries": [
+          {
+            "date": "2025-12-11T00:00:00.000Z",
+            "close": 80600
+          },
           {
             "date": "2025-12-12T00:00:00.000Z",
             "close": 81600
@@ -2276,10 +1889,392 @@
           {
             "date": "2026-04-24T00:00:00.000Z",
             "close": 119400
+          }
+        ]
+      },
+      {
+        "ticker": "XOM",
+        "company": "ExxonMobil",
+        "sectorTag": "energy-oil",
+        "market": "US",
+        "exchange": "NYSE",
+        "tradingViewSymbol": "NYSE:XOM",
+        "importanceScore": 71,
+        "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
+        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $137.83, 저항은 $176.41 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
+        "patternAnalysis": [
+          {
+            "name": "뚜렷한 패턴 없음",
+            "detail": "지금은 강한 패턴보다 지지/저항 반응 확인이 더 중요합니다.",
+            "confidence": "low"
+          }
+        ],
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
+        "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
+        "linkedNewsIds": [],
+        "latestPrice": 149.22000122070312,
+        "priceChange": 0.30999755859375,
+        "priceChangePercent": 0.20817779260630687,
+        "chartSeries": [
+          {
+            "date": "2025-12-16T14:30:00.000Z",
+            "close": 114.68000030517578
           },
           {
-            "date": "2026-04-27T00:00:00.000Z",
-            "close": 115400
+            "date": "2025-12-17T14:30:00.000Z",
+            "close": 117.41000366210938
+          },
+          {
+            "date": "2025-12-18T14:30:00.000Z",
+            "close": 116.54000091552734
+          },
+          {
+            "date": "2025-12-19T14:30:00.000Z",
+            "close": 116.69000244140625
+          },
+          {
+            "date": "2025-12-22T14:30:00.000Z",
+            "close": 118.1500015258789
+          },
+          {
+            "date": "2025-12-23T14:30:00.000Z",
+            "close": 119.41999816894531
+          },
+          {
+            "date": "2025-12-24T14:30:00.000Z",
+            "close": 119.22000122070312
+          },
+          {
+            "date": "2025-12-26T14:30:00.000Z",
+            "close": 119.11000061035156
+          },
+          {
+            "date": "2025-12-29T14:30:00.000Z",
+            "close": 120.52999877929688
+          },
+          {
+            "date": "2025-12-30T14:30:00.000Z",
+            "close": 120.98999786376953
+          },
+          {
+            "date": "2025-12-31T14:30:00.000Z",
+            "close": 120.33999633789062
+          },
+          {
+            "date": "2026-01-02T14:30:00.000Z",
+            "close": 122.6500015258789
+          },
+          {
+            "date": "2026-01-05T14:30:00.000Z",
+            "close": 125.36000061035156
+          },
+          {
+            "date": "2026-01-06T14:30:00.000Z",
+            "close": 121.05000305175781
+          },
+          {
+            "date": "2026-01-07T14:30:00.000Z",
+            "close": 118.48999786376953
+          },
+          {
+            "date": "2026-01-08T14:30:00.000Z",
+            "close": 122.91000366210938
+          },
+          {
+            "date": "2026-01-09T14:30:00.000Z",
+            "close": 124.61000061035156
+          },
+          {
+            "date": "2026-01-12T14:30:00.000Z",
+            "close": 124.02999877929688
+          },
+          {
+            "date": "2026-01-13T14:30:00.000Z",
+            "close": 126.54000091552734
+          },
+          {
+            "date": "2026-01-14T14:30:00.000Z",
+            "close": 130.1999969482422
+          },
+          {
+            "date": "2026-01-15T14:30:00.000Z",
+            "close": 129.1300048828125
+          },
+          {
+            "date": "2026-01-16T14:30:00.000Z",
+            "close": 129.88999938964844
+          },
+          {
+            "date": "2026-01-20T14:30:00.000Z",
+            "close": 130.4600067138672
+          },
+          {
+            "date": "2026-01-21T14:30:00.000Z",
+            "close": 133.61000061035156
+          },
+          {
+            "date": "2026-01-22T14:30:00.000Z",
+            "close": 133.63999938964844
+          },
+          {
+            "date": "2026-01-23T14:30:00.000Z",
+            "close": 134.97000122070312
+          },
+          {
+            "date": "2026-01-26T14:30:00.000Z",
+            "close": 134.83999633789062
+          },
+          {
+            "date": "2026-01-27T14:30:00.000Z",
+            "close": 136.8300018310547
+          },
+          {
+            "date": "2026-01-28T14:30:00.000Z",
+            "close": 137.5800018310547
+          },
+          {
+            "date": "2026-01-29T14:30:00.000Z",
+            "close": 140.50999450683594
+          },
+          {
+            "date": "2026-01-30T14:30:00.000Z",
+            "close": 141.39999389648438
+          },
+          {
+            "date": "2026-02-02T14:30:00.000Z",
+            "close": 138.39999389648438
+          },
+          {
+            "date": "2026-02-03T14:30:00.000Z",
+            "close": 143.72999572753906
+          },
+          {
+            "date": "2026-02-04T14:30:00.000Z",
+            "close": 147.58999633789062
+          },
+          {
+            "date": "2026-02-05T14:30:00.000Z",
+            "close": 146.0800018310547
+          },
+          {
+            "date": "2026-02-06T14:30:00.000Z",
+            "close": 149.0500030517578
+          },
+          {
+            "date": "2026-02-09T14:30:00.000Z",
+            "close": 151.2100067138672
+          },
+          {
+            "date": "2026-02-10T14:30:00.000Z",
+            "close": 151.58999633789062
+          },
+          {
+            "date": "2026-02-11T14:30:00.000Z",
+            "close": 155.55999755859375
+          },
+          {
+            "date": "2026-02-12T14:30:00.000Z",
+            "close": 149.92999267578125
+          },
+          {
+            "date": "2026-02-13T14:30:00.000Z",
+            "close": 148.4499969482422
+          },
+          {
+            "date": "2026-02-17T14:30:00.000Z",
+            "close": 146.19000244140625
+          },
+          {
+            "date": "2026-02-18T14:30:00.000Z",
+            "close": 150.67999267578125
+          },
+          {
+            "date": "2026-02-19T14:30:00.000Z",
+            "close": 150.97000122070312
+          },
+          {
+            "date": "2026-02-20T14:30:00.000Z",
+            "close": 147.27999877929688
+          },
+          {
+            "date": "2026-02-23T14:30:00.000Z",
+            "close": 150.75999450683594
+          },
+          {
+            "date": "2026-02-24T14:30:00.000Z",
+            "close": 149.25999450683594
+          },
+          {
+            "date": "2026-02-25T14:30:00.000Z",
+            "close": 149.05999755859375
+          },
+          {
+            "date": "2026-02-26T14:30:00.000Z",
+            "close": 148.5399932861328
+          },
+          {
+            "date": "2026-02-27T14:30:00.000Z",
+            "close": 152.5
+          },
+          {
+            "date": "2026-03-02T14:30:00.000Z",
+            "close": 154.22000122070312
+          },
+          {
+            "date": "2026-03-03T14:30:00.000Z",
+            "close": 151.8300018310547
+          },
+          {
+            "date": "2026-03-04T14:30:00.000Z",
+            "close": 149.82000732421875
+          },
+          {
+            "date": "2026-03-05T14:30:00.000Z",
+            "close": 150.75999450683594
+          },
+          {
+            "date": "2026-03-06T14:30:00.000Z",
+            "close": 151.2100067138672
+          },
+          {
+            "date": "2026-03-09T13:30:00.000Z",
+            "close": 150.44000244140625
+          },
+          {
+            "date": "2026-03-10T13:30:00.000Z",
+            "close": 148.1300048828125
+          },
+          {
+            "date": "2026-03-11T13:30:00.000Z",
+            "close": 151.5800018310547
+          },
+          {
+            "date": "2026-03-12T13:30:00.000Z",
+            "close": 153.52999877929688
+          },
+          {
+            "date": "2026-03-13T13:30:00.000Z",
+            "close": 156.1199951171875
+          },
+          {
+            "date": "2026-03-16T13:30:00.000Z",
+            "close": 157.22999572753906
+          },
+          {
+            "date": "2026-03-17T13:30:00.000Z",
+            "close": 158.80999755859375
+          },
+          {
+            "date": "2026-03-18T13:30:00.000Z",
+            "close": 157.58999633789062
+          },
+          {
+            "date": "2026-03-19T13:30:00.000Z",
+            "close": 158.16000366210938
+          },
+          {
+            "date": "2026-03-20T13:30:00.000Z",
+            "close": 159.6699981689453
+          },
+          {
+            "date": "2026-03-23T13:30:00.000Z",
+            "close": 161.1300048828125
+          },
+          {
+            "date": "2026-03-24T13:30:00.000Z",
+            "close": 165.3800048828125
+          },
+          {
+            "date": "2026-03-25T13:30:00.000Z",
+            "close": 163.25999450683594
+          },
+          {
+            "date": "2026-03-26T13:30:00.000Z",
+            "close": 165.42999267578125
+          },
+          {
+            "date": "2026-03-27T13:30:00.000Z",
+            "close": 170.99000549316406
+          },
+          {
+            "date": "2026-03-30T13:30:00.000Z",
+            "close": 171.47000122070312
+          },
+          {
+            "date": "2026-03-31T13:30:00.000Z",
+            "close": 169.66000366210938
+          },
+          {
+            "date": "2026-04-01T13:30:00.000Z",
+            "close": 160.77999877929688
+          },
+          {
+            "date": "2026-04-02T13:30:00.000Z",
+            "close": 160.69000244140625
+          },
+          {
+            "date": "2026-04-06T13:30:00.000Z",
+            "close": 163.3699951171875
+          },
+          {
+            "date": "2026-04-07T13:30:00.000Z",
+            "close": 163.91000366210938
+          },
+          {
+            "date": "2026-04-08T13:30:00.000Z",
+            "close": 156.22000122070312
+          },
+          {
+            "date": "2026-04-09T13:30:00.000Z",
+            "close": 155.0399932861328
+          },
+          {
+            "date": "2026-04-10T13:30:00.000Z",
+            "close": 152.50999450683594
+          },
+          {
+            "date": "2026-04-13T13:30:00.000Z",
+            "close": 152.63999938964844
+          },
+          {
+            "date": "2026-04-14T13:30:00.000Z",
+            "close": 149.24000549316406
+          },
+          {
+            "date": "2026-04-15T13:30:00.000Z",
+            "close": 149.00999450683594
+          },
+          {
+            "date": "2026-04-16T13:30:00.000Z",
+            "close": 151.97999572753906
+          },
+          {
+            "date": "2026-04-17T13:30:00.000Z",
+            "close": 146.44000244140625
+          },
+          {
+            "date": "2026-04-20T13:30:00.000Z",
+            "close": 147.67999267578125
+          },
+          {
+            "date": "2026-04-21T13:30:00.000Z",
+            "close": 148.36000061035156
+          },
+          {
+            "date": "2026-04-22T13:30:00.000Z",
+            "close": 149.5
+          },
+          {
+            "date": "2026-04-23T13:30:00.000Z",
+            "close": 150.52999877929688
+          },
+          {
+            "date": "2026-04-24T13:30:00.000Z",
+            "close": 148.91000366210938
+          },
+          {
+            "date": "2026-04-27T13:30:00.000Z",
+            "close": 149.22000122070312
           }
         ]
       }
@@ -2326,20 +2321,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster",
-            "파생 뉴스: Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.",
-            "파생 뉴스: This Week In AI Chips - WeRide Advances Multi-Chip Integration With Major Partnerships",
-            "파생 뉴스: Tech stocks today: Qualcomm stock soars, Nvidia tops $5 trillion again, with Big Tech Q1 updates on deck",
-            "반도체: Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally."
+            "메인 헤드라인: Jim Cramer Discusses NVIDIA (NVDA) Shares",
+            "파생 뉴스: COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem",
+            "파생 뉴스: Intel Stock Rally Rages On. What UBS Says It Underestimated.",
+            "파생 뉴스: Zacks.com featured highlights include NVIDIA and Broadcom",
+            "반도체: COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-            "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-            "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners",
-            "live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec"
+            "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+            "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+            "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated",
+            "live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom"
           ]
         },
         {
@@ -2356,8 +2351,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-            "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral"
+            "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+            "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv"
           ]
         },
         {
@@ -2369,16 +2364,16 @@
           "summary": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다.",
           "outputLines": [
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-            "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $164.27 / $164.27, 저항은 $210.95 / $210.95입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+            "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $164.27 / $164.27, 저항은 $211.95 / $211.95입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-            "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-            "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners"
+            "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+            "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+            "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated"
           ]
         },
         {
@@ -2387,21 +2382,21 @@
           "name": "Execution Trader",
           "roleLabel": "행동 제안",
           "objective": "시장 해석과 티커 분석을 실제 행동 계획으로 번역한다.",
-          "summary": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.",
+          "summary": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.",
           "outputLines": [
-            "오늘 전략: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.",
+            "오늘 전략: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.",
             "추천 행동: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
             "추천 행동: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.",
-            "추천 행동: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.",
+            "추천 행동: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.",
             "하지 말 것: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.",
             "하지 말 것: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다."
           ],
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-            "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners",
-            "live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec"
+            "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+            "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated",
+            "live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom"
           ]
         }
       ],
@@ -2454,11 +2449,11 @@
         ]
       },
       "actionPlan": {
-        "strategy": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.",
+        "strategy": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.",
         "recommendedActions": [
           "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
           "AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.",
-          "XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다."
+          "010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다."
         ],
         "avoidActions": [
           "서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.",
@@ -2470,14 +2465,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-04-27T12:18:36.672Z",
+        "runId": "fallback-2026-04-27T15:01:20.544Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-04-27T12:18:36.672Z",
+        "generatedAt": "2026-04-27T15:01:20.544Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-27T12:18:36.672Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral, live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners, live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral, live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral, live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners, live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/15\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/17\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/19\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/21\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/23\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-27T15:01:20.544Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Jim Cramer Discusses NVIDIA (NVDA) Shares\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv, live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated, live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv, live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv, live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated, live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/15\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/17\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/19\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/21\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/23\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2486,13 +2481,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-              "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-              "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners",
-              "live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec"
+              "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+              "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+              "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated",
+              "live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom"
             ]
           },
           {
@@ -2505,8 +2500,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-              "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral"
+              "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+              "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv"
             ]
           },
           {
@@ -2520,9 +2515,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster",
-              "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-              "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners"
+              "live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares",
+              "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+              "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated"
             ]
           },
           {
@@ -2532,13 +2527,13 @@
             "author": "Execution Trader",
             "roleLabel": "행동 제안",
             "audience": "Operator",
-            "summary": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.",
-            "text": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
+            "summary": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.",
+            "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral",
-              "live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners",
-              "live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec"
+              "live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv",
+              "live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated",
+              "live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom"
             ]
           }
         ]
@@ -2768,7 +2763,7 @@
       ]
     },
     "meeting": {
-      "topic": "Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster",
+      "topic": "Jim Cramer Discusses NVIDIA (NVDA) Shares",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2829,17 +2824,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-04-27T12:18:36.672Z",
+      "generatedAt": "2026-04-27T15:01:20.544Z",
       "nextRunAt": "2026-04-28T07:30:00.000Z",
-      "subject": "[Daily Brief] Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster",
-      "previewText": "NVIDIA Blackwell Cluster Launch Target of May 8, 2026; Additional Three-Cluster Deployment is Roadmap to $72 million in Annual Recurring RevenueROAD TOWN, British Virgin Islands, April 27, 2026 (GLOBE NEWSWIRE) -- Alpha Compute Corp. (NASDAQ: ALP), a pioneering technology leader in AI GPU-as-a-service (GPUaaS) and AI Confidential Compute, today provided an update on the deployment status of its NVIDIA Blackwell GPU infrastructure. The Company confirms that its first large-scale GPU cluster, a 50 / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Jim Cramer Discusses NVIDIA (NVDA) Shares",
+      "previewText": "We have recently published Jim Cramer Discussed AI Circular Deals, Top Quantum Plays & These 22 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI chip giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well over the past month, as they are up by 16.5%. During this period, Cramer has wondered […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\n\nNVIDIA Blackwell Cluster Launch Target of May 8, 2026; Additional Three-Cluster Deployment is Roadmap to $72 million in Annual Recurring RevenueROAD TOWN, British Virgin Islands, April 27, 2026 (GLOBE NEWSWIRE) -- Alpha Compute Corp. (NASDAQ: ALP), a pioneering technology leader in AI GPU-as-a-service (GPUaaS) and AI Confidential Compute, today provided an update on the deployment status of its NVIDIA Blackwell GPU infrastructure. The Company confirms that its first large-scale GPU cluster, a 50 / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nAlpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- This Week In AI Chips - WeRide Advances Multi-Chip Integration With Major Partnerships\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Tech stocks today: Qualcomm stock soars, Nvidia tops $5 trillion again, with Big Tech Q1 updates on deck\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster</h1><p>NVIDIA Blackwell Cluster Launch Target of May 8, 2026; Additional Three-Cluster Deployment is Roadmap to $72 million in Annual Recurring RevenueROAD TOWN, British Virgin Islands, April 27, 2026 (GLOBE NEWSWIRE) -- Alpha Compute Corp. (NASDAQ: ALP), a pioneering technology leader in AI GPU-as-a-service (GPUaaS) and AI Confidential Compute, today provided an update on the deployment status of its NVIDIA Blackwell GPU infrastructure. The Company confirms that its first large-scale GPU cluster, a 50 / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>This Week In AI Chips - WeRide Advances Multi-Chip Integration With Major Partnerships</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Tech stocks today: Qualcomm stock soars, Nvidia tops $5 trillion again, with Big Tech Q1 updates on deck</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Nvidia Stock Rises After Record High. Big Tech Earnings Can Make or Break the Rally.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Jim Cramer Discusses NVIDIA (NVDA) Shares\n\nWe have recently published Jim Cramer Discussed AI Circular Deals, Top Quantum Plays & These 22 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI chip giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well over the past month, as they are up by 16.5%. During this period, Cramer has wondered […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nJim Cramer Discusses NVIDIA (NVDA) Shares\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Intel Stock Rally Rages On. What UBS Says It Underestimated.\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Zacks.com featured highlights include NVIDIA and Broadcom\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Jim Cramer Discusses NVIDIA (NVDA) Shares</h1><p>We have recently published Jim Cramer Discussed AI Circular Deals, Top Quantum Plays &amp; These 22 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI chip giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well over the past month, as they are up by 16.5%. During this period, Cramer has wondered […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Jim Cramer Discusses NVIDIA (NVDA) Shares</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Intel Stock Rally Rages On. What UBS Says It Underestimated.</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Zacks.com featured highlights include NVIDIA and Broadcom</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - COPLUS Accelerates AIoT Transition: Capturing High-Margin Mobility Markets via NVIDIA Ecosystem<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-27T12:18:36.672Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Alpha Compute AI GPU Launch Update; First Large-Scale NVIDIA Blackwell Cluster\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral, live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners, live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-alpha-compute-ai-gpu-launch-update-first-large-scale-nvidia-blackwell-cluster, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral, live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-rises-after-record-high-big-tech-earnings-can-make-or-break-the-ral, live-semiconductors-this-week-in-ai-chips-weride-advances-multi-chip-integration-with-major-partners, live-semiconductors-tech-stocks-today-qualcomm-stock-soars-nvidia-tops-5-trillion-again-with-big-tec\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/15\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/17\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/19\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/21\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/23\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-27T15:01:20.544Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Jim Cramer Discusses NVIDIA (NVDA) Shares\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Jim Cramer Discusses NVIDIA (NVDA) Shares\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv, live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated, live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-jim-cramer-discusses-nvidia-nvda-shares, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv, live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-coplus-accelerates-aiot-transition-capturing-high-margin-mobility-markets-via-nv, live-semiconductors-intel-stock-rally-rages-on-what-ubs-says-it-underestimated, live-semiconductors-zacks-com-featured-highlights-include-nvidia-and-broadcom\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/15\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/17\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/19\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/21\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/23\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
+    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3408"
   ]
 }
