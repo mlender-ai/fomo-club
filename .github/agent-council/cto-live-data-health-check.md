@@ -2,10 +2,10 @@
 
 - Item: 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.
 - Owner: CTO
-- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/17
+- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/28
 - Branch: codex/agent-council/cto-live-data-health-check
-- Generated At: 2026-04-27T16:46:11.831Z
-- Status: ready
+- Generated At: 2026-04-27T16:47:27.971Z
+- Status: queued
 
 ## Detail
 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.
