@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-04-28T05:52:55.334Z",
+    "generatedAt": "2026-04-28T10:57:56.258Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-        "title": "Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
-        "summary": "Cathie Wood, the founder of ARK Invest, is known for spotting new tech trends early. While chipmakers like Nvidia (NVDA) and Advanced Micro Devices (AMD) led the AI market through 2025, Wood’s latest moves suggest she is shifting her focus. She is now leaning toward massive “platform” companies that can use AI to drive long-term profit. Recent filings show she has been adding heavily to Amazon (AMZN) while cutting her stake in Advanced Micro Devices (AMD).Claim 55% Off TipRanksUnlock hedge fund-",
+        "id": "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
+        "title": "‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers",
+        "summary": "Big Tech has announced $740 billion in capex this year, but AI has yet to show evidence of widespread increased productivity.",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/amazon-amd-cathie-wood-leaning-053000077.html?.tsrc=rss",
-        "publishedAt": "2026-04-28T05:30:00.000Z",
-        "imageUrl": "https://s.yimg.com/os/en/tipranks_452/dc81085c754d7479098626106f581d0f",
+        "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/cost-compute-far-beyond-costs-071100797.html?.tsrc=rss",
+        "publishedAt": "2026-04-28T07:11:00.000Z",
+        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/GWwIPlOQdJ0k7n5zMu8Fxw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA-/https://media.zenfs.com/en/fortune_175/8e872fdba68c60858d5a65b1d4c04b86",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,13 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-          "title": "Bank of America resets Nvidia stock forecast",
-          "summary": "Nvidia (NVDA) has evolved so much over the years. It started as a video game chipmaker. It invented the term Graphics Processing Unit (GPU). Used the crypto boom to its advantage. And it is now the king of AI, thanks to its CUDA software moat. Along with GPUs and CPUs, an important part of its ...",
-          "source": "THESTREET",
-          "sourceUrl": "https://www.thestreet.com/investing/stocks/bank-of-america-reiterates-buy-rating-nvidia-stock?.tsrc=rss",
-          "publishedAt": "2026-04-28T03:17:00.000Z",
-          "imageUrl": null,
+          "id": "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
+          "title": "Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
+          "summary": "Cathie Wood, the founder of ARK Invest, is known for spotting new tech trends early. While chipmakers like Nvidia (NVDA) and Advanced Micro Devices (AMD) led the AI market through 2025, Wood’s latest moves suggest she is shifting her focus. She is now leaning toward massive “platform” companies that can use AI to drive long-term profit. Recent filings show she has been adding heavily to Amazon (AMZN) while cutting her stake in Advanced Micro Devices (AMD).Claim 55% Off TipRanksUnlock hedge fund-",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/amazon-amd-cathie-wood-leaning-053000077.html?.tsrc=rss",
+          "publishedAt": "2026-04-28T05:30:00.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/tipranks_452/dc81085c754d7479098626106f581d0f",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -266,42 +266,42 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp",
-          "title": "Dow Jones Futures: Nasdaq, S&P 500 Set More Record Highs; Micron, Nvidia, Sandisk, Alphabet Are Big Winners",
-          "summary": "Dow Jones Futures: The Nasdaq and S&P 500 set more record highs Monday. Micron, Sandisk, Nvidia and Alphabet were big winners.",
+          "id": "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan",
+          "title": "Nvidia’s (NVDA) Explosive Run May See Limits Going Forward, Warns JPMorgan",
+          "summary": "Chipmaker Nvidia (NVDA) has seen a strong rally recently, but not everyone on Wall Street believes it can keep going at the same pace. Indeed, JPMorgan (JPM) strategist Mislav Matejka said he still likes semiconductor stocks and remains positive on the group, but he also warned that the market may not behave the same way it did last year. While Nvidia surged about 120% over a six-month stretch in 2025 after a weak first quarter, Matejka believes that the conditions for another similar run are no",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/ba676ed4-8db8-36b4-90ef-e9d2c2ec979c/dow-jones-futures%3A-nasdaq%2C.html?.tsrc=rss",
-          "publishedAt": "2026-04-28T02:13:56.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/ibd.com/55ca4252bd7c66820fc61ce444908e68",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/nvidia-nvda-explosive-run-may-225206639.html?.tsrc=rss",
+          "publishedAt": "2026-04-27T22:52:06.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/tipranks_452/877c29e24ca4c9b618e16fc3e875fae7",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup",
-          "title": "How The Himadri Speciality Chemical (BSE:500184) Narrative Is Evolving With AI Supply Chain Hopes",
-          "summary": "Himadri Speciality Chemical’s fair value has been kept steady at ₹470.0 per share, even as the underlying model assumptions for growth, margins, and discount rate have been fine tuned. Analysts are linking this unchanged price target to ongoing debate about how closely Himadri can sit alongside the supply chains feeding high performance computing and AI hardware, where current Street research is focused on memory and optical component names tied to Nvidia’s Vera Rubin platform. As you read...",
+          "id": "live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat",
+          "title": "AMD Supplier Up 40% This Month Soars On Earnings Beat",
+          "summary": "Data center stock Sanmina trounced analyst expectations when it reported earnings on Monday, as demand for its AI hardware soars.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/himadri-speciality-chemical-bse-500184-230832993.html?.tsrc=rss",
-          "publishedAt": "2026-04-27T23:08:32.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/simply_wall_st__316/b6651b02293f0a57ba2ad962c63e215d",
+          "sourceUrl": "https://finance.yahoo.com/m/093dd76c-5951-3940-9854-0f0a34aca380/amd-supplier-up-40%25-this.html?.tsrc=rss",
+          "publishedAt": "2026-04-27T20:19:43.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/ibd.com/571786716f5729a7e84df2731b8af419",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-            "title": "Bank of America resets Nvidia stock forecast",
-            "summary": "Nvidia (NVDA) has evolved so much over the years. It started as a video game chipmaker. It invented the term Graphics Processing Unit (GPU). Used the crypto boom to its advantage. And it is now the king of AI, thanks to its CUDA software moat. Along with GPUs and CPUs, an important part of its ...",
-            "source": "THESTREET",
-            "sourceUrl": "https://www.thestreet.com/investing/stocks/bank-of-america-reiterates-buy-rating-nvidia-stock?.tsrc=rss",
-            "publishedAt": "2026-04-28T03:17:00.000Z",
-            "imageUrl": null,
+            "id": "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
+            "title": "Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
+            "summary": "Cathie Wood, the founder of ARK Invest, is known for spotting new tech trends early. While chipmakers like Nvidia (NVDA) and Advanced Micro Devices (AMD) led the AI market through 2025, Wood’s latest moves suggest she is shifting her focus. She is now leaning toward massive “platform” companies that can use AI to drive long-term profit. Recent filings show she has been adding heavily to Amazon (AMZN) while cutting her stake in Advanced Micro Devices (AMD).Claim 55% Off TipRanksUnlock hedge fund-",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/amazon-amd-cathie-wood-leaning-053000077.html?.tsrc=rss",
+            "publishedAt": "2026-04-28T05:30:00.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/tipranks_452/dc81085c754d7479098626106f581d0f",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -326,6 +326,29 @@
             "priority": "critical",
             "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
             "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          }
+        },
+        {
+          "sectorTag": "energy-oil",
+          "sectorLabel": "에너지(오일)",
+          "item": {
+            "id": "live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron",
+            "title": "BP Stock Rises After Huge Jump in Earnings. What It Means for Exxon and Chevron.",
+            "summary": "BP stock was rising on Tuesday after the rally in crude prices helped the British oil major to double its first-quarter profit. BP’s American depositary receipts climbed 3.9% to $47.75 ahead of the opening bell. The results cover a period where the war in the Middle East disrupted shipping through the Strait of Hormuz, sparking a surge in oil prices.",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/m/342a3325-b203-3dfe-bbdb-ec6e8adcd526/bp-stock-rises-after-huge.html?.tsrc=rss",
+            "publishedAt": "2026-04-28T09:59:00.000Z",
+            "imageUrl": null,
+            "sectorTag": "energy-oil",
+            "tickerTags": [
+              "XOM",
+              "CVX",
+              "SLB"
+            ],
+            "importanceScore": 98,
+            "priority": "critical",
+            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
+            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
           }
         }
       ]
@@ -353,12 +376,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
           "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-          "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-          "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp"
+          "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan"
         ],
         "latestPrice": 216.61000061035156,
         "priceChange": 8.339996337890625,
@@ -743,12 +766,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
           "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-          "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-          "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp"
+          "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan"
         ],
         "latestPrice": 334.6300048828125,
         "priceChange": -13.17999267578125,
@@ -1133,12 +1156,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
           "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-          "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-          "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp"
+          "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan"
         ],
         "latestPrice": 222000,
         "priceChange": -2500,
@@ -1513,7 +1536,7 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 80,
+        "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
         "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $105400.00 / $94600.00, 저항은 $124500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1523,12 +1546,14 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"BP Stock Rises After Huge Jump in Earnings. What It Means for Exxon and Chevron.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "010950.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-        "linkedNewsIds": [],
-        "latestPrice": 118600,
-        "priceChange": 3200,
-        "priceChangePercent": 2.772963604852686,
+        "linkedNewsIds": [
+          "live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron"
+        ],
+        "latestPrice": 118700,
+        "priceChange": 3300,
+        "priceChangePercent": 2.859618717504333,
         "chartSeries": [
           {
             "date": "2025-12-15T00:00:00.000Z",
@@ -1888,7 +1913,7 @@
           },
           {
             "date": "2026-04-28T00:00:00.000Z",
-            "close": 118600
+            "close": 118700
           }
         ]
       },
@@ -1899,7 +1924,7 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 71,
+        "importanceScore": 88,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
         "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $137.83, 저항은 $176.41 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1909,9 +1934,11 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"BP Stock Rises After Huge Jump in Earnings. What It Means for Exxon and Chevron.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [],
+        "linkedNewsIds": [
+          "live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron"
+        ],
         "latestPrice": 148.19000244140625,
         "priceChange": -0.720001220703125,
         "priceChangePercent": -0.48351433953146267,
@@ -2321,20 +2348,21 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
-            "파생 뉴스: Bank of America resets Nvidia stock forecast",
-            "파생 뉴스: Dow Jones Futures: Nasdaq, S&P 500 Set More Record Highs; Micron, Nvidia, Sandisk, Alphabet Are Big Winners",
-            "파생 뉴스: How The Himadri Speciality Chemical (BSE:500184) Narrative Is Evolving With AI Supply Chain Hopes",
-            "반도체: Bank of America resets Nvidia stock forecast"
+            "메인 헤드라인: ‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers",
+            "파생 뉴스: Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
+            "파생 뉴스: Nvidia’s (NVDA) Explosive Run May See Limits Going Forward, Warns JPMorgan",
+            "파생 뉴스: AMD Supplier Up 40% This Month Soars On Earnings Beat",
+            "반도체: Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
+            "에너지(오일): BP Stock Rises After Huge Jump in Earnings. What It Means for Exxon and Chevron."
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
+            "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
             "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-            "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp",
-            "live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup"
+            "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan",
+            "live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat"
           ]
         },
         {
@@ -2351,8 +2379,9 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
+            "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
             "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast"
+            "live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron"
           ]
         },
         {
@@ -2366,14 +2395,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $164.27 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
             "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-            "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp"
+            "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan"
           ]
         },
         {
@@ -2394,9 +2423,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-            "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp",
-            "live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup"
+            "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
+            "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan",
+            "live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat"
           ]
         }
       ],
@@ -2465,14 +2494,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-04-28T05:52:55.334Z",
+        "runId": "fallback-2026-04-28T10:57:56.258Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-04-28T05:52:55.334Z",
+        "generatedAt": "2026-04-28T10:57:56.258Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-28T05:52:55.334Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast, live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp, live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast, live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast, live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp, live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-28T10:57:56.258Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- ‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan, live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan, live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2481,13 +2510,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
+              "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
               "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-              "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp",
-              "live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup"
+              "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan",
+              "live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat"
             ]
           },
           {
@@ -2500,8 +2529,9 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
+              "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
               "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast"
+              "live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron"
             ]
           },
           {
@@ -2515,9 +2545,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa",
               "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-              "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp"
+              "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan"
             ]
           },
           {
@@ -2531,9 +2561,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-forecast",
-              "live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp",
-              "live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup"
+              "live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock",
+              "live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan",
+              "live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat"
             ]
           }
         ]
@@ -2763,7 +2793,7 @@
       ]
     },
     "meeting": {
-      "topic": "Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
+      "topic": "‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2824,16 +2854,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-04-28T05:52:55.334Z",
-      "nextRunAt": "2026-04-28T07:30:00.000Z",
-      "subject": "[Daily Brief] Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock",
-      "previewText": "Cathie Wood, the founder of ARK Invest, is known for spotting new tech trends early. While chipmakers like Nvidia (NVDA) and Advanced Micro Devices (AMD) led the AI market through 2025, Wood’s latest moves suggest she is shifting her focus. She is now leaning toward massive “platform” companies that can use AI to drive long-term profit. Recent filings show she has been adding heavily to Amazon (AMZN) while cutting her stake in Advanced Micro Devices (AMD).Claim 55% Off TipRanksUnlock hedge fund- / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "generatedAt": "2026-04-28T10:57:56.258Z",
+      "nextRunAt": "2026-04-29T07:30:00.000Z",
+      "subject": "[Daily Brief] ‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers",
+      "previewText": "Big Tech has announced $740 billion in capex this year, but AI has yet to show evidence of widespread increased productivity. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\n\nCathie Wood, the founder of ARK Invest, is known for spotting new tech trends early. While chipmakers like Nvidia (NVDA) and Advanced Micro Devices (AMD) led the AI market through 2025, Wood’s latest moves suggest she is shifting her focus. She is now leaning toward massive “platform” companies that can use AI to drive long-term profit. Recent filings show she has been adding heavily to Amazon (AMZN) while cutting her stake in Advanced Micro Devices (AMD).Claim 55% Off TipRanksUnlock hedge fund- / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nAmazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Bank of America resets Nvidia stock forecast\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Dow Jones Futures: Nasdaq, S&P 500 Set More Record Highs; Micron, Nvidia, Sandisk, Alphabet Are Big Winners\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- How The Himadri Speciality Chemical (BSE:500184) Narrative Is Evolving With AI Supply Chain Hopes\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Bank of America resets Nvidia stock forecast\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock</h1><p>Cathie Wood, the founder of ARK Invest, is known for spotting new tech trends early. While chipmakers like Nvidia (NVDA) and Advanced Micro Devices (AMD) led the AI market through 2025, Wood’s latest moves suggest she is shifting her focus. She is now leaning toward massive “platform” companies that can use AI to drive long-term profit. Recent filings show she has been adding heavily to Amazon (AMZN) while cutting her stake in Advanced Micro Devices (AMD).Claim 55% Off TipRanksUnlock hedge fund- / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Bank of America resets Nvidia stock forecast</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Dow Jones Futures: Nasdaq, S&amp;P 500 Set More Record Highs; Micron, Nvidia, Sandisk, Alphabet Are Big Winners</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>How The Himadri Speciality Chemical (BSE:500184) Narrative Is Evolving With AI Supply Chain Hopes</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Bank of America resets Nvidia stock forecast<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] ‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\n\nBig Tech has announced $740 billion in capex this year, but AI has yet to show evidence of widespread increased productivity. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\n‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Nvidia’s (NVDA) Explosive Run May See Limits Going Forward, Warns JPMorgan\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- AMD Supplier Up 40% This Month Soars On Earnings Beat\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): BP Stock Rises After Huge Jump in Earnings. What It Means for Exxon and Chevron.\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] ‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers</h1><p>Big Tech has announced $740 billion in capex this year, but AI has yet to show evidence of widespread increased productivity. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Nvidia’s (NVDA) Explosive Run May See Limits Going Forward, Warns JPMorgan</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>AMD Supplier Up 40% This Month Soars On Earnings Beat</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - BP Stock Rises After Huge Jump in Earnings. What It Means for Exxon and Chevron.<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-28T05:52:55.334Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Amazon or AMD: Cathie Wood Is Leaning Toward One High-Conviction AI Stock\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast, live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp, live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast, live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-bank-of-america-resets-nvidia-stock-forecast, live-semiconductors-dow-jones-futures-nasdaq-s-p-500-set-more-record-highs-micron-nvidia-sandisk-alp, live-semiconductors-how-the-himadri-speciality-chemical-bse-500184-narrative-is-evolving-with-ai-sup\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-28T10:57:56.258Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- ‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"‘The cost of compute is far beyond the costs of the employees’: Nvidia executive says right now AI is more expensive than paying human workers\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan, live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-energy-oil-bp-stock-rises-after-huge-jump-in-earnings-what-it-means-for-exxon-and-chevron\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-the-cost-of-compute-is-far-beyond-the-costs-of-the-employees-nvidia-executive-sa, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-amazon-or-amd-cathie-wood-is-leaning-toward-one-high-conviction-ai-stock, live-semiconductors-nvidia-s-nvda-explosive-run-may-see-limits-going-forward-warns-jpmorgan, live-semiconductors-amd-supplier-up-40-this-month-soars-on-earnings-beat\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
