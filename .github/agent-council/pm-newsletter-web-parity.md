@@ -5,7 +5,7 @@
 - Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39
 - Branch: codex/agent-council/pm-newsletter-web-parity
 - Generated At: 2026-04-28T15:23:26.926Z
-- Status: queued
+- Status: ready
 
 ## Detail
 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.
