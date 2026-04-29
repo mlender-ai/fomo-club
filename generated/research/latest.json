@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-04-29T19:14:33.216Z",
+    "generatedAt": "2026-04-29T20:56:46.854Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-        "title": "Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.",
-        "summary": "Shares are up again on Wednesday, and potential improvement in the money-losing foundry business is helping. The stock started from a low point with investors unsure whether the new CEO, Lip-Bu Tan, could turn things around. Wccftech reported that Alphabet will use Intel’s EMIB technology for its next-generation TPU chip.",
+        "id": "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+        "title": "Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires",
+        "summary": "Taiwan Semiconductor Manufacturing Company Limited (NYSE:TSM) is one of the Best Fundamental Stocks to Invest in According to Billionaires. On April 22, Reuters reported that the company is targeting to open a chip packaging plant in Arizona by 2029. Modern AI chips, like the ones made by Nvidia, ‌are not single chips. These are several chips […]",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/m/5b1c9563-a93f-39f8-8c34-7311301c4b63/intel-is-up-another-10%25.-why.html?.tsrc=rss",
-        "publishedAt": "2026-04-29T17:58:00.000Z",
-        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/e0nKw3jAJitpmYPAVpaBYw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA7Y2Y9d2VicA--/https://media.zenfs.com/en/Barrons.com/af04d4eb2e6c6083fd437fea08c6fe49",
+        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/why-taiwan-semiconductor-manufacturing-tsm-201847127.html?.tsrc=rss",
+        "publishedAt": "2026-04-29T20:18:47.000Z",
+        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/NNwY.gZByHpNCeRTqa8TTw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzM-/https://media.zenfs.com/en/insidermonkey.com/f90919c411d1aa5d89e5e74b1fb5e45e",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,61 +247,61 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-          "title": "AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook",
-          "summary": "Broadcom's AI-driven semiconductor surge: Q1 AI revenue rose 106% YoY, Tomahawk 6 ships at scale, and the Meta chip pact targets multi-GW capacity.",
+          "id": "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+          "title": "Lattice Wins BIG 2026 AI Excellence Award",
+          "summary": "HILLSBORO, Ore., April 29, 2026--Lattice Semiconductor (NASDAQ: LSCC), the low power programmable leader, today announced it was named a 2026 AI Excellence Award winner by Business Intelligence Group. Lattice was recognized for its Edge AI solution developed in collaboration with NVIDIA, which delivers a flexible, full-stack platform for real-time data acquisition and processing. The solution combines the Lattice CertusPro™-NX Sensor to Ethernet Bridge Board with the NVIDIA Holoscan Sensor Bridg",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/avgo-rides-ai-boom-explosive-180600633.html?.tsrc=rss",
-          "publishedAt": "2026-04-29T18:06:00.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/zacks.com/11c57bc89878c9157e259fddcb0b1629",
+          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/lattice-wins-big-2026-ai-200000037.html?.tsrc=rss",
+          "publishedAt": "2026-04-29T20:00:00.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/business-wire.com/3ff4ba86e0a1c2f330e0deb328eb4f18",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "AMD",
             "NVDA",
+            "AMD",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026",
-          "title": "This Super Semiconductor Stock Is Obliterating Nvidia, AMD, and Broadcom in 2026",
-          "summary": "This company serves some of the artificial intelligence industry's largest data center operators.",
-          "source": "FOOL",
-          "sourceUrl": "https://www.fool.com/investing/2026/04/29/this-semiconductor-stock-nvidia-amd-broadcom-2026/?.tsrc=rss",
-          "publishedAt": "2026-04-29T16:35:00.000Z",
-          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867361%2Fa-person-looking-down-at-a-tablet-device-while-standing-in-a-data-center.jpg&w=1200&op=resize",
+          "id": "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim",
+          "title": "Nvidia Could Generate More Cash Than Apple, Microsoft Combined — BofA Says It's Time To Pay Shareholders",
+          "summary": "BofA Securities is doubling down on NVIDIA Corp., reiterating its Buy rating and $300 price objective — implying roughly 43% upside from Monday’s $210 level. The analysts argued that the next leg higher won’t be driven by another AI product cycle, but by something far more old-school: cash returns to shareholders. In a Monday note titled “Back to Basics,” analyst Vivek Arya and team called Nvidia their top semiconductor pick and laid out why the chip giant’s valuation looks dramatically out of s",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/nvidia-could-generate-more-cash-193111534.html?.tsrc=rss",
+          "publishedAt": "2026-04-29T19:31:11.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/Benzinga/ad88cf7395b68ef80421cec7ece5069b",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "AMD",
             "NVDA",
+            "AMD",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings",
-          "title": "AMD Stock Rises After Analyst Hikes Price Target Ahead of Earnings",
-          "summary": "AMD (AMD) Climbs as Price Target Jumps to $375 Ahead of Earnings",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/amd-stock-rises-analyst-hikes-160838193.html?.tsrc=rss",
-          "publishedAt": "2026-04-29T16:08:38.000Z",
-          "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
+          "id": "live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april",
+          "title": "How ON Semiconductor More Than Doubled NVIDIA’s Gains in April",
+          "summary": "Shares of ON Semiconductor (NASDAQ:ON) are up 7% on Wednesday, trading near $99 as the analog chipmaker extends an extraordinary April rally. Through Tuesday’s close, ON stock had climbed 51% for the month, leaving the analog and power-chip name as a surprising leader amid the spring semiconductor surge. That move more than doubles the strong ... How ON Semiconductor More Than Doubled NVIDIA’s Gains in April",
+          "source": "247WALLST",
+          "sourceUrl": "https://247wallst.com/investing/2026/04/29/how-on-semiconductor-more-than-doubled-nvidias-gains-in-april/?.tsrc=rss",
+          "publishedAt": "2026-04-29T19:21:07.000Z",
+          "imageUrl": "https://247wallst.com/wp-content/uploads/2018/08/imageforentry3926.jpg",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "AMD",
             "NVDA",
+            "AMD",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         }
       ],
       "sectorIssues": [
@@ -309,46 +309,23 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-            "title": "AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook",
-            "summary": "Broadcom's AI-driven semiconductor surge: Q1 AI revenue rose 106% YoY, Tomahawk 6 ships at scale, and the Meta chip pact targets multi-GW capacity.",
+            "id": "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+            "title": "Lattice Wins BIG 2026 AI Excellence Award",
+            "summary": "HILLSBORO, Ore., April 29, 2026--Lattice Semiconductor (NASDAQ: LSCC), the low power programmable leader, today announced it was named a 2026 AI Excellence Award winner by Business Intelligence Group. Lattice was recognized for its Edge AI solution developed in collaboration with NVIDIA, which delivers a flexible, full-stack platform for real-time data acquisition and processing. The solution combines the Lattice CertusPro™-NX Sensor to Ethernet Bridge Board with the NVIDIA Holoscan Sensor Bridg",
             "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/avgo-rides-ai-boom-explosive-180600633.html?.tsrc=rss",
-            "publishedAt": "2026-04-29T18:06:00.000Z",
-            "imageUrl": "https://s.yimg.com/os/en/zacks.com/11c57bc89878c9157e259fddcb0b1629",
+            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/lattice-wins-big-2026-ai-200000037.html?.tsrc=rss",
+            "publishedAt": "2026-04-29T20:00:00.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/business-wire.com/3ff4ba86e0a1c2f330e0deb328eb4f18",
             "sectorTag": "semiconductors",
             "tickerTags": [
-              "AMD",
               "NVDA",
+              "AMD",
               "TSM"
             ],
             "importanceScore": 98,
             "priority": "critical",
             "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-            "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-          }
-        },
-        {
-          "sectorTag": "energy-oil",
-          "sectorLabel": "에너지(오일)",
-          "item": {
-            "id": "live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue",
-            "title": "Occidental Petroleum vs. Exxon Mobil: Comparing Scale in Quarterly Revenue",
-            "summary": "Quarterly results reveal a pronounced revenue gap and contrasting margin performance between these two energy giants. See how recent trends are shaping the race",
-            "source": "FOOL",
-            "sourceUrl": "https://www.fool.com/coverage/charts/2026/04/29/occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue/?.tsrc=rss",
-            "publishedAt": "2026-04-29T15:11:25.000Z",
-            "imageUrl": null,
-            "sectorTag": "energy-oil",
-            "tickerTags": [
-              "XOM",
-              "CVX",
-              "SLB"
-            ],
-            "importanceScore": 98,
-            "priority": "critical",
-            "analysis": "오일 메이저와 서비스주는 같은 에너지여도 민감도가 달라, 이런 뉴스는 포지션을 어디에 둘지 다시 정하게 만듭니다.",
-            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
+            "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
           }
         }
       ]
@@ -371,16 +348,16 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-          "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-          "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026"
+          "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+          "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+          "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim"
         ],
-        "latestPrice": 209.11500549316406,
-        "priceChange": -4.05499267578125,
-        "priceChangePercent": -1.9022342311827176,
+        "latestPrice": 209.25,
+        "priceChange": -3.9199981689453125,
+        "priceChangePercent": -1.8389070707025879,
         "chartSeries": [
           {
             "date": "2025-12-18T14:30:00.000Z",
@@ -740,7 +717,7 @@
           },
           {
             "date": "2026-04-29T13:30:00.000Z",
-            "close": 209.11500549316406
+            "close": 209.25
           }
         ]
       },
@@ -761,16 +738,16 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-          "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-          "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026"
+          "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+          "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+          "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim"
         ],
-        "latestPrice": 338.6400146484375,
-        "priceChange": 15.430023193359375,
-        "priceChangePercent": 4.773993255559348,
+        "latestPrice": 337.1099853515625,
+        "priceChange": 13.899993896484375,
+        "priceChangePercent": 4.30060773613686,
         "chartSeries": [
           {
             "date": "2025-12-18T14:30:00.000Z",
@@ -1130,7 +1107,7 @@
           },
           {
             "date": "2026-04-29T13:30:00.000Z",
-            "close": 338.6400146484375
+            "close": 337.1099853515625
           }
         ]
       },
@@ -1156,12 +1133,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-          "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-          "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026"
+          "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+          "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+          "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim"
         ],
         "latestPrice": 226000,
         "priceChange": 4000,
@@ -1536,7 +1513,7 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 97,
+        "importanceScore": 80,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
         "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $105400.00 / $94600.00, 저항은 $135200.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
@@ -1546,13 +1523,9 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Occidental Petroleum vs. Exxon Mobil: Comparing Scale in Quarterly Revenue\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "010950.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue",
-          "live-energy-oil-is-conocophillips-set-to-gain-from-current-elevation-in-crude-prices",
-          "live-energy-oil-exxon-chevron-big-oil-send-signals-ahead-of-earnings"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 134300,
         "priceChange": 15600,
         "priceChangePercent": 13.142375737152484,
@@ -1926,7 +1899,7 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 88,
+        "importanceScore": 71,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
         "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $138.31, 저항은 $168.00 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1936,16 +1909,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Occidental Petroleum vs. Exxon Mobil: Comparing Scale in Quarterly Revenue\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue",
-          "live-energy-oil-is-conocophillips-set-to-gain-from-current-elevation-in-crude-prices",
-          "live-energy-oil-exxon-chevron-big-oil-send-signals-ahead-of-earnings"
-        ],
-        "latestPrice": 154.05999755859375,
-        "priceChange": 3.5,
-        "priceChangePercent": 2.3246546604372105,
+        "linkedNewsIds": [],
+        "latestPrice": 154.6699981689453,
+        "priceChange": 4.1100006103515625,
+        "priceChangePercent": 2.7298091637867254,
         "chartSeries": [
           {
             "date": "2025-12-18T14:30:00.000Z",
@@ -2305,7 +2274,7 @@
           },
           {
             "date": "2026-04-29T13:30:00.000Z",
-            "close": 154.05999755859375
+            "close": 154.6699981689453
           }
         ]
       }
@@ -2352,21 +2321,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.",
-            "파생 뉴스: AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook",
-            "파생 뉴스: This Super Semiconductor Stock Is Obliterating Nvidia, AMD, and Broadcom in 2026",
-            "파생 뉴스: AMD Stock Rises After Analyst Hikes Price Target Ahead of Earnings",
-            "반도체: AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook",
-            "에너지(오일): Occidental Petroleum vs. Exxon Mobil: Comparing Scale in Quarterly Revenue"
+            "메인 헤드라인: Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires",
+            "파생 뉴스: Lattice Wins BIG 2026 AI Excellence Award",
+            "파생 뉴스: Nvidia Could Generate More Cash Than Apple, Microsoft Combined — BofA Says It's Time To Pay Shareholders",
+            "파생 뉴스: How ON Semiconductor More Than Doubled NVIDIA’s Gains in April",
+            "반도체: Lattice Wins BIG 2026 AI Excellence Award"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-            "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-            "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026",
-            "live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings"
+            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+            "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+            "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim",
+            "live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april"
           ]
         },
         {
@@ -2383,9 +2351,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-            "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-            "live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue"
+            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+            "live-semiconductors-lattice-wins-big-2026-ai-excellence-award"
           ]
         },
         {
@@ -2399,14 +2366,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $171.37 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-            "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-            "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026"
+            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+            "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+            "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim"
           ]
         },
         {
@@ -2427,9 +2394,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-            "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026",
-            "live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings"
+            "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+            "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim",
+            "live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april"
           ]
         }
       ],
@@ -2498,14 +2465,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-04-29T19:14:33.216Z",
+        "runId": "fallback-2026-04-29T20:56:46.854Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-04-29T19:14:33.216Z",
+        "generatedAt": "2026-04-29T20:56:46.854Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T19:14:33.216Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T20:56:46.854Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-lattice-wins-big-2026-ai-excellence-award, live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim, live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-lattice-wins-big-2026-ai-excellence-award\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-lattice-wins-big-2026-ai-excellence-award, live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-lattice-wins-big-2026-ai-excellence-award, live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim, live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2514,13 +2481,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-              "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-              "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026",
-              "live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings"
+              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+              "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+              "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim",
+              "live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april"
             ]
           },
           {
@@ -2533,9 +2500,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-              "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-              "live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue"
+              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+              "live-semiconductors-lattice-wins-big-2026-ai-excellence-award"
             ]
           },
           {
@@ -2549,9 +2515,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-              "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-              "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026"
+              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
+              "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+              "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim"
             ]
           },
           {
@@ -2565,9 +2531,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook",
-              "live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026",
-              "live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings"
+              "live-semiconductors-lattice-wins-big-2026-ai-excellence-award",
+              "live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim",
+              "live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april"
             ]
           }
         ]
@@ -2797,7 +2763,7 @@
       ]
     },
     "meeting": {
-      "topic": "Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.",
+      "topic": "Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2858,17 +2824,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-04-29T19:14:33.216Z",
+      "generatedAt": "2026-04-29T20:56:46.854Z",
       "nextRunAt": "2026-04-30T07:30:00.000Z",
-      "subject": "[Daily Brief] Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.",
-      "previewText": "Shares are up again on Wednesday, and potential improvement in the money-losing foundry business is helping. The stock started from a low point with investors unsure whether the new CEO, Lip-Bu Tan, could turn things around. Wccftech reported that Alphabet will use Intel’s EMIB technology for its next-generation TPU chip. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires",
+      "previewText": "Taiwan Semiconductor Manufacturing Company Limited (NYSE:TSM) is one of the Best Fundamental Stocks to Invest in According to Billionaires. On April 22, Reuters reported that the company is targeting to open a chip packaging plant in Arizona by 2029. Modern AI chips, like the ones made by Nvidia, ‌are not single chips. These are several chips […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\n\nShares are up again on Wednesday, and potential improvement in the money-losing foundry business is helping. The stock started from a low point with investors unsure whether the new CEO, Lip-Bu Tan, could turn things around. Wccftech reported that Alphabet will use Intel’s EMIB technology for its next-generation TPU chip. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nIntel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- This Super Semiconductor Stock Is Obliterating Nvidia, AMD, and Broadcom in 2026\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- AMD Stock Rises After Analyst Hikes Price Target Ahead of Earnings\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Occidental Petroleum vs. Exxon Mobil: Comparing Scale in Quarterly Revenue\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.</h1><p>Shares are up again on Wednesday, and potential improvement in the money-losing foundry business is helping. The stock started from a low point with investors unsure whether the new CEO, Lip-Bu Tan, could turn things around. Wccftech reported that Alphabet will use Intel’s EMIB technology for its next-generation TPU chip. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>This Super Semiconductor Stock Is Obliterating Nvidia, AMD, and Broadcom in 2026</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>AMD Stock Rises After Analyst Hikes Price Target Ahead of Earnings</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - AVGO Rides AI Boom: Explosive Growth in Semiconductor Fuels Outlook<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Occidental Petroleum vs. Exxon Mobil: Comparing Scale in Quarterly Revenue<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\n\nTaiwan Semiconductor Manufacturing Company Limited (NYSE:TSM) is one of the Best Fundamental Stocks to Invest in According to Billionaires. On April 22, Reuters reported that the company is targeting to open a chip packaging plant in Arizona by 2029. Modern AI chips, like the ones made by Nvidia, ‌are not single chips. These are several chips […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nHere’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Lattice Wins BIG 2026 AI Excellence Award\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Nvidia Could Generate More Cash Than Apple, Microsoft Combined — BofA Says It's Time To Pay Shareholders\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- How ON Semiconductor More Than Doubled NVIDIA’s Gains in April\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Lattice Wins BIG 2026 AI Excellence Award\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires</h1><p>Taiwan Semiconductor Manufacturing Company Limited (NYSE:TSM) is one of the Best Fundamental Stocks to Invest in According to Billionaires. On April 22, Reuters reported that the company is targeting to open a chip packaging plant in Arizona by 2029. Modern AI chips, like the ones made by Nvidia, ‌are not single chips. These are several chips […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Lattice Wins BIG 2026 AI Excellence Award</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Nvidia Could Generate More Cash Than Apple, Microsoft Combined — BofA Says It&#39;s Time To Pay Shareholders</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>How ON Semiconductor More Than Doubled NVIDIA’s Gains in April</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Lattice Wins BIG 2026 AI Excellence Award<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T19:14:33.216Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T20:56:46.854Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-lattice-wins-big-2026-ai-excellence-award, live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim, live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-lattice-wins-big-2026-ai-excellence-award\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-lattice-wins-big-2026-ai-excellence-award, live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-lattice-wins-big-2026-ai-excellence-award, live-semiconductors-nvidia-could-generate-more-cash-than-apple-microsoft-combined-bofa-says-it-s-tim, live-semiconductors-how-on-semiconductor-more-than-doubled-nvidia-s-gains-in-april\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
+    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3493"
   ]
 }
