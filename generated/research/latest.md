@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-04-29T17:21:32.061Z
+- Generated At: 2026-04-29T19:14:33.216Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- Assessing Nvidia (NVDA) Valuation After OpenAI Growth Concerns Pressure AI Chip Stocks
-- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.
-- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.
+- Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.
+- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
+- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "Assessing Nvidia (NVDA) Valuation After OpenAI Growth Concerns Pressure AI Chip Stocks"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-assessing-nvidia-nvda-valuation-after-openai-growth-concerns-pressure-ai-chip-st, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings, live-semiconductors-susquehanna-raises-amd-price-target-to-375-can-the-server-cpu-story-keep-powerin
+메인 헤드라인을 "Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares."로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-assessing-nvidia-nvda-valuation-after-openai-growth-concerns-pressure-ai-chip-st, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue
+References: live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-energy-oil-occidental-petroleum-vs-exxon-mobil-comparing-scale-in-quarterly-revenue
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-assessing-nvidia-nvda-valuation-after-openai-growth-concerns-pressure-ai-chip-st, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings
+References: NVDA, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings, live-semiconductors-susquehanna-raises-amd-price-target-to-375-can-the-server-cpu-story-keep-powerin
+References: NVDA, live-semiconductors-avgo-rides-ai-boom-explosive-growth-in-semiconductor-fuels-outlook, live-semiconductors-this-super-semiconductor-stock-is-obliterating-nvidia-amd-and-broadcom-in-2026, live-semiconductors-amd-stock-rises-after-analyst-hikes-price-target-ahead-of-earnings
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
