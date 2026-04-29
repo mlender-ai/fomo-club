@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-04-29T21:55:22.507Z",
+    "generatedAt": "2026-04-29T22:51:36.412Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-        "title": "Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
-        "summary": "AMD rose after an analyst upgrade pointed to stronger expectations for data center GPU demand, with upcoming earnings set to provide updated detail on revenue and deployment growth tied to AI infrastructure.",
-        "source": "FOOL",
-        "sourceUrl": "https://www.fool.com/coverage/stock-market-today/2026/04/29/stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-points-to-data-center-gpu-demand-ahead-of-earnings/?.tsrc=rss",
-        "publishedAt": "2026-04-29T21:39:40.000Z",
-        "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fcdn.content.foolcdn.com%2Fimages%2F1umn9qeh%2Fproduction%2Fdbf4812d84ab78c74b512c7cb2e4d70bee11215c-1401x1251.png%3Fw%3D800%26q%3D75%26fit%3Dmax%26auto%3Dformat&w=1200&op=resize",
+        "id": "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
+        "title": "AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply",
+        "summary": "Taiwan Semiconductor Manufacturing Company (TSMC) (TSM) is a semiconductor foundry, which means it manufactures chips for other companies like Advanced Micro Devices, Inc. (AMD) and NVIDIA Corporation (NVDA) and 530 other companies. AMD and Nvidia, on the other hand, are fabless semiconductor companies that design and sell their own chips but outsource the manufacturing to ... AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply",
+        "source": "247WALLST",
+        "sourceUrl": "https://247wallst.com/technology-3/2026/04/29/ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply/?.tsrc=rss",
+        "publishedAt": "2026-04-29T22:33:35.000Z",
+        "imageUrl": "https://247wallst.com/wp-content/uploads/2026/04/Chart1_TSMC.png",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -242,10 +242,29 @@
         ],
         "importanceScore": 98,
         "priority": "critical",
-        "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-        "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+        "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+        "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
       },
       "derivedArticles": [
+        {
+          "id": "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
+          "title": "Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
+          "summary": "AMD rose after an analyst upgrade pointed to stronger expectations for data center GPU demand, with upcoming earnings set to provide updated detail on revenue and deployment growth tied to AI infrastructure.",
+          "source": "FOOL",
+          "sourceUrl": "https://www.fool.com/coverage/stock-market-today/2026/04/29/stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-points-to-data-center-gpu-demand-ahead-of-earnings/?.tsrc=rss",
+          "publishedAt": "2026-04-29T21:39:40.000Z",
+          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fcdn.content.foolcdn.com%2Fimages%2F1umn9qeh%2Fproduction%2Fdbf4812d84ab78c74b512c7cb2e4d70bee11215c-1401x1251.png%3Fw%3D800%26q%3D75%26fit%3Dmax%26auto%3Dformat&w=1200&op=resize",
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "NVDA",
+            "AMD",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+        },
         {
           "id": "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
           "title": "Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps",
@@ -283,25 +302,6 @@
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-        },
-        {
-          "id": "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares",
-          "title": "Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.",
-          "summary": "Shares are up again on Wednesday, and potential improvement in the money-losing foundry business is helping. The stock started from a low point with investors unsure whether the new CEO, Lip-Bu Tan, could turn things around. Wccftech reported that Alphabet will use Intel’s EMIB technology for its next-generation TPU chip.",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/5b1c9563-a93f-39f8-8c34-7311301c4b63/intel-is-up-another-10%25.-why.html?.tsrc=rss",
-          "publishedAt": "2026-04-29T20:07:00.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/6Mm8uNbL1anf7.Ip7._dxQ--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/af04d4eb2e6c6083fd437fea08c6fe49",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "NVDA",
-            "AMD",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-            "title": "Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps",
-            "summary": "The iShares Semiconductor ETF fell 2% Monday, breaking its longest winning streak on record after “The Big Short” investor Michael Burry disclosed fresh short bets on chipmakers. Monday’s chip selloff snapped an unprecedented 18-day rally and arrived without a sector-specific fundamental catalyst — but with a high-profile bear newly on the tape and seven SOXX constituents reporting earnings this week. Burry Bets Chips ‘Return To Earth’ — SOXX Snaps Longest Rally Ever On 18-Day Streak On Friday a",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/michael-burry-just-did-another-213126874.html?.tsrc=rss",
-            "publishedAt": "2026-04-29T21:31:26.000Z",
-            "imageUrl": "https://s.yimg.com/os/en/Benzinga/70fb42f3d02c3baa4353681a6e06daae",
+            "id": "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
+            "title": "Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
+            "summary": "AMD rose after an analyst upgrade pointed to stronger expectations for data center GPU demand, with upcoming earnings set to provide updated detail on revenue and deployment growth tied to AI infrastructure.",
+            "source": "FOOL",
+            "sourceUrl": "https://www.fool.com/coverage/stock-market-today/2026/04/29/stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-points-to-data-center-gpu-demand-ahead-of-earnings/?.tsrc=rss",
+            "publishedAt": "2026-04-29T21:39:40.000Z",
+            "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fcdn.content.foolcdn.com%2Fimages%2F1umn9qeh%2Fproduction%2Fdbf4812d84ab78c74b512c7cb2e4d70bee11215c-1401x1251.png%3Fw%3D800%26q%3D75%26fit%3Dmax%26auto%3Dformat&w=1200&op=resize",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -348,12 +348,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
           "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-          "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-          "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
+          "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
         ],
         "latestPrice": 209.25,
         "priceChange": -3.9199981689453125,
@@ -738,12 +738,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
           "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-          "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-          "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
+          "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
         ],
         "latestPrice": 337.1099853515625,
         "priceChange": 13.899993896484375,
@@ -1133,12 +1133,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
           "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-          "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-          "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
+          "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
         ],
         "latestPrice": 226000,
         "priceChange": 4000,
@@ -2321,20 +2321,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
+            "메인 헤드라인: AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply",
+            "파생 뉴스: Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
             "파생 뉴스: Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps",
             "파생 뉴스: Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires",
-            "파생 뉴스: Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.",
-            "반도체: Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps"
+            "반도체: Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
+            "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
             "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
             "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
-            "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares"
+            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
           ]
         },
         {
@@ -2351,8 +2351,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-            "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
+            "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
+            "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p"
           ]
         },
         {
@@ -2366,14 +2366,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $171.37 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
             "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-            "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
+            "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
           ]
         },
         {
@@ -2394,9 +2394,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
             "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
-            "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares"
+            "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
           ]
         }
       ],
@@ -2465,14 +2465,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-04-29T21:55:22.507Z",
+        "runId": "fallback-2026-04-29T22:51:36.412Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-04-29T21:55:22.507Z",
+        "generatedAt": "2026-04-29T22:51:36.412Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T21:55:22.507Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T22:51:36.412Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2481,13 +2481,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
+              "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
               "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
               "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
-              "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares"
+              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
             ]
           },
           {
@@ -2500,8 +2500,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-              "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
+              "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
+              "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p"
             ]
           },
           {
@@ -2515,9 +2515,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply",
               "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
-              "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
+              "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn"
             ]
           },
           {
@@ -2531,9 +2531,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p",
               "live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn",
-              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental",
-              "live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares"
+              "live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental"
             ]
           }
         ]
@@ -2763,7 +2763,7 @@
       ]
     },
     "meeting": {
-      "topic": "Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
+      "topic": "AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2824,16 +2824,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-04-29T21:55:22.507Z",
+      "generatedAt": "2026-04-29T22:51:36.412Z",
       "nextRunAt": "2026-04-30T07:30:00.000Z",
-      "subject": "[Daily Brief] Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings",
-      "previewText": "AMD rose after an analyst upgrade pointed to stronger expectations for data center GPU demand, with upcoming earnings set to provide updated detail on revenue and deployment growth tied to AI infrastructure. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
+      "subject": "[Daily Brief] AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply",
+      "previewText": "Taiwan Semiconductor Manufacturing Company (TSMC) (TSM) is a semiconductor foundry, which means it manufactures chips for other companies like Advanced Micro Devices, Inc. (AMD) and NVIDIA Corporation (NVDA) and 530 other companies. AMD and Nvidia, on the other hand, are fabless semiconductor companies that design and sell their own chips but outsource the manufacturing to ... AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\n\nAMD rose after an analyst upgrade pointed to stronger expectations for data center GPU demand, with upcoming earnings set to provide updated detail on revenue and deployment growth tied to AI infrastructure. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nStock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings</h1><p>AMD rose after an analyst upgrade pointed to stronger expectations for data center GPU demand, with upcoming earnings set to provide updated detail on revenue and deployment growth tied to AI infrastructure. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>Michael Burry Just Did Another &#39;Big Short&#39; — As Historic Chip Stock Rally Finally Snaps</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Intel Is Up Another 10%. Why the Struggling Foundry Business Is Lifting Shares.</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Michael Burry Just Did Another &#39;Big Short&#39; — As Historic Chip Stock Rally Finally Snaps<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\n\nTaiwan Semiconductor Manufacturing Company (TSMC) (TSM) is a semiconductor foundry, which means it manufactures chips for other companies like Advanced Micro Devices, Inc. (AMD) and NVIDIA Corporation (NVDA) and 530 other companies. AMD and Nvidia, on the other hand, are fabless semiconductor companies that design and sell their own chips but outsource the manufacturing to ... AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nAI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Michael Burry Just Did Another 'Big Short' — As Historic Chip Stock Rally Finally Snaps\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply</h1><p>Taiwan Semiconductor Manufacturing Company (TSMC) (TSM) is a semiconductor foundry, which means it manufactures chips for other companies like Advanced Micro Devices, Inc. (AMD) and NVIDIA Corporation (NVDA) and 530 other companies. AMD and Nvidia, on the other hand, are fabless semiconductor companies that design and sell their own chips but outsource the manufacturing to ... AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Michael Burry Just Did Another &#39;Big Short&#39; — As Historic Chip Stock Rally Finally Snaps</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Here’s Why Taiwan Semiconductor Manufacturing (TSM) Is One of the Best Fundamental Stocks to Invest in According to Billionaires</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T21:55:22.507Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Stock Market Today, April 29: Advanced Micro Devices Rises After Analyst Upgrade Points to Data Center GPU Demand Ahead of Earnings\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental, live-semiconductors-intel-is-up-another-10-why-the-struggling-foundry-business-is-lifting-shares\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-29T22:51:36.412Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"AI Demand Is Surging — But Taiwan Semiconductor Is Controlling the Supply\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-ai-demand-is-surging-but-taiwan-semiconductor-is-controlling-the-supply, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-stock-market-today-april-29-advanced-micro-devices-rises-after-analyst-upgrade-p, live-semiconductors-michael-burry-just-did-another-big-short-as-historic-chip-stock-rally-finally-sn, live-semiconductors-here-s-why-taiwan-semiconductor-manufacturing-tsm-is-one-of-the-best-fundamental\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
