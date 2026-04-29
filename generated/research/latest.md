@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-04-29T10:49:00.529Z
+- Generated At: 2026-04-29T12:13:12.479Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- Taiwan's ASE expects strong demand to boost advanced chip packaging sales in 2026
+- Quali's Torque Platform Brings Enterprise Governance to NVIDIA NemoClaw -- Scaling Autonomous AI Agents From Pilot to Production
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
 - Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "Taiwan's ASE expects strong demand to boost advanced chip packaging sales in 2026"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-taiwan-s-ase-expects-strong-demand-to-boost-advanced-chip-packaging-sales-in-202, live-semiconductors-lg-electronics-nvidia-in-talks-over-robots-ai-data-centres-and-mobility, live-semiconductors-nvidia-nvda-stock-trades-down-here-is-why, live-semiconductors-prediction-this-artificial-intelligence-ai-chip-stock-will-become-the-next-nvidi
+메인 헤드라인을 "Quali's Torque Platform Brings Enterprise Governance to NVIDIA NemoClaw -- Scaling Autonomous AI Agents From Pilot to Production"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-quali-s-torque-platform-brings-enterprise-governance-to-nvidia-nemoclaw-scaling-, live-semiconductors-ai-chips-update-amd-s-ai-innovations-take-center-stage-at-2026-event, live-semiconductors-arrive-ai-deploys-nvidia-isaac-sim-and-blackwell-gpu-systems-to-accelerate-ai-ro, live-semiconductors-nvidia-stock-struggles-to-recover-from-openai-panic-how-amd-broadcom-are-trading
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-taiwan-s-ase-expects-strong-demand-to-boost-advanced-chip-packaging-sales-in-202, live-semiconductors-lg-electronics-nvidia-in-talks-over-robots-ai-data-centres-and-mobility
+References: live-semiconductors-quali-s-torque-platform-brings-enterprise-governance-to-nvidia-nemoclaw-scaling-, live-semiconductors-ai-chips-update-amd-s-ai-innovations-take-center-stage-at-2026-event, live-energy-oil-exxon-chevron-big-oil-send-signals-ahead-of-earnings
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-taiwan-s-ase-expects-strong-demand-to-boost-advanced-chip-packaging-sales-in-202, live-semiconductors-lg-electronics-nvidia-in-talks-over-robots-ai-data-centres-and-mobility, live-semiconductors-nvidia-nvda-stock-trades-down-here-is-why
+References: NVDA, live-semiconductors-quali-s-torque-platform-brings-enterprise-governance-to-nvidia-nemoclaw-scaling-, live-semiconductors-ai-chips-update-amd-s-ai-innovations-take-center-stage-at-2026-event, live-semiconductors-arrive-ai-deploys-nvidia-isaac-sim-and-blackwell-gpu-systems-to-accelerate-ai-ro
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-lg-electronics-nvidia-in-talks-over-robots-ai-data-centres-and-mobility, live-semiconductors-nvidia-nvda-stock-trades-down-here-is-why, live-semiconductors-prediction-this-artificial-intelligence-ai-chip-stock-will-become-the-next-nvidi
+References: NVDA, live-semiconductors-ai-chips-update-amd-s-ai-innovations-take-center-stage-at-2026-event, live-semiconductors-arrive-ai-deploys-nvidia-isaac-sim-and-blackwell-gpu-systems-to-accelerate-ai-ro, live-semiconductors-nvidia-stock-struggles-to-recover-from-openai-panic-how-amd-broadcom-are-trading
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
