@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-04-30T08:08:41.958Z",
+    "generatedAt": "2026-04-30T10:49:02.220Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-        "title": "Nvidia Stock: Next Stop $246.85 Per Share?",
-        "summary": "The GPU giant hit an all-time high this week and still has plenty of room to run.",
-        "source": "FOOL",
-        "sourceUrl": "https://www.fool.com/investing/2026/04/30/nvidia-stock-next-stop-24685-per-share/?.tsrc=rss",
-        "publishedAt": "2026-04-30T07:40:00.000Z",
-        "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867480%2Fa-person-smiles-while-standing-outside-with-a-blurred-building-in-the-background.jpg&w=1200&op=resize",
+        "id": "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
+        "title": "Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?",
+        "summary": "With stock buybacks of $51.76 billion in the 12 months through September 2025, NVIDIA Corporation (NASDAQ:NVDA) is among the 20 Stocks with the Biggest Share Buybacks. NVIDIA Corporation (NASDAQ:NVDA) benefited from ecosystem expansion on April 27 when LiveRamp Holdings, Inc. announced native support for NVIDIA AI infrastructure. The upgrade enables brands and partners to train and deploy […]",
+        "source": "FINANCE",
+        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/nvidia-nvda-among-stocks-biggest-092808516.html?.tsrc=rss",
+        "publishedAt": "2026-04-30T09:28:08.000Z",
+        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/xtlS.VjuHR4pKRpFLOUG2A--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA-/https://media.zenfs.com/en/insidermonkey.com/4beabd482637ec7f5549a99b77c1d1cd",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -246,6 +246,25 @@
         "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
       },
       "derivedArticles": [
+        {
+          "id": "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
+          "title": "Nvidia Stock: Next Stop $246.85 Per Share?",
+          "summary": "The GPU giant hit an all-time high this week and still has plenty of room to run.",
+          "source": "FOOL",
+          "sourceUrl": "https://www.fool.com/investing/2026/04/30/nvidia-stock-next-stop-24685-per-share/?.tsrc=rss",
+          "publishedAt": "2026-04-30T07:40:00.000Z",
+          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867480%2Fa-person-smiles-while-standing-outside-with-a-blurred-building-in-the-background.jpg&w=1200&op=resize",
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "NVDA",
+            "AMD",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        },
         {
           "id": "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
           "title": "SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity",
@@ -266,42 +285,23 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc",
-          "title": "Exclusive-Prices of Nvidia's B300 server at $1 million in China on US curbs, sources say",
-          "summary": "Strong demand for AI computing equipment in China has nearly doubled prices for Nvidia's B300 servers to about 7 million yuan ($1 million) each, industry sources said, as a crackdown ‌on chip smuggling dries up black-market supply. Prices of Nvidia's most advanced and powerful server, critical for artificial intelligence tasks, have ‌climbed since early this year, but rose sharply after the grey market, a key supply channel, came under pressure, the four sources said. The price surge is also being ​driven by robust computing demand from Chinese technology companies, even as many avoid holding Nvidia hardware directly on their books for fear of exposure to U.S. sanctions, the sources said.",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/exclusive-prices-nvidias-b300-server-064521420.html?.tsrc=rss",
-          "publishedAt": "2026-04-30T06:45:21.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/reuters-finance.com/e99b21901df163523eabc0aac2f58ef4",
+          "id": "live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju",
+          "title": "1 No-Brainer Artificial Intelligence (AI) Stock to Buy Before May 5 (Hint: It Has Jumped 59% in April)",
+          "summary": "AMD stock has shot up impressively in April, and its upcoming earnings report could give the stock another shot in the arm.",
+          "source": "FOOL",
+          "sourceUrl": "https://www.fool.com/investing/2026/04/30/no-brainer-artificial-intelligence-ai-stock-buy/?.tsrc=rss",
+          "publishedAt": "2026-04-30T08:15:00.000Z",
+          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867471%2Famd-headquarters-santa-clara-with-amd-logo-on-building_amd_advance.jpg&w=1200&op=resize",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-        },
-        {
-          "id": "live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027",
-          "title": "Samsung chip profit jumps almost 50-fold; supply shortage to worsen in 2027",
-          "summary": "Samsung Electronics on Thursday reported record quarterly profit driven by a 49-fold jump in chip income, saying it expects a severe supply shortage to deepen next year as clients spend on AI, driving up prices of its memory chips. A boom ‌in the construction of AI data centres has spurred Samsung and chipmaking peers to allocate production capacity to advanced chips that Nvidia uses in its so-called AI accelerators. \"Our supply falls far short of customer demand,\" Kim Jaejune, a Samsung memory chip business executive, told analysts on its post-earnings call.",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/samsung-elec-q1-profit-surges-001154038.html?.tsrc=rss",
-          "publishedAt": "2026-04-30T00:11:54.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/reuters-finance.com/9201a4d6856fc85e974df9db4a46767f",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
             "NVDA",
-            "AMD",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-            "title": "SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity",
-            "summary": "SK hynix (KOSE:A000660) has started mass production of 192GB SOCAMM2 memory modules for AI servers. The new modules are designed for NVIDIA's latest platform and tuned for large language model workloads. The product targets memory capacity and efficiency constraints in high performance AI computing. SK hynix is a major memory supplier to global data center and AI customers, and the move into mass production of SOCAMM2 modules ties directly into rising demand for AI server hardware. By...",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/sk-hynix-socamm2-ramp-highlights-070706021.html?.tsrc=rss",
-            "publishedAt": "2026-04-30T07:07:06.000Z",
-            "imageUrl": "https://s.yimg.com/os/en/simply_wall_st__316/ce85212c51bd88fd1fdcd0febb642a4a",
+            "id": "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
+            "title": "Nvidia Stock: Next Stop $246.85 Per Share?",
+            "summary": "The GPU giant hit an all-time high this week and still has plenty of room to run.",
+            "source": "FOOL",
+            "sourceUrl": "https://www.fool.com/investing/2026/04/30/nvidia-stock-next-stop-24685-per-share/?.tsrc=rss",
+            "publishedAt": "2026-04-30T07:40:00.000Z",
+            "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867480%2Fa-person-smiles-while-standing-outside-with-a-blurred-building-in-the-background.jpg&w=1200&op=resize",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -326,29 +326,6 @@
             "priority": "critical",
             "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
             "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-          }
-        },
-        {
-          "sectorTag": "energy-oil",
-          "sectorLabel": "에너지(오일)",
-          "item": {
-            "id": "live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions",
-            "title": "Exxon Mobil Lawsuit Tests Orphaned Well Accounting And ESG Risk Perceptions",
-            "summary": "A new lawsuit alleges Exxon Mobil and Empire Petroleum committed accounting fraud related to orphaned well cleanup costs in New Mexico. The case centers on retirement obligations for 670 oil and gas wells and whether cleanup liabilities were understated. The outcome could influence who ultimately bears the cost for remediation, including public entities and taxpayers. For investors tracking Exxon Mobil, NYSE:XOM, the lawsuit comes at a time when the stock trades around $154.67 and has a...",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/energy/articles/exxon-mobil-lawsuit-tests-orphaned-020721369.html?.tsrc=rss",
-            "publishedAt": "2026-04-30T02:07:21.000Z",
-            "imageUrl": null,
-            "sectorTag": "energy-oil",
-            "tickerTags": [
-              "XOM",
-              "CVX",
-              "SLB"
-            ],
-            "importanceScore": 98,
-            "priority": "critical",
-            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
-            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
           }
         }
       ]
@@ -371,12 +348,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Stock: Next Stop $246.85 Per Share?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
           "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-          "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-          "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc"
+          "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity"
         ],
         "latestPrice": 209.25,
         "priceChange": -3.9199981689453125,
@@ -761,12 +738,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Stock: Next Stop $246.85 Per Share?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
           "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-          "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-          "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc"
+          "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity"
         ],
         "latestPrice": 337.1099853515625,
         "priceChange": 13.899993896484375,
@@ -1151,12 +1128,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Stock: Next Stop $246.85 Per Share?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
           "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-          "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-          "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc"
+          "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity"
         ],
         "latestPrice": 220500,
         "priceChange": -5500,
@@ -1531,7 +1508,7 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 97,
+        "importanceScore": 80,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
         "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $105800.00 / $94600.00, 저항은 $137500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
@@ -1541,11 +1518,9 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Exxon Mobil Lawsuit Tests Orphaned Well Accounting And ESG Risk Perceptions\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "010950.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 134500,
         "priceChange": 200,
         "priceChangePercent": 0.14892032762472077,
@@ -1919,7 +1894,7 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 88,
+        "importanceScore": 71,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
         "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $138.31, 저항은 $168.00 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1929,11 +1904,9 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Exxon Mobil Lawsuit Tests Orphaned Well Accounting And ESG Risk Perceptions\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 154.6699981689453,
         "priceChange": 4.1100006103515625,
         "priceChangePercent": 2.7298091637867254,
@@ -2343,21 +2316,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Nvidia Stock: Next Stop $246.85 Per Share?\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Nvidia Stock: Next Stop $246.85 Per Share?",
+            "메인 헤드라인: Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?",
+            "파생 뉴스: Nvidia Stock: Next Stop $246.85 Per Share?",
             "파생 뉴스: SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity",
-            "파생 뉴스: Exclusive-Prices of Nvidia's B300 server at $1 million in China on US curbs, sources say",
-            "파생 뉴스: Samsung chip profit jumps almost 50-fold; supply shortage to worsen in 2027",
-            "반도체: SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity",
-            "에너지(오일): Exxon Mobil Lawsuit Tests Orphaned Well Accounting And ESG Risk Perceptions"
+            "파생 뉴스: 1 No-Brainer Artificial Intelligence (AI) Stock to Buy Before May 5 (Hint: It Has Jumped 59% in April)",
+            "반도체: Nvidia Stock: Next Stop $246.85 Per Share?"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
+            "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
             "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
             "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-            "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc",
-            "live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027"
+            "live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju"
           ]
         },
         {
@@ -2374,9 +2346,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-            "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-            "live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions"
+            "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
+            "live-semiconductors-nvidia-stock-next-stop-246-85-per-share"
           ]
         },
         {
@@ -2390,14 +2361,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $171.37 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Stock: Next Stop $246.85 Per Share?\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
             "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-            "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-            "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc"
+            "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity"
           ]
         },
         {
@@ -2418,9 +2389,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
             "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-            "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc",
-            "live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027"
+            "live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju"
           ]
         }
       ],
@@ -2489,14 +2460,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-04-30T08:08:41.958Z",
+        "runId": "fallback-2026-04-30T10:49:02.220Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-04-30T08:08:41.958Z",
+        "generatedAt": "2026-04-30T10:49:02.220Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-30T08:08:41.958Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Nvidia Stock: Next Stop $246.85 Per Share?\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia Stock: Next Stop $246.85 Per Share?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc, live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc, live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-30T10:49:02.220Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks, live-semiconductors-nvidia-stock-next-stop-246-85-per-share\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2505,13 +2476,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Nvidia Stock: Next Stop $246.85 Per Share?\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Nvidia Stock: Next Stop $246.85 Per Share?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
+              "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
               "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
               "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-              "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc",
-              "live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027"
+              "live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju"
             ]
           },
           {
@@ -2524,9 +2495,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-              "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-              "live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions"
+              "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
+              "live-semiconductors-nvidia-stock-next-stop-246-85-per-share"
             ]
           },
           {
@@ -2540,9 +2510,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks",
               "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
-              "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-              "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc"
+              "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity"
             ]
           },
           {
@@ -2556,9 +2526,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-nvidia-stock-next-stop-246-85-per-share",
               "live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity",
-              "live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc",
-              "live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027"
+              "live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju"
             ]
           }
         ]
@@ -2788,7 +2758,7 @@
       ]
     },
     "meeting": {
-      "topic": "Nvidia Stock: Next Stop $246.85 Per Share?",
+      "topic": "Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2849,16 +2819,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-04-30T08:08:41.958Z",
+      "generatedAt": "2026-04-30T10:49:02.220Z",
       "nextRunAt": "2026-05-01T07:30:00.000Z",
-      "subject": "[Daily Brief] Nvidia Stock: Next Stop $246.85 Per Share?",
-      "previewText": "The GPU giant hit an all-time high this week and still has plenty of room to run. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?",
+      "previewText": "With stock buybacks of $51.76 billion in the 12 months through September 2025, NVIDIA Corporation (NASDAQ:NVDA) is among the 20 Stocks with the Biggest Share Buybacks. NVIDIA Corporation (NASDAQ:NVDA) benefited from ecosystem expansion on April 27 when LiveRamp Holdings, Inc. announced native support for NVIDIA AI infrastructure. The upgrade enables brands and partners to train and deploy […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Nvidia Stock: Next Stop $246.85 Per Share?\n\nThe GPU giant hit an all-time high this week and still has plenty of room to run. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nNvidia Stock: Next Stop $246.85 Per Share?\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Exclusive-Prices of Nvidia's B300 server at $1 million in China on US curbs, sources say\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Samsung chip profit jumps almost 50-fold; supply shortage to worsen in 2027\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Exxon Mobil Lawsuit Tests Orphaned Well Accounting And ESG Risk Perceptions\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Nvidia Stock: Next Stop $246.85 Per Share?</h1><p>The GPU giant hit an all-time high this week and still has plenty of room to run. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Nvidia Stock: Next Stop $246.85 Per Share?</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Exclusive-Prices of Nvidia&#39;s B300 server at $1 million in China on US curbs, sources say</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Samsung chip profit jumps almost 50-fold; supply shortage to worsen in 2027</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Exxon Mobil Lawsuit Tests Orphaned Well Accounting And ESG Risk Perceptions<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\n\nWith stock buybacks of $51.76 billion in the 12 months through September 2025, NVIDIA Corporation (NASDAQ:NVDA) is among the 20 Stocks with the Biggest Share Buybacks. NVIDIA Corporation (NASDAQ:NVDA) benefited from ecosystem expansion on April 27 when LiveRamp Holdings, Inc. announced native support for NVIDIA AI infrastructure. The upgrade enables brands and partners to train and deploy […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nIs NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Nvidia Stock: Next Stop $246.85 Per Share?\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 1 No-Brainer Artificial Intelligence (AI) Stock to Buy Before May 5 (Hint: It Has Jumped 59% in April)\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Nvidia Stock: Next Stop $246.85 Per Share?\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?</h1><p>With stock buybacks of $51.76 billion in the 12 months through September 2025, NVIDIA Corporation (NASDAQ:NVDA) is among the 20 Stocks with the Biggest Share Buybacks. NVIDIA Corporation (NASDAQ:NVDA) benefited from ecosystem expansion on April 27 when LiveRamp Holdings, Inc. announced native support for NVIDIA AI infrastructure. The upgrade enables brands and partners to train and deploy […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Nvidia Stock: Next Stop $246.85 Per Share?</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>SK Hynix SOCAMM2 Ramp Highlights AI Server Memory Opportunity</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>1 No-Brainer Artificial Intelligence (AI) Stock to Buy Before May 5 (Hint: It Has Jumped 59% in April)</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Nvidia Stock: Next Stop $246.85 Per Share?<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-30T08:08:41.958Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Nvidia Stock: Next Stop $246.85 Per Share?\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia Stock: Next Stop $246.85 Per Share?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc, live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-energy-oil-exxon-mobil-lawsuit-tests-orphaned-well-accounting-and-esg-risk-perceptions\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-exclusive-prices-of-nvidia-s-b300-server-at-1-million-in-china-on-us-curbs-sourc, live-semiconductors-samsung-chip-profit-jumps-almost-50-fold-supply-shortage-to-worsen-in-2027\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-04-30T10:49:02.220Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Is NVIDIA (NVDA) Among the Stocks with the Biggest Share Buybacks?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks, live-semiconductors-nvidia-stock-next-stop-246-85-per-share\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-is-nvidia-nvda-among-the-stocks-with-the-biggest-share-buybacks, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-next-stop-246-85-per-share, live-semiconductors-sk-hynix-socamm2-ramp-highlights-ai-server-memory-opportunity, live-semiconductors-1-no-brainer-artificial-intelligence-ai-stock-to-buy-before-may-5-hint-it-has-ju\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
