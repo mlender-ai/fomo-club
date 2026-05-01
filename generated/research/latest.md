@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-01T14:49:07.727Z
+- Generated At: 2026-05-01T15:50:26.179Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- Riot Platform Stock Spikes After Data Center Debut, AMD Doubles Capacity
+- Defense Department Notches AI Deals With Nvidia, Amazon, and 5 Others. Who Was Left Out?
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
-- Action: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
+- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "Riot Platform Stock Spikes After Data Center Debut, AMD Doubles Capacity"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity, live-semiconductors-the-zacks-analyst-blog-highlights-amd-nvidia-broadcom-and-intel, live-semiconductors-got-1-000-to-invest-nvidia-vs-amd-only-one-deserves-your-money, live-semiconductors-a-look-at-amd-amd-valuation-after-a-powerful-multi-period-share-price-run
+메인 헤드라인을 "Defense Department Notches AI Deals With Nvidia, Amazon, and 5 Others. Who Was Left Out?"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-defense-department-notches-ai-deals-with-nvidia-amazon-and-5-others-who-was-left, live-semiconductors-nvidia-stock-faces-an-old-nemesis-the-200-level-it-s-losing-today, live-semiconductors-riot-jumps-10-as-amd-signs-additional-25-mw-ai-deployment-q1-earnings, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity, live-semiconductors-the-zacks-analyst-blog-highlights-amd-nvidia-broadcom-and-intel, live-energy-oil-exxon-chevron-earnings-take-center-stage
+References: live-semiconductors-defense-department-notches-ai-deals-with-nvidia-amazon-and-5-others-who-was-left, live-semiconductors-nvidia-stock-faces-an-old-nemesis-the-200-level-it-s-losing-today, live-energy-oil-exxon-ceo-warns-fuel-export-bans-could-tighten-global-supply
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity, live-semiconductors-the-zacks-analyst-blog-highlights-amd-nvidia-broadcom-and-intel, live-semiconductors-got-1-000-to-invest-nvidia-vs-amd-only-one-deserves-your-money
+References: NVDA, live-semiconductors-defense-department-notches-ai-deals-with-nvidia-amazon-and-5-others-who-was-left, live-semiconductors-nvidia-stock-faces-an-old-nemesis-the-200-level-it-s-losing-today, live-semiconductors-riot-jumps-10-as-amd-signs-additional-25-mw-ai-deployment-q1-earnings
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-the-zacks-analyst-blog-highlights-amd-nvidia-broadcom-and-intel, live-semiconductors-got-1-000-to-invest-nvidia-vs-amd-only-one-deserves-your-money, live-semiconductors-a-look-at-amd-amd-valuation-after-a-powerful-multi-period-share-price-run
+References: NVDA, live-semiconductors-nvidia-stock-faces-an-old-nemesis-the-200-level-it-s-losing-today, live-semiconductors-riot-jumps-10-as-amd-signs-additional-25-mw-ai-deployment-q1-earnings, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
