@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-02T05:30:30.488Z",
+    "generatedAt": "2026-05-02T07:22:33.975Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-        "title": "The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
-        "summary": "Memory chip makers used to be cyclical and risky to enter after explosive upside runs. But what if things are different this time around, with the AI revolution continuing to move forward while AI data center builds continue hogging up all the DRAM and SSDs? Indeed, the memory supercycle has continued to run higher, and ... The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
-        "source": "247WALLST",
-        "sourceUrl": "https://247wallst.com/investing/2026/05/01/the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stocks-with-the-most-torque/?.tsrc=rss",
-        "publishedAt": "2026-05-01T23:02:08.000Z",
-        "imageUrl": "https://247wallst.com/wp-content/uploads/2019/02/imageforentry17-cmy.jpg",
+        "id": "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
+        "title": "Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)",
+        "summary": "We have recently shared Jim Cramer Made A Big Prediction About OpenAI & Discussed These 20 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI GPU giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well lately, as they are up by 29% over the past month. The performance has vindicated Cramer, […]",
+        "source": "FINANCE",
+        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-goes-against-sentiment-060937136.html?.tsrc=rss",
+        "publishedAt": "2026-05-02T06:09:37.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/67f9cd6f73fae86b88a971abe9c6654a",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -246,6 +246,44 @@
         "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
       },
       "derivedArticles": [
+        {
+          "id": "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
+          "title": "The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+          "summary": "Memory chip makers used to be cyclical and risky to enter after explosive upside runs. But what if things are different this time around, with the AI revolution continuing to move forward while AI data center builds continue hogging up all the DRAM and SSDs? Indeed, the memory supercycle has continued to run higher, and ... The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+          "source": "247WALLST",
+          "sourceUrl": "https://247wallst.com/investing/2026/05/01/the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stocks-with-the-most-torque/?.tsrc=rss",
+          "publishedAt": "2026-05-01T23:02:08.000Z",
+          "imageUrl": "https://247wallst.com/wp-content/uploads/2019/02/imageforentry17-cmy.jpg",
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "NVDA",
+            "AMD",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        },
+        {
+          "id": "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful",
+          "title": "Jim Cramer Reveals Why Advanced Micro Devices (AMD) Was Successful",
+          "summary": "We have recently shared Jim Cramer Made A Big Prediction About OpenAI & Discussed These 20 Stocks. Advanced Micro Devices, Inc. (NASDAQ:AMD) is one of the stocks discussed by Jim Cramer. Chip designer Advanced Micro Devices, Inc. (NASDAQ:AMD)’s shares are up by 56% year-to-date and by a strong 71% over the past month. Since the […]",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-reveals-why-advanced-061043623.html?.tsrc=rss",
+          "publishedAt": "2026-05-02T06:10:43.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/ad325d3c8e98d31c6fafcacd7692c16a",
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "AMD",
+            "NVDA",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        },
         {
           "id": "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
           "title": "How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story",
@@ -264,44 +302,6 @@
           "priority": "critical",
           "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
           "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
-        },
-        {
-          "id": "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch",
-          "title": "AMD earnings, Fed commentary, April jobs report: What to Watch",
-          "summary": "Asking for a Trend Host Josh Lipton previews several of the biggest stories to come throughout next week, including earnings results out from companies like Advanced Micro Devices (AMD), Paramount Skydance (PSKY), Disney (DIS), Novo Nordisk (NVO), Pfizer (PFE), Warner Bros. Discovery (WBD), McDonald's (MCD), and Coinbase (COIN); a wave of fresh commentary from top Federal Reserve officials; and April's jobs reports due out next Friday. May 8.",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/video/amd-earnings-fed-commentary-april-230000206.html?.tsrc=rss",
-          "publishedAt": "2026-05-01T23:00:00.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/wDFfSj5aHhX0TOtMduREUw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzU-/https://d29szjachogqwa.cloudfront.net/images/user-uploaded/wtw-thumbnail-5012026_3394.png",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "AMD",
-            "NVDA",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
-        },
-        {
-          "id": "live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity",
-          "title": "Riot Platform Stock Spikes After Data Center Debut, AMD Doubles Capacity",
-          "summary": "Riot Platforms clears sales estimates, bolstered by new data center revenue. Bitcoin production falls. AMD doubles capacity agreement.",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/aa78ef4e-0591-33bc-a2ed-c7f731c5d81e/riot-platform-stock-spikes.html?.tsrc=rss",
-          "publishedAt": "2026-05-01T20:32:07.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/ibd.com/5f7d1a3ae9471f9cc0aa118ecba54c35",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "AMD",
-            "NVDA",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         }
       ],
       "sectorIssues": [
@@ -309,35 +309,35 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-            "title": "How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story",
-            "summary": "In recent weeks, Advanced Micro Devices has drawn heightened attention as analysts project strong year-over-year gains in earnings and revenue ahead of its 5 May 2026 first-quarter results, largely tied to robust demand for EPYC server processors and Instinct accelerators in data centers. At the same time, large AI infrastructure contracts with customers such as OpenAI and Meta, alongside growing concerns about AI monetization and competition, have underscored both the potential and the...",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/surging-ai-data-center-demand-050850858.html?.tsrc=rss",
-            "publishedAt": "2026-05-02T05:08:50.000Z",
-            "imageUrl": "https://s.yimg.com/os/en/simply_wall_st__316/a882d53b581ebe737458ea1484ce4133",
+            "id": "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
+            "title": "The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+            "summary": "Memory chip makers used to be cyclical and risky to enter after explosive upside runs. But what if things are different this time around, with the AI revolution continuing to move forward while AI data center builds continue hogging up all the DRAM and SSDs? Indeed, the memory supercycle has continued to run higher, and ... The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+            "source": "247WALLST",
+            "sourceUrl": "https://247wallst.com/investing/2026/05/01/the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stocks-with-the-most-torque/?.tsrc=rss",
+            "publishedAt": "2026-05-01T23:02:08.000Z",
+            "imageUrl": "https://247wallst.com/wp-content/uploads/2019/02/imageforentry17-cmy.jpg",
             "sectorTag": "semiconductors",
             "tickerTags": [
-              "AMD",
               "NVDA",
+              "AMD",
               "TSM"
             ],
             "importanceScore": 98,
             "priority": "critical",
-            "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-            "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+            "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+            "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
           }
         },
         {
           "sectorTag": "energy-oil",
           "sectorLabel": "에너지(오일)",
           "item": {
-            "id": "live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test",
-            "title": "Chevron, Exxon Show Earnings Resilience But Stocks Fail Key Test",
-            "summary": "Chevron and Exxon Mobil reported weak Q1 earnings early Friday as the Iran war disrupted oil shipments. Despite the disruptions, both oil major beat earnings estimates as production volumes rose. Exxon highlighted record production in Guyana and the first LNG production at Golden Pass Train 1, a joint venture with QatarEnergy.",
+            "id": "live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra",
+            "title": "Exxon Mobil Corp (XOM) Q1 2026 Earnings Call Highlights: Record Production and Strategic ...",
+            "summary": "Exxon Mobil Corp (XOM) reports strong operational performance with record production in Guyana and strategic expansions, despite disruptions in the Middle East.",
             "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/m/6ad148c7-ee0d-32fe-b5f3-233fe68eca7e/chevron%2C-exxon-show-earnings.html?.tsrc=rss",
-            "publishedAt": "2026-05-01T20:13:53.000Z",
+            "sourceUrl": "https://finance.yahoo.com/sectors/energy/articles/exxon-mobil-corp-xom-q1-070302885.html?.tsrc=rss",
+            "publishedAt": "2026-05-02T07:03:02.000Z",
             "imageUrl": null,
             "sectorTag": "energy-oil",
             "tickerTags": [
@@ -347,7 +347,7 @@
             ],
             "importanceScore": 98,
             "priority": "critical",
-            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
+            "analysis": "오일 메이저와 서비스주는 같은 에너지여도 민감도가 달라, 이런 뉴스는 포지션을 어디에 둘지 다시 정하게 만듭니다.",
             "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
           }
         }
@@ -371,12 +371,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
           "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-          "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-          "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch"
+          "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful"
         ],
         "latestPrice": 198.4499969482422,
         "priceChange": -1.1200103759765625,
@@ -761,12 +761,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
           "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-          "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-          "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch"
+          "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful"
         ],
         "latestPrice": 360.5400085449219,
         "priceChange": 6.050018310546875,
@@ -1151,12 +1151,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
           "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-          "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-          "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch"
+          "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful"
         ],
         "latestPrice": 220500,
         "priceChange": -5500,
@@ -1541,12 +1541,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Chevron, Exxon Show Earnings Resilience But Stocks Fail Key Test\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Exxon Mobil Corp (XOM) Q1 2026 Earnings Call Highlights: Record Production and Strategic ...\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "010950.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra",
           "live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test",
-          "live-energy-oil-oil-falls-on-hopes-for-us-iran-negotiations-hormuz-progress",
-          "live-energy-oil-exxon-mobil-xom-valuation-check-after-q1-beat-and-strong-guyana-and-permian-outp"
+          "live-energy-oil-oil-falls-on-hopes-for-us-iran-negotiations-hormuz-progress"
         ],
         "latestPrice": 134500,
         "priceChange": 200,
@@ -1931,12 +1931,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Chevron, Exxon Show Earnings Resilience But Stocks Fail Key Test\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Exxon Mobil Corp (XOM) Q1 2026 Earnings Call Highlights: Record Production and Strategic ...\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
         "linkedNewsIds": [
+          "live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra",
           "live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test",
-          "live-energy-oil-oil-falls-on-hopes-for-us-iran-negotiations-hormuz-progress",
-          "live-energy-oil-exxon-mobil-xom-valuation-check-after-q1-beat-and-strong-guyana-and-permian-outp"
+          "live-energy-oil-oil-falls-on-hopes-for-us-iran-negotiations-hormuz-progress"
         ],
         "latestPrice": 152.75,
         "priceChange": -1.5800018310546875,
@@ -2347,21 +2347,21 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+            "메인 헤드라인: Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)",
+            "파생 뉴스: The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+            "파생 뉴스: Jim Cramer Reveals Why Advanced Micro Devices (AMD) Was Successful",
             "파생 뉴스: How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story",
-            "파생 뉴스: AMD earnings, Fed commentary, April jobs report: What to Watch",
-            "파생 뉴스: Riot Platform Stock Spikes After Data Center Debut, AMD Doubles Capacity",
-            "반도체: How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story",
-            "에너지(오일): Chevron, Exxon Show Earnings Resilience But Stocks Fail Key Test"
+            "반도체: The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+            "에너지(오일): Exxon Mobil Corp (XOM) Q1 2026 Earnings Call Highlights: Record Production and Strategic ..."
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
+            "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
             "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-            "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-            "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch",
-            "live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity"
+            "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful",
+            "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-"
           ]
         },
         {
@@ -2378,9 +2378,9 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
+            "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
             "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-            "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-            "live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test"
+            "live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra"
           ]
         },
         {
@@ -2394,14 +2394,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $173.66 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
             "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-            "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-            "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch"
+            "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful"
           ]
         },
         {
@@ -2422,9 +2422,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-            "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch",
-            "live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity"
+            "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
+            "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful",
+            "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-"
           ]
         }
       ],
@@ -2493,14 +2493,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-02T05:30:30.488Z",
+        "runId": "fallback-2026-05-02T07:22:33.975Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-02T05:30:30.488Z",
+        "generatedAt": "2026-05-02T07:22:33.975Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-02T05:30:30.488Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-02T07:22:33.975Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2509,13 +2509,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
+              "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
               "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-              "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-              "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch",
-              "live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity"
+              "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful",
+              "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-"
             ]
           },
           {
@@ -2528,9 +2528,9 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
+              "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
               "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-              "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-              "live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test"
+              "live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra"
             ]
           },
           {
@@ -2544,9 +2544,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda",
               "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
-              "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-              "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch"
+              "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful"
             ]
           },
           {
@@ -2560,9 +2560,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-",
-              "live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch",
-              "live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity"
+              "live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc",
+              "live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful",
+              "live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-"
             ]
           }
         ]
@@ -2792,7 +2792,7 @@
       ]
     },
     "meeting": {
-      "topic": "The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
+      "topic": "Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2853,16 +2853,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-02T05:30:30.488Z",
+      "generatedAt": "2026-05-02T07:22:33.975Z",
       "nextRunAt": "2026-05-02T07:30:00.000Z",
-      "subject": "[Daily Brief] The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque",
-      "previewText": "Memory chip makers used to be cyclical and risky to enter after explosive upside runs. But what if things are different this time around, with the AI revolution continuing to move forward while AI data center builds continue hogging up all the DRAM and SSDs? Indeed, the memory supercycle has continued to run higher, and ... The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)",
+      "previewText": "We have recently shared Jim Cramer Made A Big Prediction About OpenAI & Discussed These 20 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI GPU giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well lately, as they are up by 29% over the past month. The performance has vindicated Cramer, […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\n\nMemory chip makers used to be cyclical and risky to enter after explosive upside runs. But what if things are different this time around, with the AI revolution continuing to move forward while AI data center builds continue hogging up all the DRAM and SSDs? Indeed, the memory supercycle has continued to run higher, and ... The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nThe Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- AMD earnings, Fed commentary, April jobs report: What to Watch\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Riot Platform Stock Spikes After Data Center Debut, AMD Doubles Capacity\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- 에너지(오일): Chevron, Exxon Show Earnings Resilience But Stocks Fail Key Test\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque</h1><p>Memory chip makers used to be cyclical and risky to enter after explosive upside runs. But what if things are different this time around, with the AI revolution continuing to move forward while AI data center builds continue hogging up all the DRAM and SSDs? Indeed, the memory supercycle has continued to run higher, and ... The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>AMD earnings, Fed commentary, April jobs report: What to Watch</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Riot Platform Stock Spikes After Data Center Debut, AMD Doubles Capacity</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>에너지(오일)</strong> - Chevron, Exxon Show Earnings Resilience But Stocks Fail Key Test<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\n\nWe have recently shared Jim Cramer Made A Big Prediction About OpenAI & Discussed These 20 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI GPU giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well lately, as they are up by 29% over the past month. The performance has vindicated Cramer, […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nJim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Jim Cramer Reveals Why Advanced Micro Devices (AMD) Was Successful\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Exxon Mobil Corp (XOM) Q1 2026 Earnings Call Highlights: Record Production and Strategic ...\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)</h1><p>We have recently shared Jim Cramer Made A Big Prediction About OpenAI &amp; Discussed These 20 Stocks. NVIDIA Corporation (NASDAQ:NVDA) is one of the stocks discussed by Jim Cramer. AI GPU giant NVIDIA Corporation (NASDAQ:NVDA)’s shares have performed well lately, as they are up by 29% over the past month. The performance has vindicated Cramer, […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Jim Cramer Reveals Why Advanced Micro Devices (AMD) Was Successful</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>How Surging AI Data Center Demand And Big-Name Deals At AMD (AMD) Has Changed Its Investment Story</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Exxon Mobil Corp (XOM) Q1 2026 Earnings Call Highlights: Record Production and Strategic ...<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-02T05:30:30.488Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"The Memory Supercycle Is Back in Motion — and Samsung and SK Hynix May Be the Stocks With the Most Torque\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-energy-oil-chevron-exxon-show-earnings-resilience-but-stocks-fail-key-test\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-, live-semiconductors-amd-earnings-fed-commentary-april-jobs-report-what-to-watch, live-semiconductors-riot-platform-stock-spikes-after-data-center-debut-amd-doubles-capacity\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-02T07:22:33.975Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Jim Cramer Goes Against The Sentiment For NVIDIA (NVDA)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-energy-oil-exxon-mobil-corp-xom-q1-2026-earnings-call-highlights-record-production-and-stra\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-jim-cramer-goes-against-the-sentiment-for-nvidia-nvda, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-the-memory-supercycle-is-back-in-motion-and-samsung-and-sk-hynix-may-be-the-stoc, live-semiconductors-jim-cramer-reveals-why-advanced-micro-devices-amd-was-successful, live-semiconductors-how-surging-ai-data-center-demand-and-big-name-deals-at-amd-amd-has-changed-its-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
