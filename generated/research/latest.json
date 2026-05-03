@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-03T20:35:34.119Z",
+    "generatedAt": "2026-05-03T21:35:37.512Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-        "title": "Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
-        "summary": "Is ON a good stock to buy? We came across a bullish thesis on ON Semiconductor Corporation on Valueinvestorsclub.com by Value1929. In this article, we will summarize the bulls’ thesis on ON. ON Semiconductor Corporation’s share was trading at $93.30 as of April 28th. ON’s trailing and forward P/E were 338.07 and 33.78 respectively according to Yahoo […]",
-        "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/semiconductor-corporation-good-stock-buy-195010579.html?.tsrc=rss",
-        "publishedAt": "2026-05-03T19:50:10.000Z",
-        "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/c026ccdca6f77118883500c54b4c5b9e",
+        "id": "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
+        "title": "Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)",
+        "summary": "AI chip stocks continue to be some of the biggest winners for technology investors this year.",
+        "source": "FOOL",
+        "sourceUrl": "https://www.fool.com/investing/2026/05/03/prediction-this-will-be-the-top-performing-artific/?.tsrc=rss",
+        "publishedAt": "2026-05-03T20:31:00.000Z",
+        "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867650%2Finvesting-stocks-calculations-tracking-market.jpg&w=1200&op=resize",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -246,6 +246,25 @@
         "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
       },
       "derivedArticles": [
+        {
+          "id": "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
+          "title": "Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
+          "summary": "Is ON a good stock to buy? We came across a bullish thesis on ON Semiconductor Corporation on Valueinvestorsclub.com by Value1929. In this article, we will summarize the bulls’ thesis on ON. ON Semiconductor Corporation’s share was trading at $93.30 as of April 28th. ON’s trailing and forward P/E were 338.07 and 33.78 respectively according to Yahoo […]",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/semiconductor-corporation-good-stock-buy-195010579.html?.tsrc=rss",
+          "publishedAt": "2026-05-03T19:50:10.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/c026ccdca6f77118883500c54b4c5b9e",
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "NVDA",
+            "AMD",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        },
         {
           "id": "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
           "title": "Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm",
@@ -283,25 +302,6 @@
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-        },
-        {
-          "id": "live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik",
-          "title": "Gorilla Technology Group (GRRR) Is Up 17.9% After Massive India GPU Deal And Astrikos.AI Investment",
-          "summary": "Gorilla Technology Group recently expanded its AI infrastructure collaboration with Yotta Data Services in India, backing the deployment of 20,736 additional B300 GPU cards in a project valued at about US$2.80 billion and tied to one of APAC’s largest NVIDIA DGX Cloud clusters, alongside increasing its strategic investment in real-time infrastructure intelligence firm Astrikos.AI. Together, these moves deepen Gorilla’s role in sovereign and enterprise AI infrastructure while tightening the...",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/gorilla-technology-group-grrr-17-180552744.html?.tsrc=rss",
-          "publishedAt": "2026-05-03T18:05:52.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/simply_wall_st__316/41bdd0c670f621394929d5266c5d6c72",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "NVDA",
-            "AMD",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-            "title": "Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm",
-            "summary": "Lip-Bu Tan, the CEO of Intel Corporation, has taken on a new role as a board member of quantum computing firm PsiQuantum, which is currently valued at $7 billion. “Their focus on fault-tolerant systems that can be manufactured at scale using the semiconductor industry sets them apart,” Tan told Semafor on Thursday, as he commended PsiQuantum’s unique approach. PsiQuantum is strengthening ties with the semiconductor industry as it advances scalable, error-tolerant quantum computers using photonic",
+            "id": "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
+            "title": "Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
+            "summary": "Is ON a good stock to buy? We came across a bullish thesis on ON Semiconductor Corporation on Valueinvestorsclub.com by Value1929. In this article, we will summarize the bulls’ thesis on ON. ON Semiconductor Corporation’s share was trading at $93.30 as of April 28th. ON’s trailing and forward P/E were 338.07 and 33.78 respectively according to Yahoo […]",
             "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/intel-ceo-lip-bu-tan-193020702.html?.tsrc=rss",
-            "publishedAt": "2026-05-03T19:30:20.000Z",
-            "imageUrl": "https://s.yimg.com/os/en/Benzinga/4ca64d9cc546438e3253ee11bdbe3227",
+            "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/semiconductor-corporation-good-stock-buy-195010579.html?.tsrc=rss",
+            "publishedAt": "2026-05-03T19:50:10.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/c026ccdca6f77118883500c54b4c5b9e",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -326,29 +326,6 @@
             "priority": "critical",
             "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
             "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-          }
-        },
-        {
-          "sectorTag": "energy-oil",
-          "sectorLabel": "에너지(오일)",
-          "item": {
-            "id": "live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen",
-            "title": "US Is Oil Supplier of Last Resort as Hormuz Disruptions Worsen",
-            "summary": "(Bloomberg) -- The tankers have been arriving from all over the world in unprecedented numbers. After loading up in Alaska and along the US Gulf Coast, they head back out to sea — to Japan, Thailand and even as far as Australia.Most Read from BloombergSupertanker Appears to Have Crossed the Strait of HormuzBeijing Tells China Firms to Ignore US Sanctions on RefinersWorld’s Largest Container Carrier Plans Route Avoiding HormuzPhilippines Says Thousands Evacuated as Mayon Volcano EruptsTrump Casts",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/news/us-oil-supplier-last-resort-133000501.html?.tsrc=rss",
-            "publishedAt": "2026-05-03T13:30:00.000Z",
-            "imageUrl": null,
-            "sectorTag": "energy-oil",
-            "tickerTags": [
-              "XOM",
-              "CVX",
-              "SLB"
-            ],
-            "importanceScore": 98,
-            "priority": "critical",
-            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
-            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
           }
         }
       ]
@@ -371,12 +348,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
           "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-          "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-          "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
+          "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp"
         ],
         "latestPrice": 198.4499969482422,
         "priceChange": -1.1200103759765625,
@@ -761,12 +738,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
           "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-          "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-          "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
+          "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp"
         ],
         "latestPrice": 360.5400085449219,
         "priceChange": 6.050018310546875,
@@ -1151,12 +1128,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
           "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-          "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-          "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
+          "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp"
         ],
         "latestPrice": 220500,
         "priceChange": -5500,
@@ -1531,7 +1508,7 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 97,
+        "importanceScore": 80,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
         "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $105800.00 / $94600.00, 저항은 $137500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
@@ -1541,11 +1518,9 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"US Is Oil Supplier of Last Resort as Hormuz Disruptions Worsen\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "010950.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 134500,
         "priceChange": 200,
         "priceChangePercent": 0.14892032762472077,
@@ -1919,7 +1894,7 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 88,
+        "importanceScore": 71,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
         "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $141.97, 저항은 $166.24 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
@@ -1929,11 +1904,9 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"US Is Oil Supplier of Last Resort as Hormuz Disruptions Worsen\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 152.75,
         "priceChange": -1.5800018310546875,
         "priceChangePercent": -1.0237813855431157,
@@ -2343,21 +2316,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
+            "메인 헤드라인: Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)",
+            "파생 뉴스: Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
             "파생 뉴스: Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm",
             "파생 뉴스: This Is My Favorite AI Chip Stock (By Far) -- and It's Not Nvidia, Intel, or Broadcom",
-            "파생 뉴스: Gorilla Technology Group (GRRR) Is Up 17.9% After Massive India GPU Deal And Astrikos.AI Investment",
-            "반도체: Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm",
-            "에너지(오일): US Is Oil Supplier of Last Resort as Hormuz Disruptions Worsen"
+            "반도체: Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
+            "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
             "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
             "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-            "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom",
-            "live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik"
+            "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
           ]
         },
         {
@@ -2374,9 +2346,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-            "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-            "live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen"
+            "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
+            "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now"
           ]
         },
         {
@@ -2390,14 +2361,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $173.66 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
             "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-            "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-            "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
+            "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp"
           ]
         },
         {
@@ -2418,9 +2389,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
             "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-            "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom",
-            "live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik"
+            "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
           ]
         }
       ],
@@ -2489,14 +2460,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-03T20:35:34.119Z",
+        "runId": "fallback-2026-05-03T21:35:37.512Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-03T20:35:34.119Z",
+        "generatedAt": "2026-05-03T21:35:37.512Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-03T20:35:34.119Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom, live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom, live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-03T21:35:37.512Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2505,13 +2476,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
+              "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
               "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
               "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-              "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom",
-              "live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik"
+              "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
             ]
           },
           {
@@ -2524,9 +2495,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-              "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-              "live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen"
+              "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
+              "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now"
             ]
           },
           {
@@ -2540,9 +2510,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc",
               "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
-              "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-              "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
+              "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp"
             ]
           },
           {
@@ -2556,9 +2526,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now",
               "live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp",
-              "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom",
-              "live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik"
+              "live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom"
             ]
           }
         ]
@@ -2788,7 +2758,7 @@
       ]
     },
     "meeting": {
-      "topic": "Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
+      "topic": "Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2849,16 +2819,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-03T20:35:34.119Z",
+      "generatedAt": "2026-05-03T21:35:37.512Z",
       "nextRunAt": "2026-05-04T07:30:00.000Z",
-      "subject": "[Daily Brief] Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?",
-      "previewText": "Is ON a good stock to buy? We came across a bullish thesis on ON Semiconductor Corporation on Valueinvestorsclub.com by Value1929. In this article, we will summarize the bulls’ thesis on ON. ON Semiconductor Corporation’s share was trading at $93.30 as of April 28th. ON’s trailing and forward P/E were 338.07 and 33.78 respectively according to Yahoo […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)",
+      "previewText": "AI chip stocks continue to be some of the biggest winners for technology investors this year. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\n\nIs ON a good stock to buy? We came across a bullish thesis on ON Semiconductor Corporation on Valueinvestorsclub.com by Value1929. In this article, we will summarize the bulls’ thesis on ON. ON Semiconductor Corporation’s share was trading at $93.30 as of April 28th. ON’s trailing and forward P/E were 338.07 and 33.78 respectively according to Yahoo […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nIs ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- This Is My Favorite AI Chip Stock (By Far) -- and It's Not Nvidia, Intel, or Broadcom\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Gorilla Technology Group (GRRR) Is Up 17.9% After Massive India GPU Deal And Astrikos.AI Investment\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): US Is Oil Supplier of Last Resort as Hormuz Disruptions Worsen\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?</h1><p>Is ON a good stock to buy? We came across a bullish thesis on ON Semiconductor Corporation on Valueinvestorsclub.com by Value1929. In this article, we will summarize the bulls’ thesis on ON. ON Semiconductor Corporation’s share was trading at $93.30 as of April 28th. ON’s trailing and forward P/E were 338.07 and 33.78 respectively according to Yahoo […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed &#39;Fault-Tolerant&#39; Quantum Computing Firm</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>This Is My Favorite AI Chip Stock (By Far) -- and It&#39;s Not Nvidia, Intel, or Broadcom</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Gorilla Technology Group (GRRR) Is Up 17.9% After Massive India GPU Deal And Astrikos.AI Investment</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed &#39;Fault-Tolerant&#39; Quantum Computing Firm<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - US Is Oil Supplier of Last Resort as Hormuz Disruptions Worsen<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\n\nAI chip stocks continue to be some of the biggest winners for technology investors this year. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nPrediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed 'Fault-Tolerant' Quantum Computing Firm\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- This Is My Favorite AI Chip Stock (By Far) -- and It's Not Nvidia, Intel, or Broadcom\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It&#39;s Not Nvidia, Broadcom, or Micron.)</h1><p>AI chip stocks continue to be some of the biggest winners for technology investors this year. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It&#39;s Not Nvidia, Broadcom, or Micron.)</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Intel CEO Lip-Bu Tan Has A New Role In Nvidia-Backed &#39;Fault-Tolerant&#39; Quantum Computing Firm</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>This Is My Favorite AI Chip Stock (By Far) -- and It&#39;s Not Nvidia, Intel, or Broadcom</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-03T20:35:34.119Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Is ON Semiconductor Corporation (ON) A Good Stock To Buy Now?\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom, live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-energy-oil-us-is-oil-supplier-of-last-resort-as-hormuz-disruptions-worsen\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom, live-semiconductors-gorilla-technology-group-grrr-is-up-17-9-after-massive-india-gpu-deal-and-astrik\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-03T21:35:37.512Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Prediction: This Will Be the Top-Performing Artificial Intelligence (AI) Semiconductor Stock Over the Next Year. (Hint: It's Not Nvidia, Broadcom, or Micron.)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-prediction-this-will-be-the-top-performing-artificial-intelligence-ai-semiconduc, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-is-on-semiconductor-corporation-on-a-good-stock-to-buy-now, live-semiconductors-intel-ceo-lip-bu-tan-has-a-new-role-in-nvidia-backed-fault-tolerant-quantum-comp, live-semiconductors-this-is-my-favorite-ai-chip-stock-by-far-and-it-s-not-nvidia-intel-or-broadcom\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
