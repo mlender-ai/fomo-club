@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-04T21:02:41.609Z",
+    "generatedAt": "2026-05-04T22:50:54.408Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-        "title": "Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
-        "summary": "Broadcom stock teases a buy zone as fellow IBD Leaderboard members Google and Caterpillar climb out of buy range.",
-        "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/m/d8f38cc8-23ce-3e37-8320-19e404aff06f/broadcom%2C-google-and.html?.tsrc=rss",
-        "publishedAt": "2026-05-04T20:00:35.000Z",
-        "imageUrl": "https://s.yimg.com/os/en/ibd.com/db43b273195f535814adfbd65fb000d3",
+        "id": "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
+        "title": "Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up",
+        "summary": "Bernstein Research’s Stacy Rasgon has been making the rounds with a deceptively simple thesis: stop arguing about market share. On a recent Marketplace Morning Report segment titled Chipping away at Nvidia’s chip dominance, Rasgon offered a line that should reframe how retirement investors think about the AI buildout. “There’s no such thing as too many ... Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up",
+        "source": "247WALLST",
+        "sourceUrl": "https://247wallst.com/investing/2026/05/04/bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-cant-keep-up/?.tsrc=rss",
+        "publishedAt": "2026-05-04T21:07:40.000Z",
+        "imageUrl": "https://247wallst.com/wp-content/uploads/2024/02/shutterstock-1496263232-huge-licensed-scaled.jpg",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,13 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-          "title": "Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April",
-          "summary": "The April 2026 scoreboard for the artificial intelligence (AI) chip trade is in, and the winner is not the most-watched name on Wall Street. Qualcomm (NASDAQ:QCOM) stock surged 39.45% in April, decisively beating Broadcom (NASDAQ:AVGO) stock at 34.87% and leaving Taiwan Semiconductor (NYSE:TSM) stock far behind at a 17.19% gain. The gap of roughly 22 ... Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April",
-          "source": "247WALLST",
-          "sourceUrl": "https://247wallst.com/investing/2026/05/04/broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april/?.tsrc=rss",
-          "publishedAt": "2026-05-04T19:37:31.000Z",
-          "imageUrl": "https://247wallst.com/wp-content/uploads/2017/08/semiconductor.jpg",
+          "id": "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
+          "title": "Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
+          "summary": "Broadcom stock teases a buy zone as fellow IBD Leaderboard members Google and Caterpillar climb out of buy range.",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/m/d8f38cc8-23ce-3e37-8320-19e404aff06f/broadcom%2C-google-and.html?.tsrc=rss",
+          "publishedAt": "2026-05-04T20:00:35.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/ibd.com/db43b273195f535814adfbd65fb000d3",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -266,32 +266,32 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock",
-          "title": "DBS Bank Raises PT on NVIDIA (NVDA) Stock",
-          "summary": "NVIDIA Corporation (NASDAQ:NVDA) is one of the Most Promising AI Stocks to Invest In. On April 27, DBS Bank analyst Fang Boon Foo lifted the price objective on the company’s stock from $220 to $250 and maintained a “Buy” rating. As per the analyst, the demand for NVIDIA Corporation (NASDAQ:NVDA)’s Hopper and Blackwell AI chips is expected to be […]",
+          "id": "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business",
+          "title": "Intel appoints Qualcomm executive to lead PC and physical AI business",
+          "summary": "Intel said on Monday it had appointed Alex Katouzian to lead the company's ‌PC and physical artificial intelligence unit. The new role ‌for Katouzian includes the company's crucial PC business, which has ​been one of the mainstays of Intel's revenue and profit for decades. Katouzian has worked at Qualcomm for more than 20 years and has worked extensively in the ‌company's mobile chip ⁠unit, which makes processors for smartphones and other gadgets.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/dbs-bank-raises-pt-nvidia-191058058.html?.tsrc=rss",
-          "publishedAt": "2026-05-04T19:10:58.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/kZveoOmr3ngssVpudK1u4A--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzM-/https://media.zenfs.com/en/insidermonkey.com/aa94e059977d3251b8b0630718e013fc",
+          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/intel-appoints-qualcomm-executive-lead-215126771.html?.tsrc=rss",
+          "publishedAt": "2026-05-04T21:51:26.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/reuters-finance.com/100549eb88ebc2ec2ad7b97ccf97c5ef",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-adeia-announces-first-quarter-2026-financial-results",
-          "title": "Adeia Announces First Quarter 2026 Financial Results",
-          "summary": "Signed new license agreements with AMD and MicrosoftGenerated $58 million in cash from operations and achieved 60% adjusted EBITDA marginPaid down debt by $28 million bringing our outstanding balance to less than $400 million SAN JOSE, Calif., May 04, 2026 (GLOBE NEWSWIRE) -- Adeia Inc. (Nasdaq: ADEA) (the “Company” or “Adeia”) today announced financial results for the first quarter ended March 31, 2026. “We had a strong start to 2026, delivering first quarter revenue of $105 million, generating",
+          "id": "live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-",
+          "title": "These Stocks Are Today’s Movers: Coinbase, AMD, Palantir, Tesla, eBay, GameStop, FedEx, UPS, Micron, and More",
+          "summary": "STOCKSTOWATCHTODAY BLOG Stocks fell Monday and oil prices rose after the United Arab Emirates’ Ministry of Defense said it detected four missiles coming from Iran. Earlier, the U.S. military’s Central Command denied a report that Iran had struck an American warship in the Strait of Hormuz.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/adeia-announces-first-quarter-2026-200500368.html?.tsrc=rss",
-          "publishedAt": "2026-05-04T20:05:00.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/globenewswire.com/ddcacc9db5d764567a9154e6e444e8dc",
+          "sourceUrl": "https://finance.yahoo.com/m/bf397f98-7506-3408-ae60-4cae99313630/these-stocks-are-today%E2%80%99s.html?.tsrc=rss",
+          "publishedAt": "2026-05-04T20:57:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/9qgSGDjo_mX62WN8dR6gYA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/67e59641357cc00df63143393a6b977d",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "AMD",
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-            "title": "Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April",
-            "summary": "The April 2026 scoreboard for the artificial intelligence (AI) chip trade is in, and the winner is not the most-watched name on Wall Street. Qualcomm (NASDAQ:QCOM) stock surged 39.45% in April, decisively beating Broadcom (NASDAQ:AVGO) stock at 34.87% and leaving Taiwan Semiconductor (NYSE:TSM) stock far behind at a 17.19% gain. The gap of roughly 22 ... Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April",
-            "source": "247WALLST",
-            "sourceUrl": "https://247wallst.com/investing/2026/05/04/broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april/?.tsrc=rss",
-            "publishedAt": "2026-05-04T19:37:31.000Z",
-            "imageUrl": "https://247wallst.com/wp-content/uploads/2017/08/semiconductor.jpg",
+            "id": "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
+            "title": "Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
+            "summary": "Broadcom stock teases a buy zone as fellow IBD Leaderboard members Google and Caterpillar climb out of buy range.",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/m/d8f38cc8-23ce-3e37-8320-19e404aff06f/broadcom%2C-google-and.html?.tsrc=rss",
+            "publishedAt": "2026-05-04T20:00:35.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/ibd.com/db43b273195f535814adfbd65fb000d3",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -348,12 +348,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
           "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-          "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-          "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock"
+          "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business"
         ],
         "latestPrice": 198.47999572753906,
         "priceChange": 0.029998779296875,
@@ -738,12 +738,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
           "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-          "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-          "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock"
+          "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business"
         ],
         "latestPrice": 341.5400085449219,
         "priceChange": -19,
@@ -1133,12 +1133,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
+          "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
           "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-          "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-          "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock"
+          "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business"
         ],
         "latestPrice": 232500,
         "priceChange": 12000,
@@ -2321,20 +2321,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
-            "파생 뉴스: Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April",
-            "파생 뉴스: DBS Bank Raises PT on NVIDIA (NVDA) Stock",
-            "파생 뉴스: Adeia Announces First Quarter 2026 Financial Results",
-            "반도체: Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April"
+            "메인 헤드라인: Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up",
+            "파생 뉴스: Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
+            "파생 뉴스: Intel appoints Qualcomm executive to lead PC and physical AI business",
+            "파생 뉴스: These Stocks Are Today’s Movers: Coinbase, AMD, Palantir, Tesla, eBay, GameStop, FedEx, UPS, Micron, and More",
+            "반도체: Broadcom, Google And Caterpillar Lead AI Charge On Must-See List"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
+            "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
             "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-            "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-            "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock",
-            "live-semiconductors-adeia-announces-first-quarter-2026-financial-results"
+            "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business",
+            "live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-"
           ]
         },
         {
@@ -2351,8 +2351,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-            "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april"
+            "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
+            "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list"
           ]
         },
         {
@@ -2366,14 +2366,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $173.66 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
+            "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
             "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-            "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-            "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock"
+            "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business"
           ]
         },
         {
@@ -2394,9 +2394,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-            "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock",
-            "live-semiconductors-adeia-announces-first-quarter-2026-financial-results"
+            "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
+            "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business",
+            "live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-"
           ]
         }
       ],
@@ -2465,14 +2465,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-04T21:02:41.609Z",
+        "runId": "fallback-2026-05-04T22:50:54.408Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-04T21:02:41.609Z",
+        "generatedAt": "2026-05-04T22:50:54.408Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-04T21:02:41.609Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock, live-semiconductors-adeia-announces-first-quarter-2026-financial-results\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock, live-semiconductors-adeia-announces-first-quarter-2026-financial-results\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-04T22:50:54.408Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business, live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business, live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2481,13 +2481,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
+              "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
               "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-              "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-              "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock",
-              "live-semiconductors-adeia-announces-first-quarter-2026-financial-results"
+              "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business",
+              "live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-"
             ]
           },
           {
@@ -2500,8 +2500,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-              "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april"
+              "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
+              "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list"
             ]
           },
           {
@@ -2515,9 +2515,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
+              "live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u",
               "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
-              "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-              "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock"
+              "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business"
             ]
           },
           {
@@ -2531,9 +2531,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april",
-              "live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock",
-              "live-semiconductors-adeia-announces-first-quarter-2026-financial-results"
+              "live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list",
+              "live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business",
+              "live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-"
             ]
           }
         ]
@@ -2763,7 +2763,7 @@
       ]
     },
     "meeting": {
-      "topic": "Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
+      "topic": "Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2824,17 +2824,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-04T21:02:41.609Z",
+      "generatedAt": "2026-05-04T22:50:54.408Z",
       "nextRunAt": "2026-05-05T07:30:00.000Z",
-      "subject": "[Daily Brief] Broadcom, Google And Caterpillar Lead AI Charge On Must-See List",
-      "previewText": "Broadcom stock teases a buy zone as fellow IBD Leaderboard members Google and Caterpillar climb out of buy range. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up",
+      "previewText": "Bernstein Research’s Stacy Rasgon has been making the rounds with a deceptively simple thesis: stop arguing about market share. On a recent Marketplace Morning Report segment titled Chipping away at Nvidia’s chip dominance, Rasgon offered a line that should reframe how retirement investors think about the AI buildout. “There’s no such thing as too many ... Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\n\nBroadcom stock teases a buy zone as fellow IBD Leaderboard members Google and Caterpillar climb out of buy range. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nBroadcom, Google And Caterpillar Lead AI Charge On Must-See List\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- DBS Bank Raises PT on NVIDIA (NVDA) Stock\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Adeia Announces First Quarter 2026 Financial Results\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Broadcom, Google And Caterpillar Lead AI Charge On Must-See List</h1><p>Broadcom stock teases a buy zone as fellow IBD Leaderboard members Google and Caterpillar climb out of buy range. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Broadcom, Google And Caterpillar Lead AI Charge On Must-See List</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>DBS Bank Raises PT on NVIDIA (NVDA) Stock</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Adeia Announces First Quarter 2026 Financial Results</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Broadcom, Qualcomm, or TSMC: Why One AI Chip Stock Won Decisively in April<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\n\nBernstein Research’s Stacy Rasgon has been making the rounds with a deceptively simple thesis: stop arguing about market share. On a recent Marketplace Morning Report segment titled Chipping away at Nvidia’s chip dominance, Rasgon offered a line that should reframe how retirement investors think about the AI buildout. “There’s no such thing as too many ... Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nBernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Intel appoints Qualcomm executive to lead PC and physical AI business\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- These Stocks Are Today’s Movers: Coinbase, AMD, Palantir, Tesla, eBay, GameStop, FedEx, UPS, Micron, and More\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up</h1><p>Bernstein Research’s Stacy Rasgon has been making the rounds with a deceptively simple thesis: stop arguing about market share. On a recent Marketplace Morning Report segment titled Chipping away at Nvidia’s chip dominance, Rasgon offered a line that should reframe how retirement investors think about the AI buildout. “There’s no such thing as too many ... Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Broadcom, Google And Caterpillar Lead AI Charge On Must-See List</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Intel appoints Qualcomm executive to lead PC and physical AI business</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>These Stocks Are Today’s Movers: Coinbase, AMD, Palantir, Tesla, eBay, GameStop, FedEx, UPS, Micron, and More</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Broadcom, Google And Caterpillar Lead AI Charge On Must-See List<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-04T21:02:41.609Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Broadcom, Google And Caterpillar Lead AI Charge On Must-See List\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock, live-semiconductors-adeia-announces-first-quarter-2026-financial-results\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock, live-semiconductors-adeia-announces-first-quarter-2026-financial-results\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-04T22:50:54.408Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Bernstein Analyst: AI Agents Drive Chip Demand ‘Off the Charts,’ Supply Can’t Keep Up\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business, live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-bernstein-analyst-ai-agents-drive-chip-demand-off-the-charts-supply-can-t-keep-u, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-intel-appoints-qualcomm-executive-to-lead-pc-and-physical-ai-business, live-semiconductors-these-stocks-are-today-s-movers-coinbase-amd-palantir-tesla-ebay-gamestop-fedex-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: AI request failed (500): {\n  \"error\": {\n    \"message\": \"The server had an error while processing your request. Sorry about that!\",\n    \"type\": \"server_error\",\n    \"param\": null,\n    \"code\": null\n  }\n}"
+    "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
 }
