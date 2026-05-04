@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-04T19:19:00.385Z
+- Generated At: 2026-05-04T21:02:41.609Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -17,19 +17,19 @@
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
 메인 헤드라인을 "Broadcom, Google And Caterpillar Lead AI Charge On Must-See List"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-cerebras-seeks-3-5-billion-ipo-as-ai-chip-race-intensifies, live-semiconductors-jim-cramer-calls-arm-holdings-a-real-good-one, live-semiconductors-jim-cramer-says-he-would-buy-some-amd-ahead-of-the-quarter
+References: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock, live-semiconductors-adeia-announces-first-quarter-2026-financial-results
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-cerebras-seeks-3-5-billion-ipo-as-ai-chip-race-intensifies
+References: live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-cerebras-seeks-3-5-billion-ipo-as-ai-chip-race-intensifies, live-semiconductors-jim-cramer-calls-arm-holdings-a-real-good-one
+References: NVDA, live-semiconductors-broadcom-google-and-caterpillar-lead-ai-charge-on-must-see-list, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-cerebras-seeks-3-5-billion-ipo-as-ai-chip-race-intensifies, live-semiconductors-jim-cramer-calls-arm-holdings-a-real-good-one, live-semiconductors-jim-cramer-says-he-would-buy-some-amd-ahead-of-the-quarter
+References: NVDA, live-semiconductors-broadcom-qualcomm-or-tsmc-why-one-ai-chip-stock-won-decisively-in-april, live-semiconductors-dbs-bank-raises-pt-on-nvidia-nvda-stock, live-semiconductors-adeia-announces-first-quarter-2026-financial-results
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
