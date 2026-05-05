@@ -4,11 +4,11 @@
 - Owner: Trader
 - Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37
 - Branch: codex/agent-council/trader-entry-condition-ladder
-- Generated At: 2026-05-05T13:22:47.460Z
-- Status: ready
+- Generated At: 2026-05-05T15:47:41.103Z
+- Status: queued
 
 ## Detail
-NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.
+AMD 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.
 
 ## Implementation Focus
 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.
