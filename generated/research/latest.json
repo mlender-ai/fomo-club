@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-05T10:03:07.365Z",
+    "generatedAt": "2026-05-05T11:56:14.912Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-        "title": "Apple Explores Using Intel and Samsung to Build Main Device Chips in the US",
-        "summary": "(Bloomberg) -- Apple Inc. has held exploratory discussions about using Intel Corp. and Samsung Electronics Co. to produce the main processors for its devices in the US, a move that would offer a secondary option beyond longtime partner Taiwan Semiconductor Manufacturing Co.Most Read from BloombergUS Has Opened a Passage Through Hormuz, Central Command SaysUS and Iran Trade Fire in Gulf, Jolting Four-Week-Old TruceChina’s Rare Sanctions Pushback Leaves Banks Caught in CrossfireFormer NYC Mayor Gi",
+        "id": "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+        "title": "Nvidia Loses China AI GPU Share as Huawei Gains",
+        "summary": "Export curbs cut off key sales in major AI chip market",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/apple-explores-using-intel-samsung-024643900.html?.tsrc=rss",
-        "publishedAt": "2026-05-05T08:27:20.000Z",
-        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/95LvRm8y.3xjqibHGQrwkg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA-/https://media.zenfs.com/en/bloomberg_holding_pen_162/c34f6984e1da7d7ef7e69f1a4bfc9bb3",
+        "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/nvidia-loses-china-ai-gpu-114932223.html?.tsrc=rss",
+        "publishedAt": "2026-05-05T11:49:32.000Z",
+        "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,13 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-          "title": "Apple's chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk",
-          "summary": "The iPhone maker's exploratory discussions are less about finding a better manufacturer than about ensuring it never again loses iPhone revenue to a single point of failure When Apple Inc (NASDAQ:AAPL, XETRA:APC) executives fly to Texas to tour a Samsung fabrication plant and hold separate...",
-          "source": "PROACTIVEINVESTORS",
-          "sourceUrl": "https://www.proactiveinvestors.com/companies/news/1091707/apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-tech-thinks-about-supply-chain-risk-1091707.html?.tsrc=rss",
-          "publishedAt": "2026-05-05T07:30:00.000Z",
-          "imageUrl": "https://cdn.proactiveinvestors.com/eyJidWNrZXQiOiJwYS1jZG4iLCJrZXkiOiJ1cGxvYWRcL05ld3NcL0ltYWdlXC8yMDI2XzA1XC8yMDIyLTA1LTEwLTEwLTEzLTM2LTg1MTg2NjllMTdjN2U2ODRlNzU5YzA3YTcwOTE1MWFlLmpwZyIsImVkaXRzIjp7InJlc2l6ZSI6eyJ3aWR0aCI6MTIwMCwiaGVpZ2h0Ijo2MzAsImZpdCI6ImNvdmVyIn19fQ==",
+          "id": "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+          "title": "Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand",
+          "summary": "Nvidia stock broke out from its monthslong trading range of $165-$195 amid wider enthusiasm about the semiconductor sector last week but subsequently fell back.",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/m/7abd7af2-e741-39c6-a5df-a5aa31f78111/why-nvidia-stock-is.html?.tsrc=rss",
+          "publishedAt": "2026-05-05T10:51:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/xa115sRzLN.MNrTYe_FKlg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/85414445d2d91e04bf29923092f97376",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -266,13 +266,13 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth",
-          "title": "AMD Earnings Are Coming. AI Spending Is Driving Growth.",
-          "summary": "Advanced Micro Devices is expected to post strong growth driven by AI data center demand, though pricing pressure could weigh on margins.",
+          "id": "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda",
+          "title": "Here’s What BofA Thinks About ​NVIDIA Corporation (NVDA)",
+          "summary": "​NVIDIA Corporation (NASDAQ:NVDA) plays an important role in the quantum computing industry through its accelerated computing infrastructure and software platforms. For instance, the company integrates quantum processors with its AI supercomputers through tools like CUDA-Q, an open-source platform for hybrid quantum-classical applications, and NVQLink for seamless connectivity. The company also ranks as one of the […]",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/7ee7513c-0f11-385c-ab15-868d492e3d58/amd-earnings-are-coming.-ai.html?.tsrc=rss",
-          "publishedAt": "2026-05-05T06:00:00.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/z6tX9m6FgZSIt7iuLc5Xfw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/ad45126dd27557ae3280e95915496442",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/bofa-thinks-nvidia-corporation-nvda-101132458.html?.tsrc=rss",
+          "publishedAt": "2026-05-05T10:11:32.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/kZveoOmr3ngssVpudK1u4A--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzM-/https://media.zenfs.com/en/insidermonkey.com/aa94e059977d3251b8b0630718e013fc",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -281,27 +281,27 @@
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now",
-          "title": "Palantir Stock: With a Fresh Earnings Report Showing Even Faster Growth, Is It Now a Better AI Stock to Buy Than Nvidia?",
-          "summary": "Palantir's first quarter was nothing short of astounding. But does it live up to its sky-high valuation?",
-          "source": "FOOL",
-          "sourceUrl": "https://www.fool.com/investing/2026/05/04/palantir-stock-with-a-fresh-earnings-report-showin/?.tsrc=rss",
-          "publishedAt": "2026-05-05T04:07:00.000Z",
-          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F868670%2Fpltr-nvda.png&w=1200&op=resize",
+          "id": "live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run",
+          "title": "AMD Earnings Could Shake the Stock After Massive 60% Run",
+          "summary": "AMD Earnings Loom: AI Boom Sets Stage for Big Stock Move",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/amd-earnings-could-shake-stock-115018995.html?.tsrc=rss",
+          "publishedAt": "2026-05-05T11:50:18.000Z",
+          "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-            "title": "Apple's chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk",
-            "summary": "The iPhone maker's exploratory discussions are less about finding a better manufacturer than about ensuring it never again loses iPhone revenue to a single point of failure When Apple Inc (NASDAQ:AAPL, XETRA:APC) executives fly to Texas to tour a Samsung fabrication plant and hold separate...",
-            "source": "PROACTIVEINVESTORS",
-            "sourceUrl": "https://www.proactiveinvestors.com/companies/news/1091707/apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-tech-thinks-about-supply-chain-risk-1091707.html?.tsrc=rss",
-            "publishedAt": "2026-05-05T07:30:00.000Z",
-            "imageUrl": "https://cdn.proactiveinvestors.com/eyJidWNrZXQiOiJwYS1jZG4iLCJrZXkiOiJ1cGxvYWRcL05ld3NcL0ltYWdlXC8yMDI2XzA1XC8yMDIyLTA1LTEwLTEwLTEzLTM2LTg1MTg2NjllMTdjN2U2ODRlNzU5YzA3YTcwOTE1MWFlLmpwZyIsImVkaXRzIjp7InJlc2l6ZSI6eyJ3aWR0aCI6MTIwMCwiaGVpZ2h0Ijo2MzAsImZpdCI6ImNvdmVyIn19fQ==",
+            "id": "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+            "title": "Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand",
+            "summary": "Nvidia stock broke out from its monthslong trading range of $165-$195 amid wider enthusiasm about the semiconductor sector last week but subsequently fell back.",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/m/7abd7af2-e741-39c6-a5df-a5aa31f78111/why-nvidia-stock-is.html?.tsrc=rss",
+            "publishedAt": "2026-05-05T10:51:00.000Z",
+            "imageUrl": "https://s.yimg.com/ny/api/res/1.2/xa115sRzLN.MNrTYe_FKlg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/85414445d2d91e04bf29923092f97376",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -348,12 +348,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Loses China AI GPU Share as Huawei Gains\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-          "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-          "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth"
+          "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+          "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+          "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda"
         ],
         "latestPrice": 198.47999572753906,
         "priceChange": 0.029998779296875,
@@ -738,12 +738,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Loses China AI GPU Share as Huawei Gains\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-          "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-          "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth"
+          "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+          "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+          "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda"
         ],
         "latestPrice": 341.5400085449219,
         "priceChange": -19,
@@ -1133,12 +1133,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Loses China AI GPU Share as Huawei Gains\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-          "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-          "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth"
+          "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+          "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+          "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda"
         ],
         "latestPrice": 232500,
         "priceChange": 12000,
@@ -2321,20 +2321,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Nvidia Loses China AI GPU Share as Huawei Gains\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Apple Explores Using Intel and Samsung to Build Main Device Chips in the US",
-            "파생 뉴스: Apple's chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk",
-            "파생 뉴스: AMD Earnings Are Coming. AI Spending Is Driving Growth.",
-            "파생 뉴스: Palantir Stock: With a Fresh Earnings Report Showing Even Faster Growth, Is It Now a Better AI Stock to Buy Than Nvidia?",
-            "반도체: Apple's chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk"
+            "메인 헤드라인: Nvidia Loses China AI GPU Share as Huawei Gains",
+            "파생 뉴스: Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand",
+            "파생 뉴스: Here’s What BofA Thinks About ​NVIDIA Corporation (NVDA)",
+            "파생 뉴스: AMD Earnings Could Shake the Stock After Massive 60% Run",
+            "반도체: Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-            "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-            "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth",
-            "live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now"
+            "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+            "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+            "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda",
+            "live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run"
           ]
         },
         {
@@ -2351,8 +2351,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-            "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t"
+            "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+            "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand"
           ]
         },
         {
@@ -2366,14 +2366,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $173.66 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
             "패턴: AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia Loses China AI GPU Share as Huawei Gains\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-            "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-            "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth"
+            "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+            "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+            "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda"
           ]
         },
         {
@@ -2394,9 +2394,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-            "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth",
-            "live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now"
+            "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+            "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda",
+            "live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run"
           ]
         }
       ],
@@ -2465,14 +2465,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-05T10:03:07.365Z",
+        "runId": "fallback-2026-05-05T11:56:14.912Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-05T10:03:07.365Z",
+        "generatedAt": "2026-05-05T11:56:14.912Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-05T10:03:07.365Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t, live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth, live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t, live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t, live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth, live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-05T11:56:14.912Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Nvidia Loses China AI GPU Share as Huawei Gains\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia Loses China AI GPU Share as Huawei Gains\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand, live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda, live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand, live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand, live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda, live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2481,13 +2481,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Nvidia Loses China AI GPU Share as Huawei Gains\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Nvidia Loses China AI GPU Share as Huawei Gains\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-              "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-              "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth",
-              "live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now"
+              "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+              "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+              "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda",
+              "live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run"
             ]
           },
           {
@@ -2500,8 +2500,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-              "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t"
+              "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+              "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand"
             ]
           },
           {
@@ -2515,9 +2515,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us",
-              "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-              "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth"
+              "live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains",
+              "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+              "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda"
             ]
           },
           {
@@ -2531,9 +2531,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t",
-              "live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth",
-              "live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now"
+              "live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand",
+              "live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda",
+              "live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run"
             ]
           }
         ]
@@ -2763,7 +2763,7 @@
       ]
     },
     "meeting": {
-      "topic": "Apple Explores Using Intel and Samsung to Build Main Device Chips in the US",
+      "topic": "Nvidia Loses China AI GPU Share as Huawei Gains",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2824,16 +2824,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-05T10:03:07.365Z",
+      "generatedAt": "2026-05-05T11:56:14.912Z",
       "nextRunAt": "2026-05-06T07:30:00.000Z",
-      "subject": "[Daily Brief] Apple Explores Using Intel and Samsung to Build Main Device Chips in the US",
-      "previewText": "(Bloomberg) -- Apple Inc. has held exploratory discussions about using Intel Corp. and Samsung Electronics Co. to produce the main processors for its devices in the US, a move that would offer a secondary option beyond longtime partner Taiwan Semiconductor Manufacturing Co.Most Read from BloombergUS Has Opened a Passage Through Hormuz, Central Command SaysUS and Iran Trade Fire in Gulf, Jolting Four-Week-Old TruceChina’s Rare Sanctions Pushback Leaves Banks Caught in CrossfireFormer NYC Mayor Gi / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Nvidia Loses China AI GPU Share as Huawei Gains",
+      "previewText": "Export curbs cut off key sales in major AI chip market / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\n\n(Bloomberg) -- Apple Inc. has held exploratory discussions about using Intel Corp. and Samsung Electronics Co. to produce the main processors for its devices in the US, a move that would offer a secondary option beyond longtime partner Taiwan Semiconductor Manufacturing Co.Most Read from BloombergUS Has Opened a Passage Through Hormuz, Central Command SaysUS and Iran Trade Fire in Gulf, Jolting Four-Week-Old TruceChina’s Rare Sanctions Pushback Leaves Banks Caught in CrossfireFormer NYC Mayor Gi / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nApple Explores Using Intel and Samsung to Build Main Device Chips in the US\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Apple's chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- AMD Earnings Are Coming. AI Spending Is Driving Growth.\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Palantir Stock: With a Fresh Earnings Report Showing Even Faster Growth, Is It Now a Better AI Stock to Buy Than Nvidia?\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Apple's chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Apple Explores Using Intel and Samsung to Build Main Device Chips in the US</h1><p>(Bloomberg) -- Apple Inc. has held exploratory discussions about using Intel Corp. and Samsung Electronics Co. to produce the main processors for its devices in the US, a move that would offer a secondary option beyond longtime partner Taiwan Semiconductor Manufacturing Co.Most Read from BloombergUS Has Opened a Passage Through Hormuz, Central Command SaysUS and Iran Trade Fire in Gulf, Jolting Four-Week-Old TruceChina’s Rare Sanctions Pushback Leaves Banks Caught in CrossfireFormer NYC Mayor Gi / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Apple Explores Using Intel and Samsung to Build Main Device Chips in the US</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Apple&#39;s chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>AMD Earnings Are Coming. AI Spending Is Driving Growth.</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Palantir Stock: With a Fresh Earnings Report Showing Even Faster Growth, Is It Now a Better AI Stock to Buy Than Nvidia?</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Apple&#39;s chip talks with Intel and Samsung signal a structural shift in how Big Tech thinks about supply chain risk<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Nvidia Loses China AI GPU Share as Huawei Gains\n\nExport curbs cut off key sales in major AI chip market / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nNvidia Loses China AI GPU Share as Huawei Gains\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Here’s What BofA Thinks About ​NVIDIA Corporation (NVDA)\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- AMD Earnings Could Shake the Stock After Massive 60% Run\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Nvidia Loses China AI GPU Share as Huawei Gains</h1><p>Export curbs cut off key sales in major AI chip market / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Nvidia Loses China AI GPU Share as Huawei Gains</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Here’s What BofA Thinks About ​NVIDIA Corporation (NVDA)</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>AMD Earnings Could Shake the Stock After Massive 60% Run</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Why Nvidia Stock Is ‘Undervalued’ Amid Soaring AI Demand<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-05T10:03:07.365Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Apple Explores Using Intel and Samsung to Build Main Device Chips in the US\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t, live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth, live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-apple-explores-using-intel-and-samsung-to-build-main-device-chips-in-the-us, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t, live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-apple-s-chip-talks-with-intel-and-samsung-signal-a-structural-shift-in-how-big-t, live-semiconductors-amd-earnings-are-coming-ai-spending-is-driving-growth, live-semiconductors-palantir-stock-with-a-fresh-earnings-report-showing-even-faster-growth-is-it-now\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-05T11:56:14.912Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Nvidia Loses China AI GPU Share as Huawei Gains\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia Loses China AI GPU Share as Huawei Gains\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand, live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda, live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-loses-china-ai-gpu-share-as-huawei-gains, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand, live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-why-nvidia-stock-is-undervalued-amid-soaring-ai-demand, live-semiconductors-here-s-what-bofa-thinks-about-nvidia-corporation-nvda, live-semiconductors-amd-earnings-could-shake-the-stock-after-massive-60-run\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
