@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-06T02:05:47.937Z
+- Generated At: 2026-05-06T05:50:59.954Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -17,19 +17,19 @@
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
 메인 헤드라인을 "AMD Stock Soars on Strong Earnings and Growing Confidence About AI"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-amd-stock-soars-on-strong-earnings-and-growing-confidence-about-ai, live-semiconductors-cathie-wood-sells-11-8-million-in-nvidia-backed-stock-before-earnings, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat, live-semiconductors-amd-q1-earnings-what-the-chipmaker-s-growth-could-mean-for-nvidia
+References: live-semiconductors-amd-stock-soars-on-strong-earnings-and-growing-confidence-about-ai, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat, live-semiconductors-amd-q1-earnings-what-the-chipmaker-s-growth-could-mean-for-nvidia, live-semiconductors-dow-jones-futures-rise-trump-hits-hormuz-pause-amd-lumentum-arista-lead-ai-earni
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-amd-stock-soars-on-strong-earnings-and-growing-confidence-about-ai, live-semiconductors-cathie-wood-sells-11-8-million-in-nvidia-backed-stock-before-earnings
+References: live-semiconductors-amd-stock-soars-on-strong-earnings-and-growing-confidence-about-ai, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat
 
 ### 03 Ticker Analyst -> Execution Trader
 AMD를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: AMD, live-semiconductors-amd-stock-soars-on-strong-earnings-and-growing-confidence-about-ai, live-semiconductors-cathie-wood-sells-11-8-million-in-nvidia-backed-stock-before-earnings, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat
+References: AMD, live-semiconductors-amd-stock-soars-on-strong-earnings-and-growing-confidence-about-ai, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat, live-semiconductors-amd-q1-earnings-what-the-chipmaker-s-growth-could-mean-for-nvidia
 
 ### 04 Execution Trader -> Operator
 AMD 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: AMD, live-semiconductors-cathie-wood-sells-11-8-million-in-nvidia-backed-stock-before-earnings, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat, live-semiconductors-amd-q1-earnings-what-the-chipmaker-s-growth-could-mean-for-nvidia
+References: AMD, live-semiconductors-amd-stock-jumps-as-ai-data-center-sales-drive-q1-beat, live-semiconductors-amd-q1-earnings-what-the-chipmaker-s-growth-could-mean-for-nvidia, live-semiconductors-dow-jones-futures-rise-trump-hits-hormuz-pause-amd-lumentum-arista-lead-ai-earni
 
 ## Trader Plan
 - Strategy: AMD 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
