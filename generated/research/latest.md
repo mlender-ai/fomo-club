@@ -1,40 +1,40 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-06T12:58:12.120Z
+- Generated At: 2026-05-06T15:27:50.118Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
 - Status: fallback
 - Sectors: 반도체, 에너지(오일)
-- Tickers: AMD, 005930.KS, 010950.KS, NVDA, XOM
+- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- Global Mofy’s U.S. Subsidiary Eaglepoint AI Selected for NVIDIA Inception Program, Further Strengthening Its Global AI Infrastructure Services Layout
+- AI Chip Packaging Constraints Create an Opening for Intel’s EMIB Technology
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
 - Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "Global Mofy’s U.S. Subsidiary Eaglepoint AI Selected for NVIDIA Inception Program, Further Strengthening Its Global AI Infrastructure Services Layout"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-global-mofy-s-u-s-subsidiary-eaglepoint-ai-selected-for-nvidia-inception-program, live-semiconductors-corning-surges-14-on-massive-nvidia-partnership-to-boost-ai-fiber-capacity, live-semiconductors-stock-market-today-dow-jumps-oil-prices-plunge-on-u-s-iran-deal-hopes-amd-surges, live-semiconductors-amd-shares-jump-15-on-stunning-ai-fueled-revenue-jump-and-strong-outlook
+메인 헤드라인을 "AI Chip Packaging Constraints Create an Opening for Intel’s EMIB Technology"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-ai-chip-packaging-constraints-create-an-opening-for-intel-s-emib-technology, live-semiconductors-coinbase-ceo-warns-american-workers-mass-layoffs-are-coming-to-every-company, live-semiconductors-samsung-hits-1-trillion-as-ai-chip-demand-fuels-14-surge, live-semiconductors-what-micron-sandisk-s-stock-moves-say-about-the-chip-sector
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-global-mofy-s-u-s-subsidiary-eaglepoint-ai-selected-for-nvidia-inception-program, live-semiconductors-corning-surges-14-on-massive-nvidia-partnership-to-boost-ai-fiber-capacity, live-energy-oil-exxon-chevron-other-oil-stocks-sink-as-market-bets-iran-war-will-end
+References: live-semiconductors-ai-chip-packaging-constraints-create-an-opening-for-intel-s-emib-technology, live-semiconductors-coinbase-ceo-warns-american-workers-mass-layoffs-are-coming-to-every-company
 
 ### 03 Ticker Analyst -> Execution Trader
-AMD를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: AMD, live-semiconductors-global-mofy-s-u-s-subsidiary-eaglepoint-ai-selected-for-nvidia-inception-program, live-semiconductors-corning-surges-14-on-massive-nvidia-partnership-to-boost-ai-fiber-capacity, live-semiconductors-stock-market-today-dow-jumps-oil-prices-plunge-on-u-s-iran-deal-hopes-amd-surges
+NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
+References: NVDA, live-semiconductors-ai-chip-packaging-constraints-create-an-opening-for-intel-s-emib-technology, live-semiconductors-coinbase-ceo-warns-american-workers-mass-layoffs-are-coming-to-every-company, live-semiconductors-samsung-hits-1-trillion-as-ai-chip-demand-fuels-14-surge
 
 ### 04 Execution Trader -> Operator
-AMD 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: AMD, live-semiconductors-corning-surges-14-on-massive-nvidia-partnership-to-boost-ai-fiber-capacity, live-semiconductors-stock-market-today-dow-jumps-oil-prices-plunge-on-u-s-iran-deal-hopes-amd-surges, live-semiconductors-amd-shares-jump-15-on-stunning-ai-fueled-revenue-jump-and-strong-outlook
+NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
+References: NVDA, live-semiconductors-coinbase-ceo-warns-american-workers-mass-layoffs-are-coming-to-every-company, live-semiconductors-samsung-hits-1-trillion-as-ai-chip-demand-fuels-14-surge, live-semiconductors-what-micron-sandisk-s-stock-moves-say-about-the-chip-sector
 
 ## Trader Plan
-- Strategy: AMD 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
-- Do: AMD는 추격 대신 조정 구간에서만 분할 진입합니다.
-- Do: 005930.KS는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.
+- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
+- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.
+- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.
 - Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.
 - Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.
 - Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.
@@ -50,7 +50,7 @@ References: AMD, live-semiconductors-corning-surges-14-on-massive-nvidia-partner
 ## Product Action Items
 - 행동 제안을 진입 조건 사다리로 바꿉니다.
   Owner: Trader
-  Detail: AMD 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.
+  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.
   Implementation Status: ready
   Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.
   Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css
