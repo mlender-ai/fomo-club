@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-07T20:09:57.468Z",
+    "generatedAt": "2026-05-07T21:49:27.635Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-        "title": "IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.",
-        "summary": "The quantum computing company raises its full-year revenue guidance on the heels of its latest quarter.",
+        "id": "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+        "title": "Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late",
+        "summary": "Iran deal doubts hit stocks Thursday, but Nvidia, Tesla were strong. CoreWeave, Rocket Lab, Cloudflare were earnings movers late. The jobs report is on deck.",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/m/356b905a-ba1b-32c2-9878-89b1bc462d82/ionq-doubles-down-on-nvidia.html?.tsrc=rss",
-        "publishedAt": "2026-05-07T19:24:00.000Z",
-        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/hbE.GcLvKnbRZsFU7.zmGg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/4ab448aca30d72b5e7d74ae7fca43db5",
+        "sourceUrl": "https://finance.yahoo.com/m/adf66c9f-a0d5-3578-a650-888f3fd43cd8/dow-jones-futures%3A-ai-leads.html?.tsrc=rss",
+        "publishedAt": "2026-05-07T21:37:09.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/ibd.com/871ec6ed51017af95a6dbb7fb2cb1d2e",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,32 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-          "title": "OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative",
-          "summary": "OpenAI cannot close $18 billion for its Broadcom chip deal, fueling fresh concerns about AI capex sustainability.",
-          "source": "BEINCRYPTO",
-          "sourceUrl": "https://beincrypto.com/openai-broadcom-18-billion-financing-snag/?.tsrc=rss",
-          "publishedAt": "2026-05-07T19:04:57.000Z",
-          "imageUrl": null,
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "NVDA",
-            "AMD",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-        },
-        {
-          "id": "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane",
-          "title": "These Stocks Are Today’s Movers: IonQ, Arm, Datadog, Fortinet, Nvidia, Whirlpool, Planet Fitness, Fastly, and More",
-          "summary": "Arm stock falls as the semiconductor company suggests it may not be able to meet surging demand for its new chip.",
+          "id": "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+          "title": "Iren Stock Rallies On Nvidia Partnership For AI Deployments",
+          "summary": "Bitcoin miner Iren continues its shift to AI infrastructure with a new strategic partnership with Nvidia. IREN stock rallies.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/a0e94489-6dd8-3443-bb53-f3ef388ec897/these-stocks-are-today%E2%80%99s.html?.tsrc=rss",
-          "publishedAt": "2026-05-07T18:42:00.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/_LGm0a4KlyWkf.J7Zc7YbQ--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/82f4486dca63f849767e3a7a590c1d20",
+          "sourceUrl": "https://finance.yahoo.com/m/fd2dc479-0901-3bd0-aab5-abd34c824000/iren-stock-rallies-on-nvidia.html?.tsrc=rss",
+          "publishedAt": "2026-05-07T21:30:07.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/ibd.com/871ec6ed51017af95a6dbb7fb2cb1d2e",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -285,23 +266,42 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings",
-          "title": "Cathie Wood buys $32M of e-commerce goliath after strong earnings",
-          "summary": "Cathie Wood has spent weeks trimming some of the market’s hottest winners. Advanced Micro Devices (AMD) kept climbing, and it was one of the several that Wood sold. In my previous coverage, Cathie Wood sold another $15.6M of the semiconductor stock after it gained 93% this year. Other artificial ...",
-          "source": "THESTREET",
-          "sourceUrl": "https://www.thestreet.com/investing/stocks/cathie-wood-buys-32m-of-e-commerce-goliath-shopify-after-strong-earnings?.tsrc=rss",
-          "publishedAt": "2026-05-07T19:47:00.000Z",
-          "imageUrl": null,
+          "id": "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening",
+          "title": "Advanced Micro Devices, Inc. (AMD): Gap with NVIDIA Widening?",
+          "summary": "We just covered Sell These 4 Stocks and Go All In on These 3 Stocks Before May 9th for 100x Returns? and Advanced Micro Devices, Inc. (NASDAQ:AMD) ranks 6th on this list. Advanced Micro Devices, Inc. (NASDAQ:AMD) is the biggest competitor of NVIDIA in the AI and GPU universe. However, Instagram influencers have highlighted the […]",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/advanced-micro-devices-inc-amd-210033600.html?.tsrc=rss",
+          "publishedAt": "2026-05-07T21:00:33.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/GFNsOLjc4_3gbqmmkPNSDA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzM-/https://media.zenfs.com/en/insidermonkey.com/cece14d8df3ff9750f89999715c2f4bb",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "AMD",
             "NVDA",
+            "AMD",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
-          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        },
+        {
+          "id": "live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout",
+          "title": "IREN partners with NVIDIA on up to 5 GW AI infrastructure buildout",
+          "summary": "IREN and NVIDIA announced a strategic partnership to accelerate deployment of up to 5 gigawatts of AI infrastructure, as IREN targets 150,000 GPUs by end of 2026.",
+          "source": "BLOCKSPACE",
+          "sourceUrl": "https://blockspace.media/insight/iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout/?.tsrc=rss",
+          "publishedAt": "2026-05-07T20:58:51.000Z",
+          "imageUrl": null,
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "NVDA",
+            "AMD",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-            "title": "OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative",
-            "summary": "OpenAI cannot close $18 billion for its Broadcom chip deal, fueling fresh concerns about AI capex sustainability.",
-            "source": "BEINCRYPTO",
-            "sourceUrl": "https://beincrypto.com/openai-broadcom-18-billion-financing-snag/?.tsrc=rss",
-            "publishedAt": "2026-05-07T19:04:57.000Z",
-            "imageUrl": null,
+            "id": "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+            "title": "Iren Stock Rallies On Nvidia Partnership For AI Deployments",
+            "summary": "Bitcoin miner Iren continues its shift to AI infrastructure with a new strategic partnership with Nvidia. IREN stock rallies.",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/m/fd2dc479-0901-3bd0-aab5-abd34c824000/iren-stock-rallies-on-nvidia.html?.tsrc=rss",
+            "publishedAt": "2026-05-07T21:30:07.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/ibd.com/871ec6ed51017af95a6dbb7fb2cb1d2e",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -326,29 +326,6 @@
             "priority": "critical",
             "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
             "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-          }
-        },
-        {
-          "sectorTag": "energy-oil",
-          "sectorLabel": "에너지(오일)",
-          "item": {
-            "id": "live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories",
-            "title": "Oil Supply Shock Worsens amid Plunging Petroleum Inventories",
-            "summary": "Major institutions, including Goldman Sachs and executives from TotalEnergies and ExxonMobil, say commercial inventories are approaching critically low levels, especially for refined fuels like gasoline and jet fuel.",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/energy/articles/oil-supply-shock-worsens-amid-160000087.html?.tsrc=rss",
-            "publishedAt": "2026-05-07T16:00:00.000Z",
-            "imageUrl": null,
-            "sectorTag": "energy-oil",
-            "tickerTags": [
-              "XOM",
-              "CVX",
-              "SLB"
-            ],
-            "importanceScore": 98,
-            "priority": "critical",
-            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
-            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
           }
         }
       ]
@@ -376,16 +353,16 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-          "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-          "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane"
+          "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+          "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+          "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening"
         ],
-        "latestPrice": 211.4969940185547,
-        "priceChange": 3.6669921875,
-        "priceChangePercent": 1.7644190709678689,
+        "latestPrice": 211.5,
+        "priceChange": 3.6699981689453125,
+        "priceChangePercent": 1.765865436467955,
         "chartSeries": [
           {
             "date": "2025-12-29T14:30:00.000Z",
@@ -745,7 +722,7 @@
           },
           {
             "date": "2026-05-07T13:30:00.000Z",
-            "close": 211.4969940185547
+            "close": 211.5
           }
         ]
       },
@@ -766,12 +743,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-          "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-          "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane"
+          "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+          "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+          "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening"
         ],
         "latestPrice": 408.4599914550781,
         "priceChange": -12.930023193359375,
@@ -1161,12 +1138,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-          "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-          "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane"
+          "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+          "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+          "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening"
         ],
         "latestPrice": 271500,
         "priceChange": 5500,
@@ -1541,7 +1518,7 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 88,
+        "importanceScore": 71,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
         "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $110000.00 / $94600.00, 저항은 $137500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
@@ -1551,11 +1528,9 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 연결 뉴스에서는 \"Oil Supply Shock Worsens amid Plunging Petroleum Inventories\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "010950.KS는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 118200,
         "priceChange": -3800,
         "priceChangePercent": -3.114754098360656,
@@ -1929,7 +1904,7 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 82,
+        "importanceScore": 65,
         "summary": "반등보다 구조 복원 확인이 먼저 필요한 방어 구간입니다.",
         "technicalAnalysis": "단기와 중기 추세가 함께 꺾여 있어 반등보다 방어가 우선입니다. 주요 지지는 $141.97 / $141.97, 저항은 $155.69 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1939,14 +1914,12 @@
             "confidence": "medium"
           }
         ],
-        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 연결 뉴스에서는 \"Oil Supply Shock Worsens amid Plunging Petroleum Inventories\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "XOM는 단기 반등이 나와도 20일선 회복 전까지는 신규 진입보다 회피가 우선입니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories"
-        ],
-        "latestPrice": 146.5,
-        "priceChange": -2.19000244140625,
-        "priceChangePercent": -1.4728646213246628,
+        "linkedNewsIds": [],
+        "latestPrice": 146.5800018310547,
+        "priceChange": -2.1100006103515625,
+        "priceChangePercent": -1.4190601760081638,
         "chartSeries": [
           {
             "date": "2025-12-29T14:30:00.000Z",
@@ -2306,7 +2279,7 @@
           },
           {
             "date": "2026-05-07T13:30:00.000Z",
-            "close": 146.5
+            "close": 146.5800018310547
           }
         ]
       }
@@ -2353,21 +2326,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.",
-            "파생 뉴스: OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative",
-            "파생 뉴스: These Stocks Are Today’s Movers: IonQ, Arm, Datadog, Fortinet, Nvidia, Whirlpool, Planet Fitness, Fastly, and More",
-            "파생 뉴스: Cathie Wood buys $32M of e-commerce goliath after strong earnings",
-            "반도체: OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative",
-            "에너지(오일): Oil Supply Shock Worsens amid Plunging Petroleum Inventories"
+            "메인 헤드라인: Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late",
+            "파생 뉴스: Iren Stock Rallies On Nvidia Partnership For AI Deployments",
+            "파생 뉴스: Advanced Micro Devices, Inc. (AMD): Gap with NVIDIA Widening?",
+            "파생 뉴스: IREN partners with NVIDIA on up to 5 GW AI infrastructure buildout",
+            "반도체: Iren Stock Rallies On Nvidia Partnership For AI Deployments"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-            "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-            "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane",
-            "live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings"
+            "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+            "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+            "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening",
+            "live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout"
           ]
         },
         {
@@ -2384,9 +2356,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-            "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-            "live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories"
+            "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+            "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments"
           ]
         },
         {
@@ -2400,14 +2371,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $184.30 / $164.27, 저항은 $216.83 / $216.83입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-            "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-            "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane"
+            "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+            "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+            "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening"
           ]
         },
         {
@@ -2428,9 +2399,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-            "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane",
-            "live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings"
+            "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+            "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening",
+            "live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout"
           ]
         }
       ],
@@ -2499,14 +2470,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-07T20:09:57.468Z",
+        "runId": "fallback-2026-05-07T21:49:27.635Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-07T20:09:57.468Z",
+        "generatedAt": "2026-05-07T21:49:27.635Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-07T20:09:57.468Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane, live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane, live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-07T21:49:27.635Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments, live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening, live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments, live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments, live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening, live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2515,13 +2486,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-              "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-              "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane",
-              "live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings"
+              "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+              "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+              "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening",
+              "live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout"
             ]
           },
           {
@@ -2534,9 +2505,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-              "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-              "live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories"
+              "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+              "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments"
             ]
           },
           {
@@ -2550,9 +2520,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea",
-              "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-              "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane"
+              "live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud",
+              "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+              "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening"
             ]
           },
           {
@@ -2566,9 +2536,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative",
-              "live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane",
-              "live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings"
+              "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
+              "live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening",
+              "live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout"
             ]
           }
         ]
@@ -2798,7 +2768,7 @@
       ]
     },
     "meeting": {
-      "topic": "IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.",
+      "topic": "Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2859,17 +2829,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-07T20:09:57.468Z",
+      "generatedAt": "2026-05-07T21:49:27.635Z",
       "nextRunAt": "2026-05-08T07:30:00.000Z",
-      "subject": "[Daily Brief] IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.",
-      "previewText": "The quantum computing company raises its full-year revenue guidance on the heels of its latest quarter. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
+      "subject": "[Daily Brief] Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late",
+      "previewText": "Iran deal doubts hit stocks Thursday, but Nvidia, Tesla were strong. CoreWeave, Rocket Lab, Cloudflare were earnings movers late. The jobs report is on deck. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
       "to": [],
-      "bodyText": "[Daily Brief] IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\n\nThe quantum computing company raises its full-year revenue guidance on the heels of its latest quarter. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nIonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- These Stocks Are Today’s Movers: IonQ, Arm, Datadog, Fortinet, Nvidia, Whirlpool, Planet Fitness, Fastly, and More\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Cathie Wood buys $32M of e-commerce goliath after strong earnings\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Oil Supply Shock Worsens amid Plunging Petroleum Inventories\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.</h1><p>The quantum computing company raises its full-year revenue guidance on the heels of its latest quarter. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>These Stocks Are Today’s Movers: IonQ, Arm, Datadog, Fortinet, Nvidia, Whirlpool, Planet Fitness, Fastly, and More</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Cathie Wood buys $32M of e-commerce goliath after strong earnings</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - OpenAI’s $18 Billion Chip Financing Trouble Rattles AI Boom Narrative<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Oil Supply Shock Worsens amid Plunging Petroleum Inventories<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\n\nIran deal doubts hit stocks Thursday, but Nvidia, Tesla were strong. CoreWeave, Rocket Lab, Cloudflare were earnings movers late. The jobs report is on deck. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nDow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- Iren Stock Rallies On Nvidia Partnership For AI Deployments\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Advanced Micro Devices, Inc. (AMD): Gap with NVIDIA Widening?\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- IREN partners with NVIDIA on up to 5 GW AI infrastructure buildout\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Iren Stock Rallies On Nvidia Partnership For AI Deployments\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late</h1><p>Iran deal doubts hit stocks Thursday, but Nvidia, Tesla were strong. CoreWeave, Rocket Lab, Cloudflare were earnings movers late. The jobs report is on deck. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>Iren Stock Rallies On Nvidia Partnership For AI Deployments</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Advanced Micro Devices, Inc. (AMD): Gap with NVIDIA Widening?</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>IREN partners with NVIDIA on up to 5 GW AI infrastructure buildout</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Iren Stock Rallies On Nvidia Partnership For AI Deployments<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-07T20:09:57.468Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"IonQ Doubles Down on Nvidia Comparison. Why the Stock Is Falling After Blowout Earnings.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane, live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-energy-oil-oil-supply-shock-worsens-amid-plunging-petroleum-inventories\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-ionq-doubles-down-on-nvidia-comparison-why-the-stock-is-falling-after-blowout-ea, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-openai-s-18-billion-chip-financing-trouble-rattles-ai-boom-narrative, live-semiconductors-these-stocks-are-today-s-movers-ionq-arm-datadog-fortinet-nvidia-whirlpool-plane, live-semiconductors-cathie-wood-buys-32m-of-e-commerce-goliath-after-strong-earnings\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-07T21:49:27.635Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Dow Jones Futures: AI Leads Market Slide But Nvidia, Tesla Strong; Rocket Lab, Cloudflare, Iren Are Big Earnings Movers Late\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments, live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening, live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-dow-jones-futures-ai-leads-market-slide-but-nvidia-tesla-strong-rocket-lab-cloud, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments, live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments, live-semiconductors-advanced-micro-devices-inc-amd-gap-with-nvidia-widening, live-semiconductors-iren-partners-with-nvidia-on-up-to-5-gw-ai-infrastructure-buildout\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3439"
+    "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
 }
