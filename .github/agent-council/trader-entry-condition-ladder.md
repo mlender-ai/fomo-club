@@ -4,8 +4,8 @@
 - Owner: Trader
 - Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37
 - Branch: codex/agent-council/trader-entry-condition-ladder
-- Generated At: 2026-05-08T19:07:49.336Z
-- Status: ready
+- Generated At: 2026-05-08T20:51:06.920Z
+- Status: queued
 
 ## Detail
 NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.
