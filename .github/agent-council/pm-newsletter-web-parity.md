@@ -4,8 +4,8 @@
 - Owner: PM
 - Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39
 - Branch: codex/agent-council/pm-newsletter-web-parity
-- Generated At: 2026-05-08T07:19:38.802Z
-- Status: ready
+- Generated At: 2026-05-08T09:08:22.550Z
+- Status: queued
 
 ## Detail
 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.
