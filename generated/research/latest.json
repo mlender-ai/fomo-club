@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-08T20:52:06.715Z",
+    "generatedAt": "2026-05-08T21:53:43.672Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
-        "title": "Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)",
-        "summary": "Stock Market Today: The Dow Jones index rose Friday on a surprise April jobs report. Coinbase and Cloudflare dived on earnings.",
+        "id": "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
+        "title": "Why the Gap Between Chip and Software Stocks Keeps Getting Wider",
+        "summary": "Investors can’t get enough of Nvidia, AMD, Intel, and Micron as earnings season widens the divide between chip and software stocks.",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/m/b8d58ef5-7101-33bc-96a9-9dcc9f0843d1/stock-market-today%3A-nasdaq%2C.html?.tsrc=rss",
-        "publishedAt": "2026-05-08T20:45:44.000Z",
-        "imageUrl": "https://s.yimg.com/os/en/ibd.com/bdbe6dbbffecf1cbdc8bf7c0c08c3a92",
+        "sourceUrl": "https://finance.yahoo.com/m/edc3318a-0154-3865-b23e-4bece2b19f97/why-the-gap-between-chip-and.html?.tsrc=rss",
+        "publishedAt": "2026-05-08T20:49:00.000Z",
+        "imageUrl": "https://s.yimg.com/ny/api/res/1.2/F8YHgghDi1rhYxtcUyJmpg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/b3207b8eaf2ce797adc3e7966b73ded9",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -266,13 +266,13 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple",
-          "title": "Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple",
-          "summary": "A preliminary Apple-Intel manufacturing agreement—backed by a White House push—sent Intel stock above $130 on Friday.",
-          "source": "DECRYPT",
-          "sourceUrl": "https://decrypt.co/367320/intel-all-time-high-chip-deal-apple?.tsrc=rss",
-          "publishedAt": "2026-05-08T20:17:26.000Z",
-          "imageUrl": "https://cdn.decrypt.co/resize/1024/height/512/wp-content/uploads/2026/05/intel-logo-decrypt-style-01-gID_7.png",
+          "id": "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+          "title": "Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)",
+          "summary": "Stock Market Today: The Dow Jones index rose Friday on a surprise April jobs report. Coinbase and Cloudflare dived on earnings.",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/m/b8d58ef5-7101-33bc-96a9-9dcc9f0843d1/stock-market-today%3A-nasdaq%2C.html?.tsrc=rss",
+          "publishedAt": "2026-05-08T20:36:39.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/ibd.com/bdbe6dbbffecf1cbdc8bf7c0c08c3a92",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -281,17 +281,17 @@
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         },
         {
-          "id": "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments",
-          "title": "IREN Stock Rallies On Nvidia Partnership For AI Deployments",
-          "summary": "Bitcoin miner IREN continues its shift to AI infrastructure with a new strategic partnership with Nvidia. IREN stock rallies.",
+          "id": "live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner",
+          "title": "In Rush to Buy CPUs, Intel Won’t Be the Only Winner",
+          "summary": "The rise of AI agents is swinging attention back to the main brain of data-center computing, the CPU.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/fd2dc479-0901-3bd0-aab5-abd34c824000/iren-stock-rallies-on-nvidia.html?.tsrc=rss",
-          "publishedAt": "2026-05-08T20:15:28.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/ibd.com/871ec6ed51017af95a6dbb7fb2cb1d2e",
+          "sourceUrl": "https://finance.yahoo.com/m/ad55b0ae-ca00-390a-8d12-1e076c9eefb8/in-rush-to-buy-cpus%2C-intel.html?.tsrc=rss",
+          "publishedAt": "2026-05-08T20:34:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/bkRg_ByqZL6pkTHiKPIb7g--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/9d0b15dfe9e3c88b8a85d729fcf6b284",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -353,12 +353,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+          "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
           "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-          "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
+          "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-"
         ],
         "latestPrice": 215.1999969482422,
         "priceChange": 3.6999969482421875,
@@ -743,12 +743,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+          "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
           "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-          "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
+          "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-"
         ],
         "latestPrice": 455.19000244140625,
         "priceChange": 46.730010986328125,
@@ -1133,12 +1133,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+          "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
           "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-          "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
+          "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-"
         ],
         "latestPrice": 268500,
         "priceChange": -3000,
@@ -2321,20 +2321,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)",
+            "메인 헤드라인: Why the Gap Between Chip and Software Stocks Keeps Getting Wider",
             "파생 뉴스: This new AI trade is leaving Nvidia and Micron in the dust",
-            "파생 뉴스: Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple",
-            "파생 뉴스: IREN Stock Rallies On Nvidia Partnership For AI Deployments",
+            "파생 뉴스: Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)",
+            "파생 뉴스: In Rush to Buy CPUs, Intel Won’t Be the Only Winner",
             "반도체: This new AI trade is leaving Nvidia and Micron in the dust"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+            "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
             "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-            "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple",
-            "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments"
+            "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+            "live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner"
           ]
         },
         {
@@ -2351,7 +2351,7 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+            "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
             "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust"
           ]
         },
@@ -2366,14 +2366,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $185.74 / $164.27, 저항은 $217.80 / $217.80입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+            "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
             "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-            "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
+            "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-"
           ]
         },
         {
@@ -2395,8 +2395,8 @@
           "references": [
             "NVDA",
             "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-            "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple",
-            "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments"
+            "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+            "live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner"
           ]
         }
       ],
@@ -2465,14 +2465,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-08T20:52:06.715Z",
+        "runId": "fallback-2026-05-08T21:53:43.672Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-08T20:52:06.715Z",
+        "generatedAt": "2026-05-08T21:53:43.672Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-08T20:52:06.715Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-08T21:53:43.672Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Why the Gap Between Chip and Software Stocks Keeps Getting Wider\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2481,13 +2481,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+              "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
               "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-              "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple",
-              "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments"
+              "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+              "live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner"
             ]
           },
           {
@@ -2500,7 +2500,7 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+              "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
               "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust"
             ]
           },
@@ -2515,9 +2515,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+              "live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider",
               "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-              "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
+              "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-"
             ]
           },
           {
@@ -2532,8 +2532,8 @@
             "references": [
               "NVDA",
               "live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust",
-              "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple",
-              "live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments"
+              "live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-",
+              "live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner"
             ]
           }
         ]
@@ -2763,7 +2763,7 @@
       ]
     },
     "meeting": {
-      "topic": "Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)",
+      "topic": "Why the Gap Between Chip and Software Stocks Keeps Getting Wider",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2824,17 +2824,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-08T20:52:06.715Z",
+      "generatedAt": "2026-05-08T21:53:43.672Z",
       "nextRunAt": "2026-05-09T07:30:00.000Z",
-      "subject": "[Daily Brief] Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)",
-      "previewText": "Stock Market Today: The Dow Jones index rose Friday on a surprise April jobs report. Coinbase and Cloudflare dived on earnings. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
+      "subject": "[Daily Brief] Why the Gap Between Chip and Software Stocks Keeps Getting Wider",
+      "previewText": "Investors can’t get enough of Nvidia, AMD, Intel, and Micron as earnings season widens the divide between chip and software stocks. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\n\nStock Market Today: The Dow Jones index rose Friday on a surprise April jobs report. Coinbase and Cloudflare dived on earnings. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nStock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- This new AI trade is leaving Nvidia and Micron in the dust\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- IREN Stock Rallies On Nvidia Partnership For AI Deployments\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: This new AI trade is leaving Nvidia and Micron in the dust\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Stock Market Today: Nasdaq, S&amp;P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)</h1><p>Stock Market Today: The Dow Jones index rose Friday on a surprise April jobs report. Coinbase and Cloudflare dived on earnings. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>Stock Market Today: Nasdaq, S&amp;P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>This new AI trade is leaving Nvidia and Micron in the dust</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>IREN Stock Rallies On Nvidia Partnership For AI Deployments</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - This new AI trade is leaving Nvidia and Micron in the dust<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Why the Gap Between Chip and Software Stocks Keeps Getting Wider\n\nInvestors can’t get enough of Nvidia, AMD, Intel, and Micron as earnings season widens the divide between chip and software stocks. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nWhy the Gap Between Chip and Software Stocks Keeps Getting Wider\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- This new AI trade is leaving Nvidia and Micron in the dust\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- In Rush to Buy CPUs, Intel Won’t Be the Only Winner\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: This new AI trade is leaving Nvidia and Micron in the dust\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Why the Gap Between Chip and Software Stocks Keeps Getting Wider</h1><p>Investors can’t get enough of Nvidia, AMD, Intel, and Micron as earnings season widens the divide between chip and software stocks. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>Why the Gap Between Chip and Software Stocks Keeps Getting Wider</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>This new AI trade is leaving Nvidia and Micron in the dust</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Stock Market Today: Nasdaq, S&amp;P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>In Rush to Buy CPUs, Intel Won’t Be the Only Winner</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - This new AI trade is leaving Nvidia and Micron in the dust<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-08T20:52:06.715Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Stock Market Today: Nasdaq, S&P 500 Score Record Closes On Iran Hopes; Nvidia Hits Highs (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple, live-semiconductors-iren-stock-rallies-on-nvidia-partnership-for-ai-deployments\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-08T21:53:43.672Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Why the Gap Between Chip and Software Stocks Keeps Getting Wider\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Why the Gap Between Chip and Software Stocks Keeps Getting Wider\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-why-the-gap-between-chip-and-software-stocks-keeps-getting-wider, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-this-new-ai-trade-is-leaving-nvidia-and-micron-in-the-dust, live-semiconductors-stock-market-today-nasdaq-s-p-500-score-record-closes-on-iran-hopes-nvidia-hits-, live-semiconductors-in-rush-to-buy-cpus-intel-won-t-be-the-only-winner\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3694"
+    "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
 }
