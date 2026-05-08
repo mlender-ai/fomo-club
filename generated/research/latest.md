@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-08T11:05:44.141Z
+- Generated At: 2026-05-08T13:14:32.437Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- TSMC Stock Rises. Revenue Climbs 18% Yearly on AI Chip Boom
+- US Said to Suspect Nvidia Chips Smuggled to Alibaba Via Thailand
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
 - Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "TSMC Stock Rises. Revenue Climbs 18% Yearly on AI Chip Boom"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-tsmc-stock-rises-revenue-climbs-18-yearly-on-ai-chip-boom, live-semiconductors-iren-stock-soars-as-nvidia-drops-3-4b-ai-infrastructure-deal, live-semiconductors-tsmc-sees-strong-growth-as-ai-demand-holds-up, live-semiconductors-nvidia-deepens-ai-data-center-push-with-iren-deal
+메인 헤드라인을 "US Said to Suspect Nvidia Chips Smuggled to Alibaba Via Thailand"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-nvidia-vs-palantir-clash-of-ai-titans-heats-up, live-semiconductors-mypropops-launches-compliance-centered-property-operations-platform-governed-by-, live-semiconductors-jim-cramer-makes-sarcastic-remark-about-nvidia-nvda
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-tsmc-stock-rises-revenue-climbs-18-yearly-on-ai-chip-boom, live-semiconductors-iren-stock-soars-as-nvidia-drops-3-4b-ai-infrastructure-deal
+References: live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-nvidia-vs-palantir-clash-of-ai-titans-heats-up
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-tsmc-stock-rises-revenue-climbs-18-yearly-on-ai-chip-boom, live-semiconductors-iren-stock-soars-as-nvidia-drops-3-4b-ai-infrastructure-deal, live-semiconductors-tsmc-sees-strong-growth-as-ai-demand-holds-up
+References: NVDA, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-nvidia-vs-palantir-clash-of-ai-titans-heats-up, live-semiconductors-mypropops-launches-compliance-centered-property-operations-platform-governed-by-
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-iren-stock-soars-as-nvidia-drops-3-4b-ai-infrastructure-deal, live-semiconductors-tsmc-sees-strong-growth-as-ai-demand-holds-up, live-semiconductors-nvidia-deepens-ai-data-center-push-with-iren-deal
+References: NVDA, live-semiconductors-nvidia-vs-palantir-clash-of-ai-titans-heats-up, live-semiconductors-mypropops-launches-compliance-centered-property-operations-platform-governed-by-, live-semiconductors-jim-cramer-makes-sarcastic-remark-about-nvidia-nvda
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
