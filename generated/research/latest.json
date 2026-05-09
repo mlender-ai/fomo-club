@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-09T11:43:40.368Z",
+    "generatedAt": "2026-05-09T12:59:24.301Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-        "title": "Bangkok’s SiamAI rejects allegations of U.S. chip export violations",
-        "summary": "Investing.com -- Bangkok-based technology firm SiamAI issued a formal denial on Saturday regarding allegations that it circumvented U.S. export restrictions to ship advanced artificial intelligence servers to China.",
+        "id": "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+        "title": "Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.",
+        "summary": "Nvidia and Boeing lead five Dow stocks to watch near buy points this week. Nvidia stock and its peers have rallied in a soaring stock market, with earnings out of the way for some of these names but not for others. Walmart, Goldman Sachs and UnitedHealth also make the cut.",
         "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/bangkok-siamai-rejects-allegations-u-094107102.html?.tsrc=rss",
-        "publishedAt": "2026-05-09T09:41:07.000Z",
-        "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
+        "sourceUrl": "https://finance.yahoo.com/m/efb885fb-075e-3abc-82da-c59cf07a3891/nvidia%2C-boeing-lead-5-dow.html?.tsrc=rss",
+        "publishedAt": "2026-05-09T12:00:43.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/ibd.com/d21071775ea8dc4698fec09e59424952",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -242,37 +242,18 @@
         ],
         "importanceScore": 98,
         "priority": "critical",
-        "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-        "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+        "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-          "title": "Thailand's SiamAI denies exporting US AI servers to China",
-          "summary": "Bangkok-based SiamAI said on Saturday it had ‌not exported AI servers to ‌China and that it complies with U.S. ​export and re-export control laws. • The firm has faced allegations of ‌circumventing exports of ⁠advanced chips from U.S. firms Super Micro Computer and ⁠Nvidia to China. • \"SiamAI has not engaged in the export of AI ​servers to ​China,\" it said ​in a statement.",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/thailands-siamai-denies-exporting-us-054352657.html?.tsrc=rss",
-          "publishedAt": "2026-05-09T05:43:52.000Z",
-          "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "NVDA",
-            "AMD",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-        },
-        {
-          "id": "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand",
-          "title": "US Said to Suspect Nvidia Chips Smuggled to Alibaba Via Thailand",
-          "summary": "(Bloomberg) -- A key company behind Thailand’s national AI effort is suspected of helping to smuggle billions of dollars worth of Super Micro Computer Inc. servers containing advanced Nvidia Corp. chips to China, with Alibaba Group Holding Ltd. one of multiple end customers, according to people familiar with the matter.Most Read from BloombergBillionaire Duke of Westminster to Sell £700 Million of US Real Estate AssetsTrump Wants to Make H-1B Workers More Expensive for US EmployersApple’s Camera",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/us-said-suspect-nvidia-chips-075632473.html?.tsrc=rss",
-          "publishedAt": "2026-05-09T05:20:02.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/pb1DF9A5Hqc1qqlqzZuy6g--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA-/https://media.zenfs.com/en/bloomberg_holding_pen_162/bc8d4aab0cc0fb208b81347392f426eb",
+          "id": "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+          "title": "NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC",
+          "summary": "The Fast Money panel on CNBC zeroed in on the question every AI investor is asking: How much longer can NVIDIA (NASDAQ:NVDA) keep printing? One panelist captured the bear unease bluntly, saying investors can’t get past the worry that “the party is going to end soon.” The Bear Case: The Run Already Happened The skeptical ... NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC",
+          "source": "247WALLST",
+          "sourceUrl": "https://247wallst.com/investing/2026/05/09/nvidia-the-party-is-going-to-end-soon-according-to-cnbc/?.tsrc=rss",
+          "publishedAt": "2026-05-09T11:30:55.000Z",
+          "imageUrl": "https://247wallst.com/wp-content/uploads/2026/04/Untitled-design.png",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -291,7 +272,26 @@
           "source": "FOOL",
           "sourceUrl": "https://www.fool.com/coverage/stock-market-today/2026/05/08/stock-market-today-may-8-rackspace-surges-after-amd-ai-cloud-agreement/?.tsrc=rss",
           "publishedAt": "2026-05-08T22:39:59.000Z",
-          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fcdn.content.foolcdn.com%2Fimages%2F1umn9qeh%2Fproduction%2Ffba1f8637ee52b475744b372db2dad28ef4043f2-200x200.png%3Fw%3D800%26q%3D75%26fit%3Dmax%26auto%3Dformat&w=1200&op=resize",
+          "imageUrl": null,
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "AMD",
+            "NVDA",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
+          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        },
+        {
+          "id": "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple",
+          "title": "Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple",
+          "summary": "A preliminary Apple-Intel manufacturing agreement—backed by a White House push—sent Intel stock above $130 on Friday.",
+          "source": "DECRYPT",
+          "sourceUrl": "https://decrypt.co/367320/intel-all-time-high-chip-deal-apple?.tsrc=rss",
+          "publishedAt": "2026-05-08T20:17:26.000Z",
+          "imageUrl": "https://cdn.decrypt.co/resize/1024/height/512/wp-content/uploads/2026/05/intel-logo-decrypt-style-01-gID_7.png",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "AMD",
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-            "title": "Thailand's SiamAI denies exporting US AI servers to China",
-            "summary": "Bangkok-based SiamAI said on Saturday it had ‌not exported AI servers to ‌China and that it complies with U.S. ​export and re-export control laws. • The firm has faced allegations of ‌circumventing exports of ⁠advanced chips from U.S. firms Super Micro Computer and ⁠Nvidia to China. • \"SiamAI has not engaged in the export of AI ​servers to ​China,\" it said ​in a statement.",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/thailands-siamai-denies-exporting-us-054352657.html?.tsrc=rss",
-            "publishedAt": "2026-05-09T05:43:52.000Z",
-            "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
+            "id": "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+            "title": "NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC",
+            "summary": "The Fast Money panel on CNBC zeroed in on the question every AI investor is asking: How much longer can NVIDIA (NASDAQ:NVDA) keep printing? One panelist captured the bear unease bluntly, saying investors can’t get past the worry that “the party is going to end soon.” The Bear Case: The Run Already Happened The skeptical ... NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC",
+            "source": "247WALLST",
+            "sourceUrl": "https://247wallst.com/investing/2026/05/09/nvidia-the-party-is-going-to-end-soon-according-to-cnbc/?.tsrc=rss",
+            "publishedAt": "2026-05-09T11:30:55.000Z",
+            "imageUrl": "https://247wallst.com/wp-content/uploads/2026/04/Untitled-design.png",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -376,12 +376,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-          "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-          "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand"
+          "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+          "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+          "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
         ],
         "latestPrice": 215.1999969482422,
         "priceChange": 3.6999969482421875,
@@ -766,12 +766,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-          "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-          "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand"
+          "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+          "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+          "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
         ],
         "latestPrice": 455.19000244140625,
         "priceChange": 46.730010986328125,
@@ -1156,12 +1156,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-          "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-          "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand"
+          "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+          "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+          "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
         ],
         "latestPrice": 268500,
         "priceChange": -3000,
@@ -1549,7 +1549,8 @@
         "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 연결 뉴스에서는 \"Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "010950.KS는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
         "linkedNewsIds": [
-          "live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2"
+          "live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2",
+          "live-energy-oil-shell-earnings-surge-on-iran-war-oil-boom-why-the-stock-is-falling"
         ],
         "latestPrice": 116800,
         "priceChange": -1400,
@@ -1937,7 +1938,8 @@
         "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 연결 뉴스에서는 \"Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "XOM는 단기 반등이 나와도 20일선 회복 전까지는 신규 진입보다 회피가 우선입니다.",
         "linkedNewsIds": [
-          "live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2"
+          "live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2",
+          "live-energy-oil-shell-earnings-surge-on-iran-war-oil-boom-why-the-stock-is-falling"
         ],
         "latestPrice": 144.57000732421875,
         "priceChange": -2.0099945068359375,
@@ -2348,21 +2350,21 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Bangkok’s SiamAI rejects allegations of U.S. chip export violations",
-            "파생 뉴스: Thailand's SiamAI denies exporting US AI servers to China",
-            "파생 뉴스: US Said to Suspect Nvidia Chips Smuggled to Alibaba Via Thailand",
+            "메인 헤드라인: Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.",
+            "파생 뉴스: NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC",
             "파생 뉴스: Stock Market Today, May 8: Rackspace Surges on AMD AI Cloud Agreement",
-            "반도체: Thailand's SiamAI denies exporting US AI servers to China",
+            "파생 뉴스: Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple",
+            "반도체: NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC",
             "에너지(오일): Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-            "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-            "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand",
-            "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
+            "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+            "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+            "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement",
+            "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
           ]
         },
         {
@@ -2379,8 +2381,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-            "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
+            "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+            "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
             "live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2"
           ]
         },
@@ -2395,14 +2397,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $185.74 / $164.27, 저항은 $217.80 / $217.80입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-            "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-            "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand"
+            "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+            "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+            "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
           ]
         },
         {
@@ -2423,9 +2425,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-            "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand",
-            "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
+            "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+            "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement",
+            "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
           ]
         }
       ],
@@ -2494,14 +2496,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-09T11:43:40.368Z",
+        "runId": "fallback-2026-05-09T12:59:24.301Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-09T11:43:40.368Z",
+        "generatedAt": "2026-05-09T12:59:24.301Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-09T11:43:40.368Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Bangkok’s SiamAI rejects allegations of U.S. chip export violations\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-09T12:59:24.301Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2510,13 +2512,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-              "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-              "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand",
-              "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
+              "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+              "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+              "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement",
+              "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
             ]
           },
           {
@@ -2529,8 +2531,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-              "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
+              "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+              "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
               "live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2"
             ]
           },
@@ -2545,9 +2547,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations",
-              "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-              "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand"
+              "live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw",
+              "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+              "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
             ]
           },
           {
@@ -2561,9 +2563,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china",
-              "live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand",
-              "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement"
+              "live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc",
+              "live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement",
+              "live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple"
             ]
           }
         ]
@@ -2793,7 +2795,7 @@
       ]
     },
     "meeting": {
-      "topic": "Bangkok’s SiamAI rejects allegations of U.S. chip export violations",
+      "topic": "Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2854,16 +2856,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-09T11:43:40.368Z",
+      "generatedAt": "2026-05-09T12:59:24.301Z",
       "nextRunAt": "2026-05-10T07:30:00.000Z",
-      "subject": "[Daily Brief] Bangkok’s SiamAI rejects allegations of U.S. chip export violations",
-      "previewText": "Investing.com -- Bangkok-based technology firm SiamAI issued a formal denial on Saturday regarding allegations that it circumvented U.S. export restrictions to ship advanced artificial intelligence servers to China. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.",
+      "previewText": "Nvidia and Boeing lead five Dow stocks to watch near buy points this week. Nvidia stock and its peers have rallied in a soaring stock market, with earnings out of the way for some of these names but not for others. Walmart, Goldman Sachs and UnitedHealth also make the cut. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Bangkok’s SiamAI rejects allegations of U.S. chip export violations\n\nInvesting.com -- Bangkok-based technology firm SiamAI issued a formal denial on Saturday regarding allegations that it circumvented U.S. export restrictions to ship advanced artificial intelligence servers to China. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nBangkok’s SiamAI rejects allegations of U.S. chip export violations\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Thailand's SiamAI denies exporting US AI servers to China\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- US Said to Suspect Nvidia Chips Smuggled to Alibaba Via Thailand\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Stock Market Today, May 8: Rackspace Surges on AMD AI Cloud Agreement\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Thailand's SiamAI denies exporting US AI servers to China\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Bangkok’s SiamAI rejects allegations of U.S. chip export violations</h1><p>Investing.com -- Bangkok-based technology firm SiamAI issued a formal denial on Saturday regarding allegations that it circumvented U.S. export restrictions to ship advanced artificial intelligence servers to China. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Bangkok’s SiamAI rejects allegations of U.S. chip export violations</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Thailand&#39;s SiamAI denies exporting US AI servers to China</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>US Said to Suspect Nvidia Chips Smuggled to Alibaba Via Thailand</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Stock Market Today, May 8: Rackspace Surges on AMD AI Cloud Agreement</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Thailand&#39;s SiamAI denies exporting US AI servers to China<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\n\nNvidia and Boeing lead five Dow stocks to watch near buy points this week. Nvidia stock and its peers have rallied in a soaring stock market, with earnings out of the way for some of these names but not for others. Walmart, Goldman Sachs and UnitedHealth also make the cut. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nNvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Stock Market Today, May 8: Rackspace Surges on AMD AI Cloud Agreement\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.</h1><p>Nvidia and Boeing lead five Dow stocks to watch near buy points this week. Nvidia stock and its peers have rallied in a soaring stock market, with earnings out of the way for some of these names but not for others. Walmart, Goldman Sachs and UnitedHealth also make the cut. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Stock Market Today, May 8: Rackspace Surges on AMD AI Cloud Agreement</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Intel Stock Hits All-Time High After Preliminary Chip Deal With Apple</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - NVIDIA: ‘The Party Is Going to End Soon’ According to CNBC<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Argus Hikes Exxon Mobil Price Target to $169 as Permian, Guyana Production Power 2026<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-09T11:43:40.368Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Bangkok’s SiamAI rejects allegations of U.S. chip export violations\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Bangkok’s SiamAI rejects allegations of U.S. chip export violations\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-bangkok-s-siamai-rejects-allegations-of-u-s-chip-export-violations, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-thailand-s-siamai-denies-exporting-us-ai-servers-to-china, live-semiconductors-us-said-to-suspect-nvidia-chips-smuggled-to-alibaba-via-thailand, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-09T12:59:24.301Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia, Boeing Lead 5 Dow Stocks Near Buy Points. They Share This Flaw.\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-energy-oil-argus-hikes-exxon-mobil-price-target-to-169-as-permian-guyana-production-power-2\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-boeing-lead-5-dow-stocks-near-buy-points-they-share-this-flaw, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-the-party-is-going-to-end-soon-according-to-cnbc, live-semiconductors-stock-market-today-may-8-rackspace-surges-on-amd-ai-cloud-agreement, live-semiconductors-intel-stock-hits-all-time-high-after-preliminary-chip-deal-with-apple\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
