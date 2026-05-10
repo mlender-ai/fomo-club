@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-09T23:40:04.613Z
+- Generated At: 2026-05-10T02:10:16.119Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -17,19 +17,19 @@
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
 메인 헤드라인을 "Is It Too Late To Consider Nvidia (NVDA) After Its 80% One-Year Surge?"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-is-it-too-late-to-consider-nvidia-nvda-after-its-80-one-year-surge, live-semiconductors-blackrock-s-larry-fink-says-ai-is-creating-a-new-trillion-dollar-asset-class-and, live-semiconductors-analysts-turn-heads-with-amd-stock-forecast-after-massive-rally, live-semiconductors-jim-cramer-slams-amd-downgrade
+References: live-semiconductors-is-it-too-late-to-consider-nvidia-nvda-after-its-80-one-year-surge, live-semiconductors-amd-rackspace-ai-cloud-deal-targets-regulated-growth-and-valuation-questions, live-semiconductors-analysts-turn-heads-with-amd-stock-forecast-after-massive-rally, live-semiconductors-jim-cramer-slams-amd-downgrade
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-is-it-too-late-to-consider-nvidia-nvda-after-its-80-one-year-surge, live-semiconductors-blackrock-s-larry-fink-says-ai-is-creating-a-new-trillion-dollar-asset-class-and, live-energy-oil-shell-earnings-surge-on-iran-war-oil-boom-why-the-stock-is-falling
+References: live-semiconductors-is-it-too-late-to-consider-nvidia-nvda-after-its-80-one-year-surge, live-semiconductors-amd-rackspace-ai-cloud-deal-targets-regulated-growth-and-valuation-questions, live-energy-oil-shell-earnings-surge-on-iran-war-oil-boom-why-the-stock-is-falling
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-is-it-too-late-to-consider-nvidia-nvda-after-its-80-one-year-surge, live-semiconductors-blackrock-s-larry-fink-says-ai-is-creating-a-new-trillion-dollar-asset-class-and, live-semiconductors-analysts-turn-heads-with-amd-stock-forecast-after-massive-rally
+References: NVDA, live-semiconductors-is-it-too-late-to-consider-nvidia-nvda-after-its-80-one-year-surge, live-semiconductors-amd-rackspace-ai-cloud-deal-targets-regulated-growth-and-valuation-questions, live-semiconductors-analysts-turn-heads-with-amd-stock-forecast-after-massive-rally
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-blackrock-s-larry-fink-says-ai-is-creating-a-new-trillion-dollar-asset-class-and, live-semiconductors-analysts-turn-heads-with-amd-stock-forecast-after-massive-rally, live-semiconductors-jim-cramer-slams-amd-downgrade
+References: NVDA, live-semiconductors-amd-rackspace-ai-cloud-deal-targets-regulated-growth-and-valuation-questions, live-semiconductors-analysts-turn-heads-with-amd-stock-forecast-after-massive-rally, live-semiconductors-jim-cramer-slams-amd-downgrade
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
