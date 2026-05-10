@@ -5,7 +5,7 @@
 - Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41
 - Branch: codex/agent-council/da-idea-yield-score
 - Generated At: 2026-05-10T23:43:36.492Z
-- Status: queued
+- Status: ready
 
 ## Detail
 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.
