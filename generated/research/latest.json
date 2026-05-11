@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-11T13:41:05.625Z",
+    "generatedAt": "2026-05-11T16:30:12.299Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-        "title": "IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits",
-        "summary": "Shares of IREN (NASDAQ:IREN) are down roughly 9% in early Monday trading to $55.83, giving back a chunk of Friday’s powerful rally. The move follows Friday’s 8% surge to $61.20, which was triggered by a landmark AI cloud partnership with NVIDIA (NASDAQ:NVDA). Profit-takers are clearly stepping in after a parabolic run. IREN stock is still ... IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits",
-        "source": "247WALLST",
-        "sourceUrl": "https://247wallst.com/investing/2026/05/11/iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-hits/?.tsrc=rss",
-        "publishedAt": "2026-05-11T13:16:02.000Z",
-        "imageUrl": "https://247wallst.com/wp-content/uploads/2018/03/balticservers_data_center-e1520874449488.jpg",
+        "id": "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+        "title": "Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter",
+        "summary": "Taiwan Semiconductor Manufacturing Co. Ltd. (NYSE:TSM) is one of the 14 Stocks That Will Skyrocket. This stock is another one pitched by Adam O’Dell. He makes a big claim to point out that “Amazon is betting its entire AI future on this company’s technology.” In fact, the technology is so crucial that “without this partner’s […]",
+        "source": "FINANCE",
+        "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/taiwan-semiconductor-tsm-just-rolling-152948583.html?.tsrc=rss",
+        "publishedAt": "2026-05-11T15:29:48.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/dcf08a9dbb7c3de961dd78d32a01adf8",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,61 +247,61 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-          "title": "Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk",
-          "summary": "Virtue AI today announced the speaker lineup for Virtue AI Presents: CTRL+AI, its inaugural conference focused on AI Trust, Risk, and Leadership. Taking place June 4 at The Presidio in San Francisco, the event will bring together leading researchers, enterprise security executives, and AI builders tackling the operational realities of deploying autonomous AI systems at scale.",
+          "id": "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+          "title": "Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts",
+          "summary": "Advanced Micro Devices, Inc. (NASDAQ:AMD) is one of the 9 Best American Semiconductor Stocks to Buy According to Analysts. On May 7, 2026, Rackspace Technology and Advanced Micro Devices, Inc. (NASDAQ:AMD) announced the signing of a memorandum of understanding outlining a multiyear strategic partnership focused on building an Enterprise AI Cloud designed for regulated enterprises […]",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/virtue-ai-announces-speaker-lineup-130000667.html?.tsrc=rss",
-          "publishedAt": "2026-05-11T13:00:00.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/prnewswire.com/9a183750324e9c5086e58ab848121efa",
+          "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/why-advanced-micro-devices-amd-143813826.html?.tsrc=rss",
+          "publishedAt": "2026-05-11T14:38:13.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/c21fbacb6c2f871b98f480a40a563913",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
           "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start",
-          "title": "Qualcomm’s 70% Rally May Be Just the Start",
-          "summary": "While Qualcomm (QCOM) stock has largely been left behind in the AI-driven semiconductor rally over the last few years, the tide appears to have turned for the company, with the stock up by close to 70% over the past month as Qualcomm is positioning for the next phase of AI, one that moves beyond centralized compute and into billions of connected devices. In our previous analysis, we outlined how Qualcomm stock could surge 2x led by edge AI. Here, we outline the specifics of the shift and how Qua",
-          "source": "TREFIS",
-          "sourceUrl": "https://www.trefis.com/articles/598939/qualcomms-70-rally-may-be-just-the-start/2026-05-11?.tsrc=rss",
-          "publishedAt": "2026-05-11T12:57:29.000Z",
-          "imageUrl": null,
+          "id": "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains",
+          "title": "Rackspace Technology (RXT) Extends Rally as Short Covering Accelerates Gains",
+          "summary": "Rackspace Technology (NASDAQ:RXT) shares climbed as much as 10% on Monday morning, continuing the strong momentum seen after last week’s explosive rally. The stock surged 56% on Friday and has now gained more than 200% since the company released earnings and announced a strategic partnership with AMD on May 7.",
+          "source": "INVESTORSHUB",
+          "sourceUrl": "https://investorshub.advfn.com/market-news/article/28137/rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains?.tsrc=rss",
+          "publishedAt": "2026-05-11T13:53:19.000Z",
+          "imageUrl": "https://us.advfn-editors.com/wp-content/uploads/2024/04/data-center.png",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         },
         {
-          "id": "live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth",
-          "title": "AI chip stocks surge as investors refocus on growth",
-          "summary": "Micron and AMD lead another semiconductor rally",
+          "id": "live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost",
+          "title": "Nvidia Stock Heads for Record. What Can Give It Another Boost.",
+          "summary": "Nvidia stock was gaining early Monday. The chip maker was headed for a record close and its earnings could provide more momentum. While Nvidia is still the leading artificial-intelligence chip company, its 15% stock gain this year so far through Friday’s close has lagged far behind semiconductor peers Intel and Advanced Micro Devices which have gained on excitement about the uses of their central-processing units for AI inference.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/ai-chip-stocks-surge-investors-122602017.html?.tsrc=rss",
-          "publishedAt": "2026-05-11T12:26:02.000Z",
-          "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
+          "sourceUrl": "https://finance.yahoo.com/m/fad8b416-2bdb-3cef-8e05-668956dddc08/nvidia-stock-heads-for.html?.tsrc=rss",
+          "publishedAt": "2026-05-11T13:50:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/PxHsguHp.sxlJf_hZTmhLg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/ad906746d864d7b057c2bd3e29f6fd9a",
           "sectorTag": "semiconductors",
           "tickerTags": [
-            "NVDA",
             "AMD",
+            "NVDA",
             "TSM"
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         }
       ],
       "sectorIssues": [
@@ -309,23 +309,46 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-            "title": "Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk",
-            "summary": "Virtue AI today announced the speaker lineup for Virtue AI Presents: CTRL+AI, its inaugural conference focused on AI Trust, Risk, and Leadership. Taking place June 4 at The Presidio in San Francisco, the event will bring together leading researchers, enterprise security executives, and AI builders tackling the operational realities of deploying autonomous AI systems at scale.",
+            "id": "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+            "title": "Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts",
+            "summary": "Advanced Micro Devices, Inc. (NASDAQ:AMD) is one of the 9 Best American Semiconductor Stocks to Buy According to Analysts. On May 7, 2026, Rackspace Technology and Advanced Micro Devices, Inc. (NASDAQ:AMD) announced the signing of a memorandum of understanding outlining a multiyear strategic partnership focused on building an Enterprise AI Cloud designed for regulated enterprises […]",
             "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/sectors/technology/articles/virtue-ai-announces-speaker-lineup-130000667.html?.tsrc=rss",
-            "publishedAt": "2026-05-11T13:00:00.000Z",
-            "imageUrl": "https://s.yimg.com/os/en/prnewswire.com/9a183750324e9c5086e58ab848121efa",
+            "sourceUrl": "https://finance.yahoo.com/markets/stocks/articles/why-advanced-micro-devices-amd-143813826.html?.tsrc=rss",
+            "publishedAt": "2026-05-11T14:38:13.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/insidermonkey.com/c21fbacb6c2f871b98f480a40a563913",
             "sectorTag": "semiconductors",
             "tickerTags": [
-              "NVDA",
               "AMD",
+              "NVDA",
               "TSM"
             ],
             "importanceScore": 98,
             "priority": "critical",
             "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-            "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+            "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          }
+        },
+        {
+          "sectorTag": "energy-oil",
+          "sectorLabel": "에너지(오일)",
+          "item": {
+            "id": "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag",
+            "title": "The Zacks Analyst Blog Micron, Exxon and RWE AG",
+            "summary": "Dallas Fed models show a 3-quarter Iran War oil shock could lift core inflation and push oil to $167, reshaping sector outlooks.",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/sectors/energy/articles/zacks-analyst-blog-micron-exxon-125700881.html?.tsrc=rss",
+            "publishedAt": "2026-05-11T12:57:00.000Z",
+            "imageUrl": null,
+            "sectorTag": "energy-oil",
+            "tickerTags": [
+              "XOM",
+              "CVX",
+              "SLB"
+            ],
+            "importanceScore": 98,
+            "priority": "critical",
+            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
+            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
           }
         }
       ]
@@ -340,7 +363,7 @@
         "tradingViewSymbol": "NASDAQ:NVDA",
         "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $190.77 / $164.27, 저항은 $218.32 / $218.32입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $190.77 / $164.27, 저항은 $222.30 / $222.30입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
             "name": "상승 추세 내 눌림 후 재가속",
@@ -353,16 +376,16 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-          "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-          "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start"
+          "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+          "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+          "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains"
         ],
-        "latestPrice": 218.16000366210938,
-        "priceChange": 2.9600067138671875,
-        "priceChangePercent": 1.3754678233471813,
+        "latestPrice": 221.94000244140625,
+        "priceChange": 6.7400054931640625,
+        "priceChangePercent": 3.1319728572231824,
         "chartSeries": [
           {
             "date": "2025-12-31T14:30:00.000Z",
@@ -722,7 +745,7 @@
           },
           {
             "date": "2026-05-11T13:30:00.000Z",
-            "close": 218.16000366210938
+            "close": 221.94000244140625
           }
         ]
       },
@@ -743,16 +766,16 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-          "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-          "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start"
+          "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+          "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+          "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains"
         ],
-        "latestPrice": 458.8699035644531,
-        "priceChange": 3.679901123046875,
-        "priceChangePercent": 0.8084318863133566,
+        "latestPrice": 463.94000244140625,
+        "priceChange": 8.75,
+        "priceChangePercent": 1.9222742048528036,
         "chartSeries": [
           {
             "date": "2025-12-31T14:30:00.000Z",
@@ -1112,7 +1135,7 @@
           },
           {
             "date": "2026-05-11T13:30:00.000Z",
-            "close": 458.8699035644531
+            "close": 463.94000244140625
           }
         ]
       },
@@ -1125,30 +1148,29 @@
         "tradingViewSymbol": "KRX:005930",
         "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $198200.00 / $162000.00, 저항은 $288500.00 / $288500.00입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $198200.00 / $151600.00, 저항은 $277000.00 / $277000.00입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
-          {
-            "name": "상승 추세 내 눌림 후 재가속",
-            "detail": "20일선 위에서 가격이 버티고 있어, 고점 재시험이 실패하지 않으면 추세 지속 확률이 높습니다.",
-            "confidence": "high"
-          },
           {
             "name": "AB=CD 반등형",
             "detail": "직전 상승파와 최근 반등파 길이가 유사해 209000.00 부근에서 과열 해소 여부를 봐야 합니다.",
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-          "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-          "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start"
+          "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+          "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+          "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains"
         ],
-        "latestPrice": 285500,
-        "priceChange": 17000,
-        "priceChangePercent": 6.33147113594041,
+        "latestPrice": 268500,
+        "priceChange": -3000,
+        "priceChangePercent": -1.1049723756906076,
         "chartSeries": [
+          {
+            "date": "2025-12-23T00:00:00.000Z",
+            "close": 111500
+          },
           {
             "date": "2025-12-24T00:00:00.000Z",
             "close": 111100
@@ -1504,10 +1526,6 @@
           {
             "date": "2026-05-08T00:00:00.000Z",
             "close": 268500
-          },
-          {
-            "date": "2026-05-11T00:00:00.000Z",
-            "close": 285500
           }
         ]
       },
@@ -1518,9 +1536,9 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 71,
+        "importanceScore": 88,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
-        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $108600.00 / $98700.00, 저항은 $137500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
+        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $111200.00 / $94600.00, 저항은 $137500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
           {
             "name": "뚜렷한 패턴 없음",
@@ -1528,13 +1546,19 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
+        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 연결 뉴스에서는 \"The Zacks Analyst Blog Micron, Exxon and RWE AG\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "010950.KS는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [],
-        "latestPrice": 110900,
-        "priceChange": -5900,
-        "priceChangePercent": -5.051369863013699,
+        "linkedNewsIds": [
+          "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag"
+        ],
+        "latestPrice": 116800,
+        "priceChange": -1400,
+        "priceChangePercent": -1.1844331641285957,
         "chartSeries": [
+          {
+            "date": "2025-12-23T00:00:00.000Z",
+            "close": 84000
+          },
           {
             "date": "2025-12-24T00:00:00.000Z",
             "close": 83200
@@ -1890,10 +1914,6 @@
           {
             "date": "2026-05-08T00:00:00.000Z",
             "close": 116800
-          },
-          {
-            "date": "2026-05-11T00:00:00.000Z",
-            "close": 110900
           }
         ]
       },
@@ -1904,7 +1924,7 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 65,
+        "importanceScore": 82,
         "summary": "반등보다 구조 복원 확인이 먼저 필요한 방어 구간입니다.",
         "technicalAnalysis": "단기와 중기 추세가 함께 꺾여 있어 반등보다 방어가 우선입니다. 주요 지지는 $141.97 / $141.97, 저항은 $155.69 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1914,12 +1934,14 @@
             "confidence": "medium"
           }
         ],
-        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
+        "marketContext": "섹터 프록시가 이미 약해져 있어 개별 종목 반등도 업종 역풍을 함께 고려해야 합니다. 연결 뉴스에서는 \"The Zacks Analyst Blog Micron, Exxon and RWE AG\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "XOM는 단기 반등이 나와도 20일선 회복 전까지는 신규 진입보다 회피가 우선입니다.",
-        "linkedNewsIds": [],
-        "latestPrice": 146.77999877929688,
-        "priceChange": 2.209991455078125,
-        "priceChangePercent": 1.5286652439063004,
+        "linkedNewsIds": [
+          "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag"
+        ],
+        "latestPrice": 148.1649932861328,
+        "priceChange": 3.5949859619140625,
+        "priceChangePercent": 2.486674814819506,
         "chartSeries": [
           {
             "date": "2025-12-31T14:30:00.000Z",
@@ -2279,7 +2301,7 @@
           },
           {
             "date": "2026-05-11T13:30:00.000Z",
-            "close": 146.77999877929688
+            "close": 148.1649932861328
           }
         ]
       }
@@ -2326,20 +2348,21 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits",
-            "파생 뉴스: Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk",
-            "파생 뉴스: Qualcomm’s 70% Rally May Be Just the Start",
-            "파생 뉴스: AI chip stocks surge as investors refocus on growth",
-            "반도체: Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk"
+            "메인 헤드라인: Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter",
+            "파생 뉴스: Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts",
+            "파생 뉴스: Rackspace Technology (RXT) Extends Rally as Short Covering Accelerates Gains",
+            "파생 뉴스: Nvidia Stock Heads for Record. What Can Give It Another Boost.",
+            "반도체: Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts",
+            "에너지(오일): The Zacks Analyst Blog Micron, Exxon and RWE AG"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-            "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-            "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start",
-            "live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth"
+            "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+            "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+            "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains",
+            "live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost"
           ]
         },
         {
@@ -2356,8 +2379,9 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-            "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap"
+            "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+            "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+            "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag"
           ]
         },
         {
@@ -2369,16 +2393,16 @@
           "summary": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다.",
           "outputLines": [
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-            "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $190.77 / $164.27, 저항은 $218.32 / $218.32입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+            "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $190.77 / $164.27, 저항은 $222.30 / $222.30입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-            "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-            "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start"
+            "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+            "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+            "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains"
           ]
         },
         {
@@ -2399,9 +2423,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-            "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start",
-            "live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth"
+            "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+            "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains",
+            "live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost"
           ]
         }
       ],
@@ -2470,14 +2494,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-11T13:41:05.625Z",
+        "runId": "fallback-2026-05-11T16:30:12.299Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-11T13:41:05.625Z",
+        "generatedAt": "2026-05-11T16:30:12.299Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-11T13:41:05.625Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start, live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start, live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-11T16:30:12.299Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains, live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains, live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2486,13 +2510,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-              "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-              "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start",
-              "live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth"
+              "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+              "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+              "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains",
+              "live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost"
             ]
           },
           {
@@ -2505,8 +2529,9 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-              "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap"
+              "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+              "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+              "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag"
             ]
           },
           {
@@ -2520,9 +2545,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-",
-              "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-              "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start"
+              "live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter",
+              "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+              "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains"
             ]
           },
           {
@@ -2536,9 +2561,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap",
-              "live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start",
-              "live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth"
+              "live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto",
+              "live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains",
+              "live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost"
             ]
           }
         ]
@@ -2768,7 +2793,7 @@
       ]
     },
     "meeting": {
-      "topic": "IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits",
+      "topic": "Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2829,17 +2854,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-11T13:41:05.625Z",
+      "generatedAt": "2026-05-11T16:30:12.299Z",
       "nextRunAt": "2026-05-12T07:30:00.000Z",
-      "subject": "[Daily Brief] IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits",
-      "previewText": "Shares of IREN (NASDAQ:IREN) are down roughly 9% in early Monday trading to $55.83, giving back a chunk of Friday’s powerful rally. The move follows Friday’s 8% surge to $61.20, which was triggered by a landmark AI cloud partnership with NVIDIA (NASDAQ:NVDA). Profit-takers are clearly stepping in after a parabolic run. IREN stock is still ... IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter",
+      "previewText": "Taiwan Semiconductor Manufacturing Co. Ltd. (NYSE:TSM) is one of the 14 Stocks That Will Skyrocket. This stock is another one pitched by Adam O’Dell. He makes a big claim to point out that “Amazon is betting its entire AI future on this company’s technology.” In fact, the technology is so crucial that “without this partner’s […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\n\nShares of IREN (NASDAQ:IREN) are down roughly 9% in early Monday trading to $55.83, giving back a chunk of Friday’s powerful rally. The move follows Friday’s 8% surge to $61.20, which was triggered by a landmark AI cloud partnership with NVIDIA (NASDAQ:NVDA). Profit-takers are clearly stepping in after a parabolic run. IREN stock is still ... IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nIREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Qualcomm’s 70% Rally May Be Just the Start\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- AI chip stocks surge as investors refocus on growth\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits</h1><p>Shares of IREN (NASDAQ:IREN) are down roughly 9% in early Monday trading to $55.83, giving back a chunk of Friday’s powerful rally. The move follows Friday’s 8% surge to $61.20, which was triggered by a landmark AI cloud partnership with NVIDIA (NASDAQ:NVDA). Profit-takers are clearly stepping in after a parabolic run. IREN stock is still ... IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Qualcomm’s 70% Rally May Be Just the Start</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>AI chip stocks surge as investors refocus on growth</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Virtue AI Announces Speaker Lineup for CTRL+AI Featuring Leaders From NVIDIA, Capital One, Stanford, UC Berkeley, ServiceNow, Glean, and Splunk<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\n\nTaiwan Semiconductor Manufacturing Co. Ltd. (NYSE:TSM) is one of the 14 Stocks That Will Skyrocket. This stock is another one pitched by Adam O’Dell. He makes a big claim to point out that “Amazon is betting its entire AI future on this company’s technology.” In fact, the technology is so crucial that “without this partner’s […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nTaiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Rackspace Technology (RXT) Extends Rally as Short Covering Accelerates Gains\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Nvidia Stock Heads for Record. What Can Give It Another Boost.\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): The Zacks Analyst Blog Micron, Exxon and RWE AG\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter</h1><p>Taiwan Semiconductor Manufacturing Co. Ltd. (NYSE:TSM) is one of the 14 Stocks That Will Skyrocket. This stock is another one pitched by Adam O’Dell. He makes a big claim to point out that “Amazon is betting its entire AI future on this company’s technology.” In fact, the technology is so crucial that “without this partner’s […] / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Rackspace Technology (RXT) Extends Rally as Short Covering Accelerates Gains</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Nvidia Stock Heads for Record. What Can Give It Another Boost.</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />AMD는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Here is Why Advanced Micro Devices (AMD) is Among the 9 Best American Semiconductor Stocks to Buy According to Analysts<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - The Zacks Analyst Blog Micron, Exxon and RWE AG<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-11T13:41:05.625Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start, live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start, live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-11T16:30:12.299Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM\n\n## Main Headline\n- Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains, live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains, live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: 010950.KS 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
+    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3179"
   ]
 }

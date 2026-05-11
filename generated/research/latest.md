@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-11T13:41:05.625Z
+- Generated At: 2026-05-11T16:30:12.299Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits
+- Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
 - Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "IREN Drops 9% After Friday Rip: NVIDIA AI Cloud Excitement Cools as Profit-Taking Hits"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start, live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth
+메인 헤드라인을 "Taiwan Semiconductor (TSM) Is Just Rolling In Billions Of Dollars, Says Newsletter"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains, live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap
+References: live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-iren-drops-9-after-friday-rip-nvidia-ai-cloud-excitement-cools-as-profit-taking-, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start
+References: NVDA, live-semiconductors-taiwan-semiconductor-tsm-is-just-rolling-in-billions-of-dollars-says-newsletter, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-virtue-ai-announces-speaker-lineup-for-ctrl-ai-featuring-leaders-from-nvidia-cap, live-semiconductors-qualcomm-s-70-rally-may-be-just-the-start, live-semiconductors-ai-chip-stocks-surge-as-investors-refocus-on-growth
+References: NVDA, live-semiconductors-here-is-why-advanced-micro-devices-amd-is-among-the-9-best-american-semiconducto, live-semiconductors-rackspace-technology-rxt-extends-rally-as-short-covering-accelerates-gains, live-semiconductors-nvidia-stock-heads-for-record-what-can-give-it-another-boost
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
