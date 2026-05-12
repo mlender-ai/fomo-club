@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-11T23:59:16.487Z
+- Generated At: 2026-05-12T03:27:00.154Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, 010950.KS, XOM
 
 ## Main Headline
-- Applied Materials makes unexpected AI move as demand explodes
-- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.
-- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.
+- Arm Holdings (ARM) Price Target Raised to $300 on AI and Data Center Momentum
+- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
+- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "Applied Materials makes unexpected AI move as demand explodes"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-applied-materials-makes-unexpected-ai-move-as-demand-explodes, live-semiconductors-nvidia-expands-ai-investment-push, live-semiconductors-nvidia-bull-unveils-bold-new-ai-trade-wall-street-hasn-t-named-yet, live-semiconductors-amd-mi450-ai-deals-with-meta-and-openai-test-rich-valuation
+메인 헤드라인을 "Arm Holdings (ARM) Price Target Raised to $300 on AI and Data Center Momentum"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-arm-holdings-arm-price-target-raised-to-300-on-ai-and-data-center-momentum, live-semiconductors-nvidia-nvda-draws-bullish-goldman-sachs-call-ahead-of-earnings, live-semiconductors-applied-materials-makes-unexpected-ai-move-as-demand-explodes, live-semiconductors-nvidia-expands-ai-investment-push
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-applied-materials-makes-unexpected-ai-move-as-demand-explodes, live-semiconductors-nvidia-expands-ai-investment-push, live-energy-oil-exxon-mobil-weighs-venezuela-reentry-against-valuation-and-dividend-concerns
+References: live-semiconductors-arm-holdings-arm-price-target-raised-to-300-on-ai-and-data-center-momentum, live-semiconductors-nvidia-nvda-draws-bullish-goldman-sachs-call-ahead-of-earnings
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-applied-materials-makes-unexpected-ai-move-as-demand-explodes, live-semiconductors-nvidia-expands-ai-investment-push, live-semiconductors-nvidia-bull-unveils-bold-new-ai-trade-wall-street-hasn-t-named-yet
+References: NVDA, live-semiconductors-arm-holdings-arm-price-target-raised-to-300-on-ai-and-data-center-momentum, live-semiconductors-nvidia-nvda-draws-bullish-goldman-sachs-call-ahead-of-earnings, live-semiconductors-applied-materials-makes-unexpected-ai-move-as-demand-explodes
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-nvidia-expands-ai-investment-push, live-semiconductors-nvidia-bull-unveils-bold-new-ai-trade-wall-street-hasn-t-named-yet, live-semiconductors-amd-mi450-ai-deals-with-meta-and-openai-test-rich-valuation
+References: NVDA, live-semiconductors-nvidia-nvda-draws-bullish-goldman-sachs-call-ahead-of-earnings, live-semiconductors-applied-materials-makes-unexpected-ai-move-as-demand-explodes, live-semiconductors-nvidia-expands-ai-investment-push
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, 010950.KS로 방어 노출을 병행하는 전략이 우세합니다.
