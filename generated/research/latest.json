@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-13T06:20:58.235Z",
+    "generatedAt": "2026-05-13T09:38:17.756Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-        "title": "Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel",
-        "summary": "Nvidia CEO Jensen Huang is joining President Trump's China trip. Investors need sell rules for big AI winners such as Sandisk, Micron and Intel.",
-        "source": "FINANCE",
-        "sourceUrl": "https://finance.yahoo.com/m/aaff5e7b-727a-3550-9b4c-da4c80e4c232/dow-jones-futures%3A-nvidia%27s.html?.tsrc=rss",
-        "publishedAt": "2026-05-13T03:09:38.000Z",
-        "imageUrl": "https://s.yimg.com/os/en/ibd.com/aa4fbd056951462780d5672e9d9859e7",
+        "id": "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+        "title": "Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks",
+        "summary": "A high-level delegation of business executives is travelling to China with US President Donald Trump on Wednesday, with the inclusion of Jensen Huang underscoring how AI chip exports and advanced technology trade are likely to be central to discussions between the two nations.View on euronews",
+        "source": "EURONEWS",
+        "sourceUrl": "https://www.euronews.com/2026/05/13/trump-china-visit-us-ceos-musk-cook-and-nvidias-huang-join-trade-talks?utm_source=yahoo&utm_campaign=feeds_business_articles_2024&utm_medium=referral&.tsrc=rss",
+        "publishedAt": "2026-05-13T08:03:07.000Z",
+        "imageUrl": "https://images.euronews.com/articles/stories/09/75/65/07/1200x675_cmsv2_99da770a-7188-5f57-a430-cff067d2941d-9756507.jpg",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,13 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-          "title": "CoreWeave CEO sends blunt message to Nvidia stock investors",
-          "summary": "Nvidia (NVDA) stock investors have laughed all the way to the bank over the past three years, as the company has crushed the AI chip space. CoreWeave (CRWV) CEO Michael Intrator, however, just laid out why that incredible level of dominance requires consistent defense. In a recent CNBC ...",
-          "source": "THESTREET",
-          "sourceUrl": "https://www.thestreet.com/investing/stocks/coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors?.tsrc=rss",
-          "publishedAt": "2026-05-13T03:07:00.000Z",
-          "imageUrl": null,
+          "id": "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+          "title": "1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club",
+          "summary": "This semiconductor leader has added more than $1 trillion in market cap over the past year. There's likely more to come.",
+          "source": "FOOL",
+          "sourceUrl": "https://www.fool.com/investing/2026/05/13/nvidia-alphabet-apple-microsoft-3-trillion/?.tsrc=rss",
+          "publishedAt": "2026-05-13T07:22:00.000Z",
+          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F869690%2Fa-smiling-person-holding-a-notebook-looking-at-the-upward-trajectory-of-graph-lines.jpg&w=1200&op=resize",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -266,13 +266,13 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc",
-          "title": "Fortinet NVIDIA Alliance Puts AI Cybersecurity And Valuation Expectations In Focus",
-          "summary": "Fortinet (NasdaqGS:FTNT) announced a major partnership with NVIDIA to integrate its FortiAIGate solution with NVIDIA's AI platforms. The integration targets real-time cybersecurity for AI workloads across data centers, cloud, and edge environments. The collaboration introduces GPU-accelerated zero-trust protection, AI runtime guardrails, and defenses against prompt injection and data leakage. The solution also supports scalable multitenant security using NVIDIA Multi-Instance GPU. For...",
+          "id": "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute",
+          "title": "Trump Personally Calls Nvidia CEO Jensen Huang To Join China Trip At Last Minute Amid Backlash Over AI Chip Sales To Beijing: Report",
+          "summary": "On Tuesday, President Donald Trump reportedly made a personal 11th-hour appeal to Nvidia Corp (NASDAQ:NVDA) CEO Jensen Huang to join his China delegation after earlier concerns that the chipmaker's presence could intensify political scrutiny over U.S. semiconductor exports to Beijing. Trump Reverses Course On Jensen Huang's China Visit Huang was initially expected to skip the high-profile trip due to mounting criticism from Republican China hawks and concerns that his attendance could trigger \"a",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/news/fortinet-nvidia-alliance-puts-ai-212530584.html?.tsrc=rss",
-          "publishedAt": "2026-05-12T21:25:30.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/simply_wall_st__316/4cdd6cacb96bc743cd56a234948011ec",
+          "sourceUrl": "https://finance.yahoo.com/news/trump-personally-calls-nvidia-ceo-053546247.html?.tsrc=rss",
+          "publishedAt": "2026-05-13T05:35:46.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/Benzinga/52adb90b36d79170476cb177676ed890",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -285,13 +285,13 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-",
-          "title": "Was Advanced Micro Devices (AMD) One of the Top “Blue Chip” Stocks Suddenly on Fire in April?",
-          "summary": "Advanced Micro Devices, Inc. (NASDAQ:AMD) is one of the top “blue chip” stocks that were suddenly on fire in April. KeyBanc lifted the price target on Advanced Micro Devices, Inc. (NASDAQ:AMD) to $530 from $330 on May 7, reaffirming an Overweight rating on the shares. The firm stated that the company posted solid fiscal Q1 […]",
+          "id": "live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc",
+          "title": "Power Integrations, Himax, Penguin Solutions, KLA Corporation, and AMD Shares Skyrocket, What You Need To Know",
+          "summary": "A number of stocks jumped in the afternoon session after the semiconductor sector rose buoyed by robust AI-related demand and a strong global sales outlook. Global semiconductor sales are on a significant upward trend, projected to surpass $1 trillion this year, largely driven by widespread AI infrastructure and data-center needs.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/news/advanced-micro-devices-amd-one-212919043.html?.tsrc=rss",
-          "publishedAt": "2026-05-12T21:29:19.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/urMM2VzBkSHT98G0um.0Eg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzM-/https://media.zenfs.com/en/insidermonkey.com/78ee81d4d8cbe53924c848faf9b29aa4",
+          "sourceUrl": "https://finance.yahoo.com/news/power-integrations-himax-penguin-solutions-062055738.html?.tsrc=rss",
+          "publishedAt": "2026-05-13T06:20:55.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/CX6j46SeqAk2l282uUvB_A--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/stockstory_922/1b6bb350987e2cbac4623e6de5acc22e",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "AMD",
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-            "title": "CoreWeave CEO sends blunt message to Nvidia stock investors",
-            "summary": "Nvidia (NVDA) stock investors have laughed all the way to the bank over the past three years, as the company has crushed the AI chip space. CoreWeave (CRWV) CEO Michael Intrator, however, just laid out why that incredible level of dominance requires consistent defense. In a recent CNBC ...",
-            "source": "THESTREET",
-            "sourceUrl": "https://www.thestreet.com/investing/stocks/coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors?.tsrc=rss",
-            "publishedAt": "2026-05-13T03:07:00.000Z",
-            "imageUrl": null,
+            "id": "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+            "title": "1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club",
+            "summary": "This semiconductor leader has added more than $1 trillion in market cap over the past year. There's likely more to come.",
+            "source": "FOOL",
+            "sourceUrl": "https://www.fool.com/investing/2026/05/13/nvidia-alphabet-apple-microsoft-3-trillion/?.tsrc=rss",
+            "publishedAt": "2026-05-13T07:22:00.000Z",
+            "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F869690%2Fa-smiling-person-holding-a-notebook-looking-at-the-upward-trajectory-of-graph-lines.jpg&w=1200&op=resize",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -376,12 +376,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-          "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-          "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc"
+          "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+          "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+          "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute"
         ],
         "latestPrice": 220.77999877929688,
         "priceChange": 1.339996337890625,
@@ -766,12 +766,12 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-          "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-          "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc"
+          "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+          "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+          "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute"
         ],
         "latestPrice": 448.2900085449219,
         "priceChange": -10.5,
@@ -1161,16 +1161,16 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-          "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-          "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc"
+          "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+          "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+          "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute"
         ],
-        "latestPrice": 284250,
-        "priceChange": 5250,
-        "priceChangePercent": 1.881720430107527,
+        "latestPrice": 284000,
+        "priceChange": 5000,
+        "priceChangePercent": 1.7921146953405016,
         "chartSeries": [
           {
             "date": "2025-12-29T00:00:00.000Z",
@@ -1530,7 +1530,7 @@
           },
           {
             "date": "2026-05-13T00:00:00.000Z",
-            "close": 284250
+            "close": 284000
           }
         ]
       },
@@ -1554,8 +1554,7 @@
         "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
         "linkedNewsIds": [
-          "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally",
-          "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag"
+          "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
         ],
         "latestPrice": 150.6300048828125,
         "priceChange": 0.95001220703125,
@@ -1943,12 +1942,11 @@
         "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "010950.KS는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
         "linkedNewsIds": [
-          "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally",
-          "live-energy-oil-the-zacks-analyst-blog-micron-exxon-and-rwe-ag"
+          "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
         ],
-        "latestPrice": 115100,
-        "priceChange": 800,
-        "priceChangePercent": 0.699912510936133,
+        "latestPrice": 115300,
+        "priceChange": 1000,
+        "priceChangePercent": 0.8748906386701663,
         "chartSeries": [
           {
             "date": "2025-12-29T00:00:00.000Z",
@@ -2308,7 +2306,7 @@
           },
           {
             "date": "2026-05-13T00:00:00.000Z",
-            "close": 115100
+            "close": 115300
           }
         ]
       }
@@ -2355,21 +2353,21 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel",
-            "파생 뉴스: CoreWeave CEO sends blunt message to Nvidia stock investors",
-            "파생 뉴스: Fortinet NVIDIA Alliance Puts AI Cybersecurity And Valuation Expectations In Focus",
-            "파생 뉴스: Was Advanced Micro Devices (AMD) One of the Top “Blue Chip” Stocks Suddenly on Fire in April?",
-            "반도체: CoreWeave CEO sends blunt message to Nvidia stock investors",
+            "메인 헤드라인: Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks",
+            "파생 뉴스: 1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club",
+            "파생 뉴스: Trump Personally Calls Nvidia CEO Jensen Huang To Join China Trip At Last Minute Amid Backlash Over AI Chip Sales To Beijing: Report",
+            "파생 뉴스: Power Integrations, Himax, Penguin Solutions, KLA Corporation, and AMD Shares Skyrocket, What You Need To Know",
+            "반도체: 1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club",
             "에너지(오일): Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-            "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-            "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc",
-            "live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-"
+            "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+            "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+            "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute",
+            "live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc"
           ]
         },
         {
@@ -2386,8 +2384,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-            "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
+            "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+            "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
             "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
           ]
         },
@@ -2402,14 +2400,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $194.74 / $164.27, 저항은 $223.75 / $223.75입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-            "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-            "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc"
+            "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+            "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+            "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute"
           ]
         },
         {
@@ -2430,9 +2428,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-            "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc",
-            "live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-"
+            "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+            "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute",
+            "live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc"
           ]
         }
       ],
@@ -2501,14 +2499,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-13T06:20:58.235Z",
+        "runId": "fallback-2026-05-13T09:38:17.756Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-13T06:20:58.235Z",
+        "generatedAt": "2026-05-13T09:38:17.756Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T06:20:58.235Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc, live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc, live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T09:38:17.756Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute, live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute, live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2517,13 +2515,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-              "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-              "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc",
-              "live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-"
+              "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+              "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+              "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute",
+              "live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc"
             ]
           },
           {
@@ -2536,8 +2534,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-              "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
+              "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+              "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
               "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
             ]
           },
@@ -2552,9 +2550,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-",
-              "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-              "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc"
+              "live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks",
+              "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+              "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute"
             ]
           },
           {
@@ -2568,9 +2566,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors",
-              "live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc",
-              "live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-"
+              "live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i",
+              "live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute",
+              "live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc"
             ]
           }
         ]
@@ -2800,7 +2798,7 @@
       ]
     },
     "meeting": {
-      "topic": "Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel",
+      "topic": "Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2861,16 +2859,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-13T06:20:58.235Z",
-      "nextRunAt": "2026-05-13T07:30:00.000Z",
-      "subject": "[Daily Brief] Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel",
-      "previewText": "Nvidia CEO Jensen Huang is joining President Trump's China trip. Investors need sell rules for big AI winners such as Sandisk, Micron and Intel. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "generatedAt": "2026-05-13T09:38:17.756Z",
+      "nextRunAt": "2026-05-14T07:30:00.000Z",
+      "subject": "[Daily Brief] Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks",
+      "previewText": "A high-level delegation of business executives is travelling to China with US President Donald Trump on Wednesday, with the inclusion of Jensen Huang underscoring how AI chip exports and advanced technology trade are likely to be central to discussions between the two nations.View on euronews / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\n\nNvidia CEO Jensen Huang is joining President Trump's China trip. Investors need sell rules for big AI winners such as Sandisk, Micron and Intel. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nDow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- CoreWeave CEO sends blunt message to Nvidia stock investors\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Fortinet NVIDIA Alliance Puts AI Cybersecurity And Valuation Expectations In Focus\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Was Advanced Micro Devices (AMD) One of the Top “Blue Chip” Stocks Suddenly on Fire in April?\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: CoreWeave CEO sends blunt message to Nvidia stock investors\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Dow Jones Futures: Nvidia&#39;s Huang Joins Trump&#39;s China Trip; How To Handle Sandisk, Micron, Intel</h1><p>Nvidia CEO Jensen Huang is joining President Trump&#39;s China trip. Investors need sell rules for big AI winners such as Sandisk, Micron and Intel. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Dow Jones Futures: Nvidia&#39;s Huang Joins Trump&#39;s China Trip; How To Handle Sandisk, Micron, Intel</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>CoreWeave CEO sends blunt message to Nvidia stock investors</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Fortinet NVIDIA Alliance Puts AI Cybersecurity And Valuation Expectations In Focus</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Was Advanced Micro Devices (AMD) One of the Top “Blue Chip” Stocks Suddenly on Fire in April?</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - CoreWeave CEO sends blunt message to Nvidia stock investors<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\n\nA high-level delegation of business executives is travelling to China with US President Donald Trump on Wednesday, with the inclusion of Jensen Huang underscoring how AI chip exports and advanced technology trade are likely to be central to discussions between the two nations.View on euronews / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nTrump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- 1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Trump Personally Calls Nvidia CEO Jensen Huang To Join China Trip At Last Minute Amid Backlash Over AI Chip Sales To Beijing: Report\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Power Integrations, Himax, Penguin Solutions, KLA Corporation, and AMD Shares Skyrocket, What You Need To Know\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: 1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Trump&#39;s China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks</h1><p>A high-level delegation of business executives is travelling to China with US President Donald Trump on Wednesday, with the inclusion of Jensen Huang underscoring how AI chip exports and advanced technology trade are likely to be central to discussions between the two nations.View on euronews / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Trump&#39;s China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Trump Personally Calls Nvidia CEO Jensen Huang To Join China Trip At Last Minute Amid Backlash Over AI Chip Sales To Beijing: Report</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Power Integrations, Himax, Penguin Solutions, KLA Corporation, and AMD Shares Skyrocket, What You Need To Know</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - 1 Unstoppable Stock to Buy Before It Joins Nvidia, Alphabet, Apple, and Microsoft in the $3 Trillion Club<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T06:20:58.235Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Dow Jones Futures: Nvidia's Huang Joins Trump's China Trip; How To Handle Sandisk, Micron, Intel\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc, live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-dow-jones-futures-nvidia-s-huang-joins-trump-s-china-trip-how-to-handle-sandisk-, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-coreweave-ceo-sends-blunt-message-to-nvidia-stock-investors, live-semiconductors-fortinet-nvidia-alliance-puts-ai-cybersecurity-and-valuation-expectations-in-foc, live-semiconductors-was-advanced-micro-devices-amd-one-of-the-top-blue-chip-stocks-suddenly-on-fire-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T09:38:17.756Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Trump's China visit: US CEOs Musk, Cook and Nvidia’s Huang join trade talks\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute, live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-trump-s-china-visit-us-ceos-musk-cook-and-nvidia-s-huang-join-trade-talks, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-1-unstoppable-stock-to-buy-before-it-joins-nvidia-alphabet-apple-and-microsoft-i, live-semiconductors-trump-personally-calls-nvidia-ceo-jensen-huang-to-join-china-trip-at-last-minute, live-semiconductors-power-integrations-himax-penguin-solutions-kla-corporation-and-amd-shares-skyroc\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
