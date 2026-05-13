@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-13T11:57:57.373Z",
+    "generatedAt": "2026-05-13T14:29:53.194Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-        "title": "Nvidia vs. AMD: The Better AI Chip Stock for 2026",
-        "summary": "Nvidia and AMD have witnessed contrasting fortunes on the stock market this year, which is why one of them is available at a really attractive valuation.",
-        "source": "FOOL",
-        "sourceUrl": "https://www.fool.com/investing/2026/05/13/nvidia-vs-amd-the-better-ai-chip-stock-for-2026/?.tsrc=rss",
-        "publishedAt": "2026-05-13T11:43:00.000Z",
-        "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F867899%2Famd_nvda_tmf.png&w=1200&op=resize",
+        "id": "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+        "title": "Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)",
+        "summary": "The Dow Jones fell but Nvidia, Sandisk, Micron and Intel buoyed techs as the Trump-Xi summit looms. Nextpower, Nebius are big earnings winners.",
+        "source": "FINANCE",
+        "sourceUrl": "https://finance.yahoo.com/m/7b388d5b-d465-332e-bc39-f94ac0bef55b/stock-market-today%3A-dow-falls.html?.tsrc=rss",
+        "publishedAt": "2026-05-13T14:10:42.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/ibd.com/fbc8e12504fa008dd864dabbe664ca02",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -242,18 +242,37 @@
         ],
         "importanceScore": 98,
         "priority": "critical",
-        "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-        "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+        "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+        "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-          "title": "AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China",
-          "summary": "Investing.com -- Shares in semiconductor, optical networking, and data storage companies have surged in premarket trading on Wednesday, driven by tightening global memory chip supply and a boost in sentiment as Nvidia Chief Executive Jensen Huang joined President Donald Trump on his visit to China.",
+          "id": "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+          "title": "Why Nvidia Earnings May Matter More To The S&P 500 Than Fed Minutes Right Now",
+          "summary": "For years, Federal Reserve minutes were among Wall Street's most market-moving events. But in today's AI-driven rally, one earnings report may now rival macro data releases in influence: Nvidia Corp (NASDAQ:NVDA). The Santa Clara, California-based chip giant, whose earnings are due next week, is worth roughly $5.3 trillion and recently surpassed the entire S&P 500 healthcare sector in market value, according to Barron's. Essentially, Nvidia is proving to be more than just another mega-cap tech s",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/news/ai-chip-stocks-surge-again-114249160.html?.tsrc=rss",
-          "publishedAt": "2026-05-13T11:42:49.000Z",
-          "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
+          "sourceUrl": "https://finance.yahoo.com/news/why-nvidia-earnings-may-matter-140129771.html?.tsrc=rss",
+          "publishedAt": "2026-05-13T14:01:29.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/Benzinga/8b7ad4d165a5bb12850a21af86311722",
+          "sectorTag": "semiconductors",
+          "tickerTags": [
+            "NVDA",
+            "AMD",
+            "TSM"
+          ],
+          "importanceScore": 98,
+          "priority": "critical",
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
+        },
+        {
+          "id": "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip",
+          "title": "Nvidia's CEO Is a Late Add to Trump's China Trip",
+          "summary": "President Donald Trump invited Nvidia co-founder Jensen Huang to join him on his trip to China at the last minute. This brings AI and chips into the spotlight. Tim Cook and Elon Musk also went along. Bloomberg's Annmarie Hordern is traveling with the president and reports from Beijing.",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/video/nvidias-ceo-add-trumps-china-140014330.html?.tsrc=rss",
+          "publishedAt": "2026-05-13T14:00:14.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/8xk8OvlQy9lXQ0LAe.TQzA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzU-/https://media.zenfs.com/en/bloomberg_markets_video_2/91bcb1b297dd20262dc5d16b180f12c5",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -266,13 +285,13 @@
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on",
-          "title": "Wolfspeed Stock Jumps 23% as Power Chip Rally Rolls On",
-          "summary": "Wolfspeed stock was surging on Wednesday after Citrini Research—best known for its viral blog posts about AI wrecking the economy and the Strait of Hormuz—recommended the power-chip maker. Futures tracking the were 0.2% higher as President Donald Trump headed to China with executives including Nvidia CEO Jensen Huang and Tesla CEO Elon Musk. The company makes power semiconductors, which control the voltages that flow into a device’s specific components.",
+          "id": "live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip",
+          "title": "Nvidia CEO Jensen Huang joins Trump delegation on China trip",
+          "summary": "Nvidia (NVDA) CEO Jensen Huang is among the Big Tech executives accompanying President Trump on his trip to Beijing to meet with Chinese President Xi Jinping. He joins Tesla's (TSLA) Elon Musk and Apple's (AAPL) Tim Cook as part of this US delegation. Morning Brief Host Julie Hyman and Yahoo Finance Head of News Myles Udland talk about the latest news coming out of the administration's visit to China. Nvidia will be reporting first quarter earnings results next Wednesday, May 20.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/c35dc59a-884c-329b-b03a-248073b27274/wolfspeed-stock-jumps-23%25-as.html?.tsrc=rss",
-          "publishedAt": "2026-05-13T11:28:00.000Z",
-          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/r2lRaHbSGobODq_az69LCg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/933844320daafae497c10eeb0155cc34",
+          "sourceUrl": "https://finance.yahoo.com/video/nvidia-ceo-jensen-huang-joins-140000639.html?.tsrc=rss",
+          "publishedAt": "2026-05-13T14:00:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/IJKIVs2AgRYUAXVxyjRj3A--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzU-/https://d29szjachogqwa.cloudfront.net/images/user-uploaded/8f328e5c-1ec6-4d49-bbc7-3034e1c8ad11_6f239ba8e1af3e9b08a6c6efa64bb8522a49c1717a7a401d5d084f8732689614.jpg",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -281,27 +300,8 @@
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-        },
-        {
-          "id": "live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon",
-          "title": "Market Analysis: Advanced Micro Devices And Competitors In Semiconductors & Semiconductor Equipment Industry",
-          "summary": "In the fast-paced and cutthroat world of business, conducting thorough company analysis is essential for investors and industry experts. In this article, we will undertake a comprehensive industry comparison, evaluating Advanced Micro Devices (NASDAQ:AMD) in comparison to its major competitors within the Semiconductors & Semiconductor Equipment industry. By analyzing crucial financial metrics, market position, and growth potential, our objective is to provide valuable insights for investors and",
-          "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/news/market-analysis-advanced-micro-devices-095900454.html?.tsrc=rss",
-          "publishedAt": "2026-05-13T09:59:00.000Z",
-          "imageUrl": "https://s.yimg.com/os/en/Benzinga/65990e13f1351625e9fd19ff4ee5ce5d",
-          "sectorTag": "semiconductors",
-          "tickerTags": [
-            "AMD",
-            "NVDA",
-            "TSM"
-          ],
-          "importanceScore": 98,
-          "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-            "title": "AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China",
-            "summary": "Investing.com -- Shares in semiconductor, optical networking, and data storage companies have surged in premarket trading on Wednesday, driven by tightening global memory chip supply and a boost in sentiment as Nvidia Chief Executive Jensen Huang joined President Donald Trump on his visit to China.",
+            "id": "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+            "title": "Why Nvidia Earnings May Matter More To The S&P 500 Than Fed Minutes Right Now",
+            "summary": "For years, Federal Reserve minutes were among Wall Street's most market-moving events. But in today's AI-driven rally, one earnings report may now rival macro data releases in influence: Nvidia Corp (NASDAQ:NVDA). The Santa Clara, California-based chip giant, whose earnings are due next week, is worth roughly $5.3 trillion and recently surpassed the entire S&P 500 healthcare sector in market value, according to Barron's. Essentially, Nvidia is proving to be more than just another mega-cap tech s",
             "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/news/ai-chip-stocks-surge-again-114249160.html?.tsrc=rss",
-            "publishedAt": "2026-05-13T11:42:49.000Z",
-            "imageUrl": "https://s.yimg.com/cv/apiv2/cv/apiv2/social/images/yahoo-finance-default-logo.png",
+            "sourceUrl": "https://finance.yahoo.com/news/why-nvidia-earnings-may-matter-140129771.html?.tsrc=rss",
+            "publishedAt": "2026-05-13T14:01:29.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/Benzinga/8b7ad4d165a5bb12850a21af86311722",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -324,31 +324,8 @@
             ],
             "importanceScore": 98,
             "priority": "critical",
-            "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-            "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
-          }
-        },
-        {
-          "sectorTag": "energy-oil",
-          "sectorLabel": "에너지(오일)",
-          "item": {
-            "id": "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally",
-            "title": "Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?",
-            "summary": "Investors may be wondering whether Exxon Mobil at around US$149.68 is still offering value or if most of the upside has already been priced in. The stock has pulled back slightly, with returns declining 2.6% over the past week and 1.9% over the past month. It is still up 22.0% year to date and 41.8% over the past year. Recent headlines around Exxon Mobil have largely focused on its position in the global energy sector and investor interest in large integrated oil companies. This continues to...",
-            "source": "FINANCE",
-            "sourceUrl": "https://finance.yahoo.com/news/too-consider-exxon-mobil-xom-192914532.html?.tsrc=rss",
-            "publishedAt": "2026-05-12T19:29:14.000Z",
-            "imageUrl": null,
-            "sectorTag": "energy-oil",
-            "tickerTags": [
-              "XOM",
-              "CVX",
-              "SLB"
-            ],
-            "importanceScore": 98,
-            "priority": "critical",
-            "analysis": "에너지 섹터는 유가 수준 자체보다 현금흐름과 투자계획 유지 여부가 중요해져 있어, 업종 내 승자와 패자를 바로 가르는 재료입니다.",
-            "recommendation": "XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다."
+            "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+            "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
           }
         }
       ]
@@ -363,7 +340,7 @@
         "tradingViewSymbol": "NASDAQ:NVDA",
         "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $194.74 / $164.27, 저항은 $223.75 / $223.75입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $194.74 / $164.27, 저항은 $227.16 / $227.16입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
             "name": "상승 추세 내 눌림 후 재가속",
@@ -376,21 +353,17 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-          "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-          "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on"
+          "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+          "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+          "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip"
         ],
-        "latestPrice": 220.77999877929688,
-        "priceChange": 1.339996337890625,
-        "priceChangePercent": 0.6106436032548003,
+        "latestPrice": 224.47450256347656,
+        "priceChange": 3.6945037841796875,
+        "priceChangePercent": 1.6733869936619146,
         "chartSeries": [
-          {
-            "date": "2026-01-02T14:30:00.000Z",
-            "close": 188.85000610351562
-          },
           {
             "date": "2026-01-05T14:30:00.000Z",
             "close": 188.1199951171875
@@ -746,6 +719,10 @@
           {
             "date": "2026-05-12T13:30:00.000Z",
             "close": 220.77999877929688
+          },
+          {
+            "date": "2026-05-13T13:30:00.000Z",
+            "close": 224.47450256347656
           }
         ]
       },
@@ -758,7 +735,7 @@
         "tradingViewSymbol": "NASDAQ:AMD",
         "importanceScore": 97,
         "summary": "추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $251.85 / $188.22, 저항은 $469.22 / $469.22입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+        "technicalAnalysis": "단기와 중기 추세가 모두 상방입니다. 주요 지지는 $261.51 / $188.22, 저항은 $469.22 / $469.22입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
             "name": "뚜렷한 패턴 없음",
@@ -766,21 +743,17 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-          "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-          "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on"
+          "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+          "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+          "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip"
         ],
-        "latestPrice": 448.2900085449219,
-        "priceChange": -10.5,
-        "priceChangePercent": -2.288628741785667,
+        "latestPrice": 439.1099853515625,
+        "priceChange": -9.180023193359375,
+        "priceChangePercent": -2.0477867046727787,
         "chartSeries": [
-          {
-            "date": "2026-01-02T14:30:00.000Z",
-            "close": 223.47000122070312
-          },
           {
             "date": "2026-01-05T14:30:00.000Z",
             "close": 221.0800018310547
@@ -1136,6 +1109,10 @@
           {
             "date": "2026-05-12T13:30:00.000Z",
             "close": 448.2900085449219
+          },
+          {
+            "date": "2026-05-13T13:30:00.000Z",
+            "close": 439.1099853515625
           }
         ]
       },
@@ -1161,12 +1138,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-          "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-          "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on"
+          "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+          "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+          "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip"
         ],
         "latestPrice": 284000,
         "priceChange": 5000,
@@ -1541,9 +1518,9 @@
         "market": "US",
         "exchange": "NYSE",
         "tradingViewSymbol": "NYSE:XOM",
-        "importanceScore": 88,
+        "importanceScore": 71,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
-        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $141.97, 저항은 $155.69 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
+        "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $141.97 / $141.97, 저항은 $155.69 / $176.41입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
         "patternAnalysis": [
           {
             "name": "뚜렷한 패턴 없음",
@@ -1551,19 +1528,13 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
-        ],
-        "latestPrice": 150.6300048828125,
-        "priceChange": 0.95001220703125,
-        "priceChangePercent": 0.6346955194533259,
+        "linkedNewsIds": [],
+        "latestPrice": 151.26800537109375,
+        "priceChange": 0.63800048828125,
+        "priceChangePercent": 0.42355471526247584,
         "chartSeries": [
-          {
-            "date": "2026-01-02T14:30:00.000Z",
-            "close": 122.6500015258789
-          },
           {
             "date": "2026-01-05T14:30:00.000Z",
             "close": 125.36000061035156
@@ -1919,6 +1890,10 @@
           {
             "date": "2026-05-12T13:30:00.000Z",
             "close": 150.6300048828125
+          },
+          {
+            "date": "2026-05-13T13:30:00.000Z",
+            "close": 151.26800537109375
           }
         ]
       },
@@ -1929,7 +1904,7 @@
         "market": "KR",
         "exchange": "KRX",
         "tradingViewSymbol": "KRX:010950",
-        "importanceScore": 88,
+        "importanceScore": 71,
         "summary": "방향성 확정 전이라 조건부 접근이 필요한 중립 구간입니다.",
         "technicalAnalysis": "추세는 살아 있지만 방향 확신이 강한 구간은 아닙니다. 주요 지지는 $108600.00 / $101200.00, 저항은 $137500.00 / $177100.00입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 하방 모멘텀이 우세해 섣부른 추격은 불리합니다.",
         "patternAnalysis": [
@@ -1939,11 +1914,9 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 연결 뉴스에서는 \"Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "010950.KS는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
-        "linkedNewsIds": [
-          "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
-        ],
+        "linkedNewsIds": [],
         "latestPrice": 115300,
         "priceChange": 1000,
         "priceChangePercent": 0.8748906386701663,
@@ -2353,21 +2326,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Nvidia vs. AMD: The Better AI Chip Stock for 2026",
-            "파생 뉴스: AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China",
-            "파생 뉴스: Wolfspeed Stock Jumps 23% as Power Chip Rally Rolls On",
-            "파생 뉴스: Market Analysis: Advanced Micro Devices And Competitors In Semiconductors & Semiconductor Equipment Industry",
-            "반도체: AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China",
-            "에너지(오일): Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?"
+            "메인 헤드라인: Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)",
+            "파생 뉴스: Why Nvidia Earnings May Matter More To The S&P 500 Than Fed Minutes Right Now",
+            "파생 뉴스: Nvidia's CEO Is a Late Add to Trump's China Trip",
+            "파생 뉴스: Nvidia CEO Jensen Huang joins Trump delegation on China trip",
+            "반도체: Why Nvidia Earnings May Matter More To The S&P 500 Than Fed Minutes Right Now"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-            "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-            "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on",
-            "live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon"
+            "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+            "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+            "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip",
+            "live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip"
           ]
         },
         {
@@ -2384,9 +2356,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-            "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-            "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
+            "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+            "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now"
           ]
         },
         {
@@ -2398,16 +2369,16 @@
           "summary": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다.",
           "outputLines": [
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
-            "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $194.74 / $164.27, 저항은 $223.75 / $223.75입니다. RSI는 중립대에서 추세 지속 여부를 보는 구간입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
+            "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $194.74 / $164.27, 저항은 $227.16 / $227.16입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-            "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-            "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on"
+            "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+            "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+            "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip"
           ]
         },
         {
@@ -2428,9 +2399,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-            "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on",
-            "live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon"
+            "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+            "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip",
+            "live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip"
           ]
         }
       ],
@@ -2499,14 +2470,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-13T11:57:57.373Z",
+        "runId": "fallback-2026-05-13T14:29:53.194Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-13T11:57:57.373Z",
+        "generatedAt": "2026-05-13T14:29:53.194Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T11:57:57.373Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Nvidia vs. AMD: The Better AI Chip Stock for 2026\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on, live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on, live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T14:29:53.194Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now, live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip, live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now, live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now, live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip, live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2515,13 +2486,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-              "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-              "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on",
-              "live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon"
+              "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+              "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+              "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip",
+              "live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip"
             ]
           },
           {
@@ -2534,9 +2505,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-              "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-              "live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally"
+              "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+              "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now"
             ]
           },
           {
@@ -2550,9 +2520,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026",
-              "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-              "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on"
+              "live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-",
+              "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+              "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip"
             ]
           },
           {
@@ -2566,9 +2536,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china",
-              "live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on",
-              "live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon"
+              "live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now",
+              "live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip",
+              "live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip"
             ]
           }
         ]
@@ -2798,7 +2768,7 @@
       ]
     },
     "meeting": {
-      "topic": "Nvidia vs. AMD: The Better AI Chip Stock for 2026",
+      "topic": "Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2859,16 +2829,16 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-13T11:57:57.373Z",
+      "generatedAt": "2026-05-13T14:29:53.194Z",
       "nextRunAt": "2026-05-14T07:30:00.000Z",
-      "subject": "[Daily Brief] Nvidia vs. AMD: The Better AI Chip Stock for 2026",
-      "previewText": "Nvidia and AMD have witnessed contrasting fortunes on the stock market this year, which is why one of them is available at a really attractive valuation. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)",
+      "previewText": "The Dow Jones fell but Nvidia, Sandisk, Micron and Intel buoyed techs as the Trump-Xi summit looms. Nextpower, Nebius are big earnings winners. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Nvidia vs. AMD: The Better AI Chip Stock for 2026\n\nNvidia and AMD have witnessed contrasting fortunes on the stock market this year, which is why one of them is available at a really attractive valuation. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nNvidia vs. AMD: The Better AI Chip Stock for 2026\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Wolfspeed Stock Jumps 23% as Power Chip Rally Rolls On\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Market Analysis: Advanced Micro Devices And Competitors In Semiconductors & Semiconductor Equipment Industry\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- 에너지(오일): Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?\n  행동: XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Nvidia vs. AMD: The Better AI Chip Stock for 2026</h1><p>Nvidia and AMD have witnessed contrasting fortunes on the stock market this year, which is why one of them is available at a really attractive valuation. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Nvidia vs. AMD: The Better AI Chip Stock for 2026</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Wolfspeed Stock Jumps 23% as Power Chip Rally Rolls On</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Market Analysis: Advanced Micro Devices And Competitors In Semiconductors &amp; Semiconductor Equipment Industry</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />AMD 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - AI chip stocks surge again as Nvidia’s Huang joins Trump on visit to China<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>에너지(오일)</strong> - Is It Too Late To Consider Exxon Mobil (XOM) After Its Strong 1-Year Rally?<br />XOM 비중을 우선 두고, 서비스주는 메이저 capex 유지가 확인될 때만 확장하는 편이 안전합니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\n\nThe Dow Jones fell but Nvidia, Sandisk, Micron and Intel buoyed techs as the Trump-Xi summit looms. Nextpower, Nebius are big earnings winners. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[메인 헤드라인]\nStock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\n- 분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- 행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[파생 기사]\n- Why Nvidia Earnings May Matter More To The S&P 500 Than Fed Minutes Right Now\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Nvidia's CEO Is a Late Add to Trump's China Trip\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Nvidia CEO Jensen Huang joins Trump delegation on China trip\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Why Nvidia Earnings May Matter More To The S&P 500 Than Fed Minutes Right Now\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)</h1><p>The Dow Jones fell but Nvidia, Sandisk, Micron and Intel buoyed techs as the Trump-Xi summit looms. Nextpower, Nebius are big earnings winners. / 행동 제안: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p><h2>메인 헤드라인</h2><article><strong>Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)</strong><p>실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.</p><p>NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</p></article><h2>파생 기사</h2><ul><li><strong>Why Nvidia Earnings May Matter More To The S&amp;P 500 Than Fed Minutes Right Now</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Nvidia&#39;s CEO Is a Late Add to Trump&#39;s China Trip</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Nvidia CEO Jensen Huang joins Trump delegation on China trip</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Why Nvidia Earnings May Matter More To The S&amp;P 500 Than Fed Minutes Right Now<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T11:57:57.373Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Nvidia vs. AMD: The Better AI Chip Stock for 2026\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Nvidia vs. AMD: The Better AI Chip Stock for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on, live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-energy-oil-is-it-too-late-to-consider-exxon-mobil-xom-after-its-strong-1-year-rally\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-nvidia-vs-amd-the-better-ai-chip-stock-for-2026, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-ai-chip-stocks-surge-again-as-nvidia-s-huang-joins-trump-on-visit-to-china, live-semiconductors-wolfspeed-stock-jumps-23-as-power-chip-rally-rolls-on, live-semiconductors-market-analysis-advanced-micro-devices-and-competitors-in-semiconductors-semicon\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-13T14:29:53.194Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\n- Why it matters: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n- Action: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Stock Market Today: Dow Falls On Hot Inflation But Nvidia, Micron Rise; Solar Play Breaks Out (Live Coverage)\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now, live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip, live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-stock-market-today-dow-falls-on-hot-inflation-but-nvidia-micron-rise-solar-play-, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now, live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-why-nvidia-earnings-may-matter-more-to-the-s-p-500-than-fed-minutes-right-now, live-semiconductors-nvidia-s-ceo-is-a-late-add-to-trump-s-china-trip, live-semiconductors-nvidia-ceo-jensen-huang-joins-trump-delegation-on-china-trip\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
     "AI 파이프라인 실행 실패: AI request failed (429): Too many requests. For more on scraping GitHub and how it may affect your rights, please review our Terms of Service (https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).\n"
   ]
