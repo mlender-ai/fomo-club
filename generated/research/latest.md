@@ -1,7 +1,7 @@
 # Research Pipeline
 
 - Contract Version: 2026-04-21.1
-- Generated At: 2026-05-14T19:38:50.636Z
+- Generated At: 2026-05-14T21:13:19.944Z
 - Provider: rule-based
 - Model: openai/gpt-4.1
 - Source: github-actions
@@ -10,26 +10,26 @@
 - Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS
 
 ## Main Headline
-- Bank of America resets Nvidia stock price target for 2026
+- Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues
 - Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.
 - Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.
 
 ## Agent Transcript
 ### 01 News Editor -> Macro Analyst
-메인 헤드라인을 "Bank of America resets Nvidia stock price target for 2026"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
-References: live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co, live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-
+메인 헤드라인을 "Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.
+References: live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju, live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc
 
 ### 02 Macro Analyst -> Ticker Analyst
 지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.
-References: live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now
+References: live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news
 
 ### 03 Ticker Analyst -> Execution Trader
 NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.
-References: NVDA, live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co
+References: NVDA, live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju
 
 ### 04 Execution Trader -> Operator
 NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.
-References: NVDA, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co, live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-
+References: NVDA, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju, live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc
 
 ## Trader Plan
 - Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.

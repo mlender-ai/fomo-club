@@ -42,7 +42,7 @@
   },
   "workspace": {
     "contractVersion": "2026-04-21.1",
-    "generatedAt": "2026-05-14T19:38:50.636Z",
+    "generatedAt": "2026-05-14T21:13:19.944Z",
     "preferences": {
       "sectors": [
         "semiconductors",
@@ -227,13 +227,13 @@
     },
     "news": {
       "headline": {
-        "id": "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-        "title": "Bank of America resets Nvidia stock price target for 2026",
-        "summary": "Nvidia (NVDA) just became the first company in history to hit a $5.5 trillion market cap. Its CEO is flying to Beijing with President Trump. And on the same day all of that was happening, Bank of America's top semiconductor analyst just changed a number that puts 45% upside on the table. That ...",
-        "source": "THESTREET",
-        "sourceUrl": "https://www.thestreet.com/investing/stocks/bank-of-america-resets-nvidia-stock-price-target-for-2026?.tsrc=rss",
-        "publishedAt": "2026-05-14T19:13:00.000Z",
-        "imageUrl": null,
+        "id": "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+        "title": "Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues",
+        "summary": "The stock market hit highs as Nvidia led and AI chip IPO Cerebras soared in its debut, while Broadcom and Taiwan Semiconductor flashed buy signals. The Trump-Xi summit continues.",
+        "source": "FINANCE",
+        "sourceUrl": "https://finance.yahoo.com/m/63a0367a-b214-3c30-957e-0363f7c21b2e/dow-jones-futures%3A-stocks.html?.tsrc=rss",
+        "publishedAt": "2026-05-14T20:50:50.000Z",
+        "imageUrl": "https://s.yimg.com/os/en/ibd.com/e6ce284711e0b847401bbc51cf5e7e27",
         "sectorTag": "semiconductors",
         "tickerTags": [
           "NVDA",
@@ -247,13 +247,13 @@
       },
       "derivedArticles": [
         {
-          "id": "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-          "title": "Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?",
-          "summary": "Both companies are critical to the AI build-out. But one's growth profile and order book make it the more compelling buy.",
-          "source": "FOOL",
-          "sourceUrl": "https://www.fool.com/investing/2026/05/14/broadcom-vs-taiwan-semiconductor-which-ai-chip-gia/?.tsrc=rss",
-          "publishedAt": "2026-05-14T19:07:00.000Z",
-          "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F870115%2Fbroadcom-vs-tsm.jpg&w=1200&op=resize",
+          "id": "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+          "title": "Nvidia Stock Extends Winning Streak On China News",
+          "summary": "Nvidia stock gapped higher on Thursday on a report that Chinese firms are lining up to buy its AI chips if they can secure China's approval.",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/m/63f678e6-a552-3a03-91b5-2d53ed0f375b/nvidia-stock-extends-winning.html?.tsrc=rss",
+          "publishedAt": "2026-05-14T20:38:49.000Z",
+          "imageUrl": "https://s.yimg.com/os/en/ibd.com/b5afe962be01539ab5fdc845dea6a6dd",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -262,16 +262,16 @@
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
           "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
         },
         {
-          "id": "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co",
-          "title": "Stock Market Today: Nasdaq Charges Higher; Boeing Stumbles Amid Trump News (Live Coverage)",
+          "id": "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju",
+          "title": "Stock Market Today: Nasdaq, S&P 500 Make Record Closes On Trump-Xi Talks; Nvidia Jumps (Live Coverage)",
           "summary": "The Dow rose with Cisco soaring on earnings, while fellow blue chip Nvidia could be a Trump-Xi summit winner.",
           "source": "FINANCE",
-          "sourceUrl": "https://finance.yahoo.com/m/40f20718-1adc-3bce-bb08-29c8ed6334bf/stock-market-today%3A-nasdaq.html?.tsrc=rss",
-          "publishedAt": "2026-05-14T19:05:47.000Z",
+          "sourceUrl": "https://finance.yahoo.com/m/40f20718-1adc-3bce-bb08-29c8ed6334bf/stock-market-today%3A-nasdaq%2C.html?.tsrc=rss",
+          "publishedAt": "2026-05-14T20:27:12.000Z",
           "imageUrl": "https://s.yimg.com/os/en/ibd.com/62bfb3f24967c73bc46f49e3020e493d",
           "sectorTag": "semiconductors",
           "tickerTags": [
@@ -285,13 +285,13 @@
           "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         },
         {
-          "id": "live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-",
-          "title": "AMD vs Intel: One Triples Free Cash Flow While Another Burns Billions on Foundry Ambitions",
-          "summary": "AMD (NASDAQ:AMD) and Intel (NASDAQ:INTC) both reported Q1 fiscal 2026 results within two weeks of each other, and the contrast is striking. AMD posted $10.25 billion in revenue powered by AI accelerators, while Intel delivered $13.58 billion alongside a sprawling foundry rebuild. Two chipmakers, two very different bets on where compute is heading. Data Center ... AMD vs Intel: One Triples Free Cash Flow While Another Burns Billions on Foundry Ambitions",
-          "source": "247WALLST",
-          "sourceUrl": "https://247wallst.com/investing/2026/05/14/amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-ambitions/?.tsrc=rss",
-          "publishedAt": "2026-05-14T18:58:29.000Z",
-          "imageUrl": "https://247wallst.com/wp-content/uploads/2026/04/AMD-EPYC.png",
+          "id": "live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc",
+          "title": "Why Intel Is More Like Boeing than Nvidia or TSMC",
+          "summary": "Intel’s turnaround story may make Boeing a better comparison than Nvidia or TSMC as investors focus less on near-term earnings and more on long-term execution.",
+          "source": "FINANCE",
+          "sourceUrl": "https://finance.yahoo.com/m/fa103316-010c-3bd0-995b-585f4e95a0ca/why-intel-is-more-like-boeing.html?.tsrc=rss",
+          "publishedAt": "2026-05-14T20:17:00.000Z",
+          "imageUrl": "https://s.yimg.com/ny/api/res/1.2/Cq9QB2r4XvW.LC5AQJ7RZw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA-/https://media.zenfs.com/en/Barrons.com/7ea811d498dbd3a8848e62eaee93cde1",
           "sectorTag": "semiconductors",
           "tickerTags": [
             "NVDA",
@@ -300,8 +300,8 @@
           ],
           "importanceScore": 98,
           "priority": "critical",
-          "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
-          "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
+          "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+          "recommendation": "NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다."
         }
       ],
       "sectorIssues": [
@@ -309,13 +309,13 @@
           "sectorTag": "semiconductors",
           "sectorLabel": "반도체",
           "item": {
-            "id": "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-            "title": "Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?",
-            "summary": "Both companies are critical to the AI build-out. But one's growth profile and order book make it the more compelling buy.",
-            "source": "FOOL",
-            "sourceUrl": "https://www.fool.com/investing/2026/05/14/broadcom-vs-taiwan-semiconductor-which-ai-chip-gia/?.tsrc=rss",
-            "publishedAt": "2026-05-14T19:07:00.000Z",
-            "imageUrl": "https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F870115%2Fbroadcom-vs-tsm.jpg&w=1200&op=resize",
+            "id": "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+            "title": "Nvidia Stock Extends Winning Streak On China News",
+            "summary": "Nvidia stock gapped higher on Thursday on a report that Chinese firms are lining up to buy its AI chips if they can secure China's approval.",
+            "source": "FINANCE",
+            "sourceUrl": "https://finance.yahoo.com/m/63f678e6-a552-3a03-91b5-2d53ed0f375b/nvidia-stock-extends-winning.html?.tsrc=rss",
+            "publishedAt": "2026-05-14T20:38:49.000Z",
+            "imageUrl": "https://s.yimg.com/os/en/ibd.com/b5afe962be01539ab5fdc845dea6a6dd",
             "sectorTag": "semiconductors",
             "tickerTags": [
               "NVDA",
@@ -324,7 +324,7 @@
             ],
             "importanceScore": 98,
             "priority": "critical",
-            "analysis": "실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.",
+            "analysis": "반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.",
             "recommendation": "NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다."
           }
         }
@@ -353,16 +353,16 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bank of America resets Nvidia stock price target for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-          "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-          "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co"
+          "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+          "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+          "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju"
         ],
-        "latestPrice": 235.36990356445312,
-        "priceChange": 9.539901733398438,
-        "priceChangePercent": 4.2243730487746785,
+        "latestPrice": 235.74000549316406,
+        "priceChange": 9.910003662109375,
+        "priceChangePercent": 4.388258239276432,
         "chartSeries": [
           {
             "date": "2026-01-06T14:30:00.000Z",
@@ -722,7 +722,7 @@
           },
           {
             "date": "2026-05-14T13:30:00.000Z",
-            "close": 235.36990356445312
+            "close": 235.74000549316406
           }
         ]
       },
@@ -743,16 +743,16 @@
             "confidence": "low"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bank of America resets Nvidia stock price target for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-          "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-          "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co"
+          "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+          "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+          "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju"
         ],
-        "latestPrice": 450.41009521484375,
-        "priceChange": 4.91009521484375,
-        "priceChangePercent": 1.1021538080457352,
+        "latestPrice": 449.70001220703125,
+        "priceChange": 4.20001220703125,
+        "priceChangePercent": 0.9427636828352974,
         "chartSeries": [
           {
             "date": "2026-01-06T14:30:00.000Z",
@@ -1112,7 +1112,7 @@
           },
           {
             "date": "2026-05-14T13:30:00.000Z",
-            "close": 450.41009521484375
+            "close": 449.70001220703125
           }
         ]
       },
@@ -1138,12 +1138,12 @@
             "confidence": "high"
           }
         ],
-        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bank of America resets Nvidia stock price target for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다.",
+        "marketContext": "섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"가 가장 큰 가격 재료로 작동하고 있습니다.",
         "recommendation": "005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
         "linkedNewsIds": [
-          "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-          "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-          "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co"
+          "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+          "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+          "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju"
         ],
         "latestPrice": 296000,
         "priceChange": 12000,
@@ -1531,9 +1531,9 @@
         "marketContext": "섹터 흐름은 중립이라 개별 실적과 뉴스 반응이 더 중요합니다. 직결 뉴스보다 업종 흐름 자체가 더 중요하게 작동하는 구간입니다.",
         "recommendation": "XOM는 방향이 정리되기 전이라 고점 추격보다 지지 구간 확인 후 분할 접근이 적절합니다.",
         "linkedNewsIds": [],
-        "latestPrice": 152.55499267578125,
-        "priceChange": 0.9849853515625,
-        "priceChangePercent": 0.6498550530881404,
+        "latestPrice": 152.77999877929688,
+        "priceChange": 1.209991455078125,
+        "priceChangePercent": 0.798305335230254,
         "chartSeries": [
           {
             "date": "2026-01-06T14:30:00.000Z",
@@ -1893,7 +1893,7 @@
           },
           {
             "date": "2026-05-14T13:30:00.000Z",
-            "close": 152.55499267578125
+            "close": 152.77999877929688
           }
         ]
       },
@@ -2326,20 +2326,20 @@
           "name": "News Editor",
           "roleLabel": "뉴스 선별",
           "objective": "가격 영향이 큰 뉴스만 추려 메인 헤드라인과 파생 뉴스, 섹터 핵심 이슈를 만든다.",
-          "summary": "메인 헤드라인을 \"Bank of America resets Nvidia stock price target for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+          "summary": "메인 헤드라인을 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
           "outputLines": [
-            "메인 헤드라인: Bank of America resets Nvidia stock price target for 2026",
-            "파생 뉴스: Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?",
-            "파생 뉴스: Stock Market Today: Nasdaq Charges Higher; Boeing Stumbles Amid Trump News (Live Coverage)",
-            "파생 뉴스: AMD vs Intel: One Triples Free Cash Flow While Another Burns Billions on Foundry Ambitions",
-            "반도체: Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?"
+            "메인 헤드라인: Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues",
+            "파생 뉴스: Nvidia Stock Extends Winning Streak On China News",
+            "파생 뉴스: Stock Market Today: Nasdaq, S&P 500 Make Record Closes On Trump-Xi Talks; Nvidia Jumps (Live Coverage)",
+            "파생 뉴스: Why Intel Is More Like Boeing than Nvidia or TSMC",
+            "반도체: Nvidia Stock Extends Winning Streak On China News"
           ],
           "handoffNote": "이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
           "references": [
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-            "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-            "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co",
-            "live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-"
+            "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+            "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+            "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju",
+            "live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc"
           ]
         },
         {
@@ -2356,8 +2356,8 @@
           ],
           "handoffNote": "이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
           "references": [
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-            "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now"
+            "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+            "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news"
           ]
         },
         {
@@ -2371,14 +2371,14 @@
             "요약: 추세 우위가 유지되는 동안 눌림 확인 매매가 유리한 구조입니다.",
             "기술적 상태: 단기와 중기 추세가 모두 상방입니다. 주요 지지는 $194.74 / $164.27, 저항은 $236.54 / $236.54입니다. RSI는 과열권에 가까워 추격보다 눌림 확인이 우선입니다. MACD는 상방 모멘텀이 남아 있어 추세 추종 쪽이 우세합니다.",
             "패턴: 상승 추세 내 눌림 후 재가속, AB=CD 조정형",
-            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Bank of America resets Nvidia stock price target for 2026\"가 가장 큰 가격 재료로 작동하고 있습니다."
+            "시황 연결: 섹터 프록시도 20일선과 50일선 위에 있어 업종 흐름이 종목을 지지하는 구간입니다. 연결 뉴스에서는 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"가 가장 큰 가격 재료로 작동하고 있습니다."
           ],
           "handoffNote": "이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-            "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-            "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co"
+            "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+            "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+            "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju"
           ]
         },
         {
@@ -2399,9 +2399,9 @@
           "handoffNote": "이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
           "references": [
             "NVDA",
-            "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-            "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co",
-            "live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-"
+            "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+            "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju",
+            "live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc"
           ]
         }
       ],
@@ -2470,14 +2470,14 @@
         ]
       },
       "runtime": {
-        "runId": "fallback-2026-05-14T19:38:50.636Z",
+        "runId": "fallback-2026-05-14T21:13:19.944Z",
         "provider": "rule-based",
         "model": "openai/gpt-4.1",
         "source": "github-actions",
         "status": "fallback",
-        "generatedAt": "2026-05-14T19:38:50.636Z",
+        "generatedAt": "2026-05-14T21:13:19.944Z",
         "artifactPath": "generated/research/latest.json",
-        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-14T19:38:50.636Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Bank of America resets Nvidia stock price target for 2026\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Bank of America resets Nvidia stock price target for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co, live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co, live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+        "summaryMarkdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-14T21:13:19.944Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju, live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju, live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
         "transcript": [
           {
             "id": "news-editor-message-1",
@@ -2486,13 +2486,13 @@
             "author": "News Editor",
             "roleLabel": "뉴스 선별",
             "audience": "Macro Analyst",
-            "summary": "메인 헤드라인을 \"Bank of America resets Nvidia stock price target for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
-            "text": "메인 헤드라인을 \"Bank of America resets Nvidia stock price target for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
+            "summary": "메인 헤드라인을 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"로 고정하고 파생 뉴스 3개를 연결했습니다.",
+            "text": "메인 헤드라인을 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.",
             "references": [
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-              "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-              "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co",
-              "live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-"
+              "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+              "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+              "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju",
+              "live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc"
             ]
           },
           {
@@ -2505,8 +2505,8 @@
             "summary": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다.",
             "text": "지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.",
             "references": [
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-              "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now"
+              "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+              "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news"
             ]
           },
           {
@@ -2520,9 +2520,9 @@
             "text": "NVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026",
-              "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-              "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co"
+              "live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum",
+              "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+              "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju"
             ]
           },
           {
@@ -2536,9 +2536,9 @@
             "text": "NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.",
             "references": [
               "NVDA",
-              "live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now",
-              "live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co",
-              "live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-"
+              "live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news",
+              "live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju",
+              "live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc"
             ]
           }
         ]
@@ -2768,7 +2768,7 @@
       ]
     },
     "meeting": {
-      "topic": "Bank of America resets Nvidia stock price target for 2026",
+      "topic": "Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues",
       "objective": "뉴스 → 시황 → 분석 → 행동 체인이 실제 제품 흐름으로 이어지는지 점검합니다.",
       "nextAction": "NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.",
       "messages": [
@@ -2829,17 +2829,17 @@
     },
     "newsletter": {
       "cadence": "daily",
-      "generatedAt": "2026-05-14T19:38:50.636Z",
+      "generatedAt": "2026-05-14T21:13:19.944Z",
       "nextRunAt": "2026-05-15T07:30:00.000Z",
-      "subject": "[Daily Brief] Bank of America resets Nvidia stock price target for 2026",
-      "previewText": "Nvidia (NVDA) just became the first company in history to hit a $5.5 trillion market cap. Its CEO is flying to Beijing with President Trump. And on the same day all of that was happening, Bank of America's top semiconductor analyst just changed a number that puts 45% upside on the table. That ... / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
+      "subject": "[Daily Brief] Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues",
+      "previewText": "The stock market hit highs as Nvidia led and AI chip IPO Cerebras soared in its debut, while Broadcom and Taiwan Semiconductor flashed buy signals. The Trump-Xi summit continues. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.",
       "to": [],
-      "bodyText": "[Daily Brief] Bank of America resets Nvidia stock price target for 2026\n\nNvidia (NVDA) just became the first company in history to hit a $5.5 trillion market cap. Its CEO is flying to Beijing with President Trump. And on the same day all of that was happening, Bank of America's top semiconductor analyst just changed a number that puts 45% upside on the table. That ... / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nBank of America resets Nvidia stock price target for 2026\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Stock Market Today: Nasdaq Charges Higher; Boeing Stumbles Amid Trump News (Live Coverage)\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- AMD vs Intel: One Triples Free Cash Flow While Another Burns Billions on Foundry Ambitions\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
-      "bodyHtml": "<h1>[Daily Brief] Bank of America resets Nvidia stock price target for 2026</h1><p>Nvidia (NVDA) just became the first company in history to hit a $5.5 trillion market cap. Its CEO is flying to Beijing with President Trump. And on the same day all of that was happening, Bank of America&#39;s top semiconductor analyst just changed a number that puts 45% upside on the table. That ... / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Bank of America resets Nvidia stock price target for 2026</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Stock Market Today: Nasdaq Charges Higher; Boeing Stumbles Amid Trump News (Live Coverage)</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>AMD vs Intel: One Triples Free Cash Flow While Another Burns Billions on Foundry Ambitions</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Broadcom vs. Taiwan Semiconductor: Which AI Chip Giant Is the Better Buy Right Now?<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
+      "bodyText": "[Daily Brief] Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\n\nThe stock market hit highs as Nvidia led and AI chip IPO Cerebras soared in its debut, while Broadcom and Taiwan Semiconductor flashed buy signals. The Trump-Xi summit continues. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[메인 헤드라인]\nDow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\n- 분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- 행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[파생 기사]\n- Nvidia Stock Extends Winning Streak On China News\n  분석: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n- Stock Market Today: Nasdaq, S&P 500 Make Record Closes On Trump-Xi Talks; Nvidia Jumps (Live Coverage)\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n- Why Intel Is More Like Boeing than Nvidia or TSMC\n  분석: 실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.\n  행동: NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.\n\n[섹터별 핵심 이슈]\n- 반도체: Nvidia Stock Extends Winning Streak On China News\n  행동: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n[티커 행동 우선순위]\n- NVDA: NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- AMD: AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.\n- 005930.KS: 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.",
+      "bodyHtml": "<h1>[Daily Brief] Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues</h1><p>The stock market hit highs as Nvidia led and AI chip IPO Cerebras soared in its debut, while Broadcom and Taiwan Semiconductor flashed buy signals. The Trump-Xi summit continues. / 행동 제안: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p><h2>메인 헤드라인</h2><article><strong>Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues</strong><p>반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.</p><p>NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</p></article><h2>파생 기사</h2><ul><li><strong>Nvidia Stock Extends Winning Streak On China News</strong><br />반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li><li><strong>Stock Market Today: Nasdaq, S&amp;P 500 Make Record Closes On Trump-Xi Talks; Nvidia Jumps (Live Coverage)</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li><li><strong>Why Intel Is More Like Boeing than Nvidia or TSMC</strong><br />실적과 가이던스 변화가 공급 체인 기대치를 바로 다시 가격에 반영할 수 있어 리더 종목 밸류에이션에 직접 연결됩니다.<br />NVDA는 추격보다 실적 코멘트 확인 뒤 눌림 구간에서만 대응하고, 후행주는 확산 신호가 나올 때까지 보수적으로 봅니다.</li></ul><h2>섹터별 핵심 이슈</h2><ul><li><strong>반도체</strong> - Nvidia Stock Extends Winning Streak On China News<br />NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.</li></ul><h2>티커 행동 우선순위</h2><ul><li><strong>NVDA</strong> - NVDA는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>AMD</strong> - AMD는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li><li><strong>005930.KS</strong> - 005930.KS는 추격보다 20일선 근처 눌림 확인 뒤 진입하는 편이 유리하고, 20일선이 무너지면 관망으로 전환하는 게 좋습니다.</li></ul>"
     }
   },
-  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-14T19:38:50.636Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Bank of America resets Nvidia stock price target for 2026\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Bank of America resets Nvidia stock price target for 2026\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co, live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-bank-of-america-resets-nvidia-stock-price-target-for-2026, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-broadcom-vs-taiwan-semiconductor-which-ai-chip-giant-is-the-better-buy-right-now, live-semiconductors-stock-market-today-nasdaq-charges-higher-boeing-stumbles-amid-trump-news-live-co, live-semiconductors-amd-vs-intel-one-triples-free-cash-flow-while-another-burns-billions-on-foundry-\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
+  "markdown": "# Research Pipeline\n\n- Contract Version: 2026-04-21.1\n- Generated At: 2026-05-14T21:13:19.944Z\n- Provider: rule-based\n- Model: openai/gpt-4.1\n- Source: github-actions\n- Status: fallback\n- Sectors: 반도체, 에너지(오일)\n- Tickers: NVDA, AMD, 005930.KS, XOM, 010950.KS\n\n## Main Headline\n- Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\n- Why it matters: 반도체는 수급보다 리드타임과 고객 믹스에 더 민감해져 있어, 기사 한 건이 업황 기대의 방향을 빠르게 바꿀 수 있습니다.\n- Action: NVDA 중심으로만 노출을 유지하고, 제목만 강한 후행 설계주 추격은 피하는 편이 좋습니다.\n\n## Agent Transcript\n### 01 News Editor -> Macro Analyst\n메인 헤드라인을 \"Dow Jones Futures: Stocks Power Up As Nvidia Runs, Cerebras IPO Soars; Trump-Xi Summit Continues\"로 고정하고 파생 뉴스 3개를 연결했습니다. 이 출력은 시황 해석 에이전트의 입력으로 넘어갑니다.\nReferences: live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju, live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc\n\n### 02 Macro Analyst -> Ticker Analyst\n지금 시장은 반도체 리더십과 방어형 에너지로 자금이 압축되는 국면입니다. 이 해석은 티커 딥분석과 행동 제안 에이전트의 공통 컨텍스트가 됩니다.\nReferences: live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news\n\n### 03 Ticker Analyst -> Execution Trader\nNVDA를 대표 분석 티커로 선택해 추세, 패턴, 섹터 연결을 해석했습니다. 이 출력은 행동 제안 에이전트가 진입/관망/회피 조건을 만드는 기준이 됩니다.\nReferences: NVDA, live-semiconductors-dow-jones-futures-stocks-power-up-as-nvidia-runs-cerebras-ipo-soars-trump-xi-sum, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju\n\n### 04 Execution Trader -> Operator\nNVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다. 이 출력은 사용자에게 보이는 최종 실행 제안이자 제품 팀 리뷰의 평가 대상입니다.\nReferences: NVDA, live-semiconductors-nvidia-stock-extends-winning-streak-on-china-news, live-semiconductors-stock-market-today-nasdaq-s-p-500-make-record-closes-on-trump-xi-talks-nvidia-ju, live-semiconductors-why-intel-is-more-like-boeing-than-nvidia-or-tsmc\n\n## Trader Plan\n- Strategy: NVDA 중심의 조정 매수만 허용하고, XOM로 방어 노출을 병행하는 전략이 우세합니다.\n- Do: NVDA는 추격 대신 조정 구간에서만 분할 진입합니다.\n- Do: AMD는 이벤트 전 기대가 과열되면 비중을 늘리지 않고, 가이던스 확인 뒤 확장합니다.\n- Do: XOM 같은 방어형 에너지로 포지션 균형을 맞춥니다.\n- Avoid: 서비스주나 후행 확산주를 뉴스 헤드라인만 보고 추격 매수하지 않습니다.\n- Avoid: 행동 조건 없이 모든 관심 티커를 동시에 매수하는 분산 진입은 피합니다.\n- Risk: 리드타임 둔화나 고객 믹스 악화 코멘트가 나오면 반도체 강세 논리가 빠르게 약해질 수 있습니다.\n- Risk: 메이저 오일의 capex 보수화는 에너지 내 강세 확산을 막고 서비스주를 먼저 흔들 수 있습니다.\n\n## Behavior Funnel\n- 헤드라인 열람: 0회\n- 다음 단계 이동: 0회\n- 티커 선택: 0회\n- 행동 제안 확장: 0회\n\n## Product Action Items\n- 행동 제안을 진입 조건 사다리로 바꿉니다.\n  Owner: Trader\n  Detail: NVDA 같은 대표 티커는 추천 행동을 한 줄 조언으로 끝내지 말고, 진입 조건, 무효화 조건, 추격 금지 규칙 순서로 보여줘 실행 오류를 줄입니다.\n  Implementation Status: ready\n  Focus: 행동 제안을 매수/관망/회피 분류보다 조건 기반 의사결정 카드로 재구성합니다.\n  Scope: packages/shared/src/research.ts, apps/web/components/research/ResearchWorkspace.tsx, apps/web/app/globals.css\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/37\n  Branch: codex/agent-council/trader-entry-condition-ladder\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/16\n  Plan: .github/agent-council/trader-entry-condition-ladder.md\n  Changed Files: none yet\n\n- 실데이터 fetch와 fallback 상태를 운영 패널에 드러냅니다.\n  Owner: CTO\n  Detail: 뉴스 RSS, 차트 API, 기사 이미지 추출이 실패해 fallback으로 내려간 경우를 회의 탭과 markdown summary에서 바로 알 수 있게 만듭니다.\n  Implementation Status: ready\n  Focus: 실데이터 성공률과 fallback 사용 여부를 구조화된 운영 신호로 표면화합니다.\n  Scope: packages/shared/src/researchLive.ts, packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx\n  Verify: npm run typecheck | npm run research:generate | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/38\n  Branch: codex/agent-council/cto-live-data-health-check\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/18\n  Plan: .github/agent-council/cto-live-data-health-check.md\n  Changed Files: none yet\n\n- 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.\n  Owner: PM\n  Detail: 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.\n  Implementation Status: ready\n  Focus: 뉴스, 시황, 행동, 섹터 이슈의 섹션 parity를 검증 가능한 규칙으로 정의합니다.\n  Scope: packages/shared/src/research.ts, scripts/research-newsletter.ts, apps/web/lib/researchPipelineStore.ts\n  Verify: npm run typecheck | npm run research:newsletter\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39\n  Branch: codex/agent-council/pm-newsletter-web-parity\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/20\n  Plan: .github/agent-council/pm-newsletter-web-parity.md\n  Changed Files: none yet\n\n- fallback 데이터 사용 시 사용자에게 명확히 표시합니다.\n  Owner: QA\n  Detail: 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.\n  Implementation Status: ready\n  Focus: 실패를 숨기지 않고 사용자와 운영자가 즉시 구분할 수 있는 disclosure 패턴을 도입합니다.\n  Scope: packages/shared/src/researchPipeline.ts, apps/web/components/research/ResearchWorkspace.tsx, scripts/research-newsletter.ts\n  Verify: npm run typecheck | npm run build:web\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/40\n  Branch: codex/agent-council/qa-fallback-visibility\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/22\n  Plan: .github/agent-council/qa-fallback-visibility.md\n  Changed Files: none yet\n\n- 에이전트 아이디어가 실제 구현으로 이어지는 비율을 측정합니다.\n  Owner: DA\n  Detail: 회의에서 나온 아이디어가 issue 생성, PR 생성, merge 완료로 얼마나 이어지는지 추적해 council의 아이디어 품질을 평가합니다.\n  Implementation Status: ready\n  Focus: 아이디어 생산량보다 실제 실행 전환율을 기준으로 council의 품질을 평가하는 지표를 만듭니다.\n  Scope: scripts/research-agent-issues.ts, .github/workflows/research-pipeline.yml, packages/shared/src/research.ts\n  Verify: npm run typecheck | npm run research:issues\n  Issue: https://github.com/mlender-ai/auto-trading-bot/issues/41\n  Branch: codex/agent-council/da-idea-yield-score\n  PR: https://github.com/mlender-ai/auto-trading-bot/pull/24\n  Plan: .github/agent-council/da-idea-yield-score.md\n  Changed Files: none yet\n",
   "warnings": [
-    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3545"
+    "AI 파이프라인 실행 실패: Expected ',' or ']' after array element in JSON at position 3346"
   ]
 }
