@@ -1,163 +1,353 @@
-# Research Product DESIGN.md
+# Trading Taro — Style Reference
+> Mystical Terminal Interface — a dark, intuitive, and deeply insightful workspace for market interpretation.
 
-This file follows the DESIGN.md structure highlighted by VoltAgent's `awesome-design-md`.
+**Theme:** dark
 
-The target direction blends three reference attitudes:
+Trading Taro embodies a technical yet mystical aesthetic, blending the precision of market analysis with the intuitive power of tarot interpretation. Dark, layered surfaces create a sense of depth and introspection, akin to candlelit divination balanced with illuminated data. The primary mystical green accent color, `Taro Essence`, acts as a confident highlight for interactive insights without overwhelming the dark canvas. Typography prioritizes clarity and a balanced information hierarchy, ensuring readability across both technical market indicators and interpretive narratives.
 
-- Linear: precise hierarchy, very restrained chrome, clean state changes
-- Revolut: fintech trust, sharp data presentation, polished utility surfaces
-- Tesla: subtractive hero composition, fewer elements, stronger whitespace
+## Tokens — Colors
 
-The product should feel like a calm financial briefing desk, not a noisy dashboard.
+| Name | Value | Token | Role |
+|------|-------|-------|------|
+| Midnight Abyss | `#000000` | `--color-midnight-abyss` | Deepest background elements, occasional graphic fill. |
+| Ebony Canvas | `#121212` | `--color-ebony-canvas` | Primary page background, base surface for components. |
+| Graphite Base | `#242424` | `--color-graphite-base` | Alternative surface background, button background for secondary actions, subtle borders. |
+| Steel Surface | `#2e2e2` | `--color-steel-surface` | Card backgrounds, elevated UI elements, default input backgrounds. The subtle deviation from pure black creates visual layering. |
+| Carbon Border | `#393939` | `--color-carbon-border` | Input borders, dividers, subtle separators. |
+| Iron Outline | `#4d4d4d` | `--color-iron-outline` | Subtle text, icon strokes, secondary graphic elements, subtle borders. |
+| Mid-Gray Text | `#898989` | `--color-mid-gray-text` | Muted body text, secondary information, disabled states. |
+| Silver Highlight | `#b4b4b4` | `--color-silver-highlight` | Lightest neutral text for contrast on dark backgrounds, secondary navigation items. |
+| Whiteout | `#fafafa` | `--color-whiteout` | Primary headings, body text, interactive text on buttons, icons. High contrast for critical information. |
+| Taro Essence | `#3ecf8e` | `--color-taro-essence` | Key interaction accents, prominent headings, insight indicators, interactive links. The signature mystical accent. |
+| Deep Insight | `#1f4b37` | `--color-deep-insight` | Subtle border for primary action buttons, hover states that deepen the essence green. |
+| Arcane Call to Action | `#006239` | `--color-arcane-cta` | Primary call-to-action button background. Opaque and declarative. |
+| Luminous Reveal | `#00c573` | `--color-luminous-reveal` | Link hover states, subtle accent in decorative elements if needed. |
+| Void Green | `#002918` | `--color-void-green` | Rare background color, likely for specific brand moments or deep elements. |
 
-## 1. Visual Theme & Atmosphere
+## Tokens — Typography
 
-- Light, quiet, editorial-first interface
-- Financial product, but never "trading terminal cosplay"
-- High information quality, low visual noise
-- One primary canvas, one secondary surface, one accent color
-- The first screen should answer "What matters now?" in one glance
-- Dense data belongs in depth pages, not on the home surface
+### Circular — Primary UI font for all headings, body text, labels, and buttons. Offers excellent readability and a strong character with its subtly humanist touch. · `--font-circular`
+- **Substitute:** Inter
+- **Weights:** 400, 500
+- **Sizes:** 12px, 14px, 16px, 18px, 24px, 36px, 72px
+- **Line height:** 1.00, 1.11, 1.20, 1.25, 1.33, 1.38, 1.43, 1.50, 1.56
+- **Letter spacing:** -0.0070em
+- **Role:** Primary UI font for all headings, body text, labels, and buttons. Offers excellent readability and a strong character with its subtly humanist touch.
 
-## 2. Color Palette & Roles
+### Source Code Pro — Monospaced font for code snippets, technical data, or whenever a fixed-width, precise feel is required. · `--font-source-code-pro`
+- **Substitute:** Menlo
+- **Weights:** 400
+- **Sizes:** 12px
+- **Line height:** 1.33
+- **Letter spacing:** 0.1000em
+- **Role:** Monospaced font for code snippets, technical data, or whenever a fixed-width, precise feel is required.
 
-| Token | Hex | Role |
-| --- | --- | --- |
-| `canvas` | `#f4f7fb` | app background |
-| `surface` | `#ffffff` | main cards and sheets |
-| `surface-muted` | `#f8fafd` | secondary cards and grouped blocks |
-| `surface-accent` | `#f2f6ff` | selected or highlighted neutral state |
-| `line` | `rgba(15, 23, 42, 0.08)` | default border |
-| `line-strong` | `rgba(15, 23, 42, 0.14)` | stronger separators |
-| `text` | `#111827` | primary text |
-| `text-soft` | `rgba(17, 24, 39, 0.72)` | secondary text |
-| `text-dim` | `rgba(17, 24, 39, 0.50)` | tertiary text |
-| `text-muted` | `rgba(17, 24, 39, 0.62)` | long-form support copy |
-| `accent` | `#2563eb` | primary action |
-| `accent-soft` | `rgba(37, 99, 235, 0.10)` | primary action background |
-| `positive` | `#0f9f6e` | gains and constructive signals |
-| `positive-soft` | `rgba(15, 159, 110, 0.12)` | gain backgrounds |
-| `danger` | `#d9485f` | downside or risk |
-| `danger-soft` | `rgba(217, 72, 95, 0.12)` | danger backgrounds |
-| `warning` | `#b7791f` | event watch or caution |
-| `warning-soft` | `rgba(183, 121, 31, 0.12)` | warning backgrounds |
+### Type Scale
 
-## 3. Typography Rules
+| Role | Size | Line Height | Letter Spacing | Token |
+|------|------|-------------|----------------|-------|
+| caption | 12px | 1.56 | -0.007px | `--text-caption` |
+| body-sm | 14px | 1.5 | -0.007px | `--text-body-sm` |
+| body | 16px | 1.43 | -0.007px | `--text-body` |
+| subheading | 18px | 1.38 | -0.007px | `--text-subheading` |
+| heading | 24px | 1.33 | -0.007px | `--text-heading` |
+| heading-lg | 36px | 1.25 | -0.007px | `--text-heading-lg` |
+| display | 72px | 1.11 | -0.007px | `--text-display` |
 
-- Primary UI font: modern sans stack with Korean support
-- Headline font: serif display only for major editorial headlines and depth-page hero copy
-- Numbers, tickers, and compact metadata use monospace
-- Use only three text intensities: primary, soft, dim
-- Never use oversized display type unless it is the single focus of a section
+## Tokens — Spacing & Shapes
 
-### Scale
+**Base unit:** 8px
 
-- `hero`: 40-52px, serif, tight tracking, only once per page
-- `h1`: 32-40px, sans or serif depending on context
-- `h2`: 22-28px
-- `h3`: 18-20px
-- `body`: 14-16px
-- `meta`: 11-12px, uppercase only when short
+**Density:** comfortable
 
-## 4. Component Stylings
+### Spacing Scale
 
-### Surfaces
+| Name | Value | Token |
+|------|-------|-------|
+| 8 | 8px | `--spacing-8` |
+| 16 | 16px | `--spacing-16` |
+| 24 | 24px | `--spacing-24` |
+| 32 | 32px | `--spacing-32` |
+| 40 | 40px | `--spacing-40` |
+| 48 | 48px | `--spacing-48` |
+| 64 | 64px | `--spacing-64` |
+| 80 | 80px | `--spacing-80` |
+| 96 | 96px | `--spacing-96` |
+| 112 | 112px | `--spacing-112` |
+| 128 | 128px | `--spacing-128` |
+| 224 | 224px | `--spacing-224` |
 
-- Default cards are white with subtle border and low shadow
-- Secondary grouped areas use muted surface rather than more borders
-- Avoid nested card-on-card-on-card stacks when a divider will do
+### Border Radius
 
-### Buttons
+| Element | Value |
+|---------|-------|
+| cards | 16px |
+| inputs | 6px |
+| buttons | 6px |
+| pillButtons | 9999px |
 
-- Primary buttons are soft blue fills, not saturated blocks
-- Secondary buttons are white pills with border
-- CTA copy should describe the destination, not the implementation
-- Never show system words like `pipeline`, `provider`, `runtime`, `JSON`, or internal status labels on user-facing primary surfaces
+### Shadows
 
-### Tabs
+| Name | Value | Token |
+|------|-------|-------|
+| sm | `rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px` | `--shadow-sm` |
 
-- Tabs are compact pills with one active surface
-- Active tab uses white fill and subtle elevation
-- Inactive tabs remain flat and quiet
+### Layout
 
-### Chips
+- **Card padding:** 24px
 
-- Chips should be lightweight filters, not mini buttons pretending to be tabs
-- Keep them short, one line, and semantically grouped
+## Components
 
-### Search Overlay
+### Ghost Button
+**Role:** secondary action
 
-- Search should feel like a command palette, but visually calm
-- Use one large input, grouped result panels, and explicit CTA labels
+backgroundColor: transparent, color: #fafafa, border: none, borderRadius: 6px, padding: 8px.
 
-### Empty / Loading / Error States
+### Secondary Button
+**Role:** secondary action
 
-- Same design language as the main product
-- Calm explanation, one recovery CTA, one navigation CTA
-- No stack traces, raw API language, or developer phrasing
+backgroundColor: #242424, color: #fafafa, borderColor: #393939, borderRadius: 6px, padding: 8px 16px.
 
-## 5. Layout Principles
+### Primary Call to Action Button
+**Role:** primary action
 
-- Home page = overview first, browse second
-- Each section should answer one question:
-  - overview: what matters now
-  - news: what changed
-  - ticker: what to do about this symbol
-  - meeting: what the system recommends next
-- Prefer two-column layouts only when both columns are semantically linked
-- On mobile, everything becomes a single reading column
+backgroundColor: #006239, color: #fafafa, borderColor: rgba(62, 207, 142, 0.3), borderRadius: 6px, padding: 8px 16px.
 
-### Spacing
+### Alert Pill Button
+**Role:** informational alert
 
-- Use a strict 4px base rhythm
-- Default gaps: 8, 12, 16, 20, 24
-- Large sections: 28-32
+backgroundColor: #121212, color: #fafafa, borderColor: #2e2e2, borderRadius: 9999px, padding: 8px 32px.
 
-### Radius
+### Feature Card
+**Role:** content container
 
-- Small controls: 14-16
-- Panels: 20-24
-- Large hero surfaces: 28-32
+backgroundColor: #121212, borderRadius: 16px, boxShadow: none, padding: 24px.
 
-## 6. Depth & Elevation
+### Text Input (with focus ring)
+**Role:** data entry
 
-- Shadows must stay soft and short
-- Prefer separation by spacing and border over dramatic elevation
-- Floating overlay can use stronger shadow, but main page should stay near-flat
+backgroundColor: rgba(250, 250, 250, 0.027), color: #fafafa, borderColor: #393939, borderRadius: 6px, padding: 8px. Focus state likely uses a #3ecf8e border or shadow.
 
-## 7. Do's and Don'ts
+## Do's and Don'ts
 
 ### Do
-
-- Group related information into one readable surface
-- Use typography and spacing for hierarchy before adding more cards
-- Let the hero explain the market in one sentence
-- Keep supporting lists short and scannable
-- Make depth pages the place for dense analysis
+- Use 'Circular' font at weight 400 or 500 for all UI text, except code blocks.
+- Adopt #fafafa for primary text and headings against dark backgrounds to ensure AAA contrast.
+- Apply #3ecf8e ('Taro Essence') exclusively for active states, primary links, and key insight affirmations.
+- Maintain a clear visual hierarchy by utilizing #121212 as the base surface and #2e2e2 for elevated cards and modals.
+- Utilize 6px radius for interactive elements like buttons and inputs, transitioning to 16px for larger content cards.
+- Employ the 9999px radius sparingly, only for 'Pill Buttons' that act as prominent announcements or unique navigational elements.
+- Ensure all interactive elements have a clear visual feedback using either a color change to 'Luminous Reveal' or a subtle border change to 'Deep Insight'.
 
 ### Don't
+- Avoid arbitrary color usage; every color should map to a defined role in the palette.
+- Do not use shadows for elevation; rely on background color changes from #121212 to #2e2e2 to differentiate surface levels.
+- Do not apply `Source Code Pro` for general body text or headlines; reserve it specifically for code or data display.
+- Refrain from using mixed color backgrounds or gradients unless explicitly defined as a brand graphical element.
+- Do not break the established spacing scale; maintain 8px increments or derived values (e.g., 24px, 32px) for consistency.
+- Avoid excessive text decoration; links are identified by color ('Taro Essence') rather than underlines or heavy styling.
 
-- Do not expose implementation details to users
-- Do not mix three or more visual emphases in one row
-- Do not use gradients unless they are extremely subtle
-- Do not create dashboard clutter with many equal-weight panels
-- Do not rely on color alone for state changes
+## Surfaces
 
-## 8. Responsive Behavior
+| Level | Name | Value | Purpose |
+|-------|------|-------|---------|
+| 0 | Ebony Canvas | `#121212` | Primary page background |
+| 1 | Steel Surface | `#2e2e2` | Elevated cards, modals, and distinct content sections |
+| 2 | Graphite Base | `#242424` | Input backgrounds, secondary button backgrounds, subtle hover states |
 
-- Desktop: one main overview canvas plus one narrow context rail
-- Tablet: collapse overview into a single column before reducing type size
-- Mobile: hero, strategy, checklist, watchlist, then navigation
-- Search overlay becomes full-width sheet on small screens
-- Touch targets minimum 40px height
+## Elevation
 
-## 9. Agent Prompt Guide
+Trading Taro intentionally avoids traditional box shadows for elevation. Instead, depth and hierarchy are communicated through distinct background color shifts. Elements on a higher 'layer' utilize a lighter, less saturated dark tone (#2e2e2) against the base page background (#121212), creating a clean, high-contrast separation without blur or visual noise. The only shadow detected is a subtle one on buttons, likely for a minimal pressed state, not for general elevation.
 
-When generating UI for this project:
+## Imagery
 
-- Start from the design system, not from ad hoc card layouts
-- Reduce element count before adding decoration
-- Treat the homepage as a briefing cover page
-- Move anything verbose or analytical into ticker/sector depth pages
-- Keep user-facing copy human and direct
-- If unsure, choose the more minimal option
+The visual language for imagery is functional and mystical, balancing clarity with intuition. Market indicators and charts are minimalist, displayed against dark backgrounds with precise grid overlays. Tarot card illustrations are stylized and symbolic, utilizing line art and flat fills in shades of gray and `Taro Essence`. Icons are outlined, minimal, and mono-colored, complementing the overall technical-mystical aesthetic. Photography is absent, replaced by stylized graphics, cards, or market UI snippets. Images serve both interpretive and explanatory roles, maintaining a high density of information without clutter. The visual language respects both the precision of data and the intuition of divination.
+
+## Layout
+
+The page adheres to a mostly full-bleed layout, particularly in hero sections, with content centered within an implied max-width. The hero section is characterized by a full-width dark background with a large, centered headline that uses two distinct colors (`Whiteout` and `Taro Essence`) for visual emphasis. Content sections alternate between visually seamless dark backgrounds and slightly lighter dark surfaces for cards. There's a clear rhythm of stacked content blocks and feature sections that often alternate between interpretive text on one side and a visual market indicator or tarot card on the other. Card grids, typically 3-column, are used to present insights or features, maintaining consistent padding. Navigation is a sticky top bar, minimal and persistent. The overall density is comfortable, providing breathing room around critical information.
+
+## Agent Prompt Guide
+
+### Quick Color Reference
+- Text (Primary): `#fafafa`
+- Background (Canvas): `#121212`
+- CTA (Taro Essence): `#006239`
+- Border (Input/Secondary): `#393939`
+- Accent (Heading/Link): `#3ecf8e`
+
+### 3 Example Component Prompts
+1. Create a hero section with `Ebony Canvas` background. Headline 'Interpret the Market' in `Whiteout` and 'Through Ancient Wisdom' in `Taro Essence`, both `Circular` font, 72px size, 1.11 lineHeight, -0.007em letterSpacing. Below, create a `Primary Call to Action Button` and a `Secondary Button`.
+2. Design a tarot card interpretation component: Use `Steel Surface` background, 16px borderRadius, 24px padding. Inside, place a 'Circular' font, 18px size, 1.38 lineHeight card name in `Whiteout`, followed by 'Circular' font, 14px size, 1.5 lineHeight interpretation text in `Mid-Gray Text`.
+3. Implement a navigation item for market insights: Text 'Chart Insights' `Circular` font, 16px size, 1.43 lineHeight in `Whiteout`. On hover, the text color changes to `Taro Essence` (`#3ecf8e`), and the background shifts to `Graphite Base`.
+
+## Similar Design Influences
+
+- **Vercel** — Shares a sophisticated dark-mode UI with a single prominent accent color, minimalist typography, and a focus on developer tools and product-centric visuals.
+- **Linear** — Exhibits a highly refined dark theme, meticulous spacing, and a strong reliance on typographic scale and subtle foreground/background color shifts rather than heavy shadows for depth.
+- **Stripe (dark mode)** — Employs a clean, deep dark background with crisp, readable text and strategic use of a single strong accent color to denote key actions and branding.
+
+## Quick Start
+
+### CSS Custom Properties
+
+```css
+:root {
+  /* Colors */
+  --color-midnight-abyss: #000000;
+  --color-ebony-canvas: #121212;
+  --color-graphite-base: #242424;
+  --color-steel-surface: #2e2e2;
+  --color-carbon-border: #393939;
+  --color-iron-outline: #4d4d4d;
+  --color-mid-gray-text: #898989;
+  --color-silver-highlight: #b4b4b4;
+  --color-whiteout: #fafafa;
+  --color-taro-essence: #3ecf8e;
+  --color-deep-insight: #1f4b37;
+  --color-arcane-cta: #006239;
+  --color-luminous-reveal: #00c573;
+  --color-void-green: #002918;
+
+  /* Typography — Font Families */
+  --font-circular: 'Circular', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-source-code-pro: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Typography — Scale */
+  --text-caption: 12px;
+  --leading-caption: 1.56;
+  --tracking-caption: -0.007px;
+  --text-body-sm: 14px;
+  --leading-body-sm: 1.5;
+  --tracking-body-sm: -0.007px;
+  --text-body: 16px;
+  --leading-body: 1.43;
+  --tracking-body: -0.007px;
+  --text-subheading: 18px;
+  --leading-subheading: 1.38;
+  --tracking-subheading: -0.007px;
+  --text-heading: 24px;
+  --leading-heading: 1.33;
+  --tracking-heading: -0.007px;
+  --text-heading-lg: 36px;
+  --leading-heading-lg: 1.25;
+  --tracking-heading-lg: -0.007px;
+  --text-display: 72px;
+  --leading-display: 1.11;
+  --tracking-display: -0.007px;
+
+  /* Typography — Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+
+  /* Spacing */
+  --spacing-unit: 8px;
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+  --spacing-112: 112px;
+  --spacing-128: 128px;
+  --spacing-224: 224px;
+
+  /* Layout */
+  --card-padding: 24px;
+
+  /* Border Radius */
+  --radius-lg: 8px;
+  --radius-lg-2: 11px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Named Radii */
+  --radius-cards: 16px;
+  --radius-inputs: 6px;
+  --radius-buttons: 6px;
+  --radius-pillbuttons: 9999px;
+
+  /* Shadows */
+  --shadow-sm: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px;
+
+  /* Surfaces */
+  --surface-ebony-canvas: #121212;
+  --surface-steel-surface: #2e2e2;
+  --surface-graphite-base: #242424;
+}
+```
+
+### Tailwind v4
+
+```css
+@theme {
+  /* Colors */
+  --color-midnight-abyss: #000000;
+  --color-ebony-canvas: #121212;
+  --color-graphite-base: #242424;
+  --color-steel-surface: #2e2e2;
+  --color-carbon-border: #393939;
+  --color-iron-outline: #4d4d4d;
+  --color-mid-gray-text: #898989;
+  --color-silver-highlight: #b4b4b4;
+  --color-whiteout: #fafafa;
+  --color-taro-essence: #3ecf8e;
+  --color-deep-insight: #1f4b37;
+  --color-arcane-cta: #006239;
+  --color-luminous-reveal: #00c573;
+  --color-void-green: #002918;
+
+  /* Typography */
+  --font-circular: 'Circular', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-source-code-pro: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Typography — Scale */
+  --text-caption: 12px;
+  --leading-caption: 1.56;
+  --tracking-caption: -0.007px;
+  --text-body-sm: 14px;
+  --leading-body-sm: 1.5;
+  --tracking-body-sm: -0.007px;
+  --text-body: 16px;
+  --leading-body: 1.43;
+  --tracking-body: -0.007px;
+  --text-subheading: 18px;
+  --leading-subheading: 1.38;
+  --tracking-subheading: -0.007px;
+  --text-heading: 24px;
+  --leading-heading: 1.33;
+  --tracking-heading: -0.007px;
+  --text-heading-lg: 36px;
+  --leading-heading-lg: 1.25;
+  --tracking-heading-lg: -0.007px;
+  --text-display: 72px;
+  --leading-display: 1.11;
+  --tracking-display: -0.007px;
+
+  /* Spacing */
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+  --spacing-112: 112px;
+  --spacing-128: 128px;
+  --spacing-224: 224px;
+
+  /* Border Radius */
+  --radius-lg: 8px;
+  --radius-lg-2: 11px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px;
+}
+```
