@@ -1,6 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
@@ -17,7 +19,13 @@
       }
     ],
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@taro/core": ["../../packages/tarot-core/src/index.ts"],
+      "@taro/core/*": ["../../packages/tarot-core/src/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/app/*": ["./app/*"]
+    }
   },
   "include": [
     "**/*.ts",

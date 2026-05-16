@@ -1,7 +1,7 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
 const sharedConfig = {
-  transpilePackages: ["@trading/shared"]
+  transpilePackages: ["@trading/shared", "@taro/core"]
 };
 
 export default function nextConfig(phase) {
