@@ -4,8 +4,8 @@
 - Owner: QA
 - Issue: https://github.com/mlender-ai/taro-stock-app/issues/40
 - Branch: codex/agent-council/qa-fallback-visibility
-- Generated At: 2026-05-16T13:04:38.600Z
-- Status: ready
+- Generated At: 2026-05-16T14:49:36.912Z
+- Status: queued
 
 ## Detail
 실제 뉴스나 가격 데이터를 가져오지 못해 fallback snapshot을 쓴 경우, 웹과 뉴스레터에 분명한 상태 표시를 넣어 신뢰 저하를 막습니다.
