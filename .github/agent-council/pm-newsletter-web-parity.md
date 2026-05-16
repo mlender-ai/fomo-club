@@ -2,10 +2,10 @@
 
 - Item: 웹과 뉴스레터의 섹션 구조 차이를 자동 점검합니다.
 - Owner: PM
-- Issue: https://github.com/mlender-ai/auto-trading-bot/issues/39
+- Issue: https://github.com/mlender-ai/taro-stock-app/issues/39
 - Branch: codex/agent-council/pm-newsletter-web-parity
-- Generated At: 2026-05-16T02:11:46.411Z
-- Status: ready
+- Generated At: 2026-05-16T04:59:52.207Z
+- Status: queued
 
 ## Detail
 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.
