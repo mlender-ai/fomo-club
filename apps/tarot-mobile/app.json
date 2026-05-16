@@ -34,7 +34,15 @@
     },
     "plugins": [
       "expo-router",
-      "react-native-reanimated"
+      "react-native-reanimated",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-PLACEHOLDER~PLACEHOLDER",
+          "iosAppId": "ca-app-pub-PLACEHOLDER~PLACEHOLDER",
+          "userTrackingUsageDescription": "광고를 최적화하기 위해 기기 식별자를 사용합니다."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

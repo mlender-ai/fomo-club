@@ -2,20 +2,22 @@ import { create } from "zustand";
 
 interface UserState {
   userId: string | null;
+  token: string | null;
   credits: number;
   isLoggedIn: boolean;
-  setUser: (userId: string) => void;
+  setUser: (userId: string, token: string, credits: number) => void;
   setCredits: (credits: number) => void;
   logout: () => void;
 }
 
 export const useUserStore = create<UserState>((set) => ({
   userId: null,
+  token: null,
   credits: 0,
   isLoggedIn: false,
-  setUser: (userId) => set({ userId, isLoggedIn: true }),
+  setUser: (userId, token, credits) => set({ userId, token, credits, isLoggedIn: true }),
   setCredits: (credits) => set({ credits }),
-  logout: () => set({ userId: null, credits: 0, isLoggedIn: false }),
+  logout: () => set({ userId: null, token: null, credits: 0, isLoggedIn: false }),
 }));
 
 interface DrawState {
