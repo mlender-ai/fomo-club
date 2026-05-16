@@ -4,8 +4,8 @@
 - Owner: PM
 - Issue: https://github.com/mlender-ai/taro-stock-app/issues/39
 - Branch: codex/agent-council/pm-newsletter-web-parity
-- Generated At: 2026-05-16T09:23:48.822Z
-- Status: ready
+- Generated At: 2026-05-16T09:24:18.493Z
+- Status: queued
 
 ## Detail
 웹에서는 보이는데 뉴스레터에는 빠지는 요소, 뉴스레터에는 있는데 웹에는 없는 요소를 자동 점검해 동일 데이터 기반 경험을 유지합니다.
