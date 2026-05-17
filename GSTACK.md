@@ -1,5 +1,7 @@
 # 기술 스택 참조
 
+> 이 파일은 프로젝트 기술 스택 참조 문서이다. Garry Tan의 gstack 도구(`~/.claude/skills/gstack/`)와는 별개이며, gstack 슬래시 커맨드 사용법은 CLAUDE.md를 참조한다.
+
 ## 모노레포 구조
 
 ```

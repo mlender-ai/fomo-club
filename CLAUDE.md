@@ -67,3 +67,28 @@ CLAUDE.md          ← 지금 이 파일 (진입점)
   → MEMORY.md      ← 컨텍스트 지속
   → AGENT_BIBLE.md ← 불변 원칙
 ```
+
+---
+
+## gstack 연동
+
+gstack 스킬(`~/.claude/skills/gstack/`)이 설치되어 있다. 아래 슬래시 커맨드를 적극 활용한다.
+
+### 주요 커맨드
+- `/plan-eng-review` — 기능 구현 전 아키텍처/설계 리뷰
+- `/plan-ceo-review` — 제품 방향성 리뷰
+- `/plan-design-review` — UI/UX 디자인 리뷰
+- `/review` — 코드 완성 후 프로덕션 버그 탐지 리뷰
+- `/qa` — 실제 브라우저/앱에서 QA 실행
+- `/ship` — PR 생성 + 릴리즈
+- `/retro` — 작업 완료 후 회고 + MEMORY.md 업데이트
+- `/careful` — 위험한 변경 전 안전 모드 활성화
+- `/freeze` — 아키텍처 확정 후 변경 잠금
+- `/browse` — 웹 브라우징 (모든 웹 브라우징에 이 커맨드 사용)
+
+### 워크플로우 규칙
+- 새 기능 시작 전: `/plan-eng-review` 먼저 실행
+- 코드 완성 후: `/review` 실행
+- PR 올리기 전: `/ship` 으로 최종 점검
+- 작업 끝나면: `/retro` 로 회고 + 메모리 업데이트
+- Prisma 스키마 변경, 인증/결제 관련 코드: `/careful` 선행
