@@ -117,3 +117,69 @@ export async function verifyGoogleIdToken(
   if (info.email !== undefined) result.email = info.email;
   return result;
 }
+
+// ─── Kakao ────────────────────────────────────────────────────────────────────
+
+interface KakaoAccount {
+  email?: string;
+  email_needs_agreement?: boolean;
+}
+
+interface KakaoUserInfo {
+  id: number;
+  kakao_account?: KakaoAccount;
+}
+
+// identityToken = Kakao access token (클라이언트에서 발급받은 OAuth 액세스 토큰)
+export async function verifyKakaoAccessToken(
+  accessToken: string
+): Promise<{ sub: string; email?: string }> {
+  const res = await fetch("https://kapi.kakao.com/v2/user/me", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(5_000),
+  });
+  if (!res.ok) throw new Error(`Kakao user info failed: ${res.status}`);
+
+  const info = (await res.json()) as Partial<KakaoUserInfo>;
+  if (!info.id) throw new Error("Kakao token missing id");
+
+  const result: { sub: string; email?: string } = { sub: String(info.id) };
+  const email = info.kakao_account?.email;
+  if (email && !info.kakao_account?.email_needs_agreement) result.email = email;
+  return result;
+}
+
+// ─── Naver ────────────────────────────────────────────────────────────────────
+
+interface NaverResponse {
+  resultcode: string;
+  message: string;
+  response: {
+    id: string;
+    email?: string;
+    name?: string;
+  };
+}
+
+// identityToken = Naver access token
+export async function verifyNaverAccessToken(
+  accessToken: string
+): Promise<{ sub: string; email?: string; name?: string }> {
+  const res = await fetch("https://openapi.naver.com/v1/nid/me", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(5_000),
+  });
+  if (!res.ok) throw new Error(`Naver user info failed: ${res.status}`);
+
+  const data = (await res.json()) as Partial<NaverResponse>;
+  if (data.resultcode !== "00" || !data.response?.id) {
+    throw new Error("Naver token invalid");
+  }
+
+  const result: { sub: string; email?: string; name?: string } = {
+    sub: data.response.id,
+  };
+  if (data.response.email) result.email = data.response.email;
+  if (data.response.name) result.name = data.response.name;
+  return result;
+}

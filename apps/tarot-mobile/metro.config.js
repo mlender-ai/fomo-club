@@ -31,4 +31,24 @@ config.resolver.extraNodeModules = {
   "react-native": path.resolve(projectRoot, "node_modules/react-native"),
 };
 
+// Native-only modules not available in Expo Go — mock with empty module
+// 실제 동작은 EAS 네이티브 빌드에서만 가능
+const NATIVE_ONLY_MODULES = [
+  "@invertase/react-native-apple-authentication",
+  "@react-native-seoul/kakao-login",
+  "@react-native-seoul/naver-login",
+];
+
+const originalResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (NATIVE_ONLY_MODULES.includes(moduleName)) {
+    // 빈 모듈로 대체 — try-require에서 catch로 처리됨
+    return { type: "empty" };
+  }
+  if (originalResolveRequest) {
+    return originalResolveRequest(context, moduleName, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

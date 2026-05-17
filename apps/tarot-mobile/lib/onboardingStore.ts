@@ -1,6 +1,18 @@
 import { create } from "zustand";
 import { apiFetch } from "./api";
 
+let AsyncStorage: {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+} | null = null;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  AsyncStorage = require("@react-native-async-storage/async-storage").default;
+} catch {}
+
+const AGREED_KEY = "tarot_disclaimer_agreed";
+
 interface OnboardingState {
   hasAgreed: boolean;
   currentVersion: string | null;
@@ -9,6 +21,8 @@ interface OnboardingState {
   loading: boolean;
   showOnboarding: boolean;
 
+  /** AsyncStorage에서 동의 상태를 로드 (스플래시에서 호출) */
+  loadFromStorage: () => Promise<void>;
   checkDisclaimer: (userId: string) => Promise<void>;
   agreeDisclaimer: (userId: string, version: string) => Promise<void>;
   setShowOnboarding: (show: boolean) => void;
@@ -22,6 +36,24 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   loading: true,
   showOnboarding: false,
 
+  loadFromStorage: async () => {
+    if (!AsyncStorage) {
+      set({ loading: false });
+      return;
+    }
+    try {
+      const raw = await AsyncStorage.getItem(AGREED_KEY);
+      if (raw) {
+        const { agreed, version } = JSON.parse(raw) as { agreed: boolean; version: string };
+        set({ hasAgreed: agreed, currentVersion: version, loading: false });
+      } else {
+        set({ loading: false });
+      }
+    } catch {
+      set({ loading: false });
+    }
+  },
+
   checkDisclaimer: async (userId) => {
     set({ loading: true });
     try {
@@ -32,6 +64,13 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
         needsUpdate: boolean;
       }>(`/api/tarot/disclaimer?userId=${userId}`);
 
+      if (data.hasAgreed && AsyncStorage) {
+        await AsyncStorage.setItem(
+          AGREED_KEY,
+          JSON.stringify({ agreed: true, version: data.version })
+        );
+      }
+
       set({
         hasAgreed: data.hasAgreed,
         currentVersion: data.version,
@@ -41,7 +80,6 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
         loading: false,
       });
     } catch {
-      // 조회 실패 시 온보딩 표시
       set({ showOnboarding: true, loading: false });
     }
   },
@@ -52,6 +90,9 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
         method: "POST",
         body: JSON.stringify({ userId, version }),
       });
+      if (AsyncStorage) {
+        await AsyncStorage.setItem(AGREED_KEY, JSON.stringify({ agreed: true, version }));
+      }
       set({
         hasAgreed: true,
         currentVersion: version,
@@ -59,10 +100,10 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
         showOnboarding: false,
       });
     } catch {
-      // 실패해도 로컬에서는 진행 허용
       set({ showOnboarding: false });
     }
   },
 
   setShowOnboarding: (show) => set({ showOnboarding: show }),
 }));
+
