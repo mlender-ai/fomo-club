@@ -1,23 +1,20 @@
 import { useState, useRef } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Dimensions,
-  Animated,
+  View, TouchableOpacity, ScrollView, StyleSheet,
+  Dimensions, Animated,
 } from "react-native";
-import { Colors } from "../../constants/colors";
-import { useUserStore } from "../../lib/store";
-import { useOnboardingStore } from "../../lib/onboardingStore";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Text } from "../../components/ui/Text";
+import { Button } from "../../components/ui/Button";
+import { Colors, Spacing } from "../../constants/theme";
 
 const { width } = Dimensions.get("window");
 
 const SLIDES = [
   {
     icon: "✦",
-    title: "타로 증권에 오신 것을\n환영합니다",
+    title: "타로 증권에\n오신 것을 환영합니다",
     desc: "시장의 흐름을 타로 카드로 해석합니다.\n숫자 너머의 직관적 통찰을 경험하세요.",
   },
   {
@@ -28,267 +25,122 @@ const SLIDES = [
   {
     icon: "⊡",
     title: "AI가 시장과 카드를\n연결합니다",
-    desc: "시장 데이터와 타로 카드의 상징을 결합하여\n신비로운 해석을 생성합니다.",
+    desc: "실시간 시장 데이터를 기반으로\nAI가 타로 해석을 생성합니다.",
+  },
+  {
+    icon: "⚠",
+    title: "투자 조언이\n아닙니다",
+    desc: "본 서비스는 오락 목적으로 제공됩니다.\n모든 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.\n\n타로 해석을 실제 투자 결정에 활용하지 마세요.",
+    isDisclaimer: true,
   },
 ];
 
-const DISCLAIMER_TEXT = `
-이 서비스는 엔터테인먼트 목적의 타로 해석 서비스이며, 투자 조언이 아닙니다.
-
-• 본 앱에서 제공하는 타로 해석은 증권 시장 데이터를 타로 카드의 상징으로 재해석한 것으로, 투자 결정의 근거로 사용할 수 없습니다.
-
-• 모든 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.
-
-• 과거 데이터와 타로 해석은 미래 수익을 보장하지 않습니다.
-
-• 본 서비스는 투자 자문업에 해당하지 않으며, 금융투자업에 관한 법률에 따른 투자권유를 하지 않습니다.
-`.trim();
-
 export default function OnboardingScreen() {
-  const userId = useUserStore((s) => s.userId);
-  const { agreeDisclaimer, latestVersion } = useOnboardingStore();
-  const [currentPage, setCurrentPage] = useState(0);
-  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
+  const router = useRouter();
+  const [page, setPage] = useState(0);
+  const [agreed, setAgreed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // 페이지 전환 시 fade in
-  const onMomentumScrollEnd = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-    const page = Math.round(e.nativeEvent.contentOffset.x / width);
-    setCurrentPage(page);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
+  const isLast = page === SLIDES.length - 1;
+  const slide = SLIDES[page];
 
   const goNext = () => {
-    if (currentPage < SLIDES.length) {
-      scrollRef.current?.scrollTo({ x: (currentPage + 1) * width, animated: true });
-      setCurrentPage(currentPage + 1);
+    if (isLast) {
+      if (!agreed) return;
+      router.replace("/(tabs)");
+      return;
     }
+    const next = page + 1;
+    setPage(next);
+    scrollRef.current?.scrollTo({ x: next * width, animated: true });
   };
 
-  const handleAgree = () => {
-    if (userId) {
-      agreeDisclaimer(userId, latestVersion);
-    } else {
-      // 비로그인 상태에서는 로컬만 처리
-      useOnboardingStore.getState().setShowOnboarding(false);
-    }
+  const onScroll = (e: any) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+    setPage(idx);
   };
-
-  const isLastSlide = currentPage === SLIDES.length;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* 슬라이드 */}
       <ScrollView
         ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onMomentumScrollEnd}
+        onMomentumScrollEnd={onScroll}
         scrollEventThrottle={16}
+        style={styles.scroll}
       >
-        {/* 소개 슬라이드들 */}
-        {SLIDES.map((slide, i) => (
+        {SLIDES.map((s, i) => (
           <View key={i} style={styles.slide}>
-            <View style={styles.slideContent}>
-              <Text style={styles.slideIcon}>{slide.icon}</Text>
-              <Text style={styles.slideTitle}>{slide.title}</Text>
-              <Text style={styles.slideDesc}>{slide.desc}</Text>
-            </View>
+            <Text style={[styles.slideIcon, s.isDisclaimer && styles.disclaimerIcon]}>
+              {s.icon}
+            </Text>
+            <Text variant="heading-lg" style={styles.slideTitle}>{s.title}</Text>
+            <Text variant="body-sm" style={styles.slideDesc}>{s.desc}</Text>
           </View>
         ))}
-
-        {/* 면책 고지 슬라이드 */}
-        <View style={styles.slide}>
-          <View style={styles.disclaimerSlide}>
-            <Text style={styles.disclaimerTitle}>면책 고지</Text>
-            <ScrollView
-              style={styles.disclaimerScroll}
-              nestedScrollEnabled
-            >
-              <Text style={styles.disclaimerText}>{DISCLAIMER_TEXT}</Text>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() => setDisclaimerChecked(!disclaimerChecked)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  disclaimerChecked && styles.checkboxChecked,
-                ]}
-              >
-                {disclaimerChecked && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text style={styles.checkboxLabel}>
-                위 내용을 모두 읽고 이해했습니다
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
 
-      {/* 하단 네비게이션 */}
-      <View style={styles.footer}>
-        {/* 도트 인디케이터 */}
-        <View style={styles.dots}>
-          {[...SLIDES, { title: "disclaimer" }].map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, currentPage === i && styles.dotActive]}
-            />
-          ))}
-        </View>
+      {/* 페이지 인디케이터 */}
+      <View style={styles.dots}>
+        {SLIDES.map((_, i) => (
+          <View key={i} style={[styles.dot, i === page && styles.dotActive]} />
+        ))}
+      </View>
 
-        {/* 버튼 */}
-        {isLastSlide ? (
-          <TouchableOpacity
-            style={[
-              styles.agreeBtn,
-              !disclaimerChecked && styles.agreeBtnDisabled,
-            ]}
-            onPress={handleAgree}
-            disabled={!disclaimerChecked}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.agreeBtnText}>동의하고 시작하기</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.nextBtn}
-            onPress={goNext}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.nextBtnText}>다음</Text>
+      {/* 동의 체크박스 (마지막 슬라이드) */}
+      {isLast && (
+        <TouchableOpacity
+          style={styles.agreeRow}
+          onPress={() => setAgreed((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
+            {agreed && <Text style={styles.checkMark}>✓</Text>}
+          </View>
+          <Text variant="body-sm" color={Colors.silverHighlight}>
+            위 내용을 이해했으며, 투자 조언이 아님에 동의합니다
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* 버튼 */}
+      <View style={styles.btnArea}>
+        <Button
+          variant="primary"
+          label={isLast ? "시작하기" : "다음"}
+          disabled={isLast && !agreed}
+          onPress={goNext}
+        />
+        {!isLast && (
+          <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+            <Text variant="caption" color={Colors.ironOutline} style={styles.skip}>
+              건너뛰기
+            </Text>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-
-  // Slides
-  slide: { width, flex: 1 },
-  slideContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-  },
-  slideIcon: {
-    fontSize: 56,
-    color: Colors.gold,
-    marginBottom: 24,
-  },
-  slideTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: Colors.text,
-    textAlign: "center",
-    lineHeight: 36,
-    letterSpacing: -0.5,
-    marginBottom: 16,
-  },
-  slideDesc: {
-    fontSize: 15,
-    color: Colors.muted,
-    textAlign: "center",
-    lineHeight: 24,
-  },
-
-  // Disclaimer
-  disclaimerSlide: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  disclaimerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.text,
-    marginBottom: 16,
-    letterSpacing: -0.5,
-  },
-  disclaimerScroll: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 18,
-    marginBottom: 16,
-  },
-  disclaimerText: {
-    fontSize: 13,
-    color: Colors.text,
-    lineHeight: 22,
-    opacity: 0.85,
-  },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  checkmark: { fontSize: 13, color: "#fff", fontWeight: "700" },
-  checkboxLabel: { fontSize: 14, color: Colors.text },
-
-  // Footer
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    gap: 20,
-    alignItems: "center",
-  },
-  dots: { flexDirection: "row", gap: 6 },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.border,
-  },
-  dotActive: { backgroundColor: Colors.accent, width: 20 },
-
-  nextBtn: {
-    width: "100%",
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-  },
-  nextBtnText: { fontSize: 15, fontWeight: "600", color: Colors.text },
-
-  agreeBtn: {
-    width: "100%",
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: Colors.accent,
-    alignItems: "center",
-  },
-  agreeBtnDisabled: { opacity: 0.4 },
-  agreeBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  container:       { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  scroll:          { flex: 1 },
+  slide:           { width, flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: Spacing.s32 },
+  slideIcon:       { fontSize: 64, color: Colors.taroEssence, marginBottom: Spacing.s32 },
+  disclaimerIcon:  { color: "#e5a020" },
+  slideTitle:      { color: Colors.whiteout, textAlign: "center", marginBottom: Spacing.s16 },
+  slideDesc:       { color: Colors.midGrayText, textAlign: "center", lineHeight: 22 },
+  dots:            { flexDirection: "row", justifyContent: "center", gap: 6, paddingVertical: Spacing.s24 },
+  dot:             { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.carbonBorder },
+  dotActive:       { width: 20, backgroundColor: Colors.taroEssence },
+  agreeRow:        { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: Spacing.s24, marginBottom: Spacing.s16, gap: 12 },
+  checkbox:        { width: 22, height: 22, borderRadius: 4, borderWidth: 1, borderColor: Colors.carbonBorder, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  checkboxChecked: { backgroundColor: Colors.arcaneCta, borderColor: Colors.arcaneCta },
+  checkMark:       { color: Colors.whiteout, fontSize: 13, fontWeight: "700" },
+  btnArea:         { paddingHorizontal: Spacing.s24, paddingBottom: Spacing.s32, gap: 12 },
+  skip:            { textAlign: "center" },
 });
