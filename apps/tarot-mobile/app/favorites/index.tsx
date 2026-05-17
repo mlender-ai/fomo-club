@@ -1,245 +1,109 @@
-import { useEffect, useCallback } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Switch,
-  StyleSheet,
-  Alert,
-  RefreshControl,
-} from "react-native";
+import { useState } from "react";
+import { SafeAreaView, View, FlatList, TouchableOpacity, Switch, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { Colors } from "../../constants/colors";
-import { useUserStore } from "../../lib/store";
-import {
-  useFavoritesStore,
-  type FavoriteItem,
-} from "../../lib/favoritesStore";
+import { Text } from "../../components/ui/Text";
+import { Colors, Spacing } from "../../constants/theme";
+import { useDrawStore } from "../../lib/drawStore";
 
-function FavoriteCard({
-  item,
-  onToggleAlert,
-  onRemove,
-}: {
-  item: FavoriteItem;
-  onToggleAlert: (id: string, enabled: boolean) => void;
-  onRemove: (ticker: string) => void;
-}) {
-  return (
-    <View style={styles.favCard}>
-      <View style={styles.favLeft}>
-        <View style={styles.favTickerRow}>
-          <Text style={styles.favTicker}>{item.ticker}</Text>
-          <Text style={styles.favMarket}>{item.market}</Text>
-        </View>
-        {item.label && <Text style={styles.favLabel}>{item.label}</Text>}
-      </View>
+interface FavItem { id: string; ticker: string; market: string; label: string; alertEnabled: boolean; }
 
-      <View style={styles.favRight}>
-        <View style={styles.alertRow}>
-          <Text style={styles.alertLabel}>알림</Text>
-          <Switch
-            value={item.alertEnabled}
-            onValueChange={(v) => onToggleAlert(item.id, v)}
-            trackColor={{ false: Colors.border, true: Colors.accent }}
-            thumbColor="#fff"
-            style={styles.alertSwitch}
-          />
-        </View>
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert(
-              "관심 종목 삭제",
-              `${item.ticker}을(를) 삭제하시겠습니까?`,
-              [
-                { text: "취소", style: "cancel" },
-                {
-                  text: "삭제",
-                  style: "destructive",
-                  onPress: () => onRemove(item.ticker),
-                },
-              ]
-            )
-          }
-          style={styles.removeBtn}
-        >
-          <Text style={styles.removeBtnText}>삭제</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
+const INITIAL: FavItem[] = [
+  { id: "1", ticker: "AAPL", market: "US", label: "Apple Inc.", alertEnabled: true },
+  { id: "2", ticker: "NVDA", market: "US", label: "NVIDIA Corp.", alertEnabled: false },
+  { id: "3", ticker: "삼성전자", market: "KR", label: "삼성전자", alertEnabled: true },
+  { id: "4", ticker: "SK하이닉스", market: "KR", label: "SK하이닉스", alertEnabled: false },
+];
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const userId = useUserStore((s) => s.userId);
-  const { items, loading, fetchFavorites, toggleAlert, removeFavorite } =
-    useFavoritesStore();
+  const { setTicker, addRecentSearch } = useDrawStore();
+  const [items, setItems] = useState<FavItem[]>(INITIAL);
 
-  const load = useCallback(() => {
-    if (userId) fetchFavorites(userId);
-  }, [userId, fetchFavorites]);
+  const toggle = (id: string, v: boolean) =>
+    setItems((prev) => prev.map((it) => it.id === id ? { ...it, alertEnabled: v } : it));
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const remove = (id: string, ticker: string) =>
+    Alert.alert("관심 종목 삭제", `${ticker}을(를) 삭제할까요?`, [
+      { text: "취소", style: "cancel" },
+      { text: "삭제", style: "destructive", onPress: () => setItems((prev) => prev.filter((it) => it.id !== id)) },
+    ]);
 
-  if (!userId) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>☆</Text>
-          <Text style={styles.emptyTitle}>로그인이 필요합니다</Text>
-          <Text style={styles.emptyDesc}>
-            관심 종목은 로그인 후 관리할 수 있습니다
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const handleDraw = (item: FavItem) => {
+    setTicker(item.ticker, item.label);
+    addRecentSearch(item.ticker);
+    router.push("/(tabs)/draw");
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← 뒤로</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text variant="body-sm" color={Colors.midGrayText}>← 뒤로</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>관심 종목</Text>
-        <Text style={styles.headerCount}>{items.length}개</Text>
+        <Text variant="subheading" color={Colors.whiteout}>관심 종목</Text>
+        <Text variant="caption" color={Colors.midGrayText}>{items.length}개</Text>
       </View>
 
       <FlatList
         data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <FavoriteCard
-            item={item}
-            onToggleAlert={toggleAlert}
-            onRemove={(ticker) => {
-              if (userId) removeFavorite(userId, ticker);
-            }}
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={load}
-            tintColor={Colors.accent}
-          />
-        }
+        keyExtractor={(it) => it.id}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>☆</Text>
-              <Text style={styles.emptyTitle}>관심 종목이 없습니다</Text>
-              <Text style={styles.emptyDesc}>
-                종목 검색 후 ☆ 를 눌러 추가하세요
-              </Text>
+          <View style={styles.empty}>
+            <Text style={styles.emptyIcon}>☆</Text>
+            <Text variant="body-sm" color={Colors.midGrayText} style={{ marginTop: 12 }}>관심 종목이 없습니다</Text>
+            <Text variant="caption" color={Colors.ironOutline} style={{ marginTop: 4 }}>홈에서 종목 검색 후 추가하세요</Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.cardLeft} onPress={() => handleDraw(item)} activeOpacity={0.75}>
+              <Text variant="body-sm" color={Colors.taroEssence}>{item.ticker}</Text>
+              <Text variant="caption" color={Colors.midGrayText}>{item.label}</Text>
+              <View style={styles.marketBadge}>
+                <Text variant="caption" color={Colors.ironOutline}>{item.market}</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.cardRight}>
+              <View style={styles.alertRow}>
+                <Text variant="caption" color={Colors.midGrayText}>알림</Text>
+                <Switch
+                  value={item.alertEnabled}
+                  onValueChange={(v) => toggle(item.id, v)}
+                  trackColor={{ false: Colors.carbonBorder, true: Colors.arcaneCta }}
+                  thumbColor={Colors.whiteout}
+                  style={{ transform: [{ scale: 0.8 }] }}
+                />
+              </View>
+              <View style={styles.actions}>
+                <TouchableOpacity style={styles.drawBtn} onPress={() => handleDraw(item)}>
+                  <Text variant="caption" color={Colors.taroEssence}>카드 뽑기</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => remove(item.id, item.ticker)}>
+                  <Text variant="caption" color="#e0875a">삭제</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          ) : null
-        }
-        contentContainerStyle={
-          items.length === 0 ? styles.emptyList : styles.list
-        }
+          </View>
+        )}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
-    gap: 12,
-  },
-  backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 14, color: Colors.accent },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  headerCount: { fontSize: 13, color: Colors.muted },
-
-  // List
-  list: { paddingBottom: 24 },
-
-  // Favorite card
-  favCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginVertical: 4,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  favLeft: { flex: 1, gap: 2 },
-  favTickerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  favTicker: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.text,
-    fontVariant: ["tabular-nums"],
-  },
-  favMarket: {
-    fontSize: 9,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    color: Colors.muted,
-    overflow: "hidden",
-  },
-  favLabel: { fontSize: 12, color: Colors.muted },
-
-  favRight: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  alertRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  alertLabel: { fontSize: 11, color: Colors.muted },
-  alertSwitch: { transform: [{ scale: 0.8 }] },
-  removeBtn: {
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(224,82,82,0.3)",
-  },
-  removeBtnText: { fontSize: 10, color: Colors.error },
-
-  // Empty states
-  emptyList: { flexGrow: 1 },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  emptyIcon: { fontSize: 36, color: Colors.border, marginBottom: 12 },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  emptyDesc: {
-    fontSize: 13,
-    color: Colors.muted,
-    textAlign: "center",
-  },
+  container:   { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  header:      { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: Spacing.s24, paddingTop: Spacing.s16, paddingBottom: Spacing.s16 },
+  list:        { paddingHorizontal: Spacing.s24, paddingBottom: 40 },
+  card:        { flexDirection: "row", backgroundColor: Colors.graphiteBase, borderRadius: 14, padding: Spacing.s16, borderWidth: 1, borderColor: Colors.carbonBorder },
+  cardLeft:    { flex: 1, gap: 4 },
+  marketBadge: { alignSelf: "flex-start", borderWidth: 1, borderColor: Colors.carbonBorder, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
+  cardRight:   { alignItems: "flex-end", gap: 10 },
+  alertRow:    { flexDirection: "row", alignItems: "center", gap: 6 },
+  actions:     { flexDirection: "row", gap: 12, alignItems: "center" },
+  drawBtn:     { borderWidth: 1, borderColor: Colors.deepInsight, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 4 },
+  empty:       { alignItems: "center", justifyContent: "center", paddingTop: 80 },
+  emptyIcon:   { fontSize: 40, color: Colors.ironOutline },
 });

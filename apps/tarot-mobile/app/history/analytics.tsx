@@ -1,198 +1,131 @@
-import { useEffect } from "react";
-import {
-  SafeAreaView,
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
+import { SafeAreaView, ScrollView, View, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Colors } from "../../constants/colors";
-import { useUserStore } from "../../lib/store";
-import { useHistoryStore } from "../../lib/historyStore";
+import { Text } from "../../components/ui/Text";
+import { Colors, Spacing } from "../../constants/theme";
 
-function sourceLabel(source: string): string {
-  if (source === "LLM") return "AI 실시간";
-  if (source === "CACHE") return "캐시";
-  return "폴백";
-}
+const MOCK_ANALYTICS = {
+  totalDraws: 12,
+  spreadBreakdown: [{ spread: "SINGLE", count: 8 }, { spread: "THREE_CARD", count: 4 }],
+  topCards: [
+    { cardId: "fool", count: 4, card: { nameKo: "광대", name: "The Fool", number: 0 } },
+    { cardId: "star", count: 3, card: { nameKo: "별", name: "The Star", number: 17 } },
+    { cardId: "tower", count: 2, card: { nameKo: "탑", name: "The Tower", number: 16 } },
+    { cardId: "world", count: 2, card: { nameKo: "세계", name: "The World", number: 21 } },
+    { cardId: "sun", count: 1, card: { nameKo: "태양", name: "The Sun", number: 19 } },
+  ],
+  topTickers: [
+    { ticker: "AAPL", count: 4 }, { ticker: "NVDA", count: 3 },
+    { ticker: "삼성전자", count: 3 }, { ticker: "TSLA", count: 2 },
+  ],
+  sourceBreakdown: [{ source: "LLM", count: 9 }, { source: "CACHE", count: 2 }, { source: "FALLBACK", count: 1 }],
+  recentActivity: [
+    { date: new Date(Date.now() - 0).toISOString(), count: 2 },
+    { date: new Date(Date.now() - 86400000).toISOString(), count: 1 },
+    { date: new Date(Date.now() - 172800000).toISOString(), count: 3 },
+    { date: new Date(Date.now() - 259200000).toISOString(), count: 0 },
+    { date: new Date(Date.now() - 345600000).toISOString(), count: 2 },
+    { date: new Date(Date.now() - 432000000).toISOString(), count: 1 },
+    { date: new Date(Date.now() - 518400000).toISOString(), count: 3 },
+  ],
+};
+
+const maxActivity = Math.max(...MOCK_ANALYTICS.recentActivity.map((r) => r.count), 1);
 
 export default function AnalyticsScreen() {
   const router = useRouter();
-  const userId = useUserStore((s) => s.userId);
-  const { analytics, analyticsLoading, fetchAnalytics } = useHistoryStore();
-
-  useEffect(() => {
-    if (userId) fetchAnalytics(userId);
-  }, [userId, fetchAnalytics]);
-
-  if (analyticsLoading || !analytics) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.accent} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const a = MOCK_ANALYTICS;
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* 헤더 */}
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← 기록</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text variant="body-sm" color={Colors.midGrayText}>← 기록</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>내 분석</Text>
+          <Text variant="subheading" color={Colors.whiteout}>내 분석</Text>
         </View>
 
-        {/* 총 뽑기 수 */}
+        {/* 총 뽑기 */}
         <View style={styles.heroCard}>
-          <Text style={styles.heroLabel}>총 뽑기</Text>
-          <Text style={styles.heroValue}>{analytics.totalDraws}</Text>
-          <Text style={styles.heroSub}>회</Text>
+          <Text variant="caption" color={Colors.midGrayText}>총 뽑기 횟수</Text>
+          <Text style={styles.heroNum}>{a.totalDraws}</Text>
+          <Text variant="caption" color={Colors.midGrayText}>회</Text>
         </View>
 
         {/* 스프레드 분포 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>스프레드 선호</Text>
-          <View style={styles.barGroup}>
-            {analytics.spreadBreakdown.map((s) => {
-              const pct =
-                analytics.totalDraws > 0
-                  ? (s.count / analytics.totalDraws) * 100
-                  : 0;
-              return (
-                <View key={s.spread} style={styles.barItem}>
-                  <View style={styles.barLabelRow}>
-                    <Text style={styles.barLabel}>
-                      {s.spread === "SINGLE" ? "1장" : "3장"}
-                    </Text>
-                    <Text style={styles.barCount}>
-                      {s.count}회 ({pct.toFixed(0)}%)
-                    </Text>
-                  </View>
-                  <View style={styles.barTrack}>
-                    <View
-                      style={[styles.barFill, { width: `${pct}%` }]}
-                    />
-                  </View>
+        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>스프레드 선호</Text>
+        <View style={styles.card}>
+          {a.spreadBreakdown.map((s) => {
+            const pct = a.totalDraws > 0 ? (s.count / a.totalDraws) * 100 : 0;
+            return (
+              <View key={s.spread} style={styles.barItem}>
+                <View style={styles.barLabelRow}>
+                  <Text variant="body-sm" color={Colors.silverHighlight}>{s.spread === "SINGLE" ? "1장" : "3장"}</Text>
+                  <Text variant="caption" color={Colors.midGrayText}>{s.count}회 ({pct.toFixed(0)}%)</Text>
                 </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* 자주 나온 카드 Top 5 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>자주 나온 카드</Text>
-          {analytics.topCards.length === 0 ? (
-            <Text style={styles.emptyText}>아직 데이터 없음</Text>
-          ) : (
-            <View style={styles.rankList}>
-              {analytics.topCards.map((c, i) => (
-                <View key={c.cardId} style={styles.rankItem}>
-                  <Text style={styles.rankNumber}>{i + 1}</Text>
-                  <View style={styles.rankInfo}>
-                    <Text style={styles.rankName}>
-                      {c.card?.nameKo ?? c.cardId}
-                    </Text>
-                    <Text style={styles.rankSub}>
-                      {c.card?.name ?? ""}
-                    </Text>
-                  </View>
-                  <Text style={styles.rankCount}>{c.count}회</Text>
+                <View style={styles.barTrack}>
+                  <View style={[styles.barFill, { width: `${pct}%` as any }]} />
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* 자주 검색한 종목 Top 5 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>관심 종목</Text>
-          {analytics.topTickers.length === 0 ? (
-            <Text style={styles.emptyText}>아직 데이터 없음</Text>
-          ) : (
-            <View style={styles.rankList}>
-              {analytics.topTickers.map((t, i) => (
-                <View key={t.ticker} style={styles.rankItem}>
-                  <Text style={styles.rankNumber}>{i + 1}</Text>
-                  <Text style={[styles.rankName, styles.tickerMono]}>
-                    {t.ticker}
-                  </Text>
-                  <Text style={styles.rankCount}>{t.count}회</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* 해석 소스 분포 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>해석 소스 분포</Text>
-          <View style={styles.sourceGrid}>
-            {analytics.sourceBreakdown.map((s) => (
-              <View key={s.source} style={styles.sourceItem}>
-                <Text
-                  style={[
-                    styles.sourceBadge,
-                    s.source === "LLM"
-                      ? styles.sourceLlm
-                      : s.source === "CACHE"
-                        ? styles.sourceCache
-                        : styles.sourceFallback,
-                  ]}
-                >
-                  {sourceLabel(s.source)}
-                </Text>
-                <Text style={styles.sourceCount}>{s.count}건</Text>
               </View>
-            ))}
-          </View>
+            );
+          })}
         </View>
 
-        {/* 최근 7일 활동 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>최근 7일</Text>
-          {analytics.recentActivity.length === 0 ? (
-            <Text style={styles.emptyText}>최근 7일간 활동 없음</Text>
-          ) : (
-            <View style={styles.activityList}>
-              {analytics.recentActivity.map((a) => (
-                <View key={a.date} style={styles.activityRow}>
-                  <Text style={styles.activityDate}>
-                    {new Date(a.date).toLocaleDateString("ko-KR", {
-                      month: "short",
-                      day: "numeric",
-                      weekday: "short",
-                    })}
-                  </Text>
-                  <View style={styles.activityBarTrack}>
-                    <View
-                      style={[
-                        styles.activityBarFill,
-                        {
-                          width: `${Math.min(
-                            (a.count /
-                              Math.max(
-                                ...analytics.recentActivity.map((r) => r.count)
-                              )) *
-                              100,
-                            100
-                          )}%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.activityCount}>{a.count}</Text>
-                </View>
-              ))}
+        {/* 자주 나온 카드 */}
+        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>자주 나온 카드 Top 5</Text>
+        <View style={styles.card}>
+          {a.topCards.map((c, i) => (
+            <View key={c.cardId} style={styles.rankRow}>
+              <View style={styles.rankNum}><Text style={styles.rankNumText}>{i + 1}</Text></View>
+              <View style={styles.rankInfo}>
+                <Text variant="body-sm" color={Colors.whiteout}>{c.card.nameKo}</Text>
+                <Text variant="caption" color={Colors.midGrayText}>{c.card.name}</Text>
+              </View>
+              <Text variant="body-sm" color={Colors.taroEssence}>{c.count}회</Text>
             </View>
-          )}
+          ))}
+        </View>
+
+        {/* 자주 검색한 종목 */}
+        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>관심 종목</Text>
+        <View style={styles.card}>
+          {a.topTickers.map((t, i) => (
+            <View key={t.ticker} style={styles.rankRow}>
+              <View style={styles.rankNum}><Text style={styles.rankNumText}>{i + 1}</Text></View>
+              <Text variant="body-sm" color={Colors.whiteout} style={{ flex: 1 }}>{t.ticker}</Text>
+              <Text variant="body-sm" color={Colors.taroEssence}>{t.count}회</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* 해석 소스 */}
+        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>해석 소스</Text>
+        <View style={styles.sourceRow}>
+          {a.sourceBreakdown.map((s) => (
+            <View key={s.source} style={styles.sourceCard}>
+              <Text style={[styles.sourceBadge, s.source === "LLM" ? styles.srcLlm : s.source === "CACHE" ? styles.srcCache : styles.srcFallback]}>
+                {s.source === "LLM" ? "AI" : s.source === "CACHE" ? "캐시" : "폴백"}
+              </Text>
+              <Text variant="subheading" color={Colors.whiteout}>{s.count}</Text>
+              <Text variant="caption" color={Colors.midGrayText}>건</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* 최근 7일 */}
+        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>최근 7일 활동</Text>
+        <View style={styles.card}>
+          {a.recentActivity.map((act) => (
+            <View key={act.date} style={styles.actRow}>
+              <Text variant="caption" color={Colors.midGrayText} style={styles.actDate}>
+                {new Date(act.date).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short" })}
+              </Text>
+              <View style={styles.actTrack}>
+                <View style={[styles.actFill, { width: `${(act.count / maxActivity) * 100}%` as any }]} />
+              </View>
+              <Text variant="caption" color={act.count > 0 ? Colors.taroEssence : Colors.ironOutline} style={styles.actCount}>{act.count}</Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -200,161 +133,30 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { paddingBottom: 40 },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 14, color: Colors.accent },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: Colors.text },
-
-  // Hero
-  heroCard: {
-    marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 24,
-    borderRadius: 14,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-  },
-  heroLabel: { fontSize: 12, color: Colors.muted, marginBottom: 4 },
-  heroValue: {
-    fontSize: 48,
-    fontWeight: "800",
-    color: Colors.text,
-    letterSpacing: -2,
-  },
-  heroSub: { fontSize: 14, color: Colors.muted },
-
-  // Section
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-
-  // Bar chart
-  barGroup: { gap: 10 },
-  barItem: { gap: 4 },
-  barLabelRow: { flexDirection: "row", justifyContent: "space-between" },
-  barLabel: { fontSize: 13, fontWeight: "600", color: Colors.text },
-  barCount: { fontSize: 12, color: Colors.muted },
-  barTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    borderRadius: 3,
-    backgroundColor: Colors.accent,
-  },
-
-  // Rank list
-  rankList: { gap: 6 },
-  rankItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  rankNumber: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(124, 92, 191, 0.12)",
-    color: Colors.accent,
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
-    lineHeight: 22,
-    overflow: "hidden",
-  },
-  rankInfo: { flex: 1 },
-  rankName: { fontSize: 14, fontWeight: "600", color: Colors.text },
-  rankSub: { fontSize: 11, color: Colors.muted },
-  rankCount: {
-    fontSize: 13,
-    color: Colors.muted,
-    fontVariant: ["tabular-nums"],
-  },
-  tickerMono: { fontVariant: ["tabular-nums"], flex: 1 },
-
-  // Source grid
-  sourceGrid: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  sourceItem: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    gap: 6,
-    minWidth: 90,
-  },
-  sourceBadge: {
-    fontSize: 11,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    fontWeight: "600",
-    overflow: "hidden",
-  },
-  sourceLlm: { backgroundColor: "rgba(82,168,130,0.15)", color: Colors.success },
-  sourceCache: { backgroundColor: "rgba(201,168,76,0.15)", color: Colors.gold },
-  sourceFallback: { backgroundColor: "rgba(224,82,82,0.12)", color: Colors.error },
-  sourceCount: { fontSize: 16, fontWeight: "700", color: Colors.text },
-
-  // Activity
-  activityList: { gap: 6 },
-  activityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  activityDate: { fontSize: 12, color: Colors.muted, width: 80 },
-  activityBarTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    overflow: "hidden",
-  },
-  activityBarFill: {
-    height: "100%",
-    borderRadius: 3,
-    backgroundColor: Colors.gold,
-  },
-  activityCount: {
-    fontSize: 12,
-    color: Colors.text,
-    width: 24,
-    textAlign: "right",
-    fontVariant: ["tabular-nums"],
-  },
-
-  emptyText: { fontSize: 13, color: Colors.muted, textAlign: "center", paddingVertical: 16 },
+  container:    { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  scroll:       { paddingHorizontal: Spacing.s24, paddingBottom: 48 },
+  header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: Spacing.s16, marginBottom: Spacing.s24 },
+  heroCard:     { backgroundColor: Colors.graphiteBase, borderRadius: 16, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, alignItems: "center", marginBottom: Spacing.s24 },
+  heroNum:      { fontSize: 56, fontWeight: "800", color: Colors.whiteout, letterSpacing: -2, lineHeight: 64 },
+  sectionLabel: { letterSpacing: 0.5, marginBottom: Spacing.s8 },
+  card:         { backgroundColor: Colors.graphiteBase, borderRadius: 14, padding: Spacing.s16, borderWidth: 1, borderColor: Colors.carbonBorder, marginBottom: Spacing.s24, gap: 12 },
+  barItem:      { gap: 6 },
+  barLabelRow:  { flexDirection: "row", justifyContent: "space-between" },
+  barTrack:     { height: 6, borderRadius: 3, backgroundColor: Colors.carbonBorder, overflow: "hidden" },
+  barFill:      { height: "100%", borderRadius: 3, backgroundColor: Colors.taroEssence },
+  rankRow:      { flexDirection: "row", alignItems: "center", gap: 12 },
+  rankNum:      { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.voidGreen, alignItems: "center", justifyContent: "center" },
+  rankNumText:  { fontSize: 11, color: Colors.taroEssence, fontWeight: "700" },
+  rankInfo:     { flex: 1 },
+  sourceRow:    { flexDirection: "row", gap: 10, marginBottom: Spacing.s24 },
+  sourceCard:   { flex: 1, backgroundColor: Colors.graphiteBase, borderRadius: 12, padding: Spacing.s16, borderWidth: 1, borderColor: Colors.carbonBorder, alignItems: "center", gap: 4 },
+  sourceBadge:  { fontSize: 11, fontWeight: "700", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, overflow: "hidden" },
+  srcLlm:       { backgroundColor: Colors.voidGreen, color: Colors.taroEssence },
+  srcCache:     { backgroundColor: "#2a1f00", color: "#c9a84c" },
+  srcFallback:  { backgroundColor: "#2a0a0a", color: "#e0875a" },
+  actRow:       { flexDirection: "row", alignItems: "center", gap: 10 },
+  actDate:      { width: 76 },
+  actTrack:     { flex: 1, height: 6, borderRadius: 3, backgroundColor: Colors.carbonBorder, overflow: "hidden" },
+  actFill:      { height: "100%", borderRadius: 3, backgroundColor: Colors.taroEssence },
+  actCount:     { width: 20, textAlign: "right" },
 });
