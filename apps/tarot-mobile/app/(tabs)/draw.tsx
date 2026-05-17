@@ -10,19 +10,18 @@ import { Colors, Spacing, Radius } from "../../constants/theme";
 import { useDrawStore, type SpreadType } from "../../lib/drawStore";
 import { useUserStore } from "../../lib/store";
 import { apiFetch } from "../../lib/api";
+import { localDraw, saveLocalDraw } from "../../lib/localEngine";
 
 const SPREAD_OPTIONS: { type: SpreadType; label: string; desc: string; cost: number }[] = [
   { type: "single",     label: "1장",  desc: "핵심 흐름",    cost: 1 },
   { type: "three-card", label: "3장",  desc: "과거·현재·미래", cost: 3 },
 ];
 
-// 스프레드 타입 → API 값 매핑
 const SPREAD_MAP: Record<SpreadType, string> = {
   "single":     "SINGLE",
   "three-card": "THREE_CARD",
 };
 
-// API 응답 → DrawResult 변환
 interface ApiDrawResponse {
   drawId: string;
   ticker: string;
@@ -30,41 +29,22 @@ interface ApiDrawResponse {
   spread: string;
   creditCost: number;
   creditsRemaining: number;
-  marketSnapshot: {
-    price: number;
-    changePercent: number;
-    condition: string;
-    summary: string;
-  };
+  marketSnapshot: { price: number; changePercent: number; condition: string; summary: string };
   interpretation: {
     headline: string;
     summary: string;
     detail: string;
     disclaimer: string;
-    cards: Array<{
-      id: string;
-      nameKo: string;
-      orientation: string;
-      slot: string | null;
-      imageUrl: string;
-    }>;
+    cards: Array<{ id: string; nameKo: string; orientation: string; slot: string | null; imageUrl: string }>;
   };
 }
 
 function CardBack({ flipped, delay }: { flipped: boolean; delay: number }) {
   const anim = useRef(new Animated.Value(0)).current;
-
   if (flipped) {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 600,
-      delay,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(anim, { toValue: 1, duration: 600, delay, useNativeDriver: true }).start();
   }
-
   const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
-
   return (
     <Animated.View style={[styles.card, { transform: [{ rotateY: rotate }] }]}>
       <Text style={styles.cardSymbol}>✦</Text>
@@ -79,69 +59,68 @@ export default function DrawScreen() {
   const [phase, setPhase] = useState<"select" | "flipping" | "done">("select");
 
   const selectedOption = SPREAD_OPTIONS.find((o) => o.type === spread)!;
-  const canDraw = !isLoggedIn || credits >= selectedOption.cost;
+  const market = ticker?.endsWith(".KS") || ticker?.endsWith(".KQ") ? "KR" : "US";
 
   const handleDraw = async () => {
     if (isDrawing) return;
-
-    // 크레딧 부족 체크 (로그인 상태에서만)
-    if (isLoggedIn && credits < selectedOption.cost) {
-      Alert.alert(
-        "크레딧 부족",
-        `${selectedOption.cost} 크레딧이 필요합니다. (현재: ${credits})`,
-        [{ text: "확인" }]
-      );
-      return;
-    }
-
     setDrawing(true);
     setPhase("flipping");
 
     try {
-      // 카드 뒤집기 애니메이션과 API 호출 병렬
-      const [, apiData] = await Promise.all([
-        new Promise((r) => setTimeout(r, 1200)), // 최소 애니메이션 시간
+      // 애니메이션 + API 호출 병렬 (1.2초 최소 대기)
+      const [, apiResult] = await Promise.allSettled([
+        new Promise((r) => setTimeout(r, 1200)),
         apiFetch<ApiDrawResponse>("/api/tarot/draw", {
           method: "POST",
           body: JSON.stringify({
             ticker: ticker || "AAPL",
-            market: ticker?.endsWith(".KS") || ticker?.endsWith(".KQ") ? "KR" : "US",
+            market,
             spread: SPREAD_MAP[spread],
           }),
         }),
       ]);
 
-      // 크레딧 잔액 업데이트
-      setCredits(apiData.creditsRemaining);
+      let drawResult;
 
-      // DrawResult 형태로 변환해서 스토어에 저장
-      setResult({
-        id: apiData.drawId,
-        ticker: apiData.ticker,
-        tickerName: tickerName || apiData.ticker,
-        spread,
-        interpretation: apiData.interpretation.summary,
-        drawnAt: new Date().toISOString(),
-        cards: apiData.interpretation.cards.map((c, i) => ({
-          id: c.id,
-          name: c.id,
-          nameKo: c.nameKo,
-          symbol: "✦",
-          isReversed: c.orientation === "reversed",
-          headline: i === 0 ? apiData.interpretation.headline : c.nameKo,
-          summary: apiData.interpretation.summary,
-          detail: apiData.interpretation.detail,
-          // 각 카드별 슬롯 안내
-          ...(c.slot ? { slot: c.slot } : {}),
-        })),
-      });
+      if (apiResult.status === "fulfilled") {
+        // ✅ 서버 응답 성공
+        const api = apiResult.value;
+        setCredits(api.creditsRemaining);
+        drawResult = {
+          id: api.drawId,
+          ticker: api.ticker,
+          tickerName: tickerName || api.ticker,
+          spread,
+          interpretation: api.interpretation.summary,
+          drawnAt: new Date().toISOString(),
+          cards: api.interpretation.cards.map((c, i) => ({
+            id: c.id,
+            name: c.id,
+            nameKo: c.nameKo,
+            symbol: "✦",
+            isReversed: c.orientation === "reversed",
+            headline: i === 0 ? api.interpretation.headline : c.nameKo,
+            summary: api.interpretation.summary,
+            detail: api.interpretation.detail,
+          })),
+        };
+      } else {
+        // ⚡ 서버 없음 → 로컬 엔진 폴백 (자동, 사용자에게 안 보임)
+        drawResult = localDraw(ticker || "AAPL", tickerName || "AAPL", spread);
+        // 로컬 기록에 저장
+        void saveLocalDraw(drawResult, market);
+      }
 
+      setResult(drawResult);
       setPhase("done");
       setTimeout(() => router.push("/result"), 400);
-    } catch (err) {
-      setPhase("select");
-      const msg = err instanceof Error ? err.message : "뽑기에 실패했습니다";
-      Alert.alert("오류", msg, [{ text: "다시 시도" }]);
+    } catch {
+      // 로컬 엔진도 실패하는 극단적 케이스
+      const fallback = localDraw(ticker || "AAPL", tickerName || "AAPL", spread);
+      void saveLocalDraw(fallback, market);
+      setResult(fallback);
+      setPhase("done");
+      setTimeout(() => router.push("/result"), 400);
     } finally {
       setDrawing(false);
     }
@@ -159,7 +138,7 @@ export default function DrawScreen() {
           </TouchableOpacity>
           <View style={styles.creditBadge}>
             <Text variant="caption" color={Colors.taroEssence}>
-              {isLoggedIn ? `✦ ${credits} 크레딧` : "✦ 게스트"}
+              {isLoggedIn ? `✦ ${credits} 크레딧` : "✦ 데모"}
             </Text>
           </View>
         </View>
@@ -171,7 +150,9 @@ export default function DrawScreen() {
           </Text>
           {ticker ? (
             <Text variant="caption" color={Colors.taroEssence}>{ticker}</Text>
-          ) : null}
+          ) : (
+            <Text variant="caption" color={Colors.midGrayText}>홈에서 종목을 선택하세요</Text>
+          )}
         </View>
 
         {/* 스프레드 선택 */}
@@ -183,22 +164,13 @@ export default function DrawScreen() {
               onPress={() => setSpread(opt.type)}
               disabled={phase !== "select"}
             >
-              <Text
-                variant="heading"
-                color={spread === opt.type ? Colors.taroEssence : Colors.midGrayText}
-              >
+              <Text variant="heading" color={spread === opt.type ? Colors.taroEssence : Colors.midGrayText}>
                 {opt.label}
               </Text>
-              <Text
-                variant="caption"
-                color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}
-              >
+              <Text variant="caption" color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}>
                 {opt.desc}
               </Text>
-              <Text
-                variant="caption"
-                color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}
-              >
+              <Text variant="caption" color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}>
                 {opt.cost} 크레딧
               </Text>
             </TouchableOpacity>
@@ -216,24 +188,12 @@ export default function DrawScreen() {
             <ActivityIndicator color={Colors.taroEssence} style={{ marginTop: 16 }} />
           )}
           {phase === "select" && (
-            <Text variant="body-sm" style={styles.hint}>
-              카드를 집중하여 바라보세요
-            </Text>
+            <Text variant="body-sm" style={styles.hint}>카드를 집중하여 바라보세요</Text>
           )}
         </View>
 
         {/* CTA */}
         <View style={styles.ctaArea}>
-          {!ticker && (
-            <Text variant="caption" color={Colors.midGrayText} style={styles.noTickerHint}>
-              홈에서 종목을 선택하면 해당 종목으로 해석됩니다
-            </Text>
-          )}
-          {!canDraw && (
-            <Text variant="caption" color={Colors.taroEssence} style={styles.noTickerHint}>
-              크레딧이 부족합니다
-            </Text>
-          )}
           <Button
             variant="primary"
             label={phase === "select" ? `카드 뽑기 (${selectedOption.cost} 크레딧)` : "해석 중..."}
@@ -263,5 +223,4 @@ const styles = StyleSheet.create({
   cardSymbol:     { fontSize: 28, color: Colors.taroEssence },
   hint:           { marginTop: 16, color: Colors.ironOutline, textAlign: "center" },
   ctaArea:        { paddingBottom: Spacing.s32, gap: 12 },
-  noTickerHint:   { textAlign: "center" },
 });

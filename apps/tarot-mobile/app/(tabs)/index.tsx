@@ -9,6 +9,8 @@ import { Colors, Spacing, Typography } from "../../constants/theme";
 import { useUserStore } from "../../lib/store";
 import { useDrawStore } from "../../lib/drawStore";
 import { apiFetch } from "../../lib/api";
+import { localSearch } from "../../lib/localEngine";
+
 
 const POPULAR: { ticker: string; label: string; market: string }[] = [
   { ticker: "AAPL", label: "Apple Inc.", market: "US" },
@@ -48,13 +50,15 @@ export default function HomeScreen() {
         const data = await apiFetch<{ results: SearchResult[] }>(
           `/api/tarot/search?q=${encodeURIComponent(query.trim())}`
         );
-        setResults(data.results);
+        setResults(data.results.length > 0 ? data.results : localSearch(query.trim()));
       } catch {
-        setResults([]);
+        // 서버 없음 → 로컬 검색 폴백
+        setResults(localSearch(query.trim()));
       } finally {
         setSearching(false);
       }
     }, 300);
+
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
