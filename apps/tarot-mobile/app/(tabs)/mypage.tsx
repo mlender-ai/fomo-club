@@ -1,11 +1,18 @@
-import { useEffect } from "react";
-import { SafeAreaView, ScrollView, View, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { useEffect, useCallback } from "react";
+import { SafeAreaView, ScrollView, View, TouchableOpacity, StyleSheet, Alert, Linking } from "react-native";
 import { useRouter } from "expo-router";
+import * as ExpoDigest from "expo-crypto";
 import { Text } from "../../components/ui/Text";
 import { Colors, Spacing } from "../../constants/theme";
 import { useUserStore } from "../../lib/store";
 import { useDrawStore } from "../../lib/drawStore";
 import { useCollectionStore } from "../../lib/collectionStore";
+import { useRewardedAd } from "../../lib/ads/useRewardedAd";
+import { apiFetch } from "../../lib/api";
+import { trackEvent } from "../../lib/tracking";
+
+const PRIVACY_URL = "https://tarostock.app/privacy";
+const TERMS_URL = "https://tarostock.app/terms";
 
 function Row({ label, value, onPress, right }: { label: string; value?: string; onPress?: () => void; right?: React.ReactNode }) {
   return (
@@ -27,13 +34,58 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function MyPageScreen() {
   const router = useRouter();
-  const { credits, isLoggedIn, userId, logout } = useUserStore();
+  const { credits, isLoggedIn, userId, logout, setCredits } = useUserStore();
   const { recentSearches, reset: resetDraw } = useDrawStore();
   const { stats, fetchCollection } = useCollectionStore();
 
   useEffect(() => {
     if (isLoggedIn) fetchCollection();
   }, [isLoggedIn, fetchCollection]);
+
+  const handleRewardEarned = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const key = await ExpoDigest.digestStringAsync(
+        ExpoDigest.CryptoDigestAlgorithm.SHA256,
+        `reward-${userId ?? ""}-${Date.now()}`
+      );
+      const data = await apiFetch<{ credits: number }>("/api/tarot/credits/reward", {
+        method: "POST",
+        body: JSON.stringify({ idempotencyKey: key }),
+      });
+      setCredits(data.credits);
+      trackEvent("ad_rewarded");
+      Alert.alert("크레딧 지급!", "+1 크레딧이 추가됐습니다");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("REWARD_COOLDOWN")) {
+        Alert.alert("잠시 후 다시", "30분 뒤에 다시 시청할 수 있습니다");
+      }
+    }
+  }, [isLoggedIn, userId, setCredits]);
+
+  const { status: adStatus, load: loadAd, show: showAd } = useRewardedAd(handleRewardEarned);
+
+  const handleWatchAd = () => {
+    if (!isLoggedIn) {
+      Alert.alert("로그인 필요", "로그인 후 이용 가능합니다");
+      return;
+    }
+    if (adStatus === "ready") {
+      showAd();
+    } else if (adStatus === "idle" || adStatus === "error") {
+      loadAd();
+      Alert.alert("광고 로딩 중", "잠시 후 다시 시도해 주세요");
+    }
+  };
+
+  const handleCharge = () => {
+    if (!isLoggedIn) {
+      Alert.alert("로그인 필요", "로그인 후 이용 가능합니다");
+      return;
+    }
+    Alert.alert("크레딧 충전", "앱스토어 결제 연동 후 이용 가능합니다");
+  };
 
   const handleLogout = () => {
     Alert.alert("로그아웃", "로그아웃 하시겠습니까?", [
@@ -65,10 +117,10 @@ export default function MyPageScreen() {
           <Text variant="caption" color={Colors.midGrayText}>보유 크레딧</Text>
           <Text variant="heading-lg" color={Colors.taroEssence}>{credits}</Text>
           <View style={styles.creditActions}>
-            <TouchableOpacity style={styles.creditBtn}>
+            <TouchableOpacity style={styles.creditBtn} onPress={handleCharge}>
               <Text variant="caption" color={Colors.taroEssence}>+ 충전하기</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.creditBtn}>
+            <TouchableOpacity style={styles.creditBtn} onPress={handleWatchAd}>
               <Text variant="caption" color={Colors.midGrayText}>광고 시청 +1</Text>
             </TouchableOpacity>
           </View>
@@ -116,8 +168,8 @@ export default function MyPageScreen() {
         <Section title="앱 정보">
           <Row label="버전" value="1.0.0 (Beta)" />
           <Row label="면책 고지" onPress={() => router.push("/onboarding")} right={<Text variant="body-sm" color={Colors.ironOutline}>→</Text>} />
-          <Row label="개인정보처리방침" right={<Text variant="body-sm" color={Colors.ironOutline}>→</Text>} />
-          <Row label="이용약관" right={<Text variant="body-sm" color={Colors.ironOutline}>→</Text>} />
+          <Row label="개인정보처리방침" onPress={() => Linking.openURL(PRIVACY_URL)} right={<Text variant="body-sm" color={Colors.ironOutline}>→</Text>} />
+          <Row label="이용약관" onPress={() => Linking.openURL(TERMS_URL)} right={<Text variant="body-sm" color={Colors.ironOutline}>→</Text>} />
         </Section>
       </ScrollView>
     </SafeAreaView>
