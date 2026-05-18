@@ -50,8 +50,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[PM] $(date '+%Y-%m-%d') 제품 개선 제안" \
             --body-file /tmp/body.md \
@@ -88,8 +89,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[Frontend] $(date '+%Y-%m-%d') 모바일 UX 개선 제안" \
             --body-file /tmp/body.md \
@@ -126,8 +128,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[Backend] $(date '+%Y-%m-%d') API/인프라 개선 제안" \
             --body-file /tmp/body.md \
@@ -163,8 +166,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[Designer] $(date '+%Y-%m-%d') UX/UI 개선 제안" \
             --body-file /tmp/body.md \
@@ -200,8 +204,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[QA] $(date '+%Y-%m-%d') 품질 개선 제안" \
             --body-file /tmp/body.md \
@@ -237,8 +242,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[CTO] $(date '+%Y-%m-%d') 기술 부채 개선 제안" \
             --body-file /tmp/body.md \
@@ -275,8 +281,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[Marketer] $(date '+%Y-%m-%d') 성장 전략 제안" \
             --body-file /tmp/body.md \
@@ -312,8 +319,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[Security] $(date '+%Y-%m-%d') 보안 점검 제안" \
             --body-file /tmp/body.md \
@@ -349,8 +357,9 @@ jobs:
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.proposal.outputs.response }}
         run: |
-          printf '%s' "${{ steps.proposal.outputs.response }}" > /tmp/body.md
+          echo "$BODY" > /tmp/body.md
           gh issue create \
             --title "[Prompt Engineer] $(date '+%Y-%m-%d') AI 해석 품질 개선 제안" \
             --body-file /tmp/body.md \
@@ -397,8 +406,9 @@ jobs:
         id: create_issue
         env:
           GH_TOKEN: ${{ github.token }}
+          BRIEF: ${{ steps.brief.outputs.response }}
         run: |
-          printf '%s' "${{ steps.brief.outputs.response }}" > /tmp/ceo_body.md
+          echo "$BRIEF" > /tmp/ceo_body.md
           URL=$(gh issue create \
             --title "📋 [CEO Brief] $(date '+%Y-%m-%d') 일일 에이전트 브리핑" \
             --body-file /tmp/ceo_body.md \
@@ -412,6 +422,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare Email Prompt
+        env:
+          BRIEF: ${{ needs.ceo_brief.outputs.brief }}
+        run: |
+          cat > /tmp/email_prompt.md << 'PROMPTEOF'
+아래 CEO Brief를 HTML 이메일 body로 변환하세요.
+스타일: 배경 #0f0f0f, 카드 #1e1e1e, 강조색 #3ecf8e, 충돌은 #e07b3e.
+핵심 3가지는 굵게 초록 강조. 섹션마다 border-left:3px solid #3ecf8e 카드 스타일.
+최하단에 GitHub 이슈 링크 포함.
+HTML body 내용만 반환 (body 태그 제외).
+
+PROMPTEOF
+          echo "$BRIEF" >> /tmp/email_prompt.md
+
       - name: Format and Send Email
         uses: actions/ai-inference@v1
         id: email_html
@@ -419,14 +443,7 @@ jobs:
           model: openai/gpt-4o
           system-prompt: |
             당신은 CEO 비서 AI입니다. 브리핑을 모바일 최적화 HTML 이메일로 변환합니다.
-          prompt: |
-            아래 CEO Brief를 HTML 이메일 body로 변환하세요.
-            스타일: 배경 #0f0f0f, 카드 #1e1e1e, 강조색 #3ecf8e, 충돌은 #e07b3e.
-            핵심 3가지는 굵게 초록 강조. 섹션마다 border-left:3px solid #3ecf8e 카드 스타일.
-            최하단에 GitHub 이슈 링크 포함.
-            HTML body 내용만 반환 (body 태그 제외).
-
-            ${{ needs.ceo_brief.outputs.brief }}
+          prompt-file: /tmp/email_prompt.md
       - name: Send Email via Gmail
         uses: dawidd6/action-send-mail@v3
         with:
