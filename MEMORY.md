@@ -45,13 +45,26 @@
 ## 진행 상황
 
 ```
-Phase 0 (현재): 에이전트 시스템 구축 + 기능명세서 정리
-Phase 1 (다음): 모노레포 초기 셋업 (tarot-mobile + tarot-core + Prisma)
-Phase 2: 핵심 기능 MVP (카드 뽑기 + AI 해석 + 3단 폴백)
-Phase 3: 사용자 인증 (소셜 로그인) + 크레딧 시스템
-Phase 4: 결제/광고 연동
-Phase 5: 스토어 출시
+Phase 1 ✅: 기반 인프라 (tarot-core, tarot-mobile 기본 구조, Prisma 스키마 65개 모델)
+Phase 2 ✅: 핵심 기능 (카드 뽑기 API + AI 3단폴백 + 소셜 로그인 + 크레딧 시스템)
+Phase 3 ✅: 결제/광고 (RevenueCat IAP, AdMob 배너/리워드, 리워드 서버 검증)
+Phase 4 ✅: 부가 기능 (기록, 온보딩/면책고지, 푸시알림 토큰, 컬렉션, 즐겨찾기)
+Phase 5 ✅: 어드민/운영 (카드 CRUD, 프롬프트 관리, 모니터링 대시보드)
+현재 상태: 스토어 제출 준비 단계
 ```
+
+### 2026-05-18 완료 항목 (PR #46)
+- `POST /api/tarot/feedback` — 별점 피드백 API (upsert)
+- `POST /api/tarot/report` — 신고 API
+- result/index.tsx — 별점 UI + 신고 모달
+- history/analytics.tsx — MOCK → 실제 /api/tarot/analytics 연결
+- adIds.ts — app.json extra + Constants 방식으로 AdMob ID 주입 방식 전환
+
+### 남은 항목
+- [ ] 테스트 작성 (현재 0개 — 배포 안전망 없음)
+- [ ] AdMob 프로덕션 ID 실제 값 입력 (app.json extra 또는 EAS secrets)
+- [ ] 행동 추적 이벤트 실제 호출 (tracking.ts ATT 권한만, 이벤트 발송 미구현)
+- [ ] 프롬프트 v1.1.0 (한국어 최적화 + SINGLE/THREE_CARD 분기)
 
 ---
 
@@ -70,5 +83,7 @@ Phase 5: 스토어 출시
 ## 알려진 기술 부채
 
 ```
-(아직 없음 — 프로젝트 진행되면서 여기에 추가)
+1. 테스트 0개 — 금칙어 필터, 카드 뽑기 API, 크레딧 차감 로직 최소 테스트 필요
+2. AdMob 프로덕션 ID 미입력 — app.json extra의 adMobBanner/Rewarded 필드가 비어 있음
+3. 행동 추적 미연결 — lib/tracking.ts에 ATT 권한만, Mixpanel/Amplitude 등 실제 이벤트 없음
 ```
