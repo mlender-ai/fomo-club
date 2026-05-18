@@ -27,7 +27,7 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
         <p className="eyebrow">Personal dashboard</p>
         <h1>Paper trading access</h1>
         <p>개인용 봇 대시보드입니다. 비밀번호로만 보호합니다.</p>
-        <form action={login} className="login-form">
+        <form action={login as unknown as string} className="login-form">
           <input name="password" type="password" placeholder="Dashboard password" required />
           <button type="submit">Enter dashboard</button>
         </form>
