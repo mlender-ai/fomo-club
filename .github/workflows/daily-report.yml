@@ -2,7 +2,7 @@ name: Daily Morning Report
 
 on:
   schedule:
-    - cron: "0 23 * * *"  # 매일 08:00 KST — 에이전트 카운슬(05:30) 완료 후 발송
+    - cron: "30 22 * * *"  # 매일 07:30 KST — 에이전트 카운슬(07:00) 완료 후 30분
   workflow_dispatch:       # 수동 테스트용
 
 permissions:
@@ -46,67 +46,36 @@ jobs:
           echo "$ISSUE_JSON" | jq -r '.body' >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
-      # ── 2. Shell HTML 변환 (GitHub Models API 429 우회) ──────────
-      - name: Convert Markdown to HTML
+      # ── 2. AI로 이메일 HTML 포맷 변환 ───────────────────────────
+      - name: Format as Email HTML
         if: steps.brief.outputs.found == 'true'
+        uses: actions/ai-inference@v1
         id: email_html
-        env:
-          BODY: ${{ steps.brief.outputs.body }}
-          ISSUE_NUM: ${{ steps.brief.outputs.number }}
-        run: |
-          printenv BODY > /tmp/body.md
+        with:
+          model: openai/gpt-4o
+          system: |
+            당신은 타로 증권 앱 CEO 비서 AI입니다.
+            GitHub 이슈 마크다운을 모바일에서 읽기 편한 HTML 이메일로 변환합니다.
+            원칙: 5분 안에 읽을 수 있을 것, 액션 아이템이 눈에 띌 것.
+          prompt: |
+            아래 CEO Daily Brief 마크다운을 HTML 이메일 body로 변환하세요.
 
-          {
-            echo '<div style="max-width:640px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f0f;color:#e0e0e0;padding:20px;font-size:14px;line-height:1.7">'
-            echo '<div style="text-align:center;padding:20px 0;border-bottom:1px solid #333">'
-            echo '<span style="font-size:28px">🔮</span>'
-            echo '<h1 style="color:#3ecf8e;font-size:20px;margin:8px 0 4px">Trading Taro CEO Brief</h1>'
-            echo '<p style="color:#888;font-size:13px;margin:0">'"$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')"'</p>'
-            echo '</div>'
+            디자인 가이드:
+            - 배경: #0f0f0f, 카드 배경: #1e1e1e, 텍스트: #e0e0e0
+            - 강조 컬러: #3ecf8e (타로 에센스 그린)
+            - 폰트: -apple-system, sans-serif / 최소 14px (모바일 가독성)
+            - 섹션마다 카드 스타일 (<div style="border-radius:12px; padding:16px; margin:12px 0; background:#1e1e1e; border-left:3px solid #3ecf8e">)
+            - 핵심 3가지는 번호 + 굵게 + 초록 강조
+            - 충돌 포인트는 주황색(#e07b3e) 강조
+            - 최하단에 이슈 링크 포함
 
-            sed \
-              -e 's|^## 🚨\(.*\)|<div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #e07b3e"><h2 style="color:#e07b3e;font-size:17px;margin:0 0 12px">\1</h2>|' \
-              -e 's|^### 🚨\(.*\)|<div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #e07b3e"><h3 style="color:#e07b3e;font-size:16px;margin:0 0 12px">🚨\1</h3>|' \
-              -e 's|^## 📋\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h2 style="color:#3ecf8e;font-size:17px;margin:0 0 12px">📋\1</h2>|' \
-              -e 's|^### 📋\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h3 style="color:#3ecf8e;font-size:16px;margin:0 0 12px">📋\1</h3>|' \
-              -e 's|^## ⚔️\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #e07b3e"><h2 style="color:#e07b3e;font-size:17px;margin:0 0 12px">⚔️\1</h2>|' \
-              -e 's|^### ⚔️\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #e07b3e"><h3 style="color:#e07b3e;font-size:16px;margin:0 0 12px">⚔️\1</h3>|' \
-              -e 's|^## 💡\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h2 style="color:#3ecf8e;font-size:17px;margin:0 0 12px">💡\1</h2>|' \
-              -e 's|^### 💡\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h3 style="color:#3ecf8e;font-size:16px;margin:0 0 12px">💡\1</h3>|' \
-              -e 's|^## 🗑️\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #888"><h2 style="color:#888;font-size:17px;margin:0 0 12px">🗑️\1</h2>|' \
-              -e 's|^### 🗑️\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #888"><h3 style="color:#888;font-size:16px;margin:0 0 12px">🗑️\1</h3>|' \
-              -e 's|^## 📊\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h2 style="color:#3ecf8e;font-size:17px;margin:0 0 12px">📊\1</h2>|' \
-              -e 's|^### 📊\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h3 style="color:#3ecf8e;font-size:16px;margin:0 0 12px">📊\1</h3>|' \
-              -e 's|^## 🔭\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h2 style="color:#3ecf8e;font-size:17px;margin:0 0 12px">🔭\1</h2>|' \
-              -e 's|^### 🔭\(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h3 style="color:#3ecf8e;font-size:16px;margin:0 0 12px">🔭\1</h3>|' \
-              -e 's|^## \(.*\)|</div><div style="border-radius:12px;padding:16px;margin:16px 0;background:#1e1e1e;border-left:3px solid #3ecf8e"><h2 style="color:#3ecf8e;font-size:17px;margin:0 0 12px">\1</h2>|' \
-              -e 's|^### \(.*\)|<h3 style="color:#e0e0e0;font-size:15px;margin:12px 0 8px">\1</h3>|' \
-              -e 's|^#### \(.*\)|<h4 style="color:#ccc;font-size:14px;margin:10px 0 6px">\1</h4>|' \
-              -e 's|^\*\*\[CRITICAL\]\(.*\)\*\*|<span style="background:#e07b3e;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold">CRITICAL</span> <strong>\1</strong>|' \
-              -e 's|^\*\*\[HIGH\]\(.*\)\*\*|<span style="background:#e0c13e;color:#000;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:bold">HIGH</span> <strong>\1</strong>|' \
-              -e 's|\*\*\([^*]*\)\*\*|<strong style="color:#fff">\1</strong>|g' \
-              -e 's|^- \[ \] \(.*\)|<div style="padding:4px 0">☐ \1</div>|' \
-              -e 's|^- \[x\] \(.*\)|<div style="padding:4px 0;color:#3ecf8e">☑ \1</div>|' \
-              -e 's|^- \(.*\)|<div style="padding:3px 0;padding-left:12px">• \1</div>|' \
-              -e 's|^> \(.*\)|<div style="border-left:3px solid #555;padding-left:12px;color:#aaa;margin:8px 0">\1</div>|' \
-              -e 's|^---$|<hr style="border:none;border-top:1px solid #333;margin:16px 0">|' \
-              -e 's|^|<div>|;s|$|</div>|' \
-              -e 's|^<div></div>$||' \
-              /tmp/body.md
+            이슈 번호: #${{ steps.brief.outputs.number }}
+            이슈 링크: https://github.com/${{ github.repository }}/issues/${{ steps.brief.outputs.number }}
 
-            # 마크다운 테이블 → HTML 테이블 (간이 변환)
-            # 테이블은 sed로 한계가 있으므로 기본 스타일만 적용
+            마크다운 내용:
+            ${{ steps.brief.outputs.body }}
 
-            echo '</div>'
-            echo '<div style="text-align:center;padding:20px 0;border-top:1px solid #333;margin-top:20px">'
-            echo '<a href="https://github.com/${{ github.repository }}/issues/'"$ISSUE_NUM"'" style="color:#3ecf8e;text-decoration:none;font-size:13px">GitHub 이슈에서 전체 보기 →</a>'
-            echo '<p style="color:#555;font-size:11px;margin-top:8px">Trading Taro Agent Council</p>'
-            echo '</div></div>'
-          } > /tmp/email.html
-
-          echo "response<<__HTML_EOF__" >> "$GITHUB_OUTPUT"
-          cat /tmp/email.html >> "$GITHUB_OUTPUT"
-          echo "__HTML_EOF__" >> "$GITHUB_OUTPUT"
+            HTML body 태그 내용만 반환 (<!DOCTYPE> 불필요, <body> 태그 포함 금지).
 
       # ── 3. 이메일 발송 ────────────────────────────────────────
       - name: Send Morning Report Email
@@ -118,7 +87,7 @@ jobs:
           secure: true
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "🔮 [${{ steps.brief.outputs.title }}]"
+          subject: "☀️ [${{ steps.brief.outputs.title }}]"
           to: ${{ secrets.REPORT_EMAIL }}
           from: "Trading Taro 에이전트 카운슬 <${{ secrets.SMTP_USERNAME }}>"
           html_body: ${{ steps.email_html.outputs.response }}
