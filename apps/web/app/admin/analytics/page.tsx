@@ -3,48 +3,59 @@ import { prisma } from "../../../lib/prisma";
 export const dynamic = "force-dynamic";
 
 async function getAnalyticsData() {
-  const now = new Date();
-  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  try {
+    const now = new Date();
+    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [eventCounts24h, eventCounts7d, totalEvents] = await Promise.all([
-    prisma.tarotAnalyticsEvent.groupBy({
-      by: ["event"],
-      _count: true,
-      where: { createdAt: { gte: last24h } },
-      orderBy: { _count: { event: "desc" } },
-    }),
-    prisma.tarotAnalyticsEvent.groupBy({
-      by: ["event"],
-      _count: true,
+    const [eventCounts24h, eventCounts7d, totalEvents] = await Promise.all([
+      prisma.tarotAnalyticsEvent.groupBy({
+        by: ["event"],
+        _count: true,
+        where: { createdAt: { gte: last24h } },
+        orderBy: { _count: { event: "desc" } },
+      }),
+      prisma.tarotAnalyticsEvent.groupBy({
+        by: ["event"],
+        _count: true,
+        where: { createdAt: { gte: last7d } },
+        orderBy: { _count: { event: "desc" } },
+      }),
+      prisma.tarotAnalyticsEvent.count(),
+    ]);
+
+    // 일별 이벤트 수 (7일)
+    const dailyEvents = await prisma.$queryRaw<Array<{ day: string; count: bigint }>>`
+      SELECT DATE("createdAt") as day, COUNT(*)::bigint as count
+      FROM "TarotAnalyticsEvent"
+      WHERE "createdAt" >= ${last7d}
+      GROUP BY DATE("createdAt")
+      ORDER BY day ASC
+    `.catch(() => [] as Array<{ day: string; count: bigint }>);
+
+    // 유니크 유저 수 (7일)
+    const uniqueUsers7d = await prisma.tarotAnalyticsEvent.groupBy({
+      by: ["userId"],
       where: { createdAt: { gte: last7d } },
-      orderBy: { _count: { event: "desc" } },
-    }),
-    prisma.tarotAnalyticsEvent.count(),
-  ]);
+    }).then((r: Array<{ userId: string }>) => r.length).catch(() => 0);
 
-  // 일별 이벤트 수 (7일)
-  const dailyEvents = await prisma.$queryRaw<Array<{ day: string; count: bigint }>>`
-    SELECT DATE("createdAt") as day, COUNT(*)::bigint as count
-    FROM "TarotAnalyticsEvent"
-    WHERE "createdAt" >= ${last7d}
-    GROUP BY DATE("createdAt")
-    ORDER BY day ASC
-  `.catch(() => [] as Array<{ day: string; count: bigint }>);
-
-  // 유니크 유저 수 (7일)
-  const uniqueUsers7d = await prisma.tarotAnalyticsEvent.groupBy({
-    by: ["userId"],
-    where: { createdAt: { gte: last7d } },
-  }).then((r: Array<{ userId: string }>) => r.length).catch(() => 0);
-
-  return {
-    eventCounts24h: eventCounts24h.map((e: { event: string; _count: number }) => ({ event: e.event, count: e._count })),
-    eventCounts7d: eventCounts7d.map((e: { event: string; _count: number }) => ({ event: e.event, count: e._count })),
-    totalEvents,
-    uniqueUsers7d,
-    dailyEvents: dailyEvents.map((d) => ({ day: String(d.day).slice(0, 10), count: Number(d.count) })),
-  };
+    return {
+      eventCounts24h: eventCounts24h.map((e: { event: string; _count: number }) => ({ event: e.event, count: e._count })),
+      eventCounts7d: eventCounts7d.map((e: { event: string; _count: number }) => ({ event: e.event, count: e._count })),
+      totalEvents,
+      uniqueUsers7d,
+      dailyEvents: dailyEvents.map((d) => ({ day: String(d.day).slice(0, 10), count: Number(d.count) })),
+    };
+  } catch (e) {
+    console.error("DB Error (Analytics):", e);
+    return {
+      eventCounts24h: [],
+      eventCounts7d: [],
+      totalEvents: 0,
+      uniqueUsers7d: 0,
+      dailyEvents: [],
+    };
+  }
 }
 
 const EVENT_LABELS: Record<string, string> = {

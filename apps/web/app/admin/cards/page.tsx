@@ -4,14 +4,19 @@ import { CardTable } from "./CardTable";
 export const dynamic = "force-dynamic";
 
 async function getCards() {
-  return prisma.tarotCard.findMany({
-    orderBy: { number: "asc" },
-    include: {
-      _count: {
-        select: { drawHistoryCards: true },
+  try {
+    return await prisma.tarotCard.findMany({
+      orderBy: { number: "asc" },
+      include: {
+        _count: {
+          select: { drawHistoryCards: true },
+        },
       },
-    },
-  });
+    });
+  } catch (e) {
+    console.error("DB Error (Cards):", e);
+    return [];
+  }
 }
 
 export default async function CardsPage() {

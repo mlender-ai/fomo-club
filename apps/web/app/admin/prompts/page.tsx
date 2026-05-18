@@ -4,9 +4,14 @@ import { PromptManager } from "./PromptManager";
 export const dynamic = "force-dynamic";
 
 async function getPrompts() {
-  return prisma.tarotPromptVersion.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    return await prisma.tarotPromptVersion.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (e) {
+    console.error("DB Error (Prompts):", e);
+    return [];
+  }
 }
 
 export default async function PromptsPage() {
