@@ -54,3 +54,44 @@ export async function isTrackingAllowed(): Promise<boolean> {
   const status = await getTrackingStatus();
   return status === "authorized";
 }
+
+// ─── 이벤트 트래킹 ───────────────────────────────────────────────
+
+export type TarotEvent =
+  | "draw_started"
+  | "draw_completed"
+  | "draw_failed"
+  | "feedback_submitted"
+  | "report_submitted"
+  | "ad_rewarded"
+  | "credit_purchased"
+  | "collection_viewed"
+  | "analytics_viewed"
+  | "onboarding_completed";
+
+let _apiBase: string | null = null;
+let _getToken: (() => string | null) | null = null;
+
+/**
+ * 트래킹 초기화. 앱 진입 시 1회 호출.
+ */
+export function initTracking(apiBase: string, getToken: () => string | null): void {
+  _apiBase = apiBase;
+  _getToken = getToken;
+}
+
+/**
+ * 이벤트를 서버로 전송. fire-and-forget (실패 무시).
+ * 로그인 전이거나 초기화 전이면 조용히 스킵.
+ */
+export function trackEvent(event: TarotEvent, properties?: Record<string, unknown>): void {
+  if (!_apiBase || !_getToken) return;
+  const token = _getToken();
+  if (!token) return;
+
+  fetch(`${_apiBase}/api/tarot/track`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ event, properties: properties ?? {}, ts: Date.now() }),
+  }).catch(() => { /* 네트워크 오류 무시 */ });
+}

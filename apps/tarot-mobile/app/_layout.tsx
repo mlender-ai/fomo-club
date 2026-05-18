@@ -1,15 +1,21 @@
 import { Stack, SplashScreen } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import Constants from "expo-constants";
 import { Colors } from "../constants/theme";
+import { initTracking } from "../lib/tracking";
+import { useUserStore } from "../lib/store";
 
 // expo-router가 자동으로 숨기는 걸 막고 splash에서 직접 제어
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+const API_BASE =
+  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ?? "http://localhost:3000";
+
 export default function RootLayout() {
   useEffect(() => {
-    // 네이티브 스플래시는 즉시 숨김 (우리 스플래시 화면이 대신)
     void SplashScreen.hideAsync();
+    initTracking(API_BASE, () => useUserStore.getState().token);
   }, []);
 
   return (

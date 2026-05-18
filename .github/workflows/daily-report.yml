@@ -1,0 +1,112 @@
+name: Daily Morning Report
+
+on:
+  schedule:
+    - cron: "30 22 * * *"  # 매일 07:30 KST — 에이전트 카운슬(07:00) 완료 후 30분
+  workflow_dispatch:       # 수동 테스트용
+
+permissions:
+  issues: read
+  models: read
+
+jobs:
+  send_report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── 1. 오늘 생성된 CEO Brief 이슈 가져오기 ─────────────────
+      - name: Fetch Today's CEO Brief
+        id: brief
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+
+          # 오늘 날짜가 제목에 포함된 CEO Brief 이슈 검색
+          ISSUE_JSON=$(gh issue list \
+            --label "ceo-brief" \
+            --state open \
+            --limit 10 \
+            --json number,title,body,createdAt \
+            --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | contains(\"$TODAY\"))] | .[0]")
+
+          if [ "$ISSUE_JSON" = "null" ] || [ -z "$ISSUE_JSON" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "number=$(echo "$ISSUE_JSON" | jq -r '.number')" >> "$GITHUB_OUTPUT"
+          echo "title=$(echo "$ISSUE_JSON" | jq -r '.title')" >> "$GITHUB_OUTPUT"
+
+          # 멀티라인 body는 heredoc으로 전달
+          echo "body<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$ISSUE_JSON" | jq -r '.body' >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
+
+      # ── 2. AI로 이메일 HTML 포맷 변환 ───────────────────────────
+      - name: Format as Email HTML
+        if: steps.brief.outputs.found == 'true'
+        uses: actions/ai-inference@v1
+        id: email_html
+        with:
+          model: openai/gpt-4o
+          system: |
+            당신은 타로 증권 앱 CEO 비서 AI입니다.
+            GitHub 이슈 마크다운을 모바일에서 읽기 편한 HTML 이메일로 변환합니다.
+            원칙: 5분 안에 읽을 수 있을 것, 액션 아이템이 눈에 띌 것.
+          prompt: |
+            아래 CEO Daily Brief 마크다운을 HTML 이메일 body로 변환하세요.
+
+            디자인 가이드:
+            - 배경: #0f0f0f, 카드 배경: #1e1e1e, 텍스트: #e0e0e0
+            - 강조 컬러: #3ecf8e (타로 에센스 그린)
+            - 폰트: -apple-system, sans-serif / 최소 14px (모바일 가독성)
+            - 섹션마다 카드 스타일 (<div style="border-radius:12px; padding:16px; margin:12px 0; background:#1e1e1e; border-left:3px solid #3ecf8e">)
+            - 핵심 3가지는 번호 + 굵게 + 초록 강조
+            - 충돌 포인트는 주황색(#e07b3e) 강조
+            - 최하단에 이슈 링크 포함
+
+            이슈 번호: #${{ steps.brief.outputs.number }}
+            이슈 링크: https://github.com/${{ github.repository }}/issues/${{ steps.brief.outputs.number }}
+
+            마크다운 내용:
+            ${{ steps.brief.outputs.body }}
+
+            HTML body 태그 내용만 반환 (<!DOCTYPE> 불필요, <body> 태그 포함 금지).
+
+      # ── 3. 이메일 발송 ────────────────────────────────────────
+      - name: Send Morning Report Email
+        if: steps.brief.outputs.found == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "☀️ [${{ steps.brief.outputs.title }}]"
+          to: ${{ secrets.REPORT_EMAIL }}
+          from: "Trading Taro 에이전트 카운슬 <${{ secrets.SMTP_USERNAME }}>"
+          html_body: ${{ steps.email_html.outputs.response }}
+
+      # ── 4. 이슈 없을 때 알림 ─────────────────────────────────
+      - name: Send Fallback Email (no brief found)
+        if: steps.brief.outputs.found == 'false'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "⚠️ [Trading Taro] 오늘 CEO Brief 이슈가 생성되지 않았습니다"
+          to: ${{ secrets.REPORT_EMAIL }}
+          from: "Trading Taro 에이전트 카운슬 <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            오늘(${{ env.TODAY }}) CEO Brief 이슈를 찾을 수 없습니다.
+
+            에이전트 카운슬 워크플로우가 정상 실행됐는지 확인하세요:
+            https://github.com/${{ github.repository }}/actions/workflows/idea-proposal.yml

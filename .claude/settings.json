@@ -28,5 +28,14 @@
       "Bash(gh pr*)",
       "Bash(gh api*)"
     ]
+  },
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_ACCESS_TOKEN": "YOUR_FIGMA_ACCESS_TOKEN_HERE"
+      }
+    }
   }
 }
