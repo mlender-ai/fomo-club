@@ -679,3 +679,41 @@ model TarotAnalyticsEvent {
   @@index([event])
   @@index([createdAt])
 }
+
+// ─────────────────────────────────────────────
+// Admin 보안 모델 (Phase 1)
+// ─────────────────────────────────────────────
+
+// 로그인 시도 기록 — 브루트포스 방어용
+model AdminLoginAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+  @@index([createdAt])
+}
+
+// 어드민 액션 감사 로그 — 모든 변경 사항 기록
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  action     String   // "card.update", "prompt.activate", "report.resolve" 등
+  targetId   String?
+  targetType String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+// 전역 세션 무효화 타임스탬프 — 비밀번호 변경 시 모든 세션 일괄 만료
+model AdminSessionConfig {
+  id                String   @id @default("singleton")
+  invalidatedBefore DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

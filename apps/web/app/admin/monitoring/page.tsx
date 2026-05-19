@@ -216,9 +216,9 @@ export default async function MonitoringPage() {
           <div className="admin-cost-estimate">
             <span className="admin-cost-label">예상 LLM 비용 (24h)</span>
             <span className="admin-cost-value">
-              ~${((data.llmCalls * 0.003)).toFixed(2)}
+              ~${((data.llmCalls * 0.006)).toFixed(3)}
             </span>
-            <span className="admin-cost-note">Claude Sonnet 기준, 건당 ~$0.003</span>
+            <span className="admin-cost-note">Claude Sonnet 4 기준 ($3/1M input + $15/1M output, 건당 평균 ~$0.006)</span>
           </div>
         </section>
 

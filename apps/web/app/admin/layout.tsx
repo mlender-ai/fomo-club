@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { requireAdmin } from "../../lib/admin-auth";
+import LogoutButton from "./LogoutButton";
 import "./admin.css";
 
 export const metadata = {
@@ -7,8 +8,8 @@ export const metadata = {
   description: "타로 앱 운영 관리 대시보드",
 };
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  requireAdmin();
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  await requireAdmin();
 
   return (
     <div className="admin-shell">
@@ -17,21 +18,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <span className="admin-logo-icon">🔮</span>
           <span className="admin-logo-text">Taro Admin</span>
         </div>
-        
-        {/* Added by Gemini - Agent Identifier Badge */}
-        <div style={{ padding: '0 20px', marginBottom: '20px' }}>
-          <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '6px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px' }}>✨</span>
-            <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: '500' }}>Managed by Gemini</span>
-          </div>
-        </div>
 
         <ul className="admin-nav">
           <li>
             <a href="/admin" className="admin-nav-link">
               <span className="admin-nav-icon">📊</span>
               대시보드
-
             </a>
           </li>
           <li>
@@ -60,7 +52,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </li>
         </ul>
         <div className="admin-sidebar-footer">
-          <a href="/" className="admin-nav-link">← 메인으로</a>
+          <LogoutButton />
         </div>
       </nav>
       <main className="admin-content">{children}</main>
