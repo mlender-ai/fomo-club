@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   models: read
 
@@ -45,17 +45,25 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 Product Manager입니다.
           사용자 페르소나: MZ세대 개인 투자자, 타로에 관심 있는 주식 입문자.
           KPI: DAU, 크레딧 소비량, 앱스토어 평점, D7/D30 리텐션.
-          현재 구현: 카드 뽑기(1장/3장), Apple/Google 로그인, 크레딧(IAP+광고), 히스토리/분석, 즐겨찾기, 어드민."
+          현재 구현: 카드 뽑기(1장/3장), Apple/Google 로그인, 크레딧(IAP+광고), 히스토리/분석, 즐겨찾기, 어드민.
+
+          ${AGENT_CONTEXT}
+
+          중요: 당신의 제안은 반드시 이번 분기 OKR 중 하나에 기여해야 합니다. 어떤 OKR에 기여하는지 명시하세요.
+          과거 학습 기록을 참고하여 이전에 거부된 동일한 방향의 제안을 반복하지 마세요."
 
           PROMPT="오늘의 제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
 
           ## 🎯 PM 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 사용자 문제
           ## 기능 아이디어
           ## 성공 지표
@@ -90,17 +98,25 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 프런트엔드 개발자입니다.
           스택: React Native + Expo SDK 54, expo-router, zustand, StyleSheet.
           현재 화면: 홈(종목 검색), 카드 뽑기, 결과, 히스토리/분석, 마이페이지, 즐겨찾기, 컬렉션.
-          당신의 시각: 컴포넌트 재사용성, 번들 크기, 60fps 애니메이션, 접근성."
+          당신의 시각: 컴포넌트 재사용성, 번들 크기, 60fps 애니메이션, 접근성.
+
+          ${AGENT_CONTEXT}
+
+          중요: 당신의 제안은 반드시 이번 분기 OKR 중 하나에 기여해야 합니다.
+          과거 학습 기록을 참고하여 이전에 거부된 동일한 방향의 제안을 반복하지 마세요."
 
           PROMPT="모바일 프런트엔드 관점에서 개선할 아이디어 1개를 제안하세요.
 
           ## 📱 Frontend 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 현재 문제
           ## 개선 방안
           ## 영향받는 화면/파일
@@ -135,17 +151,25 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 백엔드 개발자입니다.
           스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM.
           핵심 API: /api/tarot/draw, /api/tarot/analytics, /api/tarot/credits, /api/admin/*.
-          당신의 시각: API 성능, DB 쿼리 최적화, 캐싱, 확장성, 데이터 정합성."
+          당신의 시각: API 성능, DB 쿼리 최적화, 캐싱, 확장성, 데이터 정합성.
+
+          ${AGENT_CONTEXT}
+
+          중요: 당신의 제안은 반드시 이번 분기 OKR 중 하나에 기여해야 합니다.
+          과거 학습 기록을 참고하여 이전에 거부된 동일한 방향의 제안을 반복하지 마세요."
 
           PROMPT="백엔드/인프라 관점에서 개선할 아이디어 1개를 제안하세요.
 
           ## ⚙️ Backend 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 현재 문제
           ## 개선 방안
           ## 영향받는 파일/API
@@ -186,16 +210,24 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 UI/UX 디자이너입니다.
           디자인 시스템: 다크 테마(#121212), 타로 에센스(#3ecf8e), 그래핏 베이스(#242424).
-          당신의 시각: 감성적 몰입감, 시각적 계층구조, 마이크로인터랙션, 접근성, 일관된 디자인 언어."
+          당신의 시각: 감성적 몰입감, 시각적 계층구조, 마이크로인터랙션, 접근성, 일관된 디자인 언어.
+
+          ${AGENT_CONTEXT}
+
+          중요: 당신의 제안은 반드시 이번 분기 OKR 중 하나에 기여해야 합니다.
+          과거에 '구현 비용이 높은 제안'으로 거부된 패턴에 주의하세요. 출시 전에는 기본기 완성이 우선입니다."
 
           PROMPT="UX/UI 디자인 관점에서 개선할 아이디어 1개를 제안하세요.
 
           ## 🎨 Designer 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 현재 디자인 문제
           ## 디자인 개선 방향
           ## 영향받는 화면
@@ -232,21 +264,29 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 QA 엔지니어입니다.
-          현재 테스트: packages/tarot-core vitest 61개+. E2E 없음.
-          당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트 시나리오."
+          현재 테스트: packages/tarot-core vitest 92개+. Playwright E2E 12케이스 (admin + API health).
+          당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트 시나리오.
+
+          ${AGENT_CONTEXT}
+
+          중요: 당신의 제안은 반드시 이번 분기 OKR 중 하나에 기여해야 합니다.
+          1인 개발 체제를 고려하여 현실적인 테스트 범위를 제안하세요."
 
           PROMPT="품질 보증 관점에서 개선할 아이디어 1개를 제안하세요.
 
           ## 🧪 QA 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 현재 품질 리스크
           ## 개선 방안
           ## 구체적 테스트 시나리오 3개
           ## 영향 범위
-          ## 구현 방법 (vitest / Detox / Playwright / 수동)"
+          ## 구현 방법 (vitest / Playwright / 수동)"
 
           RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
           { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
@@ -278,16 +318,25 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 CTO입니다.
-          알려진 기술 부채: AdMob 프로덕션 ID 미입력, TarotAnalyticsEvent 모델 db push 필요, 서버 사이드 IAP 검증 RevenueCat 연동 필요.
-          당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리, 기술 선택의 미래 호환성."
+          알려진 기술 부채: 서버 사이드 IAP 검증 RevenueCat 연동 필요, JWT 보안 강화 (Phase 5 예정).
+          완료된 부채: AdMob 환경 분리 (2026-05-19 완료).
+          당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리, 기술 선택의 미래 호환성.
+
+          ${AGENT_CONTEXT}
+
+          중요: 기술 부채는 중요하지만, '지금 안 갚으면 나중에 10배 비싸지는 것'과 '나중에 해도 되는 것'을 구분하세요.
+          OKR O4(지속 가능한 개발 체계)와 O1(앱스토어 출시)에 집중하세요."
 
           PROMPT="기술 부채 또는 아키텍처 관점에서 개선할 아이디어 1개를 제안하세요.
 
           ## 🏗️ CTO 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 기술 부채 항목
           ## 방치 시 리스크
           ## 개선 방향
@@ -328,17 +377,25 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 그로스 마케터입니다.
           채널: App Store ASO, 소셜(인스타/틱톡), 바이럴 루프.
-          수익화: 크레딧 IAP + AdMob 리워드 광고.
-          당신의 시각: 신규 유입, 바이럴 계수(K-factor), 크레딧 소비 증대, D7/D30 리텐션."
+          수익화: 크레딧 IAP + AdMob 리워드 광고 + 공유 리워드.
+          당신의 시각: 신규 유입, 바이럴 계수(K-factor), 크레딧 소비 증대, D7/D30 리텐션.
+
+          ${AGENT_CONTEXT}
+
+          중요: 앱 미출시 상태에서 대규모 마케팅 캠페인은 의미 없습니다.
+          출시 준비(ASO, 스크린샷, 앱 설명)와 바이럴 루프 설계에 집중하세요."
 
           PROMPT="성장/마케팅 관점에서 개선할 아이디어 1개를 제안하세요.
 
           ## 📣 Marketer 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 성장 기회
           ## 전략 아이디어
           ## 실행 방법
@@ -375,16 +432,24 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 보안 및 규정 준수 담당자입니다.
           앱: 금융 AI 해석 서비스. Apple/Google 로그인, IAP, 크레딧 시스템.
-          위험: JWT 관리, IAP 영수증 서버 검증, 개인정보 처리, 금융광고 규제(자본시장법)."
+          위험: JWT 관리, IAP 영수증 서버 검증, 개인정보 처리, 금융광고 규제(자본시장법).
+
+          ${AGENT_CONTEXT}
+
+          중요: 보안은 중요하지만 '1인 개발에서 실현 가능한' 수준을 제안하세요.
+          HashiCorp Vault 같은 엔터프라이즈 솔루션은 현실적이지 않습니다."
 
           PROMPT="보안/컴플라이언스 항목 1개를 제안하세요.
 
           ## 🔒 Security 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 위험 항목
           ## 현재 상태
           ## 개선 방안
@@ -421,16 +486,24 @@ jobs:
         id: result
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
 
           SYSTEM="당신은 타로 증권 앱의 AI 해석 품질 담당 프롬프트 엔지니어입니다.
           현재: interpret-v1.1.0.ts (한국어 최적화, 기술적 지표 MACD/BB/SMA 연결).
-          3단 폴백(LLM→캐시→프리빌트). 출력: {headline, summary, detail}."
+          3단 폴백(LLM→캐시→프리빌트). 출력: {headline, summary, detail}.
+
+          ${AGENT_CONTEXT}
+
+          중요: AI 해석 품질은 O2(핵심 사용자 경험)의 핵심입니다.
+          토큰 비용과 품질의 균형을 고려하세요."
 
           PROMPT="AI 해석 품질 개선 아이디어를 제안하세요.
 
           ## ✨ Prompt Engineer 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
           ## 현재 문제 또는 기회
           ## 개선 방향
           ## 샘플 비교 (개선 전 / 개선 후)
@@ -469,6 +542,7 @@ jobs:
         id: brief
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           PM_OUT: ${{ needs.pm.outputs.proposal }}
           FE_OUT: ${{ needs.frontend.outputs.proposal }}
           BE_OUT: ${{ needs.backend.outputs.proposal }}
@@ -481,33 +555,24 @@ jobs:
         run: |
           source .github/scripts/ai-inference.sh
 
-          SYSTEM="당신은 Trading Taro (타로 증권 앱)의 CEO입니다. 비서가 아니라 최종 의사결정자입니다.
-          매일 아침 9개 팀 에이전트(PM, Frontend, Backend, Designer, QA, CTO, Marketer, Security, Prompt Engineer)가 각자 제안을 올립니다.
+          # CEO 페르소나 + OKR + 메모리 로드
+          CEO_PERSONA=$(cat .github/agents/CEO_PERSONA.md)
+          OKR=$(cat .github/agents/QUARTERLY_OKR.md)
+          MEMORY=$(tail -60 .github/agents/MEMORY.md 2>/dev/null || echo "이전 기록 없음")
 
-          당신의 역할:
-          1. 검증: 각 제안이 현실적인지, 우선순위가 맞는지 CEO 관점에서 판단합니다.
-          2. 교차 검증: 에이전트 간 충돌하는 의견을 찾아내고, 어느 쪽이 맞는지 근거와 함께 결론을 냅니다.
-          3. 의사결정: '좋은 아이디어' 나열이 아니라 '이번 주 이것만 하라'는 명확한 지시를 내립니다.
-          4. 리스크 판단: Security/CTO 제안 중 당장 처리해야 할 것과 나중에 해도 되는 것을 구분합니다.
-          5. 킬(kill)할 것: 지금 하면 안 되는 제안은 이유와 함께 명확히 거부합니다.
+          SYSTEM="${CEO_PERSONA}
 
-          현재 제품 상태:
-          - 앱스토어 미출시 (개발 중)
-          - 1인 개발자 체제 (리소스 극히 제한)
-          - 핵심 기능: 타로 카드 뽑기 → AI 시장 해석, 크레딧(IAP+광고), 즐겨찾기, 푸시 알림
-          - 기술 스택: React Native Expo + Next.js API + PostgreSQL + Prisma
+          === 이번 분기 OKR ===
+          ${OKR}
 
-          판단 기준 (우선순위 순):
-          1. 스토어 출시 차단 이슈 (없으면 출시 못함)
-          2. 법적/보안 리스크 (출시 후 문제 터짐)
-          3. 핵심 사용자 경험 (D1 리텐션에 직접 영향)
-          4. 수익화 (크레딧 소비 증가)
-          5. 나머지는 백로그"
+          === 과거 학습 기록 ===
+          ${MEMORY}"
 
-          # 에이전트 출력을 파일로 안전하게 조합
+          # 에이전트 출력 조합
           {
             echo "아래 9개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요."
             echo "단순 요약이 아니라 당신의 판단과 지시가 담겨야 합니다."
+            echo "각 제안이 OKR에 부합하는지 검증하고, 부합하지 않는 제안은 왜 그런지 설명하세요."
             echo ""
             echo "---"
             echo "**PM:** ${PM_OUT:-(PM 에이전트 미응답)}"
@@ -535,34 +600,32 @@ jobs:
           ## 📋 CEO Daily Brief — YYYY-MM-DD
 
           ### 🚨 즉시 대응 (스토어 출시 차단 or 보안 리스크)
-          - 에이전트 제안 중 당장 처리 안 하면 출시 못하거나 법적 문제가 되는 것
           - 없으면 "현재 차단 이슈 없음" 명시
 
           ### ✅ 이번 주 실행 지시 (최대 2개)
-          - CEO로서 "이것만 해라"는 명확한 지시
-          - 왜 이것인지 근거, 담당 에이전트, 예상 소요 시간
-          - 1인 개발자 체제를 고려한 현실적 스코프
+          - 왜 이것인지 근거, 담당 에이전트, 예상 소요, 대상 OKR
 
           ### 🔍 에이전트 간 충돌 분석
-          - 서로 모순되거나 리소스가 겹치는 제안 식별
           - CEO 판단: 어느 쪽을 택하고 왜인지
 
           ### 💡 CEO 인사이트
-          - 에이전트들이 놓친 관점이나 더 큰 그림
-          - 제품 방향성에 대한 CEO의 생각
+          - 에이전트들이 놓친 관점, 제품 방향성
+
+          ### 📊 에이전트 성과 피드백
+          - 각 에이전트의 제안 품질에 대한 CEO 피드백
+          - 개선이 필요한 에이전트에게 구체적 코칭 (예: "Backend는 현재 트래픽 규모를 반영하지 않은 제안이 반복됨")
+          - 잘한 에이전트는 인정 (예: "CTO는 OKR에 정확히 부합하는 제안")
 
           ### ❌ 지금 하지 않을 것 (Kill list)
-          - 좋은 아이디어지만 지금 타이밍이 아닌 것
-          - 구체적 이유 (리소스, 우선순위, 의존성 등)
+          - 구체적 이유 + 재검토 조건
 
-          ### 📊 에이전트별 제안 요약 (1줄씩)
-          | 에이전트 | 제안 핵심 | CEO 판정 |
-          |---------|----------|---------|
-          | PM | ... | ✅ 채택 / ⏸️ 보류 / ❌ 거부 |
-          | (9개 모두) | | |
+          ### 📊 에이전트별 제안 요약
+          | 에이전트 | 대상 OKR | 제안 핵심 | CEO 판정 | 사유 |
+          |---------|---------|----------|---------|------|
+          | PM | O? | ... | ✅/⏸️/❌ | ... |
+          | (9개 모두) | | | | |
 
           ### 📅 내일 체크포인트
-          - 내일 브리핑에서 확인할 것
           FORMAT
           } > /tmp/ceo_prompt.txt
 
@@ -597,6 +660,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 1. CEO 브리프에서 판정 JSON 추출 ──────────────────
       - name: Parse verdicts from CEO brief
@@ -624,23 +689,20 @@ jobs:
             \"prompt_engineer\": {\"verdict\": \"...\", \"reason\": \"...\"}
           }
 
-          판정 기준:
-          - ✅ 채택 → approved
-          - ⏸️ 보류 → deferred
-          - ❌ 거부 / Kill list → killed
+          판정 기준: ✅ 채택 → approved / ⏸️ 보류 → deferred / ❌ 거부 → killed
 
           CEO 브리프:
           ${CEO_BRIEF}"
 
           RESULT=$(ai_inference "$SYSTEM" "$PROMPT" 1000)
-          # JSON 블록만 추출 (```json ... ``` 래핑 제거)
           CLEAN=$(echo "$RESULT" | sed 's/^```json//' | sed 's/^```//' | sed 's/```$//' | tr -d '\n')
           echo "$CLEAN" | jq . > /tmp/verdicts.json 2>/dev/null || echo '{}' > /tmp/verdicts.json
 
           { echo "json<<__VEOF__"; cat /tmp/verdicts.json; echo "__VEOF__"; } >> "$GITHUB_OUTPUT"
 
-      # ── 2. 오늘 에이전트 이슈에 라벨 부여 ────────────────
+      # ── 2. 라벨 부여 + 반론 대상 식별 ────────────────────
       - name: Label agent issues
+        id: labeling
         env:
           GH_TOKEN: ${{ github.token }}
           VERDICTS: ${{ steps.verdicts.outputs.json }}
@@ -659,11 +721,12 @@ jobs:
             [prompt_engineer]="agent-council,prompt"
           )
 
+          > /tmp/killed_issues.env
+
           for agent in pm frontend backend designer qa cto marketer security prompt_engineer; do
             verdict=$(echo "$VERDICTS" | jq -r ".${agent}.verdict // \"deferred\"")
             reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"판정 미확인\"")
 
-            # 오늘 날짜가 포함된 해당 에이전트의 이슈 찾기
             ISSUE_NUM=$(gh issue list \
               --label "${AGENT_LABELS[$agent]}" \
               --state open \
@@ -671,10 +734,7 @@ jobs:
               --json number,title \
               --jq "[.[] | select(.title | contains(\"$TODAY\"))] | .[0].number // empty")
 
-            if [ -z "$ISSUE_NUM" ]; then
-              echo "::notice::$agent: 오늘 이슈 없음, 스킵"
-              continue
-            fi
+            [ -z "$ISSUE_NUM" ] && continue
 
             case "$verdict" in
               approved)
@@ -691,26 +751,23 @@ jobs:
 
           ---
           > 💬 이 판정에 동의하지 않는 에이전트는 아래에 반론을 제출합니다."
-                # killed 이슈 번호 저장 (반론용)
                 echo "${agent}=${ISSUE_NUM}" >> /tmp/killed_issues.env
                 ;;
             esac
-            echo "::notice::$agent #$ISSUE_NUM → $verdict"
           done
 
-          # 반론 대상 목록을 output으로 전달
-          if [ -f /tmp/killed_issues.env ]; then
+          if [ -s /tmp/killed_issues.env ]; then
             { echo "killed<<__KEOF__"; cat /tmp/killed_issues.env; echo "__KEOF__"; } >> "$GITHUB_OUTPUT"
           else
             echo "killed=" >> "$GITHUB_OUTPUT"
           fi
-        id: labeling
 
-      # ── 3. 킬된 에이전트 반론 (rebuttal) ─────────────────
+      # ── 3. 킬된 에이전트 반론 ─────────────────────────────
       - name: Agent rebuttals
         if: steps.labeling.outputs.killed != ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           VERDICTS: ${{ steps.verdicts.outputs.json }}
           KILLED_LIST: ${{ steps.labeling.outputs.killed }}
         run: |
@@ -729,24 +786,22 @@ jobs:
           )
 
           echo "$KILLED_LIST" | while IFS='=' read -r agent issue_num; do
-            [ -z "$agent" ] && continue
-            [ -z "$issue_num" ] && continue
+            [ -z "$agent" ] || [ -z "$issue_num" ] && continue
 
             reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"사유 없음\"")
             role="${AGENT_ROLES[$agent]}"
 
             SYSTEM="당신은 타로 증권 앱의 ${role}입니다.
-          CEO가 당신의 제안을 거부했습니다. 당신은 반론할 기회가 있습니다.
-          단, 반론은 CEO의 판단 기준(출시 차단 > 법적 리스크 > 핵심 UX > 수익화 > 백로그)을 존중해야 합니다.
+          CEO가 당신의 제안을 거부했습니다. 반론할 기회가 있습니다.
+          판단 기준(출시 차단 > 법적 리스크 > 기술 부채 임계점 > 핵심 UX > 수익화 > 백로그)을 존중하세요.
           감정적이지 않고 데이터/근거 기반으로 반론하세요.
-          CEO가 맞다고 생각하면 솔직히 수긍하세요."
+          CEO가 맞다면 솔직히 수긍하세요. 수긍도 전문가의 판단입니다."
 
             PROMPT="CEO 거부 사유: ${reason}
 
           아래 형식으로 반론하세요 (200자 이내):
 
           ## 🔄 에이전트 반론
-
           **수긍/반론**: (CEO 판단에 동의 or 반론)
           **근거**: (왜 이것이 지금 필요한지 구체적 데이터나 리스크)
           **절충안**: (있다면, 더 작은 스코프로 이번 주 실행 가능한 방법)"
@@ -754,10 +809,47 @@ jobs:
             REBUTTAL=$(ai_inference "$SYSTEM" "$PROMPT" 500)
 
             if echo "$REBUTTAL" | grep -qi "수긍\|동의\|CEO.*맞"; then
-              gh issue comment "$issue_num" --body "$(printf '%s\n\n---\n🏷️ *에이전트가 CEO 판정을 수긍했습니다. 자동 종료 대상.*' "$REBUTTAL")"
+              gh issue comment "$issue_num" --body "$(printf '%s\n\n---\n🏷️ *에이전트가 CEO 판정을 수긍했습니다.*' "$REBUTTAL")"
             else
               gh issue comment "$issue_num" --body "$REBUTTAL"
               gh issue edit "$issue_num" --add-label "agent-rebuttal"
-              echo "::warning::$agent #$issue_num: 에이전트가 반론 제출 — 수동 검토 필요"
             fi
           done
+
+      # ── 4. 메모리 업데이트 (학습 누적) ────────────────────
+      - name: Update agent memory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          CEO_BRIEF: ${{ needs.ceo_brief.outputs.brief }}
+          VERDICTS: ${{ steps.verdicts.outputs.json }}
+        run: |
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+
+          # 판정 기록 생성
+          {
+            echo ""
+            echo "### ${TODAY}"
+            echo "| 에이전트 | 판정 | 사유 |"
+            echo "|---------|------|------|"
+            for agent in pm frontend backend designer qa cto marketer security prompt_engineer; do
+              verdict=$(echo "$VERDICTS" | jq -r ".${agent}.verdict // \"unknown\"")
+              reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"-\"" | tr -d '\n' | head -c 80)
+              icon="❓"
+              case "$verdict" in
+                approved) icon="✅" ;;
+                deferred) icon="⏸️" ;;
+                killed) icon="❌" ;;
+              esac
+              echo "| ${agent} | ${icon} ${verdict} | ${reason} |"
+            done
+          } >> .github/agents/MEMORY.md
+
+          # 커밋 + 푸시
+          git config user.name "Trading Taro Agent Council"
+          git config user.email "agent-council@trading-taro.app"
+          git add .github/agents/MEMORY.md
+          git diff --cached --quiet || {
+            git commit -m "chore(agents): ${TODAY} 에이전트 카운슬 학습 기록 업데이트"
+            git push
+          }
