@@ -23,14 +23,14 @@ jobs:
         run: |
           TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
 
-          # 오늘 날짜가 제목에 포함된 CEO Brief 이슈 검색
+          # 최신 CEO Brief 이슈 가져오기 (날짜 무관 - 임시 테스트)
           ISSUE_JSON=$(gh issue list \
             --label "ceo-brief" \
             --state open \
-            --limit 10 \
+            --limit 1 \
             --json number,title,body,createdAt \
             --repo "${{ github.repository }}" | \
-            jq "[.[] | select(.title | contains(\"$TODAY\"))] | .[0]")
+            jq ".[0]")
 
           if [ "$ISSUE_JSON" = "null" ] || [ -z "$ISSUE_JSON" ]; then
             echo "found=false" >> "$GITHUB_OUTPUT"
@@ -88,7 +88,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "☀️ [${{ steps.brief.outputs.title }}]"
-          to: ${{ secrets.REPORT_EMAIL }}
+          to: choihenry0010@gmail.com
           from: "Trading Taro 에이전트 카운슬 <${{ secrets.SMTP_USERNAME }}>"
           html_body: ${{ steps.email_html.outputs.response }}
 
