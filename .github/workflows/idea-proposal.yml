@@ -525,11 +525,73 @@ jobs:
             --label "idea,agent-council,prompt"
 
   # ═══════════════════════════════════════════════════
+  # Content Agent — 타로 콘텐츠 바이럴 & UX 전략
+  # ═══════════════════════════════════════════════════
+
+  content:
+    needs: [prompt_engineer]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'content' ||
+       github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    outputs:
+      proposal: ${{ steps.result.outputs.response }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "[Content] 타로 카드 콘텐츠 바이럴·UX 전략 제안"
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
+
+          SYSTEM="당신은 타로 증권 앱의 콘텐츠 전략가입니다.
+          핵심 미션: 투자자의 불안한 심리를 타로로 비춰주는 카드 해석 콘텐츠를 설계합니다.
+          현재 문제: headline이 '심판의 에너지가 흐른다'처럼 추상적이고 투자 감정과 단절돼 있습니다.
+          목표: SNS에서 캡처하고 싶은 한 줄, 친구에게 보내고 싶어지는 문장을 만드는 것입니다.
+          v2.0.0 철학: 시장 데이터 → 감정 번역이 중심. 카드는 심리의 거울입니다.
+          좋은 예: '팔고 싶은 충동이 드는 지금, 카드는 손을 놓지 말라 합니다'
+          좋은 예: '모두가 도망칠 때 혼자 남은 당신, 그게 용기인지 확인할 때'
+
+          ${AGENT_CONTEXT}
+
+          이 역할은 O2(핵심 사용자 경험)와 O3(바이럴·공유를 통한 수익화)에 직결됩니다."
+
+          PROMPT="오늘의 타로 카드 콘텐츠 및 UX 개선 제안을 작성하세요.
+
+          ## 🎴 Content Agent 제안
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
+          ## 현재 콘텐츠 문제
+          ## 바이럴 headline 전략 (구체적 예시 3개 이상)
+          ## 카드별 투자 심리 연결 제안 (주요 카드 3장)
+          ## 카드 공개 UX 개선 아이디어
+          ## 공유 전환율을 높이는 방법
+          ## 성공 지표"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
+      - name: Create Issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.result.outputs.response }}
+        run: |
+          printenv BODY > /tmp/body.md
+          gh issue create \
+            --title "[Content] $(TZ=Asia/Seoul date '+%Y-%m-%d') 타로 콘텐츠 바이럴·UX 전략" \
+            --body-file /tmp/body.md \
+            --label "idea,agent-council,content"
+
+  # ═══════════════════════════════════════════════════
   # CEO Brief — 전체 에이전트 종합 판단
   # ═══════════════════════════════════════════════════
 
   ceo_brief:
-    needs: [pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer]
+    needs: [pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer, content]
     if: >-
       always() &&
       (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
@@ -552,6 +614,7 @@ jobs:
           MKT_OUT: ${{ needs.marketer.outputs.proposal }}
           SEC_OUT: ${{ needs.security.outputs.proposal }}
           PE_OUT: ${{ needs.prompt_engineer.outputs.proposal }}
+          CT_OUT: ${{ needs.content.outputs.proposal }}
         run: |
           source .github/scripts/ai-inference.sh
 
@@ -570,7 +633,7 @@ jobs:
 
           # 에이전트 출력 조합
           {
-            echo "아래 9개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요."
+            echo "아래 10개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요."
             echo "단순 요약이 아니라 당신의 판단과 지시가 담겨야 합니다."
             echo "각 제안이 OKR에 부합하는지 검증하고, 부합하지 않는 제안은 왜 그런지 설명하세요."
             echo ""
@@ -592,6 +655,8 @@ jobs:
             echo "**Security:** ${SEC_OUT:-(Security 에이전트 미응답)}"
             echo "---"
             echo "**Prompt Engineer:** ${PE_OUT:-(Prompt Engineer 에이전트 미응답)}"
+            echo "---"
+            echo "**Content:** ${CT_OUT:-(Content 에이전트 미응답)}"
             echo "---"
             echo ""
             cat << 'FORMAT'
@@ -623,7 +688,7 @@ jobs:
           | 에이전트 | 대상 OKR | 제안 핵심 | CEO 판정 | 사유 |
           |---------|---------|----------|---------|------|
           | PM | O? | ... | ✅/⏸️/❌ | ... |
-          | (9개 모두) | | | | |
+          | (10개 모두) | | | | |
 
           ### 📅 내일 체크포인트
           FORMAT
@@ -719,11 +784,12 @@ jobs:
             [marketer]="agent-council,marketing"
             [security]="agent-council,security"
             [prompt_engineer]="agent-council,prompt"
+            [content]="agent-council,content"
           )
 
           > /tmp/killed_issues.env
 
-          for agent in pm frontend backend designer qa cto marketer security prompt_engineer; do
+          for agent in pm frontend backend designer qa cto marketer security prompt_engineer content; do
             verdict=$(echo "$VERDICTS" | jq -r ".${agent}.verdict // \"deferred\"")
             reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"판정 미확인\"")
 
@@ -783,6 +849,7 @@ jobs:
             [marketer]="그로스 마케터"
             [security]="보안 담당자"
             [prompt_engineer]="프롬프트 엔지니어"
+            [content]="콘텐츠 전략가"
           )
 
           echo "$KILLED_LIST" | while IFS='=' read -r agent issue_num; do
@@ -832,7 +899,7 @@ jobs:
             echo "### ${TODAY}"
             echo "| 에이전트 | 판정 | 사유 |"
             echo "|---------|------|------|"
-            for agent in pm frontend backend designer qa cto marketer security prompt_engineer; do
+            for agent in pm frontend backend designer qa cto marketer security prompt_engineer content; do
               verdict=$(echo "$VERDICTS" | jq -r ".${agent}.verdict // \"unknown\"")
               reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"-\"" | tr -d '\n' | head -c 80)
               icon="❓"
