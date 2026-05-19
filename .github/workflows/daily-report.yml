@@ -2,7 +2,7 @@ name: Daily Morning Report
 
 on:
   schedule:
-    - cron: "30 22 * * *"  # 매일 07:30 KST — 에이전트 카운슬(07:00) 완료 후 30분
+    - cron: "0 23 * * *"  # 매일 08:00 KST — 에이전트 카운슬(05:30) 완료 후 발송
   workflow_dispatch:       # 수동 테스트용
 
 permissions:

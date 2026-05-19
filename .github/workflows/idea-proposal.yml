@@ -2,7 +2,7 @@ name: Daily Agent Council
 
 on:
   schedule:
-    - cron: "0 22 * * *"  # 매일 오전 7시 KST (UTC 22:00 전날)
+    - cron: "30 20 * * *"  # 05:30 KST (UTC 20:30 전날)
   workflow_dispatch:
     inputs:
       agent:
@@ -19,512 +19,566 @@ permissions:
   issues: write
   models: read
 
+env:
+  AI_MODEL: openai/gpt-4o
+  AI_API_URL: https://models.inference.ai.azure.com/chat/completions
+  AI_MAX_RETRIES: 3
+  AI_RETRY_DELAY: 45
+
 jobs:
 
+  # ═══════════════════════════════════════════════════
+  # Wave 1 — PM, Frontend, Backend (병렬)
+  # ═══════════════════════════════════════════════════
+
   pm:
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'pm' || github.event_name == 'schedule') }}
+    if: >-
+      github.event.inputs.agent == 'all' ||
+      github.event.inputs.agent == 'pm' ||
+      github.event_name == 'schedule'
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[PM] 제품 방향 및 기능 우선순위 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 Product Manager입니다.
-            사용자 페르소나: MZ세대 개인 투자자, 타로에 관심 있는 주식 입문자.
-            KPI: DAU, 크레딧 소비량, 앱스토어 평점, D7/D30 리텐션.
-            현재 구현: 카드 뽑기(1장/3장), Apple/Google 로그인, 크레딧(IAP+광고), 히스토리/분석, 즐겨찾기, 어드민.
-          prompt: |
-            오늘의 제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 🎯 PM 제안
-            ## 사용자 문제
-            ## 기능 아이디어
-            ## 성공 지표
-            ## 우선순위 근거
-            ## 난이도 (S/M/L)
+          SYSTEM="당신은 타로 증권 앱의 Product Manager입니다.
+          사용자 페르소나: MZ세대 개인 투자자, 타로에 관심 있는 주식 입문자.
+          KPI: DAU, 크레딧 소비량, 앱스토어 평점, D7/D30 리텐션.
+          현재 구현: 카드 뽑기(1장/3장), Apple/Google 로그인, 크레딧(IAP+광고), 히스토리/분석, 즐겨찾기, 어드민."
+
+          PROMPT="오늘의 제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
+
+          ## 🎯 PM 제안
+          ## 사용자 문제
+          ## 기능 아이디어
+          ## 성공 지표
+          ## 우선순위 근거
+          ## 난이도 (S/M/L)"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[PM] $(TZ=Asia/Seoul date '+%Y-%m-%d') 제품 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,pm" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,pm"
 
   frontend:
-    needs: [pm]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'frontend' || github.event_name == 'schedule') }}
+    if: >-
+      github.event.inputs.agent == 'all' ||
+      github.event.inputs.agent == 'frontend' ||
+      github.event_name == 'schedule'
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[Frontend] 모바일 UX / 성능 / 컴포넌트 개선 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 프런트엔드 개발자입니다.
-            스택: React Native + Expo SDK 54, expo-router, zustand, StyleSheet.
-            현재 화면: 홈(종목 검색), 카드 뽑기, 결과, 히스토리/분석, 마이페이지, 즐겨찾기, 컬렉션.
-            당신의 시각: 컴포넌트 재사용성, 번들 크기, 60fps 애니메이션, 접근성.
-          prompt: |
-            모바일 프런트엔드 관점에서 개선할 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 📱 Frontend 제안
-            ## 현재 문제
-            ## 개선 방안
-            ## 영향받는 화면/파일
-            ## 예상 효과
-            ## 구현 복잡도 (S/M/L)
+          SYSTEM="당신은 타로 증권 앱의 프런트엔드 개발자입니다.
+          스택: React Native + Expo SDK 54, expo-router, zustand, StyleSheet.
+          현재 화면: 홈(종목 검색), 카드 뽑기, 결과, 히스토리/분석, 마이페이지, 즐겨찾기, 컬렉션.
+          당신의 시각: 컴포넌트 재사용성, 번들 크기, 60fps 애니메이션, 접근성."
+
+          PROMPT="모바일 프런트엔드 관점에서 개선할 아이디어 1개를 제안하세요.
+
+          ## 📱 Frontend 제안
+          ## 현재 문제
+          ## 개선 방안
+          ## 영향받는 화면/파일
+          ## 예상 효과
+          ## 구현 복잡도 (S/M/L)"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[Frontend] $(TZ=Asia/Seoul date '+%Y-%m-%d') 모바일 UX 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,frontend,mobile" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,frontend,mobile"
 
   backend:
-    needs: [frontend]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'backend' || github.event_name == 'schedule') }}
+    if: >-
+      github.event.inputs.agent == 'all' ||
+      github.event.inputs.agent == 'backend' ||
+      github.event_name == 'schedule'
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[Backend] API / DB / 인프라 개선 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 백엔드 개발자입니다.
-            스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM.
-            핵심 API: /api/tarot/draw, /api/tarot/analytics, /api/tarot/credits, /api/admin/*.
-            당신의 시각: API 성능, DB 쿼리 최적화, 캐싱, 확장성, 데이터 정합성.
-          prompt: |
-            백엔드/인프라 관점에서 개선할 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## ⚙️ Backend 제안
-            ## 현재 문제
-            ## 개선 방안
-            ## 영향받는 파일/API
-            ## 예상 효과
-            ## 마이그레이션 위험도
+          SYSTEM="당신은 타로 증권 앱의 백엔드 개발자입니다.
+          스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM.
+          핵심 API: /api/tarot/draw, /api/tarot/analytics, /api/tarot/credits, /api/admin/*.
+          당신의 시각: API 성능, DB 쿼리 최적화, 캐싱, 확장성, 데이터 정합성."
+
+          PROMPT="백엔드/인프라 관점에서 개선할 아이디어 1개를 제안하세요.
+
+          ## ⚙️ Backend 제안
+          ## 현재 문제
+          ## 개선 방안
+          ## 영향받는 파일/API
+          ## 예상 효과
+          ## 마이그레이션 위험도"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[Backend] $(TZ=Asia/Seoul date '+%Y-%m-%d') API/인프라 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,backend" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,backend"
+
+  # ═══════════════════════════════════════════════════
+  # Wave 2 — Designer, QA, CTO (병렬, Wave 1 완료 후)
+  # ═══════════════════════════════════════════════════
 
   designer:
-    needs: [backend]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'designer' || github.event_name == 'schedule') }}
+    needs: [pm, frontend, backend]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'designer' ||
+       github.event_name == 'schedule')
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[Designer] UX/UI/비주얼 디자인 개선 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 UI/UX 디자이너입니다.
-            디자인 시스템: 다크 테마(#121212), 타로 에센스(#3ecf8e), 그래핏 베이스(#242424).
-            당신의 시각: 감성적 몰입감, 시각적 계층구조, 마이크로인터랙션, 접근성, 일관된 디자인 언어.
-          prompt: |
-            UX/UI 디자인 관점에서 개선할 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 🎨 Designer 제안
-            ## 현재 디자인 문제
-            ## 디자인 개선 방향
-            ## 영향받는 화면
-            ## 레퍼런스 패턴
-            ## 구현 복잡도
+          SYSTEM="당신은 타로 증권 앱의 UI/UX 디자이너입니다.
+          디자인 시스템: 다크 테마(#121212), 타로 에센스(#3ecf8e), 그래핏 베이스(#242424).
+          당신의 시각: 감성적 몰입감, 시각적 계층구조, 마이크로인터랙션, 접근성, 일관된 디자인 언어."
+
+          PROMPT="UX/UI 디자인 관점에서 개선할 아이디어 1개를 제안하세요.
+
+          ## 🎨 Designer 제안
+          ## 현재 디자인 문제
+          ## 디자인 개선 방향
+          ## 영향받는 화면
+          ## 레퍼런스 패턴
+          ## 구현 복잡도"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[Designer] $(TZ=Asia/Seoul date '+%Y-%m-%d') UX/UI 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,design" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,design"
 
   qa:
-    needs: [designer]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'qa' || github.event_name == 'schedule') }}
+    needs: [pm, frontend, backend]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'qa' ||
+       github.event_name == 'schedule')
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[QA] 품질 개선 / 테스트 커버리지 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 QA 엔지니어입니다.
-            현재 테스트: packages/tarot-core vitest 61개+. E2E 없음.
-            당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트 시나리오.
-          prompt: |
-            품질 보증 관점에서 개선할 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 🧪 QA 제안
-            ## 현재 품질 리스크
-            ## 개선 방안
-            ## 구체적 테스트 시나리오 3개
-            ## 영향 범위
-            ## 구현 방법 (vitest / Detox / Playwright / 수동)
+          SYSTEM="당신은 타로 증권 앱의 QA 엔지니어입니다.
+          현재 테스트: packages/tarot-core vitest 61개+. E2E 없음.
+          당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트 시나리오."
+
+          PROMPT="품질 보증 관점에서 개선할 아이디어 1개를 제안하세요.
+
+          ## 🧪 QA 제안
+          ## 현재 품질 리스크
+          ## 개선 방안
+          ## 구체적 테스트 시나리오 3개
+          ## 영향 범위
+          ## 구현 방법 (vitest / Detox / Playwright / 수동)"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[QA] $(TZ=Asia/Seoul date '+%Y-%m-%d') 품질 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,qa" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,qa"
 
   cto:
-    needs: [qa]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'cto' || github.event_name == 'schedule') }}
+    needs: [pm, frontend, backend]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'cto' ||
+       github.event_name == 'schedule')
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[CTO] 기술 부채 / 아키텍처 개선 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 CTO입니다.
-            알려진 기술 부채: AdMob 프로덕션 ID 미입력, TarotAnalyticsEvent 모델 db push 필요, 서버 사이드 IAP 검증 RevenueCat 연동 필요.
-            당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리, 기술 선택의 미래 호환성.
-          prompt: |
-            기술 부채 또는 아키텍처 관점에서 개선할 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 🏗️ CTO 제안
-            ## 기술 부채 항목
-            ## 방치 시 리스크
-            ## 개선 방향
-            ## 영향받는 파일/패키지
-            ## 예상 ROI
+          SYSTEM="당신은 타로 증권 앱의 CTO입니다.
+          알려진 기술 부채: AdMob 프로덕션 ID 미입력, TarotAnalyticsEvent 모델 db push 필요, 서버 사이드 IAP 검증 RevenueCat 연동 필요.
+          당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리, 기술 선택의 미래 호환성."
+
+          PROMPT="기술 부채 또는 아키텍처 관점에서 개선할 아이디어 1개를 제안하세요.
+
+          ## 🏗️ CTO 제안
+          ## 기술 부채 항목
+          ## 방치 시 리스크
+          ## 개선 방향
+          ## 영향받는 파일/패키지
+          ## 예상 ROI"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[CTO] $(TZ=Asia/Seoul date '+%Y-%m-%d') 기술 부채 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,cto,tech-debt" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,cto,tech-debt"
+
+  # ═══════════════════════════════════════════════════
+  # Wave 3 — Marketer, Security, Prompt Engineer (병렬, Wave 2 완료 후)
+  # ═══════════════════════════════════════════════════
 
   marketer:
-    needs: [cto]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'marketer' || github.event_name == 'schedule') }}
+    needs: [designer, qa, cto]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'marketer' ||
+       github.event_name == 'schedule')
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[Marketer] 성장 / 바이럴 / 리텐션 개선 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 그로스 마케터입니다.
-            채널: App Store ASO, 소셜(인스타/틱톡), 바이럴 루프.
-            수익화: 크레딧 IAP + AdMob 리워드 광고.
-            당신의 시각: 신규 유입, 바이럴 계수(K-factor), 크레딧 소비 증대, D7/D30 리텐션.
-          prompt: |
-            성장/마케팅 관점에서 개선할 아이디어 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 📣 Marketer 제안
-            ## 성장 기회
-            ## 전략 아이디어
-            ## 실행 방법
-            ## 예상 지표 개선
-            ## 비용/리소스
+          SYSTEM="당신은 타로 증권 앱의 그로스 마케터입니다.
+          채널: App Store ASO, 소셜(인스타/틱톡), 바이럴 루프.
+          수익화: 크레딧 IAP + AdMob 리워드 광고.
+          당신의 시각: 신규 유입, 바이럴 계수(K-factor), 크레딧 소비 증대, D7/D30 리텐션."
+
+          PROMPT="성장/마케팅 관점에서 개선할 아이디어 1개를 제안하세요.
+
+          ## 📣 Marketer 제안
+          ## 성장 기회
+          ## 전략 아이디어
+          ## 실행 방법
+          ## 예상 지표 개선
+          ## 비용/리소스"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[Marketer] $(TZ=Asia/Seoul date '+%Y-%m-%d') 성장 전략 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,marketing" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,marketing"
 
   security:
-    needs: [marketer]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'security' || github.event_name == 'schedule') }}
+    needs: [designer, qa, cto]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'security' ||
+       github.event_name == 'schedule')
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[Security] 보안/컴플라이언스 점검 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 보안 및 규정 준수 담당자입니다.
-            앱: 금융 AI 해석 서비스. Apple/Google 로그인, IAP, 크레딧 시스템.
-            위험: JWT 관리, IAP 영수증 서버 검증, 개인정보 처리, 금융광고 규제(자본시장법).
-          prompt: |
-            보안/컴플라이언스 항목 1개를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## 🔒 Security 제안
-            ## 위험 항목
-            ## 현재 상태
-            ## 개선 방안
-            ## 우선순위 (Critical/High/Medium/Low)
-            ## 관련 규제/기준
+          SYSTEM="당신은 타로 증권 앱의 보안 및 규정 준수 담당자입니다.
+          앱: 금융 AI 해석 서비스. Apple/Google 로그인, IAP, 크레딧 시스템.
+          위험: JWT 관리, IAP 영수증 서버 검증, 개인정보 처리, 금융광고 규제(자본시장법)."
+
+          PROMPT="보안/컴플라이언스 항목 1개를 제안하세요.
+
+          ## 🔒 Security 제안
+          ## 위험 항목
+          ## 현재 상태
+          ## 개선 방안
+          ## 우선순위 (Critical/High/Medium/Low)
+          ## 관련 규제/기준"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[Security] $(TZ=Asia/Seoul date '+%Y-%m-%d') 보안 점검 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,security" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,security"
 
   prompt_engineer:
-    needs: [security]
-    if: ${{ always() && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'prompt_engineer' || github.event_name == 'schedule') }}
+    needs: [designer, qa, cto]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'prompt_engineer' ||
+       github.event_name == 'schedule')
     runs-on: ubuntu-latest
     outputs:
-      proposal: ${{ steps.proposal.outputs.response }}
+      proposal: ${{ steps.result.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[Prompt Engineer] AI 해석 품질 개선 제안"
-        uses: actions/ai-inference@v1
-        id: proposal
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 타로 증권 앱의 AI 해석 품질 담당 프롬프트 엔지니어입니다.
-            현재: interpret-v1.1.0.ts (한국어 최적화, 기술적 지표 MACD/BB/SMA 연결).
-            3단 폴백(LLM→캐시→프리빌트). 출력: {headline, summary, detail}.
-          prompt: |
-            AI 해석 품질 개선 아이디어를 제안하세요.
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            ## ✨ Prompt Engineer 제안
-            ## 현재 문제 또는 기회
-            ## 개선 방향
-            ## 샘플 비교 (개선 전 / 개선 후)
-            ## 검증 방법
-            ## 토큰 비용 영향
+          SYSTEM="당신은 타로 증권 앱의 AI 해석 품질 담당 프롬프트 엔지니어입니다.
+          현재: interpret-v1.1.0.ts (한국어 최적화, 기술적 지표 MACD/BB/SMA 연결).
+          3단 폴백(LLM→캐시→프리빌트). 출력: {headline, summary, detail}."
+
+          PROMPT="AI 해석 품질 개선 아이디어를 제안하세요.
+
+          ## ✨ Prompt Engineer 제안
+          ## 현재 문제 또는 기회
+          ## 개선 방향
+          ## 샘플 비교 (개선 전 / 개선 후)
+          ## 검증 방법
+          ## 토큰 비용 영향"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Create Issue
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ steps.proposal.outputs.response }}
+          BODY: ${{ steps.result.outputs.response }}
         run: |
           printenv BODY > /tmp/body.md
           gh issue create \
             --title "[Prompt Engineer] $(TZ=Asia/Seoul date '+%Y-%m-%d') AI 해석 품질 개선 제안" \
             --body-file /tmp/body.md \
-            --label "idea,agent-council,prompt" \
-            --repo "${{ github.repository }}"
+            --label "idea,agent-council,prompt"
+
+  # ═══════════════════════════════════════════════════
+  # CEO Brief — 전체 에이전트 종합 판단
+  # ═══════════════════════════════════════════════════
 
   ceo_brief:
     needs: [pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer]
-    if: always() && (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
-    outputs:
-      brief: ${{ steps.brief.outputs.response }}
     steps:
       - uses: actions/checkout@v4
       - name: "[CEO] 에이전트 브리핑 종합 + 교차 검증"
-        uses: actions/ai-inference@v1
         id: brief
-        with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 Trading Taro (타로 증권 앱)의 **CEO**입니다. 비서가 아니라 최종 의사결정자입니다.
-            매일 아침 9개 팀 에이전트(PM, Frontend, Backend, Designer, QA, CTO, Marketer, Security, Prompt Engineer)가 각자 제안을 올립니다.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PM_OUT: ${{ needs.pm.outputs.proposal }}
+          FE_OUT: ${{ needs.frontend.outputs.proposal }}
+          BE_OUT: ${{ needs.backend.outputs.proposal }}
+          DESIGN_OUT: ${{ needs.designer.outputs.proposal }}
+          QA_OUT: ${{ needs.qa.outputs.proposal }}
+          CTO_OUT: ${{ needs.cto.outputs.proposal }}
+          MKT_OUT: ${{ needs.marketer.outputs.proposal }}
+          SEC_OUT: ${{ needs.security.outputs.proposal }}
+          PE_OUT: ${{ needs.prompt_engineer.outputs.proposal }}
+        run: |
+          source .github/scripts/ai-inference.sh
 
-            당신의 역할:
-            1. **검증**: 각 제안이 현실적인지, 우선순위가 맞는지 CEO 관점에서 판단합니다.
-            2. **교차 검증**: 에이전트 간 충돌하는 의견을 찾아내고, 어느 쪽이 맞는지 근거와 함께 결론을 냅니다.
-            3. **의사결정**: "좋은 아이디어" 나열이 아니라 "이번 주 이것만 하라"는 명확한 지시를 내립니다.
-            4. **리스크 판단**: Security/CTO 제안 중 당장 처리해야 할 것과 나중에 해도 되는 것을 구분합니다.
-            5. **킬(kill)할 것**: 지금 하면 안 되는 제안은 이유와 함께 명확히 거부합니다.
+          SYSTEM="당신은 Trading Taro (타로 증권 앱)의 CEO입니다. 비서가 아니라 최종 의사결정자입니다.
+          매일 아침 9개 팀 에이전트(PM, Frontend, Backend, Designer, QA, CTO, Marketer, Security, Prompt Engineer)가 각자 제안을 올립니다.
 
-            현재 제품 상태:
-            - 앱스토어 미출시 (개발 중)
-            - 1인 개발자 체제 (리소스 극히 제한)
-            - 핵심 기능: 타로 카드 뽑기 → AI 시장 해석, 크레딧(IAP+광고), 즐겨찾기, 푸시 알림
-            - 기술 스택: React Native Expo + Next.js API + PostgreSQL + Prisma
+          당신의 역할:
+          1. 검증: 각 제안이 현실적인지, 우선순위가 맞는지 CEO 관점에서 판단합니다.
+          2. 교차 검증: 에이전트 간 충돌하는 의견을 찾아내고, 어느 쪽이 맞는지 근거와 함께 결론을 냅니다.
+          3. 의사결정: '좋은 아이디어' 나열이 아니라 '이번 주 이것만 하라'는 명확한 지시를 내립니다.
+          4. 리스크 판단: Security/CTO 제안 중 당장 처리해야 할 것과 나중에 해도 되는 것을 구분합니다.
+          5. 킬(kill)할 것: 지금 하면 안 되는 제안은 이유와 함께 명확히 거부합니다.
 
-            판단 기준 (우선순위 순):
-            1. 스토어 출시 차단 이슈 (없으면 출시 못함)
-            2. 법적/보안 리스크 (출시 후 문제 터짐)
-            3. 핵심 사용자 경험 (D1 리텐션에 직접 영향)
-            4. 수익화 (크레딧 소비 ↑)
-            5. 나머지는 백로그
-          prompt: |
-            아래 9개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요.
-            단순 요약이 아니라 **당신의 판단과 지시**가 담겨야 합니다.
+          현재 제품 상태:
+          - 앱스토어 미출시 (개발 중)
+          - 1인 개발자 체제 (리소스 극히 제한)
+          - 핵심 기능: 타로 카드 뽑기 → AI 시장 해석, 크레딧(IAP+광고), 즐겨찾기, 푸시 알림
+          - 기술 스택: React Native Expo + Next.js API + PostgreSQL + Prisma
 
-            ---
-            **PM:** ${{ needs.pm.outputs.proposal }}
-            ---
-            **Frontend:** ${{ needs.frontend.outputs.proposal }}
-            ---
-            **Backend:** ${{ needs.backend.outputs.proposal }}
-            ---
-            **Designer:** ${{ needs.designer.outputs.proposal }}
-            ---
-            **QA:** ${{ needs.qa.outputs.proposal }}
-            ---
-            **CTO:** ${{ needs.cto.outputs.proposal }}
-            ---
-            **Marketer:** ${{ needs.marketer.outputs.proposal }}
-            ---
-            **Security:** ${{ needs.security.outputs.proposal }}
-            ---
-            **Prompt Engineer:** ${{ needs.prompt_engineer.outputs.proposal }}
-            ---
+          판단 기준 (우선순위 순):
+          1. 스토어 출시 차단 이슈 (없으면 출시 못함)
+          2. 법적/보안 리스크 (출시 후 문제 터짐)
+          3. 핵심 사용자 경험 (D1 리텐션에 직접 영향)
+          4. 수익화 (크레딧 소비 증가)
+          5. 나머지는 백로그"
 
-            아래 형식으로 작성하세요. 각 섹션을 충실히 채우세요:
+          # 에이전트 출력을 파일로 안전하게 조합
+          {
+            echo "아래 9개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요."
+            echo "단순 요약이 아니라 당신의 판단과 지시가 담겨야 합니다."
+            echo ""
+            echo "---"
+            echo "**PM:** ${PM_OUT:-(PM 에이전트 미응답)}"
+            echo "---"
+            echo "**Frontend:** ${FE_OUT:-(Frontend 에이전트 미응답)}"
+            echo "---"
+            echo "**Backend:** ${BE_OUT:-(Backend 에이전트 미응답)}"
+            echo "---"
+            echo "**Designer:** ${DESIGN_OUT:-(Designer 에이전트 미응답)}"
+            echo "---"
+            echo "**QA:** ${QA_OUT:-(QA 에이전트 미응답)}"
+            echo "---"
+            echo "**CTO:** ${CTO_OUT:-(CTO 에이전트 미응답)}"
+            echo "---"
+            echo "**Marketer:** ${MKT_OUT:-(Marketer 에이전트 미응답)}"
+            echo "---"
+            echo "**Security:** ${SEC_OUT:-(Security 에이전트 미응답)}"
+            echo "---"
+            echo "**Prompt Engineer:** ${PE_OUT:-(Prompt Engineer 에이전트 미응답)}"
+            echo "---"
+            echo ""
+            cat << 'FORMAT'
+          아래 형식으로 작성하세요. 각 섹션을 충실히 채우세요:
 
-            ## 📋 CEO Daily Brief — $(TZ=Asia/Seoul date '+%Y-%m-%d')
+          ## 📋 CEO Daily Brief — YYYY-MM-DD
 
-            ### 🚨 즉시 대응 (스토어 출시 차단 or 보안 리스크)
-            - 에이전트 제안 중 당장 처리 안 하면 출시 못하거나 법적 문제가 되는 것
-            - 없으면 "현재 차단 이슈 없음" 명시
+          ### 🚨 즉시 대응 (스토어 출시 차단 or 보안 리스크)
+          - 에이전트 제안 중 당장 처리 안 하면 출시 못하거나 법적 문제가 되는 것
+          - 없으면 "현재 차단 이슈 없음" 명시
 
-            ### ✅ 이번 주 실행 지시 (최대 2개)
-            - CEO로서 "이것만 해라"는 명확한 지시
-            - 왜 이것인지 근거, 담당 에이전트, 예상 소요 시간
-            - 1인 개발자 체제를 고려한 현실적 스코프
+          ### ✅ 이번 주 실행 지시 (최대 2개)
+          - CEO로서 "이것만 해라"는 명확한 지시
+          - 왜 이것인지 근거, 담당 에이전트, 예상 소요 시간
+          - 1인 개발자 체제를 고려한 현실적 스코프
 
-            ### 🔍 에이전트 간 충돌 분석
-            - 서로 모순되거나 리소스가 겹치는 제안 식별
-            - CEO 판단: 어느 쪽을 택하고 왜인지
+          ### 🔍 에이전트 간 충돌 분석
+          - 서로 모순되거나 리소스가 겹치는 제안 식별
+          - CEO 판단: 어느 쪽을 택하고 왜인지
 
-            ### 💡 CEO 인사이트
-            - 에이전트들이 놓친 관점이나 더 큰 그림
-            - 제품 방향성에 대한 CEO의 생각
+          ### 💡 CEO 인사이트
+          - 에이전트들이 놓친 관점이나 더 큰 그림
+          - 제품 방향성에 대한 CEO의 생각
 
-            ### ❌ 지금 하지 않을 것 (Kill list)
-            - 좋은 아이디어지만 지금 타이밍이 아닌 것
-            - 구체적 이유 (리소스, 우선순위, 의존성 등)
+          ### ❌ 지금 하지 않을 것 (Kill list)
+          - 좋은 아이디어지만 지금 타이밍이 아닌 것
+          - 구체적 이유 (리소스, 우선순위, 의존성 등)
 
-            ### 📊 에이전트별 제안 요약 (1줄씩)
-            | 에이전트 | 제안 핵심 | CEO 판정 |
-            |---------|----------|---------|
-            | PM | ... | ✅ 채택 / ⏸️ 보류 / ❌ 거부 |
-            | Frontend | ... | ... |
-            | (9개 모두) | | |
+          ### 📊 에이전트별 제안 요약 (1줄씩)
+          | 에이전트 | 제안 핵심 | CEO 판정 |
+          |---------|----------|---------|
+          | PM | ... | ✅ 채택 / ⏸️ 보류 / ❌ 거부 |
+          | (9개 모두) | | |
 
-            ### 📅 내일 체크포인트
-            - 내일 브리핑에서 확인할 것
+          ### 📅 내일 체크포인트
+          - 내일 브리핑에서 확인할 것
+          FORMAT
+          } > /tmp/ceo_prompt.txt
+
+          PROMPT=$(cat /tmp/ceo_prompt.txt)
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT" 4000)
+          {
+            echo "response<<__CEO_EOF__"
+            echo "$RESULT"
+            echo "__CEO_EOF__"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create CEO Brief Issue
-        id: create_issue
         env:
           GH_TOKEN: ${{ github.token }}
           BRIEF: ${{ steps.brief.outputs.response }}
         run: |
           printenv BRIEF > /tmp/ceo_body.md
-          URL=$(gh issue create \
+          gh issue create \
             --title "📋 [CEO Brief] $(TZ=Asia/Seoul date '+%Y-%m-%d') 일일 에이전트 브리핑" \
             --body-file /tmp/ceo_body.md \
-            --label "ceo-brief,agent-council,daily" \
-            --repo "${{ github.repository }}")
-          echo "issue_url=$URL" >> $GITHUB_OUTPUT
-
-  send_email:
-    needs: [ceo_brief]
-    if: always() && needs.ceo_brief.result == 'success' && (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Prepare Email Prompt
-        env:
-          BRIEF: ${{ needs.ceo_brief.outputs.brief }}
-        run: |
-          {
-            printf '%s\n' "아래 CEO Brief를 HTML 이메일 body로 변환하세요."
-            printf '%s\n' "스타일: 배경 #0f0f0f, 카드 #1e1e1e, 강조색 #3ecf8e, 충돌은 #e07b3e."
-            printf '%s\n' "핵심 3가지는 굵게 초록 강조. 섹션마다 border-left:3px solid #3ecf8e 카드 스타일."
-            printf '%s\n' "테이블은 border-collapse로 깔끔하게. CEO 판정 이모지 유지."
-            printf '%s\n' "최하단에 GitHub 이슈 링크 포함."
-            printf '%s\n' "HTML body 내용만 반환 (body 태그 제외)."
-            printf '%s\n' ""
-            printenv BRIEF
-          } > /tmp/email_prompt.md
-
-      - name: Format and Send Email
-        uses: actions/ai-inference@v1
-        id: email_html
-        with:
-          model: openai/gpt-4o
-          system-prompt: "당신은 CEO 비서 AI입니다. 순수 HTML만 반환하세요. ```html 코드블록 절대 사용 금지. <html><head><body> 태그 없이 컨텐츠만 반환."
-          prompt-file: /tmp/email_prompt.md
-
-      - name: Strip codeblock and save HTML
-        env:
-          EMAIL_RAW: ${{ steps.email_html.outputs.response }}
-        run: |
-          printenv EMAIL_RAW \
-            | sed 's/^```html[[:space:]]*//' \
-            | sed 's/^```[[:space:]]*//' \
-            | sed 's/[[:space:]]*```$//' \
-            > /tmp/email_body.html
-          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
-          echo "TODAY=$TODAY" >> "$GITHUB_ENV"
-
-      - name: Send Email via Gmail
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "☀️ [CEO Brief] ${{ env.TODAY }} 일일 에이전트 브리핑"
-          to: ${{ secrets.REPORT_EMAIL }}
-          from: "Trading Taro 에이전트 카운슬 <${{ secrets.SMTP_USERNAME }}>"
-          html_body: file:///tmp/email_body.html
+            --label "ceo-brief,agent-council,daily"
