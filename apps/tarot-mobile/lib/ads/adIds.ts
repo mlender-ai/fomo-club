@@ -8,14 +8,15 @@ const TEST_REWARDED = "ca-app-pub-3940256099942544/1712485313";
 
 const extra = Constants.expoConfig?.extra as Record<string, string> | undefined;
 
-export const AD_UNIT_BANNER = __DEV__
-  ? TEST_BANNER
-  : Platform.OS === "ios"
-  ? (extra?.adMobBannerIos ?? "")
-  : (extra?.adMobBannerAndroid ?? "");
+function resolveAdId(iosKey: string, androidKey: string, testId: string): string {
+  if (__DEV__) return testId;
+  const id = Platform.OS === "ios" ? (extra?.[iosKey] ?? "") : (extra?.[androidKey] ?? "");
+  if (!id) {
+    console.warn(`[AdMob] ${Platform.OS === "ios" ? iosKey : androidKey} is empty — falling back to test ID`);
+    return testId;
+  }
+  return id;
+}
 
-export const AD_UNIT_REWARDED = __DEV__
-  ? TEST_REWARDED
-  : Platform.OS === "ios"
-  ? (extra?.adMobRewardedIos ?? "")
-  : (extra?.adMobRewardedAndroid ?? "");
+export const AD_UNIT_BANNER = resolveAdId("adMobBannerIos", "adMobBannerAndroid", TEST_BANNER);
+export const AD_UNIT_REWARDED = resolveAdId("adMobRewardedIos", "adMobRewardedAndroid", TEST_REWARDED);

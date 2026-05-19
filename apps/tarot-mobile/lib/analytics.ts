@@ -16,7 +16,8 @@ type EventName =
   | "iap_error"
   | "favorite_add"
   | "favorite_remove"
-  | "share_result";
+  | "share_result"
+  | "share_reward";
 
 interface AnalyticsEvent {
   event: EventName;

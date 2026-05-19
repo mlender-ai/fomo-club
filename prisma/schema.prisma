@@ -112,6 +112,7 @@ enum TarotCreditReason {
   SIGNUP_BONUS
   PURCHASE
   REWARD_AD
+  REWARD_SHARE
   DRAW_SINGLE
   DRAW_THREE
   REFUND
@@ -141,66 +142,66 @@ enum TarotCardStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String?  @unique
-  passwordHash String?
-  displayName  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String                  @id @default(cuid())
+  email              String?                 @unique
+  passwordHash       String?
+  displayName        String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
   // 타로 앱 전용 필드
-  authProvider        TarotAuthProvider?
-  authProviderId      String?
-  membershipStatus    TarotMembershipStatus @default(FREE)
-  pushToken           String?
-  disclaimerVersion   TarotDisclaimerVersion?
-  disclaimerAgreedAt  DateTime?
+  authProvider       TarotAuthProvider?
+  authProviderId     String?
+  membershipStatus   TarotMembershipStatus   @default(FREE)
+  pushToken          String?
+  disclaimerVersion  TarotDisclaimerVersion?
+  disclaimerAgreedAt DateTime?
   // 관계
-  bots                Bot[]
-  researchProfile     ResearchProfile?
-  agentThreads        AgentMeetingThread[]
-  creditLedger        TarotCreditLedger[]
-  drawHistory         TarotDrawHistory[]
-  favorites           TarotFavorite[]
-  feedbacks           TarotFeedback[]
-  reports             TarotReport[]
-  cardCollection      TarotCardCollection[]
-  analyticsEvents     TarotAnalyticsEvent[]
+  bots               Bot[]
+  researchProfile    ResearchProfile?
+  agentThreads       AgentMeetingThread[]
+  creditLedger       TarotCreditLedger[]
+  drawHistory        TarotDrawHistory[]
+  favorites          TarotFavorite[]
+  feedbacks          TarotFeedback[]
+  reports            TarotReport[]
+  cardCollection     TarotCardCollection[]
+  analyticsEvents    TarotAnalyticsEvent[]
 
   @@unique([authProvider, authProviderId])
   @@index([authProvider, authProviderId])
 }
 
 model Bot {
-  id              String      @id @default(cuid())
-  userId          String?
-  name            String
-  mode            String      @default("paper")
-  status          BotStatus   @default(STOPPED)
-  exchangeKey     String      @default("mock-binance-futures")
-  baseAsset       String      @default("USDT")
-  paperBalance    Float       @default(10000)
-  reservedBalance Float       @default(0)
-  makerFeeRate    Float       @default(0.0002)
-  takerFeeRate    Float       @default(0.0005)
-  entryOrderRole  OrderRole   @default(TAKER)
-  exitOrderRole   OrderRole   @default(TAKER)
-  slippageBps     Float       @default(4)
-  heartbeatAt     DateTime?
-  lastErrorAt     DateTime?
-  lastDailyReportSentAt DateTime?
+  id                     String            @id @default(cuid())
+  userId                 String?
+  name                   String
+  mode                   String            @default("paper")
+  status                 BotStatus         @default(STOPPED)
+  exchangeKey            String            @default("mock-binance-futures")
+  baseAsset              String            @default("USDT")
+  paperBalance           Float             @default(10000)
+  reservedBalance        Float             @default(0)
+  makerFeeRate           Float             @default(0.0002)
+  takerFeeRate           Float             @default(0.0005)
+  entryOrderRole         OrderRole         @default(TAKER)
+  exitOrderRole          OrderRole         @default(TAKER)
+  slippageBps            Float             @default(4)
+  heartbeatAt            DateTime?
+  lastErrorAt            DateTime?
+  lastDailyReportSentAt  DateTime?
   lastWeeklyReportSentAt DateTime?
-  metadata        Json?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  user            User?       @relation(fields: [userId], references: [id])
-  strategies      Strategy[]
-  sessions        StrategySession[]
-  strategyRuns    StrategyRun[]
-  positions       Position[]
-  trades          Trade[]
-  alerts          Alert[]
-  dailySummaries  DailySummary[]
-  systemLogs      SystemLog[]
+  metadata               Json?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  user                   User?             @relation(fields: [userId], references: [id])
+  strategies             Strategy[]
+  sessions               StrategySession[]
+  strategyRuns           StrategyRun[]
+  positions              Position[]
+  trades                 Trade[]
+  alerts                 Alert[]
+  dailySummaries         DailySummary[]
+  systemLogs             SystemLog[]
 }
 
 model Strategy {
@@ -248,31 +249,31 @@ model StrategySession {
 }
 
 model DailySummary {
-  id                     String   @id @default(cuid())
+  id                     String           @id @default(cuid())
   botId                  String
   sessionId              String?
-  scopeKey               String   @unique
+  scopeKey               String           @unique
   dateKey                String
   timezone               String
   sessionName            String?
   runLabel               String?
-  tradeCount             Int      @default(0)
-  closedPositionCount    Int      @default(0)
-  winCount               Int      @default(0)
-  lossCount              Int      @default(0)
-  grossPnl               Float    @default(0)
-  netPnl                 Float    @default(0)
-  totalFees              Float    @default(0)
-  totalWinningPnl        Float    @default(0)
-  totalLosingPnl         Float    @default(0)
-  bestTrade              Float    @default(0)
-  worstTrade             Float    @default(0)
+  tradeCount             Int              @default(0)
+  closedPositionCount    Int              @default(0)
+  winCount               Int              @default(0)
+  lossCount              Int              @default(0)
+  grossPnl               Float            @default(0)
+  netPnl                 Float            @default(0)
+  totalFees              Float            @default(0)
+  totalWinningPnl        Float            @default(0)
+  totalLosingPnl         Float            @default(0)
+  bestTrade              Float            @default(0)
+  worstTrade             Float            @default(0)
   strategyPerformance    Json
   entryReasonPerformance Json
   exitReasonPerformance  Json
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-  bot                    Bot      @relation(fields: [botId], references: [id])
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  bot                    Bot              @relation(fields: [botId], references: [id])
   session                StrategySession? @relation(fields: [sessionId], references: [id])
 
   @@index([botId, dateKey])
@@ -280,47 +281,47 @@ model DailySummary {
 }
 
 model StrategyRun {
-  id           String            @id @default(cuid())
-  botId        String
-  strategyId   String
-  sessionId    String?
-  runLabel     String?
-  symbol       String
-  timeframe    String
-  status       StrategyRunStatus
-  signalType   String
-  price        Float?
+  id                String            @id @default(cuid())
+  botId             String
+  strategyId        String
+  sessionId         String?
+  runLabel          String?
+  symbol            String
+  timeframe         String
+  status            StrategyRunStatus
+  signalType        String
+  price             Float?
   primaryReasonCode String?
   primaryReasonText String?
-  reasonsText  String?
-  reasons      Json?
-  indicators   Json?
-  errorMessage String?
-  executedAt   DateTime          @default(now())
-  bot          Bot               @relation(fields: [botId], references: [id])
-  strategy     Strategy          @relation(fields: [strategyId], references: [id])
-  session      StrategySession?  @relation(fields: [sessionId], references: [id])
+  reasonsText       String?
+  reasons           Json?
+  indicators        Json?
+  errorMessage      String?
+  executedAt        DateTime          @default(now())
+  bot               Bot               @relation(fields: [botId], references: [id])
+  strategy          Strategy          @relation(fields: [strategyId], references: [id])
+  session           StrategySession?  @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId, executedAt])
 }
 
 model Position {
-  id              String         @id @default(cuid())
+  id              String           @id @default(cuid())
   botId           String
   strategyId      String?
   sessionId       String?
   symbol          String
-  side            String         @default("LONG")
-  status          PositionStatus @default(OPEN)
+  side            String           @default("LONG")
+  status          PositionStatus   @default(OPEN)
   quantity        Float
   entryPrice      Float
   exitPrice       Float?
   entryValue      Float
   exitValue       Float?
-  realizedPnl     Float          @default(0)
-  unrealizedPnl   Float          @default(0)
-  feesPaid        Float          @default(0)
-  openedAt        DateTime       @default(now())
+  realizedPnl     Float            @default(0)
+  unrealizedPnl   Float            @default(0)
+  feesPaid        Float            @default(0)
+  openedAt        DateTime         @default(now())
   closedAt        DateTime?
   entryReasonCode String
   entryReasonText String
@@ -328,8 +329,8 @@ model Position {
   exitReasonCode  String?
   exitReasonText  String?
   exitReasonMeta  Json?
-  bot             Bot            @relation(fields: [botId], references: [id])
-  strategy        Strategy?      @relation(fields: [strategyId], references: [id])
+  bot             Bot              @relation(fields: [botId], references: [id])
+  strategy        Strategy?        @relation(fields: [strategyId], references: [id])
   session         StrategySession? @relation(fields: [sessionId], references: [id])
   trades          Trade[]
 
@@ -338,31 +339,31 @@ model Position {
 }
 
 model Trade {
-  id              String      @id @default(cuid())
+  id              String           @id @default(cuid())
   botId           String
   strategyId      String?
   positionId      String?
   sessionId       String?
   symbol          String
   action          TradeAction
-  side            String      @default("LONG")
+  side            String           @default("LONG")
   quantity        Float
   price           Float
   notional        Float
   orderRole       OrderRole
   feeRate         Float
-  slippageBps     Float       @default(0)
-  fee             Float       @default(0)
-  grossPnl        Float       @default(0)
-  realizedPnl     Float       @default(0)
+  slippageBps     Float            @default(0)
+  fee             Float            @default(0)
+  grossPnl        Float            @default(0)
+  realizedPnl     Float            @default(0)
   reasonCode      String
   reasonText      String
   reasonMeta      Json
-  executedAt      DateTime    @default(now())
+  executedAt      DateTime         @default(now())
   externalOrderId String?
-  bot             Bot         @relation(fields: [botId], references: [id])
-  strategy        Strategy?   @relation(fields: [strategyId], references: [id])
-  position        Position?   @relation(fields: [positionId], references: [id])
+  bot             Bot              @relation(fields: [botId], references: [id])
+  strategy        Strategy?        @relation(fields: [strategyId], references: [id])
+  position        Position?        @relation(fields: [positionId], references: [id])
   session         StrategySession? @relation(fields: [sessionId], references: [id])
 
   @@index([botId, executedAt])
@@ -370,19 +371,19 @@ model Trade {
 }
 
 model Alert {
-  id         String      @id @default(cuid())
+  id         String           @id @default(cuid())
   botId      String
   strategyId String?
   sessionId  String?
   type       AlertType
-  status     AlertStatus @default(PENDING)
+  status     AlertStatus      @default(PENDING)
   title      String
   message    String
   payload    Json?
   sentAt     DateTime?
-  createdAt  DateTime    @default(now())
-  bot        Bot         @relation(fields: [botId], references: [id])
-  strategy   Strategy?   @relation(fields: [strategyId], references: [id])
+  createdAt  DateTime         @default(now())
+  bot        Bot              @relation(fields: [botId], references: [id])
+  strategy   Strategy?        @relation(fields: [strategyId], references: [id])
   session    StrategySession? @relation(fields: [sessionId], references: [id])
 }
 
@@ -418,32 +419,32 @@ model SystemLog {
 }
 
 model ResearchProfile {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  preferredSectors   Json
-  preferredTickers   Json
-  newsletterEnabled  Boolean  @default(true)
-  newsletterEmail    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id])
-  newsletters        NewsletterDigest[]
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  preferredSectors  Json
+  preferredTickers  Json
+  newsletterEnabled Boolean            @default(true)
+  newsletterEmail   String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id])
+  newsletters       NewsletterDigest[]
 }
 
 model ResearchNews {
-  id               String   @id @default(cuid())
-  title            String
-  summary          String
-  source           String?
-  sectorTag        String
-  tickerTags       Json
-  importanceScore  Float    @default(0)
-  analysis         String
-  recommendation   String
-  publishedAt      DateTime
-  metadata         Json?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String
+  summary         String
+  source          String?
+  sectorTag       String
+  tickerTags      Json
+  importanceScore Float    @default(0)
+  analysis        String
+  recommendation  String
+  publishedAt     DateTime
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([sectorTag, importanceScore])
   @@index([publishedAt])
@@ -469,51 +470,51 @@ model TickerInsight {
 }
 
 model NewsletterDigest {
-  id            String                 @id @default(cuid())
-  profileId     String?
-  cadence       String                 @default("daily")
-  status        NewsletterDigestStatus @default(GENERATED)
-  subject       String
-  previewText   String
-  payload       Json
-  htmlBody      String?
-  textBody      String?
-  generatedAt   DateTime               @default(now())
-  scheduledFor  DateTime?
-  sentAt        DateTime?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  profile       ResearchProfile?       @relation(fields: [profileId], references: [id])
+  id           String                 @id @default(cuid())
+  profileId    String?
+  cadence      String                 @default("daily")
+  status       NewsletterDigestStatus @default(GENERATED)
+  subject      String
+  previewText  String
+  payload      Json
+  htmlBody     String?
+  textBody     String?
+  generatedAt  DateTime               @default(now())
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  profile      ResearchProfile?       @relation(fields: [profileId], references: [id])
 
   @@index([generatedAt])
   @@index([status, scheduledFor])
 }
 
 model AgentMeetingThread {
-  id            String   @id @default(cuid())
-  userId        String?
-  topic         String
-  objective     String
-  nextAction    String
-  context       Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User?    @relation(fields: [userId], references: [id])
-  messages      AgentMeetingMessage[]
+  id         String                @id @default(cuid())
+  userId     String?
+  topic      String
+  objective  String
+  nextAction String
+  context    Json?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  user       User?                 @relation(fields: [userId], references: [id])
+  messages   AgentMeetingMessage[]
 
   @@index([userId, createdAt])
 }
 
 model AgentMeetingMessage {
-  id          String             @id @default(cuid())
-  threadId    String
-  role        String
-  author      String
-  content     String
-  references  Json?
-  position    Int
-  createdAt   DateTime           @default(now())
-  thread      AgentMeetingThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  id         String             @id @default(cuid())
+  threadId   String
+  role       String
+  author     String
+  content    String
+  references Json?
+  position   Int
+  createdAt  DateTime           @default(now())
+  thread     AgentMeetingThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@unique([threadId, position])
   @@index([threadId, createdAt])
@@ -523,10 +524,10 @@ model AgentMeetingMessage {
 
 // 타로 카드 메타데이터 (어드민이 관리)
 model TarotCard {
-  id               String         @id
+  id               String                 @id
   name             String
   nameKo           String
-  arcana           String         @default("major")
+  arcana           String                 @default("major")
   number           Int
   keywords         Json
   keywordsKo       Json
@@ -534,9 +535,9 @@ model TarotCard {
   meaningReversed  String
   imageUrl         String
   toneGuide        String
-  status           TarotCardStatus @default(ACTIVE)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  status           TarotCardStatus        @default(ACTIVE)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
   drawHistoryCards TarotDrawHistoryCard[]
   collections      TarotCardCollection[]
 }
@@ -545,9 +546,9 @@ model TarotCard {
 model TarotCreditLedger {
   id          String            @id @default(cuid())
   userId      String
-  amount      Int               // 양수: 충전, 음수: 차감
+  amount      Int // 양수: 충전, 음수: 차감
   reason      TarotCreditReason
-  referenceId String?           // 결제 ID, 광고 세션 ID 등
+  referenceId String? // 결제 ID, 광고 세션 ID 등
   createdAt   DateTime          @default(now())
   user        User              @relation(fields: [userId], references: [id])
 
@@ -556,23 +557,23 @@ model TarotCreditLedger {
 
 // 뽑기 기록
 model TarotDrawHistory {
-  id              String                   @id @default(cuid())
-  userId          String
-  ticker          String
-  market          TarotMarket
-  spread          TarotSpreadType
-  headline        String
-  summary         String
-  detail          String
-  source          TarotInterpretationSource
-  idempotencyKey  String                   @unique
-  creditCost      Int
-  cacheKey        String?
-  createdAt       DateTime                 @default(now())
-  user            User                     @relation(fields: [userId], references: [id])
-  cards           TarotDrawHistoryCard[]
-  feedbacks       TarotFeedback[]
-  reports         TarotReport[]
+  id             String                    @id @default(cuid())
+  userId         String
+  ticker         String
+  market         TarotMarket
+  spread         TarotSpreadType
+  headline       String
+  summary        String
+  detail         String
+  source         TarotInterpretationSource
+  idempotencyKey String                    @unique
+  creditCost     Int
+  cacheKey       String?
+  createdAt      DateTime                  @default(now())
+  user           User                      @relation(fields: [userId], references: [id])
+  cards          TarotDrawHistoryCard[]
+  feedbacks      TarotFeedback[]
+  reports        TarotReport[]
 
   @@index([userId, createdAt])
   @@index([ticker, createdAt])
@@ -583,9 +584,9 @@ model TarotDrawHistoryCard {
   id          String           @id @default(cuid())
   drawId      String
   cardId      String
-  orientation String           // "upright" | "reversed"
-  slot        String?          // "past" | "present" | "future" (3장 스프레드)
-  position    Int              // 순서
+  orientation String // "upright" | "reversed"
+  slot        String? // "past" | "present" | "future" (3장 스프레드)
+  position    Int // 순서
   draw        TarotDrawHistory @relation(fields: [drawId], references: [id], onDelete: Cascade)
   card        TarotCard        @relation(fields: [cardId], references: [id])
 
@@ -594,14 +595,14 @@ model TarotDrawHistoryCard {
 
 // 관심 종목/섹터 즐겨찾기
 model TarotFavorite {
-  id        String      @id @default(cuid())
-  userId    String
-  ticker    String
-  market    TarotMarket
-  label     String?     // 표시명 (예: "삼성전자")
-  alertEnabled Boolean  @default(false)
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id])
+  id           String      @id @default(cuid())
+  userId       String
+  ticker       String
+  market       TarotMarket
+  label        String? // 표시명 (예: "삼성전자")
+  alertEnabled Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  user         User        @relation(fields: [userId], references: [id])
 
   @@unique([userId, ticker])
   @@index([userId])
@@ -624,40 +625,40 @@ model TarotFeedback {
 
 // 부적절한 콘텐츠 신고
 model TarotReport {
-  id        String             @id @default(cuid())
+  id        String            @id @default(cuid())
   userId    String
   drawId    String
   reason    String
-  status    TarotReportStatus  @default(PENDING)
-  createdAt DateTime           @default(now())
-  user      User               @relation(fields: [userId], references: [id])
-  draw      TarotDrawHistory   @relation(fields: [drawId], references: [id])
+  status    TarotReportStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id])
+  draw      TarotDrawHistory  @relation(fields: [drawId], references: [id])
 
   @@index([status, createdAt])
 }
 
 // 프롬프트 버전 이력 (어드민 관리)
 model TarotPromptVersion {
-  id          String   @id @default(cuid())
-  version     String   @unique  // "1.0.0"
+  id          String    @id @default(cuid())
+  version     String    @unique // "1.0.0"
   content     String
-  isActive    Boolean  @default(false)
+  isActive    Boolean   @default(false)
   activatedAt DateTime?
   createdBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([isActive])
 }
 
 // 카드 컬렉션/도감 — 사용자가 수집한 카드 기록
 model TarotCardCollection {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
-  cardId       String   // TarotCard.id 참조
-  firstDrawnAt DateTime @default(now())
-  drawCount    Int      @default(1)
-  user         User     @relation(fields: [userId], references: [id])
+  cardId       String // TarotCard.id 참조
+  firstDrawnAt DateTime  @default(now())
+  drawCount    Int       @default(1)
+  user         User      @relation(fields: [userId], references: [id])
   card         TarotCard @relation(fields: [cardId], references: [id])
 
   @@unique([userId, cardId])
@@ -668,9 +669,9 @@ model TarotCardCollection {
 model TarotAnalyticsEvent {
   id              String   @id @default(cuid())
   userId          String
-  event           String   // e.g. "draw_start", "ad_earned", "iap_complete"
+  event           String // e.g. "draw_start", "ad_earned", "iap_complete"
   properties      Json     @default("{}")
-  clientTimestamp  DateTime
+  clientTimestamp DateTime
   createdAt       DateTime @default(now())
   user            User     @relation(fields: [userId], references: [id])
 

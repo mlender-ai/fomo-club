@@ -1,7 +1,16 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
 const sharedConfig = {
-  transpilePackages: ["@trading/shared", "@taro/core"]
+  transpilePackages: ["@trading/shared", "@taro/core"],
+  webpack(config) {
+    // ESM .js 확장자 → .ts 소스 resolve (tarot-core가 main: "src/index.ts" + .js imports 사용)
+    config.resolve.extensionAlias = {
+      ".js": [".ts", ".tsx", ".js", ".jsx"],
+      ".mjs": [".mts", ".mjs"],
+      ...config.resolve.extensionAlias,
+    };
+    return config;
+  },
 };
 
 export default function nextConfig(phase) {

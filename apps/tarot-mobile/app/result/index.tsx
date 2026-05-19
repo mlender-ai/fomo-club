@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   SafeAreaView, View, ScrollView, TouchableOpacity,
   StyleSheet, Animated, Alert,
@@ -12,6 +12,7 @@ import { useRewardedAd } from "../../lib/ads/useRewardedAd";
 import { useUserStore } from "../../lib/store";
 import { apiFetch } from "../../lib/api";
 import { trackEvent } from "../../lib/analytics";
+import { shareResult } from "../../lib/share";
 
 const DISCLAIMER = "본 해석은 오락 목적으로 제공되며 투자 조언이 아닙니다. 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.";
 
@@ -57,6 +58,7 @@ export default function ResultScreen() {
   const { status: adStatus, errorMessage, load: loadAd, show: showAd, resetStatus } = useRewardedAd();
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
 
   useEffect(() => {
     if (adStatus === "earned") {
@@ -109,6 +111,45 @@ export default function ResultScreen() {
         },
       ]
     );
+  };
+
+  const handleShare = async () => {
+    if (!result) return;
+    setShareLoading(true);
+    try {
+      const firstCard = result.cards[0];
+      const shared = await shareResult({
+        headline: firstCard.headline,
+        summary: firstCard.summary,
+        ticker: result.tickerName || result.ticker,
+      });
+      trackEvent("share_result", { drawId: result.id ?? "", ticker: result.ticker });
+
+      if (shared && isLoggedIn) {
+        try {
+          const res = await apiFetch<{ credits: number; rewarded: boolean; alreadyClaimed?: boolean }>(
+            "/api/tarot/share-reward",
+            {
+              method: "POST",
+              body: JSON.stringify({ idempotencyKey: `share-${result.id}-${new Date().toISOString().slice(0, 10)}` }),
+            },
+          );
+          trackEvent("share_reward", { rewarded: String(res.rewarded), drawId: result.id ?? "" });
+          if (res.rewarded) {
+            useUserStore.getState().setCredits(res.credits);
+            Alert.alert("공유 완료", "크레딧 1개 지급!");
+          } else if (res.alreadyClaimed) {
+            Alert.alert("공유 완료", "오늘 공유 보상은 이미 받았어요");
+          }
+        } catch {
+          // 보상 API 실패해도 공유 자체는 성공
+        }
+      }
+    } catch {
+      // 사용자가 공유를 취소한 경우 등 — 무시
+    } finally {
+      setShareLoading(false);
+    }
   };
 
   const handleDrawAgain = () => {
@@ -173,6 +214,21 @@ export default function ResultScreen() {
           <Text variant="caption" color={Colors.ironOutline} style={styles.disclaimerText}>
             ⚠ {DISCLAIMER}
           </Text>
+        </View>
+
+        {/* 공유하기 */}
+        <View style={styles.shareSection}>
+          <Button
+            variant="primary"
+            label={shareLoading ? "공유 중..." : "공유하기"}
+            loading={shareLoading}
+            onPress={handleShare}
+          />
+          {isLoggedIn && (
+            <Text variant="caption" color={Colors.ironOutline} style={styles.shareHint}>
+              공유하면 크레딧 1개를 받을 수 있어요 (1일 1회)
+            </Text>
+          )}
         </View>
 
         {/* 피드백 + 신고 */}
@@ -253,6 +309,8 @@ const styles = StyleSheet.create({
   detail:         { color: Colors.midGrayText, lineHeight: 22 },
   disclaimer:     { backgroundColor: Colors.steelSurface, borderRadius: 10, padding: Spacing.s16, marginBottom: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder },
   disclaimerText: { lineHeight: 18 },
+  shareSection:   { marginBottom: Spacing.s24, gap: 8 },
+  shareHint:      { textAlign: "center" },
   feedbackSection: { marginBottom: Spacing.s24, alignItems: "center", gap: 8 },
   feedbackTitle:  { textAlign: "center" },
   starRow:        { flexDirection: "row", gap: 8 },

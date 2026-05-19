@@ -40,16 +40,35 @@ else
   echo "[3] metro.config.js blockList: FAIL — blockList 없음"; ERRORS=$((ERRORS+1))
 fi
 
-# 4. app.json plugins 확인 (reanimated 없어야 함)
-if node -e "
-  const a = require('$APP_DIR/app.json');
-  const plugins = a.expo.plugins || [];
-  const bad = plugins.filter(p => typeof p === 'string' && p.includes('reanimated'));
-  if (bad.length > 0) { process.exit(1); }
-" 2>/dev/null; then
-  echo "[4] app.json plugins: OK"
+# 4. app config plugins 확인 (reanimated 없어야 함)
+# app.config.ts (dynamic) 또는 app.json (static) 모두 지원
+if [ -f "$APP_DIR/app.config.ts" ] || [ -f "$APP_DIR/app.config.js" ]; then
+  # dynamic config — npx expo config로 최종 결과 확인
+  RESOLVED=$(cd "$APP_DIR" && npx expo config --json 2>/dev/null || echo '{}')
+  if echo "$RESOLVED" | node -e "
+    const input = require('fs').readFileSync(0, 'utf8');
+    const cfg = JSON.parse(input);
+    const plugins = cfg.plugins || [];
+    const bad = plugins.filter(p => typeof p === 'string' && p.includes('reanimated'));
+    if (bad.length > 0) { process.exit(1); }
+  " 2>/dev/null; then
+    echo "[4] app.config plugins: OK"
+  else
+    echo "[4] app.config plugins: FAIL — reanimated plugin 감지"; ERRORS=$((ERRORS+1))
+  fi
+elif [ -f "$APP_DIR/app.json" ]; then
+  if node -e "
+    const a = require('$APP_DIR/app.json');
+    const plugins = (a.expo || a).plugins || [];
+    const bad = plugins.filter(p => typeof p === 'string' && p.includes('reanimated'));
+    if (bad.length > 0) { process.exit(1); }
+  " 2>/dev/null; then
+    echo "[4] app.json plugins: OK"
+  else
+    echo "[4] app.json plugins: FAIL — reanimated plugin 감지"; ERRORS=$((ERRORS+1))
+  fi
 else
-  echo "[4] app.json plugins: FAIL — reanimated plugin 감지"; ERRORS=$((ERRORS+1))
+  echo "[4] FAIL — app.json 또는 app.config.ts 없음"; ERRORS=$((ERRORS+1))
 fi
 
 # 5. 네이티브 전용 모듈 직접 import 감지 (Expo Go 크래시 원인)
