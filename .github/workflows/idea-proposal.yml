@@ -525,11 +525,82 @@ jobs:
             --label "idea,agent-council,prompt"
 
   # ═══════════════════════════════════════════════════
+  # Researcher Agent — 글로벌 시장 리서치 & 트렌드 인사이트
+  # ═══════════════════════════════════════════════════
+
+  researcher:
+    needs: [marketer]
+    if: >-
+      always() &&
+      (github.event.inputs.agent == 'all' ||
+       github.event.inputs.agent == 'researcher' ||
+       github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    outputs:
+      proposal: ${{ steps.result.outputs.response }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "[Researcher] 글로벌 타로·주식 앱 트렌드 리서치"
+        id: result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source .github/scripts/ai-inference.sh
+          source .github/scripts/load-context.sh
+
+          RESEARCHER_PERSONA=$(cat .github/agents/RESEARCHER_PERSONA.md)
+
+          SYSTEM="${RESEARCHER_PERSONA}
+
+          ${AGENT_CONTEXT}
+
+          당신은 글로벌 앱스토어 시장 전문 리서처입니다.
+          타로·운세 앱, 주식·증권 앱, 게이미피케이션 패턴을 국내외 가리지 않고 탐색하고,
+          Trading Taro가 즉시 벤치마킹할 수 있는 인사이트를 제공합니다.
+          단순 트렌드 나열이 아니라 '우리 제품에 이렇게 쓴다'는 구체적 제안이 핵심입니다."
+
+          PROMPT="오늘의 시장 리서치 인사이트를 제안하세요.
+          지식 컷오프 내에서 알고 있는 앱·트렌드·UX 패턴을 기반으로 작성하세요.
+
+          ## 🔍 Researcher 리서치 리포트
+          ## 대상 OKR (O1/O2/O3/O4 중 택 1)
+
+          ## 1. 타로·운세 앱 벤치마크
+          관찰한 앱(국내/해외), 핵심 UX 패턴, 우리 제품 적용 가능성 (🟢/🟡/🔴)
+
+          ## 2. 주식·증권 앱 심리 UX 사례
+          투자자 감정을 건드리는 UX 패턴 사례, 성공/실패 포함, 우리에게 안전한 적용 방법
+
+          ## 3. 게이미피케이션 트렌드
+          금융·운세 앱에서 효과적인 게이미피케이션 패턴, 규제 리스크 있는 패턴은 ⚠️ 표시
+
+          ## 4. 바이럴·공유 메커니즘
+          실제로 바이럴된 공유 UX 케이스, 우리 공유 기능에 즉시 적용 가능한 것
+
+          ## 5. 이번 주 최우선 적용 제안 (1개)
+          가장 임팩트 높고 구현 빠른 것 단 1개, 적용 난이도와 기대 효과 명시"
+
+          RESULT=$(ai_inference "$SYSTEM" "$PROMPT")
+          { echo "response<<__EOF__"; echo "$RESULT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
+      - name: Create Issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.result.outputs.response }}
+        run: |
+          printenv BODY > /tmp/body.md
+          gh issue create \
+            --title "[Researcher] $(TZ=Asia/Seoul date '+%Y-%m-%d') 글로벌 타로·주식 앱 트렌드 리서치" \
+            --body-file /tmp/body.md \
+            --label "idea,agent-council,research"
+
+  # ═══════════════════════════════════════════════════
   # Content Agent — 타로 콘텐츠 바이럴 & UX 전략
   # ═══════════════════════════════════════════════════
 
   content:
-    needs: [prompt_engineer]
+    needs: [prompt_engineer, researcher]
     if: >-
       always() &&
       (github.event.inputs.agent == 'all' ||
@@ -545,6 +616,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ github.token }}
+          RESEARCH_OUT: ${{ needs.researcher.outputs.proposal }}
         run: |
           source .github/scripts/ai-inference.sh
           source .github/scripts/load-context.sh
@@ -559,9 +631,13 @@ jobs:
 
           ${AGENT_CONTEXT}
 
-          이 역할은 O2(핵심 사용자 경험)와 O3(바이럴·공유를 통한 수익화)에 직결됩니다."
+          이 역할은 O2(핵심 사용자 경험)와 O3(바이럴·공유를 통한 수익화)에 직결됩니다.
+
+          === 오늘 Researcher 에이전트의 시장 리서치 ===
+          ${RESEARCH_OUT:-(리서치 결과 없음)}"
 
           PROMPT="오늘의 타로 카드 콘텐츠 및 UX 개선 제안을 작성하세요.
+          위 리서치 인사이트를 반드시 참고하고, 어떤 벤치마크를 반영했는지 명시하세요.
 
           ## 🎴 Content Agent 제안
           ## 대상 OKR (O1/O2/O3/O4 중 택 1)
@@ -591,7 +667,7 @@ jobs:
   # ═══════════════════════════════════════════════════
 
   ceo_brief:
-    needs: [pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer, content]
+    needs: [pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer, researcher, content]
     if: >-
       always() &&
       (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
@@ -614,6 +690,7 @@ jobs:
           MKT_OUT: ${{ needs.marketer.outputs.proposal }}
           SEC_OUT: ${{ needs.security.outputs.proposal }}
           PE_OUT: ${{ needs.prompt_engineer.outputs.proposal }}
+          RS_OUT: ${{ needs.researcher.outputs.proposal }}
           CT_OUT: ${{ needs.content.outputs.proposal }}
         run: |
           source .github/scripts/ai-inference.sh
@@ -633,7 +710,7 @@ jobs:
 
           # 에이전트 출력 조합
           {
-            echo "아래 10개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요."
+            echo "아래 11개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요."
             echo "단순 요약이 아니라 당신의 판단과 지시가 담겨야 합니다."
             echo "각 제안이 OKR에 부합하는지 검증하고, 부합하지 않는 제안은 왜 그런지 설명하세요."
             echo ""
@@ -655,6 +732,8 @@ jobs:
             echo "**Security:** ${SEC_OUT:-(Security 에이전트 미응답)}"
             echo "---"
             echo "**Prompt Engineer:** ${PE_OUT:-(Prompt Engineer 에이전트 미응답)}"
+            echo "---"
+            echo "**Researcher:** ${RS_OUT:-(Researcher 에이전트 미응답)}"
             echo "---"
             echo "**Content:** ${CT_OUT:-(Content 에이전트 미응답)}"
             echo "---"
@@ -688,7 +767,7 @@ jobs:
           | 에이전트 | 대상 OKR | 제안 핵심 | CEO 판정 | 사유 |
           |---------|---------|----------|---------|------|
           | PM | O? | ... | ✅/⏸️/❌ | ... |
-          | (10개 모두) | | | | |
+          | (11개 모두) | | | | |
 
           ### 📅 내일 체크포인트
           FORMAT
@@ -784,12 +863,13 @@ jobs:
             [marketer]="agent-council,marketing"
             [security]="agent-council,security"
             [prompt_engineer]="agent-council,prompt"
+            [researcher]="agent-council,research"
             [content]="agent-council,content"
           )
 
           > /tmp/killed_issues.env
 
-          for agent in pm frontend backend designer qa cto marketer security prompt_engineer content; do
+          for agent in pm frontend backend designer qa cto marketer security prompt_engineer researcher content; do
             verdict=$(echo "$VERDICTS" | jq -r ".${agent}.verdict // \"deferred\"")
             reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"판정 미확인\"")
 
@@ -849,6 +929,7 @@ jobs:
             [marketer]="그로스 마케터"
             [security]="보안 담당자"
             [prompt_engineer]="프롬프트 엔지니어"
+            [researcher]="시장 리서처"
             [content]="콘텐츠 전략가"
           )
 
@@ -899,7 +980,7 @@ jobs:
             echo "### ${TODAY}"
             echo "| 에이전트 | 판정 | 사유 |"
             echo "|---------|------|------|"
-            for agent in pm frontend backend designer qa cto marketer security prompt_engineer content; do
+            for agent in pm frontend backend designer qa cto marketer security prompt_engineer researcher content; do
               verdict=$(echo "$VERDICTS" | jq -r ".${agent}.verdict // \"unknown\"")
               reason=$(echo "$VERDICTS" | jq -r ".${agent}.reason // \"-\"" | tr -d '\n' | head -c 80)
               icon="❓"
