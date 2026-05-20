@@ -116,6 +116,7 @@ enum TarotCreditReason {
   DRAW_SINGLE
   DRAW_THREE
   REFUND
+  STREAK_REWARD
 }
 
 enum TarotDisclaimerVersion {
@@ -155,6 +156,9 @@ model User {
   pushToken          String?
   disclaimerVersion  TarotDisclaimerVersion?
   disclaimerAgreedAt DateTime?
+  // 연속 로그인 스트릭
+  streakCount        Int                     @default(0)
+  streakLastDate     DateTime?
   // 관계
   bots               Bot[]
   researchProfile    ResearchProfile?
