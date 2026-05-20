@@ -12,14 +12,30 @@ import { apiFetch } from "../../lib/api";
 import { localSearch } from "../../lib/localEngine";
 
 
-const POPULAR: { ticker: string; label: string; market: string }[] = [
-  { ticker: "AAPL", label: "Apple Inc.", market: "US" },
-  { ticker: "NVDA", label: "NVIDIA", market: "US" },
-  { ticker: "TSLA", label: "Tesla", market: "US" },
-  { ticker: "MSFT", label: "Microsoft", market: "US" },
-  { ticker: "005930.KS", label: "삼성전자", market: "KR" },
-  { ticker: "000660.KS", label: "SK하이닉스", market: "KR" },
+const POPULAR: { ticker: string; label: string; market: string; flag: string }[] = [
+  { ticker: "AAPL",       label: "Apple Inc.",  market: "US", flag: "🇺🇸" },
+  { ticker: "NVDA",       label: "NVIDIA",      market: "US", flag: "🇺🇸" },
+  { ticker: "TSLA",       label: "Tesla",       market: "US", flag: "🇺🇸" },
+  { ticker: "MSFT",       label: "Microsoft",   market: "US", flag: "🇺🇸" },
+  { ticker: "005930.KS",  label: "삼성전자",    market: "KR", flag: "🇰🇷" },
+  { ticker: "000660.KS",  label: "SK하이닉스",  market: "KR", flag: "🇰🇷" },
 ];
+
+// 날짜 기반 고정 인사이트 (서버 없어도 항상 표시)
+const DAILY_INSIGHTS = [
+  { card: "✦", message: "불확실성은 기회의 다른 이름입니다" },
+  { card: "◈", message: "시장은 흔들려도, 방향은 잃지 마세요" },
+  { card: "⬡", message: "패턴을 읽는 자가 흐름을 만듭니다" },
+  { card: "◇", message: "두려움과 탐욕, 그 사이 어딘가에 진실이 있습니다" },
+  { card: "✸", message: "작은 신호가 큰 전환의 시작입니다" },
+  { card: "⟐", message: "시간이 시장의 가장 강한 편입니다" },
+  { card: "✦", message: "오늘도 시장은 이야기하고 있습니다" },
+];
+
+function getDailyInsight() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  return DAILY_INSIGHTS[dayOfYear % DAILY_INSIGHTS.length]!;
+}
 
 interface SearchResult {
   ticker: string;
@@ -32,6 +48,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { credits, isLoggedIn } = useUserStore();
   const { recentSearches, setTicker, addRecentSearch } = useDrawStore();
+  const dailyInsight = getDailyInsight();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -107,6 +124,20 @@ export default function HomeScreen() {
             AI가 분석한 시장 데이터를 타로 카드 해석으로 만나보세요
           </Text>
         </View>
+
+        {/* 오늘의 타로 인사이트 */}
+        <TouchableOpacity style={styles.insightCard} onPress={() => router.push("/(tabs)/draw")} activeOpacity={0.8}>
+          <View style={styles.insightIcon}>
+            <Text style={styles.insightSymbol}>{dailyInsight.card}</Text>
+          </View>
+          <View style={styles.insightText}>
+            <Text variant="caption" color={Colors.taroEssence} style={styles.insightLabel}>오늘의 타로 인사이트</Text>
+            <Text variant="body-sm" color={Colors.silverHighlight} style={styles.insightMessage}>
+              {dailyInsight.message}
+            </Text>
+          </View>
+          <Text variant="caption" color={Colors.ironOutline}>→</Text>
+        </TouchableOpacity>
 
         {/* 검색 */}
         <View style={styles.searchWrap}>
@@ -189,7 +220,10 @@ export default function HomeScreen() {
                 style={styles.chip}
                 onPress={() => handleSelect(p.ticker, p.label)}
               >
-                <Text variant="caption" color={Colors.silverHighlight}>{p.label}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text style={{ fontSize: 11 }}>{p.flag}</Text>
+                  <Text variant="caption" color={Colors.silverHighlight}>{p.label}</Text>
+                </View>
                 <Text variant="caption" color={Colors.ironOutline} style={{ fontSize: 10 }}>
                   {p.ticker}
                 </Text>
@@ -200,17 +234,27 @@ export default function HomeScreen() {
 
         {/* 사용 안내 */}
         <View style={styles.guide}>
+          <Text variant="caption" color={Colors.midGrayText} style={{ letterSpacing: 0.5, marginBottom: 4 }}>처음이신가요?</Text>
           <View style={styles.guideRow}>
             <Text style={styles.guideStep}>1</Text>
-            <Text variant="body-sm">종목을 검색하세요</Text>
+            <View style={{ flex: 1 }}>
+              <Text variant="body-sm" color={Colors.silverHighlight}>종목 검색</Text>
+              <Text variant="caption" color={Colors.midGrayText}>AAPL, 삼성전자 등 원하는 종목을 입력하세요</Text>
+            </View>
           </View>
           <View style={styles.guideRow}>
             <Text style={styles.guideStep}>2</Text>
-            <Text variant="body-sm">카드 수를 선택하세요 (1장 / 3장)</Text>
+            <View style={{ flex: 1 }}>
+              <Text variant="body-sm" color={Colors.silverHighlight}>카드 선택</Text>
+              <Text variant="caption" color={Colors.midGrayText}>1장(핵심 흐름) 또는 3장(과거·현재·미래)</Text>
+            </View>
           </View>
           <View style={styles.guideRow}>
             <Text style={styles.guideStep}>3</Text>
-            <Text variant="body-sm">AI 타로 해석을 확인하세요</Text>
+            <View style={{ flex: 1 }}>
+              <Text variant="body-sm" color={Colors.silverHighlight}>AI 타로 해석 확인</Text>
+              <Text variant="caption" color={Colors.midGrayText}>실시간 시장 데이터 기반 타로 리딩을 받으세요</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -240,7 +284,13 @@ const styles = StyleSheet.create({
   sectionLabel: { marginBottom: Spacing.s8, letterSpacing: 0.5 },
   chipRow:      { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip:         { backgroundColor: Colors.graphiteBase, borderWidth: 1, borderColor: Colors.carbonBorder, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 6, gap: 2 },
-  guide:        { backgroundColor: Colors.graphiteBase, borderRadius: 16, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, gap: 12 },
-  guideRow:     { flexDirection: "row", alignItems: "center", gap: 12 },
-  guideStep:    { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.arcaneCta, textAlign: "center", lineHeight: 24, fontSize: 12, color: Colors.whiteout, fontWeight: "700" },
+  guide:        { backgroundColor: Colors.graphiteBase, borderRadius: 16, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, gap: 14 },
+  guideRow:     { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  guideStep:    { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.arcaneCta, textAlign: "center", lineHeight: 24, fontSize: 12, color: Colors.whiteout, fontWeight: "700", marginTop: 2 },
+  insightCard:  { flexDirection: "row", alignItems: "center", backgroundColor: Colors.voidGreen, borderRadius: 14, padding: 16, marginBottom: Spacing.s24, borderWidth: 1, borderColor: Colors.deepInsight, gap: 12 },
+  insightIcon:  { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.arcaneCta, alignItems: "center", justifyContent: "center" },
+  insightSymbol:{ fontSize: 18, color: Colors.taroEssence },
+  insightText:  { flex: 1, gap: 2 },
+  insightLabel: { letterSpacing: 0.5, fontWeight: "700" },
+  insightMessage: { lineHeight: 20 },
 });
