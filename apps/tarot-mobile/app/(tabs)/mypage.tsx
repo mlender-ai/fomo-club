@@ -1,15 +1,12 @@
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { SafeAreaView, ScrollView, View, TouchableOpacity, StyleSheet, Alert, Linking } from "react-native";
 import { useRouter } from "expo-router";
-import * as ExpoDigest from "expo-crypto";
 import { Text } from "../../components/ui/Text";
 import { Colors, Spacing } from "../../constants/theme";
 import { useUserStore } from "../../lib/store";
 import { useDrawStore } from "../../lib/drawStore";
 import { useCollectionStore } from "../../lib/collectionStore";
 import { useRewardedAd } from "../../lib/ads/useRewardedAd";
-import { apiFetch } from "../../lib/api";
-import { trackEvent } from "../../lib/tracking";
 
 const PRIVACY_URL = "https://tarostock.app/privacy";
 const TERMS_URL = "https://tarostock.app/terms";
@@ -34,7 +31,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function MyPageScreen() {
   const router = useRouter();
-  const { credits, isLoggedIn, userId, logout, setCredits } = useUserStore();
+  const { credits, isLoggedIn, userId, logout } = useUserStore();
   const { recentSearches, reset: resetDraw } = useDrawStore();
   const { stats, fetchCollection } = useCollectionStore();
 
@@ -42,29 +39,16 @@ export default function MyPageScreen() {
     if (isLoggedIn) fetchCollection();
   }, [isLoggedIn, fetchCollection]);
 
-  const handleRewardEarned = useCallback(async () => {
-    if (!isLoggedIn) return;
-    try {
-      const key = await ExpoDigest.digestStringAsync(
-        ExpoDigest.CryptoDigestAlgorithm.SHA256,
-        `reward-${userId ?? ""}-${Date.now()}`
-      );
-      const data = await apiFetch<{ credits: number }>("/api/tarot/credits/reward", {
-        method: "POST",
-        body: JSON.stringify({ idempotencyKey: key }),
-      });
-      setCredits(data.credits);
-      trackEvent("ad_rewarded");
-      Alert.alert("크레딧 지급!", "+1 크레딧이 추가됐습니다");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "";
-      if (msg.includes("REWARD_COOLDOWN")) {
-        Alert.alert("잠시 후 다시", "30분 뒤에 다시 시청할 수 있습니다");
-      }
-    }
-  }, [isLoggedIn, userId, setCredits]);
+  const { status: adStatus, load: loadAd, show: showAd, resetStatus } = useRewardedAd();
 
-  const { status: adStatus, load: loadAd, show: showAd } = useRewardedAd(handleRewardEarned);
+  // 리워드 획득 시 알림 (useRewardedAd가 내부에서 크레딧 API 처리)
+  useEffect(() => {
+    if (adStatus === "earned") {
+      Alert.alert("크레딧 지급!", "+1 크레딧이 추가됐습니다");
+      const t = setTimeout(resetStatus, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [adStatus, resetStatus]);
 
   const handleWatchAd = () => {
     if (!isLoggedIn) {

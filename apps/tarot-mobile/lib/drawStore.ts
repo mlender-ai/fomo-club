@@ -11,6 +11,7 @@ export interface DrawnCard {
   headline: string;
   summary: string;
   detail: string;
+  slot?: string | null;
 }
 
 export interface DrawResult {

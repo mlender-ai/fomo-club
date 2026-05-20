@@ -130,6 +130,7 @@ export default function DrawScreen() {
             headline: i === 0 ? api.interpretation.headline : c.nameKo,
             summary: api.interpretation.summary,
             detail: api.interpretation.detail,
+            slot: c.slot ?? null,
           })),
         };
       } else {
