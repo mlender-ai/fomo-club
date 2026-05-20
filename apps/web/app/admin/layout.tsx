@@ -50,6 +50,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               분석
             </a>
           </li>
+          <li>
+            <a href="/admin/logos" className="admin-nav-link">
+              <span className="admin-nav-icon">🖼️</span>
+              티커 로고
+            </a>
+          </li>
         </ul>
         <div className="admin-sidebar-footer">
           <LogoutButton />

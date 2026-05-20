@@ -7,6 +7,7 @@ import { initTracking } from "../lib/tracking";
 import { useUserStore } from "../lib/store";
 import { registerForPushNotificationsAsync } from "../lib/notifications";
 import { useFavoritesStore } from "../lib/favoritesStore";
+import { useTickerLogos } from "../hooks/useTickerLogos";
 
 // expo-router가 자동으로 숨기는 걸 막고 splash에서 직접 제어
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -33,6 +34,8 @@ async function initPushToken() {
 }
 
 export default function RootLayout() {
+  useTickerLogos();
+
   useEffect(() => {
     void SplashScreen.hideAsync();
     initTracking(API_BASE, () => useUserStore.getState().token);

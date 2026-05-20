@@ -313,3 +313,60 @@ body {
   padding: 40px 0;
   font-size: var(--text-body-sm);
 }
+
+/* ─── Logos / Input / Button ─────────────────────── */
+.admin-input {
+  background: var(--color-graphite-base);
+  border: 1px solid var(--color-carbon-border);
+  border-radius: 6px;
+  color: var(--color-whiteout);
+  font-size: var(--text-body-sm);
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-input:focus {
+  border-color: var(--color-indigo-accent, #6366f1);
+}
+
+.admin-btn {
+  background: var(--color-graphite-base);
+  border: 1px solid var(--color-carbon-border);
+  border-radius: 6px;
+  color: var(--color-whiteout);
+  font-size: var(--text-body-sm);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.admin-btn:hover:not(:disabled) {
+  background: var(--color-graphite-hover, #2a2a3a);
+}
+
+.admin-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-btn-primary {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.admin-btn-danger {
+  background: transparent;
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.1);
+}

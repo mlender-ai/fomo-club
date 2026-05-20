@@ -1,7 +1,7 @@
-// Clearbit Logo API (PNG, no API key required for basic usage)
-// https://logo.clearbit.com/{domain}?size={size}
+// Ticker logo URL resolution
+// Priority: custom override (from API) → Clearbit → Google Favicons → null
 
-const TICKER_DOMAIN_MAP: Record<string, string> = {
+export const TICKER_DOMAIN_MAP: Record<string, string> = {
   // US — Large Cap
   AAPL:  "apple.com",
   NVDA:  "nvidia.com",
@@ -57,9 +57,9 @@ const TICKER_DOMAIN_MAP: Record<string, string> = {
   "051910.KS": "lgchem.com",
   "006400.KS": "samsungsdi.com",
   "207940.KS": "samsungbiologics.com",
-  "066570.KS": "lge.com",
+  "066570.KS": "lg.com",
   "003550.KS": "lgcorp.com",
-  "012330.KS": "hyundaimobis.com",
+  "012330.KS": "mobis.co.kr",
   "005380.KS": "hyundai.com",
   "000270.KS": "kia.com",
   "028260.KS": "samsungsds.com",
@@ -67,16 +67,47 @@ const TICKER_DOMAIN_MAP: Record<string, string> = {
   "017670.KS": "sktelecom.com",
   "030200.KS": "kt.com",
   "032830.KS": "samsunglife.com",
-  "086790.KS": "hana.com",
-  "105560.KS": "kb.com",
+  "086790.KS": "hanabank.com",
+  "105560.KS": "kbfg.com",
   // KR — 코스닥
-  "035760.KQ": "cj.com",
+  "035760.KQ": "cjenm.com",
 };
 
+// Custom overrides fetched from API (managed via admin)
+let _customOverrides: Record<string, string> = {};
+
+export function setTickerLogoOverrides(overrides: Record<string, string>) {
+  _customOverrides = overrides;
+}
+
+export function getTickerLogoOverride(ticker: string): string | null {
+  return _customOverrides[ticker] ?? _customOverrides[ticker.toUpperCase()] ?? null;
+}
+
+/** Returns ordered list of URLs to try (custom override first, then auto sources) */
+export function getTickerLogoUrls(ticker: string, size = 48): string[] {
+  const override = getTickerLogoOverride(ticker);
+  if (override) return [override];
+
+  const domain =
+    TICKER_DOMAIN_MAP[ticker] ??
+    TICKER_DOMAIN_MAP[ticker.toUpperCase()] ??
+    null;
+
+  if (!domain) return [];
+
+  return [
+    // Primary: Clearbit (high quality, sometimes rate-limited)
+    `https://logo.clearbit.com/${domain}?size=${size}`,
+    // Secondary: Google S2 Favicons (reliable, lower quality)
+    `https://www.google.com/s2/favicons?sz=${Math.min(size, 128)}&domain=${domain}`,
+  ];
+}
+
+/** Legacy single-URL helper — returns first candidate */
 export function getTickerLogoUrl(ticker: string, size = 48): string | null {
-  const domain = TICKER_DOMAIN_MAP[ticker.toUpperCase()] ?? TICKER_DOMAIN_MAP[ticker];
-  if (!domain) return null;
-  return `https://logo.clearbit.com/${domain}?size=${size}`;
+  const urls = getTickerLogoUrls(ticker, size);
+  return urls[0] ?? null;
 }
 
 // Deterministic color from ticker string for fallback avatar

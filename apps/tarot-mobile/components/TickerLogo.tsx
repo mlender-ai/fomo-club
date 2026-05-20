@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Image, View, Text, StyleSheet } from "react-native";
-import { getTickerLogoUrl, getTickerColor } from "../lib/tickerLogo";
+import { getTickerLogoUrls, getTickerColor } from "../lib/tickerLogo";
 
 interface Props {
   ticker: string;
@@ -8,37 +8,49 @@ interface Props {
 }
 
 export function TickerLogo({ ticker, size = 32 }: Props) {
-  const [failed, setFailed] = useState(false);
-  const url = getTickerLogoUrl(ticker, size * 2); // 2x for retina
+  const urls = getTickerLogoUrls(ticker, size * 2); // 2x for retina
+  const [urlIndex, setUrlIndex] = useState(0);
   const radius = size * 0.25;
 
-  if (!url || failed) {
-    return (
-      <View
-        style={[
-          styles.fallback,
-          {
-            width: size,
-            height: size,
-            borderRadius: radius,
-            backgroundColor: getTickerColor(ticker),
-          },
-        ]}
-      >
-        <Text style={[styles.initial, { fontSize: size * 0.4 }]}>
-          {ticker.replace(/\.\w+$/, "").slice(0, 2).toUpperCase()}
-        </Text>
-      </View>
-    );
+  const currentUrl = urls[urlIndex] ?? null;
+
+  if (!currentUrl) {
+    return <Fallback ticker={ticker} size={size} radius={radius} />;
   }
 
   return (
     <Image
-      source={{ uri: url }}
+      source={{ uri: currentUrl }}
       style={{ width: size, height: size, borderRadius: radius }}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (urlIndex + 1 < urls.length) {
+          setUrlIndex((i) => i + 1);
+        } else {
+          setUrlIndex(urls.length); // triggers fallback on next render
+        }
+      }}
       resizeMode="contain"
     />
+  );
+}
+
+function Fallback({ ticker, size, radius }: { ticker: string; size: number; radius: number }) {
+  return (
+    <View
+      style={[
+        styles.fallback,
+        {
+          width: size,
+          height: size,
+          borderRadius: radius,
+          backgroundColor: getTickerColor(ticker),
+        },
+      ]}
+    >
+      <Text style={[styles.initial, { fontSize: size * 0.38 }]}>
+        {ticker.replace(/\.\w+$/, "").slice(0, 2).toUpperCase()}
+      </Text>
+    </View>
   );
 }
 
