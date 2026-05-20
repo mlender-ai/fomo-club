@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/tarot/prisma";
 import { issueToken, AUTH_COOKIE_NAME, cookieOptions, ACCESS_EXPIRY_MS } from "@/lib/tarot/jwt";
 import { grantSignupBonus, getCreditBalance } from "@/lib/tarot/credits";
+import { processLoginStreak } from "@/lib/tarot/streak";
 import {
   verifyAppleIdentityToken,
   verifyGoogleIdToken,
@@ -104,6 +105,7 @@ export async function POST(req: NextRequest) {
     await grantSignupBonus(user.id);
   }
 
+  const streak = await processLoginStreak(user.id);
   const credits = await getCreditBalance(user.id);
   const token = issueToken(user.id);
 
@@ -115,6 +117,8 @@ export async function POST(req: NextRequest) {
       membershipStatus: user.membershipStatus,
       credits,
       isNew,
+      streakCount: streak.streakCount,
+      streakRewardGiven: streak.rewardGiven,
     },
   });
 
