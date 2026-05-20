@@ -6,7 +6,6 @@ import {
 import { useRouter } from "expo-router";
 import * as ExpoDigest from "expo-crypto";
 import { Text } from "../../components/ui/Text";
-import { Button } from "../../components/ui/Button";
 import { Colors, Spacing, Radius } from "../../constants/theme";
 import { useDrawStore, type SpreadType } from "../../lib/drawStore";
 import { useUserStore } from "../../lib/store";
@@ -16,9 +15,10 @@ import { AdBanner } from "../../components/AdBanner";
 import { trackEvent } from "../../lib/analytics";
 import { useStoreReview } from "../../lib/useStoreReview";
 import { TickerLogo } from "../../components/TickerLogo";
+import { CardSpread } from "../../components/CardSpread";
 
 const SPREAD_OPTIONS: { type: SpreadType; label: string; desc: string; cost: number }[] = [
-  { type: "single",     label: "1장",  desc: "핵심 흐름",    cost: 1 },
+  { type: "single",     label: "1장",  desc: "핵심 흐름",     cost: 1 },
   { type: "three-card", label: "3장",  desc: "과거·현재·미래", cost: 3 },
 ];
 
@@ -63,10 +63,9 @@ export default function DrawScreen() {
   const router = useRouter();
   const { spread, ticker, tickerName, isDrawing, setSpread, setDrawing, setResult } = useDrawStore();
   const { credits, setCredits, isLoggedIn } = useUserStore();
-  const [phase, setPhase] = useState<"select" | "flipping" | "done">("select");
+  const [phase, setPhase] = useState<"select" | "selecting" | "flipping" | "done">("select");
   const [loadingLabel, setLoadingLabel] = useState("해석 중...");
 
-  // 로딩 단계 메시지 순환 — 사용자 체감 대기 시간 단축
   useEffect(() => {
     if (phase !== "flipping") return;
     const steps = ["시장 분석 중...", "카드 배치 중...", "타로 해석 중...", "결과 생성 중..."];
@@ -85,17 +84,14 @@ export default function DrawScreen() {
   const handleDraw = async () => {
     if (isDrawing) return;
     setDrawing(true);
-    setPhase("flipping");
     trackEvent("draw_start", { spread, ticker: ticker || "AAPL", market });
 
-    // 멱등성 키 생성 (같은 뽑기가 중복 요청되어도 1회만 처리)
     const idempotencyKey = await ExpoDigest.digestStringAsync(
       ExpoDigest.CryptoDigestAlgorithm.SHA256,
       `draw-${ticker || "AAPL"}-${spread}-${Date.now()}`
     );
 
     try {
-      // 애니메이션 + API 호출 병렬 (1.2초 최소 대기)
       const [, apiResult] = await Promise.allSettled([
         new Promise((r) => setTimeout(r, 1200)),
         apiFetch<ApiDrawResponse>("/api/tarot/draw", {
@@ -112,7 +108,6 @@ export default function DrawScreen() {
       let drawResult;
 
       if (apiResult.status === "fulfilled") {
-        // ✅ 서버 응답 성공
         const api = apiResult.value;
         setCredits(api.creditsRemaining);
         drawResult = {
@@ -135,9 +130,7 @@ export default function DrawScreen() {
           })),
         };
       } else {
-        // ⚡ 서버 없음 → 로컬 엔진 폴백 (자동, 사용자에게 안 보임)
         drawResult = localDraw(ticker || "AAPL", tickerName || "AAPL", spread);
-        // 로컬 기록에 저장
         void saveLocalDraw(drawResult, market);
       }
 
@@ -147,7 +140,6 @@ export default function DrawScreen() {
       onDrawComplete();
       setTimeout(() => router.push("/result"), 400);
     } catch {
-      // 로컬 엔진도 실패하는 극단적 케이스
       trackEvent("draw_error", { spread, ticker: ticker || "AAPL" });
       const fallback = localDraw(ticker || "AAPL", tickerName || "AAPL", spread);
       void saveLocalDraw(fallback, market);
@@ -159,6 +151,14 @@ export default function DrawScreen() {
     }
   };
 
+  const handleBackPress = () => {
+    if (phase === "selecting") {
+      setPhase("select");
+      return;
+    }
+    router.back();
+  };
+
   const cardCount = spread === "single" ? 1 : 3;
 
   return (
@@ -166,7 +166,7 @@ export default function DrawScreen() {
       <View style={styles.inner}>
         {/* 헤더 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backBtn}>
             <Text variant="body-sm" color={Colors.midGrayText}>← 뒤로</Text>
           </TouchableOpacity>
           <View style={styles.creditBadge}>
@@ -178,7 +178,7 @@ export default function DrawScreen() {
 
         {/* 종목 */}
         <View style={styles.tickerRow}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={styles.tickerInner}>
             {ticker && <TickerLogo ticker={ticker} size={36} />}
             <View>
               <Text variant="subheading" color={Colors.whiteout}>
@@ -193,75 +193,86 @@ export default function DrawScreen() {
           </View>
         </View>
 
-        {/* 스프레드 선택 */}
-        <View style={styles.spreadRow}>
-          {SPREAD_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.type}
-              style={[styles.spreadOpt, spread === opt.type && styles.spreadOptActive]}
-              onPress={() => setSpread(opt.type)}
-              disabled={phase !== "select"}
-            >
-              <Text variant="heading" color={spread === opt.type ? Colors.taroEssence : Colors.midGrayText}>
-                {opt.label}
-              </Text>
-              <Text variant="caption" color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}>
-                {opt.desc}
-              </Text>
-              <Text variant="caption" color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}>
-                {opt.cost} 크레딧
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* SELECT — 스프레드 선택이 CTA */}
+        {phase === "select" && (
+          <>
+            <View style={styles.spreadRow}>
+              {SPREAD_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.type}
+                  style={[styles.spreadOpt, spread === opt.type && styles.spreadOptActive]}
+                  onPress={() => {
+                    setSpread(opt.type);
+                    setPhase("selecting");
+                  }}
+                >
+                  <Text variant="heading" color={spread === opt.type ? Colors.taroEssence : Colors.midGrayText}>
+                    {opt.label}
+                  </Text>
+                  <Text variant="caption" color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}>
+                    {opt.desc}
+                  </Text>
+                  <Text variant="caption" color={spread === opt.type ? Colors.taroEssence : Colors.ironOutline}>
+                    {opt.cost} 크레딧
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.cardsArea}>
+              <Text variant="body-sm" style={styles.hint}>스프레드를 선택하면 카드가 펼쳐집니다</Text>
+            </View>
+            <AdBanner />
+          </>
+        )}
 
-        {/* 카드 영역 */}
-        <View style={styles.cardsArea}>
-          <View style={styles.cardsRow}>
-            {Array.from({ length: cardCount }).map((_, i) => (
-              <CardBack key={i} flipped={phase === "flipping" || phase === "done"} delay={i * 200} />
-            ))}
-          </View>
-          {phase === "flipping" && (
-            <ActivityIndicator color={Colors.taroEssence} style={{ marginTop: 16 }} />
-          )}
-          {phase === "select" && (
-            <Text variant="body-sm" style={styles.hint}>카드를 집중하여 바라보세요</Text>
-          )}
-        </View>
-
-        {/* CTA */}
-        <View style={styles.ctaArea}>
-          <Button
-            variant="primary"
-            label={phase === "select" ? `카드 뽑기 (${selectedOption.cost} 크레딧)` : loadingLabel}
-            loading={isDrawing}
-            disabled={phase !== "select"}
-            onPress={handleDraw}
+        {/* SELECTING — 인터랙티브 카드 선택 */}
+        {phase === "selecting" && (
+          <CardSpread
+            spreadType={spread}
+            onComplete={() => {
+              setPhase("flipping");
+              handleDraw();
+            }}
           />
-        </View>
+        )}
 
-        {/* 배너 광고 */}
-        <AdBanner />
+        {/* FLIPPING — API 호출 중 */}
+        {phase === "flipping" && (
+          <>
+            <View style={styles.cardsArea}>
+              <View style={styles.cardsRow}>
+                {Array.from({ length: cardCount }).map((_, i) => (
+                  <CardBack key={i} flipped delay={i * 200} />
+                ))}
+              </View>
+              <ActivityIndicator color={Colors.taroEssence} style={{ marginTop: 20 }} />
+              <Text variant="body-sm" color={Colors.taroEssence} style={styles.loadingText}>
+                {loadingLabel}
+              </Text>
+            </View>
+            <AdBanner />
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: Colors.ebonyCanvas },
-  inner:          { flex: 1, paddingHorizontal: Spacing.s24, paddingTop: Spacing.s16 },
-  header:         { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: Spacing.s24 },
-  backBtn:        { padding: 4 },
-  creditBadge:    { borderWidth: 1, borderColor: Colors.deepInsight, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
-  tickerRow:      { marginBottom: Spacing.s24, gap: 4 },
-  spreadRow:      { flexDirection: "row", gap: 12, marginBottom: Spacing.s32 },
-  spreadOpt:      { flex: 1, alignItems: "center", paddingVertical: Spacing.s16, backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, borderWidth: 1, borderColor: Colors.carbonBorder, gap: 4 },
-  spreadOptActive:{ borderColor: Colors.taroEssence, backgroundColor: Colors.voidGreen },
-  cardsArea:      { flex: 1, alignItems: "center", justifyContent: "center" },
-  cardsRow:       { flexDirection: "row", gap: 12 },
-  card:           { width: 80, height: 128, backgroundColor: Colors.graphiteBase, borderRadius: 10, borderWidth: 1, borderColor: Colors.taroEssence, alignItems: "center", justifyContent: "center" },
-  cardSymbol:     { fontSize: 28, color: Colors.taroEssence },
-  hint:           { marginTop: 16, color: Colors.ironOutline, textAlign: "center" },
-  ctaArea:        { paddingBottom: Spacing.s32, gap: 12 },
+  container:       { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  inner:           { flex: 1, paddingHorizontal: Spacing.s24, paddingTop: Spacing.s16 },
+  header:          { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: Spacing.s24 },
+  backBtn:         { padding: 4 },
+  creditBadge:     { borderWidth: 1, borderColor: Colors.deepInsight, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
+  tickerRow:       { marginBottom: Spacing.s24 },
+  tickerInner:     { flexDirection: "row", alignItems: "center", gap: 10 },
+  spreadRow:       { flexDirection: "row", gap: 12, marginBottom: Spacing.s32 },
+  spreadOpt:       { flex: 1, alignItems: "center", paddingVertical: Spacing.s16, backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, borderWidth: 1, borderColor: Colors.carbonBorder, gap: 4 },
+  spreadOptActive: { borderColor: Colors.taroEssence, backgroundColor: Colors.voidGreen },
+  cardsArea:       { flex: 1, alignItems: "center", justifyContent: "center" },
+  cardsRow:        { flexDirection: "row", gap: 12 },
+  card:            { width: 80, height: 128, backgroundColor: Colors.graphiteBase, borderRadius: 10, borderWidth: 1, borderColor: Colors.taroEssence, alignItems: "center", justifyContent: "center" },
+  cardSymbol:      { fontSize: 28, color: Colors.taroEssence },
+  hint:            { color: Colors.ironOutline, textAlign: "center" },
+  loadingText:     { marginTop: 12, textAlign: "center", letterSpacing: 0.3 },
 });
