@@ -12,7 +12,7 @@ on:
 
 concurrency:
   group: agent-council
-  cancel-in-progress: true
+  cancel-in-progress: false  # 이미 완료된 이슈 생성 보호
 
 permissions:
   contents: read
@@ -28,17 +28,47 @@ permissions:
 
 jobs:
 
-  # ── 0. Prepare — 최근 피드백 로그 수집 (모든 에이전트 공유) ────
+  # ── 0. Prepare — 공통 컨텍스트 + 피드백 수집 (모든 에이전트 공유) ──
   prepare:
     runs-on: ubuntu-latest
     outputs:
       feedback: ${{ steps.fetch.outputs.feedback }}
+      merged_prs: ${{ steps.fetch.outputs.merged_prs }}
+      open_issues: ${{ steps.fetch.outputs.open_issues }}
+      today: ${{ steps.fetch.outputs.today }}
     steps:
-      - name: Fetch Recent Feedback Logs
+      - name: Fetch Context and Feedback
         id: fetch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+          # 최근 머지된 PR 15개 (에이전트가 이미 구현된 것 재제안 방지)
+          MERGED=$(gh pr list --state merged --limit 15 \
+            --json title,number \
+            --repo "${{ github.repository }}" | \
+            jq -r '.[] | "- #\(.number) \(.title)"' 2>/dev/null || echo "없음")
+
+          echo "merged_prs<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$MERGED" >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
+
+          # 현재 열린 에이전트 제안 이슈 제목 목록 (중복 방지)
+          OPEN=$(gh issue list \
+            --label "agent-council" \
+            --state open \
+            --limit 30 \
+            --json title \
+            --repo "${{ github.repository }}" | \
+            jq -r '.[].title' 2>/dev/null || echo "없음")
+
+          echo "open_issues<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$OPEN" >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
+
+          # 이전 사이클 피드백 로그 (자기 개선 컨텍스트)
           FEEDBACK=$(gh issue list \
             --repo "${{ github.repository }}" \
             --label "feedback-log" \
@@ -64,7 +94,20 @@ jobs:
       proposal: ${{ steps.proposal.outputs.response }}
     steps:
       - uses: actions/checkout@v4
+      - name: Rate limit stagger
+        run: sleep 15
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[PM\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[PM] 제품 방향 및 기능 우선순위 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -74,15 +117,24 @@ jobs:
             사용자 페르소나: MZ세대 개인 투자자, 타로에 관심 있는 주식 입문자.
             KPI: DAU, 크레딧 소비량, 앱스토어 평점, D7/D30 리텐션.
             당신의 시각: 사용자 문제 → 측정 가능한 임팩트 순으로 사고한다.
+
+            🔴 현재 최우선 지시사항: 타로앱 UX 몰입감 완성. 제안은 이 방향에 기여하거나
+            명확한 근거가 있는 것만. 사주팔자, 카카오톡 공유, 어드민 UI는 제안 금지.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             아래 피드백을 읽고, 사용자가 good으로 평가한 방향으로 제안하고 bad로 평가한 유형은 피하세요.
 
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
-            오늘의 제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
+            위 컨텍스트를 참고하여, 아직 구현되지 않았고 중복되지 않는
+            제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
 
             ## 🎯 PM 제안
 
@@ -101,13 +153,15 @@ jobs:
             ## 난이도 및 예상 소요
             (S=1일 / M=1주 / L=2주+)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[PM] $(date '+%Y-%m-%d') 제품 개선 제안" \
+            --title "[PM] $TODAY 제품 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,pm" \
             --repo "${{ github.repository }}"
@@ -122,8 +176,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 15
+        run: sleep 30
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[Frontend\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[Frontend] 모바일 UX / 성능 / 컴포넌트 개선 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -131,14 +196,22 @@ jobs:
           system-prompt: |
             당신은 타로 증권 앱의 프런트엔드 개발자입니다.
             스택: React Native + Expo SDK 54, expo-router, zustand, StyleSheet.
-            현재 화면: 홈(종목 검색), 카드 뽑기, 결과, 히스토리/분석, 마이페이지, 즐겨찾기, 컬렉션.
+            현재 화면: 홈(종목 검색), 카드 뽑기(7장 부채꼴 선택 UI 구현됨), 결과, 히스토리/분석, 마이페이지.
             당신의 시각: 컴포넌트 재사용성, 번들 크기, 60fps 애니메이션, 접근성.
+
+            🔴 현재 최우선: 타로앱 UX 몰입감 강화. 애니메이션, 인터랙션, 감성 연결에 집중.
+            Expo Go 제약: react-native-reanimated 사용 불가 (Animated API만 허용).
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             모바일 프런트엔드 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 📱 Frontend 제안
@@ -158,13 +231,15 @@ jobs:
             ## 구현 복잡도
             (S/M/L + 이유)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[Frontend] $(date '+%Y-%m-%d') 모바일 UX 개선 제안" \
+            --title "[Frontend] $TODAY 모바일 UX 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,frontend,mobile" \
             --repo "${{ github.repository }}"
@@ -179,8 +254,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 30
+        run: sleep 45
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[Backend\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[Backend] API / DB / 인프라 개선 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -189,19 +275,25 @@ jobs:
             당신은 타로 증권 앱의 백엔드 개발자입니다.
             스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM, Railway/Supabase 배포.
             핵심 API: /api/tarot/draw, /api/tarot/analytics, /api/tarot/credits, /api/admin/*.
-            당신의 시각: API 성능, DB 쿼리 최적화, 캐싱, 확장성, 데이터 정합성.
+            이미 구현됨: API 응답 캐싱(market 5분/interpret 4-tier), JWT HttpOnly 쿠키(7일), IAP 서버 검증(RevenueCat), HMAC nonce 광고 검증, 7일 스트릭 보상.
+            당신의 시각: API 성능, DB 쿼리 최적화, 확장성, 데이터 정합성.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             백엔드/인프라 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## ⚙️ Backend 제안
 
             ## 현재 문제
-            (성능 병목, 쿼리 비효율, 캐싱 부재, 확장성 리스크 등)
+            (성능 병목, 쿼리 비효율, 확장성 리스크 등)
 
             ## 개선 방안
             (API 설계, DB 인덱스, 캐싱 전략, 인프라 변경 등)
@@ -215,13 +307,15 @@ jobs:
             ## 마이그레이션 위험도
             (없음 / 낮음 / 중간 / 높음)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[Backend] $(date '+%Y-%m-%d') API/인프라 개선 제안" \
+            --title "[Backend] $TODAY API/인프라 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,backend" \
             --repo "${{ github.repository }}"
@@ -236,8 +330,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 45
+        run: sleep 60
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[Designer\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[Designer] UX/UI/비주얼 디자인 개선 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -245,14 +350,21 @@ jobs:
           system-prompt: |
             당신은 타로 증권 앱의 UI/UX 디자이너입니다.
             현재 디자인 시스템: 다크 테마(#121212), 타로 에센스 컬러(#3ecf8e), 그래핏 베이스(#242424).
-            현재 화면: 스플래시, 온보딩, 로그인, 홈, 카드 뽑기, 결과, 히스토리, 마이페이지.
+            현재 화면: 스플래시, 온보딩, 로그인, 홈, 카드 뽑기(7장 부채꼴 선택 구현됨), 결과, 히스토리, 마이페이지.
             당신의 시각: 감성적 몰입감, 시각적 계층구조, 마이크로인터랙션, 접근성, 일관된 디자인 언어.
+
+            🔴 최우선: 타로 의식(ritual) 느낌의 몰입감 극대화. 애니메이션/인터랙션 아이디어 우선.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             UX/UI 디자인 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 🎨 Designer 제안
@@ -272,13 +384,15 @@ jobs:
             ## 구현 복잡도
             (디자이너 관점: 낮음/중간/높음 + 개발자 관점)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[Designer] $(date '+%Y-%m-%d') UX/UI 개선 제안" \
+            --title "[Designer] $TODAY UX/UI 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,design" \
             --repo "${{ github.repository }}"
@@ -293,22 +407,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 60
+        run: sleep 75
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[QA\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[QA] 품질 개선 / 테스트 커버리지 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 QA 엔지니어입니다.
-            현재 테스트: packages/tarot-core vitest 31개 (forbidden/draw/cache). E2E 없음.
-            당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트 시나리오.
+            현재 테스트: packages/tarot-core vitest 31개 (forbidden/draw/cache), IAP 자동화 7개.
+            E2E 없음. 당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             품질 보증 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 🧪 QA 제안
@@ -330,13 +460,15 @@ jobs:
             ## 구현 방법
             (vitest / Detox E2E / Playwright / 수동 QA)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[QA] $(date '+%Y-%m-%d') 품질 개선 제안" \
+            --title "[QA] $TODAY 품질 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,qa" \
             --repo "${{ github.repository }}"
@@ -351,22 +483,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 75
+        run: sleep 90
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[CTO\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[CTO] 기술 부채 / 아키텍처 개선 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 CTO입니다.
-            알려진 기술 부채: AdMob 프로덕션 ID 미입력, 트래킹 console.log 수준, 서버 사이드 검증 미비.
-            당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리, 기술 선택의 미래 호환성.
+            해결된 기술 부채 (재제안 금지): JWT HttpOnly 쿠키(완료), 서버사이드 검증(완료), API 캐싱(완료), IAP 서버검증(완료), HMAC nonce(완료).
+            미해결 기술 부채: AdMob 프로덕션 ID 미입력, console.log 수준 트래킹, E2E 테스트 부재, Prisma 마이그레이션 미배포(streak).
+            당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             기술 부채 또는 아키텍처 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 🏗️ CTO 제안
@@ -386,13 +535,15 @@ jobs:
             ## 예상 ROI
             (투자 대비 효과 — 개발 속도, 비용, 안정성)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[CTO] $(date '+%Y-%m-%d') 기술 부채 개선 제안" \
+            --title "[CTO] $TODAY 기술 부채 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,cto,tech-debt" \
             --repo "${{ github.repository }}"
@@ -407,23 +558,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 90
+        run: sleep 105
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[Marketer\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[Marketer] 성장 / 바이럴 / 리텐션 개선 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 그로스 마케터입니다.
-            채널: App Store(앱스토어 ASO), 소셜(인스타/틱톡), 바이럴 루프.
-            현재 수익화: 크레딧 IAP(유료) + AdMob 리워드 광고(무료).
+            채널: App Store(ASO), 소셜(인스타/틱톡), 바이럴 루프.
+            현재 수익화: 크레딧 IAP(유료) + AdMob 리워드 광고(무료) + 공유 보상(1일 1크레딧).
+            이미 구현됨: 공유 보상, 7일 스트릭 보상, 앱스토어 리뷰 요청.
             당신의 시각: 신규 유입, 바이럴 계수(K-factor), 크레딧 소비 증대, D7/D30 리텐션.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             성장/마케팅 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 📣 Marketer 제안
@@ -443,13 +611,15 @@ jobs:
             ## 비용/리소스
             (개발 工數, 마케팅 예산 필요 여부)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[Marketer] $(date '+%Y-%m-%d') 성장 전략 제안" \
+            --title "[Marketer] $TODAY 성장 전략 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,marketing" \
             --repo "${{ github.repository }}"
@@ -464,8 +634,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 105
+        run: sleep 120
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[Security\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[Security] 보안/컴플라이언스 점검 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -473,13 +654,19 @@ jobs:
           system-prompt: |
             당신은 타로 증권 앱의 보안 및 규정 준수 담당자입니다.
             앱: 금융 AI 해석 서비스. Apple/Google 로그인, IAP, 크레딧 시스템, 시장 데이터 포함.
-            주요 위험: JWT 관리, IAP 영수증 서버 검증, 개인정보 처리, 금융광고 규제(자본시장법).
+            이미 해결됨: JWT HttpOnly 쿠키(7일 만료), IAP 서버 검증(RevenueCat), HMAC nonce 광고 검증, HTTPS 강제 적용.
+            아직 미검토: 데이터 보관 정책, GDPR/개인정보보호법 준수, 앱 바이너리 난독화, 딥링크 취약점.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             현재 앱에서 점검하거나 강화해야 할 보안/컴플라이언스 항목 1개를 제안하세요.
 
             ## 🔒 Security 제안
@@ -499,13 +686,15 @@ jobs:
             ## 관련 규제/기준
             (OWASP, 자본시장법, Apple/Google 정책 등)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[Security] $(date '+%Y-%m-%d') 보안 점검 제안" \
+            --title "[Security] $TODAY 보안 점검 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,security" \
             --repo "${{ github.repository }}"
@@ -520,8 +709,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 120
+        run: sleep 135
+      - name: Check duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | test(\"\\\\[Prompt Engineer\\\\] $TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[Prompt Engineer] AI 해석 품질 개선 제안"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -532,11 +732,16 @@ jobs:
             구조: 3단 폴백(LLM→캐시→프리빌트). 출력: {headline, summary, detail}.
             금칙어: 매수/매도/수익보장 등 금융 권유 표현 차단.
           prompt: |
+            ## 이미 구현된 기능 (재제안 금지)
+            ${{ needs.prepare.outputs.merged_prs }}
+
+            ## 이미 열린 제안 이슈 (중복 금지)
+            ${{ needs.prepare.outputs.open_issues }}
+
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-
             현재 타로 카드 해석 프롬프트를 개선하거나 새 기능을 추가할 아이디어를 제안하세요.
 
             ## ✨ Prompt Engineer 제안
@@ -557,13 +762,15 @@ jobs:
             ## 토큰 비용 영향
             (증가 / 감소 / 동일)
       - name: Create Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "[Prompt Engineer] $(date '+%Y-%m-%d') AI 해석 품질 개선 제안" \
+            --title "[Prompt Engineer] $TODAY AI 해석 품질 개선 제안" \
             --body-file /tmp/body.md \
             --label "idea,agent-council,prompt" \
             --repo "${{ github.repository }}"
@@ -575,7 +782,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check CEO Brief duplicate
+        id: dedup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          COUNT=$(gh issue list --label "ceo-brief" --state open --limit 5 \
+            --json title --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | contains(\"$TODAY\"))] | length")
+          echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: "[CEO] 에이전트 브리핑 종합 + 아이디어 교차 검증"
+        if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: brief
         with:
@@ -592,7 +810,7 @@ jobs:
             - "이게 몰입감을 높이는가?"가 모든 우선순위 판단의 첫 번째 기준이다.
             - UX 몰입감 관련 항목(애니메이션, 카드 인터랙션, 의식感, 결과 화면 경험)은 절대 킬리스트에 넣지 않는다.
             - 카카오톡 공유, 사주팔자, 어드민 UI는 이 지시가 해제될 때까지 킬리스트 대상이다.
-            - 이 지시는 사용자가 직접 "됐다"고 해제하기 전까지 유효하다. 어떤 OKR이나 보안 이슈보다 우선한다.
+            - 이 지시는 사용자가 직접 "됐다"고 해제하기 전까지 유효하다.
           prompt: |
             아래 9개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요.
 
@@ -634,8 +852,6 @@ jobs:
 
             ---
 
-            ---
-
             ## 📚 이전 사이클 사용자 피드백 (우선순위 판단 개선 컨텍스트)
             아래 피드백을 반드시 반영하여 브리핑을 작성하세요.
             사용자가 good으로 평가한 방향의 항목을 실행 지시로 선택하고,
@@ -655,7 +871,7 @@ jobs:
             ---
 
             ### ✅ 이번 주 실행 지시 (최대 2개)
-            (피드백 이력에서 good 평가를 받은 방향 우선)
+            (피드백 이력에서 good 평가를 받은 방향 우선. UX 몰입감 기준 최우선.)
 
             #### 1️⃣ **[항목명]**
             - **담당 에이전트**:
@@ -693,13 +909,15 @@ jobs:
             ### 📅 내일 체크포인트
             (오늘 실행 지시의 진행 상황 확인 항목)
       - name: Create CEO Brief Issue
+        if: steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.brief.outputs.response }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$BODY" > /tmp/body.md
           gh issue create \
-            --title "📋 [CEO Brief] $(date '+%Y-%m-%d') 일일 에이전트 브리핑" \
+            --title "📋 [CEO Brief] $TODAY 일일 에이전트 브리핑" \
             --body-file /tmp/body.md \
             --label "ceo-brief,agent-council,daily" \
             --repo "${{ github.repository }}"
