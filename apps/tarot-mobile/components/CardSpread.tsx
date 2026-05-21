@@ -73,9 +73,9 @@ export function CardSpread({ spreadType, onComplete }: CardSpreadProps) {
 
   // --- new micro-interaction refs ---
 
-  // shimmer sweep per card — starts at different phases so cards shimmer at offset times
+  // shimmer sweep per card — setTimeout stagger keeps cards permanently out of phase
   const shimmerAnims = useRef(
-    Array.from({ length: CARD_COUNT }, (_, i) => new Animated.Value(i / CARD_COUNT))
+    Array.from({ length: CARD_COUNT }, () => new Animated.Value(0))
   ).current;
 
   // press scale — springs on tap
@@ -119,20 +119,26 @@ export function CardSpread({ spreadType, onComplete }: CardSpreadProps) {
     Animated.stagger(70, animations).start(() => setSpreadPhase("picking"));
   }, []);
 
-  // shimmer sweep — loops across all card backs
+  // shimmer sweep — each card starts its loop with a staggered delay to stay out of phase
   useEffect(() => {
-    const loops = shimmerAnims.map((anim) => {
-      return Animated.loop(
-        Animated.timing(anim, {
-          toValue: anim.__getValue() > 0.5 ? 0 : 1,
-          duration: 2200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        })
-      );
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    shimmerAnims.forEach((anim, i) => {
+      const t = setTimeout(() => {
+        Animated.loop(
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          })
+        ).start();
+      }, i * 300);
+      timers.push(t);
     });
-    loops.forEach((l) => l.start());
-    return () => loops.forEach((l) => l.stop());
+    return () => {
+      timers.forEach(clearTimeout);
+      shimmerAnims.forEach((anim) => anim.stopAnimation());
+    };
   }, []);
 
   // crossfade instruction text when it changes
