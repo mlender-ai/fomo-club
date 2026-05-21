@@ -45,8 +45,8 @@ jobs:
           TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
           echo "today=$TODAY" >> "$GITHUB_OUTPUT"
 
-          # 최근 머지된 PR 15개 (에이전트가 이미 구현된 것 재제안 방지)
-          MERGED=$(gh pr list --state merged --limit 15 \
+          # 최근 머지된 PR 30개 (에이전트가 이미 구현된 것 재제안 방지)
+          MERGED=$(gh pr list --state merged --limit 30 \
             --json title,number \
             --repo "${{ github.repository }}" | \
             jq -r '.[] | "- #\(.number) \(.title)"' 2>/dev/null || echo "없음")
@@ -55,14 +55,14 @@ jobs:
           echo "$MERGED" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
-          # 현재 열린 에이전트 제안 이슈 제목 목록 (중복 방지)
+          # 현재 열린 에이전트 제안 이슈 — 제목 + 본문 첫 150자 (내용 유사도 파악용)
           OPEN=$(gh issue list \
             --label "agent-council" \
             --state open \
-            --limit 30 \
-            --json title \
+            --limit 50 \
+            --json title,body \
             --repo "${{ github.repository }}" | \
-            jq -r '.[].title' 2>/dev/null || echo "없음")
+            jq -r '.[] | "제목: \(.title)\n요약: \(.body | .[0:150] | gsub("\n";" "))\n---"' 2>/dev/null || echo "없음")
 
           echo "open_issues<<__EOF__" >> "$GITHUB_OUTPUT"
           echo "$OPEN" >> "$GITHUB_OUTPUT"
@@ -124,7 +124,7 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
@@ -135,6 +135,7 @@ jobs:
             ---
             위 컨텍스트를 참고하여, 아직 구현되지 않았고 중복되지 않는
             제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
+            ⚠️ 이미 열린 이슈의 제목뿐 아니라 요약 내용이 유사한 아이디어도 금지합니다.
 
             ## 🎯 PM 제안
 
@@ -205,13 +206,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             모바일 프런트엔드 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 📱 Frontend 제안
@@ -281,13 +283,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             백엔드/인프라 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## ⚙️ Backend 제안
@@ -358,13 +361,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             UX/UI 디자인 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 🎨 Designer 제안
@@ -432,13 +436,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             품질 보증 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 🧪 QA 제안
@@ -509,13 +514,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             기술 부채 또는 아키텍처 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 🏗️ CTO 제안
@@ -585,13 +591,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             성장/마케팅 관점에서 개선할 아이디어 1개를 제안하세요.
 
             ## 📣 Marketer 제안
@@ -660,7 +667,7 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
@@ -735,13 +742,14 @@ jobs:
             ## 이미 구현된 기능 (재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 (중복 금지)
+            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
             ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
             현재 타로 카드 해석 프롬프트를 개선하거나 새 기능을 추가할 아이디어를 제안하세요.
 
             ## ✨ Prompt Engineer 제안
