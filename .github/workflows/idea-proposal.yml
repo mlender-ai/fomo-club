@@ -12,7 +12,7 @@ on:
 
 concurrency:
   group: agent-council
-  cancel-in-progress: false  # 이미 완료된 이슈 생성 보호
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -20,72 +20,99 @@ permissions:
   models: read
 
 # ─────────────────────────────────────────────────────────────
-# 공통 컨텍스트 (모든 에이전트 공유)
-# 앱: 주식 시장 지표를 AI가 분석 → 타로 카드 형식으로 해석 제공 (네이티브 앱)
-# 스택: React Native + Expo SDK 54, Next.js 14, PostgreSQL + Prisma, Claude/OpenAI AI
-# 현재: 카드 뽑기(1장/3장), Apple/Google 로그인, 크레딧(IAP+광고), 히스토리/분석, 즐겨찾기, 어드민
+# v3 (2026-05-22) — 산발성 제거, 구조화, 자기 학습
+#   - AGENT_NORTH_STAR.md 도입: 모든 에이전트 단일 진실
+#   - 각 에이전트별 자기 라벨 history 주입 (자기 반복 금지)
+#   - 닫힌 이슈 컨텍스트 추가 (거부 패턴 학습)
+#   - 통일된 제안 템플릿: 가설/근거(파일경로 필수)/액션/측정 지표/North Star 정렬
+#   - 약한 어휘 금지 규칙 prompt 강제
+#   - CEO Brief: 어제 채택 진척 추적 + North Star 정렬도 평가 + 반복 주제 디플래그
 # ─────────────────────────────────────────────────────────────
 
 jobs:
 
-  # ── 0. Prepare — 공통 컨텍스트 + 피드백 수집 (모든 에이전트 공유) ──
   prepare:
     runs-on: ubuntu-latest
     outputs:
       feedback: ${{ steps.fetch.outputs.feedback }}
       merged_prs: ${{ steps.fetch.outputs.merged_prs }}
       open_issues: ${{ steps.fetch.outputs.open_issues }}
+      closed_issues: ${{ steps.fetch.outputs.closed_issues }}
+      north_star: ${{ steps.fetch.outputs.north_star }}
+      yesterday_brief: ${{ steps.fetch.outputs.yesterday_brief }}
       today: ${{ steps.fetch.outputs.today }}
     steps:
-      - name: Fetch Context and Feedback
+      - uses: actions/checkout@v4
+
+      - name: Fetch Context, Feedback, North Star
         id: fetch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          YESTERDAY=$(TZ=Asia/Seoul date -d 'yesterday' '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Seoul date -v-1d '+%Y-%m-%d')
           echo "today=$TODAY" >> "$GITHUB_OUTPUT"
 
-          # 최근 머지된 PR 30개 (에이전트가 이미 구현된 것 재제안 방지)
-          MERGED=$(gh pr list --state merged --limit 30 \
-            --json title,number \
-            --repo "${{ github.repository }}" | \
-            jq -r '.[] | "- #\(.number) \(.title)"' 2>/dev/null || echo "없음")
+          # North Star — 모든 에이전트 단일 진실
+          if [ -f AGENT_NORTH_STAR.md ]; then
+            NS=$(cat AGENT_NORTH_STAR.md)
+          else
+            NS="⚠️ AGENT_NORTH_STAR.md 파일이 없습니다. 사용자에게 알리고 일반 제안만 수행하세요."
+          fi
+          echo "north_star<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$NS" >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
 
+          # 어제 CEO Brief — 채택 항목 진척 추적용
+          YB=$(gh issue list --label "ceo-brief" --state all --limit 5 \
+            --json title,body \
+            --repo "${{ github.repository }}" | \
+            jq -r ".[] | select(.title | contains(\"$YESTERDAY\")) | .body" 2>/dev/null | head -c 2000)
+          if [ -z "$YB" ]; then
+            YB="어제 CEO Brief 없음 — 진척 추적 불가, 새 사이클로 시작."
+          fi
+          echo "yesterday_brief<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$YB" >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
+
+          # 머지된 PR 30개
+          MERGED=$(gh pr list --state merged --limit 30 \
+            --json title,number --repo "${{ github.repository }}" | \
+            jq -r '.[] | "- #\(.number) \(.title)"' 2>/dev/null || echo "없음")
           echo "merged_prs<<__EOF__" >> "$GITHUB_OUTPUT"
           echo "$MERGED" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
-          # 현재 열린 에이전트 제안 이슈 — 제목 + 본문 첫 150자 (내용 유사도 파악용)
-          OPEN=$(gh issue list \
-            --label "agent-council" \
-            --state open \
-            --limit 50 \
-            --json title,body \
-            --repo "${{ github.repository }}" | \
-            jq -r '.[] | "제목: \(.title)\n요약: \(.body | .[0:150] | gsub("\n";" "))\n---"' 2>/dev/null || echo "없음")
-
+          # 열린 제안 이슈 (제목 + 본문 첫 200자)
+          OPEN=$(gh issue list --label "agent-council" --state open --limit 50 \
+            --json title,body --repo "${{ github.repository }}" | \
+            jq -r '.[] | "제목: \(.title)\n요약: \(.body | .[0:200] | gsub("\n";" "))\n---"' 2>/dev/null || echo "없음")
           echo "open_issues<<__EOF__" >> "$GITHUB_OUTPUT"
           echo "$OPEN" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
-          # 이전 사이클 피드백 로그 (자기 개선 컨텍스트)
-          FEEDBACK=$(gh issue list \
-            --repo "${{ github.repository }}" \
-            --label "feedback-log" \
-            --state all \
-            --limit 7 \
-            --json title,body \
+          # 닫힌 이슈 최근 20개 (거부/완료 패턴 학습)
+          CLOSED=$(gh issue list --label "agent-council" --state closed --limit 20 \
+            --json title,closedAt --repo "${{ github.repository }}" | \
+            jq -r '.[] | "- [\(.closedAt | .[0:10])] \(.title)"' 2>/dev/null || echo "없음")
+          echo "closed_issues<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$CLOSED" >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
+
+          # 피드백 로그
+          FEEDBACK=$(gh issue list --repo "${{ github.repository }}" \
+            --label "feedback-log" --state all --limit 7 --json title,body \
             | jq -r '.[] | "---\n## " + .title + "\n" + .body' 2>/dev/null || true)
-
           if [ -z "$FEEDBACK" ]; then
-            FEEDBACK="피드백 이력 없음 — 첫 번째 사이클입니다. 기본 판단으로 제안하세요."
+            FEEDBACK="피드백 이력 없음 — 첫 번째 사이클입니다."
           fi
-
           echo "feedback<<__EOF__" >> "$GITHUB_OUTPUT"
           echo "$FEEDBACK" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
-  # ── 1. PM — 제품 전략 / 사용자 니즈 ──────────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 1. PM
+  # ─────────────────────────────────────────────────────────────
   pm:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'pm' || github.event_name == 'schedule' }}
@@ -96,8 +123,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 15
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -106,8 +133,15 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[PM\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[PM] 제품 방향 및 기능 우선순위 제안"
-        if: steps.dedup.outputs.exists == 'false'
+
+          HIST=$(gh issue list --label "pm" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[PM] 제품 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -116,45 +150,61 @@ jobs:
             당신은 타로 증권 앱의 Product Manager입니다.
             사용자 페르소나: MZ세대 개인 투자자, 타로에 관심 있는 주식 입문자.
             KPI: DAU, 크레딧 소비량, 앱스토어 평점, D7/D30 리텐션.
-            당신의 시각: 사용자 문제 → 측정 가능한 임팩트 순으로 사고한다.
 
-            🔴 현재 최우선 지시사항: 타로앱 UX 몰입감 완성. 제안은 이 방향에 기여하거나
-            명확한 근거가 있는 것만. 사주팔자, 카카오톡 공유, 어드민 UI는 제안 금지.
+            === 절대 규칙 ===
+            1. 이번 주 North Star 테마 밖의 제안 금지. North Star가 곧 우선순위다.
+            2. 금지 어휘: "가능성", "우려됩니다", "수도", "보입니다", "할 것 같습니다". 단정형 + 근거만 사용.
+            3. 모든 "현재 문제"는 파일경로/메트릭/사용자 피드백 인용 중 1개 이상 포함. 추측 금지.
+            4. 제안은 1주 내 단일 PR로 완료 가능한 범위. 추상 표현 금지.
+            5. 자기 직전 이력에서 다룬 영역과 같은 주제 금지.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star (이번 주 단일 진실)
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 PM 에이전트 자기 직전 5개 제안 (같은 영역 재제안 금지)
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR (이미 구현됨 — 재제안 금지)
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 현재 열린 다른 에이전트 제안 (중복 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
-            아래 피드백을 읽고, 사용자가 good으로 평가한 방향으로 제안하고 bad로 평가한 유형은 피하세요.
+            ## 🗂️ 최근 닫힌 이슈 (거부됨 또는 완료됨 — 같은 주제 금지)
+            ${{ needs.prepare.outputs.closed_issues }}
 
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            위 컨텍스트를 참고하여, 아직 구현되지 않았고 중복되지 않는
-            제품 개선 우선순위를 분석하고 가장 임팩트 높은 아이디어 1개를 제안하세요.
-            ⚠️ 이미 열린 이슈의 제목뿐 아니라 요약 내용이 유사한 아이디어도 금지합니다.
+            위 컨텍스트와 North Star를 모두 준수하여 PM 관점에서 제안 1개를 작성하세요.
+            North Star "이번 주 테마"와 명확히 연결되는 것만. 연결 안 되면 제안을 만들지 마세요.
 
-            ## 🎯 PM 제안
+            ## 🎯 PM 제안: [한 줄 제목]
 
-            ## 사용자 문제
-            (구체적인 페인 포인트 또는 놓치고 있는 기회)
+            ### 가설 (1문장)
+            (사용자 행동/감정/지표가 어떻게 바뀐다는 가설인가)
 
-            ## 기능 아이디어
-            (솔루션 설명 — 사용자 관점에서)
+            ### 근거 (필수)
+            - 파일 경로 또는 메트릭 또는 사용자 피드백 인용 1개 이상:
+            -
 
-            ## 성공 지표
-            (측정 가능한 KPI, 목표 수치 포함)
+            ### 액션 (단일 PR 범위)
+            - 수정할 화면/컴포넌트:
+            - 구체 구현 단계 2-4개:
 
-            ## 우선순위 근거
-            (왜 지금 이것이 중요한가)
+            ### 측정 지표
+            - 어떤 숫자가 얼마나 변하면 성공인가:
 
-            ## 난이도 및 예상 소요
-            (S=1일 / M=1주 / L=2주+)
+            ### North Star 정렬 (1문장)
+            (이 제안이 이번 주 테마와 어떻게 직결되는가)
+
+            ### 위험/대안
+            (실패 시 또는 다른 접근법)
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -167,7 +217,9 @@ jobs:
             --label "idea,agent-council,pm" \
             --repo "${{ github.repository }}"
 
-  # ── 2. Frontend — React Native / Expo / 모바일 UX ────────────
+  # ─────────────────────────────────────────────────────────────
+  # 2. Frontend
+  # ─────────────────────────────────────────────────────────────
   frontend:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'frontend' || github.event_name == 'schedule' }}
@@ -178,8 +230,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 30
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -188,8 +240,14 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Frontend\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[Frontend] 모바일 UX / 성능 / 컴포넌트 개선 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "frontend" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[Frontend] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
@@ -197,43 +255,58 @@ jobs:
           system-prompt: |
             당신은 타로 증권 앱의 프런트엔드 개발자입니다.
             스택: React Native + Expo SDK 54, expo-router, zustand, StyleSheet.
-            현재 화면: 홈(종목 검색), 카드 뽑기(7장 부채꼴 선택 UI 구현됨), 결과, 히스토리/분석, 마이페이지.
-            당신의 시각: 컴포넌트 재사용성, 번들 크기, 60fps 애니메이션, 접근성.
+            제약: Expo Go — `react-native-reanimated` 사용 불가. `Animated` API만 허용.
 
-            🔴 현재 최우선: 타로앱 UX 몰입감 강화. 애니메이션, 인터랙션, 감성 연결에 집중.
-            Expo Go 제약: react-native-reanimated 사용 불가 (Animated API만 허용).
+            === 절대 규칙 ===
+            1. North Star 테마 밖 제안 금지.
+            2. 금지 어휘: "가능성", "우려됩니다", "수도", "보입니다". 단정형 + 근거.
+            3. 현재 문제는 파일 경로(예: apps/mobile/src/screens/...) + 줄 번호 또는 구체 컴포넌트명 명시.
+            4. 단일 PR 범위. 라이브러리 새로 도입은 정당화 필요.
+            5. 자기 직전 이력과 다른 화면/컴포넌트 선택. 같은 영역(예: 카드 애니메이션) 반복 금지.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 Frontend 자기 직전 5개 제안 (같은 영역 재제안 금지)
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 현재 열린 다른 에이전트 제안
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 최근 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            모바일 프런트엔드 관점에서 개선할 아이디어 1개를 제안하세요.
+            North Star 테마에 직결되는 프런트엔드 제안 1개. 자기 이력과 다른 각도여야 함.
 
-            ## 📱 Frontend 제안
+            ## 📱 Frontend 제안: [한 줄 제목]
 
-            ## 현재 문제
-            (UX 마찰, 성능 병목, 코드 중복, 접근성 미비 등)
+            ### 가설 (1문장)
 
-            ## 개선 방안
-            (구체적 구현: 컴포넌트명, 파일 경로, 라이브러리)
+            ### 근거 (필수 — 파일 경로 또는 컴포넌트명)
+            -
 
-            ## 영향받는 화면/파일
-            (수정 대상 목록)
+            ### 액션 (단일 PR 범위)
+            - 수정 파일:
+            - 추가/변경 컴포넌트:
+            - 구체 구현 단계 2-4개:
 
-            ## 예상 효과
-            (성능 지표, 사용자 경험, 번들 크기 등)
+            ### 측정 지표
+            (체류 시간, fps, 클릭률, 번들 크기 등 수치)
 
-            ## 구현 복잡도
-            (S/M/L + 이유)
+            ### North Star 정렬 (1문장)
+
+            ### 위험/대안
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -246,7 +319,9 @@ jobs:
             --label "idea,agent-council,frontend,mobile" \
             --repo "${{ github.repository }}"
 
-  # ── 3. Backend — API / DB / 인프라 ───────────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 3. Backend
+  # ─────────────────────────────────────────────────────────────
   backend:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'backend' || github.event_name == 'schedule' }}
@@ -257,8 +332,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 45
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -267,50 +342,72 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Backend\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[Backend] API / DB / 인프라 개선 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "backend" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[Backend] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 백엔드 개발자입니다.
-            스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM, Railway/Supabase 배포.
-            핵심 API: /api/tarot/draw, /api/tarot/analytics, /api/tarot/credits, /api/admin/*.
-            이미 구현됨: API 응답 캐싱(market 5분/interpret 4-tier), JWT HttpOnly 쿠키(7일), IAP 서버 검증(RevenueCat), HMAC nonce 광고 검증, 7일 스트릭 보상.
-            당신의 시각: API 성능, DB 쿼리 최적화, 확장성, 데이터 정합성.
+            스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM, Railway/Supabase.
+            중요: DB는 `prisma db push`로 운영 — "마이그레이션 미배포"는 잘못된 가정.
+            이미 구현됨: API 4-tier 캐싱, JWT HttpOnly, IAP 서버 검증, HMAC nonce, 7일 스트릭.
+
+            === 절대 규칙 ===
+            1. North Star 테마와 직결되는 제안만 (예: 의식 경험 흐름의 백엔드 지원).
+            2. 금지 어휘 사용 시 거부.
+            3. 현재 문제는 API 경로(예: /api/tarot/...) + Prisma 모델명 명시.
+            4. 새 인프라(Redis 등) 도입은 North Star Out of Scope이므로 금지.
+            5. 자기 직전 이력과 다른 영역/API 선택.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 Backend 자기 직전 5개 제안
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 열린 다른 에이전트 제안
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            백엔드/인프라 관점에서 개선할 아이디어 1개를 제안하세요.
+            ## ⚙️ Backend 제안: [한 줄 제목]
 
-            ## ⚙️ Backend 제안
+            ### 가설 (1문장)
 
-            ## 현재 문제
-            (성능 병목, 쿼리 비효율, 확장성 리스크 등)
+            ### 근거 (API 경로 / Prisma 모델 / 쿼리 패턴)
+            -
 
-            ## 개선 방안
-            (API 설계, DB 인덱스, 캐싱 전략, 인프라 변경 등)
+            ### 액션 (단일 PR 범위)
+            - API/모델:
+            - 구현 단계 2-4개:
 
-            ## 영향받는 파일/API
-            (경로 포함)
+            ### 측정 지표
+            (레이턴시 ms, p95, 처리량 등 수치)
 
-            ## 예상 효과
-            (레이턴시 감소, 비용 절감, 처리량 증가 등 수치 포함)
+            ### North Star 정렬 (1문장)
 
-            ## 마이그레이션 위험도
-            (없음 / 낮음 / 중간 / 높음)
+            ### 마이그레이션 위험도
+            (없음 / 낮음 / 중간 / 높음 — `db push` 기준)
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -323,7 +420,9 @@ jobs:
             --label "idea,agent-council,backend" \
             --repo "${{ github.repository }}"
 
-  # ── 4. Designer — UX / UI / 비주얼 ──────────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 4. Designer
+  # ─────────────────────────────────────────────────────────────
   designer:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'designer' || github.event_name == 'schedule' }}
@@ -334,8 +433,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 60
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -344,51 +443,73 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Designer\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[Designer] UX/UI/비주얼 디자인 개선 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "design" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[Designer] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 UI/UX 디자이너입니다.
-            현재 디자인 시스템: 다크 테마(#121212), 타로 에센스 컬러(#3ecf8e), 그래핏 베이스(#242424).
-            현재 화면: 스플래시, 온보딩, 로그인, 홈, 카드 뽑기(7장 부채꼴 선택 구현됨), 결과, 히스토리, 마이페이지.
-            당신의 시각: 감성적 몰입감, 시각적 계층구조, 마이크로인터랙션, 접근성, 일관된 디자인 언어.
+            현재 화면: 스플래시, 온보딩, 로그인, 홈, 카드 뽑기(7장 부채꼴 구현됨), 결과, 히스토리, 마이페이지.
+            팔레트: 다크 #121212, 타로 에센스 #3ecf8e, 그래핏 #242424.
 
-            🔴 최우선: 타로 의식(ritual) 느낌의 몰입감 극대화. 애니메이션/인터랙션 아이디어 우선.
+            === 절대 규칙 ===
+            1. North Star 테마 직결만. "의식 경험" 영역.
+            2. 금지 어휘 사용 금지.
+            3. 자기 직전 이력에서 다룬 화면/효과는 절대 재선택 금지.
+               (예: 이력에 "카드 뽑기 애니메이션"이 있으면 → 다른 화면 또는 다른 차원 — 사운드, 햅틱, 타이포, 컬러, 여백, 결과 화면 정보 위계 등 — 선택)
+            4. 추상 표현 금지. "마이크로인터랙션 강화" 같은 단어는 금지. 어느 요소가 어떻게 바뀌는지 1픽셀 단위로.
+            5. 단일 PR 범위.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 Designer 자기 직전 5개 제안 (같은 화면/효과 절대 재제안 금지)
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 열린 다른 에이전트 제안 (Frontend와 중복 금지)
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            UX/UI 디자인 관점에서 개선할 아이디어 1개를 제안하세요.
+            ## 🎨 Designer 제안: [한 줄 제목]
 
-            ## 🎨 Designer 제안
+            ### 가설 (1문장 — 사용자 감정/행동이 어떻게 바뀌는가)
 
-            ## 현재 디자인 문제
-            (시각적 불일치, UX 마찰, 감성 연결 부족, 접근성 미비 등)
+            ### 근거 (현재 디자인의 구체 약점)
+            - 화면명 + 구체 요소(예: "결과 화면 헤드라인 폰트 24pt, 라인 높이 1.2"):
+            -
 
-            ## 디자인 개선 방향
-            (레이아웃, 컬러, 타이포그래피, 애니메이션, 마이크로인터랙션)
+            ### 액션 (단일 PR 범위, 1픽셀 단위)
+            - 변경 대상:
+            - Before → After 구체 변경 2-4개:
 
-            ## 영향받는 화면
-            (화면명 목록)
+            ### 측정 지표
+            (체류 시간, 스크롤 깊이, 공유 클릭률 등)
 
-            ## 레퍼런스 패턴
-            (벤치마크할 앱이나 디자인 패턴)
+            ### North Star 정렬 (1문장)
 
-            ## 구현 복잡도
-            (디자이너 관점: 낮음/중간/높음 + 개발자 관점)
+            ### 다른 디자인 차원 시도 여부 확인
+            (자기 직전 이력에서 다룬 차원과 다른가? — 사운드 / 햅틱 / 타이포 / 컬러 / 여백 / 정보 위계 / 트랜지션 중 어느 것?)
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -401,7 +522,9 @@ jobs:
             --label "idea,agent-council,design" \
             --repo "${{ github.repository }}"
 
-  # ── 5. QA — 품질 / 테스트 / 버그 예방 ───────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 5. QA
+  # ─────────────────────────────────────────────────────────────
   qa:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'qa' || github.event_name == 'schedule' }}
@@ -412,8 +535,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 75
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -422,50 +545,70 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[QA\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[QA] 품질 개선 / 테스트 커버리지 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "qa" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[QA] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 QA 엔지니어입니다.
-            현재 테스트: packages/tarot-core vitest 31개 (forbidden/draw/cache), IAP 자동화 7개.
-            E2E 없음. 당신의 시각: 회귀 버그 예방, 엣지 케이스 발굴, 자동화 가능한 테스트.
+            현재: packages/tarot-core vitest 31개 (forbidden/draw/cache), IAP 자동화 7개. E2E 없음.
+
+            === 절대 규칙 ===
+            1. North Star 테마(의식 경험) 흐름의 품질 보장 제안만.
+            2. 금지 어휘 사용 금지.
+            3. 구체 테스트 케이스 — Given/When/Then 형식 의무.
+            4. 자기 직전 이력과 다른 흐름/영역 선택.
+            5. 추상 "테스트 강화" 금지. 어느 함수/화면을 어떻게 테스트하는지 명시.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 QA 자기 직전 5개 제안
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 열린 다른 에이전트 제안
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            품질 보증 관점에서 개선할 아이디어 1개를 제안하세요.
+            ## 🧪 QA 제안: [한 줄 제목]
 
-            ## 🧪 QA 제안
+            ### 가설 (1문장 — 어떤 회귀 리스크인가)
 
-            ## 현재 품질 리스크
-            (버그 가능성이 높은 영역, 테스트 공백 지점)
+            ### 근거 (테스트 공백의 구체 위치)
+            - 파일/함수/흐름:
 
-            ## 개선 방안
-            (테스트 케이스, 자동화 시나리오, 수동 체크리스트)
-
-            ## 구체적 테스트 시나리오 3개
-            1. (Given/When/Then 형식)
+            ### 테스트 시나리오 (Given/When/Then 3개)
+            1. Given ... When ... Then ...
             2.
             3.
 
-            ## 영향 범위
-            (어떤 기능/흐름이 커버되는가)
+            ### 구현 방법
+            (vitest / Detox / 수동 — 어느 파일에 어떻게)
 
-            ## 구현 방법
-            (vitest / Detox E2E / Playwright / 수동 QA)
+            ### North Star 정렬 (1문장)
+
+            ### 자동화 가능 여부
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -478,7 +621,9 @@ jobs:
             --label "idea,agent-council,qa" \
             --repo "${{ github.repository }}"
 
-  # ── 6. CTO — 기술 부채 / 아키텍처 / 확장성 ──────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 6. CTO
+  # ─────────────────────────────────────────────────────────────
   cto:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'cto' || github.event_name == 'schedule' }}
@@ -489,8 +634,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 90
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -499,49 +644,71 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[CTO\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[CTO] 기술 부채 / 아키텍처 개선 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "cto" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[CTO] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 CTO입니다.
-            해결된 기술 부채 (재제안 금지): JWT HttpOnly 쿠키(완료), 서버사이드 검증(완료), API 캐싱(완료), IAP 서버검증(완료), HMAC nonce(완료).
-            미해결 기술 부채: AdMob 프로덕션 ID 미입력, console.log 수준 트래킹, E2E 테스트 부재, Prisma 마이그레이션 미배포(streak).
-            당신의 시각: 장기적 확장성, 모노레포 건강도, 의존성 관리.
+            중요 사실: DB는 `prisma db push` 운영 — "마이그레이션 미배포" 같은 제안은 잘못된 가설로 거부됨.
+            이미 해결: JWT HttpOnly, 서버 검증, API 캐싱(4-tier), IAP 서버검증, HMAC nonce.
+            North Star Out of Scope에 따라 새 인프라(Redis 등) 도입 금지.
+
+            === 절대 규칙 ===
+            1. North Star 테마 직결되는 기술 부채만. 의식 경험 흐름의 안정성/성능.
+            2. 금지 어휘 금지.
+            3. 코드 경로 + 패키지명 명시 의무.
+            4. 자기 직전 이력과 다른 영역 선택.
+            5. 단일 PR 범위.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 CTO 자기 직전 5개 제안
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 열린 다른 에이전트 제안
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            기술 부채 또는 아키텍처 관점에서 개선할 아이디어 1개를 제안하세요.
+            ## 🏗️ CTO 제안: [한 줄 제목]
 
-            ## 🏗️ CTO 제안
+            ### 가설 (1문장)
 
-            ## 기술 부채 항목
-            (구체적인 코드/아키텍처 문제)
+            ### 근거 (코드 경로/패키지)
+            -
 
-            ## 방치 시 리스크
-            (확장성 저하, 보안 취약, 개발 속도 저하 등)
+            ### 액션 (단일 PR 범위)
+            - 영향 파일/패키지:
+            - 변경 단계 2-4개:
 
-            ## 개선 방향
-            (리팩토링 전략, 마이그레이션 경로, 새 패턴 도입)
+            ### 측정 지표
+            (빌드 시간 / 번들 / p95 / 에러율 등)
 
-            ## 영향받는 파일/패키지
-            (모노레포 기준 경로)
+            ### North Star 정렬 (1문장)
 
-            ## 예상 ROI
-            (투자 대비 효과 — 개발 속도, 비용, 안정성)
+            ### 마이그레이션 전략 (`db push` 가정)
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -554,7 +721,9 @@ jobs:
             --label "idea,agent-council,cto,tech-debt" \
             --repo "${{ github.repository }}"
 
-  # ── 7. Marketer — 성장 / 바이럴 / 리텐션 ────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 7. Marketer
+  # ─────────────────────────────────────────────────────────────
   marketer:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'marketer' || github.event_name == 'schedule' }}
@@ -565,8 +734,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 105
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -575,50 +744,69 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Marketer\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[Marketer] 성장 / 바이럴 / 리텐션 개선 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "marketing" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[Marketer] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱의 그로스 마케터입니다.
-            채널: App Store(ASO), 소셜(인스타/틱톡), 바이럴 루프.
-            현재 수익화: 크레딧 IAP(유료) + AdMob 리워드 광고(무료) + 공유 보상(1일 1크레딧).
-            이미 구현됨: 공유 보상, 7일 스트릭 보상, 앱스토어 리뷰 요청.
-            당신의 시각: 신규 유입, 바이럴 계수(K-factor), 크레딧 소비 증대, D7/D30 리텐션.
+            North Star가 "의식 경험"인 동안, 마케팅은 신규 유입보다 **앱 내 경험을 외부로 노출** 측면을 우선합니다.
+
+            === 절대 규칙 ===
+            1. North Star Out of Scope(카카오톡 공유, 사주팔자) 절대 제안 금지.
+            2. 신규 IAP 상품 제안 금지(Out of Scope).
+            3. 금지 어휘 금지.
+            4. 자기 직전 이력과 다른 채널/액션 선택.
+            5. 측정 가능한 지표 명시.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 Marketer 자기 직전 5개 제안
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 열린 다른 에이전트 제안
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            성장/마케팅 관점에서 개선할 아이디어 1개를 제안하세요.
+            ## 📣 Marketer 제안: [한 줄 제목]
 
-            ## 📣 Marketer 제안
+            ### 가설 (1문장)
 
-            ## 성장 기회
-            (신규 유입, 리텐션, 바이럴 중 어디를 공략하는가)
+            ### 근거 (지표 또는 벤치마크 사례)
+            -
 
-            ## 전략 아이디어
-            (구체적 기능 또는 캠페인)
+            ### 액션 (단일 PR 또는 단일 캠페인)
+            - 채널:
+            - 구체 실행 단계 2-4개:
 
-            ## 실행 방법
-            (앱 내 기능, ASO, 소셜 콘텐츠, 이벤트 등)
+            ### 측정 지표
+            (설치 수 / DAU / 바이럴 계수 / 크레딧 매출 — 수치)
 
-            ## 예상 지표 개선
-            (설치 수, DAU, 크레딧 매출, 바이럴 계수 등 수치로)
+            ### North Star 정렬 (1문장 — 의식 경험을 외부에 어떻게 노출하나)
 
-            ## 비용/리소스
-            (개발 工數, 마케팅 예산 필요 여부)
+            ### 비용/리소스
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -631,7 +819,9 @@ jobs:
             --label "idea,agent-council,marketing" \
             --repo "${{ github.repository }}"
 
-  # ── 8. Security — 보안 / 규제 준수 ──────────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 8. Security
+  # ─────────────────────────────────────────────────────────────
   security:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'security' || github.event_name == 'schedule' }}
@@ -642,8 +832,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 120
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -652,48 +842,61 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Security\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[Security] 보안/컴플라이언스 점검 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "security" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[Security] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
-            당신은 타로 증권 앱의 보안 및 규정 준수 담당자입니다.
-            앱: 금융 AI 해석 서비스. Apple/Google 로그인, IAP, 크레딧 시스템, 시장 데이터 포함.
-            이미 해결됨: JWT HttpOnly 쿠키(7일 만료), IAP 서버 검증(RevenueCat), HMAC nonce 광고 검증, HTTPS 강제 적용.
-            아직 미검토: 데이터 보관 정책, GDPR/개인정보보호법 준수, 앱 바이너리 난독화, 딥링크 취약점.
+            당신은 타로 증권 앱의 보안 담당자입니다.
+            이미 구현: JWT HttpOnly(7일), IAP 서버검증(RevenueCat), HMAC nonce, HTTPS 강제.
+
+            === 절대 규칙 ===
+            1. Critical/High만 제안 — 의식 경험 흐름을 막는 우선순위가 아니면 보류.
+            2. 금지 어휘 금지. 구체 위협 모델 명시.
+            3. 자기 직전 이력 영역 재제안 금지.
+            4. North Star 테마와 직결 안 되면 "다음 주 후보"로 표시 후 본 제안 보류.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
-            ${{ needs.prepare.outputs.merged_prs }}
-
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
-            ${{ needs.prepare.outputs.open_issues }}
-
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
-            ${{ needs.prepare.outputs.feedback }}
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
 
             ---
-            현재 앱에서 점검하거나 강화해야 할 보안/컴플라이언스 항목 1개를 제안하세요.
+            ## 📜 Security 자기 직전 5개 제안
+            ${{ steps.ctx.outputs.history }}
 
-            ## 🔒 Security 제안
+            ---
+            ## ✅ 머지된 PR
+            ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 위험 항목
-            (구체적 취약점 또는 규제 미준수 사항)
+            ## 📌 열린 다른 에이전트 제안
+            ${{ needs.prepare.outputs.open_issues }}
 
-            ## 현재 상태
-            (어떤 코드/설정에서 이슈가 발생하는가)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
 
-            ## 개선 방안
-            (코드/설정/프로세스 레벨 구체적 수정 방법)
+            ---
+            북스타와 직결되는 Critical/High 보안 항목 1개만. 없으면 명시적으로 "이번 주 우선순위 없음 — 다음 주 후보"라고 적으세요.
 
-            ## 우선순위
-            (Critical/High/Medium/Low + 이유)
+            ## 🔒 Security 제안: [한 줄 제목]
 
-            ## 관련 규제/기준
-            (OWASP, 자본시장법, Apple/Google 정책 등)
+            ### 위협 모델 (구체 시나리오)
+
+            ### 영향받는 코드/엔드포인트
+
+            ### 개선 방안 (단일 PR 범위)
+
+            ### 우선순위 (Critical/High만 본 제안 — 그 외는 다음 주 후보로 분리)
+
+            ### North Star 정렬 (1문장)
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -706,7 +909,9 @@ jobs:
             --label "idea,agent-council,security" \
             --repo "${{ github.repository }}"
 
-  # ── 9. Prompt Engineer — AI 해석 품질 ───────────────────────
+  # ─────────────────────────────────────────────────────────────
+  # 9. Prompt Engineer
+  # ─────────────────────────────────────────────────────────────
   prompt_engineer:
     needs: [prepare]
     if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'prompt_engineer' || github.event_name == 'schedule' }}
@@ -717,8 +922,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
         run: sleep 135
-      - name: Check duplicate
-        id: dedup
+      - name: Check duplicate & fetch self history
+        id: ctx
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
@@ -727,50 +932,72 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Prompt Engineer\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[Prompt Engineer] AI 해석 품질 개선 제안"
-        if: steps.dedup.outputs.exists == 'false'
+          HIST=$(gh issue list --label "prompt" --state all --limit 5 \
+            --json title,body,state --repo "${{ github.repository }}" | \
+            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+          echo "history<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$HIST" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+      - name: "[Prompt] 제안"
+        if: steps.ctx.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: proposal
         with:
           model: openai/gpt-4o
           system-prompt: |
-            당신은 타로 증권 앱의 AI 해석 품질 담당 프롬프트 엔지니어입니다.
-            현재: packages/tarot-core/src/prompts/interpret-v1.1.0.ts (한국어 최적화, SINGLE/THREE_CARD 분기).
-            구조: 3단 폴백(LLM→캐시→프리빌트). 출력: {headline, summary, detail}.
-            금칙어: 매수/매도/수익보장 등 금융 권유 표현 차단.
+            당신은 타로 증권 앱의 AI 해석 품질 담당입니다.
+            현재 파일: packages/tarot-core/src/prompts/interpret-v1.1.0.ts (SINGLE/THREE_CARD 분기).
+            출력: {headline, summary, detail}. 폴백: LLM→캐시→프리빌트.
+
+            === 절대 규칙 ===
+            1. North Star 테마(의식 경험)과 직결: 해석 결과 자체가 의식의 정점이다.
+            2. 금지 어휘 금지. "개인화" 같은 추상 단어 금지 — 어느 필드를 어떤 토큰으로.
+            3. Before/After 샘플 의무. 가상이라도 1쌍 명시.
+            4. 자기 직전 이력과 다른 차원 선택.
+            5. 토큰 비용 영향 명시.
           prompt: |
-            ## 이미 구현된 기능 (재제안 금지)
+            ## 🌟 North Star
+            ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 📜 Prompt Engineer 자기 직전 5개 제안
+            ${{ steps.ctx.outputs.history }}
+
+            ---
+            ## ✅ 머지된 PR
             ${{ needs.prepare.outputs.merged_prs }}
 
-            ## 이미 열린 제안 이슈 — 제목+요약 (내용이 유사한 것도 금지)
+            ## 📌 열린 다른 에이전트 제안
             ${{ needs.prepare.outputs.open_issues }}
 
-            ## 📚 이전 사이클 사용자 피드백 (자기 개선 컨텍스트)
+            ## 🗂️ 닫힌 이슈
+            ${{ needs.prepare.outputs.closed_issues }}
+
+            ## 💬 사용자 피드백
             ${{ needs.prepare.outputs.feedback }}
 
             ---
-            ⚠️ 이미 열린 이슈의 내용(요약 포함)과 유사한 아이디어는 금지합니다. 완전히 새로운 각도의 제안만 허용합니다.
-            현재 타로 카드 해석 프롬프트를 개선하거나 새 기능을 추가할 아이디어를 제안하세요.
+            ## ✨ Prompt Engineer 제안: [한 줄 제목]
 
-            ## ✨ Prompt Engineer 제안
+            ### 가설 (1문장)
 
-            ## 현재 문제 또는 기회
-            (해석 품질, 사용자 반응, 폴백률, 안전 필터 충돌 등)
+            ### 근거 (현재 프롬프트의 구체 약점)
+            - interpret-v1.1.0.ts의 어느 부분:
 
-            ## 개선 방향
-            (구체적 프롬프트 전략, 파라미터, 새 출력 필드)
+            ### 액션 (단일 PR — 프롬프트 또는 후처리 변경)
 
-            ## 샘플 비교
-            개선 전: (짧게)
-            개선 후: (짧게)
+            ### Before / After 샘플 (가상이라도 1쌍 의무)
+            **Before**:
+            **After**:
 
-            ## 검증 방법
-            (A/B 테스트, 폴백률 측정, 사용자 별점 비교)
+            ### 측정 지표
+            (폴백률 / 사용자 별점 / 평균 토큰 / 헤드라인 길이 등)
 
-            ## 토큰 비용 영향
-            (증가 / 감소 / 동일)
+            ### North Star 정렬 (1문장)
+
+            ### 토큰 비용 영향
       - name: Create Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.ctx.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.proposal.outputs.response }}
@@ -783,7 +1010,9 @@ jobs:
             --label "idea,agent-council,prompt" \
             --repo "${{ github.repository }}"
 
-  # ── 10. CEO Brief — 모든 에이전트 종합 + 교차 검증 ──────────
+  # ─────────────────────────────────────────────────────────────
+  # 10. CEO Brief — 실리콘밸리 weekly review 스타일
+  # ─────────────────────────────────────────────────────────────
   ceo_brief:
     needs: [prepare, pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer]
     if: always() && (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
@@ -800,7 +1029,7 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | contains(\"$TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-      - name: "[CEO] 에이전트 브리핑 종합 + 아이디어 교차 검증"
+      - name: "[CEO Brief]"
         if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: brief
@@ -808,114 +1037,123 @@ jobs:
           model: openai/gpt-4o
           system-prompt: |
             당신은 타로 증권 앱 CEO의 수석 비서 AI입니다.
-            매일 아침 9개 팀 에이전트의 제안을 읽고 CEO가 5분 안에 판단할 수 있는 브리핑을 작성합니다.
-            CEO 관심사: 사용자 성장, 수익화, 스토어 평점, 기술 부채, 팀 정렬.
-            당신의 역할: 에이전트 간 시너지 발굴, 충돌 지점 명확화, 실행 우선순위 정렬.
+            매일 아침 9개 팀 에이전트의 제안을 받아 CEO가 5분 안에 판단할 수 있는 브리핑을 작성합니다.
+            실리콘밸리 weekly review 스타일: 단일 테마 정렬도 우선, 산발성 제거, 어제 채택의 진척 추적.
 
-            ## 🔴 현재 최우선 지시사항 (해제 전까지 절대 우선)
-            **타로앱 사용자 경험 몰입감 완성이 유일한 우선순위다.**
-            - 애니메이션 강화, 인터랙티브 UX, 의식(ritual) 느낌 구현 관련 제안은 반드시 실행 지시로 채택한다.
-            - "이게 몰입감을 높이는가?"가 모든 우선순위 판단의 첫 번째 기준이다.
-            - UX 몰입감 관련 항목(애니메이션, 카드 인터랙션, 의식感, 결과 화면 경험)은 절대 킬리스트에 넣지 않는다.
-            - 카카오톡 공유, 사주팔자, 어드민 UI는 이 지시가 해제될 때까지 킬리스트 대상이다.
-            - 이 지시는 사용자가 직접 "됐다"고 해제하기 전까지 유효하다.
+            === CEO Brief 절대 규칙 ===
+            1. North Star "이번 주 테마"가 모든 판단의 1순위. 테마 밖 제안은 자동 킬리스트.
+            2. 각 에이전트 제안을 "North Star 정렬도 0-5점"으로 채점.
+            3. 어제 CEO Brief의 채택 항목 진척을 표로 추적.
+            4. 같은 주제가 N일 연속 반복되면 "반복 경고" 표시 후 자동 디플래그.
+            5. 금지 어휘 사용 시 해당 제안은 자동 킬리스트.
+            6. 실행 지시는 정렬도 4점 이상만 채택. 그 외는 "다음 주 후보".
+            7. 사용자가 5분 안에 GO/NO-GO 판단 가능한 분량.
           prompt: |
-            아래 9개 에이전트의 오늘 제안을 읽고 CEO 일일 브리핑을 작성하세요.
+            ## 🌟 North Star (이번 주 테마)
+            ${{ needs.prepare.outputs.north_star }}
 
             ---
-            **PM 제안:**
-            ${{ needs.pm.outputs.proposal }}
+            ## 📅 어제 CEO Brief (채택 항목 진척 추적용)
+            ${{ needs.prepare.outputs.yesterday_brief }}
 
             ---
-            **Frontend 제안:**
-            ${{ needs.frontend.outputs.proposal }}
+            ## 9개 에이전트 오늘 제안
+
+            **PM:** ${{ needs.pm.outputs.proposal }}
 
             ---
-            **Backend 제안:**
-            ${{ needs.backend.outputs.proposal }}
+            **Frontend:** ${{ needs.frontend.outputs.proposal }}
 
             ---
-            **Designer 제안:**
-            ${{ needs.designer.outputs.proposal }}
+            **Backend:** ${{ needs.backend.outputs.proposal }}
 
             ---
-            **QA 제안:**
-            ${{ needs.qa.outputs.proposal }}
+            **Designer:** ${{ needs.designer.outputs.proposal }}
 
             ---
-            **CTO 제안:**
-            ${{ needs.cto.outputs.proposal }}
+            **QA:** ${{ needs.qa.outputs.proposal }}
 
             ---
-            **Marketer 제안:**
-            ${{ needs.marketer.outputs.proposal }}
+            **CTO:** ${{ needs.cto.outputs.proposal }}
 
             ---
-            **Security 제안:**
-            ${{ needs.security.outputs.proposal }}
+            **Marketer:** ${{ needs.marketer.outputs.proposal }}
 
             ---
-            **Prompt Engineer 제안:**
-            ${{ needs.prompt_engineer.outputs.proposal }}
+            **Security:** ${{ needs.security.outputs.proposal }}
 
             ---
+            **Prompt Engineer:** ${{ needs.prompt_engineer.outputs.proposal }}
 
-            ## 📚 이전 사이클 사용자 피드백 (우선순위 판단 개선 컨텍스트)
-            아래 피드백을 반드시 반영하여 브리핑을 작성하세요.
-            사용자가 good으로 평가한 방향의 항목을 실행 지시로 선택하고,
-            bad로 평가된 유형의 항목은 킬리스트에 포함하세요.
-
+            ---
+            ## 💬 피드백 이력
             ${{ needs.prepare.outputs.feedback }}
 
             ---
+            ## 🗂️ 최근 닫힌 이슈 (이미 처리된 영역)
+            ${{ needs.prepare.outputs.closed_issues }}
 
-            위 9개 제안과 피드백 이력을 종합하여 다음 형식으로 CEO 브리핑을 작성하세요:
+            ---
+            아래 형식으로 CEO Brief를 작성하세요. 형식 엄수.
 
             ## 📋 CEO Daily Brief
 
-            ### 🚨 즉시 대응 (스토어 출시 차단 or 보안 리스크)
-            (없으면 생략)
+            ### 🎯 이번 주 North Star 진척 (실리콘밸리식)
+            | 어제 채택 항목 | 담당 에이전트 | 진척 상태 | 오늘 액션 |
+            |---|---|---|---|
+            (어제 Brief가 없으면 "사이클 시작 — 진척 추적 없음" 표시)
 
             ---
 
-            ### ✅ 이번 주 실행 지시 (최대 2개)
-            (피드백 이력에서 good 평가를 받은 방향 우선. UX 몰입감 기준 최우선.)
-
-            #### 1️⃣ **[항목명]**
-            - **담당 에이전트**:
-            - **근거**: (OKR 연결 + 피드백 반영 여부 명시)
-            - **예상 소요**:
-            - **대상 OKR**:
-
-            ---
-
-            ### 🔍 에이전트 간 충돌 분석
-            (의견이 갈리는 트레이드오프 — CEO 판단 포함)
-
-            ---
-
-            ### 💡 CEO 인사이트
-            (피드백 이력에서 배운 패턴 + 오늘의 판단 근거)
-
-            ---
-
-            ### ❌ 지금 하지 않을 것 (Kill list)
-            (피드백 이력에서 bad 평가를 받은 유형 포함)
-
-            1. **[항목명]** ([에이전트]):
-               - **이유**:
-               - **재검토 조건**:
-
-            ---
-
-            ### 📊 에이전트별 제안 요약
-            | 에이전트 | 대상 OKR | 제안 핵심 | CEO 판정 | 사유 |
+            ### 📊 오늘 9개 제안 — North Star 정렬도 채점
+            | 에이전트 | 제안 제목 | 정렬도(0-5) | 근거 충실도 | 판정 |
             |---|---|---|---|---|
 
+            (정렬도 5: 테마 직결 + 측정 지표 명확 / 4: 직결 / 3: 간접 / 2: 모호 / 0-1: 무관)
+            (근거 충실도: 파일경로/메트릭/피드백 인용 있으면 ✅ 없으면 ❌)
+
             ---
 
-            ### 📅 내일 체크포인트
-            (오늘 실행 지시의 진행 상황 확인 항목)
+            ### 🚨 즉시 대응 (스토어 차단 or Critical 보안만)
+            (없으면 "없음" 명시)
+
+            ---
+
+            ### ✅ 이번 주 실행 지시 (정렬도 4+ 만 최대 2개)
+
+            #### 1️⃣ **[한 줄 제목]**
+            - **담당**:
+            - **North Star 연결**: (1문장)
+            - **측정 지표**:
+            - **예상 소요**: (1주 내)
+            - **내일 체크포인트**:
+
+            ---
+
+            ### 🔄 반복 주제 경고 (자동 디플래그)
+            (같은 주제가 3일 이상 반복되면 여기에 명시 + "사용자 결정 필요" 표시)
+
+            ---
+
+            ### ❌ 킬리스트 (이번 주 안 함)
+            | 항목 | 에이전트 | 사유 (Out of Scope / 정렬도 낮음 / 금지 어휘 / 자기 반복) |
+            |---|---|---|
+
+            ---
+
+            ### 💡 CEO 한 줄 인사이트
+            (오늘 9개 제안에서 발견한 패턴 1줄)
+
+            ---
+
+            ### 📅 다음 주 후보 (정렬도 낮지만 가치 있는 것)
+            - [에이전트] 제안:
+            -
+
+            ---
+
+            ### 🧭 사용자 결정 필요 항목
+            (북스타 갱신, 반복 주제 종결 등 CEO가 직접 판단할 것)
       - name: Create CEO Brief Issue
         if: steps.dedup.outputs.exists == 'false'
         env:
