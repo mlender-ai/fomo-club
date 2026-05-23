@@ -15,6 +15,7 @@ import { trackEvent } from "../../lib/analytics";
 import { shareResult } from "../../lib/share";
 import { TickerLogo } from "../../components/TickerLogo";
 import { useStoreReview } from "../../lib/useStoreReview";
+import { getCardStory } from "../../lib/cardStories";
 
 const DISCLAIMER = "본 해석은 오락 목적으로 제공되며 투자 조언이 아닙니다. 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.";
 
@@ -76,6 +77,18 @@ function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
 
       {/* 상세 — 세 번째 계층, 약간 흐리게 */}
       <Text variant="body-sm" style={styles.detail}>{card.detail}</Text>
+
+      {/* 카드 원형 서사 — 타로 카드 고유의 상징적 이야기 */}
+      {getCardStory(card.id, card.isReversed) && (
+        <View style={styles.storyBlock}>
+          <Text variant="caption" color={Colors.taroEssence} style={styles.storyLabel}>
+            ✦ 카드 이야기
+          </Text>
+          <Text variant="body-sm" style={styles.storyText}>
+            {getCardStory(card.id, card.isReversed)}
+          </Text>
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -348,6 +361,9 @@ const styles = StyleSheet.create({
   headline:       { color: Colors.whiteout, marginBottom: 10, fontWeight: "700", lineHeight: 26 },
   summary:        { color: Colors.silverHighlight, marginBottom: Spacing.s8, lineHeight: 22 },
   detail:         { color: Colors.midGrayText, lineHeight: 22, opacity: 0.9 },
+  storyBlock:     { marginTop: Spacing.s16, backgroundColor: Colors.voidGreen, borderRadius: Radius.inputs, padding: Spacing.s16, borderLeftWidth: 2, borderLeftColor: Colors.taroEssence },
+  storyLabel:     { letterSpacing: 1, marginBottom: 8, fontWeight: "700" },
+  storyText:      { color: Colors.silverHighlight, lineHeight: 22, fontStyle: "italic" },
   disclaimer:     { backgroundColor: Colors.steelSurface, borderRadius: 10, padding: Spacing.s16, marginBottom: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder },
   disclaimerText: { lineHeight: 18 },
   shareSection:   { marginBottom: Spacing.s24, gap: 8 },
