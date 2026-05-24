@@ -3,6 +3,7 @@
  * 타로 카드 22장 메타데이터 + 폴백 해석 + AsyncStorage 기록 저장
  */
 import type { DrawResult, DrawnCard, SpreadType } from "./drawStore";
+import { getCardStory } from "./cardStoryTemplates";
 
 // ─── 카드 22장 ────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,8 @@ export function localDraw(
       headline: interp.headline,
       summary: interp.summary,
       detail: interp.detail,
+      // 오프라인/폴백에서도 카드 이야기 표시
+      storyText: getCardStory(d.card.id, d.isReversed),
       ...(spread === "three-card" ? { slot: THREE_CARD_SLOTS[i] } : {}),
     } as DrawnCard;
   });
