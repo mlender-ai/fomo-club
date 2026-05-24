@@ -125,10 +125,11 @@ jobs:
             CEO Brief:
             ${{ steps.brief.outputs.body }}
 
-      # ── 4. Claude Code로 실제 구현 ────────────────────────────
+      # ── 4a. Claude Code로 실제 구현 시도 ──────────────────────
       - name: Implement with Claude Code
         id: claude
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -160,8 +161,86 @@ jobs:
             - 커밋 메시지: "[Auto] ${{ steps.brief.outputs.today }} — {기능명}"
             - PR 제목: "[Auto] ${{ steps.brief.outputs.today }} — {기능명}"
             - PR 본문에 CEO Brief #${{ steps.brief.outputs.number }} 참조 포함
-          allowed_tools: "Bash,Read,Write,Edit"
-          timeout_minutes: 15
+
+      # ── 4b. Claude Code 실패 시 GitHub Models 폴백 ────────────
+      - name: Generate Implementation Plan (fallback)
+        id: plan
+        if: steps.claude.outcome == 'failure' && steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4o
+          system-prompt: |
+            당신은 Trading Taro 앱의 시니어 풀스택 개발자입니다.
+            모노레포 구조: apps/tarot-mobile (React Native + Expo), apps/web (Next.js 14 API), packages/shared (공용 타입), packages/tarot-core (비즈니스 로직)
+            디자인 토큰: apps/tarot-mobile/constants/theme.ts (Colors, Spacing, Radius)
+            애니메이션: React Native Animated API만 허용 (react-native-reanimated 사용 금지)
+            Kill list (절대 구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI
+
+            반드시 아래 형식으로만 응답하세요:
+            1. 수정할 파일 경로와 변경 내용을 구체적으로
+            2. 새로 생성할 파일이 있다면 전체 내용
+            3. 모든 코드는 TypeScript로 작성
+            4. 기존 패턴과 컨벤션을 따를 것
+
+            응답은 ```diff 또는 ```typescript 코드 블록으로 구성하세요.
+            각 파일별로 === FILE: {경로} === 헤더를 붙이세요.
+          prompt: |
+            아래 실행 지시를 구현하세요.
+
+            ## 실행 지시
+            ${{ steps.extract.outputs.response }}
+
+            ## 프로젝트 파일 구조 참고
+            현재 레포의 주요 파일들을 참고하여 기존 패턴에 맞게 구현하세요.
+            packages/shared/의 기존 타입과 유틸을 최대한 재활용하세요.
+
+      - name: Create Branch and PR (fallback)
+        if: steps.claude.outcome == 'failure' && steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ steps.plan.outputs.response }}
+          INSTRUCTION: ${{ steps.extract.outputs.response }}
+          TODAY: ${{ steps.brief.outputs.today }}
+          BRIEF_NUMBER: ${{ steps.brief.outputs.number }}
+        run: |
+          BRANCH="agent/ceo-brief-${TODAY}"
+
+          git config user.name "taro-agent[bot]"
+          git config user.email "taro-agent[bot]@users.noreply.github.com"
+
+          git push origin --delete "$BRANCH" 2>&1 || echo "No existing branch to delete"
+          git checkout -b "$BRANCH"
+
+          TITLE=$(echo "$INSTRUCTION" | jq -r '.title // "CEO Brief 구현"' 2>/dev/null || echo "CEO Brief 구현")
+
+          mkdir -p docs/auto-implement
+          echo "$PLAN" > "docs/auto-implement/${TODAY}-plan.md"
+
+          git add -A
+          git commit -m "[Auto] ${TODAY} — ${TITLE}
+
+          CEO Brief #${BRIEF_NUMBER} 기반 자동 구현 (GitHub Models 폴백)
+          " || echo "No changes to commit"
+
+          git push origin "$BRANCH" --force 2>&1
+
+          {
+            echo "## CEO Brief #${BRIEF_NUMBER} 자동 구현"
+            echo ""
+            echo "원본 이슈: #${BRIEF_NUMBER}"
+            echo ""
+            echo "> ⚠️ Claude Code Action 크레딧 부족으로 GitHub Models 폴백 사용"
+          } > /tmp/pr-body.md
+
+          gh pr create \
+            --title "[Auto] ${TODAY} — ${TITLE}" \
+            --body-file /tmp/pr-body.md \
+            --base main \
+            --head "$BRANCH" \
+            --repo "${{ github.repository }}" || {
+              echo "gh pr create failed with exit code $?"
+              exit 1
+            }
 
       # ── 5. CI 수동 트리거 (GITHUB_TOKEN PR은 CI 자동 트리거 안 됨) ──
       - name: Trigger CI on branch
@@ -172,22 +251,24 @@ jobs:
         run: |
           BRANCH="agent/ceo-brief-${TODAY}"
 
-          # PR이 생성되었는지 확인
           PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
 
           if [ -n "$PR_NUM" ]; then
             echo "PR #${PR_NUM} found. Triggering CI on branch: $BRANCH"
 
-            # workflow_dispatch로 CI 직접 트리거
             gh workflow run ci.yml \
               --ref "$BRANCH" \
               --field ref="$BRANCH" \
               --repo "${{ github.repository }}" || echo "CI trigger failed (non-critical)"
 
-            # CEO Brief 이슈에 코멘트
+            IMPL_MODE="Claude Code"
+            if [ "${{ steps.claude.outcome }}" = "failure" ]; then
+              IMPL_MODE="GitHub Models (폴백)"
+            fi
+
             gh issue comment "${{ steps.brief.outputs.number }}" \
               --repo "${{ github.repository }}" \
-              --body "🤖 구현 PR: #${PR_NUM} — Claude Code로 자동 생성됨" || true
+              --body "🤖 구현 PR: #${PR_NUM} — ${IMPL_MODE}로 자동 생성됨" || true
           else
             echo "No PR found for branch $BRANCH"
           fi
