@@ -19,6 +19,7 @@ permissions:
   issues: write
   pull-requests: write
   models: read
+  id-token: write
 
 jobs:
   implement:
@@ -95,7 +96,7 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── 3. AI로 실행 지시 1개 추출 ────────────────────────────
+      # ── 3. AI로 실행 지시 추출 ────────────────────────────────
       - name: Extract Top Execution Instruction
         id: extract
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
@@ -124,110 +125,71 @@ jobs:
             CEO Brief:
             ${{ steps.brief.outputs.body }}
 
-      # ── 4. AI로 코드 변경사항 생성 ────────────────────────────
-      - name: Generate Implementation Plan
-        id: plan
+      # ── 4. Claude Code로 실제 구현 ────────────────────────────
+      - name: Implement with Claude Code
+        id: claude
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        uses: actions/ai-inference@v1
+        uses: anthropics/claude-code-action@v1
         with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 Trading Taro 앱의 시니어 풀스택 개발자입니다.
-            모노레포 구조: apps/tarot-mobile (React Native + Expo), apps/web (Next.js 14 API), packages/shared (공용 타입), packages/tarot-core (비즈니스 로직)
-            디자인 토큰: apps/tarot-mobile/constants/theme.ts (Colors, Spacing, Radius)
-            애니메이션: React Native Animated API만 허용 (react-native-reanimated 사용 금지)
-            Kill list (절대 구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI
-
-            반드시 아래 형식으로만 응답하세요:
-            1. 수정할 파일 경로와 변경 내용을 구체적으로
-            2. 새로 생성할 파일이 있다면 전체 내용
-            3. 모든 코드는 TypeScript로 작성
-            4. 기존 패턴과 컨벤션을 따를 것
-
-            응답은 ```diff 또는 ```typescript 코드 블록으로 구성하세요.
-            각 파일별로 === FILE: {경로} === 헤더를 붙이세요.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            아래 실행 지시를 구현하세요.
+            아래 실행 지시를 구현하세요. 반드시 실제 코드를 작성하고 커밋하세요.
 
             ## 실행 지시
             ${{ steps.extract.outputs.response }}
 
-            ## 프로젝트 파일 구조 참고
-            현재 레포의 주요 파일들을 참고하여 기존 패턴에 맞게 구현하세요.
-            packages/shared/의 기존 타입과 유틸을 최대한 재활용하세요.
+            ## 프로젝트 규칙
+            - 모노레포 구조: apps/tarot-mobile (React Native + Expo), apps/web (Next.js 14 API), packages/shared (공용 타입), packages/tarot-core (비즈니스 로직)
+            - 디자인 토큰: apps/tarot-mobile/constants/theme.ts (Colors, Spacing, Radius)
+            - 애니메이션: React Native Animated API만 허용 (react-native-reanimated 사용 금지)
+            - Kill list (절대 구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI
+            - 모든 코드는 TypeScript로 작성
+            - packages/shared/의 기존 타입과 유틸을 최대한 재활용
+            - 새 환경변수 추가 시 .env.example에도 반영
 
-      # ── 5. 브랜치 생성 + 코드 적용 + PR ──────────────────────
-      - name: Create Branch and PR
+            ## 검증
+            구현 후 반드시 아래를 통과시키세요:
+            1. npm run lint
+            2. npm run typecheck
+            3. npm run build:web
+
+            lint/typecheck 에러가 있으면 수정하세요.
+
+            ## 커밋
+            - 브랜치명: agent/ceo-brief-${{ steps.brief.outputs.today }}
+            - 커밋 메시지: "[Auto] ${{ steps.brief.outputs.today }} — {기능명}"
+            - PR 제목: "[Auto] ${{ steps.brief.outputs.today }} — {기능명}"
+            - PR 본문에 CEO Brief #${{ steps.brief.outputs.number }} 참조 포함
+          allowed_tools: "Bash,Read,Write,Edit"
+          timeout_minutes: 15
+
+      # ── 5. CI 수동 트리거 (GITHUB_TOKEN PR은 CI 자동 트리거 안 됨) ──
+      - name: Trigger CI on branch
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-          PLAN: ${{ steps.plan.outputs.response }}
-          INSTRUCTION: ${{ steps.extract.outputs.response }}
           TODAY: ${{ steps.brief.outputs.today }}
-          BRIEF_NUMBER: ${{ steps.brief.outputs.number }}
         run: |
           BRANCH="agent/ceo-brief-${TODAY}"
 
-          git config user.name "taro-agent[bot]"
-          git config user.email "taro-agent[bot]@users.noreply.github.com"
+          # PR이 생성되었는지 확인
+          PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
 
-          # 기존 원격 브랜치가 있으면 삭제
-          echo "Checking for existing remote branch: $BRANCH"
-          git push origin --delete "$BRANCH" 2>&1 || echo "No existing branch to delete"
-
-          git checkout -b "$BRANCH"
-
-          # AI 응답에서 코드 블록 추출 후 적용
-          # 계획을 PLAN.md로 저장 (PR body에 활용)
-          echo "$PLAN" > /tmp/implementation-plan.md
-
-          # 실행 지시에서 제목 추출
-          TITLE=$(echo "$INSTRUCTION" | jq -r '.title // "CEO Brief 구현"' 2>/dev/null || echo "CEO Brief 구현")
-
-          # 빈 커밋 방지: 최소한 구현 계획이라도 추가
-          mkdir -p docs/auto-implement
-          echo "$PLAN" > "docs/auto-implement/${TODAY}-plan.md"
-
-          git add -A
-          git commit -m "[Auto] ${TODAY} — ${TITLE}
-
-          CEO Brief #${BRIEF_NUMBER} 기반 자동 구현
-          " || echo "No changes to commit"
-
-          echo "Pushing branch: $BRANCH"
-          git push origin "$BRANCH" --force 2>&1
-
-          # PR body 파일 생성 (환경변수 내 특수문자 안전 처리)
-          {
-            echo "## CEO Brief #${BRIEF_NUMBER} 자동 구현"
-            echo ""
-            echo "원본 이슈: #${BRIEF_NUMBER}"
-          } > /tmp/pr-body.md
-
-          echo "=== PR body ==="
-          cat /tmp/pr-body.md
-          echo "=== Creating PR ==="
-
-          gh pr create \
-            --title "[Auto] ${TODAY} — ${TITLE}" \
-            --body-file /tmp/pr-body.md \
-            --base main \
-            --head "$BRANCH" \
-            --repo "${{ github.repository }}" || {
-              echo "gh pr create failed with exit code $?"
-              exit 1
-            }
-
-          PR_URL=$(gh pr list --head "$BRANCH" --json url --jq '.[0].url' --repo "${{ github.repository }}" 2>/dev/null || echo "")
-
-          echo "PR created: $PR_URL"
-
-          # CEO Brief 이슈에 코멘트
-          PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
           if [ -n "$PR_NUM" ]; then
-            gh issue comment "$BRIEF_NUMBER" \
+            echo "PR #${PR_NUM} found. Triggering CI on branch: $BRANCH"
+
+            # workflow_dispatch로 CI 직접 트리거
+            gh workflow run ci.yml \
+              --ref "$BRANCH" \
+              --field ref="$BRANCH" \
+              --repo "${{ github.repository }}" || echo "CI trigger failed (non-critical)"
+
+            # CEO Brief 이슈에 코멘트
+            gh issue comment "${{ steps.brief.outputs.number }}" \
               --repo "${{ github.repository }}" \
-              --body "구현 PR: #${PR_NUM}"
+              --body "🤖 구현 PR: #${PR_NUM} — Claude Code로 자동 생성됨" || true
+          else
+            echo "No PR found for branch $BRANCH"
           fi
 
       # ── 6. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────

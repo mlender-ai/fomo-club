@@ -5,6 +5,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or SHA to check"
+        required: false
 
 env:
   NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
@@ -22,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || '' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -47,6 +54,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || '' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -69,6 +78,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || '' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
