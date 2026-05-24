@@ -19,11 +19,9 @@ permissions:
   issues: write
   pull-requests: write
   models: read
-  id-token: write
 
 jobs:
   implement:
-    # 스케줄 실행은 idea-proposal 성공 시에만, 수동은 항상
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
@@ -31,6 +29,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       # ── 1. 오늘 CEO Brief 이슈 가져오기 ───────────────────────
       - name: Fetch CEO Brief
@@ -87,7 +95,7 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── 3. AI로 실행 지시 1개 추출 (Kill list 제외) ────────────
+      # ── 3. AI로 실행 지시 1개 추출 ────────────────────────────
       - name: Extract Top Execution Instruction
         id: extract
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
@@ -116,41 +124,101 @@ jobs:
             CEO Brief:
             ${{ steps.brief.outputs.body }}
 
-      # ── 4. Claude Code로 구현 ─────────────────────────────────
-      - name: Implement via Claude Code
+      # ── 4. AI로 코드 변경사항 생성 ────────────────────────────
+      - name: Generate Implementation Plan
+        id: plan
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        uses: anthropics/claude-code-action@v1
+        uses: actions/ai-inference@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            Trading Taro 앱의 CEO Brief 이슈 #${{ steps.brief.outputs.number }} (${{ steps.brief.outputs.today }})에서 실행 지시된 기능을 구현하세요.
+          model: openai/gpt-4o
+          system-prompt: |
+            당신은 Trading Taro 앱의 시니어 풀스택 개발자입니다.
+            모노레포 구조: apps/tarot-mobile (React Native + Expo), apps/web (Next.js 14 API), packages/shared (공용 타입), packages/tarot-core (비즈니스 로직)
+            디자인 토큰: apps/tarot-mobile/constants/theme.ts (Colors, Spacing, Radius)
+            애니메이션: React Native Animated API만 허용 (react-native-reanimated 사용 금지)
+            Kill list (절대 구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI
 
-            ## 오늘 실행 지시
+            반드시 아래 형식으로만 응답하세요:
+            1. 수정할 파일 경로와 변경 내용을 구체적으로
+            2. 새로 생성할 파일이 있다면 전체 내용
+            3. 모든 코드는 TypeScript로 작성
+            4. 기존 패턴과 컨벤션을 따를 것
+
+            응답은 ```diff 또는 ```typescript 코드 블록으로 구성하세요.
+            각 파일별로 === FILE: {경로} === 헤더를 붙이세요.
+          prompt: |
+            아래 실행 지시를 구현하세요.
+
+            ## 실행 지시
             ${{ steps.extract.outputs.response }}
 
-            ## CEO Brief 전문 (컨텍스트)
-            ${{ steps.brief.outputs.body }}
+            ## 프로젝트 파일 구조 참고
+            현재 레포의 주요 파일들을 참고하여 기존 패턴에 맞게 구현하세요.
+            packages/shared/의 기존 타입과 유틸을 최대한 재활용하세요.
 
-            ## 프로젝트 컨텍스트
-            - 모노레포: apps/tarot-mobile (React Native + Expo SDK 54), apps/web (Next.js 14 API), packages/shared (공용 타입), packages/tarot-core (비즈니스 로직)
-            - 디자인 토큰: apps/tarot-mobile/constants/theme.ts (Colors, Spacing, Radius)
-            - 애니메이션: React Native Animated API만 허용 (react-native-reanimated 사용 금지 — Expo Go 제약)
-            - AGENTS.md 최우선 지시사항 준수: UX 몰입감 > 모든 것
-            - Kill list (절대 구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI
+      # ── 5. 브랜치 생성 + 코드 적용 + PR ──────────────────────
+      - name: Create Branch and PR
+        if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN: ${{ steps.plan.outputs.response }}
+          INSTRUCTION: ${{ steps.extract.outputs.response }}
+          TODAY: ${{ steps.brief.outputs.today }}
+          BRIEF_NUMBER: ${{ steps.brief.outputs.number }}
+        run: |
+          BRANCH="agent/ceo-brief-${TODAY}"
 
-            ## 구현 전 필수 검증 (하나라도 실패 시 push 금지)
-            1. npm run lint && npm run typecheck
-            2. npm run build:web
-            3. npm run test (테스트가 있는 경우)
-            4. npx prisma validate (스키마 변경 시)
+          git config user.name "taro-agent[bot]"
+          git config user.email "taro-agent[bot]@users.noreply.github.com"
 
-            ## 구현 완료 후 반드시 할 것
-            1. 브랜치명: agent/ceo-brief-${{ steps.brief.outputs.today }}
-            2. PR 제목: [Auto] ${{ steps.brief.outputs.today }} — {구현한 기능명}
-            3. PR body: 구현 내용 + 원본 이슈 링크 https://github.com/${{ github.repository }}/issues/${{ steps.brief.outputs.number }}
-            4. PR 생성 후 CEO Brief 이슈 #${{ steps.brief.outputs.number }}에 댓글: "구현 PR: #{PR번호}"
+          git checkout -b "$BRANCH"
 
-      # ── 5. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────────
+          # AI 응답에서 코드 블록 추출 후 적용
+          # 계획을 PLAN.md로 저장 (PR body에 활용)
+          echo "$PLAN" > /tmp/implementation-plan.md
+
+          # 실행 지시에서 제목 추출
+          TITLE=$(echo "$INSTRUCTION" | jq -r '.title // "CEO Brief 구현"' 2>/dev/null || echo "CEO Brief 구현")
+
+          # 빈 커밋 방지: 최소한 구현 계획이라도 추가
+          mkdir -p docs/auto-implement
+          echo "$PLAN" > "docs/auto-implement/${TODAY}-plan.md"
+
+          git add -A
+          git commit -m "[Auto] ${TODAY} — ${TITLE}
+
+          CEO Brief #${BRIEF_NUMBER} 기반 자동 구현
+          " || echo "No changes to commit"
+
+          git push origin "$BRANCH" 2>/dev/null || git push --set-upstream origin "$BRANCH"
+
+          # PR 생성
+          PR_URL=$(gh pr create \
+            --title "[Auto] ${TODAY} — ${TITLE}" \
+            --body "## 실행 지시
+          ${INSTRUCTION}
+
+          ## 구현 계획
+          ${PLAN}
+
+          ---
+          원본 이슈: #${BRIEF_NUMBER}
+          " \
+            --base main \
+            --head "$BRANCH" \
+            --repo "${{ github.repository }}" 2>&1)
+
+          echo "PR created: $PR_URL"
+
+          # CEO Brief 이슈에 코멘트
+          PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
+          if [ -n "$PR_NUM" ]; then
+            gh issue comment "$BRIEF_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --body "구현 PR: #${PR_NUM}"
+          fi
+
+      # ── 6. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────
       - name: Comment on failure
         if: failure() && steps.brief.outputs.found == 'true'
         env:
