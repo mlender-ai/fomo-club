@@ -52,8 +52,8 @@ function useScreenEntrance() {
 // --- 카드 개별 등장 컴포넌트 ---
 function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
   const opacity    = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(32)).current;
-  const scale      = useRef(new Animated.Value(0.96)).current;
+  const translateY = useRef(new Animated.Value(56)).current;
+  const scale      = useRef(new Animated.Value(0.90)).current;
   const storyGlow  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -63,9 +63,11 @@ function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
     Animated.sequence([
       Animated.delay(cardDelay),
       Animated.parallel([
-        Animated.timing(opacity,     { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(translateY,  { toValue: 0, duration: 600, useNativeDriver: true }),
-        Animated.timing(scale,       { toValue: 1, duration: 600, useNativeDriver: true }),
+        // opacity는 timing으로 빠르게
+        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        // translateY·scale은 spring으로 튀어오르는 느낌 (bounce 효과)
+        Animated.spring(translateY, { toValue: 0, tension: 65, friction: 9, useNativeDriver: true }),
+        Animated.spring(scale,      { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
       ]),
     ]).start(() => {
       // 카드 등장 완료 후 스토리텍스트 페이드인
