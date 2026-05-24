@@ -11,6 +11,7 @@ import { useDrawStore, type SpreadType } from "../../lib/drawStore";
 import { useUserStore } from "../../lib/store";
 import { apiFetch } from "../../lib/api";
 import { localDraw, saveLocalDraw } from "../../lib/localEngine";
+import { getCardStory } from "../../lib/cardStoryTemplates";
 import { AdBanner } from "../../components/AdBanner";
 import { trackEvent } from "../../lib/analytics";
 import { useStoreReview } from "../../lib/useStoreReview";
@@ -117,18 +118,23 @@ export default function DrawScreen() {
           spread,
           interpretation: api.interpretation.summary,
           drawnAt: new Date().toISOString(),
-          cards: api.interpretation.cards.map((c, i) => ({
-            id: c.id,
-            name: c.id,
-            nameKo: c.nameKo,
-            symbol: "✦",
-            isReversed: c.orientation === "reversed",
-            headline: i === 0 ? api.interpretation.headline : c.nameKo,
-            summary: api.interpretation.summary,
-            detail: api.interpretation.detail,
-            slot: c.slot ?? null,
-            cardNarrative: c.narrative,
-          })),
+          cards: api.interpretation.cards.map((c, i) => {
+            const isReversed = c.orientation === "reversed";
+            // 서버 narrative 우선, 없으면 클라이언트 템플릿 폴백
+            const storyText = c.narrative ?? getCardStory(c.id, isReversed);
+            return {
+              id: c.id,
+              name: c.id,
+              nameKo: c.nameKo,
+              symbol: "✦",
+              isReversed,
+              headline: i === 0 ? api.interpretation.headline : c.nameKo,
+              summary: api.interpretation.summary,
+              detail: api.interpretation.detail,
+              storyText,
+              slot: c.slot ?? null,
+            };
+          }),
         };
       } else {
         drawResult = localDraw(ticker || "AAPL", tickerName || "AAPL", spread);

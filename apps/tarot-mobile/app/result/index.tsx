@@ -24,17 +24,53 @@ const SLOT_LABELS: Record<string, string> = {
   future: "미래",
 };
 
-function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(32)).current;
-  const scale = useRef(new Animated.Value(0.96)).current;
+// --- 화면 입장 애니메이션 훅 ---
+// 드로우→결과 전환에 신비로운 몰입감을 더한다.
+// 어두운 베일이 걷히며 콘텐츠가 살짝 확대되어 드러난다.
+function useScreenEntrance() {
+  const veilOpacity    = useRef(new Animated.Value(1)).current;
+  const contentScale   = useRef(new Animated.Value(0.97)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,     { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(translateY,  { toValue: 0,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(scale,       { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
+      Animated.timing(contentOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(contentScale,   { toValue: 1, duration: 600, useNativeDriver: true }),
     ]).start();
+
+    Animated.timing(veilOpacity, {
+      toValue: 0,
+      duration: 700,
+      delay: 150,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return { veilOpacity, contentScale, contentOpacity };
+}
+
+// --- 카드 개별 등장 컴포넌트 ---
+function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
+  const opacity    = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(32)).current;
+  const scale      = useRef(new Animated.Value(0.96)).current;
+  const storyGlow  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const BASE_DELAY = 300; // 베일이 걷힌 뒤 카드 등장
+    const cardDelay  = BASE_DELAY + index * 280;
+
+    Animated.sequence([
+      Animated.delay(cardDelay),
+      Animated.parallel([
+        Animated.timing(opacity,     { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(translateY,  { toValue: 0, duration: 600, useNativeDriver: true }),
+        Animated.timing(scale,       { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]),
+    ]).start(() => {
+      // 카드 등장 완료 후 스토리텍스트 페이드인
+      Animated.timing(storyGlow, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    });
   }, []);
 
   const slotLabel = card.slot ? SLOT_LABELS[card.slot] ?? null : null;
@@ -68,22 +104,23 @@ function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
       {/* 구분선 */}
       <View style={styles.divider} />
 
-      {/* 헤드라인 — 가장 큰 계층 */}
+      {/* 헤드라인 */}
       <Text variant="subheading" style={styles.headline}>{card.headline}</Text>
 
-      {/* 요약 — 두 번째 계층 */}
+      {/* 요약 */}
       <Text variant="body-sm" style={styles.summary}>{card.summary}</Text>
 
-      {/* 상세 — 세 번째 계층, 약간 흐리게 */}
+      {/* 상세 */}
       <Text variant="body-sm" style={styles.detail}>{card.detail}</Text>
 
-      {/* 카드 이야기 — 카드의 원형적 의미를 서사로 전달 */}
-      {card.cardNarrative ? (
-        <View style={styles.narrativeBlock}>
-          <Text variant="caption" color={Colors.taroEssence} style={styles.narrativeLabel}>✦ 카드 이야기</Text>
-          <Text variant="body-sm" style={styles.narrativeText}>{card.cardNarrative}</Text>
-        </View>
-      ) : null}
+      {/* 미니 스토리텍스트 — 카드 아키타입과 사용자 상황을 연결하는 몰입 내러티브 */}
+      {card.storyText && (
+        <Animated.View style={[styles.storyContainer, { opacity: storyGlow }]}>
+          <View style={styles.storyDivider} />
+          <Text style={styles.storySymbol}>✦</Text>
+          <Text variant="body-sm" style={styles.storyText}>{card.storyText}</Text>
+        </Animated.View>
+      )}
     </Animated.View>
   );
 }
@@ -97,6 +134,8 @@ export default function ResultScreen() {
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+
+  const { veilOpacity, contentScale, contentOpacity } = useScreenEntrance();
 
   useEffect(() => {
     if (adStatus === "earned") {
@@ -214,164 +253,181 @@ export default function ResultScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text variant="body-sm" color={Colors.midGrayText}>← 뒤로</Text>
-          </TouchableOpacity>
-          {isLoggedIn && (
-            <View style={styles.creditBadge}>
-              <Text variant="caption" color={Colors.taroEssence}>✦ {credits}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* 종목 + 날짜 */}
-        <View style={styles.meta}>
-          <Text variant="caption" color={Colors.taroEssence} style={styles.spreadLabel}>
-            {result.spread === "single" ? "1장 스프레드" : "3장 스프레드"}
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
-            <TickerLogo ticker={result.ticker} size={44} />
-            <View>
-              <Text variant="heading" style={styles.tickerTitle}>
-                {result.tickerName}
-              </Text>
-              <Text variant="caption" color={Colors.ironOutline}>{result.ticker}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* 카드들 */}
-        <View style={styles.cards}>
-          {result.cards.map((card, i) => (
-            <CardReveal key={card.id} card={card} index={i} />
-          ))}
-        </View>
-
-        {/* 면책 고지 */}
-        <View style={styles.disclaimer}>
-          <Text variant="caption" color={Colors.ironOutline} style={styles.disclaimerText}>
-            ⚠ {DISCLAIMER}
-          </Text>
-        </View>
-
-        {/* 공유하기 */}
-        <View style={styles.shareSection}>
-          <Button
-            variant="primary"
-            label={shareLoading ? "공유 중..." : "공유하기"}
-            loading={shareLoading}
-            onPress={handleShare}
-          />
-          {isLoggedIn && (
-            <Text variant="caption" color={Colors.ironOutline} style={styles.shareHint}>
-              공유하면 크레딧 1개를 받을 수 있어요 (1일 1회)
-            </Text>
-          )}
-        </View>
-
-        {/* 피드백 + 신고 */}
-        {isLoggedIn && (
-          <View style={styles.feedbackSection}>
-            <Text variant="body-sm" color={Colors.silverHighlight} style={styles.feedbackTitle}>
-              {feedbackSent ? "감사합니다!" : "이 해석이 도움이 됐나요?"}
-            </Text>
-            <View style={styles.starRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => handleFeedback(star)}
-                  disabled={feedbackSent}
-                  style={styles.starBtn}
-                >
-                  <Text style={[
-                    styles.starText,
-                    feedbackRating !== null && star <= feedbackRating && styles.starActive,
-                  ]}>
-                    {feedbackRating !== null && star <= feedbackRating ? "★" : "☆"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity onPress={handleReport} style={styles.reportBtn}>
-              <Text variant="caption" color={Colors.ironOutline}>부적절한 해석 신고</Text>
+      {/* 콘텐츠 — 입장 시 스케일업 + 페이드인 */}
+      <Animated.View style={[
+        styles.contentWrapper,
+        { opacity: contentOpacity, transform: [{ scale: contentScale }] },
+      ]}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 헤더 */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Text variant="body-sm" color={Colors.midGrayText}>← 뒤로</Text>
             </TouchableOpacity>
+            {isLoggedIn && (
+              <View style={styles.creditBadge}>
+                <Text variant="caption" color={Colors.taroEssence}>✦ {credits}</Text>
+              </View>
+            )}
           </View>
-        )}
 
-        {/* 리워드 광고 */}
-        {isLoggedIn && (
-          <View style={styles.rewardSection}>
-            <Text variant="body-sm" color={Colors.silverHighlight} style={styles.rewardTitle}>
-              크레딧이 부족하신가요?
+          {/* 종목 + 날짜 */}
+          <View style={styles.meta}>
+            <Text variant="caption" color={Colors.taroEssence} style={styles.spreadLabel}>
+              {result.spread === "single" ? "1장 스프레드" : "3장 스프레드"}
             </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
+              <TickerLogo ticker={result.ticker} size={44} />
+              <View>
+                <Text variant="heading" style={styles.tickerTitle}>
+                  {result.tickerName}
+                </Text>
+                <Text variant="caption" color={Colors.ironOutline}>{result.ticker}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 카드들 */}
+          <View style={styles.cards}>
+            {result.cards.map((card, i) => (
+              <CardReveal key={card.id} card={card} index={i} />
+            ))}
+          </View>
+
+          {/* 면책 고지 */}
+          <View style={styles.disclaimer}>
+            <Text variant="caption" color={Colors.ironOutline} style={styles.disclaimerText}>
+              ⚠ {DISCLAIMER}
+            </Text>
+          </View>
+
+          {/* 공유하기 */}
+          <View style={styles.shareSection}>
+            <Button
+              variant="primary"
+              label={shareLoading ? "공유 중..." : "공유하기"}
+              loading={shareLoading}
+              onPress={handleShare}
+            />
+            {isLoggedIn && (
+              <Text variant="caption" color={Colors.ironOutline} style={styles.shareHint}>
+                공유하면 크레딧 1개를 받을 수 있어요 (1일 1회)
+              </Text>
+            )}
+          </View>
+
+          {/* 피드백 + 신고 */}
+          {isLoggedIn && (
+            <View style={styles.feedbackSection}>
+              <Text variant="body-sm" color={Colors.silverHighlight} style={styles.feedbackTitle}>
+                {feedbackSent ? "감사합니다!" : "이 해석이 도움이 됐나요?"}
+              </Text>
+              <View style={styles.starRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => handleFeedback(star)}
+                    disabled={feedbackSent}
+                    style={styles.starBtn}
+                  >
+                    <Text style={[
+                      styles.starText,
+                      feedbackRating !== null && star <= feedbackRating && styles.starActive,
+                    ]}>
+                      {feedbackRating !== null && star <= feedbackRating ? "★" : "☆"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity onPress={handleReport} style={styles.reportBtn}>
+                <Text variant="caption" color={Colors.ironOutline}>부적절한 해석 신고</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 리워드 광고 */}
+          {isLoggedIn && (
+            <View style={styles.rewardSection}>
+              <Text variant="body-sm" color={Colors.silverHighlight} style={styles.rewardTitle}>
+                크레딧이 부족하신가요?
+              </Text>
+              <Button
+                variant="secondary"
+                label={rewardLabel}
+                disabled={adStatus === "loading" || adStatus === "showing" || adStatus === "earned"}
+                onPress={handleWatchAd}
+              />
+            </View>
+          )}
+
+          {/* 액션 버튼 */}
+          <View style={styles.actions}>
+            <Button variant="primary" label="다시 뽑기" onPress={handleDrawAgain} />
             <Button
               variant="secondary"
-              label={rewardLabel}
-              disabled={adStatus === "loading" || adStatus === "showing" || adStatus === "earned"}
-              onPress={handleWatchAd}
+              label="홈으로"
+              onPress={() => { reset(); router.replace("/(tabs)"); }}
             />
           </View>
-        )}
+        </ScrollView>
+      </Animated.View>
 
-        {/* 액션 버튼 */}
-        <View style={styles.actions}>
-          <Button variant="primary" label="다시 뽑기" onPress={handleDrawAgain} />
-          <Button
-            variant="secondary"
-            label="홈으로"
-            onPress={() => { reset(); router.replace("/(tabs)"); }}
-          />
-        </View>
-      </ScrollView>
+      {/* 신비로운 베일 — 화면 전환 시 페이드아웃되며 결과를 드러냄 */}
+      <Animated.View
+        style={[styles.veil, { opacity: veilOpacity }]}
+        pointerEvents="none"
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: Colors.ebonyCanvas },
-  scroll:         { paddingHorizontal: Spacing.s24, paddingBottom: 48 },
-  header:         { paddingTop: Spacing.s16, marginBottom: Spacing.s16 },
-  backBtn:        { alignSelf: "flex-start", padding: 4 },
-  meta:           { marginBottom: Spacing.s32, gap: 4 },
-  spreadLabel:    { letterSpacing: 1, marginBottom: 4 },
-  tickerTitle:    { color: Colors.whiteout },
-  cards:          { gap: 16, marginBottom: Spacing.s24 },
-  cardReveal:     { backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, shadowColor: Colors.taroEssence, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
-  slotBadge:      { alignSelf: "flex-start", backgroundColor: Colors.voidGreen, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 12 },
-  slotLabel:      { letterSpacing: 1.5, fontWeight: "700" },
-  cardHeader:     { flexDirection: "row", gap: 16, marginBottom: 12 },
-  cardThumb:      { width: 64, height: 92, backgroundColor: Colors.ebonyCanvas, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.taroEssence, alignItems: "center", justifyContent: "center", gap: 4 },
+  container:       { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  contentWrapper:  { flex: 1 },
+  scroll:          { paddingHorizontal: Spacing.s24, paddingBottom: 48 },
+  header:          { paddingTop: Spacing.s16, marginBottom: Spacing.s16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  backBtn:         { padding: 4 },
+  meta:            { marginBottom: Spacing.s32, gap: 4 },
+  spreadLabel:     { letterSpacing: 1, marginBottom: 4 },
+  tickerTitle:     { color: Colors.whiteout },
+  cards:           { gap: 16, marginBottom: Spacing.s24 },
+  cardReveal:      { backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, shadowColor: Colors.taroEssence, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
+  slotBadge:       { alignSelf: "flex-start", backgroundColor: Colors.voidGreen, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 12 },
+  slotLabel:       { letterSpacing: 1.5, fontWeight: "700" },
+  cardHeader:      { flexDirection: "row", gap: 16, marginBottom: 12 },
+  cardThumb:       { width: 64, height: 92, backgroundColor: Colors.ebonyCanvas, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.taroEssence, alignItems: "center", justifyContent: "center", gap: 4 },
   cardThumbReversed: { borderColor: Colors.ironOutline, opacity: 0.85 },
-  cardThumSymbol: { fontSize: 18, color: Colors.taroEssence, fontWeight: "700" },
-  reversedMark:   { fontSize: 9, color: Colors.ironOutline },
-  cardMeta:       { flex: 1, justifyContent: "center", gap: 4 },
-  reversedBadge:  { marginTop: 4, alignSelf: "flex-start", borderWidth: 1, borderColor: Colors.ironOutline, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  divider:        { height: 1, backgroundColor: Colors.carbonBorder, marginVertical: 14 },
-  headline:       { color: Colors.whiteout, marginBottom: 10, fontWeight: "700", lineHeight: 26 },
-  summary:        { color: Colors.silverHighlight, marginBottom: Spacing.s8, lineHeight: 22 },
-  detail:         { color: Colors.midGrayText, lineHeight: 22, opacity: 0.9 },
-  narrativeBlock: { marginTop: Spacing.s16, backgroundColor: Colors.ebonyCanvas, borderRadius: 8, padding: Spacing.s16, borderWidth: 1, borderColor: Colors.deepInsight },
-  narrativeLabel: { letterSpacing: 1.5, fontWeight: "700", marginBottom: 8 },
-  narrativeText:  { color: Colors.silverHighlight, lineHeight: 20, fontStyle: "italic" },
-  disclaimer:     { backgroundColor: Colors.steelSurface, borderRadius: 10, padding: Spacing.s16, marginBottom: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder },
-  disclaimerText: { lineHeight: 18 },
-  shareSection:   { marginBottom: Spacing.s24, gap: 8 },
-  shareHint:      { textAlign: "center" },
+  cardThumSymbol:  { fontSize: 18, color: Colors.taroEssence, fontWeight: "700" },
+  reversedMark:    { fontSize: 9, color: Colors.ironOutline },
+  cardMeta:        { flex: 1, justifyContent: "center", gap: 4 },
+  reversedBadge:   { marginTop: 4, alignSelf: "flex-start", borderWidth: 1, borderColor: Colors.ironOutline, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  divider:         { height: 1, backgroundColor: Colors.carbonBorder, marginVertical: 14 },
+  headline:        { color: Colors.whiteout, marginBottom: 10, fontWeight: "700", lineHeight: 26 },
+  summary:         { color: Colors.silverHighlight, marginBottom: Spacing.s8, lineHeight: 22 },
+  detail:          { color: Colors.midGrayText, lineHeight: 22, opacity: 0.9 },
+  // 미니 스토리텍스트 — 카드 아키타입 서사 블록
+  storyContainer:  { marginTop: Spacing.s16 },
+  storyDivider:    { height: 1, backgroundColor: Colors.deepInsight, marginBottom: Spacing.s16 },
+  storySymbol:     { fontSize: 10, color: Colors.taroEssence, textAlign: "center", marginBottom: Spacing.s8, letterSpacing: 4 },
+  storyText:       { color: Colors.silverHighlight, lineHeight: 22, fontStyle: "italic", opacity: 0.85 },
+  disclaimer:      { backgroundColor: Colors.steelSurface, borderRadius: 10, padding: Spacing.s16, marginBottom: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder },
+  disclaimerText:  { lineHeight: 18 },
+  shareSection:    { marginBottom: Spacing.s24, gap: 8 },
+  shareHint:       { textAlign: "center" },
   feedbackSection: { marginBottom: Spacing.s24, alignItems: "center", gap: 8 },
-  feedbackTitle:  { textAlign: "center" },
-  starRow:        { flexDirection: "row", gap: 8 },
-  starBtn:        { padding: 4 },
-  starText:       { fontSize: 28, color: Colors.ironOutline },
-  starActive:     { color: Colors.taroEssence },
-  reportBtn:      { marginTop: 4, padding: 4 },
-  rewardSection:  { marginBottom: Spacing.s24, gap: 8 },
-  rewardTitle:    { textAlign: "center", marginBottom: 4 },
-  creditBadge:    { borderWidth: 1, borderColor: Colors.deepInsight, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
-  actions:        { gap: 12 },
+  feedbackTitle:   { textAlign: "center" },
+  starRow:         { flexDirection: "row", gap: 8 },
+  starBtn:         { padding: 4 },
+  starText:        { fontSize: 28, color: Colors.ironOutline },
+  starActive:      { color: Colors.taroEssence },
+  reportBtn:       { marginTop: 4, padding: 4 },
+  rewardSection:   { marginBottom: Spacing.s24, gap: 8 },
+  rewardTitle:     { textAlign: "center", marginBottom: 4 },
+  creditBadge:     { borderWidth: 1, borderColor: Colors.deepInsight, borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4 },
+  actions:         { gap: 12 },
+  // 화면 전환 베일 — pointerEvents="none"으로 인터랙션 방해 없음
+  veil:            { ...StyleSheet.absoluteFillObject, backgroundColor: Colors.ebonyCanvas },
 });
