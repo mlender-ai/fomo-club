@@ -171,6 +171,9 @@ jobs:
           git config user.name "taro-agent[bot]"
           git config user.email "taro-agent[bot]@users.noreply.github.com"
 
+          # 기존 원격 브랜치가 있으면 삭제
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+
           git checkout -b "$BRANCH"
 
           # AI 응답에서 코드 블록 추출 후 적용
