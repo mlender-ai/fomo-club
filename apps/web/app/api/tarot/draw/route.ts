@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { drawCards, DRAW_COST, buildCacheKey, getCacheTtlMs, type TarotSpreadType } from "@taro/core";
+import { drawCards, DRAW_COST, buildCacheKey, getCacheTtlMs, getCardNarrative, type TarotSpreadType } from "@taro/core";
 import { fetchMarketSnapshot } from "@/lib/tarot/market";
 import { generateInterpretation } from "@/lib/tarot/interpret";
 import { requireAuth } from "@/lib/tarot/auth";
@@ -156,6 +156,7 @@ export async function POST(req: NextRequest) {
         orientation: dc.orientation,
         slot: dc.slot ?? null,
         imageUrl: dc.card.imageUrl,
+        narrative: getCardNarrative(dc.card.id, dc.orientation),
       })),
     },
   });
