@@ -172,7 +172,8 @@ jobs:
           git config user.email "taro-agent[bot]@users.noreply.github.com"
 
           # 기존 원격 브랜치가 있으면 삭제
-          git push origin --delete "$BRANCH" 2>/dev/null || true
+          echo "Checking for existing remote branch: $BRANCH"
+          git push origin --delete "$BRANCH" 2>&1 || echo "No existing branch to delete"
 
           git checkout -b "$BRANCH"
 
@@ -193,12 +194,12 @@ jobs:
           CEO Brief #${BRIEF_NUMBER} 기반 자동 구현
           " || echo "No changes to commit"
 
-          git push origin "$BRANCH" 2>/dev/null || git push --set-upstream origin "$BRANCH"
+          echo "Pushing branch: $BRANCH"
+          git push origin "$BRANCH" --force 2>&1
 
-          # PR 생성
-          PR_URL=$(gh pr create \
-            --title "[Auto] ${TODAY} — ${TITLE}" \
-            --body "## 실행 지시
+          # PR 생성 (heredoc으로 body 전달)
+          cat > /tmp/pr-body.md << PRBODY
+          ## 실행 지시
           ${INSTRUCTION}
 
           ## 구현 계획
@@ -206,7 +207,11 @@ jobs:
 
           ---
           원본 이슈: #${BRIEF_NUMBER}
-          " \
+          PRBODY
+
+          PR_URL=$(gh pr create \
+            --title "[Auto] ${TODAY} — ${TITLE}" \
+            --body-file /tmp/pr-body.md \
             --base main \
             --head "$BRANCH" \
             --repo "${{ github.repository }}" 2>&1)
