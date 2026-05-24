@@ -119,10 +119,10 @@ jobs:
       # ── 4. Claude Code로 구현 ─────────────────────────────────
       - name: Implement via Claude Code
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
+          prompt: |
             Trading Taro 앱의 CEO Brief 이슈 #${{ steps.brief.outputs.number }} (${{ steps.brief.outputs.today }})에서 실행 지시된 기능을 구현하세요.
 
             ## 오늘 실행 지시
