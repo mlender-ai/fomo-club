@@ -247,25 +247,17 @@ jobs:
               exit 1
             }
 
-      # ── 5. CI 수동 트리거 (GITHUB_TOKEN PR은 CI 자동 트리거 안 됨) ──
-      - name: Trigger CI on branch
+      # ── 5. PR 생성 코멘트 (CI는 workflow_run으로 자동 트리거) ──
+      - name: Comment on CEO Brief
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ steps.brief.outputs.today }}
         run: |
           BRANCH="agent/ceo-brief-${TODAY}"
-
           PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
 
           if [ -n "$PR_NUM" ]; then
-            echo "PR #${PR_NUM} found. Triggering CI on branch: $BRANCH"
-
-            gh workflow run ci.yml \
-              --ref "$BRANCH" \
-              --field ref="$BRANCH" \
-              --repo "${{ github.repository }}" || echo "CI trigger failed (non-critical)"
-
             IMPL_MODE="Claude Code"
             if [ "${{ steps.claude.outcome }}" = "failure" ]; then
               IMPL_MODE="GitHub Models (폴백)"
@@ -273,9 +265,7 @@ jobs:
 
             gh issue comment "${{ steps.brief.outputs.number }}" \
               --repo "${{ github.repository }}" \
-              --body "🤖 구현 PR: #${PR_NUM} — ${IMPL_MODE}로 자동 생성됨" || true
-          else
-            echo "No PR found for branch $BRANCH"
+              --body "🤖 구현 PR: #${PR_NUM} — ${IMPL_MODE}로 자동 생성됨. CI가 자동으로 트리거됩니다." || true
           fi
 
       # ── 6. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────

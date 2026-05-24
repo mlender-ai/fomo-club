@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  workflow_run:
+    workflows: ["Auto Implement CEO Brief"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       ref:
@@ -22,13 +25,43 @@ env:
   MARKET_DATA_PROVIDER: demo
 
 jobs:
+  resolve-ref:
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.value }}
+    steps:
+      - name: Determine checkout ref
+        id: ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.ref }}" ]; then
+            echo "value=${{ github.event.inputs.ref }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Auto Implement가 완료된 후 → 가장 최근 agent/ceo-brief 브랜치 찾기
+            BRANCH=$(gh api repos/${{ github.repository }}/branches --jq '[.[] | select(.name | startswith("agent/ceo-brief-"))] | sort_by(.commit.commit.committer.date) | last | .name' 2>/dev/null || echo "")
+            if [ -n "$BRANCH" ] && [ "$BRANCH" != "null" ]; then
+              echo "value=$BRANCH" >> "$GITHUB_OUTPUT"
+              echo "Found auto-implement branch: $BRANCH"
+            else
+              echo "value=" >> "$GITHUB_OUTPUT"
+              echo "No agent/ceo-brief branch found, using default"
+            fi
+          else
+            echo "value=" >> "$GITHUB_OUTPUT"
+          fi
+
   repo-checks:
+    needs: resolve-ref
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || '' }}
+          ref: ${{ needs.resolve-ref.outputs.ref || '' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -50,12 +83,12 @@ jobs:
 
   build-api:
     runs-on: ubuntu-latest
-    needs: repo-checks
+    needs: [resolve-ref, repo-checks]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || '' }}
+          ref: ${{ needs.resolve-ref.outputs.ref || '' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -74,12 +107,12 @@ jobs:
 
   build-web:
     runs-on: ubuntu-latest
-    needs: repo-checks
+    needs: [resolve-ref, repo-checks]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || '' }}
+          ref: ${{ needs.resolve-ref.outputs.ref || '' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
