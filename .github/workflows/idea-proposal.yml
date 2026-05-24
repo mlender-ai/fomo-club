@@ -146,6 +146,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 Product Manager입니다.
             사용자 페르소나: MZ세대 개인 투자자, 타로에 관심 있는 주식 입문자.
@@ -252,6 +253,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 프런트엔드 개발자입니다.
             스택: React Native + Expo SDK 54, expo-router, zustand, StyleSheet.
@@ -354,6 +356,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 백엔드 개발자입니다.
             스택: Next.js 14 API Routes, PostgreSQL + Prisma ORM, Railway/Supabase.
@@ -455,6 +458,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 UI/UX 디자이너입니다.
             현재 화면: 스플래시, 온보딩, 로그인, 홈, 카드 뽑기(7장 부채꼴 구현됨), 결과, 히스토리, 마이페이지.
@@ -557,6 +561,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 QA 엔지니어입니다.
             현재: packages/tarot-core vitest 31개 (forbidden/draw/cache), IAP 자동화 7개. E2E 없음.
@@ -656,6 +661,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 CTO입니다.
             중요 사실: DB는 `prisma db push` 운영 — "마이그레이션 미배포" 같은 제안은 잘못된 가설로 거부됨.
@@ -756,6 +762,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 그로스 마케터입니다.
             North Star가 "의식 경험"인 동안, 마케팅은 신규 유입보다 **앱 내 경험을 외부로 노출** 측면을 우선합니다.
@@ -854,6 +861,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 보안 담당자입니다.
             이미 구현: JWT HttpOnly(7일), IAP 서버검증(RevenueCat), HMAC nonce, HTTPS 강제.
@@ -944,6 +952,7 @@ jobs:
         id: proposal
         with:
           model: openai/gpt-4o
+          max-tokens: 4096
           system-prompt: |
             당신은 타로 증권 앱의 AI 해석 품질 담당입니다.
             현재 파일: packages/tarot-core/src/prompts/interpret-v1.1.0.ts (SINGLE/THREE_CARD 분기).
@@ -1035,6 +1044,7 @@ jobs:
         id: brief
         with:
           model: openai/gpt-4o
+          max-tokens: 8192
           system-prompt: |
             당신은 타로 증권 앱 CEO의 수석 비서 AI입니다.
             매일 아침 9개 팀 에이전트의 제안을 받아 CEO가 5분 안에 판단할 수 있는 브리핑을 작성합니다.
