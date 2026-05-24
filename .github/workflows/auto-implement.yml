@@ -194,6 +194,11 @@ jobs:
             현재 레포의 주요 파일들을 참고하여 기존 패턴에 맞게 구현하세요.
             packages/shared/의 기존 타입과 유틸을 최대한 재활용하세요.
 
+      - name: Restore git credentials (fallback)
+        if: steps.claude.outcome == 'failure' && steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+        run: |
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
       - name: Create Branch and PR (fallback)
         if: steps.claude.outcome == 'failure' && steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
         env:
