@@ -207,6 +207,7 @@ export default function ResultScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
@@ -327,6 +328,7 @@ export default function ResultScreen() {
 
 const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  scrollView:     { flex: 1 },
   scroll:         { paddingHorizontal: Spacing.s24, paddingBottom: 48 },
   header:         { paddingTop: Spacing.s16, marginBottom: Spacing.s16 },
   backBtn:        { alignSelf: "flex-start", padding: 4 },

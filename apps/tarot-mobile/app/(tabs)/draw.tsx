@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   SafeAreaView, View, TouchableOpacity, Animated,
   StyleSheet, ActivityIndicator, Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as ExpoDigest from "expo-crypto";
 import { Text } from "../../components/ui/Text";
 import { Colors, Spacing, Radius } from "../../constants/theme";
@@ -65,6 +65,13 @@ export default function DrawScreen() {
   const { credits, setCredits, isLoggedIn } = useUserStore();
   const [phase, setPhase] = useState<"select" | "selecting" | "flipping" | "done">("select");
   const [loadingLabel, setLoadingLabel] = useState("해석 중...");
+
+  // 탭 포커스 시 "done" 상태면 "select"로 리셋 — 인기종목 클릭 후 빈 화면 방지
+  useFocusEffect(
+    useCallback(() => {
+      setPhase((prev) => (prev === "done" ? "select" : prev));
+    }, [])
+  );
 
   useEffect(() => {
     if (phase !== "flipping") return;

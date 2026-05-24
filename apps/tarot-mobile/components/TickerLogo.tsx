@@ -8,31 +8,44 @@ interface Props {
 }
 
 export function TickerLogo({ ticker, size = 32 }: Props) {
-  const urls = getTickerLogoUrls(ticker, Math.max(size * 2, 128)); // 최소 128px
+  const urls = getTickerLogoUrls(ticker, Math.max(size * 2, 128));
   const [urlIndex, setUrlIndex] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const radius = size * 0.25;
 
-  // ticker 변경 시 항상 첫 URL부터 재시도
+  // ticker 변경 시 항상 첫 URL부터 재시도 + 로드 상태 초기화
   useEffect(() => {
     setUrlIndex(0);
+    setLoaded(false);
   }, [ticker]);
 
   const currentUrl = urls[urlIndex] ?? null;
 
+  // 모든 소스 실패 또는 URL 없음 → 컬러 이니셜 폴백
   if (!currentUrl) {
     return <Fallback ticker={ticker} size={size} radius={radius} />;
   }
 
   return (
-    <Image
-      source={{ uri: currentUrl }}
-      style={{ width: size, height: size, borderRadius: radius }}
-      onError={() => {
-        const next = urlIndex + 1;
-        setUrlIndex(next); // urls[next]가 없으면 null → Fallback
-      }}
-      resizeMode="contain"
-    />
+    <View style={{ width: size, height: size }}>
+      {/* 이미지 로드 완료 전 폴백 항상 표시 (blank 상태 방지) */}
+      {!loaded && <Fallback ticker={ticker} size={size} radius={radius} />}
+      <Image
+        source={{ uri: currentUrl }}
+        style={[
+          { width: size, height: size, borderRadius: radius },
+          // 로드 전: invisible로 마운트해 onLoad/onError 이벤트 수신 대기
+          !loaded && (StyleSheet.absoluteFill as object),
+          !loaded && { opacity: 0 },
+        ]}
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          setLoaded(false);
+          setUrlIndex((prev) => prev + 1);
+        }}
+        resizeMode="contain"
+      />
+    </View>
   );
 }
 

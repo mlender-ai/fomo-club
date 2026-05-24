@@ -97,6 +97,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -268,6 +269,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: Colors.ebonyCanvas },
+  scrollView:   { flex: 1 },
   scroll:       { paddingHorizontal: Spacing.s24, paddingBottom: 40 },
   header:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: Spacing.s16, marginBottom: Spacing.s32 },
   brand:        { letterSpacing: 2 },
