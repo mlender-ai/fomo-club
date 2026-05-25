@@ -8,6 +8,11 @@ on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "agent 브랜치명 (CI dispatch용)"
+        required: true
 
 permissions:
   contents: write
@@ -16,10 +21,11 @@ permissions:
 
 jobs:
   gate:
-    # CI가 성공했고 agent/ceo-brief-* 브랜치인 경우만
+    # CI 성공 + agent/ceo-brief-* 브랜치 (workflow_run 또는 workflow_dispatch)
     if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'agent/ceo-brief-')
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'agent/ceo-brief-'))
     runs-on: ubuntu-latest
     outputs:
       pr_number: ${{ steps.find_pr.outputs.pr_number }}
@@ -28,9 +34,18 @@ jobs:
       block_reason: ${{ steps.quality.outputs.reason }}
 
     steps:
+      - name: Resolve branch
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "branch=${{ github.event.inputs.branch }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "branch=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ steps.resolve.outputs.branch }}
           fetch-depth: 0
 
       # ── 1. 브랜치에 연결된 PR 찾기 ────────────────────────────
@@ -38,7 +53,7 @@ jobs:
         id: find_pr
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
         run: |
           PR=$(gh pr list \
             --head "$BRANCH" \

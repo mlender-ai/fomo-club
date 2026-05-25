@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { verifySlackRequest } from "@/lib/slack/verify";
 import { dispatchCommand, SLOW_COMMANDS } from "@/lib/slack/commands";
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   // 느린 커맨드 (GitHub API 다중 호출): 즉시 ACK 후 백그라운드 처리
   if (SLOW_COMMANDS.has(cmdName) && responseUrl) {
-    void dispatchAndRespond(cmdName, args, userId, channelId, responseUrl);
+    waitUntil(dispatchAndRespond(cmdName, args, userId, channelId, responseUrl));
     return NextResponse.json({
       response_type: "in_channel",
       text: `⏳ \`/taro ${cmdName}\` 처리 중...`,

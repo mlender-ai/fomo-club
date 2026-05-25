@@ -354,8 +354,13 @@ jobs:
         if: steps.verify.outputs.pass == 'false'
         continue-on-error: true
         run: |
-          npm run lint 2>&1 && npm run typecheck 2>&1
-          if [ $? -eq 0 ]; then
+          npm run lint 2>&1 | tee /tmp/relint-output.txt
+          LINT_EXIT=${PIPESTATUS[0]}
+
+          npm run typecheck 2>&1 | tee /tmp/retc-output.txt
+          TC_EXIT=${PIPESTATUS[0]}
+
+          if [ "$LINT_EXIT" -eq 0 ] && [ "$TC_EXIT" -eq 0 ]; then
             echo "pass=true" >> "$GITHUB_OUTPUT"
           else
             echo "pass=false" >> "$GITHUB_OUTPUT"

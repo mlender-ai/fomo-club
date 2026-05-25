@@ -6,14 +6,9 @@ on:
     types: [opened, closed]
     branches: [main]
 
-  # CI 완료 알림 (agent 브랜치)
+  # CI + Daily Agent Council 완료 알림
   workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-
-  # Daily Agent Council 완료 알림
-  workflow_run:
-    workflows: ["Daily Agent Council"]
+    workflows: ["CI", "Daily Agent Council"]
     types: [completed]
 
   workflow_dispatch:

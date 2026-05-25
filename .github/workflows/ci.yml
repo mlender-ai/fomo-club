@@ -128,3 +128,28 @@ jobs:
 
       - name: Build web workspace
         run: npm --workspace @trading/web run build
+
+  # ── Phase 3: CI 성공 시 auto-merge 트리거 ──────────────────────
+  # workflow_run 이벤트는 2단계 전파 불가 → 명시적 dispatch
+  dispatch-auto-merge:
+    needs: [resolve-ref, repo-checks, build-api, build-web]
+    if: |
+      always() &&
+      needs.repo-checks.result == 'success' &&
+      needs.build-api.result == 'success' &&
+      needs.build-web.result == 'success' &&
+      needs.resolve-ref.outputs.ref != '' &&
+      startsWith(needs.resolve-ref.outputs.ref, 'agent/ceo-brief-')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Trigger auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ needs.resolve-ref.outputs.ref }}
+        run: |
+          echo "CI 성공 — auto-merge dispatch: $BRANCH"
+          gh workflow run auto-merge.yml \
+            -f branch="$BRANCH" \
+            --repo "${{ github.repository }}"

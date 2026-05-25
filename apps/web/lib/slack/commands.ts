@@ -1,4 +1,3 @@
-import { postMessage } from "./client";
 import {
   triggerWorkflow,
   getOpenPRs,
@@ -51,15 +50,14 @@ export async function dispatchCommand(
 
 async function handleImplement(args: string): Promise<CommandResult> {
   if (!args) {
-    return { text: "사용법: `/taro implement {이슈번호 또는 날짜}`" };
+    return { text: "사용법: `/taro implement {YYYY-MM-DD}`\n예: `/taro implement 2026-05-25`" };
   }
 
-  const inputs: Record<string, string> = {};
-  if (/^\d+$/.test(args)) {
-    inputs.brief_date = args;
-  } else {
-    inputs.brief_date = args;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(args)) {
+    return { text: "날짜 형식이 올바르지 않습니다. `YYYY-MM-DD` 형식으로 입력하세요.\n예: `/taro implement 2026-05-25`" };
   }
+
+  const inputs: Record<string, string> = { brief_date: args };
 
   await triggerWorkflow("auto-implement.yml", inputs);
   return { text: `Auto-implement 워크플로우 트리거됨 (입력: ${args})` };

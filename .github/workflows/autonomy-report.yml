@@ -72,7 +72,7 @@ jobs:
 
           # 성공률 계산
           if [ "$IMPL_RUNS" -gt 0 ]; then
-            SUCCESS_RATE=$(echo "scale=0; $IMPL_SUCCESS * 100 / $IMPL_RUNS" | bc)
+            SUCCESS_RATE=$(( IMPL_SUCCESS * 100 / IMPL_RUNS ))
           else
             SUCCESS_RATE=0
           fi

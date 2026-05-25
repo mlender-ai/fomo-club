@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { verifySlackRequest } from "@/lib/slack/verify";
 import { postMessage } from "@/lib/slack/client";
 import { dispatchCommand, KNOWN_COMMANDS } from "@/lib/slack/commands";
@@ -58,10 +59,9 @@ export async function POST(req: NextRequest) {
 
     // 알려진 커맨드 → 기존 dispatch
     if (KNOWN_COMMANDS.has(cmdName)) {
-      void handleMentionAsync(cmdName, args, event.user || "", channel, threadTs);
+      waitUntil(handleMentionAsync(cmdName, args, event.user || "", channel, threadTs));
     } else {
-      // 자유 대화 → Phase 3 Agent Chat (GPT-4o 무료)
-      void handleAgentChat(text, event.user || "", channel, threadTs);
+      waitUntil(handleAgentChat(text, event.user || "", channel, threadTs));
     }
   }
 
@@ -174,8 +174,12 @@ ${runList || "(없음)"}
     }
 
     const data = (await res.json()) as {
+      error?: { message: string };
       choices: { message: { content: string } }[];
     };
+
+    if (data.error) throw new Error(data.error.message || "AI API error");
+
     const reply = data.choices?.[0]?.message?.content?.trim();
 
     if (!reply) throw new Error("AI 응답이 비어있습니다");
