@@ -19,7 +19,6 @@ permissions:
   issues: write
   pull-requests: write
   models: read
-  id-token: write
 
 jobs:
   implement:
@@ -125,7 +124,7 @@ jobs:
             CEO Brief:
             ${{ steps.brief.outputs.body }}
 
-      # ── 4. 프로젝트 구조 스냅샷 생성 (Claude에게 탐색 비용 제거) ──
+      # ── 4. 프로젝트 구조 스냅샷 생성 ──────────────────────────
       - name: Generate project context
         id: context
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
@@ -187,81 +186,215 @@ jobs:
             ## 현재 프로젝트 구조
             ${{ steps.context.outputs.context }}
 
-      # ── 6a. Claude Code로 코드 적용 + 검증 (Sonnet, 최소 토큰) ──
-      - name: Apply and verify with Claude
-        id: claude
+      # ── 6. 생성된 코드를 파일에 적용 (bash 파싱) ───────────────
+      - name: Apply generated code
+        id: apply
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--model claude-sonnet-4-6 --max-turns 5"
-          prompt: |
-            아래 코드를 프로젝트에 적용하고 검증하세요. 코드베이스를 탐색하지 마세요.
+        env:
+          CODEGEN: ${{ steps.codegen.outputs.response }}
+        run: |
+          APPLIED=0
+          CURRENT_FILE=""
+          IN_CODE=false
 
-            ## 적용할 코드
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^===\ FILE:\ (.+)\ ===$ ]]; then
+              CURRENT_FILE="${BASH_REMATCH[1]}"
+              IN_CODE=false
+              continue
+            fi
+            if [[ "$line" =~ ^\`\`\`(typescript|tsx|ts|json|javascript|js|css|html|yaml|yml|sh|bash|text|markdown|md)$ ]] && [ -n "$CURRENT_FILE" ]; then
+              mkdir -p "$(dirname "$CURRENT_FILE")"
+              > "$CURRENT_FILE"
+              IN_CODE=true
+              continue
+            fi
+            if [[ "$line" == '```' ]] && [ "$IN_CODE" = true ]; then
+              IN_CODE=false
+              APPLIED=$((APPLIED + 1))
+              echo "✅ Applied: $CURRENT_FILE"
+              CURRENT_FILE=""
+              continue
+            fi
+            if [ "$IN_CODE" = true ] && [ -n "$CURRENT_FILE" ]; then
+              echo "$line" >> "$CURRENT_FILE"
+            fi
+          done <<< "$CODEGEN"
+
+          echo "applied=$APPLIED" >> "$GITHUB_OUTPUT"
+          echo "총 ${APPLIED}개 파일 적용 완료"
+
+          if [ "$APPLIED" -eq 0 ]; then
+            echo "⚠️ 적용된 파일이 없습니다. GPT-4o 출력 형식을 확인하세요."
+            echo "--- GPT-4o 출력 (처음 500자) ---"
+            echo "$CODEGEN" | head -c 500
+            exit 1
+          fi
+
+      # ── 7. 코드 검증 (lint + typecheck) ────────────────────────
+      - name: Verify code
+        id: verify
+        if: steps.apply.outputs.applied > 0
+        continue-on-error: true
+        run: |
+          npm run lint 2>&1 | tee /tmp/lint-output.txt
+          LINT_EXIT=${PIPESTATUS[0]}
+
+          npm run typecheck 2>&1 | tee /tmp/typecheck-output.txt
+          TC_EXIT=${PIPESTATUS[0]}
+
+          if [ "$LINT_EXIT" -ne 0 ] || [ "$TC_EXIT" -ne 0 ]; then
+            echo "pass=false" >> "$GITHUB_OUTPUT"
+
+            {
+              echo "errors<<__ERR_EOF__"
+              if [ "$LINT_EXIT" -ne 0 ]; then
+                echo "=== LINT ERRORS ==="
+                tail -50 /tmp/lint-output.txt
+              fi
+              if [ "$TC_EXIT" -ne 0 ]; then
+                echo "=== TYPECHECK ERRORS ==="
+                tail -50 /tmp/typecheck-output.txt
+              fi
+              echo "__ERR_EOF__"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "pass=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 8. 에러 수정 (GPT-4o 무료, 조건부) ────────────────────
+      - name: Fix errors with GPT-4o
+        id: fix
+        if: steps.verify.outputs.pass == 'false'
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4o
+          system-prompt: |
+            당신은 TypeScript 코드의 lint/typecheck 에러를 수정하는 전문가입니다.
+            에러가 발생한 파일의 수정된 전체 내용만 출력하세요.
+            응답 형식:
+            === FILE: {경로} ===
+            ```typescript
+            (수정된 파일 전체 내용)
+            ```
+            설명 없이 파일 블록만 출력하세요.
+          prompt: |
+            아래 에러를 수정하세요.
+
+            ## 에러 메시지
+            ${{ steps.verify.outputs.errors }}
+
+            ## 원본 생성 코드
             ${{ steps.codegen.outputs.response }}
 
-            ## 지시사항 (토큰 절약을 위해 최소한의 작업만)
-            1. 위 코드의 각 === FILE: {경로} === 블록을 해당 경로에 Write하세요.
-            2. `npm run lint && npm run typecheck` 실행하세요.
-            3. 에러가 있으면 해당 파일만 수정하세요. 다른 파일은 읽지 마세요.
-            4. 에러가 없으면 바로 끝내세요.
-
-            절대 하지 말 것:
-            - 코드베이스 탐색 (Read로 다른 파일 읽기)
-            - 추가 기능 구현
-            - 리팩토링
-
-            ## 커밋/PR
-            - 브랜치: agent/ceo-brief-${{ steps.brief.outputs.today }}
-            - 커밋 메시지: "[Auto] ${{ steps.brief.outputs.today }} — ${{ steps.extract.outputs.response && fromJSON(steps.extract.outputs.response).title || 'CEO Brief 구현' }}"
-            - PR 본문: "CEO Brief #${{ steps.brief.outputs.number }} 자동 구현"
-
-      # ── 6b. Claude 실패 시 GitHub Models 폴백 ──────────────────
-      - name: Restore git credentials (fallback)
-        if: steps.claude.outcome == 'failure' && steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+      # ── 9. 수정된 코드 재적용 (조건부) ─────────────────────────
+      - name: Re-apply fixed code
+        id: reapply
+        if: steps.verify.outputs.pass == 'false'
+        env:
+          CODEGEN: ${{ steps.fix.outputs.response }}
         run: |
-          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          APPLIED=0
+          CURRENT_FILE=""
+          IN_CODE=false
 
-      - name: Create Branch and PR (fallback)
-        if: steps.claude.outcome == 'failure' && steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^===\ FILE:\ (.+)\ ===$ ]]; then
+              CURRENT_FILE="${BASH_REMATCH[1]}"
+              IN_CODE=false
+              continue
+            fi
+            if [[ "$line" =~ ^\`\`\`(typescript|tsx|ts|json|javascript|js|css|html|yaml|yml|sh|bash|text|markdown|md)$ ]] && [ -n "$CURRENT_FILE" ]; then
+              mkdir -p "$(dirname "$CURRENT_FILE")"
+              > "$CURRENT_FILE"
+              IN_CODE=true
+              continue
+            fi
+            if [[ "$line" == '```' ]] && [ "$IN_CODE" = true ]; then
+              IN_CODE=false
+              APPLIED=$((APPLIED + 1))
+              echo "✅ Fixed: $CURRENT_FILE"
+              CURRENT_FILE=""
+              continue
+            fi
+            if [ "$IN_CODE" = true ] && [ -n "$CURRENT_FILE" ]; then
+              echo "$line" >> "$CURRENT_FILE"
+            fi
+          done <<< "$CODEGEN"
+
+          echo "applied=$APPLIED" >> "$GITHUB_OUTPUT"
+          echo "수정된 파일 ${APPLIED}개 재적용 완료"
+
+      # ── 10. 재검증 (조건부) ────────────────────────────────────
+      - name: Re-verify code
+        id: reverify
+        if: steps.verify.outputs.pass == 'false'
+        continue-on-error: true
+        run: |
+          npm run lint 2>&1 && npm run typecheck 2>&1
+          if [ $? -eq 0 ]; then
+            echo "pass=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pass=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ 재검증 실패 — PR에 경고를 포함합니다."
+          fi
+
+      # ── 11. 브랜치 생성 + PR ───────────────────────────────────
+      - name: Create Branch and PR
+        if: steps.apply.outputs.applied > 0
         env:
           GH_TOKEN: ${{ github.token }}
-          CODEGEN: ${{ steps.codegen.outputs.response }}
           INSTRUCTION: ${{ steps.extract.outputs.response }}
           TODAY: ${{ steps.brief.outputs.today }}
           BRIEF_NUMBER: ${{ steps.brief.outputs.number }}
+          VERIFY_PASS: ${{ steps.verify.outputs.pass }}
+          REVERIFY_PASS: ${{ steps.reverify.outputs.pass }}
         run: |
           BRANCH="agent/ceo-brief-${TODAY}"
 
           git config user.name "taro-agent[bot]"
           git config user.email "taro-agent[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
-          git push origin --delete "$BRANCH" 2>&1 || echo "No existing branch to delete"
+          git push origin --delete "$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
 
           TITLE=$(echo "$INSTRUCTION" | jq -r '.title // "CEO Brief 구현"' 2>/dev/null || echo "CEO Brief 구현")
 
-          mkdir -p docs/auto-implement
-          echo "$CODEGEN" > "docs/auto-implement/${TODAY}-codegen.md"
-
           git add -A
           git commit -m "[Auto] ${TODAY} — ${TITLE}
 
-          CEO Brief #${BRIEF_NUMBER} 기반 자동 구현 (GitHub Models 폴백)
-          " || echo "No changes to commit"
+          CEO Brief #${BRIEF_NUMBER} 기반 자동 구현 (GitHub Models)" || {
+            echo "변경사항 없음 — PR 생성 건너뜀"
+            exit 0
+          }
 
-          git push origin "$BRANCH" --force 2>&1
+          git push origin "$BRANCH" --force
 
-          {
-            echo "## CEO Brief #${BRIEF_NUMBER} 자동 구현"
-            echo ""
-            echo "원본 이슈: #${BRIEF_NUMBER}"
-            echo ""
-            echo "> ⚠️ Claude Code 크레딧 부족으로 GitHub Models 폴백 사용"
-            echo "> 생성된 코드가 \`docs/auto-implement/${TODAY}-codegen.md\`에 있습니다."
-          } > /tmp/pr-body.md
+          QUALITY_NOTE=""
+          if [ "$VERIFY_PASS" = "true" ]; then
+            QUALITY_NOTE="✅ lint + typecheck 통과"
+          elif [ "$REVERIFY_PASS" = "true" ]; then
+            QUALITY_NOTE="✅ lint + typecheck 통과 (GPT-4o 자동 수정 후)"
+          else
+            QUALITY_NOTE="⚠️ lint/typecheck 에러 있음 — 수동 리뷰 필요"
+          fi
+
+          cat > /tmp/pr-body.md << PREOF
+          ## CEO Brief #${BRIEF_NUMBER} 자동 구현
+
+          원본 이슈: #${BRIEF_NUMBER}
+
+          ### 구현 방식
+          - 코드 생성: GPT-4o (GitHub Models, 무료)
+          - 코드 적용: bash 파싱
+          - 품질 검증: ${QUALITY_NOTE}
+
+          ### 실행 지시
+          \`\`\`json
+          ${INSTRUCTION}
+          \`\`\`
+          PREOF
 
           gh pr create \
             --title "[Auto] ${TODAY} — ${TITLE}" \
@@ -269,11 +402,11 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --repo "${{ github.repository }}" || {
-              echo "gh pr create failed with exit code $?"
+              echo "PR 생성 실패 (exit code $?)"
               exit 1
             }
 
-      # ── 7. PR 생성 코멘트 (CI는 workflow_run으로 자동 트리거) ──
+      # ── 12. CEO Brief 이슈에 결과 코멘트 ──────────────────────
       - name: Comment on CEO Brief
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
         env:
@@ -284,17 +417,12 @@ jobs:
           PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
 
           if [ -n "$PR_NUM" ]; then
-            IMPL_MODE="Claude Sonnet (토큰 최적화)"
-            if [ "${{ steps.claude.outcome }}" = "failure" ]; then
-              IMPL_MODE="GitHub Models (폴백)"
-            fi
-
             gh issue comment "${{ steps.brief.outputs.number }}" \
               --repo "${{ github.repository }}" \
-              --body "🤖 구현 PR: #${PR_NUM} — ${IMPL_MODE}로 자동 생성됨. CI가 자동으로 트리거됩니다." || true
+              --body "🤖 구현 PR: #${PR_NUM} — GPT-4o (GitHub Models, 무료)로 자동 생성됨. CI가 자동으로 트리거됩니다." || true
           fi
 
-      # ── 8. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────
+      # ── 13. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────
       - name: Comment on failure
         if: failure() && steps.brief.outputs.found == 'true'
         env:
