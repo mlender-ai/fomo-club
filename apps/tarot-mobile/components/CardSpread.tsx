@@ -1,7 +1,111 @@
 import { useEffect, useRef, useState } from "react";
-import { View, TouchableOpacity, Animated, StyleSheet, Easing } from "react-native";
+import { View, TouchableOpacity, Animated, StyleSheet, Easing, Vibration } from "react-native";
 import { Text } from "./ui/Text";
 import { Colors } from "../constants/theme";
+
+// 파티클 4방향: 상/하/좌/우 대각
+const BURST_DIRS = [
+  { dx: 0,    dy: -1  },
+  { dx: 0,    dy:  1  },
+  { dx: -1,   dy:  0  },
+  { dx:  1,   dy:  0  },
+  { dx: -0.7, dy: -0.7 },
+  { dx:  0.7, dy: -0.7 },
+  { dx: -0.7, dy:  0.7 },
+  { dx:  0.7, dy:  0.7 },
+] as const;
+const BURST_DIST = 32;
+
+/**
+ * GlowBurst — 카드 탭 시 방사형 파티클 + 링 확장 효과.
+ * `trigger`가 true로 바뀌면 한 번 실행한다.
+ */
+function GlowBurst({ trigger }: { readonly trigger: boolean }) {
+  const ringScale = useRef(new Animated.Value(0.2)).current;
+  const ringOpacity = useRef(new Animated.Value(0.9)).current;
+  const particleAnims = useRef(
+    BURST_DIRS.map(() => ({
+      tx: new Animated.Value(0),
+      ty: new Animated.Value(0),
+      opacity: new Animated.Value(0),
+    }))
+  ).current;
+
+  useEffect(() => {
+    if (!trigger) return;
+    // 링 확장
+    Animated.parallel([
+      Animated.timing(ringScale,   { toValue: 2.4, duration: 480, useNativeDriver: true }),
+      Animated.timing(ringOpacity, { toValue: 0,   duration: 480, useNativeDriver: true }),
+    ]).start(() => {
+      ringScale.setValue(0.2);
+      ringOpacity.setValue(0.9);
+    });
+    // 파티클 방사
+    particleAnims.forEach((anim, i) => {
+      const dir = BURST_DIRS[i]!;
+      anim.tx.setValue(0);
+      anim.ty.setValue(0);
+      anim.opacity.setValue(1);
+      Animated.parallel([
+        Animated.timing(anim.tx,      { toValue: dir.dx * BURST_DIST, duration: 420, useNativeDriver: true }),
+        Animated.timing(anim.ty,      { toValue: dir.dy * BURST_DIST, duration: 420, useNativeDriver: true }),
+        Animated.timing(anim.opacity, { toValue: 0, duration: 420, useNativeDriver: true }),
+      ]).start();
+    });
+  }, [trigger]);
+
+  return (
+    <View style={burstStyles.container} pointerEvents="none">
+      {/* 확장 링 */}
+      <Animated.View
+        style={[
+          burstStyles.ring,
+          { opacity: ringOpacity, transform: [{ scale: ringScale }] },
+        ]}
+      />
+      {/* 파티클 8개 */}
+      {particleAnims.map((anim, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            burstStyles.particle,
+            {
+              opacity: anim.opacity,
+              transform: [{ translateX: anim.tx }, { translateY: anim.ty }],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+const burstStyles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    // 카드 크기와 동일하게 맞춤 (CARD_W/H는 아래 선언 후 참조 불가 — 하드코드)
+    width: 58,
+    height: 90,
+  },
+  ring: {
+    position: "absolute",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 1.5,
+    borderColor: Colors.taroEssence,
+  },
+  particle: {
+    position: "absolute",
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: Colors.luminousReveal,
+  },
+});
 
 const CARD_COUNT = 7;
 const CARD_W = 58;
@@ -23,6 +127,10 @@ export function CardSpread({ spreadType, onComplete }: CardSpreadProps) {
   const [spreadPhase, setSpreadPhase] = useState<SpreadPhase>("spreading");
   const [selected, setSelected] = useState<number[]>([]);
   const [revealedSet, setRevealedSet] = useState<ReadonlySet<number>>(new Set());
+  // 카드별 burst trigger — toggle마다 GlowBurst가 다시 실행된다
+  const [burstTriggers, setBurstTriggers] = useState<boolean[]>(
+    Array.from({ length: CARD_COUNT }, () => false)
+  );
 
   const enterYs = useRef(
     Array.from({ length: CARD_COUNT }, () => new Animated.Value(200))
@@ -92,6 +200,14 @@ export function CardSpread({ spreadType, onComplete }: CardSpreadProps) {
   const handleCardTap = (cardIdx: number) => {
     if (spreadPhase !== "picking") return;
     if (selected.includes(cardIdx)) return;
+
+    // 빛 피드백: 진동(짧게) + 파티클 burst
+    Vibration.vibrate(40);
+    setBurstTriggers(prev => {
+      const next = [...prev];
+      next[cardIdx] = !next[cardIdx]!;
+      return next;
+    });
 
     const newSelected = [...selected, cardIdx];
     setSelected(newSelected);
@@ -217,6 +333,8 @@ export function CardSpread({ spreadType, onComplete }: CardSpreadProps) {
                   )}
                 </Animated.View>
               </TouchableOpacity>
+              {/* 카드 선택 시 빛 burst */}
+              <GlowBurst trigger={burstTriggers[i]!} />
             </Animated.View>
           );
         })}

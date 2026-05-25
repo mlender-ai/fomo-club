@@ -15,6 +15,7 @@ import { trackEvent } from "../../lib/analytics";
 import { shareResult } from "../../lib/share";
 import { TickerLogo } from "../../components/TickerLogo";
 import { useStoreReview } from "../../lib/useStoreReview";
+import { FlameAura } from "../../components/FlameAura";
 
 const DISCLAIMER = "본 해석은 오락 목적으로 제공되며 투자 조언이 아닙니다. 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.";
 
@@ -28,19 +29,32 @@ function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(32)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
+  // 카드 테두리 글로우 — 나타난 후 부드럽게 pulse
+  const glowOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const revealDelay = index * 250;
     Animated.parallel([
-      Animated.timing(opacity,     { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(translateY,  { toValue: 0,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(scale,       { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
-    ]).start();
+      Animated.timing(opacity,    { toValue: 1, duration: 600, delay: revealDelay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 600, delay: revealDelay, useNativeDriver: true }),
+      Animated.timing(scale,      { toValue: 1, duration: 600, delay: revealDelay, useNativeDriver: true }),
+    ]).start(() => {
+      // 등장 완료 후 글로우 pulse 시작
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowOpacity, { toValue: 0.25, duration: 1200, useNativeDriver: true }),
+          Animated.timing(glowOpacity, { toValue: 0,    duration: 1200, useNativeDriver: true }),
+        ])
+      ).start();
+    });
   }, []);
 
   const slotLabel = card.slot ? SLOT_LABELS[card.slot] ?? null : null;
 
   return (
     <Animated.View style={[styles.cardReveal, { opacity, transform: [{ translateY }, { scale }] }]}>
+      {/* 불꽃 글로우 오버레이 — 카드 위에 얹히는 반투명 그린 광채 */}
+      <Animated.View style={[styles.cardGlow, { opacity: glowOpacity }]} />
       {/* 슬롯 레이블 (3장 스프레드용) */}
       {slotLabel && (
         <View style={styles.slotBadge}>
@@ -231,6 +245,9 @@ export default function ResultScreen() {
           )}
         </View>
 
+        {/* 해석의 불꽃 오러 — 결과 화면 진입 시 신비감 연출 */}
+        <FlameAura />
+
         {/* 종목 + 날짜 */}
         <View style={styles.meta}>
           <Text variant="caption" color={Colors.taroEssence} style={styles.spreadLabel}>
@@ -344,7 +361,8 @@ const styles = StyleSheet.create({
   spreadLabel:    { letterSpacing: 1, marginBottom: 4 },
   tickerTitle:    { color: Colors.whiteout },
   cards:          { gap: 16, marginBottom: Spacing.s24 },
-  cardReveal:     { backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, shadowColor: Colors.taroEssence, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
+  cardReveal:     { backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, shadowColor: Colors.taroEssence, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, overflow: "hidden" },
+  cardGlow:       { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: Radius.cards, backgroundColor: Colors.taroEssence },
   slotBadge:      { alignSelf: "flex-start", backgroundColor: Colors.voidGreen, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 12 },
   slotLabel:      { letterSpacing: 1.5, fontWeight: "700" },
   cardHeader:     { flexDirection: "row", gap: 16, marginBottom: 12 },
