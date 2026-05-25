@@ -1,0 +1,134 @@
+name: Slack Notify
+
+on:
+  # Auto-implement PR 생성 알림
+  pull_request:
+    types: [opened, closed]
+    branches: [main]
+
+  # CI 완료 알림 (agent 브랜치)
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+  # Daily Agent Council 완료 알림
+  workflow_run:
+    workflows: ["Daily Agent Council"]
+    types: [completed]
+
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Slack에 보낼 메시지"
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: vars.SLACK_WEBHOOK_URL != ''
+
+    steps:
+      # ── workflow_dispatch: 수동 알림 ──────────────────────────
+      - name: Manual message
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"📢 ${{ github.event.inputs.message }}\"}"
+
+      # ── PR 오픈: Auto PR 생성 알림 ──────────────────────────
+      - name: PR opened (Auto)
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.action == 'opened' &&
+          startsWith(github.event.pull_request.title, '[Auto]')
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \"🤖 *Auto PR 생성됨*\n>#${PR_NUMBER}: ${PR_TITLE}\n>${PR_URL}\n\n✅ CI가 자동 실행 중입니다.\"
+            }"
+
+      # ── PR 머지 완료 ────────────────────────────────────────
+      - name: PR merged
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged == true &&
+          startsWith(github.event.pull_request.title, '[Auto]')
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \"✅ *Auto PR 머지됨*\n>#${PR_NUMBER}: ${PR_TITLE}\n>${PR_URL}\"
+            }"
+
+      # ── CI 완료: agent 브랜치 결과 ──────────────────────────
+      - name: CI result
+        if: |
+          github.event_name == 'workflow_run' &&
+          github.event.workflow.name == 'CI' &&
+          (startsWith(github.event.workflow_run.head_branch, 'agent/') ||
+           github.event.workflow_run.head_branch == 'main')
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ "$CONCLUSION" = "success" ]; then
+            EMOJI="✅"
+            STATUS="통과"
+          elif [ "$CONCLUSION" = "failure" ]; then
+            EMOJI="❌"
+            STATUS="실패"
+          else
+            EMOJI="⚠️"
+            STATUS="$CONCLUSION"
+          fi
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \"${EMOJI} *CI ${STATUS}* — \`${BRANCH}\`\n>${RUN_URL}\"
+            }"
+
+      # ── Daily Agent Council 완료 ────────────────────────────
+      - name: Council completed
+        if: |
+          github.event_name == 'workflow_run' &&
+          github.event.workflow.name == 'Daily Agent Council'
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ "$CONCLUSION" = "success" ]; then
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"text\": \"📋 *Daily Agent Council 완료*\nCEO Brief 이슈가 생성되었습니다. Auto-implement가 곧 실행됩니다.\n>${RUN_URL}\"
+              }"
+          else
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"text\": \"⚠️ *Daily Agent Council 실패*\n>${RUN_URL}\"
+              }"
+          fi

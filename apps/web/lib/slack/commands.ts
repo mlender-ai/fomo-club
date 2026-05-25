@@ -14,6 +14,9 @@ interface CommandResult {
 
 type CommandHandler = (args: string, userId: string) => Promise<CommandResult>;
 
+// GitHub API 다중 호출 등 3초 초과 가능성 있는 커맨드
+export const SLOW_COMMANDS = new Set(["status", "implement", "council", "merge"]);
+
 const commands: Record<string, CommandHandler> = {
   implement: handleImplement,
   council: handleCouncil,
