@@ -265,6 +265,7 @@ jobs:
             3. 현재 문제는 파일 경로(예: apps/mobile/src/screens/...) + 줄 번호 또는 구체 컴포넌트명 명시.
             4. 단일 PR 범위. 라이브러리 새로 도입은 정당화 필요.
             5. 자기 직전 이력과 다른 화면/컴포넌트 선택. 같은 영역(예: 카드 애니메이션) 반복 금지.
+            6. 빛, 소리, 햅틱 같은 감각 효과는 기본 디자인(피그마)이 확정된 화면에만 제안 가능. 디자인 미확정 화면에 폴리싱 효과를 제안하는 것은 시기상조이므로 금지.
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
@@ -867,10 +868,10 @@ jobs:
             이미 구현: JWT HttpOnly(7일), IAP 서버검증(RevenueCat), HMAC nonce, HTTPS 강제.
 
             === 절대 규칙 ===
-            1. Critical/High만 제안 — 의식 경험 흐름을 막는 우선순위가 아니면 보류.
+            1. Critical/High 보안 항목은 North Star 테마와 무관해도 제안 가능. 보안은 Out of Scope가 아닌 필수 영역이다.
             2. 금지 어휘 금지. 구체 위협 모델 명시.
             3. 자기 직전 이력 영역 재제안 금지.
-            4. North Star 테마와 직결 안 되면 "다음 주 후보"로 표시 후 본 제안 보류.
+            4. 단, Medium/Low는 North Star와 직결될 때만 제안. 그 외는 "다음 주 후보".
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
@@ -1058,6 +1059,8 @@ jobs:
             5. 금지 어휘 사용 시 해당 제안은 자동 킬리스트.
             6. 실행 지시는 정렬도 4점 이상만 채택. 그 외는 "다음 주 후보".
             7. 사용자가 5분 안에 GO/NO-GO 판단 가능한 분량.
+            8. Security 제안은 North Star 정렬도가 낮더라도 Critical/High면 킬리스트가 아닌 "다음 주 후보" 또는 "채택"으로 분류. 보안은 Out of Scope가 아니다.
+            9. 피그마 디자인이 확정되지 않은 화면에 대한 빛/소리/햅틱 같은 감각 폴리싱 제안은 자동 킬리스트. 기본 디자인이 먼저다.
           prompt: |
             ## 🌟 North Star (이번 주 테마)
             ${{ needs.prepare.outputs.north_star }}
