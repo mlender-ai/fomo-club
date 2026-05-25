@@ -15,7 +15,6 @@ import { trackEvent } from "../../lib/analytics";
 import { shareResult } from "../../lib/share";
 import { TickerLogo } from "../../components/TickerLogo";
 import { useStoreReview } from "../../lib/useStoreReview";
-import { FlameGlow } from "../../components/FlameGlow";
 
 const DISCLAIMER = "본 해석은 오락 목적으로 제공되며 투자 조언이 아닙니다. 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.";
 
@@ -42,7 +41,6 @@ function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
 
   return (
     <Animated.View style={[styles.cardReveal, { opacity, transform: [{ translateY }, { scale }] }]}>
-      <FlameGlow delay={index * 250 + 400} />
       {/* 슬롯 레이블 (3장 스프레드용) */}
       {slotLabel && (
         <View style={styles.slotBadge}>

@@ -84,6 +84,28 @@ export function getTickerLogoOverride(ticker: string): string | null {
   return _customOverrides[ticker] ?? _customOverrides[ticker.toUpperCase()] ?? null;
 }
 
+// 런타임에서 검색 결과로 알게 된 이름 → 도메인 추론용 캐시
+let _nameCache: Record<string, string> = {};
+
+export function cacheTickerName(ticker: string, companyName: string) {
+  _nameCache[ticker] = companyName;
+  _nameCache[ticker.toUpperCase()] = companyName;
+}
+
+/** 회사명에서 도메인을 추론 (예: "Apple Inc." → "apple.com") */
+function guessDomainFromName(name: string): string | null {
+  if (!name) return null;
+  // 흔한 접미사 제거
+  const cleaned = name
+    .replace(/,?\s*(Inc\.?|Corp\.?|Co\.?|Ltd\.?|LLC|PLC|S\.A\.?|SE|N\.V\.?|AG|Group|Holdings?|Incorporated|Corporation|Limited|Company)$/i, "")
+    .trim();
+  if (!cleaned) return null;
+  // 첫 단어만 사용 (보통 브랜드명)
+  const brand = cleaned.split(/\s+/)[0]!.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (brand.length < 2) return null;
+  return `${brand}.com`;
+}
+
 /** Returns ordered list of URLs to try (custom override first, then auto sources) */
 export function getTickerLogoUrls(ticker: string, size = 48): string[] {
   const override = getTickerLogoOverride(ticker);
@@ -94,14 +116,25 @@ export function getTickerLogoUrls(ticker: string, size = 48): string[] {
     TICKER_DOMAIN_MAP[ticker.toUpperCase()] ??
     null;
 
-  if (!domain) return [];
+  if (domain) {
+    return [
+      `https://logo.clearbit.com/${domain}`,
+      `https://www.google.com/s2/favicons?sz=128&domain=${domain}`,
+    ];
+  }
 
-  // 1순위: Clearbit 고품질 PNG
-  // 2순위: Google Favicons (Clearbit 실패/rate-limit 시 폴백)
-  return [
-    `https://logo.clearbit.com/${domain}`,
-    `https://www.google.com/s2/favicons?sz=128&domain=${domain}`,
-  ];
+  // 도메인 맵에 없는 티커 → 캐시된 회사명으로 도메인 추론
+  const companyName = _nameCache[ticker] ?? _nameCache[ticker.toUpperCase()];
+  const guessedDomain = companyName ? guessDomainFromName(companyName) : null;
+
+  if (guessedDomain) {
+    return [
+      `https://logo.clearbit.com/${guessedDomain}`,
+      `https://www.google.com/s2/favicons?sz=128&domain=${guessedDomain}`,
+    ];
+  }
+
+  return [];
 }
 
 /** Legacy single-URL helper — returns first candidate */

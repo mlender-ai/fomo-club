@@ -11,6 +11,7 @@ import { useDrawStore } from "../../lib/drawStore";
 import { apiFetch } from "../../lib/api";
 import { localSearch } from "../../lib/localEngine";
 import { TickerLogo } from "../../components/TickerLogo";
+import { cacheTickerName } from "../../lib/tickerLogo";
 
 
 const POPULAR: { ticker: string; label: string; market: string; flag: string }[] = [
@@ -68,10 +69,14 @@ export default function HomeScreen() {
         const data = await apiFetch<{ results: SearchResult[] }>(
           `/api/tarot/search?q=${encodeURIComponent(query.trim())}`
         );
-        setResults(data.results.length > 0 ? data.results : localSearch(query.trim()));
+        const searchResults = data.results.length > 0 ? data.results : localSearch(query.trim());
+        searchResults.forEach((r: SearchResult) => cacheTickerName(r.ticker, r.label));
+        setResults(searchResults);
       } catch {
         // 서버 없음 → 로컬 검색 폴백
-        setResults(localSearch(query.trim()));
+        const fallbackResults = localSearch(query.trim());
+        fallbackResults.forEach((r) => cacheTickerName(r.ticker, r.label));
+        setResults(fallbackResults);
       } finally {
         setSearching(false);
       }
