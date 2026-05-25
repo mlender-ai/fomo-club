@@ -1,0 +1,151 @@
+name: Autonomy Report
+
+# Phase 3 — 주간 자율 운영 리포트
+# 매주 월요일 오전 9시 KST (UTC 일요일 00:00)에 Slack에 리포트 전송
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"  # 매주 월요일 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    if: vars.SLACK_WEBHOOK_URL != ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── 1. 지난 7일 자율 활동 집계 ─────────────────────────────
+      - name: Collect metrics
+        id: metrics
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SINCE=$(TZ=Asia/Seoul date -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || \
+                  TZ=Asia/Seoul date -v-7d '+%Y-%m-%dT%H:%M:%SZ')
+
+          # CEO Brief 생성 수
+          CEO_BRIEFS=$(gh issue list \
+            --label "ceo-brief" \
+            --state all \
+            --limit 50 \
+            --json createdAt \
+            --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.createdAt > \"$SINCE\")] | length")
+
+          # Auto PR 생성 수
+          AUTO_PRS_CREATED=$(gh pr list \
+            --state all \
+            --limit 50 \
+            --json title,createdAt \
+            --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | startswith(\"[Auto]\")) | select(.createdAt > \"$SINCE\")] | length")
+
+          # Auto PR 머지 수
+          AUTO_PRS_MERGED=$(gh pr list \
+            --state merged \
+            --limit 50 \
+            --json title,mergedAt \
+            --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.title | startswith(\"[Auto]\")) | select(.mergedAt != null) | select(.mergedAt > \"$SINCE\")] | length")
+
+          # Auto-implement 워크플로우 실행 수
+          IMPL_RUNS=$(gh run list \
+            --workflow auto-implement.yml \
+            --limit 20 \
+            --json conclusion,createdAt \
+            --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.createdAt > \"$SINCE\")] | length")
+
+          IMPL_SUCCESS=$(gh run list \
+            --workflow auto-implement.yml \
+            --limit 20 \
+            --json conclusion,createdAt \
+            --repo "${{ github.repository }}" | \
+            jq "[.[] | select(.createdAt > \"$SINCE\") | select(.conclusion == \"success\")] | length")
+
+          # 성공률 계산
+          if [ "$IMPL_RUNS" -gt 0 ]; then
+            SUCCESS_RATE=$(echo "scale=0; $IMPL_SUCCESS * 100 / $IMPL_RUNS" | bc)
+          else
+            SUCCESS_RATE=0
+          fi
+
+          echo "ceo_briefs=$CEO_BRIEFS" >> "$GITHUB_OUTPUT"
+          echo "prs_created=$AUTO_PRS_CREATED" >> "$GITHUB_OUTPUT"
+          echo "prs_merged=$AUTO_PRS_MERGED" >> "$GITHUB_OUTPUT"
+          echo "impl_runs=$IMPL_RUNS" >> "$GITHUB_OUTPUT"
+          echo "success_rate=$SUCCESS_RATE" >> "$GITHUB_OUTPUT"
+
+      # ── 2. 머지된 기능 목록 ─────────────────────────────────────
+      - name: Collect merged features
+        id: features
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SINCE=$(TZ=Asia/Seoul date -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || \
+                  TZ=Asia/Seoul date -v-7d '+%Y-%m-%dT%H:%M:%SZ')
+
+          FEATURES=$(gh pr list \
+            --state merged \
+            --limit 20 \
+            --json title,mergedAt,number \
+            --repo "${{ github.repository }}" | \
+            jq -r "[.[] | select(.title | startswith(\"[Auto]\")) | select(.mergedAt != null) | select(.mergedAt > \"$SINCE\")] | .[] | \"• #\(.number): \(.title | ltrimstr(\"[Auto] \"))\"" | \
+            head -10)
+
+          if [ -z "$FEATURES" ]; then
+            FEATURES="• (이번 주 머지된 Auto 피처 없음)"
+          fi
+
+          echo "features<<__FEAT_EOF__" >> "$GITHUB_OUTPUT"
+          echo "$FEATURES" >> "$GITHUB_OUTPUT"
+          echo "__FEAT_EOF__" >> "$GITHUB_OUTPUT"
+
+      # ── 3. Slack 리포트 전송 ────────────────────────────────────
+      - name: Send weekly report
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          CEO_BRIEFS: ${{ steps.metrics.outputs.ceo_briefs }}
+          PRS_CREATED: ${{ steps.metrics.outputs.prs_created }}
+          PRS_MERGED: ${{ steps.metrics.outputs.prs_merged }}
+          IMPL_RUNS: ${{ steps.metrics.outputs.impl_runs }}
+          SUCCESS_RATE: ${{ steps.metrics.outputs.success_rate }}
+          FEATURES: ${{ steps.features.outputs.features }}
+        run: |
+          WEEK_START=$(TZ=Asia/Seoul date -d '7 days ago' '+%m/%d' 2>/dev/null || \
+                      TZ=Asia/Seoul date -v-7d '+%m/%d')
+          WEEK_END=$(TZ=Asia/Seoul date '+%m/%d')
+
+          # 이모지 선택
+          if [ "$SUCCESS_RATE" -ge 80 ]; then
+            RATE_EMOJI="🟢"
+          elif [ "$SUCCESS_RATE" -ge 50 ]; then
+            RATE_EMOJI="🟡"
+          else
+            RATE_EMOJI="🔴"
+          fi
+
+          MESSAGE="📊 *주간 자율 운영 리포트* (${WEEK_START} ~ ${WEEK_END})
+
+*이번 주 자율 파이프라인 요약:*
+• 📋 CEO Brief 생성: ${CEO_BRIEFS}건
+• 🤖 Auto PR 생성: ${PRS_CREATED}건
+• ✅ Auto PR 머지: ${PRS_MERGED}건
+• ⚙️ 파이프라인 실행: ${IMPL_RUNS}회
+• ${RATE_EMOJI} 성공률: ${SUCCESS_RATE}%
+
+*머지된 기능:*
+${FEATURES}
+
+_Hermes 자율 루프 — CEO 개입 없이 자동 운영 중_"
+
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": $(echo "$MESSAGE" | jq -Rs .)}"

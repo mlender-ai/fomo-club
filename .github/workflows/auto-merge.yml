@@ -1,0 +1,179 @@
+name: Auto Merge
+
+# Phase 3 — Hermes 자율 루프
+# CI가 agent/ceo-brief-* 브랜치에서 통과하면 PR을 자동 squash 머지한다.
+# 품질 게이트 실패(Prisma 변경, 빌드 에러, 테스트 실패) 시 머지 차단 + Slack 알림
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  gate:
+    # CI가 성공했고 agent/ceo-brief-* 브랜치인 경우만
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'agent/ceo-brief-')
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.find_pr.outputs.pr_number }}
+      pr_title:  ${{ steps.find_pr.outputs.pr_title }}
+      blocked:   ${{ steps.quality.outputs.blocked }}
+      block_reason: ${{ steps.quality.outputs.reason }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      # ── 1. 브랜치에 연결된 PR 찾기 ────────────────────────────
+      - name: Find PR
+        id: find_pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          PR=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number,title \
+            --repo "${{ github.repository }}" \
+            --jq '.[0]')
+
+          if [ -z "$PR" ] || [ "$PR" = "null" ]; then
+            echo "⚠️ 브랜치 $BRANCH 에 연결된 오픈 PR 없음. 건너뜁니다."
+            echo "pr_number=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PR_NUMBER=$(echo "$PR" | jq -r '.number')
+          PR_TITLE=$(echo "$PR" | jq -r '.title')
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+          echo "PR #$PR_NUMBER: $PR_TITLE"
+
+      # ── 2. 품질 게이트 ─────────────────────────────────────────
+      - name: Quality gate
+        id: quality
+        if: steps.find_pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.find_pr.outputs.pr_number }}
+        run: |
+          BLOCKED=false
+          REASON=""
+
+          # 게이트 1: Prisma 스키마 변경 여부 (마이그레이션 필요 → 수동)
+          PRISMA_CHANGED=$(gh pr diff "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --name-only 2>/dev/null | grep -c "prisma/schema.prisma" || true)
+          if [ "$PRISMA_CHANGED" -gt 0 ]; then
+            BLOCKED=true
+            REASON="Prisma 스키마 변경 감지 — 마이그레이션 수동 검토 필요"
+          fi
+
+          # 게이트 2: 보안 민감 파일 변경 여부
+          SENSITIVE=$(gh pr diff "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --name-only 2>/dev/null | \
+            grep -cE "(middleware\.ts|lib/admin-jwt|lib/admin-auth|lib/tarot/auth)" || true)
+          if [ "$SENSITIVE" -gt 0 ]; then
+            BLOCKED=true
+            REASON="${REASON:+$REASON | }보안 파일 변경 감지 — 수동 리뷰 필요"
+          fi
+
+          # 게이트 3: PR 타이틀 [Auto] 확인 (수동 PR과 구분)
+          PR_TITLE="${{ steps.find_pr.outputs.pr_title }}"
+          if [[ "$PR_TITLE" != \[Auto\]* ]]; then
+            BLOCKED=true
+            REASON="${REASON:+$REASON | }[Auto] PR이 아님 — 자동 머지 대상 외"
+          fi
+
+          echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+
+          if [ "$BLOCKED" = "true" ]; then
+            echo "🚫 품질 게이트 차단: $REASON"
+          else
+            echo "✅ 품질 게이트 통과"
+          fi
+
+  merge:
+    needs: gate
+    if: |
+      needs.gate.outputs.pr_number != '' &&
+      needs.gate.outputs.blocked == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Squash merge PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
+          PR_TITLE: ${{ needs.gate.outputs.pr_title }}
+        run: |
+          gh pr merge "$PR_NUMBER" \
+            --squash \
+            --delete-branch \
+            --repo "${{ github.repository }}" \
+            --subject "$PR_TITLE" \
+            --body "Auto-merged by Hermes (Phase 3 자율 루프)"
+
+          echo "✅ PR #$PR_NUMBER squash 머지 완료"
+
+      - name: Notify Slack (success)
+        if: vars.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
+          PR_TITLE: ${{ needs.gate.outputs.pr_title }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_URL="https://github.com/${REPO}/pull/${PR_NUMBER}"
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \"🚀 *자동 머지 완료* — Hermes\n>#${PR_NUMBER}: ${PR_TITLE}\n>${PR_URL}\"
+            }"
+
+  blocked:
+    needs: gate
+    if: |
+      needs.gate.outputs.pr_number != '' &&
+      needs.gate.outputs.blocked == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on PR (blocked)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
+          REASON: ${{ needs.gate.outputs.block_reason }}
+        run: |
+          gh pr comment "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --body "🚫 **자동 머지 차단** — $REASON
+
+          수동으로 검토 후 머지하거나 \`/taro merge $PR_NUMBER\` 으로 강제 머지하세요."
+
+      - name: Notify Slack (blocked)
+        if: vars.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
+          PR_TITLE: ${{ needs.gate.outputs.pr_title }}
+          REASON: ${{ needs.gate.outputs.block_reason }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_URL="https://github.com/${REPO}/pull/${PR_NUMBER}"
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \"🚫 *자동 머지 차단* — 수동 검토 필요\n>#${PR_NUMBER}: ${PR_TITLE}\n>사유: ${REASON}\n>${PR_URL}\"
+            }"

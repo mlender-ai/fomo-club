@@ -63,3 +63,30 @@ export async function getWorkflowRuns(workflow: string, limit = 3) {
     `/repos/${REPO}/actions/workflows/${workflow}/runs?per_page=${limit}`
   );
 }
+
+export async function getPRByBranch(branch: string) {
+  const owner = REPO.split("/")[0] ?? "";
+  return githubApi(
+    `/repos/${REPO}/pulls?head=${encodeURIComponent(owner)}:${encodeURIComponent(branch)}&state=open`
+  );
+}
+
+export async function getPRFiles(prNumber: number) {
+  return githubApi(`/repos/${REPO}/pulls/${prNumber}/files`);
+}
+
+export async function getMergedPRs(since: string, limit = 20) {
+  return githubApi(
+    `/repos/${REPO}/pulls?state=closed&per_page=${limit}&sort=updated&direction=desc`
+  ).then((prs: Array<{ merged_at: string | null; [key: string]: unknown }>) =>
+    prs.filter((pr) => pr.merged_at && pr.merged_at > since)
+  );
+}
+
+export async function getRecentIssues(label: string, since: string, limit = 20) {
+  return githubApi(
+    `/repos/${REPO}/issues?labels=${encodeURIComponent(label)}&state=all&per_page=${limit}&sort=created&direction=desc`
+  ).then((issues: Array<{ created_at: string; [key: string]: unknown }>) =>
+    issues.filter((i) => i.created_at > since)
+  );
+}

@@ -17,6 +17,9 @@ type CommandHandler = (args: string, userId: string) => Promise<CommandResult>;
 // GitHub API 다중 호출 등 3초 초과 가능성 있는 커맨드
 export const SLOW_COMMANDS = new Set(["status", "implement", "council", "merge"]);
 
+// 알려진 커맨드 목록 — events/route.ts에서 chat vs command 분기에 사용
+export const KNOWN_COMMANDS = new Set(["implement", "council", "status", "approve", "merge", "help"]);
+
 const commands: Record<string, CommandHandler> = {
   implement: handleImplement,
   council: handleCouncil,
