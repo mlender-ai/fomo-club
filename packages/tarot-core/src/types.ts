@@ -57,6 +57,12 @@ export interface MarketSnapshot {
   support20?: number;
   resistance20?: number;
   sentimentScore?: number;
+  // 종목 정체성 — 카드 해석 풍경에 활용. 숫자 자체는 프롬프트에 노출되지 않고 심리 표현으로 번역됨.
+  name?: string;            // 회사 이름 (예: "Apple Inc.")
+  sector?: string;          // 섹터 (예: "Technology")
+  industry?: string;        // 산업 (예: "Consumer Electronics")
+  marketCap?: number;       // 시가총액 (대형/중형/소형 심리 차이)
+  fiftyTwoWeekPosition?: number; // 0~1, 52주 범위 내 현재 위치
   condition: MarketCondition;
   summary: string;
 }

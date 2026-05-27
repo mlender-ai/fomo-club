@@ -118,6 +118,38 @@ function translateSentiment(market: MarketSnapshot): string | null {
   return "뉴스 온도가 미지근함 — 결정적인 소식이 없는 시점";
 }
 
+// 시가총액 → 군중 인식 심리 (숫자 노출 금지)
+function translateMarketCap(market: MarketSnapshot): string | null {
+  if (market.marketCap === undefined) return null;
+  const cap = market.marketCap;
+  // KRW 표시는 amount가 100배~1000배 큰데, 일단 USD/KRW 통일 임계값으로 운영. 추후 currency-aware로 확장.
+  if (cap >= 100_000_000_000) return "대중이 안다고 믿는 거대한 이름 — 모두가 한 번쯤 들어본 종목";
+  if (cap >= 10_000_000_000) return "많은 사람이 알고 있는 익숙한 이름 — 시장의 단골 주제";
+  if (cap >= 1_000_000_000) return "관심 있는 사람들 사이에서 회자되는 중간 규모의 이름";
+  return "소수만 아는 종목 — 군중의 눈 밖에 있어 외로운 자리";
+}
+
+// 52주 위치 → 1년 군중 기억 심리 (비율·퍼센트 노출 금지)
+function translateRangePosition(market: MarketSnapshot): string | null {
+  if (market.fiftyTwoWeekPosition === undefined) return null;
+  const pos = market.fiftyTwoWeekPosition;
+  if (pos >= 0.85) return "1년 동안 가장 사랑받았던 자리 근처 — 모두의 시선이 모인 정점";
+  if (pos >= 0.6) return "지난 1년 흐름에서 상위권에 자리잡은 — 기대가 누적된 위치";
+  if (pos >= 0.4) return "1년 범위 중간 — 어디로든 갈 수 있는 무게중심";
+  if (pos > 0.15) return "지난 1년 흐름에서 하위권 — 외면받기 시작한 위치";
+  return "1년 동안 가장 외면받았던 자리 근처 — 군중이 잊고 있는 바닥 부근";
+}
+
+// 종목 정체성 (이름·섹터·산업) — 카드 해석에 컨텍스트 제공. 절대 숫자 미노출.
+function translateIdentity(market: MarketSnapshot): string | null {
+  const parts: string[] = [];
+  if (market.name) parts.push(market.name);
+  if (market.sector) parts.push(`${market.sector} 섹터`);
+  if (market.industry && market.industry !== market.sector) parts.push(market.industry);
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
+}
+
 function conditionToEmotion(condition: string): string {
   const map: Record<string, string> = {
     bullish: "기대와 흥분이 뒤섞인 상승장",
@@ -132,6 +164,13 @@ function conditionToEmotion(condition: string): string {
 function buildPsychologyContext(market: MarketSnapshot): string {
   const lines: string[] = [];
 
+  // 종목 정체성 — 첫 줄에 등장하여 카드 해석에 컨텍스트 제공
+  const identitySignal = translateIdentity(market);
+  if (identitySignal) lines.push(`이 종목의 정체: ${identitySignal}`);
+
+  const capSignal = translateMarketCap(market);
+  if (capSignal) lines.push(`군중 인지도: ${capSignal}`);
+
   lines.push(`오늘의 에너지: ${translateMomentum(market)}`);
 
   const rsiSignal = translateRsi(market);
@@ -139,6 +178,9 @@ function buildPsychologyContext(market: MarketSnapshot): string {
 
   const macdSignal = translateMacd(market);
   if (macdSignal) lines.push(`모멘텀 흐름: ${macdSignal}`);
+
+  const rangePosSignal = translateRangePosition(market);
+  if (rangePosSignal) lines.push(`1년 군중 기억: ${rangePosSignal}`);
 
   const trendSignal = translateTrendPosition(market);
   if (trendSignal) lines.push(`추세 맥락: ${trendSignal}`);

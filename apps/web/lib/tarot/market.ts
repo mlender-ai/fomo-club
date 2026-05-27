@@ -149,6 +149,17 @@ export async function fetchMarketSnapshot(
   const support20 = recentLows.length > 0 ? Math.min(...recentLows) : undefined;
   const resistance20 = recentHighs.length > 0 ? Math.max(...recentHighs) : undefined;
 
+  // 52주 위치 — 1년 데이터의 high/low 범위 내 현재 가격 위치 (0~1)
+  let fiftyTwoWeekPosition: number | undefined;
+  if (highs.length > 0 && lows.length > 0) {
+    const high52 = Math.max(...highs);
+    const low52 = Math.min(...lows);
+    const range = high52 - low52;
+    if (range > 0) {
+      fiftyTwoWeekPosition = Math.min(1, Math.max(0, (price - low52) / range));
+    }
+  }
+
   const condition = inferCondition(
     changePercent, rsi, macd.histogram, price, sma20, bb?.upper ?? null, bb?.lower ?? null
   );
@@ -186,6 +197,10 @@ export async function fetchMarketSnapshot(
   }
   if (support20 !== undefined) snapshot.support20 = support20;
   if (resistance20 !== undefined) snapshot.resistance20 = resistance20;
+
+  // 종목 정체성 — chart meta로부터 즉시 채울 수 있는 것만. sector/industry/marketCap은 별도 API 통합 후 추가 예정.
+  if (meta?.shortName) snapshot.name = meta.shortName;
+  if (fiftyTwoWeekPosition !== undefined) snapshot.fiftyTwoWeekPosition = fiftyTwoWeekPosition;
 
   marketCache.set(cacheKey, { snapshot, expiresAt: now + MARKET_CACHE_TTL_MS });
   return snapshot;
