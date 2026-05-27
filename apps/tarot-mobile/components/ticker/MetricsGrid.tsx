@@ -32,8 +32,8 @@ export function MetricsGrid({ quote }: Props) {
   const metrics: MetricCard[] = [
     {
       label: "시가총액",
-      value: formatLargeNumber(quote.marketCap, currency),
-      show: quote.marketCap > 0,
+      value: quote.marketCap != null ? formatLargeNumber(quote.marketCap, currency) : "-",
+      show: quote.marketCap != null && quote.marketCap > 0,
     },
     {
       label: "PER",

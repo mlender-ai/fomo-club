@@ -28,7 +28,7 @@ export function PriceStats({ quote }: Props) {
 
       <View style={styles.card}>
         {/* Day range */}
-        {quote.dayLow > 0 && quote.dayHigh > 0 && (
+        {quote.dayLow != null && quote.dayHigh != null && quote.dayLow > 0 && quote.dayHigh > 0 && (
           <RangeBar
             label="오늘"
             min={quote.dayLow}
@@ -39,7 +39,7 @@ export function PriceStats({ quote }: Props) {
         )}
 
         {/* 52-week range */}
-        {quote.fiftyTwoWeekLow > 0 && quote.fiftyTwoWeekHigh > 0 && (
+        {quote.fiftyTwoWeekLow != null && quote.fiftyTwoWeekHigh != null && quote.fiftyTwoWeekLow > 0 && quote.fiftyTwoWeekHigh > 0 && (
           <View style={styles.rangeSpacing}>
             <RangeBar
               label="52주"

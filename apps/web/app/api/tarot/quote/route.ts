@@ -4,9 +4,13 @@ import type { StockQuote } from "@trading/shared/src/stockTypes";
 const YAHOO_QUOTE_URL = "https://query2.finance.yahoo.com/v10/finance/quoteSummary";
 const USER_AGENT = "Mozilla/5.0 (compatible; TarotStockBot/1.0)";
 
-// 5분 in-memory 캐시
-const CACHE_TTL_MS = 5 * 60 * 1000;
-const cache = new Map<string, { data: StockQuote; expiresAt: number }>();
+// 캐시 TTL: 장중 30초 / 장외 5분 (Yahoo marketState 기준)
+const CACHE_TTL_REGULAR_MS = 30 * 1000;
+const CACHE_TTL_OFF_HOURS_MS = 5 * 60 * 1000;
+const cache = new Map<string, { data: StockQuote; completeness: string; expiresAt: number }>();
+
+// 결측 가능 필드 — 외부 데이터 소스에서 누락 시 null. 0과 결측을 구분.
+const NULLABLE_FIELDS = ["dayLow", "dayHigh", "fiftyTwoWeekLow", "fiftyTwoWeekHigh", "marketCap"] as const;
 
 function extractNum(obj: unknown): number | null {
   if (obj && typeof obj === "object" && "raw" in obj) {
@@ -15,6 +19,17 @@ function extractNum(obj: unknown): number | null {
   }
   if (typeof obj === "number" && Number.isFinite(obj)) return obj;
   return null;
+}
+
+function logMissing(symbol: string, fields: readonly string[]): void {
+  if (fields.length === 0) return;
+  for (const field of fields) {
+    console.warn(JSON.stringify({ metric: "quote_field_missing", symbol, field }));
+  }
+}
+
+function pickCacheTtl(marketState: string | null): number {
+  return marketState === "REGULAR" ? CACHE_TTL_REGULAR_MS : CACHE_TTL_OFF_HOURS_MS;
 }
 
 export async function GET(req: NextRequest) {
@@ -26,7 +41,9 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const hit = cache.get(symbol);
   if (hit && hit.expiresAt > now) {
-    return NextResponse.json(hit.data);
+    return NextResponse.json(hit.data, {
+      headers: { "X-Data-Completeness": hit.completeness, "X-Cache": "HIT" },
+    });
   }
 
   try {
@@ -71,6 +88,12 @@ export async function GET(req: NextRequest) {
     const changePercent = extractNum(price.regularMarketChangePercent) ??
       (previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0);
 
+    const dayLow = extractNum(summary.dayLow);
+    const dayHigh = extractNum(summary.dayHigh);
+    const fiftyTwoWeekLow = extractNum(summary.fiftyTwoWeekLow);
+    const fiftyTwoWeekHigh = extractNum(summary.fiftyTwoWeekHigh);
+    const marketCap = extractNum(price.marketCap);
+
     const quote: StockQuote = {
       symbol,
       shortName: (price.shortName as string) ?? symbol,
@@ -81,28 +104,39 @@ export async function GET(req: NextRequest) {
       previousClose,
       change,
       changePercent,
-      dayLow: extractNum(summary.dayLow) ?? 0,
-      dayHigh: extractNum(summary.dayHigh) ?? 0,
-      fiftyTwoWeekLow: extractNum(summary.fiftyTwoWeekLow) ?? 0,
-      fiftyTwoWeekHigh: extractNum(summary.fiftyTwoWeekHigh) ?? 0,
-      marketCap: extractNum(price.marketCap) ?? 0,
+      dayLow,
+      dayHigh,
+      fiftyTwoWeekLow,
+      fiftyTwoWeekHigh,
+      marketCap,
       trailingPE: extractNum(summary.trailingPE),
       forwardPE: extractNum(keyStats.forwardPE) ?? extractNum(summary.forwardPE),
       priceToBook: extractNum(keyStats.priceToBook),
       dividendYield: extractNum(summary.dividendYield),
       volume: extractNum(summary.volume) ?? 0,
       averageVolume: extractNum(summary.averageVolume) ?? 0,
-      // Phase 2 extended fields
       returnOnEquity: extractNum(financialData.returnOnEquity),
       grossMargins: extractNum(financialData.grossMargins),
       operatingMargins: extractNum(financialData.operatingMargins),
       totalRevenue: extractNum(financialData.totalRevenue),
       revenueGrowth: extractNum(financialData.revenueGrowth),
       debtToEquity: extractNum(financialData.debtToEquity),
+      dataAt: new Date(now).toISOString(),
     };
 
-    cache.set(symbol, { data: quote, expiresAt: now + CACHE_TTL_MS });
-    return NextResponse.json(quote);
+    // 결측치 추적: null인 필드 목록
+    const missing = NULLABLE_FIELDS.filter((f) => quote[f] === null);
+    logMissing(symbol, missing);
+
+    const completeness = missing.length === 0 ? "full" : missing.join(",");
+    const marketState = (price.marketState as string | undefined) ?? null;
+    const ttl = pickCacheTtl(marketState);
+
+    cache.set(symbol, { data: quote, completeness, expiresAt: now + ttl });
+
+    return NextResponse.json(quote, {
+      headers: { "X-Data-Completeness": completeness, "X-Cache": "MISS" },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -11,11 +11,12 @@ export interface StockQuote {
   previousClose: number;
   change: number;
   changePercent: number;
-  dayLow: number;
-  dayHigh: number;
-  fiftyTwoWeekLow: number;
-  fiftyTwoWeekHigh: number;
-  marketCap: number;
+  // 결측 가능 — 외부 데이터 소스에서 누락 시 null. 0과 결측을 구분하기 위함.
+  dayLow: number | null;
+  dayHigh: number | null;
+  fiftyTwoWeekLow: number | null;
+  fiftyTwoWeekHigh: number | null;
+  marketCap: number | null;
   trailingPE: number | null;
   forwardPE: number | null;
   priceToBook: number | null;
@@ -29,6 +30,8 @@ export interface StockQuote {
   totalRevenue?: number | null;
   revenueGrowth?: number | null;
   debtToEquity?: number | null;
+  // 응답 생성 시각 (ISO 8601). 캐시 신선도 추적용.
+  dataAt: string;
 }
 
 export interface StockChartBar {

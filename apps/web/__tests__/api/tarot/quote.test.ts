@@ -1,0 +1,199 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// 검증 항목:
+//   1. 정상 응답 — 모든 필드 채워짐, dataAt 존재, X-Data-Completeness=full
+//   2. 결측치 — 외부 API에서 일부 필드 누락 → null 명시 + X-Data-Completeness 헤더에 누락 필드 콤마 명시
+//   3. symbol 누락 → 400
+//   4. 외부 API 502 → 502 패스스루
+//   5. 외부 API result 없음 → 404
+//   6. 캐시 — 같은 symbol 두 번째 호출은 외부 fetch 없이 캐시 응답
+//   7. 결측치 발생 시 구조화 로그 (metric: quote_field_missing)
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
+
+import { GET } from "@/app/api/tarot/quote/route";
+import { NextRequest } from "next/server";
+
+function makeRequest(url: string): NextRequest {
+  return new NextRequest(url);
+}
+
+function fullYahooPayload() {
+  return {
+    quoteSummary: {
+      result: [
+        {
+          price: {
+            shortName: "Apple Inc.",
+            longName: "Apple Inc.",
+            currency: "USD",
+            exchangeName: "NMS",
+            regularMarketPrice: { raw: 200.5 },
+            regularMarketPreviousClose: { raw: 198.0 },
+            regularMarketChange: { raw: 2.5 },
+            regularMarketChangePercent: { raw: 1.26 },
+            marketCap: { raw: 3_000_000_000_000 },
+          },
+          summaryDetail: {
+            dayLow: { raw: 199.0 },
+            dayHigh: { raw: 201.5 },
+            fiftyTwoWeekLow: { raw: 150.0 },
+            fiftyTwoWeekHigh: { raw: 220.0 },
+            trailingPE: { raw: 28.5 },
+            volume: { raw: 50_000_000 },
+            averageVolume: { raw: 45_000_000 },
+            dividendYield: { raw: 0.005 },
+          },
+          defaultKeyStatistics: {
+            forwardPE: { raw: 25.0 },
+            priceToBook: { raw: 40.0 },
+          },
+          financialData: {
+            returnOnEquity: { raw: 1.5 },
+            grossMargins: { raw: 0.45 },
+            operatingMargins: { raw: 0.3 },
+            totalRevenue: { raw: 400_000_000_000 },
+            revenueGrowth: { raw: 0.05 },
+            debtToEquity: { raw: 150 },
+          },
+        },
+      ],
+    },
+  };
+}
+
+beforeEach(() => {
+  mockFetch.mockReset();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("/api/tarot/quote", () => {
+  it("symbol 누락 → 400", async () => {
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote"));
+    expect(res.status).toBe(400);
+  });
+
+  it("정상 응답 — 모든 필드 채워짐 + dataAt + X-Data-Completeness=full", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => fullYahooPayload(),
+    });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=FULL1"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.symbol).toBe("FULL1");
+    expect(body.currentPrice).toBe(200.5);
+    expect(body.dayLow).toBe(199.0);
+    expect(body.dayHigh).toBe(201.5);
+    expect(body.fiftyTwoWeekLow).toBe(150.0);
+    expect(body.fiftyTwoWeekHigh).toBe(220.0);
+    expect(body.marketCap).toBe(3_000_000_000_000);
+    expect(typeof body.dataAt).toBe("string");
+    expect(() => new Date(body.dataAt)).not.toThrow();
+    expect(Number.isNaN(new Date(body.dataAt).getTime())).toBe(false);
+
+    expect(res.headers.get("X-Data-Completeness")).toBe("full");
+  });
+
+  it("결측치 — dayLow / dayHigh / 52주 / marketCap 누락 시 null + X-Data-Completeness 헤더에 명시", async () => {
+    const payload = fullYahooPayload();
+    const r = payload.quoteSummary.result[0]!;
+    // 의도적 누락
+    delete (r.summaryDetail as { dayLow?: unknown }).dayLow;
+    delete (r.summaryDetail as { dayHigh?: unknown }).dayHigh;
+    delete (r.summaryDetail as { fiftyTwoWeekLow?: unknown }).fiftyTwoWeekLow;
+    delete (r.summaryDetail as { fiftyTwoWeekHigh?: unknown }).fiftyTwoWeekHigh;
+    delete (r.price as { marketCap?: unknown }).marketCap;
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => payload,
+    });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=MISS1"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.dayLow).toBeNull();
+    expect(body.dayHigh).toBeNull();
+    expect(body.fiftyTwoWeekLow).toBeNull();
+    expect(body.fiftyTwoWeekHigh).toBeNull();
+    expect(body.marketCap).toBeNull();
+
+    const completeness = res.headers.get("X-Data-Completeness") ?? "";
+    expect(completeness).toContain("dayLow");
+    expect(completeness).toContain("dayHigh");
+    expect(completeness).toContain("fiftyTwoWeekLow");
+    expect(completeness).toContain("fiftyTwoWeekHigh");
+    expect(completeness).toContain("marketCap");
+  });
+
+  it("결측치 발생 시 구조화 로그 출력 (metric: quote_field_missing)", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const payload = fullYahooPayload();
+    delete (payload.quoteSummary.result[0]!.price as { marketCap?: unknown }).marketCap;
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => payload,
+    });
+
+    await GET(makeRequest("http://localhost/api/tarot/quote?symbol=LOG1"));
+
+    const calls = warnSpy.mock.calls.map((c) => String(c[0]));
+    const found = calls.find((c) => c.includes("quote_field_missing") && c.includes("marketCap") && c.includes("LOG1"));
+    expect(found).toBeTruthy();
+  });
+
+  it("외부 API 502 → 502 패스스루", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=ERR1"));
+    expect(res.status).toBe(502);
+  });
+
+  it("외부 API result 없음 → 404", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ quoteSummary: { result: [] } }),
+    });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=EMPTY1"));
+    expect(res.status).toBe(404);
+  });
+
+  it("캐시 — 같은 symbol 두 번째 호출은 외부 fetch 없이 캐시 응답", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => fullYahooPayload(),
+    });
+
+    const r1 = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=CACHE1"));
+    expect(r1.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const r2 = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=CACHE1"));
+    expect(r2.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const body = await r2.json();
+    expect(body.symbol).toBe("CACHE1");
+    expect(typeof body.dataAt).toBe("string");
+  });
+});
