@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { apiFetch } from "./api";
-import { classifyFreshness } from "@trading/shared/src/staleness";
+import { decideSwrAction } from "@trading/shared/src/swrPolicy";
 import type { StockQuote, StockChartBar, StockChartResponse } from "@trading/shared/src/stockTypes";
 
 export type ChartRange = "1d" | "5d" | "1mo" | "3mo" | "1y";
@@ -96,9 +96,13 @@ export const useStockStore = create<StockState>((set, get) => ({
     const force = opts?.force === true;
     const cached = get().quoteCache[symbol];
     const now = Date.now();
-    const freshness = cached
-      ? classifyFreshness(cached.dataAt, now, FRESH_TTL_MS, STALE_TTL_MS)
-      : "expired";
+    const action = decideSwrAction({
+      cachedDataAt: cached?.dataAt,
+      force,
+      now,
+      freshTtlMs: FRESH_TTL_MS,
+      staleTtlMs: STALE_TTL_MS,
+    });
 
     // 캐시 hit: 즉시 표시 (fresh든 stale이든)
     if (cached) {
@@ -107,12 +111,9 @@ export const useStockStore = create<StockState>((set, get) => ({
       set({ quote: null, quoteLoading: true, error: null });
     }
 
-    // fresh + !force → fetch 스킵
-    if (freshness === "fresh" && !force) {
-      return;
-    }
+    if (action === "skip") return;
 
-    // stale 또는 expired 또는 force → fetch (백그라운드)
+    // background-revalidate 또는 fetch-blocking → 동일 fetch 코드 (UX 차이는 위에서 set로 처리됨)
     try {
       const data = await apiFetch<StockQuote>(
         `/api/tarot/quote?symbol=${encodeURIComponent(symbol)}`
@@ -139,9 +140,13 @@ export const useStockStore = create<StockState>((set, get) => ({
     const cached = get().chartCache[cacheKey];
     const now = Date.now();
     const cachedAtIso = cached ? new Date(cached.cachedAt).toISOString() : null;
-    const freshness = cachedAtIso
-      ? classifyFreshness(cachedAtIso, now, FRESH_TTL_MS, STALE_TTL_MS)
-      : "expired";
+    const action = decideSwrAction({
+      cachedDataAt: cachedAtIso,
+      force,
+      now,
+      freshTtlMs: FRESH_TTL_MS,
+      staleTtlMs: STALE_TTL_MS,
+    });
 
     if (cached) {
       set({ chartBars: cached.bars, chartRange: r, chartLoading: false });
@@ -149,7 +154,7 @@ export const useStockStore = create<StockState>((set, get) => ({
       set({ chartBars: [], chartRange: r, chartLoading: true });
     }
 
-    if (freshness === "fresh" && !force) return;
+    if (action === "skip") return;
 
     try {
       const data = await apiFetch<StockChartResponse>(
@@ -173,9 +178,13 @@ export const useStockStore = create<StockState>((set, get) => ({
     const cached = get().financialsCache[symbol];
     const now = Date.now();
     const cachedAtIso = cached ? new Date(cached.cachedAt).toISOString() : null;
-    const freshness = cachedAtIso
-      ? classifyFreshness(cachedAtIso, now, FRESH_TTL_MS, STALE_TTL_MS)
-      : "expired";
+    const action = decideSwrAction({
+      cachedDataAt: cachedAtIso,
+      force,
+      now,
+      freshTtlMs: FRESH_TTL_MS,
+      staleTtlMs: STALE_TTL_MS,
+    });
 
     if (cached) {
       set({
@@ -188,7 +197,7 @@ export const useStockStore = create<StockState>((set, get) => ({
       set({ financialsLoading: true });
     }
 
-    if (freshness === "fresh" && !force) return;
+    if (action === "skip") return;
 
     try {
       const data = await apiFetch<FinancialsResponse>(

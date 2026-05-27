@@ -196,4 +196,88 @@ describe("/api/tarot/quote", () => {
     expect(body.symbol).toBe("CACHE1");
     expect(typeof body.dataAt).toBe("string");
   });
+
+  // ─── 추가 회귀 (QA 우선순위 #8) ──────────────────────────────────────────────
+
+  it("부분 결측 — marketCap만 누락 → completeness=\"marketCap\"", async () => {
+    const payload = fullYahooPayload();
+    delete (payload.quoteSummary.result[0]!.price as { marketCap?: unknown }).marketCap;
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => payload });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=PART1"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.marketCap).toBeNull();
+    expect(body.dayLow).toBe(199.0); // 다른 필드는 보존
+    expect(res.headers.get("X-Data-Completeness")).toBe("marketCap");
+  });
+
+  it("부분 결측 — 52주 두 필드만 누락 → completeness=\"fiftyTwoWeekLow,fiftyTwoWeekHigh\"", async () => {
+    const payload = fullYahooPayload();
+    const r = payload.quoteSummary.result[0]!;
+    delete (r.summaryDetail as { fiftyTwoWeekLow?: unknown }).fiftyTwoWeekLow;
+    delete (r.summaryDetail as { fiftyTwoWeekHigh?: unknown }).fiftyTwoWeekHigh;
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => payload });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=PART2"));
+    const body = await res.json();
+    expect(body.fiftyTwoWeekLow).toBeNull();
+    expect(body.fiftyTwoWeekHigh).toBeNull();
+    expect(body.marketCap).toBe(3_000_000_000_000);
+    expect(res.headers.get("X-Data-Completeness")).toBe("fiftyTwoWeekLow,fiftyTwoWeekHigh");
+  });
+
+  it("X-Cache 헤더 — 첫 호출 MISS, 두 번째 HIT", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => fullYahooPayload() });
+
+    const r1 = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=CACHE2"));
+    expect(r1.headers.get("X-Cache")).toBe("MISS");
+
+    const r2 = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=CACHE2"));
+    expect(r2.headers.get("X-Cache")).toBe("HIT");
+  });
+
+  it("X-Cache 헤더는 캐시 응답에서도 completeness 보존", async () => {
+    const payload = fullYahooPayload();
+    delete (payload.quoteSummary.result[0]!.price as { marketCap?: unknown }).marketCap;
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => payload });
+
+    const r1 = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=CACHE3"));
+    expect(r1.headers.get("X-Data-Completeness")).toBe("marketCap");
+
+    // 두 번째 호출 — 캐시 hit이지만 completeness 동일 유지
+    const r2 = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=CACHE3"));
+    expect(r2.headers.get("X-Cache")).toBe("HIT");
+    expect(r2.headers.get("X-Data-Completeness")).toBe("marketCap");
+  });
+
+  it("외부 fetch 예외(timeout) → 500 + 메시지 전달", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("AbortError: signal timed out"));
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=TIMEOUT1"));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toContain("AbortError");
+  });
+
+  it("응답 본문에 알려지지 않은 추가 필드 없음 — 스키마 안정성", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => fullYahooPayload() });
+    const res = await GET(makeRequest("http://localhost/api/tarot/quote?symbol=SCHEMA1"));
+    const body = await res.json();
+    const expectedKeys = [
+      "symbol", "shortName", "longName", "currency", "exchange",
+      "currentPrice", "previousClose", "change", "changePercent",
+      "dayLow", "dayHigh", "fiftyTwoWeekLow", "fiftyTwoWeekHigh", "marketCap",
+      "trailingPE", "forwardPE", "priceToBook", "dividendYield",
+      "volume", "averageVolume",
+      "returnOnEquity", "grossMargins", "operatingMargins", "totalRevenue", "revenueGrowth", "debtToEquity",
+      "dataAt",
+    ];
+    const actualKeys = Object.keys(body).sort();
+    const unexpected = actualKeys.filter((k) => !expectedKeys.includes(k));
+    expect(unexpected).toEqual([]);
+  });
 });
