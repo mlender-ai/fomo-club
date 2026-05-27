@@ -15,6 +15,7 @@ import { MetricsGrid } from "../../components/ticker/MetricsGrid";
 import { CompanyInfo } from "../../components/ticker/CompanyInfo";
 import { FinancialChart } from "../../components/ticker/FinancialChart";
 import { NewsList } from "../../components/ticker/NewsList";
+import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { useStockStore, type ChartRange } from "../../lib/stockStore";
 import { useFavoritesStore } from "../../lib/favoritesStore";
 import { useDrawStore } from "../../lib/drawStore";
@@ -41,7 +42,7 @@ function formatPrice(price: number, currency: string): string {
 export default function TickerDetailScreen() {
   const router = useRouter();
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
-  const { isLoggedIn } = useUserStore();
+  const { isLoggedIn, userId } = useUserStore();
   const {
     quote, chartBars, chartRange, quoteLoading, chartLoading,
     profile, quarterlyEarnings, annualFinancials, financialsLoading,
@@ -232,6 +233,9 @@ export default function TickerDetailScreen() {
                 width={SCREEN_WIDTH}
                 currency={currency}
               />
+            )}
+            {isLoggedIn && userId && (
+              <TickerCardHistory symbol={symbol} userId={userId} />
             )}
             <NewsList symbol={symbol} />
           </>
