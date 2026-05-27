@@ -24,32 +24,73 @@ const SLOT_LABELS: Record<string, string> = {
   future: "미래",
 };
 
-function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
+// 각 텍스트 블록을 개별적으로 순차 등장시키는 래퍼
+// delay만 props로 받아 opacity + translateY 애니메이션 실행
+function RevealBlock({
+  delay,
+  style,
+  children,
+}: {
+  delay: number;
+  style?: object;
+  children: React.ReactNode;
+}) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(32)).current;
-  const scale = useRef(new Animated.Value(0.96)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,     { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(translateY,  { toValue: 0,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(scale,       { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 380, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 380, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
+  // 카드 전체 입장 애니메이션 (기존 유지)
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardTranslateY = useRef(new Animated.Value(32)).current;
+  const cardScale = useRef(new Animated.Value(0.96)).current;
+
+  // 카드 입장 완료 후 텍스트 순차 등장 기준 딜레이
+  // 각 카드는 index * 250ms 후 입장(600ms 소요) → 텍스트는 그 이후 순서대로
+  const BASE_DELAY = index * 250;
+  const TEXT_BASE = BASE_DELAY + 500; // 카드 입장 중반부터 텍스트 준비
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(cardOpacity,    { toValue: 1,    duration: 600, delay: BASE_DELAY, useNativeDriver: true }),
+      Animated.timing(cardTranslateY, { toValue: 0,    duration: 600, delay: BASE_DELAY, useNativeDriver: true }),
+      Animated.timing(cardScale,      { toValue: 1,    duration: 600, delay: BASE_DELAY, useNativeDriver: true }),
     ]).start();
   }, []);
 
   const slotLabel = card.slot ? SLOT_LABELS[card.slot] ?? null : null;
 
   return (
-    <Animated.View style={[styles.cardReveal, { opacity, transform: [{ translateY }, { scale }] }]}>
-      {/* 슬롯 레이블 (3장 스프레드용) */}
+    <Animated.View
+      style={[
+        styles.cardReveal,
+        { opacity: cardOpacity, transform: [{ translateY: cardTranslateY }, { scale: cardScale }] },
+      ]}
+    >
+      {/* 슬롯 레이블 (3장 스프레드) */}
       {slotLabel && (
-        <View style={styles.slotBadge}>
-          <Text variant="caption" color={Colors.taroEssence} style={styles.slotLabel}>{slotLabel}</Text>
-        </View>
+        <RevealBlock delay={TEXT_BASE}>
+          <View style={styles.slotBadge}>
+            <Text variant="caption" color={Colors.taroEssence} style={styles.slotLabel}>{slotLabel}</Text>
+          </View>
+        </RevealBlock>
       )}
 
+      {/* 카드 이미지 + 이름 — 카드 입장과 함께 */}
       <View style={styles.cardHeader}>
-        {/* 카드 아트 영역 — 역방향 시 회전 표시 */}
         <Animated.View style={[styles.cardThumb, card.isReversed && styles.cardThumbReversed]}>
           <Text style={styles.cardThumSymbol}>{card.symbol}</Text>
           {card.isReversed && <Text style={styles.reversedMark}>▽</Text>}
@@ -66,23 +107,33 @@ function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
       </View>
 
       {/* 구분선 */}
-      <View style={styles.divider} />
+      <RevealBlock delay={TEXT_BASE + 100}>
+        <View style={styles.divider} />
+      </RevealBlock>
 
-      {/* 헤드라인 — 가장 큰 계층 */}
-      <Text variant="subheading" style={styles.headline}>{card.headline}</Text>
+      {/* 헤드라인 — 텍스트 계층 중 가장 먼저 */}
+      <RevealBlock delay={TEXT_BASE + 200}>
+        <Text variant="subheading" style={styles.headline}>{card.headline}</Text>
+      </RevealBlock>
 
-      {/* 요약 — 두 번째 계층 */}
-      <Text variant="body-sm" style={styles.summary}>{card.summary}</Text>
+      {/* 요약 */}
+      <RevealBlock delay={TEXT_BASE + 430}>
+        <Text variant="body-sm" style={styles.summary}>{card.summary}</Text>
+      </RevealBlock>
 
-      {/* 상세 — 세 번째 계층, 약간 흐리게 */}
-      <Text variant="body-sm" style={styles.detail}>{card.detail}</Text>
+      {/* 상세 — 가장 마지막 텍스트 블록 */}
+      <RevealBlock delay={TEXT_BASE + 680}>
+        <Text variant="body-sm" style={styles.detail}>{card.detail}</Text>
+      </RevealBlock>
 
-      {/* 카드 이야기 — 카드의 원형적 의미를 서사로 전달 */}
+      {/* 카드 이야기 — 있을 때만 */}
       {card.cardNarrative ? (
-        <View style={styles.narrativeBlock}>
-          <Text variant="caption" color={Colors.taroEssence} style={styles.narrativeLabel}>✦ 카드 이야기</Text>
-          <Text variant="body-sm" style={styles.narrativeText}>{card.cardNarrative}</Text>
-        </View>
+        <RevealBlock delay={TEXT_BASE + 950}>
+          <View style={styles.narrativeBlock}>
+            <Text variant="caption" color={Colors.taroEssence} style={styles.narrativeLabel}>✦ 카드 이야기</Text>
+            <Text variant="body-sm" style={styles.narrativeText}>{card.cardNarrative}</Text>
+          </View>
+        </RevealBlock>
       ) : null}
     </Animated.View>
   );

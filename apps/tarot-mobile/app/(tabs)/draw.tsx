@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   SafeAreaView, View, TouchableOpacity, Animated,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, Vibration,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import * as ExpoDigest from "expo-crypto";
@@ -59,17 +59,73 @@ function CardBack({ flipped, delay }: { flipped: boolean; delay: number }) {
   );
 }
 
+// 카드 뽑기 완료 후 결과 화면 진입 전 의식감 조성 카운트다운
+// Vibration으로 종소리를 모사 — 실제 오디오는 expo-av + assets/sounds/chime.mp3 추가 시 교체 가능
+const COUNTDOWN_LABELS = ["3", "2", "1", "✦"] as const;
+
+function CountdownOverlay({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const numOpacity = useRef(new Animated.Value(0)).current;
+  const numScale = useRef(new Animated.Value(0.4)).current;
+  const bgOpacity = useRef(new Animated.Value(0)).current;
+
+  // 배경 페이드인 + 첫 진동(종소리 대용)
+  useEffect(() => {
+    Animated.timing(bgOpacity, { toValue: 0.92, duration: 350, useNativeDriver: true }).start();
+    Vibration.vibrate([0, 60, 40, 80]); // 짧고 강한 진동 패턴
+  }, []);
+
+  // step 변경 시 숫자 입장 애니메이션
+  useEffect(() => {
+    numOpacity.setValue(0);
+    numScale.setValue(0.4);
+
+    Animated.parallel([
+      Animated.timing(numOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.spring(numScale, { toValue: 1, friction: 7, tension: 200, useNativeDriver: true }),
+    ]).start();
+
+    if (step < 3) {
+      // 다음 숫자로 전환
+      const t = setTimeout(() => {
+        Animated.timing(numOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(() =>
+          setStep((s) => s + 1)
+        );
+      }, 820);
+      return () => clearTimeout(t);
+    } else {
+      // ✦ 단계: 잠시 유지 후 화면 전환
+      const t = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(numOpacity, { toValue: 0, duration: 350, useNativeDriver: true }),
+          Animated.timing(bgOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        ]).start(() => onDone());
+      }, 700);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
+  return (
+    <View style={countdownStyles.overlay} pointerEvents="none">
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.midnightAbyss, opacity: bgOpacity }]} />
+      <Animated.View style={[countdownStyles.numWrapper, { opacity: numOpacity, transform: [{ scale: numScale }] }]}>
+        <Text style={countdownStyles.number}>{COUNTDOWN_LABELS[step]}</Text>
+      </Animated.View>
+    </View>
+  );
+}
+
 export default function DrawScreen() {
   const router = useRouter();
   const { spread, ticker, tickerName, isDrawing, setSpread, setDrawing, setResult } = useDrawStore();
   const { credits, setCredits, isLoggedIn } = useUserStore();
-  const [phase, setPhase] = useState<"select" | "selecting" | "flipping" | "done">("select");
+  const [phase, setPhase] = useState<"select" | "selecting" | "flipping" | "countdown" | "done">("select");
   const [loadingLabel, setLoadingLabel] = useState("해석 중...");
 
-  // 탭 포커스 시 "done" 상태면 "select"로 리셋 — 인기종목 클릭 후 빈 화면 방지
+  // 탭 포커스 시 종료 상태면 초기화 — 인기종목 클릭 후 빈 화면 방지
   useFocusEffect(
     useCallback(() => {
-      setPhase((prev) => (prev === "done" ? "select" : prev));
+      setPhase((prev) => (prev === "done" || prev === "countdown" ? "select" : prev));
     }, [])
   );
 
@@ -143,17 +199,15 @@ export default function DrawScreen() {
       }
 
       setResult(drawResult);
-      setPhase("done");
+      setPhase("countdown"); // 카운트다운 후 결과 화면 진입
       trackEvent("draw_complete", { spread, ticker: ticker || "AAPL", source: apiResult.status === "fulfilled" ? "server" : "local" });
       onDrawComplete();
-      setTimeout(() => router.push("/result"), 400);
     } catch {
       trackEvent("draw_error", { spread, ticker: ticker || "AAPL" });
       const fallback = localDraw(ticker || "AAPL", tickerName || "AAPL", spread);
       void saveLocalDraw(fallback, market);
       setResult(fallback);
-      setPhase("done");
-      setTimeout(() => router.push("/result"), 400);
+      setPhase("countdown");
     } finally {
       setDrawing(false);
     }
@@ -262,6 +316,16 @@ export default function DrawScreen() {
           </>
         )}
       </View>
+
+      {/* COUNTDOWN — API 완료 후 결과 화면 진입 직전 의식 연출 */}
+      {phase === "countdown" && (
+        <CountdownOverlay
+          onDone={() => {
+            setPhase("done");
+            router.push("/result");
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -283,4 +347,19 @@ const styles = StyleSheet.create({
   cardSymbol:      { fontSize: 28, color: Colors.taroEssence },
   hint:            { color: Colors.ironOutline, textAlign: "center" },
   loadingText:     { marginTop: 12, textAlign: "center", letterSpacing: 0.3 },
+});
+
+const countdownStyles = StyleSheet.create({
+  overlay:    { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  numWrapper: { alignItems: "center", justifyContent: "center" },
+  number: {
+    fontSize: 96,
+    fontWeight: "700",
+    color: Colors.taroEssence,
+    textAlign: "center",
+    textShadowColor: Colors.luminousReveal,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 24,
+    letterSpacing: -2,
+  },
 });
