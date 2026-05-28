@@ -1335,6 +1335,23 @@ jobs:
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | contains(\"$TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+      - name: Fetch today's new agent issues (실제 번호)
+        id: today_issues
+        if: steps.dedup.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          LIST=$(gh issue list --label "agent-council" --state open --limit 30 \
+            --json number,title,labels --repo "${{ github.repository }}" | \
+            jq -r --arg today "$TODAY" '.[] | select(.title | contains($today)) | "#\(.number) \(.title) [labels: \(.labels | map(.name) | join(\",\"))]"')
+          echo "list<<__EOF__" >> $GITHUB_OUTPUT
+          if [ -z "$LIST" ]; then
+            echo "(오늘 신규 이슈 없음)"
+          else
+            echo "$LIST"
+          fi
+          echo "__EOF__" >> $GITHUB_OUTPUT
       - name: "[CEO Brief]"
         if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
@@ -1366,12 +1383,17 @@ jobs:
             11. 우선순위 정렬 기준 (위에서 아래로): ① 즉시 대응(Critical 보안·스토어 차단) → ② 정렬도 5점 + 다른 에이전트와 묶음 가능(의존성) → ③ 정렬도 5점 단독 → ④ 정렬도 4점 → ⑤ 정렬도 3점 이하 (그래도 처리는 함, 우선순위만 낮음).
             12. 사용자가 5분 안에 GO/NO-GO 판단 가능한 분량.
             13. **자동 점수 시스템 결과 활용** (2026-05-27 도입): 각 제안 본문 끝의 `Score: U=X F=Y N=Z A=W` 합계가 함께 전달됨. 14+(`score-strong`)은 우선순위 상단, 11-13(`score-conditional`)은 중단. 10 이하는 score_and_filter job이 이미 close했으므로 이 브리핑에는 도착하지 않음. **자동 점수와 North Star 정렬도가 충돌하면 North Star가 우선** (점수는 LLM 자기 평가라 편향 가능).
+            14. **이슈 번호 인용 규칙 (2026-05-28 추가 — 절대 규칙)**: 우선순위 항목의 "이슈: #N" 인용은 반드시 아래 prompt 의 **"📌 오늘 사이클 신규 이슈 (정확한 번호)"** 목록의 번호만 사용한다. 어제/그저께 닫힌 이슈 번호를 인용하지 마라. 이전 사이클 이슈 번호 인용은 사고이며, 사용자가 새 브리핑을 어제 거 재탕으로 오해하게 만든다. 만약 오늘 신규 이슈 목록이 비어있으면 "이슈: (오늘 사이클 신규 이슈 없음)" 으로 표시.
           prompt: |
             ## 🌟 North Star (이번 주 테마)
             ${{ needs.prepare.outputs.north_star }}
 
             ---
-            ## 📅 어제 CEO Brief (채택 항목 진척 추적용)
+            ## 📌 오늘 사이클 신규 이슈 (정확한 번호 — 우선순위 인용은 이 번호만 사용)
+            ${{ steps.today_issues.outputs.list }}
+
+            ---
+            ## 📅 어제 CEO Brief (채택 항목 진척 추적용 — 이슈 번호 재인용 금지)
             ${{ needs.prepare.outputs.yesterday_brief }}
 
             ---
