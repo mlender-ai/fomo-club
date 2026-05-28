@@ -16,6 +16,8 @@ export interface AnnualFinancial {
   revenue: number | null;
   operatingIncome: number | null;
   netIncome: number | null;
+  grossProfit: number | null;
+  ebitda: number | null;
 }
 
 export interface CompanyProfile {
@@ -26,16 +28,33 @@ export interface CompanyProfile {
   website: string;
 }
 
+export interface KeyMetrics {
+  eps: number | null;
+  bookValue: number | null;
+  freeCashflow: number | null;
+  totalDebt: number | null;
+  totalCash: number | null;
+  currentRatio: number | null;
+  quickRatio: number | null;
+  returnOnAssets: number | null;
+  profitMargins: number | null;
+  grossMargins: number | null;
+  priceToSalesTrailing12Months: number | null;
+  pegRatio: number | null;
+}
+
 interface FinancialsResponse {
   profile: CompanyProfile;
   quarterlyEarnings: QuarterlyEarning[];
   annualFinancials: AnnualFinancial[];
+  keyMetrics: KeyMetrics;
 }
 
 interface FinancialsBundle {
   profile: CompanyProfile;
   quarterlyEarnings: QuarterlyEarning[];
   annualFinancials: AnnualFinancial[];
+  keyMetrics: KeyMetrics;
   cachedAt: number; // for staleness
 }
 
@@ -62,6 +81,7 @@ interface StockState {
   profile: CompanyProfile | null;
   quarterlyEarnings: QuarterlyEarning[];
   annualFinancials: AnnualFinancial[];
+  keyMetrics: KeyMetrics | null;
   financialsLoading: boolean;
 
   // per-symbol 캐시 (stale-while-revalidate 지원)
@@ -72,6 +92,8 @@ interface StockState {
   fetchQuote: (symbol: string, opts?: { force?: boolean }) => Promise<void>;
   fetchChart: (symbol: string, range?: ChartRange, opts?: { force?: boolean }) => Promise<void>;
   fetchFinancials: (symbol: string, opts?: { force?: boolean }) => Promise<void>;
+  /** quote + financials를 단일 API 호출로 가져온다 (N+1 제거). */
+  fetchBundle: (symbol: string, opts?: { force?: boolean }) => Promise<void>;
   setChartRange: (range: ChartRange) => void;
   /** 현재 표시 상태만 비움 — 캐시는 유지 (다른 종목 진입 시 호출). */
   clearActive: () => void;
@@ -87,6 +109,7 @@ export const useStockStore = create<StockState>((set, get) => ({
   profile: null,
   quarterlyEarnings: [],
   annualFinancials: [],
+  keyMetrics: null,
   financialsLoading: false,
   quoteCache: {},
   chartCache: {},
@@ -191,6 +214,7 @@ export const useStockStore = create<StockState>((set, get) => ({
         profile: cached.profile,
         quarterlyEarnings: cached.quarterlyEarnings,
         annualFinancials: cached.annualFinancials,
+        keyMetrics: cached.keyMetrics,
         financialsLoading: false,
       });
     } else {
@@ -207,6 +231,7 @@ export const useStockStore = create<StockState>((set, get) => ({
         profile: data.profile,
         quarterlyEarnings: data.quarterlyEarnings,
         annualFinancials: data.annualFinancials,
+        keyMetrics: data.keyMetrics,
         financialsLoading: false,
         financialsCache: {
           ...s.financialsCache,
@@ -214,12 +239,93 @@ export const useStockStore = create<StockState>((set, get) => ({
             profile: data.profile,
             quarterlyEarnings: data.quarterlyEarnings,
             annualFinancials: data.annualFinancials,
+            keyMetrics: data.keyMetrics,
             cachedAt: Date.now(),
           },
         },
       }));
     } catch {
       set({ financialsLoading: false });
+    }
+  },
+
+  fetchBundle: async (symbol, opts) => {
+    const force = opts?.force === true;
+    const cachedQuote = get().quoteCache[symbol];
+    const cachedFinancials = get().financialsCache[symbol];
+    const now = Date.now();
+
+    const quoteAction = decideSwrAction({
+      cachedDataAt: cachedQuote?.dataAt,
+      force,
+      now,
+      freshTtlMs: FRESH_TTL_MS,
+      staleTtlMs: STALE_TTL_MS,
+    });
+    const finAction = decideSwrAction({
+      cachedDataAt: cachedFinancials ? new Date(cachedFinancials.cachedAt).toISOString() : null,
+      force,
+      now,
+      freshTtlMs: FRESH_TTL_MS,
+      staleTtlMs: STALE_TTL_MS,
+    });
+
+    if (cachedQuote) {
+      set({ quote: cachedQuote, quoteLoading: false });
+    } else {
+      set({ quote: null, quoteLoading: true });
+    }
+
+    if (cachedFinancials) {
+      set({
+        profile: cachedFinancials.profile,
+        quarterlyEarnings: cachedFinancials.quarterlyEarnings,
+        annualFinancials: cachedFinancials.annualFinancials,
+        keyMetrics: cachedFinancials.keyMetrics,
+        financialsLoading: false,
+      });
+    } else {
+      set({ financialsLoading: true });
+    }
+
+    if (quoteAction === "skip" && finAction === "skip") return;
+
+    try {
+      const data = await apiFetch<{ quote: StockQuote; financials: FinancialsResponse | null }>(
+        `/api/tarot/stock-bundle?symbol=${encodeURIComponent(symbol)}`
+      );
+
+      set((s) => ({
+        quote: data.quote,
+        quoteLoading: false,
+        quoteCache: { ...s.quoteCache, [symbol]: data.quote },
+        ...(data.financials
+          ? {
+              profile: data.financials.profile,
+              quarterlyEarnings: data.financials.quarterlyEarnings,
+              annualFinancials: data.financials.annualFinancials,
+              keyMetrics: data.financials.keyMetrics,
+              financialsLoading: false,
+              financialsCache: {
+                ...s.financialsCache,
+                [symbol]: {
+                  profile: data.financials.profile,
+                  quarterlyEarnings: data.financials.quarterlyEarnings,
+                  annualFinancials: data.financials.annualFinancials,
+                  keyMetrics: data.financials.keyMetrics,
+                  cachedAt: Date.now(),
+                },
+              },
+            }
+          : { financialsLoading: false }),
+      }));
+    } catch (err) {
+      const hadQuoteCache = !!cachedQuote;
+      set({
+        quoteLoading: false,
+        financialsLoading: false,
+        error: hadQuoteCache ? null : err instanceof Error ? err.message : "조회 실패",
+      });
     }
   },
 
@@ -236,6 +342,7 @@ export const useStockStore = create<StockState>((set, get) => ({
       profile: null,
       quarterlyEarnings: [],
       annualFinancials: [],
+      keyMetrics: null,
       financialsLoading: false,
     }),
 }));

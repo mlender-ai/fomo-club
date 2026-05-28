@@ -17,6 +17,8 @@ interface AnnualFinancial {
   revenue: number | null;
   operatingIncome: number | null;
   netIncome: number | null;
+  grossProfit: number | null;
+  ebitda: number | null;
 }
 
 interface CompanyProfile {
@@ -27,10 +29,27 @@ interface CompanyProfile {
   website: string;
 }
 
+// 토스증권 수준의 추가 재무 지표
+interface KeyMetrics {
+  eps: number | null;                  // 주당순이익 (EPS)
+  bookValue: number | null;            // 주당순자산 (BPS)
+  freeCashflow: number | null;         // 자유현금흐름
+  totalDebt: number | null;            // 총부채
+  totalCash: number | null;            // 총현금
+  currentRatio: number | null;         // 유동비율
+  quickRatio: number | null;           // 당좌비율
+  returnOnAssets: number | null;       // 총자산이익률 (ROA)
+  profitMargins: number | null;        // 순이익률
+  grossMargins: number | null;         // 매출총이익률
+  priceToSalesTrailing12Months: number | null; // PSR
+  pegRatio: number | null;             // PEG 비율 (PER/성장률)
+}
+
 interface FinancialsResponse {
   profile: CompanyProfile;
   quarterlyEarnings: QuarterlyEarning[];
   annualFinancials: AnnualFinancial[];
+  keyMetrics: KeyMetrics;
 }
 
 function extractNum(obj: unknown): number | null {
@@ -60,7 +79,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const modules = "summaryProfile,earnings,incomeStatementHistory";
+    const modules = "summaryProfile,earnings,incomeStatementHistory,financialData,defaultKeyStatistics,cashflowStatementHistory";
     const url = `${YAHOO_QUOTE_URL}/${encodeURIComponent(symbol)}?modules=${modules}`;
     const res = await fetch(url, {
       headers: { accept: "application/json", "user-agent": USER_AGENT },
@@ -78,7 +97,6 @@ export async function GET(req: NextRequest) {
           earnings?: {
             financialsChart?: {
               quarterly?: Array<{ date?: string; revenue?: unknown; earnings?: unknown }>;
-              yearly?: Array<{ date?: number; revenue?: unknown; earnings?: unknown }>;
             };
           };
           incomeStatementHistory?: {
@@ -87,6 +105,15 @@ export async function GET(req: NextRequest) {
               totalRevenue?: unknown;
               operatingIncome?: unknown;
               netIncome?: unknown;
+              grossProfit?: unknown;
+              ebitda?: unknown;
+            }>;
+          };
+          financialData?: Record<string, unknown>;
+          defaultKeyStatistics?: Record<string, unknown>;
+          cashflowStatementHistory?: {
+            cashflowStatements?: Array<{
+              freeCashflow?: unknown;
             }>;
           };
         }>;
@@ -115,16 +142,37 @@ export async function GET(req: NextRequest) {
       earnings: extractNum(q.earnings),
     }));
 
-    // Annual financials from incomeStatementHistory
+    // Annual financials from incomeStatementHistory (+ grossProfit, ebitda)
     const annualStatements = result.incomeStatementHistory?.incomeStatementHistory ?? [];
     const annualFinancials: AnnualFinancial[] = annualStatements.map((s) => ({
       year: s.endDate?.fmt?.slice(0, 4) ?? "",
       revenue: extractNum(s.totalRevenue),
       operatingIncome: extractNum(s.operatingIncome),
       netIncome: extractNum(s.netIncome),
+      grossProfit: extractNum(s.grossProfit),
+      ebitda: extractNum(s.ebitda),
     })).reverse(); // oldest first
 
-    const data: FinancialsResponse = { profile, quarterlyEarnings, annualFinancials };
+    const fd = result.financialData ?? {};
+    const ks = result.defaultKeyStatistics ?? {};
+    const latestCashflow = result.cashflowStatementHistory?.cashflowStatements?.[0];
+
+    const keyMetrics: KeyMetrics = {
+      eps: extractNum(ks.trailingEps),
+      bookValue: extractNum(ks.bookValue),
+      freeCashflow: latestCashflow ? extractNum(latestCashflow.freeCashflow) : null,
+      totalDebt: extractNum(fd.totalDebt),
+      totalCash: extractNum(fd.totalCash),
+      currentRatio: extractNum(fd.currentRatio),
+      quickRatio: extractNum(fd.quickRatio),
+      returnOnAssets: extractNum(fd.returnOnAssets),
+      profitMargins: extractNum(fd.profitMargins),
+      grossMargins: extractNum(fd.grossMargins),
+      priceToSalesTrailing12Months: extractNum(ks.priceToSalesTrailing12Months),
+      pegRatio: extractNum(ks.pegRatio),
+    };
+
+    const data: FinancialsResponse = { profile, quarterlyEarnings, annualFinancials, keyMetrics };
     cache.set(symbol, { data, expiresAt: now + CACHE_TTL_MS });
     return NextResponse.json(data);
   } catch (err) {
