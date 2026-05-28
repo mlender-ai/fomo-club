@@ -49,7 +49,13 @@
      ├── 금융 규제 검토 ────→ regulation-reviewer
      ├── 스토어 심사 검토 ──→ store-reviewer
      ├── 타로 프롬프트 ────→ prompt-engineer
-     └── RN/Expo 전문 ────→ rn-specialist
+     ├── RN/Expo 전문 ────→ rn-specialist
+     │
+     │  [simulo 차용 — 2026-05-27 도입]
+     ├── 아이디어 점수화 ───→ po-validator       (4점 척도 16점 만점)
+     ├── PM 영역 검증 ─────→ pm-reviewer        (RICE + 5 Whys)
+     ├── Playwright 검증 ──→ auto-qa-web        (어드민/공개 라우트 시각 회귀)
+     └── 아이디어 발산 ────→ idea-generator     (요일별 렌즈, 선택적)
 ```
 
 ---
@@ -363,3 +369,31 @@ model: sonnet
 - 성능 최적화 (FlatList, 이미지 캐싱, 번들 사이즈)
 - 딥링크 / 유니버설 링크 설정
 - 애니메이션 성능 (reanimated, 60fps 검증)
+
+---
+
+## simulo 차용 에이전트 (2026-05-27 도입)
+
+`/root/.claude/plans/simulo-cuddly-globe.md` T2a 결과. 4개 sub-agent 추가. 정의는 `.claude/agents/*.md` 에 명시.
+
+### 12. po-validator
+- **역할**: 일일 회의 제안 / 신규 아이디어 정량 검증.
+- **프레임워크**: 4점 척도 (U/F/N/A × 4 = 16점 만점) + 70% 유사도 중복 거부.
+- **판정**: ≥14 score-strong / 11-13 score-conditional / ≤10 auto-close.
+- **연계**: GitHub Actions `score_and_filter` job 의 로컬 인격화 버전. CEO Brief 사전 필터.
+
+### 13. pm-reviewer
+- **역할**: PM 영역 제안에 RICE 점수 + 5 Whys 적용. ✅/⚠️/❌/🔄 판정.
+- **트리거**: PM 직군 일일 제안 후 검증, 새 PRD 작성 시, 사용자 `/pm-review` 호출.
+- **원칙**: 빠른 NO. 통과율 100% 면 검증 무의미.
+
+### 14. auto-qa-web
+- **역할**: `apps/web` 어드민/공개 라우트 시각·인터랙션 회귀 자동 탐지.
+- **도구**: Playwright (chromium, production build).
+- **트리거**: `.github/workflows/auto-qa-web.yml` PR 자동 + 사용자 `/auto-qa-web` 호출.
+- **결과**: PASS / WARN / FAIL (CRITICAL).
+
+### 15. idea-generator (선택적)
+- **역할**: 요일별 렌즈로 비편향 아이디어 발산. UX 60% + 비즈니스 25% + 기술 15%.
+- **트리거**: 직군 제안 정체 / North Star 갱신 직후 / 사용자 `/ideate` 호출.
+- **연계**: po-validator 로 자기 추정 점수 산출 후 최종 3개 선별.
