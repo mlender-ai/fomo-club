@@ -81,3 +81,29 @@
 빌드 성공률: 100% (실패 시 push 금지)
 금칙어 검사: 사용자 노출 텍스트 100% 커버
 ```
+
+---
+
+## 결정론적 제어 — Stop Prompting, Start Governing (2026-05-27 도입)
+
+simulo AGENT_BIBLE 차용. 프롬프트 의존성을 버리고 Hooks 로 규칙을 강제한다.
+
+### .claude/hooks/protect-secrets.sh
+
+**Edit/Write/NotebookEdit 도구가 호출될 때마다** `.claude/settings.json` 의 PreToolUse hook 이 실행되어 다음 파일을 자동 차단:
+
+| 패턴 | 사유 |
+|---|---|
+| `.env`, `.env.local`, `.env.production`, `.env.*.local` | 시크릿 노출 위험 (단 `.env.example` 은 허용) |
+| `prisma/migrations/*.sql` | 적용된 마이그레이션은 immutable — `npx prisma migrate dev` 로 새 마이그레이션 생성 |
+| `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks` | 암호화 키 파일 |
+| `apple-shared-secret*`, `google-service-account*`, `firebase-admin*` | 결제 검증 시크릿 |
+| `admob-secret*`, `revenuecat-*-secret*` | 결제/광고 시크릿 |
+
+차단 시 사용자에게 `exit 2` + stderr 메시지로 사유와 대안 안내. 우회 불가 — 어떤 에이전트도 hook 통과 후에만 파일 편집 가능.
+
+### 원칙
+
+1. **Prompt 신뢰 < Hook 강제** — 시스템 프롬프트에 "민감 파일 편집 금지" 한 줄로는 부족. Hook 으로 결정론적 차단.
+2. **샘플 파일은 허용** — `.env.example` 같은 템플릿 파일은 통과해 신규 변수 동기화 가능.
+3. **사용자 직접 변경 안내** — Hook 차단 메시지에 "사용자가 1Password / GitHub Secrets 에서 관리" 명시.

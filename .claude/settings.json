@@ -29,6 +29,19 @@
       "Bash(gh api*)"
     ]
   },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-secrets.sh"
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "figma": {
       "command": "npx",
