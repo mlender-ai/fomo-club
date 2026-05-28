@@ -15,9 +15,12 @@ import { PriceStats } from "../../components/ticker/PriceStats";
 import { MetricsGrid } from "../../components/ticker/MetricsGrid";
 import { CompanyInfo } from "../../components/ticker/CompanyInfo";
 import { FinancialChart } from "../../components/ticker/FinancialChart";
+import { KeyMetricsGrid } from "../../components/ticker/KeyMetricsGrid";
 import { NewsList } from "../../components/ticker/NewsList";
+import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
+import { TickerDetailSkeleton } from "../../components/ticker/SkeletonLoader";
 import { planTabSwitch, shouldShowCompactHeader } from "@trading/shared/src/tabScrollPositions";
 import { useStockStore, type ChartRange } from "../../lib/stockStore";
 import { useFavoritesStore } from "../../lib/favoritesStore";
@@ -50,8 +53,8 @@ export default function TickerDetailScreen() {
   const { isLoggedIn, userId } = useUserStore();
   const {
     quote, chartBars, chartRange, quoteLoading, chartLoading,
-    profile, quarterlyEarnings, annualFinancials, financialsLoading,
-    fetchQuote, fetchChart, fetchFinancials, clearActive,
+    profile, quarterlyEarnings, annualFinancials, keyMetrics, financialsLoading,
+    fetchBundle, fetchChart, clearActive,
   } = useStockStore();
   const { isFavorite, addFavorite, removeFavorite } = useFavoritesStore();
   const { setTicker } = useDrawStore();
@@ -68,9 +71,8 @@ export default function TickerDetailScreen() {
 
   useEffect(() => {
     if (!symbol) return;
-    fetchQuote(symbol);
+    fetchBundle(symbol);
     fetchChart(symbol);
-    fetchFinancials(symbol);
     return () => clearActive();
   }, [symbol]);
 
@@ -78,12 +80,11 @@ export default function TickerDetailScreen() {
     if (!symbol) return;
     setRefreshing(true);
     await Promise.all([
-      fetchQuote(symbol, { force: true }),
+      fetchBundle(symbol, { force: true }),
       fetchChart(symbol, undefined, { force: true }),
-      fetchFinancials(symbol, { force: true }),
     ]);
     setRefreshing(false);
-  }, [symbol, fetchQuote, fetchChart, fetchFinancials]);
+  }, [symbol, fetchBundle, fetchChart]);
 
   const handleRangeChange = useCallback(
     (range: ChartRange) => {
@@ -128,6 +129,16 @@ export default function TickerDetailScreen() {
   if (!symbol) {
     router.back();
     return null;
+  }
+
+  // 첫 진입 시 (캐시 없음): 모든 데이터가 없고 로딩 중이면 전체 스켈레톤 표시
+  const isInitialLoading = quoteLoading && !quote && chartLoading && chartBars.length === 0;
+  if (isInitialLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <TickerDetailSkeleton />
+      </SafeAreaView>
+    );
   }
 
   const isPositive = (quote?.change ?? 0) >= 0;
@@ -276,10 +287,14 @@ export default function TickerDetailScreen() {
                   currency={currency}
                 />
               )}
+              {keyMetrics && (
+                <KeyMetricsGrid metrics={keyMetrics} currency={currency} />
+              )}
               {isLoggedIn && userId && (
                 <TickerCardHistory symbol={symbol} userId={userId} />
               )}
               <NewsList symbol={symbol} />
+              <InvestmentInsight symbol={symbol} />
             </>
           )}
         </View>
