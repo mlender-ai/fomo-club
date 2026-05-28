@@ -17,3 +17,8 @@ apps/web/.env.local
 apps/web/generated/
 prisma/dev.db
 *.tsbuildinfo
+
+# Playwright (auto-qa-web)
+test-results/
+playwright-report/
+playwright/.cache/
