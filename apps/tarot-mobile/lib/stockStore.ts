@@ -37,6 +37,9 @@ export interface KeyMetrics {
   currentRatio: number | null;
   quickRatio: number | null;
   returnOnAssets: number | null;
+  returnOnEquity: number | null;
+  debtToEquity: number | null;
+  revenueGrowth: number | null;
   profitMargins: number | null;
   grossMargins: number | null;
   priceToSalesTrailing12Months: number | null;

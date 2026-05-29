@@ -39,6 +39,9 @@ interface KeyMetrics {
   currentRatio: number | null;         // 유동비율
   quickRatio: number | null;           // 당좌비율
   returnOnAssets: number | null;       // 총자산이익률 (ROA)
+  returnOnEquity: number | null;       // 자기자본이익률 (ROE)
+  debtToEquity: number | null;         // 부채비율 (D/E)
+  revenueGrowth: number | null;        // 매출 성장률
   profitMargins: number | null;        // 순이익률
   grossMargins: number | null;         // 매출총이익률
   priceToSalesTrailing12Months: number | null; // PSR
@@ -166,6 +169,9 @@ export async function GET(req: NextRequest) {
       currentRatio: extractNum(fd.currentRatio),
       quickRatio: extractNum(fd.quickRatio),
       returnOnAssets: extractNum(fd.returnOnAssets),
+      returnOnEquity: extractNum(fd.returnOnEquity),
+      debtToEquity: extractNum(fd.debtToEquity),
+      revenueGrowth: extractNum(fd.revenueGrowth),
       profitMargins: extractNum(fd.profitMargins),
       grossMargins: extractNum(fd.grossMargins),
       priceToSalesTrailing12Months: extractNum(ks.priceToSalesTrailing12Months),
