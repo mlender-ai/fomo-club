@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { drawCards, getFallbackInterpretation } from "@taro/core";
+import { drawCards, getFallbackInterpretation, buildInterpretationPromptV2_2, checkSafety, type FinancialContext } from "@taro/core";
 import { fetchMarketSnapshot } from "@/lib/tarot/market";
-import { buildInterpretationPromptV2_1, checkSafety } from "@taro/core";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +21,43 @@ interface InsightResponse {
 
 interface LlmResponse {
   choices?: Array<{ message?: { content?: string } }>;
+}
+
+const INTERNAL_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3000";
+
+async function fetchFinancialCtx(symbol: string): Promise<FinancialContext | undefined> {
+  try {
+    const res = await fetch(`${INTERNAL_BASE}/api/tarot/financials?symbol=${encodeURIComponent(symbol)}`, {
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as {
+      keyMetrics?: {
+        profitMargins?: number | null;
+        grossMargins?: number | null;
+        revenueGrowth?: number | null;
+        returnOnEquity?: number | null;
+        returnOnAssets?: number | null;
+        debtToEquity?: number | null;
+        currentRatio?: number | null;
+        freeCashflow?: number | null;
+      };
+    };
+    if (!data.keyMetrics) return undefined;
+    const km = data.keyMetrics;
+    return {
+      profitMargins: km.profitMargins ?? null,
+      grossMargins: km.grossMargins ?? null,
+      revenueGrowth: km.revenueGrowth ?? null,
+      returnOnEquity: km.returnOnEquity ?? null,
+      returnOnAssets: km.returnOnAssets ?? null,
+      debtToEquity: km.debtToEquity ?? null,
+      currentRatio: km.currentRatio ?? null,
+      freeCashflow: km.freeCashflow ?? null,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 async function callLlmForInsight(prompt: string): Promise<{ headline: string; summary: string }> {
@@ -68,7 +104,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const market = symbol.includes(".KS") || symbol.includes(".KQ") ? "KR" : "US";
-    const snapshot = await fetchMarketSnapshot(symbol, market);
+    const [snapshot, financialCtx] = await Promise.all([
+      fetchMarketSnapshot(symbol, market),
+      fetchFinancialCtx(symbol),
+    ]);
 
     const [drawn] = drawCards("single", snapshot.condition);
     if (!drawn) {
@@ -79,7 +118,7 @@ export async function GET(req: NextRequest) {
     let summary: string;
 
     try {
-      const prompt = buildInterpretationPromptV2_1(snapshot, [drawn]);
+      const prompt = buildInterpretationPromptV2_2(snapshot, [drawn], financialCtx);
       const result = await callLlmForInsight(prompt);
 
       const safetyResult = checkSafety(`${result.headline} ${result.summary}`);

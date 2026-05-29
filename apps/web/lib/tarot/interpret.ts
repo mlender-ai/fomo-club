@@ -3,10 +3,12 @@ import {
   buildInterpretationPromptV1_1,
   buildInterpretationPromptV2_0,
   buildInterpretationPromptV2_1,
+  buildInterpretationPromptV2_2,
   checkSafety,
   getFallbackInterpretation,
   REQUIRED_DISCLAIMER,
   type DrawnCard,
+  type FinancialContext,
   type MarketSnapshot,
   type TarotInterpretation,
   type TarotSpreadType,
@@ -78,7 +80,8 @@ export async function generateInterpretation(
   spread: TarotSpreadType,
   cacheKey: string,
   cacheTtlMs: number,
-  preloaded?: ParsedInterpretation
+  preloaded?: ParsedInterpretation,
+  financialCtx?: FinancialContext
 ): Promise<TarotInterpretation> {
   const now = Date.now();
 
@@ -96,7 +99,7 @@ export async function generateInterpretation(
 
   // 3차: LLM 호출
   try {
-    const prompt = buildInterpretationPromptV2_1(market, cards);
+    const prompt = buildInterpretationPromptV2_2(market, cards, financialCtx);
     const raw = await callLlm(prompt);
     const parsed = parseLlmJson(raw);
 
