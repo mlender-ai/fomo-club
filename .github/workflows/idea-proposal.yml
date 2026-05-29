@@ -785,7 +785,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 90
+        run: sleep 150
       - name: Check duplicate & fetch self history
         id: ctx
         env:
@@ -905,7 +905,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 105
+        run: sleep 180
       - name: Check duplicate & fetch self history
         id: ctx
         env:
@@ -1126,7 +1126,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rate limit stagger
-        run: sleep 135
+        run: sleep 210
       - name: Check duplicate & fetch self history
         id: ctx
         env:
@@ -1356,6 +1356,7 @@ jobs:
         if: steps.dedup.outputs.exists == 'false'
         uses: actions/ai-inference@v1
         id: brief
+        continue-on-error: true
         with:
           model: openai/gpt-4o
           max-tokens: 8192
@@ -1503,7 +1504,7 @@ jobs:
             ### 🧭 사용자 결정 필요 항목
             (북스타 갱신, 반복 주제 종결, 임계값 조정 등 CEO가 직접 판단할 것)
       - name: Create CEO Brief Issue
-        if: steps.dedup.outputs.exists == 'false'
+        if: steps.dedup.outputs.exists == 'false' && steps.brief.outputs.response != ''
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.brief.outputs.response }}
