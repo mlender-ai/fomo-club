@@ -1344,7 +1344,7 @@ jobs:
         run: |
           LIST=$(gh issue list --label "agent-council" --state open --limit 30 \
             --json number,title,labels --repo "${{ github.repository }}" | \
-            jq -r --arg today "$TODAY" '.[] | select(.title | contains($today)) | "#\(.number) \(.title) [labels: \(.labels | map(.name) | join(\",\"))]"')
+            jq -r --arg today "$TODAY" '.[] | select(.title | contains($today)) | "#" + (.number|tostring) + " " + .title + " [labels: " + (.labels | map(.name) | join(",")) + "]"')
           echo "list<<__EOF__" >> $GITHUB_OUTPUT
           if [ -z "$LIST" ]; then
             echo "(오늘 신규 이슈 없음)"
