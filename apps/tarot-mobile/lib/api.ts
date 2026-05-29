@@ -1,31 +1,25 @@
-import Constants from "expo-constants";
-import { useUserStore } from "./store";
+import axios from "axios";
 
-const API_BASE =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ??
-  "http://localhost:3000";
+const API_BASE_URL = "https://api.trading-taro.com";
 
-interface ApiError {
-  error: string;
-  code: string;
+interface TarotInsightRequest {
+  ticker: string;
+  cardId: string;
+  orientation: string;
+  marketCondition: string;
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options?: RequestInit
-): Promise<T> {
-  const token = useUserStore.getState().token;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options?.headers as Record<string, string> | undefined) },
+interface TarotInsightResponse {
+  title: string;
+  content: string;
+}
+
+export async function fetchTarotInsight({ ticker, cardId, orientation, marketCondition }: TarotInsightRequest): Promise<TarotInsightResponse> {
+  const response = await axios.post(`${API_BASE_URL}/tarot-insight`, {
+    ticker,
+    cardId,
+    orientation,
+    marketCondition,
   });
-
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as Partial<ApiError>;
-    throw new Error(body.error ?? `API error ${res.status}`);
-  }
-
-  return res.json() as Promise<T>;
+  return response.data;
 }
