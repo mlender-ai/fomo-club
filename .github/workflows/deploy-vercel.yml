@@ -28,55 +28,54 @@ jobs:
         with:
           node-version: 20
 
-      # ── 1. 프로젝트 ID 취득 (없으면 생성) ──────────────────────
-      #    ID 취득만 필수. 설정 PATCH는 best-effort (원격 빌드는
-      #    전체 레포 접근 가능 → stored installCommand 도 정상 동작).
-      - name: Resolve Vercel project
+      # ── 1. 프로젝트 조회/생성 + 모노레포 설정 ──────────────────
+      #
+      #   핵심: npm workspaces 모노레포에서 rootDirectory=apps/web 만으로는
+      #   원격 빌드가 루트 lockfile / 워크스페이스 패키지(@trading/shared,
+      #   @taro/core)에 접근 불가 → 빌드 실패. sourceFilesOutsideRootDirectory
+      #   를 true 로 켜야 전체 레포가 업로드되어 빌드 가능.
+      #
+      - name: Configure Vercel project
         run: |
-          set +e
+          api() { curl -s --max-time 30 -H "Authorization: Bearer $VERCEL_TOKEN" "$@"; }
 
-          USER_JSON=$(curl -s --max-time 30 "https://api.vercel.com/v2/user" \
-            -H "Authorization: Bearer $VERCEL_TOKEN")
-          ORG_ID=$(echo "$USER_JSON" | jq -r '.user.id // .id // empty')
+          ORG_ID=$(api "https://api.vercel.com/v2/user" | jq -r '.user.id // .id // empty')
           if [ -z "$ORG_ID" ]; then
-            echo "::error::Vercel 사용자 조회 실패 (토큰 확인). 응답: $USER_JSON"
-            exit 1
+            echo "::error::Vercel 사용자 조회 실패 — VERCEL_TOKEN 확인"; exit 1
           fi
           echo "VERCEL_ORG_ID=$ORG_ID" >> "$GITHUB_ENV"
           echo "ORG_ID=$ORG_ID"
 
-          PROJ_JSON=$(curl -s --max-time 30 \
-            "https://api.vercel.com/v9/projects/taro-stock-web" \
-            -H "Authorization: Bearer $VERCEL_TOKEN")
-          PROJ_ID=$(echo "$PROJ_JSON" | jq -r '.id // empty')
-
+          PROJ_ID=$(api "https://api.vercel.com/v9/projects/taro-stock-web" | jq -r '.id // empty')
           if [ -z "$PROJ_ID" ]; then
-            CREATE_JSON=$(curl -s --max-time 30 -X POST \
-              "https://api.vercel.com/v10/projects" \
-              -H "Authorization: Bearer $VERCEL_TOKEN" \
+            PROJ_ID=$(api -X POST "https://api.vercel.com/v10/projects" \
               -H "Content-Type: application/json" \
-              -d '{"name":"taro-stock-web","framework":"nextjs","rootDirectory":"apps/web"}')
-            PROJ_ID=$(echo "$CREATE_JSON" | jq -r '.id // empty')
-            echo "프로젝트 생성 시도 → $PROJ_ID"
+              -d '{"name":"taro-stock-web","framework":"nextjs","rootDirectory":"apps/web"}' \
+              | jq -r '.id // empty')
+            echo "프로젝트 생성 → $PROJ_ID"
           else
             echo "기존 프로젝트 → $PROJ_ID"
           fi
-
           if [ -z "$PROJ_ID" ]; then
-            echo "::error::프로젝트 조회/생성 실패. GET: $PROJ_JSON"
-            exit 1
+            echo "::error::프로젝트 조회/생성 실패"; exit 1
           fi
           echo "VERCEL_PROJECT_ID=$PROJ_ID" >> "$GITHUB_ENV"
 
-          # 설정 리셋 (best-effort — 실패해도 진행)
-          PATCH_CODE=$(curl -s --max-time 30 -o /dev/null -w "%{http_code}" \
+          # 모노레포 빌드 설정 (auto-detect + 외부 파일 포함)
+          CODE=$(api -o /dev/null -w "%{http_code}" \
             -X PATCH "https://api.vercel.com/v9/projects/$PROJ_ID" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"framework":"nextjs","rootDirectory":"apps/web","outputDirectory":".next-build","installCommand":null,"buildCommand":null}')
-          echo "설정 PATCH HTTP $PATCH_CODE"
+            -d '{
+              "framework":"nextjs",
+              "rootDirectory":"apps/web",
+              "sourceFilesOutsideRootDirectory":true,
+              "installCommand":null,
+              "buildCommand":null,
+              "outputDirectory":".next-build"
+            }')
+          echo "설정 PATCH HTTP $CODE"
 
-      # ── 2. 환경변수 동기화 (best-effort) ───────────────────────
+      # ── 2. 런타임 환경변수 동기화 (Slack 엔드포인트용) ─────────
       - name: Sync environment variables
         env:
           SLACK_BOT_TOKEN:      ${{ secrets.SLACK_BOT_TOKEN }}
@@ -86,7 +85,6 @@ jobs:
           JWT_SECRET:           ${{ secrets.JWT_SECRET }}
           DATABASE_URL:         ${{ secrets.DATABASE_URL }}
         run: |
-          set +e
           sync_env() {
             local key=$1 val=$2
             [ -z "$val" ] && return
@@ -107,20 +105,21 @@ jobs:
           sync_env AI_MODEL             "openai/gpt-4.1"
           sync_env JWT_SECRET           "$JWT_SECRET"
           sync_env DATABASE_URL         "$DATABASE_URL"
-          exit 0
 
       # ── 3. 원격 빌드 배포 ──────────────────────────────────────
+      #    VERCEL_ORG_ID / VERCEL_PROJECT_ID 가 env 에 있으므로
+      #    대화형 링크 없이 해당 프로젝트로 배포됨.
+      #    sourceFilesOutsideRootDirectory=true 라 전체 레포 업로드.
       - name: Deploy
         id: deploy
         run: |
-          OUTPUT=$(npx --yes vercel@latest deploy --prod --yes \
+          OUT=$(npx --yes vercel@latest deploy --prod --yes \
             --token "$VERCEL_TOKEN" 2>&1)
-          echo "$OUTPUT"
-          URL=$(echo "$OUTPUT" | grep -Eo "https://[a-zA-Z0-9.-]+\.vercel\.app" | tail -1)
+          echo "$OUT"
+          URL=$(echo "$OUT" | grep -Eo "https://[a-zA-Z0-9.-]+\.vercel\.app" | tail -1)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           if [ -z "$URL" ]; then
-            echo "::error::배포 URL 없음 — 배포 실패"
-            exit 1
+            echo "::error::배포 URL 없음 — 빌드 실패 (위 로그 확인)"; exit 1
           fi
           echo "DEPLOYED → $URL"
 
@@ -129,11 +128,9 @@ jobs:
         if: vars.SLACK_WEBHOOK_URL != '' && steps.deploy.outputs.url != ''
         env:
           SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
-          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         run: |
           PAYLOAD=$(jq -n \
-            --arg text "🚀 *Vercel 배포 완료*\n>${DEPLOY_URL}\n\nSlack Slash Command URL:\n>${DEPLOY_URL}/api/slack/commands" \
+            --arg text "🚀 *Vercel 배포 완료*\n>https://taro-stock-web.vercel.app\n\nSlack Slash Command URL:\n>https://taro-stock-web.vercel.app/api/slack/commands\nEvent URL:\n>https://taro-stock-web.vercel.app/api/slack/events" \
             '{"text": $text}')
           curl -sf -X POST "$SLACK_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD" || true
+            -H "Content-Type: application/json" -d "$PAYLOAD" || true
