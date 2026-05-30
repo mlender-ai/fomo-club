@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { Colors, Spacing } from "../../constants/theme";
 import { TickerLogo } from "../../components/TickerLogo";
 import { PriceChart } from "../../components/ticker/PriceChart";
+import { ChartErrorBoundary } from "../../components/ticker/ChartErrorBoundary";
 import { TabBar, type TickerTab } from "../../components/ticker/TabBar";
 import { PriceStats } from "../../components/ticker/PriceStats";
 import { MetricsGrid } from "../../components/ticker/MetricsGrid";
@@ -236,12 +237,14 @@ export default function TickerDetailScreen() {
         <View style={styles.tabContent}>
           {activeTab === "chart" ? (
             <View style={styles.chartSection}>
-              <PriceChart
-                bars={chartBars}
-                loading={chartLoading}
-                width={CHART_WIDTH}
-                positive={isPositive}
-              />
+              <ChartErrorBoundary>
+                <PriceChart
+                  bars={chartBars}
+                  loading={chartLoading}
+                  width={CHART_WIDTH}
+                  positive={isPositive}
+                />
+              </ChartErrorBoundary>
               <View style={styles.rangeRow}>
                 {RANGE_OPTIONS.map((opt) => (
                   <TouchableOpacity
@@ -282,12 +285,14 @@ export default function TickerDetailScreen() {
                 />
               )}
               {(quarterlyEarnings.length > 0 || annualFinancials.length > 0) && (
-                <FinancialChart
-                  quarterlyEarnings={quarterlyEarnings}
-                  annualFinancials={annualFinancials}
-                  width={SCREEN_WIDTH}
-                  currency={currency}
-                />
+                <ChartErrorBoundary>
+                  <FinancialChart
+                    quarterlyEarnings={quarterlyEarnings}
+                    annualFinancials={annualFinancials}
+                    width={SCREEN_WIDTH}
+                    currency={currency}
+                  />
+                </ChartErrorBoundary>
               )}
               {keyMetrics && (
                 <KeyMetricsGrid metrics={keyMetrics} currency={currency} />
