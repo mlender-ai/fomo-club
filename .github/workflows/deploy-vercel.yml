@@ -1,0 +1,105 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 프로젝트 링크 (없으면 자동 생성) ────────────────────
+      - name: Link Vercel project
+        working-directory: apps/web
+        run: |
+          npx vercel link --yes \
+            --token "$VERCEL_TOKEN" \
+            --project "taro-stock-web" 2>&1 || true
+
+      # ── Vercel 환경변수 설정 (최초 1회 — 이미 있으면 스킵) ──
+      - name: Set Vercel environment variables
+        working-directory: apps/web
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+          GITHUB_PAT: ${{ secrets.GH_PAT }}
+          GITHUB_REPO: mlender-ai/taro-stock-app
+          AI_API_URL: https://models.github.ai/inference/chat/completions
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: openai/gpt-4.1
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          set_env() {
+            local key=$1
+            local val=$2
+            [ -z "$val" ] && return
+            # 이미 있으면 --force로 덮어쓰기
+            echo "$val" | npx vercel env add "$key" production \
+              --token "$VERCEL_TOKEN" --yes 2>/dev/null || \
+            echo "$val" | npx vercel env add "$key" production \
+              --token "$VERCEL_TOKEN" --yes --force 2>/dev/null || true
+          }
+
+          set_env SLACK_BOT_TOKEN       "$SLACK_BOT_TOKEN"
+          set_env SLACK_SIGNING_SECRET  "$SLACK_SIGNING_SECRET"
+          set_env GITHUB_PAT            "$GITHUB_PAT"
+          set_env GITHUB_REPO           "$GITHUB_REPO"
+          set_env AI_API_URL            "$AI_API_URL"
+          set_env AI_API_KEY            "$AI_API_KEY"
+          set_env AI_MODEL              "$AI_MODEL"
+          set_env DATABASE_URL          "$DATABASE_URL"
+          set_env JWT_SECRET            "$JWT_SECRET"
+
+      # ── 빌드 ─────────────────────────────────────────────────
+      - name: Build
+        working-directory: apps/web
+        run: npx vercel build --prod --token "$VERCEL_TOKEN"
+
+      # ── 배포 ─────────────────────────────────────────────────
+      - name: Deploy
+        id: deploy
+        working-directory: apps/web
+        run: |
+          DEPLOY_URL=$(npx vercel deploy --prebuilt --prod \
+            --token "$VERCEL_TOKEN" 2>&1 | tail -1)
+          echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "배포 URL: $DEPLOY_URL"
+
+      # ── Slack 알림 ───────────────────────────────────────────
+      - name: Notify Slack
+        if: vars.SLACK_WEBHOOK_URL != '' && steps.deploy.outputs.url != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg text "🚀 *Vercel 배포 완료*\n>${DEPLOY_URL}\n>${COMMIT_MSG}" \
+            '{"text": $text}')
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" || true
