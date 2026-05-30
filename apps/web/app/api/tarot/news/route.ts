@@ -36,8 +36,16 @@ function inferCategory(title: string, description: string, rawCategory: string):
   return "시장";
 }
 
+// pubDate가 비정상 포맷이면 Invalid Date → toISOString() 예외. 안전하게 변환.
+function safePublishedAt(pubDate: string): string {
+  if (!pubDate) return new Date().toISOString();
+  const d = new Date(pubDate);
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
 function parseYahooRss(xml: string): NewsItem[] {
   const items: NewsItem[] = [];
+  const seen = new Set<string>(); // link 기준 중복 기사 제거
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
@@ -57,19 +65,24 @@ function parseYahooRss(xml: string): NewsItem[] {
       ?? block.match(/<category>(.*?)<\/category>/)?.[1]
       ?? "";
 
-    if (title && link) {
-      const cleanTitle = title.trim();
-      const cleanDescription = description.replace(/<[^>]*>/g, "").trim().slice(0, 200);
-      items.push({
-        title: cleanTitle,
-        description: cleanDescription,
-        summary: cleanDescription,
-        link: link.trim(),
-        publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
-        source: source.trim() || "Yahoo Finance",
-        category: inferCategory(cleanTitle, cleanDescription, rawCategory.trim()),
-      });
-    }
+    const cleanTitle = title.trim();
+    const cleanLink = link.trim();
+    // 필수 필드(title/link) 결측 항목 제외 — 깨진 카드가 사용자에게 노출되지 않도록
+    if (!cleanTitle || !cleanLink) continue;
+    // 동일 link 중복 기사 제거
+    if (seen.has(cleanLink)) continue;
+    seen.add(cleanLink);
+
+    const cleanDescription = description.replace(/<[^>]*>/g, "").trim().slice(0, 200);
+    items.push({
+      title: cleanTitle,
+      description: cleanDescription,
+      summary: cleanDescription,
+      link: cleanLink,
+      publishedAt: safePublishedAt(pubDate),
+      source: source.trim() || "Yahoo Finance",
+      category: inferCategory(cleanTitle, cleanDescription, rawCategory.trim()),
+    });
   }
   return items;
 }
