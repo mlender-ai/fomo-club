@@ -26,6 +26,8 @@ export function TabBar({ activeTab, onTabChange }: Props) {
             style={styles.tab}
             onPress={() => onTabChange(tab.key)}
             activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
           >
             <View style={[styles.labelWrapper, isActive && styles.labelWrapperActive]}>
               <Text

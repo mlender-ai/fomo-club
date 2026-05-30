@@ -1,0 +1,43 @@
+# Taro Agent Bot — Slack App Manifest
+#
+# 사용법:
+# 1. https://api.slack.com/apps → (기존 앱) → App Manifest 메뉴
+#    또는 Create New App → From an app manifest
+# 2. 아래 전체를 붙여넣기
+# 3. {DOMAIN} 을 Vercel 배포 도메인으로 치환
+#    예: taro-stock-web.vercel.app
+# 4. Save Changes → Install App
+#
+# 이 매니페스트 하나로 Bot 권한 + Slash Command + Event 구독이 전부 설정됨.
+
+display_information:
+  name: Taro Agent Bot
+  description: Trading Taro 자율 파이프라인 제어 봇
+  background_color: "#1a1a2e"
+
+features:
+  bot_user:
+    display_name: Taro Agent Bot
+    always_online: true
+  slash_commands:
+    - command: /taro
+      url: https://{DOMAIN}/api/slack/commands
+      description: Taro Agent 파이프라인 제어
+      usage_hint: "[implement|status|council|approve|merge|help] [args]"
+      should_escape: false
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - app_mentions:read
+      - commands
+
+settings:
+  event_subscriptions:
+    request_url: https://{DOMAIN}/api/slack/events
+    bot_events:
+      - app_mention
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

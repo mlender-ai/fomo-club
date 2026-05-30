@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { Text } from "../ui/Text";
 import { Colors, Spacing, Radius } from "../../constants/theme";
-import { apiFetch } from "../../lib/api";
+import { useCachedFetch } from "../../lib/useCachedFetch";
 
 interface InsightResponse {
   headline: string;
@@ -16,25 +16,23 @@ interface Props {
 }
 
 export function InvestmentInsight({ symbol }: Props) {
-  const [insight, setInsight] = useState<InsightResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    apiFetch<InsightResponse>(`/api/tarot/news-insight?symbol=${encodeURIComponent(symbol)}`)
-      .then((data) => setInsight(data))
-      .catch(() => setInsight(null))
-      .finally(() => setLoading(false));
-  }, [symbol]);
+  const path = `/api/tarot/news-insight?symbol=${encodeURIComponent(symbol)}`;
+  // 15분 캐시 — 탭 전환 시 재fetch 없음 (서버 캐시 TTL과 일치)
+  const { data: insight, loading } = useCachedFetch<InsightResponse>(path, 15 * 60 * 1000);
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>
-          타로 투자 인사이트
-        </Text>
+        <View style={styles.labelRow}>
+          <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>
+            타로 시장 인사이트
+          </Text>
+        </View>
         <View style={[styles.card, styles.loadingCard]}>
           <ActivityIndicator size="small" color={Colors.taroEssence} />
+          <Text variant="caption" color={Colors.midGrayText} style={styles.loadingText}>
+            카드 해석 중…
+          </Text>
         </View>
       </View>
     );
@@ -44,9 +42,14 @@ export function InvestmentInsight({ symbol }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>
-        타로 투자 인사이트
-      </Text>
+      <View style={styles.labelRow}>
+        <Text variant="caption" color={Colors.midGrayText} style={styles.sectionLabel}>
+          타로 시장 인사이트
+        </Text>
+        <Text variant="caption" color={Colors.ironOutline} style={styles.sectionSub}>
+          AI가 시장 데이터를 타로 카드로 해석한 참고 정보
+        </Text>
+      </View>
 
       <View style={styles.card}>
         <View style={styles.cardBadgeRow}>
@@ -55,7 +58,7 @@ export function InvestmentInsight({ symbol }: Props) {
           </View>
           <View style={[styles.cardBadge, styles.orientationBadge]}>
             <Text variant="caption" color={Colors.midGrayText}>
-              {insight.orientation === "upright" ? "정방향" : "역방향"}
+              {insight.orientation === "upright" ? "정방향 ↑" : "역방향 ↓"}
             </Text>
           </View>
         </View>
@@ -67,6 +70,10 @@ export function InvestmentInsight({ symbol }: Props) {
         <Text variant="body-sm" color={Colors.midGrayText} style={styles.summary}>
           {insight.summary}
         </Text>
+
+        <Text variant="caption" color={Colors.ironOutline} style={styles.disclaimer}>
+          본 해석은 투자 조언이 아닌 참고용 콘텐츠입니다.
+        </Text>
       </View>
     </View>
   );
@@ -76,9 +83,16 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.s24,
   },
-  sectionLabel: {
+  labelRow: {
     marginBottom: Spacing.s8,
+    gap: 4,
+  },
+  sectionLabel: {
     letterSpacing: 0.5,
+  },
+  sectionSub: {
+    fontSize: 10,
+    letterSpacing: 0.2,
   },
   card: {
     backgroundColor: Colors.voidGreen,
@@ -91,6 +105,10 @@ const styles = StyleSheet.create({
   loadingCard: {
     alignItems: "center",
     paddingVertical: Spacing.s32,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 11,
   },
   cardBadgeRow: {
     flexDirection: "row",
@@ -113,5 +131,11 @@ const styles = StyleSheet.create({
   },
   summary: {
     lineHeight: 20,
+  },
+  disclaimer: {
+    fontSize: 10,
+    letterSpacing: 0.2,
+    opacity: 0.7,
+    marginTop: 4,
   },
 });

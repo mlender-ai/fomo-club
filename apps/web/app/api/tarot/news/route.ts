@@ -9,9 +9,31 @@ const cache = new Map<string, { data: NewsItem[]; expiresAt: number }>();
 interface NewsItem {
   title: string;
   description: string;
+  summary: string;
   link: string;
   publishedAt: string;
   source: string;
+  category: string;
+}
+
+const CATEGORY_KEYWORDS: Array<{ keywords: RegExp; category: string }> = [
+  { keywords: /\b(earnings|revenue|profit|guidance|eps|quarterly|results)\b/i, category: "실적" },
+  { keywords: /\b(merger|acquisition|deal|buyout|takeover|m&a)\b/i, category: "M&A" },
+  { keywords: /\b(upgrade|downgrade|rating|price target|analyst)\b/i, category: "애널리스트" },
+  { keywords: /\b(dividend|buyback|split|payout)\b/i, category: "주주환원" },
+  { keywords: /\b(ceo|cfo|executive|leadership|board)\b/i, category: "경영진" },
+  { keywords: /\b(lawsuit|sec|investigation|fine|regulation|fda|approval)\b/i, category: "규제/소송" },
+  { keywords: /\b(ai|chip|semiconductor|cloud|tech|software|app)\b/i, category: "기술" },
+  { keywords: /\b(fed|inflation|rate|economy|gdp|jobs|cpi)\b/i, category: "거시경제" },
+];
+
+function inferCategory(title: string, description: string, rawCategory: string): string {
+  if (rawCategory) return rawCategory;
+  const blob = `${title} ${description}`;
+  for (const { keywords, category } of CATEGORY_KEYWORDS) {
+    if (keywords.test(blob)) return category;
+  }
+  return "시장";
 }
 
 function parseYahooRss(xml: string): NewsItem[] {
@@ -31,14 +53,21 @@ function parseYahooRss(xml: string): NewsItem[] {
     const source = block.match(/<source[^>]*>(.*?)<\/source>/)?.[1]
       ?? block.match(/<source[^>]*url="([^"]*)".*?<\/source>/)?.[1]
       ?? "Yahoo Finance";
+    const rawCategory = block.match(/<category><!\[CDATA\[(.*?)\]\]><\/category>/)?.[1]
+      ?? block.match(/<category>(.*?)<\/category>/)?.[1]
+      ?? "";
 
     if (title && link) {
+      const cleanTitle = title.trim();
+      const cleanDescription = description.replace(/<[^>]*>/g, "").trim().slice(0, 200);
       items.push({
-        title: title.trim(),
-        description: description.replace(/<[^>]*>/g, "").trim().slice(0, 200),
+        title: cleanTitle,
+        description: cleanDescription,
+        summary: cleanDescription,
         link: link.trim(),
         publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
         source: source.trim() || "Yahoo Finance",
+        category: inferCategory(cleanTitle, cleanDescription, rawCategory.trim()),
       });
     }
   }

@@ -67,7 +67,9 @@ export type TarotEvent =
   | "credit_purchased"
   | "collection_viewed"
   | "analytics_viewed"
-  | "onboarding_completed";
+  | "onboarding_completed"
+  | "news_modal_opened"
+  | "news_modal_closed";
 
 let _apiBase: string | null = null;
 let _getToken: (() => string | null) | null = null;

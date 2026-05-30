@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { drawCards, getFallbackInterpretation, buildInterpretationPromptV2_2, checkSafety, type FinancialContext } from "@taro/core";
+import { drawCards, getFallbackInterpretation, buildInterpretationPromptV2_2, checkSafety, generateFallbackInsight, type FinancialContext } from "@taro/core";
 import { fetchMarketSnapshot } from "@/lib/tarot/market";
+import type { StockQuote } from "@trading/shared/src/stockTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ const AI_API_URL = process.env["AI_API_URL"] ?? "";
 const AI_API_KEY = process.env["AI_API_KEY"] ?? "";
 const AI_MODEL = process.env["AI_MODEL"] ?? "openai/gpt-4.1-mini";
 
+const INTERNAL_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3000";
+
 interface InsightResponse {
   headline: string;
   summary: string;
@@ -21,43 +24,6 @@ interface InsightResponse {
 
 interface LlmResponse {
   choices?: Array<{ message?: { content?: string } }>;
-}
-
-const INTERNAL_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3000";
-
-async function fetchFinancialCtx(symbol: string): Promise<FinancialContext | undefined> {
-  try {
-    const res = await fetch(`${INTERNAL_BASE}/api/tarot/financials?symbol=${encodeURIComponent(symbol)}`, {
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!res.ok) return undefined;
-    const data = (await res.json()) as {
-      keyMetrics?: {
-        profitMargins?: number | null;
-        grossMargins?: number | null;
-        revenueGrowth?: number | null;
-        returnOnEquity?: number | null;
-        returnOnAssets?: number | null;
-        debtToEquity?: number | null;
-        currentRatio?: number | null;
-        freeCashflow?: number | null;
-      };
-    };
-    if (!data.keyMetrics) return undefined;
-    const km = data.keyMetrics;
-    return {
-      profitMargins: km.profitMargins ?? null,
-      grossMargins: km.grossMargins ?? null,
-      revenueGrowth: km.revenueGrowth ?? null,
-      returnOnEquity: km.returnOnEquity ?? null,
-      returnOnAssets: km.returnOnAssets ?? null,
-      debtToEquity: km.debtToEquity ?? null,
-      currentRatio: km.currentRatio ?? null,
-      freeCashflow: km.freeCashflow ?? null,
-    };
-  } catch {
-    return undefined;
-  }
 }
 
 async function callLlmForInsight(prompt: string): Promise<{ headline: string; summary: string }> {
@@ -90,6 +56,19 @@ async function callLlmForInsight(prompt: string): Promise<{ headline: string; su
   return { headline: parsed.headline, summary: parsed.summary };
 }
 
+function buildFinancialContext(quote: StockQuote): FinancialContext | undefined {
+  const ctx: FinancialContext = {
+    grossMargins: quote.grossMargins ?? null,
+    profitMargins: quote.operatingMargins ?? null,
+    revenueGrowth: quote.revenueGrowth ?? null,
+    returnOnEquity: quote.returnOnEquity ?? null,
+    debtToEquity: quote.debtToEquity ?? null,
+  };
+  // 의미 있는 값이 하나라도 있어야 컨텍스트를 쓸 가치가 있음
+  const hasAny = Object.values(ctx).some((v) => v !== null && v !== undefined);
+  return hasAny ? ctx : undefined;
+}
+
 export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get("symbol");
   if (!symbol) {
@@ -104,12 +83,24 @@ export async function GET(req: NextRequest) {
 
   try {
     const market = symbol.includes(".KS") || symbol.includes(".KQ") ? "KR" : "US";
-    const [snapshot, financialCtx] = await Promise.all([
+
+    // 시장 스냅샷 + 종목 재무 데이터를 병렬로 조회 — 재무 데이터는 프롬프트 컨텍스트 강화용
+    const [snapshot, quoteResult] = await Promise.allSettled([
       fetchMarketSnapshot(symbol, market),
-      fetchFinancialCtx(symbol),
+      fetch(`${INTERNAL_BASE}/api/tarot/quote?symbol=${encodeURIComponent(symbol)}`, {
+        signal: AbortSignal.timeout(8_000),
+      }).then((r) => (r.ok ? (r.json() as Promise<StockQuote>) : null)).catch(() => null),
     ]);
 
-    const [drawn] = drawCards("single", snapshot.condition);
+    if (snapshot.status === "rejected") {
+      throw snapshot.reason as Error;
+    }
+
+    const marketSnapshot = snapshot.value;
+    const quoteData = quoteResult.status === "fulfilled" ? quoteResult.value : null;
+    const financialCtx = quoteData ? buildFinancialContext(quoteData) : undefined;
+
+    const [drawn] = drawCards("single", marketSnapshot.condition);
     if (!drawn) {
       return NextResponse.json({ error: "Card draw failed" }, { status: 500 });
     }
@@ -118,7 +109,8 @@ export async function GET(req: NextRequest) {
     let summary: string;
 
     try {
-      const prompt = buildInterpretationPromptV2_2(snapshot, [drawn], financialCtx);
+      // v2.2.0: 종목 재무 데이터 기반 컨텍스트를 프롬프트에 추가
+      const prompt = buildInterpretationPromptV2_2(marketSnapshot, [drawn], financialCtx);
       const result = await callLlmForInsight(prompt);
 
       const safetyResult = checkSafety(`${result.headline} ${result.summary}`);
@@ -129,7 +121,12 @@ export async function GET(req: NextRequest) {
     } catch {
       const fallback = getFallbackInterpretation(drawn.card.id, drawn.orientation);
       headline = fallback.headline;
-      summary = fallback.summary;
+
+      summary = generateFallbackInsight({
+        cardId: drawn.card.id,
+        orientation: drawn.orientation,
+        snapshot: marketSnapshot,
+      });
     }
 
     const data: InsightResponse = {

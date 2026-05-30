@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { View, TouchableOpacity, StyleSheet, Linking } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Text } from "../ui/Text";
 import { Colors, Spacing, Radius } from "../../constants/theme";
 import { apiFetch } from "../../lib/api";
+import { NewsDetailModal } from "./NewsDetailModal";
 
 interface NewsItem {
   title: string;
   description: string;
+  summary?: string;
   link: string;
   publishedAt: string;
   source: string;
+  category?: string;
 }
 
 interface Props {
@@ -29,6 +32,7 @@ function timeAgo(dateStr: string): string {
 export function NewsList({ symbol }: Props) {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<NewsItem | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -52,19 +56,35 @@ export function NewsList({ symbol }: Props) {
           <TouchableOpacity
             key={i}
             style={[styles.newsItem, i < news.length - 1 && styles.newsItemBorder]}
-            onPress={() => Linking.openURL(item.link).catch(() => {})}
+            onPress={() => setSelected(item)}
             activeOpacity={0.7}
           >
             <Text variant="body-sm" color={Colors.whiteout} numberOfLines={2} style={styles.newsTitle}>
               {item.title}
             </Text>
             <View style={styles.newsMeta}>
-              <Text variant="caption" color={Colors.midGrayText}>{item.source}</Text>
+              <View style={styles.metaLeft}>
+                {item.category ? (
+                  <View style={styles.categoryChip}>
+                    <Text variant="caption" color={Colors.taroEssence}>
+                      {item.category}
+                    </Text>
+                  </View>
+                ) : null}
+                <Text variant="caption" color={Colors.midGrayText}>{item.source}</Text>
+              </View>
               <Text variant="caption" color={Colors.ironOutline}>{timeAgo(item.publishedAt)}</Text>
             </View>
           </TouchableOpacity>
         ))}
       </View>
+
+      <NewsDetailModal
+        visible={selected !== null}
+        item={selected}
+        symbol={symbol}
+        onClose={() => setSelected(null)}
+      />
     </View>
   );
 }
@@ -99,5 +119,19 @@ const styles = StyleSheet.create({
   newsMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+  },
+  metaLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  categoryChip: {
+    backgroundColor: Colors.voidGreen,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: Colors.deepInsight,
   },
 });
