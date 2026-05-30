@@ -121,8 +121,7 @@ export async function GET(req: NextRequest) {
     } catch {
       const fallback = getFallbackInterpretation(drawn.card.id, drawn.orientation);
       headline = fallback.headline;
-      
-      // 새로 개발한 섹터/데이터 연동 프레임워크를 요약문에 적용 (데이터 누락 방어 로직 포함)
+
       summary = generateFallbackInsight({
         cardId: drawn.card.id,
         orientation: drawn.orientation,

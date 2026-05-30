@@ -1,7 +1,7 @@
 // stale-while-revalidate 결정 로직 — 컴포넌트와 분리해 회귀 봉쇄.
 // dataAt(ISO 8601) 기준 freshness를 평가해 fetch 동작을 결정.
 
-import { classifyFreshness } from "./staleness.js";
+import { classifyFreshness } from "./staleness";
 
 export type FetchAction =
   | "skip"                  // 캐시 fresh이고 force=false → fetch 전혀 안 함

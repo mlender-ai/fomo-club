@@ -23,19 +23,22 @@ export function TabBar({ activeTab, onTabChange }: Props) {
         return (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tab, isActive && styles.tabActive]}
+            style={styles.tab}
             onPress={() => onTabChange(tab.key)}
             activeOpacity={0.7}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
           >
-            <Text
-              variant="body-sm"
-              color={isActive ? Colors.taroEssence : Colors.ironOutline}
-              style={isActive ? styles.labelActive : styles.labelInactive}
-            >
-              {tab.label}
-            </Text>
+            <View style={[styles.labelWrapper, isActive && styles.labelWrapperActive]}>
+              <Text
+                variant="body-sm"
+                color={isActive ? Colors.taroEssence : Colors.midGrayText}
+                style={isActive ? styles.labelActive : styles.labelInactive}
+              >
+                {tab.label}
+              </Text>
+            </View>
+            <View style={[styles.indicator, isActive && styles.indicatorActive]} />
           </TouchableOpacity>
         );
       })}
@@ -53,22 +56,33 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderBottomWidth: 3,
-    borderBottomColor: "transparent",
+    paddingTop: 10,
   },
-  tabActive: {
-    borderBottomColor: Colors.taroEssence,
-    backgroundColor: `${Colors.taroEssence}10`,
+  labelWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  labelWrapperActive: {
+    backgroundColor: Colors.voidGreen,
   },
   labelActive: {
     fontWeight: "700",
     fontSize: 14,
+    letterSpacing: 0.2,
   },
   labelInactive: {
     fontWeight: "400",
     fontSize: 14,
-    opacity: 0.55,
+  },
+  indicator: {
+    height: 3,
+    width: "60%",
+    marginTop: 6,
+    borderRadius: 2,
+    backgroundColor: "transparent",
+  },
+  indicatorActive: {
+    backgroundColor: Colors.taroEssence,
   },
 });

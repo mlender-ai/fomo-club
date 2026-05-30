@@ -1,10 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { drawCards, DRAW_COST, buildCacheKey, getCacheTtlMs, getCardNarrative, type TarotSpreadType } from "@taro/core";
+import { drawCards, DRAW_COST, buildCacheKey, getCacheTtlMs, getCardNarrative, type TarotSpreadType, type FinancialContext } from "@taro/core";
 import { fetchMarketSnapshot } from "@/lib/tarot/market";
 import { generateInterpretation } from "@/lib/tarot/interpret";
 import { requireAuth } from "@/lib/tarot/auth";
 import { deductCredit } from "@/lib/tarot/credits";
 import { prisma } from "@/lib/tarot/prisma";
+
+const INTERNAL_BASE = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "http://localhost:3000";
+
+async function fetchFinancialContext(ticker: string): Promise<FinancialContext | undefined> {
+  try {
+    const res = await fetch(`${INTERNAL_BASE}/api/tarot/financials?symbol=${encodeURIComponent(ticker)}`, {
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as {
+      keyMetrics?: {
+        profitMargins?: number | null;
+        grossMargins?: number | null;
+        revenueGrowth?: number | null;
+        returnOnEquity?: number | null;
+        returnOnAssets?: number | null;
+        debtToEquity?: number | null;
+        currentRatio?: number | null;
+        freeCashflow?: number | null;
+      };
+    };
+    if (!data.keyMetrics) return undefined;
+    const km = data.keyMetrics;
+    return {
+      profitMargins: km.profitMargins ?? null,
+      grossMargins: km.grossMargins ?? null,
+      revenueGrowth: km.revenueGrowth ?? null,
+      returnOnEquity: km.returnOnEquity ?? null,
+      returnOnAssets: km.returnOnAssets ?? null,
+      debtToEquity: km.debtToEquity ?? null,
+      currentRatio: km.currentRatio ?? null,
+      freeCashflow: km.freeCashflow ?? null,
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -56,10 +93,14 @@ export async function POST(req: NextRequest) {
     return errorJson("크레딧이 부족합니다", "INSUFFICIENT_CREDITS", 402);
   }
 
-  // 시장 데이터 조회
+  // 시장 데이터 + 재무 컨텍스트 병렬 조회
   let marketSnapshot;
+  let financialCtx: FinancialContext | undefined;
   try {
-    marketSnapshot = await fetchMarketSnapshot(ticker, market);
+    [marketSnapshot, financialCtx] = await Promise.all([
+      fetchMarketSnapshot(ticker, market),
+      fetchFinancialContext(ticker),
+    ]);
   } catch {
     // 크레딧 환불
     await deductCredit(userId, -creditCost, "REFUND" as const, idempotencyKey);
@@ -89,7 +130,8 @@ export async function POST(req: NextRequest) {
     cacheTtlMs,
     dbCached
       ? { headline: dbCached.headline, summary: dbCached.summary, detail: dbCached.detail ?? "" }
-      : undefined
+      : undefined,
+    financialCtx
   );
 
   // DB 저장

@@ -34,6 +34,48 @@ export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style 
   );
 }
 
+export function InfoTabSkeleton() {
+  return (
+    <View style={styles.container}>
+      {/* Stats rows */}
+      <View style={{ gap: 12, marginBottom: 24 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} style={styles.statRow}>
+            <Skeleton width={100} height={14} />
+            <Skeleton width={70} height={14} />
+          </View>
+        ))}
+      </View>
+
+      {/* Company info block */}
+      <Skeleton width="100%" height={80} borderRadius={12} style={{ marginBottom: 24 }} />
+
+      {/* Metrics grid */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} width="47%" height={56} borderRadius={12} />
+        ))}
+      </View>
+
+      {/* Chart placeholder */}
+      <Skeleton width="100%" height={140} borderRadius={12} style={{ marginBottom: 24 }} />
+
+      {/* News insight placeholder */}
+      <Skeleton width={120} height={14} style={{ marginBottom: 8 }} />
+      <Skeleton width="100%" height={100} borderRadius={12} style={{ marginBottom: 16 }} />
+
+      {/* News list placeholder */}
+      <Skeleton width={80} height={14} style={{ marginBottom: 8 }} />
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={{ gap: 6, marginBottom: 12 }}>
+          <Skeleton width="90%" height={14} />
+          <Skeleton width="60%" height={12} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function TickerDetailSkeleton() {
   return (
     <View style={styles.container}>

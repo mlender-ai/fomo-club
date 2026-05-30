@@ -65,6 +65,9 @@ function fullYahooFinancialsPayload() {
             currentRatio: { raw: 0.87 },
             quickRatio: { raw: 0.83 },
             returnOnAssets: { raw: 0.225 },
+            returnOnEquity: { raw: 1.56 },
+            debtToEquity: { raw: 151.86 },
+            revenueGrowth: { raw: 0.051 },
             profitMargins: { raw: 0.239 },
             grossMargins: { raw: 0.462 },
             freeCashflow: { raw: 90_000_000_000 },
@@ -168,6 +171,9 @@ describe("/api/tarot/financials", () => {
     expect(km.profitMargins).toBe(0.239);
     expect(km.grossMargins).toBe(0.462);
     expect(km.returnOnAssets).toBe(0.225);
+    expect(km.returnOnEquity).toBe(1.56);
+    expect(km.debtToEquity).toBe(151.86);
+    expect(km.revenueGrowth).toBe(0.051);
     expect(km.pegRatio).toBe(2.3);
     expect(km.priceToSalesTrailing12Months).toBe(8.5);
   });
@@ -189,6 +195,29 @@ describe("/api/tarot/financials", () => {
     expect(body.keyMetrics.bookValue).toBeNull();
     expect(body.keyMetrics.pegRatio).toBeNull();
     // financialData에서 채워지는 필드는 여전히 있어야 함
+    expect(body.keyMetrics.currentRatio).toBe(0.87);
+    expect(body.keyMetrics.returnOnEquity).toBe(1.56);
+    expect(body.keyMetrics.debtToEquity).toBe(151.86);
+    expect(body.keyMetrics.revenueGrowth).toBe(0.051);
+  });
+
+  it("확장 필드 결측 — financialData에서 returnOnEquity / debtToEquity / revenueGrowth 없을 때 null", async () => {
+    const payload = fullYahooFinancialsPayload();
+    const fd = payload.quoteSummary.result[0]!.financialData as Record<string, unknown>;
+    delete fd.returnOnEquity;
+    delete fd.debtToEquity;
+    delete fd.revenueGrowth;
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => payload });
+
+    const res = await GET(makeRequest("http://localhost/api/tarot/financials?symbol=MISS2"));
+    const body = await res.json();
+
+    expect(body.keyMetrics.returnOnEquity).toBeNull();
+    expect(body.keyMetrics.debtToEquity).toBeNull();
+    expect(body.keyMetrics.revenueGrowth).toBeNull();
+    // 기존 필드는 유지
+    expect(body.keyMetrics.profitMargins).toBe(0.239);
     expect(body.keyMetrics.currentRatio).toBe(0.87);
   });
 

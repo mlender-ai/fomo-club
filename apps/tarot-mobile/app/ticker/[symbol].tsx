@@ -20,7 +20,7 @@ import { NewsList } from "../../components/ticker/NewsList";
 import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
-import { TickerDetailSkeleton } from "../../components/ticker/SkeletonLoader";
+import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
 import { planTabSwitch, shouldShowCompactHeader } from "@trading/shared/src/tabScrollPositions";
 import { useStockStore, type ChartRange } from "../../lib/stockStore";
 import { useFavoritesStore } from "../../lib/favoritesStore";
@@ -263,6 +263,8 @@ export default function TickerDetailScreen() {
                 ))}
               </View>
             </View>
+          ) : financialsLoading && !profile ? (
+            <InfoTabSkeleton />
           ) : (
             <>
               {quote && (
@@ -293,8 +295,9 @@ export default function TickerDetailScreen() {
               {isLoggedIn && userId && (
                 <TickerCardHistory symbol={symbol} userId={userId} />
               )}
-              <NewsList symbol={symbol} />
+              {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
               <InvestmentInsight symbol={symbol} />
+              <NewsList symbol={symbol} />
             </>
           )}
         </View>
