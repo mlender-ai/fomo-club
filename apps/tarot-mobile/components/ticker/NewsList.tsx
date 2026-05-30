@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Text } from "../ui/Text";
 import { Colors, Spacing, Radius } from "../../constants/theme";
-import { apiFetch } from "../../lib/api";
+import { useCachedFetch } from "../../lib/useCachedFetch";
 import { NewsDetailModal } from "./NewsDetailModal";
 
 interface NewsItem {
@@ -30,17 +30,13 @@ function timeAgo(dateStr: string): string {
 }
 
 export function NewsList({ symbol }: Props) {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // SWR 캐시: 동일 종목 뉴스는 10분 내 재요청 없이 캐시 재사용 (탭 전환/재진입 시 호출 절감)
+  const { data, loading } = useCachedFetch<{ items: NewsItem[] }>(
+    `/api/tarot/news?symbol=${encodeURIComponent(symbol)}&limit=8`,
+    10 * 60 * 1000
+  );
+  const news = data?.items ?? [];
   const [selected, setSelected] = useState<NewsItem | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    apiFetch<{ items: NewsItem[] }>(`/api/tarot/news?symbol=${encodeURIComponent(symbol)}&limit=8`)
-      .then((data) => setNews(data.items))
-      .catch(() => setNews([]))
-      .finally(() => setLoading(false));
-  }, [symbol]);
 
   if (loading) return null;
   if (news.length === 0) return null;
@@ -54,7 +50,7 @@ export function NewsList({ symbol }: Props) {
       <View style={styles.card}>
         {news.map((item, i) => (
           <TouchableOpacity
-            key={i}
+            key={item.link || i}
             style={[styles.newsItem, i < news.length - 1 && styles.newsItemBorder]}
             onPress={() => setSelected(item)}
             activeOpacity={0.7}
