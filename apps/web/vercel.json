@@ -1,5 +1,4 @@
 {
-  "name": "taro-stock-web",
   "framework": "nextjs",
   "outputDirectory": ".next-build"
 }

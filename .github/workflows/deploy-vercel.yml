@@ -8,6 +8,7 @@ on:
       - "packages/**"
       - "package.json"
       - "package-lock.json"
+      - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,91 +26,90 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      # ── 1. Vercel ORG_ID + PROJECT_ID 취득 ─────────────────────
-      - name: Resolve Vercel project
-        id: vsetup
+      # ── 1. 프로젝트 조회/생성 + 설정 리셋 ──────────────────────
+      #    잘못된 installCommand("cd ../.. && npm ci")를 null로 초기화하여
+      #    Vercel 네이티브 npm-workspace 감지(루트 lockfile)로 설치되도록 함.
+      - name: Resolve & configure Vercel project
         run: |
-          # 개인 계정 ID (= ORG_ID)
           ORG_ID=$(curl -sf "https://api.vercel.com/v2/user" \
             -H "Authorization: Bearer $VERCEL_TOKEN" | jq -r '.user.id')
           echo "VERCEL_ORG_ID=$ORG_ID" >> "$GITHUB_ENV"
 
-          # 기존 프로젝트 조회
-          PROJ=$(curl -sf \
-            "https://api.vercel.com/v9/projects/taro-stock-web" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" 2>/dev/null || echo '{}')
+          PROJ=$(curl -s "https://api.vercel.com/v9/projects/taro-stock-web" \
+            -H "Authorization: Bearer $VERCEL_TOKEN")
           PROJ_ID=$(echo "$PROJ" | jq -r '.id // empty')
 
-          # 없으면 생성
           if [ -z "$PROJ_ID" ]; then
-            PROJ=$(curl -sf "https://api.vercel.com/v9/projects" \
+            PROJ=$(curl -sf "https://api.vercel.com/v10/projects" \
               -H "Authorization: Bearer $VERCEL_TOKEN" \
               -H "Content-Type: application/json" \
               -d '{"name":"taro-stock-web","framework":"nextjs","rootDirectory":"apps/web"}')
             PROJ_ID=$(echo "$PROJ" | jq -r '.id')
-            echo "프로젝트 생성: $PROJ_ID"
+            echo "프로젝트 생성됨: $PROJ_ID"
           else
             echo "기존 프로젝트: $PROJ_ID"
           fi
-
           echo "VERCEL_PROJECT_ID=$PROJ_ID" >> "$GITHUB_ENV"
 
-      # ── 2. 프로젝트 설정 다운로드 ──────────────────────────────
-      - name: Pull project settings
+          # 설정을 기본값으로 리셋 (커스텀 install/build 명령 제거)
+          curl -sf -X PATCH "https://api.vercel.com/v9/projects/$PROJ_ID" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"framework":"nextjs","rootDirectory":"apps/web","installCommand":null,"buildCommand":null,"devCommand":null,"outputDirectory":".next-build"}' \
+            > /dev/null
+          echo "프로젝트 설정 리셋 완료"
+
+      # ── 2. 환경변수 동기화 (REST API upsert) ───────────────────
+      - name: Sync environment variables
+        env:
+          SLACK_BOT_TOKEN:      ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+          GH_PAT_VAL:           ${{ secrets.GH_PAT }}
+          AI_API_KEY:           ${{ secrets.AI_API_KEY }}
+          JWT_SECRET:           ${{ secrets.JWT_SECRET }}
+          DATABASE_URL:         ${{ secrets.DATABASE_URL }}
         run: |
-          npx vercel pull --yes \
-            --token "$VERCEL_TOKEN" \
-            --environment=production 2>&1
+          sync_env() {
+            local key=$1 val=$2
+            [ -z "$val" ] && return
+            curl -s -X POST \
+              "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/env?upsert=true" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg k "$key" --arg v "$val" \
+                '{key:$k,value:$v,type:"encrypted",target:["production","preview","development"]}')" \
+              > /dev/null && echo "  ✓ $key"
+          }
+          sync_env SLACK_BOT_TOKEN      "$SLACK_BOT_TOKEN"
+          sync_env SLACK_SIGNING_SECRET "$SLACK_SIGNING_SECRET"
+          sync_env GITHUB_PAT           "$GH_PAT_VAL"
+          sync_env GITHUB_REPO          "mlender-ai/taro-stock-app"
+          sync_env AI_API_URL           "https://models.github.ai/inference/chat/completions"
+          sync_env AI_API_KEY           "$AI_API_KEY"
+          sync_env AI_MODEL             "openai/gpt-4.1"
+          sync_env JWT_SECRET           "$JWT_SECRET"
+          sync_env DATABASE_URL         "$DATABASE_URL"
 
-      # ── 3. 의존성 설치 (workspace root에서) ────────────────────
-      - name: Install dependencies
-        run: npm ci
-
-      # ── 4. Vercel 빌드 ─────────────────────────────────────────
-      - name: Build
-        run: npx vercel build --prod --token "$VERCEL_TOKEN" 2>&1
-
-      # ── 5. 배포 ───────────────────────────────────────────────
+      # ── 3. 원격 빌드 배포 (레포 루트에서 업로드) ───────────────
+      #    --prebuilt 없이 → Vercel이 원격에서 빌드.
+      #    rootDirectory=apps/web 가 프로젝트에 설정되어 있으므로
+      #    루트 lockfile로 workspace 설치 후 apps/web 빌드.
       - name: Deploy
         id: deploy
         run: |
-          OUTPUT=$(npx vercel deploy --prebuilt --prod \
+          OUTPUT=$(npx --yes vercel@latest deploy --prod --yes \
             --token "$VERCEL_TOKEN" 2>&1)
           echo "$OUTPUT"
-          URL=$(echo "$OUTPUT" | grep -E "^https://" | tail -1)
+          URL=$(echo "$OUTPUT" | grep -Eo "https://[a-zA-Z0-9.-]+\.vercel\.app" | tail -1)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
+          if [ -z "$URL" ]; then
+            echo "::error::배포 URL을 찾을 수 없음 — 배포 실패"
+            exit 1
+          fi
+          echo "배포 완료: $URL"
 
-      # ── 6. Vercel 환경변수 동기화 ──────────────────────────────
-      - name: Sync env vars to Vercel
-        env:
-          SLACK_BOT_TOKEN:     ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
-          GITHUB_PAT_VAL:      ${{ secrets.GH_PAT }}
-          AI_API_KEY:          ${{ secrets.AI_API_KEY }}
-          JWT_SECRET:          ${{ secrets.JWT_SECRET }}
-          DATABASE_URL:        ${{ secrets.DATABASE_URL }}
-        run: |
-          upsert() {
-            local key=$1 val=$2
-            [ -z "$val" ] && return
-            echo "$val" | npx vercel env add "$key" production \
-              --token "$VERCEL_TOKEN" --yes 2>/dev/null || \
-            echo "$val" | npx vercel env add "$key" production \
-              --token "$VERCEL_TOKEN" --yes --force 2>/dev/null || true
-          }
-          upsert SLACK_BOT_TOKEN      "$SLACK_BOT_TOKEN"
-          upsert SLACK_SIGNING_SECRET "$SLACK_SIGNING_SECRET"
-          upsert GITHUB_PAT           "$GITHUB_PAT_VAL"
-          upsert GITHUB_REPO          "mlender-ai/taro-stock-app"
-          upsert AI_API_URL           "https://models.github.ai/inference/chat/completions"
-          upsert AI_API_KEY           "$AI_API_KEY"
-          upsert AI_MODEL             "openai/gpt-4.1"
-          upsert JWT_SECRET           "$JWT_SECRET"
-          upsert DATABASE_URL         "$DATABASE_URL"
-
-      # ── 7. Slack 배포 완료 알림 ────────────────────────────────
+      # ── 4. Slack 알림 ──────────────────────────────────────────
       - name: Notify Slack
         if: vars.SLACK_WEBHOOK_URL != '' && steps.deploy.outputs.url != ''
         env:
@@ -117,7 +117,7 @@ jobs:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         run: |
           PAYLOAD=$(jq -n \
-            --arg text "🚀 *Vercel 배포 완료*\n>${DEPLOY_URL}" \
+            --arg text "🚀 *Vercel 배포 완료*\n>${DEPLOY_URL}\n\nSlack Slash Command URL:\n>${DEPLOY_URL}/api/slack/commands" \
             '{"text": $text}')
           curl -sf -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
