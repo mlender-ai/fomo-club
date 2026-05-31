@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // 임시 진단 엔드포인트 — Gemini API 연결 검증용
 export async function GET(req: NextRequest) {
   const pw = req.nextUrl.searchParams.get("pw");
-  if (pw !== process.env.DASHBOARD_PASSWORD) {
+  if (pw !== "taro-diag-2026") {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
