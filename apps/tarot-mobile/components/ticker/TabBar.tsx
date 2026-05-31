@@ -65,6 +65,8 @@ const styles = StyleSheet.create({
   },
   labelWrapperActive: {
     backgroundColor: Colors.voidGreen,
+    borderWidth: 1,
+    borderColor: Colors.deepInsight,
   },
   labelActive: {
     fontWeight: "700",
@@ -76,13 +78,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   indicator: {
-    height: 3,
-    width: "60%",
+    height: 2,
+    width: "50%",
     marginTop: 6,
     borderRadius: 2,
     backgroundColor: "transparent",
   },
   indicatorActive: {
-    backgroundColor: Colors.taroEssence,
+    backgroundColor: Colors.luminousReveal,
+    shadowColor: Colors.taroEssence,
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 3,
   },
 });
