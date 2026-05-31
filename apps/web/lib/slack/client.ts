@@ -6,6 +6,15 @@ interface SlackResponse {
   [key: string]: unknown;
 }
 
+export interface SlackMessage {
+  type: string;
+  user?: string;
+  bot_id?: string;
+  text?: string;
+  ts: string;
+  thread_ts?: string;
+}
+
 export async function slackApi(
   method: string,
   body: Record<string, unknown>
@@ -30,4 +39,19 @@ export async function postMessage(channel: string, text: string, threadTs?: stri
     text,
     ...(threadTs && { thread_ts: threadTs }),
   });
+}
+
+// 스레드 대화 이력 조회 (최대 20개)
+export async function getThreadHistory(
+  channel: string,
+  threadTs: string
+): Promise<SlackMessage[]> {
+  const res = (await slackApi("conversations.replies", {
+    channel,
+    ts: threadTs,
+    limit: 20,
+  })) as SlackResponse & { messages?: SlackMessage[] };
+
+  if (!res.ok || !res.messages) return [];
+  return res.messages;
 }
