@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
   // app_mention: @taro-bot <text>
   if (event.type === "app_mention" && event.text && event.channel) {
     const channel = event.channel;
-    const replyTs = event.thread_ts || event.ts;
-    const rootThreadTs = event.thread_ts || event.ts;
+    const replyTs = event.thread_ts || event.ts || undefined;
+    const rootThreadTs = event.thread_ts || event.ts || "";
     const currentMsgTs = event.ts || "";
 
     // 봇 멘션 제거 후 파싱
@@ -94,7 +94,7 @@ async function handleAgentChat(
   _userId: string,
   channel: string,
   threadTs: string | undefined,
-  rootThreadTs: string,
+  rootThreadTs: string | undefined,
   currentMsgTs: string
 ) {
   const AI_API_URL = process.env.AI_API_URL;
@@ -110,7 +110,7 @@ async function handleAgentChat(
     await postMessage(channel, `🤔 생각 중...`, threadTs);
 
     // 스레드 히스토리 조회
-    const threadHistoryResult = await getThreadHistory(channel, rootThreadTs).catch(() => []);
+    const threadHistoryResult = rootThreadTs ? await getThreadHistory(channel, rootThreadTs).catch(() => []) : [];
     const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
     for (const msg of threadHistoryResult) {
       if (!msg.text || msg.ts === currentMsgTs) continue;
