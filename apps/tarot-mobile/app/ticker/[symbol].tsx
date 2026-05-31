@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { Colors, Spacing } from "../../constants/theme";
 import { TickerLogo } from "../../components/TickerLogo";
 import { PriceChart } from "../../components/ticker/PriceChart";
+import { ChartErrorBoundary } from "../../components/ticker/ChartErrorBoundary";
 import { TabBar, type TickerTab } from "../../components/ticker/TabBar";
 import { PriceStats } from "../../components/ticker/PriceStats";
 import { MetricsGrid } from "../../components/ticker/MetricsGrid";
@@ -23,6 +24,7 @@ import { CompactHeader } from "../../components/ticker/CompactHeader";
 import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
 import { planTabSwitch, shouldShowCompactHeader } from "@trading/shared/src/tabScrollPositions";
 import { useStockStore, type ChartRange } from "../../lib/stockStore";
+import { useDeferredRender } from "../../lib/useDeferredRender";
 import { useFavoritesStore } from "../../lib/favoritesStore";
 import { useDrawStore } from "../../lib/drawStore";
 import { useUserStore } from "../../lib/store";
@@ -61,6 +63,8 @@ export default function TickerDetailScreen() {
   const [activeTab, setActiveTab] = useState<TickerTab>("chart");
   const [refreshing, setRefreshing] = useState(false);
   const [showCompact, setShowCompact] = useState(false);
+  // info 탭의 네트워크 의존 위젯은 탭 전환 인터랙션 완료 후 마운트 (#264 — 첫 페인트/전환 jank 감소)
+  const infoDeferReady = useDeferredRender(activeTab === "info");
 
   // 탭별 스크롤 위치 보존 — 탭 전환 시 이전 위치로 복원
   const scrollViewRef = useRef<ScrollView | null>(null);
@@ -236,12 +240,14 @@ export default function TickerDetailScreen() {
         <View style={styles.tabContent}>
           {activeTab === "chart" ? (
             <View style={styles.chartSection}>
-              <PriceChart
-                bars={chartBars}
-                loading={chartLoading}
-                width={CHART_WIDTH}
-                positive={isPositive}
-              />
+              <ChartErrorBoundary>
+                <PriceChart
+                  bars={chartBars}
+                  loading={chartLoading}
+                  width={CHART_WIDTH}
+                  positive={isPositive}
+                />
+              </ChartErrorBoundary>
               <View style={styles.rangeRow}>
                 {RANGE_OPTIONS.map((opt) => (
                   <TouchableOpacity
@@ -282,22 +288,29 @@ export default function TickerDetailScreen() {
                 />
               )}
               {(quarterlyEarnings.length > 0 || annualFinancials.length > 0) && (
-                <FinancialChart
-                  quarterlyEarnings={quarterlyEarnings}
-                  annualFinancials={annualFinancials}
-                  width={SCREEN_WIDTH}
-                  currency={currency}
-                />
+                <ChartErrorBoundary>
+                  <FinancialChart
+                    quarterlyEarnings={quarterlyEarnings}
+                    annualFinancials={annualFinancials}
+                    width={SCREEN_WIDTH}
+                    currency={currency}
+                  />
+                </ChartErrorBoundary>
               )}
               {keyMetrics && (
                 <KeyMetricsGrid metrics={keyMetrics} currency={currency} />
               )}
-              {isLoggedIn && userId && (
-                <TickerCardHistory symbol={symbol} userId={userId} />
+              {/* 네트워크 의존 위젯 — 탭 전환 인터랙션 완료 후 마운트해 전환 jank 감소 (#264) */}
+              {infoDeferReady && (
+                <>
+                  {isLoggedIn && userId && (
+                    <TickerCardHistory symbol={symbol} userId={userId} />
+                  )}
+                  {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
+                  <InvestmentInsight symbol={symbol} />
+                  <NewsList symbol={symbol} />
+                </>
               )}
-              {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
-              <InvestmentInsight symbol={symbol} />
-              <NewsList symbol={symbol} />
             </>
           )}
         </View>

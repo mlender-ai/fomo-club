@@ -109,6 +109,27 @@ jobs:
           if [ -z "$FEEDBACK" ]; then
             FEEDBACK="피드백 이력 없음 — 첫 번째 사이클입니다."
           fi
+
+          # 실제 레포 파일 구조 주입 — 에이전트가 존재하지 않는 경로를 환각 인용하는 사고 방지
+          # (2026-05-31 사용자 피드백: "선행으로 파일 리소스/경로를 먼저 파악하고 이슈 생성하라")
+          REPO_MAP=$(git ls-files \
+            'apps/tarot-mobile/app/**' 'apps/tarot-mobile/components/**' \
+            'apps/tarot-mobile/lib/**' 'apps/tarot-mobile/hooks/**' 'apps/tarot-mobile/constants/**' \
+            'apps/web/app/api/**' 'apps/web/lib/**' \
+            'packages/tarot-core/src/**' 'packages/shared/src/**' \
+            2>/dev/null | grep -vE '__tests__|\.test\.|node_modules' | head -400)
+          if [ -z "$REPO_MAP" ]; then
+            REPO_MAP="(레포 구조 조회 실패 — 경로 인용 시 추측 금지, 디렉토리 수준으로만 언급)"
+          fi
+          REPO_MAP_HEADER=$(printf '%s\n' \
+            "📁 실제 레포 파일 구조 (== 경로 인용 절대 규칙 ==):" \
+            "아래 목록에 실제로 존재하는 파일만 '근거'의 파일 경로로 인용한다." \
+            "목록에 없는 경로를 쓰려면 반드시 '신규 생성:' 접두사를 붙여 새 파일임을 명시한다." \
+            "존재하지 않는 경로를 기존 파일처럼 인용하면 CEO Brief에서 '사실 오류'로 킬리스트 처리된다." \
+            "제안하려는 기능의 파일이 목록에 없으면, 그 기능 자체가 미구현이라는 뜻이므로 '신규 기능' 으로 명확히 구분해 제안한다.")
+          FEEDBACK=$(printf '%s\n\n%s\n\n%s\n\n%s\n' \
+            "$REPO_MAP_HEADER" "$REPO_MAP" "──────────────────────────────" "$FEEDBACK")
+
           echo "feedback<<__EOF__" >> "$GITHUB_OUTPUT"
           echo "$FEEDBACK" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
@@ -1457,6 +1478,7 @@ jobs:
                - **(2026-05-29 임시)** Marketer 에이전트는 Content Marketer 직무로 임시 변경됨 — 푸시·SNS·ASO·공유 이미지·인플루언서·SEO 등 외부 채널 제안은 직군 침범 사유로 킬리스트 분류. Content Marketer는 타로 해석/UX 라이팅/콘텐츠 기획/카드 메타 콘텐츠만 다룬다.
                - North Star 4축(UX·콘텐츠·백엔드 인프라·토스증권 멘탈모델)과 완전히 무관한 제안 — 정렬도 0점 사유로 킬리스트.
                - 이미 구현됨 / 잘못된 가설 (예: 캐싱이 적용되지 않은 엔드포인트의 캐시 제거) — 사실 오류 사유로 킬리스트.
+               - **(2026-05-31 추가)** 존재하지 않는 파일/경로를 기존 파일처럼 인용 — 사실 오류 사유로 킬리스트. prompt에 주입된 "📁 실제 레포 파일 구조" 목록에 없는 경로를 '근거'로 인용했는데 '신규 생성:' 접두사가 없으면, 해당 제안은 환각 기반이므로 킬리스트 처리. (단 '신규 기능/신규 파일'로 명시한 제안은 정상 — 미구현 기능 제안은 허용.)
                - 금지 어휘 사용 ("가능성", "우려됩니다", "수도", "보입니다", "할 것 같습니다") — 표현 위반 사유로 킬리스트.
                 - **(2026-05-30 추가)** 투자 권유 뉘앙스 표현("투자해도 될까요", "사도 될까요", "매수 타이밍" 등) 포함 → 리걸 위협 사유로 킬리스트. Before/After 샘플의 UserQuestion도 검사 대상.
                 - **(2026-05-30 추가)** 데이터 불일치/결측/오류를 사용자에게 직접 알리는 UI 제안(배너, 경고 등) → 사용자 신뢰 저하 사유로 킬리스트. 정합성은 로딩으로 해결, 사용자에게는 항상 정합된 데이터만 표시.

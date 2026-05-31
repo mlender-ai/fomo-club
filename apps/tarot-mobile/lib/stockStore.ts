@@ -67,9 +67,24 @@ interface ChartBundle {
   cachedAt: number;
 }
 
-// Stale-while-revalidate: data 60초 이내 → fresh (fetch 스킵), 5분 이내 → stale (즉시 표시 + 백그라운드 fetch), 그 외 → expired (정상 fetch)
-const FRESH_TTL_MS = 60 * 1000;
-const STALE_TTL_MS = 5 * 60 * 1000;
+// Stale-while-revalidate TTL — 데이터 갱신 주기에 맞춰 차등 적용 (#267 CTO).
+// fresh 이내 → fetch 스킵, stale 이내 → 즉시 표시 + 백그라운드 재검증, 그 외 → 정상 fetch.
+
+// 시세: 가격이 실시간으로 움직임 → 짧게 유지.
+const QUOTE_FRESH_TTL_MS = 30 * 1000;       // 30초
+const QUOTE_STALE_TTL_MS = 3 * 60 * 1000;   // 3분
+
+// 재무: 분기 단위로만 갱신 → 길게 유지해 중복 호출 제거.
+const FIN_FRESH_TTL_MS = 30 * 60 * 1000;        // 30분
+const FIN_STALE_TTL_MS = 6 * 60 * 60 * 1000;    // 6시간
+
+// 차트: 단기 봉(1d/5d)은 장중 자주 변하고, 장기 봉(1mo+)은 하루 단위로만 변함.
+function chartTtl(range: ChartRange): { fresh: number; stale: number } {
+  const intraday = range === "1d" || range === "5d";
+  return intraday
+    ? { fresh: 60 * 1000, stale: 5 * 60 * 1000 }          // 1분 / 5분
+    : { fresh: 30 * 60 * 1000, stale: 6 * 60 * 60 * 1000 }; // 30분 / 6시간
+}
 
 interface StockState {
   // 현재 화면 표시용 (셀렉터)
@@ -126,8 +141,8 @@ export const useStockStore = create<StockState>((set, get) => ({
       cachedDataAt: cached?.dataAt,
       force,
       now,
-      freshTtlMs: FRESH_TTL_MS,
-      staleTtlMs: STALE_TTL_MS,
+      freshTtlMs: QUOTE_FRESH_TTL_MS,
+      staleTtlMs: QUOTE_STALE_TTL_MS,
     });
 
     // 캐시 hit: 즉시 표시 (fresh든 stale이든)
@@ -166,12 +181,13 @@ export const useStockStore = create<StockState>((set, get) => ({
     const cached = get().chartCache[cacheKey];
     const now = Date.now();
     const cachedAtIso = cached ? new Date(cached.cachedAt).toISOString() : null;
+    const ttl = chartTtl(r);
     const action = decideSwrAction({
       cachedDataAt: cachedAtIso,
       force,
       now,
-      freshTtlMs: FRESH_TTL_MS,
-      staleTtlMs: STALE_TTL_MS,
+      freshTtlMs: ttl.fresh,
+      staleTtlMs: ttl.stale,
     });
 
     if (cached) {
@@ -208,8 +224,8 @@ export const useStockStore = create<StockState>((set, get) => ({
       cachedDataAt: cachedAtIso,
       force,
       now,
-      freshTtlMs: FRESH_TTL_MS,
-      staleTtlMs: STALE_TTL_MS,
+      freshTtlMs: FIN_FRESH_TTL_MS,
+      staleTtlMs: FIN_STALE_TTL_MS,
     });
 
     if (cached) {
@@ -262,15 +278,15 @@ export const useStockStore = create<StockState>((set, get) => ({
       cachedDataAt: cachedQuote?.dataAt,
       force,
       now,
-      freshTtlMs: FRESH_TTL_MS,
-      staleTtlMs: STALE_TTL_MS,
+      freshTtlMs: QUOTE_FRESH_TTL_MS,
+      staleTtlMs: QUOTE_STALE_TTL_MS,
     });
     const finAction = decideSwrAction({
       cachedDataAt: cachedFinancials ? new Date(cachedFinancials.cachedAt).toISOString() : null,
       force,
       now,
-      freshTtlMs: FRESH_TTL_MS,
-      staleTtlMs: STALE_TTL_MS,
+      freshTtlMs: FIN_FRESH_TTL_MS,
+      staleTtlMs: FIN_STALE_TTL_MS,
     });
 
     if (cachedQuote) {

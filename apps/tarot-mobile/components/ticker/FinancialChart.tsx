@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { Svg, Rect, SvgText, G, Line } from "../../lib/svg";
 import { Text } from "../ui/Text";
 import { Colors, Spacing, Radius } from "../../constants/theme";
 
@@ -33,21 +32,12 @@ const BAR_COLORS = {
   earnings: "#eab308",
 };
 
-function formatCompact(n: number, currency: string): string {
-  const abs = Math.abs(n);
-  if (currency === "KRW") {
-    if (abs >= 1e12) return `${(n / 1e12).toFixed(1)}조`;
-    if (abs >= 1e8) return `${(n / 1e8).toFixed(0)}억`;
-    return `${(n / 1e4).toFixed(0)}만`;
-  }
-  if (abs >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${(n / 1e6).toFixed(0)}M`;
-  return n.toLocaleString();
-}
-
 const CHART_HEIGHT = 200;
-const PADDING = { top: 20, bottom: 40, left: 8, right: 8 };
+const LABEL_H = 18;
+const TOP_PAD = 16;
+const DRAW_H = CHART_HEIGHT - LABEL_H - TOP_PAD;
 
+// SVG 없는 차트 — Expo Go의 svg 네이티브 부재로 인한 크래시 회피. 순수 View 막대.
 export function FinancialChart({ quarterlyEarnings, annualFinancials, width, currency = "USD" }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>(
     annualFinancials.length > 0 ? "annual" : "quarterly"
@@ -90,9 +80,9 @@ export function FinancialChart({ quarterlyEarnings, annualFinancials, width, cur
 
       <View style={styles.card}>
         {viewMode === "quarterly" ? (
-          <QuarterlyChart data={quarterlyEarnings} width={width - Spacing.s24 * 2 - 2} currency={currency} />
+          <QuarterlyChart data={quarterlyEarnings} width={width - Spacing.s24 * 2 - 2} />
         ) : (
-          <AnnualChart data={annualFinancials} width={width - Spacing.s24 * 2 - 2} currency={currency} />
+          <AnnualChart data={annualFinancials} width={width - Spacing.s24 * 2 - 2} />
         )}
 
         {/* Legend */}
@@ -115,7 +105,7 @@ export function FinancialChart({ quarterlyEarnings, annualFinancials, width, cur
   );
 }
 
-function QuarterlyChart({ data, width, currency }: { data: QuarterlyEarning[]; width: number; currency: string }) {
+function QuarterlyChart({ data, width }: { data: QuarterlyEarning[]; width: number }) {
   const chartData = useMemo(() => {
     const items = data.slice(-8); // 최근 8분기
     if (items.length === 0) return null;
@@ -123,137 +113,161 @@ function QuarterlyChart({ data, width, currency }: { data: QuarterlyEarning[]; w
     const allValues = items.flatMap((d) => [d.revenue ?? 0, d.earnings ?? 0]);
     const maxVal = Math.max(...allValues, 1);
     const minVal = Math.min(...allValues, 0);
-    const range = maxVal - Math.min(minVal, 0);
+    const positiveRange = maxVal;
+    const negativeRange = Math.max(0, -minVal);
+    const totalRange = positiveRange + negativeRange || 1;
+    const zeroFromTop = (positiveRange / totalRange) * DRAW_H;
 
-    const drawH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
-    const drawW = width - PADDING.left - PADDING.right;
-    const groupW = drawW / items.length;
-    const barW = groupW * 0.3;
-    const zeroY = PADDING.top + (maxVal / range) * drawH;
+    const groupW = width / items.length;
+    const barW = Math.max(2, groupW * 0.3);
 
-    return { items, maxVal, minVal, range, drawH, groupW, barW, zeroY };
+    return { items, groupW, barW, totalRange, zeroFromTop };
   }, [data, width]);
 
   if (!chartData) return null;
 
   return (
-    <Svg width={width} height={CHART_HEIGHT} viewBox={`0 0 ${width} ${CHART_HEIGHT}`}>
-      {/* Zero line */}
-      <Line x1={PADDING.left} y1={chartData.zeroY} x2={width - PADDING.right} y2={chartData.zeroY} stroke={Colors.carbonBorder} strokeWidth={1} />
+    <View style={{ width, height: CHART_HEIGHT }}>
+      <View style={{ height: TOP_PAD + DRAW_H, position: "relative" }}>
+        {/* 0 라인 */}
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: TOP_PAD + chartData.zeroFromTop,
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: Colors.carbonBorder,
+          }}
+        />
 
-      {chartData.items.map((item, i) => {
-        const x = PADDING.left + i * chartData.groupW;
-        const revH = ((item.revenue ?? 0) / chartData.range) * chartData.drawH;
-        const earnH = ((item.earnings ?? 0) / chartData.range) * chartData.drawH;
+        <View style={styles.barsRow}>
+          {chartData.items.map((item, i) => {
+            const revRatio = (item.revenue ?? 0) / chartData.totalRange;
+            const earnRatio = (item.earnings ?? 0) / chartData.totalRange;
+            return (
+              <View key={i} style={[styles.barGroup, { width: chartData.groupW, height: TOP_PAD + DRAW_H }]}>
+                <FloatingBar
+                  ratio={revRatio}
+                  zeroFromTop={chartData.zeroFromTop + TOP_PAD}
+                  drawH={DRAW_H}
+                  color={BAR_COLORS.revenue}
+                  width={chartData.barW}
+                  offset={-chartData.barW / 2 - 1}
+                />
+                <FloatingBar
+                  ratio={earnRatio}
+                  zeroFromTop={chartData.zeroFromTop + TOP_PAD}
+                  drawH={DRAW_H}
+                  color={BAR_COLORS.earnings}
+                  width={chartData.barW}
+                  offset={chartData.barW / 2 + 1}
+                />
+              </View>
+            );
+          })}
+        </View>
+      </View>
 
-        return (
-          <G key={i}>
-            {/* Revenue bar */}
-            <Rect
-              x={x + chartData.groupW * 0.1}
-              y={revH >= 0 ? chartData.zeroY - revH : chartData.zeroY}
-              width={chartData.barW}
-              height={Math.abs(revH) || 1}
-              fill={BAR_COLORS.revenue}
-              rx={2}
-            />
-            {/* Earnings bar */}
-            <Rect
-              x={x + chartData.groupW * 0.1 + chartData.barW + 2}
-              y={earnH >= 0 ? chartData.zeroY - earnH : chartData.zeroY}
-              width={chartData.barW}
-              height={Math.abs(earnH) || 1}
-              fill={BAR_COLORS.earnings}
-              rx={2}
-            />
-            {/* Label */}
-            <SvgText
-              x={x + chartData.groupW / 2}
-              y={CHART_HEIGHT - 8}
-              fill={Colors.midGrayText}
-              fontSize={9}
-              textAnchor="middle"
-            >
+      {/* X축 라벨 */}
+      <View style={styles.labelRow}>
+        {chartData.items.map((item, i) => (
+          <View key={i} style={{ width: chartData.groupW, alignItems: "center" }}>
+            <Text variant="caption" color={Colors.midGrayText} style={styles.tickLabel}>
               {item.date}
-            </SvgText>
-          </G>
-        );
-      })}
-    </Svg>
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
-function AnnualChart({ data, width, currency }: { data: AnnualFinancial[]; width: number; currency: string }) {
+function AnnualChart({ data, width }: { data: AnnualFinancial[]; width: number }) {
   const chartData = useMemo(() => {
-    const items = data.slice(-5); // 최근 5년
+    const items = data.slice(-5);
     if (items.length === 0) return null;
 
     const allValues = items.flatMap((d) => [d.revenue ?? 0, d.operatingIncome ?? 0, d.netIncome ?? 0]);
     const maxVal = Math.max(...allValues, 1);
     const minVal = Math.min(...allValues, 0);
-    const range = maxVal - Math.min(minVal, 0);
+    const positiveRange = maxVal;
+    const negativeRange = Math.max(0, -minVal);
+    const totalRange = positiveRange + negativeRange || 1;
+    const zeroFromTop = (positiveRange / totalRange) * DRAW_H;
 
-    const drawH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
-    const drawW = width - PADDING.left - PADDING.right;
-    const groupW = drawW / items.length;
-    const barW = groupW * 0.2;
-    const zeroY = PADDING.top + (maxVal / range) * drawH;
+    const groupW = width / items.length;
+    const barW = Math.max(2, groupW * 0.22);
 
-    return { items, range, drawH, groupW, barW, zeroY };
+    return { items, groupW, barW, totalRange, zeroFromTop };
   }, [data, width]);
 
   if (!chartData) return null;
 
   return (
-    <Svg width={width} height={CHART_HEIGHT} viewBox={`0 0 ${width} ${CHART_HEIGHT}`}>
-      <Line x1={PADDING.left} y1={chartData.zeroY} x2={width - PADDING.right} y2={chartData.zeroY} stroke={Colors.carbonBorder} strokeWidth={1} />
+    <View style={{ width, height: CHART_HEIGHT }}>
+      <View style={{ height: TOP_PAD + DRAW_H, position: "relative" }}>
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: TOP_PAD + chartData.zeroFromTop,
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: Colors.carbonBorder,
+          }}
+        />
+        <View style={styles.barsRow}>
+          {chartData.items.map((item, i) => {
+            const r = (item.revenue ?? 0) / chartData.totalRange;
+            const o = (item.operatingIncome ?? 0) / chartData.totalRange;
+            const n = (item.netIncome ?? 0) / chartData.totalRange;
+            const span = chartData.barW + 2;
+            return (
+              <View key={i} style={[styles.barGroup, { width: chartData.groupW, height: TOP_PAD + DRAW_H }]}>
+                <FloatingBar ratio={r} zeroFromTop={chartData.zeroFromTop + TOP_PAD} drawH={DRAW_H} color={BAR_COLORS.revenue} width={chartData.barW} offset={-span} />
+                <FloatingBar ratio={o} zeroFromTop={chartData.zeroFromTop + TOP_PAD} drawH={DRAW_H} color={BAR_COLORS.operatingIncome} width={chartData.barW} offset={0} />
+                <FloatingBar ratio={n} zeroFromTop={chartData.zeroFromTop + TOP_PAD} drawH={DRAW_H} color={BAR_COLORS.netIncome} width={chartData.barW} offset={span} />
+              </View>
+            );
+          })}
+        </View>
+      </View>
 
-      {chartData.items.map((item, i) => {
-        const x = PADDING.left + i * chartData.groupW;
-        const revH = ((item.revenue ?? 0) / chartData.range) * chartData.drawH;
-        const opH = ((item.operatingIncome ?? 0) / chartData.range) * chartData.drawH;
-        const netH = ((item.netIncome ?? 0) / chartData.range) * chartData.drawH;
-        const gap = 2;
-
-        return (
-          <G key={i}>
-            <Rect
-              x={x + chartData.groupW * 0.1}
-              y={revH >= 0 ? chartData.zeroY - revH : chartData.zeroY}
-              width={chartData.barW}
-              height={Math.abs(revH) || 1}
-              fill={BAR_COLORS.revenue}
-              rx={2}
-            />
-            <Rect
-              x={x + chartData.groupW * 0.1 + chartData.barW + gap}
-              y={opH >= 0 ? chartData.zeroY - opH : chartData.zeroY}
-              width={chartData.barW}
-              height={Math.abs(opH) || 1}
-              fill={BAR_COLORS.operatingIncome}
-              rx={2}
-            />
-            <Rect
-              x={x + chartData.groupW * 0.1 + (chartData.barW + gap) * 2}
-              y={netH >= 0 ? chartData.zeroY - netH : chartData.zeroY}
-              width={chartData.barW}
-              height={Math.abs(netH) || 1}
-              fill={BAR_COLORS.netIncome}
-              rx={2}
-            />
-            <SvgText
-              x={x + chartData.groupW / 2}
-              y={CHART_HEIGHT - 8}
-              fill={Colors.midGrayText}
-              fontSize={10}
-              textAnchor="middle"
-            >
+      <View style={styles.labelRow}>
+        {chartData.items.map((item, i) => (
+          <View key={i} style={{ width: chartData.groupW, alignItems: "center" }}>
+            <Text variant="caption" color={Colors.midGrayText} style={styles.tickLabel}>
               {item.year}
-            </SvgText>
-          </G>
-        );
-      })}
-    </Svg>
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// 0선 기준으로 위/아래로 뻗는 막대. ratio>0 → 위, ratio<0 → 아래.
+function FloatingBar({
+  ratio, zeroFromTop, drawH, color, width, offset,
+}: {
+  ratio: number; zeroFromTop: number; drawH: number; color: string; width: number; offset: number;
+}) {
+  const h = Math.max(1, Math.abs(ratio) * drawH);
+  const top = ratio >= 0 ? zeroFromTop - h : zeroFromTop;
+  return (
+    <View
+      style={{
+        position: "absolute",
+        top,
+        left: "50%",
+        marginLeft: offset - width / 2,
+        width,
+        height: h,
+        backgroundColor: color,
+        borderRadius: 2,
+      }}
+    />
   );
 }
 
@@ -297,6 +311,21 @@ const styles = StyleSheet.create({
     padding: Spacing.s24,
     borderWidth: 1,
     borderColor: Colors.carbonBorder,
+  },
+  barsRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
+  barGroup: {
+    position: "relative",
+  },
+  labelRow: {
+    flexDirection: "row",
+    height: LABEL_H,
+    alignItems: "center",
+  },
+  tickLabel: {
+    fontSize: 10,
   },
   legend: {
     flexDirection: "row",

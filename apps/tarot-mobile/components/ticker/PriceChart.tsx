@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, ActivityIndicator } from "react-native";
-import { Svg, Path, Defs, LinearGradient, Stop, Rect } from "../../lib/svg";
 import { Text } from "../ui/Text";
 import { Colors } from "../../constants/theme";
 import type { StockChartBar } from "@trading/shared/src/stockTypes";
@@ -15,11 +14,13 @@ interface Props {
 
 const CHART_HEIGHT = 180;
 const VOLUME_HEIGHT = 40;
-const PADDING_X = 4;
-const PADDING_Y = 12;
+const PAD_Y = 12;
 
+// SVG 없는 차트 — Expo Go의 react-native-svg 네이티브 모듈 부재로 인한 크래시 회피.
+// 각 봉을 얇은 vertical View 막대로 그리고, 막대 상단에 미니 dot으로 close 표시.
+// 라인 차트 대비 단순화됐지만 추세 식별은 가능 — 종목 미니 차트 패턴.
 export function PriceChart({ bars, loading, width, height = CHART_HEIGHT, positive = true }: Props) {
-  const chartData = useMemo(() => {
+  const data = useMemo(() => {
     if (bars.length < 2) return null;
 
     const closes = bars.map((b) => b.close);
@@ -29,89 +30,115 @@ export function PriceChart({ bars, loading, width, height = CHART_HEIGHT, positi
     const maxV = Math.max(...volumes, 1);
     const rangeP = maxP - minP || 1;
 
-    const w = width - PADDING_X * 2;
-    const h = height - PADDING_Y * 2;
-    const stepX = w / (closes.length - 1);
+    const innerH = height - PAD_Y * 2;
+    const barW = width / closes.length;
+    const stemW = Math.max(0.6, Math.min(2, barW * 0.18));
 
-    // Price line path
-    const points = closes.map((c, i) => ({
-      x: PADDING_X + i * stepX,
-      y: PADDING_Y + h - ((c - minP) / rangeP) * h,
-    }));
+    // close 가격을 막대 높이(상단 정렬)로 표현 — 낮은 가격은 짧은 막대, 높은 가격은 긴 막대
+    const priceBars = closes.map((c) => {
+      const ratio = (c - minP) / rangeP;
+      const barH = PAD_Y + ratio * innerH;
+      return { barH, stemW };
+    });
 
-    let linePath = `M ${points[0]!.x} ${points[0]!.y}`;
-    for (let i = 1; i < points.length; i++) {
-      linePath += ` L ${points[i]!.x} ${points[i]!.y}`;
-    }
-
-    // Area fill path
-    const areaPath = `${linePath} L ${points[points.length - 1]!.x} ${height} L ${points[0]!.x} ${height} Z`;
-
-    // Volume bars
-    const barWidth = Math.max(1, stepX * 0.6);
-    const volBars = volumes.map((v, i) => ({
-      x: PADDING_X + i * stepX - barWidth / 2,
+    const volBarW = Math.max(1, barW * 0.6);
+    const volBars = volumes.map((v) => ({
       h: (v / maxV) * VOLUME_HEIGHT,
+      w: volBarW,
     }));
 
-    return { linePath, areaPath, volBars, barWidth, minP, maxP };
+    return { priceBars, volBars, barW, minP, maxP };
   }, [bars, width, height]);
 
   if (loading) {
     return (
-      <View style={[styles.container, { height: height + VOLUME_HEIGHT }]}>
+      <View style={[styles.empty, { height: height + VOLUME_HEIGHT }]}>
         <ActivityIndicator size="small" color={Colors.taroEssence} />
       </View>
     );
   }
 
-  if (!chartData) {
+  if (!data) {
     return (
-      <View style={[styles.container, { height: height + VOLUME_HEIGHT }]}>
+      <View style={[styles.empty, { height: height + VOLUME_HEIGHT }]}>
         <Text variant="caption" color={Colors.midGrayText}>차트 데이터 없음</Text>
       </View>
     );
   }
 
   const lineColor = positive ? Colors.taroEssence : "#f43f5e";
-  const gradientId = positive ? "areaGradientGreen" : "areaGradientRed";
 
   return (
-    <View style={styles.wrapper}>
-      {/* Price chart */}
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Defs>
-          <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={lineColor} stopOpacity="0.25" />
-            <Stop offset="1" stopColor={lineColor} stopOpacity="0" />
-          </LinearGradient>
-        </Defs>
-        <Path d={chartData.areaPath} fill={`url(#${gradientId})`} />
-        <Path d={chartData.linePath} stroke={lineColor} strokeWidth={1.5} fill="none" />
-      </Svg>
-
-      {/* Volume bars */}
-      <Svg width={width} height={VOLUME_HEIGHT} viewBox={`0 0 ${width} ${VOLUME_HEIGHT}`}>
-        {chartData.volBars.map((bar, i) => (
-          <Rect
+    <View>
+      {/* 가격 영역 */}
+      <View style={[styles.priceArea, { width, height }]}>
+        {data.priceBars.map((b, i) => (
+          <View
             key={i}
-            x={bar.x}
-            y={VOLUME_HEIGHT - bar.h}
-            width={chartData.barWidth}
-            height={bar.h}
-            fill={Colors.ironOutline}
-            opacity={0.5}
-          />
+            style={[
+              styles.priceBar,
+              {
+                width: data.barW,
+                height: b.barH,
+              },
+            ]}
+          >
+            <View
+              style={{
+                width: b.stemW,
+                height: b.barH,
+                backgroundColor: lineColor,
+                opacity: 0.85,
+                borderRadius: b.stemW / 2,
+              }}
+            />
+          </View>
         ))}
-      </Svg>
+      </View>
+
+      {/* 볼륨 영역 */}
+      <View style={[styles.volumeArea, { width, height: VOLUME_HEIGHT }]}>
+        {data.volBars.map((b, i) => (
+          <View
+            key={i}
+            style={[styles.volSlot, { width: data.barW }]}
+          >
+            <View
+              style={{
+                width: b.w,
+                height: Math.max(1, b.h),
+                backgroundColor: Colors.ironOutline,
+                opacity: 0.5,
+                borderRadius: 1,
+              }}
+            />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { },
-  container: {
+  empty: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  priceArea: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
+  priceBar: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  volumeArea: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: 4,
+  },
+  volSlot: {
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
 });
