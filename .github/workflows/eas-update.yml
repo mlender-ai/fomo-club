@@ -1,0 +1,71 @@
+name: EAS Update (Mobile OTA)
+
+# main 브랜치에 모바일 관련 변경이 머지되면 EAS Update를 자동 발행.
+# Expo Go가 동일 SDK runtime을 사용하므로 user는 앱 재시작만으로 최신 번들 수령.
+#
+# 필수 secret: EXPO_TOKEN (expo.dev → Account Settings → Access Tokens)
+# 필수 env (Repository secret): EAS_PROJECT_ID (eas init 후 발급된 UUID)
+#
+# 설정 미완료 시(EXPO_TOKEN 또는 EAS_PROJECT_ID 없음) 워크플로우는 자동 skip.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/tarot-mobile/**"
+      - "packages/shared/**"
+      - "packages/tarot-core/**"
+      - ".github/workflows/eas-update.yml"
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Update 메시지"
+        required: false
+        default: "manual update"
+
+concurrency:
+  group: eas-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        id: gate
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ] || [ -z "${{ secrets.EAS_PROJECT_ID }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::EXPO_TOKEN 또는 EAS_PROJECT_ID secret 미설정 — EAS Update skip. docs/eas-update-setup.md 참고."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.skip == 'false'
+        with:
+          node-version: 20
+
+      - name: Install deps
+        if: steps.gate.outputs.skip == 'false'
+        run: npm ci
+
+      - name: Setup EAS
+        if: steps.gate.outputs.skip == 'false'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish update
+        if: steps.gate.outputs.skip == 'false'
+        working-directory: apps/tarot-mobile
+        env:
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+        run: |
+          MSG="${{ github.event.inputs.message }}"
+          if [ -z "$MSG" ]; then
+            MSG=$(git log -1 --pretty=format:"%s" -- .)
+          fi
+          eas update --branch production --channel production --message "$MSG" --non-interactive

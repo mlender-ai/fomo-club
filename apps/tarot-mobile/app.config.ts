@@ -94,9 +94,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adMobRewardedIos,
     adMobRewardedAndroid,
     eas: {
-      projectId: "",
+      projectId: process.env.EAS_PROJECT_ID || "",
     },
   },
+  // EAS Update OTA — main 브랜치 푸시 시 GitHub Actions가 새 JS 번들 발행.
+  // Expo Go가 동일 SDK runtime을 사용하므로 sdkVersion 정책으로 매칭.
+  // EAS_PROJECT_ID 환경변수 미설정 시 updates URL이 비어 OTA 비활성 (Expo Go dev server는 정상 동작).
+  ...(process.env.EAS_PROJECT_ID
+    ? {
+        updates: {
+          url: `https://u.expo.dev/${process.env.EAS_PROJECT_ID}`,
+        },
+        runtimeVersion: { policy: "sdkVersion" as const },
+      }
+    : {}),
   experiments: {
     typedRoutes: true,
   },
