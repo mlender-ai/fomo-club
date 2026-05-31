@@ -97,9 +97,14 @@ async function handleAgentChat(
   rootThreadTs: string | undefined,
   currentMsgTs: string
 ) {
-  const AI_API_URL = process.env.AI_API_URL;
   const AI_API_KEY = process.env.AI_API_KEY;
   const AI_MODEL = process.env.AI_MODEL || "openai/gpt-4o";
+
+  // Gemini URL이면 OpenAI 호환 엔드포인트로 정규화
+  let AI_API_URL = process.env.AI_API_URL;
+  if (AI_API_URL?.includes("generativelanguage.googleapis.com")) {
+    AI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+  }
 
   if (!AI_API_URL || !AI_API_KEY) {
     await postMessage(channel, "❌ AI_API_URL / AI_API_KEY 환경변수가 설정되지 않았습니다.", threadTs);
