@@ -100,9 +100,11 @@ async function handleAgentChat(
   const AI_API_KEY = process.env.AI_API_KEY;
   const AI_MODEL = process.env.AI_MODEL || "openai/gpt-4o";
 
-  // Gemini URL이면 OpenAI 호환 엔드포인트로 정규화
+  // Gemini 모델이면 항상 올바른 OpenAI 호환 엔드포인트로 강제 교체
   let AI_API_URL = process.env.AI_API_URL;
-  if (AI_API_URL?.includes("generativelanguage.googleapis.com")) {
+  const isGemini = AI_MODEL.toLowerCase().includes("gemini") ||
+    AI_API_URL?.includes("generativelanguage.googleapis.com");
+  if (isGemini) {
     AI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
   }
 
