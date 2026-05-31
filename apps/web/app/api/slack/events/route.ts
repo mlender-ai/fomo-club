@@ -109,6 +109,16 @@ async function handleAgentChat(
   try {
     await postMessage(channel, `🤔 생각 중...`, threadTs);
 
+    // 스레드 히스토리 조회
+    const threadHistoryResult = await getThreadHistory(channel, rootThreadTs).catch(() => []);
+    const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
+    for (const msg of threadHistoryResult) {
+      if (!msg.text || msg.ts === currentMsgTs) continue;
+      const cleaned = msg.text.replace(/<@[A-Z0-9]+>/g, "").trim();
+      if (!cleaned) continue;
+      historyMessages.push({ role: msg.bot_id ? "assistant" : "user", content: cleaned });
+    }
+
     // 컨텍스트 수집 (병렬)
     const [prs, briefs, runs] = await Promise.allSettled([
       getOpenPRs(5),
