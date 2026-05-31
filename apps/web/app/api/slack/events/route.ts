@@ -193,7 +193,7 @@ ${runList || "(없음)"}
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => "(no body)");
-      throw new Error(`AI API ${res.status} — ${errBody.slice(0, 300)}`);
+      throw new Error(`[URL:${AI_API_URL}][MODEL:${AI_MODEL}] ${res.status} — ${errBody.slice(0, 200)}`);
     }
 
     const data = (await res.json()) as {
