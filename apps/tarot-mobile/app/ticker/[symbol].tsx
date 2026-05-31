@@ -17,10 +17,12 @@ import { CompanyInfo } from "../../components/ticker/CompanyInfo";
 import { FinancialChart } from "../../components/ticker/FinancialChart";
 import { KeyMetricsGrid } from "../../components/ticker/KeyMetricsGrid";
 import { NewsList } from "../../components/ticker/NewsList";
+import { TarotCardRecommendation } from "../../components/ticker/TarotCardRecommendation";
 import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
 import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
+import { LazySection } from "../../components/ticker/LazySection";
 import { planTabSwitch, shouldShowCompactHeader } from "@trading/shared/src/tabScrollPositions";
 import { useStockStore, type ChartRange } from "../../lib/stockStore";
 import { useFavoritesStore } from "../../lib/favoritesStore";
@@ -273,31 +275,39 @@ export default function TickerDetailScreen() {
                   <MetricsGrid quote={quote} />
                 </>
               )}
-              {profile && (
-                <CompanyInfo
-                  symbol={symbol}
-                  name={quote?.longName ?? quote?.shortName ?? symbol}
-                  exchange={quote?.exchange ?? ""}
-                  profile={profile}
-                />
-              )}
-              {(quarterlyEarnings.length > 0 || annualFinancials.length > 0) && (
-                <FinancialChart
-                  quarterlyEarnings={quarterlyEarnings}
-                  annualFinancials={annualFinancials}
-                  width={SCREEN_WIDTH}
-                  currency={currency}
-                />
-              )}
-              {keyMetrics && (
-                <KeyMetricsGrid metrics={keyMetrics} currency={currency} />
-              )}
-              {isLoggedIn && userId && (
-                <TickerCardHistory symbol={symbol} userId={userId} />
-              )}
-              {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
-              <InvestmentInsight symbol={symbol} />
-              <NewsList symbol={symbol} />
+              <LazySection>
+                <>
+                  {profile && (
+                    <CompanyInfo
+                      symbol={symbol}
+                      name={quote?.longName ?? quote?.shortName ?? symbol}
+                      exchange={quote?.exchange ?? ""}
+                      profile={profile}
+                    />
+                  )}
+                  {(quarterlyEarnings.length > 0 || annualFinancials.length > 0) && (
+                    <FinancialChart
+                      quarterlyEarnings={quarterlyEarnings}
+                      annualFinancials={annualFinancials}
+                      width={SCREEN_WIDTH}
+                      currency={currency}
+                    />
+                  )}
+                  {keyMetrics && (
+                    <KeyMetricsGrid metrics={keyMetrics} currency={currency} />
+                  )}
+                  {isLoggedIn && userId && (
+                    <TickerCardHistory symbol={symbol} userId={userId} />
+                  )}
+                  {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
+                  <InvestmentInsight symbol={symbol} />
+                  <NewsList symbol={symbol} />
+                  <TarotCardRecommendation
+                    symbol={symbol}
+                    tickerName={quote?.shortName ?? quote?.longName}
+                  />
+                </>
+              </LazySection>
             </>
           )}
         </View>
