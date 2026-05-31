@@ -98,18 +98,11 @@ async function handleAgentChat(
   currentMsgTs: string
 ) {
   const AI_API_KEY = process.env.AI_API_KEY;
-  const AI_MODEL = process.env.AI_MODEL || "openai/gpt-4o";
+  const GEMINI_MODEL = "gemini-2.0-flash";
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-  // Gemini 모델이면 항상 올바른 OpenAI 호환 엔드포인트로 강제 교체
-  let AI_API_URL = process.env.AI_API_URL;
-  const isGemini = AI_MODEL.toLowerCase().includes("gemini") ||
-    AI_API_URL?.includes("generativelanguage.googleapis.com");
-  if (isGemini) {
-    AI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-  }
-
-  if (!AI_API_URL || !AI_API_KEY) {
-    await postMessage(channel, "❌ AI_API_URL / AI_API_KEY 환경변수가 설정되지 않았습니다.", threadTs);
+  if (!AI_API_KEY) {
+    await postMessage(channel, "AI_API_KEY 환경변수가 설정되지 않았습니다.", threadTs);
     return;
   }
 
@@ -118,12 +111,15 @@ async function handleAgentChat(
 
     // 스레드 히스토리 조회
     const threadHistoryResult = rootThreadTs ? await getThreadHistory(channel, rootThreadTs).catch(() => []) : [];
-    const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
+    const historyContents: { role: string; parts: { text: string }[] }[] = [];
     for (const msg of threadHistoryResult) {
       if (!msg.text || msg.ts === currentMsgTs) continue;
       const cleaned = msg.text.replace(/<@[A-Z0-9]+>/g, "").trim();
       if (!cleaned) continue;
-      historyMessages.push({ role: msg.bot_id ? "assistant" : "user", content: cleaned });
+      historyContents.push({
+        role: msg.bot_id ? "model" : "user",
+        parts: [{ text: cleaned }],
+      });
     }
 
     // 컨텍스트 수집 (병렬)
@@ -154,7 +150,7 @@ async function handleAgentChat(
           .join("\n")
       : "(조회 실패)";
 
-    const systemPrompt = `당신은 Trading Taro 프로젝트의 Hermes 에이전트입니다.
+    const systemInstruction = `당신은 Trading Taro 프로젝트의 Hermes 에이전트입니다.
 CEO가 Slack에서 물어보는 질문에 한국어로 간결하게 답합니다.
 현재 파이프라인 상태를 바탕으로 구체적이고 actionable한 답변을 제공하세요.
 
@@ -173,37 +169,32 @@ ${runList || "(없음)"}
 - Slack mrkdwn 포맷 사용 (*볼드*, _이탤릭_, \`코드\`)
 - 확실하지 않은 것은 솔직하게 모른다고 답변`;
 
-    const res = await fetch(AI_API_URL, {
+    const res = await fetch(`${GEMINI_URL}?key=${AI_API_KEY}`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${AI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...historyMessages,
-          { role: "user", content: question },
+        system_instruction: { parts: [{ text: systemInstruction }] },
+        contents: [
+          ...historyContents,
+          { role: "user", parts: [{ text: question }] },
         ],
-        max_tokens: 500,
-        temperature: 0.3,
+        generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
       }),
     });
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => "(no body)");
-      throw new Error(`[URL:${AI_API_URL}][MODEL:${AI_MODEL}] ${res.status} — ${errBody.slice(0, 200)}`);
+      throw new Error(`Gemini API ${res.status} — ${errBody.slice(0, 200)}`);
     }
 
     const data = (await res.json()) as {
+      candidates?: { content: { parts: { text: string }[] } }[];
       error?: { message: string };
-      choices: { message: { content: string } }[];
     };
 
-    if (data.error) throw new Error(data.error.message || "AI API error");
+    if (data.error) throw new Error(data.error.message || "Gemini API error");
 
-    const reply = data.choices?.[0]?.message?.content?.trim();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!reply) throw new Error("AI 응답이 비어있습니다");
 
