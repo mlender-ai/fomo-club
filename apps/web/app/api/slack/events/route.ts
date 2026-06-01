@@ -98,7 +98,8 @@ async function handleAgentChat(
   currentMsgTs: string
 ) {
   const AI_API_KEY = process.env.AI_API_KEY;
-  const GEMINI_MODEL = process.env.AI_MODEL?.includes("gemini") ? process.env.AI_MODEL : "gemini-1.5-flash";
+  // gemini-1.5-flash 이 API 키에서 404 반환 — 2.0만 유효
+  const GEMINI_MODEL = "gemini-2.0-flash";
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
   if (!AI_API_KEY) {
