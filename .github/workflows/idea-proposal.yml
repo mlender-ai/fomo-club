@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       feedback: ${{ steps.fetch.outputs.feedback }}
+      feedback_brief: ${{ steps.fetch.outputs.feedback_brief }}
       merged_prs: ${{ steps.fetch.outputs.merged_prs }}
       open_issues: ${{ steps.fetch.outputs.open_issues }}
       closed_issues: ${{ steps.fetch.outputs.closed_issues }}
@@ -109,6 +110,12 @@ jobs:
           if [ -z "$FEEDBACK" ]; then
             FEEDBACK="피드백 이력 없음 — 첫 번째 사이클입니다."
           fi
+          # CEO Brief용 짧은 버전 (REPO_MAP 제외, 5KB 제한) — agent prompt와 분리해
+          # CEO Brief의 LLM 입력 토큰 부담을 줄이고 호출 실패를 차단.
+          FEEDBACK_BRIEF=$(printf '%s' "$FEEDBACK" | head -c 5000)
+          echo "feedback_brief<<__EOF__" >> "$GITHUB_OUTPUT"
+          echo "$FEEDBACK_BRIEF" >> "$GITHUB_OUTPUT"
+          echo "__EOF__" >> "$GITHUB_OUTPUT"
 
           # 실제 레포 파일 구조 주입 — 에이전트가 존재하지 않는 경로를 환각 인용하는 사고 방지
           # (2026-05-31 사용자 피드백: "선행으로 파일 리소스/경로를 먼저 파악하고 이슈 생성하라")
@@ -1534,7 +1541,7 @@ jobs:
 
             ---
             ## 💬 피드백 이력
-            ${{ needs.prepare.outputs.feedback }}
+            ${{ needs.prepare.outputs.feedback_brief }}
 
             ---
             ## 🗂️ 최근 닫힌 이슈 (이미 처리된 영역)

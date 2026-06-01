@@ -32,12 +32,12 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(url, { method: "POST", headers, body });
 
-    const body = await res.text();
+    const responseBody = await res.text();
     if (!res.ok) {
-      return NextResponse.json({ ok: false, status: res.status, body }, { status: 200 });
+      return NextResponse.json({ ok: false, status: res.status, body: responseBody }, { status: 200 });
     }
 
-    const data = JSON.parse(body);
+    const data = JSON.parse(responseBody);
     const reply = useOpenAI
       ? (data.choices?.[0]?.message?.content ?? "(empty)")
       : (data.candidates?.[0]?.content?.parts?.[0]?.text ?? "(empty)");
