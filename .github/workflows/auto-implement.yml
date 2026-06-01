@@ -9,6 +9,12 @@ on:
       brief_date:
         description: "CEO Brief 날짜 (YYYY-MM-DD, 기본: 오늘)"
         required: false
+      model:
+        description: "Claude 모델 (비우면 vars.CLAUDE_MODEL → 기본 claude-opus-4-8)"
+        required: false
+      effort:
+        description: "Effort 레벨 (비우면 vars.CLAUDE_EFFORT → 기본 medium)"
+        required: false
 
 concurrency:
   group: auto-implement
@@ -95,6 +101,22 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # ── 2.5. 모델/effort 결정 (우선순위: 입력 > 레포변수 > 기본값) ─
+      - name: Resolve model config
+        id: model
+        if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
+        env:
+          IN_MODEL: ${{ github.event.inputs.model }}
+          IN_EFFORT: ${{ github.event.inputs.effort }}
+          VAR_MODEL: ${{ vars.CLAUDE_MODEL }}
+          VAR_EFFORT: ${{ vars.CLAUDE_EFFORT }}
+        run: |
+          MODEL="${IN_MODEL:-${VAR_MODEL:-claude-opus-4-8}}"
+          EFFORT="${IN_EFFORT:-${VAR_EFFORT:-medium}}"
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+          echo "effort=$EFFORT" >> "$GITHUB_OUTPUT"
+          echo "🤖 모델=$MODEL / effort=$EFFORT"
+
       # ── 3. Claude Code로 에이전트 구현 (구독 OAuth) ───────────
       - name: Implement with Claude Code
         id: implement
@@ -102,7 +124,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--max-turns 60 --allowedTools "Read,Edit,Write,Glob,Grep,Bash"'
+          claude_args: '--max-turns 60 --model ${{ steps.model.outputs.model }} --effort ${{ steps.model.outputs.effort }} --allowedTools "Read,Edit,Write,Glob,Grep,Bash"'
           prompt: |
             당신은 Trading Taro 앱(모노레포)의 시니어 풀스택 개발자입니다.
             아래 CEO Brief를 읽고 "이번 주 실행 지시" 섹션의 **첫 번째 유효 항목 하나**를 골라 실제로 구현하세요.
