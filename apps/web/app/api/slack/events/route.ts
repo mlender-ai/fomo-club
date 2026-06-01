@@ -98,12 +98,8 @@ async function handleThreadReply(
   currentMsgTs: string
 ) {
   // 스레드에 봇 메시지가 있는지 확인 → 봇이 참여한 스레드만 응답
-  const history = await getThreadHistory(channel, rootThreadTs).catch((e) => {
-    console.error("[slack] getThreadHistory failed:", e instanceof Error ? e.message : String(e));
-    return [];
-  });
+  const history = await getThreadHistory(channel, rootThreadTs).catch(() => []);
   const botInThread = history.some((m) => m.bot_id);
-  console.log(`[slack] threadReply: historyLen=${history.length} botInThread=${botInThread} root=${rootThreadTs}`);
   if (!botInThread) return; // 봇이 없는 스레드는 무시 (다른 사람들 대화에 끼어들지 않음)
 
   await handleAgentChat(text, userId, channel, rootThreadTs, rootThreadTs, currentMsgTs);
