@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Text } from "../ui/Text";
 import { Colors } from "../../constants/theme";
 
-export type TickerTab = "chart" | "info";
+export type TickerTab = "chart" | "info" | "disclosure";
 
 interface Props {
   activeTab: TickerTab;
@@ -13,6 +13,7 @@ interface Props {
 const TABS: { key: TickerTab; label: string }[] = [
   { key: "chart", label: "차트" },
   { key: "info", label: "종목정보" },
+  { key: "disclosure", label: "공시" },
 ];
 
 export function TabBar({ activeTab, onTabChange }: Props) {
@@ -63,8 +64,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
+  // 선택 상태: 배경색 + 테두리로 비선택 탭과 명확히 구분 (#268 Designer)
   labelWrapperActive: {
     backgroundColor: Colors.voidGreen,
+    borderWidth: 1,
+    borderColor: Colors.deepInsight,
   },
   labelActive: {
     fontWeight: "700",
@@ -74,6 +78,7 @@ const styles = StyleSheet.create({
   labelInactive: {
     fontWeight: "400",
     fontSize: 14,
+    opacity: 0.65,
   },
   indicator: {
     height: 3,
@@ -84,5 +89,11 @@ const styles = StyleSheet.create({
   },
   indicatorActive: {
     backgroundColor: Colors.taroEssence,
+    // 그림자로 선택 인디케이터 시인성 강화
+    shadowColor: Colors.taroEssence,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
