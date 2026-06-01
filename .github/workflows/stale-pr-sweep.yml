@@ -1,0 +1,80 @@
+name: Stale Agent PR Sweep
+
+# main과 충돌(CONFLICTING)하는 스테일 [Auto] 에이전트 PR을 감지해 자동 정리한다.
+# - 대상: agent/ceo-brief-* 브랜치 + [Auto] 타이틀 PR만 (사람 PR은 절대 건드리지 않음)
+# - 사람이 만든 PR, 충돌 없는 PR은 유지
+# - 수동 실행(workflow_dispatch)은 기본 dry_run(미리보기), 스케줄 실행은 실제 정리
+
+on:
+  schedule:
+    - cron: "30 18 * * *"   # 매일 03:30 KST (auto-implement 이후 시각)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "미리보기만 (닫지 않음)"
+        required: false
+        default: "true"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close stale/conflicting [Auto] agent PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # 스케줄 실행 시 input이 비어있음 → 'false'(실제 정리). 수동 실행은 기본 'true'(미리보기).
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -uo pipefail
+          CLOSED=0
+          KEPT=0
+
+          # [Auto] 타이틀 + agent/ceo-brief-* 브랜치의 열린 PR만 추출 (사람 PR 제외)
+          PRS=$(gh pr list --repo "$REPO" --state open --limit 50 \
+                 --json number,headRefName,mergeable \
+                 --jq '.[] | select(.headRefName|startswith("agent/ceo-brief-")) | "\(.number)|\(.mergeable)"')
+
+          if [ -z "$PRS" ]; then
+            echo "정리 대상 에이전트 PR 없음."
+            echo "## Stale Agent PR Sweep" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 대상 PR 없음" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          for ROW in $PRS; do
+            PR="${ROW%%|*}"
+            STATE="${ROW##*|}"
+
+            # GitHub이 mergeable를 아직 계산 안 했으면(UNKNOWN) 잠시 후 재조회
+            if [ "$STATE" = "UNKNOWN" ]; then
+              sleep 6
+              STATE=$(gh pr view "$PR" --repo "$REPO" --json mergeable --jq '.mergeable')
+            fi
+
+            if [ "$STATE" = "CONFLICTING" ]; then
+              echo "🚫 PR #$PR — main과 충돌(스테일 추정)"
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "   [DRY RUN] 닫지 않음"
+              else
+                gh pr close "$PR" --repo "$REPO" --delete-branch \
+                  --comment "🤖 [자동 정리] main과 충돌(CONFLICTING)하는 스테일 [Auto] PR이라 종료합니다. 현재 코드로 대체됐을 가능성이 높습니다. 필요 시 재오픈하세요."
+                echo "   ✅ 닫음 + 브랜치 삭제"
+              fi
+              CLOSED=$((CLOSED + 1))
+            else
+              echo "✅ PR #$PR — $STATE (유지)"
+              KEPT=$((KEPT + 1))
+            fi
+          done
+
+          {
+            echo "## Stale Agent PR Sweep"
+            echo "- 닫음(충돌): $CLOSED"
+            echo "- 유지: $KEPT"
+            [ "$DRY_RUN" = "true" ] && echo "- ⚠️ DRY RUN 모드 (실제로 닫지 않음)"
+          } >> "$GITHUB_STEP_SUMMARY"
