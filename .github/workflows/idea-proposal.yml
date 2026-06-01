@@ -43,8 +43,12 @@ jobs:
       yesterday_brief: ${{ steps.fetch.outputs.yesterday_brief }}
       today: ${{ steps.fetch.outputs.today }}
       scoring_guide: ${{ steps.fetch.outputs.scoring_guide }}
+      lane_state_json: ${{ steps.lane_state.outputs.lane_state_json }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Fetch Context, Feedback, North Star
         id: fetch
@@ -65,15 +69,22 @@ jobs:
           echo "$NS" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
-          # 어제 CEO Brief — 채택 항목 진척 추적용
-          # 이슈 번호(#NNN)를 마스킹하여 오늘 브리핑에서 어제 번호를 재인용하는 사고 방지
-          YB=$(gh issue list --label "ceo-brief" --state all --limit 5 \
+          # 어제 CEO Brief — 채택 항목 진척 추적 + 킬리스트/반복경고 보존 (Phase 1)
+          # (구) head -c 2000 + 번호 마스킹 → 킬리스트(하단)가 잘리고 #번호가 죽어
+          # 반복 탐지 신호가 소실됐다. 이제 마스킹 제거 + 하단 섹션 우선 보존.
+          # 어제 번호 오인용 방지는 ceo_brief 프롬프트 규칙(신규 번호는 today list만)으로 대체.
+          YB_FULL=$(gh issue list --label "ceo-brief" --state all --limit 5 \
             --json title,body \
             --repo "${{ github.repository }}" | \
-            jq -r ".[] | select(.title | contains(\"$YESTERDAY\")) | .body" 2>/dev/null | head -c 2000 | \
-            sed -E 's/#([0-9]+)/[이전이슈]/g')
-          if [ -z "$YB" ]; then
+            jq -r ".[] | select(.title | contains(\"$YESTERDAY\")) | .body" 2>/dev/null)
+          if [ -z "$YB_FULL" ]; then
             YB="어제 CEO Brief 없음 — 진척 추적 불가, 새 사이클로 시작."
+          elif [ ${#YB_FULL} -gt 6000 ]; then
+            # 길면 '오늘 처리 우선순위'~끝(반복경고·킬리스트 포함)을 우선 보존
+            YB=$(printf '%s' "$YB_FULL" | awk '/오늘 처리 우선순위/{f=1} f' | head -c 6000)
+            [ -z "$YB" ] && YB=$(printf '%s' "$YB_FULL" | tail -c 6000)
+          else
+            YB="$YB_FULL"
           fi
           echo "yesterday_brief<<__EOF__" >> "$GITHUB_OUTPUT"
           echo "$YB" >> "$GITHUB_OUTPUT"
@@ -151,6 +162,68 @@ jobs:
           echo "$SCORING_GUIDE" >> "$GITHUB_OUTPUT"
           echo "__EOF__" >> "$GITHUB_OUTPUT"
 
+      # ── Lane-State 원장 (Phase 1) — lane별 DONE/KILLED/IN-PROGRESS 파생 ──
+      # 각 에이전트가 자기 lane 슬라이스를 받아 이미 끝난/거부된 영역 재제안 차단(#282).
+      - name: Build lane-state ledger
+        id: lane_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          DEGRADED=0
+          # lane/scoreLabel 파생 jq (Phase 0 digest 와 동일한 규칙)
+          LANEJQ='def lane: ([.labels[].name] - ["idea","agent-council","mobile","tech-debt","daily","score-strong","score-conditional","score-missing"]) | (.[0] // "unknown"); def scorelabel: ([.labels[].name] | map(select(test("^score-(strong|conditional|missing)$"))) | (.[0] // "score-none"));'
+
+          # 1) 머지 PR (번호+제목+본문 — 연결 이슈 #NNN 추출용)
+          if ! gh pr list --state merged --limit 30 \
+                --json number,title,body --repo "${{ github.repository }}" > /tmp/ls_merged.json 2>/dev/null; then
+            echo "[]" > /tmp/ls_merged.json; DEGRADED=1
+          fi
+          # 2) 닫힌 agent-council 이슈 (lane/score 파생)
+          if gh issue list --label "agent-council" --state closed --limit 40 \
+                --json number,title,labels --repo "${{ github.repository }}" > /tmp/ls_closed_raw.json 2>/dev/null; then
+            jq "$LANEJQ"' [ .[] | {number, title, lane: lane, scoreLabel: scorelabel} ]' /tmp/ls_closed_raw.json > /tmp/ls_closed.json
+          else
+            echo "[]" > /tmp/ls_closed.json; DEGRADED=1
+          fi
+          # 3) 열린 agent-council 이슈 (lane/score 파생)
+          if gh issue list --label "agent-council" --state open --limit 50 \
+                --json number,title,labels --repo "${{ github.repository }}" > /tmp/ls_open_raw.json 2>/dev/null; then
+            jq "$LANEJQ"' [ .[] | {number, title, lane: lane, scoreLabel: scorelabel} ]' /tmp/ls_open_raw.json > /tmp/ls_open.json
+          else
+            echo "[]" > /tmp/ls_open.json; DEGRADED=1
+          fi
+
+          if [ "$DEGRADED" = "1" ]; then
+            LS_JSON='{"__degraded__":true}'
+          else
+            LS_JSON=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts build \
+              /tmp/ls_merged.json /tmp/ls_closed.json /tmp/ls_open.json 2>/dev/null || echo '{"__degraded__":true}')
+            [ -z "$LS_JSON" ] && LS_JSON='{"__degraded__":true}'
+          fi
+
+          # JSON 한 줄 — 멀티라인 가드용 heredoc output
+          echo "lane_state_json<<__LSEOF__" >> "$GITHUB_OUTPUT"
+          echo "$LS_JSON" >> "$GITHUB_OUTPUT"
+          echo "__LSEOF__" >> "$GITHUB_OUTPUT"
+
+          # 옵저버빌리티(9.1): 원장을 job summary + 아티팩트로 덤프
+          {
+            echo "### 🧾 Lane-State 원장 (이번 사이클)"
+            echo '```json'
+            printf '%s\n' "$LS_JSON" | jq . 2>/dev/null || printf '%s\n' "$LS_JSON"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf '%s' "$LS_JSON" > /tmp/lane-state.json
+      - name: Upload lane-state artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lane-state-${{ steps.fetch.outputs.today }}
+          path: /tmp/lane-state.json
+          if-no-files-found: ignore
+          retention-days: 14
+
   # ─────────────────────────────────────────────────────────────
   # 1. PM
   # ─────────────────────────────────────────────────────────────
@@ -169,15 +242,31 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[PM\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "pm" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["pm"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["pm"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "pm" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -243,6 +332,12 @@ jobs:
           prompt: |
             ## 🌟 North Star (이번 주 단일 진실)
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 PM 에이전트 자기 직전 5개 제안 (같은 영역 재제안 금지)
@@ -334,14 +429,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Frontend\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "frontend" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["frontend"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["frontend"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "frontend" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -404,6 +515,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 Frontend 자기 직전 5개 제안 (같은 영역 재제안 금지)
@@ -489,14 +606,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Backend\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "backend" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["backend"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["backend"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "backend" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -540,6 +673,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 Backend 자기 직전 5개 제안
@@ -610,14 +749,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Designer\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "design" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["design"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["design"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "design" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -662,6 +817,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 Designer 자기 직전 5개 제안 (같은 화면/효과 절대 재제안 금지)
@@ -733,14 +894,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[QA\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "qa" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["qa"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["qa"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "qa" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -784,6 +961,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 QA 자기 직전 5개 제안
@@ -854,14 +1037,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[CTO\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "cto" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["cto"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["cto"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "cto" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -905,6 +1104,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 CTO 자기 직전 5개 제안
@@ -974,14 +1179,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Marketer\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "marketing" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["marketing"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["marketing"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "marketing" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -1041,6 +1262,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 Marketer 자기 직전 5개 제안
@@ -1131,14 +1358,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Security\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "security" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["security"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["security"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "security" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -1169,6 +1412,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 Security 자기 직전 5개 제안
@@ -1231,14 +1480,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
             jq "[.[] | select(.title | test(\"\\\\[Prompt Engineer\\\\] $TODAY\"))] | length")
           echo "exists=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          # Lane-State 슬라이스 (Phase 1) — 자기 직군 DONE/KILLED/IN-PROGRESS
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          LANE_SLICE=$(npx -y tsx@4.19.2 scripts/build-lane-state.ts slice "prompt" /tmp/lane-state.json 2>/dev/null || echo "이력 없음 — 새 영역 제안 가능.")
+          echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
+          echo "$LANE_SLICE" >> $GITHUB_OUTPUT
+          echo "__EOF__" >> $GITHUB_OUTPUT
+
+          DONE_NUMS=$(jq -r '(.["prompt"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
+          KILLED_NUMS=$(jq -r '(.["prompt"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           HIST=$(gh issue list --label "prompt" --state all --limit 5 \
-            --json title,body,state --repo "${{ github.repository }}" | \
-            jq -r '.[] | "### [\(.state)] \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"' 2>/dev/null || echo "이력 없음")
+            --json number,title,body,state --repo "${{ github.repository }}" | \
+            jq -r --arg done "$DONE_NUMS" --arg killed "$KILLED_NUMS" '
+              ($done | split(" ") | map(select(length>0) | tonumber)) as $d
+              | ($killed | split(" ") | map(select(length>0) | tonumber)) as $k
+              | .[] | (.number) as $n
+              | (if ($d | index($n)) then "DONE" elif ($k | index($n)) then "KILLED" else .state end) as $v
+              | "### [\($v)] #\($n) \(.title)\n\(.body | .[0:700] | gsub("\n";" "))\n"
+            ' 2>/dev/null || echo "이력 없음")
           echo "history<<__EOF__" >> $GITHUB_OUTPUT
           echo "$HIST" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
@@ -1282,6 +1547,12 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
+            ${{ steps.ctx.outputs.lane_slice }}
+            > ⚠️ 위 DONE/KILLED 목록의 주제는 절대 재제안 금지. 재제안 시 CEO Brief에서 자동 킬리스트 처리되어 사이클이 낭비된다.
+            > 개선하려면 반드시 "기존 #NNN 위에 무엇을 *추가*하는가"를 명시하라.
 
             ---
             ## 📜 Prompt Engineer 자기 직전 5개 제안
@@ -1535,7 +1806,10 @@ jobs:
             ${{ steps.today_issues.outputs.list }}
 
             ---
-            ## 📅 어제 CEO Brief (채택 항목 진척 추적용 — 이슈 번호 재인용 금지)
+            ## 📅 어제 CEO Brief (채택 항목 진척 추적용)
+            > ⚠️ 번호 인용 절대 규칙: 아래 어제 브리핑의 #번호는 **과거 참조용**이다(진척 추적·반복 탐지에만 사용).
+            > 오늘 신규 제안의 "이슈: #N" 인용은 반드시 위 "📌 오늘 사이클 신규 이슈" 목록의 번호만 사용하라.
+            > 어제 브리핑의 번호를 오늘 신규 항목의 번호로 재인용하면 사고다.
             ${{ needs.prepare.outputs.yesterday_brief }}
 
             ---
@@ -1630,13 +1904,25 @@ jobs:
         env:
           MERGED_PRS: ${{ needs.prepare.outputs.merged_prs }}
           CLOSED_ISSUES: ${{ needs.prepare.outputs.closed_issues }}
+          LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
           TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           printf '%s' "$MERGED_PRS" > /tmp/merged.txt
+          # done.txt = 닫힌 이슈 + lane-state 의 DONE/KILLED 제목 (반복 탐지 강화, Task 4)
           printf '%s' "$CLOSED_ISSUES" > /tmp/done.txt
+          printf '%s' "$LANE_STATE" > /tmp/lane-state.json
+          jq -r '
+            [ .[]? | (.done // []), (.killed // []) ] | flatten
+            | .[]? | "- #\(.number) \(.title)"
+          ' /tmp/lane-state.json >> /tmp/done.txt 2>/dev/null || true
           npx -y tsx@4.19.2 scripts/ceo-brief-fallback.ts \
             /tmp/digest.json /tmp/merged.txt /tmp/done.txt "$TODAY" /tmp/brief.md
           echo "used=true" >> $GITHUB_OUTPUT
+          # 옵저버빌리티(9.2): 폴백 발동을 job summary 에 명시
+          {
+            echo "## ⚠️ CEO Brief 자동 폴백 발동 ($TODAY)"
+            echo "LLM 브리핑 실패/빈응답 → 규칙 기반 폴백으로 생성됨. 품질 저하 가능 — 확인 요망."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Create CEO Brief Issue
         if: steps.dedup.outputs.exists == 'false' && steps.today_issues.outputs.has_issues == 'true' && (steps.brief.outputs.response != '' || steps.fallback.outputs.used == 'true')
         env:
