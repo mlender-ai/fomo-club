@@ -42,20 +42,21 @@ export async function postMessage(channel: string, text: string, threadTs?: stri
 }
 
 // 스레드 대화 이력 조회 (최대 20개)
+// conversations.replies는 JSON body를 받지 않으므로 query string(GET)으로 호출
 export async function getThreadHistory(
   channel: string,
   threadTs: string
 ): Promise<SlackMessage[]> {
-  const res = (await slackApi("conversations.replies", {
-    channel,
-    ts: threadTs,
-    limit: 20,
-  })) as SlackResponse & { messages?: SlackMessage[] };
+  if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN not configured");
+
+  const params = new URLSearchParams({ channel, ts: threadTs, limit: "20" });
+  const r = await fetch(`https://slack.com/api/conversations.replies?${params}`, {
+    headers: { Authorization: `Bearer ${SLACK_BOT_TOKEN}` },
+  });
+  const res = (await r.json()) as SlackResponse & { messages?: SlackMessage[] };
 
   if (!res.ok || !res.messages) {
-    console.warn("SLACK_ERR=" + (res.error || "empty"));
-    console.warn("SLACK_CH=" + channel);
-    console.warn("SLACK_TS=" + threadTs);
+    console.warn("SLACK_REPLIES_ERR=" + (res.error || "empty"));
     return [];
   }
   return res.messages;
