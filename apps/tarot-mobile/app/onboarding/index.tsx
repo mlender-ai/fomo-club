@@ -15,18 +15,18 @@ const { width } = Dimensions.get("window");
 const SLIDES = [
   {
     icon: "✦",
-    title: "타로 증권에\n오신 것을 환영합니다",
-    desc: "차트가 낯설어도 괜찮아요.\n시장의 흐름을 타로 카드의 직관적인 언어로 풀어냅니다.",
+    title: "타로로 투자 결정을\n새롭게 바라보세요",
+    desc: "시장의 데이터와 타로의 상징이 만나는\n독특한 투자 인사이트를 경험해 보세요.",
   },
   {
     icon: "◈",
-    title: "종목을 선택하고\n카드를 뽑으세요",
-    desc: "관심 종목을 검색한 후\n1장 또는 3장 스프레드로 카드를 뽑을 수 있습니다.",
+    title: "관심 종목을 선택하고\n카드를 뽑으세요",
+    desc: "전통 타로 카드 해석을 바탕으로\n관심 있는 종목에 영감을 더해 드립니다.",
   },
   {
     icon: "⊡",
-    title: "AI가 시장과 카드를\n연결합니다",
-    desc: "실시간 시장 데이터를 기반으로\nAI가 타로 해석을 생성합니다.",
+    title: "AI가 실시간 시장 데이터와\n카드를 연결합니다",
+    desc: "오늘의 시세·감정·흐름을 분석해\nAI가 지금 이 종목을 들고 있는 당신의 마음을 읽어냅니다.",
   },
   {
     icon: "⚠",
@@ -114,7 +114,7 @@ export default function OnboardingScreen() {
       <View style={styles.btnArea}>
         <Button
           variant="primary"
-          label={isLast ? "시작하기" : "다음"}
+          label={isLast ? "지금 타로 뽑기" : "다음"}
           disabled={isLast && !agreed}
           onPress={goNext}
         />
