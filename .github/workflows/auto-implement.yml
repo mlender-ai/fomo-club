@@ -95,318 +95,69 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── 3. AI로 실행 지시 추출 (GPT-4o 무료) ──────────────────
-      - name: Extract Top Execution Instruction
-        id: extract
+      # ── 3. Claude Code로 에이전트 구현 (구독 OAuth) ───────────
+      - name: Implement with Claude Code
+        id: implement
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        uses: actions/ai-inference@v1
+        uses: anthropics/claude-code-action@v1
         with:
-          model: openai/gpt-4o
-          system-prompt: |
-            당신은 CEO Brief를 파싱하여 개발팀에 전달할 실행 지시를 추출하는 파서입니다.
-            반드시 JSON만 반환하세요. 마크다운 코드 블록도 없이, 순수 JSON만.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--max-turns 60 --allowedTools "Read,Edit,Write,Glob,Grep,Bash"'
           prompt: |
-            아래 CEO Brief에서 "이번 주 실행 지시" 섹션의 첫 번째 항목만 추출하세요.
+            당신은 Trading Taro 앱(모노레포)의 시니어 풀스택 개발자입니다.
+            아래 CEO Brief를 읽고 "이번 주 실행 지시" 섹션의 **첫 번째 유효 항목 하나**를 골라 실제로 구현하세요.
 
-            중요 규칙:
-            - Kill list, 보류, 무시 항목은 절대 선택하지 마세요.
-            - 카카오톡 공유, 사주팔자, 어드민 UI는 절대 선택하지 마세요.
-            - 타로앱 UX 몰입감과 관련된 항목을 최우선으로 선택하세요.
+            ## 모노레포 구조
+            - apps/tarot-mobile — React Native + Expo
+            - apps/web — Next.js 14 API Routes + 어드민
+            - packages/shared — 공용 타입 (새 코드 전 먼저 확인)
+            - packages/tarot-core — 비즈니스 로직
 
-            응답 형식 (JSON만, 다른 텍스트 없이):
-            {
-              "title": "기능 이름 (짧게)",
-              "agent": "담당 에이전트",
-              "description": "구현 내용 요약 (구체적으로, 3-5문장)",
-              "rationale": "선택 이유"
-            }
+            ## 절대 규칙
+            - Kill list (구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI, 보류/무시 항목
+            - 애니메이션: React Native Animated API만 (reanimated 금지)
+            - 모든 코드 TypeScript, 기존 패턴/컨벤션 재사용
+            - 빈 catch {} 금지 (최소 console.warn)
+            - react-native-svg는 lib/svg.ts 래퍼로 import
+            - 타로앱 UX 몰입감 관련 항목 최우선 선택
 
-            CEO Brief:
+            ## 작업 절차 (반드시 이 순서로)
+            1. 실행 지시 항목 하나 선택 후 코드 구현 (파일 읽고 수정)
+            2. `npm run lint` 와 `npm run typecheck` 를 직접 실행해 통과할 때까지 수정
+            3. 선택한 작업의 한 줄 제목을 `/tmp/impl-title.txt` 에 기록 (예: echo "데일리 카드 플립 애니메이션" > /tmp/impl-title.txt)
+            4. **commit / push / PR 생성은 하지 마세요.** 코드 변경만 작업 트리에 남기면 다음 단계가 처리합니다.
+
+            ## CEO Brief
             ${{ steps.brief.outputs.body }}
 
-      # ── 4. 프로젝트 구조 스냅샷 생성 ──────────────────────────
-      - name: Generate project context
-        id: context
-        if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        run: |
-          {
-            echo "=== 디렉토리 구조 ==="
-            find apps packages -maxdepth 3 -type f -name '*.ts' -o -name '*.tsx' | head -80
-            echo ""
-            echo "=== packages/shared 타입 ==="
-            for f in packages/shared/types/*.ts; do
-              [ -f "$f" ] && echo "--- $f ---" && head -30 "$f"
-            done
-            echo ""
-            echo "=== packages/tarot-core exports ==="
-            for f in packages/tarot-core/src/*.ts; do
-              [ -f "$f" ] && echo "--- $f ---" && head -20 "$f"
-            done
-            echo ""
-            echo "=== apps/tarot-mobile/constants/theme.ts ==="
-            head -50 apps/tarot-mobile/constants/theme.ts 2>/dev/null || echo "(없음)"
-          } > /tmp/project-context.txt
-
-          echo "context<<__CTX_EOF__" >> "$GITHUB_OUTPUT"
-          head -300 /tmp/project-context.txt >> "$GITHUB_OUTPUT"
-          echo "__CTX_EOF__" >> "$GITHUB_OUTPUT"
-
-      # ── 5. GPT-4o로 전체 코드 생성 (무료) ─────────────────────
-      - name: Generate code with GPT-4o
-        id: codegen
-        if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        uses: actions/ai-inference@v1
-        with:
-          model: openai/gpt-4o
-          max-tokens: 16000
-          system-prompt: |
-            당신은 Trading Taro 앱의 시니어 풀스택 개발자입니다.
-            모노레포 구조: apps/tarot-mobile (React Native + Expo), apps/web (Next.js 14 API), packages/shared (공용 타입), packages/tarot-core (비즈니스 로직)
-
-            중요 규칙:
-            - 애니메이션: React Native Animated API만 허용 (react-native-reanimated 사용 금지)
-            - Kill list (절대 구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI
-            - 모든 코드는 TypeScript
-            - 기존 패턴과 컨벤션을 따를 것
-
-            응답 형식 — 반드시 아래 형식만 사용:
-            각 파일마다:
-            === FILE: {상대경로} ===
-            ```typescript
-            (파일 전체 내용)
-            ```
-
-            기존 파일 수정 시에도 파일 전체 내용을 출력하세요.
-            설명 텍스트 없이 파일 블록만 출력하세요.
-          prompt: |
-            아래 실행 지시를 구현하세요.
-
-            ## 실행 지시
-            ${{ steps.extract.outputs.response }}
-
-            ## 현재 프로젝트 구조
-            ${{ steps.context.outputs.context }}
-
-      # ── 6. 생성된 코드를 파일에 적용 (bash 파싱) ───────────────
-      - name: Apply generated code
-        id: apply
-        if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
-        env:
-          CODEGEN: ${{ steps.codegen.outputs.response }}
-        run: |
-          printf '%s\n' "$CODEGEN" > /tmp/codegen-raw.txt
-          echo "GPT-4o 출력 크기: $(wc -c < /tmp/codegen-raw.txt) bytes, $(wc -l < /tmp/codegen-raw.txt) lines"
-
-          APPLIED=0
-          CURRENT_FILE=""
-          IN_CODE=false
-          FENCE='```'
-
-          while IFS= read -r line; do
-            if [[ "$line" =~ ^===\ FILE:\ (.+)\ ===$ ]]; then
-              CURRENT_FILE="${BASH_REMATCH[1]}"
-              CURRENT_FILE=$(echo "$CURRENT_FILE" | xargs)
-              IN_CODE=false
-              echo "📄 Found file block: $CURRENT_FILE"
-              continue
-            fi
-
-            if [ -n "$CURRENT_FILE" ] && [ "$IN_CODE" = false ] && [[ "$line" == ${FENCE}* ]]; then
-              mkdir -p "$(dirname "$CURRENT_FILE")"
-              > "$CURRENT_FILE"
-              IN_CODE=true
-              continue
-            fi
-
-            if [ "$IN_CODE" = true ] && [[ "$line" == "$FENCE" ]]; then
-              IN_CODE=false
-              APPLIED=$((APPLIED + 1))
-              echo "✅ Applied ($APPLIED): $CURRENT_FILE ($(wc -l < "$CURRENT_FILE") lines)"
-              CURRENT_FILE=""
-              continue
-            fi
-
-            if [ "$IN_CODE" = true ] && [ -n "$CURRENT_FILE" ]; then
-              echo "$line" >> "$CURRENT_FILE"
-            fi
-          done < /tmp/codegen-raw.txt
-
-          if [ "$IN_CODE" = true ] && [ -n "$CURRENT_FILE" ]; then
-            APPLIED=$((APPLIED + 1))
-            echo "⚠️ Auto-closed truncated block ($APPLIED): $CURRENT_FILE"
-          fi
-
-          echo "applied=$APPLIED" >> "$GITHUB_OUTPUT"
-          echo "총 ${APPLIED}개 파일 적용 완료"
-
-          if [ "$APPLIED" -eq 0 ]; then
-            echo "⚠️ 적용된 파일이 없습니다. GPT-4o 출력 형식을 확인하세요."
-            echo "--- GPT-4o 출력 (처음 20줄) ---"
-            head -20 /tmp/codegen-raw.txt
-            exit 1
-          fi
-
-      # ── 7. 코드 검증 (lint + typecheck) ────────────────────────
-      - name: Verify code
-        id: verify
-        if: steps.apply.outputs.applied > 0
-        continue-on-error: true
-        run: |
-          npm run lint 2>&1 | tee /tmp/lint-output.txt
-          LINT_EXIT=${PIPESTATUS[0]}
-
-          npm run typecheck 2>&1 | tee /tmp/typecheck-output.txt
-          TC_EXIT=${PIPESTATUS[0]}
-
-          if [ "$LINT_EXIT" -ne 0 ] || [ "$TC_EXIT" -ne 0 ]; then
-            echo "pass=false" >> "$GITHUB_OUTPUT"
-
-            {
-              echo "errors<<__ERR_EOF__"
-              if [ "$LINT_EXIT" -ne 0 ]; then
-                echo "=== LINT ERRORS ==="
-                tail -50 /tmp/lint-output.txt
-              fi
-              if [ "$TC_EXIT" -ne 0 ]; then
-                echo "=== TYPECHECK ERRORS ==="
-                tail -50 /tmp/typecheck-output.txt
-              fi
-              echo "__ERR_EOF__"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "pass=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      # ── 8. 에러 수정 (GPT-4o 무료, 조건부) ────────────────────
-      - name: Fix errors with GPT-4o
-        id: fix
-        if: steps.verify.outputs.pass == 'false'
-        uses: actions/ai-inference@v1
-        with:
-          model: openai/gpt-4o
-          max-tokens: 16000
-          system-prompt: |
-            당신은 TypeScript 코드의 lint/typecheck 에러를 수정하는 전문가입니다.
-            에러가 발생한 파일의 수정된 전체 내용만 출력하세요.
-            응답 형식:
-            === FILE: {경로} ===
-            ```typescript
-            (수정된 파일 전체 내용)
-            ```
-            설명 없이 파일 블록만 출력하세요.
-          prompt: |
-            아래 에러를 수정하세요.
-
-            ## 에러 메시지
-            ${{ steps.verify.outputs.errors }}
-
-            ## 원본 생성 코드
-            ${{ steps.codegen.outputs.response }}
-
-      # ── 9. 수정된 코드 재적용 (조건부) ─────────────────────────
-      - name: Re-apply fixed code
-        id: reapply
-        if: steps.verify.outputs.pass == 'false'
-        env:
-          CODEGEN: ${{ steps.fix.outputs.response }}
-        run: |
-          printf '%s\n' "$CODEGEN" > /tmp/fix-raw.txt
-
-          APPLIED=0
-          CURRENT_FILE=""
-          IN_CODE=false
-          FENCE='```'
-
-          while IFS= read -r line; do
-            if [[ "$line" =~ ^===\ FILE:\ (.+)\ ===$ ]]; then
-              CURRENT_FILE="${BASH_REMATCH[1]}"
-              CURRENT_FILE=$(echo "$CURRENT_FILE" | xargs)
-              IN_CODE=false
-              continue
-            fi
-
-            if [ -n "$CURRENT_FILE" ] && [ "$IN_CODE" = false ] && [[ "$line" == ${FENCE}* ]]; then
-              mkdir -p "$(dirname "$CURRENT_FILE")"
-              > "$CURRENT_FILE"
-              IN_CODE=true
-              continue
-            fi
-
-            if [ "$IN_CODE" = true ] && [[ "$line" == "$FENCE" ]]; then
-              IN_CODE=false
-              APPLIED=$((APPLIED + 1))
-              echo "✅ Fixed ($APPLIED): $CURRENT_FILE"
-              CURRENT_FILE=""
-              continue
-            fi
-
-            if [ "$IN_CODE" = true ] && [ -n "$CURRENT_FILE" ]; then
-              echo "$line" >> "$CURRENT_FILE"
-            fi
-          done < /tmp/fix-raw.txt
-
-          echo "applied=$APPLIED" >> "$GITHUB_OUTPUT"
-          echo "수정된 파일 ${APPLIED}개 재적용 완료"
-
-      # ── 10. 재검증 (조건부) ────────────────────────────────────
-      - name: Re-verify code
-        id: reverify
-        if: steps.verify.outputs.pass == 'false'
-        continue-on-error: true
-        run: |
-          npm run lint 2>&1 | tee /tmp/relint-output.txt
-          LINT_EXIT=${PIPESTATUS[0]}
-
-          npm run typecheck 2>&1 | tee /tmp/retc-output.txt
-          TC_EXIT=${PIPESTATUS[0]}
-
-          if [ "$LINT_EXIT" -eq 0 ] && [ "$TC_EXIT" -eq 0 ]; then
-            echo "pass=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "pass=false" >> "$GITHUB_OUTPUT"
-            echo "⚠️ 재검증 실패 — PR에 경고를 포함합니다."
-          fi
-
-      # ── 11. 브랜치 생성 + PR ───────────────────────────────────
+      # ── 4. 브랜치 생성 + PR ────────────────────────────────────
       - name: Create Branch and PR
-        if: steps.apply.outputs.applied > 0
+        if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-          INSTRUCTION: ${{ steps.extract.outputs.response }}
           TODAY: ${{ steps.brief.outputs.today }}
           BRIEF_NUMBER: ${{ steps.brief.outputs.number }}
-          VERIFY_PASS: ${{ steps.verify.outputs.pass }}
-          REVERIFY_PASS: ${{ steps.reverify.outputs.pass }}
         run: |
-          BRANCH="agent/ceo-brief-${TODAY}"
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "변경사항 없음 — PR 생성 건너뜀"
+            exit 0
+          fi
 
+          TITLE=$(head -1 /tmp/impl-title.txt 2>/dev/null | xargs)
+          [ -z "$TITLE" ] && TITLE="CEO Brief 구현"
+
+          BRANCH="agent/ceo-brief-${TODAY}"
           git config user.name "taro-agent[bot]"
           git config user.email "taro-agent[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
           git push origin --delete "$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
-
-          TITLE=$(echo "$INSTRUCTION" | jq -r '.title // "CEO Brief 구현"' 2>/dev/null || echo "CEO Brief 구현")
-
           git add -A
           git commit -m "[Auto] ${TODAY} — ${TITLE}
 
-          CEO Brief #${BRIEF_NUMBER} 기반 자동 구현 (GitHub Models)" || {
-            echo "변경사항 없음 — PR 생성 건너뜀"
-            exit 0
-          }
-
+          CEO Brief #${BRIEF_NUMBER} 기반 Claude Code 자동 구현"
           git push origin "$BRANCH" --force
-
-          QUALITY_NOTE=""
-          if [ "$VERIFY_PASS" = "true" ]; then
-            QUALITY_NOTE="✅ lint + typecheck 통과"
-          elif [ "$REVERIFY_PASS" = "true" ]; then
-            QUALITY_NOTE="✅ lint + typecheck 통과 (GPT-4o 자동 수정 후)"
-          else
-            QUALITY_NOTE="⚠️ lint/typecheck 에러 있음 — 수동 리뷰 필요"
-          fi
 
           cat > /tmp/pr-body.md << PREOF
           ## CEO Brief #${BRIEF_NUMBER} 자동 구현
@@ -414,14 +165,9 @@ jobs:
           원본 이슈: #${BRIEF_NUMBER}
 
           ### 구현 방식
-          - 코드 생성: GPT-4o (GitHub Models, 무료)
-          - 코드 적용: bash 파싱
-          - 품질 검증: ${QUALITY_NOTE}
-
-          ### 실행 지시
-          \`\`\`json
-          ${INSTRUCTION}
-          \`\`\`
+          - 에이전트: Claude Code (anthropics/claude-code-action, 구독 인증)
+          - lint + typecheck 에이전트가 직접 검증
+          - 작업: ${TITLE}
           PREOF
 
           gh pr create \
@@ -434,7 +180,7 @@ jobs:
               exit 1
             }
 
-      # ── 12. CEO Brief 이슈에 결과 코멘트 ──────────────────────
+      # ── 5. CEO Brief 이슈에 결과 코멘트 ───────────────────────
       - name: Comment on CEO Brief
         if: steps.brief.outputs.found == 'true' && steps.dedup.outputs.exists == 'false'
         env:
@@ -443,14 +189,13 @@ jobs:
         run: |
           BRANCH="agent/ceo-brief-${TODAY}"
           PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
-
           if [ -n "$PR_NUM" ]; then
             gh issue comment "${{ steps.brief.outputs.number }}" \
               --repo "${{ github.repository }}" \
-              --body "🤖 구현 PR: #${PR_NUM} — GPT-4o (GitHub Models, 무료)로 자동 생성됨. CI가 자동으로 트리거됩니다." || true
+              --body "🤖 구현 PR: #${PR_NUM} — Claude Code(구독)로 자동 구현됨. CI가 자동으로 트리거됩니다." || true
           fi
 
-      # ── 13. 실패 시 CEO Brief 이슈에 코멘트 ───────────────────
+      # ── 6. 실패 시 CEO Brief 이슈에 코멘트 ────────────────────
       - name: Comment on failure
         if: failure() && steps.brief.outputs.found == 'true'
         env:
