@@ -19,6 +19,8 @@ import { FinancialChart } from "../../components/ticker/FinancialChart";
 import { KeyMetricsGrid } from "../../components/ticker/KeyMetricsGrid";
 import { NewsList } from "../../components/ticker/NewsList";
 import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
+import { TarotCardRecommendation } from "../../components/ticker/TarotCardRecommendation";
+import { AnnouncementSection } from "../../components/stock/AnnouncementSection";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
 import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
@@ -63,12 +65,13 @@ export default function TickerDetailScreen() {
   const [activeTab, setActiveTab] = useState<TickerTab>("chart");
   const [refreshing, setRefreshing] = useState(false);
   const [showCompact, setShowCompact] = useState(false);
-  // info 탭의 네트워크 의존 위젯은 탭 전환 인터랙션 완료 후 마운트 (#264 — 첫 페인트/전환 jank 감소)
+  // info/disclosure 탭의 네트워크 의존 위젯은 탭 전환 인터랙션 완료 후 마운트 (#264 — 첫 페인트/전환 jank 감소)
   const infoDeferReady = useDeferredRender(activeTab === "info");
+  const disclosureDeferReady = useDeferredRender(activeTab === "disclosure");
 
   // 탭별 스크롤 위치 보존 — 탭 전환 시 이전 위치로 복원
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const scrollPositions = useRef<Record<TickerTab, number>>({ chart: 0, info: 0 });
+  const scrollPositions = useRef<Record<TickerTab, number>>({ chart: 0, info: 0, disclosure: 0 });
   const currentScrollY = useRef(0);
 
   const isFav = symbol ? isFavorite(symbol) : false;
@@ -238,7 +241,11 @@ export default function TickerDetailScreen() {
 
         {/* [3] Tab Content */}
         <View style={styles.tabContent}>
-          {activeTab === "chart" ? (
+          {activeTab === "disclosure" ? (
+            disclosureDeferReady ? (
+              <AnnouncementSection symbol={symbol} />
+            ) : null
+          ) : activeTab === "chart" ? (
             <View style={styles.chartSection}>
               <ChartErrorBoundary>
                 <PriceChart
@@ -309,6 +316,8 @@ export default function TickerDetailScreen() {
                   {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
                   <InvestmentInsight symbol={symbol} />
                   <NewsList symbol={symbol} />
+                  {/* 뉴스 읽기 후 카드 뽑기로 자연스럽게 연결 (#263) */}
+                  <TarotCardRecommendation symbol={symbol} shortName={quote?.shortName} />
                 </>
               )}
             </>
