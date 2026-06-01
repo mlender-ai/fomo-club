@@ -97,13 +97,13 @@ async function handleAgentChat(
   rootThreadTs: string | undefined,
   currentMsgTs: string
 ) {
-  const AI_API_KEY = process.env.AI_API_KEY;
-  // gemini-1.5-flash 이 API 키에서 404 반환 — 2.0만 유효
-  const GEMINI_MODEL = "gemini-2.0-flash";
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  // GitHub Models (무료, GITHUB_PAT 재사용) — OpenAI-compat 포맷
+  const GITHUB_PAT = process.env.GITHUB_PAT;
+  const AI_URL = "https://models.github.ai/inference/chat/completions";
+  const AI_MODEL = "openai/gpt-4o";
 
-  if (!AI_API_KEY) {
-    await postMessage(channel, "AI_API_KEY 환경변수가 설정되지 않았습니다.", threadTs);
+  if (!GITHUB_PAT) {
+    await postMessage(channel, "GITHUB_PAT 환경변수가 설정되지 않았습니다.", threadTs);
     return;
   }
 
@@ -112,15 +112,12 @@ async function handleAgentChat(
 
     // 스레드 히스토리 조회
     const threadHistoryResult = rootThreadTs ? await getThreadHistory(channel, rootThreadTs).catch(() => []) : [];
-    const historyContents: { role: string; parts: { text: string }[] }[] = [];
+    const historyMessages: { role: "user" | "assistant"; content: string }[] = [];
     for (const msg of threadHistoryResult) {
       if (!msg.text || msg.ts === currentMsgTs) continue;
       const cleaned = msg.text.replace(/<@[A-Z0-9]+>/g, "").trim();
       if (!cleaned) continue;
-      historyContents.push({
-        role: msg.bot_id ? "model" : "user",
-        parts: [{ text: cleaned }],
-      });
+      historyMessages.push({ role: msg.bot_id ? "assistant" : "user", content: cleaned });
     }
 
     // 컨텍스트 수집 (병렬)
@@ -151,7 +148,7 @@ async function handleAgentChat(
           .join("\n")
       : "(조회 실패)";
 
-    const systemInstruction = `당신은 Trading Taro 프로젝트의 Hermes 에이전트입니다.
+    const systemPrompt = `당신은 Trading Taro 프로젝트의 Hermes 에이전트입니다.
 CEO가 Slack에서 물어보는 질문에 한국어로 간결하게 답합니다.
 현재 파이프라인 상태를 바탕으로 구체적이고 actionable한 답변을 제공하세요.
 
@@ -170,32 +167,37 @@ ${runList || "(없음)"}
 - Slack mrkdwn 포맷 사용 (*볼드*, _이탤릭_, \`코드\`)
 - 확실하지 않은 것은 솔직하게 모른다고 답변`;
 
-    const res = await fetch(`${GEMINI_URL}?key=${AI_API_KEY}`, {
+    const res = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${GITHUB_PAT}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents: [
-          ...historyContents,
-          { role: "user", parts: [{ text: question }] },
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...historyMessages,
+          { role: "user", content: question },
         ],
-        generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
+        max_tokens: 500,
+        temperature: 0.3,
       }),
     });
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => "(no body)");
-      throw new Error(`Gemini API ${res.status} — ${errBody.slice(0, 200)}`);
+      throw new Error(`AI API ${res.status} — ${errBody.slice(0, 300)}`);
     }
 
     const data = (await res.json()) as {
-      candidates?: { content: { parts: { text: string }[] } }[];
       error?: { message: string };
+      choices: { message: { content: string } }[];
     };
 
-    if (data.error) throw new Error(data.error.message || "Gemini API error");
+    if (data.error) throw new Error(data.error.message || "AI API error");
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const reply = data.choices?.[0]?.message?.content?.trim();
 
     if (!reply) throw new Error("AI 응답이 비어있습니다");
 
