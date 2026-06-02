@@ -205,7 +205,14 @@ ${runList || "(없음)"}
 개발 실행 규칙 (중요):
 - 사용자가 **실제 코드 개발·구현 실행**을 지시하면(예: "개발해줘", "구현해줘", "만들어줘", "우선 개발해", "진행해"), 답변 맨 끝에 정확히 \`[[TRIGGER_IMPLEMENT]]\` 토큰을 단독 줄로 출력한다. 이 토큰은 실제 auto-implement 워크플로우를 실행시킨다.
 - 단순 질문·요약·상태 확인·의견 요청에는 절대 이 토큰을 출력하지 마라.
-- 토큰을 출력할 때는 "개발을 시작하겠다"는 취지의 답변과 함께 출력한다.`;
+- 토큰을 출력할 때는 "개발을 시작하겠다"는 취지의 답변과 함께 출력한다.
+
+Standing Constraint 규칙 (중요):
+- CEO가 **앞으로 계속 지켜야 할 규칙·방향·금지사항**을 지시하면(예: "앞으로 X 하지 마", "항상 토스처럼 가", "그건 영구 금지", "이제부터 Y는 금지"), 답변 끝에 단독 줄로 정확히 다음을 출력한다:
+  \`[[ADD_CONSTRAINT]]{"rule":"<한 문장 규칙>","scope":["pm"|"frontend"|"backend"|"design"|"qa"|"cto"|"marketing"|"security"|"prompt"|"all"],"kind":"prohibition"|"preference"|"priority"|"mental-model","permanent":true}\`
+  JSON은 반드시 한 줄. 전체 적용이면 scope를 ["all"]로.
+- **1회성 지시**("이번엔 이거 해", "오늘은 온보딩부터")에는 절대 이 토큰을 출력하지 마라 — 반복 적용 가능한 영구 규칙일 때만.
+- 토큰 출력 시 "규칙으로 등록하겠다"는 취지의 답변과 함께 출력한다.`;
 
     const res = await fetch(AI_URL, {
       method: "POST",
@@ -240,6 +247,28 @@ ${runList || "(없음)"}
     let reply = data.choices?.[0]?.message?.content?.trim();
 
     if (!reply) throw new Error("AI 응답이 비어있습니다");
+
+    // Standing Constraint 적재 인텐트 감지 → distill-constraints 워크플로우에 위임 (main 직접 push 금지)
+    const constraintMatch = reply.match(/\[\[ADD_CONSTRAINT\]\]\s*(\{[^\n]*\})/);
+    if (constraintMatch && constraintMatch[1]) {
+      reply = reply.replace(/\[\[ADD_CONSTRAINT\]\]\s*\{[^\n]*\}/g, "").trim();
+      const payloadRaw: string = constraintMatch[1];
+      try {
+        const parsed = JSON.parse(payloadRaw) as { rule?: string; scope?: unknown };
+        if (!parsed.rule || typeof parsed.rule !== "string") {
+          throw new Error("rule 필드 누락");
+        }
+        const sourceHint = `slack/${channel}/${rootThreadTs || threadTs || ""}`;
+        await triggerWorkflow("distill-constraints.yml", {
+          manual_constraint: payloadRaw,
+          source_hint: sourceHint,
+        });
+        const scopeStr = Array.isArray(parsed.scope) ? parsed.scope.join(", ") : "all";
+        reply += `\n\n🔒 *Standing Constraint 추가 요청됨*: "${parsed.rule}" (scope: ${scopeStr}).\n리뷰 PR이 생성됩니다 — 머지하면 다음 사이클부터 모든 에이전트가 준수합니다.`;
+      } catch (e) {
+        reply += `\n\n⚠️ Constraint 적재 실패: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
 
     // 개발 실행 인텐트 감지 → 실제 auto-implement 워크플로우 트리거
     if (reply.includes("[[TRIGGER_IMPLEMENT]]")) {

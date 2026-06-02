@@ -1,0 +1,37 @@
+{
+  "constraints": [
+    {
+      "id": "c-20260530-datamismatch",
+      "rule": "데이터 불일치/결측/오류를 사용자에게 직접 알리는 UI(배너·경고·\"데이터가 일치하지 않습니다\" 등) 제안 금지. 정합성 문제는 로딩 스켈레톤을 유지하며 백엔드에서 자동 해결하고, 사용자에게는 항상 정합된 데이터만 보여준다. DataMismatchBanner류 자동 폐기.",
+      "scope": ["pm", "frontend", "backend", "all"],
+      "kind": "prohibition",
+      "source": "ceo-brief / 2026-05-30 CEO 직접 피드백",
+      "permanent": true,
+      "createdAt": "2026-05-30",
+      "expiresAt": null,
+      "hits": 0
+    },
+    {
+      "id": "c-20260526-effectsban",
+      "rule": "이펙트/사운드/햅틱/글로우/파티클/반짝임/싱크로 효과/BGM/장식 애니메이션/버튼 펄스·진동 등 시각적·청각적 폴리싱 제안 금지. 사용자 경험(플로우·정보 위계·접근성)과 콘텐츠(해석 품질·카드 서사·재방문 동기)에만 집중한다.",
+      "scope": ["all"],
+      "kind": "prohibition",
+      "source": "ceo / 2026-05-26 CEO 직접 지시",
+      "permanent": true,
+      "createdAt": "2026-05-26",
+      "expiresAt": null,
+      "hits": 0
+    },
+    {
+      "id": "c-20260522-tossmentalmodel",
+      "rule": "증권 관련 UX(종목 상세·차트·재무·뉴스·공시)의 멘탈모델은 토스증권(tossinvest.com)이다. 정보 위계·레이아웃·데이터 표시는 토스증권을 레퍼런스로 한다. 토스와 동떨어진 금융 UX 제안은 토스 레퍼런스 근거가 필요하다.",
+      "scope": ["pm", "frontend", "design", "all"],
+      "kind": "mental-model",
+      "source": "north-star / 2026-05-22",
+      "permanent": true,
+      "createdAt": "2026-05-22",
+      "expiresAt": null,
+      "hits": 0
+    }
+  ]
+}

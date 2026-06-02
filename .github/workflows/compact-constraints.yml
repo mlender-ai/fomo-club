@@ -1,0 +1,76 @@
+name: Compact Standing Constraints
+
+# weekly — 만료/중복 standing constraint 정리. 변경 있으면 리뷰 PR.
+# 무한 성장 방지 (Phase 2 Task 5).
+
+on:
+  schedule:
+    - cron: "0 21 * * 0"  # 매주 월요일 오전 6시 KST (UTC 일 21:00)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: compact-constraints
+  cancel-in-progress: false
+
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Compact constraints
+        id: compact
+        run: |
+          set -uo pipefail
+          if [ ! -f constraints/active.json ]; then
+            echo "active.json 없음 — skip"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+          BEFORE=$(jq '.constraints | length' constraints/active.json)
+          npx -y tsx@4.19.2 scripts/constraints.ts compact constraints/active.json "$TODAY" > /tmp/compacted.json 2>/dev/null || true
+          if ! jq empty /tmp/compacted.json 2>/dev/null; then
+            echo "compact 실패 — 변경 없음"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          AFTER=$(jq '.constraints | length' /tmp/compacted.json)
+          echo "before=$BEFORE after=$AFTER"
+          # 내용 동일하면 변경 없음
+          if diff -q <(jq -S . constraints/active.json) <(jq -S . /tmp/compacted.json) >/dev/null 2>&1; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            cp /tmp/compacted.json constraints/active.json
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "removed=$((BEFORE - AFTER))" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create review PR
+        if: steps.compact.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          TODAY="${{ steps.compact.outputs.today }}"
+          REMOVED="${{ steps.compact.outputs.removed }}"
+          BRANCH="constraints/compact-${TODAY}-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add constraints/active.json
+          git commit -m "chore(constraints): compact — 만료/중복 ${REMOVED}건 정리 (${TODAY})"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "🧹 Standing Constraints 압축 — ${REMOVED}건 정리 (${TODAY})" \
+            --body "weekly compact: 만료(expiresAt 경과)·정규화 중복 constraint를 제거했습니다. 검토 후 머지하세요." \
+            --label "constraints,needs-ceo-review" \
+            --repo "${{ github.repository }}"
+
+      - name: No change
+        if: steps.compact.outputs.changed != 'true'
+        run: echo "정리할 constraint 없음 — PR 생성 안 함."

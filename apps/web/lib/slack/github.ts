@@ -83,6 +83,14 @@ export async function getMergedPRs(since: string, limit = 20) {
   );
 }
 
+export async function getFileContent(path: string): Promise<string> {
+  const res = (await githubApi(
+    `/repos/${REPO}/contents/${path}`
+  )) as { content?: string; encoding?: string };
+  if (!res.content) return "";
+  return Buffer.from(res.content, (res.encoding as BufferEncoding) || "base64").toString("utf8");
+}
+
 export async function getRecentIssues(label: string, since: string, limit = 20) {
   return githubApi(
     `/repos/${REPO}/issues?labels=${encodeURIComponent(label)}&state=all&per_page=${limit}&sort=created&direction=desc`

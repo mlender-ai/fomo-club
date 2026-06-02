@@ -5,6 +5,7 @@ import {
   addLabel,
   mergePR,
   getWorkflowRuns,
+  getFileContent,
 } from "./github";
 
 interface CommandResult {
@@ -14,10 +15,10 @@ interface CommandResult {
 type CommandHandler = (args: string, userId: string) => Promise<CommandResult>;
 
 // GitHub API 다중 호출 등 3초 초과 가능성 있는 커맨드
-export const SLOW_COMMANDS = new Set(["status", "implement", "council", "merge"]);
+export const SLOW_COMMANDS = new Set(["status", "implement", "council", "merge", "constraints"]);
 
 // 알려진 커맨드 목록 — events/route.ts에서 chat vs command 분기에 사용
-export const KNOWN_COMMANDS = new Set(["implement", "council", "status", "approve", "merge", "help"]);
+export const KNOWN_COMMANDS = new Set(["implement", "council", "status", "approve", "merge", "help", "constraints"]);
 
 const commands: Record<string, CommandHandler> = {
   implement: handleImplement,
@@ -25,6 +26,7 @@ const commands: Record<string, CommandHandler> = {
   status: handleStatus,
   approve: handleApprove,
   merge: handleMerge,
+  constraints: handleConstraints,
   help: handleHelp,
 };
 
@@ -115,6 +117,29 @@ async function handleMerge(args: string): Promise<CommandResult> {
   return { text: `PR #${prNum} 머지 완료 (squash)` };
 }
 
+interface ActiveConstraint {
+  rule: string;
+  scope: string[];
+  kind: string;
+  source: string;
+}
+
+async function handleConstraints(): Promise<CommandResult> {
+  try {
+    const raw = await getFileContent("constraints/active.json");
+    if (!raw) return { text: "등록된 standing constraint가 없습니다." };
+    const parsed = JSON.parse(raw) as { constraints?: ActiveConstraint[] };
+    const list = parsed.constraints ?? [];
+    if (list.length === 0) return { text: "등록된 standing constraint가 없습니다." };
+    const lines = list.map(
+      (c) => `• [${c.kind}] (${c.scope.join(",")}) ${c.rule}  _(${c.source})_`
+    );
+    return { text: `*🔒 Standing Constraints (${list.length}건)*\n\n${lines.join("\n")}` };
+  } catch (e) {
+    return { text: `constraints 조회 실패: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
 async function handleHelp(): Promise<CommandResult> {
   return {
     text: [
@@ -124,6 +149,7 @@ async function handleHelp(): Promise<CommandResult> {
       "`/taro status` — 오픈 PR + CEO Brief + 실행 상태 요약",
       "`/taro approve {이슈#}` — 이슈에 implement-approved 라벨 추가",
       "`/taro merge {PR#}` — PR squash 머지",
+      "`/taro constraints` — 현재 등록된 standing constraints 목록",
       "`/taro help` — 이 도움말",
     ].join("\n"),
   };
