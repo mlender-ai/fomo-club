@@ -83,6 +83,79 @@ export async function getMergedPRs(since: string, limit = 20) {
   );
 }
 
+// ── Step 1 (읽기 천장): 본문 조회 함수 ──────────────────────────────
+
+/** 가장 최근 ceo-brief 이슈 1건의 본문 전문 (state=all — 닫힌 과거 브리핑도 포함). */
+export async function getLatestCEOBrief(): Promise<{
+  number: number;
+  title: string;
+  body: string;
+} | null> {
+  const issues = (await githubApi(
+    `/repos/${REPO}/issues?labels=ceo-brief&state=all&per_page=1&sort=created&direction=desc`
+  )) as { number: number; title: string; body: string | null }[];
+  const top = issues[0];
+  if (!top) return null;
+  return { number: top.number, title: top.title, body: top.body ?? "" };
+}
+
+/** 특정 이슈의 본문 + 최근 코멘트. */
+export async function getIssue(n: number): Promise<{
+  number: number;
+  title: string;
+  body: string;
+  comments: string[];
+}> {
+  const issue = (await githubApi(`/repos/${REPO}/issues/${n}`)) as {
+    number: number;
+    title: string;
+    body: string | null;
+  };
+  let comments: string[] = [];
+  try {
+    const c = (await githubApi(
+      `/repos/${REPO}/issues/${n}/comments?per_page=10`
+    )) as { body: string | null }[];
+    comments = c.map((x) => x.body ?? "").filter((b) => b.length > 0);
+  } catch {
+    comments = [];
+  }
+  return { number: issue.number, title: issue.title, body: issue.body ?? "", comments };
+}
+
+/** 특정 PR 의 본문 + 상태 + 변경 파일 목록. */
+export async function getPR(n: number): Promise<{
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  merged: boolean;
+  files: string[];
+}> {
+  const pr = (await githubApi(`/repos/${REPO}/pulls/${n}`)) as {
+    number: number;
+    title: string;
+    body: string | null;
+    state: string;
+    merged?: boolean;
+  };
+  let files: string[] = [];
+  try {
+    const f = (await getPRFiles(n)) as { filename: string }[];
+    files = f.map((x) => x.filename);
+  } catch {
+    files = [];
+  }
+  return {
+    number: pr.number,
+    title: pr.title,
+    body: pr.body ?? "",
+    state: pr.state,
+    merged: pr.merged ?? false,
+    files,
+  };
+}
+
 export async function getFileContent(path: string): Promise<string> {
   const res = (await githubApi(
     `/repos/${REPO}/contents/${path}`
