@@ -19,6 +19,11 @@ import {
 } from "@/lib/slack/github";
 import { classifyIntent, truncate } from "@/lib/slack/intent";
 import { resolveAgent, axisIdentity } from "@/lib/slack/agents";
+import {
+  isCeoDecisionThread,
+  classifyDecision,
+  decisionGuidance,
+} from "@/lib/slack/decision";
 import { parseActions, type ParsedAction } from "@/lib/slack/actions";
 
 interface SlackEvent {
@@ -170,6 +175,13 @@ async function handleAgentChat(
       historyMessages.push({ role: msg.bot_id ? "assistant" : "user", content: cleaned });
     }
 
+    // ── Stage D: 합의 실패 → CEO 판정 스레드면, CEO 발화를 결정으로 보고 규칙화 유도 ──
+    let decisionAddendum = "";
+    if (isCeoDecisionThread(threadHistoryResult)) {
+      const kind = classifyDecision(question);
+      decisionAddendum = decisionGuidance(kind);
+    }
+
     // ── Step 1: 의도 분류 → 필요한 데이터를 본문까지 깊게 로드 ──
     const intent = classifyIntent(question);
 
@@ -303,7 +315,7 @@ ${runList || "(없음)"}
 
 - **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
 - merge/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
-- add_constraint 는 "앞으로 항상/절대" 류의 반복 규칙에만. 1회성 지시("오늘은 온보딩부터")엔 금지.`;
+- add_constraint 는 "앞으로 항상/절대" 류의 반복 규칙에만. 1회성 지시("오늘은 온보딩부터")엔 금지.${decisionAddendum}`;
 
     const res = await fetch(AI_URL, {
       method: "POST",

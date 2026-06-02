@@ -27,6 +27,7 @@ import {
   type AxisStance,
 } from "../apps/web/lib/slack/meeting";
 import { AXES, type Axis, type AxisId } from "../apps/web/lib/slack/agents";
+import { CEO_DECISION_MARKER } from "../apps/web/lib/slack/decision";
 import { loadConstraints, activeConstraints, checkViolations } from "./constraints";
 
 const ROOT = join(__dirname, "..");
@@ -216,7 +217,7 @@ async function main() {
     await speak(
       axisOf("default"),
       args.channel,
-      `⚠️ *합의 실패* — ${consensus.opposers.join(", ")} 축이 반대. <@CEO> 판단이 필요합니다.\n발언 한마디로 결정하면 영구 규칙(standing constraint)으로 반영됩니다.`,
+      `⚠️ *합의 실패* — ${consensus.opposers.join(", ")} 축이 반대. <@CEO> 판단이 필요합니다.\n발언 한마디로 결정하면 영구 규칙(standing constraint)으로 반영됩니다. ${CEO_DECISION_MARKER}`,
       threadTs,
       args.dryRun,
     );
