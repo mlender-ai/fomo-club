@@ -22,6 +22,7 @@ import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
 import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
+import { DataFetchError } from "../../components/ui/DataFetchError";
 import { planTabSwitch, shouldShowCompactHeader } from "@trading/shared/src/tabScrollPositions";
 import { useStockStore, type ChartRange } from "../../lib/stockStore";
 import { useDeferredRender } from "../../lib/useDeferredRender";
@@ -54,7 +55,7 @@ export default function TickerDetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
   const { isLoggedIn, userId } = useUserStore();
   const {
-    quote, chartBars, chartRange, quoteLoading, chartLoading,
+    quote, chartBars, chartRange, quoteLoading, chartLoading, error,
     profile, quarterlyEarnings, annualFinancials, keyMetrics, financialsLoading,
     fetchBundle, fetchChart, clearActive,
   } = useStockStore();
@@ -88,6 +89,13 @@ export default function TickerDetailScreen() {
       fetchChart(symbol, undefined, { force: true }),
     ]);
     setRefreshing(false);
+  }, [symbol, fetchBundle, fetchChart]);
+
+  // 첫 진입 fetch 실패(캐시 없음)에서 빈 화면 대신 노출하는 재시도. force로 캐시 무효화 후 재요청.
+  const handleRetry = useCallback(() => {
+    if (!symbol) return;
+    fetchBundle(symbol, { force: true });
+    fetchChart(symbol, undefined, { force: true });
   }, [symbol, fetchBundle, fetchChart]);
 
   const handleRangeChange = useCallback(
@@ -141,6 +149,26 @@ export default function TickerDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <TickerDetailSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  // 첫 진입 fetch 실패(캐시 없음): 조용히 빈 화면을 내보내는 대신 폴백 + 재시도 노출 (#292)
+  if (error && !quote) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.navHeader}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text variant="body-sm" color={Colors.midGrayText}>← 뒤로</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorWrap}>
+          <DataFetchError
+            label={symbol}
+            message="종목 정보를 불러오지 못했어요"
+            onRetry={handleRetry}
+          />
+        </View>
       </SafeAreaView>
     );
   }
@@ -374,4 +402,6 @@ const styles = StyleSheet.create({
   rangeTextActive: { fontWeight: "700" },
 
   ctaSection:   { paddingHorizontal: Spacing.s24, marginTop: Spacing.s8 },
+
+  errorWrap:    { flex: 1, justifyContent: "center", paddingHorizontal: Spacing.s24 },
 });

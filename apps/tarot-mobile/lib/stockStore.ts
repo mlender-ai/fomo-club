@@ -210,7 +210,8 @@ export const useStockStore = create<StockState>((set, get) => ({
           [cacheKey]: { bars: data.bars, range: r, cachedAt: Date.now() },
         },
       }));
-    } catch {
+    } catch (err) {
+      console.warn("[stockStore] fetchChart error:", err instanceof Error ? err.message : err);
       set({ chartLoading: false });
     }
   },
@@ -263,7 +264,8 @@ export const useStockStore = create<StockState>((set, get) => ({
           },
         },
       }));
-    } catch {
+    } catch (err) {
+      console.warn("[stockStore] fetchFinancials error:", err instanceof Error ? err.message : err);
       set({ financialsLoading: false });
     }
   },
