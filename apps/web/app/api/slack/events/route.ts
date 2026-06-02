@@ -18,6 +18,7 @@ import {
   getTodayAutoPRs,
 } from "@/lib/slack/github";
 import { classifyIntent, truncate } from "@/lib/slack/intent";
+import { resolveAgent, axisIdentity } from "@/lib/slack/agents";
 import { parseActions, type ParsedAction } from "@/lib/slack/actions";
 
 interface SlackEvent {
@@ -152,8 +153,12 @@ async function handleAgentChat(
     return;
   }
 
+  // 발화 축 결정 (Agent Team Stage A) — @CTO/@PM/@Security 또는 키워드, 없으면 Hermes
+  const axis = resolveAgent(question);
+  const identity = axisIdentity(axis);
+
   try {
-    await postMessage(channel, `🤔 생각 중...`, threadTs);
+    await postMessage(channel, `🤔 생각 중...`, threadTs, identity);
 
     // 스레드 히스토리 조회
     const threadHistoryResult = rootThreadTs ? await getThreadHistory(channel, rootThreadTs).catch(() => []) : [];
@@ -241,8 +246,8 @@ async function handleAgentChat(
     }
     if (!detailSection) detailSection = "(특정 이슈/PR 언급 없음)";
 
-    const systemPrompt = `당신은 Trading Taro 프로젝트의 Hermes 에이전트입니다.
-CEO가 Slack에서 물어보는 질문에 한국어로 간결하게 답합니다.
+    const systemPrompt = `${axis.personaPrompt}
+CEO가 Slack에서 물어보는 질문에 한국어로 간결하게, 당신 축의 관점에서 답합니다.
 현재 파이프라인 상태를 바탕으로 구체적이고 actionable한 답변을 제공하세요.
 
 현재 컨텍스트:
@@ -341,13 +346,14 @@ ${runList || "(없음)"}
       reply += "\n\n" + (await executeAction(action, channel, rootThreadTs || threadTs));
     }
 
-    await postMessage(channel, reply, threadTs);
+    await postMessage(channel, reply, threadTs, identity);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await postMessage(
       channel,
       `❌ 답변 생성 실패: ${msg}\n커맨드는 \`/taro help\`를 입력하세요.`,
-      threadTs
+      threadTs,
+      identity
     ).catch(() => {});
   }
 }

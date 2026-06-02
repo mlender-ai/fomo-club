@@ -33,11 +33,24 @@ export async function slackApi(
   return res.json() as Promise<SlackResponse>;
 }
 
-export async function postMessage(channel: string, text: string, threadTs?: string) {
+/** 발화자 정체성 — 축마다 다른 username/아이콘으로 발화 (Agent Team Stage A). */
+export interface SlackIdentity {
+  username?: string;
+  icon_emoji?: string;
+}
+
+export async function postMessage(
+  channel: string,
+  text: string,
+  threadTs?: string,
+  identity?: SlackIdentity
+) {
   return slackApi("chat.postMessage", {
     channel,
     text,
     ...(threadTs && { thread_ts: threadTs }),
+    ...(identity?.username && { username: identity.username }),
+    ...(identity?.icon_emoji && { icon_emoji: identity.icon_emoji }),
   });
 }
 
