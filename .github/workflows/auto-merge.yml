@@ -152,7 +152,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           PR_URL="https://github.com/${REPO}/pull/${PR_NUMBER}"
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          curl -s -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "{
               \"text\": \"🚀 *자동 머지 완료* — Hermes\n>#${PR_NUMBER}: ${PR_TITLE}\n>${PR_URL}\"
@@ -187,7 +187,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           PR_URL="https://github.com/${REPO}/pull/${PR_NUMBER}"
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          curl -s -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "{
               \"text\": \"🚫 *자동 머지 차단* — 수동 검토 필요\n>#${PR_NUMBER}: ${PR_TITLE}\n>사유: ${REASON}\n>${PR_URL}\"
