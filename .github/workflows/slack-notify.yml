@@ -36,7 +36,7 @@ jobs:
           MSG: ${{ github.event.inputs.message }}
         run: |
           PAYLOAD=$(jq -n --arg text "📢 $MSG" '{"text": $text}')
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
 
@@ -55,7 +55,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg text "🤖 *Auto PR 생성됨*\n>#${PR_NUMBER}: ${PR_TITLE}\n>${PR_URL}\n\n✅ CI가 자동 실행 중입니다." \
             '{"text": $text}')
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
 
@@ -75,7 +75,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg text "✅ *Auto PR 머지됨*\n>#${PR_NUMBER}: ${PR_TITLE}\n>${PR_URL}" \
             '{"text": $text}')
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
 
@@ -102,7 +102,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg text "${EMOJI} *CI ${STATUS}* — \`${BRANCH}\`\n>${RUN_URL}" \
             '{"text": $text}')
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
 
@@ -120,7 +120,7 @@ jobs:
           set -uo pipefail
           if [ "$CONCLUSION" != "success" ]; then
             jq -n --arg t "⚠️ *Daily Agent Council 실패*\n>${RUN_URL}" '{"text": $t}' > /tmp/payload.json
-            curl -sf -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d @/tmp/payload.json
+            curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" -H "Content-Type: application/json" -d @/tmp/payload.json
             exit 0
           fi
           # 최신 CEO Brief 본문을 단일 jq 패스로 Slack 페이로드화 (재파싱·개행 이슈 회피)
@@ -136,7 +136,7 @@ jobs:
                     + "\n\n_… 전체는 GitHub 이슈에서. 피드백은 이 스레드에 @봇 멘션으로._"
                   )}
                   end' > /tmp/payload.json
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d @/tmp/payload.json
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" -H "Content-Type: application/json" -d @/tmp/payload.json
 
       # ── Auto Implement 완료 ─────────────────────────────────
       - name: Auto implement completed
@@ -157,6 +157,6 @@ jobs:
               --arg text "❌ *Auto Implement 실패*\n>${RUN_URL}" \
               '{"text": $text}')
           fi
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"

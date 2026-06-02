@@ -69,4 +69,4 @@ jobs:
 
           TEXT="🔄 *주간 회고* (지난 7일)\n• 머지된 PR: *${MERGED}*\n• 처리/폐기된 제안 이슈: *${CLOSED}*\n• 현재 열린 제안: *${OPEN}*\n\n*🔒 규칙이 한 일:*\n• 활성 규칙: *${CONS}개*\n• 이번 주 사전 차단한 제안: *${HITS_WEEK}건*\n• 새로 학습한 규칙 후보(PR): *${NEW_PRS}건* / 리뷰 대기: *${REVIEW_PENDING}건*\n\n*CEO께 질문:*\n1. 이번 주 가장 잘된 것 / 막힌 것은?\n2. 다음 주 우선순위 방향은? (이 스레드에 답하면 기억에 적재됩니다 — @봇 멘션)${QUESTION3}"
           PAYLOAD=$(jq -n --arg text "$TEXT" '{"text": $text}')
-          curl -sf -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d "$PAYLOAD"
+          curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" -H "Content-Type: application/json" -d "$PAYLOAD"

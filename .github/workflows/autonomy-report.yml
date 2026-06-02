@@ -199,6 +199,6 @@ jobs:
             "_Hermes 자율 루프 — CEO 개입 없이 자동 운영 중_")
 
           jq -n --arg text "$MESSAGE" '{"text": $text}' > /tmp/report_payload.json
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+          curl -s -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
             -H "Content-Type: application/json" \
             -d @/tmp/report_payload.json
