@@ -232,6 +232,25 @@ export async function getRecentFeedbackLog(maxChars = 1500): Promise<string> {
   return body.length > maxChars ? body.slice(body.length - maxChars) : body;
 }
 
+/** 오늘자 [Auto] PR 목록 (open+merged 포함) — auto-implement 산출물 가시화/중복 안내용. */
+export async function getTodayAutoPRs(today: string): Promise<
+  { number: number; title: string; state: string; merged: boolean; html_url: string }[]
+> {
+  const prs = (await githubApi(
+    `/repos/${REPO}/pulls?state=all&per_page=30&sort=created&direction=desc`
+  )) as { number: number; title: string; state: string; merged_at: string | null; html_url: string }[];
+  const re = new RegExp(`\\[Auto\\].*${today.replace(/[-]/g, "\\-")}`);
+  return prs
+    .filter((p) => re.test(p.title))
+    .map((p) => ({
+      number: p.number,
+      title: p.title,
+      state: p.state,
+      merged: Boolean(p.merged_at),
+      html_url: p.html_url,
+    }));
+}
+
 export async function getFileContent(path: string): Promise<string> {
   const res = (await githubApi(
     `/repos/${REPO}/contents/${path}`

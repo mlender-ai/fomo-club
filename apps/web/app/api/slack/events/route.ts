@@ -15,6 +15,7 @@ import {
   addIssueComment,
   appendFeedbackLog,
   getRecentFeedbackLog,
+  getTodayAutoPRs,
 } from "@/lib/slack/github";
 import { classifyIntent, truncate } from "@/lib/slack/intent";
 import { parseActions, type ParsedAction } from "@/lib/slack/actions";
@@ -167,15 +168,34 @@ async function handleAgentChat(
     // ── Step 1: 의도 분류 → 필요한 데이터를 본문까지 깊게 로드 ──
     const intent = classifyIntent(question);
 
-    // 컨텍스트 수집 (병렬) — 항상 최신 CEO Brief 본문 + 오픈 PR/실행 상태 + 최근 피드백
-    const [prs, latestBrief, runs, feedbackLog] = await Promise.allSettled([
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+
+    // 컨텍스트 수집 (병렬) — 최신 CEO Brief 본문 + 오픈 PR + 실행 상태 + 피드백 + 오늘 Auto PR
+    const [prs, latestBrief, runs, feedbackLog, todayAuto] = await Promise.allSettled([
       getOpenPRs(5),
       getLatestCEOBrief(),
       getWorkflowRuns("auto-implement.yml", 5),
       getRecentFeedbackLog(1500),
+      getTodayAutoPRs(today),
     ]);
     const feedbackSection =
       feedbackLog.status === "fulfilled" && feedbackLog.value ? feedbackLog.value : "(적재된 피드백 없음)";
+
+    // auto-implement 실제 상태 (skip/no-op 도 conclusion=success 라 PR 존재로 판별)
+    const latestRun =
+      runs.status === "fulfilled"
+        ? ((runs.value as { workflow_runs?: { status: string; conclusion: string | null; html_url: string; created_at: string }[] })
+            .workflow_runs || [])[0]
+        : undefined;
+    const runStateLine = latestRun
+      ? `상태=${latestRun.status} / 결론=${latestRun.conclusion ?? "진행중"} (${latestRun.created_at})`
+      : "(실행 기록 없음)";
+    const autoPrList =
+      todayAuto.status === "fulfilled" && todayAuto.value.length > 0
+        ? todayAuto.value
+            .map((p) => `- #${p.number} [${p.merged ? "머지됨" : p.state}] ${p.title}\n  ${p.html_url}`)
+            .join("\n")
+        : "(오늘 생성된 Auto PR 없음)";
 
     const prList = prs.status === "fulfilled"
       ? (prs.value as { number: number; title: string; html_url: string }[])
@@ -238,7 +258,13 @@ ${detailSection}
 ## 최근 CEO 피드백 로그 (스레드 넘은 기억 — "어제 뭐라 했지?"에 답할 때 활용)
 ${feedbackSection}
 
-## 최근 auto-implement 실행
+## 오늘(${today}) auto-implement 산출 PR (실제 결과 — 이걸로 "개발됐는지" 판단)
+${autoPrList}
+
+## auto-implement 최신 실행 상태 (사실)
+${runStateLine}
+
+## 최근 auto-implement 실행 이력
 ${runList || "(없음)"}
 
 규칙:
@@ -246,6 +272,10 @@ ${runList || "(없음)"}
 - Slack mrkdwn 포맷 사용 (*볼드*, _이탤릭_, \`코드\`)
 - **위 컨텍스트에 본문이 주어졌으면 "확인할 수 없다"고 답하지 말고 그 내용을 직접 요약·인용해 답한다.**
 - 본문에 없는 정보만 "확인 불가"로 답한다
+- **개발/진행 상태(status)를 물으면 추측 금지. 오직 위 "오늘 auto-implement 산출 PR"과 "최신 실행 상태"의 사실만으로 답한다:**
+  - 최신 실행 상태가 in_progress/queued 면 "구현 진행 중", 그 외엔 진행 중이라고 말하지 마라.
+  - 오늘 Auto PR이 있으면 그 번호·머지여부·링크를 그대로 보여준다(이게 실제 개발 결과다).
+  - 오늘 Auto PR이 없고 최신 실행이 완료(success)인데 PR이 없으면 "최근 트리거는 중복/변경없음으로 건너뛰었을 수 있다"고 솔직히 답한다. 절대 "개발 진행 중"이라 지어내지 마라.
 
 액션 실행 규칙 (중요 — tool use):
 - CEO가 **명확히 실행을 지시**하면, 답변 끝에 단독 줄로 액션 토큰을 정확히 출력한다. 한 메시지당 1개만.
@@ -340,8 +370,17 @@ async function executeAction(
         const raw = action.payload.date;
         // 유효한 YYYY-MM-DD 만 사용, 아니면(placeholder 포함) 오늘 KST
         const date = typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : kstDate();
+        // auto-implement 는 같은 날 열린 Auto PR 이 있으면 내부에서 skip(no-op) 한다.
+        // 그 경우 트리거해도 아무것도 안 생기므로, 미리 확인해 사실대로 안내(조용한 no-op 방지).
+        const todays = await getTodayAutoPRs(date).catch(() => []);
+        const openAuto = todays.find((p) => p.state === "open");
+        if (openAuto) {
+          return `ℹ️ 오늘(${date}) 이미 열린 Auto PR이 있어 새로 트리거하지 않았습니다 (중복 시 자동 skip됨):\n#${openAuto.number} ${openAuto.title}\n${openAuto.html_url}\n→ 이 PR을 검토/머지하거나, 추가 작업이 필요하면 말씀해 주세요.`;
+        }
         await triggerWorkflow("auto-implement.yml", { brief_date: date });
-        return `🚀 *auto-implement 실행* (날짜: ${date}). 진행은 \`@봇 status\`로 확인하세요.`;
+        const done = todays.filter((p) => p.merged).length;
+        const doneNote = done > 0 ? ` (오늘 이미 ${done}건 머지됨)` : "";
+        return `🚀 *auto-implement 실행*${doneNote} — 날짜 ${date}. 구현은 수 분 걸리며 결과는 새 *[Auto] ${date}* PR로 옵니다. \`status\`로 실제 PR/실행 상태를 확인하세요.`;
       }
       case "merge": {
         const pr = Number(action.payload.pr);
