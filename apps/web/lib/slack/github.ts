@@ -1,6 +1,19 @@
 const GITHUB_PAT = process.env.GITHUB_PAT;
 const REPO = process.env.GITHUB_REPO || "mlender-ai/taro-stock-app";
 
+/**
+ * GitHub 응답을 안전하게 파싱.
+ * workflow dispatch 등 일부 엔드포인트는 성공 시 204 No Content(빈 본문)를 반환한다.
+ * 그때 res.json() 을 부르면 "Unexpected end of JSON input" 으로 터지므로
+ * 204/205/빈 본문은 null 을 반환한다. (순수 함수 — vitest 로 검증)
+ */
+export async function parseGitHubResponse(res: Response): Promise<unknown> {
+  if (res.status === 204 || res.status === 205) return null;
+  const text = await res.text();
+  if (!text || !text.trim()) return null;
+  return JSON.parse(text);
+}
+
 async function githubApi(path: string, options?: RequestInit) {
   if (!GITHUB_PAT) throw new Error("GITHUB_PAT not configured");
 
@@ -19,7 +32,7 @@ async function githubApi(path: string, options?: RequestInit) {
     throw new Error(`GitHub API ${res.status}: ${text}`);
   }
 
-  return res.json();
+  return parseGitHubResponse(res);
 }
 
 export async function triggerWorkflow(
@@ -85,8 +98,10 @@ export async function getPRFiles(prNumber: number) {
 export async function getMergedPRs(since: string, limit = 20) {
   return githubApi(
     `/repos/${REPO}/pulls?state=closed&per_page=${limit}&sort=updated&direction=desc`
-  ).then((prs: Array<{ merged_at: string | null; [key: string]: unknown }>) =>
-    prs.filter((pr) => pr.merged_at && pr.merged_at > since)
+  ).then((v) =>
+    (v as Array<{ merged_at: string | null; [key: string]: unknown }>).filter(
+      (pr) => pr.merged_at && pr.merged_at > since
+    )
   );
 }
 
@@ -228,7 +243,9 @@ export async function getFileContent(path: string): Promise<string> {
 export async function getRecentIssues(label: string, since: string, limit = 20) {
   return githubApi(
     `/repos/${REPO}/issues?labels=${encodeURIComponent(label)}&state=all&per_page=${limit}&sort=created&direction=desc`
-  ).then((issues: Array<{ created_at: string; [key: string]: unknown }>) =>
-    issues.filter((i) => i.created_at > since)
+  ).then((v) =>
+    (v as Array<{ created_at: string; [key: string]: unknown }>).filter(
+      (i) => i.created_at > since
+    )
   );
 }
