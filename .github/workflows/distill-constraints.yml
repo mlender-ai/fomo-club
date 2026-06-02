@@ -1,0 +1,190 @@
+name: Distill Standing Constraints
+
+# CEO 판정(브리핑 킬리스트·인사이트)·Slack 지시를 standing constraint 후보로 추출 →
+# scripts/constraints.ts 로 검증/dedup → constraints/active.json 에 머지 → 사람 리뷰 PR.
+# 자동 머지 비대상(needs-ceo-review). Slack [[ADD_CONSTRAINT]] 는 manual_constraint 로 위임됨.
+
+on:
+  workflow_dispatch:
+    inputs:
+      manual_constraint:
+        description: "Slack/수동 constraint JSON (단일 객체 또는 배열). 비우면 최신 CEO Brief에서 LLM 추출."
+        required: false
+        default: ""
+      source_hint:
+        description: "source 표기 (예: slack/<channel>/<ts>)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  models: read
+
+concurrency:
+  group: distill-constraints
+  cancel-in-progress: false
+
+jobs:
+  distill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Prepare inputs
+        id: prep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MANUAL: ${{ github.event.inputs.manual_constraint }}
+        run: |
+          set -uo pipefail
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+          if [ -n "$MANUAL" ]; then
+            echo "mode=manual" >> "$GITHUB_OUTPUT"
+            printf '%s' "$MANUAL" > /tmp/candidates.json
+            echo "Manual constraint payload received."
+          else
+            echo "mode=llm" >> "$GITHUB_OUTPUT"
+            # 최신 CEO Brief 본문 (킬리스트·인사이트·사용자 직접 지시 추출용)
+            gh issue list --label "ceo-brief" --state all --limit 1 \
+              --json number,body --repo "${{ github.repository }}" \
+              | jq -r '.[0] // {} | .body // ""' > /tmp/brief.md || true
+            gh issue list --label "ceo-brief" --state all --limit 1 \
+              --json number --repo "${{ github.repository }}" \
+              | jq -r '.[0].number // 0' > /tmp/brief_num.txt || echo 0 > /tmp/brief_num.txt
+            BBODY=$(head -c 6000 /tmp/brief.md)
+            echo "brief_body<<__BEOF__" >> "$GITHUB_OUTPUT"
+            echo "$BBODY" >> "$GITHUB_OUTPUT"
+            echo "__BEOF__" >> "$GITHUB_OUTPUT"
+          fi
+          # 현재 active constraints (LLM 에 중복 회피용 + 머지 베이스)
+          if [ -f constraints/active.json ]; then cp constraints/active.json /tmp/active.json; else echo '{"constraints":[]}' > /tmp/active.json; fi
+          ACTIVE_RULES=$(jq -r '.constraints[]? | "- " + .rule' /tmp/active.json 2>/dev/null | head -c 4000 || echo "(없음)")
+          echo "active_rules<<__AEOF__" >> "$GITHUB_OUTPUT"
+          echo "$ACTIVE_RULES" >> "$GITHUB_OUTPUT"
+          echo "__AEOF__" >> "$GITHUB_OUTPUT"
+
+      - name: LLM distill (브리핑 모드)
+        if: steps.prep.outputs.mode == 'llm'
+        id: llm
+        uses: actions/ai-inference@v1
+        continue-on-error: true
+        with:
+          model: openai/gpt-4o
+          max-tokens: 1500
+          system-prompt: |
+            당신은 CEO 판정에서 "반복 적용 가능한 영구 규칙"만 추출하는 추출기다.
+            출력은 **JSON 배열만**. 설명/마크다운 금지.
+            각 원소: {"rule": string, "scope": string[], "kind": "prohibition"|"preference"|"priority"|"mental-model", "permanent": boolean}
+            scope 는 ["pm","frontend","backend","design","qa","cto","marketing","security","prompt","all"] 중 해당하는 것. 전체 적용이면 ["all"].
+            규칙:
+            - 1회성 판단("이번 제안 채택", "오늘은 X부터")은 절대 제외. 앞으로 계속 지켜야 할 금지/선호/우선순위/멘탈모델만.
+            - 이미 아래 "현재 constraints"에 의미상 존재하는 것은 제외.
+            - 후보가 없으면 빈 배열 [] 출력.
+            - rule 은 한국어 한 문장, 구체적으로.
+          prompt: |
+            ## 현재 constraints (이것들과 의미가 겹치면 새로 만들지 마라)
+            ${{ steps.prep.outputs.active_rules }}
+
+            ## 최신 CEO Brief 본문 (이 안의 킬리스트·반복경고·CEO 인사이트·사용자 직접 지시에서만 추출)
+            ${{ steps.prep.outputs.brief_body }}
+
+            ---
+            위 브리핑에서 "앞으로 항상/절대 지켜야 할" 영구 규칙만 JSON 배열로 추출하라.
+            1회성 채택/지시는 제외. 후보가 없으면 [] 출력.
+
+      - name: Write LLM candidates
+        if: steps.prep.outputs.mode == 'llm'
+        env:
+          RESP: ${{ steps.llm.outputs.response }}
+        run: |
+          set -uo pipefail
+          # 코드펜스 제거 후 JSON 배열만 추출
+          printf '%s' "$RESP" | sed -E 's/^```[a-zA-Z]*//; s/```$//' > /tmp/resp_raw.txt
+          # 첫 '[' ~ 마지막 ']' 사이만 취함 (앞뒤 잡음 제거)
+          python3 - <<'PY' || echo '[]' > /tmp/candidates.json
+          import re, sys
+          try:
+              t = open('/tmp/resp_raw.txt', encoding='utf-8').read()
+              i, j = t.find('['), t.rfind(']')
+              out = t[i:j+1] if (i != -1 and j != -1 and j > i) else '[]'
+              import json; json.loads(out)  # 유효성 확인
+              open('/tmp/candidates.json','w',encoding='utf-8').write(out)
+          except Exception:
+              open('/tmp/candidates.json','w',encoding='utf-8').write('[]')
+          PY
+          echo "candidates:"; cat /tmp/candidates.json
+
+      - name: Merge into active.json (validate + dedup)
+        id: merge
+        env:
+          SOURCE_HINT: ${{ github.event.inputs.source_hint }}
+          MODE: ${{ steps.prep.outputs.mode }}
+        run: |
+          set -uo pipefail
+          TODAY="${{ steps.prep.outputs.today }}"
+          [ -f /tmp/candidates.json ] || echo '[]' > /tmp/candidates.json
+
+          # source 보강: manual 은 source_hint, llm 은 ceo-brief #번호
+          if [ "$MODE" = "manual" ]; then
+            SRC="${SOURCE_HINT:-slack/manual}"
+          else
+            BNUM=$(cat /tmp/brief_num.txt 2>/dev/null || echo 0)
+            SRC="ceo-brief #${BNUM}"
+          fi
+          # 후보 각 항목에 source/createdAt 보강 (없으면)
+          jq --arg src "$SRC" 'if type=="array" then map(. + {source: (.source // $src)}) else [] end' \
+            /tmp/candidates.json > /tmp/candidates_src.json 2>/dev/null || cp /tmp/candidates.json /tmp/candidates_src.json
+
+          BEFORE=$(jq '.constraints | length' /tmp/active.json)
+          npx -y tsx@4.19.2 scripts/constraints.ts add /tmp/active.json /tmp/candidates_src.json "$TODAY" > /tmp/merged.json 2> /tmp/merge_err.txt || true
+          cat /tmp/merge_err.txt || true
+          if ! jq empty /tmp/merged.json 2>/dev/null; then
+            echo "merge 실패 — 변경 없음"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          AFTER=$(jq '.constraints | length' /tmp/merged.json)
+          echo "before=$BEFORE after=$AFTER"
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            cp /tmp/merged.json constraints/active.json
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "added=$((AFTER - BEFORE))" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create review PR
+        if: steps.merge.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          TODAY="${{ steps.prep.outputs.today }}"
+          ADDED="${{ steps.merge.outputs.added }}"
+          BRANCH="constraints/distill-${TODAY}-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add constraints/active.json
+          git commit -m "feat(constraints): distill ${ADDED}개 standing constraint 후보 (${TODAY})"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "🔒 Standing Constraints 후보 ${ADDED}건 — CEO 리뷰 필요 (${TODAY})" \
+            --body "$(printf '%s\n' \
+              "CEO 판정/지시에서 자동 추출된 standing constraint 후보입니다." \
+              "" \
+              "- 출처 모드: ${{ steps.prep.outputs.mode }}" \
+              "- 추가 후보: ${ADDED}건" \
+              "" \
+              "**머지 전 검토**: 잘못된 일반화가 아닌지, 기존 규칙과 모순되지 않는지 확인하세요." \
+              "이 PR은 auto-merge 대상이 아닙니다 (needs-ceo-review).")" \
+            --label "constraints,needs-ceo-review" \
+            --repo "${{ github.repository }}"
+
+      - name: No change
+        if: steps.merge.outputs.changed != 'true'
+        run: echo "신규 constraint 후보 없음 — PR 생성 안 함."

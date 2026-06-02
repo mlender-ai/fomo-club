@@ -44,6 +44,7 @@ jobs:
       today: ${{ steps.fetch.outputs.today }}
       scoring_guide: ${{ steps.fetch.outputs.scoring_guide }}
       lane_state_json: ${{ steps.lane_state.outputs.lane_state_json }}
+      constraints_json: ${{ steps.constraints.outputs.constraints_json }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -224,6 +225,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # ── Standing Constraints (Phase 2) — CEO 확정 규칙 active 필터 ──
+      # constraints/active.json 의 active(permanent || 미만료) 만 추려 각 에이전트에 주입.
+      - name: Load active standing constraints
+        id: constraints
+        run: |
+          set -uo pipefail
+          TODAY="${{ steps.fetch.outputs.today }}"
+          if [ -f constraints/active.json ]; then
+            C_JSON=$(npx -y tsx@4.19.2 scripts/constraints.ts active constraints/active.json "$TODAY" 2>/dev/null || echo '[]')
+            [ -z "$C_JSON" ] && C_JSON='[]'
+          else
+            C_JSON='[]'
+          fi
+          echo "constraints_json<<__CEOF__" >> "$GITHUB_OUTPUT"
+          echo "$C_JSON" >> "$GITHUB_OUTPUT"
+          echo "__CEOF__" >> "$GITHUB_OUTPUT"
+          {
+            echo "### 🔒 Standing Constraints (active)"
+            echo '```json'
+            printf '%s\n' "$C_JSON" | jq . 2>/dev/null || printf '%s\n' "$C_JSON"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # ─────────────────────────────────────────────────────────────
   # 1. PM
   # ─────────────────────────────────────────────────────────────
@@ -243,6 +267,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -255,6 +280,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "pm" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["pm"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["pm"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -332,6 +363,10 @@ jobs:
           prompt: |
             ## 🌟 North Star (이번 주 단일 진실)
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -430,6 +465,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -441,6 +477,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "frontend" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["frontend"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["frontend"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -515,6 +557,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -607,6 +653,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -618,6 +665,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "backend" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["backend"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["backend"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -673,6 +726,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -750,6 +807,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -761,6 +819,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "design" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["design"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["design"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -817,6 +881,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -895,6 +963,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -906,6 +975,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "qa" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["qa"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["qa"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -961,6 +1036,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -1038,6 +1117,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -1049,6 +1129,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "cto" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["cto"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["cto"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -1104,6 +1190,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -1180,6 +1270,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -1191,6 +1282,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "marketing" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["marketing"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["marketing"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -1262,6 +1359,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -1359,6 +1460,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -1370,6 +1472,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "security" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["security"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["security"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -1412,6 +1520,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -1481,6 +1593,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
           LANE_STATE: ${{ needs.prepare.outputs.lane_state_json }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
           COUNT=$(gh issue list --label "agent-council" --state open --limit 10 \
             --json title --repo "${{ github.repository }}" | \
@@ -1492,6 +1605,12 @@ jobs:
           echo "lane_slice<<__EOF__" >> $GITHUB_OUTPUT
           echo "$LANE_SLICE" >> $GITHUB_OUTPUT
           echo "__EOF__" >> $GITHUB_OUTPUT
+          # Standing Constraints 슬라이스 (Phase 2)
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_SLICE=$(npx -y tsx@4.19.2 scripts/constraints.ts render-lane "prompt" /tmp/constraints.json 2>/dev/null || echo "")
+          echo "constraints_slice<<__CEOF__" >> $GITHUB_OUTPUT
+          echo "$C_SLICE" >> $GITHUB_OUTPUT
+          echo "__CEOF__" >> $GITHUB_OUTPUT
 
           DONE_NUMS=$(jq -r '(.["prompt"].done // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
           KILLED_NUMS=$(jq -r '(.["prompt"].killed // []) | map(.number) | join(" ")' /tmp/lane-state.json 2>/dev/null || echo "")
@@ -1547,6 +1666,10 @@ jobs:
           prompt: |
             ## 🌟 North Star
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 위반 시 자동 폐기, 하드코딩 개별 규칙보다 우선)
+            ${{ steps.ctx.outputs.constraints_slice }}
 
             ---
             ## 🧾 우리 직군 상태 원장 (DONE/KILLED/IN-PROGRESS — 재제안 금지)
@@ -1716,7 +1839,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          CONSTRAINTS_JSON: ${{ needs.prepare.outputs.constraints_json }}
         run: |
+          # Standing Constraints 요약 (Phase 2) — 브리핑이 판정 시 기존 규칙과 충돌 방지
+          printf '%s' "$CONSTRAINTS_JSON" > /tmp/constraints.json
+          C_BRIEF=$(npx -y tsx@4.19.2 scripts/constraints.ts render-brief /tmp/constraints.json 2>/dev/null || echo "(constraint 조회 실패)")
+          echo "constraints_brief<<__CBEOF__" >> $GITHUB_OUTPUT
+          echo "$C_BRIEF" >> $GITHUB_OUTPUT
+          echo "__CBEOF__" >> $GITHUB_OUTPUT
+
           # 오늘 사이클 agent-council open 이슈 원본 (번호·제목·라벨·본문)
           gh issue list --label "agent-council" --state open --limit 30 \
             --json number,title,labels,body --repo "${{ github.repository }}" \
@@ -1800,6 +1931,10 @@ jobs:
           prompt: |
             ## 🌟 North Star (이번 주 테마)
             ${{ needs.prepare.outputs.north_star }}
+
+            ---
+            ## 🔒 Standing Constraints (CEO 확정 규칙 — 채점·킬리스트 판단의 상위 기준)
+            ${{ steps.today_issues.outputs.constraints_brief }}
 
             ---
             ## 📌 오늘 사이클 신규 이슈 (정확한 번호 — 우선순위 인용은 이 번호만 사용)
