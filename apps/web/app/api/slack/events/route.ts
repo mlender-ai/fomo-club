@@ -5,10 +5,13 @@ import { postMessage, getThreadHistory } from "@/lib/slack/client";
 import { dispatchCommand, KNOWN_COMMANDS } from "@/lib/slack/commands";
 import {
   getOpenPRs,
-  getCEOBriefIssues,
   getWorkflowRuns,
   triggerWorkflow,
+  getLatestCEOBrief,
+  getIssue,
+  getPR,
 } from "@/lib/slack/github";
+import { classifyIntent, truncate } from "@/lib/slack/intent";
 
 interface SlackEvent {
   type: string;
@@ -155,10 +158,13 @@ async function handleAgentChat(
       historyMessages.push({ role: msg.bot_id ? "assistant" : "user", content: cleaned });
     }
 
-    // 컨텍스트 수집 (병렬)
-    const [prs, briefs, runs] = await Promise.allSettled([
+    // ── Step 1: 의도 분류 → 필요한 데이터를 본문까지 깊게 로드 ──
+    const intent = classifyIntent(question);
+
+    // 컨텍스트 수집 (병렬) — 항상 최신 CEO Brief 본문 + 오픈 PR/실행 상태
+    const [prs, latestBrief, runs] = await Promise.allSettled([
       getOpenPRs(5),
-      getCEOBriefIssues(3),
+      getLatestCEOBrief(),
       getWorkflowRuns("auto-implement.yml", 5),
     ]);
 
@@ -168,11 +174,14 @@ async function handleAgentChat(
           .join("\n")
       : "(조회 실패)";
 
-    const briefList = briefs.status === "fulfilled"
-      ? (briefs.value as { number: number; title: string }[])
-          .map((b) => `- #${b.number}: ${b.title}`)
-          .join("\n")
-      : "(조회 실패)";
+    // 최신 CEO Brief — 제목만이 아니라 본문 전문(3000자)을 주입 (스크린샷 이슈 해결)
+    let briefSection = "(없음)";
+    if (latestBrief.status === "fulfilled" && latestBrief.value) {
+      const b = latestBrief.value;
+      briefSection = `#${b.number}: ${b.title}\n\n${truncate(b.body, 3000)}`;
+    } else if (latestBrief.status === "rejected") {
+      briefSection = "(조회 실패)";
+    }
 
     const runList = runs.status === "fulfilled"
       ? (
@@ -183,6 +192,26 @@ async function handleAgentChat(
           .join("\n")
       : "(조회 실패)";
 
+    // 의도에 따라 특정 이슈/PR 본문을 깊게 로드 (#NNN 언급 시)
+    let detailSection = "";
+    const issueDetails = await Promise.allSettled(intent.issueNumbers.map((n) => getIssue(n)));
+    for (const r of issueDetails) {
+      if (r.status === "fulfilled") {
+        const d = r.value;
+        const cmts = d.comments.length ? `\n코멘트: ${truncate(d.comments.join(" / "), 600)}` : "";
+        detailSection += `\n### 이슈 #${d.number}: ${d.title}\n${truncate(d.body, 2500)}${cmts}\n`;
+      }
+    }
+    const prDetails = await Promise.allSettled(intent.prNumbers.map((n) => getPR(n)));
+    for (const r of prDetails) {
+      if (r.status === "fulfilled") {
+        const d = r.value;
+        const files = d.files.length ? `\n변경 파일(${d.files.length}): ${truncate(d.files.join(", "), 800)}` : "";
+        detailSection += `\n### PR #${d.number}: ${d.title} [${d.merged ? "merged" : d.state}]\n${truncate(d.body, 2000)}${files}\n`;
+      }
+    }
+    if (!detailSection) detailSection = "(특정 이슈/PR 언급 없음)";
+
     const systemPrompt = `당신은 Trading Taro 프로젝트의 Hermes 에이전트입니다.
 CEO가 Slack에서 물어보는 질문에 한국어로 간결하게 답합니다.
 현재 파이프라인 상태를 바탕으로 구체적이고 actionable한 답변을 제공하세요.
@@ -191,8 +220,11 @@ CEO가 Slack에서 물어보는 질문에 한국어로 간결하게 답합니다
 ## 오픈 PR
 ${prList || "(없음)"}
 
-## 최근 CEO Brief
-${briefList || "(없음)"}
+## 최신 CEO Brief (본문)
+${briefSection}
+
+## 질문에서 언급된 이슈/PR 상세
+${detailSection}
 
 ## 최근 auto-implement 실행
 ${runList || "(없음)"}
@@ -200,7 +232,8 @@ ${runList || "(없음)"}
 규칙:
 - 답변은 3-5문장 이내로 간결하게
 - Slack mrkdwn 포맷 사용 (*볼드*, _이탤릭_, \`코드\`)
-- 확실하지 않은 것은 솔직하게 모른다고 답변
+- **위 컨텍스트에 본문이 주어졌으면 "확인할 수 없다"고 답하지 말고 그 내용을 직접 요약·인용해 답한다.**
+- 본문에 없는 정보만 "확인 불가"로 답한다
 
 개발 실행 규칙 (중요):
 - 사용자가 **실제 코드 개발·구현 실행**을 지시하면(예: "개발해줘", "구현해줘", "만들어줘", "우선 개발해", "진행해"), 답변 맨 끝에 정확히 \`[[TRIGGER_IMPLEMENT]]\` 토큰을 단독 줄로 출력한다. 이 토큰은 실제 auto-implement 워크플로우를 실행시킨다.
