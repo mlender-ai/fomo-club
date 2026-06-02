@@ -28,23 +28,8 @@ export interface CompanyProfile {
   website: string;
 }
 
-export interface KeyMetrics {
-  eps: number | null;
-  bookValue: number | null;
-  freeCashflow: number | null;
-  totalDebt: number | null;
-  totalCash: number | null;
-  currentRatio: number | null;
-  quickRatio: number | null;
-  returnOnAssets: number | null;
-  returnOnEquity: number | null;
-  debtToEquity: number | null;
-  revenueGrowth: number | null;
-  profitMargins: number | null;
-  grossMargins: number | null;
-  priceToSalesTrailing12Months: number | null;
-  pegRatio: number | null;
-}
+import type { KeyMetrics } from "@trading/shared/src/stockTypes";
+export type { KeyMetrics };
 
 interface FinancialsResponse {
   profile: CompanyProfile;

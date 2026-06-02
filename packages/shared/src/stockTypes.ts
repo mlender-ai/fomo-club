@@ -34,6 +34,25 @@ export interface StockQuote {
   dataAt: string;
 }
 
+// 종목 상세 재무 핵심 지표. 외부 데이터 소스 누락 시 null — 0과 결측을 구분한다.
+export interface KeyMetrics {
+  eps: number | null;
+  bookValue: number | null;
+  freeCashflow: number | null;
+  totalDebt: number | null;
+  totalCash: number | null;
+  currentRatio: number | null;
+  quickRatio: number | null;
+  returnOnAssets: number | null;
+  returnOnEquity: number | null;
+  debtToEquity: number | null;
+  revenueGrowth: number | null;
+  profitMargins: number | null;
+  grossMargins: number | null;
+  priceToSalesTrailing12Months: number | null;
+  pegRatio: number | null;
+}
+
 export interface StockChartBar {
   date: string; // ISO date or timestamp
   open: number;
