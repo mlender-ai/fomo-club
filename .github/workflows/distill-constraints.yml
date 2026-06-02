@@ -15,6 +15,11 @@ on:
         description: "source 표기 (예: slack/<channel>/<ts>)"
         required: false
         default: ""
+  # 고리1 (Phase 2.5): Daily Agent Council(=CEO Brief 생성) 성공 후 자동 distill.
+  # 후보 0건이면 PR 미생성(조용히 종료), 중복 후보는 add dedup 가 거름(멱등).
+  workflow_run:
+    workflows: ["Daily Agent Council"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -29,6 +34,8 @@ concurrency:
 jobs:
   distill:
     runs-on: ubuntu-latest
+    # workflow_run 으로 트리거되면 성공한 경우에만 (실패 브리핑은 distill 안 함). 수동은 항상 허용.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

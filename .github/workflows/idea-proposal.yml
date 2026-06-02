@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write  # score_and_filter 가 constraint hits 파일을 커밋(Phase 2.5)
   issues: write
   models: read
 
@@ -1741,9 +1741,14 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Parse scores and label/close
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Parse scores + constraint 위반 게이트 (Phase 2.5)
         env:
           GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
         run: |
           set -uo pipefail
           # 오늘 생성된 agent-council 라벨 open 이슈만 (24시간 이내)
@@ -1760,14 +1765,14 @@ jobs:
           COUNT=$(jq 'length' /tmp/issues.json)
           echo "Found $COUNT today's open agent-council issues"
 
-          STRONG=0
-          CONDITIONAL=0
-          CLOSED=0
-          MISSING=0
+          # lane 파생 jq (Phase 0/1 과 동일 규칙)
+          LANEJQ='([.labels[].name] - ["idea","agent-council","mobile","tech-debt","daily","score-strong","score-conditional","score-missing","constraint-violation"]) | (.[0] // "unknown")'
+          : > /tmp/violated_ids.txt   # 위반 constraint id 누적(파일 — 서브셸 안전)
 
           jq -c '.[]' /tmp/issues.json | while read -r issue; do
             NUM=$(echo "$issue" | jq -r '.number')
-            BODY=$(echo "$issue" | jq -r '.body')
+            echo "$issue" | jq -r '.body' > /tmp/body.txt
+            LANE=$(echo "$issue" | jq -r "$LANEJQ")
 
             # 이미 점수 라벨이 있으면 skip (재실행 안전성)
             HAS_LABEL=$(echo "$issue" | jq -r '.labels[].name' | grep -E 'score-(strong|conditional|missing)' || true)
@@ -1776,15 +1781,30 @@ jobs:
               continue
             fi
 
+            # ── Standing Constraint 위반 게이트 (고리 3, 결정론) ──
+            VIOL=$(npx -y tsx@4.19.2 scripts/constraints.ts check constraints/active.json "$LANE" /tmp/body.txt "$TODAY" 2>/dev/null || echo "[]")
+            if [ "$(echo "$VIOL" | jq 'length')" -gt 0 ]; then
+              RULE=$(echo "$VIOL" | jq -r '.[0].rule')
+              MATCHED=$(echo "$VIOL" | jq -r '[.[].matched] | join(", ")')
+              echo "$VIOL" | jq -r '.[].id' >> /tmp/violated_ids.txt
+              printf '%s\n' \
+                "⛔ Standing Constraint 위반 — 자동 폐기. 매칭: \`${MATCHED}\`" \
+                "> ${RULE}" \
+                "이 영역은 CEO가 확정한 규칙으로 금지됩니다. 규칙이 부당하면 constraints/active.json 리뷰 PR로 조정하세요." > /tmp/viol_comment.md
+              gh issue edit "$NUM" --add-label "constraint-violation,score-missing" --repo "${{ github.repository }}" || true
+              gh issue comment "$NUM" --repo "${{ github.repository }}" --body-file /tmp/viol_comment.md || true
+              gh issue close "$NUM" --repo "${{ github.repository }}" || true
+              continue
+            fi
+
             # 점수 파싱 — "Score: U=X F=Y N=Z A=W" 형식
-            SCORE_LINE=$(echo "$BODY" | grep -oE 'Score:[[:space:]]*U=[1-4][[:space:]]+F=[1-4][[:space:]]+N=[1-4][[:space:]]+A=[1-4]' | head -1 || true)
+            SCORE_LINE=$(grep -oE 'Score:[[:space:]]*U=[1-4][[:space:]]+F=[1-4][[:space:]]+N=[1-4][[:space:]]+A=[1-4]' /tmp/body.txt | head -1 || true)
 
             if [ -z "$SCORE_LINE" ]; then
               echo "#$NUM: 점수 형식 누락"
               gh issue edit "$NUM" --add-label "score-missing" --repo "${{ github.repository }}" || true
               gh issue comment "$NUM" --repo "${{ github.repository }}" \
                 --body "🤖 자동 점수 시스템: 본문에서 \`Score: U=X F=Y N=Z A=W\` 형식을 찾지 못했습니다. system-prompt 출력 가이드 확인 필요." || true
-              MISSING=$((MISSING+1))
               continue
             fi
 
@@ -1794,28 +1814,44 @@ jobs:
             A=$(echo "$SCORE_LINE" | grep -oE 'A=[1-4]' | grep -oE '[1-4]')
             TOTAL=$((U + F + N + A))
 
-            echo "#$NUM: U=$U F=$F N=$N A=$A 총합 $TOTAL"
+            echo "#$NUM: U=$U F=$F N=$N A=$A 총합 $TOTAL (lane=$LANE)"
 
             if [ "$TOTAL" -ge 14 ]; then
               gh issue edit "$NUM" --add-label "score-strong" --repo "${{ github.repository }}" || true
-              STRONG=$((STRONG+1))
             elif [ "$TOTAL" -ge 11 ]; then
               gh issue edit "$NUM" --add-label "score-conditional" --repo "${{ github.repository }}" || true
-              CONDITIONAL=$((CONDITIONAL+1))
             else
               gh issue comment "$NUM" --repo "${{ github.repository }}" \
                 --body "🤖 자동 점수 시스템: 총합 ${TOTAL}/16점 (U=$U F=$F N=$N A=$A). 임계값(11) 미달로 자동 폐기. 점수가 부당하다고 판단되면 이슈를 재개해 주세요." || true
               gh issue close "$NUM" --repo "${{ github.repository }}" || true
-              CLOSED=$((CLOSED+1))
             fi
           done
 
-          echo "---"
-          echo "## Daily scoring summary"
-          echo "- score-strong (≥14): $STRONG"
-          echo "- score-conditional (11-13): $CONDITIONAL"
-          echo "- auto-closed (≤10): $CLOSED"
-          echo "- score-missing: $MISSING"
+          # ── hits 집계 → generated/constraint-hits/<TODAY>.json (충돌 회피: 주간 compact 가 합산) ──
+          if [ -s /tmp/violated_ids.txt ]; then
+            mkdir -p generated/constraint-hits
+            sort /tmp/violated_ids.txt | uniq -c | \
+              jq -Rn '[inputs | ltrimstr(" ") | capture("(?<n>[0-9]+) +(?<id>.+)") | {(.id): (.n|tonumber)}] | add // {}' \
+              > "generated/constraint-hits/${TODAY}.json"
+            echo "constraint hits 기록:"; cat "generated/constraint-hits/${TODAY}.json"
+          else
+            echo "이번 사이클 constraint 위반 없음."
+          fi
+      - name: Commit constraint hits
+        if: always()
+        env:
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          set -uo pipefail
+          FILE="generated/constraint-hits/${TODAY}.json"
+          [ -f "$FILE" ] || { echo "hits 파일 없음 — 커밋 생략"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git diff --cached --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "chore(constraints): bump hits ${TODAY} [skip ci]"
+          # 동시 push 충돌 시 rebase 후 1회 재시도(보수적 — 실패해도 다음 사이클이 합산)
+          git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main || echo "push 실패 — 다음 사이클로 미룸"; }
 
   ceo_brief:
     needs: [prepare, pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer, score_and_filter]

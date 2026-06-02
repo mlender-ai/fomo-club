@@ -33,6 +33,8 @@ export interface Constraint {
   expiresAt: string | null;
   /** 이 제약이 실제로 제안을 막은 횟수(가치 측정) */
   hits: number;
+  /** 위반 탐지용 키워드(선택). 없으면 rule 에서 추출. */
+  keywords?: string[];
 }
 
 const KIND_LABEL: Record<ConstraintKind, string> = {
@@ -74,8 +76,14 @@ export function validateConstraint(obj: unknown, idx = 0): Constraint {
     throw new Error(`${where}: 비영구 constraint 는 expiresAt 필수`);
   }
   if (typeof o.hits !== "number" || !Number.isFinite(o.hits)) throw new Error(`${where}: hits number 필수`);
+  if (
+    o.keywords !== undefined &&
+    (!Array.isArray(o.keywords) || !o.keywords.every((k) => typeof k === "string"))
+  ) {
+    throw new Error(`${where}: keywords 는 string 배열`);
+  }
 
-  return {
+  const out: Constraint = {
     id: o.id,
     rule: o.rule.trim(),
     scope: o.scope as string[],
@@ -86,6 +94,8 @@ export function validateConstraint(obj: unknown, idx = 0): Constraint {
     expiresAt: (o.expiresAt as string | null) ?? null,
     hits: o.hits,
   };
+  if (Array.isArray(o.keywords) && o.keywords.length > 0) out.keywords = o.keywords as string[];
+  return out;
 }
 
 function validateAll(arr: unknown): Constraint[] {
@@ -198,6 +208,7 @@ export interface IncomingConstraint {
   permanent?: boolean;
   expiresAt?: string | null;
   id?: string;
+  keywords?: string[];
 }
 
 /** 외부(distill/Slack) 입력을 검증된 Constraint 로 정규화. */
@@ -222,6 +233,7 @@ export function normalizeIncoming(input: IncomingConstraint, today: string): Con
     createdAt: today,
     expiresAt,
     hits: 0,
+    ...(Array.isArray(input.keywords) && input.keywords.length > 0 ? { keywords: input.keywords } : {}),
   });
 }
 
@@ -260,6 +272,85 @@ export function mergeConstraints(
     seen.set(key, candidate);
   }
   return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 위반 탐지 (고리 3) + hits 집계 (고리 2) — Phase 2.5
+// ─────────────────────────────────────────────────────────────
+
+const STOPWORD_RE = /^(제안|금지|사용|등의|관련|있는|없는|해야|하지|대한|위한|으로|에서|이다|한다|및|또는|the|and|for|with)$/;
+
+/** constraint 의 위반 탐지 키워드 — 명시 keywords 우선, 없으면 rule 에서 보수적으로 추출. */
+export function constraintKeywords(c: Constraint): string[] {
+  if (c.keywords && c.keywords.length > 0) return c.keywords;
+  const out = new Set<string>();
+  // 1) 따옴표로 강조된 토큰 ("DataMismatchBanner" 등)
+  for (const m of c.rule.matchAll(/["'“”‘’]([^"'“”‘’]{2,40})["'“”‘’]/g)) {
+    if (m[1]) out.add(m[1].trim());
+  }
+  // 2) CamelCase/식별자형 영문 (DataMismatchBanner)
+  for (const m of c.rule.matchAll(/[A-Z][A-Za-z]{3,}/g)) {
+    if (m[0]) out.add(m[0]);
+  }
+  // 3) 가운뎃점(·)으로 나열된 금지 카테고리 토큰 (이펙트·사운드·햅틱·글로우…)
+  for (const seg of c.rule.split(/[()]/)) {
+    if (seg.includes("·")) {
+      for (const tok of seg.split(/[·,/]/)) {
+        const t = tok.trim();
+        if (t.length >= 2 && t.length <= 12 && !STOPWORD_RE.test(t)) out.add(t);
+      }
+    }
+  }
+  return Array.from(out);
+}
+
+export interface Violation {
+  constraint: Constraint;
+  matched: string;
+}
+
+/**
+ * 제안 텍스트가 해당 lane(+all) 의 *금지(prohibition)* constraint 키워드를 포함하면 위반.
+ * 보수적: prohibition kind 만, 키워드 정확 부분일치. 거짓양성 최소화(Phase 1 철학).
+ */
+export function checkViolations(
+  proposalText: string,
+  constraints: Constraint[],
+  lane: string,
+): Violation[] {
+  const text = (proposalText || "").toLowerCase();
+  if (!text) return [];
+  const result: Violation[] = [];
+  for (const c of constraints) {
+    if (c.kind !== "prohibition") continue;
+    if (!appliesToLane(c, lane)) continue;
+    for (const kw of constraintKeywords(c)) {
+      const k = kw.trim().toLowerCase();
+      if (k.length >= 2 && text.includes(k)) {
+        result.push({ constraint: c, matched: kw });
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+/** 여러 사이클 hit 맵({id:count})을 합산. */
+export function sumHitMaps(maps: Record<string, number>[]): Record<string, number> {
+  const total: Record<string, number> = {};
+  for (const m of maps) {
+    for (const [id, n] of Object.entries(m)) {
+      if (typeof n === "number" && Number.isFinite(n)) total[id] = (total[id] ?? 0) + n;
+    }
+  }
+  return total;
+}
+
+/** hit 맵을 constraints 에 누적 반영(불변 — 새 배열 반환). */
+export function applyHits(constraints: Constraint[], hitMap: Record<string, number>): Constraint[] {
+  return constraints.map((c) =>
+    hitMap[c.id] ? { ...c, hits: c.hits + hitMap[c.id]! } : c,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -313,9 +404,38 @@ function main(): void {
     const merged = mergeConstraints(existing, incoming, argv[5] ?? today);
     process.stdout.write(JSON.stringify({ constraints: merged.constraints }, null, 2));
     process.stderr.write(`added=${merged.added.length} skipped=${merged.skipped.length}\n`);
+  } else if (cmd === "check") {
+    // check <active.json> <lane> <proposal.txt> [today]
+    const all = loadConstraints(argv[3] ?? "");
+    const active = activeConstraints(all, argv[6] ?? today);
+    const lane = argv[4] ?? "";
+    let text = "";
+    try {
+      text = readFileSync(argv[5] ?? "", "utf8");
+    } catch {
+      text = "";
+    }
+    const violations = checkViolations(text, active, lane);
+    process.stdout.write(
+      JSON.stringify(violations.map((v) => ({ id: v.constraint.id, rule: v.constraint.rule, matched: v.matched }))),
+    );
+  } else if (cmd === "apply-hits") {
+    // apply-hits <active.json> <hitfile1> [hitfile2 ...] → {constraints:[]} (hits 누적)
+    const all = loadConstraints(argv[3] ?? "");
+    const maps: Record<string, number>[] = [];
+    for (const p of argv.slice(4)) {
+      try {
+        const raw = readFileSync(p, "utf8").trim();
+        if (raw) maps.push(JSON.parse(raw) as Record<string, number>);
+      } catch {
+        /* 파일 없거나 불량이면 무시 */
+      }
+    }
+    const updated = applyHits(all, sumHitMaps(maps));
+    process.stdout.write(JSON.stringify({ constraints: updated }, null, 2));
   } else {
     console.error(
-      "usage:\n  active <active.json> <today>\n  render-lane <lane> <array.json>\n  render-brief <array.json>\n  compact <active.json> <today>\n  add <active.json> <payload.json> <today>",
+      "usage:\n  active <active.json> <today>\n  render-lane <lane> <array.json>\n  render-brief <array.json>\n  compact <active.json> <today>\n  add <active.json> <payload.json> <today>\n  check <active.json> <lane> <proposal.txt> [today]\n  apply-hits <active.json> <hitfile...>",
     );
     process.exit(1);
   }

@@ -44,8 +44,29 @@ jobs:
             CONS=0
           fi
 
-          MERGED=${MERGED:-0}; CLOSED=${CLOSED:-0}; OPEN=${OPEN:-0}; CONS=${CONS:-0}
+          # Standing Constraint 효과 (Phase 2.5): 이번 주 막은 제안 + 신규 후보 + 리뷰 대기
+          SINCE_DATE=$(date -u -d '7 days ago' '+%Y-%m-%d' 2>/dev/null || date -u -v-7d '+%Y-%m-%d')
+          HITS_WEEK=0
+          if ls generated/constraint-hits/*.json >/dev/null 2>&1; then
+            WEEK_FILES=""
+            for f in generated/constraint-hits/*.json; do
+              b=$(basename "$f" .json)
+              if [ "$b" \> "$SINCE_DATE" ] || [ "$b" = "$SINCE_DATE" ]; then WEEK_FILES="$WEEK_FILES $f"; fi
+            done
+            [ -n "$WEEK_FILES" ] && HITS_WEEK=$(jq -s 'reduce .[] as $m (0; . + ([$m[]] | add // 0))' $WEEK_FILES 2>/dev/null || echo 0)
+          fi
+          NEW_PRS=$(gh pr list --label "constraints" --state all --limit 30 --json createdAt --repo "$REPO" 2>/dev/null \
+            | jq --arg s "${SINCE_DATE}T00:00:00Z" '[.[] | select(.createdAt >= $s)] | length' || echo 0)
+          REVIEW_PENDING=$(gh pr list --label "needs-ceo-review" --state open --limit 30 --json number --repo "$REPO" 2>/dev/null | jq 'length' || echo 0)
 
-          TEXT="🔄 *주간 회고* (지난 7일)\n• 머지된 PR: *${MERGED}*\n• 처리/폐기된 제안 이슈: *${CLOSED}*\n• 현재 열린 제안: *${OPEN}*\n• 등록된 standing constraints: *${CONS}*\n\n*CEO께 질문:*\n1. 이번 주 가장 잘된 것 / 막힌 것은?\n2. 다음 주 우선순위 방향은? (이 스레드에 답하면 기억에 적재됩니다 — @봇 멘션)"
+          MERGED=${MERGED:-0}; CLOSED=${CLOSED:-0}; OPEN=${OPEN:-0}; CONS=${CONS:-0}
+          HITS_WEEK=${HITS_WEEK:-0}; NEW_PRS=${NEW_PRS:-0}; REVIEW_PENDING=${REVIEW_PENDING:-0}
+
+          QUESTION3=""
+          if [ "$REVIEW_PENDING" -gt 0 ]; then
+            QUESTION3="\n3. 리뷰 대기 중인 규칙 PR이 *${REVIEW_PENDING}건* 있습니다. 지금 확인하시겠어요?"
+          fi
+
+          TEXT="🔄 *주간 회고* (지난 7일)\n• 머지된 PR: *${MERGED}*\n• 처리/폐기된 제안 이슈: *${CLOSED}*\n• 현재 열린 제안: *${OPEN}*\n\n*🔒 규칙이 한 일:*\n• 활성 규칙: *${CONS}개*\n• 이번 주 사전 차단한 제안: *${HITS_WEEK}건*\n• 새로 학습한 규칙 후보(PR): *${NEW_PRS}건* / 리뷰 대기: *${REVIEW_PENDING}건*\n\n*CEO께 질문:*\n1. 이번 주 가장 잘된 것 / 막힌 것은?\n2. 다음 주 우선순위 방향은? (이 스레드에 답하면 기억에 적재됩니다 — @봇 멘션)${QUESTION3}"
           PAYLOAD=$(jq -n --arg text "$TEXT" '{"text": $text}')
           curl -sf -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d "$PAYLOAD"

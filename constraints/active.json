@@ -9,7 +9,8 @@
       "permanent": true,
       "createdAt": "2026-05-30",
       "expiresAt": null,
-      "hits": 0
+      "hits": 0,
+      "keywords": ["DataMismatchBanner", "불일치 배너", "데이터 불일치 알림", "결측 경고 배너", "데이터가 일치하지 않습니다", "정합성 경고 배너"]
     },
     {
       "id": "c-20260526-effectsban",
@@ -20,7 +21,8 @@
       "permanent": true,
       "createdAt": "2026-05-26",
       "expiresAt": null,
-      "hits": 0
+      "hits": 0,
+      "keywords": ["햅틱", "글로우", "파티클", "반짝임", "BGM", "사운드 이펙트", "장식 애니메이션", "버튼 펄스", "진동 효과", "싱크로 효과"]
     },
     {
       "id": "c-20260522-tossmentalmodel",

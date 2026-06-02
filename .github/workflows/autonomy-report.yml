@@ -108,6 +108,45 @@ jobs:
           echo "$FEATURES" >> "$GITHUB_OUTPUT"
           echo "__FEAT_EOF__" >> "$GITHUB_OUTPUT"
 
+      # ── 2.5 Standing Constraint 효과 지표 (Phase 2.5 — "규칙이 일한다"를 숫자로) ──
+      - name: Collect constraint metrics
+        id: constraints
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          ACTIVE=0
+          if [ -f constraints/active.json ]; then ACTIVE=$(jq '.constraints | length' constraints/active.json 2>/dev/null || echo 0); fi
+          SINCE_DATE=$(TZ=Asia/Seoul date -d '7 days ago' '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Seoul date -v-7d '+%Y-%m-%d')
+
+          # 이번 주 막은 제안 수 + 상위 규칙 (generated/constraint-hits/<date>.json 이벤트 로그 합산)
+          HITS_WEEK=0; TOP="(없음)"
+          WEEK_FILES=""
+          if ls generated/constraint-hits/*.json >/dev/null 2>&1; then
+            for f in generated/constraint-hits/*.json; do
+              b=$(basename "$f" .json)
+              if [ "$b" \> "$SINCE_DATE" ] || [ "$b" = "$SINCE_DATE" ]; then WEEK_FILES="$WEEK_FILES $f"; fi
+            done
+            if [ -n "$WEEK_FILES" ]; then
+              HITS_WEEK=$(jq -s 'reduce .[] as $m (0; . + ([$m[]] | add // 0))' $WEEK_FILES 2>/dev/null || echo 0)
+            fi
+            TOP=$(jq -s 'reduce .[] as $m ({}; reduce ($m|to_entries[]) as $e (.; .[$e.key] += $e.value)) | to_entries | sort_by(-.value) | .[0:3] | map("\(.key)(\(.value))") | join(", ")' generated/constraint-hits/*.json 2>/dev/null || echo "(없음)")
+            [ -z "$TOP" ] && TOP="(없음)"
+          fi
+
+          # 이번 주 신규 constraint 후보 PR (distill) + 리뷰 대기
+          NEW_PRS=$(gh pr list --label "constraints" --state all --limit 30 --json createdAt --repo "${{ github.repository }}" 2>/dev/null \
+            | jq --arg s "${SINCE_DATE}T00:00:00Z" '[.[] | select(.createdAt >= $s)] | length' || echo 0)
+          REVIEW_PENDING=$(gh pr list --label "needs-ceo-review" --state open --limit 30 --json number --repo "${{ github.repository }}" 2>/dev/null | jq 'length' || echo 0)
+
+          echo "active=$ACTIVE" >> "$GITHUB_OUTPUT"
+          echo "hits_week=${HITS_WEEK:-0}" >> "$GITHUB_OUTPUT"
+          echo "new_prs=${NEW_PRS:-0}" >> "$GITHUB_OUTPUT"
+          echo "review_pending=${REVIEW_PENDING:-0}" >> "$GITHUB_OUTPUT"
+          echo "top<<__TOP_EOF__" >> "$GITHUB_OUTPUT"
+          echo "$TOP" >> "$GITHUB_OUTPUT"
+          echo "__TOP_EOF__" >> "$GITHUB_OUTPUT"
+
       # ── 3. Slack 리포트 전송 ────────────────────────────────────
       - name: Send weekly report
         env:
@@ -118,6 +157,11 @@ jobs:
           IMPL_RUNS: ${{ steps.metrics.outputs.impl_runs }}
           SUCCESS_RATE: ${{ steps.metrics.outputs.success_rate }}
           FEATURES: ${{ steps.features.outputs.features }}
+          C_ACTIVE: ${{ steps.constraints.outputs.active }}
+          C_HITS_WEEK: ${{ steps.constraints.outputs.hits_week }}
+          C_NEW_PRS: ${{ steps.constraints.outputs.new_prs }}
+          C_REVIEW_PENDING: ${{ steps.constraints.outputs.review_pending }}
+          C_TOP: ${{ steps.constraints.outputs.top }}
         run: |
           WEEK_START=$(TZ=Asia/Seoul date -d '7 days ago' '+%m/%d' 2>/dev/null || \
                       TZ=Asia/Seoul date -v-7d '+%m/%d')
@@ -132,20 +176,29 @@ jobs:
             RATE_EMOJI="🔴"
           fi
 
-          MESSAGE="📊 *주간 자율 운영 리포트* (${WEEK_START} ~ ${WEEK_END})
+          # 메시지를 printf 로 조립(YAML 블록 안 들여쓰기 정상화 — 멀티라인 리터럴 회피)
+          MESSAGE=$(printf '%s\n' \
+            "📊 *주간 자율 운영 리포트* (${WEEK_START} ~ ${WEEK_END})" \
+            "" \
+            "*이번 주 자율 파이프라인 요약:*" \
+            "• 📋 CEO Brief 생성: ${CEO_BRIEFS}건" \
+            "• 🤖 Auto PR 생성: ${PRS_CREATED}건" \
+            "• ✅ Auto PR 머지: ${PRS_MERGED}건" \
+            "• ⚙️ 파이프라인 실행: ${IMPL_RUNS}회" \
+            "• ${RATE_EMOJI} 성공률: ${SUCCESS_RATE}%" \
+            "" \
+            "*머지된 기능:*" \
+            "${FEATURES}" \
+            "" \
+            "*🔒 Standing Constraints (CEO와의 싱크):*" \
+            "• 활성 규칙: ${C_ACTIVE}개" \
+            "• 이번 주 사전 차단한 제안: *${C_HITS_WEEK}건* — 그만큼 CEO가 같은 피드백을 반복하지 않아도 됐습니다" \
+            "• 자주 작동한 규칙: ${C_TOP}" \
+            "• 이번 주 새로 학습한 규칙 후보(PR): ${C_NEW_PRS}건 / 리뷰 대기: ${C_REVIEW_PENDING}건" \
+            "" \
+            "_Hermes 자율 루프 — CEO 개입 없이 자동 운영 중_")
 
-*이번 주 자율 파이프라인 요약:*
-• 📋 CEO Brief 생성: ${CEO_BRIEFS}건
-• 🤖 Auto PR 생성: ${PRS_CREATED}건
-• ✅ Auto PR 머지: ${PRS_MERGED}건
-• ⚙️ 파이프라인 실행: ${IMPL_RUNS}회
-• ${RATE_EMOJI} 성공률: ${SUCCESS_RATE}%
-
-*머지된 기능:*
-${FEATURES}
-
-_Hermes 자율 루프 — CEO 개입 없이 자동 운영 중_"
-
+          jq -n --arg text "$MESSAGE" '{"text": $text}' > /tmp/report_payload.json
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"text\": $(echo "$MESSAGE" | jq -Rs .)}"
+            -d @/tmp/report_payload.json

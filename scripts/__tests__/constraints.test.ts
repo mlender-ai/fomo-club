@@ -9,6 +9,10 @@ import {
   makeId,
   normalizeIncoming,
   mergeConstraints,
+  constraintKeywords,
+  checkViolations,
+  sumHitMaps,
+  applyHits,
   type Constraint,
 } from "../constraints";
 
@@ -140,5 +144,61 @@ describe("normalizeIncoming / mergeConstraints", () => {
     const merged = mergeConstraints([], [{ rule: "" }], "2026-06-02");
     expect(merged.added).toHaveLength(0);
     expect(merged.skipped).toHaveLength(1);
+  });
+  it("keywords 를 보존한다", () => {
+    const c = normalizeIncoming({ rule: "배너 금지", keywords: ["DataMismatchBanner"] }, "2026-06-02");
+    expect(c.keywords).toEqual(["DataMismatchBanner"]);
+  });
+});
+
+describe("constraintKeywords", () => {
+  it("명시 keywords 를 우선 사용", () => {
+    expect(constraintKeywords(base({ keywords: ["햅틱", "글로우"] }))).toEqual(["햅틱", "글로우"]);
+  });
+  it("없으면 따옴표·CamelCase 토큰 추출", () => {
+    const kws = constraintKeywords(base({ rule: '"DataMismatchBanner" 류와 MismatchAlert 금지', keywords: undefined }));
+    expect(kws).toContain("DataMismatchBanner");
+    expect(kws).toContain("MismatchAlert");
+  });
+});
+
+describe("checkViolations", () => {
+  const dm = base({
+    id: "dm",
+    rule: "데이터 불일치 배너 금지",
+    scope: ["frontend", "all"],
+    kind: "prohibition",
+    keywords: ["DataMismatchBanner", "불일치 배너"],
+  });
+  const toss = base({ id: "toss", rule: "토스 멘탈모델", scope: ["all"], kind: "mental-model", keywords: ["토스"] });
+
+  it("금지 키워드를 포함한 제안을 위반으로 잡는다", () => {
+    const v = checkViolations("DataMismatchBanner 컴포넌트를 추가하자", [dm], "frontend");
+    expect(v).toHaveLength(1);
+    expect(v[0]!.constraint.id).toBe("dm");
+    expect(v[0]!.matched).toBe("DataMismatchBanner");
+  });
+  it("무관한 제안은 위반 아님", () => {
+    expect(checkViolations("뉴스 탭 무한 스크롤 추가", [dm], "frontend")).toEqual([]);
+  });
+  it("lane 이 다르면(scope 불포함) 검사 안 함", () => {
+    const pmOnly = base({ id: "x", rule: "x", scope: ["pm"], kind: "prohibition", keywords: ["배너"] });
+    expect(checkViolations("배너 추가", [pmOnly], "qa")).toEqual([]);
+  });
+  it("prohibition 이 아닌 kind 는 위반 대상 아님", () => {
+    expect(checkViolations("토스 레퍼런스 적용", [toss], "frontend")).toEqual([]);
+  });
+});
+
+describe("hits 집계", () => {
+  it("sumHitMaps 가 여러 맵을 합산", () => {
+    expect(sumHitMaps([{ a: 1, b: 2 }, { a: 3 }, {}])).toEqual({ a: 4, b: 2 });
+  });
+  it("applyHits 가 id 매칭해 hits 누적(불변)", () => {
+    const cs = [base({ id: "a", hits: 1 }), base({ id: "b", hits: 0 })];
+    const out = applyHits(cs, { a: 2 });
+    expect(out[0]!.hits).toBe(3);
+    expect(out[1]!.hits).toBe(0);
+    expect(cs[0]!.hits).toBe(1); // 원본 불변
   });
 });
