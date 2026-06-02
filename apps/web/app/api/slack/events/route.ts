@@ -259,8 +259,15 @@ ${runList || "(없음)"}
   \`[[ACTION:log_feedback]] {"note":"..."}\` — CEO의 피드백·방향·판정을 기억에 적재 (다음 Agent Council 입력에 반영)
 - JSON 페이로드는 반드시 한 줄. scope kind 는 정해진 값만.
 - CEO가 제품 방향·선호·평가("X는 별로", "Y 방향 좋아", "온보딩은 토스처럼")를 주면 log_feedback 으로 기억에 남긴다(영구 규칙까진 아닌 소프트 피드백). 영구 금지/규칙이면 add_constraint.
-- **단순 질문·요약·상태 확인·의견 요청에는 절대 토큰을 출력하지 마라.** 실행 의도가 명확할 때만.
-- merge/implement/add_constraint 는 비가역·고영향이다 — CEO가 명시적으로 그 동작을 지시했을 때만 토큰을 낸다. 애매하면 토큰 없이 "진행할까요?"라고 먼저 묻는다.
+
+**개발/구현 실행 트리거 (자주 쓰임 — 반드시 정확히 인식)**:
+- 다음과 같은 발화는 **개발 실행 지시**다 → 반드시 \`[[ACTION:implement]]\` 토큰을 출력한다(거의 항상 date 생략 = 오늘 브리핑 구현):
+  "개발해", "개발 진행해", "개발진행해", "구현해", "구현 시작", "만들어줘", "진행해", "이거 개발해줘", "우선순위 개발해", "리스트 개발하고 알려줘", "오늘 브리핑 구현해".
+- 위 발화에 "리스트", "우선순위", "알려줘" 같은 단어가 섞여 있어도 **'개발/구현/진행' 동사가 있으면 실행 지시**다. 단순 조회로 오해하지 마라. (예: "오늘 처리 우선순위 리스트 개발하고 알려줘" = implement 실행 + 진행 상황 안내)
+- 답변엔 "개발(auto-implement)을 시작하겠다"는 한 문장 + 토큰만. 우선순위를 또 길게 나열하지 마라.
+
+- **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
+- merge/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
 - add_constraint 는 "앞으로 항상/절대" 류의 반복 규칙에만. 1회성 지시("오늘은 온보딩부터")엔 금지.`;
 
     const res = await fetch(AI_URL, {
@@ -330,7 +337,9 @@ async function executeAction(
         return "🗳️ *Agent Council 실행* — 잠시 후 제안 이슈들이 생성됩니다.";
       }
       case "implement": {
-        const date = typeof action.payload.date === "string" ? action.payload.date : kstDate();
+        const raw = action.payload.date;
+        // 유효한 YYYY-MM-DD 만 사용, 아니면(placeholder 포함) 오늘 KST
+        const date = typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : kstDate();
         await triggerWorkflow("auto-implement.yml", { brief_date: date });
         return `🚀 *auto-implement 실행* (날짜: ${date}). 진행은 \`@봇 status\`로 확인하세요.`;
       }
