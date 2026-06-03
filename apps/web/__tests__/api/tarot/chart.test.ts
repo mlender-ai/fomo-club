@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 //   5. close가 NaN/Infinity 같은 비정상 값일 때도 스킵 (Number.isFinite 가드)
 //   6. open/high/low가 null이면 close 값으로 폴백
 //   7. 동일 timestamp 중복 입력 — 모두 가공되지만 close 무결성 유지
-//   8. timestamps 배열은 있는데 quote 데이터 자체가 비어있을 때 bars=[]
-//   9. 외부 API 502 → 502 패스스루
+//   8. Yahoo quote 비어있음 + 폴백도 불가 → 404 (graceful, 크래시 없음)
+//   9. Yahoo 5xx + 폴백 불가 → 404 (패스스루 대신 graceful 폴백)
 //   10. 외부 API result 없음 → 404
 //   11. 캐시 — 같은 (symbol, range, interval) 두 번째 호출은 외부 fetch 없이 응답
 
@@ -197,7 +197,7 @@ describe("/api/tarot/chart", () => {
     expect(body.bars.every((b: { close: number }) => Number.isFinite(b.close))).toBe(true);
   });
 
-  it("timestamps 있지만 quote 비어있음 → bars=[] (크래시 없음)", async () => {
+  it("Yahoo quote 비어있음 + 폴백 불가 → 404 (graceful)", async () => {
     const payload = {
       chart: {
         result: [
@@ -209,29 +209,24 @@ describe("/api/tarot/chart", () => {
         ],
       },
     };
-
+    // query1=빈 quote, 이후 호출(query2·Stooq)은 거부 → 모든 소스 실패
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => payload });
+    mockFetch.mockRejectedValue(new Error("network blocked"));
 
     const res = await GET(
       makeRequest("http://localhost/api/tarot/chart?symbol=EMPTY1&range=1mo"),
     );
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.bars).toEqual([]);
-    expect(body.meta.currency).toBe("USD");
+    expect(res.status).toBe(404);
   });
 
-  it("외부 API 502 → 502 패스스루", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 503,
-      json: async () => ({}),
-    });
+  it("Yahoo 5xx + 폴백 불가 → 404 (패스스루 대신 graceful 폴백)", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) });
+    mockFetch.mockRejectedValue(new Error("network blocked"));
 
     const res = await GET(
       makeRequest("http://localhost/api/tarot/chart?symbol=ERR1&range=1mo"),
     );
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(404);
   });
 
   it("외부 API result 없음 → 404", async () => {

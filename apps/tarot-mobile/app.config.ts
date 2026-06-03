@@ -18,6 +18,11 @@ const admobAppIdAndroid = IS_PROD
   ? (process.env.ADMOB_APP_ID_ANDROID || TEST_APP_ID_ANDROID)
   : TEST_APP_ID_ANDROID;
 
+// API 서버 주소 — 실기기/배포에서 localhost 로 폴백하면 모든 API(차트 포함)가 실패한다.
+// EXPO_PUBLIC_API_BASE_URL 로 오버라이드, 없으면 배포된 Vercel 프로덕션 URL을 기본값으로.
+const apiBaseUrl =
+  process.env.EXPO_PUBLIC_API_BASE_URL || "https://taro-stock-web.vercel.app";
+
 const adMobBannerIos = IS_PROD
   ? (process.env.ADMOB_BANNER_ID_IOS || "")
   : TEST_BANNER_ID;
@@ -88,7 +93,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     revenueCatIosKey: "",
     revenueCatAndroidKey: "",
-    apiBaseUrl: "",
+    apiBaseUrl,
     adMobBannerIos,
     adMobBannerAndroid,
     adMobRewardedIos,

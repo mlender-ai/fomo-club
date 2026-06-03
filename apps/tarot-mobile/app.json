@@ -53,7 +53,7 @@
     "extra": {
       "revenueCatIosKey": "",
       "revenueCatAndroidKey": "",
-      "apiBaseUrl": "",
+      "apiBaseUrl": "https://taro-stock-web.vercel.app",
       "adMobBannerIos": "",
       "adMobBannerAndroid": "",
       "adMobRewardedIos": "",

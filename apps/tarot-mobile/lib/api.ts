@@ -1,9 +1,13 @@
 import Constants from "expo-constants";
 import { useUserStore } from "./store";
 
+// 우선순위: app config extra(apiBaseUrl) → EXPO_PUBLIC_API_BASE_URL → 배포 기본값.
+// 빈 문자열은 무시(과거 ""로 인해 localhost 폴백 → 실기기에서 차트 등 전 API 실패한 버그 방지).
+const configured = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
 const API_BASE =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ??
-  "http://localhost:3000";
+  (configured && configured.length > 0 ? configured : undefined) ??
+  process.env.EXPO_PUBLIC_API_BASE_URL ??
+  "https://taro-stock-web.vercel.app";
 
 interface ApiError {
   error: string;
