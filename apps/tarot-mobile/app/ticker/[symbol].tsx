@@ -19,6 +19,7 @@ import { FinancialChart } from "../../components/ticker/FinancialChart";
 import { KeyMetricsGrid } from "../../components/ticker/KeyMetricsGrid";
 import { NewsList } from "../../components/ticker/NewsList";
 import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
+import { InvestmentScoreSummary } from "../../components/ticker/InvestmentScoreSummary";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
 import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
@@ -303,6 +304,7 @@ export default function TickerDetailScreen() {
             <>
               {quote && (
                 <>
+                  <InvestmentScoreSummary quote={quote} />
                   <PriceStats quote={quote} />
                   <MetricsGrid quote={quote} />
                 </>
