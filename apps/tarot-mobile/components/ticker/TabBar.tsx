@@ -23,21 +23,18 @@ export function TabBar({ activeTab, onTabChange }: Props) {
         return (
           <TouchableOpacity
             key={tab.key}
-            style={styles.tab}
+            style={[styles.tab, isActive ? styles.tabActive : styles.tabInactive]}
             onPress={() => onTabChange(tab.key)}
             activeOpacity={0.7}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
           >
-            <View style={[styles.labelWrapper, isActive && styles.labelWrapperActive]}>
-              <Text
-                variant="body-sm"
-                color={isActive ? Colors.taroEssence : Colors.midGrayText}
-                style={isActive ? styles.labelActive : styles.labelInactive}
-              >
-                {tab.label}
-              </Text>
-            </View>
+            <Text
+              color={isActive ? Colors.taroEssence : Colors.graphiteBase}
+              style={isActive ? styles.labelActive : styles.labelInactive}
+            >
+              {tab.label}
+            </Text>
             <View style={[styles.indicator, isActive && styles.indicatorActive]} />
           </TouchableOpacity>
         );
@@ -49,6 +46,7 @@ export function TabBar({ activeTab, onTabChange }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
+    height: 48,
     borderBottomWidth: 1,
     borderBottomColor: Colors.carbonBorder,
     backgroundColor: Colors.ebonyCanvas,
@@ -56,29 +54,32 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: "center",
-    paddingTop: 10,
+    justifyContent: "center",
+    marginHorizontal: 12,
   },
-  labelWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
+  tabActive: {
+    backgroundColor: Colors.steelSurface,
+    borderRadius: 6,
   },
-  labelWrapperActive: {
-    backgroundColor: Colors.voidGreen,
+  tabInactive: {
+    backgroundColor: Colors.ebonyCanvas,
   },
   labelActive: {
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 16,
     letterSpacing: 0.2,
   },
   labelInactive: {
     fontWeight: "400",
-    fontSize: 14,
+    fontSize: 13,
+    color: Colors.graphiteBase,
   },
   indicator: {
-    height: 3,
-    width: "60%",
-    marginTop: 6,
+    position: "absolute",
+    bottom: 0,
+    left: "10%",
+    right: "10%",
+    height: 4,
     borderRadius: 2,
     backgroundColor: "transparent",
   },
