@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { apiFetch } from "./api";
 import { decideSwrAction } from "@trading/shared/src/swrPolicy";
 import type { StockQuote, StockChartBar, StockChartResponse } from "@trading/shared/src/stockTypes";
+import { CachePolicy, chartCachePolicy } from "../utils/cachePolicy";
 
 export type ChartRange = "1d" | "5d" | "1mo" | "3mo" | "1y";
 
@@ -52,23 +53,15 @@ interface ChartBundle {
   cachedAt: number;
 }
 
-// Stale-while-revalidate TTL — 데이터 갱신 주기에 맞춰 차등 적용 (#267 CTO).
-// fresh 이내 → fetch 스킵, stale 이내 → 즉시 표시 + 백그라운드 재검증, 그 외 → 정상 fetch.
+// Stale-while-revalidate TTL — cachePolicy.ts 에서 중앙 관리 (#321)
+const QUOTE_FRESH_TTL_MS = CachePolicy.quote.freshMs;
+const QUOTE_STALE_TTL_MS = CachePolicy.quote.staleMs;
+const FIN_FRESH_TTL_MS   = CachePolicy.financials.freshMs;
+const FIN_STALE_TTL_MS   = CachePolicy.financials.staleMs;
 
-// 시세: 가격이 실시간으로 움직임 → 짧게 유지.
-const QUOTE_FRESH_TTL_MS = 30 * 1000;       // 30초
-const QUOTE_STALE_TTL_MS = 3 * 60 * 1000;   // 3분
-
-// 재무: 분기 단위로만 갱신 → 길게 유지해 중복 호출 제거.
-const FIN_FRESH_TTL_MS = 30 * 60 * 1000;        // 30분
-const FIN_STALE_TTL_MS = 6 * 60 * 60 * 1000;    // 6시간
-
-// 차트: 단기 봉(1d/5d)은 장중 자주 변하고, 장기 봉(1mo+)은 하루 단위로만 변함.
 function chartTtl(range: ChartRange): { fresh: number; stale: number } {
-  const intraday = range === "1d" || range === "5d";
-  return intraday
-    ? { fresh: 60 * 1000, stale: 5 * 60 * 1000 }          // 1분 / 5분
-    : { fresh: 30 * 60 * 1000, stale: 6 * 60 * 60 * 1000 }; // 30분 / 6시간
+  const p = chartCachePolicy(range);
+  return { fresh: p.freshMs, stale: p.staleMs };
 }
 
 interface StockState {
