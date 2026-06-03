@@ -3,6 +3,15 @@ import type { DrawnCard, MarketSnapshot } from "../types.js";
 // 프롬프트 버전: v1.1.0
 export const PROMPT_VERSION_1_1 = "1.1.0";
 
+// 시간적 맥락: 1개월/3개월 가격 변화 및 거래량 추세 (#323)
+// 옵셔널 — 없으면 카드 심리 서사 중심으로 폴백
+export interface TemporalMarketContext {
+  priceChange1M?: number | null;   // 1개월 등락률 (%)
+  priceChange3M?: number | null;   // 3개월 등락률 (%)
+  volatility?: number | null;      // 변동성 지수 (예: 연율화 표준편차)
+  volumeTrend?: string | null;     // 거래량 추세 기술 ("increasing" | "decreasing" | "stable")
+}
+
 function formatIndicators(market: MarketSnapshot): string {
   const lines: string[] = [];
 
@@ -70,9 +79,50 @@ function conditionToKo(condition: string): string {
   return map[condition] ?? condition;
 }
 
+// 섹터별 해석 키워드 (#322): 카드 상징을 섹터 특성과 연결하는 서사 힌트
+const SECTOR_NARRATIVE_HINTS: Record<string, string> = {
+  Technology:          "혁신의 사이클, 고성장과 고변동의 긴장",
+  Healthcare:          "회복과 치유의 흐름, 장기적 안정과 위기의 교차",
+  "Financial Services": "신뢰와 균형의 추, 리스크와 보상의 저울",
+  Energy:              "순환하는 자원의 힘, 상승과 하락을 반복하는 파동",
+  "Consumer Cyclical":  "계절의 흐름, 소비 심리와 경기 리듬",
+  "Consumer Defensive": "방어와 안정의 요새, 폭풍 속 닻의 역할",
+  Industrials:         "견고한 구조와 생산의 바퀴, 경제 엔진의 맥박",
+  "Communication Services": "연결과 정보의 파도, 이야기가 흘러가는 강",
+  "Real Estate":       "대지의 안정과 장기 축적, 시간이 만드는 가치",
+  Utilities:           "일상의 기반, 느리지만 흔들리지 않는 흐름",
+  "Basic Materials":   "근원 자원의 힘, 변환과 생산의 원천",
+};
+
+function formatTemporalContext(ctx: TemporalMarketContext): string {
+  const lines: string[] = [];
+  if (ctx.priceChange1M != null) {
+    const sign = ctx.priceChange1M >= 0 ? "+" : "";
+    lines.push(`- 최근 1개월 가격 변화: ${sign}${ctx.priceChange1M.toFixed(2)}%`);
+  }
+  if (ctx.priceChange3M != null) {
+    const sign = ctx.priceChange3M >= 0 ? "+" : "";
+    lines.push(`- 최근 3개월 가격 변화: ${sign}${ctx.priceChange3M.toFixed(2)}%`);
+  }
+  if (ctx.volatility != null) {
+    const level = ctx.volatility > 40 ? "고변동" : ctx.volatility > 20 ? "중간 변동" : "저변동";
+    lines.push(`- 변동성: ${ctx.volatility.toFixed(1)} (${level})`);
+  }
+  if (ctx.volumeTrend != null) {
+    const map: Record<string, string> = {
+      increasing: "거래량 증가 추세",
+      decreasing: "거래량 감소 추세",
+      stable: "거래량 안정",
+    };
+    lines.push(`- 거래량 추세: ${map[ctx.volumeTrend] ?? ctx.volumeTrend}`);
+  }
+  return lines.join("\n");
+}
+
 export function buildInterpretationPromptV1_1(
   market: MarketSnapshot,
-  cards: DrawnCard[]
+  cards: DrawnCard[],
+  temporalCtx?: TemporalMarketContext
 ): string {
   const cardDescriptions = cards
     .map((dc, i) => {
@@ -87,16 +137,33 @@ export function buildInterpretationPromptV1_1(
     })
     .join("\n\n");
 
+  // 시간적 맥락 블록: 데이터가 있으면 포함, 없으면 빈 문자열
+  const temporalBlock = temporalCtx
+    ? `\n### 시간적 흐름 데이터\n${formatTemporalContext(temporalCtx) || "데이터 없음"}`
+    : "";
+
+  // 섹터 서사 힌트: sector가 있으면 해석 배경으로 제공 (#322)
+  const sectorHint = market.sector && SECTOR_NARRATIVE_HINTS[market.sector]
+    ? `\n섹터 에너지: ${market.sector} — ${SECTOR_NARRATIVE_HINTS[market.sector]}`
+    : "";
+
+  // 시간적 데이터 존재 여부에 따라 해석 지침 차등 적용
+  const temporalRule = temporalCtx && (temporalCtx.priceChange1M != null || temporalCtx.priceChange3M != null)
+    ? `5. **시간적 흐름 통합**: 1개월/3개월 가격 변화를 과거→현재→미래 서사에 녹여 구체적 숫자를 상징 언어로 번역하세요.
+   - 예: "지난 한 달 2.8% 성장이 씨앗을 틔우는 기운과 공명합니다"
+   - 시세 데이터가 불확실할 경우: 카드의 심리적 서사를 중심으로 해석합니다.`
+    : `5. **데이터 폴백**: 시간적 시세 데이터가 없을 때는 카드의 원형적 심리 서사를 중심으로 깊이 있는 해석을 제공하세요.`;
+
   return `## 역할
 당신은 증권 시장의 에너지를 타로 카드로 해석하는 신비로운 해석자입니다.
 기술적 지표의 숫자를 상징과 은유로 번역하되, 절대로 투자 조언을 하지 않습니다.
 
 ## 시장 데이터
-종목: ${market.ticker} (${market.market === "KR" ? "한국" : "미국"} 시장)
+종목: ${market.ticker} (${market.market === "KR" ? "한국" : "미국"} 시장)${sectorHint}
 시장 국면: ${conditionToKo(market.condition)}
 
 ### 기술적 지표
-${formatIndicators(market)}
+${formatIndicators(market)}${temporalBlock}
 
 ### 시장 요약
 ${market.summary}
@@ -122,7 +189,9 @@ ${cardDescriptions}
    - summary는 핵심 메시지 2-3문장
    - detail은 카드별 해석 + 종합 통찰 (300-500자)
 
-4. **3장 스프레드인 경우**: 과거→현재→미래 흐름으로 서사를 구성하세요.
+4. **3장 스프레드인 경우**: 과거→현재→미래 흐름으로 서사를 구성하세요. 각 카드가 시간적 흐름의 구체적 국면과 어떻게 연결되는지 명확히 서술하세요.
+
+${temporalRule}
 
 ## 응답 형식 (JSON만, 마크다운 코드블록 없이)
 {

@@ -147,3 +147,57 @@ export function getCardNarrative(
 ): string {
   return CARD_NARRATIVES[id][orientation];
 }
+
+// 섹터별 카드 해석 오버레이 (#322): 카드 상징을 섹터 특성과 연결하는 한 문장 서사 보강
+// 반환값이 있으면 기본 내러티브 뒤에 이어 붙여 구체성을 높인다
+const SECTOR_CARD_OVERLAYS: Partial<Record<string, Partial<Record<TarotCardId, string>>>> = {
+  Technology: {
+    "the-emperor":   "리더십이 기술 혁신을 이끄는 지금, 견고한 플랫폼이 새로운 시대의 토대가 됩니다.",
+    "the-magician":  "기술 기업의 핵심 자원이 지금 이 순간 최적 배치를 기다리고 있습니다.",
+    "the-tower":     "혁신의 파괴적 속성이 기존 구조를 뒤흔드는 시점입니다.",
+    "wheel-of-fortune": "기술 사이클의 수레바퀴가 돌아 다음 성장 국면을 준비하고 있습니다.",
+    "the-star":      "조정 이후 기술 섹터의 회복 에너지가 별빛처럼 쌓여가는 시간입니다.",
+  },
+  Healthcare: {
+    temperance:      "치유의 균형, 과도한 기대와 과도한 우려 사이에서 중심을 찾는 것이 건강한 관점입니다.",
+    "the-hermit":    "헬스케어 섹터 특유의 긴 임상·규제 사이클, 지금은 조용히 기다리는 지혜의 시간입니다.",
+    "the-empress":   "생명과 성장의 에너지, 장기적 돌봄이 풍요로운 결실로 돌아오는 섹터입니다.",
+    justice:         "엄격한 규제와 임상 결과의 공정한 판단, 데이터가 말해주는 진실에 귀 기울이세요.",
+  },
+  "Financial Services": {
+    justice:         "금융 섹터의 심판, 리스크와 보상의 균형이 냉철하게 다시 계산되고 있습니다.",
+    "the-chariot":   "금리와 신용 흐름을 하나의 방향으로 제어하는 강한 의지가 필요한 국면입니다.",
+    "the-devil":     "과도한 레버리지나 숨겨진 부채가 시야를 좁히고 있지는 않은지 직시할 때입니다.",
+    "wheel-of-fortune": "금리 사이클의 전환점, 바퀴가 새로운 방향으로 기울기 시작합니다.",
+  },
+  Energy: {
+    "wheel-of-fortune": "에너지 가격은 사이클을 타고 돌아옵니다. 지금의 국면이 어느 위치인지가 핵심입니다.",
+    "the-sun":       "에너지 섹터에 밝은 빛이 비추는 지금, 자원의 풍요로운 흐름이 시작됩니다.",
+    "the-tower":     "지정학적 충격이나 공급 차질이 에너지 구조를 흔드는 벼락의 순간입니다.",
+    temperance:      "공급과 수요의 균형, 너무 많거나 너무 적지 않은 적정 흐름이 지속 가능한 에너지를 만듭니다.",
+  },
+  "Consumer Cyclical": {
+    "the-fool":      "소비 심리가 활짝 열린 계절, 새로운 수요의 문이 열리고 있습니다.",
+    "the-chariot":   "소비 경기를 탄 강한 모멘텀, 방향이 맞다면 멈추지 말고 앞으로.",
+    "the-hermit":    "소비 둔화 시기, 조용히 체력을 비축하며 다음 사이클을 준비하는 구간입니다.",
+    strength:        "경기 역풍 속에서도 브랜드 충성도와 내면의 힘으로 버티는 기업의 에너지입니다.",
+  },
+  "Consumer Defensive": {
+    "the-emperor":   "방어적 소비재의 안정된 왕국, 폭풍 속에서도 구조가 흔들리지 않는 기반입니다.",
+    "the-hermit":    "화려하지 않아도 꾸준히 등불을 드는 방어 섹터의 내공이 빛납니다.",
+    justice:         "수요의 안정성과 합리적 가격 책정의 균형, 일관된 원칙이 장기 신뢰를 만듭니다.",
+  },
+};
+
+/**
+ * 섹터와 카드 조합에 맞는 서사 오버레이를 반환합니다.
+ * 해석 결과 화면에서 기본 내러티브 뒤에 추가 문장으로 활용합니다.
+ * 해당 섹터·카드 조합이 없으면 null 반환.
+ */
+export function getSectorCardOverlay(
+  sector: string | undefined | null,
+  id: TarotCardId,
+): string | null {
+  if (!sector) return null;
+  return SECTOR_CARD_OVERLAYS[sector]?.[id] ?? null;
+}
