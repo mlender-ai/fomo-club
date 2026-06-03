@@ -63,6 +63,9 @@ export interface MarketSnapshot {
   industry?: string;        // 산업 (예: "Consumer Electronics")
   marketCap?: number;       // 시가총액 (대형/중형/소형 심리 차이)
   fiftyTwoWeekPosition?: number; // 0~1, 52주 범위 내 현재 위치
+  // 시간축(trajectory) 파생 메트릭 — 1y 캔들에서 계산. 신호 엔진(computeSignal)이 사용.
+  momentum20?: number;      // 최근 20봉 % 수익률 (예: +20)
+  daysAboveSma200?: number; // 200일선 위를 연속으로 유지한 봉 수
   condition: MarketCondition;
   summary: string;
 }
@@ -85,6 +88,8 @@ export interface TarotInterpretation {
   source: InterpretationSource;
   cachedAt?: string;
   createdAt: string;
+  // 확장 슬롯 — 신호 드라이버·향후 사주 레이어 등 부가 데이터(사용자 노출은 선택). 사주 통합 대비.
+  extras?: Record<string, unknown>;
 }
 
 export interface DrawRequest {

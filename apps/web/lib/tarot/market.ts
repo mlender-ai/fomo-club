@@ -202,6 +202,23 @@ export async function fetchMarketSnapshot(
   if (meta?.shortName) snapshot.name = meta.shortName;
   if (fiftyTwoWeekPosition !== undefined) snapshot.fiftyTwoWeekPosition = fiftyTwoWeekPosition;
 
+  // 시간축(trajectory) 메트릭 — 신호 엔진(computeSignal) 접지용. 1y 캔들에서 파생.
+  if (closes.length >= 21) {
+    const past = closes[closes.length - 21];
+    if (past && past > 0) {
+      snapshot.momentum20 = parseFloat((((price - past) / past) * 100).toFixed(1));
+    }
+  }
+  if (sma200 !== null) {
+    // 현재 200일선 위를 연속으로 유지한 봉 수(근사 — 현 SMA200 기준 최근 연속).
+    let days = 0;
+    for (let i = closes.length - 1; i >= 0; i--) {
+      if ((closes[i] ?? 0) >= sma200) days++;
+      else break;
+    }
+    if (days > 0) snapshot.daysAboveSma200 = days;
+  }
+
   marketCache.set(cacheKey, { snapshot, expiresAt: now + MARKET_CACHE_TTL_MS });
   return snapshot;
 }

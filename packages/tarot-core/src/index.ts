@@ -13,3 +13,10 @@ export { buildInterpretationPromptV2_1, PROMPT_VERSION_2_1 } from "./prompts/int
 export { buildInterpretationPromptV2_2, PROMPT_VERSION_2_2, type FinancialContext } from "./prompts/interpret-v2.2.0.js";
 export { buildInterpretationPromptV2_3, PROMPT_VERSION_2_3 } from "./prompts/interpret-v2.3.0.js";
 export { buildInterpretationPromptV2_4, PROMPT_VERSION_2_4 } from "./prompts/interpret-v2.4.0.js";
+export { buildInterpretationPromptV2_5, PROMPT_VERSION_2_5 } from "./prompts/interpret-v2.5.0.js";
+export {
+  computeSignal,
+  type Signal,
+  type SignalDriver,
+  type SignalGrade,
+} from "./signal/computeSignal.js";

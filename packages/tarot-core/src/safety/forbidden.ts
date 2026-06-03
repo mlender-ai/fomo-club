@@ -6,7 +6,7 @@ export const FORBIDDEN_TERMS_BLOCKED: string[] = [
   "사세요", "파세요", "사야", "팔아야",
   // 수익 보장
   "수익 보장", "guaranteed return", "guaranteed profit",
-  "반드시 오른다", "반드시 내린다", "확실히",
+  "반드시 오른다", "반드시 내린다", "확실히", "확실한",
   "무조건 상승", "무조건 하락",
   // 투자 추천
   "투자 추천", "investment advice", "투자 조언",
@@ -20,6 +20,8 @@ export const FORBIDDEN_TERMS_RISK: string[] = [
   "좋은 타이밍", "적기입니다", "최적의 시기",
   "강한 매수세", "강한 매도세",
   "수익률 %", "% 상승 예상", "% 하락 예상",
+  // 신호 드라이버 판정어가 출력에 에코될 때 대비 (방향성 우열 암시)
+  "상승 우위", "하락 우위", "방향 우위",
 ];
 
 export const REQUIRED_DISCLAIMER =
