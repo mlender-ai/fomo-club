@@ -84,16 +84,46 @@ const MENTION: Record<Exclude<AxisId, "default">, RegExp> = {
   security: /@\s*(security|sec|보안)\b/i,
 };
 
+/** @ 없이 축을 가리키는 이름 (호출 동사와 함께, 또는 문장 맨 앞일 때 발화 대상으로 인정). */
+const AXIS_NAME: Record<Exclude<AxisId, "default">, RegExp> = {
+  // "개발해" 같은 동사 오인 방지 위해 cto 는 cto/개발팀/기술팀/기술리드만(맨 '개발' 제외)
+  cto: /(cto|개발팀|기술팀|기술\s*리드|기술\s*책임)/i,
+  pm: /(pm|피엠|기획자|프로덕트\s*매니저|제품팀|제품\s*매니저)/i,
+  security: /(보안|시큐리티|security|\bsec\b)/i,
+};
+
+/** 특정 축을 "불러서 말 거는" 신호 동사. */
+const CALL_VERB = /(호출|불러|소환|콜|물어|의견|관점|입장|답해|말해|봐줘|검토)/;
+
+/** 문장 맨 앞에서 축 이름으로 시작하면 그 축에게 말 거는 것으로 본다. */
+const START_NAME: Record<Exclude<AxisId, "default">, RegExp> = {
+  cto: /^\s*@?\s*(cto)\b/i,
+  pm: /^\s*@?\s*(pm|피엠)\b/i,
+  security: /^\s*@?\s*(보안|security)\b/i,
+};
+
+function isCalled(axis: Exclude<AxisId, "default">, text: string): boolean {
+  if (START_NAME[axis].test(text)) return true;
+  return AXIS_NAME[axis].test(text) && CALL_VERB.test(text);
+}
+
 /**
  * 질문 텍스트에서 발화 축을 결정한다.
  * 1) 명시 멘션(@CTO/@PM/@Security/@보안) 우선
- * 2) 없으면 키워드 휴리스틱 (security → pm → cto 순으로 안전 우선)
- * 3) 아무 단서 없으면 default(Hermes)
+ * 2) @ 없는 호명/호출 ("PM 호출해봐", "CTO한테 물어봐", 문장 맨 앞 이름) — 실사용 패턴
+ * 3) 키워드 휴리스틱 (security → pm → cto 순으로 안전 우선)
+ * 4) 아무 단서 없으면 default(Hermes)
+ * 안전 우선: 충돌 시 security > pm > cto.
  */
 export function resolveAgent(text: string): Axis {
   if (MENTION.security.test(text)) return SECURITY;
   if (MENTION.cto.test(text)) return CTO;
   if (MENTION.pm.test(text)) return PM;
+
+  // @ 없는 호명/호출
+  if (isCalled("security", text)) return SECURITY;
+  if (isCalled("pm", text)) return PM;
+  if (isCalled("cto", text)) return CTO;
 
   // 키워드: 안전(보안)을 가장 먼저 잡고, 제품, 그다음 구현
   if (SECURITY.keywords.test(text)) return SECURITY;
@@ -106,4 +136,15 @@ export function resolveAgent(text: string): Axis {
 /** postMessage 정체성 파라미터 추출 (default 는 봇 기본값 유지 위해 username 생략 가능). */
 export function axisIdentity(axis: Axis): { username: string; icon_emoji: string } {
   return { username: axis.username, icon_emoji: axis.icon_emoji };
+}
+
+/**
+ * 답변 본문 맨 앞에 붙이는 발화자 헤더.
+ * Slack username override 는 chat:write.customize 스코프가 없으면 무시되므로,
+ * 스코프와 무관하게 "누가 답했는지" 항상 보이도록 본문에도 표기한다.
+ * default(Hermes) 는 운영봇이라 헤더 생략(잡음 최소화).
+ */
+export function axisHeader(axis: Axis): string {
+  if (axis.id === "default") return "";
+  return `${axis.icon_emoji} *${axis.username}*`;
 }

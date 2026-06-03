@@ -18,7 +18,7 @@ import {
   getTodayAutoPRs,
 } from "@/lib/slack/github";
 import { classifyIntent, truncate } from "@/lib/slack/intent";
-import { resolveAgent, axisIdentity } from "@/lib/slack/agents";
+import { resolveAgent, axisIdentity, axisHeader } from "@/lib/slack/agents";
 import {
   isCeoDecisionThread,
   classifyDecision,
@@ -158,12 +158,14 @@ async function handleAgentChat(
     return;
   }
 
-  // 발화 축 결정 (Agent Team Stage A) — @CTO/@PM/@Security 또는 키워드, 없으면 Hermes
+  // 발화 축 결정 (Agent Team Stage A) — @CTO/@PM/@Security·호명·키워드, 없으면 Hermes
   const axis = resolveAgent(question);
   const identity = axisIdentity(axis);
+  // username override 는 chat:write.customize 스코프가 없으면 무시되므로 본문에도 발화자 표기
+  const header = axisHeader(axis);
 
   try {
-    await postMessage(channel, `🤔 생각 중...`, threadTs, identity);
+    await postMessage(channel, header ? `${header}\n🤔 생각 중...` : `🤔 생각 중...`, threadTs, identity);
 
     // 스레드 히스토리 조회
     const threadHistoryResult = rootThreadTs ? await getThreadHistory(channel, rootThreadTs).catch(() => []) : [];
@@ -181,6 +183,16 @@ async function handleAgentChat(
       const kind = classifyDecision(question);
       decisionAddendum = decisionGuidance(kind);
     }
+
+    // ── 호명 모드: 특정 축이 직접 불린 경우, 그 페르소나로 답하고 워크플로 액션 오발 방지 ──
+    const personaAddendum =
+      axis.id === "default"
+        ? ""
+        : `\n\n[호명 모드 — 당신은 ${axis.username}으로 직접 호명되었습니다]
+CEO가 당신 축에게 말을 걸고 있습니다. 그 페르소나의 관점으로 의견을 답하세요.
+"호출/불러/물어봐/의견" 같은 말은 *당신에게 말 거는 신호*이지 워크플로 실행 명령이 아닙니다 —
+run_council/implement 같은 액션 토큰을 내지 마세요. CEO가 명시적으로 "의회 돌려/구현해/머지해"라고
+할 때만 액션을 냅니다.`;
 
     // ── Step 1: 의도 분류 → 필요한 데이터를 본문까지 깊게 로드 ──
     const intent = classifyIntent(question);
@@ -315,7 +327,7 @@ ${runList || "(없음)"}
 
 - **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
 - merge/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
-- add_constraint 는 "앞으로 항상/절대" 류의 반복 규칙에만. 1회성 지시("오늘은 온보딩부터")엔 금지.${decisionAddendum}`;
+- add_constraint 는 "앞으로 항상/절대" 류의 반복 규칙에만. 1회성 지시("오늘은 온보딩부터")엔 금지.${personaAddendum}${decisionAddendum}`;
 
     const res = await fetch(AI_URL, {
       method: "POST",
@@ -358,6 +370,8 @@ ${runList || "(없음)"}
       reply += "\n\n" + (await executeAction(action, channel, rootThreadTs || threadTs));
     }
 
+    // 발화자 헤더를 본문 맨 앞에 (스코프 무관 가시성)
+    if (header) reply = `${header}\n${reply}`;
     await postMessage(channel, reply, threadTs, identity);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

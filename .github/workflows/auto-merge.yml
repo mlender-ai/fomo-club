@@ -143,6 +143,33 @@ jobs:
 
           echo "✅ PR #$PR_NUMBER squash 머지 완료"
 
+      # 해결=닫힘: 머지된 PR이 참조한 agent-council 제안 이슈를 자동 close.
+      # "PR 머지됐는데 이슈는 계속 open" 문제 해결.
+      - name: Close resolved proposal issues
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json title,body \
+            -q '(.title // "") + " " + (.body // "")' 2>/dev/null || echo "")
+          REFS=$(printf '%s' "$BODY" | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
+          for N in $REFS; do
+            LABELS=$(gh issue view "$N" --repo "$REPO" --json labels \
+              -q '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+            case ",$LABELS," in
+              *,agent-council,*)
+                STATE=$(gh issue view "$N" --repo "$REPO" --json state -q .state 2>/dev/null || echo "")
+                if [ "$STATE" = "OPEN" ]; then
+                  echo "  close #$N (PR #$PR_NUMBER 로 해결)"
+                  gh issue close "$N" --repo "$REPO" \
+                    --comment "✅ PR #${PR_NUMBER} 머지로 해결됨 — 자동 close." || true
+                fi
+                ;;
+            esac
+          done
+
       - name: Notify Slack (success)
         if: vars.SLACK_WEBHOOK_URL != ''
         env:

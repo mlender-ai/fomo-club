@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveAgent, AXES } from "@/lib/slack/agents";
+import { resolveAgent, axisHeader, AXES } from "@/lib/slack/agents";
 
 describe("resolveAgent — 명시 멘션 우선", () => {
   it("@CTO → cto", () => {
@@ -34,6 +34,34 @@ describe("resolveAgent — 멘션 없으면 키워드 휴리스틱", () => {
 describe("resolveAgent — 기본값", () => {
   it("아무 단서 없으면 default(Hermes)", () => {
     expect(resolveAgent("안녕 오늘 상태 어때").id).toBe("default");
+  });
+});
+
+describe("resolveAgent — @ 없는 호명/호출 (실사용 패턴)", () => {
+  it("'Pm 호출해봐' → pm (@ 없이도)", () => {
+    expect(resolveAgent("Pm 호출해봐").id).toBe("pm");
+  });
+  it("'CTO한테 물어봐' → cto", () => {
+    expect(resolveAgent("CTO한테 물어봐").id).toBe("cto");
+  });
+  it("'보안 의견 줘' → security", () => {
+    expect(resolveAgent("보안 의견 줘").id).toBe("security");
+  });
+  it("문장 맨 앞 이름 호명 'PM 이거 어때' → pm", () => {
+    expect(resolveAgent("PM 이거 어때").id).toBe("pm");
+  });
+  it("'개발해줘' 는 호출 아님 → cto로 오인하지 않음(default)", () => {
+    expect(resolveAgent("개발해줘").id).toBe("default");
+  });
+});
+
+describe("axisHeader — 본문 발화자 헤더 (스코프 무관 가시성)", () => {
+  it("비-default 축은 이모지+이름 헤더", () => {
+    expect(axisHeader(AXES.find((a) => a.id === "cto")!)).toContain("CTO Agent");
+    expect(axisHeader(AXES.find((a) => a.id === "security")!)).toMatch(/:shield:/);
+  });
+  it("default(Hermes)는 헤더 없음(운영봇 — 잡음 최소화)", () => {
+    expect(axisHeader(AXES.find((a) => a.id === "default")!)).toBe("");
   });
 });
 

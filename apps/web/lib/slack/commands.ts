@@ -151,6 +151,13 @@ async function handleHelp(): Promise<CommandResult> {
       "`/taro merge {PR#}` — PR squash 머지",
       "`/taro constraints` — 현재 등록된 standing constraints 목록",
       "`/taro help` — 이 도움말",
+      "",
+      "*직군 에이전트와 대화:*",
+      "봇을 멘션하고 직군을 부르면 그 에이전트가 답합니다.",
+      "• `@Taro Agent Bot PM 이거 어때?` — PM 관점",
+      "• `@Taro Agent Bot CTO한테 물어봐` — CTO(개발) 관점",
+      "• `@Taro Agent Bot 보안 의견 줘` — Security 관점",
+      "직군 없이 물으면 운영봇(Hermes)이 상태·조회를 답합니다.",
     ].join("\n"),
   };
 }
