@@ -24,23 +24,49 @@ const SLOT_LABELS: Record<string, string> = {
   future: "미래",
 };
 
+// 카드 뒷면 장식 심볼 — 뒤집히기 전 잠깐 보이는 뒷면 무늬
+const BACK_SYMBOLS = ["✦", "◈", "⬡", "◇"] as const;
+
 function CardReveal({ card, index }: { card: DrawnCard; index: number }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(32)).current;
-  const scale = useRef(new Animated.Value(0.96)).current;
+  // 0 → 1 한 줄기 진행값으로 뒤집기·등장·뒷면 페이드를 모두 구동
+  const flip = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity,     { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(translateY,  { toValue: 0,    duration: 600, delay: index * 250, useNativeDriver: true }),
-      Animated.timing(scale,       { toValue: 1,    duration: 600, delay: index * 250, useNativeDriver: true }),
-    ]).start();
+    // 카드가 모서리에서 정면으로 돌아오며 펼쳐지는 "공개" 의식
+    Animated.timing(flip, {
+      toValue: 1,
+      duration: 720,
+      delay: index * 320,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const slotLabel = card.slot ? SLOT_LABELS[card.slot] ?? null : null;
 
+  // 모서리(80°)에서 정면(0°)으로 — 손으로 카드를 뒤집어 세우는 느낌
+  const rotateY = flip.interpolate({ inputRange: [0, 1], outputRange: ["82deg", "0deg"] });
+  const scale = flip.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+  const opacity = flip.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 1, 1] });
+  // 뒷면은 절반 지점까지 카드를 덮다가, 정면이 드러나면서 사라짐
+  const backOpacity = flip.interpolate({ inputRange: [0, 0.5, 0.82], outputRange: [1, 1, 0] });
+
   return (
-    <Animated.View style={[styles.cardReveal, { opacity, transform: [{ translateY }, { scale }] }]}>
+    <Animated.View
+      style={[
+        styles.cardReveal,
+        { opacity, transform: [{ perspective: 900 }, { rotateY }, { scale }] },
+      ]}
+    >
+      {/* 뒷면 오버레이 — 뒤집히는 동안 해석을 가렸다가 페이드아웃 */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.cardBackFace, { opacity: backOpacity }]}
+      >
+        <Text style={styles.cardBackSymbol}>{BACK_SYMBOLS[index % BACK_SYMBOLS.length]}</Text>
+        <View style={styles.cardBackLineTop} />
+        <View style={styles.cardBackLineBot} />
+      </Animated.View>
+
       {/* 슬롯 레이블 (3장 스프레드용) */}
       {slotLabel && (
         <View style={styles.slotBadge}>
@@ -350,6 +376,10 @@ const styles = StyleSheet.create({
   tickerTitle:    { color: Colors.whiteout },
   cards:          { gap: 16, marginBottom: Spacing.s24 },
   cardReveal:     { backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, padding: Spacing.s24, borderWidth: 1, borderColor: Colors.carbonBorder, shadowColor: Colors.taroEssence, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
+  cardBackFace:   { ...StyleSheet.absoluteFillObject, backgroundColor: Colors.graphiteBase, borderRadius: Radius.cards, borderWidth: 1.5, borderColor: Colors.deepInsight, alignItems: "center", justifyContent: "center", zIndex: 5 },
+  cardBackSymbol: { fontSize: 30, color: Colors.taroEssence, opacity: 0.6 },
+  cardBackLineTop: { position: "absolute", top: 14, left: 14, right: 14, height: 1, backgroundColor: Colors.deepInsight },
+  cardBackLineBot: { position: "absolute", bottom: 14, left: 14, right: 14, height: 1, backgroundColor: Colors.deepInsight },
   slotBadge:      { alignSelf: "flex-start", backgroundColor: Colors.voidGreen, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 12 },
   slotLabel:      { letterSpacing: 1.5, fontWeight: "700" },
   cardHeader:     { flexDirection: "row", gap: 16, marginBottom: 12 },
