@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # B1a: OKR 스냅샷 시계열 커밋
   issues: read
   pull-requests: read
 
@@ -20,6 +20,28 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # ── 0. B1a: OKR 지표 스냅샷 시계열 적재 ────────────────────
+      - name: Capture OKR snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          npx -y tsx@4.19.2 scripts/outcome-snapshot.ts \
+            generated/outcomes/metric-registry.json generated/outcomes "$TODAY" || echo "스냅샷 실패 — 계속 진행"
+          if [ -f "generated/outcomes/okr-snapshot-${TODAY}.json" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add "generated/outcomes/okr-snapshot-${TODAY}.json"
+            git diff --cached --quiet || {
+              git commit -m "chore(outcomes): OKR 스냅샷 ${TODAY} [skip ci]"
+              git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main || echo "push 실패 — 다음 주기"; }
+            }
+          fi
 
       # ── 1. 지난 7일 자율 활동 집계 ─────────────────────────────
       - name: Collect metrics

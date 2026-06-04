@@ -1,0 +1,65 @@
+{
+  "_doc": "B1 Outcome Grounding — KR↔측정신호 매핑. auto=true 는 자동 취득(github-issues/repo-files), auto=false 는 Slack/수동 입력 슬롯. direction+target 으로 움직임의 좋고나쁨 판정.",
+  "metrics": [
+    {
+      "id": "o1-kr3-blockers",
+      "okr": "O1/KR3",
+      "label": "출시 차단 이슈 수",
+      "source": "github-issues",
+      "query": "label:launch-blocker state:open",
+      "direction": "down",
+      "target": 0,
+      "auto": true
+    },
+    {
+      "id": "o4-kr2-techdebt",
+      "okr": "O4/KR2",
+      "label": "열린 기술부채 이슈 수",
+      "source": "github-issues",
+      "query": "label:tech-debt state:open",
+      "direction": "down",
+      "target": 0,
+      "auto": true
+    },
+    {
+      "id": "o4-kr1-e2e",
+      "okr": "O4/KR1",
+      "label": "E2E 테스트 스펙 수",
+      "source": "repo-files",
+      "query": "apps/web/e2e/*.spec.ts",
+      "direction": "up",
+      "target": 5,
+      "auto": true
+    },
+    {
+      "id": "o1-kr5-safety",
+      "okr": "O1/KR5",
+      "label": "AI 안전검사 테스트 파일 수",
+      "source": "repo-files",
+      "query": "packages/tarot-core/__tests__/*safety*.test.ts",
+      "direction": "up",
+      "target": 1,
+      "auto": true
+    },
+    {
+      "id": "o2-kr3-crash",
+      "okr": "O2/KR3",
+      "label": "앱 크래시율(%)",
+      "source": "manual",
+      "query": "",
+      "direction": "down",
+      "target": 1.0,
+      "auto": false
+    },
+    {
+      "id": "o2-kr2-satisfaction",
+      "okr": "O2/KR2",
+      "label": "AI 해석 만족도(5점)",
+      "source": "manual",
+      "query": "",
+      "direction": "up",
+      "target": 4.0,
+      "auto": false
+    }
+  ]
+}
