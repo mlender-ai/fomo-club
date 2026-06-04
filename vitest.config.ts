@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       "packages/**/__tests__/**/*.test.ts",
       "apps/web/__tests__/**/*.test.ts",
+      "apps/tarot-mobile/**/__tests__/**/*.test.ts",
       "scripts/**/__tests__/**/*.test.ts",
     ],
   },
