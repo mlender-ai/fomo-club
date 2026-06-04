@@ -16,8 +16,10 @@ export type ActionName =
   | "run_council"
   | "implement"
   | "merge"
+  | "merge_all"
   | "approve"
   | "comment"
+  | "close_completed"
   | "add_constraint"
   | "log_feedback";
 
@@ -25,8 +27,10 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set<ActionName>([
   "run_council",
   "implement",
   "merge",
+  "merge_all",
   "approve",
   "comment",
+  "close_completed",
   "add_constraint",
   "log_feedback",
 ]);
@@ -34,7 +38,9 @@ export const KNOWN_ACTIONS: ReadonlySet<string> = new Set<ActionName>([
 /** 비가역/고영향 — 실행 전 신중해야 하는 액션 */
 export const HIGH_IMPACT_ACTIONS: ReadonlySet<string> = new Set<ActionName>([
   "merge",
+  "merge_all",
   "implement",
+  "close_completed",
   "add_constraint",
 ]);
 

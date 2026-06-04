@@ -21,6 +21,29 @@ describe("parseActions", () => {
     expect(r.actions[0]!.payload).toEqual({ issue: 298, body: "온보딩은 토스 스타일로" });
   });
 
+  it("벌크 액션: merge_all (페이로드 없음)", () => {
+    const r = parseActions("이상 없는 PR 전부 머지할게요.\n[[ACTION:merge_all]]");
+    expect(r.actions).toEqual([{ name: "merge_all", payload: {} }]);
+    expect(r.cleaned).toBe("이상 없는 PR 전부 머지할게요.");
+  });
+
+  it("벌크 액션: close_completed (페이로드 없음)", () => {
+    const r = parseActions("완료된 이슈 정리합니다.\n[[ACTION:close_completed]]");
+    expect(r.actions).toEqual([{ name: "close_completed", payload: {} }]);
+  });
+
+  it("merge_all + close_completed 동시 (한 메시지 두 토큰)", () => {
+    const r = parseActions("머지하고 이슈 닫을게요.\n[[ACTION:merge_all]]\n[[ACTION:close_completed]]");
+    expect(r.actions.map((a) => a.name)).toEqual(["merge_all", "close_completed"]);
+  });
+
+  it("merge_all·close_completed 는 고영향으로 분류", () => {
+    expect(HIGH_IMPACT_ACTIONS.has("merge_all")).toBe(true);
+    expect(HIGH_IMPACT_ACTIONS.has("close_completed")).toBe(true);
+    expect(KNOWN_ACTIONS.has("merge_all")).toBe(true);
+    expect(KNOWN_ACTIONS.has("close_completed")).toBe(true);
+  });
+
   it("하위호환: [[TRIGGER_IMPLEMENT]] → implement", () => {
     const r = parseActions("개발 시작!\n[[TRIGGER_IMPLEMENT]]");
     expect(r.actions).toEqual([{ name: "implement", payload: {} }]);
