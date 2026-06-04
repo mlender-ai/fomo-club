@@ -50,6 +50,7 @@
      ├── 스토어 심사 검토 ──→ store-reviewer
      ├── 타로 프롬프트 ────→ prompt-engineer
      ├── RN/Expo 전문 ────→ rn-specialist
+     ├── FOMO Index 검증 ──→ fomo-index-analyst
      │
      │  [simulo 차용 — 2026-05-27 도입]
      ├── 아이디어 점수화 ───→ po-validator       (4점 척도 16점 만점)
@@ -283,7 +284,10 @@ packages/tarot-core/prompts/     ← LLM 프롬프트
 packages/tarot-core/fallback/    ← 폴백 해석 텍스트
 apps/tarot-mobile/ 내 하드코딩 문구
 푸시 알림 텍스트
+포모 마스코트 멘트 (FOMO Club)  ← docs/MASCOT.md
 ```
+
+> **FOMO Club**: 포모의 멘트도 검사 대상이다. 위로하되 투자 조언/단정 표현이 섞이지 않도록 확인한다. FOMO Index는 금융 지표가 아닌 감정 체감 지표임을 흐리는 표현 금지.
 
 **금칙어 카테고리**:
 | 카테고리 | 예시 | 대응 |
@@ -369,6 +373,34 @@ model: sonnet
 - 성능 최적화 (FlatList, 이미지 캐싱, 번들 사이즈)
 - 딥링크 / 유니버설 링크 설정
 - 애니메이션 성능 (reanimated, 60fps 검증)
+
+> **FOMO Club**: FOMO Club 홈 화면은 포모 마스코트의 두 상태(시장의 포모 → 나의 포모)와 전환 애니메이션을 가진다. docs/MASCOT.md 기준으로 구현한다. apps/fomo-club은 NativeWind를 사용한다(기존 tarot-mobile은 StyleSheet).
+
+---
+
+### 16. fomo-index-analyst (FOMO Index 검증 — FOMO Club)
+
+```yaml
+name: fomo-index-analyst
+description: >
+  FOMO Index 산출 로직의 정확성을 검증하고, 4개 Heat 컴포넌트의
+  가중치/데이터 소스를 점검한다. 이상치 탐지 및 일일 리포트 생성.
+tools: [Read, Grep, Bash, WebSearch]
+model: sonnet
+```
+
+**역할**:
+- packages/fomo-core의 산출 로직(Market/Community/Emotion/Whale Heat → calculate) 정확성 검증
+- 4개 Heat 컴포넌트의 가중치(30/30/30/10)와 데이터 소스 점검, 폴백 동작 확인
+- 일일 스냅샷(FomoIndexSnapshot)의 이상치 탐지 → 이상 발견 시 GitHub 이슈 자동 생성 + 슬랙 알림
+- 일일 리포트 생성 (오늘의 지수, 전일 대비, 컴포넌트별 기여도)
+
+**강제 인지**:
+- FOMO Index 다섯 구간(무관심/관망/관심/FOMO/광기)은 포모의 다섯 표정과 직결된다(docs/MASCOT.md, docs/FOMO_INDEX.md).
+  구간 경계값 변경 시 마스코트 표정 매핑도 함께 점검한다.
+- FOMO Index는 금융 지표가 아닌 감정 체감 지표다. 검증·리포트에서 투자 조언으로 오인될 표현을 쓰지 않는다.
+
+**출력**: 일일 리포트 + 이상치(ANOMALY) / 정상(NORMAL) 판정.
 
 ---
 

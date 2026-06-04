@@ -8,9 +8,10 @@
 
 ## 프로젝트 컨텍스트
 
-- **레포**: `mlender-ai/trading-taro`
+- **레포**: `mlender-ai/taro-stock-app`
 - **제품**: 증권 시장의 기술적 지표를 AI가 분석하여 타로 카드 형식으로 해석을 제공하는 네이티브 앱
-- **모노레포 구조**: `apps/web` (API + 어드민), `apps/tarot-mobile` (React Native), `packages/shared` (공용 타입), `packages/tarot-core` (비즈니스 로직)
+- **리포지셔닝 (현재 최우선)**: 본 프로젝트는 **FOMO CLUB**으로 리포지셔닝 중이다(MVP 우선 출시). 타로 엔진/코드는 모노레포 내 보존하며 해석 백엔드로 후속 연계한다. 레포 디렉토리·패키지 리네이밍(@trading/*, @taro/*, tarot-mobile 등)은 출시 전후 별도 정리 라운드로 연기한다. 정의/지표/마스코트는 `docs/FOMO_CLUB.md`, `docs/FOMO_INDEX.md`, `docs/MASCOT.md` 참조.
+- **모노레포 구조**: `apps/web` (API + 어드민), `apps/api` (Fastify 백엔드/워커), `apps/tarot-mobile` (React Native), `packages/shared` (공용 타입), `packages/tarot-core` (비즈니스 로직). FOMO Club 신설 예정: `apps/fomo-club`, `apps/fomo-web`, `packages/fomo-core`.
 - **기능명세서**: `docs/기능명세서.md` 참조
 
 ---
@@ -43,6 +44,26 @@
 6. catch 블록에 최소한 console.warn 또는 에러 상태 set. 빈 catch {} 금지.
 7. react-native-svg 사용 시 lib/svg.ts 래퍼 import. 새 SVG 컴포넌트 추가 시 svg.ts에도 추가.
 ```
+
+### FOMO Club
+
+docs/FOMO_CLUB.md, docs/FOMO_INDEX.md 참조. 모노레포 내 별도 앱(apps/fomo-club, apps/fomo-web)으로 신설한다.
+
+- **정직한 숫자 원칙**: 가짜 데이터 금지, 실제 집계값만. 사용자 0~소수여도 그대로 표기.
+- **무가입 웹**: apps/fomo-web은 가입 없이 방문 가능 (익명 세션 기반 집계). 가입은 푸시/기록 저장 등 부가 기능에만 요구.
+- **FOMO Index**: packages/fomo-core에서 산출. 체감 온도계이지 금융 지표가 아니다(투자 조언 아님).
+- **MVP**: 홈 화면 하나에 핵심 경험 집중. 커뮤니티/감정피드는 후속.
+- **스타일링**: apps/fomo-club은 **NativeWind** 사용(마스터 프롬프트 확정). 기존 tarot-mobile은 raw StyleSheet + constants/theme.ts 유지 — 두 앱의 스타일 패턴 공존을 허용한다.
+
+### FOMO Club 마스코트 (포모)
+
+docs/MASCOT.md 참조. 포모는 FOMO Club의 마스코트이자 살아있는 지표다.
+
+- 포모의 표정이 곧 FOMO Index다. 홈 화면의 주인공은 숫자가 아니라 표정 짓는 포모.
+- 두 단계 감정 변화는 필수 구현: ①시장의 포모(진입 직후, FOMO Index 표현) → ②나의 포모(감정 선택 후 반응).
+- 화면 설계 시 이 두 상태와 전환(애니메이션 + 멘트)을 반드시 포함한다.
+- 디자인: 검은 얼굴 + 흰 눈, 얼굴 중심. 배경 검정, 감정 색은 포인트로만. 화면 밀도는 기리고처럼 비운다.
+- 색 체계: FOMO=빨강 / 공포=파랑 / 후회=보라 / 탐욕=초록 / 확신=노랑.
 
 ### 향후 피처 대비 설계 원칙 (사주팔자 통합)
 
