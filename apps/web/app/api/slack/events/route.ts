@@ -11,6 +11,9 @@ import {
   getIssue,
   getPR,
   mergePR,
+  getPRMergeability,
+  closeIssue,
+  getResolvedOpenIssues,
   addLabel,
   addIssueComment,
   appendFeedbackLog,
@@ -307,13 +310,15 @@ ${runList || "(없음)"}
   - 오늘 Auto PR이 없고 최신 실행이 완료(success)인데 PR이 없으면 "최근 트리거는 중복/변경없음으로 건너뛰었을 수 있다"고 솔직히 답한다. 절대 "개발 진행 중"이라 지어내지 마라.
 
 액션 실행 규칙 (중요 — tool use):
-- CEO가 **명확히 실행을 지시**하면, 답변 끝에 단독 줄로 액션 토큰을 정확히 출력한다. 한 메시지당 1개만.
+- CEO가 **명확히 실행을 지시**하면, 답변 끝에 단독 줄로 액션 토큰을 정확히 출력한다. 보통 1개, 단 "PR 머지 + 이슈 정리"처럼 벌크 정리는 merge_all·close_completed 를 함께(각각 단독 줄) 낼 수 있다.
 - 사용 가능한 액션:
   \`[[ACTION:run_council]]\` — Agent Council(idea-proposal) 즉시 실행 ("의회 돌려", "제안 받아")
   \`[[ACTION:implement]] {"date":"YYYY-MM-DD"}\` — auto-implement 트리거 (date 생략 시 오늘) ("구현 시작", "개발 진행")
-  \`[[ACTION:merge]] {"pr":291}\` — PR squash 머지 ("이 PR 머지해")
+  \`[[ACTION:merge]] {"pr":291}\` — 특정 PR squash 머지 ("이 PR 머지해", 번호 명시)
+  \`[[ACTION:merge_all]]\` — 열린 PR 중 **이상 없는 것 전부** 머지 ("PR 전부 머지", "남은 PR 머지", "이상없으면 다 머지"). 번호 불필요 — 초안·CI미통과·충돌은 자동 제외.
   \`[[ACTION:approve]] {"issue":298}\` — 이슈에 implement-approved 라벨
   \`[[ACTION:comment]] {"issue":298,"body":"..."}\` — 이슈/PR에 코멘트 (= 피드백 반영의 1차 형태)
+  \`[[ACTION:close_completed]]\` — **완료(머지로 해결)됐는데 안 닫힌 이슈를 전부 닫기** ("완료된 이슈 닫아", "끝난 이슈 정리해"). 번호 불필요.
   \`[[ACTION:add_constraint]] {"rule":"...","scope":["all"],"kind":"prohibition","permanent":true}\` — 영구 규칙(standing constraint) 적재
   \`[[ACTION:log_feedback]] {"note":"..."}\` — CEO의 피드백·방향·판정을 기억에 적재 (다음 Agent Council 입력에 반영)
 - JSON 페이로드는 반드시 한 줄. scope kind 는 정해진 값만.
@@ -325,8 +330,14 @@ ${runList || "(없음)"}
 - 위 발화에 "리스트", "우선순위", "알려줘" 같은 단어가 섞여 있어도 **'개발/구현/진행' 동사가 있으면 실행 지시**다. 단순 조회로 오해하지 마라. (예: "오늘 처리 우선순위 리스트 개발하고 알려줘" = implement 실행 + 진행 상황 안내)
 - 답변엔 "개발(auto-implement)을 시작하겠다"는 한 문장 + 토큰만. 우선순위를 또 길게 나열하지 마라.
 
+**벌크 정리 트리거 (번호 없이도 실행 — 자주 쓰임)**:
+- "PR 이상없으면 전부 머지", "남은 PR 다 머지", "문제없으면 머지해" → 번호를 묻지 말고 \`[[ACTION:merge_all]]\` 토큰을 낸다. (개별 번호가 명시되면 그때만 \`[[ACTION:merge]]\`.)
+- "완료된 이슈 닫아", "끝난 이슈 정리해", "해결된 건 닫아줘" → \`[[ACTION:close_completed]]\` 토큰을 낸다.
+- 둘 다 지시하면("머지하고 이슈도 닫아") 두 토큰을 각각 단독 줄로 출력한다.
+- **절대 "PR 번호가 올바르지 않다/머지할 PR이 없다"고 지어내지 마라** — 벌크 토큰을 내면 시스템이 실제 열린 PR/이슈를 조회해 처리한다.
+
 - **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
-- merge/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
+- merge/merge_all/close_completed/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
 - add_constraint 는 "앞으로 항상/절대" 류의 반복 규칙에만. 1회성 지시("오늘은 온보딩부터")엔 금지.${personaAddendum}${decisionAddendum}`;
 
     const res = await fetch(AI_URL, {
@@ -420,6 +431,31 @@ async function executeAction(
         await mergePR(pr);
         return `✅ *PR #${pr} squash 머지 완료*.`;
       }
+      case "merge_all": {
+        // "이상 없으면 전부 머지" — 열린 PR 중 초안 아니고 mergeable_state=clean(CI통과+충돌없음)만 머지.
+        const prs = (await getOpenPRs(30)) as Array<{ number: number; title: string }>;
+        if (!prs.length) return "머지할 열린 PR이 없습니다.";
+        const merged: number[] = [];
+        const skipped: string[] = [];
+        for (const p of prs) {
+          try {
+            const m = await getPRMergeability(p.number);
+            if (m.draft) { skipped.push(`#${p.number}(초안)`); continue; }
+            if (m.mergeableState !== "clean") { skipped.push(`#${p.number}(${m.mergeableState})`); continue; }
+            await mergePR(p.number);
+            merged.push(p.number);
+          } catch (e) {
+            skipped.push(`#${p.number}(실패:${e instanceof Error ? e.message : "?"})`);
+          }
+        }
+        const lines = [
+          merged.length > 0
+            ? `✅ *${merged.length}건 머지 완료*: ${merged.map((n) => `#${n}`).join(", ")}`
+            : "✅ 머지한 PR 없음.",
+        ];
+        if (skipped.length) lines.push(`⏭️ 건너뜀(${skipped.length}): ${skipped.join(", ")}  _CI 미통과·충돌·초안은 안전상 제외_`);
+        return lines.join("\n");
+      }
       case "approve": {
         const issue = Number(action.payload.issue);
         if (!Number.isInteger(issue) || issue <= 0) return "⚠️ approve: 이슈 번호가 올바르지 않습니다.";
@@ -432,6 +468,21 @@ async function executeAction(
         if (!Number.isInteger(issue) || issue <= 0 || !body) return "⚠️ comment: 이슈 번호/본문이 올바르지 않습니다.";
         await addIssueComment(issue, `🗣️ (CEO via Slack): ${body}`);
         return `💬 *#${issue}에 코멘트 작성 완료*.`;
+      }
+      case "close_completed": {
+        // "완료된 이슈 닫아" — 최근 머지된 PR이 참조(#N)한, 아직 열려있는 이슈를 닫는다.
+        const open = await getResolvedOpenIssues(45);
+        if (!open.length) return "닫을 완료(머지로 해결된) 이슈가 없습니다.";
+        const closed: number[] = [];
+        for (const n of open) {
+          try {
+            await closeIssue(n, "✅ 머지로 해결됨 — CEO 지시로 자동 close.");
+            closed.push(n);
+          } catch {
+            // 개별 실패는 건너뜀
+          }
+        }
+        return `🗂️ *완료 이슈 ${closed.length}건 닫음*: ${closed.map((n) => `#${n}`).join(", ")}`;
       }
       case "add_constraint": {
         const rule = action.payload.rule;

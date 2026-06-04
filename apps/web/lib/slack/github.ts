@@ -178,6 +178,75 @@ export async function getPR(n: number): Promise<{
   };
 }
 
+// ── 벌크 액션 지원: PR 머지 가능 여부 / 이슈 닫기 / 해결된 이슈 탐지 ──
+
+/** PR 머지 가능 상태 — mergeable_state("clean"=CI통과+충돌없음)·draft 여부. */
+export async function getPRMergeability(n: number): Promise<{
+  number: number;
+  title: string;
+  draft: boolean;
+  mergeableState: string;
+  htmlUrl: string;
+}> {
+  const pr = (await githubApi(`/repos/${REPO}/pulls/${n}`)) as {
+    number: number;
+    title: string;
+    draft?: boolean;
+    mergeable_state?: string;
+    html_url?: string;
+  };
+  return {
+    number: pr.number,
+    title: pr.title,
+    draft: pr.draft ?? false,
+    mergeableState: pr.mergeable_state ?? "unknown",
+    htmlUrl: pr.html_url ?? "",
+  };
+}
+
+/** 이슈 닫기 (선택적 코멘트 먼저). */
+export async function closeIssue(n: number, comment?: string): Promise<void> {
+  if (comment) {
+    try {
+      await addIssueComment(n, comment);
+    } catch (e) {
+      console.warn(`closeIssue comment failed #${n}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  await githubApi(`/repos/${REPO}/issues/${n}`, {
+    method: "PATCH",
+    body: JSON.stringify({ state: "closed" }),
+  });
+}
+
+/** 최근 머지된 PR들이 참조(#N)한 이슈 중 아직 열려있는 것 — "완료(머지로 해결)됐는데 안 닫힌" 이슈. */
+export async function getResolvedOpenIssues(sinceDays = 45): Promise<number[]> {
+  const since = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
+  const merged = (await getMergedPRs(since, 50)) as Array<{ title?: string; body?: string }>;
+  const refs = new Set<number>();
+  for (const pr of merged) {
+    const text = `${pr.title ?? ""} ${pr.body ?? ""}`;
+    for (const m of text.matchAll(/#(\d+)/g)) {
+      const x = Number(m[1]);
+      if (x > 0) refs.add(x);
+    }
+  }
+  const openIssues: number[] = [];
+  for (const n of refs) {
+    try {
+      const it = (await githubApi(`/repos/${REPO}/issues/${n}`)) as {
+        state: string;
+        pull_request?: unknown;
+      };
+      // PR(이슈로도 조회됨)은 제외, 열린 이슈만
+      if (it.state === "open" && !it.pull_request) openIssues.push(n);
+    } catch {
+      // 조회 실패는 건너뜀
+    }
+  }
+  return openIssues;
+}
+
 // ── Step 3 (기억 천장): CEO 피드백 로그 적재/조회 ──────────────────
 // prepare 가 읽는 feedback-log 라벨 이슈에 누적 → 다음 Agent Council 사이클에 자동 반영.
 const FEEDBACK_LOG_TITLE = "[Slack] CEO Feedback Log";
