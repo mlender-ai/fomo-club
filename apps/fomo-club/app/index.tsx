@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Easing, View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link } from "expo-router";
 import {
@@ -23,6 +23,19 @@ export default function Home() {
   const stage: "market" | "mine" = mine ? "mine" : "market";
   const marketFace =
     MARKET_SCORE_PLACEHOLDER == null ? "curious" : scoreToFace(MARKET_SCORE_PLACEHOLDER);
+
+  // '나의 포모' 멘트가 떠오르듯 페이드+슬라이드인. docs/MASCOT.md "전환 = 애니메이션 + 멘트".
+  const mentionFade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.timing(mentionFade, {
+      toValue: stage === "mine" ? 1 : 0,
+      duration: 420,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [stage, mentionFade]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -54,9 +67,19 @@ export default function Home() {
 
         {/* 2단계 전환 멘트 — Phase 3에서 실제 멘트/애니메이션 */}
         {stage === "mine" && mine && (
-          <Text style={styles.mention}>
+          <Animated.Text
+            style={[
+              styles.mention,
+              {
+                opacity: mentionFade,
+                transform: [
+                  { translateY: mentionFade.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+                ],
+              },
+            ]}
+          >
             다들 어떻든, 너의 「{EMOTION_LABELS[mine]}」도 괜찮아.
-          </Text>
+          </Animated.Text>
         )}
 
         {/* 오늘의 감정 투표 */}
