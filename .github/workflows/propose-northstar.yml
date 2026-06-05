@@ -1,0 +1,174 @@
+name: Propose North Star Change
+
+# 제안형 거버넌스(Task B): 에이전트가 AGENT_NORTH_STAR.md 변경을 *제안* → CEO 가 PR 머지로 승인.
+# Phase 2 distill 패턴 재사용. auto-merge 절대 비대상 — CEO 만 머지. main 직접 push 금지.
+# 안전장치: 필수 섹션 누락 제안은 PR 생성 안 함(파일 파손 방지). 헌법 섹션 변경 시 ⚠️ 배지.
+
+on:
+  workflow_dispatch:
+    inputs:
+      proposal_markdown:
+        description: "제안하는 AGENT_NORTH_STAR.md 전문(비우면 LLM 이 현재+컨텍스트로 초안 생성)"
+        required: false
+        default: ""
+      reason:
+        description: "변경 사유 (PR 본문에 표기)"
+        required: false
+        default: ""
+      source_hint:
+        description: "출처 (예: slack/<thread>, weekly-cron)"
+        required: false
+        default: "manual"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  models: read
+
+concurrency:
+  group: propose-northstar
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cooldown — 이미 열린 제안 PR 있으면 중단
+        id: cooldown
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          OPEN=$(gh pr list --label "northstar-proposal" --state open --limit 5 \
+            --json number --repo "${{ github.repository }}" 2>/dev/null | jq 'length' || echo 0)
+          if [ "${OPEN:-0}" -gt 0 ]; then
+            echo "이미 리뷰 대기 중인 North Star 제안 PR 존재 — 중복 제안 중단(쿨다운)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare context
+        id: prep
+        if: steps.cooldown.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROPOSAL: ${{ github.event.inputs.proposal_markdown }}
+        run: |
+          set -uo pipefail
+          echo "today=$(TZ=Asia/Seoul date '+%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+          if [ -n "$PROPOSAL" ]; then
+            echo "mode=manual" >> "$GITHUB_OUTPUT"
+            printf '%s' "$PROPOSAL" > /tmp/proposed.md
+          else
+            echo "mode=llm" >> "$GITHUB_OUTPUT"
+            # 현재 North Star + 최근 CEO Brief + B1 ledger 요약을 LLM 프롬프트로 전달
+            head -c 8000 AGENT_NORTH_STAR.md > /tmp/current_ns.md
+            CUR=$(cat /tmp/current_ns.md)
+            echo "current_ns<<__NSEOF__" >> "$GITHUB_OUTPUT"
+            echo "$CUR" >> "$GITHUB_OUTPUT"
+            echo "__NSEOF__" >> "$GITHUB_OUTPUT"
+            BRIEF=$(gh issue list --label "ceo-brief" --state all --limit 1 \
+              --json body --repo "${{ github.repository }}" | jq -r '.[0].body // ""' | head -c 3000 || true)
+            echo "brief<<__BEOF__" >> "$GITHUB_OUTPUT"
+            echo "$BRIEF" >> "$GITHUB_OUTPUT"
+            echo "__BEOF__" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: LLM draft (제안 본문 없을 때)
+        if: steps.cooldown.outputs.skip != 'true' && steps.prep.outputs.mode == 'llm'
+        id: llm
+        uses: actions/ai-inference@v1
+        continue-on-error: true
+        with:
+          model: openai/gpt-4o
+          max-tokens: 4096
+          system-prompt: |
+            당신은 AGENT_NORTH_STAR.md 변경안을 작성하는 에이전트다.
+            출력은 **수정된 North Star 전문(markdown)만**. 코드펜스·설명 금지.
+            규칙:
+            - 섹션 골격(## 헤더들)을 모두 유지한다. 어떤 섹션도 삭제하지 마라.
+            - 제품은 FOMO Club(투자자 감정 시각화, FOMO Index, 마스코트 포모, 정직한 숫자). 타로/주식/크레딧으로 되돌리지 마라.
+            - "## ⛔ 절대 제안 금지"·"## ✍️ 제안 작성 절대 규칙"(헌법 섹션)은 가급적 건드리지 말고, 바꿔야 하면 최소한으로.
+            - 변경은 보통 "이번 주 테마"·"측정 지표"·"집중 영역"·"회고"에 한정한다(주간 갱신).
+            - <<< CEO 확정 >>> 슬롯 표기는 유지한다.
+          prompt: |
+            ## 현재 AGENT_NORTH_STAR.md
+            ${{ steps.prep.outputs.current_ns }}
+
+            ## 최근 CEO Brief (참고)
+            ${{ steps.prep.outputs.brief }}
+
+            ---
+            위 현재 North Star를 기준으로, 최근 브리핑·진척을 반영한 **다음 주 버전 전문**을 출력하라.
+            섹션은 전부 유지하고 내용만 갱신. FOMO Club 정체성 유지.
+
+      - name: Write LLM proposal
+        if: steps.cooldown.outputs.skip != 'true' && steps.prep.outputs.mode == 'llm'
+        env:
+          RESP: ${{ steps.llm.outputs.response }}
+        run: |
+          # 코드펜스 제거 후 저장
+          printf '%s' "$RESP" | sed -E 's/^```[a-zA-Z]*$//; s/^```$//' > /tmp/proposed.md
+          head -c 200 /tmp/proposed.md
+
+      - name: Validate proposal (필수 섹션 가드)
+        id: validate
+        if: steps.cooldown.outputs.skip != 'true'
+        run: |
+          set -uo pipefail
+          if [ ! -s /tmp/proposed.md ]; then
+            echo "빈 제안 — 중단"; echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if npx -y tsx@4.19.2 scripts/northstar-proposal.ts validate /tmp/proposed.md; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "필수 섹션 누락 — North Star 파손 방지 위해 PR 생성 안 함."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+          CONST=$(npx -y tsx@4.19.2 scripts/northstar-proposal.ts constitutional AGENT_NORTH_STAR.md /tmp/proposed.md 2>/dev/null || echo "true")
+          echo "constitutional=$CONST" >> "$GITHUB_OUTPUT"
+
+      - name: Create proposal PR
+        if: steps.cooldown.outputs.skip != 'true' && steps.validate.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REASON: ${{ github.event.inputs.reason }}
+          SOURCE: ${{ github.event.inputs.source_hint }}
+          MODE: ${{ steps.prep.outputs.mode }}
+          CONSTITUTIONAL: ${{ steps.validate.outputs.constitutional }}
+        run: |
+          set -uo pipefail
+          TODAY="${{ steps.prep.outputs.today }}"
+          # 변경 없으면 종료
+          cp /tmp/proposed.md AGENT_NORTH_STAR.md
+          if git diff --quiet AGENT_NORTH_STAR.md; then
+            echo "변경 없음 — PR 생략"; exit 0
+          fi
+          BRANCH="northstar/propose-${TODAY}-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add AGENT_NORTH_STAR.md
+          git commit -m "propose(northstar): North Star 변경 제안 (${TODAY})"
+          git push -u origin "$BRANCH"
+
+          BADGE=""
+          if [ "$CONSTITUTIONAL" = "true" ]; then
+            BADGE="⚠️ **헌법 변경 제안** — '절대 제안 금지' 또는 '제안 작성 절대 규칙' 섹션이 바뀝니다. CEO 특별 주의 리뷰 필요.\n\n"
+          fi
+          gh pr create \
+            --title "🌟 North Star 변경 제안 (${TODAY})" \
+            --body "$(printf '%b' "${BADGE}**출처**: ${SOURCE} · **모드**: ${MODE}\n**사유**: ${REASON:-(미기재)}\n\n변경 내용은 이 PR의 diff를 확인하세요. **머지 = 승인(반영), close = 거부.**\n거부 시 사유를 코멘트로 남기면 다음 제안이 학습합니다.\n\n— auto-merge 비대상(CEO 전용). 에이전트는 직접 수정하지 않습니다.")" \
+            --label "northstar-proposal,needs-ceo-review" \
+            --repo "${{ github.repository }}"
+
+      - name: No-op note
+        if: steps.cooldown.outputs.skip == 'true' || steps.validate.outputs.ok != 'true'
+        run: echo "North Star 제안 PR 생성 안 됨 (쿨다운 또는 검증 실패)."
