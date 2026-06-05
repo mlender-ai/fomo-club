@@ -4,7 +4,7 @@ import {
   buildInterpretationPromptV2_0,
   buildInterpretationPromptV2_1,
   buildInterpretationPromptV2_2,
-  buildInterpretationPromptV2_5,
+  buildInterpretationPromptV2_6,
   checkSafety,
   getFallbackInterpretation,
   REQUIRED_DISCLAIMER,
@@ -100,7 +100,7 @@ export async function generateInterpretation(
 
   // 3차: LLM 호출
   try {
-    const prompt = buildInterpretationPromptV2_5(market, cards, financialCtx);
+    const prompt = buildInterpretationPromptV2_6(market, cards, financialCtx);
     const raw = await callLlm(prompt);
     const parsed = parseLlmJson(raw);
 

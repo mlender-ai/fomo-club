@@ -14,3 +14,4 @@ export { buildInterpretationPromptV2_2, PROMPT_VERSION_2_2, type FinancialContex
 export { buildInterpretationPromptV2_3, PROMPT_VERSION_2_3 } from "./prompts/interpret-v2.3.0.js";
 export { buildInterpretationPromptV2_4, PROMPT_VERSION_2_4 } from "./prompts/interpret-v2.4.0.js";
 export { buildInterpretationPromptV2_5, PROMPT_VERSION_2_5 } from "./prompts/interpret-v2.5.0.js";
+export { buildInterpretationPromptV2_6, PROMPT_VERSION_2_6 } from "./prompts/interpret-v2.6.0.js";

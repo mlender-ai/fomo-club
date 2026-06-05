@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { drawCards, getFallbackInterpretation, buildInterpretationPromptV2_5, checkSafety, generateFallbackInsight, type FinancialContext } from "@taro/core";
+import { drawCards, getFallbackInterpretation, buildInterpretationPromptV2_6, checkSafety, generateFallbackInsight, type FinancialContext } from "@taro/core";
 import { fetchMarketSnapshot } from "@/lib/tarot/market";
 import type { StockQuote } from "@trading/shared/src/stockTypes";
 
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
 
     try {
       // v2.3.0: 단일 카드는 v2.2.0과 동일. 3장 스프레드에서 슬롯별 심리 지형 강화.
-      const prompt = buildInterpretationPromptV2_5(marketSnapshot, [drawn], financialCtx);
+      const prompt = buildInterpretationPromptV2_6(marketSnapshot, [drawn], financialCtx);
       const result = await callLlmForInsight(prompt);
 
       const safetyResult = checkSafety(`${result.headline} ${result.summary}`);
