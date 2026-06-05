@@ -8,6 +8,8 @@ interface CacheEntry<T> {
 
 // 모듈 레벨 캐시 — 동일 URL에 대한 중복 fetch 방지 (탭 전환 시 재사용)
 const fetchCache = new Map<string, CacheEntry<unknown>>();
+// 인플라이트 요청 맵 — 동일 URL의 병렬 요청을 단일 Promise로 합산해 서버 부하 감소
+const inFlightMap = new Map<string, Promise<unknown>>();
 
 interface UseCachedFetchResult<T> {
   data: T | null;
@@ -46,6 +48,7 @@ export function useCachedFetch<T>(path: string, ttlMs = 15 * 60 * 1000): UseCach
     const now = Date.now();
     const hit = fetchCache.get(path);
     if (hit && hit.expiresAt > now) {
+      console.log("[useCachedFetch] hit:", path);
       setData(hit.data as T);
       setLoading(false);
       setError(null);
@@ -55,9 +58,19 @@ export function useCachedFetch<T>(path: string, ttlMs = 15 * 60 * 1000): UseCach
     setLoading(true);
     setError(null);
 
-    apiFetch<T>(path)
+    // 이미 진행 중인 동일 URL 요청 재활용 — 중복 네트워크 호출 제거
+    let fetchPromise = inFlightMap.get(path) as Promise<T> | undefined;
+    if (!fetchPromise) {
+      fetchPromise = apiFetch<T>(path).finally(() => {
+        inFlightMap.delete(path);
+      });
+      inFlightMap.set(path, fetchPromise as Promise<unknown>);
+    }
+
+    fetchPromise
       .then((result) => {
         fetchCache.set(path, { data: result, expiresAt: Date.now() + ttlMs });
+        console.log("[useCachedFetch] miss → cached:", path);
         if (mountedRef.current) {
           setData(result);
           setError(null);
