@@ -2,7 +2,7 @@
   "constraints": [
     {
       "id": "c-20260530-datamismatch",
-      "rule": "데이터 불일치/결측/오류를 사용자에게 직접 알리는 UI(배너·경고·\"데이터가 일치하지 않습니다\" 등) 제안 금지. 정합성 문제는 로딩 스켈레톤을 유지하며 백엔드에서 자동 해결하고, 사용자에게는 항상 정합된 데이터만 보여준다. DataMismatchBanner류 자동 폐기.",
+      "rule": "데이터 불일치/결측/오류를 사용자에게 직접 알리는 UI(배너·경고·\"데이터가 일치하지 않습니다\" 등) 제안 금지. 정합성 문제는 로딩을 유지하며 백엔드에서 자동 해결하고, 사용자에게는 항상 정합된 데이터만 보여준다. DataMismatchBanner류 자동 폐기.",
       "scope": ["pm", "frontend", "backend", "all"],
       "kind": "prohibition",
       "source": "ceo-brief / 2026-05-30 CEO 직접 피드백",
@@ -14,10 +14,10 @@
     },
     {
       "id": "c-20260526-effectsban",
-      "rule": "이펙트/사운드/햅틱/글로우/파티클/반짝임/싱크로 효과/BGM/장식 애니메이션/버튼 펄스·진동 등 시각적·청각적 폴리싱 제안 금지. 사용자 경험(플로우·정보 위계·접근성)과 콘텐츠(해석 품질·카드 서사·재방문 동기)에만 집중한다.",
+      "rule": "이펙트/사운드/햅틱/글로우/파티클/반짝임/싱크로 효과/BGM/장식 애니메이션/버튼 펄스·진동 등 시각적·청각적 폴리싱 제안 금지. 감정 시각화·집단 통계·마스코트 포모 표정의 의미 전달·정보 위계·접근성·재방문 동기에만 집중한다. (포모 표정 변화 등 핵심 메커니즘 전달용 애니메이션은 폴리싱이 아니라 기능 — 예외)",
       "scope": ["all"],
       "kind": "prohibition",
-      "source": "ceo / 2026-05-26 CEO 직접 지시",
+      "source": "ceo / 2026-05-26 CEO 직접 지시 (2026-06-05 FOMO 맥락 갱신)",
       "permanent": true,
       "createdAt": "2026-05-26",
       "expiresAt": null,
@@ -26,12 +26,58 @@
     },
     {
       "id": "c-20260522-tossmentalmodel",
-      "rule": "증권 관련 UX(종목 상세·차트·재무·뉴스·공시)의 멘탈모델은 토스증권(tossinvest.com)이다. 정보 위계·레이아웃·데이터 표시는 토스증권을 레퍼런스로 한다. 토스와 동떨어진 금융 UX 제안은 토스 레퍼런스 근거가 필요하다.",
-      "scope": ["pm", "frontend", "design", "all"],
+      "rule": "[만료 2026-06-05 — FOMO Club 리포지셔닝] (구) 증권 관련 UX(종목 상세·차트·재무·뉴스)의 멘탈모델은 토스증권. → c-20260605-minimalux 로 대체(종목 한정이 아닌 일반 미니멀 UX 원칙).",
+      "scope": ["pm", "frontend", "design"],
       "kind": "mental-model",
-      "source": "north-star / 2026-05-22",
-      "permanent": true,
+      "source": "north-star / 2026-05-22 (superseded by c-20260605-minimalux)",
+      "permanent": false,
       "createdAt": "2026-05-22",
+      "expiresAt": "2026-06-04",
+      "hits": 0
+    },
+    {
+      "id": "c-20260605-honest-numbers",
+      "rule": "정직한 숫자 원칙: 가짜/임의 수치 금지, 실제 집계값만 표기한다(작아도, 0이어도 그대로). 데이터 소스 미비 시 안전한 기본값+폴백으로 산출하되 빈 값/에러를 사용자에게 노출하지 않는다. FOMO Index 등 모든 수치는 실제 집계/시장 데이터 기반이어야 한다.",
+      "scope": ["all"],
+      "kind": "prohibition",
+      "source": "docs/FOMO_CLUB.md 정직한 숫자 원칙 / 2026-06-05",
+      "permanent": true,
+      "createdAt": "2026-06-05",
+      "expiresAt": null,
+      "hits": 0,
+      "keywords": ["가짜 데이터", "가짜 숫자", "임의 수치", "더미 데이터", "mock 수치", "랜덤 지수", "하드코딩 지수"]
+    },
+    {
+      "id": "c-20260605-emotion-viz",
+      "rule": "감정 시각화 우선: 우리는 시장을 분석/예측하지 않고 참여자 감정을 시각화한다. 예측·투자 조언성 표현 금지(매수·매도·목표가·\"오를 것\" 등). FOMO Index는 감정 체감 온도계이지 금융 지표가 아니며 면책을 유지한다.",
+      "scope": ["pm", "frontend", "prompt", "all"],
+      "kind": "prohibition",
+      "source": "docs/FOMO_INDEX.md 면책 / 2026-06-05",
+      "permanent": true,
+      "createdAt": "2026-06-05",
+      "expiresAt": null,
+      "hits": 0,
+      "keywords": ["매수 추천", "매도 추천", "목표가", "투자 조언", "수익률 예측", "오를 것", "사야 할", "팔아야 할"]
+    },
+    {
+      "id": "c-20260605-fomo-mascot",
+      "rule": "마스코트 포모 중심: 홈의 주인공은 숫자가 아니라 표정 짓는 포모다. 포모 표정 ↔ FOMO Index 5구간 매핑을 일관되게 유지하고(경계값 변경 시 표정 동시 점검), 2단계 감정 변화(시장의 포모 → 나의 포모)를 핵심 메커니즘으로 둔다.",
+      "scope": ["pm", "design", "frontend"],
+      "kind": "mental-model",
+      "source": "docs/MASCOT.md / 2026-06-05",
+      "permanent": true,
+      "createdAt": "2026-06-05",
+      "expiresAt": null,
+      "hits": 0
+    },
+    {
+      "id": "c-20260605-minimalux",
+      "rule": "미니멀 UX 원칙: 정보 위계는 명확히, 화면 밀도는 비운다(기리고 스타일). 토스의 정보 위계·미니멀 정신을 일반 UX 레퍼런스로 삼되 종목 상세·차트에 한정하지 않는다. 홈은 핵심 경험(Index+포모+투표+통계) 하나에 집중.",
+      "scope": ["pm", "design", "frontend"],
+      "kind": "mental-model",
+      "source": "north-star + FOMO_CLUB MVP / 2026-06-05 (replaces c-20260522-tossmentalmodel)",
+      "permanent": true,
+      "createdAt": "2026-06-05",
       "expiresAt": null,
       "hits": 0
     }
