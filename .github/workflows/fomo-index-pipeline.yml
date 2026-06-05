@@ -1,0 +1,38 @@
+name: FOMO Index Pipeline
+
+# FOMO Index 일일 산출 (docs/FOMO_INDEX.md)
+# 장 마감 후 + 주요 시간대에 감정 집계 + 지수 산출 → FomoIndexSnapshot 저장
+
+on:
+  schedule:
+    # KST = UTC+9. 미국장 마감 후(06:30 KST = 21:30 UTC) + 한국장 마감 후(15:40 KST = 06:40 UTC) + 정오(03:00 UTC)
+    - cron: "30 21 * * 1-5" # 미국장 마감 후
+    - cron: "40 6 * * 1-5"  # 한국장 마감 후
+    - cron: "0 3 * * *"     # 정오 스냅샷
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Prisma generate
+        run: npm run prisma:generate
+
+      - name: Compute FOMO Index snapshot
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+        run: npm run fomo:index

@@ -721,3 +721,39 @@ model AdminSessionConfig {
   invalidatedBefore DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────
+// FOMO Club (Phase 2) — 감정 집계 + FOMO Index 스냅샷
+// docs/FOMO_CLUB.md, docs/FOMO_INDEX.md 참조. 익명 세션 기반, 무가입 허용.
+// ─────────────────────────────────────────────
+
+// 익명 감정 투표 — 웹/앱 공통, 1세션 1일 1회
+model EmotionVote {
+  id        String   @id @default(cuid())
+  sessionId String // 익명 세션 (웹: localStorage, 앱: 디바이스 ID)
+  userId    String? // 가입자만 (선택)
+  emotion   String // "fomo"|"fear"|"regret"|"greed"|"conviction"
+  source    String // "web"|"mobile"
+  votedDate String // YYYY-MM-DD (1일 1회 제한용)
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, votedDate]) // 1세션 1일 1회
+  @@index([votedDate, emotion])
+}
+
+// 일일 FOMO Index 스냅샷 — 파이프라인이 산출하여 저장
+model FomoIndexSnapshot {
+  id            String   @id @default(cuid())
+  date          String   @unique // YYYY-MM-DD
+  score         Int // 0~100
+  state         String // "무관심"|"관망"|"관심"|"FOMO"|"광기"
+  marketHeat    Int // 0~30
+  communityHeat Int // 0~30
+  emotionHeat   Int // 0~30
+  whaleHeat     Int // 0~10
+  aiSummary     String
+  insights      Json // Daily Insights 배너 배열
+  prevDayDelta  Int
+  avg30Delta    Int
+  createdAt     DateTime @default(now())
+}
