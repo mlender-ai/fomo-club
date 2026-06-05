@@ -39,16 +39,41 @@ const FALLBACK_TEMPLATES: Partial<Record<FallbackKey, FallbackTemplate>> = {
   },
 };
 
+export interface FallbackContext {
+  ticker?: string;
+  sector?: string;
+}
+
 export function getFallbackInterpretation(
   cardId: TarotCardId,
-  orientation: TarotCardOrientation
+  orientation: TarotCardOrientation,
+  context?: FallbackContext
 ): FallbackTemplate {
   const key: FallbackKey = `${cardId}:${orientation}`;
   const template = FALLBACK_TEMPLATES[key];
 
-  if (template) return template;
+  if (template) {
+    if (!context?.ticker) return template;
+    // 종목 컨텍스트가 있으면 요약 문장에 종목명/섹터를 자연스럽게 결합
+    const sectorHint = context.sector ? ` ${context.sector} 섹터 특유의 에너지와 함께,` : "";
+    return {
+      ...template,
+      summary: `${context.ticker}에${sectorHint} ${template.summary}`,
+    };
+  }
 
-  // 카드별 템플릿이 없을 때 범용 폴백
+  // 카드별 템플릿이 없을 때 범용 폴백 — 종목 컨텍스트 반영
+  if (context?.ticker) {
+    const sectorNote = context.sector
+      ? ` ${context.sector} 섹터의 흐름 속에서`
+      : "";
+    return {
+      headline: "우주의 흐름이 말을 건넨다",
+      summary: `${context.ticker}는${sectorNote} 지금 이 순간 타로가 포착한 에너지를 담고 있습니다. 단기 변동에 흔들리지 않고 흐름을 관망하는 지혜가 필요할 수 있습니다.`,
+      detail: `카드가 ${context.ticker}에 전하는 메시지는 지금 이 순간 가장 필요한 통찰을 담고 있습니다. 숫자와 차트 너머에 존재하는 에너지의 흐름을 느껴보세요. 타로는 결정을 대신하지 않으며, 스스로의 직관을 깨우는 거울입니다. 이 해석은 투자 조언이 아닙니다.`,
+    };
+  }
+
   return {
     headline: "우주의 흐름이 말을 건넨다",
     summary: "타로 카드가 현재의 에너지를 담아 메시지를 전합니다. 이 순간의 흐름을 차분히 바라볼 것을 권합니다.",
