@@ -17,6 +17,7 @@ import { MetricsGrid } from "../../components/ticker/MetricsGrid";
 import { CompanyInfo } from "../../components/ticker/CompanyInfo";
 import { FinancialChart } from "../../components/ticker/FinancialChart";
 import { KeyMetricsGrid } from "../../components/ticker/KeyMetricsGrid";
+import { FinancialSummary } from "../../components/ticker/FinancialSummary";
 import { NewsList } from "../../components/ticker/NewsList";
 import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
@@ -313,6 +314,13 @@ export default function TickerDetailScreen() {
                   name={quote?.longName ?? quote?.shortName ?? symbol}
                   exchange={quote?.exchange ?? ""}
                   profile={profile}
+                />
+              )}
+              {keyMetrics && annualFinancials.length > 0 && (
+                <FinancialSummary
+                  keyMetrics={keyMetrics}
+                  annualFinancials={annualFinancials}
+                  currency={currency}
                 />
               )}
               {(quarterlyEarnings.length > 0 || annualFinancials.length > 0) && (
