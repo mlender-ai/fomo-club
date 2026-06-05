@@ -26,13 +26,13 @@
 `Target-Metric: <지표 id>`
 `Expected-Direction: up|down`
 
-사용 가능한 지표 id (generated/outcomes/metric-registry.json):
-- `o1-kr3-blockers` — 출시 차단 이슈 수 (down)
-- `o4-kr2-techdebt` — 열린 기술부채 이슈 수 (down)
-- `o4-kr1-e2e` — E2E 테스트 스펙 수 (up)
-- `o1-kr5-safety` — AI 안전검사 테스트 수 (up)
-- `o2-kr3-crash` — 앱 크래시율 (down)
-- `o2-kr2-satisfaction` — AI 해석 만족도 (up)
+사용 가능한 지표 id (generated/outcomes/metric-registry.json — FOMO Club):
+- `o1-mvp-blockers` — FOMO Club 출시 차단 이슈 수 (down)
+- `o1-mvp-screens` — fomo-club 화면 진척 (up)
+- `o2-fomo-core-modules` — FOMO Index 4 Heat 산출 모듈 수 (up)
+- `o2-honest-number-tests` — 폴백·정합성(정직한 숫자) 테스트 수 (up)
+- `o3-index-clarity` — FOMO Index 3초 직관 이해도 (up, 수동)
+- `o3-revisit-motivation` — 감정 투표→재방문 동기 (up, 수동)
 
 목록에 딱 맞는 지표가 없으면 `Target-Metric: 신규 지표 제안 — <한줄 설명>`.
 이 필드가 있어야 머지 후 "이 베팅이 지표를 실제로 움직였는지" 추적 가능(없으면 보완 요청, 차단은 아님).
