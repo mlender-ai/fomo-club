@@ -25,12 +25,11 @@ else
   echo "    OK (격리됨 — metro.config.js blockList 적용)"
 fi
 
-# 2. babel-preset-expo 경로 확인
-BABEL_PRESET="$APP_DIR/node_modules/expo/node_modules/babel-preset-expo"
-if [ -d "$BABEL_PRESET" ]; then
-  echo "[2] babel-preset-expo: OK"
+# 2. babel-preset-expo 해소 확인 (nested/hoist 위치 무관 — babel.config가 require.resolve 사용)
+if node -e "require.resolve('babel-preset-expo', { paths: ['$APP_DIR'] })" 2>/dev/null; then
+  echo "[2] babel-preset-expo: OK (require.resolve)"
 else
-  echo "[2] babel-preset-expo: FAIL — 경로 없음"; ERRORS=$((ERRORS+1))
+  echo "[2] babel-preset-expo: FAIL — resolve 불가"; ERRORS=$((ERRORS+1))
 fi
 
 # 3. metro.config.js blockList 패턴 확인

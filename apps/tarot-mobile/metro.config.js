@@ -15,20 +15,17 @@ config.resolver.nodeModulesPaths = [
 
 const rootNodeModules = path.resolve(workspaceRoot, "node_modules");
 
-// react/react-native must resolve to a single copy — block root versions
+// react는 루트(18.3.1)와 앱(19.1.0) 두 버전 공존 → 루트 copy 차단 + 앱 로컬 강제.
+// react-native는 단일 버전(0.81.5)이라 dedup 불필요 → 차단하지 않는다.
+// (두 번째 Expo 앱 추가로 react-native가 루트로 hoist되면, 차단 시 오히려 해소 실패)
 config.resolver.blockList = [
   new RegExp(
     `^${rootNodeModules.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/react/.*`
   ),
-  new RegExp(
-    `^${rootNodeModules.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/react-native/.*`
-  ),
 ];
 
-// Force all react/react-native imports (including those from root-hoisted packages) to app-local copy
 config.resolver.extraNodeModules = {
-  "react":        path.resolve(projectRoot, "node_modules/react"),
-  "react-native": path.resolve(projectRoot, "node_modules/react-native"),
+  "react": path.resolve(projectRoot, "node_modules/react"),
 };
 
 // Apple Authentication은 iOS 네이티브 바이너리 전용 — Expo Go에서 empty로 처리
