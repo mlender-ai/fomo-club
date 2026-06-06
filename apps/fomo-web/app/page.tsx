@@ -6,8 +6,12 @@ import {
   EMOTION_LABELS,
   EMOTION_COLORS,
   scoreToFace,
+  scoreToState,
+  marketLine,
+  mineLine,
   type EmotionType,
   type FomoFace as FomoFaceType,
+  type FomoState,
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
 import { getSessionId } from "@/lib/session";
@@ -40,75 +44,74 @@ export default function Home() {
 
   const vote = useCallback(async (e: EmotionType) => {
     setVoting(true);
-    setMine(e); // 2단계 전환 즉시
+    setMine(e); // 2단계 즉시 전환(낙관적)
     try {
       const res = await postVote(getSessionId(), e);
       setTally(res);
     } catch {
-      // 실패해도 선택 상태는 유지(낙관적). 집계는 다음 로드에 반영.
+      /* 선택 상태 유지 */
     } finally {
       setVoting(false);
     }
   }, []);
 
   const stage: "market" | "mine" = mine ? "mine" : "market";
+  const state: FomoState | null = index ? scoreToState(index.score) : null;
   const marketFace: FomoFaceType = index ? scoreToFace(index.score) : "curious";
+  const line = mine ? mineLine(mine) : state ? marketLine(state) : "";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center px-6 pb-16 pt-6">
-      <div className="mb-6 flex w-full items-center justify-between">
-        <span className="text-lg font-semibold text-whiteout">FOMO Club</span>
-        <span className="text-sm text-muted">가입 없이 둘러보기</span>
+    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center px-6 pb-20 pt-8">
+      {/* 헤더 */}
+      <div className="mb-7 flex w-full items-center justify-between">
+        <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
+        <span className="text-xs text-muted">가입 없이 둘러보기</span>
       </div>
 
-      {/* Market Pulse 롤링 배너 */}
+      {/* Market Pulse 배너 */}
       {pulse.length > 0 && (
-        <div className="mb-6 w-full overflow-hidden rounded-lg border border-hairline bg-surface px-4 py-2">
-          <p className="truncate text-xs text-muted">{pulse[0]}</p>
+        <div className="mb-7 w-full overflow-hidden rounded-xl border border-hairline bg-surface px-4 py-2.5">
+          <p className="truncate font-pixel text-xs text-muted">{pulse[0]}</p>
         </div>
       )}
 
-      {/* 주인공: 포모 마스코트 */}
-      <p className="mb-3 text-xs text-muted">
-        {stage === "market" ? "오늘의 포모 — 시장의 분위기" : "나의 포모"}
+      {/* 주인공: 포모 */}
+      <p className="mb-4 text-xs text-muted">
+        {stage === "market" ? "오늘의 포모" : "나의 포모"}
       </p>
       <FomoFace
         face={stage === "market" ? marketFace : "calm"}
-        glow={stage === "mine" && mine ? EMOTION_COLORS[mine] : undefined}
+        glow={stage === "mine" && mine ? EMOTION_COLORS[mine] : state ? STATE_GLOW(index!.score) : undefined}
       />
 
-      {/* 보조: FOMO Index 숫자 */}
-      <div className="mt-5 flex flex-col items-center">
+      {/* 보조: FOMO Index (픽셀) */}
+      <div className="mt-7 flex flex-col items-center">
         {loading ? (
           <p className="text-sm text-muted">불러오는 중…</p>
         ) : index ? (
           <>
-            <p className="text-2xl font-semibold text-whiteout">
-              {index.score} · {index.state}
+            <p className="font-pixel text-5xl leading-none text-whiteout">{index.score}</p>
+            <p className="mt-2 font-pixel text-sm text-muted">
+              FOMO INDEX · {index.state}
+              {index.prevDayDelta ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}` : ""}
             </p>
-            <p className="mt-1 text-xs text-muted">
-              FOMO INDEX{index.prevDayDelta ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}` : ""}
-              {index.live ? " · 실시간 집계" : ""}
-            </p>
-            {index.aiSummary && (
-              <p className="mt-2 max-w-xs text-center text-sm text-whiteout">{index.aiSummary}</p>
-            )}
           </>
         ) : (
-          <p className="text-sm text-muted">FOMO INDEX · 집계 준비 중</p>
+          <p className="font-pixel text-sm text-muted">FOMO INDEX · 집계 준비 중</p>
         )}
       </div>
 
-      {stage === "mine" && mine && (
-        <p className="mt-4 text-center text-sm leading-5 text-whiteout">
-          다들 어떻든, 너의 「{EMOTION_LABELS[mine]}」도 괜찮아.
+      {/* 포모의 담담한 한마디 (전환 시 떠오름) */}
+      {line && (
+        <p key={stage + (mine ?? "")} className="fomo-rise mt-5 max-w-xs text-center text-[15px] leading-6 text-whiteout">
+          {line}
         </p>
       )}
 
       {/* 오늘의 감정 투표 */}
-      <section className="mt-10 w-full">
+      <section className="mt-12 w-full">
         <h2 className="text-base font-semibold text-whiteout">오늘 당신의 감정은?</h2>
-        <p className="mb-4 text-xs text-muted">하루 한 번 선택할 수 있어요</p>
+        <p className="mb-4 text-xs text-muted">하루 한 번, 지금 마음에 가까운 걸로.</p>
 
         <div className="flex flex-wrap gap-2">
           {EMOTION_TYPES.map((e) => {
@@ -118,11 +121,12 @@ export default function Home() {
                 key={e}
                 disabled={voting}
                 onClick={() => vote(e)}
-                className="rounded-xl border px-4 py-3 text-sm transition-opacity disabled:opacity-60"
+                className="rounded-xl border px-4 py-3 text-sm transition-all duration-200 disabled:opacity-60"
                 style={{
-                  borderColor: selected ? EMOTION_COLORS[e] : "#2e2e2e",
-                  backgroundColor: selected ? EMOTION_COLORS[e] + "22" : "#121212",
-                  color: selected ? EMOTION_COLORS[e] : "#fafafa",
+                  borderColor: selected ? EMOTION_COLORS[e] : "#2A2A2A",
+                  backgroundColor: selected ? EMOTION_COLORS[e] + "20" : "#0E0E0E",
+                  color: selected ? EMOTION_COLORS[e] : "#FAFAFA",
+                  boxShadow: selected ? `0 0 18px ${EMOTION_COLORS[e]}55` : "none",
                 }}
               >
                 {EMOTION_LABELS[e]}
@@ -131,31 +135,42 @@ export default function Home() {
           })}
         </div>
 
-        {/* 집계 결과 — 정직한 숫자 */}
+        {/* 집계 — 정직한 숫자 */}
         {tally && (
-          <div className="mt-5">
+          <div className="mt-6">
             <p className="text-xs text-muted">
-              {mine ? "같은 감정을 선택한 사람 포함, " : ""}오늘 {tally.total}명이 감정을 선택했어요
+              오늘 <span className="font-pixel text-whiteout">{tally.total}</span>명이 마음을 남겼어요
+              {mine ? " · 너도 그 안에 있어" : ""}
             </p>
-            <div className="mt-3 flex flex-col gap-1.5">
+            <div className="mt-3 flex flex-col gap-2">
               {EMOTION_TYPES.map((e) => (
-                <div key={e} className="flex items-center gap-2">
-                  <span className="w-10 text-xs" style={{ color: EMOTION_COLORS[e] }}>
-                    {EMOTION_LABELS[e]}
-                  </span>
+                <div key={e} className="flex items-center gap-2.5">
+                  <span className="w-10 text-xs" style={{ color: EMOTION_COLORS[e] }}>{EMOTION_LABELS[e]}</span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-elevated">
                     <div
-                      className="h-full rounded-full"
+                      className="h-full rounded-full transition-[width] duration-500 ease-out"
                       style={{ width: `${tally.ratios[e] ?? 0}%`, backgroundColor: EMOTION_COLORS[e] }}
                     />
                   </div>
-                  <span className="w-9 text-right text-xs text-muted">{tally.ratios[e] ?? 0}%</span>
+                  <span className="w-9 text-right font-pixel text-xs text-muted">{tally.ratios[e] ?? 0}%</span>
                 </div>
               ))}
             </div>
           </div>
         )}
       </section>
+
+      {/* 면책 — 담담하게 */}
+      <p className="mt-12 text-center text-[11px] leading-5 text-muted">
+        FOMO Index는 감정 체감 지표예요. 투자 조언이 아니에요.
+      </p>
     </main>
   );
+}
+
+// 시장의 포모: 지수가 높을수록 옅은 따뜻함, 낮으면 차분(무채색에 가깝게)
+function STATE_GLOW(score: number): string | undefined {
+  if (score >= 61) return EMOTION_COLORS.fomo; // 달아오름
+  if (score >= 41) return "#5A5A5A"; // 관심 — 옅은 무채색
+  return undefined; // 관망/무관심 — 잔잔, glow 없음
 }
