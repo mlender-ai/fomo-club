@@ -22,6 +22,28 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Diagnose DATABASE_URL shape (no secret leak)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node -e '
+            const raw = process.env.DATABASE_URL || "";
+            console.log("length:", raw.length);
+            console.log("startsWith postgresql:", raw.startsWith("postgresql://") || raw.startsWith("postgres://"));
+            console.log("has brackets [ ]:", /[\[\]]/.test(raw));
+            console.log("has whitespace/newline:", /\s/.test(raw));
+            try {
+              const u = new URL(raw);
+              console.log("scheme:", u.protocol);
+              console.log("username:", u.username);
+              console.log("password.length:", (u.password||"").length);
+              console.log("password has special (@:/?#&=):", /[@:/?#&=]/.test(decodeURIComponent(u.password||"")));
+              console.log("host:", u.hostname);
+              console.log("port:", u.port);
+              console.log("db:", u.pathname);
+            } catch (e) { console.log("URL parse error:", e.message); }
+          '
+
       - name: Preview pending SQL (read-only diff)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
