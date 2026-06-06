@@ -31,6 +31,7 @@ async function get<T>(path: string): Promise<T> {
 export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
 export const fetchToday = () => get<TallyResponse>("/api/fomo/emotions/today");
 export const fetchPulse = () => get<{ items: string[] }>("/api/fomo/pulse");
+export const fetchWhale = () => get<{ items: string[] }>("/api/fomo/whale");
 
 export async function postVote(sessionId: string, emotion: string): Promise<TallyResponse & { mine: string }> {
   const res = await fetch(`${API_BASE}/api/fomo/emotions/vote`, {

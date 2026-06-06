@@ -14,11 +14,13 @@ import {
   type FomoState,
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
+import { RollingBanner } from "@/components/RollingBanner";
 import { getSessionId } from "@/lib/session";
 import {
   fetchIndex,
   fetchToday,
   fetchPulse,
+  fetchWhale,
   postVote,
   type FomoIndexResponse,
   type TallyResponse,
@@ -28,16 +30,18 @@ export default function Home() {
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
   const [tally, setTally] = useState<TallyResponse | null>(null);
   const [pulse, setPulse] = useState<string[]>([]);
+  const [whale, setWhale] = useState<string[]>([]);
   const [mine, setMine] = useState<EmotionType | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
 
   useEffect(() => {
     getSessionId();
-    Promise.allSettled([fetchIndex(), fetchToday(), fetchPulse()]).then(([i, t, p]) => {
+    Promise.allSettled([fetchIndex(), fetchToday(), fetchPulse(), fetchWhale()]).then(([i, t, p, w]) => {
       if (i.status === "fulfilled") setIndex(i.value);
       if (t.status === "fulfilled") setTally(t.value);
       if (p.status === "fulfilled") setPulse(p.value.items);
+      if (w.status === "fulfilled") setWhale(w.value.items);
       setLoading(false);
     });
   }, []);
@@ -68,12 +72,10 @@ export default function Home() {
         <span className="text-xs text-muted">가입 없이 둘러보기</span>
       </div>
 
-      {/* Market Pulse 배너 */}
-      {pulse.length > 0 && (
-        <div className="mb-7 w-full overflow-hidden rounded-xl border border-hairline bg-surface px-4 py-2.5">
-          <p className="truncate font-pixel text-xs text-muted">{pulse[0]}</p>
-        </div>
-      )}
+      {/* 고래/시장 신호 롤링 배너 (실데이터, 하향비교 안도) */}
+      <div className="mb-7 w-full">
+        <RollingBanner items={whale.length > 0 ? whale : pulse} />
+      </div>
 
       {/* 주인공: 포모 */}
       <p className="mb-4 text-xs text-muted">
