@@ -45,6 +45,16 @@
 7. react-native-svg 사용 시 lib/svg.ts 래퍼 import. 새 SVG 컴포넌트 추가 시 svg.ts에도 추가.
 ```
 
+### 제품 정체성 (North Star — MLP)
+
+FOMO Club은 MVP가 아니라 **MLP(Minimum Lovable Product)**다. 정체성 정본: `docs/IDENTITY_AND_MILESTONES.md` (모든 화면·기능 결정의 최상위 기준).
+
+- **시금석(모든 결정)**: *"내가 물렸던 그날 밤, 진짜 열고 싶었던 앱 — 그날 밤의 내가 이걸 보고 조금 덜 외로웠을까?"*
+- **톤 3원칙**: ①담담한 솔직함(가짜긍정 "곧 반등" ❌ / 거침 "존버 가즈아" ❌ / 사실 인정 + 혼자 아님 ⭕) ②형태가 곧 윤리(자유 텍스트 날것 ❌ / 규칙·형태로 담기 ⭕) ③깊이 있는 단순함(인디게임 만듦새).
+- **love mark는 nice-to-have가 아니라 의도적 우선순위**(포모의 한마디, 전환 애니메이션, 캘린더의 만족감 등). 일정이 빠듯해도 자르지 않는다.
+- **제품에 대한 FOMO 경계**: 기능 비대화(타로+감정+사주+피드 다 넣기)는 금물. 좁은 범위 안에서 사랑스러움만 maximum. 한 번에 하나씩.
+- 머지/출시 전 **Lovable 게이트**(HARNESS Gate 6, lovable-reviewer)를 통과해야 한다.
+
 ### FOMO Club
 
 docs/FOMO_CLUB.md, docs/FOMO_INDEX.md 참조. 모노레포 내 별도 앱(apps/fomo-club, apps/fomo-web)으로 신설한다.
@@ -95,6 +105,7 @@ npx prisma validate                  # 4. DB 스키마 (변경 시)
 
 ```
 CLAUDE.md          ← 지금 이 파일 (진입점)
+  → docs/IDENTITY_AND_MILESTONES.md ← 제품 정체성(North Star, MLP) — 최상위 기준
   → GSTACK.md      ← 기술 스택 참조
   → AGENTS.md      ← 에이전트 역할 정의 + 라우팅
   → SKILLS.md      ← 도메인 전문 스킬

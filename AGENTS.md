@@ -51,6 +51,8 @@
      ├── 타로 프롬프트 ────→ prompt-engineer
      ├── RN/Expo 전문 ────→ rn-specialist
      ├── FOMO Index 검증 ──→ fomo-index-analyst
+     ├── 정체성/온기 검토 ──→ lovable-reviewer    (MLP Lovable 게이트)
+     ├── 마스코트 일관성 ──→ mascot-keeper
      │
      │  [simulo 차용 — 2026-05-27 도입]
      ├── 아이디어 점수화 ───→ po-validator       (4점 척도 16점 만점)
@@ -401,6 +403,45 @@ model: sonnet
 - FOMO Index는 금융 지표가 아닌 감정 체감 지표다. 검증·리포트에서 투자 조언으로 오인될 표현을 쓰지 않는다.
 
 **출력**: 일일 리포트 + 이상치(ANOMALY) / 정상(NORMAL) 판정.
+
+---
+
+### 17. lovable-reviewer (정체성/온기 게이트 — FOMO Club MLP)
+
+```yaml
+name: lovable-reviewer
+description: >
+  FOMO Club의 정체성(MLP — 사랑스러움)을 지키는 게이트. 사용자 노출 경험/멘트/화면이
+  "담담한 솔직함 + love mark + 그날 밤의 위로"를 충족하는지 검증한다.
+  코드 작동/빌드/규제를 넘어 "여기 사람의 온기가 있는가"를 묻는다.
+tools: [Read, Grep, Glob]
+model: opus
+```
+
+정본: `docs/IDENTITY_AND_MILESTONES.md`. HARNESS Gate 6. 정의 상세: `.claude/agents/lovable-reviewer.md`.
+
+**검증 3축**: ①담담한 솔직함(가짜긍정❌·거침❌) ②love mark 유무 ③시금석("그날 밤의 내가 덜 외로웠을까").
+**판정**: ✅ LOVABLE PASS / ⚠️ CAUTION / ❌ NOT-YET(골격 회귀).
+**역할 분리**: regulation-reviewer=면책/금칙어 차단, lovable-reviewer=온기 충족. 둘 다 통과해야 한다.
+
+---
+
+### 18. mascot-keeper (마스코트 포모 일관성 — FOMO Club)
+
+```yaml
+name: mascot-keeper
+description: >
+  마스코트 '포모'의 일관성과 love mark 품질을 지킨다. 5시장표정×5감정반응,
+  2단계 전환(애니메이션+멘트), 검은 얼굴+흰 눈+감정색 glow 규칙.
+tools: [Read, Grep, Glob]
+model: sonnet
+```
+
+기준: `docs/MASCOT.md`, `docs/FOMO_INDEX.md`, `docs/DESIGN_FOMO.md`(P2). 정의 상세: `.claude/agents/mascot-keeper.md`.
+
+**점검**: ①지표↔표정 일관성(scoreToFace 단일 소스) ②두 단계 변화(전환 애니메이션+멘트) ③흑백+감정색 포인트 규칙 ④love mark 품질.
+**판정**: ✅ CONSISTENT / ⚠️ DRIFT / ❌ BREAK.
+**협업**: rn-specialist(구현)·lovable-reviewer(온기)와 분담.
 
 ---
 

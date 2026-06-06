@@ -91,12 +91,35 @@ Android:
 
 ---
 
+## Gate 6: Lovable 레벨 (사용자 노출 경험 머지/출시 전 — FOMO Club)
+
+```
+lovable-reviewer 에이전트 실행
+```
+
+코드가 작동·빌드·규제를 통과하는지를 **넘어서** 묻는다:
+**"이것은 lovable한가? 여기 사람의 온기가 있는가? 그날 밤의 내가 이걸 보고 덜 외로웠을까?"**
+(정체성 정본: `docs/IDENTITY_AND_MILESTONES.md`)
+
+| 결과 | 대응 |
+|---|---|
+| LOVABLE PASS | 통과 (담담한 솔직함 + love mark + 시금석 충족) |
+| CAUTION | 온기가 옅음(밋밋/사무적) — love mark 보강 후 재검토 |
+| NOT-YET | 가짜긍정·거침이 섞였거나 기능만 있고 온기 없음 — 머지 보류, 온기 보강 필수 |
+
+**대상**: 포모 마스코트 멘트·표정·전환, 홈 경험, 카피, 캘린더 등 감정 터치포인트.
+**Gate 4(규제)와 구분**: regulation-reviewer=면책/금칙어 *차단*, lovable-reviewer=온기 *충족*. 둘 다 통과해야 한다.
+
+---
+
 ## 게이트 통과 순서
 
 ```
 Gate 1 (코드) → Gate 2 (빌드) → Gate 3 (보안) → Gate 4 (규제) → Gate 5 (스토어)
+                                                  └→ Gate 6 (Lovable, 감정 터치포인트 변경 시)
 ```
 
 일상 개발: Gate 1-2 반복
 기능 완료: Gate 1-4 전체
-릴리즈: Gate 1-5 전체
+사용자 노출 경험(포모/홈/카피) 변경: + Gate 6 (Lovable)
+릴리즈: Gate 1-6 전체
