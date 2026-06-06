@@ -87,7 +87,7 @@ describe("getFallbackInterpretation", () => {
 
   it("매핑 없는 카드에 범용 폴백 반환", () => {
     const fb = getFallbackInterpretation("the-magician", "upright");
-    expect(fb.headline).toBe("우주의 흐름이 말을 건넨다");
+    expect(fb.headline).toBe("흐름이 말을 건네는 순간");
   });
 
   it("반환 텍스트에 금칙어 없음", () => {
