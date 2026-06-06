@@ -437,7 +437,7 @@ tools: [Read, Grep, Glob]
 model: sonnet
 ```
 
-기준: `docs/MASCOT.md`, `docs/FOMO_INDEX.md`, `docs/DESIGN_FOMO.md`(P2). 정의 상세: `.claude/agents/mascot-keeper.md`.
+기준: `docs/MASCOT.md`, `docs/FOMO_INDEX.md`, `docs/DESIGN_FOMO.md`(DESIGN.md 표준) + 토큰 `design/tokens.json`. **Figma 디자인 확정 시 Figma MCP로 대조**(`docs/FIGMA_WORKFLOW.md`). 정의 상세: `.claude/agents/mascot-keeper.md`.
 
 **점검**: ①지표↔표정 일관성(scoreToFace 단일 소스) ②두 단계 변화(전환 애니메이션+멘트) ③흑백+감정색 포인트 규칙 ④love mark 품질.
 **판정**: ✅ CONSISTENT / ⚠️ DRIFT / ❌ BREAK.

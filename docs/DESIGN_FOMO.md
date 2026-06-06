@@ -1,142 +1,199 @@
-# FOMO Club — Design System (DESIGN_FOMO.md)
-
-| | |
-|---|---|
-| **위상** | FOMO Club 시각 언어의 단일 소스. 피그마 작업 전 단계의 기준. |
-| **관계** | 기존 `DESIGN.md`(타로 "Mystical Terminal", 녹색)와 **별개**. FOMO Club 전용. |
-| **정체성 근거** | `docs/IDENTITY_AND_MILESTONES.md`, `docs/MASCOT.md` |
-| **리서치 출처** | designengineer.tools (James Warner 큐레이션) |
-
-> 정체성 한 줄: **"디시의 마음(담담한 솔직함) + 인디게임의 몸(만듦새)."**
-> 시각 언어도 이 둘이 한 몸이다 — 절제된 흑백 위에, 인디게임의 픽셀 악센트와 감정 색 한 점.
-
+---
+version: alpha
+name: FOMO Club
+description: >-
+  투자자 감정 동반자. 검정 베이스 + 감정색 포인트 + 픽셀 악센트.
+  "디시의 마음(담담한 솔직함) + 인디게임의 몸(만듦새)". 다크-네이티브.
+colors:
+  ink: "#000000"
+  surface: "#0E0E0E"
+  elevated: "#1A1A1A"
+  hairline: "#2A2A2A"
+  muted: "#8A8A8A"
+  whiteout: "#FAFAFA"
+  emotion-fomo: "#FF5A36"
+  emotion-fear: "#38BDF8"
+  emotion-regret: "#8B7CF6"
+  emotion-greed: "#34D399"
+  emotion-conviction: "#FACC15"
+  primary: "{colors.emotion-fomo}"
+  background: "{colors.ink}"
+  text: "{colors.whiteout}"
+typography:
+  display:
+    fontFamily: "Galmuri11, Departure Mono, monospace"
+    fontSize: 64px
+    lineHeight: 1
+  headingLg:
+    fontFamily: Pretendard
+    fontSize: 28px
+    fontWeight: 600
+  heading:
+    fontFamily: Pretendard
+    fontSize: 20px
+    fontWeight: 600
+  body:
+    fontFamily: Pretendard
+    fontSize: 16px
+    fontWeight: 400
+  label:
+    fontFamily: "Galmuri11, Departure Mono, monospace"
+    fontSize: 13px
+  caption:
+    fontFamily: Pretendard
+    fontSize: 12px
+rounded:
+  sm: 12px
+  md: 16px
+  lg: 20px
+  pill: 9999px
+spacing:
+  xs: 4px
+  sm: 8px
+  md: 16px
+  lg: 24px
+  xl: 32px
+  2xl: 40px
+components:
+  mascotFace:
+    backgroundColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    size: 160px
+  emotionChip:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.whiteout}"
+    typography: "{typography.body}"
+    rounded: "{rounded.sm}"
+    padding: "{spacing.md}"
+  emotionChipSelected:
+    textColor: "{colors.primary}"
+    rounded: "{rounded.sm}"
+  indexNumber:
+    textColor: "{colors.whiteout}"
+    typography: "{typography.display}"
+  stateLabel:
+    textColor: "{colors.muted}"
+    typography: "{typography.label}"
+  tallyBar:
+    backgroundColor: "{colors.elevated}"
+    rounded: "{rounded.pill}"
+  pulseBanner:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.muted}"
+    typography: "{typography.label}"
+    rounded: "{rounded.sm}"
 ---
 
-## 1. 디자인 원칙 (정체성 → 시각)
+# FOMO Club — Design System (DESIGN.md)
 
-1. **기리고式 비움**: 순수 검정 베이스, 화면당 요소 최소, 여백 최대. 주인공은 포모 하나. (타로의 #121212보다 더 깊은 `#000`.)
-2. **인디게임의 몸**: 픽셀/모노 텍스처는 **악센트로만** — FOMO Index 숫자, 상태 라벨(무관심/광기), 캘린더 블록. 본문까지 픽셀로 덮지 않는다.
-3. **담담함**: 고대비 흰색 본문, 차분한 위계. 화려한 그라데이션·드롭섀도 금지(타로 원칙 계승). 깊이는 그림자가 아니라 **배경 명도 차**로.
-4. **형태가 곧 윤리**: 감정은 자유 텍스트가 아니라 5색·표정·픽셀로 담는다. 색은 칠하지 않고 **포인트 광(glow)**으로만.
-5. **love mark 우선**: 전환 곡선·표정 디테일·캘린더 채움감은 nice-to-have가 아니라 의도적 우선순위.
+> 표준: Google DESIGN.md 스펙(getdesign.md). frontmatter = 기계가독 토큰, 아래 = 사람/에이전트용 산문.
+> 기계가독 단일 소스는 `design/tokens.json`(DTCG). 색·표정 진실은 코드 `@fomo/core`. Figma 왕복: `docs/FIGMA_WORKFLOW.md`.
+> 기존 `DESIGN.md`(타로 "Mystical Terminal", 녹색)와 **별개** — FOMO Club 전용.
 
----
+## Overview
 
-## 2. 컬러
+정체성 한 줄: **"디시의 마음(담담한 솔직함) + 인디게임의 몸(만듦새)."** 정본 `docs/IDENTITY_AND_MILESTONES.md`, 마스코트 `docs/MASCOT.md`.
 
-### 2.1 베이스 (무채색)
+디자인 5원칙:
+1. **기리고式 비움** — 순수 검정, 요소 최소, 여백 최대. 주인공은 포모 하나.
+2. **인디게임의 몸** — 픽셀/모노는 악센트로만(숫자·라벨·캘린더). 본문은 픽셀로 덮지 않음.
+3. **담담함** — 고대비 흰 텍스트, 차분한 위계. 그라데이션·드롭섀도 금지.
+4. **형태가 곧 윤리** — 감정은 자유 텍스트가 아니라 5색·표정·픽셀로. 색은 칠하지 않고 포인트 광(glow)으로만.
+5. **love mark 우선** — 전환 곡선·표정 디테일·캘린더 채움은 의도적 우선순위.
+
+**다크-네이티브**: FOMO Club은 라이트 테마가 없다(정체성). 프리뷰는 `docs/design/preview-dark.html` 하나뿐.
+
+## Colors
+
+베이스는 무채색, 감정은 포인트 광으로만. (frontmatter `colors` 참조.)
+
 | 토큰 | HEX | 용도 |
 |---|---|---|
-| `ink` | `#000000` | 앱 배경(순수 검정) |
-| `surface` | `#0E0E0E` | 카드/표면(배경과 거의 동일, 명도차로만 분리) |
-| `elevated` | `#1A1A1A` | 살짝 떠 있는 표면(트랙/칩 배경) |
-| `hairline` | `#2A2A2A` | 경계선(아주 옅게) |
-| `muted` | `#8A8A8A` | 보조 텍스트 |
-| `whiteout` | `#FAFAFA` | 본문/주요 텍스트, 포모의 흰 눈 |
+| ink | `#000000` | 배경(순수 검정) |
+| surface / elevated / hairline | `#0E0E0E` / `#1A1A1A` / `#2A2A2A` | 표면·트랙·경계(명도차로 분리) |
+| muted / whiteout | `#8A8A8A` / `#FAFAFA` | 보조/주요 텍스트 |
+| emotion-fomo | `#FF5A36` | 달아오르는 불꽃 |
+| emotion-fear | `#38BDF8` | 얼어붙는 차가움 |
+| emotion-regret | `#8B7CF6` | 가라앉아 곱씹음 |
+| emotion-greed | `#34D399` | 돈의 욕망 |
+| emotion-conviction | `#FACC15` | 또렷한 자신감 |
 
-### 2.2 감정 색 (포인트 전용 — `@fomo/core` EMOTION_COLORS 단일 소스)
-검정 위에서 빛나는 점 하나. 화면을 채우지 않는다. **OKLCH로 정의**해 glow 명도 램프를 일관화한다(designengineer.tools → OKLCH Color Picker로 최종 확정).
+- **OKLCH glow 램프**: 각 감정색의 L(명도)만 ±조정한 2단계로 배경광(radial/box-shadow). C·H 고정 → 5색이 같은 온도로 빛난다. (designengineer.tools → OKLCH Color Picker로 확정.)
+- **대비**: whiteout/ink = AAA, muted/ink ≈ 5.4:1(AA). 감정색은 검정 위 보더/라벨용(L≥0.66). Color.review로 검증.
 
-| 감정 | HEX | OKLCH (근사 — 도구로 확정) | 체감 근거 |
+## Typography
+
+한글 UI → 한글 지원 1순위. **두 가족만**(깊이 있는 단순함).
+
+| 토큰 | 폰트 | 크기 | 용도 |
 |---|---|---|---|
-| FOMO | `#FF5A36` | `oklch(0.68 0.20 35)` | 달아오르는 불꽃(빨강~주황) |
-| 공포 fear | `#38BDF8` | `oklch(0.76 0.13 235)` | 얼어붙는 차가움(파랑~청록) |
-| 후회 regret | `#8B7CF6` | `oklch(0.66 0.18 290)` | 가라앉아 곱씹음(보라~남색) |
-| 탐욕 greed | `#34D399` | `oklch(0.78 0.15 165)` | 돈의 욕망(초록/황금) |
-| 확신 conviction | `#FACC15` | `oklch(0.86 0.17 95)` | 또렷한 자신감(노랑/골드) |
+| display | 픽셀(Galmuri/Departure Mono) | 64 | FOMO Index 대형 숫자 |
+| headingLg / heading | Pretendard 600 | 28 / 20 | 제목 |
+| body | Pretendard 400/500 | 16 | 본문·멘트 |
+| label | 픽셀 | 13 | 상태 라벨(무관심/광기)·캘린더 |
+| caption | Pretendard | 12 | 보조 |
 
-- **glow 램프**: 각 감정색에서 L(명도)만 +0.08/−0.10한 2단계로 배경광(box-shadow/radial)을 만든다. 채도·색상(C·H)은 고정 → 5색이 같은 "온도"로 빛난다.
-- **접근성**: 검정 위 텍스트로 쓸 땐 명도 충분(전부 L≥0.66). 칩 보더/텍스트에 사용 OK. designengineer.tools → Color.review로 대비 검증.
+- 본문 **Pretendard**(한글+라틴, OFL) — 담담함. 악센트 **Galmuri11**(한글 픽셀, OFL) / **Departure Mono**(라틴 픽셀, OFL) — 인디게임의 몸.
 
----
+## Layout & Spacing
 
-## 3. 타이포그래피
+8px 그리드: `4 / 8 / 16 / 24 / 32 / 40`(frontmatter `spacing`). **비움을 위해 한 단계 크게** 쓰는 걸 기본으로. 모바일·웹 공통 max-width 중앙 정렬.
 
-한국어 UI이므로 **한글 지원이 1순위**. 폰트 sprawl 금지(정체성 §2.3 깊이 있는 단순함) — **두 가족만**.
+## Elevation & Depth
 
-### 3.1 본문 — Pretendard (담담한 목소리)
-- 한글+라틴 모두 우수, 무료(OFL), 한국 제품의 사실상 표준. 따뜻하면서 중립적 → "담담함".
-- 용도: 모든 본문, 멘트("다들 어떻든…"), 설명, 버튼.
-- CDN: `https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css`
+**그림자 금지.** 깊이는 배경 명도차(ink → surface → elevated) + hairline 경계로만. 네온 글로우 남발 금지(감정 glow는 마스코트·포인트 한정).
 
-### 3.2 악센트 — 픽셀/모노 (인디게임의 몸)
-"인디게임의 몸"을 한 곳에만: **FOMO Index 숫자, 상태 라벨, 캘린더, 작은 메타 라벨**.
-- **Galmuri (갈무리)** — 한글+라틴+숫자 픽셀 폰트(quiple, OFL). 한국어 라벨(무관심/광기)까지 픽셀로 → 1폰트로 해결. **권장.** (CDN: jsdelivr `quiple/galmuri`)
-- 대안/병행: **Departure Mono** — 라틴/숫자 전용 픽셀 모노(Helena Zhang, OFL, 상업 무료). 순수 숫자(74)에 더 깔끔. 한글 미지원이라 라벨엔 Galmuri.
+## Shapes
 
-### 3.3 스케일
-| 토큰 | 크기 | 폰트 | 용도 |
-|---|---|---|---|
-| `display` | 64–72 | 픽셀 | FOMO Index 대형 숫자 |
-| `headingLg` | 28 | Pretendard 600 | 화면 제목 |
-| `heading` | 20 | Pretendard 600 | 섹션 제목 |
-| `body` | 16 | Pretendard 400/500 | 본문·멘트 |
-| `label` | 13 | 픽셀 | 상태 라벨/메타(무관심·광기, 캘린더) |
-| `caption` | 12 | Pretendard 400 | 보조 |
-- 본문 letter-spacing 0, 픽셀은 폰트 자체 그리드 존중(자간 0).
+라운드: 칩/입력 `12`, 카드 `16`, 큰 카드 `20`, 알약 `9999`(frontmatter `rounded`). 마스코트 얼굴 = 완전 원.
 
----
+## Components
 
-## 4. 스페이싱 · 라운드
-- 스페이싱 8px 그리드: `4 / 8 / 12 / 16 / 24 / 32 / 40 / 64`. **비움을 위해 한 단계 크게** 쓰는 걸 기본으로(기리고).
-- 라운드: 칩/입력 `12`, 카드 `16`, 알약 `9999`. 마스코트 얼굴 = 완전 원.
-- 그림자 금지. 분리는 배경 명도차(ink↔surface↔elevated) + hairline.
+- **mascotFace**: 검은 원 + 흰 눈 2점. 감정/지수 색은 얼굴 뒤 radial glow로만(얼굴은 흑백 유지).
+- **emotionChip**: surface + hairline 보더 / 선택 시 감정색 보더 + 감정색 12% 배경 + 감정색 텍스트.
+- **indexNumber / stateLabel**: 픽셀. 주인공 아님(포모 아래 보조).
+- **tallyBar**: elevated 트랙 + 감정색 채움 + 우측 % 픽셀 라벨.
+- **pulseBanner**: surface 1줄, 이모지 + 픽셀 메타, 롤링.
 
----
+## Motion
 
-## 5. 모션 (love mark의 핵심)
-절제하되, 의미 있는 순간엔 정성. designengineer.tools → Easing Editor / Easing.dev로 곡선 확정.
+절제하되 의미 있는 순간엔 정성(love mark). 곡선은 Easing.dev로 확정, 마스코트는 Lottie 권장.
 
 | 순간 | 동작 | 곡선/지속 |
 |---|---|---|
-| 진입 | 포모가 옅게 페이드인(시장의 포모) | ease-out, 300ms |
-| **2단계 전환** | 감정 선택 → 포모가 감정색으로 물들고 멘트가 떠오르듯 | ease-out-quad, 420ms (현재 모바일 구현됨) |
-| 표정 변화 | 눈 모양 보간 | ease-in-out, 250ms |
-| 집계 바 | 비율 바가 좌→우로 채워짐 | ease-out, 500ms |
-| 캘린더 채움 | 픽셀 블록이 톡 찍히듯 | spring/짧은 pop |
+| 진입 | 포모 페이드인(시장의 포모) | ease-out 300ms |
+| 2단계 전환 | 감정 선택 → 감정색 물듦 + 멘트 떠오름 | ease-out-quad 420ms (모바일 구현됨) |
+| 표정 변화 | 눈 모양 보간 | ease-in-out 250ms |
+| 집계 바 | 좌→우 채움 | ease-out 500ms |
+| 캘린더 채움 | 픽셀 블록 톡 | spring/짧은 pop |
 
-- **마스코트 표정·전환은 "장식"이 아니라 핵심 경험**(NORTH_STAR 킬리스트 예외). 그 외 글로우 남발·파티클은 금지.
-- 마스코트 모션 에셋은 **Lottie**로(앱·웹 공용, 가벼움). designengineer.tools → Lottie Creator/Lottielab. 웹 미세 인터랙션은 Motion Primitives.
+> 마스코트 표정·전환은 "장식"이 아니라 핵심 경험(NORTH_STAR 킬리스트 예외).
 
----
+## Do's and Don'ts
 
-## 6. 마스코트 포모 렌더 규칙 (docs/MASCOT.md 시각화)
-- 검은 얼굴 + 흰 눈 2점, 얼굴 중심(머리+어깨). 배경 검정. 완전 원형(현재 플레이스홀더).
-- 감정/지수 색은 **얼굴 뒤 배경광(radial glow)**으로만. 얼굴 자체는 흑백 유지.
-- 5시장표정(무관심/관망/관심/FOMO/광기) ↔ FOMO Index 5구간 1:1(`@fomo/core` scoreToFace 단일 소스).
-- 2단계: ①시장의 포모(지수색 옅은 glow) → ②나의 포모(선택 감정색 glow + 멘트).
-- 구체 픽셀 조형은 미확정(MASCOT §10) — 원칙만 강제, 시각 작업(피그마/픽셀)에서 확정.
-
----
-
-## 7. 컴포넌트 규칙(요약)
-- **감정 칩**: 기본 surface + hairline 보더 / 선택 시 감정색 보더 + 감정색 12% 배경 + 감정색 텍스트.
-- **집계 바**: elevated 트랙 + 감정색 채움, 우측에 % 픽셀 라벨.
-- **FOMO Index**: 대형 픽셀 숫자(주인공 아님 — 포모 아래 보조), 상태 라벨은 픽셀.
-- **Market Pulse 배너**: surface 1줄, 🚨/이모지 + 픽셀 메타, 롤링.
-
----
-
-## 8. Do / Don't
 | Do | Don't |
 |---|---|
-| 순수 검정 + 흰 텍스트 + 감정색 한 점 | 알록달록 다색 / 그라데이션 범벅 |
-| 픽셀은 숫자·라벨·캘린더 악센트로만 | 본문까지 픽셀(가독성·담담함 해침) |
+| 검정 + 흰 텍스트 + 감정색 한 점 | 알록달록 다색 / 그라데이션 범벅 |
+| 픽셀은 숫자·라벨·캘린더 악센트로만 | 본문까지 픽셀 |
 | 명도차·hairline으로 깊이 | 드롭섀도·네온 글로우 남발 |
 | 표정/전환에 정성(love mark) | 의미 없는 장식 애니메이션·파티클 |
 | 담담한 카피(사실+위로) | 가짜긍정/거친 톤/투자조언 |
-| 여백 크게(기리고) | 화면 빽빽하게 채우기 |
+| 여백 크게(기리고) | 화면 빽빽하게 |
 
----
+## Responsive Behavior
 
-## 9. 적용 도구 체크리스트 (designengineer.tools)
-- 색 램프 확정: **OKLCH Color Picker** · 대비: **Color.review**
-- 폰트: **Fontshare**(라틴 대안) · **Departure Mono**(픽셀 모노) · Galmuri(한글 픽셀)
-- 모션 곡선: **Easing Editor / Easing.dev** · 마스코트: **Lottie Creator/Lottielab** · 웹: **Motion Primitives**
-- 영감: **Godly / Mobbin**(다크 미니멀) · **game UI database**(픽셀/인디 결)
+- 모바일(`apps/fomo-club`, Expo): 단일 컬럼, max 약 420dp, 터치타깃 ≥44pt.
+- 웹(`apps/fomo-web`, Next): 중앙 정렬 max-width ~480px(모바일 우선), 데스크톱도 같은 컬럼 폭 유지(밀도 비움).
+- 둘 다 동일 홈 경험·동일 토큰. 라이트 모드 없음.
 
-## 10. 코드 파생 (P3에서 wiring)
-- 웹: `apps/fomo-web/tailwind.config.ts` (이미 감정색 @fomo/core 미러) ← 베이스 토큰/폰트 추가
-- 모바일: `apps/fomo-club/constants/fomoTheme.ts` ← 동일 토큰
-- 폰트 로드: 웹은 CDN/next/font, 앱은 expo-font. 픽셀 폰트는 숫자/라벨 컴포넌트에만 적용.
-- 색·표정 단일 소스는 `@fomo/core`(EMOTION_COLORS, scoreToFace) 유지.
+## Agent Prompt Guide
+
+코딩 에이전트가 이 DESIGN.md를 읽고 FOMO Club 화면을 만들 때:
+- **주인공은 포모 표정**, FOMO Index 숫자는 보조(작게). 감정 색은 **glow로만**, 화면을 칠하지 않는다.
+- **픽셀 폰트는 숫자·라벨·캘린더에만**, 본문은 Pretendard.
+- 두 단계(시장의 포모 → 나의 포모) + 전환 애니메이션 + 담담한 멘트 필수(`docs/MASCOT.md`).
+- 톤 = **담담한 솔직함**(가짜긍정❌·거침❌·투자조언❌). 머지 전 **Lovable 게이트**(HARNESS Gate 6, `lovable-reviewer`) 통과.
+- 토큰은 `design/tokens.json`(DTCG)이 단일 소스 — 하드코딩 금지, 토큰 참조.
+- **Figma**: 사용자의 Figma 디자인이 있으면 **Figma MCP**로 읽어 이 토큰과 대조/반영(`docs/FIGMA_WORKFLOW.md`).
+
+예시 프롬프트: *"design/tokens.json과 docs/DESIGN_FOMO.md를 따라 FOMO Club 홈을 만들어줘. 검정 배경에 포모 마스코트(표정=FOMO Index), 그 아래 픽셀 숫자, 5감정 칩, 선택 시 2단계 전환. 담담한 톤."*
