@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FOMO Club — Design Preview</title>
+<!-- 본문: Pretendard / 픽셀 악센트: Galmuri (jsdelivr CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/quiple/galmuri/dist/Galmuri11.css" />
+<style>
+  :root {
+    --ink:#000; --surface:#0E0E0E; --elevated:#1A1A1A; --hairline:#2A2A2A;
+    --muted:#8A8A8A; --whiteout:#FAFAFA;
+    --fomo:#FF5A36; --fear:#38BDF8; --regret:#8B7CF6; --greed:#34D399; --conviction:#FACC15;
+    --pixel:"Galmuri11","Departure Mono",monospace;
+    --body:"Pretendard",system-ui,sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--ink); color:var(--whiteout); font-family:var(--body); padding:40px 24px 80px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:920px; margin:0 auto; display:flex; flex-direction:column; gap:56px; }
+  h1 { font-size:22px; font-weight:600; }
+  h2 { font-family:var(--pixel); font-size:14px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:18px; }
+  .muted { color:var(--muted); }
+  .pixel { font-family:var(--pixel); }
+  /* 팔레트 */
+  .palette { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; }
+  .sw { background:var(--surface); border:1px solid var(--hairline); border-radius:16px; padding:22px 14px; text-align:center; }
+  .dot { width:54px; height:54px; border-radius:9999px; margin:0 auto 14px; }
+  .sw .name { font-family:var(--pixel); font-size:13px; }
+  .sw .hex { font-family:var(--pixel); font-size:11px; color:var(--muted); margin-top:4px; }
+  /* 타이포 */
+  .type-row { display:flex; flex-direction:column; gap:14px; }
+  .num { font-family:var(--pixel); font-size:72px; line-height:1; }
+  /* 마스코트 + 홈 목업 */
+  .home { display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:center; }
+  @media(max-width:680px){ .home{grid-template-columns:1fr} .palette{grid-template-columns:repeat(2,1fr)} }
+  .mascot-card { background:var(--surface); border:1px solid var(--hairline); border-radius:20px; padding:36px; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .face { width:160px; height:160px; border-radius:9999px; background:#000; border:1px solid var(--hairline);
+          display:flex; align-items:center; justify-content:center; gap:26px; box-shadow:0 0 32px var(--fomo); }
+  .eye { width:20px; height:26px; border-radius:9999px; background:var(--whiteout); }
+  .stage { font-size:12px; color:var(--muted); }
+  .idx { font-family:var(--pixel); font-size:54px; }
+  .state { font-family:var(--pixel); font-size:16px; color:var(--fomo); }
+  .mention { text-align:center; font-size:14px; line-height:1.5; max-width:300px; }
+  /* 칩 */
+  .chips { display:flex; flex-wrap:wrap; gap:10px; }
+  .chip { padding:12px 18px; border-radius:12px; border:1px solid var(--hairline); background:var(--surface); font-size:14px; }
+  .chip.sel { border-color:var(--fomo); background:rgba(255,90,54,.13); color:var(--fomo); }
+  /* 집계 바 */
+  .bars { display:flex; flex-direction:column; gap:9px; margin-top:8px; }
+  .bar { display:flex; align-items:center; gap:10px; }
+  .bar .lab { width:48px; font-family:var(--pixel); font-size:12px; }
+  .track { flex:1; height:8px; border-radius:9999px; background:var(--elevated); overflow:hidden; }
+  .fill { height:100%; border-radius:9999px; }
+  .pct { width:38px; text-align:right; font-family:var(--pixel); font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>FOMO Club — Design Preview</h1>
+    <p class="muted" style="margin-top:8px">검정 베이스 · Pretendard 본문 · 픽셀(Galmuri) 악센트 · 감정 색 한 점 — 피그마 전 미리보기</p>
+  </header>
+
+  <!-- 감정 팔레트 -->
+  <section>
+    <h2>Emotion Palette (glow on black)</h2>
+    <div class="palette">
+      <div class="sw"><div class="dot" style="background:var(--fomo);box-shadow:0 0 26px var(--fomo)"></div><div class="name" style="color:var(--fomo)">FOMO</div><div class="hex">#FF5A36</div></div>
+      <div class="sw"><div class="dot" style="background:var(--fear);box-shadow:0 0 26px var(--fear)"></div><div class="name" style="color:var(--fear)">공포</div><div class="hex">#38BDF8</div></div>
+      <div class="sw"><div class="dot" style="background:var(--regret);box-shadow:0 0 26px var(--regret)"></div><div class="name" style="color:var(--regret)">후회</div><div class="hex">#8B7CF6</div></div>
+      <div class="sw"><div class="dot" style="background:var(--greed);box-shadow:0 0 26px var(--greed)"></div><div class="name" style="color:var(--greed)">탐욕</div><div class="hex">#34D399</div></div>
+      <div class="sw"><div class="dot" style="background:var(--conviction);box-shadow:0 0 26px var(--conviction)"></div><div class="name" style="color:var(--conviction)">확신</div><div class="hex">#FACC15</div></div>
+    </div>
+  </section>
+
+  <!-- 타이포 -->
+  <section>
+    <h2>Typography</h2>
+    <div class="type-row">
+      <div class="num">74</div>
+      <div class="pixel" style="font-size:16px;color:var(--fomo)">🔥 FOMO · 무관심 관망 관심 FOMO 광기</div>
+      <div style="font-size:20px;font-weight:600">Pretendard — 화면 제목 (담담한 본문)</div>
+      <div style="font-size:16px" class="mention">다들 어떻든, 너의 「FOMO」도 괜찮아. — 본문/멘트는 Pretendard로 담담하게.</div>
+      <div class="muted" style="font-size:12px">caption · 보조 텍스트</div>
+    </div>
+  </section>
+
+  <!-- 홈 목업 -->
+  <section>
+    <h2>Home Mock — 마스코트(주인공) + 지수(보조)</h2>
+    <div class="home">
+      <div class="mascot-card">
+        <div class="stage">오늘의 포모 — 시장의 분위기</div>
+        <div class="face"><div class="eye"></div><div class="eye"></div></div>
+        <div class="idx">74</div>
+        <div class="state">🔥 FOMO</div>
+        <div class="mention muted">다들 어떻든, 너의 「FOMO」도 괜찮아.</div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px">오늘 당신의 감정은?</div>
+        <div class="muted" style="font-size:12px;margin-bottom:16px">하루 한 번 선택할 수 있어요</div>
+        <div class="chips">
+          <span class="chip sel">FOMO</span>
+          <span class="chip">공포</span>
+          <span class="chip">후회</span>
+          <span class="chip">탐욕</span>
+          <span class="chip">확신</span>
+        </div>
+        <div class="muted" style="font-size:12px;margin-top:18px">오늘 1,203명이 감정을 선택했어요</div>
+        <div class="bars">
+          <div class="bar"><span class="lab" style="color:var(--fomo)">FOMO</span><div class="track"><div class="fill" style="width:43%;background:var(--fomo)"></div></div><span class="pct">43%</span></div>
+          <div class="bar"><span class="lab" style="color:var(--fear)">공포</span><div class="track"><div class="fill" style="width:22%;background:var(--fear)"></div></div><span class="pct">22%</span></div>
+          <div class="bar"><span class="lab" style="color:var(--regret)">후회</span><div class="track"><div class="fill" style="width:18%;background:var(--regret)"></div></div><span class="pct">18%</span></div>
+          <div class="bar"><span class="lab" style="color:var(--greed)">탐욕</span><div class="track"><div class="fill" style="width:11%;background:var(--greed)"></div></div><span class="pct">11%</span></div>
+          <div class="bar"><span class="lab" style="color:var(--conviction)">확신</span><div class="track"><div class="fill" style="width:6%;background:var(--conviction)"></div></div><span class="pct">6%</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
