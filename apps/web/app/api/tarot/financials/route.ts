@@ -90,6 +90,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!res.ok) {
+      console.warn(`[financials] Yahoo API error ${res.status} for symbol=${symbol}`);
       return NextResponse.json({ error: `Yahoo API error ${res.status}` }, { status: 502 });
     }
 
@@ -125,6 +126,7 @@ export async function GET(req: NextRequest) {
 
     const result = payload.quoteSummary?.result?.[0];
     if (!result) {
+      console.warn(`[financials] No data found for symbol=${symbol}`);
       return NextResponse.json({ error: "No data found" }, { status: 404 });
     }
 
@@ -178,11 +180,21 @@ export async function GET(req: NextRequest) {
       pegRatio: extractNum(ks.pegRatio),
     };
 
+    // 결측치 감지 및 로깅 — 정직한 숫자 원칙: 데이터 부재 시 null 노출, 임의값 채움 금지.
+    const missingFields: string[] = [];
+    if (annualFinancials.length === 0) missingFields.push("annualFinancials");
+    if (!profile.sector) missingFields.push("sector");
+    if (keyMetrics.eps === null) missingFields.push("eps");
+    if (missingFields.length > 0) {
+      console.warn(`[financials] missing fields for symbol=${symbol}: ${missingFields.join(", ")}`);
+    }
+
     const data: FinancialsResponse = { profile, quarterlyEarnings, annualFinancials, keyMetrics };
     cache.set(symbol, { data, expiresAt: now + CACHE_TTL_MS });
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.warn(`[financials] unexpected error for symbol=${symbol}:`, err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
