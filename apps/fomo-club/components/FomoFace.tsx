@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet } from "react-native";
+import { Animated, Easing, InteractionManager, StyleSheet } from "react-native";
 import type { FomoFace as FomoFaceType } from "@fomo/core";
 import { FomoColors } from "../constants/fomoTheme";
 
@@ -33,26 +33,28 @@ export function FomoFace({
   // 감정 글로우 차오름(0~1).
   const glowFade = useRef(new Animated.Value(glow ? 1 : 0)).current;
 
-  // 상시 호흡 루프 — 마운트 시 1회 시작.
+  // 상시 호흡 루프 — 네비게이션 전환 완료 후 시작해 첫 paint 지연 방지.
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breathe, {
-          toValue: 1,
-          duration: 2600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(breathe, {
-          toValue: 0,
-          duration: 2600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
+    const task = InteractionManager.runAfterInteractions(() => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(breathe, {
+            toValue: 1,
+            duration: 2600,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(breathe, {
+            toValue: 0,
+            duration: 2600,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      loop.start();
+    });
+    return () => task.cancel();
   }, [breathe]);
 
   // 표정이 바뀔 때마다 깜빡임 + 반응 펄스 — 포모가 "반응"하는 느낌.
