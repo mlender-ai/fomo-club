@@ -4,7 +4,6 @@ import {
   Easing,
   View,
   Text,
-  Pressable,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -23,7 +22,9 @@ import {
   type FomoFace as FomoFaceType,
 } from "@fomo/core";
 import { FomoFace } from "../components/FomoFace";
-import { FomoColors, Spacing, Radius } from "../constants/fomoTheme";
+import { TallyBar } from "../components/TallyBar";
+import { EmotionChip } from "../components/EmotionChip";
+import { FomoColors, Spacing } from "../constants/fomoTheme";
 import {
   fetchIndex,
   fetchToday,
@@ -143,28 +144,16 @@ export default function Home() {
           <Text style={styles.voteHint}>하루 한 번 선택할 수 있어요</Text>
 
           <View style={styles.chips}>
-            {EMOTION_TYPES.map((e) => {
-              const selected = mine === e;
-              return (
-                <Pressable
-                  key={e}
-                  disabled={voting}
-                  onPress={() => vote(e)}
-                  style={[
-                    styles.chip,
-                    {
-                      borderColor: selected ? EMOTION_COLORS[e] : FomoColors.hairline,
-                      backgroundColor: selected ? EMOTION_COLORS[e] + "22" : FomoColors.surface,
-                      opacity: voting ? 0.6 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={{ color: selected ? EMOTION_COLORS[e] : FomoColors.whiteout }}>
-                    {EMOTION_LABELS[e]}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {EMOTION_TYPES.map((e) => (
+              <EmotionChip
+                key={e}
+                label={EMOTION_LABELS[e]}
+                color={EMOTION_COLORS[e]}
+                selected={mine === e}
+                disabled={voting}
+                onPress={() => vote(e)}
+              />
+            ))}
           </View>
 
           {/* 집계 결과 — 정직한 숫자 */}
@@ -172,20 +161,13 @@ export default function Home() {
             <View style={styles.tallyBlock}>
               <Text style={styles.tally}>오늘 {tally.total}명이 감정을 선택했어요</Text>
               {EMOTION_TYPES.map((e) => (
-                <View key={e} style={styles.barRow}>
-                  <Text style={[styles.barLabel, { color: EMOTION_COLORS[e] }]}>{EMOTION_LABELS[e]}</Text>
-                  <View style={styles.barTrack}>
-                    <View
-                      style={{
-                        width: `${tally.ratios[e] ?? 0}%`,
-                        height: "100%",
-                        borderRadius: 999,
-                        backgroundColor: EMOTION_COLORS[e],
-                      }}
-                    />
-                  </View>
-                  <Text style={styles.barPct}>{tally.ratios[e] ?? 0}%</Text>
-                </View>
+                <TallyBar
+                  key={e}
+                  label={EMOTION_LABELS[e]}
+                  color={EMOTION_COLORS[e]}
+                  pct={tally.ratios[e] ?? 0}
+                  mine={mine === e}
+                />
               ))}
             </View>
           )}
@@ -211,11 +193,6 @@ const styles = StyleSheet.create({
   voteTitle: { color: FomoColors.whiteout, fontSize: 16, fontWeight: "600", marginBottom: Spacing.s4 },
   voteHint: { color: FomoColors.muted, fontSize: 12, marginBottom: Spacing.s16 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.s8 },
-  chip: { paddingHorizontal: Spacing.s16, paddingVertical: Spacing.s12, borderRadius: Radius.md, borderWidth: 1 },
   tallyBlock: { marginTop: Spacing.s24 },
   tally: { color: FomoColors.muted, fontSize: 12, marginBottom: Spacing.s12 },
-  barRow: { flexDirection: "row", alignItems: "center", gap: Spacing.s8, marginBottom: 6 },
-  barLabel: { width: 44, fontSize: 12 },
-  barTrack: { flex: 1, height: 8, borderRadius: 999, backgroundColor: FomoColors.elevated, overflow: "hidden" },
-  barPct: { width: 36, textAlign: "right", color: FomoColors.muted, fontSize: 12 },
 });
