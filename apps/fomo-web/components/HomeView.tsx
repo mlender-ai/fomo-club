@@ -20,6 +20,7 @@ import type {
   FomoIndexResponse,
   TallyResponse,
   CalendarResponse,
+  BannerItem,
 } from "@/lib/fomoApi";
 
 /**
@@ -30,16 +31,14 @@ import type {
 export function HomeView({
   index,
   tally,
-  pulse,
-  whale,
+  banner,
   calendar,
   mine,
   onReopenGate,
 }: {
   index: FomoIndexResponse | null;
   tally: TallyResponse | null;
-  pulse: string[];
-  whale: string[];
+  banner: BannerItem[];
   calendar: CalendarResponse | null;
   mine: EmotionType | null;
   onReopenGate: () => void;
@@ -57,9 +56,9 @@ export function HomeView({
         <span className="text-xs text-muted">가입 없이 둘러보기</span>
       </div>
 
-      {/* 혼자가 아님의 신호 — 시장 무관 단일 카드 문법 (M3) */}
+      {/* 혼자가 아님의 신호 — 롤링 배너(클릭 시 상세) (M3) */}
       <div className="mb-4 w-full">
-        <RollingBanner items={[...whale, ...pulse]} />
+        <RollingBanner items={banner} />
       </div>
 
       {/* 주인공: 포모 */}

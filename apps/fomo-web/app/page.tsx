@@ -9,13 +9,13 @@ import { getSessionId } from "@/lib/session";
 import {
   fetchIndex,
   fetchToday,
-  fetchPulse,
-  fetchWhale,
+  fetchBanner,
   fetchCalendar,
   postVote,
   type FomoIndexResponse,
   type TallyResponse,
   type CalendarResponse,
+  type BannerItem,
 } from "@/lib/fomoApi";
 
 type Phase = "splash" | "gate" | "home";
@@ -41,8 +41,7 @@ export default function Home() {
 
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
   const [tally, setTally] = useState<TallyResponse | null>(null);
-  const [pulse, setPulse] = useState<string[]>([]);
-  const [whale, setWhale] = useState<string[]>([]);
+  const [banner, setBanner] = useState<BannerItem[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
   const [mine, setMine] = useState<EmotionType | null>(null);
 
@@ -60,14 +59,12 @@ export default function Home() {
     const load = Promise.allSettled([
       fetchIndex(),
       fetchToday(),
-      fetchPulse(),
-      fetchWhale(),
+      fetchBanner(),
       fetchCalendar(sid),
-    ]).then(([i, t, p, w, c]) => {
+    ]).then(([i, t, b, c]) => {
       if (i.status === "fulfilled") setIndex(i.value);
       if (t.status === "fulfilled") setTally(t.value);
-      if (p.status === "fulfilled") setPulse(p.value.items);
-      if (w.status === "fulfilled") setWhale(w.value.items);
+      if (b.status === "fulfilled") setBanner(b.value.items);
       let todays: EmotionType | null = null;
       if (c.status === "fulfilled") {
         setCalendar(c.value);
@@ -129,8 +126,7 @@ export default function Home() {
     <HomeView
       index={index}
       tally={tally}
-      pulse={pulse}
-      whale={whale}
+      banner={banner}
       calendar={calendar}
       mine={mine}
       onReopenGate={reopenGate}

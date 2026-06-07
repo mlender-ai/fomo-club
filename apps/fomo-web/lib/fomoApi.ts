@@ -1,5 +1,9 @@
 // FOMO API 클라이언트. API는 apps/web(@trading/web)의 /api/fomo/*에 있다.
 // NEXT_PUBLIC_FOMO_API_BASE로 오버라이드(로컬: http://127.0.0.1:3200), 기본은 배포된 prod.
+import type { BannerItem } from "@fomo/core";
+
+export type { BannerItem } from "@fomo/core";
+
 const API_BASE =
   process.env.NEXT_PUBLIC_FOMO_API_BASE?.replace(/\/$/, "") ||
   "https://taro-stock-web.vercel.app";
@@ -37,8 +41,7 @@ async function get<T>(path: string): Promise<T> {
 
 export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
 export const fetchToday = () => get<TallyResponse>("/api/fomo/emotions/today");
-export const fetchPulse = () => get<{ items: string[] }>("/api/fomo/pulse");
-export const fetchWhale = () => get<{ items: string[] }>("/api/fomo/whale");
+export const fetchBanner = () => get<{ items: BannerItem[] }>("/api/fomo/banner");
 
 export const fetchCalendar = (sessionId: string, month?: string) =>
   get<CalendarResponse>(
