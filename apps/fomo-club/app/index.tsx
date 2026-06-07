@@ -63,18 +63,23 @@ export default function Home() {
     });
   }, []);
 
-  const vote = useCallback(async (e: EmotionType) => {
-    setVoting(true);
-    setMine(e);
-    try {
-      const res = await postVote(e);
-      setTally(res);
-    } catch {
-      // 낙관적 — 선택 유지, 집계는 다음 로드에 반영
-    } finally {
-      setVoting(false);
-    }
-  }, []);
+  // 하루 한 번 — 이미 선택했으면(또는 요청 중이면) 재투표를 막는다.
+  const vote = useCallback(
+    async (e: EmotionType) => {
+      if (mine || voting) return;
+      setVoting(true);
+      setMine(e);
+      try {
+        const res = await postVote(e);
+        setTally(res);
+      } catch {
+        // 낙관적 — 선택 유지, 집계는 다음 로드에 반영
+      } finally {
+        setVoting(false);
+      }
+    },
+    [mine, voting],
+  );
 
   // 멘트가 떠오르듯 페이드+슬라이드인 — 시장/나의 포모 전환마다 재생. docs/MASCOT.md.
   const mentionFade = useRef(new Animated.Value(0)).current;
@@ -89,6 +94,21 @@ export default function Home() {
     anim.start();
     return () => anim.stop();
   }, [stage, mine, mentionFade]);
+
+  // 집계 결과는 투표를 마친 뒤 "공개되듯" 떠오른다 — 결과를 보는 만족감(love mark).
+  const voted = mine !== null;
+  const tallyReveal = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!voted) return;
+    const anim = Animated.timing(tallyReveal, {
+      toValue: 1,
+      duration: 480,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [voted, tallyReveal]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -141,7 +161,9 @@ export default function Home() {
         {/* 오늘의 감정 투표 */}
         <View style={styles.voteBlock}>
           <Text style={styles.voteTitle}>오늘 당신의 감정은?</Text>
-          <Text style={styles.voteHint}>하루 한 번 선택할 수 있어요</Text>
+          <Text style={styles.voteHint}>
+            {voted ? "오늘의 감정을 남겼어요 · 내일 또 만나요" : "하루 한 번 선택할 수 있어요"}
+          </Text>
 
           <View style={styles.chips}>
             {EMOTION_TYPES.map((e) => (
@@ -151,15 +173,30 @@ export default function Home() {
                 color={EMOTION_COLORS[e]}
                 selected={mine === e}
                 disabled={voting}
+                locked={voted}
                 onPress={() => vote(e)}
               />
             ))}
           </View>
 
-          {/* 집계 결과 — 정직한 숫자 */}
+          {/* 집계 결과 — 정직한 숫자. 투표 후 공개되듯 페이드+슬라이드인. */}
           {tally && (
-            <View style={styles.tallyBlock}>
-              <Text style={styles.tally}>오늘 {tally.total}명이 감정을 선택했어요</Text>
+            <Animated.View
+              style={[
+                styles.tallyBlock,
+                voted && {
+                  opacity: tallyReveal,
+                  transform: [
+                    { translateY: tallyReveal.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+                  ],
+                },
+              ]}
+            >
+              <Text style={styles.tally}>
+                {voted
+                  ? `당신을 포함해 오늘 ${tally.total}명이 감정을 남겼어요`
+                  : `오늘 ${tally.total}명이 감정을 선택했어요`}
+              </Text>
               {EMOTION_TYPES.map((e) => (
                 <TallyBar
                   key={e}
@@ -169,7 +206,7 @@ export default function Home() {
                   mine={mine === e}
                 />
               ))}
-            </View>
+            </Animated.View>
           )}
         </View>
       </ScrollView>
