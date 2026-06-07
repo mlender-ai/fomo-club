@@ -63,6 +63,9 @@ export interface MarketSnapshot {
   industry?: string;        // 산업 (예: "Consumer Electronics")
   marketCap?: number;       // 시가총액 (대형/중형/소형 심리 차이)
   fiftyTwoWeekPosition?: number; // 0~1, 52주 범위 내 현재 위치
+  // 리스크·회복력 지표 — THREE_CARD 시간 축별 해석 보강용 (optional)
+  beta?: number;            // 시장 대비 변동성 민감도 (1 = 시장 동일, >1 = 고변동)
+  alpha?: number;           // 초과 수익률 (시장 대비 성과, 양수 = 아웃퍼폼)
   condition: MarketCondition;
   summary: string;
 }

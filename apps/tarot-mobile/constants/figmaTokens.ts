@@ -34,6 +34,10 @@ export const FigmaColors = {
   arcaneCta:      "#006239",
   luminousReveal: "#00c573",
   voidGreen:      "#002918",
+
+  // Chart — 명도 대비를 높여 시인성 강화 (#333 Designer)
+  chartUp:        "#32C874", // 상승 — 원래 #3ecf8e 대비 채도 낮추고 명도 높임
+  chartDown:      "#FF4C41", // 하락 — 원래 #ff3b30 대비 채도 낮추고 명도 높임
 } as const;
 
 export const FigmaTypography = {

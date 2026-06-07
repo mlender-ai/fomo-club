@@ -66,6 +66,12 @@ export function InvestmentInsight({ symbol }: Props) {
         </Text>
       </View>
 
+      <View style={styles.contextBanner}>
+        <Text variant="caption" color={Colors.silverHighlight} style={styles.contextText}>
+          타로 해석은 선택한 종목의 시장 데이터를 기반으로 패턴과 흐름을 해석합니다. 타로가 제안하는 투자 인사이트는 의사결정을 돕는 실마리를 제공합니다.
+        </Text>
+      </View>
+
       <View style={styles.card}>
         <View style={styles.cardBadgeRow}>
           <View style={styles.cardBadge}>
@@ -87,7 +93,7 @@ export function InvestmentInsight({ symbol }: Props) {
         </Text>
 
         <Text variant="caption" color={Colors.ironOutline} style={styles.disclaimer}>
-          본 해석은 투자 조언이 아닌 참고용 콘텐츠입니다.
+          본 해석은 투자 조언이 아닌 참고용 콘텐츠입니다. 데이터 기반으로 도출된 통찰을 참고해 투자 결정을 보완하세요.
         </Text>
       </View>
     </View>
@@ -146,6 +152,19 @@ const styles = StyleSheet.create({
   },
   summary: {
     lineHeight: 20,
+  },
+  contextBanner: {
+    backgroundColor: Colors.graphiteBase,
+    borderRadius: 8,
+    paddingHorizontal: Spacing.s16,
+    paddingVertical: 10,
+    marginBottom: Spacing.s8,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.taroEssence,
+  },
+  contextText: {
+    lineHeight: 18,
+    opacity: 0.85,
   },
   disclaimer: {
     fontSize: 10,

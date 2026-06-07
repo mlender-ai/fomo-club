@@ -21,6 +21,10 @@ export const Colors = {
   luminousReveal: "#00c573",
   voidGreen:      "#002918",
 
+  // Chart — 명도 대비 강화 (#333 Designer)
+  chartUp:        "#32C874",
+  chartDown:      "#FF4C41",
+
   // Semantic aliases (backward compat with existing code)
   bg:      "#121212",
   surface: "#2e2e2e",

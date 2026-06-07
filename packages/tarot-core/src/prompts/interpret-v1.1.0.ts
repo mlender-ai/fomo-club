@@ -56,6 +56,22 @@ function formatIndicators(market: MarketSnapshot): string {
     lines.push(`- 뉴스 감성: ${market.sentimentScore.toFixed(2)} (${mood})`);
   }
 
+  // 리스크 지표 — THREE_CARD 시간 축 해석 보강 (존재할 때만)
+  if (market.beta !== undefined) {
+    const betaDesc = market.beta > 1.5 ? "고변동 (시장 대비 민감)" : market.beta < 0.7 ? "저변동 (방어적)" : "시장 평균 수준";
+    lines.push(`- 베타(β): ${market.beta.toFixed(2)} → ${betaDesc}`);
+  }
+  if (market.alpha !== undefined) {
+    const alphaDesc = market.alpha > 0 ? "시장 대비 초과 성과" : "시장 대비 부진";
+    lines.push(`- 알파(α): ${market.alpha > 0 ? "+" : ""}${market.alpha.toFixed(2)}% → ${alphaDesc}`);
+  }
+  if (market.fiftyTwoWeekPosition !== undefined) {
+    const posDesc = market.fiftyTwoWeekPosition > 0.8 ? "52주 고점 근접 (강세 지속)"
+      : market.fiftyTwoWeekPosition < 0.2 ? "52주 저점 근접 (회복 가능성)"
+      : "52주 중간 구간";
+    lines.push(`- 52주 위치: ${(market.fiftyTwoWeekPosition * 100).toFixed(0)}% → ${posDesc}`);
+  }
+
   return lines.join("\n");
 }
 
@@ -123,6 +139,10 @@ ${cardDescriptions}
    - detail은 카드별 해석 + 종합 통찰 (300-500자)
 
 4. **3장 스프레드인 경우**: 과거→현재→미래 흐름으로 서사를 구성하세요.
+   - **과거 카드**: 종목이 지나온 변동성·리스크 흐름(베타, 52주 저점 여부)과 연결
+   - **현재 카드**: 지금 시장이 보내는 신호(RSI/MACD/뉴스 감성)와 직접 공명
+   - **미래 카드**: 회복력 지표(알파, 52주 위치)를 바탕으로 앞으로의 에너지 방향 암시
+   - 세 카드의 키워드가 이어지는 하나의 서사(narrative)를 완성하세요. 단절된 카드 해석 나열 금지.
 
 ## 응답 형식 (JSON만, 마크다운 코드블록 없이)
 {

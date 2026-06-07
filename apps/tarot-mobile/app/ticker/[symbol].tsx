@@ -19,6 +19,7 @@ import { FinancialChart } from "../../components/ticker/FinancialChart";
 import { KeyMetricsGrid } from "../../components/ticker/KeyMetricsGrid";
 import { NewsList } from "../../components/ticker/NewsList";
 import { InvestmentInsight } from "../../components/ticker/InvestmentInsight";
+import { DisclosureSummary } from "../../components/ticker/DisclosureSummary";
 import { TickerCardHistory } from "../../components/ticker/TickerCardHistory";
 import { CompactHeader } from "../../components/ticker/CompactHeader";
 import { TickerDetailSkeleton, InfoTabSkeleton } from "../../components/ticker/SkeletonLoader";
@@ -334,6 +335,7 @@ export default function TickerDetailScreen() {
                   {isLoggedIn && userId && (
                     <TickerCardHistory symbol={symbol} userId={userId} />
                   )}
+                  <DisclosureSummary symbol={symbol} />
                   {/* 타로 투자 인사이트: 뉴스 섹션의 AI 해석 헤드라인으로 뉴스 앞에 배치 */}
                   <InvestmentInsight symbol={symbol} />
                   <NewsList symbol={symbol} />

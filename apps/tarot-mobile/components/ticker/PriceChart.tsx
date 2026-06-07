@@ -66,7 +66,7 @@ export function PriceChart({ bars, loading, width, height = CHART_HEIGHT, positi
     );
   }
 
-  const lineColor = positive ? Colors.taroEssence : "#f43f5e";
+  const lineColor = positive ? Colors.chartUp : Colors.chartDown;
 
   return (
     <View>
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   volumeArea: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginTop: 4,
+    marginTop: 12,
   },
   volSlot: {
     alignItems: "center",
