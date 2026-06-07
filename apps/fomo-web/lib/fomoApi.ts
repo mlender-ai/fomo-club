@@ -22,6 +22,13 @@ export interface TallyResponse {
   ratios: Record<string, number>;
 }
 
+export interface CalendarResponse {
+  month: string; // YYYY-MM
+  today: string; // YYYY-MM-DD
+  days: Record<string, string>; // date → emotion
+  market: Record<string, number>; // date → FOMO Index score
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET ${path} ${res.status}`);
@@ -32,6 +39,11 @@ export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
 export const fetchToday = () => get<TallyResponse>("/api/fomo/emotions/today");
 export const fetchPulse = () => get<{ items: string[] }>("/api/fomo/pulse");
 export const fetchWhale = () => get<{ items: string[] }>("/api/fomo/whale");
+
+export const fetchCalendar = (sessionId: string, month?: string) =>
+  get<CalendarResponse>(
+    `/api/fomo/emotions/calendar?sessionId=${encodeURIComponent(sessionId)}${month ? `&month=${month}` : ""}`
+  );
 
 export async function postVote(sessionId: string, emotion: string): Promise<TallyResponse & { mine: string }> {
   const res = await fetch(`${API_BASE}/api/fomo/emotions/vote`, {

@@ -15,15 +15,18 @@ import {
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
 import { RollingBanner } from "@/components/RollingBanner";
+import { EmotionCalendar } from "@/components/EmotionCalendar";
 import { getSessionId } from "@/lib/session";
 import {
   fetchIndex,
   fetchToday,
   fetchPulse,
   fetchWhale,
+  fetchCalendar,
   postVote,
   type FomoIndexResponse,
   type TallyResponse,
+  type CalendarResponse,
 } from "@/lib/fomoApi";
 
 export default function Home() {
@@ -32,16 +35,29 @@ export default function Home() {
   const [pulse, setPulse] = useState<string[]>([]);
   const [whale, setWhale] = useState<string[]>([]);
   const [mine, setMine] = useState<EmotionType | null>(null);
+  const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
 
   useEffect(() => {
-    getSessionId();
-    Promise.allSettled([fetchIndex(), fetchToday(), fetchPulse(), fetchWhale()]).then(([i, t, p, w]) => {
+    const sid = getSessionId();
+    Promise.allSettled([
+      fetchIndex(),
+      fetchToday(),
+      fetchPulse(),
+      fetchWhale(),
+      fetchCalendar(sid),
+    ]).then(([i, t, p, w, c]) => {
       if (i.status === "fulfilled") setIndex(i.value);
       if (t.status === "fulfilled") setTally(t.value);
       if (p.status === "fulfilled") setPulse(p.value.items);
       if (w.status === "fulfilled") setWhale(w.value.items);
+      if (c.status === "fulfilled") {
+        setCalendar(c.value);
+        // 오늘 이미 남긴 감정이 있으면 2단계(나의 포모)로 복원
+        const todays = c.value.days[c.value.today];
+        if (todays) setMine(todays as EmotionType);
+      }
       setLoading(false);
     });
   }, []);
@@ -52,6 +68,10 @@ export default function Home() {
     try {
       const res = await postVote(getSessionId(), e);
       setTally(res);
+      // 캘린더 오늘 칸 즉시 반영(낙관적)
+      setCalendar((prev) =>
+        prev ? { ...prev, days: { ...prev.days, [prev.today]: e } } : prev
+      );
     } catch {
       /* 선택 상태 유지 */
     } finally {
@@ -162,6 +182,9 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* 감정 캘린더 — 매일 돌아올 이유 (M2) */}
+      {calendar && <EmotionCalendar data={calendar} />}
 
       {/* 면책 — 담담하게 */}
       <p className="mt-7 text-center text-[11px] leading-5 text-muted">
