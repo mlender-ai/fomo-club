@@ -69,7 +69,7 @@ export function EmotionGate({
               ? stateGlow(score)
               : undefined
         }
-        size={132}
+        size={92}
       />
 
       {/* FOMO Index (픽셀) */}

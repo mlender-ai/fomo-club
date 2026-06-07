@@ -79,7 +79,7 @@ export function HomeView({
                     ? stateGlow(index.score)
                     : undefined
               }
-              size={120}
+              size={84}
             />
 
             {/* 보조: FOMO Index (픽셀) */}

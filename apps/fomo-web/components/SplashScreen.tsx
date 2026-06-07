@@ -15,7 +15,7 @@ export function SplashScreen({ leaving = false }: { leaving?: boolean }) {
       }`}
     >
       <div className="fomo-splash-in flex flex-col items-center">
-        <FomoFace face="calm" size={108} />
+        <FomoFace face="calm" size={76} />
         <p className="mt-7 font-pixel text-lg tracking-wide text-whiteout">FOMO CLUB</p>
         <p className="mt-2 text-sm text-muted">나만 그런 게 아니구나.</p>
       </div>
