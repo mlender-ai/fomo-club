@@ -25,12 +25,17 @@ export type FomoFace = "sleepy" | "calm" | "curious" | "excited" | "manic";
 /** FOMO Index를 구성하는 4개 Heat 컴포넌트. 가중치 30/30/30/10. */
 export type HeatKey = "market" | "community" | "emotion" | "whale";
 
+/**
+ * @author 안티그래비티 — 1-B: HeatMeta(신뢰도) 필드 추가
+ */
 export interface HeatComponent {
   key: HeatKey;
   /** 산출 점수 (0 ~ max). */
   score: number;
   /** 컴포넌트 만점 (market/community/emotion=30, whale=10). */
   max: number;
+  /** 데이터 신뢰도 + 진단 메타. UI에서 "X시간 전 기준" 표기용. */
+  meta?: import("./index-engine/types").HeatMeta;
 }
 
 /** 하루치 FOMO Index 스냅샷의 코어 형태. */
