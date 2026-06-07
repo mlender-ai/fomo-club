@@ -1,0 +1,9 @@
+{
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "installCommand": "cd ../.. && npm install",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_FOMO_API_BASE": "https://taro-stock-web.vercel.app"
+  }
+}
