@@ -11,6 +11,7 @@
 - **레포**: `mlender-ai/taro-stock-app`
 - **제품**: 증권 시장의 기술적 지표를 AI가 분석하여 타로 카드 형식으로 해석을 제공하는 네이티브 앱
 - **리포지셔닝 (현재 최우선)**: 본 프로젝트는 **FOMO CLUB**으로 리포지셔닝 중이다(MVP 우선 출시). 타로 엔진/코드는 모노레포 내 보존하며 해석 백엔드로 후속 연계한다. 레포 디렉토리·패키지 리네이밍(@trading/*, @taro/*, tarot-mobile 등)은 출시 전후 별도 정리 라운드로 연기한다. 정의/지표/마스코트는 `docs/FOMO_CLUB.md`, `docs/FOMO_INDEX.md`, `docs/MASCOT.md` 참조.
+- **🚫 타로 신규 작업 거부 (확정 — 모든 세션·에이전트 준수)**: 앞으로 **FOMO Club이 최우선이자 유일한 제품 개발 대상**이다. 타로(tarot-core 프롬프트/해석, tarot-mobile 화면·UX, Signal Engine 등) 관련 **신규 기능·개선·이슈·PR은 거부**한다. 기존 타로 코드는 보존만 하며 손대지 않는다. 에이전트 카운슬(github-actions)이 타로 관련 제안을 올리면 구현하지 말고 조용히 close(not_planned). FOMO Club과 직접 연계되는 해석 백엔드 작업만 예외적으로 후속 라운드에서 검토한다.
 - **모노레포 구조**: `apps/web` (API + 어드민), `apps/api` (Fastify 백엔드/워커), `apps/tarot-mobile` (React Native), `packages/shared` (공용 타입), `packages/tarot-core` (비즈니스 로직). FOMO Club 신설 예정: `apps/fomo-club`, `apps/fomo-web`, `packages/fomo-core`.
 - **기능명세서**: `docs/기능명세서.md` 참조
 
