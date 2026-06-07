@@ -9,6 +9,8 @@ import {
   scoreToState,
   marketLine,
   mineLine,
+  isCalmDay,
+  restorativeLine,
   type EmotionType,
   type FomoFace as FomoFaceType,
   type FomoState,
@@ -129,6 +131,19 @@ export default function Home() {
         <p key={stage + (mine ?? "")} className="fomo-rise mt-3 max-w-xs text-center text-sm leading-5 text-whiteout">
           {line}
         </p>
+      )}
+
+      {/* 잔잔한 날 = 치유의 날 — 변동성 없는 날에도 열 이유 (M2) */}
+      {state && index && isCalmDay(state) && (
+        <div className="fomo-rise mt-4 flex w-full items-start gap-2.5 rounded-xl border border-hairline bg-surface px-4 py-3">
+          <span className="mt-0.5 text-sm" aria-hidden>
+            🌙
+          </span>
+          <div>
+            <p className="text-xs text-muted">오늘의 쉼</p>
+            <p className="mt-0.5 text-sm leading-5 text-whiteout">{restorativeLine(index.date)}</p>
+          </div>
+        </div>
       )}
 
       {/* 오늘의 감정 투표 */}

@@ -32,3 +32,34 @@ export function marketLine(state: FomoState): string {
 export function mineLine(emotion: EmotionType): string {
   return MINE_LINES[emotion];
 }
+
+/**
+ * 잔잔한 날 = 치유의 날 (M2). docs/IDENTITY_AND_MILESTONES.md §M2.
+ * 변동성 없는 날에도 포모를 열 이유 — 회복적 공감(잘 버팀/의연함).
+ * 투자 조언·종목 언급 ❌ / 차트에서 벗어나 마음을 돌보는 담담한 한마디 ⭕.
+ * regulation-reviewer + lovable-reviewer 검사 대상.
+ */
+const RESTORATIVE_LINES: readonly string[] = [
+  "오늘은 시장도 한 박자 쉬어가는 날. 차트 잠깐 덮어두고 숨 한 번 쉬자.",
+  "조용한 하루야. 잘 버텨온 너를, 오늘은 좀 쉬게 해줘도 돼.",
+  "큰일 없는 날. 이런 하루하루가 사실 마음이 회복되는 시간이야.",
+  "오늘은 멀리서 지켜보는 날. 아무것도 안 해도 괜찮아.",
+  "잔잔한 날엔 잔잔하게. 산책 한 바퀴, 물 한 잔. 그거면 충분해.",
+  "시장이 조용할 땐 마음도 정리하기 좋아. 오늘 네 기분은 어땠어?",
+  "무던한 하루를 버티는 것도 실력이야. 너, 잘하고 있어.",
+] as const;
+
+/** 잔잔한 날(낮은 FOMO Index)인지 — 무관심/관망 구간. */
+export function isCalmDay(state: FomoState): boolean {
+  return state === "무관심" || state === "관망";
+}
+
+/**
+ * 그날의 회복 콘텐츠 한 줄. 날짜("YYYY-MM-DD") 기반 결정적 선택 →
+ * 같은 날 새로고침해도 동일, 매일은 달라져 "돌아올 이유"가 된다.
+ */
+export function restorativeLine(date: string): string {
+  let sum = 0;
+  for (let i = 0; i < date.length; i++) sum += date.charCodeAt(i);
+  return RESTORATIVE_LINES[sum % RESTORATIVE_LINES.length]!;
+}
