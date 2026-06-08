@@ -12,3 +12,4 @@ export * from "./index-engine/calculate";
 export * from "./index-engine/summary";
 // @author 안티그래비티 — 1-A: Reddit 페처 export
 export * from "./index-engine/redditFetcher";
+export * from "./index-engine/validate";
