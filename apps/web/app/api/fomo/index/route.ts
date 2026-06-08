@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scoreToColor, scoreToDescription } from "@fomo/core";
+import { scoreToColor, scoreToDescription, computeFomoIndex } from "@fomo/core";
 import { prisma } from "../../../../lib/prisma";
 import { kstDate, computeLiveFomoIndex, corsJson, withCors } from "../../../../lib/fomo";
 import { createLogger } from "../../../../lib/logger";
@@ -60,10 +60,24 @@ export async function GET() {
       live: true,
     });
   } catch (err) {
-    log.error("FOMO Index 조회 실패", {
+    log.error("FOMO Index 조회 실패 — 중립 폴백 반환 (#393)", {
       date,
       err: err instanceof Error ? err.message : String(err),
     });
-    return corsJson({ error: "FOMO Index 조회 실패", code: "INDEX_ERROR" }, { status: 500 });
+    // 데이터 미비 시 500 에러 대신 중립 폴백을 반환해 사용자에게 빈 화면이 노출되지 않도록 한다.
+    const fallback = computeFomoIndex({}, date);
+    return corsJson({
+      date:            fallback.date,
+      score:           fallback.score,
+      state:           fallback.state,
+      zoneColor:       scoreToColor(fallback.score),
+      zoneDescription: scoreToDescription(fallback.score),
+      components: { market: 15, community: 15, emotion: 15, whale: 0 },
+      aiSummary:    "",
+      prevDayDelta: 0,
+      avg30Delta:   0,
+      live: true,
+      fallback: true,
+    });
   }
 }

@@ -108,16 +108,20 @@ describe("스냅샷 없음 (라이브 계산)", () => {
   });
 });
 
-// ─── 3. 폴백 — DB 전체 장애 ────────────────────────────────────────────────────
+// ─── 3. 폴백 — DB 전체 장애 (#393) ────────────────────────────────────────────
 describe("DB 전체 장애", () => {
-  it("snapshot 조회 실패 → 500 + INDEX_ERROR", async () => {
+  it("snapshot 조회 실패 → 500 대신 중립 폴백(200)을 반환해 사용자에게 빈 화면 노출 방지", async () => {
     mockSnapshot.mockRejectedValueOnce(new Error("DB connection refused"));
 
     const res = await GET();
-    expect(res.status).toBe(500);
+    // #393: 에러 시 500 대신 중립 폴백 스냅샷으로 사용자 경험 보호
+    expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.code).toBe("INDEX_ERROR");
+    expect(body.fallback).toBe(true);
+    expect(body.score).toBe(45); // 중립: market15 + community15 + emotion15 + whale0
+    expect(body.state).toBe("관심");
+    expect(body.live).toBe(true);
   });
 });
 
