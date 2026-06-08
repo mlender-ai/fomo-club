@@ -6,6 +6,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { EmotionGate } from "@/components/EmotionGate";
 import { HomeView } from "@/components/HomeView";
 import { getSessionId } from "@/lib/session";
+import { isLoggedIn } from "@/lib/auth";
 import {
   fetchIndex,
   fetchToday,
@@ -44,6 +45,12 @@ export default function Home() {
   const [banner, setBanner] = useState<BannerItem[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
   const [mine, setMine] = useState<EmotionType | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  // 로그인 상태는 클라에서만 확정(SSR 불일치 방지).
+  useEffect(() => {
+    setLoggedIn(isLoggedIn());
+  }, []);
 
   // 스플래시 동안 데이터 프리페치 + 최소 표시시간 보장 후 분기
   const startedRef = useRef(false);
@@ -107,6 +114,16 @@ export default function Home() {
     setPhase("home");
   }, []);
 
+  // 로그인 성공(SignupGate) → 토큰 기준으로 캘린더 재조회(익명+연결분 합쳐 표시).
+  const handleLoggedIn = useCallback(() => {
+    setLoggedIn(true);
+    fetchCalendar(getSessionId())
+      .then(setCalendar)
+      .catch(() => {
+        /* 조회 실패해도 게이트는 통과 — 다음 진입에 다시 시도 */
+      });
+  }, []);
+
   if (phase === "splash") {
     return <SplashScreen leaving={leavingSplash} />;
   }
@@ -130,6 +147,8 @@ export default function Home() {
       calendar={calendar}
       mine={mine}
       onReopenGate={reopenGate}
+      loggedIn={loggedIn}
+      onLoggedIn={handleLoggedIn}
     />
   );
 }

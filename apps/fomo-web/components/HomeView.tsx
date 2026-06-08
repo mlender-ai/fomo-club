@@ -16,6 +16,7 @@ import {
 import { FomoFace } from "@/components/FomoFace";
 import { RollingBanner } from "@/components/RollingBanner";
 import { EmotionCalendar } from "@/components/EmotionCalendar";
+import { SignupGate } from "@/components/SignupGate";
 import { stateGlow } from "@/lib/fomoVisual";
 import type {
   FomoIndexResponse,
@@ -37,6 +38,8 @@ export function HomeView({
   calendar,
   mine,
   onReopenGate,
+  loggedIn,
+  onLoggedIn,
 }: {
   index: FomoIndexResponse | null;
   tally: TallyResponse | null;
@@ -44,6 +47,8 @@ export function HomeView({
   calendar: CalendarResponse | null;
   mine: EmotionType | null;
   onReopenGate: () => void;
+  loggedIn: boolean;
+  onLoggedIn: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("home");
 
@@ -187,7 +192,9 @@ export function HomeView({
 
         {tab === "calendar" && (
           <div className="w-full">
-            {calendar ? (
+            {!loggedIn ? (
+              <SignupGate onLoggedIn={onLoggedIn} />
+            ) : calendar ? (
               <EmotionCalendar data={calendar} />
             ) : (
               <p className="mt-10 text-center text-sm text-muted">불러오는 중…</p>
