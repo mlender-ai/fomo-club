@@ -83,20 +83,28 @@ export function buildWhaleItems(input: WhaleInput): BannerItem[] {
   }
 
   const coins = input.coins ?? [];
-  const btc = coins.find((c) => c.symbol?.toLowerCase() === "btc");
-  if (btc && typeof btc.athChange === "number" && btc.athChange < 0) {
-    items.push({
-      id: "whale-btc-ath",
-      kind: "whale",
-      emoji: "📉",
-      text: `비트코인, 전고점 대비 ${pct(btc.athChange)} — 고점에 물린 건 너만이 아니야`,
-      detail: {
-        title: "비트코인 전고점 대비",
-        body: "사상 최고가에 산 사람도 지금 같이 기다리는 중이야. 고점에 물린 건 너만이 아니야.",
-        metric: { label: "전고점(ATH) 대비", value: pct(btc.athChange), change: btc.athChange },
-        source: { label: "CoinGecko", url: "https://www.coingecko.com/en/coins/bitcoin" },
-      },
-    });
+
+  // BTC·ETH 전고점 대비 — 가장 많이 "고점에 물린" 두 코인. 둘 다 무료 CoinGecko 실측.
+  const ATH_COINS: { sym: string; name: string; url: string }[] = [
+    { sym: "btc", name: "비트코인", url: "https://www.coingecko.com/en/coins/bitcoin" },
+    { sym: "eth", name: "이더리움", url: "https://www.coingecko.com/en/coins/ethereum" },
+  ];
+  for (const { sym, name, url } of ATH_COINS) {
+    const coin = coins.find((c) => c.symbol?.toLowerCase() === sym);
+    if (coin && typeof coin.athChange === "number" && coin.athChange < 0) {
+      items.push({
+        id: `whale-${sym}-ath`,
+        kind: "whale",
+        emoji: "📉",
+        text: `${name}, 전고점 대비 ${pct(coin.athChange)} — 고점에 물린 건 너만이 아니야`,
+        detail: {
+          title: `${name} 전고점 대비`,
+          body: "사상 최고가에 산 사람도 지금 같이 기다리는 중이야. 고점에 물린 건 너만이 아니야.",
+          metric: { label: "전고점(ATH) 대비", value: pct(coin.athChange), change: coin.athChange },
+          source: { label: "CoinGecko", url },
+        },
+      });
+    }
   }
 
   const withChg = coins.filter((c) => typeof c.change24h === "number");

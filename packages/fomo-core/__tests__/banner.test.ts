@@ -29,6 +29,7 @@ describe("buildWhaleItems", () => {
     const ids = items.map((i) => i.id);
     expect(ids).toContain("whale-marketcap");
     expect(ids).toContain("whale-btc-ath");
+    expect(ids).toContain("whale-eth-ath");
     expect(ids).toContain("whale-worst");
     expect(ids).toContain("whale-breadth");
     // 최대 낙폭은 ETH
