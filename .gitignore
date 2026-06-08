@@ -22,3 +22,4 @@ prisma/dev.db
 test-results/
 playwright-report/
 playwright/.cache/
+fomo-index-health.json

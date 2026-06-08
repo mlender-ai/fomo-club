@@ -30,9 +30,34 @@ jobs:
         run: npm run prisma:generate
 
       - name: Compute FOMO Index snapshot
+        id: compute
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
         run: npm run fomo:index
+
+      # 운영 관측 — 실패/저하를 Slack 에 가시화(정직한 숫자 원칙). 무알림 사고(06-06) 재발 방지.
+      - name: Report health to Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          OUTCOME: ${{ steps.compute.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          URL="$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')"
+          if [ "$OUTCOME" != "success" ]; then
+            MSG=$(printf '%s\n%s' "🔴 *FOMO Index 파이프라인 실패* — 오늘 지수 스냅샷 미생성 (정직한 숫자: 데이터 누락)" ">${RUN_URL}")
+            jq -n --arg t "$MSG" '{text:$t}' > /tmp/fomo_health.json
+          elif [ -f fomo-index-health.json ]; then
+            jq '{text: (
+              "📊 FOMO Index \(.date) — \(.score) (\(.state))\n실데이터 \(.realCount)/4 Heat · 감정투표 \(.voteCount)표"
+              + (if .degraded then "\n⚠️ 폴백 \(.fallbackCount)개 Heat (라이브 소스 미연동/실패)" else "" end)
+              + "\n" + ([.heats[] | "\(.key):\(.confidence)"] | join(" · "))
+            )}' fomo-index-health.json > /tmp/fomo_health.json
+          else
+            jq -n --arg t "⚠️ FOMO Index — 건강 리포트 파일 없음(드라이런/스킵). ${RUN_URL}" '{text:$t}' > /tmp/fomo_health.json
+          fi
+          curl -s -X POST "$URL" -H "Content-Type: application/json" -d @/tmp/fomo_health.json || true

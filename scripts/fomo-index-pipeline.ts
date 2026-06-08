@@ -9,9 +9,12 @@
 import {
   computeFomoIndex,
   buildSummary,
+  summarizeHealth,
+  renderHealthReport,
   type EmotionTally,
   type EmotionType,
 } from "@fomo/core";
+import { writeFileSync } from "node:fs";
 
 /** Asia/Seoul 기준 YYYY-MM-DD. */
 function kstDate(offsetDays = 0): string {
@@ -110,6 +113,17 @@ async function main() {
       `[dry-run] date=${date} score=${index.score} state=${index.state} summary=${aiSummary}\n`
     );
   }
+
+  // 5. 운영 관측 — 건강 요약(정직한 숫자: 실데이터 vs 폴백) 산출 + 파일 기록.
+  //    워크플로가 이 파일을 읽어 Slack 에 푸시하고 저하/실패를 가시화한다.
+  const voteCount = Object.values(tally).reduce((a, n) => a + (n ?? 0), 0);
+  const health = summarizeHealth(index, voteCount);
+  try {
+    writeFileSync("fomo-index-health.json", JSON.stringify(health), "utf8");
+  } catch (err) {
+    process.stderr.write(`건강 리포트 기록 실패(무시): ${String(err)}\n`);
+  }
+  process.stdout.write(renderHealthReport(health) + "\n");
 }
 
 main().catch((error) => {

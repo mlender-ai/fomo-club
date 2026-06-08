@@ -10,5 +10,6 @@ export * from "./index-engine/emotionHeat";
 export * from "./index-engine/whaleHeat";
 export * from "./index-engine/calculate";
 export * from "./index-engine/summary";
+export * from "./index-engine/health";
 // @author 안티그래비티 — 1-A: Reddit 페처 export
 export * from "./index-engine/redditFetcher";
