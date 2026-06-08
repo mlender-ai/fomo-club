@@ -21,7 +21,8 @@ export const revalidate = 300; // 5분 캐시 (외부 API 레이트리밋 보호
 // Yahoo Finance chart로 지수 일봉 변화율을 가져온다(Stooq는 안티봇 차단으로 사망).
 // 국내(코스피·코스닥) 먼저, 그다음 미증시·반도체 — User Zero에게 가까운 순.
 const YAHOO_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-const YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart";
+// 호스트 2개 폴백 — 한쪽이 스로틀(429/빈응답)이면 다른 쪽 시도.
+const YAHOO_HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
 const INDICES: { key: MacroQuote["key"]; label: string; symbol: string }[] = [
   { key: "kospi", label: "코스피", symbol: "^KS11" },
   { key: "kosdaq", label: "코스닥", symbol: "^KQ11" },
@@ -34,29 +35,41 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-/** Yahoo chart(최근 5일 일봉)에서 각 지수의 직전 대비 변화율을 모은다. */
-async function fetchMacro(): Promise<MacroQuote[]> {
-  const results = await Promise.allSettled(
-    INDICES.map(async (s) => {
-      const url = `${YAHOO_CHART}/${encodeURIComponent(s.symbol)}?range=5d&interval=1d`;
+/** 한 심볼의 일봉 종가 배열. query1→query2 폴백. 실패 시 null. */
+async function fetchIndexCloses(symbol: string): Promise<(number | null)[] | null> {
+  for (const host of YAHOO_HOSTS) {
+    try {
+      const url = `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1d`;
       const res = await fetch(url, {
         headers: { accept: "application/json", "user-agent": YAHOO_UA },
         signal: AbortSignal.timeout(8_000),
         next: { revalidate: 300 },
       });
-      if (!res.ok) throw new Error(`yahoo ${s.symbol} ${res.status}`);
+      if (!res.ok) continue;
       const payload = (await res.json()) as {
         chart?: { result?: { indicators?: { quote?: { close?: (number | null)[] }[] } }[] };
       };
-      const closes = payload.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-      const parsed = yahooChange(closes);
-      return { ...s, change: parsed?.change ?? null, close: parsed?.close ?? null } as MacroQuote;
-    })
-  );
+      const closes = payload.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      if (closes && closes.length > 0) return closes;
+    } catch {
+      // 다음 호스트로
+    }
+  }
+  return null;
+}
+
+/**
+ * Yahoo chart(최근 5일 일봉)에서 각 지수의 직전 대비 변화율을 모은다.
+ * **순차 요청** — 동시(burst)로 5개를 때리면 Yahoo가 일부를 스로틀해 누락되므로
+ * 하나씩 직렬로(호스트 폴백 포함) 받아 안정성을 확보한다(5분 캐시라 지연 무관).
+ */
+async function fetchMacro(): Promise<MacroQuote[]> {
   const quotes: MacroQuote[] = [];
-  for (const r of results) {
-    if (r.status === "fulfilled") quotes.push(r.value);
-    else console.warn("[fomo/banner] yahoo error", r.reason);
+  for (const s of INDICES) {
+    const closes = await fetchIndexCloses(s.symbol);
+    const parsed = closes ? yahooChange(closes) : null;
+    if (parsed) quotes.push({ ...s, change: parsed.change, close: parsed.close });
+    else console.warn(`[fomo/banner] yahoo miss ${s.symbol}`);
   }
   return quotes;
 }
