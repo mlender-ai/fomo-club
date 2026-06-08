@@ -3,6 +3,7 @@ import {
   pct,
   buildWhaleItems,
   buildMacroItems,
+  yahooChange,
   buildPulseItems,
   bannerFallback,
   parseStooqDailyChange,
@@ -51,19 +52,40 @@ describe("buildWhaleItems", () => {
 });
 
 describe("buildMacroItems", () => {
-  it("미증시/반도체 변화율로 항목 생성", () => {
+  it("국내/미증시/반도체 변화율로 항목 생성", () => {
     const items = buildMacroItems([
+      { key: "kosdaq", label: "코스닥", change: -8.0, close: 900 },
       { key: "spx", label: "S&P500", change: -1.2, close: 5000 },
       { key: "sox", label: "필라델피아 반도체", change: -8.2, close: 4000 },
     ]);
-    expect(items.map((i) => i.id)).toEqual(["macro-spx", "macro-sox"]);
-    expect(items[1]?.text).toContain("-8.2%");
-    expect(items[1]?.detail?.source?.label).toBe("Stooq");
+    expect(items.map((i) => i.id)).toEqual(["macro-kosdaq", "macro-spx", "macro-sox"]);
+    expect(items[0]?.text).toContain("코스닥");
+    expect(items[2]?.text).toContain("-8.2%");
+    expect(items[2]?.detail?.source?.label).toBe("Yahoo Finance");
   });
 
   it("change가 없으면 생략", () => {
     const items = buildMacroItems([{ key: "ndq", label: "나스닥", change: null }]);
     expect(items).toHaveLength(0);
+  });
+});
+
+describe("yahooChange", () => {
+  it("마지막 2개 유효 종가로 변화율 계산", () => {
+    const r = yahooChange([1002.44, 911.39]);
+    expect(r?.close).toBe(911.39);
+    // (911.39-1002.44)/1002.44*100 ≈ -9.08
+    expect(r && Math.round(r.change * 10) / 10).toBe(-9.1);
+  });
+
+  it("null/결측을 걸러내고 계산", () => {
+    const r = yahooChange([null, 5000, null, 4950, null]);
+    expect(r?.close).toBe(4950);
+  });
+
+  it("유효 종가 2개 미만이면 null", () => {
+    expect(yahooChange([null, 100])).toBeNull();
+    expect(yahooChange([])).toBeNull();
   });
 });
 

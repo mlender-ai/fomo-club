@@ -139,8 +139,8 @@ export function buildWhaleItems(input: WhaleInput): BannerItem[] {
 
 export interface MacroQuote {
   /** 내부 식별자(라우팅·아이콘 매핑용). */
-  key: "spx" | "ndq" | "sox";
-  /** 표시 이름. 예: "S&P500", "나스닥", "필라델피아 반도체". */
+  key: "kospi" | "kosdaq" | "spx" | "ndq" | "sox";
+  /** 표시 이름. 예: "코스피", "코스닥", "S&P500", "나스닥", "필라델피아 반도체". */
   label: string;
   /** 전일 종가 대비 변화율(%). */
   change?: number | null;
@@ -149,19 +149,29 @@ export interface MacroQuote {
 }
 
 const MACRO_META: Record<MacroQuote["key"], { emoji: string; sourceUrl: string; note: string }> = {
+  kospi: {
+    emoji: "🇰🇷",
+    sourceUrl: "https://finance.yahoo.com/quote/%5EKS11",
+    note: "코스피가 같이 움직인 날이야.",
+  },
+  kosdaq: {
+    emoji: "📊",
+    sourceUrl: "https://finance.yahoo.com/quote/%5EKQ11",
+    note: "코스닥이 같이 움직인 날이야.",
+  },
   spx: {
     emoji: "🇺🇸",
-    sourceUrl: "https://stooq.com/q/?s=%5Espx",
+    sourceUrl: "https://finance.yahoo.com/quote/%5EGSPC",
     note: "미국 대표 지수가 같이 움직인 날이야.",
   },
   ndq: {
     emoji: "💻",
-    sourceUrl: "https://stooq.com/q/?s=%5Endq",
+    sourceUrl: "https://finance.yahoo.com/quote/%5EIXIC",
     note: "기술주 중심 지수가 같이 움직인 날이야.",
   },
   sox: {
     emoji: "🔧",
-    sourceUrl: "https://stooq.com/q/?s=%5Esox",
+    sourceUrl: "https://finance.yahoo.com/quote/%5ESOX",
     note: "반도체 섹터가 같이 움직인 날이야.",
   },
 };
@@ -197,7 +207,23 @@ export function parseStooqDailyChange(csv: string): { change: number; close: num
   return { change: ((last - prev) / prev) * 100, close: last };
 }
 
-/** Stooq 미증시/반도체 지수 → BannerItem[]. 실측 변화율만, 결측은 생략. */
+/**
+ * Yahoo chart 일봉 종가 배열에서 직전 대비 변화율(%)·최근 종가를 구한다.
+ * (Stooq가 안티봇 차단으로 사망 → Yahoo chart JSON으로 교체.)
+ * 유효 종가 2개 미만이거나 직전가 0이면 null(→ 항목 생략).
+ */
+export function yahooChange(
+  closes: (number | null | undefined)[]
+): { change: number; close: number } | null {
+  const valid = closes.filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (valid.length < 2) return null;
+  const last = valid[valid.length - 1]!;
+  const prev = valid[valid.length - 2]!;
+  if (prev === 0) return null;
+  return { change: ((last - prev) / prev) * 100, close: last };
+}
+
+/** 미증시/반도체/국내 지수 → BannerItem[]. 실측 변화율만, 결측은 생략. */
 export function buildMacroItems(quotes: MacroQuote[]): BannerItem[] {
   const items: BannerItem[] = [];
   for (const q of quotes) {
@@ -221,7 +247,7 @@ export function buildMacroItems(quotes: MacroQuote[]): BannerItem[] {
           value: pct(q.change),
           change: q.change,
         },
-        source: { label: "Stooq", url: meta.sourceUrl },
+        source: { label: "Yahoo Finance", url: meta.sourceUrl },
       },
     });
   }

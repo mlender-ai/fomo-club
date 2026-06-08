@@ -4,7 +4,7 @@ import {
   buildWhaleItems,
   buildMacroItems,
   buildPulseItems,
-  parseStooqDailyChange,
+  yahooChange,
   bannerFallback,
   type BannerItem,
   type MacroQuote,
@@ -13,40 +13,50 @@ import {
 import { prisma } from "../../../../lib/prisma";
 import { kstDate, todayTally, withCors } from "../../../../lib/fomo";
 
-// 통합 롤링 배너 — pulse(감정) + whale(CoinGecko) + macro(Stooq 미증시·반도체).
+// 통합 롤링 배너 — pulse(감정) + macro(국내·미증시·반도체) + whale(CoinGecko).
 // 정직한 숫자 원칙: 실측값만. 결측은 항목 생략, 전부 비면 담담한 폴백.
 // 문구/포맷팅은 @fomo/core/banner의 순수 빌더가 담당(테스트 보장).
 export const revalidate = 300; // 5분 캐시 (외부 API 레이트리밋 보호)
 
-const STOOQ: { key: MacroQuote["key"]; label: string; symbol: string }[] = [
-  { key: "spx", label: "S&P500", symbol: "^spx" },
-  { key: "ndq", label: "나스닥", symbol: "^ndq" },
-  { key: "sox", label: "필라델피아 반도체", symbol: "^sox" },
+// Yahoo Finance chart로 지수 일봉 변화율을 가져온다(Stooq는 안티봇 차단으로 사망).
+// 국내(코스피·코스닥) 먼저, 그다음 미증시·반도체 — User Zero에게 가까운 순.
+const YAHOO_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart";
+const INDICES: { key: MacroQuote["key"]; label: string; symbol: string }[] = [
+  { key: "kospi", label: "코스피", symbol: "^KS11" },
+  { key: "kosdaq", label: "코스닥", symbol: "^KQ11" },
+  { key: "spx", label: "S&P500", symbol: "^GSPC" },
+  { key: "ndq", label: "나스닥", symbol: "^IXIC" },
+  { key: "sox", label: "필라델피아 반도체", symbol: "^SOX" },
 ];
 
 export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-/** Stooq 최근 일봉 CSV에서 각 지수의 전일 대비 변화율을 모은다. */
+/** Yahoo chart(최근 5일 일봉)에서 각 지수의 직전 대비 변화율을 모은다. */
 async function fetchMacro(): Promise<MacroQuote[]> {
-  // 최근 ~15일 범위만 요청해 응답을 가볍게(마지막 2행만 사용).
-  const d2 = kstDate().replace(/-/g, "");
-  const d1 = kstDate(-15).replace(/-/g, "");
   const results = await Promise.allSettled(
-    STOOQ.map(async (s) => {
-      const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(s.symbol)}&d1=${d1}&d2=${d2}&i=d`;
-      const res = await fetch(url, { next: { revalidate: 300 } });
-      if (!res.ok) throw new Error(`stooq ${s.symbol} ${res.status}`);
-      const csv = await res.text();
-      const parsed = parseStooqDailyChange(csv);
+    INDICES.map(async (s) => {
+      const url = `${YAHOO_CHART}/${encodeURIComponent(s.symbol)}?range=5d&interval=1d`;
+      const res = await fetch(url, {
+        headers: { accept: "application/json", "user-agent": YAHOO_UA },
+        signal: AbortSignal.timeout(8_000),
+        next: { revalidate: 300 },
+      });
+      if (!res.ok) throw new Error(`yahoo ${s.symbol} ${res.status}`);
+      const payload = (await res.json()) as {
+        chart?: { result?: { indicators?: { quote?: { close?: (number | null)[] }[] } }[] };
+      };
+      const closes = payload.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
+      const parsed = yahooChange(closes);
       return { ...s, change: parsed?.change ?? null, close: parsed?.close ?? null } as MacroQuote;
     })
   );
   const quotes: MacroQuote[] = [];
   for (const r of results) {
     if (r.status === "fulfilled") quotes.push(r.value);
-    else console.warn("[fomo/banner] stooq error", r.reason);
+    else console.warn("[fomo/banner] yahoo error", r.reason);
   }
   return quotes;
 }
