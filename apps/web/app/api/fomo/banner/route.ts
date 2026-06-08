@@ -16,7 +16,11 @@ import { kstDate, todayTally, withCors } from "../../../../lib/fomo";
 // 통합 롤링 배너 — pulse(감정) + macro(국내·미증시·반도체) + whale(CoinGecko).
 // 정직한 숫자 원칙: 실측값만. 결측은 항목 생략, 전부 비면 담담한 폴백.
 // 문구/포맷팅은 @fomo/core/banner의 순수 빌더가 담당(테스트 보장).
-export const revalidate = 300; // 5분 캐시 (외부 API 레이트리밋 보호)
+// 라우트는 force-dynamic — 매 요청 현재 소스별 캐시로 재조립한다.
+// (export const revalidate 전체 라우트 캐시는 콜드 렌더 결과에 고정되는 문제가 있어
+//  일부 지수가 실패한 첫 렌더가 박히면 재검증이 반영 안 됐다.)
+// 외부 API 레이트리밋 보호는 각 fetch의 next:{revalidate:300}(데이터 캐시)이 담당.
+export const dynamic = "force-dynamic";
 
 // Yahoo Finance chart로 지수 일봉 변화율을 가져온다(Stooq는 안티봇 차단으로 사망).
 // 국내(코스피·코스닥) 먼저, 그다음 미증시·반도체 — User Zero에게 가까운 순.
