@@ -13,6 +13,7 @@
  */
 
 import { fetchRedditSignals } from "./redditFetcher";
+import { fetchNaverSignals } from "./naverFetcher";
 import type { CommunitySourceSignal } from "./types";
 
 export type { CommunitySourceSignal };
@@ -70,12 +71,26 @@ function stubProvider(id: string, label: string): CommunityProvider {
   };
 }
 
+// ── 네이버 종목토론실 (라이브, 국내) — finance.naver.com HTML 파싱 ──
+const naverProvider: CommunityProvider = {
+  id: "naver",
+  label: "네이버 종목토론실",
+  enabled: true,
+  async fetch() {
+    try {
+      return await fetchNaverSignals();
+    } catch {
+      return [];
+    }
+  },
+};
+
 export const COMMUNITY_PROVIDERS: readonly CommunityProvider[] = [
-  redditProvider,
+  naverProvider, // 국내 우선 (라이브)
+  redditProvider, // 해외 (공개 JSON 403 가능 — OAuth 후속)
   stubProvider("x", "X (트위터)"),
   stubProvider("telegram", "Telegram"),
-  stubProvider("toss", "토스증권 커뮤니티"),
-  stubProvider("naver", "네이버 종목토론/카페"),
+  stubProvider("toss", "토스증권 커뮤니티"), // 공개 API 부재 — 연동 보류
 ];
 
 export interface CommunityFetchResult {
