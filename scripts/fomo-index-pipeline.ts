@@ -11,10 +11,42 @@ import {
   buildSummary,
   summarizeHealth,
   renderHealthReport,
+  fetchCommunity,
+  whaleEventsFromCrypto,
   type EmotionTally,
   type EmotionType,
+  type CommunitySourceSignal,
+  type WhaleEvent,
+  type CryptoSignals,
 } from "@fomo/core";
 import { writeFileSync } from "node:fs";
+
+/** CoinGecko 공개 API에서 24h 변동(글로벌 시총 + 상위 코인)을 가져온다(실패 시 빈 신호). */
+async function fetchCrypto(): Promise<CryptoSignals> {
+  try {
+    const [g, m] = await Promise.all([
+      fetch("https://api.coingecko.com/api/v3/global"),
+      fetch(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&price_change_percentage=24h",
+      ),
+    ]);
+    let marketCapChangePct: number | undefined;
+    if (g.ok) {
+      const gj = (await g.json()) as { data?: { market_cap_change_percentage_24h_usd?: number } };
+      marketCapChangePct = gj.data?.market_cap_change_percentage_24h_usd;
+    }
+    let coins: CryptoSignals["coins"] = [];
+    if (m.ok) {
+      const mj = (await m.json()) as { symbol: string; price_change_percentage_24h: number | null }[];
+      coins = mj
+        .filter((c) => c.price_change_percentage_24h != null)
+        .map((c) => ({ symbol: c.symbol.toUpperCase(), change24h: c.price_change_percentage_24h as number }));
+    }
+    return { coins, marketCapChangePct };
+  } catch {
+    return { coins: [] };
+  }
+}
 
 /** Asia/Seoul 기준 YYYY-MM-DD. */
 function kstDate(offsetDays = 0): string {
@@ -56,8 +88,32 @@ async function main() {
     }
   }
 
-  // 2. FOMO Index 산출 (market/community/whale은 Phase 2 중립 폴백)
-  const index = computeFomoIndex({ emotion: tally }, date);
+  // 1.5 라이브 소스 — Community(다중 프로바이더: Reddit 라이브 + 확장 스텁) + Whale(CoinGecko).
+  //     실패는 빈 값으로 degrade(정직한 폴백). Market 은 무료 실시간 소스 부재로 폴백 유지.
+  let communitySignals: CommunitySourceSignal[] = [];
+  try {
+    const c = await fetchCommunity();
+    communitySignals = c.sources;
+    process.stdout.write(
+      `community: ${c.providersAvailable}/${c.providersEnabled} provider 가용(등록 ${c.providersTotal}) · 시그널 ${c.sources.length}건\n`,
+    );
+  } catch (err) {
+    process.stderr.write(`community 수집 실패(폴백): ${String(err)}\n`);
+  }
+
+  let whaleEvents: WhaleEvent[] = [];
+  try {
+    whaleEvents = whaleEventsFromCrypto(await fetchCrypto());
+    process.stdout.write(`whale: 이벤트 ${whaleEvents.length}건\n`);
+  } catch (err) {
+    process.stderr.write(`whale(coingecko) 수집 실패(폴백): ${String(err)}\n`);
+  }
+
+  // 2. FOMO Index 산출 (Market 은 무료 소스 부재로 폴백 유지 — 정직)
+  const index = computeFomoIndex(
+    { emotion: tally, community: { sources: communitySignals }, whale: whaleEvents },
+    date,
+  );
   const aiSummary = buildSummary(index, tally);
 
   // 3. 전일/30일 평균 대비

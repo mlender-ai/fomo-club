@@ -66,6 +66,20 @@ export interface CommunitySignals {
   bullishRatio?: number;
   /** Reddit 소스 집계 결과 (1-A 확장). */
   reddit?: RedditSignal[];
+  /** 다중 프로바이더(Reddit/X/Telegram/Toss/Naver…) 정규화 시그널 — community.ts 확장. */
+  sources?: CommunitySourceSignal[];
+}
+
+/** 플랫폼 무관 정규화 커뮤니티 시그널 (다중 프로바이더 — community.ts). */
+export interface CommunitySourceSignal {
+  /** 소스 키 (예: "reddit/wallstreetbets", "x/$NVDA"). */
+  source: string;
+  postCount: number;
+  /** 긍정 반응 수(좋아요/추천/upvote). engagement 가중치. */
+  totalUpvotes: number;
+  totalComments: number;
+  bullishRatio: number;
+  fetchedAt: string;
 }
 
 /**

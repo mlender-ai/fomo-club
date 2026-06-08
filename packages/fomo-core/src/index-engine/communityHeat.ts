@@ -91,12 +91,23 @@ export function communityHeat(signals: CommunitySignals = {}): HeatComponent {
       ? null
       : Math.max(0, Math.min(1, signals.bullishRatio));
 
-  const reddit = redditEngagementScore(signals.reddit ?? []);
+  // reddit(레거시) + sources(다중 프로바이더: X/Telegram/Toss/Naver…)를 하나의 engagement 풀로 합산.
+  const reddit = redditEngagementScore([
+    ...(signals.reddit ?? []),
+    ...(signals.sources ?? []).map((s) => ({
+      subreddit: s.source,
+      postCount: s.postCount,
+      totalUpvotes: s.totalUpvotes,
+      totalComments: s.totalComments,
+      bullishRatio: s.bullishRatio,
+      fetchedAt: s.fetchedAt,
+    })),
+  ]);
 
   // ── 가중 평균 산출 ──
   const parts = [mention, bullish, reddit].filter((v): v is number => v != null);
 
-  const SOURCES_TOTAL = 3; // mentionChangePct, bullishRatio, reddit
+  const SOURCES_TOTAL = 3; // mentionChangePct, bullishRatio, 커뮤니티집계(reddit+sources)
   const sourcesAvailable = parts.length;
 
   const score =
