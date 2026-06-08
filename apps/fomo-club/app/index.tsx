@@ -17,6 +17,7 @@ import {
   scoreToFace,
   scoreToState,
   marketLine,
+  marketSummary,
   mineLine,
   type EmotionType,
   type FomoFace as FomoFaceType,
@@ -135,6 +136,8 @@ export default function Home() {
             <>
               <Text style={styles.indexText}>{index.score}</Text>
               <Text style={styles.muted}>FOMO INDEX · {index.state}</Text>
+              {/* 3초 직관 요약 — 숫자가 무슨 온도인지 한 줄로. */}
+              <Text style={styles.indexSummary}>{marketSummary(scoreToState(index.score))}</Text>
             </>
           ) : (
             <Text style={styles.muted}>FOMO INDEX · 집계 준비 중</Text>
@@ -224,6 +227,7 @@ const styles = StyleSheet.create({
   indexRow: { alignItems: "center", marginTop: Spacing.s24, minHeight: 28 },
   indexText: { color: FomoColors.whiteout, fontSize: 24, fontWeight: "600" },
   muted: { color: FomoColors.muted, fontSize: 12, marginTop: 4 },
+  indexSummary: { color: FomoColors.whiteout, fontSize: 13, marginTop: Spacing.s4, opacity: 0.85 },
   summary: { color: FomoColors.whiteout, fontSize: 14, textAlign: "center", marginTop: Spacing.s8, maxWidth: 300 },
   mention: { color: FomoColors.whiteout, textAlign: "center", fontSize: 14, marginTop: Spacing.s16, lineHeight: 20 },
   voteBlock: { width: "100%", marginTop: Spacing.s40 },

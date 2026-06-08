@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { marketLine, mineLine, restorativeLine, isCalmDay } from "../src/mascot-lines";
+import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay } from "../src/mascot-lines";
 import { EMOTION_TYPES } from "../src/types";
 
 const STATES = ["무관심", "관망", "관심", "FOMO", "광기"] as const;
@@ -20,6 +20,15 @@ describe("포모 멘트 — 담담한 솔직함 (lovable + regulation)", () => {
       const line = mineLine(e);
       expect(line.length).toBeGreaterThan(0);
       expect(line).not.toMatch(FORBIDDEN);
+    }
+  });
+
+  it("지표 한 줄 요약은 5구간 모두 짧고(직관) 금칙 표현이 없다", () => {
+    for (const s of STATES) {
+      const summary = marketSummary(s);
+      expect(summary.length).toBeGreaterThan(0);
+      expect(summary.length).toBeLessThanOrEqual(16); // 3초 안에 읽히는 길이
+      expect(summary).not.toMatch(FORBIDDEN);
     }
   });
 
