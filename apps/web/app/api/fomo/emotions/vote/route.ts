@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { EMOTION_TYPES } from "@fomo/core";
 import { prisma } from "../../../../../lib/prisma";
 import { kstDate, todayTally, isEmotionType, corsJson, withCors } from "../../../../../lib/fomo";
+import { extractBearerToken, verifyToken } from "@/lib/tarot/jwt";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 로그인 상태면 Bearer 토큰의 userId를 우선(클라 위조 방지), 없으면 body.userId 폴백.
+    const tokenUserId = verifyToken(extractBearerToken(req.headers.get("authorization")) ?? "");
+    const userId = tokenUserId ?? body.userId ?? null;
+
     // 1세션 1일 1회 — 같은 날 재투표는 감정만 갱신(@@unique([sessionId, votedDate]))
     await prisma.emotionVote.upsert({
       where: { sessionId_votedDate: { sessionId, votedDate: date } },
-      create: { sessionId, emotion, source, votedDate: date, userId: body.userId ?? null },
-      update: { emotion, source },
+      create: { sessionId, emotion, source, votedDate: date, userId },
+      update: { emotion, source, ...(userId ? { userId } : {}) },
     });
 
     const { tally, total } = await todayTally(date);

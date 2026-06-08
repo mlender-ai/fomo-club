@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { type EmotionType } from "@fomo/core";
 import { prisma } from "../../../../../lib/prisma";
 import { kstDate, corsJson, withCors, isEmotionType } from "../../../../../lib/fomo";
+import { extractBearerToken, verifyToken } from "@/lib/tarot/jwt";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,15 @@ export async function GET(req: NextRequest) {
     const prevY = m === 1 ? year - 1 : year;
     const prevLo = `${prevY}-${String(prevM).padStart(2, "0")}-01`;
 
+    // 소프트 인증: Bearer 있으면 userId 해석 → 익명(sessionId) + 연결분(userId)을 합쳐 조회.
+    // 토큰 없으면 기존 익명 동작 그대로(sessionId만).
+    const userId = verifyToken(extractBearerToken(req.headers.get("authorization")) ?? "");
+    const ownerWhere = userId
+      ? { OR: [{ userId }, { sessionId }] }
+      : { sessionId };
+
     const votes = await prisma.emotionVote.findMany({
-      where: { sessionId, votedDate: { gte: prevLo, lt: hi } },
+      where: { ...ownerWhere, votedDate: { gte: prevLo, lt: hi } },
       select: { votedDate: true, emotion: true },
     });
 
