@@ -29,6 +29,23 @@ export function marketLine(state: FomoState): string {
   return MARKET_LINES[state];
 }
 
+/**
+ * FOMO Index 한 줄 요약 — "3초 안에" 지금 온도를 직관적으로 잡게 하는 짧은 글.
+ * 마스코트의 위로 멘트(marketLine)와 달리, 숫자 옆에서 지표의 의미만 담담히 옮긴다.
+ * 투자 조언·단정❌ / 감정 체감 온도만 표현. docs/FOMO_INDEX.md.
+ */
+const MARKET_SUMMARY: Record<FomoState, string> = {
+  무관심: "시장이 식어 있어요",
+  관망: "잔잔하게 지켜보는 중",
+  관심: "조금씩 달아오르는 중",
+  FOMO: "다들 들떠 있어요",
+  광기: "감정이 시장보다 앞서요",
+};
+
+export function marketSummary(state: FomoState): string {
+  return MARKET_SUMMARY[state];
+}
+
 export function mineLine(emotion: EmotionType): string {
   return MINE_LINES[emotion];
 }
