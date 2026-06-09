@@ -1,6 +1,18 @@
 {
   "constraints": [
     {
+      "id": "c-20260609-tarot-reject",
+      "rule": "타로 신규작업 거부(확정 디폴트): FOMO Club이 유일한 제품 개발 대상이다. 타로(tarot-core 프롬프트/해석, tarot-mobile 화면·UX, 타로카드·아르카나·카드 해석 등) 관련 신규 기능·개선·이슈·PR 제안 금지. 기존 타로 코드는 보존만 하며 손대지 않는다(리네이밍도 별도 라운드 연기). FOMO Club과 직접 연계되는 해석 백엔드 작업만 후속 라운드에서 예외 검토.",
+      "scope": ["all"],
+      "kind": "prohibition",
+      "source": "CLAUDE.md 🚫 타로 신규 작업 거부 (확정) / 2026-06-09 디폴트 승격",
+      "permanent": true,
+      "createdAt": "2026-06-09",
+      "expiresAt": null,
+      "hits": 0,
+      "keywords": ["타로", "타로카드", "타로 해석", "아르카나", "tarot-core", "tarot-mobile", "카드 해석"]
+    },
+    {
       "id": "c-20260530-datamismatch",
       "rule": "데이터 불일치/결측/오류를 사용자에게 직접 알리는 UI(배너·경고·\"데이터가 일치하지 않습니다\" 등) 제안 금지. 정합성 문제는 로딩을 유지하며 백엔드에서 자동 해결하고, 사용자에게는 항상 정합된 데이터만 보여준다. DataMismatchBanner류 자동 폐기.",
       "scope": ["pm", "frontend", "backend", "all"],

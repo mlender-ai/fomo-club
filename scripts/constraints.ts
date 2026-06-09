@@ -310,8 +310,29 @@ export interface Violation {
 }
 
 /**
+ * 부정/회피 문맥 토큰 — 키워드 주변에 이게 있으면 "금지 어휘를 *회피/면책*하는 문장"이므로
+ * 위반이 아니다. (예: "투자 조언이 아님을 명시", "매수 추천을 하지 않는다", "가짜 데이터 금지")
+ * #416(포모 멘트 카피, FOMO 정합) 이 "투자 조언" 단어를 회피 목적으로 언급했다가 오탐 킬된 사고를 막는다.
+ */
+// 한국어 부정/회피 술어는 거의 항상 금지 명사 *뒤*에 온다("투자 조언이 아님", "매수 추천 금지",
+// "~을 하지 않"). 그래서 키워드 직후 좁은 창(10자)만 본다 — before 창을 쓰면 앞 절의 "금지"가
+// 끌려와 같은 문장의 다른 occurrence 를 오판(부정 누수)한다.
+const NEGATION_TOKENS = [
+  "금지", "아님", "아닌", "않", "없이", "없는", "없다", "회피", "지양", "방지",
+  "말아야", "말고", "제외", "배제", "안 함", "안함", "안 하",
+];
+
+/** 키워드 직후 좁은 창에 부정/회피 술어가 있으면 true (회피·면책 문장). */
+export function isNegatedOccurrence(text: string, idx: number, klen: number): boolean {
+  const after = text.slice(idx + klen, idx + klen + 10);
+  return NEGATION_TOKENS.some((t) => after.includes(t));
+}
+
+/**
  * 제안 텍스트가 해당 lane(+all) 의 *금지(prohibition)* constraint 키워드를 포함하면 위반.
  * 보수적: prohibition kind 만, 키워드 정확 부분일치. 거짓양성 최소화(Phase 1 철학).
+ * (Phase B) 부정/회피 문맥(금지·아님·하지 않 등) 안에서만 등장하는 키워드는 위반이 아니다 —
+ * 면책·자기검열 문장이 좋은 제안을 죽이는 오탐을 제거. 비-부정 occurrence가 하나라도 있어야 위반.
  */
 export function checkViolations(
   proposalText: string,
@@ -326,7 +347,18 @@ export function checkViolations(
     if (!appliesToLane(c, lane)) continue;
     for (const kw of constraintKeywords(c)) {
       const k = kw.trim().toLowerCase();
-      if (k.length >= 2 && text.includes(k)) {
+      if (k.length < 2) continue;
+      // 모든 occurrence 를 훑어 비-부정 등장이 하나라도 있으면 위반.
+      let violating = false;
+      let from = text.indexOf(k);
+      while (from !== -1) {
+        if (!isNegatedOccurrence(text, from, k.length)) {
+          violating = true;
+          break;
+        }
+        from = text.indexOf(k, from + k.length);
+      }
+      if (violating) {
         result.push({ constraint: c, matched: kw });
         break;
       }

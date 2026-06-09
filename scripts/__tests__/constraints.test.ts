@@ -188,6 +188,29 @@ describe("checkViolations", () => {
   it("prohibition 이 아닌 kind 는 위반 대상 아님", () => {
     expect(checkViolations("토스 레퍼런스 적용", [toss], "frontend")).toEqual([]);
   });
+
+  // ── Phase B: 부정/회피 문맥 오탐 제거 (#416 사고 회귀) ──
+  const advice = base({
+    id: "adv",
+    rule: "투자 조언성 표현 금지",
+    scope: ["all"],
+    kind: "prohibition",
+    keywords: ["투자 조언", "매수 추천"],
+  });
+  it("회피/면책 문맥(아님·금지·하지 않)의 키워드는 위반 아님", () => {
+    expect(checkViolations("투자 조언이 아님을 명시하는 면책 카피를 추가", [advice], "marketing")).toEqual([]);
+    expect(checkViolations("매수 추천을 하지 않는다는 톤을 유지", [advice], "marketing")).toEqual([]);
+    expect(checkViolations("투자 조언 금지 원칙을 지킨다", [advice], "marketing")).toEqual([]);
+  });
+  it("실제로 권유하는 문맥은 여전히 위반으로 잡는다", () => {
+    const v = checkViolations("매수 추천 배지를 종목 카드에 노출하자", [advice], "marketing");
+    expect(v).toHaveLength(1);
+    expect(v[0]!.matched).toBe("매수 추천");
+  });
+  it("부정 등장과 비-부정 등장이 섞이면 위반(비-부정 우선)", () => {
+    const v = checkViolations("투자 조언은 금지지만, 이번엔 투자 조언 문구를 본문에 넣자", [advice], "marketing");
+    expect(v).toHaveLength(1);
+  });
 });
 
 describe("hits 집계", () => {
