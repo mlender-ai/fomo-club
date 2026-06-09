@@ -1,12 +1,18 @@
 name: Daily Agent Council
 
+# ⚠️ 일일 바텀업 제안 비활성화 (2026-06-09 톱다운 개편 P4):
+#   매일 9직군이 산발적 아이디어를 던지던 cron 을 끈다. 이제 톱다운 프로젝트 구동
+#   (PROJECT_ROADMAP.md → select_project → project-kickoff 분해 → 격파)이며,
+#   매일 cron 은 project-progress.yml(활성 프로젝트 진척 리포트)로 대체됐다.
+#   이 워크플로는 수동(workflow_dispatch) 폴백으로만 남긴다. 자율 루프 복원 시 schedule 주석 해제.
+# on:
+#   schedule:
+#     - cron: "0 22 * * *"  # 매일 오전 7시 KST (UTC 22:00 전날) — 비활성
 on:
-  schedule:
-    - cron: "0 22 * * *"  # 매일 오전 7시 KST (UTC 22:00 전날)
   workflow_dispatch:
     inputs:
       agent:
-        description: "실행할 에이전트 (all / pm / frontend / backend / designer / qa / cto / marketer / security / prompt_engineer)"
+        description: "실행할 에이전트 (all / pm / frontend / backend / designer / qa / cto / marketer / security / prompt_engineer) — 수동 폴백"
         required: false
         default: "all"
 
