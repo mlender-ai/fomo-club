@@ -211,6 +211,13 @@ describe("checkViolations", () => {
     const v = checkViolations("투자 조언은 금지지만, 이번엔 투자 조언 문구를 본문에 넣자", [advice], "marketing");
     expect(v).toHaveLength(1);
   });
+  it("체크리스트 자기검증(#427 회귀): 금칙어 나열 + 미포함 확인은 위반 아님", () => {
+    const txt = '### 금융 규제 점검\n- 금칙어("매수/매도/수익보장/확정 예측/투자 조언") 미포함 확인: ✅\n- 단정 예측 표현 회피 확인: ✅';
+    expect(checkViolations(txt, [advice], "marketing")).toEqual([]);
+  });
+  it("리스트 마커(금칙어) 뒤 나열된 금지어는 회피로 간주", () => {
+    expect(checkViolations('금칙어: 매수 추천, 투자 조언 등 노출 안 함', [advice], "marketing")).toEqual([]);
+  });
 });
 
 describe("hits 집계", () => {

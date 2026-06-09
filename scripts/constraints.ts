@@ -315,17 +315,25 @@ export interface Violation {
  * #416(포모 멘트 카피, FOMO 정합) 이 "투자 조언" 단어를 회피 목적으로 언급했다가 오탐 킬된 사고를 막는다.
  */
 // 한국어 부정/회피 술어는 거의 항상 금지 명사 *뒤*에 온다("투자 조언이 아님", "매수 추천 금지",
-// "~을 하지 않"). 그래서 키워드 직후 좁은 창(10자)만 본다 — before 창을 쓰면 앞 절의 "금지"가
-// 끌려와 같은 문장의 다른 occurrence 를 오판(부정 누수)한다.
+// "투자 조언 미포함 확인", "~을 하지 않"). 그래서 키워드 직후 좁은 창(12자)을 본다.
+// "미포함/미사용/포함하지/없음" 같은 체크리스트 자기검증 표현이 좋은 제안을 죽이던 오탐(#427) 포함.
 const NEGATION_TOKENS = [
-  "금지", "아님", "아닌", "않", "없이", "없는", "없다", "회피", "지양", "방지",
+  "금지", "아님", "아닌", "않", "없이", "없는", "없다", "없음", "회피", "지양", "방지",
   "말아야", "말고", "제외", "배제", "안 함", "안함", "안 하",
+  "미포함", "미사용", "포함하지", "포함 안", "사용하지", "제거", "불가", "불허", "위반 없",
 ];
 
-/** 키워드 직후 좁은 창에 부정/회피 술어가 있으면 true (회피·면책 문장). */
+// 금지어를 *나열*하는 체크리스트/면책 헤더 — 키워드 *앞*에 오며, 뒤따르는 금지어는 회피 대상이다.
+// (예: `금칙어("매수/매도/투자 조언") 미포함`). generic "금지"(앞 절 누수 위험) 는 제외하고
+// 명확한 복합 마커만 본다 — 같은 문장의 실제 위반 occurrence 를 오판하지 않게.
+const LIST_MARKER_TOKENS = ["금칙어", "금지어", "금지 어휘", "금칙 어휘", "금지 표현"];
+
+/** 키워드 주변(직후 12자 또는 직전 30자 리스트마커)에 부정/회피 문맥이 있으면 true. */
 export function isNegatedOccurrence(text: string, idx: number, klen: number): boolean {
-  const after = text.slice(idx + klen, idx + klen + 10);
-  return NEGATION_TOKENS.some((t) => after.includes(t));
+  const after = text.slice(idx + klen, idx + klen + 12);
+  if (NEGATION_TOKENS.some((t) => after.includes(t))) return true;
+  const before = text.slice(Math.max(0, idx - 30), idx);
+  return LIST_MARKER_TOKENS.some((t) => before.includes(t));
 }
 
 /**
