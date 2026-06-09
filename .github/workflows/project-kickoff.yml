@@ -1,0 +1,88 @@
+name: Project Kickoff
+
+# 톱다운 워크플로 — 인간 오너가 Slack [[ACTION:select_project]] (또는 수동 실행)으로
+# 활성 프로젝트를 선택하면: ① PROJECT_ROADMAP.md status=active 갱신·커밋
+# ② (P2에서 추가) 4축 에이전트 회의로 프로젝트를 project:<id> 이슈 세트로 분해.
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "활성화할 프로젝트 id (예: P1)"
+        required: true
+
+concurrency:
+  group: project-kickoff
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  kickoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Select active project (PROJECT_ROADMAP.md 갱신)
+        id: select
+        run: |
+          set -uo pipefail
+          PID="${{ github.event.inputs.project_id }}"
+          if [ ! -f PROJECT_ROADMAP.md ]; then
+            echo "msg=PROJECT_ROADMAP.md 없음 — 선택 불가" >> "$GITHUB_OUTPUT"
+            echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # select 는 성공 시 파일을 덮어쓰고 메시지를 stdout 으로, 실패 시 exit≠0 + stderr.
+          if MSG=$(npx -y tsx@4.19.2 scripts/project-roadmap.ts select PROJECT_ROADMAP.md "$PID" 2>/tmp/sel_err); then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "msg=$MSG" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "msg=$(cat /tmp/sel_err)" >> "$GITHUB_OUTPUT"
+          fi
+          # 활성 프로젝트 메타(분해 step 입력용)
+          npx -y tsx@4.19.2 scripts/project-roadmap.ts active PROJECT_ROADMAP.md > /tmp/active.json || echo "null" > /tmp/active.json
+          {
+            echo "### 🗺️ Project Kickoff: $PID"
+            cat /tmp/sel_err 2>/dev/null || true
+            echo ""; echo '```json'; cat /tmp/active.json; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit roadmap change
+        if: steps.select.outputs.ok == 'true'
+        run: |
+          set -uo pipefail
+          if git diff --quiet PROJECT_ROADMAP.md; then
+            echo "변경 없음 (이미 active) — 커밋 생략"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PROJECT_ROADMAP.md
+          git commit -m "chore(roadmap): ${{ github.event.inputs.project_id }} 활성화 (project kickoff)"
+          git push origin HEAD:main
+
+      # ── P2 TODO: 4축(PL/TD/BA/UX) 회의로 활성 프로젝트를 project:<id> 이슈 세트로 분해 ──
+      # 현재(P1)는 선택·활성화·알림까지. 분해는 project-kickoff 후속 step 으로 추가된다.
+
+      - name: Notify Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        env:
+          OK: ${{ steps.select.outputs.ok }}
+          MSG: ${{ steps.select.outputs.msg }}
+          PID: ${{ github.event.inputs.project_id }}
+        run: |
+          URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
+          if [ "$OK" = "true" ]; then
+            TEXT="🗺️ *Project Kickoff — ${PID} 활성화*\n${MSG}\n\n다음: 4축 에이전트가 이 프로젝트를 이슈로 분해합니다(곧). 진척은 매일 아침 리포트로 옵니다."
+          else
+            TEXT="⚠️ *Project Kickoff 실패 (${PID})*\n${MSG}"
+          fi
+          BODY=$(jq -n --arg t "$TEXT" '{text: $t}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL" || true

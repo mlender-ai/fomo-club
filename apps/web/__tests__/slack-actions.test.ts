@@ -108,3 +108,17 @@ describe("액션 집합", () => {
     expect(HIGH_IMPACT_ACTIONS.has("run_council")).toBe(false);
   });
 });
+
+describe("select_project 액션 (톱다운 프로젝트 선택)", () => {
+  it("id 페이로드 파싱", () => {
+    const r = parseActions('P1 시작할게요 [[ACTION:select_project]] {"id":"P1"}');
+    expect(r.actions).toHaveLength(1);
+    expect(r.actions[0]!.name).toBe("select_project");
+    expect(r.actions[0]!.payload).toEqual({ id: "P1" });
+    expect(r.cleaned).toBe("P1 시작할게요");
+  });
+  it("KNOWN + HIGH_IMPACT 에 포함", () => {
+    expect(KNOWN_ACTIONS.has("select_project")).toBe(true);
+    expect(HIGH_IMPACT_ACTIONS.has("select_project")).toBe(true);
+  });
+});
