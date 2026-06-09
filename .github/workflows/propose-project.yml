@@ -31,14 +31,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          IDENT=$(cat docs/IDENTITY_AND_MILESTONES.md 2>/dev/null | head -c 6000 || echo "")
-          OKR=$(cat .github/agents/QUARTERLY_OKR.md 2>/dev/null | head -c 3000 || echo "")
-          ROADMAP=$(cat PROJECT_ROADMAP.md 2>/dev/null | head -c 3000 || echo "(아직 없음)")
-          DONE=$(gh pr list --state merged --limit 20 --json title \
-            --repo "${{ github.repository }}" 2>/dev/null | jq -r '.[].title' 2>/dev/null | head -c 2000 || echo "")
-          { echo "ident<<__E__"; echo "$IDENT"; echo "__E__";
-            echo "okr<<__E__"; echo "$OKR"; echo "__E__";
-            echo "roadmap<<__E__"; echo "$ROADMAP"; echo "__E__";
+          # 제품 비전(정체성 핵심) — 마일스톤 목록(M1~M5)은 일부러 제외(순수 발굴 유도)
+          VISION=$(cat docs/FOMO_CLUB.md 2>/dev/null | head -c 4000 || echo "")
+          [ -z "$VISION" ] && VISION=$(sed -n '1,60p' docs/IDENTITY_AND_MILESTONES.md 2>/dev/null | head -c 3500 || echo "")
+
+          # ★ 실제 구현 인벤토리 — 이미 만든 것 재제안(중복) 방지의 핵심 컨텍스트
+          INV=$(git ls-files \
+            'apps/fomo-web/app/**' 'apps/fomo-web/components/**' \
+            'apps/fomo-club/app/**' 'apps/fomo-club/components/**' \
+            'packages/fomo-core/src/**' \
+            'apps/web/app/api/fomo/**' \
+            2>/dev/null | grep -vE '__tests__|\.test\.|globals\.css|_layout' | sort | head -120)
+          [ -z "$INV" ] && INV="(인벤토리 조회 실패)"
+
+          DONE=$(gh pr list --state merged --limit 25 --json title \
+            --repo "${{ github.repository }}" 2>/dev/null | jq -r '.[].title' 2>/dev/null | head -c 2500 || echo "")
+
+          { echo "vision<<__E__"; echo "$VISION"; echo "__E__";
+            echo "inventory<<__E__"; echo "$INV"; echo "__E__";
             echo "done<<__E__"; echo "$DONE"; echo "__E__"; } >> "$GITHUB_OUTPUT"
 
       - name: "CEO 프로젝트 제안 (LLM)"
@@ -49,28 +59,31 @@ jobs:
           model: openai/gpt-4o
           max-tokens: 3072
           system-prompt: |
-            당신은 FOMO Club 의 CEO(제품 총괄)다. 제품 정체성·OKR·이미 한 일을 근거로,
-            지금 가장 임팩트 있는 *프로젝트 후보*를 제안한다. (잔 기능 아이디어가 아니라 프로젝트 단위.)
-            규칙:
-            1. 프로젝트 = 마일스톤 단위의 "사랑스러움 완성" 묶음. 가시적·미시적 잡일(스켈레톤·여백 등) 금지.
-            2. 2~4개 후보. 각 후보는 왜 지금 중요한지(임팩트)·완료=성공 기준·대략 범위를 제품 정체성과 OKR에 연결.
-            3. 이미 완료된 것(머지 PR)과 중복 금지. 정직한 숫자·투자조언 금지·타로 금지 등 정체성 제약 준수.
-            4. 출력은 **오직 JSON 배열** 한 개. 설명·코드펜스 금지.
-            형식: [{"title":"...","why":"왜 지금 임팩트 있나","success":"완료=성공 기준(검증 가능)","scope":"대략 범위","milestone":"M?","okr":"O?"}, ...]
+            당신은 FOMO Club 의 CEO(제품 총괄)다. 제품 비전과 *이미 구현된 것*을 직접 보고,
+            지금 가장 임팩트 있는 **새 프로젝트**를 순수하게 발굴한다.
+            절대 규칙:
+            1. **기존 마일스톤(M1~M5) 목록을 따라 적지 마라.** 제품 비전 + 아래 "이미 구현된 것" 인벤토리를 보고
+               네가 직접 빈틈/기회를 찾아 net-new 프로젝트를 제안하라.
+            2. **이미 구현된 기능 재제안 금지.** 인벤토리에 파일이 있으면(예: EmotionCalendar=감정 캘린더, banner=롤링배너,
+               emotionHeat/community/whale=4 Heat, vote/today/calendar API) 그 기능은 *이미 있다* — 중복 제안은 즉시 실패다.
+               기존 위에 무엇을 *새로* 얹는지가 분명해야 한다.
+            3. **추상어 금지.** "리텐션 강화", "경험 개선" 같은 말 대신 구체적 산출물·화면·데이터·동작을 적어라.
+            4. 각 후보에 **직군별 첫 착수(breakdown)** 를 구체적으로: 기획/백엔드/프론트·UX/품질이 각각 무엇을 만드는지 1줄씩.
+            5. 가시적·미시적 잡일(스켈레톤·여백·1px) 금지. 정직한 숫자·투자조언 금지·타로 금지 준수.
+            6. 2~4개. 출력은 **오직 JSON 배열** 한 개. 설명·코드펜스 금지.
+            형식: [{"title":"구체적 프로젝트명","why":"왜 지금 임팩트 있나(구체)","success":"완료=성공 기준(검증 가능)","scope":"무엇을 새로 만드나(구체)","breakdown":"기획: … / 백엔드: … / 프론트·UX: … / 품질: …","milestone":"느슨한 연결 1개(선택)","okr":"느슨한 연결(선택)"}, ...]
           prompt: |
-            ## 제품 정체성·마일스톤 (docs/IDENTITY_AND_MILESTONES.md)
-            ${{ steps.ctx.outputs.ident }}
+            ## 제품 비전 (FOMO Club — 무엇을 위한 제품인가)
+            ${{ steps.ctx.outputs.vision }}
 
-            ## 분기 OKR
-            ${{ steps.ctx.outputs.okr }}
+            ## ★ 이미 구현된 것 (실제 파일 인벤토리 — 이것들은 *이미 있다*. 재제안 금지, 이 위에 새로 얹어라)
+            ${{ steps.ctx.outputs.inventory }}
 
-            ## 현재 로드맵(있으면 참고 — 교체/재정렬 가능)
-            ${{ steps.ctx.outputs.roadmap }}
-
-            ## 이미 한 일 (최근 머지 PR — 중복 금지)
+            ## 최근 머지 PR (추가 참고 — 중복 금지)
             ${{ steps.ctx.outputs.done }}
 
-            위를 근거로 지금 가장 임팩트 있는 프로젝트 후보 2~4개를 JSON 배열로만 제안하라.
+            마일스톤 목록은 무시하고, 위 비전과 "이미 구현된 것"을 근거로 *아직 없는* 가장 임팩트 있는
+            새 프로젝트 2~4개를 발굴해 JSON 배열로만 제안하라. 각 후보는 직군별 첫 착수까지 구체적으로.
 
       - name: Apply proposal (roadmap 재생성 + 검토 이슈)
         if: steps.propose.outputs.response != ''

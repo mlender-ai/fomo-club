@@ -3,8 +3,8 @@ import { parseProposals, renderRoadmap, renderProposalIssue, renderProposalSlack
 import { parseRoadmap, getActiveProject } from "../project-roadmap";
 
 const raw = JSON.stringify([
-  { title: "단 하나의 사랑스러운 순간", why: "제품의 심장", success: "창업자가 열고 싶다", scope: "포모·감정선택·한마디", milestone: "M1", okr: "O1, O3" },
-  { title: "매일 돌아올 이유", why: "습관화", success: "잔잔한 날도 연다", scope: "감정 캘린더", milestone: "M2", okr: "O3" },
+  { title: "단 하나의 사랑스러운 순간", why: "제품의 심장", success: "창업자가 열고 싶다", scope: "포모·감정선택·한마디", breakdown: "기획: 플로우 / 프론트·UX: 전환", milestone: "M1", okr: "O1, O3" },
+  { title: "매일 돌아올 이유", why: "습관화", success: "잔잔한 날도 연다", scope: "감정 캘린더", breakdown: "백엔드: 집계", milestone: "M2", okr: "O3" },
   { bad: "no title" },
 ]);
 
@@ -42,6 +42,7 @@ describe("renderProposalIssue / Slack", () => {
     expect(txt).toContain("CEO 프로젝트 제안");
     expect(txt).toContain("P1 · 단 하나의 사랑스러운 순간");
     expect(txt).toContain("제품의 심장");
+    expect(txt).toContain("직군별 착수");
     expect(txt).toContain("P1 시작");
   });
   it("후보 0건 안내", () => {
