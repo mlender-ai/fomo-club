@@ -1965,6 +1965,65 @@ jobs:
             echo "$MD" >> $GITHUB_OUTPUT
             echo "__EOF__" >> $GITHUB_OUTPUT
           fi
+      # ── 진척 원장 (Phase A) — "어제 채택 진척" 표를 LLM 발명이 아닌 실제 PR/머지로 고정 ──
+      - name: Build progress ledger (어제 채택 → 실제 PR/머지)
+        id: progress
+        if: steps.dedup.outputs.exists == 'false' && steps.today_issues.outputs.has_issues == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TODAY: ${{ needs.prepare.outputs.today }}
+        run: |
+          set -uo pipefail
+          YESTERDAY=$(TZ=Asia/Seoul date -d 'yesterday' '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Seoul date -v-1d '+%Y-%m-%d')
+          LANEJQ='def lane: ([.labels[].name] - ["idea","agent-council","mobile","tech-debt","daily","score-strong","score-conditional","score-missing"]) | (.[0] // "unknown");'
+
+          # 어제 사이클의 제안(idea) 이슈 전부 — 상태 칸이 실제 결과(머지/PR중/미착수/종료)를 말한다.
+          # (score 라벨은 실제로 안 붙는 경우가 있어 신뢰 불가 → idea 라벨로 선별, ceo-brief 자신은 제외)
+          if gh issue list --label "agent-council" --state all --limit 60 \
+               --json number,title,labels,state --repo "${{ github.repository }}" > /tmp/y_raw.json 2>/dev/null; then
+            jq --arg y "$YESTERDAY" "$LANEJQ"'
+              [ .[]
+              | select(.title | contains($y))
+              | select([.labels[].name] | index("idea"))
+              | {number, title, agent: lane, state} ]' /tmp/y_raw.json > /tmp/adopted.json 2>/dev/null || echo "[]" > /tmp/adopted.json
+          else
+            echo "[]" > /tmp/adopted.json
+          fi
+          [ -s /tmp/adopted.json ] || echo "[]" > /tmp/adopted.json
+
+          # 머지 PR / 오픈 PR (본문의 #NNN 참조로 이슈→PR 연결)
+          gh pr list --state merged --limit 40 --json number,title,body \
+            --repo "${{ github.repository }}" > /tmp/p_merged.json 2>/dev/null || echo "[]" > /tmp/p_merged.json
+          gh pr list --state open --limit 40 --json number,title,body \
+            --repo "${{ github.repository }}" > /tmp/p_open.json 2>/dev/null || echo "[]" > /tmp/p_open.json
+
+          LEDGER=$(npx -y tsx@4.19.2 scripts/build-progress-ledger.ts build \
+            /tmp/adopted.json /tmp/p_merged.json /tmp/p_open.json /tmp/ptable.md /tmp/pship.txt 2>/dev/null || echo "[]")
+          [ -s /tmp/ptable.md ] || echo "| (어제 채택 항목 없음 — 진척 추적 없음) | - | - | - |" > /tmp/ptable.md
+          [ -s /tmp/pship.txt ] || echo "🚢 어제 실제 머지: 없음" > /tmp/pship.txt
+
+          PTABLE=$(cat /tmp/ptable.md)
+          PSHIP=$(cat /tmp/pship.txt)
+          echo "table<<__PTEOF__" >> "$GITHUB_OUTPUT"
+          echo "$PTABLE" >> "$GITHUB_OUTPUT"
+          echo "__PTEOF__" >> "$GITHUB_OUTPUT"
+          echo "shipped<<__PSEOF__" >> "$GITHUB_OUTPUT"
+          echo "$PSHIP" >> "$GITHUB_OUTPUT"
+          echo "__PSEOF__" >> "$GITHUB_OUTPUT"
+
+          # 발행 전 검증용 화이트리스트: 오늘 신규 이슈 번호 ∪ 어제 채택 이슈/연결 PR 번호
+          TODAY_NUMS=$(jq -r '[.[].number] | join(" ")' /tmp/today_raw.json 2>/dev/null || echo "")
+          LEDGER_NUMS=$(printf '%s' "$LEDGER" | jq -r '[ .[] | .issue, (.pr // empty) ] | join(" ")' 2>/dev/null || echo "")
+          echo "allowed=$TODAY_NUMS $LEDGER_NUMS" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### 🚢 진척 원장 (어제 채택 → 실제 상태)"
+            echo "$PSHIP"
+            echo '```'
+            cat /tmp/ptable.md
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: "[CEO Brief]"
         if: steps.dedup.outputs.exists == 'false' && steps.today_issues.outputs.has_issues == 'true'
         uses: actions/ai-inference@v1
@@ -1982,7 +2041,7 @@ jobs:
             === CEO Brief 절대 규칙 ===
             1. North Star "이번 주 테마"가 모든 판단의 1순위.
             2. 각 에이전트 제안을 "North Star 정렬도 0-5점"으로 채점.
-            3. 어제 CEO Brief의 채택 항목 진척을 표로 추적.
+            3. **어제 채택 진척 표는 발명 금지 — 사전 계산된 원장을 그대로 사용 (2026-06-09 절대 규칙)**: "🎯 이번 주 North Star 진척" 표는 아래 prompt 의 **"🚢 진척 원장(실제 PR/머지 기반)"** 블록을 **그대로 복사**한다. 행을 추가/삭제하거나 상태("머지됨/PR 리뷰 중/미착수/종료")를 임의로 바꾸지 마라. "🔄 진행 중", "샘플 수집 완료" 같은 상태를 지어내는 것은 사고다 — 원장에 있는 상태 라벨만 쓴다. "오늘 액션" 칸만 네가 1문장으로 채운다.
             4. 같은 주제가 N일 연속 반복되면 "반복 경고" 표시 후 자동 디플래그.
             5. **킬리스트 사유**: 아래에 해당하면 킬리스트로 분류, 그 외는 모두 그날 처리 우선순위에 포함:
                - 자동 폐기 카테고리 (사운드/햅틱/빛 효과/글로우/파티클/반짝임/싱크로 효과/BGM/결과 화면 장식 애니메이션/버튼 펄스·진동 등) — 정렬도와 무관하게 자동 킬리스트. CEO 직접 지시(2026-05-26).
@@ -2019,8 +2078,19 @@ jobs:
             ${{ steps.today_issues.outputs.list }}
 
             ---
-            ## 📅 어제 CEO Brief (채택 항목 진척 추적용)
-            > ⚠️ 번호 인용 절대 규칙: 아래 어제 브리핑의 #번호는 **과거 참조용**이다(진척 추적·반복 탐지에만 사용).
+            ## 🚢 진척 원장 (어제 채택 → 실제 PR/머지 기반 — 이 표를 그대로 복사)
+            > 이 표는 실제 레포 상태(머지/오픈 PR, 이슈 상태)에서 결정론적으로 계산됐다.
+            > "🎯 이번 주 North Star 진척" 표에 **이 행들을 그대로** 넣고, "오늘 액션" 칸만 1문장씩 채워라.
+            > 상태를 바꾸거나 행을 지어내면 사고다.
+            ${{ steps.progress.outputs.shipped }}
+
+            | 어제 제안 항목 | 담당 | 진척 상태 | PR |
+            |---|---|---|---|
+            ${{ steps.progress.outputs.table }}
+
+            ---
+            ## 📅 어제 CEO Brief (반복 주제 탐지용 — 진척 표 작성에는 위 진척 원장만 사용)
+            > ⚠️ 번호 인용 절대 규칙: 아래 어제 브리핑의 #번호는 **과거 참조용**이다(반복 탐지에만 사용).
             > 오늘 신규 제안의 "이슈: #N" 인용은 반드시 위 "📌 오늘 사이클 신규 이슈" 목록의 번호만 사용하라.
             > 어제 브리핑의 번호를 오늘 신규 항목의 번호로 재인용하면 사고다.
             ${{ needs.prepare.outputs.yesterday_brief }}
@@ -2042,10 +2112,12 @@ jobs:
 
             ## 📋 CEO Daily Brief
 
-            ### 🎯 이번 주 North Star 진척 (실리콘밸리식)
-            | 어제 채택 항목 | 담당 에이전트 | 진척 상태 | 오늘 액션 |
+            {위 "🚢 진척 원장"의 실적 한 줄(🚢 …)을 여기 그대로 적는다}
+
+            ### 🎯 이번 주 North Star 진척 (실리콘밸리식 — 실제 PR/머지 기반)
+            | 어제 제안 항목 | 담당 | 진척 상태 | 오늘 액션 |
             |---|---|---|---|
-            (어제 Brief가 없으면 "사이클 시작 — 진척 추적 없음" 표시)
+            (위 "🚢 진척 원장" 표의 각 행을 그대로 옮기고 — #번호·담당·진척 상태 그대로 — "오늘 액션" 칸만 1문장으로 채운다. 진척 상태를 임의로 바꾸지 마라. 어제 제안 항목이 없으면 "사이클 시작 — 진척 추적 없음" 표시)
 
             ---
 
@@ -2143,6 +2215,7 @@ jobs:
           BODY: ${{ steps.brief.outputs.response }}
           USED_FALLBACK: ${{ steps.fallback.outputs.used }}
           TODAY: ${{ needs.prepare.outputs.today }}
+          ALLOWED: ${{ steps.progress.outputs.allowed }}
         run: |
           if [ "$USED_FALLBACK" = "true" ]; then
             # 폴백 스크립트가 /tmp/brief.md 에 작성함. 제목에 식별 접미사.
@@ -2151,6 +2224,31 @@ jobs:
             printf '%s' "$BODY" > /tmp/brief.md
             TITLE="📋 [CEO Brief] $TODAY 일일 에이전트 브리핑"
           fi
+
+          # ── 발행 전 번호 검증 (Phase A) — 화이트리스트 밖 #번호 인용 탐지 ──
+          # 허용: 오늘 신규 이슈 ∪ 어제 채택 이슈/연결 PR. 그 밖의 #번호는 환각 가능성.
+          if [ -n "${ALLOWED// /}" ]; then
+            CITED=$(grep -oE '#[0-9]+' /tmp/brief.md | tr -d '#' | sort -un)
+            UNKNOWN=""
+            for n in $CITED; do
+              case " $ALLOWED " in
+                *" $n "*) ;;
+                *) UNKNOWN="$UNKNOWN #$n" ;;
+              esac
+            done
+            if [ -n "${UNKNOWN// /}" ]; then
+              {
+                echo ""
+                echo "---"
+                echo "> ⚠️ **번호 검증 경고**: 이 브리핑이 화이트리스트(오늘 신규 이슈 + 어제 채택/연결 PR) 밖의 번호를 인용했습니다 →${UNKNOWN}. 과거 이슈 재인용 또는 환각일 수 있으니 교차 확인하세요."
+              } >> /tmp/brief.md
+              {
+                echo "## ⚠️ CEO Brief 번호 검증 경고 ($TODAY)"
+                echo "화이트리스트 밖 인용:${UNKNOWN}"
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
           gh issue create \
             --title "$TITLE" \
             --body-file /tmp/brief.md \
