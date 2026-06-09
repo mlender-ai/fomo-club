@@ -9,16 +9,16 @@
 
 매일 9개 직군이 바텀업으로 잔 아이디어를 던지던 방식은 **폐지**됐다. 이제 **톱다운 프로젝트 구동**이다:
 
-1. **백로그**: `PROJECT_ROADMAP.md`(마일스톤 M1~M5 = 프로젝트 P1~P5)가 단일 진실. Product Lead 가 후보를 큐레이션.
-2. **선택**: 인간 오너가 Slack `[[ACTION:select_project]]`(예: "P1 시작")로 활성 프로젝트 1개 선택.
-3. **분해**: `project-kickoff.yml` 이 **4축 회의**로 활성 프로젝트를 정렬된 `project:<id>` task 이슈로 쪼갬.
+1. **제안(리스트업)**: CEO 에이전트가 제품 분석 → 프로젝트 후보 제안(`propose-project.yml`, Slack "프로젝트 제안해"). 사람이 검토.
+2. **선택**: 인간 오너가 Slack `[[ACTION:select_project]]`(예: "P1 시작")로 활성 프로젝트 1개 선택. `PROJECT_ROADMAP.md`가 단일 진실.
+3. **분해**: `project-kickoff.yml` 이 **직군 회의**로 활성 프로젝트를 정렬된 `project:<id>` 하위 task 이슈로 쪼갬.
 4. **격파**: CEO 승인(슬랙 "개발해") 시에만 auto-implement → PR. 매일 cron 은 **진척 리포트**만(아이디어 생성 X).
 
-**4축 에이전트 (9+2 → 4 빌더 + 게이트, 정본: AGENT_NORTH_STAR.md §4축)**:
-- **PL** Product Lead — 로드맵·기획·유저 저니·시퀀싱·카피 방향 (← PM + Designer 전략 + Marketer + Prompt 제품 프레이밍)
-- **TD** Tech-Debt/Platform — 안정성·성능·빌드·테스트·옵저버빌리티 (← CTO + QA)
-- **BA** Backend·Architecture — 데이터·API·스키마·아키텍처·보안 하드닝 (← Backend + Security)
-- **UX** Experience — 화면·포모 표정/전환·정보위계·감정 멘트·플로우 (← Frontend + Designer 시각 + Prompt 멘트 + Content)
+**4직군 (9+2 → 4 빌더 + 게이트, 정본: AGENT_NORTH_STAR.md)**:
+- **기획** — 제품 기획·유저 저니·시퀀싱·카피 방향 (← PM + Designer 전략 + Marketer + Prompt 제품 프레이밍)
+- **백엔드** — 데이터·API·스키마·아키텍처·보안 하드닝 (← Backend + Security)
+- **프론트·UX** — 화면·포모 표정/전환·정보위계·감정 멘트·플로우 (← Frontend + Designer 시각 + Prompt 멘트 + Content)
+- **품질** — 안정성·성능·빌드·테스트·옵저버빌리티 (← CTO + QA)
 - 게이트(제안자 아님): **Lovable Reviewer**, **Mascot Keeper** — 머지 전 정체성/마스코트 일관성. Security Critical/High 도 머지 게이트.
 
 > 아래 9직군 상세 정의(§)는 4축의 *책임 사전*으로 참고하되, 일일 제안자로 동작하지 않는다.

@@ -59,10 +59,10 @@ jobs:
           | jq '[ .[] | {
                 number, title, state,
                 axis: ([.labels[].name]
-                  | if index("product-lead") then "PL"
-                    elif index("tech-debt") then "TD"
-                    elif index("backend") then "BA"
-                    elif index("experience") then "UX"
+                  | if index("기획") then "기획"
+                    elif index("품질") then "품질"
+                    elif index("백엔드") then "백엔드"
+                    elif index("프론트UX") then "프론트·UX"
                     else "task" end)
               } ]' > /tmp/proj_issues.json 2>/dev/null || echo "[]" > /tmp/proj_issues.json
           [ -s /tmp/proj_issues.json ] || echo "[]" > /tmp/proj_issues.json

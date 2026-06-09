@@ -121,4 +121,9 @@ describe("select_project 액션 (톱다운 프로젝트 선택)", () => {
     expect(KNOWN_ACTIONS.has("select_project")).toBe(true);
     expect(HIGH_IMPACT_ACTIONS.has("select_project")).toBe(true);
   });
+  it("propose_projects 는 KNOWN (페이로드 없음)", () => {
+    const r = parseActions("프로젝트 제안해드릴게요\n[[ACTION:propose_projects]]");
+    expect(r.actions).toEqual([{ name: "propose_projects", payload: {} }]);
+    expect(KNOWN_ACTIONS.has("propose_projects")).toBe(true);
+  });
 });

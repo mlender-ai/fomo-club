@@ -14,6 +14,7 @@
 
 export type ActionName =
   | "run_council"
+  | "propose_projects"
   | "select_project"
   | "implement"
   | "merge"
@@ -27,6 +28,7 @@ export type ActionName =
 
 export const KNOWN_ACTIONS: ReadonlySet<string> = new Set<ActionName>([
   "run_council",
+  "propose_projects",
   "select_project",
   "implement",
   "merge",

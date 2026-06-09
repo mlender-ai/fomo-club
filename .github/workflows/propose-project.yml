@@ -1,0 +1,121 @@
+name: Propose Projects (CEO)
+
+# 톱다운 1단계 — CEO 에이전트가 제품(정체성·OKR·현 상태)을 분석해 *프로젝트 후보*를 제안한다.
+#   → PROJECT_ROADMAP.md 재생성 + 검토용 이슈 + Slack. 사람이 "제품 이해도"를 검토하고 1개 선택.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: propose-project
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  models: read
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Gather product context
+        id: ctx
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          IDENT=$(cat docs/IDENTITY_AND_MILESTONES.md 2>/dev/null | head -c 6000 || echo "")
+          OKR=$(cat .github/agents/QUARTERLY_OKR.md 2>/dev/null | head -c 3000 || echo "")
+          ROADMAP=$(cat PROJECT_ROADMAP.md 2>/dev/null | head -c 3000 || echo "(아직 없음)")
+          DONE=$(gh pr list --state merged --limit 20 --json title \
+            --repo "${{ github.repository }}" 2>/dev/null | jq -r '.[].title' 2>/dev/null | head -c 2000 || echo "")
+          { echo "ident<<__E__"; echo "$IDENT"; echo "__E__";
+            echo "okr<<__E__"; echo "$OKR"; echo "__E__";
+            echo "roadmap<<__E__"; echo "$ROADMAP"; echo "__E__";
+            echo "done<<__E__"; echo "$DONE"; echo "__E__"; } >> "$GITHUB_OUTPUT"
+
+      - name: "CEO 프로젝트 제안 (LLM)"
+        id: propose
+        uses: actions/ai-inference@v1
+        continue-on-error: true
+        with:
+          model: openai/gpt-4o
+          max-tokens: 3072
+          system-prompt: |
+            당신은 FOMO Club 의 CEO(제품 총괄)다. 제품 정체성·OKR·이미 한 일을 근거로,
+            지금 가장 임팩트 있는 *프로젝트 후보*를 제안한다. (잔 기능 아이디어가 아니라 프로젝트 단위.)
+            규칙:
+            1. 프로젝트 = 마일스톤 단위의 "사랑스러움 완성" 묶음. 가시적·미시적 잡일(스켈레톤·여백 등) 금지.
+            2. 2~4개 후보. 각 후보는 왜 지금 중요한지(임팩트)·완료=성공 기준·대략 범위를 제품 정체성과 OKR에 연결.
+            3. 이미 완료된 것(머지 PR)과 중복 금지. 정직한 숫자·투자조언 금지·타로 금지 등 정체성 제약 준수.
+            4. 출력은 **오직 JSON 배열** 한 개. 설명·코드펜스 금지.
+            형식: [{"title":"...","why":"왜 지금 임팩트 있나","success":"완료=성공 기준(검증 가능)","scope":"대략 범위","milestone":"M?","okr":"O?"}, ...]
+          prompt: |
+            ## 제품 정체성·마일스톤 (docs/IDENTITY_AND_MILESTONES.md)
+            ${{ steps.ctx.outputs.ident }}
+
+            ## 분기 OKR
+            ${{ steps.ctx.outputs.okr }}
+
+            ## 현재 로드맵(있으면 참고 — 교체/재정렬 가능)
+            ${{ steps.ctx.outputs.roadmap }}
+
+            ## 이미 한 일 (최근 머지 PR — 중복 금지)
+            ${{ steps.ctx.outputs.done }}
+
+            위를 근거로 지금 가장 임팩트 있는 프로젝트 후보 2~4개를 JSON 배열로만 제안하라.
+
+      - name: Apply proposal (roadmap 재생성 + 검토 이슈)
+        if: steps.propose.outputs.response != ''
+        id: apply
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESP: ${{ steps.propose.outputs.response }}
+        run: |
+          set -uo pipefail
+          printf '%s' "$RESP" > /tmp/candidates_raw.txt
+          npx -y tsx@4.19.2 scripts/project-proposal.ts roadmap /tmp/candidates_raw.txt > /tmp/new_roadmap.md 2>/dev/null || true
+          # 후보 파싱 0건이면 중단(기존 로드맵 보존)
+          if [ ! -s /tmp/new_roadmap.md ] || ! grep -q "^## P1 ·" /tmp/new_roadmap.md; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "후보 파싱 실패 — 로드맵 미변경"; exit 0
+          fi
+          mv /tmp/new_roadmap.md PROJECT_ROADMAP.md
+          npx -y tsx@4.19.2 scripts/project-proposal.ts issue /tmp/candidates_raw.txt > /tmp/proposal_issue.md
+          npx -y tsx@4.19.2 scripts/project-proposal.ts slack /tmp/candidates_raw.txt > /tmp/proposal_slack.txt
+
+          # 로드맵 커밋
+          if ! git diff --quiet PROJECT_ROADMAP.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add PROJECT_ROADMAP.md
+            git commit -m "chore(roadmap): CEO 프로젝트 제안 반영 (검토 대기)"
+            git push origin HEAD:main
+          fi
+
+          # 검토용 이슈 (label: project-proposal)
+          gh label create "project-proposal" --force --color 5319e7 --description "CEO 프로젝트 제안" >/dev/null 2>&1 || true
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          gh issue create --title "🧭 [CEO 프로젝트 제안] $TODAY" \
+            --body-file /tmp/proposal_issue.md \
+            --label "project-proposal,agent-council" --repo "${{ github.repository }}" || true
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+          { echo "### 🧭 CEO 프로젝트 제안"; cat /tmp/proposal_issue.md; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        run: |
+          URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
+          if [ -s /tmp/proposal_slack.txt ]; then
+            TEXT=$(cat /tmp/proposal_slack.txt)
+          else
+            TEXT="⚠️ CEO 프로젝트 제안 생성 실패 — 수동 확인 요망."
+          fi
+          BODY=$(jq -n --arg t "$TEXT" '{text: $t}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL" || true

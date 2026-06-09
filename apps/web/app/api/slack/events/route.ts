@@ -314,7 +314,8 @@ ${runList || "(없음)"}
 - CEO가 **명확히 실행을 지시**하면, 답변 끝에 단독 줄로 액션 토큰을 정확히 출력한다. 보통 1개, 단 "PR 머지 + 이슈 정리"처럼 벌크 정리는 merge_all·close_completed 를 함께(각각 단독 줄) 낼 수 있다.
 - 사용 가능한 액션:
   \`[[ACTION:run_council]]\` — Agent Council(idea-proposal) 즉시 실행 ("의회 돌려", "제안 받아")
-  \`[[ACTION:select_project]] {"id":"P1"}\` — 톱다운 활성 프로젝트 선택 ("P1 시작", "P2 프로젝트 하자", "이 프로젝트로 가자"). PROJECT_ROADMAP.md 를 active 로 갱신하고 4축이 이슈로 분해.
+  \`[[ACTION:propose_projects]]\` — CEO 에이전트가 제품 분석 → 프로젝트 후보 리스트 제안 ("프로젝트 제안해", "뭐부터 할지 제안해", "프로젝트 뽑아줘"). 사람이 검토 후 선택.
+  \`[[ACTION:select_project]] {"id":"P1"}\` — 제안된 후보 중 활성 프로젝트 선택 ("P1 시작", "P2 프로젝트 하자"). 선택 시 직군(기획/백엔드/프론트·UX/품질)이 하위 이슈로 분해.
   \`[[ACTION:implement]] {"date":"YYYY-MM-DD"}\` — auto-implement 트리거 (date 생략 시 오늘) ("구현 시작", "개발 진행")
   \`[[ACTION:merge]] {"pr":291}\` — 특정 PR squash 머지 ("이 PR 머지해", 번호 명시)
   \`[[ACTION:merge_all]]\` — 열린 PR 중 **이상 없는 것 전부** 머지 ("PR 전부 머지", "남은 PR 머지", "이상없으면 다 머지"). 번호 불필요 — 초안·CI미통과·충돌은 자동 제외.
@@ -342,9 +343,10 @@ ${runList || "(없음)"}
 - 둘 다 지시하면("머지하고 이슈도 닫아") merge_all + close_all 두 토큰을 각각 단독 줄로 출력한다.
 - **절대 "닫을 이슈가 없다/PR 번호가 올바르지 않다"고 지어내지 마라** — 벌크 토큰을 내면 시스템이 실제 열린 PR/이슈를 조회해 처리한다. close_all 은 이미 닫힌 게 아니면 반드시 무언가 닫는다.
 
-**톱다운 프로젝트 선택 트리거**:
-- "P1 시작", "P2 프로젝트 하자", "P3로 가자", "이 프로젝트 시작해", "다음 프로젝트는 P4" 처럼 **활성 프로젝트를 고르는** 발화 → \`[[ACTION:select_project]] {"id":"P<번호>"}\` 토큰을 낸다. (id 는 PROJECT_ROADMAP.md 의 P1~P5.)
-- 이건 매일 잔 아이디어를 받는 run_council 과 다르다. 프로젝트 선택은 그 프로젝트를 이슈로 분해해 격파를 시작하는 톱다운 지시다.
+**톱다운 프로젝트 흐름 (2단계)**:
+- ① "프로젝트 제안해", "뭐부터 할지 정리해", "프로젝트 뽑아줘" → \`[[ACTION:propose_projects]]\` (CEO가 제품 분석해 후보 리스트 제안). 사람이 제품 이해도를 검토.
+- ② "P1 시작", "P2 프로젝트 하자", "이 프로젝트로 가자" → \`[[ACTION:select_project]] {"id":"P<번호>"}\` (후보 중 1개 활성화 → 직군별 하위 이슈 분해).
+- 이건 매일 잔 아이디어를 받는 run_council 과 다르다. 톱다운: 제안 → 선택 → 분해 → 격파.
 
 - **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
 - merge/merge_all/close_completed/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
@@ -418,6 +420,10 @@ async function executeAction(
       case "run_council": {
         await triggerWorkflow("idea-proposal.yml", { agent: "all" });
         return "🗳️ *Agent Council 실행* — 잠시 후 제안 이슈들이 생성됩니다.";
+      }
+      case "propose_projects": {
+        await triggerWorkflow("propose-project.yml", {});
+        return "🧭 *CEO 프로젝트 제안 생성 중* — 제품 정체성·OKR·현 상태를 분석해 프로젝트 후보를 제안합니다. 잠시 후 PROJECT_ROADMAP 갱신 + 검토 이슈(🧭 [CEO 프로젝트 제안])가 올라옵니다. 검토 후 \"P1 시작\"처럼 하나를 고르세요.";
       }
       case "select_project": {
         const id = typeof action.payload.id === "string" ? action.payload.id.trim().toUpperCase() : "";

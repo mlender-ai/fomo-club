@@ -103,19 +103,20 @@ jobs:
           model: openai/gpt-4o
           max-tokens: 4096
           system-prompt: |
-            당신은 FOMO Club 에이전트 카운슬이다. 4축이 한 자리에 모여 *선택된 하나의 프로젝트*를
-            실행 가능한 task 로 분해한다. (산발적 아이디어가 아니라 톱다운 프로젝트 격파.)
-            - PL(Product Lead): 제품 로드맵·기획·유저 저니·시퀀싱 (무엇을 왜 어떤 순서로)
-            - TD(Tech-Debt): 안정성·성능·빌드·테스트·옵저버빌리티
-            - BA(Backend·Architecture): 데이터·API·스키마·아키텍처·보안 하드닝
-            - UX(Experience): 화면·렌더·정보위계·포모 표정/멘트·플로우
+            당신은 FOMO Club 제품팀이다. 4개 직군이 한 자리에 모여 *선택된 하나의 프로젝트*를
+            실행 가능한 하위 개발 task 로 분해한다. (산발적 아이디어가 아니라 톱다운 프로젝트 격파.)
+            직군(axis 는 아래 한글명 그대로 사용):
+            - 기획: 제품 기획·유저 저니·우선순위 (무엇을 왜 어떤 순서로)
+            - 백엔드: 데이터·API·스키마·집계·아키텍처·보안
+            - 프론트·UX: 화면·렌더·정보위계·포모 표정/멘트·전환·플로우
+            - 품질: 안정성·성능·빌드·테스트·폴백 회귀·옵저버빌리티
             규칙:
-            1. PL 이 회의를 리딩한다. 프로젝트의 success 기준을 충족하는 *최소한의* task 로 쪼갠다(비대화 금지).
+            1. 기획이 회의를 리딩한다. 프로젝트의 success 기준을 충족하는 *최소한의* task 로 쪼갠다(비대화 금지).
             2. 각 task 는 단일 PR 로 끝낼 크기. 크면 더 쪼갠다. 가시적·미시적 잡일(여백 1px 등) 금지 — 프로젝트 success 에 직결되는 것만.
-            3. 각 task 에 담당 축(PL/TD/BA/UX) 1개 배정. 의존성(dependsOn)을 seq 로 명시해 실행 순서를 만든다.
+            3. 각 task 에 담당 직군(기획/백엔드/프론트·UX/품질) 1개 배정. 의존성(dependsOn)을 seq 로 명시해 실행 순서를 만든다.
             4. 정직한 숫자·투자조언 금지·타로 금지 등 Standing Constraints 를 위반하지 않는다.
-            5. 출력은 **오직 JSON 배열** 한 개. 설명·코드펜스 금지.
-            형식: [{"seq":1,"axis":"PL","title":"...","rationale":"프로젝트 success 와 어떻게 연결","dependsOn":[],"acceptance":"검증 가능한 완료 기준"}, ...]
+            5. 출력은 **오직 JSON 배열** 한 개. 설명·코드펜스 금지. axis 는 반드시 위 4개 한글 직군명 중 하나.
+            형식: [{"seq":1,"axis":"기획","title":"...","rationale":"이 프로젝트 success 와 어떻게 연결되는지","dependsOn":[],"acceptance":"검증 가능한 완료 기준"}, ...]
           prompt: |
             ## 선택된 활성 프로젝트 (이걸 분해하라)
             ${{ steps.ctx.outputs.active_json }}
@@ -145,17 +146,18 @@ jobs:
             echo "분해 task 0건 — 이슈 생성 없음"; echo "plan=(분해 실패 — task 0건)" >> "$GITHUB_OUTPUT"; exit 0
           fi
           PTITLE=$(jq -r '.title // ""' /tmp/active.json 2>/dev/null || echo "")
-          AXIS_LABEL () { case "$1" in PL) echo "product-lead";; TD) echo "tech-debt";; BA) echo "backend";; UX) echo "experience";; *) echo "agent-council";; esac; }
+          AXIS_LABEL () { case "$1" in 기획) echo "기획";; 품질) echo "품질";; 백엔드) echo "백엔드";; 프론트·UX) echo "프론트UX";; *) echo "agent-council";; esac; }
           # gh issue create 는 *존재하지 않는 라벨*이면 실패한다 → 필요한 라벨을 idempotent 하게 미리 생성.
-          for L in "project:$PID" "agent-council" "task" "product-lead" "tech-debt" "backend" "experience"; do
+          for L in "project:$PID" "agent-council" "task" "기획" "백엔드" "프론트UX" "품질"; do
             gh label create "$L" --force --color ededed --description "topdown kickoff" >/dev/null 2>&1 || true
           done
           CREATED=""
           for i in $(seq 0 $((COUNT-1))); do
             jq -c ".[$i]" /tmp/tasks.json > /tmp/task.json
             AXIS=$(jq -r '.axis' /tmp/task.json)
-            TITLE="[$PID · $AXIS] $(jq -r '.title' /tmp/task.json)"
-            npx -y tsx@4.19.2 scripts/kickoff-tasks.ts render "$PID" /tmp/task.json > /tmp/task_body.md 2>/dev/null || echo "(본문 생성 실패)" > /tmp/task_body.md
+            SEQ=$(jq -r '.seq' /tmp/task.json)
+            TITLE="[$PID $SEQ/$COUNT · $AXIS] $(jq -r '.title' /tmp/task.json)"
+            npx -y tsx@4.19.2 scripts/kickoff-tasks.ts render "$PID" "$PTITLE" "$COUNT" /tmp/task.json > /tmp/task_body.md 2>/dev/null || echo "(본문 생성 실패)" > /tmp/task_body.md
             LB=$(AXIS_LABEL "$AXIS")
             if N=$(gh issue create --title "$TITLE" --body-file /tmp/task_body.md \
                   --label "project:$PID,agent-council,task,$LB" --repo "${{ github.repository }}"); then
@@ -165,7 +167,7 @@ jobs:
             fi
           done
           PLAN=$(npx -y tsx@4.19.2 scripts/kickoff-tasks.ts parse "$PID" /tmp/decompose_raw.txt 2>/dev/null \
-            | jq -r '.[] | "\(.seq). [\(.axis)] \(.title)" + (if (.dependsOn|length)>0 then " (선행 \(.dependsOn|join(",")))" else "" end)' 2>/dev/null || echo "")
+            | jq -r '(length) as $n | to_entries[] | "\(.value.seq)/\($n) [\(.value.axis)] \(.value.title)" + (if (.value.dependsOn|length)>0 then " ← \(.value.dependsOn|join(","))단계 후" else "" end)' 2>/dev/null || echo "")
           echo "plan<<__PEOF__" >> "$GITHUB_OUTPUT"; echo "$PLAN" >> "$GITHUB_OUTPUT"; echo "__PEOF__" >> "$GITHUB_OUTPUT"
           echo "created=$CREATED" >> "$GITHUB_OUTPUT"
           { echo "### 🧩 $PID 분해 이슈 생성: $COUNT건"; echo '```'; echo "$PLAN"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
