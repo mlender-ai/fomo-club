@@ -18,6 +18,8 @@ export interface ProjectCandidate {
   why: string;
   success: string;
   scope: string;
+  /** 직군별 구체 착수 (기획/백엔드/프론트·UX/품질이 각각 무엇을 하는지) */
+  breakdown: string;
   milestone: string;
   okr: string;
 }
@@ -60,6 +62,7 @@ export function parseProposals(raw: string): ProjectCandidate[] {
       why: str(o.why),
       success: str(o.success),
       scope: str(o.scope),
+      breakdown: str(o.breakdown),
       milestone: str(o.milestone),
       okr: str(o.okr),
     });
@@ -104,6 +107,7 @@ export function renderRoadmap(candidates: ProjectCandidate[]): string {
         `- **why**: ${c.why || "-"}`,
         `- **success**: ${c.success || "-"}`,
         `- **scope**: ${c.scope || "-"}`,
+        `- **breakdown**: ${c.breakdown || "-"}`,
       ].join("\n"),
     )
     .join("\n\n");
@@ -124,6 +128,7 @@ export function renderProposalIssue(candidates: ProjectCandidate[]): string {
     lines.push(`- **왜(임팩트)**: ${c.why || "-"}`);
     lines.push(`- **완료=성공 기준**: ${c.success || "-"}`);
     lines.push(`- **대략 범위**: ${c.scope || "-"}`);
+    lines.push(`- **직군별 착수**: ${c.breakdown || "-"}`);
     lines.push("");
   }
   lines.push("---");
