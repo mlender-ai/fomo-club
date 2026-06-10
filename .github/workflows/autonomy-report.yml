@@ -206,6 +206,22 @@ jobs:
           echo "$STUCK" >> "$GITHUB_OUTPUT"
           echo "__STUCK_EOF__" >> "$GITHUB_OUTPUT"
 
+      - name: Collect knowledge metrics (Brain K1/K2 — O1 하네스 가시화)
+        id: knowledge
+        run: |
+          set -uo pipefail
+          TOTAL=0; SHIPPED=0; DECISIONS=0; DAILY=0
+          if [ -f knowledge/distilled.md ]; then
+            TOTAL=$(grep -c '^- \[' knowledge/distilled.md 2>/dev/null || echo 0)
+            SHIPPED=$(grep -c '(shipped)' knowledge/distilled.md 2>/dev/null || echo 0)
+            DECISIONS=$(grep -c '(decision)' knowledge/distilled.md 2>/dev/null || echo 0)
+          fi
+          [ -d knowledge/daily ] && DAILY=$(ls -1 knowledge/daily/*.md 2>/dev/null | wc -l | tr -d ' ')
+          echo "total=${TOTAL:-0}" >> "$GITHUB_OUTPUT"
+          echo "shipped=${SHIPPED:-0}" >> "$GITHUB_OUTPUT"
+          echo "decisions=${DECISIONS:-0}" >> "$GITHUB_OUTPUT"
+          echo "daily=${DAILY:-0}" >> "$GITHUB_OUTPUT"
+
       # ── 3. Slack 리포트 전송 ────────────────────────────────────
       - name: Send weekly report
         env:
@@ -226,6 +242,10 @@ jobs:
           O_WORSENED: ${{ steps.outcomes.outputs.worsened }}
           O_UNKNOWN: ${{ steps.outcomes.outputs.unknown }}
           O_STUCK: ${{ steps.outcomes.outputs.stuck }}
+          K_TOTAL: ${{ steps.knowledge.outputs.total }}
+          K_SHIPPED: ${{ steps.knowledge.outputs.shipped }}
+          K_DECISIONS: ${{ steps.knowledge.outputs.decisions }}
+          K_DAILY: ${{ steps.knowledge.outputs.daily }}
         run: |
           WEEK_START=$(TZ=Asia/Seoul date -d '7 days ago' '+%m/%d' 2>/dev/null || \
                       TZ=Asia/Seoul date -v-7d '+%m/%d')
@@ -264,6 +284,10 @@ jobs:
             "• ✅ 움직임(moved): ${O_MOVED} · ➖ 정체(flat): ${O_FLAT} · 🔻 역효과(worsened): ${O_WORSENED} · ❔ 측정불가(unknown): ${O_UNKNOWN}" \
             "• 이번 주 머지된 베팅 중 ${O_MOVED}건이 목표 지표를 실제로 움직였습니다 (상관 기록 — 인과 단정 아님)" \
             "${O_STUCK}" \
+            "" \
+            "*🧠 지식 레이어 (제2의 뇌 — 복리로 쌓이는 기억):*" \
+            "• 정제 지식 ${K_TOTAL}건 (출고 ${K_SHIPPED} · 결정 ${K_DECISIONS}) · daily 노트 ${K_DAILY}개" \
+            "• 에이전트가 propose/decompose/implement 때 이 지식을 출처와 함께 검색·재주입 → 재제안·중복 차단" \
             "" \
             "_Hermes 자율 루프 — CEO 개입 없이 자동 운영 중_")
 
