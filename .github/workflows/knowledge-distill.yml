@@ -1,0 +1,86 @@
+name: Knowledge Distill (Brain K1)
+
+# 에이전트 두뇌 K1 — 매일 흩어진 기억(머지 PR·제약 hit)을 정제 지식으로 적층한다.
+#   knowledge/distilled.md (멱등 누적, K2 검색이 읽음) + knowledge/daily/<date>.md (그날 raw).
+#   "메모는 쌓이는데 다시 안 본다"를 막는 복리 지식 레이어.
+on:
+  schedule:
+    - cron: "30 22 * * *"  # 매일 오전 7:30 KST (진척 리포트 직후)
+  workflow_dispatch:
+
+concurrency:
+  group: knowledge-distill
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  distill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Gather + distill knowledge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          SINCE=$(TZ=Asia/Seoul date -d '2 days ago' '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Seoul date -v-2d '+%Y-%m-%d')
+
+          # 1) 최근 머지 PR (since 이후) → [{number,title}]
+          gh pr list --state merged --limit 60 --json number,title,mergedAt \
+            --repo "${{ github.repository }}" 2>/dev/null \
+            | jq --arg since "$SINCE" '[ .[] | select((.mergedAt|.[0:10]) >= $since) | {number, title} ]' \
+            > /tmp/kb_merged.json || echo "[]" > /tmp/kb_merged.json
+          [ -s /tmp/kb_merged.json ] || echo "[]" > /tmp/kb_merged.json
+
+          # 2) 오늘 제약 위반 hit ({id:count} → [{id,count}])
+          HITF="generated/constraint-hits/${TODAY}.json"
+          if [ -f "$HITF" ]; then
+            jq 'to_entries | map({id: .key, count: .value})' "$HITF" > /tmp/kb_hits.json 2>/dev/null || echo "[]" > /tmp/kb_hits.json
+          else
+            echo "[]" > /tmp/kb_hits.json
+          fi
+
+          # 3) 결정(현재는 자동 추출 보류 — 후속) — 빈 배열
+          echo "[]" > /tmp/kb_decisions.json
+
+          mkdir -p knowledge/daily
+          [ -f knowledge/distilled.md ] || printf '' > knowledge/distilled.md
+
+          NEW=$(npx -y tsx@4.19.2 scripts/knowledge-base.ts build \
+            "$TODAY" /tmp/kb_merged.json /tmp/kb_hits.json /tmp/kb_decisions.json \
+            knowledge/distilled.md "knowledge/daily/${TODAY}.md" 2>/dev/null || echo 0)
+          echo "NEW_LESSONS=$NEW" >> "$GITHUB_ENV"
+          echo "KDATE=$TODAY" >> "$GITHUB_ENV"
+          {
+            echo "### 🧠 Knowledge distill ($TODAY) — 신규 교훈 $NEW 건"
+            echo '```'; head -30 knowledge/distilled.md; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit knowledge
+        run: |
+          set -uo pipefail
+          if git diff --quiet knowledge/; then
+            echo "지식 변경 없음 — 커밋 생략"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add knowledge/
+          git commit -m "chore(knowledge): ${KDATE} 지식 적층 (신규 교훈 ${NEW_LESSONS}건)"
+          git push origin HEAD:main
+
+      - name: Notify Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        run: |
+          URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
+          TEXT="🧠 *지식 적층 (${KDATE})* — 정제 교훈 신규 ${NEW_LESSONS}건. knowledge/distilled.md 누적. (에이전트가 이걸 검색해 재제안·중복을 막습니다)"
+          BODY=$(jq -n --arg t "$TEXT" '{text: $t}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL" || true
