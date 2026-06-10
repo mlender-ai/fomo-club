@@ -59,6 +59,12 @@ jobs:
           INV=$(git ls-files 'apps/fomo-web/app/**' 'apps/fomo-web/components/**' 'apps/fomo-club/app/**' 'apps/fomo-club/components/**' 'packages/fomo-core/src/**' 'apps/web/app/api/fomo/**' 'apps/web/prisma/**' 2>/dev/null | grep -vE '__tests__|\.test\.|globals\.css' | sort | head -140)
           [ -z "$INV" ] && INV="(인벤토리 조회 실패)"
           echo "inventory<<__IEOF__" >> "$GITHUB_OUTPUT"; echo "$INV" >> "$GITHUB_OUTPUT"; echo "__IEOF__" >> "$GITHUB_OUTPUT"
+          # K2 — 관련 과거 지식 출처와 함께 검색 재주입 (중복 설계 방지)
+          KN="(지식 레이어 없음)"
+          if [ -f knowledge/distilled.md ]; then
+            KN=$(npx -y tsx@4.19.2 scripts/knowledge-retrieve.ts retrieve knowledge/distilled.md "$PTITLE $(head -c 300 /tmp/prd.txt 2>/dev/null)" 2>/dev/null || echo "(검색 실패)")
+          fi
+          echo "knowledge<<__KEOF__" >> "$GITHUB_OUTPUT"; echo "$KN" >> "$GITHUB_OUTPUT"; echo "__KEOF__" >> "$GITHUB_OUTPUT"
 
       - name: "직군 회의 — 기획문서 → 하위 task 분해 (LLM)"
         id: decompose
@@ -89,6 +95,8 @@ jobs:
 
             ## 이미 있는 파일/영역 (files 항목은 여기서 골라 구체적으로)
             ${{ steps.ctx.outputs.inventory }}
+
+            ${{ steps.ctx.outputs.knowledge }}
 
             위 PRD 를 충실히 반영한 직군별 하위 task 배열(JSON)만 출력하라. 4~8개. 각 task 는 details/files/acceptance 까지 구체적으로.
 

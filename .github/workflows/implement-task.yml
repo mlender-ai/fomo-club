@@ -70,6 +70,13 @@ jobs:
           PROJ=$(printf '%s' "$DATA" | jq -r '[.labels[].name] | map(select(startswith("project:"))) | (.[0] // "")')
           echo "proj=$PROJ" >> "$GITHUB_OUTPUT"
           printf '%s' "$DATA" | jq '{title, body}' > /tmp/self.json
+          # K2 — 관련 과거 지식 출처 검색 재주입 (기존 코드 재사용·중복 구현 방지)
+          KN="(지식 레이어 없음)"
+          if [ -f knowledge/distilled.md ]; then
+            QTITLE=$(printf '%s' "$DATA" | jq -r '.title')
+            KN=$(npx -y tsx@4.19.2 scripts/knowledge-retrieve.ts retrieve knowledge/distilled.md "$QTITLE $(head -c 300 /tmp/task_spec.md 2>/dev/null)" 2>/dev/null || echo "(검색 실패)")
+          fi
+          echo "knowledge<<__KEOF__" >> "$GITHUB_OUTPUT"; echo "$KN" >> "$GITHUB_OUTPUT"; echo "__KEOF__" >> "$GITHUB_OUTPUT"
 
       # ── 선행 게이트 (충돌 방지): 선행 task PR 이 머지(close) 되기 전엔 구현 차단 ──
       - name: Prerequisite gate
@@ -136,6 +143,8 @@ jobs:
             2. `npm run lint` 와 `npm run typecheck` 를 직접 실행해 통과할 때까지 수정. (가능하면 `npm run test` 도)
             3. 구현 요약 한 줄을 `/tmp/impl-title.txt` 에 기록.
             4. **commit/push/PR 생성은 하지 마세요.** 코드 변경만 작업 트리에 남기면 다음 단계가 처리합니다.
+
+            ${{ steps.task.outputs.knowledge }}
 
             ## 구현할 이슈 #${{ github.event.inputs.issue }}: ${{ steps.task.outputs.title }}
             ${{ steps.task.outputs.body }}
