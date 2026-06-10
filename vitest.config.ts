@@ -8,6 +8,7 @@ export default defineConfig({
       "packages/**/__tests__/**/*.test.ts",
       "apps/web/__tests__/**/*.test.ts",
       "apps/tarot-mobile/**/__tests__/**/*.test.ts",
+      "apps/fomo-club/tests/**/*.e2e.ts",
       "scripts/**/__tests__/**/*.test.ts",
     ],
   },
