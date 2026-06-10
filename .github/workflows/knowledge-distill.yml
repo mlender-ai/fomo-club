@@ -68,12 +68,12 @@ jobs:
       - name: Commit knowledge
         run: |
           set -uo pipefail
-          if git diff --quiet knowledge/; then
-            echo "지식 변경 없음 — 커밋 생략"; exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add knowledge/
+          git add knowledge/  # 신규(untracked) 포함 — diff --quiet 는 untracked 미감지라 add 후 staged 로 검사
+          if git diff --cached --quiet; then
+            echo "지식 변경 없음 — 커밋 생략"; exit 0
+          fi
           git commit -m "chore(knowledge): ${KDATE} 지식 적층 (신규 교훈 ${NEW_LESSONS}건)"
           git push origin HEAD:main
 
