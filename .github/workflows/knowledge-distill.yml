@@ -7,6 +7,10 @@ on:
   schedule:
     - cron: "30 22 * * *"  # 매일 오전 7:30 KST (진척 리포트 직후)
   workflow_dispatch:
+    inputs:
+      since:
+        description: "머지 PR 수집 시작일 YYYY-MM-DD (비우면 2일 전 — 백필 시 과거 날짜)"
+        required: false
 
 concurrency:
   group: knowledge-distill
@@ -32,7 +36,8 @@ jobs:
         run: |
           set -uo pipefail
           TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
-          SINCE=$(TZ=Asia/Seoul date -d '2 days ago' '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Seoul date -v-2d '+%Y-%m-%d')
+          SINCE="${{ github.event.inputs.since }}"
+          [ -z "$SINCE" ] && SINCE=$(TZ=Asia/Seoul date -d '2 days ago' '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Seoul date -v-2d '+%Y-%m-%d')
 
           # 1) 최근 머지 PR (since 이후) → [{number,title}]
           gh pr list --state merged --limit 60 --json number,title,mergedAt \
