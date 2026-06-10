@@ -149,12 +149,51 @@ jobs:
             ## 구현할 이슈 #${{ github.event.inputs.issue }}: ${{ steps.task.outputs.title }}
             ${{ steps.task.outputs.body }}
 
+      # ── H1 자가수정: lint/typecheck 검증 → 실패 시 에러 물고 1회 재수정 ──
+      - name: Verify build (lint + typecheck)
+        id: verify
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0' && steps.gate.outputs.passed == 'true'
+        run: |
+          set +e
+          { npm run lint && npm run typecheck; } > /tmp/verify.log 2>&1
+          RC=$?
+          if [ "$RC" = "0" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; echo "✅ 검증 통과"; else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "⚠️ 검증 실패 — 자가수정 시도"; tail -40 /tmp/verify.log
+          fi
+          { echo "log<<__VEOF__"; tail -60 /tmp/verify.log; echo "__VEOF__"; } >> "$GITHUB_OUTPUT"
+
+      - name: Self-correct (Claude Code, 1 retry)
+        if: steps.verify.outputs.ok == 'false'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--max-turns 50 --model ${{ steps.model.outputs.model }} --effort ${{ steps.model.outputs.effort }} --allowedTools "Read,Edit,Write,Glob,Grep,Bash"'
+          prompt: |
+            직전 구현이 lint/typecheck 에서 실패했습니다. 아래 에러를 보고 **고치세요**.
+            범위는 그대로(이슈 #${{ github.event.inputs.issue }}). `npm run lint`·`npm run typecheck` 가 통과할 때까지 수정.
+            commit/push/PR 생성은 하지 마세요(다음 단계 처리).
+
+            ## 실패 로그
+            ${{ steps.verify.outputs.log }}
+
+      - name: Re-verify (after self-correct)
+        id: reverify
+        if: steps.verify.outputs.ok == 'false'
+        run: |
+          set +e
+          { npm run lint && npm run typecheck; } > /tmp/verify2.log 2>&1
+          if [ "$?" = "0" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; echo "✅ 자가수정 후 통과"; else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "⚠️ 자가수정 후에도 실패 — PR 은 올리되 본문에 경고"; tail -30 /tmp/verify2.log
+          fi
+
       - name: Create Branch and PR
         if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0' && steps.gate.outputs.passed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NUM: ${{ github.event.inputs.issue }}
           ITITLE: ${{ steps.task.outputs.title }}
+          VERIFY1: ${{ steps.verify.outputs.ok }}
+          VERIFY2: ${{ steps.reverify.outputs.ok }}
         run: |
           set -uo pipefail
           if [ -z "$(git status --porcelain)" ]; then
@@ -166,6 +205,10 @@ jobs:
           [ -z "$TITLE" ] && TITLE="$ITITLE"
           PRISMA_NOTE=""
           git status --porcelain | grep -q 'schema.prisma' && PRISMA_NOTE="⚠️ Prisma 스키마 변경 있음 — 자동 머지 차단됨(수동 \`prisma db push\` 확인 필요)."
+          VERIFY_NOTE="✅ lint/typecheck 통과(자가수정 포함)."
+          if [ "${VERIFY1:-true}" != "true" ] && [ "${VERIFY2:-}" != "true" ]; then
+            VERIFY_NOTE="⚠️ lint/typecheck 미통과(1회 자가수정 후에도) — 리뷰 주의, CI 확인 필수."
+          fi
           BRANCH="agent/task-${NUM}"
           git config user.name "taro-agent[bot]"
           git config user.email "taro-agent[bot]@users.noreply.github.com"
@@ -183,7 +226,7 @@ jobs:
           Closes #${NUM}
 
           - 에이전트: Claude Code (구독 인증)
-          - lint + typecheck 에이전트가 직접 검증
+          - 검증: ${VERIFY_NOTE}
           - 작업: ${TITLE}
 
           ${PRISMA_NOTE}
