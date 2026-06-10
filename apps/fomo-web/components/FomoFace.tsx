@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import type { FomoFace as FomoFaceType } from "@fomo/core";
 
 /**
@@ -5,6 +6,7 @@ import type { FomoFace as FomoFaceType } from "@fomo/core";
  * 타마고치/동물의숲/ShowHex 류: 둥근 머리 + 작은 몸 + 발 + 윤곽선 + 볼터치.
  * 흰 본체 + 회색 윤곽 + 검정 눈, 감정색(glow)은 볼터치 + 외곽광으로(레퍼런스의 '흰 캐릭터 + 색 악센트' 문법).
  * 5표정은 눈·입 픽셀 오버레이로. 애니메이션은 idle float만(초안 — 고도화 전).
+ * React.memo + useMemo: face/glow/size가 동일하면 SVG 전체 재계산·리렌더 방지.
  */
 
 const COLS = 16;
@@ -77,59 +79,65 @@ const OUTLINE = "#6E6E82";
 const BODY = "#F2F2EA";
 const EYE = "#2A2A35";
 
-export function FomoFace({
-  face,
-  glow,
-  size = 168,
-}: {
-  face: FomoFaceType;
-  glow?: string | undefined;
-  size?: number;
-}) {
-  const e = EXPR[face];
-  const eyeSet = new Set(e.eyes);
-  const mouthSet = new Set(e.mouth);
-  const cheekSet = new Set(e.cheeks);
-  const cheek = glow ?? "#FF9AA2"; // glow 있으면 감정색, 없으면 옅은 분홍
+export const FomoFace = memo(
+  function FomoFace({
+    face,
+    glow,
+    size = 168,
+  }: {
+    face: FomoFaceType;
+    glow?: string | undefined;
+    size?: number;
+  }) {
+    const pixel = size / (COLS + 2); // 좌우 여백 1칸
+    const w = COLS * pixel;
+    const h = ROWS * pixel;
 
-  const pixel = size / (COLS + 2); // 좌우 여백 1칸
-  const w = COLS * pixel;
-  const h = ROWS * pixel;
+    // face·glow·size가 바뀔 때만 셀 배열 재계산
+    const cells = useMemo(() => {
+      const e = EXPR[face];
+      const eyeSet = new Set(e.eyes);
+      const mouthSet = new Set(e.mouth);
+      const cheekSet = new Set(e.cheeks);
+      const cheek = glow ?? "#FF9AA2"; // glow 있으면 감정색, 없으면 옅은 분홍
 
-  const cells: { x: number; y: number; fill: string }[] = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const ch = BASE[r]![c];
-      if (ch === ".") continue;
-      const key = `${r},${c}`;
-      let fill: string;
-      if (eyeSet.has(key) || mouthSet.has(key)) fill = EYE;
-      else if (cheekSet.has(key)) fill = cheek;
-      else if (ch === "K") fill = OUTLINE;
-      else fill = BODY;
-      cells.push({ x: c, y: r, fill });
-    }
+      const result: { x: number; y: number; fill: string }[] = [];
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const ch = BASE[r]![c];
+          if (ch === ".") continue;
+          const key = `${r},${c}`;
+          let fill: string;
+          if (eyeSet.has(key) || mouthSet.has(key)) fill = EYE;
+          else if (cheekSet.has(key)) fill = cheek;
+          else if (ch === "K") fill = OUTLINE;
+          else fill = BODY;
+          result.push({ x: c, y: r, fill });
+        }
+      }
+      return result;
+    }, [face, glow]);
+
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          // 감정/지수 색은 외곽광으로만
+          filter: glow ? `drop-shadow(0 0 ${pixel * 1.4}px ${glow}99)` : "none",
+          transition: "filter 420ms cubic-bezier(0.16,1,0.3,1)",
+          animation: "fomo-float 6s ease-in-out infinite",
+        }}
+      >
+        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} shapeRendering="crispEdges" aria-hidden>
+          {cells.map(({ x, y, fill }) => (
+            <rect key={`${x},${y}`} x={x * pixel} y={y * pixel} width={pixel} height={pixel} fill={fill} />
+          ))}
+        </svg>
+      </div>
+    );
   }
-
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        // 감정/지수 색은 외곽광으로만
-        filter: glow ? `drop-shadow(0 0 ${pixel * 1.4}px ${glow}99)` : "none",
-        transition: "filter 420ms cubic-bezier(0.16,1,0.3,1)",
-        animation: "fomo-float 6s ease-in-out infinite",
-      }}
-    >
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} shapeRendering="crispEdges" aria-hidden>
-        {cells.map(({ x, y, fill }) => (
-          <rect key={`${x},${y}`} x={x * pixel} y={y * pixel} width={pixel} height={pixel} fill={fill} />
-        ))}
-      </svg>
-    </div>
-  );
-}
+);
