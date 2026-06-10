@@ -53,3 +53,31 @@ export async function postVote(emotion: string): Promise<TallyResponse & { mine:
   if (!res.ok) throw new Error(`vote ${res.status}`);
   return res.json();
 }
+
+// 데일리 챌린지 — 미수락 → 진행 중 → 완료의 3단계. 선행 1·2단계(백엔드)가 계약을 정의.
+export type ChallengeStatus = "unaccepted" | "in_progress" | "completed";
+
+export interface ChallengeResponse {
+  date: string;
+  /** 진행 상태. 데이터 미비 시 'unaccepted' 폴백. */
+  status: ChallengeStatus;
+  title: string;
+  description: string;
+  /** 이 챌린지의 보상 포인트. */
+  points: number;
+  /** 누적 포인트(완료한 챌린지 합산). */
+  totalPoints: number;
+}
+
+export const fetchChallenge = () =>
+  get<ChallengeResponse>(`/api/fomo/challenge/today?sessionId=${encodeURIComponent(getSessionId())}`);
+
+export async function acceptChallenge(): Promise<ChallengeResponse> {
+  const res = await fetch(`${API_BASE}/api/fomo/challenge/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: getSessionId(), source: "mobile" }),
+  });
+  if (!res.ok) throw new Error(`accept ${res.status}`);
+  return res.json();
+}
