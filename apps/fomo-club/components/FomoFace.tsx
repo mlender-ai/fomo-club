@@ -12,16 +12,20 @@ import { FomoColors } from "../constants/fomoTheme";
  *  1. 상시 호흡(breathing): 미세 스케일 펄스로 멈춰있지 않게.
  *  2. 표정 전환 반응: face가 바뀌면 눈을 한 번 깜빡이고 얼굴이 톡 튄다(시장의 포모 → 나의 포모).
  *  3. 감정 글로우: glow가 들어오면 색 배경광이 부드럽게 차오른다.
+ *  4. 축하(celebrate): 챌린지 완료 등 기쁜 순간에 한 번 크게 통통 튀어 오른다.
  */
 export function FomoFace({
   face,
   glow,
   size = 160,
+  celebrate = false,
 }: {
   face: FomoFaceType;
   /** 감정/지수 포인트 색 (hex). 없으면 무채색. */
   glow?: string;
   size?: number;
+  /** 축하 모먼트(챌린지 완료 등) — true가 되는 순간 통통 튀는 반응을 한 번 재생한다. */
+  celebrate?: boolean;
 }) {
   const eye = EYE_SHAPE[face];
 
@@ -32,6 +36,8 @@ export function FomoFace({
   const blink = useRef(new Animated.Value(1)).current;
   // 감정 글로우 차오름(0~1).
   const glowFade = useRef(new Animated.Value(glow ? 1 : 0)).current;
+  // 축하 통통(0=평상, 1=점프 정점).
+  const celebratePulse = useRef(new Animated.Value(0)).current;
 
   // 상시 호흡 루프 — 마운트 시 1회 시작.
   useEffect(() => {
@@ -91,6 +97,29 @@ export function FomoFace({
     return () => anim.stop();
   }, [face, blink, reactPulse]);
 
+  // 축하 모먼트 — celebrate가 켜지는 순간 두 번 통통 튀어 오른다(챌린지 완료 등).
+  useEffect(() => {
+    if (!celebrate) return;
+    const hop = () =>
+      Animated.sequence([
+        Animated.timing(celebratePulse, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(celebratePulse, {
+          toValue: 0,
+          friction: 4,
+          tension: 90,
+          useNativeDriver: true,
+        }),
+      ]);
+    const anim = Animated.sequence([hop(), hop()]);
+    anim.start();
+    return () => anim.stop();
+  }, [celebrate, celebratePulse]);
+
   // 감정 글로우 부드럽게 차오름/사라짐.
   useEffect(() => {
     const anim = Animated.timing(glowFade, {
@@ -104,9 +133,17 @@ export function FomoFace({
   }, [glow, glowFade]);
 
   const headScale = Animated.add(
-    breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }),
-    reactPulse.interpolate({ inputRange: [0, 1], outputRange: [0, 0.1] }),
+    Animated.add(
+      breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }),
+      reactPulse.interpolate({ inputRange: [0, 1], outputRange: [0, 0.1] }),
+    ),
+    celebratePulse.interpolate({ inputRange: [0, 1], outputRange: [0, 0.14] }),
   );
+  // 축하 점프 — 정점에서 위로 살짝 떠오른다.
+  const headLift = celebratePulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -size * 0.12],
+  });
 
   return (
     <Animated.View style={[styles.wrapper, { width: size, height: size }]}>
@@ -137,7 +174,7 @@ export function FomoFace({
             shadowColor: glow ?? "transparent",
             shadowOpacity: glow ? 0.6 : 0,
             shadowRadius: glow ? 28 : 0,
-            transform: [{ scale: headScale }],
+            transform: [{ translateY: headLift }, { scale: headScale }],
           },
         ]}
       >
