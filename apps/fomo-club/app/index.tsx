@@ -224,10 +224,12 @@ const styles = StyleSheet.create({
   brand: { color: FomoColors.whiteout, fontSize: 18, fontWeight: "600" },
   link: { color: FomoColors.muted, fontSize: 14 },
   stageLabel: { color: FomoColors.muted, fontSize: 12, marginBottom: Spacing.s12 },
-  indexRow: { alignItems: "center", marginTop: Spacing.s24, minHeight: 28 },
-  indexText: { color: FomoColors.whiteout, fontSize: 24, fontWeight: "600" },
-  muted: { color: FomoColors.muted, fontSize: 12, marginTop: 4 },
-  indexSummary: { color: FomoColors.whiteout, fontSize: 13, marginTop: Spacing.s4, opacity: 0.85 },
+  indexRow: { alignItems: "center", marginTop: Spacing.s24, minHeight: 36 },
+  // 숫자를 32pt·Bold로 — 3초 안에 FOMO Index 값이 눈에 들어오는 크기 (#412)
+  indexText: { color: FomoColors.whiteout, fontSize: 32, fontWeight: "700", letterSpacing: -0.5 },
+  muted: { color: FomoColors.muted, fontSize: 12, marginTop: 6 },
+  // 상태 설명을 16pt로 올려 인덱스와 계층 차이를 명확히 (#412)
+  indexSummary: { color: FomoColors.whiteout, fontSize: 16, fontWeight: "400", marginTop: Spacing.s8, lineHeight: 22 },
   summary: { color: FomoColors.whiteout, fontSize: 14, textAlign: "center", marginTop: Spacing.s8, maxWidth: 300 },
   mention: { color: FomoColors.whiteout, textAlign: "center", fontSize: 14, marginTop: Spacing.s16, lineHeight: 20 },
   voteBlock: { width: "100%", marginTop: Spacing.s40 },
