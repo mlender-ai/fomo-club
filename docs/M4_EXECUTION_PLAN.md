@@ -1,7 +1,8 @@
 # M4 — 불안 해소 여정의 완성 · 실행 계획서
 
 > **문서 위상**: 실행 계획 (Execution Brief). `docs/IDENTITY_AND_MILESTONES.md §M4`의 구체 구현안.
-> **상태**: 📋 계획 확정 · 구현 대기 (언제든 착수 가능). 작성일 2026-06-08.
+> **상태**: 🚧 P0 읽기 경로 구현·배포됨 (2026-06-11) — `voices.ts`+테스트 / `/api/fomo/voices`(큐레이션 폴백) / 피드 탭+`VoiceFeed`.
+> **남은 것**: Step 2/4 쓰기 경로 — Prisma `situationKey`/`resolveKey` 2필드(optional) **migration 사용자 확인 필요** + vote 확장 + 게이트 2-스텝 선택 UI. 작성일 2026-06-08.
 > **스타일**: BCG/실리콘밸리식 — 가설 → 우선순위 → 임팩트·리스크 분리.
 > **범위 확정**: ① 타인의 목소리 = **구조화 한마디** ② 출시 = **피드 탭 1개 집중** ③ 플랫폼 = **웹만** (fomo-web + fomo-core + apps/web API).
 
