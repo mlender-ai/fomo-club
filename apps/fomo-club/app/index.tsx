@@ -25,6 +25,7 @@ import {
 import { FomoFace } from "../components/FomoFace";
 import { TallyBar } from "../components/TallyBar";
 import { EmotionChip } from "../components/EmotionChip";
+import { DailyChallengeSection } from "../components/DailyChallengeSection";
 import { FomoColors, Spacing } from "../constants/fomoTheme";
 import {
   fetchIndex,
@@ -212,6 +213,9 @@ export default function Home() {
             </Animated.View>
           )}
         </View>
+
+        {/* 데일리 챌린지 — 발견/수락/진행/완료. 데이터 미비 시 비표시(안전 폴백). */}
+        <DailyChallengeSection />
       </ScrollView>
     </SafeAreaView>
   );
