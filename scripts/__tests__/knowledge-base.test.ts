@@ -2,11 +2,27 @@ import { describe, it, expect } from "vitest";
 import {
   lessonsFromMergedPRs,
   lessonsFromDecisions,
+  lessonsFromConstraints,
   parseDistilled,
   mergeLessons,
   renderDistilled,
   renderDailyNote,
 } from "../knowledge-base";
+
+describe("lessonsFromConstraints", () => {
+  it("active constraint → rule 교훈 (ref=id, createdAt 우선)", () => {
+    const l = lessonsFromConstraints(
+      [{ id: "c-tarot-reject", rule: "타로 신규작업 거부", createdAt: "2026-06-09" }],
+      "2026-06-10",
+    );
+    expect(l[0]).toEqual({ date: "2026-06-09", kind: "rule", text: "타로 신규작업 거부", ref: "c-tarot-reject" });
+  });
+  it("id/rule 없으면 제외, createdAt 없으면 fallback", () => {
+    const l = lessonsFromConstraints([{ id: "", rule: "x" }, { id: "c1", rule: "규칙" }], "2026-06-10");
+    expect(l).toHaveLength(1);
+    expect(l[0]!.date).toBe("2026-06-10");
+  });
+});
 
 describe("lessonsFromMergedPRs", () => {
   it("머지 PR → shipped 교훈 (Auto 접두사 제거 + ref)", () => {
