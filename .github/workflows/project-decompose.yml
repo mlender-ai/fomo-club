@@ -1,0 +1,137 @@
+name: Project Decompose
+
+# 톱다운 — 기획문서(PRD) 승인 후, PRD 를 직군별 하위 task 이슈로 분해한다.
+#   Slack [[ACTION:approve_plan]] {"id":"P2"} (또는 수동) → 이 워크플로.
+#   기획문서가 없으면(킥오프 먼저 안 함) 중단.
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "분해할 프로젝트 id (예: P2) — 기획문서가 이미 있어야 함"
+        required: true
+
+concurrency:
+  group: project-decompose
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  models: read
+
+jobs:
+  decompose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Resolve project + plan-doc + dedup
+        id: ctx
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          PID="${{ github.event.inputs.project_id }}"
+          echo "pid=$PID" >> "$GITHUB_OUTPUT"
+          # 프로젝트 메타
+          PTITLE=$(npx -y tsx@4.19.2 scripts/project-roadmap.ts list PROJECT_ROADMAP.md 2>/dev/null \
+            | jq -r --arg id "$PID" '.[] | select(.id==$id) | .title' 2>/dev/null || echo "")
+          echo "ptitle=$PTITLE" >> "$GITHUB_OUTPUT"
+          # 이미 task 이슈 있으면 중단(중복 분해 방지)
+          TASKS=$(gh issue list --label "project:$PID,task" --state open --limit 50 \
+            --json number --jq 'length' --repo "${{ github.repository }}" 2>/dev/null || echo 0)
+          echo "tasks=$TASKS" >> "$GITHUB_OUTPUT"
+          # 기획문서(plan-doc) 본문 — 분해 입력
+          PLANNUM=$(gh issue list --label "project:$PID,plan-doc" --state all --limit 5 \
+            --json number,createdAt --jq 'sort_by(.createdAt) | last | .number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
+          echo "plannum=$PLANNUM" >> "$GITHUB_OUTPUT"
+          if [ -n "$PLANNUM" ]; then
+            gh issue view "$PLANNUM" --json body --jq .body --repo "${{ github.repository }}" 2>/dev/null | head -c 6000 > /tmp/prd.txt || echo "" > /tmp/prd.txt
+          else
+            echo "" > /tmp/prd.txt
+          fi
+          PRD=$(cat /tmp/prd.txt)
+          echo "prd<<__PEOF__" >> "$GITHUB_OUTPUT"; echo "$PRD" >> "$GITHUB_OUTPUT"; echo "__PEOF__" >> "$GITHUB_OUTPUT"
+
+      - name: "직군 회의 — 기획문서 → 하위 task 분해 (LLM)"
+        id: decompose
+        if: steps.ctx.outputs.tasks == '0' && steps.ctx.outputs.plannum != ''
+        uses: actions/ai-inference@v1
+        continue-on-error: true
+        with:
+          model: openai/gpt-4o
+          max-tokens: 4096
+          system-prompt: |
+            당신은 FOMO Club 제품팀이다. *승인된 기획문서(PRD)* 를 직군별 실행 task 로 분해한다.
+            직군(axis 는 한글명 그대로): 기획 / 백엔드 / 프론트·UX / 품질.
+            규칙:
+            1. PRD 의 기능 요구사항·범위를 충실히 반영. PRD 에 없는 기능 추가 금지(비대화 금지).
+            2. 각 task 는 단일 PR 크기. 의존성(dependsOn)을 seq 로 명시해 실행 순서를 만든다.
+            3. 가시적·미시적 잡일(여백 1px 등) 금지. 정직한 숫자·투자조언·타로 금지 준수.
+            4. 각 task 에 담당 직군 1개. 출력은 **오직 JSON 배열**. 코드펜스·설명 금지.
+            형식: [{"seq":1,"axis":"기획","title":"...","rationale":"PRD 의 어느 요구사항을 충족","dependsOn":[],"acceptance":"검증 가능한 완료 기준"}, ...]
+          prompt: |
+            ## 프로젝트: ${{ steps.ctx.outputs.pid }} · ${{ steps.ctx.outputs.ptitle }}
+
+            ## 승인된 기획문서 (PRD)
+            ${{ steps.ctx.outputs.prd }}
+
+            위 PRD 를 충실히 반영한 직군별 하위 task 배열(JSON)만 출력하라. 4~8개 권장.
+
+      - name: Create task issues
+        id: create
+        if: steps.ctx.outputs.tasks == '0' && steps.decompose.outputs.response != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PID: ${{ steps.ctx.outputs.pid }}
+          PTITLE: ${{ steps.ctx.outputs.ptitle }}
+          RESP: ${{ steps.decompose.outputs.response }}
+        run: |
+          set -uo pipefail
+          printf '%s' "$RESP" > /tmp/decompose_raw.txt
+          npx -y tsx@4.19.2 scripts/kickoff-tasks.ts parse "$PID" /tmp/decompose_raw.txt > /tmp/tasks.json || echo "[]" > /tmp/tasks.json
+          COUNT=$(jq 'length' /tmp/tasks.json 2>/dev/null || echo 0)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" = "0" ]; then echo "분해 0건"; echo "plan=(분해 실패)" >> "$GITHUB_OUTPUT"; exit 0; fi
+          AXIS_LABEL () { case "$1" in 기획) echo "기획";; 품질) echo "품질";; 백엔드) echo "백엔드";; 프론트·UX) echo "프론트UX";; *) echo "agent-council";; esac; }
+          for L in "project:$PID" "agent-council" "task" "기획" "백엔드" "프론트UX" "품질"; do
+            gh label create "$L" --force --color ededed --description "topdown" >/dev/null 2>&1 || true
+          done
+          for i in $(seq 0 $((COUNT-1))); do
+            jq -c ".[$i]" /tmp/tasks.json > /tmp/task.json
+            AXIS=$(jq -r '.axis' /tmp/task.json); SEQ=$(jq -r '.seq' /tmp/task.json)
+            TITLE="[$PID $SEQ/$COUNT · $AXIS] $(jq -r '.title' /tmp/task.json)"
+            npx -y tsx@4.19.2 scripts/kickoff-tasks.ts render "$PID" "$PTITLE" "$COUNT" /tmp/task.json > /tmp/task_body.md 2>/dev/null || echo "(본문 생성 실패)" > /tmp/task_body.md
+            LB=$(AXIS_LABEL "$AXIS")
+            gh issue create --title "$TITLE" --body-file /tmp/task_body.md \
+              --label "project:$PID,agent-council,task,$LB" --repo "${{ github.repository }}" || echo "⚠️ 생성 실패: $TITLE"
+          done
+          PLAN=$(jq -r '(length) as $n | to_entries[] | "\(.value.seq)/\($n) [\(.value.axis)] \(.value.title)" + (if (.value.dependsOn|length)>0 then " ← \(.value.dependsOn|join(","))단계 후" else "" end)' /tmp/tasks.json 2>/dev/null || echo "")
+          echo "plan<<__PEOF__" >> "$GITHUB_OUTPUT"; echo "$PLAN" >> "$GITHUB_OUTPUT"; echo "__PEOF__" >> "$GITHUB_OUTPUT"
+          { echo "### 🧩 $PID 분해 이슈 $COUNT건"; echo '```'; echo "$PLAN"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        env:
+          PID: ${{ steps.ctx.outputs.pid }}
+          PTITLE: ${{ steps.ctx.outputs.ptitle }}
+          TASKS: ${{ steps.ctx.outputs.tasks }}
+          PLANNUM: ${{ steps.ctx.outputs.plannum }}
+          COUNT: ${{ steps.create.outputs.count }}
+          PLAN: ${{ steps.create.outputs.plan }}
+        run: |
+          URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
+          if [ -z "${PLANNUM:-}" ]; then
+            TEXT="⚠️ *${PID} 분해 불가* — 기획문서가 없습니다. 먼저 \"${PID} 시작\"으로 기획문서를 만드세요."
+          elif [ "${TASKS:-0}" != "0" ]; then
+            TEXT="ℹ️ *${PID}* 이미 분해된 task 이슈가 있어 재분해하지 않았습니다."
+          elif [ -n "${COUNT:-}" ] && [ "${COUNT}" != "0" ]; then
+            TEXT="🧩 *기획 승인 → ${PID} · ${PTITLE} 분해 완료* (${COUNT}개 task):\n${PLAN}\n\n구현은 CEO 승인(\"개발해\") 시에만. 진척은 매일 리포트로."
+          else
+            TEXT="⚠️ *${PID} 분해 실패*(LLM) — 수동 확인 요망."
+          fi
+          BODY=$(jq -n --arg t "$TEXT" '{text: $t}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL" || true

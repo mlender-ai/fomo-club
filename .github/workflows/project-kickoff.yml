@@ -69,33 +69,36 @@ jobs:
           git commit -m "chore(roadmap): ${{ github.event.inputs.project_id }} 활성화 (project kickoff)"
           git push origin HEAD:main
 
-      # ── 4축(PL/TD/BA/UX) 회의로 활성 프로젝트를 project:<id> 이슈 세트로 분해 (P2) ──
-      - name: Prepare decomposition context
+      # ── 기획문서(PRD) 작성 — 선택 직후엔 이슈 분해가 아니라 *기획문서* 먼저 (사람 GO/NO-GO 판단용) ──
+      - name: Prepare PRD context
         id: ctx
         if: steps.select.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           PID="${{ github.event.inputs.project_id }}"
-          # 이미 이 프로젝트의 task 이슈가 있으면 재분해 skip(중복 세트 방지)
-          EXIST=$(gh issue list --label "project:$PID" --state open --limit 50 \
+          # 이미 이 프로젝트의 기획문서가 있으면 재작성 skip(중복 방지)
+          EXIST=$(gh issue list --label "project:$PID,plan-doc" --state open --limit 10 \
             --json number --jq 'length' --repo "${{ github.repository }}" 2>/dev/null || echo 0)
           echo "exist=$EXIST" >> "$GITHUB_OUTPUT"
           ACTIVE=$(cat /tmp/active.json 2>/dev/null || echo "null")
           echo "active_json<<__AEOF__" >> "$GITHUB_OUTPUT"; echo "$ACTIVE" >> "$GITHUB_OUTPUT"; echo "__AEOF__" >> "$GITHUB_OUTPUT"
-          NS=$(cat AGENT_NORTH_STAR.md 2>/dev/null | head -c 4000 || echo "")
-          echo "north_star<<__NEOF__" >> "$GITHUB_OUTPUT"; echo "$NS" >> "$GITHUB_OUTPUT"; echo "__NEOF__" >> "$GITHUB_OUTPUT"
+          echo "ptitle=$(printf '%s' "$ACTIVE" | jq -r '.title // ""' 2>/dev/null || echo "")" >> "$GITHUB_OUTPUT"
+          VISION=$(cat docs/FOMO_CLUB.md 2>/dev/null | head -c 3500 || echo "")
+          echo "vision<<__VEOF__" >> "$GITHUB_OUTPUT"; echo "$VISION" >> "$GITHUB_OUTPUT"; echo "__VEOF__" >> "$GITHUB_OUTPUT"
+          INV=$(git ls-files 'apps/fomo-web/app/**' 'apps/fomo-web/components/**' 'apps/fomo-club/app/**' 'apps/fomo-club/components/**' 'packages/fomo-core/src/**' 'apps/web/app/api/fomo/**' 2>/dev/null | grep -vE '__tests__|\.test\.|globals\.css|_layout' | sort | head -120)
+          echo "inventory<<__IEOF__" >> "$GITHUB_OUTPUT"; echo "$INV" >> "$GITHUB_OUTPUT"; echo "__IEOF__" >> "$GITHUB_OUTPUT"
           CB="(constraint 없음)"
           if [ -f constraints/active.json ]; then
             TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
-            npx -y tsx@4.19.2 scripts/constraints.ts active constraints/active.json "$TODAY" > /tmp/ctx_active_constraints.json 2>/dev/null || echo "[]" > /tmp/ctx_active_constraints.json
-            CB=$(npx -y tsx@4.19.2 scripts/constraints.ts render-brief /tmp/ctx_active_constraints.json 2>/dev/null || echo "(constraint 조회 실패)")
+            npx -y tsx@4.19.2 scripts/constraints.ts active constraints/active.json "$TODAY" > /tmp/ctx_c.json 2>/dev/null || echo "[]" > /tmp/ctx_c.json
+            CB=$(npx -y tsx@4.19.2 scripts/constraints.ts render-brief /tmp/ctx_c.json 2>/dev/null || echo "(조회 실패)")
           fi
           echo "constraints<<__CEOF__" >> "$GITHUB_OUTPUT"; echo "$CB" >> "$GITHUB_OUTPUT"; echo "__CEOF__" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ github.token }}
 
-      - name: "4축 회의 — 프로젝트 분해 (LLM)"
-        id: decompose
+      - name: "기획문서(PRD) 작성 (기획 직군 LLM)"
+        id: prd
         if: steps.select.outputs.ok == 'true' && steps.ctx.outputs.exist == '0' && steps.ctx.outputs.active_json != 'null'
         uses: actions/ai-inference@v1
         continue-on-error: true
@@ -103,74 +106,51 @@ jobs:
           model: openai/gpt-4o
           max-tokens: 4096
           system-prompt: |
-            당신은 FOMO Club 제품팀이다. 4개 직군이 한 자리에 모여 *선택된 하나의 프로젝트*를
-            실행 가능한 하위 개발 task 로 분해한다. (산발적 아이디어가 아니라 톱다운 프로젝트 격파.)
-            직군(axis 는 아래 한글명 그대로 사용):
-            - 기획: 제품 기획·유저 저니·우선순위 (무엇을 왜 어떤 순서로)
-            - 백엔드: 데이터·API·스키마·집계·아키텍처·보안
-            - 프론트·UX: 화면·렌더·정보위계·포모 표정/멘트·전환·플로우
-            - 품질: 안정성·성능·빌드·테스트·폴백 회귀·옵저버빌리티
-            규칙:
-            1. 기획이 회의를 리딩한다. 프로젝트의 success 기준을 충족하는 *최소한의* task 로 쪼갠다(비대화 금지).
-            2. 각 task 는 단일 PR 로 끝낼 크기. 크면 더 쪼갠다. 가시적·미시적 잡일(여백 1px 등) 금지 — 프로젝트 success 에 직결되는 것만.
-            3. 각 task 에 담당 직군(기획/백엔드/프론트·UX/품질) 1개 배정. 의존성(dependsOn)을 seq 로 명시해 실행 순서를 만든다.
-            4. 정직한 숫자·투자조언 금지·타로 금지 등 Standing Constraints 를 위반하지 않는다.
-            5. 출력은 **오직 JSON 배열** 한 개. 설명·코드펜스 금지. axis 는 반드시 위 4개 한글 직군명 중 하나.
-            형식: [{"seq":1,"axis":"기획","title":"...","rationale":"이 프로젝트 success 와 어떻게 연결되는지","dependsOn":[],"acceptance":"검증 가능한 완료 기준"}, ...]
+            당신은 FOMO Club 의 기획자다. 선택된 *하나의 프로젝트*에 대한 **상세 기획문서(PRD)** 를 쓴다.
+            CEO(사람)가 이 문서만 읽고 "개발을 시작할지 말지"를 판단한다. 그러니 구체적이고 정직해야 한다.
+            아래 섹션을 마크다운으로 작성(추상어 금지 — 화면/데이터/동작/숫자로):
+            ## 배경 · 문제 (지금 왜 이게 필요한가)
+            ## 목표 · 성공지표 (검증 가능한 수치)
+            ## 사용자 시나리오 (유저 스토리 2~3개)
+            ## 기능 요구사항 (구체적으로 — 어떤 화면/데이터/동작. 이미 있는 것 위에 무엇을 더하는지)
+            ## 범위 · 비범위 (이번에 하는 것 / 안 하는 것)
+            ## 정체성 정합 (담담한 솔직함·정직한 숫자·love mark 를 어떻게 지키나)
+            ## 정체성·제약 자가점검 (예측/투자 도구화·푸시 보류·커뮤니티 후속 등 Out-of-Scope 와 충돌하는 부분이 있으면 *솔직히* 명시. 없으면 "충돌 없음")
+            ## 리스크 · 오픈 퀘스천 (CEO 결정이 필요한 것)
           prompt: |
-            ## 선택된 활성 프로젝트 (이걸 분해하라)
+            ## 선택된 프로젝트
             ${{ steps.ctx.outputs.active_json }}
 
-            ## North Star (정체성·금지 — 위반 금지)
-            ${{ steps.ctx.outputs.north_star }}
+            ## 제품 비전 (FOMO Club)
+            ${{ steps.ctx.outputs.vision }}
 
-            ## Standing Constraints (절대 위반 금지)
+            ## 이미 구현된 것 (이 위에 얹어라 — 중복 금지)
+            ${{ steps.ctx.outputs.inventory }}
+
+            ## Standing Constraints (자가점검 기준)
             ${{ steps.ctx.outputs.constraints }}
 
-            위 프로젝트의 success 기준을 충족하는 정렬된 task 배열(JSON)만 출력하라. 4~8개 권장.
+            위 프로젝트의 상세 기획문서(PRD)를 마크다운으로 작성하라.
 
-      - name: Create project issues
-        id: create
-        if: steps.select.outputs.ok == 'true' && steps.ctx.outputs.exist == '0' && steps.decompose.outputs.response != ''
+      - name: Create plan-doc issue
+        id: plandoc
+        if: steps.select.outputs.ok == 'true' && steps.ctx.outputs.exist == '0' && steps.prd.outputs.response != ''
         env:
           GH_TOKEN: ${{ github.token }}
           PID: ${{ github.event.inputs.project_id }}
-          RESP: ${{ steps.decompose.outputs.response }}
+          PTITLE: ${{ steps.ctx.outputs.ptitle }}
+          RESP: ${{ steps.prd.outputs.response }}
         run: |
           set -uo pipefail
-          printf '%s' "$RESP" > /tmp/decompose_raw.txt
-          npx -y tsx@4.19.2 scripts/kickoff-tasks.ts parse "$PID" /tmp/decompose_raw.txt > /tmp/tasks.json || echo "[]" > /tmp/tasks.json
-          COUNT=$(jq 'length' /tmp/tasks.json 2>/dev/null || echo 0)
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-          if [ "$COUNT" = "0" ]; then
-            echo "분해 task 0건 — 이슈 생성 없음"; echo "plan=(분해 실패 — task 0건)" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          PTITLE=$(jq -r '.title // ""' /tmp/active.json 2>/dev/null || echo "")
-          AXIS_LABEL () { case "$1" in 기획) echo "기획";; 품질) echo "품질";; 백엔드) echo "백엔드";; 프론트·UX) echo "프론트UX";; *) echo "agent-council";; esac; }
-          # gh issue create 는 *존재하지 않는 라벨*이면 실패한다 → 필요한 라벨을 idempotent 하게 미리 생성.
-          for L in "project:$PID" "agent-council" "task" "기획" "백엔드" "프론트UX" "품질"; do
-            gh label create "$L" --force --color ededed --description "topdown kickoff" >/dev/null 2>&1 || true
+          printf '%s' "$RESP" > /tmp/prd.md
+          npx -y tsx@4.19.2 scripts/plan-doc.ts issue "$PID" "$PTITLE" /tmp/prd.md > /tmp/plandoc_issue.md 2>/dev/null || cp /tmp/prd.md /tmp/plandoc_issue.md
+          for L in "project:$PID" "agent-council" "plan-doc" "기획"; do
+            gh label create "$L" --force --color 5319e7 --description "topdown" >/dev/null 2>&1 || true
           done
-          CREATED=""
-          for i in $(seq 0 $((COUNT-1))); do
-            jq -c ".[$i]" /tmp/tasks.json > /tmp/task.json
-            AXIS=$(jq -r '.axis' /tmp/task.json)
-            SEQ=$(jq -r '.seq' /tmp/task.json)
-            TITLE="[$PID $SEQ/$COUNT · $AXIS] $(jq -r '.title' /tmp/task.json)"
-            npx -y tsx@4.19.2 scripts/kickoff-tasks.ts render "$PID" "$PTITLE" "$COUNT" /tmp/task.json > /tmp/task_body.md 2>/dev/null || echo "(본문 생성 실패)" > /tmp/task_body.md
-            LB=$(AXIS_LABEL "$AXIS")
-            if N=$(gh issue create --title "$TITLE" --body-file /tmp/task_body.md \
-                  --label "project:$PID,agent-council,task,$LB" --repo "${{ github.repository }}"); then
-              CREATED="$CREATED ${N##*/}"
-            else
-              echo "⚠️ 이슈 생성 실패: $TITLE"
-            fi
-          done
-          PLAN=$(npx -y tsx@4.19.2 scripts/kickoff-tasks.ts parse "$PID" /tmp/decompose_raw.txt 2>/dev/null \
-            | jq -r '(length) as $n | to_entries[] | "\(.value.seq)/\($n) [\(.value.axis)] \(.value.title)" + (if (.value.dependsOn|length)>0 then " ← \(.value.dependsOn|join(","))단계 후" else "" end)' 2>/dev/null || echo "")
-          echo "plan<<__PEOF__" >> "$GITHUB_OUTPUT"; echo "$PLAN" >> "$GITHUB_OUTPUT"; echo "__PEOF__" >> "$GITHUB_OUTPUT"
-          echo "created=$CREATED" >> "$GITHUB_OUTPUT"
-          { echo "### 🧩 $PID 분해 이슈 생성: $COUNT건"; echo '```'; echo "$PLAN"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          URL=$(gh issue create --title "📋 [기획문서] $PID · $PTITLE" --body-file /tmp/plandoc_issue.md \
+            --label "project:$PID,agent-council,plan-doc,기획" --repo "${{ github.repository }}" 2>/dev/null || echo "")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          { echo "### 📋 $PID 기획문서"; echo "$URL"; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Slack
         if: always() && vars.SLACK_WEBHOOK_URL != ''
@@ -178,19 +158,19 @@ jobs:
           OK: ${{ steps.select.outputs.ok }}
           MSG: ${{ steps.select.outputs.msg }}
           PID: ${{ github.event.inputs.project_id }}
+          PTITLE: ${{ steps.ctx.outputs.ptitle }}
           EXIST: ${{ steps.ctx.outputs.exist }}
-          COUNT: ${{ steps.create.outputs.count }}
-          PLAN: ${{ steps.create.outputs.plan }}
+          URL: ${{ steps.plandoc.outputs.url }}
         run: |
-          URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
+          URL_HOOK=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
           if [ "$OK" != "true" ]; then
             TEXT="⚠️ *Project Kickoff 실패 (${PID})*\n${MSG}"
           elif [ "${EXIST:-0}" != "0" ]; then
-            TEXT="🗺️ *Project Kickoff — ${PID}*\n${MSG}\n\nℹ️ 이미 이 프로젝트의 task 이슈가 있어 재분해하지 않았습니다. 기존 이슈를 이어서 진행하세요."
-          elif [ -n "${COUNT:-}" ] && [ "${COUNT}" != "0" ]; then
-            TEXT="🗺️ *Project Kickoff — ${PID} 활성화 + 분해 완료*\n${MSG}\n\n🧩 *${COUNT}개 task 이슈 생성* (project:${PID}):\n${PLAN}\n\n구현은 CEO 승인(\"개발해\") 시에만. 진척은 매일 아침 리포트로 옵니다."
+            TEXT="🗺️ *${PID} 활성화* — ${MSG}\n\nℹ️ 이미 기획문서가 있습니다. 검토 후 \"${PID} 기획 승인\"으로 분해를 시작하세요."
+          elif [ -n "${URL:-}" ]; then
+            TEXT="📋 *기획문서 작성됨 — ${PID} · ${PTITLE}*\n${URL}\n\n읽어보시고 진행하려면 *\"${PID} 기획 승인\"*, 고칠 점은 이슈에 코멘트 주세요.\n_승인 전까지 직군 이슈 분해는 시작되지 않습니다._"
           else
-            TEXT="🗺️ *Project Kickoff — ${PID} 활성화*\n${MSG}\n\n⚠️ 분해 task 생성 0건(LLM 실패 가능) — 수동 확인 요망."
+            TEXT="🗺️ *${PID} 활성화* — ${MSG}\n\n⚠️ 기획문서 생성 실패(LLM) — 수동 확인 요망."
           fi
           BODY=$(jq -n --arg t "$TEXT" '{text: $t}')
-          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL" || true
+          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL_HOOK" || true

@@ -126,4 +126,10 @@ describe("select_project 액션 (톱다운 프로젝트 선택)", () => {
     expect(r.actions).toEqual([{ name: "propose_projects", payload: {} }]);
     expect(KNOWN_ACTIONS.has("propose_projects")).toBe(true);
   });
+  it("approve_plan id 파싱 + KNOWN/HIGH_IMPACT", () => {
+    const r = parseActions('P2 기획 승인합니다 [[ACTION:approve_plan]] {"id":"P2"}');
+    expect(r.actions).toEqual([{ name: "approve_plan", payload: { id: "P2" } }]);
+    expect(KNOWN_ACTIONS.has("approve_plan")).toBe(true);
+    expect(HIGH_IMPACT_ACTIONS.has("approve_plan")).toBe(true);
+  });
 });

@@ -315,7 +315,8 @@ ${runList || "(없음)"}
 - 사용 가능한 액션:
   \`[[ACTION:run_council]]\` — Agent Council(idea-proposal) 즉시 실행 ("의회 돌려", "제안 받아")
   \`[[ACTION:propose_projects]]\` — CEO 에이전트가 제품 분석 → 프로젝트 후보 리스트 제안 ("프로젝트 제안해", "뭐부터 할지 제안해", "프로젝트 뽑아줘"). 사람이 검토 후 선택.
-  \`[[ACTION:select_project]] {"id":"P1"}\` — 제안된 후보 중 활성 프로젝트 선택 ("P1 시작", "P2 프로젝트 하자"). 선택 시 직군(기획/백엔드/프론트·UX/품질)이 하위 이슈로 분해.
+  \`[[ACTION:select_project]] {"id":"P1"}\` — 후보 중 활성 프로젝트 선택 ("P1 시작", "P2 프로젝트 하자"). 선택 시 **기획문서(PRD)** 를 먼저 작성(아직 분해 안 함).
+  \`[[ACTION:approve_plan]] {"id":"P2"}\` — 기획문서 검토 후 승인 ("P2 기획 승인", "이 기획으로 개발 진행"). 승인 시 직군(기획/백엔드/프론트·UX/품질)별 하위 이슈로 분해.
   \`[[ACTION:implement]] {"date":"YYYY-MM-DD"}\` — auto-implement 트리거 (date 생략 시 오늘) ("구현 시작", "개발 진행")
   \`[[ACTION:merge]] {"pr":291}\` — 특정 PR squash 머지 ("이 PR 머지해", 번호 명시)
   \`[[ACTION:merge_all]]\` — 열린 PR 중 **이상 없는 것 전부** 머지 ("PR 전부 머지", "남은 PR 머지", "이상없으면 다 머지"). 번호 불필요 — 초안·CI미통과·충돌은 자동 제외.
@@ -343,10 +344,11 @@ ${runList || "(없음)"}
 - 둘 다 지시하면("머지하고 이슈도 닫아") merge_all + close_all 두 토큰을 각각 단독 줄로 출력한다.
 - **절대 "닫을 이슈가 없다/PR 번호가 올바르지 않다"고 지어내지 마라** — 벌크 토큰을 내면 시스템이 실제 열린 PR/이슈를 조회해 처리한다. close_all 은 이미 닫힌 게 아니면 반드시 무언가 닫는다.
 
-**톱다운 프로젝트 흐름 (2단계)**:
-- ① "프로젝트 제안해", "뭐부터 할지 정리해", "프로젝트 뽑아줘" → \`[[ACTION:propose_projects]]\` (CEO가 제품 분석해 후보 리스트 제안). 사람이 제품 이해도를 검토.
-- ② "P1 시작", "P2 프로젝트 하자", "이 프로젝트로 가자" → \`[[ACTION:select_project]] {"id":"P<번호>"}\` (후보 중 1개 활성화 → 직군별 하위 이슈 분해).
-- 이건 매일 잔 아이디어를 받는 run_council 과 다르다. 톱다운: 제안 → 선택 → 분해 → 격파.
+**톱다운 프로젝트 흐름 (3단계 — 단계마다 사람이 게이트)**:
+- ① "프로젝트 제안해", "뭐부터 할지 정리해" → \`[[ACTION:propose_projects]]\` (CEO가 제품 분석해 후보 리스트 제안).
+- ② "P2 시작", "P2 프로젝트 하자" → \`[[ACTION:select_project]] {"id":"P2"}\` (활성화 + **기획문서(PRD)** 작성. 아직 분해 안 함).
+- ③ 기획문서 검토 후 "P2 기획 승인", "이 기획으로 진행" → \`[[ACTION:approve_plan]] {"id":"P2"}\` (PRD 기준 직군별 하위 이슈 분해).
+- 이건 매일 잔 아이디어 run_council 과 다르다. 톱다운: 제안 → 선택 → 기획문서 → 승인 → 분해 → 격파.
 
 - **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
 - merge/merge_all/close_completed/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
@@ -429,7 +431,13 @@ async function executeAction(
         const id = typeof action.payload.id === "string" ? action.payload.id.trim().toUpperCase() : "";
         if (!/^P\d+$/.test(id)) return "⚠️ select_project: 프로젝트 id(예: P1)가 올바르지 않아 실행하지 않았습니다.";
         await triggerWorkflow("project-kickoff.yml", { project_id: id });
-        return `🗺️ *프로젝트 ${id} 킥오프* — PROJECT_ROADMAP.md 를 active 로 갱신하고, 4축 에이전트가 이 프로젝트를 이슈로 분해합니다. 진척은 매일 아침 리포트로 옵니다.`;
+        return `🗺️ *프로젝트 ${id} 킥오프* — 활성화하고 **기획문서(PRD)** 를 먼저 작성합니다. 잠시 후 "📋 [기획문서] ${id}" 이슈가 올라오면 검토 후 *"${id} 기획 승인"* 하세요. (승인 전엔 직군 이슈 분해 안 함)`;
+      }
+      case "approve_plan": {
+        const id = typeof action.payload.id === "string" ? action.payload.id.trim().toUpperCase() : "";
+        if (!/^P\d+$/.test(id)) return "⚠️ approve_plan: 프로젝트 id(예: P2)가 올바르지 않아 실행하지 않았습니다.";
+        await triggerWorkflow("project-decompose.yml", { project_id: id });
+        return `✅ *${id} 기획 승인 → 분해 시작* — 기획문서(PRD)를 기준으로 직군별(기획/백엔드/프론트·UX/품질) 하위 이슈를 만듭니다. 구현은 이후 "개발해" 승인 시에만.`;
       }
       case "implement": {
         const raw = action.payload.date;
