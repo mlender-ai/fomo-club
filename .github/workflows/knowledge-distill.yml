@@ -54,8 +54,21 @@ jobs:
             echo "[]" > /tmp/kb_hits.json
           fi
 
-          # 3) 결정(자유 텍스트) — 현재 빈 배열(후속: 브리프/플랜doc 추출)
+          # 3) 결정 자동추출 — 기획문서(plan-doc) 이슈의 "✅ CEO 결정" 섹션 불릿
           echo "[]" > /tmp/kb_decisions.json
+          PLAN_NUMS=$(gh issue list --label "plan-doc" --state all --limit 10 \
+            --json number --jq '.[].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
+          : > /tmp/kb_dec_all.json
+          for N in $PLAN_NUMS; do
+            gh issue view "$N" --json body --jq .body --repo "${{ github.repository }}" 2>/dev/null > /tmp/kb_plan_body.md || continue
+            npx -y tsx@4.19.2 scripts/knowledge-base.ts decisions /tmp/kb_plan_body.md 2>/dev/null \
+              | jq --arg ref "issue#$N" '[ .[] | {text: ., ref: $ref} ]' >> /tmp/kb_dec_all.json || true
+          done
+          if [ -s /tmp/kb_dec_all.json ]; then
+            # build 는 {text, ref}[] 를 받는다 — issue# 출처 보존 (멱등은 ref+text 기준)
+            jq -s 'add // []' /tmp/kb_dec_all.json > /tmp/kb_decisions.json 2>/dev/null || echo "[]" > /tmp/kb_decisions.json
+          fi
+          [ -s /tmp/kb_decisions.json ] || echo "[]" > /tmp/kb_decisions.json
 
           # 4) 규칙(rule) 자동추출 — Standing Constraints(=CEO 확정 규칙)를 지식 rule 층으로
           if [ -f constraints/active.json ]; then
