@@ -16,8 +16,10 @@ on:
         description: "effort (비우면 vars.CLAUDE_EFFORT → medium)"
         required: false
 
+# 충돌 방지(2026-06): 모든 task 구현을 *직렬화*한다(공유 그룹). 동시에 여러 task 를 구현하면
+# 각자 main 에서 분기해 서로 모르는 설계를 만들어 충돌하므로, 한 번에 하나만 실행한다.
 concurrency:
-  group: implement-task-${{ github.event.inputs.issue }}
+  group: implement-task
   cancel-in-progress: false
 
 permissions:
@@ -64,10 +66,36 @@ jobs:
           echo "dup=$DUP" >> "$GITHUB_OUTPUT"
           printf '%s' "$DATA" | jq -r '.body' > /tmp/task_spec.md
           echo "body<<__EOF__" >> "$GITHUB_OUTPUT"; cat /tmp/task_spec.md >> "$GITHUB_OUTPUT"; echo "__EOF__" >> "$GITHUB_OUTPUT"
+          # 프로젝트 라벨(project:<id>) + self.json (게이트 입력)
+          PROJ=$(printf '%s' "$DATA" | jq -r '[.labels[].name] | map(select(startswith("project:"))) | (.[0] // "")')
+          echo "proj=$PROJ" >> "$GITHUB_OUTPUT"
+          printf '%s' "$DATA" | jq '{title, body}' > /tmp/self.json
+
+      # ── 선행 게이트 (충돌 방지): 선행 task PR 이 머지(close) 되기 전엔 구현 차단 ──
+      - name: Prerequisite gate
+        id: gate
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUM: ${{ github.event.inputs.issue }}
+          PROJ: ${{ steps.task.outputs.proj }}
+        run: |
+          set -uo pipefail
+          if [ -z "$PROJ" ]; then echo "passed=true" >> "$GITHUB_OUTPUT"; echo "프로젝트 라벨 없음 — 게이트 생략"; exit 0; fi
+          gh issue list --label "$PROJ,task" --state all --limit 60 \
+            --json number,title,state --repo "${{ github.repository }}" 2>/dev/null > /tmp/siblings.json || echo "[]" > /tmp/siblings.json
+          RES=$(npx -y tsx@4.19.2 scripts/task-deps.ts gate "$NUM" /tmp/self.json /tmp/siblings.json 2>/dev/null || echo '{"ok":true,"reason":"게이트 평가 실패 — 통과 처리"}')
+          OK=$(printf '%s' "$RES" | jq -r '.ok'); REASON=$(printf '%s' "$RES" | jq -r '.reason')
+          echo "passed=$OK" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "🚦 게이트: ok=$OK — $REASON"
+          if [ "$OK" != "true" ]; then
+            gh issue comment "$NUM" --repo "${{ github.repository }}" --body "🚦 구현 보류 — $REASON" || true
+          fi
 
       - name: Resolve model
         id: model
-        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0' && steps.gate.outputs.passed == 'true'
         env:
           IN_MODEL: ${{ github.event.inputs.model }}
           IN_EFFORT: ${{ github.event.inputs.effort }}
@@ -79,7 +107,7 @@ jobs:
 
       - name: Implement with Claude Code
         id: implement
-        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0' && steps.gate.outputs.passed == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -113,7 +141,7 @@ jobs:
             ${{ steps.task.outputs.body }}
 
       - name: Create Branch and PR
-        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0' && steps.gate.outputs.passed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NUM: ${{ github.event.inputs.issue }}
@@ -163,12 +191,16 @@ jobs:
           FOUND: ${{ steps.task.outputs.found }}
           DUP: ${{ steps.task.outputs.dup }}
           ITITLE: ${{ steps.task.outputs.title }}
+          GATE: ${{ steps.gate.outputs.passed }}
+          GREASON: ${{ steps.gate.outputs.reason }}
         run: |
           URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
           if [ "$FOUND" != "true" ]; then
             TEXT="⚠️ *구현 불가 (#${NUM})* — task 이슈가 없거나 닫힘/라벨 불일치."
           elif [ "${DUP:-0}" != "0" ]; then
             TEXT="ℹ️ *#${NUM}* 이미 구현 PR이 열려 있어 새로 만들지 않았습니다."
+          elif [ "${GATE:-true}" != "true" ]; then
+            TEXT="🚦 *#${NUM} 구현 보류 (선행 게이트)* — ${GREASON}"
           else
             TEXT="🚀 *구현 실행 — #${NUM} ${ITITLE}* — Claude Code 가 구현 후 PR을 올립니다(수 분). CI 후 리뷰/머지."
           fi
