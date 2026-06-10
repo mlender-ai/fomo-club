@@ -36,11 +36,16 @@ export interface KickoffTask {
   seq: number;
   axis: Axis;
   title: string;
+  /** PRD 의 어느 요구사항을 충족하는가 */
   rationale: string;
+  /** 구체 작업 항목 (무엇을 어떻게 — 3~6개) */
+  details: string[];
+  /** 관련 파일/영역 후보 (실제 경로 — 어디를 건드리나) */
+  files: string;
+  /** 완료 체크리스트 (검증 가능 — 2~4개) */
+  acceptance: string[];
   /** 선행 task 의 seq 들 */
   dependsOn: number[];
-  /** 완료 판정 기준(검증 가능) */
-  acceptance: string;
 }
 
 /** 구 약어(PL/TD/BA/UX)도 너그럽게 한글 직군으로 흡수. */
@@ -68,6 +73,18 @@ function coerceAxis(v: unknown): Axis | null {
 function coerceDeps(v: unknown): number[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0);
+}
+
+/** 문자열 배열로 강제 — 배열이면 항목 trim, 문자열이면 줄/세미콜론 분리. */
+function coerceStrArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+  if (typeof v === "string") {
+    return v
+      .split(/\n|;|·|(?:^|\s)[-*]\s/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 /**
@@ -107,8 +124,10 @@ export function parseKickoffTasks(raw: string): KickoffTask[] {
       axis,
       title,
       rationale: typeof o.rationale === "string" ? o.rationale.trim() : "",
+      details: coerceStrArray(o.details),
+      files: typeof o.files === "string" ? o.files.trim() : coerceStrArray(o.files).join(", "),
+      acceptance: coerceStrArray(o.acceptance),
       dependsOn: coerceDeps(o.dependsOn),
-      acceptance: typeof o.acceptance === "string" ? o.acceptance.trim() : "",
     });
     auto = seq + 1;
   }
@@ -128,6 +147,12 @@ export function renderIssueBody(
   const deps = task.dependsOn.length
     ? task.dependsOn.map((d) => `${d}단계`).join(", ")
     : "없음 (먼저 시작 가능)";
+  const details = task.details.length
+    ? task.details.map((d) => `- ${d}`).join("\n")
+    : "- (구체 작업 미기재 — 분해 보강 필요)";
+  const accept = task.acceptance.length
+    ? task.acceptance.map((a) => `- [ ] ${a}`).join("\n")
+    : "- [ ] (완료 기준 미기재 — 분해 보강 필요)";
   return [
     `## 🗺️ 상위 프로젝트: ${projectId} · ${projectTitle}`,
     `이 이슈는 위 프로젝트를 완성하기 위한 **하위 개발 이슈**다.`,
@@ -136,14 +161,20 @@ export function renderIssueBody(
     `- **담당 직군**: ${task.axis} — ${AXIS_DESC[task.axis]}`,
     `- **선행 단계**: ${deps}`,
     "",
-    "## 🎯 무엇을 하나",
+    "## 🎯 목표",
     task.title,
     "",
-    "## 왜 (이 프로젝트에 왜 필요한가)",
-    task.rationale || "(근거 미기재)",
+    "## 🔨 작업 내용 (구체)",
+    details,
     "",
-    "## ✅ 완료 판정 (검증 가능)",
-    task.acceptance || "(판정 기준 미기재)",
+    "## 📂 관련 파일 / 영역",
+    task.files || "(미기재 — 구현 전 탐색 필요)",
+    "",
+    "## ✅ 완료 체크리스트 (검증 가능)",
+    accept,
+    "",
+    "## 🔗 왜 (PRD·프로젝트 연결)",
+    task.rationale || "(근거 미기재)",
     "",
     "---",
     `_프로젝트 \`${projectId}\` 의 ${task.seq}/${total} 단계. CEO 승인(슬랙 "개발해"/수동) 시에만 구현된다._`,

@@ -9,16 +9,20 @@ import {
 
 describe("parseKickoffTasks", () => {
   const good = JSON.stringify([
-    { seq: 1, axis: "기획", title: "포모 홈 와이어 정의", rationale: "심장", dependsOn: [], acceptance: "와이어 확정" },
-    { seq: 2, axis: "프론트·UX", title: "감정 선택→반응 전환", rationale: "love mark", dependsOn: [1], acceptance: "전환 동작" },
-    { seq: 3, axis: "백엔드", title: "감정 집계 API", rationale: "데이터", dependsOn: [1], acceptance: "API 200" },
+    { seq: 1, axis: "기획", title: "포모 홈 와이어 정의", rationale: "심장", details: ["화면 구성 정의", "상태 정의"], files: "docs/", acceptance: ["와이어 확정", "리뷰 통과"], dependsOn: [] },
+    { seq: 2, axis: "프론트·UX", title: "감정 선택→반응 전환", rationale: "love mark", details: ["전환 컴포넌트"], files: "apps/fomo-web/components/FomoFace.tsx", acceptance: "전환 동작", dependsOn: [1] },
+    { seq: 3, axis: "백엔드", title: "감정 집계 API", rationale: "데이터", dependsOn: [1] },
   ]);
 
-  it("정상 JSON 을 seq 순 정렬 파싱", () => {
+  it("정상 JSON 을 seq 순 정렬 파싱 + 풍부한 필드", () => {
     const t = parseKickoffTasks(good);
     expect(t.map((x) => x.seq)).toEqual([1, 2, 3]);
     expect(t[1]!.axis).toBe("프론트·UX");
     expect(t[1]!.dependsOn).toEqual([1]);
+    expect(t[0]!.details).toEqual(["화면 구성 정의", "상태 정의"]);
+    expect(t[0]!.acceptance).toEqual(["와이어 확정", "리뷰 통과"]);
+    expect(t[1]!.files).toBe("apps/fomo-web/components/FomoFace.tsx");
+    expect(t[1]!.acceptance).toEqual(["전환 동작"]); // 문자열도 배열로
   });
   it("코드펜스/잡텍스트로 둘러싸여도 배열 추출", () => {
     expect(parseKickoffTasks("```json\n" + good + "\n``` 끝!")).toHaveLength(3);
@@ -70,19 +74,20 @@ describe("parseKickoffTasks", () => {
 });
 
 describe("render", () => {
-  const task = { seq: 2, axis: "프론트·UX" as const, title: "전환", rationale: "love mark", dependsOn: [1], acceptance: "동작" };
+  const task = { seq: 2, axis: "프론트·UX" as const, title: "전환", rationale: "love mark", details: ["FomoFace 전환 추가", "멘트 교체"], files: "apps/fomo-web/components/FomoFace.tsx", acceptance: ["전환 동작", "멘트 노출"], dependsOn: [1] };
   it("이슈 제목 = [P1 2/5 · 프론트·UX] 전환", () => {
     expect(renderIssueTitle(task, "P1", 5)).toBe("[P1 2/5 · 프론트·UX] 전환");
   });
-  it("본문에 상위 프로젝트·단계·선행·완료판정 포함", () => {
+  it("본문에 작업 내용·파일·체크리스트 포함", () => {
     const b = renderIssueBody(task, "P1", "단 하나의 순간", 5);
     expect(b).toContain("상위 프로젝트: P1 · 단 하나의 순간");
     expect(b).toContain("진행 단계: 2 / 5");
-    expect(b).toContain("담당 직군");
-    expect(b).toContain("프론트·UX");
-    expect(b).toContain("선행 단계");
+    expect(b).toContain("작업 내용");
+    expect(b).toContain("- FomoFace 전환 추가");
+    expect(b).toContain("관련 파일");
+    expect(b).toContain("apps/fomo-web/components/FomoFace.tsx");
+    expect(b).toContain("- [ ] 전환 동작");
     expect(b).toContain("1단계");
-    expect(b).toContain("동작");
   });
   it("renderPlan 순서 요약", () => {
     const plan = renderPlan(parseKickoffTasks(JSON.stringify([

@@ -55,6 +55,10 @@ jobs:
           fi
           PRD=$(cat /tmp/prd.txt)
           echo "prd<<__PEOF__" >> "$GITHUB_OUTPUT"; echo "$PRD" >> "$GITHUB_OUTPUT"; echo "__PEOF__" >> "$GITHUB_OUTPUT"
+          # 실제 파일 인벤토리 — 각 task 가 '어느 파일/영역'을 건드리는지 구체적으로 적게
+          INV=$(git ls-files 'apps/fomo-web/app/**' 'apps/fomo-web/components/**' 'apps/fomo-club/app/**' 'apps/fomo-club/components/**' 'packages/fomo-core/src/**' 'apps/web/app/api/fomo/**' 'apps/web/prisma/**' 2>/dev/null | grep -vE '__tests__|\.test\.|globals\.css' | sort | head -140)
+          [ -z "$INV" ] && INV="(인벤토리 조회 실패)"
+          echo "inventory<<__IEOF__" >> "$GITHUB_OUTPUT"; echo "$INV" >> "$GITHUB_OUTPUT"; echo "__IEOF__" >> "$GITHUB_OUTPUT"
 
       - name: "직군 회의 — 기획문서 → 하위 task 분해 (LLM)"
         id: decompose
@@ -67,19 +71,26 @@ jobs:
           system-prompt: |
             당신은 FOMO Club 제품팀이다. *승인된 기획문서(PRD)* 를 직군별 실행 task 로 분해한다.
             직군(axis 는 한글명 그대로): 기획 / 백엔드 / 프론트·UX / 품질.
+            ★ 각 task 는 **개발자가 바로 착수할 만큼 구체적**이어야 한다. 한 줄 제목만 던지지 마라.
             규칙:
             1. PRD 의 기능 요구사항·범위를 충실히 반영. PRD 에 없는 기능 추가 금지(비대화 금지).
             2. 각 task 는 단일 PR 크기. 의존성(dependsOn)을 seq 로 명시해 실행 순서를 만든다.
-            3. 가시적·미시적 잡일(여백 1px 등) 금지. 정직한 숫자·투자조언·타로 금지 준수.
-            4. 각 task 에 담당 직군 1개. 출력은 **오직 JSON 배열**. 코드펜스·설명 금지.
-            형식: [{"seq":1,"axis":"기획","title":"...","rationale":"PRD 의 어느 요구사항을 충족","dependsOn":[],"acceptance":"검증 가능한 완료 기준"}, ...]
+            3. **details**: 그 task 에서 실제로 할 일을 3~6개 구체 항목으로(무엇을 만들고 어떻게 — 함수/엔드포인트/컴포넌트/스키마 수준). 추상어 금지.
+            4. **files**: 아래 "이미 있는 파일/영역"을 참고해 *실제로 건드릴 파일·경로 후보*를 적는다(신규면 "신규:" 접두사). 추측 경로 금지.
+            5. **acceptance**: 검증 가능한 완료 체크리스트 2~4개(테스트·동작·수치).
+            6. 가시적·미시적 잡일(여백 1px 등) 금지. 정직한 숫자·투자조언·타로 금지 준수. 담당 직군 1개.
+            7. 출력은 **오직 JSON 배열**. 코드펜스·설명 금지.
+            형식: [{"seq":1,"axis":"백엔드","title":"한 줄 목표","rationale":"PRD 의 어느 요구사항을 충족","details":["구체 작업1","구체 작업2","..."],"files":"apps/web/app/api/fomo/..., packages/fomo-core/src/...","acceptance":["체크1","체크2"],"dependsOn":[1]}, ...]
           prompt: |
             ## 프로젝트: ${{ steps.ctx.outputs.pid }} · ${{ steps.ctx.outputs.ptitle }}
 
-            ## 승인된 기획문서 (PRD)
+            ## 승인된 기획문서 (PRD) — 이걸 충실히 분해하라
             ${{ steps.ctx.outputs.prd }}
 
-            위 PRD 를 충실히 반영한 직군별 하위 task 배열(JSON)만 출력하라. 4~8개 권장.
+            ## 이미 있는 파일/영역 (files 항목은 여기서 골라 구체적으로)
+            ${{ steps.ctx.outputs.inventory }}
+
+            위 PRD 를 충실히 반영한 직군별 하위 task 배열(JSON)만 출력하라. 4~8개. 각 task 는 details/files/acceptance 까지 구체적으로.
 
       - name: Create task issues
         id: create
