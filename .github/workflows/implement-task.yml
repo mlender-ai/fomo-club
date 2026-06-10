@@ -1,0 +1,176 @@
+name: Implement Task
+
+# 톱다운 구현 — 승인된 프로젝트 하위 task 이슈(project:<id>,task) 하나를 Claude Code 로 구현 → PR.
+#   Slack [[ACTION:implement_task]] {"issue":457} 또는 수동 실행. CEO 승인(이 트리거 자체)에서만.
+#   PR 은 auto-merge 게이트를 거친다(Prisma·보안 파일 변경은 자동머지 차단 → 사람 리뷰).
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "구현할 task 이슈 번호 (예: 457)"
+        required: true
+      model:
+        description: "Claude 모델 (비우면 vars.CLAUDE_MODEL → claude-opus-4-8)"
+        required: false
+      effort:
+        description: "effort (비우면 vars.CLAUDE_EFFORT → medium)"
+        required: false
+
+concurrency:
+  group: implement-task-${{ github.event.inputs.issue }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  implement:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch task issue
+        id: task
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUM: ${{ github.event.inputs.issue }}
+        run: |
+          set -uo pipefail
+          DATA=$(gh issue view "$NUM" --repo "${{ github.repository }}" --json number,title,body,labels,state 2>/dev/null || echo "")
+          if [ -z "$DATA" ] || [ "$(printf '%s' "$DATA" | jq -r '.state')" != "OPEN" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"; echo "이슈 #$NUM 없음/닫힘"; exit 0
+          fi
+          IS_TASK=$(printf '%s' "$DATA" | jq -r '[.labels[].name] | index("task") != null')
+          if [ "$IS_TASK" != "true" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"; echo "이슈 #$NUM 은 task 라벨이 아님 — 중단"; exit 0
+          fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "title=$(printf '%s' "$DATA" | jq -r '.title')" >> "$GITHUB_OUTPUT"
+          # 중복: 이 이슈를 참조하는 열린 Auto PR 있으면 skip
+          DUP=$(gh pr list --state open --limit 50 --json title,body --repo "${{ github.repository }}" 2>/dev/null \
+            | jq --arg n "$NUM" '[.[] | select((.title|test("#"+$n+"\\b")) or (.body|test("#"+$n+"\\b")))] | length' 2>/dev/null || echo 0)
+          echo "dup=$DUP" >> "$GITHUB_OUTPUT"
+          printf '%s' "$DATA" | jq -r '.body' > /tmp/task_spec.md
+          echo "body<<__EOF__" >> "$GITHUB_OUTPUT"; cat /tmp/task_spec.md >> "$GITHUB_OUTPUT"; echo "__EOF__" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve model
+        id: model
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        env:
+          IN_MODEL: ${{ github.event.inputs.model }}
+          IN_EFFORT: ${{ github.event.inputs.effort }}
+          VAR_MODEL: ${{ vars.CLAUDE_MODEL }}
+          VAR_EFFORT: ${{ vars.CLAUDE_EFFORT }}
+        run: |
+          echo "model=${IN_MODEL:-${VAR_MODEL:-claude-opus-4-8}}" >> "$GITHUB_OUTPUT"
+          echo "effort=${IN_EFFORT:-${VAR_EFFORT:-medium}}" >> "$GITHUB_OUTPUT"
+
+      - name: Implement with Claude Code
+        id: implement
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--max-turns 80 --model ${{ steps.model.outputs.model }} --effort ${{ steps.model.outputs.effort }} --allowedTools "Read,Edit,Write,Glob,Grep,Bash"'
+          prompt: |
+            당신은 FOMO Club(모노레포)의 시니어 풀스택 개발자입니다.
+            아래 **하위 개발 이슈(task)** 의 "작업 내용 / 관련 파일 / 완료 체크리스트" 를 그대로 구현하세요.
+            이슈에 적힌 범위만 — 임의로 더하거나 빼지 마세요.
+
+            ## 모노레포 구조 (FOMO Club)
+            - apps/fomo-web — Next.js (무가입 웹). components/HomeView·FomoFace·EmotionCalendar 등
+            - apps/fomo-club — Expo + NativeWind (모바일)
+            - apps/web — Next.js API Routes (apps/web/app/api/fomo/*) + Prisma(apps/web/prisma/schema.prisma)
+            - packages/fomo-core — FOMO Index/집계 순수 로직 (state.ts, types.ts, index-engine/*)
+            - packages/shared — 공용 타입(새 코드 전 먼저 확인)
+
+            ## 절대 규칙
+            - 정직한 숫자: 가짜/임의 수치 금지, 실제 집계값만. 데이터 미비 시 안전 폴백(빈 값/에러 노출 금지).
+            - 투자 조언·예측 금지, 타로 신규 작업 금지(기존 tarot-* 보존).
+            - 애니메이션은 RN Animated API (reanimated 금지). react-native-svg 는 lib/svg.ts 래퍼.
+            - 빈 catch {} 금지(최소 console.warn). TypeScript, 기존 패턴 재사용.
+            - **Prisma 스키마 변경 시**: schema.prisma 만 수정(마이그레이션 SQL 직접 실행 금지 — 운영은 `prisma db push`). 변경했으면 PR 본문에 'Prisma 스키마 변경 있음' 명시.
+
+            ## 작업 절차 (반드시 이 순서로)
+            1. 이슈의 "관련 파일" 을 먼저 읽고, "작업 내용" 을 구현한다(신규 파일은 적절 위치에 생성).
+            2. `npm run lint` 와 `npm run typecheck` 를 직접 실행해 통과할 때까지 수정. (가능하면 `npm run test` 도)
+            3. 구현 요약 한 줄을 `/tmp/impl-title.txt` 에 기록.
+            4. **commit/push/PR 생성은 하지 마세요.** 코드 변경만 작업 트리에 남기면 다음 단계가 처리합니다.
+
+            ## 구현할 이슈 #${{ github.event.inputs.issue }}: ${{ steps.task.outputs.title }}
+            ${{ steps.task.outputs.body }}
+
+      - name: Create Branch and PR
+        if: steps.task.outputs.found == 'true' && steps.task.outputs.dup == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUM: ${{ github.event.inputs.issue }}
+          ITITLE: ${{ steps.task.outputs.title }}
+        run: |
+          set -uo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "변경사항 없음 — PR 생략"
+            gh issue comment "$NUM" --repo "${{ github.repository }}" --body "⚠️ 자동 구현이 코드 변경을 만들지 못했습니다(작업 트리 비어있음). 이슈 스펙을 더 구체화하거나 수동 확인이 필요합니다." || true
+            exit 0
+          fi
+          TITLE=$(head -1 /tmp/impl-title.txt 2>/dev/null | xargs)
+          [ -z "$TITLE" ] && TITLE="$ITITLE"
+          PRISMA_NOTE=""
+          git status --porcelain | grep -q 'schema.prisma' && PRISMA_NOTE="⚠️ Prisma 스키마 변경 있음 — 자동 머지 차단됨(수동 \`prisma db push\` 확인 필요)."
+          BRANCH="agent/task-${NUM}"
+          git config user.name "taro-agent[bot]"
+          git config user.email "taro-agent[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "[Auto] #${NUM} — ${TITLE}
+
+          프로젝트 하위 task #${NUM} Claude Code 자동 구현"
+          git push origin "$BRANCH" --force
+          cat > /tmp/pr-body.md << PREOF
+          ## 프로젝트 task #${NUM} 자동 구현
+
+          Closes #${NUM}
+
+          - 에이전트: Claude Code (구독 인증)
+          - lint + typecheck 에이전트가 직접 검증
+          - 작업: ${TITLE}
+
+          ${PRISMA_NOTE}
+          PREOF
+          gh pr create --title "[Auto] #${NUM} — ${TITLE}" --body-file /tmp/pr-body.md \
+            --base main --head "$BRANCH" --repo "${{ github.repository }}" || { echo "PR 생성 실패"; exit 1; }
+          PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
+          [ -n "$PR_NUM" ] && gh issue comment "$NUM" --repo "${{ github.repository }}" --body "🤖 구현 PR #${PR_NUM} 생성됨 — Claude Code 자동 구현. CI 후 리뷰/머지하세요. ${PRISMA_NOTE}" || true
+
+      - name: Notify Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        env:
+          NUM: ${{ github.event.inputs.issue }}
+          FOUND: ${{ steps.task.outputs.found }}
+          DUP: ${{ steps.task.outputs.dup }}
+          ITITLE: ${{ steps.task.outputs.title }}
+        run: |
+          URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
+          if [ "$FOUND" != "true" ]; then
+            TEXT="⚠️ *구현 불가 (#${NUM})* — task 이슈가 없거나 닫힘/라벨 불일치."
+          elif [ "${DUP:-0}" != "0" ]; then
+            TEXT="ℹ️ *#${NUM}* 이미 구현 PR이 열려 있어 새로 만들지 않았습니다."
+          else
+            TEXT="🚀 *구현 실행 — #${NUM} ${ITITLE}* — Claude Code 가 구현 후 PR을 올립니다(수 분). CI 후 리뷰/머지."
+          fi
+          BODY=$(jq -n --arg t "$TEXT" '{text: $t}')
+          curl -sS -X POST -H 'Content-type: application/json' --data "$BODY" "$URL" || true

@@ -317,6 +317,7 @@ ${runList || "(없음)"}
   \`[[ACTION:propose_projects]]\` — CEO 에이전트가 제품 분석 → 프로젝트 후보 리스트 제안 ("프로젝트 제안해", "뭐부터 할지 제안해", "프로젝트 뽑아줘"). 사람이 검토 후 선택.
   \`[[ACTION:select_project]] {"id":"P1"}\` — 후보 중 활성 프로젝트 선택 ("P1 시작", "P2 프로젝트 하자"). 선택 시 **기획문서(PRD)** 를 먼저 작성(아직 분해 안 함).
   \`[[ACTION:approve_plan]] {"id":"P2"}\` — 기획문서 검토 후 승인 ("P2 기획 승인", "이 기획으로 개발 진행"). 승인 시 직군(기획/백엔드/프론트·UX/품질)별 하위 이슈로 분해.
+  \`[[ACTION:implement_task]] {"issue":457}\` — 특정 프로젝트 하위 task 이슈를 실제 구현 → PR ("#457 개발해", "457 구현해", "이 이슈 개발"). 번호가 명시된 task 개발 지시.
   \`[[ACTION:implement]] {"date":"YYYY-MM-DD"}\` — auto-implement 트리거 (date 생략 시 오늘) ("구현 시작", "개발 진행")
   \`[[ACTION:merge]] {"pr":291}\` — 특정 PR squash 머지 ("이 PR 머지해", 번호 명시)
   \`[[ACTION:merge_all]]\` — 열린 PR 중 **이상 없는 것 전부** 머지 ("PR 전부 머지", "남은 PR 머지", "이상없으면 다 머지"). 번호 불필요 — 초안·CI미통과·충돌은 자동 제외.
@@ -438,6 +439,12 @@ async function executeAction(
         if (!/^P\d+$/.test(id)) return "⚠️ approve_plan: 프로젝트 id(예: P2)가 올바르지 않아 실행하지 않았습니다.";
         await triggerWorkflow("project-decompose.yml", { project_id: id });
         return `✅ *${id} 기획 승인 → 분해 시작* — 기획문서(PRD)를 기준으로 직군별(기획/백엔드/프론트·UX/품질) 하위 이슈를 만듭니다. 구현은 이후 "개발해" 승인 시에만.`;
+      }
+      case "implement_task": {
+        const issue = Number(action.payload.issue);
+        if (!Number.isInteger(issue) || issue <= 0) return "⚠️ implement_task: 이슈 번호가 올바르지 않아 실행하지 않았습니다.";
+        await triggerWorkflow("implement-task.yml", { issue: String(issue) });
+        return `🚀 *#${issue} 구현 시작* — Claude Code 가 이슈 스펙대로 구현 후 PR을 올립니다(수 분). CI 후 리뷰/머지하세요. (Prisma·보안 변경은 자동 머지 차단)`;
       }
       case "implement": {
         const raw = action.payload.date;

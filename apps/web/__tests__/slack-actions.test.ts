@@ -132,4 +132,10 @@ describe("select_project 액션 (톱다운 프로젝트 선택)", () => {
     expect(KNOWN_ACTIONS.has("approve_plan")).toBe(true);
     expect(HIGH_IMPACT_ACTIONS.has("approve_plan")).toBe(true);
   });
+  it("implement_task issue 파싱 + KNOWN/HIGH_IMPACT", () => {
+    const r = parseActions('457 개발할게요 [[ACTION:implement_task]] {"issue":457}');
+    expect(r.actions).toEqual([{ name: "implement_task", payload: { issue: 457 } }]);
+    expect(KNOWN_ACTIONS.has("implement_task")).toBe(true);
+    expect(HIGH_IMPACT_ACTIONS.has("implement_task")).toBe(true);
+  });
 });
