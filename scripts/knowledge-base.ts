@@ -49,6 +49,27 @@ export function lessonsFromDecisions(decisions: string[], date: string, refs: st
     .map((text, i) => ({ date, kind: "decision" as const, text, ref: refs[i] ?? "" }));
 }
 
+export interface ConstraintRule {
+  id: string;
+  rule: string;
+  createdAt?: string;
+}
+
+/**
+ * Standing Constraints(active.json) → rule 교훈. CEO 확정 규칙은 가장 오래가는 결정이므로
+ * 지식의 rule 층을 자동으로 채운다(지금까지 비어 있던 층). ref = constraint id, 멱등 누적.
+ */
+export function lessonsFromConstraints(constraints: ConstraintRule[], fallbackDate: string): Lesson[] {
+  return (constraints || [])
+    .filter((c) => c && c.id && clean(c.rule))
+    .map((c) => ({
+      date: c.createdAt || fallbackDate,
+      kind: "rule" as const,
+      text: clean(c.rule).slice(0, 180),
+      ref: c.id,
+    }));
+}
+
 const LINE_RE = /^- \[(\d{4}-\d{2}-\d{2})\]\s*\((shipped|decision|rule)\)\s*(.*?)(?:\s*\[출처:\s*([^\]]+)\])?\s*$/;
 
 /** knowledge/distilled.md 파싱 → Lesson[]. */
@@ -147,8 +168,13 @@ function main(): void {
   const decisions = readJson<string[]>(argv[6], []);
   const distilledPath = argv[7];
   const outDaily = argv[8];
+  const constraints = readJson<ConstraintRule[]>(argv[9], []); // 선택 — active constraints 배열
 
-  const incoming = [...lessonsFromMergedPRs(merged, date), ...lessonsFromDecisions(decisions, date)];
+  const incoming = [
+    ...lessonsFromMergedPRs(merged, date),
+    ...lessonsFromDecisions(decisions, date),
+    ...lessonsFromConstraints(constraints, date),
+  ];
   const existing = parseDistilled(readText(distilledPath));
   const mergedLessons = mergeLessons(existing, incoming);
   if (distilledPath) writeFileSync(distilledPath, renderDistilled(mergedLessons));

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tokenize, retrieve, renderInjection } from "../knowledge-retrieve";
+import { tokenize, expand, retrieve, renderInjection } from "../knowledge-retrieve";
 import type { Lesson } from "../knowledge-base";
 
 const lessons: Lesson[] = [
@@ -20,10 +20,31 @@ describe("tokenize", () => {
   });
 });
 
+describe("expand (동의어 확장)", () => {
+  it("동의어 그룹으로 토큰 확장", () => {
+    const e = expand(["알림"]);
+    expect(e.has("푸시")).toBe(true);
+    expect(e.has("notification")).toBe(true);
+  });
+});
+
 describe("retrieve", () => {
   it("쿼리와 겹치는 교훈을 점수순 반환", () => {
     const r = retrieve("감정 캘린더 스트릭 기능 추가", lessons);
     expect(r[0]!.lesson.ref).toBe("PR#300"); // 감정+캘린더 겹침 최다
+  });
+  it("동의어로 recall — '푸시 notification' 쿼리가 '알림' 교훈 회수", () => {
+    const ls = [{ date: "2026-06-10", kind: "shipped" as const, text: "감정 변화 알림 발송", ref: "PR#999" }];
+    const r = retrieve("푸시 notification 시스템", ls);
+    expect(r.length).toBe(1);
+    expect(r[0]!.lesson.ref).toBe("PR#999");
+  });
+  it("동점이면 최신 교훈 우선(최신성 가중)", () => {
+    const ls = [
+      { date: "2026-05-01", kind: "shipped" as const, text: "감정 캘린더", ref: "PR#1" },
+      { date: "2026-06-10", kind: "shipped" as const, text: "감정 캘린더", ref: "PR#2" },
+    ];
+    expect(retrieve("감정 캘린더", ls, 6, "2026-06-11")[0]!.lesson.ref).toBe("PR#2");
   });
   it("관련 없으면 빈 배열", () => {
     expect(retrieve("로그인 OAuth 토큰 갱신", lessons)).toEqual([]);

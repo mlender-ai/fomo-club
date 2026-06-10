@@ -54,15 +54,22 @@ jobs:
             echo "[]" > /tmp/kb_hits.json
           fi
 
-          # 3) 결정(현재는 자동 추출 보류 — 후속) — 빈 배열
+          # 3) 결정(자유 텍스트) — 현재 빈 배열(후속: 브리프/플랜doc 추출)
           echo "[]" > /tmp/kb_decisions.json
+
+          # 4) 규칙(rule) 자동추출 — Standing Constraints(=CEO 확정 규칙)를 지식 rule 층으로
+          if [ -f constraints/active.json ]; then
+            jq '.constraints | map({id, rule, createdAt})' constraints/active.json > /tmp/kb_constraints.json 2>/dev/null || echo "[]" > /tmp/kb_constraints.json
+          else
+            echo "[]" > /tmp/kb_constraints.json
+          fi
 
           mkdir -p knowledge/daily
           [ -f knowledge/distilled.md ] || printf '' > knowledge/distilled.md
 
           NEW=$(npx -y tsx@4.19.2 scripts/knowledge-base.ts build \
             "$TODAY" /tmp/kb_merged.json /tmp/kb_hits.json /tmp/kb_decisions.json \
-            knowledge/distilled.md "knowledge/daily/${TODAY}.md" 2>/dev/null || echo 0)
+            knowledge/distilled.md "knowledge/daily/${TODAY}.md" /tmp/kb_constraints.json 2>/dev/null || echo 0)
           echo "NEW_LESSONS=$NEW" >> "$GITHUB_ENV"
           echo "KDATE=$TODAY" >> "$GITHUB_ENV"
           {
