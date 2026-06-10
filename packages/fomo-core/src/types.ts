@@ -58,6 +58,24 @@ export interface EmotionVote {
 }
 
 /**
+ * 데일리 챌린지 상태 (P2). 익명 세션 기반, 1세션 1일 1챌린지.
+ * accepted(수락) → completed(완료) 순으로 전이하며 완료 시 포인트가 적립된다.
+ */
+export interface ChallengeStatus {
+  /** YYYY-MM-DD */
+  date: string;
+  /** 챌린지 수락 여부. */
+  accepted: boolean;
+  /** 챌린지 완료 여부. */
+  completed: boolean;
+  /** 이 챌린지로 적립된 포인트. */
+  points: number;
+}
+
+/** 챌린지 상태 변경 액션. POST 본문 action 필드. */
+export type ChallengeAction = "accept" | "complete";
+
+/**
  * 감정 색상 체계 (검정 배경 위 포인트 색). docs/MASCOT.md §4.
  * FOMO=빨강 / 공포=파랑 / 후회=보라 / 탐욕=초록 / 확신=노랑.
  */

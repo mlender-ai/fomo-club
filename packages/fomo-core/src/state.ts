@@ -62,6 +62,20 @@ export function scoreToDescription(score: number): string {
   return bandFor(score).description;
 }
 
+/**
+ * 데일리 챌린지 1회 완료 시 적립 포인트 (P2).
+ * 정직한 숫자 원칙: 완료한 챌린지에 대해서만 고정 포인트를 적립한다.
+ */
+export const CHALLENGE_COMPLETE_POINTS = 10;
+
+/**
+ * 챌린지 완료 여부에 따른 적립 포인트.
+ * 미완료(수락만)는 0점, 완료 시에만 CHALLENGE_COMPLETE_POINTS 적립.
+ */
+export function challengePointsFor(completed: boolean): number {
+  return completed ? CHALLENGE_COMPLETE_POINTS : 0;
+}
+
 /** 전체 구간 메타데이터 (UI 범례, 설정 화면 등 활용). */
 export const ZONE_BANDS = BANDS.map(({ min, state, face, emoji, color, description }) => ({
   min,

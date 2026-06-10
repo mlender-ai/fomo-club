@@ -741,6 +741,25 @@ model EmotionVote {
   @@index([votedDate, emotion])
 }
 
+// 데일리 챌린지 상태 — 수락/완료/적립 포인트 추적 (P2)
+// 익명 세션 기반(무가입 허용). 가입자는 userId 선택 연결. 1세션 1일 1챌린지.
+model ChallengeState {
+  id            String    @id @default(cuid())
+  sessionId     String // 익명 세션 (웹: localStorage, 앱: 디바이스 ID)
+  userId        String? // 가입자만 (선택)
+  challengeDate String // YYYY-MM-DD (1일 1챌린지)
+  accepted      Boolean   @default(false) // 챌린지 수락 여부
+  completed     Boolean   @default(false) // 챌린지 완료 여부
+  points        Int       @default(0) // 이 챌린지로 적립된 포인트
+  acceptedAt    DateTime? // 수락 시각
+  completedAt   DateTime? // 완료 시각
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([sessionId, challengeDate]) // 1세션 1일 1챌린지
+  @@index([challengeDate])
+}
+
 // 일일 FOMO Index 스냅샷 — 파이프라인이 산출하여 저장
 model FomoIndexSnapshot {
   id            String   @id @default(cuid())
