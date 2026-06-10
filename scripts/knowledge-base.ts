@@ -70,6 +70,45 @@ export function lessonsFromConstraints(constraints: ConstraintRule[], fallbackDa
     }));
 }
 
+/**
+ * 기획문서(plan-doc) 본문의 "✅ CEO 결정" 섹션에서 결정 불릿을 추출.
+ * 사람이 승인/수정하며 적은 결정("포인트 유료화 보류" 등)이 지식 decision 층으로 적층된다.
+ * 섹션 헤더(## ✅ CEO 결정 …)부터 다음 헤더(##) 전까지의 "- " 불릿만, 마크업 정리.
+ */
+export function extractPlanDecisions(body: string): string[] {
+  const lines = (body || "").split("\n");
+  const out: string[] = [];
+  let inSection = false;
+  for (const line of lines) {
+    if (/^#{2,3}\s*.*CEO\s*결정/.test(line)) {
+      inSection = true;
+      continue;
+    }
+    if (inSection && /^#{1,3}\s/.test(line)) break; // 다음 섹션
+    if (inSection) {
+      const m = line.match(/^\s*-\s+(.*)$/);
+      if (m) {
+        const text = clean(m[1]!.replace(/\*\*/g, "").replace(/^[🚫✅⛔→>]+\s*/u, ""));
+        if (text.length >= 6) out.push(text.slice(0, 180));
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * 컴팩션 — 무한 누적 방지. rule/decision 은 전부 보존(가장 오래가는 지식),
+ * shipped 만 최신순으로 maxShipped 개 유지. (오래된 출고는 코드/inventory 가 이미 진실)
+ */
+export function compactLessons(lessons: Lesson[], maxShipped = 300): Lesson[] {
+  const keep = lessons.filter((l) => l.kind !== "shipped");
+  const shipped = lessons
+    .filter((l) => l.kind === "shipped")
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, maxShipped);
+  return [...keep, ...shipped];
+}
+
 const LINE_RE = /^- \[(\d{4}-\d{2}-\d{2})\]\s*\((shipped|decision|rule)\)\s*(.*?)(?:\s*\[출처:\s*([^\]]+)\])?\s*$/;
 
 /** knowledge/distilled.md 파싱 → Lesson[]. */
@@ -82,9 +121,18 @@ export function parseDistilled(md: string): Lesson[] {
   return out;
 }
 
-/** 멱등 누적 — ref 가 있으면 ref 로, 없으면 정규화 text 로 중복 판정. 신규만 추가. */
+/**
+ * 멱등 누적 — kind 별 중복 키. 신규만 추가.
+ *  - shipped/rule: ref 1개 = 교훈 1개 (PR 번호·constraint id 가 유일키)
+ *  - decision: 한 이슈(ref)에 결정이 여러 개 가능 → ref+text 로 판정 (같은 ref 붕괴 방지)
+ */
 export function mergeLessons(existing: Lesson[], incoming: Lesson[]): Lesson[] {
-  const keyOf = (l: Lesson) => (l.ref ? `ref:${l.ref.toLowerCase()}` : `txt:${l.text.toLowerCase()}`);
+  const keyOf = (l: Lesson) => {
+    const txt = l.text.toLowerCase();
+    if (!l.ref) return `txt:${txt}`;
+    if (l.kind === "decision") return `ref:${l.ref.toLowerCase()}|${txt}`;
+    return `ref:${l.ref.toLowerCase()}`;
+  };
   const seen = new Set(existing.map(keyOf));
   const merged = [...existing];
   for (const l of incoming) {
@@ -158,27 +206,37 @@ function readText(path: string | undefined): string {
  */
 function main(): void {
   const argv = process.argv;
+  if (argv[2] === "decisions") {
+    // decisions <plan_doc_body.md> → CEO 결정 불릿 JSON 배열 stdout
+    const body = readText(argv[3]);
+    process.stdout.write(JSON.stringify(extractPlanDecisions(body)));
+    return;
+  }
   if (argv[2] !== "build") {
-    console.error("usage: tsx scripts/knowledge-base.ts build <date> <merged.json> <hits.json> <decisions.json> <distilled.md> <out_daily.md>");
+    console.error("usage: tsx scripts/knowledge-base.ts <build|decisions> ...");
     process.exit(1);
   }
   const date = argv[3] ?? "";
   const merged = readJson<MergedPR[]>(argv[4], []);
   const hits = readJson<{ id: string; count: number }[]>(argv[5], []);
-  const decisions = readJson<string[]>(argv[6], []);
+  // decisions: string[] 또는 {text, ref}[] 둘 다 허용 — ref(issue#) 가 있으면 출처 보존
+  const decisionsRaw = readJson<Array<string | { text: string; ref?: string }>>(argv[6], []);
+  const decisionTexts = decisionsRaw.map((d) => (typeof d === "string" ? d : d.text ?? ""));
+  const decisionRefs = decisionsRaw.map((d) => (typeof d === "string" ? "" : d.ref ?? ""));
   const distilledPath = argv[7];
   const outDaily = argv[8];
   const constraints = readJson<ConstraintRule[]>(argv[9], []); // 선택 — active constraints 배열
 
-  const incoming = [
+  const dailyLessons = [
     ...lessonsFromMergedPRs(merged, date),
-    ...lessonsFromDecisions(decisions, date),
-    ...lessonsFromConstraints(constraints, date),
+    ...lessonsFromDecisions(decisionTexts, date, decisionRefs),
   ];
+  // 규칙(constraints)은 distilled 에만 — daily 노트가 매일 전체 규칙으로 도배되는 것 방지
+  const incoming = [...dailyLessons, ...lessonsFromConstraints(constraints, date)];
   const existing = parseDistilled(readText(distilledPath));
-  const mergedLessons = mergeLessons(existing, incoming);
+  const mergedLessons = compactLessons(mergeLessons(existing, incoming));
   if (distilledPath) writeFileSync(distilledPath, renderDistilled(mergedLessons));
-  if (outDaily) writeFileSync(outDaily, renderDailyNote(date, incoming, hits));
+  if (outDaily) writeFileSync(outDaily, renderDailyNote(date, dailyLessons, hits));
   process.stdout.write(String(mergedLessons.length - existing.length));
 }
 

@@ -96,6 +96,14 @@ jobs:
             CB=$(npx -y tsx@4.19.2 scripts/constraints.ts render-brief /tmp/ctx_c.json 2>/dev/null || echo "(조회 실패)")
           fi
           echo "constraints<<__CEOF__" >> "$GITHUB_OUTPUT"; echo "$CB" >> "$GITHUB_OUTPUT"; echo "__CEOF__" >> "$GITHUB_OUTPUT"
+          # K2 — 기획문서 작성 전, 관련 과거 지식(이미 출고/결정) 검색 재주입
+          KN="(지식 레이어 없음)"
+          if [ -f knowledge/distilled.md ]; then
+            PT=$(printf '%s' "$ACTIVE" | jq -r '.title // ""' 2>/dev/null || echo "")
+            PS=$(printf '%s' "$ACTIVE" | jq -r '.scope // ""' 2>/dev/null || echo "")
+            KN=$(npx -y tsx@4.19.2 scripts/knowledge-retrieve.ts retrieve knowledge/distilled.md "$PT $PS" 2>/dev/null || echo "(검색 실패)")
+          fi
+          echo "knowledge<<__KEOF__" >> "$GITHUB_OUTPUT"; echo "$KN" >> "$GITHUB_OUTPUT"; echo "__KEOF__" >> "$GITHUB_OUTPUT"
 
       - name: "기획문서(PRD) 작성 (기획 직군 LLM)"
         id: prd
@@ -129,6 +137,8 @@ jobs:
 
             ## Standing Constraints (자가점검 기준)
             ${{ steps.ctx.outputs.constraints }}
+
+            ${{ steps.ctx.outputs.knowledge }}
 
             위 프로젝트의 상세 기획문서(PRD)를 마크다운으로 작성하라.
 
