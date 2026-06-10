@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState, useMemo } from "react";
 import {
   EMOTION_TYPES,
   EMOTION_LABELS,
@@ -17,6 +17,7 @@ import { FomoFace } from "@/components/FomoFace";
 import { RollingBanner } from "@/components/RollingBanner";
 import { EmotionCalendar } from "@/components/EmotionCalendar";
 import { SignupGate } from "@/components/SignupGate";
+import { FomoIndexSkeleton, TallySkeleton } from "@/components/SkeletonLoader";
 import { stateGlow } from "@/lib/fomoVisual";
 import type {
   FomoIndexResponse,
@@ -31,7 +32,7 @@ type Tab = "home" | "calendar";
  * 메인 홈 — 하단 탭 바로 메인/캘린더 분기.
  * 향후 M4(피드) 등 탭 추가 시 TABS 배열에만 항목 추가하면 됨.
  */
-export function HomeView({
+export const HomeView = memo(function HomeView({
   index,
   tally,
   banner,
@@ -40,6 +41,7 @@ export function HomeView({
   onReopenGate,
   loggedIn,
   onLoggedIn,
+  isLoading = false,
 }: {
   index: FomoIndexResponse | null;
   tally: TallyResponse | null;
@@ -49,13 +51,26 @@ export function HomeView({
   onReopenGate: () => void;
   loggedIn: boolean;
   onLoggedIn: () => void;
+  isLoading?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("home");
 
-  const state = index ? scoreToState(index.score) : null;
-  const marketFace = index ? scoreToFace(index.score) : "curious";
+  const state = useMemo(() => (index ? scoreToState(index.score) : null), [index]);
+  const marketFace = useMemo(() => (index ? scoreToFace(index.score) : "curious"), [index]);
   const stage: "market" | "mine" = mine ? "mine" : "market";
-  const line = mine ? mineLine(mine) : state ? marketLine(state) : "";
+  const line = useMemo(
+    () => (mine ? mineLine(mine) : state ? marketLine(state) : ""),
+    [mine, state]
+  );
+  const glowColor = useMemo(
+    () =>
+      stage === "mine" && mine
+        ? EMOTION_COLORS[mine]
+        : index
+          ? stateGlow(index.score)
+          : undefined,
+    [stage, mine, index]
+  );
 
   return (
     <>
@@ -73,36 +88,36 @@ export function HomeView({
               <RollingBanner items={banner} />
             </div>
 
-            {/* 주인공: 포모 */}
-            <p className="mb-2 text-xs text-muted">{stage === "market" ? "오늘의 포모" : "나의 포모"}</p>
-            <FomoFace
-              face={stage === "market" ? marketFace : "calm"}
-              glow={
-                stage === "mine" && mine
-                  ? EMOTION_COLORS[mine]
-                  : index
-                    ? stateGlow(index.score)
-                    : undefined
-              }
-              size={84}
-            />
+            {/* 주인공: 포모 (로딩 중엔 스켈레톤) */}
+            {isLoading && !index ? (
+              <FomoIndexSkeleton />
+            ) : (
+              <>
+                <p className="mb-2 text-xs text-muted">{stage === "market" ? "오늘의 포모" : "나의 포모"}</p>
+                <FomoFace
+                  face={stage === "market" ? marketFace : "calm"}
+                  glow={glowColor}
+                  size={84}
+                />
 
-            {/* 보조: FOMO Index (픽셀) */}
-            <div className="mt-3 flex flex-col items-center">
-              {index ? (
-                <>
-                  <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
-                  <p className="mt-1.5 font-pixel text-xs text-muted">
-                    FOMO INDEX · {index.state}
-                    {index.prevDayDelta
-                      ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
-                      : ""}
-                  </p>
-                </>
-              ) : (
-                <p className="font-pixel text-sm text-muted">FOMO INDEX · 집계 준비 중</p>
-              )}
-            </div>
+                {/* 보조: FOMO Index (픽셀) */}
+                <div className="mt-3 flex flex-col items-center">
+                  {index ? (
+                    <>
+                      <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
+                      <p className="mt-1.5 font-pixel text-xs text-muted">
+                        FOMO INDEX · {index.state}
+                        {index.prevDayDelta
+                          ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
+                          : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="font-pixel text-sm text-muted">FOMO INDEX · 집계 준비 중</p>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* 포모의 담담한 한마디 */}
             {line && (
@@ -142,8 +157,12 @@ export function HomeView({
               </div>
             )}
 
-            {/* 집계 — 정직한 숫자 */}
-            {tally && (
+            {/* 집계 — 정직한 숫자 (로딩 중엔 스켈레톤) */}
+            {isLoading && !tally ? (
+              <section className="mt-7 w-full">
+                <TallySkeleton />
+              </section>
+            ) : tally && (
               <section className="mt-7 w-full">
                 <p className="text-xs text-muted">
                   오늘 <span className="font-pixel text-whiteout">{tally.total}</span>명이 마음을 남겼어요
@@ -212,7 +231,7 @@ export function HomeView({
       </nav>
     </>
   );
-}
+});
 
 function TabButton({
   active,
