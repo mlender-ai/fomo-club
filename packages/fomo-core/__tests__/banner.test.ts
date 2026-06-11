@@ -4,6 +4,7 @@ import {
   buildWhaleItems,
   buildMacroItems,
   yahooChange,
+  twelveDataChange,
   buildPulseItems,
   bannerFallback,
   parseStooqDailyChange,
@@ -87,6 +88,33 @@ describe("yahooChange", () => {
   it("유효 종가 2개 미만이면 null", () => {
     expect(yahooChange([null, 100])).toBeNull();
     expect(yahooChange([])).toBeNull();
+  });
+});
+
+describe("twelveDataChange", () => {
+  it("percent_change(문자열) 우선 신뢰 + close 파싱", () => {
+    const r = twelveDataChange({ close: "2611.45", previous_close: "2600.00", percent_change: "0.44" });
+    expect(r?.close).toBe(2611.45);
+    expect(r?.change).toBe(0.44);
+  });
+
+  it("percent_change 없으면 close/previous_close 로 계산", () => {
+    const r = twelveDataChange({ close: 4950, previous_close: 5000 });
+    expect(r?.close).toBe(4950);
+    expect(r && Math.round(r.change * 100) / 100).toBe(-1);
+  });
+
+  it("숫자 타입도 허용", () => {
+    const r = twelveDataChange({ close: 100, percent_change: 2.5 });
+    expect(r).toEqual({ close: 100, change: 2.5 });
+  });
+
+  it("status:error / null / close 결측 / prev 0 이면 null", () => {
+    expect(twelveDataChange({ status: "error", close: "100" })).toBeNull();
+    expect(twelveDataChange(null)).toBeNull();
+    expect(twelveDataChange(undefined)).toBeNull();
+    expect(twelveDataChange({ previous_close: "100" })).toBeNull();
+    expect(twelveDataChange({ close: 100, previous_close: 0 })).toBeNull();
   });
 });
 

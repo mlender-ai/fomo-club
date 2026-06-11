@@ -231,6 +231,39 @@ export function yahooChange(
   return { change: ((last - prev) / prev) * 100, close: last };
 }
 
+/**
+ * Twelve Data `/quote` 응답 1건에서 변화율(%)·최근 종가를 구한다.
+ * (Yahoo/Stooq가 Vercel egress IP를 레이트리밋·차단해 ^KS11 등이 상시 누락 →
+ *  무료키 기반 Twelve Data 로 1차 소스 교체. #480.)
+ * `percent_change`(문자열/숫자)를 우선 신뢰하고, 없으면 close/previous_close 로 계산.
+ * 값이 없거나 파싱 불가, 또는 status:"error" 면 null(→ 항목 생략 / Yahoo 폴백).
+ */
+export function twelveDataChange(
+  q:
+    | {
+        status?: string;
+        close?: string | number | null;
+        previous_close?: string | number | null;
+        percent_change?: string | number | null;
+      }
+    | null
+    | undefined
+): { change: number; close: number } | null {
+  if (!q || q.status === "error") return null;
+  const num = (v: unknown): number | null => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const close = num(q.close);
+  if (close === null) return null;
+  const pctChange = num(q.percent_change);
+  if (pctChange !== null) return { change: pctChange, close };
+  const prev = num(q.previous_close);
+  if (prev === null || prev === 0) return null;
+  return { change: ((close - prev) / prev) * 100, close };
+}
+
 /** 미증시/반도체/국내 지수 → BannerItem[]. 실측 변화율만, 결측은 생략. */
 export function buildMacroItems(quotes: MacroQuote[]): BannerItem[] {
   const items: BannerItem[] = [];
