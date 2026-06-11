@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   EMOTION_TYPES,
   EMOTION_LABELS,
@@ -18,6 +18,7 @@ import { RollingBanner } from "@/components/RollingBanner";
 import { EmotionCalendar } from "@/components/EmotionCalendar";
 import { SignupGate } from "@/components/SignupGate";
 import { VoiceFeed } from "@/components/VoiceFeed";
+import { FomoIndexSkeleton, TallySkeleton } from "@/components/SkeletonLoader";
 import { stateGlow } from "@/lib/fomoVisual";
 import type {
   FomoIndexResponse,
@@ -61,6 +62,17 @@ export function HomeView({
   const stage: "market" | "mine" = mine ? "mine" : "market";
   const line = mine ? mineLine(mine) : state ? marketLine(state) : "";
 
+  // FomoFace props 메모이제이션 — 불필요한 리렌더 방지 (이슈 #410)
+  const fomoFaceGlow = useMemo(
+    () =>
+      stage === "mine" && mine
+        ? EMOTION_COLORS[mine]
+        : index
+          ? stateGlow(index.score)
+          : undefined,
+    [stage, mine, index]
+  );
+
   return (
     <>
       <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col items-center px-6 pb-24 pt-5">
@@ -81,32 +93,24 @@ export function HomeView({
             <p className="mb-2 text-xs text-muted">{stage === "market" ? "오늘의 포모" : "나의 포모"}</p>
             <FomoFace
               face={stage === "market" ? marketFace : "calm"}
-              glow={
-                stage === "mine" && mine
-                  ? EMOTION_COLORS[mine]
-                  : index
-                    ? stateGlow(index.score)
-                    : undefined
-              }
               size={84}
+              {...(fomoFaceGlow !== undefined ? { glow: fomoFaceGlow } : {})}
             />
 
             {/* 보조: FOMO Index (픽셀) */}
-            <div className="mt-3 flex flex-col items-center">
-              {index ? (
-                <>
-                  <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
-                  <p className="mt-1.5 font-pixel text-xs text-muted">
-                    FOMO INDEX · {index.state}
-                    {index.prevDayDelta
-                      ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
-                      : ""}
-                  </p>
-                </>
-              ) : (
-                <p className="font-pixel text-sm text-muted">FOMO INDEX · 집계 준비 중</p>
-              )}
-            </div>
+            {index ? (
+              <div className="mt-3 flex flex-col items-center">
+                <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
+                <p className="mt-1.5 font-pixel text-xs text-muted">
+                  FOMO INDEX · {index.state}
+                  {index.prevDayDelta
+                    ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
+                    : ""}
+                </p>
+              </div>
+            ) : (
+              <FomoIndexSkeleton />
+            )}
 
             {/* 포모의 담담한 한마디 */}
             {line && (
@@ -146,8 +150,8 @@ export function HomeView({
               </div>
             )}
 
-            {/* 집계 — 정직한 숫자 */}
-            {tally && (
+            {/* 집계 — 정직한 숫자. 로딩 중이면 스켈레톤(이슈 #409). */}
+            {tally ? (
               <section className="mt-7 w-full">
                 <p className="text-xs text-muted">
                   오늘 <span className="font-pixel text-whiteout">{tally.total}</span>명이 마음을 남겼어요
@@ -185,6 +189,8 @@ export function HomeView({
                   ))}
                 </div>
               </section>
+            ) : (
+              <TallySkeleton />
             )}
 
             {/* 면책 — 담담하게 */}
