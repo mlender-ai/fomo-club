@@ -1,231 +1,71 @@
-# AI Research Operating System
+# taro-stock-app — FOMO Club 모노레포
 
-Personal stock research product focused on one sharp job:
+> **현재 최우선 제품: FOMO Club** — 물려 있고 비교에 시달리는 투자자를 위한 감정 동반자(MLP).
+> 기존 "Trading Taro"(증권 타로 해석)에서 리포지셔닝 중이며, 타로 엔진/코드는 해석 백엔드로 **보존**한다.
+> 정체성 정본은 [`docs/IDENTITY_AND_MILESTONES.md`](docs/IDENTITY_AND_MILESTONES.md), 에이전트 규칙은 [`CLAUDE.md`](CLAUDE.md).
 
-`help me understand what matters, what to do next, and which related names move with it in under 3 minutes.`
+---
 
-The product is no longer just a paper-trading console.
-It now has three core user surfaces:
+## 모노레포 지도 (현재 살아있는 구조)
 
-- `뉴스`: headline-first market brief
-- `티커 분석`: deep technical and context-aware ticker analysis
-- `에이전트 회의`: internal AI product/team loop that reviews the product and creates execution items
+| 앱/패키지 | 목적 | 스택 | 상태 | 진입점 |
+|---|---|---|---|---|
+| **`apps/fomo-web`** | FOMO Club 웹 (무가입 둘러보기) — **주력** | Next.js 14, Tailwind | 라이브 (Vercel) | `app/page.tsx` → splash→gate→home, 탭(오늘/피드/기록) |
+| **`apps/web`** | API + 어드민 + 리서치 워크스페이스 | Next.js 14 | 라이브 | `app/api/fomo/*`(FOMO API), `app/api/tarot/*`(타로 API), `app/admin/*` |
+| **`packages/fomo-core`** | FOMO Index 산출·마스코트·배너·voices 도메인 로직 | TS (순수함수) | 활성 | `src/index.ts` |
+| **`apps/tarot-mobile`** | 타로 네이티브 앱 (RevenueCat·소셜로그인) | Expo / RN | 보존 | `app/` (expo-router) |
+| **`apps/fomo-club`** | FOMO Club 네이티브 앱 | Expo / RN, NativeWind | 보류 (토큰 절약) | `app/` |
+| `packages/tarot-core` | 타로 프롬프트·해석·안전 로직 | TS | 보존 | `src/index.ts` |
+| `packages/shared` | 공용 타입·유틸 | TS | 활성 | `src/index.ts` |
+| `apps/api` | 레거시 페이퍼트레이딩(Fastify+worker) | Fastify | **레거시(처분 검토)** | `src/` |
 
-There are also two depth pages:
+> 워크스페이스: `apps/*`, `packages/*` (npm workspaces).
 
-- `/ticker/[ticker]`: ticker deep dive with chart, catalysts, scenarios, and related opportunities
-- `/sector/[sector]`: sector deep dive with routine, catalysts, and cross-market beneficiary set
+---
 
-## Product State
+## FOMO Club 한눈에
 
-What is already working:
+- **핵심 경험**: 앱을 열면 마스코트 "포모"의 표정이 곧 오늘의 FOMO Index. 감정 5종(FOMO/공포/후회/탐욕/확신) 중 하나를 고르면 포모가 반응하고 담담한 한마디를 건넨다.
+- **데이터 원칙**: 정직한 숫자만 — 가짜 데이터 금지. 무가입 익명 세션 집계.
+- **마일스톤**: M0 정체성 → M1 사랑스러운 한 순간 → M2 감정 캘린더 → M3 집단 위로(배너) → M4 구조화 한마디 피드. (`docs/IDENTITY_AND_MILESTONES.md`)
+- **FOMO Index**: `packages/fomo-core`에서 4개 Heat(market/community/emotion/whale) 가중 산출. 금융 지표가 아닌 **감정 체감 온도계**(투자 조언 아님).
 
-- personalized home briefing for favorite sectors and tickers
-- live research data before fallback where possible
-- ticker and sector search
-- US/KR cross-market related opportunity mapping
-- GitHub Actions research pipeline and newsletter generation
-- design-system driven research UI with loading / error / not-found fallback screens
+---
 
-What is still partial:
-
-- email newsletter delivery depends on sender secrets
-- GitHub Models can still hit rate limits and fall back
-- related opportunity graph is still rule-based, not full relationship intelligence
-- portfolio-native workflow is not implemented yet
-
-## Repository Map
-
-- `apps/web`: Next.js App Router product UI and API routes
-- `apps/api`: Fastify/worker runtime for the older console and paper-trading layer
-- `packages/shared`: shared research contracts, pipeline structs, live data shaping
-- `generated/research`: published research snapshot consumed by the app and GitHub Actions
-- `docs`: deploy, roadmap, and handoff documents
-- `DESIGN.md`: design system source of truth for future UI work
-
-## Key Entry Points
-
-Product pages:
-
-- [`apps/web/app/page.tsx`](apps/web/app/page.tsx)
-- [`apps/web/app/ticker/[ticker]/page.tsx`](apps/web/app/ticker/[ticker]/page.tsx)
-- [`apps/web/app/sector/[sector]/page.tsx`](apps/web/app/sector/[sector]/page.tsx)
-
-Main UI logic:
-
-- [`apps/web/components/research/ResearchWorkspace.tsx`](apps/web/components/research/ResearchWorkspace.tsx)
-- [`apps/web/app/globals.css`](apps/web/app/globals.css)
-- [`apps/web/lib/researchPipelineStore.ts`](apps/web/lib/researchPipelineStore.ts)
-- [`apps/web/lib/researchInsights.ts`](apps/web/lib/researchInsights.ts)
-
-Shared contracts and live data:
-
-- [`packages/shared/src/research.ts`](packages/shared/src/research.ts)
-- [`packages/shared/src/researchLive.ts`](packages/shared/src/researchLive.ts)
-- [`packages/shared/src/researchBehaviorStore.ts`](packages/shared/src/researchBehaviorStore.ts)
-
-Automation and generated content:
-
-- [`scripts/research-pipeline.ts`](scripts/research-pipeline.ts)
-- [`scripts/research-agent-issues.ts`](scripts/research-agent-issues.ts)
-- [`scripts/research-newsletter.ts`](scripts/research-newsletter.ts)
-- [`.github/workflows/research-pipeline.yml`](.github/workflows/research-pipeline.yml)
-- [`.github/workflows/daily-newsletter.yml`](.github/workflows/daily-newsletter.yml)
-
-## Design System
-
-The repo now includes a project-root [`DESIGN.md`](DESIGN.md) inspired by the `DESIGN.md` workflow popularized by [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md).
-
-The design direction blends:
-
-- Linear: precise, quiet product hierarchy
-- Revolut: fintech trust and crisp data presentation
-- Tesla: subtraction and restraint
-
-Important UI rule:
-
-- never expose implementation words like `pipeline`, `provider`, `runtime`, `JSON`, or internal debug phrasing on user-facing primary surfaces
-
-## Docs Index
-
-- Product roadmap: [`docs/product-strategy-roadmap.md`](docs/product-strategy-roadmap.md)
-- Research MVP deploy handoff: [`docs/research-mvp-deploy-handoff.md`](docs/research-mvp-deploy-handoff.md)
-- Agent/dev handoff: [`docs/agent-handoff.md`](docs/agent-handoff.md)
-- Deployment runbook: [`docs/deployment.md`](docs/deployment.md)
-- Paper trading setup: [`docs/paper-trading-setup.md`](docs/paper-trading-setup.md)
-- Telegram setup: [`docs/telegram-setup.md`](docs/telegram-setup.md)
-
-## Local Commands
-
-Run from the repo root:
+## 개발
 
 ```bash
-npm install
-npm run dev:web
-npm run dev:api
-npm run research:generate
-npm run research:issues
-npm run research:newsletter
-npm run qa:screenshot -- --url http://127.0.0.1:3100/ --out /tmp/qa-home.png --width 1440 --height 1200 --budget 7000
+npm install                 # 루트에서 1회
+
+# 개발 서버
+npm run dev:fomo-web        # FOMO 웹 (포트 3300)
+npm run dev:web             # API + 어드민 (포트 3200)
+npm run dev:mobile          # 타로 모바일 (expo)
+npm run dev:fomo-club       # FOMO 네이티브 (expo)
+
+# 검증 (push 전 필수 — CLAUDE.md)
+npm run lint                # = typecheck
+npm run typecheck           # 전 워크스페이스
+npm run build:web           # API 빌드
+npm run test                # vitest (전 패키지)
+npx prisma validate         # 스키마 변경 시
 ```
 
-Main scripts:
+배포: `main` push → Vercel 자동 배포(`apps/fomo-web`, `apps/web`). DB는 Supabase(`db-push.yml` 수동 dispatch, ADR-003: migrate 대신 db push).
 
-- `npm run dev:web`
-- `npm run dev:api`
-- `npm run dev`
-- `npm run typecheck`
-- `npm run build:web`
-- `npm run research:generate`
-- `npm run research:issues`
-- `npm run research:newsletter`
-- `npm run qa:screenshot`
-- `npm run paper:status`
+**필수 prod 시크릿**(미설정 시 해당 라우트 fail-closed): `TAROT_API_SECRET`·`REWARD_NONCE_SECRET`(각 32자+), `DATABASE_URL`, `GROQ_API_KEY`. 전체 목록은 `.env.example`.
 
-Notes:
+---
 
-- web is pinned to `http://127.0.0.1:3100`
-- the homepage prefers stored or published snapshot data before rebuilding live data
-- the meeting tab hydrates heavier transcript/review data lazily
-- if Next dev chunks go weird, run `npm run clean:web`
+## 문서 위계
 
-## Live Data And Snapshot Flow
+```
+CLAUDE.md                          ← 에이전트 진입점·행동 규칙 (최상위)
+docs/IDENTITY_AND_MILESTONES.md    ← 제품 정체성(North Star, MLP)
+docs/FOMO_CLUB.md / FOMO_INDEX.md  ← FOMO 정의·지표
+docs/MASCOT.md / DESIGN_FOMO.md    ← 마스코트·디자인 시스템
+AGENTS.md                          ← 에이전트 역할·라우팅
+docs/M4_EXECUTION_PLAN.md          ← 진행 중 실행 계획
+```
 
-The product prefers live data first and degrades into a published snapshot when needed.
-
-Primary live sources:
-
-- Yahoo Finance RSS for news
-- Yahoo Finance chart API for ticker candles
-- source-page `og:image` / `twitter:image` extraction for article visuals
-
-Snapshot flow:
-
-1. pipeline generates `generated/research/latest.json` and `generated/research/latest.md`
-2. GitHub Actions publishes the same snapshot back to `main`
-3. web reads stored snapshot first, then published snapshot, then live build as fallback
-
-This keeps:
-
-- web UI
-- newsletter generation
-- GitHub Actions summaries
-
-on the same research data contract.
-
-## GitHub Models / AI Runtime
-
-The research pipeline can run without an external OpenAI key when GitHub Actions has:
-
-- `models: read`
-- `GITHUB_TOKEN`
-
-Supported runtime envs:
-
-- `AI_API_URL`
-- `AI_API_KEY`
-- `AI_MODEL`
-- `AI_TEMPERATURE`
-
-Fallback behavior:
-
-- if model calls fail or rate-limit, the pipeline can still produce a rule-based snapshot instead of leaving the UI empty
-
-## Deployment Overview
-
-Current recommended path:
-
-1. Vercel for `apps/web`
-2. GitHub Actions for research snapshot generation
-3. Resend for newsletter delivery when secrets are ready
-4. Railway only if the paper-trading/API stack needs to stay active
-
-Detailed deploy info lives in [`docs/research-mvp-deploy-handoff.md`](docs/research-mvp-deploy-handoff.md) and [`docs/deployment.md`](docs/deployment.md).
-
-## Environment Variables
-
-Core research product envs:
-
-- `DASHBOARD_PASSWORD`
-- `RESEARCH_PUBLISHED_SNAPSHOT_URL`
-- `AI_API_URL`
-- `AI_API_KEY`
-- `AI_MODEL`
-- `AI_TEMPERATURE`
-- `NEWSLETTER_TO`
-- `NEWSLETTER_FROM`
-- `RESEND_API_KEY`
-
-Legacy / broader stack envs:
-
-- `NEXT_PUBLIC_API_BASE_URL`
-- `API_PASSWORD`
-- `BOT_PASSWORD`
-- `DATABASE_URL`
-- `CONFIG_ENCRYPTION_SECRET`
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-
-Reference values are in [`.env.example`](.env.example).
-
-## Git Workflow
-
-Recommended:
-
-1. branch from `main`
-2. keep research UI, data, and automation changes scoped
-3. run `npm run typecheck` and `npm run build:web`
-4. if UI changed, capture a screenshot with `npm run qa:screenshot`
-5. open a PR or push to the intended branch
-
-PR template:
-
-- [`.github/pull_request_template.md`](.github/pull_request_template.md)
-
-## Operational Guardrails
-
-- keep deploys rollback-friendly
-- avoid mixing risky migration work with large UI changes in the same PR
-- prefer additive data contracts
-- keep generated snapshot updates deterministic
-- if the product cannot load, show recovery UI instead of exposing raw failure
+타로 관련 **신규** 기능·이슈·PR은 받지 않는다(보존만). FOMO Club이 유일한 신규 개발 대상.

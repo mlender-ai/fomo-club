@@ -1,5 +1,5 @@
 {
-  "name": "auto-trading-bot",
+  "name": "taro-stock-app",
   "private": true,
   "workspaces": [
     "apps/*",
