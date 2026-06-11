@@ -83,46 +83,56 @@ function determineConfidence(available: number, total: number): HeatConfidence {
  * 소스가 하나도 없으면 중립값(15) + confidence="fallback".
  */
 export function communityHeat(signals: CommunitySignals = {}): HeatComponent {
-  // ── 각 소스 추출 ──
-  const mention = mentionIntensity(signals.mentionChangePct);
+  try {
+    // ── 각 소스 추출 ──
+    const mention = mentionIntensity(signals.mentionChangePct);
 
-  const bullish =
-    signals.bullishRatio == null || Number.isNaN(signals.bullishRatio)
-      ? null
-      : Math.max(0, Math.min(1, signals.bullishRatio));
+    const bullish =
+      signals.bullishRatio == null || Number.isNaN(signals.bullishRatio)
+        ? null
+        : Math.max(0, Math.min(1, signals.bullishRatio));
 
-  // reddit(레거시) + sources(다중 프로바이더: X/Telegram/Toss/Naver…)를 하나의 engagement 풀로 합산.
-  const reddit = redditEngagementScore([
-    ...(signals.reddit ?? []),
-    ...(signals.sources ?? []).map((s) => ({
-      subreddit: s.source,
-      postCount: s.postCount,
-      totalUpvotes: s.totalUpvotes,
-      totalComments: s.totalComments,
-      bullishRatio: s.bullishRatio,
-      fetchedAt: s.fetchedAt,
-    })),
-  ]);
+    // reddit(레거시) + sources(다중 프로바이더: X/Telegram/Toss/Naver…)를 하나의 engagement 풀로 합산.
+    const reddit = redditEngagementScore([
+      ...(signals.reddit ?? []),
+      ...(signals.sources ?? []).map((s) => ({
+        subreddit: s.source,
+        postCount: s.postCount,
+        totalUpvotes: s.totalUpvotes,
+        totalComments: s.totalComments,
+        bullishRatio: s.bullishRatio,
+        fetchedAt: s.fetchedAt,
+      })),
+    ]);
 
-  // ── 가중 평균 산출 ──
-  const parts = [mention, bullish, reddit].filter((v): v is number => v != null);
+    // ── 가중 평균 산출 ──
+    const parts = [mention, bullish, reddit].filter((v): v is number => v != null);
 
-  const SOURCES_TOTAL = 3; // mentionChangePct, bullishRatio, 커뮤니티집계(reddit+sources)
-  const sourcesAvailable = parts.length;
+    const SOURCES_TOTAL = 3; // mentionChangePct, bullishRatio, 커뮤니티집계(reddit+sources)
+    const sourcesAvailable = parts.length;
 
-  const score =
-    parts.length === 0
-      ? NEUTRAL
-      : Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * COMMUNITY_HEAT_MAX);
+    const score =
+      parts.length === 0
+        ? NEUTRAL
+        : Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * COMMUNITY_HEAT_MAX);
 
-  // ── 신뢰도 메타 (1-B) ──
-  const meta: HeatMeta = {
-    confidence: determineConfidence(sourcesAvailable, SOURCES_TOTAL),
-    sourcesTotal: SOURCES_TOTAL,
-    sourcesAvailable,
-  };
+    // ── 신뢰도 메타 (1-B) ──
+    const meta: HeatMeta = {
+      confidence: determineConfidence(sourcesAvailable, SOURCES_TOTAL),
+      sourcesTotal: SOURCES_TOTAL,
+      sourcesAvailable,
+    };
 
-  return { key: "community", score: clamp(score), max: COMMUNITY_HEAT_MAX, meta };
+    return { key: "community", score: clamp(score), max: COMMUNITY_HEAT_MAX, meta };
+  } catch (err) {
+    console.warn("[fomo-core/communityHeat] unexpected error, using fallback", err);
+    return {
+      key: "community",
+      score: NEUTRAL,
+      max: COMMUNITY_HEAT_MAX,
+      meta: { confidence: "fallback", sourcesTotal: 3, sourcesAvailable: 0 },
+    };
+  }
 }
 
 function clamp(n: number): number {

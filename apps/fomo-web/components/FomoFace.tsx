@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { FomoFace as FomoFaceType } from "@fomo/core";
 
 /**
@@ -77,7 +78,11 @@ const OUTLINE = "#6E6E82";
 const BODY = "#F2F2EA";
 const EYE = "#2A2A35";
 
-export function FomoFace({
+/**
+ * props가 동일하면 리렌더링을 건너뛴다 (이슈 #410).
+ * face/glow/size 변경 시에만 재렌더.
+ */
+export const FomoFace = memo(function FomoFace({
   face,
   glow,
   size = 168,
@@ -132,4 +137,4 @@ export function FomoFace({
       </svg>
     </div>
   );
-}
+}, (prev, next) => prev.face === next.face && prev.glow === next.glow && prev.size === next.size);

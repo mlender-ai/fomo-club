@@ -30,28 +30,38 @@ function determineConfidence(available: number, total: number): HeatConfidence {
  * 신호가 하나도 없으면 중립값(15)으로 폴백. 절대 에러/빈값 노출 금지.
  */
 export function marketHeat(signals: MarketSignals = {}): HeatComponent {
-  const parts = [
-    intensity(signals.volumeChangePct),
-    intensity(signals.turnoverChangePct),
-    intensity(signals.searchChangePct),
-    intensity(signals.etfInflowPct),
-  ].filter((v): v is number => v != null);
+  try {
+    const parts = [
+      intensity(signals.volumeChangePct),
+      intensity(signals.turnoverChangePct),
+      intensity(signals.searchChangePct),
+      intensity(signals.etfInflowPct),
+    ].filter((v): v is number => v != null);
 
-  const SOURCES_TOTAL = 4;
-  const sourcesAvailable = parts.length;
+    const SOURCES_TOTAL = 4;
+    const sourcesAvailable = parts.length;
 
-  const score =
-    parts.length === 0
-      ? NEUTRAL
-      : Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * MARKET_HEAT_MAX);
+    const score =
+      parts.length === 0
+        ? NEUTRAL
+        : Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * MARKET_HEAT_MAX);
 
-  const meta: HeatMeta = {
-    confidence: determineConfidence(sourcesAvailable, SOURCES_TOTAL),
-    sourcesTotal: SOURCES_TOTAL,
-    sourcesAvailable,
-  };
+    const meta: HeatMeta = {
+      confidence: determineConfidence(sourcesAvailable, SOURCES_TOTAL),
+      sourcesTotal: SOURCES_TOTAL,
+      sourcesAvailable,
+    };
 
-  return { key: "market", score: clamp(score), max: MARKET_HEAT_MAX, meta };
+    return { key: "market", score: clamp(score), max: MARKET_HEAT_MAX, meta };
+  } catch (err) {
+    console.warn("[fomo-core/marketHeat] unexpected error, using fallback", err);
+    return {
+      key: "market",
+      score: NEUTRAL,
+      max: MARKET_HEAT_MAX,
+      meta: { confidence: "fallback", sourcesTotal: 4, sourcesAvailable: 0 },
+    };
+  }
 }
 
 function clamp(n: number): number {

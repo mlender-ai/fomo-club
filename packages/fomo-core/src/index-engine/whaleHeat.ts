@@ -16,16 +16,26 @@ export const WHALE_HEAT_MAX = 10;
  * 이벤트 가중치 합. 이벤트가 없으면 0 (보너스성 Heat이므로 부재는 0이 안전한 기본값).
  */
 export function whaleHeat(events: WhaleEvent[] = []): HeatComponent {
-  const validEvents = events.filter((e) => Number.isFinite(e.weight) && e.weight > 0);
-  const sum = validEvents.reduce((acc, e) => acc + e.weight, 0);
+  try {
+    const validEvents = events.filter((e) => Number.isFinite(e.weight) && e.weight > 0);
+    const sum = validEvents.reduce((acc, e) => acc + e.weight, 0);
 
-  const meta: HeatMeta = {
-    confidence: validEvents.length > 0 ? "high" : "fallback",
-    sourcesTotal: 1, // 단일 소스: 이벤트 피드
-    sourcesAvailable: validEvents.length > 0 ? 1 : 0,
-  };
+    const meta: HeatMeta = {
+      confidence: validEvents.length > 0 ? "high" : "fallback",
+      sourcesTotal: 1, // 단일 소스: 이벤트 피드
+      sourcesAvailable: validEvents.length > 0 ? 1 : 0,
+    };
 
-  return { key: "whale", score: clamp(Math.round(sum)), max: WHALE_HEAT_MAX, meta };
+    return { key: "whale", score: clamp(Math.round(sum)), max: WHALE_HEAT_MAX, meta };
+  } catch (err) {
+    console.warn("[fomo-core/whaleHeat] unexpected error, using fallback", err);
+    return {
+      key: "whale",
+      score: 0,
+      max: WHALE_HEAT_MAX,
+      meta: { confidence: "fallback", sourcesTotal: 1, sourcesAvailable: 0 },
+    };
+  }
 }
 
 function clamp(n: number): number {

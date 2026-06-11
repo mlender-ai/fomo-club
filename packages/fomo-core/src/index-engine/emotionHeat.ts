@@ -29,36 +29,46 @@ function voteConfidence(total: number): HeatConfidence {
  * 투표가 0건이면 중립값(15)으로 폴백 (정직한 숫자: 표가 없으면 과열로 보지 않음).
  */
 export function emotionHeat(tally: EmotionTally = {}): HeatComponent {
-  const fomo = tally.fomo ?? 0;
-  const greed = tally.greed ?? 0;
-  const fear = tally.fear ?? 0;
-  const regret = tally.regret ?? 0;
-  const conviction = tally.conviction ?? 0;
+  try {
+    const fomo = tally.fomo ?? 0;
+    const greed = tally.greed ?? 0;
+    const fear = tally.fear ?? 0;
+    const regret = tally.regret ?? 0;
+    const conviction = tally.conviction ?? 0;
 
-  const total = fomo + greed + fear + regret + conviction;
+    const total = fomo + greed + fear + regret + conviction;
 
-  if (total === 0) {
+    if (total === 0) {
+      const meta: HeatMeta = {
+        confidence: "fallback",
+        sourcesTotal: 1, // 단일 소스: 사용자 투표
+        sourcesAvailable: 0,
+      };
+      return { key: "emotion", score: NEUTRAL, max: EMOTION_HEAT_MAX, meta };
+    }
+
+    const bullish = fomo + greed;
+    const bearish = fear + regret;
+    // net ∈ [-1, 1] — 확신(conviction)은 분모에 포함되어 과열을 희석.
+    const net = (bullish - bearish) / total;
+    const score = Math.round(NEUTRAL + net * NEUTRAL);
+
     const meta: HeatMeta = {
-      confidence: "fallback",
-      sourcesTotal: 1, // 단일 소스: 사용자 투표
-      sourcesAvailable: 0,
+      confidence: voteConfidence(total),
+      sourcesTotal: 1,
+      sourcesAvailable: 1,
     };
-    return { key: "emotion", score: NEUTRAL, max: EMOTION_HEAT_MAX, meta };
+
+    return { key: "emotion", score: clamp(score), max: EMOTION_HEAT_MAX, meta };
+  } catch (err) {
+    console.warn("[fomo-core/emotionHeat] unexpected error, using fallback", err);
+    return {
+      key: "emotion",
+      score: NEUTRAL,
+      max: EMOTION_HEAT_MAX,
+      meta: { confidence: "fallback", sourcesTotal: 1, sourcesAvailable: 0 },
+    };
   }
-
-  const bullish = fomo + greed;
-  const bearish = fear + regret;
-  // net ∈ [-1, 1] — 확신(conviction)은 분모에 포함되어 과열을 희석.
-  const net = (bullish - bearish) / total;
-  const score = Math.round(NEUTRAL + net * NEUTRAL);
-
-  const meta: HeatMeta = {
-    confidence: voteConfidence(total),
-    sourcesTotal: 1,
-    sourcesAvailable: 1,
-  };
-
-  return { key: "emotion", score: clamp(score), max: EMOTION_HEAT_MAX, meta };
 }
 
 function clamp(n: number): number {

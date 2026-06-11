@@ -16,6 +16,7 @@ import {
   EMOTION_COLORS,
   scoreToFace,
   scoreToState,
+  scoreToColor,
   marketLine,
   marketSummary,
   mineLine,
@@ -46,6 +47,8 @@ export default function Home() {
   const stage: "market" | "mine" = mine ? "mine" : "market";
   const marketFace: FomoFaceType = index ? scoreToFace(index.score) : "curious";
   const state = index ? scoreToState(index.score) : null;
+  // FOMO 상태별 포인트 색 — 숫자 자체가 감정 온도를 드러낸다 (이슈 #412).
+  const indexColor = index ? scoreToColor(index.score) : FomoColors.whiteout;
   // 포모의 담담한 한마디: 선택 전=시장의 포모, 선택 후=나의 포모. @fomo/core.
   const line = mine ? mineLine(mine) : state ? marketLine(state) : "";
   // 시장 glow: 달아오르면 따뜻하게, 차분하면 옅게/없음.
@@ -135,7 +138,8 @@ export default function Home() {
             <ActivityIndicator color={FomoColors.muted} />
           ) : index ? (
             <>
-              <Text style={styles.indexText}>{index.score}</Text>
+              {/* 이슈 #412: 상태별 포인트 색으로 숫자 자체가 감정 온도를 나타낸다. */}
+              <Text style={[styles.indexText, { color: indexColor }]}>{index.score}</Text>
               <Text style={styles.muted}>FOMO INDEX · {index.state}</Text>
               {/* 3초 직관 요약 — 숫자가 무슨 온도인지 한 줄로. */}
               <Text style={styles.indexSummary}>{marketSummary(scoreToState(index.score))}</Text>
