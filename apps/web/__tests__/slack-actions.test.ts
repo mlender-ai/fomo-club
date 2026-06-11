@@ -48,6 +48,20 @@ describe("parseActions", () => {
     expect(r.actions.map((a) => a.name)).toEqual(["merge_all", "close_all"]);
   });
 
+  // 2026-06-11 사고: LLM 이 같은 토큰을 2번 출력 → 워크플로 2번 dispatch → main push race
+  it("같은 액션 중복 출력은 한 번만 (멱등)", () => {
+    const r = parseActions("프로젝트 제안할게요.\n[[ACTION:propose_projects]]\n[[ACTION:propose_projects]]");
+    expect(r.actions).toEqual([{ name: "propose_projects", payload: {} }]);
+  });
+
+  it("같은 이름이라도 페이로드가 다르면 둘 다 유지", () => {
+    const r = parseActions('[[ACTION:merge]] {"pr":1}\n[[ACTION:merge]] {"pr":2}');
+    expect(r.actions).toEqual([
+      { name: "merge", payload: { pr: 1 } },
+      { name: "merge", payload: { pr: 2 } },
+    ]);
+  });
+
   it("merge_all·close_completed·close_all 은 고영향으로 분류", () => {
     expect(HIGH_IMPACT_ACTIONS.has("merge_all")).toBe(true);
     expect(HIGH_IMPACT_ACTIONS.has("close_completed")).toBe(true);

@@ -87,27 +87,38 @@ export function parseActions(reply: string): ParseResult {
   const actions: ParsedAction[] = [];
   let cleaned = reply;
 
+  // 같은 (name, payload) 조합은 한 번만 실행한다.
+  // LLM 이 동일 토큰을 중복 출력하면 워크플로가 2번 dispatch 되어 main push race 가
+  // 발생한다(2026-06-11 propose_projects 중복 사고). 여기서 멱등하게 막는다.
+  const seen = new Set<string>();
+  const pushUnique = (action: ParsedAction): void => {
+    const key = `${action.name}:${JSON.stringify(action.payload)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    actions.push(action);
+  };
+
   // 1) 범용 [[ACTION:name]] {json}?
   const actionRe = /\[\[ACTION:(\w+)\]\]\s*(\{[^\n]*\})?/g;
   let m: RegExpExecArray | null;
   while ((m = actionRe.exec(reply)) !== null) {
     const name = m[1];
     if (name && KNOWN_ACTIONS.has(name)) {
-      actions.push({ name: name as ActionName, payload: safeJson(m[2]) });
+      pushUnique({ name: name as ActionName, payload: safeJson(m[2]) });
     }
   }
   cleaned = cleaned.replace(actionRe, "").trim();
 
   // 2) 하위호환: [[TRIGGER_IMPLEMENT]]
   if (/\[\[TRIGGER_IMPLEMENT\]\]/.test(cleaned)) {
-    actions.push({ name: "implement", payload: {} });
+    pushUnique({ name: "implement", payload: {} });
     cleaned = cleaned.replace(/\[\[TRIGGER_IMPLEMENT\]\]/g, "").trim();
   }
 
   // 3) 하위호환: [[ADD_CONSTRAINT]]{json}
   const addC = cleaned.match(/\[\[ADD_CONSTRAINT\]\]\s*(\{[^\n]*\})/);
   if (addC && addC[1]) {
-    actions.push({ name: "add_constraint", payload: safeJson(addC[1]) });
+    pushUnique({ name: "add_constraint", payload: safeJson(addC[1]) });
     cleaned = cleaned.replace(/\[\[ADD_CONSTRAINT\]\]\s*\{[^\n]*\}/g, "").trim();
   }
 
