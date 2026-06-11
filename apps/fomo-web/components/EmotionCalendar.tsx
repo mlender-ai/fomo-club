@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import {
   buildCalendar,
   calendarStats,
+  insightStats,
+  mirrorLines,
   EMOTION_COLORS,
   EMOTION_LABELS,
   scoreToState,
@@ -29,6 +31,11 @@ export function EmotionCalendar({ data }: { data: CalendarResponse }) {
   const stats = useMemo(
     () => calendarStats(data.month, days, data.today),
     [data.month, days, data.today]
+  );
+  // 자기 통찰 미러 — 사실만 비춘다(조언 금지). 기록 3일 미만이면 빈 배열(미노출).
+  const mirrors = useMemo(
+    () => mirrorLines(insightStats(days, data.market, data.month)),
+    [days, data.market, data.month]
   );
 
   const [year, month] = data.month.split("-");
@@ -134,6 +141,21 @@ export function EmotionCalendar({ data }: { data: CalendarResponse }) {
           시장 달아오름
         </span>
       </div>
+
+      {/* 나의 패턴 — 쌓인 기록을 사실 그대로 비추는 거울 (전략 §1.3 "깨달음의 순간" v0).
+          조언은 하지 않는다 — "아!"는 보는 사람의 몫. */}
+      {mirrors.length > 0 && (
+        <div className="mt-5 w-full rounded-xl border border-hairline bg-surface px-4 py-3">
+          <p className="text-xs text-muted">나의 패턴</p>
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            {mirrors.map((m) => (
+              <p key={m} className="text-sm leading-5 text-whiteout">
+                {m}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
