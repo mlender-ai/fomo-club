@@ -4,6 +4,7 @@ import {
   buildWhaleItems,
   buildMacroItems,
   buildPulseItems,
+  buildMarketScores,
   bannerFallback,
   type BannerItem,
 } from "@fomo/core";
@@ -62,10 +63,13 @@ export async function GET() {
 
   if (items.length === 0) items.push(bannerFallback());
 
+  // 홈 상단 캐러셀용 시장 점수(나스닥·비트코인·코스피) — 같은 소스 재사용, 추가 fetch 없음.
+  const markets = buildMarketScores(macroQuotes, whaleInput);
+
   // 엣지 캐시로 Yahoo/CoinGecko 레이트리밋 보호 — 5분 신선, 이후 10분간 stale 허용하며 백그라운드 갱신.
   return withCors(
     NextResponse.json(
-      { items },
+      { items, markets },
       { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
     )
   );

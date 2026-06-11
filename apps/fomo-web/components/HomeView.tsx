@@ -23,6 +23,7 @@ import {
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
 import { MoodSignals } from "@/components/MoodSignals";
+import { MarketCarousel } from "@/components/MarketCarousel";
 import { NewsFeed } from "@/components/NewsFeed";
 import { EmotionCalendar } from "@/components/EmotionCalendar";
 import { SignupGate } from "@/components/SignupGate";
@@ -34,6 +35,7 @@ import type {
   TallyResponse,
   CalendarResponse,
   BannerItem,
+  MarketScore,
   FeedResponse,
   NewsResponse,
   VoiceItem,
@@ -58,6 +60,7 @@ export function HomeView({
   index,
   tally,
   banner,
+  markets,
   feed,
   news,
   calendar,
@@ -70,6 +73,7 @@ export function HomeView({
   index: FomoIndexResponse | null;
   tally: TallyResponse | null;
   banner: BannerItem[];
+  markets: MarketScore[];
   feed: FeedResponse | null;
   news: NewsResponse | null;
   calendar: CalendarResponse | null;
@@ -123,6 +127,13 @@ export function HomeView({
 
         {tab === "home" && (
           <>
+            {/* 상단 시장 점수 캐러셀 — 나스닥·비트코인·코스피, 3초 자동 슬라이드 */}
+            {markets.length > 0 && (
+              <div className="mb-5 w-full">
+                <MarketCarousel markets={markets} />
+              </div>
+            )}
+
             {/* 주인공: 포모 */}
             <p className="mb-2 text-xs text-muted">{stage === "market" ? "오늘의 포모" : "나의 포모"}</p>
             <FomoFace

@@ -5,6 +5,7 @@ export * from "./mascot-lines";
 export * from "./calendar";
 export * from "./insights";
 export * from "./banner";
+export * from "./markets";
 export * from "./mood-signals";
 export * from "./emotion-translation";
 export * from "./news-feed";

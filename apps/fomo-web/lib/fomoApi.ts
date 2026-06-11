@@ -1,6 +1,6 @@
 // FOMO API 클라이언트. API는 apps/web(@trading/web)의 /api/fomo/*에 있다.
 // NEXT_PUBLIC_FOMO_API_BASE로 오버라이드(로컬: http://127.0.0.1:3200), 기본은 배포된 prod.
-import type { BannerItem, FeedCards, MoodSignal, ScoredArticle } from "@fomo/core";
+import type { BannerItem, FeedCards, MarketScore, MoodSignal, ScoredArticle } from "@fomo/core";
 import { getToken, setToken } from "@/lib/auth";
 
 export type { BannerItem } from "@fomo/core";
@@ -48,7 +48,13 @@ async function get<T>(path: string): Promise<T> {
 
 export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
 export const fetchToday = () => get<TallyResponse>("/api/fomo/emotions/today");
-export const fetchBanner = () => get<{ items: BannerItem[] }>("/api/fomo/banner");
+/** 롤링 배너 + 홈 상단 캐러셀용 시장 점수(나스닥·비트코인·코스피). */
+export type { MarketScore } from "@fomo/core";
+export interface BannerResponse {
+  items: BannerItem[];
+  markets?: MarketScore[];
+}
+export const fetchBanner = () => get<BannerResponse>("/api/fomo/banner");
 
 /** 감정 치환 피드 + 오늘 탭 분위기 시그널 (Phase 3 엔진 산출). */
 export interface FeedResponse {

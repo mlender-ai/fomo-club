@@ -23,6 +23,7 @@ import {
   type TallyResponse,
   type CalendarResponse,
   type BannerItem,
+  type MarketScore,
 } from "@/lib/fomoApi";
 
 type Phase = "splash" | "gate" | "home";
@@ -49,6 +50,7 @@ export default function Home() {
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
   const [tally, setTally] = useState<TallyResponse | null>(null);
   const [banner, setBanner] = useState<BannerItem[]>([]);
+  const [markets, setMarkets] = useState<MarketScore[]>([]);
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
   const [voices, setVoices] = useState<VoiceItem[] | null>(null);
   const [feed, setFeed] = useState<FeedResponse | null>(null);
@@ -90,7 +92,10 @@ export default function Home() {
     ]).then(([i, t, b, c, v, f]) => {
       if (i.status === "fulfilled") setIndex(i.value);
       if (t.status === "fulfilled") setTally(t.value);
-      if (b.status === "fulfilled") setBanner(b.value.items);
+      if (b.status === "fulfilled") {
+        setBanner(b.value.items);
+        setMarkets(b.value.markets ?? []);
+      }
       // 실패 시 null — EmotionFeed가 mock으로 폴백(빈 화면 금지)
       if (f.status === "fulfilled") setFeed(f.value);
       // 실패 시 빈 배열 — 무한 "불러오는 중" 대신 담담한 빈 상태로
@@ -184,6 +189,7 @@ export default function Home() {
       index={index}
       tally={tally}
       banner={banner}
+      markets={markets}
       feed={feed}
       news={news}
       calendar={calendar}
