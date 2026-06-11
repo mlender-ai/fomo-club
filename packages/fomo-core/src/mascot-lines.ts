@@ -1,4 +1,5 @@
 import type { EmotionType, FomoState } from "./types";
+import { EMOTION_LABELS } from "./types";
 
 /**
  * 포모의 담담한 한마디. docs/IDENTITY_AND_MILESTONES.md §2.1 "담담한 솔직함".
@@ -79,4 +80,38 @@ export function restorativeLine(date: string): string {
   let sum = 0;
   for (let i = 0; i < date.length; i++) sum += date.charCodeAt(i);
   return RESTORATIVE_LINES[sum % RESTORATIVE_LINES.length]!;
+}
+
+/**
+ * 포모의 기억 — "나를 기억하는 캐릭터" (전략 노트 v1.0 §1.4).
+ * 다마고치(돌봄 의무·죄책감) ❌ — 돌봄의 방향을 뒤집어, 포모가 *나의 기록*을 기억한다.
+ * 실측 기록만 참조(정직한 숫자), 결정적 규칙 템플릿(형태가 곧 윤리 — LLM·자유문장 ❌).
+ * 해당 없으면 null → 호출부가 기존 mineLine/restorativeLine 으로 폴백.
+ */
+export interface PersonalContext {
+  /** 어제 남긴 감정 (기록 없으면 null) */
+  yesterdayEmotion?: EmotionType | null;
+  /** 오늘 남긴 감정 */
+  todayEmotion?: EmotionType | null;
+  /** 오늘 포함 현재 연속 기록 일수 */
+  streak?: number;
+}
+
+/** 기억을 꺼내는 절기 — 연속 기록 마일스톤. */
+const STREAK_MILESTONES: readonly number[] = [7, 14, 30, 50, 100];
+
+/** 우선순위: 마일스톤(희귀) > 감정 전환 > 같은 감정 이어짐 > null(폴백). */
+export function personalLine(ctx: PersonalContext): string | null {
+  const { yesterdayEmotion, todayEmotion, streak = 0 } = ctx;
+
+  if (streak > 0 && STREAK_MILESTONES.includes(streak)) {
+    return `오늘로 ${streak}일째야. 네가 남긴 색들, 전부 기억하고 있어.`;
+  }
+  if (yesterdayEmotion && todayEmotion && yesterdayEmotion !== todayEmotion) {
+    return `어제의 너는 ${EMOTION_LABELS[yesterdayEmotion]}, 오늘은 ${EMOTION_LABELS[todayEmotion]}. 그 변화, 내가 기억할게.`;
+  }
+  if (yesterdayEmotion && todayEmotion && yesterdayEmotion === todayEmotion) {
+    return `어제도 오늘도 ${EMOTION_LABELS[todayEmotion]}. 이어지는 마음도 그대로 적어뒀어.`;
+  }
+  return null;
 }

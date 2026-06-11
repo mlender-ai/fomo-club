@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./state";
 export * from "./mascot-lines";
 export * from "./calendar";
+export * from "./insights";
 export * from "./banner";
 export * from "./voices";
 export * from "./index-engine/types";

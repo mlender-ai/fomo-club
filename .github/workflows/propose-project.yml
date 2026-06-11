@@ -7,7 +7,9 @@ on:
 
 concurrency:
   group: propose-project
-  cancel-in-progress: false
+  # 멱등(roadmap 재생성 + 검토 이슈). 중복 dispatch 시 앞 run 을 취소해
+  # 동시 main push race 를 막는다(2026-06-11 사고). 결과는 항상 1개.
+  cancel-in-progress: true
 
 permissions:
   contents: write

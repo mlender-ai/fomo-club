@@ -11,6 +11,9 @@ import {
   mineLine,
   isCalmDay,
   restorativeLine,
+  calendarStats,
+  personalLine,
+  prevDay,
   type EmotionType,
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
@@ -60,7 +63,20 @@ export function HomeView({
   const state = index ? scoreToState(index.score) : null;
   const marketFace = index ? scoreToFace(index.score) : "curious";
   const stage: "market" | "mine" = mine ? "mine" : "market";
-  const line = mine ? mineLine(mine) : state ? marketLine(state) : "";
+  // 연속 기록 — 캘린더와 같은 계산(calendarStats)·같은 문구로 홈에도 살짝 (전략: 리텐션 = BM의 전제)
+  const streak = calendar
+    ? calendarStats(calendar.month, calendar.days as Record<string, EmotionType>, calendar.today).streak
+    : 0;
+  // 포모의 기억 — 어제의 감정·연속 기록을 기억하는 멘트가 있으면 우선, 없으면 기존 한마디 폴백
+  const memory =
+    mine && calendar
+      ? personalLine({
+          yesterdayEmotion: (calendar.days[prevDay(calendar.today)] ?? null) as EmotionType | null,
+          todayEmotion: mine,
+          streak,
+        })
+      : null;
+  const line = mine ? (memory ?? mineLine(mine)) : state ? marketLine(state) : "";
 
   // FomoFace props 메모이제이션 — 불필요한 리렌더 방지 (이슈 #410)
   const fomoFaceGlow = useMemo(
@@ -98,19 +114,26 @@ export function HomeView({
             />
 
             {/* 보조: FOMO Index (픽셀) */}
-            {index ? (
-              <div className="mt-3 flex flex-col items-center">
-                <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
-                <p className="mt-1.5 font-pixel text-xs text-muted">
-                  FOMO INDEX · {index.state}
-                  {index.prevDayDelta
-                    ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
-                    : ""}
-                </p>
-              </div>
-            ) : (
-              <FomoIndexSkeleton />
-            )}
+            <div className="mt-3 flex flex-col items-center">
+              {index ? (
+                <>
+                  <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
+                  <p className="mt-1.5 font-pixel text-xs text-muted">
+                    FOMO INDEX · {index.state}
+                    {index.prevDayDelta
+                      ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
+                      : ""}
+                  </p>
+                  {streak >= 2 && (
+                    <p className="mt-1.5 font-pixel text-[11px]" style={{ color: EMOTION_COLORS.conviction }}>
+                      {streak}일째 함께
+                    </p>
+                  )}
+                </>
+              ) : (
+                <FomoIndexSkeleton />
+              )}
+            </div>
 
             {/* 포모의 담담한 한마디 */}
             {line && (
@@ -193,9 +216,12 @@ export function HomeView({
               <TallySkeleton />
             )}
 
-            {/* 면책 — 담담하게 */}
+            {/* 면책 — 담담하게. 상담 안내 한 줄 = "여긴 등쳐먹는 곳이 아니다"의 증명 */}
             <p className="mt-7 text-center text-[11px] leading-5 text-muted">
               FOMO Index는 감정 체감 지표예요. 투자 조언이 아니에요.
+              <br />
+              도박문제로 힘들 땐 <span className="text-whiteout">1336</span>
+              (한국도박문제예방치유원)에서 무료로 상담할 수 있어요.
             </p>
           </>
         )}

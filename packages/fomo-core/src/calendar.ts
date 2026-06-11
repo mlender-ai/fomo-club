@@ -87,7 +87,7 @@ export interface CalendarStats {
 }
 
 /** "YYYY-MM-DD"에서 하루 전 문자열. 시간대 안전(UTC 분해). */
-function prevDay(date: string): string {
+export function prevDay(date: string): string {
   const { year, month, day } = parseDate(date);
   const dt = new Date(Date.UTC(year, month - 1, day - 1));
   return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;

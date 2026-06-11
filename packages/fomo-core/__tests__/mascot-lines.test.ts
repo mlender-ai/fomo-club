@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay } from "../src/mascot-lines";
+import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay, personalLine } from "../src/mascot-lines";
 import { EMOTION_TYPES } from "../src/types";
 
 const STATES = ["무관심", "관망", "관심", "FOMO", "광기"] as const;
@@ -60,5 +60,46 @@ describe("잔잔한 날 = 치유의 날 (M2 회복 콘텐츠)", () => {
       seen.add(restorativeLine(`2026-06-${String(d).padStart(2, "0")}`));
     }
     expect(seen.size).toBeGreaterThan(1);
+  });
+});
+
+describe("personalLine — 포모의 기억 (나를 기억하는 캐릭터)", () => {
+  it("연속 기록 마일스톤이 최우선", () => {
+    const l = personalLine({ yesterdayEmotion: "fear", todayEmotion: "fomo", streak: 7 });
+    expect(l).toBe("오늘로 7일째야. 네가 남긴 색들, 전부 기억하고 있어.");
+  });
+
+  it("감정 전환을 기억한다", () => {
+    const l = personalLine({ yesterdayEmotion: "fear", todayEmotion: "conviction", streak: 2 });
+    expect(l).toBe("어제의 너는 공포, 오늘은 확신. 그 변화, 내가 기억할게.");
+  });
+
+  it("같은 감정이 이어져도 기억한다", () => {
+    const l = personalLine({ yesterdayEmotion: "fomo", todayEmotion: "fomo", streak: 3 });
+    expect(l).toBe("어제도 오늘도 FOMO. 이어지는 마음도 그대로 적어뒀어.");
+  });
+
+  it("어제 기록이 없으면 null (폴백 — 거짓 기억 금지)", () => {
+    expect(personalLine({ yesterdayEmotion: null, todayEmotion: "fomo", streak: 1 })).toBeNull();
+    expect(personalLine({ todayEmotion: "fomo" })).toBeNull();
+    expect(personalLine({})).toBeNull();
+  });
+
+  it("마일스톤 아닌 streak 는 전환/이어짐 규칙으로", () => {
+    const l = personalLine({ yesterdayEmotion: "greed", todayEmotion: "greed", streak: 8 });
+    expect(l).toContain("어제도 오늘도");
+  });
+
+  it("금칙 표현(조언·단정·죄책감) 없음", () => {
+    const lines = [
+      personalLine({ yesterdayEmotion: "fear", todayEmotion: "fomo", streak: 7 }),
+      personalLine({ yesterdayEmotion: "fear", todayEmotion: "fomo", streak: 2 }),
+      personalLine({ yesterdayEmotion: "fomo", todayEmotion: "fomo", streak: 2 }),
+    ];
+    for (const l of lines) {
+      expect(l).toBeTruthy();
+      expect(l!).not.toMatch(FORBIDDEN);
+      expect(l!).not.toMatch(/하세요|해야|안 오면|죽어|미안하지/); // 조언·죄책감 어휘
+    }
   });
 });
