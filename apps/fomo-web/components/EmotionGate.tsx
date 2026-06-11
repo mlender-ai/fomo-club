@@ -1,5 +1,7 @@
 "use client";
 
+// [HIDDEN] feature flag(FEATURE_EMOTION_VOTE·FEATURE_EMOTION_JOURNAL)로 비활성화. 삭제 금지. docs/PIVOT_FEED_FIRST.md 참조.
+
 import { useState, useCallback } from "react";
 import {
   EMOTION_TYPES,

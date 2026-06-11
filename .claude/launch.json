@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fomo-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:fomo-web"],
+      "port": 3300
+    }
+  ]
+}

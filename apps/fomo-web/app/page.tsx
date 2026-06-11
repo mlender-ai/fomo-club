@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import type { EmotionType } from "@fomo/core";
+import { FEATURE_EMOTION_VOTE, type EmotionType } from "@fomo/core";
 import { SplashScreen } from "@/components/SplashScreen";
 import { EmotionGate } from "@/components/EmotionGate";
 import { HomeView } from "@/components/HomeView";
@@ -92,8 +92,9 @@ export default function Home() {
 
     Promise.all([load, minDelay]).then(([todays]) => {
       // 스플래시를 부드럽게 내보내고 다음 phase로
+      // 액션 제로 전환: 감정 투표가 꺼져 있으면 게이트 없이 바로 홈 (docs/PIVOT_FEED_FIRST.md)
       setLeavingSplash(true);
-      setTimeout(() => setPhase(todays ? "home" : "gate"), 300);
+      setTimeout(() => setPhase(todays || !FEATURE_EMOTION_VOTE ? "home" : "gate"), 300);
     });
   }, []);
 

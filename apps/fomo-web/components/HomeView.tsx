@@ -14,6 +14,10 @@ import {
   calendarStats,
   personalLine,
   prevDay,
+  FEATURE_EMOTION_VOTE,
+  FEATURE_EMOTION_JOURNAL,
+  FEATURE_HISTORY_TAB,
+  FEATURE_FEED_EMOTION_TABS,
   type EmotionType,
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
@@ -33,9 +37,18 @@ import type {
 
 type Tab = "home" | "feed" | "calendar";
 
+// 방향 전환(docs/PIVOT_FEED_FIRST.md): 기록 탭은 flag로 숨김 — 기본 [오늘/피드] 2탭.
+const TABS: { key: Tab; label: string }[] = [
+  { key: "home", label: "오늘" },
+  ...(FEATURE_FEED_EMOTION_TABS || FEATURE_EMOTION_JOURNAL
+    ? [{ key: "feed" as Tab, label: "피드" }]
+    : []),
+  ...(FEATURE_HISTORY_TAB ? [{ key: "calendar" as Tab, label: "기록" }] : []),
+];
+
 /**
  * 메인 홈 — 하단 탭 바로 메인/캘린더 분기.
- * 향후 M4(피드) 등 탭 추가 시 TABS 배열에만 항목 추가하면 됨.
+ * 향후 탭 추가 시 TABS 배열에만 항목 추가하면 됨.
  */
 export function HomeView({
   index,
@@ -62,7 +75,8 @@ export function HomeView({
 
   const state = index ? scoreToState(index.score) : null;
   const marketFace = index ? scoreToFace(index.score) : "curious";
-  const stage: "market" | "mine" = mine ? "mine" : "market";
+  // 액션 제로: 감정 투표가 꺼져 있으면 항상 시장의 포모만 보여준다.
+  const stage: "market" | "mine" = FEATURE_EMOTION_VOTE && mine ? "mine" : "market";
   // 연속 기록 — 캘린더와 같은 계산(calendarStats)·같은 문구로 홈에도 살짝 (전략: 리텐션 = BM의 전제)
   const streak = calendar
     ? calendarStats(calendar.month, calendar.days as Record<string, EmotionType>, calendar.today).streak
@@ -76,7 +90,8 @@ export function HomeView({
           streak,
         })
       : null;
-  const line = mine ? (memory ?? mineLine(mine)) : state ? marketLine(state) : "";
+  const line =
+    stage === "mine" && mine ? (memory ?? mineLine(mine)) : state ? marketLine(state) : "";
 
   // FomoFace props 메모이제이션 — 불필요한 리렌더 방지 (이슈 #410)
   const fomoFaceGlow = useMemo(
@@ -124,7 +139,7 @@ export function HomeView({
                       ? ` · 전일 ${index.prevDayDelta > 0 ? "+" : ""}${index.prevDayDelta}`
                       : ""}
                   </p>
-                  {streak >= 2 && (
+                  {FEATURE_EMOTION_VOTE && streak >= 2 && (
                     <p className="mt-1.5 font-pixel text-[11px]" style={{ color: EMOTION_COLORS.conviction }}>
                       {streak}일째 함께
                     </p>
@@ -145,8 +160,8 @@ export function HomeView({
               </p>
             )}
 
-            {/* 오늘의 너 — 게이트에서 고른 감정 요약 + 다시 고르기 */}
-            {mine && (
+            {/* 오늘의 너 — 게이트에서 고른 감정 요약 + 다시 고르기 [HIDDEN: FEATURE_EMOTION_VOTE] */}
+            {FEATURE_EMOTION_VOTE && mine && (
               <div className="mt-4 flex items-center gap-2.5 rounded-full border border-hairline bg-surface px-4 py-2">
                 <span className="text-xs text-muted">오늘의 너</span>
                 <span className="font-pixel text-sm" style={{ color: EMOTION_COLORS[mine] }}>
@@ -173,8 +188,9 @@ export function HomeView({
               </div>
             )}
 
-            {/* 집계 — 정직한 숫자. 로딩 중이면 스켈레톤(이슈 #409). */}
-            {tally ? (
+            {/* 집계 — 정직한 숫자. 로딩 중이면 스켈레톤(이슈 #409). [HIDDEN: FEATURE_EMOTION_VOTE] */}
+            {FEATURE_EMOTION_VOTE &&
+            (tally ? (
               <section className="mt-7 w-full">
                 <p className="text-xs text-muted">
                   오늘 <span className="font-pixel text-whiteout">{tally.total}</span>명이 마음을 남겼어요
@@ -214,7 +230,7 @@ export function HomeView({
               </section>
             ) : (
               <TallySkeleton />
-            )}
+            ))}
 
             {/* 면책 — 담담하게. 상담 안내 한 줄 = "여긴 등쳐먹는 곳이 아니다"의 증명 */}
             <p className="mt-7 text-center text-[11px] leading-5 text-muted">
@@ -228,7 +244,8 @@ export function HomeView({
 
         {tab === "feed" && (
           <div className="w-full">
-            <VoiceFeed items={voices} />
+            {/* 한마디 피드(VoiceFeed)는 감정 기록과 한 몸 — flag로 숨김 [HIDDEN: FEATURE_EMOTION_JOURNAL] */}
+            {FEATURE_EMOTION_JOURNAL && <VoiceFeed items={voices} />}
           </div>
         )}
 
@@ -245,12 +262,17 @@ export function HomeView({
         )}
       </main>
 
-      {/* 하단 탭 바 — 향후 탭 추가 시 여기에 항목 추가 */}
+      {/* 하단 탭 바 — TABS 배열(flag 필터)로 렌더 */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black">
         <div className="mx-auto flex max-w-md">
-          <TabButton active={tab === "home"} onClick={() => setTab("home")} label="오늘" />
-          <TabButton active={tab === "feed"} onClick={() => setTab("feed")} label="피드" />
-          <TabButton active={tab === "calendar"} onClick={() => setTab("calendar")} label="기록" />
+          {TABS.map((t) => (
+            <TabButton
+              key={t.key}
+              active={tab === t.key}
+              onClick={() => setTab(t.key)}
+              label={t.label}
+            />
+          ))}
         </div>
       </nav>
     </>
