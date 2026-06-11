@@ -3,7 +3,8 @@ import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 import { resolveServerSecret } from "./secret";
 
 // P0-1: 하드코딩 폴백 제거 → fail-closed. 호출 시점에 해석(빌드 무중단, prod 미설정 시 throw).
-const secret = (): string => resolveServerSecret("TAROT_API_SECRET");
+// 전용 키 우선, 미설정 시 prod의 기존 JWT_SECRET(코드 미사용 고아 변수) 재사용.
+const secret = (): string => resolveServerSecret("TAROT_API_SECRET", "JWT_SECRET");
 export const ACCESS_EXPIRY_MS  = 7  * 24 * 60 * 60 * 1000; // 7일 (기존 30일 → 단축)
 const REFRESH_EXPIRY_MS = 90 * 24 * 60 * 60 * 1000; // 90일 리프레시 토큰
 

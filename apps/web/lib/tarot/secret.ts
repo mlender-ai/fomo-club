@@ -15,9 +15,17 @@ import { randomBytes } from "crypto";
 const MIN_LENGTH = 32;
 const ephemeral = new Map<string, string>();
 
-export function resolveServerSecret(envKey: string): string {
-  const v = process.env[envKey];
-  if (v && v.length >= MIN_LENGTH) return v;
+/**
+ * @param envKey      1순위 전용 env 키
+ * @param fallbackKeys 미설정 시 순서대로 시도할 기존 prod 시크릿 키
+ *   (예: TAROT_API_SECRET 미설정 시 이미 prod에 있는 JWT_SECRET 재사용 →
+ *    공개 문자열 없이 prod 무중단. 전용 키를 설정하면 그게 항상 우선).
+ */
+export function resolveServerSecret(envKey: string, ...fallbackKeys: string[]): string {
+  for (const key of [envKey, ...fallbackKeys]) {
+    const v = process.env[key];
+    if (v && v.length >= MIN_LENGTH) return v;
+  }
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
