@@ -7,6 +7,7 @@ import {
   EMOTION_COLORS,
   scoreToFace,
   scoreToState,
+  scoreToColor,
   marketLine,
   mineLine,
   isCalmDay,
@@ -21,7 +22,7 @@ import {
   type EmotionType,
 } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
-import { RollingBanner } from "@/components/RollingBanner";
+import { MoodSignals } from "@/components/MoodSignals";
 import { EmotionCalendar } from "@/components/EmotionCalendar";
 import { SignupGate } from "@/components/SignupGate";
 import { VoiceFeed } from "@/components/VoiceFeed";
@@ -115,11 +116,6 @@ export function HomeView({
 
         {tab === "home" && (
           <>
-            {/* 혼자가 아님의 신호 — 롤링 배너(클릭 시 상세) (M3) */}
-            <div className="mb-4 w-full">
-              <RollingBanner items={banner} />
-            </div>
-
             {/* 주인공: 포모 */}
             <p className="mb-2 text-xs text-muted">{stage === "market" ? "오늘의 포모" : "나의 포모"}</p>
             <FomoFace
@@ -132,7 +128,13 @@ export function HomeView({
             <div className="mt-3 flex flex-col items-center">
               {index ? (
                 <>
-                  <p className="font-pixel text-4xl leading-none text-whiteout">{index.score}</p>
+                  {/* 숫자 색 = 감정 색 (과열=빨강 계열, 침체=파랑 계열) */}
+                  <p
+                    className="font-pixel text-4xl leading-none"
+                    style={{ color: scoreToColor(index.score) }}
+                  >
+                    {index.score}
+                  </p>
                   <p className="mt-1.5 font-pixel text-xs text-muted">
                     FOMO INDEX · {index.state}
                     {index.prevDayDelta
@@ -159,6 +161,11 @@ export function HomeView({
                 {line}
               </p>
             )}
+
+            {/* 롤링 시그널 — 시장 신호를 분위기로 (액션 제로, docs/PIVOT_FEED_FIRST.md) */}
+            <div className="mt-5 w-full">
+              <MoodSignals items={banner} />
+            </div>
 
             {/* 오늘의 너 — 게이트에서 고른 감정 요약 + 다시 고르기 [HIDDEN: FEATURE_EMOTION_VOTE] */}
             {FEATURE_EMOTION_VOTE && mine && (
