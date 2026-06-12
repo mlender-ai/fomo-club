@@ -91,6 +91,55 @@ export function parseRssFeed(
   return items;
 }
 
+/** 네이버 금융 뉴스 JSON 1건. (api.stock.naver.com/news/*) */
+export interface NaverNewsRaw {
+  tit?: string;
+  subcontent?: string;
+  oid?: string;
+  aid?: string;
+  /** 언론사명. */
+  ohnm?: string;
+  /** "YYYYMMDDHHmmss" (KST). */
+  dt?: string;
+}
+
+/** "YYYYMMDDHHmmss"(KST) → ISO. 실패 시 빈 문자열. */
+function naverDtToIso(dt: string | undefined): string {
+  if (!dt || !/^\d{14}$/.test(dt)) return "";
+  const [y, mo, d, h, mi, s] = [
+    dt.slice(0, 4), dt.slice(4, 6), dt.slice(6, 8), dt.slice(8, 10), dt.slice(10, 12), dt.slice(12, 14),
+  ];
+  const t = Date.parse(`${y}-${mo}-${d}T${h}:${mi}:${s}+09:00`);
+  return Number.isNaN(t) ? "" : new Date(t).toISOString();
+}
+
+/**
+ * 네이버 금융 뉴스 JSON → RawArticle[]. 이미 한국어(국내·해외 모두 한국어 번역 제공).
+ * 본문 요약(subcontent)은 길어서 잘라 담는다. URL은 표준 n.news.naver.com 패턴.
+ */
+export function parseNaverNews(items: NaverNewsRaw[], nowIso: string): RawArticle[] {
+  const out: RawArticle[] = [];
+  const seen = new Set<string>();
+  for (const it of items ?? []) {
+    const title = (it.tit ?? "").replace(/<[^>]*>/g, "").trim();
+    if (!title || !it.oid || !it.aid) continue;
+    const url = `https://n.news.naver.com/mnews/article/${it.oid}/${it.aid}`;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    const summary = (it.subcontent ?? "").replace(/<[^>]*>/g, "").replace(/\*\*/g, "").trim().slice(0, 160);
+    out.push({
+      id: slugId(url),
+      title,
+      url,
+      source: it.ohnm?.trim() || "네이버 금융",
+      publishedAt: naverDtToIso(it.dt) || nowIso,
+      lang: "ko",
+      ...(summary ? { summary } : {}),
+    });
+  }
+  return out;
+}
+
 export function parseYahooRss(
   xml: string,
   opts: { symbol?: string; nowIso: string; lang?: NewsLang } = { nowIso: "" }

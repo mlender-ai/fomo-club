@@ -1,4 +1,11 @@
-import { parseRssFeed, parseYahooRss, type NewsSource, type RawArticle } from "@fomo/core";
+import {
+  parseNaverNews,
+  parseRssFeed,
+  parseYahooRss,
+  type NaverNewsRaw,
+  type NewsSource,
+  type RawArticle,
+} from "@fomo/core";
 
 /**
  * FOMO 뉴스 소스 — 실제 기사 수집. docs/PIVOT_FEED_FIRST.md.
@@ -56,11 +63,37 @@ export const yahooSource: NewsSource = {
 };
 
 // ───────────────────────── 한국 금융 뉴스 RSS ─────────────────────────
-// 증권/금융 초점 피드(Node fetch 200 확인). 표준 RSS 2.0 → parseRssFeed.
+// 증권/금융/시황 초점 피드(Node fetch 200 확인). 표준 RSS 2.0 → parseRssFeed.
 const KR_FEEDS: { id: string; url: string; source: string }[] = [
   { id: "hankyung", url: "https://www.hankyung.com/feed/finance", source: "한국경제" },
   { id: "mk", url: "https://www.mk.co.kr/rss/50200011/", source: "매일경제" },
+  { id: "yna", url: "https://www.yna.co.kr/rss/market.xml", source: "연합뉴스" },
 ];
+
+// ───────────────────────── 네이버 금융 뉴스 (JSON) ─────────────────────────
+// 해외 증시 실시간 뉴스(이미 한국어). api.stock.naver.com/news/worldNews.
+const NAVER_NEWS_URL = "https://api.stock.naver.com/news/worldNews?pageSize=20&page=1";
+
+export const naverNewsSource: NewsSource = {
+  id: "naver",
+  lang: "ko",
+  enabled: true,
+  async fetch() {
+    try {
+      const res = await fetch(NAVER_NEWS_URL, {
+        headers: { accept: "application/json", "user-agent": BROWSER_UA },
+        signal: AbortSignal.timeout(8_000),
+        next: { revalidate: 600 },
+      });
+      if (!res.ok) return [];
+      const json = (await res.json()) as NaverNewsRaw[];
+      return parseNaverNews(Array.isArray(json) ? json : [], new Date().toISOString());
+    } catch (err) {
+      console.warn("[fomo/news] naver error", err);
+      return [];
+    }
+  },
+};
 
 /** 한국 RSS 피드 1개 → 한국어 RawArticle[]. 실패 시 빈 배열. */
 function makeKoreanRssSource({ id, url, source }: (typeof KR_FEEDS)[number]): NewsSource {
@@ -87,11 +120,12 @@ function makeKoreanRssSource({ id, url, source }: (typeof KR_FEEDS)[number]): Ne
 }
 
 /**
- * 등록된 뉴스 소스 — 확장 지점. 영문(Yahoo) + 한국어(한경/매경).
+ * 등록된 뉴스 소스 — 확장 지점. 영문(Yahoo) + 한국어(한경/매경/연합/네이버).
  * 소스 추가 시 이 배열에 NewsSource 구현을 넣으면 같은 파이프라인에 합류.
  */
 export const NEWS_SOURCES: readonly NewsSource[] = [
   yahooSource,
+  naverNewsSource,
   ...KR_FEEDS.map(makeKoreanRssSource),
 ];
 

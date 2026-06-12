@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyKoTranslations,
   buildNewsFeed,
   localizeArticle,
+  parseKoTranslations,
+  parseNaverNews,
   parseRssFeed,
   parseYahooRss,
   scoreArticleFomo,
@@ -115,6 +118,50 @@ describe("parseRssFeed (한국 뉴스)", () => {
     const items = parseRssFeed(xml, { source: "한국경제", lang: "ko", nowIso: "2026-06-12T12:00:00Z" });
     const feed = buildNewsFeed(items, { nowMs: Date.parse("2026-06-12T12:00:00Z") });
     expect(feed[0]!.fomoScore).toBeGreaterThanOrEqual(70); // 신고가 급등
+  });
+});
+
+describe("parseNaverNews", () => {
+  it("네이버 JSON → 한국어 기사 (URL/날짜/출처)", () => {
+    const items = [
+      { tit: "엔비디아 신고가", subcontent: "** 반도체 강세 **", oid: "fnGuide", aid: "123", ohnm: "로이터", dt: "20260612130757" },
+      { tit: "", oid: "x", aid: "1" }, // 제목 결측 제외
+    ];
+    const out = parseNaverNews(items, "2026-06-12T12:00:00Z");
+    expect(out).toHaveLength(1);
+    expect(out[0]!.title).toBe("엔비디아 신고가");
+    expect(out[0]!.lang).toBe("ko");
+    expect(out[0]!.source).toBe("로이터");
+    expect(out[0]!.url).toBe("https://n.news.naver.com/mnews/article/fnGuide/123");
+    expect(out[0]!.summary).toBe("반도체 강세");
+    expect(out[0]!.publishedAt).toBe("2026-06-12T04:07:57.000Z");
+  });
+});
+
+describe("LLM 한국어 번역 (순수부)", () => {
+  it("코드펜스/잡텍스트 섞인 응답에서 JSON 배열 추출", () => {
+    const content = '설명...\n```json\n[{"id":"a","titleKo":"엔비디아 급등","summaryKo":"AI 랠리"}]\n```';
+    const t = parseKoTranslations(content);
+    expect(t).toEqual([{ id: "a", titleKo: "엔비디아 급등", summaryKo: "AI 랠리" }]);
+  });
+
+  it("깨진 응답 → 빈 배열 (영문 폴백)", () => {
+    expect(parseKoTranslations("미안 번역 못함")).toEqual([]);
+    expect(parseKoTranslations("")).toEqual([]);
+  });
+
+  it("applyKoTranslations: id 매칭만 titleKo 채움, 원문 보존", () => {
+    const arts: RawArticle[] = [
+      { id: "a", title: "Nvidia soars", url: "u1", source: "Y", publishedAt: "x", lang: "en" },
+      { id: "b", title: "Already KO", url: "u2", source: "한경", publishedAt: "x", lang: "ko" },
+    ];
+    const out = applyKoTranslations(arts, [{ id: "a", titleKo: "엔비디아 급등" }]);
+    expect(out[0]!.title).toBe("Nvidia soars"); // 원문 보존
+    expect(out[0]!.titleKo).toBe("엔비디아 급등");
+    expect(out[1]!.titleKo).toBeUndefined(); // 매칭 없으면 그대로
+    // localizeArticle(ko)와 결합되면 영문기사는 titleKo, 한국기사는 원문(한국어) 노출
+    expect(localizeArticle(out[0]!, "ko").title).toBe("엔비디아 급등");
+    expect(localizeArticle(out[1]!, "ko").title).toBe("Already KO");
   });
 });
 
