@@ -1,11 +1,12 @@
 // 서버 사이드 JWT — 경량 구현 (Node crypto 내장 모듈만 사용)
+// 공유 인증 인프라 — 보관된 감정 투표/캘린더(/api/fomo/emotions/*)가 Bearer 검증에 재사용.
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 import { resolveServerSecret } from "./secret";
 
-// P0-1: 하드코딩 폴백 제거 → fail-closed. 호출 시점에 해석(빌드 무중단, prod 미설정 시 throw).
-// 전용 키 우선, 미설정 시 prod의 기존 JWT_SECRET(코드 미사용 고아 변수) 재사용.
-const secret = (): string => resolveServerSecret("TAROT_API_SECRET", "JWT_SECRET");
-export const ACCESS_EXPIRY_MS  = 7  * 24 * 60 * 60 * 1000; // 7일 (기존 30일 → 단축)
+// fail-closed. 호출 시점에 해석(빌드 무중단, prod 미설정 시 throw).
+// 전용 키 우선, 미설정 시 prod의 기존 JWT_SECRET 재사용.
+const secret = (): string => resolveServerSecret("FOMO_API_SECRET", "JWT_SECRET");
+export const ACCESS_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7일
 const REFRESH_EXPIRY_MS = 90 * 24 * 60 * 60 * 1000; // 90일 리프레시 토큰
 
 interface JwtPayload {
@@ -52,7 +53,6 @@ export function issueToken(userId: string): string {
   return sign({ userId, iat: now, exp: now + ACCESS_EXPIRY_MS });
 }
 
-// 불투명 리프레시 토큰 — DB에 저장하여 회전/폐기 가능
 export function generateRefreshToken(): string {
   return randomBytes(40).toString("base64url");
 }
@@ -72,16 +72,12 @@ export function extractBearerToken(authHeader: string | null): string | null {
 }
 
 // 쿠키 속성 — 웹 클라이언트용 HttpOnly 설정
-export const AUTH_COOKIE_NAME = "tarot_access_token";
-export const REFRESH_COOKIE_NAME = "tarot_refresh_token";
+export const AUTH_COOKIE_NAME = "fomo_access_token";
+export const REFRESH_COOKIE_NAME = "fomo_refresh_token";
 export function cookieOptions(maxAgeMs: number): string {
   const prod = process.env["NODE_ENV"] === "production";
   const maxAge = Math.floor(maxAgeMs / 1000);
-  return [
-    `Max-Age=${maxAge}`,
-    "Path=/",
-    "HttpOnly",
-    "SameSite=Strict",
-    prod ? "Secure" : "",
-  ].filter(Boolean).join("; ");
+  return [`Max-Age=${maxAge}`, "Path=/", "HttpOnly", "SameSite=Strict", prod ? "Secure" : ""]
+    .filter(Boolean)
+    .join("; ");
 }

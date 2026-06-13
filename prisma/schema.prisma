@@ -780,3 +780,13 @@ model FomoIndexSnapshot {
   avg30Delta    Int
   createdAt     DateTime @default(now())
 }
+
+// 키워드 카드 일일 스냅샷 — KEYWORD_ENGINE_SPEC §4.5.
+// cards = KeywordCard[] (점수순). confidence = 전체 산출 신뢰도(정직성 노출).
+model KeywordCardSnapshot {
+  id         String   @id @default(cuid())
+  date       String   @unique // YYYY-MM-DD (KST)
+  cards      Json // KeywordCard[] (점수순 정렬)
+  confidence String // "high" | "medium" | "low" | "fallback"
+  createdAt  DateTime @default(now())
+}

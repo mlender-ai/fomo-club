@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from "crypto";
 
 /**
- * 서버 시크릿 fail-closed 리졸버 (P0-1).
+ * 서버 시크릿 fail-closed 리졸버.
  *
  * 레포가 public이라 하드코딩 폴백 문자열은 그 자체가 취약점이었다
  * (prod env 누락 시 누구나 토큰/논스 위조 가능). 그래서:
@@ -18,7 +18,7 @@ const ephemeral = new Map<string, string>();
 /**
  * @param envKey      1순위 전용 env 키
  * @param fallbackKeys 미설정 시 순서대로 시도할 기존 prod 시크릿 키
- *   (예: TAROT_API_SECRET 미설정 시 이미 prod에 있는 JWT_SECRET 재사용 →
+ *   (예: FOMO_API_SECRET 미설정 시 이미 prod에 있는 JWT_SECRET 재사용 →
  *    공개 문자열 없이 prod 무중단. 전용 키를 설정하면 그게 항상 우선).
  */
 export function resolveServerSecret(envKey: string, ...fallbackKeys: string[]): string {
@@ -30,7 +30,6 @@ export function resolveServerSecret(envKey: string, ...fallbackKeys: string[]): 
   if (process.env.NODE_ENV === "production") {
     // 최종 폴백: prod에 항상 존재하는 고엔트로피 시크릿(DATABASE_URL)에서 결정적 파생.
     // 공개 고정 문자열 없이 prod 무중단을 보장하고, envKey를 섞어 시크릿별로 다른 키를 만든다.
-    // (전용 env를 설정하면 위에서 항상 우선. DATABASE_URL 회전 시 토큰만 무효화 — 허용.)
     const dbUrl = process.env.DATABASE_URL;
     if (dbUrl && dbUrl.length >= MIN_LENGTH) {
       return createHash("sha256").update(`fomo-secret:${envKey}:${dbUrl}`).digest("hex");
@@ -40,7 +39,6 @@ export function resolveServerSecret(envKey: string, ...fallbackKeys: string[]): 
     );
   }
 
-  // dev/test — 프로세스 수명 동안만 유효한 랜덤. 공개 고정 문자열 절대 사용 안 함.
   let dev = ephemeral.get(envKey);
   if (!dev) {
     dev = randomBytes(32).toString("hex");

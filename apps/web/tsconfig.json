@@ -21,8 +21,6 @@
     "noEmit": true,
     "isolatedModules": true,
     "paths": {
-      "@taro/core": ["../../packages/tarot-core/src/index.ts"],
-      "@taro/core/*": ["../../packages/tarot-core/src/*"],
       "@fomo/core": ["../../packages/fomo-core/src/index.ts"],
       "@fomo/core/*": ["../../packages/fomo-core/src/*"],
       "@/lib/*": ["./lib/*"],

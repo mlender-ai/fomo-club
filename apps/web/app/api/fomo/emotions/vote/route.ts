@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { EMOTION_TYPES, isSituationKey, isResolveKey } from "@fomo/core";
 import { prisma } from "../../../../../lib/prisma";
 import { kstDate, todayTally, isEmotionType, corsJson, withCors } from "../../../../../lib/fomo";
-import { extractBearerToken, verifyToken } from "@/lib/tarot/jwt";
+import { extractBearerToken, verifyToken } from "@/lib/auth/jwt";
 import { isValidSessionIdFormat, verifySession } from "@/lib/session-hmac";
 
 export const dynamic = "force-dynamic";
