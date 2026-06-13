@@ -126,6 +126,13 @@ community       클러스터링          (군중 쏠림)        + 균형추 + de
 
 5구간 ↔ 색·표정 매핑은 `@fomo/core`의 `scoreToColor`/`scoreToEmoji` 재활용(`KeywordCardFeed.tsx:4`에서 이미 import 중). FOMO_INDEX.md의 5구간과 일관.
 
+#### Phase 2에서 반드시 해결할 것 (Phase 1 구현이 남긴 한계 — 선택 아님)
+
+Phase 1은 30일 기준선이 없어 `(c)톤강도·(d)커뮤니티열`만 재정규화(실효 가중 tone 0.571 / community 0.429)하고 confidence "low"로 산출한다. 그대로 머지하되, Phase 2에서 `(a)volume·(b)accel` 기준선을 스냅샷에 넣을 때 아래 둘을 **반드시** 함께 푼다.
+
+1. **(필수) community 정규화 ↔ '어제 대비' 서사 충돌.** 현재 `(d)`는 *당일* 키워드들 사이의 상대 참여도(`engagement / 당일 max`)다. "오늘의 너"의 핵심 훅(어제 64 → 오늘 45, PRODUCT_VISION §4.1)은 day-over-day delta 위에 선다. community가 당일 상대값이면 어제·오늘이 **다른 척도**라 delta가 거짓이 된다. Phase 2 스냅샷에 `(a)(b)` 기준선을 도입할 때 **community도 날짜 간 비교 가능한 절대 기준**(예: 30일 참여도 기준선 대비)으로 다듬어야 한다. **안 풀면 리텐션 훅이 깨진다.**
+2. **(확인) community 소유 왜곡 — 순위 역전.** 진짜 급등인데 뉴스전용(참여 0)이면 저평가되고(상한 ~57), 중립인데 커뮤니티만 시끄러우면 과대평가된다(+최대 ~43). 기준선이 들어와도 상대정규화 특성상 자동으로 안 풀릴 수 있으니 Phase 2에서 같이 점검한다.
+
 ### 4.4 코멘트 생성 — `keyword-cards/comment.ts` (신규)
 
 `comment`(카드 앞면) + `depth.why` + `depth.remember`를 생성. **LLM 1차, 룰 폴백 필수.**
