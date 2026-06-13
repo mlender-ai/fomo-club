@@ -1,6 +1,14 @@
 // FOMO API 클라이언트. API는 apps/web(@trading/web)의 /api/fomo/*에 있다.
 // NEXT_PUBLIC_FOMO_API_BASE로 오버라이드(로컬: http://127.0.0.1:3200), 기본은 배포된 prod.
-import type { BannerItem, FeedCards, MarketScore, MoodSignal, ScoredArticle } from "@fomo/core";
+import type {
+  BannerItem,
+  FeedCards,
+  KeywordCard,
+  KeywordConfidence,
+  MarketScore,
+  MoodSignal,
+  ScoredArticle,
+} from "@fomo/core";
 import { getToken, setToken } from "@/lib/auth";
 
 export type { BannerItem } from "@fomo/core";
@@ -70,6 +78,16 @@ export interface NewsResponse {
   lang: "en" | "ko";
 }
 export const fetchNews = () => get<NewsResponse>("/api/fomo/news");
+
+/** 키워드 카드 — "오늘 쏠린 키워드" 실데이터(KEYWORD_ENGINE_SPEC §4.6). confidence 로 정직성 노출. */
+export type { KeywordCard, KeywordConfidence } from "@fomo/core";
+export interface KeywordsResponse {
+  date: string;
+  cards: KeywordCard[];
+  confidence: KeywordConfidence;
+  live: boolean;
+}
+export const fetchKeywords = () => get<KeywordsResponse>("/api/fomo/keywords");
 
 export const fetchCalendar = (sessionId: string, month?: string) =>
   get<CalendarResponse>(

@@ -25,6 +25,8 @@ interface ThemeDef {
   emoji: string;
   /** 매칭 용어 — EN+KO. 한 글이 복수 테마에 매칭될 수 있다. */
   terms: readonly string[];
+  /** 관련 종목/테마 미니 리스트(시세 아님 — "다들 이런 것들 봤어"). KeywordCard.related 소스. */
+  related: readonly string[];
 }
 
 /**
@@ -35,28 +37,35 @@ export const THEME_DICTIONARY: Record<string, ThemeDef> = {
   반도체: {
     emoji: "🔥",
     terms: ["반도체", "HBM", "엔비디아", "SK하이닉스", "삼성전자", "TSMC", "메모리", "파운드리", "semiconductor", "chip", "nvidia"],
+    related: ["삼성전자", "SK하이닉스", "엔비디아"],
   },
   AI: {
     emoji: "🤖",
     terms: ["AI", "인공지능", "오픈AI", "챗GPT", "ChatGPT", "LLM", "GPT", "openai", "엔비디아"],
+    related: ["엔비디아", "마이크로소프트", "팔란티어"],
   },
   코인: {
     emoji: "₿",
     terms: ["비트코인", "이더리움", "코인", "암호화폐", "가상자산", "crypto", "bitcoin", "btc", "ethereum", "eth", "ETF"],
+    related: ["비트코인", "이더리움"],
   },
   금리: {
     emoji: "💵",
     terms: ["금리", "연준", "FOMC", "기준금리", "채권", "인플레", "물가", "rate", "fed", "fomc"],
+    related: ["은행주", "채권"],
   },
   "2차전지": {
     emoji: "🔋",
     terms: ["2차전지", "2차 전지", "배터리", "에코프로", "LG에너지", "전기차", "battery"],
+    related: ["에코프로비엠", "LG에너지솔루션"],
   },
 };
 
 export interface ExtractedKeyword {
   keyword: string;
   emoji: string;
+  /** 관련 종목/테마 미니 리스트(시세 아님). 테마 사전 고정값. */
+  related: readonly string[];
   /** 이 테마에 매칭된 원본 글. */
   articles: KeywordSourceItem[];
   /** 매칭 글 수(언급량). */
@@ -99,6 +108,7 @@ export function extractKeywords(items: KeywordSourceItem[]): ExtractedKeyword[] 
     out.push({
       keyword,
       emoji: THEME_DICTIONARY[keyword]!.emoji,
+      related: THEME_DICTIONARY[keyword]!.related,
       articles,
       mentions: articles.length,
       engagement: articles.reduce((s, a) => s + (a.engagement ?? 0), 0),
