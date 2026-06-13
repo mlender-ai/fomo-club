@@ -7,9 +7,10 @@ import { recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
 
 /**
- * 키워드 카드 덱 — 자연스러운 스와이프(드래그+뒤 카드 노출) + 하단 버튼 2개. KEYWORD_CARD_FEED_DEV_SPEC v3.
- * 피드탭 SwipeDeck 메커니즘 재사용. 오른쪽=관심 / 왼쪽=덜관심(둘 다 다음 카드로).
- * 본 카드(스와이프/뎁스 열람)는 히스토리에 적재 + 덱에서 제외 → 다시 와도 안 본 다음 카드부터.
+ * 키워드 카드 덱 — 자연스러운 스와이프(드래그+뒤 카드 실제 콘텐츠 노출) + 하단 버튼 2개.
+ * KEYWORD_CARD_FEED_DEV_SPEC v3. 오른쪽=관심 / 왼쪽=덜관심(둘 다 다음 카드로).
+ * 본 카드는 히스토리 적재 + 덱에서 제외 → 다시 와도 다음 카드부터.
+ * 뎁스에서 닫으면 본 카드가 스르륵 넘어가며(자동 스와이프) 다음 카드가 보인다.
  */
 const THRESHOLD = 90;
 const EXIT_MS = 320;
@@ -19,6 +20,30 @@ function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
+  );
+}
+
+/** 카드 내용(앞/뒤 공용). progress 있으면 우하단에 n/N 표시(앞면만). */
+function CardFace({ card, progress }: { card: KeywordCard; progress?: string }) {
+  const color = scoreToColor(card.fomoScore);
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2">
+        <span className="text-2xl font-bold text-whiteout">{card.keyword}</span>
+        <span className="text-xl" aria-hidden>{card.emoji}</span>
+      </div>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="font-pixel text-5xl leading-none" style={{ color }}>
+          {card.fomoScore}
+        </span>
+        <span className="font-pixel text-sm text-muted">{scoreToEmoji(card.fomoScore)} 포모 점수</span>
+      </div>
+      <p className="mt-6 text-lg leading-8 text-whiteout">{card.comment}</p>
+      <div className="mt-auto flex items-center justify-between pt-6">
+        <span className="font-pixel text-[11px] text-muted">더보기 →</span>
+        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+      </div>
+    </div>
   );
 }
 
@@ -40,6 +65,21 @@ export function KeywordCardFeed({
   const startX = useRef(0);
   const moved = useRef(false);
 
+  // 본 카드를 한쪽으로 날리고 다음 카드로. (관심 기록은 호출부에서 별도)
+  const flingNext = useCallback((dir: "left" | "right") => {
+    if (prefersReducedMotion()) {
+      setDx(0);
+      setIdx((i) => i + 1);
+      return;
+    }
+    setExiting(dir);
+    window.setTimeout(() => {
+      setExiting(null);
+      setDx(0);
+      setIdx((i) => i + 1);
+    }, EXIT_MS);
+  }, []);
+
   const advance = useCallback(
     (dir: "left" | "right") => {
       const card = deck[idx];
@@ -47,26 +87,19 @@ export function KeywordCardFeed({
         recordInterest(card.id, dir === "right" ? "more" : "less", Date.now());
         recordViewed(card, Date.now());
       }
-      setExiting(dir);
-      const after = () => {
-        setExiting(null);
-        setDx(0);
-        setIdx((i) => i + 1);
-      };
-      if (prefersReducedMotion()) after();
-      else window.setTimeout(after, EXIT_MS);
+      flingNext(dir);
     },
-    [deck, idx]
+    [deck, idx, flingNext]
   );
 
   const openDepth = (card: KeywordCard) => {
     recordViewed(card, Date.now());
     setSelected(card);
   };
-  // 뎁스 닫으면 다음 카드로 (한번 보고 돌아오면 다음 카드).
+  // 뎁스 닫으면 본 카드가 스르륵 넘어가며 다음 카드 노출.
   const closeDepth = () => {
     setSelected(null);
-    setIdx((i) => i + 1);
+    window.setTimeout(() => flingNext("left"), 40);
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -130,20 +163,26 @@ export function KeywordCardFeed({
         오른쪽=<span style={{ color: UP }}>관심</span> · 왼쪽=덜 관심 · 탭하면 자세히
       </p>
 
-      {/* 카드 스택 (뒤 카드 일부 보임) */}
+      {/* 카드 스택 (뒤 카드 실제 콘텐츠 노출) */}
       <div className="relative mx-auto h-[56vh] w-full select-none">
-        {behind.map((card, i) => (
-          <div
-            key={`b-${card.id}`}
-            aria-hidden
-            className="absolute inset-0 rounded-2xl border border-hairline bg-surface"
-            style={{
-              transform: `translateY(${(i + 1) * 12}px) scale(${1 - (i + 1) * 0.04})`,
-              opacity: 0.6 - i * 0.25,
-              zIndex: 1,
-            }}
-          />
-        ))}
+        {behind
+          .map((card, i) => ({ card, i }))
+          .reverse()
+          .map(({ card, i }) => (
+            <div
+              key={`b-${card.id}`}
+              aria-hidden
+              className="absolute inset-0 overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
+              style={{
+                borderLeft: `2px solid ${scoreToColor(card.fomoScore)}`,
+                transform: `translateY(${(i + 1) * 12}px) scale(${1 - (i + 1) * 0.04})`,
+                opacity: 1 - (i + 1) * 0.18,
+                zIndex: 1,
+              }}
+            >
+              <CardFace card={card} />
+            </div>
+          ))}
 
         {/* 상단(인터랙티브) 카드 */}
         <div
@@ -154,7 +193,7 @@ export function KeywordCardFeed({
           onClick={() => {
             if (!moved.current && !exiting) openDepth(top);
           }}
-          className="absolute inset-0 z-10 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
+          className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
           style={{ borderLeft: `2px solid ${color}`, transform: topTransform, transition: topTransition }}
         >
           {/* 좌우 오버레이 */}
@@ -171,25 +210,11 @@ export function KeywordCardFeed({
             ← 덜 관심
           </span>
 
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-whiteout">{top.keyword}</span>
-            <span className="text-xl" aria-hidden>{top.emoji}</span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="font-pixel text-5xl leading-none" style={{ color }}>
-              {top.fomoScore}
-            </span>
-            <span className="font-pixel text-sm text-muted">{scoreToEmoji(top.fomoScore)} 포모 점수</span>
-          </div>
-          <p className="mt-6 text-lg leading-8 text-whiteout">{top.comment}</p>
-          <div className="mt-auto flex items-center justify-between pt-6">
-            <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-            <span className="font-pixel text-[11px] text-muted">{idx + 1} / {deck.length}</span>
-          </div>
+          <CardFace card={top} progress={`${idx + 1} / ${deck.length}`} />
         </div>
       </div>
 
-      {/* 하단 버튼 2개 (피드탭 SwipeDeck 재사용 결) */}
+      {/* 하단 버튼 2개 */}
       <div className="mt-4 flex items-center justify-center gap-4">
         <button
           onClick={() => advance("left")}
@@ -206,7 +231,7 @@ export function KeywordCardFeed({
           className="flex h-14 flex-1 items-center justify-center rounded-full font-pixel text-sm text-white transition-opacity disabled:opacity-40"
           style={{ backgroundColor: UP }}
         >
-          관심 ❤
+          관심
         </button>
       </div>
 
