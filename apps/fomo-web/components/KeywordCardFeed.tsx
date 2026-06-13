@@ -1,223 +1,216 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { MOCK_KEYWORD_CARDS, scoreToColor, scoreToEmoji, type KeywordCard } from "@fomo/core";
+import { KeywordDepthPage } from "@/components/KeywordDepthPage";
 import { recordInterest } from "@/lib/keywordInterest";
+import { recordViewed, getHistory } from "@/lib/keywordHistory";
 
 /**
- * 키워드 카드 피드 — 메인 그 자체(틴더형). KEYWORD_CARD_FEED_DEV_SPEC v3.
- * 위/아래 스와이프(네이티브 스크롤 스냅)로 다음 카드, 탭하면 뎁스. 거래 버튼 없음.
- * 좌우 스와이프 = (향후) 관심/덜관심 — 지금은 UI만(seam에 기록, 로직 없음).
- * 정렬: 포모 점수 높은 순. 데이터는 mock.
+ * 키워드 카드 덱 — 자연스러운 스와이프(드래그+뒤 카드 노출) + 하단 버튼 2개. KEYWORD_CARD_FEED_DEV_SPEC v3.
+ * 피드탭 SwipeDeck 메커니즘 재사용. 오른쪽=관심 / 왼쪽=덜관심(둘 다 다음 카드로).
+ * 본 카드(스와이프/뎁스 열람)는 히스토리에 적재 + 덱에서 제외 → 다시 와도 안 본 다음 카드부터.
  */
-const SWIPE_THRESHOLD = 80;
+const THRESHOLD = 90;
+const EXIT_MS = 320;
+const UP = "#FF5A36";
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
+  );
+}
 
 export function KeywordCardFeed({
   cards = MOCK_KEYWORD_CARDS,
 }: {
   cards?: readonly KeywordCard[];
 }) {
-  const [selected, setSelected] = useState<KeywordCard | null>(null);
+  // 마운트 시점의 "이미 본" 집합 — 본 카드는 덱에서 제외(다시 와도 다음 카드부터).
+  const viewedIds = useState(() => new Set(getHistory().map((h) => h.id)))[0];
+  const [replay, setReplay] = useState(false);
+  const deck = replay ? [...cards] : cards.filter((c) => !viewedIds.has(c.id));
 
-  return (
-    <div className="w-full">
-      <div className="scrollbar-none h-[calc(100vh-132px)] snap-y snap-mandatory overflow-y-auto">
-        {cards.map((card, i) => (
-          <KeywordSlide
-            key={card.id}
-            card={card}
-            index={i}
-            total={cards.length}
-            onOpen={() => setSelected(card)}
-          />
-        ))}
-        {/* 끝 카드 — 부담 없는 데일리 + 면책 */}
-        <div className="flex h-[calc(100vh-132px)] snap-center flex-col items-center justify-center gap-3 px-8 text-center">
-          <p className="text-sm leading-6 text-whiteout">
-            오늘 사람들 시선은 여기까지였어.
-            <br />
-            내일은 또 어디로 쏠릴지 같이 보자.
-          </p>
-          <p className="text-[11px] leading-5 text-muted">
-            FOMO Index는 감정 체감 지표예요. 투자 조언이 아니에요.
-            <br />
-            도박문제로 힘들 땐 <span className="text-whiteout">1336</span>(한국도박문제예방치유원)에서 무료 상담.
-          </p>
-        </div>
-      </div>
-
-      {selected && <DepthPage card={selected} onClose={() => setSelected(null)} />}
-    </div>
-  );
-}
-
-function KeywordSlide({
-  card,
-  index,
-  total,
-  onOpen,
-}: {
-  card: KeywordCard;
-  index: number;
-  total: number;
-  onOpen: () => void;
-}) {
-  const color = scoreToColor(card.fomoScore);
+  const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
+  const [exiting, setExiting] = useState<null | "left" | "right">(null);
+  const [selected, setSelected] = useState<KeywordCard | null>(null);
   const dragging = useRef(false);
-  const start = useRef({ x: 0, y: 0 });
-  const horizontal = useRef(false);
+  const startX = useRef(0);
   const moved = useRef(false);
 
+  const advance = useCallback(
+    (dir: "left" | "right") => {
+      const card = deck[idx];
+      if (card) {
+        recordInterest(card.id, dir === "right" ? "more" : "less", Date.now());
+        recordViewed(card, Date.now());
+      }
+      setExiting(dir);
+      const after = () => {
+        setExiting(null);
+        setDx(0);
+        setIdx((i) => i + 1);
+      };
+      if (prefersReducedMotion()) after();
+      else window.setTimeout(after, EXIT_MS);
+    },
+    [deck, idx]
+  );
+
+  const openDepth = (card: KeywordCard) => {
+    recordViewed(card, Date.now());
+    setSelected(card);
+  };
+  // 뎁스 닫으면 다음 카드로 (한번 보고 돌아오면 다음 카드).
+  const closeDepth = () => {
+    setSelected(null);
+    setIdx((i) => i + 1);
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
+    if (exiting) return;
     dragging.current = true;
-    horizontal.current = false;
     moved.current = false;
-    start.current = { x: e.clientX, y: e.clientY };
+    startX.current = e.clientX;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current) return;
-    const ddx = e.clientX - start.current.x;
-    const ddy = e.clientY - start.current.y;
-    // 가로 우세 제스처만 가로채고, 세로는 네이티브 스크롤(touch-action: pan-y)에 맡긴다.
-    if (!horizontal.current && Math.abs(ddx) > Math.abs(ddy) && Math.abs(ddx) > 8) {
-      horizontal.current = true;
-      (e.target as Element).setPointerCapture?.(e.pointerId);
-    }
-    if (horizontal.current) {
-      moved.current = true;
-      setDx(ddx);
-    }
+    const d = e.clientX - startX.current;
+    if (Math.abs(d) > 6) moved.current = true;
+    setDx(d);
   };
   const onPointerUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
-    if (horizontal.current && Math.abs(dx) > SWIPE_THRESHOLD) {
-      recordInterest(card.id, dx > 0 ? "more" : "less", Date.now());
-    }
-    setDx(0);
+    if (dx > THRESHOLD) advance("right");
+    else if (dx < -THRESHOLD) advance("left");
+    else setDx(0);
   };
 
-  return (
-    <div className="flex h-[calc(100vh-132px)] snap-center flex-col justify-center">
-      <div
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onClick={() => {
-          if (!moved.current) onOpen();
-        }}
-        className="relative flex min-h-[62vh] w-full flex-col cursor-pointer touch-pan-y overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-8"
-        style={{
-          borderLeft: `2px solid ${color}`,
-          transform: `translateX(${dx}px) rotate(${dx * 0.03}deg)`,
-          transition: dragging.current ? "none" : "transform 280ms cubic-bezier(0.22,1,0.36,1)",
-        }}
-      >
-        {/* 좌우 관심 오버레이 (향후 개인화 — 지금은 표시만) */}
-        <span
-          className="pointer-events-none absolute right-4 top-4 rounded-lg border-2 px-2 py-0.5 font-pixel text-xs"
-          style={{ color, borderColor: color, opacity: Math.max(0, Math.min(1, dx / SWIPE_THRESHOLD)) }}
+  if (idx >= deck.length) {
+    return (
+      <div className="mt-16 flex flex-col items-center gap-4 px-8 text-center">
+        <p className="text-sm leading-6 text-whiteout">
+          오늘 사람들 시선은 여기까지였어.
+          <br />
+          내일은 또 어디로 쏠릴지 같이 보자.
+        </p>
+        <button
+          onClick={() => {
+            setReplay(true);
+            setIdx(0);
+          }}
+          className="rounded-full border border-hairline px-4 py-2 font-pixel text-xs text-muted transition-colors hover:text-whiteout"
         >
-          관심 →
-        </span>
-        <span
-          className="pointer-events-none absolute left-4 top-4 rounded-lg border-2 px-2 py-0.5 font-pixel text-xs"
-          style={{ color: "#64748B", borderColor: "#64748B", opacity: Math.max(0, Math.min(1, -dx / SWIPE_THRESHOLD)) }}
-        >
-          ← 덜 관심
-        </span>
-
-        {/* 키워드 + 이모지 */}
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-whiteout">{card.keyword}</span>
-          <span className="text-xl" aria-hidden>{card.emoji}</span>
-        </div>
-
-        {/* 포모 점수 */}
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-pixel text-5xl leading-none" style={{ color }}>
-            {card.fomoScore}
-          </span>
-          <span className="font-pixel text-sm text-muted">
-            {scoreToEmoji(card.fomoScore)} 포모 점수
-          </span>
-        </div>
-
-        {/* 포모 한마디 (전부) */}
-        <p className="mt-7 text-lg leading-8 text-whiteout">{card.comment}</p>
-
-        {/* 더보기 + 진행 (거래 버튼 없음) — 하단 고정 */}
-        <div className="mt-auto flex items-center justify-between pt-8">
-          <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-          <span className="font-pixel text-[11px] text-muted">{index + 1} / {total}</span>
-        </div>
+          처음부터 다시
+        </button>
+        <p className="mt-2 text-[11px] leading-5 text-muted">
+          FOMO Index는 감정 체감 지표예요. 투자 조언이 아니에요.
+          <br />
+          도박문제로 힘들 땐 <span className="text-whiteout">1336</span>(한국도박문제예방치유원) 무료 상담.
+        </p>
       </div>
-      <p className="mt-3 text-center font-pixel text-[10px] text-hairline">↓ 밀어서 다음 키워드</p>
-    </div>
-  );
-}
+    );
+  }
 
-function DepthPage({ card, onClose }: { card: KeywordCard; onClose: () => void }) {
-  const color = scoreToColor(card.fomoScore);
+  const top = deck[idx]!;
+  const color = scoreToColor(top.fomoScore);
+  const topTransform = exiting
+    ? `translateX(${exiting === "right" ? 140 : -140}%) rotate(${exiting === "right" ? 16 : -16}deg)`
+    : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
+  const topTransition = dragging.current ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
+  const behind = [deck[idx + 1], deck[idx + 2]].filter(Boolean) as KeywordCard[];
+
   return (
-    <div className="fixed inset-0 z-[60] bg-black">
-      <div className="mx-auto flex h-full max-w-md flex-col">
-        <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
-            <span aria-hidden>{card.emoji}</span>
-            <span className="font-pixel text-sm" style={{ color }}>
-              포모 {card.fomoScore}
+    <div className="w-full">
+      <p className="mb-2 px-1 text-center text-xs text-muted">
+        오른쪽=<span style={{ color: UP }}>관심</span> · 왼쪽=덜 관심 · 탭하면 자세히
+      </p>
+
+      {/* 카드 스택 (뒤 카드 일부 보임) */}
+      <div className="relative mx-auto h-[56vh] w-full select-none">
+        {behind.map((card, i) => (
+          <div
+            key={`b-${card.id}`}
+            aria-hidden
+            className="absolute inset-0 rounded-2xl border border-hairline bg-surface"
+            style={{
+              transform: `translateY(${(i + 1) * 12}px) scale(${1 - (i + 1) * 0.04})`,
+              opacity: 0.6 - i * 0.25,
+              zIndex: 1,
+            }}
+          />
+        ))}
+
+        {/* 상단(인터랙티브) 카드 */}
+        <div
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClick={() => {
+            if (!moved.current && !exiting) openDepth(top);
+          }}
+          className="absolute inset-0 z-10 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
+          style={{ borderLeft: `2px solid ${color}`, transform: topTransform, transition: topTransition }}
+        >
+          {/* 좌우 오버레이 */}
+          <span
+            className="pointer-events-none absolute right-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 font-pixel text-sm"
+            style={{ color: UP, borderColor: UP, opacity: Math.max(0, Math.min(1, dx / THRESHOLD)) }}
+          >
+            관심 →
+          </span>
+          <span
+            className="pointer-events-none absolute left-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 font-pixel text-sm"
+            style={{ color: "#64748B", borderColor: "#64748B", opacity: Math.max(0, Math.min(1, -dx / THRESHOLD)) }}
+          >
+            ← 덜 관심
+          </span>
+
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-whiteout">{top.keyword}</span>
+            <span className="text-xl" aria-hidden>{top.emoji}</span>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="font-pixel text-5xl leading-none" style={{ color }}>
+              {top.fomoScore}
             </span>
+            <span className="font-pixel text-sm text-muted">{scoreToEmoji(top.fomoScore)} 포모 점수</span>
           </div>
-          <button onClick={onClose} className="font-pixel text-sm text-muted hover:text-whiteout">
-            닫기
-          </button>
-        </div>
-
-        <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
-          <p className="text-sm leading-6 text-whiteout">{card.comment}</p>
-
-          <section className="mt-7">
-            <p className="font-pixel text-sm text-whiteout">{card.depth.whyTitle}</p>
-            <p className="mt-2 text-sm leading-6 text-muted">{card.depth.why}</p>
-          </section>
-
-          <section className="mt-6">
-            <p className="font-pixel text-sm text-whiteout">{card.depth.rememberTitle}</p>
-            <p className="mt-2 text-sm leading-6 text-muted">{card.depth.remember}</p>
-          </section>
-
-          {/* 관련 종목/테마 미니 — 시세 나열 아님 */}
-          <section className="mt-6">
-            <p className="text-xs text-muted">다들 이런 것들 봤어</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {card.related.map((r) => (
-                <span
-                  key={r}
-                  className="rounded-full border border-hairline bg-surface px-3 py-1 text-xs text-whiteout"
-                >
-                  {r}
-                </span>
-              ))}
-            </div>
-          </section>
-
-          {/* 향후 유료 자리 — 표시만 */}
-          <div className="mt-8 rounded-xl border border-dashed border-hairline px-4 py-4">
-            <p className="font-pixel text-[11px] text-muted">곧 추가될 거야</p>
-            <p className="mt-1.5 text-sm leading-6 text-muted">
-              이 테마 더 깊이 보기 · 관심 종목 모아보기
-            </p>
+          <p className="mt-6 text-lg leading-8 text-whiteout">{top.comment}</p>
+          <div className="mt-auto flex items-center justify-between pt-6">
+            <span className="font-pixel text-[11px] text-muted">더보기 →</span>
+            <span className="font-pixel text-[11px] text-muted">{idx + 1} / {deck.length}</span>
           </div>
-
-          <p className="mt-8 text-center text-[11px] leading-5 text-muted">
-            지난 흐름을 친구처럼 풀어준 거예요. 투자 조언이 아니에요.
-          </p>
         </div>
       </div>
+
+      {/* 하단 버튼 2개 (피드탭 SwipeDeck 재사용 결) */}
+      <div className="mt-4 flex items-center justify-center gap-4">
+        <button
+          onClick={() => advance("left")}
+          disabled={!!exiting}
+          aria-label="덜 관심"
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline bg-surface text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
+        >
+          ✕
+        </button>
+        <button
+          onClick={() => advance("right")}
+          disabled={!!exiting}
+          aria-label="관심"
+          className="flex h-14 flex-1 items-center justify-center rounded-full font-pixel text-sm text-white transition-opacity disabled:opacity-40"
+          style={{ backgroundColor: UP }}
+        >
+          관심 ❤
+        </button>
+      </div>
+
+      {selected && <KeywordDepthPage card={selected} onClose={closeDepth} />}
     </div>
   );
 }

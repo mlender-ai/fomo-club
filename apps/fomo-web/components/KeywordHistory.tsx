@@ -1,0 +1,68 @@
+"use client";
+
+import { useState } from "react";
+import { MOCK_KEYWORD_CARDS, scoreToColor, type KeywordCard } from "@fomo/core";
+import { KeywordDepthPage } from "@/components/KeywordDepthPage";
+import { getHistory } from "@/lib/keywordHistory";
+
+/**
+ * 히스토리 탭 — 내가 본 키워드 카드 다시 보기. KEYWORD_CARD_FEED_DEV_SPEC v3.
+ * 본 순서(최근 먼저). 탭하면 뎁스 다시 열림. 데이터는 mock 조회(id 매칭).
+ */
+function relativeTime(ts: number): string {
+  const mins = Math.floor((Date.now() - ts) / 60_000);
+  if (mins < 1) return "방금";
+  if (mins < 60) return `${mins}분 전`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  return `${Math.floor(hours / 24)}일 전`;
+}
+
+export function KeywordHistory() {
+  const [history] = useState(() => getHistory());
+  const [selected, setSelected] = useState<KeywordCard | null>(null);
+
+  if (history.length === 0) {
+    return (
+      <p className="mt-16 text-center text-sm leading-6 text-muted">
+        아직 본 카드가 없어.
+        <br />
+        카드를 슥 넘기면 여기 쌓여.
+      </p>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <p className="mb-3 px-1 text-xs text-muted">내가 본 키워드</p>
+      <div className="flex flex-col gap-2.5">
+        {history.map((h) => {
+          const color = scoreToColor(h.fomoScore);
+          const full = MOCK_KEYWORD_CARDS.find((c) => c.id === h.id) ?? null;
+          return (
+            <button
+              key={`${h.id}-${h.ts}`}
+              onClick={() => full && setSelected(full)}
+              disabled={!full}
+              className="flex w-full items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-muted disabled:opacity-50"
+              style={{ borderLeft: `2px solid ${color}` }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-whiteout">{h.keyword}</span>
+                <span aria-hidden>{h.emoji}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-pixel text-sm" style={{ color }}>
+                  {h.fomoScore}
+                </span>
+                <span className="text-[11px] text-muted">{relativeTime(h.ts)}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {selected && <KeywordDepthPage card={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
