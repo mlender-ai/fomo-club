@@ -105,9 +105,13 @@ interface LoginResponse {
   user: { id: string; displayName: string | null; isNew: boolean };
 }
 
-/** 카카오 access_token으로 타로 백엔드 로그인 → JWT 저장 후 반환. */
+/**
+ * 카카오 access_token으로 로그인 → JWT 저장 후 반환.
+ * [보관] 감정 캘린더(FEATURE_HISTORY_TAB) 가입 흐름 전용 — 현재 flag OFF라 미사용.
+ * 인증 백엔드(`/api/fomo/auth/login`)는 감정 모델 복원 시 함께 복원한다.
+ */
 export async function loginKakao(accessToken: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_BASE}/api/tarot/auth/login`, {
+  const res = await fetch(`${API_BASE}/api/fomo/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider: "KAKAO", identityToken: accessToken }),

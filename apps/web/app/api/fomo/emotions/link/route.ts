@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { corsJson, withCors } from "../../../../../lib/fomo";
-import { extractBearerToken, verifyToken } from "@/lib/tarot/jwt";
+import { extractBearerToken, verifyToken } from "@/lib/auth/jwt";
 
 export const dynamic = "force-dynamic";
 

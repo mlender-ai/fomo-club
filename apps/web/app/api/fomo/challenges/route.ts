@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { challengePointsFor } from "@fomo/core";
 import { prisma } from "../../../../lib/prisma";
 import { kstDate, corsJson, withCors } from "../../../../lib/fomo";
-import { extractBearerToken, verifyToken } from "@/lib/tarot/jwt";
+import { extractBearerToken, verifyToken } from "@/lib/auth/jwt";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 // 카카오 로그인(웹). Kakao JS SDK를 동적 로드 → Kakao.init → 로그인 → access_token 획득.
-// 토큰은 타로 백엔드(/api/tarot/auth/login, KAKAO 분기)가 kapi.kakao.com로 서버 검증한다.
+// 토큰은 인증 백엔드(/api/fomo/auth/login, KAKAO 분기)가 kapi.kakao.com로 서버 검증한다.
 // NEXT_PUBLIC_KAKAO_JS_KEY 필요(Vercel). Kakao Developers 콘솔에 웹 도메인 등록 선행.
 
 const SDK_SRC = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js";

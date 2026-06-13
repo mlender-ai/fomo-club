@@ -65,27 +65,6 @@ test.describe("smoke — 공개 라우트 시각/인터랙션 회귀 검증", ()
     expect(res?.status(), "HTTP 200 응답").toBe(200);
   });
 
-  test("/admin/login 어드민 로그인 페이지 — HTTP only", async ({ page }) => {
-    // 동일 사유 — boundingBox hang. HTTP 200만 회귀 봉쇄.
-    const res = await page.goto("/admin/login", { waitUntil: "commit" });
-    expect(res?.status()).toBe(200);
-  });
-
-  test("/admin 비로그인 접근 → 로그인 페이지로 리다이렉트 또는 401/403", async ({ page }) => {
-    // middleware 가 인증 안 된 요청을 적절히 처리하는지 회귀
-    const res = await page.goto("/admin", { waitUntil: "domcontentloaded" });
-    const status = res?.status() ?? 0;
-    const url = page.url();
-
-    // 허용 시나리오:
-    // - 200 + /admin/login 로 리다이렉트
-    // - 401/403/404
-    const acceptable =
-      (status === 200 && url.includes("/admin/login")) ||
-      status === 401 ||
-      status === 403 ||
-      status === 404;
-
-    expect(acceptable, `예상 외 응답: status=${status}, url=${url}`).toBe(true);
-  });
+  // 어드민(/admin, /api/admin) + 타로는 PRODUCT_TRUTH §2 정리로 제거됨(legacy/tarot-archive 보존).
+  // 새 구조엔 admin 표면이 없으므로 /admin/login·/admin smoke 단언은 삭제한다.
 });
