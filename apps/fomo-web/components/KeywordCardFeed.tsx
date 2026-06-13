@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { MOCK_KEYWORD_CARDS, scoreToColor, scoreToEmoji, type KeywordCard } from "@fomo/core";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { scoreToColor, scoreToEmoji, type KeywordCard, type KeywordConfidence } from "@fomo/core";
 import { KeywordDepthPage } from "@/components/KeywordDepthPage";
+import { fetchKeywords } from "@/lib/fomoApi";
 import { recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
 
@@ -47,10 +48,80 @@ function CardFace({ card, progress }: { card: KeywordCard; progress?: string }) 
   );
 }
 
-export function KeywordCardFeed({
-  cards = MOCK_KEYWORD_CARDS,
+/** confidence 정직 한마디(§5). high 면 노출 안 함. */
+function ConfidenceNote({ confidence }: { confidence: KeywordConfidence }) {
+  if (confidence === "high") return null;
+  const text =
+    confidence === "fallback"
+      ? "오늘은 시장이 너무 조용해서 보여줄 게 별로 없어. 그것도 정상이야."
+      : "오늘은 데이터가 좀 적어서 포모도 긴가민가해 🤔";
+  return (
+    <p className="mb-2 px-2 text-center text-[11px] leading-5 text-muted">{text}</p>
+  );
+}
+
+/** 스와이프 스켈레톤(로딩) — 무한 로딩 대신 카드 형태만 비워 보여준다. */
+function DeckSkeleton() {
+  return (
+    <div className="w-full">
+      <div className="mx-auto h-[56vh] w-full animate-pulse rounded-2xl border border-hairline bg-surface" />
+      <p className="mt-4 text-center text-xs text-muted">오늘 뭐에 쏠렸는지 보는 중…</p>
+    </div>
+  );
+}
+
+/** 담담한 빈 상태(수집 실패/데이터 없음) — 무한 로딩 금지. */
+function DeckEmpty() {
+  return (
+    <div className="mt-16 flex flex-col items-center gap-3 px-8 text-center">
+      <p className="text-sm leading-6 text-whiteout">
+        오늘은 보여줄 게 잠깐 비었어.
+        <br />
+        조용한 날도 있는 거야. 이따 다시 와줘.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * 데이터 로딩 래퍼 — /api/fomo/keywords 실데이터를 받아 덱에 넘긴다.
+ * 로딩=스켈레톤, 실패=담담한 빈 상태(무한 로딩 금지). confidence 는 덱 상단 한마디로.
+ */
+export function KeywordCardFeed() {
+  const [state, setState] = useState<
+    | { kind: "loading" }
+    | { kind: "error" }
+    | { kind: "ready"; cards: readonly KeywordCard[]; confidence: KeywordConfidence }
+  >({ kind: "loading" });
+
+  useEffect(() => {
+    let alive = true;
+    fetchKeywords()
+      .then((res) => {
+        if (!alive) return;
+        if (!res.cards || res.cards.length === 0) setState({ kind: "error" });
+        else setState({ kind: "ready", cards: res.cards, confidence: res.confidence });
+      })
+      .catch((err) => {
+        console.warn("[KeywordCardFeed] fetch failed", err);
+        if (alive) setState({ kind: "error" });
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (state.kind === "loading") return <DeckSkeleton />;
+  if (state.kind === "error") return <DeckEmpty />;
+  return <KeywordDeck cards={state.cards} confidence={state.confidence} />;
+}
+
+function KeywordDeck({
+  cards,
+  confidence,
 }: {
-  cards?: readonly KeywordCard[];
+  cards: readonly KeywordCard[];
+  confidence: KeywordConfidence;
 }) {
   // 마운트 시점의 "이미 본" 집합 — 본 카드는 덱에서 제외(다시 와도 다음 카드부터).
   const viewedIds = useState(() => new Set(getHistory().map((h) => h.id)))[0];
@@ -159,6 +230,7 @@ export function KeywordCardFeed({
 
   return (
     <div className="w-full">
+      <ConfidenceNote confidence={confidence} />
       <p className="mb-2 px-1 text-center text-xs text-muted">
         오른쪽=<span style={{ color: UP }}>관심</span> · 왼쪽=덜 관심 · 탭하면 자세히
       </p>
