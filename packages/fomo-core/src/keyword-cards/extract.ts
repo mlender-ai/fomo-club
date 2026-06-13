@@ -1,0 +1,109 @@
+import type { NewsLang } from "../news-feed/types";
+
+/**
+ * 키워드/테마 추출 — 사전 기반 1차. KEYWORD_ENGINE_SPEC §4.2.
+ *
+ * 순수 함수(네트워크·DB 0). 입력: 점수 매기기 전 뉴스/커뮤니티 글 배열.
+ * 출력: 테마별 버킷 { keyword, articles, mentions, engagement, emoji }.
+ * LLM 클러스터링 X(예측 불가·디버깅 난해) — 사전 매칭으로 정직·재현 가능하게. v2에서 임베딩 확장.
+ */
+
+/** 추출 입력 — 뉴스 기사 또는 커뮤니티 글. fetch 는 Phase 2 라우트 담당. */
+export interface KeywordSourceItem {
+  title: string;
+  summary?: string;
+  /** 발행/작성 시각 ISO. 최신성·가속 계산용(없으면 무시). */
+  publishedAt?: string;
+  /** 커뮤니티 참여도(upvote+댓글 합). 뉴스는 0/생략. */
+  engagement?: number;
+  source?: string;
+  lang?: NewsLang;
+}
+
+interface ThemeDef {
+  /** 고정 이모지(분위기). §4.2 */
+  emoji: string;
+  /** 매칭 용어 — EN+KO. 한 글이 복수 테마에 매칭될 수 있다. */
+  terms: readonly string[];
+}
+
+/**
+ * 테마 사전(MVP). 코인+주식 테마만(PRODUCT_TRUTH §4 Now). 부동산·환율은 Later.
+ * 용어 추가/조정은 운영 중 데이터 보며 튜닝. 오추출 1건이 신뢰를 깨므로 보수적으로.
+ */
+export const THEME_DICTIONARY: Record<string, ThemeDef> = {
+  반도체: {
+    emoji: "🔥",
+    terms: ["반도체", "HBM", "엔비디아", "SK하이닉스", "삼성전자", "TSMC", "메모리", "파운드리", "semiconductor", "chip", "nvidia"],
+  },
+  AI: {
+    emoji: "🤖",
+    terms: ["AI", "인공지능", "오픈AI", "챗GPT", "ChatGPT", "LLM", "GPT", "openai", "엔비디아"],
+  },
+  코인: {
+    emoji: "₿",
+    terms: ["비트코인", "이더리움", "코인", "암호화폐", "가상자산", "crypto", "bitcoin", "btc", "ethereum", "eth", "ETF"],
+  },
+  금리: {
+    emoji: "💵",
+    terms: ["금리", "연준", "FOMC", "기준금리", "채권", "인플레", "물가", "rate", "fed", "fomc"],
+  },
+  "2차전지": {
+    emoji: "🔋",
+    terms: ["2차전지", "2차 전지", "배터리", "에코프로", "LG에너지", "전기차", "battery"],
+  },
+};
+
+export interface ExtractedKeyword {
+  keyword: string;
+  emoji: string;
+  /** 이 테마에 매칭된 원본 글. */
+  articles: KeywordSourceItem[];
+  /** 매칭 글 수(언급량). */
+  mentions: number;
+  /** 참여도 합(커뮤니티 upvote+댓글). */
+  engagement: number;
+  // ── 미래 확장 자리(Phase 2+, PRODUCT_VISION §7) — 지금은 미산출. 타입을 닫지 않기 위해 선점. ──
+  /** 쏠림 첫 감지일(YYYY-MM-DD). 일일 스냅샷 누적 시 채운다(타이밍 판단 보조용). */
+  firstDetectedAt?: string;
+  /** 연속 감지일 수. 스냅샷 누적 시 채운다. */
+  consecutiveDays?: number;
+}
+
+/** 한 글이 어떤 테마에 매칭되는지 — 사전 용어 substring(대소문자 무시). */
+function matchedThemes(item: KeywordSourceItem): string[] {
+  const blob = `${item.title} ${item.summary ?? ""}`.toLowerCase();
+  const hits: string[] = [];
+  for (const [keyword, def] of Object.entries(THEME_DICTIONARY)) {
+    if (def.terms.some((t) => blob.includes(t.toLowerCase()))) hits.push(keyword);
+  }
+  return hits;
+}
+
+/**
+ * 글 배열 → 테마 버킷. mention 0 테마는 제외(정직: 안 쏠렸으면 안 보여준다, §4.2 step 3).
+ * 정렬: 언급량 내림차순(동률이면 참여도) — 점수는 score.ts가 매긴다.
+ */
+export function extractKeywords(items: KeywordSourceItem[]): ExtractedKeyword[] {
+  const buckets = new Map<string, KeywordSourceItem[]>();
+  for (const item of items) {
+    for (const keyword of matchedThemes(item)) {
+      const arr = buckets.get(keyword) ?? [];
+      arr.push(item);
+      buckets.set(keyword, arr);
+    }
+  }
+
+  const out: ExtractedKeyword[] = [];
+  for (const [keyword, articles] of buckets) {
+    out.push({
+      keyword,
+      emoji: THEME_DICTIONARY[keyword]!.emoji,
+      articles,
+      mentions: articles.length,
+      engagement: articles.reduce((s, a) => s + (a.engagement ?? 0), 0),
+    });
+  }
+  out.sort((a, b) => b.mentions - a.mentions || b.engagement - a.engagement);
+  return out;
+}
