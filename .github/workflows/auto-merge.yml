@@ -5,9 +5,11 @@ name: Auto Merge
 # 품질 게이트 실패(Prisma 변경, 빌드 에러, 테스트 실패) 시 머지 차단 + Slack 알림
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  # [PAUSED 2026-06-14] 에이전트 자율 루프 정지 — 자동 머지 비활성. 외부 예약 루틴(CEO Brief Agent)이
+  # 연 PR이 CI 통과 시 사람 검토 없이 squash 머지되던 것을 차단. 되살리려면 아래 workflow_run 주석 해제.
+  # workflow_run:
+  #   workflows: ["CI"]
+  #   types: [completed]
   workflow_dispatch:
     inputs:
       branch:
