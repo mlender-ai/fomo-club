@@ -101,3 +101,37 @@ describe("scoreKeywords (군중 쏠림 0~100)", () => {
     expect(scoreKeywords([], { nowMs: NOW })).toEqual([]);
   });
 });
+
+describe("extractKeywords — 오추출 방지(단어경계·일반어 제거, 2026-06-14)", () => {
+  const themesOf = (item: KeywordSourceItem) => extractKeywords([item]).map((e) => e.keyword);
+
+  it("'Shanghai'의 'ai' 부분일치 → AI 오추출 안 됨", () => {
+    const item: KeywordSourceItem = {
+      title: "상하이 국제공항 여객 처리량 감소",
+      summary: "Shanghai Pudong airport passenger volume fell 1.0%",
+      source: "로이터",
+    };
+    expect(themesOf(item)).not.toContain("AI");
+  });
+
+  it("'federal'의 'fed' 부분일치 → 금리 오추출 안 됨", () => {
+    expect(themesOf({ title: "US federal holiday calendar updated" })).not.toContain("금리");
+  });
+
+  it("반도체 ETF 기사 → 코인 오추출 안 됨('ETF' 사전어 제거)", () => {
+    const item: KeywordSourceItem = { title: "'조정이 기회' 반도체株 3배 ETF에 뭉칫돈", source: "매일경제" };
+    const themes = themesOf(item);
+    expect(themes).toContain("반도체");
+    expect(themes).not.toContain("코인");
+  });
+
+  it("영문 약어는 독립 단어일 때만 매칭 — 'AI 반도체 수요'는 AI+반도체", () => {
+    const themes = themesOf({ title: "AI 반도체 수요 폭발, Fed 금리 동결" });
+    expect(themes).toEqual(expect.arrayContaining(["AI", "반도체", "금리"]));
+  });
+
+  it("정상 키워드는 여전히 매칭 — 한글/약어", () => {
+    expect(themesOf({ title: "비트코인 급등, ethereum도 강세" })).toContain("코인");
+    expect(themesOf({ title: "엔비디아 GPT 칩 수요" })).toEqual(expect.arrayContaining(["반도체", "AI"]));
+  });
+});
