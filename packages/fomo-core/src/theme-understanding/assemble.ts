@@ -120,6 +120,7 @@ function usedSources(
       title: d.title,
       ...(d.source ? { source: d.source } : {}),
       ...(d.url ? { url: d.url } : {}),
+      ...(d.tier ? { tier: d.tier } : {}),
     });
   }
   return out;

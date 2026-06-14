@@ -71,6 +71,7 @@ export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
       publishedAt: a.publishedAt,
       source: a.source,
       lang: a.lang,
+      ...(a.tier ? { tier: a.tier } : {}),
     }));
     const bucket = extractKeywords(items).find((k) => k.keyword === theme);
     for (const art of (bucket?.articles ?? []).slice(0, MAX_NEWS)) {
@@ -82,6 +83,7 @@ export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
         ...(art.source ? { source: art.source } : {}),
         ...(art.url ? { url: art.url } : {}),
         ...(art.publishedAt ? { publishedAt: art.publishedAt } : {}),
+        tier: art.tier ?? "news-mid",
       });
     }
   } else {
@@ -99,6 +101,7 @@ export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
           title: post.title,
           source: `네이버 종토방 ${c.label}`,
           ...(post.tsMs ? { publishedAt: new Date(post.tsMs).toISOString() } : {}),
+          tier: "community-mid", // 종토방 = 개미 본진(§4.5)
         });
       }
     } else if (r && r.status === "rejected") {

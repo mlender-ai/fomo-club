@@ -110,6 +110,23 @@ describe("균형(강세/약세) 정직 표기", () => {
   });
 });
 
+describe("소스 tier 전파 (C-1)", () => {
+  it("SourceDoc.tier → InsightSourceRef.tier 로 전파(가중·표기용)", () => {
+    const docs: SourceDoc[] = [
+      { id: "S1", kind: "news", title: "외국인 매수세가 삼성전자", source: "연합뉴스", tier: "news-mid" },
+    ];
+    const raw = {
+      stocks: [],
+      bull: [{ claim: "외국인이 담았어", sourceId: "S1", quote: "외국인 매수세가 삼성전자" }],
+      bear: [],
+      wordings: [],
+      stanceNote: "",
+    };
+    const r = assembleThemeInsight("반도체", docs, raw);
+    expect(r.sources[0]!.tier).toBe("news-mid");
+  });
+});
+
 describe("워딩 안전 필터 (룰 단계, Track C 선행)", () => {
   it("욕설/혐오 → 탈락", () => {
     expect(screenWordingRule("시발 존버 지친다").kept).toBe(false);

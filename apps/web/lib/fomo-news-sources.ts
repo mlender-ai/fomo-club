@@ -5,7 +5,13 @@ import {
   type NaverNewsRaw,
   type NewsSource,
   type RawArticle,
+  type SourceTier,
 } from "@fomo/core";
+
+/** 파싱 결과 기사들에 tier 를 부착(수집 레이어 메타). */
+function withTier(articles: RawArticle[], tier: SourceTier): RawArticle[] {
+  return articles.map((a) => ({ ...a, tier }));
+}
 
 /**
  * FOMO 뉴스 소스 — 실제 기사 수집. docs/PIVOT_FEED_FIRST.md.
@@ -68,10 +74,15 @@ export const yahooSource: NewsSource = {
 
 // ───────────────────────── 한국 금융 뉴스 RSS ─────────────────────────
 // 증권/금융/시황 초점 피드(Node fetch 200 확인). 표준 RSS 2.0 → parseRssFeed.
-const KR_FEEDS: { id: string; url: string; source: string }[] = [
-  { id: "hankyung", url: "https://www.hankyung.com/feed/finance", source: "한국경제" },
-  { id: "mk", url: "https://www.mk.co.kr/rss/50200011/", source: "매일경제" },
-  { id: "yna", url: "https://www.yna.co.kr/rss/market.xml", source: "연합뉴스" },
+// C-1(DATA_ENGINE_STRATEGY §4.5): 매경 쏠림 해결 — 연합·한경·파이낸셜뉴스·연합인포맥스로 다양화.
+// 전부 news-mid tier(공식 데이터 FRED=official-high 는 C-2). 죽은 피드는 fetch 실패 시 [] 로 degrade.
+const KR_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] = [
+  { id: "hankyung", url: "https://www.hankyung.com/feed/finance", source: "한국경제", tier: "news-mid" },
+  { id: "mk", url: "https://www.mk.co.kr/rss/50200011/", source: "매일경제", tier: "news-mid" },
+  { id: "yna", url: "https://www.yna.co.kr/rss/market.xml", source: "연합뉴스", tier: "news-mid" },
+  { id: "yna-econ", url: "https://www.yna.co.kr/rss/economy.xml", source: "연합뉴스", tier: "news-mid" },
+  { id: "fnnews", url: "https://www.fnnews.com/rss/r20/fn_realnews_stock.xml", source: "파이낸셜뉴스", tier: "news-mid" },
+  { id: "einfomax", url: "https://news.einfomax.co.kr/rss/S1N2.xml", source: "연합인포맥스", tier: "news-mid" },
 ];
 
 // ───────────────────────── 네이버 금융 뉴스 (JSON) ─────────────────────────
@@ -91,7 +102,8 @@ export const naverNewsSource: NewsSource = {
       });
       if (!res.ok) return [];
       const json = (await res.json()) as NaverNewsRaw[];
-      return parseNaverNews(Array.isArray(json) ? json : [], new Date().toISOString());
+      // 네이버 worldNews = 해외 증시 뉴스(한국어 번역) — 외신 채널. news-mid.
+      return withTier(parseNaverNews(Array.isArray(json) ? json : [], new Date().toISOString()), "news-mid");
     } catch (err) {
       console.warn("[fomo/news] naver error", err);
       return [];
@@ -100,7 +112,7 @@ export const naverNewsSource: NewsSource = {
 };
 
 /** 한국 RSS 피드 1개 → 한국어 RawArticle[]. 실패 시 빈 배열. */
-function makeKoreanRssSource({ id, url, source }: (typeof KR_FEEDS)[number]): NewsSource {
+function makeKoreanRssSource({ id, url, source, tier }: (typeof KR_FEEDS)[number]): NewsSource {
   return {
     id,
     lang: "ko",
@@ -114,7 +126,7 @@ function makeKoreanRssSource({ id, url, source }: (typeof KR_FEEDS)[number]): Ne
         });
         if (!res.ok) return [];
         const xml = await res.text();
-        return parseRssFeed(xml, { source, lang: "ko", nowIso: new Date().toISOString() });
+        return withTier(parseRssFeed(xml, { source, lang: "ko", nowIso: new Date().toISOString() }), tier);
       } catch (err) {
         console.warn(`[fomo/news] ${id} error`, err);
         return [];

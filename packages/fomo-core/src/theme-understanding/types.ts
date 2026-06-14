@@ -10,6 +10,8 @@
 
 export type SourceKind = "news" | "community";
 
+export type { SourceTier } from "../news-feed/types";
+
 /** 수집한 원문 1건(제목·본문 보존 — 커뮤니티 글도 제목을 버리지 않는다). */
 export interface SourceDoc {
   /** 인용 식별자(예: "S1"). 근거가 어느 원문에서 나왔는지 추적·검증용. */
@@ -22,6 +24,8 @@ export interface SourceDoc {
   source?: string;
   url?: string;
   publishedAt?: string;
+  /** 소스 신뢰도 등급(§4.5) — 가중·정직 표기용. */
+  tier?: import("../news-feed/types").SourceTier;
 }
 
 /** 강세/약세 근거 1건 — 반드시 원문에 박힌 인용으로 뒷받침. */
@@ -52,6 +56,8 @@ export interface InsightSourceRef {
   title: string;
   source?: string;
   url?: string;
+  /** 소스 신뢰도 등급(§4.5) — 카드/뎁스에 정직 표기. */
+  tier?: import("../news-feed/types").SourceTier;
 }
 
 /** 한 테마의 이해·구조화 결과. */

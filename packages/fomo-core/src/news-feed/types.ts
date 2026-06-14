@@ -12,6 +12,13 @@
 export type NewsLang = "en" | "ko";
 
 /** 정규화된 원본 기사 — 소스(Yahoo/네이버/연합 등) 무관 공통 형태. */
+/**
+ * 소스 신뢰도 등급(tier) — DATA_ENGINE_STRATEGY §4.5. 가지치기를 설정화하기 위한 메타.
+ * 같은 "강세"라도 official-high(FRED) > news-mid(연합/한경) > community-mid(종토방) > community-low(디시).
+ * 나중에 "디시 가중치↓" 같은 조정이 코드 수술이 아니라 tier 가중치 한 줄이 되게 한다.
+ */
+export type SourceTier = "official-high" | "news-mid" | "community-mid" | "community-low";
+
 export interface RawArticle {
   /** 안정 식별자 (보통 url 해시/슬러그). */
   id: string;
@@ -29,6 +36,8 @@ export interface RawArticle {
   category?: string;
   /** 어느 티커/종목에서 수집됐는지. */
   symbol?: string;
+  /** 소스 신뢰도 등급 — 수집 레이어가 부착(가지치기·가중치용). */
+  tier?: SourceTier;
   /** 소스 원어. 점수기·번역기가 참고. */
   lang: NewsLang;
   /** 향후 한국어 번역 자리 (지금은 비움). */

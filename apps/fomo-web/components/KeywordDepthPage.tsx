@@ -35,9 +35,20 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
   // sourceId → 원문(링크용).
   const srcOf = (id: string) => insight?.sources.find((s) => s.id === id);
+  // tier → 신뢰도 정직 표기(§4.5).
+  const tierLabel = (tier?: string) =>
+    tier === "official-high"
+      ? "공식 데이터"
+      : tier === "news-mid"
+        ? "뉴스"
+        : tier === "community-mid" || tier === "community-low"
+          ? "커뮤니티"
+          : "";
 
   const evidenceItem = (claim: string, sourceId: string, key: string) => {
     const s = srcOf(sourceId);
+    const tl = tierLabel(s?.tier);
+    const label = `${s?.source ?? s?.title ?? ""}${tl ? ` · ${tl}` : ""}`;
     return (
       <li key={key} className="rounded-lg border border-hairline bg-surface px-3 py-2">
         <span className="block text-sm leading-5 text-whiteout">{claim}</span>
@@ -49,10 +60,10 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
               rel="noreferrer"
               className="mt-1 block text-[11px] text-muted hover:text-whiteout"
             >
-              ↳ {s.source ?? s.title} · 원문 보기 →
+              ↳ {label} · 원문 보기 →
             </a>
           ) : (
-            <span className="mt-1 block text-[11px] text-muted">↳ {s.source ?? s.title}</span>
+            <span className="mt-1 block text-[11px] text-muted">↳ {label}</span>
           ))}
       </li>
     );

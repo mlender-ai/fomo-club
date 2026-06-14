@@ -14,6 +14,8 @@ export interface KeywordSourceItem {
   summary?: string;
   /** 원문 링크(있으면 카드 소스에서 클릭 가능). */
   url?: string;
+  /** 소스 신뢰도 등급(DATA_ENGINE_STRATEGY §4.5). 이해 레이어로 전달돼 가중·표기에 쓰임. */
+  tier?: import("../news-feed/types").SourceTier;
   /** 발행/작성 시각 ISO. 최신성·가속 계산용(없으면 무시). */
   publishedAt?: string;
   /** 커뮤니티 참여도(upvote+댓글 합). 뉴스는 0/생략. */
