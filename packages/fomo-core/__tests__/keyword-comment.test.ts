@@ -10,9 +10,15 @@ import {
   scoreKeywords,
   josa,
   hasBatchim,
+  applyLlmComment,
+  validateLlmComment,
+  parseKeywordComments,
+  buildKeywordCommentPrompt,
+  isCommentSafe,
   type KeywordSourceItem,
   type ScoredKeyword,
   type CommunitySourceSignal,
+  type LlmKeywordComment,
 } from "../src";
 
 const NOW = Date.parse("2026-06-13T12:00:00Z");
@@ -109,6 +115,86 @@ describe("코멘트 변주 (밴드 중복 해소)", () => {
     const base = scoreSample()[0]!;
     const card = buildKeywordCard({ ...base, keyword: "AI", fomoScore: 66, mentions: 23 });
     expect(card.comment.includes("23")).toBe(true);
+  });
+});
+
+describe("Phase 3 — LLM 코멘트 가드레일 (§4.4)", () => {
+  const good: LlmKeywordComment = {
+    keyword: "반도체",
+    comment: "너 지금 반도체 관심 왔구나. 너만 그런 거 아니야 — 시장도 과열됐어. 잠깐 뒤로 빠져서 지켜보는 건 어때?",
+    why: "오늘 엔비디아·삼성전자 얘기가 여기저기서 돌면서 다들 시선이 쏠렸어.",
+    remember: "제일 뜨거울 때 들어가면 늦는 경우가 많아. 안 급해도 돼.",
+  };
+
+  it("정상 LLM 코멘트는 통과하고 카드에 얹힌다", () => {
+    expect(validateLlmComment(good)).toBe(true);
+    const card = buildKeywordCard(scoreSample()[0]!);
+    const merged = applyLlmComment(card, good);
+    expect(merged.comment).toBe(good.comment);
+    expect(merged.depth.why).toBe(good.why);
+    expect(merged.depth.remember).toBe(good.remember);
+    // 점수·관련종목 등 사실 부분은 LLM 이 못 건드린다.
+    expect(merged.fomoScore).toBe(card.fomoScore);
+    expect(merged.related).toEqual(card.related);
+  });
+
+  it("투자조언 주입 → 폐기 → 룰 폴백으로 강등", () => {
+    const card = buildKeywordCard(scoreSample()[0]!);
+    const bad: LlmKeywordComment = { ...good, comment: "지금 반도체 매수해. 안 사면 후회해." };
+    expect(validateLlmComment(bad)).toBe(false);
+    // applyLlmComment 가 룰 카드 그대로 돌려준다(코멘트 교체 안 됨).
+    expect(applyLlmComment(card, bad)).toEqual(card);
+  });
+
+  it("미래 예측 주입 → 폐기", () => {
+    const bad: LlmKeywordComment = { ...good, comment: "이거 곧 오른다. 천천히 봐도 돼." };
+    expect(validateLlmComment(bad)).toBe(false);
+  });
+
+  it("전문용어 주입 → 폐기", () => {
+    const bad: LlmKeywordComment = { ...good, why: "골든크로스가 떠서 다들 들떴어. 안 급해도 돼." };
+    expect(validateLlmComment(bad)).toBe(false);
+  });
+
+  it("균형추(진정 결) 누락 → 폐기", () => {
+    const bad: LlmKeywordComment = {
+      ...good,
+      comment: "너 지금 반도체 관심 왔구나. 다들 여기 몰렸어.",
+      remember: "오늘 제일 뜨거운 키워드였어.",
+    };
+    expect(validateLlmComment(bad)).toBe(false);
+  });
+
+  it("빈 필드(LLM 누락) → 폐기 + applyLlmComment 룰 폴백", () => {
+    const card = buildKeywordCard(scoreSample()[0]!);
+    expect(validateLlmComment({ ...good, why: "" })).toBe(false);
+    expect(validateLlmComment(undefined)).toBe(false);
+    // undefined(LLM 미동작) → 룰 카드 그대로.
+    expect(applyLlmComment(card, undefined)).toEqual(card);
+  });
+
+  it("룰 폴백 템플릿 자체는 금칙어 가드를 통과한다(강등 카드도 안전)", () => {
+    for (const c of buildKeywordCards(scoreSample())) {
+      expect(isCommentSafe(`${c.comment} ${c.depth.why} ${c.depth.remember}`)).toBe(true);
+    }
+  });
+
+  it("parseKeywordComments — JSON 배열 + 코드펜스/잡텍스트 허용", () => {
+    const raw = '설명 텍스트\n```json\n[{"keyword":"코인","comment":"c","why":"w","remember":"r"}]\n``` 끝';
+    const out = parseKeywordComments(raw);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toEqual({ keyword: "코인", comment: "c", why: "w", remember: "r" });
+    expect(parseKeywordComments("not json")).toEqual([]);
+  });
+
+  it("buildKeywordCommentPrompt — 2인칭/균형추/JSON 지시 + 키워드 포함", () => {
+    const p = buildKeywordCommentPrompt([
+      { keyword: "반도체", score: 88, titles: ["엔비디아 급등"], related: ["삼성전자"] },
+    ]);
+    expect(p).toContain("반도체");
+    expect(p).toContain('2인칭 "너"');
+    expect(p).toContain("균형추");
+    expect(p).toMatch(/JSON 배열/);
   });
 });
 
