@@ -13,6 +13,7 @@ import {
 } from "@fomo/core";
 import { withCors, kstDate } from "../../../../lib/fomo";
 import { fetchAllNews } from "../../../../lib/fomo-news-sources";
+import { addKeywordCardComments } from "../../../../lib/fomo-keyword-comment";
 
 /**
  * 키워드 카드 API — "오늘 사람들 시선이 가장 쏠린 키워드" 실데이터 산출. KEYWORD_ENGINE_SPEC §4.6 / Phase 2.
@@ -77,12 +78,15 @@ async function computeLive(date: string): Promise<KeywordsPayload> {
   // 뉴스 추출 → 커뮤니티 참여도 가산(뉴스로 확인된 테마에만, §4.3 보수적) → 점수.
   const extracted = mergeCommunityEngagement(extractKeywords(items), communitySignals);
   const scored = scoreKeywords(extracted, { nowMs: Date.now() });
-  const cards = buildKeywordCards(scored);
+  const ruleCards = buildKeywordCards(scored);
 
   // 키워드 0건 = 보여줄 게 없음 → mock 명시적 폴백(가짜 점수 강제 생성 금지, §5).
-  if (cards.length === 0) {
+  if (ruleCards.length === 0) {
     return { date, cards: MOCK_KEYWORD_CARDS, confidence: "fallback", live: true };
   }
+
+  // Phase 3: 코멘트를 LLM 1차로(가드레일 + 룰 폴백 강등). 점수 로직은 그대로 — 코멘트 텍스트만 교체.
+  const cards = await addKeywordCardComments(scored, ruleCards);
   return { date, cards, confidence: overallConfidence(scored), live: true };
 }
 

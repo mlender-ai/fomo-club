@@ -194,6 +194,144 @@ export function buildKeywordCards(scored: readonly ScoredKeyword[]): KeywordCard
   return scored.map(buildKeywordCard);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 3 — LLM 코멘트 + 가드레일 (KEYWORD_ENGINE_SPEC §4.4)
+//
+// 순수부: 프롬프트 빌더 + 응답 파서 + 가드(금칙어·균형추) + 룰 폴백 병합.
+// 네트워크(LLM 호출)는 apps/web/lib/fomo-keyword-comment.ts 가 담당하고, 검증·병합은 여기로 모은다.
+// LLM 실패·레이트리밋·가드 위반 시 자동으로 위 룰 폴백(buildKeywordCard)으로 강등한다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** LLM 이 키워드별로 돌려주는 코멘트 묶음(앞면 comment + depth.why/remember). */
+export interface LlmKeywordComment {
+  keyword: string;
+  comment: string;
+  why: string;
+  remember: string;
+}
+
+/**
+ * 금칙어 가드(§2·§4.4 규칙 2·3). 위반 시 그 LLM 출력은 폐기 → 룰 폴백.
+ * - 투자조언/매수매도/종목추천: 행동 지시·추천.
+ * - 예측/미래 단정: "오른다/내린다/급등" 등 방향 단정.
+ * - 전문용어: 차트·기술 지표 용어(중학생도 알아듣게 하라는 규칙 위반).
+ * 주의: 룰 폴백 템플릿("따라 들어가는 건 조심" 등 과거·현재 설명)은 통과해야 하므로
+ *   "들어가라/세요" 같은 명령형만 잡고 "들어가는/들어가면" 서술형은 건드리지 않는다.
+ * 펀더멘탈(EPS·PER)은 §5 '따뜻하게 풀어줄' 대상이라 금칙에서 제외.
+ */
+export const COMMENT_FORBIDDEN: RegExp =
+  /사라|팔아라|사세요|파세요|매수|매도|손절|익절|불타기|물타기|풀매수|추천|담아라|담으세요|들어가라|들어가세요|진입하|베팅|올인|줍줍|오른다|오를\s*(?:거|것|듯|전망|예정)|내린다|내릴\s*(?:거|것|듯)|상승할|하락할|급등할|폭등|폭락|반등할|텐배거|떡상|떡락|불장|가즈아|목표가|지금\s*안\s*사면|오더블럭|골든크로스|데드크로스|RSI|MACD|볼린저|이평선|지지선|저항선|과매수|과매도|손익비|레버리지|공매도|보조지표|피보나치|이격도/;
+
+/**
+ * 균형추(진정 결) 감지 — §4.4 규칙 4: 모든 코멘트는 진정 결로 닫혀야 한다.
+ * 룰 폴백용 CALM_MARKERS 보다 넓게(LLM 의 자연스러운 표현까지 포착). 누락 시 폐기.
+ */
+const CALM_TONE =
+  /급(?:해|할|하지|한|히)|기회는\s*또|천천히|조심|아쉬워|무서워할|쉬어가|쉬어도|괜찮|조급|서두르지|놓쳐도|늦었다고|뒤로\s*빠져|물러나|지켜보|한\s*박자|천천히\s*봐도/;
+
+/** LLM 출력이 가드를 통과하는가(금칙어 없음 + 균형추 있음). */
+export function isCommentSafe(text: string): boolean {
+  if (!text) return false;
+  return !COMMENT_FORBIDDEN.test(text);
+}
+
+/** comment + remember 묶음에 진정 결이 1개 이상 있는가. */
+export function hasCalmTone(text: string): boolean {
+  return CALM_TONE.test(text);
+}
+
+/**
+ * LLM 코멘트 묶음 검증(§4.4). 하나라도 어기면 false → 호출부가 룰 폴백으로 강등.
+ * - comment/why/remember 모두 비어있지 않을 것.
+ * - 어느 필드에도 금칙어 없을 것.
+ * - comment+remember 에 균형추(진정 결) 있을 것.
+ */
+export function validateLlmComment(c: LlmKeywordComment | undefined | null): c is LlmKeywordComment {
+  if (!c) return false;
+  const { comment, why, remember } = c;
+  if (!comment?.trim() || !why?.trim() || !remember?.trim()) return false;
+  const blob = `${comment} ${why} ${remember}`;
+  if (!isCommentSafe(blob)) return false;
+  return hasCalmTone(`${comment} ${remember}`);
+}
+
+/**
+ * 룰 폴백 카드에 검증된 LLM 코멘트를 얹는다. LLM 이 없거나 가드 위반이면 룰 카드 그대로(자동 강등).
+ * 점수·관련 종목·이모지 등 카드의 사실 부분은 LLM 이 건드리지 않는다(코멘트 텍스트만 교체).
+ */
+export function applyLlmComment(card: KeywordCard, llm: LlmKeywordComment | undefined): KeywordCard {
+  if (!validateLlmComment(llm)) return card;
+  return {
+    ...card,
+    comment: llm.comment.trim(),
+    depth: {
+      ...card.depth,
+      why: llm.why.trim(),
+      remember: llm.remember.trim(),
+    },
+  };
+}
+
+/** §4.4 가드레일 프롬프트(운영자 톤 스펙 반영). 배치: 여러 키워드를 한 콜로. */
+export function buildKeywordCommentPrompt(
+  items: readonly { keyword: string; score: number; titles: readonly string[]; related: readonly string[] }[]
+): string {
+  const payload = items.map((it) => ({
+    keyword: it.keyword,
+    score: it.score,
+    titles: it.titles.slice(0, 5),
+    related: it.related.slice(0, 3),
+  }));
+  return [
+    "너는 'FOMO Club'의 마스코트 포모다. 새벽 1시에 차트 보며 똑같이 불안해하는 친구다.",
+    "아래 키워드 각각에 대해, 그 키워드에 관심이 온 사용자에게 한마디 건넨다.",
+    "",
+    "톤(반드시):",
+    '- 사용자에게 2인칭 "너"로 말한다. 친구 반말, 따뜻하고 담담하게. 위에서 가르치지 마라.',
+    "- 포모를 살짝 건드리되 즉시 진정시킨다. 결: \"너 지금 이거 관심 왔구나. 왜 왔는지 설명해줄게.",
+    '  근데 너만 그런 거 아니야 — 시장도 과열됐어. 잠깐 뒤로 빠져서 지켜보는 건 어때?" (베끼지 말고 이 결을 따를 것)',
+    "",
+    "규칙(어기면 그 키워드 출력은 폐기된다):",
+    "1) 과거·현재 사실만 설명. 미래 단정·예측 절대 금지(오른다/내린다/급등/반등할 금지).",
+    "2) 매수·매도·추천·종목 권유 금지(사라/팔아라/매수/들어가라 금지).",
+    "3) 전문용어 금지. 꼭 나오면 친구가 풀어주듯 쉽게(예: \"오더블럭? 큰손들이 사 모은 가격대야\").",
+    "4) 반드시 균형추(진정)로 닫는다: \"안 급해도 돼 / 기회는 또 와 / 잠깐 지켜보자\" 결.",
+    "5) 점수가 높을수록(60+) 진정 톤을 더 강하게. 낮으면(40-) \"조용한 건 나쁜 게 아니야\" 결.",
+    "",
+    'comment 는 2~3줄, why 는 왜 쏠렸는지 용어 없이, remember 는 균형추 한마디.',
+    '출력은 JSON 배열만(그 외 텍스트 0): [{"keyword","comment","why","remember"}]',
+    "",
+    JSON.stringify(payload),
+  ].join("\n");
+}
+
+/** LLM 응답(JSON 배열) 파서 — parseFomoComments 와 동형, 4필드. 코드펜스/잡텍스트 허용. */
+export function parseKeywordComments(content: string): LlmKeywordComment[] {
+  if (!content) return [];
+  const start = content.indexOf("[");
+  const end = content.lastIndexOf("]");
+  if (start === -1 || end <= start) return [];
+  let arr: unknown;
+  try {
+    arr = JSON.parse(content.slice(start, end + 1));
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(arr)) return [];
+  const out: LlmKeywordComment[] = [];
+  for (const r of arr) {
+    if (r && typeof r === "object") {
+      const o = r as Record<string, unknown>;
+      const keyword = typeof o.keyword === "string" ? o.keyword.trim() : "";
+      const comment = typeof o.comment === "string" ? o.comment.trim() : "";
+      const why = typeof o.why === "string" ? o.why.trim() : "";
+      const remember = typeof o.remember === "string" ? o.remember.trim() : "";
+      if (keyword && comment) out.push({ keyword, comment, why, remember });
+    }
+  }
+  return out;
+}
+
 /**
  * 전체 산출 신뢰도(응답 confidence, §4.6·§5). 정직성 노출.
  * - 키워드 0건 → "fallback"(보여줄 게 없음 → 라우트가 mock 으로 대체).
