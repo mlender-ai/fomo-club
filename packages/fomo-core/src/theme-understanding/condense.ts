@@ -26,6 +26,19 @@ export interface CondensedPoint {
   sourceId: string;
 }
 
+/**
+ * 강세/약세 쏠림(NEXT_FEATURES_HANDOFF 작업2). 점수=얼마나 뜨거운가, lean=어느 쪽으로 기울었나.
+ * grounded 카운트(전체) 기반. 방향 *제시*가 아니라 쏠림 *알림*(CTA 재료, 매매신호 아님).
+ */
+export interface LeanInfo {
+  bullCount: number;
+  bearCount: number;
+  /** 차이 1 이하면 balanced. */
+  direction: "bull" | "bear" | "balanced";
+  /** 한쪽이 0(반대 관점 안 보임). */
+  oneSided: boolean;
+}
+
 export interface CondensedInsight {
   theme: string;
   /** "왜 떴나" 2~3문장 — A의 grounded claim 들을 결정론적으로 종합(새 사실 추가 없음). */
@@ -42,6 +55,8 @@ export interface CondensedInsight {
   /** 출처가 한 매체에만 쏠렸나(true면 "한 곳 안의 균형"일 뿐 — UI/정직성 표기). */
   singleOutlet: boolean;
   confidence: ThemeInsightConfidence;
+  /** 강세/약세 쏠림(작업2) — grounded 전체 카운트. CTA·시각화 재료. */
+  lean: LeanInfo;
   /** 정직성/진단 — 왜 이 confidence·stance 인지(A의 reason 그대로). 빈 상태 원인 추적용. */
   reason: string;
   /** 워딩 필터 감사 로그(통과·탈락 + 사유, 검수용). */
@@ -69,6 +84,17 @@ export function condenseThemeInsight(
   const outlets = [...new Set(insight.sources.map((s) => s.source).filter((x): x is string => !!x))];
   const singleOutlet = outlets.length <= 1;
 
+  // 쏠림(작업2) — grounded *전체* 카운트로(표시용 slice 전). 차이 1 이하면 balanced.
+  const bullCount = insight.bull.length;
+  const bearCount = insight.bear.length;
+  const lean: LeanInfo = {
+    bullCount,
+    bearCount,
+    direction:
+      Math.abs(bullCount - bearCount) <= 1 ? "balanced" : bullCount > bearCount ? "bull" : "bear",
+    oneSided: bullCount + bearCount > 0 && (bullCount === 0 || bearCount === 0),
+  };
+
   const base = {
     theme: insight.theme,
     stance: insight.stance,
@@ -76,6 +102,7 @@ export function condenseThemeInsight(
     sources: insight.sources,
     outlets,
     singleOutlet,
+    lean,
     confidence: insight.confidence,
     reason: insight.reason,
     ...(insight.wordingAudit ? { wordingAudit: insight.wordingAudit } : {}),
