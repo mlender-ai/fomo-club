@@ -119,6 +119,15 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
           {hasInsight ? (
             <>
+              {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
+                <p className="mt-3 text-[11px] leading-5 text-muted">
+                  오늘 쏠림 · <span style={{ color: "var(--up, #ff5a5f)" }}>강세 {insight!.lean.bullCount}</span>
+                  {" : "}
+                  <span style={{ color: "var(--down, #4f8cff)" }}>약세 {insight!.lean.bearCount}</span>
+                  {insight!.lean.oneSided ? " · 반대 관점 안 보임" : ""}
+                </p>
+              )}
+
               {insight!.singleOutlet && insight!.outlets.length > 0 && (
                 <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
                   ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이야 — 한 매체 안의 시각일 수 있어.

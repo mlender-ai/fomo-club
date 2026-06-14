@@ -294,6 +294,28 @@ describe("parse / prompt / 커뮤니티 원문 보존", () => {
     expect(c.confidence).toBe("low");
   });
 
+  it("condense — lean(쏠림): grounded 전체 카운트 + 방향 + oneSided", () => {
+    const mk = (bull: number, bear: number): ThemeInsight => ({
+      theme: "반도체",
+      stocks: [],
+      bull: Array.from({ length: bull }, (_, i) => ({ claim: `b${i}`, sourceId: "S1", quote: "q" })),
+      bear: Array.from({ length: bear }, (_, i) => ({ claim: `r${i}`, sourceId: "S1", quote: "q" })),
+      wordings: [],
+      stance: "balanced",
+      stanceNote: "",
+      sources: [{ id: "S1", kind: "news", title: "t" }],
+      confidence: "low",
+      reason: "r",
+    });
+    // slice(maxPerSide=2) 와 무관하게 lean 은 전체 카운트.
+    const a = condenseThemeInsight(mk(9, 1));
+    expect(a.lean).toEqual({ bullCount: 9, bearCount: 1, direction: "bull", oneSided: false });
+    expect(a.bull.length).toBe(2); // 표시는 slice
+    expect(condenseThemeInsight(mk(3, 3)).lean.direction).toBe("balanced");
+    expect(condenseThemeInsight(mk(5, 0)).lean).toMatchObject({ direction: "bull", oneSided: true });
+    expect(condenseThemeInsight(mk(0, 4)).lean).toMatchObject({ direction: "bear", oneSided: true });
+  });
+
   it("condense — 강세만이면 약세 안 보임 정직 표기(균형)", () => {
     const insight: ThemeInsight = {
       theme: "반도체",
