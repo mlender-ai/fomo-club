@@ -5,3 +5,4 @@ export * from "./assemble";
 export * from "./condense";
 export * from "./wording-filter";
 export * from "./fred";
+export * from "./dcinside";

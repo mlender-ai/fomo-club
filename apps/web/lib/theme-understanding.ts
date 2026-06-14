@@ -13,6 +13,7 @@ import {
 import { fetchNaverBoardPosts } from "@fomo/core";
 import { fetchAllNews } from "./fomo-news-sources";
 import { fetchFredDocs } from "./fred";
+import { fetchDcStockTitles } from "./dcinside";
 
 /**
  * 이해 레이어 오케스트레이션 — DATA_ENGINE_STRATEGY §4 Track A. (네트워크 + LLM)
@@ -55,8 +56,9 @@ interface LlmResponse {
 export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
   const codes = THEME_NAVER_CODES[theme] ?? [];
 
-  const [newsRes, ...commRes] = await Promise.allSettled([
+  const [newsRes, dcRes, ...commRes] = await Promise.allSettled([
     fetchAllNews(),
+    fetchDcStockTitles(),
     ...codes.map((c) => fetchNaverBoardPosts(c.code)),
   ]);
 
@@ -110,6 +112,24 @@ export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
       console.warn("[theme-understanding] community error", c.label, r.reason);
     }
   });
+
+  // 디시 주식갤러리(C-3) — 날것 심리(community-low). 테마 관련 글만 필터(기존 extract 재사용).
+  // 욕설·단정은 워딩 필터(룰+LLM)가 카드 진입 전 거른다.
+  if (dcRes.status === "fulfilled" && dcRes.value.length > 0) {
+    const dcItems: KeywordSourceItem[] = dcRes.value.map((t) => ({ title: t }));
+    const dcBucket = extractKeywords(dcItems).find((k) => k.keyword === theme);
+    for (const art of (dcBucket?.articles ?? []).slice(0, 6)) {
+      docs.push({
+        id: nextId(),
+        kind: "community",
+        title: art.title,
+        source: "디시 주식갤러리",
+        tier: "community-low",
+      });
+    }
+  } else if (dcRes.status === "rejected") {
+    console.warn("[theme-understanding] dcinside error", dcRes.reason);
+  }
 
   // 공식 데이터(FRED) — 금리·거시 테마에 연준 공식 숫자(official-high). grounding 강화(C-2).
   try {
