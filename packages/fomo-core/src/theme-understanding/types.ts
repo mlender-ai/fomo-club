@@ -8,7 +8,7 @@
  *   투자조언/매매신호 금지(판단 재료지 답이 아님) · 데이터 부족 시 정직한 빈 상태.
  */
 
-export type SourceKind = "news" | "community";
+export type SourceKind = "news" | "community" | "official";
 
 export type { SourceTier } from "../news-feed/types";
 
@@ -60,6 +60,17 @@ export interface InsightSourceRef {
   tier?: import("../news-feed/types").SourceTier;
 }
 
+/** 공식 지표 팩트(FRED 등) — 방향성 주장이 아니라 *중립 사실 숫자*. official-high. */
+export interface OfficialFact {
+  /** 예: "미국 기준금리(연방기금금리) 3.63%". */
+  label: string;
+  /** 보충 문장(시점 등). */
+  detail?: string;
+  source: string;
+  url?: string;
+  tier: import("../news-feed/types").SourceTier;
+}
+
 /** 한 테마의 이해·구조화 결과. */
 export interface ThemeInsight {
   theme: string;
@@ -81,4 +92,6 @@ export interface ThemeInsight {
   reason: string;
   /** 워딩 필터 전/후 감사 로그(통과·탈락 + 사유, 검수용). */
   wordingAudit?: import("./wording-filter").WordingVerdict[];
+  /** 공식 지표 팩트(FRED 등) — 강세/약세와 별개로 중립 사실 노출(C-2). */
+  officialFacts?: OfficialFact[];
 }

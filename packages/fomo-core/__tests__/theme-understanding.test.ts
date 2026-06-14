@@ -110,6 +110,43 @@ describe("균형(강세/약세) 정직 표기", () => {
   });
 });
 
+describe("FRED 공식 데이터 (C-2)", () => {
+  it("parseFredCsvLatest — 최신 유효 관측치(결측 '.' 스킵)", async () => {
+    const { parseFredCsvLatest } = await import("../src");
+    const csv = "observation_date,FEDFUNDS\n2026-03-01,4.33\n2026-04-01,.\n2026-05-01,3.63\n";
+    expect(parseFredCsvLatest(csv)).toEqual({ date: "2026-05-01", value: 3.63 });
+    expect(parseFredCsvLatest("")).toBeNull();
+    expect(parseFredCsvLatest("observation_date,X\n2026-05-01,.\n")).toBeNull(); // 전부 결측
+  });
+
+  it("buildFredDoc — 팩트 문장 + official-high + kind official(주장 아닌 숫자)", async () => {
+    const { buildFredDoc } = await import("../src");
+    const doc = buildFredDoc("S1", "FEDFUNDS", { date: "2026-05-01", value: 3.63 })!;
+    expect(doc.kind).toBe("official");
+    expect(doc.tier).toBe("official-high");
+    expect(doc.title).toContain("3.63%");
+    expect(doc.body).toContain("FRED FEDFUNDS");
+    expect(doc.source).toContain("FRED");
+    // 사전에 없는 시리즈 → null
+    expect(buildFredDoc("S2", "UNKNOWN_X", { date: "2026-05-01", value: 1 })).toBeNull();
+  });
+
+  it("FRED 문장은 이해 레이어의 grounding 근거로 쓰인다(quote substring)", async () => {
+    const { buildFredDoc } = await import("../src");
+    const doc = buildFredDoc("S1", "FEDFUNDS", { date: "2026-05-01", value: 3.63 })!;
+    const raw = {
+      stocks: [],
+      bull: [],
+      bear: [{ claim: "기준금리가 높게 유지돼 부담이라는 시각", sourceId: "S1", quote: "기준금리(연방기금금리)는 3.63%" }],
+      wordings: [],
+      stanceNote: "",
+    };
+    const r = assembleThemeInsight("금리", [doc], raw);
+    expect(r.bear).toHaveLength(1); // 연준 숫자에 grounded → 통과
+    expect(r.sources[0]!.tier).toBe("official-high");
+  });
+});
+
 describe("소스 tier 전파 (C-1)", () => {
   it("SourceDoc.tier → InsightSourceRef.tier 로 전파(가중·표기용)", () => {
     const docs: SourceDoc[] = [

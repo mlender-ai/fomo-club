@@ -96,6 +96,27 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
             </p>
           </section>
 
+          {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관. */}
+          {insight?.officialFacts && insight.officialFacts.length > 0 && (
+            <section className="mt-6">
+              <p className="font-pixel text-sm text-whiteout">📊 공식 지표</p>
+              <ul className="mt-2 space-y-2">
+                {insight.officialFacts.map((f, i) => (
+                  <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+                    <span className="block text-sm leading-5 text-whiteout">{f.label}</span>
+                    {f.url ? (
+                      <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
+                        ↳ {f.source} · 공식 데이터 →
+                      </a>
+                    ) : (
+                      <span className="mt-1 block text-[11px] text-muted">↳ {f.source} · 공식 데이터</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {hasInsight ? (
             <>
               {insight!.singleOutlet && insight!.outlets.length > 0 && (

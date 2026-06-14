@@ -32,6 +32,7 @@ export function buildThemeInsightPrompt(theme: string, docs: readonly SourceDoc[
     "3) 투자조언·매매신호·미래 단정 금지(사라/팔아라/매수/오른다/목표가 X). 사실 전달만.",
     "4) wordings: 사람들이 *실제로 한 말*(특히 커뮤니티 원문)을 그대로 인용. 없으면 빈 배열.",
     "5) stocks: 원문에서 언급된 종목/섹터만.",
+    "6) 공식 데이터(official — FRED/연준 등 실제 숫자)가 원문에 있으면, 관련 사실 근거에 *우선 인용*하라. 주장보다 신뢰도가 높다.",
     "",
     "수집된 원문:",
     corpus || "(원문 없음)",

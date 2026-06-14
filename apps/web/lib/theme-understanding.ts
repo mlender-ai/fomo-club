@@ -8,9 +8,11 @@ import {
   type ThemeInsight,
   type KeywordSourceItem,
   type WordingVerdict,
+  type OfficialFact,
 } from "@fomo/core";
 import { fetchNaverBoardPosts } from "@fomo/core";
 import { fetchAllNews } from "./fomo-news-sources";
+import { fetchFredDocs } from "./fred";
 
 /**
  * 이해 레이어 오케스트레이션 — DATA_ENGINE_STRATEGY §4 Track A. (네트워크 + LLM)
@@ -109,6 +111,13 @@ export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
     }
   });
 
+  // 공식 데이터(FRED) — 금리·거시 테마에 연준 공식 숫자(official-high). grounding 강화(C-2).
+  try {
+    docs.push(...(await fetchFredDocs(theme, nextId)));
+  } catch (err) {
+    console.warn("[theme-understanding] fred error", err);
+  }
+
   return docs;
 }
 
@@ -164,14 +173,32 @@ async function judgeWordingsSafety(
   return out;
 }
 
+/** 공식 데이터(FRED 등 kind=official) 원문을 중립 팩트 리스트로(방향성 주장 아님 — C-2). */
+function officialFactsFrom(docs: readonly SourceDoc[]): OfficialFact[] {
+  return docs
+    .filter((d) => d.kind === "official" && d.source && d.tier)
+    .map((d) => ({
+      label: d.title,
+      ...(d.body ? { detail: d.body } : {}),
+      source: d.source!,
+      ...(d.url ? { url: d.url } : {}),
+      tier: d.tier!,
+    }));
+}
+
 /** 테마 이해·구조화 — 수집 → LLM → grounding 검증(assemble) → 워딩 LLM 안전 판정. 실패 시 정직한 빈 상태. */
 export async function understandTheme(theme: string): Promise<ThemeInsight> {
   const docs = await collectThemeDocs(theme);
   if (docs.length === 0) return emptyThemeInsight(theme, "수집된 원문이 없음(소스 도달 실패 또는 매칭 0)");
 
+  // 공식 지표 팩트(FRED) — LLM 결과와 별개로 항상 노출(있으면). 강세/약세로 해석하지 않는다.
+  const officialFacts = officialFactsFrom(docs);
+  const withFacts = (insight: ThemeInsight): ThemeInsight =>
+    officialFacts.length > 0 ? { ...insight, officialFacts } : insight;
+
   const apiKey = resolveAiKey();
   if (!AI_API_URL || !apiKey) {
-    return emptyThemeInsight(theme, "AI 미설정 — 이해 레이어 비활성(정직한 빈 상태)");
+    return withFacts(emptyThemeInsight(theme, "AI 미설정 — 이해 레이어 비활성(정직한 빈 상태)"));
   }
 
   try {
@@ -187,14 +214,14 @@ export async function understandTheme(theme: string): Promise<ThemeInsight> {
     });
     if (!res.ok) {
       console.warn("[theme-understanding] LLM", res.status);
-      return emptyThemeInsight(theme, `LLM ${res.status} — 정직한 빈 상태`);
+      return withFacts(emptyThemeInsight(theme, `LLM ${res.status} — 정직한 빈 상태`));
     }
     const data = (await res.json()) as LlmResponse;
     const raw = parseThemeInsightResponse(data.choices?.[0]?.message?.content ?? "");
     const insight = assembleThemeInsight(theme, docs, raw);
 
     // 2단계: 룰 통과 워딩을 LLM 으로 한 번 더 안전 판정(욕설/단정/혐오/찌라시 — 룰이 못 잡는 뉘앙스).
-    if (insight.wordings.length === 0) return insight;
+    if (insight.wordings.length === 0) return withFacts(insight);
     const judged = await judgeWordingsSafety(insight.wordings.map((w) => w.text), apiKey);
     const llmAudit: WordingVerdict[] = insight.wordings.map((w) => {
       const v = judged.get(w.text);
@@ -210,13 +237,13 @@ export async function understandTheme(theme: string): Promise<ThemeInsight> {
     if (dropped.length > 0) {
       console.warn("[wording-judge] dropped:", dropped.map((d) => `"${d.text}"(${d.reason})`).join(" | "));
     }
-    return {
+    return withFacts({
       ...insight,
       wordings: safeWordings,
       wordingAudit: [...(insight.wordingAudit ?? []), ...llmAudit],
-    };
+    });
   } catch (err) {
     console.warn("[theme-understanding] error", err);
-    return emptyThemeInsight(theme, "이해 레이어 호출 실패 — 정직한 빈 상태");
+    return withFacts(emptyThemeInsight(theme, "이해 레이어 호출 실패 — 정직한 빈 상태"));
   }
 }

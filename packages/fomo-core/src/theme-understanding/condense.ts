@@ -46,6 +46,8 @@ export interface CondensedInsight {
   reason: string;
   /** 워딩 필터 감사 로그(통과·탈락 + 사유, 검수용). */
   wordingAudit?: import("./types").WordingVerdict[];
+  /** 공식 지표 팩트(FRED 등) — 중립 사실 숫자(C-2). 강세/약세와 별개. */
+  officialFacts?: import("./types").OfficialFact[];
 }
 
 export interface CondenseOptions {
@@ -77,6 +79,9 @@ export function condenseThemeInsight(
     confidence: insight.confidence,
     reason: insight.reason,
     ...(insight.wordingAudit ? { wordingAudit: insight.wordingAudit } : {}),
+    ...(insight.officialFacts && insight.officialFacts.length > 0
+      ? { officialFacts: insight.officialFacts }
+      : {}),
   };
 
   // 정직한 빈 상태 — A가 근거를 못 뽑았으면 응축도 비운다(가짜 생성 금지).
