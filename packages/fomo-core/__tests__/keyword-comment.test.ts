@@ -47,6 +47,14 @@ describe("buildKeywordCards (룰 폴백 코멘트)", () => {
     }
   });
 
+  it("정중한 반말 — 카드 텍스트에 '너' 2인칭 지목이 없다(상황 주어)", () => {
+    const cards = buildKeywordCards(scoreSample());
+    for (const c of cards) {
+      const blob = `${c.comment} ${c.depth.why} ${c.depth.remember}`;
+      expect(blob, `카드 ${c.keyword} 2인칭 지목`).not.toMatch(/너(는|가|도|만|를|한테|희)/);
+    }
+  });
+
   it("모든 카드(코멘트+depth)에 금칙어가 없다", () => {
     const cards = buildKeywordCards(scoreSample());
     for (const c of cards) {
@@ -223,12 +231,13 @@ describe("Phase 3 — LLM 코멘트 가드레일 (§4.4)", () => {
     expect(parseKeywordComments("not json")).toEqual([]);
   });
 
-  it("buildKeywordCommentPrompt — 2인칭/균형추/JSON 지시 + 키워드 포함", () => {
+  it("buildKeywordCommentPrompt — 정중한 반말(너 지목 금지)/균형추/JSON 지시 + 키워드 포함", () => {
     const p = buildKeywordCommentPrompt([
       { keyword: "반도체", score: 88, titles: ["엔비디아 급등"], related: ["삼성전자"] },
     ]);
     expect(p).toContain("반도체");
-    expect(p).toContain('2인칭 "너"');
+    expect(p).toContain("정중한 반말");
+    expect(p).toContain("지목 금지");
     expect(p).toContain("균형추");
     expect(p).toMatch(/JSON 배열/);
   });

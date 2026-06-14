@@ -11,7 +11,7 @@ export const MOCK_KEYWORD_CARDS: readonly KeywordCard[] = [
     emoji: "🔥",
     fomoScore: 84,
     comment:
-      "오늘 다들 반도체 얘기뿐이야. 너만 못 탄 것 같지? 그 마음 알아. " +
+      "오늘 다들 반도체 얘기뿐이야. 혼자 놓친 것 같은 기분 들기 쉬운 날이지. " +
       "근데 이미 한참 오른 거 따라 들어가는 건 늘 조심하는 게 좋아.",
     related: ["삼성전자", "SK하이닉스", "엔비디아"],
     sources: [
@@ -82,7 +82,7 @@ export const MOCK_KEYWORD_CARDS: readonly KeywordCard[] = [
     fomoScore: 54,
     comment:
       "오늘은 금리 얘기로 다들 눈치 보는 날이야. 크게 들뜨진 않았어. " +
-      "조용히 지켜보는 분위기니까 너도 급할 거 없어.",
+      "조용히 지켜보는 분위기라 급할 거 없어.",
     related: ["은행주", "채권"],
     sources: [
       { title: "연준 FOMC 앞두고 금리 관망세", source: "연합뉴스" },
@@ -128,7 +128,7 @@ export const MOCK_KEYWORD_CARDS: readonly KeywordCard[] = [
     fomoScore: 31,
     comment:
       "바이오는 오늘 거의 조용했어. 다들 관심이 다른 데 가 있는 날이야. " +
-      "조용한 건 나쁜 게 아니야. 너도 안 급해도 돼.",
+      "조용한 건 나쁜 게 아니야. 안 급해도 되는 날이야.",
     related: ["삼성바이오로직스", "셀트리온"],
     sources: [
       { title: "바이오, 특별한 모멘텀 없이 관망", source: "약업신문" },

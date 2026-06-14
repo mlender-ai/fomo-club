@@ -222,7 +222,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           </section>
 
           <p className="mt-8 text-center text-[11px] leading-5 text-muted">
-            지난 흐름을 친구처럼 풀어준 거예요. 투자 조언이 아니에요.
+            지난 흐름을 친구처럼 풀어준 거야. 투자 조언은 아니야.
           </p>
         </div>
       </div>
