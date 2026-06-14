@@ -48,7 +48,8 @@ export const THEME_DICTIONARY: Record<string, ThemeDef> = {
   },
   코인: {
     emoji: "₿",
-    terms: ["비트코인", "이더리움", "코인", "암호화폐", "가상자산", "crypto", "bitcoin", "btc", "ethereum", "eth", "ETF"],
+    // "ETF" 제외 — 일반 래퍼라 반도체/지수 ETF 기사까지 코인으로 오추출(2026-06-14 false-positive).
+    terms: ["비트코인", "이더리움", "코인", "암호화폐", "가상자산", "스테이블코인", "crypto", "bitcoin", "btc", "ethereum", "eth"],
     related: ["비트코인", "이더리움"],
   },
   금리: {
@@ -81,12 +82,52 @@ export interface ExtractedKeyword {
   consecutiveDays?: number;
 }
 
-/** 한 글이 어떤 테마에 매칭되는지 — 사전 용어 substring(대소문자 무시). */
+/** ASCII 영숫자 용어(단어경계 매칭 대상)인가. "AI"/"GPT"/"eth" 등 — 'shanghai'의 'ai' 부분일치 방지. */
+function isAsciiTerm(t: string): boolean {
+  return /^[a-z0-9]+$/i.test(t);
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+interface ThemeMatcher {
+  keyword: string;
+  /** 비-ASCII(한글 등) 용어 — 부분일치(소문자). */
+  substrings: readonly string[];
+  /** ASCII 약어 — 단어경계 매칭(앞뒤에 영숫자 없을 때만). 룩비하인드 없이 호환되게. */
+  regexes: readonly RegExp[];
+}
+
+/**
+ * 테마별 매처 사전 컴파일. ASCII 용어는 단어경계로, 한글 용어는 부분일치로.
+ * (2026-06-14) 단순 substring 이 "AI"→"shanghai", "fed"→"federal" 같은 오추출을 냈다.
+ */
+const THEME_MATCHERS: readonly ThemeMatcher[] = Object.entries(THEME_DICTIONARY).map(
+  ([keyword, def]) => {
+    const substrings: string[] = [];
+    const regexes: RegExp[] = [];
+    for (const t of def.terms) {
+      const low = t.toLowerCase();
+      if (isAsciiTerm(t)) {
+        // 앞뒤가 문자열 끝이거나 비영숫자일 때만 — "ai"가 "shanghai" 안에서 안 걸리게.
+        regexes.push(new RegExp(`(^|[^a-z0-9])${escapeRegex(low)}([^a-z0-9]|$)`));
+      } else {
+        substrings.push(low);
+      }
+    }
+    return { keyword, substrings, regexes };
+  }
+);
+
+/** 한 글이 어떤 테마에 매칭되는지 — 한글=부분일치, 영문 약어=단어경계(대소문자 무시). */
 function matchedThemes(item: KeywordSourceItem): string[] {
   const blob = `${item.title} ${item.summary ?? ""}`.toLowerCase();
   const hits: string[] = [];
-  for (const [keyword, def] of Object.entries(THEME_DICTIONARY)) {
-    if (def.terms.some((t) => blob.includes(t.toLowerCase()))) hits.push(keyword);
+  for (const m of THEME_MATCHERS) {
+    if (m.substrings.some((s) => blob.includes(s)) || m.regexes.some((re) => re.test(blob))) {
+      hits.push(m.keyword);
+    }
   }
   return hits;
 }
