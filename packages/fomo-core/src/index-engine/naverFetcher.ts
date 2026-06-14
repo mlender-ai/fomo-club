@@ -141,3 +141,71 @@ export async function fetchNaverSignals(
     .map((r) => r.value)
     .filter((v): v is CommunitySourceSignal => v != null);
 }
+
+// ── 원문 보존 게시물 (DATA_ENGINE_STRATEGY Track A — 제목을 버리지 않는다) ──────────
+// 기존 parseNaverBoard 는 집계(개수)만 반환한다. 이해 레이어는 글 제목 원문이 필요해
+// *추가* 함수로 제목을 보존해 돌려준다(기존 집계 경로는 그대로).
+
+export interface NaverBoardPost {
+  /** 게시물 제목 원문. */
+  title: string;
+  /** 작성 시각(ms, KST). 파싱 실패 시 null. */
+  tsMs: number | null;
+  /** 제목 감성 분류(강세/약세 균형 참고용). */
+  tone: "bull" | "bear" | "neutral";
+}
+
+/**
+ * 네이버 종토 HTML → 게시물 제목 배열(순수). 최근 24h 우선, 최신순, limit 개.
+ * parseNaverBoard 와 같은 추출 로직을 쓰되 *집계하지 않고 제목을 보존*한다.
+ */
+export function parseNaverBoardPosts(html: string, nowMs: number, limit = 15): NaverBoardPost[] {
+  try {
+    const titles = [...html.matchAll(/board_read\.naver\?[^"]*"[^>]*title="([^"]*)"/g)]
+      .map((m) => (m[1] ?? "").trim())
+      .filter((t) => t.length > 0);
+    if (titles.length === 0) return [];
+
+    const dates = [...html.matchAll(/(\d{4}\.\d{2}\.\d{2} \d{2}:\d{2})/g)].map((m) => m[1] ?? "");
+    const cutoff = nowMs - 24 * 3600 * 1000;
+    const aligned = dates.length === titles.length;
+
+    const posts: NaverBoardPost[] = titles.map((title, i) => ({
+      title,
+      tsMs: aligned ? parseNaverDate(dates[i]!) : null,
+      tone: classifyKoreanTitle(title),
+    }));
+
+    const recent = aligned
+      ? posts.filter((p) => p.tsMs == null || p.tsMs >= cutoff)
+      : posts;
+    // 최신순(시각 없는 건 뒤로).
+    recent.sort((a, b) => (b.tsMs ?? 0) - (a.tsMs ?? 0));
+    return recent.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+/** 단일 종목 종토 게시물 제목 fetch (실패 시 빈 배열 — 정직한 폴백). */
+export async function fetchNaverBoardPosts(
+  code: string,
+  timeoutMs = 5000,
+  nowMs: number = Date.now(),
+  limit = 15,
+): Promise<NaverBoardPost[]> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`https://finance.naver.com/item/board.naver?code=${encodeURIComponent(code)}`, {
+      headers: { "User-Agent": UA, "Accept-Language": "ko-KR,ko;q=0.9" },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return [];
+    const html = await res.text();
+    return parseNaverBoardPosts(html, nowMs, limit);
+  } catch {
+    return [];
+  }
+}
