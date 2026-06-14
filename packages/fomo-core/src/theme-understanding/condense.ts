@@ -38,6 +38,8 @@ export interface CondensedInsight {
   /** 근거가 가리킨 원문(원문 보기 링크용 — 검증 가능하게 유지). */
   sources: InsightSourceRef[];
   confidence: ThemeInsightConfidence;
+  /** 정직성/진단 — 왜 이 confidence·stance 인지(A의 reason 그대로). 빈 상태 원인 추적용. */
+  reason: string;
 }
 
 export interface CondenseOptions {
@@ -61,6 +63,7 @@ export function condenseThemeInsight(
     stanceNote: insight.stanceNote,
     sources: insight.sources,
     confidence: insight.confidence,
+    reason: insight.reason,
   };
 
   // 정직한 빈 상태 — A가 근거를 못 뽑았으면 응축도 비운다(가짜 생성 금지).
