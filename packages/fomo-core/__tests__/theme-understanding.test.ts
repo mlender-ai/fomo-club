@@ -110,6 +110,29 @@ describe("균형(강세/약세) 정직 표기", () => {
   });
 });
 
+describe("디시 주식갤러리 파서 (C-3)", () => {
+  it("parseDcGalleryTitles — board/view 앵커 제목 추출(태그/엔티티 정리·중복·숫자만 스킵)", async () => {
+    const { parseDcGalleryTitles } = await import("../src");
+    const html = `
+      <td class="gall_tit"><a href="/board/view/?id=stock&amp;no=123">삼성전자 <b>가즈아</b></a></td>
+      <td class="gall_tit"><a href="/board/view/?id=stock&no=124">반도체 슈퍼사이클 온다</a></td>
+      <td class="gall_tit"><a href="/board/view/?id=stock&no=125">반도체 슈퍼사이클 온다</a></td>
+      <td><a href="/board/view/?id=stock&no=126">42</a></td>
+    `;
+    const out = parseDcGalleryTitles(html, 10);
+    expect(out).toContain("삼성전자 가즈아");
+    expect(out).toContain("반도체 슈퍼사이클 온다");
+    expect(out.filter((t) => t === "반도체 슈퍼사이클 온다")).toHaveLength(1); // 중복 제거
+    expect(out).not.toContain("42"); // 숫자만 스킵
+  });
+
+  it("빈/무효 입력 → 빈 배열", async () => {
+    const { parseDcGalleryTitles } = await import("../src");
+    expect(parseDcGalleryTitles("")).toEqual([]);
+    expect(parseDcGalleryTitles("<div>no anchors</div>")).toEqual([]);
+  });
+});
+
 describe("FRED 공식 데이터 (C-2)", () => {
   it("parseFredCsvLatest — 최신 유효 관측치(결측 '.' 스킵)", async () => {
     const { parseFredCsvLatest } = await import("../src");
