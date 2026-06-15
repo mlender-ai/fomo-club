@@ -82,6 +82,12 @@ function groundWordings(
     const key = norm(w.text);
     if (seen.has(key)) continue;
     seen.add(key);
+    // 출처 종류 강제(§3-b): 워딩은 "사람들이 한 말"이므로 community 원문에서만. 뉴스/공식 문장이 워딩으로
+    // 통과해 "사람들 워딩"에 매경 등이 섞이던 버그를 차단. 종류 불일치는 폐기(라벨 거짓표기 대신).
+    if (doc.kind !== "community") {
+      audit.push({ text: w.text, kept: false, reason: `워딩 출처가 community 아님(${doc.kind})`, stage: "rule" });
+      continue;
+    }
     // 룰 안전 필터(욕설/단정/찌라시 명백한 것 차단). 통과/탈락 모두 감사 로그.
     const verdict = screenWordingRule(w.text);
     audit.push(verdict);
