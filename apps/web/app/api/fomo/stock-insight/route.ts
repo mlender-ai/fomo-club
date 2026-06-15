@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { condenseThemeInsight, type CondensedInsight } from "@fomo/core";
-import { withCors } from "../../../../lib/fomo";
+import { withCors, kstDate } from "../../../../lib/fomo";
 import { understandStock } from "../../../../lib/theme-understanding";
 
 /**
@@ -17,20 +17,21 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-const TTL_MS = 30 * 60 * 1000;
-const cache = new Map<string, { at: number; payload: CondensedInsight }>();
+// 버그1(깜빡임) 수정: 같은 KST 날짜 동안 결과 고정(date 키). theme-insight 와 동일 정책.
+const cache = new Map<string, { date: string; payload: CondensedInsight }>();
 const inflight = new Map<string, Promise<CondensedInsight>>();
 
 async function getInsight(stock: string): Promise<CondensedInsight> {
+  const today = kstDate();
   const hit = cache.get(stock);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.payload;
+  if (hit && hit.date === today) return hit.payload;
 
   const running = inflight.get(stock);
   if (running) return running;
 
   const p = (async () => {
     const condensed = condenseThemeInsight(await understandStock(stock));
-    cache.set(stock, { at: Date.now(), payload: condensed });
+    cache.set(stock, { date: today, payload: condensed });
     return condensed;
   })().finally(() => inflight.delete(stock));
 
