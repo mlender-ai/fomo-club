@@ -1,8 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { scoreToColor, type KeywordCard } from "@fomo/core";
+import { scoreToColor, cleanText, cleanQuote, type KeywordCard } from "@fomo/core";
 import { fetchThemeInsight, type CondensedInsight } from "@/lib/fomoApi";
+
+/** 응축(강세/약세/워딩) 로딩 중 표시 — "강세/약세 없는 중간 상태"가 노출되지 않게(핸드오프 §1).
+ *  카피는 임시(정중한 반말), 최종본은 광혁 조정. */
+function DepthBodySkeleton() {
+  return (
+    <section className="mt-6" aria-busy="true">
+      <p className="text-sm leading-6 text-muted">원문 읽고 강세·약세 정리하는 중…</p>
+      <div className="mt-3 space-y-2">
+        <div className="h-12 animate-pulse rounded-lg border border-hairline bg-surface" />
+        <div className="h-12 animate-pulse rounded-lg border border-hairline bg-surface" />
+        <div className="h-12 w-2/3 animate-pulse rounded-lg border border-hairline bg-surface" />
+      </div>
+    </section>
+  );
+}
 
 /**
  * 키워드 뎁스 페이지 — 카드/히스토리에서 공용. KEYWORD_CARD_FEED_DEV_SPEC v3 §3.
@@ -51,7 +66,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
     const label = `${s?.source ?? s?.title ?? ""}${tl ? ` · ${tl}` : ""}`;
     return (
       <li key={key} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-        <span className="block text-sm leading-5 text-whiteout">{claim}</span>
+        <span className="block text-sm leading-5 text-whiteout">{cleanText(claim)}</span>
         {s &&
           (s.url ? (
             <a
@@ -86,24 +101,26 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
-          <p className="text-sm leading-6 text-whiteout">{card.comment}</p>
+          <p className="text-sm leading-6 text-whiteout">{cleanText(card.comment)}</p>
 
-          {/* 왜 떴나 — 응축이 있으면 grounded whyHot, 없으면 기존 키워드 why */}
+          {/* 왜 떴나 — 응축이 있으면 grounded whyHot, 없으면 기존 키워드 why.
+              로딩 중엔 grounded 본문을 기다린다(중간 상태 노출 방지). */}
           <section className="mt-7">
             <p className="font-pixel text-sm text-whiteout">{card.depth.whyTitle}</p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              {hasInsight ? insight!.whyHot : card.depth.why}
+              {loading ? "원문 읽는 중…" : cleanText(hasInsight ? insight!.whyHot : card.depth.why)}
             </p>
           </section>
 
-          {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관. */}
-          {insight?.officialFacts && insight.officialFacts.length > 0 && (
+          {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관.
+              로딩 중이면 표시하지 않는다(도착 후 노출 — 깜빡임 방지). */}
+          {!loading && insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
               <p className="font-pixel text-sm text-whiteout">📊 공식 지표</p>
               <ul className="mt-2 space-y-2">
                 {insight.officialFacts.map((f, i) => (
                   <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                    <span className="block text-sm leading-5 text-whiteout">{f.label}</span>
+                    <span className="block text-sm leading-5 text-whiteout">{cleanText(f.label)}</span>
                     {f.url ? (
                       <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
                         ↳ {f.source} · 공식 데이터 →
@@ -117,7 +134,9 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
             </section>
           )}
 
-          {hasInsight ? (
+          {loading ? (
+            <DepthBodySkeleton />
+          ) : hasInsight ? (
             <>
               {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
                 <p className="mt-3 text-[11px] leading-5 text-muted">
@@ -168,8 +187,8 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                       const s = srcOf(w.sourceId);
                       return (
                         <li key={`w-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                          <span className="block text-sm leading-5 text-whiteout">“{w.text}”</span>
-                          {s && <span className="mt-1 block text-[11px] text-muted">↳ {s.source ?? s.title}</span>}
+                          <span className="block text-sm leading-5 text-whiteout">“{cleanQuote(w.text)}”</span>
+                          {s && <span className="mt-1 block text-[11px] text-muted">↳ {cleanText(s.source ?? s.title)}</span>}
                         </li>
                       );
                     })}
@@ -178,11 +197,11 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
               )}
             </>
           ) : (
-            // 폴백 — 로딩 중이거나 응축 부족: 기존 뉴스 소스(#500). 빈 화면 금지.
+            // 폴백 — 응축 부족(insufficient): 기존 뉴스 소스(#500). 빈 화면 금지.
+            // 로딩 중은 위 DepthBodySkeleton 이 담당하므로 여기는 항상 도착 후 상태다.
             card.sources.length > 0 && (
               <section className="mt-6">
                 <p className="font-pixel text-sm text-whiteout">오늘 이런 뉴스가 돌았어</p>
-                {loading && <p className="mt-1 text-[11px] text-muted">원문 읽는 중…</p>}
                 <ul className="mt-2 space-y-2">
                   {card.sources.map((s, i) =>
                     s.url ? (
@@ -193,16 +212,16 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                           rel="noreferrer"
                           className="block rounded-lg border border-hairline bg-surface px-3 py-2 transition-colors hover:border-whiteout/30"
                         >
-                          <span className="block text-sm leading-5 text-whiteout">{s.title}</span>
+                          <span className="block text-sm leading-5 text-whiteout">{cleanText(s.title)}</span>
                           {s.source && (
-                            <span className="mt-0.5 block text-[11px] text-muted">{s.source} · 원문 보기 →</span>
+                            <span className="mt-0.5 block text-[11px] text-muted">{cleanText(s.source)} · 원문 보기 →</span>
                           )}
                         </a>
                       </li>
                     ) : (
                       <li key={i} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                        <span className="block text-sm leading-5 text-whiteout">{s.title}</span>
-                        {s.source && <span className="mt-0.5 block text-[11px] text-muted">{s.source}</span>}
+                        <span className="block text-sm leading-5 text-whiteout">{cleanText(s.title)}</span>
+                        {s.source && <span className="mt-0.5 block text-[11px] text-muted">{cleanText(s.source)}</span>}
                       </li>
                     )
                   )}
