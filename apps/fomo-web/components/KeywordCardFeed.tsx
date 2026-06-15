@@ -123,8 +123,15 @@ function KeywordDeck({
   cards: readonly KeywordCard[];
   confidence: KeywordConfidence;
 }) {
-  // 마운트 시점의 "이미 본" 집합 — 본 카드는 덱에서 제외(다시 와도 다음 카드부터).
-  const viewedIds = useState(() => new Set(getHistory().map((h) => h.id)))[0];
+  // 마운트 시점의 "오늘 이미 본" 집합 — 본 카드는 덱에서 제외(다시 와도 다음 카드부터).
+  // ★버그: card.id 가 키워드("반도체")라 날짜 무관 고정 → 전체기간 히스토리로 거르면 어제 본 게
+  //   오늘도 걸려 덱이 비고 "다 봤다" 끝-상태가 최초 진입에 뜬다. → *오늘(KST) 본 것만* 필터링.
+  const viewedIds = useState(() => {
+    const kstDay = (ms: number) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date(ms));
+    const today = kstDay(Date.now());
+    return new Set(getHistory().filter((h) => kstDay(h.ts) === today).map((h) => h.id));
+  })[0];
   const [replay, setReplay] = useState(false);
   const deck = replay ? [...cards] : cards.filter((c) => !viewedIds.has(c.id));
 
