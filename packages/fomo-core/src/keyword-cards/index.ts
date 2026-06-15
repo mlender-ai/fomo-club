@@ -5,3 +5,4 @@ export * from "./score";
 export * from "./community";
 export * from "./comment";
 export * from "./josa";
+export * from "./stocks";

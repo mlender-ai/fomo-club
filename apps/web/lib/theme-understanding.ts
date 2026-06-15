@@ -1,16 +1,22 @@
 import {
   extractKeywords,
+  extractStocks,
+  stockDef,
+  stockMatchesText,
   buildThemeInsightPrompt,
   parseThemeInsightResponse,
   assembleThemeInsight,
   emptyThemeInsight,
+  fetchNaverBoardPosts,
+  fetchSubredditPosts,
+  DEFAULT_SUBREDDITS,
   type SourceDoc,
   type ThemeInsight,
   type KeywordSourceItem,
+  type ExtractedStock,
   type WordingVerdict,
   type OfficialFact,
 } from "@fomo/core";
-import { fetchNaverBoardPosts } from "@fomo/core";
 import { fetchAllNews } from "./fomo-news-sources";
 import { fetchFredDocs } from "./fred";
 import { fetchDcStockTitles } from "./dcinside";
@@ -206,35 +212,37 @@ function officialFactsFrom(docs: readonly SourceDoc[]): OfficialFact[] {
     }));
 }
 
-/** 종목명 → 네이버 종토방 코드(국내 상장만). 해외주(엔비디아 등)는 종토방 없음 → 뉴스+디시만. */
-const STOCK_NAVER_CODES: Record<string, string> = {
-  삼성전자: "005930",
-  SK하이닉스: "000660",
-  카카오: "035720",
-  NAVER: "035420",
-  에코프로비엠: "247540",
-  LG에너지솔루션: "373220",
-  셀트리온: "068270",
-  삼성바이오로직스: "207940",
-};
-
-/** 개별 종목 원문 수집(작업3) — 뉴스(종목명 필터) + 종토방(국내) + 디시(종목명 필터). FRED 없음. */
+/**
+ * 개별 종목 원문 수집(B 트랙 §1) — 종목 *국적*에 맞는 소스를 연결한다.
+ * - 한국 종목(종토방 코드 보유): 한국뉴스(종목명 필터) + 네이버 종토방 + 디시.
+ * - 미국/글로벌 종목(엔비디아 등): 뉴스(종목명 필터) + **레딧 글 제목**(외신/해외 커뮤니티) + 디시.
+ * grounding 가드 그대로 — 별칭(엔비디아=Nvidia=NVDA)이 원문에 실제 substring/단어경계로 존재하는 글만.
+ */
 export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
-  const code = STOCK_NAVER_CODES[stock];
-  const [newsRes, dcRes, commRes] = await Promise.allSettled([
+  const def = stockDef(stock);
+  const code = def?.naverCode;
+  const isForeign = def ? def.country !== "KR" : false;
+  const matches = (s: string) => stockMatchesText(stock, s);
+
+  const [newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
     fetchAllNews(),
     fetchDcStockTitles(),
     code ? fetchNaverBoardPosts(code) : Promise.resolve([]),
+    // 미국/글로벌 종목만 레딧 원문 수집(국내주는 종토방이 본진). 코인은 cryptocurrency 포함.
+    isForeign
+      ? Promise.allSettled(DEFAULT_SUBREDDITS.map((s) => fetchSubredditPosts(s))).then((rs) =>
+          rs.flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+        )
+      : Promise.resolve([]),
   ]);
 
   const docs: SourceDoc[] = [];
   let n = 0;
   const nextId = () => `S${++n}`;
-  const mentions = (s: string) => s.includes(stock);
 
-  // 뉴스 — 종목명이 제목/요약에 등장하는 기사만.
+  // 뉴스 — 종목명(별칭 포함)이 제목/요약에 등장하는 기사만.
   if (newsRes.status === "fulfilled") {
-    const hit = newsRes.value.filter((a) => mentions(`${a.title} ${a.summary ?? ""}`)).slice(0, MAX_NEWS);
+    const hit = newsRes.value.filter((a) => matches(`${a.title} ${a.summary ?? ""}`)).slice(0, MAX_NEWS);
     for (const a of hit) {
       docs.push({
         id: nextId(),
@@ -265,14 +273,48 @@ export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
     }
   }
 
+  // 레딧(미국/글로벌 종목) — 종목 별칭이 제목에 등장하는 글만. 해외 심리 grounding.
+  if (redditRes.status === "fulfilled") {
+    const hit = (redditRes.value as { title: string; tsMs: number }[])
+      .filter((p) => matches(p.title))
+      .slice(0, MAX_COMMUNITY);
+    for (const p of hit) {
+      docs.push({
+        id: nextId(),
+        kind: "community",
+        title: p.title,
+        source: "Reddit",
+        ...(p.tsMs ? { publishedAt: new Date(p.tsMs).toISOString() } : {}),
+        tier: "community-mid",
+      });
+    }
+  }
+
   // 디시 — 종목명 언급 글만(community-low). 워딩 필터가 진입 전 거른다.
   if (dcRes.status === "fulfilled") {
-    for (const t of dcRes.value.filter(mentions).slice(0, 6)) {
+    for (const t of dcRes.value.filter(matches).slice(0, 6)) {
       docs.push({ id: nextId(), kind: "community", title: t, source: "디시 주식갤러리", tier: "community-low" });
     }
   }
 
   return docs;
+}
+
+/**
+ * 그날 테마 원문에 실제 등장한 종목 추출(B 트랙 §1) — 마스터 리스트 없이 "원문이 곧 필터".
+ * 테마 docs(뉴스+커뮤니티)를 종목 어휘로 스캔 → 빈도 임계 이상만, market 동봉(시장 분리 훅).
+ * 화면·표기(국기/시장 라벨)는 광혁 UI. 엔진은 데이터(종목·market·빈도)만 정확히 제공한다.
+ */
+export async function collectThemeStocks(
+  theme: string,
+  opts: { minMentions?: number } = {}
+): Promise<ExtractedStock[]> {
+  const docs = await collectThemeDocs(theme);
+  const items: KeywordSourceItem[] = docs.map((d) => ({
+    title: d.title,
+    ...(d.body ? { summary: d.body } : {}),
+  }));
+  return extractStocks(items, opts);
 }
 
 /** 개별 종목 이해·구조화(작업3, BM 심장) — 테마와 동일 구조/가드. 자료 적으면 정직한 빈 상태. */

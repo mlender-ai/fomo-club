@@ -64,6 +64,29 @@ export const THEME_DICTIONARY: Record<string, ThemeDef> = {
     terms: ["2차전지", "2차 전지", "배터리", "에코프로", "LG에너지", "전기차", "battery"],
     related: ["에코프로비엠", "LG에너지솔루션"],
   },
+  // ── 테마 풀 확장(B 트랙 §2) — 평평하게, "이름 보고 궁금한" 후킹 단위만(분류학 아님). ──
+  // 동적 노출: 그날 매칭 0이면 자동 제외(extractKeywords), 식은 건 점수로 가라앉음(score.ts).
+  방산: {
+    emoji: "🛡️",
+    terms: ["방산", "방위산업", "한화에어로", "LIG넥스원", "현대로템", "방위비", "defense"],
+    related: ["한화에어로스페이스", "LIG넥스원"],
+  },
+  바이오: {
+    emoji: "💊",
+    terms: ["바이오", "셀트리온", "삼성바이오", "신약", "임상", "FDA", "제약주"],
+    related: ["셀트리온", "삼성바이오로직스"],
+  },
+  원자력: {
+    emoji: "⚡",
+    terms: ["원자력", "원전", "SMR", "두산에너빌리티", "한국전력", "한전", "nuclear"],
+    related: ["두산에너빌리티", "한국전력"],
+  },
+  공급망: {
+    emoji: "🔗",
+    // 관련 종목이 그날따라 달라 related 는 비워둔다(가짜 연관 금지 — §0). 종목은 그날 원문이 추린다.
+    terms: ["공급망", "희토류", "리쇼어링", "관세", "수출규제"],
+    related: [],
+  },
 };
 
 export interface ExtractedKeyword {

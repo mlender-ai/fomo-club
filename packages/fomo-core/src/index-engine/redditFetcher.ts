@@ -132,6 +132,45 @@ export async function fetchSubredditSignal(
   }
 }
 
+/** 레딧 글 1건(제목 원문) — 미국주 grounding 용(B 트랙 §1). 집계가 아니라 *원문 제목*. */
+export interface RedditPost {
+  title: string;
+  ups: number;
+  numComments: number;
+  /** 작성 시각 ms(UTC). */
+  tsMs: number;
+}
+
+/**
+ * 단일 서브레딧 hot 글의 *제목 원문*을 반환(집계 아님). 실패 시 빈 배열(폴백 우선).
+ * 미국 종목(엔비디아 등)을 레딧 원문에 substring-grounding 하려면 제목 텍스트가 필요하다.
+ */
+export async function fetchSubredditPosts(
+  subreddit: string,
+  timeoutMs = 5000,
+): Promise<RedditPost[]> {
+  const url = `https://www.reddit.com/r/${encodeURIComponent(subreddit)}/hot.json?limit=25&raw_json=1`;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "fomo-club:community-heat:v1.0 (by /u/fomo-club-bot)" },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return [];
+    const listing = (await res.json()) as RedditListing;
+    return listing.data.children.map((c) => ({
+      title: c.data.title,
+      ups: Math.max(0, c.data.ups),
+      numComments: Math.max(0, c.data.num_comments),
+      tsMs: Math.max(0, c.data.created_utc) * 1000,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * 여러 서브레딧을 병렬 수집하여 RedditSignal[]을 반환한다.
  * 실패한 서브레딧은 결과에서 제외된다 (부분 실패 허용).
