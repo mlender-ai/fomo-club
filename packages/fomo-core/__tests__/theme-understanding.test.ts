@@ -231,6 +231,48 @@ describe("워딩 안전 필터 (룰 단계, Track C 선행)", () => {
   });
 });
 
+describe("출처 종류 강제 — 워딩은 community 전용 (§3-b)", () => {
+  it("뉴스 원문에 grounded 된 워딩은 폐기(워딩=사람들 말=community)", () => {
+    const docs: SourceDoc[] = [
+      { id: "S1", kind: "news", title: "외국인 매수세가 삼성전자로 번졌다", source: "매일경제" },
+      { id: "S2", kind: "community", title: "가즈아 풀매수 ㄱㄱ", source: "종토방" },
+    ];
+    const raw = {
+      stocks: [],
+      bull: [{ claim: "외국인이 담았어", sourceId: "S1", quote: "외국인 매수세가 삼성전자" }],
+      bear: [],
+      wordings: [
+        { text: "외국인 매수세가 삼성전자", sourceId: "S1" }, // 뉴스 → 폐기
+        { text: "가즈아 풀매수", sourceId: "S2" }, // 커뮤니티 → 통과
+      ],
+      stanceNote: "",
+    };
+    const r = assembleThemeInsight("반도체", docs, raw);
+    expect(r.wordings.map((w) => w.text)).toEqual(["가즈아 풀매수"]); // 뉴스 워딩 사라짐
+    // 폐기 사유가 감사 로그에 남는다.
+    const dropped = r.wordingAudit!.find((a) => a.text === "외국인 매수세가 삼성전자")!;
+    expect(dropped.kept).toBe(false);
+    expect(dropped.reason).toContain("community 아님");
+  });
+
+  it("근거(bull/bear)의 출처 종류는 doc.kind 그대로 라벨됨(뉴스↔커뮤니티 안 섞임)", () => {
+    const docs: SourceDoc[] = [
+      { id: "S1", kind: "news", title: "삼성전자 외국인 순매수", source: "한국경제", tier: "news-mid" },
+      { id: "S2", kind: "community", title: "하닉 고점이다 손절각", source: "종토방", tier: "community-mid" },
+    ];
+    const raw = {
+      stocks: [],
+      bull: [{ claim: "외국인이 순매수했어", sourceId: "S1", quote: "외국인 순매수" }],
+      bear: [{ claim: "고점이라는 시각도 있어", sourceId: "S2", quote: "고점이다" }],
+      wordings: [],
+      stanceNote: "",
+    };
+    const r = assembleThemeInsight("반도체", docs, raw);
+    expect(r.sources.find((s) => s.id === "S1")!.kind).toBe("news");
+    expect(r.sources.find((s) => s.id === "S2")!.kind).toBe("community"); // 약세=커뮤니티, 뉴스로 둔갑 안 함
+  });
+});
+
 describe("워딩(여론 원문) grounding", () => {
   it("커뮤니티 원문에 실재하는 워딩만 통과", () => {
     const raw: RawThemeInsight = {

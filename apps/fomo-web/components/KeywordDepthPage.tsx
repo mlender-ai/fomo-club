@@ -50,20 +50,14 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
   // sourceId → 원문(링크용).
   const srcOf = (id: string) => insight?.sources.find((s) => s.id === id);
-  // tier → 신뢰도 정직 표기(§4.5).
-  const tierLabel = (tier?: string) =>
-    tier === "official-high"
-      ? "공식 데이터"
-      : tier === "news-mid"
-        ? "뉴스"
-        : tier === "community-mid" || tier === "community-low"
-          ? "커뮤니티"
-          : "";
+  // 출처 종류 정직 표기 — doc.kind 기준(§3-b). kind 가 진실, tier 는 보조.
+  const kindLabel = (kind?: string) =>
+    kind === "official" ? "공식 데이터" : kind === "community" ? "커뮤니티" : kind === "news" ? "뉴스" : "";
 
   const evidenceItem = (claim: string, sourceId: string, key: string) => {
     const s = srcOf(sourceId);
-    const tl = tierLabel(s?.tier);
-    const label = `${s?.source ?? s?.title ?? ""}${tl ? ` · ${tl}` : ""}`;
+    const kl = kindLabel(s?.kind);
+    const label = `${s?.source ?? s?.title ?? ""}${kl ? ` · ${kl}` : ""}`;
     return (
       <li key={key} className="rounded-lg border border-hairline bg-surface px-3 py-2">
         <span className="block text-sm leading-5 text-whiteout">{cleanText(claim)}</span>
