@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { condenseThemeInsight, type CondensedInsight } from "@fomo/core";
-import { withCors } from "../../../../lib/fomo";
+import { withCors, kstDate } from "../../../../lib/fomo";
 import { understandTheme } from "../../../../lib/theme-understanding";
 
 /**
@@ -19,22 +19,24 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-// 테마별 TTL 캐시 + in-flight dedup(같은 테마 동시 탭 → 외부 소스 반복 폭격 방지).
-const TTL_MS = 30 * 60 * 1000;
-const cache = new Map<string, { at: number; payload: CondensedInsight }>();
+// 버그1(깜빡임) 수정: understandTheme 는 LLM 이라 비결정적 → 매 요청 재산출 시 강세/약세가 들쭉날쭉.
+// 같은 KST 날짜 동안 한 번 뽑은 결과를 **그날 끝까지 고정**(date 키). 강력 새로고침(클라 no-cache)도
+// 서버 캐시는 유지 → 같은 카드는 그날 같은 강세/약세. (LLM 호출 방식·프롬프트는 불변 — 캐시 레이어만.)
+// 한계: 서버리스 인스턴스별 메모리라 콜드스타트/다중 인스턴스에선 재산출 가능 — 완전 고정은 스냅샷(DDL) 후속.
+const cache = new Map<string, { date: string; payload: CondensedInsight }>();
 const inflight = new Map<string, Promise<CondensedInsight>>();
 
 async function getInsight(theme: string): Promise<CondensedInsight> {
+  const today = kstDate();
   const hit = cache.get(theme);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.payload;
+  if (hit && hit.date === today) return hit.payload; // 그날 안에선 고정
 
   const running = inflight.get(theme);
   if (running) return running;
 
   const p = (async () => {
-    const insight = await understandTheme(theme);
-    const condensed = condenseThemeInsight(insight);
-    cache.set(theme, { at: Date.now(), payload: condensed });
+    const condensed = condenseThemeInsight(await understandTheme(theme));
+    cache.set(theme, { date: today, payload: condensed });
     return condensed;
   })().finally(() => inflight.delete(theme));
 

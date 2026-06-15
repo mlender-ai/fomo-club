@@ -56,6 +56,9 @@ function groundEvidence(
   for (const e of raw) {
     const doc = docById.get(e.sourceId);
     if (!doc) continue; // 존재하지 않는 원문 인용 → 폐기(환각)
+    // 출처 종류 분리(§버그2): 강세/약세 근거 = 뉴스/공식(분석·근거)만. community 는 워딩으로만 간다.
+    // (워딩=community 전용과 대칭) → 두 섹션 성격이 깨끗이 분리. 커뮤니티 약세가 줄어도 정상.
+    if (doc.kind === "community") continue;
     const docText = `${doc.title} ${doc.body ?? ""}`;
     if (!isGrounded(e.quote, docText)) continue; // 원문에 없는 인용 → 폐기(환각)
     if (INSIGHT_FORBIDDEN.test(e.claim)) continue; // 투자조언/매매신호(명령·예측·추천) → 폐기

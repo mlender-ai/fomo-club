@@ -255,21 +255,44 @@ describe("출처 종류 강제 — 워딩은 community 전용 (§3-b)", () => {
     expect(dropped.reason).toContain("community 아님");
   });
 
-  it("근거(bull/bear)의 출처 종류는 doc.kind 그대로 라벨됨(뉴스↔커뮤니티 안 섞임)", () => {
+  it("강세/약세 근거는 news/official 만 — community 출처 근거는 폐기(워딩 전용)", () => {
+    const docs: SourceDoc[] = [
+      { id: "S1", kind: "news", title: "삼성전자 외국인 순매수 지속", source: "한국경제" },
+      { id: "S2", kind: "community", title: "하닉 고점이다 손절각", source: "종토방" },
+      { id: "S3", kind: "official", title: "미국 기준금리 3.63%", source: "FRED" },
+    ];
+    const raw = {
+      stocks: [],
+      bull: [
+        { claim: "외국인 순매수가 이어졌어", sourceId: "S1", quote: "외국인 순매수" }, // news → 통과
+        { claim: "공식 금리가 높아", sourceId: "S3", quote: "기준금리 3.63%" }, // official → 통과
+      ],
+      bear: [{ claim: "고점이라는 시각", sourceId: "S2", quote: "고점이다" }], // community → 폐기
+      wordings: [],
+      stanceNote: "",
+    };
+    const r = assembleThemeInsight("반도체", docs, raw);
+    expect(r.bull).toHaveLength(2); // news + official
+    expect(r.bear).toHaveLength(0); // community 약세 폐기
+    expect(r.stance).toBe("bull-dominant"); // 약세 0 → 정직하게
+    expect(r.sources.every((s) => s.kind !== "community")).toBe(true); // 근거 출처에 community 없음
+  });
+
+  it("근거(bull/bear)의 출처 종류는 doc.kind 그대로 라벨됨(뉴스↔공식 안 섞임)", () => {
     const docs: SourceDoc[] = [
       { id: "S1", kind: "news", title: "삼성전자 외국인 순매수", source: "한국경제", tier: "news-mid" },
-      { id: "S2", kind: "community", title: "하닉 고점이다 손절각", source: "종토방", tier: "community-mid" },
+      { id: "S2", kind: "official", title: "미국 기준금리 3.63%", source: "FRED", tier: "official-high" },
     ];
     const raw = {
       stocks: [],
       bull: [{ claim: "외국인이 순매수했어", sourceId: "S1", quote: "외국인 순매수" }],
-      bear: [{ claim: "고점이라는 시각도 있어", sourceId: "S2", quote: "고점이다" }],
+      bear: [{ claim: "금리가 높아 부담이라는 시각", sourceId: "S2", quote: "기준금리 3.63%" }],
       wordings: [],
       stanceNote: "",
     };
     const r = assembleThemeInsight("반도체", docs, raw);
     expect(r.sources.find((s) => s.id === "S1")!.kind).toBe("news");
-    expect(r.sources.find((s) => s.id === "S2")!.kind).toBe("community"); // 약세=커뮤니티, 뉴스로 둔갑 안 함
+    expect(r.sources.find((s) => s.id === "S2")!.kind).toBe("official");
   });
 });
 
