@@ -21,6 +21,25 @@ export function kstDate(offsetDays = 0): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(now);
 }
 
+/**
+ * KST 시간대 슬롯 — 뎁스 인사이트 캐시 키에 넣어 하루를 4구간으로 나눈다.
+ * 같은 슬롯 안에선 캐시 고정(깜빡임 방지), 슬롯이 바뀌면 새 키 → 그날 최신 뉴스로 재산출.
+ *   dawn(~09) · morning(09~13, 장 시작) · afternoon(13~16, 장 마감 전후) · evening(16~, 마감 후)
+ */
+export function kstSlot(): "dawn" | "morning" | "afternoon" | "evening" {
+  const h = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Seoul",
+      hour: "2-digit",
+      hour12: false,
+    }).format(new Date())
+  ) % 24; // "24" → 0 정규화
+  if (h < 9) return "dawn";
+  if (h < 13) return "morning";
+  if (h < 16) return "afternoon";
+  return "evening";
+}
+
 export function isEmotionType(v: unknown): v is EmotionType {
   return typeof v === "string" && (EMOTION_TYPES as readonly string[]).includes(v);
 }
