@@ -6,6 +6,7 @@ import {
   buildThemeInsightPrompt,
   parseNaverBoardPosts,
   condenseThemeInsight,
+  discoverRelatedStocks,
   screenWordingRule,
   type SourceDoc,
   type ThemeInsight,
@@ -503,5 +504,59 @@ describe("parse / prompt / 커뮤니티 원문 보존", () => {
     expect(posts.map((p) => p.title)).toContain("삼성전자 가즈아 풀매수");
     expect(posts.find((p) => p.title.includes("가즈아"))!.tone).toBe("bull");
     expect(posts.find((p) => p.title.includes("손절"))!.tone).toBe("bear");
+  });
+});
+
+describe("발굴 엔진 — 연관 확산 (BM 구멍1, 불변)", () => {
+  // 반도체 대장주(THEME_DICTIONARY.related) = 삼성전자/SK하이닉스/엔비디아.
+  const mk = (stocks: string[], bull: { claim: string; sourceId: string; quote: string }[]): ThemeInsight => ({
+    theme: "반도체",
+    stocks,
+    bull,
+    bear: [],
+    wordings: [],
+    stance: "bull-dominant",
+    stanceNote: "",
+    sources: [{ id: "S1", kind: "news", title: "t", source: "한국경제" }],
+    confidence: "low",
+    reason: "r",
+  });
+
+  it("의외성 — 대장주(삼성전자)는 연관주로 안 뽑힌다", () => {
+    const insight = mk(
+      ["삼성전자", "한미반도체"],
+      [
+        { claim: "삼성전자가 외국인 매수세", sourceId: "S1", quote: "외국인 매수세" },
+        { claim: "한미반도체가 삼성에 HBM 장비를 납품한다", sourceId: "S1", quote: "HBM 장비" },
+      ]
+    );
+    const r = discoverRelatedStocks(insight);
+    expect(r.map((x) => x.stock)).toEqual(["한미반도체"]); // 삼성전자(대장주) 제외
+    expect(r[0]!.reason).toContain("한미반도체"); // grounded 연관 근거
+    expect(r[0]!.sourceId).toBe("S1");
+  });
+
+  it("grounding — 연관 근거(claim 언급) 없는 종목은 폐기", () => {
+    // HPSP 가 stocks 에 있지만 어떤 claim 도 HPSP 를 언급 안 함 → 폐기.
+    const insight = mk(
+      ["HPSP", "한미반도체"],
+      [{ claim: "한미반도체가 장비를 납품한다", sourceId: "S1", quote: "장비" }]
+    );
+    expect(discoverRelatedStocks(insight).map((x) => x.stock)).toEqual(["한미반도체"]);
+  });
+
+  it("결정성 — 같은 insight → 같은 연관주", () => {
+    const insight = mk(
+      ["한미반도체", "HPSP"],
+      [
+        { claim: "한미반도체 납품 확대", sourceId: "S1", quote: "납품" },
+        { claim: "HPSP 수주 증가", sourceId: "S1", quote: "수주" },
+      ]
+    );
+    expect(discoverRelatedStocks(insight)).toEqual(discoverRelatedStocks(insight));
+  });
+
+  it("정직한 빈 상태 — 연관주 없으면 빈 배열(가짜 안 채움)", () => {
+    expect(discoverRelatedStocks(mk(["삼성전자"], []))).toEqual([]);
   });
 });
