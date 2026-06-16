@@ -39,6 +39,7 @@
     "research:newsletter": "tsx scripts/research-newsletter.ts",
     "fomo:index": "tsx scripts/fomo-index-pipeline.ts",
     "keywords:generate": "tsx scripts/keywords-generate.ts",
+    "warm:insights": "tsx scripts/warm-insights.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

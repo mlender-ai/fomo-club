@@ -1,0 +1,42 @@
+name: Warm Depth Insights
+
+# 뎁스 인사이트 프리워밍 (PERF — cold 첫 진입 제거).
+# 그날 키워드 테마 + 등장 종목의 theme/stock-insight 를 배포 endpoint 로 HTTP 호출해
+# Vercel Data Cache 를 *현재 슬롯 키*로 미리 채운다 → 사용자는 항상 warm(즉시).
+# 슬롯(kstSlot): morning(09~13) / afternoon(13~16) / evening(16~). 슬롯 시작마다 워밍.
+# 테이블 신설 없음(기존 Data Cache 재사용). 제품 데이터 파이프라인 — 에이전트 자율 루프 아님.
+
+on:
+  schedule:
+    # KST = UTC+9. 각 슬롯 시작 직후 워밍.
+    - cron: "0 0 * * *"  # 09:00 KST — morning 슬롯
+    - cron: "0 4 * * *"  # 13:00 KST — afternoon 슬롯
+    - cron: "0 7 * * *"  # 16:00 KST — evening 슬롯
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warm-insights
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Warm depth insights
+        env:
+          # 배포 API 베이스(미설정 시 스크립트 기본값 = prod).
+          WARM_BASE_URL: ${{ vars.WARM_BASE_URL }}
+          # 종목 추출(collectThemeStocks)은 룰 기반이라 LLM 불필요하나, 수집 소스 키가 있으면 품질↑.
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: npm run warm:insights
