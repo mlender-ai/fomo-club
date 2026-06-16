@@ -24,6 +24,29 @@ export interface RelatedStock {
 
 const norm = (s: string) => s.replace(/\s+/g, "");
 
+/** 카테고리·일반명사 토큰(종목명 아님). "반도체 부품"·"기술주"·"지주사" 등. */
+// 주의: "한미반도체" 같은 실제 종목이 안 걸리게 어미 앵커(반도체$/메모리$) 안 씀.
+// standalone "반도체"·"메모리"는 아래 CATEGORY 정확매칭이 잡는다.
+const GENERIC_TERM =
+  /(부품|소재|장비주|기술주|지주사|대형주|중소형주|성장주|가치주|배당주|섹터|업종|관련주|테마주|수혜주|대장주)/;
+
+/**
+ * 연관주 후보가 *진짜 종목*처럼 보이나(v1.1). LLM 이 stocks 에 카테고리어("미국 AI주", "반도체 부품")를
+ * 섞어 넣어 발굴 가치 없는 게 뽑히던 문제 보정. 휴리스틱(보수적 — 애매하면 제외).
+ */
+function isLikelyStock(name: string): boolean {
+  const n = name.trim();
+  if (n.length < 2) return false;
+  if (/(주|株)$/.test(n)) return false; // "미국 AI주", "중국 기술주", "반도체주" — 카테고리
+  if (GENERIC_TERM.test(n)) return false; // 부품/기술주/지주사 등
+  // 지역+카테고리 ("미국 AI주", "중국 기술주") — 종목명에 지역 수식어가 붙지 않는다.
+  if (/\s/.test(n) && /(미국|중국|국내|글로벌|해외|아시아)/.test(n)) return false;
+  // 테마/카테고리 일반명사 자체.
+  const CATEGORY = new Set(["반도체", "메모리", "반도체부품", "AI반도체", "메모리반도체", "코인", "금리", "2차전지", "바이오", "방산", "원자력", "공급망", "AI"]);
+  if (CATEGORY.has(norm(n))) return false;
+  return true;
+}
+
 export function discoverRelatedStocks(insight: ThemeInsight, opts: { max?: number } = {}): RelatedStock[] {
   const max = opts.max ?? 2;
   // 대장주(다 아는 것) = 테마 사전 related + 테마명. 의외성을 위해 후보에서 제외.
@@ -40,6 +63,7 @@ export function discoverRelatedStocks(insight: ThemeInsight, opts: { max?: numbe
   for (const stock of insight.stocks) {
     const ns = norm(stock);
     if (!ns || majors.has(ns) || seen.has(ns)) continue; // 의외성: 대장주·중복 제외
+    if (!isLikelyStock(stock)) continue; // v1.1: 카테고리어("미국 AI주"·"반도체 부품") 제외
     // 연관 근거(grounding): 이 종목을 *언급한* grounded 근거를 찾는다. 없으면 폐기.
     const hit = evidence.find(({ e }) => norm(e.claim).includes(ns));
     if (!hit) continue;

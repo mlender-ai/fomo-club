@@ -86,6 +86,16 @@ describe("★ 불변 규칙 (회귀 방지)", () => {
     };
     expect(assembleThemeInsight("반도체", DOCS, raw).bull).toHaveLength(0);
   });
+
+  it("불변5b — 매매신호 relay 차단: '매수 신호'·'추천'(시그널 서비스 인용)도 폐기", () => {
+    for (const claim of [
+      "AI 기자가 블록에 매수 신호를 보냈어",
+      "네패스를 추천 후 주가가 올랐어",
+    ]) {
+      const raw: RawThemeInsight = { ...baseRaw, bull: [{ claim, sourceId: "S1", quote: "외국인 매수세가 삼성전자" }] };
+      expect(assembleThemeInsight("반도체", DOCS, raw).bull, claim).toHaveLength(0);
+    }
+  });
 });
 
 describe("assembleThemeInsight — grounding 가드(환각 차단)", () => {
@@ -558,5 +568,18 @@ describe("발굴 엔진 — 연관 확산 (BM 구멍1, 불변)", () => {
 
   it("정직한 빈 상태 — 연관주 없으면 빈 배열(가짜 안 채움)", () => {
     expect(discoverRelatedStocks(mk(["삼성전자"], []))).toEqual([]);
+  });
+
+  it("v1.1 — 카테고리어(미국 AI주·반도체 부품·기술주)는 연관주에서 제외, 진짜 종목만", () => {
+    const insight = mk(
+      ["미국 AI주", "반도체 부품", "중국 기술주", "제너셈"],
+      [
+        { claim: "미국 AI주가 비싸다는 인식", sourceId: "S1", quote: "비싼" },
+        { claim: "반도체 부품 수요가 늘었다", sourceId: "S1", quote: "수요" },
+        { claim: "중국 기술주가 재평가받는다", sourceId: "S1", quote: "재평가" },
+        { claim: "제너셈이 SK하이닉스에 장비를 공급한다", sourceId: "S1", quote: "공급" },
+      ]
+    );
+    expect(discoverRelatedStocks(insight).map((x) => x.stock)).toEqual(["제너셈"]);
   });
 });
