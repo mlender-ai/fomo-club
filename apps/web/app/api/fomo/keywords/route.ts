@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import type { KeywordCard, KeywordConfidence } from "@fomo/core";
 import { withCors, kstDate } from "../../../../lib/fomo";
 import { computeKeywordCards } from "../../../../lib/keyword-pipeline";
@@ -32,18 +33,24 @@ interface KeywordsPayload {
   live: boolean;
 }
 
-// ── 라이브 결과 메모리 캐시(TTL) + in-flight dedup ──────────────────────────
-// snapshot-first 정신(§4.6): 한 사용자의 새로고침/동시 접속이 외부 소스를 반복 폭격하지 않게,
-// 라이브 산출 결과를 서버 인스턴스 단위로 짧게 캐시하고 동시 요청은 진행 중 Promise 를 공유한다.
-// (Phase 4 의 일일 DB 스냅샷이 메인이면 이 메모리 캐시는 스냅샷 미스 시 백업.)
-const TTL_MS = 30 * 60 * 1000;
-let cache: { at: number; payload: KeywordsPayload } | null = null;
+// ── 영속 캐시(Vercel Data Cache) + in-flight dedup ──────────────────────────
+// 성능(PERF LOADING HANDOFF §1·§2): 메인 카드는 뉴스 RSS·커뮤니티 HTML fetch + LLM 코멘트라 수~10초.
+// 기존 인스턴스 메모리 캐시는 Vercel 서버리스 콜드/다중 인스턴스에서 미스 잦아 자주 재산출됐다.
+// → computeKeywordCards 를 Data Cache(unstable_cache)로 영속화: (KST날짜)당 한 번만 산출,
+//   이후 모든 인스턴스가 즉시 읽기. DDL/외부 KV 불필요. revalidate 30분(시장 변동 반영) + 익일 자동 새 키.
+// snapshot-first(§4.6)는 그대로 — cron 스냅샷이 있으면 그게 1순위. 이 캐시는 라이브 폴백 경로의 영속화.
+// mock 폴백은 캐시 밖(실패를 굳히지 않게). inflight 로 인스턴스 내 동시 요청 dedup.
 let inflight: Promise<KeywordsPayload> | null = null;
 
-/** 라이브 산출(공유 파이프라인). 실패해도 throw 없이 mock 폴백. */
+/** 라이브 산출(공유 파이프라인). 성공분만 Data Cache 에 영속. 실패해도 throw 없이 mock 폴백. */
 async function computeLive(date: string): Promise<KeywordsPayload> {
   try {
-    const { cards, confidence } = await computeKeywordCards();
+    const load = unstable_cache(
+      async () => await computeKeywordCards(),
+      ["fomo-keywords-live", date],
+      { revalidate: 1800 }
+    );
+    const { cards, confidence } = await load();
     return { date, cards, confidence, live: true };
   } catch (err) {
     console.warn("[fomo/keywords] live compute failed — mock fallback", err);
@@ -52,28 +59,17 @@ async function computeLive(date: string): Promise<KeywordsPayload> {
   }
 }
 
-/** 스냅샷-우선 → 캐시 → 라이브 dedup. */
+/** 스냅샷-우선 → 라이브(Data Cache, dedup). */
 async function getPayload(date: string): Promise<KeywordsPayload> {
   // 1) 오늘 스냅샷(테이블 없으면 null) — cron 이 채운 안정 데이터를 외부 호출 없이 즉시 반환.
   const snap = await readKeywordSnapshot(date);
   if (snap) return { date, cards: snap.cards, confidence: snap.confidence, live: false };
 
-  // 2) 메모리 캐시.
-  if (cache && Date.now() - cache.at < TTL_MS && cache.payload.date === date) {
-    return cache.payload;
-  }
+  // 2) 라이브 산출 — Data Cache 가 영속 캐시, inflight 가 인스턴스 내 동시 dedup.
   if (inflight) return inflight;
-
-  // 3) 라이브 산출(dedup).
-  inflight = (async () => {
-    try {
-      const payload = await computeLive(date);
-      cache = { at: Date.now(), payload };
-      return payload;
-    } finally {
-      inflight = null;
-    }
-  })();
+  inflight = computeLive(date).finally(() => {
+    inflight = null;
+  });
   return inflight;
 }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { condenseThemeInsight, type CondensedInsight } from "@fomo/core";
 import { withCors, kstDate } from "../../../../lib/fomo";
 import { understandTheme } from "../../../../lib/theme-understanding";
@@ -19,28 +20,28 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-// 버그1(깜빡임) 수정: understandTheme 는 LLM 이라 비결정적 → 매 요청 재산출 시 강세/약세가 들쭉날쭉.
-// 같은 KST 날짜 동안 한 번 뽑은 결과를 **그날 끝까지 고정**(date 키). 강력 새로고침(클라 no-cache)도
-// 서버 캐시는 유지 → 같은 카드는 그날 같은 강세/약세. (LLM 호출 방식·프롬프트는 불변 — 캐시 레이어만.)
-// 한계: 서버리스 인스턴스별 메모리라 콜드스타트/다중 인스턴스에선 재산출 가능 — 완전 고정은 스냅샷(DDL) 후속.
-const cache = new Map<string, { date: string; payload: CondensedInsight }>();
+// 성능(PERF LOADING HANDOFF §1·§2): understandTheme 는 LLM+원문 fetch 라 20~30초.
+// 인스턴스 메모리 Map 은 Vercel 서버리스 콜드/다중 인스턴스에서 미스 잦아 매번 재산출됐다.
+// → Vercel Data Cache(unstable_cache)로 영속화: 인스턴스 무관, 같은 (KST날짜,테마)면 한 번만 LLM,
+//   이후 모든 인스턴스가 즉시 읽기(warm 즉시). DDL/외부 KV 불필요(빌트인).
+// date 를 캐시 키에 넣어 "그날 고정"(깜빡임 방지) + 익일 자동 새 키. revalidate 24h(키가 매일 바뀌므로 상한일 뿐).
+// inflight: 한 인스턴스 내 동시 요청이 cold 산출을 중복 호출하지 않게 dedup.
 const inflight = new Map<string, Promise<CondensedInsight>>();
 
 async function getInsight(theme: string): Promise<CondensedInsight> {
   const today = kstDate();
-  const hit = cache.get(theme);
-  if (hit && hit.date === today) return hit.payload; // 그날 안에선 고정
-
-  const running = inflight.get(theme);
+  const key = `${today}:${theme}`;
+  const running = inflight.get(key);
   if (running) return running;
 
-  const p = (async () => {
-    const condensed = condenseThemeInsight(await understandTheme(theme));
-    cache.set(theme, { date: today, payload: condensed });
-    return condensed;
-  })().finally(() => inflight.delete(theme));
+  const load = unstable_cache(
+    async () => condenseThemeInsight(await understandTheme(theme)),
+    ["fomo-theme-insight", today, theme],
+    { revalidate: 86400 }
+  );
 
-  inflight.set(theme, p);
+  const p = load().finally(() => inflight.delete(key));
+  inflight.set(key, p);
   return p;
 }
 
