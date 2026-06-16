@@ -6,6 +6,7 @@ import type {
   ThemeInsightConfidence,
   ThemeStance,
 } from "./types";
+import { discoverRelatedStocks } from "./discover";
 
 /**
  * 재가공/응축 레이어 — DATA_ENGINE_STRATEGY §4 Track B.
@@ -63,6 +64,8 @@ export interface CondensedInsight {
   wordingAudit?: import("./types").WordingVerdict[];
   /** 공식 지표 팩트(FRED 등) — 중립 사실 숫자(C-2). 강세/약세와 별개. */
   officialFacts?: import("./types").OfficialFact[];
+  /** 숨은 연관주(BM 발굴 엔진) — 대장주 아닌, grounded 연관 근거가 있는 종목. 없으면 빈 배열. */
+  relatedStocks: import("./discover").RelatedStock[];
 }
 
 export interface CondenseOptions {
@@ -95,6 +98,9 @@ export function condenseThemeInsight(
     oneSided: bullCount + bearCount > 0 && (bullCount === 0 || bearCount === 0),
   };
 
+  // 발굴 엔진(BM) — understandTheme 출력 위 가공(LLM 0). 대장주 제외 + grounded 연관 근거만.
+  const relatedStocks = discoverRelatedStocks(insight);
+
   const base = {
     theme: insight.theme,
     stance: insight.stance,
@@ -103,6 +109,7 @@ export function condenseThemeInsight(
     outlets,
     singleOutlet,
     lean,
+    relatedStocks,
     confidence: insight.confidence,
     reason: insight.reason,
     ...(insight.wordingAudit ? { wordingAudit: insight.wordingAudit } : {}),
