@@ -58,10 +58,9 @@ export function HomeView({
   return (
     <>
       <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-20 pt-4">
-        {/* 상단 얇은 띠: 로고 + 가입 없이 둘러보기 */}
-        <div className="flex items-center justify-between">
+        {/* 상단 얇은 띠: 로고 */}
+        <div className="flex items-center">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
-          <span className="text-xs text-muted">가입 없이 둘러보기</span>
         </div>
 
         {/* 시장 온도(FOMO Index) — 전체 폴백이면 정직하게 "수집 중" 표시 @author 안티그래비티 */}
