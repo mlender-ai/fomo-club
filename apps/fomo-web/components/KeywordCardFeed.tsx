@@ -122,18 +122,6 @@ function colorOf(item: DeckItem): string {
   return item.kind === "sector" ? scoreToColor(item.card.fomoScore) : UP;
 }
 
-/** confidence 정직 한마디(§5). high 면 노출 안 함. */
-function ConfidenceNote({ confidence }: { confidence: KeywordConfidence }) {
-  if (confidence === "high") return null;
-  const text =
-    confidence === "fallback"
-      ? "오늘은 시장이 너무 조용해서 보여줄 게 별로 없어. 그것도 정상이야."
-      : "오늘은 데이터가 좀 적어서 포모도 긴가민가해 🤔";
-  return (
-    <p className="mb-2 px-2 text-center text-[11px] leading-5 text-muted">{text}</p>
-  );
-}
-
 /** 담담한 빈 상태(수집 실패/데이터 없음) — 무한 로딩 금지. */
 function DeckEmpty() {
   return (
@@ -178,16 +166,10 @@ export function KeywordCardFeed() {
   if (state.kind === "loading")
     return <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />;
   if (state.kind === "error") return <DeckEmpty />;
-  return <KeywordDeck cards={state.cards} confidence={state.confidence} />;
+  return <KeywordDeck cards={state.cards} />;
 }
 
-function KeywordDeck({
-  cards,
-  confidence,
-}: {
-  cards: readonly KeywordCard[];
-  confidence: KeywordConfidence;
-}) {
+function KeywordDeck({ cards }: { cards: readonly KeywordCard[] }) {
   // 마운트 시점의 "오늘 이미 본" 집합 — 본 섹터 카드는 덱에서 제외(종목 카드는 섹터를 따라간다).
   const viewedIds = useState(() => {
     const kstDay = (ms: number) =>
@@ -316,11 +298,6 @@ function KeywordDeck({
 
   return (
     <div className="w-full">
-      <ConfidenceNote confidence={confidence} />
-      <p className="mb-2 px-1 text-center text-xs text-muted">
-        오른쪽=<span style={{ color: UP }}>관심</span> · 왼쪽=덜 관심 · 탭하면 자세히
-      </p>
-
       {/* 카드 스택 (뒤 카드 실제 콘텐츠 노출) */}
       <div className="relative mx-auto h-[56vh] w-full select-none">
         {behind
