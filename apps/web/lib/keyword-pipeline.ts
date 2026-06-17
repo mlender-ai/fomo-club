@@ -5,6 +5,7 @@ import {
   buildKeywordCards,
   overallConfidence,
   fetchCommunity,
+  pickSurpriseStock,
   MOCK_KEYWORD_CARDS,
   type KeywordCard,
   type KeywordConfidence,
@@ -65,5 +66,16 @@ export async function computeKeywordCards(): Promise<KeywordPayloadCore> {
 
   // Phase 3: 코멘트를 LLM 1차로(가드레일 + 룰 폴백 강등). 점수 로직은 그대로.
   const cards = await addKeywordCardComments(scored, ruleCards);
-  return { cards, confidence: overallConfidence(scored) };
+
+  // 카드별 "의외의 추천 종목" — 그 키워드가 등장한 원문에서 추출(룰 기반, LLM 무관).
+  // 후보 없으면 생략(정직). 매칭은 v1 substring(한글 테마 기준).
+  const withSurprise = cards.map((card) => {
+    const matched = items.filter((it) =>
+      `${it.title} ${it.summary ?? ""}`.includes(card.keyword)
+    );
+    const surpriseStock = pickSurpriseStock(matched);
+    return surpriseStock ? { ...card, surpriseStock } : card;
+  });
+
+  return { cards: withSurprise, confidence: overallConfidence(scored) };
 }

@@ -41,6 +41,14 @@ function CardFace({ card, progress }: { card: KeywordCard; progress?: string }) 
         <span className="font-pixel text-sm text-muted">{scoreToEmoji(card.fomoScore)} 포모 점수</span>
       </div>
       <p className="mt-6 text-lg leading-8 text-whiteout">{card.comment}</p>
+      {/* 의외의 추천 종목 — 대장주 말고 같이 뜬 종목 1개(있을 때만). 카피·디자인은 광혁 조정. */}
+      {card.surpriseStock && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-surface px-3 py-2">
+          <span className="text-sm" aria-hidden>💡</span>
+          <span className="text-xs text-muted">의외의 종목</span>
+          <span className="font-pixel text-sm" style={{ color }}>{card.surpriseStock.canonical}</span>
+        </div>
+      )}
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
         {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}

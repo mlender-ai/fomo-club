@@ -41,5 +41,7 @@ export interface KeywordCard {
   related: readonly string[];
   /** 이 키워드를 뽑게 한 실제 핵심 뉴스(헤드라인+출처). 추상 브리핑이 아니라 근거. */
   sources: readonly KeywordCardSource[];
+  /** 의외의 추천 종목 1개(대장주 말고 같이 뜬 종목). 후보 없으면 생략(정직). */
+  surpriseStock?: import("./stocks").SurpriseStock;
   depth: KeywordDepth;
 }

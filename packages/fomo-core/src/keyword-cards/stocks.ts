@@ -182,6 +182,53 @@ export function isLikelyStock(name: string): boolean {
   return true;
 }
 
+/** 카드에 붙는 "의외의 추천 종목" — 대장주 말고, 그 테마에서 의외로 같이 뜬 종목 1개. */
+export interface SurpriseStock {
+  canonical: string;
+  market: StockMarket;
+  country: StockCountry;
+  /** 원문 등장 글 수. */
+  mentions: number;
+  /** 의외성 점수(높을수록 의외 — UI/정렬·디버그용). */
+  surprise: number;
+}
+
+/**
+ * 카드 1장의 "의외성 1위" 종목 — v1(광혁 피드백 루프 전제).
+ *
+ * 의외성 정의(v1): **대장주(빈도 1위)가 아니면서, 덜 알려졌는데(코스닥·중소형) 그래도 여러 번 같이 뜬 종목.**
+ *   = "어, 이게 왜 같이 떴지?" 직관. 대장주는 의외가 아니므로 1위는 제외.
+ *   점수 = 코스닥 가중(덜 알려짐) × 저빈도 가중(주목 덜 받음). 동점은 mentions 적은 순 → 가나다.
+ * 정직성: 후보 없으면(대장주만/종목 0) null → 카드에 표기 안 함(가짜로 안 채움).
+ */
+export function pickSurpriseStock(
+  items: readonly KeywordSourceItem[],
+  opts: ExtractStocksOptions = {}
+): SurpriseStock | null {
+  const stocks = extractStocks(items, { minMentions: opts.minMentions ?? 2 });
+  if (stocks.length <= 1) return null; // 대장주만 있거나 없으면 "의외"가 성립 안 함
+  const maxMentions = stocks[0]!.mentions; // 1위 빈도(정규화 기준)
+  const scored = stocks.slice(1).map((s) => {
+    const lesserKnown = s.market === "KOSDAQ" ? 1.5 : 1.0; // 코스닥(중소형) = 덜 알려짐
+    const lowProfile = 1 - s.mentions / (maxMentions + 1); // 대장주 대비 덜 주목받을수록 ↑
+    return { s, surprise: lesserKnown * (0.5 + lowProfile) };
+  });
+  scored.sort(
+    (a, b) =>
+      b.surprise - a.surprise ||
+      a.s.mentions - b.s.mentions ||
+      a.s.canonical.localeCompare(b.s.canonical)
+  );
+  const top = scored[0]!;
+  return {
+    canonical: top.s.canonical,
+    market: top.s.market,
+    country: top.s.country,
+    mentions: top.s.mentions,
+    surprise: Math.round(top.surprise * 100) / 100,
+  };
+}
+
 /** 종목명 → 정의(소스 매핑 등에 사용). 없으면 undefined. */
 export function stockDef(canonical: string): StockDef | undefined {
   return STOCK_VOCAB.find((d) => d.canonical === canonical);
