@@ -202,12 +202,17 @@ export interface SurpriseStock {
  *   덜 알려진 종목 중 1개. = "어, 이게 왜 같이 떴지?". marquee(삼성전자·엔비디아·하이닉스 등) 제외가 핵심.
  *   남은 후보 점수 = 코스닥(중소형) 가중 × 저빈도(주목 덜 받음) 가중. 동점은 mentions 적은 순 → 가나다.
  * 정직성: marquee 빼고 후보 없으면 null → 카드 표기 안 함(가짜로 안 채움).
+ *
+ * minMentions 기본 1(extractStocks 의 전역 노이즈컷 2와 다름): 이 함수는 호출부에서 **이미 그 키워드로
+ *   좁혀진 부분집합**(theme-scoped news)을 받는다. 좁힌 집합에서 비-marquee 종목이 2회+ 등장하는 일은
+ *   드물어, 2로 두면 2+ 생존자가 늘 marquee뿐 → 제외 후 후보 0 → 항상 null(기능이 화면에 영영 안 뜸).
+ *   키워드 스코프 자체가 노이즈 필터라, 그 안의 grounded 1회 언급은 "같이 움직인 종목"의 유효 신호다.
  */
 export function pickSurpriseStock(
   items: readonly KeywordSourceItem[],
   opts: ExtractStocksOptions = {}
 ): SurpriseStock | null {
-  const stocks = extractStocks(items, { minMentions: opts.minMentions ?? 2 });
+  const stocks = extractStocks(items, { minMentions: opts.minMentions ?? 1 });
   const maxMentions = stocks[0]?.mentions ?? 1; // 빈도 정규화 기준(대장주 포함 1위)
   const byCanonical = new Map(STOCK_VOCAB.map((d) => [d.canonical, d]));
   // 초대형 대장주(marquee) 제외 — 삼성전자류는 "주목해볼만한"이 아님.
