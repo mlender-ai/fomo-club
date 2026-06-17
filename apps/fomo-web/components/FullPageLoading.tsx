@@ -19,6 +19,10 @@ import { useEffect, useState } from "react";
 const REVEAL_DELAY_MS = 150; // 이 시간 내 완료(warm)면 로딩 화면이 아예 안 뜸
 const TICK_MS = 100;
 const MAX_RATIO = 0.9; // 가짜 100% 금지 — 추정 바는 90%에서 정지
+const ROLL_MS = 2_500; // 추정 초과(바 정지) 시 대기 멘트 롤링 주기
+
+/** 추정 초과(바가 90%에서 멈춤) 시 롤링되는 대기 멘트 — 멈춰 보이지 않게. 카피 최종본은 광혁. */
+const WAITING_MESSAGES = ["거의 다 됐어요", "조금만 기다려주세요", "원문을 꼼꼼히 읽고 있어요"] as const;
 
 export function FullPageLoading({
   estimateMs,
@@ -44,12 +48,11 @@ export function FullPageLoading({
 
   const ratio = Math.min(MAX_RATIO, estimateMs > 0 ? elapsed / estimateMs : MAX_RATIO);
   const pct = Math.round(ratio * 100);
-  // 단계 — 진척 비율로 인덱스. 추정 초과면 마지막 단계 고정("거의 다 됐어").
   const overEstimate = elapsed >= estimateMs;
-  const idx = overEstimate
-    ? steps.length - 1
-    : Math.min(steps.length - 1, Math.floor((elapsed / estimateMs) * steps.length));
-  const label = steps[idx] ?? "";
+  // 단계 텍스트 — 추정 내엔 진척 비율로 단계, 추정 초과(바 정지)면 대기 멘트를 롤링(멈춰 보이지 않게).
+  const label = overEstimate
+    ? WAITING_MESSAGES[Math.floor(elapsed / ROLL_MS) % WAITING_MESSAGES.length]
+    : steps[Math.min(steps.length - 1, Math.floor((elapsed / estimateMs) * steps.length))] ?? "";
 
   return (
     <div
@@ -57,11 +60,14 @@ export function FullPageLoading({
       aria-busy="true"
       role="status"
     >
-      <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-elevated">
-        <div
-          className="h-full rounded-full bg-whiteout transition-[width] duration-300 ease-out"
-          style={{ width: `${pct}%` }}
-        />
+      <div className="flex w-full max-w-xs items-center gap-3">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-elevated">
+          <div
+            className="h-full rounded-full bg-whiteout transition-[width] duration-300 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="font-pixel text-xs tabular-nums text-muted">{pct}%</span>
       </div>
       <p className="text-sm leading-6 text-muted">{label}</p>
     </div>
