@@ -143,4 +143,17 @@ describe("pickSurpriseStock — 의외의 추천 종목(대장주 말고 같이 
   it("종목 0이면 null", () => {
     expect(pickSurpriseStock([{ title: "금리 인상 우려" }])).toBeNull();
   });
+  // 회귀(prod 버그): 키워드로 좁힌 부분집합에선 비-marquee 종목이 1회만 등장하는 게 흔하다.
+  // 기본 minMentions=2 였을 때 2+ 생존자가 전부 marquee라 제외 후 후보 0 → 항상 null(화면에 영영 안 뜸).
+  // 기본 1로 내려 grounded 1회 언급도 후보가 돼야 한다. (반도체 매칭 집합 ≈ 한미반도체:1 + 마르키:N 재현)
+  it("비-marquee 후보가 1회만 등장해도(marquee 다수) 그 종목을 고른다 — 기본 minMentions 1", () => {
+    const items = [
+      ...mk(5, "SK하이닉스 메모리 강세"),  // marquee 5
+      ...mk(3, "삼성전자 반도체"),          // marquee 3
+      { title: "한미반도체 HBM 장비 수주" }, // 비-marquee, 1회뿐
+    ];
+    const s = pickSurpriseStock(items);
+    expect(s).not.toBeNull();
+    expect(s!.canonical).toBe("한미반도체");
+  });
 });
