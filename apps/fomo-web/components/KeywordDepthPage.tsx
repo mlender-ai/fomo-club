@@ -3,21 +3,7 @@
 import { useEffect, useState } from "react";
 import { scoreToColor, cleanText, cleanQuote, type KeywordCard } from "@fomo/core";
 import { fetchThemeInsight, fetchStockInsight, type CondensedInsight } from "@/lib/fomoApi";
-
-/** 응축(강세/약세/워딩) 로딩 중 표시 — "강세/약세 없는 중간 상태"가 노출되지 않게(핸드오프 §1).
- *  카피는 임시(정중한 반말), 최종본은 광혁 조정. */
-function DepthBodySkeleton() {
-  return (
-    <section className="mt-6" aria-busy="true">
-      <p className="text-sm leading-6 text-muted">원문 읽고 강세·약세 정리하는 중…</p>
-      <div className="mt-3 space-y-2">
-        <div className="h-12 animate-pulse rounded-lg border border-hairline bg-surface" />
-        <div className="h-12 animate-pulse rounded-lg border border-hairline bg-surface" />
-        <div className="h-12 w-2/3 animate-pulse rounded-lg border border-hairline bg-surface" />
-      </div>
-    </section>
-  );
-}
+import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
  * 키워드 뎁스 페이지 — 카드/히스토리에서 공용. KEYWORD_CARD_FEED_DEV_SPEC v3 §3.
@@ -97,20 +83,22 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+          {loading ? (
+            <FullPageLoading estimateMs={LOADING_PRESETS.theme.estimateMs} steps={LOADING_PRESETS.theme.steps} />
+          ) : (
+          <>
           <p className="text-sm leading-6 text-whiteout">{cleanText(card.comment)}</p>
 
-          {/* 왜 떴나 — 응축이 있으면 grounded whyHot, 없으면 기존 키워드 why.
-              로딩 중엔 grounded 본문을 기다린다(중간 상태 노출 방지). */}
+          {/* 왜 떴나 — 응축이 있으면 grounded whyHot, 없으면 기존 키워드 why. */}
           <section className="mt-7">
             <p className="font-pixel text-sm text-whiteout">{card.depth.whyTitle}</p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              {loading ? "원문 읽는 중…" : cleanText(hasInsight ? insight!.whyHot : card.depth.why)}
+              {cleanText(hasInsight ? insight!.whyHot : card.depth.why)}
             </p>
           </section>
 
-          {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관.
-              로딩 중이면 표시하지 않는다(도착 후 노출 — 깜빡임 방지). */}
-          {!loading && insight?.officialFacts && insight.officialFacts.length > 0 && (
+          {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관. */}
+          {insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
               <p className="font-pixel text-sm text-whiteout">📊 공식 지표</p>
               <ul className="mt-2 space-y-2">
@@ -130,9 +118,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
             </section>
           )}
 
-          {loading ? (
-            <DepthBodySkeleton />
-          ) : hasInsight ? (
+          {hasInsight ? (
             <>
               {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
                 <p className="mt-3 text-[11px] leading-5 text-muted">
@@ -223,7 +209,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
             </>
           ) : (
             // 폴백 — 응축 부족(insufficient): 기존 뉴스 소스(#500). 빈 화면 금지.
-            // 로딩 중은 위 DepthBodySkeleton 이 담당하므로 여기는 항상 도착 후 상태다.
+            // 로딩 중은 상위 FullPageLoading 이 담당하므로 여기는 항상 도착 후 상태다.
             card.sources.length > 0 && (
               <section className="mt-6">
                 <p className="font-pixel text-sm text-whiteout">오늘 이런 뉴스가 돌았어</p>
@@ -277,6 +263,8 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           <p className="mt-8 text-center text-[11px] leading-5 text-muted">
             지난 흐름을 친구처럼 풀어준 거야. 투자 조언은 아니야.
           </p>
+          </>
+          )}
         </div>
       </div>
 
@@ -350,14 +338,18 @@ function StockInsightView({ stock, onClose }: { stock: string; onClose: () => vo
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+          {loading ? (
+            <FullPageLoading estimateMs={LOADING_PRESETS.stock.estimateMs} steps={LOADING_PRESETS.stock.steps} />
+          ) : (
+          <>
           <section>
             <p className="font-pixel text-sm text-whiteout">왜 같이 움직였나</p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              {loading ? "원문 읽는 중…" : hasInsight ? cleanText(insight!.whyHot) : "이 종목만으로는 응축할 원문이 아직 부족해. 그것도 정상이야."}
+              {hasInsight ? cleanText(insight!.whyHot) : "이 종목만으로는 응축할 원문이 아직 부족해. 그것도 정상이야."}
             </p>
           </section>
 
-          {!loading && insight?.officialFacts && insight.officialFacts.length > 0 && (
+          {insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
               <p className="font-pixel text-sm text-whiteout">📊 공식 지표</p>
               <ul className="mt-2 space-y-2">
@@ -377,9 +369,7 @@ function StockInsightView({ stock, onClose }: { stock: string; onClose: () => vo
             </section>
           )}
 
-          {loading ? (
-            <DepthBodySkeleton />
-          ) : hasInsight ? (
+          {hasInsight ? (
             <>
               {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
                 <p className="mt-3 text-[11px] leading-5 text-muted">
@@ -448,6 +438,8 @@ function StockInsightView({ stock, onClose }: { stock: string; onClose: () => vo
           <p className="mt-8 text-center text-[11px] leading-5 text-muted">
             원문을 친구처럼 풀어준 거야. 투자 조언은 아니야.
           </p>
+          </>
+          )}
         </div>
       </div>
     </div>

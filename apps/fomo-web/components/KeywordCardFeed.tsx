@@ -6,6 +6,7 @@ import { KeywordDepthPage } from "@/components/KeywordDepthPage";
 import { fetchKeywords } from "@/lib/fomoApi";
 import { recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
+import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
  * 키워드 카드 덱 — 자연스러운 스와이프(드래그+뒤 카드 실제 콘텐츠 노출) + 하단 버튼 2개.
@@ -60,16 +61,6 @@ function ConfidenceNote({ confidence }: { confidence: KeywordConfidence }) {
   );
 }
 
-/** 스와이프 스켈레톤(로딩) — 무한 로딩 대신 카드 형태만 비워 보여준다. */
-function DeckSkeleton() {
-  return (
-    <div className="w-full">
-      <div className="mx-auto h-[56vh] w-full animate-pulse rounded-2xl border border-hairline bg-surface" />
-      <p className="mt-4 text-center text-xs text-muted">오늘 뭐에 쏠렸는지 보는 중…</p>
-    </div>
-  );
-}
-
 /** 담담한 빈 상태(수집 실패/데이터 없음) — 무한 로딩 금지. */
 function DeckEmpty() {
   return (
@@ -111,7 +102,8 @@ export function KeywordCardFeed() {
     };
   }, []);
 
-  if (state.kind === "loading") return <DeckSkeleton />;
+  if (state.kind === "loading")
+    return <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />;
   if (state.kind === "error") return <DeckEmpty />;
   return <KeywordDeck cards={state.cards} confidence={state.confidence} />;
 }
