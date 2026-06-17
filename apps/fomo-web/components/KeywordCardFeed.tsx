@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { scoreToColor, scoreToEmoji, type KeywordCard, type KeywordConfidence } from "@fomo/core";
 import { KeywordDepthPage } from "@/components/KeywordDepthPage";
-import { fetchKeywords } from "@/lib/fomoApi";
+import { fetchKeywords, fetchThemeInsight } from "@/lib/fomoApi";
 import { recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
@@ -134,6 +134,22 @@ function KeywordDeck({
   const dragging = useRef(false);
   const startX = useRef(0);
   const moved = useRef(false);
+
+  // 뎁스 프리페치 — 지금 보이는 카드의 theme-insight 를 백그라운드로 미리 불러와 서버 캐시를 데운다.
+  // 사용자가 메인을 보는 동안 뎁스가 준비돼, 탭하면 즉시 뜬다("같이 불러오기").
+  // cron 프리워밍과 시너지: 이미 데워졌으면 캐시 히트(LLM 0). 안 데워진 카드만 산출(어차피 탭하면 발생).
+  // 본/볼 카드 종류만 1회씩(중복 제거) — 비용 최소. fire-and-forget(결과는 버리고 캐시만 채움).
+  const prefetched = useRef(new Set<string>());
+  useEffect(() => {
+    const top = deck[idx];
+    if (!top || prefetched.current.has(top.keyword)) return;
+    // 350ms 이상 머문 카드만 프리페치 — 빠르게 스와이프해 스쳐가는 카드는 산출 안 함(비용 최소).
+    const t = window.setTimeout(() => {
+      prefetched.current.add(top.keyword);
+      fetchThemeInsight(top.keyword).catch(() => prefetched.current.delete(top.keyword));
+    }, 350);
+    return () => window.clearTimeout(t);
+  }, [deck, idx]);
 
   // 본 카드를 한쪽으로 날리고 다음 카드로. (관심 기록은 호출부에서 별도)
   const flingNext = useCallback((dir: "left" | "right") => {
