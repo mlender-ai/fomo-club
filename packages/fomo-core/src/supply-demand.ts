@@ -50,3 +50,30 @@ export function latestInvestorFlow(flows: readonly InvestorFlow[]): InvestorFlow
   // date 내림차순 정렬 후 최신.
   return [...flows].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0]!;
 }
+
+import type { OfficialFact } from "./theme-understanding/types";
+
+function netDirection(net: number): string {
+  return net > 0 ? "순매수" : net < 0 ? "순매도" : "보합";
+}
+function fmtShares(net: number): string {
+  const abs = Math.abs(net);
+  if (abs >= 10_000) return `${Math.round(abs / 10_000).toLocaleString("en-US")}만주`;
+  return `${abs.toLocaleString("en-US")}주`;
+}
+
+/**
+ * 수급 → 공식 지표 카드(객관 사실 + 기준일). SUPPLY DEMAND SCORE HANDOFF §4.
+ * ✅ 사실만: "외국인 순매도 · 기관 순매수 (6/17 장마감)". 방향과 시점을 정직하게.
+ * ❌ 해석·조언 금지(사라/팔아라/위험 등) — 판단은 유저. 강세/약세 단정 안 함.
+ */
+export function supplyDemandFact(flow: InvestorFlow): OfficialFact {
+  const [, m, d] = flow.date.split("-");
+  const md = `${Number(m)}/${Number(d)}`;
+  return {
+    label: `수급 — 외국인 ${netDirection(flow.foreignNet)} · 기관 ${netDirection(flow.institutionNet)} (${md} 장마감)`,
+    detail: `외국인 ${fmtShares(flow.foreignNet)} ${netDirection(flow.foreignNet)}, 기관 ${fmtShares(flow.institutionNet)} ${netDirection(flow.institutionNet)} · ${flow.date} 장 마감 확정`,
+    source: "네이버 금융(KRX 확정)",
+    tier: "official-high",
+  };
+}

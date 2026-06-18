@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseNaverInvestorFlow, latestInvestorFlow } from "../src/supply-demand";
+import { parseNaverInvestorFlow, latestInvestorFlow, supplyDemandFact } from "../src/supply-demand";
 
 // 네이버 frgn.naver 실제 행 구조(2행) — 날짜·종가·전일비·등락률·거래량·기관·외국인·보유주수·보유율.
 // 기관/외국인만 부호(+/-) 동반. 등락률(+1.02%)은 % 라 순매매로 안 잡혀야 한다.
@@ -59,5 +59,25 @@ describe("latestInvestorFlow", () => {
   });
   it("빈 입력 → null", () => {
     expect(latestInvestorFlow([])).toBeNull();
+  });
+});
+
+describe("supplyDemandFact — 객관 사실 + 기준일, 조언 금지(§4)", () => {
+  it("방향과 기준일을 사실로 표기", () => {
+    const f = supplyDemandFact({ date: "2026-06-17", foreignNet: -2_000_080, institutionNet: 1_133_803 });
+    expect(f.label).toContain("외국인 순매도");
+    expect(f.label).toContain("기관 순매수");
+    expect(f.label).toContain("6/17 장마감");
+    expect(f.source).toContain("KRX");
+  });
+  it("조언·단정 어휘가 없다(규제선)", () => {
+    const f = supplyDemandFact({ date: "2026-06-16", foreignNet: 500, institutionNet: -700 });
+    const text = `${f.label} ${f.detail ?? ""}`;
+    expect(text).not.toMatch(/사세요|파세요|매수하|매도하|추천|위험하다|사라|팔아라|오를|내릴|급등|폭락/);
+  });
+  it("보합(0)도 정직하게", () => {
+    const f = supplyDemandFact({ date: "2026-06-15", foreignNet: 0, institutionNet: 0 });
+    expect(f.label).toContain("외국인 보합");
+    expect(f.label).toContain("기관 보합");
   });
 });

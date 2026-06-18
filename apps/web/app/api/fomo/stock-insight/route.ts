@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { condenseThemeInsight, type CondensedInsight } from "@fomo/core";
+import { condenseThemeInsight, stockDef, supplyDemandFact, type CondensedInsight } from "@fomo/core";
 import { withCors, kstDate } from "../../../../lib/fomo";
 import { understandStock } from "../../../../lib/theme-understanding";
+import { readLatestSupplyDemand } from "../../../../lib/supply-demand-store";
 
 /**
  * 개별 종목 이해·응축 API — NEXT_FEATURES_HANDOFF 작업3(BM 심장). 읽기 전용.
@@ -45,8 +46,17 @@ export async function GET(req: Request) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }
   const payload = await getInsight(stock);
+
+  // 수급(외인·기관 장마감 확정) — 공식 지표 섹션에 객관 사실로 동봉(§4). 데이터 없으면 미표시(정직).
+  // 캐시 밖에서 1회 조회(일별이라 가벼움). 테이블 전/미수집이면 null → 기존 응답 그대로.
+  const code = stockDef(stock)?.naverCode;
+  const flow = code ? await readLatestSupplyDemand(code) : null;
+  const out = flow
+    ? { ...payload, officialFacts: [supplyDemandFact(flow), ...(payload.officialFacts ?? [])] }
+    : payload;
+
   return withCors(
-    NextResponse.json(payload, {
+    NextResponse.json(out, {
       headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800" },
     })
   );
