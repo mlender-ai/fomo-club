@@ -100,6 +100,28 @@ describe("scoreKeywords (군중 쏠림 0~100)", () => {
   it("빈 입력 → 빈 배열(에러 없음, 폴백)", () => {
     expect(scoreKeywords([], { nowMs: NOW })).toEqual([]);
   });
+
+  // SUPPLY DEMAND SCORE HANDOFF §3 — 수급 보조 신호(불변/결정성)
+  it("수급 미주입(현재 기본) — 점수가 기존과 동일하고 supplyDemand=null (불변)", () => {
+    const ex = extractKeywords(SAMPLE);
+    const a = scoreKeywords(ex, { nowMs: NOW });
+    const b = scoreKeywords(ex, { nowMs: NOW, supplyByKeyword: {} });
+    expect(b.map((s) => s.fomoScore)).toEqual(a.map((s) => s.fomoScore));
+    for (const s of b) expect(s.signals.supplyDemand).toBeNull();
+  });
+
+  it("수급 주입 시 방향이 점수에 약하게 블렌딩되고 결정적", () => {
+    const ex = extractKeywords(SAMPLE);
+    const kw = ex[0]!.keyword;
+    const base = scoreKeywords(ex, { nowMs: NOW }).find((s) => s.keyword === kw)!.fomoScore;
+    const buy = scoreKeywords(ex, { nowMs: NOW, supplyByKeyword: { [kw]: 0.65 } }).find((s) => s.keyword === kw)!;
+    const sell = scoreKeywords(ex, { nowMs: NOW, supplyByKeyword: { [kw]: 0.35 } }).find((s) => s.keyword === kw)!;
+    expect(buy.signals.supplyDemand).toBe(0.65);
+    expect(buy.fomoScore).toBeGreaterThanOrEqual(sell.fomoScore); // 매수세가 매도세보다 높거나 같게
+    // 블렌딩은 10%라 base 근처 — 결정적
+    expect(scoreKeywords(ex, { nowMs: NOW, supplyByKeyword: { [kw]: 0.65 } }).find((s) => s.keyword === kw)!.fomoScore).toBe(buy.fomoScore);
+    expect(Math.abs(buy.fomoScore - base)).toBeLessThanOrEqual(15); // 보조라 큰 변동 없음
+  });
 });
 
 describe("extractKeywords — 오추출 방지(단어경계·일반어 제거, 2026-06-14)", () => {
