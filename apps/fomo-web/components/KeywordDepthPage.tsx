@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { scoreToColor, cleanText, cleanQuote, type KeywordCard } from "@fomo/core";
+import { scoreToColor, cleanText, cleanQuote, communityWordings, type KeywordCard } from "@fomo/core";
 import { fetchThemeInsight, fetchStockInsight, type CondensedInsight } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
@@ -161,11 +161,11 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                 )}
               </section>
 
-              {insight!.wordings.length > 0 && (
+              {communityWordings(insight!).length > 0 && (
                 <section className="mt-6">
                   <p className="font-pixel text-sm text-whiteout">🗣️ 사람들 워딩</p>
                   <ul className="mt-2 space-y-2">
-                    {insight!.wordings.map((w, i) => {
+                    {communityWordings(insight!).map((w, i) => {
                       const s = srcOf(w.sourceId);
                       return (
                         <li key={`w-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
@@ -412,11 +412,11 @@ export function StockInsightView({ stock, onClose }: { stock: string; onClose: (
                 )}
               </section>
 
-              {insight!.wordings.length > 0 && (
+              {communityWordings(insight!).length > 0 && (
                 <section className="mt-6">
                   <p className="font-pixel text-sm text-whiteout">🗣️ 사람들 워딩</p>
                   <ul className="mt-2 space-y-2">
-                    {insight!.wordings.map((w, i) => {
+                    {communityWordings(insight!).map((w, i) => {
                       const s = srcOf(w.sourceId);
                       return (
                         <li key={`w-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">

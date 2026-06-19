@@ -161,3 +161,12 @@ function buildWhyHot(
   if (bear.length) parts.push(`약세 쪽은 — ${join(bear)}`);
   return parts.join(" ");
 }
+
+/**
+ * "사람들 워딩"은 커뮤니티 출처만(BUGFIX DEPTH HANDOFF §3-b). 뉴스·공식 sourceId 가 붙은 워딩은 제외 —
+ * 워딩은 사람들(커뮤니티)의 목소리이지 기사 인용이 아니다. 표시층이 이걸로 워딩을 거른다(엔진 불변).
+ */
+export function communityWordings(insight: CondensedInsight): KeyWording[] {
+  const kindById = new Map(insight.sources.map((s) => [s.id, s.kind]));
+  return insight.wordings.filter((w) => kindById.get(w.sourceId) === "community");
+}
