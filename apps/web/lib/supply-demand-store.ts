@@ -19,8 +19,18 @@ export async function writeSupplyDemand(
     try {
       await prisma.supplyDemandDaily.upsert({
         where: { ticker_date: { ticker, date: f.date } },
-        create: { ticker, date: f.date, foreignNet: f.foreignNet, institutionNet: f.institutionNet },
-        update: { foreignNet: f.foreignNet, institutionNet: f.institutionNet },
+        create: {
+          ticker,
+          date: f.date,
+          foreignNet: f.foreignNet,
+          institutionNet: f.institutionNet,
+          individualNet: f.individualNet ?? null,
+        },
+        update: {
+          foreignNet: f.foreignNet,
+          institutionNet: f.institutionNet,
+          individualNet: f.individualNet ?? null,
+        },
       });
       n++;
     } catch (err) {
@@ -40,7 +50,12 @@ export async function readLatestSupplyDemand(ticker: string): Promise<InvestorFl
       orderBy: { date: "desc" },
     });
     if (!row) return null;
-    return { date: row.date, foreignNet: row.foreignNet, institutionNet: row.institutionNet };
+    return {
+      date: row.date,
+      foreignNet: row.foreignNet,
+      institutionNet: row.institutionNet,
+      ...(row.individualNet != null ? { individualNet: row.individualNet } : {}),
+    };
   } catch (err) {
     console.warn("[supply-demand-store] read skipped (table missing?)", (err as Error)?.message);
     return null;

@@ -800,6 +800,7 @@ model SupplyDemandDaily {
   date           String // YYYY-MM-DD (장마감 확정 거래일)
   foreignNet     Float // 외국인 순매매량(주, +매수/-매도)
   institutionNet Float // 기관 순매매량(주, +매수/-매도)
+  individualNet  Float? // 개인 순매매량(주). KIS Open API 만 제공(네이버 경로는 null)
   createdAt      DateTime @default(now())
 
   @@unique([ticker, date])

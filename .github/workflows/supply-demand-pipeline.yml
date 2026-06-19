@@ -35,4 +35,7 @@ jobs:
       - name: Collect supply-demand
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # KIS 앱키가 secrets 에 있으면 개인까지 수집(없으면 네이버 폴백).
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
         run: npm run supply:collect

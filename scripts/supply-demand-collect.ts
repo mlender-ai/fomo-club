@@ -9,20 +9,24 @@
  */
 import { STOCK_VOCAB } from "@fomo/core";
 import { fetchSupplyDemand } from "../apps/web/lib/supply-demand";
+import { fetchKisInvestorFlow, kisEnabled } from "../apps/web/lib/kis";
 import { writeSupplyDemand } from "../apps/web/lib/supply-demand-store";
 
 const GAP_MS = 400; // 종목 간 간격(네이버 레이트 보호)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  const targets = STOCK_VOCAB.filter((d) => d.naverCode); // 국내 상장만(네이버 종목 페이지)
+  const targets = STOCK_VOCAB.filter((d) => d.naverCode); // 국내 상장만
   const hasDb = !!process.env.DATABASE_URL;
-  console.log(`[supply-demand] 대상 ${targets.length}종목, DB=${hasDb ? "on" : "dry-run"}`);
+  const useKis = kisEnabled(); // 앱키 있으면 KIS(개인 포함), 없으면 네이버(외인·기관)
+  console.log(`[supply-demand] 대상 ${targets.length}종목, DB=${hasDb ? "on" : "dry-run"}, 소스=${useKis ? "KIS(개인 포함)" : "네이버"}`);
 
   let collected = 0;
   let saved = 0;
   for (const d of targets) {
-    const flows = await fetchSupplyDemand(d.naverCode!);
+    // KIS 우선(개인까지) → 실패/미설정 시 네이버 폴백(외인·기관). 둘 다 시점(기준일) 부착.
+    const kis = useKis ? await fetchKisInvestorFlow(d.naverCode!) : null;
+    const flows = kis ? [kis] : await fetchSupplyDemand(d.naverCode!);
     if (flows.length === 0) {
       console.warn(`  ✗ ${d.canonical}(${d.naverCode}): 수급 0(차단/형식변경?)`);
       await sleep(GAP_MS);

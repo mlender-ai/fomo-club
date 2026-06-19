@@ -18,6 +18,8 @@ export interface InvestorFlow {
   foreignNet: number;
   /** 기관 순매매량(주식 수, +매수 / -매도). */
   institutionNet: number;
+  /** 개인 순매매량(주식 수, +매수 / -매도). 네이버는 미제공(undefined), KIS Open API 는 제공. */
+  individualNet?: number;
 }
 
 /** 부호 붙은 정수만(콤마 제거). 등락률(+1.02%)은 % 동반이라 매칭되지 않는다. */
@@ -42,6 +44,34 @@ export function parseNaverInvestorFlow(html: string): InvestorFlow[] {
     out.push({ date, institutionNet: signed[0]!, foreignNet: signed[1]! });
   }
   return out;
+}
+
+/** YYYYMMDD → YYYY-MM-DD. */
+function dashDate(yyyymmdd: string): string {
+  return /^\d{8}$/.test(yyyymmdd)
+    ? `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`
+    : yyyymmdd;
+}
+
+/**
+ * KIS '주식현재가 투자자'(tr_id FHKST01010900) output 한 행 → InvestorFlow. 순수.
+ * KIS 는 개인까지 제공(네이버 한계 보완). 매일 cron 호출로 일별 누적.
+ *
+ * ⚠️ 필드명(stck_bsop_date / prsn·frgn·orgn _ntby_qty)은 KIS 명세 기준 **best-guess**.
+ *    앱키 발급 후 실제 응답 1회로 최종 확정 필요(아래 키만 맞추면 됨). 못 맞으면 null → 네이버 폴백 유지.
+ */
+export function parseKisInvestorFlow(
+  row: Record<string, unknown> | null | undefined
+): InvestorFlow | null {
+  if (!row) return null;
+  const num = (v: unknown) => Number(String(v ?? "").replace(/,/g, ""));
+  const date = dashDate(String(row["stck_bsop_date"] ?? "")); // TODO(키): 영업일자 필드 확인
+  const foreignNet = num(row["frgn_ntby_qty"]); // TODO(키): 외국인 순매수량
+  const institutionNet = num(row["orgn_ntby_qty"]); // TODO(키): 기관 순매수량
+  const individualNet = num(row["prsn_ntby_qty"]); // TODO(키): 개인 순매수량
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (![foreignNet, institutionNet, individualNet].every(Number.isFinite)) return null;
+  return { date, foreignNet, institutionNet, individualNet };
 }
 
 /** 가장 최근(장 마감 확정) 1거래일 수급. 없으면 null(정직한 빈 값). */
@@ -70,10 +100,16 @@ function fmtShares(net: number): string {
 export function supplyDemandFact(flow: InvestorFlow): OfficialFact {
   const [, m, d] = flow.date.split("-");
   const md = `${Number(m)}/${Number(d)}`;
+  // 개인은 데이터가 있을 때만(KIS). 네이버 경로는 외국인·기관만.
+  const indivLabel = flow.individualNet !== undefined ? ` · 개인 ${netDirection(flow.individualNet)}` : "";
+  const indivDetail =
+    flow.individualNet !== undefined
+      ? `, 개인 ${fmtShares(flow.individualNet)} ${netDirection(flow.individualNet)}`
+      : "";
   return {
-    label: `수급 — 외국인 ${netDirection(flow.foreignNet)} · 기관 ${netDirection(flow.institutionNet)} (${md} 장마감)`,
-    detail: `외국인 ${fmtShares(flow.foreignNet)} ${netDirection(flow.foreignNet)}, 기관 ${fmtShares(flow.institutionNet)} ${netDirection(flow.institutionNet)} · ${flow.date} 장 마감 확정`,
-    source: "네이버 금융(KRX 확정)",
+    label: `수급 — 외국인 ${netDirection(flow.foreignNet)} · 기관 ${netDirection(flow.institutionNet)}${indivLabel} (${md} 장마감)`,
+    detail: `외국인 ${fmtShares(flow.foreignNet)} ${netDirection(flow.foreignNet)}, 기관 ${fmtShares(flow.institutionNet)} ${netDirection(flow.institutionNet)}${indivDetail} · ${flow.date} 장 마감 확정`,
+    source: flow.individualNet !== undefined ? "한국투자증권 KIS(KRX 확정)" : "네이버 금융(KRX 확정)",
     tier: "official-high",
   };
 }
