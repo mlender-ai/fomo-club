@@ -157,3 +157,33 @@ describe("pickSurpriseStock — 의외의 추천 종목(대장주 말고 같이 
     expect(s!.canonical).toBe("한미반도체");
   });
 });
+
+describe("STOCK_VOCAB 확장 — 신규 종목 인식 + 오인식 방지", () => {
+  it("새 종목을 원문에서 인식한다", () => {
+    const items: KeywordSourceItem[] = [
+      { title: "한화오션 카타르 LNG선 수주" },
+      { title: "한화오션 추가 계약" },
+      { title: "알테오젠 기술수출 기대 알테오젠 신고가" },
+      { title: "한국항공우주 KAI 폴란드 수출" },
+      { title: "한국항공우주 실적 호조" },
+    ];
+    const names = extractStocks(items, { minMentions: 2 }).map((s) => s.canonical);
+    expect(names).toContain("한화오션");
+    expect(names).toContain("한국항공우주");
+  });
+  it("짧은 영문 티커(HLB·KAI)는 일반 단어에서 오인식 안 함", () => {
+    expect(stockMatchesText("HLB", "the global supply chain")).toBe(false);
+    expect(stockMatchesText("한국항공우주", "kайak trip")).toBe(false);
+    expect(stockMatchesText("HLB", "HLB 임상 결과")).toBe(true);
+  });
+  it("신규 비-marquee 종목이 주목 후보가 된다(대장주만 있을 때 비지 않게)", () => {
+    const items = [
+      ...Array(5).fill({ title: "삼성전자 반도체 강세" }),
+      ...Array(3).fill({ title: "한미반도체 HBM 장비" }),
+      { title: "리노공업 테스트소켓 수주" },
+    ];
+    const s = pickSurpriseStock(items);
+    expect(s).not.toBeNull();
+    expect(["한미반도체", "리노공업"]).toContain(s!.canonical);
+  });
+});
