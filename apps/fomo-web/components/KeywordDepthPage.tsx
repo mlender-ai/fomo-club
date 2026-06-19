@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { scoreToColor, cleanText, cleanQuote, type KeywordCard } from "@fomo/core";
-import { fetchThemeInsight, fetchStockInsight, type CondensedInsight } from "@/lib/fomoApi";
+import { fetchThemeInsight, fetchStockInsight, recordTaste, type CondensedInsight } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
@@ -192,7 +192,10 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                       <li key={`rel-${i}`}>
                         <button
                           type="button"
-                          onClick={() => setStockSubject(r.stock)}
+                          onClick={() => {
+                            recordTaste("stock", r.stock, "tap_related"); // 트랙 B: 발굴 반응
+                            setStockSubject(r.stock);
+                          }}
                           className="block w-full rounded-lg border border-hairline bg-surface px-3 py-2 text-left transition-colors hover:border-whiteout/30"
                         >
                           <span className="flex items-center justify-between gap-2">
