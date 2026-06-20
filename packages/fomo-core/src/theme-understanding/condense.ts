@@ -150,13 +150,13 @@ function buildWhyHot(
   const join = (xs: readonly Evidence[]) => xs.map((e) => e.claim.replace(/\s+$/, "")).join(" ");
 
   if (stance === "bull-dominant") {
-    return `오늘 ${theme} 쪽은 강세 얘기가 우세해. ${join(bull)} ${stanceNote}`.trim();
+    return `오늘 ${theme} 쪽은 강세 얘기가 우세해요. ${join(bull)} ${stanceNote}`.trim();
   }
   if (stance === "bear-dominant") {
-    return `오늘 ${theme} 쪽은 약세·리스크 얘기가 우세해. ${join(bear)} ${stanceNote}`.trim();
+    return `오늘 ${theme} 쪽은 약세·리스크 얘기가 우세해요. ${join(bear)} ${stanceNote}`.trim();
   }
   // balanced
-  const parts = [`오늘 ${theme}는 강세와 약세가 엇갈려.`];
+  const parts = [`오늘 ${theme}는 강세와 약세가 엇갈려요.`];
   if (bull.length) parts.push(`강세 쪽은 — ${join(bull)}`);
   if (bear.length) parts.push(`약세 쪽은 — ${join(bear)}`);
   return parts.join(" ");
