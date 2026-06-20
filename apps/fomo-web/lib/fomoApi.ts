@@ -112,10 +112,18 @@ export async function postVote(
   emotion: string,
   voice?: { situationKey: string; resolveKey: string }
 ): Promise<TallyResponse & { mine: string }> {
+  const { getSessionSignature } = await import("@/lib/session");
+  const sessionSignature = getSessionSignature();
   const res = await fetch(`${API_BASE}/api/fomo/emotions/vote`, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ sessionId, emotion, source: "web", ...voice }),
+    body: JSON.stringify({
+      sessionId,
+      emotion,
+      source: "web",
+      ...(sessionSignature ? { sessionSignature } : {}),
+      ...voice,
+    }),
   });
   if (!res.ok) throw new Error(`vote ${res.status}`);
   return res.json();
