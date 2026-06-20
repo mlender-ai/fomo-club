@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { condenseThemeInsight, type CondensedInsight } from "@fomo/core";
-import { withCors, kstDate } from "../../../../lib/fomo";
+import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
 import { understandTheme } from "../../../../lib/theme-understanding";
 
 /**
@@ -39,7 +39,7 @@ async function getInsight(theme: string): Promise<CondensedInsight> {
 
   const load = unstable_cache(
     async () => condenseThemeInsight(await understandTheme(theme)),
-    ["fomo-theme-insight", today, theme],
+    ["fomo-theme-insight", cacheVersion(), today, theme],
     { revalidate: REVALIDATE_S }
   );
 

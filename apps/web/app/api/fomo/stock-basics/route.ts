@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import type { StockBasics } from "@fomo/core";
-import { withCors, kstDate } from "../../../../lib/fomo";
+import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
 import { fetchStockBasics } from "../../../../lib/stock-basics";
 
 /**
@@ -27,7 +27,7 @@ async function getBasics(stock: string): Promise<StockBasics> {
 
   const load = unstable_cache(
     async () => fetchStockBasics(stock),
-    ["fomo-stock-basics", today, stock],
+    ["fomo-stock-basics", cacheVersion(), today, stock],
     { revalidate: REVALIDATE_S }
   );
   const p = load().finally(() => inflight.delete(key));

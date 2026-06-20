@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import type { KeywordCard, KeywordConfidence } from "@fomo/core";
-import { withCors, kstDate } from "../../../../lib/fomo";
+import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
 import { computeKeywordCards } from "../../../../lib/keyword-pipeline";
 import { readKeywordSnapshot } from "../../../../lib/keyword-snapshot";
 
@@ -47,7 +47,7 @@ async function computeLive(date: string): Promise<KeywordsPayload> {
   try {
     const load = unstable_cache(
       async () => await computeKeywordCards(),
-      ["fomo-keywords-live", date],
+      ["fomo-keywords-live", cacheVersion(), date],
       { revalidate: 1800 }
     );
     const { cards, confidence } = await load();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { condenseThemeInsight, stockDef, supplyDemandFact, type CondensedInsight } from "@fomo/core";
-import { withCors, kstDate } from "../../../../lib/fomo";
+import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
 import { understandStock } from "../../../../lib/theme-understanding";
 import { readLatestSupplyDemand } from "../../../../lib/supply-demand-store";
 
@@ -31,7 +31,7 @@ async function getInsight(stock: string): Promise<CondensedInsight> {
 
   const load = unstable_cache(
     async () => condenseThemeInsight(await understandStock(stock)),
-    ["fomo-stock-insight", today, stock],
+    ["fomo-stock-insight", cacheVersion(), today, stock],
     { revalidate: REVALIDATE_S }
   );
 

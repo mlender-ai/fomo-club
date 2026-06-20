@@ -22,6 +22,15 @@ export function kstDate(offsetDays = 0): string {
 }
 
 /**
+ * 배포 버전 토큰 — Vercel Data Cache(unstable_cache) 키에 넣어 *배포마다 캐시 무효화*.
+ * unstable_cache 는 배포로 자동 무효화되지 않아, 코드/로직 수정이 (날짜+종목) 캐시 TTL(수h) 전까지
+ * 화면에 안 떴다(반복 이슈). 커밋 SHA 를 키에 더해, 새 배포 = 새 키 = 즉시 재산출. (로컬은 "dev".)
+ */
+export function cacheVersion(): string {
+  return (process.env.VERCEL_GIT_COMMIT_SHA || "dev").slice(0, 8);
+}
+
+/**
  * KST 시간대 슬롯 — 뎁스 인사이트 캐시 키에 넣어 하루를 4구간으로 나눈다.
  * 같은 슬롯 안에선 캐시 고정(깜빡임 방지), 슬롯이 바뀌면 새 키 → 그날 최신 뉴스로 재산출.
  *   dawn(~09) · morning(09~13, 장 시작) · afternoon(13~16, 장 마감 전후) · evening(16~, 마감 후)
