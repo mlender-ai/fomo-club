@@ -97,6 +97,12 @@ describe("parseNaverFinanceAnnual — 연간 재무(추정치 구분, 결측 미
   it("재무 없으면 financials 생략(빈 객체에도 안전)", () => {
     expect(parseNaverFinanceAnnual({}).financials).toBeUndefined();
   });
+  it("회사개요 dict(comment1/2/3) 형태도 합쳐서 추출", () => {
+    const r = parseNaverFinanceAnnual({
+      corporationSummary: { comment1: "1969년 설립된 전자 기업.", comment2: "메모리·파운드리 사업.", comment3: "" },
+    });
+    expect(r.summary).toBe("1969년 설립된 전자 기업. 메모리·파운드리 사업.");
+  });
 });
 
 describe("assembleStockBasics — 기본 정보는 항상(원문 무관), name 최소 보장", () => {

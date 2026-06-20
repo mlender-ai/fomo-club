@@ -80,7 +80,7 @@ export const STOCK_VOCAB: readonly StockDef[] = [
   // 반도체 소부장/연관 — 발굴(discover)에서 자주 뜨는 실상장 종목(티커 검증된 것만 보강).
   { canonical: "삼성전기", aliases: ["삼성전기"], market: "KOSPI", country: "KR", naverCode: "009150" },
   { canonical: "DB하이텍", aliases: ["DB하이텍"], market: "KOSPI", country: "KR", naverCode: "000990" },
-  { canonical: "저스템", aliases: ["저스템"], market: "KOSDAQ", country: "KR", naverCode: "417180" },
+  { canonical: "저스템", aliases: ["저스템"], market: "KOSDAQ", country: "KR", naverCode: "417840" },
   { canonical: "네패스", aliases: ["네패스"], market: "KOSDAQ", country: "KR", naverCode: "033640" },
   { canonical: "원익IPS", aliases: ["원익IPS"], market: "KOSDAQ", country: "KR", naverCode: "240810" },
   { canonical: "동진쎄미켐", aliases: ["동진쎄미켐"], market: "KOSDAQ", country: "KR", naverCode: "005290" },

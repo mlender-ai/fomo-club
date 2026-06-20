@@ -136,8 +136,17 @@ export function parseNaverFinanceAnnual(json: unknown): {
   const cs = d.corporationSummary;
   if (typeof cs === "string" && cs.trim()) out.summary = cs.trim();
   else if (cs && typeof cs === "object") {
-    const t = (cs as Record<string, unknown>).summary ?? (cs as Record<string, unknown>).text;
-    if (typeof t === "string" && t.trim()) out.summary = t.trim();
+    // 네이버: corporationSummary = { comment1, comment2, comment3, ... } (회사개요 문장들).
+    const o = cs as Record<string, unknown>;
+    const comments = Object.keys(o)
+      .filter((k) => /^comment\d+$/.test(k))
+      .sort()
+      .map((k) => o[k])
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+    const joined = comments.length > 0 ? comments.join(" ") : "";
+    const fallback = typeof o.summary === "string" ? o.summary : typeof o.text === "string" ? o.text : "";
+    const s = (joined || fallback).trim();
+    if (s) out.summary = s;
   }
 
   const fi = (d.financeInfo ?? {}) as Record<string, unknown>;
