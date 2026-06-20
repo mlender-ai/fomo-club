@@ -47,4 +47,3 @@ describe("calculateProductMetrics", () => {
     expect(result.engagedSessions30d).toBe(2);
   });
 });
-

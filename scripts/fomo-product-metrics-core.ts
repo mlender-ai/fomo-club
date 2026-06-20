@@ -43,7 +43,6 @@ function rate(numerator: number, denominator: number): RateMetric {
     rate: denominator > 0 ? numerator / denominator : null,
   };
 }
-
 function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -129,4 +128,3 @@ export function calculateProductMetrics(
     d7EngagedRetention: retention(7),
   };
 }
-
