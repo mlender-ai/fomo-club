@@ -105,6 +105,43 @@ describe("parseNaverFinanceAnnual — 연간 재무(추정치 구분, 결측 미
   });
 });
 
+describe("A — 재무 한 줄 해석(사실까지만, 조언 금지)", () => {
+  const FORBIDDEN = /(싸다|비싸다|저평가|고평가|위험|사라|팔아라|매수|매도|추천|손절|익절|좋다|나쁘다)/;
+  it("PER 높으면 '시장 기대' 해석이 붙고, 조언어는 없음", () => {
+    const m = parseNaverTotalInfos({ totalInfos: [{ key: "PER", value: "140.2배" }] }).metrics;
+    const per = m.find((x) => x.term === "PER");
+    expect(per?.note).toBeTruthy();
+    expect(per!.note).toMatch(/기대/);
+    expect(per!.note).not.toMatch(FORBIDDEN);
+  });
+  it("영업이익 출렁이면 '안정성 낮은 편', 적자 섞이면 '기복' — 둘 다 조언 아님", () => {
+    const swing = parseNaverFinanceAnnual({
+      financeInfo: {
+        trTitleList: [
+          { title: "2023.12.", key: "a", isConsensus: "N" },
+          { title: "2024.12.", key: "b", isConsensus: "N" },
+        ],
+        rowList: [{ title: "영업이익", columns: { a: { value: "1,000" }, b: { value: "5,000" } } }],
+      },
+    });
+    expect(swing.financials?.note).toMatch(/출렁|안정성/);
+    expect(swing.financials?.note).not.toMatch(FORBIDDEN);
+  });
+  it("추정 기간(E)은 안정성 판단에서 제외(확정치만)", () => {
+    const r = parseNaverFinanceAnnual({
+      financeInfo: {
+        trTitleList: [
+          { title: "2024.12.", key: "a", isConsensus: "N" },
+          { title: "2025.12.", key: "b", isConsensus: "Y" }, // 추정 — 제외
+        ],
+        rowList: [{ title: "영업이익", columns: { a: { value: "1,000" }, b: { value: "9,999" } } }],
+      },
+    });
+    // 확정 1개뿐 → 안정성 판단 보류(note 없음, 가짜 단정 금지)
+    expect(r.financials?.note).toBeUndefined();
+  });
+});
+
 describe("assembleStockBasics — 기본 정보는 항상(원문 무관), name 최소 보장", () => {
   it("세 소스 합치고, 비어도 name + metrics 배열은 보장(빈 화면 박멸)", () => {
     const b = assembleStockBasics("저스템", {}, {}, {});

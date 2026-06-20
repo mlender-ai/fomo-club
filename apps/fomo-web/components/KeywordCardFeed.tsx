@@ -410,7 +410,8 @@ function KeywordDeck({
             stock={selected.stock.canonical}
             context={{
               fromTheme: selected.fromKeyword,
-              reason: `뉴스에 ${selected.stock.mentions}번 같이 등장한 종목이야.`,
+              // B — "왜 보여줬나": 그 종목이 실제 등장한 원문 한 줄(grounded). 없으면 테마 연결만 정직하게.
+              reason: selected.stock.reason ?? `‘${selected.fromKeyword}’ 흐름에서 같이 움직인 종목이야.`,
             }}
             onClose={closeDepth}
           />

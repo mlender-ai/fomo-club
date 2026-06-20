@@ -165,6 +165,15 @@ describe("pickSurpriseStock — 의외의 추천 종목(대장주 말고 같이 
   it("종목 0이면 null", () => {
     expect(pickSurpriseStock([{ title: "금리 인상 우려" }])).toBeNull();
   });
+  it("B — '왜 보여줬나' grounded 근거(그 종목 등장 원문 한 줄)를 함께 반환", () => {
+    const s = pickSurpriseStock([
+      { title: "삼성전자 강세" },
+      { title: "삼성전자 또 신고가" },
+      { title: "한미반도체, HBM 장비 수주로 급등" },
+    ]);
+    expect(s?.canonical).toBe("한미반도체");
+    expect(s?.reason).toBe("한미반도체, HBM 장비 수주로 급등"); // 약한 'N번 등장'이 아니라 실제 원문
+  });
   // 회귀(prod 버그): 키워드로 좁힌 부분집합에선 비-marquee 종목이 1회만 등장하는 게 흔하다.
   // 기본 minMentions=2 였을 때 2+ 생존자가 전부 marquee라 제외 후 후보 0 → 항상 null(화면에 영영 안 뜸).
   // 기본 1로 내려 grounded 1회 언급도 후보가 돼야 한다. (반도체 매칭 집합 ≈ 한미반도체:1 + 마르키:N 재현)

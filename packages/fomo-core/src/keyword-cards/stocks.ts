@@ -227,6 +227,8 @@ export interface SurpriseStock {
   mentions: number;
   /** 의외성 점수(높을수록 의외 — UI/정렬·디버그용). */
   surprise: number;
+  /** "왜 보여줬나" grounded 근거 — 이 종목이 등장한 실제 원문 한 줄(B). 없으면 노출 약함. */
+  reason?: string;
 }
 
 /**
@@ -265,12 +267,16 @@ export function pickSurpriseStock(
       a.s.canonical.localeCompare(b.s.canonical)
   );
   const top = scored[0]!;
+  // B — "왜 보여줬나" grounded 근거: 이 종목이 실제로 등장한 원문 한 줄(제목 우선, 없으면 요약).
+  const hit = items.find((it) => stockMatchesText(top.s.canonical, `${it.title} ${it.summary ?? ""}`));
+  const reason = hit?.title?.trim();
   return {
     canonical: top.s.canonical,
     market: top.s.market,
     country: top.s.country,
     mentions: top.s.mentions,
     surprise: Math.round(top.surprise * 100) / 100,
+    ...(reason ? { reason } : {}),
   };
 }
 
