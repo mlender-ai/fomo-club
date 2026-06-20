@@ -77,6 +77,15 @@ export const STOCK_VOCAB: readonly StockDef[] = [
   { canonical: "한전기술", aliases: ["한전기술"], market: "KOSPI", country: "KR", naverCode: "052690" },
   { canonical: "두산로보틱스", aliases: ["두산로보틱스"], market: "KOSPI", country: "KR", naverCode: "454910" },
   { canonical: "레인보우로보틱스", aliases: ["레인보우로보틱스"], market: "KOSDAQ", country: "KR", naverCode: "277810" },
+  // 반도체 소부장/연관 — 발굴(discover)에서 자주 뜨는 실상장 종목(티커 검증된 것만 보강).
+  { canonical: "삼성전기", aliases: ["삼성전기"], market: "KOSPI", country: "KR", naverCode: "009150" },
+  { canonical: "DB하이텍", aliases: ["DB하이텍"], market: "KOSPI", country: "KR", naverCode: "000990" },
+  { canonical: "저스템", aliases: ["저스템"], market: "KOSDAQ", country: "KR", naverCode: "417180" },
+  { canonical: "네패스", aliases: ["네패스"], market: "KOSDAQ", country: "KR", naverCode: "033640" },
+  { canonical: "원익IPS", aliases: ["원익IPS"], market: "KOSDAQ", country: "KR", naverCode: "240810" },
+  { canonical: "동진쎄미켐", aliases: ["동진쎄미켐"], market: "KOSDAQ", country: "KR", naverCode: "005290" },
+  { canonical: "하나마이크론", aliases: ["하나마이크론"], market: "KOSDAQ", country: "KR", naverCode: "067310" },
+  { canonical: "제너셈", aliases: ["제너셈"], market: "KOSDAQ", country: "KR", naverCode: "217190" },
 
   // ── 미국/글로벌 — 종토방 없음(레딧/외신으로 grounding, §1) ──
   { canonical: "엔비디아", aliases: ["엔비디아", "Nvidia", "NVDA"], market: "NASDAQ", country: "US", marquee: true },
@@ -268,6 +277,30 @@ export function pickSurpriseStock(
 /** 종목명 → 정의(소스 매핑 등에 사용). 없으면 undefined. */
 export function stockDef(canonical: string): StockDef | undefined {
   return STOCK_VOCAB.find((d) => d.canonical === canonical);
+}
+
+const normName = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+
+/**
+ * 종목 검증 게이트(품질 최우선) — 후보명이 *실제 상장 종목(티커 보유)* 인지 해석한다.
+ * STOCK_VOCAB(canonical+aliases, 모두 naverCode/거래소 보유)에 **정확/별칭 일치**하면 그 정의를,
+ * 아니면 null. "MLCC·HBM·온디바이스AI" 같은 부품·기술·소재어는 vocab 에 없으니 null → 종목 노출 금지.
+ * substring 이 아니라 정규화 동치(공백·대소문자 무시)로만 — "삼성전자 관련주" 가 삼성전자로 둔갑하지 않게.
+ * 발굴(discover)·라벨·stock-insight 진입의 **공통 관문**으로 쓴다. 검증 실패 = 가짜로 만들지 않는다.
+ */
+export function resolveStock(name: string): StockDef | null {
+  const nn = normName(name ?? "");
+  if (nn.length < 2) return null;
+  for (const d of STOCK_VOCAB) {
+    if (normName(d.canonical) === nn) return d;
+    if (d.aliases.some((a) => normName(a) === nn)) return d;
+  }
+  return null;
+}
+
+/** 후보명이 검증된 상장 종목인가(resolveStock 의 boolean 버전). */
+export function isVerifiedStock(name: string): boolean {
+  return resolveStock(name) !== null;
 }
 
 const MATCHER_BY_CANONICAL = new Map(STOCK_MATCHERS.map((m) => [m.def.canonical, m]));

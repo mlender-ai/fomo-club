@@ -41,3 +41,42 @@ export function buildThemeInsightPrompt(theme: string, docs: readonly SourceDoc[
     '{"stocks":[],"bull":[{"claim":"","sourceId":"S1","quote":""}],"bear":[],"wordings":[{"text":"","sourceId":"S2"}],"stanceNote":""}',
   ].join("\n");
 }
+
+/**
+ * 종목 *주체* 이해 프롬프트(품질 최우선 §2). 테마 프롬프트와 달리 **그 종목이 주어/주체인** 근거만 뽑는다.
+ * "그 이름이 들어간 기사"가 아니라 "그 종목 자체"의 실적·사업·수급. 비교·배경 언급은 근거에서 제외
+ * (예: "SK하이닉스가 마이크론을 제쳤다"는 마이크론이 주어가 아님 → 마이크론 강세 근거로 쓰지 마라).
+ */
+export function buildStockInsightPrompt(stock: string, docs: readonly SourceDoc[]): string {
+  const corpus = docs
+    .map((d) => {
+      const meta = [d.source, d.publishedAt].filter(Boolean).join(" · ");
+      const bodyLine = d.body ? `\n   본문: ${d.body}` : "";
+      return `[${d.id}] (${d.kind}${meta ? " · " + meta : ""})\n   제목: ${d.title}${bodyLine}`;
+    })
+    .join("\n\n");
+
+  return [
+    `너는 종목 '${stock}' *그 자체*를 분석하는 애널리스트다. 아래 *수집된 원문만* 읽어라.`,
+    `핵심: '${stock}' 이 **주어/주체**인 사실만 근거로 삼아라. '${stock}' 이 비교 대상·배경·예시로만 등장한 문장은 버려라.`,
+    `  - ✅ 좋은 근거: "'${stock}' 이 …했다/…를 수주했다/실적이 …다" (${stock} 이 주체).`,
+    `  - ❌ 나쁜 근거: "○○가 '${stock}' 을 제쳤다/넘어섰다", "'${stock}' 등 관련주를 샀다" (${stock} 이 주체 아님 — 버려라).`,
+    "수집한 원문 외의 배경지식·일반론은 절대 쓰지 마라.",
+    "",
+    "규칙(어기면 그 항목은 폐기된다):",
+    `1) 강세/약세 근거(bull/bear)는 **뉴스(news)·공식(official) 원문에서만**, 그리고 **'${stock}' 이 주체인 문장**에서만. community 는 wordings 로. 각 근거에:`,
+    "   - claim: 친구에게 설명하듯 한 줄(쉽게). 톤은 '정중한 반말'(주어는 그 종목/상황, '너·네가' 지목 금지, 존댓말 금지, 어미 ~네/~더라/~야).",
+    "   - sourceId: 근거가 실제로 나온 원문 번호. quote: 그 원문에 실제로 있는 문구 그대로(지어내기 금지).",
+    `2) 강세·약세 모두 찾되, '${stock}' 이 주체인 근거가 한쪽에 정말 없으면 빈 배열 + stanceNote 에 정직하게. 억지로 만들지 마라.`,
+    `3) '${stock}' 이 주체인 근거가 원문에 거의 없으면, bull/bear 를 비우고 stanceNote 에 "이 종목 자체를 다룬 원문이 적다"고 적어라(가짜로 채우지 마라).`,
+    "4) 투자조언·매매신호·미래 단정 금지. 사실 전달만.",
+    "5) wordings: community 원문에서 그 종목에 대해 *사람들이 한 말* 그대로. 없으면 빈 배열.",
+    `6) stocks: 원문에 언급된 종목(참고용). 7) 공식 데이터(숫자)가 있으면 우선 인용.`,
+    "",
+    "수집된 원문:",
+    corpus || "(원문 없음)",
+    "",
+    "출력은 JSON 객체만(그 외 텍스트 0):",
+    '{"stocks":[],"bull":[{"claim":"","sourceId":"S1","quote":""}],"bear":[],"wordings":[{"text":"","sourceId":"S2"}],"stanceNote":""}',
+  ].join("\n");
+}

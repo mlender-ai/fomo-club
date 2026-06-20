@@ -4,6 +4,7 @@ import {
   stockDef,
   stockMatchesText,
   buildThemeInsightPrompt,
+  buildStockInsightPrompt,
   parseThemeInsightResponse,
   assembleThemeInsight,
   emptyThemeInsight,
@@ -319,14 +320,18 @@ export async function collectThemeStocks(
 
 /** 개별 종목 이해·구조화(작업3, BM 심장) — 테마와 동일 구조/가드. 자료 적으면 정직한 빈 상태. */
 export async function understandStock(stock: string): Promise<ThemeInsight> {
-  return runUnderstanding(stock, await collectStockDocs(stock));
+  return runUnderstanding(stock, await collectStockDocs(stock), "stock");
 }
 
 /**
  * 이해 코어(테마/종목 공용) — 수집된 docs 를 LLM 으로 읽고 grounding 검증(assemble) → 워딩 안전 판정.
  * subject 는 테마명 또는 종목명. 실패/미설정/빈 docs → 정직한 빈 상태.
  */
-async function runUnderstanding(subject: string, docs: SourceDoc[]): Promise<ThemeInsight> {
+async function runUnderstanding(
+  subject: string,
+  docs: SourceDoc[],
+  kind: "theme" | "stock" = "theme"
+): Promise<ThemeInsight> {
   if (docs.length === 0) return emptyThemeInsight(subject, "수집된 원문이 없음(소스 도달 실패 또는 매칭 0)");
 
   // 공식 지표 팩트(FRED) — LLM 결과와 별개로 항상 노출(있으면). 강세/약세로 해석하지 않는다.
@@ -346,7 +351,15 @@ async function runUnderstanding(subject: string, docs: SourceDoc[]): Promise<The
       body: JSON.stringify({
         model: MODEL,
         temperature: TEMPERATURE,
-        messages: [{ role: "user", content: buildThemeInsightPrompt(subject, docs) }],
+        messages: [
+          {
+            role: "user",
+            content:
+              kind === "stock"
+                ? buildStockInsightPrompt(subject, docs)
+                : buildThemeInsightPrompt(subject, docs),
+          },
+        ],
       }),
       signal: AbortSignal.timeout(45_000),
     });
