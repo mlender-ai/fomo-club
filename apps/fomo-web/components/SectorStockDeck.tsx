@@ -1,17 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SectorStock, StockSector } from "@fomo/core";
+import type { KeywordCard, SectorStock, StockSector } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
-import { fetchSectorStocks, recordTaste } from "@/lib/fomoApi";
+import { fetchSectorStocks, fetchKeywords, recordTaste } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
- * 섹터 종목 무한 스와이프 덱 — SECTOR_STRUCTURE_HANDOFF §1 (Stage ③ 구조 배선).
+ * 섹터 종목 무한 스와이프 덱 — SECTOR_STRUCTURE_HANDOFF §1·§4 (Stage ③·④ 구조 배선).
  *
  * 섹터 칩을 고르면: 그 섹터의 종목 풀(/api/fomo/sector-stocks?baseline=1 → 빈 카드 방지)을
  * 무한히(풀만큼 순환) 스와이프한다. 오른쪽=관심/왼쪽=덜관심 → recordTaste("stock", …) 적재(트랙 B).
  * 탭 → 종목 뎁스(StockInsightView: baseline+이해 레이어를 *도달 시* lazy 로드 = 비용 방어).
+ *
+ * ④ 발굴 결합: 그날 그 섹터에서 발굴된 숨은 수혜주(keywords API 의 surpriseStock)를 풀에 섞고,
+ *   "왜 이 종목"(grounded 근거)을 카드에 유지(#560). 대장주만 나오면 발굴 가치 0 → 발굴주를 노출 우선.
  *
  * 비주얼(카드 디자인·국기/시장 라벨·요약 리치 등)은 광혁 — 여기선 구조/동작만(§4).
  * 정렬은 @fomo/core sortStocksForFeed(콜드스타트 기본) — 개인화는 다음 트랙이 seam 에 끼움.
@@ -20,6 +23,46 @@ const THRESHOLD = 90;
 const EXIT_MS = 320;
 const UP = "#FF5A36";
 const DOWN = "#64748B";
+
+/** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
+type DeckStock = SectorStock & { reason?: string };
+
+/**
+ * 섹터 풀 + 그날 발굴 종목 병합(④). 발굴 근거(reason)를 풀 종목에 붙이고, 풀에 없던 발굴주는 추가.
+ * 노출 순서: 대표 대장주 먼저 → 발굴(근거 있는) 종목 → 나머지(결정적 — 캐시·새로고침 안정).
+ */
+function mergeDiscovered(
+  pool: readonly SectorStock[],
+  cards: readonly KeywordCard[],
+  sector: StockSector
+): DeckStock[] {
+  const reasons = new Map<string, string>();
+  for (const c of cards) {
+    if (c.keyword !== sector) continue;
+    const s = c.surpriseStock;
+    if (s?.reason) reasons.set(s.canonical, s.reason);
+  }
+  const have = new Set(pool.map((s) => s.canonical));
+  const out: DeckStock[] = pool.map((s) => {
+    const r = reasons.get(s.canonical);
+    return r ? { ...s, reason: r } : s;
+  });
+  // 풀(국내 baseline)에 없던 발굴주(예: 글로벌)도 추가 — 뎁스(StockInsightView)가 근거를 채운다.
+  for (const c of cards) {
+    if (c.keyword !== sector) continue;
+    const s = c.surpriseStock;
+    if (!s?.reason || have.has(s.canonical)) continue;
+    have.add(s.canonical);
+    out.push({ canonical: s.canonical, market: s.market, country: s.country, marquee: false, sector, reason: s.reason });
+  }
+  out.sort(
+    (a, b) =>
+      Number(b.marquee) - Number(a.marquee) ||
+      Number(!!b.reason) - Number(!!a.reason) || // 발굴(근거 있는) 우선 노출
+      a.canonical.localeCompare(b.canonical)
+  );
+  return out;
+}
 
 function prefersReducedMotion(): boolean {
   return (
@@ -36,8 +79,8 @@ const MARKET_LABEL: Record<string, string> = {
   COIN: "코인",
 };
 
-/** 종목 카드 앞면 — 이름 + 시장 라벨(카피·국기 등 비주얼은 광혁). */
-function StockCardFace({ stock, progress }: { stock: SectorStock; progress?: string }) {
+/** 종목 카드 앞면 — 이름 + 시장 라벨 + (발굴주면) 왜 보여줬나 근거(카피·국기 등 비주얼은 광혁). */
+function StockCardFace({ stock, progress }: { stock: DeckStock; progress?: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2">
@@ -47,9 +90,16 @@ function StockCardFace({ stock, progress }: { stock: SectorStock; progress?: str
       <p className="mt-3 font-pixel text-sm text-muted">
         {MARKET_LABEL[stock.market] ?? stock.market}
       </p>
-      <p className="mt-6 text-lg leading-8 text-whiteout">
-        이 종목, 오늘 어떤 흐름인지 한번 볼까요?
-      </p>
+      {stock.reason ? (
+        <>
+          <p className="mt-4 font-pixel text-sm" style={{ color: UP }}>💡 주목해볼만한 종목</p>
+          <p className="mt-3 text-base leading-7 text-whiteout">{stock.reason}</p>
+        </>
+      ) : (
+        <p className="mt-6 text-lg leading-8 text-whiteout">
+          이 종목, 오늘 어떤 흐름인지 한번 볼까요?
+        </p>
+      )}
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
         {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
@@ -66,18 +116,25 @@ interface SectorDeckProps {
 
 export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeckProps) {
   const [state, setState] = useState<
-    { kind: "loading" } | { kind: "error" } | { kind: "ready"; stocks: SectorStock[] }
+    { kind: "loading" } | { kind: "error" } | { kind: "ready"; stocks: DeckStock[] }
   >({ kind: "loading" });
 
   useEffect(() => {
     let alive = true;
     setState({ kind: "loading" });
-    // baseline 보장(국내 상장)만 — 무한 스와이프에서 빈 카드 방지(§2 전제).
-    fetchSectorStocks(sector, true)
-      .then((res) => {
+    // 풀(baseline 보장 — 빈 카드 방지) + 그날 발굴주(keywords) 병렬. 발굴 실패해도 풀로 진행.
+    Promise.all([
+      fetchSectorStocks(sector, true),
+      fetchKeywords().catch(() => null), // 발굴은 보강 — 실패 무시
+    ])
+      .then(([poolRes, kwRes]) => {
         if (!alive) return;
-        if (!res.stocks?.length) setState({ kind: "error" });
-        else setState({ kind: "ready", stocks: res.stocks });
+        if (!poolRes.stocks?.length) {
+          setState({ kind: "error" });
+          return;
+        }
+        const stocks = mergeDiscovered(poolRes.stocks, kwRes?.cards ?? [], sector);
+        setState({ kind: "ready", stocks });
       })
       .catch((err) => {
         console.warn("[SectorStockDeck] fetch failed", err);
@@ -105,12 +162,12 @@ function SectorDeckInner({
   stocks,
   loggedIn,
   onRequireLogin,
-}: { stocks: SectorStock[] } & Omit<SectorDeckProps, "sector">) {
+}: { stocks: DeckStock[] } & Omit<SectorDeckProps, "sector">) {
   // 무한: 풀을 순환(modulo)해 끝나지 않는다(§7 "무한히 풀만큼").
   const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
-  const [selected, setSelected] = useState<SectorStock | null>(null);
+  const [selected, setSelected] = useState<DeckStock | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
   const moved = useRef(false);
@@ -139,7 +196,7 @@ function SectorDeckInner({
     [idx, stocks, flingNext]
   );
 
-  const openDepth = (stock: SectorStock) => {
+  const openDepth = (stock: DeckStock) => {
     if (!loggedIn && onRequireLogin) {
       onRequireLogin();
       return;
