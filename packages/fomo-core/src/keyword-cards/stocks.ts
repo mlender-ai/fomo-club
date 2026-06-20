@@ -267,17 +267,45 @@ export function pickSurpriseStock(
       a.s.canonical.localeCompare(b.s.canonical)
   );
   const top = scored[0]!;
-  // B — "왜 보여줬나" grounded 근거: 이 종목이 실제로 등장한 원문 한 줄(제목 우선, 없으면 요약).
-  const hit = items.find((it) => stockMatchesText(top.s.canonical, `${it.title} ${it.summary ?? ""}`));
-  const reason = hit?.title?.trim();
+  // B — "왜 보여줬나" grounded 근거: 이 종목이 *주어*인 원문 한 줄만. 비교("하이닉스가 마이크론 제쳤다")·
+  //     리스트/인기검색("[인기검색TOP5] …")은 약한 이유라 폐기. 좋은 근거 없으면 surprise 자체를 안 띄움.
+  const reason = pickSurpriseReason(items, top.s.canonical);
+  if (!reason) return null; // 납득 가능한 이유 없음 → 노출 안 함(B: 약한 이유는 미노출)
   return {
     canonical: top.s.canonical,
     market: top.s.market,
     country: top.s.country,
     mentions: top.s.mentions,
     surprise: Math.round(top.surprise * 100) / 100,
-    ...(reason ? { reason } : {}),
+    reason,
   };
+}
+
+/** 비교/리스트/인기검색 류 — 종목이 주어가 아닌 약한 헤드라인(노출 기준 미달). */
+const WEAK_HEADLINE =
+  /(인기검색|특징주|급등주|급등 ?종목|상한가|TOP\s?\d|순위|총정리|모음|제쳤|제치|넘어섰|넘고|앞질|제외하고|\[[^\]]*\])/;
+
+/** surprise 종목의 "왜" 근거 한 줄 — 그 종목이 *주어*인 깨끗한 원문만(없으면 undefined). */
+function pickSurpriseReason(
+  items: readonly KeywordSourceItem[],
+  canonical: string
+): string | undefined {
+  const matched = items.filter((it) =>
+    stockMatchesText(canonical, `${it.title} ${it.summary ?? ""}`)
+  );
+  if (matched.length === 0) return undefined;
+  const norm = (s: string) => s.replace(/\s+/g, "");
+  const nc = norm(canonical);
+  // 1순위: 제목이 종목명으로 시작(주어) + 비교/리스트 아님.
+  const subjectFirst = matched.find(
+    (it) => norm(it.title).startsWith(nc) && !WEAK_HEADLINE.test(it.title)
+  );
+  if (subjectFirst) return subjectFirst.title.trim();
+  // 2순위: 종목명 포함 + 비교/리스트 아님(주어 추정).
+  const clean = matched.find((it) => !WEAK_HEADLINE.test(it.title));
+  if (clean) return clean.title.trim();
+  // 전부 비교/리스트 → 약한 이유뿐 → 폐기.
+  return undefined;
 }
 
 /** 종목명 → 정의(소스 매핑 등에 사용). 없으면 undefined. */
