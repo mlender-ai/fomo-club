@@ -174,6 +174,20 @@ describe("pickSurpriseStock — 의외의 추천 종목(대장주 말고 같이 
     expect(s?.canonical).toBe("한미반도체");
     expect(s?.reason).toBe("한미반도체, HBM 장비 수주로 급등"); // 약한 'N번 등장'이 아니라 실제 원문
   });
+  it("B 회귀 — 1순위 후보가 비교/리스트뿐이어도 차순위의 주어 헤드라인을 고른다(통째 null 금지)", () => {
+    // 한미반도체(코스닥=점수 1위)는 비교 헤드라인뿐 → 폐기되지만, 삼성전기(주어 헤드라인)가 살아남아야 함.
+    const items = [
+      ...mk(4, "삼성전자 강세"), // marquee 제외
+      { title: "하이닉스가 한미반도체 제쳤다" }, // 1순위 후보지만 비교(주어 아님)
+      { title: "[인기검색TOP5] 한미반도체, 삼성전자" }, // 한미반도체 리스트
+      { title: "삼성전기, AI 서버 수요 폭발에 실적 급증" }, // 주어 헤드라인 → 이게 선택돼야
+    ];
+    const s = pickSurpriseStock(items);
+    expect(s).not.toBeNull();
+    expect(s!.canonical).toBe("삼성전기");
+    expect(s!.reason).toContain("삼성전기");
+  });
+
   it("B — 비교/리스트 헤드라인뿐이면 약한 이유라 surprise 미노출(null)", () => {
     // 한미반도체가 비교 대상·인기검색 리스트로만 등장 → 주어 아님 → 폐기.
     const s = pickSurpriseStock([
