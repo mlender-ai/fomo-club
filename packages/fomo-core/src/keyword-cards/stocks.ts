@@ -266,19 +266,23 @@ export function pickSurpriseStock(
       a.s.mentions - b.s.mentions ||
       a.s.canonical.localeCompare(b.s.canonical)
   );
-  const top = scored[0]!;
-  // B — "왜 보여줬나" grounded 근거: 이 종목이 *주어*인 원문 한 줄만. 비교("하이닉스가 마이크론 제쳤다")·
-  //     리스트/인기검색("[인기검색TOP5] …")은 약한 이유라 폐기. 좋은 근거 없으면 surprise 자체를 안 띄움.
-  const reason = pickSurpriseReason(items, top.s.canonical);
-  if (!reason) return null; // 납득 가능한 이유 없음 → 노출 안 함(B: 약한 이유는 미노출)
-  return {
-    canonical: top.s.canonical,
-    market: top.s.market,
-    country: top.s.country,
-    mentions: top.s.mentions,
-    surprise: Math.round(top.surprise * 100) / 100,
-    reason,
-  };
+  // B — "왜 보여줬나" grounded 근거: 그 종목이 *주어*인 원문 한 줄만(비교·리스트는 폐기).
+  //     점수 1위만 보지 않고 **후보를 점수순으로 훑어 깨끗한 근거가 있는 첫 종목**을 고른다.
+  //     (1위 후보의 헤드라인이 비교/리스트뿐이어도, 차순위에 주어 헤드라인이 있으면 그걸 노출 — 종목 카드가
+  //      엉뚱하게 통째로 사라지던 버그 수정.) 어느 후보도 깨끗한 근거가 없을 때만 null(정직).
+  for (const { s, surprise } of scored) {
+    const reason = pickSurpriseReason(items, s.canonical);
+    if (!reason) continue;
+    return {
+      canonical: s.canonical,
+      market: s.market,
+      country: s.country,
+      mentions: s.mentions,
+      surprise: Math.round(surprise * 100) / 100,
+      reason,
+    };
+  }
+  return null;
 }
 
 /** 비교/리스트/인기검색 류 — 종목이 주어가 아닌 약한 헤드라인(노출 기준 미달). */
