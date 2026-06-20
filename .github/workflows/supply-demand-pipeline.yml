@@ -1,0 +1,41 @@
+name: Supply Demand Pipeline
+
+# 일별 투자자 수급(외국인·기관 순매매) 수집·누적. SUPPLY DEMAND SCORE HANDOFF §1·§2.
+# 장 마감 확정치를 네이버 금융에서 수집 → SupplyDemandDaily 누적(기준선 씨앗).
+# 제품 데이터 파이프라인(에이전트 자율 루프 아님) — 정지 대상 아님.
+#
+# 전제: prod 에 SupplyDemandDaily 테이블이 있어야 저장(운영 규약상 prisma db push 직접 승인 후 활성).
+# 테이블 전이라도 수집 로그까지는 돌고, store 가 폴백(0건 누적)으로 누락을 가시화한다.
+
+on:
+  schedule:
+    # KST = UTC+9. 한국장 마감(15:30) 후 확정치 안정화 시점 — 18:30 KST(09:30 UTC) 평일.
+    - cron: "30 9 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supply-demand
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Prisma generate
+        run: npm run prisma:generate
+      - name: Collect supply-demand
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # KIS 앱키가 secrets 에 있으면 개인까지 수집(없으면 네이버 폴백).
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+        run: npm run supply:collect

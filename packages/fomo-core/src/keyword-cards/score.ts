@@ -28,6 +28,12 @@ export interface KeywordSignals {
   volume: number;
   /** (b) 언급 가속 0~1 — 최근 6h vs 직전 6h. 인트라데이 시계열 미보유 시 null(Phase 4+). */
   accel: number | null;
+  /**
+   * (e) 수급 0~1 — 그 테마 종목들의 외인+기관 순매매 **방향**(장마감 확정 직전거래일).
+   * SUPPLY DEMAND SCORE HANDOFF §3: 기준선 없는 지금은 방향(매수세/매도세)만 보조로, 가중치 낮게.
+   * 데이터 없으면 null → 점수 영향 0(언급량 주신호 유지). 기준선 쌓이면 "이례성"으로 승격(별도).
+   */
+  supplyDemand: number | null;
 }
 
 export interface ScoredKeyword extends ExtractedKeyword {
@@ -71,7 +77,15 @@ function toneSignal(kw: ExtractedKeyword, nowMs: number): number {
 export interface ScoreOptions {
   /** 현재 시각(ms) — 최신성·테스트 주입용. */
   nowMs: number;
+  /**
+   * 키워드별 수급 신호(0~1, 장마감 확정 방향). 데이터 없는 키워드는 생략 → null(점수 영향 0).
+   * 미주입(현재 기본)이면 모든 키워드 null → 점수는 언급량 기준 그대로(불변).
+   */
+  supplyByKeyword?: Readonly<Record<string, number>>;
 }
+
+/** 수급 보조 가중치 — §3 "가중치 낮게 시작". 데이터 있을 때만 base 점수에 10% 블렌딩. */
+const SUPPLY_BLEND = 0.1;
 
 /**
  * 추출된 키워드 → 포모 점수. 점수 내림차순 정렬.
@@ -102,16 +116,26 @@ export function scoreKeywords(keywords: ExtractedKeyword[], opts: ScoreOptions):
     const volume = clamp01(kw.mentions / maxMention);
     const community = anyCommunity ? clamp01(kw.engagement / maxCommunity) : 0;
 
-    const fomoScore = clamp100((w.volume * volume + w.tone * tone + w.community * community) * 100);
+    const base = clamp100((w.volume * volume + w.tone * tone + w.community * community) * 100);
+
+    // (e) 수급 보조 — 데이터 있을 때만 방향을 base 에 10% 블렌딩(§3 가중치 낮게). 없으면 base 그대로(불변).
+    const supplyDemand = opts.supplyByKeyword?.[kw.keyword] ?? null;
+    const fomoScore =
+      supplyDemand !== null
+        ? clamp100(base * (1 - SUPPLY_BLEND) + supplyDemand * 100 * SUPPLY_BLEND)
+        : base;
 
     return {
       ...kw,
       fomoScore,
       confidence: "low",
-      signals: { tone, community, volume, accel: null },
+      signals: { tone, community, volume, accel: null, supplyDemand },
       reason:
         `volume=${volume.toFixed(2)} tone=${tone.toFixed(2)} community=${community.toFixed(2)} ` +
         `(w ${w.volume.toFixed(2)}/${w.tone.toFixed(2)}/${w.community.toFixed(2)}) | ` +
+        (supplyDemand !== null
+          ? `supply=${supplyDemand.toFixed(2)}(장마감 확정, blend ${SUPPLY_BLEND}) | `
+          : "") +
         `(a)volume=당일 상대mention, (b)accel 미산출, 30일 절대기준선 부재 → confidence low`,
     };
   });

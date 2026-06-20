@@ -8,10 +8,12 @@ name: Warm Depth Insights
 
 on:
   schedule:
-    # KST = UTC+9. 각 슬롯 시작 직후 워밍.
-    - cron: "0 0 * * *"  # 09:00 KST — morning 슬롯
-    - cron: "0 4 * * *"  # 13:00 KST — afternoon 슬롯
-    - cron: "0 7 * * *"  # 16:00 KST — evening 슬롯
+    # KST = UTC+9. 캐시 키가 (KST날짜,테마)라 그날 첫 워밍이 종일 warm 을 만든다.
+    # 자정 직후(00:20 KST) 먼저 데워 새벽~오전 cold 구간 제거 + 장중 갱신(SWR revalidate 6h).
+    - cron: "20 15 * * *" # 00:20 KST — 그날 키 생성 직후(새벽 cold 제거)
+    - cron: "0 0 * * *"   # 09:00 KST — 장 시작
+    - cron: "0 4 * * *"   # 13:00 KST — 장중 갱신
+    - cron: "0 7 * * *"   # 16:00 KST — 장 마감 후 갱신
   workflow_dispatch:
 
 permissions:

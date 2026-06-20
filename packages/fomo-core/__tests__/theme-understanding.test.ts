@@ -3,6 +3,7 @@ import {
   assembleThemeInsight,
   emptyThemeInsight,
   parseThemeInsightResponse,
+  communityWordings,
   buildThemeInsightPrompt,
   parseNaverBoardPosts,
   condenseThemeInsight,
@@ -602,5 +603,31 @@ describe("parseThemeInsightResponse — 깨진 LLM JSON 복구(바이오 파싱 
   });
   it("JSON 이 전혀 없으면 null", () => {
     expect(parseThemeInsightResponse("죄송합니다, 답변을 드릴 수 없습니다.")).toBeNull();
+  });
+});
+
+describe("communityWordings — 워딩은 커뮤니티 출처만(§3-b)", () => {
+  const insight = {
+    theme: "반도체", whyHot: "", bull: [], bear: [], stance: "balanced", stanceNote: "",
+    outlets: [], singleOutlet: false, confidence: "low", lean: { bullCount: 0, bearCount: 0, oneSided: false },
+    reason: "", relatedStocks: [],
+    wordings: [
+      { text: "존버한다", sourceId: "S1" },   // 커뮤니티
+      { text: "기사 인용", sourceId: "S2" },   // 뉴스 — 제외돼야
+      { text: "공식 발표", sourceId: "S3" },   // 공식 — 제외돼야
+    ],
+    sources: [
+      { id: "S1", kind: "community", title: "종토방" },
+      { id: "S2", kind: "news", title: "매일경제" },
+      { id: "S3", kind: "official", title: "FRED" },
+    ],
+  } as never;
+  it("뉴스·공식 출처 워딩은 거르고 커뮤니티만 남긴다", () => {
+    const out = communityWordings(insight);
+    expect(out.map((w) => w.text)).toEqual(["존버한다"]);
+  });
+  it("커뮤니티 워딩이 없으면 빈 배열", () => {
+    const none = { ...insight, wordings: [{ text: "기사", sourceId: "S2" }] } as never;
+    expect(communityWordings(none)).toEqual([]);
   });
 });

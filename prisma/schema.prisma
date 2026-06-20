@@ -822,3 +822,19 @@ model TasteSignal {
   @@index([sessionId, createdAt])
   @@index([subjectType, subject])
 }
+
+// 일별 투자자 수급(외국인·기관 순매매) 누적 — SUPPLY DEMAND SCORE HANDOFF §2.
+// 시점 원칙: date = 장 마감 확정 거래일. 2~3주 쌓이면 "평소 대비 이례성"(z-score) 산출 토대.
+// db push 게이트: prisma db push 는 오너 직접 승인. 테이블 전이라도 cron/라우트는 폴백(빈 값)으로 동작.
+model SupplyDemandDaily {
+  id             String   @id @default(cuid())
+  ticker         String // 종목 코드(네이버/KRX 6자리)
+  date           String // YYYY-MM-DD (장마감 확정 거래일)
+  foreignNet     Float // 외국인 순매매량(주, +매수/-매도)
+  institutionNet Float // 기관 순매매량(주, +매수/-매도)
+  individualNet  Float? // 개인 순매매량(주). KIS Open API 만 제공(네이버 경로는 null)
+  createdAt      DateTime @default(now())
+
+  @@unique([ticker, date])
+  @@index([ticker, date])
+}

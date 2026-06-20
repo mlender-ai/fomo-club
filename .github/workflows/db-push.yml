@@ -6,6 +6,11 @@ name: DB Push (manual)
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "체크=미리보기만(SQL 출력, DB 변경 안 함) · 해제=실제 적용(db push)"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -54,7 +59,12 @@ jobs:
             --to-schema-datamodel prisma/schema.prisma \
             --script || true
 
+      - name: Dry-run notice (skipped 실제 적용)
+        if: ${{ inputs.dry_run }}
+        run: echo "🔍 미리보기 모드 — 위 'Preview pending SQL' 의 변경만 확인하고 DB 는 건드리지 않았습니다. 실제 적용하려면 dry_run 체크를 해제하고 다시 실행하세요."
+
       - name: Prisma db push (additive; aborts on data loss)
+        if: ${{ !inputs.dry_run }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx prisma db push
