@@ -102,12 +102,12 @@ function groundWordings(
 
 function decideStance(bull: number, bear: number): { stance: ThemeStance; note: string } {
   if (bull === 0 && bear === 0)
-    return { stance: "insufficient", note: "원문에서 강세·약세 근거를 충분히 찾지 못했어." };
+    return { stance: "insufficient", note: "원문에서 강세·약세 근거를 충분히 찾지 못했어요." };
   if (bull > 0 && bear === 0)
-    return { stance: "bull-dominant", note: "오늘은 강세 의견이 우세하고, 반대(약세) 관점은 원문에서 안 보여." };
+    return { stance: "bull-dominant", note: "오늘은 강세 의견이 우세하고, 반대(약세) 관점은 원문에서 안 보여요." };
   if (bear > 0 && bull === 0)
-    return { stance: "bear-dominant", note: "오늘은 약세/리스크 쪽 얘기가 우세하고, 강세 관점은 원문에서 안 보여." };
-  return { stance: "balanced", note: "강세와 약세 관점이 원문에 둘 다 있어." };
+    return { stance: "bear-dominant", note: "오늘은 약세/리스크 쪽 얘기가 우세하고, 강세 관점은 원문에서 안 보여요." };
+  return { stance: "balanced", note: "강세와 약세 관점이 원문에 둘 다 있어요." };
 }
 
 /** 근거가 인용한 원문만 출처 목록으로(검증용). */
@@ -145,7 +145,7 @@ export function emptyThemeInsight(theme: string, reason: string): ThemeInsight {
     bear: [],
     wordings: [],
     stance: "insufficient",
-    stanceNote: "보여줄 만큼 원문이 모이지 않았어. 그것도 정상이야.",
+    stanceNote: "보여줄 만큼 원문이 모이지 않았어요. 그것도 정상이에요.",
     sources: [],
     confidence: "insufficient",
     reason,
