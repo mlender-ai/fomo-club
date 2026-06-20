@@ -5,6 +5,7 @@ import {
   parseThemeInsightResponse,
   communityWordings,
   buildThemeInsightPrompt,
+  buildStockInsightPrompt,
   parseNaverBoardPosts,
   condenseThemeInsight,
   discoverRelatedStocks,
@@ -406,6 +407,14 @@ describe("parse / prompt / 커뮤니티 원문 보존", () => {
     expect(p).toContain("quote");
   });
 
+  it("buildStockInsightPrompt — 종목 주체 분석 강제(비교/배경 언급 거부)", () => {
+    const p = buildStockInsightPrompt("마이크론", DOCS);
+    expect(p).toContain("마이크론"); // 주체 종목
+    expect(p).toMatch(/주어|주체/); // 주체 중심 지시
+    expect(p).toMatch(/제쳤|넘어섰|관련주/); // 비교/배경 언급 거부 예시
+    expect(p).toContain("quote"); // grounding 유지
+  });
+
   it("condenseThemeInsight — 응축은 grounded claim 만 조립(새 사실 없음) + 균형 유지", () => {
     const insight: ThemeInsight = {
       theme: "반도체",
@@ -569,6 +578,19 @@ describe("발굴 엔진 — 연관 확산 (BM 구멍1, 불변)", () => {
 
   it("정직한 빈 상태 — 연관주 없으면 빈 배열(가짜 안 채움)", () => {
     expect(discoverRelatedStocks(mk(["삼성전자"], []))).toEqual([]);
+  });
+
+  it("종목 검증 게이트 — MLCC·HBM 등 비종목어는 연관주로 안 뽑힌다(티커 해석 실패)", () => {
+    const insight = mk(
+      ["MLCC", "HBM", "삼성전기"],
+      [
+        { claim: "MLCC 수요가 급증한다", sourceId: "S1", quote: "수요" },
+        { claim: "HBM 가격이 오른다", sourceId: "S1", quote: "가격" },
+        { claim: "삼성전기가 MLCC 사상 최고가를 찍었다", sourceId: "S1", quote: "최고가" },
+      ]
+    );
+    // MLCC·HBM 은 vocab 에 없어 폐기, 삼성전기(실상장)만 — 부품명이 종목 자리에 안 옴.
+    expect(discoverRelatedStocks(insight).map((x) => x.stock)).toEqual(["삼성전기"]);
   });
 
   it("v1.1 — 카테고리어(미국 AI주·반도체 부품·기술주)는 연관주에서 제외, 진짜 종목만", () => {
