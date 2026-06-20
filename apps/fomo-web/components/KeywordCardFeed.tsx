@@ -9,7 +9,7 @@ import {
   type SurpriseStock,
 } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
-import { fetchKeywords, fetchThemeInsight } from "@/lib/fomoApi";
+import { fetchKeywords, fetchThemeInsight, recordTaste } from "@/lib/fomoApi";
 import { recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
@@ -122,6 +122,13 @@ function colorOf(item: DeckItem): string {
   return item.kind === "sector" ? scoreToColor(item.card.fomoScore) : UP;
 }
 
+/** 덱 한 장 → 취향 적재용 (subjectType, subject). 섹터=테마(키워드), 종목=종목명. */
+function tasteOf(item: DeckItem): { type: "theme" | "stock"; subject: string } {
+  return item.kind === "sector"
+    ? { type: "theme", subject: item.card.keyword }
+    : { type: "stock", subject: item.stock.canonical };
+}
+
 /** 담담한 빈 상태(수집 실패/데이터 없음) — 무한 로딩 금지. */
 function DeckEmpty() {
   return (
@@ -220,6 +227,8 @@ function KeywordDeck({ cards }: { cards: readonly KeywordCard[] }) {
       const item = deck[idx];
       if (item) {
         recordInterest(item.id, dir === "right" ? "more" : "less", Date.now());
+        const t = tasteOf(item);
+        recordTaste(t.type, t.subject, dir === "right" ? "more" : "less"); // 트랙 B: 서버 적재
         if (item.kind === "sector") recordViewed(item.card, Date.now()); // 종목 카드는 섹터를 따라가므로 별도 기록 X
       }
       flingNext(dir);
@@ -229,11 +238,15 @@ function KeywordDeck({ cards }: { cards: readonly KeywordCard[] }) {
 
   const openItem = (item: DeckItem) => {
     if (item.kind === "sector") recordViewed(item.card, Date.now());
+    const t = tasteOf(item);
+    recordTaste(t.type, t.subject, "view_depth"); // 트랙 B: 뎁스 열람 = 강한 관심
     setSelected(item);
   };
   // CTA "관심" — "이거 더 볼래" → 관심 기록 + 자세히. 다음 카드 넘김은 닫을 때.
   const openInterest = (item: DeckItem) => {
     recordInterest(item.id, "more", Date.now());
+    const t = tasteOf(item);
+    recordTaste(t.type, t.subject, "more"); // 트랙 B: 명시적 관심
     openItem(item);
   };
   const closeDepth = () => {

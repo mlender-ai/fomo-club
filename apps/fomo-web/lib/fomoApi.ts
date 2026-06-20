@@ -10,6 +10,7 @@ import type {
   ScoredArticle,
 } from "@fomo/core";
 import { getToken, setToken } from "@/lib/auth";
+import { getSessionId } from "@/lib/session";
 
 export type { BannerItem } from "@fomo/core";
 
@@ -162,4 +163,24 @@ export async function linkSession(sessionId: string): Promise<{ linked: number }
   });
   if (!res.ok) throw new Error(`link ${res.status}`);
   return res.json();
+}
+
+// ── 트랙 B: 취향 학습 적재 ──────────────────────────────────────────────────
+// 스와이프(관심/덜관심)·깊이 신호(뎁스 열람/연관주 탭)를 서버에 쌓는다. 로그인이면 Bearer 로 유저별,
+// 아니면 익명 sessionId 로(익명 적재 먼저). fire-and-forget — 실패해도 스와이프 흐름을 막지 않는다.
+export type TasteSubjectType = "theme" | "stock";
+export type TasteSignalKind = "more" | "less" | "view_depth" | "tap_related";
+
+export function recordTaste(
+  subjectType: TasteSubjectType,
+  subject: string,
+  signal: TasteSignalKind
+): void {
+  if (typeof window === "undefined" || !subject) return;
+  void fetch(`${API_BASE}/api/fomo/taste`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ subjectType, subject, signal, sessionId: getSessionId() }),
+    keepalive: true, // 화면 전환/언마운트 중에도 전송 보장
+  }).catch((err) => console.warn("[recordTaste] failed", err));
 }
