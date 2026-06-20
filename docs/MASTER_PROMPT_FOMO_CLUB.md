@@ -1,5 +1,7 @@
 # 마스터 프롬프트 — FOMO Club (MVP 우선 출시)
 
+> **[보관 문서 — 실행 금지]** 감정 투표 MVP를 만들던 시기의 일회성 구현 프롬프트다. 아래 Phase 명령을 다시 실행하지 않는다. 현재 방향은 `PRODUCT_VISION.md`와 루트 `CLAUDE.md`를 따른다.
+
 | | |
 |---|---|
 | **목적** | 기존 taro-stock-app 모노레포에 FOMO Club 앱 신설 → MVP 우선 출시 |
