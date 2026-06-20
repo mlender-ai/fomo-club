@@ -28,12 +28,12 @@ export const SITUATION_OPTIONS: readonly VoiceOption[] = [
 
 /** 의연함 선택지 — 버팀/쉼/거리두기만. 무모함 키는 존재하지 않는다(가드레일). */
 export const RESOLVE_OPTIONS: readonly VoiceOption[] = [
-  { key: "no_panic", label: "허둥대진 않았어" },
-  { key: "closed_app", label: "오늘은 앱을 일찍 껐어" },
-  { key: "took_walk", label: "잠깐 산책하고 왔어" },
-  { key: "kept_routine", label: "그래도 할 일은 다 했어" },
-  { key: "no_impulse", label: "충동적으로 사고팔진 않았어" },
-  { key: "early_sleep", label: "오늘은 일찍 자려고" },
+  { key: "no_panic", label: "허둥대진 않았어요" },
+  { key: "closed_app", label: "오늘은 앱을 일찍 껐어요" },
+  { key: "took_walk", label: "잠깐 산책하고 왔어요" },
+  { key: "kept_routine", label: "그래도 할 일은 다 했어요" },
+  { key: "no_impulse", label: "충동적으로 사고팔진 않았어요" },
+  { key: "early_sleep", label: "오늘은 일찍 자려고요" },
 ] as const;
 
 export interface FomoVoice {
@@ -73,15 +73,15 @@ export function composeVoice(v: FomoVoice): string | null {
  * 같은 날은 동일, 매일 달라져 돌아올 이유가 된다.
  */
 const CURATED_POOL: readonly { emotion: EmotionType; text: string }[] = [
-  { emotion: "fear", text: "공포 · 오늘도 파란 날이었지만, 허둥대진 않았어." },
-  { emotion: "regret", text: "후회 · 물린 지 꽤 됐지만, 그래도 할 일은 다 했어." },
-  { emotion: "fomo", text: "FOMO · 오르는 걸 구경만 했지만, 충동적으로 사고팔진 않았어." },
-  { emotion: "fear", text: "공포 · 새벽까지 시세를 봤지만, 오늘은 일찍 자려고." },
-  { emotion: "greed", text: "탐욕 · 하루 종일 차트만 봤지만, 오늘은 앱을 일찍 껐어." },
-  { emotion: "regret", text: "후회 · 오늘도 파란 날이었지만, 잠깐 산책하고 왔어." },
-  { emotion: "conviction", text: "확신 · 별일 없는 하루였고, 그래도 할 일은 다 했어." },
-  { emotion: "fomo", text: "FOMO · 새벽까지 시세를 봤지만, 허둥대진 않았어." },
-  { emotion: "fear", text: "공포 · 물린 지 꽤 됐지만, 충동적으로 사고팔진 않았어." },
+  { emotion: "fear", text: "공포 · 오늘도 파란 날이었지만, 허둥대진 않았어요." },
+  { emotion: "regret", text: "후회 · 물린 지 꽤 됐지만, 그래도 할 일은 다 했어요." },
+  { emotion: "fomo", text: "FOMO · 오르는 걸 구경만 했지만, 충동적으로 사고팔진 않았어요." },
+  { emotion: "fear", text: "공포 · 새벽까지 시세를 봤지만, 오늘은 일찍 자려고요." },
+  { emotion: "greed", text: "탐욕 · 하루 종일 차트만 봤지만, 오늘은 앱을 일찍 껐어요." },
+  { emotion: "regret", text: "후회 · 오늘도 파란 날이었지만, 잠깐 산책하고 왔어요." },
+  { emotion: "conviction", text: "확신 · 별일 없는 하루였고, 그래도 할 일은 다 했어요." },
+  { emotion: "fomo", text: "FOMO · 새벽까지 시세를 봤지만, 허둥대진 않았어요." },
+  { emotion: "fear", text: "공포 · 물린 지 꽤 됐지만, 충동적으로 사고팔진 않았어요." },
 ] as const;
 
 export interface CuratedVoice {

@@ -47,7 +47,7 @@ describe("buildKeywordCards (룰 폴백 코멘트)", () => {
     }
   });
 
-  it("정중한 반말 — 카드 텍스트에 '너' 2인칭 지목이 없다(상황 주어)", () => {
+  it("정중한 해요체 — 카드 텍스트에 '너' 2인칭 지목이 없다(상황 주어)", () => {
     const cards = buildKeywordCards(scoreSample());
     for (const c of cards) {
       const blob = `${c.comment} ${c.depth.why} ${c.depth.remember}`;
@@ -231,14 +231,14 @@ describe("Phase 3 — LLM 코멘트 가드레일 (§4.4)", () => {
     expect(parseKeywordComments("not json")).toEqual([]);
   });
 
-  it("buildKeywordCommentPrompt — 정중한 반말(너 지목 금지)/균형추/JSON 지시 + 키워드 포함", () => {
+  it("buildKeywordCommentPrompt — 정중한 해요체(너 지목 금지)/담담한 사실/JSON 지시 + 키워드 포함", () => {
     const p = buildKeywordCommentPrompt([
       { keyword: "반도체", score: 88, titles: ["엔비디아 급등"], related: ["삼성전자"] },
     ]);
     expect(p).toContain("반도체");
-    expect(p).toContain("정중한 반말");
+    expect(p).toContain("해요체");
     expect(p).toContain("지목 금지");
-    expect(p).toContain("균형추");
+    expect(p).toContain("담담한 사실");
     expect(p).toMatch(/JSON 배열/);
   });
 });

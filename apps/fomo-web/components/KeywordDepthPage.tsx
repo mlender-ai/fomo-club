@@ -139,7 +139,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
               {insight!.singleOutlet && insight!.outlets.length > 0 && (
                 <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
-                  ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이야 — 한 매체 안의 시각일 수 있어.
+                  ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
                 </p>
               )}
 
@@ -152,7 +152,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                     {insight!.bull.map((p, i) => evidenceItem(p.claim, p.sourceId, `bull-${i}`))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-sm leading-6 text-muted">원문에서 강세 근거는 안 보였어.</p>
+                  <p className="mt-2 text-sm leading-6 text-muted">원문에서 강세 근거는 안 보였어요.</p>
                 )}
               </section>
 
@@ -193,7 +193,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                 <section className="mt-6">
                   <p className="font-pixel text-sm text-whiteout">🔗 같이 움직인 종목</p>
                   <p className="mt-1 text-[11px] leading-5 text-muted">
-                    대장주 말고, 이 테마 때문에 같이 들썩인 덜 알려진 종목들. 탭하면 그 종목만 따로 봐.
+                    대장주 말고, 이 테마 때문에 같이 들썩인 덜 알려진 종목들이에요. 탭하면 그 종목만 따로 볼 수 있어요.
                   </p>
                   <ul className="mt-2 space-y-2">
                     {insight!.relatedStocks.map((r, i) => (
@@ -230,7 +230,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
             // 로딩 중은 상위 FullPageLoading 이 담당하므로 여기는 항상 도착 후 상태다.
             card.sources.length > 0 && (
               <section className="mt-6">
-                <p className="font-pixel text-sm text-whiteout">오늘 이런 뉴스가 돌았어</p>
+                <p className="font-pixel text-sm text-whiteout">오늘 이런 뉴스가 돌았어요</p>
                 <ul className="mt-2 space-y-2">
                   {card.sources.map((s, i) =>
                     s.url ? (
@@ -265,7 +265,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           </section>
 
           <section className="mt-6">
-            <p className="text-xs text-muted">다들 이런 것들 봤어</p>
+            <p className="text-xs text-muted">다들 이런 것들 봤어요</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {card.related.map((r) => (
                 <span
@@ -279,7 +279,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           </section>
 
           <p className="mt-8 text-center text-[11px] leading-5 text-muted">
-            지난 흐름을 친구처럼 풀어준 거야. 투자 조언은 아니야.
+            지난 흐름을 친구처럼 풀어드린 거예요. 투자 조언은 아니에요.
           </p>
           </>
           )}
@@ -400,7 +400,7 @@ function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
 
       {empty && (
         <p className="text-sm leading-6 text-muted">
-          이 종목 기본 정보는 아직 연결 전이야(해외·신규 상장 등). 아래 흐름으로 봐줘.
+          이 종목 기본 정보는 아직 연결 전이에요(해외·신규 상장 등). 아래 흐름으로 봐주세요.
         </p>
       )}
     </section>
@@ -522,7 +522,7 @@ export function StockInsightView({
 
           {/* 그 위 — 강세/약세 해석(원문 grounded, 있을 때만). LLM 이라 따로 로딩. */}
           {loading ? (
-            <p className="mt-7 text-sm leading-6 text-muted">강세·약세 관점을 읽고 있어…</p>
+            <p className="mt-7 text-sm leading-6 text-muted">강세·약세 관점을 읽고 있어요…</p>
           ) : (
           <>
           {/* 종목 단독 응축(understandStock)이 되면 강세/약세 종합. 추천 이유는 위 배너가 담당. */}
@@ -566,7 +566,7 @@ export function StockInsightView({
 
               {insight!.singleOutlet && insight!.outlets.length > 0 && (
                 <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
-                  ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이야 — 한 매체 안의 시각일 수 있어.
+                  ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
                 </p>
               )}
 
@@ -579,7 +579,7 @@ export function StockInsightView({
                     {insight!.bull.map((p, i) => evidenceItem(p.claim, p.sourceId, `bull-${i}`))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-sm leading-6 text-muted">원문에서 강세 근거는 안 보였어.</p>
+                  <p className="mt-2 text-sm leading-6 text-muted">원문에서 강세 근거는 안 보였어요.</p>
                 )}
               </section>
 
@@ -616,13 +616,13 @@ export function StockInsightView({
           ) : (
             <p className="mt-6 text-sm leading-6 text-muted">
               {context?.reason
-                ? "이 종목 단독 원문은 아직 모이는 중이야 — 위 연결이 지금까지의 근거야. 더 쌓이면 강세·약세로 풀어줄게."
-                : "이 종목으로 모인 원문이 아직 적어. 더 쌓이면 강세·약세로 풀어줄게."}
+                ? "이 종목 단독 원문은 아직 모이는 중이에요 — 위 연결이 지금까지의 근거예요. 더 쌓이면 강세·약세로 풀어드릴게요."
+                : "이 종목으로 모인 원문이 아직 적어요. 더 쌓이면 강세·약세로 풀어드릴게요."}
             </p>
           )}
 
           <p className="mt-8 text-center text-[11px] leading-5 text-muted">
-            원문을 친구처럼 풀어준 거야. 투자 조언은 아니야.
+            원문을 친구처럼 풀어드린 거예요. 투자 조언은 아니에요.
           </p>
           </>
           )}

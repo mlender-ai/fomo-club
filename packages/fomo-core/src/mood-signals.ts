@@ -24,9 +24,9 @@ const FLAT_THRESHOLD = 0.3;
 
 /** 데이터 결측 시에도 빈 화면을 만들지 않는, 사실 주장 없는 분위기 폴백. */
 export const MOOD_FALLBACK_SIGNALS: readonly MoodSignal[] = [
-  { id: "mood-fallback-1", emoji: "👥", text: "오늘도 다들 비슷한 마음으로 여기 들렀어." },
-  { id: "mood-fallback-2", emoji: "🌙", text: "놓친 것 같은 날엔 다들 여기 모여. 너만 그런 거 아니야." },
-  { id: "mood-fallback-3", emoji: "🫧", text: "조급한 마음, 오늘 여기 두고 가도 돼." },
+  { id: "mood-fallback-1", emoji: "👥", text: "오늘도 다들 비슷한 마음으로 여기 들렀어요." },
+  { id: "mood-fallback-2", emoji: "🌙", text: "놓친 것 같은 날엔 다들 여기 모여요. 다들 그래요." },
+  { id: "mood-fallback-3", emoji: "🫧", text: "조급한 마음, 오늘 여기 두고 가도 돼요." },
 ] as const;
 
 function metricChange(item: BannerItem): number | null {
@@ -51,20 +51,20 @@ export function moodifyBannerItem(item: BannerItem): MoodSignal | null {
       return {
         id: item.id,
         emoji: "🔥",
-        text: `오늘 ${label} 쪽은 다들 신났어 🔥 못 탄 사람도 여기 많아.`,
+        text: `오늘 ${label} 쪽은 다들 신났어요 🔥 못 탄 사람도 여기 많아요.`,
       };
     }
     if (change <= -FLAT_THRESHOLD) {
       return {
         id: item.id,
         emoji: item.emoji,
-        text: `${label} 가라앉은 날. 다들 같은 화면 보고 있어.`,
+        text: `${label} 가라앉은 날. 다들 같은 화면 보고 있어요.`,
       };
     }
     return {
       id: item.id,
       emoji: item.emoji,
-      text: `${label}는 오늘 잠잠해. 같이 쉬어가는 날이야.`,
+      text: `${label}는 오늘 잠잠해요. 같이 쉬어가는 날이에요.`,
     };
   }
 
@@ -73,15 +73,15 @@ export function moodifyBannerItem(item: BannerItem): MoodSignal | null {
     const change = metricChange(item);
     if (change === null) return null;
     return change >= 0
-      ? { id: item.id, emoji: "🐋", text: "코인판 또 달아올랐대. 안 탄 사람 여기 많아." }
-      : { id: item.id, emoji: "🐋", text: "코인판도 식은 날이야. 같이 버티는 중." };
+      ? { id: item.id, emoji: "🐋", text: "코인판 또 달아올랐대요. 안 탄 사람 여기 많아요." }
+      : { id: item.id, emoji: "🐋", text: "코인판도 식은 날이에요. 같이 버티는 중이에요." };
   }
   if (item.id.endsWith("-ath")) {
     // "전고점 대비 -x% — 고점에 물린 건 너만이 아니야" — 이미 분위기 결이라 그대로.
     return { id: item.id, emoji: item.emoji, text: item.text };
   }
   if (item.id === "whale-breadth") {
-    return { id: item.id, emoji: item.emoji, text: "오늘은 코인들 다 같이 내려앉았어. 너 혼자 아니야." };
+    return { id: item.id, emoji: item.emoji, text: "오늘은 코인들 다 같이 내려앉았어요. 혼자가 아니에요." };
   }
   // whale-worst 등 수치 나열형은 분위기 치환 근거가 부족 → 보수적으로 제외.
   return null;

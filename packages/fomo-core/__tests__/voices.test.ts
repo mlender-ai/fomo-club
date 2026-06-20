@@ -13,7 +13,7 @@ describe("composeVoice", () => {
       situationKey: "blue_day",
       resolveKey: "no_panic",
     });
-    expect(line).toBe("공포 · 오늘도 파란 날이었지만, 허둥대진 않았어.");
+    expect(line).toBe("공포 · 오늘도 파란 날이었지만, 허둥대진 않았어요.");
   });
 
   it("잘못된 상황 키 → null (가짜 조합 금지)", () => {

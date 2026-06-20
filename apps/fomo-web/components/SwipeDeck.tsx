@@ -68,9 +68,9 @@ export function SwipeDeck({ deck }: { deck: DeckCard[] | null }) {
   if (deck.length === 0) {
     return (
       <p className="mt-10 text-center text-sm leading-6 text-muted">
-        지금은 가져올 소식이 조용해.
+        지금은 가져올 소식이 조용해요.
         <br />
-        내일 다시 들러도 돼.
+        내일 다시 들러도 돼요.
       </p>
     );
   }
@@ -78,9 +78,9 @@ export function SwipeDeck({ deck }: { deck: DeckCard[] | null }) {
     return (
       <div className="mt-12 flex flex-col items-center gap-4 text-center">
         <p className="text-sm leading-6 text-whiteout">
-          오늘 소식은 여기까지야.
+          오늘 소식은 여기까지예요.
           <br />
-          너만 늦은 거 아니야. 내일 또 보자.
+          혼자 늦은 거 아니에요. 내일 또 봐요.
         </p>
         <button
           onClick={() => setIdx(0)}
@@ -104,7 +104,7 @@ export function SwipeDeck({ deck }: { deck: DeckCard[] | null }) {
   return (
     <div className="w-full">
       <p className="mb-3 px-1 text-center text-xs text-muted">
-        오른쪽으로 넘기면 <span style={{ color: "#FF5A36" }}>FOMO</span>, 왼쪽은 아니야
+        오른쪽으로 넘기면 <span style={{ color: "#FF5A36" }}>FOMO</span>, 왼쪽은 아니에요
       </p>
 
       {/* 카드 스택 */}
@@ -142,7 +142,7 @@ export function SwipeDeck({ deck }: { deck: DeckCard[] | null }) {
             className="pointer-events-none absolute left-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 font-pixel text-sm"
             style={{ color: "#64748B", borderColor: "#64748B", opacity: Math.max(0, Math.min(1, -dx / THRESHOLD)) }}
           >
-            ← 아니야
+            ← 아니에요
           </span>
 
           {(() => {

@@ -33,7 +33,7 @@ export function LoginPage({
       onAuthed();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "문제가 생겼어. 다시 시도해줘.");
+      setError(e instanceof Error ? e.message : "문제가 생겼어요. 다시 시도해주세요.");
     } finally {
       setBusy(false);
     }
@@ -53,7 +53,7 @@ export function LoginPage({
         <div className="flex flex-1 flex-col justify-center px-6 pb-24">
           {loggedIn ? (
             <div className="flex flex-col gap-3">
-              <p className="text-sm leading-6 text-muted">로그인 상태야. 취향이 계정에 기억되고 있어.</p>
+              <p className="text-sm leading-6 text-muted">로그인 상태예요. 취향이 계정에 기억되고 있어요.</p>
               <button
                 onClick={() => {
                   logout();
@@ -66,13 +66,13 @@ export function LoginPage({
               </button>
               <button
                 onClick={async () => {
-                  if (!window.confirm("정말 탈퇴할래? 쌓인 취향 데이터도 함께 삭제돼.")) return;
+                  if (!window.confirm("정말 탈퇴할까요? 쌓인 취향 데이터도 함께 삭제돼요.")) return;
                   try {
                     await deleteAccount();
                     onClose();
                     window.location.reload();
                   } catch {
-                    setError("탈퇴 처리에 실패했어.");
+                    setError("탈퇴 처리에 실패했어요.");
                   }
                 }}
                 className="rounded-lg px-4 py-3 text-sm text-muted"
@@ -84,10 +84,10 @@ export function LoginPage({
           ) : (
             <div className="flex flex-col gap-3">
               <p className="font-pixel text-base text-whiteout">
-                {mode === "login" ? "다시 왔구나" : "취향을 기억해줄게"}
+                {mode === "login" ? "다시 오셨네요" : "취향을 기억해드릴게요"}
               </p>
               <p className="text-[13px] leading-5 text-muted">
-                로그인하면 네가 넘긴 카드가 기억돼서, 다음엔 너에게 맞는 흐름부터 보여줄게.
+                로그인하면 넘긴 카드가 기억돼서, 다음엔 취향에 맞는 흐름부터 보여드릴게요.
               </p>
               <input
                 type="email"
@@ -122,11 +122,11 @@ export function LoginPage({
                 }}
                 className="text-[12px] text-muted"
               >
-                {mode === "login" ? "처음이야? 가입하기" : "이미 계정이 있어? 로그인"}
+                {mode === "login" ? "처음이세요? 가입하기" : "이미 계정이 있으세요? 로그인"}
               </button>
               <p className="mt-2 text-[11px] leading-5 text-muted">
-                가입하면 <a href="/privacy" target="_blank" className="underline">개인정보 처리방침</a>에 동의하는 거야.
-                취향 신호(관심/덜관심·열람)만 모으고, 언제든 탈퇴 시 전부 삭제돼.
+                가입하면 <a href="/privacy" target="_blank" className="underline">개인정보 처리방침</a>에 동의하는 거예요.
+                취향 신호(관심/덜관심·열람)만 모으고, 언제든 탈퇴 시 전부 삭제돼요.
               </p>
             </div>
           )}

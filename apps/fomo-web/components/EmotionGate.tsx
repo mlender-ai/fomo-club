@@ -168,12 +168,12 @@ export function EmotionGate({
       {(voiceStep === "situation" || voiceStep === "resolve") && (
         <section className="fomo-rise mt-9 w-full">
           <h2 className="text-center text-base font-semibold text-whiteout">
-            {voiceStep === "situation" ? "오늘은 어떤 하루였어?" : "그래도, 너는?"}
+            {voiceStep === "situation" ? "오늘은 어떤 하루였어요?" : "그래도, 지금은요?"}
           </h2>
           <p className="mb-4 mt-1 text-center text-xs text-muted">
             {voiceStep === "situation"
-              ? "한마디를 남기면 피드의 누군가가 덜 외로워져. (안 해도 돼)"
-              : "조각을 고르면 한 줄이 완성돼."}
+              ? "한마디를 남기면 피드의 누군가가 덜 외로워져요. (안 해도 돼요)"
+              : "조각을 고르면 한 줄이 완성돼요."}
           </p>
 
           <div className="flex flex-col items-stretch gap-2">

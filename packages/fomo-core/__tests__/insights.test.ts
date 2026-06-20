@@ -56,9 +56,9 @@ describe("mirrorLines", () => {
   it("거울 문장 — 수치가 실측과 일치", () => {
     const lines = mirrorLines(insightStats(days, market, "2026-06"));
     expect(lines).toHaveLength(3);
-    expect(lines[0]).toBe("이번 달 너는 FOMO 3일 · 공포 1일이었어.");
-    expect(lines[1]).toBe("시장이 달아올랐던 3일 중 2일, 너도 같이 뜨거웠어.");
-    expect(lines[2]).toBe("가장 길게 이어진 기록, 4일이야.");
+    expect(lines[0]).toBe("이번 달은 FOMO 3일 · 공포 1일이었어요.");
+    expect(lines[1]).toBe("시장이 달아올랐던 3일 중 2일, 같이 뜨거웠어요.");
+    expect(lines[2]).toBe("가장 길게 이어진 기록, 4일이에요.");
   });
 
   it("동조 0회도 사실 그대로 비춘다", () => {
@@ -86,6 +86,6 @@ describe("mirrorLines", () => {
       "2026-06-05": "fomo",
     };
     const lines = mirrorLines(insightStats(d, {}, "2026-06"));
-    expect(lines[0]).toBe("이번 달 너는 FOMO 3일이었어.");
+    expect(lines[0]).toBe("이번 달은 FOMO 3일이었어요.");
   });
 });

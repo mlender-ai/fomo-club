@@ -103,22 +103,22 @@ export function mirrorLines(stats: InsightStats): string[] {
     .slice(0, 2);
   if (top.length === 2) {
     lines.push(
-      `이번 달 너는 ${EMOTION_LABELS[top[0]!.e]} ${top[0]!.n}일 · ${EMOTION_LABELS[top[1]!.e]} ${top[1]!.n}일이었어.`
+      `이번 달은 ${EMOTION_LABELS[top[0]!.e]} ${top[0]!.n}일 · ${EMOTION_LABELS[top[1]!.e]} ${top[1]!.n}일이었어요.`
     );
   } else if (top.length === 1) {
-    lines.push(`이번 달 너는 ${EMOTION_LABELS[top[0]!.e]} ${top[0]!.n}일이었어.`);
+    lines.push(`이번 달은 ${EMOTION_LABELS[top[0]!.e]} ${top[0]!.n}일이었어요.`);
   }
 
   if (stats.hotMarketLogged >= 2) {
     lines.push(
       stats.hotBoth > 0
-        ? `시장이 달아올랐던 ${stats.hotMarketLogged}일 중 ${stats.hotBoth}일, 너도 같이 뜨거웠어.`
-        : `시장이 달아올랐던 ${stats.hotMarketLogged}일, 너는 한 번도 같이 달아오르지 않았어.`
+        ? `시장이 달아올랐던 ${stats.hotMarketLogged}일 중 ${stats.hotBoth}일, 같이 뜨거웠어요.`
+        : `시장이 달아올랐던 ${stats.hotMarketLogged}일, 한 번도 같이 달아오르지 않았어요.`
     );
   }
 
   if (stats.longestStreak >= 2) {
-    lines.push(`가장 길게 이어진 기록, ${stats.longestStreak}일이야.`);
+    lines.push(`가장 길게 이어진 기록, ${stats.longestStreak}일이에요.`);
   }
 
   return lines.slice(0, 3);

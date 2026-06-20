@@ -42,11 +42,11 @@ export function StockCardFeed({ cards = MOCK_STOCK_CARDS }: { cards?: readonly S
         {/* 끝 카드 — 부담 없는 데일리 */}
         <div className="flex h-[calc(100vh-180px)] snap-center flex-col items-center justify-center gap-3 px-6 text-center">
           <p className="text-sm leading-6 text-whiteout">
-            오늘의 카드는 여기까지야.
+            오늘의 카드는 여기까지예요.
             <br />
-            내일 또 새로운 카드로 만나자.
+            내일 또 새로운 카드로 만나요.
           </p>
-          <p className="text-[11px] text-muted">매일 가볍게 슥 보고 가는 거야. 안 급해도 돼.</p>
+          <p className="text-[11px] text-muted">매일 가볍게 슥 보고 가는 거예요. 안 급해도 돼요.</p>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ function DepthPage({ card, onClose }: { card: StockCard; onClose: () => void }) 
 
           {/* 향후 유료 자리 — 지금은 표시만 (거래 아님) */}
           <div className="mt-8 rounded-xl border border-dashed border-hairline px-4 py-4">
-            <p className="font-pixel text-[11px] text-muted">곧 추가될 거야</p>
+            <p className="font-pixel text-[11px] text-muted">곧 추가될 거예요</p>
             <p className="mt-1.5 text-sm leading-6 text-muted">
               이 종목 더 깊이 보기 · 관심 종목 모아보기
             </p>

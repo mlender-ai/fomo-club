@@ -7,8 +7,8 @@ export default function InsightNotFound() {
       <p className="text-4xl" aria-hidden>
         🌙
       </p>
-      <p className="mt-4 text-sm text-whiteout">지금은 이 소식을 찾을 수 없어.</p>
-      <p className="mt-1 text-xs text-muted">시간이 지나 바뀌었을 수 있어.</p>
+      <p className="mt-4 text-sm text-whiteout">지금은 이 소식을 찾을 수 없어요.</p>
+      <p className="mt-1 text-xs text-muted">시간이 지나 바뀌었을 수 있어요.</p>
       <Link
         href="/"
         className="mt-6 rounded-full border border-hairline px-5 py-2 text-sm text-muted transition-colors hover:text-whiteout"
