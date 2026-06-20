@@ -1,5 +1,5 @@
 const GITHUB_PAT = process.env.GITHUB_PAT;
-const REPO = process.env.GITHUB_REPO || "mlender-ai/taro-stock-app";
+const REPO = process.env.GITHUB_REPO || "mlender-ai/fomo-club";
 
 /**
  * GitHub 응답을 안전하게 파싱.

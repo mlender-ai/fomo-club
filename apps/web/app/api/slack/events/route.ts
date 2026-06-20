@@ -403,7 +403,7 @@ ${runList || "(없음)"}
     const msg = err instanceof Error ? err.message : String(err);
     await postMessage(
       channel,
-      `❌ 답변 생성 실패: ${msg}\n커맨드는 \`/taro help\`를 입력하세요.`,
+      `❌ 답변 생성 실패: ${msg}\n커맨드는 \`/fomo help\`를 입력하세요.`,
       threadTs,
       identity
     ).catch(() => {});

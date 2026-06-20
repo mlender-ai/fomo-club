@@ -18,7 +18,7 @@ import { buildLiveResearchWorkspace } from "@fomo/shared/src/researchLive";
 const OUTPUT_DIR = path.join(process.cwd(), "generated", "research");
 const JSON_BASENAME = "latest.json";
 const MARKDOWN_BASENAME = "latest.md";
-const DEFAULT_PUBLISHED_SNAPSHOT_URL = "https://raw.githubusercontent.com/mlender-ai/auto-trading-bot/main/generated/research/latest.json";
+const DEFAULT_PUBLISHED_SNAPSHOT_URL = "https://raw.githubusercontent.com/mlender-ai/fomo-club/main/generated/research/latest.json";
 const PUBLISHED_SNAPSHOT_TTL_MS = 60_000;
 
 export const RESEARCH_PIPELINE_JSON_PATH = path.join(OUTPUT_DIR, JSON_BASENAME);

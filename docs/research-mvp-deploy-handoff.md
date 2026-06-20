@@ -77,7 +77,7 @@
 아래 정보만 주시면 됩니다.
 
 1. Vercel 프로젝트 연결 여부
-- 이 GitHub repo `mlender-ai/auto-trading-bot`를 이미 Vercel에 import 했는지
+- 이 GitHub repo `mlender-ai/fomo-club`를 이미 Vercel에 import 했는지
 - 아직 안 했으면 "아직 안 함"이라고만 말해주시면 됩니다
 
 2. 배포 도메인
@@ -90,7 +90,7 @@
 
 4. 공개 snapshot URL 유지 여부
 - 기본값 그대로 사용해도 되는지
-- 기본값: `https://raw.githubusercontent.com/mlender-ai/auto-trading-bot/main/generated/research/latest.json`
+- 기본값: `https://raw.githubusercontent.com/mlender-ai/fomo-club/main/generated/research/latest.json`
 
 5. 뉴스레터 발송 설정
 - 받을 이메일: 이미 `NEWSLETTER_TO=choihenry0010@gmail.com`
@@ -140,7 +140,7 @@
 
 - `DASHBOARD_PASSWORD=<원하는 비밀번호>`
 - `LOCAL_DEMO_MODE=false`
-- `RESEARCH_PUBLISHED_SNAPSHOT_URL=https://raw.githubusercontent.com/mlender-ai/auto-trading-bot/main/generated/research/latest.json`
+- `RESEARCH_PUBLISHED_SNAPSHOT_URL=https://raw.githubusercontent.com/mlender-ai/fomo-club/main/generated/research/latest.json`
 
 ## 5. GitHub Actions에 넣을 값
 
