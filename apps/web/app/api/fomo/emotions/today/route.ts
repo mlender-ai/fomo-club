@@ -19,9 +19,12 @@ export async function GET() {
     const ratios = Object.fromEntries(
       EMOTION_TYPES.map((e) => [e, total > 0 ? Math.round(((tally[e] ?? 0) / total) * 100) : 0])
     );
-    return corsJson({ date, total, counts, ratios, fallback: total === 0 });
+    const confidence = total === 0 ? "fallback" : total >= 50 ? "high" : total >= 10 ? "medium" : "low";
+    return corsJson({ date, total, counts, ratios, fallback: total === 0, confidence });
   } catch (err) {
     console.warn("[fomo/emotions/today] error", err);
-    return corsJson({ error: "집계 조회 실패", code: "TALLY_ERROR" }, { status: 500 });
+    const counts = Object.fromEntries(EMOTION_TYPES.map((e) => [e, 0]));
+    const ratios = Object.fromEntries(EMOTION_TYPES.map((e) => [e, 0]));
+    return corsJson({ date, total: 0, counts, ratios, fallback: true, confidence: "fallback" });
   }
 }
