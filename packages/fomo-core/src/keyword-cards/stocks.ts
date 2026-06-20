@@ -337,6 +337,144 @@ export function isVerifiedStock(name: string): boolean {
   return resolveStock(name) !== null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 섹터 ↔ 종목 매핑 (SECTOR_STRUCTURE_HANDOFF §2) — 섹터 카테고리 × 종목 풀의 토대.
+//
+// 섹터 = 취향의 단위 = THEME_DICTIONARY 키와 일치시킨다(섹터 요약 카드가 테마 이해 레이어를
+//   그대로 재사용하도록 — understandTheme(sector) 가 돌게). 그래서 섹터는 *테마가 있는 것만*.
+// 평평하게(§0): 종목당 단일 primary 섹터. 다중소속·연관 그래프는 D 이후(relatedHint 자리만 열림).
+// 풀의 바닥은 여기 큐레이션된 "의미 있는 종목"(baseline·발굴·테마 대표). 빈약(미등록) 종목은 애초에 없음.
+// 매핑 없는 vocab 종목(자동차·조선·게임·로봇 등 — 대응 테마 미존재)은 섹터 풀에서 빠진다(정직).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 섹터 = 취향/네비 단위. THEME_DICTIONARY 키 중 대표 종목이 있는 것. */
+export type StockSector =
+  | "반도체"
+  | "AI"
+  | "2차전지"
+  | "방산"
+  | "바이오"
+  | "원자력"
+  | "코인";
+
+/** 섹터 표시 순서(콜드스타트 기본 노출 순 — 인기/대표 섹터 우선). 개인화 정렬은 다음 트랙. */
+export const SECTORS: readonly StockSector[] = [
+  "반도체",
+  "AI",
+  "2차전지",
+  "방산",
+  "바이오",
+  "원자력",
+  "코인",
+];
+
+/** 종목 canonical → primary 섹터(섹터 SSOT). 매핑 없으면 섹터 풀에서 제외. */
+const SECTOR_OF: Readonly<Record<string, StockSector>> = {
+  // 반도체(글로벌 진원지 포함)
+  삼성전자: "반도체", SK하이닉스: "반도체", 한미반도체: "반도체", 삼성전기: "반도체",
+  DB하이텍: "반도체", 저스템: "반도체", 네패스: "반도체", 원익IPS: "반도체",
+  동진쎄미켐: "반도체", 하나마이크론: "반도체", 제너셈: "반도체", 리노공업: "반도체",
+  이오테크닉스: "반도체", HPSP: "반도체", 주성엔지니어링: "반도체",
+  엔비디아: "반도체", TSMC: "반도체", AMD: "반도체", 브로드컴: "반도체", 마이크론: "반도체",
+  // AI
+  마이크로소프트: "AI", 팔란티어: "AI",
+  // 2차전지
+  에코프로비엠: "2차전지", 에코프로: "2차전지", LG에너지솔루션: "2차전지", 삼성SDI: "2차전지",
+  포스코퓨처엠: "2차전지", 엘앤에프: "2차전지",
+  // 방산(군함 포함)
+  한화에어로스페이스: "방산", 한국항공우주: "방산", LIG넥스원: "방산", 현대로템: "방산",
+  한화오션: "방산", 삼성중공업: "방산",
+  // 바이오
+  셀트리온: "바이오", 삼성바이오로직스: "바이오", 알테오젠: "바이오", 유한양행: "바이오",
+  HLB: "바이오", 리가켐바이오: "바이오",
+  // 원자력
+  두산에너빌리티: "원자력", 한전기술: "원자력",
+  // 코인
+  비트코인: "코인", 이더리움: "코인",
+};
+
+/** 종목의 섹터(없으면 undefined — 대응 테마 없는 종목). */
+export function sectorOf(canonical: string): StockSector | undefined {
+  return SECTOR_OF[canonical];
+}
+
+/** 섹터 풀의 종목 1건 — 정렬·카드 생성에 필요한 메타(시세 아님). */
+export interface SectorStock {
+  canonical: string;
+  market: StockMarket;
+  country: StockCountry;
+  naverCode?: string;
+  /** 누구나 아는 대표 대장주 — 콜드스타트 기본 노출 상단. */
+  marquee: boolean;
+  sector: StockSector;
+}
+
+export interface StocksBySectorOptions {
+  /**
+   * baseline(주가·재무) 수집 가능한 국내 상장(naverCode 보유)만. 기본 false(미국·코인 포함).
+   * 카드 풀의 "빈 카드 방지"가 필요한 호출부(무한 스와이프)는 true 로 baseline 보장 종목만 받는다.
+   */
+  requireNaverCode?: boolean;
+}
+
+/**
+ * 섹터 → 그 섹터의 의미 있는 종목 풀(SECTOR_STRUCTURE_HANDOFF §2). 순수.
+ * SECTOR_OF(큐레이션)로 1차 구성 → 정렬 seam(sortStocksForFeed)로 노출 순서 결정.
+ * "빈약 제외"는 풀 자체가 큐레이션이라 기본 충족. requireNaverCode 로 baseline 보장만 더 좁힐 수 있다.
+ */
+export function stocksBySector(
+  sector: StockSector,
+  opts: StocksBySectorOptions = {}
+): SectorStock[] {
+  const out: SectorStock[] = [];
+  for (const d of STOCK_VOCAB) {
+    if (SECTOR_OF[d.canonical] !== sector) continue;
+    if (opts.requireNaverCode && !d.naverCode) continue;
+    out.push({
+      canonical: d.canonical,
+      market: d.market,
+      country: d.country,
+      ...(d.naverCode ? { naverCode: d.naverCode } : {}),
+      marquee: d.marquee === true,
+      sector,
+    });
+  }
+  return sortStocksForFeed(out);
+}
+
+export interface SortStocksOptions {
+  /**
+   * ★ 개인화 정렬 seam(다음 트랙 PERSONALIZATION_MATCHING) — 종목별 점수(높을수록 위).
+   * 지금은 미주입 → 콜드스타트 기본 정렬(대표 대장주 우선). 다음 트랙이 취향 점수를 여기 끼운다.
+   */
+  rank?: (stock: SectorStock) => number;
+}
+
+/**
+ * 피드 노출 순서 — 콜드스타트 기본은 "대표 대장주 먼저"(VISION 콜드스타트: 인기/대표 종목 순).
+ * rank 가 주어지면 그 점수 내림차순(개인화가 들어오는 자리). 결정적(동점은 이름) — 캐시·새로고침 안정.
+ */
+export function sortStocksForFeed(
+  stocks: readonly SectorStock[],
+  opts: SortStocksOptions = {}
+): SectorStock[] {
+  const arr = [...stocks];
+  if (opts.rank) {
+    const r = opts.rank;
+    arr.sort((a, b) => r(b) - r(a) || a.canonical.localeCompare(b.canonical));
+  } else {
+    // 콜드스타트: marquee(대표) 먼저 → 국내(baseline 보장) 먼저 → 이름순.
+    arr.sort(
+      (a, b) =>
+        Number(b.marquee) - Number(a.marquee) ||
+        Number(!!b.naverCode) - Number(!!a.naverCode) ||
+        a.canonical.localeCompare(b.canonical)
+    );
+  }
+  return arr;
+}
+
+
 const MATCHER_BY_CANONICAL = new Map(STOCK_MATCHERS.map((m) => [m.def.canonical, m]));
 
 /**
