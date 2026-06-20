@@ -16,6 +16,8 @@ export interface StockMetric {
   value: string;
   /** 보조 용어(작게) — 예 "EPS". 초보는 label 을, 고급은 term 을 본다. */
   term?: string;
+  /** 이게 무슨 뜻인지 한 줄(A) — *사실까지만*(싸다/비싸다/사라 금지). 판단은 유저 몫. */
+  note?: string;
 }
 
 export interface StockFinancialRow {
@@ -28,6 +30,29 @@ export interface StockFinancialRow {
 export interface StockFinancials {
   periods: { title: string; estimate: boolean }[];
   rows: StockFinancialRow[];
+  /** 이익 안정성 한 줄(A) — *사실까지만*. 예 "남기는 돈이 해마다 출렁여". */
+  note?: string;
+}
+
+/** PER → "이게 무슨 뜻" 한 줄(사실: 시장 기대 수준 묘사. 싸다/비싸다 단정 금지). */
+function perNote(value: string): string | undefined {
+  const n = num(value);
+  if (n === null || n <= 0) return undefined;
+  if (n >= 50) return "주가가 버는 돈의 수십 배 수준 — 시장이 앞으로의 성장을 크게 기대한다는 뜻이야(기대가 식으면 출렁일 수 있어).";
+  if (n >= 15) return "버는 돈에 비해 주가에 성장 기대가 어느 정도 들어가 있어.";
+  return "버는 돈 대비 주가는 차분한 편 — 큰 성장 기대가 반영되진 않았어.";
+}
+
+/** 영업이익 추이 → 이익 안정성 한 줄(사실: 변동/적자 여부 묘사). 안전이면 undefined(군더더기 없이). */
+function stabilityNote(opRaw: (number | null)[]): string | undefined {
+  const vals = opRaw.filter((v): v is number => v !== null);
+  if (vals.length < 2) return undefined;
+  const hasLoss = vals.some((v) => v < 0);
+  const pos = vals.filter((v) => v > 0);
+  const swing = pos.length >= 2 && Math.max(...pos) / Math.min(...pos) >= 2;
+  if (hasLoss) return "해에 따라 적자도 있어 — 남기는 돈의 기복이 큰 편이야.";
+  if (swing) return "남기는 돈이 해마다 출렁여 — 이익 안정성은 낮은 편이야.";
+  return "남기는 돈이 해마다 비교적 꾸준한 편이야.";
 }
 
 export interface StockBasics {
@@ -120,6 +145,12 @@ export function parseNaverTotalInfos(json: unknown): { marketCap?: string; metri
   push("52주 최고", "최근 1년 최고가");
   push("52주 최저", "최근 1년 최저가");
   push("외인소진율", "외국인이 가진 비율", "외인소진율");
+  // A — PER 에 "무슨 뜻" 한 줄(사실까지만).
+  const per = metrics.find((m) => m.term === "PER");
+  if (per) {
+    const note = perNote(per.value);
+    if (note) per.note = note;
+  }
   const out: { marketCap?: string; metrics: StockMetric[] } = { metrics };
   const cap = by.get("시총");
   if (cap && cap.trim()) out.marketCap = cap;
@@ -179,7 +210,19 @@ export function parseNaverFinanceAnnual(json: unknown): {
     if (values.some((v) => v !== "—")) rows.push({ label: want.label, values });
   }
   if (rows.length > 0) {
-    out.financials = { periods: periods.map((p) => ({ title: p.title, estimate: p.estimate })), rows };
+    const financials: StockFinancials = {
+      periods: periods.map((p) => ({ title: p.title, estimate: p.estimate })),
+      rows,
+    };
+    // A — 이익 안정성 한 줄: 영업이익의 *확정(비추정)* 추이로만 판단(추정치 제외).
+    const opRow = rowList.find((x) => typeof x.title === "string" && (x.title as string).includes("영업이익"));
+    if (opRow) {
+      const cols = (opRow.columns ?? {}) as Record<string, { value?: string }>;
+      const opRaw = periods.filter((p) => !p.estimate).map((p) => num(cols[p.key]?.value ?? ""));
+      const note = stabilityNote(opRaw);
+      if (note) financials.note = note;
+    }
+    out.financials = financials;
   }
   return out;
 }

@@ -11,6 +11,7 @@ import {
   type StockBasics,
 } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
+import { isWatched, toggleWatch } from "@/lib/watchlist";
 
 /**
  * 키워드 뎁스 페이지 — 카드/히스토리에서 공용. KEYWORD_CARD_FEED_DEV_SPEC v3 §3.
@@ -356,6 +357,7 @@ function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
                 {m.term ? <span className="text-muted/70"> · {m.term}</span> : null}
               </span>
               <span className="mt-0.5 block text-sm text-whiteout">{m.value}</span>
+              {m.note && <span className="mt-1 block text-[11px] leading-4 text-muted">{m.note}</span>}
             </li>
           ))}
         </ul>
@@ -389,6 +391,9 @@ function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
               </tbody>
             </table>
           </div>
+          {basics.financials.note && (
+            <p className="mt-2 text-[12px] leading-5 text-muted">{basics.financials.note}</p>
+          )}
           <p className="mt-1 text-[10px] leading-4 text-muted">(E)=컨센서스 추정치 · 출처: 네이버 금융</p>
         </div>
       )}
@@ -415,6 +420,18 @@ export function StockInsightView({
   const [loading, setLoading] = useState(true);
   // 기본 정보(바닥) — 원문 무관 객관 사실. 빠른 네이버 fetch라 해석(LLM)과 분리해 먼저 깐다.
   const [basics, setBasics] = useState<StockBasics | null>(null);
+  // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
+  const [watched, setWatchedState] = useState(false);
+
+  useEffect(() => {
+    setWatchedState(isWatched(stock));
+  }, [stock]);
+
+  const toggleWatched = () => {
+    const now = toggleWatch(stock, Date.now());
+    setWatchedState(now);
+    recordTaste("stock", stock, now ? "more" : "less"); // 서버 취향 신호(트랙 B 재사용)
+  };
 
   useEffect(() => {
     let alive = true;
@@ -470,10 +487,36 @@ export function StockInsightView({
             </button>
             <span className="text-lg font-bold text-whiteout">{cleanText(stock)}</span>
           </div>
-          <span className="font-pixel text-xs text-muted">종목</span>
+          <button
+            onClick={toggleWatched}
+            aria-label={watched ? "관심 해제" : "관심 등록"}
+            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
+            style={{
+              borderColor: watched ? "#FF5A36" : "var(--hairline, #2a2a2a)",
+              color: watched ? "#FF5A36" : "#94a3b8",
+            }}
+          >
+            <span aria-hidden>{watched ? "♥" : "♡"}</span>
+            {watched ? "관심" : "관심"}
+          </button>
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+          {/* B — "왜 너한테 보여줬나" 상단 한 줄(추천 맥락이 있으면). 납득 먼저. */}
+          {context?.reason && (
+            <div className="mb-5 rounded-lg border border-hairline bg-surface px-3 py-2">
+              <span className="block text-[11px] text-muted">
+                {context.fromTheme ? `‘${cleanText(context.fromTheme)}’ 흐름에서 보여주는 이유` : "보여주는 이유"}
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-whiteout">{cleanText(context.reason)}</span>
+              {context.sourceUrl && (
+                <a href={context.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
+                  ↳ {cleanText(context.sourceLabel ?? "원문")} · 원문 보기 →
+                </a>
+              )}
+            </div>
+          )}
+
           {/* 바닥 — 기본 정보는 원문 무관 객관 사실이라 항상 먼저 깐다(빈 화면 박멸). */}
           <StockBasicsBlock basics={basics} />
 
@@ -482,33 +525,13 @@ export function StockInsightView({
             <p className="mt-7 text-sm leading-6 text-muted">강세·약세 관점을 읽고 있어…</p>
           ) : (
           <>
-          <section className="mt-7">
-            <p className="font-pixel text-sm text-whiteout">왜 같이 움직였나</p>
-            {/* 들어온 맥락(연관 근거) — stock-insight 가 부족해도 항상 보여준다(빈 화면 금지). */}
-            {context?.reason && (
-              <div className="mt-2 rounded-lg border border-hairline bg-surface px-3 py-2">
-                {context.fromTheme && (
-                  <span className="mb-1 block text-[11px] text-muted">‘{cleanText(context.fromTheme)}’ 흐름에서</span>
-                )}
-                <span className="block text-sm leading-6 text-whiteout">{cleanText(context.reason)}</span>
-                {context.sourceUrl ? (
-                  <a href={context.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
-                    ↳ {cleanText(context.sourceLabel ?? "원문")} · 원문 보기 →
-                  </a>
-                ) : (
-                  context.sourceLabel && <span className="mt-1 block text-[11px] text-muted">↳ {cleanText(context.sourceLabel)}</span>
-                )}
-              </div>
-            )}
-            {/* 종목 단독 응축(understandStock)이 되면 그걸 덧붙임. 안 되면 위 맥락이 근거. */}
-            {hasInsight ? (
+          {/* 종목 단독 응축(understandStock)이 되면 강세/약세 종합. 추천 이유는 위 배너가 담당. */}
+          {hasInsight && (
+            <section className="mt-7">
+              <p className="font-pixel text-sm text-whiteout">왜 같이 움직였나</p>
               <p className="mt-2 text-sm leading-6 text-muted">{cleanText(insight!.whyHot)}</p>
-            ) : (
-              !context?.reason && (
-                <p className="mt-2 text-sm leading-6 text-muted">이 종목만으로는 응축할 원문이 아직 부족해. 그것도 정상이야.</p>
-              )
-            )}
-          </section>
+            </section>
+          )}
 
           {insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
