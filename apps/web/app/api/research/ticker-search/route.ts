@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { searchResearchTickers } from "@trading/shared/src/researchLive";
+import { searchResearchTickers } from "@fomo/shared/src/researchLive";
 
 export const dynamic = "force-dynamic";
 

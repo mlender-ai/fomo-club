@@ -7,7 +7,7 @@ import type {
   NotificationDeliveryStatus,
   PaperEventType,
   StrategyCode
-} from "@trading/shared";
+} from "@fomo/shared";
 
 export interface RuntimeMetadataShape {
   initialCapital?: number;

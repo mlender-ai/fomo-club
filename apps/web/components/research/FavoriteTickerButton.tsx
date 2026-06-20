@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { normalizeResearchPreferences, type ResearchSectorTag } from "@trading/shared/src/research";
+import { normalizeResearchPreferences, type ResearchSectorTag } from "@fomo/shared/src/research";
 
 import { getFavoriteStorageTicker } from "../../lib/researchInsights";
 

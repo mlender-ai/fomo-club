@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import type { CandleDto, StrategySignal } from "@trading/shared";
+import type { CandleDto, StrategySignal } from "@fomo/shared";
 
 import { toInputJsonValue } from "../../lib/json.js";
 import { prisma } from "../../lib/prisma.js";

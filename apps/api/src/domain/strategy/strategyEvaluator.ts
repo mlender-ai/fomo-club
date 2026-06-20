@@ -1,7 +1,7 @@
 import { IndicatorEngine } from "../indicators/indicatorEngine.js";
 import { bbMeanReversionStrategy } from "./strategies/bbMeanReversionStrategy.js";
 import type { StrategyDefinition, StrategyRuntimeRecord } from "./types.js";
-import type { CandleDto, StrategySignal } from "@trading/shared";
+import type { CandleDto, StrategySignal } from "@fomo/shared";
 
 const registry = {
   "bb-mean-reversion": bbMeanReversionStrategy

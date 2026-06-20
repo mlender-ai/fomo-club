@@ -1,4 +1,4 @@
-import type { CandleDto, StrategyCode, StrategyConfig, StrategySignal } from "@trading/shared";
+import type { CandleDto, StrategyCode, StrategyConfig, StrategySignal } from "@fomo/shared";
 import type { IndicatorState } from "../indicators/indicatorEngine.js";
 
 export interface StrategyRuntimeRecord {

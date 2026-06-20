@@ -5,7 +5,7 @@ import type {
   StrategyPerformanceRow,
   StrategySortKey,
   StrategyView
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import { prisma } from "../../lib/prisma.js";
 import { recentWindowStart } from "../../lib/time.js";

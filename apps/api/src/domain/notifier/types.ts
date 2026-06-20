@@ -1,4 +1,4 @@
-import type { AlertType, DailyReportResponse, NotificationDeliveryStatus, PaperEventType, StrategyCode, WeeklyReportResponse } from "@trading/shared";
+import type { AlertType, DailyReportResponse, NotificationDeliveryStatus, PaperEventType, StrategyCode, WeeklyReportResponse } from "@fomo/shared";
 
 export interface NotificationDispatchResult {
   status: NotificationDeliveryStatus;

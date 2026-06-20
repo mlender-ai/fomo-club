@@ -1,4 +1,4 @@
-import type { PaperEventType, StrategyCode } from "@trading/shared";
+import type { PaperEventType, StrategyCode } from "@fomo/shared";
 
 export interface PublishPaperEventInput {
   botId: string;

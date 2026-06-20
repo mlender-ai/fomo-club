@@ -68,7 +68,7 @@ Slack App 매니페스트는 `docs/slack-app-manifest.yml` 사용:
 
 ## 트러블슈팅
 
-**빌드 실패 — `Cannot find module '@trading/shared'`**
+**빌드 실패 — `Cannot find module '@fomo/shared'`**
 → Root Directory가 `apps/web`인지 재확인. `vercel.json`의 `installCommand`(`cd ../.. && npm ci`)가 모노레포 루트에서 설치하도록 처리.
 
 **빌드 실패 — `Next.js detected but no .next directory`**

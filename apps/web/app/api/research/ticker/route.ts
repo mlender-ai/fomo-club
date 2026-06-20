@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { type ResearchSectorTag } from "@trading/shared/src/research";
-import { analyzeLiveTicker } from "@trading/shared/src/researchLive";
+import { type ResearchSectorTag } from "@fomo/shared/src/research";
+import { analyzeLiveTicker } from "@fomo/shared/src/researchLive";
 
 import { parseResearchPreferences } from "../../../../lib/research";
 

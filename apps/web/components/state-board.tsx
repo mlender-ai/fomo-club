@@ -6,7 +6,7 @@ import type {
   StrategyView,
   SystemStatusView,
   TradeView
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import { formatCompactDate, formatCurrency } from "../lib/format";
 

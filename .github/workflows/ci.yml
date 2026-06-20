@@ -106,7 +106,7 @@ jobs:
         run: npm run prisma:generate
 
       - name: Build API workspace
-        run: npm --workspace @trading/api run build
+        run: npm --workspace @fomo/legacy-paper-api run build
 
   build-web:
     runs-on: ubuntu-latest
@@ -130,7 +130,7 @@ jobs:
         run: npm run prisma:generate
 
       - name: Build web workspace
-        run: npm --workspace @trading/web run build
+        run: npm --workspace @fomo/backend run build
 
   build-fomo-web:
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-import type { LogView, TradeView } from "@trading/shared";
+import type { LogView, TradeView } from "@fomo/shared";
 
 import { formatCompactDate, formatCurrency } from "../lib/format";
 

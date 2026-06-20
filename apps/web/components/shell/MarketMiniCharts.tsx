@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { MarketOverviewResponse, MarketTickerView } from "@trading/shared";
+import type { MarketOverviewResponse, MarketTickerView } from "@fomo/shared";
 
 import { getMarketOverviewClient } from "../../lib/client-api";
 import { formatCompactNumber } from "../../lib/format";

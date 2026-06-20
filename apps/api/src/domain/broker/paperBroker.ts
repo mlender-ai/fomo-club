@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { AlertType, StrategyConfig, StrategySignal } from "@trading/shared";
+import type { AlertType, StrategyConfig, StrategySignal } from "@fomo/shared";
 
 import { toInputJsonValue } from "../../lib/json.js";
 import { prisma } from "../../lib/prisma.js";

@@ -14,7 +14,7 @@ import {
   type SessionCompareResponse,
   type StrategyControlResponse,
   type WeeklyReportResponse
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import { backendApiFetch } from "./backend-api";
 

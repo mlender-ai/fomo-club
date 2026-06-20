@@ -1,4 +1,4 @@
-import type { StrategyConfig } from "@trading/shared";
+import type { StrategyConfig } from "@fomo/shared";
 
 import { toInputJsonValue } from "../../lib/json.js";
 import { formatDateKey } from "../../lib/time.js";

@@ -1,4 +1,4 @@
-import type { BotStatus, ConnectionState, KillSwitchMode, SystemStatusView } from "@trading/shared";
+import type { BotStatus, ConnectionState, KillSwitchMode, SystemStatusView } from "@fomo/shared";
 
 interface DeriveSystemStatusInput {
   botStatus: BotStatus | "UNKNOWN";

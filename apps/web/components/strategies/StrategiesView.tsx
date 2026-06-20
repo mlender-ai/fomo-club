@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { DashboardSummaryResponse, PeriodFilter, RuntimeStateResponse, SessionCompareResponse, StrategyControlResponse, StrategySortKey } from "@trading/shared";
+import type { DashboardSummaryResponse, PeriodFilter, RuntimeStateResponse, SessionCompareResponse, StrategyControlResponse, StrategySortKey } from "@fomo/shared";
 
 import { getStrategyControlClient } from "../../lib/client-api";
 import { StrategyDetail } from "./StrategyDetail";

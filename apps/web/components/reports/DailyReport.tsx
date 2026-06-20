@@ -1,6 +1,6 @@
 "use client";
 
-import type { DailyReportResponse } from "@trading/shared";
+import type { DailyReportResponse } from "@fomo/shared";
 
 import { buildDailyAiSummary, getReasonLabel, translateRecommendation } from "../../lib/console-copy";
 import { formatCurrency, formatPercent, formatSignedCurrency } from "../../lib/format";

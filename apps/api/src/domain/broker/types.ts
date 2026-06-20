@@ -1,4 +1,4 @@
-import type { AlertType, StrategyConfig, StrategySignal } from "@trading/shared";
+import type { AlertType, StrategyConfig, StrategySignal } from "@fomo/shared";
 
 export interface BrokerExecutionResult {
   alertType: AlertType;

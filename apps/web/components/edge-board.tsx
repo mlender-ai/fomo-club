@@ -1,4 +1,4 @@
-import type { DailyReportResponse, SessionCompareResponse, WeeklyReportResponse } from "@trading/shared";
+import type { DailyReportResponse, SessionCompareResponse, WeeklyReportResponse } from "@fomo/shared";
 
 import { formatCurrency, formatPercent } from "../lib/format";
 

@@ -1,4 +1,4 @@
-import type { AccountOverviewView } from "@trading/shared";
+import type { AccountOverviewView } from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { DailyReportResponse, DashboardSummaryResponse, MarketOverviewResponse, MarketSymbol, PaperEventView, RuntimeStateResponse } from "@trading/shared";
+import type { DailyReportResponse, DashboardSummaryResponse, MarketOverviewResponse, MarketSymbol, PaperEventView, RuntimeStateResponse } from "@fomo/shared";
 
 import { buildAgentLogRows, buildAgentLogRowsFromPaperEvents, buildAgentRiskSnapshot, buildAgentSuggestionItems, getActionStatusLabel } from "../../lib/console-copy";
 import { getPaperLogsClient } from "../../lib/client-api";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { AccountOverviewView, PeriodFilter, StrategyControlResponse, StrategyPerformanceRow, StrategySortKey, StrategyView } from "@trading/shared";
+import type { AccountOverviewView, PeriodFilter, StrategyControlResponse, StrategyPerformanceRow, StrategySortKey, StrategyView } from "@fomo/shared";
 
 import { formatCurrency, formatPercent, formatSignedCurrency } from "../../lib/format";
 

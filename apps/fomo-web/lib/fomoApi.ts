@@ -1,4 +1,4 @@
-// FOMO API 클라이언트. API는 apps/web(@trading/web)의 /api/fomo/*에 있다.
+// FOMO API 클라이언트. API는 apps/web(@fomo/backend)의 /api/fomo/*에 있다.
 // NEXT_PUBLIC_FOMO_API_BASE로 오버라이드(로컬: http://127.0.0.1:3200), 기본은 배포된 prod.
 import type {
   BannerItem,

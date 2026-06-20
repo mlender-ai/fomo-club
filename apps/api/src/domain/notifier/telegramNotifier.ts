@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import TelegramBot from "node-telegram-bot-api";
-import type { AlertType, DailyReportResponse, PaperEventType, WeeklyReportResponse } from "@trading/shared";
+import type { AlertType, DailyReportResponse, PaperEventType, WeeklyReportResponse } from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { toInputJsonValue } from "../../lib/json.js";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { DashboardSummaryResponse } from "@trading/shared";
+import type { DashboardSummaryResponse } from "@fomo/shared";
 
 import { TradeDetail } from "./TradeDetail";
 import { TradeList } from "./TradeList";

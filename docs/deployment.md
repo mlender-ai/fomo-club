@@ -51,8 +51,8 @@ CI verifies:
 - Prisma client generation with `npm run prisma:generate`
 - static repo checks with `npm run lint`
 - type safety with `npm run typecheck`
-- API workspace build with `npm --workspace @trading/api run build`
-- web workspace build with `npm --workspace @trading/web run build`
+- API workspace build with `npm --workspace @fomo/legacy-paper-api run build`
+- web workspace build with `npm --workspace @fomo/backend run build`
 
 This is the minimum gate before a merge to `main`.
 
@@ -97,14 +97,14 @@ Keep the source directory as the repo root so npm workspaces resolve correctly.
 
 ### API service
 
-- Build Command: `npm ci && npm run prisma:generate && npm --workspace @trading/api run build`
-- Start Command: `npm --workspace @trading/api run start`
+- Build Command: `npm ci && npm run prisma:generate && npm --workspace @fomo/legacy-paper-api run build`
+- Start Command: `npm --workspace @fomo/legacy-paper-api run start`
 - Healthcheck path: `/health`
 
 ### Worker service
 
-- Build Command: `npm ci && npm run prisma:generate && npm --workspace @trading/api run build`
-- Start Command: `npm --workspace @trading/api run worker`
+- Build Command: `npm ci && npm run prisma:generate && npm --workspace @fomo/legacy-paper-api run build`
+- Start Command: `npm --workspace @fomo/legacy-paper-api run worker`
 
 Recommended Railway settings:
 

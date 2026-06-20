@@ -10,10 +10,10 @@ import {
   type ResearchWorkspaceData,
   type TickerAnalysis,
   type UserResearchPreferences
-} from "@trading/shared/src/research";
-import { generateResearchPipelineSnapshot, type GeneratedResearchSnapshot } from "@trading/shared/src/researchPipeline";
-import { readResearchBehaviorSummary } from "@trading/shared/src/researchBehaviorStore";
-import { buildLiveResearchWorkspace } from "@trading/shared/src/researchLive";
+} from "@fomo/shared/src/research";
+import { generateResearchPipelineSnapshot, type GeneratedResearchSnapshot } from "@fomo/shared/src/researchPipeline";
+import { readResearchBehaviorSummary } from "@fomo/shared/src/researchBehaviorStore";
+import { buildLiveResearchWorkspace } from "@fomo/shared/src/researchLive";
 
 const OUTPUT_DIR = path.join(process.cwd(), "generated", "research");
 const JSON_BASENAME = "latest.json";

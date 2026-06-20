@@ -1,4 +1,4 @@
-import type { SessionCompareResponse } from "@trading/shared";
+import type { SessionCompareResponse } from "@fomo/shared";
 
 import { formatCurrency, formatPercent } from "../lib/format";
 

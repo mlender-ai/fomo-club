@@ -1,6 +1,6 @@
 "use client";
 
-import type { TradeView } from "@trading/shared";
+import type { TradeView } from "@fomo/shared";
 
 import { getActionLabel, getReasonLabel, getReasonText, getSessionNameKorean } from "../../lib/console-copy";
 import { formatCompactDate, formatCurrency, formatSignedCurrency } from "../../lib/format";

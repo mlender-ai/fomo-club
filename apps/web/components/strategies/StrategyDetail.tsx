@@ -1,6 +1,6 @@
 "use client";
 
-import type { DashboardSummaryResponse, RuntimeStateResponse, SessionCompareResponse, StrategyControlResponse, StrategyView } from "@trading/shared";
+import type { DashboardSummaryResponse, RuntimeStateResponse, SessionCompareResponse, StrategyControlResponse, StrategyView } from "@fomo/shared";
 
 import { getConnectionStatusLabel, getStrategyStatusLabel } from "../../lib/console-copy";
 import { formatCompactDate, formatCurrency, formatPercent, formatSignedCurrency } from "../../lib/format";

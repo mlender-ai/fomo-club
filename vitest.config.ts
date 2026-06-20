@@ -15,7 +15,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@taro/core": path.resolve(__dirname, "packages/tarot-core/src"),
-      "@trading/shared": path.resolve(__dirname, "packages/shared/src"),
+      "@fomo/shared": path.resolve(__dirname, "packages/shared/src"),
       "@fomo/core": path.resolve(__dirname, "packages/fomo-core/src"),
       "@/lib": path.resolve(__dirname, "apps/web/lib"),
       "@/app": path.resolve(__dirname, "apps/web/app"),

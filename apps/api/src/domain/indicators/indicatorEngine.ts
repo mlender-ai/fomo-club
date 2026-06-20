@@ -1,5 +1,5 @@
 import { BollingerBands, RSI } from "technicalindicators";
-import type { CandleDto, IndicatorSnapshot, StrategyConfig } from "@trading/shared";
+import type { CandleDto, IndicatorSnapshot, StrategyConfig } from "@fomo/shared";
 
 export interface IndicatorState {
   previous: IndicatorSnapshot;

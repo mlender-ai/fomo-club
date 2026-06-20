@@ -11,8 +11,8 @@ import {
   type ResearchTickerInputMarket,
   type ResearchTickerMarket,
   type TickerAnalysis
-} from "@trading/shared/src/research";
-import { analyzeLiveTicker, buildLiveResearchWorkspace, searchResearchTickers } from "@trading/shared/src/researchLive";
+} from "@fomo/shared/src/research";
+import { analyzeLiveTicker, buildLiveResearchWorkspace, searchResearchTickers } from "@fomo/shared/src/researchLive";
 
 const INSIGHT_CACHE_TTL_MS = 90_000;
 

@@ -1,4 +1,4 @@
-import type { CandleDto } from "@trading/shared";
+import type { CandleDto } from "@fomo/shared";
 
 export interface GetCandlesInput {
   symbol: string;

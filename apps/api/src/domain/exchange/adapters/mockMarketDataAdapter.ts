@@ -1,4 +1,4 @@
-import type { CandleDto } from "@trading/shared";
+import type { CandleDto } from "@fomo/shared";
 
 import type { ExchangeAdapter, GetCandlesInput } from "../types.js";
 

@@ -1,4 +1,4 @@
-import type { DashboardMetrics, FeeModelView, PositionView } from "@trading/shared";
+import type { DashboardMetrics, FeeModelView, PositionView } from "@fomo/shared";
 
 import { formatCurrency, formatPercent } from "../lib/format";
 

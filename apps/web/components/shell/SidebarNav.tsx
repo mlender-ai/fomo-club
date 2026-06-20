@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 
-import type { MarketSymbol, RuntimeStateResponse, StrategyControlResponse } from "@trading/shared";
+import type { MarketSymbol, RuntimeStateResponse, StrategyControlResponse } from "@fomo/shared";
 
 import type { AgentTrustMetric } from "../../lib/console-copy";
 import { getActionStatusLabel, getConnectionStatusLabel, getStrategyStatusLabel } from "../../lib/console-copy";

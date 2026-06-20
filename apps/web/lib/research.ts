@@ -1,4 +1,4 @@
-import { type UserResearchPreferences } from "@trading/shared/src/research";
+import { type UserResearchPreferences } from "@fomo/shared/src/research";
 
 function parseCsv(value: string | null): string[] {
   if (!value) {

@@ -29,8 +29,8 @@ import {
   type ResearchWorkspaceData,
   type TickerAnalysis,
   type UserResearchPreferences
-} from "@trading/shared/src/research";
-import type { GeneratedResearchSnapshot } from "@trading/shared/src/researchPipeline";
+} from "@fomo/shared/src/research";
+import type { GeneratedResearchSnapshot } from "@fomo/shared/src/researchPipeline";
 
 const STORAGE_KEY = "research-preferences-v1";
 const DEFAULT_NEWS_IMAGE = "/news/default-cover.svg";

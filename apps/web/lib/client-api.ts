@@ -1,4 +1,4 @@
-import type { DashboardSummaryResponse, MarketOverviewResponse, PaperEventView, RuntimeStateResponse, StrategyControlResponse } from "@trading/shared";
+import type { DashboardSummaryResponse, MarketOverviewResponse, PaperEventView, RuntimeStateResponse, StrategyControlResponse } from "@fomo/shared";
 
 async function browserFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {

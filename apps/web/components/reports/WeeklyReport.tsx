@@ -1,6 +1,6 @@
 "use client";
 
-import type { SessionCompareResponse, WeeklyReportResponse } from "@trading/shared";
+import type { SessionCompareResponse, WeeklyReportResponse } from "@fomo/shared";
 
 import { buildSessionCompareSummary, buildWeeklyAiSummary, translatePerformanceLabel, translateRecommendation } from "../../lib/console-copy";
 import { formatCurrency, formatPercent, formatSignedCurrency } from "../../lib/format";

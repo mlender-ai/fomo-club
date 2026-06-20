@@ -18,7 +18,7 @@ import type {
   SystemStatusView,
   TradeView,
   WeeklyReportResponse
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import { formatCompactDate, formatCurrency, formatPercent, formatSignedCurrency, formatTimeOnly } from "./format";
 

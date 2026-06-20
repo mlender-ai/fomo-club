@@ -1,4 +1,4 @@
-import type { PerformanceBreakdownView } from "@trading/shared";
+import type { PerformanceBreakdownView } from "@fomo/shared";
 
 import { formatCurrency, formatPercent } from "../lib/format";
 

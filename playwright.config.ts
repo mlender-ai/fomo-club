@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm --workspace @trading/web run dev",
+    command: "npm --workspace @fomo/backend run dev",
     url: "http://127.0.0.1:3200",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

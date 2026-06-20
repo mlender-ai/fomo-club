@@ -1,4 +1,4 @@
-import type { KillSwitchMode, RuntimeStateResponse } from "@trading/shared";
+import type { KillSwitchMode, RuntimeStateResponse } from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { encryptText } from "../../lib/crypto.js";

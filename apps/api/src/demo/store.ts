@@ -6,7 +6,7 @@ import type {
   StrategySortKey,
   RuntimeStateResponse,
   StrategyControlResponse
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import {
   demoDashboardSummary as demoDashboardSummaryTemplate,

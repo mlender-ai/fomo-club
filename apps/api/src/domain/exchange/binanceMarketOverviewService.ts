@@ -1,4 +1,4 @@
-import type { MarketOverviewResponse, MarketSymbol, MarketTickerView } from "@trading/shared";
+import type { MarketOverviewResponse, MarketSymbol, MarketTickerView } from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { demoMarketOverview } from "../../demo/dashboardSummary.js";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { RuntimeStateResponse } from "@trading/shared";
+import type { RuntimeStateResponse } from "@fomo/shared";
 
 interface SettingsViewProps {
   isMutating: boolean;

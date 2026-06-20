@@ -1,4 +1,4 @@
-import type { SignalReason, StrategySignal } from "@trading/shared";
+import type { SignalReason, StrategySignal } from "@fomo/shared";
 
 const fallbackReason: SignalReason = {
   code: "UNSPECIFIED",

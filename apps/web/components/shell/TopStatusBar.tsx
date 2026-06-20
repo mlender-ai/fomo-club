@@ -1,6 +1,6 @@
 "use client";
 
-import type { RuntimeStateResponse, StrategyView } from "@trading/shared";
+import type { RuntimeStateResponse, StrategyView } from "@fomo/shared";
 
 import { getActionStatusLabel, getConnectionStatusLabel, getStrategyStatusLabel } from "../../lib/console-copy";
 import { formatCompactDate } from "../../lib/format";

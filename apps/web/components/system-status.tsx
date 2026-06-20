@@ -1,4 +1,4 @@
-import type { LogView, SystemStatusView } from "@trading/shared";
+import type { LogView, SystemStatusView } from "@fomo/shared";
 
 import { formatDate } from "../lib/format";
 

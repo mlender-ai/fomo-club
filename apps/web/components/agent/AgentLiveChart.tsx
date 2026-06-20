@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 
-import type { MarketOverviewResponse, MarketSymbol, MarketTickerView } from "@trading/shared";
+import type { MarketOverviewResponse, MarketSymbol, MarketTickerView } from "@fomo/shared";
 
 import { getMarketOverviewClient } from "../../lib/client-api";
 import { getTickerLabel } from "../../lib/console-copy";

@@ -1,7 +1,7 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
 const sharedConfig = {
-  transpilePackages: ["@trading/shared", "@fomo/core"],
+  transpilePackages: ["@fomo/shared", "@fomo/core"],
   webpack(config) {
     // ESM .js 확장자 → .ts 소스 resolve (@fomo/core 등이 main: "src/index.ts" + .js imports 사용)
     config.resolve.extensionAlias = {

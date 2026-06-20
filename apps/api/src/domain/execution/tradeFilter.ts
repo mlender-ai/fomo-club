@@ -1,4 +1,4 @@
-import type { StrategyConfig, StrategySignal, SignalReason } from "@trading/shared";
+import type { StrategyConfig, StrategySignal, SignalReason } from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { formatDateKey } from "../../lib/time.js";

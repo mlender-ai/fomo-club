@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import type { BbMeanReversionConfig, PerformanceBreakdownView, ReportMetricsView } from "@trading/shared";
+import type { BbMeanReversionConfig, PerformanceBreakdownView, ReportMetricsView } from "@fomo/shared";
 
 const prisma = new PrismaClient();
 

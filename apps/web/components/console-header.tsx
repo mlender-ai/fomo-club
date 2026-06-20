@@ -1,4 +1,4 @@
-import type { StrategySessionView, StrategyView, SystemStatusView } from "@trading/shared";
+import type { StrategySessionView, StrategyView, SystemStatusView } from "@fomo/shared";
 
 interface ConsoleHeaderProps {
   currentSession: StrategySessionView | null;

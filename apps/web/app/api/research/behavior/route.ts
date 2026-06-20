@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { RESEARCH_BEHAVIOR_EVENT_LABELS, type ResearchBehaviorEventName } from "@trading/shared/src/research";
-import { readResearchBehaviorSummary, recordResearchBehaviorEvent } from "@trading/shared/src/researchBehaviorStore";
+import { RESEARCH_BEHAVIOR_EVENT_LABELS, type ResearchBehaviorEventName } from "@fomo/shared/src/research";
+import { readResearchBehaviorSummary, recordResearchBehaviorEvent } from "@fomo/shared/src/researchBehaviorStore";
 
 export const dynamic = "force-dynamic";
 

@@ -8,7 +8,7 @@ import type {
   StrategySessionView,
   TradeView,
   WeeklyReportResponse
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { toInputJsonValue } from "../../lib/json.js";

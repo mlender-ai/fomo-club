@@ -1,4 +1,4 @@
-import type { PaperEventView, PaperStatusResponse, PositionView, TradeView, WorkerStatusResponse } from "@trading/shared";
+import type { PaperEventView, PaperStatusResponse, PositionView, TradeView, WorkerStatusResponse } from "@fomo/shared";
 
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";

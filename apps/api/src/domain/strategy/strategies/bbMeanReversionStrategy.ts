@@ -1,4 +1,4 @@
-import type { BbMeanReversionConfig, SignalReason, StrategySignal } from "@trading/shared";
+import type { BbMeanReversionConfig, SignalReason, StrategySignal } from "@fomo/shared";
 
 import type { StrategyDefinition } from "../types.js";
 

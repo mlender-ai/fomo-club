@@ -1,4 +1,4 @@
-import type { StrategyCode, StrategyConfig } from "@trading/shared";
+import type { StrategyCode, StrategyConfig } from "@fomo/shared";
 
 import { env } from "../config/env.js";
 import { AuditLogger } from "../domain/audit/auditLogger.js";

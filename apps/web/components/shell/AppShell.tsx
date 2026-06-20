@@ -12,7 +12,7 @@ import type {
   SessionCompareResponse,
   StrategyControlResponse,
   WeeklyReportResponse
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import {
   getDashboardSummaryClient,

@@ -1,4 +1,4 @@
-import type { StrategySessionView, StrategySignal } from "@trading/shared";
+import type { StrategySessionView, StrategySignal } from "@fomo/shared";
 
 import { AuditLogger } from "../audit/auditLogger.js";
 import type { BrokerPort } from "../broker/types.js";

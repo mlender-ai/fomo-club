@@ -1,4 +1,4 @@
-import type { FeeModelView, StrategySessionView } from "@trading/shared";
+import type { FeeModelView, StrategySessionView } from "@fomo/shared";
 
 import { formatCurrency, formatDate } from "../lib/format";
 

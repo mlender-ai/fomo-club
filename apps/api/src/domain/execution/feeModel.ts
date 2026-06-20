@@ -1,4 +1,4 @@
-import type { OrderRole } from "@trading/shared";
+import type { OrderRole } from "@fomo/shared";
 
 export interface FeeModelInput {
   makerFeeRate: number;

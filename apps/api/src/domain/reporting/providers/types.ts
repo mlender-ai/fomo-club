@@ -1,4 +1,4 @@
-import type { DailyReportResponse, SessionCompareResponse, WeeklyReportResponse } from "@trading/shared";
+import type { DailyReportResponse, SessionCompareResponse, WeeklyReportResponse } from "@fomo/shared";
 
 export type DailyReportInput = Omit<DailyReportResponse, "report">;
 export type WeeklyReportInput = Omit<WeeklyReportResponse, "report">;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { DailyReportResponse, DashboardSummaryResponse, RuntimeStateResponse } from "@trading/shared";
+import type { DailyReportResponse, DashboardSummaryResponse, RuntimeStateResponse } from "@fomo/shared";
 
 import {
   buildAgentRecommendationBullets,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { DailyReportResponse, SessionCompareResponse, WeeklyReportResponse } from "@trading/shared";
+import type { DailyReportResponse, SessionCompareResponse, WeeklyReportResponse } from "@fomo/shared";
 
 import { DailyReport } from "./DailyReport";
 import { WeeklyReport } from "./WeeklyReport";

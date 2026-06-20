@@ -8,7 +8,7 @@ import type {
   StrategyPerformanceRow,
   StrategyView,
   WeeklyReportResponse
-} from "@trading/shared";
+} from "@fomo/shared";
 
 const now = new Date();
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000).toISOString();

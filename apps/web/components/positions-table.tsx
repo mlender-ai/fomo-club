@@ -1,4 +1,4 @@
-import type { PositionView } from "@trading/shared";
+import type { PositionView } from "@fomo/shared";
 
 import { formatCurrency, formatDate } from "../lib/format";
 

@@ -1,4 +1,4 @@
-import type { PerformanceBreakdownView, ReportMetricsView, StrategySessionView } from "@trading/shared";
+import type { PerformanceBreakdownView, ReportMetricsView, StrategySessionView } from "@fomo/shared";
 
 interface BreakdownRow {
   realizedPnl: number;

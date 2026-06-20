@@ -5,7 +5,7 @@ import type {
   ReportInsightView,
   ReportRecommendationView,
   StrategyInsightView
-} from "@trading/shared";
+} from "@fomo/shared";
 
 import type { DailyReportInput, ReportGeneratorProvider, SessionCompareInput, WeeklyReportInput } from "./types.js";
 
