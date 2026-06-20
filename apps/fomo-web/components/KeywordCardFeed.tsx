@@ -146,7 +146,13 @@ function DeckEmpty() {
  * 데이터 로딩 래퍼 — /api/fomo/keywords 실데이터를 받아 덱에 넘긴다.
  * 로딩=전체화면 프로그레스, 실패=담담한 빈 상태(무한 로딩 금지). confidence 는 덱 상단 한마디로.
  */
-export function KeywordCardFeed() {
+/** 카드 클릭 → 로그인 게이트(트랙 B). 비로그인 시 뎁스 대신 로그인 페이지로 보낸다. */
+interface FeedGate {
+  loggedIn?: boolean | undefined;
+  onRequireLogin?: (() => void) | undefined;
+}
+
+export function KeywordCardFeed({ loggedIn, onRequireLogin }: FeedGate = {}) {
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "error" }
@@ -173,10 +179,14 @@ export function KeywordCardFeed() {
   if (state.kind === "loading")
     return <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />;
   if (state.kind === "error") return <DeckEmpty />;
-  return <KeywordDeck cards={state.cards} />;
+  return <KeywordDeck cards={state.cards} loggedIn={loggedIn} onRequireLogin={onRequireLogin} />;
 }
 
-function KeywordDeck({ cards }: { cards: readonly KeywordCard[] }) {
+function KeywordDeck({
+  cards,
+  loggedIn,
+  onRequireLogin,
+}: { cards: readonly KeywordCard[] } & FeedGate) {
   // 마운트 시점의 "오늘 이미 본" 집합 — 본 섹터 카드는 덱에서 제외(종목 카드는 섹터를 따라간다).
   const viewedIds = useState(() => {
     const kstDay = (ms: number) =>
@@ -237,6 +247,11 @@ function KeywordDeck({ cards }: { cards: readonly KeywordCard[] }) {
   );
 
   const openItem = (item: DeckItem) => {
+    // 카드 클릭 → 비로그인이면 뎁스 대신 로그인 페이지로(트랙 B 게이트).
+    if (!loggedIn && onRequireLogin) {
+      onRequireLogin();
+      return;
+    }
     if (item.kind === "sector") recordViewed(item.card, Date.now());
     const t = tasteOf(item);
     recordTaste(t.type, t.subject, "view_depth"); // 트랙 B: 뎁스 열람 = 강한 관심
@@ -244,6 +259,10 @@ function KeywordDeck({ cards }: { cards: readonly KeywordCard[] }) {
   };
   // CTA "관심" — "이거 더 볼래" → 관심 기록 + 자세히. 다음 카드 넘김은 닫을 때.
   const openInterest = (item: DeckItem) => {
+    if (!loggedIn && onRequireLogin) {
+      onRequireLogin();
+      return;
+    }
     recordInterest(item.id, "more", Date.now());
     const t = tasteOf(item);
     recordTaste(t.type, t.subject, "more"); // 트랙 B: 명시적 관심

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { FEATURE_EMOTION_VOTE, type EmotionType } from "@fomo/core";
-import { SplashScreen } from "@/components/SplashScreen";
 import { EmotionGate } from "@/components/EmotionGate";
 import { HomeView } from "@/components/HomeView";
 import { getSessionId } from "@/lib/session";
@@ -26,25 +25,14 @@ import {
   type MarketScore,
 } from "@/lib/fomoApi";
 
-type Phase = "splash" | "gate" | "home";
-
-const SPLASH_MIN_MS = 1200;
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
-  );
-}
+type Phase = "gate" | "home";
 
 /**
- * 진입 여정 오케스트레이터 — splash → (오늘 미선택 시) gate → home.
- * 데이터 페칭/투표를 여기서 관리하고 하위 화면에 props로 내려준다.
- * 정체성: 감정 게이트가 '시장의 포모 → 나의 포모' 두 단계 전환의 무대(docs/MASCOT.md §5).
+ * 진입 여정 오케스트레이터 — 진입 시 바로 home(스플래시 제거). 데이터는 백그라운드 로드.
+ * (감정 투표 flag 가 켜져 오늘 미선택이면 gate 로, 현재는 OFF 라 항상 home.)
  */
 export default function Home() {
-  const [phase, setPhase] = useState<Phase>("splash");
-  const [leavingSplash, setLeavingSplash] = useState(false);
+  const [phase, setPhase] = useState<Phase>("home");
   const [gateReopen, setGateReopen] = useState(false);
 
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
@@ -71,16 +59,13 @@ export default function Home() {
       .catch(() => setNews({ deck: [], lang: "ko" }));
   }, []);
 
-  // 스플래시 동안 데이터 프리페치 + 최소 표시시간 보장 후 분기
+  // 진입 즉시 백그라운드 데이터 로드(스플래시 없음). 도착 전엔 HomeView 내부 로딩 상태가 담당.
   const startedRef = useRef(false);
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
 
     const sid = getSessionId();
-    const minDelay = prefersReducedMotion()
-      ? Promise.resolve()
-      : new Promise((r) => setTimeout(r, SPLASH_MIN_MS));
 
     const load = Promise.allSettled([
       fetchIndex(),
@@ -112,11 +97,9 @@ export default function Home() {
       return todays;
     });
 
-    Promise.all([load, minDelay]).then(([todays]) => {
-      // 스플래시를 부드럽게 내보내고 다음 phase로
-      // 액션 제로 전환: 감정 투표가 꺼져 있으면 게이트 없이 바로 홈 (docs/PIVOT_FEED_FIRST.md)
-      setLeavingSplash(true);
-      setTimeout(() => setPhase(todays || !FEATURE_EMOTION_VOTE ? "home" : "gate"), 300);
+    load.then((todays) => {
+      // 감정 투표 flag 가 켜져 있고 오늘 미선택이면만 게이트. 현재 OFF → 항상 home 유지.
+      if (FEATURE_EMOTION_VOTE && !todays) setPhase("gate");
     });
   }, []);
 
@@ -167,10 +150,6 @@ export default function Home() {
         /* 조회 실패해도 게이트는 통과 — 다음 진입에 다시 시도 */
       });
   }, []);
-
-  if (phase === "splash") {
-    return <SplashScreen leaving={leavingSplash} />;
-  }
 
   if (phase === "gate") {
     return (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
 import { KeywordHistory } from "@/components/KeywordHistory";
-import { AuthSheet } from "@/components/AuthSheet";
+import { LoginPage } from "@/components/LoginPage";
 import type {
   FomoIndexResponse,
   TallyResponse,
@@ -100,7 +100,11 @@ export function HomeView({
         )}
 
         <div className={`mt-3 flex flex-1 flex-col ${tab === "card" ? "justify-center" : ""}`}>
-          {tab === "card" ? <KeywordCardFeed /> : <KeywordHistory />}
+          {tab === "card" ? (
+            <KeywordCardFeed loggedIn={loggedIn} onRequireLogin={() => setAuthOpen(true)} />
+          ) : (
+            <KeywordHistory />
+          )}
         </div>
       </main>
 
@@ -113,7 +117,7 @@ export function HomeView({
       </nav>
 
       {authOpen && (
-        <AuthSheet loggedIn={loggedIn} onClose={() => setAuthOpen(false)} onAuthed={onLoggedIn} />
+        <LoginPage loggedIn={loggedIn} onClose={() => setAuthOpen(false)} onAuthed={onLoggedIn} />
       )}
     </>
   );
