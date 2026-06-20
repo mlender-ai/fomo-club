@@ -148,4 +148,87 @@ describe("buildSummary — Heat 정보 + 정직한 숫자 (#428)", () => {
     const s = buildSummary(idx, {});
     expect(s).not.toMatch(/매수|매도|반드시|보장|폭락|급등/);
   });
+
+  it("전체 폴백 시 '데이터 제한적' 표기 (#428)", () => {
+    const idx = computeFomoIndex({}, "2026-06-11");
+    const s = buildSummary(idx, {});
+    expect(s).toContain("데이터 제한적");
+  });
+
+  it("실데이터 있으면 '데이터 제한적' 미표기", () => {
+    const idx = computeFomoIndex(
+      { market: { volumeChangePct: 20 }, community: { bullishRatio: 0.6 }, emotion: { fomo: 5 } },
+      "2026-06-11",
+    );
+    const s = buildSummary(idx, { fomo: 5 });
+    expect(s).not.toContain("데이터 제한적");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Heat 에러 격리 — 한 Heat 실패가 전체를 멈추지 않음 (#415)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("computeFomoIndex — Heat 에러 격리 (#415)", () => {
+  it("이상 입력(NaN/Infinity)에도 유효한 스냅샷 반환", () => {
+    const idx = computeFomoIndex(
+      {
+        market: { volumeChangePct: NaN, searchChangePct: Infinity },
+        emotion: { fomo: NaN as unknown as number },
+      },
+      "2026-06-11",
+    );
+    expect(Number.isNaN(idx.score)).toBe(false);
+    expect(idx.score).toBeGreaterThanOrEqual(0);
+    expect(idx.score).toBeLessThanOrEqual(100);
+    expect(idx.components).toHaveLength(4);
+  });
+
+  it("빈 whale 배열 + 유효한 emotion → 정상 산출", () => {
+    const idx = computeFomoIndex({ whale: [], emotion: { conviction: 10 } }, "2026-06-11");
+    const whaleComp = idx.components.find((c) => c.key === "whale")!;
+    expect(whaleComp.score).toBe(0);
+    expect(whaleComp.meta?.confidence).toBe("fallback");
+    const emotionComp = idx.components.find((c) => c.key === "emotion")!;
+    expect(emotionComp.meta?.confidence).not.toBe("fallback");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Heat confidence 수준 검증 (#413)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Heat confidence 수준 (#413)", () => {
+  it("Market: 4개 소스 모두 제공 시 high confidence", () => {
+    const h = marketHeat({
+      volumeChangePct: 10,
+      turnoverChangePct: 5,
+      searchChangePct: 15,
+      etfInflowPct: 20,
+    });
+    expect(h.meta?.confidence).toBe("high");
+    expect(h.meta?.sourcesAvailable).toBe(4);
+  });
+
+  it("Market: 1개 소스만 제공 시 low confidence", () => {
+    const h = marketHeat({ volumeChangePct: 10 });
+    expect(h.meta?.confidence).toBe("low");
+    expect(h.meta?.sourcesAvailable).toBe(1);
+  });
+
+  it("Community: mentionChange + bullish → medium confidence", () => {
+    const h = communityHeat({ mentionChangePct: 10, bullishRatio: 0.5 });
+    expect(h.meta?.confidence).toBe("medium");
+    expect(h.meta?.sourcesAvailable).toBe(2);
+  });
+
+  it("Emotion: 50+ 투표 시 high confidence", () => {
+    const h = emotionHeat({ fomo: 20, fear: 15, greed: 10, regret: 5, conviction: 5 });
+    expect(h.meta?.confidence).toBe("high");
+  });
+
+  it("Emotion: 1~9 투표 시 low confidence", () => {
+    const h = emotionHeat({ fomo: 3 });
+    expect(h.meta?.confidence).toBe("low");
+  });
 });

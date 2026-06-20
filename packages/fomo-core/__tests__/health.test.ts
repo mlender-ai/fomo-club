@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeFomoIndex } from "../src/index-engine/calculate";
-import { summarizeHealth, renderHealthReport, confidenceRank } from "../src/index-engine/health";
+import { summarizeHealth, renderHealthReport, confidenceRank, heatToLogRecords } from "../src/index-engine/health";
 
 describe("summarizeHealth", () => {
   it("입력 전무 → 4 Heat 모두 폴백, degraded=true", () => {
@@ -51,5 +51,32 @@ describe("confidenceRank", () => {
     expect(confidenceRank("fallback")).toBeLessThan(confidenceRank("low"));
     expect(confidenceRank("low")).toBeLessThan(confidenceRank("medium"));
     expect(confidenceRank("medium")).toBeLessThan(confidenceRank("high"));
+  });
+});
+
+describe("heatToLogRecords (#415)", () => {
+  it("4개 Heat에 대해 구조화된 로그 레코드 반환", () => {
+    const idx = computeFomoIndex({ emotion: { fomo: 10 } }, "2026-06-20");
+    const records = heatToLogRecords(idx);
+    expect(records).toHaveLength(4);
+    for (const r of records) {
+      expect(r.date).toBe("2026-06-20");
+      expect(typeof r.heat).toBe("string");
+      expect(typeof r.score).toBe("number");
+      expect(typeof r.fallback).toBe("boolean");
+      expect(["high", "medium", "low", "fallback"]).toContain(r.confidence);
+    }
+  });
+
+  it("폴백 Heat는 fallback=true", () => {
+    const idx = computeFomoIndex({}, "2026-06-20");
+    const records = heatToLogRecords(idx);
+    expect(records.every((r) => r.fallback)).toBe(true);
+  });
+
+  it("실데이터 Heat는 fallback=false", () => {
+    const idx = computeFomoIndex({ emotion: { fomo: 30, fear: 20 } }, "2026-06-20");
+    const emotionRecord = heatToLogRecords(idx).find((r) => r.heat === "emotion")!;
+    expect(emotionRecord.fallback).toBe(false);
   });
 });

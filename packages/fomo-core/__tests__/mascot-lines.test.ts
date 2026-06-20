@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay, personalLine } from "../src/mascot-lines";
+import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay, personalLine, heatContextLine } from "../src/mascot-lines";
 import { EMOTION_TYPES } from "../src/types";
 
 const STATES = ["무관심", "관망", "관심", "FOMO", "광기"] as const;
@@ -60,6 +60,29 @@ describe("잔잔한 날 = 치유의 날 (M2 회복 콘텐츠)", () => {
       seen.add(restorativeLine(`2026-06-${String(d).padStart(2, "0")}`));
     }
     expect(seen.size).toBeGreaterThan(1);
+  });
+});
+
+describe("heatContextLine — Heat 기반 맥락 (#428)", () => {
+  it("70% 이상이면 움직임 큰 편", () => {
+    const l = heatContextLine("시장", 75);
+    expect(l).toContain("움직임이 큰 편");
+  });
+
+  it("50~69%이면 약간의 움직임", () => {
+    const l = heatContextLine("커뮤니티", 55);
+    expect(l).toContain("약간의 움직임");
+  });
+
+  it("50% 미만이면 잔잔한 흐름", () => {
+    const l = heatContextLine("감정", 30);
+    expect(l).toContain("잔잔한 흐름");
+  });
+
+  it("금칙 표현 없음", () => {
+    for (const pct of [0, 30, 55, 75, 100]) {
+      expect(heatContextLine("시장", pct)).not.toMatch(FORBIDDEN);
+    }
   });
 });
 
