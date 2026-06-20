@@ -41,6 +41,7 @@
     "keywords:generate": "tsx scripts/keywords-generate.ts",
     "warm:insights": "tsx scripts/warm-insights.ts",
     "supply:collect": "tsx scripts/supply-demand-collect.ts",
+    "metrics:fomo": "tsx scripts/fomo-product-metrics.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
