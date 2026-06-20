@@ -110,6 +110,17 @@ export const fetchStockBasics = (stock: string) =>
     `/api/fomo/stock-basics?stock=${encodeURIComponent(stock)}`
   );
 
+/** 섹터 → 종목 풀(섹터구조 ②). 콜드스타트 노출 순. baseline=true 면 baseline 보장(국내) 종목만. */
+export type { StockSector, SectorStock } from "@fomo/core";
+export interface SectorStocksResponse {
+  sector: import("@fomo/core").StockSector;
+  stocks: import("@fomo/core").SectorStock[];
+}
+export const fetchSectorStocks = (sector: string, baselineOnly = false) =>
+  get<SectorStocksResponse>(
+    `/api/fomo/sector-stocks?sector=${encodeURIComponent(sector)}${baselineOnly ? "&baseline=1" : ""}`
+  );
+
 export const fetchCalendar = (sessionId: string, month?: string) =>
   get<CalendarResponse>(
     `/api/fomo/emotions/calendar?sessionId=${encodeURIComponent(sessionId)}${month ? `&month=${month}` : ""}`
