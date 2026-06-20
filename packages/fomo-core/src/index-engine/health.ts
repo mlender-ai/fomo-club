@@ -95,3 +95,31 @@ export function renderHealthReport(h: IndexHealth): string {
 export function confidenceRank(c: HeatConfidence): number {
   return CONF_RANK[c];
 }
+
+/**
+ * Heat 산출 결과를 구조화된 로그 레코드로 변환.
+ * 파이프라인·API 레이어에서 JSON 로거로 전달하면 모니터링/대시보드에 활용 가능.
+ */
+export interface HeatLogRecord {
+  heat: string;
+  score: number;
+  max: number;
+  confidence: HeatConfidence;
+  sourcesAvailable: number;
+  sourcesTotal: number;
+  fallback: boolean;
+  date: string;
+}
+
+export function heatToLogRecords(index: FomoIndex): HeatLogRecord[] {
+  return index.components.map((c) => ({
+    heat: c.key,
+    score: c.score,
+    max: c.max,
+    confidence: c.meta?.confidence ?? "fallback",
+    sourcesAvailable: c.meta?.sourcesAvailable ?? 0,
+    sourcesTotal: c.meta?.sourcesTotal ?? 0,
+    fallback: (c.meta?.confidence ?? "fallback") === "fallback",
+    date: index.date,
+  }));
+}

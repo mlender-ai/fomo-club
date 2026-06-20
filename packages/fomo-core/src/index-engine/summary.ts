@@ -35,14 +35,18 @@ export function buildSummary(index: FomoIndex, tally: EmotionTally = {}): string
 
   const heatLine = topHeats.map((h) => `${h.label} ${h.pct}%`).join(", ");
 
+  // 정직한 숫자: 폴백이 3개 이상이면 데이터 한정 사실을 명시한다.
+  const fallbackCount = index.components.filter((c) => c.meta?.confidence === "fallback").length;
+  const qualifier = fallbackCount >= 3 ? " (데이터 제한적)" : "";
+
   const entries = (Object.entries(tally) as [keyof typeof EMOTION_LABELS, number][]).filter(
     ([, n]) => (n ?? 0) > 0
   );
   if (entries.length === 0) {
-    return `${emoji} 오늘 시장 감정은 '${index.state}' — ${heatLine}. ${moodLine}`;
+    return `${emoji} 오늘 시장 감정은 '${index.state}' — ${heatLine}${qualifier}. ${moodLine}`;
   }
   const [topEmotion] = entries.sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]!;
-  return `${emoji} 오늘 시장 감정은 '${index.state}' — ${heatLine}. 가장 많이 선택된 감정은 「${EMOTION_LABELS[topEmotion]}」이에요. ${moodLine}`;
+  return `${emoji} 오늘 시장 감정은 '${index.state}' — ${heatLine}${qualifier}. 가장 많이 선택된 감정은 「${EMOTION_LABELS[topEmotion]}」이에요. ${moodLine}`;
 }
 
 const STATE_LINE: Record<FomoIndex["state"], string> = {

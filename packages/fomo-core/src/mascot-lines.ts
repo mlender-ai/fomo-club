@@ -83,6 +83,20 @@ export function restorativeLine(date: string): string {
 }
 
 /**
+ * Heat 데이터에 기반한 한 줄 맥락.
+ * buildSummary가 지표 요약이라면, 이 함수는 지금 어디서 신호가 오는지 담담히 전달한다.
+ * 투자 조언·단정 ❌ / 사실 기반 맥락만 ⭕.
+ */
+export function heatContextLine(
+  topHeatLabel: string,
+  topHeatPct: number,
+): string {
+  if (topHeatPct >= 70) return `${topHeatLabel} 쪽에서 움직임이 큰 편이에요.`;
+  if (topHeatPct >= 50) return `${topHeatLabel} 쪽에서 약간의 움직임이 감지돼요.`;
+  return "전반적으로 잔잔한 흐름이에요.";
+}
+
+/**
  * 포모의 기억 — "나를 기억하는 캐릭터" (전략 노트 v1.0 §1.4).
  * 다마고치(돌봄 의무·죄책감) ❌ — 돌봄의 방향을 뒤집어, 포모가 *나의 기록*을 기억한다.
  * 실측 기록만 참조(정직한 숫자), 결정적 규칙 템플릿(형태가 곧 윤리 — LLM·자유문장 ❌).
