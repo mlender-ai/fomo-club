@@ -81,6 +81,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test -- --reporter=dot
+
   build-api:
     runs-on: ubuntu-latest
     needs: [resolve-ref, repo-checks]
@@ -129,15 +132,37 @@ jobs:
       - name: Build web workspace
         run: npm --workspace @trading/web run build
 
+  build-fomo-web:
+    runs-on: ubuntu-latest
+    needs: [resolve-ref, repo-checks]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-ref.outputs.ref || '' }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build FOMO web workspace
+        run: npm run build:fomo-web
+
   # ── Phase 3: CI 성공 시 auto-merge 트리거 ──────────────────────
   # workflow_run 이벤트는 2단계 전파 불가 → 명시적 dispatch
   dispatch-auto-merge:
-    needs: [resolve-ref, repo-checks, build-api, build-web]
+    needs: [resolve-ref, repo-checks, build-api, build-web, build-fomo-web]
     if: |
       always() &&
       needs.repo-checks.result == 'success' &&
       needs.build-api.result == 'success' &&
       needs.build-web.result == 'success' &&
+      needs.build-fomo-web.result == 'success' &&
       needs.resolve-ref.outputs.ref != '' &&
       startsWith(needs.resolve-ref.outputs.ref, 'agent/ceo-brief-')
     runs-on: ubuntu-latest
