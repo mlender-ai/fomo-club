@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { scoreToColor, cleanText, cleanQuote, communityWordings, type KeywordCard } from "@fomo/core";
-import { fetchThemeInsight, fetchStockInsight, recordTaste, type CondensedInsight } from "@/lib/fomoApi";
+import {
+  fetchThemeInsight,
+  fetchStockInsight,
+  fetchStockBasics,
+  recordTaste,
+  type CondensedInsight,
+  type StockBasics,
+} from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
@@ -303,6 +310,98 @@ export interface StockContext {
   fromTheme?: string;
 }
 
+/**
+ * 종목 기본 정보 블록(바닥) — 항상 렌더. 주가·회사개요·시총·핵심지표·연간 재무.
+ * "정확한 숫자 + 쉬운 라벨"(EPS→'한 주가 번 돈') 둘 다. 없는 값은 생략(가짜 금지), 추정치·출처 표기.
+ */
+function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
+  if (!basics) {
+    return (
+      <div className="space-y-2" aria-busy="true">
+        <div className="h-8 w-1/2 animate-pulse rounded bg-surface" />
+        <div className="h-14 animate-pulse rounded-lg border border-hairline bg-surface" />
+      </div>
+    );
+  }
+  const up = basics.changeDir === "up";
+  const down = basics.changeDir === "down";
+  const empty = !basics.priceText && basics.metrics.length === 0 && !basics.financials && !basics.summary;
+  return (
+    <section>
+      {basics.priceText && (
+        <div className="flex items-baseline gap-2">
+          <span className="font-pixel text-3xl text-whiteout">{basics.priceText}</span>
+          {basics.changeText && (
+            <span className="text-sm" style={up || down ? { color: up ? "#ff5a5f" : "#4f8cff" } : undefined}>
+              {up ? "▲" : down ? "▼" : ""} {basics.changeText}
+            </span>
+          )}
+        </div>
+      )}
+      {(basics.market || basics.marketCap || basics.sector) && (
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
+          {basics.market && <span>{basics.market}</span>}
+          {basics.marketCap && <span>시총 {basics.marketCap}</span>}
+          {basics.sector && <span>{cleanText(basics.sector)}</span>}
+        </div>
+      )}
+      {basics.summary && <p className="mt-3 text-sm leading-6 text-muted">{cleanText(basics.summary)}</p>}
+
+      {basics.metrics.length > 0 && (
+        <ul className="mt-4 grid grid-cols-2 gap-2">
+          {basics.metrics.map((m, i) => (
+            <li key={`m-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+              <span className="block text-[11px] text-muted">
+                {m.label}
+                {m.term ? <span className="text-muted/70"> · {m.term}</span> : null}
+              </span>
+              <span className="mt-0.5 block text-sm text-whiteout">{m.value}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {basics.financials && (
+        <div className="mt-5">
+          <p className="font-pixel text-sm text-whiteout">실적 흐름</p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-muted">
+                  <th className="py-1 text-left font-normal"> </th>
+                  {basics.financials.periods.map((p, i) => (
+                    <th key={`p-${i}`} className="px-2 py-1 text-right font-normal">
+                      {p.title}
+                      {p.estimate ? <span className="text-[10px]"> (E)</span> : null}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {basics.financials.rows.map((r, ri) => (
+                  <tr key={`r-${ri}`} className="border-t border-hairline">
+                    <td className="py-1.5 text-left text-muted">{r.label}</td>
+                    {r.values.map((v, vi) => (
+                      <td key={`v-${vi}`} className="px-2 py-1.5 text-right text-whiteout">{v}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-1 text-[10px] leading-4 text-muted">(E)=컨센서스 추정치 · 출처: 네이버 금융</p>
+        </div>
+      )}
+
+      {empty && (
+        <p className="text-sm leading-6 text-muted">
+          이 종목 기본 정보는 아직 연결 전이야(해외·신규 상장 등). 아래 흐름으로 봐줘.
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function StockInsightView({
   stock,
   context,
@@ -314,11 +413,18 @@ export function StockInsightView({
 }) {
   const [insight, setInsight] = useState<CondensedInsight | null>(null);
   const [loading, setLoading] = useState(true);
+  // 기본 정보(바닥) — 원문 무관 객관 사실. 빠른 네이버 fetch라 해석(LLM)과 분리해 먼저 깐다.
+  const [basics, setBasics] = useState<StockBasics | null>(null);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setInsight(null);
+    setBasics(null);
+    // 기본 정보(빠름) + 이해 레이어(느림 LLM) 병렬 — 각자 도착하는 대로 표시(빈 화면 박멸).
+    fetchStockBasics(stock)
+      .then((r) => alive && setBasics(r))
+      .catch(() => alive && setBasics(null));
     fetchStockInsight(stock)
       .then((r) => alive && setInsight(r))
       .catch(() => alive && setInsight(null))
@@ -368,11 +474,15 @@ export function StockInsightView({
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+          {/* 바닥 — 기본 정보는 원문 무관 객관 사실이라 항상 먼저 깐다(빈 화면 박멸). */}
+          <StockBasicsBlock basics={basics} />
+
+          {/* 그 위 — 강세/약세 해석(원문 grounded, 있을 때만). LLM 이라 따로 로딩. */}
           {loading ? (
-            <FullPageLoading estimateMs={LOADING_PRESETS.stock.estimateMs} steps={LOADING_PRESETS.stock.steps} />
+            <p className="mt-7 text-sm leading-6 text-muted">강세·약세 관점을 읽고 있어…</p>
           ) : (
           <>
-          <section>
+          <section className="mt-7">
             <p className="font-pixel text-sm text-whiteout">왜 같이 움직였나</p>
             {/* 들어온 맥락(연관 근거) — stock-insight 가 부족해도 항상 보여준다(빈 화면 금지). */}
             {context?.reason && (

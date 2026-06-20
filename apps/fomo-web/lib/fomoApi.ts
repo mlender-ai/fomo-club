@@ -103,6 +103,13 @@ export const fetchStockInsight = (stock: string) =>
     `/api/fomo/stock-insight?stock=${encodeURIComponent(stock)}`
   );
 
+/** 종목 기본 정보(바닥 — 주가·개요·시총·지표·재무). 항상 깔린다(원문 무관). */
+export type { StockBasics } from "@fomo/core";
+export const fetchStockBasics = (stock: string) =>
+  get<import("@fomo/core").StockBasics>(
+    `/api/fomo/stock-basics?stock=${encodeURIComponent(stock)}`
+  );
+
 export const fetchCalendar = (sessionId: string, month?: string) =>
   get<CalendarResponse>(
     `/api/fomo/emotions/calendar?sessionId=${encodeURIComponent(sessionId)}${month ? `&month=${month}` : ""}`
