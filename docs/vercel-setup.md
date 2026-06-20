@@ -18,7 +18,7 @@ import 화면에서 아래대로 입력:
 
 | 항목 | 값 |
 |------|-----|
-| **Project Name** | `fomo-backend` (또는 원하는 이름) |
+| **Project Name** | `fomo-club-backend` |
 | **Framework Preset** | `Next.js` (자동 감지됨) |
 | **Root Directory** | `apps/web` ← **반드시 클릭해서 선택** |
 | **Build and Output Settings** | 그대로 둠 (apps/web/vercel.json 이 읽힘) |
@@ -46,7 +46,7 @@ import 화면에서 아래대로 입력:
 
 **Deploy** 버튼 클릭. 첫 빌드 2~4분 소요.
 
-완료되면 도메인 표시: `https://fomo-backend.vercel.app`
+완료되면 도메인 표시: `https://fomo-club-backend.vercel.app`
 
 ---
 
@@ -55,13 +55,13 @@ import 화면에서 아래대로 입력:
 Slack App 매니페스트는 `docs/slack-app-manifest.yml` 사용:
 
 1. https://api.slack.com/apps → 만든 앱 클릭
-2. 좌측 **App Manifest** → 매니페스트 붙여넣고 `{DOMAIN}` → `fomo-backend.vercel.app` 치환
+2. 좌측 **App Manifest** → 매니페스트 붙여넣고 `{DOMAIN}` → `fomo-club-backend.vercel.app` 치환
 3. **Save Changes** → Slack이 URL 검증
 4. **Install App** → **Reinstall to Workspace** → **Allow**
 
 또는 수동:
-- **Slash Commands** → `/fomo` Request URL: `https://fomo-backend.vercel.app/api/slack/commands`
-- **Event Subscriptions** → Request URL: `https://fomo-backend.vercel.app/api/slack/events`
+- **Slash Commands** → `/fomo` Request URL: `https://fomo-club-backend.vercel.app/api/slack/commands`
+- **Event Subscriptions** → Request URL: `https://fomo-club-backend.vercel.app/api/slack/events`
 - **OAuth & Permissions** → Scopes: `chat:write`, `app_mentions:read`, `commands`
 
 ---

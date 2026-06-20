@@ -13,7 +13,7 @@
  */
 import { collectThemeStocks } from "../apps/web/lib/theme-understanding";
 
-const BASE = (process.env.WARM_BASE_URL || "https://taro-stock-web.vercel.app").replace(/\/$/, "");
+const BASE = (process.env.WARM_BASE_URL || "https://fomo-club-backend.vercel.app").replace(/\/$/, "");
 const MIN_MENTIONS = 2; // 종목 추출 임계(가짜 연관 방지 — 빈도 낮은 종목은 워밍 제외)
 const REQ_TIMEOUT_MS = 60_000; // understandTheme/Stock 의 LLM timeout(45s)보다 여유
 

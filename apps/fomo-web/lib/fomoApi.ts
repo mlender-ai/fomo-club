@@ -16,7 +16,7 @@ export type { BannerItem } from "@fomo/core";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_FOMO_API_BASE?.replace(/\/$/, "") ||
-  "https://taro-stock-web.vercel.app";
+  "https://fomo-club-backend.vercel.app";
 
 /** 로그인 토큰이 있으면 Authorization 헤더를 붙인다(없으면 익명). */
 function authHeaders(extra?: Record<string, string>): Record<string, string> {

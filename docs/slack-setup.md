@@ -42,7 +42,7 @@ FOMO Club Agent은 Slack에서 자율 파이프라인을 제어하는 봇입니�
    - **Usage Hint**: `[implement|status|council|approve|merge|help] [args]`
 4. **Save** 클릭
 
-> `{VERCEL_DOMAIN}`은 Vercel 배포 도메인으로 교체 (예: `fomo-backend.vercel.app`)
+> `{VERCEL_DOMAIN}`은 Vercel 배포 도메인으로 교체 (예: `fomo-club-backend.vercel.app`)
 
 ---
 
