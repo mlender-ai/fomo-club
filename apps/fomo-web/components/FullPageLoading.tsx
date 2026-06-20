@@ -78,14 +78,14 @@ export function FullPageLoading({
 export const LOADING_PRESETS = {
   main: {
     estimateMs: 8_000,
-    steps: ["오늘 뭐에 쏠렸는지 모으는 중…", "키워드 정리하는 중…", "거의 다 됐어"] as const,
+    steps: ["오늘 뭐에 쏠렸는지 모으는 중…", "키워드 정리하는 중…", "거의 다 됐어요"] as const,
   },
   theme: {
     estimateMs: 15_000,
-    steps: ["원문 읽는 중…", "강세·약세 정리하는 중…", "거의 다 됐어"] as const,
+    steps: ["원문 읽는 중…", "강세·약세 정리하는 중…", "거의 다 됐어요"] as const,
   },
   stock: {
     estimateMs: 80_000,
-    steps: ["원문 읽는 중…", "강세·약세 정리하는 중…", "거의 다 됐어"] as const,
+    steps: ["원문 읽는 중…", "강세·약세 정리하는 중…", "거의 다 됐어요"] as const,
   },
 } as const;

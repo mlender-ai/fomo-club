@@ -30,7 +30,7 @@ export function SignupGate({ onLoggedIn }: { onLoggedIn: () => void }) {
       }
       onLoggedIn();
     } catch {
-      setError("로그인에 실패했어. 잠깐 뒤에 다시 시도해줄래?");
+      setError("로그인에 실패했어요. 잠깐 뒤에 다시 시도해주실래요?");
       setBusy(false);
     }
   }, [busy, onLoggedIn]);
@@ -39,11 +39,11 @@ export function SignupGate({ onLoggedIn }: { onLoggedIn: () => void }) {
     <div className="fomo-phase-in mt-10 flex flex-col items-center px-2 text-center">
       <FomoFace face="calm" size={84} />
 
-      <h2 className="mt-6 text-base font-semibold text-whiteout">너만의 한 달 지도</h2>
+      <h2 className="mt-6 text-base font-semibold text-whiteout">나만의 한 달 지도</h2>
       <p className="mt-2 max-w-xs text-sm leading-6 text-muted">
-        여기 칠한 칸은 너만의 감정 지도야.
+        여기 칠한 칸은 나만의 감정 지도예요.
         <br />
-        저장하고 이어가려면 가입하자. 오늘 고른 마음은 그대로 남아.
+        저장하고 이어가려면 가입해요. 오늘 고른 마음은 그대로 남아요.
       </p>
 
       <button
@@ -51,13 +51,13 @@ export function SignupGate({ onLoggedIn }: { onLoggedIn: () => void }) {
         disabled={busy}
         className="mt-7 flex w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3.5 font-medium text-[#191600] transition-opacity disabled:opacity-60"
       >
-        {busy ? "잠깐만…" : "카카오로 시작하기"}
+        {busy ? "잠깐만요…" : "카카오로 시작하기"}
       </button>
 
       {error && <p className="mt-3 text-xs text-[#FF9AA2]">{error}</p>}
 
       <p className="mt-5 text-[11px] leading-5 text-muted">
-        가입은 기록 저장·이어보기에만 써. 감정 선택과 홈은 가입 없이도 그대로야.
+        가입은 기록 저장·이어보기에만 써요. 감정 선택과 홈은 가입 없이도 그대로예요.
       </p>
     </div>
   );

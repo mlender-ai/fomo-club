@@ -68,14 +68,14 @@ export function buildWhaleItems(input: WhaleInput): BannerItem[] {
       emoji: "🐋",
       text:
         mc < 0
-          ? `오늘 암호화폐 시총 ${pct(mc)} — 오늘은 다 같이 빨갰어`
+          ? `오늘 암호화폐 시총 ${pct(mc)} — 오늘은 다 같이 빨갰어요`
           : `오늘 암호화폐 시총 ${pct(mc)}`,
       detail: {
         title: "암호화폐 전체 시총",
         body:
           mc < 0
-            ? "오늘은 시장 전체가 같이 내려갔어. 너 혼자 물린 게 아니야."
-            : "오늘은 시장 전체가 같이 올랐어. 분위기만 살펴보자.",
+            ? "오늘은 시장 전체가 같이 내려갔어요. 혼자 물린 게 아니에요."
+            : "오늘은 시장 전체가 같이 올랐어요. 분위기만 살펴봐요.",
         metric: { label: "전체 시총 24시간", value: pct(mc), change: mc },
         source: { label: "CoinGecko", url: "https://www.coingecko.com/" },
       },
@@ -96,10 +96,10 @@ export function buildWhaleItems(input: WhaleInput): BannerItem[] {
         id: `whale-${sym}-ath`,
         kind: "whale",
         emoji: "📉",
-        text: `${name}, 전고점 대비 ${pct(coin.athChange)} — 고점에 물린 건 너만이 아니야`,
+        text: `${name}, 전고점 대비 ${pct(coin.athChange)} — 고점에 물린 사람, 혼자가 아니에요`,
         detail: {
           title: `${name} 전고점 대비`,
-          body: "사상 최고가에 산 사람도 지금 같이 기다리는 중이야. 고점에 물린 건 너만이 아니야.",
+          body: "사상 최고가에 산 사람도 지금 같이 기다리는 중이에요. 고점에 물린 사람, 혼자가 아니에요.",
           metric: { label: "전고점(ATH) 대비", value: pct(coin.athChange), change: coin.athChange },
           source: { label: "CoinGecko", url },
         },
@@ -117,7 +117,7 @@ export function buildWhaleItems(input: WhaleInput): BannerItem[] {
       text: `${worst.name} 24시간 ${pct(worst.change24h!)}`,
       detail: {
         title: `${worst.name} 24시간`,
-        body: "오늘 가장 많이 내린 대형 코인이야. 차트만 잠깐 확인해두자.",
+        body: "오늘 가장 많이 내린 대형 코인이에요. 차트만 잠깐 확인해둬요.",
         metric: { label: "24시간 변화", value: pct(worst.change24h!), change: worst.change24h! },
         source: { label: "CoinGecko", url: "https://www.coingecko.com/" },
       },
@@ -133,7 +133,7 @@ export function buildWhaleItems(input: WhaleInput): BannerItem[] {
       text: `상위 ${withChg.length}개 중 ${downCount}개가 하락 중`,
       detail: {
         title: "시총 상위 코인 흐름",
-        body: `시총 상위 ${withChg.length}개 중 ${downCount}개가 오늘 내렸어. 다들 같은 화면을 보고 있어.`,
+        body: `시총 상위 ${withChg.length}개 중 ${downCount}개가 오늘 내렸어요. 다들 같은 화면을 보고 있어요.`,
         metric: { label: "하락 종목", value: `${downCount}/${withChg.length}` },
         source: { label: "CoinGecko", url: "https://www.coingecko.com/" },
       },
@@ -160,27 +160,27 @@ const MACRO_META: Record<MacroQuote["key"], { emoji: string; sourceUrl: string; 
   kospi: {
     emoji: "🇰🇷",
     sourceUrl: "https://finance.yahoo.com/quote/%5EKS11",
-    note: "코스피가 같이 움직인 날이야.",
+    note: "코스피가 같이 움직인 날이에요.",
   },
   kosdaq: {
     emoji: "📊",
     sourceUrl: "https://finance.yahoo.com/quote/%5EKQ11",
-    note: "코스닥이 같이 움직인 날이야.",
+    note: "코스닥이 같이 움직인 날이에요.",
   },
   spx: {
     emoji: "🇺🇸",
     sourceUrl: "https://finance.yahoo.com/quote/%5EGSPC",
-    note: "미국 대표 지수가 같이 움직인 날이야.",
+    note: "미국 대표 지수가 같이 움직인 날이에요.",
   },
   ndq: {
     emoji: "💻",
     sourceUrl: "https://finance.yahoo.com/quote/%5EIXIC",
-    note: "기술주 중심 지수가 같이 움직인 날이야.",
+    note: "기술주 중심 지수가 같이 움직인 날이에요.",
   },
   sox: {
     emoji: "🔧",
     sourceUrl: "https://finance.yahoo.com/quote/%5ESOX",
-    note: "반도체 섹터가 같이 움직인 날이야.",
+    note: "반도체 섹터가 같이 움직인 날이에요.",
   },
 };
 
@@ -276,12 +276,12 @@ export function buildMacroItems(quotes: MacroQuote[]): BannerItem[] {
       kind: "macro",
       emoji: meta.emoji,
       text: down
-        ? `${q.label} ${pct(q.change)} — 다들 같은 화면 보고 있어`
+        ? `${q.label} ${pct(q.change)} — 다들 같은 화면 보고 있어요`
         : `${q.label} ${pct(q.change)}`,
       detail: {
         title: q.label,
         body: `${meta.note} ${
-          down ? "오늘 내린 건 너 혼자가 아니야." : "오늘은 같이 올랐어. 분위기만 살펴보자."
+          down ? "오늘 내린 건 혼자가 아니에요." : "오늘은 같이 올랐어요. 분위기만 살펴봐요."
         }`,
         metric: {
           label: "전일 종가 대비",
@@ -332,7 +332,7 @@ export function buildPulseItems(input: PulseInput): BannerItem[] {
         text: `오늘 ${input.total}명 참여 · 최다 「${EMOTION_LABELS[top[0]]}」`,
         detail: {
           title: "오늘 함께한 사람들",
-          body: `오늘 ${input.total}명이 마음을 남겼어. 가장 많은 감정은 「${EMOTION_LABELS[top[0]]}」이야. 너만 그런 거 아니야.`,
+          body: `오늘 ${input.total}명이 마음을 남겼어요. 가장 많은 감정은 「${EMOTION_LABELS[top[0]]}」이에요. 다들 그래요.`,
           metric: { label: "참여", value: `${input.total}명` },
         },
       });
@@ -345,7 +345,7 @@ export function buildPulseItems(input: PulseInput): BannerItem[] {
       text: "오늘의 첫 감정을 남겨보세요",
       detail: {
         title: "오늘 함께한 사람들",
-        body: "아직 오늘의 첫 감정이 비어 있어. 네가 먼저 남겨도 좋아.",
+        body: "아직 오늘의 첫 감정이 비어 있어요. 먼저 남겨도 좋아요.",
       },
     });
   }
@@ -359,10 +359,10 @@ export function bannerFallback(): BannerItem {
     id: "fallback",
     kind: "whale",
     emoji: "🐋",
-    text: "고래들도 오늘은 조용해. 잠깐 같이 지켜보자.",
+    text: "고래들도 오늘은 조용해요. 잠깐 같이 지켜봐요.",
     detail: {
       title: "오늘의 시장",
-      body: "지금은 가져올 신호가 조용해. 가짜 숫자 대신 잠깐 같이 지켜보자.",
+      body: "지금은 가져올 신호가 조용해요. 가짜 숫자 대신 잠깐 같이 지켜봐요.",
     },
   };
 }

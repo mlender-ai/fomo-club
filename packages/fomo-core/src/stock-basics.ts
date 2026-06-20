@@ -38,9 +38,9 @@ export interface StockFinancials {
 function perNote(value: string): string | undefined {
   const n = num(value);
   if (n === null || n <= 0) return undefined;
-  if (n >= 50) return "주가가 버는 돈의 수십 배 수준 — 시장이 앞으로의 성장을 크게 기대한다는 뜻이야(기대가 식으면 출렁일 수 있어).";
-  if (n >= 15) return "버는 돈에 비해 주가에 성장 기대가 어느 정도 들어가 있어.";
-  return "버는 돈 대비 주가는 차분한 편 — 큰 성장 기대가 반영되진 않았어.";
+  if (n >= 50) return "주가가 버는 돈의 수십 배 수준 — 시장이 앞으로의 성장을 크게 기대한다는 뜻이에요(기대가 식으면 출렁일 수 있어요).";
+  if (n >= 15) return "버는 돈에 비해 주가에 성장 기대가 어느 정도 들어가 있어요.";
+  return "버는 돈 대비 주가는 차분한 편 — 큰 성장 기대가 반영되진 않았어요.";
 }
 
 /** 영업이익 추이 → 이익 안정성 한 줄(사실: 변동/적자 여부 묘사). 안전이면 undefined(군더더기 없이). */
@@ -50,9 +50,9 @@ function stabilityNote(opRaw: (number | null)[]): string | undefined {
   const hasLoss = vals.some((v) => v < 0);
   const pos = vals.filter((v) => v > 0);
   const swing = pos.length >= 2 && Math.max(...pos) / Math.min(...pos) >= 2;
-  if (hasLoss) return "해에 따라 적자도 있어 — 남기는 돈의 기복이 큰 편이야.";
-  if (swing) return "남기는 돈이 해마다 출렁여 — 이익 안정성은 낮은 편이야.";
-  return "남기는 돈이 해마다 비교적 꾸준한 편이야.";
+  if (hasLoss) return "해에 따라 적자도 있어요 — 남기는 돈의 기복이 큰 편이에요.";
+  if (swing) return "남기는 돈이 해마다 출렁여요 — 이익 안정성은 낮은 편이에요.";
+  return "남기는 돈이 해마다 비교적 꾸준한 편이에요.";
 }
 
 export interface StockBasics {

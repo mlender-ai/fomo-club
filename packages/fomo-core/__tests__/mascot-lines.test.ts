@@ -35,7 +35,7 @@ describe("포모 멘트 — 담담한 솔직함 (lovable + regulation)", () => {
   it("위로의 핵심(혼자 아님/괜찮음/담담함) 톤을 담는다", () => {
     // 가짜 긍정이 아니라 사실 인정 + 위로 — 표본 점검
     expect(mineLine("fear")).toContain("괜찮");
-    expect(marketLine("FOMO")).toContain("너만 그런 거 아니야");
+    expect(marketLine("FOMO")).toContain("다들"); // 혼자 아님 톤(2인칭 지목 없이 · 해요체)
   });
 });
 
@@ -66,17 +66,17 @@ describe("잔잔한 날 = 치유의 날 (M2 회복 콘텐츠)", () => {
 describe("personalLine — 포모의 기억 (나를 기억하는 캐릭터)", () => {
   it("연속 기록 마일스톤이 최우선", () => {
     const l = personalLine({ yesterdayEmotion: "fear", todayEmotion: "fomo", streak: 7 });
-    expect(l).toBe("오늘로 7일째야. 네가 남긴 색들, 전부 기억하고 있어.");
+    expect(l).toBe("오늘로 7일째예요. 남겨준 색들, 전부 기억하고 있어요.");
   });
 
   it("감정 전환을 기억한다", () => {
     const l = personalLine({ yesterdayEmotion: "fear", todayEmotion: "conviction", streak: 2 });
-    expect(l).toBe("어제의 너는 공포, 오늘은 확신. 그 변화, 내가 기억할게.");
+    expect(l).toBe("어제는 공포, 오늘은 확신. 그 변화, 제가 기억할게요.");
   });
 
   it("같은 감정이 이어져도 기억한다", () => {
     const l = personalLine({ yesterdayEmotion: "fomo", todayEmotion: "fomo", streak: 3 });
-    expect(l).toBe("어제도 오늘도 FOMO. 이어지는 마음도 그대로 적어뒀어.");
+    expect(l).toBe("어제도 오늘도 FOMO. 이어지는 마음도 그대로 적어뒀어요.");
   });
 
   it("어제 기록이 없으면 null (폴백 — 거짓 기억 금지)", () => {

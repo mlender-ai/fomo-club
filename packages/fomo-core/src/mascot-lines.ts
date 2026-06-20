@@ -10,20 +10,20 @@ import { EMOTION_LABELS } from "./types";
 
 // 1단계 — 시장의 포모(진입 직후, FOMO Index 상태별 idle 멘트)
 const MARKET_LINES: Record<FomoState, string> = {
-  무관심: "오늘은 다들 조용하네. 잠깐 쉬어가도 되는 날이야.",
-  관망: "딱히 큰일은 없어. 그냥 같이 지켜보는 중이야.",
-  관심: "사람들 시선이 한쪽으로 모이고 있어. 너도 느껴지지.",
-  FOMO: "다들 들떠 있어. 놓치기 싫은 마음, 너만 그런 거 아니야.",
-  광기: "오늘은 감정이 시장보다 앞서 달리는 날이야. 잠깐 숨 고르자.",
+  무관심: "오늘은 다들 조용하네요. 잠깐 쉬어가도 되는 날이에요.",
+  관망: "딱히 큰일은 없어요. 그냥 같이 지켜보는 중이에요.",
+  관심: "사람들 시선이 한쪽으로 모이고 있어요. 다들 느끼는 분위기예요.",
+  FOMO: "다들 들떠 있어요. 놓치기 싫은 마음, 다들 똑같아요.",
+  광기: "오늘은 감정이 시장보다 앞서 달리는 날이에요. 잠깐 숨 고르기 좋은 때예요.",
 };
 
 // 2단계 — 나의 포모(감정 선택에 대한 담담한 반응)
 const MINE_LINES: Record<EmotionType, string> = {
-  fomo: "놓친 것 같아 조급하지. 그 마음 알아. 너만 그런 거 아니야.",
-  fear: "무서울 수 있어. 다들 들떠 있어도 너는 그럴 수 있어. 그래도 괜찮아.",
-  regret: "이미 지난 건 어쩔 수 없지. 오늘 여기 와준 것만으로 충분해.",
-  greed: "더 갖고 싶은 마음, 자연스러워. 잠깐 천천히 가도 돼.",
-  conviction: "오늘은 마음이 또렷하구나. 그 느낌, 기억해 둬.",
+  fomo: "놓친 것 같아 조급하죠. 그 마음 알아요. 다들 그래요.",
+  fear: "무서울 수 있어요. 다들 들떠 있어도 무서울 수 있어요. 그래도 괜찮아요.",
+  regret: "이미 지난 건 어쩔 수 없죠. 오늘 여기 와준 것만으로 충분해요.",
+  greed: "더 갖고 싶은 마음, 자연스러워요. 잠깐 천천히 가도 돼요.",
+  conviction: "오늘은 마음이 또렷하네요. 그 느낌, 기억해 두세요.",
 };
 
 export function marketLine(state: FomoState): string {
@@ -58,13 +58,13 @@ export function mineLine(emotion: EmotionType): string {
  * regulation-reviewer + lovable-reviewer 검사 대상.
  */
 const RESTORATIVE_LINES: readonly string[] = [
-  "오늘은 시장도 한 박자 쉬어가는 날. 차트 잠깐 덮어두고 숨 한 번 쉬자.",
-  "조용한 하루야. 잘 버텨온 너를, 오늘은 좀 쉬게 해줘도 돼.",
-  "큰일 없는 날. 이런 하루하루가 사실 마음이 회복되는 시간이야.",
-  "오늘은 멀리서 지켜보는 날. 아무것도 안 해도 괜찮아.",
-  "잔잔한 날엔 잔잔하게. 산책 한 바퀴, 물 한 잔. 그거면 충분해.",
-  "시장이 조용할 땐 마음도 정리하기 좋아. 오늘 네 기분은 어땠어?",
-  "무던한 하루를 버티는 것도 실력이야. 너, 잘하고 있어.",
+  "오늘은 시장도 한 박자 쉬어가는 날. 차트 잠깐 덮어두고 숨 한 번 쉬어요.",
+  "조용한 하루예요. 잘 버텨온 마음을, 오늘은 좀 쉬게 해줘도 돼요.",
+  "큰일 없는 날. 이런 하루하루가 사실 마음이 회복되는 시간이에요.",
+  "오늘은 멀리서 지켜보는 날. 아무것도 안 해도 괜찮아요.",
+  "잔잔한 날엔 잔잔하게. 산책 한 바퀴, 물 한 잔. 그거면 충분해요.",
+  "시장이 조용할 땐 마음도 정리하기 좋아요. 오늘 기분은 어땠어요?",
+  "무던한 하루를 버티는 것도 실력이에요. 잘하고 있어요.",
 ] as const;
 
 /** 잔잔한 날(낮은 FOMO Index)인지 — 무관심/관망 구간. */
@@ -105,13 +105,13 @@ export function personalLine(ctx: PersonalContext): string | null {
   const { yesterdayEmotion, todayEmotion, streak = 0 } = ctx;
 
   if (streak > 0 && STREAK_MILESTONES.includes(streak)) {
-    return `오늘로 ${streak}일째야. 네가 남긴 색들, 전부 기억하고 있어.`;
+    return `오늘로 ${streak}일째예요. 남겨준 색들, 전부 기억하고 있어요.`;
   }
   if (yesterdayEmotion && todayEmotion && yesterdayEmotion !== todayEmotion) {
-    return `어제의 너는 ${EMOTION_LABELS[yesterdayEmotion]}, 오늘은 ${EMOTION_LABELS[todayEmotion]}. 그 변화, 내가 기억할게.`;
+    return `어제는 ${EMOTION_LABELS[yesterdayEmotion]}, 오늘은 ${EMOTION_LABELS[todayEmotion]}. 그 변화, 제가 기억할게요.`;
   }
   if (yesterdayEmotion && todayEmotion && yesterdayEmotion === todayEmotion) {
-    return `어제도 오늘도 ${EMOTION_LABELS[todayEmotion]}. 이어지는 마음도 그대로 적어뒀어.`;
+    return `어제도 오늘도 ${EMOTION_LABELS[todayEmotion]}. 이어지는 마음도 그대로 적어뒀어요.`;
   }
   return null;
 }

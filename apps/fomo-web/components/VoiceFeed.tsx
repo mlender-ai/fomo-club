@@ -22,8 +22,8 @@ export function VoiceFeed({ items }: { items: VoiceItem[] | null }) {
       <h2 className="text-base font-semibold text-whiteout">오늘의 목소리</h2>
       <p className="mb-4 mt-0.5 text-xs text-muted">
         {allCurated
-          ? "아직 오늘의 한마디가 없어서, 포모가 모아둔 마음을 먼저 들려줄게."
-          : "같은 자리에 있는 사람들의 한마디야."}
+          ? "아직 오늘의 한마디가 없어서, 포모가 모아둔 마음을 먼저 들려드릴게요."
+          : "같은 자리에 있는 사람들의 한마디예요."}
       </p>
 
       <div className="flex flex-col gap-2.5">
@@ -48,12 +48,12 @@ export function VoiceFeed({ items }: { items: VoiceItem[] | null }) {
 
       {items.length === 0 && (
         <p className="mt-8 text-center text-sm text-muted">
-          오늘은 아직 조용해. 네가 먼저 마음을 남겨도 좋아.
+          오늘은 아직 조용해요. 먼저 마음을 남겨도 좋아요.
         </p>
       )}
 
       <p className="mt-5 text-center text-[11px] leading-5 text-muted">
-        한마디는 정해진 조각을 골라 만든 거야. 투자 조언이 아니에요.
+        한마디는 정해진 조각을 골라 만든 거예요. 투자 조언이 아니에요.
       </p>
     </section>
   );

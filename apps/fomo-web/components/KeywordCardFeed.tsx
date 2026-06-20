@@ -96,9 +96,9 @@ function StockFace({
         주목해볼만한 종목
       </p>
       <p className="mt-6 text-lg leading-8 text-whiteout">
-        ‘{fromKeyword}’ 흐름에서 대장주 말고 같이 움직인 종목이야.
+        ‘{fromKeyword}’ 흐름에서 대장주 말고 같이 움직인 종목이에요.
         <br />
-        왜 같이 떴는지 한번 볼래?
+        왜 같이 떴는지 한번 볼까요?
       </p>
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
@@ -134,9 +134,9 @@ function DeckEmpty() {
   return (
     <div className="mt-16 flex flex-col items-center gap-3 px-8 text-center">
       <p className="text-sm leading-6 text-whiteout">
-        오늘은 보여줄 게 잠깐 비었어.
+        오늘은 보여줄 게 잠깐 비었어요.
         <br />
-        조용한 날도 있는 거야. 이따 다시 와줘.
+        조용한 날도 있는 거예요. 이따 다시 와주세요.
       </p>
     </div>
   );
@@ -298,9 +298,9 @@ function KeywordDeck({
     return (
       <div className="mt-16 flex flex-col items-center gap-4 px-8 text-center">
         <p className="text-sm leading-6 text-whiteout">
-          오늘 사람들 시선은 여기까지였어.
+          오늘 사람들 시선은 여기까지였어요.
           <br />
-          내일은 또 어디로 쏠릴지 같이 보자.
+          내일은 또 어디로 쏠릴지 같이 봐요.
         </p>
         <button
           onClick={() => {
@@ -411,7 +411,7 @@ function KeywordDeck({
             context={{
               fromTheme: selected.fromKeyword,
               // B — "왜 보여줬나": 그 종목이 실제 등장한 원문 한 줄(grounded). 없으면 테마 연결만 정직하게.
-              reason: selected.stock.reason ?? `‘${selected.fromKeyword}’ 흐름에서 같이 움직인 종목이야.`,
+              reason: selected.stock.reason ?? `‘${selected.fromKeyword}’ 흐름에서 같이 움직인 종목이에요.`,
             }}
             onClose={closeDepth}
           />

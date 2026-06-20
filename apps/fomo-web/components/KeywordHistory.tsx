@@ -28,9 +28,9 @@ export function KeywordHistory() {
   if (history.length === 0 && watchlist.length === 0) {
     return (
       <p className="mt-16 text-center text-sm leading-6 text-muted">
-        아직 관심 둔 게 없어.
+        아직 관심 둔 게 없어요.
         <br />
-        카드를 넘기거나 종목에 ♥를 누르면 여기 쌓여.
+        카드를 넘기거나 종목에 ♥를 누르면 여기 쌓여요.
       </p>
     );
   }
