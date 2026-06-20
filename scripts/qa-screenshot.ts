@@ -53,7 +53,7 @@ function parseArgs(argv: string[]): CliArgs {
 
 async function run() {
   const args = parseArgs(process.argv.slice(2));
-  const profileDir = await mkdtemp(join(tmpdir(), "auto-trading-bot-qa-chrome-"));
+  const profileDir = await mkdtemp(join(tmpdir(), "fomo-club-qa-chrome-"));
 
   const chromeArgs = [
     "--headless=new",

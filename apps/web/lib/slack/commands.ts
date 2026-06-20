@@ -38,7 +38,7 @@ export async function dispatchCommand(
 ): Promise<string> {
   const handler = commands[command];
   if (!handler) {
-    return `알 수 없는 커맨드: \`${command}\`. \`/taro help\`로 사용법을 확인하세요.`;
+    return `알 수 없는 커맨드: \`${command}\`. \`/fomo help\`로 사용법을 확인하세요.`;
   }
 
   try {
@@ -52,11 +52,11 @@ export async function dispatchCommand(
 
 async function handleImplement(args: string): Promise<CommandResult> {
   if (!args) {
-    return { text: "사용법: `/taro implement {YYYY-MM-DD}`\n예: `/taro implement 2026-05-25`" };
+    return { text: "사용법: `/fomo implement {YYYY-MM-DD}`\n예: `/fomo implement 2026-05-25`" };
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(args)) {
-    return { text: "날짜 형식이 올바르지 않습니다. `YYYY-MM-DD` 형식으로 입력하세요.\n예: `/taro implement 2026-05-25`" };
+    return { text: "날짜 형식이 올바르지 않습니다. `YYYY-MM-DD` 형식으로 입력하세요.\n예: `/fomo implement 2026-05-25`" };
   }
 
   const inputs: Record<string, string> = { brief_date: args };
@@ -100,7 +100,7 @@ async function handleStatus(): Promise<CommandResult> {
 async function handleApprove(args: string): Promise<CommandResult> {
   const issueNum = parseInt(args);
   if (isNaN(issueNum)) {
-    return { text: "사용법: `/taro approve {이슈번호}`" };
+    return { text: "사용법: `/fomo approve {이슈번호}`" };
   }
 
   await addLabel(issueNum, ["implement-approved"]);
@@ -110,7 +110,7 @@ async function handleApprove(args: string): Promise<CommandResult> {
 async function handleMerge(args: string): Promise<CommandResult> {
   const prNum = parseInt(args);
   if (isNaN(prNum)) {
-    return { text: "사용법: `/taro merge {PR번호}`" };
+    return { text: "사용법: `/fomo merge {PR번호}`" };
   }
 
   await mergePR(prNum);
@@ -143,20 +143,20 @@ async function handleConstraints(): Promise<CommandResult> {
 async function handleHelp(): Promise<CommandResult> {
   return {
     text: [
-      "*Taro Agent Bot 커맨드:*",
-      "`/taro implement {날짜}` — CEO Brief 자동 구현 트리거",
-      "`/taro council` — Agent Council 수동 실행",
-      "`/taro status` — 오픈 PR + CEO Brief + 실행 상태 요약",
-      "`/taro approve {이슈#}` — 이슈에 implement-approved 라벨 추가",
-      "`/taro merge {PR#}` — PR squash 머지",
-      "`/taro constraints` — 현재 등록된 standing constraints 목록",
-      "`/taro help` — 이 도움말",
+      "*FOMO Club Agent 커맨드:*",
+      "`/fomo implement {날짜}` — CEO Brief 자동 구현 트리거",
+      "`/fomo council` — Agent Council 수동 실행",
+      "`/fomo status` — 오픈 PR + CEO Brief + 실행 상태 요약",
+      "`/fomo approve {이슈#}` — 이슈에 implement-approved 라벨 추가",
+      "`/fomo merge {PR#}` — PR squash 머지",
+      "`/fomo constraints` — 현재 등록된 standing constraints 목록",
+      "`/fomo help` — 이 도움말",
       "",
       "*직군 에이전트와 대화:*",
       "봇을 멘션하고 직군을 부르면 그 에이전트가 답합니다.",
-      "• `@Taro Agent Bot PM 이거 어때?` — PM 관점",
-      "• `@Taro Agent Bot CTO한테 물어봐` — CTO(개발) 관점",
-      "• `@Taro Agent Bot 보안 의견 줘` — Security 관점",
+      "• `@FOMO Club Agent PM 이거 어때?` — PM 관점",
+      "• `@FOMO Club Agent CTO한테 물어봐` — CTO(개발) 관점",
+      "• `@FOMO Club Agent 보안 의견 줘` — Security 관점",
       "직군 없이 물으면 운영봇(Hermes)이 상태·조회를 답합니다.",
     ].join("\n"),
   };

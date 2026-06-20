@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     waitUntil(dispatchAndRespond(cmdName, args, userId, channelId, responseUrl));
     return NextResponse.json({
       response_type: "in_channel",
-      text: `⏳ \`/taro ${cmdName}\` 처리 중...`,
+      text: `⏳ \`/fomo ${cmdName}\` 처리 중...`,
     });
   }
 

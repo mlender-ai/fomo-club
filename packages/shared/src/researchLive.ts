@@ -17,7 +17,7 @@ import {
   type UserResearchPreferences
 } from "./research";
 
-const RSS_USER_AGENT = "Mozilla/5.0 (compatible; TradingResearchBot/1.0; +https://github.com/mlender-ai/auto-trading-bot)";
+const RSS_USER_AGENT = "Mozilla/5.0 (compatible; FomoClubResearchBot/1.0; +https://github.com/mlender-ai/fomo-club)";
 const YAHOO_RSS_URL = "https://feeds.finance.yahoo.com/rss/2.0/headline";
 const YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart";
 const YAHOO_SEARCH_URL = "https://query2.finance.yahoo.com/v1/finance/search";
