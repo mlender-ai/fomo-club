@@ -30,11 +30,12 @@ function voteConfidence(total: number): HeatConfidence {
  */
 export function emotionHeat(tally: EmotionTally = {}): HeatComponent {
   try {
-    const fomo = tally.fomo ?? 0;
-    const greed = tally.greed ?? 0;
-    const fear = tally.fear ?? 0;
-    const regret = tally.regret ?? 0;
-    const conviction = tally.conviction ?? 0;
+    const safe = (v: number | undefined) => (Number.isFinite(v) ? v! : 0);
+    const fomo = safe(tally.fomo);
+    const greed = safe(tally.greed);
+    const fear = safe(tally.fear);
+    const regret = safe(tally.regret);
+    const conviction = safe(tally.conviction);
 
     const total = fomo + greed + fear + regret + conviction;
 
