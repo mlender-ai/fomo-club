@@ -4,6 +4,7 @@ import { useState } from "react";
 import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
 import { KeywordHistory } from "@/components/KeywordHistory";
+import { AuthSheet } from "@/components/AuthSheet";
 import type {
   FomoIndexResponse,
   TallyResponse,
@@ -24,6 +25,8 @@ type Tab = "card" | "history";
 
 export function HomeView({
   index,
+  loggedIn,
+  onLoggedIn,
 }: {
   index: FomoIndexResponse | null;
   tally: TallyResponse | null;
@@ -39,6 +42,7 @@ export function HomeView({
   onLoggedIn: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("card");
+  const [authOpen, setAuthOpen] = useState(false);
   const color = index ? scoreToColor(index.score) : undefined;
 
   /**
@@ -58,9 +62,15 @@ export function HomeView({
   return (
     <>
       <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-20 pt-4">
-        {/* 상단 얇은 띠: 로고 */}
-        <div className="flex items-center">
+        {/* 상단 얇은 띠: 로고 + 로그인(취향 기억) */}
+        <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
+          <button
+            onClick={() => setAuthOpen(true)}
+            className="text-xs text-muted transition-colors hover:text-whiteout"
+          >
+            {loggedIn ? "내 계정" : "로그인"}
+          </button>
         </div>
 
         {/* 시장 온도(FOMO Index) — 전체 폴백이면 정직하게 "수집 중" 표시 @author 안티그래비티 */}
@@ -101,6 +111,10 @@ export function HomeView({
           <TabButton active={tab === "history"} onClick={() => setTab("history")} label="히스토리" />
         </div>
       </nav>
+
+      {authOpen && (
+        <AuthSheet loggedIn={loggedIn} onClose={() => setAuthOpen(false)} onAuthed={onLoggedIn} />
+      )}
     </>
   );
 }

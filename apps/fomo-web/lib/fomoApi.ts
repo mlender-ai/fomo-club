@@ -9,7 +9,7 @@ import type {
   MoodSignal,
   ScoredArticle,
 } from "@fomo/core";
-import { getToken, setToken } from "@/lib/auth";
+import { getToken, setToken, clearToken } from "@/lib/auth";
 import { getSessionId } from "@/lib/session";
 
 export type { BannerItem } from "@fomo/core";
@@ -183,4 +183,57 @@ export function recordTaste(
     body: JSON.stringify({ subjectType, subject, signal, sessionId: getSessionId() }),
     keepalive: true, // 화면 전환/언마운트 중에도 전송 보장
   }).catch((err) => console.warn("[recordTaste] failed", err));
+}
+
+// ── 트랙 B: 이메일+비밀번호 인증 ────────────────────────────────────────────
+// 비로그인 둘러보기는 그대로 유지 — 로그인은 "취향을 기억"하기 위한 선택. 로그인/가입 직후
+// 익명 sessionId 로 쌓인 취향을 내 계정으로 연결(linkTaste)해 가입 전 학습이 끊기지 않게 한다.
+
+/** 익명 sessionId 취향 신호 → 내 계정 연결(로그인 직후 1회). 실패해도 흐름 안 막음. */
+async function linkTaste(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/fomo/taste/link`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ sessionId: getSessionId() }),
+    });
+  } catch (err) {
+    console.warn("[linkTaste] failed", err);
+  }
+}
+
+async function authPost(path: string, email: string, password: string): Promise<LoginResponse> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = (await res.json().catch(() => ({}))) as Partial<LoginResponse> & { error?: string };
+  if (!res.ok || !data.token) throw new Error(data.error || `auth ${res.status}`);
+  setToken(data.token);
+  await linkTaste(); // 가입 전 익명 취향을 계정으로 이어붙임
+  return data as LoginResponse;
+}
+
+/** 이메일+비밀번호 가입 → JWT 저장 + 익명 취향 연결. */
+export const registerEmail = (email: string, password: string) =>
+  authPost("/api/fomo/auth/register", email, password);
+
+/** 이메일+비밀번호 로그인 → JWT 저장 + 익명 취향 연결. */
+export const loginEmail = (email: string, password: string) =>
+  authPost("/api/fomo/auth/login", email, password);
+
+/** 로그아웃 — 토큰만 제거(서버 상태 없음). */
+export function logout(): void {
+  clearToken();
+}
+
+/** 탈퇴 — 계정·취향 신호 삭제(서버 CASCADE) 후 토큰 제거. */
+export async function deleteAccount(): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/fomo/account`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`delete ${res.status}`);
+  clearToken();
 }
