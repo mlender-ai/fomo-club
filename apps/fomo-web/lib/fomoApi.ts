@@ -110,6 +110,15 @@ export const fetchStockBasics = (stock: string) =>
     `/api/fomo/stock-basics?stock=${encodeURIComponent(stock)}`
   );
 
+/** 카드 앞면 FOMO 신호(rev2 후속) — baseline·라이브 수급 streak·시총순위·3개월 스파크라인. 도달 종목 lazy. */
+export type { CardFrontSignals } from "@fomo/core";
+export interface StockFrontResponse {
+  signals: import("@fomo/core").CardFrontSignals;
+  sparkline: number[];
+}
+export const fetchStockFront = (stock: string) =>
+  get<StockFrontResponse>(`/api/fomo/stock-front?stock=${encodeURIComponent(stock)}`);
+
 /** 섹터 → 종목 풀(섹터구조 ②). 콜드스타트 노출 순. baseline=true 면 baseline 보장(국내) 종목만. */
 export type { StockSector, SectorStock } from "@fomo/core";
 export interface SectorStocksResponse {

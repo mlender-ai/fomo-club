@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildCardFrontHook, signalsFromBasics } from "@fomo/core";
+import { buildCardFrontHook, sparklinePath, seriesIsUp } from "@fomo/core";
 import type { KeywordCard, SectorStock, StockSector, CardFrontHook, CardFrontSignals } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
-import { fetchSectorStocks, fetchKeywords, fetchStockBasics, recordTaste } from "@/lib/fomoApi";
+import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
@@ -107,15 +107,33 @@ function InitialBadge({ name }: { name: string }) {
  * 강도에 비례한 톤(§3) — 핫한 종목은 세게, 조용한 종목은 차분하게. 점수·판정·예측 없음.
  * 로고 이미지·미니차트·시총순위는 후속(배포 복구 후 서버 페치) — 지금은 이니셜/태그/텍스트 골격.
  */
+/** 3개월 종가 스파크라인 — 인라인 SVG(라이브러리 없음). 추세색: 상승=코랄/하락=블루. */
+function Sparkline({ series }: { series: number[] }) {
+  const paths = sparklinePath(series, 300, 44);
+  if (!paths) return null;
+  const up = seriesIsUp(series);
+  const stroke = up ? UP : "#60A5FA";
+  return (
+    <svg viewBox="0 0 300 44" preserveAspectRatio="none" className="mt-4 h-11 w-full" aria-hidden>
+      <path d={paths.area} fill={stroke} opacity={0.1} />
+      <path d={paths.line} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function StockCardFace({
   stock,
   hook,
   changePct,
+  rankLabel,
+  sparkline,
   progress,
 }: {
   stock: DeckStock;
   hook: CardFrontHook;
   changePct?: number | undefined;
+  rankLabel?: string | undefined;
+  sparkline?: number[] | undefined;
   progress?: string | undefined;
 }) {
   const color = INTENSITY_COLOR[hook.intensity] ?? "#94A3B8";
@@ -134,7 +152,10 @@ function StockCardFace({
             <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
             {stock.marquee && <span className="text-base" aria-hidden>⭐</span>}
           </div>
-          <span className="font-pixel text-xs text-muted">{MARKET_LABEL[stock.market] ?? stock.market}</span>
+          <span className="font-pixel text-xs text-muted">
+            {MARKET_LABEL[stock.market] ?? stock.market}
+            {rankLabel && <span> · {rankLabel}</span>}
+          </span>
         </div>
       </div>
 
@@ -152,6 +173,9 @@ function StockCardFace({
       <p className="mt-4 text-xl font-bold leading-8" style={{ color }}>
         {hook.headline}
       </p>
+
+      {/* 4행 — 미니 스파크라인(최근 3개월) */}
+      {sparkline && sparkline.length >= 2 && <Sparkline series={sparkline} />}
 
       {/* 5행 — 다가오는 재료(구체·일정) */}
       {hook.catalysts.length > 0 && (
@@ -254,36 +278,40 @@ function SectorDeckInner({
   const startX = useRef(0);
   const moved = useRef(false);
 
-  // 앞면 후킹 신호 — 도달하는 카드의 baseline(가격·52주 등)을 lazy 로 불러 규칙기반 후킹(비용 방어 §5).
-  // 국내(naverCode) 종목만 가격 도출 — 없으면 발굴 근거/잠잠으로. 캐시(canonical 키)로 재방문 즉시.
-  const [signals, setSignals] = useState<Record<string, CardFrontSignals>>({});
+  // 앞면 FOMO 신호 — 도달하는 카드의 stock-front(가격·52주·라이브 수급 streak·시총순위·3개월 종가)를
+  // lazy 로 서버에서 조립해 받는다(비용 방어 §5). 캐시(canonical 키)로 재방문 즉시.
+  const [front, setFront] = useState<Record<string, { signals: CardFrontSignals; sparkline: number[] }>>({});
   const inflight = useRef<Set<string>>(new Set());
   const asOf = useRef<string>(kstTodayLabel()).current;
 
   const at = (i: number) => stocks[((i % stocks.length) + stocks.length) % stocks.length]!;
 
-  const ensureSignals = useCallback(
+  const ensureFront = useCallback(
     (stock: DeckStock) => {
       const key = stock.canonical;
-      if (!stock.naverCode || signals[key] || inflight.current.has(key)) return;
+      if (!stock.naverCode || front[key] || inflight.current.has(key)) return;
       inflight.current.add(key);
-      fetchStockBasics(key)
-        .then((b) => setSignals((prev) => ({ ...prev, [key]: signalsFromBasics(b) })))
-        .catch((err) => console.warn("[SectorStockDeck] basics signal failed", key, err))
+      fetchStockFront(key)
+        .then((d) => setFront((prev) => ({ ...prev, [key]: { signals: d.signals, sparkline: d.sparkline } })))
+        .catch((err) => console.warn("[SectorStockDeck] stock-front failed", key, err))
         .finally(() => inflight.current.delete(key));
     },
-    [signals]
+    [front]
   );
 
-  // 종목별 신호 조립 — basics(가격·52주) + 테마 태그(섹터) + 발굴 근거(named catalyst).
-  // 라이브 수급 streak·거래량·시총순위·일정은 후속(서버 페치, 배포 복구 후) — 엔진은 채워지면 자동 반영.
+  // 종목별 신호 조립 — 서버 신호(가격·52주·수급 streak·시총순위) + 테마 태그(섹터) + 발굴 근거(named catalyst).
   const signalsFor = (stock: DeckStock): CardFrontSignals => {
-    const sig: CardFrontSignals = { ...(signals[stock.canonical] ?? {}), asOf, themeLabel: stock.sector };
+    const sig: CardFrontSignals = { ...(front[stock.canonical]?.signals ?? {}), asOf, themeLabel: stock.sector };
     if (stock.reason) sig.catalysts = [{ label: stock.reason, kind: "news" }];
     return sig;
   };
   const hookFor = (stock: DeckStock): CardFrontHook => buildCardFrontHook(signalsFor(stock));
-  const pctOf = (stock: DeckStock): number | undefined => signals[stock.canonical]?.changePct;
+  const pctOf = (stock: DeckStock): number | undefined => front[stock.canonical]?.signals.changePct;
+  const sparkOf = (stock: DeckStock): number[] | undefined => front[stock.canonical]?.sparkline;
+  const rankLabelFor = (stock: DeckStock): string | undefined => {
+    const r = front[stock.canonical]?.signals.marketCapRank;
+    return r ? `시총 ${r.rank}위` : undefined; // 시장명은 1행에 이미 있음(중복 방지)
+  };
 
   const flingNext = useCallback((dir: "left" | "right") => {
     if (prefersReducedMotion()) {
@@ -343,9 +371,9 @@ function SectorDeckInner({
 
   // 보이는 카드(+다음 1장)의 신호를 미리 채운다 — 도달 종목만(비용 방어).
   useEffect(() => {
-    ensureSignals(at(idx));
-    ensureSignals(at(idx + 1));
-  }, [idx, ensureSignals]); // eslint-disable-line react-hooks/exhaustive-deps
+    ensureFront(at(idx));
+    ensureFront(at(idx + 1));
+  }, [idx, ensureFront]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const top = at(idx);
   const topTransform = exiting
@@ -372,7 +400,7 @@ function SectorDeckInner({
                 zIndex: 1,
               }}
             >
-              <StockCardFace stock={stock} hook={hookFor(stock)} changePct={pctOf(stock)} />
+              <StockCardFace stock={stock} hook={hookFor(stock)} changePct={pctOf(stock)} rankLabel={rankLabelFor(stock)} sparkline={sparkOf(stock)} />
             </div>
           ))}
 
@@ -399,7 +427,7 @@ function SectorDeckInner({
           >
             ← 덜 관심
           </span>
-          <StockCardFace stock={top} hook={hookFor(top)} changePct={pctOf(top)} progress={`${(idx % stocks.length) + 1} / ${stocks.length}`} />
+          <StockCardFace stock={top} hook={hookFor(top)} changePct={pctOf(top)} rankLabel={rankLabelFor(top)} sparkline={sparkOf(top)} progress={`${(idx % stocks.length) + 1} / ${stocks.length}`} />
         </div>
       </div>
 
