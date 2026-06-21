@@ -7,6 +7,7 @@ import {
   isLeadingSetup,
   fomoLabelTextsSafe,
   rankByScore,
+  rankFeedByFomo,
   isFrontHookSafe,
   C_WEIGHTS,
   type FomoScoreInputs,
@@ -217,6 +218,65 @@ describe("fomoCardView — 엔진 출력 → 카드(척추 ②, 단일 출처)",
       const h = fomoCardView(s, { sector: "반도체" }).headline;
       expect(isFrontHookSafe(h), `금칙어: ${h}`).toBe(true);
     }
+  });
+});
+
+describe("rankFeedByFomo — 발견 피드 밴드 정렬 + 일별 셔플(척추 ④)", () => {
+  const items = [
+    { key: "식는주", label: "cooling" as const },
+    { key: "조용주", label: "quiet" as const },
+    { key: "핫주", label: "hot" as const },
+    { key: "데우주", label: "warming" as const },
+    { key: "수급주", label: "incoming" as const }, // 💎
+    { key: "잠잠주", label: "silent" as const },
+  ];
+
+  it("밴드 순서 — 🔥/💎 상단, 식는중·silent 하단", () => {
+    const order = rankFeedByFomo(items, { seed: "2026-06-22" });
+    const band = (k: string) => order.indexOf(k);
+    // hot·incoming(💎) 이 warming·quiet·cooling·silent 보다 앞
+    expect(band("핫주")).toBeLessThan(band("데우주"));
+    expect(band("수급주")).toBeLessThan(band("데우주"));
+    expect(band("데우주")).toBeLessThan(band("조용주"));
+    expect(band("조용주")).toBeLessThan(band("식는주"));
+    expect(band("잠잠주")).toBe(order.length - 1); // silent 최하단
+  });
+
+  it("★핵심 — 💎(incoming, C 낮음)가 상위 밴드에 노출(바닥 안 가라앉음)", () => {
+    // 💎가 hot 과 같은 최상위 밴드(0) → 항상 상위 2개 안.
+    const order = rankFeedByFomo(items, { seed: "2026-06-22" });
+    expect(order.slice(0, 2)).toContain("수급주");
+    // 여러 시드에서도 늘 상위 밴드(데우는중보다 위)
+    for (const seed of ["a", "b", "2026-06-21", "x"]) {
+      const o = rankFeedByFomo(items, { seed });
+      expect(o.indexOf("수급주")).toBeLessThan(o.indexOf("데우주"));
+    }
+  });
+
+  it("일별 시드 결정성 — 같은 날 같은 순서, 다른 날 다른 순서", () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({ key: `q${i}`, label: "quiet" as const }));
+    expect(rankFeedByFomo(many, { seed: "2026-06-22" })).toEqual(rankFeedByFomo(many, { seed: "2026-06-22" }));
+    expect(rankFeedByFomo(many, { seed: "2026-06-22" })).not.toEqual(rankFeedByFomo(many, { seed: "2026-06-23" }));
+  });
+
+  it("콜드스타트(취향 없음) — 객관 밴드 순서로 안전", () => {
+    const order = rankFeedByFomo(items, { seed: "2026-06-22" });
+    expect(order[order.length - 1]).toBe("잠잠주"); // 억지로 상단에 안 올림
+  });
+
+  it("개인화 seam — rank 주입 시 밴드 내 그 순서(밴드는 유지)", () => {
+    const band0 = [
+      { key: "h1", label: "hot" as const },
+      { key: "h2", label: "hot" as const },
+      { key: "w1", label: "warming" as const },
+    ];
+    const order = rankFeedByFomo(band0, { seed: "x", rank: (k) => (k === "h2" ? 100 : 0) });
+    expect(order[0]).toBe("h2"); // 취향 점수 높은 게 밴드 내 위로
+    expect(order[order.length - 1]).toBe("w1"); // 밴드는 유지(warming 은 그대로 아래)
+  });
+
+  it("dropSilent — silent 제외", () => {
+    expect(rankFeedByFomo(items, { seed: "x", dropSilent: true })).not.toContain("잠잠주");
   });
 });
 
