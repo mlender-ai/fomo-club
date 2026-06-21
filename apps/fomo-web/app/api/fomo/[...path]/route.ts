@@ -8,6 +8,7 @@ import {
   isTokenUnexpired,
   sanitizeAuthPayload,
 } from "../../../../lib/auth-proxy";
+import { isTrustedRequestOrigin } from "../../../../lib/request-origin";
 import { consumeRateLimit } from "../../../../lib/request-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
 
   if (!isAllowedProxyRequest(proxyPath, request.method)) {
     return noStoreJson({ error: "Not found" }, { status: 404 });
+  }
+
+  if (!isTrustedRequestOrigin(request.method, request.headers, request.nextUrl)) {
+    return noStoreJson({ error: "허용되지 않은 요청 출처입니다." }, { status: 403 });
   }
 
   const rateLimit = consumeRateLimit(proxyPath, request.headers.get("x-forwarded-for"));

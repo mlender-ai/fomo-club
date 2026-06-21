@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { isAllowedProxyRequest, isTokenUnexpired, sanitizeAuthPayload } from "../lib/auth-proxy";
+import { isTrustedRequestOrigin } from "../lib/request-origin";
 import { consumeRateLimit, getClientIp, resetRateLimitStore } from "../lib/request-rate-limit";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
@@ -41,6 +42,44 @@ describe("FOMO Web browser auth security", () => {
     expect(isAllowedProxyRequest("auth/login", "GET")).toBe(false);
     expect(isAllowedProxyRequest("../runtime/state", "GET")).toBe(false);
     expect(isAllowedProxyRequest("feed", "GET")).toBe(false);
+  });
+
+  it("allows state-changing requests only from the current web origin", () => {
+    const requestUrl = new URL("https://fomo.club/api/fomo/taste");
+    const sameOriginHeaders = new Headers({
+      origin: "https://fomo.club",
+      host: "fomo.club",
+    });
+
+    expect(isTrustedRequestOrigin("POST", sameOriginHeaders, requestUrl)).toBe(true);
+    expect(
+      isTrustedRequestOrigin(
+        "POST",
+        new Headers({ origin: "https://attacker.example", host: "fomo.club" }),
+        requestUrl
+      )
+    ).toBe(false);
+    expect(isTrustedRequestOrigin("DELETE", new Headers({ host: "fomo.club" }), requestUrl)).toBe(false);
+  });
+
+  it("uses forwarded host and protocol behind the deployment proxy", () => {
+    const internalUrl = new URL("http://internal:3000/api/fomo/emotions/vote");
+    const headers = new Headers({
+      origin: "https://preview.fomo.club",
+      host: "internal:3000",
+      "x-forwarded-host": "preview.fomo.club",
+      "x-forwarded-proto": "https",
+    });
+
+    expect(isTrustedRequestOrigin("PATCH", headers, internalUrl)).toBe(true);
+    expect(isTrustedRequestOrigin("GET", new Headers(), internalUrl)).toBe(true);
+  });
+
+  it("rejects opaque and malformed mutation origins", () => {
+    const requestUrl = new URL("https://fomo.club/api/fomo/auth/logout");
+
+    expect(isTrustedRequestOrigin("POST", new Headers({ origin: "null" }), requestUrl)).toBe(false);
+    expect(isTrustedRequestOrigin("POST", new Headers({ origin: "not a url" }), requestUrl)).toBe(false);
   });
 
   it("does not write authentication credentials to localStorage or browser Authorization headers", () => {
