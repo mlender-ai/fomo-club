@@ -199,6 +199,33 @@ export function fomoLabelTextsSafe(): boolean {
   return Object.values(LABEL_TEXT).every((t) => isFrontHookSafe(t));
 }
 
+// ── 상세 페이지 표현(척추 ③ — 포모 해부·근거 등급. 단일 출처, 예측·판정 0) ──────────
+/** 이 포모 점수를 만든 *주된 동인*을 쉬운 한 줄로(왜 핫한가 / 왜 조용한가). 사실만, 예측 금지. */
+export function fomoWhy(s: FomoScoreResult): string {
+  const i = s.inputs;
+  if (s.label === "incoming")
+    return "가격·거래량은 아직 조용한데, 외국인·기관 수급이 먼저 들어오는 중이에요.";
+  if (i.accumulationDivergence)
+    return "거래는 느는데 가격은 잠잠해요 — 누군가 조용히 담는 모양새예요.";
+  if (s.label === "cooling")
+    return "거래는 많지만 가격이 빠지면서 한 물 가는 분위기예요.";
+  const vol = i.volume ?? 0;
+  const price = i.price ?? 0;
+  const mention = i.mention ?? 0;
+  if (s.label === "silent" || (vol < 30 && price < 30 && mention < 30 && s.leadSignal < FOMO_THRESHOLDS.lead))
+    return "아직 큰 거래도, 끌어당기는 재료도 안 붙었어요. 조용한 자리예요.";
+  const top = Math.max(vol, price, mention);
+  if (top === vol && vol > 0) return "평소보다 훨씬 많은 거래가 몰리면서 시선이 쏠렸어요.";
+  if (top === mention && mention > 0) return "여기저기서 많이 회자되며 주목이 몰렸어요.";
+  if (top === price && price > 0) return "가격이 크게 움직이면서 관심이 모였어요.";
+  return "여러 신호가 조금씩 모이는 중이에요.";
+}
+
+/** 근거 등급(confidence 가시화 — StockRay "근거 보통"과 동급, 정직 원칙). */
+export function confidenceGrade(confidence: number): "근거 탄탄" | "근거 보통" | "근거 약함" {
+  return confidence >= 0.8 ? "근거 탄탄" : confidence >= 0.45 ? "근거 보통" : "근거 약함";
+}
+
 // ── 카드 앞면 표현(척추 ② — 엔진 출력 → 카드. 단일 출처) ──────────────────────
 export type FomoTone = "hot" | "incoming" | "warming" | "calm" | "cooling";
 
