@@ -3,6 +3,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../../../../../lib/prisma";
 import { corsJson, withCors } from "../../../../../lib/fomo";
 import { issueToken } from "@/lib/auth/jwt";
+import {
+  BCRYPT_MAX_PASSWORD_BYTES,
+  exceedsBcryptPasswordLimit,
+} from "@/lib/auth/passwordPolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +36,12 @@ export async function POST(req: NextRequest) {
     }
     if (password.length < MIN_PASSWORD) {
       return corsJson({ error: `비밀번호는 ${MIN_PASSWORD}자 이상이어야 해.`, code: "WEAK_PASSWORD" }, { status: 400 });
+    }
+    if (exceedsBcryptPasswordLimit(password)) {
+      return corsJson(
+        { error: `비밀번호는 UTF-8 기준 ${BCRYPT_MAX_PASSWORD_BYTES}바이트 이하여야 해.`, code: "WEAK_PASSWORD" },
+        { status: 400 }
+      );
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });

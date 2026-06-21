@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../../../../../lib/prisma";
 import { corsJson, withCors } from "../../../../../lib/fomo";
 import { issueToken } from "@/lib/auth/jwt";
+import { exceedsBcryptPasswordLimit } from "@/lib/auth/passwordPolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,9 @@ export async function POST(req: NextRequest) {
     const password = body.password ?? "";
     if (!email || !password) {
       return corsJson({ error: "이메일과 비밀번호를 입력해줘.", code: "MISSING" }, { status: 400 });
+    }
+    if (exceedsBcryptPasswordLimit(password)) {
+      return corsJson({ error: "이메일 또는 비밀번호가 맞지 않아.", code: "BAD_CREDENTIALS" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });

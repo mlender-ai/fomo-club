@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { createLogger } from "../../../../lib/logger";
-import { tokenStore } from "../../../../lib/passwordResetStore";
+import { hashResetToken, tokenStore } from "../../../../lib/passwordResetStore";
 
 const log = createLogger("auth/forgot-password");
 
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   for (const [k, v] of tokenStore) {
     if (v.email === email && !v.used) tokenStore.delete(k);
   }
-  tokenStore.set(token, { email, expiresAt, used: false });
+  tokenStore.set(hashResetToken(token), { email, expiresAt, used: false });
 
   log.info("password reset token issued", { email, expiresAt: new Date(expiresAt).toISOString() });
 
@@ -75,7 +75,5 @@ export async function POST(req: NextRequest) {
   // 프로덕션: 이메일에 아래 형태로 발송, 피싱 방지 문구 포함 필수.
   // "링크: https://fomo-club.com/reset-password?token=<token>"
   // "이 링크는 fomo-club.com 도메인에서만 유효합니다. 본인이 요청하지 않았다면 무시하세요."
-  log.debug("reset token (dev only — remove before prod)", { token });
-
   return NextResponse.json({ ok: true });
 }
