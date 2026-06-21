@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       "packages/**/__tests__/**/*.test.ts",
       "apps/web/__tests__/**/*.test.ts",
+      "apps/fomo-web/__tests__/**/*.test.ts",
       "apps/fomo-club/tests/**/*.e2e.ts",
       "scripts/**/__tests__/**/*.test.ts",
     ],

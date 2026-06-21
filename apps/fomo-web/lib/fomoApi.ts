@@ -9,7 +9,6 @@ import type {
   MoodSignal,
   ScoredArticle,
 } from "@fomo/core";
-import { getToken, setToken, clearToken } from "@/lib/auth";
 import { getSessionId } from "@/lib/session";
 
 export type { BannerItem } from "@fomo/core";
@@ -17,12 +16,6 @@ export type { BannerItem } from "@fomo/core";
 const API_BASE =
   process.env.NEXT_PUBLIC_FOMO_API_BASE?.replace(/\/$/, "") ||
   "https://fomo-club-backend.vercel.app";
-
-/** 로그인 토큰이 있으면 Authorization 헤더를 붙인다(없으면 익명). */
-function authHeaders(extra?: Record<string, string>): Record<string, string> {
-  const token = getToken();
-  return { ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-}
 
 export interface FomoIndexResponse {
   date: string;
@@ -50,7 +43,7 @@ export interface CalendarResponse {
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: authHeaders() });
+  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`GET ${path} ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -134,18 +127,25 @@ export const fetchSectorStocks = (sector: string, baselineOnly = false) =>
   );
 
 export const fetchCalendar = (sessionId: string, month?: string) =>
-  get<CalendarResponse>(
+  getPrivate<CalendarResponse>(
     `/api/fomo/emotions/calendar?sessionId=${encodeURIComponent(sessionId)}${month ? `&month=${month}` : ""}`
   );
+
+async function getPrivate<T>(path: string): Promise<T> {
+  const res = await fetch(path, { cache: "no-store", credentials: "same-origin" });
+  if (!res.ok) throw new Error(`GET ${path} ${res.status}`);
+  return res.json() as Promise<T>;
+}
 
 export async function postVote(
   sessionId: string,
   emotion: string,
   voice?: { situationKey: string; resolveKey: string }
 ): Promise<TallyResponse & { mine: string }> {
-  const res = await fetch(`${API_BASE}/api/fomo/emotions/vote`, {
+  const res = await fetch("/api/fomo/emotions/vote", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({ sessionId, emotion, source: "web", ...voice }),
   });
   if (!res.ok) throw new Error(`vote ${res.status}`);
@@ -163,32 +163,31 @@ export interface VoiceItem {
 export const fetchVoices = () => get<{ date: string; items: VoiceItem[] }>("/api/fomo/voices");
 
 interface LoginResponse {
-  token: string;
   user: { id: string; displayName: string | null; isNew: boolean };
 }
 
 /**
- * 카카오 access_token으로 로그인 → JWT 저장 후 반환.
+ * 카카오 access_token으로 로그인 → BFF가 JWT를 HttpOnly 쿠키에 저장한 뒤 안전한 사용자 정보만 반환.
  * [보관] 감정 캘린더(FEATURE_HISTORY_TAB) 가입 흐름 전용 — 현재 flag OFF라 미사용.
  * 인증 백엔드(`/api/fomo/auth/login`)는 감정 모델 복원 시 함께 복원한다.
  */
 export async function loginKakao(accessToken: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_BASE}/api/fomo/auth/login`, {
+  const res = await fetch("/api/fomo/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider: "KAKAO", identityToken: accessToken }),
   });
   if (!res.ok) throw new Error(`login ${res.status}`);
   const data = (await res.json()) as LoginResponse;
-  if (data.token) setToken(data.token);
   return data;
 }
 
 /** 로그인 직후 익명 sessionId 기록을 내 계정으로 연결(가입 전 감정 보존). */
 export async function linkSession(sessionId: string): Promise<{ linked: number }> {
-  const res = await fetch(`${API_BASE}/api/fomo/emotions/link`, {
+  const res = await fetch("/api/fomo/emotions/link", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({ sessionId }),
   });
   if (!res.ok) throw new Error(`link ${res.status}`);
@@ -196,7 +195,7 @@ export async function linkSession(sessionId: string): Promise<{ linked: number }
 }
 
 // ── 트랙 B: 취향 학습 적재 ──────────────────────────────────────────────────
-// 스와이프(관심/덜관심)·깊이 신호(뎁스 열람/연관주 탭)를 서버에 쌓는다. 로그인이면 Bearer 로 유저별,
+// 스와이프(관심/덜관심)·깊이 신호(뎁스 열람/연관주 탭)를 서버에 쌓는다. 로그인 쿠키가 있으면 BFF가 유저별,
 // 아니면 익명 sessionId 로(익명 적재 먼저). fire-and-forget — 실패해도 스와이프 흐름을 막지 않는다.
 export type TasteSubjectType = "theme" | "stock";
 export type TasteSignalKind = "more" | "less" | "view_depth" | "tap_related";
@@ -207,9 +206,10 @@ export function recordTaste(
   signal: TasteSignalKind
 ): void {
   if (typeof window === "undefined" || !subject) return;
-  void fetch(`${API_BASE}/api/fomo/taste`, {
+  void fetch("/api/fomo/taste", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({ subjectType, subject, signal, sessionId: getSessionId() }),
     keepalive: true, // 화면 전환/언마운트 중에도 전송 보장
   }).catch((err) => console.warn("[recordTaste] failed", err));
@@ -222,9 +222,10 @@ export function recordTaste(
 /** 익명 sessionId 취향 신호 → 내 계정 연결(로그인 직후 1회). 실패해도 흐름 안 막음. */
 async function linkTaste(): Promise<void> {
   try {
-    await fetch(`${API_BASE}/api/fomo/taste/link`, {
+    await fetch("/api/fomo/taste/link", {
       method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify({ sessionId: getSessionId() }),
     });
   } catch (err) {
@@ -233,14 +234,14 @@ async function linkTaste(): Promise<void> {
 }
 
 async function authPost(path: string, email: string, password: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({ email, password }),
   });
   const data = (await res.json().catch(() => ({}))) as Partial<LoginResponse> & { error?: string };
-  if (!res.ok || !data.token) throw new Error(data.error || `auth ${res.status}`);
-  setToken(data.token);
+  if (!res.ok || !data.user) throw new Error(data.error || `auth ${res.status}`);
   await linkTaste(); // 가입 전 익명 취향을 계정으로 이어붙임
   return data as LoginResponse;
 }
@@ -253,17 +254,17 @@ export const registerEmail = (email: string, password: string) =>
 export const loginEmail = (email: string, password: string) =>
   authPost("/api/fomo/auth/login", email, password);
 
-/** 로그아웃 — 토큰만 제거(서버 상태 없음). */
-export function logout(): void {
-  clearToken();
+/** 로그아웃 — BFF의 HttpOnly 쿠키를 만료시킨다. */
+export async function logout(): Promise<void> {
+  const res = await fetch("/api/fomo/auth/logout", { method: "POST", credentials: "same-origin" });
+  if (!res.ok) throw new Error(`logout ${res.status}`);
 }
 
 /** 탈퇴 — 계정·취향 신호 삭제(서버 CASCADE) 후 토큰 제거. */
 export async function deleteAccount(): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/fomo/account`, {
+  const res = await fetch("/api/fomo/account", {
     method: "DELETE",
-    headers: authHeaders(),
+    credentials: "same-origin",
   });
   if (!res.ok) throw new Error(`delete ${res.status}`);
-  clearToken();
 }

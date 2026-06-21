@@ -5,7 +5,7 @@ import { FEATURE_EMOTION_VOTE, type EmotionType } from "@fomo/core";
 import { EmotionGate } from "@/components/EmotionGate";
 import { HomeView } from "@/components/HomeView";
 import { getSessionId } from "@/lib/session";
-import { isLoggedIn } from "@/lib/auth";
+import { hasSession } from "@/lib/auth";
 import {
   fetchIndex,
   fetchToday,
@@ -48,7 +48,7 @@ export default function Home() {
 
   // 로그인 상태는 클라에서만 확정(SSR 불일치 방지).
   useEffect(() => {
-    setLoggedIn(isLoggedIn());
+    void hasSession().then(setLoggedIn);
   }, []);
 
   // 뉴스 피드는 외부 RSS 다중 수집이라 느릴 수 있다 — 스플래시를 막지 않고 별도로 로드.

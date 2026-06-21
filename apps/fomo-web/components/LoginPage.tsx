@@ -55,10 +55,14 @@ export function LoginPage({
             <div className="flex flex-col gap-3">
               <p className="text-sm leading-6 text-muted">로그인 상태예요. 취향이 계정에 기억되고 있어요.</p>
               <button
-                onClick={() => {
-                  logout();
-                  onClose();
-                  window.location.reload();
+                onClick={async () => {
+                  try {
+                    await logout();
+                    onClose();
+                    window.location.reload();
+                  } catch {
+                    setError("로그아웃 처리에 실패했어요.");
+                  }
                 }}
                 className="rounded-lg border border-hairline px-4 py-3 text-sm text-whiteout"
               >

@@ -1,23 +1,27 @@
-// 로그인 토큰 보관. FOMO Club 인증(/api/fomo/auth/*)이 발급한 JWT를 localStorage에 저장하고
-// Authorization: Bearer 로 fomo API에 보낸다(크로스오리진이라 쿠키 대신 Bearer).
-// 트랙 B — 로그인하면 취향 신호가 유저별로 서버에 쌓인다(가입 전 익명 sessionId 도 로그인 시 연결).
-const TOKEN_KEY = "fomo_token";
+// 인증 토큰은 BFF의 HttpOnly 쿠키에만 보관한다.
+// 브라우저 JavaScript는 토큰을 읽거나 쓰지 않고 세션 존재 여부만 같은 출처 API로 확인한다.
+const LEGACY_TOKEN_KEY = "fomo_token";
 
-export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
-}
-
-export function setToken(token: string): void {
+export function clearLegacyBrowserToken(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(TOKEN_KEY, token);
+  window.localStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
-export function clearToken(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(TOKEN_KEY);
-}
+export async function hasSession(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
 
-export function isLoggedIn(): boolean {
-  return !!getToken();
+  // 이전 버전의 JavaScript-readable JWT를 남기지 않는다. 보안을 위해 기존 사용자는 재로그인한다.
+  clearLegacyBrowserToken();
+
+  try {
+    const response = await fetch("/api/fomo/auth/session", {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as { authenticated?: boolean };
+    return data.authenticated === true;
+  } catch {
+    return false;
+  }
 }
