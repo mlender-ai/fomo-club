@@ -1,14 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { scoreToColor, cleanText, cleanQuote, communityWordings, type KeywordCard } from "@fomo/core";
+import {
+  scoreToColor,
+  cleanText,
+  cleanQuote,
+  communityWordings,
+  fomoCardView,
+  fomoWhy,
+  confidenceGrade,
+  sparklinePath,
+  seriesIsUp,
+  type KeywordCard,
+  type FomoTone,
+} from "@fomo/core";
 import {
   fetchThemeInsight,
   fetchStockInsight,
   fetchStockBasics,
+  fetchStockFront,
   recordTaste,
   type CondensedInsight,
   type StockBasics,
+  type StockFrontResponse,
 } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
@@ -346,8 +360,6 @@ function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
           {basics.sector && <span>{cleanText(basics.sector)}</span>}
         </div>
       )}
-      {basics.summary && <p className="mt-3 text-sm leading-6 text-muted">{cleanText(basics.summary)}</p>}
-
       {basics.metrics.length > 0 && (
         <ul className="mt-4 grid grid-cols-2 gap-2">
           {basics.metrics.map((m, i) => (
@@ -407,6 +419,78 @@ function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
   );
 }
 
+/** 포모 톤 → 색(카드 ②와 동일 매핑, 단일 출처 일관). */
+const DETAIL_TONE_COLOR: Record<FomoTone, string> = {
+  hot: "#FF5A36",
+  incoming: "#A855F7",
+  warming: "#F59E0B",
+  calm: "#94A3B8",
+  cooling: "#3B82F6",
+};
+
+/**
+ * 포모 상태 히어로(척추 ③ 주인공) — 큰 포모 점수(C) + 라벨 + 근거등급 + 왜(해부).
+ * 카드(②)와 *동일 출처*(fetchStockFront 의 FomoScoreResult). 강도 비례 톤, 예측·판정 0.
+ */
+function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rankLabel?: string }) {
+  if (!front) {
+    return <div className="h-28 animate-pulse rounded-2xl border border-hairline bg-surface" />;
+  }
+  const { fomo } = front;
+  const view = fomoCardView(fomo);
+  const tone = DETAIL_TONE_COLOR[view.tone] ?? "#94A3B8";
+  const grade = confidenceGrade(fomo.confidence);
+  return (
+    <section className="rounded-2xl border border-hairline bg-surface p-5" style={{ borderLeft: `3px solid ${tone}` }}>
+      <div className="flex items-center justify-between">
+        <span className="font-pixel text-xs text-muted">포모 점수 · 주목도</span>
+        {rankLabel && <span className="font-pixel text-[11px] text-muted">{rankLabel}</span>}
+      </div>
+      <div className="mt-1.5 flex items-end gap-3">
+        <span className="font-pixel text-5xl leading-none" style={{ color: tone }}>
+          {view.scoreText ? fomo.fomoScore : "—"}
+        </span>
+        <span className="pb-1 text-lg font-bold" style={{ color: tone }}>
+          {view.emoji && <span aria-hidden>{view.emoji} </span>}
+          {view.badge}
+        </span>
+      </div>
+      <p className="mt-3 text-base leading-7 text-whiteout">{fomo.labelText}</p>
+      <p className="mt-2 text-sm leading-6 text-muted">{fomoWhy(fomo)}</p>
+      <span className="mt-3 inline-flex items-center rounded-full border border-hairline px-2.5 py-1 font-pixel text-[11px] text-muted">
+        {grade}
+      </span>
+    </section>
+  );
+}
+
+/** 상세 미니 차트 — 3개월 종가 + 정직한 상태 한 줄(예측 아님, 현재 상태 묘사). */
+function DetailChart({ front }: { front: StockFrontResponse | null }) {
+  const series = front?.sparkline ?? [];
+  if (series.length < 2) return null;
+  const paths = sparklinePath(series, 320, 64);
+  if (!paths) return null;
+  const up = seriesIsUp(series);
+  const stroke = up ? "#FF5A36" : "#60A5FA";
+  const lead = (front?.fomo.leadSignal ?? 0) >= 60;
+  // 차트가 뒷받침하나 — 현재 상태 묘사만(예측 금지).
+  const note = lead && !up
+    ? "차트는 아직 안 따라왔어요 — 수급이 가격보다 먼저 움직이는 자리예요."
+    : up
+      ? "이미 위로 올라온 자리예요(최근 3개월)."
+      : "최근 3개월은 차분한 흐름이에요.";
+  return (
+    <section className="mt-7">
+      <p className="font-pixel text-sm text-whiteout">차트가 받쳐주나</p>
+      <svg viewBox="0 0 320 64" preserveAspectRatio="none" className="mt-2 h-16 w-full" aria-hidden>
+        <path d={paths.area} fill={stroke} opacity={0.1} />
+        <path d={paths.line} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinejoin="round" />
+      </svg>
+      <p className="mt-2 text-sm leading-6 text-muted">{note}</p>
+    </section>
+  );
+}
+
 export function StockInsightView({
   stock,
   context,
@@ -420,6 +504,8 @@ export function StockInsightView({
   const [loading, setLoading] = useState(true);
   // 기본 정보(바닥) — 원문 무관 객관 사실. 빠른 네이버 fetch라 해석(LLM)과 분리해 먼저 깐다.
   const [basics, setBasics] = useState<StockBasics | null>(null);
+  // 포모 상태(히어로) — 카드(②)와 동일 출처(FomoScoreResult). 단일 출처 보장.
+  const [front, setFront] = useState<StockFrontResponse | null>(null);
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
@@ -438,7 +524,11 @@ export function StockInsightView({
     setLoading(true);
     setInsight(null);
     setBasics(null);
-    // 기본 정보(빠름) + 이해 레이어(느림 LLM) 병렬 — 각자 도착하는 대로 표시(빈 화면 박멸).
+    setFront(null);
+    // 포모 상태(히어로, 카드와 동일 출처) + 기본 정보(빠름) + 이해 레이어(느림 LLM) 병렬 — 도착하는 대로.
+    fetchStockFront(stock)
+      .then((r) => alive && setFront(r))
+      .catch(() => alive && setFront(null));
     fetchStockBasics(stock)
       .then((r) => alive && setBasics(r))
       .catch(() => alive && setBasics(null));
@@ -517,8 +607,19 @@ export function StockInsightView({
             </div>
           )}
 
-          {/* 바닥 — 기본 정보는 원문 무관 객관 사실이라 항상 먼저 깐다(빈 화면 박멸). */}
-          <StockBasicsBlock basics={basics} />
+          {/* 주인공 — 포모 상태 히어로(카드와 동일 출처). 회사소개 대신 이게 프라임 자리. */}
+          <FomoHero
+            front={front}
+            {...(front?.signals.marketCapRank ? { rankLabel: `시총 ${front.signals.marketCapRank.rank}위` } : {})}
+          />
+
+          {/* 차트가 받쳐주나 — 3개월 종가 + 정직한 상태 한 줄. */}
+          <DetailChart front={front} />
+
+          {/* 돈·지표·실적·미래(E) — 객관 사실. 회사소개는 맨 아래로 강등(아래). */}
+          <div className="mt-7">
+            <StockBasicsBlock basics={basics} />
+          </div>
 
           {/* 그 위 — 강세/약세 해석(원문 grounded, 있을 때만). LLM 이라 따로 로딩. */}
           {loading ? (
@@ -621,7 +722,15 @@ export function StockInsightView({
             </p>
           )}
 
-          <p className="mt-8 text-center text-[11px] leading-5 text-muted">
+          {/* 회사가 뭐 하는 곳 — 맨 아래 한 줄로 강등(긴 blurb 폐기). */}
+          {basics?.summary && (
+            <p className="mt-8 border-t border-hairline pt-4 text-[12px] leading-5 text-muted">
+              <span className="text-muted/70">회사 </span>
+              {cleanText(basics.summary).split(/[.\n]/)[0]}
+            </p>
+          )}
+
+          <p className="mt-6 text-center text-[11px] leading-5 text-muted">
             원문을 친구처럼 풀어드린 거예요. 투자 조언은 아니에요.
           </p>
           </>

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeFomoScore,
   fomoCardView,
+  fomoWhy,
+  confidenceGrade,
   isLeadingSetup,
   fomoLabelTextsSafe,
   rankByScore,
@@ -9,6 +11,39 @@ import {
   C_WEIGHTS,
   type FomoScoreInputs,
 } from "../src";
+
+describe("fomoWhy / confidenceGrade — 상세 포모 해부(척추 ③)", () => {
+  it("incoming → 수급 선행 정직 설명", () => {
+    const s = computeFomoScore({ foreignNetStreak: 5, foreignNetRatio: 0.01, institutionNetStreak: 5, institutionNetRatio: 0.01 });
+    expect(s.label).toBe("incoming");
+    expect(fomoWhy(s)).toContain("수급");
+  });
+  it("조용한 종목 → '왜 조용한가' 정직(가짜 흥분 없음)", () => {
+    expect(fomoWhy(computeFomoScore({ mentionScore: 5 }))).toContain("조용");
+  });
+  it("거래량 주도 → 거래 몰림 설명", () => {
+    expect(fomoWhy(computeFomoScore({ volumeRatio: 3.2, changePct: 0.3 }))).toMatch(/거래|담는/);
+  });
+  it("모든 동인 설명에 예측·판정 어휘 0", () => {
+    const cases = [
+      computeFomoScore({ volumeRatio: 3.5, mentionScore: 90 }),
+      computeFomoScore({ foreignNetStreak: 5, foreignNetRatio: 0.01, institutionNetStreak: 5, institutionNetRatio: 0.01 }),
+      computeFomoScore({ volumeRatio: 3, mentionScore: 80, changePct: -7 }),
+      computeFomoScore({ mentionScore: 5 }),
+      computeFomoScore({ volumeRatio: 2.5, changePct: 0.5 }),
+    ];
+    for (const s of cases) {
+      const w = fomoWhy(s);
+      expect(isFrontHookSafe(w), `금칙어: ${w}`).toBe(true);
+      expect(w).not.toMatch(/오를|사라|급등할|추천|유망/);
+    }
+  });
+  it("근거 등급 — confidence 구간", () => {
+    expect(confidenceGrade(0.8)).toBe("근거 탄탄");
+    expect(confidenceGrade(0.45)).toBe("근거 보통");
+    expect(confidenceGrade(0.2)).toBe("근거 약함");
+  });
+});
 
 describe("computeFomoScore — 포모 점수 엔진(§2)", () => {
   it("거래량 회전이 C를 강하게 끌어올림 → 🔥 hot", () => {
