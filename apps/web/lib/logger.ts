@@ -13,13 +13,41 @@ interface LogEntry {
   [key: string]: unknown;
 }
 
+const SENSITIVE_KEY_RE = /(?:authorization|cookie|password|secret|token|api[-_]?key)/i;
+const MAX_CONTEXT_DEPTH = 6;
+
+function redactSensitive(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
+  if (depth > MAX_CONTEXT_DEPTH) return "[TRUNCATED]";
+  if (value === null || typeof value !== "object") return value;
+  if (seen.has(value)) return "[CIRCULAR]";
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => redactSensitive(item, depth + 1, seen));
+  }
+
+  if (value instanceof Error) {
+    return { name: value.name, message: value.message };
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [
+      key,
+      SENSITIVE_KEY_RE.test(key) ? "[REDACTED]" : redactSensitive(child, depth + 1, seen),
+    ])
+  );
+}
+
 function emit(level: LogLevel, service: string, msg: string, ctx?: Record<string, unknown>) {
+  // production debug 로그는 토큰·개인정보 노출면과 로그 비용만 늘리므로 출력하지 않는다.
+  if (level === "debug" && process.env.NODE_ENV === "production") return;
+
   const entry: LogEntry = {
     ts: new Date().toISOString(),
     level,
     service,
     msg,
-    ...ctx,
+    ...(ctx ? (redactSensitive(ctx) as Record<string, unknown>) : undefined),
   };
   const line = JSON.stringify(entry);
   if (level === "debug") console.debug(line);
