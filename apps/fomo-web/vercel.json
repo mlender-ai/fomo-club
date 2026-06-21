@@ -4,6 +4,6 @@
   "installCommand": "cd ../.. && npm install",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_FOMO_API_BASE": "https://taro-stock-web.vercel.app"
+    "NEXT_PUBLIC_FOMO_API_BASE": "https://fomo-club-backend.vercel.app"
   }
 }

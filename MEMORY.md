@@ -64,8 +64,8 @@ Phase A (현재 최우선): FOMO Club MVP 출시 — 검증용. 타로 앱보다
 - fomo-core: `calendar.ts`(`buildCalendar`/`calendarStats` 순수 로직, 시간대-안전 문자열 산술) + `mascot-lines.ts`에 `restorativeLine`/`isCalmDay` 추가. 색·날짜 계산은 모두 fomo-core 단일 소스 → vitest 회귀(31개).
 - 백엔드: `GET /api/fomo/emotions/calendar?sessionId&month` (apps/web). 세션 월별 감정 + FomoIndexSnapshot 점수. **fomoIndexSnapshot 쿼리는 try/catch 폴백** — 그 테이블이 DB에 없을 수 있음(파이프라인 미실행/마이그레이션 미적용). EmotionVote 테이블만 신뢰.
 - fomo-web: `EmotionCalendar.tsx`(픽셀 그리드+스트릭+시장 오버레이) + 홈 '오늘의 쉼' 회복 카드(잔잔한 날).
-- **배포**: apps/fomo-web = Vercel 프로젝트 `fomo-web`(prj_dfwSKviFgdUg7MocHAqiBEPmaxcV, rootDir=apps/fomo-web)로 신규 연결됨. taro-stock-web(prj_B68x…, rootDir=apps/web)은 백엔드 API 전용. `.github/workflows/deploy-fomo-web.yml`은 GitHub Secrets(VERCEL_TOKEN/ORG_ID/FOMO_WEB_PROJECT_ID) 필요 — 단, Vercel Git 통합이 이미 자동 배포하므로 워크플로우는 중복일 수 있음(정리 후보).
-- fomo-web API 기본값: `NEXT_PUBLIC_FOMO_API_BASE` (기본 prod taro-stock-web.vercel.app). 캘린더 라우트가 prod main 머지 전이면 프리뷰 API_BASE 필요.
+- **배포**: apps/fomo-web = Vercel 프로젝트 `fomo-web`(prj_dfwSKviFgdUg7MocHAqiBEPmaxcV, rootDir=apps/fomo-web), apps/web = `fomo-club-backend`(prj_B68x…, rootDir=apps/web). `.github/workflows/deploy-fomo-web.yml`은 GitHub Secrets(VERCEL_TOKEN/ORG_ID/FOMO_WEB_PROJECT_ID) 필요 — 단, Vercel Git 통합이 이미 자동 배포하므로 워크플로우는 중복일 수 있음(정리 후보).
+- fomo-web API 기본값: `NEXT_PUBLIC_FOMO_API_BASE` (기본 prod `fomo-club-backend.vercel.app`).
 
 --- 타로 앱 (보존, 후속 해석 백엔드) ---
 Phase 1 ✅: 기반 인프라 (tarot-core, tarot-mobile 기본 구조, Prisma 스키마 65개 모델)

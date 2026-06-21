@@ -6,7 +6,7 @@ const configured = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefine
 export const API_BASE = (
   (configured && configured.length > 0 ? configured : undefined) ??
   process.env.EXPO_PUBLIC_FOMO_API_URL ??
-  "https://taro-stock-web.vercel.app"
+  "https://fomo-club-backend.vercel.app"
 ).replace(/\/$/, "");
 
 // 익명 세션 ID — MVP: 앱 실행 단위 랜덤. (후속: expo-secure-store로 영속화)
