@@ -105,8 +105,10 @@ export const fetchStockBasics = (stock: string) =>
 
 /** 카드 앞면 FOMO 신호(rev2 후속) — baseline·라이브 수급 streak·시총순위·3개월 스파크라인. 도달 종목 lazy. */
 export type { CardFrontSignals } from "@fomo/core";
+export type { FomoScoreResult } from "@fomo/core";
 export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
+  fomo: import("@fomo/core").FomoScoreResult;
   sparkline: number[];
   priceText?: string;
   changeText?: string;

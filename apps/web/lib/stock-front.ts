@@ -1,7 +1,14 @@
 // 카드 앞면 FOMO 신호 서버 조립 — PHASE0 rev2 후속(스파크라인·시총순위·라이브 수급).
 // baseline(가격·52주)·라이브 수급 streak·시총 순위·3개월 종가를 한 번에 모아 CardFrontSignals 로.
 // 외부소스는 네이버 금융(이미 쓰는 무료·무인증) — 새 비용·DDL 없음. 실패는 조용히 폴백(부분만 채움).
-import { resolveStock, signalsFromBasics, investorNetStreak, type CardFrontSignals } from "@fomo/core";
+import {
+  resolveStock,
+  signalsFromBasics,
+  investorNetStreak,
+  computeFomoScore,
+  type CardFrontSignals,
+  type FomoScoreResult,
+} from "@fomo/core";
 import { fetchStockBasics } from "./stock-basics";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 
@@ -17,7 +24,8 @@ async function getJson(url: string): Promise<unknown> {
  * 네이버 siseJson(일봉) → 최근 N거래일 종가(오름차순, 오래된→최신). 스파크라인용.
  * 응답은 작은따옴표 의사 JSON + 헤더행(한글, EUC-KR) — 숫자 행만 정규식으로 안전 추출(인코딩 무관).
  */
-export async function fetchStockSparkline(code: string, calendarDays = 100): Promise<number[]> {
+/** 네이버 siseJson 일봉 → 최근 거래일 종가·거래량(오름차순). 스파크라인 + 거래량 회전·추세 산출용. */
+export async function fetchStockDaily(code: string, calendarDays = 100): Promise<{ closes: number[]; volumes: number[] }> {
   try {
     const ymd = (d: Date) =>
       `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -25,22 +33,46 @@ export async function fetchStockSparkline(code: string, calendarDays = 100): Pro
     const start = new Date(end.getTime() - calendarDays * 86_400_000); // ~100일 ≈ 3개월 거래일
     const url = `https://api.finance.naver.com/siseJson.naver?symbol=${encodeURIComponent(code)}&requestType=1&startTime=${ymd(start)}&endTime=${ymd(end)}&timeframe=day`;
     const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return [];
+    if (!res.ok) return { closes: [], volumes: [] };
     const text = await res.text();
-    // 데이터 행: ["20260320", 350000, 355000, 348000, 352000, ...] — 날짜(따옴표),시,고,저,종,거래량,...
-    const rows: { date: string; close: number }[] = [];
-    const re = /\[\s*"?(\d{8})"?\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/g;
+    // 데이터 행: ["20260320", 시, 고, 저, 종, 거래량, ...] — 날짜(따옴표)·OHLC·거래량(idx5).
+    const rows: { date: string; close: number; volume: number }[] = [];
+    const re = /\[\s*"?(\d{8})"?\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
       const close = Number(m[5]);
-      if (Number.isFinite(close)) rows.push({ date: m[1]!, close });
+      const volume = Number(m[6]);
+      if (Number.isFinite(close)) rows.push({ date: m[1]!, close, volume: Number.isFinite(volume) ? volume : 0 });
     }
     rows.sort((a, b) => (a.date < b.date ? -1 : 1)); // 오래된→최신
-    return rows.map((r) => r.close).slice(-66); // 최근 ~3개월
+    const recent = rows.slice(-66); // 최근 ~3개월
+    return { closes: recent.map((r) => r.close), volumes: recent.map((r) => r.volume) };
   } catch (err) {
-    console.warn("[stock-front] sparkline failed", code, (err as Error)?.message);
-    return [];
+    console.warn("[stock-front] daily failed", code, (err as Error)?.message);
+    return { closes: [], volumes: [] };
   }
+}
+
+/** 평소 대비 거래량 배수(거래량 회전) — 최신일 / 직전 ~20거래일 평균. 데이터 부족이면 undefined(가짜숫자 금지). */
+function volumeTurnover(volumes: number[]): number | undefined {
+  if (volumes.length < 6) return undefined;
+  const today = volumes[volumes.length - 1]!;
+  const prev = volumes.slice(-21, -1).filter((v) => v > 0);
+  if (prev.length < 5 || today <= 0) return undefined;
+  const avg = prev.reduce((a, b) => a + b, 0) / prev.length;
+  return avg > 0 ? today / avg : undefined;
+}
+
+/** 추세 강도 0~1 — *최근 ~1개월* 종가 변화폭(상·하 무관)을 15% 밴드로 정규화(현재 추세 세기).
+ *  3개월 누적은 강세장에서 거의 다 saturate 라 최근 창으로 차별화. 데이터 부족이면 undefined. */
+function trendStrength(closes: number[]): number | undefined {
+  if (closes.length < 2) return undefined;
+  const win = Math.min(closes.length, 21); // 최근 ~1개월 거래일
+  const start = closes[closes.length - win]!;
+  const last = closes[closes.length - 1]!;
+  if (start <= 0) return undefined;
+  const mag = Math.abs(last / start - 1) / 0.15;
+  return mag < 0 ? 0 : mag > 1 ? 1 : mag;
 }
 
 interface RankEntry {
@@ -79,8 +111,10 @@ export async function fetchMarketCapRankMap(): Promise<Record<string, RankEntry>
 }
 
 export interface StockFrontData {
-  /** 엔진(buildCardFrontHook)에 넣을 신호(가격·52주·수급 streak·시총순위·정체성). */
+  /** 엔진에 넣을 신호(가격·52주·수급 streak·시총순위·정체성). */
   signals: CardFrontSignals;
+  /** 포모 점수(척추) — C·L·라벨. 카드 점수/라벨/헤드라인의 단일 출처. */
+  fomo: FomoScoreResult;
   /** 최근 3개월 종가(스파크라인) — 없으면 빈 배열. */
   sparkline: number[];
   /** 현재가 — 예 "354,000원"(카드 1행 표기용). */
@@ -92,7 +126,8 @@ export interface StockFrontData {
 }
 
 /**
- * 한 종목의 카드 앞면 데이터 조립. baseline(가격·52주) + 라이브 수급 streak + 시총순위 + 스파크라인.
+ * 한 종목의 카드 앞면 데이터 조립 + 포모 점수 산출(척추 단일 출처).
+ * baseline(가격·52주) + 라이브 수급 streak + 거래량 회전·추세 + 시총순위 + 스파크라인 → computeFomoScore.
  * rankMap 은 비싸므로 호출부에서 받아 재사용(없으면 순위 생략).
  */
 export async function assembleStockFront(
@@ -101,12 +136,12 @@ export async function assembleStockFront(
 ): Promise<StockFrontData> {
   const def = resolveStock(stock);
   const code = def?.naverCode;
-  if (!code) return { signals: {}, sparkline: [] };
+  if (!code) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
 
-  const [basics, history, sparkline] = await Promise.all([
+  const [basics, history, daily] = await Promise.all([
     fetchStockBasics(stock).catch(() => null),
     readSupplyDemandHistory(code).catch(() => []),
-    fetchStockSparkline(code),
+    fetchStockDaily(code),
   ]);
 
   const signals: CardFrontSignals = basics ? signalsFromBasics(basics) : {};
@@ -120,9 +155,21 @@ export async function assembleStockFront(
   const rank = rankMap?.[code];
   if (rank) signals.marketCapRank = { scope: "market", market: rank.market, rank: rank.rank };
 
+  // ── 포모 점수(척추) — 거래량 회전·가격(등락·추세)·수급. 언급량·prevScore 는 후속(없으면 제외). ──
+  const volRatio = volumeTurnover(daily.volumes);
+  const trend = trendStrength(daily.closes);
+  const fomo = computeFomoScore({
+    ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
+    ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
+    ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+    ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),
+    ...(typeof signals.institutionNetStreak === "number" ? { institutionNetStreak: signals.institutionNetStreak } : {}),
+  });
+
   return {
     signals,
-    sparkline,
+    fomo,
+    sparkline: daily.closes,
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),
     ...(basics?.changeText ? { changeText: basics.changeText } : {}),
     ...(basics?.changeDir ? { changeDir: basics.changeDir } : {}),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeFomoScore,
+  fomoCardView,
   isLeadingSetup,
   fomoLabelTextsSafe,
   rankByScore,
@@ -116,6 +117,70 @@ describe("computeFomoScore — 포모 점수 엔진(§2)", () => {
       const t = computeFomoScore(l).labelText;
       expect(isFrontHookSafe(t), `금칙어: ${t}`).toBe(true);
       expect(t).not.toMatch(/점수|등급|추천|오를|사라|급등할/);
+    }
+  });
+});
+
+describe("fomoCardView — 엔진 출력 → 카드(척추 ②, 단일 출처)", () => {
+  it("점수·라벨이 엔진 결과와 정확히 일치(단일 출처)", () => {
+    const s = computeFomoScore({ volumeRatio: 3.5, changePct: 7, mentionScore: 90 });
+    const v = fomoCardView(s, { sector: "반도체" });
+    expect(v.scoreText).toBe(`포모 ${s.fomoScore}`);
+    expect(v.emoji).toBe("🔥");
+    expect(v.badge).toBe("지금 한복판");
+    expect(v.tone).toBe("hot");
+  });
+
+  it("💎 incoming 특별 취급 — isLeading + 특별 문구(reason 있어도 유지, 예측 0)", () => {
+    const s = computeFomoScore({
+      volumeRatio: 1.1,
+      foreignNetStreak: 5,
+      foreignNetRatio: 0.01,
+      institutionNetStreak: 5,
+      institutionNetRatio: 0.01,
+    });
+    const v = fomoCardView(s, { sector: "2차전지", reason: "수주 기대로 묶임" });
+    expect(s.label).toBe("incoming");
+    expect(v.isLeading).toBe(true);
+    expect(v.emoji).toBe("💎");
+    expect(v.headline).toContain("이미 움직였");
+    expect(v.headline).not.toMatch(/오를|될 것|상승할/);
+  });
+
+  it("강도 비례 톤 — 핫 세게(hot)·조용 차분(calm)·식는 중(cooling)", () => {
+    expect(fomoCardView(computeFomoScore({ volumeRatio: 3.5, mentionScore: 90 })).tone).toBe("hot");
+    expect(fomoCardView(computeFomoScore({ mentionScore: 10 })).tone).toBe("calm");
+    expect(fomoCardView(computeFomoScore({ volumeRatio: 3, mentionScore: 80, changePct: -7 })).tone).toBe("cooling");
+  });
+
+  it("근거(reason) 우선 — incoming 아닐 때 grounded 헤드라인", () => {
+    const s = computeFomoScore({ volumeRatio: 3.5, mentionScore: 90 }); // hot
+    expect(fomoCardView(s, { sector: "반도체", reason: "HBM4 공급계약 보도" }).headline).toBe("HBM4 공급계약 보도");
+  });
+
+  it("가드 위반 reason 은 폐기 → 라벨 헤드라인 폴백", () => {
+    const s = computeFomoScore({ volumeRatio: 3.5, mentionScore: 90 });
+    const v = fomoCardView(s, { sector: "반도체", reason: "지금 매수 추천! 급등할 종목" });
+    expect(v.headline).toBe("지금 반도체에서 가장 시선이 몰리는 자리예요");
+  });
+
+  it("데이터 0 → 점수 보류(빈 문자열), 라벨 silent", () => {
+    const v = fomoCardView(computeFomoScore({}));
+    expect(v.scoreText).toBe("");
+    expect(v.badge).toBe("조용");
+  });
+
+  it("금칙어 가드 — 모든 라벨 헤드라인에 예측·판정 0", () => {
+    const cases = [
+      computeFomoScore({ volumeRatio: 3.5, mentionScore: 90 }),
+      computeFomoScore({ foreignNetStreak: 5, foreignNetRatio: 0.01, institutionNetStreak: 5, institutionNetRatio: 0.01 }),
+      computeFomoScore({ mentionScore: 50, volumeRatio: 2 }),
+      computeFomoScore({ mentionScore: 10 }),
+      computeFomoScore({ volumeRatio: 3, mentionScore: 80, changePct: -7 }),
+    ];
+    for (const s of cases) {
+      const h = fomoCardView(s, { sector: "반도체" }).headline;
+      expect(isFrontHookSafe(h), `금칙어: ${h}`).toBe(true);
     }
   });
 });

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildCardFrontHook, sparklinePath, seriesIsUp } from "@fomo/core";
-import type { KeywordCard, SectorStock, StockSector, CardFrontHook, CardFrontSignals } from "@fomo/core";
+import { sparklinePath, seriesIsUp, fomoCardView, computeFomoScore } from "@fomo/core";
+import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, FomoTone } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
@@ -24,6 +24,9 @@ const THRESHOLD = 90;
 const EXIT_MS = 320;
 const UP = "#FF5A36";
 const DOWN = "#64748B";
+
+/** 포모 점수 로드 전 placeholder(빈 입력 → silent·점수 보류). */
+const EMPTY_FOMO = computeFomoScore({});
 
 /** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
 type DeckStock = SectorStock & { reason?: string };
@@ -80,9 +83,6 @@ const MARKET_LABEL: Record<string, string> = {
   COIN: "코인",
 };
 
-/** 강도별 헤드라인 색 — 강도 비례 톤(§3). high=코랄, medium=주황, calm=그레이. */
-const INTENSITY_COLOR: Record<string, string> = { high: UP, medium: "#F59E0B", calm: "#94A3B8" };
-
 /** 종목 로고 — 네이버 심볼 이미지(불러와지면), 실패 시 이니셜 원형 폴백. */
 function LogoBadge({ name, code }: { name: string; code?: string | undefined }) {
   const [failed, setFailed] = useState(false);
@@ -127,13 +127,24 @@ function Sparkline({ series }: { series: number[] }) {
 const DIR_COLOR: Record<string, string> = { up: UP, down: "#3B82F6", flat: "#94A3B8" };
 const DIR_MARK: Record<string, string> = { up: "▲", down: "▼", flat: "" };
 
+/** 포모 톤 → 색(강도 비례). hot=코랄·incoming=💎보라·warming=주황·calm=그레이·cooling=블루. */
+const TONE_COLOR: Record<FomoTone, string> = {
+  hot: UP,
+  incoming: "#A855F7",
+  warming: "#F59E0B",
+  calm: "#94A3B8",
+  cooling: "#3B82F6",
+};
+
 /**
- * 종목 카드 앞면(rev2): 정체성(로고+종목명+시장·시총순위) / 현재가 / 테마태그 / FOMO 후킹 / 스파크라인 / 재료.
- * 강도 비례 톤(§3) — 핫하면 세게, 조용하면 차분히. 점수·판정·예측 없음. 로고는 네이버 심볼(폴백 이니셜).
+ * 종목 카드 앞면 — 포모 점수(척추 ②, 단일 출처)로 점수·라벨·헤드라인·톤. 휴리스틱 대체.
+ * 정체성 / 현재가 / 포모점수+라벨 / 테마태그 / 헤드라인 / 스파크라인 / 재료. 점수=주목도(품질 아님), 예측 0.
  */
 function StockCardFace({
   stock,
-  hook,
+  view,
+  themeLabel,
+  catalysts,
   priceText,
   changeText,
   changeDir,
@@ -142,7 +153,9 @@ function StockCardFace({
   progress,
 }: {
   stock: DeckStock;
-  hook: CardFrontHook;
+  view: FomoCardView;
+  themeLabel?: string | undefined;
+  catalysts?: string[] | undefined;
   priceText?: string | undefined;
   changeText?: string | undefined;
   changeDir?: "up" | "down" | "flat" | undefined;
@@ -150,7 +163,7 @@ function StockCardFace({
   sparkline?: number[] | undefined;
   progress?: string | undefined;
 }) {
-  const color = INTENSITY_COLOR[hook.intensity] ?? "#94A3B8";
+  const tone = TONE_COLOR[view.tone] ?? "#94A3B8";
   return (
     <div className="flex h-full flex-col">
       {/* 1행 — 정체성: 로고 + 종목명 + 시장·시총순위 */}
@@ -168,7 +181,7 @@ function StockCardFace({
         </div>
       </div>
 
-      {/* 현재가 — 시총순위줄과 테마태그 사이(시장 readout, 후킹 아님) */}
+      {/* 현재가 — 시총순위줄과 포모 점수 사이(시장 readout, 후킹 아님) */}
       {priceText && (
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
@@ -180,34 +193,47 @@ function StockCardFace({
         </div>
       )}
 
-      {/* 2행 — 테마 태그 */}
-      {hook.themeLabel && (
+      {/* 포모 점수 + 라벨 (척추) — "포모 72 · 🔥 지금 한복판". 주목도 명시(품질 아님). */}
+      {view.scoreText && (
+        <div
+          className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-bold"
+          style={{ backgroundColor: `${tone}22`, color: tone }}
+        >
+          <span>{view.scoreText}</span>
+          <span className="opacity-70">·</span>
+          <span>
+            {view.emoji && <span aria-hidden>{view.emoji} </span>}
+            {view.badge}
+          </span>
+        </div>
+      )}
+
+      {/* 테마 태그 */}
+      {themeLabel && (
         <span
-          className="mt-4 inline-flex w-fit items-center rounded-full px-2.5 py-1 font-pixel text-xs"
+          className="mt-3 inline-flex w-fit items-center rounded-full px-2.5 py-1 font-pixel text-xs"
           style={{ backgroundColor: "rgba(255,90,54,0.12)", color: UP }}
         >
-          # {hook.themeLabel}
+          # {themeLabel}
         </span>
       )}
 
-      {/* 3행 — FOMO 후킹(강도 비례 톤) */}
-      <p className="mt-4 text-xl font-bold leading-8" style={{ color }}>
-        {hook.headline}
+      {/* 헤드라인 = 라벨 기반 한 줄(강도 비례 톤). 💎는 특별 강조. */}
+      <p className="mt-4 text-xl font-bold leading-8" style={{ color: tone }}>
+        {view.isLeading && <span aria-hidden>💎 </span>}
+        {view.headline}
       </p>
 
-      {/* 4행 — 미니 스파크라인(최근 3개월) */}
+      {/* 미니 스파크라인(최근 3개월) */}
       {sparkline && sparkline.length >= 2 && <Sparkline series={sparkline} />}
 
-      {/* 5행 — 다가오는 재료(구체·일정) */}
-      {hook.catalysts.length > 0 && (
+      {/* 다가오는 재료(있으면) */}
+      {catalysts && catalysts.length > 0 && (
         <ul className="mt-4 flex flex-col gap-1.5">
-          {hook.catalysts.map((c, i) => (
+          {catalysts.map((c, i) => (
             <li key={i} className="flex gap-2 text-sm leading-6 text-whiteout">
               <span aria-hidden style={{ color: UP }}>•</span>
-              <span>
-                {c.when && <span className="font-pixel text-muted">{c.when} · </span>}
-                {c.label}
-              </span>
+              <span>{c}</span>
             </li>
           ))}
         </ul>
@@ -219,16 +245,6 @@ function StockCardFace({
       </div>
     </div>
   );
-}
-
-/** 오늘(KST) "M/D" — 후킹 헤드라인 시점 라벨(§4 시점 명시). */
-function kstTodayLabel(): string {
-  try {
-    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-    return `${kst.getMonth() + 1}/${kst.getDate()}`;
-  } catch {
-    return "";
-  }
 }
 
 interface SectorDeckProps {
@@ -299,6 +315,7 @@ function SectorDeckInner({
   // lazy 로 서버에서 조립해 받는다(비용 방어 §5). 캐시(canonical 키)로 재방문 즉시.
   type FrontEntry = {
     signals: CardFrontSignals;
+    fomo: FomoScoreResult;
     sparkline: number[];
     priceText?: string;
     changeText?: string;
@@ -306,7 +323,6 @@ function SectorDeckInner({
   };
   const [front, setFront] = useState<Record<string, FrontEntry>>({});
   const inflight = useRef<Set<string>>(new Set());
-  const asOf = useRef<string>(kstTodayLabel()).current;
 
   const at = (i: number) => stocks[((i % stocks.length) + stocks.length) % stocks.length]!;
 
@@ -321,6 +337,7 @@ function SectorDeckInner({
             ...prev,
             [key]: {
               signals: d.signals,
+              fomo: d.fomo,
               sparkline: d.sparkline,
               ...(d.priceText ? { priceText: d.priceText } : {}),
               ...(d.changeText ? { changeText: d.changeText } : {}),
@@ -334,17 +351,35 @@ function SectorDeckInner({
     [front]
   );
 
-  // 종목별 신호 조립 — 서버 신호(가격·52주·수급 streak·시총순위) + 테마 태그(섹터) + 발굴 근거(named catalyst).
-  const signalsFor = (stock: DeckStock): CardFrontSignals => {
-    const sig: CardFrontSignals = { ...(front[stock.canonical]?.signals ?? {}), asOf, themeLabel: stock.sector };
-    if (stock.reason) sig.catalysts = [{ label: stock.reason, kind: "news" }];
-    return sig;
+  // 카드 표현 — 포모 점수(척추, 단일 출처) → fomoCardView. 로드 전엔 EMPTY(근거 있으면 그게 헤드라인).
+  // 헤드라인으로 쓰인 근거는 재료 리스트에서 빼서 중복 방지.
+  const cardFor = (stock: DeckStock): { view: FomoCardView; catalysts: string[] } => {
+    const fomo = front[stock.canonical]?.fomo ?? EMPTY_FOMO;
+    const view = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
+    const catalysts = stock.reason && view.headline !== stock.reason ? [stock.reason] : [];
+    return { view, catalysts };
   };
-  const hookFor = (stock: DeckStock): CardFrontHook => buildCardFrontHook(signalsFor(stock));
-  const sparkOf = (stock: DeckStock): number[] | undefined => front[stock.canonical]?.sparkline;
   const rankLabelFor = (stock: DeckStock): string | undefined => {
     const r = front[stock.canonical]?.signals.marketCapRank;
     return r ? `시총 ${r.rank}위` : undefined; // 시장명은 1행에 이미 있음(중복 방지)
+  };
+  const renderFace = (stock: DeckStock, progress?: string) => {
+    const { view, catalysts } = cardFor(stock);
+    const e = front[stock.canonical];
+    return (
+      <StockCardFace
+        stock={stock}
+        view={view}
+        catalysts={catalysts}
+        themeLabel={stock.sector}
+        priceText={e?.priceText}
+        changeText={e?.changeText}
+        changeDir={e?.changeDir}
+        rankLabel={rankLabelFor(stock)}
+        sparkline={e?.sparkline}
+        progress={progress}
+      />
+    );
   };
 
   const flingNext = useCallback((dir: "left" | "right") => {
@@ -434,7 +469,7 @@ function SectorDeckInner({
                 zIndex: 1,
               }}
             >
-              <StockCardFace stock={stock} hook={hookFor(stock)} priceText={front[stock.canonical]?.priceText} changeText={front[stock.canonical]?.changeText} changeDir={front[stock.canonical]?.changeDir} rankLabel={rankLabelFor(stock)} sparkline={sparkOf(stock)} />
+              {renderFace(stock)}
             </div>
           ))}
 
@@ -461,7 +496,7 @@ function SectorDeckInner({
           >
             ← 덜 관심
           </span>
-          <StockCardFace stock={top} hook={hookFor(top)} priceText={front[top.canonical]?.priceText} changeText={front[top.canonical]?.changeText} changeDir={front[top.canonical]?.changeDir} rankLabel={rankLabelFor(top)} sparkline={sparkOf(top)} progress={`${(idx % stocks.length) + 1} / ${stocks.length}`} />
+          {renderFace(top, `${(idx % stocks.length) + 1} / ${stocks.length}`)}
         </div>
       </div>
 

@@ -199,6 +199,95 @@ export function fomoLabelTextsSafe(): boolean {
   return Object.values(LABEL_TEXT).every((t) => isFrontHookSafe(t));
 }
 
+// ── 카드 앞면 표현(척추 ② — 엔진 출력 → 카드. 단일 출처) ──────────────────────
+export type FomoTone = "hot" | "incoming" | "warming" | "calm" | "cooling";
+
+export interface FomoCardView {
+  /** 2행 점수 — "포모 72"(주목도 명시). 데이터 0이면 빈 문자열(보류). */
+  scoreText: string;
+  /** 라벨 이모지 — 🔥/💎(나머지 없음). */
+  emoji: string;
+  /** 짧은 상태 배지 — "지금 한복판"/"오기 직전"/"데우는 중"/"조용"/"식는 중". */
+  badge: string;
+  /** 4행 헤드라인 — 강도 비례·섹터 인지·근거 우선. 예측/판정 0. */
+  headline: string;
+  /** 톤(색·강조 매핑용). */
+  tone: FomoTone;
+  /** 💎 "오기 직전" 특별 취급 여부. */
+  isLeading: boolean;
+}
+
+const BADGE: Record<FomoLabel, string> = {
+  hot: "지금 한복판",
+  warming: "데우는 중",
+  incoming: "오기 직전",
+  quiet: "조용",
+  silent: "조용",
+  cooling: "식는 중",
+};
+const EMOJI: Record<FomoLabel, string> = {
+  hot: "🔥",
+  warming: "",
+  incoming: "💎",
+  quiet: "",
+  silent: "",
+  cooling: "",
+};
+const TONE: Record<FomoLabel, FomoTone> = {
+  hot: "hot",
+  warming: "warming",
+  incoming: "incoming",
+  quiet: "calm",
+  silent: "calm",
+  cooling: "cooling",
+};
+
+/**
+ * 포모 점수 → 카드 앞면 표현(점수·라벨·헤드라인·톤). 순수·결정적. 단일 출처(휴리스틱 대체).
+ * 헤드라인은 강도 비례·섹터 인지. 💎는 특별 문구(예측 금지 — "이미 움직였다"는 사실까지만).
+ * 근거(reason, 발굴 named)가 있으면 더 구체적이라 우선 — 단 💎는 특별 문구 유지, 가드 위반 reason 은 폐기.
+ */
+export function fomoCardView(score: FomoScoreResult, opts: { sector?: string; reason?: string } = {}): FomoCardView {
+  const { label } = score;
+  const sector = opts.sector?.trim();
+  const reason = opts.reason?.trim();
+  const isLeading = label === "incoming";
+
+  let headline: string;
+  if (isLeading) {
+    headline = "조용한데 외국인·기관이 이미 움직였어요 · 아직 사람들은 몰라요";
+  } else if (reason && isFrontHookSafe(reason)) {
+    headline = reason;
+  } else {
+    switch (label) {
+      case "hot":
+        headline = sector ? `지금 ${sector}에서 가장 시선이 몰리는 자리예요` : "지금 가장 시선이 몰리는 자리예요";
+        break;
+      case "warming":
+        headline = sector ? `${sector} 관심이 데워지는 중이에요` : "관심이 데워지는 중이에요";
+        break;
+      case "cooling":
+        headline = "한 물 가는 분위기예요";
+        break;
+      case "silent":
+        headline = "재료도 수급도 아직 조용해요";
+        break;
+      case "quiet":
+      default:
+        headline = "지금은 조용한 자리예요";
+    }
+  }
+
+  return {
+    scoreText: score.confidence > 0 ? `포모 ${score.fomoScore}` : "",
+    emoji: EMOJI[label],
+    badge: BADGE[label],
+    headline,
+    tone: TONE[label],
+    isLeading,
+  };
+}
+
 // ── 순위 (척추 §3) — 포모 순위·시총 순위 공통. 시장 전체 & 섹터 둘 다. 순수·결정적. ─────────
 export interface RankInput {
   key: string;

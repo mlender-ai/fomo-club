@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
+import { computeFomoScore } from "@fomo/core";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "../../../../lib/stock-front";
 
 /**
@@ -52,7 +53,9 @@ export async function GET(req: Request) {
     );
   } catch (err) {
     console.warn("[stock-front] failed", stock, (err as Error)?.message);
-    // 정직한 폴백 — 신호 없이도 카드는 잠잠으로 뜬다.
-    return withCors(NextResponse.json({ signals: {}, sparkline: [] } satisfies StockFrontData));
+    // 정직한 폴백 — 신호 없이도 카드는 잠잠(점수 보류)으로 뜬다.
+    return withCors(
+      NextResponse.json({ signals: {}, fomo: computeFomoScore({}), sparkline: [] } satisfies StockFrontData)
+    );
   }
 }
