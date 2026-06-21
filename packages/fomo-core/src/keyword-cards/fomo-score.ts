@@ -329,6 +329,63 @@ export interface RankResult {
   sector?: number;
 }
 
+// ── 발견 피드 정렬(척추 ④ — 밴드 + 일별 셔플. 💎 안 묻히게) ────────────────────
+/** 라벨 → 밴드(상단 0 → 하단 4). 🔥hot·💎incoming 은 같은 최상위 밴드(인터리브, §3). */
+const FEED_BAND: Record<FomoLabel, number> = {
+  hot: 0,
+  incoming: 0, // 💎 — C 낮아도 반드시 상위(순수 C 내림차순이면 바닥에 묻힘 → 금지)
+  warming: 1,
+  quiet: 2,
+  cooling: 3,
+  silent: 4,
+};
+
+export interface FeedRankItem {
+  key: string;
+  label: FomoLabel;
+}
+
+export interface FeedRankOptions {
+  /** 일별 셔플 시드 — 같은 날=같은 순서(캐시 안정), 다른 날=새 순서. 예 "2026-06-22"[, +유저]. */
+  seed: string;
+  /** 개인화 재정렬 seam(P3) — 밴드는 유지하고 밴드 *내* 순서만. 높을수록 위. 미주입 시 일별 셔플. */
+  rank?: (key: string) => number;
+  /** silent(진짜 조용) 제외 여부. 기본 false(최하단 유지). */
+  dropSilent?: boolean;
+}
+
+/** 결정적 문자열 해시(djb2) — 밴드 내 일별 셔플용. */
+function hashStr(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/**
+ * 발견 피드 정렬 — 밴드(🔥/💎 상단 → 데우는중 → 조용 → 식는중 → silent 최하단) + 밴드 내 일별 결정적 셔플.
+ * ⚠️ 순수 C 내림차순 아님: 💎(조용한데 수급 선행)가 상위 밴드라 안 묻힌다(핵심 가치).
+ * 개인화(rank) 주입 시 밴드는 유지하고 밴드 내 순서만 취향대로(P3 seam). 순수·결정적.
+ */
+export function rankFeedByFomo(items: readonly FeedRankItem[], opts: FeedRankOptions): string[] {
+  const { seed, rank } = opts;
+  const pool = opts.dropSilent ? items.filter((it) => it.label !== "silent") : items;
+  return [...pool]
+    .sort((a, b) => {
+      const band = FEED_BAND[a.label] - FEED_BAND[b.label];
+      if (band !== 0) return band;
+      if (rank) {
+        const r = rank(b.key) - rank(a.key); // 밴드 내 개인화(취향 높을수록 위)
+        if (r !== 0) return r;
+      }
+      // 밴드 내 일별 셔플 — seed 를 XOR 로 섞는다(prefix 연결은 djb2 특성상 seed-독립 순서가 돼 안 됨).
+      const s = hashStr(seed);
+      const ha = (hashStr(a.key) ^ s) >>> 0;
+      const hb = (hashStr(b.key) ^ s) >>> 0;
+      return ha !== hb ? ha - hb : a.key < b.key ? -1 : 1; // 해시 동점도 결정적
+    })
+    .map((it) => it.key);
+}
+
 /**
  * 점수 내림차순 순위 — 시장 전체 + 섹터별. 동점은 key 사전순으로 결정적 tiebreak.
  * 포모 순위(score=C)·시총 순위(score=marketCap) 모두 이 함수로(척추 §3).

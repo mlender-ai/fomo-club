@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sparklinePath, seriesIsUp, fomoCardView, computeFomoScore } from "@fomo/core";
+import { sparklinePath, seriesIsUp, fomoCardView, computeFomoScore, rankFeedByFomo } from "@fomo/core";
 import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, FomoTone } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
@@ -30,6 +30,26 @@ const EMPTY_FOMO = computeFomoScore({});
 
 /** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
 type DeckStock = SectorStock & { reason?: string };
+
+/** 종목별 앞면 데이터(stock-front 응답 캐시). 포모 점수(척추)·스파크라인·가격. */
+type FrontEntry = {
+  signals: CardFrontSignals;
+  fomo: FomoScoreResult;
+  sparkline: number[];
+  priceText?: string;
+  changeText?: string;
+  changeDir?: "up" | "down" | "flat";
+};
+
+/** 오늘(KST) "YYYY-MM-DD" — 발견 정렬의 일별 셔플 시드(같은 날=같은 순서). */
+function kstDateSeed(): string {
+  try {
+    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
+  } catch {
+    return "seed";
+  }
+}
 
 /**
  * 섹터 풀 + 그날 발굴 종목 병합(④). 발굴 근거(reason)를 풀 종목에 붙이고, 풀에 없던 발굴주는 추가.
@@ -255,30 +275,59 @@ interface SectorDeckProps {
 
 export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeckProps) {
   const [state, setState] = useState<
-    { kind: "loading" } | { kind: "error" } | { kind: "ready"; stocks: DeckStock[] }
+    | { kind: "loading" }
+    | { kind: "error" }
+    | { kind: "ready"; stocks: DeckStock[]; fronts: Record<string, FrontEntry> }
   >({ kind: "loading" });
 
   useEffect(() => {
     let alive = true;
     setState({ kind: "loading" });
-    // 풀(baseline 보장 — 빈 카드 방지) + 그날 발굴주(keywords) 병렬. 발굴 실패해도 풀로 진행.
-    Promise.all([
-      fetchSectorStocks(sector, true),
-      fetchKeywords().catch(() => null), // 발굴은 보강 — 실패 무시
-    ])
-      .then(([poolRes, kwRes]) => {
+    (async () => {
+      try {
+        // 풀(baseline 보장 — 빈 카드 방지) + 그날 발굴주(keywords) 병렬. 발굴 실패해도 풀로 진행.
+        const [poolRes, kwRes] = await Promise.all([
+          fetchSectorStocks(sector, true),
+          fetchKeywords().catch(() => null),
+        ]);
         if (!alive) return;
         if (!poolRes.stocks?.length) {
           setState({ kind: "error" });
           return;
         }
-        const stocks = mergeDiscovered(poolRes.stocks, kwRes?.cards ?? [], sector);
-        setState({ kind: "ready", stocks });
-      })
-      .catch((err) => {
+        const merged = mergeDiscovered(poolRes.stocks, kwRes?.cards ?? [], sector);
+
+        // ④ 발견 정렬 — 풀 종목 포모 점수를 미리 모아(서버 캐시로 방어) 밴드 정렬(💎 안 묻힘) + 일별 셔플.
+        const domestic = merged.filter((s) => s.naverCode);
+        const settled = await Promise.allSettled(domestic.map((s) => fetchStockFront(s.canonical)));
+        if (!alive) return;
+        const fronts: Record<string, FrontEntry> = {};
+        domestic.forEach((s, i) => {
+          const r = settled[i];
+          if (r && r.status === "fulfilled") {
+            const d = r.value;
+            fronts[s.canonical] = {
+              signals: d.signals,
+              fomo: d.fomo,
+              sparkline: d.sparkline,
+              ...(d.priceText ? { priceText: d.priceText } : {}),
+              ...(d.changeText ? { changeText: d.changeText } : {}),
+              ...(d.changeDir ? { changeDir: d.changeDir } : {}),
+            };
+          }
+        });
+        const order = rankFeedByFomo(
+          merged.map((s) => ({ key: s.canonical, label: fronts[s.canonical]?.fomo.label ?? "quiet" })),
+          { seed: kstDateSeed() }
+        );
+        const byKey = new Map(merged.map((s) => [s.canonical, s] as const));
+        const ranked = order.map((k) => byKey.get(k)).filter((s): s is DeckStock => !!s);
+        setState({ kind: "ready", stocks: ranked.length ? ranked : merged, fronts });
+      } catch (err) {
         console.warn("[SectorStockDeck] fetch failed", err);
         if (alive) setState({ kind: "error" });
-      });
+      }
+    })();
     return () => {
       alive = false;
     };
@@ -294,14 +343,22 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
         다른 섹터를 둘러봐 주세요.
       </div>
     );
-  return <SectorDeckInner stocks={state.stocks} loggedIn={loggedIn} onRequireLogin={onRequireLogin} />;
+  return (
+    <SectorDeckInner
+      stocks={state.stocks}
+      initialFronts={state.fronts}
+      loggedIn={loggedIn}
+      onRequireLogin={onRequireLogin}
+    />
+  );
 }
 
 function SectorDeckInner({
   stocks,
+  initialFronts,
   loggedIn,
   onRequireLogin,
-}: { stocks: DeckStock[] } & Omit<SectorDeckProps, "sector">) {
+}: { stocks: DeckStock[]; initialFronts?: Record<string, FrontEntry> } & Omit<SectorDeckProps, "sector">) {
   // 무한: 풀을 순환(modulo)해 끝나지 않는다(§7 "무한히 풀만큼").
   const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
@@ -311,17 +368,8 @@ function SectorDeckInner({
   const startX = useRef(0);
   const moved = useRef(false);
 
-  // 앞면 FOMO 신호 — 도달하는 카드의 stock-front(가격·52주·라이브 수급 streak·시총순위·3개월 종가)를
-  // lazy 로 서버에서 조립해 받는다(비용 방어 §5). 캐시(canonical 키)로 재방문 즉시.
-  type FrontEntry = {
-    signals: CardFrontSignals;
-    fomo: FomoScoreResult;
-    sparkline: number[];
-    priceText?: string;
-    changeText?: string;
-    changeDir?: "up" | "down" | "flat";
-  };
-  const [front, setFront] = useState<Record<string, FrontEntry>>({});
+  // 앞면 FOMO 신호 — ④ 정렬 때 풀 전체를 이미 받아 seed(initialFronts). 빠진 종목만 도달 시 lazy 보강.
+  const [front, setFront] = useState<Record<string, FrontEntry>>(initialFronts ?? {});
   const inflight = useRef<Set<string>>(new Set());
 
   const at = (i: number) => stocks[((i % stocks.length) + stocks.length) % stocks.length]!;
