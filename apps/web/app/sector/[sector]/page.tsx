@@ -19,9 +19,10 @@ function getCatalystHorizonLabel(horizon: "today" | "this-week" | "next") {
 export default async function SectorDeepDivePage({
   params
 }: {
-  params: { sector: string };
+  params: Promise<{ sector: string }>;
 }) {
-  const data = await getSectorDeepDiveData(params.sector as Parameters<typeof getSectorDeepDiveData>[0]);
+  const { sector } = await params;
+  const data = await getSectorDeepDiveData(sector as Parameters<typeof getSectorDeepDiveData>[0]);
 
   if (!data) {
     notFound();

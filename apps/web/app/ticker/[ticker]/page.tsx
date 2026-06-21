@@ -55,10 +55,11 @@ export default async function TickerDeepDivePage({
   params,
   searchParams
 }: {
-  params: { ticker: string };
-  searchParams?: { market?: string };
+  params: Promise<{ ticker: string }>;
+  searchParams?: Promise<{ market?: string }>;
 }) {
-  const data = await getTickerDeepDiveData(decodeURIComponent(params.ticker), searchParams?.market);
+  const [{ ticker }, query] = await Promise.all([params, searchParams]);
+  const data = await getTickerDeepDiveData(decodeURIComponent(ticker), query?.market);
 
   if (!data) {
     notFound();

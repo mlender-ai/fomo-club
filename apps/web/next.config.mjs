@@ -1,6 +1,11 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 const sharedConfig = {
+  outputFileTracingRoot: monorepoRoot,
   transpilePackages: ["@fomo/shared", "@fomo/core"],
   webpack(config) {
     // ESM .js 확장자 → .ts 소스 resolve (@fomo/core 등이 main: "src/index.ts" + .js imports 사용)

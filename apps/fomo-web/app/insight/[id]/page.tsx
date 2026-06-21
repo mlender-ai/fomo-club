@@ -16,8 +16,9 @@ async function getItem(id: string): Promise<BannerItem | null> {
   }
 }
 
-export default async function InsightPage({ params }: { params: { id: string } }) {
-  const id = decodeURIComponent(params.id);
+export default async function InsightPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: rawId } = await params;
+  const id = decodeURIComponent(rawId);
   const item = await getItem(id);
   if (!item) notFound();
 

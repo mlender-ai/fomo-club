@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "clean": "node ../../scripts/clean-web-cache.mjs",
-    "build": "next build",
-    "dev": "next dev --hostname 127.0.0.1 --port 3200",
+    "build": "next build --webpack",
+    "dev": "next dev --webpack --hostname 127.0.0.1 --port 3200",
     "lint": "npm run typecheck",
     "start": "next start --hostname 127.0.0.1 --port 3200",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -18,17 +18,17 @@
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.3",
     "lightweight-charts": "^5.1.0",
-    "next": "^14.2.25",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
-    "@vercel/functions": "^2.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.1",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vercel/functions": "^2.0.0",
     "typescript": "^5.7.2"
   }
 }

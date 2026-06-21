@@ -12,7 +12,8 @@ async function login(formData: FormData) {
     redirect("/login?error=1");
   }
 
-  cookies().set("dashboard_session", password, {
+  const cookieStore = await cookies();
+  cookieStore.set("dashboard_session", password, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -22,7 +23,12 @@ async function login(formData: FormData) {
   redirect("/admin");
 }
 
-export default function LoginPage({ searchParams }: { searchParams?: { error?: string } }) {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const query = await searchParams;
   return (
     <main className="login-shell">
       <section className="login-card">
@@ -33,9 +39,8 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
           <PasswordInput />
           <button type="submit">Enter dashboard</button>
         </form>
-        {searchParams?.error ? <p className="error-text">비밀번호가 올바르지 않습니다.</p> : null}
+        {query?.error ? <p className="error-text">비밀번호가 올바르지 않습니다.</p> : null}
       </section>
     </main>
   );
 }
-

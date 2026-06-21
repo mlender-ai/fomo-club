@@ -69,7 +69,7 @@ async function getSessionInvalidatedBefore(): Promise<number | null> {
 
 // 현재 요청의 쿠키에서 토큰 검증 (Server Component용)
 export async function getAdminSession(): Promise<AdminJwtPayload | null> {
-  const token = cookies().get(COOKIE_NAME)?.value;
+  const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
   return verifyAdminToken(token);
 }
