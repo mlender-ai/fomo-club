@@ -97,7 +97,7 @@ const LABEL_TEXT: Record<FomoLabel, string> = {
   incoming: "조용한데 외국인·기관은 이미 들어오는 중이에요",
   quiet: "지금은 조용한 자리예요",
   silent: "재료도 수급도 아직 조용해요",
-  cooling: "한 물 가는 분위기예요",
+  cooling: "모였던 관심이 식는 중이에요",
 };
 
 /**
@@ -208,7 +208,7 @@ export function fomoWhy(s: FomoScoreResult): string {
   if (i.accumulationDivergence)
     return "거래는 느는데 가격은 잠잠해요 — 누군가 조용히 담는 모양새예요.";
   if (s.label === "cooling")
-    return "거래는 많지만 가격이 빠지면서 한 물 가는 분위기예요.";
+    return "거래는 많은데 가격은 빠지고 있어요 — 모였던 관심이 식는 흐름이에요.";
   const vol = i.volume ?? 0;
   const price = i.price ?? 0;
   const mention = i.mention ?? 0;
@@ -294,7 +294,7 @@ export function fomoCardView(score: FomoScoreResult, opts: { sector?: string; re
         headline = sector ? `${sector} 관심이 데워지는 중이에요` : "관심이 데워지는 중이에요";
         break;
       case "cooling":
-        headline = "한 물 가는 분위기예요";
+        headline = "모였던 관심이 식는 중이에요";
         break;
       case "silent":
         headline = "재료도 수급도 아직 조용해요";

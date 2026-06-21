@@ -98,9 +98,10 @@ function intensityOf(score: number): FomoIntensity {
   return score >= HIGH_AT ? "high" : score >= MEDIUM_AT ? "medium" : "calm";
 }
 
-// 판정·추천·예측 어휘는 isCommentSafe 로 거르고, 점수/등급류만 추가로 막는다.
+// 판정·추천·예측 어휘는 isCommentSafe 로 거르고, 점수/등급류 + has-been(쇠퇴 판정) 관용구를 추가로 막는다.
+// ⚠️ "분위기" 자체는 금지 금물(데워지는 분위기 등 정상) — verdict 관용구만 정밀 타깃.
 const FRONT_JUDGMENT =
-  /점수|등급|[SAB]\s?급|최우수|유망|강력\s?매수|적극\s?매수|꼭\s?사|놓치면|지금\s?사/;
+  /점수|등급|[SAB]\s?급|최우수|유망|강력\s?매수|적극\s?매수|꼭\s?사|놓치면|지금\s?사|한\s?물\s?(?:가|간|갔|지)|끝물|한물/;
 
 /** 후킹 텍스트가 가드를 통과하는가(투자조언·예측·점수·등급 없음). */
 export function isFrontHookSafe(text: string): boolean {

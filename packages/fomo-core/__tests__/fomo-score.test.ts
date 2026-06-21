@@ -44,6 +44,26 @@ describe("fomoWhy / confidenceGrade — 상세 포모 해부(척추 ③)", () =>
     expect(confidenceGrade(0.45)).toBe("근거 보통");
     expect(confidenceGrade(0.2)).toBe("근거 약함");
   });
+
+  // HOTFIX 회귀 — "한 물 가는 분위기"(쇠퇴 판정) 제거 + 가드 구멍 막힘.
+  it("가드 구멍 — '한 물 가는 분위기예요'는 이제 거부(false)", () => {
+    expect(isFrontHookSafe("한 물 가는 분위기예요")).toBe(false);
+    expect(isFrontHookSafe("한물 갔어요")).toBe(false);
+    expect(isFrontHookSafe("끝물이에요")).toBe(false);
+  });
+  it("정상 카피('분위기' 정상 사용)는 통과 — 과금지 아님", () => {
+    expect(isFrontHookSafe("관심이 데워지는 분위기예요")).toBe(true);
+    expect(fomoLabelTextsSafe()).toBe(true); // 새 cooling 카피 포함 전부 통과
+  });
+  it("cooling 경로(라벨·fomoWhy·카드 헤드라인)에 '한물'/'한 물' 없음", () => {
+    const cooling = computeFomoScore({ volumeRatio: 3, mentionScore: 80, changePct: -7 });
+    expect(cooling.label).toBe("cooling");
+    const texts = [cooling.labelText, fomoWhy(cooling), fomoCardView(cooling, { sector: "반도체" }).headline];
+    for (const t of texts) {
+      expect(t).not.toMatch(/한\s?물|한물|끝물/);
+      expect(isFrontHookSafe(t), `cooling 텍스트 가드 통과: ${t}`).toBe(true);
+    }
+  });
 });
 
 describe("computeFomoScore — 포모 점수 엔진(§2)", () => {
