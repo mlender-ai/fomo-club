@@ -85,35 +85,96 @@ const MARKET_LABEL: Record<string, string> = {
  * 2행 헤드라인(가격>거래량>수급>뉴스>잠잠) · 3행 쉬운 번역 · 4행 균형(있으면). 점수·판정 없이 사실만.
  * 비주얼 디테일(국기·리치 등)은 광혁 — 여기선 구조/문구만.
  */
-function StockCardFace({ stock, hook, progress }: { stock: DeckStock; hook: CardFrontHook; progress?: string }) {
-  const quiet = hook.source === "quiet";
+/** 강도별 헤드라인 색 — 강도 비례 톤(§3). high=코랄, medium=주황, calm=그레이. */
+const INTENSITY_COLOR: Record<string, string> = { high: UP, medium: "#F59E0B", calm: "#94A3B8" };
+
+/** 로고 폴백 — 종목명 첫 글자 원형(외부 이미지는 후속, 게이트). */
+function InitialBadge({ name }: { name: string }) {
+  const ch = name.trim().slice(0, 1) || "·";
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
+      style={{ backgroundColor: "rgba(255,90,54,0.18)", color: UP }}
+      aria-hidden
+    >
+      {ch}
+    </span>
+  );
+}
+
+/**
+ * 종목 카드 앞면 — FOMO 후킹 구조(rev2 §4): 정체성 / 테마태그 / 후킹 / 다가오는 재료 / baseline.
+ * 강도에 비례한 톤(§3) — 핫한 종목은 세게, 조용한 종목은 차분하게. 점수·판정·예측 없음.
+ * 로고 이미지·미니차트·시총순위는 후속(배포 복구 후 서버 페치) — 지금은 이니셜/태그/텍스트 골격.
+ */
+function StockCardFace({
+  stock,
+  hook,
+  changePct,
+  progress,
+}: {
+  stock: DeckStock;
+  hook: CardFrontHook;
+  changePct?: number | undefined;
+  progress?: string | undefined;
+}) {
+  const color = INTENSITY_COLOR[hook.intensity] ?? "#94A3B8";
+  // 6행 baseline(위생) — 헤드라인이 이미 등락을 말하는 가격/quiet 앵글은 생략(중복 방지).
+  const showBaseline = ["named", "dday", "big", "surprise"].includes(hook.angle) && typeof changePct === "number";
+  const baseline = showBaseline
+    ? `오늘 ${changePct! > 0 ? "+" : changePct! < 0 ? "-" : ""}${Math.abs(changePct!).toFixed(1)}%`
+    : undefined;
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2">
-        <span className="text-2xl font-bold text-whiteout">{stock.canonical}</span>
-        {stock.marquee && <span className="text-xl" aria-hidden>⭐</span>}
+      {/* 1행 — 정체성: 로고(이니셜) + 종목명 + 시장 */}
+      <div className="flex items-center gap-2.5">
+        <InitialBadge name={stock.canonical} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
+            {stock.marquee && <span className="text-base" aria-hidden>⭐</span>}
+          </div>
+          <span className="font-pixel text-xs text-muted">{MARKET_LABEL[stock.market] ?? stock.market}</span>
+        </div>
       </div>
-      <p className="mt-3 font-pixel text-sm text-muted">
-        {MARKET_LABEL[stock.market] ?? stock.market}
-      </p>
 
-      {/* 2행 — 후킹(가장 센 객관 신호 1줄) */}
-      <p
-        className="mt-5 text-xl font-bold leading-8"
-        style={quiet ? { color: "#94A3B8" } : { color: UP }}
-      >
+      {/* 2행 — 테마 태그 */}
+      {hook.themeLabel && (
+        <span
+          className="mt-4 inline-flex w-fit items-center rounded-full px-2.5 py-1 font-pixel text-xs"
+          style={{ backgroundColor: "rgba(255,90,54,0.12)", color: UP }}
+        >
+          # {hook.themeLabel}
+        </span>
+      )}
+
+      {/* 3행 — FOMO 후킹(강도 비례 톤) */}
+      <p className="mt-4 text-xl font-bold leading-8" style={{ color }}>
         {hook.headline}
       </p>
-      {/* 3행 — 쉬운 번역(사실 묘사) */}
-      {hook.translation && (
-        <p className="mt-2 text-base leading-7 text-whiteout">{hook.translation}</p>
-      )}
-      {/* 4행 — 균형(반대 방향 사실, 있을 때만) */}
-      {hook.balance && <p className="mt-2 text-sm leading-6 text-muted">{hook.balance}</p>}
 
-      <div className="mt-auto flex items-center justify-between pt-6">
-        <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+      {/* 5행 — 다가오는 재료(구체·일정) */}
+      {hook.catalysts.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-1.5">
+          {hook.catalysts.map((c, i) => (
+            <li key={i} className="flex gap-2 text-sm leading-6 text-whiteout">
+              <span aria-hidden style={{ color: UP }}>•</span>
+              <span>
+                {c.when && <span className="font-pixel text-muted">{c.when} · </span>}
+                {c.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-auto pt-6">
+        {/* 6행 — baseline(위생 요소, 후킹 아님) */}
+        {baseline && <p className="font-pixel text-[11px] text-muted">{baseline}</p>}
+        <div className="mt-2 flex items-center justify-between">
+          <span className="font-pixel text-[11px] text-muted">더보기 →</span>
+          {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+        </div>
       </div>
     </div>
   );
@@ -214,11 +275,15 @@ function SectorDeckInner({
     [signals]
   );
 
-  const hookFor = (stock: DeckStock): CardFrontHook => {
-    const sig: CardFrontSignals = { ...(signals[stock.canonical] ?? {}), asOf };
-    if (stock.reason) sig.reason = stock.reason;
-    return buildCardFrontHook(sig);
+  // 종목별 신호 조립 — basics(가격·52주) + 테마 태그(섹터) + 발굴 근거(named catalyst).
+  // 라이브 수급 streak·거래량·시총순위·일정은 후속(서버 페치, 배포 복구 후) — 엔진은 채워지면 자동 반영.
+  const signalsFor = (stock: DeckStock): CardFrontSignals => {
+    const sig: CardFrontSignals = { ...(signals[stock.canonical] ?? {}), asOf, themeLabel: stock.sector };
+    if (stock.reason) sig.catalysts = [{ label: stock.reason, kind: "news" }];
+    return sig;
   };
+  const hookFor = (stock: DeckStock): CardFrontHook => buildCardFrontHook(signalsFor(stock));
+  const pctOf = (stock: DeckStock): number | undefined => signals[stock.canonical]?.changePct;
 
   const flingNext = useCallback((dir: "left" | "right") => {
     if (prefersReducedMotion()) {
@@ -307,7 +372,7 @@ function SectorDeckInner({
                 zIndex: 1,
               }}
             >
-              <StockCardFace stock={stock} hook={hookFor(stock)} />
+              <StockCardFace stock={stock} hook={hookFor(stock)} changePct={pctOf(stock)} />
             </div>
           ))}
 
@@ -334,7 +399,7 @@ function SectorDeckInner({
           >
             ← 덜 관심
           </span>
-          <StockCardFace stock={top} hook={hookFor(top)} progress={`${(idx % stocks.length) + 1} / ${stocks.length}`} />
+          <StockCardFace stock={top} hook={hookFor(top)} changePct={pctOf(top)} progress={`${(idx % stocks.length) + 1} / ${stocks.length}`} />
         </div>
       </div>
 

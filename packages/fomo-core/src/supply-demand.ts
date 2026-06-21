@@ -81,6 +81,39 @@ export function latestInvestorFlow(flows: readonly InvestorFlow[]): InvestorFlow
   return [...flows].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0]!;
 }
 
+/** 연속 순매수/순매도 일수(최신일부터, 같은 부호가 이어지는 길이). 순매수=+, 순매도=−, 보합/없음=0. */
+export interface InvestorStreak {
+  /** 외국인 연속 일수(+순매수/−순매도). */
+  foreign: number;
+  /** 기관 연속 일수(+순매수/−순매도). */
+  institution: number;
+}
+
+function streakOf(sortedDescNets: number[]): number {
+  const first = sortedDescNets.find((n) => n !== 0);
+  if (first === undefined) return 0;
+  const dir = first > 0 ? 1 : -1;
+  let n = 0;
+  for (const net of sortedDescNets) {
+    if (net === 0) break; // 보합이면 연속 끊김
+    if (Math.sign(net) !== dir) break;
+    n++;
+  }
+  return dir * n;
+}
+
+/**
+ * 일별 수급 → 외국인·기관 연속 순매수/순매도 일수(사회적 증거 레버용). 최신일부터 같은 방향이 이어지는 길이.
+ * 데이터가 적으면(누적 전) 그만큼만 — 정직(환각 금지). 결정적.
+ */
+export function investorNetStreak(flows: readonly InvestorFlow[]): InvestorStreak {
+  const desc = [...flows].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return {
+    foreign: streakOf(desc.map((f) => f.foreignNet)),
+    institution: streakOf(desc.map((f) => f.institutionNet)),
+  };
+}
+
 import type { OfficialFact } from "./theme-understanding/types";
 
 function netDirection(net: number): string {

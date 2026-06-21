@@ -61,3 +61,26 @@ export async function readLatestSupplyDemand(ticker: string): Promise<InvestorFl
     return null;
   }
 }
+
+/** 한 종목의 최근 N거래일 수급(최신순). 연속 순매수/순매도(streak) 계산용. 테이블 미생성이면 빈 배열. */
+export async function readSupplyDemandHistory(
+  ticker: string,
+  days = 20
+): Promise<InvestorFlow[]> {
+  try {
+    const rows = await prisma.supplyDemandDaily.findMany({
+      where: { ticker },
+      orderBy: { date: "desc" },
+      take: Math.max(1, Math.min(days, 60)),
+    });
+    return rows.map((row) => ({
+      date: row.date,
+      foreignNet: row.foreignNet,
+      institutionNet: row.institutionNet,
+      ...(row.individualNet != null ? { individualNet: row.individualNet } : {}),
+    }));
+  } catch (err) {
+    console.warn("[supply-demand-store] history read skipped (table missing?)", (err as Error)?.message);
+    return [];
+  }
+}

@@ -4,7 +4,29 @@ import {
   latestInvestorFlow,
   supplyDemandFact,
   parseKisInvestorFlow,
+  investorNetStreak,
+  type InvestorFlow,
 } from "../src/supply-demand";
+
+describe("investorNetStreak — 연속 순매수/순매도(사회적 증거 레버)", () => {
+  const f = (date: string, foreignNet: number, institutionNet: number): InvestorFlow => ({
+    date,
+    foreignNet,
+    institutionNet,
+  });
+  it("최신일부터 같은 부호가 이어지는 길이(순매수=+/순매도=−)", () => {
+    const flows = [f("2026-06-21", 100, -50), f("2026-06-20", 80, -10), f("2026-06-19", 30, 5), f("2026-06-18", -10, -20)];
+    const s = investorNetStreak(flows);
+    expect(s.foreign).toBe(3); // +,+,+ 후 끊김
+    expect(s.institution).toBe(-2); // -,- 후 +로 끊김
+  });
+  it("입력 순서 무관(결정적), 보합이면 끊김, 비면 0", () => {
+    expect(investorNetStreak([]).foreign).toBe(0);
+    expect(investorNetStreak([f("2026-06-21", 0, 5), f("2026-06-20", 10, 5)]).foreign).toBe(0); // 최신 보합
+    const a = investorNetStreak([f("2026-06-19", 1, 1), f("2026-06-21", 1, 1), f("2026-06-20", 1, 1)]);
+    expect(a.foreign).toBe(3);
+  });
+});
 
 // 네이버 frgn.naver 실제 행 구조(2행) — 날짜·종가·전일비·등락률·거래량·기관·외국인·보유주수·보유율.
 // 기관/외국인만 부호(+/-) 동반. 등락률(+1.02%)은 % 라 순매매로 안 잡혀야 한다.
