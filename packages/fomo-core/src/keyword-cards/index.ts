@@ -7,3 +7,4 @@ export * from "./comment";
 export * from "./josa";
 export * from "./stocks";
 export * from "./card-front-hook";
+export * from "./fomo-score";
