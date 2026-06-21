@@ -1,11 +1,16 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { isAllowedProxyRequest, isTokenUnexpired, sanitizeAuthPayload } from "../lib/auth-proxy";
+import { consumeRateLimit, getClientIp, resetRateLimitStore } from "../lib/request-rate-limit";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
+
+afterEach(() => {
+  resetRateLimitStore();
+});
 
 function tokenWithExpiry(exp: number): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
@@ -54,5 +59,38 @@ describe("FOMO Web browser auth security", () => {
     expect(config).toContain("Content-Security-Policy-Report-Only");
     expect(config).toContain("object-src 'none'");
     expect(config).toContain("https://t1.kakaocdn.net");
+  });
+
+  it("rate limits repeated auth attempts per client IP", () => {
+    const now = 1_000;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const result = consumeRateLimit("auth/login", "203.0.113.10", now);
+      expect(result.allowed).toBe(true);
+    }
+
+    const blocked = consumeRateLimit("auth/login", "203.0.113.10", now);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
+
+    const otherIp = consumeRateLimit("auth/login", "203.0.113.11", now);
+    expect(otherIp.allowed).toBe(true);
+  });
+
+  it("shares session checks by IP but isolates mutations by path", () => {
+    const now = 2_000;
+
+    const session = Array.from({ length: 60 }, () => consumeRateLimit("auth/session", "198.51.100.7", now));
+    expect(session.every((result) => result.allowed)).toBe(true);
+    expect(consumeRateLimit("auth/session", "198.51.100.7", now).allowed).toBe(false);
+
+    const vote = Array.from({ length: 30 }, () => consumeRateLimit("emotions/vote", "198.51.100.7", now));
+    expect(vote.every((result) => result.allowed)).toBe(true);
+    expect(consumeRateLimit("taste", "198.51.100.7", now).allowed).toBe(true);
+  });
+
+  it("normalizes the first forwarded IP and falls back safely", () => {
+    expect(getClientIp("198.51.100.7, 10.0.0.1")).toBe("198.51.100.7");
+    expect(getClientIp(null)).toBe("unknown");
   });
 });

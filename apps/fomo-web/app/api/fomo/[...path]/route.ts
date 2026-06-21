@@ -8,6 +8,7 @@ import {
   isTokenUnexpired,
   sanitizeAuthPayload,
 } from "../../../../lib/auth-proxy";
+import { consumeRateLimit } from "../../../../lib/request-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,19 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
 
   if (!isAllowedProxyRequest(proxyPath, request.method)) {
     return noStoreJson({ error: "Not found" }, { status: 404 });
+  }
+
+  const rateLimit = consumeRateLimit(proxyPath, request.headers.get("x-forwarded-for"));
+  if (!rateLimit.allowed) {
+    return noStoreJson(
+      { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        },
+      }
+    );
   }
 
   if (proxyPath === "auth/logout" && request.method === "POST") {
