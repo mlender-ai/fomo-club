@@ -5,6 +5,8 @@ import { fomoCardView, computeFomoScore, rankFeedByFomo } from "@fomo/core";
 import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, FomoTone, TaFact } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
+import { getWatchlist } from "@/lib/watchlist";
+import { recordStockInterest, stockInterestScore } from "@/lib/stockInterest";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
@@ -18,7 +20,7 @@ import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
  *   "왜 이 종목"(grounded 근거)을 카드에 유지(#560). 대장주만 나오면 발굴 가치 0 → 발굴주를 노출 우선.
  *
  * 비주얼(카드 디자인·국기/시장 라벨·요약 리치 등)은 광혁 — 여기선 구조/동작만(§4).
- * 정렬은 @fomo/core sortStocksForFeed(콜드스타트 기본) — 개인화는 다음 트랙이 seam 에 끼움.
+ * 정렬은 @fomo/core rankFeedByFomo 밴드 + 로컬 취향 점수(관심/덜관심/상세/워치리스트) 1차 반영.
  */
 const THRESHOLD = 90;
 const EXIT_MS = 320;
@@ -89,6 +91,13 @@ function mergeDiscovered(
       a.canonical.localeCompare(b.canonical)
   );
   return out;
+}
+
+function stockPersonalizationRank(stock: string, nowMs = Date.now()): number {
+  const watch = getWatchlist();
+  const watchIndex = watch.findIndex((w) => w.stock === stock);
+  const watchBoost = watchIndex >= 0 ? 30 + Math.max(0, 10 - watchIndex) : 0;
+  return stockInterestScore(stock, nowMs) + watchBoost;
 }
 
 function prefersReducedMotion(): boolean {
@@ -366,7 +375,7 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
         });
         const order = rankFeedByFomo(
           merged.map((s) => ({ key: s.canonical, label: fronts[s.canonical]?.fomo.label ?? "quiet" })),
-          { seed: kstDateSeed() }
+          { seed: kstDateSeed(), rank: (key) => stockPersonalizationRank(key) }
         );
         const byKey = new Map(merged.map((s) => [s.canonical, s] as const));
         const ranked = order.map((k) => byKey.get(k)).filter((s): s is DeckStock => !!s);
@@ -496,7 +505,9 @@ function SectorDeckInner({
 
   const advance = useCallback(
     (dir: "left" | "right") => {
-      recordTaste("stock", at(idx).canonical, dir === "right" ? "more" : "less"); // 트랙 B 적재
+      const stock = at(idx).canonical;
+      recordStockInterest(stock, dir === "right" ? "more" : "less", Date.now());
+      recordTaste("stock", stock, dir === "right" ? "more" : "less"); // 트랙 B 적재
       flingNext(dir);
     },
     [idx, stocks, flingNext]
@@ -507,6 +518,7 @@ function SectorDeckInner({
       onRequireLogin();
       return;
     }
+    recordStockInterest(stock.canonical, "view_depth", Date.now());
     recordTaste("stock", stock.canonical, "view_depth"); // 강한 관심
     setSelected(stock);
   };

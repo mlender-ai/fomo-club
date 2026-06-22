@@ -13,7 +13,7 @@ import {
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { SectorStockDeck } from "@/components/SectorStockDeck";
 import { fetchKeywords, fetchThemeInsight, recordTaste } from "@/lib/fomoApi";
-import { recordInterest } from "@/lib/keywordInterest";
+import { keywordInterestScore, recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
@@ -239,6 +239,25 @@ function TodayFeed({ loggedIn, onRequireLogin }: FeedGate) {
   return <KeywordDeck cards={state.cards} loggedIn={loggedIn} onRequireLogin={onRequireLogin} />;
 }
 
+function personalizedKeywordCards(cards: readonly KeywordCard[]): KeywordCard[] {
+  const history = getHistory();
+  const lastViewed = new Map(history.map((h) => [h.id, h.ts] as const));
+  const now = Date.now();
+  const dayMs = 86_400_000;
+  const score = (card: KeywordCard) => {
+    const viewedTs = lastViewed.get(card.id);
+    const recencyBoost =
+      viewedTs === undefined ? 0 : Math.max(0, 6 * (1 - Math.max(0, now - viewedTs) / (21 * dayMs)));
+    return keywordInterestScore(card.id, now) + recencyBoost;
+  };
+  return [...cards].sort((a, b) => {
+    const pa = score(a);
+    const pb = score(b);
+    if (pa !== pb) return pb - pa;
+    return cards.indexOf(a) - cards.indexOf(b);
+  });
+}
+
 function KeywordDeck({
   cards,
   loggedIn,
@@ -252,7 +271,8 @@ function KeywordDeck({
     return new Set(getHistory().filter((h) => kstDay(h.ts) === today).map((h) => h.id));
   })[0];
   const [replay, setReplay] = useState(false);
-  const sectorCards = replay ? [...cards] : cards.filter((c) => !viewedIds.has(c.id));
+  const personalizedCards = personalizedKeywordCards(cards);
+  const sectorCards = replay ? personalizedCards : personalizedCards.filter((c) => !viewedIds.has(c.id));
   const deck = toDeckItems(sectorCards);
 
   const [idx, setIdx] = useState(0);
