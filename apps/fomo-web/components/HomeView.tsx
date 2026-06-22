@@ -73,27 +73,41 @@ export function HomeView({
           </button>
         </div>
 
-        {/* 시장 온도(FOMO Index) — 전체 폴백이면 정직하게 "수집 중" 표시 @author 안티그래비티 */}
-        {index && !isFullFallback && (
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-2.5">
+        {/* 시장 온도(FOMO Index) — #412 타이포그래피 위계 강화 + #409 스켈레톤 폴백 */}
+        {!index && (
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
             <span className="text-xs text-muted">오늘의 시장 온도</span>
-            <div className="flex items-baseline gap-2">
-              <span className="font-pixel text-xl leading-none" style={{ color }}>
-                {index.score}
-              </span>
-              <span className="font-pixel text-[11px] text-muted">{index.state}</span>
-              {index.prevDayDelta !== 0 && (
-                <span className="font-pixel text-[11px]" style={{ color }}>
-                  {index.prevDayDelta > 0
-                    ? `· 어제보다 ▲+${index.prevDayDelta}`
-                    : `· 어제보다 ▼${index.prevDayDelta}`}
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-10 animate-pulse rounded bg-elevated" />
+              <div className="h-3 w-16 animate-pulse rounded bg-elevated" />
             </div>
           </div>
         )}
+        {index && !isFullFallback && (
+          <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-hairline bg-surface px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted">오늘의 시장 온도</span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-pixel text-2xl font-bold leading-none" style={{ color }}>
+                  {index.score}
+                </span>
+                <span className="font-pixel text-xs text-muted">{index.state}</span>
+                {index.prevDayDelta !== 0 && (
+                  <span className="font-pixel text-[11px]" style={{ color }}>
+                    {index.prevDayDelta > 0
+                      ? `▲+${index.prevDayDelta}`
+                      : `▼${index.prevDayDelta}`}
+                  </span>
+                )}
+              </div>
+            </div>
+            {index.aiSummary && (
+              <p className="text-xs leading-relaxed text-muted">{index.aiSummary}</p>
+            )}
+          </div>
+        )}
         {index && isFullFallback && (
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-2.5">
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3">
             <span className="text-xs text-muted">오늘의 시장 온도</span>
             <span className="font-pixel text-[11px] text-muted">데이터 수집 중…</span>
           </div>

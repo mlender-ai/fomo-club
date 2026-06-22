@@ -149,3 +149,105 @@ describe("buildSummary — Heat 정보 + 정직한 숫자 (#428)", () => {
     expect(s).not.toMatch(/매수|매도|반드시|보장|폭락|급등/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #413 추가 회귀 테스트 — 경계값·부분 조합·Heat 격리
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("computeFomoIndex — 경계값 시나리오 (#413)", () => {
+  it("market만 극단값일 때 다른 Heat는 독립적으로 산출", () => {
+    const idx = computeFomoIndex(
+      { market: { volumeChangePct: 999, turnoverChangePct: 999, searchChangePct: 999, etfInflowPct: 999 } },
+      "2026-06-22",
+    );
+    const market = idx.components.find((c) => c.key === "market")!;
+    const community = idx.components.find((c) => c.key === "community")!;
+    expect(market.score).toBe(30);
+    expect(community.meta?.confidence).toBe("fallback");
+  });
+
+  it("emotion 투표가 bullish 쏠림일 때 score > 중립", () => {
+    const idx = computeFomoIndex(
+      { emotion: { fomo: 50, greed: 30, fear: 5, regret: 5, conviction: 10 } },
+      "2026-06-22",
+    );
+    const emotion = idx.components.find((c) => c.key === "emotion")!;
+    expect(emotion.score).toBeGreaterThan(15);
+    expect(emotion.meta?.confidence).not.toBe("fallback");
+  });
+
+  it("emotion 투표가 bearish 쏠림일 때 score < 중립", () => {
+    const idx = computeFomoIndex(
+      { emotion: { fear: 50, regret: 30, fomo: 5, greed: 5, conviction: 10 } },
+      "2026-06-22",
+    );
+    const emotion = idx.components.find((c) => c.key === "emotion")!;
+    expect(emotion.score).toBeLessThan(15);
+  });
+
+  it("whale 이벤트가 max 초과해도 10 이하로 clamp", () => {
+    const idx = computeFomoIndex(
+      { whale: [{ weight: 100 }, { weight: 200 }] },
+      "2026-06-22",
+    );
+    const whale = idx.components.find((c) => c.key === "whale")!;
+    expect(whale.score).toBeLessThanOrEqual(10);
+  });
+
+  it("모든 소스가 정상이면 fallbackCount === 0", () => {
+    const idx = computeFomoIndex(
+      {
+        market: { volumeChangePct: 10, turnoverChangePct: 5, searchChangePct: 20, etfInflowPct: 3 },
+        community: { mentionChangePct: 15, bullishRatio: 0.6 },
+        emotion: { fomo: 10, fear: 5, greed: 3, regret: 2, conviction: 8 },
+        whale: [{ weight: 3 }],
+      },
+      "2026-06-22",
+    );
+    for (const c of idx.components) {
+      expect(c.meta?.confidence).not.toBe("fallback");
+    }
+  });
+
+  it("date 필드가 반환 결과에 그대로 전달된다", () => {
+    const idx = computeFomoIndex({}, "2099-12-31");
+    expect(idx.date).toBe("2099-12-31");
+  });
+
+  it("4개 컴포넌트가 항상 반환된다", () => {
+    const idx = computeFomoIndex({}, "2026-06-22");
+    expect(idx.components).toHaveLength(4);
+    const keys = idx.components.map((c) => c.key).sort();
+    expect(keys).toEqual(["community", "emotion", "market", "whale"]);
+  });
+});
+
+describe("개별 Heat — confidence 레벨 정확성 (#413)", () => {
+  it("marketHeat: 4개 소스 모두 제공 → high", () => {
+    const h = marketHeat({ volumeChangePct: 10, turnoverChangePct: 5, searchChangePct: 20, etfInflowPct: 3 });
+    expect(h.meta?.confidence).toBe("high");
+    expect(h.meta?.sourcesAvailable).toBe(4);
+  });
+
+  it("marketHeat: 1개 소스만 → low", () => {
+    const h = marketHeat({ volumeChangePct: 10 });
+    expect(h.meta?.confidence).toBe("low");
+    expect(h.meta?.sourcesAvailable).toBe(1);
+  });
+
+  it("communityHeat: mentionChangePct + bullishRatio → medium", () => {
+    const h = communityHeat({ mentionChangePct: 10, bullishRatio: 0.5 });
+    expect(h.meta?.confidence).toBe("medium");
+    expect(h.meta?.sourcesAvailable).toBe(2);
+  });
+
+  it("emotionHeat: 50+ 투표 → high", () => {
+    const h = emotionHeat({ fomo: 20, fear: 15, greed: 10, regret: 5, conviction: 5 });
+    expect(h.meta?.confidence).toBe("high");
+  });
+
+  it("emotionHeat: 10~49 투표 → medium", () => {
+    const h = emotionHeat({ fomo: 5, fear: 5 });
+    expect(h.meta?.confidence).toBe("medium");
+  });
+});

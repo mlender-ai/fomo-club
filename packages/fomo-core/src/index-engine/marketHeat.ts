@@ -7,6 +7,7 @@
 
 import type { HeatComponent } from "../types";
 import type { MarketSignals, HeatMeta, HeatConfidence } from "./types";
+import { logHeatError } from "./logger";
 
 export const MARKET_HEAT_MAX = 30;
 const NEUTRAL = MARKET_HEAT_MAX / 2; // 데이터 미비 시 중립값(인위적 과열/과냉 방지)
@@ -54,7 +55,7 @@ export function marketHeat(signals: MarketSignals = {}): HeatComponent {
 
     return { key: "market", score: clamp(score), max: MARKET_HEAT_MAX, meta };
   } catch (err) {
-    console.warn("[fomo-core/marketHeat] unexpected error, using fallback", err);
+    logHeatError("marketHeat", "산출 실패, 폴백 사용", err);
     return {
       key: "market",
       score: NEUTRAL,

@@ -8,6 +8,7 @@
 
 import type { HeatComponent } from "../types";
 import type { WhaleEvent, HeatMeta } from "./types";
+import { logHeatError } from "./logger";
 
 export const WHALE_HEAT_MAX = 10;
 
@@ -28,7 +29,7 @@ export function whaleHeat(events: WhaleEvent[] = []): HeatComponent {
 
     return { key: "whale", score: clamp(Math.round(sum)), max: WHALE_HEAT_MAX, meta };
   } catch (err) {
-    console.warn("[fomo-core/whaleHeat] unexpected error, using fallback", err);
+    logHeatError("whaleHeat", "산출 실패, 폴백 사용", err);
     return {
       key: "whale",
       score: 0,

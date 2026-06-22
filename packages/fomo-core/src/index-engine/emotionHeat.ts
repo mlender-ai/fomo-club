@@ -8,6 +8,7 @@
 
 import type { HeatComponent } from "../types";
 import type { EmotionTally, HeatMeta, HeatConfidence } from "./types";
+import { logHeatError } from "./logger";
 
 export const EMOTION_HEAT_MAX = 30;
 const NEUTRAL = EMOTION_HEAT_MAX / 2;
@@ -61,7 +62,7 @@ export function emotionHeat(tally: EmotionTally = {}): HeatComponent {
 
     return { key: "emotion", score: clamp(score), max: EMOTION_HEAT_MAX, meta };
   } catch (err) {
-    console.warn("[fomo-core/emotionHeat] unexpected error, using fallback", err);
+    logHeatError("emotionHeat", "산출 실패, 폴백 사용", err);
     return {
       key: "emotion",
       score: NEUTRAL,

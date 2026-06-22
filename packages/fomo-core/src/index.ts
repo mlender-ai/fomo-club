@@ -25,6 +25,7 @@ export * from "./index-engine/whaleHeat";
 export * from "./index-engine/calculate";
 export * from "./index-engine/summary";
 export * from "./index-engine/health";
+export * from "./index-engine/logger";
 export * from "./index-engine/community";
 export * from "./index-engine/whaleEvents";
 export * from "./index-engine/naverFetcher";

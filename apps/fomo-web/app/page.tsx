@@ -76,7 +76,12 @@ export default function Home() {
       fetchFeed(),
     ]).then(([i, t, b, c, v, f]) => {
       if (i.status === "fulfilled") setIndex(i.value);
-      if (t.status === "fulfilled") setTally(t.value);
+      // #425: 감정 투표 데이터 폴백 — 실패/빈값 시 중립 기본값(정직한 숫자: votes=0 명시)
+      setTally(
+        t.status === "fulfilled" && t.value.total > 0
+          ? t.value
+          : { date: new Date().toISOString().slice(0, 10), total: 0, counts: {}, ratios: {} },
+      );
       if (b.status === "fulfilled") {
         setBanner(b.value.items);
         setMarkets(b.value.markets ?? []);

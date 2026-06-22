@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay, personalLine } from "../src/mascot-lines";
+import { marketLine, marketSummary, mineLine, restorativeLine, isCalmDay, personalLine, indexAwareMarketLine } from "../src/mascot-lines";
 import { EMOTION_TYPES } from "../src/types";
 
 const STATES = ["무관심", "관망", "관심", "FOMO", "광기"] as const;
@@ -36,6 +36,36 @@ describe("포모 멘트 — 담담한 솔직함 (lovable + regulation)", () => {
     // 가짜 긍정이 아니라 사실 인정 + 위로 — 표본 점검
     expect(mineLine("fear")).toContain("괜찮");
     expect(marketLine("FOMO")).toContain("다들"); // 혼자 아님 톤(2인칭 지목 없이 · 해요체)
+  });
+});
+
+describe("indexAwareMarketLine — Heat 근거 포함 멘트 (#428)", () => {
+  it("상위 2개 Heat 비율이 괄호 안에 포함된다", () => {
+    const components = [
+      { key: "market", score: 24, max: 30 },
+      { key: "community", score: 9, max: 30 },
+      { key: "emotion", score: 20, max: 30 },
+      { key: "whale", score: 3, max: 10 },
+    ];
+    const line = indexAwareMarketLine("관심", components);
+    expect(line).toContain("시장 80%");
+    expect(line).toContain("감정");
+    expect(line).toContain("%");
+  });
+
+  it("components 빈 배열이면 기본 marketLine 반환", () => {
+    expect(indexAwareMarketLine("무관심", [])).toBe(marketLine("무관심"));
+  });
+
+  it("금칙 표현 없음", () => {
+    const components = [
+      { key: "market", score: 30, max: 30 },
+      { key: "emotion", score: 30, max: 30 },
+    ];
+    for (const s of STATES) {
+      const line = indexAwareMarketLine(s, components);
+      expect(line).not.toMatch(FORBIDDEN);
+    }
   });
 });
 

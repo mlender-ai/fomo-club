@@ -14,6 +14,7 @@
 
 import type { HeatComponent } from "../types";
 import type { CommunitySignals, RedditSignal, HeatMeta, HeatConfidence } from "./types";
+import { logHeatError } from "./logger";
 
 export const COMMUNITY_HEAT_MAX = 30;
 const NEUTRAL = COMMUNITY_HEAT_MAX / 2;
@@ -125,7 +126,7 @@ export function communityHeat(signals: CommunitySignals = {}): HeatComponent {
 
     return { key: "community", score: clamp(score), max: COMMUNITY_HEAT_MAX, meta };
   } catch (err) {
-    console.warn("[fomo-core/communityHeat] unexpected error, using fallback", err);
+    logHeatError("communityHeat", "산출 실패, 폴백 사용", err);
     return {
       key: "community",
       score: NEUTRAL,

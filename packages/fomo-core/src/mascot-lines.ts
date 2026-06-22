@@ -30,6 +30,40 @@ export function marketLine(state: FomoState): string {
   return MARKET_LINES[state];
 }
 
+const HEAT_LABELS: Record<string, string> = {
+  market: "시장",
+  community: "커뮤니티",
+  emotion: "감정",
+  whale: "고래",
+};
+
+/**
+ * Index 근거를 포함한 마켓 멘트 (#428).
+ * 상위 2개 Heat의 기여도를 담담히 곁들여 "왜 이런 분위기인지" 3초 이내 이해를 돕는다.
+ * components 가 비어 있거나 max=0 이면 기본 marketLine 으로 폴백.
+ */
+export function indexAwareMarketLine(
+  state: FomoState,
+  components: ReadonlyArray<{ key: string; score: number; max: number }>,
+): string {
+  const base = MARKET_LINES[state];
+  if (components.length === 0) return base;
+
+  const topHeats = [...components]
+    .filter((c) => c.max > 0)
+    .map((c) => ({
+      label: HEAT_LABELS[c.key] ?? c.key,
+      pct: Math.round((c.score / c.max) * 100),
+    }))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 2);
+
+  if (topHeats.length === 0) return base;
+
+  const heatHint = topHeats.map((h) => `${h.label} ${h.pct}%`).join(", ");
+  return `${base} (${heatHint})`;
+}
+
 /**
  * FOMO Index 한 줄 요약 — "3초 안에" 지금 온도를 직관적으로 잡게 하는 짧은 글.
  * 마스코트의 위로 멘트(marketLine)와 달리, 숫자 옆에서 지표의 의미만 담담히 옮긴다.
