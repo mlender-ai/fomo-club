@@ -32,6 +32,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          gh label create "source-discovery" --repo "$REPO" --force --color "0e8a16" --description "Agent source discovery report" >/dev/null 2>&1 || true
+          gh label create "integrity-check" --repo "$REPO" --force --color "fbca04" --description "Agent data/source integrity check" >/dev/null 2>&1 || true
+          gh label create "pipeline-monitor" --repo "$REPO" --force --color "1d76db" --description "Agent pipeline monitoring request" >/dev/null 2>&1 || true
+          gh label create "ssot-sync" --repo "$REPO" --force --color "5319e7" --description "SSOT/document synchronization" >/dev/null 2>&1 || true
+          gh label create "needs-ceo-review" --repo "$REPO" --force --color "d93f0b" --description "Requires Gwanghyuk review/approval" >/dev/null 2>&1 || true
+          gh label create "data-quality" --repo "$REPO" --force --color "c2e0c6" --description "Data quality, confidence, fallback, grounding" >/dev/null 2>&1 || true
+
           case "$MODE" in
             source-discovery)
               TITLE="🔎 [source-discovery] 소스 후보 발굴 요청"
