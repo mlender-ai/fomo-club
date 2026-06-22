@@ -27,7 +27,6 @@ import {
   type StockBasics,
   type StockFrontResponse,
 } from "@/lib/fomoApi";
-import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 
 /**
@@ -107,43 +106,86 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
-          {loading ? (
-            <FullPageLoading estimateMs={LOADING_PRESETS.theme.estimateMs} steps={LOADING_PRESETS.theme.steps} />
-          ) : (
-          <>
           <p className="text-sm leading-6 text-whiteout">{cleanText(card.comment)}</p>
 
-          {/* 왜 떴나 — 응축이 있으면 grounded whyHot, 없으면 기존 키워드 why. */}
+          {/* 왜 떴나 — LLM insight 를 기다리지 않고 카드 기본 depth 를 먼저 보여준다. */}
           <section className="mt-7">
             <p className="font-pixel text-sm text-whiteout">{card.depth.whyTitle}</p>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {cleanText(hasInsight ? insight!.whyHot : card.depth.why)}
-            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">{cleanText(card.depth.why)}</p>
           </section>
 
-          {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관. */}
-          {insight?.officialFacts && insight.officialFacts.length > 0 && (
+          {/* 원문 fallback — insight 도착 전에도 먼저 볼 수 있는 카드 소스. */}
+          {card.sources.length > 0 && (
             <section className="mt-6">
-              <p className="font-pixel text-sm text-whiteout">공식 지표</p>
+              <p className="font-pixel text-sm text-whiteout">오늘 이런 뉴스가 돌았어요</p>
               <ul className="mt-2 space-y-2">
-                {insight.officialFacts.map((f, i) => (
-                  <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                    <span className="block text-sm leading-5 text-whiteout">{cleanText(f.label)}</span>
-                    {f.url ? (
-                      <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
-                        ↳ {f.source} · 공식 데이터 →
+                {card.sources.map((s, i) =>
+                  s.url ? (
+                    <li key={i}>
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-lg border border-hairline bg-surface px-3 py-2 transition-colors hover:border-whiteout/30"
+                      >
+                        <span className="block text-sm leading-5 text-whiteout">{cleanText(s.title)}</span>
+                        {s.source && (
+                          <span className="mt-0.5 block text-[11px] text-muted">{cleanText(s.source)} · 원문 보기 →</span>
+                        )}
                       </a>
-                    ) : (
-                      <span className="mt-1 block text-[11px] text-muted">↳ {f.source} · 공식 데이터</span>
-                    )}
-                  </li>
-                ))}
+                    </li>
+                  ) : (
+                    <li key={i} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+                      <span className="block text-sm leading-5 text-whiteout">{cleanText(s.title)}</span>
+                      {s.source && <span className="mt-0.5 block text-[11px] text-muted">{cleanText(s.source)}</span>}
+                    </li>
+                  )
+                )}
               </ul>
             </section>
           )}
 
-          {hasInsight ? (
+          <section className="mt-6">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-pixel text-sm text-whiteout">원문 정리</p>
+              {loading ? (
+                <span className="text-[11px] text-muted">정리 중</span>
+              ) : (
+                <span className="text-[11px] text-muted">{hasInsight ? "원문 근거 있음" : "원문 근거 부족"}</span>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="mt-3 space-y-2" aria-busy="true">
+                <p className="text-sm leading-6 text-muted">원문을 정리하는 중이에요…</p>
+                <div className="h-16 animate-pulse rounded-lg border border-hairline bg-surface" />
+                <div className="h-16 animate-pulse rounded-lg border border-hairline bg-surface" />
+              </div>
+            ) : hasInsight ? (
             <>
+              <p className="mt-2 text-sm leading-6 text-muted">{cleanText(insight!.whyHot)}</p>
+
+              {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). */}
+              {insight?.officialFacts && insight.officialFacts.length > 0 && (
+                <section className="mt-6">
+                  <p className="font-pixel text-sm text-whiteout">공식 지표</p>
+                  <ul className="mt-2 space-y-2">
+                    {insight.officialFacts.map((f, i) => (
+                      <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+                        <span className="block text-sm leading-5 text-whiteout">{cleanText(f.label)}</span>
+                        {f.url ? (
+                          <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
+                            ↳ {f.source} · 공식 데이터 →
+                          </a>
+                        ) : (
+                          <span className="mt-1 block text-[11px] text-muted">↳ {f.source} · 공식 데이터</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
                 <p className="mt-3 text-[11px] leading-5 text-muted">
                   오늘 쏠림 · <span style={{ color: "var(--up, #ff5a5f)" }}>강세 {insight!.lean.bullCount}</span>
@@ -242,38 +284,11 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
               )}
             </>
           ) : (
-            // 폴백 — 응축 부족(insufficient): 기존 뉴스 소스(#500). 빈 화면 금지.
-            // 로딩 중은 상위 FullPageLoading 이 담당하므로 여기는 항상 도착 후 상태다.
-            card.sources.length > 0 && (
-              <section className="mt-6">
-                <p className="font-pixel text-sm text-whiteout">오늘 이런 뉴스가 돌았어요</p>
-                <ul className="mt-2 space-y-2">
-                  {card.sources.map((s, i) =>
-                    s.url ? (
-                      <li key={i}>
-                        <a
-                          href={s.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block rounded-lg border border-hairline bg-surface px-3 py-2 transition-colors hover:border-whiteout/30"
-                        >
-                          <span className="block text-sm leading-5 text-whiteout">{cleanText(s.title)}</span>
-                          {s.source && (
-                            <span className="mt-0.5 block text-[11px] text-muted">{cleanText(s.source)} · 원문 보기 →</span>
-                          )}
-                        </a>
-                      </li>
-                    ) : (
-                      <li key={i} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                        <span className="block text-sm leading-5 text-whiteout">{cleanText(s.title)}</span>
-                        {s.source && <span className="mt-0.5 block text-[11px] text-muted">{cleanText(s.source)}</span>}
-                      </li>
-                    )
-                  )}
-                </ul>
-              </section>
-            )
+            <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-sm leading-6 text-muted">
+              원문을 묶어 봤지만 아직 강세·약세로 나눌 만큼 근거가 충분하진 않아요. 위 뉴스와 카드 기본 설명을 먼저 봐주세요.
+            </p>
           )}
+          </section>
 
           <section className="mt-6">
             <p className="font-pixel text-sm text-whiteout">{card.depth.rememberTitle}</p>
@@ -297,8 +312,6 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           <p className="mt-8 text-center text-[11px] leading-5 text-muted">
             지난 흐름을 친구처럼 풀어드린 거예요. 투자 조언은 아니에요.
           </p>
-          </>
-          )}
         </div>
       </div>
 
