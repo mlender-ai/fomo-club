@@ -9,6 +9,8 @@ import {
   fomoCardView,
   fomoStateSummary,
   fomoWatchPoint,
+  selectFomoHook,
+  translateTaFact,
   confidenceGrade,
   sparklinePath,
   seriesIsUp,
@@ -456,7 +458,12 @@ function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rank
     return <div className="h-24 animate-pulse rounded-xl border border-hairline bg-surface" />;
   }
   const { fomo } = front;
-  const view = fomoCardView(fomo);
+  const hook = selectFomoHook({
+    fomo,
+    signals: front.signals,
+    ...(front.taFact ? { taFact: front.taFact } : {}),
+  });
+  const view = { ...fomoCardView(fomo), headline: hook.headline };
   const tone = DETAIL_TONE_COLOR[view.tone] ?? "#94A3B8";
   const grade = confidenceGrade(fomo.confidence);
   return (
@@ -475,6 +482,7 @@ function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rank
         </span>
       </div>
       <p className="mt-3 text-sm leading-6 text-whiteout">{view.headline}</p>
+      <p className="mt-1 text-sm leading-6 text-muted">{fomoWatchPoint(fomo)}</p>
       <span className="mt-3 inline-flex items-center rounded-full border border-hairline px-2.5 py-1 font-pixel text-[11px] text-muted">
         {grade}
       </span>
@@ -492,7 +500,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
   const stroke = "#D8FF3A"; // 픽셀 차트 단색(브랜드 네온), 등락색 아님
   const lead = (front?.fomo.leadSignal ?? 0) >= 60;
   // 차트가 뒷받침하나 — 현재 상태 묘사만(예측 금지).
-  const note = front?.taFact?.text ?? (lead && !up
+  const note = translateTaFact(front?.taFact) ?? (lead && !up
     ? "차트는 아직 안 따라왔어요 — 수급이 가격보다 먼저 움직이는 자리예요."
     : up
       ? "이미 위로 올라온 자리예요(최근 3개월)."
@@ -524,8 +532,10 @@ function uniquePoints(points: ReadPoint[]): ReadPoint[] {
 function signalFromTa(front: StockFrontResponse | null): { side: "bull" | "bear" | "watch"; text: string } | null {
   const fact = front?.taFact;
   if (!fact) return null;
+  const text = translateTaFact(fact);
+  if (!text) return null;
   if (fact.kind === "ma_bullish" || fact.kind === "macd_bullish" || fact.kind === "near_52w_high") {
-    return { side: "bull", text: fact.text };
+    return { side: "bull", text };
   }
   if (
     fact.kind === "ma_bearish" ||
@@ -535,9 +545,9 @@ function signalFromTa(front: StockFrontResponse | null): { side: "bull" | "bear"
     fact.kind === "near_52w_low" ||
     fact.kind === "atr_expanded"
   ) {
-    return { side: "bear", text: fact.text };
+    return { side: "bear", text };
   }
-  return { side: "watch", text: fact.text };
+  return { side: "watch", text };
 }
 
 function buildReadPoints(front: StockFrontResponse | null, insight: CondensedInsight | null) {
@@ -564,16 +574,16 @@ function buildReadPoints(front: StockFrontResponse | null, insight: CondensedIns
 
     const { foreignNetStreak, institutionNetStreak } = front.signals;
     if (typeof foreignNetStreak === "number" && foreignNetStreak > 0) {
-      bull.push({ text: `외국인 순매수가 ${foreignNetStreak}일 이어졌어요.`, source: "수급" });
+      bull.push({ text: `외국인이 ${foreignNetStreak}일째 사는 중이에요.`, source: "수급" });
     }
     if (typeof institutionNetStreak === "number" && institutionNetStreak > 0) {
-      bull.push({ text: `기관 순매수가 ${institutionNetStreak}일 이어졌어요.`, source: "수급" });
+      bull.push({ text: `기관이 ${institutionNetStreak}일째 사는 중이에요.`, source: "수급" });
     }
     if (typeof foreignNetStreak === "number" && foreignNetStreak < 0) {
-      bear.push({ text: `외국인 순매도가 ${Math.abs(foreignNetStreak)}일 이어졌어요.`, source: "수급" });
+      bear.push({ text: `외국인이 ${Math.abs(foreignNetStreak)}일째 파는 중이에요.`, source: "수급" });
     }
     if (typeof institutionNetStreak === "number" && institutionNetStreak < 0) {
-      bear.push({ text: `기관 순매도가 ${Math.abs(institutionNetStreak)}일 이어졌어요.`, source: "수급" });
+      bear.push({ text: `기관이 ${Math.abs(institutionNetStreak)}일째 파는 중이에요.`, source: "수급" });
     }
     watch.push({ text: fomoWatchPoint(front.fomo), source: "관전 포인트" });
   }

@@ -177,6 +177,7 @@ export async function assembleStockFront(
 
   // ── 포모 점수(척추) — 거래량 회전·가격(등락·추세)·수급. 언급량·prevScore 는 후속(없으면 제외). ──
   const volRatio = volumeTurnover(daily.volumes);
+  if (typeof volRatio === "number") signals.volumeRatio = volRatio;
   const ta = computeTechnicalAnalysis(daily.candles);
   const trend = ta.inputs.trendStrength ?? trendStrength(daily.closes);
   const fomo = computeFomoScore({

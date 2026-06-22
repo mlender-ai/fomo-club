@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, rankFeedByFomo, sparklinePath } from "@fomo/core";
+import { fomoCardView, computeFomoScore, rankFeedByFomo, selectFomoHook, sparklinePath } from "@fomo/core";
 import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, TaFact } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
@@ -190,7 +190,7 @@ function StockCardFace({
   changeDir,
   rankLabel,
   sparkline,
-  taFact,
+  subLine,
   progress,
 }: {
   stock: DeckStock;
@@ -202,7 +202,7 @@ function StockCardFace({
   changeDir?: "up" | "down" | "flat" | undefined;
   rankLabel?: string | undefined;
   sparkline?: number[] | undefined;
-  taFact?: TaFact | undefined;
+  subLine?: string | undefined;
   progress?: string | undefined;
 }) {
   return (
@@ -261,17 +261,15 @@ function StockCardFace({
         </span>
       )}
 
-      {/* 헤드라인 = 라벨 기반 한 줄. 색 강조는 점수/미터/CTA에만 둔다. */}
+      {/* 헤드라인 = 종목별 후킹 사실 1개. 색 강조는 점수/미터/CTA에만 둔다. */}
       <p className="mt-4 text-xl font-bold leading-8 text-whiteout">
         {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
         {view.headline}
       </p>
 
-      {taFact && (
+      {subLine && (
         <p className="mt-2 rounded-lg border border-hairline bg-black/10 px-3 py-2 text-sm leading-6 text-muted">
-          <span className="font-pixel text-[11px] text-whiteout">차트 사실</span>
-          <span className="mx-1.5 opacity-50">·</span>
-          {taFact.text}
+          {subLine}
         </p>
       )}
 
@@ -434,18 +432,25 @@ function SectorDeckInner({
 
   // 카드 표현 — 포모 점수(척추, 단일 출처) → fomoCardView. 로드 전엔 EMPTY(근거 있으면 그게 헤드라인).
   // 헤드라인으로 쓰인 근거는 재료 리스트에서 빼서 중복 방지.
-  const cardFor = (stock: DeckStock): { view: FomoCardView; catalysts: string[] } => {
-    const fomo = front[stock.canonical]?.fomo ?? EMPTY_FOMO;
-    const view = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
-    const catalysts = stock.reason && view.headline !== stock.reason ? [stock.reason] : [];
-    return { view, catalysts };
+  const cardFor = (stock: DeckStock): { view: FomoCardView; catalysts: string[]; subLine?: string } => {
+    const e = front[stock.canonical];
+    const fomo = e?.fomo ?? EMPTY_FOMO;
+    const hook = selectFomoHook({
+      fomo,
+      ...(e?.signals ? { signals: e.signals } : {}),
+      ...(e?.taFact ? { taFact: e.taFact } : {}),
+    });
+    const baseView = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
+    const view = { ...baseView, headline: hook.headline };
+    const catalysts = stock.reason && hook.headline !== stock.reason && hook.subLine !== stock.reason ? [stock.reason] : [];
+    return { view, catalysts, ...(hook.subLine ? { subLine: hook.subLine } : {}) };
   };
   const rankLabelFor = (stock: DeckStock): string | undefined => {
     const r = front[stock.canonical]?.signals.marketCapRank;
     return r ? `시총 ${r.rank}위` : undefined; // 시장명은 1행에 이미 있음(중복 방지)
   };
   const renderFace = (stock: DeckStock, progress?: string) => {
-    const { view, catalysts } = cardFor(stock);
+    const { view, catalysts, subLine } = cardFor(stock);
     const e = front[stock.canonical];
     return (
       <StockCardFace
@@ -458,7 +463,7 @@ function SectorDeckInner({
         changeDir={e?.changeDir}
         rankLabel={rankLabelFor(stock)}
         sparkline={e?.sparkline}
-        taFact={e?.taFact}
+        subLine={subLine}
         progress={progress}
       />
     );

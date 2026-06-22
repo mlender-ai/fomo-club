@@ -6,7 +6,7 @@ import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "
 
 /**
  * 카드 앞면 FOMO 신호 — PHASE0 rev2 후속. baseline(가격·52주) + 라이브 수급 streak + 시총순위 + 스파크라인.
- * 덱이 도달 종목에 lazy 로 부른다(비용 방어). 응축은 buildCardFrontHook(@fomo/core)가 클라에서.
+ * 덱이 도달 종목에 lazy 로 부른다(비용 방어). 헤드라인 선택은 selectFomoHook(@fomo/core)가 클라에서.
  * 순수 데이터(LLM 0) — 네이버 금융 + 수급 누적 테이블. 일 단위 캐시(가격은 장중 갱신 위해 짧게).
  */
 export const dynamic = "force-dynamic";

@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCardFrontHook,
+  computeFomoScore,
+  isEverydayHookText,
   isFrontHookSafe,
+  selectFomoHook,
   signalsFromBasics,
+  translateTaFact,
   type CardFrontSignals,
   type FomoCatalyst,
   type StockBasics,
+  type TaFact,
 } from "../src";
 
 describe("buildCardFrontHook rev2 — FOMO 강도 모델(§2·§3)", () => {
@@ -133,5 +138,76 @@ describe("signalsFromBasics — baseline(stock-basics) → 신호 도출", () =>
 
   it("데이터 없으면 빈 신호(환각 금지) → 차분 카드로 귀결", () => {
     expect(buildCardFrontHook(signalsFromBasics(base)).angle).toBe("quiet");
+  });
+});
+
+describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인", () => {
+  const forbidden = /차트\s?사실|낙폭|과매도|과매수|정배열|RSI|MACD|볼린저|이평선|추천|급등할|반등할|오를 것|내릴 것|매수\s?신호|매도\s?신호/;
+
+  it("가격 큼+주목 약은 긴장형 헤드라인을 고른다", () => {
+    const fomo = computeFomoScore({ volumeRatio: 1, changePct: 10.58 });
+    const hook = selectFomoHook({ fomo, signals: { changePct: 10.58, volumeRatio: 1 } });
+    expect(fomo.label).toBe("lone");
+    expect(hook.kind).toBe("axis_tension");
+    expect(hook.headline).toBe("가격은 +10.6% 올랐는데, 아직 거래·관심은 조용해요.");
+  });
+
+  it("빠지는 중인데 거래·관심이 늘면 하락 긴장형을 고른다", () => {
+    const fomo = computeFomoScore({ volumeRatio: 2.8, changePct: -8.34 });
+    const hook = selectFomoHook({ fomo, signals: { changePct: -8.34, volumeRatio: 2.8 } });
+    expect(hook.kind).toBe("axis_tension");
+    expect(hook.headline).toBe("빠지는 중인데 거래·관심은 오히려 늘고 있어요.");
+  });
+
+  it("같은 상태라도 데이터가 다르면 서로 다른 헤드라인이 나온다", () => {
+    const volumeFomo = computeFomoScore({ volumeRatio: 2.2, changePct: 1 });
+    const positionFomo = computeFomoScore({ changePct: 1, trendStrength: 0.42 });
+    expect(volumeFomo.label).toBe("warming");
+    expect(positionFomo.label).toBe("warming");
+
+    const a = selectFomoHook({ fomo: volumeFomo, signals: { volumeRatio: 2.2, changePct: 1 } });
+    const b = selectFomoHook({ fomo: positionFomo, signals: { near52WeekHigh: true, changePct: 1 } });
+    expect(a.headline).toBe("최근 거래가 평소 2.2배로 늘었어요.");
+    expect(b.headline).toBe("최근 1년 최고가 근처까지 왔어요.");
+    expect(a.headline).not.toBe(b.headline);
+  });
+
+  it("데이터가 빈약하면 상태 헤드라인으로 폴백하고 디테일을 지어내지 않는다", () => {
+    const fomo = computeFomoScore({});
+    const hook = selectFomoHook({ fomo });
+    expect(hook.kind).toBe("fallback");
+    expect(hook.headline).toBe(fomo.labelText);
+    expect(hook.subLine).toBeUndefined();
+  });
+
+  it("TA 사실은 일상어로 번역하고 업계어 라벨을 남기지 않는다", () => {
+    const fact: TaFact = {
+      kind: "rsi_oversold",
+      role: "event",
+      confidence: "high",
+      text: "최근 낙폭이 가팔라 RSI가 바닥 영역(과매도)이에요.",
+    };
+    const translated = translateTaFact(fact);
+    expect(translated).toBe("며칠 새 빠르게 빠졌고, 단기엔 너무 많이 떨어졌단 신호도 같이 나와요.");
+    expect(translated).not.toMatch(forbidden);
+    expect(isEverydayHookText(translated!)).toBe(true);
+  });
+
+  it("헤드라인·보조문장은 안전하고 결정적이다", () => {
+    const fomo = computeFomoScore({ foreignNetStreak: 4, volumeRatio: 2.4, changePct: 0.4 });
+    const fact: TaFact = {
+      kind: "ma_bullish",
+      role: "event",
+      confidence: "high",
+      text: "20·60·120일선이 위쪽으로 정렬된 상태예요.",
+    };
+    const input = { fomo, signals: { foreignNetStreak: 4, volumeRatio: 2.4, changePct: 0.4 }, taFact: fact };
+    const a = selectFomoHook(input);
+    const b = selectFomoHook(input);
+    expect(a).toEqual(b);
+    const joined = `${a.headline} ${a.subLine ?? ""}`;
+    expect(joined).not.toMatch(forbidden);
+    expect(isFrontHookSafe(joined)).toBe(true);
+    expect(isEverydayHookText(joined)).toBe(true);
   });
 });

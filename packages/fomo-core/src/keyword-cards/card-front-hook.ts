@@ -15,6 +15,8 @@
 
 import { isCommentSafe } from "./comment";
 import type { StockBasics } from "../stock-basics";
+import type { FomoScoreResult } from "./fomo-score";
+import type { TaFact, TaFactKind } from "./technical-analysis";
 
 /** 다가오는 재료 한 항목(§4 5행) — 구체·일정. 익명 "재료" 금지. */
 export interface FomoCatalyst {
@@ -274,6 +276,219 @@ export function buildCardFrontHook(sig: CardFrontSignals = {}): CardFrontHook {
     angle: top.angle,
     catalysts,
     ...(sig.themeLabel ? { themeLabel: sig.themeLabel } : {}),
+  };
+}
+
+// ── FOMO_HOOK_SELECTOR — 상태 배지와 분리된 "지금 후킹되는 사실 1개" ─────────────
+export type FomoHookSignalKind =
+  | "axis_tension"
+  | "supply_streak"
+  | "volume_event"
+  | "position"
+  | "accumulation"
+  | "ta_fact"
+  | "fallback";
+
+export interface FomoHookSelection {
+  /** 카드·상세 히어로가 같이 쓰는 종목별 후킹 헤드라인. */
+  headline: string;
+  /** 헤드라인과 다른 보조 사실. 없으면 생략한다. */
+  subLine?: string;
+  /** 헤드라인으로 채택된 신호. */
+  kind: FomoHookSignalKind;
+}
+
+interface HookCandidate {
+  kind: FomoHookSignalKind;
+  score: number;
+  headline: string;
+  subLine?: string;
+}
+
+const HOOK_FLOOR = 0.42;
+const HOOK_KIND_RANK: Record<FomoHookSignalKind, number> = {
+  axis_tension: 0,
+  supply_streak: 1,
+  volume_event: 2,
+  position: 3,
+  accumulation: 4,
+  ta_fact: 5,
+  fallback: 6,
+};
+
+const EVERYDAY_FORBIDDEN = /차트\s?사실|낙폭|과매도|과매수|정배열|역배열|RSI|MACD|볼린저|이평선|신호선|골든크로스|데드크로스/;
+
+export function isEverydayHookText(text: string): boolean {
+  return !EVERYDAY_FORBIDDEN.test(text);
+}
+
+function pctText(p: number): string {
+  const sign = p > 0 ? "+" : p < 0 ? "-" : "";
+  return `${sign}${Math.abs(p).toFixed(1)}%`;
+}
+
+function ratioText(ratio: number): string {
+  const rounded = Math.round(ratio * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+const TA_EVERYDAY: Record<TaFactKind, string> = {
+  accumulation_divergence: "거래는 느는데 가격은 잠잠해요.",
+  bollinger_squeeze: "요즘 가격이 좁게 움직여요.",
+  rsi_overbought: "단기엔 너무 많이 오른 편이에요.",
+  rsi_oversold: "며칠 새 빠르게 빠졌고, 단기엔 너무 많이 떨어졌단 신호도 같이 나와요.",
+  ma_bullish: "최근 흐름이 위로 가지런해요.",
+  ma_bearish: "최근 흐름이 아래로 가지런해요.",
+  macd_bullish: "최근 흐름이 위쪽으로 바뀐 상태예요.",
+  macd_bearish: "최근 흐름이 아래쪽으로 바뀐 상태예요.",
+  near_52w_high: "최근 1년 최고가 근처까지 왔어요.",
+  near_52w_low: "최근 1년 낮은 구간에 가까워요.",
+  atr_expanded: "하루 가격 움직임이 최근보다 커졌어요.",
+};
+
+export function translateTaFact(fact: TaFact | undefined): string | undefined {
+  if (!fact) return undefined;
+  const text = TA_EVERYDAY[fact.kind] ?? fact.text;
+  return isFrontHookSafe(text) && isEverydayHookText(text) ? text : undefined;
+}
+
+function fallbackHeadline(fomo: FomoScoreResult): string {
+  return fomo.labelText || "지금은 조용한 자리예요.";
+}
+
+function pushCandidate(candidates: HookCandidate[], candidate: HookCandidate | null): void {
+  if (!candidate) return;
+  if (candidate.score < HOOK_FLOOR) return;
+  if (!isFrontHookSafe(candidate.headline) || !isEverydayHookText(candidate.headline)) return;
+  if (candidate.subLine && (!isFrontHookSafe(candidate.subLine) || !isEverydayHookText(candidate.subLine))) return;
+  candidates.push(candidate);
+}
+
+function axisTensionCandidate(fomo: FomoScoreResult, signals: CardFrontSignals): HookCandidate | null {
+  const pct = typeof signals.changePct === "number" ? signals.changePct : undefined;
+  const volumeStrong = typeof signals.volumeRatio === "number" && signals.volumeRatio >= FRONT_VOLUME_RATIO_MIN;
+  const attentionRising = fomo.attentionAxis >= 40 || volumeStrong;
+
+  if (fomo.priceMove === "down" && attentionRising) {
+    const strength = Math.min(1, Math.max(fomo.attentionAxis / 100, volumeStrong ? 0.62 : 0));
+    return {
+      kind: "axis_tension",
+      score: 0.92 + strength * 0.18,
+      headline: "빠지는 중인데 거래·관심은 오히려 늘고 있어요.",
+    };
+  }
+
+  if (fomo.priceMove === "up" && fomo.attentionAxis < 60 && typeof pct === "number" && pct >= 5) {
+    const gap = Math.min(1, Math.max(0, pct / 12) + Math.max(0, 60 - fomo.attentionAxis) / 120);
+    return {
+      kind: "axis_tension",
+      score: 0.9 + gap * 0.2,
+      headline: `가격은 ${pctText(pct)} 올랐는데, 아직 거래·관심은 조용해요.`,
+    };
+  }
+
+  return null;
+}
+
+function supplyCandidate(signals: CardFrontSignals): HookCandidate | null {
+  const fs = signals.foreignNetStreak ?? 0;
+  const is = signals.institutionNetStreak ?? 0;
+  const foreignStrong = fs >= FRONT_SOCIAL_STREAK_MIN;
+  const instStrong = is >= FRONT_SOCIAL_STREAK_MIN;
+  if (!foreignStrong && !instStrong) return null;
+
+  const n = foreignStrong && instStrong ? Math.min(fs, is) : Math.max(fs, is);
+  const actor = foreignStrong && instStrong ? "외국인·기관이" : foreignStrong ? "외국인이" : "기관이";
+  return {
+    kind: "supply_streak",
+    score: Math.min(1, 0.5 + n / 10),
+    headline: `${actor} ${n}일째 사는 중이에요.`,
+  };
+}
+
+function volumeCandidate(signals: CardFrontSignals): HookCandidate | null {
+  const vr = signals.volumeRatio;
+  if (typeof vr !== "number" || vr < FRONT_VOLUME_RATIO_MIN) return null;
+  return {
+    kind: "volume_event",
+    score: Math.min(1, 0.42 + vr / 5),
+    headline: `최근 거래가 평소 ${ratioText(vr)}배로 늘었어요.`,
+  };
+}
+
+function positionCandidate(signals: CardFrontSignals): HookCandidate | null {
+  if (!signals.near52WeekHigh) return null;
+  return {
+    kind: "position",
+    score: 0.58,
+    headline: "최근 1년 최고가 근처까지 왔어요.",
+  };
+}
+
+function accumulationCandidate(fomo: FomoScoreResult, taFact?: TaFact): HookCandidate | null {
+  if (fomo.inputs.accumulationDivergence !== true && taFact?.kind !== "accumulation_divergence") return null;
+  return {
+    kind: "accumulation",
+    score: 0.7,
+    headline: "거래는 느는데 가격은 잠잠해요.",
+  };
+}
+
+function taCandidate(taFact?: TaFact): HookCandidate | null {
+  const text = translateTaFact(taFact);
+  if (!text) return null;
+  const strength: Record<TaFactKind, number> = {
+    accumulation_divergence: 0.7,
+    near_52w_high: 0.62,
+    near_52w_low: 0.58,
+    bollinger_squeeze: 0.56,
+    rsi_oversold: 0.55,
+    rsi_overbought: 0.55,
+    atr_expanded: 0.5,
+    ma_bullish: 0.48,
+    ma_bearish: 0.48,
+    macd_bullish: 0.46,
+    macd_bearish: 0.46,
+  };
+  return { kind: "ta_fact", score: strength[taFact!.kind], headline: text };
+}
+
+function secondaryLine(candidates: readonly HookCandidate[], top: HookCandidate): string | undefined {
+  const next = candidates.find((c) => c.kind !== top.kind && c.headline !== top.headline);
+  return next?.subLine ?? next?.headline;
+}
+
+/**
+ * 카드/상세 공용 헤드라인 셀렉터.
+ * 배지(2축 상태)는 fomoCardView가 유지하고, 이 함수는 데이터로 입증되는 후킹 사실 1개만 고른다.
+ */
+export function selectFomoHook({
+  fomo,
+  signals = {},
+  taFact,
+}: {
+  fomo: FomoScoreResult;
+  signals?: CardFrontSignals;
+  taFact?: TaFact;
+}): FomoHookSelection {
+  const candidates: HookCandidate[] = [];
+  pushCandidate(candidates, axisTensionCandidate(fomo, signals));
+  pushCandidate(candidates, supplyCandidate(signals));
+  pushCandidate(candidates, volumeCandidate(signals));
+  pushCandidate(candidates, positionCandidate(signals));
+  pushCandidate(candidates, accumulationCandidate(fomo, taFact));
+  pushCandidate(candidates, taCandidate(taFact));
+
+  candidates.sort((a, b) => b.score - a.score || HOOK_KIND_RANK[a.kind] - HOOK_KIND_RANK[b.kind]);
+  const top = candidates[0];
+  if (!top) {
+    return { kind: "fallback", headline: fallbackHeadline(fomo) };
+  }
+  const subLine = secondaryLine(candidates, top);
+  return {
+    kind: top.kind,
+    headline: top.headline,
+    ...(subLine ? { subLine } : {}),
   };
 }
 
