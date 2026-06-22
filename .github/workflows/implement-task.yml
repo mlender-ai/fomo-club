@@ -52,11 +52,17 @@ jobs:
           set -uo pipefail
           DATA=$(gh issue view "$NUM" --repo "${{ github.repository }}" --json number,title,body,labels,state 2>/dev/null || echo "")
           if [ -z "$DATA" ] || [ "$(printf '%s' "$DATA" | jq -r '.state')" != "OPEN" ]; then
-            echo "found=false" >> "$GITHUB_OUTPUT"; echo "이슈 #$NUM 없음/닫힘"; exit 0
+            echo "found=false" >> "$GITHUB_OUTPUT"; echo "이슈 #$NUM 없음/닫힘"; exit 1
           fi
-          IS_TASK=$(printf '%s' "$DATA" | jq -r '[.labels[].name] | index("task") != null')
-          if [ "$IS_TASK" != "true" ]; then
-            echo "found=false" >> "$GITHUB_OUTPUT"; echo "이슈 #$NUM 은 task 라벨이 아님 — 중단"; exit 0
+          IS_IMPLEMENTABLE=$(printf '%s' "$DATA" | jq -r '[.labels[].name] as $l | (
+            ($l | index("task") != null) or
+            ($l | index("pipeline-monitor") != null) or
+            ($l | index("source-discovery") != null) or
+            ($l | index("integrity-check") != null) or
+            ($l | index("ssot-sync") != null)
+          )')
+          if [ "$IS_IMPLEMENTABLE" != "true" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"; echo "이슈 #$NUM 은 구현 가능한 작업 라벨(task/agent ops)이 아님 — 중단"; exit 1
           fi
           echo "found=true" >> "$GITHUB_OUTPUT"
           echo "title=$(printf '%s' "$DATA" | jq -r '.title')" >> "$GITHUB_OUTPUT"
@@ -199,7 +205,7 @@ jobs:
           if [ -z "$(git status --porcelain)" ]; then
             echo "변경사항 없음 — PR 생략"
             gh issue comment "$NUM" --repo "${{ github.repository }}" --body "⚠️ 자동 구현이 코드 변경을 만들지 못했습니다(작업 트리 비어있음). 이슈 스펙을 더 구체화하거나 수동 확인이 필요합니다." || true
-            exit 0
+            exit 1
           fi
           TITLE=$(head -1 /tmp/impl-title.txt 2>/dev/null | xargs)
           [ -z "$TITLE" ] && TITLE="$ITITLE"

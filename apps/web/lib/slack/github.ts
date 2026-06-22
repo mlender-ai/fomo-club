@@ -380,3 +380,44 @@ export async function getRecentIssues(label: string, since: string, limit = 20) 
     )
   );
 }
+
+const ACTIONABLE_AGENT_LABELS = [
+  "task",
+  "pipeline-monitor",
+  "integrity-check",
+  "source-discovery",
+  "ssot-sync",
+];
+
+export async function getLatestActionableIssue(): Promise<{
+  number: number;
+  title: string;
+  html_url: string;
+  labels: string[];
+} | null> {
+  const issues = (await githubApi(
+    `/repos/${REPO}/issues?state=open&per_page=50&sort=created&direction=desc`
+  )) as Array<{
+    number: number;
+    title: string;
+    html_url?: string;
+    pull_request?: unknown;
+    labels?: ({ name: string } | string)[];
+  }>;
+
+  for (const issue of issues) {
+    if (issue.pull_request) continue;
+    const labels = (issue.labels ?? []).map((label) =>
+      typeof label === "string" ? label : label.name
+    );
+    if (labels.some((label) => ACTIONABLE_AGENT_LABELS.includes(label))) {
+      return {
+        number: issue.number,
+        title: issue.title,
+        html_url: issue.html_url ?? "",
+        labels,
+      };
+    }
+  }
+  return null;
+}

@@ -65,9 +65,9 @@ jobs:
             --jq '.[0]')
 
           if [ -z "$PR" ] || [ "$PR" = "null" ]; then
-            echo "⚠️ 브랜치 $BRANCH 에 연결된 오픈 PR 없음. 건너뜁니다."
+            echo "❌ 브랜치 $BRANCH 에 연결된 오픈 PR 없음. 실제 머지 대상이 없으므로 실패 처리합니다."
             echo "pr_number=" >> "$GITHUB_OUTPUT"
-            exit 0
+            exit 1
           fi
 
           PR_NUMBER=$(echo "$PR" | jq -r '.number')
@@ -161,7 +161,7 @@ jobs:
             LABELS=$(gh issue view "$N" --repo "$REPO" --json labels \
               -q '[.labels[].name] | join(",")' 2>/dev/null || echo "")
             case ",$LABELS," in
-              *,agent-council,*)
+              *,agent-council,*|*,task,*|*,pipeline-monitor,*|*,source-discovery,*|*,integrity-check,*|*,ssot-sync,*)
                 STATE=$(gh issue view "$N" --repo "$REPO" --json state -q .state 2>/dev/null || echo "")
                 if [ "$STATE" = "OPEN" ]; then
                   echo "  close #$N (PR #$PR_NUMBER 로 해결)"

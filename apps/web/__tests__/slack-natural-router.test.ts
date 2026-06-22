@@ -41,6 +41,7 @@ describe("routeNaturalLanguage", () => {
 
   it("특정 이슈 개발과 일반 개발을 구분", () => {
     expect(routeNaturalLanguage("#457 개발해").actions[0]).toEqual({ name: "implement_task", payload: { issue: 457 } });
+    expect(routeNaturalLanguage("오늘자 이슈 작업 진행해줘").actions[0]).toEqual({ name: "implement", payload: { target: "latest_issue" } });
     expect(routeNaturalLanguage("다음 작업 개발 진행해").actions[0]).toEqual({ name: "implement", payload: {} });
   });
 

@@ -20,6 +20,7 @@ import {
   appendFeedbackLog,
   getRecentFeedbackLog,
   getTodayAutoPRs,
+  getLatestActionableIssue,
 } from "@/lib/slack/github";
 import { classifyIntent, truncate } from "@/lib/slack/intent";
 import { routeNaturalLanguage } from "@/lib/slack/natural-router";
@@ -480,6 +481,14 @@ async function executeAction(
         return "🧪 *integrity-checker 접수* — 정합성 검수 작업 이슈를 생성합니다. 투자조언·근거·강세/약세 균형을 우선 확인합니다.";
       }
       case "implement": {
+        if (action.payload.target === "latest_issue") {
+          const issue = await getLatestActionableIssue();
+          if (!issue) {
+            return "⚠️ 구현할 최신 작업 이슈를 찾지 못했습니다. `#이슈번호 개발해`처럼 번호를 지정해 주세요.";
+          }
+          await triggerWorkflow("implement-task.yml", { issue: String(issue.number) });
+          return `🚀 *#${issue.number} 구현 시작* — 최신 작업 이슈로 판단했습니다: ${issue.title}\n${issue.html_url}\nClaude Code가 구현 후 PR을 올립니다. CI 통과 시 자동 머지 게이트까지 이어집니다.`;
+        }
         const raw = action.payload.date;
         // 유효한 YYYY-MM-DD 만 사용, 아니면(placeholder 포함) 오늘 KST
         const date = typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : kstDate();

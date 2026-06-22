@@ -164,7 +164,9 @@ jobs:
       needs.build-web.result == 'success' &&
       needs.build-fomo-web.result == 'success' &&
       needs.resolve-ref.outputs.ref != '' &&
-      startsWith(needs.resolve-ref.outputs.ref, 'agent/ceo-brief-')
+      (startsWith(needs.resolve-ref.outputs.ref, 'agent/ceo-brief-') ||
+       startsWith(needs.resolve-ref.outputs.ref, 'agent/task-') ||
+       startsWith(needs.resolve-ref.outputs.ref, 'agent/issue-'))
     runs-on: ubuntu-latest
     permissions:
       actions: write

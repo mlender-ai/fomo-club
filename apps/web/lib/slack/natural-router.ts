@@ -155,6 +155,13 @@ export function routeNaturalLanguage(input: string): NaturalRoute {
         "implement_task",
       );
     }
+    if (/(오늘자|오늘|최근|방금|새로\s*뜬|방금\s*뜬).*(이슈|issue)|(이슈|issue).*(작업|처리|진행)/i.test(text)) {
+      return route(
+        [{ name: "implement", payload: { target: "latest_issue" } }],
+        "🚀 최신 작업 이슈 구현 요청으로 이해했어요. 최근 열린 작업 이슈를 찾아 구현 워크플로를 실행할게요.",
+        "implement",
+      );
+    }
     return route(
       [{ name: "implement", payload: {} }],
       "🚀 개발 실행 요청으로 이해했어요. 오늘 기준 auto-implement를 실행할게요.",

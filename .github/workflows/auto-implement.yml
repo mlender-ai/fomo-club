@@ -16,6 +16,9 @@ on:
       brief_date:
         description: "CEO Brief 날짜 (YYYY-MM-DD, 기본: 오늘)"
         required: false
+      issue:
+        description: "직접 구현할 이슈 번호 (있으면 brief_date보다 우선)"
+        required: false
       model:
         description: "Claude 모델 (비우면 vars.CLAUDE_MODEL → 기본 claude-opus-4-8)"
         required: false
@@ -52,11 +55,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ── 1. 오늘 CEO Brief 이슈 가져오기 ───────────────────────
-      - name: Fetch CEO Brief
+      # ── 1. 구현 대상 이슈 가져오기 ────────────────────────────
+      - name: Fetch target issue
         id: brief
         env:
           GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.inputs.issue }}
         run: |
           if [ -n "${{ github.event.inputs.brief_date }}" ]; then
             TODAY="${{ github.event.inputs.brief_date }}"
@@ -65,18 +69,31 @@ jobs:
           fi
           echo "today=$TODAY" >> "$GITHUB_OUTPUT"
 
-          BRIEF_JSON=$(gh issue list \
-            --label "ceo-brief" \
-            --state open \
-            --limit 5 \
-            --json number,title,body \
-            --repo "${{ github.repository }}" | \
-            jq "[.[] | select(.title | contains(\"$TODAY\"))] | .[0]")
+          if [ -n "$ISSUE" ]; then
+            BRIEF_JSON=$(gh issue view "$ISSUE" \
+              --json number,title,body,state \
+              --repo "${{ github.repository }}" 2>/dev/null || echo "")
+            if [ -z "$BRIEF_JSON" ] || [ "$(printf '%s' "$BRIEF_JSON" | jq -r '.state')" != "OPEN" ]; then
+              echo "found=false" >> "$GITHUB_OUTPUT"
+              echo "❌ 구현 대상 이슈 #$ISSUE 를 찾지 못했거나 이미 닫혔습니다."
+              exit 1
+            fi
+            echo "target_kind=issue" >> "$GITHUB_OUTPUT"
+          else
+            BRIEF_JSON=$(gh issue list \
+              --label "ceo-brief" \
+              --state open \
+              --limit 5 \
+              --json number,title,body \
+              --repo "${{ github.repository }}" | \
+              jq "[.[] | select(.title | contains(\"$TODAY\"))] | .[0]")
+            echo "target_kind=ceo-brief" >> "$GITHUB_OUTPUT"
+          fi
 
           if [ -z "$BRIEF_JSON" ] || [ "$BRIEF_JSON" = "null" ]; then
             echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "⚠️ $TODAY 날짜의 CEO Brief 이슈를 찾지 못했습니다."
-            exit 0
+            echo "❌ $TODAY 날짜의 CEO Brief 이슈를 찾지 못했습니다. PR을 만들지 못했으므로 실패 처리합니다."
+            exit 1
           fi
 
           echo "found=true" >> "$GITHUB_OUTPUT"
@@ -210,14 +227,18 @@ jobs:
           BRIEF_NUMBER: ${{ steps.brief.outputs.number }}
         run: |
           if [ -z "$(git status --porcelain)" ]; then
-            echo "변경사항 없음 — PR 생성 건너뜀"
-            exit 0
+            echo "❌ 변경사항 없음 — PR을 만들지 못했으므로 실패 처리"
+            exit 1
           fi
 
           TITLE=$(head -1 /tmp/impl-title.txt 2>/dev/null | xargs)
           [ -z "$TITLE" ] && TITLE="CEO Brief 구현"
 
-          BRANCH="agent/ceo-brief-${TODAY}"
+          if [ "${{ steps.brief.outputs.target_kind }}" = "issue" ]; then
+            BRANCH="agent/issue-${BRIEF_NUMBER}"
+          else
+            BRANCH="agent/ceo-brief-${TODAY}"
+          fi
           git config user.name "fomo-agent[bot]"
           git config user.email "fomo-agent[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
@@ -275,7 +296,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TODAY: ${{ steps.brief.outputs.today }}
         run: |
-          BRANCH="agent/ceo-brief-${TODAY}"
+          if [ "${{ steps.brief.outputs.target_kind }}" = "issue" ]; then
+            BRANCH="agent/issue-${{ steps.brief.outputs.number }}"
+          else
+            BRANCH="agent/ceo-brief-${TODAY}"
+          fi
           PR_NUM=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' --repo "${{ github.repository }}" 2>/dev/null || echo "")
           if [ -n "$PR_NUM" ]; then
             gh issue comment "${{ steps.brief.outputs.number }}" \

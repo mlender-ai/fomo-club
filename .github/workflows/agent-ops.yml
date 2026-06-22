@@ -38,11 +38,12 @@ jobs:
           gh label create "ssot-sync" --repo "$REPO" --force --color "5319e7" --description "SSOT/document synchronization" >/dev/null 2>&1 || true
           gh label create "needs-ceo-review" --repo "$REPO" --force --color "d93f0b" --description "Requires Gwanghyuk review/approval" >/dev/null 2>&1 || true
           gh label create "data-quality" --repo "$REPO" --force --color "c2e0c6" --description "Data quality, confidence, fallback, grounding" >/dev/null 2>&1 || true
+          gh label create "task" --repo "$REPO" --force --color "bfd4f2" --description "Implementable task issue" >/dev/null 2>&1 || true
 
           case "$MODE" in
             source-discovery)
               TITLE="🔎 [source-discovery] 소스 후보 발굴 요청"
-              LABELS="source-discovery,needs-ceo-review"
+              LABELS="source-discovery,needs-ceo-review,task"
               BODY=$(cat <<'EOF'
           ## 목적
           새로운 투자 정보 소스 후보를 찾는다.
@@ -67,7 +68,7 @@ jobs:
               ;;
             integrity-checker)
               TITLE="🧪 [integrity-checker] 정합성 검수 요청"
-              LABELS="integrity-check,data-quality,needs-ceo-review"
+              LABELS="integrity-check,data-quality,needs-ceo-review,task"
               BODY=$(cat <<'EOF'
           ## 목적
           수집된 정보가 진짜 판단 재료인지 검증한다.
@@ -92,7 +93,7 @@ jobs:
               ;;
             pipeline-monitor)
               TITLE="🛠 [pipeline-monitor] 파이프라인 점검 요청"
-              LABELS="pipeline-monitor,data-quality"
+              LABELS="pipeline-monitor,data-quality,task"
               BODY=$(cat <<'EOF'
           ## 목적
           FOMO Club 데이터 파이프라인이 조용히 망가지는 것을 감시한다.

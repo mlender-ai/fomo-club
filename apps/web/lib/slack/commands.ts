@@ -6,6 +6,7 @@ import {
   mergePR,
   getWorkflowRuns,
   getFileContent,
+  getLatestActionableIssue,
 } from "./github";
 
 interface CommandResult {
@@ -84,11 +85,22 @@ export async function dispatchCommand(
 
 async function handleImplement(args: string): Promise<CommandResult> {
   if (!args) {
-    return { text: "사용법: `/fomo implement {YYYY-MM-DD}`\n예: `/fomo implement 2026-05-25`" };
+    const issue = await getLatestActionableIssue();
+    if (!issue) {
+      return { text: "사용법: `/fomo implement {YYYY-MM-DD}` 또는 `/fomo implement #{이슈번호}`\n예: `/fomo implement 2026-05-25`, `/fomo implement #607`" };
+    }
+    await triggerWorkflow("implement-task.yml", { issue: String(issue.number) });
+    return { text: `최신 작업 이슈 #${issue.number} 구현 워크플로우 트리거됨: ${issue.title}` };
+  }
+
+  const issueMatch = args.match(/^#?(\d+)$/);
+  if (issueMatch?.[1]) {
+    await triggerWorkflow("implement-task.yml", { issue: issueMatch[1] });
+    return { text: `이슈 #${issueMatch[1]} 구현 워크플로우 트리거됨` };
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(args)) {
-    return { text: "날짜 형식이 올바르지 않습니다. `YYYY-MM-DD` 형식으로 입력하세요.\n예: `/fomo implement 2026-05-25`" };
+    return { text: "입력 형식이 올바르지 않습니다. `YYYY-MM-DD` 또는 `#이슈번호` 형식으로 입력하세요.\n예: `/fomo implement 2026-05-25`, `/fomo implement #607`" };
   }
 
   const inputs: Record<string, string> = { brief_date: args };
