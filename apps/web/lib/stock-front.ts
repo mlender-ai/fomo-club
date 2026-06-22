@@ -15,6 +15,7 @@ import {
 } from "@fomo/core";
 import { fetchStockBasics } from "./stock-basics";
 import { readSupplyDemandHistory } from "./supply-demand-store";
+import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 
@@ -152,7 +153,8 @@ export interface StockFrontData {
  */
 export async function assembleStockFront(
   stock: string,
-  rankMap?: Record<string, RankEntry>
+  rankMap?: Record<string, RankEntry>,
+  coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {}
 ): Promise<StockFrontData> {
   const def = resolveStock(stock);
   const code = def?.naverCode;
@@ -165,6 +167,17 @@ export async function assembleStockFront(
   ]);
 
   const signals: CardFrontSignals = basics ? signalsFromBasics(basics) : {};
+  if (coverage.attention) {
+    signals.mentionCount = coverage.attention.mentionCount;
+    signals.mentionScore = coverage.attention.mentionScore;
+  }
+  if (coverage.themeRelative) {
+    signals.themeLabel = coverage.themeRelative.themeLabel;
+    signals.themeRelativeRank = coverage.themeRelative.themeRelativeRank;
+    signals.themePeerCount = coverage.themeRelative.themePeerCount;
+    signals.themeAverageChangePct = coverage.themeRelative.themeAverageChangePct;
+    signals.themeRelativeChangePct = coverage.themeRelative.themeRelativeChangePct;
+  }
 
   if (history.length > 0) {
     const streak = investorNetStreak(history);
@@ -184,6 +197,7 @@ export async function assembleStockFront(
     ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
     ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
     ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+    ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
     ...(ta.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
     ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
     ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),

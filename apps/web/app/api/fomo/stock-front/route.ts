@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
-import { computeFomoScore } from "@fomo/core";
+import { computeFomoScore, resolveStock, sectorOf, type StockSector } from "@fomo/core";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "../../../../lib/stock-front";
+import {
+  computeStockAttentionSignals,
+  computeThemeRelativeSignals,
+  type StockAttentionSignal,
+  type ThemeRelativeSignal,
+} from "../../../../lib/stock-signal-coverage";
 
 /**
  * 카드 앞면 FOMO 신호 — PHASE0 rev2 후속. baseline(가격·52주) + 라이브 수급 streak + 시총순위 + 스파크라인.
@@ -26,12 +32,42 @@ async function getRankMap(): Promise<Record<string, { market: string; rank: numb
   return load();
 }
 
+async function getAttentionMap(): Promise<Record<string, StockAttentionSignal>> {
+  const load = unstable_cache(
+    async () => computeStockAttentionSignals(),
+    ["fomo-stock-attention", cacheVersion(), kstDate()],
+    { revalidate: 1800 }
+  );
+  return load();
+}
+
+async function getThemeRelativeMap(sector: StockSector): Promise<Record<string, ThemeRelativeSignal>> {
+  const load = unstable_cache(
+    async () => computeThemeRelativeSignals(sector),
+    ["fomo-theme-relative", cacheVersion(), kstDate(), sector],
+    { revalidate: 1800 }
+  );
+  return load();
+}
+
 async function getFront(stock: string): Promise<StockFrontData> {
   const today = kstDate();
   const load = unstable_cache(
     async () => {
-      const rankMap = await getRankMap().catch(() => ({}));
-      return assembleStockFront(stock, rankMap);
+      const def = resolveStock(stock);
+      const canonical = def?.canonical ?? stock;
+      const sector = def ? sectorOf(def.canonical) : undefined;
+      const [rankMap, attentionMap, themeRelativeMap] = await Promise.all([
+        getRankMap().catch(() => ({})),
+        getAttentionMap().catch((): Record<string, StockAttentionSignal> => ({})),
+        sector
+          ? getThemeRelativeMap(sector).catch((): Record<string, ThemeRelativeSignal> => ({}))
+          : Promise.resolve({} as Record<string, ThemeRelativeSignal>),
+      ]);
+      return assembleStockFront(stock, rankMap, {
+        ...(attentionMap[canonical] ? { attention: attentionMap[canonical] } : {}),
+        ...(themeRelativeMap[canonical] ? { themeRelative: themeRelativeMap[canonical] } : {}),
+      });
     },
     ["fomo-stock-front", cacheVersion(), today, stock],
     { revalidate: REVALIDATE_S }

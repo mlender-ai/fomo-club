@@ -130,6 +130,17 @@ describe("signalsFromBasics — baseline(stock-basics) → 신호 도출", () =>
     ).toBe(false);
   });
 
+  it("52주 저가권 — 현재가가 최저가의 105% 이하면 부근", () => {
+    expect(
+      signalsFromBasics({ ...base, priceText: "105,000원", metrics: [{ label: "최근 1년 최저가", value: "100,000원" }] })
+        .near52WeekLow
+    ).toBe(true);
+    expect(
+      signalsFromBasics({ ...base, priceText: "120,000원", metrics: [{ label: "최근 1년 최저가", value: "100,000원" }] })
+        .near52WeekLow
+    ).toBe(false);
+  });
+
   it("정체성 — '동사는' 보일러플레이트 제거한 첫 구절", () => {
     expect(signalsFromBasics({ ...base, summary: "동사는 모바일 메모리 설계 팹리스. 2010년 설립." }).identity).toBe(
       "모바일 메모리 설계 팹리스"
@@ -191,6 +202,65 @@ describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인",
     expect(translated).toBe("며칠 새 빠르게 빠졌고, 단기엔 너무 많이 떨어졌단 신호도 같이 나와요.");
     expect(translated).not.toMatch(forbidden);
     expect(isEverydayHookText(translated!)).toBe(true);
+  });
+
+  it("테마 상대성 — 피어 대비 덜 움직인 종목과 가장 많이 오른 종목을 구분한다", () => {
+    const calm = computeFomoScore({ changePct: 0.4, mentionScore: 20 });
+    const lagging = selectFomoHook({
+      fomo: calm,
+      signals: {
+        themeLabel: "AI",
+        changePct: 0.4,
+        themePeerCount: 6,
+        themeRelativeRank: 6,
+        themeAverageChangePct: 5.2,
+        themeRelativeChangePct: -4.8,
+      },
+    });
+    expect(lagging.kind).toBe("relative");
+    expect(lagging.headline).toBe("AI 테마 안에서 아직 덜 움직였어요.");
+
+    const moving = computeFomoScore({ changePct: 7, mentionScore: 80 });
+    const leading = selectFomoHook({
+      fomo: moving,
+      signals: {
+        themeLabel: "AI",
+        changePct: 7,
+        themePeerCount: 6,
+        themeRelativeRank: 1,
+        themeAverageChangePct: 2.1,
+        themeRelativeChangePct: 4.9,
+      },
+    });
+    expect(leading.kind).toBe("relative");
+    expect(leading.headline).toBe("AI 테마에서 가장 많이 오른 쪽이에요.");
+  });
+
+  it("D-day seam — 일정 데이터가 들어온 경우에만 일정 헤드라인을 고른다", () => {
+    const fomo = computeFomoScore({ mentionScore: 30 });
+    const withoutSchedule = selectFomoHook({ fomo, signals: { catalysts: [{ label: "공급계약 보도", kind: "news" }] } });
+    expect(withoutSchedule.kind).toBe("fallback");
+
+    const withSchedule = selectFomoHook({
+      fomo,
+      signals: { catalysts: [{ label: "2분기 실적 발표", when: "7월 말", kind: "schedule" }] },
+    });
+    expect(withSchedule.kind).toBe("dday");
+    expect(withSchedule.headline).toBe("7월 말 2분기 실적 발표가 있어요.");
+  });
+
+  it("mentionScore는 주목축 A에 반영된다", () => {
+    const quietVolume = computeFomoScore({ volumeRatio: 1, mentionScore: 0 });
+    const mentioned = computeFomoScore({ volumeRatio: 1, mentionScore: 100 });
+    expect(mentioned.inputs.mention).toBe(100);
+    expect(mentioned.attentionAxis).toBeGreaterThan(quietVolume.attentionAxis);
+  });
+
+  it("언급 데이터가 충분하면 숫자 있는 mention 헤드라인을 고른다", () => {
+    const fomo = computeFomoScore({ mentionScore: 90 });
+    const hook = selectFomoHook({ fomo, signals: { mentionScore: 90, mentionCount: 4 } });
+    expect(hook.kind).toBe("mention_event");
+    expect(hook.headline).toBe("오늘 뉴스·커뮤니티에서 4번 언급됐어요.");
   });
 
   it("헤드라인·보조문장은 안전하고 결정적이다", () => {

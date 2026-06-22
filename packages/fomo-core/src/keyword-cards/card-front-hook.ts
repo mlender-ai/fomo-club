@@ -36,15 +36,29 @@ export interface CardFrontSignals {
   institutionNetStreak?: number;
   /** 평소 대비 거래량 배수. */
   volumeRatio?: number;
+  /** 뉴스·커뮤니티 언급 주목도 0~100. 주목축(attention)에만 사용한다. */
+  mentionScore?: number;
+  /** 뉴스·커뮤니티 원문에서 감지된 글 수. 디버그·커버리지용. */
+  mentionCount?: number;
   /** 등락률 %(부호 포함). 사회적 증거의 결과(보강). */
   changePct?: number;
   /** 52주 신고가 부근/돌파. */
   near52WeekHigh?: boolean;
+  /** 52주 저가권 부근. */
+  near52WeekLow?: boolean;
   // ── 레버 3: 판이 큼 ──
   /** 그날 테마 주목도 순위(1=최고). 키워드 엔진 fomoScore 기반. */
   themeProminenceRank?: number;
   /** 테마 라벨(2행 태그·헤드라인) — 예 "AI 메모리 슈퍼사이클". */
   themeLabel?: string;
+  /** 테마 안 등락 순위(1=가장 많이 오른 쪽). */
+  themeRelativeRank?: number;
+  /** 테마 비교에 들어간 종목 수. */
+  themePeerCount?: number;
+  /** 테마 평균 등락률(%). */
+  themeAverageChangePct?: number;
+  /** 종목 등락률 - 테마 평균 등락률(%p). */
+  themeRelativeChangePct?: number;
   // ── 레버 2·4: D-day·named catalyst ──
   /** 다가오는 재료(구체·일정). 비어도 됨. */
   catalysts?: readonly FomoCatalyst[];
@@ -282,8 +296,11 @@ export function buildCardFrontHook(sig: CardFrontSignals = {}): CardFrontHook {
 // ── FOMO_HOOK_SELECTOR — 상태 배지와 분리된 "지금 후킹되는 사실 1개" ─────────────
 export type FomoHookSignalKind =
   | "axis_tension"
+  | "dday"
   | "supply_streak"
   | "volume_event"
+  | "mention_event"
+  | "relative"
   | "position"
   | "accumulation"
   | "ta_fact"
@@ -308,12 +325,15 @@ interface HookCandidate {
 const HOOK_FLOOR = 0.42;
 const HOOK_KIND_RANK: Record<FomoHookSignalKind, number> = {
   axis_tension: 0,
-  supply_streak: 1,
-  volume_event: 2,
-  position: 3,
-  accumulation: 4,
-  ta_fact: 5,
-  fallback: 6,
+  dday: 1,
+  supply_streak: 2,
+  volume_event: 3,
+  mention_event: 4,
+  relative: 5,
+  position: 6,
+  accumulation: 7,
+  ta_fact: 8,
+  fallback: 9,
 };
 
 const EVERYDAY_FORBIDDEN = /차트\s?사실|낙폭|과매도|과매수|정배열|역배열|RSI|MACD|볼린저|이평선|신호선|골든크로스|데드크로스/;
@@ -406,6 +426,18 @@ function supplyCandidate(signals: CardFrontSignals): HookCandidate | null {
   };
 }
 
+function ddayCandidate(signals: CardFrontSignals): HookCandidate | null {
+  const schedule = (signals.catalysts ?? []).find((c) => c.kind === "schedule" && c.label.trim());
+  if (!schedule) return null;
+  const when = schedule.when?.trim();
+  const label = schedule.label.trim();
+  return {
+    kind: "dday",
+    score: 0.88,
+    headline: when ? `${when} ${label}가 있어요.` : `${label} 일정이 있어요.`,
+  };
+}
+
 function volumeCandidate(signals: CardFrontSignals): HookCandidate | null {
   const vr = signals.volumeRatio;
   if (typeof vr !== "number" || vr < FRONT_VOLUME_RATIO_MIN) return null;
@@ -416,7 +448,57 @@ function volumeCandidate(signals: CardFrontSignals): HookCandidate | null {
   };
 }
 
+function mentionCandidate(signals: CardFrontSignals): HookCandidate | null {
+  const score = signals.mentionScore;
+  const count = signals.mentionCount;
+  if (typeof score !== "number" || typeof count !== "number") return null;
+  if (score < 60 || count < 2) return null;
+  return {
+    kind: "mention_event",
+    score: Math.min(0.78, 0.48 + score / 250),
+    headline: `오늘 뉴스·커뮤니티에서 ${count}번 언급됐어요.`,
+  };
+}
+
+function relativeCandidate(signals: CardFrontSignals): HookCandidate | null {
+  const peerCount = signals.themePeerCount ?? 0;
+  const rank = signals.themeRelativeRank;
+  const delta = signals.themeRelativeChangePct;
+  const avg = signals.themeAverageChangePct;
+  const pct = signals.changePct;
+  const theme = signals.themeLabel?.trim();
+  if (peerCount < 3 || typeof rank !== "number" || typeof delta !== "number" || typeof pct !== "number") {
+    return null;
+  }
+  const label = theme ? `${theme} 테마` : "같은 테마";
+
+  if (rank === 1 && pct > 0 && delta >= 2) {
+    return {
+      kind: "relative",
+      score: Math.min(0.86, 0.56 + Math.abs(delta) / 20),
+      headline: `${label}에서 가장 많이 오른 쪽이에요.`,
+    };
+  }
+
+  if (typeof avg === "number" && avg >= 2 && pct <= 1.5 && delta <= -3 && rank >= Math.max(2, peerCount - 1)) {
+    return {
+      kind: "relative",
+      score: Math.min(0.82, 0.54 + Math.abs(delta) / 22),
+      headline: `${label} 안에서 아직 덜 움직였어요.`,
+    };
+  }
+
+  return null;
+}
+
 function positionCandidate(signals: CardFrontSignals): HookCandidate | null {
+  if (signals.near52WeekLow) {
+    return {
+      kind: "position",
+      score: 0.56,
+      headline: "최근 1년 낮은 구간에 가까워요.",
+    };
+  }
   if (!signals.near52WeekHigh) return null;
   return {
     kind: "position",
@@ -473,8 +555,11 @@ export function selectFomoHook({
 }): FomoHookSelection {
   const candidates: HookCandidate[] = [];
   pushCandidate(candidates, axisTensionCandidate(fomo, signals));
+  pushCandidate(candidates, ddayCandidate(signals));
   pushCandidate(candidates, supplyCandidate(signals));
   pushCandidate(candidates, volumeCandidate(signals));
+  pushCandidate(candidates, mentionCandidate(signals));
+  pushCandidate(candidates, relativeCandidate(signals));
   pushCandidate(candidates, positionCandidate(signals));
   pushCandidate(candidates, accumulationCandidate(fomo, taFact));
   pushCandidate(candidates, taCandidate(taFact));
@@ -531,11 +616,17 @@ export function signalsFromBasics(b: StockBasics): CardFrontSignals {
     }
   }
   const high = b.metrics.find((m) => m.label === "최근 1년 최고가")?.value;
+  const low = b.metrics.find((m) => m.label === "최근 1년 최저가")?.value;
   const cur = b.priceText;
   if (high && cur) {
     const h = numOf(high);
     const c = numOf(cur);
     if (h && c && h > 0) out.near52WeekHigh = c >= h * 0.98;
+  }
+  if (low && cur) {
+    const l = numOf(low);
+    const c = numOf(cur);
+    if (l && c && l > 0) out.near52WeekLow = c <= l * 1.05;
   }
   if (b.summary) {
     const id = firstClause(b.summary);
