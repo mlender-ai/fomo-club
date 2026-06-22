@@ -53,7 +53,7 @@ const config: Config = {
         pixel: ["Galmuri11", "Departure Mono", "monospace"],
         // DESIGN.md v1: 한글·문장 sans / 라틴 디스플레이·데이터 mono(Departure Mono 에셋 셋업 후 우선).
         sans: ["Pretendard", "system-ui", "sans-serif"],
-        display: ["Departure Mono", "Galmuri11", "monospace"],
+        display: ["Silkscreen", "Departure Mono", "Galmuri11", "monospace"],
         mono: ["Departure Mono", "Galmuri11", "monospace"],
       },
     },

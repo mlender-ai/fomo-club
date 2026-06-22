@@ -1,6 +1,8 @@
-/* 본문 Pretendard / 픽셀 악센트 Galmuri (design/tokens.json) — @import는 Tailwind보다 먼저 */
+/* 본문 Pretendard / 픽셀 악센트 Galmuri / 히어로 숫자(라틴) Silkscreen — @import는 Tailwind보다 먼저.
+ * Silkscreen = DESIGN.md §3 히어로 숫자(포모 점수·라틴 only, 큰 크기에서만). 한글엔 절대 금지. */
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 @import url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css");
+@import url("https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap");
 
 @tailwind base;
 @tailwind components;

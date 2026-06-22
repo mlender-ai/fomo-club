@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { sparklinePath, seriesIsUp, fomoCardView, computeFomoScore, rankFeedByFomo } from "@fomo/core";
+import { fomoCardView, computeFomoScore, rankFeedByFomo } from "@fomo/core";
 import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, FomoTone, TaFact } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
@@ -22,8 +22,10 @@ import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
  */
 const THRESHOLD = 90;
 const EXIT_MS = 320;
-const UP = "#FF5A36";
-const DOWN = "#64748B";
+const DOWN = "#64748B"; // 덜관심(패스) 오버레이 — 중립 그레이
+// DESIGN.md §2 브랜드 액센트(역할 인코딩). 오렌지=주목 열기/강도, 네온=발견·💎·CTA. 등락엔 절대 금지.
+const ORANGE = "#FF5A1F";
+const NEON = "#D8FF3A";
 
 /** 포모 점수 로드 전 placeholder(빈 입력 → silent·점수 보류). */
 const EMPTY_FOMO = computeFomoScore({});
@@ -122,7 +124,7 @@ function LogoBadge({ name, code }: { name: string; code?: string | undefined }) 
   return (
     <span
       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold"
-      style={{ backgroundColor: "rgba(255,90,54,0.18)", color: UP }}
+      style={{ backgroundColor: "rgba(255,90,31,0.16)", color: ORANGE }}
       aria-hidden
     >
       {ch}
@@ -130,31 +132,63 @@ function LogoBadge({ name, code }: { name: string; code?: string | undefined }) 
   );
 }
 
-/** 3개월 종가 스파크라인 — 인라인 SVG(라이브러리 없음). 추세색: 상승=코랄/하락=블루. */
+/**
+ * 픽셀 스파크라인(DESIGN.md §8 시그니처) — 매끈 선 아닌 *이산 픽셀 컬럼*. 오렌지 단색(가격 형태, 판정 아님).
+ * 모든 증권앱의 매끈 차트와 차별. 등락색 안 씀(브랜드/봉인색 분리 원칙).
+ */
 function Sparkline({ series }: { series: number[] }) {
-  const paths = sparklinePath(series, 300, 44);
-  if (!paths) return null;
-  const up = seriesIsUp(series);
-  const stroke = up ? UP : "#60A5FA";
+  const pts = series.filter((v) => typeof v === "number" && Number.isFinite(v));
+  if (pts.length < 2) return null;
+  const cols = 28; // 이산 컬럼 수
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const step = (pts.length - 1) / (cols - 1);
+  const bars = Array.from({ length: cols }, (_, i) => {
+    const v = pts[Math.round(i * step)]!;
+    return (v - min) / span; // 0~1
+  });
+  const W = 300;
+  const H = 44;
+  const gap = 2;
+  const bw = (W - gap * (cols - 1)) / cols;
   return (
-    <svg viewBox="0 0 300 44" preserveAspectRatio="none" className="mt-4 h-11 w-full" aria-hidden>
-      <path d={paths.area} fill={stroke} opacity={0.1} />
-      <path d={paths.line} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-4 h-11 w-full" aria-hidden>
+      {bars.map((b, i) => {
+        const h = Math.max(2, b * (H - 2));
+        return <rect key={i} x={i * (bw + gap)} y={H - h} width={bw} height={h} fill={ORANGE} opacity={0.25 + b * 0.6} />;
+      })}
     </svg>
   );
 }
 
-/** 등락 방향 색 — 상승 코랄/하락 블루/보합 그레이(국내 관습: 상승 적·하락 청). */
-const DIR_COLOR: Record<string, string> = { up: UP, down: "#3B82F6", flat: "#94A3B8" };
+/** 포모 강도 미터(DESIGN.md §8 모티프) — 10 도트 세그먼트, 점수만큼 오렌지 fill·나머지 dim. */
+function FomoMeter({ score, color }: { score: number; color: string }) {
+  const filled = Math.round(Math.max(0, Math.min(100, score)) / 10);
+  return (
+    <span className="inline-flex items-center gap-[3px]" aria-hidden>
+      {Array.from({ length: 10 }, (_, i) => (
+        <span
+          key={i}
+          className="h-2 w-2 rounded-[1px]"
+          style={{ backgroundColor: i < filled ? color : "rgba(255,255,255,0.12)" }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
+const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 const DIR_MARK: Record<string, string> = { up: "▲", down: "▼", flat: "" };
 
-/** 포모 톤 → 색(강도 비례). hot=코랄·incoming=💎보라·warming=주황·calm=그레이·cooling=블루. */
+/** 포모 톤 → 색(강도 비례, DESIGN.md §2). hot=오렌지(열기)·incoming=네온(💎 발견)·warming=오렌지dim·calm/cooling=secondary. */
 const TONE_COLOR: Record<FomoTone, string> = {
-  hot: UP,
-  incoming: "#A855F7",
+  hot: ORANGE,
+  incoming: NEON,
   warming: "#F59E0B",
-  calm: "#94A3B8",
-  cooling: "#3B82F6",
+  calm: "#8A8A86",
+  cooling: "#8A8A86",
 };
 
 /**
@@ -216,15 +250,17 @@ function StockCardFace({
         </div>
       )}
 
-      {/* 포모 점수 + 라벨 (척추) — "포모 72 · 🔥 지금 한복판". 주목도 명시(품질 아님). */}
+      {/* 포모 점수 + 강도 미터 + 라벨 (척추) — 숫자=픽셀 디스플레이(라틴), 한글 라벨=Pretendard. 주목도(품질 아님). */}
       {view.scoreText && (
-        <div
-          className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-bold"
-          style={{ backgroundColor: `${tone}22`, color: tone }}
-        >
-          <span>{view.scoreText}</span>
-          <span className="opacity-70">·</span>
-          <span>
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-text-secondary">포모</span>
+            <span className="font-display text-3xl leading-none" style={{ color: tone }}>
+              {view.scoreText.replace(/[^0-9]/g, "")}
+            </span>
+          </div>
+          <FomoMeter score={Number(view.scoreText.replace(/[^0-9]/g, "")) || 0} color={tone} />
+          <span className="text-sm font-bold" style={{ color: tone }}>
             {view.emoji && <span aria-hidden>{view.emoji} </span>}
             {view.badge}
           </span>
@@ -234,8 +270,8 @@ function StockCardFace({
       {/* 테마 태그 */}
       {themeLabel && (
         <span
-          className="mt-3 inline-flex w-fit items-center rounded-full px-2.5 py-1 font-pixel text-xs"
-          style={{ backgroundColor: "rgba(255,90,54,0.12)", color: UP }}
+          className="mt-3 inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs"
+          style={{ backgroundColor: "rgba(255,90,31,0.12)", color: ORANGE }}
         >
           # {themeLabel}
         </span>
@@ -263,7 +299,7 @@ function StockCardFace({
         <ul className="mt-4 flex flex-col gap-1.5">
           {catalysts.map((c, i) => (
             <li key={i} className="flex gap-2 text-sm leading-6 text-whiteout">
-              <span aria-hidden style={{ color: UP }}>•</span>
+              <span aria-hidden style={{ color: ORANGE }}>•</span>
               <span>{c}</span>
             </li>
           ))}
@@ -512,6 +548,7 @@ function SectorDeckInner({
     : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
   const topTransition = dragging.current ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
   const behind = [at(idx + 1), at(idx + 2)];
+  const topTone = TONE_COLOR[cardFor(top).view.tone] ?? ORANGE; // 카드 좌측 엣지 = 그 종목 포모 톤(🔥 오렌지/💎 네온)
 
   return (
     <div className="w-full">
@@ -523,9 +560,9 @@ function SectorDeckInner({
             <div
               key={`b-${i}-${stock.canonical}`}
               aria-hidden
-              className="absolute inset-0 overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
+              className="absolute inset-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
               style={{
-                borderLeft: `2px solid ${UP}`,
+                borderLeft: "2px solid rgba(255,255,255,0.08)",
                 transform: `translateY(${(i + 1) * 12}px) scale(${1 - (i + 1) * 0.04})`,
                 opacity: 1 - (i + 1) * 0.18,
                 zIndex: 1,
@@ -543,17 +580,17 @@ function SectorDeckInner({
           onClick={() => {
             if (!moved.current && !exiting) openDepth(top);
           }}
-          className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
-          style={{ borderLeft: `2px solid ${UP}`, transform: topTransform, transition: topTransition }}
+          className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
+          style={{ borderLeft: `2px solid ${topTone}`, transform: topTransform, transition: topTransition }}
         >
           <span
-            className="pointer-events-none absolute right-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 font-pixel text-sm"
-            style={{ color: UP, borderColor: UP, opacity: Math.max(0, Math.min(1, dx / THRESHOLD)) }}
+            className="pointer-events-none absolute right-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 text-sm font-bold"
+            style={{ color: NEON, borderColor: NEON, opacity: Math.max(0, Math.min(1, dx / THRESHOLD)) }}
           >
             관심 →
           </span>
           <span
-            className="pointer-events-none absolute left-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 font-pixel text-sm"
+            className="pointer-events-none absolute left-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 text-sm font-bold"
             style={{ color: DOWN, borderColor: DOWN, opacity: Math.max(0, Math.min(1, -dx / THRESHOLD)) }}
           >
             ← 덜 관심
@@ -567,7 +604,7 @@ function SectorDeckInner({
           onClick={() => advance("left")}
           disabled={!!exiting}
           aria-label="덜 관심"
-          className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline bg-surface text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
         >
           ✕
         </button>
@@ -575,8 +612,8 @@ function SectorDeckInner({
           onClick={() => openDepth(top)}
           disabled={!!exiting}
           aria-label="관심 — 자세히 보기"
-          className="flex h-14 flex-1 items-center justify-center rounded-full font-pixel text-sm text-white transition-opacity disabled:opacity-40"
-          style={{ backgroundColor: UP }}
+          className="flex h-14 flex-1 items-center justify-center rounded-full text-sm font-bold text-canvas transition-opacity disabled:opacity-40"
+          style={{ backgroundColor: NEON }}
         >
           관심
         </button>
