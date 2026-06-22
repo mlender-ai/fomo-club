@@ -1,9 +1,11 @@
 ---
 name: mascot-keeper
-description: 마스코트 '포모'의 일관성과 love mark 품질을 지킨다. 5시장표정×5감정반응, 2단계 전환(애니메이션+멘트), 검은 얼굴+흰 눈+감정색 glow 규칙. docs/MASCOT.md·docs/DESIGN_FOMO.md 기준.
+description: DEPRECATED — 호출 금지. 마스코트/감정 진정 중심 운영은 폐기. FOMO Club v5는 주식시장의 틴더이며 이 파일은 기록용으로만 보존.
 ---
 
-> ⛔ **DEPRECATED (2026-06-16, AGENT_REDESIGN) — 재가동 금지.** 마스코트 포모(감정 시각화) 정체성은 키워드 카드 피벗으로 강등됨(PRODUCT_TRUTH §1, AGENTS.md 🟣). 참고용 보존. 호출하지 말 것.
+> ⛔ **DEPRECATED (2026-06-22, FOMO Club agent setting) — 재가동 금지.**
+> 마스코트 포모/감정 시각화 중심 정체성은 키워드 카드·취향 매칭 피벗으로 강등됨.
+> FOMO Club 에이전트는 감정 진정 앱·마스코트 중심으로 회귀하지 않는다. 참고용 보존. 호출하지 말 것.
 
 # Mascot Keeper Agent
 

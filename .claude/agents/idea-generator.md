@@ -1,9 +1,11 @@
 ---
 name: idea-generator
-description: 요일별 렌즈로 비편향 아이디어 발산. UX 60% + 비즈니스 25% + 기술 15% 비율. simulo .claude/agents/idea-generator.md 차용 (선택적 사용).
+description: DEPRECATED — 호출 금지. FOMO Club은 자율 기획/아이디어 발산 조직을 쓰지 않는다. 방향은 광혁과 SSOT가 정하며 이 파일은 기록용으로만 보존.
 ---
 
-> ⛔ **DEPRECATED (2026-06-16, AGENT_REDESIGN) — 재가동 금지.** 자율 기획·아이디어 발산은 폐기됨(방향은 SSOT·광혁이 정한다, AGENTS.md 🟣). 참고용 보존. 호출하지 말 것.
+> ⛔ **DEPRECATED (2026-06-22, FOMO Club agent setting) — 재가동 금지.**
+> 자율 기획·아이디어 발산은 폐기됨. FOMO Club 에이전트는 새 제품 방향을 제안하지 않고, 광혁이 정한 방향 안에서 실행·검증·소스발굴·모니터링만 수행한다.
+> 참고용 보존. 호출하지 말 것.
 
 # Idea Generator Agent
 

@@ -87,7 +87,7 @@
 - 투자 조언·예측("오른다/사라", 종목 추천, 매수·매도·목표가), 종목 분석 일반화
 - 기능 비대화(타로+감정+사주+피드 다 넣기) = "제품에 대한 FOMO"
 
-→ **예외(장식 아님, 핵심 경험 — 재제안 금지)**: 마스코트 포모의 **감정색 glow**(FOMO=빨강/공포=파랑/후회=보라/탐욕=초록/확신=노랑), **표정 전환**(FOMO Index 5구간↔5표정), **2단계 감정 변화**(시장의 포모→나의 포모) + 전환 애니메이션/멘트. 이는 docs/MASCOT.md·DESIGN_FOMO.md가 규정한 의도적 love mark다.
+→ **주의**: 아래 장식/마스코트 예외는 2026-06-16 피벗 이전 히스토리다. 현재 작업에서는 마스코트·감정 진정 중심으로 되살리지 않는다.
 
 → **보존(삭제·재제안 금지)**: 타로 엔진(`tarot-core`)·`tarot-mobile`·증권 데이터/토스증권 UX는 후속 해석 백엔드로 보존 중(리네이밍 연기). FOMO MLP 출시 전까지 신규 작업 대상 아님.
 
@@ -116,18 +116,18 @@
      ├── 문서화 ───────────→ doc-updater
      ├── 금융 규제 검토 ────→ regulation-reviewer
      ├── 스토어 심사 검토 ──→ store-reviewer
-     ├── 타로 프롬프트 ────→ prompt-engineer
-     ├── RN/Expo 전문 ────→ rn-specialist
-     ├── FOMO Index 검증 ──→ fomo-index-analyst
-     ├── 정체성/온기 검토 ──→ lovable-reviewer    (MLP Lovable 게이트)
-     ├── 마스코트 일관성 ──→ mascot-keeper
+     ├── RN/Expo 전문 ────→ rn-specialist       (FOMO Club 네이티브만, tarot 신규 금지)
+     ├── 소스 후보 발굴 ───→ source-discovery   (제안만, 연동은 광혁 승인)
+     ├── 정합성 검수 ─────→ integrity-checker   (grounding·tier·금칙어·균형)
+     ├── 파이프라인 감시 ──→ pipeline-monitor    (수집량·fallback·confidence·지연)
      │
      │  [simulo 차용 — 2026-05-27 도입]
      ├── 아이디어 점수화 ───→ po-validator       (4점 척도 16점 만점)
      ├── PM 영역 검증 ─────→ pm-reviewer        (RICE + 5 Whys)
-     ├── Playwright 검증 ──→ auto-qa-web        (어드민/공개 라우트 시각 회귀)
-     └── 아이디어 발산 ────→ idea-generator     (요일별 렌즈, 선택적)
+     └── Playwright 검증 ──→ auto-qa-web        (공개 라우트·FOMO Club 웹 시각 회귀)
 ```
+
+> ⛔ 라우팅 금지: `idea-generator`, `mascot-keeper`, `lovable-reviewer`는 DEPRECATED 기록용 파일이다. 새 제품 방향 제안, 감정 진정/마스코트 회귀, love mark 게이트로 호출하지 않는다.
 
 ---
 
@@ -185,9 +185,10 @@ model: sonnet
 4. 커버리지 80% 이상 확인
 
 **테스트 환경**:
-- `packages/tarot-core/`: Jest 유닛 테스트
-- `apps/tarot-mobile/`: Jest + React Native Testing Library
-- `apps/web/` (API): Jest + supertest
+- `packages/fomo-core/`: Vitest 유닛 테스트
+- `apps/fomo-web/`: TypeScript/Next build + 필요한 경우 Playwright
+- `apps/web/` (FOMO API/BFF): TypeScript/Next build + API 테스트
+- `apps/fomo-club/`: Expo/RN typecheck (보류 상태면 임의 확장 금지)
 
 **각 테스트는 반드시**:
 - Arrange / Act / Assert 구조
@@ -350,14 +351,15 @@ model: opus
 
 **검사 대상**:
 ```
-packages/tarot-core/prompts/     ← LLM 프롬프트
-packages/tarot-core/fallback/    ← 폴백 해석 텍스트
-apps/tarot-mobile/ 내 하드코딩 문구
-푸시 알림 텍스트
-포모 마스코트 멘트 (FOMO Club)  ← docs/MASCOT.md
+packages/fomo-core/**            ← 키워드/종목 카드, 점수, TA 사실 문장, LLM 출력 가드
+apps/fomo-web/**                 ← 사용자 노출 텍스트, 카드/상세/로그인/약관 문구
+apps/web/app/api/fomo/**         ← API/BFF 응답 문구, 오류 메시지
+docs/PRODUCT_VISION.md           ← 최상위 SSOT
+docs/KEYWORD_ENGINE_SPEC.md      ← 발견 엔진/금칙어 기준
+푸시 알림 텍스트(도입 시)
 ```
 
-> **FOMO Club**: 포모의 멘트도 검사 대상이다. 위로하되 투자 조언/단정 표현이 섞이지 않도록 확인한다. FOMO Index는 금융 지표가 아닌 감정 체감 지표임을 흐리는 표현 금지.
+> **FOMO Club**: 제품은 “주식시장의 틴더”다. 검사는 키워드/종목 카드, 이해 레이어 강세·약세, 커뮤니티 워딩, TA 사실 문장, 💎 표현이 투자조언·예측·매수/매도 신호로 흐르지 않는지에 집중한다. 위로/감정 진정/마스코트 멘트 게이트는 폐기됐다.
 
 **금칙어 카테고리**:
 | 카테고리 | 예시 | 대응 |
@@ -367,7 +369,7 @@ apps/tarot-mobile/ 내 하드코딩 문구
 | 확정적 예측 | "내일 반등합니다", "100% 하락" | 차단 |
 | 공포 조장 | "폭락 임박", "지금 안 팔면 끝" | 차단 |
 
-향후 사주팔자 콘텐츠 추가 시: 사주/운세 표현도 금융 규제 금칙어 검사 대상에 포함
+사주/운세/타로 신규 작업은 금지다. 관련 표현이 새 작업에 등장하면 BLOCKED로 판정한다.
 
 **출력**: BLOCKED (즉시 차단) / RISK (수정 권장) / CLEAN (통과)
 
@@ -399,15 +401,17 @@ model: opus
 
 ---
 
-### 10. prompt-engineer (타로 프롬프트 전문)
+### 10. prompt-engineer (DEPRECATED — 타로 프롬프트 전문)
 
 ```yaml
 name: prompt-engineer
 description: >
-  시장 데이터 → 타로 해석 변환을 위한 LLM 프롬프트를 설계, 테스트, 최적화한다.
+  DEPRECATED. 타로 프롬프트 신규 작업 금지. 기록용으로만 보존한다.
 tools: [Read, Write, Edit, Bash]
 model: opus
 ```
+
+> ⛔ **라우팅 금지**: FOMO Club 현재 작업에서 prompt-engineer를 호출하지 않는다. LLM/워딩 검수는 `regulation-reviewer`, `integrity-checker`, `code-reviewer`가 담당한다.
 
 **역할**:
 - `packages/tarot-core/prompts/` 프롬프트 템플릿 설계/개선
@@ -444,20 +448,22 @@ model: sonnet
 - 딥링크 / 유니버설 링크 설정
 - 애니메이션 성능 (reanimated, 60fps 검증)
 
-> **FOMO Club**: FOMO Club 홈 화면은 포모 마스코트의 두 상태(시장의 포모 → 나의 포모)와 전환 애니메이션을 가진다. docs/MASCOT.md 기준으로 구현한다. apps/fomo-club은 NativeWind를 사용한다(기존 tarot-mobile은 StyleSheet).
+> **FOMO Club**: RN 작업은 `apps/fomo-club`에 한정한다. 현재 제품 정체성은 종목 발견·취향 매칭이며, 마스코트/감정 진정 중심 화면으로 회귀하지 않는다. 앱이 보류 상태이면 명시 지시 없이 확장하지 않는다. `tarot-mobile` 신규 작업 금지.
 
 ---
 
-### 16. fomo-index-analyst (FOMO Index 검증 — FOMO Club)
+### 16. fomo-index-analyst (DEPRECATED — FOMO Index 감정 지표 검증)
 
 ```yaml
 name: fomo-index-analyst
 description: >
-  FOMO Index 산출 로직의 정확성을 검증하고, 4개 Heat 컴포넌트의
-  가중치/데이터 소스를 점검한다. 이상치 탐지 및 일일 리포트 생성.
+  DEPRECATED. FOMO Index 감정 지표 중심 운영은 현재 제품 정체성이 아니다.
+  데이터 품질 감시는 pipeline-monitor / integrity-checker가 담당한다.
 tools: [Read, Grep, Bash, WebSearch]
 model: sonnet
 ```
+
+> ⛔ **라우팅 금지**: FOMO Index를 감정 체감 지표·마스코트 표정과 연결하는 운영은 폐기됐다. 현재 제품은 종목 발견·취향 매칭이며, 관련 데이터 품질은 `pipeline-monitor`와 `integrity-checker`가 감시한다.
 
 **역할**:
 - packages/fomo-core의 산출 로직(Market/Community/Emotion/Whale Heat → calculate) 정확성 검증
@@ -466,50 +472,48 @@ model: sonnet
 - 일일 리포트 생성 (오늘의 지수, 전일 대비, 컴포넌트별 기여도)
 
 **강제 인지**:
-- FOMO Index 다섯 구간(무관심/관망/관심/FOMO/광기)은 포모의 다섯 표정과 직결된다(docs/MASCOT.md, docs/FOMO_INDEX.md).
-  구간 경계값 변경 시 마스코트 표정 매핑도 함께 점검한다.
-- FOMO Index는 금융 지표가 아닌 감정 체감 지표다. 검증·리포트에서 투자 조언으로 오인될 표현을 쓰지 않는다.
+- 이 섹션은 히스토리 보존용이다. 새 작업에서 FOMO Index 감정 프레이밍·마스코트 표정 매핑을 되살리지 않는다.
+- 포모 점수/TA/💎는 발견 카드의 연료이며 독립 진열 상품이 아니다. 투자 조언으로 오인될 표현을 쓰지 않는다.
 
 **출력**: 일일 리포트 + 이상치(ANOMALY) / 정상(NORMAL) 판정.
 
 ---
 
-### 17. lovable-reviewer (정체성/온기 게이트 — FOMO Club MLP)
+### 17. lovable-reviewer (DEPRECATED — 정체성/온기 게이트)
 
 ```yaml
 name: lovable-reviewer
 description: >
-  FOMO Club의 정체성(MLP — 사랑스러움)을 지키는 게이트. 사용자 노출 경험/멘트/화면이
-  "담담한 솔직함 + love mark + 그날 밤의 위로"를 충족하는지 검증한다.
-  코드 작동/빌드/규제를 넘어 "여기 사람의 온기가 있는가"를 묻는다.
+  DEPRECATED. 위로/love mark/감정 동반자 게이트는 폐기.
+  현재 품질 게이트는 SSOT 정합성, 투자조언 금칙어, 데이터 정직성, 빌드/테스트다.
 tools: [Read, Grep, Glob]
 model: opus
 ```
 
+> ⛔ **라우팅 금지**: `.claude/agents/lovable-reviewer.md`는 기록용이다. 새 제품 방향 제안이나 감정 진정/위로 게이트로 호출하지 않는다.
+
 정본: `docs/IDENTITY_AND_MILESTONES.md`. HARNESS Gate 6. 정의 상세: `.claude/agents/lovable-reviewer.md`.
 
-**검증 3축**: ①담담한 솔직함(가짜긍정❌·거침❌) ②love mark 유무 ③시금석("그날 밤의 내가 덜 외로웠을까").
-**판정**: ✅ LOVABLE PASS / ⚠️ CAUTION / ❌ NOT-YET(골격 회귀).
-**역할 분리**: regulation-reviewer=면책/금칙어 차단, lovable-reviewer=온기 충족. 둘 다 통과해야 한다.
+**세부 내용**: 피벗 이전 기록이므로 `.claude/agents/lovable-reviewer.md`에서만 보존한다. 현재 머지 게이트가 아니다.
 
 ---
 
-### 18. mascot-keeper (마스코트 포모 일관성 — FOMO Club)
+### 18. mascot-keeper (DEPRECATED — 마스코트 포모 일관성)
 
 ```yaml
 name: mascot-keeper
 description: >
-  마스코트 '포모'의 일관성과 love mark 품질을 지킨다. 5시장표정×5감정반응,
-  2단계 전환(애니메이션+멘트), 검은 얼굴+흰 눈+감정색 glow 규칙.
+  DEPRECATED. 마스코트/감정 시각화 중심 운영은 폐기.
+  현재 FOMO Club v5는 주식시장의 틴더이며 이 섹션은 기록용이다.
 tools: [Read, Grep, Glob]
 model: sonnet
 ```
 
+> ⛔ **라우팅 금지**: `.claude/agents/mascot-keeper.md`는 기록용이다. 마스코트 중심 회귀, 감정 진정 앱 회귀, FOMO Index 표정 매핑 작업으로 호출하지 않는다.
+
 기준: `docs/MASCOT.md`, `docs/FOMO_INDEX.md`, `docs/DESIGN_FOMO.md`(DESIGN.md 표준) + 토큰 `design/tokens.json`. **Figma 디자인 확정 시 Figma MCP로 대조**(`docs/FIGMA_WORKFLOW.md`). 정의 상세: `.claude/agents/mascot-keeper.md`.
 
-**점검**: ①지표↔표정 일관성(scoreToFace 단일 소스) ②두 단계 변화(전환 애니메이션+멘트) ③흑백+감정색 포인트 규칙 ④love mark 품질.
-**판정**: ✅ CONSISTENT / ⚠️ DRIFT / ❌ BREAK.
-**협업**: rn-specialist(구현)·lovable-reviewer(온기)와 분담.
+**세부 내용**: 피벗 이전 기록이므로 `.claude/agents/mascot-keeper.md`에서만 보존한다. 현재 라우팅·머지 게이트가 아니다.
 
 ---
 

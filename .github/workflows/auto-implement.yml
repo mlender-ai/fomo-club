@@ -132,28 +132,71 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: '--max-turns 60 --model ${{ steps.model.outputs.model }} --effort ${{ steps.model.outputs.effort }} --allowedTools "Read,Edit,Write,Glob,Grep,Bash"'
           prompt: |
-            당신은 Trading Taro 앱(모노레포)의 시니어 풀스택 개발자입니다.
-            아래 CEO Brief를 읽고 "이번 주 실행 지시" 섹션의 **첫 번째 유효 항목 하나**를 골라 실제로 구현하세요.
+            당신은 FOMO Club의 시니어 풀스택 개발자입니다.
 
-            ## 모노레포 구조
-            - apps/tarot-mobile — React Native + Expo
-            - apps/web — Next.js 14 API Routes + 어드민
-            - packages/shared — 공용 타입 (새 코드 전 먼저 확인)
-            - packages/tarot-core — 비즈니스 로직
+            FOMO Club은 “주식시장의 틴더”입니다.
+            사용자는 종목 카드를 스와이프하며 내 취향의 종목을 발견하고,
+            흩어진 뉴스·커뮤니티·수급·이슈 정보를 한 장으로 응축해 판단합니다.
+
+            아래 CEO Brief를 읽고 "이번 주 실행 지시" 섹션의 **첫 번째 유효 항목 하나**만 골라 실제로 구현하세요.
+
+            ## 작업 전 반드시 확인할 SSOT
+            - docs/PRODUCT_VISION.md
+            - docs/PRODUCT_TRUTH.md
+            - docs/DATA_ENGINE_STRATEGY.md
+            - docs/KEYWORD_ENGINE_SPEC.md
+            - docs/AGENT_REDESIGN.md
+            - AGENTS.md
+            - CLAUDE.md
+
+            ## 주 작업 대상
+            - apps/fomo-web — FOMO Club 웹, 카드 피드·상세·취향 신호
+            - apps/fomo-club — FOMO Club 네이티브 앱(보류 상태면 임의 확장 금지)
+            - packages/fomo-core — 키워드·종목 카드, 점수, TA/사실층, 순수 도메인 로직
+            - apps/web/app/api/fomo — FOMO API/BFF
+            - prisma — 스키마 변경 시에만, prod DDL은 사람 승인 필요
+
+            ## 보존/금지 대상
+            - tarot 관련 코드는 신규 작업 금지
+            - 기존 tarot/legacy 코드는 지시 없이 삭제하지 않음
+            - 새 제품 방향 제안 금지. CEO Brief/SSOT 안의 작업만 실행
 
             ## 절대 규칙
-            - Kill list (구현 금지): 카카오톡 공유, 사주팔자, 어드민 UI, 보류/무시 항목
-            - 애니메이션: React Native Animated API만 (reanimated 금지)
-            - 모든 코드 TypeScript, 기존 패턴/컨벤션 재사용
-            - 빈 catch {} 금지 (최소 console.warn)
-            - react-native-svg는 lib/svg.ts 래퍼로 import
-            - 타로앱 UX 몰입감 관련 항목 최우선 선택
+            1. 투자조언, 매수/매도, 목표가, 급등·반등 예측 표현 금지
+            2. “지금 안 사면 늦다”처럼 FOMO를 부추기는 문장 금지
+            3. 💎는 수급 선행 사실까지만 표현
+            4. 포모 점수와 TA는 발견 카드의 연료이지 독립 랭킹/차트 화면으로 진열하지 않음
+            5. 발견 표면은 종목 카드 전용. 테마/매크로/이벤트 카드를 피드에 섞지 않음
+            6. UI/스와이프 구조는 명시 지시 없이 임의 변경 금지
+            7. 데이터 실패 시 가짜 숫자로 위장하지 말고 fallback/confidence를 정직하게 노출
+            8. 강세/약세 균형 유지
+            9. 새 환경변수 추가 시 `.env.example` 갱신
+            10. 빈 catch {} 금지. 최소 console.warn 또는 구조화된 에러 처리
+            11. 모든 코드 TypeScript, 기존 타입/유틸/패턴 우선 재사용
+            12. 로그인벽·약관 리스크 있는 소스 스크래핑 금지
 
             ## 작업 절차 (반드시 이 순서로)
-            1. 실행 지시 항목 하나 선택 후 코드 구현 (파일 읽고 수정)
-            2. `npm run lint` 와 `npm run typecheck` 를 직접 실행해 통과할 때까지 수정
-            3. 선택한 작업의 한 줄 제목을 `/tmp/impl-title.txt` 에 기록 (예: echo "데일리 카드 플립 애니메이션" > /tmp/impl-title.txt)
-            4. **commit / push / PR 생성은 하지 마세요.** 코드 변경만 작업 트리에 남기면 다음 단계가 처리합니다.
+            1. CEO Brief 또는 지정 이슈에서 첫 번째 유효 작업 하나만 선택한다.
+            2. 관련 파일을 읽고 최소 범위로 구현한다.
+            3. 테스트를 추가하거나 기존 테스트를 갱신한다.
+            4. 아래 명령을 실행하고 통과할 때까지 수정한다.
+               - npm run lint
+               - npm run typecheck
+               - npm run test
+               - npm run build:web
+            5. 선택한 작업의 한 줄 제목을 `/tmp/impl-title.txt` 에 기록한다.
+               예: echo "취향 신호 저장 안정화" > /tmp/impl-title.txt
+            6. **commit / push / PR 생성은 하지 마세요.** 코드 변경만 작업 트리에 남기면 다음 단계가 처리합니다.
+
+            ## PR 본문에 남길 근거
+            다음 단계가 PR을 만들 수 있도록 구현 결과는 변경 파일과 검증 결과가 드러나게 정리하세요.
+            - 무엇을 바꿨는가
+            - 왜 필요한가
+            - 건드린 파일
+            - 테스트 결과
+            - 투자조언 금칙어 위반 여부
+            - SSOT 정합성 체크
+            - 광혁 리뷰가 필요한 부분
 
             ## CEO Brief
             ${{ steps.brief.outputs.body }}
@@ -175,8 +218,8 @@ jobs:
           [ -z "$TITLE" ] && TITLE="CEO Brief 구현"
 
           BRANCH="agent/ceo-brief-${TODAY}"
-          git config user.name "taro-agent[bot]"
-          git config user.email "taro-agent[bot]@users.noreply.github.com"
+          git config user.name "fomo-agent[bot]"
+          git config user.email "fomo-agent[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
           git push origin --delete "$BRANCH" 2>/dev/null || true
@@ -194,8 +237,25 @@ jobs:
 
           ### 구현 방식
           - 에이전트: Claude Code (anthropics/claude-code-action, 구독 인증)
-          - lint + typecheck 에이전트가 직접 검증
+          - lint + typecheck + test + build:web 에이전트가 직접 검증
           - 작업: ${TITLE}
+
+          ### SSOT 정합성 체크
+          - [ ] docs/PRODUCT_VISION.md 기준과 충돌 없음
+          - [ ] docs/PRODUCT_TRUTH.md 기준과 충돌 없음
+          - [ ] docs/DATA_ENGINE_STRATEGY.md / docs/KEYWORD_ENGINE_SPEC.md 기준과 충돌 없음
+          - [ ] AGENTS.md / CLAUDE.md 운영 규칙과 충돌 없음
+
+          ### 금칙어·제품 경계 체크
+          - [ ] 투자조언/매수/매도/목표가/급등·반등 예측 표현 없음
+          - [ ] FOMO 부추김 표현 없음
+          - [ ] 타로 신규 작업 없음
+          - [ ] 포모 점수/TA 독립 진열 화면 없음
+          - [ ] 발견 피드에 비종목 카드 섞지 않음
+
+          ### 광혁 리뷰 필요
+          - [ ] 제품/화면/카피 판단 필요
+          - [ ] 외부 서비스·비용·개인정보·prod DDL 승인 필요
           PREOF
 
           gh pr create \
