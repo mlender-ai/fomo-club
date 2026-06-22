@@ -46,7 +46,6 @@ export function KeywordHistory() {
                 key={`${w.stock}-${w.ts}`}
                 onClick={() => setStockSel(w.stock)}
                 className="flex w-full items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-muted"
-                style={{ borderLeft: "2px solid #FF5A36" }}
               >
                 <span className="text-base font-semibold text-whiteout">{w.stock}</span>
                 <span className="text-[11px] text-muted">{relativeTime(w.ts)}</span>
@@ -67,7 +66,6 @@ export function KeywordHistory() {
               onClick={() => full && setSelected(full)}
               disabled={!full}
               className="flex w-full items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-muted disabled:opacity-50"
-              style={{ borderLeft: `2px solid ${color}` }}
             >
               <div className="flex items-center gap-2">
                 <span className="text-base font-semibold text-whiteout">{h.keyword}</span>

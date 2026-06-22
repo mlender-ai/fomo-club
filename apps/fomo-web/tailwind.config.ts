@@ -50,11 +50,11 @@ const config: Config = {
       fontFamily: {
         // 본문 Pretendard(담담) / 픽셀 악센트 Galmuri(인디게임의 몸) — design/tokens.json
         body: ["Pretendard", "system-ui", "sans-serif"],
-        pixel: ["Galmuri11", "Departure Mono", "monospace"],
-        // DESIGN.md v1: 한글·문장 sans / 라틴 디스플레이·데이터 mono(Departure Mono 에셋 셋업 후 우선).
+        // 픽셀 폰트 = 숫자(라틴)만. 한글은 글리프 없어 Pretendard 폴백(= 한글 픽셀 금지, 전역 자동 적용).
+        pixel: ["Pixelify Sans", "Pretendard", "system-ui", "sans-serif"],
         sans: ["Pretendard", "system-ui", "sans-serif"],
-        display: ["Silkscreen", "Departure Mono", "Galmuri11", "monospace"],
-        mono: ["Departure Mono", "Galmuri11", "monospace"],
+        display: ["Pixelify Sans", "Pretendard", "system-ui", "sans-serif"],
+        mono: ["Pixelify Sans", "Pretendard", "monospace"],
       },
     },
   },

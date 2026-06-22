@@ -6,6 +6,7 @@ import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScore
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
+import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 
 /**
  * 섹터 종목 무한 스와이프 덱 — SECTOR_STRUCTURE_HANDOFF §1·§4 (Stage ③·④ 구조 배선).
@@ -24,7 +25,6 @@ const THRESHOLD = 90;
 const EXIT_MS = 320;
 const DOWN = "#64748B"; // 덜관심(패스) 오버레이 — 중립 그레이
 // DESIGN.md §2 브랜드 액센트(역할 인코딩). 오렌지=주목 열기/강도, 네온=발견·💎·CTA. 등락엔 절대 금지.
-const ORANGE = "#FF5A1F";
 const NEON = "#D8FF3A";
 
 /** 포모 점수 로드 전 placeholder(빈 입력 → silent·점수 보류). */
@@ -124,7 +124,7 @@ function LogoBadge({ name, code }: { name: string; code?: string | undefined }) 
   return (
     <span
       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold"
-      style={{ backgroundColor: "rgba(255,90,31,0.16)", color: ORANGE }}
+      style={{ backgroundColor: "rgba(216,255,58,0.14)", color: NEON }}
       aria-hidden
     >
       {ch}
@@ -156,7 +156,7 @@ function Sparkline({ series }: { series: number[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-4 h-11 w-full" aria-hidden>
       {bars.map((b, i) => {
         const h = Math.max(2, b * (H - 2));
-        return <rect key={i} x={i * (bw + gap)} y={H - h} width={bw} height={h} fill={ORANGE} opacity={0.25 + b * 0.6} />;
+        return <rect key={i} x={i * (bw + gap)} y={H - h} width={bw} height={h} fill={NEON} opacity={0.25 + b * 0.6} />;
       })}
     </svg>
   );
@@ -180,13 +180,12 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 
 /** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
-const DIR_MARK: Record<string, string> = { up: "▲", down: "▼", flat: "" };
 
 /** 포모 톤 → 색(강도 비례, DESIGN.md §2). hot=오렌지(열기)·incoming=네온(💎 발견)·warming=오렌지dim·calm/cooling=secondary. */
 const TONE_COLOR: Record<FomoTone, string> = {
-  hot: ORANGE,
+  hot: NEON,
   incoming: NEON,
-  warming: "#F59E0B",
+  warming: NEON,
   calm: "#8A8A86",
   cooling: "#8A8A86",
 };
@@ -229,7 +228,7 @@ function StockCardFace({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
-            {stock.marquee && <span className="text-base" aria-hidden>⭐</span>}
+            {stock.marquee && <StarIcon size={14} className="shrink-0 text-text-secondary" />}
           </div>
           <span className="font-pixel text-xs text-muted">
             {MARKET_LABEL[stock.market] ?? stock.market}
@@ -243,8 +242,10 @@ function StockCardFace({
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
           {changeText && (
-            <span className="font-pixel text-sm" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
-              {DIR_MARK[changeDir ?? "flat"]} {changeText}
+            <span className="inline-flex items-center gap-1 font-pixel text-sm" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
+              {changeDir === "up" && <CaretUpIcon size={11} />}
+              {changeDir === "down" && <CaretDownIcon size={11} />}
+              {changeText}
             </span>
           )}
         </div>
@@ -260,8 +261,9 @@ function StockCardFace({
             </span>
           </div>
           <FomoMeter score={Number(view.scoreText.replace(/[^0-9]/g, "")) || 0} color={tone} />
-          <span className="text-sm font-bold" style={{ color: tone }}>
-            {view.emoji && <span aria-hidden>{view.emoji} </span>}
+          <span className="inline-flex items-center gap-1 text-sm font-bold" style={{ color: tone }}>
+            {view.emoji === "🔥" && <FlameIcon size={15} />}
+            {view.emoji === "💎" && <GemIcon size={15} />}
             {view.badge}
           </span>
         </div>
@@ -271,15 +273,15 @@ function StockCardFace({
       {themeLabel && (
         <span
           className="mt-3 inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs"
-          style={{ backgroundColor: "rgba(255,90,31,0.12)", color: ORANGE }}
+          style={{ backgroundColor: "rgba(216,255,58,0.10)", color: NEON }}
         >
           # {themeLabel}
         </span>
       )}
 
-      {/* 헤드라인 = 라벨 기반 한 줄(강도 비례 톤). 💎는 특별 강조. */}
+      {/* 헤드라인 = 라벨 기반 한 줄(강도 비례 톤). 오기 직전(💎)은 보석 아이콘 강조. */}
       <p className="mt-4 text-xl font-bold leading-8" style={{ color: tone }}>
-        {view.isLeading && <span aria-hidden>💎 </span>}
+        {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
         {view.headline}
       </p>
 
@@ -299,7 +301,7 @@ function StockCardFace({
         <ul className="mt-4 flex flex-col gap-1.5">
           {catalysts.map((c, i) => (
             <li key={i} className="flex gap-2 text-sm leading-6 text-whiteout">
-              <span aria-hidden style={{ color: ORANGE }}>•</span>
+              <span aria-hidden style={{ color: NEON }}>•</span>
               <span>{c}</span>
             </li>
           ))}
@@ -547,31 +549,11 @@ function SectorDeckInner({
     ? `translateX(${exiting === "right" ? 140 : -140}%) rotate(${exiting === "right" ? 16 : -16}deg)`
     : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
   const topTransition = dragging.current ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
-  const behind = [at(idx + 1), at(idx + 2)];
-  const topTone = TONE_COLOR[cardFor(top).view.tone] ?? ORANGE; // 카드 좌측 엣지 = 그 종목 포모 톤(🔥 오렌지/💎 네온)
 
   return (
     <div className="w-full">
       <div className="relative mx-auto h-[56vh] w-full select-none">
-        {behind
-          .map((stock, i) => ({ stock, i }))
-          .reverse()
-          .map(({ stock, i }) => (
-            <div
-              key={`b-${i}-${stock.canonical}`}
-              aria-hidden
-              className="absolute inset-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
-              style={{
-                borderLeft: "2px solid rgba(255,255,255,0.08)",
-                transform: `translateY(${(i + 1) * 12}px) scale(${1 - (i + 1) * 0.04})`,
-                opacity: 1 - (i + 1) * 0.18,
-                zIndex: 1,
-              }}
-            >
-              {renderFace(stock)}
-            </div>
-          ))}
-
+        {/* 단일 카드만 렌더 — 글래스모피즘 카드 뒤로 비침 금지(스택 미리보기 제거). */}
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -580,8 +562,8 @@ function SectorDeckInner({
           onClick={() => {
             if (!moved.current && !exiting) openDepth(top);
           }}
-          className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
-          style={{ borderLeft: `2px solid ${topTone}`, transform: topTransform, transition: topTransition }}
+          className="glass-card absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl px-6 py-7"
+          style={{ transform: topTransform, transition: topTransition }}
         >
           <span
             className="pointer-events-none absolute right-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 text-sm font-bold"

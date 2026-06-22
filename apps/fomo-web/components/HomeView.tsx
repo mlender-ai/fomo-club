@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
+import { CaretUpIcon, CaretDownIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
 import { LoginPage } from "@/components/LoginPage";
 import type {
@@ -83,10 +84,10 @@ export function HomeView({
               </span>
               <span className="font-pixel text-[11px] text-muted">{index.state}</span>
               {index.prevDayDelta !== 0 && (
-                <span className="font-pixel text-[11px]" style={{ color }}>
-                  {index.prevDayDelta > 0
-                    ? `· 어제보다 ▲+${index.prevDayDelta}`
-                    : `· 어제보다 ▼${index.prevDayDelta}`}
+                <span className="inline-flex items-center gap-0.5 font-pixel text-[11px]" style={{ color }}>
+                  · 어제보다
+                  {index.prevDayDelta > 0 ? <CaretUpIcon size={10} /> : <CaretDownIcon size={10} />}
+                  {index.prevDayDelta > 0 ? `+${index.prevDayDelta}` : `${index.prevDayDelta}`}
                 </span>
               )}
             </div>

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   scoreToColor,
-  scoreToEmoji,
   SECTORS,
   type KeywordCard,
   type KeywordConfidence,
@@ -24,7 +23,7 @@ import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
  */
 const THRESHOLD = 90;
 const EXIT_MS = 320;
-const UP = "#FF5A36";
+const NEON = "#D8FF3A"; // 브랜드 프라이머리(네온 옐로우)
 
 /** 덱 한 장 — 섹터 카드 또는 종목 카드. */
 type DeckItem =
@@ -62,13 +61,12 @@ function SectorFace({ card, progress }: { card: KeywordCard; progress?: string }
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2">
         <span className="text-2xl font-bold text-whiteout">{card.keyword}</span>
-        <span className="text-xl" aria-hidden>{card.emoji}</span>
       </div>
       <div className="mt-3 flex items-baseline gap-2">
         <span className="font-pixel text-5xl leading-none" style={{ color }}>
           {card.fomoScore}
         </span>
-        <span className="font-pixel text-sm text-muted">{scoreToEmoji(card.fomoScore)} 포모 점수</span>
+        <span className="font-pixel text-sm text-muted">포모 점수</span>
       </div>
       <p className="mt-6 text-lg leading-8 text-whiteout">{card.comment}</p>
       <div className="mt-auto flex items-center justify-between pt-6">
@@ -93,9 +91,8 @@ function StockFace({
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2">
         <span className="text-2xl font-bold text-whiteout">{stock.canonical}</span>
-        <span className="text-xl" aria-hidden>💡</span>
       </div>
-      <p className="mt-3 font-pixel text-sm" style={{ color: UP }}>
+      <p className="mt-3 font-pixel text-sm" style={{ color: NEON }}>
         주목해볼만한 종목
       </p>
       <p className="mt-6 text-lg leading-8 text-whiteout">
@@ -118,11 +115,6 @@ function FaceOf({ item, progress }: { item: DeckItem; progress?: string }) {
   ) : (
     <StockFace stock={item.stock} fromKeyword={item.fromKeyword} {...p} />
   );
-}
-
-/** 카드 좌측 색 띠 — 섹터는 포모색, 종목은 강조색. */
-function colorOf(item: DeckItem): string {
-  return item.kind === "sector" ? scoreToColor(item.card.fomoScore) : UP;
 }
 
 /** 덱 한 장 → 취향 적재용 (subjectType, subject). 섹터=테마(키워드), 종목=종목명. */
@@ -378,37 +370,15 @@ function KeywordDeck({
   }
 
   const top = deck[idx]!;
-  const color = colorOf(top);
   const topTransform = exiting
     ? `translateX(${exiting === "right" ? 140 : -140}%) rotate(${exiting === "right" ? 16 : -16}deg)`
     : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
   const topTransition = dragging.current ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
-  const behind = [deck[idx + 1], deck[idx + 2]].filter(Boolean) as DeckItem[];
 
   return (
     <div className="w-full">
-      {/* 카드 스택 (뒤 카드 실제 콘텐츠 노출) */}
+      {/* 카드 스택 — 글래스모피즘 단일 카드(뒤 비침 금지: 스택 미리보기 제거). */}
       <div className="relative mx-auto h-[56vh] w-full select-none">
-        {behind
-          .map((item, i) => ({ item, i }))
-          .reverse()
-          .map(({ item, i }) => (
-            <div
-              key={`b-${item.id}`}
-              aria-hidden
-              className="absolute inset-0 overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
-              style={{
-                borderLeft: `2px solid ${colorOf(item)}`,
-                transform: `translateY(${(i + 1) * 12}px) scale(${1 - (i + 1) * 0.04})`,
-                opacity: 1 - (i + 1) * 0.18,
-                zIndex: 1,
-              }}
-            >
-              <FaceOf item={item} />
-            </div>
-          ))}
-
-        {/* 상단(인터랙티브) 카드 */}
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -417,13 +387,13 @@ function KeywordDeck({
           onClick={() => {
             if (!moved.current && !exiting) openItem(top);
           }}
-          className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-7"
-          style={{ borderLeft: `2px solid ${color}`, transform: topTransform, transition: topTransition }}
+          className="glass-card absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl px-6 py-7"
+          style={{ transform: topTransform, transition: topTransition }}
         >
           {/* 좌우 오버레이 */}
           <span
             className="pointer-events-none absolute right-4 top-4 z-20 rounded-lg border-2 px-2 py-0.5 font-pixel text-sm"
-            style={{ color: UP, borderColor: UP, opacity: Math.max(0, Math.min(1, dx / THRESHOLD)) }}
+            style={{ color: NEON, borderColor: NEON, opacity: Math.max(0, Math.min(1, dx / THRESHOLD)) }}
           >
             관심 →
           </span>
@@ -444,7 +414,7 @@ function KeywordDeck({
           onClick={() => advance("left")}
           disabled={!!exiting}
           aria-label="덜 관심"
-          className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline bg-surface text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
         >
           ✕
         </button>
@@ -452,8 +422,8 @@ function KeywordDeck({
           onClick={() => openInterest(top)}
           disabled={!!exiting}
           aria-label="관심 — 자세히 보기"
-          className="flex h-14 flex-1 items-center justify-center rounded-full font-pixel text-sm text-white transition-opacity disabled:opacity-40"
-          style={{ backgroundColor: UP }}
+          className="flex h-14 flex-1 items-center justify-center rounded-full text-sm font-bold text-[#0B0B0C] transition-opacity disabled:opacity-40"
+          style={{ backgroundColor: NEON }}
         >
           관심
         </button>

@@ -94,7 +94,6 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">
             <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
-            <span aria-hidden>{card.emoji}</span>
             <span className="font-pixel text-sm" style={{ color }}>
               포모 {card.fomoScore}
             </span>
@@ -122,7 +121,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           {/* 공식 지표(FRED 등) — 강세/약세와 별개의 중립 사실 숫자(C-2). hasInsight 무관. */}
           {insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
-              <p className="font-pixel text-sm text-whiteout">📊 공식 지표</p>
+              <p className="font-pixel text-sm text-whiteout">공식 지표</p>
               <ul className="mt-2 space-y-2">
                 {insight.officialFacts.map((f, i) => (
                   <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
@@ -153,13 +152,13 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
               {insight!.singleOutlet && insight!.outlets.length > 0 && (
                 <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
-                  ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
+                  오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
                 </p>
               )}
 
               <section className="mt-6">
                 <p className="font-pixel text-sm" style={{ color: "var(--up, #ff5a5f)" }}>
-                  📈 강세 관점
+                  강세 관점
                 </p>
                 {insight!.bull.length > 0 ? (
                   <ul className="mt-2 space-y-2">
@@ -172,7 +171,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
               <section className="mt-6">
                 <p className="font-pixel text-sm" style={{ color: "var(--down, #4f8cff)" }}>
-                  📉 약세 관점
+                  약세 관점
                 </p>
                 {insight!.bear.length > 0 ? (
                   <ul className="mt-2 space-y-2">
@@ -185,7 +184,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
 
               {communityWordings(insight!).length > 0 && (
                 <section className="mt-6">
-                  <p className="font-pixel text-sm text-whiteout">🗣️ 사람들 워딩</p>
+                  <p className="font-pixel text-sm text-whiteout">사람들 워딩</p>
                   <ul className="mt-2 space-y-2">
                     {communityWordings(insight!).map((w, i) => {
                       const s = srcOf(w.sourceId);
@@ -205,7 +204,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
                   카피/전환은 임시(광혁 조정 영역). 없으면 섹션 자체를 숨긴다(가짜로 안 채움). */}
               {insight!.relatedStocks.length > 0 && (
                 <section className="mt-6">
-                  <p className="font-pixel text-sm text-whiteout">🔗 같이 움직인 종목</p>
+                  <p className="font-pixel text-sm text-whiteout">같이 움직인 종목</p>
                   <p className="mt-1 text-[11px] leading-5 text-muted">
                     대장주 말고, 이 테마 때문에 같이 들썩인 덜 알려진 종목들이에요. 탭하면 그 종목만 따로 볼 수 있어요.
                   </p>
@@ -421,7 +420,7 @@ function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
 
 /** 포모 톤 → 색(카드 ②와 동일 매핑, 단일 출처 일관). */
 const DETAIL_TONE_COLOR: Record<FomoTone, string> = {
-  hot: "#FF5A36",
+  hot: "#D8FF3A",
   incoming: "#A855F7",
   warming: "#F59E0B",
   calm: "#94A3B8",
@@ -441,7 +440,7 @@ function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rank
   const tone = DETAIL_TONE_COLOR[view.tone] ?? "#94A3B8";
   const grade = confidenceGrade(fomo.confidence);
   return (
-    <section className="rounded-2xl border border-hairline bg-surface p-5" style={{ borderLeft: `3px solid ${tone}` }}>
+    <section className="rounded-2xl border border-hairline bg-surface p-5">
       <div className="flex items-center justify-between">
         <span className="font-pixel text-xs text-muted">포모 점수 · 주목도</span>
         {rankLabel && <span className="font-pixel text-[11px] text-muted">{rankLabel}</span>}
@@ -471,7 +470,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
   const paths = sparklinePath(series, 320, 64);
   if (!paths) return null;
   const up = seriesIsUp(series);
-  const stroke = up ? "#FF5A36" : "#60A5FA";
+  const stroke = "#D8FF3A"; // 픽셀 차트 단색(브랜드 네온), 등락색 아님
   const lead = (front?.fomo.leadSignal ?? 0) >= 60;
   // 차트가 뒷받침하나 — 현재 상태 묘사만(예측 금지).
   const note = front?.taFact?.text ?? (lead && !up
@@ -582,8 +581,8 @@ export function StockInsightView({
             aria-label={watched ? "관심 해제" : "관심 등록"}
             className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
             style={{
-              borderColor: watched ? "#FF5A36" : "var(--hairline, #2a2a2a)",
-              color: watched ? "#FF5A36" : "#94a3b8",
+              borderColor: watched ? "#D8FF3A" : "var(--hairline, #2a2a2a)",
+              color: watched ? "#D8FF3A" : "#94a3b8",
             }}
           >
             <span aria-hidden>{watched ? "♥" : "♡"}</span>
@@ -636,7 +635,7 @@ export function StockInsightView({
 
           {insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
-              <p className="font-pixel text-sm text-whiteout">📊 공식 지표</p>
+              <p className="font-pixel text-sm text-whiteout">공식 지표</p>
               <ul className="mt-2 space-y-2">
                 {insight.officialFacts.map((f, i) => (
                   <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
@@ -667,13 +666,13 @@ export function StockInsightView({
 
               {insight!.singleOutlet && insight!.outlets.length > 0 && (
                 <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
-                  ⚠️ 오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
+                  오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
                 </p>
               )}
 
               <section className="mt-6">
                 <p className="font-pixel text-sm" style={{ color: "var(--up, #ff5a5f)" }}>
-                  📈 강세 관점
+                  강세 관점
                 </p>
                 {insight!.bull.length > 0 ? (
                   <ul className="mt-2 space-y-2">
@@ -686,7 +685,7 @@ export function StockInsightView({
 
               <section className="mt-6">
                 <p className="font-pixel text-sm" style={{ color: "var(--down, #4f8cff)" }}>
-                  📉 약세 관점
+                  약세 관점
                 </p>
                 {insight!.bear.length > 0 ? (
                   <ul className="mt-2 space-y-2">
@@ -699,7 +698,7 @@ export function StockInsightView({
 
               {communityWordings(insight!).length > 0 && (
                 <section className="mt-6">
-                  <p className="font-pixel text-sm text-whiteout">🗣️ 사람들 워딩</p>
+                  <p className="font-pixel text-sm text-whiteout">사람들 워딩</p>
                   <ul className="mt-2 space-y-2">
                     {communityWordings(insight!).map((w, i) => {
                       const s = srcOf(w.sourceId);
