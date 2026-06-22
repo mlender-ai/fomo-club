@@ -329,39 +329,58 @@ export interface StockContext {
  * 종목 기본 정보 블록(바닥) — 항상 렌더. 주가·회사개요·시총·핵심지표·연간 재무.
  * "정확한 숫자 + 쉬운 라벨"(EPS→'한 주가 번 돈') 둘 다. 없는 값은 생략(가짜 금지), 추정치·출처 표기.
  */
-function StockBasicsBlock({ basics }: { basics: StockBasics | null }) {
-  if (!basics) {
+function StockPriceHeader({ basics, front }: { basics: StockBasics | null; front: StockFrontResponse | null }) {
+  const priceText = basics?.priceText ?? front?.priceText;
+  const changeText = basics?.changeText ?? front?.changeText;
+  const changeDir = basics?.changeDir ?? front?.changeDir;
+  if (!basics && !front) {
     return (
       <div className="space-y-2" aria-busy="true">
-        <div className="h-8 w-1/2 animate-pulse rounded bg-surface" />
-        <div className="h-14 animate-pulse rounded-lg border border-hairline bg-surface" />
+        <div className="h-5 w-2/3 animate-pulse rounded bg-surface" />
+        <div className="h-12 w-3/4 animate-pulse rounded bg-surface" />
       </div>
     );
   }
-  const up = basics.changeDir === "up";
-  const down = basics.changeDir === "down";
-  const empty = !basics.priceText && basics.metrics.length === 0 && !basics.financials && !basics.summary;
+  const up = changeDir === "up";
+  const down = changeDir === "down";
   return (
     <section>
-      {basics.priceText && (
-        <div className="flex items-baseline gap-2">
-          <span className="font-pixel text-3xl text-whiteout">{basics.priceText}</span>
-          {basics.changeText && (
-            <span className="text-sm" style={up || down ? { color: up ? "#ff5a5f" : "#4f8cff" } : undefined}>
-              {up ? "▲" : down ? "▼" : ""} {basics.changeText}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
+        {basics?.market && <span>{basics.market}</span>}
+        {basics?.sector && <span>{cleanText(basics.sector)}</span>}
+        {basics?.marketCap && <span>시총 {basics.marketCap}</span>}
+      </div>
+      {priceText ? (
+        <div className="mt-2">
+          <span className="font-pixel text-4xl leading-none text-whiteout">{priceText}</span>
+          {changeText && (
+            <span className="ml-2 align-baseline text-sm" style={up || down ? { color: up ? "#ff5a5f" : "#4f8cff" } : undefined}>
+              {up ? "▲" : down ? "▼" : ""} {changeText}
             </span>
           )}
         </div>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-muted">가격 정보는 아직 연결 중이에요.</p>
       )}
-      {(basics.market || basics.marketCap || basics.sector) && (
-        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
-          {basics.market && <span>{basics.market}</span>}
-          {basics.marketCap && <span>시총 {basics.marketCap}</span>}
-          {basics.sector && <span>{cleanText(basics.sector)}</span>}
-        </div>
-      )}
+    </section>
+  );
+}
+
+function StockFundamentalsBlock({ basics }: { basics: StockBasics | null }) {
+  if (!basics) {
+    return (
+      <div className="space-y-2" aria-busy="true">
+        <div className="h-5 w-1/3 animate-pulse rounded bg-surface" />
+        <div className="h-20 animate-pulse rounded-lg border border-hairline bg-surface" />
+      </div>
+    );
+  }
+  const empty = basics.metrics.length === 0 && !basics.financials && !basics.summary;
+  return (
+    <section>
+      <p className="font-pixel text-sm text-whiteout">기본 지표</p>
       {basics.metrics.length > 0 && (
-        <ul className="mt-4 grid grid-cols-2 gap-2">
+        <ul className="mt-3 grid grid-cols-2 gap-2">
           {basics.metrics.map((m, i) => (
             <li key={`m-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
               <span className="block text-[11px] text-muted">
@@ -434,7 +453,7 @@ const DETAIL_TONE_COLOR: Record<FomoTone, string> = {
  */
 function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rankLabel?: string }) {
   if (!front) {
-    return <div className="h-28 animate-pulse rounded-2xl border border-hairline bg-surface" />;
+    return <div className="h-24 animate-pulse rounded-xl border border-hairline bg-surface" />;
   }
   const { fomo } = front;
   const view = fomoCardView(fomo);
@@ -443,21 +462,19 @@ function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rank
   return (
     <section className="rounded-2xl border border-hairline bg-surface p-5">
       <div className="flex items-center justify-between">
-        <span className="font-pixel text-xs text-muted">포모 점수 · 주목도</span>
+        <span className="font-pixel text-xs text-muted">포모 상태</span>
         {rankLabel && <span className="font-pixel text-[11px] text-muted">{rankLabel}</span>}
       </div>
-      <div className="mt-1.5 flex items-end gap-3">
-        <span className="font-pixel text-5xl leading-none" style={{ color: tone }}>
+      <div className="mt-1.5 flex items-end gap-2">
+        <span className="font-pixel text-4xl leading-none" style={{ color: tone }}>
           {view.scoreText ? fomo.fomoScore : "—"}
         </span>
-        <span className="pb-1 text-lg font-bold" style={{ color: tone }}>
+        <span className="pb-1 text-base font-bold" style={{ color: tone }}>
           {view.emoji && <span aria-hidden>{view.emoji} </span>}
           {view.badge}
         </span>
       </div>
-      <p className="mt-3 text-base leading-7 text-whiteout">{view.headline}</p>
-      <p className="mt-2 text-sm leading-6 text-muted">{fomoWatchPoint(fomo)}</p>
-      <p className="mt-2 text-sm leading-6 text-muted">{fomoStateSummary(fomo)}</p>
+      <p className="mt-3 text-sm leading-6 text-whiteout">{view.headline}</p>
       <span className="mt-3 inline-flex items-center rounded-full border border-hairline px-2.5 py-1 font-pixel text-[11px] text-muted">
         {grade}
       </span>
@@ -481,13 +498,204 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
       ? "이미 위로 올라온 자리예요(최근 3개월)."
       : "최근 3개월은 차분한 흐름이에요.");
   return (
-    <section className="mt-7">
-      <p className="font-pixel text-sm text-whiteout">차트가 받쳐주나</p>
+    <section className="mt-6">
+      <p className="font-pixel text-sm text-whiteout">차트 흐름</p>
       <svg viewBox="0 0 320 64" preserveAspectRatio="none" className="mt-2 h-16 w-full" aria-hidden>
         <path d={paths.area} fill={stroke} opacity={0.1} />
         <path d={paths.line} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinejoin="round" />
       </svg>
       <p className="mt-2 text-sm leading-6 text-muted">{note}</p>
+    </section>
+  );
+}
+
+type ReadPoint = { text: string; source?: string };
+
+function uniquePoints(points: ReadPoint[]): ReadPoint[] {
+  const seen = new Set<string>();
+  return points.filter((p) => {
+    const key = p.text.replace(/\s+/g, "");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function signalFromTa(front: StockFrontResponse | null): { side: "bull" | "bear" | "watch"; text: string } | null {
+  const fact = front?.taFact;
+  if (!fact) return null;
+  if (fact.kind === "ma_bullish" || fact.kind === "macd_bullish" || fact.kind === "near_52w_high") {
+    return { side: "bull", text: fact.text };
+  }
+  if (
+    fact.kind === "ma_bearish" ||
+    fact.kind === "macd_bearish" ||
+    fact.kind === "rsi_overbought" ||
+    fact.kind === "rsi_oversold" ||
+    fact.kind === "near_52w_low" ||
+    fact.kind === "atr_expanded"
+  ) {
+    return { side: "bear", text: fact.text };
+  }
+  return { side: "watch", text: fact.text };
+}
+
+function buildReadPoints(front: StockFrontResponse | null, insight: CondensedInsight | null) {
+  const bull: ReadPoint[] = [];
+  const bear: ReadPoint[] = [];
+  const watch: ReadPoint[] = [];
+
+  if (insight && insight.confidence !== "insufficient") {
+    bull.push(...insight.bull.slice(0, 2).map((p) => ({ text: cleanText(p.claim), source: "원문 근거" })));
+    bear.push(...insight.bear.slice(0, 2).map((p) => ({ text: cleanText(p.claim), source: "원문 근거" })));
+  }
+
+  if (front) {
+    if (front.changeDir === "up" && front.changeText) {
+      bull.push({ text: `오늘 가격은 ${front.changeText} 상승으로 움직였어요.`, source: "가격" });
+    }
+    if (front.changeDir === "down" && front.changeText) {
+      bear.push({ text: `오늘 가격은 ${front.changeText} 하락으로 움직였어요.`, source: "가격" });
+    }
+    const ta = signalFromTa(front);
+    if (ta?.side === "bull") bull.push({ text: ta.text, source: "차트" });
+    if (ta?.side === "bear") bear.push({ text: ta.text, source: "차트" });
+    if (ta?.side === "watch") watch.push({ text: ta.text, source: "차트" });
+
+    const { foreignNetStreak, institutionNetStreak } = front.signals;
+    if (typeof foreignNetStreak === "number" && foreignNetStreak > 0) {
+      bull.push({ text: `외국인 순매수가 ${foreignNetStreak}일 이어졌어요.`, source: "수급" });
+    }
+    if (typeof institutionNetStreak === "number" && institutionNetStreak > 0) {
+      bull.push({ text: `기관 순매수가 ${institutionNetStreak}일 이어졌어요.`, source: "수급" });
+    }
+    if (typeof foreignNetStreak === "number" && foreignNetStreak < 0) {
+      bear.push({ text: `외국인 순매도가 ${Math.abs(foreignNetStreak)}일 이어졌어요.`, source: "수급" });
+    }
+    if (typeof institutionNetStreak === "number" && institutionNetStreak < 0) {
+      bear.push({ text: `기관 순매도가 ${Math.abs(institutionNetStreak)}일 이어졌어요.`, source: "수급" });
+    }
+    watch.push({ text: fomoWatchPoint(front.fomo), source: "관전 포인트" });
+  }
+
+  return {
+    bull: uniquePoints(bull).slice(0, 3),
+    bear: uniquePoints(bear).slice(0, 3),
+    watch: uniquePoints(watch).slice(0, 2),
+  };
+}
+
+function PointList({ title, tone, points, empty }: { title: string; tone: string; points: ReadPoint[]; empty: string }) {
+  return (
+    <div className="rounded-lg border border-hairline bg-surface px-3 py-3">
+      <p className="font-pixel text-xs" style={{ color: tone }}>
+        {title}
+      </p>
+      {points.length > 0 ? (
+        <ul className="mt-2 space-y-2">
+          {points.map((p, i) => (
+            <li key={`${title}-${i}`} className="text-sm leading-6 text-whiteout">
+              <span>{p.text}</span>
+              {p.source && <span className="ml-1 text-[11px] text-muted">· {p.source}</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-muted">{empty}</p>
+      )}
+    </div>
+  );
+}
+
+function StockReadGuide({
+  front,
+  insight,
+  loading,
+}: {
+  front: StockFrontResponse | null;
+  insight: CondensedInsight | null;
+  loading: boolean;
+}) {
+  const points = buildReadPoints(front, insight);
+  const hasGrounded = !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
+  return (
+    <section className="mt-6">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-pixel text-sm text-whiteout">오늘 읽는 법</p>
+        {loading ? (
+          <span className="text-[11px] text-muted">원문 읽는 중…</span>
+        ) : (
+          <span className="text-[11px] text-muted">{hasGrounded ? "원문 근거 있음" : "원문 근거 부족"}</span>
+        )}
+      </div>
+      {front && <p className="mt-2 text-sm leading-6 text-muted">{fomoStateSummary(front.fomo)}</p>}
+      <div className="mt-3 grid gap-2">
+        <PointList
+          title="강세 쪽 재료"
+          tone="var(--up, #ff5a5f)"
+          points={points.bull}
+          empty="아직 강세 쪽으로 확인된 근거는 적어요."
+        />
+        <PointList
+          title="약세·주의 재료"
+          tone="var(--down, #4f8cff)"
+          points={points.bear}
+          empty="아직 약세·주의 쪽으로 확인된 근거는 적어요."
+        />
+        {points.watch.length > 0 && (
+          <PointList title="다음에 볼 것" tone="#8A8A8A" points={points.watch} empty="" />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function OfficialFactsBlock({ facts }: { facts: CondensedInsight["officialFacts"] | undefined }) {
+  if (!facts || facts.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <p className="font-pixel text-sm text-whiteout">확정 데이터</p>
+      <ul className="mt-2 space-y-2">
+        {facts.map((f, i) => (
+          <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+            <span className="block text-sm leading-5 text-whiteout">{cleanText(f.label)}</span>
+            {f.detail && <span className="mt-1 block text-[11px] leading-4 text-muted">{cleanText(f.detail)}</span>}
+            {f.url ? (
+              <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
+                ↳ {f.source} · 공식 데이터 →
+              </a>
+            ) : (
+              <span className="mt-1 block text-[11px] text-muted">↳ {f.source} · 공식 데이터</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function auditWordings(insight: CondensedInsight | null): string[] {
+  if (!insight?.wordingAudit) return [];
+  const llm = insight.wordingAudit.filter((w) => w.stage === "llm" && w.kept).map((w) => w.text);
+  const rule = insight.wordingAudit.filter((w) => w.stage === "rule" && w.kept).map((w) => w.text);
+  const list = llm.length > 0 ? llm : rule;
+  return [...new Set(list.map(cleanQuote).filter(Boolean))].slice(0, 3);
+}
+
+function CommunityWordingBlock({ insight }: { insight: CondensedInsight | null }) {
+  const grounded = insight ? communityWordings(insight).map((w) => cleanQuote(w.text)) : [];
+  const words = grounded.length > 0 ? grounded : auditWordings(insight);
+  if (words.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <p className="font-pixel text-sm text-whiteout">사람들 워딩</p>
+      <ul className="mt-2 space-y-2">
+        {words.map((w, i) => (
+          <li key={`cw-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+            <span className="block text-sm leading-6 text-whiteout">“{w}”</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -545,29 +753,6 @@ export function StockInsightView({
   const hasInsight =
     !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
 
-  const srcOf = (id: string) => insight?.sources.find((s) => s.id === id);
-  const kindLabel = (kind?: string) =>
-    kind === "official" ? "공식 데이터" : kind === "community" ? "커뮤니티" : kind === "news" ? "뉴스" : "";
-
-  const evidenceItem = (claim: string, sourceId: string, key: string) => {
-    const s = srcOf(sourceId);
-    const kl = kindLabel(s?.kind);
-    const label = `${s?.source ?? s?.title ?? ""}${kl ? ` · ${kl}` : ""}`;
-    return (
-      <li key={key} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-        <span className="block text-sm leading-5 text-whiteout">{cleanText(claim)}</span>
-        {s &&
-          (s.url ? (
-            <a href={s.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
-              ↳ {label} · 원문 보기 →
-            </a>
-          ) : (
-            <span className="mt-1 block text-[11px] text-muted">↳ {label}</span>
-          ))}
-      </li>
-    );
-  };
-
   return (
     <div className="fixed inset-0 z-[70] bg-black">
       <div className="mx-auto flex h-full max-w-md flex-col">
@@ -608,120 +793,60 @@ export function StockInsightView({
             </div>
           )}
 
-          {/* 주인공 — 포모 상태 히어로(카드와 동일 출처). 회사소개 대신 이게 프라임 자리. */}
-          <FomoHero
-            front={front}
-            {...(front?.signals.marketCapRank ? { rankLabel: `시총 ${front.signals.marketCapRank.rank}위` } : {})}
-          />
+          {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
+          <StockPriceHeader basics={basics} front={front} />
 
-          {/* 차트가 받쳐주나 — 3개월 종가 + 정직한 상태 한 줄. */}
+          {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
 
-          {/* 돈·지표·실적·미래(E) — 객관 사실. 회사소개는 맨 아래로 강등(아래). */}
-          <div className="mt-7">
-            <StockBasicsBlock basics={basics} />
+          {/* 핵심 해석 — 강세/약세 원문이 부족해도 가격·차트·수급으로 읽을 재료를 먼저 보여준다. */}
+          <StockReadGuide front={front} insight={insight} loading={loading} />
+
+          {/* 포모 상태 — 카드와 같은 단일 출처지만, 상세의 첫 주인공은 가격/차트가 담당. */}
+          <div className="mt-6">
+            <FomoHero
+              front={front}
+              {...(front?.signals.marketCapRank ? { rankLabel: `시총 ${front.signals.marketCapRank.rank}위` } : {})}
+            />
           </div>
 
-          {/* 그 위 — 강세/약세 해석(원문 grounded, 있을 때만). LLM 이라 따로 로딩. */}
+          {/* 원문/공식 데이터 — 있으면 보여주고, 없으면 위 '오늘 읽는 법'에서 부족 상태를 이미 설명한다. */}
           {loading ? (
-            <p className="mt-7 text-sm leading-6 text-muted">강세·약세 관점을 읽고 있어요…</p>
+            <p className="mt-6 text-sm leading-6 text-muted">원문 근거를 정리하는 중이에요…</p>
           ) : (
           <>
-          {/* 종목 단독 응축(understandStock)이 되면 강세/약세 종합. 추천 이유는 위 배너가 담당. */}
           {hasInsight && (
-            <section className="mt-7">
-              <p className="font-pixel text-sm text-whiteout">왜 같이 움직였나</p>
-              <p className="mt-2 text-sm leading-6 text-muted">{cleanText(insight!.whyHot)}</p>
-            </section>
-          )}
-
-          {insight?.officialFacts && insight.officialFacts.length > 0 && (
             <section className="mt-6">
-              <p className="font-pixel text-sm text-whiteout">공식 지표</p>
-              <ul className="mt-2 space-y-2">
-                {insight.officialFacts.map((f, i) => (
-                  <li key={`of-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                    <span className="block text-sm leading-5 text-whiteout">{cleanText(f.label)}</span>
-                    {f.url ? (
-                      <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
-                        ↳ {f.source} · 공식 데이터 →
-                      </a>
-                    ) : (
-                      <span className="mt-1 block text-[11px] text-muted">↳ {f.source} · 공식 데이터</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {hasInsight ? (
-            <>
+              <p className="font-pixel text-sm text-whiteout">원문 요약</p>
+              <p className="mt-2 text-sm leading-6 text-muted">{cleanText(insight!.whyHot)}</p>
               {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
-                <p className="mt-3 text-[11px] leading-5 text-muted">
-                  오늘 쏠림 · <span style={{ color: "var(--up, #ff5a5f)" }}>강세 {insight!.lean.bullCount}</span>
+                <p className="mt-2 text-[11px] leading-5 text-muted">
+                  원문 쏠림 · <span style={{ color: "var(--up, #ff5a5f)" }}>강세 {insight!.lean.bullCount}</span>
                   {" : "}
                   <span style={{ color: "var(--down, #4f8cff)" }}>약세 {insight!.lean.bearCount}</span>
                   {insight!.lean.oneSided ? " · 반대 관점 안 보임" : ""}
                 </p>
               )}
-
               {insight!.singleOutlet && insight!.outlets.length > 0 && (
-                <p className="mt-3 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
-                  오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
+                <p className="mt-2 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
+                  오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요.
                 </p>
               )}
+            </section>
+          )}
 
-              <section className="mt-6">
-                <p className="font-pixel text-sm" style={{ color: "var(--up, #ff5a5f)" }}>
-                  강세 관점
-                </p>
-                {insight!.bull.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {insight!.bull.map((p, i) => evidenceItem(p.claim, p.sourceId, `bull-${i}`))}
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-sm leading-6 text-muted">원문에서 강세 근거는 안 보였어요.</p>
-                )}
-              </section>
+          <OfficialFactsBlock facts={insight?.officialFacts} />
+          <CommunityWordingBlock insight={insight} />
 
-              <section className="mt-6">
-                <p className="font-pixel text-sm" style={{ color: "var(--down, #4f8cff)" }}>
-                  약세 관점
-                </p>
-                {insight!.bear.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {insight!.bear.map((p, i) => evidenceItem(p.claim, p.sourceId, `bear-${i}`))}
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-sm leading-6 text-muted">{insight!.stanceNote}</p>
-                )}
-              </section>
-
-              {communityWordings(insight!).length > 0 && (
-                <section className="mt-6">
-                  <p className="font-pixel text-sm text-whiteout">사람들 워딩</p>
-                  <ul className="mt-2 space-y-2">
-                    {communityWordings(insight!).map((w, i) => {
-                      const s = srcOf(w.sourceId);
-                      return (
-                        <li key={`w-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                          <span className="block text-sm leading-5 text-whiteout">“{cleanQuote(w.text)}”</span>
-                          {s && <span className="mt-1 block text-[11px] text-muted">↳ {cleanText(s.source ?? s.title)}</span>}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
-            </>
-          ) : (
+          {!hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0 && (
             <p className="mt-6 text-sm leading-6 text-muted">
-              {context?.reason
-                ? "이 종목 단독 원문은 아직 모이는 중이에요 — 위 연결이 지금까지의 근거예요. 더 쌓이면 강세·약세로 풀어드릴게요."
-                : "이 종목으로 모인 원문이 아직 적어요. 더 쌓이면 강세·약세로 풀어드릴게요."}
+              이 종목으로 모인 원문은 아직 적어요. 그래서 위에는 가격·차트·수급처럼 확인된 재료만 정리했어요.
             </p>
           )}
+
+          <div className="mt-7">
+            <StockFundamentalsBlock basics={basics} />
+          </div>
 
           {/* 회사가 뭐 하는 곳 — 맨 아래 한 줄로 강등(긴 blurb 폐기). */}
           {basics?.summary && (
