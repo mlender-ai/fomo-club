@@ -37,6 +37,7 @@ jobs:
         id: generate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PRISMA_CONNECTION_LIMIT: "1"
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
