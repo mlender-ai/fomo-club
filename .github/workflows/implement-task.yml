@@ -251,9 +251,13 @@ jobs:
           ITITLE: ${{ steps.task.outputs.title }}
           GATE: ${{ steps.gate.outputs.passed }}
           GREASON: ${{ steps.gate.outputs.reason }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           URL=$(printf '%s' "${{ vars.SLACK_WEBHOOK_URL }}" | tr -d '[:space:]')
-          if [ "$FOUND" != "true" ]; then
+          if [ "$JOB_STATUS" != "success" ]; then
+            TEXT="⚠️ *#${NUM} 자동 구현 실패/PR 미생성* — 실제 코드 변경 또는 PR이 만들어지지 않았습니다. 이슈 코멘트와 Actions 로그를 확인하세요: ${RUN_URL}"
+          elif [ "$FOUND" != "true" ]; then
             TEXT="⚠️ *구현 불가 (#${NUM})* — task 이슈가 없거나 닫힘/라벨 불일치."
           elif [ "${DUP:-0}" != "0" ]; then
             TEXT="ℹ️ *#${NUM}* 이미 구현 PR이 열려 있어 새로 만들지 않았습니다."
