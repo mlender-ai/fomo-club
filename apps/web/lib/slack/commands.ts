@@ -1,7 +1,6 @@
 import {
   triggerWorkflow,
   getOpenPRs,
-  getCEOBriefIssues,
   addLabel,
   mergePR,
   getWorkflowRuns,
@@ -23,6 +22,7 @@ export const SLOW_COMMANDS = new Set([
   "merge",
   "constraints",
   "pipeline",
+  "monitor",
   "source",
   "integrity",
   "파이프라인",
@@ -40,6 +40,7 @@ export const KNOWN_COMMANDS = new Set([
   "help",
   "constraints",
   "pipeline",
+  "monitor",
   "source",
   "integrity",
   "파이프라인",
@@ -55,6 +56,7 @@ const commands: Record<string, CommandHandler> = {
   merge: handleMerge,
   constraints: handleConstraints,
   pipeline: handlePipeline,
+  monitor: handleMonitor,
   source: handleSourceDiscovery,
   integrity: handleIntegrityCheck,
   파이프라인: handlePipeline,
@@ -87,7 +89,7 @@ async function handleImplement(args: string): Promise<CommandResult> {
   if (!args) {
     const issue = await getLatestActionableIssue();
     if (!issue) {
-      return { text: "사용법: `/fomo implement {YYYY-MM-DD}` 또는 `/fomo implement #{이슈번호}`\n예: `/fomo implement 2026-05-25`, `/fomo implement #607`" };
+      return { text: "구현할 작업 이슈가 없습니다. 먼저 Daily Product Monitor가 critical 이슈를 만들거나, `/fomo implement #607`처럼 이슈 번호를 지정해 주세요." };
     }
     await triggerWorkflow("implement-task.yml", { issue: String(issue.number) });
     return { text: `최신 작업 이슈 #${issue.number} 구현 워크플로우 트리거됨: ${issue.title}` };
@@ -99,14 +101,11 @@ async function handleImplement(args: string): Promise<CommandResult> {
     return { text: `이슈 #${issueMatch[1]} 구현 워크플로우 트리거됨` };
   }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(args)) {
-    return { text: "입력 형식이 올바르지 않습니다. `YYYY-MM-DD` 또는 `#이슈번호` 형식으로 입력하세요.\n예: `/fomo implement 2026-05-25`, `/fomo implement #607`" };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(args)) {
+    return { text: "CEO Brief 날짜 기반 auto-implement는 더 이상 기본 경로가 아닙니다. `/fomo monitor`로 제품 모니터링을 실행하거나 `/fomo implement #이슈번호`를 사용해 주세요." };
   }
 
-  const inputs: Record<string, string> = { brief_date: args };
-
-  await triggerWorkflow("auto-implement.yml", inputs);
-  return { text: `Auto-implement 워크플로우 트리거됨 (입력: ${args})` };
+  return { text: "입력 형식이 올바르지 않습니다. `/fomo implement #이슈번호` 형식으로 입력하세요.\n예: `/fomo implement #607`" };
 }
 
 async function handleCouncil(): Promise<CommandResult> {
@@ -116,29 +115,32 @@ async function handleCouncil(): Promise<CommandResult> {
 }
 
 async function handleStatus(): Promise<CommandResult> {
-  const [prs, briefs, implRuns] = await Promise.all([
+  const [prs, monitorRuns, taskRuns] = await Promise.all([
     getOpenPRs(5),
-    getCEOBriefIssues(3),
-    getWorkflowRuns("auto-implement.yml", 3),
+    getWorkflowRuns("daily-product-monitor.yml", 3),
+    getWorkflowRuns("implement-task.yml", 3),
   ]);
 
   const prList = (prs as { number: number; title: string }[])
     .map((pr) => `  #${pr.number}: ${pr.title}`)
     .join("\n") || "  (없음)";
 
-  const briefList = (briefs as { number: number; title: string }[])
-    .map((b) => `  #${b.number}: ${b.title}`)
+  const monitorList = (
+    (monitorRuns as { workflow_runs: { conclusion: string; created_at: string }[] })
+      .workflow_runs || []
+  )
+    .map((r) => `  ${r.conclusion || "running"} — ${r.created_at}`)
     .join("\n") || "  (없음)";
 
-  const runList = (
-    (implRuns as { workflow_runs: { conclusion: string; created_at: string }[] })
+  const taskList = (
+    (taskRuns as { workflow_runs: { conclusion: string; created_at: string }[] })
       .workflow_runs || []
   )
     .map((r) => `  ${r.conclusion || "running"} — ${r.created_at}`)
     .join("\n") || "  (없음)";
 
   return {
-    text: `*현재 상태*\n\n*오픈 PR:*\n${prList}\n\n*CEO Brief:*\n${briefList}\n\n*Auto-implement 최근 실행:*\n${runList}`,
+    text: `*현재 상태*\n\n*오픈 PR:*\n${prList}\n\n*Daily Product Monitor 최근 실행:*\n${monitorList}\n\n*Implement Task 최근 실행:*\n${taskList}`,
   };
 }
 
@@ -165,6 +167,13 @@ async function handleMerge(args: string): Promise<CommandResult> {
 async function handlePipeline(args: string): Promise<CommandResult> {
   await triggerWorkflow("agent-ops.yml", { mode: "pipeline-monitor", query: args });
   return { text: "🛠️ pipeline-monitor 작업 이슈 생성을 요청했습니다. 수집량·fallback·confidence·빈 카드 기준으로 점검합니다." };
+}
+
+async function handleMonitor(args: string): Promise<CommandResult> {
+  await triggerWorkflow("daily-product-monitor.yml", {
+    auto_fix: args.includes("no-fix") ? "false" : "true",
+  });
+  return { text: "🩺 Daily Product Monitor를 수동 실행했습니다. critical 없으면 보고만 하고 스킵, 있으면 이슈 생성 후 자동 수정 시도합니다." };
 }
 
 async function handleSourceDiscovery(args: string): Promise<CommandResult> {
@@ -204,9 +213,10 @@ async function handleHelp(): Promise<CommandResult> {
   return {
     text: [
       "*FOMO Club Agent 커맨드:*",
-      "`/fomo implement {날짜}` — CEO Brief 자동 구현 트리거",
+      "`/fomo monitor` — Daily Product Monitor 수동 실행",
+      "`/fomo implement #{이슈번호}` — 지정 작업 이슈 구현",
       "`/fomo council` — 잠김: 자율기획 루프는 실행하지 않음",
-      "`/fomo status` — 오픈 PR + CEO Brief + 실행 상태 요약",
+      "`/fomo status` — 오픈 PR + 모니터/구현 실행 상태 요약",
       "`/fomo approve {이슈#}` — 이슈에 implement-approved 라벨 추가",
       "`/fomo merge {PR#}` — PR squash 머지",
       "`/fomo constraints` — 현재 등록된 standing constraints 목록",

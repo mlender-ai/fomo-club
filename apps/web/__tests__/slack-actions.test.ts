@@ -113,7 +113,7 @@ describe("log_feedback 액션", () => {
 
 describe("액션 집합", () => {
   it("KNOWN_ACTIONS 에 7개 포함", () => {
-    for (const a of ["run_council", "implement", "merge", "approve", "comment", "add_constraint", "log_feedback", "pipeline_check", "source_discovery", "integrity_check"]) {
+    for (const a of ["run_council", "implement", "merge", "approve", "comment", "add_constraint", "log_feedback", "pipeline_check", "source_discovery", "integrity_check", "monitor"]) {
       expect(KNOWN_ACTIONS.has(a)).toBe(true);
     }
   });
@@ -151,5 +151,11 @@ describe("select_project 액션 (톱다운 프로젝트 선택)", () => {
     expect(r.actions).toEqual([{ name: "implement_task", payload: { issue: 457 } }]);
     expect(KNOWN_ACTIONS.has("implement_task")).toBe(true);
     expect(HIGH_IMPACT_ACTIONS.has("implement_task")).toBe(true);
+  });
+  it("monitor 액션 파싱 + KNOWN/HIGH_IMPACT", () => {
+    const r = parseActions("데일리 모니터링 실행\n[[ACTION:monitor]]");
+    expect(r.actions).toEqual([{ name: "monitor", payload: {} }]);
+    expect(KNOWN_ACTIONS.has("monitor")).toBe(true);
+    expect(HIGH_IMPACT_ACTIONS.has("monitor")).toBe(true);
   });
 });

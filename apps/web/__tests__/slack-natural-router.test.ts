@@ -24,6 +24,10 @@ describe("routeNaturalLanguage", () => {
     expect(names("grounding 검증해줘")).toEqual(["integrity_check"]);
   });
 
+  it("데일리 제품 모니터링 요청을 monitor로 라우팅", () => {
+    expect(routeNaturalLanguage("데일리 제품 모니터링 돌려줘").actions[0]).toEqual({ name: "monitor", payload: {} });
+  });
+
   it("조회/상태 질문은 실행하지 않음", () => {
     expect(routeNaturalLanguage("파이프라인 상태 알려줘").confidence).toBe("low");
     expect(routeNaturalLanguage("개발됐어?").confidence).toBe("low");
@@ -42,7 +46,7 @@ describe("routeNaturalLanguage", () => {
   it("특정 이슈 개발과 일반 개발을 구분", () => {
     expect(routeNaturalLanguage("#457 개발해").actions[0]).toEqual({ name: "implement_task", payload: { issue: 457 } });
     expect(routeNaturalLanguage("오늘자 이슈 작업 진행해줘").actions[0]).toEqual({ name: "implement", payload: { target: "latest_issue" } });
-    expect(routeNaturalLanguage("다음 작업 개발 진행해").actions[0]).toEqual({ name: "implement", payload: {} });
+    expect(routeNaturalLanguage("다음 작업 개발 진행해").actions[0]).toEqual({ name: "implement", payload: { target: "latest_issue" } });
   });
 
   it("PR 머지와 이슈 닫기를 안전하게 분류", () => {

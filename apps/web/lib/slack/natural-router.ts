@@ -123,6 +123,14 @@ export function routeNaturalLanguage(input: string): NaturalRoute {
     );
   }
 
+  if (/(데일리|daily|매일|제품).*(모니터|monitor|점검|체크)|모니터링.*(실행|돌려|시작)/i.test(text)) {
+    return route(
+      [{ name: "monitor", payload: {} }],
+      "🩺 Daily Product Monitor 실행 요청으로 이해했어요. critical 없으면 보고만 하고 스킵할게요.",
+      "monitor",
+    );
+  }
+
   // ── 톱다운 프로젝트 흐름 ─────────────────────────────────────
   if (/프로젝트.*(제안|뽑아|추천|정리)|뭐부터\s*할지.*(제안|정리)/i.test(text)) {
     return noRoute("autonomous-project-proposal-locked");
@@ -163,8 +171,8 @@ export function routeNaturalLanguage(input: string): NaturalRoute {
       );
     }
     return route(
-      [{ name: "implement", payload: {} }],
-      "🚀 개발 실행 요청으로 이해했어요. 오늘 기준 auto-implement를 실행할게요.",
+      [{ name: "implement", payload: { target: "latest_issue" } }],
+      "🚀 최신 작업 이슈 구현 요청으로 이해했어요. CEO Brief가 아니라 최근 열린 작업 이슈를 구현할게요.",
       "implement",
     );
   }

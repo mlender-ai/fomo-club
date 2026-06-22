@@ -1,0 +1,159 @@
+name: Daily Product Monitor
+
+# Bottom-up 운영 감시.
+# 매일 가볍게 제품/운영 상태를 확인하고, 크리티컬한 깨짐이 있을 때만 task 이슈와 자동 수정 시도를 만든다.
+# 평소 Claude/LLM 비용 없음. critical 발견 후 implement-task 를 호출할 때만 Claude Code 비용 발생.
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # 09:00 KST
+  workflow_dispatch:
+    inputs:
+      auto_fix:
+        description: "critical 발견 시 implement-task 자동 실행 여부"
+        required: false
+        default: "true"
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: daily-product-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect product health
+        id: inspect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          TODAY=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+          gh label create "daily-product-monitor" --repo "$REPO" --force --color "0052cc" --description "Daily bottom-up product health monitor" >/dev/null 2>&1 || true
+          gh label create "pipeline-monitor" --repo "$REPO" --force --color "1d76db" --description "Agent pipeline monitoring request" >/dev/null 2>&1 || true
+          gh label create "data-quality" --repo "$REPO" --force --color "c2e0c6" --description "Data quality, confidence, fallback, grounding" >/dev/null 2>&1 || true
+          gh label create "task" --repo "$REPO" --force --color "bfd4f2" --description "Implementable task issue" >/dev/null 2>&1 || true
+
+          gh run list --repo "$REPO" --branch main --limit 50 \
+            --json databaseId,workflowName,displayTitle,conclusion,status,createdAt,url \
+            > /tmp/runs.json
+
+          jq --arg since "$SINCE" '
+            [
+              .[]
+              | select(.createdAt >= $since)
+              | select(.status == "completed")
+              | select(.conclusion == "failure" or .conclusion == "timed_out")
+              | select(
+                  .workflowName == "CI" or
+                  .workflowName == "Auto QA — Web Smoke" or
+                  .workflowName == "FOMO Index Pipeline" or
+                  .workflowName == "Keyword Cards Pipeline" or
+                  .workflowName == "Supply Demand Pipeline" or
+                  .workflowName == "Warm Insights"
+                )
+            ]
+          ' /tmp/runs.json > /tmp/critical-runs.json
+
+          CRITICAL_COUNT=$(jq 'length' /tmp/critical-runs.json)
+          echo "critical_count=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "# Daily Product Monitor — $TODAY"
+            echo
+            echo "기간: 최근 24시간 ($SINCE 이후)"
+            echo
+            if [ "$CRITICAL_COUNT" = "0" ]; then
+              echo "상태: 정상"
+              echo
+              echo "크리티컬한 CI/제품 파이프라인 실패를 발견하지 못했습니다. 오늘은 개발 작업을 만들지 않습니다."
+            else
+              echo "상태: 위험"
+              echo
+              echo "아래 critical run을 확인하고, 제품/운영 안정성을 회복하는 최소 수정 PR을 만드세요."
+              echo
+              jq -r '.[] | "- \(.workflowName): \(.displayTitle) / \(.conclusion) / \(.url)"' /tmp/critical-runs.json
+              echo
+              echo "## 작업 원칙"
+              echo "- 새 제품 방향/기능 제안 금지"
+              echo "- 실패 원인 확인 후 최소 수정"
+              echo "- 화면/카피/프롬프트 임의 변경 금지"
+              echo "- 비용/외부 서비스/prod DDL 필요 시 구현하지 말고 이슈에 사유 기록"
+            fi
+          } > /tmp/monitor-body.md
+
+      - name: Create critical task issue
+        id: issue
+        if: steps.inspect.outputs.critical_count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TODAY: ${{ steps.inspect.outputs.today }}
+        run: |
+          set -euo pipefail
+
+          EXISTING=$(gh issue list --repo "$REPO" \
+            --label "daily-product-monitor" \
+            --state open \
+            --limit 20 \
+            --json number,title \
+            --jq ".[] | select(.title | contains(\"$TODAY\")) | .number" | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "이미 오늘자 monitor 이슈가 있어 재사용: #$EXISTING"
+            exit 0
+          fi
+
+          URL=$(gh issue create --repo "$REPO" \
+            --title "🚨 [daily-product-monitor] critical $TODAY" \
+            --body-file /tmp/monitor-body.md \
+            --label "daily-product-monitor,pipeline-monitor,data-quality,task")
+          NUM="${URL##*/}"
+          echo "number=$NUM" >> "$GITHUB_OUTPUT"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "created issue #$NUM"
+
+      - name: Auto-fix critical issue
+        if: |
+          steps.issue.outputs.number != '' &&
+          (github.event_name == 'schedule' || github.event.inputs.auto_fix != 'false')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ steps.issue.outputs.number }}
+        run: |
+          set -euo pipefail
+          gh workflow run implement-task.yml --repo "$REPO" -f issue="$NUM"
+          gh issue comment "$NUM" --repo "$REPO" \
+            --body "🤖 Daily Product Monitor가 critical 상태를 감지해 implement-task 자동 수정을 시작했습니다."
+
+      - name: Report to Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          CRITICAL_COUNT: ${{ steps.inspect.outputs.critical_count }}
+          TODAY: ${{ steps.inspect.outputs.today }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          URL=$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')
+          if [ "${CRITICAL_COUNT:-0}" = "0" ]; then
+            TEXT="🟢 *Daily Product Monitor* — ${TODAY}\n크리티컬한 제품/운영 깨짐 없음. 오늘은 개발 스킵.\n${RUN_URL}"
+          else
+            TEXT="🚨 *Daily Product Monitor* — ${TODAY}\ncritical ${CRITICAL_COUNT}건 감지. 이슈 #${ISSUE_NUMBER} 생성/재사용 후 자동 수정 시도.\n${RUN_URL}"
+          fi
+          jq -n --arg text "$TEXT" '{text: $text}' > /tmp/slack.json
+          curl -sS -X POST -H 'Content-type: application/json' --data @/tmp/slack.json "$URL" || true
