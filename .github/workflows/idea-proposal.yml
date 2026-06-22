@@ -15,6 +15,10 @@ on:
         description: "실행할 에이전트 (all / pm / frontend / backend / designer / qa / cto / marketer / security / prompt_engineer) — 수동 폴백"
         required: false
         default: "all"
+      approval_token:
+        description: "자율기획 잠금 해제 토큰. SSOT_EXECUTION_ONLY 입력 시에만 실행"
+        required: false
+        default: ""
 
 concurrency:
   group: agent-council
@@ -38,6 +42,7 @@ permissions:
 jobs:
 
   prepare:
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' }}
     runs-on: ubuntu-latest
     outputs:
       feedback: ${{ steps.fetch.outputs.feedback }}
@@ -303,7 +308,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   pm:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'pm' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'pm') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -502,7 +507,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   frontend:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'frontend' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'frontend') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -691,7 +696,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   backend:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'backend' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'backend') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -846,7 +851,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   designer:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'designer' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'designer') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -1003,7 +1008,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   qa:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'qa' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'qa') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -1158,7 +1163,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   cto:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'cto' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'cto') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -1312,7 +1317,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   marketer:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'marketer' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'marketer') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -1500,7 +1505,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   security:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'security' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'security') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -1634,7 +1639,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   prompt_engineer:
     needs: [prepare]
-    if: ${{ github.event.inputs.agent == 'all' || github.event.inputs.agent == 'prompt_engineer' || github.event_name == 'schedule' }}
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && (github.event.inputs.agent == 'all' || github.event.inputs.agent == 'prompt_engineer') }}
     runs-on: ubuntu-latest
     outputs:
       proposal: ${{ steps.proposal.outputs.response }}
@@ -1794,7 +1799,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   score_and_filter:
     needs: [prepare, pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer]
-    if: always()
+    if: ${{ always() && github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -1917,7 +1922,7 @@ jobs:
 
   ceo_brief:
     needs: [prepare, pm, frontend, backend, designer, qa, cto, marketer, security, prompt_engineer, score_and_filter]
-    if: always() && (github.event.inputs.agent == 'all' || github.event_name == 'schedule')
+    if: ${{ always() && github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' && github.event.inputs.agent == 'all' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

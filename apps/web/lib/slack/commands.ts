@@ -98,8 +98,9 @@ async function handleImplement(args: string): Promise<CommandResult> {
 }
 
 async function handleCouncil(): Promise<CommandResult> {
-  await triggerWorkflow("idea-proposal.yml", { agent: "all" });
-  return { text: "Daily Agent Council 워크플로우 트리거됨" };
+  return {
+    text: "🔒 Daily Agent Council은 잠겨 있습니다. 자율 기획 루프는 사용하지 않습니다. 대신 `/fomo pipeline`, `/fomo source`, `/fomo integrity` 또는 특정 이슈 개발 지시를 사용하세요.",
+  };
 }
 
 async function handleStatus(): Promise<CommandResult> {
@@ -192,7 +193,7 @@ async function handleHelp(): Promise<CommandResult> {
     text: [
       "*FOMO Club Agent 커맨드:*",
       "`/fomo implement {날짜}` — CEO Brief 자동 구현 트리거",
-      "`/fomo council` — Agent Council 수동 실행",
+      "`/fomo council` — 잠김: 자율기획 루프는 실행하지 않음",
       "`/fomo status` — 오픈 PR + CEO Brief + 실행 상태 요약",
       "`/fomo approve {이슈#}` — 이슈에 implement-approved 라벨 추가",
       "`/fomo merge {PR#}` — PR squash 머지",

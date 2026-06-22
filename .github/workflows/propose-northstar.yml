@@ -19,6 +19,10 @@ on:
         description: "출처 (예: slack/<thread>, weekly-cron)"
         required: false
         default: "manual"
+      approval_token:
+        description: "North Star 자율 제안 잠금 해제 토큰. SSOT_EXECUTION_ONLY 입력 시에만 실행"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -32,6 +36,7 @@ concurrency:
 
 jobs:
   propose:
+    if: ${{ github.event.inputs.approval_token == 'SSOT_EXECUTION_ONLY' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -125,11 +125,7 @@ export function routeNaturalLanguage(input: string): NaturalRoute {
 
   // ── 톱다운 프로젝트 흐름 ─────────────────────────────────────
   if (/프로젝트.*(제안|뽑아|추천|정리)|뭐부터\s*할지.*(제안|정리)/i.test(text)) {
-    return route(
-      [{ name: "propose_projects", payload: {} }],
-      "🧭 프로젝트 후보 제안 요청으로 이해했어요. 자율 실행이 아니라 후보 리스트만 만들게요.",
-      "propose_projects",
-    );
+    return noRoute("autonomous-project-proposal-locked");
   }
 
   const pid = projectId(text);

@@ -30,8 +30,11 @@ describe("routeNaturalLanguage", () => {
     expect(routeNaturalLanguage("PR 뭐 있어?").confidence).toBe("low");
   });
 
-  it("프로젝트 자연어를 단계별 액션으로 라우팅", () => {
-    expect(routeNaturalLanguage("프로젝트 제안해줘").actions[0]).toEqual({ name: "propose_projects", payload: {} });
+  it("프로젝트 자율 제안은 실행하지 않고 LLM/안내 경로로 넘김", () => {
+    expect(routeNaturalLanguage("프로젝트 제안해줘").confidence).toBe("low");
+  });
+
+  it("사람이 지정한 프로젝트 단계는 액션으로 라우팅", () => {
     expect(routeNaturalLanguage("P1 시작하자").actions[0]).toEqual({ name: "select_project", payload: { id: "P1" } });
     expect(routeNaturalLanguage("P2 기획 승인").actions[0]).toEqual({ name: "approve_plan", payload: { id: "P2" } });
   });

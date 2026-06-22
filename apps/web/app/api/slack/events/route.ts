@@ -333,8 +333,8 @@ ${runList || "(없음)"}
 액션 실행 규칙 (중요 — tool use):
 - CEO가 **명확히 실행을 지시**하면, 답변 끝에 단독 줄로 액션 토큰을 정확히 출력한다. 보통 1개, 단 "PR 머지 + 이슈 정리"처럼 벌크 정리는 merge_all·close_completed 를 함께(각각 단독 줄) 낼 수 있다.
 - 사용 가능한 액션:
-  \`[[ACTION:run_council]]\` — Agent Council(idea-proposal) 즉시 실행 ("의회 돌려", "제안 받아")
-  \`[[ACTION:propose_projects]]\` — CEO 에이전트가 제품 분석 → 프로젝트 후보 리스트 제안 ("프로젝트 제안해", "뭐부터 할지 제안해", "프로젝트 뽑아줘"). 사람이 검토 후 선택.
+  ~~\`[[ACTION:run_council]]\`~~ — 잠김. Agent Council/자율 제안 루프는 실행하지 않는다.
+  ~~\`[[ACTION:propose_projects]]\`~~ — 잠김. 에이전트가 새 제품 방향을 제안하지 않는다.
   \`[[ACTION:select_project]] {"id":"P1"}\` — 후보 중 활성 프로젝트 선택 ("P1 시작", "P2 프로젝트 하자"). 선택 시 **기획문서(PRD)** 를 먼저 작성(아직 분해 안 함).
   \`[[ACTION:approve_plan]] {"id":"P2"}\` — 기획문서 검토 후 승인 ("P2 기획 승인", "이 기획으로 개발 진행"). 승인 시 직군(기획/백엔드/프론트·UX/품질)별 하위 이슈로 분해.
   \`[[ACTION:implement_task]] {"issue":457}\` — 특정 프로젝트 하위 task 이슈를 실제 구현 → PR ("#457 개발해", "457 구현해", "이 이슈 개발"). 번호가 명시된 task 개발 지시.
@@ -365,11 +365,11 @@ ${runList || "(없음)"}
 - 둘 다 지시하면("머지하고 이슈도 닫아") merge_all + close_all 두 토큰을 각각 단독 줄로 출력한다.
 - **절대 "닫을 이슈가 없다/PR 번호가 올바르지 않다"고 지어내지 마라** — 벌크 토큰을 내면 시스템이 실제 열린 PR/이슈를 조회해 처리한다. close_all 은 이미 닫힌 게 아니면 반드시 무언가 닫는다.
 
-**톱다운 프로젝트 흐름 (3단계 — 단계마다 사람이 게이트)**:
-- ① "프로젝트 제안해", "뭐부터 할지 정리해" → \`[[ACTION:propose_projects]]\` (CEO가 제품 분석해 후보 리스트 제안).
-- ② "P2 시작", "P2 프로젝트 하자" → \`[[ACTION:select_project]] {"id":"P2"}\` (활성화 + **기획문서(PRD)** 작성. 아직 분해 안 함).
-- ③ 기획문서 검토 후 "P2 기획 승인", "이 기획으로 진행" → \`[[ACTION:approve_plan]] {"id":"P2"}\` (PRD 기준 직군별 하위 이슈 분해).
-- 이건 매일 잔 아이디어 run_council 과 다르다. 톱다운: 제안 → 선택 → 기획문서 → 승인 → 분해 → 격파.
+**톱다운 프로젝트 흐름 (사람이 방향 지정 — 단계마다 사람이 게이트)**:
+- "프로젝트 제안해", "뭐부터 할지 정리해" → 액션 토큰 금지. 자율기획은 잠겨 있으므로, SSOT 기준으로 “광혁이 프로젝트 방향을 지정하면 Pn 시작으로 받을 수 있다”고 안내한다.
+- "P2 시작", "P2 프로젝트 하자" → \`[[ACTION:select_project]] {"id":"P2"}\` (활성화 + **기획문서(PRD)** 작성. 아직 분해 안 함).
+- 기획문서 검토 후 "P2 기획 승인", "이 기획으로 진행" → \`[[ACTION:approve_plan]] {"id":"P2"}\` (PRD 기준 직군별 하위 이슈 분해).
+- 에이전트는 새 방향을 제안하지 않는다. 톱다운: 광혁 방향 지정 → 선택 → 기획문서 → 승인 → 분해 → 격파.
 
 - **순수 조회·요약·상태 확인·의견 질문**("브리핑 알려줘", "PR 뭐 있어", "상태 어때")에는 토큰을 내지 않는다.
 - merge/merge_all/close_completed/add_constraint 는 비가역·고영향 — CEO가 그 동작을 명시했을 때만. 정말 애매하면 토큰 없이 "구현을 시작할까요?"라고 한 번만 되묻는다(단, '개발/구현/진행' 동사가 있으면 되묻지 말고 바로 implement).
@@ -441,12 +441,10 @@ async function executeAction(
   try {
     switch (action.name) {
       case "run_council": {
-        await triggerWorkflow("idea-proposal.yml", { agent: "all" });
-        return "🗳️ *Agent Council 실행* — 잠시 후 제안 이슈들이 생성됩니다.";
+        return "🔒 *Agent Council은 잠겨 있습니다.* 자율 기획 루프는 FOMO Club SSOT 운영 방식과 맞지 않아 Slack에서 실행하지 않습니다. 필요한 작업은 `파이프라인 점검해`, `소스 후보 찾아줘`, `정합성 체크해`, 또는 특정 이슈 번호로 지시해 주세요.";
       }
       case "propose_projects": {
-        await triggerWorkflow("propose-project.yml", {});
-        return "🧭 *CEO 프로젝트 제안 생성 중* — 제품 정체성·OKR·현 상태를 분석해 프로젝트 후보를 제안합니다. 잠시 후 PROJECT_ROADMAP 갱신 + 검토 이슈(🧭 [CEO 프로젝트 제안])가 올라옵니다. 검토 후 \"P1 시작\"처럼 하나를 고르세요.";
+        return "🔒 *프로젝트 자율 제안은 잠겨 있습니다.* 에이전트가 새 방향을 제안하지 않도록 막았습니다. 광혁이 방향을 지정하면 `P1 시작`, `P1 기획 승인`, `#123 개발해`처럼 실행·검증 흐름만 처리합니다.";
       }
       case "select_project": {
         const id = typeof action.payload.id === "string" ? action.payload.id.trim().toUpperCase() : "";
