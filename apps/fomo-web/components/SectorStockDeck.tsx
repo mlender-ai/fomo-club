@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, rankFeedByFomo, selectFomoHook, sparklinePath } from "@fomo/core";
+import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
 import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, TaFact } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
-import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
+import { fetchSectorStocks, fetchStockFront, getCachedKeywords, recordTaste, warmKeywords } from "@/lib/fomoApi";
 import { getWatchlist } from "@/lib/watchlist";
 import { recordStockInterest, stockInterestScore } from "@/lib/stockInterest";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
@@ -21,7 +21,8 @@ import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon } from "@/comp
  *   "왜 이 종목"(grounded 근거)을 카드에 유지(#560). 대장주만 나오면 발굴 가치 0 → 발굴주를 노출 우선.
  *
  * 비주얼(카드 디자인·국기/시장 라벨·요약 리치 등)은 광혁 — 여기선 구조/동작만(§4).
- * 정렬은 @fomo/core rankFeedByFomo 밴드 + 로컬 취향 점수(관심/덜관심/상세/워치리스트) 1차 반영.
+ * 정렬은 즉시 가능한 로컬 신호(취향·발굴 근거·대표주·기존 순서)만 사용한다.
+ * stock-front 는 현재 카드와 다음 카드만 lazy hydrate 한다.
  */
 const THRESHOLD = 90;
 const EXIT_MS = 320;
@@ -46,19 +47,9 @@ type FrontEntry = {
   changeDir?: "up" | "down" | "flat";
 };
 
-/** 오늘(KST) "YYYY-MM-DD" — 발견 정렬의 일별 셔플 시드(같은 날=같은 순서). */
-function kstDateSeed(): string {
-  try {
-    const kst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-    return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
-  } catch {
-    return "seed";
-  }
-}
-
 /**
  * 섹터 풀 + 그날 발굴 종목 병합(④). 발굴 근거(reason)를 풀 종목에 붙이고, 풀에 없던 발굴주는 추가.
- * 노출 순서: 대표 대장주 먼저 → 발굴(근거 있는) 종목 → 나머지(결정적 — 캐시·새로고침 안정).
+ * 순서는 풀 순서를 보존한다. 즉시 렌더 path 에서 다시 정렬한다.
  */
 function mergeDiscovered(
   pool: readonly SectorStock[],
@@ -84,12 +75,6 @@ function mergeDiscovered(
     have.add(s.canonical);
     out.push({ canonical: s.canonical, market: s.market, country: s.country, marquee: false, sector, reason: s.reason });
   }
-  out.sort(
-    (a, b) =>
-      Number(b.marquee) - Number(a.marquee) ||
-      Number(!!b.reason) - Number(!!a.reason) || // 발굴(근거 있는) 우선 노출
-      a.canonical.localeCompare(b.canonical)
-  );
   return out;
 }
 
@@ -98,6 +83,19 @@ function stockPersonalizationRank(stock: string, nowMs = Date.now()): number {
   const watchIndex = watch.findIndex((w) => w.stock === stock);
   const watchBoost = watchIndex >= 0 ? 30 + Math.max(0, 10 - watchIndex) : 0;
   return stockInterestScore(stock, nowMs) + watchBoost;
+}
+
+function rankInstantStocks(stocks: readonly DeckStock[], nowMs = Date.now()): DeckStock[] {
+  return stocks
+    .map((stock, index) => ({ stock, index, rank: stockPersonalizationRank(stock.canonical, nowMs) }))
+    .sort(
+      (a, b) =>
+        b.rank - a.rank ||
+        Number(!!b.stock.reason) - Number(!!a.stock.reason) ||
+        Number(b.stock.marquee) - Number(a.stock.marquee) ||
+        a.index - b.index
+    )
+    .map((row) => row.stock);
 }
 
 function prefersReducedMotion(): boolean {
@@ -314,45 +312,18 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
     setState({ kind: "loading" });
     (async () => {
       try {
-        // 풀(baseline 보장 — 빈 카드 방지) + 그날 발굴주(keywords) 병렬. 발굴 실패해도 풀로 진행.
-        const [poolRes, kwRes] = await Promise.all([
-          fetchSectorStocks(sector, true),
-          fetchKeywords().catch(() => null),
-        ]);
+        // ready 는 섹터 풀만 기다린다. keywords 는 캐시가 있으면 즉시 사용하고, 없으면 다음 전환을 위해 뒤에서 데운다.
+        const cachedKeywords = getCachedKeywords();
+        if (!cachedKeywords) warmKeywords().catch((err) => console.warn("[SectorStockDeck] keywords warm failed", err));
+        const poolRes = await fetchSectorStocks(sector, true);
         if (!alive) return;
         if (!poolRes.stocks?.length) {
           setState({ kind: "error" });
           return;
         }
-        const merged = mergeDiscovered(poolRes.stocks, kwRes?.cards ?? [], sector);
-
-        // ④ 발견 정렬 — 풀 종목 포모 점수를 미리 모아(서버 캐시로 방어) 밴드 정렬(💎 안 묻힘) + 일별 셔플.
-        const domestic = merged.filter((s) => s.naverCode);
-        const settled = await Promise.allSettled(domestic.map((s) => fetchStockFront(s.canonical)));
-        if (!alive) return;
-        const fronts: Record<string, FrontEntry> = {};
-        domestic.forEach((s, i) => {
-          const r = settled[i];
-          if (r && r.status === "fulfilled") {
-            const d = r.value;
-            fronts[s.canonical] = {
-              signals: d.signals,
-              fomo: d.fomo,
-              ...(d.taFact ? { taFact: d.taFact } : {}),
-              sparkline: d.sparkline,
-              ...(d.priceText ? { priceText: d.priceText } : {}),
-              ...(d.changeText ? { changeText: d.changeText } : {}),
-              ...(d.changeDir ? { changeDir: d.changeDir } : {}),
-            };
-          }
-        });
-        const order = rankFeedByFomo(
-          merged.map((s) => ({ key: s.canonical, label: fronts[s.canonical]?.fomo.label ?? "quiet" })),
-          { seed: kstDateSeed(), rank: (key) => stockPersonalizationRank(key) }
-        );
-        const byKey = new Map(merged.map((s) => [s.canonical, s] as const));
-        const ranked = order.map((k) => byKey.get(k)).filter((s): s is DeckStock => !!s);
-        setState({ kind: "ready", stocks: ranked.length ? ranked : merged, fronts });
+        const merged = mergeDiscovered(poolRes.stocks, cachedKeywords?.cards ?? [], sector);
+        const ranked = rankInstantStocks(merged);
+        setState({ kind: "ready", stocks: ranked.length ? ranked : merged, fronts: {} });
       } catch (err) {
         console.warn("[SectorStockDeck] fetch failed", err);
         if (alive) setState({ kind: "error" });
@@ -434,6 +405,17 @@ function SectorDeckInner({
   // 헤드라인으로 쓰인 근거는 재료 리스트에서 빼서 중복 방지.
   const cardFor = (stock: DeckStock): { view: FomoCardView; catalysts: string[]; subLine?: string } => {
     const e = front[stock.canonical];
+    if (!e) {
+      const view: FomoCardView = {
+        scoreText: "",
+        emoji: "",
+        badge: "신호 확인 중",
+        headline: stock.reason ?? "신호를 확인하는 중이에요.",
+        tone: "calm",
+        isLeading: false,
+      };
+      return { view, catalysts: stock.reason ? [] : [], subLine: "가격·거래량 신호를 불러오고 있어요." };
+    }
     const fomo = e?.fomo ?? EMPTY_FOMO;
     const hook = selectFomoHook({
       fomo,
