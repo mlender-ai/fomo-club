@@ -81,7 +81,25 @@ export interface KeywordsResponse {
   confidence: KeywordConfidence;
   live: boolean;
 }
-export const fetchKeywords = () => get<KeywordsResponse>("/api/fomo/keywords");
+let keywordsCache: KeywordsResponse | null = null;
+let keywordsInflight: Promise<KeywordsResponse> | null = null;
+
+export const getCachedKeywords = () => keywordsCache;
+
+export const fetchKeywords = async () => {
+  const res = await get<KeywordsResponse>("/api/fomo/keywords");
+  keywordsCache = res;
+  return res;
+};
+
+export const warmKeywords = () => {
+  if (!keywordsInflight) {
+    keywordsInflight = fetchKeywords().finally(() => {
+      keywordsInflight = null;
+    });
+  }
+  return keywordsInflight;
+};
 
 /** 테마 이해·응축(데이터 엔진 Track A+B) — 뎁스 페이지가 카드 탭 시 lazy 로 부른다. */
 export type { CondensedInsight } from "@fomo/core";
