@@ -17,8 +17,10 @@ export const L_WEIGHTS = { foreign: 60, institution: 40 } as const;
 export const FOMO_THRESHOLDS = { hot: 80, warm: 60, quiet: 40, lead: 60 } as const;
 /** 정규화 기준점 — 거래량 3.5배=만점, 등락 8%=만점, 수급 5일연속·시총대비 1%=만점. */
 export const FOMO_NORM = { volTopX: 3.5, priceTopPct: 8, streakTopDays: 5, ratioTopPct: 0.01 } as const;
-/** 매집 다이버전스(§6.4 — 거래량↑·가격 평탄 = 조용히 담는 중). L 보너스 + 💎 보조 트리거. */
-export const ACCUMULATION = { enabled: true, volMin: 1.8, priceFlatMax: 2, leadBonus: 15 } as const;
+/** 매집 다이버전스(§6.4 — 거래량↑·가격 평탄 = 조용히 담는 중). 광혁 튜닝 전 기본 off. */
+export const ACCUMULATION = { enabled: false, volMin: 1.8, priceFlatMax: 2, leadBonus: 8 } as const;
+/** 볼린저 스퀴즈(§6.4 — 변동성 압축). L 보조 입력. 광혁 튜닝 전 기본 off. */
+export const BOLLINGER_SQUEEZE = { enabled: false, leadBonus: 5 } as const;
 /** 방향 — 어제(또는 3일 전) C 대비. flat 밴드 ±5, 강한 하락 = C 10↓ 또는 가격 -5%. */
 export const FOMO_DIRECTION = { flatBand: 5, strongDropDelta: 10, strongDropPct: -5 } as const;
 
@@ -41,11 +43,20 @@ export interface FomoScoreInputs {
   foreignNetRatio?: number; // 시총 대비 비중 0~1
   institutionNetStreak?: number;
   institutionNetRatio?: number;
+  /** TA 사실층 입력 — 거래량은 늘었는데 가격이 평탄한 매집형 다이버전스. */
+  accumulationDivergence?: boolean;
+  /** TA 사실층 입력 — 볼린저밴드 폭이 낮은 압축 상태. */
+  bollingerSqueeze?: boolean;
   // 방향
   /** 어제(또는 최근 3일) C — 방향 산출용. */
   prevScore?: number;
   /** 수급 기준일(시점 명시) — 예 "6/21". */
   asOf?: string;
+}
+
+export interface FomoScoreTuning {
+  accumulation?: Partial<typeof ACCUMULATION>;
+  bollingerSqueeze?: Partial<typeof BOLLINGER_SQUEEZE>;
 }
 
 export interface FomoScoreResult {
@@ -104,7 +115,9 @@ const LABEL_TEXT: Record<FomoLabel, string> = {
  * 포모 점수 산출 — C(현재 강도)·L(선행)·방향·상태 라벨. 순수·결정적.
  * 입력 없는 항목은 제외하고 가중치 재정규화 + confidence 반영(가짜숫자 금지).
  */
-export function computeFomoScore(input: FomoScoreInputs = {}): FomoScoreResult {
+export function computeFomoScore(input: FomoScoreInputs = {}, tuning: FomoScoreTuning = {}): FomoScoreResult {
+  const accumulation = { ...ACCUMULATION, ...tuning.accumulation };
+  const bollingerSqueeze = { ...BOLLINGER_SQUEEZE, ...tuning.bollingerSqueeze };
   const inputs: FomoScoreResult["inputs"] = {};
 
   // ── C — 현재 강도 ──
@@ -147,14 +160,18 @@ export function computeFomoScore(input: FomoScoreInputs = {}): FomoScoreResult {
 
   // 매집 다이버전스 — 거래량↑인데 가격 평탄 = 조용히 담는 중(거래량 논리 직계 선행 신호).
   const divergence =
-    ACCUMULATION.enabled &&
-    typeof input.volumeRatio === "number" &&
-    input.volumeRatio >= ACCUMULATION.volMin &&
-    typeof input.changePct === "number" &&
-    Math.abs(input.changePct) < ACCUMULATION.priceFlatMax;
+    accumulation.enabled &&
+    (input.accumulationDivergence === true ||
+      (typeof input.volumeRatio === "number" &&
+        input.volumeRatio >= accumulation.volMin &&
+        typeof input.changePct === "number" &&
+        Math.abs(input.changePct) < accumulation.priceFlatMax));
   if (divergence) {
     inputs.accumulationDivergence = true;
-    L = clamp100(L + ACCUMULATION.leadBonus);
+    L = clamp100(L + accumulation.leadBonus);
+  }
+  if (bollingerSqueeze.enabled && input.bollingerSqueeze === true) {
+    L = clamp100(L + bollingerSqueeze.leadBonus);
   }
 
   // ── 방향 ──

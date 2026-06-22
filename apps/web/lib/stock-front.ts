@@ -6,8 +6,12 @@ import {
   signalsFromBasics,
   investorNetStreak,
   computeFomoScore,
+  computeTechnicalAnalysis,
+  selectTaFact,
   type CardFrontSignals,
   type FomoScoreResult,
+  type DailyOhlcv,
+  type TaFact,
 } from "@fomo/core";
 import { fetchStockBasics } from "./stock-basics";
 import { readSupplyDemandHistory } from "./supply-demand-store";
@@ -24,8 +28,11 @@ async function getJson(url: string): Promise<unknown> {
  * 네이버 siseJson(일봉) → 최근 N거래일 종가(오름차순, 오래된→최신). 스파크라인용.
  * 응답은 작은따옴표 의사 JSON + 헤더행(한글, EUC-KR) — 숫자 행만 정규식으로 안전 추출(인코딩 무관).
  */
-/** 네이버 siseJson 일봉 → 최근 거래일 종가·거래량(오름차순). 스파크라인 + 거래량 회전·추세 산출용. */
-export async function fetchStockDaily(code: string, calendarDays = 100): Promise<{ closes: number[]; volumes: number[] }> {
+/** 네이버 siseJson 일봉 → 최근 거래일 OHLCV(오름차순). 스파크라인 + 거래량 회전 + TA 사실층 공용. */
+export async function fetchStockDaily(
+  code: string,
+  calendarDays = 420
+): Promise<{ candles: DailyOhlcv[]; closes: number[]; volumes: number[] }> {
   try {
     const ymd = (d: Date) =>
       `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -33,23 +40,34 @@ export async function fetchStockDaily(code: string, calendarDays = 100): Promise
     const start = new Date(end.getTime() - calendarDays * 86_400_000); // ~100일 ≈ 3개월 거래일
     const url = `https://api.finance.naver.com/siseJson.naver?symbol=${encodeURIComponent(code)}&requestType=1&startTime=${ymd(start)}&endTime=${ymd(end)}&timeframe=day`;
     const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return { closes: [], volumes: [] };
+    if (!res.ok) return { candles: [], closes: [], volumes: [] };
     const text = await res.text();
     // 데이터 행: ["20260320", 시, 고, 저, 종, 거래량, ...] — 날짜(따옴표)·OHLC·거래량(idx5).
-    const rows: { date: string; close: number; volume: number }[] = [];
+    const rows: DailyOhlcv[] = [];
     const re = /\[\s*"?(\d{8})"?\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
+      const open = Number(m[2]);
+      const high = Number(m[3]);
+      const low = Number(m[4]);
       const close = Number(m[5]);
       const volume = Number(m[6]);
-      if (Number.isFinite(close)) rows.push({ date: m[1]!, close, volume: Number.isFinite(volume) ? volume : 0 });
+      if ([open, high, low, close].every(Number.isFinite)) {
+        rows.push({
+          date: m[1]!,
+          open,
+          high,
+          low,
+          close,
+          volume: Number.isFinite(volume) ? volume : 0,
+        });
+      }
     }
-    rows.sort((a, b) => (a.date < b.date ? -1 : 1)); // 오래된→최신
-    const recent = rows.slice(-66); // 최근 ~3개월
-    return { closes: recent.map((r) => r.close), volumes: recent.map((r) => r.volume) };
+    rows.sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? -1 : 1)); // 오래된→최신
+    return { candles: rows, closes: rows.map((r) => r.close), volumes: rows.map((r) => r.volume) };
   } catch (err) {
     console.warn("[stock-front] daily failed", code, (err as Error)?.message);
-    return { closes: [], volumes: [] };
+    return { candles: [], closes: [], volumes: [] };
   }
 }
 
@@ -115,6 +133,8 @@ export interface StockFrontData {
   signals: CardFrontSignals;
   /** 포모 점수(척추) — C·L·라벨. 카드 점수/라벨/헤드라인의 단일 출처. */
   fomo: FomoScoreResult;
+  /** TA 셀렉터가 고른 사실 1개 — 점수/진열이 아니라 카드·상세 보조 문맥. */
+  taFact?: TaFact;
   /** 최근 3개월 종가(스파크라인) — 없으면 빈 배열. */
   sparkline: number[];
   /** 현재가 — 예 "354,000원"(카드 1행 표기용). */
@@ -157,19 +177,24 @@ export async function assembleStockFront(
 
   // ── 포모 점수(척추) — 거래량 회전·가격(등락·추세)·수급. 언급량·prevScore 는 후속(없으면 제외). ──
   const volRatio = volumeTurnover(daily.volumes);
-  const trend = trendStrength(daily.closes);
+  const ta = computeTechnicalAnalysis(daily.candles);
+  const trend = ta.inputs.trendStrength ?? trendStrength(daily.closes);
   const fomo = computeFomoScore({
     ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
     ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
     ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+    ...(ta.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
+    ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
     ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),
     ...(typeof signals.institutionNetStreak === "number" ? { institutionNetStreak: signals.institutionNetStreak } : {}),
   });
+  const taFact = selectTaFact(fomo, ta);
 
   return {
     signals,
     fomo,
-    sparkline: daily.closes,
+    ...(taFact ? { taFact } : {}),
+    sparkline: daily.closes.slice(-66),
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),
     ...(basics?.changeText ? { changeText: basics.changeText } : {}),
     ...(basics?.changeDir ? { changeDir: basics.changeDir } : {}),

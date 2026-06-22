@@ -474,11 +474,11 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
   const stroke = up ? "#FF5A36" : "#60A5FA";
   const lead = (front?.fomo.leadSignal ?? 0) >= 60;
   // 차트가 뒷받침하나 — 현재 상태 묘사만(예측 금지).
-  const note = lead && !up
+  const note = front?.taFact?.text ?? (lead && !up
     ? "차트는 아직 안 따라왔어요 — 수급이 가격보다 먼저 움직이는 자리예요."
     : up
       ? "이미 위로 올라온 자리예요(최근 3개월)."
-      : "최근 3개월은 차분한 흐름이에요.";
+      : "최근 3개월은 차분한 흐름이에요.");
   return (
     <section className="mt-7">
       <p className="font-pixel text-sm text-whiteout">차트가 받쳐주나</p>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sparklinePath, seriesIsUp, fomoCardView, computeFomoScore, rankFeedByFomo } from "@fomo/core";
-import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, FomoTone } from "@fomo/core";
+import type { KeywordCard, SectorStock, StockSector, CardFrontSignals, FomoScoreResult, FomoCardView, FomoTone, TaFact } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchSectorStocks, fetchKeywords, fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
@@ -35,6 +35,7 @@ type DeckStock = SectorStock & { reason?: string };
 type FrontEntry = {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
+  taFact?: TaFact;
   sparkline: number[];
   priceText?: string;
   changeText?: string;
@@ -170,6 +171,7 @@ function StockCardFace({
   changeDir,
   rankLabel,
   sparkline,
+  taFact,
   progress,
 }: {
   stock: DeckStock;
@@ -181,6 +183,7 @@ function StockCardFace({
   changeDir?: "up" | "down" | "flat" | undefined;
   rankLabel?: string | undefined;
   sparkline?: number[] | undefined;
+  taFact?: TaFact | undefined;
   progress?: string | undefined;
 }) {
   const tone = TONE_COLOR[view.tone] ?? "#94A3B8";
@@ -243,6 +246,14 @@ function StockCardFace({
         {view.isLeading && <span aria-hidden>💎 </span>}
         {view.headline}
       </p>
+
+      {taFact && (
+        <p className="mt-2 rounded-lg border border-hairline bg-black/10 px-3 py-2 text-sm leading-6 text-muted">
+          <span className="font-pixel text-[11px] text-whiteout">차트 사실</span>
+          <span className="mx-1.5 opacity-50">·</span>
+          {taFact.text}
+        </p>
+      )}
 
       {/* 미니 스파크라인(최근 3개월) */}
       {sparkline && sparkline.length >= 2 && <Sparkline series={sparkline} />}
@@ -309,6 +320,7 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
             fronts[s.canonical] = {
               signals: d.signals,
               fomo: d.fomo,
+              ...(d.taFact ? { taFact: d.taFact } : {}),
               sparkline: d.sparkline,
               ...(d.priceText ? { priceText: d.priceText } : {}),
               ...(d.changeText ? { changeText: d.changeText } : {}),
@@ -386,6 +398,7 @@ function SectorDeckInner({
             [key]: {
               signals: d.signals,
               fomo: d.fomo,
+              ...(d.taFact ? { taFact: d.taFact } : {}),
               sparkline: d.sparkline,
               ...(d.priceText ? { priceText: d.priceText } : {}),
               ...(d.changeText ? { changeText: d.changeText } : {}),
@@ -425,6 +438,7 @@ function SectorDeckInner({
         changeDir={e?.changeDir}
         rankLabel={rankLabelFor(stock)}
         sparkline={e?.sparkline}
+        taFact={e?.taFact}
         progress={progress}
       />
     );

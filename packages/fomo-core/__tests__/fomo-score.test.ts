@@ -122,12 +122,17 @@ describe("computeFomoScore — 포모 점수 엔진(§2)", () => {
     expect(empty.label).toBe("silent");
   });
 
-  it("매집 다이버전스 — 거래량↑·가격 평탄이면 L 보너스 + 플래그", () => {
+  it("매집 다이버전스 — 기본 off, 튜닝 플래그를 켜면 L 보너스 + 플래그", () => {
     const base = computeFomoScore({ volumeRatio: 2.5, changePct: 0.5, foreignNetStreak: 3 });
+    const tuned = computeFomoScore(
+      { volumeRatio: 2.5, changePct: 0.5, foreignNetStreak: 3 },
+      { accumulation: { enabled: true, leadBonus: 8 } }
+    );
     const noDiv = computeFomoScore({ volumeRatio: 2.5, changePct: 6, foreignNetStreak: 3 });
-    expect(base.inputs.accumulationDivergence).toBe(true);
+    expect(base.inputs.accumulationDivergence).toBeUndefined();
+    expect(tuned.inputs.accumulationDivergence).toBe(true);
     expect(noDiv.inputs.accumulationDivergence).toBeUndefined();
-    expect(base.leadSignal).toBeGreaterThan(noDiv.leadSignal);
+    expect(tuned.leadSignal).toBeGreaterThan(noDiv.leadSignal);
   });
 
   it("방향 — prevScore 대비 ↑/↓/flat", () => {
