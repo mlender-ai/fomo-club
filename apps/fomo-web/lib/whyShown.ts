@@ -5,6 +5,7 @@ import { stockInterestScore } from "./stockInterest";
 import type { DeckStock } from "./discoveryDeck";
 
 const HIGH_INTEREST_SCORE = 18;
+const MAX_INLINE_REASON = 34;
 
 interface WhyShownInput {
   stock: DeckStock;
@@ -22,6 +23,12 @@ function hasWatchedPeer(sector: StockSector, stockName: string): boolean {
   return watch.some((w) => names.has(w.stock));
 }
 
+function compactInline(text: string | undefined): string {
+  const clean = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  return clean.length > MAX_INLINE_REASON ? `${clean.slice(0, MAX_INLINE_REASON - 1)}…` : clean;
+}
+
 export function whyShown({ stock, fomoLabel, signals, nowMs = Date.now() }: WhyShownInput): string {
   if (stock.whyShown) return stock.whyShown;
   const changePct = signals?.changePct;
@@ -36,10 +43,14 @@ export function whyShown({ stock, fomoLabel, signals, nowMs = Date.now() }: WhyS
   const hasSupplySell = foreign <= -3 || institution <= -3;
 
   if (stock.reason) {
-    return `‘${stock.sector}’ 흐름에서 같이 잡힌 원문 근거가 있어요: ${stock.reason}`;
+    const reason = compactInline(stock.reason);
+    return reason
+      ? `‘${stock.sector}’ 흐름에서 같이 잡힌 원문 근거가 있어요: ${reason}`
+      : `‘${stock.sector}’ 흐름에서 같이 잡힌 원문 근거가 있어요.`;
   }
   if (signals?.newsEventLabel) {
-    return `오늘 이 종목을 직접 언급한 뉴스가 있어요: ${signals.newsEventLabel}`;
+    const label = compactInline(signals.newsEventLabel);
+    return label ? `오늘 이 종목을 직접 언급한 뉴스가 있어요: ${label}` : "오늘 이 종목을 직접 언급한 뉴스가 있어요.";
   }
   if (isDown && hasSupplyBuy) {
     const actor = foreign >= 3 && institution >= 3 ? "외국인·기관" : foreign >= 3 ? "외국인" : "기관";
