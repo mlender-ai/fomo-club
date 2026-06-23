@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { condenseThemeInsight, emptyThemeInsight, stockDef, supplyDemandFact, type CondensedInsight } from "@fomo/core";
 import { withCors, kstDate, kstSlot, cacheVersion } from "../../../../lib/fomo";
+import { stockInsightCacheControl } from "../../../../lib/stock-insight-cache";
 import { understandStock } from "../../../../lib/theme-understanding";
 import { readLatestSupplyDemand } from "../../../../lib/supply-demand-store";
 
@@ -87,13 +88,10 @@ export async function GET(req: Request) {
     ? { ...payload, officialFacts: [supplyDemandFact(flow), ...(payload.officialFacts ?? [])] }
     : payload;
 
-  return withCors(
-    NextResponse.json(out, {
-      headers: {
-        "Cache-Control": coldFallback
-          ? "public, s-maxage=30, stale-while-revalidate=120"
-          : "public, s-maxage=900, stale-while-revalidate=1800",
-      },
-    })
-  );
+  const headers = new Headers({
+    "Cache-Control": stockInsightCacheControl(coldFallback),
+  });
+  if (coldFallback) headers.set("X-Fomo-Cold-Fallback", "1");
+
+  return withCors(NextResponse.json(out, { headers }));
 }
