@@ -21,7 +21,7 @@ export function OPTIONS() {
 
 // theme-insight 와 동일 정책 — (KST날짜, 종목) 키로 cold 를 하루 1회로. revalidate 6h(SWR — 대기 없이 갱신).
 const REVALIDATE_S = 21_600; // 6h
-const USER_WAIT_MS = 6_000;
+const USER_WAIT_MS = 4_500;
 const inflight = new Map<string, Promise<CondensedInsight>>();
 
 async function getInsight(stock: string): Promise<CondensedInsight> {
