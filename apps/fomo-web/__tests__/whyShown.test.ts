@@ -22,7 +22,27 @@ describe("whyShown", () => {
       signals: { mentionScore: 90, mentionCount: 6 },
     });
 
-    expect(text).toBe("대장주 말고 ‘2차전지’ 흐름에서 같이 움직인 종목이에요.");
+    expect(text).toBe("‘2차전지’ 흐름에서 같이 잡힌 원문 근거가 있어요: 실리콘 음극재 원문 근거");
+    expect(text).not.toMatch(FORBIDDEN);
+  });
+
+  it("explains bearish attention as a check card, not a bullish recommendation", () => {
+    const text = whyShown({
+      stock: { ...baseStock, marquee: true },
+      signals: { changePct: -6.4, mentionScore: 80, mentionCount: 5, volumeRatio: 2.1 },
+    });
+
+    expect(text).toBe("강세 카드가 아니라, 하락 중에도 거래·언급이 몰린 이유를 확인하는 카드예요.");
+    expect(text).not.toMatch(FORBIDDEN);
+  });
+
+  it("keeps falling stocks with positive supply explainable", () => {
+    const text = whyShown({
+      stock: baseStock,
+      signals: { changePct: -3.2, foreignNetStreak: 4 },
+    });
+
+    expect(text).toBe("가격은 빠졌지만 외국인 수급이 이어져서 확인 대상으로 보여줘요.");
     expect(text).not.toMatch(FORBIDDEN);
   });
 
@@ -46,7 +66,7 @@ describe("whyShown", () => {
     const first = whyShown({ stock: baseStock });
     const second = whyShown({ stock: baseStock });
 
-    expect(first).toBe("오늘 발견 풀에서 보여주는 종목이에요.");
+    expect(first).toBe("아직 강한 재료는 적어요. 2차전지 발견 풀에서 흐름 확인용으로 보여줘요.");
     expect(second).toBe(first);
     expect(first).not.toMatch(FORBIDDEN);
   });
