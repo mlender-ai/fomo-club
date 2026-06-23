@@ -241,7 +241,7 @@ function StockCardFace({
         <div className="mt-2.5 flex shrink-0 items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
           {changeText && (
-            <span className="inline-flex items-center gap-1 font-pixel text-sm" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
+            <span className="inline-flex items-center gap-1 font-number text-sm font-medium tabular-nums" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
               {changeDir === "up" && <CaretUpIcon size={11} />}
               {changeDir === "down" && <CaretDownIcon size={11} />}
               {changeText}
@@ -379,6 +379,7 @@ export function StockSwipeDeck({
   const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
+  const [restoring, setRestoring] = useState(false);
   const [selected, setSelected] = useState<DeckStock | null>(null);
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   const dragging = useRef(false);
@@ -542,10 +543,18 @@ export function StockSwipeDeck({
 
   const undoLast = useCallback(() => {
     if (!undoEntry || exiting) return;
-    setDx(0);
+    const fromX = undoEntry.dir === "right" ? 72 : -72;
     setExiting(null);
     setIdx(undoEntry.idx);
     setUndoEntry(null);
+    if (prefersReducedMotion()) {
+      setDx(0);
+      return;
+    }
+    setRestoring(true);
+    setDx(fromX);
+    window.setTimeout(() => setDx(0), 20);
+    window.setTimeout(() => setRestoring(false), EXIT_MS + 40);
   }, [undoEntry, exiting]);
 
   const openDepth = (stock: DeckStock, source: "card" | "interest_button" = "card") => {
@@ -569,7 +578,7 @@ export function StockSwipeDeck({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (exiting) return;
+    if (exiting || restoring) return;
     if (!front[at(idx).canonical]) return;
     dragging.current = true;
     moved.current = false;
@@ -639,7 +648,7 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (topReady && !moved.current && !exiting) openDepth(top, "card");
+            if (topReady && !moved.current && !exiting && !restoring) openDepth(top, "card");
           }}
           className="glass-card absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl px-6 py-7"
           style={{ transform: topTransform, transition: topTransition }}
@@ -662,25 +671,25 @@ export function StockSwipeDeck({
 
       <div className="mt-4 flex items-center justify-center gap-4">
         <button
+          onClick={undoLast}
+          disabled={!!exiting || restoring || !undoEntry}
+          aria-label={undoEntry ? `${undoEntry.stock.canonical} 카드로 돌아가기` : "이전 카드 없음"}
+          title={undoEntry ? `${undoEntry.stock.canonical} 다시 보기` : "이전 카드 없음"}
+          className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-muted transition-colors hover:text-whiteout disabled:opacity-30"
+        >
+          <UndoIcon size={24} />
+        </button>
+        <button
           onClick={() => advance("left")}
-          disabled={!!exiting || !topReady}
+          disabled={!!exiting || restoring || !topReady}
           aria-label="덜 관심"
           className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
         >
           ✕
         </button>
         <button
-          onClick={undoLast}
-          disabled={!!exiting || !undoEntry}
-          aria-label={undoEntry ? `${undoEntry.stock.canonical} 카드로 돌아가기` : "이전 카드 없음"}
-          title={undoEntry ? `${undoEntry.stock.canonical} 다시 보기` : "이전 카드 없음"}
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-muted transition-colors hover:text-whiteout disabled:opacity-30"
-        >
-          <UndoIcon size={20} />
-        </button>
-        <button
           onClick={() => openDepth(top, "interest_button")}
-          disabled={!!exiting || !topReady}
+          disabled={!!exiting || restoring || !topReady}
           aria-label="관심 — 자세히 보기"
           className="flex h-14 flex-1 items-center justify-center rounded-full text-sm font-bold text-canvas transition-opacity disabled:opacity-40"
           style={{ backgroundColor: NEON }}
