@@ -673,6 +673,25 @@ function StockReadGuide({
   );
 }
 
+function StockDepthLoadingBlock() {
+  return (
+    <section
+      className="mt-6 rounded-2xl border border-hairline bg-surface px-4 py-5"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <p className="font-pixel text-sm text-whiteout">페이지 불러오는 중</p>
+      <p className="mt-2 text-sm leading-6 text-muted">
+        가격·차트·원문 근거를 한 번에 맞춰 불러오고 있어요.
+      </p>
+      <div className="mt-4 space-y-2">
+        <div className="h-3 w-5/6 animate-pulse rounded-full bg-white/10" />
+        <div className="h-3 w-2/3 animate-pulse rounded-full bg-white/10" />
+      </div>
+    </section>
+  );
+}
+
 function OfficialFactsBlock({ facts }: { facts: CondensedInsight["officialFacts"] | undefined }) {
   if (!facts || facts.length === 0) return null;
   return (
@@ -736,8 +755,10 @@ export function StockInsightView({
   const [loading, setLoading] = useState(true);
   // 기본 정보(바닥) — 원문 무관 객관 사실. 빠른 네이버 fetch라 해석(LLM)과 분리해 먼저 깐다.
   const [basics, setBasics] = useState<StockBasics | null>(null);
+  const [basicsLoaded, setBasicsLoaded] = useState(false);
   // 포모 상태(히어로) — 카드(②)와 동일 출처(FomoScoreResult). 단일 출처 보장.
   const [front, setFront] = useState<StockFrontResponse | null>(null);
+  const [frontLoaded, setFrontLoaded] = useState(false);
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
@@ -757,13 +778,17 @@ export function StockInsightView({
     setInsight(null);
     setBasics(null);
     setFront(null);
-    // 포모 상태(히어로, 카드와 동일 출처) + 기본 정보(빠름) + 이해 레이어(느림 LLM) 병렬 — 도착하는 대로.
+    setBasicsLoaded(false);
+    setFrontLoaded(false);
+    // 가격 헤더만 먼저 허용하고, 아래 가변 섹션은 세 요청이 모두 끝난 뒤 한 번에 연다.
     fetchStockFront(stock)
       .then((r) => alive && setFront(r))
-      .catch(() => alive && setFront(null));
+      .catch(() => alive && setFront(null))
+      .finally(() => alive && setFrontLoaded(true));
     fetchStockBasics(stock)
       .then((r) => alive && setBasics(r))
-      .catch(() => alive && setBasics(null));
+      .catch(() => alive && setBasics(null))
+      .finally(() => alive && setBasicsLoaded(true));
     fetchStockInsight(stock)
       .then((r) => alive && setInsight(r))
       .catch(() => alive && setInsight(null))
@@ -775,6 +800,7 @@ export function StockInsightView({
 
   const hasInsight =
     !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
+  const detailsReady = !loading && basicsLoaded && frontLoaded;
 
   return (
     <div className="fixed inset-0 z-[70] bg-black">
@@ -819,11 +845,15 @@ export function StockInsightView({
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
 
+          {!detailsReady ? (
+            <StockDepthLoadingBlock />
+          ) : (
+          <>
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
 
           {/* 핵심 해석 — 강세/약세 원문이 부족해도 가격·차트·수급으로 읽을 재료를 먼저 보여준다. */}
-          <StockReadGuide front={front} insight={insight} loading={loading} />
+          <StockReadGuide front={front} insight={insight} loading={false} />
 
           {/* 포모 상태 — 카드와 같은 단일 출처지만, 상세의 첫 주인공은 가격/차트가 담당. */}
           <div className="mt-6">
@@ -834,10 +864,6 @@ export function StockInsightView({
           </div>
 
           {/* 원문/공식 데이터 — 있으면 보여주고, 없으면 위 '오늘 읽는 법'에서 부족 상태를 이미 설명한다. */}
-          {loading ? (
-            <p className="mt-6 text-sm leading-6 text-muted">원문 근거를 정리하는 중이에요…</p>
-          ) : (
-          <>
           {hasInsight && (
             <section className="mt-6">
               <p className="font-pixel text-sm text-whiteout">원문 요약</p>

@@ -24,6 +24,7 @@ import type {
  */
 type Tab = "card" | "history";
 const FIRST_VISIT_NOTICE_KEY = "fomo_first_visit_notice_v1";
+const NEON = "#D8FF3A";
 
 export function HomeView({
   index,
@@ -201,8 +202,8 @@ function FirstVisitNoticeSheet({
               type="checkbox"
             />
             <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 text-lg text-whiteout transition-colors"
-              style={{ backgroundColor: checked ? "#FF5A36" : "transparent" }}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 text-lg font-bold transition-colors"
+              style={{ backgroundColor: checked ? NEON : "transparent", color: checked ? "#0B0B0C" : "#FAFAFA" }}
               aria-hidden
             >
               {checked ? "✓" : ""}
@@ -211,9 +212,10 @@ function FirstVisitNoticeSheet({
           </label>
 
           <button
-            className="mt-5 h-14 w-full rounded-2xl bg-[#FF5A36] text-lg font-semibold text-whiteout transition-opacity disabled:opacity-40"
+            className="mt-5 h-14 w-full rounded-2xl text-lg font-semibold text-canvas transition-opacity disabled:opacity-40"
             disabled={!checked}
             onClick={onAccept}
+            style={{ backgroundColor: NEON }}
             type="button"
           >
             동의하고 시작하기
