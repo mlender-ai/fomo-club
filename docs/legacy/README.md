@@ -1,16 +1,14 @@
-# Legacy product records
+# docs/legacy — 구 정체성 히스토리
 
-이 디렉터리는 FOMO Club 이전의 Trading Taro 기획·디자인·운영 기록을 보존한다.
+이 폴더의 문서들은 **PRODUCT_VISION v5(두 표면·한 엔진) 이전**의 정체성 기록이다.
+현재 제품 기준이 아니며, 에이전트는 이 폴더를 정체성 근거로 참조하지 않는다.
+삭제 보류 — 가역성 보존 목적.
 
-- 현재 제품 정의나 구현 지시로 사용하지 않는다.
-- 최신 제품 정본은 `docs/PRODUCT_VISION.md`와 `docs/DATA_ENGINE_STRATEGY.md`다.
-- 최신 디자인 정본은 `docs/DESIGN_FOMO.md`다.
-- 역사 확인이 필요할 때만 참고한다.
-
-보존 문서:
-
-- `TRADING_TARO_DESIGN.md`
-- `TARO_CONTEXT.md`
-- `TARO_DEV_CHECKLIST.md`
-- `AGENT_CONTENT_PLANNER.md`
-- `admin/ADMIN_PHASES.md`
+| 파일 | 이전 정체성 |
+|------|------------|
+| FOMO_CLUB.md | 마스코트·감정 온도계 시절 정의 |
+| FOMO_INDEX.md | 감정 체감 온도계 프레이밍 |
+| MASCOT.md | 마스코트 '포모' 설계 (부활 금지) |
+| IDENTITY_AND_MILESTONES.md | MLP·사랑스러움 마일스톤 |
+| PIVOT_FEED_FIRST.md | 피드 우선 피벗 기록 |
+| DESIGN_FOMO.md | 구 디자인 가이드 |

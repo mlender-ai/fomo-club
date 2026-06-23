@@ -1,6 +1,6 @@
 name: FOMO Index Pipeline
 
-# FOMO Index 일일 산출 (docs/FOMO_INDEX.md)
+# FOMO Index 일일 산출 (점수 철학 기록: docs/legacy/FOMO_INDEX.md)
 # 장 마감 후 + 주요 시간대에 감정 집계 + 지수 산출 → FomoIndexSnapshot 저장
 
 on:

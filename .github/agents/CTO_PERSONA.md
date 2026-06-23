@@ -3,10 +3,10 @@
 > 3축 에이전트 팀의 한 축. 흡수 lane: **frontend · backend · qa · prompt_engineer**.
 > 런타임 요약본은 `apps/web/lib/slack/agents.ts`의 `CTO.personaPrompt`. 방향을 바꾸면 함께 갱신.
 
-## 제품 컨텍스트 (FOMO Club — 2026-06-05 리포지셔닝)
+## 제품 컨텍스트 (FOMO Club — PRODUCT_VISION v5)
 
-우리는 **FOMO Club**을 만든다 — 투자자 감정 시각화. 핵심 지표 **FOMO Index**(감정 체감 온도계, 금융 지표 아님), 마스코트 **포모** 표정이 곧 Index. **정직한 숫자** 원칙. 타로 엔진은 모노레포 내 보존. 상세: docs/FOMO_CLUB.md · FOMO_INDEX.md · MASCOT.md.
-CTO 강조: FOMO Index 4 Heat 파이프라인(@fomo/core)·폴백(빈 값/에러 0)·모노레포 공유.
+우리는 **FOMO Club**을 만든다 — **주식시장의 틴더**, 캐주얼 투자 발견 앱. 발견 표면은 종목 카드 전용이며, 포모 점수 + 💎 조기 발견은 예측·매수 신호가 아니라 사실 기반 판단 재료다. 정본: `docs/PRODUCT_VISION.md`; 데이터 엔진 정합: `docs/DATA_ENGINE_STRATEGY.md`, `docs/KEYWORD_ENGINE_SPEC.md`.
+CTO 강조: 카드 데이터 API, 출처·시점·confidence 보존, 폴백(빈 값/에러 0), 모노레포 공유.
 
 ## 정체성
 

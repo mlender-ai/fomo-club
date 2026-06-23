@@ -47,7 +47,7 @@
 - 상세는 PRODUCT_VISION §3~§8.
 
 ### 마스코트 포모 — 폐기
-- 마스코트(표정 짓는 포모)·"화면의 주인공은 표정/목소리" 프레이밍은 **현재 정체성 아님**(발견 피벗으로 강등·폐기, `docs/MASCOT.md` 폐기 배너 참조).
+- 마스코트(표정 짓는 포모)·"화면의 주인공은 표정/목소리" 프레이밍은 **현재 정체성 아님**(발견 피벗으로 강등·폐기, `docs/legacy/MASCOT.md` 폐기 배너 참조).
 - 화면의 중심은 **종목 카드와 발견 경험**이다.
 
 ---
@@ -83,10 +83,10 @@
 |---|---|
 | `PRODUCT_TRUTH.md` (이 문서) | **신규 SSOT.** 제품 정의·지표·범위 |
 | `KEYWORD_ENGINE_SPEC.md` | **신규.** 키워드 엔진 개발 스펙 |
-| `FOMO_INDEX.md` | **폐기 배너 + 부분 참조** — "감정 온도계" 정체성은 폐기, 점수 5구간·색 매핑만 발견 엔진이 참조 |
-| `MASCOT.md` | **폐기** — 마스코트 정체성은 발견 피벗으로 폐기(상단 배너). 부활 금지 |
-| `FOMO_CLUB.md` | **흡수·폐기** — 핵심은 이 문서로, 파일은 보관 |
-| `PIVOT_FEED_FIRST.md` | **흡수·폐기** — flag 정책만 이 문서 §2에 승계 |
+| `docs/legacy/FOMO_INDEX.md` | **폐기 배너 + 부분 참조** — "감정 온도계" 정체성은 폐기, 점수 5구간·색 매핑만 발견 엔진이 참조 |
+| `docs/legacy/MASCOT.md` | **폐기** — 마스코트 정체성은 발견 피벗으로 폐기(상단 배너). 부활 금지 |
+| `docs/legacy/FOMO_CLUB.md` | **흡수·폐기** — 핵심은 이 문서로, 파일은 보관 |
+| `docs/legacy/PIVOT_FEED_FIRST.md` | **흡수·폐기** — flag 정책만 이 문서 §2에 승계 |
 | `AGENT_NORTH_STAR.md` | **갱신** — 제품 정의·지표를 이 문서로 교체(아래 §4) |
 
 ---
@@ -148,7 +148,7 @@
 ## 8. 프로젝트 사실 규약 (갱신 — 잘못된 가정 금지)
 
 - 모노레포: `apps/fomo-web`(Next, **현재 유일한 활성 surface**) · `packages/fomo-core`. `apps/fomo-club`(Expo)은 **보류**. 타로(`tarot-core`/`tarot-mobile`)는 **제거 예정**(보존 아님).
-- 키워드 점수 5구간 ↔ 색·표정 매핑은 `@fomo/core`(`scoreToColor`/`scoreToEmoji`). FOMO_INDEX.md 기준.
+- 키워드 점수 5구간 ↔ 색·표정 매핑은 `@fomo/core`(`scoreToColor`/`scoreToEmoji`). 점수 철학 기록은 `docs/legacy/FOMO_INDEX.md`에 보존.
 - DB 마이그레이션은 `prisma db push`로 운영.
 - 종목 카드 앞면의 현재 상태 = `stock-front` live 데이터(가격·거래량·수급·TA) + `@fomo/core` 포모 상태 엔진. 키워드/테마 카드는 콘텐츠 맥락 표면이며, 발견 표면의 중심은 종목 카드다.
 - 개인화의 현재 상태 = 로컬 1차 반영(키워드 interest/history, 종목 interest/watchlist → 다음 덱 정렬). 서버 동기화/모델화는 다음 단계.

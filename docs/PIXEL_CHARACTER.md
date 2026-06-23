@@ -196,6 +196,6 @@ apps/fomo-web/components/HomeView.tsx   ← size=84 사용
 apps/fomo-web/components/EmotionGate.tsx← size=92 사용
 apps/fomo-web/components/SplashScreen.tsx← size=76 사용
 packages/fomo-core/src/state.ts         ← scoreToFace() — FOMO Index → FomoFaceType 변환
-docs/MASCOT.md                          ← 마스코트 정체성/역할 정의
-docs/DESIGN_FOMO.md                     ← 색 토큰, 디자인 시스템
+docs/legacy/MASCOT.md                   ← 마스코트 정체성/역할 정의(legacy)
+docs/legacy/DESIGN_FOMO.md              ← 구 색 토큰, 디자인 시스템(legacy)
 ```

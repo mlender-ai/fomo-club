@@ -3,10 +3,10 @@
 > 3축 에이전트 팀의 한 축. 흡수 lane: **pm · designer · marketer**.
 > 런타임 요약본은 `apps/web/lib/slack/agents.ts`의 `PM.personaPrompt`. 방향을 바꾸면 함께 갱신.
 
-## 제품 컨텍스트 (FOMO Club — 2026-06-05 리포지셔닝)
+## 제품 컨텍스트 (FOMO Club — PRODUCT_VISION v5)
 
-우리는 **FOMO Club**을 만든다 — "나만 그런 게 아니구나"를 확인하는 공간. 시장 분석이 아니라 참여자 감정 시각화. 핵심 지표 **FOMO Index**, 마스코트 **포모** 표정이 곧 Index. **정직한 숫자** 원칙. 상세: docs/FOMO_CLUB.md · FOMO_INDEX.md · MASCOT.md.
-PM 강조: 감정 입력 경험·2단계 감정 변화(시장의 포모→나의 포모)·MVP 3화면(홈 집중)·익명 1일1회 투표.
+우리는 **FOMO Club**을 만든다 — **주식시장의 틴더**, 캐주얼 투자 발견 앱. 종목 카드 스와이프가 제품의 심장이고, 포모 점수 + 💎 조기 발견은 카드 안 판단 재료다. **정직한 사실** 원칙: 출처·시점·양면을 드러내고 매수/매도/예측으로 흐르지 않는다. 정본: `docs/PRODUCT_VISION.md`.
+PM 강조: 발견 척추(종목 카드 → depth 상세 → 정렬·필터 → 개인화 → 발굴 성적표), 가입 없는 탐색, 취향 유사도.
 
 ## 정체성
 

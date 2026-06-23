@@ -91,24 +91,24 @@ Android:
 
 ---
 
-## Gate 6: Lovable 레벨 (사용자 노출 경험 머지/출시 전 — FOMO Club)
+## Gate 6: SSOT 정합성 (사용자 노출 경험 머지/출시 전 — FOMO Club)
 
 ```
-lovable-reviewer 에이전트 실행
+PRODUCT_VISION 정합성 + 투자조언 금칙어 + 데이터 정직성 점검
 ```
 
 코드가 작동·빌드·규제를 통과하는지를 **넘어서** 묻는다:
-**"이것은 lovable한가? 여기 사람의 온기가 있는가? 그날 밤의 내가 이걸 보고 덜 외로웠을까?"**
-(정체성 정본: `docs/IDENTITY_AND_MILESTONES.md`)
+**"이것은 PRODUCT_VISION v5의 발견 척추와 맞는가? 사실·출처·시점을 정직하게 드러내는가? 투자 조언이나 예측으로 오해되지 않는가?"**
+(정체성 정본: `docs/PRODUCT_VISION.md`)
 
 | 결과 | 대응 |
 |---|---|
-| LOVABLE PASS | 통과 (담담한 솔직함 + love mark + 시금석 충족) |
-| CAUTION | 온기가 옅음(밋밋/사무적) — love mark 보강 후 재검토 |
-| NOT-YET | 가짜긍정·거침이 섞였거나 기능만 있고 온기 없음 — 머지 보류, 온기 보강 필수 |
+| PASS | 통과 (SSOT 정합 + 정직한 사실 + 금칙어 없음) |
+| CAUTION | 정체성·카피·출처 표기가 흐림 — 보강 후 재검토 |
+| BLOCKED | 매수/매도/예측 신호, 감정 진정·마스코트 회귀, 가짜 데이터가 섞임 — 머지 보류 |
 
-**대상**: 포모 마스코트 멘트·표정·전환, 홈 경험, 카피, 캘린더 등 감정 터치포인트.
-**Gate 4(규제)와 구분**: regulation-reviewer=면책/금칙어 *차단*, lovable-reviewer=온기 *충족*. 둘 다 통과해야 한다.
+**대상**: 종목 카드, depth 상세, 정렬·필터, TA 사실 문장, 💎·포모 점수 표현, 사용자 노출 카피.
+**Gate 4(규제)와 구분**: regulation-reviewer=면책/금칙어 *차단*, Gate 6=PRODUCT_VISION 정합성·데이터 정직성 확인.
 
 ---
 
@@ -116,10 +116,10 @@ lovable-reviewer 에이전트 실행
 
 ```
 Gate 1 (코드) → Gate 2 (빌드) → Gate 3 (보안) → Gate 4 (규제) → Gate 5 (스토어)
-                                                  └→ Gate 6 (Lovable, 감정 터치포인트 변경 시)
+                                                  └→ Gate 6 (SSOT 정합성, 사용자 노출 변경 시)
 ```
 
 일상 개발: Gate 1-2 반복
 기능 완료: Gate 1-4 전체
-사용자 노출 경험(포모/홈/카피) 변경: + Gate 6 (Lovable)
+사용자 노출 경험(종목 카드/depth/카피) 변경: + Gate 6 (SSOT 정합성)
 릴리즈: Gate 1-6 전체

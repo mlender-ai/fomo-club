@@ -85,7 +85,7 @@ jobs:
           ACTIVE=$(cat /tmp/active.json 2>/dev/null || echo "null")
           echo "active_json<<__AEOF__" >> "$GITHUB_OUTPUT"; echo "$ACTIVE" >> "$GITHUB_OUTPUT"; echo "__AEOF__" >> "$GITHUB_OUTPUT"
           echo "ptitle=$(printf '%s' "$ACTIVE" | jq -r '.title // ""' 2>/dev/null || echo "")" >> "$GITHUB_OUTPUT"
-          VISION=$(cat docs/FOMO_CLUB.md 2>/dev/null | head -c 3500 || echo "")
+          VISION=$(cat docs/PRODUCT_VISION.md 2>/dev/null | head -c 3500 || echo "")
           echo "vision<<__VEOF__" >> "$GITHUB_OUTPUT"; echo "$VISION" >> "$GITHUB_OUTPUT"; echo "__VEOF__" >> "$GITHUB_OUTPUT"
           INV=$(git ls-files 'apps/fomo-web/app/**' 'apps/fomo-web/components/**' 'apps/fomo-club/app/**' 'apps/fomo-club/components/**' 'packages/fomo-core/src/**' 'apps/web/app/api/fomo/**' 2>/dev/null | grep -vE '__tests__|\.test\.|globals\.css|_layout' | sort | head -120)
           echo "inventory<<__IEOF__" >> "$GITHUB_OUTPUT"; echo "$INV" >> "$GITHUB_OUTPUT"; echo "__IEOF__" >> "$GITHUB_OUTPUT"

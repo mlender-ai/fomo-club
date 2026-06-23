@@ -1,7 +1,7 @@
 # FOMO Club — Figma 워크플로우 (MCP 연결 + 토큰 왕복)
 
 사용자가 **피그마로 직접 디자인**한 결과가 우리 DESIGN.md·토큰·코드로 흘러들도록 하는 연결 가이드.
-토큰 단일 소스는 `design/tokens.json`(DTCG), 시각 정본은 `docs/DESIGN_FOMO.md`.
+토큰 단일 소스는 `design/tokens.json`(DTCG), 시각 정본은 `docs/DESIGN.md`.
 
 ---
 
@@ -45,7 +45,7 @@ Figma Variables  ──(export)──►  design/tokens.json (DTCG)  ──►  
 
 - **Figma → 토큰**: Figma Variables를 ① **Tokens Studio**(Figma 플러그인, Git-sync로 이 레포에 DTCG JSON push) 또는 ② **Figma Variables API** export 로 빼서 `design/tokens.json` 갱신.
 - **토큰 정합**: 갱신 후 `npm run test`(드리프트 가드 `packages/fomo-core/__tests__/tokens-drift.test.ts`)로 `@fomo/core`와 감정색 일치 확인.
-- **에이전트 활용**: Figma 파일이 있으면 "이 Figma 프레임을 design/tokens.json·docs/DESIGN_FOMO.md와 대조해서 fomo-web 홈을 만들어줘" — 에이전트가 Figma MCP로 읽어 토큰 매핑.
+- **에이전트 활용**: Figma 파일이 있으면 "이 Figma 프레임을 design/tokens.json·docs/DESIGN.md와 대조해서 fomo-web 홈을 만들어줘" — 에이전트가 Figma MCP로 읽어 토큰 매핑.
 
 ---
 

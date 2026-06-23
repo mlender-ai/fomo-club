@@ -39,9 +39,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          # 제품 비전(정체성 핵심) — 마일스톤 목록(M1~M5)은 일부러 제외(순수 발굴 유도)
-          VISION=$(cat docs/FOMO_CLUB.md 2>/dev/null | head -c 4000 || echo "")
-          [ -z "$VISION" ] && VISION=$(sed -n '1,60p' docs/IDENTITY_AND_MILESTONES.md 2>/dev/null | head -c 3500 || echo "")
+          # 제품 비전(정체성 핵심) — PRODUCT_VISION v5 기준
+          VISION=$(cat docs/PRODUCT_VISION.md 2>/dev/null | head -c 4000 || echo "")
+          [ -z "$VISION" ] && VISION=$(cat PROJECT_ROADMAP.md 2>/dev/null | head -c 3500 || echo "")
 
           # ★ 실제 구현 인벤토리 — 이미 만든 것 재제안(중복) 방지의 핵심 컨텍스트
           INV=$(git ls-files \
@@ -58,7 +58,7 @@ jobs:
           # K2 — 이미 출고/결정된 지식(중복 제안 방지). 제품 도메인 광역 쿼리로 검색.
           KN="(지식 레이어 없음)"
           if [ -f knowledge/distilled.md ]; then
-            KN=$(npx -y tsx@4.19.2 scripts/knowledge-retrieve.ts retrieve knowledge/distilled.md "감정 포모 챌린지 캘린더 포인트 알림 시뮬레이터 피드 통계 고래 인덱스" 2>/dev/null || echo "(검색 실패)")
+            KN=$(npx -y tsx@4.19.2 scripts/knowledge-retrieve.ts retrieve knowledge/distilled.md "종목 카드 스와이프 포모 점수 조기 발견 수급 뉴스 커뮤니티 신호 depth 상세 정렬 필터 개인화 발굴 성적표" 2>/dev/null || echo "(검색 실패)")
           fi
           { echo "vision<<__E__"; echo "$VISION"; echo "__E__";
             echo "inventory<<__E__"; echo "$INV"; echo "__E__";
@@ -76,10 +76,9 @@ jobs:
             당신은 FOMO Club 의 CEO(제품 총괄)다. 제품 비전과 *이미 구현된 것*을 직접 보고,
             지금 가장 임팩트 있는 **새 프로젝트**를 순수하게 발굴한다.
             절대 규칙:
-            1. **기존 마일스톤(M1~M5) 목록을 따라 적지 마라.** 제품 비전 + 아래 "이미 구현된 것" 인벤토리를 보고
+            1. **발견 척추 순서를 무시하지 마라.** 제품 비전 + 아래 "이미 구현된 것" 인벤토리를 보고
                네가 직접 빈틈/기회를 찾아 net-new 프로젝트를 제안하라.
-            2. **이미 구현된 기능 재제안 금지.** 인벤토리에 파일이 있으면(예: EmotionCalendar=감정 캘린더, banner=롤링배너,
-               emotionHeat/community/whale=4 Heat, vote/today/calendar API) 그 기능은 *이미 있다* — 중복 제안은 즉시 실패다.
+            2. **이미 구현된 기능 재제안 금지.** 인벤토리에 파일이 있으면 그 기능은 *이미 있다* — 중복 제안은 즉시 실패다.
                기존 위에 무엇을 *새로* 얹는지가 분명해야 한다.
             3. **추상어 금지.** "리텐션 강화", "경험 개선" 같은 말 대신 구체적 산출물·화면·데이터·동작을 적어라.
             4. 각 후보에 **직군별 첫 착수(breakdown)** 를 구체적으로: 기획/백엔드/프론트·UX/품질이 각각 무엇을 만드는지 1줄씩.

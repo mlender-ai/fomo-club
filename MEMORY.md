@@ -44,59 +44,47 @@
 
 ## 진행 상황
 
-Phase: 피드 중심 전환 — 액션 제로 / 감정 탭 (docs/PIVOT_FEED_FIRST.md, 2026-06-12~)
-- 감정 투표/기록/캘린더/기록 탭은 feature flag(packages/fomo-core/src/features.ts)로 숨김(코드·DB 보존).
-- 새 구조: 하단 탭 2개(오늘/피드). 오늘=포모+Index+롤링 시그널(액션 없음), 피드=감정 카테고리(포모/공포/환희/후회/탐욕) 치환 카드.
+**현재 Phase**: 발견 척추 구축 — PRODUCT_VISION v5 기준
 
-```
-Phase A (현재 최우선): FOMO Club MVP 출시 — 검증용. 타로 앱보다 먼저 출시.
-  트리거: 4주 내 베타 출시 목표. 검증 후 타로 앱 방향 확정.
-  정체성 고정 (M0): docs/IDENTITY_AND_MILESTONES.md = North Star. MVP가 아니라 MLP(사랑스러움 최대).
-    "디시의 마음(담담한 솔직함) + 인디게임의 몸". 시금석: "그날 밤의 내가 덜 외로웠을까".
-    마일스톤 M0(정체성)→M1(단 하나의 순간)→M2(돌아올 이유)→M3(혼자가 아님)→M4(여정)→M5+(확장, 검증 후).
-    거버넌스: HARNESS Gate 6 Lovable + lovable-reviewer/mascot-keeper 신규(.claude/agents/).
-    진행: M0✅ M1✅(웹/모바일 홈 love mark) M2✅(웹) M3🟡(웹 부분: 집계/배너). 다음 한 발 = M3 마무리(카드 문법 1개 통일) 또는 M4.
-  - 정의/지표/마스코트 정본: docs/FOMO_CLUB.md, docs/FOMO_INDEX.md, docs/MASCOT.md, docs/MASTER_PROMPT_FOMO_CLUB.md
-  - 마스코트 '포모' 설계 확정 (docs/MASCOT.md). 화면 설계의 기준 문서.
-    포모 = 살아있는 지표. 두 단계 감정 변화(시장의 포모 → 나의 포모)가 핵심 메커니즘.
+### 완료
+- 모노레포 구조 확립 (apps/fomo-web, apps/web, packages/fomo-core, packages/shared)
+- Vercel 배포 자동화 (fomo-web -> prj_dfwSKviFgdUg7MocHAqiBEPmaxcV, fomo-club-backend -> prj_B68x...)
+- Prisma 스키마 + Supabase 연동
+- packages/shared 공용 헬퍼 (staleness.ts, swrPolicy.ts, tabScrollPositions.ts, historyFormatting.ts)
+- 테스트 케이스 172개 (vitest)
+- .claude/hooks/protect-secrets.sh — PreToolUse Hook으로 시크릿 파일 자동 차단
 
-### 2026-06-07 — M2 감정 캘린더 (웹, PR #389)
-- fomo-core: `calendar.ts`(`buildCalendar`/`calendarStats` 순수 로직, 시간대-안전 문자열 산술) + `mascot-lines.ts`에 `restorativeLine`/`isCalmDay` 추가. 색·날짜 계산은 모두 fomo-core 단일 소스 → vitest 회귀(31개).
-- 백엔드: `GET /api/fomo/emotions/calendar?sessionId&month` (apps/web). 세션 월별 감정 + FomoIndexSnapshot 점수. **fomoIndexSnapshot 쿼리는 try/catch 폴백** — 그 테이블이 DB에 없을 수 있음(파이프라인 미실행/마이그레이션 미적용). EmotionVote 테이블만 신뢰.
-- fomo-web: `EmotionCalendar.tsx`(픽셀 그리드+스트릭+시장 오버레이) + 홈 '오늘의 쉼' 회복 카드(잔잔한 날).
-- **배포**: apps/fomo-web = Vercel 프로젝트 `fomo-web`(prj_dfwSKviFgdUg7MocHAqiBEPmaxcV, rootDir=apps/fomo-web), apps/web = `fomo-club-backend`(prj_B68x…, rootDir=apps/web). `.github/workflows/deploy-fomo-web.yml`은 GitHub Secrets(VERCEL_TOKEN/ORG_ID/FOMO_WEB_PROJECT_ID) 필요 — 단, Vercel Git 통합이 이미 자동 배포하므로 워크플로우는 중복일 수 있음(정리 후보).
-- fomo-web API 기본값: `NEXT_PUBLIC_FOMO_API_BASE` (기본 prod `fomo-club-backend.vercel.app`).
+### 진행 중
+- 발견 척추 Step 1: 포모 점수가 박힌 종목 카드 스와이프 (apps/fomo-web)
 
---- 타로 앱 (보존, 후속 해석 백엔드) ---
-Phase 1 ✅: 기반 인프라 (tarot-core, tarot-mobile 기본 구조, Prisma 스키마 65개 모델)
-Phase 2 ✅: 핵심 기능 (카드 뽑기 API + AI 3단폴백 + 소셜 로그인 + 크레딧 시스템)
-Phase 3 ✅: 결제/광고 (RevenueCat IAP, AdMob 배너/리워드, 리워드 서버 검증)
-Phase 4 ✅: 부가 기능 (기록, 온보딩/면책고지, 푸시알림 토큰, 컬렉션, 즐겨찾기)
-Phase 5 ✅: 어드민/운영 (카드 CRUD, 프롬프트 관리, 모니터링 대시보드)
-현재 상태: 스토어 제출 준비 단계
-Phase 6 (대기): 사주팔자 투자 체질 통합 — docs/사주팔자_투자체질_기획서.md 참조
-  트리거 조건: 스토어 출시 완료 + DAU 100+ + 사용자 피드백에서 개인화 니즈 관측
-```
+### 다음 순서 (PRODUCT_VISION §11 빌드 순서 기준)
+1. 종목 카드 스와이프 (포모 점수 + 💎 배지 + 사실 한 줄) ← **지금 여기**
+2. depth 상세 (사실·출처·시점·양면)
+3. 정렬·필터 (쏠림순·💎순)
+4. TA 카드 안 사실 한 줄
+5. 개인화 (스와이프 → 취향 유사도)
+6. 발굴 성적표 (♥·💎 그 후 사실)
+7. 콘텐츠 표면 (브리핑·뉴스)
+8. BM 실험
 
-### 2026-05-18 완료 항목 (PR #46)
-- `POST /api/tarot/feedback` — 별점 피드백 API (upsert)
-- `POST /api/tarot/report` — 신고 API
-- result/index.tsx — 별점 UI + 신고 모달
-- history/analytics.tsx — MOCK → 실제 /api/tarot/analytics 연결
-- adIds.ts — app.json extra + Constants 방식으로 AdMob ID 주입 방식 전환
+### 보류 확정 항목
+- apps/fomo-club (React Native 네이티브 앱) — 웹 MVP 검증 후
+- 감정 투표·기록·캘린더 — features.ts flag 숨김 (코드·DB 보존, 정체성 아님)
+- 푸시 알림 일체 — 발견 척추 완성 후
+- BM 확정 — 발굴 성적표 데이터 확인 후
+- 사주팔자 통합 — 트리거 조건 미충족
 
-### 2026-05-18 완료 항목 (2차)
-- `packages/tarot-core` vitest 31개 테스트 (forbidden, draw, cache)
-- `prompts/interpret-v1.1.0.ts` — 한국어 최적화 + SINGLE/THREE_CARD 서사 분기
-- `POST /api/tarot/track` — 이벤트 로깅 엔드포인트
-- `tracking.ts` — `initTracking` + `trackEvent` + `TarotEvent` 타입
-- `_layout.tsx` — 앱 진입 시 트래킹 초기화
-- `draw.tsx` — draw_started/completed/failed 이벤트 연결
-- `result/index.tsx` — feedback_submitted/report_submitted 이벤트
-- `analytics.tsx` — analytics_viewed 이벤트
+### 배포 메모
+- apps/fomo-web: Vercel Git 통합 자동 배포 (main push)
+- apps/web (백엔드): Vercel Git 통합 자동 배포 (main push)
+- `.github/workflows/deploy-fomo-web.yml` — 현재 레포에 없음. 배포 워크플로우 변경은 이번 정리 범위에서 제외.
+- DB: Supabase, `.github/workflows/db-push.yml` 수동 dispatch
 
-### 남은 항목
-- [ ] AdMob 프로덕션 ID 실제 값 입력 — app.json extra의 adMobBanner/Rewarded 4개 필드에 Google AdMob 콘솔에서 발급한 ID 입력 필요 (개발자 직접 처리)
+### 신규 핵심 파일 위치
+- `packages/shared/src/staleness.ts` — freshness 분류
+- `packages/shared/src/swrPolicy.ts` — SWR 정책 결정
+- `packages/shared/src/tabScrollPositions.ts` — 탭 스크롤 위치
+- `packages/shared/src/historyFormatting.ts` — 시간·카드 포맷
 
 ---
 

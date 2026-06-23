@@ -33,7 +33,7 @@
 5. Verify before trusting → 신뢰 전 반드시 검증
 ```
 
-### Trading Taro 프로젝트 원칙
+### FOMO Club 프로젝트 원칙
 
 ```
 6. 기존 코드 먼저        → 새로 만들기 전에 packages/shared/를 반드시 검색

@@ -4,7 +4,7 @@
 |---|---|
 | **상태** | 개발 착수 스펙 — 현재 화면의 모든 키워드 카드는 정적 mock |
 | **대상 surface** | 웹 (`apps/fomo-web`) 우선. 앱(`apps/fomo-club`)은 보류 |
-| **선행 문서** | **`docs/PRODUCT_VISION.md`(정체성 정본·SSOT)**, `docs/PRODUCT_TRUTH.md`(제품 정의), `docs/FOMO_INDEX.md`(점수 철학) |
+| **선행 문서** | **`docs/PRODUCT_VISION.md`(정체성 정본·SSOT)**, `docs/PRODUCT_TRUTH.md`(제품 정의), `docs/legacy/FOMO_INDEX.md`(점수 철학 기록) |
 | **버전** | v1 |
 
 > 이 문서는 발견 표면(① 종목 카드 스와이프)의 **엔진**을 정의한다 — "오늘 쏠린 곳"을 **실제 데이터로** 산출한다.
@@ -128,7 +128,7 @@ community       클러스터링          (군중 쏠림)        + 균형추 + de
   (c)(d)만으로 산출. 절대 가짜 기준선을 만들지 않는다.
 ```
 
-5구간 ↔ 색·표정 매핑은 `@fomo/core`의 `scoreToColor`/`scoreToEmoji` 재활용(`KeywordCardFeed.tsx:4`에서 이미 import 중). FOMO_INDEX.md의 5구간과 일관.
+5구간 ↔ 색·표정 매핑은 `@fomo/core`의 `scoreToColor`/`scoreToEmoji` 재활용(`KeywordCardFeed.tsx:4`에서 이미 import 중). 점수 철학 기록은 `docs/legacy/FOMO_INDEX.md`에 보존.
 
 #### Phase 2에서 반드시 해결할 것 (Phase 1 구현이 남긴 한계 — 선택 아님)
 

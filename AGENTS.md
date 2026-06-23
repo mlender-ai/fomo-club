@@ -58,9 +58,9 @@
 **4직군 (9+2 → 4 빌더 + 게이트, 정본: AGENT_NORTH_STAR.md)**:
 - **기획** — 제품 기획·유저 저니·시퀀싱·카피 방향 (← PM + Designer 전략 + Marketer + Prompt 제품 프레이밍)
 - **백엔드** — 데이터·API·스키마·아키텍처·보안 하드닝 (← Backend + Security)
-- **프론트·UX** — 화면·포모 표정/전환·정보위계·감정 멘트·플로우 (← Frontend + Designer 시각 + Prompt 멘트 + Content)
+- **프론트·UX** — 종목 카드 발견 경험·정보위계·접근성·카피·플로우 (← Frontend + Designer 시각 + Prompt 멘트 + Content)
 - **품질** — 안정성·성능·빌드·테스트·옵저버빌리티 (← CTO + QA)
-- 게이트(제안자 아님): **Lovable Reviewer**, **Mascot Keeper** — 머지 전 정체성/마스코트 일관성. Security Critical/High 도 머지 게이트.
+- 게이트(제안자 아님): Security Critical/High, SSOT 정합성, 데이터 정직성, 투자조언 금칙어가 머지 게이트. **Lovable Reviewer**, **Mascot Keeper**는 deprecated 기록용.
 
 > 아래 9직군 상세 정의(§)는 4축의 *책임 사전*으로 참고하되, 일일 제안자로 동작하지 않는다.
 
@@ -69,16 +69,16 @@
 ## 🔴 현재 최우선 지시사항 (CEO 직접 지시 — 해제 전까지 전 에이전트 적용)
 > ⚠️ **[폐기 2026-06-16]** 이 섹션의 "FOMO Index·마스코트·감정 시각화" 정체성은 키워드 카드/데이터 엔진 피벗으로 강등됨. 위 🟣 거버넌스 + SSOT 4문서를 따른다. 아래는 히스토리.
 
-**FOMO Club MLP(사랑스러움)와 정직한 숫자가 유일한 우선순위다.** (2026-06-07 FOMO 리포지셔닝 반영)
+**현재 우선순위는 PRODUCT_VISION v5의 발견 척추다.** (2026-06-24 컨텍스트 정합 정리)
 
-> 정체성 정본: `docs/IDENTITY_AND_MILESTONES.md`(North Star) · 직군별 상세: `AGENT_NORTH_STAR.md`.
-> 제품은 **FOMO Club** — 투자자가 "나만 그런 게 아니구나"를 확인하는 공간. 시장을 분석하지 않고 참여자 감정을 시각화한다.
+> 정체성 정본: `docs/PRODUCT_VISION.md` · 정합 문서: `docs/PRODUCT_TRUTH.md`, `docs/DATA_ENGINE_STRATEGY.md`, `docs/KEYWORD_ENGINE_SPEC.md`, `docs/AGENT_REDESIGN.md`.
+> 제품은 **FOMO Club** — 주식시장의 틴더. 종목 카드 스와이프로 발견하고, 포모 점수 + 💎 조기 발견 엔진으로 판단 재료를 제공한다.
 
 ### ✅ 집중할 것
-- **사용자 경험(MLP)**: 플로우의 빠진 단계, 정보 위계, 접근성, 데이터 표시 정합성 + "이게 lovable한가"(Gate 6)
-- **핵심 경험**: FOMO Index(4 Heat) + 오늘의 감정 투표 + 집단 통계 + 마스코트 포모 표정/2단계 감정 변화
-- **정직한 숫자**: 실제 집계값만. 가짜·임의 숫자 금지. 0~소수여도 그대로 표기, 데이터 미비 시 폴백
-- **담담한 솔직함 톤**: 가짜 긍정("곧 반등")❌ / 거침("존버 가즈아")❌ / 사실 인정 + "혼자 아님"⭕
+- **발견 척추**: 종목 카드 스와이프 → depth 상세 → 정렬·필터 → TA 카드 안 사실 한 줄 → 개인화 → 발굴 성적표
+- **주목 엔진**: 포모 점수 + 💎 조기 발견을 카드 안 판단 재료로만 제공. 독립 랭킹/매수 신호 금지
+- **정직한 사실**: 출처·시점·양면을 밝히고, 데이터 부족 시 confidence를 정직하게 노출
+- **담담한 사실 톤**: 가짜 긍정("곧 반등")❌ / 거침("존버 가즈아")❌ / 투자 조언·예측❌
 
 ### ❌ 절대 제안 금지 (전 에이전트 자동 킬리스트)
 - 사운드 이펙트, BGM, 햅틱 피드백
@@ -89,7 +89,7 @@
 
 → **주의**: 아래 장식/마스코트 예외는 2026-06-16 피벗 이전 히스토리다. 현재 작업에서는 마스코트·감정 진정 중심으로 되살리지 않는다.
 
-→ **보존(삭제·재제안 금지)**: 타로 엔진(`tarot-core`)·`tarot-mobile`·증권 데이터/토스증권 UX는 후속 해석 백엔드로 보존 중(리네이밍 연기). FOMO MLP 출시 전까지 신규 작업 대상 아님.
+→ **보존(삭제·재제안 금지)**: 타로 관련 히스토리는 legacy 문맥에서만 보존한다. 신규 타로 기능은 작업 대상이 아니다.
 
 ### 📐 직군 경계 (lane)
 각 에이전트는 자기 직군 영역만 다룬다. 직군 침범 시 CEO Brief 자동 킬리스트.
@@ -492,7 +492,7 @@ model: opus
 
 > ⛔ **라우팅 금지**: `.claude/agents/lovable-reviewer.md`는 기록용이다. 새 제품 방향 제안이나 감정 진정/위로 게이트로 호출하지 않는다.
 
-정본: `docs/IDENTITY_AND_MILESTONES.md`. HARNESS Gate 6. 정의 상세: `.claude/agents/lovable-reviewer.md`.
+기준 기록: `docs/legacy/IDENTITY_AND_MILESTONES.md`. 정의 상세: `.claude/agents/lovable-reviewer.md`.
 
 **세부 내용**: 피벗 이전 기록이므로 `.claude/agents/lovable-reviewer.md`에서만 보존한다. 현재 머지 게이트가 아니다.
 
@@ -511,7 +511,7 @@ model: sonnet
 
 > ⛔ **라우팅 금지**: `.claude/agents/mascot-keeper.md`는 기록용이다. 마스코트 중심 회귀, 감정 진정 앱 회귀, FOMO Index 표정 매핑 작업으로 호출하지 않는다.
 
-기준: `docs/MASCOT.md`, `docs/FOMO_INDEX.md`, `docs/DESIGN_FOMO.md`(DESIGN.md 표준) + 토큰 `design/tokens.json`. **Figma 디자인 확정 시 Figma MCP로 대조**(`docs/FIGMA_WORKFLOW.md`). 정의 상세: `.claude/agents/mascot-keeper.md`.
+기준 기록: `docs/legacy/MASCOT.md`, `docs/legacy/FOMO_INDEX.md`, `docs/legacy/DESIGN_FOMO.md`. 현재 디자인 작업은 `docs/DESIGN.md`, `design/tokens.json`, `docs/PRODUCT_VISION.md`를 따른다. 정의 상세: `.claude/agents/mascot-keeper.md`.
 
 **세부 내용**: 피벗 이전 기록이므로 `.claude/agents/mascot-keeper.md`에서만 보존한다. 현재 라우팅·머지 게이트가 아니다.
 

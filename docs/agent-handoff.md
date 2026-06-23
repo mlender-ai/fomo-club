@@ -86,7 +86,7 @@ The product should never degrade into raw framework errors on primary user flows
 
 ## 4. Design Rules
 
-Read `docs/DESIGN_FOMO.md` before doing UI work.
+Read `docs/DESIGN.md` and `design/tokens.json` before doing UI work.
 
 Short version:
 

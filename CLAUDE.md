@@ -8,7 +8,7 @@
 
 ## 프로젝트 컨텍스트
 
-- **레포**: `mlender-ai/taro-stock-app` (디렉토리·패키지명은 타로 시절 잔재 — 리네이밍은 후속 정리 라운드로 연기. 제품 정체성과 무관).
+- **레포**: `mlender-ai/fomo-club`
 - **제품 — 정체성(PRODUCT_VISION v5 확정)**: **주식시장의 틴더 — 캐주얼 투자 발견 앱.** **두 표면, 한 엔진** — ① 발견(종목 카드 스와이프, 제품의 심장·종목 전용) ② 콘텐츠(뉴스·브리핑 읽기, 별도 표면). 둘 다 같은 **주목 엔진(포모 점수 + 💎 조기 발견)** 으로 돈다. 한 줄: **"머니터링은 종목을 분석해주고, FOMO Club은 너를 안다."** 분석 앱과 다른 게임(분석 아닌 **발견·취향**). 판단·결정은 유저 몫.
 - **제품 — 핵심 규율**: 발견 표면은 **종목 카드 전용**(테마·매크로·이벤트는 콘텐츠 표면 또는 카드 안 사실 한 줄). 포모 점수·TA는 **발견의 연료**지 독립 진열 상품 아님(랭킹·차트 진열 금지). 💎는 수급 선행 **사실까지만**(예측·매수신호 금지). 매칭은 "네가 멈춰보던 패턴과 닮음" 취향 유사도까지만("사도 되는 자리" 금지). BM 확정 보류 + **발굴 성적표** 먼저.
 - **제품 — 연료(데이터 엔진)**: 발견 카드의 사실을 공급하는 **파편 투자정보 응축 엔진**(키워드 카드 + 이해 레이어 — 원문 grounded 강세/약세·워딩, 수급). 수집→이해→재가공→응축. 엔진과 발견 표면은 같은 엔진의 두 면.
@@ -21,7 +21,17 @@
   - `docs/AGENT_REDESIGN.md` — 에이전트 재설계 정본
 - **🚫 타로 신규 작업 거부 (확정 — 모든 세션·에이전트 준수)**: **FOMO Club이 유일한 제품 개발 대상**이다. 타로(tarot-core 프롬프트/해석, tarot-mobile 화면·UX, Signal Engine 등) 관련 **신규 기능·개선·이슈·PR은 거부**한다. 기존 타로 코드는 **보존만**(삭제 금지) 하며 손대지 않는다. 에이전트가 타로 관련 제안을 올리면 구현하지 말고 조용히 close(not_planned).
 - **감정 기능(기록/캘린더/투표)**: flag로 숨김 상태(`packages/fomo-core/src/features.ts` — 삭제 금지, 복원 가능). **현재 정체성이 아님** — 데이터 엔진 피벗으로 강등됨.
-- **모노레포 구조**: `apps/web` (API + 어드민), `apps/api` (Fastify 백엔드/워커), `apps/tarot-mobile` (React Native, 보존), `packages/shared` (공용 타입), `packages/tarot-core` (타로 로직, 보존). FOMO Club: `apps/fomo-web`, `apps/fomo-club`, `packages/fomo-core`.
+- **모노레포 구조**: `apps/fomo-web` (웹 MVP), `apps/fomo-club` (React Native 네이티브 앱, 보류), `apps/web` (백엔드), `apps/api` (Fastify 백엔드/워커), `packages/fomo-core` (FOMO Club 도메인 로직), `packages/shared` (공용 타입·헬퍼).
+
+## 루트 디렉토리 설명
+
+| 디렉토리 | 용도 |
+|---------|------|
+| `generated/` | 에이전트·리서치·성과 측정 산출물. 직접 편집보다 생성 스크립트 갱신 우선. |
+| `constraints/` | 에이전트 행동 제약 규칙 파일. 변경 시 광혁 확인 필요. |
+| `knowledge/` | 도메인 지식 참조 자료와 일일 지식 스냅샷. |
+| `design/` | 디자인 토큰 (`tokens.json`). 색·토큰 하드코딩 대신 이 파일 참조. |
+| `docs/legacy/` | 폐기된 구 정체성 문서. 정체성 근거로 참조 금지. |
 
 ---
 
@@ -90,7 +100,7 @@
 - FOMO Index = 감정 체감 온도계 프레이밍 — 보조 지표로 강등.
 - MLP / Lovable 시금석("그날 밤 덜 외로웠을까", love mark 우선) — 판단력 피드로 대체.
 - 감정 탭 피드·감정 기록·캘린더 중심 — flag로 숨김(features.ts), 정체성 아님.
-- 참조 docs(`FOMO_CLUB.md` / `FOMO_INDEX.md` / `MASCOT.md` / `IDENTITY_AND_MILESTONES.md` / `PIVOT_FEED_FIRST.md` / `DESIGN_FOMO.md`): 히스토리 보존용, 현재 기준 아님(삭제는 보류).
+- 참조 docs(`docs/legacy/FOMO_CLUB.md` / `docs/legacy/FOMO_INDEX.md` / `docs/legacy/MASCOT.md` / `docs/legacy/IDENTITY_AND_MILESTONES.md` / `docs/legacy/PIVOT_FEED_FIRST.md` / `docs/legacy/DESIGN_FOMO.md`): 히스토리 보존용, 현재 기준 아님(삭제는 보류).
 
 ### 향후 피처 대비 설계 원칙 (사주팔자 통합)
 
