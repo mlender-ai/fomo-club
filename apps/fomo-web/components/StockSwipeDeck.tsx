@@ -87,7 +87,7 @@ function Sparkline({ series }: { series: number[] }) {
   const paths = sparklinePath(pts, W, H);
   if (!paths) return null;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-4 h-11 w-full" aria-hidden>
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-3 h-9 w-full shrink-0" aria-hidden>
       <path d={paths.line} fill="none" stroke="rgba(250,250,250,0.52)" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
@@ -96,7 +96,7 @@ function Sparkline({ series }: { series: number[] }) {
 function ChartSlot({ series, supported }: { series?: number[] | undefined; supported: boolean }) {
   if (series && series.length >= 2) return <Sparkline series={series} />;
   return (
-    <div className="mt-4 flex h-11 w-full items-center justify-center rounded-lg border border-hairline bg-white/[0.03]">
+    <div className="mt-3 flex h-9 w-full shrink-0 items-center justify-center rounded-lg border border-hairline bg-white/[0.03]">
       <span className="font-pixel text-[10px] text-muted">
         {supported ? "차트 불러오는 중" : "차트 데이터 없음"}
       </span>
@@ -132,7 +132,6 @@ function StockCardFace({
   stock,
   view,
   themeLabel,
-  catalysts,
   priceText,
   changeText,
   changeDir,
@@ -146,7 +145,6 @@ function StockCardFace({
   stock: DeckStock;
   view: FomoCardView;
   themeLabel?: string | undefined;
-  catalysts?: string[] | undefined;
   priceText?: string | undefined;
   changeText?: string | undefined;
   changeDir?: "up" | "down" | "flat" | undefined;
@@ -158,9 +156,9 @@ function StockCardFace({
   progress?: string | undefined;
 }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {/* 1행 — 정체성: 로고 + 종목명 + 시장·시총순위 */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex shrink-0 items-center gap-2.5">
         <LogoBadge name={stock.canonical} code={stock.naverCode} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -176,7 +174,7 @@ function StockCardFace({
 
       {/* 현재가 — 시총순위줄과 포모 점수 사이(시장 readout, 후킹 아님) */}
       {priceText && (
-        <div className="mt-3 flex items-baseline gap-2">
+        <div className="mt-2.5 flex shrink-0 items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
           {changeText && (
             <span className="inline-flex items-center gap-1 font-pixel text-sm" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
@@ -190,7 +188,7 @@ function StockCardFace({
 
       {/* 포모 점수 + 강도 미터 + 라벨 (척추) — 숫자=픽셀 디스플레이(라틴), 한글 라벨=Pretendard. 주목도(품질 아님). */}
       {view.scoreText && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="mt-3.5 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
           <div className="flex items-baseline gap-1.5">
             <span className="text-[10px] uppercase tracking-wide text-text-secondary">포모</span>
             <span className="font-display text-3xl leading-none" style={{ color: NEON }}>
@@ -208,44 +206,32 @@ function StockCardFace({
 
       {/* 테마 태그 */}
       {themeLabel && (
-        <span className="mt-3 inline-flex w-fit items-center rounded-full border border-hairline-soft bg-white/[0.04] px-2.5 py-1 text-xs text-whiteout">
+        <span className="mt-2.5 inline-flex w-fit shrink-0 items-center rounded-full border border-hairline-soft bg-white/[0.04] px-2.5 py-1 text-xs text-whiteout">
           # {themeLabel}
         </span>
       )}
 
       {/* 헤드라인 = 종목별 후킹 사실 1개. 색 강조는 점수/미터/CTA에만 둔다. */}
-      <p className="mt-4 line-clamp-3 text-xl font-bold leading-8 text-whiteout">
+      <p className="mt-3 line-clamp-2 shrink-0 text-lg font-bold leading-7 text-whiteout">
         {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
         {view.headline}
       </p>
 
-      <div className="mt-3 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
+      <div className="mt-2.5 shrink-0 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
         <span className="block text-[10px] text-muted">보여주는 이유</span>
         <span className="mt-1 line-clamp-2 text-sm leading-6 text-whiteout">{why}</span>
       </div>
 
       {subLine && (
-        <p className="mt-2 line-clamp-2 rounded-lg border border-hairline bg-black/10 px-3 py-2 text-sm leading-6 text-muted">
-          {subLine}
-        </p>
+        <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-2">
+          <span className="line-clamp-1 text-sm leading-6 text-muted">{subLine}</span>
+        </div>
       )}
 
       {/* 미니 스파크라인(최근 흐름) — lite 응답도 짧은 라인차트를 싣는다. */}
       <ChartSlot series={sparkline} supported={chartSupported} />
 
-      {/* 다가오는 재료(있으면) */}
-      {catalysts && catalysts.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-1.5">
-          {catalysts.map((c, i) => (
-            <li key={i} className="flex gap-2 text-sm leading-6 text-whiteout">
-              <span className="text-muted" aria-hidden>•</span>
-              <span>{c}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-auto flex items-center justify-between pt-6">
+      <div className="mt-auto flex shrink-0 items-center justify-between pt-4">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
         {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
       </div>
@@ -368,9 +354,9 @@ export function StockSwipeDeck({
     [front]
   );
 
-  // 카드 표현 — 포모 점수(척추, 단일 출처) → fomoCardView. 로드 전엔 EMPTY(근거 있으면 그게 헤드라인).
-  // 헤드라인으로 쓰인 근거는 재료 리스트에서 빼서 중복 방지.
-  const cardFor = (stock: DeckStock): { view: FomoCardView; catalysts: string[]; subLine?: string } => {
+  // 카드 표현 — 포모 점수(척추, 단일 출처) → fomoCardView.
+  // 긴 원문 재료는 why/depth 로 보내고, 앞면은 잘리지 않는 핵심 독해만 남긴다.
+  const cardFor = (stock: DeckStock): { view: FomoCardView; subLine?: string } => {
     const e = front[stock.canonical];
     if (!e) {
       const view: FomoCardView = {
@@ -381,7 +367,7 @@ export function StockSwipeDeck({
         tone: "calm",
         isLeading: false,
       };
-      return { view, catalysts: stock.reason ? [] : [], subLine: "가격·거래량 신호를 불러오고 있어요." };
+      return { view, subLine: "가격·거래량 신호를 불러오고 있어요." };
     }
     const fomo = e?.fomo ?? EMPTY_FOMO;
     const hook = selectFomoHook({
@@ -391,8 +377,7 @@ export function StockSwipeDeck({
     });
     const baseView = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
     const view = { ...baseView, headline: hook.headline };
-    const catalysts = stock.reason && hook.headline !== stock.reason && hook.subLine !== stock.reason ? [stock.reason] : [];
-    return { view, catalysts, ...(hook.subLine ? { subLine: hook.subLine } : {}) };
+    return { view, ...(hook.subLine ? { subLine: hook.subLine } : {}) };
   };
   const rankLabelFor = (stock: DeckStock): string | undefined => {
     const r = front[stock.canonical]?.signals.marketCapRank;
@@ -414,12 +399,11 @@ export function StockSwipeDeck({
     if (!e) {
       return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
     }
-    const { view, catalysts, subLine } = cardFor(stock);
+    const { view, subLine } = cardFor(stock);
     return (
       <StockCardFace
         stock={stock}
         view={view}
-        catalysts={catalysts}
         themeLabel={stock.sector}
         priceText={e?.priceText}
         changeText={e?.changeText}
