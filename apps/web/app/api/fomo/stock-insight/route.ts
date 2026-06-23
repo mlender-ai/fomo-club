@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { condenseThemeInsight, emptyThemeInsight, stockDef, supplyDemandFact, type CondensedInsight } from "@fomo/core";
-import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
+import { withCors, kstDate, kstSlot, cacheVersion } from "../../../../lib/fomo";
 import { understandStock } from "../../../../lib/theme-understanding";
 import { readLatestSupplyDemand } from "../../../../lib/supply-demand-store";
 
@@ -26,13 +26,14 @@ const inflight = new Map<string, Promise<CondensedInsight>>();
 
 async function getInsight(stock: string): Promise<CondensedInsight> {
   const today = kstDate();
-  const key = `${today}:${stock}`;
+  const slot = kstSlot();
+  const key = `${today}:${slot}:${stock}`;
   const running = inflight.get(key);
   if (running) return running;
 
   const load = unstable_cache(
     async () => condenseThemeInsight(await understandStock(stock)),
-    ["fomo-stock-insight", cacheVersion(), today, stock],
+    ["fomo-stock-insight", cacheVersion(), today, slot, stock],
     { revalidate: REVALIDATE_S }
   );
 

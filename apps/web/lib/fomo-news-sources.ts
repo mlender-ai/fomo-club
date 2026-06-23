@@ -1,4 +1,5 @@
 import {
+  decodeHtmlEntities,
   parseNaverNews,
   parseNaverStockNews,
   parseRssFeed,
@@ -91,6 +92,7 @@ const KR_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] 
 // 해외 증시 실시간 뉴스(이미 한국어). api.stock.naver.com/news/worldNews.
 const NAVER_NEWS_URL = "https://api.stock.naver.com/news/worldNews?pageSize=20&page=1";
 const NAVER_STOCK_NEWS_URL = "https://api.stock.naver.com/news/stock";
+const NAVER_COMPANY_RESEARCH_URL = "https://finance.naver.com/research/company_list.naver";
 
 export const naverNewsSource: NewsSource = {
   id: "naver",
@@ -128,6 +130,94 @@ export async function fetchNaverStockNews(code: string, pageSize = 10): Promise<
     return withTier(parseNaverStockNews(Array.isArray(json) ? json : [], new Date().toISOString()), "news-mid");
   } catch (err) {
     console.warn(`[fomo/news] naver stock ${code} error`, err);
+    return [];
+  }
+}
+
+function cleanResearchText(text: string): string {
+  return decodeHtmlEntities(text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ")).trim();
+}
+
+function absoluteNaverFinanceUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `https://finance.naver.com${path.startsWith("/") ? path : `/research/${path}`}`;
+}
+
+function researchDateToIso(date: string, nowIso: string): string {
+  const m = date.trim().match(/^(\d{2})\.(\d{2})\.(\d{2})$/);
+  if (!m) return nowIso;
+  const year = 2000 + Number(m[1]);
+  const month = m[2];
+  const day = m[3];
+  const ts = Date.parse(`${year}-${month}-${day}T09:00:00+09:00`);
+  return Number.isNaN(ts) ? nowIso : new Date(ts).toISOString();
+}
+
+function researchId(url: string): string {
+  return `research-${url.replace(/^https?:\/\//, "").replace(/[^a-z0-9]+/gi, "-").slice(0, 64)}`;
+}
+
+export function parseNaverCompanyResearchHtml(
+  html: string,
+  opts: { code: string; stock: string; nowIso: string; limit?: number }
+): RawArticle[] {
+  const out: RawArticle[] = [];
+  const seen = new Set<string>();
+  const rowRe = /<tr>\s*<td[^>]*>\s*<a[^>]+code=([^"&]+)[^>]*title="([^"]*)"[^>]*class="stock_item"[^>]*>[\s\S]*?<\/td>\s*<td>\s*<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/td>\s*<td>([\s\S]*?)<\/td>\s*<td\s+class="file">([\s\S]*?)<\/td>\s*<td[^>]*class="date"[^>]*>([\s\S]*?)<\/td>/g;
+  let match: RegExpExecArray | null;
+  while ((match = rowRe.exec(html)) !== null) {
+    const code = cleanResearchText(match[1] ?? "");
+    const stock = cleanResearchText(match[2] ?? "");
+    if (code !== opts.code || stock !== opts.stock) continue;
+
+    const readUrl = absoluteNaverFinanceUrl(match[3] ?? "");
+    const title = cleanResearchText(match[4] ?? "");
+    const broker = cleanResearchText(match[5] ?? "");
+    const fileBlock = match[6] ?? "";
+    const date = cleanResearchText(match[7] ?? "");
+    const pdfUrl = fileBlock.match(/<a\s+href="([^"]+\.pdf[^"]*)"/i)?.[1];
+    const url = pdfUrl ? absoluteNaverFinanceUrl(pdfUrl) : readUrl;
+    if (!title || !url || seen.has(url)) continue;
+    seen.add(url);
+
+    out.push({
+      id: researchId(url),
+      title,
+      url,
+      source: broker ? `${broker} 리서치` : "네이버 증권 리서치",
+      publishedAt: researchDateToIso(date, opts.nowIso),
+      lang: "ko",
+      category: "리서치",
+      summary: `${stock} 종목 리포트 · ${broker || "증권사"} · ${date || "작성일 미상"}`,
+      tier: "news-mid",
+    });
+    if (opts.limit && out.length >= opts.limit) break;
+  }
+  return out;
+}
+
+/** 네이버 증권 종목분석 리포트 — 국내 종목 stock-insight 원문 근거 보강용. */
+export async function fetchNaverCompanyResearch(code: string, stock: string, limit = 6): Promise<RawArticle[]> {
+  if (!/^\d{6}$/.test(code) || !stock.trim()) return [];
+  try {
+    const url = new URL(NAVER_COMPANY_RESEARCH_URL);
+    url.searchParams.set("searchType", "itemCode");
+    url.searchParams.set("itemCode", code);
+    const res = await fetch(url.toString(), {
+      headers: { accept: "text/html", "user-agent": BROWSER_UA },
+      signal: AbortSignal.timeout(8_000),
+      next: { revalidate: 3_600 },
+    });
+    if (!res.ok) return [];
+    const html = new TextDecoder("euc-kr").decode(await res.arrayBuffer());
+    return parseNaverCompanyResearchHtml(html, {
+      code,
+      stock,
+      nowIso: new Date().toISOString(),
+      limit,
+    });
+  } catch (err) {
+    console.warn(`[fomo/news] naver research ${code} error`, err);
     return [];
   }
 }

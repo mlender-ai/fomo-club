@@ -18,7 +18,7 @@ import {
   type WordingVerdict,
   type OfficialFact,
 } from "@fomo/core";
-import { fetchAllNews, fetchNaverStockNews } from "./fomo-news-sources";
+import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews } from "./fomo-news-sources";
 import { fetchFredDocs } from "./fred";
 import { fetchDcStockTitles } from "./dcinside";
 
@@ -225,8 +225,9 @@ export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
   const isForeign = def ? def.country !== "KR" : false;
   const matches = (s: string) => stockMatchesText(stock, s);
 
-  const [stockNewsRes, newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
+  const [stockNewsRes, researchRes, newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
     code ? fetchNaverStockNews(code, MAX_NEWS) : Promise.resolve([]),
+    code ? fetchNaverCompanyResearch(code, stock, 6) : Promise.resolve([]),
     fetchAllNews(),
     fetchDcStockTitles(),
     code ? fetchNaverBoardPosts(code) : Promise.resolve([]),
@@ -266,6 +267,13 @@ export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
     for (const a of hit) pushNews(a);
   } else {
     console.warn("[stock-understanding] naver stock news error", stockNewsRes.reason);
+  }
+
+  // 증권사 리서치 리포트 — 종목코드로 좁게 조회한 보고서 제목·증권사·PDF 링크. 무료 공개 HTML만 사용한다.
+  if (researchRes.status === "fulfilled") {
+    for (const a of researchRes.value.slice(0, 6)) pushNews(a);
+  } else {
+    console.warn("[stock-understanding] naver research error", stock, researchRes.reason);
   }
 
   // 뉴스 — 종목명(별칭 포함)이 제목/요약에 등장하는 기사만.
