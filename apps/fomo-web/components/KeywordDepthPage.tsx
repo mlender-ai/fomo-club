@@ -608,6 +608,20 @@ function buildReadPoints(front: StockFrontResponse | null, insight: CondensedIns
   };
 }
 
+function readGuideLead(front: StockFrontResponse | null, insight: CondensedInsight | null, context?: StockContext): string {
+  const points = buildReadPoints(front, insight);
+  if (front?.changeDir === "down" && points.bull.length === 0 && points.bear.length > 0) {
+    return "강세로 확정해서 보여주는 카드가 아니에요. 하락 중에도 남아 있는 수급·거래·언급 신호를 확인하는 화면이에요.";
+  }
+  if (context?.reason) {
+    return "카드에서 본 이유를 가격·차트·원문 근거로 나눠 확인해요.";
+  }
+  if (front && points.bull.length === 0 && points.bear.length === 0) {
+    return "아직 강한 근거는 적어요. 확인된 가격·차트·수급만 분리해서 봐요.";
+  }
+  return front ? fomoStateSummary(front.fomo) : "";
+}
+
 function PointList({ title, tone, points, empty }: { title: string; tone: string; points: ReadPoint[]; empty: string }) {
   return (
     <div className="rounded-lg border border-hairline bg-surface px-3 py-3">
@@ -634,12 +648,15 @@ function StockReadGuide({
   front,
   insight,
   loading,
+  context,
 }: {
   front: StockFrontResponse | null;
   insight: CondensedInsight | null;
   loading: boolean;
+  context?: StockContext | undefined;
 }) {
   const points = buildReadPoints(front, insight);
+  const lead = readGuideLead(front, insight, context);
   const hasGrounded = !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
   return (
     <section className="mt-6">
@@ -651,7 +668,7 @@ function StockReadGuide({
           <span className="text-[11px] text-muted">{hasGrounded ? "원문 근거 있음" : "원문 근거 부족"}</span>
         )}
       </div>
-      {front && <p className="mt-2 text-sm leading-6 text-muted">{fomoStateSummary(front.fomo)}</p>}
+      {lead && <p className="mt-2 text-sm leading-6 text-muted">{lead}</p>}
       <div className="mt-3 grid gap-2">
         <PointList
           title="강세 쪽 재료"
@@ -856,7 +873,7 @@ export function StockInsightView({
           <DetailChart front={front} />
 
           {/* 핵심 해석 — 강세/약세 원문이 부족해도 가격·차트·수급으로 읽을 재료를 먼저 보여준다. */}
-          <StockReadGuide front={front} insight={insight} loading={false} />
+          <StockReadGuide front={front} insight={insight} loading={false} context={context} />
 
           {/* 포모 상태 — 카드와 같은 단일 출처지만, 상세의 첫 주인공은 가격/차트가 담당. */}
           <div className="mt-6">

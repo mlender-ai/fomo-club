@@ -214,18 +214,18 @@ function StockCardFace({
       )}
 
       {/* 헤드라인 = 종목별 후킹 사실 1개. 색 강조는 점수/미터/CTA에만 둔다. */}
-      <p className="mt-4 text-xl font-bold leading-8 text-whiteout">
+      <p className="mt-4 line-clamp-3 text-xl font-bold leading-8 text-whiteout">
         {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
         {view.headline}
       </p>
 
       <div className="mt-3 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
         <span className="block text-[10px] text-muted">보여주는 이유</span>
-        <span className="mt-1 block text-sm leading-6 text-whiteout">{why}</span>
+        <span className="mt-1 line-clamp-2 text-sm leading-6 text-whiteout">{why}</span>
       </div>
 
       {subLine && (
-        <p className="mt-2 rounded-lg border border-hairline bg-black/10 px-3 py-2 text-sm leading-6 text-muted">
+        <p className="mt-2 line-clamp-2 rounded-lg border border-hairline bg-black/10 px-3 py-2 text-sm leading-6 text-muted">
           {subLine}
         </p>
       )}
@@ -247,6 +247,55 @@ function StockCardFace({
 
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
+        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+      </div>
+    </div>
+  );
+}
+
+function StockCardLoadingFace({
+  stock,
+  themeLabel,
+  progress,
+}: {
+  stock: DeckStock;
+  themeLabel?: string | undefined;
+  progress?: string | undefined;
+}) {
+  return (
+    <div className="flex h-full flex-col" aria-busy="true" aria-live="polite">
+      <div className="flex items-center gap-2.5">
+        <LogoBadge name={stock.canonical} code={stock.naverCode} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
+            {stock.marquee && <StarIcon size={14} className="shrink-0 text-text-secondary" />}
+          </div>
+          <span className="font-pixel text-xs text-muted">{MARKET_LABEL[stock.market] ?? stock.market}</span>
+        </div>
+      </div>
+
+      {themeLabel && (
+        <span className="mt-5 inline-flex w-fit items-center rounded-full border border-hairline-soft bg-white/[0.04] px-2.5 py-1 text-xs text-whiteout">
+          # {themeLabel}
+        </span>
+      )}
+
+      <div className="mt-7 rounded-lg border border-hairline bg-white/[0.035] px-3 py-3">
+        <span className="block text-[10px] text-muted">카드 준비 중</span>
+        <span className="mt-1 block text-sm leading-6 text-whiteout">
+          가격·수급·언급 근거를 맞춰 불러오고 있어요.
+        </span>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        <div className="h-3 w-5/6 animate-pulse rounded-full bg-white/10" />
+        <div className="h-3 w-2/3 animate-pulse rounded-full bg-white/10" />
+        <div className="h-11 animate-pulse rounded-lg border border-hairline bg-white/[0.03]" />
+      </div>
+
+      <div className="mt-auto flex items-center justify-between pt-6">
+        <span className="font-pixel text-[11px] text-muted">신호 확인 중</span>
         {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
       </div>
     </div>
@@ -361,8 +410,11 @@ export function StockSwipeDeck({
     upsertWatch(stock.canonical, Date.now(), { sector: stock.sector, reason: whyFor(stock) });
   };
   const renderFace = (stock: DeckStock, progress?: string) => {
-    const { view, catalysts, subLine } = cardFor(stock);
     const e = front[stock.canonical];
+    if (!e) {
+      return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
+    }
+    const { view, catalysts, subLine } = cardFor(stock);
     return (
       <StockCardFace
         stock={stock}
@@ -429,6 +481,7 @@ export function StockSwipeDeck({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (exiting) return;
+    if (!front[at(idx).canonical]) return;
     dragging.current = true;
     moved.current = false;
     startX.current = e.clientX;
@@ -481,10 +534,11 @@ export function StockSwipeDeck({
     ? `translateX(${exiting === "right" ? 140 : -140}%) rotate(${exiting === "right" ? 16 : -16}deg)`
     : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
   const topTransition = dragging.current ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
+  const topReady = !!front[top.canonical];
 
   return (
     <div className="w-full">
-      <div className="relative mx-auto h-[56vh] w-full select-none">
+      <div className="relative mx-auto h-[64vh] min-h-[500px] max-h-[640px] w-full select-none">
         {/* 단일 카드만 렌더 — 글래스모피즘 카드 뒤로 비침 금지(스택 미리보기 제거). */}
         <div
           onPointerDown={onPointerDown}
@@ -492,7 +546,7 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (!moved.current && !exiting) openDepth(top, "card");
+            if (topReady && !moved.current && !exiting) openDepth(top, "card");
           }}
           className="glass-card absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl px-6 py-7"
           style={{ transform: topTransform, transition: topTransition }}
@@ -516,7 +570,7 @@ export function StockSwipeDeck({
       <div className="mt-4 flex items-center justify-center gap-4">
         <button
           onClick={() => advance("left")}
-          disabled={!!exiting}
+          disabled={!!exiting || !topReady}
           aria-label="덜 관심"
           className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
         >
@@ -524,7 +578,7 @@ export function StockSwipeDeck({
         </button>
         <button
           onClick={() => openDepth(top, "interest_button")}
-          disabled={!!exiting}
+          disabled={!!exiting || !topReady}
           aria-label="관심 — 자세히 보기"
           className="flex h-14 flex-1 items-center justify-center rounded-full text-sm font-bold text-canvas transition-opacity disabled:opacity-40"
           style={{ backgroundColor: NEON }}
