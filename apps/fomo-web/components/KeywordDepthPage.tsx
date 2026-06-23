@@ -367,7 +367,7 @@ function StockPriceHeader({ basics, front }: { basics: StockBasics | null; front
       </div>
       {priceText ? (
         <div className="mt-2">
-          <span className="font-pixel text-4xl leading-none text-whiteout">{priceText}</span>
+          <span className="text-5xl font-bold leading-none text-whiteout">{priceText}</span>
           {changeText && (
             <span className="ml-2 align-baseline text-sm" style={up || down ? { color: up ? "#ff5a5f" : "#4f8cff" } : undefined}>
               {up ? "▲" : down ? "▼" : ""} {changeText}

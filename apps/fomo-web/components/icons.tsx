@@ -49,3 +49,13 @@ export function CaretDownIcon({ size = 12, className }: IconProps) {
     </svg>
   );
 }
+
+/** 되돌리기 — 직전 스와이프 카드 복구. */
+export function UndoIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M9 7H4v5" />
+      <path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68" />
+    </svg>
+  );
+}
