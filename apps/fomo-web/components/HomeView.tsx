@@ -92,7 +92,7 @@ export function HomeView({
           <div className="mt-3 flex items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-2.5">
             <span className="text-xs text-muted">오늘의 시장 온도</span>
             <div className="flex items-baseline gap-2">
-              <span className="font-pixel text-xl leading-none" style={{ color }}>
+              <span className="font-number text-xl font-bold leading-none" style={{ color }}>
                 {index.score}
               </span>
               <span className="font-pixel text-[11px] text-muted">{index.state}</span>
