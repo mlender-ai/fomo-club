@@ -31,6 +31,15 @@ jobs:
   monitor:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
       - name: Inspect product health
         id: inspect
         env:
@@ -148,9 +157,77 @@ jobs:
           fi
           echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
 
+      - name: Inspect FOMO quality
+        id: quality
+        env:
+          FOMO_API_BASE: "https://fomo-club-backend.vercel.app"
+          FOMO_WEB_URL: "https://fomo-web-mlender-ais-projects.vercel.app"
+          FOMO_QUALITY_STOCK_LIMIT: "8"
+          FOMO_QUALITY_DEPTH_LIMIT: "3"
+          FOMO_QUALITY_TIMEOUT_MS: "8000"
+          FOMO_QUALITY_JSON_OUT: "/tmp/fomo-quality-report.json"
+          FOMO_QUALITY_MD_OUT: "/tmp/fomo-quality-report.md"
+        run: |
+          set -euo pipefail
+          set +e
+          npm run quality:fomo > /tmp/product-quality.stdout 2> /tmp/product-quality.stderr
+          STATUS=$?
+          set -e
+
+          if [ "$STATUS" != "0" ] || [ ! -f /tmp/fomo-quality-report.json ]; then
+            {
+              echo "# FOMO Quality Report"
+              echo
+              echo "상태: critical"
+              echo
+              echo "품질 리포트 스크립트가 실패했습니다."
+              echo
+              echo "## stderr"
+              sed 's/^/    /' /tmp/product-quality.stderr || true
+            } > /tmp/fomo-quality-report.md
+            echo "critical_count=1" >> "$GITHUB_OUTPUT"
+            echo "warn_count=0" >> "$GITHUB_OUTPUT"
+            echo "summary=quality report failed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require("fs");
+          const report = JSON.parse(fs.readFileSync("/tmp/fomo-quality-report.json", "utf8"));
+          const critical = report.findings.filter((f) => f.severity === "critical").length;
+          const warn = report.findings.filter((f) => f.severity === "warn").length;
+          const lite = report.latency.find((row) => row.endpoint === "stock_front_lite");
+          const fallback = report.hookDistribution.liteTier.find((row) => row.key === "fallback");
+          const material = report.hookDistribution.liteTier.find((row) => row.key === "material");
+          const pct = (row) => row ? `${Math.round(row.rate * 100)}%` : "0%";
+          const summary = `critical ${critical}, warn ${warn}, lite p95 ${lite?.p95Ms ?? "N/A"}ms, material ${pct(material)}, fallback ${pct(fallback)}`;
+          console.log(`critical_count=${critical}`);
+          console.log(`warn_count=${warn}`);
+          console.log(`summary=${summary}`);
+          NODE
+
+      - name: Combine monitor report
+        id: combine
+        env:
+          INSPECT_CRITICAL: ${{ steps.inspect.outputs.critical_count }}
+          QUALITY_CRITICAL: ${{ steps.quality.outputs.critical_count }}
+        run: |
+          set -euo pipefail
+          TOTAL=$(( ${INSPECT_CRITICAL:-0} + ${QUALITY_CRITICAL:-0} ))
+          echo "critical_count=$TOTAL" >> "$GITHUB_OUTPUT"
+          cp /tmp/monitor-body.md /tmp/monitor-combined-body.md
+          if [ -f /tmp/fomo-quality-report.md ]; then
+            {
+              echo
+              echo "---"
+              echo
+              cat /tmp/fomo-quality-report.md
+            } >> /tmp/monitor-combined-body.md
+          fi
+
       - name: Create critical task issue
         id: issue
-        if: steps.inspect.outputs.critical_count != '0'
+        if: steps.combine.outputs.critical_count != '0'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -174,7 +251,7 @@ jobs:
 
           URL=$(gh issue create --repo "$REPO" \
             --title "🚨 [daily-product-monitor] critical $TODAY" \
-            --body-file /tmp/monitor-body.md \
+            --body-file /tmp/monitor-combined-body.md \
             --label "daily-product-monitor,pipeline-monitor,data-quality,task")
           NUM="${URL##*/}"
           echo "number=$NUM" >> "$GITHUB_OUTPUT"
@@ -227,10 +304,13 @@ jobs:
         if: always() && vars.SLACK_WEBHOOK_URL != ''
         env:
           SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
-          CRITICAL_COUNT: ${{ steps.inspect.outputs.critical_count }}
+          CRITICAL_COUNT: ${{ steps.combine.outputs.critical_count }}
           CRITICAL_RUN_COUNT: ${{ steps.inspect.outputs.critical_run_count }}
           STALE_COUNT: ${{ steps.inspect.outputs.stale_count }}
           SUMMARY: ${{ steps.inspect.outputs.summary }}
+          QUALITY_SUMMARY: ${{ steps.quality.outputs.summary }}
+          QUALITY_CRITICAL_COUNT: ${{ steps.quality.outputs.critical_count }}
+          QUALITY_WARN_COUNT: ${{ steps.quality.outputs.warn_count }}
           TODAY: ${{ steps.inspect.outputs.today }}
           LOOKBACK_HOURS: ${{ steps.inspect.outputs.lookback_hours }}
           ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
@@ -241,7 +321,7 @@ jobs:
           set -euo pipefail
           URL=$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')
           if [ "${CRITICAL_COUNT:-0}" = "0" ]; then
-            TEXT="🟢 *Daily Product Monitor* — ${TODAY}\n${SUMMARY}\n범위: 최근 ${LOOKBACK_HOURS}시간\n다음 액션: 없음 — 오늘은 개발 스킵.\n${RUN_URL}"
+            TEXT="🟢 *Daily Product Monitor* — ${TODAY}\n${SUMMARY}\n품질: ${QUALITY_SUMMARY:-N/A}\n범위: 최근 ${LOOKBACK_HOURS}시간\n다음 액션: 없음 — 오늘은 개발 스킵.\n${RUN_URL}"
           else
             if [ "${AUTO_FIX_STARTED:-false}" = "true" ]; then
               NEXT="이슈 #${ISSUE_NUMBER} 생성/재사용 → implement-task 자동 수정 시작"
@@ -250,7 +330,7 @@ jobs:
             else
               NEXT="이슈 #${ISSUE_NUMBER} 생성/재사용 → auto-fix dispatch 실패, 수동 확인 필요"
             fi
-            TEXT="🚨 *Daily Product Monitor* — ${TODAY}\n${SUMMARY}\n범위: 최근 ${LOOKBACK_HOURS}시간\n분해: 실패 ${CRITICAL_RUN_COUNT:-0}건 · stale ${STALE_COUNT:-0}건\n다음 액션: ${NEXT}\n${RUN_URL}"
+            TEXT="🚨 *Daily Product Monitor* — ${TODAY}\n${SUMMARY}\n품질: ${QUALITY_SUMMARY:-N/A}\n범위: 최근 ${LOOKBACK_HOURS}시간\n분해: 실패 ${CRITICAL_RUN_COUNT:-0}건 · stale ${STALE_COUNT:-0}건 · 품질 critical ${QUALITY_CRITICAL_COUNT:-0}건 · 품질 warn ${QUALITY_WARN_COUNT:-0}건\n다음 액션: ${NEXT}\n${RUN_URL}"
           fi
           jq -n --arg text "$TEXT" '{text: $text}' > /tmp/slack.json
           curl -sS -X POST -H 'Content-type: application/json' --data @/tmp/slack.json "$URL" || true
