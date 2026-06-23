@@ -767,7 +767,10 @@ export function StockInsightView({
   }, [stock]);
 
   const toggleWatched = () => {
-    const now = toggleWatch(stock, Date.now());
+    const now = toggleWatch(stock, Date.now(), {
+      ...(context?.fromTheme ? { sector: context.fromTheme } : {}),
+      ...(context?.reason ? { reason: context.reason } : {}),
+    });
     setWatchedState(now);
     recordTaste("stock", stock, now ? "more" : "less"); // 서버 취향 신호(트랙 B 재사용)
   };

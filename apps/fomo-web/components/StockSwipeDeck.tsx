@@ -6,8 +6,10 @@ import type { CardFrontSignals, FomoScoreResult, FomoCardView, TaFact } from "@f
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import { recordStockInterest } from "@/lib/stockInterest";
+import { upsertWatch } from "@/lib/watchlist";
 import type { DeckStock } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
+import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 
 /**
@@ -262,6 +264,7 @@ interface StockSwipeDeckProps {
 export function StockSwipeDeck({
   stocks,
   initialFronts,
+  contextLabel,
   loggedIn,
   onRequireLogin,
 }: StockSwipeDeckProps) {
@@ -274,6 +277,8 @@ export function StockSwipeDeck({
   const startX = useRef(0);
   const moved = useRef(false);
   const lastSeenStock = useRef<string | null>(null);
+  const firstCardRecorded = useRef(false);
+  const hydratedRecorded = useRef<Set<string>>(new Set());
 
   // 앞면 FOMO 신호 — ④ 정렬 때 풀 전체를 이미 받아 seed(initialFronts). 빠진 종목만 도달 시 lazy 보강.
   const [front, setFront] = useState<Record<string, FrontEntry>>(initialFronts ?? {});
@@ -352,6 +357,9 @@ export function StockSwipeDeck({
       signals: e?.signals,
     });
   };
+  const saveDiscovery = (stock: DeckStock) => {
+    upsertWatch(stock.canonical, Date.now(), { sector: stock.sector, reason: whyFor(stock) });
+  };
   const renderFace = (stock: DeckStock, progress?: string) => {
     const { view, catalysts, subLine } = cardFor(stock);
     const e = front[stock.canonical];
@@ -390,19 +398,26 @@ export function StockSwipeDeck({
 
   const advance = useCallback(
     (dir: "left" | "right") => {
-      const stock = at(idx).canonical;
-      recordStockInterest(stock, dir === "right" ? "more" : "less", Date.now());
-      recordTaste("stock", stock, dir === "right" ? "more" : "less"); // 트랙 B 적재
+      const stock = at(idx);
+      if (dir === "right") saveDiscovery(stock);
+      recordDiscoveryEvent("swipe", { direction: dir, hydrated: !!front[stock.canonical] });
+      recordStockInterest(stock.canonical, dir === "right" ? "more" : "less", Date.now());
+      recordTaste("stock", stock.canonical, dir === "right" ? "more" : "less"); // 트랙 B 적재
       flingNext(dir);
     },
-    [idx, stocks, flingNext]
+    [idx, stocks, flingNext, front]
   );
 
-  const openDepth = (stock: DeckStock) => {
+  const openDepth = (stock: DeckStock, source: "card" | "interest_button" = "card") => {
     if (!loggedIn && onRequireLogin) {
       onRequireLogin();
       return;
     }
+    if (source === "interest_button") {
+      saveDiscovery(stock);
+      recordDiscoveryEvent("interest_button");
+    }
+    recordDiscoveryEvent("depth_open");
     recordStockInterest(stock.canonical, "view_depth", Date.now());
     recordTaste("stock", stock.canonical, "view_depth"); // 강한 관심
     setSelected(stock);
@@ -440,11 +455,26 @@ export function StockSwipeDeck({
   }, [idx, ensureFront]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    recordDiscoveryEvent("deck_mount");
+  }, [contextLabel]);
+
+  useEffect(() => {
     const stock = at(idx).canonical;
+    if (!firstCardRecorded.current) {
+      firstCardRecorded.current = true;
+      recordDiscoveryEvent("first_card_display");
+    }
     if (lastSeenStock.current === stock) return;
     lastSeenStock.current = stock;
     recordStockInterest(stock, "seen", Date.now());
   }, [idx, stocks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const stock = at(idx).canonical;
+    if (!front[stock] || hydratedRecorded.current.has(stock)) return;
+    hydratedRecorded.current.add(stock);
+    recordDiscoveryEvent("card_hydrate");
+  }, [idx, front, stocks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const top = at(idx);
   const topTransform = exiting
@@ -462,7 +492,7 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (!moved.current && !exiting) openDepth(top);
+            if (!moved.current && !exiting) openDepth(top, "card");
           }}
           className="glass-card absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl px-6 py-7"
           style={{ transform: topTransform, transition: topTransition }}
@@ -493,7 +523,7 @@ export function StockSwipeDeck({
           ✕
         </button>
         <button
-          onClick={() => openDepth(top)}
+          onClick={() => openDepth(top, "interest_button")}
           disabled={!!exiting}
           aria-label="관심 — 자세히 보기"
           className="flex h-14 flex-1 items-center justify-center rounded-full text-sm font-bold text-canvas transition-opacity disabled:opacity-40"

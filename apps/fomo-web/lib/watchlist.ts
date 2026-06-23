@@ -11,13 +11,30 @@ const CAP = 200;
 export interface WatchItem {
   stock: string;
   ts: number;
+  sector?: string;
+  reason?: string;
 }
 
 function read(): WatchItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as WatchItem[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item): WatchItem | null => {
+        if (!item || typeof item !== "object") return null;
+        const row = item as Record<string, unknown>;
+        if (typeof row.stock !== "string" || typeof row.ts !== "number") return null;
+        return {
+          stock: row.stock,
+          ts: row.ts,
+          ...(typeof row.sector === "string" ? { sector: row.sector } : {}),
+          ...(typeof row.reason === "string" ? { reason: row.reason } : {}),
+        };
+      })
+      .filter((item): item is WatchItem => item !== null);
   } catch {
     return [];
   }
@@ -41,8 +58,30 @@ export function getWatchlist(): WatchItem[] {
   return [...read()].sort((a, b) => b.ts - a.ts);
 }
 
+/** 관심 등록/갱신 — 기존 localStorage 구조와 호환되게 stock 기준으로 upsert. */
+export function upsertWatch(
+  stock: string,
+  nowMs: number,
+  meta: { sector?: string | undefined; reason?: string | undefined } = {}
+): WatchItem | null {
+  if (typeof window === "undefined" || !stock) return null;
+  const list = read().filter((w) => w.stock !== stock);
+  const item: WatchItem = {
+    stock,
+    ts: nowMs,
+    ...(meta.sector ? { sector: meta.sector } : {}),
+    ...(meta.reason ? { reason: meta.reason } : {}),
+  };
+  write([...list, item]);
+  return item;
+}
+
 /** 관심 토글 — 새 상태(true=관심 등록됨) 반환. */
-export function toggleWatch(stock: string, nowMs: number): boolean {
+export function toggleWatch(
+  stock: string,
+  nowMs: number,
+  meta: { sector?: string | undefined; reason?: string | undefined } = {}
+): boolean {
   if (typeof window === "undefined") return false;
   const list = read();
   const exists = list.some((w) => w.stock === stock);
@@ -50,7 +89,7 @@ export function toggleWatch(stock: string, nowMs: number): boolean {
     write(list.filter((w) => w.stock !== stock));
     return false;
   }
-  write([...list, { stock, ts: nowMs }]);
+  upsertWatch(stock, nowMs, meta);
   return true;
 }
 
