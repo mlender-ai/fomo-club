@@ -6,7 +6,7 @@ export const MAX_DISCOVERY_STOCKS = 60;
 export const MIN_DISCOVERY_STOCKS = 30;
 
 /** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
-export type DeckStock = SectorStock & { reason?: string };
+export type DeckStock = SectorStock & { reason?: string; whyShown?: string };
 
 export interface SectorPool {
   sector: StockSector;

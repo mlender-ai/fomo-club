@@ -7,6 +7,7 @@ import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import { recordStockInterest } from "@/lib/stockInterest";
 import type { DeckStock } from "@/lib/discoveryDeck";
+import { whyShown } from "@/lib/whyShown";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 
 /**
@@ -137,6 +138,7 @@ function StockCardFace({
   sparkline,
   chartSupported,
   subLine,
+  why,
   progress,
 }: {
   stock: DeckStock;
@@ -150,6 +152,7 @@ function StockCardFace({
   sparkline?: number[] | undefined;
   chartSupported: boolean;
   subLine?: string | undefined;
+  why: string;
   progress?: string | undefined;
 }) {
   return (
@@ -213,6 +216,11 @@ function StockCardFace({
         {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
         {view.headline}
       </p>
+
+      <div className="mt-3 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
+        <span className="block text-[10px] text-muted">보여주는 이유</span>
+        <span className="mt-1 block text-sm leading-6 text-whiteout">{why}</span>
+      </div>
 
       {subLine && (
         <p className="mt-2 rounded-lg border border-hairline bg-black/10 px-3 py-2 text-sm leading-6 text-muted">
@@ -335,6 +343,14 @@ export function StockSwipeDeck({
     const r = front[stock.canonical]?.signals.marketCapRank;
     return r ? `시총 ${r.rank}위` : undefined; // 시장명은 1행에 이미 있음(중복 방지)
   };
+  const whyFor = (stock: DeckStock): string => {
+    const e = front[stock.canonical];
+    return whyShown({
+      stock,
+      fomoLabel: e?.fomo.label,
+      signals: e?.signals,
+    });
+  };
   const renderFace = (stock: DeckStock, progress?: string) => {
     const { view, catalysts, subLine } = cardFor(stock);
     const e = front[stock.canonical];
@@ -351,6 +367,7 @@ export function StockSwipeDeck({
         sparkline={e?.sparkline}
         chartSupported={!!stock.naverCode}
         subLine={subLine}
+        why={whyFor(stock)}
         progress={progress}
       />
     );
@@ -481,7 +498,7 @@ export function StockSwipeDeck({
       {selected && (
         <StockInsightView
           stock={selected.canonical}
-          context={{ fromTheme: selected.sector }}
+          context={{ fromTheme: selected.sector, reason: whyFor(selected) }}
           onClose={closeDepth}
         />
       )}
