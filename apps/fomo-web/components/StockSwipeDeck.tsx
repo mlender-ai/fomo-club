@@ -10,6 +10,7 @@ import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
 import type { DeckStock } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
+import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 
@@ -203,7 +204,7 @@ function StockCardFace({
   subLine?: string | undefined;
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
-  why: string;
+  why?: string | undefined;
   progress?: string | undefined;
 }) {
   return (
@@ -268,12 +269,14 @@ function StockCardFace({
         {view.headline}
       </p>
 
-      <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
-        <span className="shrink-0 text-[10px] leading-5 text-muted">이유</span>
-        <span className="min-w-0 flex-1 text-sm leading-5 text-whiteout" style={clampStyle(1)}>
-          {why}
-        </span>
-      </div>
+      {why && (
+        <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
+          <span className="shrink-0 text-[10px] leading-5 text-muted">이유</span>
+          <span className="min-w-0 flex-1 text-sm leading-5 text-whiteout" style={clampStyle(1)}>
+            {why}
+          </span>
+        </div>
+      )}
 
       <FeedSignalStrip bull={feedBull} bear={feedBear} />
 
@@ -460,6 +463,13 @@ export function StockSwipeDeck({
       return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
     }
     const { view, subLine } = cardFor(stock);
+    const deduped = dedupeCardCopy({
+      headline: view.headline,
+      why: whyFor(stock),
+      feedBull: e?.feedBull,
+      feedBear: e?.feedBear,
+      preserveGroundedReason: !!stock.reason,
+    });
     return (
       <StockCardFace
         stock={stock}
@@ -472,9 +482,9 @@ export function StockSwipeDeck({
         sparkline={e?.sparkline}
         chartSupported={!!stock.naverCode}
         subLine={subLine}
-        feedBull={e?.feedBull}
-        feedBear={e?.feedBear}
-        why={whyFor(stock)}
+        feedBull={deduped.feedBull}
+        feedBear={deduped.feedBear}
+        why={deduped.why}
         progress={progress}
       />
     );
