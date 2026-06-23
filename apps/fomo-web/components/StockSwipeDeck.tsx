@@ -243,7 +243,7 @@ function StockCardFace({
         <div className="mt-3.5 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
           <div className="flex items-baseline gap-1.5">
             <span className="text-[10px] uppercase tracking-wide text-text-secondary">포모</span>
-            <span className="font-display text-3xl leading-none" style={{ color: NEON }}>
+            <span className="font-number text-3xl font-bold leading-none" style={{ color: NEON }}>
               {view.scoreText.replace(/[^0-9]/g, "")}
             </span>
           </div>

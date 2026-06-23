@@ -486,7 +486,7 @@ function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rank
         {rankLabel && <span className="font-pixel text-[11px] text-muted">{rankLabel}</span>}
       </div>
       <div className="mt-1.5 flex items-end gap-2">
-        <span className="font-pixel text-4xl leading-none" style={{ color: tone }}>
+        <span className="font-number text-4xl font-bold leading-none" style={{ color: tone }}>
           {view.scoreText ? fomo.fomoScore : "—"}
         </span>
         <span className="pb-1 text-base font-bold" style={{ color: tone }}>

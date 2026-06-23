@@ -64,7 +64,7 @@ function SectorFace({ card, progress }: { card: KeywordCard; progress?: string }
         <span className="text-2xl font-bold text-whiteout">{card.keyword}</span>
       </div>
       <div className="mt-3 flex items-baseline gap-2">
-        <span className="font-pixel text-5xl leading-none" style={{ color }}>
+        <span className="font-number text-5xl font-bold leading-none" style={{ color }}>
           {card.fomoScore}
         </span>
         <span className="font-pixel text-sm text-muted">포모 점수</span>
