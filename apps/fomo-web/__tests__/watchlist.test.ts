@@ -24,8 +24,10 @@ describe("watchlist discovery metadata", () => {
     storage.set(
       "fomo_watchlist",
       JSON.stringify([
+        "현대로템",
         { stock: "삼성SDI", ts: 100 },
         { stock: "대주전자재료", ts: 200, sector: "2차전지", reason: "같은 흐름에서 같이 움직인 종목이에요." },
+        { stock: "  우진  " },
         { stock: 123, ts: 300 },
       ])
     );
@@ -33,18 +35,29 @@ describe("watchlist discovery metadata", () => {
     expect(getWatchlist()).toEqual([
       { stock: "대주전자재료", ts: 200, sector: "2차전지", reason: "같은 흐름에서 같이 움직인 종목이에요." },
       { stock: "삼성SDI", ts: 100 },
+      { stock: "우진", ts: 4 },
+      { stock: "현대로템", ts: 1 },
     ]);
   });
 
-  it("upserts discovery metadata by stock", () => {
+  it("keeps an existing discovery item stable when the same stock is saved again", () => {
     installLocalStorage();
 
     upsertWatch("대주전자재료", 100, { sector: "2차전지", reason: "첫 이유" });
     upsertWatch("대주전자재료", 200, { sector: "2차전지", reason: "갱신된 이유" });
 
     expect(getWatchlist()).toEqual([
-      { stock: "대주전자재료", ts: 200, sector: "2차전지", reason: "갱신된 이유" },
+      { stock: "대주전자재료", ts: 100, sector: "2차전지", reason: "첫 이유" },
     ]);
+  });
+
+  it("fills missing metadata without refreshing the saved timestamp", () => {
+    installLocalStorage();
+    storage.set("fomo_watchlist", JSON.stringify([{ stock: "우진", ts: 100 }]));
+
+    upsertWatch("우진", 300, { sector: "원자력", reason: "기관 수급이 이어져요." });
+
+    expect(getWatchlist()).toEqual([{ stock: "우진", ts: 100, sector: "원자력", reason: "기관 수급이 이어져요." }]);
   });
 
   it("toggleWatch stores metadata on add and removes the item on the next toggle", () => {

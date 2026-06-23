@@ -3,7 +3,9 @@
 import type { WatchItem } from "@/lib/watchlist";
 
 function relativeTime(ts: number): string {
+  if (!Number.isFinite(ts) || ts <= 0) return "저장됨";
   const mins = Math.floor((Date.now() - ts) / 60_000);
+  if (mins < 0) return "저장됨";
   if (mins < 1) return "방금";
   if (mins < 60) return `${mins}분 전`;
   const hours = Math.floor(mins / 60);

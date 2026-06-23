@@ -15,6 +15,12 @@ export interface WatchItem {
   reason?: string;
 }
 
+function normalizeStock(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const stock = value.trim();
+  return stock.length > 0 ? stock : null;
+}
+
 function read(): WatchItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -23,13 +29,17 @@ function read(): WatchItem[] {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((item): WatchItem | null => {
+      .map((item, index): WatchItem | null => {
+        const legacyStock = normalizeStock(item);
+        if (legacyStock) return { stock: legacyStock, ts: index + 1 };
         if (!item || typeof item !== "object") return null;
         const row = item as Record<string, unknown>;
-        if (typeof row.stock !== "string" || typeof row.ts !== "number") return null;
+        const stock = normalizeStock(row.stock);
+        if (!stock) return null;
+        const ts = typeof row.ts === "number" && Number.isFinite(row.ts) ? row.ts : index + 1;
         return {
-          stock: row.stock,
-          ts: row.ts,
+          stock,
+          ts,
           ...(typeof row.sector === "string" ? { sector: row.sector } : {}),
           ...(typeof row.reason === "string" ? { reason: row.reason } : {}),
         };
@@ -64,15 +74,26 @@ export function upsertWatch(
   nowMs: number,
   meta: { sector?: string | undefined; reason?: string | undefined } = {}
 ): WatchItem | null {
-  if (typeof window === "undefined" || !stock) return null;
-  const list = read().filter((w) => w.stock !== stock);
+  const normalized = normalizeStock(stock);
+  if (typeof window === "undefined" || !normalized) return null;
+  const list = read();
+  const existingIndex = list.findIndex((w) => w.stock === normalized);
+  const existing = existingIndex >= 0 ? list[existingIndex] : null;
+  const sector = existing?.sector ?? meta.sector;
+  const reason = existing?.reason ?? meta.reason;
   const item: WatchItem = {
-    stock,
-    ts: nowMs,
-    ...(meta.sector ? { sector: meta.sector } : {}),
-    ...(meta.reason ? { reason: meta.reason } : {}),
+    stock: normalized,
+    ts: existing?.ts ?? nowMs,
+    ...(sector ? { sector } : {}),
+    ...(reason ? { reason } : {}),
   };
-  write([...list, item]);
+  if (existingIndex >= 0) {
+    const next = [...list];
+    next[existingIndex] = item;
+    write(next);
+  } else {
+    write([...list, item]);
+  }
   return item;
 }
 
