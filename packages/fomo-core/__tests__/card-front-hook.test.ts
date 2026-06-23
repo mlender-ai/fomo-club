@@ -295,6 +295,40 @@ describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인",
     expect(hook.subLine).toBe("최근 거래가 평소 2.5배로 늘었어요.");
   });
 
+  it("뉴스 이벤트는 하락 긴장형보다 먼저 헤드라인을 차지한다", () => {
+    const fomo = computeFomoScore({ mentionScore: 100, volumeRatio: 2.4, changePct: -8.3 });
+    const hook = selectFomoHook({
+      fomo,
+      signals: {
+        newsEventLabel: "신약개발 해법은 AI·오픈이노베이션",
+        mentionScore: 100,
+        mentionCount: 4,
+        volumeRatio: 2.4,
+        changePct: -8.3,
+      },
+    });
+
+    expect(hook.kind).toBe("news_event");
+    expect(hook.headline).toBe("신약개발 해법은 AI·오픈이노베이션 소식이 나왔어요.");
+    expect(hook.subLine).toBe("가격은 빠졌는데, 뉴스·커뮤니티 언급은 늘었어요.");
+  });
+
+  it("긴 뉴스 원문 제목은 카드 헤드라인에서 짧게 정리한다", () => {
+    const fomo = computeFomoScore({ mentionScore: 80 });
+    const hook = selectFomoHook({
+      fomo,
+      signals: {
+        newsEventLabel: "SK바이오팜 신약개발 해법은 AI·오픈이노베이션과 글로벌 공동연구 확대",
+        mentionScore: 80,
+        mentionCount: 3,
+      },
+    });
+
+    expect(hook.kind).toBe("news_event");
+    expect(hook.headline).toBe("SK바이오팜 신약개발 해법은 AI·오픈이노베이션과 글로벌 공동연구 … 소식이 나왔어요.");
+    expect(hook.headline.length).toBeLessThanOrEqual(50);
+  });
+
   it("헤드라인·보조문장은 안전하고 결정적이다", () => {
     const fomo = computeFomoScore({ foreignNetStreak: 4, volumeRatio: 2.4, changePct: 0.4 });
     const fact: TaFact = {

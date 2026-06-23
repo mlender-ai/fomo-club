@@ -143,6 +143,12 @@ function compactEvidenceLine(text: string | undefined): string | undefined {
   return clean.length > 58 ? `${clean.slice(0, 57)}…` : clean;
 }
 
+function compactReasonHeadlineSeed(text: string | undefined): string | undefined {
+  const clean = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!clean) return undefined;
+  return clean.length > 38 ? `${clean.slice(0, 37)}…` : clean;
+}
+
 function FeedSignalStrip({
   bull,
   bear,
@@ -418,7 +424,7 @@ export function StockSwipeDeck({
 
   // 카드 표현 — 포모 점수(척추, 단일 출처) → fomoCardView.
   // 긴 원문 재료는 why/depth 로 보내고, 앞면은 잘리지 않는 핵심 독해만 남긴다.
-  const cardFor = (stock: DeckStock): { view: FomoCardView; subLine?: string } => {
+  const cardFor = (stock: DeckStock): { view: FomoCardView; subLine?: string; usedReasonHeadline?: boolean } => {
     const e = front[stock.canonical];
     if (!e) {
       const view: FomoCardView = {
@@ -432,15 +438,25 @@ export function StockSwipeDeck({
       return { view, subLine: "가격·거래량 신호를 불러오고 있어요." };
     }
     const fomo = e?.fomo ?? EMPTY_FOMO;
+    const reasonHeadlineSeed = compactReasonHeadlineSeed(stock.reason);
+    const signalsForHook: CardFrontSignals = {
+      ...(e?.signals ?? {}),
+      ...(!e?.signals.newsEventLabel && reasonHeadlineSeed ? { newsEventLabel: reasonHeadlineSeed } : {}),
+    };
     const hook = selectFomoHook({
       fomo,
-      ...(e?.signals ? { signals: e.signals } : {}),
+      signals: signalsForHook,
       ...(e?.taFact ? { taFact: e.taFact } : {}),
     });
     const baseView = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
     const view = { ...baseView, headline: hook.headline };
-    const evidenceLine = compactEvidenceLine(stock.reason);
-    return { view, ...(evidenceLine || hook.subLine ? { subLine: evidenceLine ?? hook.subLine } : {}) };
+    const usedReasonHeadline = !!reasonHeadlineSeed && !e?.signals.newsEventLabel && hook.kind === "news_event";
+    const evidenceLine = usedReasonHeadline ? undefined : compactEvidenceLine(stock.reason);
+    return {
+      view,
+      ...(evidenceLine || hook.subLine ? { subLine: evidenceLine ?? hook.subLine } : {}),
+      ...(usedReasonHeadline ? { usedReasonHeadline } : {}),
+    };
   };
   const rankLabelFor = (stock: DeckStock): string | undefined => {
     const r = front[stock.canonical]?.signals.marketCapRank;
@@ -462,13 +478,13 @@ export function StockSwipeDeck({
     if (!e) {
       return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
     }
-    const { view, subLine } = cardFor(stock);
+    const { view, subLine, usedReasonHeadline } = cardFor(stock);
     const deduped = dedupeCardCopy({
       headline: view.headline,
       why: whyFor(stock),
       feedBull: e?.feedBull,
       feedBear: e?.feedBear,
-      preserveGroundedReason: !!stock.reason,
+      preserveGroundedReason: !!stock.reason && !usedReasonHeadline,
     });
     return (
       <StockCardFace

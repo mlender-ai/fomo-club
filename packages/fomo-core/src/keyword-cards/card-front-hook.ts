@@ -360,6 +360,16 @@ function ratioText(ratio: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+function compactNewsLabel(label: string): string {
+  const clean = label
+    .replace(/\s+/g, " ")
+    .replace(/[.!?。]+$/, "")
+    .replace(/\s+소식$/, "")
+    .trim();
+  if (clean.length <= 38) return clean;
+  return `${clean.slice(0, 37)}…`;
+}
+
 const TA_EVERYDAY: Record<TaFactKind, string> = {
   accumulation_divergence: "거래는 느는데 가격은 잠잠해요.",
   bollinger_squeeze: "며칠째 가격이 좁은 폭에서만 움직이고 있어요.",
@@ -446,12 +456,12 @@ function newsEventCandidate(signals: CardFrontSignals): HookCandidate | null {
     signals.newsEventLabel?.trim() ??
     (signals.catalysts ?? []).find((c) => c.kind === "news" && c.label.trim())?.label.trim();
   if (!label || label === "재료") return null;
-  const event = label.replace(/[.!?。]+$/, "").replace(/\s+소식$/, "");
+  const event = compactNewsLabel(label);
   const headline = `${event} 소식이 나왔어요.`;
   return {
     kind: "news_event",
     tier: "material",
-    score: 0.94,
+    score: 1.18,
     headline,
   };
 }
