@@ -18,7 +18,7 @@ import {
   type WordingVerdict,
   type OfficialFact,
 } from "@fomo/core";
-import { fetchAllNews } from "./fomo-news-sources";
+import { fetchAllNews, fetchNaverStockNews } from "./fomo-news-sources";
 import { fetchFredDocs } from "./fred";
 import { fetchDcStockTitles } from "./dcinside";
 
@@ -225,7 +225,8 @@ export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
   const isForeign = def ? def.country !== "KR" : false;
   const matches = (s: string) => stockMatchesText(stock, s);
 
-  const [newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
+  const [stockNewsRes, newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
+    code ? fetchNaverStockNews(code, MAX_NEWS) : Promise.resolve([]),
     fetchAllNews(),
     fetchDcStockTitles(),
     code ? fetchNaverBoardPosts(code) : Promise.resolve([]),
@@ -240,22 +241,37 @@ export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
   const docs: SourceDoc[] = [];
   let n = 0;
   const nextId = () => `S${++n}`;
+  const seenNews = new Set<string>();
+  const pushNews = (a: Awaited<ReturnType<typeof fetchAllNews>>[number]) => {
+    const key = a.url || a.title;
+    if (!key || seenNews.has(key)) return;
+    seenNews.add(key);
+    docs.push({
+      id: nextId(),
+      kind: "news",
+      title: a.title,
+      ...(a.summary ? { body: a.summary } : {}),
+      ...(a.source ? { source: a.source } : {}),
+      ...(a.url ? { url: a.url } : {}),
+      ...(a.publishedAt ? { publishedAt: a.publishedAt } : {}),
+      tier: a.tier ?? "news-mid",
+    });
+  };
+
+  // 네이버 종목별 뉴스 — 전체 금융 RSS보다 종목 커버리지가 높아 stock-insight grounded 근거의 1순위 연료다.
+  if (stockNewsRes.status === "fulfilled") {
+    const hit = stockNewsRes.value
+      .filter((a) => matches(`${a.title} ${a.summary ?? ""}`))
+      .slice(0, MAX_NEWS);
+    for (const a of hit) pushNews(a);
+  } else {
+    console.warn("[stock-understanding] naver stock news error", stockNewsRes.reason);
+  }
 
   // 뉴스 — 종목명(별칭 포함)이 제목/요약에 등장하는 기사만.
   if (newsRes.status === "fulfilled") {
     const hit = newsRes.value.filter((a) => matches(`${a.title} ${a.summary ?? ""}`)).slice(0, MAX_NEWS);
-    for (const a of hit) {
-      docs.push({
-        id: nextId(),
-        kind: "news",
-        title: a.title,
-        ...(a.summary ? { body: a.summary } : {}),
-        ...(a.source ? { source: a.source } : {}),
-        ...(a.url ? { url: a.url } : {}),
-        ...(a.publishedAt ? { publishedAt: a.publishedAt } : {}),
-        tier: a.tier ?? "news-mid",
-      });
-    }
+    for (const a of hit) pushNews(a);
   } else {
     console.warn("[stock-understanding] news error", newsRes.reason);
   }

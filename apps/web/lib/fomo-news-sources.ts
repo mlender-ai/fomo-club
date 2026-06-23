@@ -1,7 +1,9 @@
 import {
   parseNaverNews,
+  parseNaverStockNews,
   parseRssFeed,
   parseYahooRss,
+  type NaverStockNewsRawGroup,
   type NaverNewsRaw,
   type NewsSource,
   type RawArticle,
@@ -88,6 +90,7 @@ const KR_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] 
 // ───────────────────────── 네이버 금융 뉴스 (JSON) ─────────────────────────
 // 해외 증시 실시간 뉴스(이미 한국어). api.stock.naver.com/news/worldNews.
 const NAVER_NEWS_URL = "https://api.stock.naver.com/news/worldNews?pageSize=20&page=1";
+const NAVER_STOCK_NEWS_URL = "https://api.stock.naver.com/news/stock";
 
 export const naverNewsSource: NewsSource = {
   id: "naver",
@@ -110,6 +113,24 @@ export const naverNewsSource: NewsSource = {
     }
   },
 };
+
+/** 네이버 종목별 뉴스 — stock-insight 원문 근거 보강용. 코드 1개만 좁게 조회한다. */
+export async function fetchNaverStockNews(code: string, pageSize = 10): Promise<RawArticle[]> {
+  if (!/^\d{6}$/.test(code)) return [];
+  try {
+    const res = await fetch(`${NAVER_STOCK_NEWS_URL}/${code}?pageSize=${pageSize}&page=1`, {
+      headers: { accept: "application/json", "user-agent": BROWSER_UA },
+      signal: AbortSignal.timeout(8_000),
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as NaverStockNewsRawGroup[];
+    return withTier(parseNaverStockNews(Array.isArray(json) ? json : [], new Date().toISOString()), "news-mid");
+  } catch (err) {
+    console.warn(`[fomo/news] naver stock ${code} error`, err);
+    return [];
+  }
+}
 
 /** 한국 RSS 피드 1개 → 한국어 RawArticle[]. 실패 시 빈 배열. */
 function makeKoreanRssSource({ id, url, source, tier }: (typeof KR_FEEDS)[number]): NewsSource {

@@ -36,6 +36,17 @@ function slugId(url: string): string {
   return `news-${url.replace(/^https?:\/\//, "").replace(/[^a-z0-9]+/gi, "-").slice(0, 60)}`;
 }
 
+function decodeHtmlText(s: string): string {
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCodePoint(Number.parseInt(n, 16)));
+}
+
 /**
  * 범용 RSS 2.0 파서 — 한국 금융 뉴스(한경/매경/연합 등) 정규화용.
  * 표준 <item>(title/link/description/pubDate)만 본다. category 영문 추론 없음(한국어 소스).
@@ -103,6 +114,22 @@ export interface NaverNewsRaw {
   dt?: string;
 }
 
+/** 네이버 종목별 뉴스 JSON 1그룹. (api.stock.naver.com/news/stock/{code}) */
+export interface NaverStockNewsRawGroup {
+  total?: number;
+  items?: Array<{
+    officeId?: string;
+    articleId?: string;
+    officeName?: string;
+    /** "YYYYMMDDHHmm" (KST). */
+    datetime?: string;
+    title?: string;
+    titleFull?: string;
+    body?: string;
+    mobileNewsUrl?: string;
+  }>;
+}
+
 /** "YYYYMMDDHHmmss"(KST) → ISO. 실패 시 빈 문자열. */
 function naverDtToIso(dt: string | undefined): string {
   if (!dt || !/^\d{14}$/.test(dt)) return "";
@@ -113,6 +140,11 @@ function naverDtToIso(dt: string | undefined): string {
   return Number.isNaN(t) ? "" : new Date(t).toISOString();
 }
 
+function naverStockDtToIso(dt: string | undefined): string {
+  if (!dt || !/^\d{12}$/.test(dt)) return "";
+  return naverDtToIso(`${dt}00`);
+}
+
 /**
  * 네이버 금융 뉴스 JSON → RawArticle[]. 이미 한국어(국내·해외 모두 한국어 번역 제공).
  * 본문 요약(subcontent)은 길어서 잘라 담는다. URL은 표준 n.news.naver.com 패턴.
@@ -121,12 +153,14 @@ export function parseNaverNews(items: NaverNewsRaw[], nowIso: string): RawArticl
   const out: RawArticle[] = [];
   const seen = new Set<string>();
   for (const it of items ?? []) {
-    const title = (it.tit ?? "").replace(/<[^>]*>/g, "").trim();
+    const title = decodeHtmlText((it.tit ?? "").replace(/<[^>]*>/g, "")).trim();
     if (!title || !it.oid || !it.aid) continue;
     const url = `https://n.news.naver.com/mnews/article/${it.oid}/${it.aid}`;
     if (seen.has(url)) continue;
     seen.add(url);
-    const summary = (it.subcontent ?? "").replace(/<[^>]*>/g, "").replace(/\*\*/g, "").trim().slice(0, 160);
+    const summary = decodeHtmlText((it.subcontent ?? "").replace(/<[^>]*>/g, "").replace(/\*\*/g, ""))
+      .trim()
+      .slice(0, 160);
     out.push({
       id: slugId(url),
       title,
@@ -136,6 +170,38 @@ export function parseNaverNews(items: NaverNewsRaw[], nowIso: string): RawArticl
       lang: "ko",
       ...(summary ? { summary } : {}),
     });
+  }
+  return out;
+}
+
+/** 네이버 종목별 뉴스 JSON → RawArticle[]. 종목 뎁스 원문 근거 보강용. */
+export function parseNaverStockNews(groups: NaverStockNewsRawGroup[], nowIso: string): RawArticle[] {
+  const out: RawArticle[] = [];
+  const seen = new Set<string>();
+  for (const group of groups ?? []) {
+    for (const it of group.items ?? []) {
+      const title = decodeHtmlText((it.titleFull || it.title || "").replace(/<[^>]*>/g, "")).trim();
+      if (!title) continue;
+      const url =
+        it.mobileNewsUrl ||
+        (it.officeId && it.articleId
+          ? `https://n.news.naver.com/mnews/article/${it.officeId}/${it.articleId}`
+          : "");
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      const summary = decodeHtmlText((it.body ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " "))
+        .trim()
+        .slice(0, 200);
+      out.push({
+        id: slugId(url),
+        title,
+        url,
+        source: it.officeName?.trim() || "네이버 금융",
+        publishedAt: naverStockDtToIso(it.datetime) || nowIso,
+        lang: "ko",
+        ...(summary ? { summary } : {}),
+      });
+    }
   }
   return out;
 }

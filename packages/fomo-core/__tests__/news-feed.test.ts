@@ -5,6 +5,7 @@ import {
   localizeArticle,
   parseKoTranslations,
   parseNaverNews,
+  parseNaverStockNews,
   parseRssFeed,
   parseYahooRss,
   scoreArticleFomo,
@@ -135,6 +136,45 @@ describe("parseNaverNews", () => {
     expect(out[0]!.url).toBe("https://n.news.naver.com/mnews/article/fnGuide/123");
     expect(out[0]!.summary).toBe("반도체 강세");
     expect(out[0]!.publishedAt).toBe("2026-06-12T04:07:57.000Z");
+  });
+});
+
+describe("parseNaverStockNews", () => {
+  it("네이버 종목별 뉴스 그룹 → 한국어 기사 (중복 URL 제거)", () => {
+    const groups = [
+      {
+        total: 2,
+        items: [
+          {
+            officeId: "018",
+            articleId: "0006312961",
+            officeName: "이데일리",
+            datetime: "202606231203",
+            title: "짧은 제목",
+            titleFull: "'삼전닉스'가 끌어올린 R&amp;D 기업 실적",
+            body: "반도체 호황이 삼성전자와 SK하이닉스를 중심으로 기업 실적을 끌어올렸다.",
+            mobileNewsUrl: "https://n.news.naver.com/mnews/article/018/0006312961",
+          },
+          {
+            officeId: "018",
+            articleId: "0006312961",
+            officeName: "이데일리",
+            datetime: "202606231203",
+            titleFull: "중복 기사",
+            mobileNewsUrl: "https://n.news.naver.com/mnews/article/018/0006312961",
+          },
+        ],
+      },
+    ];
+
+    const out = parseNaverStockNews(groups, "2026-06-23T03:00:00Z");
+    expect(out).toHaveLength(1);
+    expect(out[0]!.title).toBe("'삼전닉스'가 끌어올린 R&D 기업 실적");
+    expect(out[0]!.source).toBe("이데일리");
+    expect(out[0]!.url).toBe("https://n.news.naver.com/mnews/article/018/0006312961");
+    expect(out[0]!.publishedAt).toBe("2026-06-23T03:03:00.000Z");
+    expect(out[0]!.summary).toContain("반도체 호황");
+    expect(out[0]!.lang).toBe("ko");
   });
 });
 
