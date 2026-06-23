@@ -1,4 +1,4 @@
-import { stocksBySector, type KeywordCard, type SectorStock, type StockSector } from "@fomo/core";
+import { resolveStock, stocksBySector, type KeywordCard, type SectorStock, type StockSector } from "@fomo/core";
 import { getWatchlist } from "./watchlist";
 import { recentSeenStocks, stockInteractionSummary, stockInterestScore } from "./stockInterest";
 
@@ -19,6 +19,24 @@ export type DeckStock = SectorStock & { reason?: string; whyShown?: string };
 export interface SectorPool {
   sector: StockSector;
   stocks: SectorStock[];
+}
+
+function enrichDiscoveredStock(
+  stock: Pick<SectorStock, "canonical" | "market" | "country" | "naverCode"> & Partial<Pick<SectorStock, "marquee">>,
+  sector: StockSector,
+  reason: string
+): DeckStock {
+  const resolved = resolveStock(stock.canonical);
+  const naverCode = resolved?.naverCode ?? stock.naverCode;
+  return {
+    canonical: resolved?.canonical ?? stock.canonical,
+    market: resolved?.market ?? stock.market,
+    country: resolved?.country ?? stock.country,
+    marquee: resolved?.marquee ?? stock.marquee ?? false,
+    sector,
+    reason,
+    ...(naverCode ? { naverCode } : {}),
+  };
 }
 
 /**
@@ -46,7 +64,7 @@ export function buildSectorDiscoveryStocks(
     const s = c.surpriseStock;
     if (!s?.reason || have.has(s.canonical)) continue;
     have.add(s.canonical);
-    out.push({ canonical: s.canonical, market: s.market, country: s.country, marquee: false, sector, reason: s.reason });
+    out.push(enrichDiscoveredStock(s, sector, s.reason));
   }
   return rankInstantStocks(out);
 }
@@ -83,14 +101,8 @@ export function buildTodayDiscoveryStocks(
     if (!sectorSet.has(card.keyword)) continue;
     const surprise = card.surpriseStock;
     if (!surprise?.reason) continue;
-    byCanonical.set(surprise.canonical, {
-      canonical: surprise.canonical,
-      market: surprise.market,
-      country: surprise.country,
-      marquee: false,
-      sector: card.keyword as StockSector,
-      reason: surprise.reason,
-    });
+    const enriched = enrichDiscoveredStock(surprise, card.keyword as StockSector, surprise.reason);
+    byCanonical.set(enriched.canonical, enriched);
   }
 
   for (const pool of pools) {

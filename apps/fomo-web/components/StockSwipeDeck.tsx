@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
 import type { CardFrontSignals, FomoScoreResult, FomoCardView, TaFact } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
@@ -124,6 +124,21 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 /** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 
+function clampStyle(lines: number): CSSProperties {
+  return {
+    display: "-webkit-box",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: lines,
+    overflow: "hidden",
+  };
+}
+
+function compactEvidenceLine(text: string | undefined): string | undefined {
+  const clean = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!clean) return undefined;
+  return clean.length > 58 ? `${clean.slice(0, 57)}…` : clean;
+}
+
 /**
  * 종목 카드 앞면 — 포모 점수(척추 ②, 단일 출처)로 점수·라벨·헤드라인·톤. 휴리스틱 대체.
  * 정체성 / 현재가 / 포모점수+라벨 / 테마태그 / 헤드라인 / 스파크라인 / 재료. 점수=주목도(품질 아님), 예측 0.
@@ -212,19 +227,23 @@ function StockCardFace({
       )}
 
       {/* 헤드라인 = 종목별 후킹 사실 1개. 색 강조는 점수/미터/CTA에만 둔다. */}
-      <p className="mt-3 line-clamp-2 shrink-0 text-lg font-bold leading-7 text-whiteout">
+      <p className="mt-3 shrink-0 text-lg font-bold leading-7 text-whiteout" style={clampStyle(2)}>
         {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
         {view.headline}
       </p>
 
       <div className="mt-2.5 shrink-0 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
         <span className="block text-[10px] text-muted">보여주는 이유</span>
-        <span className="mt-1 line-clamp-2 text-sm leading-6 text-whiteout">{why}</span>
+        <span className="mt-1 text-sm leading-6 text-whiteout" style={clampStyle(2)}>
+          {why}
+        </span>
       </div>
 
       {subLine && (
         <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-2">
-          <span className="line-clamp-1 text-sm leading-6 text-muted">{subLine}</span>
+          <span className="text-sm leading-6 text-muted" style={clampStyle(1)}>
+            {subLine}
+          </span>
         </div>
       )}
 
@@ -377,7 +396,8 @@ export function StockSwipeDeck({
     });
     const baseView = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
     const view = { ...baseView, headline: hook.headline };
-    return { view, ...(hook.subLine ? { subLine: hook.subLine } : {}) };
+    const evidenceLine = compactEvidenceLine(stock.reason);
+    return { view, ...(evidenceLine || hook.subLine ? { subLine: evidenceLine ?? hook.subLine } : {}) };
   };
   const rankLabelFor = (stock: DeckStock): string | undefined => {
     const r = front[stock.canonical]?.signals.marketCapRank;
@@ -522,7 +542,7 @@ export function StockSwipeDeck({
 
   return (
     <div className="w-full">
-      <div className="relative mx-auto h-[64vh] min-h-[500px] max-h-[640px] w-full select-none">
+      <div className="relative mx-auto h-[60svh] min-h-[460px] max-h-[580px] w-full select-none sm:min-h-[500px]">
         {/* 단일 카드만 렌더 — 글래스모피즘 카드 뒤로 비침 금지(스택 미리보기 제거). */}
         <div
           onPointerDown={onPointerDown}

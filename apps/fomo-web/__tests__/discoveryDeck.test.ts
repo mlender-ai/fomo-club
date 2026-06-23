@@ -40,8 +40,8 @@ describe("buildTodayDiscoveryStocks", () => {
       {
         keyword: "AI",
         surpriseStock: {
-          canonical: "테스트3",
-          market: "KOSDAQ",
+          canonical: "SK바이오팜",
+          market: "KOSPI",
           country: "KR",
           mentions: 2,
           surprise: 0.8,
@@ -54,7 +54,36 @@ describe("buildTodayDiscoveryStocks", () => {
 
     expect(result).toHaveLength(MAX_DISCOVERY_STOCKS);
     expect(new Set(result.map((s) => s.canonical)).size).toBe(result.length);
-    expect(result.find((s) => s.canonical === "테스트3")?.reason).toBe("원문 근거");
+    const discovered = result.find((s) => s.canonical === "SK바이오팜");
+    expect(discovered?.reason).toBe("원문 근거");
+    expect(discovered?.naverCode).toBe("326030");
+  });
+
+  it("keeps discovered stocks in the keyword sector while enriching market metadata", () => {
+    const result = buildTodayDiscoveryStocks(
+      [],
+      [
+        {
+          keyword: "AI",
+          surpriseStock: {
+            canonical: "SK바이오팜",
+            market: "KOSPI",
+            country: "KR",
+            mentions: 3,
+            surprise: 0.9,
+            reason: "AI 원문 근거",
+          },
+        } as KeywordCard,
+      ],
+      ["AI"]
+    );
+
+    expect(result[0]).toMatchObject({
+      canonical: "SK바이오팜",
+      sector: "AI",
+      naverCode: "326030",
+      reason: "AI 원문 근거",
+    });
   });
 
   it("pushes recently seen and lessed stocks out of the first 20 when there is enough pool", () => {
