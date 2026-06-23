@@ -380,6 +380,8 @@ export function StockSwipeDeck({
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
   const [restoring, setRestoring] = useState(false);
+  const [restoreStart, setRestoreStart] = useState<null | "left" | "right">(null);
+  const [restorePrimed, setRestorePrimed] = useState(false);
   const [selected, setSelected] = useState<DeckStock | null>(null);
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   const dragging = useRef(false);
@@ -543,17 +545,23 @@ export function StockSwipeDeck({
 
   const undoLast = useCallback(() => {
     if (!undoEntry || exiting) return;
-    const fromX = undoEntry.dir === "right" ? 72 : -72;
     setExiting(null);
+    setDx(0);
     setIdx(undoEntry.idx);
     setUndoEntry(null);
     if (prefersReducedMotion()) {
-      setDx(0);
+      setRestoreStart(null);
+      setRestorePrimed(false);
+      setRestoring(false);
       return;
     }
     setRestoring(true);
-    setDx(fromX);
-    window.setTimeout(() => setDx(0), 20);
+    setRestorePrimed(true);
+    setRestoreStart(undoEntry.dir);
+    window.setTimeout(() => {
+      setRestorePrimed(false);
+      setRestoreStart(null);
+    }, 20);
     window.setTimeout(() => setRestoring(false), EXIT_MS + 40);
   }, [undoEntry, exiting]);
 
@@ -632,10 +640,14 @@ export function StockSwipeDeck({
   }, [idx, front, stocks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const top = at(idx);
-  const topTransform = exiting
-    ? `translateX(${exiting === "right" ? 140 : -140}%) rotate(${exiting === "right" ? 16 : -16}deg)`
-    : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
-  const topTransition = dragging.current ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
+  const flingTransform = (dir: "left" | "right") =>
+    `translateX(${dir === "right" ? 140 : -140}%) rotate(${dir === "right" ? 16 : -16}deg)`;
+  const topTransform = restoreStart
+    ? flingTransform(restoreStart)
+    : exiting
+      ? flingTransform(exiting)
+      : `translateX(${dx}px) rotate(${dx * 0.04}deg)`;
+  const topTransition = dragging.current || restorePrimed ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
   const topReady = !!front[top.canonical];
 
   return (
