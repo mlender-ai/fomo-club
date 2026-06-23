@@ -12,7 +12,7 @@ import type { DeckStock } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
-import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
+import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon } from "@/components/icons";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -39,6 +39,12 @@ export type FrontEntry = {
   changeDir?: "up" | "down" | "flat";
   feedBull?: FeedSignalPoint;
   feedBear?: FeedSignalPoint;
+};
+
+type UndoEntry = {
+  idx: number;
+  dir: "left" | "right";
+  stock: DeckStock;
 };
 
 function prefersReducedMotion(): boolean {
@@ -374,6 +380,7 @@ export function StockSwipeDeck({
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
   const [selected, setSelected] = useState<DeckStock | null>(null);
+  const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
   const moved = useRef(false);
@@ -523,6 +530,7 @@ export function StockSwipeDeck({
   const advance = useCallback(
     (dir: "left" | "right") => {
       const stock = at(idx);
+      setUndoEntry({ idx, dir, stock });
       if (dir === "right") saveDiscovery(stock);
       recordDiscoveryEvent("swipe", { direction: dir, hydrated: !!front[stock.canonical] });
       recordStockInterest(stock.canonical, dir === "right" ? "more" : "less", Date.now());
@@ -531,6 +539,14 @@ export function StockSwipeDeck({
     },
     [idx, stocks, flingNext, front]
   );
+
+  const undoLast = useCallback(() => {
+    if (!undoEntry || exiting) return;
+    setDx(0);
+    setExiting(null);
+    setIdx(undoEntry.idx);
+    setUndoEntry(null);
+  }, [undoEntry, exiting]);
 
   const openDepth = (stock: DeckStock, source: "card" | "interest_button" = "card") => {
     if (!loggedIn && onRequireLogin) {
@@ -547,6 +563,7 @@ export function StockSwipeDeck({
     setSelected(stock);
   };
   const closeDepth = () => {
+    if (selected) setUndoEntry({ idx, dir: "left", stock: selected });
     setSelected(null);
     window.setTimeout(() => flingNext("left"), 40);
   };
@@ -582,6 +599,10 @@ export function StockSwipeDeck({
   useEffect(() => {
     recordDiscoveryEvent("deck_mount");
   }, [contextLabel]);
+
+  useEffect(() => {
+    setUndoEntry(null);
+  }, [stocks]);
 
   useEffect(() => {
     const stock = at(idx).canonical;
@@ -647,6 +668,15 @@ export function StockSwipeDeck({
           className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-xl text-muted transition-colors hover:text-whiteout disabled:opacity-40"
         >
           ✕
+        </button>
+        <button
+          onClick={undoLast}
+          disabled={!!exiting || !undoEntry}
+          aria-label={undoEntry ? `${undoEntry.stock.canonical} 카드로 돌아가기` : "이전 카드 없음"}
+          title={undoEntry ? `${undoEntry.stock.canonical} 다시 보기` : "이전 카드 없음"}
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-muted transition-colors hover:text-whiteout disabled:opacity-30"
+        >
+          <UndoIcon size={20} />
         </button>
         <button
           onClick={() => openDepth(top, "interest_button")}
