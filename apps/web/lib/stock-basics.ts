@@ -1,4 +1,4 @@
-import { assembleStockBasics, resolveStock, type StockBasics } from "@fomo/core";
+import { assembleStockBasics, parseNaverStockBasic, resolveStock, type StockBasics } from "@fomo/core";
 
 /**
  * 종목 기본 정보(바닥) 수집 — STOCK_SCREEN_REDESIGN §2.
@@ -13,11 +13,11 @@ import { assembleStockBasics, resolveStock, type StockBasics } from "@fomo/core"
 const UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
 
-async function getJson(url: string): Promise<unknown> {
+async function getJson(url: string, timeoutMs = 8000): Promise<unknown> {
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": UA, Accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) {
       console.warn("[stock-basics] non-OK", res.status, url);
@@ -28,6 +28,25 @@ async function getJson(url: string): Promise<unknown> {
     console.warn("[stock-basics] fetch failed", url, (err as Error)?.message);
     return null;
   }
+}
+
+/** 카드 앞면 lite용 — 주가·등락만 짧게 가져온다. 상세 지표/재무/개요는 depth API가 맡는다. */
+export async function fetchStockBasicsLite(stock: string, timeoutMs = 3500): Promise<StockBasics> {
+  const def = resolveStock(stock);
+  const code = def?.naverCode;
+  if (!code) return { name: def?.canonical ?? stock, metrics: [] };
+
+  const base = `https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}`;
+  const basic = await getJson(`${base}/basic`, timeoutMs);
+  const parsed = parseNaverStockBasic(basic);
+  return {
+    name: parsed.name || def?.canonical || stock,
+    ...(parsed.market ? { market: parsed.market } : {}),
+    ...(parsed.priceText ? { priceText: parsed.priceText } : {}),
+    ...(parsed.changeText ? { changeText: parsed.changeText } : {}),
+    ...(parsed.changeDir ? { changeDir: parsed.changeDir } : {}),
+    metrics: [],
+  };
 }
 
 /** 종목명으로 기본 정보. 코드 해석 실패(미등록/미국주) → name 만(빈 화면 대신 최소 보장). */

@@ -48,6 +48,29 @@ export async function cachedGet<T>(
   return promise;
 }
 
+export async function refreshCached<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttlMs: number
+): Promise<T> {
+  const pending = inflight.get(key);
+  if (pending) return pending as Promise<T>;
+
+  const previous = memoryCache.get(key)?.value as T | undefined;
+  const promise = fetcher()
+    .then((value) => setCached(key, value, ttlMs))
+    .catch((err) => {
+      if (previous !== undefined) return previous;
+      throw err;
+    })
+    .finally(() => {
+      inflight.delete(key);
+    });
+
+  inflight.set(key, promise);
+  return promise;
+}
+
 export function clearApiCache(): void {
   memoryCache.clear();
   inflight.clear();

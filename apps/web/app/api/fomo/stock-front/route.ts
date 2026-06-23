@@ -50,7 +50,7 @@ async function getThemeRelativeMap(sector: StockSector): Promise<Record<string, 
   return load();
 }
 
-async function getFront(stock: string): Promise<StockFrontData> {
+async function getFront(stock: string, lite = false): Promise<StockFrontData> {
   const today = kstDate();
   const load = unstable_cache(
     async () => {
@@ -58,30 +58,32 @@ async function getFront(stock: string): Promise<StockFrontData> {
       const canonical = def?.canonical ?? stock;
       const sector = def ? sectorOf(def.canonical) : undefined;
       const [rankMap, attentionMap, themeRelativeMap] = await Promise.all([
-        getRankMap().catch(() => ({})),
-        getAttentionMap().catch((): Record<string, StockAttentionSignal> => ({})),
-        sector
+        lite ? Promise.resolve({}) : getRankMap().catch(() => ({})),
+        lite ? Promise.resolve({} as Record<string, StockAttentionSignal>) : getAttentionMap().catch((): Record<string, StockAttentionSignal> => ({})),
+        !lite && sector
           ? getThemeRelativeMap(sector).catch((): Record<string, ThemeRelativeSignal> => ({}))
           : Promise.resolve({} as Record<string, ThemeRelativeSignal>),
       ]);
       return assembleStockFront(stock, rankMap, {
         ...(attentionMap[canonical] ? { attention: attentionMap[canonical] } : {}),
         ...(themeRelativeMap[canonical] ? { themeRelative: themeRelativeMap[canonical] } : {}),
-      });
+      }, { lite });
     },
-    ["fomo-stock-front", cacheVersion(), today, stock],
+    ["fomo-stock-front", lite ? "lite" : "full", cacheVersion(), today, stock],
     { revalidate: REVALIDATE_S }
   );
   return load();
 }
 
 export async function GET(req: Request) {
-  const stock = new URL(req.url).searchParams.get("stock")?.trim();
+  const url = new URL(req.url);
+  const stock = url.searchParams.get("stock")?.trim();
+  const lite = url.searchParams.get("lite") === "1";
   if (!stock) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }
   try {
-    const data = await getFront(stock);
+    const data = await getFront(stock, lite);
     return withCors(
       NextResponse.json(data, {
         headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400" },

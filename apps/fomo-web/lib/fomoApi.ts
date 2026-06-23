@@ -10,7 +10,7 @@ import type {
   ScoredArticle,
 } from "@fomo/core";
 import { getSessionId } from "@/lib/session";
-import { cachedGet, readCached } from "./apiCache";
+import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
 
 export type { BannerItem } from "@fomo/core";
 
@@ -28,6 +28,7 @@ const CACHE_TTL = {
   themeInsight: 6 * HOUR,
   stockInsight: 6 * HOUR,
 } as const;
+export const KEYWORDS_UPDATED_EVENT = "fomo:keywords-updated";
 
 function kstDateKey(now = new Date()): string {
   return new Date(now.getTime() + 9 * HOUR).toISOString().slice(0, 10);
@@ -100,15 +101,60 @@ export interface KeywordsResponse {
   snapshotDate?: string | null;
 }
 const keywordsKey = () => `keywords:${kstDateKey()}`;
+const keywordsStorageKey = () => `fomo:keywords:${kstDateKey()}`;
 
 export const getCachedKeywords = () => readCached<KeywordsResponse>(keywordsKey());
 
+function readStoredKeywords(): KeywordsResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(keywordsStorageKey());
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<KeywordsResponse>;
+    if (!parsed || !Array.isArray(parsed.cards) || typeof parsed.date !== "string") return null;
+    return parsed as KeywordsResponse;
+  } catch (err) {
+    console.warn("[fetchKeywords] localStorage read failed", err);
+    return null;
+  }
+}
+
+function writeStoredKeywords(value: KeywordsResponse): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(keywordsStorageKey(), JSON.stringify(value));
+  } catch (err) {
+    console.warn("[fetchKeywords] localStorage write failed", err);
+  }
+}
+
+function emitKeywordsUpdated(value: KeywordsResponse): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<KeywordsResponse>(KEYWORDS_UPDATED_EVENT, { detail: value }));
+}
+
+const fetchKeywordsNetwork = () => get<KeywordsResponse>("/api/fomo/keywords");
+
 export const fetchKeywords = async () => {
-  return cachedGet(
-    keywordsKey(),
-    () => get<KeywordsResponse>("/api/fomo/keywords"),
-    CACHE_TTL.keywords
-  );
+  const key = keywordsKey();
+  const cached = readCached<KeywordsResponse>(key);
+  if (cached) return cached;
+
+  const stored = readStoredKeywords();
+  if (stored) {
+    setCached(key, stored, CACHE_TTL.keywords);
+    void refreshCached(key, fetchKeywordsNetwork, CACHE_TTL.keywords)
+      .then((fresh) => {
+        writeStoredKeywords(fresh);
+        emitKeywordsUpdated(fresh);
+      })
+      .catch((err) => console.warn("[fetchKeywords] revalidate failed", err));
+    return stored;
+  }
+
+  const res = await cachedGet(key, fetchKeywordsNetwork, CACHE_TTL.keywords);
+  writeStoredKeywords(res);
+  return res;
 };
 
 export const warmKeywords = () => fetchKeywords();
@@ -161,10 +207,13 @@ export interface StockFrontResponse {
   changeText?: string;
   changeDir?: "up" | "down" | "flat";
 }
-export const fetchStockFront = (stock: string) =>
+export const fetchStockFront = (stock: string, opts: { lite?: boolean } = {}) =>
   cachedGet(
-    `stock-front:${stock}`,
-    () => get<StockFrontResponse>(`/api/fomo/stock-front?stock=${encodeURIComponent(stock)}`),
+    `stock-front:${opts.lite ? "lite" : "full"}:${stock}`,
+    () =>
+      get<StockFrontResponse>(
+        `/api/fomo/stock-front?stock=${encodeURIComponent(stock)}${opts.lite ? "&lite=1" : ""}`
+      ),
     CACHE_TTL.stockFront
   );
 

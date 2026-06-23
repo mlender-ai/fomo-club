@@ -11,7 +11,7 @@ import {
 } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { SectorStockDeck } from "@/components/SectorStockDeck";
-import { fetchKeywords, fetchThemeInsight, recordTaste } from "@/lib/fomoApi";
+import { KEYWORDS_UPDATED_EVENT, fetchKeywords, fetchThemeInsight, recordTaste, type KeywordsResponse } from "@/lib/fomoApi";
 import { keywordInterestScore, recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
@@ -210,6 +210,12 @@ function TodayFeed({ loggedIn, onRequireLogin }: FeedGate) {
 
   useEffect(() => {
     let alive = true;
+    const onKeywordsUpdated = (event: Event) => {
+      const res = (event as CustomEvent<KeywordsResponse>).detail;
+      if (!alive || !res?.cards?.length) return;
+      setState({ kind: "ready", cards: res.cards, confidence: res.confidence });
+    };
+    window.addEventListener(KEYWORDS_UPDATED_EVENT, onKeywordsUpdated);
     fetchKeywords()
       .then((res) => {
         if (!alive) return;
@@ -222,6 +228,7 @@ function TodayFeed({ loggedIn, onRequireLogin }: FeedGate) {
       });
     return () => {
       alive = false;
+      window.removeEventListener(KEYWORDS_UPDATED_EVENT, onKeywordsUpdated);
     };
   }, []);
 

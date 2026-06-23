@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cachedGet, clearApiCache, readCached } from "../lib/apiCache";
+import { cachedGet, clearApiCache, readCached, refreshCached } from "../lib/apiCache";
 
 beforeEach(() => {
   vi.useRealTimers();
@@ -60,6 +60,24 @@ describe("apiCache", () => {
     vi.advanceTimersByTime(1_001);
     await expect(cachedGet("stale", fetcher, 1_000)).resolves.toEqual({ value: 1 });
 
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshCached ignores fresh cache but shares inflight refreshes", async () => {
+    const fetcher = vi
+      .fn<() => Promise<{ value: number }>>()
+      .mockResolvedValueOnce({ value: 1 })
+      .mockResolvedValueOnce({ value: 2 });
+
+    await cachedGet("refresh", fetcher, 10_000);
+    const [a, b] = await Promise.all([
+      refreshCached("refresh", fetcher, 10_000),
+      refreshCached("refresh", fetcher, 10_000),
+    ]);
+
+    expect(a.value).toBe(2);
+    expect(b.value).toBe(2);
+    expect(readCached<{ value: number }>("refresh")?.value).toBe(2);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });

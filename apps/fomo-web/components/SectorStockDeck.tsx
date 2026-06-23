@@ -380,7 +380,7 @@ function SectorDeckInner({
       const key = stock.canonical;
       if (!stock.naverCode || front[key] || inflight.current.has(key)) return;
       inflight.current.add(key);
-      fetchStockFront(key)
+      fetchStockFront(key, { lite: true })
         .then((d) =>
           setFront((prev) => ({
             ...prev,

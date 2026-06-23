@@ -13,7 +13,7 @@ import {
   type DailyOhlcv,
   type TaFact,
 } from "@fomo/core";
-import { fetchStockBasics } from "./stock-basics";
+import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
 
@@ -146,6 +146,11 @@ export interface StockFrontData {
   changeDir?: "up" | "down" | "flat";
 }
 
+export interface StockFrontOptions {
+  /** 카드 앞면용 경량 경로. 시총순위·TA·스파크라인·상세 지표를 빼고 가격/수급/언급만 쓴다. */
+  lite?: boolean;
+}
+
 /**
  * 한 종목의 카드 앞면 데이터 조립 + 포모 점수 산출(척추 단일 출처).
  * baseline(가격·52주) + 라이브 수급 streak + 거래량 회전·추세 + 시총순위 + 스파크라인 → computeFomoScore.
@@ -154,16 +159,18 @@ export interface StockFrontData {
 export async function assembleStockFront(
   stock: string,
   rankMap?: Record<string, RankEntry>,
-  coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {}
+  coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {},
+  options: StockFrontOptions = {}
 ): Promise<StockFrontData> {
   const def = resolveStock(stock);
   const code = def?.naverCode;
   if (!code) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+  const lite = options.lite === true;
 
   const [basics, history, daily] = await Promise.all([
-    fetchStockBasics(stock).catch(() => null),
+    (lite ? fetchStockBasicsLite(stock) : fetchStockBasics(stock)).catch(() => null),
     readSupplyDemandHistory(code).catch(() => []),
-    fetchStockDaily(code),
+    lite ? Promise.resolve({ candles: [], closes: [], volumes: [] }) : fetchStockDaily(code),
   ]);
 
   const signals: CardFrontSignals = basics ? signalsFromBasics(basics) : {};
@@ -187,31 +194,31 @@ export async function assembleStockFront(
     if (streak.institution !== 0) signals.institutionNetStreak = streak.institution;
   }
 
-  const rank = rankMap?.[code];
+  const rank = lite ? undefined : rankMap?.[code];
   if (rank) signals.marketCapRank = { scope: "market", market: rank.market, rank: rank.rank };
 
   // ── 포모 점수(척추) — 거래량 회전·가격(등락·추세)·수급. 언급량·prevScore 는 후속(없으면 제외). ──
-  const volRatio = volumeTurnover(daily.volumes);
+  const volRatio = lite ? undefined : volumeTurnover(daily.volumes);
   if (typeof volRatio === "number") signals.volumeRatio = volRatio;
-  const ta = computeTechnicalAnalysis(daily.candles);
-  const trend = ta.inputs.trendStrength ?? trendStrength(daily.closes);
+  const ta = lite ? null : computeTechnicalAnalysis(daily.candles);
+  const trend = ta?.inputs.trendStrength ?? (lite ? undefined : trendStrength(daily.closes));
   const fomo = computeFomoScore({
     ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
     ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
     ...(typeof trend === "number" ? { trendStrength: trend } : {}),
     ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
-    ...(ta.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
-    ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
+    ...(ta?.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
+    ...(ta?.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
     ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),
     ...(typeof signals.institutionNetStreak === "number" ? { institutionNetStreak: signals.institutionNetStreak } : {}),
   });
-  const taFact = selectTaFact(fomo, ta);
+  const taFact = ta ? selectTaFact(fomo, ta) : undefined;
 
   return {
     signals,
     fomo,
     ...(taFact ? { taFact } : {}),
-    sparkline: daily.closes.slice(-66),
+    sparkline: lite ? [] : daily.closes.slice(-66),
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),
     ...(basics?.changeText ? { changeText: basics.changeText } : {}),
     ...(basics?.changeDir ? { changeDir: basics.changeDir } : {}),
