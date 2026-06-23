@@ -11,6 +11,7 @@ import {
 } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { SectorStockDeck } from "@/components/SectorStockDeck";
+import { TodayDiscoveryDeck } from "@/components/TodayDiscoveryDeck";
 import { KEYWORDS_UPDATED_EVENT, fetchKeywords, fetchThemeInsight, recordTaste, type KeywordsResponse } from "@/lib/fomoApi";
 import { keywordInterestScore, recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
@@ -181,13 +182,13 @@ function SectorChips({
 }
 
 export function KeywordCardFeed({ loggedIn, onRequireLogin }: FeedGate = {}) {
-  // 섹터 네비: null = "오늘"(기존 쏠림 피드, 무변경). 섹터 선택 시 그 섹터 종목 무한 스와이프.
+  // 섹터 네비: null = "오늘의 발견"(전체 종목 풀). 섹터 선택 시 그 섹터 종목 무한 스와이프.
   const [activeSector, setActiveSector] = useState<StockSector | null>(null);
   return (
     <div className="w-full">
       <SectorChips active={activeSector} onSelect={setActiveSector} />
       {activeSector === null ? (
-        <TodayFeed loggedIn={loggedIn} onRequireLogin={onRequireLogin} />
+        <TodayDiscoveryDeck loggedIn={loggedIn} onRequireLogin={onRequireLogin} />
       ) : (
         <SectorStockDeck
           key={activeSector}

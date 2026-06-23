@@ -34,10 +34,10 @@ const NEON = "#D8FF3A";
 const EMPTY_FOMO = computeFomoScore({});
 
 /** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
-type DeckStock = SectorStock & { reason?: string };
+export type DeckStock = SectorStock & { reason?: string };
 
 /** 종목별 앞면 데이터(stock-front 응답 캐시). 포모 점수(척추)·스파크라인·가격. */
-type FrontEntry = {
+export type FrontEntry = {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
   taFact?: TaFact;
@@ -85,7 +85,7 @@ function stockPersonalizationRank(stock: string, nowMs = Date.now()): number {
   return stockInterestScore(stock, nowMs) + watchBoost;
 }
 
-function rankInstantStocks(stocks: readonly DeckStock[], nowMs = Date.now()): DeckStock[] {
+export function rankInstantStocks(stocks: readonly DeckStock[], nowMs = Date.now()): DeckStock[] {
   return stocks
     .map((stock, index) => ({ stock, index, rank: stockPersonalizationRank(stock.canonical, nowMs) }))
     .sort(
@@ -358,7 +358,7 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
       </div>
     );
   return (
-    <SectorDeckInner
+    <StockDiscoveryDeckInner
       stocks={state.stocks}
       initialFronts={state.fronts}
       loggedIn={loggedIn}
@@ -367,7 +367,7 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
   );
 }
 
-function SectorDeckInner({
+export function StockDiscoveryDeckInner({
   stocks,
   initialFronts,
   loggedIn,
