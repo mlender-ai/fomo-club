@@ -43,6 +43,24 @@
 - **비활성(옛 정체성 — 재가동 금지, 파일 상단 DEPRECATED)**: mascot-keeper, idea-generator, lovable-reviewer.
 - **GitHub Actions 자율 조직**(`.github/agents/` 7페르소나 + idea-proposal/propose-*/project-*/autonomy-report/slack-retro): cron 전부 비활성 확인됨(2026-06-16). 정지 유지, 참고용 보존.
 
+### 코드 작성 규율 — 게으름 사다리 (전 LLM 공통: Claude/Codex/Cursor/GPT)
+"가장 좋은 코드는 안 짠 코드." 새 코드 쓰기 전 위에서부터 순서대로 자문, 멈추는 첫 칸에서 멈춤 (영향 코드·실행 흐름을 먼저 읽은 **뒤** 적용):
+1. 존재할 필요 있나? → 없으면 만들지 마라(YAGNI) · 2. 코드베이스에 이미 있나(특히 `packages/shared`)? → 재사용 · 3. 표준 라이브러리? → 쓴다 · 4. 네이티브 기능? → 쓴다 · 5. 깔린 의존성? → 쓴다 · 6. 한 줄? → 한 줄 · 7. 그제서야 동작하는 최소 구현.
+⚠️ **게으르되 부주의 금지**: trust-boundary 검증·데이터 손실 처리·보안·접근성은 절대 잘라내지 않는다(투자 데이터 앱). 정체성 "깊이 있는 단순함·기능 비대화 금물"과 같은 방향. (출처: ponytail)
+
+### 에이전트 핸드오프 규약 (Claude ↔ Codex ↔ GPT 컨텍스트 인계)
+모델/세션 전환 시 맥락 손실·토큰 낭비를 막기 위해, 작업을 넘길 땐 마지막 출력에 아래 **HANDOFF 블록**을 남긴다 (PR/이슈 코멘트·세션 메모리·커밋 본문 어디든):
+```
+HANDOFF
+- 목표: <한 줄>
+- 한 일: <건드린 파일·핵심 변경>
+- 안 한 일/막힌 곳: <남은 작업·블로커>
+- 다음 액션: <다음 모델이 바로 할 일 1~3개>
+- 검증: <통과/실패한 게이트 — typecheck/test/build>
+- SSOT 변경: <PRODUCT_VISION 등 정본 영향 있으면 명시, 없으면 "없음">
+```
+받는 쪽은 코드 통독 전 `codebase-memory` MCP(`get_architecture`/`search_graph`/`trace_path`)로 구조를 쿼리해 토큰을 아낀다. (출처: mattpocock /handoff)
+
 ---
 
 ## 🟢 운영 모델 (2026-06-09 톱다운 개편 — 이 섹션이 아래 9직군 로스터를 대체)
