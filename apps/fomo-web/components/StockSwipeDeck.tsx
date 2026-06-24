@@ -250,7 +250,7 @@ function StockCardFace({
         <div className="mt-2.5 flex shrink-0 items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
           {changeText && (
-            <span className="inline-flex items-center gap-1 font-number text-sm font-medium tabular-nums" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
+            <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
               {changeDir === "up" && <CaretUpIcon size={11} />}
               {changeDir === "down" && <CaretDownIcon size={11} />}
               {changeText}
