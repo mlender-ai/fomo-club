@@ -4,6 +4,7 @@ import {
   buildAxisSignals,
   computeFomoScore,
   discoveryWhy,
+  hasPublicMaterialEvent,
   rankDiscoveryCandidates,
   resolveStock,
   sectorOf,
@@ -186,6 +187,8 @@ function eventFromNews(attention: StockAttentionSignal | undefined, asOf: string
 function stockPayload(row: NaverMarketRow, candidate: DiscoveryCandidate): DiscoveryStockPayload {
   const def = resolveStock(candidate.ticker);
   const sector = def ? sectorOf(def.canonical) : undefined;
+  const why = discoveryWhy(candidate);
+  const hasMaterial = hasPublicMaterialEvent(candidate);
   return {
     canonical: candidate.ticker,
     market: row.market,
@@ -193,8 +196,10 @@ function stockPayload(row: NaverMarketRow, candidate: DiscoveryCandidate): Disco
     naverCode: row.naverCode,
     marquee: def?.marquee === true,
     sector: sector ?? candidate.sector ?? row.market,
-    whyShown: discoveryWhy(candidate),
-    reason: discoveryWhy(candidate),
+    whyShown: hasMaterial
+      ? why
+      : "큰 가격 움직임은 보였지만, 연결된 공개 재료는 아직 확인되지 않았어요.",
+    ...(hasMaterial ? { reason: why } : {}),
   };
 }
 

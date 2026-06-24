@@ -16,6 +16,7 @@ interface DedupeInput {
   why: string;
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
+  subLine?: string | undefined;
   preserveGroundedReason?: boolean | undefined;
 }
 
@@ -23,6 +24,7 @@ interface DedupeOutput {
   why?: string | undefined;
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
+  subLine?: string | undefined;
 }
 
 function normalizeCopy(text: string | undefined): string {
@@ -44,6 +46,21 @@ function clustersFor(text: string | undefined): Set<CopyCluster> {
   return clusters;
 }
 
+function priceMoveOverlap(a: string | undefined, b: string | undefined): boolean {
+  const left = a ?? "";
+  const right = b ?? "";
+  const leftPct = [...left.matchAll(/[+-]?\d+(?:\.\d+)?(?=%)/g)].map((m) => Number(m[0]));
+  const rightPct = [...right.matchAll(/[+-]?\d+(?:\.\d+)?(?=%)/g)].map((m) => Number(m[0]));
+  if (
+    leftPct.some((l) => rightPct.some((r) => Number.isFinite(l) && Number.isFinite(r) && Math.abs(l - r) <= 0.2))
+  ) {
+    return true;
+  }
+  const publicMaterialCaveat = /공개\s*재료|재료.*확인/.test(left) || /공개\s*재료|재료.*확인/.test(right);
+  if (publicMaterialCaveat) return false;
+  return /오늘.*가격/.test(left) && /오늘.*가격/.test(right) && /(움직|상승|하락|올랐|빠졌)/.test(left) && /(움직|상승|하락|올랐|빠졌)/.test(right);
+}
+
 function hasMaterialOverlap(a: string | undefined, b: string | undefined): boolean {
   const left = normalizeCopy(a);
   const right = normalizeCopy(b);
@@ -57,6 +74,7 @@ function hasMaterialOverlap(a: string | undefined, b: string | undefined): boole
   if (aClusters.has("news") && bClusters.has("news")) return true;
   if (aClusters.has("mention") && bClusters.has("mention")) return true;
   if (aClusters.has("theme") && bClusters.has("theme")) return true;
+  if (aClusters.has("price") && bClusters.has("price") && priceMoveOverlap(a, b)) return true;
   if (aClusters.has("volume") && bClusters.has("volume")) return true;
   if (aClusters.has("position") && bClusters.has("position")) return true;
   return false;
@@ -67,6 +85,7 @@ export function dedupeCardCopy({
   why,
   feedBull,
   feedBear,
+  subLine,
   preserveGroundedReason = false,
 }: DedupeInput): DedupeOutput {
   const whyRestatesHeadline = !preserveGroundedReason && hasMaterialOverlap(headline, why);
@@ -80,10 +99,19 @@ export function dedupeCardCopy({
   const shouldHideBear =
     !!feedBear &&
     (hasMaterialOverlap(headline, bearText) || (!!visibleWhy && hasMaterialOverlap(visibleWhy, bearText)));
+  const visibleBull = shouldHideBull ? undefined : feedBull;
+  const visibleBear = shouldHideBear ? undefined : feedBear;
+  const shouldHideSubLine =
+    !!subLine &&
+    (hasMaterialOverlap(headline, subLine) ||
+      (!!visibleWhy && hasMaterialOverlap(visibleWhy, subLine)) ||
+      (!!visibleBull && hasMaterialOverlap(visibleBull.text, subLine)) ||
+      (!!visibleBear && hasMaterialOverlap(visibleBear.text, subLine)));
 
   return {
     ...(visibleWhy ? { why: visibleWhy } : {}),
-    ...(!shouldHideBull && feedBull ? { feedBull } : {}),
-    ...(!shouldHideBear && feedBear ? { feedBear } : {}),
+    ...(visibleBull ? { feedBull: visibleBull } : {}),
+    ...(visibleBear ? { feedBear: visibleBear } : {}),
+    ...(!shouldHideSubLine && subLine ? { subLine } : {}),
   };
 }

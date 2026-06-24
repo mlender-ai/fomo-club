@@ -29,4 +29,26 @@ describe("dedupeCardCopy", () => {
     expect(copy.why).toBe("‘바이오’ 흐름에서 같이 잡힌 원문 근거가 있어요: 신약개발 해법은 AI·오픈이노베이션");
     expect(copy.feedBull).toBeUndefined();
   });
+
+  it("hides repeated price copy across headline, reason, and subline", () => {
+    const copy = dedupeCardCopy({
+      headline: "오늘 가격이 +18.9% 움직였어요.",
+      why: "오늘 가격이 +18.86% 움직였어요.",
+      subLine: "오늘 가격이 +18.86% 움직였어요.",
+    });
+
+    expect(copy.why).toBeUndefined();
+    expect(copy.subLine).toBeUndefined();
+  });
+
+  it("keeps a non-overlapping reason while removing a repeated subline", () => {
+    const copy = dedupeCardCopy({
+      headline: "오늘 가격이 +29.9% 움직였어요.",
+      why: "큰 가격 움직임은 보였지만, 연결된 공개 재료는 아직 확인되지 않았어요.",
+      subLine: "오늘 가격이 +29.91% 움직였어요.",
+    });
+
+    expect(copy.why).toBe("큰 가격 움직임은 보였지만, 연결된 공개 재료는 아직 확인되지 않았어요.");
+    expect(copy.subLine).toBeUndefined();
+  });
 });

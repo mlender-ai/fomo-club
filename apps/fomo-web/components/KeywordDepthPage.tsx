@@ -340,6 +340,46 @@ export interface StockContext {
   fromTheme?: string;
   /** 피드 60장 기준 다축 셀렉터가 고른 카드 헤드라인. 상세에서도 같은 관통선을 유지한다. */
   axisHeadline?: string | undefined;
+  /** 발견 덱이 이미 가진 가격·포모·차트 seed. 상세 fetch 실패 시 비어 보이지 않게 한다. */
+  frontSeed?: StockFrontResponse | undefined;
+}
+
+function hasUsableFront(front: StockFrontResponse | null | undefined): front is StockFrontResponse {
+  if (!front) return false;
+  return (
+    !!front.priceText ||
+    !!front.changeText ||
+    (front.sparkline?.length ?? 0) >= 2 ||
+    Object.keys(front.signals ?? {}).length > 0
+  );
+}
+
+function mergeFrontSeed(
+  seed: StockFrontResponse | null | undefined,
+  fresh: StockFrontResponse | null | undefined
+): StockFrontResponse | null {
+  if (!hasUsableFront(seed)) return fresh ?? null;
+  if (!hasUsableFront(fresh)) return seed;
+  return {
+    signals: { ...seed.signals, ...fresh.signals },
+    fomo: fresh.fomo ?? seed.fomo,
+    ...(fresh.taFact ?? seed.taFact ? { taFact: fresh.taFact ?? seed.taFact } : {}),
+    sparkline: fresh.sparkline.length >= 2 ? fresh.sparkline : seed.sparkline,
+    ...(fresh.priceText ?? seed.priceText ? { priceText: fresh.priceText ?? seed.priceText } : {}),
+    ...(fresh.changeText ?? seed.changeText ? { changeText: fresh.changeText ?? seed.changeText } : {}),
+    ...(fresh.changeDir ?? seed.changeDir ? { changeDir: fresh.changeDir ?? seed.changeDir } : {}),
+    ...(fresh.feedBull ?? seed.feedBull ? { feedBull: fresh.feedBull ?? seed.feedBull } : {}),
+    ...(fresh.feedBear ?? seed.feedBear ? { feedBear: fresh.feedBear ?? seed.feedBear } : {}),
+    ...(fresh.axisSignals?.length ? { axisSignals: fresh.axisSignals } : seed.axisSignals?.length ? { axisSignals: seed.axisSignals } : {}),
+    ...(fresh.axisHook ?? seed.axisHook ? { axisHook: fresh.axisHook ?? seed.axisHook } : {}),
+  };
+}
+
+function copyRestates(a: string | undefined, b: string | undefined): boolean {
+  const clean = (text: string | undefined) => (text ?? "").replace(/\s+/g, "").replace(/[‘’'".,:·…]/g, "");
+  const left = clean(a);
+  const right = clean(b);
+  return !!left && !!right && (left.includes(right) || right.includes(left));
 }
 
 /**
@@ -777,8 +817,8 @@ export function StockInsightView({
   const [basics, setBasics] = useState<StockBasics | null>(null);
   const [basicsLoaded, setBasicsLoaded] = useState(false);
   // 포모 상태(히어로) — 카드(②)와 동일 출처(FomoScoreResult). 단일 출처 보장.
-  const [front, setFront] = useState<StockFrontResponse | null>(null);
-  const [frontLoaded, setFrontLoaded] = useState(false);
+  const [front, setFront] = useState<StockFrontResponse | null>(context?.frontSeed ?? null);
+  const [frontLoaded, setFrontLoaded] = useState(!!context?.frontSeed);
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
@@ -797,16 +837,17 @@ export function StockInsightView({
 
   useEffect(() => {
     let alive = true;
+    const seed = context?.frontSeed ?? null;
     setLoading(true);
     setInsight(null);
     setBasics(null);
-    setFront(null);
+    setFront(seed);
     setBasicsLoaded(false);
-    setFrontLoaded(false);
+    setFrontLoaded(!!seed);
     // 가격 헤더만 먼저 허용하고, 아래 가변 섹션은 세 요청이 모두 끝난 뒤 한 번에 연다.
     fetchStockFront(stock)
-      .then((r) => alive && setFront(r))
-      .catch(() => alive && setFront(null))
+      .then((r) => alive && setFront(mergeFrontSeed(seed, r)))
+      .catch(() => alive && setFront(seed))
       .finally(() => alive && setFrontLoaded(true));
     fetchStockBasics(stock)
       .then((r) => alive && setBasics(r))
@@ -819,11 +860,15 @@ export function StockInsightView({
     return () => {
       alive = false;
     };
-  }, [stock]);
+  }, [stock, context?.frontSeed]);
 
   const hasInsight =
     !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
   const detailsReady = !loading && basicsLoaded && frontLoaded;
+  const contextReason =
+    context?.reason && !copyRestates(context.reason, context.axisHeadline)
+      ? context.reason
+      : undefined;
 
   return (
     <div className="fixed inset-0 z-[70] bg-black">
@@ -851,13 +896,13 @@ export function StockInsightView({
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
           {/* B — "왜 너한테 보여줬나" 상단 한 줄(추천 맥락이 있으면). 납득 먼저. */}
-          {context?.reason && (
+          {contextReason && (
             <div className="mb-5 rounded-lg border border-hairline bg-surface px-3 py-2">
               <span className="block text-[11px] text-muted">
-                {context.fromTheme ? `‘${cleanText(context.fromTheme)}’ 흐름에서 보여주는 이유` : "보여주는 이유"}
+                {context?.fromTheme ? `‘${cleanText(context.fromTheme)}’ 흐름에서 보여주는 이유` : "보여주는 이유"}
               </span>
-              <span className="mt-1 block text-sm leading-6 text-whiteout">{cleanText(context.reason)}</span>
-              {context.sourceUrl && (
+              <span className="mt-1 block text-sm leading-6 text-whiteout">{cleanText(contextReason)}</span>
+              {context?.sourceUrl && (
                 <a href={context.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
                   ↳ {cleanText(context.sourceLabel ?? "원문")} · 원문 보기 →
                 </a>

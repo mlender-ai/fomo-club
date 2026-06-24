@@ -12,7 +12,7 @@ import type {
 } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
-import type { FeedSignalPoint } from "@/lib/fomoApi";
+import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
 import type { DeckStock } from "@/lib/discoveryDeck";
@@ -301,7 +301,7 @@ function StockCardFace({
 
       <FeedSignalStrip bull={feedBull} bear={feedBear} />
 
-      {subLine && !feedBull && !feedBear && (
+      {subLine && !why && !feedBull && !feedBear && (
         <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-1.5">
           <span className="text-sm leading-5 text-muted" style={clampStyle(1)}>
             {subLine}
@@ -510,13 +510,14 @@ export function StockSwipeDeck({
     if (!e) {
       return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
     }
-    const { view, subLine, usedReasonHeadline } = cardFor(stock);
+    const { view, subLine } = cardFor(stock);
     const deduped = dedupeCardCopy({
       headline: view.headline,
       why: whyFor(stock),
       feedBull: e?.feedBull,
       feedBear: e?.feedBear,
-      preserveGroundedReason: !!stock.reason && !usedReasonHeadline,
+      subLine,
+      preserveGroundedReason: false,
     });
     return (
       <StockCardFace
@@ -529,7 +530,7 @@ export function StockSwipeDeck({
         rankLabel={rankLabelFor(stock)}
         sparkline={e?.sparkline}
         chartSupported={!!stock.naverCode && (e?.sparkline?.length ?? 0) >= 2}
-        subLine={subLine}
+        subLine={deduped.subLine}
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
         why={deduped.why}
@@ -831,6 +832,7 @@ export function StockSwipeDeck({
           context={{
             fromTheme: selected.sector,
             reason: whyFor(selected),
+            ...(front[selected.canonical] ? { frontSeed: front[selected.canonical] as StockFrontResponse } : {}),
             ...(axisHeadlineFor(selected) ? { axisHeadline: axisHeadlineFor(selected) } : {}),
           }}
           onClose={closeDepth}
