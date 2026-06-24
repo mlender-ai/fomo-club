@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "codebase-memory": {
+      "command": "/Users/cocteau/.local/bin/codebase-memory-mcp",
+      "args": []
+    },
+    "headroom": {
+      "command": "/Users/cocteau/Library/Python/3.13/bin/headroom",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
