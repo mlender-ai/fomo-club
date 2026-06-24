@@ -1,8 +1,15 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
-import type { CardFrontSignals, FomoScoreResult, FomoCardView, TaFact } from "@fomo/core";
+import { fomoCardView, computeFomoScore, selectFomoHook, selectMultiAxisHook, sparklinePath } from "@fomo/core";
+import type {
+  AxisSignal,
+  CardFrontSignals,
+  FomoScoreResult,
+  FomoCardView,
+  MultiAxisHookSelection,
+  TaFact,
+} from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint } from "@/lib/fomoApi";
@@ -39,6 +46,8 @@ export type FrontEntry = {
   changeDir?: "up" | "down" | "flat";
   feedBull?: FeedSignalPoint;
   feedBear?: FeedSignalPoint;
+  axisSignals?: AxisSignal[];
+  axisHook?: MultiAxisHookSelection;
 };
 
 type UndoEntry = {
@@ -425,6 +434,8 @@ export function StockSwipeDeck({
               ...(d.changeDir ? { changeDir: d.changeDir } : {}),
               ...(d.feedBull ? { feedBull: d.feedBull } : {}),
               ...(d.feedBear ? { feedBear: d.feedBear } : {}),
+              ...(d.axisSignals ? { axisSignals: d.axisSignals } : {}),
+              ...(d.axisHook ? { axisHook: d.axisHook } : {}),
             },
           }))
         )
@@ -455,18 +466,22 @@ export function StockSwipeDeck({
       ...(e?.signals ?? {}),
       ...(!e?.signals.newsEventLabel && reasonHeadlineSeed ? { newsEventLabel: reasonHeadlineSeed } : {}),
     };
-    const hook = selectFomoHook({
+    const legacyHook = selectFomoHook({
       fomo,
       signals: signalsForHook,
       ...(e?.taFact ? { taFact: e.taFact } : {}),
     });
+    const axisHook =
+      stock.axisHook ??
+      e?.axisHook ??
+      (e?.axisSignals ? selectMultiAxisHook(e.axisSignals) : undefined);
     const baseView = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
-    const view = { ...baseView, headline: hook.headline };
-    const usedReasonHeadline = !!reasonHeadlineSeed && !e?.signals.newsEventLabel && hook.kind === "news_event";
+    const view = { ...baseView, headline: axisHook?.hookText ?? legacyHook.headline };
+    const usedReasonHeadline = !!reasonHeadlineSeed && !e?.signals.newsEventLabel && !axisHook && legacyHook.kind === "news_event";
     const evidenceLine = usedReasonHeadline ? undefined : compactEvidenceLine(stock.reason);
     return {
       view,
-      ...(evidenceLine || hook.subLine ? { subLine: evidenceLine ?? hook.subLine } : {}),
+      ...(evidenceLine || legacyHook.subLine ? { subLine: evidenceLine ?? legacyHook.subLine } : {}),
       ...(usedReasonHeadline ? { usedReasonHeadline } : {}),
     };
   };
@@ -482,6 +497,8 @@ export function StockSwipeDeck({
       signals: e?.signals,
     });
   };
+  const axisHeadlineFor = (stock: DeckStock): string | undefined =>
+    stock.axisHook?.hookText ?? front[stock.canonical]?.axisHook?.hookText;
   const saveDiscovery = (stock: DeckStock) => {
     upsertWatch(stock.canonical, Date.now(), { sector: stock.sector, reason: whyFor(stock) });
   };
@@ -756,7 +773,11 @@ export function StockSwipeDeck({
       {selected && (
         <StockInsightView
           stock={selected.canonical}
-          context={{ fromTheme: selected.sector, reason: whyFor(selected) }}
+          context={{
+            fromTheme: selected.sector,
+            reason: whyFor(selected),
+            ...(axisHeadlineFor(selected) ? { axisHeadline: axisHeadlineFor(selected) } : {}),
+          }}
           onClose={closeDepth}
         />
       )}

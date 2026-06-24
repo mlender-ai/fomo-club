@@ -6,12 +6,16 @@ import {
   signalsFromBasics,
   investorNetStreak,
   computeFomoScore,
+  buildAxisSignals,
+  selectMultiAxisHook,
   computeTechnicalAnalysis,
   selectTaFact,
   type CardFrontSignals,
   type FomoScoreResult,
   type DailyOhlcv,
   type TaFact,
+  type AxisSignal,
+  type MultiAxisHookSelection,
 } from "@fomo/core";
 import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
 import { readSupplyDemandHistory } from "./supply-demand-store";
@@ -148,6 +152,10 @@ export interface StockFrontData {
   feedBull?: FeedSignalPoint;
   /** 피드 카드용 약세·주의 쪽 균형 사실 1줄. 원문/숫자가 있을 때만 채운다. */
   feedBear?: FeedSignalPoint;
+  /** 다축 후킹 후보. 단일 종목 응답에서는 rarity=0, 피드 batch 에서 후보군 기준으로 재계산한다. */
+  axisSignals?: AxisSignal[];
+  /** 다축 후킹 대표 문장. 카드/상세 헤드라인의 우선 출처. */
+  axisHook?: MultiAxisHookSelection;
 }
 
 export interface StockFrontOptions {
@@ -296,6 +304,8 @@ export async function assembleStockFront(
   });
   const taFact = ta ? selectTaFact(fomo, ta) : undefined;
   const feedPoints = buildFeedPoints(signals, basics?.changeDir, basics?.changeText);
+  const axisSignals = buildAxisSignals({ signals });
+  const axisHook = selectMultiAxisHook(axisSignals);
 
   return {
     signals,
@@ -307,5 +317,7 @@ export async function assembleStockFront(
     ...(basics?.changeDir ? { changeDir: basics.changeDir } : {}),
     ...(feedPoints.bull ? { feedBull: feedPoints.bull } : {}),
     ...(feedPoints.bear ? { feedBear: feedPoints.bear } : {}),
+    axisSignals,
+    axisHook,
   };
 }

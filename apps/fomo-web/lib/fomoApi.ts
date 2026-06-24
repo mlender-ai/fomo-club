@@ -198,6 +198,7 @@ export const fetchStockBasics = (stock: string) =>
 export type { CardFrontSignals } from "@fomo/core";
 export type { FomoScoreResult } from "@fomo/core";
 export type { TaFact } from "@fomo/core";
+export type { AxisSignal, MultiAxisHookSelection } from "@fomo/core";
 export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
   fomo: import("@fomo/core").FomoScoreResult;
@@ -208,6 +209,8 @@ export interface StockFrontResponse {
   changeDir?: "up" | "down" | "flat";
   feedBull?: FeedSignalPoint;
   feedBear?: FeedSignalPoint;
+  axisSignals?: import("@fomo/core").AxisSignal[];
+  axisHook?: import("@fomo/core").MultiAxisHookSelection;
 }
 
 export interface FeedSignalPoint {
@@ -223,6 +226,24 @@ export const fetchStockFront = (stock: string, opts: { lite?: boolean } = {}) =>
       ),
     CACHE_TTL.stockFront
   );
+
+export interface AxisSnapshotEntry {
+  axisSignals: import("@fomo/core").AxisSignal[];
+  axisHook: import("@fomo/core").MultiAxisHookSelection;
+}
+
+export interface AxisSnapshotResponse {
+  items: Record<string, AxisSnapshotEntry>;
+}
+
+export const fetchAxisSnapshot = (stocks: readonly string[]) => {
+  const unique = [...new Set(stocks.map((s) => s.trim()).filter(Boolean))].slice(0, 60);
+  return cachedGet(
+    `axis-snapshot:${unique.join("|")}`,
+    () => get<AxisSnapshotResponse>(`/api/fomo/axis-snapshot?stocks=${encodeURIComponent(unique.join(","))}`),
+    CACHE_TTL.stockFront
+  );
+};
 
 /** 섹터 → 종목 풀(섹터구조 ②). 콜드스타트 노출 순. baseline=true 면 baseline 보장(국내) 종목만. */
 export type { StockSector, SectorStock } from "@fomo/core";

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { SECTORS, type StockSector } from "@fomo/core";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
-import { fetchSectorStocks, getCachedKeywords, warmKeywords } from "@/lib/fomoApi";
+import { fetchAxisSnapshot, fetchSectorStocks, getCachedKeywords, warmKeywords } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import {
+  applyAxisSnapshotToStocks,
   buildTodayDiscoveryStocks,
   MIN_DISCOVERY_STOCKS,
   type DeckStock,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/discoveryDeck";
 
 const DISCOVERY_SECTORS: readonly StockSector[] = SECTORS.filter((sector) => sector !== "코인").slice(0, 6);
+const AXIS_SNAPSHOT_TIMEOUT_MS = 1800;
 
 interface TodayDiscoveryDeckProps {
   loggedIn?: boolean | undefined;
@@ -27,6 +29,19 @@ function DiscoveryEmpty() {
       잠깐 뒤 다시 들어와 주세요.
     </div>
   );
+}
+
+async function applyAxisSnapshot(stocks: DeckStock[]): Promise<DeckStock[]> {
+  try {
+    const snapshot = await Promise.race([
+      fetchAxisSnapshot(stocks.map((s) => s.canonical)),
+      new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("axis snapshot timeout")), AXIS_SNAPSHOT_TIMEOUT_MS)),
+    ]);
+    return applyAxisSnapshotToStocks(stocks, snapshot.items);
+  } catch (err) {
+    console.warn("[TodayDiscoveryDeck] axis snapshot fallback", (err as Error)?.message);
+    return applyAxisSnapshotToStocks(stocks);
+  }
 }
 
 export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryDeckProps) {
@@ -65,7 +80,9 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
           setState({ kind: "error" });
           return;
         }
-        setState({ kind: "ready", stocks });
+        const withAxis = await applyAxisSnapshot(stocks);
+        if (!alive) return;
+        setState({ kind: "ready", stocks: withAxis });
       } catch (err) {
         console.warn("[TodayDiscoveryDeck] fetch failed", err);
         if (alive) setState({ kind: "error" });

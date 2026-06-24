@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { KeywordCard, SectorStock, StockSector } from "@fomo/core";
-import { buildTodayDiscoveryStocks, MAX_DISCOVERY_STOCKS } from "../lib/discoveryDeck";
+import type { AxisSignal, HookAxis, KeywordCard, MultiAxisHookSelection, SectorStock, StockSector } from "@fomo/core";
+import { applyAxisSnapshotToStocks, buildTodayDiscoveryStocks, MAX_DISCOVERY_STOCKS } from "../lib/discoveryDeck";
 
 const storage = new Map<string, string>();
 
@@ -102,5 +102,43 @@ describe("buildTodayDiscoveryStocks", () => {
 
     expect(first20).not.toContain("테스트0");
     expect(first20).not.toContain("테스트1");
+  });
+
+  it("applies axis snapshot order while avoiding three identical hook axes in a row", () => {
+    installLocalStorage();
+    const stocks = Array.from({ length: 7 }, (_, i) => stock(i, i < 3 ? "AI" : i < 5 ? "반도체" : "방산"));
+    const axisOf = (i: number): HookAxis => (i < 3 ? "flow" : i < 5 ? "price" : i === 5 ? "herd" : "time");
+    const snapshot = Object.fromEntries(
+      stocks.map((s, i) => [
+        s.canonical,
+        {
+          axisHook: {
+            axis: axisOf(i),
+            hookText: `${s.canonical} 축 사실이에요.`,
+            strength: 0.8 - i * 0.01,
+            rarity: 0,
+            evidence: [],
+            axisSignals: [],
+          } satisfies MultiAxisHookSelection,
+          axisSignals: [
+            {
+              axis: axisOf(i),
+              fired: true,
+              strength: 0.8 - i * 0.01,
+              rarity: 0,
+              hookText: `${s.canonical} 축 사실이에요.`,
+              evidence: [{ text: "실측", sourceKind: "market", source: "테스트", asOf: "오늘 기준" }],
+            },
+          ] satisfies AxisSignal[],
+        },
+      ])
+    );
+
+    const result = applyAxisSnapshotToStocks(stocks, snapshot);
+    const axes = result.map((s) => s.axisHook?.axis);
+
+    for (let i = 2; i < axes.length; i += 1) {
+      expect([axes[i - 2], axes[i - 1], axes[i]]).not.toEqual([axes[i], axes[i], axes[i]]);
+    }
   });
 });

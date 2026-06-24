@@ -4,13 +4,28 @@ import { useEffect, useState } from "react";
 import type { StockSector } from "@fomo/core";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { fetchSectorStocks, getCachedKeywords, warmKeywords } from "@/lib/fomoApi";
-import { buildSectorDiscoveryStocks, type DeckStock } from "@/lib/discoveryDeck";
+import { fetchAxisSnapshot, fetchSectorStocks, getCachedKeywords, warmKeywords } from "@/lib/fomoApi";
+import { applyAxisSnapshotToStocks, buildSectorDiscoveryStocks, type DeckStock } from "@/lib/discoveryDeck";
 
 interface SectorDeckProps {
   sector: StockSector;
   loggedIn?: boolean | undefined;
   onRequireLogin?: (() => void) | undefined;
+}
+
+const AXIS_SNAPSHOT_TIMEOUT_MS = 1800;
+
+async function applyAxisSnapshot(stocks: DeckStock[]): Promise<DeckStock[]> {
+  try {
+    const snapshot = await Promise.race([
+      fetchAxisSnapshot(stocks.map((s) => s.canonical)),
+      new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("axis snapshot timeout")), AXIS_SNAPSHOT_TIMEOUT_MS)),
+    ]);
+    return applyAxisSnapshotToStocks(stocks, snapshot.items);
+  } catch (err) {
+    console.warn("[SectorStockDeck] axis snapshot fallback", (err as Error)?.message);
+    return applyAxisSnapshotToStocks(stocks);
+  }
 }
 
 /**
@@ -40,7 +55,9 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
           return;
         }
         const stocks = buildSectorDiscoveryStocks(poolRes.stocks, cachedKeywords?.cards ?? [], sector);
-        setState({ kind: "ready", stocks: stocks.length ? stocks : poolRes.stocks });
+        const withAxis = await applyAxisSnapshot(stocks.length ? stocks : poolRes.stocks);
+        if (!alive) return;
+        setState({ kind: "ready", stocks: withAxis });
       } catch (err) {
         console.warn("[SectorStockDeck] fetch failed", err);
         if (alive) setState({ kind: "error" });

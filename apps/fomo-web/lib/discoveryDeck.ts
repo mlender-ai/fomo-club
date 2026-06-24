@@ -1,4 +1,15 @@
-import { resolveStock, stocksBySector, type KeywordCard, type SectorStock, type StockSector } from "@fomo/core";
+import {
+  affinityAxisSignal,
+  rankMultiAxisFeed,
+  selectMultiAxisHook,
+  type AxisSignal,
+  type KeywordCard,
+  type MultiAxisHookSelection,
+  type SectorStock,
+  type StockSector,
+  resolveStock,
+  stocksBySector,
+} from "@fomo/core";
 import { getWatchlist } from "./watchlist";
 import { recentSeenStocks, stockInteractionSummary, stockInterestScore } from "./stockInterest";
 
@@ -14,7 +25,17 @@ export const DISCOVERY_MIX = {
 } as const;
 
 /** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
-export type DeckStock = SectorStock & { reason?: string; whyShown?: string };
+export type DeckStock = SectorStock & {
+  reason?: string;
+  whyShown?: string;
+  axisSignals?: AxisSignal[];
+  axisHook?: MultiAxisHookSelection;
+};
+
+export interface AxisSnapshotLike {
+  axisSignals: AxisSignal[];
+  axisHook: MultiAxisHookSelection;
+}
 
 export interface SectorPool {
   sector: StockSector;
@@ -202,4 +223,46 @@ function isTasteSimilarStock(stock: DeckStock): boolean {
   if (watch.length === 0) return false;
   const peers = new Set(stocksBySector(stock.sector).map((s) => s.canonical));
   return watch.some((w) => w.stock !== stock.canonical && peers.has(w.stock));
+}
+
+function affinitySignalFor(stock: DeckStock): AxisSignal | undefined {
+  const watch = getWatchlist();
+  if (watch.length === 0) return undefined;
+  const peers = new Set(stocksBySector(stock.sector).map((s) => s.canonical));
+  const peerWatch = watch.find((w) => w.stock !== stock.canonical && peers.has(w.stock));
+  if (!peerWatch) return undefined;
+  return affinityAxisSignal({
+    fired: true,
+    strength: 0.72,
+    hookText: "네가 관심 둔 종목들과 같은 섹터에 있어요.",
+    evidenceText: `${stock.sector} 관심 종목 기반`,
+  });
+}
+
+function mergeAffinitySignal(signals: readonly AxisSignal[], affinity?: AxisSignal): AxisSignal[] {
+  const withoutAffinity = signals.filter((s) => s.axis !== "affinity");
+  return affinity ? [...withoutAffinity, affinity] : [...withoutAffinity];
+}
+
+export function applyAxisSnapshotToStocks(
+  stocks: readonly DeckStock[],
+  snapshot: Record<string, AxisSnapshotLike> = {}
+): DeckStock[] {
+  const enriched = stocks.map((stock) => {
+    const snap = snapshot[stock.canonical];
+    const axisSignals = mergeAffinitySignal(snap?.axisSignals ?? stock.axisSignals ?? [], affinitySignalFor(stock));
+    return {
+      ...stock,
+      ...(axisSignals.length > 0 ? { axisSignals, axisHook: selectMultiAxisHook(axisSignals) } : {}),
+    };
+  });
+  if (!enriched.some((stock) => stock.axisSignals?.some((signal) => signal.fired))) return enriched;
+  return rankMultiAxisFeed(enriched, {
+    getSignals: (stock) => stock.axisSignals,
+    getKey: (stock) => stock.canonical,
+  }).map(({ item, hook }) => ({
+    ...item,
+    axisHook: hook,
+    axisSignals: hook.axisSignals,
+  }));
 }

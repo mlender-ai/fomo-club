@@ -53,6 +53,8 @@ describe("assembleStockFront lite", () => {
     expect(front.taFact).toBeUndefined();
     expect(front.fomo.inputs.volume).toBeDefined();
     expect(front.fomo.inputs.price).toBeDefined();
+    expect(front.axisSignals?.some((signal) => signal.fired)).toBe(true);
+    expect(front.axisHook?.hookText).toBeTruthy();
   });
 
   it("카드 경량 경로에서도 캐시된 coverage와 강세·약세 1줄을 반환한다", async () => {
@@ -82,5 +84,7 @@ describe("assembleStockFront lite", () => {
     expect(front.signals.themeRelativeRank).toBe(6);
     expect(front.feedBull).toEqual({ text: "오늘 이 종목을 직접 언급한 뉴스가 있어요.", source: "뉴스" });
     expect(front.feedBear).toEqual({ text: "반도체 평균보다 덜 움직였어요.", source: "테마" });
+    expect(front.axisSignals?.some((signal) => signal.axis === "time" && signal.fired)).toBe(true);
+    expect(front.axisHook?.axis).toBe("time");
   });
 });

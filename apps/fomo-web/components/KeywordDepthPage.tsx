@@ -338,6 +338,8 @@ export interface StockContext {
   sourceUrl?: string;
   /** 어느 테마(키워드) 흐름에서 떴는지. */
   fromTheme?: string;
+  /** 피드 60장 기준 다축 셀렉터가 고른 카드 헤드라인. 상세에서도 같은 관통선을 유지한다. */
+  axisHeadline?: string | undefined;
 }
 
 /**
@@ -466,7 +468,7 @@ const DETAIL_TONE_COLOR: Record<FomoTone, string> = {
  * 포모 상태 히어로(척추 ③ 주인공) — 큰 포모 점수(C) + 라벨 + 근거등급 + 왜(해부).
  * 카드(②)와 *동일 출처*(fetchStockFront 의 FomoScoreResult). 강도 비례 톤, 예측·판정 0.
  */
-function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rankLabel?: string }) {
+function FomoHero({ front, rankLabel, headlineOverride }: { front: StockFrontResponse | null; rankLabel?: string; headlineOverride?: string }) {
   if (!front) {
     return <div className="h-24 animate-pulse rounded-xl border border-hairline bg-surface" />;
   }
@@ -477,6 +479,7 @@ function FomoHero({ front, rankLabel }: { front: StockFrontResponse | null; rank
     ...(front.taFact ? { taFact: front.taFact } : {}),
   });
   const view = { ...fomoCardView(fomo), headline: hook.headline };
+  view.headline = headlineOverride ?? front.axisHook?.hookText ?? view.headline;
   const tone = DETAIL_TONE_COLOR[view.tone] ?? "#94A3B8";
   const grade = confidenceGrade(fomo.confidence);
   return (
@@ -879,6 +882,7 @@ export function StockInsightView({
           <div className="mt-6">
             <FomoHero
               front={front}
+              {...(context?.axisHeadline ? { headlineOverride: context.axisHeadline } : {})}
               {...(front?.signals.marketCapRank ? { rankLabel: `시총 ${front.signals.marketCapRank.rank}위` } : {})}
             />
           </div>
