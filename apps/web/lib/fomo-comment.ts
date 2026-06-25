@@ -1,27 +1,19 @@
 import { fomoCommentFallback, parseFomoComments, type ScoredArticle } from "@fomo/core";
+import { callAI, isAiConfigured } from "@fomo/shared";
 
 /**
  * 기사별 포모 한 줄 코멘트 (LLM). docs/PIVOT_FEED_FIRST.md.
  *
- * fomo-translate.ts 와 동형: AI_API_URL + 키해소(AI_API_KEY→GITHUB_TOKEN) + 배치 1콜 + id별 인메모리 캐시.
+ * fomo-translate.ts 와 동형: 공용 callAI(@fomo/shared) + 배치 1콜 + id별 인메모리 캐시.
  * 톤: 담담한 솔직함, "너만 그런 거 아니야". 투자조언/단정 금지.
  * 미설정/실패/미커버 기사는 fomoCommentFallback(규칙)으로 항상 채운다 — 빈 코멘트 없음.
  */
 
-const AI_API_URL = process.env["AI_API_URL"] ?? "";
 const COMMENT_MODEL = process.env["AI_TRANSLATE_MODEL"] ?? "openai/gpt-4.1-mini";
 const MAX_COMMENT = 20;
 
 const cache = new Map<string, string>();
 const CACHE_MAX = 1000;
-
-function resolveAiKey(): string {
-  const configured = process.env["AI_API_KEY"] ?? "";
-  if (!configured || configured.toUpperCase() === "USE_GITHUB_TOKEN") {
-    return process.env["GITHUB_TOKEN"] ?? "";
-  }
-  return configured;
-}
 
 function buildPrompt(items: { id: string; title: string }[]): string {
   return [
@@ -34,43 +26,26 @@ function buildPrompt(items: { id: string; title: string }[]): string {
   ].join("\n");
 }
 
-interface LlmResponse {
-  choices?: Array<{ message?: { content?: string } }>;
-}
-
 /** 기사들의 comment 를 채워 반환. LLM 우선, 미커버/실패는 규칙 폴백으로 항상 채움. */
 export async function addFomoComments(articles: ScoredArticle[]): Promise<ScoredArticle[]> {
-  const apiKey = resolveAiKey();
-
   // LLM 시도(설정돼 있을 때, 미캐시분만).
-  if (AI_API_URL && apiKey) {
+  if (isAiConfigured()) {
     const uncached = articles
       .filter((a) => !cache.has(a.id))
       .slice(0, MAX_COMMENT)
       .map((a) => ({ id: a.id, title: a.title }));
     if (uncached.length > 0) {
-      try {
-        const res = await fetch(AI_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: COMMENT_MODEL,
-            temperature: 0.5,
-            messages: [{ role: "user", content: buildPrompt(uncached) }],
-          }),
-          signal: AbortSignal.timeout(25_000),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as LlmResponse;
-          for (const c of parseFomoComments(data.choices?.[0]?.message?.content ?? "")) {
-            cache.set(c.id, c.comment);
-          }
-          if (cache.size > CACHE_MAX) cache.clear();
-        } else {
-          console.warn("[fomo/comment] LLM", res.status);
+      const res = await callAI({
+        model: COMMENT_MODEL,
+        temperature: 0.5,
+        messages: [{ role: "user", content: buildPrompt(uncached) }],
+        trace: "fomo-comment",
+      });
+      if (res.ok) {
+        for (const c of parseFomoComments(res.content)) {
+          cache.set(c.id, c.comment);
         }
-      } catch (err) {
-        console.warn("[fomo/comment] error", err);
+        if (cache.size > CACHE_MAX) cache.clear();
       }
     }
   }

@@ -18,6 +18,7 @@ import {
   type WordingVerdict,
   type OfficialFact,
 } from "@fomo/core";
+import { callAI, isAiConfigured } from "@fomo/shared";
 import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews } from "./fomo-news-sources";
 import { fetchFredDocs } from "./fred";
 import { fetchDcStockTitles } from "./dcinside";
@@ -31,7 +32,6 @@ import { fetchDcStockTitles } from "./dcinside";
  * 정직성: AI 미설정·실패·원문 부족 → emptyThemeInsight(정직한 빈 상태). 가짜 생성 금지.
  */
 
-const AI_API_URL = process.env["AI_API_URL"] ?? "";
 // 한 테마만 깊게 보는 PoC → 품질 우선 본 모델. 충실 추출 위해 온도 낮게.
 const MODEL = process.env["AI_MODEL"] || "openai/gpt-4.1";
 const TEMPERATURE = Number.parseFloat(process.env["AI_TEMPERATURE"] ?? "") || 0.2;
@@ -47,17 +47,6 @@ const THEME_NAVER_CODES: Record<string, { code: string; label: string }[]> = {
   ],
 };
 
-function resolveAiKey(): string {
-  const configured = process.env["AI_API_KEY"] ?? "";
-  if (!configured || configured.toUpperCase() === "USE_GITHUB_TOKEN") {
-    return process.env["GITHUB_TOKEN"] ?? "";
-  }
-  return configured;
-}
-
-interface LlmResponse {
-  choices?: Array<{ message?: { content?: string } }>;
-}
 
 /** 뉴스 + 종토방 원문을 SourceDoc[] 로(제목·본문 보존, S1.. 식별자 부여). */
 export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
@@ -154,8 +143,7 @@ export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
  * 애매하면 unsafe(안전 우선). 실패 시 룰 통과분 유지(이미 룰-세이프). 변조 없음 — 통과/탈락만 결정.
  */
 async function judgeWordingsSafety(
-  texts: readonly string[],
-  apiKey: string
+  texts: readonly string[]
 ): Promise<Map<string, { safe: boolean; reason: string }>> {
   const out = new Map<string, { safe: boolean; reason: string }>();
   if (texts.length === 0) return out;
@@ -168,22 +156,18 @@ async function judgeWordingsSafety(
     "",
     JSON.stringify(texts),
   ].join("\n");
+  const res = await callAI({
+    model: MODEL,
+    temperature: 0,
+    messages: [{ role: "user", content: prompt }],
+    trace: "wording-judge",
+  });
+  if (!res.ok) return out; // 룰 통과분 유지(이미 룰-세이프)
+  const content = res.content;
+  const start = content.indexOf("[");
+  const end = content.lastIndexOf("]");
+  if (start === -1 || end <= start) return out;
   try {
-    const res = await fetch(AI_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: MODEL, temperature: 0, messages: [{ role: "user", content: prompt }] }),
-      signal: AbortSignal.timeout(25_000),
-    });
-    if (!res.ok) {
-      console.warn("[wording-judge] LLM", res.status, "— 룰 통과분 유지");
-      return out;
-    }
-    const data = (await res.json()) as LlmResponse;
-    const content = data.choices?.[0]?.message?.content ?? "";
-    const start = content.indexOf("[");
-    const end = content.lastIndexOf("]");
-    if (start === -1 || end <= start) return out;
     const arr = JSON.parse(content.slice(start, end + 1)) as unknown;
     if (Array.isArray(arr)) {
       for (const r of arr) {
@@ -195,7 +179,7 @@ async function judgeWordingsSafety(
       }
     }
   } catch (err) {
-    console.warn("[wording-judge] error — 룰 통과분 유지", err);
+    console.warn("[wording-judge] parse error — 룰 통과분 유지", err);
   }
   return out;
 }
@@ -363,41 +347,36 @@ async function runUnderstanding(
   const withFacts = (insight: ThemeInsight): ThemeInsight =>
     officialFacts.length > 0 ? { ...insight, officialFacts } : insight;
 
-  const apiKey = resolveAiKey();
-  if (!AI_API_URL || !apiKey) {
+  if (!isAiConfigured()) {
     return withFacts(emptyThemeInsight(subject, "AI 미설정 — 이해 레이어 비활성(정직한 빈 상태)"));
   }
 
   try {
-    const res = await fetch(AI_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: TEMPERATURE,
-        messages: [
-          {
-            role: "user",
-            content:
-              kind === "stock"
-                ? buildStockInsightPrompt(subject, docs)
-                : buildThemeInsightPrompt(subject, docs),
-          },
-        ],
-      }),
-      signal: AbortSignal.timeout(45_000),
+    const res = await callAI({
+      model: MODEL,
+      temperature: TEMPERATURE,
+      timeoutMs: 45_000,
+      trace: kind === "stock" ? "understanding-stock" : "understanding-theme",
+      metadata: { subject, kind, docs: docs.length },
+      messages: [
+        {
+          role: "user",
+          content:
+            kind === "stock"
+              ? buildStockInsightPrompt(subject, docs)
+              : buildThemeInsightPrompt(subject, docs),
+        },
+      ],
     });
     if (!res.ok) {
-      console.warn("[understanding] LLM", res.status);
       return withFacts(emptyThemeInsight(subject, `LLM ${res.status} — 정직한 빈 상태`));
     }
-    const data = (await res.json()) as LlmResponse;
-    const raw = parseThemeInsightResponse(data.choices?.[0]?.message?.content ?? "");
+    const raw = parseThemeInsightResponse(res.content);
     const insight = assembleThemeInsight(subject, docs, raw);
 
     // 2단계: 룰 통과 워딩을 LLM 으로 한 번 더 안전 판정(욕설/단정/혐오/찌라시 — 룰이 못 잡는 뉘앙스).
     if (insight.wordings.length === 0) return withFacts(insight);
-    const judged = await judgeWordingsSafety(insight.wordings.map((w) => w.text), apiKey);
+    const judged = await judgeWordingsSafety(insight.wordings.map((w) => w.text));
     const llmAudit: WordingVerdict[] = insight.wordings.map((w) => {
       const v = judged.get(w.text);
       return {

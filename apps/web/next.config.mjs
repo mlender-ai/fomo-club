@@ -7,6 +7,9 @@ const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const sharedConfig = {
   outputFileTracingRoot: monorepoRoot,
   transpilePackages: ["@fomo/shared", "@fomo/core"],
+  // opik(LLM 관측)는 nunjucks/chokidar/fsevents(네이티브) 의존 → 번들 금지, 런타임 require.
+  // ai-client.ts 가 동적 import("opik") 로만 사용(OPIK_* 설정 시). 미설정 시 fail-open.
+  serverExternalPackages: ["opik"],
   webpack(config) {
     // ESM .js 확장자 → .ts 소스 resolve (@fomo/core 등이 main: "src/index.ts" + .js imports 사용)
     config.resolve.extensionAlias = {

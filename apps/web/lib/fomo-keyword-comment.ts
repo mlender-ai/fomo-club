@@ -6,11 +6,12 @@ import {
   type LlmKeywordComment,
   type ScoredKeyword,
 } from "@fomo/core";
+import { callAI, isAiConfigured } from "@fomo/shared";
 
 /**
  * 키워드 카드 코멘트 — LLM 1차, 룰 폴백 강등. KEYWORD_ENGINE_SPEC §4.4 / Phase 3.
  *
- * fomo-comment.ts(기사 코멘트)와 동형: AI_API_URL + 키해소(AI_API_KEY→GITHUB_TOKEN) + 배치 1콜 + 인메모리 캐시.
+ * fomo-comment.ts(기사 코멘트)와 동형: 공용 callAI(@fomo/shared) + 배치 1콜 + 인메모리 캐시.
  * 검증·병합은 @fomo/core 의 순수 함수(applyLlmComment: 금칙어/균형추 가드 + 룰 폴백)에 위임한다.
  *
  * 강등 경로(모두 룰 폴백 = buildKeywordCard 결과 유지):
@@ -21,7 +22,6 @@ import {
  * 정직성(§5): score 를 프롬프트에 넣어, 데이터가 잠잠하면(낮은 점수) LLM 도 과장하지 않게 유도.
  */
 
-const AI_API_URL = process.env["AI_API_URL"] ?? "";
 // 코멘트는 5장 내외라 품질 우선 — 본 모델(AI_MODEL) 사용, 미설정 시 빠른 mini.
 const COMMENT_MODEL = process.env["AI_MODEL"] || "openai/gpt-4.1-mini";
 // 변주(자연스러움) 위해 약간 높게. AI_TEMPERATURE 가 있으면 재활용.
@@ -30,18 +30,6 @@ const TEMPERATURE = Number.parseFloat(process.env["AI_TEMPERATURE"] ?? "") || 0.
 /** keyword|score → 검증 전 LLM 묶음 캐시. 같은 회차 재호출 비용 절감(라우트가 이미 30분 TTL). */
 const cache = new Map<string, LlmKeywordComment>();
 const CACHE_MAX = 500;
-
-function resolveAiKey(): string {
-  const configured = process.env["AI_API_KEY"] ?? "";
-  if (!configured || configured.toUpperCase() === "USE_GITHUB_TOKEN") {
-    return process.env["GITHUB_TOKEN"] ?? "";
-  }
-  return configured;
-}
-
-interface LlmResponse {
-  choices?: Array<{ message?: { content?: string } }>;
-}
 
 const cacheKey = (kw: ScoredKeyword) => `${kw.keyword}|${kw.fomoScore}`;
 
@@ -53,44 +41,31 @@ export async function addKeywordCardComments(
   scored: readonly ScoredKeyword[],
   cards: readonly KeywordCard[]
 ): Promise<KeywordCard[]> {
-  const apiKey = resolveAiKey();
-
-  if (AI_API_URL && apiKey) {
+  if (isAiConfigured()) {
     const uncached = scored.filter((kw) => !cache.has(cacheKey(kw)));
     if (uncached.length > 0) {
-      try {
-        const prompt = buildKeywordCommentPrompt(
-          uncached.map((kw) => ({
-            keyword: kw.keyword,
-            score: kw.fomoScore,
-            titles: kw.articles.map((a) => a.title),
-            related: kw.related,
-          }))
-        );
-        const res = await fetch(AI_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: COMMENT_MODEL,
-            temperature: TEMPERATURE,
-            messages: [{ role: "user", content: prompt }],
-          }),
-          signal: AbortSignal.timeout(25_000),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as LlmResponse;
-          const parsed = parseKeywordComments(data.choices?.[0]?.message?.content ?? "");
-          const byKeyword = new Map(parsed.map((c) => [c.keyword, c]));
-          for (const kw of uncached) {
-            const c = byKeyword.get(kw.keyword);
-            if (c) cache.set(cacheKey(kw), c);
-          }
-          if (cache.size > CACHE_MAX) cache.clear();
-        } else {
-          console.warn("[fomo/keyword-comment] LLM", res.status);
+      const prompt = buildKeywordCommentPrompt(
+        uncached.map((kw) => ({
+          keyword: kw.keyword,
+          score: kw.fomoScore,
+          titles: kw.articles.map((a) => a.title),
+          related: kw.related,
+        }))
+      );
+      const res = await callAI({
+        model: COMMENT_MODEL,
+        temperature: TEMPERATURE,
+        messages: [{ role: "user", content: prompt }],
+        trace: "fomo-keyword-comment",
+      });
+      if (res.ok) {
+        const parsed = parseKeywordComments(res.content);
+        const byKeyword = new Map(parsed.map((c) => [c.keyword, c]));
+        for (const kw of uncached) {
+          const c = byKeyword.get(kw.keyword);
+          if (c) cache.set(cacheKey(kw), c);
         }
-      } catch (err) {
-        console.warn("[fomo/keyword-comment] error", err);
+        if (cache.size > CACHE_MAX) cache.clear();
       }
     }
   }

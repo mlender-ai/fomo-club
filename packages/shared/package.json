@@ -9,5 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "dependencies": {
+    "opik": "^2.1.3"
+  }
 }

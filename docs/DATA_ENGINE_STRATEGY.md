@@ -156,3 +156,22 @@
    우리 적용: Phase A~D 단계 플랜과 매핑(이미 정합). 단계별 산출물에 confidence·grounding 부착.
 
 > 코드 복사 X(Python 중량 파이프라인 ≠ 우리 TS). 아키텍처 참고 노트로만 사용.
+
+---
+
+## 9. LLM 관측·평가 (opik — 적용됨) + 지식그래프 메모리 (graphiti — 후보)
+
+### 9.1 opik — 응축 품질 가시화 (🟢 적용, 2026-06)
+제품의 #1 리스크는 grounding 위반(지어내기). 그동안 응축 품질이 **안 보여서** 개선이 정체됐다.
+
+- **단일 seam**: 흩어진 7개 AI 호출 → `packages/shared/src/ai-client.ts`의 `callAI()` 하나로 통합(모델 무관). 제품 런타임 호출(theme-understanding·fomo-comment·fomo-keyword-comment·fomo-translate)은 이관 완료. dev/ops 호출(slack/events·researchPipeline·council-meeting)은 follow-up.
+- **추적**: `callAI`에 opik 내장. `OPIK_*`(.env.example) 설정 시 모든 LLM 호출이 input/output/model 과 함께 기록(미설정 시 fail-open). Claude/Codex/Groq/향후 모델 전부 같은 지점 통과 → 모델 비교·관측 일괄.
+- **평가**: `npm run eval:understanding`(`scripts/eval-understanding.ts`) — LLM-as-judge 로 워딩의 grounded 여부 채점, pass rate < 80% 면 exit 1(CI 게이트화 가능). "User Zero 검수 자동화" 목표의 첫 계단.
+- **다음**: 실제 `runUnderstanding` 출력으로 SAMPLES 교체 → 모델/프롬프트 변경 회귀를 수치로.
+
+### 9.2 graphiti — 시간성 지식그래프 (🟡 후보, 지금은 X)
+getzep/graphiti(Apache-2.0). 엔티티(종목·테마·이벤트)·관계(수급·내러티브)·**시점 변화**(어제 vs 오늘 내러티브)를 그래프로. 이해/재가공 레이어(§4 Track A/B)엔 개념적으로 최강 후보.
+
+- **막는 이유**: Python 전용 + Neo4j/FalkorDB 필수 = 우리 TS 스택에 무거운 신규 인프라. 지금(정체 국면) 붙이면 야크쉐이빙.
+- **채택 조건**: 이해 레이어가 PoC 넘어 "내러티브 변화 추적"이 제품 가치로 확인될 때. 그때 Python 사이드카 서비스로 분리 검토(앱은 API로만 소비).
+- **대안 우선**: 지금은 confidence·grounding 부착 + opik 평가로 품질부터 끌어올린다.

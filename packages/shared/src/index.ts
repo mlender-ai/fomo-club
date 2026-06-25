@@ -1,3 +1,5 @@
+export * from "./ai-client.js";
+
 export type BotMode = "paper" | "real";
 export type BotStatus = "RUNNING" | "STOPPED" | "DEGRADED";
 export type StrategyStatus = "ACTIVE" | "PAUSED" | "DISABLED";
