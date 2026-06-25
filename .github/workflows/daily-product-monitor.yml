@@ -230,10 +230,21 @@ jobs:
         env:
           INSPECT_CRITICAL: ${{ steps.inspect.outputs.critical_count }}
           QUALITY_CRITICAL: ${{ steps.quality.outputs.critical_count }}
+          QUALITY_WARN: ${{ steps.quality.outputs.warn_count }}
         run: |
           set -euo pipefail
           TOTAL=$(( ${INSPECT_CRITICAL:-0} + ${QUALITY_CRITICAL:-0} ))
           echo "critical_count=$TOTAL" >> "$GITHUB_OUTPUT"
+          WARN=${QUALITY_WARN:-0}
+          SIGNAL=$(( TOTAL + WARN ))
+          echo "signal_count=$SIGNAL" >> "$GITHUB_OUTPUT"
+          if [ "$TOTAL" != "0" ]; then
+            echo "severity=critical" >> "$GITHUB_OUTPUT"
+          elif [ "$WARN" != "0" ]; then
+            echo "severity=warn" >> "$GITHUB_OUTPUT"
+          else
+            echo "severity=ok" >> "$GITHUB_OUTPUT"
+          fi
           cp /tmp/monitor-body.md /tmp/monitor-combined-body.md
           if [ -f /tmp/fomo-quality-report.md ]; then
             {
@@ -244,22 +255,31 @@ jobs:
             } >> /tmp/monitor-combined-body.md
           fi
 
-      - name: Create critical task issue
+      - name: Create monitor issue
         id: issue
-        if: steps.combine.outputs.critical_count != '0'
+        if: steps.combine.outputs.signal_count != '0'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           TODAY: ${{ steps.inspect.outputs.today }}
+          SEVERITY: ${{ steps.combine.outputs.severity }}
         run: |
           set -euo pipefail
+
+          if [ "$SEVERITY" = "critical" ]; then
+            TITLE="🚨 [daily-product-monitor] critical $TODAY"
+            LABELS="daily-product-monitor,pipeline-monitor,data-quality,task"
+          else
+            TITLE="⚠️ [daily-product-monitor] watch $TODAY"
+            LABELS="daily-product-monitor,pipeline-monitor,data-quality"
+          fi
 
           EXISTING=$(gh issue list --repo "$REPO" \
             --label "daily-product-monitor" \
             --state open \
             --limit 20 \
             --json number,title \
-            --jq ".[] | select(.title | contains(\"$TODAY\")) | .number" | head -1)
+            --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)
 
           if [ -n "$EXISTING" ]; then
             echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
@@ -269,9 +289,9 @@ jobs:
           fi
 
           URL=$(gh issue create --repo "$REPO" \
-            --title "🚨 [daily-product-monitor] critical $TODAY" \
+            --title "$TITLE" \
             --body-file /tmp/monitor-combined-body.md \
-            --label "daily-product-monitor,pipeline-monitor,data-quality,task")
+            --label "$LABELS")
           NUM="${URL##*/}"
           echo "number=$NUM" >> "$GITHUB_OUTPUT"
           echo "created=true" >> "$GITHUB_OUTPUT"
@@ -281,6 +301,7 @@ jobs:
         id: autofix
         if: |
           steps.issue.outputs.number != '' &&
+          steps.combine.outputs.severity == 'critical' &&
           (github.event_name == 'schedule' || github.event.inputs.auto_fix != 'false')
         env:
           GH_TOKEN: ${{ github.token }}

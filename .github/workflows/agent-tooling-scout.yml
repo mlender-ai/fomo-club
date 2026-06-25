@@ -9,7 +9,7 @@ on:
       repos:
         description: "Comma-separated repos to scan"
         required: false
-        default: "mlender-ai/simulo"
+        default: "mlender-ai/simulo,openai/codex,anthropics/claude-code,modelcontextprotocol/servers,github/github-mcp-server,microsoft/playwright-mcp"
       days:
         description: "Lookback window in days"
         required: false
@@ -40,7 +40,7 @@ jobs:
       - name: Run tooling scout
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TOOLING_SCOUT_REPOS: ${{ github.event.inputs.repos || 'mlender-ai/simulo' }}
+          TOOLING_SCOUT_REPOS: ${{ github.event.inputs.repos || 'mlender-ai/simulo,openai/codex,anthropics/claude-code,modelcontextprotocol/servers,github/github-mcp-server,microsoft/playwright-mcp' }}
           TOOLING_SCOUT_DAYS: ${{ github.event.inputs.days || '21' }}
         run: npm run agent:tooling-scout
 
@@ -71,7 +71,17 @@ jobs:
               }
             }
 
-            const date = new Date().toISOString().slice(0, 10);
+            const kstDate = () => {
+              const parts = new Intl.DateTimeFormat("en", {
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+              }).formatToParts(new Date());
+              const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+              return `${values.year}-${values.month}-${values.day}`;
+            };
+            const date = kstDate();
             const title = `에이전트 툴링 업데이트 후보 - ${date}`;
             const marker = "<!-- agent-tooling-scout -->";
             const issueBody = `${marker}\n\n${body}`;
@@ -82,7 +92,7 @@ jobs:
               labels: "tooling-scout",
               per_page: 30
             });
-            const existing = openIssues.find((issue) => issue.title === title || issue.body?.includes(marker));
+            const existing = openIssues.find((issue) => issue.title === title);
 
             if (existing) {
               await github.rest.issues.update({

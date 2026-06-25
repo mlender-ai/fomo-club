@@ -39,8 +39,8 @@ const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
 const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 5;
 const SPARKLINE_CONCURRENCY = 8;
-const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
-const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
+const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL === "1";
+const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE === "1";
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED ? 12 : 0;
 const TARGETED_MATERIAL_CONCURRENCY = 4;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
@@ -324,11 +324,13 @@ function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined,
   if (!strongTheme && !weakTheme && !leadingTheme && !laggingTheme && !bigSectorMove && !sectorSpike) return null;
   const weakRank = theme.peerCount - theme.rank + 1;
   const label =
-    row.changePct < 0
+    row.changePct <= 0
       ? laggingTheme
         ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 아래에서 ${ordinalText(weakRank)} 약했어요(${pctText(row.changePct)}).`
-        : theme.relativeChangePct >= 0
-          ? `가격은 빠졌지만 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다는 ${pointText(theme.relativeChangePct)}포인트 덜 약했어요(${pctText(row.changePct)}).`
+        : row.changePct === 0
+          ? `${theme.sector} 평균(${pctText(theme.averageChangePct)})이 약한 날, 이 종목은 보합으로 버텼어요.`
+          : theme.relativeChangePct >= 0
+            ? `가격은 빠졌지만 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다는 ${pointText(theme.relativeChangePct)}포인트 덜 약했어요(${pctText(row.changePct)}).`
           : `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 약했어요(${pctText(row.changePct)}).`
       : theme.rank <= 3
         ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강했어요(${pctText(row.changePct)}).`

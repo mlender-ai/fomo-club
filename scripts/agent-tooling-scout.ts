@@ -36,7 +36,14 @@ interface ToolingCandidate {
   suggestedIssue: string;
 }
 
-const DEFAULT_REPOS = ["mlender-ai/simulo"];
+const DEFAULT_REPOS = [
+  "mlender-ai/simulo",
+  "openai/codex",
+  "anthropics/claude-code",
+  "modelcontextprotocol/servers",
+  "github/github-mcp-server",
+  "microsoft/playwright-mcp",
+];
 const DEFAULT_DAYS = 21;
 const MAX_COMMITS_PER_REPO = 30;
 const MAX_CANDIDATES = 8;
@@ -68,6 +75,15 @@ const PATH_WEIGHTS: Array<{ pattern: RegExp; weight: number; reason: string }> =
   { pattern: /CLAUDE\.md$/, weight: 3, reason: "LLM 핸드오프 규칙 변경" },
   { pattern: /SECURITY/i, weight: 5, reason: "보안 체크리스트 변경" },
   { pattern: /package\.json$/, weight: 2, reason: "도구 의존성 또는 명령 변경" }
+];
+
+const EXCLUDED_CHANGE_PATTERNS = [
+  /자동\s*이슈\s*생성\s*중단/i,
+  /schedule\s*트리거\s*제거/i,
+  /\bdisable[ds]?\b.*\b(workflow|cron|schedule|issue|agent)s?\b/i,
+  /\bremove[sd]?\b.*\b(workflow|cron|schedule|issue|agent)s?\b/i,
+  /\bdelete[sd]?\b.*\b(workflow|cron|schedule|issue|agent)s?\b/i,
+  /\bstop(?:ped|ping)?\b.*\b(workflow|cron|schedule|issue|agent)s?\b/i,
 ];
 
 function env(name: string): string | undefined {
@@ -128,6 +144,10 @@ function scoreCommit(detail: GitHubCommitDetail): ToolingCandidate | null {
   const files = detail.files ?? [];
   const paths = files.map((file) => file.filename);
   const searchable = `${detail.commit.message}\n${paths.join("\n")}`.toLowerCase();
+  if (EXCLUDED_CHANGE_PATTERNS.some((pattern) => pattern.test(searchable))) {
+    return null;
+  }
+
   const matchedKeywords: string[] = [];
   const whyItMatters: string[] = [];
   let score = 0;
@@ -218,6 +238,10 @@ function riskRank(risk: CandidateRisk): number {
   return risk === "low" ? 0 : risk === "medium" ? 1 : 2;
 }
 
+function kstDate(now = new Date()): string {
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 function renderReport(params: {
   repos: string[];
   days: number;
@@ -229,11 +253,13 @@ function renderReport(params: {
   const localBranch = git(["branch", "--show-current"]);
   const recentLocal = git(["log", "--oneline", "-5"]);
   const topCandidates = sortCandidates(params.candidates).slice(0, MAX_CANDIDATES);
+  const generatedDateKst = kstDate(new Date(params.generatedAt));
 
   return [
     "# Agent Tooling Scout Report",
     "",
     `- Generated At: ${params.generatedAt}`,
+    `- Generated Date (KST): ${generatedDateKst}`,
     `- Local Branch: ${localBranch}`,
     `- Local Head: ${localHead}`,
     `- Lookback: ${params.days} days`,
@@ -296,7 +322,7 @@ async function main(): Promise<void> {
   }
 
   const report = renderReport({ repos, days, candidates, errors, generatedAt });
-  const date = generatedAt.slice(0, 10);
+  const date = kstDate(new Date(generatedAt));
   const outputDir = path.resolve(process.cwd(), REPORT_DIR);
   await fs.mkdir(outputDir, { recursive: true });
   await fs.writeFile(path.join(outputDir, `tooling-scout-${date}.md`), report);
