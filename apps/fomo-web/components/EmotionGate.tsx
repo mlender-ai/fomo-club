@@ -109,7 +109,7 @@ export function EmotionGate({
       <div className="mt-3 flex flex-col items-center">
         {score != null ? (
           <>
-            <p className="font-pixel text-4xl leading-none text-whiteout">{score}</p>
+            <p className="text-4xl font-bold leading-none text-whiteout">{score}</p>
             <p className="mt-1.5 font-pixel text-xs text-muted">
               FOMO INDEX · {state}
             </p>

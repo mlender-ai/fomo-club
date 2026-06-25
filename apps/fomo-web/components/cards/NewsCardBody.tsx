@@ -41,7 +41,7 @@ export function NewsCardBody({ article }: { article: ScoredArticle }) {
       {/* 점수 배지 + 카테고리 */}
       <div className="mt-4 flex items-center gap-2">
         <span
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-pixel text-[11px]"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
           style={{ color, backgroundColor: `${color}1A` }}
         >
           <span aria-hidden>{scoreToEmoji(article.fomoScore)}</span>

@@ -96,7 +96,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">
             <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
-            <span className="font-pixel text-sm" style={{ color }}>
+            <span className="text-sm font-semibold" style={{ color }}>
               포모 {card.fomoScore}
             </span>
           </div>
@@ -382,13 +382,18 @@ function copyRestates(a: string | undefined, b: string | undefined): boolean {
   return !!left && !!right && (left.includes(right) || right.includes(left));
 }
 
+function normalizeChangeText(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  return text.replace(/^--+/, "-").replace(/^\+\++/, "+");
+}
+
 /**
  * 종목 기본 정보 블록(바닥) — 항상 렌더. 주가·회사개요·시총·핵심지표·연간 재무.
  * "정확한 숫자 + 쉬운 라벨"(EPS→'한 주가 번 돈') 둘 다. 없는 값은 생략(가짜 금지), 추정치·출처 표기.
  */
 function StockPriceHeader({ basics, front }: { basics: StockBasics | null; front: StockFrontResponse | null }) {
   const priceText = basics?.priceText ?? front?.priceText;
-  const changeText = basics?.changeText ?? front?.changeText;
+  const changeText = normalizeChangeText(basics?.changeText ?? front?.changeText);
   const changeDir = basics?.changeDir ?? front?.changeDir;
   if (!basics && !front) {
     return (
@@ -618,10 +623,10 @@ function buildReadPoints(front: StockFrontResponse | null, insight: CondensedIns
 
   if (front) {
     if (front.changeDir === "up" && front.changeText) {
-      bull.push({ text: `오늘 가격은 ${front.changeText} 상승으로 움직였어요.`, source: "가격" });
+      bull.push({ text: `오늘 가격은 ${normalizeChangeText(front.changeText)} 상승으로 움직였어요.`, source: "가격" });
     }
     if (front.changeDir === "down" && front.changeText) {
-      bear.push({ text: `오늘 가격은 ${front.changeText} 하락으로 움직였어요.`, source: "가격" });
+      bear.push({ text: `오늘 가격은 ${normalizeChangeText(front.changeText)} 하락으로 움직였어요.`, source: "가격" });
     }
     const ta = signalFromTa(front);
     if (ta?.side === "bull") bull.push({ text: ta.text, source: "차트" });

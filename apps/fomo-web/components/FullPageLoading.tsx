@@ -67,7 +67,7 @@ export function FullPageLoading({
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="font-pixel text-xs tabular-nums text-muted">{pct}%</span>
+        <span className="text-xs font-medium tabular-nums text-muted">{pct}%</span>
       </div>
       <p className="text-sm leading-6 text-muted">{label}</p>
     </div>

@@ -25,7 +25,7 @@ export function MyDiscoveryPreview({
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between px-1">
         <p className="text-xs text-muted">내 발굴함</p>
-        <span className="font-pixel text-[10px] text-muted">{items.length}</span>
+        <span className="text-[10px] font-medium text-muted">{items.length}</span>
       </div>
       <div className="flex flex-col gap-2.5">
         {items.slice(0, 8).map((item) => (

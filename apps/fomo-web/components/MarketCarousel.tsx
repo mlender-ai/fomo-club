@@ -54,7 +54,7 @@ export function MarketCarousel({ markets }: { markets: MarketScore[] }) {
         </div>
         {/* FOMO 체감 점수 */}
         <div key={`${m.key}-r`} className="fomo-rise flex items-baseline gap-1.5">
-          <span className="font-pixel text-3xl leading-none" style={{ color }}>
+          <span className="text-3xl font-bold leading-none" style={{ color }}>
             {m.score}
           </span>
           <span className="font-pixel text-[11px] text-muted">{m.state}</span>

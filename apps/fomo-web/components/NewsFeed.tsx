@@ -88,7 +88,7 @@ function NewsCard({ article }: { article: ScoredArticle }) {
       <div className="mb-1.5 flex items-center gap-2">
         {/* FOMO 점수 배지 — 색=구간 감정색, 숫자가 정렬 기준 */}
         <span
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-pixel text-[11px]"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
           style={{ color, backgroundColor: `${color}1A` }}
           aria-label={`FOMO 점수 ${article.fomoScore}`}
         >

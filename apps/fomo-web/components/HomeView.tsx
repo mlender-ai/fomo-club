@@ -96,7 +96,7 @@ export function HomeView({
               </span>
               <span className="font-pixel text-[11px] text-muted">{index.state}</span>
               {!isFullFallback && index.prevDayDelta !== 0 && (
-                <span className="inline-flex items-center gap-0.5 font-pixel text-[11px]" style={{ color }}>
+                <span className="inline-flex items-center gap-0.5 text-[11px] font-medium" style={{ color }}>
                   · 어제보다
                   {index.prevDayDelta > 0 ? <CaretUpIcon size={10} /> : <CaretDownIcon size={10} />}
                   {index.prevDayDelta > 0 ? `+${index.prevDayDelta}` : `${index.prevDayDelta}`}
