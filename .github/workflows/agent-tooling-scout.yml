@@ -6,14 +6,18 @@ name: Agent Tooling Scout
 on:
   workflow_dispatch:
     inputs:
-      repos:
-        description: "Comma-separated repos to scan"
+      seed_repos:
+        description: "Comma-separated curated repos to inspect"
         required: false
-        default: "mlender-ai/simulo,openai/codex,anthropics/claude-code,modelcontextprotocol/servers,github/github-mcp-server,microsoft/playwright-mcp"
-      days:
-        description: "Lookback window in days"
+        default: "NVIDIA/SkillSpector,openai/codex,anthropics/claude-code,github/github-mcp-server,modelcontextprotocol/servers,microsoft/playwright-mcp"
+      search_queries:
+        description: "Pipe-separated GitHub search queries"
         required: false
-        default: "21"
+        default: "agent skills security scanner|claude code skills|codex agent tooling|mcp agent workflow|ai agent security"
+      updated_days:
+        description: "Require repos to be updated within this many days"
+        required: false
+        default: "60"
   schedule:
     - cron: "0 0 * * 1"
 
@@ -40,15 +44,17 @@ jobs:
       - name: Run tooling scout
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TOOLING_SCOUT_REPOS: ${{ github.event.inputs.repos || 'mlender-ai/simulo,openai/codex,anthropics/claude-code,modelcontextprotocol/servers,github/github-mcp-server,microsoft/playwright-mcp' }}
-          TOOLING_SCOUT_DAYS: ${{ github.event.inputs.days || '21' }}
+          TOOLING_SCOUT_SEED_REPOS: ${{ github.event.inputs.seed_repos || 'NVIDIA/SkillSpector,openai/codex,anthropics/claude-code,github/github-mcp-server,modelcontextprotocol/servers,microsoft/playwright-mcp' }}
+          TOOLING_SCOUT_SEARCH_QUERIES: ${{ github.event.inputs.search_queries || 'agent skills security scanner|claude code skills|codex agent tooling|mcp agent workflow|ai agent security' }}
+          TOOLING_SCOUT_UPDATED_DAYS: ${{ github.event.inputs.updated_days || '60' }}
+          TOOLING_SCOUT_MIN_STARS: "1000"
         run: npm run agent:tooling-scout
 
       - name: Upload scout report
         uses: actions/upload-artifact@v4
         with:
           name: agent-tooling-scout
-          path: agent-tooling-reports/latest.md
+          path: agent-tooling-reports/*
 
       - name: Create or update review issue
         uses: actions/github-script@v7
@@ -56,6 +62,12 @@ jobs:
           script: |
             const fs = require("fs");
             const body = fs.readFileSync("agent-tooling-reports/latest.md", "utf8");
+            const summary = JSON.parse(fs.readFileSync("agent-tooling-reports/latest.json", "utf8"));
+            if (!summary.candidateCount) {
+              core.info("오늘 후보 없음");
+              return;
+            }
+
             const labels = [
               { name: "agent-ops", color: "1d76db", description: "Agent operations and tooling" },
               { name: "tooling-scout", color: "5319e7", description: "Automated agent/tooling update scout" },
@@ -81,8 +93,8 @@ jobs:
               const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
               return `${values.year}-${values.month}-${values.day}`;
             };
-            const date = kstDate();
-            const title = `에이전트 툴링 업데이트 후보 - ${date}`;
+            const date = summary.generatedDateKst || kstDate();
+            const title = `오늘의 에이전트 툴링 후보 - ${date}`;
             const marker = "<!-- agent-tooling-scout -->";
             const issueBody = `${marker}\n\n${body}`;
             const { data: openIssues } = await github.rest.issues.listForRepo({
@@ -92,7 +104,8 @@ jobs:
               labels: "tooling-scout",
               per_page: 30
             });
-            const existing = openIssues.find((issue) => issue.title === title);
+            const existing = openIssues.find((issue) => issue.title === title)
+              || openIssues.find((issue) => issue.title.includes(date) && issue.body?.includes(marker));
 
             if (existing) {
               await github.rest.issues.update({
