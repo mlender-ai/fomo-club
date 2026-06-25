@@ -319,27 +319,15 @@ function buildThemeMoveSignals(rows: readonly NaverMarketRow[]): Map<string, The
 function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
   if (!theme || typeof row.changePct !== "number") return null;
   const strongTheme = theme.averageChangePct >= 1.5 && theme.positiveCount >= 2;
-  const weakTheme = theme.averageChangePct <= -1.5 && theme.positiveCount <= Math.max(1, Math.floor(theme.peerCount / 3));
   const leadingTheme = theme.rank <= 3 && row.changePct >= 5;
-  const laggingTheme = theme.rank >= Math.max(3, theme.peerCount - 2) && row.changePct <= -5;
-  const bigSectorMove = Math.abs(row.changePct) >= 7 && Math.abs(theme.relativeChangePct) >= 2;
-  const sectorSpike = Math.abs(row.changePct) >= 5;
-  if (!strongTheme && !weakTheme && !leadingTheme && !laggingTheme && !bigSectorMove && !sectorSpike) return null;
-  const weakRank = theme.peerCount - theme.rank + 1;
+  const positiveOutperformer = row.changePct >= 1.5 && theme.relativeChangePct >= 2;
+  const positiveStrongTheme = row.changePct >= 3 && strongTheme && theme.relativeChangePct >= 0;
+  const positiveSectorSpike = row.changePct >= 7 && theme.relativeChangePct >= 0;
+  if (!leadingTheme && !positiveOutperformer && !positiveStrongTheme && !positiveSectorSpike) return null;
   const label =
-    row.changePct <= 0
-      ? laggingTheme
-        ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 아래에서 ${ordinalText(weakRank)} 약했어요(${pctText(row.changePct)}).`
-        : row.changePct === 0
-          ? `${theme.sector} 평균(${pctText(theme.averageChangePct)})이 약한 날, 이 종목은 보합으로 버텼어요.`
-          : theme.relativeChangePct >= 0
-            ? `가격은 빠졌지만 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다는 ${pointText(theme.relativeChangePct)}포인트 덜 약했어요(${pctText(row.changePct)}).`
-          : `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 약했어요(${pctText(row.changePct)}).`
-      : theme.rank <= 3
-        ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강했어요(${pctText(row.changePct)}).`
-        : theme.relativeChangePct >= 0
-          ? `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 강했어요(${pctText(row.changePct)}).`
-          : `가격은 올랐지만 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다는 ${pointText(theme.relativeChangePct)}포인트 덜 강했어요(${pctText(row.changePct)}).`;
+    theme.rank <= 3
+      ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강했어요(${pctText(row.changePct)}).`
+      : `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 강했어요(${pctText(row.changePct)}).`;
   return {
     kind: "theme_link",
     firstSeen: true,

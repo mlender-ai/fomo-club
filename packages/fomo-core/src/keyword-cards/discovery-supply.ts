@@ -105,19 +105,28 @@ export function hasPublicMaterialEvent(candidate: DiscoveryCandidate): boolean {
   );
 }
 
+function isConstructiveThemeEvent(event: DiscoveryEvent): boolean {
+  return event.kind === "theme_link" && event.direction !== "down" && event.direction !== "flat";
+}
+
 export function hasThemeLinkEvent(candidate: DiscoveryCandidate): boolean {
-  return candidate.events.some((event) => event.kind === "theme_link");
+  return candidate.events.some(isConstructiveThemeEvent);
 }
 
 export function hasDisplayWhyEvent(candidate: DiscoveryCandidate): boolean {
   return (
     hasPublicMaterialEvent(candidate) ||
-    candidate.events.some((event) => event.kind === "theme_link" || (event.kind === "volume_spike" && event.firstSeen))
+    candidate.events.some((event) => isConstructiveThemeEvent(event) || (event.kind === "volume_spike" && event.firstSeen))
   );
 }
 
 export function isWeakDiscoveryCandidate(candidate: DiscoveryCandidate): boolean {
-  return !hasDisplayWhyEvent(candidate) && candidate.events.every((event) => event.kind === "price_move" || event.kind === "volume_spike" || event.kind === "market_context");
+  return !hasDisplayWhyEvent(candidate) && candidate.events.every((event) =>
+    event.kind === "price_move" ||
+    event.kind === "volume_spike" ||
+    event.kind === "market_context" ||
+    (event.kind === "theme_link" && !isConstructiveThemeEvent(event))
+  );
 }
 
 const WHY_KIND_PRIORITY: Record<DiscoveryEventKind, number> = {
@@ -131,26 +140,32 @@ const WHY_KIND_PRIORITY: Record<DiscoveryEventKind, number> = {
   price_move: 7,
 };
 
+function eventTimePrefix(event: DiscoveryEvent, candidate: DiscoveryCandidate): "오늘" | "최근" {
+  return event.asOf.slice(0, 10) === candidate.asOf.slice(0, 10) ? "오늘" : "최근";
+}
+
 export function discoveryWhy(candidate: DiscoveryCandidate): string {
   const strongest = [...candidate.events].sort(
     (a, b) => WHY_KIND_PRIORITY[a.kind] - WHY_KIND_PRIORITY[b.kind] || b.strength - a.strength || a.kind.localeCompare(b.kind)
   )[0];
   if (!strongest) return "오늘 확인된 사건이 아직 없어요.";
   if (strongest.kind === "disclosure") {
+    const prefix = eventTimePrefix(strongest, candidate);
     return strongest.label
-      ? `오늘 공시가 확인됐어요: ${strongest.label}`
-      : "오늘 이 종목의 공시가 확인됐어요.";
+      ? `${prefix} 공시가 확인됐어요: ${strongest.label}`
+      : `${prefix} 이 종목의 공시가 확인됐어요.`;
   }
   if (strongest.kind === "news_mention") {
+    const prefix = eventTimePrefix(strongest, candidate);
     const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(strongest.source);
     if (isResearch) {
       return strongest.label
-        ? `오늘 이 종목을 직접 다룬 리서치가 있어요: ${strongest.label}`
-        : "오늘 이 종목을 직접 다룬 리서치가 있어요.";
+        ? `${prefix} 이 종목을 직접 다룬 리서치가 있어요: ${strongest.label}`
+        : `${prefix} 이 종목을 직접 다룬 리서치가 있어요.`;
     }
     return strongest.label
-      ? `오늘 이 종목을 직접 언급한 뉴스가 있어요: ${strongest.label}`
-      : "오늘 이 종목을 직접 언급한 뉴스가 있어요.";
+      ? `${prefix} 이 종목을 직접 언급한 뉴스가 있어요: ${strongest.label}`
+      : `${prefix} 이 종목을 직접 언급한 뉴스가 있어요.`;
   }
   if (strongest.kind === "flow_entry") return strongest.label ?? "수급이 새로 감지된 종목이에요.";
   if (strongest.kind === "theme_link") return strongest.label ?? "오늘 강한 테마 흐름에 같이 묶여 있어요.";
@@ -226,7 +241,6 @@ export function rankDiscoveryCandidates(
     .filter(
       (candidate) =>
         !isWeakDiscoveryCandidate(candidate) ||
-        Math.max(0, ...candidate.events.map((event) => event.strength)) >= DISCOVERY_WEAK_MIN_STRENGTH ||
         candidate.events.some((event) => event.firstSeen && (event.kind === "volume_spike" || event.kind === "flow_entry"))
     )
     .map((candidate, index) => ({

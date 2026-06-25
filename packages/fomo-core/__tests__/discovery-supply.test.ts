@@ -43,14 +43,14 @@ describe("WO-05 discovery supply engine", () => {
     expect(result.map((s) => s.ticker)).toEqual(["정상A", "정상B"]);
   });
 
-  it("keeps candidates with real events and ranks public material above weak shape-only cards", () => {
+  it("keeps candidates with real events and drops weak shape-only cards", () => {
     const ranked = rankDiscoveryCandidates([
       { ticker: "조용", market: "KOSPI", events: [], asOf },
       candidate("가격만", 0.9, "price_move"),
       candidate("뉴스", 0.55, "news_mention"),
     ]);
 
-    expect(ranked.map((c) => c.ticker)).toEqual(["뉴스", "가격만"]);
+    expect(ranked.map((c) => c.ticker)).toEqual(["뉴스"]);
   });
 
   it("applies seen decay but keeps watched stocks exempt", () => {
@@ -110,6 +110,22 @@ describe("WO-05 discovery supply engine", () => {
     expect(isWeakDiscoveryCandidate(theme)).toBe(false);
   });
 
+  it("does not treat flat or bearish theme comparison as a top-band display WHY", () => {
+    const flatTheme = candidate("보합방어", 0.72, "theme_link", "AI 평균(-3.00%)이 약한 날, 이 종목은 보합으로 버텼어요.");
+    flatTheme.events[0]!.direction = "flat";
+    const downTheme = candidate("약세비교", 0.72, "theme_link", "오늘 AI 평균(-3.00%)보다 1.8포인트 더 약했어요(-4.81%).");
+    downTheme.events[0]!.direction = "down";
+    const upTheme = candidate("상승선두", 0.45, "theme_link", "오늘 원자력 7개 종목 중 가장 강했어요(+6.20%).");
+    upTheme.events[0]!.direction = "up";
+
+    expect(hasDisplayWhyEvent(flatTheme)).toBe(false);
+    expect(isWeakDiscoveryCandidate(flatTheme)).toBe(true);
+    expect(hasDisplayWhyEvent(downTheme)).toBe(false);
+    expect(isWeakDiscoveryCandidate(downTheme)).toBe(true);
+    expect(hasDisplayWhyEvent(upTheme)).toBe(true);
+    expect(rankDiscoveryCandidates([flatTheme, downTheme, upTheme]).map((row) => row.ticker)).toEqual(["상승선두"]);
+  });
+
   it("drops weak market-context padding instead of filling the deck with price restatements", () => {
     const rows = Array.from({ length: 100 }, (_, index) =>
       candidate(`시장${index}`, 0.35 + (index % 10) / 100, "market_context", `KOSPI 시총 ${index + 1}위권에서 오늘 시장 흐름과 같이 확인해요.`)
@@ -119,7 +135,7 @@ describe("WO-05 discovery supply engine", () => {
     expect(ranked).toHaveLength(0);
   });
 
-  it("keeps real WHY cards above price-only cards even when price-only strength is larger", () => {
+  it("keeps real WHY cards and drops price-only cards even when price-only strength is larger", () => {
     const priceOnly = candidate("가격만큰종목", 1, "price_move", "오늘 가격이 +18.00% 움직였어요.");
     const themeWhy = candidate("테마이유", 0.45, "theme_link", "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요.");
     const materialWhy = candidate("뉴스이유", 0.4, "news_mention", "종목 지정 기사");
@@ -127,7 +143,6 @@ describe("WO-05 discovery supply engine", () => {
     expect(rankDiscoveryCandidates([priceOnly, themeWhy, materialWhy]).map((row) => row.ticker)).toEqual([
       "뉴스이유",
       "테마이유",
-      "가격만큰종목",
     ]);
   });
 
@@ -140,13 +155,13 @@ describe("WO-05 discovery supply engine", () => {
     expect(rankDiscoveryCandidates([famous, obscure]).map((row) => row.ticker)).toEqual(["무명주", "대형주"]);
   });
 
-  it("ranks non-material down moves below same-strength up moves", () => {
+  it("drops non-material direction-only price moves instead of ranking them as discovery", () => {
     const up = candidate("상승", 0.9, "price_move", "오늘 가격이 +9.00% 움직였어요.");
     up.events[0]!.direction = "up";
     const down = candidate("하락", 0.9, "price_move", "오늘 가격이 -9.00% 움직였어요.");
     down.events[0]!.direction = "down";
 
-    expect(rankDiscoveryCandidates([down, up]).map((row) => row.ticker)).toEqual(["상승", "하락"]);
+    expect(rankDiscoveryCandidates([down, up]).map((row) => row.ticker)).toEqual([]);
   });
 
   it("boosts obscure first-seen awakening over stale same-strength candidates", () => {
