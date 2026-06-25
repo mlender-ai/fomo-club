@@ -341,6 +341,8 @@ export interface StockContext {
   axisHeadline?: string | undefined;
   /** 발견 덱이 이미 가진 가격·포모·차트 seed. 상세 fetch 실패 시 비어 보이지 않게 한다. */
   frontSeed?: StockFrontResponse | undefined;
+  /** 발견 공급 엔진이 가진 네이버 종목 코드. STOCK_VOCAB 미등록 발견주 기본지표 조회용. */
+  naverCode?: string | undefined;
 }
 
 function hasUsableFront(front: StockFrontResponse | null | undefined): front is StockFrontResponse {
@@ -967,7 +969,7 @@ export function StockInsightView({
       .then((r) => alive && setFront(mergeFrontSeed(seed, r)))
       .catch(() => alive && setFront(seed))
       .finally(() => alive && setFrontLoaded(true));
-    fetchStockBasics(stock)
+    fetchStockBasics(stock, context?.naverCode ? { naverCode: context.naverCode } : {})
       .then((r) => alive && setBasics(r))
       .catch(() => alive && setBasics(null))
       .finally(() => alive && setBasicsLoaded(true));
@@ -978,7 +980,7 @@ export function StockInsightView({
     return () => {
       alive = false;
     };
-  }, [stock, context?.frontSeed]);
+  }, [stock, context?.frontSeed, context?.naverCode]);
 
   const hasInsight =
     !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;

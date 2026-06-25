@@ -190,12 +190,12 @@ export const fetchStockInsight = (stock: string) =>
 
 /** 종목 기본 정보(바닥 — 주가·개요·시총·지표·재무). 항상 깔린다(원문 무관). */
 export type { StockBasics } from "@fomo/core";
-export const fetchStockBasics = (stock: string) =>
+export const fetchStockBasics = (stock: string, opts: { naverCode?: string } = {}) =>
   cachedGet(
-    `stock-basics:${stock}`,
+    `stock-basics:${opts.naverCode ?? "name"}:${stock}`,
     () =>
       get<import("@fomo/core").StockBasics>(
-        `/api/fomo/stock-basics?stock=${encodeURIComponent(stock)}`
+        `/api/fomo/stock-basics?stock=${encodeURIComponent(stock)}${opts.naverCode ? `&code=${encodeURIComponent(opts.naverCode)}` : ""}`
       ),
     CACHE_TTL.stockBasics
   );

@@ -19,15 +19,20 @@ export function OPTIONS() {
 const REVALIDATE_S = 21_600; // 6h (가격은 약간 지연 허용 — 바닥 정보 안정성 우선, SWR)
 const inflight = new Map<string, Promise<StockBasics>>();
 
-async function getBasics(stock: string): Promise<StockBasics> {
+function validNaverCode(code: string | null): string | undefined {
+  const c = code?.trim();
+  return c && /^\d{6}$/.test(c) ? c : undefined;
+}
+
+async function getBasics(stock: string, naverCode?: string): Promise<StockBasics> {
   const today = kstDate();
-  const key = `${today}:${stock}`;
+  const key = `${today}:${stock}:${naverCode ?? ""}`;
   const running = inflight.get(key);
   if (running) return running;
 
   const load = unstable_cache(
-    async () => fetchStockBasics(stock),
-    ["fomo-stock-basics", cacheVersion(), today, stock],
+    async () => fetchStockBasics(stock, naverCode),
+    ["fomo-stock-basics", cacheVersion(), today, stock, naverCode ?? ""],
     { revalidate: REVALIDATE_S }
   );
   const p = load().finally(() => inflight.delete(key));
@@ -36,11 +41,12 @@ async function getBasics(stock: string): Promise<StockBasics> {
 }
 
 export async function GET(req: Request) {
-  const stock = new URL(req.url).searchParams.get("stock")?.trim();
+  const url = new URL(req.url);
+  const stock = url.searchParams.get("stock")?.trim();
   if (!stock) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }
-  const payload = await getBasics(stock);
+  const payload = await getBasics(stock, validNaverCode(url.searchParams.get("code")));
   return withCors(
     NextResponse.json(payload, {
       headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800" },
