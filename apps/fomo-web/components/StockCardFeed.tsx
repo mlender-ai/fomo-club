@@ -90,7 +90,7 @@ function StockCardSlide({
 
         {/* 현재가 + 등락 */}
         <div className="mt-4 flex items-baseline gap-2">
-          <span className="font-pixel text-3xl leading-none text-whiteout">{card.priceText}</span>
+          <span className="text-3xl font-bold leading-none text-whiteout">{card.priceText}</span>
         </div>
         <p className="mt-1.5 text-sm" style={{ color }}>
           {changeText(card.changePct)}
@@ -102,7 +102,7 @@ function StockCardSlide({
         {/* 더보기 + 진행 표시 (거래 버튼 없음) */}
         <div className="mt-5 flex items-center justify-between">
           <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-          <span className="font-pixel text-[11px] text-muted">
+          <span className="text-[11px] font-medium text-muted">
             {index + 1} / {total}
           </span>
         </div>
@@ -128,7 +128,7 @@ function DepthPage({ card, onClose }: { card: StockCard; onClose: () => void }) 
             </span>
             <div>
               <p className="text-sm font-semibold text-whiteout">{card.name}</p>
-              <p className="font-pixel text-[11px]" style={{ color }}>
+              <p className="text-[11px] font-medium" style={{ color }}>
                 {card.priceText} · {changeText(card.changePct)}
               </p>
             </div>

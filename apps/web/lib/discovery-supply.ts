@@ -125,7 +125,7 @@ function changeDirFrom(row: RawNaverStock, pct: number | undefined): "up" | "dow
 }
 
 function signedChangeText(row: RawNaverStock, dir: "up" | "down" | "flat", pct: number | undefined): string | undefined {
-  const change = row.compareToPreviousClosePrice?.trim();
+  const change = row.compareToPreviousClosePrice?.trim().replace(/^[+-]+/, "");
   if (!change && typeof pct !== "number") return undefined;
   const pctText = typeof pct === "number" ? `${pct.toFixed(2)}%` : undefined;
   const prefix = dir === "down" ? "-" : "";

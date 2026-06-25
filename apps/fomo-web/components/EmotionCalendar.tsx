@@ -57,7 +57,7 @@ export function EmotionCalendar({ data }: { data: CalendarResponse }) {
       <p className="mb-3 mt-0.5 text-xs text-muted">
         {stats.filled > 0 ? (
           <>
-            이번 달 <span className="font-pixel text-whiteout">{stats.filled}</span>
+            이번 달 <span className="font-semibold text-whiteout">{stats.filled}</span>
             칸을 칠했어요
             {stats.streak >= 2 ? (
               <>
@@ -108,7 +108,7 @@ export function EmotionCalendar({ data }: { data: CalendarResponse }) {
               }}
             >
               <span
-                className="font-pixel"
+                className="font-medium"
                 style={{ color: color ?? (cell.isToday ? "#FAFAFA" : "#6A6A6A") }}
               >
                 {day}

@@ -109,7 +109,7 @@ export function parseNaverStockBasic(json: unknown): Partial<StockBasics> {
   const change = d.compareToPreviousClosePrice ?? d.compareToPreviousPrice;
   if (change !== undefined && change !== null && `${change}`.trim()) {
     const r = ratio !== undefined && ratio !== null ? ` (${ratio}%)` : "";
-    out.changeText = `${`${change}`.replace(/^-/, "")}${r}`;
+    out.changeText = `${`${change}`.replace(/^[+-]+/, "")}${r}`;
   }
   const code = typeof d.compareToPreviousClosePrice === "object" ? null : null; // (구조 변동 방어)
   void code;

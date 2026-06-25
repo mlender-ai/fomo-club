@@ -49,7 +49,7 @@ export default async function InsightPage({ params }: { params: Promise<{ id: st
       {d?.metric && (
         <div className="mt-6 rounded-2xl border border-hairline bg-surface px-5 py-5">
           <p className="text-xs text-muted">{d.metric.label}</p>
-          <p className={`mt-1 font-pixel text-4xl leading-none ${changeColor}`}>{d.metric.value}</p>
+          <p className={`mt-1 text-4xl font-bold leading-none ${changeColor}`}>{d.metric.value}</p>
         </div>
       )}
 

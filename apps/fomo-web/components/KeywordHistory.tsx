@@ -57,7 +57,7 @@ export function KeywordHistory() {
                 <span aria-hidden>{h.emoji}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-pixel text-sm" style={{ color }}>
+                <span className="text-sm font-semibold" style={{ color }}>
                   {h.fomoScore}
                 </span>
                 <span className="text-[11px] text-muted">{relativeTime(h.ts)}</span>

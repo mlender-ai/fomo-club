@@ -50,10 +50,10 @@ const config: Config = {
       fontFamily: {
         body: ["Pretendard", "system-ui", "sans-serif"],
         sans: ["Pretendard", "system-ui", "sans-serif"],
-        // 모든 숫자(점수·가격·등락·온도 등) = 또렷한 모노 JetBrains Mono. 픽셀 폰트는 가독성 떨어져 폐기.
-        // 한글은 JetBrains 글리프 없어 Pretendard 폴백(= 한글 모노 안 박힘). pixel/display/mono/number 전부 동일.
-        number: ["JetBrains Mono", "Pretendard", "monospace"],
-        mono: ["JetBrains Mono", "Pretendard", "monospace"],
+        // 숫자(점수·가격·등락·온도 등)는 본문과 같은 Pretendard로 통일한다.
+        // JetBrains Mono는 로고성 pixel/display 텍스트에만 남긴다.
+        number: ["Pretendard", "system-ui", "sans-serif"],
+        mono: ["Pretendard", "system-ui", "sans-serif"],
         pixel: ["JetBrains Mono", "Pretendard", "monospace"],
         display: ["JetBrains Mono", "Pretendard", "monospace"],
       },

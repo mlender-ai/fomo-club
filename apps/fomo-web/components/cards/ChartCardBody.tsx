@@ -42,8 +42,8 @@ export function ChartCardBody({ chart }: { chart: ChartCard }) {
       <div className="mt-5">
         <p className="font-pixel text-sm text-muted">{chart.label}</p>
         <div className="mt-1 flex items-baseline gap-2">
-          <span className="font-pixel text-3xl leading-none text-whiteout">{fmtValue(chart.value)}</span>
-          <span className="font-pixel text-sm" style={{ color }}>
+          <span className="text-3xl font-bold leading-none text-whiteout">{fmtValue(chart.value)}</span>
+          <span className="text-sm font-medium" style={{ color }}>
             {pct(chart.changePct)}
           </span>
         </div>

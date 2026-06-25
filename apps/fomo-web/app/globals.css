@@ -1,5 +1,4 @@
-/* 본문 Pretendard / 모든 숫자 JetBrains Mono(또렷) — @import는 Tailwind보다 먼저.
- * 숫자는 JetBrains Mono(가독성). 한글은 글리프 없어 Pretendard 폴백. 픽셀 폰트는 가독성 문제로 폐기. */
+/* 본문·숫자 Pretendard / 로고성 pixel-display만 JetBrains Mono — @import는 Tailwind보다 먼저. */
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&display=swap");
 

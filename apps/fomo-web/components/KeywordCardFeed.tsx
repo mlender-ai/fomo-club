@@ -69,7 +69,7 @@ function SectorFace({ card, progress }: { card: KeywordCard; progress?: string }
       <p className="mt-6 text-lg leading-8 text-whiteout">{card.comment}</p>
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+        {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
       </div>
     </div>
   );
@@ -100,7 +100,7 @@ function StockFace({
       </p>
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+        {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
       </div>
     </div>
   );

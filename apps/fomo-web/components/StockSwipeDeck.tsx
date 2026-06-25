@@ -71,6 +71,11 @@ const MARKET_LABEL: Record<string, string> = {
   COIN: "코인",
 };
 
+function normalizeChangeText(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  return text.replace(/^--+/, "-").replace(/^\+\++/, "+");
+}
+
 /** 종목 로고 — 네이버 심볼 이미지(불러와지면), 실패 시 이니셜 원형 폴백. */
 function LogoBadge({ name, code }: { name: string; code?: string | undefined }) {
   const [failed, setFailed] = useState(false);
@@ -228,6 +233,7 @@ function StockCardFace({
   why?: string | undefined;
   progress?: string | undefined;
 }) {
+  const displayChangeText = normalizeChangeText(changeText);
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* 1행 — 정체성: 로고 + 종목명 + 시장·시총순위 */}
@@ -249,11 +255,11 @@ function StockCardFace({
       {priceText && (
         <div className="mt-2.5 flex shrink-0 items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
-          {changeText && (
+          {displayChangeText && (
             <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums" style={{ color: DIR_COLOR[changeDir ?? "flat"] }}>
               {changeDir === "up" && <CaretUpIcon size={11} />}
               {changeDir === "down" && <CaretDownIcon size={11} />}
-              {changeText}
+              {displayChangeText}
             </span>
           )}
         </div>
@@ -314,7 +320,7 @@ function StockCardFace({
 
       <div className="mt-auto flex shrink-0 items-center justify-between pt-2">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+        {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
       </div>
     </div>
   );
@@ -363,7 +369,7 @@ function StockCardLoadingFace({
 
       <div className="mt-auto flex items-center justify-between pt-6">
         <span className="font-pixel text-[11px] text-muted">신호 확인 중</span>
-        {progress && <span className="font-pixel text-[11px] text-muted">{progress}</span>}
+        {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
       </div>
     </div>
   );

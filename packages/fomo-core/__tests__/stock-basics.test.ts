@@ -38,6 +38,7 @@ describe("parseNaverStockBasic — 주가·등락(객관 사실)", () => {
   });
   it("하락 방향", () => {
     expect(parseNaverStockBasic({ closePrice: "100", fluctuationsRatio: "-1.2", compareToPreviousClosePrice: "-5" }).changeDir).toBe("down");
+    expect(parseNaverStockBasic({ closePrice: "100", fluctuationsRatio: "-1.2", compareToPreviousClosePrice: "-5" }).changeText).toBe("5 (-1.2%)");
   });
 });
 
