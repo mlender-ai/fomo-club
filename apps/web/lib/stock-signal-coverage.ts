@@ -4,7 +4,7 @@ import {
   fetchCommunity,
   isFrontHookSafe,
   signalsFromBasics,
-  stockMatchesText,
+  stockMentionRole,
   stocksBySector,
   type StockSector,
   type KeywordSourceItem,
@@ -86,7 +86,7 @@ function buildNewsEventMap(newsItems: readonly KeywordSourceItem[], canonicals: 
   const out = new Map<string, { label: string; source?: string }>();
   for (const canonical of canonicals) {
     for (const item of newsItems) {
-      if (!stockMatchesText(canonical, item.title)) continue;
+      if (stockMentionRole(canonical, item) !== "primary") continue;
       const label = cleanNewsEventTitle(item.title);
       if (!label) continue;
       out.set(canonical, {

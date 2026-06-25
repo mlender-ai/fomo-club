@@ -102,11 +102,11 @@ export function hasThemeLinkEvent(candidate: DiscoveryCandidate): boolean {
 }
 
 export function hasDisplayWhyEvent(candidate: DiscoveryCandidate): boolean {
-  return hasPublicMaterialEvent(candidate) || candidate.events.some((event) => event.kind === "theme_link" || event.kind === "market_context");
+  return hasPublicMaterialEvent(candidate) || candidate.events.some((event) => event.kind === "theme_link");
 }
 
 export function isWeakDiscoveryCandidate(candidate: DiscoveryCandidate): boolean {
-  return !hasDisplayWhyEvent(candidate) && candidate.events.every((event) => event.kind === "price_move" || event.kind === "volume_spike");
+  return !hasDisplayWhyEvent(candidate) && candidate.events.every((event) => event.kind === "price_move" || event.kind === "volume_spike" || event.kind === "market_context");
 }
 
 const WHY_KIND_PRIORITY: Record<DiscoveryEventKind, number> = {

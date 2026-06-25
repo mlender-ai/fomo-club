@@ -14,6 +14,7 @@ import {
   resolveStock,
   sectorOf,
   selectMultiAxisHook,
+  stockMentionRole,
   stockMatchesText,
   type AxisSignal,
   type CardFrontSignals,
@@ -38,8 +39,8 @@ const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
 const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 5;
 const SPARKLINE_CONCURRENCY = 8;
-const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL === "1";
-const DISCOVERY_FLOW_ENABLED = process.env.DISCOVERY_FLOW_LIVE === "1";
+const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
+const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED ? 12 : 0;
 const TARGETED_MATERIAL_CONCURRENCY = 4;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
@@ -209,7 +210,7 @@ function eventFromPrice(row: NaverMarketRow, asOf: string): DiscoveryEvent | nul
 }
 
 function eventFromNews(attention: StockAttentionSignal | undefined, asOf: string): DiscoveryEvent | null {
-  if (!attention || attention.mentionCount <= 0) return null;
+  if (!attention?.newsEventLabel || attention.mentionCount <= 0) return null;
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -238,6 +239,13 @@ function isStockArticle(canonical: string, article: RawArticle): boolean {
   return stockMatchesText(canonical, `${article.title} ${article.summary ?? ""}`);
 }
 
+function isPrimaryStockArticle(canonical: string, article: RawArticle): boolean {
+  return stockMentionRole(canonical, {
+    title: article.title,
+    ...(article.summary ? { summary: article.summary } : {}),
+  }) === "primary";
+}
+
 function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
   const label = cleanMaterialTitle(article.title);
   if (!label) return null;
@@ -262,7 +270,7 @@ async function eventFromTargetedMaterial(row: NaverMarketRow, asOf: string): Pro
 
   const stockNews =
     newsResult.status === "fulfilled"
-      ? newsResult.value.find((article) => isStockArticle(row.canonical, article))
+      ? newsResult.value.find((article) => isPrimaryStockArticle(row.canonical, article))
       : undefined;
   if (stockNews) return materialEventFromArticle(stockNews, asOf, "네이버 종목뉴스");
 
@@ -306,18 +314,31 @@ function buildThemeMoveSignals(rows: readonly NaverMarketRow[]): Map<string, The
 }
 
 function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
-  if (!theme || typeof row.changePct !== "number" || row.changePct <= 0) return null;
+  if (!theme || typeof row.changePct !== "number") return null;
   const strongTheme = theme.averageChangePct >= 1.5 && theme.positiveCount >= 2;
+  const weakTheme = theme.averageChangePct <= -1.5 && theme.positiveCount <= Math.max(1, Math.floor(theme.peerCount / 3));
   const leadingTheme = theme.rank <= 3 && row.changePct >= 5;
-  if (!strongTheme && !leadingTheme) return null;
+  const laggingTheme = theme.rank >= Math.max(3, theme.peerCount - 2) && row.changePct <= -5;
+  const bigSectorMove = Math.abs(row.changePct) >= 7 && Math.abs(theme.relativeChangePct) >= 2;
+  const sectorSpike = Math.abs(row.changePct) >= 5;
+  if (!strongTheme && !weakTheme && !leadingTheme && !laggingTheme && !bigSectorMove && !sectorSpike) return null;
+  const weakRank = theme.peerCount - theme.rank + 1;
   const label =
-    theme.rank <= 3
-      ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강하게 움직였어요.`
-      : `오늘 ${theme.sector} 흐름이 강했고, 이 종목도 같이 움직였어요.`;
+    row.changePct < 0
+      ? laggingTheme
+        ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 아래에서 ${ordinalText(weakRank)} 약했어요(${pctText(row.changePct)}).`
+        : theme.relativeChangePct >= 0
+          ? `가격은 빠졌지만 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다는 ${pointText(theme.relativeChangePct)}포인트 덜 약했어요(${pctText(row.changePct)}).`
+          : `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 약했어요(${pctText(row.changePct)}).`
+      : theme.rank <= 3
+        ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강했어요(${pctText(row.changePct)}).`
+        : theme.relativeChangePct >= 0
+          ? `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 강했어요(${pctText(row.changePct)}).`
+          : `가격은 올랐지만 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다는 ${pointText(theme.relativeChangePct)}포인트 덜 강했어요(${pctText(row.changePct)}).`;
   return {
     kind: "theme_link",
     firstSeen: true,
-    strength: Math.min(0.92, 0.48 + Math.max(0, theme.averageChangePct) / 10 + Math.max(0, row.changePct) / 40),
+    strength: Math.min(0.92, 0.48 + Math.abs(theme.averageChangePct) / 10 + Math.abs(row.changePct) / 40),
     source: "FOMO 섹터맵·네이버 시세",
     asOf,
     confidence: "M",
@@ -328,6 +349,10 @@ function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined,
 function pctText(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
+}
+
+function pointText(value: number): string {
+  return Math.abs(value).toFixed(1);
 }
 
 function ordinalText(rank: number): string {
@@ -383,7 +408,6 @@ function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | un
 }
 
 async function eventFromFlow(ticker: string): Promise<DiscoveryEvent | null> {
-  if (!DISCOVERY_FLOW_ENABLED) return null;
   if (!process.env.DATABASE_URL) return null;
   const history = await readSupplyDemandHistory(ticker, 10);
   if (history.length === 0) return null;
@@ -408,13 +432,12 @@ function eventAxisSignal(event: DiscoveryEvent): AxisSignal | null {
     event.kind !== "theme_link" &&
     event.kind !== "flow_entry" &&
     event.kind !== "disclosure" &&
-    event.kind !== "news_mention" &&
-    event.kind !== "market_context"
+    event.kind !== "news_mention"
   ) return null;
   const axis =
-    event.kind === "theme_link" || event.kind === "market_context" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
+    event.kind === "theme_link" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
   const sourceKind =
-    event.kind === "theme_link" || event.kind === "market_context"
+    event.kind === "theme_link"
       ? "market"
       : event.kind === "news_mention"
         ? "news"
@@ -425,9 +448,7 @@ function eventAxisSignal(event: DiscoveryEvent): AxisSignal | null {
     axis,
     fired: true,
     strength:
-      event.kind === "market_context"
-        ? event.strength
-        : event.kind === "theme_link"
+      event.kind === "theme_link"
           ? Math.max(0.91, event.strength)
           : event.kind === "news_mention"
             ? Math.max(0.94, event.strength)
@@ -585,7 +606,7 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
     byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
   }
 
-  if (DISCOVERY_FLOW_ENABLED) {
+  if (DISCOVERY_FLOW_CACHE_ENABLED) {
     const flowRows = await mapLimit([...byTicker.keys()], 8, async (ticker) => ({ ticker, event: await eventFromFlow(ticker) }));
     for (const result of flowRows) {
       if (result.status !== "fulfilled" || !result.value.event) continue;

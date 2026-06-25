@@ -199,6 +199,50 @@ export interface ExtractStocksOptions {
   minMentions?: number;
 }
 
+export type StockMentionRole = "primary" | "secondary" | "none";
+
+function aliasMatchIndex(def: StockDef, text: string): number {
+  const blob = text.toLowerCase();
+  let best = Number.POSITIVE_INFINITY;
+  for (const alias of def.aliases) {
+    const low = alias.toLowerCase();
+    if (isAsciiAlias(alias)) {
+      const re = new RegExp(`(^|[^a-z0-9])${escapeRegex(low)}([^a-z0-9]|$)`, "i");
+      const match = re.exec(blob);
+      if (match) best = Math.min(best, match.index + (match[1]?.length ?? 0));
+    } else {
+      const index = blob.indexOf(low);
+      if (index >= 0) best = Math.min(best, index);
+    }
+  }
+  return best;
+}
+
+/**
+ * 기사/원문이 특정 종목을 어느 정도로 다루는지.
+ * - primary: 제목에서 해당 종목이 가장 먼저 등장하거나 제목이 그 종목명으로 시작.
+ * - secondary: 본문/제목에 등장하지만 다른 종목이 먼저 나온 부차 언급.
+ * WHY 헤드라인은 primary 에만 붙인다. 부차 동시언급을 그대로 쓰면 삼성=하이닉스 같은 중복 이유가 된다.
+ */
+export function stockMentionRole(canonical: string, item: Pick<KeywordSourceItem, "title" | "summary">): StockMentionRole {
+  const def = resolveStock(canonical);
+  if (!def) return "none";
+  const title = item.title ?? "";
+  const summary = item.summary ?? "";
+  if (!stockMatchesText(canonical, `${title} ${summary}`)) return "none";
+
+  const titleIndex = aliasMatchIndex(def, title);
+  if (Number.isFinite(titleIndex)) {
+    const titleHits = STOCK_VOCAB
+      .map((stock) => ({ stock, index: aliasMatchIndex(stock, title) }))
+      .filter((hit) => Number.isFinite(hit.index))
+      .sort((a, b) => a.index - b.index || a.stock.canonical.localeCompare(b.stock.canonical));
+    return titleHits[0]?.stock.canonical === def.canonical ? "primary" : "secondary";
+  }
+
+  return stockMatchesText(canonical, summary) ? "secondary" : "none";
+}
+
 /**
  * 그날 원문 글 → 등장 종목 추출(빈도 임계 컷). §1 "원문이 곧 필터".
  * - 글 1건에 같은 종목이 여러 별칭으로 나와도 그 글은 1회로 센다(글 수 기준).

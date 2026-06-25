@@ -3,6 +3,7 @@ import {
   extractStocks,
   isLikelyStock,
   pickSurpriseStock,
+  stockMentionRole,
   stockMatchesText,
   stockDef,
   resolveStock,
@@ -78,6 +79,29 @@ describe("stockMatchesText — 별칭/티커 grounding", () => {
   it("stockDef 로 정의 조회", () => {
     expect(stockDef("엔비디아")?.country).toBe("US");
     expect(stockDef("없는종목")).toBeUndefined();
+  });
+});
+
+describe("stockMentionRole — 뉴스 WHY 주어/부차 언급 분리", () => {
+  it("제목에서 먼저 등장한 종목만 primary 로 본다", () => {
+    const item = {
+      title: "하이닉스, 나스닥100 연내편입 유력…삼성전자도 ADR 상장설",
+      summary: "메모리 업종 주요 종목이 함께 언급됐어요.",
+    };
+
+    expect(stockMentionRole("SK하이닉스", item)).toBe("primary");
+    expect(stockMentionRole("삼성전자", item)).toBe("secondary");
+  });
+
+  it("본문에만 등장한 종목은 WHY 헤드라인 후보에서 내린다", () => {
+    const item = {
+      title: "SK하이닉스, AI 메모리 투자 확대",
+      summary: "삼성전자와 마이크론도 업황 비교 대상으로 언급됐어요.",
+    };
+
+    expect(stockMentionRole("SK하이닉스", item)).toBe("primary");
+    expect(stockMentionRole("삼성전자", item)).toBe("secondary");
+    expect(stockMentionRole("엔비디아", item)).toBe("none");
   });
 });
 

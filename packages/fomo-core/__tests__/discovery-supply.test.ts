@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   discoveryWhy,
   eligibleUniverse,
+  hasDisplayWhyEvent,
+  isWeakDiscoveryCandidate,
   rankDiscoveryCandidates,
   type DiscoveryEventKind,
   type DiscoveryCandidate,
@@ -88,23 +90,32 @@ describe("WO-05 discovery supply engine", () => {
     expect(discoveryWhy(row)).toContain("공급계약");
   });
 
-  it("ranks contextual theme links above market context but below material events", () => {
+  it("keeps contextual theme links and drops weak market context", () => {
     const ranked = rankDiscoveryCandidates([
       candidate("시장맥락", 0.65, "market_context", "KOSPI 시총 상위권에서 오늘 +1.2% 움직였어요."),
       candidate("테마", 0.55, "theme_link", "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요."),
       candidate("수급", 0.5, "flow_entry", "기관이 3일째 사는 중이에요."),
     ]);
 
-    expect(ranked.map((c) => c.ticker)).toEqual(["수급", "테마", "시장맥락"]);
+    expect(ranked.map((c) => c.ticker)).toEqual(["수급", "테마"]);
   });
 
-  it("keeps the deck full when market context gives every card a real reason", () => {
+  it("does not treat market context as a real display WHY", () => {
+    const market = candidate("시장맥락", 0.55, "market_context", "KOSPI 시총 상위권에서 오늘 +1.2% 움직였어요.");
+    const theme = candidate("테마", 0.55, "theme_link", "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요.");
+
+    expect(hasDisplayWhyEvent(market)).toBe(false);
+    expect(isWeakDiscoveryCandidate(market)).toBe(true);
+    expect(hasDisplayWhyEvent(theme)).toBe(true);
+    expect(isWeakDiscoveryCandidate(theme)).toBe(false);
+  });
+
+  it("drops weak market-context padding instead of filling the deck with price restatements", () => {
     const rows = Array.from({ length: 100 }, (_, index) =>
       candidate(`시장${index}`, 0.35 + (index % 10) / 100, "market_context", `KOSPI 시총 ${index + 1}위권에서 오늘 시장 흐름과 같이 확인해요.`)
     );
     const ranked = rankDiscoveryCandidates(rows, { maxCandidates: 100 });
 
-    expect(ranked).toHaveLength(100);
-    expect(ranked.every((row) => discoveryWhy(row).length > 0)).toBe(true);
+    expect(ranked).toHaveLength(0);
   });
 });
