@@ -20,6 +20,7 @@ export interface DiscoveryEvent {
   asOf: string;
   confidence: "L" | "M" | "H";
   label?: string;
+  direction?: "up" | "down" | "flat";
 }
 
 export interface DiscoveryCandidate {
@@ -32,6 +33,7 @@ export interface DiscoveryCandidate {
   asOf: string;
   reason?: string;
   marquee?: boolean;
+  marketCapRank?: number;
 }
 
 export interface UniverseStock {
@@ -60,6 +62,12 @@ export const DISCOVERY_LIQUIDITY_MEDIAN_RATIO_CUT = 0.1;
 export const DISCOVERY_SEEN_DECAY_DAYS = 3;
 export const DISCOVERY_TOP_BAND_WHY_REQUIRED = 30;
 export const DISCOVERY_WEAK_MIN_STRENGTH = 0.85;
+export const DISCOVERY_FAME_MAX_PENALTY = 0.5;
+export const DISCOVERY_FAME_RANK_FLOOR = 120;
+export const DISCOVERY_AWAKENING_MAX_BOOST = 0.3;
+export const DISCOVERY_DIR_DOWN_NOISE_PENALTY = 0.5;
+export const DISCOVERY_DIR_DOWN_MATERIAL_PENALTY = 0.15;
+export const DISCOVERY_STRENGTH_WEIGHT = 0.65;
 
 const RISK_FLAG_PATTERN = /관리|투자경고|투자위험|거래정지|단기과열|이상급등/;
 
@@ -155,11 +163,45 @@ function freshnessBoost(candidate: DiscoveryCandidate): number {
   return candidate.events.some((event) => event.firstSeen) ? 0.16 : 0;
 }
 
+export function famePenalty(rank?: number): number {
+  if (typeof rank !== "number" || !Number.isFinite(rank) || rank <= 0) return 0;
+  const fameRatio = clamp01((DISCOVERY_FAME_RANK_FLOOR - Math.min(rank, DISCOVERY_FAME_RANK_FLOOR)) / DISCOVERY_FAME_RANK_FLOOR);
+  return -DISCOVERY_FAME_MAX_PENALTY * fameRatio;
+}
+
+export function awakeningBoost(candidate: DiscoveryCandidate): number {
+  if (!candidate.events.some((event) => event.firstSeen)) return 0;
+  const rank = candidate.marketCapRank;
+  const obscure =
+    typeof rank === "number" && Number.isFinite(rank)
+      ? clamp01((Math.min(rank, 300) - 80) / 220)
+      : 0.4;
+  return DISCOVERY_AWAKENING_MAX_BOOST * obscure;
+}
+
+export function directionPenalty(candidate: DiscoveryCandidate): number {
+  const hasDownShapeEvent = candidate.events.some(
+    (event) =>
+      event.direction === "down" &&
+      (event.kind === "price_move" || event.kind === "volume_spike" || event.kind === "market_context" || event.kind === "theme_link")
+  );
+  if (!hasDownShapeEvent) return 0;
+  return hasPublicMaterialEvent(candidate) ? -DISCOVERY_DIR_DOWN_MATERIAL_PENALTY : -DISCOVERY_DIR_DOWN_NOISE_PENALTY;
+}
+
 function eventScore(candidate: DiscoveryCandidate): number {
   const maxStrength = Math.max(0, ...candidate.events.map((event) => clamp01(event.strength)));
   const diversity = new Set(candidate.events.map((event) => event.kind)).size;
   const materialBoost = hasPublicMaterialEvent(candidate) ? 0.22 : hasThemeLinkEvent(candidate) ? 0.08 : hasDisplayWhyEvent(candidate) ? -0.03 : -0.25;
-  return maxStrength + freshnessBoost(candidate) + Math.min(0.12, diversity * 0.03) + materialBoost;
+  return (
+    DISCOVERY_STRENGTH_WEIGHT * maxStrength +
+    freshnessBoost(candidate) +
+    Math.min(0.12, diversity * 0.03) +
+    materialBoost +
+    famePenalty(candidate.marketCapRank) +
+    awakeningBoost(candidate) +
+    directionPenalty(candidate)
+  );
 }
 
 function seenPenalty(ticker: string, seen: readonly SeenRecord[], watched: ReadonlySet<string>): number {
@@ -178,7 +220,12 @@ export function rankDiscoveryCandidates(
   const watched = new Set(opts.watched ?? []);
   return candidates
     .filter((candidate) => candidate.events.length > 0)
-    .filter((candidate) => !isWeakDiscoveryCandidate(candidate) || Math.max(0, ...candidate.events.map((event) => event.strength)) >= DISCOVERY_WEAK_MIN_STRENGTH)
+    .filter(
+      (candidate) =>
+        !isWeakDiscoveryCandidate(candidate) ||
+        Math.max(0, ...candidate.events.map((event) => event.strength)) >= DISCOVERY_WEAK_MIN_STRENGTH ||
+        candidate.events.some((event) => event.firstSeen && (event.kind === "volume_spike" || event.kind === "flow_entry"))
+    )
     .map((candidate, index) => ({
       candidate,
       index,

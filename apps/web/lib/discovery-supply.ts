@@ -621,16 +621,27 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
   const candidates = [...byTicker.entries()].map(([ticker, { row, events }]): DiscoveryCandidate => {
     const def = resolveStock(ticker);
     const sector = sectorOf(ticker);
-    const reason = discoveryWhy({ ticker, market: row.market, events, asOf });
+    const direction: NonNullable<DiscoveryEvent["direction"]> =
+      typeof row.changePct !== "number" ? "flat" : row.changePct > 0 ? "up" : row.changePct < 0 ? "down" : "flat";
+    const directedEvents: DiscoveryEvent[] = events.map((event) => event.direction ? event : { ...event, direction });
+    const candidateBase: DiscoveryCandidate = {
+      ticker,
+      market: row.market,
+      events: directedEvents,
+      asOf,
+      ...(typeof row.marketCapRank === "number" ? { marketCapRank: row.marketCapRank } : {}),
+    };
+    const reason = discoveryWhy(candidateBase);
     return {
       ticker,
       market: row.market,
       country: (def?.country ?? "KR") as StockCountry,
       naverCode: row.naverCode,
       ...(sector ? { sector } : {}),
-      events,
+      events: directedEvents,
       asOf,
-      ...(hasDisplayWhyEvent({ ticker, market: row.market, events, asOf }) ? { reason } : {}),
+      ...(typeof row.marketCapRank === "number" ? { marketCapRank: row.marketCapRank } : {}),
+      ...(hasDisplayWhyEvent(candidateBase) ? { reason } : {}),
       marquee: def?.marquee === true,
     };
   });

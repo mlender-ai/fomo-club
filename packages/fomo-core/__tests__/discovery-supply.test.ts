@@ -118,4 +118,54 @@ describe("WO-05 discovery supply engine", () => {
 
     expect(ranked).toHaveLength(0);
   });
+
+  it("ranks obscure stocks above famous stocks at the same signal strength", () => {
+    const famous = candidate("대형주", 0.7, "news_mention", "대형주 기사");
+    famous.marketCapRank = 3;
+    const obscure = candidate("무명주", 0.7, "news_mention", "무명주 기사");
+    obscure.marketCapRank = 250;
+
+    expect(rankDiscoveryCandidates([famous, obscure]).map((row) => row.ticker)).toEqual(["무명주", "대형주"]);
+  });
+
+  it("ranks non-material down moves below same-strength up moves", () => {
+    const up = candidate("상승", 0.9, "price_move", "오늘 가격이 +9.00% 움직였어요.");
+    up.events[0]!.direction = "up";
+    const down = candidate("하락", 0.9, "price_move", "오늘 가격이 -9.00% 움직였어요.");
+    down.events[0]!.direction = "down";
+
+    expect(rankDiscoveryCandidates([down, up]).map((row) => row.ticker)).toEqual(["상승", "하락"]);
+  });
+
+  it("boosts obscure first-seen awakening over stale same-strength candidates", () => {
+    const stale = candidate("기존무명", 0.7, "theme_link", "오늘 원자력 평균보다 강했어요.");
+    stale.marketCapRank = 260;
+    stale.events[0]!.firstSeen = false;
+    const awakening = candidate("각성무명", 0.7, "theme_link", "오늘 원자력 평균보다 강했어요.");
+    awakening.marketCapRank = 260;
+
+    expect(rankDiscoveryCandidates([stale, awakening]).map((row) => row.ticker)).toEqual(["각성무명", "기존무명"]);
+  });
+
+  it("keeps legacy candidates without rank or direction safe and deterministic", () => {
+    const rows = [
+      candidate("B", 0.6, "news_mention", "B 기사"),
+      candidate("A", 0.6, "news_mention", "A 기사"),
+    ];
+
+    const first = rankDiscoveryCandidates(rows).map((row) => row.ticker);
+    const second = rankDiscoveryCandidates(rows).map((row) => row.ticker);
+
+    expect(first).toEqual(["B", "A"]);
+    expect(second).toEqual(first);
+  });
+
+  it("keeps first-seen volume awakenings even below the weak strength floor", () => {
+    const ranked = rankDiscoveryCandidates([
+      candidate("거래량각성", 0.4, "volume_spike", "오늘 거래량이 새로 튀었어요."),
+      candidate("가격약함", 0.4, "price_move", "오늘 가격이 +4.00% 움직였어요."),
+    ]);
+
+    expect(ranked.map((row) => row.ticker)).toEqual(["거래량각성"]);
+  });
 });
