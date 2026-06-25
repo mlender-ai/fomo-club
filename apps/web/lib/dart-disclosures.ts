@@ -31,6 +31,7 @@ const DART_ROUTINE_REPORT =
   /사업보고서|반기보고서|분기보고서|증권발행실적|투자설명서|첨부정정|정정신고|임원ㆍ주요주주|임원·주요주주|주식등의대량보유|최대주주등소유주식변동/i;
 
 function dartKey(): string | undefined {
+  if (process.env.DISCOVERY_DART_LIVE !== "1") return undefined;
   return process.env.DART_API_KEY || process.env.DART_CRTFC_KEY;
 }
 

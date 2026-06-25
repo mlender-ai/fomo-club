@@ -132,7 +132,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
     return noStoreJson(
-      { error: timedOut ? "인증 서버 응답 시간이 초과되었습니다." : "인증 서버에 연결할 수 없습니다." },
+      { error: timedOut ? "데이터 서버 응답 시간이 초과되었습니다." : "데이터 서버에 연결할 수 없습니다." },
       { status: timedOut ? 504 : 502 }
     );
   }

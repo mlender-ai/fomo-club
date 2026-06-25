@@ -43,7 +43,9 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
         }
         setState({ kind: "ready", stocks, fronts: discovery.fronts as Record<string, FrontEntry> });
       } catch (err) {
-        console.warn("[TodayDiscoveryDeck] fetch failed", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[TodayDiscoveryDeck] fetch failed", err);
+        }
         if (alive) setState({ kind: "error" });
       }
     })();

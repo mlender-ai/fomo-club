@@ -65,6 +65,12 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function getSameOrigin<T>(path: string): Promise<T> {
+  const res = await fetch(path, { cache: "no-store", credentials: "same-origin" });
+  if (!res.ok) throw new Error(`GET ${path} ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
 export const fetchToday = () => get<TallyResponse>("/api/fomo/emotions/today");
 /** 롤링 배너 + 홈 상단 캐러셀용 시장 점수(나스닥·비트코인·코스피). */
@@ -247,7 +253,7 @@ export interface DiscoveryResponse {
 }
 
 export const fetchDiscovery = () =>
-  cachedGet("discovery:today", () => get<DiscoveryResponse>("/api/fomo/discovery"), CACHE_TTL.stockFront);
+  cachedGet("discovery:today", () => getSameOrigin<DiscoveryResponse>("/api/fomo/discovery"), CACHE_TTL.stockFront);
 
 export interface AxisSnapshotEntry {
   axisSignals: import("@fomo/core").AxisSignal[];

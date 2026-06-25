@@ -38,11 +38,15 @@ const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
 const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 5;
 const SPARKLINE_CONCURRENCY = 8;
-const TARGETED_MATERIAL_CANDIDATE_LIMIT = 18;
-const TARGETED_MATERIAL_CONCURRENCY = 6;
+const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL === "1";
+const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED ? 12 : 0;
+const TARGETED_MATERIAL_CONCURRENCY = 4;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d/i;
+const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_ENABLED
+  ? "네이버 시세·종목뉴스·리서치·DART 공시"
+  : "네이버 시세·뉴스 언급";
 
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
@@ -646,6 +650,6 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
     stocks,
     fronts,
     confidence: stocks.length >= 30 ? "H" : stocks.length >= 10 ? "M" : "L",
-    source: "네이버 시세·종목뉴스·리서치·DART 공시",
+    source: DISCOVERY_SOURCE_LABEL,
   };
 }

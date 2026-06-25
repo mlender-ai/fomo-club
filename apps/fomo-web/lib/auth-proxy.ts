@@ -6,6 +6,7 @@ const ALLOWED_PROXY_REQUESTS = new Map<string, ReadonlySet<string>>([
   ["auth/register", new Set(["POST"])],
   ["auth/logout", new Set(["POST"])],
   ["auth/session", new Set(["GET"])],
+  ["discovery", new Set(["GET"])],
   ["emotions/calendar", new Set(["GET"])],
   ["emotions/link", new Set(["POST"])],
   ["emotions/vote", new Set(["POST"])],
