@@ -838,6 +838,7 @@ export function StockSwipeDeck({
           context={{
             fromTheme: selected.sector,
             reason: whyFor(selected),
+            ...(selected.naverCode ? { naverCode: selected.naverCode } : {}),
             ...(front[selected.canonical] ? { frontSeed: front[selected.canonical] as StockFrontResponse } : {}),
             ...(axisHeadlineFor(selected) ? { axisHeadline: axisHeadlineFor(selected) } : {}),
           }}

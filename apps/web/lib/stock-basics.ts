@@ -30,10 +30,15 @@ async function getJson(url: string, timeoutMs = 8000): Promise<unknown> {
   }
 }
 
+function validNaverCode(code: string | undefined | null): string | undefined {
+  const c = code?.trim();
+  return c && /^\d{6}$/.test(c) ? c : undefined;
+}
+
 /** 카드 앞면 lite용 — 주가·등락만 짧게 가져온다. 상세 지표/재무/개요는 depth API가 맡는다. */
-export async function fetchStockBasicsLite(stock: string, timeoutMs = 3500): Promise<StockBasics> {
+export async function fetchStockBasicsLite(stock: string, timeoutMs = 3500, naverCode?: string): Promise<StockBasics> {
   const def = resolveStock(stock);
-  const code = def?.naverCode;
+  const code = validNaverCode(naverCode) ?? def?.naverCode;
   if (!code) return { name: def?.canonical ?? stock, metrics: [] };
 
   const base = `https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}`;
@@ -49,10 +54,10 @@ export async function fetchStockBasicsLite(stock: string, timeoutMs = 3500): Pro
   };
 }
 
-/** 종목명으로 기본 정보. 코드 해석 실패(미등록/미국주) → name 만(빈 화면 대신 최소 보장). */
-export async function fetchStockBasics(stock: string): Promise<StockBasics> {
+/** 종목명으로 기본 정보. discovery row 의 naverCode 가 있으면 vocab 미등록 종목도 조회한다. */
+export async function fetchStockBasics(stock: string, naverCode?: string): Promise<StockBasics> {
   const def = resolveStock(stock);
-  const code = def?.naverCode;
+  const code = validNaverCode(naverCode) ?? def?.naverCode;
   if (!code) {
     // 국내 코드 없음 → 네이버 종목 API 경로 없음. 정직하게 이름만(상위에서 수급/해석으로 보완).
     return { name: def?.canonical ?? stock, metrics: [] };
