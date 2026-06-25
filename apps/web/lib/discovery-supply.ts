@@ -3,15 +3,18 @@ import {
   applyAxisRarity,
   buildAxisSignals,
   computeFomoScore,
+  decodeHtmlEntities,
   discoveryWhy,
   eligibleUniverse,
   hasDisplayWhyEvent,
   hasPublicMaterialEvent,
+  isFrontHookSafe,
   investorNetStreak,
   rankDiscoveryCandidates,
   resolveStock,
   sectorOf,
   selectMultiAxisHook,
+  stockMatchesText,
   type AxisSignal,
   type CardFrontSignals,
   type DiscoveryCandidate,
@@ -22,7 +25,10 @@ import {
   type SectorStock,
   type StockCountry,
   type StockSector,
+  type RawArticle,
 } from "@fomo/core";
+import { fetchDartDisclosuresByStock, type DartDisclosureHit } from "./dart-disclosures";
+import { fetchNaverCompanyResearch, fetchNaverStockNews } from "./fomo-news-sources";
 import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { readSupplyDemandHistory } from "./supply-demand-store";
@@ -32,7 +38,11 @@ const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
 const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 5;
 const SPARKLINE_CONCURRENCY = 8;
+const TARGETED_MATERIAL_CANDIDATE_LIMIT = 18;
+const TARGETED_MATERIAL_CONCURRENCY = 6;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
+const MATERIAL_NEWS_NOISE =
+  /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d/i;
 
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
@@ -206,6 +216,60 @@ function eventFromNews(attention: StockAttentionSignal | undefined, asOf: string
   };
 }
 
+function cleanMaterialTitle(title: string): string | undefined {
+  const cleaned = decodeHtmlEntities(title)
+    .replace(/^\s*(?:\[[^\]]+\]|【[^】]+】|\([^)]*\))\s*/g, "")
+    .replace(/[“”"]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[.!?。]+$/g, "")
+    .trim();
+  if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned)) return undefined;
+  if (/[\[\]{}<>]/.test(cleaned)) return undefined;
+  const compact = cleaned.length > 46 ? `${cleaned.slice(0, 44).trim()}…` : cleaned;
+  return isFrontHookSafe(`${compact} 소식이 나왔어요.`) ? compact : undefined;
+}
+
+function isStockArticle(canonical: string, article: RawArticle): boolean {
+  return stockMatchesText(canonical, `${article.title} ${article.summary ?? ""}`);
+}
+
+function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
+  const label = cleanMaterialTitle(article.title);
+  if (!label) return null;
+  const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(`${article.source} ${article.category ?? ""}`);
+  return {
+    kind: "news_mention",
+    firstSeen: true,
+    strength: isResearch ? 0.82 : 0.88,
+    source: article.source || sourceFallback,
+    asOf: article.publishedAt?.slice(0, 10) || asOf,
+    confidence: "H",
+    label,
+  };
+}
+
+async function eventFromTargetedMaterial(row: NaverMarketRow, asOf: string): Promise<DiscoveryEvent | null> {
+  if (!/^\d{6}$/.test(row.naverCode)) return null;
+  const [newsResult, researchResult] = await Promise.allSettled([
+    fetchNaverStockNews(row.naverCode, 8),
+    fetchNaverCompanyResearch(row.naverCode, row.canonical, 4),
+  ]);
+
+  const stockNews =
+    newsResult.status === "fulfilled"
+      ? newsResult.value.find((article) => isStockArticle(row.canonical, article))
+      : undefined;
+  if (stockNews) return materialEventFromArticle(stockNews, asOf, "네이버 종목뉴스");
+
+  const research =
+    researchResult.status === "fulfilled"
+      ? researchResult.value.find((article) => isStockArticle(row.canonical, article))
+      : undefined;
+  if (research) return materialEventFromArticle(research, asOf, "네이버 증권 리서치");
+
+  return null;
+}
+
 function buildThemeMoveSignals(rows: readonly NaverMarketRow[]): Map<string, ThemeMoveSignal> {
   const groups = new Map<StockSector, Array<{ ticker: string; changePct: number }>>();
   for (const row of rows) {
@@ -334,15 +398,34 @@ async function eventFromFlow(ticker: string): Promise<DiscoveryEvent | null> {
 }
 
 function eventAxisSignal(event: DiscoveryEvent): AxisSignal | null {
-  if (event.kind !== "theme_link" && event.kind !== "flow_entry" && event.kind !== "disclosure" && event.kind !== "market_context") return null;
-  const axis = event.kind === "theme_link" || event.kind === "market_context" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
-  const sourceKind = event.kind === "theme_link" || event.kind === "market_context" ? "market" : "official";
+  if (
+    event.kind !== "theme_link" &&
+    event.kind !== "flow_entry" &&
+    event.kind !== "disclosure" &&
+    event.kind !== "news_mention" &&
+    event.kind !== "market_context"
+  ) return null;
+  const axis =
+    event.kind === "theme_link" || event.kind === "market_context" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
+  const sourceKind =
+    event.kind === "theme_link" || event.kind === "market_context"
+      ? "market"
+      : event.kind === "news_mention"
+        ? "news"
+        : "official";
   const hookText = event.label?.trim();
   if (!hookText) return null;
   return {
     axis,
     fired: true,
-    strength: event.kind === "market_context" ? event.strength : event.kind === "theme_link" ? Math.max(0.91, event.strength) : Math.max(0.93, event.strength),
+    strength:
+      event.kind === "market_context"
+        ? event.strength
+        : event.kind === "theme_link"
+          ? Math.max(0.91, event.strength)
+          : event.kind === "news_mention"
+            ? Math.max(0.94, event.strength)
+            : Math.max(0.93, event.strength),
     rarity: 0,
     hookText,
     evidence: [{ text: hookText, sourceKind, source: event.source, asOf: event.asOf }],
@@ -455,6 +538,47 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   }
 
+  const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  for (const [ticker, disclosure] of Object.entries(disclosureMap)) {
+    const def = resolveStock(ticker);
+    if (!def?.naverCode || !eligibleTickers.has(def.canonical)) continue;
+    const row =
+      normalizedRows.find((r) => r.naverCode === def.naverCode) ??
+      ({ canonical: def.canonical, naverCode: def.naverCode, market: def.market as DiscoveryMarket } satisfies NaverMarketRow);
+    const current = byTicker.get(def.canonical);
+    const event: DiscoveryEvent = {
+      kind: "disclosure",
+      firstSeen: true,
+      strength: 0.96,
+      source: disclosure.source,
+      asOf: disclosure.asOf,
+      confidence: "H",
+      label: disclosure.label,
+    };
+    byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
+  }
+
+  const targetedRows = [...byTicker.entries()]
+    .filter(([, value]) => !value.events.some((event) => event.kind === "disclosure" || event.kind === "news_mention"))
+    .sort((a, b) => {
+      const aPct = Math.abs(a[1].row.changePct ?? 0);
+      const bPct = Math.abs(b[1].row.changePct ?? 0);
+      const aHasTheme = Number(a[1].events.some((event) => event.kind === "theme_link"));
+      const bHasTheme = Number(b[1].events.some((event) => event.kind === "theme_link"));
+      return bHasTheme - aHasTheme || bPct - aPct || a[0].localeCompare(b[0]);
+    })
+    .slice(0, TARGETED_MATERIAL_CANDIDATE_LIMIT);
+  const targetedMaterial = await mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
+    ticker,
+    event: await eventFromTargetedMaterial(value.row, asOf),
+  }));
+  for (const result of targetedMaterial) {
+    if (result.status !== "fulfilled" || !result.value.event) continue;
+    const current = byTicker.get(result.value.ticker);
+    if (!current) continue;
+    byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
+  }
+
   const flowRows = await mapLimit([...byTicker.keys()], 8, async (ticker) => ({ ticker, event: await eventFromFlow(ticker) }));
   for (const result of flowRows) {
     if (result.status !== "fulfilled" || !result.value.event) continue;
@@ -522,6 +646,6 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
     stocks,
     fronts,
     confidence: stocks.length >= 30 ? "H" : stocks.length >= 10 ? "M" : "L",
-    source: "네이버 시세·뉴스 언급",
+    source: "네이버 시세·종목뉴스·리서치·DART 공시",
   };
 }

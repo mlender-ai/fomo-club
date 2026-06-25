@@ -131,6 +131,12 @@ export function discoveryWhy(candidate: DiscoveryCandidate): string {
       : "오늘 이 종목의 공시가 확인됐어요.";
   }
   if (strongest.kind === "news_mention") {
+    const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(strongest.source);
+    if (isResearch) {
+      return strongest.label
+        ? `오늘 이 종목을 직접 다룬 리서치가 있어요: ${strongest.label}`
+        : "오늘 이 종목을 직접 다룬 리서치가 있어요.";
+    }
     return strongest.label
       ? `오늘 이 종목을 직접 언급한 뉴스가 있어요: ${strongest.label}`
       : "오늘 이 종목을 직접 언급한 뉴스가 있어요.";

@@ -63,6 +63,14 @@ describe("WO-05 discovery supply engine", () => {
     expect(discoveryWhy(candidate("뉴스", 0.6, "news_mention"))).toContain("신규 공급계약 공시");
   });
 
+  it("names research evidence as research instead of news", () => {
+    const row = candidate("리서치", 0.7, "news_mention", "신규 설비 증설 점검");
+    row.events[0]!.source = "한화투자증권 리서치";
+
+    expect(discoveryWhy(row)).toContain("직접 다룬 리서치");
+    expect(discoveryWhy(row)).not.toContain("언급한 뉴스");
+  });
+
   it("selects WHY by source strength order before raw numeric strength", () => {
     const row: DiscoveryCandidate = {
       ticker: "동시보유",
