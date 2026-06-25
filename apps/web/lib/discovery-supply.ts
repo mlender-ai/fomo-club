@@ -32,6 +32,7 @@ const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
 const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 5;
 const SPARKLINE_CONCURRENCY = 8;
+const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
@@ -62,6 +63,7 @@ interface NaverMarketRow {
   canonical: string;
   naverCode: string;
   market: DiscoveryMarket;
+  marketCapRank?: number;
   priceText?: string;
   changeText?: string;
   changeDir?: "up" | "down" | "flat";
@@ -119,6 +121,7 @@ function parseMarketRow(row: RawNaverStock, market: DiscoveryMarket): NaverMarke
   const canonical = (row.stockName ?? row.itemName ?? "").trim();
   const naverCode = row.itemCode?.trim();
   if (!canonical || !naverCode) return null;
+  if (NON_STOCK_NAME_PATTERN.test(canonical)) return null;
   const rawPct = numberFromText(row.fluctuationsRatio);
   const dir = changeDirFrom(row, rawPct);
   const changePct = typeof rawPct === "number" ? (dir === "down" ? -Math.abs(rawPct) : Math.abs(rawPct)) : undefined;
@@ -151,7 +154,12 @@ async function fetchMarketRows(): Promise<NaverMarketRow[]> {
   const rows = settled.flatMap((row) => (row.status === "fulfilled" ? row.value : []));
   const byCode = new Map<string, NaverMarketRow>();
   for (const row of rows) if (!byCode.has(row.naverCode)) byCode.set(row.naverCode, row);
-  return [...byCode.values()];
+  const rankByMarket = new Map<DiscoveryMarket, number>();
+  return [...byCode.values()].map((row) => {
+    const rank = (rankByMarket.get(row.market) ?? 0) + 1;
+    rankByMarket.set(row.market, rank);
+    return { ...row, marketCapRank: rank };
+  });
 }
 
 async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
@@ -233,6 +241,10 @@ function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined,
   const strongTheme = theme.averageChangePct >= 1.5 && theme.positiveCount >= 2;
   const leadingTheme = theme.rank <= 3 && row.changePct >= 5;
   if (!strongTheme && !leadingTheme) return null;
+  const label =
+    theme.rank <= 3
+      ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강하게 움직였어요.`
+      : `오늘 ${theme.sector} 흐름이 강했고, 이 종목도 같이 움직였어요.`;
   return {
     kind: "theme_link",
     firstSeen: true,
@@ -240,7 +252,64 @@ function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined,
     source: "FOMO 섹터맵·네이버 시세",
     asOf,
     confidence: "M",
-    label: `오늘 ${theme.sector} 흐름이 셌고, 이 종목이 거기 묶여 있어요.`,
+    label,
+  };
+}
+
+function pctText(value: number): string {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+function ordinalText(rank: number): string {
+  if (rank === 1) return "가장";
+  if (rank === 2) return "두 번째로";
+  if (rank === 3) return "세 번째로";
+  return `${rank}번째로`;
+}
+
+function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent {
+  const sector = theme?.sector ?? sectorOf(row.canonical);
+  const rankText = row.marketCapRank ? `시총 ${row.marketCapRank}위권` : "시총 상위권";
+  const changePct = row.changePct;
+  const change = typeof changePct === "number" ? pctText(changePct) : undefined;
+  const source = "네이버 시세";
+  if (sector && theme && typeof changePct === "number") {
+    const relativeLabel =
+      theme.rank <= 3
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${ordinalText(theme.rank)} 강하게 움직였어요.`
+        : changePct > 0
+          ? `오늘 ${sector} 안에서 같이 오른 쪽이에요(${change}).`
+          : `오늘 ${sector} 안에서 약한 쪽 흐름이에요(${change}).`;
+    return {
+      kind: "market_context",
+      firstSeen: true,
+      strength: Math.min(0.72, 0.38 + Math.abs(changePct) / 35 + Math.max(0, theme.relativeChangePct) / 30),
+      source,
+      asOf,
+      confidence: "M",
+      label: relativeLabel,
+    };
+  }
+  if (typeof changePct === "number" && change) {
+    return {
+      kind: "market_context",
+      firstSeen: true,
+      strength: Math.min(0.66, 0.34 + Math.abs(changePct) / 40),
+      source,
+      asOf,
+      confidence: "M",
+      label: `${row.market} ${rankText}에서 오늘 ${change} 움직였어요.`,
+    };
+  }
+  return {
+    kind: "market_context",
+    firstSeen: true,
+    strength: 0.32,
+    source,
+    asOf,
+    confidence: "L",
+    label: `${row.market} ${rankText}이라 오늘 시장 흐름과 같이 확인해요.`,
   };
 }
 
@@ -265,15 +334,15 @@ async function eventFromFlow(ticker: string): Promise<DiscoveryEvent | null> {
 }
 
 function eventAxisSignal(event: DiscoveryEvent): AxisSignal | null {
-  if (event.kind !== "theme_link" && event.kind !== "flow_entry" && event.kind !== "disclosure") return null;
-  const axis = event.kind === "theme_link" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
-  const sourceKind = event.kind === "theme_link" ? "market" : "official";
+  if (event.kind !== "theme_link" && event.kind !== "flow_entry" && event.kind !== "disclosure" && event.kind !== "market_context") return null;
+  const axis = event.kind === "theme_link" || event.kind === "market_context" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
+  const sourceKind = event.kind === "theme_link" || event.kind === "market_context" ? "market" : "official";
   const hookText = event.label?.trim();
   if (!hookText) return null;
   return {
     axis,
     fired: true,
-    strength: event.kind === "theme_link" ? Math.max(0.91, event.strength) : Math.max(0.93, event.strength),
+    strength: event.kind === "market_context" ? event.strength : event.kind === "theme_link" ? Math.max(0.91, event.strength) : Math.max(0.93, event.strength),
     rarity: 0,
     hookText,
     evidence: [{ text: hookText, sourceKind, source: event.source, asOf: event.asOf }],
@@ -312,6 +381,7 @@ function frontSeed(
     ...(attention ? { mentionCount: attention.mentionCount, mentionScore: attention.mentionScore } : {}),
     ...(attention?.newsEventLabel ? { newsEventLabel: attention.newsEventLabel } : {}),
     ...(attention?.newsEventSource ? { newsEventSource: attention.newsEventSource } : {}),
+    ...(row.marketCapRank ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
     ...(theme ? {
       themeLabel: theme.sector,
       themeRelativeRank: theme.rank,
@@ -365,7 +435,8 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
   for (const row of normalizedRows) {
     const ticker = row.canonical;
     if (!eligibleTickers.has(ticker)) continue;
-    const events = [eventFromPrice(row, asOf), eventFromTheme(row, themeSignals.get(ticker), asOf)].filter(
+    const theme = themeSignals.get(ticker);
+    const events = [eventFromPrice(row, asOf), eventFromTheme(row, theme, asOf), eventFromMarketContext(row, theme, asOf)].filter(
       (event): event is DiscoveryEvent => event !== null
     );
     if (events.length > 0) byTicker.set(ticker, { row: { ...row, canonical: ticker }, events });

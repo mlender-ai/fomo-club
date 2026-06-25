@@ -9,7 +9,8 @@ export type DiscoveryEventKind =
   | "flow_entry"
   | "news_mention"
   | "disclosure"
-  | "theme_link";
+  | "theme_link"
+  | "market_context";
 
 export interface DiscoveryEvent {
   kind: DiscoveryEventKind;
@@ -96,12 +97,12 @@ export function hasPublicMaterialEvent(candidate: DiscoveryCandidate): boolean {
   );
 }
 
-export function hasContextualWhyEvent(candidate: DiscoveryCandidate): boolean {
+export function hasThemeLinkEvent(candidate: DiscoveryCandidate): boolean {
   return candidate.events.some((event) => event.kind === "theme_link");
 }
 
 export function hasDisplayWhyEvent(candidate: DiscoveryCandidate): boolean {
-  return hasPublicMaterialEvent(candidate) || hasContextualWhyEvent(candidate);
+  return hasPublicMaterialEvent(candidate) || candidate.events.some((event) => event.kind === "theme_link" || event.kind === "market_context");
 }
 
 export function isWeakDiscoveryCandidate(candidate: DiscoveryCandidate): boolean {
@@ -113,9 +114,10 @@ const WHY_KIND_PRIORITY: Record<DiscoveryEventKind, number> = {
   news_mention: 1,
   flow_entry: 2,
   theme_link: 3,
-  new_high: 4,
-  volume_spike: 5,
-  price_move: 6,
+  market_context: 4,
+  new_high: 5,
+  volume_spike: 6,
+  price_move: 7,
 };
 
 export function discoveryWhy(candidate: DiscoveryCandidate): string {
@@ -135,6 +137,7 @@ export function discoveryWhy(candidate: DiscoveryCandidate): string {
   }
   if (strongest.kind === "flow_entry") return strongest.label ?? "수급이 새로 감지된 종목이에요.";
   if (strongest.kind === "theme_link") return strongest.label ?? "오늘 강한 테마 흐름에 같이 묶여 있어요.";
+  if (strongest.kind === "market_context") return strongest.label ?? "오늘 시장 흐름 안에서 확인하는 종목이에요.";
   if (strongest.kind === "new_high") return strongest.label ?? "새로운 가격 위치가 확인된 종목이에요.";
   if (strongest.kind === "volume_spike") {
     return strongest.label ?? "오늘 거래량 급증, 뚜렷한 공개 재료는 확인 안 됨.";
@@ -149,7 +152,7 @@ function freshnessBoost(candidate: DiscoveryCandidate): number {
 function eventScore(candidate: DiscoveryCandidate): number {
   const maxStrength = Math.max(0, ...candidate.events.map((event) => clamp01(event.strength)));
   const diversity = new Set(candidate.events.map((event) => event.kind)).size;
-  const materialBoost = hasPublicMaterialEvent(candidate) ? 0.22 : hasContextualWhyEvent(candidate) ? 0.08 : -0.25;
+  const materialBoost = hasPublicMaterialEvent(candidate) ? 0.22 : hasThemeLinkEvent(candidate) ? 0.08 : hasDisplayWhyEvent(candidate) ? -0.03 : -0.25;
   return maxStrength + freshnessBoost(candidate) + Math.min(0.12, diversity * 0.03) + materialBoost;
 }
 
@@ -167,7 +170,7 @@ export function rankDiscoveryCandidates(
 ): DiscoveryCandidate[] {
   const max = opts.maxCandidates ?? DISCOVERY_MAX_CANDIDATES;
   const watched = new Set(opts.watched ?? []);
-  const ranked = candidates
+  return candidates
     .filter((candidate) => candidate.events.length > 0)
     .filter((candidate) => !isWeakDiscoveryCandidate(candidate) || Math.max(0, ...candidate.events.map((event) => event.strength)) >= DISCOVERY_WEAK_MIN_STRENGTH)
     .map((candidate, index) => ({
@@ -182,9 +185,6 @@ export function rankDiscoveryCandidates(
         a.index - b.index ||
         a.candidate.ticker.localeCompare(b.candidate.ticker)
     )
+    .slice(0, max)
     .map((row) => row.candidate);
-  const withWhy = ranked.filter((candidate) => !isWeakDiscoveryCandidate(candidate));
-  const weakTail = ranked.filter((candidate) => isWeakDiscoveryCandidate(candidate));
-  const ordered = withWhy.length >= DISCOVERY_TOP_BAND_WHY_REQUIRED ? [...withWhy, ...weakTail] : withWhy;
-  return ordered.slice(0, max);
 }

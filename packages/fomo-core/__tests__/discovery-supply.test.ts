@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  DISCOVERY_TOP_BAND_WHY_REQUIRED,
   discoveryWhy,
   eligibleUniverse,
   rankDiscoveryCandidates,
@@ -42,14 +41,14 @@ describe("WO-05 discovery supply engine", () => {
     expect(result.map((s) => s.ticker)).toEqual(["정상A", "정상B"]);
   });
 
-  it("keeps only candidates with at least one event and ranks public material above weak shape-only cards", () => {
+  it("keeps candidates with real events and ranks public material above weak shape-only cards", () => {
     const ranked = rankDiscoveryCandidates([
       { ticker: "조용", market: "KOSPI", events: [], asOf },
       candidate("가격만", 0.9, "price_move"),
       candidate("뉴스", 0.55, "news_mention"),
     ]);
 
-    expect(ranked.map((c) => c.ticker)).toEqual(["뉴스"]);
+    expect(ranked.map((c) => c.ticker)).toEqual(["뉴스", "가격만"]);
   });
 
   it("applies seen decay but keeps watched stocks exempt", () => {
@@ -81,33 +80,23 @@ describe("WO-05 discovery supply engine", () => {
     expect(discoveryWhy(row)).toContain("공급계약");
   });
 
-  it("ranks contextual theme links above price-only spikes but below material events", () => {
+  it("ranks contextual theme links above market context but below material events", () => {
     const ranked = rankDiscoveryCandidates([
-      candidate("가격만강함", 1, "price_move"),
+      candidate("시장맥락", 0.65, "market_context", "KOSPI 시총 상위권에서 오늘 +1.2% 움직였어요."),
       candidate("테마", 0.55, "theme_link", "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요."),
       candidate("수급", 0.5, "flow_entry", "기관이 3일째 사는 중이에요."),
     ]);
 
-    expect(ranked.map((c) => c.ticker)).toEqual(["수급", "테마"]);
+    expect(ranked.map((c) => c.ticker)).toEqual(["수급", "테마", "시장맥락"]);
   });
 
-  it("keeps the top WHY-required band free of no-why weak padding", () => {
-    const whyRows = Array.from({ length: DISCOVERY_TOP_BAND_WHY_REQUIRED - 1 }, (_, index) =>
-      candidate(`테마${index}`, 0.55, "theme_link", "오늘 AI 흐름이 셌고, 이 종목이 거기 묶여 있어요.")
+  it("keeps the deck full when market context gives every card a real reason", () => {
+    const rows = Array.from({ length: 100 }, (_, index) =>
+      candidate(`시장${index}`, 0.35 + (index % 10) / 100, "market_context", `KOSPI 시총 ${index + 1}위권에서 오늘 시장 흐름과 같이 확인해요.`)
     );
-    const ranked = rankDiscoveryCandidates([...whyRows, candidate("가격만강함", 1, "price_move")], { maxCandidates: 100 });
+    const ranked = rankDiscoveryCandidates(rows, { maxCandidates: 100 });
 
-    expect(ranked).toHaveLength(DISCOVERY_TOP_BAND_WHY_REQUIRED - 1);
-    expect(ranked.some((row) => row.ticker === "가격만강함")).toBe(false);
-  });
-
-  it("allows a weak tail only after the WHY-required band is already filled", () => {
-    const whyRows = Array.from({ length: DISCOVERY_TOP_BAND_WHY_REQUIRED }, (_, index) =>
-      candidate(`테마${index}`, 0.55, "theme_link", "오늘 AI 흐름이 셌고, 이 종목이 거기 묶여 있어요.")
-    );
-    const ranked = rankDiscoveryCandidates([...whyRows, candidate("가격만강함", 1, "price_move")], { maxCandidates: 100 });
-
-    expect(ranked).toHaveLength(DISCOVERY_TOP_BAND_WHY_REQUIRED + 1);
-    expect(ranked.at(-1)?.ticker).toBe("가격만강함");
+    expect(ranked).toHaveLength(100);
+    expect(ranked.every((row) => discoveryWhy(row).length > 0)).toBe(true);
   });
 });
