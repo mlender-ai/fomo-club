@@ -39,6 +39,7 @@ const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 5;
 const SPARKLINE_CONCURRENCY = 8;
 const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL === "1";
+const DISCOVERY_FLOW_ENABLED = process.env.DISCOVERY_FLOW_LIVE === "1";
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED ? 12 : 0;
 const TARGETED_MATERIAL_CONCURRENCY = 4;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
@@ -382,6 +383,7 @@ function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | un
 }
 
 async function eventFromFlow(ticker: string): Promise<DiscoveryEvent | null> {
+  if (!DISCOVERY_FLOW_ENABLED) return null;
   if (!process.env.DATABASE_URL) return null;
   const history = await readSupplyDemandHistory(ticker, 10);
   if (history.length === 0) return null;
@@ -583,12 +585,14 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
     byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
   }
 
-  const flowRows = await mapLimit([...byTicker.keys()], 8, async (ticker) => ({ ticker, event: await eventFromFlow(ticker) }));
-  for (const result of flowRows) {
-    if (result.status !== "fulfilled" || !result.value.event) continue;
-    const current = byTicker.get(result.value.ticker);
-    if (!current) continue;
-    byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
+  if (DISCOVERY_FLOW_ENABLED) {
+    const flowRows = await mapLimit([...byTicker.keys()], 8, async (ticker) => ({ ticker, event: await eventFromFlow(ticker) }));
+    for (const result of flowRows) {
+      if (result.status !== "fulfilled" || !result.value.event) continue;
+      const current = byTicker.get(result.value.ticker);
+      if (!current) continue;
+      byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
+    }
   }
 
   const candidates = [...byTicker.entries()].map(([ticker, { row, events }]): DiscoveryCandidate => {
