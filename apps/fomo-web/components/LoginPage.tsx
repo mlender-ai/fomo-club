@@ -86,13 +86,19 @@ export function LoginPage({
               {error && <p className="text-[12px] text-[#ff5a5f]">{error}</p>}
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <p className="font-pixel text-base text-whiteout">
-                {mode === "login" ? "다시 오셨네요" : "취향을 기억해드릴게요"}
-              </p>
-              <p className="text-[13px] leading-5 text-muted">
-                로그인하면 넘긴 카드가 기억돼서, 다음엔 취향에 맞는 흐름부터 보여드릴게요.
-              </p>
+            <div className="flex flex-col gap-4">
+              {/* 브랜드 헤드라인 */}
+              <div className="mb-2">
+                <p className="font-pixel text-xs font-bold tracking-widest text-neon">FOMO CLUB</p>
+                <h1 className="mt-3 text-[2.25rem] font-bold leading-tight text-whiteout">
+                  당신을 위한<br />
+                  <span className="text-neon">취향투자</span> 클럽
+                </h1>
+                <p className="mt-3 text-[13px] leading-5 text-muted">
+                  멈춰 보게 되는 종목이 당신의 기준이다.
+                </p>
+              </div>
+
               <input
                 type="email"
                 inputMode="email"
@@ -100,7 +106,7 @@ export function LoginPage({
                 placeholder="이메일"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-2 rounded-lg border border-hairline bg-surface px-3 py-3 text-sm text-whiteout outline-none focus:border-whiteout/30"
+                className="rounded-lg border border-hairline bg-surface px-3 py-3 text-sm text-whiteout outline-none focus:border-whiteout/30"
               />
               <input
                 type="password"
@@ -115,9 +121,9 @@ export function LoginPage({
               <button
                 onClick={submit}
                 disabled={busy}
-                className="mt-1 rounded-lg bg-[#FF5A36] px-4 py-3 text-sm font-pixel text-white disabled:opacity-50"
+                className="rounded-full bg-neon px-4 py-3 text-sm font-bold text-black disabled:opacity-50"
               >
-                {busy ? "처리 중…" : mode === "login" ? "로그인" : "가입하고 시작"}
+                {busy ? "처리 중…" : mode === "login" ? "발견 이어가기" : "취향 기록 시작하기"}
               </button>
               <button
                 onClick={() => {
@@ -128,7 +134,7 @@ export function LoginPage({
               >
                 {mode === "login" ? "처음이세요? 가입하기" : "이미 계정이 있으세요? 로그인"}
               </button>
-              <p className="mt-2 text-[11px] leading-5 text-muted">
+              <p className="text-[11px] leading-5 text-muted">
                 가입하면 <a href="/privacy" target="_blank" className="underline">개인정보 처리방침</a>에 동의하는 거예요.
                 취향 신호(관심/덜관심·열람)만 모으고, 언제든 탈퇴 시 전부 삭제돼요.
               </p>
