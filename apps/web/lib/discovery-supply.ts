@@ -53,6 +53,26 @@ const MATERIAL_NEWS_NOISE =
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_ENABLED
   ? "네이버 시세·종목뉴스·리서치·DART 공시·수급 캐시"
   : "네이버 시세·뉴스 언급";
+const MARKET_LABELS = new Set(["KOSPI", "KOSDAQ", "NASDAQ", "NYSE"]);
+const INDUSTRY_HINTS: Array<{ label: string; pattern: RegExp }> = [
+  { label: "반도체", pattern: /반도체|HBM|메모리|파운드리|MLCC|기판|웨이퍼|EUV|패키징|공정|테스/i },
+  { label: "AI", pattern: /\b(?:AI|GPU|SW|Agentic|OS)\b|인공지능|클라우드|데이터센터|소프트웨어|문서|에이전틱|마키나락스|엠로/i },
+  { label: "에너지", pattern: /에너지|태양광|풍력|신재생|VPP|발전|전력|수소|ESS/i },
+  { label: "2차전지", pattern: /2차전지|이차전지|배터리|전지|리튬|양극재|음극재|전해질|분리막/i },
+  { label: "방산", pattern: /방산|디펜스|국방|무기|유도무기|항공우주|군|KAI|LIG|로템|함정/i },
+  { label: "바이오", pattern: /바이오|헬스케어|제약|신약|임상|항암|의료|진단|치료제|의약품|올릭스|한올바이오/i },
+  { label: "원자력", pattern: /원전|원자력|SMR|소형모듈|한전|전력기술/i },
+  { label: "인터넷", pattern: /네이버|카카오|플랫폼|포털|커머스|웹툰|콘텐츠/i },
+  { label: "금융", pattern: /은행|보험|손해보험|증권|캐피탈|핀테크|결제/i },
+  { label: "게임", pattern: /게임|엔씨|크래프톤|위메이드|넷마블/i },
+  { label: "자동차", pattern: /자동차|현대차|기아|모비스|부품|전장|전기차|타이어|금호타이어/i },
+  { label: "조선", pattern: /조선|중공업|선박|해양|조선소/i },
+  { label: "로봇", pattern: /로봇|자동화|로보틱스/i },
+  { label: "음식료", pattern: /식품|푸드|외식|급식|프레시웨이|음식료/i },
+  { label: "화장품", pattern: /화장품|코스메틱|뷰티|제닉|한국콜마/i },
+  { label: "건자재", pattern: /건자재|레미콘|시멘트|건설자재|유진기업/i },
+  { label: "지주", pattern: /지주|홀딩스|SK디스커버리/i },
+];
 
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
@@ -419,6 +439,32 @@ function eventFromFlowHistory(history: readonly InvestorFlow[]): DiscoveryEvent 
   };
 }
 
+function cleanSectorLabel(label: string | undefined): string | undefined {
+  const clean = label?.trim();
+  if (!clean || MARKET_LABELS.has(clean)) return undefined;
+  return clean;
+}
+
+export function inferDiscoverySectorLabel(
+  ticker: string,
+  events: readonly DiscoveryEvent[],
+  theme?: ThemeMoveSignal,
+  asOf?: string
+): string {
+  const curated = sectorOf(ticker);
+  if (curated) return curated;
+  if (theme?.sector) return theme.sector;
+  const currentEvents = asOf ? events.filter((event) => event.asOf.slice(0, 10) === asOf.slice(0, 10)) : events;
+  const text = [ticker, ...currentEvents.map((event) => event.label)]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .replace(/\b(?:KOSPI|KOSDAQ|NASDAQ|NYSE)\b/gi, " ");
+  for (const hint of INDUSTRY_HINTS) {
+    if (hint.pattern.test(text)) return hint.label;
+  }
+  return "기타 업종";
+}
+
 function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): AxisSignal | null {
   if (!isDeckDisplayEvent(event, candidate)) return null;
   if (
@@ -454,7 +500,7 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
 
 function stockPayload(row: NaverMarketRow, candidate: DiscoveryCandidate): DiscoveryStockPayload {
   const def = resolveStock(candidate.ticker);
-  const sector = def ? sectorOf(def.canonical) : undefined;
+  const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
   const why = discoveryWhy(candidate);
   const hasMaterial = hasPublicMaterialEvent(candidate);
   const hasDisplayWhy = hasDisplayWhyEvent(candidate);
@@ -464,7 +510,7 @@ function stockPayload(row: NaverMarketRow, candidate: DiscoveryCandidate): Disco
     country: def?.country ?? "KR",
     naverCode: row.naverCode,
     marquee: def?.marquee === true,
-    sector: sector ?? candidate.sector ?? row.market,
+    sector: sector ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf),
     whyShown: hasDisplayWhy
       ? why
       : "큰 가격 움직임은 보였지만, 연결된 공개 재료는 확인 안 됨.",
@@ -619,15 +665,16 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
 
   const candidates = [...byTicker.entries()].map(([ticker, { row, events }]): DiscoveryCandidate => {
     const def = resolveStock(ticker);
-    const sector = sectorOf(ticker);
     const direction: NonNullable<DiscoveryEvent["direction"]> =
       typeof row.changePct !== "number" ? "flat" : row.changePct > 0 ? "up" : row.changePct < 0 ? "down" : "flat";
     const directedEvents: DiscoveryEvent[] = events.map((event) => event.direction ? event : { ...event, direction });
+    const sector = inferDiscoverySectorLabel(ticker, directedEvents, themeSignals.get(ticker), asOf);
     const candidateBase: DiscoveryCandidate = {
       ticker,
       market: row.market,
       events: directedEvents,
       asOf,
+      sector,
       ...(typeof row.marketCapRank === "number" ? { marketCapRank: row.marketCapRank } : {}),
     };
     const reason = discoveryWhy(candidateBase);
@@ -636,7 +683,7 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
       market: row.market,
       country: (def?.country ?? "KR") as StockCountry,
       naverCode: row.naverCode,
-      ...(sector ? { sector } : {}),
+      sector,
       events: directedEvents,
       asOf,
       ...(typeof row.marketCapRank === "number" ? { marketCapRank: row.marketCapRank } : {}),
