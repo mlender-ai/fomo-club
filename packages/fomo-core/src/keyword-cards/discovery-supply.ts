@@ -69,6 +69,7 @@ export const DISCOVERY_AWAKENING_MAX_BOOST = 0.3;
 export const DISCOVERY_DIR_DOWN_NOISE_PENALTY = 0.5;
 export const DISCOVERY_DIR_DOWN_MATERIAL_PENALTY = 0.15;
 export const DISCOVERY_STRENGTH_WEIGHT = 0.65;
+export const DISCOVERY_FAMOUS_FRONT_RANK_CUTOFF = 30;
 
 const RISK_FLAG_PATTERN = /관리|투자경고|투자위험|거래정지|단기과열|이상급등/;
 
@@ -186,6 +187,11 @@ export function discoveryWhy(candidate: DiscoveryCandidate): string {
         ? `${prefix} 이 종목을 직접 다룬 리서치가 있어요: ${strongest.label}`
         : `${prefix} 이 종목을 직접 다룬 리서치가 있어요.`;
     }
+    if (/종목뉴스\s?연결/i.test(strongest.source)) {
+      return strongest.label
+        ? `${prefix} 이 종목 뉴스 탭에 함께 묶인 흐름이 있어요: ${strongest.label}`
+        : `${prefix} 이 종목 뉴스 탭에 함께 묶인 흐름이 있어요.`;
+    }
     return strongest.label
       ? `${prefix} 이 종목을 직접 언급한 뉴스가 있어요: ${strongest.label}`
       : `${prefix} 이 종목을 직접 언급한 뉴스가 있어요.`;
@@ -252,6 +258,13 @@ function eventTier(candidate: DiscoveryCandidate): number {
   return 9;
 }
 
+function fameTier(candidate: DiscoveryCandidate): number {
+  if (candidate.marquee) return 1;
+  const rank = candidate.marketCapRank;
+  if (typeof rank === "number" && Number.isFinite(rank) && rank > 0 && rank <= DISCOVERY_FAMOUS_FRONT_RANK_CUTOFF) return 1;
+  return 0;
+}
+
 function seenPenalty(ticker: string, seen: readonly SeenRecord[], watched: ReadonlySet<string>): number {
   if (watched.has(ticker)) return 0;
   const row = seen.find((s) => s.ticker === ticker);
@@ -273,10 +286,12 @@ export function rankDiscoveryCandidates(
       index,
       score: eventScore(candidate) - seenPenalty(candidate.ticker, opts.seen ?? [], watched),
       tier: eventTier(candidate),
+      fameTier: fameTier(candidate),
     }))
     .sort(
       (a, b) =>
         a.tier - b.tier ||
+        a.fameTier - b.fameTier ||
         Number(hasDisplayWhyEvent(b.candidate)) - Number(hasDisplayWhyEvent(a.candidate)) ||
         b.score - a.score ||
         Number(hasPublicMaterialEvent(b.candidate)) - Number(hasPublicMaterialEvent(a.candidate)) ||
