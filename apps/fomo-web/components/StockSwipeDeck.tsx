@@ -166,6 +166,8 @@ function compactEvidenceLine(text: string | undefined): string | undefined {
 function compactReasonHeadlineSeed(text: string | undefined): string | undefined {
   const clean = (text ?? "").replace(/\s+/g, " ").trim();
   if (!clean) return undefined;
+  if (!/오늘|최근|공시|뉴스|리서치|수급|외국인|기관|거래량|가격|테마|흐름|순매수|신고가/.test(clean)) return undefined;
+  if (/전문\s?기업|플랫폼\s?리더|도약\s?중|안정화\s?예상|사업\s?영역|서비스\s?제공/.test(clean)) return undefined;
   return clean.length > 38 ? `${clean.slice(0, 37)}…` : clean;
 }
 
