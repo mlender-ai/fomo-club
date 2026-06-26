@@ -104,6 +104,41 @@ describe("buildTodayDiscoveryStocks", () => {
     expect(first20).not.toContain("테스트1");
   });
 
+  it("downranks sectors that the user recently dismissed", () => {
+    installLocalStorage();
+    const now = Date.now();
+    storage.set("fomo_stock_interest", JSON.stringify([{ stock: "삼성전자", signal: "less", ts: now }]));
+
+    const cards = [
+      {
+        keyword: "반도체",
+        surpriseStock: {
+          canonical: "한미반도체",
+          market: "KOSDAQ",
+          country: "KR",
+          mentions: 2,
+          surprise: 0.8,
+          reason: "반도체 사건 근거",
+        },
+      } as KeywordCard,
+      {
+        keyword: "AI",
+        surpriseStock: {
+          canonical: "SK바이오팜",
+          market: "KOSPI",
+          country: "KR",
+          mentions: 2,
+          surprise: 0.8,
+          reason: "AI 사건 근거",
+        },
+      } as KeywordCard,
+    ];
+
+    const result = buildTodayDiscoveryStocks([], cards, ["반도체", "AI"]);
+
+    expect(result.map((s) => s.canonical)).toEqual(["SK바이오팜", "한미반도체"]);
+  });
+
   it("applies axis snapshot order while avoiding three identical hook axes in a row", () => {
     installLocalStorage();
     const stocks = Array.from({ length: 7 }, (_, i) => stock(i, i < 3 ? "AI" : i < 5 ? "반도체" : "방산"));

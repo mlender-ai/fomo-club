@@ -216,11 +216,30 @@ function todayDiscoveryRank(stock: DeckStock, recentRank: ReadonlyMap<string, nu
     (stock.reason ? 90 : 0) +
     (stock.marquee ? 35 : 0) +
     (isTasteSimilarStock(stock) ? 40 : 0) +
+    sectorTasteScore(stock, nowMs) +
     interest * 0.25 -
     recentPenalty * 10 -
     lessPenalty -
     positiveRevisitPenalty
   );
+}
+
+function sectorTasteScore(stock: DeckStock, nowMs = Date.now()): number {
+  if (!isKnownStockSector(stock.sector)) return 0;
+  const dayMs = 86_400_000;
+  const peers = stocksBySector(stock.sector).map((s) => s.canonical).filter((peer) => peer !== stock.canonical);
+  const watch = new Set(getWatchlist().map((w) => w.stock));
+  let score = 0;
+  for (const peer of peers) {
+    if (watch.has(peer)) score += 10;
+    const summary = stockInteractionSummary(peer);
+    const fresh = typeof summary.lastTs === "number" && nowMs - summary.lastTs < dayMs;
+    if (fresh && summary.lastSignal === "less") score -= 22;
+    if (fresh && (summary.lastSignal === "more" || summary.lastSignal === "view_depth")) score += 16;
+    score += Math.min(12, summary.moreCount * 4 + summary.depthCount * 3);
+    score -= Math.min(18, summary.lessCount * 5);
+  }
+  return Math.max(-80, Math.min(80, score));
 }
 
 function isTasteSimilarStock(stock: DeckStock): boolean {

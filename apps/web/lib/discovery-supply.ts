@@ -8,6 +8,7 @@ import {
   eligibleUniverse,
   hasDisplayWhyEvent,
   hasPublicMaterialEvent,
+  isDeckDisplayEvent,
   isFrontHookSafe,
   investorNetStreak,
   rankDiscoveryCandidates,
@@ -213,7 +214,7 @@ function eventFromPrice(row: NaverMarketRow, asOf: string): DiscoveryEvent | nul
 }
 
 function eventFromNews(attention: StockAttentionSignal | undefined, asOf: string): DiscoveryEvent | null {
-  if (!attention?.newsEventLabel || attention.mentionCount <= 0) return null;
+  if (!attention?.newsEventLabel) return null;
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -418,7 +419,8 @@ function eventFromFlowHistory(history: readonly InvestorFlow[]): DiscoveryEvent 
   };
 }
 
-function eventAxisSignal(event: DiscoveryEvent): AxisSignal | null {
+function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): AxisSignal | null {
+  if (!isDeckDisplayEvent(event, candidate)) return null;
   if (
     event.kind !== "theme_link" &&
     event.kind !== "flow_entry" &&
@@ -477,11 +479,14 @@ function frontSeed(
   theme: ThemeMoveSignal | undefined,
   sparkline: number[]
 ): DiscoveryFrontSeed {
+  const currentNewsEvent = candidate.events.find(
+    (event) => isDeckDisplayEvent(event, candidate) && (event.kind === "news_mention" || event.kind === "disclosure")
+  );
   const signals: CardFrontSignals = {
     ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
     ...(attention ? { mentionCount: attention.mentionCount, mentionScore: attention.mentionScore } : {}),
-    ...(attention?.newsEventLabel ? { newsEventLabel: attention.newsEventLabel } : {}),
-    ...(attention?.newsEventSource ? { newsEventSource: attention.newsEventSource } : {}),
+    ...(currentNewsEvent?.label ? { newsEventLabel: currentNewsEvent.label } : {}),
+    ...(currentNewsEvent?.source ? { newsEventSource: currentNewsEvent.source } : {}),
     ...(row.marketCapRank ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
     ...(theme ? {
       themeLabel: theme.sector,
@@ -496,7 +501,7 @@ function frontSeed(
     ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
     ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
   });
-  const eventSignals = candidate.events.map(eventAxisSignal).filter((signal): signal is AxisSignal => signal !== null);
+  const eventSignals = candidate.events.map((event) => eventAxisSignal(event, candidate)).filter((signal): signal is AxisSignal => signal !== null);
   const axisSignals = [...buildAxisSignals({ signals }), ...eventSignals];
   const axisHook = selectMultiAxisHook(axisSignals);
   return {
@@ -545,15 +550,19 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
 
   for (const [ticker, attention] of Object.entries(attentionMap)) {
     const def = resolveStock(ticker);
-    if (!def?.naverCode) continue;
-    if (!eligibleTickers.has(def.canonical)) continue;
+    const canonical = def?.canonical ?? ticker;
+    if (!eligibleTickers.has(canonical)) continue;
     const row =
-      normalizedRows.find((r) => r.naverCode === def.naverCode) ??
-      ({ canonical: def.canonical, naverCode: def.naverCode, market: def.market as DiscoveryMarket } satisfies NaverMarketRow);
+      normalizedRows.find((r) => r.canonical === canonical) ??
+      (def?.naverCode ? normalizedRows.find((r) => r.naverCode === def.naverCode) : undefined) ??
+      (def?.naverCode
+        ? ({ canonical: def.canonical, naverCode: def.naverCode, market: def.market as DiscoveryMarket } satisfies NaverMarketRow)
+        : undefined);
+    if (!row) continue;
     const event = eventFromNews(attention, asOf);
     if (!event) continue;
-    const current = byTicker.get(def.canonical);
-    byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
+    const current = byTicker.get(canonical);
+    byTicker.set(canonical, { row: { ...row, canonical }, events: [...(current?.events ?? []), event] });
   }
 
   const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
