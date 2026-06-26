@@ -7,10 +7,11 @@
 export function SplashScreen({ leaving = false, onDone }: { leaving?: boolean; onDone: () => void }) {
   return (
     <main
-      className={`fixed inset-0 z-50 flex flex-col bg-canvas px-6 transition-opacity duration-500 ${
+      className={`fixed inset-0 z-50 flex flex-col items-center bg-canvas transition-opacity duration-500 ${
         leaving ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
+      <div className="mx-auto flex h-full w-full max-w-md flex-col px-6">
       {/* 상단 여백 */}
       <div className="flex flex-1 flex-col justify-center">
         <p className="font-pixel text-xs font-bold tracking-widest text-neon">FOMO CLUB</p>
@@ -28,6 +29,7 @@ export function SplashScreen({ leaving = false, onDone }: { leaving?: boolean; o
         >
           발견 시작
         </button>
+      </div>
       </div>
     </main>
   );
