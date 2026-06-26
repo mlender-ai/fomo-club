@@ -34,6 +34,9 @@ describe("discovery sector labels", () => {
     expect(inferDiscoverySectorLabel("올릭스", [event("오늘 가격이 +5.47% 움직였어요.")])).toBe("바이오");
     expect(inferDiscoverySectorLabel("마키나락스", [event("오늘 가격이 +6.82% 움직였어요.")])).toBe("AI");
     expect(inferDiscoverySectorLabel("엠로", [event("오늘 가격이 +5.46% 움직였어요.")])).toBe("AI");
+    expect(inferDiscoverySectorLabel("대우건설", [event("대우건설, AI·스마트건설·기후공시 강화")])).toBe("건설");
+    expect(inferDiscoverySectorLabel("한국금융지주", [event("개인방송 경쟁 치열해져...SOOP 투자의견 하향")])).toBe("금융");
+    expect(inferDiscoverySectorLabel("HD현대일렉트릭", [event("원전주, 이제는 성과를 증명할 때")])).toBe("에너지");
   });
 
   it("does not infer the chip from provider/source metadata", () => {

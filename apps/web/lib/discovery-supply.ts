@@ -39,38 +39,45 @@ import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
 const PAGE_SIZE = 100;
-const PAGES_PER_MARKET = 5;
+const PAGES_PER_MARKET = 10;
 const SPARKLINE_CONCURRENCY = 8;
+const DISCOVERY_DECK_CARD_COUNT = 30;
 const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
 const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED
-  ? Math.max(0, Math.min(40, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 40) || 40))
+  ? Math.max(0, Math.min(240, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 240) || 240))
   : 0;
-const TARGETED_MATERIAL_CONCURRENCY = 4;
+const TARGETED_MATERIAL_CONCURRENCY = 8;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d/i;
+const LINKED_NEWS_NOISE =
+  /코스피|코스닥|증시|시황|장\s?초반|장중|마감|출발|차익\s?실현|순매도|순매수|2거래일|우상향했던|하락한|상승한/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_ENABLED
   ? "네이버 시세·종목뉴스·리서치·DART 공시·수급 캐시"
   : "네이버 시세·뉴스 언급";
 const MARKET_LABELS = new Set(["KOSPI", "KOSDAQ", "NASDAQ", "NYSE"]);
 const INDUSTRY_HINTS: Array<{ label: string; pattern: RegExp }> = [
-  { label: "반도체", pattern: /반도체|HBM|메모리|파운드리|MLCC|기판|웨이퍼|EUV|패키징|공정|테스/i },
+  { label: "유통", pattern: /유통|백화점|신세계|광주신세계|대형마트|편의점/i },
+  { label: "화학", pattern: /화학|케미칼|석유화학|롯데케미칼/i },
+  { label: "에너지", pattern: /에너지|태양광|풍력|신재생|VPP|발전|전력|수소|ESS|일진전기|LS ELECTRIC|LS\b|현대일렉트릭/i },
+  { label: "반도체", pattern: /반도체|HBM|메모리|파운드리|MLCC|기판|웨이퍼|EUV|패키징|공정|테스|심텍/i },
+  { label: "건설", pattern: /건설|건설사|대우건설/i },
   { label: "AI", pattern: /\b(?:AI|GPU|SW|Agentic|OS)\b|인공지능|클라우드|데이터센터|소프트웨어|문서|에이전틱|마키나락스|엠로/i },
-  { label: "에너지", pattern: /에너지|태양광|풍력|신재생|VPP|발전|전력|수소|ESS/i },
   { label: "2차전지", pattern: /2차전지|이차전지|배터리|전지|리튬|양극재|음극재|전해질|분리막/i },
   { label: "방산", pattern: /방산|디펜스|국방|무기|유도무기|항공우주|군|KAI|LIG|로템|함정/i },
   { label: "바이오", pattern: /바이오|헬스케어|제약|신약|임상|항암|의료|진단|치료제|의약품|올릭스|한올바이오/i },
   { label: "원자력", pattern: /원전|원자력|SMR|소형모듈|한전|전력기술/i },
   { label: "인터넷", pattern: /네이버|카카오|플랫폼|포털|커머스|웹툰|콘텐츠/i },
-  { label: "금융", pattern: /은행|보험|손해보험|증권|캐피탈|핀테크|결제/i },
-  { label: "게임", pattern: /게임|엔씨|크래프톤|위메이드|넷마블/i },
+  { label: "금융", pattern: /금융|은행|보험|손해보험|증권|캐피탈|핀테크|결제/i },
+  { label: "게임", pattern: /게임|엔씨|크래프톤|위메이드|넷마블|넵튠/i },
   { label: "자동차", pattern: /자동차|현대차|기아|모비스|부품|전장|전기차|타이어|금호타이어/i },
   { label: "조선", pattern: /조선|중공업|선박|해양|조선소/i },
   { label: "로봇", pattern: /로봇|자동화|로보틱스/i },
   { label: "음식료", pattern: /식품|푸드|외식|급식|프레시웨이|음식료/i },
   { label: "화장품", pattern: /화장품|코스메틱|뷰티|제닉|한국콜마/i },
   { label: "건자재", pattern: /건자재|레미콘|시멘트|건설자재|유진기업/i },
+  { label: "디스플레이", pattern: /디스플레이|OLED|LCD|LG디스플레이/i },
   { label: "지주", pattern: /지주|홀딩스|SK디스커버리/i },
 ];
 
@@ -255,7 +262,7 @@ function cleanMaterialTitle(title: string): string | undefined {
     .trim();
   if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned)) return undefined;
   if (/[\[\]{}<>]/.test(cleaned)) return undefined;
-  const compact = cleaned.length > 46 ? `${cleaned.slice(0, 44).trim()}…` : cleaned;
+  const compact = cleaned.length > 46 ? `${cleaned.slice(0, 44).replace(/\s+\S*$/, "").trim()}…` : cleaned;
   return isFrontHookSafe(`${compact} 소식이 나왔어요.`) ? compact : undefined;
 }
 
@@ -270,14 +277,21 @@ function isPrimaryStockArticle(canonical: string, article: RawArticle): boolean 
   }) === "primary";
 }
 
+function isLinkedStockArticle(article: RawArticle): boolean {
+  const label = cleanMaterialTitle(article.title);
+  if (!label || LINKED_NEWS_NOISE.test(label)) return false;
+  return true;
+}
+
 function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
   const label = cleanMaterialTitle(article.title);
   if (!label) return null;
   const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(`${article.source} ${article.category ?? ""}`);
+  const isLinked = /종목뉴스\s?연결/i.test(article.source || sourceFallback);
   return {
     kind: "news_mention",
     firstSeen: true,
-    strength: isResearch ? 0.82 : 0.88,
+    strength: isLinked ? 0.56 : isResearch ? 0.82 : 0.88,
     source: article.source || sourceFallback,
     asOf: article.publishedAt?.slice(0, 10) || asOf,
     confidence: "H",
@@ -294,7 +308,15 @@ async function eventFromTargetedMaterial(row: NaverMarketRow, asOf: string): Pro
 
   const stockNews =
     newsResult.status === "fulfilled"
-      ? newsResult.value.find((article) => isPrimaryStockArticle(row.canonical, article))
+      ? newsResult.value.find((article) => isPrimaryStockArticle(row.canonical, article)) ??
+        newsResult.value.find((article) => isStockArticle(row.canonical, article)) ??
+        newsResult.value
+          .filter(isLinkedStockArticle)
+          .map((article) => ({
+            ...article,
+            source: article.source ? `${article.source} 종목뉴스 연결` : "네이버 종목뉴스 연결",
+          }))
+          .at(0)
       : undefined;
   if (stockNews) return materialEventFromArticle(stockNews, asOf, "네이버 종목뉴스");
 
@@ -691,13 +713,13 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
       marquee: def?.marquee === true,
     };
   });
-  const ranked = rankDiscoveryCandidates(candidates, { maxCandidates: 100 });
+  const ranked = rankDiscoveryCandidates(candidates, { maxCandidates: DISCOVERY_DECK_CARD_COUNT });
   const rowsByTicker = new Map([...byTicker.entries()].map(([ticker, value]) => [ticker, value.row]));
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
 
   const sparklineRows = await mapLimit(
-    ranked.slice(0, 100),
+    ranked.slice(0, DISCOVERY_DECK_CARD_COUNT),
     SPARKLINE_CONCURRENCY,
     async (candidate) => ({
       ticker: candidate.ticker,

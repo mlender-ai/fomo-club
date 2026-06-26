@@ -78,6 +78,14 @@ describe("WO-05 discovery supply engine", () => {
     expect(discoveryWhy(row)).not.toContain("언급한 뉴스");
   });
 
+  it("labels linked stock-tab articles honestly instead of direct mentions", () => {
+    const row = candidate("연결기사", 0.7, "news_mention", "업종 흐름 기사");
+    row.events[0]!.source = "네이버 종목뉴스 연결";
+
+    expect(discoveryWhy(row)).toContain("뉴스 탭에 함께 묶인 흐름");
+    expect(discoveryWhy(row)).not.toContain("직접 언급한 뉴스");
+  });
+
   it("selects WHY by source strength order before raw numeric strength", () => {
     const row: DiscoveryCandidate = {
       ticker: "동시보유",
@@ -156,6 +164,27 @@ describe("WO-05 discovery supply engine", () => {
     obscure.marketCapRank = 250;
 
     expect(rankDiscoveryCandidates([famous, obscure]).map((row) => row.ticker)).toEqual(["무명주", "대형주"]);
+  });
+
+  it("keeps famous marquee stocks out of the front band when obscure hooks exist", () => {
+    const obscureRows = Array.from({ length: 12 }, (_, index) => {
+      const row = candidate(`무명${index}`, 0.58 + index / 100, "news_mention", `무명 기사 ${index}`);
+      row.marketCapRank = 180 + index;
+      return row;
+    });
+    const samsung = candidate("삼성전자", 0.95, "news_mention", "삼성전자 기사");
+    samsung.marketCapRank = 1;
+    samsung.marquee = true;
+    const hynix = candidate("SK하이닉스", 0.94, "news_mention", "SK하이닉스 기사");
+    hynix.marketCapRank = 2;
+    hynix.marquee = true;
+
+    const firstTen = rankDiscoveryCandidates([samsung, hynix, ...obscureRows], { maxCandidates: 14 })
+      .slice(0, 10)
+      .map((row) => row.ticker);
+
+    expect(firstTen).not.toContain("삼성전자");
+    expect(firstTen).not.toContain("SK하이닉스");
   });
 
   it("drops price-only moves regardless of direction", () => {
