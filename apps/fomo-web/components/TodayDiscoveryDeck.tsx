@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
-import { fetchDiscovery } from "@/lib/fomoApi";
+import { DISCOVERY_UPDATED_EVENT, fetchDiscovery, type DiscoveryResponse } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { MIN_DISCOVERY_STOCKS, type DeckStock } from "@/lib/discoveryDeck";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
@@ -31,17 +31,26 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
 
   useEffect(() => {
     let alive = true;
+    const applyDiscovery = (discovery: DiscoveryResponse) => {
+      const stocks = discovery.stocks as DeckStock[];
+      if (stocks.length === 0) {
+        setState({ kind: "error" });
+        return;
+      }
+      setState({ kind: "ready", stocks, fronts: discovery.fronts as Record<string, FrontEntry> });
+    };
+    const onDiscoveryUpdated = (event: Event) => {
+      const discovery = (event as CustomEvent<DiscoveryResponse>).detail;
+      if (!alive || !discovery) return;
+      applyDiscovery(discovery);
+    };
+    window.addEventListener(DISCOVERY_UPDATED_EVENT, onDiscoveryUpdated);
     setState({ kind: "loading" });
     (async () => {
       try {
         const discovery = await fetchDiscovery();
         if (!alive) return;
-        const stocks = discovery.stocks as DeckStock[];
-        if (stocks.length === 0) {
-          setState({ kind: "error" });
-          return;
-        }
-        setState({ kind: "ready", stocks, fronts: discovery.fronts as Record<string, FrontEntry> });
+        applyDiscovery(discovery);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[TodayDiscoveryDeck] fetch failed", err);
@@ -51,6 +60,7 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
     })();
     return () => {
       alive = false;
+      window.removeEventListener(DISCOVERY_UPDATED_EVENT, onDiscoveryUpdated);
     };
   }, []);
 

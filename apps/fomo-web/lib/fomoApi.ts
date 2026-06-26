@@ -29,6 +29,11 @@ const CACHE_TTL = {
   stockInsight: 6 * HOUR,
 } as const;
 export const KEYWORDS_UPDATED_EVENT = "fomo:keywords-updated";
+export const DISCOVERY_UPDATED_EVENT = "fomo:discovery-updated";
+
+const DISCOVERY_SAME_ORIGIN_TIMEOUT_MS = 2_500;
+const DISCOVERY_BACKEND_TIMEOUT_MS = 8_000;
+const DISCOVERY_REVALIDATE_TIMEOUT_MS = 12_000;
 
 function kstDateKey(now = new Date()): string {
   return new Date(now.getTime() + 9 * HOUR).toISOString().slice(0, 10);
@@ -65,10 +70,26 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function getSameOrigin<T>(path: string): Promise<T> {
-  const res = await fetch(path, { cache: "no-store", credentials: "same-origin" });
-  if (!res.ok) throw new Error(`GET ${path} ${res.status}`);
-  return res.json() as Promise<T>;
+async function fetchJsonWithTimeout<T>(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    if (!res.ok) throw new Error(`${label} ${res.status}`);
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if ((err as { name?: string }).name === "AbortError") {
+      throw new Error(`${label} timeout`);
+    }
+    throw err;
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
 }
 
 export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
@@ -252,21 +273,101 @@ export interface DiscoveryResponse {
   source: string;
 }
 
-export const fetchDiscovery = () =>
-  cachedGet(
-    "discovery:today:v2",
-    async () => {
-      try {
-        return await getSameOrigin<DiscoveryResponse>("/api/fomo/discovery");
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("[fomoApi] same-origin discovery failed; retrying backend", err);
-        }
-        return get<DiscoveryResponse>("/api/fomo/discovery");
-      }
-    },
-    CACHE_TTL.stockFront
-  );
+const discoveryKey = () => `discovery:today:v3:${kstDateKey()}`;
+const discoveryStorageKey = () => `fomo:discovery:${kstDateKey()}`;
+
+function isDiscoveryResponse(value: unknown): value is DiscoveryResponse {
+  const candidate = value as Partial<DiscoveryResponse> | null;
+  return !!candidate && Array.isArray(candidate.stocks) && !!candidate.fronts && typeof candidate.fronts === "object";
+}
+
+function readStoredDiscovery(): DiscoveryResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(discoveryStorageKey());
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    return isDiscoveryResponse(parsed) ? parsed : null;
+  } catch (err) {
+    console.warn("[fetchDiscovery] localStorage read failed", err);
+    return null;
+  }
+}
+
+function writeStoredDiscovery(value: DiscoveryResponse): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(discoveryStorageKey(), JSON.stringify(value));
+  } catch (err) {
+    console.warn("[fetchDiscovery] localStorage write failed", err);
+  }
+}
+
+function emitDiscoveryUpdated(value: DiscoveryResponse): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<DiscoveryResponse>(DISCOVERY_UPDATED_EVENT, { detail: value }));
+}
+
+async function fetchDiscoveryNetwork({
+  sameOriginTimeoutMs = DISCOVERY_SAME_ORIGIN_TIMEOUT_MS,
+  backendTimeoutMs = DISCOVERY_BACKEND_TIMEOUT_MS,
+}: {
+  sameOriginTimeoutMs?: number;
+  backendTimeoutMs?: number;
+} = {}): Promise<DiscoveryResponse> {
+  try {
+    return await fetchJsonWithTimeout<DiscoveryResponse>(
+      "/api/fomo/discovery",
+      { cache: "no-store", credentials: "same-origin" },
+      sameOriginTimeoutMs,
+      "GET /api/fomo/discovery"
+    );
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[fomoApi] same-origin discovery failed; retrying backend", err);
+    }
+    return fetchJsonWithTimeout<DiscoveryResponse>(
+      `${API_BASE}/api/fomo/discovery`,
+      { cache: "no-store" },
+      backendTimeoutMs,
+      "GET backend /api/fomo/discovery"
+    );
+  }
+}
+
+export const getCachedDiscovery = () => readCached<DiscoveryResponse>(discoveryKey());
+
+export async function fetchDiscovery(): Promise<DiscoveryResponse> {
+  const key = discoveryKey();
+  const cached = readCached<DiscoveryResponse>(key);
+  if (cached) return cached;
+
+  const stored = readStoredDiscovery();
+  if (stored) {
+    setCached(key, stored, CACHE_TTL.stockFront);
+    void refreshCached(
+      key,
+      () =>
+        fetchDiscoveryNetwork({
+          sameOriginTimeoutMs: DISCOVERY_SAME_ORIGIN_TIMEOUT_MS,
+          backendTimeoutMs: DISCOVERY_REVALIDATE_TIMEOUT_MS,
+        }),
+      CACHE_TTL.stockFront
+    )
+      .then((fresh) => {
+        writeStoredDiscovery(fresh);
+        emitDiscoveryUpdated(fresh);
+      })
+      .catch((err) => console.warn("[fetchDiscovery] revalidate failed", err));
+    return stored;
+  }
+
+  const fresh = await cachedGet(key, () => fetchDiscoveryNetwork(), CACHE_TTL.stockFront);
+  writeStoredDiscovery(fresh);
+  return fresh;
+}
+
+export const warmDiscovery = () => fetchDiscovery();
 
 export interface AxisSnapshotEntry {
   axisSignals: import("@fomo/core").AxisSignal[];
