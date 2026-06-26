@@ -18,9 +18,6 @@ export function SplashScreen({ leaving = false, onDone }: { leaving?: boolean; o
           당신을 위한<br />
           <span className="text-neon">취향투자</span> 클럽
         </h1>
-        <p className="mt-4 text-[15px] leading-6 text-muted">
-          멈춰 보게 되는 종목이<br />당신의 기준이다.
-        </p>
       </div>
 
       {/* CTA */}

@@ -94,9 +94,6 @@ export function LoginPage({
                   당신을 위한<br />
                   <span className="text-neon">취향투자</span> 클럽
                 </h1>
-                <p className="mt-3 text-[13px] leading-5 text-muted">
-                  멈춰 보게 되는 종목이 당신의 기준이다.
-                </p>
               </div>
 
               <input
