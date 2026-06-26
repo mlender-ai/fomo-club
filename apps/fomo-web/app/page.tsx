@@ -8,6 +8,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { getSessionId } from "@/lib/session";
 import { hasSession } from "@/lib/auth";
 import {
+  FOMO_INDEX_UPDATED_EVENT,
   fetchIndex,
   fetchToday,
   fetchBanner,
@@ -74,6 +75,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!shouldShowSplash()) setPhase("home");
+  }, []);
+
+  useEffect(() => {
+    const onIndexUpdated = (event: Event) => {
+      const next = (event as CustomEvent<FomoIndexResponse>).detail;
+      if (next) setIndex(next);
+    };
+    window.addEventListener(FOMO_INDEX_UPDATED_EVENT, onIndexUpdated);
+    return () => window.removeEventListener(FOMO_INDEX_UPDATED_EVENT, onIndexUpdated);
   }, []);
 
   // 로그인 상태는 클라에서만 확정(SSR 불일치 방지).

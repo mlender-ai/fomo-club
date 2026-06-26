@@ -14,9 +14,10 @@ import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
 
 export type { BannerItem } from "@fomo/core";
 
+const DEFAULT_API_BASE = "https://fomo-club-backend.vercel.app";
 const API_BASE =
   process.env.NEXT_PUBLIC_FOMO_API_BASE?.replace(/\/$/, "") ||
-  "https://fomo-club-backend.vercel.app";
+  DEFAULT_API_BASE;
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -30,7 +31,11 @@ const CACHE_TTL = {
 } as const;
 export const KEYWORDS_UPDATED_EVENT = "fomo:keywords-updated";
 export const DISCOVERY_UPDATED_EVENT = "fomo:discovery-updated";
+export const FOMO_INDEX_UPDATED_EVENT = "fomo:index-updated";
 
+const INDEX_SAME_ORIGIN_TIMEOUT_MS = 1_800;
+const INDEX_BACKEND_TIMEOUT_MS = 4_000;
+const INDEX_REVALIDATE_TIMEOUT_MS = 8_000;
 const DISCOVERY_SAME_ORIGIN_TIMEOUT_MS = 2_500;
 const DISCOVERY_BACKEND_TIMEOUT_MS = 8_000;
 const DISCOVERY_REVALIDATE_TIMEOUT_MS = 12_000;
@@ -48,6 +53,64 @@ export interface FomoIndexResponse {
   prevDayDelta: number;
   avg30Delta: number;
   live: boolean;
+}
+
+const indexKey = () => `fomo-index:${kstDateKey()}`;
+const indexStorageKey = () => `fomo:index:${kstDateKey()}`;
+
+function neutralFomoIndex(): FomoIndexResponse {
+  return {
+    date: kstDateKey(),
+    score: 50,
+    state: "관심",
+    components: { market: 15, community: 15, emotion: 15, whale: 0 },
+    aiSummary: "",
+    prevDayDelta: 0,
+    avg30Delta: 0,
+    live: false,
+  };
+}
+
+function isFomoIndexResponse(value: unknown): value is FomoIndexResponse {
+  const candidate = value as Partial<FomoIndexResponse> | null;
+  return (
+    !!candidate &&
+    typeof candidate.date === "string" &&
+    typeof candidate.score === "number" &&
+    typeof candidate.state === "string" &&
+    !!candidate.components &&
+    typeof candidate.components.market === "number" &&
+    typeof candidate.components.community === "number" &&
+    typeof candidate.components.emotion === "number" &&
+    typeof candidate.components.whale === "number"
+  );
+}
+
+function readStoredIndex(): FomoIndexResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(indexStorageKey());
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    return isFomoIndexResponse(parsed) ? parsed : null;
+  } catch (err) {
+    console.warn("[fetchIndex] localStorage read failed", err);
+    return null;
+  }
+}
+
+function writeStoredIndex(value: FomoIndexResponse): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(indexStorageKey(), JSON.stringify(value));
+  } catch (err) {
+    console.warn("[fetchIndex] localStorage write failed", err);
+  }
+}
+
+function emitIndexUpdated(value: FomoIndexResponse): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<FomoIndexResponse>(FOMO_INDEX_UPDATED_EVENT, { detail: value }));
 }
 
 export interface TallyResponse {
@@ -92,7 +155,88 @@ async function fetchJsonWithTimeout<T>(
   }
 }
 
-export const fetchIndex = () => get<FomoIndexResponse>("/api/fomo/index");
+function backendOrigins(): string[] {
+  return [...new Set([API_BASE, DEFAULT_API_BASE].map((origin) => origin.replace(/\/$/, "")))];
+}
+
+async function fetchIndexNetwork({
+  sameOriginTimeoutMs = INDEX_SAME_ORIGIN_TIMEOUT_MS,
+  backendTimeoutMs = INDEX_BACKEND_TIMEOUT_MS,
+}: {
+  sameOriginTimeoutMs?: number;
+  backendTimeoutMs?: number;
+} = {}): Promise<FomoIndexResponse> {
+  try {
+    return await fetchJsonWithTimeout<FomoIndexResponse>(
+      "/api/fomo/index",
+      { cache: "no-store", credentials: "same-origin" },
+      sameOriginTimeoutMs,
+      "GET /api/fomo/index"
+    );
+  } catch (sameOriginErr) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[fetchIndex] same-origin failed; retrying backend", sameOriginErr);
+    }
+  }
+
+  let lastError: unknown = null;
+  for (const origin of backendOrigins()) {
+    try {
+      return await fetchJsonWithTimeout<FomoIndexResponse>(
+        `${origin}/api/fomo/index`,
+        { cache: "no-store" },
+        backendTimeoutMs,
+        `GET ${origin}/api/fomo/index`
+      );
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("GET /api/fomo/index failed");
+}
+
+export async function fetchIndex(): Promise<FomoIndexResponse> {
+  const key = indexKey();
+  const cached = readCached<FomoIndexResponse>(key);
+  if (cached) return cached;
+
+  const stored = readStoredIndex();
+  if (stored) {
+    setCached(key, stored, CACHE_TTL.stockFront);
+    void refreshCached(
+      key,
+      () =>
+        fetchIndexNetwork({
+          sameOriginTimeoutMs: INDEX_SAME_ORIGIN_TIMEOUT_MS,
+          backendTimeoutMs: INDEX_REVALIDATE_TIMEOUT_MS,
+        }),
+      CACHE_TTL.stockFront
+    )
+      .then((fresh) => {
+        writeStoredIndex(fresh);
+        emitIndexUpdated(fresh);
+      })
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[fetchIndex] revalidate failed", err);
+        }
+      });
+    return stored;
+  }
+
+  try {
+    const fresh = await cachedGet(key, () => fetchIndexNetwork(), CACHE_TTL.stockFront);
+    writeStoredIndex(fresh);
+    return fresh;
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[fetchIndex] using neutral fallback", err);
+    }
+    const fallback = neutralFomoIndex();
+    setCached(key, fallback, MINUTE);
+    return fallback;
+  }
+}
 export const fetchToday = () => get<TallyResponse>("/api/fomo/emotions/today");
 /** 롤링 배너 + 홈 상단 캐러셀용 시장 점수(나스닥·비트코인·코스피). */
 export type { MarketScore } from "@fomo/core";
