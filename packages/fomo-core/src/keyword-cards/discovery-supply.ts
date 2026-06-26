@@ -134,13 +134,9 @@ function isDisplayVolumeEvent(event: DiscoveryEvent): boolean {
   return event.kind === "volume_spike" && event.firstSeen && event.direction !== "down" && event.direction !== "flat";
 }
 
-function isPositivePriceMoveEvent(event: DiscoveryEvent): boolean {
-  return event.kind === "price_move" && event.direction === "up";
-}
-
 export function isDeckDisplayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
   if (!isCurrentDeckEvent(event, candidate)) return false;
-  return isMaterialEvent(event) || isConstructiveThemeEvent(event) || isDisplayVolumeEvent(event) || isPositivePriceMoveEvent(event);
+  return isMaterialEvent(event) || isDisplayVolumeEvent(event);
 }
 
 export function hasDeckDisplayEvent(candidate: DiscoveryCandidate): boolean {
@@ -195,7 +191,6 @@ export function discoveryWhy(candidate: DiscoveryCandidate): string {
       : `${prefix} 이 종목을 직접 언급한 뉴스가 있어요.`;
   }
   if (strongest.kind === "flow_entry") return strongest.label ?? "수급이 새로 감지된 종목이에요.";
-  if (strongest.kind === "theme_link") return strongest.label ?? "오늘 강한 테마 흐름에 같이 묶여 있어요.";
   if (strongest.kind === "new_high") return strongest.label ?? "새로운 가격 위치가 확인된 종목이에요.";
   if (strongest.kind === "volume_spike") {
     return strongest.label ?? "오늘 거래량이 새로 늘었어요.";
@@ -253,8 +248,7 @@ function eventScore(candidate: DiscoveryCandidate): number {
 function eventTier(candidate: DiscoveryCandidate): number {
   const displayEvents = candidate.events.filter((event) => isDeckDisplayEvent(event, candidate));
   if (displayEvents.some(isMaterialEvent)) return 0;
-  if (displayEvents.some((event) => event.kind === "theme_link" || event.kind === "new_high" || event.kind === "volume_spike")) return 1;
-  if (displayEvents.some((event) => event.kind === "price_move")) return 2;
+  if (displayEvents.some((event) => event.kind === "volume_spike")) return 1;
   return 9;
 }
 
