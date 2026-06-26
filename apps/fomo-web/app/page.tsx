@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { FEATURE_EMOTION_VOTE, type EmotionType } from "@fomo/core";
 import { EmotionGate } from "@/components/EmotionGate";
 import { HomeView } from "@/components/HomeView";
+import { SplashScreen } from "@/components/SplashScreen";
 import { getSessionId } from "@/lib/session";
 import { hasSession } from "@/lib/auth";
 import {
@@ -25,15 +26,26 @@ import {
   type MarketScore,
 } from "@/lib/fomoApi";
 
-type Phase = "gate" | "home";
+type Phase = "splash" | "splashLeaving" | "gate" | "home";
 
 /**
  * 진입 여정 오케스트레이터 — 진입 시 바로 home(스플래시 제거). 데이터는 백그라운드 로드.
  * (감정 투표 flag 가 켜져 오늘 미선택이면 gate 로, 현재는 OFF 라 항상 home.)
  */
 export default function Home() {
-  const [phase, setPhase] = useState<Phase>("home");
+  const [phase, setPhase] = useState<Phase>(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("fomo_splash_seen")) {
+      return "splash";
+    }
+    return "home";
+  });
   const [gateReopen, setGateReopen] = useState(false);
+
+  const dismissSplash = useCallback(() => {
+    localStorage.setItem("fomo_splash_seen", "1");
+    setPhase("splashLeaving");
+    setTimeout(() => setPhase("home"), 500);
+  }, []);
 
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
   const [tally, setTally] = useState<TallyResponse | null>(null);
@@ -150,6 +162,10 @@ export default function Home() {
         /* 조회 실패해도 게이트는 통과 — 다음 진입에 다시 시도 */
       });
   }, []);
+
+  if (phase === "splash" || phase === "splashLeaving") {
+    return <SplashScreen leaving={phase === "splashLeaving"} onDone={dismissSplash} />;
+  }
 
   if (phase === "gate") {
     return (
