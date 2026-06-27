@@ -29,24 +29,6 @@ import {
 } from "@/lib/fomoApi";
 
 type Phase = "splash" | "splashLeaving" | "gate" | "home";
-const SPLASH_SESSION_KEY = "fomo_splash_seen_session";
-
-function shouldShowSplash(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.sessionStorage.getItem(SPLASH_SESSION_KEY) !== "1";
-  } catch {
-    return true;
-  }
-}
-
-function markSplashSeen(): void {
-  try {
-    window.sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
-  } catch {
-    /* 세션 저장이 막혀도 스플래시 종료 흐름은 유지한다. */
-  }
-}
 
 /**
  * 진입 여정 오케스트레이터 — 스플래시가 떠 있는 동안 발견 덱 데이터를 먼저 당긴다.
@@ -55,11 +37,13 @@ function markSplashSeen(): void {
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("splash");
   const [gateReopen, setGateReopen] = useState(false);
+  const splashDismissedRef = useRef(false);
+  const pendingGateRef = useRef(false);
 
   const dismissSplash = useCallback(() => {
-    markSplashSeen();
+    splashDismissedRef.current = true;
     setPhase("splashLeaving");
-    setTimeout(() => setPhase("home"), 500);
+    setTimeout(() => setPhase(pendingGateRef.current ? "gate" : "home"), 500);
   }, []);
 
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
@@ -72,10 +56,6 @@ export default function Home() {
   const [news, setNews] = useState<NewsResponse | null>(null);
   const [mine, setMine] = useState<EmotionType | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
-
-  useEffect(() => {
-    if (!shouldShowSplash()) setPhase("home");
-  }, []);
 
   useEffect(() => {
     const onIndexUpdated = (event: Event) => {
@@ -99,7 +79,7 @@ export default function Home() {
       .catch(() => setNews({ deck: [], lang: "ko" }));
   }, []);
 
-  // 진입 즉시 백그라운드 데이터 로드(스플래시 없음). 도착 전엔 HomeView 내부 로딩 상태가 담당.
+  // 진입 즉시 백그라운드 데이터 로드. 도착 전엔 HomeView 내부 로딩 상태가 담당.
   const startedRef = useRef(false);
   useEffect(() => {
     if (startedRef.current) return;
@@ -143,8 +123,11 @@ export default function Home() {
     });
 
     load.then((todays) => {
-      // 감정 투표 flag 가 켜져 있고 오늘 미선택이면만 게이트. 현재 OFF → 항상 home 유지.
-      if (FEATURE_EMOTION_VOTE && !todays) setPhase("gate");
+      // CTA 전에는 스플래시를 절대 닫지 않는다. 게이트 필요 여부만 예약한다.
+      if (FEATURE_EMOTION_VOTE && !todays) {
+        if (splashDismissedRef.current) setPhase("gate");
+        else pendingGateRef.current = true;
+      }
     });
   }, []);
 
