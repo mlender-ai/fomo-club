@@ -380,6 +380,20 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
   };
 }
 
+function materialEventFromAttentionSignal(attention: StockAttentionSignal | undefined, asOf: string): DiscoveryEvent | null {
+  const label = attention?.newsEventLabel?.trim();
+  if (!label || /^오늘 가격이/.test(label)) return null;
+  return {
+    kind: "news_mention",
+    firstSeen: true,
+    strength: 0.7,
+    source: attention?.newsEventSource || "뉴스 언급",
+    asOf,
+    confidence: "M",
+    label,
+  };
+}
+
 async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string): Promise<DiscoveryEvent | null> {
   if (row.country !== "KR") {
     const [filingResult, newsResult] = await Promise.allSettled([
@@ -1080,6 +1094,13 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       if (!current) continue;
       byTicker.set(ticker, { ...current, events: [...current.events, event] });
     }
+  }
+
+  for (const [ticker, current] of byTicker.entries()) {
+    if (current.events.some((event) => event.kind === "disclosure" || event.kind === "news_mention")) continue;
+    const event = materialEventFromAttentionSignal(attentionMap[ticker], asOf);
+    if (!event) continue;
+    byTicker.set(ticker, { ...current, events: [...current.events, event] });
   }
 
   if (scope !== "US") addStaticRecoveryRows(byTicker, asOf);
