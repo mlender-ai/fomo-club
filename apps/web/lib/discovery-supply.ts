@@ -345,8 +345,8 @@ function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined,
   if (!leadingTheme && !positiveOutperformer && !positiveStrongTheme && !positiveSectorSpike) return null;
   const label =
     theme.rank <= 3
-      ? `오늘 ${theme.sector} ${theme.peerCount}개 종목 중 ${ordinalText(theme.rank)} 강했어요(${pctText(row.changePct)}).`
-      : `오늘 ${theme.sector} 평균(${pctText(theme.averageChangePct)})보다 ${pointText(theme.relativeChangePct)}포인트 더 강했어요(${pctText(row.changePct)}).`;
+      ? `오늘 ${theme.sector} 흐름에서 먼저 확인된 종목이에요.`
+      : `오늘 ${theme.sector} 흐름에서 같이 확인된 종목이에요.`;
   return {
     kind: "theme_link",
     firstSeen: true,
@@ -361,17 +361,6 @@ function eventFromTheme(row: NaverMarketRow, theme: ThemeMoveSignal | undefined,
 function pctText(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
-}
-
-function pointText(value: number): string {
-  return Math.abs(value).toFixed(1);
-}
-
-function ordinalText(rank: number): string {
-  if (rank === 1) return "가장";
-  if (rank === 2) return "두 번째로";
-  if (rank === 3) return "세 번째로";
-  return `${rank}번째로`;
 }
 
 function industryHintForTicker(ticker: string): string | undefined {
@@ -390,10 +379,10 @@ function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | un
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${ordinalText(theme.rank)} 강하게 움직였어요.`
+        ? `${sector} 흐름에서 먼저 확인된 종목이에요.`
         : changePct > 0
-          ? `오늘 ${sector} 안에서 같이 오른 쪽이에요(${change}).`
-          : `오늘 ${sector} 안에서 약한 쪽 흐름이에요(${change}).`;
+          ? `${sector} 흐름에서 같이 확인된 종목이에요.`
+          : `${sector} 흐름에서 약한 쪽도 함께 확인하고 있어요.`;
     return {
       kind: "market_context",
       firstSeen: true,
