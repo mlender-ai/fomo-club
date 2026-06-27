@@ -144,7 +144,7 @@ function isDisplayVolumeEvent(event: DiscoveryEvent): boolean {
 
 export function isDeckDisplayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
   if (!isCurrentDeckEvent(event, candidate)) return false;
-  return isMaterialEvent(event) || isDisplayVolumeEvent(event);
+  return isMaterialEvent(event) || isConstructiveThemeEvent(event) || isDisplayVolumeEvent(event);
 }
 
 export function hasDeckDisplayEvent(candidate: DiscoveryCandidate): boolean {
