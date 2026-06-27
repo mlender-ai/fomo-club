@@ -38,7 +38,7 @@ import { fetchRecentSecFilings } from "./sec-edgar";
 import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
-import { fetchUsMarketRows } from "./us-market-source";
+import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
@@ -62,6 +62,10 @@ const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d|회장|최고경영자|CEO|고백|회고|소회|인터뷰|기부|ESG|봉사|사회공헌|미담|창업주|오너|가문|고향|강연|도서|출간|어려울\s?때마다|찾았다/i;
 const MATERIAL_NEWS_CATALYST =
   /공시|계약|공급계약|수주|납품|실적|매출|영업이익|순이익|가이던스|전망치|컨센서스|어닝|흑자|적자|턴어라운드|임상|허가|승인|FDA|품목허가|신약|치료제|기술이전|라이선스|증설|공장|양산|수율|수주잔고|M&A|인수|합병|지분|투자|유상증자|무상증자|자사주|배당|분할|상장|정부|정책|규제|지원|보조금|관세|제재|신제품|출시|개발|특허|공급|독점|선정|채택|수출|수입|국책|프로젝트|수혜/i;
+const US_MATERIAL_NEWS_NOISE =
+  /price\s?target|target price|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|should you buy|stock to buy|motley fool|zacks|benzinga|investorplace|why .* stock (?:is )?(?:up|down|rising|falling)|shares? (?:rise|fall|slip|jump) after hours/i;
+const US_MATERIAL_NEWS_CATALYST =
+  /earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]|contract|deal|order|supply|supplier|customer|partnership|launch|unveil|product|chip|gpu|ai|data center|approval|fda|trial|drug|sec|8-k|10-q|filing|acquisition|merger|stake|investment|buyback authorization|dividend/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? "네이버/KR 시세·DART·수급 캐시·Twelve Data/US 시세·SEC"
   : "시장 시세·공시·수급 캐시";
@@ -150,6 +154,10 @@ interface ThemeMoveSignal {
 
 function todayKst(): string {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function discoveryAsOf(scope: DiscoveryCountryScope): string {
+  return scope === "US" ? latestUsSessionAsOf().date : todayKst();
 }
 
 function numberFromText(value: string | undefined): number | undefined {
@@ -252,7 +260,7 @@ function eventFromPrice(row: DiscoveryMarketRow, asOf: string): DiscoveryEvent |
     kind: "price_move",
     firstSeen: true,
     strength: Math.min(1, Math.abs(row.changePct) / 15),
-    source: "네이버 시세",
+    source: row.country === "US" ? row.sessionLabel ?? "Twelve Data 시세" : "네이버 시세",
     asOf,
     confidence: "H",
     label: `오늘 가격이 ${row.changePct > 0 ? "+" : ""}${row.changePct.toFixed(2)}% 움직였어요.`,
@@ -302,9 +310,10 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
     .replace(/\s+/g, " ")
     .replace(/[.!?。]+$/g, "")
     .trim();
-  if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned)) return null;
-  const label = cleaned.length > 54 ? `${cleaned.slice(0, 52).replace(/\s+\S*$/, "").trim()}…` : cleaned;
-  if (!isFrontHookSafe(`오늘 이 종목을 직접 언급한 외신이 있어요: ${label}`)) return null;
+  if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned) || US_MATERIAL_NEWS_NOISE.test(cleaned)) return null;
+  if (!US_MATERIAL_NEWS_CATALYST.test(cleaned)) return null;
+  const label = usMaterialLabel(cleaned);
+  if (!isFrontHookSafe(label)) return null;
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -314,6 +323,24 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
     confidence: "M",
     label,
   };
+}
+
+function usMaterialLabel(title: string): string {
+  if (/8-k|10-q|filing|sec/i.test(title)) return "SEC 공시로 확인된 재료가 있어요.";
+  if (/earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]/i.test(title)) {
+    return "실적·가이던스 이슈를 직접 다룬 외신이 나왔어요.";
+  }
+  if (/contract|deal|order|supply|supplier|customer|partnership/i.test(title)) {
+    return "계약·공급망 이슈를 직접 다룬 외신이 나왔어요.";
+  }
+  if (/launch|unveil|product|chip|gpu|ai|data center/i.test(title)) {
+    return "제품·AI 인프라 이슈를 직접 다룬 외신이 나왔어요.";
+  }
+  if (/approval|fda|trial|drug/i.test(title)) return "임상·허가 이슈를 직접 다룬 외신이 나왔어요.";
+  if (/acquisition|merger|stake|investment|buyback authorization|dividend/i.test(title)) {
+    return "투자·자본정책 이슈를 직접 다룬 외신이 나왔어요.";
+  }
+  return "이 종목을 직접 다룬 외신 재료가 나왔어요.";
 }
 
 async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string): Promise<DiscoveryEvent | null> {
@@ -336,7 +363,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
     }
     const stockNews =
       newsResult.status === "fulfilled"
-        ? newsResult.value.find((article) => isPrimaryStockArticle(row.canonical, article))
+        ? newsResult.value.find((article) => materialEventFromUsArticle(article, asOf, "Yahoo Finance") !== null)
         : undefined;
     return stockNews ? materialEventFromUsArticle(stockNews, asOf, "Yahoo Finance") : null;
   }
@@ -364,7 +391,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
 function buildThemeMoveSignals(rows: readonly DiscoveryMarketRow[]): Map<string, ThemeMoveSignal> {
   const groups = new Map<string, Array<{ ticker: string; changePct: number }>>();
   for (const row of rows) {
-    const sector = sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
+    const sector = row.sectorHint ?? sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
     if (!sector || typeof row.changePct !== "number") continue;
     const current = groups.get(sector) ?? [];
     current.push({ ticker: row.canonical, changePct: row.changePct });
@@ -461,11 +488,11 @@ function industryHintForTicker(ticker: string): string | undefined {
 }
 
 function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent {
-  const sector = theme?.sector ?? sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
+  const sector = theme?.sector ?? row.sectorHint ?? sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
   const rankText = row.marketCapRank ? `시총 ${row.marketCapRank}위권` : "시총 상위권";
   const changePct = row.changePct;
   const change = typeof changePct === "number" ? pctText(changePct) : undefined;
-  const source = row.country === "KR" ? "네이버 시세" : typeof row.changePct === "number" || row.priceText ? "Twelve Data 시세" : "FOMO US 종목 사전";
+  const source = row.country === "KR" ? "네이버 시세" : row.sessionLabel ?? (typeof row.changePct === "number" || row.priceText ? "Twelve Data 시세" : "FOMO US 종목 사전");
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
@@ -779,7 +806,7 @@ function frontSeed(
     ...(mentionSignals ? mentionSignals : {}),
     ...(currentNewsEvent?.label ? { newsEventLabel: currentNewsEvent.label } : {}),
     ...(currentNewsEvent?.source ? { newsEventSource: currentNewsEvent.source } : {}),
-    ...(row.marketCapRank ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
+    ...(row.marketCapRank && row.marketCapRankSource !== "curated" ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
     ...(theme ? {
       themeLabel: theme.sector,
       themeRelativeRank: theme.rank,
@@ -922,7 +949,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   const scope = options.country ?? "KR";
   const targetedMaterialEnabled = options.targetedMaterial ?? TARGETED_MATERIAL_DEFAULT_ENABLED;
   const targetedMaterialLimit = targetedMaterialEnabled ? TARGETED_MATERIAL_CANDIDATE_LIMIT : 0;
-  const asOf = todayKst();
+  const asOf = discoveryAsOf(scope);
   const [rows, attentionMap] = await Promise.all([
     fetchMarketRows(scope),
     computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({})),
@@ -1022,7 +1049,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const direction: NonNullable<DiscoveryEvent["direction"]> =
       typeof row.changePct !== "number" ? "flat" : row.changePct > 0 ? "up" : row.changePct < 0 ? "down" : "flat";
     const directedEvents: DiscoveryEvent[] = events.map((event) => event.direction ? event : { ...event, direction });
-    const sector = inferDiscoverySectorLabel(ticker, directedEvents, themeSignals.get(ticker), asOf);
+    const sector = row.sectorHint ?? inferDiscoverySectorLabel(ticker, directedEvents, themeSignals.get(ticker), asOf);
     const candidateBase: DiscoveryCandidate = {
       ticker,
       market: row.market,
