@@ -63,7 +63,7 @@ const MATERIAL_NEWS_NOISE =
 const MATERIAL_NEWS_CATALYST =
   /공시|계약|공급계약|수주|납품|실적|매출|영업이익|순이익|가이던스|전망치|컨센서스|어닝|흑자|적자|턴어라운드|임상|허가|승인|FDA|품목허가|신약|치료제|기술이전|라이선스|증설|공장|양산|수율|수주잔고|M&A|인수|합병|지분|투자|유상증자|무상증자|자사주|배당|분할|상장|정부|정책|규제|지원|보조금|관세|제재|신제품|출시|개발|특허|공급|독점|선정|채택|수출|수입|국책|프로젝트|수혜|클러스터|산단|거점|밸류체인|관련주|부각|모멘텀|호재|주목|협력|제휴/i;
 const US_MATERIAL_NEWS_NOISE =
-  /price\s?target|target price|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|should you buy|stock to buy|better buy|which .* stock|motley fool|zacks|benzinga|investorplace|approach with caution|missing link|strain inside|what you|can it|market rotation|running out of power|internet.?s .+ odd duck|boom is|fears hit|gains as market dips|and more stocks|more stocks that|stocks that|stock market today|market roundup|why .* stock (?:is )?(?:up|down|rising|falling)|\b(?:is|are|was|were)?\s*(?:up|down|higher|lower|gains?|loses?|rises?|falls?)\s+\d+(?:\.\d+)?%|\b(?:is|are|was|were)\s+(?:up|down|higher|lower)\b|shares? (?:rise|fall|slip|jump|gain|lose) after hours/i;
+  /price\s?target|target price|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|should you buy|stock to buy|better buy|which .* stock|motley fool|zacks|benzinga|investorplace|approach with caution|missing link|strain inside|what you|can it|market rotation|running out of power|internet.?s .+ odd duck|boom is|fears hit|gains as market dips|limps along|afterglow is gone|and more stocks|more stocks that|stocks that|stock market today|market roundup|why .* stock (?:is )?(?:up|down|rising|falling)|\b(?:is|are|was|were)?\s*(?:up|down|higher|lower|gains?|loses?|rises?|falls?)\s+\d+(?:\.\d+)?%|\b(?:is|are|was|were)\s+(?:up|down|higher|lower)\b|shares? (?:rise|fall|slip|jump|gain|lose) after hours/i;
 const US_MATERIAL_NEWS_CATALYST =
   /earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]|contract|deal|order|supply|supplier|customer|partnership|launch|unveil|product|chip|gpu|ai|data center|approval|fda|trial|drug|sec|8-k|10-q|filing|acquisition|merger|stake|investment|buyback authorization|dividend/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_DEFAULT_ENABLED
@@ -464,13 +464,13 @@ export function formatThemeDiscoveryLabel(input: {
   changePct: number;
 }): string {
   if (input.rank <= 3) {
-    const orderText = input.rank === 1 ? "가장 먼저 눈에 띄었어요" : `${ordinalText(input.rank)} 눈에 띄었어요`;
+    const orderText = input.rank === 1 ? "가장 먼저 움직였어요" : `${ordinalText(input.rank)} 강하게 움직였어요`;
     return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText}.`;
   }
   if (input.averageChangePct < 0 && input.changePct > 0) {
-    return `${input.sector} 흐름이 약한 날에도 따로 눈에 띄었어요.`;
+    return `${input.sector} 흐름이 약한 날에도 혼자 버텼어요.`;
   }
-  return `${input.sector} 안에서 주변 종목보다 먼저 눈에 들어왔어요.`;
+  return `${input.sector} 안에서 주변 종목보다 먼저 움직였어요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
@@ -481,8 +481,8 @@ export function formatSectorMarketContextLabel(input: {
 }): string {
   const positive = input.changePct > 0;
   const largeMove = Math.abs(input.changePct) >= 10;
-  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목이 새로 눈에 들어왔어요.`;
-  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목도 함께 눈에 들어왔어요.`;
+  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목이 크게 움직였어요.`;
+  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목도 움직이기 시작했어요.`;
   return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 살펴봐요.`;
 }
 
@@ -534,9 +534,9 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "가장 먼저 눈에 띄었어요" : `${ordinalText(theme.rank)} 눈에 띄었어요`}.`
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "가장 먼저 움직였어요" : `${ordinalText(theme.rank)} 강하게 움직였어요`}.`
         : changePct > 0
-          ? `오늘 ${sector} 안에서 함께 눈에 들어온 종목이에요.`
+          ? `오늘 ${sector} 안에서 주변보다 먼저 움직인 종목이에요.`
           : `오늘 ${sector} 안에서 약한 쪽 흐름도 같이 살펴봐요.`;
     return {
       kind: "market_context",

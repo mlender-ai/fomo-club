@@ -79,6 +79,7 @@ describe("discovery material news filter", () => {
     expect(cleanUsMaterialTitle("The $7 Trillion AI Boom Is Running Out of Power")).toBeUndefined();
     expect(cleanUsMaterialTitle("OpenAI IPO Fears Hit Oracle and Other Stocks Exposed to the AI Trade")).toBeUndefined();
     expect(cleanUsMaterialTitle("Moderna, Nvidia, Sandisk, Palantir, ON Semi, and More Stocks That Moved Today")).toBeUndefined();
+    expect(cleanUsMaterialTitle("Sandisk Stock Limps Along. The Micron Earnings Afterglow Is Gone")).toBeUndefined();
   });
 });
 
@@ -111,9 +112,9 @@ describe("discovery specific hook copy", () => {
       changePct: 3.18,
     });
 
-    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 먼저 눈에 띄었어요.");
-    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 눈에 띄었어요.");
-    expect(outperformer).toBe("반도체 안에서 주변 종목보다 먼저 눈에 들어왔어요.");
+    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 먼저 움직였어요.");
+    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 강하게 움직였어요.");
+    expect(outperformer).toBe("반도체 안에서 주변 종목보다 먼저 움직였어요.");
     expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
     expect([hpsp, wonik, outperformer].some((text) => /신호가|흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
     expect([hpsp, wonik, outperformer].every((text) => !surfacePricePattern.test(text))).toBe(true);
@@ -133,8 +134,8 @@ describe("discovery specific hook copy", () => {
       change: "+4.20%",
     });
 
-    expect(spike).toBe("건설 안에서 시총 461위권 종목이 새로 눈에 들어왔어요.");
-    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목도 함께 눈에 들어왔어요.");
+    expect(spike).toBe("건설 안에서 시총 461위권 종목이 크게 움직였어요.");
+    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목도 움직이기 시작했어요.");
     expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
     expect([spike, ordinary].some((text) => /신호가/.test(text))).toBe(false);
     expect([spike, ordinary].every((text) => !surfacePricePattern.test(text))).toBe(true);
