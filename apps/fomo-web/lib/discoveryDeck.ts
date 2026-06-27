@@ -28,6 +28,7 @@ export const DISCOVERY_MIX = {
 
 /** 덱 카드 — 섹터 풀 종목 + 발굴 근거(있으면 "주목 종목"으로 노출). */
 export type DeckStock = Omit<SectorStock, "sector"> & {
+  kind?: "stock";
   reason?: string;
   whyShown?: string;
   symbol?: string;
@@ -37,6 +38,42 @@ export type DeckStock = Omit<SectorStock, "sector"> & {
   market: StockMarket;
   country: StockCountry;
 };
+
+export type DeckRelationKind = "customer" | "supplier" | "material" | "peer" | "beneficiary";
+
+export interface DeckThemeBundleItem {
+  ticker: string;
+  label: string;
+  market: StockMarket;
+  country?: StockCountry;
+  sector?: string;
+  relation: DeckRelationKind;
+  reason: string;
+  source: string;
+  confidence: "L" | "M" | "H";
+  changePct?: number;
+  naverCode?: string;
+  symbol?: string;
+}
+
+export interface DeckThemeBundle {
+  kind: "theme_bundle";
+  id: string;
+  title: string;
+  subtitle: string;
+  source: string;
+  asOf: string;
+  confidence: "L" | "M" | "H";
+  anchorTicker: string;
+  relation: "event_bundle";
+  items: DeckThemeBundleItem[];
+}
+
+export type DiscoveryDeckCard = DeckStock | DeckThemeBundle;
+
+export function isThemeBundleCard(card: DiscoveryDeckCard): card is DeckThemeBundle {
+  return card.kind === "theme_bundle";
+}
 
 export interface AxisSnapshotLike {
   axisSignals: AxisSignal[];

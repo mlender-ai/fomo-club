@@ -36,6 +36,36 @@ export interface DiscoveryCandidate {
   marketCapRank?: number;
 }
 
+export type DiscoveryRelationKind = "customer" | "supplier" | "material" | "peer" | "beneficiary";
+
+export interface DiscoveryThemeBundleItem {
+  ticker: string;
+  label: string;
+  market: DiscoveryMarket;
+  country?: StockCountry;
+  sector?: string;
+  relation: DiscoveryRelationKind;
+  reason: string;
+  source: string;
+  confidence: "L" | "M" | "H";
+  changePct?: number;
+  naverCode?: string;
+  symbol?: string;
+}
+
+export interface DiscoveryThemeBundleCard {
+  kind: "theme_bundle";
+  id: string;
+  title: string;
+  subtitle: string;
+  source: string;
+  asOf: string;
+  confidence: "L" | "M" | "H";
+  anchorTicker: string;
+  relation: "event_bundle";
+  items: DiscoveryThemeBundleItem[];
+}
+
 export interface UniverseStock {
   ticker: string;
   riskFlags?: readonly string[];
