@@ -5,9 +5,14 @@ import { usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
 const TWELVE_TIME_SERIES_URL = "https://api.twelvedata.com/time_series";
 const TWELVE_MARKET_MOVERS_URL = "https://api.twelvedata.com/market_movers/stocks";
+const NASDAQ_HISTORICAL_URL = "https://api.nasdaq.com/api/quote";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
+const NASDAQ_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const US_QUOTE_LIMIT = 80;
 const US_SPARKLINE_LIMIT = 60;
+const US_NASDAQ_FALLBACK_LIMIT = 50;
+const US_NASDAQ_FALLBACK_CONCURRENCY = 12;
 
 interface TwelveQuote {
   symbol?: string;
@@ -31,12 +36,18 @@ interface TwelveTimeSeries {
   values?: TwelveTimeSeriesValue[];
 }
 
+interface NasdaqDailyPoint {
+  date: string;
+  close: number;
+  volume?: number;
+}
+
 function tdKey(): string | undefined {
   return process.env.TWELVE_DATA_API_KEY?.trim();
 }
 
 function num(value: string | number | undefined): number | undefined {
-  const n = typeof value === "number" ? value : Number(String(value ?? "").replace(/,/g, ""));
+  const n = typeof value === "number" ? value : Number(String(value ?? "").replace(/[$,%]/g, ""));
   return Number.isFinite(n) ? n : undefined;
 }
 
@@ -81,12 +92,33 @@ function isSimpleUsMarketHoliday(date: Date): boolean {
 }
 
 export function latestUsSessionAsOf(now = new Date()): { date: string; label: string } {
-  const date = latestUsSessionDate(now);
+  return usSessionAsOfLabel(latestUsSessionDate(now));
+}
+
+function usSessionAsOfLabel(date: string): { date: string; label: string } {
   const [, month, day] = date.match(/^\d{4}-(\d{2})-(\d{2})$/) ?? [];
   return {
     date,
     label: month && day ? `${Number(month)}월 ${Number(day)}일(ET) 종가 기준` : `${date}(ET) 기준`,
   };
+}
+
+async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    for (;;) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      try {
+        results[index] = { status: "fulfilled", value: await fn(items[index] as T) };
+      } catch (reason) {
+        results[index] = { status: "rejected", reason };
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
 }
 
 function parseQuote(seed: UsDiscoverySymbol, quote: TwelveQuote | undefined, sparkline?: number[]): DiscoveryMarketRow | null {
@@ -117,6 +149,100 @@ function parseQuote(seed: UsDiscoverySymbol, quote: TwelveQuote | undefined, spa
     sectorHint: seed.sector,
     sessionLabel: session.label,
   };
+}
+
+function isoFromNasdaqDate(value: string | undefined): string | undefined {
+  const match = value?.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return undefined;
+  return `${match[3]}-${match[1]}-${match[2]}`;
+}
+
+function parseNasdaqHistorical(data: unknown): NasdaqDailyPoint[] {
+  if (!data || typeof data !== "object") return [];
+  const rows = (((data as Record<string, unknown>).data as Record<string, unknown> | undefined)?.tradesTable as Record<string, unknown> | undefined)
+    ?.rows;
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const record = row as Record<string, unknown>;
+      const date = isoFromNasdaqDate(String(record.date ?? ""));
+      const close = num(String(record.close ?? ""));
+      if (!date || typeof close !== "number") return null;
+      const volume = num(String(record.volume ?? ""));
+      return {
+        date,
+        close,
+        ...(typeof volume === "number" ? { volume } : {}),
+      } satisfies NasdaqDailyPoint;
+    })
+    .filter((row): row is NasdaqDailyPoint => row !== null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function parseNasdaqRow(seed: UsDiscoverySymbol, points: readonly NasdaqDailyPoint[]): DiscoveryMarketRow | null {
+  const valid = points.filter((point) => Number.isFinite(point.close));
+  if (valid.length < 2) return null;
+  const latest = valid.at(-1);
+  const previous = valid.at(-2);
+  if (!latest || !previous) return null;
+  const change = latest.close - previous.close;
+  const pct = previous.close !== 0 ? (change / previous.close) * 100 : undefined;
+  const session = usSessionAsOfLabel(latest.date);
+  const sparkline = valid.slice(-42).map((point) => point.close);
+  const priceText = money(latest.close);
+  return {
+    canonical: seed.canonical,
+    symbol: seed.symbol,
+    market: marketFor(seed.market, undefined),
+    country: "US",
+    currency: "USD",
+    ...(seed.fameRank ? { marketCapRank: seed.fameRank, marketCapRankSource: "curated" as const } : {}),
+    ...(priceText ? { priceText } : {}),
+    ...(typeof pct === "number" ? { changePct: pct } : {}),
+    changeText: `${change > 0 ? "+" : ""}${change.toFixed(2)} (${typeof pct === "number" ? `${pct > 0 ? "+" : ""}${pct.toFixed(2)}%` : "0.00%"})`,
+    changeDir: change > 0 ? "up" : change < 0 ? "down" : "flat",
+    ...(typeof latest.volume === "number" ? { tradingValue: latest.volume } : {}),
+    ...(sparkline.length >= 2 ? { sparkline } : {}),
+    sectorHint: seed.sector,
+    sessionLabel: session.label,
+  };
+}
+
+function historyRange(): { from: string; to: string } {
+  const to = latestUsSessionDate();
+  const fromDate = new Date(`${to}T12:00:00Z`);
+  fromDate.setUTCDate(fromDate.getUTCDate() - 120);
+  return { from: fromDate.toISOString().slice(0, 10), to };
+}
+
+async function fetchNasdaqDaily(seed: UsDiscoverySymbol): Promise<DiscoveryMarketRow | null> {
+  const { from, to } = historyRange();
+  const url = new URL(`${NASDAQ_HISTORICAL_URL}/${encodeURIComponent(seed.symbol)}/historical`);
+  url.searchParams.set("assetclass", "stocks");
+  url.searchParams.set("fromdate", from);
+  url.searchParams.set("todate", to);
+  url.searchParams.set("limit", "42");
+  const res = await fetch(url.toString(), {
+    headers: {
+      accept: "application/json, text/plain, */*",
+      "user-agent": NASDAQ_UA,
+      origin: "https://www.nasdaq.com",
+      referer: "https://www.nasdaq.com/",
+    },
+    signal: AbortSignal.timeout(4_000),
+    next: { revalidate: 1_800 },
+  });
+  if (!res.ok) return null;
+  return parseNasdaqRow(seed, parseNasdaqHistorical(await res.json()));
+}
+
+async function fetchNasdaqRows(seeds: readonly UsDiscoverySymbol[]): Promise<DiscoveryMarketRow[]> {
+  const settled = await mapLimit(seeds.slice(0, US_NASDAQ_FALLBACK_LIMIT), US_NASDAQ_FALLBACK_CONCURRENCY, fetchNasdaqDaily);
+  return settled
+    .filter((row): row is PromiseFulfilledResult<DiscoveryMarketRow | null> => row.status === "fulfilled")
+    .map((row) => row.value)
+    .filter((row): row is DiscoveryMarketRow => row !== null);
 }
 
 function seedRows(): DiscoveryMarketRow[] {
@@ -245,8 +371,11 @@ async function fetchSparklines(symbols: readonly string[], key: string): Promise
  */
 export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
   const key = tdKey();
-  if (!key) return seedRows();
   const seeds = usDiscoveryUniverse();
+  if (!key) {
+    const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+    return nasdaqRows.length > 0 ? nasdaqRows : seedRows();
+  }
   const bySymbol = new Map(seeds.map((seed) => [seed.symbol.toUpperCase(), seed]));
   try {
     const moverSymbols = await fetchMoverSymbols(key);
@@ -271,9 +400,22 @@ export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
       const row = parseQuote(seed, quote, sparklines[upper]);
       if (row) rows.push(row);
     }
-    return rows.length > 0 ? rows : seedRows();
+    if (rows.length === 0) {
+      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+      return nasdaqRows.length > 0 ? nasdaqRows : seedRows();
+    }
+    if (Object.keys(sparklines).length === 0) {
+      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+      const nasdaqBySymbol = new Map(nasdaqRows.map((row) => [row.symbol.toUpperCase(), row]));
+      return rows.map((row) => {
+        const fallback = nasdaqBySymbol.get(row.symbol.toUpperCase());
+        return fallback?.sparkline && (row.sparkline?.length ?? 0) < 2 ? { ...row, sparkline: fallback.sparkline } : row;
+      });
+    }
+    return rows;
   } catch (err) {
     console.warn("[us-market-source] Twelve Data quote failed", (err as Error)?.message);
-    return seedRows();
+    const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+    return nasdaqRows.length > 0 ? nasdaqRows : seedRows();
   }
 }

@@ -8,18 +8,44 @@ describe("US market source", () => {
     vi.restoreAllMocks();
   });
 
-  it("uses a verified seed universe without synthetic quotes when Twelve Data key is absent", async () => {
+  it("uses Nasdaq daily data when Twelve Data key is absent", async () => {
     vi.stubEnv("TWELVE_DATA_API_KEY", "");
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.nasdaq.com") && url.includes("/SMCI/")) {
+        return Response.json({
+          data: {
+            tradesTable: {
+              rows: [
+                { date: "06/26/2026", close: "$49.20", volume: "2,000" },
+                { date: "06/25/2026", close: "$46.10", volume: "1,000" },
+              ],
+            },
+          },
+        });
+      }
+      if (url.includes("api.nasdaq.com") && url.includes("/IONQ/")) {
+        return Response.json({
+          data: {
+            tradesTable: {
+              rows: [
+                { date: "06/26/2026", close: "$38.10", volume: "2,000" },
+                { date: "06/25/2026", close: "$36.90", volume: "1,000" },
+              ],
+            },
+          },
+        });
+      }
+      return Response.json({ data: { tradesTable: { rows: [] } } });
+    });
     const { fetchUsMarketRows } = await import("../../lib/us-market-source");
 
     const rows = await fetchUsMarketRows();
-    expect(rows.length).toBeGreaterThan(30);
+    expect(rows.length).toBe(2);
     expect(rows.every((row) => row.country !== "KR" && row.symbol && row.currency === "USD")).toBe(true);
-    expect(rows.every((row) => row.priceText === undefined && row.changePct === undefined && row.changeText === undefined)).toBe(true);
-    expect(rows.some((row) => row.symbol === "SMCI")).toBe(true);
-    expect(rows.some((row) => row.sectorHint === "양자")).toBe(true);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(rows.find((row) => row.symbol === "SMCI")?.priceText).toBe("$49.20");
+    expect(rows.find((row) => row.symbol === "SMCI")?.sparkline).toEqual([46.1, 49.2]);
+    expect(rows.find((row) => row.symbol === "IONQ")?.sectorHint).toBe("양자");
   });
 
   it("hydrates US quotes and sparklines without Yahoo chart endpoints", async () => {
@@ -57,5 +83,16 @@ describe("US market source", () => {
   it("does not wire Yahoo chart endpoints into the US quote adapter", () => {
     const source = readFileSync(fileURLToPath(new URL("../../lib/us-market-source.ts", import.meta.url)), "utf8");
     expect(source).not.toMatch(/query[12]\.finance\.yahoo\.com|chart\/|finance\.yahoo\.com\/v8/i);
+  });
+
+  it("keeps a verified no-price seed universe when all market data sources fail", async () => {
+    vi.stubEnv("TWELVE_DATA_API_KEY", "");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("blocked", { status: 403 }));
+    const { fetchUsMarketRows } = await import("../../lib/us-market-source");
+
+    const rows = await fetchUsMarketRows();
+    expect(rows.length).toBeGreaterThan(30);
+    expect(rows.some((row) => row.symbol === "SMCI")).toBe(true);
+    expect(rows.every((row) => row.priceText === undefined && row.changePct === undefined && row.changeText === undefined)).toBe(true);
   });
 });
