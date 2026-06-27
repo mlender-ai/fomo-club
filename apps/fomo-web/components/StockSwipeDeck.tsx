@@ -486,7 +486,12 @@ export function StockSwipeDeck({
       stock.axisHook ??
       e?.axisHook ??
       (e?.axisSignals ? selectMultiAxisHook(e.axisSignals) : undefined);
-    const baseView = fomoCardView(fomo, { sector: stock.sector, ...(stock.reason ? { reason: stock.reason } : {}) });
+    const baseView = fomoCardView(fomo, {
+      sector: stock.sector,
+      ...(stock.reason ? { reason: stock.reason } : {}),
+      ...(typeof e?.signals.changePct === "number" ? { changePct: e.signals.changePct } : {}),
+      ...(typeof e?.signals.marketCapRank?.rank === "number" ? { marketCapRank: e.signals.marketCapRank.rank } : {}),
+    });
     const view = { ...baseView, headline: axisHook?.hookText ?? legacyHook.headline };
     const usedReasonHeadline = !!reasonHeadlineSeed && !e?.signals.newsEventLabel && !axisHook && legacyHook.kind === "news_event";
     const evidenceLine = usedReasonHeadline ? undefined : compactEvidenceLine(stock.reason);

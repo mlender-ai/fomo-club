@@ -243,6 +243,27 @@ describe("fomoCardView — 엔진 출력 → 카드(척추 ②, 단일 출처)",
     expect(v.headline).not.toMatch(/오를|될 것|상승할/);
   });
 
+  it("💎 incoming 표면 배지는 하락 당일이나 시총 상위 종목에는 붙이지 않는다", () => {
+    const s = computeFomoScore({
+      volumeRatio: 1.1,
+      foreignNetStreak: 5,
+      foreignNetRatio: 0.01,
+      institutionNetStreak: 5,
+      institutionNetRatio: 0.01,
+    });
+    expect(s.label).toBe("incoming");
+
+    const down = fomoCardView(s, { changePct: -2.5, marketCapRank: 220 });
+    const famous = fomoCardView(s, { changePct: 0.2, marketCapRank: 5 });
+
+    expect(down.isLeading).toBe(false);
+    expect(down.emoji).toBe("");
+    expect(down.badge).toBe("조용");
+    expect(famous.isLeading).toBe(false);
+    expect(famous.emoji).toBe("");
+    expect(famous.badge).toBe("조용");
+  });
+
   it("강도 비례 톤 — 핫 세게(hot)·조용 차분(calm)·식는 중(cooling)", () => {
     expect(fomoCardView(computeFomoScore({ volumeRatio: 3.5, changePct: 7, mentionScore: 90 })).tone).toBe("hot");
     expect(fomoCardView(computeFomoScore({ mentionScore: 10 })).tone).toBe("calm");

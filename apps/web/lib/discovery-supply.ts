@@ -16,7 +16,6 @@ import {
   sectorOf,
   selectMultiAxisHook,
   stockMentionRole,
-  stockMatchesText,
   type AxisSignal,
   type CardFrontSignals,
   type DiscoveryCandidate,
@@ -50,9 +49,9 @@ const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED
 const TARGETED_MATERIAL_CONCURRENCY = 8;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 const MATERIAL_NEWS_NOISE =
-  /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d/i;
-const LINKED_NEWS_NOISE =
-  /코스피|코스닥|증시|시황|장\s?초반|장중|마감|출발|차익\s?실현|순매도|순매수|2거래일|우상향했던|하락한|상승한|반등|장밋빛\s?전망|투자전략|홀딩\s?전략/i;
+  /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d|회장|최고경영자|CEO|고백|회고|소회|인터뷰|기부|ESG|봉사|사회공헌|미담|창업주|오너|가문|고향|강연|도서|출간|어려울\s?때마다|찾았다/i;
+const MATERIAL_NEWS_CATALYST =
+  /공시|계약|공급계약|수주|납품|실적|매출|영업이익|순이익|가이던스|전망치|컨센서스|어닝|흑자|적자|턴어라운드|임상|허가|승인|FDA|품목허가|신약|치료제|기술이전|라이선스|증설|공장|양산|수율|수주잔고|M&A|인수|합병|지분|투자|유상증자|무상증자|자사주|배당|분할|상장|정부|정책|규제|지원|보조금|관세|제재|신제품|출시|개발|특허|공급|독점|선정|채택|수출|수입|국책|프로젝트|수혜/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_ENABLED
   ? "네이버 시세·종목뉴스·리서치·DART 공시·수급 캐시"
   : "네이버 시세·뉴스 언급";
@@ -241,20 +240,7 @@ function eventFromPrice(row: NaverMarketRow, asOf: string): DiscoveryEvent | nul
   };
 }
 
-function eventFromNews(attention: StockAttentionSignal | undefined, asOf: string): DiscoveryEvent | null {
-  if (!attention?.newsEventLabel) return null;
-  return {
-    kind: "news_mention",
-    firstSeen: true,
-    strength: Math.min(1, Math.max(0.32, attention.mentionScore / 100)),
-    source: attention.newsEventSource ?? "뉴스",
-    asOf,
-    confidence: attention.newsEventLabel ? "H" : "M",
-    ...(attention.newsEventLabel ? { label: attention.newsEventLabel } : {}),
-  };
-}
-
-function cleanMaterialTitle(title: string): string | undefined {
+export function cleanMaterialTitle(title: string): string | undefined {
   const cleaned = decodeHtmlEntities(title)
     .replace(/^\s*(?:\[[^\]]+\]|【[^】]+】|\([^)]*\))\s*/g, "")
     .replace(/[“”"]/g, "")
@@ -262,13 +248,10 @@ function cleanMaterialTitle(title: string): string | undefined {
     .replace(/[.!?。]+$/g, "")
     .trim();
   if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned)) return undefined;
+  if (!MATERIAL_NEWS_CATALYST.test(cleaned)) return undefined;
   if (/[\[\]{}<>]/.test(cleaned)) return undefined;
   const compact = cleaned.length > 46 ? `${cleaned.slice(0, 44).replace(/\s+\S*$/, "").trim()}…` : cleaned;
   return isFrontHookSafe(`${compact} 소식이 나왔어요.`) ? compact : undefined;
-}
-
-function isStockArticle(canonical: string, article: RawArticle): boolean {
-  return stockMatchesText(canonical, `${article.title} ${article.summary ?? ""}`);
 }
 
 function isPrimaryStockArticle(canonical: string, article: RawArticle): boolean {
@@ -276,12 +259,6 @@ function isPrimaryStockArticle(canonical: string, article: RawArticle): boolean 
     title: article.title,
     ...(article.summary ? { summary: article.summary } : {}),
   }) === "primary";
-}
-
-function isLinkedStockArticle(article: RawArticle): boolean {
-  const label = cleanMaterialTitle(article.title);
-  if (!label || LINKED_NEWS_NOISE.test(label)) return false;
-  return true;
 }
 
 function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
@@ -309,21 +286,13 @@ async function eventFromTargetedMaterial(row: NaverMarketRow, asOf: string): Pro
 
   const stockNews =
     newsResult.status === "fulfilled"
-      ? newsResult.value.find((article) => isPrimaryStockArticle(row.canonical, article)) ??
-        newsResult.value.find((article) => isStockArticle(row.canonical, article)) ??
-        newsResult.value
-          .filter(isLinkedStockArticle)
-          .map((article) => ({
-            ...article,
-            source: article.source ? `${article.source} 종목뉴스 연결` : "네이버 종목뉴스 연결",
-          }))
-          .at(0)
+      ? newsResult.value.find((article) => isPrimaryStockArticle(row.canonical, article))
       : undefined;
   if (stockNews) return materialEventFromArticle(stockNews, asOf, "네이버 종목뉴스");
 
   const research =
     researchResult.status === "fulfilled"
-      ? researchResult.value.find((article) => isStockArticle(row.canonical, article))
+      ? researchResult.value.find((article) => isPrimaryStockArticle(row.canonical, article))
       : undefined;
   if (research) return materialEventFromArticle(research, asOf, "네이버 증권 리서치");
 
@@ -625,23 +594,6 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
       (event): event is DiscoveryEvent => event !== null
     );
     if (events.length > 0) byTicker.set(ticker, { row: { ...row, canonical: ticker }, events });
-  }
-
-  for (const [ticker, attention] of Object.entries(attentionMap)) {
-    const def = resolveStock(ticker);
-    const canonical = def?.canonical ?? ticker;
-    if (!eligibleTickers.has(canonical)) continue;
-    const row =
-      normalizedRows.find((r) => r.canonical === canonical) ??
-      (def?.naverCode ? normalizedRows.find((r) => r.naverCode === def.naverCode) : undefined) ??
-      (def?.naverCode
-        ? ({ canonical: def.canonical, naverCode: def.naverCode, market: def.market as DiscoveryMarket } satisfies NaverMarketRow)
-        : undefined);
-    if (!row) continue;
-    const event = eventFromNews(attention, asOf);
-    if (!event) continue;
-    const current = byTicker.get(canonical);
-    byTicker.set(canonical, { row: { ...row, canonical }, events: [...(current?.events ?? []), event] });
   }
 
   const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));

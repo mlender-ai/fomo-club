@@ -72,6 +72,7 @@ export const DISCOVERY_STRENGTH_WEIGHT = 0.65;
 export const DISCOVERY_FAMOUS_FRONT_RANK_CUTOFF = 30;
 export const DISCOVERY_FAMOUS_FRONT_BAND_SIZE = 16;
 export const DISCOVERY_FAMOUS_DECK_MIX_COUNT = 4;
+export const DISCOVERY_AWAKENING_RANK_MIN = 150;
 
 const RISK_FLAG_PATTERN = /관리|투자경고|투자위험|거래정지|단기과열|이상급등/;
 
@@ -152,6 +153,20 @@ export function hasDeckDisplayEvent(candidate: DiscoveryCandidate): boolean {
 
 export function hasDisplayWhyEvent(candidate: DiscoveryCandidate): boolean {
   return hasDeckDisplayEvent(candidate);
+}
+
+export function isDiscoveryAwakening(candidate: DiscoveryCandidate): boolean {
+  const rank = candidate.marketCapRank;
+  if (typeof rank === "number" && Number.isFinite(rank) && rank > 0 && rank < DISCOVERY_AWAKENING_RANK_MIN) {
+    return false;
+  }
+  return candidate.events.some(
+    (event) =>
+      isCurrentDeckEvent(event, candidate) &&
+      event.firstSeen &&
+      event.direction !== "down" &&
+      (event.kind === "volume_spike" || event.kind === "flow_entry" || event.kind === "disclosure")
+  );
 }
 
 export function isWeakDiscoveryCandidate(candidate: DiscoveryCandidate): boolean {

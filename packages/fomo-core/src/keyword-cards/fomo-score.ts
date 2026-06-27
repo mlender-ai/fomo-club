@@ -315,8 +315,29 @@ export function computeFomoScore(input: FomoScoreInputs = {}, tuning: FomoScoreT
   return out;
 }
 
+export interface LeadingSetupContext {
+  /** 하락 당일에는 조기 발견(💎)으로 과장하지 않는다. */
+  changePct?: number;
+  /** 시총 상위 대형주는 "조기 발견" 표면 배지에서 제외한다. */
+  marketCapRank?: number;
+  /** discovery 엔진이 firstSeen 수급/공시/거래량 각성을 별도 판정한 경우. */
+  awakening?: boolean;
+}
+
+export const LEADING_SETUP_OBSCURE_RANK_MIN = 150;
+
 /** 💎 "오기 직전" — 현재는 조용한데 수급이 먼저 들어오는 자리. */
-export function isLeadingSetup(score: FomoScoreResult): boolean {
+export function isLeadingSetup(score: FomoScoreResult, context: LeadingSetupContext = {}): boolean {
+  if (typeof context.changePct === "number" && context.changePct < 0) return false;
+  if (
+    typeof context.marketCapRank === "number" &&
+    Number.isFinite(context.marketCapRank) &&
+    context.marketCapRank > 0 &&
+    context.marketCapRank < LEADING_SETUP_OBSCURE_RANK_MIN
+  ) {
+    return false;
+  }
+  if (typeof context.awakening === "boolean") return context.awakening && score.label === "incoming";
   return score.label === "incoming";
 }
 
@@ -401,14 +422,19 @@ const TONE: Record<FomoLabel, FomoTone> = {
  * 포모 점수 → 카드 앞면 표현(점수·라벨·헤드라인·톤). 순수·결정적. 단일 출처.
  * 헤드라인은 상태 메시지 함수만 사용한다. 근거(reason)는 보조 재료로만 남겨 모순을 막는다.
  */
-export function fomoCardView(score: FomoScoreResult, _opts: { sector?: string; reason?: string } = {}): FomoCardView {
+export function fomoCardView(
+  score: FomoScoreResult,
+  opts: { sector?: string; reason?: string } & LeadingSetupContext = {}
+): FomoCardView {
   const { label } = score;
-  const isLeading = label === "incoming";
+  const isLeading = isLeadingSetup(score, opts);
+  const emoji = isLeading ? EMOJI[label] : label === "incoming" ? "" : EMOJI[label];
+  const badge = !isLeading && label === "incoming" ? STATE_MESSAGE.quiet.badge : BADGE[label];
 
   return {
     scoreText: score.confidence > 0 ? `포모 ${score.fomoScore}` : "",
-    emoji: EMOJI[label],
-    badge: BADGE[label],
+    emoji,
+    badge,
     headline: fomoHeadline(score),
     tone: TONE[label],
     isLeading,

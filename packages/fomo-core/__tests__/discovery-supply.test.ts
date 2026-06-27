@@ -5,6 +5,7 @@ import {
   hasDeckDisplayEvent,
   hasDisplayWhyEvent,
   isWeakDiscoveryCandidate,
+  isDiscoveryAwakening,
   rankDiscoveryCandidates,
   type DiscoveryEventKind,
   type DiscoveryCandidate,
@@ -270,6 +271,26 @@ describe("WO-05 discovery supply engine", () => {
     const ranked = rankDiscoveryCandidates([volume, weakPrice]);
 
     expect(ranked.map((row) => row.ticker)).toEqual(["거래량각성"]);
+  });
+
+  it("allows 💎 awakening only for obscure non-down first-seen flow/disclosure/volume signals", () => {
+    const obscureFlow = candidate("무명수급", 0.65, "flow_entry", "외국인이 오늘 새로 담기 시작했어요.");
+    obscureFlow.marketCapRank = 220;
+    obscureFlow.events[0]!.direction = "up";
+    const famousFlow = candidate("대형수급", 0.65, "flow_entry", "외국인이 오늘 새로 담기 시작했어요.");
+    famousFlow.marketCapRank = 5;
+    famousFlow.events[0]!.direction = "up";
+    const downFlow = candidate("하락수급", 0.65, "flow_entry", "외국인이 오늘 새로 담기 시작했어요.");
+    downFlow.marketCapRank = 220;
+    downFlow.events[0]!.direction = "down";
+    const newsOnly = candidate("뉴스만", 0.65, "news_mention", "공급계약 뉴스");
+    newsOnly.marketCapRank = 220;
+    newsOnly.events[0]!.direction = "up";
+
+    expect(isDiscoveryAwakening(obscureFlow)).toBe(true);
+    expect(isDiscoveryAwakening(famousFlow)).toBe(false);
+    expect(isDiscoveryAwakening(downFlow)).toBe(false);
+    expect(isDiscoveryAwakening(newsOnly)).toBe(false);
   });
 
   it("excludes evergreen company blurb-only rows from display and ranking", () => {
