@@ -282,6 +282,22 @@ export function cleanMaterialTitle(title: string): string | undefined {
   return isFrontHookSafe(`${compact} 소식이 나왔어요.`) ? compact : undefined;
 }
 
+export function cleanUsMaterialTitle(title: string): string | undefined {
+  const cleaned = decodeHtmlEntities(title)
+    .replace(/^\s*(?:\[[^\]]+\]|【[^】]+】|\([^)]*\))\s*/g, "")
+    .replace(/[“”"]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[.!?。]+$/g, "")
+    .trim();
+  if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned) || US_MATERIAL_NEWS_NOISE.test(cleaned)) {
+    return undefined;
+  }
+  if (!US_MATERIAL_NEWS_CATALYST.test(cleaned)) return undefined;
+  if (/[\[\]{}<>]/.test(cleaned)) return undefined;
+  const compact = cleaned.length > 68 ? `${cleaned.slice(0, 66).replace(/\s+\S*$/, "").trim()}…` : cleaned;
+  return isFrontHookSafe(`${compact} 소식이 나왔어요.`) ? compact : undefined;
+}
+
 function isPrimaryStockArticle(canonical: string, article: RawArticle): boolean {
   return stockMentionRole(canonical, {
     title: article.title,
@@ -306,15 +322,8 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
 }
 
 function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
-  const cleaned = decodeHtmlEntities(article.title)
-    .replace(/[“”"]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/[.!?。]+$/g, "")
-    .trim();
-  if (!cleaned || cleaned.length < 6 || MATERIAL_NEWS_NOISE.test(cleaned) || US_MATERIAL_NEWS_NOISE.test(cleaned)) return null;
-  if (!US_MATERIAL_NEWS_CATALYST.test(cleaned)) return null;
-  const label = usMaterialLabel(cleaned);
-  if (!isFrontHookSafe(label)) return null;
+  const label = cleanUsMaterialTitle(article.title);
+  if (!label) return null;
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -324,24 +333,6 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
     confidence: "M",
     label,
   };
-}
-
-function usMaterialLabel(title: string): string {
-  if (/8-k|10-q|filing|sec/i.test(title)) return "SEC 공시로 확인된 재료가 있어요.";
-  if (/earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]/i.test(title)) {
-    return "실적·가이던스 이슈를 직접 다룬 외신이 나왔어요.";
-  }
-  if (/contract|deal|order|supply|supplier|customer|partnership/i.test(title)) {
-    return "계약·공급망 이슈를 직접 다룬 외신이 나왔어요.";
-  }
-  if (/launch|unveil|product|chip|gpu|ai|data center/i.test(title)) {
-    return "제품·AI 인프라 이슈를 직접 다룬 외신이 나왔어요.";
-  }
-  if (/approval|fda|trial|drug/i.test(title)) return "임상·허가 이슈를 직접 다룬 외신이 나왔어요.";
-  if (/acquisition|merger|stake|investment|buyback authorization|dividend/i.test(title)) {
-    return "투자·자본정책 이슈를 직접 다룬 외신이 나왔어요.";
-  }
-  return "이 종목을 직접 다룬 외신 재료가 나왔어요.";
 }
 
 async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string): Promise<DiscoveryEvent | null> {
@@ -428,13 +419,13 @@ export function formatThemeDiscoveryLabel(input: {
   changePct: number;
 }): string {
   if (input.rank <= 3) {
-    const orderText = input.rank === 1 ? "가장 먼저 신호가" : `${ordinalText(input.rank)} 신호가`;
-    return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText} 잡혔어요.`;
+    const orderText = input.rank === 1 ? "가장 먼저 눈에 띄었어요" : `${ordinalText(input.rank)} 눈에 띄었어요`;
+    return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText}.`;
   }
   if (input.averageChangePct < 0 && input.changePct > 0) {
-    return `${input.sector} 흐름이 약한 날, 이 종목은 따로 포착됐어요.`;
+    return `${input.sector} 흐름이 약한 날에도 따로 눈에 띄었어요.`;
   }
-  return `${input.sector} 흐름 안에서 다른 종목보다 먼저 포착됐어요.`;
+  return `${input.sector} 안에서 주변 종목보다 먼저 눈에 들어왔어요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
@@ -445,9 +436,9 @@ export function formatSectorMarketContextLabel(input: {
 }): string {
   const positive = input.changePct > 0;
   const largeMove = Math.abs(input.changePct) >= 10;
-  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목의 신호가 새로 잡혔어요.`;
-  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목이 같이 포착됐어요.`;
-  return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 확인해요.`;
+  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목이 새로 눈에 들어왔어요.`;
+  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목도 함께 눈에 들어왔어요.`;
+  return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 살펴봐요.`;
 }
 
 function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
@@ -498,10 +489,10 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "가장 먼저 신호가" : `${ordinalText(theme.rank)} 신호가`} 잡혔어요.`
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "가장 먼저 눈에 띄었어요" : `${ordinalText(theme.rank)} 눈에 띄었어요`}.`
         : changePct > 0
-          ? `오늘 ${sector} 안에서 함께 포착된 종목이에요.`
-          : `오늘 ${sector} 안에서 약한 쪽 흐름도 같이 확인해요.`;
+          ? `오늘 ${sector} 안에서 함께 눈에 들어온 종목이에요.`
+          : `오늘 ${sector} 안에서 약한 쪽 흐름도 같이 살펴봐요.`;
     return {
       kind: "market_context",
       firstSeen: true,
@@ -531,7 +522,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
       source,
       asOf,
       confidence: "M",
-      label: `${sector} 흐름에서 새로 확인하는 종목이에요.`,
+      label: `${sector} 안에서 더 살펴볼 종목이에요.`,
     };
   }
   if (typeof changePct === "number" && change) {

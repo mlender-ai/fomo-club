@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { DiscoveryCandidate, DiscoveryEventKind } from "@fomo/core";
 
-import { cleanMaterialTitle, formatSectorMarketContextLabel, formatThemeDiscoveryLabel, recoverDiscoveryCandidates } from "../../lib/discovery-supply";
+import {
+  cleanMaterialTitle,
+  cleanUsMaterialTitle,
+  formatSectorMarketContextLabel,
+  formatThemeDiscoveryLabel,
+  recoverDiscoveryCandidates,
+} from "../../lib/discovery-supply";
 
 const asOf = "2026-06-27";
 
@@ -49,10 +55,20 @@ describe("discovery material news filter", () => {
     expect(cleanMaterialTitle("특징주 모음, 2차전지주 동반 상승")).toBeUndefined();
     expect(cleanMaterialTitle("장중 시황, 반도체주 차익 실현")).toBeUndefined();
   });
+
+  it("keeps concrete US catalyst titles instead of collapsing them into generic foreign-news labels", () => {
+    expect(cleanUsMaterialTitle("SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance")).toBe(
+      "SoundHound AI Reports First Quarter Revenue Growth and Raises…"
+    );
+    expect(cleanUsMaterialTitle("D-Wave Quantum Announces New Partnership With Aerospace Customer")).toBe(
+      "D-Wave Quantum Announces New Partnership With Aerospace Customer"
+    );
+    expect(cleanUsMaterialTitle("Analyst raises price target on Micron shares")).toBeUndefined();
+  });
 });
 
 describe("discovery specific hook copy", () => {
-  const surfacePricePattern = /(?:가격|올랐|상승|하락|빠졌|강했어요|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트)/;
+  const surfacePricePattern = /(?:가격|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트|섹터 평균|평균보다)/;
 
   it("keeps same-sector leaders specific instead of collapsing to one generic sentence", () => {
     const hpsp = formatThemeDiscoveryLabel({
@@ -80,11 +96,11 @@ describe("discovery specific hook copy", () => {
       changePct: 3.18,
     });
 
-    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 먼저 신호가 잡혔어요.");
-    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 신호가 잡혔어요.");
-    expect(outperformer).toBe("반도체 흐름 안에서 다른 종목보다 먼저 포착됐어요.");
+    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 먼저 눈에 띄었어요.");
+    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 눈에 띄었어요.");
+    expect(outperformer).toBe("반도체 안에서 주변 종목보다 먼저 눈에 들어왔어요.");
     expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
-    expect([hpsp, wonik, outperformer].some((text) => /흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
+    expect([hpsp, wonik, outperformer].some((text) => /신호가|흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
     expect([hpsp, wonik, outperformer].every((text) => !surfacePricePattern.test(text))).toBe(true);
   });
 
@@ -102,9 +118,10 @@ describe("discovery specific hook copy", () => {
       change: "+4.20%",
     });
 
-    expect(spike).toBe("건설 안에서 시총 461위권 종목의 신호가 새로 잡혔어요.");
-    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목이 같이 포착됐어요.");
+    expect(spike).toBe("건설 안에서 시총 461위권 종목이 새로 눈에 들어왔어요.");
+    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목도 함께 눈에 들어왔어요.");
     expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
+    expect([spike, ordinary].some((text) => /신호가/.test(text))).toBe(false);
     expect([spike, ordinary].every((text) => !surfacePricePattern.test(text))).toBe(true);
   });
 });

@@ -227,24 +227,13 @@ export function discoveryWhy(candidate: DiscoveryCandidate): string {
   if (strongest.kind === "disclosure") {
     const prefix = eventTimePrefix(strongest, candidate);
     return strongest.label
-      ? `${prefix} 공시가 확인됐어요: ${strongest.label}`
+      ? `${prefix} ${strongest.label}`
       : `${prefix} 이 종목의 공시가 확인됐어요.`;
   }
   if (strongest.kind === "news_mention") {
     const prefix = eventTimePrefix(strongest, candidate);
-    const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(strongest.source);
-    if (isResearch) {
-      return strongest.label
-        ? `${prefix} 이 종목을 직접 다룬 리서치가 있어요: ${strongest.label}`
-        : `${prefix} 이 종목을 직접 다룬 리서치가 있어요.`;
-    }
-    if (/종목뉴스\s?연결/i.test(strongest.source)) {
-      return strongest.label
-        ? `${prefix} 이 종목 뉴스 탭에 함께 묶인 흐름이 있어요: ${strongest.label}`
-        : `${prefix} 이 종목 뉴스 탭에 함께 묶인 흐름이 있어요.`;
-    }
     return strongest.label
-      ? `${prefix} 이 종목을 직접 언급한 뉴스가 있어요: ${strongest.label}`
+      ? `${prefix} ${strongest.label}`
       : `${prefix} 이 종목을 직접 언급한 뉴스가 있어요.`;
   }
   if (strongest.kind === "flow_entry") return strongest.label ?? "수급이 새로 감지된 종목이에요.";

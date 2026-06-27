@@ -71,20 +71,22 @@ describe("WO-05 discovery supply engine", () => {
     expect(discoveryWhy(candidate("뉴스", 0.6, "news_mention"))).toContain("신규 공급계약 공시");
   });
 
-  it("names research evidence as research instead of news", () => {
+  it("surfaces the concrete research label instead of wrapping it in a generic source sentence", () => {
     const row = candidate("리서치", 0.7, "news_mention", "신규 설비 증설 점검");
     row.events[0]!.source = "한화투자증권 리서치";
 
-    expect(discoveryWhy(row)).toContain("직접 다룬 리서치");
+    expect(discoveryWhy(row)).toBe("오늘 신규 설비 증설 점검");
     expect(discoveryWhy(row)).not.toContain("언급한 뉴스");
+    expect(discoveryWhy(row)).not.toContain("직접 다룬 리서치");
   });
 
-  it("labels linked stock-tab articles honestly instead of direct mentions", () => {
+  it("surfaces the concrete linked article label instead of wrapping it in a generic source sentence", () => {
     const row = candidate("연결기사", 0.7, "news_mention", "업종 흐름 기사");
     row.events[0]!.source = "네이버 종목뉴스 연결";
 
-    expect(discoveryWhy(row)).toContain("뉴스 탭에 함께 묶인 흐름");
+    expect(discoveryWhy(row)).toBe("오늘 업종 흐름 기사");
     expect(discoveryWhy(row)).not.toContain("직접 언급한 뉴스");
+    expect(discoveryWhy(row)).not.toContain("뉴스 탭에 함께 묶인 흐름");
   });
 
   it("ranks direct material above linked stock-tab material", () => {

@@ -150,7 +150,7 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 const PRICE_ONLY_REASON_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요/;
 const SURFACE_PRICE_HOOK_PATTERN =
-  /(?:가격|올랐|상승|하락|빠졌|강했어요|많이 올랐|움직였|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트)/;
+  /(?:^오늘 가격이|가격 먼저 움직임|가격은 .*거래량|가격은 .*뉴스|오늘 .*제일 많이|오늘 .*가장 강|섹터 평균|평균보다|많이 올랐|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트)/;
 
 function nonPriceOnlyHeadline(text: string | undefined): string | undefined {
   if (!text || PRICE_ONLY_REASON_PATTERN.test(text) || SURFACE_PRICE_HOOK_PATTERN.test(text)) return undefined;
@@ -173,11 +173,17 @@ function compactEvidenceLine(text: string | undefined): string | undefined {
 }
 
 function compactReasonHeadlineSeed(text: string | undefined): string | undefined {
-  const clean = (text ?? "").replace(/\s+/g, " ").trim();
+  const clean = (text ?? "")
+    .replace(/\s+/g, " ")
+    .replace(
+      /^(?:오늘|최근)\s+(?:이 종목을 직접 언급한 뉴스가 있어요|이 종목을 직접 다룬 리서치가 있어요|이 종목 뉴스 탭에 함께 묶인 흐름이 있어요|공시가 확인됐어요):\s*/,
+      ""
+    )
+    .trim();
   if (!clean) return undefined;
-  if (!/오늘|최근|공시|뉴스|리서치|수급|외국인|기관|거래량|가격|테마|흐름|순매수|신고가/.test(clean)) return undefined;
+  if (!/오늘|최근|공시|뉴스|리서치|수급|외국인|기관|거래량|가격|테마|흐름|순매수|신고가|계약|공급|실적|가이던스|revenue|guidance|earnings|contract|supply|partnership|SEC|filing/i.test(clean)) return undefined;
   if (/전문\s?기업|플랫폼\s?리더|도약\s?중|안정화\s?예상|사업\s?영역|서비스\s?제공/.test(clean)) return undefined;
-  return clean.length > 38 ? `${clean.slice(0, 37)}…` : clean;
+  return clean.length > 56 ? `${clean.slice(0, 55)}…` : clean;
 }
 
 function FeedSignalStrip({
@@ -582,7 +588,7 @@ export function StockSwipeDeck({
       ...(typeof e?.signals.changePct === "number" ? { changePct: e.signals.changePct } : {}),
       ...(typeof e?.signals.marketCapRank?.rank === "number" ? { marketCapRank: e.signals.marketCapRank.rank } : {}),
     });
-    const fallbackHeadline = stock.sector ? `${stock.sector} 흐름에서 새로 확인하는 종목이에요.` : baseView.headline;
+    const fallbackHeadline = stock.sector ? `${stock.sector} 안에서 더 살펴볼 종목이에요.` : baseView.headline;
     const headline =
       discoveryHeadline ??
       nonPriceOnlyHeadline(axisHook?.hookText) ??
