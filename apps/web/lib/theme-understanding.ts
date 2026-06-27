@@ -22,6 +22,7 @@ import { callAI, isAiConfigured } from "@fomo/shared";
 import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews } from "./fomo-news-sources";
 import { fetchFredDocs } from "./fred";
 import { fetchDcStockTitles } from "./dcinside";
+import { fetchDartDisclosuresForCode } from "./dart-disclosures";
 
 /**
  * 이해 레이어 오케스트레이션 — DATA_ENGINE_STRATEGY §4 Track A. (네트워크 + LLM)
@@ -38,6 +39,12 @@ const TEMPERATURE = Number.parseFloat(process.env["AI_TEMPERATURE"] ?? "") || 0.
 
 const MAX_NEWS = 12;
 const MAX_COMMUNITY = 10;
+
+export interface StockUnderstandingOptions {
+  naverCode?: string;
+  market?: string;
+  country?: string;
+}
 
 /** 테마 → 종토방 종목코드(원문 커뮤니티 수집 대상). 지금은 반도체만(PoC). */
 const THEME_NAVER_CODES: Record<string, { code: string; label: string }[]> = {
@@ -197,21 +204,34 @@ function officialFactsFrom(docs: readonly SourceDoc[]): OfficialFact[] {
     }));
 }
 
+function validNaverCode(code: string | undefined | null): string | undefined {
+  const c = code?.trim();
+  return c && /^\d{6}$/.test(c) ? c : undefined;
+}
+
+function todayKst(): string {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 /**
  * 개별 종목 원문 수집(B 트랙 §1) — 종목 *국적*에 맞는 소스를 연결한다.
  * - 한국 종목(종토방 코드 보유): 한국뉴스(종목명 필터) + 네이버 종토방 + 디시.
  * - 미국/글로벌 종목(엔비디아 등): 뉴스(종목명 필터) + **레딧 글 제목**(외신/해외 커뮤니티) + 디시.
  * grounding 가드 그대로 — 별칭(엔비디아=Nvidia=NVDA)이 원문에 실제 substring/단어경계로 존재하는 글만.
  */
-export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
+export async function collectStockDocs(stock: string, opts: StockUnderstandingOptions = {}): Promise<SourceDoc[]> {
   const def = stockDef(stock);
-  const code = def?.naverCode;
-  const isForeign = def ? def.country !== "KR" : false;
-  const matches = (s: string) => stockMatchesText(stock, s);
+  const code = validNaverCode(opts.naverCode) ?? def?.naverCode;
+  const isForeign = def ? def.country !== "KR" : opts.country ? opts.country !== "KR" : false;
+  const matches = (s: string) => {
+    if (stockMatchesText(stock, s)) return true;
+    return s.toLowerCase().includes(stock.trim().toLowerCase());
+  };
 
-  const [stockNewsRes, researchRes, newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
+  const [stockNewsRes, researchRes, dartRes, newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
     code ? fetchNaverStockNews(code, MAX_NEWS) : Promise.resolve([]),
     code ? fetchNaverCompanyResearch(code, stock, 6) : Promise.resolve([]),
+    code ? fetchDartDisclosuresForCode(code, stock, todayKst()) : Promise.resolve([]),
     fetchAllNews(),
     fetchDcStockTitles(),
     code ? fetchNaverBoardPosts(code) : Promise.resolve([]),
@@ -258,6 +278,23 @@ export async function collectStockDocs(stock: string): Promise<SourceDoc[]> {
     for (const a of researchRes.value.slice(0, 6)) pushNews(a);
   } else {
     console.warn("[stock-understanding] naver research error", stock, researchRes.reason);
+  }
+
+  // DART 공시 — 발견 이벤트에만 쓰지 않고 depth 공식 사실에도 합류시킨다.
+  if (dartRes.status === "fulfilled") {
+    for (const hit of dartRes.value.slice(0, 4)) {
+      docs.push({
+        id: nextId(),
+        kind: "official",
+        title: hit.label,
+        body: `${hit.asOf} 접수 공시`,
+        source: hit.source,
+        publishedAt: hit.asOf,
+        tier: "official-high",
+      });
+    }
+  } else {
+    console.warn("[stock-understanding] dart disclosure error", stock, dartRes.reason);
   }
 
   // 뉴스 — 종목명(별칭 포함)이 제목/요약에 등장하는 기사만.
@@ -327,8 +364,8 @@ export async function collectThemeStocks(
 }
 
 /** 개별 종목 이해·구조화(작업3, BM 심장) — 테마와 동일 구조/가드. 자료 적으면 정직한 빈 상태. */
-export async function understandStock(stock: string): Promise<ThemeInsight> {
-  return runUnderstanding(stock, await collectStockDocs(stock), "stock");
+export async function understandStock(stock: string, opts: StockUnderstandingOptions = {}): Promise<ThemeInsight> {
+  return runUnderstanding(stock, await collectStockDocs(stock, opts), "stock");
 }
 
 /**

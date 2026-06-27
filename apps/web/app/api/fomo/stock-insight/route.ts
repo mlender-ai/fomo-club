@@ -25,16 +25,21 @@ const REVALIDATE_S = 21_600; // 6h
 const USER_WAIT_MS = 4_500;
 const inflight = new Map<string, Promise<CondensedInsight>>();
 
-async function getInsight(stock: string): Promise<CondensedInsight> {
+function validNaverCode(code: string | null | undefined): string | undefined {
+  const c = code?.trim();
+  return c && /^\d{6}$/.test(c) ? c : undefined;
+}
+
+async function getInsight(stock: string, opts: { naverCode?: string; market?: string; country?: string } = {}): Promise<CondensedInsight> {
   const today = kstDate();
   const slot = kstSlot();
-  const key = `${today}:${slot}:${stock}`;
+  const key = `${today}:${slot}:${stock}:${opts.naverCode ?? ""}`;
   const running = inflight.get(key);
   if (running) return running;
 
   const load = unstable_cache(
-    async () => condenseThemeInsight(await understandStock(stock)),
-    ["fomo-stock-insight", cacheVersion(), today, slot, stock],
+    async () => condenseThemeInsight(await understandStock(stock, opts)),
+    ["fomo-stock-insight", cacheVersion(), today, slot, stock, opts.naverCode ?? ""],
     { revalidate: REVALIDATE_S }
   );
 
@@ -47,8 +52,12 @@ function timeoutFallback(stock: string): CondensedInsight {
   return condenseThemeInsight(emptyThemeInsight(stock, "인사이트 캐시 준비 중 — 원문 근거가 아직 충분히 모이지 않았어요."));
 }
 
-async function getInsightForRequest(stock: string, blocking: boolean): Promise<{ payload: CondensedInsight; coldFallback: boolean }> {
-  if (blocking) return { payload: await getInsight(stock), coldFallback: false };
+async function getInsightForRequest(
+  stock: string,
+  blocking: boolean,
+  opts: { naverCode?: string; market?: string; country?: string } = {}
+): Promise<{ payload: CondensedInsight; coldFallback: boolean }> {
+  if (blocking) return { payload: await getInsight(stock, opts), coldFallback: false };
 
   let timedOut = false;
   const timeout = new Promise<CondensedInsight>((resolve) => {
@@ -58,7 +67,7 @@ async function getInsightForRequest(stock: string, blocking: boolean): Promise<{
     }, USER_WAIT_MS);
   });
   const payload = await Promise.race([
-    getInsight(stock).catch((err) => {
+    getInsight(stock, opts).catch((err) => {
       console.warn("[stock-insight] getInsight failed", stock, (err as Error)?.message);
       return timeoutFallback(stock);
     }),
@@ -77,12 +86,19 @@ export async function GET(req: Request) {
   if (!stock) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }
+  const naverCode = validNaverCode(url.searchParams.get("code")) ?? validNaverCode(url.searchParams.get("naverCode"));
+  const market = url.searchParams.get("market")?.trim() || undefined;
+  const country = url.searchParams.get("country")?.trim() || undefined;
   const blocking = url.searchParams.get("blocking") === "1" || req.headers.get("x-warm") === "1";
-  const { payload, coldFallback } = await getInsightForRequest(stock, blocking);
+  const { payload, coldFallback } = await getInsightForRequest(stock, blocking, {
+    ...(naverCode ? { naverCode } : {}),
+    ...(market ? { market } : {}),
+    ...(country ? { country } : {}),
+  });
 
   // 수급(외인·기관 장마감 확정) — 공식 지표 섹션에 객관 사실로 동봉(§4). 데이터 없으면 미표시(정직).
   // 캐시 밖에서 1회 조회(일별이라 가벼움). 테이블 전/미수집이면 null → 기존 응답 그대로.
-  const code = stockDef(stock)?.naverCode;
+  const code = naverCode ?? stockDef(stock)?.naverCode;
   const flow = code ? await readLatestSupplyDemand(code) : null;
   const out = flow
     ? { ...payload, officialFacts: [supplyDemandFact(flow), ...(payload.officialFacts ?? [])] }

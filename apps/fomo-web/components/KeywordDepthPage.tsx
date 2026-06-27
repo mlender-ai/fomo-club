@@ -973,7 +973,7 @@ export function StockInsightView({
       .then((r) => alive && setBasics(r))
       .catch(() => alive && setBasics(null))
       .finally(() => alive && setBasicsLoaded(true));
-    fetchStockInsight(stock)
+    fetchStockInsight(stock, context?.naverCode ? { naverCode: context.naverCode } : {})
       .then((r) => alive && setInsight(r))
       .catch(() => alive && setInsight(null))
       .finally(() => alive && setLoading(false));
@@ -989,6 +989,14 @@ export function StockInsightView({
     context?.reason && !copyRestates(context.reason, context.axisHeadline)
       ? context.reason
       : undefined;
+  const hasVerifiedFloor = !!(
+    basics?.marketCap ||
+    (basics?.metrics?.length ?? 0) > 0 ||
+    front?.priceText ||
+    (front?.sparkline?.length ?? 0) >= 2
+  );
+  const showThinSourceFootnote =
+    !hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0;
 
   return (
     <div className="fixed inset-0 z-[70] bg-black">
@@ -1076,15 +1084,17 @@ export function StockInsightView({
           <OfficialFactsBlock facts={insight?.officialFacts} />
           <CommunityWordingBlock insight={insight} />
 
-          {!hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0 && (
-            <p className="mt-6 text-sm leading-6 text-muted">
-              이 종목으로 모인 원문은 아직 적어요. 그래서 위에는 가격·차트·수급처럼 확인된 재료만 정리했어요.
-            </p>
-          )}
-
           <div className="mt-7">
             <StockFundamentalsBlock basics={basics} front={front} />
           </div>
+
+          {showThinSourceFootnote && (
+            <p className="mt-5 text-[12px] leading-5 text-muted">
+              {hasVerifiedFloor
+                ? "원문 기반 요약은 아직 얇아요. 위에는 가격·차트·수급·기본 지표처럼 확인된 자료만 먼저 정리했어요."
+                : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
+            </p>
+          )}
 
           {/* 회사가 뭐 하는 곳 — 맨 아래 한 줄로 강등(긴 blurb 폐기). */}
           {basics?.summary && (

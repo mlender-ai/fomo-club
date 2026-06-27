@@ -12,6 +12,7 @@ interface DartListItem {
   corp_name?: string;
   report_nm?: string;
   rcept_dt?: string;
+  rcept_no?: string;
 }
 
 interface DartListResponse {
@@ -97,5 +98,34 @@ export async function fetchDartDisclosuresByStock(asOf: string): Promise<Record<
     if (typeof data.total_page === "number" && page >= data.total_page) break;
   }
 
+  return out;
+}
+
+export async function fetchDartDisclosuresForCode(
+  code: string,
+  stock: string,
+  asOf: string
+): Promise<DartDisclosureHit[]> {
+  const key = dartKey();
+  const normalized = code.trim();
+  if (!key || !/^\d{6}$/.test(normalized)) return [];
+
+  const out: DartDisclosureHit[] = [];
+  for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
+    const data = await fetchDartPage(key, asOf, page).catch(() => null);
+    if (!data?.list?.length || (data.status && data.status !== "000")) break;
+    for (const item of data.list) {
+      if (item.stock_code?.trim() !== normalized) continue;
+      const label = cleanReportName(item.report_nm);
+      if (!label) continue;
+      out.push({
+        ticker: stock,
+        label,
+        source: "DART 공시",
+        asOf: isoFromDartDate(item.rcept_dt, asOf),
+      });
+    }
+    if (typeof data.total_page === "number" && page >= data.total_page) break;
+  }
   return out;
 }

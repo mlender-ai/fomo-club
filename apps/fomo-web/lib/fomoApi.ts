@@ -344,12 +344,12 @@ export const fetchThemeInsight = (theme: string) =>
   );
 
 /** 개별 종목 이해·응축(작업3) — 종목 라벨 탭 시 lazy 로 부른다(테마 뎁스와 동일 구조). */
-export const fetchStockInsight = (stock: string) =>
+export const fetchStockInsight = (stock: string, opts: { naverCode?: string; market?: string; country?: string } = {}) =>
   cachedGet(
-    `stock-insight:${stock}`,
+    `stock-insight:${opts.naverCode ?? "name"}:${stock}`,
     () =>
       get<import("@fomo/core").CondensedInsight>(
-        `/api/fomo/stock-insight?stock=${encodeURIComponent(stock)}`
+        `/api/fomo/stock-insight?stock=${encodeURIComponent(stock)}${opts.naverCode ? `&code=${encodeURIComponent(opts.naverCode)}` : ""}${opts.market ? `&market=${encodeURIComponent(opts.market)}` : ""}${opts.country ? `&country=${encodeURIComponent(opts.country)}` : ""}`
       ),
     CACHE_TTL.stockInsight
   );
