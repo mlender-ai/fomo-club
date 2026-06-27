@@ -40,6 +40,9 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Install Playwright browser
+        run: npx playwright install chromium --with-deps
+
       - name: Inspect product health
         id: inspect
         env:
@@ -225,17 +228,67 @@ jobs:
           console.log(`summary=${summary}`);
           NODE
 
+      - name: Inspect FOMO web journey
+        id: webjourney
+        env:
+          FOMO_WEB_URL: "https://fomo-web-mlender-ais-projects.vercel.app"
+          FOMO_WEB_SMOKE_JSON_OUT: "/tmp/fomo-web-journey-smoke.json"
+          FOMO_WEB_SMOKE_MD_OUT: "/tmp/fomo-web-journey-smoke.md"
+          FOMO_WEB_SMOKE_TIMEOUT_MS: "15000"
+          FOMO_WEB_SMOKE_HOLD_MS: "4500"
+        run: |
+          set -euo pipefail
+          set +e
+          npm run smoke:fomo-web > /tmp/fomo-web-journey.stdout 2> /tmp/fomo-web-journey.stderr
+          STATUS=$?
+          set -e
+
+          if [ ! -f /tmp/fomo-web-journey-smoke.json ]; then
+            {
+              echo "# FOMO Web Journey Smoke"
+              echo
+              echo "상태: critical"
+              echo
+              echo "웹 여정 스모크 스크립트가 리포트를 만들지 못했습니다."
+              echo
+              echo "## stdout"
+              sed 's/^/    /' /tmp/fomo-web-journey.stdout || true
+              echo
+              echo "## stderr"
+              sed 's/^/    /' /tmp/fomo-web-journey.stderr || true
+            } > /tmp/fomo-web-journey-smoke.md
+            echo '{"findings":[{"severity":"critical","message":"웹 여정 스모크 리포트 생성 실패"}]}' > /tmp/fomo-web-journey-smoke.json
+          fi
+
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require("fs");
+          const report = JSON.parse(fs.readFileSync("/tmp/fomo-web-journey-smoke.json", "utf8"));
+          const findings = Array.isArray(report.findings) ? report.findings : [];
+          const critical = findings.filter((f) => f.severity === "critical").length;
+          const warn = findings.filter((f) => f.severity === "warn").length;
+          const summary = findings.map((f) => `${String(f.severity).toUpperCase()}: ${f.message}`).slice(0, 3).join(" / ") || "ok";
+          console.log(`critical_count=${critical}`);
+          console.log(`warn_count=${warn}`);
+          console.log(`summary=${summary}`);
+          NODE
+
+          if [ "$STATUS" != "0" ]; then
+            echo "웹 여정 스모크가 critical 상태를 반환했습니다. Monitor issue 생성 단계로 넘깁니다."
+          fi
+
       - name: Combine monitor report
         id: combine
         env:
           INSPECT_CRITICAL: ${{ steps.inspect.outputs.critical_count }}
           QUALITY_CRITICAL: ${{ steps.quality.outputs.critical_count }}
           QUALITY_WARN: ${{ steps.quality.outputs.warn_count }}
+          WEB_JOURNEY_CRITICAL: ${{ steps.webjourney.outputs.critical_count }}
+          WEB_JOURNEY_WARN: ${{ steps.webjourney.outputs.warn_count }}
         run: |
           set -euo pipefail
-          TOTAL=$(( ${INSPECT_CRITICAL:-0} + ${QUALITY_CRITICAL:-0} ))
+          TOTAL=$(( ${INSPECT_CRITICAL:-0} + ${QUALITY_CRITICAL:-0} + ${WEB_JOURNEY_CRITICAL:-0} ))
           echo "critical_count=$TOTAL" >> "$GITHUB_OUTPUT"
-          WARN=${QUALITY_WARN:-0}
+          WARN=$(( ${QUALITY_WARN:-0} + ${WEB_JOURNEY_WARN:-0} ))
           SIGNAL=$(( TOTAL + WARN ))
           echo "signal_count=$SIGNAL" >> "$GITHUB_OUTPUT"
           if [ "$TOTAL" != "0" ]; then
@@ -252,6 +305,14 @@ jobs:
               echo "---"
               echo
               cat /tmp/fomo-quality-report.md
+            } >> /tmp/monitor-combined-body.md
+          fi
+          if [ -f /tmp/fomo-web-journey-smoke.md ]; then
+            {
+              echo
+              echo "---"
+              echo
+              cat /tmp/fomo-web-journey-smoke.md
             } >> /tmp/monitor-combined-body.md
           fi
 

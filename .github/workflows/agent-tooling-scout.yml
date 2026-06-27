@@ -19,7 +19,7 @@ on:
         required: false
         default: "60"
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: "0 0 * * *" # 09:00 KST
 
 permissions:
   contents: read
