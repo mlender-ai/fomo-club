@@ -149,9 +149,11 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 /** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 const PRICE_ONLY_REASON_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요/;
+const SURFACE_PRICE_HOOK_PATTERN =
+  /(?:가격|올랐|상승|하락|빠졌|강했어요|많이 올랐|움직였|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트)/;
 
 function nonPriceOnlyHeadline(text: string | undefined): string | undefined {
-  if (!text || PRICE_ONLY_REASON_PATTERN.test(text)) return undefined;
+  if (!text || PRICE_ONLY_REASON_PATTERN.test(text) || SURFACE_PRICE_HOOK_PATTERN.test(text)) return undefined;
   return text;
 }
 
@@ -497,6 +499,11 @@ export function StockSwipeDeck({
   // 앞면 FOMO 신호 — ④ 정렬 때 풀 전체를 이미 받아 seed(initialFronts). 빠진 종목만 도달 시 lazy 보강.
   const [front, setFront] = useState<Record<string, FrontEntry>>(initialFronts ?? {});
   const inflight = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!initialFronts) return;
+    setFront((prev) => ({ ...prev, ...initialFronts }));
+  }, [initialFronts]);
 
   const at = (i: number) => stocks[((i % stocks.length) + stocks.length) % stocks.length]!;
 

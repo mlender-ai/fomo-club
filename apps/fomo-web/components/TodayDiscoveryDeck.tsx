@@ -140,6 +140,7 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
     <>
       {scopeTabs}
       <StockSwipeDeck
+        key={country}
         stocks={state.cards.slice(0, Math.max(MIN_DISCOVERY_STOCKS, state.cards.length))}
         initialFronts={state.fronts}
         contextLabel={country === "US" ? "미국 발견" : "오늘의 발견"}

@@ -128,6 +128,7 @@ export interface DiscoveryResponse {
 
 export interface BuildDiscoveryResponseOptions {
   targetedMaterial?: boolean;
+  targetedMaterialLimit?: number;
   country?: DiscoveryCountryScope;
 }
 
@@ -426,9 +427,14 @@ export function formatThemeDiscoveryLabel(input: {
   relativeChangePct: number;
   changePct: number;
 }): string {
-  return input.rank <= 3
-    ? `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${ordinalText(input.rank)} 강했어요(${pctText(input.changePct)}).`
-    : `오늘 ${input.sector} 평균(${pctText(input.averageChangePct)})보다 ${pointText(input.relativeChangePct)}포인트 더 강했어요(${pctText(input.changePct)}).`;
+  if (input.rank <= 3) {
+    const orderText = input.rank === 1 ? "가장 먼저 신호가" : `${ordinalText(input.rank)} 신호가`;
+    return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText} 잡혔어요.`;
+  }
+  if (input.averageChangePct < 0 && input.changePct > 0) {
+    return `${input.sector} 흐름이 약한 날, 이 종목은 따로 포착됐어요.`;
+  }
+  return `${input.sector} 흐름 안에서 다른 종목보다 먼저 포착됐어요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
@@ -439,9 +445,9 @@ export function formatSectorMarketContextLabel(input: {
 }): string {
   const positive = input.changePct > 0;
   const largeMove = Math.abs(input.changePct) >= 10;
-  if (positive && largeMove) return `${input.sector} 안에서도 ${input.rankText} 종목의 큰 움직임이 새로 잡혔어요(${input.change}).`;
-  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목이 같이 움직였어요(${input.change}).`;
-  return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 확인해요(${input.change}).`;
+  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목의 신호가 새로 잡혔어요.`;
+  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목이 같이 포착됐어요.`;
+  return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 확인해요.`;
 }
 
 function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
@@ -469,10 +475,6 @@ function pctText(value: number): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function pointText(value: number): string {
-  return Math.abs(value).toFixed(1);
-}
-
 function ordinalText(rank: number): string {
   if (rank === 1) return "가장";
   if (rank === 2) return "두 번째로";
@@ -496,10 +498,10 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${ordinalText(theme.rank)} 강하게 움직였어요.`
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "가장 먼저 신호가" : `${ordinalText(theme.rank)} 신호가`} 잡혔어요.`
         : changePct > 0
-          ? `오늘 ${sector} 안에서 같이 오른 쪽이에요(${change}).`
-          : `오늘 ${sector} 안에서 약한 쪽 흐름이에요(${change}).`;
+          ? `오늘 ${sector} 안에서 함께 포착된 종목이에요.`
+          : `오늘 ${sector} 안에서 약한 쪽 흐름도 같이 확인해요.`;
     return {
       kind: "market_context",
       firstSeen: true,
@@ -948,7 +950,9 @@ function interleaveThemeBundles(
 export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOptions = {}): Promise<DiscoveryResponse> {
   const scope = options.country ?? "KR";
   const targetedMaterialEnabled = options.targetedMaterial ?? TARGETED_MATERIAL_DEFAULT_ENABLED;
-  const targetedMaterialLimit = targetedMaterialEnabled ? TARGETED_MATERIAL_CANDIDATE_LIMIT : 0;
+  const targetedMaterialLimit = targetedMaterialEnabled
+    ? Math.max(0, Math.min(TARGETED_MATERIAL_CANDIDATE_LIMIT, options.targetedMaterialLimit ?? TARGETED_MATERIAL_CANDIDATE_LIMIT))
+    : 0;
   const asOf = discoveryAsOf(scope);
   const [rows, attentionMap] = await Promise.all([
     fetchMarketRows(scope),

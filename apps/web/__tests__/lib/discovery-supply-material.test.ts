@@ -52,6 +52,8 @@ describe("discovery material news filter", () => {
 });
 
 describe("discovery specific hook copy", () => {
+  const surfacePricePattern = /(?:가격|올랐|상승|하락|빠졌|강했어요|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트)/;
+
   it("keeps same-sector leaders specific instead of collapsing to one generic sentence", () => {
     const hpsp = formatThemeDiscoveryLabel({
       sector: "반도체",
@@ -78,12 +80,12 @@ describe("discovery specific hook copy", () => {
       changePct: 3.18,
     });
 
-    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 강했어요(+3.33%).");
-    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 강했어요(+5.88%).");
-    expect(outperformer).toBe("오늘 반도체 평균(+1.50%)보다 1.7포인트 더 강했어요(+3.18%).");
+    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 먼저 신호가 잡혔어요.");
+    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 신호가 잡혔어요.");
+    expect(outperformer).toBe("반도체 흐름 안에서 다른 종목보다 먼저 포착됐어요.");
     expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
     expect([hpsp, wonik, outperformer].some((text) => /흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
-    expect([hpsp, wonik, outperformer].every((text) => !/^오늘 가격이/.test(text))).toBe(true);
+    expect([hpsp, wonik, outperformer].every((text) => !surfacePricePattern.test(text))).toBe(true);
   });
 
   it("keeps sector-only movers contextual instead of generic or raw price-only copy", () => {
@@ -100,10 +102,10 @@ describe("discovery specific hook copy", () => {
       change: "+4.20%",
     });
 
-    expect(spike).toBe("건설 안에서도 시총 461위권 종목의 큰 움직임이 새로 잡혔어요(+30.00%).");
-    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목이 같이 움직였어요(+4.20%).");
+    expect(spike).toBe("건설 안에서 시총 461위권 종목의 신호가 새로 잡혔어요.");
+    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목이 같이 포착됐어요.");
     expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
-    expect([spike, ordinary].every((text) => !/^오늘 가격이/.test(text))).toBe(true);
+    expect([spike, ordinary].every((text) => !surfacePricePattern.test(text))).toBe(true);
   });
 });
 
