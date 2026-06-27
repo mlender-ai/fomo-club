@@ -78,6 +78,7 @@ describe("discovery material news filter", () => {
     expect(cleanUsMaterialTitle("The Market Rotation Is On. ServiceNow, Workday, and AppLovin Rise")).toBeUndefined();
     expect(cleanUsMaterialTitle("The $7 Trillion AI Boom Is Running Out of Power")).toBeUndefined();
     expect(cleanUsMaterialTitle("OpenAI IPO Fears Hit Oracle and Other Stocks Exposed to the AI Trade")).toBeUndefined();
+    expect(cleanUsMaterialTitle("Moderna, Nvidia, Sandisk, Palantir, ON Semi, and More Stocks That Moved Today")).toBeUndefined();
   });
 });
 

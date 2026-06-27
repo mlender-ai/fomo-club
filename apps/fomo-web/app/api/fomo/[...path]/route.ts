@@ -91,7 +91,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       headers,
       cache: "no-store",
       redirect: "manual",
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(22_000),
     };
     if (request.method !== "GET" && request.method !== "HEAD") {
       init.body = await request.arrayBuffer();
