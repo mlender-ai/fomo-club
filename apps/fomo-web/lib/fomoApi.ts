@@ -457,7 +457,7 @@ export interface DiscoveryResponse {
 
 const discoveryKey = (country: DiscoveryCountryScope = "KR") => `discovery:today:v5:${country}:${kstDateKey()}`;
 const discoveryStorageKey = (country: DiscoveryCountryScope = "KR") => `fomo:discovery:v5:${country}:${kstDateKey()}`;
-const LAST_DISCOVERY_STORAGE_KEY = "fomo:discovery:last-good";
+const LAST_DISCOVERY_STORAGE_KEY = "fomo:discovery:last-good:v5";
 const lastDiscoveryStorageKey = (country: DiscoveryCountryScope = "KR") => `${LAST_DISCOVERY_STORAGE_KEY}:${country}`;
 
 function isDiscoveryResponse(value: unknown): value is DiscoveryResponse {
