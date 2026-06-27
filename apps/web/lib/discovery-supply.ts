@@ -41,6 +41,8 @@ const PAGE_SIZE = 100;
 const PAGES_PER_MARKET = 10;
 const SPARKLINE_CONCURRENCY = 8;
 const DISCOVERY_DECK_CARD_COUNT = 50;
+const DISCOVERY_RECOVERY_MIN_CARDS = 12;
+const DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF = 30;
 const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
 const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED
@@ -496,6 +498,7 @@ function stockPayload(row: NaverMarketRow, candidate: DiscoveryCandidate): Disco
   const why = discoveryWhy(candidate);
   const hasMaterial = hasPublicMaterialEvent(candidate);
   const hasDisplayWhy = hasDisplayWhyEvent(candidate);
+  const fallbackWhy = candidate.reason ?? "큰 가격 움직임은 보였지만, 연결된 공개 재료는 확인 안 됨.";
   return {
     canonical: candidate.ticker,
     market: row.market,
@@ -505,9 +508,68 @@ function stockPayload(row: NaverMarketRow, candidate: DiscoveryCandidate): Disco
     sector: sector ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf),
     whyShown: hasDisplayWhy
       ? why
-      : "큰 가격 움직임은 보였지만, 연결된 공개 재료는 확인 안 됨.",
-    ...(hasDisplayWhy ? { reason: why } : {}),
+      : fallbackWhy,
+    ...(hasDisplayWhy || candidate.reason ? { reason: hasDisplayWhy ? why : fallbackWhy } : {}),
   };
+}
+
+function isSameDayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
+  return event.asOf.slice(0, 10) === candidate.asOf.slice(0, 10);
+}
+
+function fallbackContextEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
+  return candidate.events
+    .filter((event) => isSameDayEvent(event, candidate) && event.direction !== "down")
+    .sort((a, b) => {
+      const aTheme = a.kind === "theme_link" ? 1 : 0;
+      const bTheme = b.kind === "theme_link" ? 1 : 0;
+      return bTheme - aTheme || b.strength - a.strength || a.kind.localeCompare(b.kind);
+    })[0];
+}
+
+function fallbackDiscoveryReason(candidate: DiscoveryCandidate): string {
+  const event = fallbackContextEvent(candidate);
+  if (event?.kind === "theme_link" && event.label) return event.label;
+  if (event?.kind === "market_context" && event.label) return event.label;
+  if (event?.kind === "price_move" && event.label) return `${event.label} 공개 재료는 더 확인 중이에요.`;
+  return "오늘 시장에서 다시 확인할 종목으로 남겨뒀어요.";
+}
+
+export function recoverDiscoveryCandidates(
+  ranked: readonly DiscoveryCandidate[],
+  candidates: readonly DiscoveryCandidate[],
+  maxCandidates = DISCOVERY_DECK_CARD_COUNT
+): DiscoveryCandidate[] {
+  if (ranked.length >= DISCOVERY_RECOVERY_MIN_CARDS) return ranked.slice(0, maxCandidates);
+  const used = new Set(ranked.map((candidate) => candidate.ticker));
+  const fallback = candidates
+    .filter((candidate) => !used.has(candidate.ticker))
+    .filter((candidate) => fallbackContextEvent(candidate) !== undefined)
+    .map((candidate, index) => ({
+      candidate: {
+        ...candidate,
+        reason: candidate.reason ?? fallbackDiscoveryReason(candidate),
+      },
+      index,
+      context: fallbackContextEvent(candidate)!,
+    }))
+    .sort((a, b) => {
+      const aFamous = typeof a.candidate.marketCapRank === "number" && a.candidate.marketCapRank <= DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF ? 1 : 0;
+      const bFamous = typeof b.candidate.marketCapRank === "number" && b.candidate.marketCapRank <= DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF ? 1 : 0;
+      const aTheme = a.context.kind === "theme_link" ? 1 : 0;
+      const bTheme = b.context.kind === "theme_link" ? 1 : 0;
+      return (
+        aFamous - bFamous ||
+        bTheme - aTheme ||
+        b.context.strength - a.context.strength ||
+        (a.candidate.marketCapRank ?? 9999) - (b.candidate.marketCapRank ?? 9999) ||
+        a.index - b.index ||
+        a.candidate.ticker.localeCompare(b.candidate.ticker)
+      );
+    })
+    .map((row) => row.candidate);
+
+  return [...ranked, ...fallback].slice(0, maxCandidates);
 }
 
 function frontSeed(
@@ -676,7 +738,11 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
       marquee: def?.marquee === true,
     };
   });
-  const ranked = rankDiscoveryCandidates(candidates, { maxCandidates: DISCOVERY_DECK_CARD_COUNT });
+  const ranked = recoverDiscoveryCandidates(
+    rankDiscoveryCandidates(candidates, { maxCandidates: DISCOVERY_DECK_CARD_COUNT }),
+    candidates,
+    DISCOVERY_DECK_CARD_COUNT
+  );
   const rowsByTicker = new Map([...byTicker.entries()].map(([ticker, value]) => [ticker, value.row]));
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];

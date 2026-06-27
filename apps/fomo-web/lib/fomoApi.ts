@@ -426,13 +426,21 @@ function isDiscoveryResponse(value: unknown): value is DiscoveryResponse {
   return !!candidate && Array.isArray(candidate.stocks) && !!candidate.fronts && typeof candidate.fronts === "object";
 }
 
+function hasDiscoveryCards(value: DiscoveryResponse | null | undefined): value is DiscoveryResponse {
+  return !!value && isDiscoveryResponse(value) && value.stocks.length > 0;
+}
+
 function readStoredDiscovery(): DiscoveryResponse | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(discoveryStorageKey()) ?? window.localStorage.getItem(LAST_DISCOVERY_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    return isDiscoveryResponse(parsed) ? parsed : null;
+    const discovery = isDiscoveryResponse(parsed) ? parsed : null;
+    if (hasDiscoveryCards(discovery)) return discovery;
+    window.localStorage.removeItem(discoveryStorageKey());
+    window.localStorage.removeItem(LAST_DISCOVERY_STORAGE_KEY);
+    return null;
   } catch (err) {
     console.warn("[fetchDiscovery] localStorage read failed", err);
     return null;
@@ -441,6 +449,7 @@ function readStoredDiscovery(): DiscoveryResponse | null {
 
 function writeStoredDiscovery(value: DiscoveryResponse): void {
   if (typeof window === "undefined") return;
+  if (!hasDiscoveryCards(value)) return;
   try {
     window.localStorage.setItem(discoveryStorageKey(), JSON.stringify(value));
     window.localStorage.setItem(LAST_DISCOVERY_STORAGE_KEY, JSON.stringify(value));
@@ -495,7 +504,7 @@ export const getCachedDiscovery = () => readCached<DiscoveryResponse>(discoveryK
 export async function fetchDiscovery(): Promise<DiscoveryResponse> {
   const key = discoveryKey();
   const cached = readCached<DiscoveryResponse>(key);
-  if (cached) return cached;
+  if (hasDiscoveryCards(cached)) return cached;
 
   const stored = readStoredDiscovery();
   if (stored) {
@@ -510,6 +519,7 @@ export async function fetchDiscovery(): Promise<DiscoveryResponse> {
       CACHE_TTL.stockFront
     )
       .then((fresh) => {
+        if (!hasDiscoveryCards(fresh)) return;
         writeStoredDiscovery(fresh);
         emitDiscoveryUpdated(fresh);
       })
@@ -521,7 +531,8 @@ export async function fetchDiscovery(): Promise<DiscoveryResponse> {
     return stored;
   }
 
-  const fresh = await cachedGet(key, () => fetchDiscoveryNetwork(), CACHE_TTL.stockFront);
+  const fresh = await fetchDiscoveryNetwork();
+  if (hasDiscoveryCards(fresh)) setCached(key, fresh, CACHE_TTL.stockFront);
   writeStoredDiscovery(fresh);
   return fresh;
 }
