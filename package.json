@@ -47,6 +47,8 @@
     "supply:collect": "tsx scripts/supply-demand-collect.ts",
     "metrics:fomo": "tsx scripts/fomo-product-metrics.ts",
     "quality:fomo": "tsx scripts/fomo-quality-report.ts",
+    "guard:discovery": "tsx scripts/discovery-regression-gate.ts",
+    "guard:product": "npm run guard:discovery",
     "eval:understanding": "tsx scripts/eval-understanding.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",

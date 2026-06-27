@@ -24,6 +24,12 @@ push/PR 전 최종 품질 검사.
 ### 테스트
 - [ ] 테스트 파일 존재 여부
 - [ ] `npm run test` 통과
+- [ ] 발견 덱·카드 훅·정렬·섹터 라벨·뎁스 reason·시장온도·discovery API 변경 시 `npm run guard:discovery` 통과
+
+### 제품 회귀
+- [ ] `docs/DEVELOPMENT_QUALITY_GUARDRAILS.md`의 변경 범위별 불변식 확인
+- [ ] 발견 카드 앞단에 가격-only 훅, KOSPI/KOSDAQ 칩, 유명주 쏠림, 50장 미만 회귀가 없는가
+- [ ] 사용자가 지시하지 않은 UX/copy/loading/order 변경이 섞이지 않았는가
 
 ### AI 호출
 - [ ] `AI_API_URL / AI_API_KEY / AI_MODEL` 환경변수 체계 사용

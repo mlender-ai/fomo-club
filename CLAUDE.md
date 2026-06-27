@@ -145,11 +145,22 @@ npx prisma validate                  # 4. DB 스키마 (변경 시)
 
 하나라도 실패하면 push하지 않고 즉시 수정한다.
 
+### 발견 덱/카드 품질 게이트 (회귀 방지)
+
+발견 덱·카드 훅·카드 정렬·섹터 라벨·뎁스 reason·시장온도·`/api/fomo/discovery`를 건드리면 `docs/DEVELOPMENT_QUALITY_GUARDRAILS.md`를 따르고 아래를 추가로 통과해야 한다.
+
+```bash
+npm run guard:discovery
+```
+
+이 게이트는 50장 유지, 앞단 가격-only 훅 금지, KOSPI/KOSDAQ 칩 금지, 앞단 유명주 회귀 금지, 금칙어 노출 금지를 검사한다. 실패하면 제품 회귀로 보고 테스트를 약화하지 말고 원인을 고친다.
+
 ### 참조 파일 로드 순서
 
 ```
 CLAUDE.md          ← 지금 이 파일 (진입점)
   → docs/PRODUCT_TRUTH.md / PRODUCT_VISION.md ← 제품 정의·비전(SSOT) — 최상위 기준
+  → docs/DEVELOPMENT_QUALITY_GUARDRAILS.md ← 발견 덱/카드/뎁스 회귀 방지
   → docs/DATA_ENGINE_STRATEGY.md ← 데이터 엔진(수집→이해→재가공→응축) + 머지정책
   → docs/AGENT_REDESIGN.md ← 에이전트 재설계 정본
   → GSTACK.md      ← 기술 스택 참조

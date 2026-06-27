@@ -24,7 +24,15 @@
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
 - [ ] `npm run build`
+- [ ] `npm run guard:discovery` if discovery deck/card/depth/market temperature/API behavior changed
 - [ ] local UI or API smoke check completed
+
+## Product Regression Check
+
+- [ ] Changed only the requested behavior; unrelated UX/copy/loading/order changes are called out
+- [ ] Discovery cards still show sector/theme chips, not KOSPI/KOSDAQ as primary chips
+- [ ] Front discovery band has no price-only hooks like "오늘 가격이 +30.0% 움직였어요"
+- [ ] Discovery deck target count and first-load/retry behavior were checked
 
 ## Deployment Notes
 
