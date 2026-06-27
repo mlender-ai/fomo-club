@@ -51,6 +51,7 @@
     "guard:product": "npm run guard:discovery",
     "eval:understanding": "tsx scripts/eval-understanding.ts",
     "eval:understanding:live": "tsx scripts/eval-understanding-live.ts",
+    "diag:collection": "tsx scripts/diag-collection.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
