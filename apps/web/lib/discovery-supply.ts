@@ -63,7 +63,7 @@ const MATERIAL_NEWS_NOISE =
 const MATERIAL_NEWS_CATALYST =
   /공시|계약|공급계약|수주|납품|실적|매출|영업이익|순이익|가이던스|전망치|컨센서스|어닝|흑자|적자|턴어라운드|임상|허가|승인|FDA|품목허가|신약|치료제|기술이전|라이선스|증설|공장|양산|수율|수주잔고|M&A|인수|합병|지분|투자|유상증자|무상증자|자사주|배당|분할|상장|정부|정책|규제|지원|보조금|관세|제재|신제품|출시|개발|특허|공급|독점|선정|채택|수출|수입|국책|프로젝트|수혜/i;
 const US_MATERIAL_NEWS_NOISE =
-  /price\s?target|target price|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|should you buy|stock to buy|motley fool|zacks|benzinga|investorplace|why .* stock (?:is )?(?:up|down|rising|falling)|shares? (?:rise|fall|slip|jump) after hours/i;
+  /price\s?target|target price|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|should you buy|stock to buy|better buy|which .* stock|motley fool|zacks|benzinga|investorplace|approach with caution|missing link|strain inside|what you|gains as market dips|why .* stock (?:is )?(?:up|down|rising|falling)|\b(?:is|are|was|were)\s+(?:up|down|higher|lower)\b|shares? (?:rise|fall|slip|jump|gain|lose) after hours/i;
 const US_MATERIAL_NEWS_CATALYST =
   /earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]|contract|deal|order|supply|supplier|customer|partnership|launch|unveil|product|chip|gpu|ai|data center|approval|fda|trial|drug|sec|8-k|10-q|filing|acquisition|merger|stake|investment|buyback authorization|dividend/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_DEFAULT_ENABLED

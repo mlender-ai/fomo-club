@@ -64,6 +64,10 @@ describe("discovery material news filter", () => {
       "D-Wave Quantum Announces New Partnership With Aerospace Customer"
     );
     expect(cleanUsMaterialTitle("Analyst raises price target on Micron shares")).toBeUndefined();
+    expect(cleanUsMaterialTitle("D-Wave Quantum (QBTS) Is Down 11.3% After U.S. Quantum Orders And Funding News")).toBeUndefined();
+    expect(cleanUsMaterialTitle("SoundHound AI vs. C3.ai: Which AI Stock Is the Better Buy Now")).toBeUndefined();
+    expect(cleanUsMaterialTitle("3 Unprofitable Stocks We Approach with Caution")).toBeUndefined();
+    expect(cleanUsMaterialTitle("Upstart Holdings, Inc. (UPST) Gains As Market Dips: What You Should Know")).toBeUndefined();
   });
 });
 
