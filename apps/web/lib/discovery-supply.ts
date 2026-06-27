@@ -432,7 +432,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   const rankText = row.marketCapRank ? `시총 ${row.marketCapRank}위권` : "시총 상위권";
   const changePct = row.changePct;
   const change = typeof changePct === "number" ? pctText(changePct) : undefined;
-  const source = row.country === "KR" ? "네이버 시세" : "Twelve Data 시세";
+  const source = row.country === "KR" ? "네이버 시세" : typeof row.changePct === "number" || row.priceText ? "Twelve Data 시세" : "FOMO US 종목 사전";
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3

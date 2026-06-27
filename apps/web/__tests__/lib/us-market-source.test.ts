@@ -8,12 +8,15 @@ describe("US market source", () => {
     vi.restoreAllMocks();
   });
 
-  it("fails closed when Twelve Data key is absent", async () => {
+  it("uses a verified seed universe without synthetic quotes when Twelve Data key is absent", async () => {
     vi.stubEnv("TWELVE_DATA_API_KEY", "");
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const { fetchUsMarketRows } = await import("../../lib/us-market-source");
 
-    await expect(fetchUsMarketRows()).resolves.toEqual([]);
+    const rows = await fetchUsMarketRows();
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.country !== "KR" && row.symbol && row.currency === "USD")).toBe(true);
+    expect(rows.every((row) => row.priceText === undefined && row.changePct === undefined && row.changeText === undefined)).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

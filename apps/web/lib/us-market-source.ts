@@ -5,6 +5,18 @@ import { usStockDefs, usSymbolForStock } from "./us-symbols";
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 
+const US_MARKET_CAP_RANK: Record<string, number> = {
+  AAPL: 1,
+  MSFT: 2,
+  NVDA: 3,
+  AVGO: 8,
+  TSLA: 9,
+  TSM: 10,
+  AMD: 32,
+  PLTR: 55,
+  MU: 96,
+};
+
 interface TwelveQuote {
   symbol?: string;
   name?: string;
@@ -52,6 +64,7 @@ function parseQuote(defCanonical: string, quote: TwelveQuote): DiscoveryMarketRo
     market: marketFor(def?.market ?? "NASDAQ", quote.exchange),
     country: def?.country ?? "US",
     currency: "USD",
+    ...(US_MARKET_CAP_RANK[symbol] ? { marketCapRank: US_MARKET_CAP_RANK[symbol] } : {}),
     ...(priceText ? { priceText } : {}),
     ...(typeof pct === "number" ? { changePct: pct } : {}),
     ...(typeof pct === "number" || typeof change === "number"
@@ -60,6 +73,23 @@ function parseQuote(defCanonical: string, quote: TwelveQuote): DiscoveryMarketRo
     changeDir: dir,
     ...(volume ? { tradingValue: volume } : {}),
   };
+}
+
+function seedRows(): DiscoveryMarketRow[] {
+  return usStockDefs()
+    .map((def, index): DiscoveryMarketRow | null => {
+      const symbol = usSymbolForStock(def.canonical)?.toUpperCase();
+      if (!symbol) return null;
+      return {
+        canonical: def.canonical,
+        symbol,
+        market: marketFor(def.market, undefined),
+        country: def.country === "KR" ? "US" : def.country,
+        currency: "USD",
+        marketCapRank: US_MARKET_CAP_RANK[symbol] ?? index + 200,
+      };
+    })
+    .filter((row): row is DiscoveryMarketRow => row !== null);
 }
 
 function normalizeQuoteResponse(data: unknown): Record<string, TwelveQuote> {
@@ -80,14 +110,15 @@ function normalizeQuoteResponse(data: unknown): Record<string, TwelveQuote> {
 
 /**
  * US quote adapter. Twelve Data is used because Yahoo chart endpoints are unstable from Node/undici.
- * If the key is absent or the upstream fails, return [] rather than synthesizing cards.
+ * If the key is absent or the upstream fails, return a verified seed universe without price data.
+ * We never synthesize quotes: price/change fields are present only when a live source returns them.
  */
 export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
   const key = tdKey();
-  if (!key) return [];
+  if (!key) return seedRows();
   const defs = usStockDefs();
   const symbols = defs.map((def) => usSymbolForStock(def.canonical)).filter((symbol): symbol is string => !!symbol);
-  if (symbols.length === 0) return [];
+  if (symbols.length === 0) return seedRows();
   try {
     const url = new URL(TWELVE_DATA_URL);
     url.searchParams.set("symbol", symbols.join(","));
@@ -97,7 +128,7 @@ export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
       signal: AbortSignal.timeout(8_000),
       next: { revalidate: 600 },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return seedRows();
     const bySymbol = normalizeQuoteResponse(await res.json());
     const rows: DiscoveryMarketRow[] = [];
     for (const def of defs) {
@@ -108,9 +139,9 @@ export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
       const row = parseQuote(def.canonical, quote);
       if (row) rows.push(row);
     }
-    return rows;
+    return rows.length > 0 ? rows : seedRows();
   } catch (err) {
     console.warn("[us-market-source] Twelve Data quote failed", (err as Error)?.message);
-    return [];
+    return seedRows();
   }
 }
