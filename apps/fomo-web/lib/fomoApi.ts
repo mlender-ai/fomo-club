@@ -36,9 +36,10 @@ export const FOMO_INDEX_UPDATED_EVENT = "fomo:index-updated";
 const INDEX_SAME_ORIGIN_TIMEOUT_MS = 1_800;
 const INDEX_BACKEND_TIMEOUT_MS = 4_000;
 const INDEX_REVALIDATE_TIMEOUT_MS = 8_000;
-const DISCOVERY_SAME_ORIGIN_TIMEOUT_MS = 1_800;
+const DISCOVERY_SAME_ORIGIN_TIMEOUT_MS = 9_000;
 const DISCOVERY_BACKEND_TIMEOUT_MS = 18_000;
 const DISCOVERY_REVALIDATE_TIMEOUT_MS = 24_000;
+const DISCOVERY_FAST_PATH = "/api/fomo/discovery?fast=1";
 
 function kstDateKey(now = new Date()): string {
   return new Date(now.getTime() + 9 * HOUR).toISOString().slice(0, 10);
@@ -472,10 +473,10 @@ async function fetchDiscoveryNetwork({
 } = {}): Promise<DiscoveryResponse> {
   try {
     return await fetchJsonWithTimeout<DiscoveryResponse>(
-      "/api/fomo/discovery",
+      DISCOVERY_FAST_PATH,
       { cache: "no-store", credentials: "same-origin" },
       sameOriginTimeoutMs,
-      "GET /api/fomo/discovery"
+      `GET ${DISCOVERY_FAST_PATH}`
     );
   } catch (err) {
     if (process.env.NODE_ENV !== "production") {
@@ -487,10 +488,10 @@ async function fetchDiscoveryNetwork({
   for (const origin of backendOrigins()) {
     try {
       return await fetchJsonWithTimeout<DiscoveryResponse>(
-        `${origin}/api/fomo/discovery`,
+        `${origin}${DISCOVERY_FAST_PATH}`,
         { cache: "no-store" },
         backendTimeoutMs,
-        `GET ${origin}/api/fomo/discovery`
+        `GET ${origin}${DISCOVERY_FAST_PATH}`
       );
     } catch (err) {
       lastError = err;
