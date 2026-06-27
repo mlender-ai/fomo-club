@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DiscoveryCandidate, DiscoveryEventKind } from "@fomo/core";
 
-import { cleanMaterialTitle, recoverDiscoveryCandidates } from "../../lib/discovery-supply";
+import { cleanMaterialTitle, formatSectorMarketContextLabel, formatThemeDiscoveryLabel, recoverDiscoveryCandidates } from "../../lib/discovery-supply";
 
 const asOf = "2026-06-27";
 
@@ -48,6 +48,62 @@ describe("discovery material news filter", () => {
   it("does not treat generic stock movement as material news", () => {
     expect(cleanMaterialTitle("특징주 모음, 2차전지주 동반 상승")).toBeUndefined();
     expect(cleanMaterialTitle("장중 시황, 반도체주 차익 실현")).toBeUndefined();
+  });
+});
+
+describe("discovery specific hook copy", () => {
+  it("keeps same-sector leaders specific instead of collapsing to one generic sentence", () => {
+    const hpsp = formatThemeDiscoveryLabel({
+      sector: "반도체",
+      rank: 1,
+      peerCount: 14,
+      averageChangePct: 1.5,
+      relativeChangePct: 1.83,
+      changePct: 3.33,
+    });
+    const wonik = formatThemeDiscoveryLabel({
+      sector: "반도체",
+      rank: 2,
+      peerCount: 14,
+      averageChangePct: 1.5,
+      relativeChangePct: 4.38,
+      changePct: 5.88,
+    });
+    const outperformer = formatThemeDiscoveryLabel({
+      sector: "반도체",
+      rank: 6,
+      peerCount: 14,
+      averageChangePct: 1.5,
+      relativeChangePct: 1.68,
+      changePct: 3.18,
+    });
+
+    expect(hpsp).toBe("오늘 반도체 14개 종목 중 가장 강했어요(+3.33%).");
+    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 강했어요(+5.88%).");
+    expect(outperformer).toBe("오늘 반도체 평균(+1.50%)보다 1.7포인트 더 강했어요(+3.18%).");
+    expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
+    expect([hpsp, wonik, outperformer].some((text) => /흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
+    expect([hpsp, wonik, outperformer].every((text) => !/^오늘 가격이/.test(text))).toBe(true);
+  });
+
+  it("keeps sector-only movers contextual instead of generic or raw price-only copy", () => {
+    const spike = formatSectorMarketContextLabel({
+      sector: "건설",
+      rankText: "시총 461위권",
+      changePct: 30,
+      change: "+30.00%",
+    });
+    const ordinary = formatSectorMarketContextLabel({
+      sector: "화장품",
+      rankText: "시총 210위권",
+      changePct: 4.2,
+      change: "+4.20%",
+    });
+
+    expect(spike).toBe("건설 안에서도 시총 461위권 종목의 큰 움직임이 새로 잡혔어요(+30.00%).");
+    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목이 같이 움직였어요(+4.20%).");
+    expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
+    expect([spike, ordinary].every((text) => !/^오늘 가격이/.test(text))).toBe(true);
   });
 });
 
