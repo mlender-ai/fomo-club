@@ -48,6 +48,7 @@
     "metrics:fomo": "tsx scripts/fomo-product-metrics.ts",
     "quality:fomo": "tsx scripts/fomo-quality-report.ts",
     "eval:understanding": "tsx scripts/eval-understanding.ts",
+    "eval:understanding:live": "tsx scripts/eval-understanding-live.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

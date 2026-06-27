@@ -335,7 +335,7 @@ export async function understandStock(stock: string): Promise<ThemeInsight> {
  * 이해 코어(테마/종목 공용) — 수집된 docs 를 LLM 으로 읽고 grounding 검증(assemble) → 워딩 안전 판정.
  * subject 는 테마명 또는 종목명. 실패/미설정/빈 docs → 정직한 빈 상태.
  */
-async function runUnderstanding(
+export async function runUnderstanding(
   subject: string,
   docs: SourceDoc[],
   kind: "theme" | "stock" = "theme"
@@ -355,7 +355,7 @@ async function runUnderstanding(
     const res = await callAI({
       model: MODEL,
       temperature: TEMPERATURE,
-      timeoutMs: 45_000,
+      timeoutMs: Number.parseInt(process.env["AI_UNDERSTANDING_TIMEOUT_MS"] ?? "", 10) || 45_000,
       trace: kind === "stock" ? "understanding-stock" : "understanding-theme",
       metadata: { subject, kind, docs: docs.length },
       messages: [
