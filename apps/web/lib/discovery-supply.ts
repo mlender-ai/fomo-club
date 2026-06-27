@@ -28,7 +28,6 @@ import {
   type MultiAxisHookSelection,
   type SectorStock,
   type StockCountry,
-  type StockSector,
   type RawArticle,
 } from "@fomo/core";
 import { fetchDartDisclosuresByStock, type DartDisclosureHit } from "./dart-disclosures";
@@ -141,7 +140,7 @@ interface RawNaverStock {
 }
 
 interface ThemeMoveSignal {
-  sector: StockSector;
+  sector: string;
   rank: number;
   peerCount: number;
   averageChangePct: number;
@@ -363,9 +362,9 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
 }
 
 function buildThemeMoveSignals(rows: readonly DiscoveryMarketRow[]): Map<string, ThemeMoveSignal> {
-  const groups = new Map<StockSector, Array<{ ticker: string; changePct: number }>>();
+  const groups = new Map<string, Array<{ ticker: string; changePct: number }>>();
   for (const row of rows) {
-    const sector = sectorOf(row.canonical);
+    const sector = sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
     if (!sector || typeof row.changePct !== "number") continue;
     const current = groups.get(sector) ?? [];
     current.push({ ticker: row.canonical, changePct: row.changePct });
@@ -392,6 +391,32 @@ function buildThemeMoveSignals(rows: readonly DiscoveryMarketRow[]): Map<string,
   return out;
 }
 
+export function formatThemeDiscoveryLabel(input: {
+  sector: string;
+  rank: number;
+  peerCount: number;
+  averageChangePct: number;
+  relativeChangePct: number;
+  changePct: number;
+}): string {
+  return input.rank <= 3
+    ? `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${ordinalText(input.rank)} 강했어요(${pctText(input.changePct)}).`
+    : `오늘 ${input.sector} 평균(${pctText(input.averageChangePct)})보다 ${pointText(input.relativeChangePct)}포인트 더 강했어요(${pctText(input.changePct)}).`;
+}
+
+export function formatSectorMarketContextLabel(input: {
+  sector: string;
+  rankText: string;
+  changePct: number;
+  change: string;
+}): string {
+  const positive = input.changePct > 0;
+  const largeMove = Math.abs(input.changePct) >= 10;
+  if (positive && largeMove) return `${input.sector} 안에서도 ${input.rankText} 종목의 큰 움직임이 새로 잡혔어요(${input.change}).`;
+  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목이 같이 움직였어요(${input.change}).`;
+  return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 확인해요(${input.change}).`;
+}
+
 function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
   if (!theme || typeof row.changePct !== "number") return null;
   const strongTheme = theme.averageChangePct >= 1.5 && theme.positiveCount >= 2;
@@ -400,10 +425,7 @@ function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefi
   const positiveStrongTheme = row.changePct >= 3 && strongTheme && theme.relativeChangePct >= 0;
   const positiveSectorSpike = row.changePct >= 7 && theme.relativeChangePct >= 0;
   if (!leadingTheme && !positiveOutperformer && !positiveStrongTheme && !positiveSectorSpike) return null;
-  const label =
-    theme.rank <= 3
-      ? `오늘 ${theme.sector} 흐름에서 먼저 확인된 종목이에요.`
-      : `오늘 ${theme.sector} 흐름에서 같이 확인된 종목이에요.`;
+  const label = formatThemeDiscoveryLabel({ ...theme, changePct: row.changePct });
   return {
     kind: "theme_link",
     firstSeen: true,
@@ -418,6 +440,17 @@ function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefi
 function pctText(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
+}
+
+function pointText(value: number): string {
+  return Math.abs(value).toFixed(1);
+}
+
+function ordinalText(rank: number): string {
+  if (rank === 1) return "가장";
+  if (rank === 2) return "두 번째로";
+  if (rank === 3) return "세 번째로";
+  return `${rank}번째로`;
 }
 
 function industryHintForTicker(ticker: string): string | undefined {
@@ -436,10 +469,10 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${sector} 흐름에서 먼저 확인된 종목이에요.`
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${ordinalText(theme.rank)} 강하게 움직였어요.`
         : changePct > 0
-          ? `${sector} 흐름에서 같이 확인된 종목이에요.`
-          : `${sector} 흐름에서 약한 쪽도 함께 확인하고 있어요.`;
+          ? `오늘 ${sector} 안에서 같이 오른 쪽이에요(${change}).`
+          : `오늘 ${sector} 안에서 약한 쪽 흐름이에요(${change}).`;
     return {
       kind: "market_context",
       firstSeen: true,
@@ -451,6 +484,17 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
     };
   }
   if (sector) {
+    if (typeof changePct === "number" && change) {
+      return {
+        kind: "market_context",
+        firstSeen: true,
+        strength: Math.min(0.7, 0.44 + Math.abs(changePct) / 50),
+        source,
+        asOf,
+        confidence: "M",
+        label: formatSectorMarketContextLabel({ sector, rankText, changePct, change }),
+      };
+    }
     return {
       kind: "market_context",
       firstSeen: true,
