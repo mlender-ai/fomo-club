@@ -43,9 +43,9 @@ const SPARKLINE_CONCURRENCY = 8;
 const DISCOVERY_DECK_CARD_COUNT = 50;
 const DISCOVERY_RECOVERY_MIN_CARDS = 12;
 const DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF = 30;
-const TARGETED_MATERIAL_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
+const TARGETED_MATERIAL_DEFAULT_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
 const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
-const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_ENABLED
+const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? Math.max(0, Math.min(720, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 720) || 720))
   : 0;
 const TARGETED_MATERIAL_CONCURRENCY = 8;
@@ -54,7 +54,7 @@ const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d|회장|최고경영자|CEO|고백|회고|소회|인터뷰|기부|ESG|봉사|사회공헌|미담|창업주|오너|가문|고향|강연|도서|출간|어려울\s?때마다|찾았다/i;
 const MATERIAL_NEWS_CATALYST =
   /공시|계약|공급계약|수주|납품|실적|매출|영업이익|순이익|가이던스|전망치|컨센서스|어닝|흑자|적자|턴어라운드|임상|허가|승인|FDA|품목허가|신약|치료제|기술이전|라이선스|증설|공장|양산|수율|수주잔고|M&A|인수|합병|지분|투자|유상증자|무상증자|자사주|배당|분할|상장|정부|정책|규제|지원|보조금|관세|제재|신제품|출시|개발|특허|공급|독점|선정|채택|수출|수입|국책|프로젝트|수혜/i;
-const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_ENABLED
+const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? "네이버 시세·종목뉴스·리서치·DART 공시·수급 캐시"
   : "네이버 시세·뉴스 언급";
 const MARKET_LABELS = new Set(["KOSPI", "KOSDAQ", "NASDAQ", "NYSE"]);
@@ -106,6 +106,10 @@ export interface DiscoveryResponse {
   fronts: Record<string, DiscoveryFrontSeed>;
   confidence: "L" | "M" | "H";
   source: string;
+}
+
+export interface BuildDiscoveryResponseOptions {
+  targetedMaterial?: boolean;
 }
 
 interface NaverMarketRow {
@@ -626,7 +630,9 @@ function frontSeed(
   };
 }
 
-export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
+export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOptions = {}): Promise<DiscoveryResponse> {
+  const targetedMaterialEnabled = options.targetedMaterial ?? TARGETED_MATERIAL_DEFAULT_ENABLED;
+  const targetedMaterialLimit = targetedMaterialEnabled ? TARGETED_MATERIAL_CANDIDATE_LIMIT : 0;
   const asOf = todayKst();
   const [rows, attentionMap] = await Promise.all([
     fetchMarketRows(),
@@ -687,16 +693,18 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
       const bHasTheme = Number(b[1].events.some((event) => event.kind === "theme_link"));
       return bHasTheme - aHasTheme || bPct - aPct || a[0].localeCompare(b[0]);
     })
-    .slice(0, TARGETED_MATERIAL_CANDIDATE_LIMIT);
-  const targetedMaterial = await mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
-    ticker,
-    event: await eventFromTargetedMaterial(value.row, asOf),
-  }));
-  for (const result of targetedMaterial) {
-    if (result.status !== "fulfilled" || !result.value.event) continue;
-    const current = byTicker.get(result.value.ticker);
-    if (!current) continue;
-    byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
+    .slice(0, targetedMaterialLimit);
+  if (targetedMaterialLimit > 0) {
+    const targetedMaterial = await mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
+      ticker,
+      event: await eventFromTargetedMaterial(value.row, asOf),
+    }));
+    for (const result of targetedMaterial) {
+      if (result.status !== "fulfilled" || !result.value.event) continue;
+      const current = byTicker.get(result.value.ticker);
+      if (!current) continue;
+      byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
+    }
   }
 
   if (DISCOVERY_FLOW_CACHE_ENABLED) {
@@ -785,6 +793,6 @@ export async function buildDiscoveryResponse(): Promise<DiscoveryResponse> {
     stocks,
     fronts,
     confidence: stocks.length >= DISCOVERY_DECK_CARD_COUNT ? "H" : stocks.length >= 30 ? "M" : "L",
-    source: DISCOVERY_SOURCE_LABEL,
+    source: targetedMaterialEnabled ? DISCOVERY_SOURCE_LABEL : "네이버 시세·DART 공시·수급 캐시",
   };
 }

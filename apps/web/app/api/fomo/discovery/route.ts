@@ -12,11 +12,13 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const fast = url.searchParams.get("fast") === "1";
     const load = unstable_cache(
-      async () => buildDiscoveryResponse(),
-      ["fomo-discovery", cacheVersion(), kstDate()],
+      async () => buildDiscoveryResponse({ targetedMaterial: !fast }),
+      ["fomo-discovery", cacheVersion(), kstDate(), fast ? "fast" : "full"],
       { revalidate: REVALIDATE_S }
     );
     return withCors(
