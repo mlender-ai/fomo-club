@@ -39,6 +39,7 @@ export async function GET(request: Request) {
         {
           asOf: kstDate(),
           stocks: [],
+          cards: [],
           fronts: {},
           confidence: "L",
           source: "데이터 없음",

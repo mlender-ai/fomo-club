@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import { DISCOVERY_UPDATED_EVENT, fetchDiscovery, type DiscoveryCountryScope, type DiscoveryResponse } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { MIN_DISCOVERY_STOCKS, type DeckStock } from "@/lib/discoveryDeck";
+import { MIN_DISCOVERY_STOCKS, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
 
 interface TodayDiscoveryDeckProps {
@@ -41,18 +41,18 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "error" }
-    | { kind: "ready"; stocks: DeckStock[]; fronts: Record<string, FrontEntry> }
+    | { kind: "ready"; cards: DiscoveryDeckCard[]; fronts: Record<string, FrontEntry> }
   >({ kind: "loading" });
 
   useEffect(() => {
     let alive = true;
     const applyDiscovery = (discovery: DiscoveryResponse) => {
-      const stocks = discovery.stocks as DeckStock[];
-      if (stocks.length === 0) {
+      const cards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
+      if (cards.length === 0) {
         setState({ kind: "error" });
         return;
       }
-      setState({ kind: "ready", stocks, fronts: discovery.fronts as Record<string, FrontEntry> });
+      setState({ kind: "ready", cards, fronts: discovery.fronts as Record<string, FrontEntry> });
     };
     const onDiscoveryUpdated = (event: Event) => {
       const discovery = (event as CustomEvent<DiscoveryResponse>).detail;
@@ -140,7 +140,7 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
     <>
       {scopeTabs}
       <StockSwipeDeck
-        stocks={state.stocks.slice(0, Math.max(MIN_DISCOVERY_STOCKS, state.stocks.length))}
+        stocks={state.cards.slice(0, Math.max(MIN_DISCOVERY_STOCKS, state.cards.length))}
         initialFronts={state.fronts}
         contextLabel={country === "US" ? "미국 발견" : "오늘의 발견"}
         loggedIn={loggedIn}

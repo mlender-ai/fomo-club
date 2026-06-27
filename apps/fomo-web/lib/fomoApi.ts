@@ -404,6 +404,7 @@ export const fetchStockFront = (stock: string, opts: { lite?: boolean } = {}) =>
   );
 
 export interface DiscoveryStockResponse {
+  kind?: "stock";
   canonical: string;
   market: import("@fomo/core").StockMarket;
   country: import("@fomo/core").StockCountry;
@@ -415,9 +416,40 @@ export interface DiscoveryStockResponse {
   reason?: string;
 }
 
+export interface DiscoveryThemeBundleItemResponse {
+  ticker: string;
+  label: string;
+  market: import("@fomo/core").StockMarket;
+  country?: import("@fomo/core").StockCountry;
+  sector?: string;
+  relation: "customer" | "supplier" | "material" | "peer" | "beneficiary";
+  reason: string;
+  source: string;
+  confidence: "L" | "M" | "H";
+  changePct?: number;
+  naverCode?: string;
+  symbol?: string;
+}
+
+export interface DiscoveryThemeBundleResponse {
+  kind: "theme_bundle";
+  id: string;
+  title: string;
+  subtitle: string;
+  source: string;
+  asOf: string;
+  confidence: "L" | "M" | "H";
+  anchorTicker: string;
+  relation: "event_bundle";
+  items: DiscoveryThemeBundleItemResponse[];
+}
+
+export type DiscoveryCardResponse = DiscoveryStockResponse | DiscoveryThemeBundleResponse;
+
 export interface DiscoveryResponse {
   asOf: string;
   stocks: DiscoveryStockResponse[];
+  cards?: DiscoveryCardResponse[];
   fronts: Record<string, StockFrontResponse>;
   confidence: "L" | "M" | "H";
   source: string;
@@ -434,7 +466,7 @@ function isDiscoveryResponse(value: unknown): value is DiscoveryResponse {
 }
 
 function hasDiscoveryCards(value: DiscoveryResponse | null | undefined): value is DiscoveryResponse {
-  return !!value && isDiscoveryResponse(value) && value.stocks.length > 0;
+  return !!value && isDiscoveryResponse(value) && (value.stocks.length > 0 || (value.cards?.length ?? 0) > 0);
 }
 
 function readStoredDiscovery(country: DiscoveryCountryScope = "KR"): DiscoveryResponse | null {

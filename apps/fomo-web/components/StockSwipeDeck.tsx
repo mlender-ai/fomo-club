@@ -16,6 +16,7 @@ import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
 import type { DeckStock } from "@/lib/discoveryDeck";
+import { isThemeBundleCard, type DiscoveryDeckCard, type DeckThemeBundle } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
@@ -53,7 +54,7 @@ export type FrontEntry = {
 type UndoEntry = {
   idx: number;
   dir: "left" | "right";
-  stock: DeckStock;
+  stock: DiscoveryDeckCard;
 };
 
 function prefersReducedMotion(): boolean {
@@ -202,6 +203,80 @@ function FeedSignalStrip({
           <span className="shrink-0 text-[10px] text-muted/80">{row.point.source}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function cardKey(card: DiscoveryDeckCard): string {
+  return isThemeBundleCard(card) ? card.id : card.canonical;
+}
+
+function cardLabel(card: DiscoveryDeckCard): string {
+  return isThemeBundleCard(card) ? card.title : card.canonical;
+}
+
+function isStockCard(card: DiscoveryDeckCard): card is DeckStock {
+  return !isThemeBundleCard(card);
+}
+
+function relationLabel(relation: DeckThemeBundle["items"][number]["relation"]): string {
+  switch (relation) {
+    case "customer":
+      return "수요처";
+    case "supplier":
+      return "공급사";
+    case "material":
+      return "원재료";
+    case "beneficiary":
+      return "확산 수혜";
+    case "peer":
+    default:
+      return "비교군";
+  }
+}
+
+function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progress?: string | undefined }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0">
+        <span className="font-pixel text-[10px] uppercase tracking-wide text-muted">THEME BUNDLE</span>
+        <h3 className="mt-3 text-2xl font-bold leading-8 text-whiteout" style={clampStyle(2)}>
+          {bundle.title}
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-muted" style={clampStyle(2)}>
+          {bundle.subtitle}
+        </p>
+      </div>
+
+      <div className="mt-5 grid min-h-0 gap-2 overflow-hidden">
+        {bundle.items.slice(0, 4).map((item) => (
+          <div key={`${bundle.id}:${item.ticker}`} className="rounded-xl border border-hairline bg-white/[0.035] px-3 py-2.5">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-base font-bold text-whiteout">{item.label}</span>
+              <span className="shrink-0 rounded-full border border-hairline-soft px-2 py-0.5 text-[10px] text-muted">
+                {relationLabel(item.relation)}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted" style={clampStyle(2)}>
+              {item.reason}
+            </p>
+            <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-muted/80">
+              <span>{item.source}</span>
+              {typeof item.changePct === "number" && (
+                <span style={{ color: item.changePct > 0 ? DIR_COLOR.up : item.changePct < 0 ? DIR_COLOR.down : DIR_COLOR.flat }}>
+                  {item.changePct > 0 ? "+" : ""}
+                  {item.changePct.toFixed(2)}%
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-auto flex shrink-0 items-center justify-between pt-2">
+        <span className="font-pixel text-[11px] text-muted">관계 근거 · {bundle.confidence}</span>
+        {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
+      </div>
     </div>
   );
 }
@@ -384,7 +459,7 @@ function StockCardLoadingFace({
 }
 
 interface StockSwipeDeckProps {
-  stocks: DeckStock[];
+  stocks: DiscoveryDeckCard[];
   initialFronts?: Record<string, FrontEntry>;
   contextLabel?: string | undefined;
   loggedIn?: boolean | undefined;
@@ -426,7 +501,8 @@ export function StockSwipeDeck({
   const at = (i: number) => stocks[((i % stocks.length) + stocks.length) % stocks.length]!;
 
   const ensureFront = useCallback(
-    (stock: DeckStock) => {
+    (stock: DiscoveryDeckCard) => {
+      if (isThemeBundleCard(stock)) return;
       const key = stock.canonical;
       if (front[key] || inflight.current.has(key)) return;
       if (!stock.naverCode) {
@@ -531,7 +607,8 @@ export function StockSwipeDeck({
   const saveDiscovery = (stock: DeckStock) => {
     upsertWatch(stock.canonical, Date.now(), { sector: stock.sector, reason: whyFor(stock) });
   };
-  const renderFace = (stock: DeckStock, progress?: string) => {
+  const renderFace = (stock: DiscoveryDeckCard, progress?: string) => {
+    if (isThemeBundleCard(stock)) return <BundleCardFace bundle={stock} progress={progress} />;
     const e = front[stock.canonical];
     if (!e) {
       return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
@@ -592,6 +669,12 @@ export function StockSwipeDeck({
   const advance = useCallback(
     (dir: "left" | "right") => {
       const stock = at(idx);
+      if (isThemeBundleCard(stock)) {
+        setUndoEntry({ idx, dir, stock });
+        recordDiscoveryEvent("swipe", { direction: dir, hydrated: true });
+        flingNext(dir);
+        return;
+      }
       setUndoEntry({ idx, dir, stock });
       if (dir === "right") saveDiscovery(stock);
       recordDiscoveryEvent("swipe", { direction: dir, hydrated: !!front[stock.canonical] });
@@ -628,6 +711,11 @@ export function StockSwipeDeck({
   // 비로그인은 로그인 유도 후 스냅백(저장·매칭 없음). kind는 매칭 모먼트 표현만 다름(하트/별).
   const interest = useCallback((kind: "like" | "super") => {
     const stock = at(idx);
+    if (isThemeBundleCard(stock)) {
+      recordDiscoveryEvent("swipe", { direction: "right", hydrated: true });
+      flingNext("right");
+      return;
+    }
     if (!loggedIn && onRequireLogin) {
       onRequireLogin();
       setDx(0);
@@ -678,7 +766,8 @@ export function StockSwipeDeck({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (exiting || restoring) return;
-    if (!front[at(idx).canonical]) return;
+    const current = at(idx);
+    if (isStockCard(current) && !front[current.canonical]) return;
     dragging.current = true;
     moved.current = false;
     startX.current = e.clientX;
@@ -721,7 +810,8 @@ export function StockSwipeDeck({
   }, [stocks]);
 
   useEffect(() => {
-    const stock = at(idx).canonical;
+    const card = at(idx);
+    const stock = isStockCard(card) ? card.canonical : card.id;
     if (!firstCardRecorded.current) {
       firstCardRecorded.current = true;
       recordDiscoveryEvent("first_card_display");
@@ -732,7 +822,9 @@ export function StockSwipeDeck({
   }, [idx, stocks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const stock = at(idx).canonical;
+    const card = at(idx);
+    if (!isStockCard(card)) return;
+    const stock = card.canonical;
     if (!front[stock] || hydratedRecorded.current.has(stock)) return;
     hydratedRecorded.current.add(stock);
     recordDiscoveryEvent("card_hydrate");
@@ -749,7 +841,7 @@ export function StockSwipeDeck({
         : flingTransform(exiting)
       : `translate(${dx}px, ${dy}px) rotate(${dx * 0.04}deg)`;
   const topTransition = dragging.current || restorePrimed ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
-  const topReady = !!front[top.canonical];
+  const topReady = isThemeBundleCard(top) ? true : !!front[top.canonical];
 
   return (
     <div className="w-full">
@@ -772,7 +864,7 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (topReady && !moved.current && !exiting && !restoring) openDepth(top, "card");
+            if (topReady && isStockCard(top) && !moved.current && !exiting && !restoring) openDepth(top, "card");
           }}
           className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
           style={{ transform: topTransform, transition: topTransition }}
@@ -817,8 +909,8 @@ export function StockSwipeDeck({
         <button
           onClick={undoLast}
           disabled={!!exiting || restoring || !undoEntry}
-          aria-label={undoEntry ? `${undoEntry.stock.canonical} 카드로 돌아가기` : "이전 카드 없음"}
-          title={undoEntry ? `${undoEntry.stock.canonical} 다시 보기` : "이전 카드 없음"}
+          aria-label={undoEntry ? `${cardLabel(undoEntry.stock)} 카드로 돌아가기` : "이전 카드 없음"}
+          title={undoEntry ? `${cardLabel(undoEntry.stock)} 다시 보기` : "이전 카드 없음"}
           className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-muted transition-colors hover:text-whiteout disabled:opacity-30"
         >
           <UndoIcon size={24} />

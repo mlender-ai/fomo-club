@@ -19,6 +19,8 @@ import {
   type AxisSignal,
   type CardFrontSignals,
   type DiscoveryCandidate,
+  type DiscoveryThemeBundleCard,
+  type DiscoveryThemeBundleItem,
   type DiscoveryEvent,
   type DiscoveryMarket,
   type FomoScoreResult,
@@ -32,6 +34,7 @@ import {
 import { fetchDartDisclosuresByStock, type DartDisclosureHit } from "./dart-disclosures";
 import { fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
+import { relatedTo, type RelatedNode } from "./relation-graph";
 import { fetchRecentSecFilings } from "./sec-edgar";
 import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
@@ -48,6 +51,9 @@ const DISCOVERY_RECOVERY_MIN_CARDS = 12;
 const DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF = 30;
 const TARGETED_MATERIAL_DEFAULT_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
 const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
+const THEME_BUNDLE_MAX_CARDS = 2;
+const THEME_BUNDLE_MIN_ITEMS = 2;
+const THEME_BUNDLE_MAX_ITEMS = 4;
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? Math.max(0, Math.min(720, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 720) || 720))
   : 0;
@@ -104,9 +110,14 @@ export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
   reason?: string;
 }
 
+export type DiscoveryDeckCardPayload =
+  | ({ kind: "stock" } & DiscoveryStockPayload)
+  | DiscoveryThemeBundleCard;
+
 export interface DiscoveryResponse {
   asOf: string;
   stocks: DiscoveryStockPayload[];
+  cards?: DiscoveryDeckCardPayload[];
   fronts: Record<string, DiscoveryFrontSeed>;
   confidence: "L" | "M" | "H";
   source: string;
@@ -753,6 +764,116 @@ function frontSeed(
   };
 }
 
+function relationCopy(relation: RelatedNode["relation"]): string {
+  switch (relation) {
+    case "customer":
+      return "수요처";
+    case "supplier":
+      return "공급사";
+    case "material":
+      return "원재료";
+    case "beneficiary":
+      return "확산 수혜";
+    case "peer":
+    default:
+      return "비교군";
+  }
+}
+
+function bundleAnchorEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
+  return candidate.events
+    .filter((event) => isDeckDisplayEvent(event, candidate))
+    .filter((event) => event.kind === "disclosure" || event.kind === "news_mention" || event.kind === "flow_entry")
+    .sort((a, b) => {
+      const priority = (event: DiscoveryEvent) =>
+        event.kind === "disclosure" ? 0 : event.kind === "news_mention" ? 1 : 2;
+      return priority(a) - priority(b) || b.strength - a.strength || a.kind.localeCompare(b.kind);
+    })[0];
+}
+
+function relationItemFromNode(
+  node: RelatedNode,
+  row: DiscoveryMarketRow,
+): DiscoveryThemeBundleItem {
+  return {
+    ticker: node.ticker,
+    label: node.label,
+    market: row.market,
+    country: row.country,
+    relation: node.relation,
+    reason: node.reason,
+    source: node.source,
+    confidence: node.confidence,
+    ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
+    ...(node.sector ? { sector: node.sector } : {}),
+    ...(row.naverCode ?? node.naverCode ? { naverCode: row.naverCode ?? node.naverCode } : {}),
+    ...(row.symbol ?? node.symbol ? { symbol: row.symbol ?? node.symbol } : {}),
+  };
+}
+
+export function buildThemeBundleCards(
+  ranked: readonly DiscoveryCandidate[],
+  rowsByTicker: ReadonlyMap<string, DiscoveryMarketRow>,
+): DiscoveryThemeBundleCard[] {
+  const cards: DiscoveryThemeBundleCard[] = [];
+  const usedAnchors = new Set<string>();
+  for (const candidate of ranked) {
+    if (cards.length >= THEME_BUNDLE_MAX_CARDS) break;
+    if (usedAnchors.has(candidate.ticker)) continue;
+    const event = bundleAnchorEvent(candidate);
+    if (!event?.label) continue;
+    const relations = relatedTo({
+      kind: "event",
+      ticker: candidate.ticker,
+      ...(candidate.sector ? { theme: candidate.sector } : {}),
+    });
+    const items = relations
+      .filter((node) => node.ticker !== candidate.ticker)
+      .map((node) => {
+        const row = rowsByTicker.get(node.ticker);
+        return row ? relationItemFromNode(node, row) : null;
+      })
+      .filter((item): item is DiscoveryThemeBundleItem => item !== null)
+      .sort((a, b) => {
+        const aRank = rowsByTicker.get(a.ticker)?.marketCapRank ?? 9999;
+        const bRank = rowsByTicker.get(b.ticker)?.marketCapRank ?? 9999;
+        return aRank - bRank || a.ticker.localeCompare(b.ticker);
+      })
+      .slice(0, THEME_BUNDLE_MAX_ITEMS);
+    if (items.length < THEME_BUNDLE_MIN_ITEMS) continue;
+    const theme = candidate.sector ?? "관련 흐름";
+    const title = `${theme} 사건으로 같이 볼 종목 ${items.length}개`;
+    cards.push({
+      kind: "theme_bundle",
+      id: `bundle:${candidate.ticker}:${event.kind}:${candidate.asOf.slice(0, 10)}`,
+      title,
+      subtitle: event.label,
+      source: event.source,
+      asOf: event.asOf,
+      confidence: event.confidence,
+      anchorTicker: candidate.ticker,
+      relation: "event_bundle",
+      items,
+    });
+    usedAnchors.add(candidate.ticker);
+  }
+  return cards;
+}
+
+function interleaveThemeBundles(
+  stocks: readonly DiscoveryStockPayload[],
+  bundles: readonly DiscoveryThemeBundleCard[],
+): DiscoveryDeckCardPayload[] {
+  const cards: DiscoveryDeckCardPayload[] = stocks.map((stock) => ({ kind: "stock", ...stock }));
+  if (bundles.length === 0 || cards.length < 8) return cards;
+  const out = [...cards];
+  bundles.forEach((bundle, index) => {
+    const insertAt = Math.min(out.length, 6 + index * 10);
+    out.splice(insertAt, 0, bundle);
+  });
+  return out;
+}
+
 export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOptions = {}): Promise<DiscoveryResponse> {
   const scope = options.country ?? "KR";
   const targetedMaterialEnabled = options.targetedMaterial ?? TARGETED_MATERIAL_DEFAULT_ENABLED;
@@ -923,10 +1044,12 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       axisHook: selectMultiAxisHook(axisSignals),
     };
   });
+  const bundleCards = buildThemeBundleCards(ranked, rowsByTicker);
 
   return {
     asOf,
     stocks,
+    cards: interleaveThemeBundles(stocks, bundleCards),
     fronts,
     confidence: stocks.length >= DISCOVERY_DECK_CARD_COUNT ? "H" : stocks.length >= 30 ? "M" : "L",
     source: targetedMaterialEnabled ? DISCOVERY_SOURCE_LABEL : "시장 시세·공시·수급 캐시",
