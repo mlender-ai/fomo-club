@@ -147,6 +147,12 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 
 /** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
+const PRICE_ONLY_REASON_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요/;
+
+function nonPriceOnlyHeadline(text: string | undefined): string | undefined {
+  if (!text || PRICE_ONLY_REASON_PATTERN.test(text)) return undefined;
+  return text;
+}
 
 function clampStyle(lines: number): CSSProperties {
   return {
@@ -473,9 +479,10 @@ export function StockSwipeDeck({
     }
     const fomo = e?.fomo ?? EMPTY_FOMO;
     const reasonHeadlineSeed = compactReasonHeadlineSeed(stock.reason);
+    const discoveryHeadline = nonPriceOnlyHeadline(reasonHeadlineSeed);
     const signalsForHook: CardFrontSignals = {
       ...(e?.signals ?? {}),
-      ...(!e?.signals.newsEventLabel && reasonHeadlineSeed ? { newsEventLabel: reasonHeadlineSeed } : {}),
+      ...(!e?.signals.newsEventLabel && discoveryHeadline ? { newsEventLabel: discoveryHeadline } : {}),
     };
     const legacyHook = selectFomoHook({
       fomo,
@@ -492,8 +499,14 @@ export function StockSwipeDeck({
       ...(typeof e?.signals.changePct === "number" ? { changePct: e.signals.changePct } : {}),
       ...(typeof e?.signals.marketCapRank?.rank === "number" ? { marketCapRank: e.signals.marketCapRank.rank } : {}),
     });
-    const view = { ...baseView, headline: axisHook?.hookText ?? legacyHook.headline };
-    const usedReasonHeadline = !!reasonHeadlineSeed && !e?.signals.newsEventLabel && !axisHook && legacyHook.kind === "news_event";
+    const fallbackHeadline = stock.sector ? `${stock.sector} 흐름에서 새로 확인하는 종목이에요.` : baseView.headline;
+    const headline =
+      discoveryHeadline ??
+      nonPriceOnlyHeadline(axisHook?.hookText) ??
+      nonPriceOnlyHeadline(legacyHook.headline) ??
+      fallbackHeadline;
+    const view = { ...baseView, headline };
+    const usedReasonHeadline = !!discoveryHeadline && !e?.signals.newsEventLabel && !axisHook && legacyHook.kind === "news_event";
     const evidenceLine = usedReasonHeadline ? undefined : compactEvidenceLine(stock.reason);
     return {
       view,

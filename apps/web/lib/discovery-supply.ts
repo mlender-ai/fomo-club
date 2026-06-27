@@ -374,8 +374,15 @@ function ordinalText(rank: number): string {
   return `${rank}번째로`;
 }
 
+function industryHintForTicker(ticker: string): string | undefined {
+  for (const hint of INDUSTRY_HINTS) {
+    if (hint.pattern.test(ticker)) return hint.label;
+  }
+  return undefined;
+}
+
 function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent {
-  const sector = theme?.sector ?? sectorOf(row.canonical);
+  const sector = theme?.sector ?? sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
   const rankText = row.marketCapRank ? `시총 ${row.marketCapRank}위권` : "시총 상위권";
   const changePct = row.changePct;
   const change = typeof changePct === "number" ? pctText(changePct) : undefined;
@@ -397,6 +404,17 @@ function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | un
       label: relativeLabel,
     };
   }
+  if (sector) {
+    return {
+      kind: "market_context",
+      firstSeen: true,
+      strength: Math.min(0.68, 0.42 + (typeof changePct === "number" ? Math.abs(changePct) / 55 : 0)),
+      source,
+      asOf,
+      confidence: "M",
+      label: `${sector} 흐름에서 새로 확인하는 종목이에요.`,
+    };
+  }
   if (typeof changePct === "number" && change) {
     return {
       kind: "market_context",
@@ -405,7 +423,7 @@ function eventFromMarketContext(row: NaverMarketRow, theme: ThemeMoveSignal | un
       source,
       asOf,
       confidence: "M",
-      label: `${row.market} ${rankText}에서 오늘 ${change} 움직였어요.`,
+      label: `${row.market === "KOSDAQ" ? "코스닥" : "코스피"} ${rankText}에서 새로 확인하는 종목이에요.`,
     };
   }
   return {
@@ -523,7 +541,12 @@ function isSameDayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): b
 
 function fallbackContextEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
   return candidate.events
-    .filter((event) => isSameDayEvent(event, candidate) && event.direction !== "down")
+    .filter((event) => {
+      if (!isSameDayEvent(event, candidate) || event.direction === "down") return false;
+      if (event.kind === "price_move") return false;
+      if (event.kind !== "market_context") return true;
+      return !!event.label && !/^KOSPI |^KOSDAQ /.test(event.label);
+    })
     .sort((a, b) => {
       const aTheme = a.kind === "theme_link" ? 1 : 0;
       const bTheme = b.kind === "theme_link" ? 1 : 0;
@@ -535,8 +558,13 @@ function fallbackDiscoveryReason(candidate: DiscoveryCandidate): string {
   const event = fallbackContextEvent(candidate);
   if (event?.kind === "theme_link" && event.label) return event.label;
   if (event?.kind === "market_context" && event.label) return event.label;
-  if (event?.kind === "price_move" && event.label) return `${event.label} 공개 재료는 더 확인 중이에요.`;
   return "오늘 시장에서 다시 확인할 종목으로 남겨뒀어요.";
+}
+
+function fallbackContextQuality(event: DiscoveryEvent): number {
+  if (event.kind === "theme_link") return 2;
+  if (event.kind === "market_context" && event.label && !/^코스피 |^코스닥 /.test(event.label)) return 1;
+  return 0;
 }
 
 export function recoverDiscoveryCandidates(
@@ -562,9 +590,12 @@ export function recoverDiscoveryCandidates(
       const bFamous = typeof b.candidate.marketCapRank === "number" && b.candidate.marketCapRank <= DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF ? 1 : 0;
       const aTheme = a.context.kind === "theme_link" ? 1 : 0;
       const bTheme = b.context.kind === "theme_link" ? 1 : 0;
+      const aQuality = fallbackContextQuality(a.context);
+      const bQuality = fallbackContextQuality(b.context);
       return (
         aFamous - bFamous ||
         bTheme - aTheme ||
+        bQuality - aQuality ||
         b.context.strength - a.context.strength ||
         (a.candidate.marketCapRank ?? 9999) - (b.candidate.marketCapRank ?? 9999) ||
         a.index - b.index ||

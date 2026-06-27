@@ -57,6 +57,7 @@ describe("discovery empty-deck recovery", () => {
       [],
       [
         candidate("대형주", "theme_link", 0.95, { rank: 1, label: "반도체 흐름에서 확인해요." }),
+        candidate("가격상승", "price_move", 0.99, { rank: 210, direction: "up", label: "오늘 가격이 +12.00% 움직였어요." }),
         candidate("하락주", "price_move", 0.99, { rank: 220, direction: "down", label: "오늘 가격이 -12.00% 움직였어요." }),
         candidate("발굴A", "theme_link", 0.6, { rank: 180, label: "AI 흐름에서 같이 확인해요." }),
         candidate("발굴B", "market_context", 0.7, { rank: 260, label: "시총 260위권에서 움직였어요." }),
@@ -65,8 +66,10 @@ describe("discovery empty-deck recovery", () => {
     );
 
     expect(recovered.map((row) => row.ticker)).toEqual(["발굴A", "발굴B", "대형주"]);
+    expect(recovered.map((row) => row.ticker)).not.toContain("가격상승");
     expect(recovered.map((row) => row.ticker)).not.toContain("하락주");
     expect(recovered.every((row) => row.reason && row.reason.length > 0)).toBe(true);
+    expect(recovered.every((row) => !/^오늘 가격이/.test(row.reason ?? ""))).toBe(true);
   });
 
   it("leaves a healthy material deck unchanged", () => {
