@@ -445,11 +445,6 @@ function formatRatio(value: number): string {
   return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}배`;
 }
 
-function formatSignedPct(value: number): string {
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
-  return `${sign}${Math.abs(value).toFixed(1)}%`;
-}
-
 function frontSignalMetrics(front: StockFrontResponse | null): BasicMetricView[] {
   if (!front) return [];
   const s = front.signals;
@@ -496,12 +491,14 @@ function frontSignalMetrics(front: StockFrontResponse | null): BasicMetricView[]
     typeof s.themePeerCount === "number" &&
     s.themePeerCount > 0
   ) {
+    const themeLabel = cleanText(s.themeLabel);
+    const themePosition = s.themeRelativeRank <= 1 ? `${themeLabel} 상위 흐름` : `${themeLabel} 동종 흐름`;
     metrics.push({
       label: "테마 안 위치",
-      value: `${cleanText(s.themeLabel)} ${s.themeRelativeRank}/${s.themePeerCount}`,
+      value: themePosition,
       term: "상대 흐름",
       ...(typeof s.themeRelativeChangePct === "number"
-        ? { note: `테마 평균 대비 ${formatSignedPct(s.themeRelativeChangePct)} 차이예요.` }
+        ? { note: `동종 종목 흐름과 비교한 위치예요.` }
         : {}),
     });
   }
@@ -608,7 +605,7 @@ function stockWatchPoint(front: StockFrontResponse | null): string {
     return `평소 ${formatRatio(s.volumeRatio)} 거래가 며칠 이어지는지 봐요.`;
   }
   if (s.themeLabel && typeof s.themeRelativeRank === "number" && typeof s.themePeerCount === "number") {
-    return `${cleanText(s.themeLabel)} 안에서 ${s.themeRelativeRank}/${s.themePeerCount} 위치가 유지되는지 봐요.`;
+    return `${cleanText(s.themeLabel)} 동종 흐름보다 먼저 보인 이유가 이어지는지 봐요.`;
   }
   if (front.changeDir === "up" && front.changeText) {
     return `오늘 오른 가격대에서 거래가 붙는지 봐요.`;

@@ -20,7 +20,7 @@ import {
 } from "@fomo/core";
 import { callAI, isAiConfigured } from "@fomo/shared";
 import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
-import { fetchFredDocs } from "./fred";
+import { fetchFredDocs, fetchFredDocsForStock } from "./fred";
 import { fetchDcStockTitles } from "./dcinside";
 import { fetchDartDisclosuresForCode } from "./dart-disclosures";
 import { fetchRecentSecFilings } from "./sec-edgar";
@@ -231,27 +231,36 @@ export async function collectStockDocs(stock: string, opts: StockUnderstandingOp
     if (stockMatchesText(stock, s)) return true;
     return s.toLowerCase().includes(stock.trim().toLowerCase());
   };
-
-  const [stockNewsRes, researchRes, dartRes, usNewsRes, secRes, newsRes, dcRes, commRes, redditRes] = await Promise.allSettled([
-    code ? fetchNaverStockNews(code, MAX_NEWS) : Promise.resolve([]),
-    code ? fetchNaverCompanyResearch(code, stock, 6) : Promise.resolve([]),
-    code ? fetchDartDisclosuresForCode(code, stock, todayKst()) : Promise.resolve([]),
-    isForeign && symbol ? fetchYahooStockNews(symbol, MAX_NEWS) : Promise.resolve([]),
-    isForeign && symbol ? fetchRecentSecFilings(symbol, 4) : Promise.resolve([]),
-    fetchAllNews(),
-    fetchDcStockTitles(),
-    code ? fetchNaverBoardPosts(code) : Promise.resolve([]),
-    // 미국/글로벌 종목만 레딧 원문 수집(국내주는 종토방이 본진). 코인은 cryptocurrency 포함.
-    isForeign
-      ? Promise.allSettled(DEFAULT_SUBREDDITS.map((s) => fetchSubredditPosts(s))).then((rs) =>
-          rs.flatMap((r) => (r.status === "fulfilled" ? r.value : []))
-        )
-      : Promise.resolve([]),
-  ]);
-
   const docs: SourceDoc[] = [];
   let n = 0;
   const nextId = () => `S${++n}`;
+
+  const [stockNewsRes, researchRes, dartRes, usNewsRes, secRes, fredRes, newsRes, dcRes, commRes, redditRes] =
+    await Promise.allSettled([
+      code ? fetchNaverStockNews(code, MAX_NEWS) : Promise.resolve([]),
+      code ? fetchNaverCompanyResearch(code, stock, 6) : Promise.resolve([]),
+      code ? fetchDartDisclosuresForCode(code, stock, todayKst()) : Promise.resolve([]),
+      isForeign && symbol ? fetchYahooStockNews(symbol, MAX_NEWS) : Promise.resolve([]),
+      isForeign && symbol ? fetchRecentSecFilings(symbol, 4) : Promise.resolve([]),
+      fetchFredDocsForStock(
+        stock,
+        {
+          ...(opts.market ? { market: opts.market } : {}),
+          ...(opts.country ? { country: opts.country } : {}),
+        },
+        nextId
+      ),
+      fetchAllNews(),
+      fetchDcStockTitles(),
+      code ? fetchNaverBoardPosts(code) : Promise.resolve([]),
+      // 미국/글로벌 종목만 레딧 원문 수집(국내주는 종토방이 본진). 코인은 cryptocurrency 포함.
+      isForeign
+        ? Promise.allSettled(DEFAULT_SUBREDDITS.map((s) => fetchSubredditPosts(s))).then((rs) =>
+            rs.flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+          )
+        : Promise.resolve([]),
+    ]);
+
   const seenNews = new Set<string>();
   const pushNews = (a: Awaited<ReturnType<typeof fetchAllNews>>[number]) => {
     const key = a.url || a.title;
@@ -295,6 +304,7 @@ export async function collectStockDocs(stock: string, opts: StockUnderstandingOp
         title: hit.label,
         body: `${hit.asOf} 접수 공시`,
         source: hit.source,
+        ...(hit.url ? { url: hit.url } : {}),
         publishedAt: hit.asOf,
         tier: "official-high",
       });
@@ -319,6 +329,13 @@ export async function collectStockDocs(stock: string, opts: StockUnderstandingOp
     }
   } else {
     console.warn("[stock-understanding] sec disclosure error", stock, secRes.reason);
+  }
+
+  // FRED 공식 거시/시장 데이터 — 종목의 배경 지표로만 노출한다. 강세/약세 근거로 과해석하지 않는다.
+  if (fredRes.status === "fulfilled") {
+    docs.push(...fredRes.value);
+  } else {
+    console.warn("[stock-understanding] fred stock macro error", stock, fredRes.reason);
   }
 
   // US per-ticker 외신 — Yahoo Finance RSS(차트 API 아님), 종목 별칭이 실제 등장하는 기사만.

@@ -3,6 +3,7 @@ const DISCOVERY_REASON_JOINER = " — ";
 export interface DiscoveryHeadlineInput {
   reason?: string | undefined;
   sector?: string | undefined;
+  ticker?: string | undefined;
   marketCapRank?: number | undefined;
 }
 
@@ -68,21 +69,57 @@ function sectorFromDetail(detail: string, fallback?: string): string {
   return fallback?.trim() || "섹터";
 }
 
-function rankFromDetail(detail: string, fallback?: number): number | undefined {
-  if (typeof fallback === "number" && Number.isFinite(fallback)) return fallback;
-  const match = detail.match(/시총\s+(\d+)위/);
-  return match?.[1] ? Number(match[1]) : undefined;
-}
-
 function clipped(text: string, max = 34): string {
   const clean = cleanInline(text);
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
+const SECTOR_THESIS: Array<{ pattern: RegExp; subject: string }> = [
+  { pattern: /전기차|자동차|모빌리티/, subject: "전기차 수요를 보는 종목" },
+  { pattern: /클라우드|데이터|소프트웨어|AI/, subject: "AI·데이터 인프라를 보는 종목" },
+  { pattern: /반도체|기판|장비|소재/, subject: "반도체 장비·소재 흐름을 보는 종목" },
+  { pattern: /바이오|제약|헬스케어/, subject: "임상·신약 모멘텀을 보는 종목" },
+  { pattern: /화장품|뷰티/, subject: "K뷰티 수요를 보는 종목" },
+  { pattern: /유통|백화점|소비/, subject: "소비 회복 흐름을 보는 종목" },
+  { pattern: /금융|보험|증권|은행/, subject: "금리·금융 업황을 보는 종목" },
+  { pattern: /에너지|전력|원전|태양광|풍력/, subject: "전력·에너지 투자 흐름을 보는 종목" },
+  { pattern: /건설|건자재/, subject: "수주·정책 흐름을 보는 종목" },
+  { pattern: /게임/, subject: "게임 신작·운영 흐름을 보는 종목" },
+  { pattern: /방산|우주|항공/, subject: "국방·우주 수요를 보는 종목" },
+  { pattern: /조선|해양/, subject: "선박 발주 흐름을 보는 종목" },
+];
+
+const STOCK_THESIS: Array<{ pattern: RegExp; subject: string }> = [
+  { pattern: /루시드|Lucid/i, subject: "프리미엄 전기차 수요를 보는 루시드" },
+  { pattern: /몽고|Mongo/i, subject: "AI 앱 데이터 수요를 보는 몽고DB" },
+  { pattern: /사운드하운드|SoundHound/i, subject: "음성 AI 상용화를 보는 사운드하운드AI" },
+  { pattern: /광주신세계/, subject: "호남 소비 흐름을 보는 광주신세계" },
+  { pattern: /롯데손해보험/, subject: "보험 업황을 보는 롯데손해보험" },
+];
+
+function thesisSubject(ticker: string | undefined, sector: string): string {
+  const stockName = cleanInline(ticker);
+  const stockMatch = STOCK_THESIS.find((entry) => entry.pattern.test(stockName));
+  if (stockMatch) return stockMatch.subject;
+  const sectorMatch = SECTOR_THESIS.find((entry) => entry.pattern.test(sector));
+  return sectorMatch?.subject ?? `${sector} 흐름을 보는 종목`;
+}
+
+function contextHeadline(ticker: string | undefined, sector: string, detail: string): string {
+  const subject = thesisSubject(ticker, sector);
+  if (/원문|근거는 아직|수급·거래·뉴스/.test(detail)) {
+    return `${subject}, 원문 근거는 아직 얇아요`;
+  }
+  if (/제일|가장|먼저|상위권|눈에 띄/.test(detail)) {
+    return `${subject}에 먼저 반응이 붙었어요`;
+  }
+  return `${subject}에 새 움직임이 붙었어요`;
+}
+
 export function compactDiscoveryCardHeadline({
   reason,
   sector,
-  marketCapRank,
+  ticker,
 }: DiscoveryHeadlineInput): string | undefined {
   const clean = cleanInline(reason);
   if (!clean) return undefined;
@@ -93,14 +130,12 @@ export function compactDiscoveryCardHeadline({
 
   if (state === "혼자 튄 무명주") {
     const displaySector = sectorFromDetail(detail, sector);
-    const rank = rankFromDetail(detail, marketCapRank);
-    const caveat = /뒤를 받칠/.test(detail);
-    const subject = rank ? `시총 ${rank}위 ${displaySector}주` : `${displaySector} 안의 무명주`;
-    return caveat ? clipped(`${subject}가 튀었지만 근거는 얇아요`) : clipped(`${subject}가 혼자 튀었어요`);
+    return clipped(contextHeadline(ticker, displaySector, detail), 42);
   }
 
   if (state === "이유 얇은 섹터선두") {
-    return clipped(`${sectorFromDetail(detail, sector)} 선두지만 근거는 얇아요`);
+    const displaySector = sectorFromDetail(detail, sector);
+    return clipped(contextHeadline(ticker, displaySector, detail), 42);
   }
 
   if (state === "뉴스 재료 붙은 종목" || state === "공시 먼저 뜬 종목" || (!state && /뉴스|공시|소식|계약|수주/.test(clean))) {

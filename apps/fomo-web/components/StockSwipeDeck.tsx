@@ -568,6 +568,7 @@ export function StockSwipeDeck({
       const discoveryHeadline = nonPriceOnlyHeadline(stock.reason) ?? compactDiscoveryCardHeadline({
         reason: stock.reason,
         sector: stock.sector,
+        ticker: stock.canonical,
       });
       const view: FomoCardView = {
         scoreText: "",
@@ -586,6 +587,7 @@ export function StockSwipeDeck({
       compactDiscoveryCardHeadline({
         reason: stock.reason,
         sector: stock.sector,
+        ticker: stock.canonical,
         marketCapRank: e?.signals.marketCapRank?.rank,
       });
     const reasonHeadlineSeed = surfaceReasonHeadline ?? compactReasonHeadlineSeed(stock.reason);
@@ -627,8 +629,8 @@ export function StockSwipeDeck({
     };
   };
   const rankLabelFor = (stock: DeckStock): string | undefined => {
-    const r = front[stock.canonical]?.signals.marketCapRank;
-    return r ? `시총 ${r.rank}위` : undefined; // 시장명은 1행에 이미 있음(중복 방지)
+    void stock;
+    return undefined;
   };
   const whyFor = (stock: DeckStock): string => {
     const e = front[stock.canonical];

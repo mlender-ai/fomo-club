@@ -180,13 +180,13 @@ function herdAxis(signals: CardFrontSignals, asOf: string): AxisSignal {
     return signal("herd", false, 0, "", []);
   }
   if (rank === 1 && pct > 0) {
-    return signal("herd", true, 0.76, `오늘 ${theme} 종목 중 가장 많이 올랐어요(${pctText(pct)}).`, [
-      { text: `${theme} ${rank}/${peerCount}, 등락률 ${pctText(pct)}`, sourceKind: "market", source: "섹터 상대강도", asOf },
+    return signal("herd", true, 0.76, `오늘 ${theme} 흐름 안에서 가장 먼저 눈에 띄었어요.`, [
+      { text: `${theme} 동종 흐름, 등락률 ${pctText(pct)}`, sourceKind: "market", source: "동종 흐름", asOf },
     ]);
   }
   if (typeof avg === "number" && typeof delta === "number" && avg <= -2 && delta >= 3) {
     return signal("herd", true, Math.min(0.82, 0.52 + delta / 18), `${theme}가 빠지는 날, 상대적으로 덜 빠졌어요.`, [
-      { text: `${theme} 평균 ${pctText(avg)}, 상대 ${pctText(delta)}`, sourceKind: "market", source: "섹터 상대강도", asOf },
+      { text: `${theme} 평균 ${pctText(avg)}, 차이 ${pctText(delta)}`, sourceKind: "market", source: "동종 흐름", asOf },
     ]);
   }
   return signal("herd", false, 0, "", []);

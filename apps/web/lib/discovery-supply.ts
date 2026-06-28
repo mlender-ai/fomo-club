@@ -545,26 +545,25 @@ export function formatThemeDiscoveryLabel(input: {
   changePct: number;
 }): string {
   if (input.rank <= 3) {
-    const orderText = input.rank === 1 ? "제일 셌어요" : `${ordinalText(input.rank)} 눈에 띄었어요`;
-    return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText}.`;
+    const orderText = input.rank === 1 ? "가장 먼저 눈에 띄었어요" : "상위권으로 눈에 띄었어요";
+    return `${input.sector} 흐름 안에서 ${orderText}.`;
   }
   if (input.averageChangePct < 0 && input.changePct > 0) {
     return `${input.sector} 흐름이 눌린 날에도 이 종목은 플러스권이에요.`;
   }
-  return `${input.sector} 안에서 주변 종목보다 오늘 더 강했어요.`;
+  return `${input.sector} 흐름보다 먼저 반응했어요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
   sector: string;
-  rankText: string;
   changePct: number;
   change: string;
 }): string {
   const positive = input.changePct > 0;
   const largeMove = Math.abs(input.changePct) >= 10;
-  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목의 변동성이 크게 잡혔어요.`;
-  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목의 신호가 새로 잡혔어요.`;
-  return `${input.sector} 안에서 ${input.rankText} 종목의 약세 흐름도 같이 확인해요.`;
+  if (positive && largeMove) return `${input.sector} 안에서 갑자기 관심이 커진 종목이에요.`;
+  if (positive) return `${input.sector} 안에서 오늘 새로 눈에 들어온 종목이에요.`;
+  return `${input.sector} 안에서 약세 흐름도 같이 확인해요.`;
 }
 
 function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
@@ -597,13 +596,6 @@ function pctText(value: number): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function ordinalText(rank: number): string {
-  if (rank === 1) return "가장";
-  if (rank === 2) return "두 번째로";
-  if (rank === 3) return "세 번째로";
-  return `${rank}번째로`;
-}
-
 function industryHintForTicker(ticker: string): string | undefined {
   for (const hint of INDUSTRY_HINTS) {
     if (hint.pattern.test(ticker)) return hint.label;
@@ -613,17 +605,10 @@ function industryHintForTicker(ticker: string): string | undefined {
 
 function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent {
   const sector = theme?.sector ?? row.sectorHint ?? sectorOf(row.canonical) ?? industryHintForTicker(row.canonical);
-  const rankText = row.marketCapRank ? `시총 ${row.marketCapRank}위권` : "시총 상위권";
   const changePct = row.changePct;
   const change = typeof changePct === "number" ? pctText(changePct) : undefined;
   const source = row.country === "KR" ? "네이버 시세" : row.sessionLabel ?? (typeof row.changePct === "number" || row.priceText ? "Twelve Data 시세" : "FOMO US 종목 사전");
   if (sector && theme && typeof changePct === "number") {
-    const relativeLabel =
-      theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "오늘 제일 셌어요" : `${ordinalText(theme.rank)} 눈에 띄었어요`}.`
-        : changePct > 0
-          ? `오늘 ${sector} 안에서 주변보다 더 강했어요.`
-          : `오늘 ${sector} 안에서 약세 흐름도 같이 확인해요.`;
     return {
       kind: "market_context",
       firstSeen: true,
@@ -631,7 +616,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
       source,
       asOf,
       confidence: "M",
-      label: relativeLabel,
+      label: formatThemeDiscoveryLabel({ ...theme, changePct }),
       changePct,
       themeRank: theme.rank,
       themePeerCount: theme.peerCount,
@@ -648,7 +633,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
         source,
         asOf,
         confidence: "M",
-        label: formatSectorMarketContextLabel({ sector, rankText, changePct, change }),
+        label: formatSectorMarketContextLabel({ sector, changePct, change }),
         changePct,
       };
     }
@@ -671,7 +656,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
       source,
       asOf,
       confidence: "M",
-      label: `${row.market} ${rankText}에서 새로 확인하는 종목이에요.`,
+      label: `${row.market} 안에서 새로 눈에 들어온 종목이에요.`,
       changePct,
     };
   }
@@ -682,7 +667,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
     source,
     asOf,
     confidence: "L",
-    label: `${row.market} ${rankText}이라 오늘 시장 흐름과 같이 확인해요.`,
+    label: `${row.market} 안에서 새로 확인된 시장 흐름이 있어요.`,
   };
 }
 
@@ -1395,6 +1380,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       asOf: disclosure.asOf,
       confidence: "H",
       label: disclosure.label,
+      ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
     };
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   }

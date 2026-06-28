@@ -193,7 +193,7 @@ function buildFeedPoints(
   }
   if (typeof signals.themeRelativeRank === "number" && signals.themeRelativeRank === 1 && typeof signals.changePct === "number" && signals.changePct > 0) {
     pushUnique(bull, {
-      text: `${signals.themeLabel ?? "같은 테마"} 안에서 오늘 가장 많이 오른 쪽이에요.`,
+      text: `${signals.themeLabel ?? "같은 테마"} 흐름 안에서 가장 먼저 눈에 띄었어요.`,
       source: "테마",
     });
   }
