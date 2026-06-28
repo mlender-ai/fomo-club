@@ -415,6 +415,8 @@ export interface DiscoveryStockResponse {
   sector: string;
   whyShown?: string;
   reason?: string;
+  sourceLabel?: string;
+  sourceUrl?: string;
 }
 
 export interface DiscoveryThemeBundleItemResponse {

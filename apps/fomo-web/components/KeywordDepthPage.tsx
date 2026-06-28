@@ -855,10 +855,12 @@ function StockSynthesisBlock({
   front,
   insight,
   contextReason,
+  contextSourceLabel,
 }: {
   front: StockFrontResponse | null;
   insight: CondensedInsight | null;
   contextReason?: string | undefined;
+  contextSourceLabel?: string | undefined;
 }) {
   const points = buildReadPoints(front, insight);
   const signalPoints = [...points.bull, ...points.bear, ...points.watch];
@@ -876,6 +878,10 @@ function StockSynthesisBlock({
     .map((p) => p.source)
     .filter((source): source is string => !!source)
     .slice(0, 3);
+  const evidenceLines = [
+    ...(contextSourceLabel ? [contextSourceLabel] : []),
+    ...evidence,
+  ].filter((source, index, list) => list.indexOf(source) === index).slice(0, 3);
 
   return (
     <section className="mt-6 rounded-2xl border border-hairline bg-surface px-4 py-4">
@@ -903,7 +909,7 @@ function StockSynthesisBlock({
         <div>
           <p className="text-[11px] text-muted">증명</p>
           <p className="mt-1 text-sm leading-6 text-muted">
-            {evidence.length > 0 ? cleanText(evidence.join(" / ")) : "카드에서 넘어온 확인 근거 기준이에요."}
+            {evidenceLines.length > 0 ? cleanText(evidenceLines.join(" / ")) : "카드에서 넘어온 확인 근거 기준이에요."}
           </p>
         </div>
       </div>
@@ -1111,7 +1117,12 @@ export function StockInsightView({
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
 
-          <StockSynthesisBlock front={front} insight={insight} contextReason={contextReason} />
+          <StockSynthesisBlock
+            front={front}
+            insight={insight}
+            contextReason={contextReason}
+            contextSourceLabel={context?.sourceLabel}
+          />
 
           {/* 핵심 해석 — 강세/약세 원문이 부족해도 가격·차트·수급으로 읽을 재료를 먼저 보여준다. */}
           <StockReadGuide front={front} insight={insight} loading={false} context={context} />

@@ -69,23 +69,35 @@ describe("WO-05 discovery supply engine", () => {
     expect(hasDeckDisplayEvent(priceUp)).toBe(false);
     expect(hasDisplayWhyEvent(priceUp)).toBe(false);
     expect(discoveryWhy(priceUp)).toBe("아직 공개된 계기 없음");
-    expect(discoveryWhy(candidate("뉴스", 0.6, "news_mention"))).toContain("신규 공급계약 공시");
+    const news = candidate("뉴스", 0.6, "news_mention");
+    news.events[0]!.headlineHook = "계약 재료가 새로 확인됐어요";
+    expect(discoveryWhy(news)).toContain("계약 재료");
   });
 
-  it("surfaces the concrete research label instead of wrapping it in a generic source sentence", () => {
+  it("surfaces the reprocessed research hook without pasting the source name", () => {
     const row = candidate("리서치", 0.7, "news_mention", "신규 설비 증설 점검");
     row.events[0]!.source = "한화투자증권 리서치";
+    row.events[0]!.sourceTitle = "신규 설비 증설 점검";
+    row.events[0]!.sourceName = "한화투자증권 리서치";
+    row.events[0]!.headlineHook = "설비 증설 이슈가 확인됐어요";
 
-    expect(discoveryWhy(row)).toBe("오늘 신규 설비 증설 점검 · 한화투자증권 리서치");
+    expect(discoveryWhy(row)).toBe("오늘 설비 증설 이슈가 확인됐어요");
+    expect(discoveryWhy(row)).not.toContain("신규 설비 증설 점검");
+    expect(discoveryWhy(row)).not.toContain("한화투자증권 리서치");
     expect(discoveryWhy(row)).not.toContain("언급한 뉴스");
     expect(discoveryWhy(row)).not.toContain("직접 다룬 리서치");
   });
 
-  it("surfaces the concrete linked article label instead of wrapping it in a generic source sentence", () => {
+  it("surfaces the reprocessed linked article hook instead of the raw title", () => {
     const row = candidate("연결기사", 0.7, "news_mention", "업종 흐름 기사");
     row.events[0]!.source = "네이버 종목뉴스 연결";
+    row.events[0]!.sourceTitle = "업종 흐름 기사";
+    row.events[0]!.sourceName = "네이버 종목뉴스 연결";
+    row.events[0]!.headlineHook = "업종 흐름에 함께 묶였어요";
 
-    expect(discoveryWhy(row)).toBe("오늘 업종 흐름 기사 · 네이버 종목뉴스 연결");
+    expect(discoveryWhy(row)).toBe("오늘 업종 흐름에 함께 묶였어요");
+    expect(discoveryWhy(row)).not.toContain("업종 흐름 기사");
+    expect(discoveryWhy(row)).not.toContain("네이버 종목뉴스 연결");
     expect(discoveryWhy(row)).not.toContain("직접 언급한 뉴스");
     expect(discoveryWhy(row)).not.toContain("뉴스 탭에 함께 묶인 흐름");
   });
@@ -93,14 +105,17 @@ describe("WO-05 discovery supply engine", () => {
   it("keeps recent material hooks but does not revive recent movement-only context", () => {
     const recentNews = candidate("최근뉴스", 0.7, "news_mention", "호남 반도체 클러스터 소식");
     recentNews.events[0]!.asOf = "2026-06-22";
+    recentNews.events[0]!.sourceTitle = "호남 반도체 클러스터 소식";
+    recentNews.events[0]!.headlineHook = "호남 클러스터에 관련주로 묶임";
     const staleNews = candidate("오래된뉴스", 0.7, "news_mention", "오래된 계약 기사");
     staleNews.events[0]!.asOf = "2026-06-19";
+    staleNews.events[0]!.headlineHook = "계약 재료가 새로 확인됐어요";
     const recentTheme = candidate("최근테마", 0.7, "theme_link", "오늘 유통 6개 종목 중 가장 먼저 움직였어요.");
     recentTheme.events[0]!.asOf = "2026-06-22";
     recentTheme.events[0]!.direction = "up";
 
     expect(hasDisplayWhyEvent(recentNews)).toBe(true);
-    expect(discoveryWhy(recentNews)).toBe("최근 호남 반도체 클러스터 소식 · 뉴스");
+    expect(discoveryWhy(recentNews)).toBe("최근 호남 클러스터에 관련주로 묶임");
     expect(hasDisplayWhyEvent(staleNews)).toBe(false);
     expect(hasDisplayWhyEvent(recentTheme)).toBe(false);
   });
@@ -123,7 +138,7 @@ describe("WO-05 discovery supply engine", () => {
         { kind: "theme_link", firstSeen: true, strength: 0.7, source: "섹터맵", asOf, confidence: "M", label: "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요." },
         { kind: "flow_entry", firstSeen: true, strength: 0.55, source: "KRX 수급", asOf, confidence: "H", label: "외국인이 2일째 사는 중이에요." },
         { kind: "news_mention", firstSeen: true, strength: 0.45, source: "뉴스", asOf, confidence: "H", label: "단독 기사" },
-        { kind: "disclosure", firstSeen: true, strength: 0.35, source: "DART", asOf, confidence: "H", label: "공급계약" },
+        { kind: "disclosure", firstSeen: true, strength: 0.35, source: "DART", asOf, confidence: "H", label: "공급계약", sourceTitle: "공급계약", headlineHook: "공급계약 공시가 확인됐어요" },
       ],
     };
 
@@ -146,6 +161,7 @@ describe("WO-05 discovery supply engine", () => {
           label: "공급계약 공시가 나왔어요.",
           sourceTitle: "공급계약 공시",
           sourceName: "한국경제",
+          headlineHook: "계약 재료가 새로 확인됐어요",
           publishedAt: `${asOf}T09:00:00+09:00`,
           direction: "up",
         },
@@ -155,12 +171,14 @@ describe("WO-05 discovery supply engine", () => {
 
     const insight = synthesizeDiscoveryInsight(row);
 
-    expect(insight.headline).toContain("공급계약 공시");
-    expect(insight.headline).toContain("한국경제");
-    expect(insight.headline).toContain("거래량");
+    expect(insight.headline).toContain("계약 재료가 새로 확인됐어요");
+    expect(insight.headline).not.toContain("공급계약 공시");
+    expect(insight.headline).not.toContain("한국경제");
+    expect(insight.headline).not.toContain("거래량");
     expect(insight.tag).toBe("뉴스 재료");
     expect(insight.observations).toHaveLength(2);
-    expect(insight.observations[0]).toBe("뉴스 원문이 확인됐어요.");
+    expect(insight.observations[0]).toBe("계약 재료가 새로 확인됐어요.");
+    expect(insight.observations[1]).toContain("거래량");
     expect(insight.synthesis).toContain("새로 나온 원문");
     expect(insight.synthesis).toContain("거래 반응");
     expect(insight.evidence[0]).toContain("공급계약 공시");
@@ -185,6 +203,7 @@ describe("WO-05 discovery supply engine", () => {
           label: "실적·가이던스 이슈가 나왔어요.",
           sourceTitle: "SoundHound AI raises annual revenue outlook",
           sourceName: "Yahoo Finance",
+          headlineHook: "실적·가이던스가 다시 확인됐어요",
           publishedAt: `${asOf}T13:00:00Z`,
           direction: "up",
         },
@@ -200,8 +219,22 @@ describe("WO-05 discovery supply engine", () => {
     for (const term of [`1위${"맥락"}도`, `${"상대"}${"강도"}`, `${"시장"} ${"위치"}`, `${"테마"} ${"상대"}${"강도"}`]) {
       expect(blocks.join(" ")).not.toContain(term);
     }
-    expect(insight.headline).toContain("SoundHound AI raises annual revenue outlook");
+    expect(insight.headline).toContain("실적·가이던스가 다시 확인됐어요");
+    expect(insight.headline).not.toContain("SoundHound AI raises annual revenue outlook");
+    expect(insight.headline).not.toContain("Yahoo Finance");
+    expect(insight.evidence[0]).toContain("SoundHound AI raises annual revenue outlook");
     expect(insight.evidence[0]).toContain("Yahoo Finance");
+  });
+
+  it("does not promote a raw news title when no reprocessed hook exists", () => {
+    const row = candidate("무내용뉴스", 0.7, "news_mention", "소식이 나왔어요");
+    row.events[0]!.sourceTitle = "소식이 나왔어요";
+    row.events[0]!.sourceName = "뉴스";
+
+    const insight = synthesizeDiscoveryInsight(row);
+
+    expect(insight.headline).toBe("아직 공개된 계기 없음");
+    expect(insight.evidence).toEqual([]);
   });
 
   it("keeps honest empty synthesis when no display signal exists", () => {

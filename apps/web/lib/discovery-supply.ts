@@ -40,6 +40,7 @@ import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
+import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
@@ -113,6 +114,8 @@ export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
   whyShown?: string;
   reason?: string;
   insightTag?: string;
+  sourceLabel?: string;
+  sourceUrl?: string;
 }
 
 export type DiscoveryDeckCardPayload =
@@ -394,6 +397,7 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
   const label = cleanUsMaterialTitle(article.title, subjectHint);
   if (!label) return null;
   const sourceName = article.source || sourceFallback;
+  const sourceTitle = decodeHtmlEntities(article.title).replace(/\s+/g, " ").trim();
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -402,7 +406,7 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
     asOf: article.publishedAt?.slice(0, 10) || asOf,
     confidence: "M",
     label,
-    sourceTitle: label,
+    sourceTitle: sourceTitle || label,
     sourceName,
     sourceUrl: article.url,
     publishedAt: article.publishedAt,
@@ -424,6 +428,40 @@ function materialEventFromAttentionSignal(attention: StockAttentionSignal | unde
     sourceTitle: label,
     sourceName: attention?.newsEventSource || "뉴스 언급",
   };
+}
+
+function newsHookInputFor(
+  event: DiscoveryEvent,
+  stock: string,
+  sector: string | undefined,
+  row: DiscoveryMarketRow | undefined,
+  asOf: string
+): NewsHookInput | undefined {
+  if (event.kind !== "news_mention" && event.kind !== "disclosure") return undefined;
+  const title = (event.sourceTitle ?? event.label ?? "").trim();
+  if (!title) return undefined;
+  return {
+    stock,
+    ...(sector ? { sector } : {}),
+    title,
+    source: event.sourceName ?? event.source,
+    ...(typeof row?.changePct === "number" ? { changePct: row.changePct } : {}),
+    asOf,
+  };
+}
+
+function withRuleHeadlineHook(
+  event: DiscoveryEvent,
+  stock: string,
+  sector: string | undefined,
+  row: DiscoveryMarketRow | undefined,
+  asOf: string
+): DiscoveryEvent {
+  if (event.headlineHook) return event;
+  const input = newsHookInputFor(event, stock, sector, row, asOf);
+  if (!input) return event;
+  const hook = ruleReprocessNewsHook(input);
+  return hook ? { ...event, headlineHook: hook } : event;
 }
 
 async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string): Promise<DiscoveryEvent | null> {
@@ -727,7 +765,7 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
       : event.kind === "news_mention"
         ? "news"
         : "official";
-  const hookText = event.label?.trim();
+  const hookText = (event.headlineHook ?? event.label)?.trim();
   if (!hookText) return null;
   return {
     axis,
@@ -748,8 +786,16 @@ function stockPayload(row: DiscoveryMarketRow, candidate: DiscoveryCandidate): D
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
   const synthesis = synthesizeDiscoveryInsight(candidate);
-  const why = synthesis.headline;
+  const fallbackThinReason =
+    !synthesis.primary && hasDisplayWhyEvent(candidate)
+      ? `${candidate.ticker} 계기는 더 확인해야 해요`
+      : undefined;
+  const why = synthesis.primary ? synthesis.headline : fallbackThinReason;
   const hasDisplayWhy = hasDisplayWhyEvent(candidate);
+  const sourceEvent = synthesis.primary?.kind === "news_mention" || synthesis.primary?.kind === "disclosure" ? synthesis.primary : undefined;
+  const sourceTitle = sourceEvent?.sourceTitle?.trim();
+  const sourceName = (sourceEvent?.sourceName ?? sourceEvent?.source)?.trim();
+  const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName;
   return {
     canonical: candidate.ticker,
     market: row.market,
@@ -758,7 +804,9 @@ function stockPayload(row: DiscoveryMarketRow, candidate: DiscoveryCandidate): D
     symbol: row.symbol,
     marquee: def?.marquee === true,
     sector: sector ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf),
-    ...(hasDisplayWhy ? { whyShown: why, reason: why, insightTag: synthesis.tag } : candidate.reason ? { whyShown: candidate.reason, reason: candidate.reason } : {}),
+    ...(hasDisplayWhy && why ? { whyShown: why, reason: why, insightTag: synthesis.tag } : candidate.reason ? { whyShown: candidate.reason, reason: candidate.reason } : {}),
+    ...(sourceLabel ? { sourceLabel } : {}),
+    ...(sourceEvent?.sourceUrl ? { sourceUrl: sourceEvent.sourceUrl } : {}),
   };
 }
 
@@ -907,12 +955,56 @@ async function hydrateFrontBandMaterial(
     if (!current) continue;
     const next: DiscoveryCandidate = {
       ...current,
-      events: [...current.events, result.value.event],
+      events: [
+        ...current.events,
+        withRuleHeadlineHook(
+          result.value.event,
+          current.ticker,
+          current.sector,
+          rowsByTicker.get(current.ticker),
+          asOf
+        ),
+      ],
     };
     if (!hasDisplayWhyEvent(next)) continue;
     out[result.value.index] = {
       ...next,
       reason: discoveryWhy(next),
+    };
+  }
+  return out;
+}
+
+async function hydrateReachedNewsHooks(
+  candidates: readonly DiscoveryCandidate[],
+  rowsByTicker: ReadonlyMap<string, DiscoveryMarketRow>,
+  asOf: string
+): Promise<DiscoveryCandidate[]> {
+  const targets = candidates
+    .map((candidate, index) => {
+      const primary = synthesizeDiscoveryInsight(candidate).primary;
+      const input = primary ? newsHookInputFor(primary, candidate.ticker, candidate.sector, rowsByTicker.get(candidate.ticker), asOf) : undefined;
+      return primary?.kind === "news_mention" && input ? { candidate, index, primary, input } : undefined;
+    })
+    .filter((row): row is { candidate: DiscoveryCandidate; index: number; primary: DiscoveryEvent; input: NewsHookInput } => !!row);
+  if (targets.length === 0) return [...candidates];
+
+  const results = await mapLimit(targets, 3, async (target) => ({
+    index: target.index,
+    hook: (await reprocessNewsHook(target.input)).hook,
+    primary: target.primary,
+  }));
+  const out = [...candidates];
+  for (const result of results) {
+    if (result.status !== "fulfilled" || !result.value.hook) continue;
+    const hook = result.value.hook;
+    const current = out[result.value.index];
+    if (!current) continue;
+    out[result.value.index] = {
+      ...current,
+      events: current.events.map((event) =>
+        event === result.value.primary ? { ...event, headlineHook: hook } : event
+      ),
     };
   }
   return out;
@@ -932,6 +1024,7 @@ function frontSeed(
     currentNewsEvent?.kind === "news_mention" || currentNewsEvent?.kind === "disclosure"
       ? Math.round(Math.max(0, Math.min(1, currentNewsEvent.strength)) * 100)
       : undefined;
+  const currentNewsEventLabel = currentNewsEvent?.headlineHook ?? currentNewsEvent?.label;
   const mentionSignals =
     attention
       ? { mentionCount: attention.mentionCount, mentionScore: attention.mentionScore }
@@ -941,7 +1034,7 @@ function frontSeed(
   const signals: CardFrontSignals = {
     ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
     ...(mentionSignals ? mentionSignals : {}),
-    ...(currentNewsEvent?.label ? { newsEventLabel: currentNewsEvent.label } : {}),
+    ...(currentNewsEventLabel ? { newsEventLabel: currentNewsEventLabel } : {}),
     ...(currentNewsEvent?.source ? { newsEventSource: currentNewsEvent.source } : {}),
     ...(row.marketCapRank && row.marketCapRankSource !== "curated" ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
     ...(theme ? {
@@ -1198,25 +1291,27 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       typeof row.changePct !== "number" ? "flat" : row.changePct > 0 ? "up" : row.changePct < 0 ? "down" : "flat";
     const directedEvents: DiscoveryEvent[] = events.map((event) => event.direction ? event : { ...event, direction });
     const sector = row.sectorHint ?? inferDiscoverySectorLabel(ticker, directedEvents, themeSignals.get(ticker), asOf);
+    const hookedEvents = directedEvents.map((event) => withRuleHeadlineHook(event, ticker, sector, row, asOf));
     const candidateBase: DiscoveryCandidate = {
       ticker,
       market: row.market,
-      events: directedEvents,
+      events: hookedEvents,
       asOf,
       sector,
       ...(typeof row.marketCapRank === "number" ? { marketCapRank: row.marketCapRank } : {}),
     };
-    const reason = discoveryWhy(candidateBase);
+    const synthesis = synthesizeDiscoveryInsight(candidateBase);
+    const reason = synthesis.primary ? synthesis.headline : undefined;
     return {
       ticker,
       market: row.market,
       country: row.country as StockCountry,
       ...(row.naverCode ? { naverCode: row.naverCode } : {}),
       sector,
-      events: directedEvents,
+      events: hookedEvents,
       asOf,
       ...(typeof row.marketCapRank === "number" ? { marketCapRank: row.marketCapRank } : {}),
-      ...(hasDisplayWhyEvent(candidateBase) ? { reason } : {}),
+      ...(reason && hasDisplayWhyEvent(candidateBase) ? { reason } : {}),
       marquee: def?.marquee === true,
     };
   });
@@ -1229,6 +1324,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   if (targetedMaterialLimit > 0) {
     ranked = await hydrateFrontBandMaterial(ranked, rowsByTicker, asOf);
   }
+  ranked = await hydrateReachedNewsHooks(ranked, rowsByTicker, asOf);
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
 

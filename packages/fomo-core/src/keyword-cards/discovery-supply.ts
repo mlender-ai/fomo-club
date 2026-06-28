@@ -25,6 +25,8 @@ export interface DiscoveryEvent {
   sourceName?: string;
   sourceUrl?: string;
   publishedAt?: string;
+  /** Card-facing, stock-perspective hook derived from sourceTitle. Raw title/source stay in evidence only. */
+  headlineHook?: string;
 }
 
 export interface DiscoveryCandidate {
@@ -333,6 +335,16 @@ function sourceTitleOf(event: DiscoveryEvent | undefined): string | undefined {
   return label;
 }
 
+function headlineHookOf(event: DiscoveryEvent | undefined): string | undefined {
+  const hook = (event?.headlineHook ?? "").replace(/\s+/g, " ").trim();
+  if (!hook || hook.length > 36) return undefined;
+  if (event?.sourceName && hook.includes(event.sourceName)) return undefined;
+  if (event?.source && hook.includes(event.source)) return undefined;
+  const rawTitle = sourceTitleOf(event);
+  if (rawTitle && (hook === rawTitle || rawTitle.includes(hook))) return undefined;
+  return hook;
+}
+
 function userFacingLabel(event: DiscoveryEvent | undefined, candidate?: DiscoveryCandidate): string {
   const raw = stripTimePrefix(labelOf(event));
   if (!event || !raw) return "";
@@ -363,7 +375,7 @@ function supportPhrase(event: DiscoveryEvent | undefined, primary?: DiscoveryEve
 function choosePrimaryEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
   return displayEventsFor(candidate).filter((event) => {
     if (event.kind !== "news_mention") return true;
-    return !!sourceTitleOf(event);
+    return !!headlineHookOf(event);
   }).sort(
     (a, b) => WHY_KIND_PRIORITY[a.kind] - WHY_KIND_PRIORITY[b.kind] || b.strength - a.strength || a.kind.localeCompare(b.kind)
   )[0];
@@ -388,11 +400,14 @@ function chooseSupportEvent(candidate: DiscoveryCandidate, primary: DiscoveryEve
 function headlineFor(primary: DiscoveryEvent, support: DiscoveryEvent | undefined, candidate: DiscoveryCandidate): string {
   const prefix = eventTimePrefix(primary, candidate);
   const supportText = supportPhrase(support, primary);
-  const title = sourceTitleOf(primary);
-  const sourceName = compactSourceName(primary);
+  const hook = headlineHookOf(primary);
   let base = "";
-  if ((primary.kind === "disclosure" || primary.kind === "news_mention") && title) {
-    base = `${prefix} ${title}${sourceName ? ` · ${sourceName}` : ""}`;
+  if ((primary.kind === "disclosure" || primary.kind === "news_mention") && hook) {
+    base = `${prefix} ${hook}`;
+  } else if (primary.kind === "disclosure") {
+    base = `${prefix} 공시 원문이 확인됐어요.`;
+  } else if (primary.kind === "news_mention") {
+    base = "";
   } else {
     base = userFacingLabel(primary, candidate);
     if (
@@ -410,14 +425,15 @@ function headlineFor(primary: DiscoveryEvent, support: DiscoveryEvent | undefine
     else if (primary.kind === "volume_spike") base = "거래량이 평소보다 달라졌어요.";
     else base = `${candidate.sector ?? candidate.market} 안에서 오늘 눈에 띈 흐름이에요.`;
   }
+  if (primary.kind === "news_mention" || primary.kind === "disclosure") return base;
   if (supportText && !base.includes(supportText)) return `${base.replace(/[.。]$/, "")} — ${supportText.replace(/[.。]$/, "")}.`;
   return base;
 }
 
 function observationFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): string {
   const label = userFacingLabel(event, candidate);
-  if (event.kind === "news_mention") return "뉴스 원문이 확인됐어요.";
-  if (event.kind === "disclosure") return "공시 원문이 확인됐어요.";
+  if (event.kind === "news_mention") return headlineHookOf(event) ? `${headlineHookOf(event)}.` : "뉴스 원문이 확인됐어요.";
+  if (event.kind === "disclosure") return headlineHookOf(event) ? `${headlineHookOf(event)}.` : "공시 원문이 확인됐어요.";
   if (event.kind === "flow_entry") return label || "수급 흐름이 확인됐어요.";
   if (event.kind === "volume_spike") return label || "거래량 변화가 확인됐어요.";
   if (event.kind === "theme_link" || event.kind === "market_context") return label || "동종 종목 대비 흐름이 확인됐어요.";

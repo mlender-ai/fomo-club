@@ -614,11 +614,9 @@ export function StockSwipeDeck({
     const view = { ...baseView, headline };
     const usedReasonHeadline = !!discoveryHeadline && !e?.signals.newsEventLabel && !axisHook && legacyHook.kind === "news_event";
     const evidenceLine = usedReasonHeadline ? undefined : compactEvidenceLine(stock.reason);
-    const tagLine =
-      stock.insightTag && stock.insightTag !== "정직한 빈 신호" ? stock.insightTag : undefined;
     return {
       view,
-      ...(tagLine || evidenceLine || legacyHook.subLine ? { subLine: tagLine ?? evidenceLine ?? legacyHook.subLine } : {}),
+      ...(evidenceLine || legacyHook.subLine ? { subLine: evidenceLine ?? legacyHook.subLine } : {}),
       ...(usedReasonHeadline ? { usedReasonHeadline } : {}),
     };
   };
@@ -982,6 +980,8 @@ export function StockSwipeDeck({
           context={{
             fromTheme: selected.sector,
             reason: whyFor(selected),
+            ...(selected.sourceLabel ? { sourceLabel: selected.sourceLabel } : {}),
+            ...(selected.sourceUrl ? { sourceUrl: selected.sourceUrl } : {}),
             ...(selected.naverCode ? { naverCode: selected.naverCode } : {}),
             ...(selected.symbol ? { symbol: selected.symbol } : {}),
             market: selected.market,
