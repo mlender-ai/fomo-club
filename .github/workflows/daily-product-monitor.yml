@@ -56,6 +56,14 @@ jobs:
           if ! [[ "${LOOKBACK_HOURS:-24}" =~ ^[0-9]+$ ]]; then LOOKBACK_HOURS=24; fi
           if [ "$LOOKBACK_HOURS" -lt 1 ] || [ "$LOOKBACK_HOURS" -gt 168 ]; then LOOKBACK_HOURS=24; fi
           SINCE=$(date -u -d "${LOOKBACK_HOURS} hours ago" '+%Y-%m-%dT%H:%M:%SZ')
+          TODAY_DOW=$(TZ=Asia/Seoul date '+%u') # 1=Mon ... 7=Sun
+          NOW_EPOCH=$(date -u '+%s')
+          age_hours() {
+            local created_at="$1"
+            local created_epoch
+            created_epoch=$(date -u -d "$created_at" '+%s')
+            echo $(( (NOW_EPOCH - created_epoch) / 3600 ))
+          }
           echo "today=$TODAY" >> "$GITHUB_OUTPUT"
           echo "lookback_hours=$LOOKBACK_HOURS" >> "$GITHUB_OUTPUT"
 
@@ -116,15 +124,26 @@ jobs:
             | sort_by(.workflowName)
           ' /tmp/runs.json > /tmp/latest-product-success.json
 
+          declare -A STALE_MAX_HOURS=(
+            ["FOMO Index Pipeline"]=$((LOOKBACK_HOURS + 6))
+            ["Keyword Cards Pipeline"]=$((LOOKBACK_HOURS + 6))
+            ["Supply Demand Pipeline"]=72
+          )
+
           STALE_NOTES=()
           for workflow in "FOMO Index Pipeline" "Keyword Cards Pipeline" "Supply Demand Pipeline"; do
+            if [ "$workflow" = "Supply Demand Pipeline" ] && { [ "$TODAY_DOW" = "6" ] || [ "$TODAY_DOW" = "7" ]; }; then
+              continue
+            fi
             LAST=$(jq -r --arg w "$workflow" '.[] | select(.workflowName == $w) | .createdAt' /tmp/latest-product-success.json | head -1)
             if [ -z "$LAST" ]; then
               STALE_NOTES+=("$workflow: 최근 성공 실행 없음")
               continue
             fi
-            if [[ "$LAST" < "$SINCE" ]]; then
-              STALE_NOTES+=("$workflow: 최근 성공 $LAST (기준 $SINCE 이전)")
+            MAX_HOURS=${STALE_MAX_HOURS[$workflow]:-$((LOOKBACK_HOURS + 6))}
+            AGE=$(age_hours "$LAST")
+            if [ "$AGE" -gt "$MAX_HOURS" ]; then
+              STALE_NOTES+=("$workflow: 최근 성공 $LAST (${MAX_HOURS}h 초과, 현재 ${AGE}h)")
             fi
           done
           printf '%s\n' "${STALE_NOTES[@]}" | sed '/^$/d' > /tmp/stale-product.txt
@@ -135,6 +154,7 @@ jobs:
           echo "critical_count=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
           echo "critical_run_count=$CRITICAL_RUN_COUNT" >> "$GITHUB_OUTPUT"
           echo "stale_count=$STALE_COUNT" >> "$GITHUB_OUTPUT"
+          echo "autofixable_count=$CRITICAL_RUN_COUNT" >> "$GITHUB_OUTPUT"
 
           {
             echo "# Daily Product Monitor — $TODAY"
@@ -284,27 +304,78 @@ jobs:
           QUALITY_WARN: ${{ steps.quality.outputs.warn_count }}
           WEB_JOURNEY_CRITICAL: ${{ steps.webjourney.outputs.critical_count }}
           WEB_JOURNEY_WARN: ${{ steps.webjourney.outputs.warn_count }}
+          INSPECT_AUTOFIXABLE: ${{ steps.inspect.outputs.autofixable_count }}
+          INSPECT_CRITICAL_RUN: ${{ steps.inspect.outputs.critical_run_count }}
+          INSPECT_STALE: ${{ steps.inspect.outputs.stale_count }}
+          AUTO_FIX_ALLOWED: ${{ github.event_name == 'schedule' || github.event.inputs.auto_fix != 'false' }}
         run: |
           set -euo pipefail
           TOTAL=$(( ${INSPECT_CRITICAL:-0} + ${QUALITY_CRITICAL:-0} + ${WEB_JOURNEY_CRITICAL:-0} ))
+          AUTOFIXABLE=$(( ${INSPECT_AUTOFIXABLE:-0} + ${QUALITY_CRITICAL:-0} + ${WEB_JOURNEY_CRITICAL:-0} ))
           echo "critical_count=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "autofixable_count=$AUTOFIXABLE" >> "$GITHUB_OUTPUT"
           WARN=$(( ${QUALITY_WARN:-0} + ${WEB_JOURNEY_WARN:-0} ))
           SIGNAL=$(( TOTAL + WARN ))
           echo "signal_count=$SIGNAL" >> "$GITHUB_OUTPUT"
           if [ "$TOTAL" != "0" ]; then
-            echo "severity=critical" >> "$GITHUB_OUTPUT"
+            SEVERITY="critical"
           elif [ "$WARN" != "0" ]; then
-            echo "severity=warn" >> "$GITHUB_OUTPUT"
+            SEVERITY="warn"
           else
-            echo "severity=ok" >> "$GITHUB_OUTPUT"
+            SEVERITY="ok"
           fi
-          cp /tmp/monitor-body.md /tmp/monitor-combined-body.md
+          echo "severity=$SEVERITY" >> "$GITHUB_OUTPUT"
+
+          RUN_CRITICAL=${INSPECT_CRITICAL_RUN:-0}
+          STALE=${INSPECT_STALE:-0}
+          QUALITY_C=${QUALITY_CRITICAL:-0}
+          WEB_C=${WEB_JOURNEY_CRITICAL:-0}
+
+          if [ "$RUN_CRITICAL" != "0" ]; then
+            IMPACT="파이프라인/CI 실패 — 신규 카드·데이터 갱신이 멈췄을 수 있음"
+          elif [ "$QUALITY_C" != "0" ]; then
+            IMPACT="카드 품질 지표가 임계 이하 — 사용자가 보는 카드 신뢰도 저하 가능"
+          elif [ "$WEB_C" != "0" ]; then
+            IMPACT="웹 스모크 실패 — 첫 진입/피드 렌더가 깨졌을 수 있음"
+          elif [ "$STALE" != "0" ]; then
+            IMPACT="데이터 파이프라인이 예정대로 안 돎 — 표시는 되지만 최신성 저하"
+          else
+            IMPACT="주의 신호 감지 — 임계 전 품질/웹 지표 확인 필요"
+          fi
+
+          if [ "$AUTOFIXABLE" != "0" ] && [ "$AUTO_FIX_ALLOWED" = "true" ]; then
+            NEXT="🤖 implement-task 자동수정 시작됨 — PR 확인"
+          elif [ "$AUTOFIXABLE" != "0" ]; then
+            NEXT="⏸ auto_fix=false — 자동수정 꺼짐, 사람 확인 필요"
+          elif [ "$STALE" != "0" ]; then
+            NEXT="👁 자동수정 불가(스케줄/데이터 이슈). 파이프라인 실행 여부 직접 확인 필요"
+          else
+            NEXT="👁 자동수정 대상 없음 — 사람이 품질/웹 경고 확인"
+          fi
+
+          {
+            if [ "$SEVERITY" = "critical" ]; then
+              echo "> 🔴 **왜 이게 떴나** — 실패 run ${RUN_CRITICAL} · stale ${STALE} · 품질 critical ${QUALITY_C} · 웹 critical ${WEB_C}"
+            elif [ "$SEVERITY" = "warn" ]; then
+              echo "> 🟡 **왜 이게 떴나** — 주의 신호만 있음 · 실패 run ${RUN_CRITICAL} · stale ${STALE} · 품질 critical ${QUALITY_C} · 웹 critical ${WEB_C}"
+            else
+              echo "> 🟢 **왜 이게 떴나** — 신호 없음 · 실패 run ${RUN_CRITICAL} · stale ${STALE} · 품질 critical ${QUALITY_C} · 웹 critical ${WEB_C}"
+            fi
+            echo "> 📉 **영향** — ${IMPACT}"
+            echo "> ▶️ **다음 액션** — ${NEXT}"
+            echo
+            cat /tmp/monitor-body.md
+          } > /tmp/monitor-combined-body.md
           if [ -f /tmp/fomo-quality-report.md ]; then
             {
               echo
               echo "---"
               echo
+              echo "<details><summary>📊 FOMO 품질 리포트 (지표·latency·hook 분포 — 펼치기)</summary>"
+              echo
               cat /tmp/fomo-quality-report.md
+              echo
+              echo "</details>"
             } >> /tmp/monitor-combined-body.md
           fi
           if [ -f /tmp/fomo-web-journey-smoke.md ]; then
@@ -312,7 +383,11 @@ jobs:
               echo
               echo "---"
               echo
+              echo "<details><summary>🌐 웹 여정 스모크 (펼치기)</summary>"
+              echo
               cat /tmp/fomo-web-journey-smoke.md
+              echo
+              echo "</details>"
             } >> /tmp/monitor-combined-body.md
           fi
 
@@ -363,6 +438,7 @@ jobs:
         if: |
           steps.issue.outputs.number != '' &&
           steps.combine.outputs.severity == 'critical' &&
+          steps.combine.outputs.autofixable_count != '0' &&
           (github.event_name == 'schedule' || github.event.inputs.auto_fix != 'false')
         env:
           GH_TOKEN: ${{ github.token }}
@@ -389,11 +465,16 @@ jobs:
           NUM: ${{ steps.issue.outputs.number }}
           AUTO_FIX_STARTED: ${{ steps.autofix.outputs.started }}
           AUTO_FIX_OUTCOME: ${{ steps.autofix.outcome }}
+          AUTOFIXABLE_COUNT: ${{ steps.combine.outputs.autofixable_count }}
+          SEVERITY: ${{ steps.combine.outputs.severity }}
+          STALE_COUNT: ${{ steps.inspect.outputs.stale_count }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
           if [ "${AUTO_FIX_STARTED:-false}" = "true" ]; then
             BODY="✅ auto-fix dispatch 성공. implement-task 실행 상태는 \`/fomo status\` 또는 Actions에서 확인하세요.\\n\\nMonitor run: ${RUN_URL}"
+          elif [ "${AUTO_FIX_OUTCOME:-skipped}" = "skipped" ] && [ "${SEVERITY:-}" = "critical" ] && [ "${AUTOFIXABLE_COUNT:-0}" = "0" ] && [ "${STALE_COUNT:-0}" != "0" ]; then
+            BODY="ℹ️ auto-fix는 스킵됐습니다. stale-only critical은 코드 자동수정 대상이 아닙니다(스케줄/데이터 이슈라 사람 확인 필요).\\n\\nMonitor run: ${RUN_URL}"
           elif [ "${AUTO_FIX_OUTCOME:-skipped}" = "skipped" ]; then
             BODY="ℹ️ auto-fix는 이번 실행에서 스킵됐습니다(auto_fix=false 또는 조건 불일치).\\n\\nMonitor run: ${RUN_URL}"
           else
