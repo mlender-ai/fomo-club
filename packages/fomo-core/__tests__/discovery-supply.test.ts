@@ -76,7 +76,7 @@ describe("WO-05 discovery supply engine", () => {
     const row = candidate("리서치", 0.7, "news_mention", "신규 설비 증설 점검");
     row.events[0]!.source = "한화투자증권 리서치";
 
-    expect(discoveryWhy(row)).toBe("오늘 신규 설비 증설 점검");
+    expect(discoveryWhy(row)).toBe("오늘 신규 설비 증설 점검 · 한화투자증권 리서치");
     expect(discoveryWhy(row)).not.toContain("언급한 뉴스");
     expect(discoveryWhy(row)).not.toContain("직접 다룬 리서치");
   });
@@ -85,7 +85,7 @@ describe("WO-05 discovery supply engine", () => {
     const row = candidate("연결기사", 0.7, "news_mention", "업종 흐름 기사");
     row.events[0]!.source = "네이버 종목뉴스 연결";
 
-    expect(discoveryWhy(row)).toBe("오늘 업종 흐름 기사");
+    expect(discoveryWhy(row)).toBe("오늘 업종 흐름 기사 · 네이버 종목뉴스 연결");
     expect(discoveryWhy(row)).not.toContain("직접 언급한 뉴스");
     expect(discoveryWhy(row)).not.toContain("뉴스 탭에 함께 묶인 흐름");
   });
@@ -100,7 +100,7 @@ describe("WO-05 discovery supply engine", () => {
     recentTheme.events[0]!.direction = "up";
 
     expect(hasDisplayWhyEvent(recentNews)).toBe(true);
-    expect(discoveryWhy(recentNews)).toBe("최근 호남 반도체 클러스터 소식");
+    expect(discoveryWhy(recentNews)).toBe("최근 호남 반도체 클러스터 소식 · 뉴스");
     expect(hasDisplayWhyEvent(staleNews)).toBe(false);
     expect(hasDisplayWhyEvent(recentTheme)).toBe(false);
   });
@@ -136,7 +136,19 @@ describe("WO-05 discovery supply engine", () => {
       market: "KOSPI",
       asOf,
       events: [
-        { kind: "news_mention", firstSeen: true, strength: 0.8, source: "뉴스", asOf, confidence: "H", label: "공급계약 공시가 나왔어요.", direction: "up" },
+        {
+          kind: "news_mention",
+          firstSeen: true,
+          strength: 0.8,
+          source: "뉴스",
+          asOf,
+          confidence: "H",
+          label: "공급계약 공시가 나왔어요.",
+          sourceTitle: "공급계약 공시",
+          sourceName: "한국경제",
+          publishedAt: `${asOf}T09:00:00+09:00`,
+          direction: "up",
+        },
         { kind: "volume_spike", firstSeen: true, strength: 0.7, source: "거래소", asOf, confidence: "M", label: "거래량이 평소 3배로 늘었어요.", direction: "up" },
       ],
     };
@@ -144,12 +156,52 @@ describe("WO-05 discovery supply engine", () => {
     const insight = synthesizeDiscoveryInsight(row);
 
     expect(insight.headline).toContain("공급계약 공시");
+    expect(insight.headline).toContain("한국경제");
     expect(insight.headline).toContain("거래량");
     expect(insight.tag).toBe("뉴스 재료");
     expect(insight.observations).toHaveLength(2);
-    expect(insight.synthesis).toContain("뉴스 재료");
-    expect(insight.synthesis).toContain("거래 이상");
+    expect(insight.observations[0]).toBe("뉴스 원문이 확인됐어요.");
+    expect(insight.synthesis).toContain("새로 나온 원문");
+    expect(insight.synthesis).toContain("거래 반응");
+    expect(insight.evidence[0]).toContain("공급계약 공시");
+    expect(insight.evidence[0]).toContain("한국경제");
     expect(discoveryWhy(row)).toBe(insight.headline);
+  });
+
+  it("keeps observation, synthesis, and evidence as separate layers", () => {
+    const row: DiscoveryCandidate = {
+      ticker: "사운드하운드AI",
+      market: "NASDAQ",
+      country: "US",
+      asOf,
+      events: [
+        {
+          kind: "news_mention",
+          firstSeen: true,
+          strength: 0.82,
+          source: "Yahoo Finance",
+          asOf,
+          confidence: "M",
+          label: "실적·가이던스 이슈가 나왔어요.",
+          sourceTitle: "SoundHound AI raises annual revenue outlook",
+          sourceName: "Yahoo Finance",
+          publishedAt: `${asOf}T13:00:00Z`,
+          direction: "up",
+        },
+        { kind: "theme_link", firstSeen: true, strength: 0.5, source: "FOMO 섹터맵", asOf, confidence: "M", label: "오늘 AI 4개 종목 중 제일 셌어요.", direction: "up" },
+      ],
+    };
+
+    const insight = synthesizeDiscoveryInsight(row);
+    const blocks = [insight.observations.join(" "), insight.synthesis, insight.evidence.join(" ")];
+
+    expect(blocks[0]).not.toBe(blocks[1]);
+    expect(blocks[1]).not.toBe(blocks[2]);
+    for (const term of [`1위${"맥락"}도`, `${"상대"}${"강도"}`, `${"시장"} ${"위치"}`, `${"테마"} ${"상대"}${"강도"}`]) {
+      expect(blocks.join(" ")).not.toContain(term);
+    }
+    expect(insight.headline).toContain("SoundHound AI raises annual revenue outlook");
+    expect(insight.evidence[0]).toContain("Yahoo Finance");
   });
 
   it("keeps honest empty synthesis when no display signal exists", () => {

@@ -116,9 +116,9 @@ describe("discovery specific hook copy", () => {
       changePct: 3.18,
     });
 
-    expect(hpsp).toBe("오늘 반도체 14개 종목 중 상대강도 1위예요.");
-    expect(wonik).toBe("오늘 반도체 14개 종목 중 상대강도 2위권이에요.");
-    expect(outperformer).toBe("반도체 안에서 주변 종목보다 상대강도가 높아요.");
+    expect(hpsp).toBe("오늘 반도체 14개 종목 중 제일 셌어요.");
+    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 눈에 띄었어요.");
+    expect(outperformer).toBe("반도체 안에서 주변 종목보다 오늘 더 강했어요.");
     expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
     expect([hpsp, wonik, outperformer].some((text) => /신호가|흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
     expect([hpsp, wonik, outperformer].every((text) => !surfacePricePattern.test(text))).toBe(true);
@@ -148,24 +148,24 @@ describe("discovery specific hook copy", () => {
     const geumho = candidate("금호건설", "market_context", 0.72, {
       rank: 461,
       direction: "up",
-      label: "건설 안에서 시총 461위권 종목의 변동성이 크게 잡혔어요.",
+      label: "오늘 건설 안에서 시총 461위권 종목의 변동성이 크게 잡혔어요.",
     });
     geumho.sector = "건설";
     const lucid = candidate("루시드", "theme_link", 0.7, {
       rank: 240,
       direction: "up",
-      label: "오늘 전기차 4개 종목 중 상대강도 1위예요.",
+      label: "오늘 전기차 4개 종목 중 제일 셌어요.",
     });
     lucid.market = "NASDAQ";
     lucid.country = "US";
     lucid.sector = "전기차";
 
     expect(hasDisplayWhyEvent(geumho)).toBe(true);
-    expect(discoveryWhy(geumho)).toBe("건설 안에서 시총 461위권 종목의 변동성이 크게 잡혔어요.");
+    expect(discoveryWhy(geumho)).toBe("오늘 건설 안에서 시총 461위권 종목의 변동성이 크게 잡혔어요.");
     expect(discoveryWhy(geumho)).not.toMatch(bannedFillerPattern);
 
     expect(hasDisplayWhyEvent(lucid)).toBe(true);
-    expect(discoveryWhy(lucid)).toBe("오늘 전기차 4개 종목 중 상대강도 1위예요.");
+    expect(discoveryWhy(lucid)).toBe("오늘 전기차 4개 종목 중 제일 셌어요.");
     expect(discoveryWhy(lucid)).not.toMatch(bannedFillerPattern);
   });
 

@@ -374,28 +374,38 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
   if (!label) return null;
   const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(`${article.source} ${article.category ?? ""}`);
   const isLinked = /종목뉴스\s?연결/i.test(article.source || sourceFallback);
+  const sourceName = article.source || sourceFallback;
   return {
     kind: "news_mention",
     firstSeen: true,
     strength: isLinked ? 0.56 : isResearch ? 0.82 : 0.88,
-    source: article.source || sourceFallback,
+    source: sourceName,
     asOf: article.publishedAt?.slice(0, 10) || asOf,
     confidence: "H",
     label,
+    sourceTitle: label,
+    sourceName,
+    sourceUrl: article.url,
+    publishedAt: article.publishedAt,
   };
 }
 
 function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string, subjectHint?: string): DiscoveryEvent | null {
   const label = cleanUsMaterialTitle(article.title, subjectHint);
   if (!label) return null;
+  const sourceName = article.source || sourceFallback;
   return {
     kind: "news_mention",
     firstSeen: true,
     strength: 0.82,
-    source: article.source || sourceFallback,
+    source: sourceName,
     asOf: article.publishedAt?.slice(0, 10) || asOf,
     confidence: "M",
     label,
+    sourceTitle: label,
+    sourceName,
+    sourceUrl: article.url,
+    publishedAt: article.publishedAt,
   };
 }
 
@@ -411,6 +421,8 @@ function materialEventFromAttentionSignal(attention: StockAttentionSignal | unde
     asOf,
     confidence: "M",
     label,
+    sourceTitle: label,
+    sourceName: attention?.newsEventSource || "뉴스 언급",
   };
 }
 
@@ -430,6 +442,8 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
         asOf: filing.asOf,
         confidence: "H",
         label: filing.label,
+        sourceTitle: filing.label,
+        sourceName: filing.source,
       };
     }
     const stockNews =
@@ -491,13 +505,13 @@ export function formatThemeDiscoveryLabel(input: {
   changePct: number;
 }): string {
   if (input.rank <= 3) {
-    const orderText = input.rank === 1 ? "상대강도 1위예요" : `상대강도 ${input.rank}위권이에요`;
+    const orderText = input.rank === 1 ? "제일 셌어요" : `${ordinalText(input.rank)} 눈에 띄었어요`;
     return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText}.`;
   }
   if (input.averageChangePct < 0 && input.changePct > 0) {
     return `${input.sector} 흐름이 눌린 날에도 이 종목은 플러스권이에요.`;
   }
-  return `${input.sector} 안에서 주변 종목보다 상대강도가 높아요.`;
+  return `${input.sector} 안에서 주변 종목보다 오늘 더 강했어요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
@@ -561,9 +575,9 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "상대강도 1위예요" : `상대강도 ${theme.rank}위권이에요`}.`
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "오늘 제일 셌어요" : `${ordinalText(theme.rank)} 눈에 띄었어요`}.`
         : changePct > 0
-          ? `오늘 ${sector} 안에서 주변보다 상대강도가 높아요.`
+          ? `오늘 ${sector} 안에서 주변보다 더 강했어요.`
           : `오늘 ${sector} 안에서 약세 흐름도 같이 확인해요.`;
     return {
       kind: "market_context",

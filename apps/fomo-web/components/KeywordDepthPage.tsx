@@ -530,12 +530,6 @@ function StockFundamentalsBlock({ basics, front }: { basics: StockBasics | null;
           ))}
         </ul>
       )}
-      {!hasNaverFundamentals && fallbackMetrics.length > 0 && (
-        <p className="mt-2 text-[11px] leading-5 text-muted">
-          재무 지표가 비어 있어, 카드에서 확인된 시장·수급 지표를 먼저 보여드려요.
-        </p>
-      )}
-
       {basics?.financials && (
         <div className="mt-5">
           <p className="font-pixel text-sm text-whiteout">실적 흐름</p>
@@ -868,19 +862,20 @@ function StockSynthesisBlock({
 }) {
   const points = buildReadPoints(front, insight);
   const signalPoints = [...points.bull, ...points.bear, ...points.watch];
-  const observations = uniquePoints([
-    ...(contextReason ? [{ text: contextReason, source: "카드 이유" }] : []),
-    ...signalPoints.slice(0, 3),
-  ]).slice(0, 3);
-  if (observations.length === 0) return null;
+  const observations = uniquePoints(signalPoints).slice(0, 3);
+  if (observations.length === 0 && !contextReason) return null;
 
   const primary = observations[0];
-  if (!primary) return null;
-  const support = observations.find((p) => !copyRestates(p.text, primary.text));
-  const synthesis = support
-    ? `${primary.text} 여기에 ${support.text}까지 같이 확인되는 화면이에요.`
-    : `${primary.text} 이 신호를 가격·차트·원문 근거로 나눠 확인하는 화면이에요.`;
-  const evidence = observations.map((p) => (p.source ? `${p.source} · ${p.text}` : p.text)).slice(0, 3);
+  const support = primary ? observations.find((p) => !copyRestates(p.text, primary.text)) : undefined;
+  const synthesis = contextReason
+    ? cleanText(contextReason)
+    : support
+      ? "서로 다른 확인 신호가 같이 잡혀, 한 가지 숫자만 볼 화면은 아니에요."
+      : "확인된 신호를 가격·수급·원문 근거로 나눠 보는 화면이에요.";
+  const evidence = uniquePoints(observations)
+    .map((p) => p.source)
+    .filter((source): source is string => !!source)
+    .slice(0, 3);
 
   return (
     <section className="mt-6 rounded-2xl border border-hairline bg-surface px-4 py-4">
@@ -888,14 +883,18 @@ function StockSynthesisBlock({
       <div className="mt-3 space-y-3">
         <div>
           <p className="text-[11px] text-muted">관찰</p>
-          <ul className="mt-1 space-y-1">
-            {observations.map((p, i) => (
-              <li key={`obs-${i}`} className="text-sm leading-6 text-whiteout">
-                {cleanText(p.text)}
-                {p.source && <span className="ml-1 text-[11px] text-muted">· {p.source}</span>}
-              </li>
-            ))}
-          </ul>
+          {observations.length > 0 ? (
+            <ul className="mt-1 space-y-1">
+              {observations.map((p, i) => (
+                <li key={`obs-${i}`} className="text-sm leading-6 text-whiteout">
+                  {cleanText(p.text)}
+                  {p.source && <span className="ml-1 text-[11px] text-muted">· {p.source}</span>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm leading-6 text-muted">아직 나눠 볼 확인 항목은 적어요.</p>
+          )}
         </div>
         <div>
           <p className="text-[11px] text-muted">종합</p>
@@ -903,7 +902,9 @@ function StockSynthesisBlock({
         </div>
         <div>
           <p className="text-[11px] text-muted">증명</p>
-          <p className="mt-1 text-sm leading-6 text-muted">{cleanText(evidence.join(" / "))}</p>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            {evidence.length > 0 ? cleanText(evidence.join(" / ")) : "카드에서 넘어온 확인 근거 기준이에요."}
+          </p>
         </div>
       </div>
     </section>
@@ -1155,7 +1156,7 @@ export function StockInsightView({
           {showThinSourceFootnote && (
             <p className="mt-5 text-[12px] leading-5 text-muted">
               {hasVerifiedFloor
-                ? "원문 기반 요약은 아직 얇아요. 위에는 가격·차트·수급·기본 지표처럼 확인된 자료만 먼저 정리했어요."
+                ? "원문 기반 요약은 아직 얇아요."
                 : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
             </p>
           )}
