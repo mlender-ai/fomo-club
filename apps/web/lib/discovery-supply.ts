@@ -1395,6 +1395,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       asOf: disclosure.asOf,
       confidence: "H",
       label: disclosure.label,
+      ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
     };
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   }

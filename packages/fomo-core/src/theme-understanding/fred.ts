@@ -14,13 +14,19 @@ export interface FredSeriesDef {
   unit: string;
 }
 
-/** 추적 시리즈 사전(금리·거시). 확장 가능. */
+/** 추적 시리즈 사전(금리·거시·시장). 확장 가능. */
 export const FRED_SERIES: Record<string, FredSeriesDef> = {
   FEDFUNDS: { name: "미국 기준금리(연방기금금리)", unit: "%" },
   DGS10: { name: "미국 10년물 국채금리", unit: "%" },
   DGS2: { name: "미국 2년물 국채금리", unit: "%" },
   CPIAUCSL: { name: "미국 소비자물가지수(CPI)", unit: "" },
   UNRATE: { name: "미국 실업률", unit: "%" },
+  SP500: { name: "S&P 500", unit: "" },
+  NASDAQCOM: { name: "나스닥 종합지수", unit: "" },
+  VIXCLS: { name: "VIX 변동성 지수", unit: "" },
+  DCOILWTICO: { name: "WTI 원유 현물가격", unit: "달러" },
+  DEXKOUS: { name: "원/달러 환율", unit: "원" },
+  T10YIE: { name: "미국 10년 기대인플레이션", unit: "%" },
 };
 
 export interface FredObservation {

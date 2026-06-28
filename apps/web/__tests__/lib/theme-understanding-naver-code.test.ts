@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   fetchSubredditPosts: vi.fn(),
   fetchDartDisclosuresForCode: vi.fn(),
   fetchRecentSecFilings: vi.fn(),
+  fetchFredDocsForStock: vi.fn(),
 }));
 
 vi.mock("../../lib/fomo-news-sources", () => ({
@@ -29,6 +30,11 @@ vi.mock("../../lib/dart-disclosures", () => ({
 
 vi.mock("../../lib/sec-edgar", () => ({
   fetchRecentSecFilings: mocks.fetchRecentSecFilings,
+}));
+
+vi.mock("../../lib/fred", () => ({
+  fetchFredDocs: vi.fn(),
+  fetchFredDocsForStock: mocks.fetchFredDocsForStock,
 }));
 
 vi.mock("@fomo/core", async (importActual) => {
@@ -67,6 +73,19 @@ describe("collectStockDocs naverCode threading", () => {
         label: "단일판매ㆍ공급계약체결",
         source: "DART 공시",
         asOf: "2026-06-27",
+        url: "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260627000001",
+      },
+    ]);
+    mocks.fetchFredDocsForStock.mockResolvedValue([
+      {
+        id: "F1",
+        kind: "official",
+        title: "원/달러 환율 1390원",
+        body: "2026-06-27 기준, 원/달러 환율은 1390원이다. (미 연준 공식 데이터 · FRED DEXKOUS)",
+        source: "FRED(미 연준)",
+        url: "https://fred.stlouisfed.org/series/DEXKOUS",
+        publishedAt: "2026-06-27T00:00:00Z",
+        tier: "official-high",
       },
     ]);
     mocks.fetchNaverBoardPosts.mockResolvedValue([{ title: "테스트무명 오늘 거래량 보네", tsMs: 1_782_486_000_000 }]);
@@ -86,9 +105,15 @@ describe("collectStockDocs naverCode threading", () => {
     expect(mocks.fetchNaverCompanyResearch).toHaveBeenCalledWith("123456", "테스트무명", 6);
     expect(mocks.fetchNaverBoardPosts).toHaveBeenCalledWith("123456");
     expect(mocks.fetchDartDisclosuresForCode).toHaveBeenCalledWith("123456", "테스트무명", expect.any(String));
+    expect(mocks.fetchFredDocsForStock).toHaveBeenCalledWith(
+      "테스트무명",
+      { country: "KR" },
+      expect.any(Function)
+    );
     expect(docs.some((doc) => doc.kind === "news" && doc.title.includes("공급계약"))).toBe(true);
     expect(docs.some((doc) => doc.kind === "community" && doc.source === "네이버 종토방 테스트무명")).toBe(true);
-    expect(docs.some((doc) => doc.kind === "official" && doc.source === "DART 공시")).toBe(true);
+    expect(docs.some((doc) => doc.kind === "official" && doc.source === "DART 공시" && doc.url?.includes("dart.fss"))).toBe(true);
+    expect(docs.some((doc) => doc.kind === "official" && doc.source === "FRED(미 연준)")).toBe(true);
   });
 
   it("uses supplied US symbol for per-ticker news and SEC filings", async () => {
@@ -116,6 +141,11 @@ describe("collectStockDocs naverCode threading", () => {
 
     expect(mocks.fetchYahooStockNews).toHaveBeenCalledWith("NVDA", expect.any(Number));
     expect(mocks.fetchRecentSecFilings).toHaveBeenCalledWith("NVDA", 4);
+    expect(mocks.fetchFredDocsForStock).toHaveBeenCalledWith(
+      "엔비디아",
+      { market: "NASDAQ", country: "US" },
+      expect.any(Function)
+    );
     expect(docs.some((doc) => doc.kind === "news" && doc.source === "Yahoo Finance")).toBe(true);
     expect(docs.some((doc) => doc.kind === "official" && doc.source === "SEC EDGAR")).toBe(true);
   });

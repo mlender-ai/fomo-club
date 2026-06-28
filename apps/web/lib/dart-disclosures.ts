@@ -5,6 +5,7 @@ export interface DartDisclosureHit {
   label: string;
   source: string;
   asOf: string;
+  url?: string;
 }
 
 interface DartListItem {
@@ -43,6 +44,11 @@ function yyyymmdd(date: string): string {
 function isoFromDartDate(date: string | undefined, fallback: string): string {
   if (!date || !/^\d{8}$/.test(date)) return fallback;
   return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+}
+
+function dartReportUrl(rceptNo: string | undefined): string | undefined {
+  const no = rceptNo?.trim();
+  return no && /^\d+$/.test(no) ? `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${no}` : undefined;
 }
 
 function cleanReportName(name: string | undefined): string | undefined {
@@ -88,12 +94,15 @@ export async function fetchDartDisclosuresByStock(asOf: string): Promise<Record<
       if (!ticker || out[ticker]) continue;
       const label = cleanReportName(item.report_nm);
       if (!label) continue;
-      out[ticker] = {
+      const url = dartReportUrl(item.rcept_no);
+      const hit: DartDisclosureHit = {
         ticker,
         label,
         source: "DART 공시",
         asOf: isoFromDartDate(item.rcept_dt, asOf),
       };
+      if (url) hit.url = url;
+      out[ticker] = hit;
     }
     if (typeof data.total_page === "number" && page >= data.total_page) break;
   }
@@ -118,12 +127,15 @@ export async function fetchDartDisclosuresForCode(
       if (item.stock_code?.trim() !== normalized) continue;
       const label = cleanReportName(item.report_nm);
       if (!label) continue;
-      out.push({
+      const url = dartReportUrl(item.rcept_no);
+      const hit: DartDisclosureHit = {
         ticker: stock,
         label,
         source: "DART 공시",
         asOf: isoFromDartDate(item.rcept_dt, asOf),
-      });
+      };
+      if (url) hit.url = url;
+      out.push(hit);
     }
     if (typeof data.total_page === "number" && page >= data.total_page) break;
   }
