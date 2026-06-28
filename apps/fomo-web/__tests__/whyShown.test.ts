@@ -22,7 +22,7 @@ describe("whyShown", () => {
       signals: { mentionScore: 90, mentionCount: 6 },
     });
 
-    expect(text).toBe("‘2차전지’ 흐름에서 같이 잡힌 원문 근거가 있어요: 실리콘 음극재 원문 근거");
+    expect(text).toBe("실리콘 음극재 원문 근거");
     expect(text).not.toMatch(FORBIDDEN);
   });
 
