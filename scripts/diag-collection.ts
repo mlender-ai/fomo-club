@@ -9,7 +9,7 @@
  *           종토방 = THEME_NAVER_CODES(apps/web/lib/theme-understanding.ts).
  */
 import { extractKeywords, type KeywordSourceItem } from "@fomo/core";
-import { collectThemeDocs } from "../apps/web/lib/theme-understanding";
+import { collectThemeDocs, themeNaverCodesFor } from "../apps/web/lib/theme-understanding";
 import { fetchAllNews } from "../apps/web/lib/fomo-news-sources";
 
 const THEMES = process.argv.slice(2).length > 0 ? process.argv.slice(2) : ["반도체", "조선", "자동차", "바이오"];
@@ -17,6 +17,7 @@ const CONTROLS = new Set(["반도체", "바이오"]); // 소스 건강성 기준
 
 interface Row {
   theme: string;
+  naverCodes: number;
   total: number;
   news: number;
   community: number;
@@ -51,17 +52,21 @@ async function main(): Promise<void> {
   const rows: Row[] = [];
   for (const theme of THEMES) {
     const docs = await collectThemeDocs(theme);
+    const naverCodes = themeNaverCodesFor(theme).length;
     const byKind = new Map<string, number>();
     for (const d of docs) byKind.set(d.kind, (byKind.get(d.kind) ?? 0) + 1);
     const row: Row = {
       theme,
+      naverCodes,
       total: docs.length,
       news: byKind.get("news") ?? 0,
       community: byKind.get("community") ?? 0,
       official: byKind.get("official") ?? 0,
     };
     rows.push(row);
-    console.log(`  ${theme.padEnd(6)} total=${row.total}  news=${row.news}  community=${row.community}  official=${row.official}`);
+    console.log(
+      `  ${theme.padEnd(6)} codes=${row.naverCodes}  total=${row.total}  news=${row.news}  community=${row.community}  official=${row.official}`
+    );
   }
 
   // 3) 분류 판정.
@@ -70,8 +75,12 @@ async function main(): Promise<void> {
   for (const r of rows) {
     if (r.total > 0) {
       console.log(`  ${r.theme}: 정상(${r.total}건)`);
-    } else if (controlsOk && !bucketKeywords.has(r.theme)) {
+    } else if (controlsOk && !bucketKeywords.has(r.theme) && r.naverCodes === 0) {
       console.log(`  ${r.theme}: (i) 구조적 매핑 공백 — 소스 정상인데 테마 버킷/종토방코드 없음`);
+    } else if (controlsOk && r.naverCodes === 0) {
+      console.log(`  ${r.theme}: (i) 구조적 종토방 매핑 공백 — 뉴스 버킷은 있으나 대표 종목 코드 없음`);
+    } else if (controlsOk && !bucketKeywords.has(r.theme)) {
+      console.log(`  ${r.theme}: (i) 구조적 뉴스 버킷 공백 — 종토방 코드는 있으나 뉴스 키워드 매칭 없음`);
     } else if (!controlsOk) {
       console.log(`  ${r.theme}: (ii) 일시적 의심 — 대조군도 실패(소스 장애/레이트리밋)`);
     } else {

@@ -886,14 +886,9 @@ function StockSynthesisBlock({
 
   const primary = observations[0];
   const support = primary ? observations.find((p) => !copyRestates(p.text, primary.text)) : undefined;
-  const contextSynthesis =
-    contextParts.state === "혼자 튄 무명주"
-      ? "같은 종목군과 다른 변동성이 잡힌 이유를 먼저 확인하는 화면이에요."
-      : contextParts.state === "이유 얇은 섹터선두"
-        ? "같은 종목군 안에서 오늘 변동성이 컸던 이유를 먼저 확인하는 화면이에요."
-        : contextParts.state
-          ? `${contextParts.state} 근거를 먼저 확인하는 화면이에요.`
-          : undefined;
+  const contextSynthesis = contextParts.state
+    ? `${contextParts.state} 근거를 먼저 확인하는 화면이에요.`
+    : undefined;
   const synthesis =
     contextSynthesis ??
     (support

@@ -49,18 +49,105 @@ export interface StockUnderstandingOptions {
   country?: string;
 }
 
-/** 테마 → 종토방 종목코드(원문 커뮤니티 수집 대상). 지금은 반도체만(PoC). */
+/** 테마 → 종토방 종목코드(원문 커뮤니티 수집 대상). 대표주 2~4개만 보수적으로 연결한다. */
 const THEME_NAVER_CODES: Record<string, { code: string; label: string }[]> = {
   반도체: [
     { code: "005930", label: "삼성전자" },
     { code: "000660", label: "SK하이닉스" },
+    { code: "042700", label: "한미반도체" },
+    { code: "240810", label: "원익IPS" },
+  ],
+  조선: [
+    { code: "329180", label: "HD현대중공업" },
+    { code: "042660", label: "한화오션" },
+    { code: "010140", label: "삼성중공업" },
+  ],
+  자동차: [
+    { code: "005380", label: "현대차" },
+    { code: "000270", label: "기아" },
+    { code: "012330", label: "현대모비스" },
+  ],
+  바이오: [
+    { code: "207940", label: "삼성바이오로직스" },
+    { code: "068270", label: "셀트리온" },
+    { code: "196170", label: "알테오젠" },
+  ],
+  "2차전지": [
+    { code: "373220", label: "LG에너지솔루션" },
+    { code: "006400", label: "삼성SDI" },
+    { code: "247540", label: "에코프로비엠" },
+    { code: "078600", label: "대주전자재료" },
+  ],
+  방산: [
+    { code: "012450", label: "한화에어로스페이스" },
+    { code: "064350", label: "현대로템" },
+    { code: "079550", label: "LIG넥스원" },
+  ],
+  원자력: [
+    { code: "034020", label: "두산에너빌리티" },
+    { code: "051600", label: "한전KPS" },
+    { code: "105840", label: "우진" },
+  ],
+  금융: [
+    { code: "105560", label: "KB금융" },
+    { code: "055550", label: "신한지주" },
+    { code: "086790", label: "하나금융지주" },
+  ],
+  유통: [
+    { code: "004170", label: "신세계" },
+    { code: "023530", label: "롯데쇼핑" },
+    { code: "139480", label: "이마트" },
+  ],
+  게임: [
+    { code: "259960", label: "크래프톤" },
+    { code: "036570", label: "엔씨소프트" },
+    { code: "251270", label: "넷마블" },
+    { code: "058630", label: "엠게임" },
+  ],
+  건설: [
+    { code: "000720", label: "현대건설" },
+    { code: "006360", label: "GS건설" },
+    { code: "047040", label: "대우건설" },
+  ],
+  에너지: [
+    { code: "034020", label: "두산에너빌리티" },
+    { code: "112610", label: "씨에스윈드" },
+    { code: "010060", label: "OCI홀딩스" },
+  ],
+  화장품: [
+    { code: "161890", label: "한국콜마" },
+    { code: "192820", label: "코스맥스" },
+    { code: "090430", label: "아모레퍼시픽" },
+  ],
+  클라우드: [
+    { code: "035420", label: "NAVER" },
+    { code: "035720", label: "카카오" },
+    { code: "012510", label: "더존비즈온" },
+  ],
+  AI: [
+    { code: "035420", label: "NAVER" },
+    { code: "005930", label: "삼성전자" },
+    { code: "108860", label: "셀바스AI" },
+  ],
+  로봇: [
+    { code: "277810", label: "레인보우로보틱스" },
+    { code: "108490", label: "로보티즈" },
+    { code: "090360", label: "로보스타" },
+  ],
+  양자: [
+    { code: "030200", label: "KT" },
+    { code: "017670", label: "SK텔레콤" },
   ],
 };
+
+export function themeNaverCodesFor(theme: string): { code: string; label: string }[] {
+  return THEME_NAVER_CODES[theme] ?? [];
+}
 
 
 /** 뉴스 + 종토방 원문을 SourceDoc[] 로(제목·본문 보존, S1.. 식별자 부여). */
 export async function collectThemeDocs(theme: string): Promise<SourceDoc[]> {
-  const codes = THEME_NAVER_CODES[theme] ?? [];
+  const codes = themeNaverCodesFor(theme);
 
   const [newsRes, dcRes, ...commRes] = await Promise.allSettled([
     fetchAllNews(),

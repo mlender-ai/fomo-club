@@ -40,33 +40,15 @@ function stripSourceAndTime(text: string): string {
 const BAD_SURFACE_COPY_PATTERN =
   /혼자\s*튄|무명주|흐름\s+흐름|흐름\s*안에서|흐름보다\s*먼저\s*반응|먼저\s*반응|눈에\s*띄|원문\s*근거|근거는\s*아직|더\s*살펴볼|더\s*확인할|보는\s*종목/;
 
-function normalizeSurfaceCopy(text: string, sector?: string, ticker?: string): string {
-  const displaySector = cleanInline(sector) || "동종";
-  const displayTicker = cleanInline(ticker);
-  return stripSourceAndTime(
-    text
-      .replace(/뒤를\s*받칠\s*수급·거래·뉴스는\s*아직\s*안\s*보여요\.?/g, "")
-      .replace(/원문·수급\s*근거는\s*아직\s*더\s*확인해야\s*해요\.?/g, "")
-      .replace(/뉴스·공시·수급\s*근거는\s*아직\s*확인되지\s*않았어요\.?/g, "")
-      .replace(/\s*·\s*(?:뉴시스|연합뉴스|한국경제|매일경제|Reuters|Bloomberg|CNBC|Yahoo Finance|SEC|DART|공시)[^.。]*[.。]?/gi, ".")
-  )
-    .replace(/^혼자\s*튄\s*무명주\s*[—-]\s*/g, "")
-    .replace(/시총\s*\d+위권인데\s*/g, "")
-    .replace(/시총\s*상위권인데\s*/g, "")
-    .replace(/흐름\s+흐름/g, "흐름")
-    .replace(/([가-힣A-Za-z0-9]+)\s*흐름\s*안에서\s*가장\s*먼저\s*눈에\s*띄었어요\.?/g, "같은 $1 종목들 중 오늘 변동성이 가장 컸어요")
-    .replace(/([가-힣A-Za-z0-9]+)\s*흐름\s*안에서\s*상위권으로\s*눈에\s*띄었어요\.?/g, "같은 $1 종목들 중 오늘 변동성이 상위권이에요")
-    .replace(/([가-힣A-Za-z0-9]+)\s*흐름보다\s*먼저\s*반응했어요\.?/g, "같은 $1 종목들보다 오늘 변동성이 더 컸어요")
-    .replace(/([가-힣A-Za-z0-9]+)\s*안에서\s*변동성이\s*크게\s*잡혔어요\.?/g, "$1 종목 중 오늘 변동성이 크게 잡혔어요")
-    .replace(/같은\s+(.+?)\s+종목들\s+중\s+오늘\s+제일\s+셌어요/g, "같은 $1 종목들 중 오늘 변동성이 가장 컸어요")
-    .replace(/같은\s+(.+?)\s+종목들\s+중\s+오늘\s+가장\s+셌어요/g, "같은 $1 종목들 중 오늘 변동성이 가장 컸어요")
-    .replace(/상대강도/g, "동종 비교")
-    .replace(/시장\s*위치/g, "시장 안 비교")
-    .replace(/테마\s*동종 비교/g, "동종 비교")
+const WHAT_ONLY_SURFACE_COPY_PATTERN =
+  /거래가|거래량|평소\s*\d|변동성|동종\s*비교|상대강도|시장\s*위치|테마\s*상대|종목\s+중|시총\s*\d|오늘\s*[+-]?\d|움직였|강했|셌|신호가\s*잡혔|확인된\s*종목|확인하는\s*종목|\d+\s*\/\s*\d+/;
+
+function normalizeSurfaceCopy(text: string): string {
+  return stripSourceAndTime(text)
     .replace(/^\s*[—-]\s*/g, "")
     .replace(/[.。]+$/g, "")
     .replace(/\s+/g, " ")
-    .trim() || (displayTicker ? `${displayTicker}에서 오늘 확인할 변화가 잡혔어요` : `같은 ${displaySector} 종목들과 다른 변동성이 잡혔어요`);
+    .trim();
 }
 
 function topicFromMaterial(detail: string): string {
@@ -94,23 +76,17 @@ function supportFromDetail(detail: string): string {
   return "직접 재료가 붙었어요";
 }
 
-function sectorFromDetail(detail: string, fallback?: string): string {
-  const sameSector = detail.match(/같은\s+(.+?)\s+종목들/);
-  if (sameSector?.[1]) return sameSector[1].trim();
-  const inSector = detail.match(/([가-힣A-Za-z0-9]+)\s+안에서/);
-  if (inSector?.[1]) return inSector[1].trim();
-  return fallback?.trim() || "섹터";
-}
-
 function clipped(text: string, max = 34): string {
   const clean = cleanInline(text);
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
+function isSurfaceMaterial(text: string): boolean {
+  return !BAD_SURFACE_COPY_PATTERN.test(text) && !WHAT_ONLY_SURFACE_COPY_PATTERN.test(text) && text.length > 8;
+}
+
 export function compactDiscoveryCardHeadline({
   reason,
-  sector,
-  ticker,
 }: DiscoveryHeadlineInput): string | undefined {
   const clean = cleanInline(reason);
   if (!clean) return undefined;
@@ -119,17 +95,9 @@ export function compactDiscoveryCardHeadline({
   const state = parts.state;
   const detail = parts.detail ?? clean;
 
-  if (state === "혼자 튄 무명주") {
-    return clipped(normalizeSurfaceCopy(detail, sectorFromDetail(detail, sector), ticker), 42);
-  }
-
-  if (state === "이유 얇은 섹터선두") {
-    return clipped(normalizeSurfaceCopy(detail, sectorFromDetail(detail, sector), ticker), 42);
-  }
-
   if (state === "뉴스 재료 붙은 종목" || state === "공시 먼저 뜬 종목" || (!state && /뉴스|공시|소식|계약|수주/.test(clean))) {
-    const material = normalizeSurfaceCopy(detail, sector, ticker);
-    if (material && !BAD_SURFACE_COPY_PATTERN.test(material) && material.length > 8) return clipped(material, 44);
+    const material = normalizeSurfaceCopy(detail);
+    if (isSurfaceMaterial(material)) return clipped(material, 44);
     const topic = topicFromMaterial(detail);
     const support = supportFromDetail(detail);
     return topic === "뉴스" ? support : `${topic}에 ${support}`;
@@ -141,11 +109,10 @@ export function compactDiscoveryCardHeadline({
     return "수급이 먼저 들어온 종목이에요";
   }
 
-  if (state?.includes("거래")) return "거래가 먼저 커진 종목이에요";
-  if (state?.includes("새 가격대")) return "새 가격대까지 밟은 종목이에요";
+  if (state?.includes("거래") || state?.includes("새 가격대")) return undefined;
 
-  const normalized = normalizeSurfaceCopy(detail, sector, ticker);
-  if (normalized && !BAD_SURFACE_COPY_PATTERN.test(normalized)) return clipped(normalized, 44);
+  const normalized = normalizeSurfaceCopy(detail);
+  if (isSurfaceMaterial(normalized)) return clipped(normalized, 44);
 
   return undefined;
 }
