@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { discoveryWhy, hasDisplayWhyEvent, type DiscoveryCandidate, type DiscoveryEventKind } from "@fomo/core";
+import { discoveryWhy, hasDisplayWhyEvent, hasRankableDiscoverySignal, type DiscoveryCandidate, type DiscoveryEventKind } from "@fomo/core";
 
 import {
   cleanMaterialTitle,
@@ -161,7 +161,7 @@ describe("discovery specific hook copy", () => {
     expect([spike, ordinary].every((text) => !bannedSurfaceMovementPattern.test(text))).toBe(true);
   });
 
-  it("uses the same concrete context signal for headline and reason instead of filler copy", () => {
+  it("keeps context signals rankable but does not expose them as filler headlines", () => {
     const geumho = candidate("금호건설", "market_context", 0.72, {
       rank: 461,
       direction: "up",
@@ -177,14 +177,16 @@ describe("discovery specific hook copy", () => {
     lucid.country = "US";
     lucid.sector = "전기차";
 
-    expect(hasDisplayWhyEvent(geumho)).toBe(true);
-    expect(discoveryWhy(geumho)).toBe("건설 종목 중 오늘 변동성이 크게 잡혔어요");
+    expect(hasDisplayWhyEvent(geumho)).toBe(false);
+    expect(hasRankableDiscoverySignal(geumho)).toBe(true);
+    expect(discoveryWhy(geumho)).toBe("아직 공개된 계기 없음");
     expect(discoveryWhy(geumho)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(geumho)).not.toMatch(bannedFillerPattern);
     expect(discoveryWhy(geumho)).not.toMatch(bannedSurfaceMovementPattern);
 
-    expect(hasDisplayWhyEvent(lucid)).toBe(true);
-    expect(discoveryWhy(lucid)).toBe("같은 전기차 종목들 중 오늘 변동성이 가장 컸어요");
+    expect(hasDisplayWhyEvent(lucid)).toBe(false);
+    expect(hasRankableDiscoverySignal(lucid)).toBe(true);
+    expect(discoveryWhy(lucid)).toBe("아직 공개된 계기 없음");
     expect(discoveryWhy(lucid)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(lucid)).not.toMatch(bannedFillerPattern);
     expect(discoveryWhy(lucid)).not.toMatch(bannedSurfaceMovementPattern);

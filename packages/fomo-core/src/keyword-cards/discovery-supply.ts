@@ -212,26 +212,23 @@ function isRecentDeckEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate,
 }
 
 function isMaterialEvent(event: DiscoveryEvent): boolean {
-  return (
-    event.kind === "disclosure" ||
-    event.kind === "news_mention" ||
-    event.kind === "flow_entry" ||
-    event.kind === "new_high"
-  );
+  return event.kind === "disclosure" || event.kind === "news_mention" || event.kind === "flow_entry";
 }
 
 function isLinkedNewsEvent(event: DiscoveryEvent): boolean {
   return event.kind === "news_mention" && /종목뉴스\s?연결/i.test(event.source);
 }
 
-function isDisplayVolumeEvent(event: DiscoveryEvent): boolean {
+function isRankableVolumeEvent(event: DiscoveryEvent): boolean {
   return event.kind === "volume_spike" && event.firstSeen && event.direction !== "down" && event.direction !== "flat";
 }
 
 export function isDeckDisplayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
-  if (isMaterialEvent(event)) return isRecentDeckEvent(event, candidate, DISCOVERY_RECENT_MATERIAL_DAYS);
-  if (!isCurrentDeckEvent(event, candidate)) return false;
-  return isDisplayVolumeEvent(event);
+  if (!isMaterialEvent(event) || !isRecentDeckEvent(event, candidate, DISCOVERY_RECENT_MATERIAL_DAYS)) return false;
+  if (event.kind === "flow_entry") return true;
+  if (event.kind === "disclosure") return !!headlineHookOf(event) || !!sourceTitleOf(event);
+  if (event.kind === "news_mention") return !!headlineHookOf(event) || !!sourceTitleOf(event);
+  return false;
 }
 
 function hasConcreteContextLabel(event: DiscoveryEvent): boolean {
@@ -254,7 +251,24 @@ export function hasDeckDisplayEvent(candidate: DiscoveryCandidate): boolean {
 }
 
 export function hasDisplayWhyEvent(candidate: DiscoveryCandidate): boolean {
-  return candidate.events.some((event) => isDeckDisplayEvent(event, candidate) || isContextDisplayEvent(event, candidate));
+  return candidate.events.some((event) => isDeckDisplayEvent(event, candidate));
+}
+
+function isRankablePricePositionEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
+  return event.kind === "new_high" && isRecentDeckEvent(event, candidate, DISCOVERY_RECENT_MATERIAL_DAYS);
+}
+
+function isRankableEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
+  return (
+    isDeckDisplayEvent(event, candidate) ||
+    isContextDisplayEvent(event, candidate) ||
+    isRankableVolumeEvent(event) ||
+    isRankablePricePositionEvent(event, candidate)
+  );
+}
+
+export function hasRankableDiscoverySignal(candidate: DiscoveryCandidate): boolean {
+  return candidate.events.some((event) => isRankableEvent(event, candidate));
 }
 
 export function isDiscoveryAwakening(candidate: DiscoveryCandidate): boolean {
@@ -272,7 +286,7 @@ export function isDiscoveryAwakening(candidate: DiscoveryCandidate): boolean {
 }
 
 export function isWeakDiscoveryCandidate(candidate: DiscoveryCandidate): boolean {
-  return !hasDisplayWhyEvent(candidate);
+  return !hasRankableDiscoverySignal(candidate);
 }
 
 const WHY_KIND_PRIORITY: Record<DiscoveryEventKind, number> = {
@@ -305,9 +319,11 @@ function isPriceRestatement(text: string): boolean {
 }
 
 function displayEventsFor(candidate: DiscoveryCandidate): DiscoveryEvent[] {
-  return candidate.events.filter(
-    (event) => isDeckDisplayEvent(event, candidate) || isContextDisplayEvent(event, candidate)
-  );
+  return candidate.events.filter((event) => isDeckDisplayEvent(event, candidate));
+}
+
+function supportEventsFor(candidate: DiscoveryCandidate): DiscoveryEvent[] {
+  return candidate.events.filter((event) => isRankableEvent(event, candidate));
 }
 
 function eventKindTone(event: DiscoveryEvent | undefined): DiscoverySynthesisTone {
@@ -348,12 +364,16 @@ function compactSourceName(event: DiscoveryEvent): string {
   return (event.sourceName ?? event.source ?? "").replace(/\s+/g, " ").trim();
 }
 
+function isGenericMaterialTitle(text: string): boolean {
+  return /^(?:이 종목을 직접 언급한 뉴스|뉴스가 있어요|소식이 나왔어요|외신이 나왔어요|직접 다룬 리서치)/.test(text);
+}
+
 function sourceTitleOf(event: DiscoveryEvent | undefined): string | undefined {
   if (!event) return undefined;
   const title = (event.sourceTitle ?? "").replace(/\s+/g, " ").trim();
-  if (title) return title;
+  if (title && !isGenericMaterialTitle(title)) return title;
   const label = stripTimePrefix(labelOf(event));
-  if (!label || /^(?:이 종목을 직접 언급한 뉴스|뉴스가 있어요|소식이 나왔어요)/.test(label)) return undefined;
+  if (!label || isGenericMaterialTitle(label)) return undefined;
   return label;
 }
 
@@ -507,16 +527,16 @@ function whyFactFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): WhyFa
   const prefix = eventTimePrefix(event, candidate);
   const change = signedPct(changePctOf(candidate, event));
   const hook = headlineHookOf(event);
+  const materialHook = event.kind === "news_mention" || event.kind === "disclosure" ? hook ?? sourceTitleOf(event) : hook;
 
-  if ((event.kind === "news_mention" || event.kind === "disclosure") && hook) {
-    const headline = change ? `${ticker} ${change}, ${hook}` : `${ticker}, ${hook}`;
+  if ((event.kind === "news_mention" || event.kind === "disclosure") && materialHook) {
     return {
-      headline,
+      headline: materialHook,
       state: event.kind === "disclosure" ? "공시 사건" : "뉴스 사건",
-      observation: `${prefix} ${hook}${change ? ` / ${ticker} ${change}` : ""}.`,
+      observation: `${prefix} ${materialHook}${change ? ` / ${ticker} ${change}` : ""}.`,
       synthesis: change
-        ? `기사 제목보다 '${hook}' 사건과 ${ticker} ${change} 반응을 분리해서 봅니다.`
-        : `기사 제목보다 '${hook}' 사건 자체를 먼저 봅니다.`,
+        ? `기사 제목보다 '${materialHook}' 사건과 ${ticker} ${change} 반응을 분리해서 봅니다.`
+        : `기사 제목보다 '${materialHook}' 사건 자체를 먼저 봅니다.`,
       evidence: evidenceFor(event),
     };
   }
@@ -593,7 +613,7 @@ function supportEligible(event: DiscoveryEvent | undefined, primary: DiscoveryEv
 function choosePrimaryEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
   return displayEventsFor(candidate).filter((event) => {
     if (event.kind !== "news_mention") return true;
-    return !!headlineHookOf(event);
+    return !!headlineHookOf(event) || !!sourceTitleOf(event);
   }).sort(
     (a, b) => WHY_KIND_PRIORITY[a.kind] - WHY_KIND_PRIORITY[b.kind] || b.strength - a.strength || a.kind.localeCompare(b.kind)
   )[0];
@@ -601,7 +621,7 @@ function choosePrimaryEvent(candidate: DiscoveryCandidate): DiscoveryEvent | und
 
 function chooseSupportEvent(candidate: DiscoveryCandidate, primary: DiscoveryEvent | undefined): DiscoveryEvent | undefined {
   if (!primary) return undefined;
-  return displayEventsFor(candidate)
+  return supportEventsFor(candidate)
     .filter((event) => supportEligible(event, primary, candidate))
     .sort((a, b) => {
       const supportRank = (event: DiscoveryEvent) => {
@@ -708,10 +728,11 @@ export function directionPenalty(candidate: DiscoveryCandidate): number {
 
 function eventScore(candidate: DiscoveryCandidate): number {
   const displayEvents = candidate.events.filter((event) => isDeckDisplayEvent(event, candidate));
-  const scoreEvents = displayEvents.length > 0 ? displayEvents : candidate.events;
+  const rankableEvents = candidate.events.filter((event) => isRankableEvent(event, candidate));
+  const scoreEvents = displayEvents.length > 0 ? displayEvents : rankableEvents.length > 0 ? rankableEvents : candidate.events;
   const maxStrength = Math.max(0, ...scoreEvents.map((event) => clamp01(event.strength)));
   const diversity = new Set(scoreEvents.map((event) => event.kind)).size;
-  const materialBoost = hasPublicMaterialEvent(candidate) ? 0.22 : hasThemeLinkEvent(candidate) ? 0.08 : hasDisplayWhyEvent(candidate) ? -0.03 : -0.25;
+  const materialBoost = hasPublicMaterialEvent(candidate) ? 0.22 : hasThemeLinkEvent(candidate) ? 0.08 : hasRankableDiscoverySignal(candidate) ? -0.03 : -0.25;
   return (
     DISCOVERY_STRENGTH_WEIGHT * maxStrength +
     freshnessBoost(candidate) +
@@ -727,7 +748,6 @@ function eventTier(candidate: DiscoveryCandidate): number {
   const displayEvents = candidate.events.filter((event) => isDeckDisplayEvent(event, candidate));
   if (displayEvents.some((event) => isMaterialEvent(event) && !isLinkedNewsEvent(event))) return 0;
   if (displayEvents.some(isLinkedNewsEvent)) return 1;
-  if (displayEvents.some((event) => event.kind === "volume_spike")) return 1;
   return 9;
 }
 
@@ -792,7 +812,7 @@ export function rankDiscoveryCandidates(
   const max = opts.maxCandidates ?? DISCOVERY_MAX_CANDIDATES;
   const watched = new Set(opts.watched ?? []);
   const sorted = candidates
-    .filter(hasDisplayWhyEvent)
+    .filter(hasRankableDiscoverySignal)
     .map((candidate, index) => ({
       candidate,
       index,

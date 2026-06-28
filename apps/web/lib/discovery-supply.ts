@@ -31,7 +31,7 @@ import {
   type StockCountry,
   type RawArticle,
 } from "@fomo/core";
-import { fetchDartDisclosuresByStock, type DartDisclosureHit } from "./dart-disclosures";
+import { fetchDartDisclosuresByStock, fetchDartDisclosuresForCode, type DartDisclosureHit } from "./dart-disclosures";
 import { fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
 import { relatedTo, type RelatedNode } from "./relation-graph";
@@ -395,6 +395,21 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
   };
 }
 
+function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEvent {
+  return {
+    kind: "disclosure",
+    firstSeen: true,
+    strength: 0.96,
+    source: disclosure.source,
+    asOf: disclosure.asOf,
+    confidence: "H",
+    label: disclosure.label,
+    sourceTitle: disclosure.label,
+    sourceName: disclosure.source,
+    ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
+  };
+}
+
 function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string, subjectHint?: string): DiscoveryEvent | null {
   const label = cleanUsMaterialTitle(article.title, subjectHint);
   if (!label) return null;
@@ -493,6 +508,11 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
     return stockNews ? materialEventFromUsArticle(stockNews, asOf, "Yahoo Finance", row.canonical) : null;
   }
   if (!row.naverCode || !/^\d{6}$/.test(row.naverCode)) return null;
+  const disclosure = (await fetchDartDisclosuresForCode(row.naverCode, row.canonical, asOf).catch(
+    (): DartDisclosureHit[] => []
+  ))[0];
+  if (disclosure) return materialEventFromDisclosure(disclosure);
+
   const news = await fetchNaverStockNews(row.naverCode, 12);
   const stockNews = pickTargetedMaterialArticle(row.canonical, news);
   if (stockNews) return materialEventFromArticle(stockNews, asOf, "네이버 종목뉴스");
@@ -823,7 +843,7 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
       : event.kind === "news_mention"
         ? "news"
         : "official";
-  const hookText = (event.headlineHook ?? event.label)?.trim();
+  const hookText = (event.headlineHook ?? event.sourceTitle ?? event.label)?.trim();
   if (!hookText) return null;
   return {
     axis,
@@ -840,19 +860,56 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
   };
 }
 
-function stockPayload(row: DiscoveryMarketRow, candidate: DiscoveryCandidate): DiscoveryStockPayload {
+const HONEST_EMPTY_REASON_PATTERN =
+  /아직\s*공개된\s*계기\s*없음|뚜렷한\s*이유|아직\s*안\s*보여|확인되지\s*않았|원문\s*근거|재료\s*확인\s*안/i;
+
+const WHAT_ONLY_REASON_PATTERN =
+  /거래가|거래량|평소\s*\d|변동성|종목\s+중|시총\s*\d|오늘\s*[+-]?\d|움직였|강했|셌|동종\s*비교|상대강도|\d+\s*\/\s*\d+/i;
+
+const GENERIC_MATERIAL_REASON_PATTERN =
+  /뉴스가\s*있어요|외신이\s*나왔어요|소식이\s*나왔어요|직접\s*언급한\s*뉴스|가격·수급·언급|흐름에서\s*(?:먼저|새로|같이)\s*확인/i;
+
+function isConcreteMaterialReason(text: string | undefined): text is string {
+  const value = text?.trim();
+  if (!value || value.length < 8) return false;
+  if (!isFrontHookSafe(value)) return false;
+  if (HONEST_EMPTY_REASON_PATTERN.test(value)) return false;
+  if (WHAT_ONLY_REASON_PATTERN.test(value)) return false;
+  if (GENERIC_MATERIAL_REASON_PATTERN.test(value)) return false;
+  return true;
+}
+
+function frontMaterialReason(front: DiscoveryFrontSeed | undefined): { reason: string; sourceLabel?: string } | undefined {
+  const label = front?.signals.newsEventLabel?.trim();
+  const source = front?.signals.newsEventSource?.trim();
+  if (isConcreteMaterialReason(label)) {
+    return { reason: label, ...(source ? { sourceLabel: source } : {}) };
+  }
+  if (front?.axisHook?.axis === "time" && isConcreteMaterialReason(front.axisHook.hookText)) {
+    const evidenceSource = front.axisHook.evidence.find((item) => item.sourceKind === "news" || item.sourceKind === "official")?.source;
+    return {
+      reason: front.axisHook.hookText.trim(),
+      ...(evidenceSource ? { sourceLabel: evidenceSource } : {}),
+    };
+  }
+  return undefined;
+}
+
+function stockPayload(
+  row: DiscoveryMarketRow,
+  candidate: DiscoveryCandidate,
+  front?: DiscoveryFrontSeed
+): DiscoveryStockPayload {
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
   const synthesis = synthesizeDiscoveryInsight(candidate);
-  const fallbackThinReason = !synthesis.primary && hasDisplayWhyEvent(candidate)
-    ? honestNumericFallbackReason(row, candidate, sector)
-    : undefined;
-  const why = synthesis.primary ? synthesis.headline : fallbackThinReason;
-  const hasDisplayWhy = hasDisplayWhyEvent(candidate);
+  const frontReason = frontMaterialReason(front);
+  const synthesizedWhy = synthesis.headline;
+  const why = isConcreteMaterialReason(synthesizedWhy) ? synthesizedWhy : frontReason?.reason ?? synthesizedWhy;
   const sourceEvent = synthesis.primary?.kind === "news_mention" || synthesis.primary?.kind === "disclosure" ? synthesis.primary : undefined;
   const sourceTitle = sourceEvent?.sourceTitle?.trim();
   const sourceName = (sourceEvent?.sourceName ?? sourceEvent?.source)?.trim();
-  const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName;
+  const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName ?? frontReason?.sourceLabel;
   return {
     canonical: candidate.ticker,
     market: row.market,
@@ -861,22 +918,10 @@ function stockPayload(row: DiscoveryMarketRow, candidate: DiscoveryCandidate): D
     symbol: row.symbol,
     marquee: def?.marquee === true,
     sector: sector ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf),
-    ...(hasDisplayWhy && why ? { whyShown: why, reason: why, insightTag: synthesis.tag } : candidate.reason ? { whyShown: candidate.reason, reason: candidate.reason } : {}),
+    ...(why ? { whyShown: why, reason: why, insightTag: frontReason && !sourceEvent ? "뉴스 재료" : synthesis.tag } : {}),
     ...(sourceLabel ? { sourceLabel } : {}),
     ...(sourceEvent?.sourceUrl ? { sourceUrl: sourceEvent.sourceUrl } : {}),
   };
-}
-
-function honestNumericFallbackReason(
-  row: DiscoveryMarketRow,
-  candidate: DiscoveryCandidate,
-  sector: string | undefined
-): string | undefined {
-  const displaySector = cleanSectorLabel(sector) ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf);
-  const rank = typeof row.marketCapRank === "number" ? `시총 ${row.marketCapRank}위 ${displaySector}주` : candidate.ticker;
-  const change = typeof row.changePct === "number" ? `${row.changePct > 0 ? "+" : ""}${row.changePct.toFixed(1)}%` : undefined;
-  if (change) return `${rank} ${change} — 공개 재료·수급·거래량은 아직 비어 있어요`;
-  return typeof row.marketCapRank === "number" ? `${rank} — 공개 재료·수급·거래량은 아직 비어 있어요` : undefined;
 }
 
 function isSameDayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
@@ -906,7 +951,7 @@ function fallbackContextQuality(event: DiscoveryEvent): number {
 }
 
 function fallbackDiscoveryReason(candidate: DiscoveryCandidate): string {
-  return hasDisplayWhyEvent(candidate) ? discoveryWhy(candidate) : "아직 공개된 계기 없음";
+  return discoveryWhy(candidate);
 }
 
 function logDiscoverySignalCoverage(stage: string, candidates: readonly DiscoveryCandidate[]): void {
@@ -1372,16 +1417,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
         currency: "KRW",
       } satisfies DiscoveryMarketRow);
     const current = byTicker.get(def.canonical);
-    const event: DiscoveryEvent = {
-      kind: "disclosure",
-      firstSeen: true,
-      strength: 0.96,
-      source: disclosure.source,
-      asOf: disclosure.asOf,
-      confidence: "H",
-      label: disclosure.label,
-      ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
-    };
+    const event = materialEventFromDisclosure(disclosure);
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   }
 
@@ -1503,8 +1539,9 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const row = rowsByTicker.get(candidate.ticker);
     if (!row) continue;
     const attention = attentionMap[candidate.ticker];
-    stocks.push(stockPayload(row, candidate));
-    fronts[candidate.ticker] = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
+    const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
+    stocks.push(stockPayload(row, candidate, front));
+    fronts[candidate.ticker] = front;
   }
   const raritySets = applyAxisRarity(stocks.map((stock) => fronts[stock.canonical]?.axisSignals ?? []));
   stocks.forEach((stock, index) => {

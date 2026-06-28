@@ -4,6 +4,7 @@ import {
   eligibleUniverse,
   hasDeckDisplayEvent,
   hasDisplayWhyEvent,
+  hasRankableDiscoverySignal,
   isWeakDiscoveryCandidate,
   isDiscoveryAwakening,
   rankDiscoveryCandidates,
@@ -81,7 +82,7 @@ describe("WO-05 discovery supply engine", () => {
     row.events[0]!.sourceName = "한화투자증권 리서치";
     row.events[0]!.headlineHook = "설비 증설 이슈가 확인됐어요";
 
-    expect(discoveryWhy(row)).toBe("리서치, 설비 증설 이슈가 확인됐어요");
+    expect(discoveryWhy(row)).toBe("설비 증설 이슈가 확인됐어요");
     expect(discoveryWhy(row)).not.toContain("신규 설비 증설 점검");
     expect(discoveryWhy(row)).not.toContain("한화투자증권 리서치");
     expect(discoveryWhy(row)).not.toContain("언급한 뉴스");
@@ -95,7 +96,7 @@ describe("WO-05 discovery supply engine", () => {
     row.events[0]!.sourceName = "네이버 종목뉴스 연결";
     row.events[0]!.headlineHook = "업종 흐름에 함께 묶였어요";
 
-    expect(discoveryWhy(row)).toBe("연결기사, 업종 흐름에 함께 묶였어요");
+    expect(discoveryWhy(row)).toBe("업종 흐름에 함께 묶였어요");
     expect(discoveryWhy(row)).not.toContain("업종 흐름 기사");
     expect(discoveryWhy(row)).not.toContain("네이버 종목뉴스 연결");
     expect(discoveryWhy(row)).not.toContain("직접 언급한 뉴스");
@@ -115,7 +116,7 @@ describe("WO-05 discovery supply engine", () => {
     recentTheme.events[0]!.direction = "up";
 
     expect(hasDisplayWhyEvent(recentNews)).toBe(true);
-    expect(discoveryWhy(recentNews)).toBe("최근뉴스, 호남 클러스터에 관련주로 묶임");
+    expect(discoveryWhy(recentNews)).toBe("호남 클러스터에 관련주로 묶임");
     expect(hasDisplayWhyEvent(staleNews)).toBe(false);
     expect(hasDisplayWhyEvent(recentTheme)).toBe(false);
   });
@@ -258,17 +259,17 @@ describe("WO-05 discovery supply engine", () => {
     expect(ranked.map((c) => c.ticker)).toEqual(["수급", "테마"]);
   });
 
-  it("keeps market-index padding weak but lets concrete theme context explain a card", () => {
+  it("keeps market-index padding weak and uses theme context only as a rankable support signal", () => {
     const market = candidate("시장맥락", 0.55, "market_context", "KOSPI 시총 상위권에서 오늘 +1.2% 움직였어요.");
     const theme = candidate("테마", 0.55, "theme_link", "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요.");
     theme.events[0]!.direction = "up";
 
     expect(hasDisplayWhyEvent(market)).toBe(false);
     expect(isWeakDiscoveryCandidate(market)).toBe(true);
-    expect(hasDisplayWhyEvent(theme)).toBe(true);
+    expect(hasDisplayWhyEvent(theme)).toBe(false);
+    expect(hasRankableDiscoverySignal(theme)).toBe(true);
     expect(isWeakDiscoveryCandidate(theme)).toBe(false);
-    expect(discoveryWhy(theme)).toContain("원자력");
-    expect(discoveryWhy(theme)).toContain("흐름");
+    expect(discoveryWhy(theme)).toBe("아직 공개된 계기 없음");
     expect(discoveryWhy(theme)).not.toContain("근거는 얇");
     expect(discoveryWhy(theme)).not.toContain("흐름도 붙");
     expect(discoveryWhy(theme)).not.toContain("시총");
@@ -281,12 +282,10 @@ describe("WO-05 discovery supply engine", () => {
     row.events[0]!.direction = "up";
 
     const insight = synthesizeDiscoveryInsight(row);
-    expect(insight.headline).toContain("같은 화장품 종목들");
-    expect(insight.headline).toContain("변동성이 가장 컸어요");
-    expect(insight.headline).toContain("화장품");
+    expect(insight.headline).toBe("아직 공개된 계기 없음");
     expect(insight.headline).not.toContain("시총 411위");
     expect(insight.headline).not.toMatch(/\d+\/\d+/);
-    expect(insight.synthesis).toContain("뉴스·공시·수급 근거는 아직 확인되지 않았어요");
+    expect(insight.synthesis).toContain("가격만으로 이유를 만들지 않습니다");
     expect(insight.headline).not.toMatch(/혼자 튄|무명주|흐름 안에서|먼저 반응|눈에 띄|움직였어요|강하게\s*움직/);
     expect(insight.headline).not.toBe("오늘 화장품 5개 종목 중 제일 셌어요.");
   });
@@ -303,7 +302,8 @@ describe("WO-05 discovery supply engine", () => {
     expect(isWeakDiscoveryCandidate(flatTheme)).toBe(true);
     expect(hasDisplayWhyEvent(downTheme)).toBe(false);
     expect(isWeakDiscoveryCandidate(downTheme)).toBe(true);
-    expect(hasDisplayWhyEvent(upTheme)).toBe(true);
+    expect(hasDisplayWhyEvent(upTheme)).toBe(false);
+    expect(hasRankableDiscoverySignal(upTheme)).toBe(true);
     expect(isWeakDiscoveryCandidate(upTheme)).toBe(false);
     expect(rankDiscoveryCandidates([flatTheme, downTheme, upTheme]).map((row) => row.ticker)).toEqual(["상승선두"]);
   });
@@ -317,7 +317,7 @@ describe("WO-05 discovery supply engine", () => {
     expect(ranked).toHaveLength(0);
   });
 
-  it("drops price-only cards but keeps concrete theme movement cards from surface hooks", () => {
+  it("drops price-only cards but can still rank concrete theme movement behind real material", () => {
     const priceOnly = candidate("가격만큰종목", 1, "price_move", "오늘 가격이 +18.00% 움직였어요.");
     priceOnly.events[0]!.direction = "up";
     const themeWhy = candidate("테마이유", 0.45, "theme_link", "오늘 원자력 흐름이 셌고, 이 종목이 거기 묶여 있어요.");
@@ -489,7 +489,8 @@ describe("WO-05 discovery supply engine", () => {
     rejected[1]!.events[0]!.direction = "down";
 
     const ranked = rankDiscoveryCandidates([...rejected, ...price, ...theme, ...material], { maxCandidates: 20 });
-    expect(ranked.every(hasDisplayWhyEvent)).toBe(true);
+    expect(ranked.filter(hasDisplayWhyEvent).map((row) => row.ticker)).toEqual(["공시3", "공시2", "공시1", "공시0"]);
+    expect(ranked.every(hasRankableDiscoverySignal)).toBe(true);
     expect(ranked.map((row) => row.ticker)).toEqual(["공시3", "공시2", "공시1", "공시0", "테마2", "테마1", "테마0"]);
     expect(ranked.map((row) => row.ticker)).not.toContain("보합");
     expect(ranked.map((row) => row.ticker)).not.toContain("하락");
