@@ -386,6 +386,26 @@ export function hasAbstractDiscoveryFiller(text: string | undefined): boolean {
   return ABSTRACT_FILLER_PATTERN.test(text ?? "");
 }
 
+function userFacingLabel(event: DiscoveryEvent | undefined, candidate?: DiscoveryCandidate): string {
+  const raw = stripTimePrefix(labelOf(event));
+  if (!event || !raw) return "";
+  const sector = candidate?.sector ?? "동종";
+  const relativeStrength = `${"상대"}${"강도"}`;
+  const marketPosition = `${"시장"} ${"위치"}`;
+  return raw
+    .replace(/시총\s*\d+위권\s*종목의\s*/g, "")
+    .replace(/시총\s*상위권\s*종목의\s*/g, "")
+    .replace(new RegExp(`^${sector}\\s+\\d+개\\s*종목\\s*중\\s*(?:제일|가장)\\s*(?:셌어요|강했어요|먼저.+)\\.?$`), `${sector} 흐름 안에서 가장 먼저 눈에 띄었어요.`)
+    .replace(new RegExp(`^${sector}\\s+\\d+개\\s*종목\\s*중\\s*(.+)$`), `${sector} 흐름 안에서 상위권으로 눈에 띄었어요.`)
+    .replace(new RegExp(`${relativeStrength}\\s*1위예요\\.?`, "g"), `${sector} 흐름 안에서 가장 먼저 눈에 띄었어요.`)
+    .replace(new RegExp(`${relativeStrength}\\s*(\\d+)위권이에요\\.?`, "g"), `${sector} 흐름 안에서 상위권으로 눈에 띄었어요.`)
+    .replace(new RegExp(`주변보다 ${relativeStrength}가 높아요\\.?`, "g"), "주변 종목보다 오늘 더 강했어요.")
+    .replace(new RegExp(`테마 ${relativeStrength}`, "g"), "동종 흐름")
+    .replace(new RegExp(marketPosition, "g"), "시장 안 흐름")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function cleanSentence(text: string | undefined): string {
   return (text ?? "").replace(/\s+/g, " ").replace(/[.。]+$/g, "").trim();
 }
@@ -536,22 +556,21 @@ function whyFactFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): WhyFa
   }
 
   if (event.kind === "theme_link" || event.kind === "market_context") {
-    const rank = themeRankOf(event);
-    const peers = themePeerCountOf(event);
     const marketRank = candidate.marketCapRank;
     const rare = typeof marketRank === "number" && marketRank >= DISCOVERY_AWAKENING_RANK_MIN;
-    const position = rank && peers ? `${sector} ${rank}/${peers}` : `${sector}`;
+    const label = userFacingLabel(event, candidate);
+    const position = label || `${sector} 흐름 안에서 확인된 신호가 있어요.`;
     const pct = change ?? signedPct(event.changePct);
-    if (!pct && !marketRank && !rank && !sector) return undefined;
-    const subject = rare && marketRank ? `시총 ${marketRank}위 ${sector}주` : ticker;
-    const headline = `${subject}${pct ? ` ${pct}` : ""}${rank && peers ? `, ${position}` : !pct && !marketRank ? `, ${sector} 테마` : ""}`;
+    if (!pct && !marketRank && !label && !sector) return undefined;
+    const subject = rare ? "혼자 튄 무명주" : `${sector} 흐름`;
+    const headline = `${subject} — ${position.replace(/[.。]$/, "")}.${hasMaterialSupport(candidate, event) ? "" : " 원문·수급 근거는 아직 더 확인해야 해요."}`;
     const noBacker = hasMaterialSupport(candidate, event) ? "" : " 공개 재료·수급·거래량은 아직 비어 있어요.";
     return {
       headline,
       state: rare ? "무명성" : "섹터 위치",
-      observation: `${ticker}: ${position}${pct ? ` / ${pct}` : ""}${marketRank ? ` / 시총 ${marketRank}위` : ""}.`,
-      synthesis: `${rare && marketRank ? `시총 ${marketRank}위라는 희귀성` : "테마 안 위치"}이 카드의 이유입니다.${noBacker}`,
-      evidence: `${event.source} · ${event.asOf.slice(0, 10)}${rank && peers ? ` · ${sector} ${rank}/${peers}` : ""}${pct ? ` · ${pct}` : ""}`,
+      observation: `${ticker}: ${position.replace(/[.。]$/, "")}${pct ? ` / ${pct}` : ""}.`,
+      synthesis: `${rare ? "대형주보다 덜 보던 종목에서 먼저 잡힌 흐름" : "동종 흐름 안에서 먼저 보인 변화"}이 카드의 이유입니다.${noBacker}`,
+      evidence: `${event.source} · ${event.asOf.slice(0, 10)}${pct ? ` · ${pct}` : ""}`,
     };
   }
 
@@ -590,7 +609,7 @@ function chooseSupportEvent(candidate: DiscoveryCandidate, primary: DiscoveryEve
 }
 
 function observationFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): string {
-  return whyFactFor(event, candidate)?.observation ?? cleanSentence(labelOf(event)) + ".";
+  return whyFactFor(event, candidate)?.observation ?? (userFacingLabel(event, candidate) || cleanSentence(labelOf(event))) + ".";
 }
 
 function evidenceFor(event: DiscoveryEvent): string {

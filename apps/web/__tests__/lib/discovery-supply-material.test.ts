@@ -116,9 +116,9 @@ describe("discovery specific hook copy", () => {
       changePct: 3.18,
     });
 
-    expect(hpsp).toBe("오늘 반도체 14개 종목 중 제일 셌어요.");
-    expect(wonik).toBe("오늘 반도체 14개 종목 중 두 번째로 눈에 띄었어요.");
-    expect(outperformer).toBe("반도체 안에서 주변 종목보다 오늘 더 강했어요.");
+    expect(hpsp).toBe("반도체 흐름 안에서 가장 먼저 눈에 띄었어요.");
+    expect(wonik).toBe("반도체 흐름 안에서 상위권으로 눈에 띄었어요.");
+    expect(outperformer).toBe("반도체 흐름보다 먼저 반응했어요.");
     expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
     expect([hpsp, wonik, outperformer].some((text) => /신호가|흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
     expect([hpsp, wonik, outperformer].every((text) => !surfacePricePattern.test(text))).toBe(true);
@@ -127,20 +127,19 @@ describe("discovery specific hook copy", () => {
   it("keeps sector-only movers contextual instead of generic or raw price-only copy", () => {
     const spike = formatSectorMarketContextLabel({
       sector: "건설",
-      rankText: "시총 461위권",
       changePct: 30,
       change: "+30.00%",
     });
     const ordinary = formatSectorMarketContextLabel({
       sector: "화장품",
-      rankText: "시총 210위권",
       changePct: 4.2,
       change: "+4.20%",
     });
 
-    expect(spike).toBe("건설 안에서 시총 461위권 종목의 변동성이 크게 잡혔어요.");
-    expect(ordinary).toBe("화장품 안에서 시총 210위권 종목의 신호가 새로 잡혔어요.");
+    expect(spike).toBe("건설 안에서 갑자기 관심이 커진 종목이에요.");
+    expect(ordinary).toBe("화장품 안에서 오늘 새로 눈에 들어온 종목이에요.");
     expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
+    expect([spike, ordinary].every((text) => !/시총|\d+\/\d+/.test(text))).toBe(true);
     expect([spike, ordinary].every((text) => !surfacePricePattern.test(text))).toBe(true);
   });
 
@@ -161,11 +160,17 @@ describe("discovery specific hook copy", () => {
     lucid.sector = "전기차";
 
     expect(hasDisplayWhyEvent(geumho)).toBe(true);
-    expect(discoveryWhy(geumho)).toBe("시총 461위 건설주");
+    expect(discoveryWhy(geumho)).toBe(
+      "혼자 튄 무명주 — 건설 안에서 변동성이 크게 잡혔어요. 원문·수급 근거는 아직 더 확인해야 해요."
+    );
+    expect(discoveryWhy(geumho)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(geumho)).not.toMatch(bannedFillerPattern);
 
     expect(hasDisplayWhyEvent(lucid)).toBe(true);
-    expect(discoveryWhy(lucid)).toBe("시총 240위 전기차주, 전기차 1/4");
+    expect(discoveryWhy(lucid)).toBe(
+      "혼자 튄 무명주 — 전기차 흐름 안에서 가장 먼저 눈에 띄었어요. 원문·수급 근거는 아직 더 확인해야 해요."
+    );
+    expect(discoveryWhy(lucid)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(lucid)).not.toMatch(bannedFillerPattern);
     expect(discoveryWhy(lucid)).not.toBe("오늘 전기차 4개 종목 중 제일 셌어요.");
   });

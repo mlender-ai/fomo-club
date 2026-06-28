@@ -267,9 +267,11 @@ describe("WO-05 discovery supply engine", () => {
     expect(isWeakDiscoveryCandidate(market)).toBe(true);
     expect(hasDisplayWhyEvent(theme)).toBe(true);
     expect(isWeakDiscoveryCandidate(theme)).toBe(false);
-    expect(discoveryWhy(theme)).toBe("테마, 원자력 테마");
+    expect(discoveryWhy(theme)).toContain("원자력");
+    expect(discoveryWhy(theme)).toContain("흐름");
     expect(discoveryWhy(theme)).not.toContain("근거는 얇");
     expect(discoveryWhy(theme)).not.toContain("흐름도 붙");
+    expect(discoveryWhy(theme)).not.toContain("시총");
   });
 
   it("does not output price-rank-only headlines for theme leaders", () => {
@@ -279,9 +281,10 @@ describe("WO-05 discovery supply engine", () => {
     row.events[0]!.direction = "up";
 
     const insight = synthesizeDiscoveryInsight(row);
-    expect(insight.headline).toContain("시총 411위");
+    expect(insight.headline).toContain("혼자 튄 무명주");
     expect(insight.headline).toContain("화장품");
-    expect(insight.headline).toContain("1/5");
+    expect(insight.headline).not.toContain("시총 411위");
+    expect(insight.headline).not.toMatch(/\d+\/\d+/);
     expect(insight.synthesis).toContain("공개 재료·수급·거래량은 아직 비어 있어요");
     expect(insight.headline).not.toBe("오늘 화장품 5개 종목 중 제일 셌어요.");
   });
