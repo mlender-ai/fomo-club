@@ -11,6 +11,7 @@ import type {
 } from "@fomo/core";
 import { getSessionId } from "@/lib/session";
 import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
+import { discoveryMatchesCountry, type DiscoveryCountryScope } from "./discoveryCountryScope";
 
 export type { BannerItem } from "@fomo/core";
 
@@ -39,7 +40,7 @@ const INDEX_REVALIDATE_TIMEOUT_MS = 8_000;
 const DISCOVERY_SAME_ORIGIN_TIMEOUT_MS = 11_500;
 const DISCOVERY_BACKEND_TIMEOUT_MS = 18_000;
 const DISCOVERY_REVALIDATE_TIMEOUT_MS = 24_000;
-export type DiscoveryCountryScope = "KR" | "US" | "all";
+export type { DiscoveryCountryScope } from "./discoveryCountryScope";
 
 function discoveryFastPath(country: DiscoveryCountryScope = "KR"): string {
   return `/api/fomo/discovery?fast=1&country=${encodeURIComponent(country)}`;
@@ -448,11 +449,17 @@ export type DiscoveryCardResponse = DiscoveryStockResponse | DiscoveryThemeBundl
 
 export interface DiscoveryResponse {
   asOf: string;
+  country?: DiscoveryCountryScope;
   stocks: DiscoveryStockResponse[];
   cards?: DiscoveryCardResponse[];
   fronts: Record<string, StockFrontResponse>;
   confidence: "L" | "M" | "H";
   source: string;
+}
+
+export interface DiscoveryUpdatedDetail {
+  country: DiscoveryCountryScope;
+  discovery: DiscoveryResponse;
 }
 
 const discoveryKey = (country: DiscoveryCountryScope = "KR") => `discovery:today:v5:${country}:${kstDateKey()}`;
@@ -465,8 +472,8 @@ function isDiscoveryResponse(value: unknown): value is DiscoveryResponse {
   return !!candidate && Array.isArray(candidate.stocks) && !!candidate.fronts && typeof candidate.fronts === "object";
 }
 
-function hasDiscoveryCards(value: DiscoveryResponse | null | undefined): value is DiscoveryResponse {
-  return !!value && isDiscoveryResponse(value) && (value.stocks.length > 0 || (value.cards?.length ?? 0) > 0);
+function hasDiscoveryCards(value: DiscoveryResponse | null | undefined, country: DiscoveryCountryScope = "all"): value is DiscoveryResponse {
+  return discoveryMatchesCountry(value, country) && (value.stocks.length > 0 || (value.cards?.length ?? 0) > 0);
 }
 
 function readStoredDiscovery(country: DiscoveryCountryScope = "KR"): DiscoveryResponse | null {
@@ -476,7 +483,7 @@ function readStoredDiscovery(country: DiscoveryCountryScope = "KR"): DiscoveryRe
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     const discovery = isDiscoveryResponse(parsed) ? parsed : null;
-    if (hasDiscoveryCards(discovery)) return discovery;
+    if (hasDiscoveryCards(discovery, country)) return discovery;
     window.localStorage.removeItem(discoveryStorageKey(country));
     window.localStorage.removeItem(lastDiscoveryStorageKey(country));
     return null;
@@ -488,7 +495,7 @@ function readStoredDiscovery(country: DiscoveryCountryScope = "KR"): DiscoveryRe
 
 function writeStoredDiscovery(value: DiscoveryResponse, country: DiscoveryCountryScope = "KR"): void {
   if (typeof window === "undefined") return;
-  if (!hasDiscoveryCards(value)) return;
+  if (!hasDiscoveryCards(value, country)) return;
   try {
     window.localStorage.setItem(discoveryStorageKey(country), JSON.stringify(value));
     window.localStorage.setItem(lastDiscoveryStorageKey(country), JSON.stringify(value));
@@ -497,9 +504,9 @@ function writeStoredDiscovery(value: DiscoveryResponse, country: DiscoveryCountr
   }
 }
 
-function emitDiscoveryUpdated(value: DiscoveryResponse): void {
+function emitDiscoveryUpdated(country: DiscoveryCountryScope, value: DiscoveryResponse): void {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent<DiscoveryResponse>(DISCOVERY_UPDATED_EVENT, { detail: value }));
+  window.dispatchEvent(new CustomEvent<DiscoveryUpdatedDetail>(DISCOVERY_UPDATED_EVENT, { detail: { country, discovery: value } }));
 }
 
 async function fetchDiscoveryNetwork({
@@ -546,7 +553,7 @@ export const getCachedDiscovery = (country: DiscoveryCountryScope = "KR") => rea
 export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Promise<DiscoveryResponse> {
   const key = discoveryKey(country);
   const cached = readCached<DiscoveryResponse>(key);
-  if (hasDiscoveryCards(cached)) return cached;
+  if (hasDiscoveryCards(cached, country)) return cached;
 
   const stored = readStoredDiscovery(country);
   if (stored) {
@@ -560,11 +567,11 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
           backendTimeoutMs: DISCOVERY_REVALIDATE_TIMEOUT_MS,
         }),
       CACHE_TTL.stockFront
-    )
+      )
       .then((fresh) => {
-        if (!hasDiscoveryCards(fresh)) return;
+        if (!hasDiscoveryCards(fresh, country)) return;
         writeStoredDiscovery(fresh, country);
-        emitDiscoveryUpdated(fresh);
+        emitDiscoveryUpdated(country, fresh);
       })
       .catch((err) => {
         if (process.env.NODE_ENV !== "production") {
@@ -575,7 +582,8 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
   }
 
   const fresh = await fetchDiscoveryNetwork({ country });
-  if (hasDiscoveryCards(fresh)) setCached(key, fresh, CACHE_TTL.stockFront);
+  if (!hasDiscoveryCards(fresh, country)) throw new Error(`GET /api/fomo/discovery returned invalid ${country} deck`);
+  setCached(key, fresh, CACHE_TTL.stockFront);
   writeStoredDiscovery(fresh, country);
   return fresh;
 }

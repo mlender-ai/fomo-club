@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
-import { DISCOVERY_UPDATED_EVENT, fetchDiscovery, type DiscoveryCountryScope, type DiscoveryResponse } from "@/lib/fomoApi";
+import {
+  DISCOVERY_UPDATED_EVENT,
+  fetchDiscovery,
+  type DiscoveryCountryScope,
+  type DiscoveryResponse,
+  type DiscoveryUpdatedDetail,
+} from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { MIN_DISCOVERY_STOCKS, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
@@ -55,7 +61,9 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
       setState({ kind: "ready", cards, fronts: discovery.fronts as Record<string, FrontEntry> });
     };
     const onDiscoveryUpdated = (event: Event) => {
-      const discovery = (event as CustomEvent<DiscoveryResponse>).detail;
+      const detail = (event as CustomEvent<DiscoveryUpdatedDetail>).detail;
+      const discovery = detail?.discovery;
+      if (detail?.country !== country) return;
       if (!alive || !discovery) return;
       applyDiscovery(discovery);
     };

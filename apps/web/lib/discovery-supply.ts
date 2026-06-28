@@ -121,6 +121,7 @@ export type DiscoveryDeckCardPayload =
 
 export interface DiscoveryResponse {
   asOf: string;
+  country?: DiscoveryCountryScope;
   stocks: DiscoveryStockPayload[];
   cards?: DiscoveryDeckCardPayload[];
   fronts: Record<string, DiscoveryFrontSeed>;
@@ -237,6 +238,18 @@ async function fetchMarketRows(scope: DiscoveryCountryScope): Promise<DiscoveryM
     scope === "US" ? [fetchUsMarketRows()] : scope === "all" ? [fetchKrMarketRows(), fetchUsMarketRows()] : [fetchKrMarketRows()];
   const settled = await Promise.allSettled(sources);
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+}
+
+export function isDiscoveryRowAllowedForScope(row: DiscoveryMarketRow, scope: DiscoveryCountryScope): boolean {
+  if (scope === "all") return true;
+  if (scope === "KR") return row.country === "KR" && (row.market === "KOSPI" || row.market === "KOSDAQ");
+  return (
+    row.country === "US" &&
+    (row.market === "NASDAQ" || row.market === "NYSE") &&
+    row.currency === "USD" &&
+    !row.naverCode &&
+    /^[A-Z.]{1,6}$/.test(row.symbol)
+  );
 }
 
 async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
@@ -1067,7 +1080,8 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({})),
   ]);
   const vocabByCode = new Map(STOCK_VOCAB.filter((s) => s.naverCode).map((s) => [s.naverCode!, s]));
-  const normalizedRows = rows.map((row) => {
+  const scopedRows = rows.filter((row) => isDiscoveryRowAllowedForScope(row, scope));
+  const normalizedRows = scopedRows.map((row) => {
     const def = row.naverCode ? vocabByCode.get(row.naverCode) : undefined;
     return { ...row, canonical: def?.canonical ?? row.canonical };
   });
@@ -1242,6 +1256,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
 
   return {
     asOf,
+    country: scope,
     stocks,
     cards: interleaveThemeBundles(stocks, bundleCards),
     fronts,
