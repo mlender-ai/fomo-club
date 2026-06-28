@@ -1,3 +1,25 @@
+# FOMO Club AI Agent Constitution
+
+> **이 파일이 모든 AI 에이전트의 헌법이다.** Claude Code, Codex, Cursor, Gemini, Antigravity, OpenCode 등 어떤 도구를 쓰더라도 이 문서를 먼저 따른다.
+> 정본 우선순위는 `docs/PRODUCT_VISION.md` > `AGENTS.md` > `docs/DATA_ENGINE_STRATEGY.md` 이다. 충돌하면 위 순서가 이긴다.
+> 에이전트별 진입 파일(`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*`, `.rules`, `ANTIGRAVITY.md`)은 이 파일을 가리키는 포인터일 뿐이며, 규약 본문은 여기 한 곳에만 둔다.
+
+## Spec-Driven 작업 규약
+
+spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순서를 따른다.
+
+1. **Constitution**: `docs/PRODUCT_VISION.md`, `AGENTS.md`, `docs/DATA_ENGINE_STRATEGY.md`의 절대 제약을 먼저 확인한다.
+2. **Spec**: 새 작업은 `docs/templates/SPEC_TEMPLATE.md` 형식으로 무엇/왜/성공지표/비범위/절대제약을 고정한다.
+3. **Plan**: 구현 전 `docs/templates/PLAN_TEMPLATE.md` 형식으로 파일, 데이터 흐름, 리스크, 검증을 정한다.
+4. **Tasks**: 실제 작업은 `docs/templates/TASKS_TEMPLATE.md` 형식으로 파일별 태스크와 병렬 가능 작업을 나눈다.
+5. **Checklist**: WO/스펙 출고 전 `docs/templates/SPEC_CHECKLIST.md`를 채워 스펙 자체의 누락을 점검한다.
+6. **Analyze Gate**: PR 전 `npm run spec:analyze`를 실행한다. 발견 덱·카드 훅·정렬·섹터 라벨·뎁스 reason·discovery API를 건드리면 `npm run guard:discovery`도 반드시 실행한다.
+
+금지:
+- spec-kit CLI, 멀티에이전트 오케스트레이션, 자율 기획 cron을 새로 도입하지 않는다.
+- 제품 동작 변경 없이 가능한 거버넌스 작업에서 카드/랭킹/수집 로직을 건드리지 않는다.
+- 규약 본문을 에이전트별 파일에 복붙하지 않는다. drift 방지를 위해 본문은 이 파일에만 둔다.
+
 # 에이전트 위임 시스템 — 역할 정의 및 위임 규칙
 
 > 이 파일은 Claude Code, Cursor, Codex, OpenCode 모두 자동으로 읽습니다.

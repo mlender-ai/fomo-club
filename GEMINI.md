@@ -1,6 +1,6 @@
-# Claude Code entrypoint
+# Gemini entrypoint
 
-Read `AGENTS.md` first. It is the shared constitution for Claude Code, Codex, Cursor, Gemini, Antigravity, and OpenCode.
+Read `AGENTS.md` first. It is the shared constitution for every AI agent working in this repo.
 
 Order of authority: `docs/PRODUCT_VISION.md` > `AGENTS.md` > `docs/DATA_ENGINE_STRATEGY.md`.
 

@@ -1,0 +1,6 @@
+Read `AGENTS.md` first.
+
+This repo uses an agent-neutral constitution:
+`docs/PRODUCT_VISION.md` > `AGENTS.md` > `docs/DATA_ENGINE_STRATEGY.md`.
+
+Do not duplicate policy text in tool-specific files.

@@ -1,0 +1,46 @@
+name: Spec Analyze
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  spec-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check discovery sensitivity
+        id: discovery
+        shell: bash
+        run: |
+          files="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          if echo "$files" | grep -E '^(apps/web/lib/discovery-supply\.ts|apps/web/app/api/fomo/discovery/|apps/fomo-web/components/(StockSwipeDeck|KeywordDepthPage|TodayDiscoveryDeck|SectorStockDeck)\.tsx|packages/fomo-core/src/keyword-cards/|scripts/discovery-regression-gate\.ts)' >/dev/null; then
+            echo "run_guard=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_guard=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Discovery guard
+        if: steps.discovery.outputs.run_guard == 'true'
+        run: npm run guard:discovery
+
+      - name: Spec analyze
+        env:
+          SPEC_ANALYZE_GUARD_DISCOVERY_RAN: ${{ steps.discovery.outputs.run_guard == 'true' && 'true' || 'false' }}
+        run: npm run spec:analyze -- --base "origin/${{ github.base_ref }}...HEAD"
