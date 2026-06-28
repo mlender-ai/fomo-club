@@ -22,7 +22,7 @@ describe("fomoWhy / confidenceGrade — 상세 포모 해부(척추 ③)", () =>
     expect(fomoWhy(s)).toContain("수급");
   });
   it("조용한 종목 → '왜 조용한가' 정직(가짜 흥분 없음)", () => {
-    expect(fomoWhy(computeFomoScore({ mentionScore: 5 }))).toContain("조용");
+    expect(fomoWhy(computeFomoScore({ mentionScore: 5 }))).toContain("뚜렷한");
   });
   it("거래량 주도 → 거래 몰림 설명", () => {
     expect(fomoWhy(computeFomoScore({ volumeRatio: 3.2, changePct: 0.3 }))).toMatch(/거래|담는/);
@@ -239,7 +239,7 @@ describe("fomoCardView — 엔진 출력 → 카드(척추 ②, 단일 출처)",
     expect(s.label).toBe("incoming");
     expect(v.isLeading).toBe(true);
     expect(v.emoji).toBe("💎");
-    expect(v.headline).toBe("가격·거래량은 아직 조용한데, 외국인·기관 수급이 먼저 들어오는 중이에요.");
+    expect(v.headline).toBe("가격·거래량은 아직 차분한데, 외국인·기관 수급이 먼저 들어오는 중이에요.");
     expect(v.headline).not.toMatch(/오를|될 것|상승할/);
   });
 

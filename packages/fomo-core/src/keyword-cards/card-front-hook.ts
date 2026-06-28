@@ -230,7 +230,7 @@ function quietHook(s: CardFrontSignals): CardFrontHook {
   if (next) {
     const when = next.when ? `${next.when} · ` : "";
     return {
-      headline: `지금은 조용한 자리예요 · 다음은 ${when}${next.label}`,
+      headline: `지금은 차분해요 · 다음은 ${when}${next.label}`,
       intensity: "calm",
       angle: "quiet",
       catalysts,
@@ -238,7 +238,7 @@ function quietHook(s: CardFrontSignals): CardFrontHook {
     };
   }
   return {
-    headline: "지금은 조용한 자리예요 · 지켜볼 재료가 아직 없어요",
+    headline: "오늘은 뚜렷한 신호 없음",
     intensity: "calm",
     angle: "quiet",
     catalysts,
@@ -391,7 +391,7 @@ export function translateTaFact(fact: TaFact | undefined): string | undefined {
 }
 
 function fallbackHeadline(_fomo: FomoScoreResult): string {
-  return "아직 조용한 자리예요.";
+  return "오늘은 뚜렷한 신호 없음";
 }
 
 function pushCandidate(candidates: HookCandidate[], candidate: HookCandidate | null): void {

@@ -59,7 +59,7 @@ describe("buildCardFrontHook rev2 — FOMO 강도 모델(§2·§3)", () => {
     const trulyQuiet = buildCardFrontHook({});
     expect(trulyQuiet.angle).toBe("quiet");
     expect(trulyQuiet.intensity).toBe("calm");
-    expect(trulyQuiet.headline).toContain("지켜볼 재료가 아직 없어요"); // 솔직
+    expect(trulyQuiet.headline).toBe("오늘은 뚜렷한 신호 없음"); // 솔직
   });
 
   it("데이터 없는 앵글은 후보에서 제외(환각 금지)", () => {
@@ -195,7 +195,7 @@ describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인",
     };
     const hook = selectFomoHook({ fomo, taFact: fact });
     expect(hook.kind).toBe("fallback");
-    expect(hook.headline).toBe("아직 조용한 자리예요.");
+    expect(hook.headline).toBe("오늘은 뚜렷한 신호 없음");
     expect(hook.subLine).toBe("최근 3개월 흐름이 위쪽으로 이어지고 있어요.");
   });
 
@@ -203,7 +203,7 @@ describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인",
     const fomo = computeFomoScore({});
     const hook = selectFomoHook({ fomo });
     expect(hook.kind).toBe("fallback");
-    expect(hook.headline).toBe("아직 조용한 자리예요.");
+    expect(hook.headline).toBe("오늘은 뚜렷한 신호 없음");
     expect(hook.subLine).toBeUndefined();
   });
 

@@ -163,19 +163,19 @@ const STATE_MESSAGE: Record<FomoLabel, { headline: string; badge: string; watchP
     summary: "가격이나 주목 신호가 조금씩 붙는 자리예요.",
   },
   incoming: {
-    headline: "가격·거래량은 아직 조용한데, 외국인·기관 수급이 먼저 들어오는 중이에요.",
+    headline: "가격·거래량은 아직 차분한데, 외국인·기관 수급이 먼저 들어오는 중이에요.",
     badge: "오기 직전",
     watchPoint: "수급이 계속 들어오는지가 관전 포인트예요.",
     summary: "가격은 조용한데 수급이나 관심이 먼저 보이는 자리예요.",
   },
   quiet: {
-    headline: "지금은 조용한 자리예요.",
+    headline: "오늘은 뚜렷한 신호가 적어요.",
     badge: "조용",
     watchPoint: "거래량이나 수급이 새로 붙는지가 관전 포인트예요.",
     summary: "가격·주목·수급이 모두 차분한 자리예요.",
   },
   silent: {
-    headline: "재료도 수급도 아직 조용해요.",
+    headline: "아직 뚜렷한 재료·수급 신호가 적어요.",
     badge: "조용",
     watchPoint: "새로 붙는 거래나 수급 신호가 있는지가 관전 포인트예요.",
     summary: "아직 뚜렷한 가격·주목 신호가 적은 자리예요.",

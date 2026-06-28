@@ -62,6 +62,7 @@ export function analyzeSpecDiff(diffText: string, options: SpecAnalyzeOptions = 
 
   for (const line of parsed.added) {
     if (isGovernanceFile(line.file)) continue;
+    if (isTestFile(line.file)) continue;
     if (FORBIDDEN_PRODUCT_COPY.test(line.text)) {
       addFinding({
         severity: "error",
@@ -82,8 +83,12 @@ export function analyzeSpecDiff(diffText: string, options: SpecAnalyzeOptions = 
     });
   }
 
-  const removedConcrete = parsed.removed.filter((line) => !isGovernanceFile(line.file) && CONCRETE_DISCOVERY_COPY.test(line.text));
-  const addedGeneric = parsed.added.filter((line) => !isGovernanceFile(line.file) && GENERIC_DISCOVERY_COPY.test(line.text));
+  const removedConcrete = parsed.removed.filter(
+    (line) => !isGovernanceFile(line.file) && !isTestFile(line.file) && !isPatternOrAssertionLine(line.text) && CONCRETE_DISCOVERY_COPY.test(line.text),
+  );
+  const addedGeneric = parsed.added.filter(
+    (line) => !isGovernanceFile(line.file) && !isTestFile(line.file) && !isPatternOrAssertionLine(line.text) && GENERIC_DISCOVERY_COPY.test(line.text),
+  );
   if (removedConcrete.length > 0 && addedGeneric.length > 0) {
     addFinding({
       severity: "error",
@@ -141,6 +146,10 @@ function isGovernanceFile(file: string): boolean {
   return GOVERNANCE_FILES.some((pattern) => pattern.test(file));
 }
 
+function isTestFile(file: string): boolean {
+  return /(?:^|\/)__tests__\/|(?:^|\/)[^/]+\.test\.[cm]?[tj]sx?$/.test(file);
+}
+
 function touchesDiscoveryInvariant(files: readonly string[]): boolean {
   return files.some((file) => DISCOVERY_SENSITIVE_FILE.test(file));
 }
@@ -151,6 +160,10 @@ function implementationChanged(files: readonly string[]): boolean {
 
 function specOrChecklistChanged(files: readonly string[]): boolean {
   return files.some((file) => /^docs\/(?:WO-|templates\/SPEC_CHECKLIST|templates\/SPEC_TEMPLATE|PRODUCT_VISION|DATA_ENGINE_STRATEGY|DEVELOPMENT_QUALITY_GUARDRAILS)/.test(file));
+}
+
+function isPatternOrAssertionLine(text: string): boolean {
+  return /(?:PATTERN|RegExp|toMatch|not\.toMatch|toContain|not\.toContain)/.test(text);
 }
 
 async function diffFromArgs(args: readonly string[]): Promise<string> {

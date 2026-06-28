@@ -149,11 +149,12 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 /** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 const PRICE_ONLY_REASON_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요/;
-const SURFACE_PRICE_HOOK_PATTERN =
-  /(?:^오늘 가격이|가격 먼저 움직임|가격은 .*거래량|가격은 .*뉴스|오늘 .*제일 많이|오늘 .*가장 강|섹터 평균|평균보다|많이 올랐|움직였어요|움직임|강하게 움직|먼저 움직|버텼어요|흐름이 약한 날|주변보다|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트)/;
+const SURFACE_FILLER_HOOK_PATTERN =
+  /(?:더\s*(?:살펴볼|확인할)|발견\s*풀|조용한\s*자리|신호를\s*확인하는\s*중|오늘은\s*뚜렷한\s*신호\s*없음)/;
+const SURFACE_PRICE_HOOK_PATTERN = /(?:^오늘 가격이|^가격 먼저 움직임$|^가격은 .*거래량|^가격은 .*뉴스)/;
 
 function nonPriceOnlyHeadline(text: string | undefined): string | undefined {
-  if (!text || PRICE_ONLY_REASON_PATTERN.test(text) || SURFACE_PRICE_HOOK_PATTERN.test(text)) return undefined;
+  if (!text || PRICE_ONLY_REASON_PATTERN.test(text) || SURFACE_PRICE_HOOK_PATTERN.test(text) || SURFACE_FILLER_HOOK_PATTERN.test(text)) return undefined;
   return text;
 }
 
@@ -560,7 +561,7 @@ export function StockSwipeDeck({
         scoreText: "",
         emoji: "",
         badge: "신호 확인 중",
-        headline: stock.reason ?? "신호를 확인하는 중이에요.",
+        headline: nonPriceOnlyHeadline(stock.reason) ?? "가격·거래량 근거를 맞춰 불러오고 있어요.",
         tone: "calm",
         isLeading: false,
       };
@@ -588,7 +589,10 @@ export function StockSwipeDeck({
       ...(typeof e?.signals.changePct === "number" ? { changePct: e.signals.changePct } : {}),
       ...(typeof e?.signals.marketCapRank?.rank === "number" ? { marketCapRank: e.signals.marketCapRank.rank } : {}),
     });
-    const fallbackHeadline = stock.sector ? `${stock.sector} 안에서 더 살펴볼 종목이에요.` : baseView.headline;
+    const fallbackHeadline =
+      nonPriceOnlyHeadline(stock.reason) ??
+      nonPriceOnlyHeadline(baseView.headline) ??
+      "오늘은 뚜렷한 신호 없음";
     const headline =
       discoveryHeadline ??
       nonPriceOnlyHeadline(axisHook?.hookText) ??

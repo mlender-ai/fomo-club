@@ -42,8 +42,8 @@ describe("fomo-quality-report-core", () => {
 
   it("fallback/insufficient/latency 위험을 finding으로 올린다", () => {
     const liteHooks: HookSample[] = [
-      { stock: "A", kind: "fallback", headline: "아직 조용한 자리예요." },
-      { stock: "B", kind: "fallback", headline: "아직 조용한 자리예요." },
+      { stock: "A", kind: "fallback", headline: "오늘은 뚜렷한 신호 없음" },
+      { stock: "B", kind: "fallback", headline: "오늘은 뚜렷한 신호 없음" },
       { stock: "C", kind: "news_event", headline: "계약 공시가 나왔어요." },
     ];
 

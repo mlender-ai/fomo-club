@@ -28,6 +28,19 @@ describe("spec analyze", () => {
     expect(result.findings.map((finding) => finding.code)).toContain("constitution.forbidden_copy");
   });
 
+  it("does not treat regex guard definitions as user-facing generic copy", () => {
+    const result = analyzeSpecDiff(
+      diffFor("apps/fomo-web/components/StockSwipeDeck.tsx", [
+        "-const SURFACE_PRICE_HOOK_PATTERN = /(?:움직였어요|먼저 움직|강하게 움직|거래량|순매수)/;",
+        "+const SURFACE_PRICE_HOOK_PATTERN = /(?:^오늘 가격이|^가격 먼저 움직임$)/;",
+      ]),
+      { guardDiscoveryRan: true },
+    );
+
+    expect(result.findings.map((finding) => finding.code)).not.toContain("diff.generic_overwrite");
+    expect(result.ok).toBe(true);
+  });
+
   it("requires discovery guard for sensitive discovery files", () => {
     const result = analyzeSpecDiff(diffFor("apps/web/lib/discovery-supply.ts", ["+const limit = 50;"]));
 

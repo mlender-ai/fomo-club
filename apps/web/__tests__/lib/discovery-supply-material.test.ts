@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { DiscoveryCandidate, DiscoveryEventKind } from "@fomo/core";
+import { discoveryWhy, hasDisplayWhyEvent, type DiscoveryCandidate, type DiscoveryEventKind } from "@fomo/core";
 
 import {
   cleanMaterialTitle,
@@ -85,6 +86,9 @@ describe("discovery material news filter", () => {
 
 describe("discovery specific hook copy", () => {
   const surfacePricePattern = /(?:가격|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트|섹터 평균|평균보다)/;
+  const bannedFillerPattern = new RegExp(
+    [`더\\s*(?:살펴${"볼"}|확인${"할"})`, `조용한\\s*자${"리"}`, `발견\\s*풀`].join("|")
+  );
 
   it("keeps same-sector leaders specific instead of collapsing to one generic sentence", () => {
     const hpsp = formatThemeDiscoveryLabel({
@@ -139,6 +143,44 @@ describe("discovery specific hook copy", () => {
     expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
     expect([spike, ordinary].some((text) => /신호가/.test(text))).toBe(false);
     expect([spike, ordinary].every((text) => !surfacePricePattern.test(text))).toBe(true);
+  });
+
+  it("uses the same concrete context signal for headline and reason instead of filler copy", () => {
+    const geumho = candidate("금호건설", "market_context", 0.72, {
+      rank: 461,
+      direction: "up",
+      label: "건설 안에서 시총 461위권 종목이 크게 움직였어요.",
+    });
+    geumho.sector = "건설";
+    const lucid = candidate("루시드", "theme_link", 0.7, {
+      rank: 240,
+      direction: "up",
+      label: "오늘 전기차 4개 종목 중 가장 먼저 움직였어요.",
+    });
+    lucid.market = "NASDAQ";
+    lucid.country = "US";
+    lucid.sector = "전기차";
+
+    expect(hasDisplayWhyEvent(geumho)).toBe(true);
+    expect(discoveryWhy(geumho)).toBe("건설 안에서 시총 461위권 종목이 크게 움직였어요.");
+    expect(discoveryWhy(geumho)).not.toMatch(bannedFillerPattern);
+
+    expect(hasDisplayWhyEvent(lucid)).toBe(true);
+    expect(discoveryWhy(lucid)).toBe("오늘 전기차 4개 종목 중 가장 먼저 움직였어요.");
+    expect(discoveryWhy(lucid)).not.toMatch(bannedFillerPattern);
+  });
+
+  it("keeps banned filler headline strings out of active discovery/card paths", () => {
+    const files = [
+      "apps/web/lib/discovery-supply.ts",
+      "apps/fomo-web/components/StockSwipeDeck.tsx",
+      "packages/fomo-core/src/keyword-cards/multi-axis-hook.ts",
+      "packages/fomo-core/src/keyword-cards/card-front-hook.ts",
+      "packages/fomo-core/src/keyword-cards/fomo-score.ts",
+    ];
+    for (const file of files) {
+      expect(readFileSync(file, "utf8"), file).not.toMatch(bannedFillerPattern);
+    }
   });
 });
 
