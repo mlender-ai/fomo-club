@@ -24,3 +24,4 @@ playwright-report/
 playwright/.cache/
 fomo-index-health.json
 agent-tooling-reports/
+.codebase-memory/
