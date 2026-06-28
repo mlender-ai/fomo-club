@@ -37,11 +37,44 @@ function stripSourceAndTime(text: string): string {
     .trim();
 }
 
+const BAD_SURFACE_COPY_PATTERN =
+  /혼자\s*튄|무명주|흐름\s+흐름|흐름\s*안에서|흐름보다\s*먼저\s*반응|먼저\s*반응|눈에\s*띄|원문\s*근거|근거는\s*아직|더\s*살펴볼|더\s*확인할|보는\s*종목/;
+
+function normalizeSurfaceCopy(text: string, sector?: string, ticker?: string): string {
+  const displaySector = cleanInline(sector) || "동종";
+  const displayTicker = cleanInline(ticker);
+  return stripSourceAndTime(
+    text
+      .replace(/뒤를\s*받칠\s*수급·거래·뉴스는\s*아직\s*안\s*보여요\.?/g, "")
+      .replace(/원문·수급\s*근거는\s*아직\s*더\s*확인해야\s*해요\.?/g, "")
+      .replace(/뉴스·공시·수급\s*근거는\s*아직\s*확인되지\s*않았어요\.?/g, "")
+      .replace(/\s*·\s*(?:뉴시스|연합뉴스|한국경제|매일경제|Reuters|Bloomberg|CNBC|Yahoo Finance|SEC|DART|공시)[^.。]*[.。]?/gi, ".")
+  )
+    .replace(/^혼자\s*튄\s*무명주\s*[—-]\s*/g, "")
+    .replace(/시총\s*\d+위권인데\s*/g, "")
+    .replace(/시총\s*상위권인데\s*/g, "")
+    .replace(/흐름\s+흐름/g, "흐름")
+    .replace(/([가-힣A-Za-z0-9]+)\s*흐름\s*안에서\s*가장\s*먼저\s*눈에\s*띄었어요\.?/g, "같은 $1 종목들 중 오늘 변동성이 가장 컸어요")
+    .replace(/([가-힣A-Za-z0-9]+)\s*흐름\s*안에서\s*상위권으로\s*눈에\s*띄었어요\.?/g, "같은 $1 종목들 중 오늘 변동성이 상위권이에요")
+    .replace(/([가-힣A-Za-z0-9]+)\s*흐름보다\s*먼저\s*반응했어요\.?/g, "같은 $1 종목들보다 오늘 변동성이 더 컸어요")
+    .replace(/([가-힣A-Za-z0-9]+)\s*안에서\s*변동성이\s*크게\s*잡혔어요\.?/g, "$1 종목 중 오늘 변동성이 크게 잡혔어요")
+    .replace(/같은\s+(.+?)\s+종목들\s+중\s+오늘\s+제일\s+셌어요/g, "같은 $1 종목들 중 오늘 변동성이 가장 컸어요")
+    .replace(/같은\s+(.+?)\s+종목들\s+중\s+오늘\s+가장\s+셌어요/g, "같은 $1 종목들 중 오늘 변동성이 가장 컸어요")
+    .replace(/상대강도/g, "동종 비교")
+    .replace(/시장\s*위치/g, "시장 안 비교")
+    .replace(/테마\s*동종 비교/g, "동종 비교")
+    .replace(/^\s*[—-]\s*/g, "")
+    .replace(/[.。]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim() || (displayTicker ? `${displayTicker}에서 오늘 확인할 변화가 잡혔어요` : `같은 ${displaySector} 종목들과 다른 변동성이 잡혔어요`);
+}
+
 function topicFromMaterial(detail: string): string {
   const title = stripSourceAndTime(detail);
   const lower = title.toLowerCase();
   if (/해외\s*수주/.test(title)) return "해외 수주";
-  if (/공급계약|계약|contract|deal|order/.test(lower)) return "계약";
+  if (/공급계약/.test(title)) return "공급계약";
+  if (/계약|contract|deal|order/.test(lower)) return "계약";
   if (/수주/.test(title)) return "수주";
   if (/실적|가이던스|매출|earnings|revenue|guidance|results/.test(lower)) return "실적";
   if (/sec|공시|filing|8-k|10-q/.test(lower)) return "공시";
@@ -57,7 +90,7 @@ function topicFromMaterial(detail: string): string {
 function supportFromDetail(detail: string): string {
   if (/수급|외국인|기관|순매수|사는 중/.test(detail)) return "수급도 붙었어요";
   if (/거래량|거래가|거래도/.test(detail)) return "거래도 붙었어요";
-  if (/동종|섹터|흐름|종목들 중/.test(detail)) return "동종 흐름도 붙었어요";
+  if (/동종|섹터|종목들 중/.test(detail)) return "동종 종목 비교도 붙었어요";
   return "직접 재료가 붙었어요";
 }
 
@@ -74,48 +107,6 @@ function clipped(text: string, max = 34): string {
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
-const SECTOR_THESIS: Array<{ pattern: RegExp; subject: string }> = [
-  { pattern: /전기차|자동차|모빌리티/, subject: "전기차 수요를 보는 종목" },
-  { pattern: /클라우드|데이터|소프트웨어|AI/, subject: "AI·데이터 인프라를 보는 종목" },
-  { pattern: /반도체|기판|장비|소재/, subject: "반도체 장비·소재 흐름을 보는 종목" },
-  { pattern: /바이오|제약|헬스케어/, subject: "임상·신약 모멘텀을 보는 종목" },
-  { pattern: /화장품|뷰티/, subject: "K뷰티 수요를 보는 종목" },
-  { pattern: /유통|백화점|소비/, subject: "소비 회복 흐름을 보는 종목" },
-  { pattern: /금융|보험|증권|은행/, subject: "금리·금융 업황을 보는 종목" },
-  { pattern: /에너지|전력|원전|태양광|풍력/, subject: "전력·에너지 투자 흐름을 보는 종목" },
-  { pattern: /건설|건자재/, subject: "수주·정책 흐름을 보는 종목" },
-  { pattern: /게임/, subject: "게임 신작·운영 흐름을 보는 종목" },
-  { pattern: /방산|우주|항공/, subject: "국방·우주 수요를 보는 종목" },
-  { pattern: /조선|해양/, subject: "선박 발주 흐름을 보는 종목" },
-];
-
-const STOCK_THESIS: Array<{ pattern: RegExp; subject: string }> = [
-  { pattern: /루시드|Lucid/i, subject: "프리미엄 전기차 수요를 보는 루시드" },
-  { pattern: /몽고|Mongo/i, subject: "AI 앱 데이터 수요를 보는 몽고DB" },
-  { pattern: /사운드하운드|SoundHound/i, subject: "음성 AI 상용화를 보는 사운드하운드AI" },
-  { pattern: /광주신세계/, subject: "호남 소비 흐름을 보는 광주신세계" },
-  { pattern: /롯데손해보험/, subject: "보험 업황을 보는 롯데손해보험" },
-];
-
-function thesisSubject(ticker: string | undefined, sector: string): string {
-  const stockName = cleanInline(ticker);
-  const stockMatch = STOCK_THESIS.find((entry) => entry.pattern.test(stockName));
-  if (stockMatch) return stockMatch.subject;
-  const sectorMatch = SECTOR_THESIS.find((entry) => entry.pattern.test(sector));
-  return sectorMatch?.subject ?? `${sector} 흐름을 보는 종목`;
-}
-
-function contextHeadline(ticker: string | undefined, sector: string, detail: string): string {
-  const subject = thesisSubject(ticker, sector);
-  if (/원문|근거는 아직|수급·거래·뉴스/.test(detail)) {
-    return `${subject}, 원문 근거는 아직 얇아요`;
-  }
-  if (/제일|가장|먼저|상위권|눈에 띄/.test(detail)) {
-    return `${subject}에 먼저 반응이 붙었어요`;
-  }
-  return `${subject}에 새 움직임이 붙었어요`;
-}
-
 export function compactDiscoveryCardHeadline({
   reason,
   sector,
@@ -129,16 +120,16 @@ export function compactDiscoveryCardHeadline({
   const detail = parts.detail ?? clean;
 
   if (state === "혼자 튄 무명주") {
-    const displaySector = sectorFromDetail(detail, sector);
-    return clipped(contextHeadline(ticker, displaySector, detail), 42);
+    return clipped(normalizeSurfaceCopy(detail, sectorFromDetail(detail, sector), ticker), 42);
   }
 
   if (state === "이유 얇은 섹터선두") {
-    const displaySector = sectorFromDetail(detail, sector);
-    return clipped(contextHeadline(ticker, displaySector, detail), 42);
+    return clipped(normalizeSurfaceCopy(detail, sectorFromDetail(detail, sector), ticker), 42);
   }
 
   if (state === "뉴스 재료 붙은 종목" || state === "공시 먼저 뜬 종목" || (!state && /뉴스|공시|소식|계약|수주/.test(clean))) {
+    const material = normalizeSurfaceCopy(detail, sector, ticker);
+    if (material && !BAD_SURFACE_COPY_PATTERN.test(material) && material.length > 8) return clipped(material, 44);
     const topic = topicFromMaterial(detail);
     const support = supportFromDetail(detail);
     return topic === "뉴스" ? support : `${topic}에 ${support}`;
@@ -152,6 +143,9 @@ export function compactDiscoveryCardHeadline({
 
   if (state?.includes("거래")) return "거래가 먼저 커진 종목이에요";
   if (state?.includes("새 가격대")) return "새 가격대까지 밟은 종목이에요";
+
+  const normalized = normalizeSurfaceCopy(detail, sector, ticker);
+  if (normalized && !BAD_SURFACE_COPY_PATTERN.test(normalized)) return clipped(normalized, 44);
 
   return undefined;
 }

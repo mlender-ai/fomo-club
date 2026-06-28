@@ -281,11 +281,13 @@ describe("WO-05 discovery supply engine", () => {
     row.events[0]!.direction = "up";
 
     const insight = synthesizeDiscoveryInsight(row);
-    expect(insight.headline).toContain("혼자 튄 무명주");
+    expect(insight.headline).toContain("같은 화장품 종목들");
+    expect(insight.headline).toContain("변동성이 가장 컸어요");
     expect(insight.headline).toContain("화장품");
     expect(insight.headline).not.toContain("시총 411위");
     expect(insight.headline).not.toMatch(/\d+\/\d+/);
-    expect(insight.synthesis).toContain("공개 재료·수급·거래량은 아직 비어 있어요");
+    expect(insight.synthesis).toContain("뉴스·공시·수급 근거는 아직 확인되지 않았어요");
+    expect(insight.headline).not.toMatch(/혼자 튄|무명주|흐름 안에서|먼저 반응|눈에 띄|움직였어요|강하게\s*움직/);
     expect(insight.headline).not.toBe("오늘 화장품 5개 종목 중 제일 셌어요.");
   });
 

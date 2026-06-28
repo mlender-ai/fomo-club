@@ -390,18 +390,23 @@ function userFacingLabel(event: DiscoveryEvent | undefined, candidate?: Discover
   const raw = stripTimePrefix(labelOf(event));
   if (!event || !raw) return "";
   const sector = candidate?.sector ?? "동종";
+  const escapedSector = sector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const relativeStrength = `${"상대"}${"강도"}`;
   const marketPosition = `${"시장"} ${"위치"}`;
   return raw
     .replace(/시총\s*\d+위권\s*종목의\s*/g, "")
     .replace(/시총\s*상위권\s*종목의\s*/g, "")
-    .replace(new RegExp(`^${sector}\\s+\\d+개\\s*종목\\s*중\\s*(?:제일|가장)\\s*(?:셌어요|강했어요|먼저.+)\\.?$`), `${sector} 흐름 안에서 가장 먼저 눈에 띄었어요.`)
-    .replace(new RegExp(`^${sector}\\s+\\d+개\\s*종목\\s*중\\s*(.+)$`), `${sector} 흐름 안에서 상위권으로 눈에 띄었어요.`)
-    .replace(new RegExp(`${relativeStrength}\\s*1위예요\\.?`, "g"), `${sector} 흐름 안에서 가장 먼저 눈에 띄었어요.`)
-    .replace(new RegExp(`${relativeStrength}\\s*(\\d+)위권이에요\\.?`, "g"), `${sector} 흐름 안에서 상위권으로 눈에 띄었어요.`)
-    .replace(new RegExp(`주변보다 ${relativeStrength}가 높아요\\.?`, "g"), "주변 종목보다 오늘 더 강했어요.")
-    .replace(new RegExp(`테마 ${relativeStrength}`, "g"), "동종 흐름")
-    .replace(new RegExp(marketPosition, "g"), "시장 안 흐름")
+    .replace(new RegExp(`^${escapedSector}\\s+\\d+개\\s*종목\\s*중\\s*(?:제일|가장)\\s*(?:셌어요|강했어요|먼저.+)\\.?$`), `같은 ${sector} 종목들 중 오늘 변동성이 가장 컸어요.`)
+    .replace(new RegExp(`^${escapedSector}\\s+\\d+개\\s*종목\\s*중\\s*(.+)$`), `같은 ${sector} 종목들 중 오늘 변동성이 상위권이에요.`)
+    .replace(new RegExp(`${relativeStrength}\\s*1위예요\\.?`, "g"), `같은 ${sector} 종목들 중 오늘 변동성이 가장 컸어요.`)
+    .replace(new RegExp(`${relativeStrength}\\s*(\\d+)위권이에요\\.?`, "g"), `같은 ${sector} 종목들 중 오늘 변동성이 상위권이에요.`)
+    .replace(new RegExp(`주변보다 ${relativeStrength}가 높아요\\.?`, "g"), "주변 종목보다 오늘 변동성이 더 컸어요.")
+    .replace(new RegExp(`테마 ${relativeStrength}`, "g"), "동종 종목 비교")
+    .replace(new RegExp(marketPosition, "g"), "시장 안 비교")
+    .replace(new RegExp(`^${escapedSector}\\s+안에서\\s+변동성이\\s+크게\\s+잡혔어요\\.?$`), `${sector} 종목 중 오늘 변동성이 크게 잡혔어요.`)
+    .replace(/흐름\s+흐름/g, "흐름")
+    .replace(/흐름\s*안에서\s*가장\s*먼저\s*눈에\s*띄었어요\.?/g, "종목들 중 오늘 변동성이 가장 컸어요.")
+    .replace(/흐름보다\s*먼저\s*반응했어요\.?/g, "종목들보다 오늘 변동성이 더 컸어요.")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -519,12 +524,12 @@ function whyFactFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): WhyFa
   if (event.kind === "volume_spike") {
     const ratio = ratioText(volumeRatioOf(event));
     if (!ratio) return undefined;
-    const headline = change ? `평소 ${ratio}배 거래 터진 ${ticker} ${change}` : `평소 ${ratio}배 거래 터진 ${ticker}`;
+    const headline = `${ticker} 거래가 평소 ${ratio}배로 늘었어요`;
     return {
       headline,
       state: "거래량",
       observation: `${ticker}: 평소 ${ratio}배 거래량${change ? ` / ${change}` : ""}.`,
-      synthesis: `핵심 숫자는 평소 대비 ${ratio}배 거래량입니다. 기사보다 먼저 거래가 달라진 카드예요.`,
+      synthesis: `평소보다 거래가 크게 늘어, 가격만이 아니라 거래 쪽 변화도 같이 보는 카드예요.`,
       evidence: `${event.source} · ${event.asOf.slice(0, 10)} · 거래량 ${ratio}배`,
     };
   }
@@ -557,19 +562,21 @@ function whyFactFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): WhyFa
 
   if (event.kind === "theme_link" || event.kind === "market_context") {
     const marketRank = candidate.marketCapRank;
-    const rare = typeof marketRank === "number" && marketRank >= DISCOVERY_AWAKENING_RANK_MIN;
     const label = userFacingLabel(event, candidate);
-    const position = label || `${sector} 흐름 안에서 확인된 신호가 있어요.`;
+    const position =
+      label ||
+      (change
+        ? `${ticker}에서 같은 ${sector} 종목들과 다른 변동성이 잡혔어요.`
+        : `같은 ${sector} 종목들과 비교할 변화가 잡혔어요.`);
     const pct = change ?? signedPct(event.changePct);
     if (!pct && !marketRank && !label && !sector) return undefined;
-    const subject = rare ? "혼자 튄 무명주" : `${sector} 흐름`;
-    const headline = `${subject} — ${position.replace(/[.。]$/, "")}.${hasMaterialSupport(candidate, event) ? "" : " 원문·수급 근거는 아직 더 확인해야 해요."}`;
-    const noBacker = hasMaterialSupport(candidate, event) ? "" : " 공개 재료·수급·거래량은 아직 비어 있어요.";
+    const headline = position.replace(/[.。]$/, "");
+    const noBacker = hasMaterialSupport(candidate, event) ? "" : " 뉴스·공시·수급 근거는 아직 확인되지 않았어요.";
     return {
       headline,
-      state: rare ? "무명성" : "섹터 위치",
+      state: "동종 비교",
       observation: `${ticker}: ${position.replace(/[.。]$/, "")}${pct ? ` / ${pct}` : ""}.`,
-      synthesis: `${rare ? "대형주보다 덜 보던 종목에서 먼저 잡힌 흐름" : "동종 흐름 안에서 먼저 보인 변화"}이 카드의 이유입니다.${noBacker}`,
+      synthesis: `같은 ${sector} 종목들과 비교해 달라진 점이 카드의 이유입니다.${noBacker}`,
       evidence: `${event.source} · ${event.asOf.slice(0, 10)}${pct ? ` · ${pct}` : ""}`,
     };
   }

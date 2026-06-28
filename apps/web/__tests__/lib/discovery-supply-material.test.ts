@@ -87,8 +87,24 @@ describe("discovery material news filter", () => {
 describe("discovery specific hook copy", () => {
   const surfacePricePattern = /(?:가격|[+-]\d+(?:\.\d+)?%|\d+(?:\.\d+)?포인트|섹터 평균|평균보다)/;
   const bannedFillerPattern = new RegExp(
-    [`더\\s*(?:살펴${"볼"}|확인${"할"})`, `조용한\\s*자${"리"}`, `발견\\s*풀`].join("|")
+    [
+      `더\\s*(?:살펴${"볼"}|확인${"할"})`,
+      `조용한\\s*자${"리"}`,
+      `발견\\s*풀`,
+      `혼자\\s*튄`,
+      `무명주`,
+      `흐름\\s+흐름`,
+      `흐름\\s*안에서`,
+      `먼저\\s*반응`,
+      `눈에\\s*띄`,
+      `보는\\s*종목`,
+      `원문\\s*근거`,
+      `강하게\\s*움직`,
+      `상위권으로\\s*움직`,
+      `더\\s*강하게\\s*움직`,
+    ].join("|")
   );
+  const bannedSurfaceMovementPattern = /움직였어요|강하게\s*움직|상위권으로\s*움직|더\s*강하게\s*움직/;
 
   it("keeps same-sector leaders specific instead of collapsing to one generic sentence", () => {
     const hpsp = formatThemeDiscoveryLabel({
@@ -116,12 +132,13 @@ describe("discovery specific hook copy", () => {
       changePct: 3.18,
     });
 
-    expect(hpsp).toBe("반도체 흐름 안에서 가장 먼저 눈에 띄었어요.");
-    expect(wonik).toBe("반도체 흐름 안에서 상위권으로 눈에 띄었어요.");
-    expect(outperformer).toBe("반도체 흐름보다 먼저 반응했어요.");
+    expect(hpsp).toBe("같은 반도체 종목들 중 오늘 변동성이 가장 컸어요.");
+    expect(wonik).toBe("같은 반도체 종목들 중 오늘 변동성이 상위권이에요.");
+    expect(outperformer).toBe("같은 반도체 종목들보다 오늘 변동성이 더 컸어요.");
     expect(new Set([hpsp, wonik, outperformer]).size).toBe(3);
     expect([hpsp, wonik, outperformer].some((text) => /신호가|흐름에서 (?:먼저|같이) 확인/.test(text))).toBe(false);
     expect([hpsp, wonik, outperformer].every((text) => !surfacePricePattern.test(text))).toBe(true);
+    expect([hpsp, wonik, outperformer].every((text) => !bannedSurfaceMovementPattern.test(text))).toBe(true);
   });
 
   it("keeps sector-only movers contextual instead of generic or raw price-only copy", () => {
@@ -136,11 +153,12 @@ describe("discovery specific hook copy", () => {
       change: "+4.20%",
     });
 
-    expect(spike).toBe("건설 안에서 갑자기 관심이 커진 종목이에요.");
-    expect(ordinary).toBe("화장품 안에서 오늘 새로 눈에 들어온 종목이에요.");
+    expect(spike).toBe("건설 종목 중 오늘 거래와 변동성이 크게 잡혔어요.");
+    expect(ordinary).toBe("화장품 종목 중 오늘 변화가 잡혔어요.");
     expect([spike, ordinary].some((text) => /흐름에서 (?:먼저|같이|새로) 확인/.test(text))).toBe(false);
     expect([spike, ordinary].every((text) => !/시총|\d+\/\d+/.test(text))).toBe(true);
     expect([spike, ordinary].every((text) => !surfacePricePattern.test(text))).toBe(true);
+    expect([spike, ordinary].every((text) => !bannedSurfaceMovementPattern.test(text))).toBe(true);
   });
 
   it("uses the same concrete context signal for headline and reason instead of filler copy", () => {
@@ -160,18 +178,16 @@ describe("discovery specific hook copy", () => {
     lucid.sector = "전기차";
 
     expect(hasDisplayWhyEvent(geumho)).toBe(true);
-    expect(discoveryWhy(geumho)).toBe(
-      "혼자 튄 무명주 — 건설 안에서 변동성이 크게 잡혔어요. 원문·수급 근거는 아직 더 확인해야 해요."
-    );
+    expect(discoveryWhy(geumho)).toBe("건설 종목 중 오늘 변동성이 크게 잡혔어요");
     expect(discoveryWhy(geumho)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(geumho)).not.toMatch(bannedFillerPattern);
+    expect(discoveryWhy(geumho)).not.toMatch(bannedSurfaceMovementPattern);
 
     expect(hasDisplayWhyEvent(lucid)).toBe(true);
-    expect(discoveryWhy(lucid)).toBe(
-      "혼자 튄 무명주 — 전기차 흐름 안에서 가장 먼저 눈에 띄었어요. 원문·수급 근거는 아직 더 확인해야 해요."
-    );
+    expect(discoveryWhy(lucid)).toBe("같은 전기차 종목들 중 오늘 변동성이 가장 컸어요");
     expect(discoveryWhy(lucid)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(lucid)).not.toMatch(bannedFillerPattern);
+    expect(discoveryWhy(lucid)).not.toMatch(bannedSurfaceMovementPattern);
     expect(discoveryWhy(lucid)).not.toBe("오늘 전기차 4개 종목 중 제일 셌어요.");
   });
 

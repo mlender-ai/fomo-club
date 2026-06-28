@@ -545,13 +545,13 @@ export function formatThemeDiscoveryLabel(input: {
   changePct: number;
 }): string {
   if (input.rank <= 3) {
-    const orderText = input.rank === 1 ? "가장 먼저 눈에 띄었어요" : "상위권으로 눈에 띄었어요";
-    return `${input.sector} 흐름 안에서 ${orderText}.`;
+    const orderText = input.rank === 1 ? "변동성이 가장 컸어요" : "변동성이 상위권이에요";
+    return `같은 ${input.sector} 종목들 중 오늘 ${orderText}.`;
   }
   if (input.averageChangePct < 0 && input.changePct > 0) {
-    return `${input.sector} 흐름이 눌린 날에도 이 종목은 플러스권이에요.`;
+    return `같은 ${input.sector} 종목들이 약한 날에도 이 종목은 플러스권이에요.`;
   }
-  return `${input.sector} 흐름보다 먼저 반응했어요.`;
+  return `같은 ${input.sector} 종목들보다 오늘 변동성이 더 컸어요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
@@ -561,9 +561,9 @@ export function formatSectorMarketContextLabel(input: {
 }): string {
   const positive = input.changePct > 0;
   const largeMove = Math.abs(input.changePct) >= 10;
-  if (positive && largeMove) return `${input.sector} 안에서 갑자기 관심이 커진 종목이에요.`;
-  if (positive) return `${input.sector} 안에서 오늘 새로 눈에 들어온 종목이에요.`;
-  return `${input.sector} 안에서 약세 흐름도 같이 확인해요.`;
+  if (positive && largeMove) return `${input.sector} 종목 중 오늘 거래와 변동성이 크게 잡혔어요.`;
+  if (positive) return `${input.sector} 종목 중 오늘 변화가 잡혔어요.`;
+  return `${input.sector} 종목 중 약세 신호가 같이 잡혔어요.`;
 }
 
 function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
@@ -720,7 +720,7 @@ function eventFromVolume(row: DiscoveryMarketRow, ratio: number | undefined, asO
     asOf,
     confidence: "H",
     direction: row.changeDir ?? (typeof row.changePct === "number" && row.changePct > 0 ? "up" : "flat"),
-    label: `평소 ${ratio.toFixed(1)}배 거래가 터졌어요.`,
+    label: `거래가 평소 ${ratio.toFixed(1)}배로 늘었어요.`,
     volumeRatio: Math.round(ratio * 10) / 10,
     ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
   };

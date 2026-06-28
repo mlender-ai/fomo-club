@@ -605,7 +605,7 @@ function stockWatchPoint(front: StockFrontResponse | null): string {
     return `평소 ${formatRatio(s.volumeRatio)} 거래가 며칠 이어지는지 봐요.`;
   }
   if (s.themeLabel && typeof s.themeRelativeRank === "number" && typeof s.themePeerCount === "number") {
-    return `${cleanText(s.themeLabel)} 동종 흐름보다 먼저 보인 이유가 이어지는지 봐요.`;
+    return `${cleanText(s.themeLabel)} 종목들 중 달랐던 거래·수급이 이어지는지 봐요.`;
   }
   if (front.changeDir === "up" && front.changeText) {
     return `오늘 오른 가격대에서 거래가 붙는지 봐요.`;
@@ -888,11 +888,11 @@ function StockSynthesisBlock({
   const support = primary ? observations.find((p) => !copyRestates(p.text, primary.text)) : undefined;
   const contextSynthesis =
     contextParts.state === "혼자 튄 무명주"
-      ? "남들이 덜 보는 종목이 섹터 안에서 먼저 튀었지만, 가격 외 신호는 아직 얇아요."
+      ? "같은 종목군과 다른 변동성이 잡힌 이유를 먼저 확인하는 화면이에요."
       : contextParts.state === "이유 얇은 섹터선두"
-        ? "섹터 안에서 먼저 보인 결과는 있지만, 가격 외 신호는 아직 얇아요."
+        ? "같은 종목군 안에서 오늘 변동성이 컸던 이유를 먼저 확인하는 화면이에요."
         : contextParts.state
-          ? `${contextParts.state}이라서 먼저 확인하는 화면이에요.`
+          ? `${contextParts.state} 근거를 먼저 확인하는 화면이에요.`
           : undefined;
   const synthesis =
     contextSynthesis ??

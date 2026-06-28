@@ -193,7 +193,7 @@ function buildFeedPoints(
   }
   if (typeof signals.themeRelativeRank === "number" && signals.themeRelativeRank === 1 && typeof signals.changePct === "number" && signals.changePct > 0) {
     pushUnique(bull, {
-      text: `${signals.themeLabel ?? "같은 테마"} 흐름 안에서 가장 먼저 눈에 띄었어요.`,
+      text: `같은 ${signals.themeLabel ?? "테마"} 종목들 중 오늘 변동성이 가장 컸어요.`,
       source: "테마",
     });
   }

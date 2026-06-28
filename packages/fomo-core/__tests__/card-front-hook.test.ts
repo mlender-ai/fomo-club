@@ -234,7 +234,7 @@ describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인",
       },
     });
     expect(lagging.kind).toBe("relative");
-    expect(lagging.headline).toBe("AI 테마 흐름이 강한 날, 다른 속도로 움직였어요.");
+    expect(lagging.headline).toBe("AI 테마 안에서 다른 속도의 변동성이 잡혔어요.");
 
     const moving = computeFomoScore({ changePct: 7, mentionScore: 80 });
     const leading = selectFomoHook({
@@ -249,7 +249,7 @@ describe("selectFomoHook — 상태 배지와 분리된 종목별 헤드라인",
       },
     });
     expect(leading.kind).toBe("relative");
-    expect(leading.headline).toBe("오늘 AI 테마 흐름 안에서 가장 먼저 눈에 띄었어요.");
+    expect(leading.headline).toBe("같은 AI 테마 종목들 중 오늘 변동성이 가장 컸어요.");
   });
 
   it("뉴스 재료와 D-day seam — 데이터가 들어온 경우에만 재료 헤드라인을 고른다", () => {

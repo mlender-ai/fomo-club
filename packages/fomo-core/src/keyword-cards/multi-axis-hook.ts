@@ -180,8 +180,8 @@ function herdAxis(signals: CardFrontSignals, asOf: string): AxisSignal {
     return signal("herd", false, 0, "", []);
   }
   if (rank === 1 && pct > 0) {
-    return signal("herd", true, 0.76, `오늘 ${theme} 흐름 안에서 가장 먼저 눈에 띄었어요.`, [
-      { text: `${theme} 동종 흐름, 등락률 ${pctText(pct)}`, sourceKind: "market", source: "동종 흐름", asOf },
+    return signal("herd", true, 0.76, `같은 ${theme} 종목들 중 오늘 변동성이 가장 컸어요.`, [
+      { text: `${theme} 동종 종목 비교, 등락률 ${pctText(pct)}`, sourceKind: "market", source: "동종 비교", asOf },
     ]);
   }
   if (typeof avg === "number" && typeof delta === "number" && avg <= -2 && delta >= 3) {

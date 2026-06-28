@@ -520,7 +520,7 @@ function relativeCandidate(signals: CardFrontSignals): HookCandidate | null {
       kind: "relative",
       tier: "material",
       score: Math.min(0.86, 0.56 + Math.abs(delta) / 20),
-      headline: `오늘 ${label} 흐름 안에서 가장 먼저 눈에 띄었어요.`,
+      headline: `같은 ${label} 종목들 중 오늘 변동성이 가장 컸어요.`,
     };
   }
 
@@ -529,7 +529,7 @@ function relativeCandidate(signals: CardFrontSignals): HookCandidate | null {
       kind: "relative",
       tier: "material",
       score: Math.min(0.82, 0.54 + Math.abs(delta) / 22),
-      headline: `${label} 흐름이 강한 날, 다른 속도로 움직였어요.`,
+      headline: `${label} 안에서 다른 속도의 변동성이 잡혔어요.`,
     };
   }
 
