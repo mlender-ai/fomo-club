@@ -77,14 +77,27 @@ function normalizeChangeText(text: string | undefined): string | undefined {
   return text.replace(/^--+/, "-").replace(/^\+\++/, "+");
 }
 
-/** 종목 로고 — 네이버 심볼 이미지(불러와지면), 실패 시 이니셜 원형 폴백. */
-function LogoBadge({ name, code }: { name: string; code?: string | undefined }) {
+/** 종목 로고 — 국내는 네이버 심볼, 미국은 티커 로고(Parqet), 실패 시 이니셜 원형 폴백. */
+function LogoBadge({
+  name,
+  naverCode,
+  symbol,
+}: {
+  name: string;
+  naverCode?: string | undefined;
+  symbol?: string | undefined;
+}) {
   const [failed, setFailed] = useState(false);
   const ch = name.trim().slice(0, 1) || "·";
-  if (code && !failed) {
+  const src = naverCode
+    ? `https://ssl.pstatic.net/imgstock/fn/real/logo/stock/Stock${naverCode}.svg`
+    : symbol
+      ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(symbol)}`
+      : undefined;
+  if (src && !failed) {
     return (
       <img
-        src={`https://ssl.pstatic.net/imgstock/fn/real/logo/stock/Stock${code}.svg`}
+        src={src}
         alt=""
         aria-hidden
         onError={() => setFailed(true)}
@@ -330,7 +343,7 @@ function StockCardFace({
     <div className="flex h-full min-h-0 flex-col">
       {/* 1행 — 정체성: 로고 + 종목명 + 시장·시총순위 */}
       <div className="flex shrink-0 items-center gap-2.5">
-        <LogoBadge name={stock.canonical} code={stock.naverCode} />
+        <LogoBadge name={stock.canonical} naverCode={stock.naverCode} symbol={stock.symbol} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
@@ -430,7 +443,7 @@ function StockCardLoadingFace({
   return (
     <div className="flex h-full flex-col" aria-busy="true" aria-live="polite">
       <div className="flex items-center gap-2.5">
-        <LogoBadge name={stock.canonical} code={stock.naverCode} />
+        <LogoBadge name={stock.canonical} naverCode={stock.naverCode} symbol={stock.symbol} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
