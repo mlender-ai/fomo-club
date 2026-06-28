@@ -579,7 +579,7 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
       source,
       asOf,
       confidence: "M",
-      label: `${sector} 안에서 더 살펴볼 종목이에요.`,
+      label: `${sector} 안에서 새로 확인된 시장 흐름이 있어요.`,
     };
   }
   if (typeof changePct === "number" && change) {
@@ -739,7 +739,7 @@ function isSameDayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): b
 function fallbackContextEvent(candidate: DiscoveryCandidate, allowDown = false): DiscoveryEvent | undefined {
   return candidate.events
     .filter((event) => {
-      if (!isSameDayEvent(event, candidate) || (!allowDown && event.direction === "down")) return false;
+      if (!isSameDayEvent(event, candidate) || event.direction === "flat" || (!allowDown && event.direction === "down")) return false;
       if (event.kind === "price_move") return false;
       if (event.kind === "theme_link") return true;
       if (event.kind !== "market_context") return true;
@@ -759,11 +759,7 @@ function fallbackContextQuality(event: DiscoveryEvent): number {
 }
 
 function fallbackDiscoveryReason(candidate: DiscoveryCandidate): string {
-  const sector = cleanSectorLabel(candidate.sector) ?? "관련 흐름";
-  const event = fallbackContextEvent(candidate, true);
-  if (event?.kind === "theme_link") return `${sector} 안에서 더 확인할 종목이에요.`;
-  if (event?.kind === "market_context") return `${sector} 안에서 더 살펴볼 종목이에요.`;
-  return "오늘 발견 풀에서 더 살펴볼 종목이에요.";
+  return hasDisplayWhyEvent(candidate) ? discoveryWhy(candidate) : "오늘은 뚜렷한 신호 없음";
 }
 
 export function recoverDiscoveryCandidates(

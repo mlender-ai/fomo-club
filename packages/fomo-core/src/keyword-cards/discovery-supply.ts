@@ -198,12 +198,27 @@ export function isDeckDisplayEvent(event: DiscoveryEvent, candidate: DiscoveryCa
   return isDisplayVolumeEvent(event);
 }
 
+function hasConcreteContextLabel(event: DiscoveryEvent): boolean {
+  const label = event.label?.trim();
+  if (!label) return false;
+  if (/더\s*(?:살펴볼|확인할)|발견\s*풀|조용한\s*자리|오늘\s*가격이/.test(label)) return false;
+  if (/^(?:KOSPI|KOSDAQ|NASDAQ|NYSE)\s/i.test(label)) return false;
+  return true;
+}
+
+function isContextDisplayEvent(event: DiscoveryEvent, candidate: DiscoveryCandidate): boolean {
+  if (!isCurrentDeckEvent(event, candidate)) return false;
+  if (event.kind !== "theme_link" && event.kind !== "market_context") return false;
+  if (event.direction === "down" || event.direction === "flat") return false;
+  return hasConcreteContextLabel(event);
+}
+
 export function hasDeckDisplayEvent(candidate: DiscoveryCandidate): boolean {
   return candidate.events.some((event) => isDeckDisplayEvent(event, candidate));
 }
 
 export function hasDisplayWhyEvent(candidate: DiscoveryCandidate): boolean {
-  return hasDeckDisplayEvent(candidate);
+  return candidate.events.some((event) => isDeckDisplayEvent(event, candidate) || isContextDisplayEvent(event, candidate));
 }
 
 export function isDiscoveryAwakening(candidate: DiscoveryCandidate): boolean {
@@ -221,7 +236,7 @@ export function isDiscoveryAwakening(candidate: DiscoveryCandidate): boolean {
 }
 
 export function isWeakDiscoveryCandidate(candidate: DiscoveryCandidate): boolean {
-  return !hasDeckDisplayEvent(candidate);
+  return !hasDisplayWhyEvent(candidate);
 }
 
 const WHY_KIND_PRIORITY: Record<DiscoveryEventKind, number> = {
@@ -240,11 +255,13 @@ function eventTimePrefix(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
 }
 
 export function discoveryWhy(candidate: DiscoveryCandidate): string {
-  const displayEvents = candidate.events.filter((event) => isDeckDisplayEvent(event, candidate));
+  const displayEvents = candidate.events.filter(
+    (event) => isDeckDisplayEvent(event, candidate) || isContextDisplayEvent(event, candidate)
+  );
   const strongest = displayEvents.sort(
     (a, b) => WHY_KIND_PRIORITY[a.kind] - WHY_KIND_PRIORITY[b.kind] || b.strength - a.strength || a.kind.localeCompare(b.kind)
   )[0];
-  if (!strongest) return "오늘 확인된 사건이 아직 없어요.";
+  if (!strongest) return "오늘은 뚜렷한 신호 없음";
   if (strongest.kind === "disclosure") {
     const prefix = eventTimePrefix(strongest, candidate);
     return strongest.label
@@ -381,7 +398,7 @@ export function rankDiscoveryCandidates(
   const max = opts.maxCandidates ?? DISCOVERY_MAX_CANDIDATES;
   const watched = new Set(opts.watched ?? []);
   const sorted = candidates
-    .filter(hasDeckDisplayEvent)
+    .filter(hasDisplayWhyEvent)
     .map((candidate, index) => ({
       candidate,
       index,

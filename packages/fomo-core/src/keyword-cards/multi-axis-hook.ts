@@ -258,7 +258,7 @@ export function selectMultiAxisHook(axisSignals: readonly AxisSignal[] = []): Mu
   if (!top) {
     return {
       axis: "fallback",
-      hookText: "아직 조용한 자리예요.",
+      hookText: "오늘은 뚜렷한 신호 없음",
       strength: 0,
       rarity: 0,
       evidence: [],
