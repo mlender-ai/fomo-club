@@ -89,13 +89,16 @@ export function analyzeSpecDiff(diffText: string, options: SpecAnalyzeOptions = 
   const addedGeneric = parsed.added.filter(
     (line) => !isGovernanceFile(line.file) && !isTestFile(line.file) && !isPatternOrAssertionLine(line.text) && GENERIC_DISCOVERY_COPY.test(line.text),
   );
-  if (removedConcrete.length > 0 && addedGeneric.length > 0) {
+  const genericOverwrite = removedConcrete
+    .map((removed) => ({ removed, added: addedGeneric.find((added) => added.file === removed.file) }))
+    .find((pair): pair is { removed: DiffLine; added: DiffLine } => !!pair.added);
+  if (genericOverwrite) {
     addFinding({
       severity: "error",
       code: "diff.generic_overwrite",
       message: "구체적인 발견 훅/기능을 제네릭 문구로 대체하는 과잉 삭제 패턴입니다.",
-      file: addedGeneric[0]?.file,
-      sample: `removed: ${removedConcrete[0]?.text.trim()} / added: ${addedGeneric[0]?.text.trim()}`,
+      file: genericOverwrite.added.file,
+      sample: `removed: ${genericOverwrite.removed.text.trim()} / added: ${genericOverwrite.added.text.trim()}`,
     });
   }
 

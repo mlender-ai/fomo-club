@@ -7,6 +7,7 @@ import {
   isWeakDiscoveryCandidate,
   isDiscoveryAwakening,
   rankDiscoveryCandidates,
+  synthesizeDiscoveryInsight,
   type DiscoveryEventKind,
   type DiscoveryCandidate,
 } from "../src";
@@ -67,7 +68,7 @@ describe("WO-05 discovery supply engine", () => {
     priceUp.events[0]!.direction = "up";
     expect(hasDeckDisplayEvent(priceUp)).toBe(false);
     expect(hasDisplayWhyEvent(priceUp)).toBe(false);
-    expect(discoveryWhy(priceUp)).toBe("오늘은 뚜렷한 신호 없음");
+    expect(discoveryWhy(priceUp)).toBe("아직 공개된 계기 없음");
     expect(discoveryWhy(candidate("뉴스", 0.6, "news_mention"))).toContain("신규 공급계약 공시");
   });
 
@@ -127,6 +128,39 @@ describe("WO-05 discovery supply engine", () => {
     };
 
     expect(discoveryWhy(row)).toContain("공급계약");
+  });
+
+  it("synthesizes primary and support signals into one headline", () => {
+    const row: DiscoveryCandidate = {
+      ticker: "합성주",
+      market: "KOSPI",
+      asOf,
+      events: [
+        { kind: "news_mention", firstSeen: true, strength: 0.8, source: "뉴스", asOf, confidence: "H", label: "공급계약 공시가 나왔어요.", direction: "up" },
+        { kind: "volume_spike", firstSeen: true, strength: 0.7, source: "거래소", asOf, confidence: "M", label: "거래량이 평소 3배로 늘었어요.", direction: "up" },
+      ],
+    };
+
+    const insight = synthesizeDiscoveryInsight(row);
+
+    expect(insight.headline).toContain("공급계약 공시");
+    expect(insight.headline).toContain("거래량");
+    expect(insight.tag).toBe("뉴스 재료");
+    expect(insight.observations).toHaveLength(2);
+    expect(insight.synthesis).toContain("뉴스 재료");
+    expect(insight.synthesis).toContain("거래 이상");
+    expect(discoveryWhy(row)).toBe(insight.headline);
+  });
+
+  it("keeps honest empty synthesis when no display signal exists", () => {
+    const row = candidate("빈종목", 0.9, "price_move", "오늘 가격이 +9.00% 움직였어요.");
+    row.events[0]!.direction = "up";
+
+    const insight = synthesizeDiscoveryInsight(row);
+
+    expect(insight.headline).toBe("아직 공개된 계기 없음");
+    expect(insight.tag).toBe("정직한 빈 신호");
+    expect(insight.observations).toEqual([]);
   });
 
   it("drops generic market context but keeps concrete theme context in surface ranking", () => {

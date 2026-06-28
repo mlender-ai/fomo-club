@@ -16,6 +16,7 @@ import {
   sectorOf,
   selectMultiAxisHook,
   stockMentionRole,
+  synthesizeDiscoveryInsight,
   type AxisSignal,
   type CardFrontSignals,
   type DiscoveryCandidate,
@@ -111,6 +112,7 @@ export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
   symbol?: string;
   whyShown?: string;
   reason?: string;
+  insightTag?: string;
 }
 
 export type DiscoveryDeckCardPayload =
@@ -476,13 +478,13 @@ export function formatThemeDiscoveryLabel(input: {
   changePct: number;
 }): string {
   if (input.rank <= 3) {
-    const orderText = input.rank === 1 ? "가장 먼저 움직였어요" : `${ordinalText(input.rank)} 강하게 움직였어요`;
+    const orderText = input.rank === 1 ? "상대강도 1위예요" : `상대강도 ${input.rank}위권이에요`;
     return `오늘 ${input.sector} ${input.peerCount}개 종목 중 ${orderText}.`;
   }
   if (input.averageChangePct < 0 && input.changePct > 0) {
-    return `${input.sector} 흐름이 약한 날에도 혼자 버텼어요.`;
+    return `${input.sector} 흐름이 눌린 날에도 이 종목은 플러스권이에요.`;
   }
-  return `${input.sector} 안에서 주변 종목보다 먼저 움직였어요.`;
+  return `${input.sector} 안에서 주변 종목보다 상대강도가 높아요.`;
 }
 
 export function formatSectorMarketContextLabel(input: {
@@ -493,9 +495,9 @@ export function formatSectorMarketContextLabel(input: {
 }): string {
   const positive = input.changePct > 0;
   const largeMove = Math.abs(input.changePct) >= 10;
-  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목이 크게 움직였어요.`;
-  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목도 움직이기 시작했어요.`;
-  return `${input.sector} 안에서 ${input.rankText} 종목의 약한 흐름도 같이 살펴봐요.`;
+  if (positive && largeMove) return `${input.sector} 안에서 ${input.rankText} 종목의 변동성이 크게 잡혔어요.`;
+  if (positive) return `${input.sector} 안에서 ${input.rankText} 종목의 신호가 새로 잡혔어요.`;
+  return `${input.sector} 안에서 ${input.rankText} 종목의 약세 흐름도 같이 확인해요.`;
 }
 
 function eventFromTheme(row: DiscoveryMarketRow, theme: ThemeMoveSignal | undefined, asOf: string): DiscoveryEvent | null {
@@ -546,10 +548,10 @@ function eventFromMarketContext(row: DiscoveryMarketRow, theme: ThemeMoveSignal 
   if (sector && theme && typeof changePct === "number") {
     const relativeLabel =
       theme.rank <= 3
-        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "가장 먼저 움직였어요" : `${ordinalText(theme.rank)} 강하게 움직였어요`}.`
+        ? `${theme.peerCount}개 ${sector} 종목 중 ${theme.rank === 1 ? "상대강도 1위예요" : `상대강도 ${theme.rank}위권이에요`}.`
         : changePct > 0
-          ? `오늘 ${sector} 안에서 주변보다 먼저 움직인 종목이에요.`
-          : `오늘 ${sector} 안에서 약한 쪽 흐름도 같이 살펴봐요.`;
+          ? `오늘 ${sector} 안에서 주변보다 상대강도가 높아요.`
+          : `오늘 ${sector} 안에서 약세 흐름도 같이 확인해요.`;
     return {
       kind: "market_context",
       firstSeen: true,
@@ -718,7 +720,8 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
 function stockPayload(row: DiscoveryMarketRow, candidate: DiscoveryCandidate): DiscoveryStockPayload {
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
-  const why = discoveryWhy(candidate);
+  const synthesis = synthesizeDiscoveryInsight(candidate);
+  const why = synthesis.headline;
   const hasDisplayWhy = hasDisplayWhyEvent(candidate);
   return {
     canonical: candidate.ticker,
@@ -728,7 +731,7 @@ function stockPayload(row: DiscoveryMarketRow, candidate: DiscoveryCandidate): D
     symbol: row.symbol,
     marquee: def?.marquee === true,
     sector: sector ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf),
-    ...(hasDisplayWhy ? { whyShown: why, reason: why } : candidate.reason ? { whyShown: candidate.reason, reason: candidate.reason } : {}),
+    ...(hasDisplayWhy ? { whyShown: why, reason: why, insightTag: synthesis.tag } : candidate.reason ? { whyShown: candidate.reason, reason: candidate.reason } : {}),
   };
 }
 
@@ -759,7 +762,7 @@ function fallbackContextQuality(event: DiscoveryEvent): number {
 }
 
 function fallbackDiscoveryReason(candidate: DiscoveryCandidate): string {
-  return hasDisplayWhyEvent(candidate) ? discoveryWhy(candidate) : "오늘은 뚜렷한 신호 없음";
+  return hasDisplayWhyEvent(candidate) ? discoveryWhy(candidate) : "아직 공개된 계기 없음";
 }
 
 export function recoverDiscoveryCandidates(

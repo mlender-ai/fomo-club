@@ -592,7 +592,7 @@ export function StockSwipeDeck({
     const fallbackHeadline =
       nonPriceOnlyHeadline(stock.reason) ??
       nonPriceOnlyHeadline(baseView.headline) ??
-      "오늘은 뚜렷한 신호 없음";
+      "아직 공개된 계기 없음";
     const headline =
       discoveryHeadline ??
       nonPriceOnlyHeadline(axisHook?.hookText) ??
@@ -601,9 +601,11 @@ export function StockSwipeDeck({
     const view = { ...baseView, headline };
     const usedReasonHeadline = !!discoveryHeadline && !e?.signals.newsEventLabel && !axisHook && legacyHook.kind === "news_event";
     const evidenceLine = usedReasonHeadline ? undefined : compactEvidenceLine(stock.reason);
+    const tagLine =
+      stock.insightTag && stock.insightTag !== "정직한 빈 신호" ? stock.insightTag : undefined;
     return {
       view,
-      ...(evidenceLine || legacyHook.subLine ? { subLine: evidenceLine ?? legacyHook.subLine } : {}),
+      ...(tagLine || evidenceLine || legacyHook.subLine ? { subLine: tagLine ?? evidenceLine ?? legacyHook.subLine } : {}),
       ...(usedReasonHeadline ? { usedReasonHeadline } : {}),
     };
   };

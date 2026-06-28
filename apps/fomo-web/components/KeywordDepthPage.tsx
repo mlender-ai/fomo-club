@@ -857,6 +857,59 @@ function StockReadGuide({
   );
 }
 
+function StockSynthesisBlock({
+  front,
+  insight,
+  contextReason,
+}: {
+  front: StockFrontResponse | null;
+  insight: CondensedInsight | null;
+  contextReason?: string | undefined;
+}) {
+  const points = buildReadPoints(front, insight);
+  const signalPoints = [...points.bull, ...points.bear, ...points.watch];
+  const observations = uniquePoints([
+    ...(contextReason ? [{ text: contextReason, source: "카드 이유" }] : []),
+    ...signalPoints.slice(0, 3),
+  ]).slice(0, 3);
+  if (observations.length === 0) return null;
+
+  const primary = observations[0];
+  if (!primary) return null;
+  const support = observations.find((p) => !copyRestates(p.text, primary.text));
+  const synthesis = support
+    ? `${primary.text} 여기에 ${support.text}까지 같이 확인되는 화면이에요.`
+    : `${primary.text} 이 신호를 가격·차트·원문 근거로 나눠 확인하는 화면이에요.`;
+  const evidence = observations.map((p) => (p.source ? `${p.source} · ${p.text}` : p.text)).slice(0, 3);
+
+  return (
+    <section className="mt-6 rounded-2xl border border-hairline bg-surface px-4 py-4">
+      <p className="font-pixel text-sm text-whiteout">핵심 줄거리</p>
+      <div className="mt-3 space-y-3">
+        <div>
+          <p className="text-[11px] text-muted">관찰</p>
+          <ul className="mt-1 space-y-1">
+            {observations.map((p, i) => (
+              <li key={`obs-${i}`} className="text-sm leading-6 text-whiteout">
+                {cleanText(p.text)}
+                {p.source && <span className="ml-1 text-[11px] text-muted">· {p.source}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="text-[11px] text-muted">종합</p>
+          <p className="mt-1 text-sm leading-6 text-whiteout">{cleanText(synthesis)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-muted">증명</p>
+          <p className="mt-1 text-sm leading-6 text-muted">{cleanText(evidence.join(" / "))}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function StockDepthLoadingBlock() {
   return (
     <section
@@ -1056,6 +1109,8 @@ export function StockInsightView({
           <>
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
+
+          <StockSynthesisBlock front={front} insight={insight} contextReason={contextReason} />
 
           {/* 핵심 해석 — 강세/약세 원문이 부족해도 가격·차트·수급으로 읽을 재료를 먼저 보여준다. */}
           <StockReadGuide front={front} insight={insight} loading={false} context={context} />

@@ -48,9 +48,7 @@ export function whyShown({ stock, fomoLabel, signals, nowMs = Date.now() }: WhyS
 
   if (stock.reason) {
     const reason = compactInline(stock.reason);
-    return reason
-      ? `‘${stock.sector}’ 흐름에서 같이 잡힌 원문 근거가 있어요: ${reason}`
-      : `‘${stock.sector}’ 흐름에서 같이 잡힌 원문 근거가 있어요.`;
+    return reason || "카드에 표시된 신호를 기준으로 보여줘요.";
   }
   if (signals?.newsEventLabel) {
     const label = compactInline(signals.newsEventLabel);

@@ -36,6 +36,19 @@ export interface DiscoveryCandidate {
   marketCapRank?: number;
 }
 
+export type DiscoverySynthesisTone = "material" | "lead" | "activity" | "context" | "empty";
+
+export interface DiscoveryInsightSynthesis {
+  headline: string;
+  tag: string;
+  tone: DiscoverySynthesisTone;
+  primary?: DiscoveryEvent;
+  support?: DiscoveryEvent;
+  observations: string[];
+  synthesis: string;
+  evidence: string[];
+}
+
 export type DiscoveryRelationKind = "customer" | "supplier" | "material" | "peer" | "beneficiary";
 
 export interface DiscoveryThemeBundleItem {
@@ -254,32 +267,134 @@ function eventTimePrefix(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
   return event.asOf.slice(0, 10) === candidate.asOf.slice(0, 10) ? "오늘" : "최근";
 }
 
-export function discoveryWhy(candidate: DiscoveryCandidate): string {
-  const displayEvents = candidate.events.filter(
+function labelOf(event: DiscoveryEvent | undefined): string {
+  return (event?.label ?? "").replace(/\s+/g, " ").trim();
+}
+
+function stripTimePrefix(text: string): string {
+  return text.replace(/^(?:오늘|최근)\s+/, "").trim();
+}
+
+function isPriceRestatement(text: string): boolean {
+  const oldPriceLeadLabel = ["가격 먼저", "움직" + "임"].join(" ");
+  const oldPricePctPrefix = ["오늘", "가격이"].join(" ");
+  return text.startsWith(oldPricePctPrefix) || text === oldPriceLeadLabel;
+}
+
+function displayEventsFor(candidate: DiscoveryCandidate): DiscoveryEvent[] {
+  return candidate.events.filter(
     (event) => isDeckDisplayEvent(event, candidate) || isContextDisplayEvent(event, candidate)
   );
-  const strongest = displayEvents.sort(
+}
+
+function eventKindTone(event: DiscoveryEvent | undefined): DiscoverySynthesisTone {
+  if (!event) return "empty";
+  if (event.kind === "disclosure" || event.kind === "news_mention" || event.kind === "new_high") return "material";
+  if (event.kind === "flow_entry") return "lead";
+  if (event.kind === "volume_spike") return "activity";
+  if (event.kind === "theme_link" || event.kind === "market_context") return "context";
+  return "empty";
+}
+
+function eventTag(event: DiscoveryEvent | undefined): string {
+  if (!event) return "아직 공개된 계기 없음";
+  if (event.kind === "disclosure") return "공시 재료";
+  if (event.kind === "news_mention") return "뉴스 재료";
+  if (event.kind === "flow_entry") return "💎 수급 선행";
+  if (event.kind === "volume_spike") return "거래 이상";
+  if (event.kind === "new_high") return "가격 위치";
+  if (event.kind === "theme_link") return "테마 상대강도";
+  if (event.kind === "market_context") return "시장 위치";
+  return "확인 신호";
+}
+
+function supportPhrase(event: DiscoveryEvent | undefined): string | undefined {
+  const label = stripTimePrefix(labelOf(event));
+  if (!event || !label || isPriceRestatement(label)) return undefined;
+  if (event.kind === "flow_entry") return label.replace(/예요\.?$/, "흐름도 같이 보여요");
+  if (event.kind === "volume_spike") return label.replace(/예요\.?$/, "점도 같이 잡혀요");
+  if (event.kind === "theme_link" || event.kind === "market_context") return label.replace(/예요\.?$/, "맥락도 붙었어요");
+  if (event.kind === "news_mention" || event.kind === "disclosure") return label.replace(/예요\.?$/, "재료도 확인돼요");
+  if (event.kind === "new_high") return label.replace(/예요\.?$/, "위치도 달라졌어요");
+  return label;
+}
+
+function choosePrimaryEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
+  return displayEventsFor(candidate).sort(
     (a, b) => WHY_KIND_PRIORITY[a.kind] - WHY_KIND_PRIORITY[b.kind] || b.strength - a.strength || a.kind.localeCompare(b.kind)
   )[0];
-  if (!strongest) return "오늘은 뚜렷한 신호 없음";
-  if (strongest.kind === "disclosure") {
-    const prefix = eventTimePrefix(strongest, candidate);
-    return strongest.label
-      ? `${prefix} ${strongest.label}`
-      : `${prefix} 이 종목의 공시가 확인됐어요.`;
+}
+
+function chooseSupportEvent(candidate: DiscoveryCandidate, primary: DiscoveryEvent | undefined): DiscoveryEvent | undefined {
+  if (!primary) return undefined;
+  return displayEventsFor(candidate)
+    .filter((event) => event !== primary && event.kind !== primary.kind && !!supportPhrase(event))
+    .sort((a, b) => {
+      const supportRank = (event: DiscoveryEvent) => {
+        if (event.kind === "volume_spike") return 0;
+        if (event.kind === "flow_entry") return 1;
+        if (event.kind === "theme_link" || event.kind === "market_context") return 2;
+        if (event.kind === "disclosure" || event.kind === "news_mention") return 3;
+        return 9;
+      };
+      return supportRank(a) - supportRank(b) || b.strength - a.strength || a.kind.localeCompare(b.kind);
+    })[0];
+}
+
+function headlineFor(primary: DiscoveryEvent, support: DiscoveryEvent | undefined, candidate: DiscoveryCandidate): string {
+  const primaryLabel = labelOf(primary);
+  const prefix = eventTimePrefix(primary, candidate);
+  const supportText = supportPhrase(support);
+  let base = primaryLabel ? (primary.kind === "disclosure" || primary.kind === "news_mention" ? `${prefix} ${stripTimePrefix(primaryLabel)}` : primaryLabel) : "";
+  if (!base) {
+    if (primary.kind === "disclosure") base = `${prefix} 이 종목의 공시가 확인됐어요.`;
+    else if (primary.kind === "news_mention") base = `${prefix} 이 종목을 직접 언급한 뉴스가 있어요.`;
+    else if (primary.kind === "flow_entry") base = "수급이 먼저 들어오는 종목이에요.";
+    else if (primary.kind === "volume_spike") base = "거래량이 평소보다 달라졌어요.";
+    else base = `${candidate.sector ?? candidate.market} 안에서 확인된 신호예요.`;
   }
-  if (strongest.kind === "news_mention") {
-    const prefix = eventTimePrefix(strongest, candidate);
-    return strongest.label
-      ? `${prefix} ${strongest.label}`
-      : `${prefix} 이 종목을 직접 언급한 뉴스가 있어요.`;
+  if (supportText && !base.includes(supportText)) return `${base.replace(/[.。]$/, "")} — ${supportText.replace(/[.。]$/, "")}.`;
+  return base;
+}
+
+export function synthesizeDiscoveryInsight(candidate: DiscoveryCandidate): DiscoveryInsightSynthesis {
+  const primary = choosePrimaryEvent(candidate);
+  const support = chooseSupportEvent(candidate, primary);
+  if (!primary) {
+    return {
+      headline: "아직 공개된 계기 없음",
+      tag: "정직한 빈 신호",
+      tone: "empty",
+      observations: [],
+      synthesis: "카드에 올릴 만큼 확인된 사건·수급·거래·상대강도 신호가 아직 적어요.",
+      evidence: [],
+    };
   }
-  if (strongest.kind === "flow_entry") return strongest.label ?? "수급이 새로 감지된 종목이에요.";
-  if (strongest.kind === "new_high") return strongest.label ?? "새로운 가격 위치가 확인된 종목이에요.";
-  if (strongest.kind === "volume_spike") {
-    return strongest.label ?? "오늘 거래량이 새로 늘었어요.";
-  }
-  return strongest.label ?? "오늘 가격 움직임이 커졌고, 뚜렷한 공개 재료는 확인 안 됨.";
+
+  const headline = headlineFor(primary, support, candidate);
+  const observations = [labelOf(primary), labelOf(support)].filter((text): text is string => !!text);
+  const evidence = [primary, support]
+    .filter((event): event is DiscoveryEvent => !!event)
+    .map((event) => `${event.source} · ${event.asOf.slice(0, 10)} · ${event.confidence}`);
+  const supportText = supportPhrase(support);
+  const synthesis = supportText
+    ? `${eventTag(primary)}에 ${eventTag(support)}가 붙어, 단일 가격 변화보다 볼 맥락이 생긴 카드예요.`
+    : `${eventTag(primary)} 하나가 먼저 확인된 카드예요. 다른 보조 신호는 아직 얇아요.`;
+
+  return {
+    headline,
+    tag: eventTag(primary),
+    tone: eventKindTone(primary),
+    primary,
+    ...(support ? { support } : {}),
+    observations,
+    synthesis,
+    evidence,
+  };
+}
+
+export function discoveryWhy(candidate: DiscoveryCandidate): string {
+  return synthesizeDiscoveryInsight(candidate).headline;
 }
 
 function freshnessBoost(candidate: DiscoveryCandidate): number {

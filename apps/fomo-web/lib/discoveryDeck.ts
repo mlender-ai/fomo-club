@@ -31,6 +31,7 @@ export type DeckStock = Omit<SectorStock, "sector"> & {
   kind?: "stock";
   reason?: string;
   whyShown?: string;
+  insightTag?: string;
   symbol?: string;
   axisSignals?: AxisSignal[];
   axisHook?: MultiAxisHookSelection;

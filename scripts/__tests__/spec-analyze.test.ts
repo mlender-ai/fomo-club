@@ -41,6 +41,26 @@ describe("spec analyze", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("does not merge concrete removals and generic guard additions from different files", () => {
+    const result = analyzeSpecDiff(
+      [
+        diffFor("apps/web/lib/discovery-supply.ts", [
+          "-  return `오늘 ${sector} 12개 종목 중 가장 먼저 움직였어요.`;",
+          "+  return `오늘 ${sector} 12개 종목 중 상대강도 1위예요.`;",
+        ]),
+        diffFor("packages/fomo-core/src/keyword-cards/discovery-supply.ts", [
+          "+function isPriceRestatement(text: string): boolean {",
+          "+  return /^오늘\\s*가격이|^가격\\s*먼저\\s*움직임$/.test(text);",
+          "+}",
+        ]),
+      ].join("\n"),
+      { guardDiscoveryRan: true },
+    );
+
+    expect(result.findings.map((finding) => finding.code)).not.toContain("diff.generic_overwrite");
+    expect(result.ok).toBe(true);
+  });
+
   it("requires discovery guard for sensitive discovery files", () => {
     const result = analyzeSpecDiff(diffFor("apps/web/lib/discovery-supply.ts", ["+const limit = 50;"]));
 
