@@ -40,7 +40,7 @@ function synthesis(overrides: Partial<DiscoveryInsightSynthesis>): DiscoveryInsi
 }
 
 describe("resolveCardHeadline", () => {
-  it("does not pass raw article titles through as the surface headline", () => {
+  it("does not pass raw article titles through as the surface headline", async () => {
     const title = "롯데손보 8월 매물 나온다…한국투자·신한 인수전 뛰어드나";
     const event: DiscoveryEvent = {
       ...baseEvent,
@@ -50,7 +50,7 @@ describe("resolveCardHeadline", () => {
       sourceUrl: "https://example.com/news",
     };
 
-    const result = resolveCardHeadline({
+    const result = await resolveCardHeadline({
       candidate: candidate([event]),
       synthesis: synthesis({
         headline: title,
@@ -61,7 +61,8 @@ describe("resolveCardHeadline", () => {
     });
 
     expect(result.text).not.toBe(title);
-    expect(result.provenance).not.toBe("synthesis");
+    expect(result.provenance).toBe("rule");
+    expect(result.text).toBe("한국투자·신한 인수전 참여");
     expect(result.eventRef).toMatchObject({
       kind: "news_mention",
       source: "뉴시스",
@@ -71,7 +72,7 @@ describe("resolveCardHeadline", () => {
     });
   });
 
-  it("returns the same headline for the same input", () => {
+  it("returns the same headline for the same input", async () => {
     const event: DiscoveryEvent = {
       ...baseEvent,
       label: "공급계약 공시와 거래 증가가 같이 확인됐어요.",
@@ -81,26 +82,28 @@ describe("resolveCardHeadline", () => {
     const input = {
       candidate: candidate([event]),
       synthesis: synthesis({
-        headline: "공급계약에 거래도 붙었어요",
+        headline: "180억원 반도체 장비 공급계약 체결",
         tone: "material",
         primary: event,
       }),
+      synthesisMethod: "ai" as const,
       sourceLabel: "티이엠씨씨엔에스, 180억원 반도체 장비 공급계약 체결 · DART",
     };
 
-    const outputs = Array.from({ length: 10 }, () => resolveCardHeadline(input).text);
+    const outputs = await Promise.all(Array.from({ length: 10 }, async () => (await resolveCardHeadline(input)).text));
 
     expect(new Set(outputs).size).toBe(1);
+    expect(outputs[0]).toBe("180억원 반도체 장비 공급계약 체결");
   });
 
-  it("marks empty candidates as suppressed instead of inventing a headline", () => {
-    const result = resolveCardHeadline({
+  it("marks empty candidates as suppressed instead of inventing a headline", async () => {
+    const result = await resolveCardHeadline({
       candidate: candidate([]),
       synthesis: synthesis({}),
     });
 
     expect(result).toMatchObject({
-      text: "아직 공개된 계기 없음",
+      text: "",
       provenance: "suppressed",
       method: "none",
     });

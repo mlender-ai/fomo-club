@@ -6,6 +6,7 @@ import {
   type DiscoveryResponse,
   type DiscoveryStockPayload,
 } from "../apps/web/lib/discovery-supply";
+import { hasConcreteSourceValue, isAbstractTemplate, isRawTitleCopy } from "../apps/web/lib/copy-guards";
 import type { DiscoveryCountryScope } from "../apps/web/lib/market-source-types";
 
 type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallback_no_event";
@@ -29,6 +30,7 @@ interface HeadlineProvenanceRow {
   eventKind: ProvenanceEventKind;
   insightTag?: string;
   sourceLabel?: string;
+  concrete: boolean;
 }
 
 interface HeadlineProvenanceReport {
@@ -42,6 +44,10 @@ interface HeadlineProvenanceReport {
     method: Record<HeadlineMethod, number>;
     eventKind: Record<ProvenanceEventKind, number>;
     hasEvent: {
+      true: number;
+      false: number;
+    };
+    concrete: {
       true: number;
       false: number;
     };
@@ -80,7 +86,7 @@ function parseArgs(): Args {
 }
 
 function finalVisibleHeadline(stock: DiscoveryStockPayload): string {
-  return cleanInline(stock.headline) || "아직 공개된 계기 없음";
+  return cleanInline(stock.headline);
 }
 
 function sourceTitleFrom(stock: DiscoveryStockPayload): string | undefined {
@@ -105,18 +111,8 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
     return "fallback_no_event";
   }
   const title = sourceTitleFrom(stock);
-  if (title) {
-    const normalizedTitle = cleanInline(title).replace(/[.。]+$/g, "");
-    const normalizedHeadline = cleanInline(headline).replace(/[.。]+$/g, "");
-    if (
-      normalizedTitle.length >= 8 &&
-      normalizedHeadline.length >= 8 &&
-      (normalizedTitle.includes(normalizedHeadline) || normalizedHeadline.includes(normalizedTitle.slice(0, Math.min(24, normalizedTitle.length))))
-    ) {
-      return "raw_title";
-    }
-  }
-  if (ABSTRACT_TEMPLATE_PATTERN.test(headline) || ADDITIONAL_ABSTRACT_TEMPLATE_PATTERN.test(headline)) return "abstract_template";
+  if (title && isRawTitleCopy(headline, title)) return "raw_title";
+  if (ABSTRACT_TEMPLATE_PATTERN.test(headline) || ADDITIONAL_ABSTRACT_TEMPLATE_PATTERN.test(headline) || isAbstractTemplate(headline)) return "abstract_template";
   if (eventKind === "none") return "fallback_no_event";
   return "why_synthesis";
 }
@@ -134,6 +130,12 @@ function increment<T extends string>(bucket: Record<T, number>, key: T): void {
   bucket[key] = (bucket[key] ?? 0) + 1;
 }
 
+function isConcreteHeadline(stock: DiscoveryStockPayload, headline: string): boolean {
+  const sourceTitle = sourceTitleFrom(stock);
+  if (sourceTitle && hasConcreteSourceValue(headline, sourceTitle)) return true;
+  return /\d/.test(headline) || /[A-Z]{2,}|[가-힣A-Za-z0-9]+(?:와|과)\s*[가-힣A-Za-z0-9]+/.test(headline);
+}
+
 function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenanceReport {
   const stocks = payload.stocks.slice(0, args.limit);
   const rows = stocks.map((stock, index): HeadlineProvenanceRow => {
@@ -141,6 +143,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     const headline = finalVisibleHeadline(stock);
     const eventKind = classifyEventKind(stock, front, headline);
     const path = classifyPath(stock, headline, eventKind);
+    const concrete = path === "why_synthesis" && isConcreteHeadline(stock, headline);
     return {
       index: index + 1,
       ticker: stock.canonical,
@@ -150,6 +153,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       method: classifyMethod(stock, path, headline),
       hasEvent: eventKind !== "none",
       eventKind,
+      concrete,
       ...(stock.insightTag ? { insightTag: stock.insightTag } : {}),
       ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
     };
@@ -177,6 +181,10 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     true: 0,
     false: 0,
   };
+  const concreteCounts = {
+    true: 0,
+    false: 0,
+  };
   rows.forEach((row) => {
     increment(pathCounts, row.path);
     increment(methodCounts, row.method);
@@ -185,6 +193,11 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       hasEventCounts.true += 1;
     } else {
       hasEventCounts.false += 1;
+    }
+    if (row.concrete) {
+      concreteCounts.true += 1;
+    } else {
+      concreteCounts.false += 1;
     }
   });
 
@@ -199,6 +212,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       method: methodCounts,
       eventKind: eventCounts,
       hasEvent: hasEventCounts,
+      concrete: concreteCounts,
     },
     cards: rows,
   };
@@ -229,6 +243,12 @@ function printReport(report: HeadlineProvenanceReport): void {
   console.log("- hasEvent");
   (Object.keys(report.distributions.hasEvent) as Array<"true" | "false">).forEach((key) => {
     const value = report.distributions.hasEvent[key];
+    const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
+    console.log(`  - ${key}: ${value} (${pct}%)`);
+  });
+  console.log("- concrete");
+  (Object.keys(report.distributions.concrete) as Array<"true" | "false">).forEach((key) => {
+    const value = report.distributions.concrete[key];
     const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
     console.log(`  - ${key}: ${value} (${pct}%)`);
   });

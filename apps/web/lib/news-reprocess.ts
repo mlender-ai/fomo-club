@@ -1,4 +1,14 @@
 import { callAI, isAiConfigured } from "@fomo/shared";
+import {
+  cleanInline,
+  hasConcreteSourceValue,
+  hasForbiddenCopy,
+  isAbstractTemplate,
+  isRawTitleCopy,
+  numberVariants,
+  numbersIn,
+  SOURCE_NAME_PATTERN,
+} from "./copy-guards";
 
 export interface NewsHookInput {
   stock: string;
@@ -15,55 +25,23 @@ export interface NewsHookResult {
 }
 
 const cache = new Map<string, NewsHookResult>();
-const FORBIDDEN_COPY = new RegExp(
-  [
-    "목표" + "가",
-    "급등\\s*임박",
-    "텐" + "베거",
-    "매" + "수",
-    "매" + "도",
-    "추" + "천",
-    "사" + "야",
-    "팔" + "아야",
-    "오를\\s*것",
-    "상승" + "할",
-    "수혜\\s*확정",
-  ].join("|"),
-  "i"
-);
-const SOURCE_NAME_PATTERN = /Yahoo Finance|한경비즈니스|한국경제|네이버|Reuters|Bloomberg|뉴시스|연합뉴스|매일경제|서울경제/i;
 const GENERIC_TITLE_PATTERN = /^(?:(?:제품·AI 인프라|실적·가이던스|고객·파트너십|인도량 확인|자금조달·유동화)\s*소식|SEC 공시|소식|뉴스)(?:이|가)?\s*나왔어요\.?$/i;
-
-function cleanInline(text: string | undefined): string {
-  return (text ?? "")
-    .replace(/[“”"]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/[.!?。]+$/g, "")
-    .trim();
-}
-
-function normalizeForCompare(text: string): string {
-  return cleanInline(text).replace(/[‘’'".,:·…\s]/g, "").toLowerCase();
-}
 
 function cacheKey(input: NewsHookInput): string {
   return [input.asOf.slice(0, 10), input.stock, input.sector ?? "", input.title, input.source ?? ""].join("\u001f");
 }
 
-function numbersIn(text: string): string[] {
-  return [...text.matchAll(/\d+(?:\.\d+)?/g)].map((m) => m[0]!).filter(Boolean);
-}
-
 export function validateReprocessedNewsHook(hook: string | undefined, input: NewsHookInput): string | undefined {
   const clean = cleanInline(hook);
-  if (!clean || clean.length > 36) return undefined;
-  if (FORBIDDEN_COPY.test(clean) || SOURCE_NAME_PATTERN.test(clean)) return undefined;
-  if (clean.includes("—") || clean.includes("·")) return undefined;
-  const titleNorm = normalizeForCompare(input.title);
-  const hookNorm = normalizeForCompare(clean);
-  if (!hookNorm || titleNorm.includes(hookNorm) || hookNorm.includes(titleNorm)) return undefined;
-  const titleNumbers = new Set(numbersIn(input.title));
-  if (numbersIn(clean).some((n) => !titleNumbers.has(n))) return undefined;
+  if (!clean || clean.length > 44) return undefined;
+  if (hasForbiddenCopy(clean) || SOURCE_NAME_PATTERN.test(clean) || isAbstractTemplate(clean)) return undefined;
+  if (isRawTitleCopy(clean, input.title)) return undefined;
+  const allowedNumbers = new Set(numbersIn(input.title).flatMap(numberVariants));
+  if (typeof input.changePct === "number" && Number.isFinite(input.changePct)) {
+    numberVariants(String(Math.abs(input.changePct))).forEach((value) => allowedNumbers.add(value));
+  }
+  if (numbersIn(clean).some((n) => !allowedNumbers.has(n) && !allowedNumbers.has(n.replace(/\.0+$/, "")))) return undefined;
+  if (!hasConcreteSourceValue(clean, input.title)) return undefined;
   return clean;
 }
 
@@ -72,31 +50,164 @@ function stripStockName(text: string, stock: string): string {
   return text.replace(new RegExp(escaped, "gi"), "").replace(/^[,\s]+|[,\s]+$/g, "").trim();
 }
 
+function pickAmount(title: string): string | undefined {
+  return title.match(/\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원|%)/i)?.[0]?.replace(/\s+/g, "");
+}
+
+function pickQuoted(title: string): string | undefined {
+  return title.match(/[‘'“"]([^‘'“”"]{2,28})[’'”"]/)?.[1]?.trim();
+}
+
+function pickCounterparty(title: string): string | undefined {
+  const pair = title.match(/([가-힣A-Za-z0-9&().+-]{2,18})[·ㆍ]([가-힣A-Za-z0-9&().+-]{2,18})\s*(?:인수전|입찰|경쟁|참여|뛰어)/);
+  if (pair?.[1] && pair[2]) return `${pair[1]}·${pair[2]}`;
+  const ko = title.match(/([가-힣A-Za-z0-9&().+-]{2,24})(?:와|과|와의|과의)\s*(?:공급계약|계약|제휴|협력|파트너십|인수전|수주)/);
+  if (ko?.[1]) return ko[1].trim();
+  const en = title.match(/\b(?:with|from|by)\s+([A-Z][A-Za-z0-9&().+-]{1,24})/);
+  return en?.[1]?.trim();
+}
+
+function pickProduct(title: string): string | undefined {
+  const quoted = pickQuoted(title);
+  if (quoted) return quoted;
+  const product = title.match(/([가-힣A-Za-z0-9&().+\-\s]{2,28})\s*(?:개발|출시|공개|공급|수주|계약|승인|허가|임상|launch|unveil|introduce|supply|contract)/i)?.[1];
+  return product
+    ?.replace(/^\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원)?\s*(?:규모\s*)?/i, "")
+    .replace(/\s*(?:공급|수주|계약)$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function pickFiling(title: string): string | undefined {
+  if (/8-K/i.test(title)) return "8-K";
+  if (/10-Q/i.test(title)) return "10-Q";
+  if (/10-K/i.test(title)) return "10-K";
+  if (/SEC/i.test(title)) return "SEC";
+  if (/DART|공시/.test(title)) return "공시";
+  return undefined;
+}
+
+function candidateHooks(input: NewsHookInput, title: string): string[] {
+  const lower = title.toLowerCase();
+  const amount = pickAmount(title);
+  const counterparty = pickCounterparty(title);
+  const product = pickProduct(title);
+  const filing = pickFiling(title);
+  const hooks: string[] = [];
+
+  if (/정부|국책|투자|클러스터|산단|호남/.test(title) && /관련주|부각|묶|투자/.test(title)) {
+    if (/호남/.test(title)) hooks.push("호남 투자 발표에 관련주로 언급");
+    if (amount) hooks.push(`${amount} 투자 발표에 관련주로 언급`);
+  }
+  if (/공급계약|계약|수주|contract|deal|order|supply/.test(lower)) {
+    if (amount && product) hooks.push(`${amount} ${product} 공급계약 체결`);
+    if (amount) hooks.push(`${amount} 공급계약 체결`);
+    if (counterparty) hooks.push(`${counterparty} 공급계약 체결`);
+    if (product) hooks.push(`${product} 공급계약 체결`);
+  }
+  if (/유상증자|증자/.test(title) && amount) {
+    hooks.push(`${amount} 유상증자 결정`);
+  }
+  if (/자사주|신탁/.test(title) && amount) {
+    hooks.push(`${amount} 자사주 취득 신탁`);
+  }
+  if (/인수전|매각|입찰|acquisition|takeover|bid/i.test(title)) {
+    if (counterparty) hooks.push(`${counterparty} 인수전 참여`);
+    if (amount) hooks.push(`${amount} 매각 이슈`);
+  }
+  if (/제품|신제품|AI 인프라|data center|solution|launch|unveil|introduce|product/.test(lower)) {
+    if (counterparty) hooks.push(`${counterparty}와 제품 협력`);
+    if (product) hooks.push(`${product} 공개`);
+  }
+  if (/실적|가이던스|매출|revenue|earnings|results|guidance|forecast/.test(lower)) {
+    if (amount) hooks.push(`${amount} 실적 발표`);
+    if (/1Q|1분기/i.test(title)) hooks.push("1분기 실적 발표");
+    if (/2Q|2분기/i.test(title)) hooks.push("2분기 실적 발표");
+  }
+  if (/파트너십|제휴|협력|고객|partnership|customer/.test(lower)) {
+    if (counterparty) hooks.push(`${counterparty}와 제휴 발표`);
+    if (product) hooks.push(`${product} 협력 발표`);
+  }
+  if (/SEC|8-K|10-Q|10-K|filing|공시/i.test(title) && filing) {
+    hooks.push(`${filing} 주요 공시 제출`);
+  }
+  if (/FDA|임상|허가|승인|trial|approval|drug/i.test(title)) {
+    const phase = title.match(/(?:임상|phase)\s*\d(?:상)?/i)?.[0]?.trim();
+    if (phase) hooks.push(`${phase} 데이터 발표`);
+    if (product) hooks.push(`${product} 임상 데이터 발표`);
+  }
+  if (/자금조달|유동화|funding|liquidity|offering/i.test(title)) {
+    if (amount) hooks.push(`${amount} 자금조달 발표`);
+  }
+  const eventPhrase = pickEventPhrase(title);
+  if (eventPhrase) hooks.push(eventPhrase);
+  const leadClause = pickLeadClause(title);
+  if (leadClause) hooks.push(leadClause);
+  return hooks;
+}
+
+function pickEventPhrase(title: string): string | undefined {
+  const clean = cleanInline(title.replace(/^[가-힣A-Za-z0-9&().+-]{1,18}\s*,\s*/, ""));
+  const keywords = [
+    "유상증자 결정",
+    "자사주 취득",
+    "상업화 권리 확보",
+    "독점 상업화 권리 확보",
+    "양산 PO 수주",
+    "글로벌 공급",
+    "급여 진입",
+    "판매 종료",
+    "임상 전략",
+    "렌탈 서비스 출시",
+    "서비스 출시",
+    "전략 전환",
+    "개발 본격화",
+    "첫 CB 발행",
+    "공급 계약",
+    "공급계약",
+    "협력",
+    "제휴",
+    "출시",
+    "수주",
+    "개발",
+    "확보",
+    "체결",
+  ];
+  for (const keyword of keywords) {
+    const idx = clean.indexOf(keyword);
+    if (idx < 0) continue;
+    const before = clean
+      .slice(Math.max(0, idx - 28), idx)
+      .replace(/^.*[.…:：]/, "")
+      .replace(/^[,\s]+|[,\s]+$/g, "")
+      .trim();
+    const phrase = cleanInline(`${before} ${keyword}`);
+    if (phrase.length >= 6 && phrase.length <= 44) return phrase;
+  }
+  return undefined;
+}
+
+function pickLeadClause(title: string): string | undefined {
+  const clean = cleanInline(title.replace(/^[가-힣A-Za-z0-9&().+-]{1,18}\s*,\s*/, ""));
+  const clause = clean
+    .split(/…|\.{2,}|[!?]|…|;|；/)
+    .map((part) => cleanInline(part))
+    .find((part) => part.length >= 8 && !/^(?:소식|뉴스|공시|재료|오늘)/.test(part));
+  if (!clause) return undefined;
+  const shortened = clause.length > 34 ? `${clause.slice(0, 34).replace(/\s+\S*$/, "")}` : clause;
+  if (!shortened || /(?:재료가|소식에|직접|붙었|확인됐어요)/.test(shortened)) return undefined;
+  return shortened;
+}
+
 export function ruleReprocessNewsHook(input: NewsHookInput): string | undefined {
   const title = cleanInline(stripStockName(input.title, input.stock));
-  const lower = title.toLowerCase();
   if (!title || GENERIC_TITLE_PATTERN.test(title)) return undefined;
 
-  let hook: string | undefined;
-  if (/정부|국책|투자|클러스터|산단|호남/.test(title) && /관련주|부각|묶/.test(title)) {
-    hook = /호남/.test(title) ? "정부 호남 투자 예고에 관련주로 묶임" : "정부 투자 예고에 관련주로 묶임";
-  } else if (/제품·AI 인프라|신제품|제품|AI 인프라|data center|solution|launch|unveil|introduce|product/.test(lower)) {
-    hook = `${input.sector === "AI" || /음성|SoundHound|사운드하운드/i.test(input.stock) ? "음성 AI " : ""}신제품 소식에 반응`;
-  } else if (/실적|가이던스|매출|revenue|earnings|results|guidance|forecast/.test(lower)) {
-    hook = "실적·가이던스가 다시 확인됐어요";
-  } else if (/공급계약|계약|수주|contract|deal|order|supply/.test(lower)) {
-    hook = /수주/.test(title) ? "수주 재료가 새로 확인됐어요" : "계약 재료가 새로 확인됐어요";
-  } else if (/파트너십|제휴|협력|고객|partnership|customer/.test(lower)) {
-    hook = "고객·파트너십 소식에 반응";
-  } else if (/SEC|8-K|10-Q|filing|공시/i.test(title)) {
-    hook = "공시 원문이 새로 확인됐어요";
-  } else if (/FDA|임상|허가|승인|trial|approval|drug/i.test(title)) {
-    hook = "신약·허가 재료가 확인됐어요";
-  } else if (/자금조달|유동화|funding|liquidity/i.test(title)) {
-    hook = "자금조달 이슈가 확인됐어요";
+  for (const hook of candidateHooks(input, title)) {
+    const validated = validateReprocessedNewsHook(hook, input);
+    if (validated) return validated;
   }
-
-  return validateReprocessedNewsHook(hook, input);
+  return undefined;
 }
 
 function parseAiHook(content: string): string | undefined {
@@ -117,8 +228,13 @@ function systemPrompt(): string {
   return [
     "너는 주식 발견 카드의 뉴스 제목을 종목 관점 한 줄로 압축한다.",
     "제목에 있는 사실만 사용한다.",
+    "무엇을·누구와·얼마·언제 중 확인 가능한 구체값을 최소 1개 포함한다.",
+    "계약/수주/실적/공시/뉴스/소식/재료 같은 카테고리 명사만으로 끝내지 않는다.",
+    "상대방·금액·제품·수치 중 하나가 없으면 빈 hook을 반환한다.",
+    "좋은 예: 원문 '티이엠씨씨엔에스, 180억원 반도체 장비 공급계약 체결' -> '180억원 반도체 장비 공급계약 체결'.",
+    "나쁜 예: '계약 재료가 새로 확인됐어요', '직접 재료가 붙었어요', '소식에 반응'.",
     `${banned.join(", ")} 금지.`,
-    "결과는 한국어 36자 이하 JSON {\"hook\":\"...\"}.",
+    "결과는 한국어 44자 이하 JSON {\"hook\":\"...\"}.",
     "연결을 못 만들면 {\"hook\":\"\"}.",
   ].join(" ");
 }

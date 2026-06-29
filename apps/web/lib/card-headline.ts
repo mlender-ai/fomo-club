@@ -4,6 +4,15 @@ import {
   type DiscoveryEvent,
   type DiscoveryInsightSynthesis,
 } from "@fomo/core";
+import {
+  cleanInline,
+  hasConcreteSourceValue,
+  hasForbiddenCopy,
+  isAbstractTemplate,
+  isRawTitleCopy,
+} from "./copy-guards";
+import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
+import { ruleReprocessNewsHook } from "./news-reprocess";
 
 export type CardHeadlineProvenance = "synthesis" | "rule" | "suppressed";
 export type CardHeadlineMethod = "ai" | "rule" | "none";
@@ -24,30 +33,16 @@ export interface CardHeadline {
 export interface ResolveCardHeadlineInput {
   candidate: DiscoveryCandidate;
   synthesis?: DiscoveryInsightSynthesis;
+  synthesisMethod?: CardHeadlineMethod;
   reason?: string;
   sourceLabel?: string;
 }
 
-const FALLBACK_TEXT = "아직 공개된 계기 없음";
 const DISCOVERY_REASON_JOINER = " — ";
 
 const EMPTY_PATTERN = /아직\s*공개된\s*계기\s*없음|뚜렷한\s*이유는\s*아직|더\s*살펴볼|더\s*확인할|발견\s*풀/;
-const ABSTRACT_MATERIAL_PATTERN =
-  /^(?:뉴스|공시|계약|수주|실적|제품|파트너십|공급계약|해외 수주)(?:에)?\s*(?:직접\s*)?(?:재료|수급|거래|동종 종목 비교)?(?:도)?\s*(?:붙었|확인됐|나왔)어요\.?$/;
 const WHAT_ONLY_PATTERN =
   /거래가|거래량|평소\s*\d|변동성|상대강도|시장\s*위치|종목\s+중|시총\s*\d|오늘\s*[+-]?\d|움직였|강했|셌|\d+\s*\/\s*\d+/;
-
-function cleanInline(text: string | undefined): string {
-  return (text ?? "").replace(/\s+/g, " ").trim();
-}
-
-function stripSourceAndTime(text: string): string {
-  return text
-    .replace(/^(?:오늘|최근)\s+/, "")
-    .replace(/\s*·\s*[^.。]+[.。]?$/g, "")
-    .replace(/[.。]+$/g, "")
-    .trim();
-}
 
 function splitReasonDetail(text: string | undefined): { state?: string; detail?: string } {
   const clean = cleanInline(text);
@@ -68,53 +63,6 @@ function sourceTitleFromLabel(sourceLabel: string | undefined): string | undefin
   return clean.split(/\s+·\s+/)[0]?.trim();
 }
 
-function normalizeComparable(text: string | undefined): string {
-  return cleanInline(text)
-    .replace(/[.。"'“”‘’]/g, "")
-    .replace(/\s+/g, "")
-    .toLowerCase();
-}
-
-function isRawTitleLike(text: string | undefined, sourceTitle: string | undefined): boolean {
-  const headline = normalizeComparable(text);
-  const title = normalizeComparable(sourceTitle);
-  if (!headline || !title || headline.length < 8 || title.length < 8) return false;
-  return title.includes(headline) || headline.includes(title.slice(0, Math.min(24, title.length)));
-}
-
-function topicFromMaterial(detail: string): string {
-  const title = stripSourceAndTime(detail);
-  const lower = title.toLowerCase();
-  if (/해외\s*수주/.test(title)) return "해외 수주";
-  if (/공급계약/.test(title)) return "공급계약";
-  if (/계약|contract|deal|order/.test(lower)) return "계약";
-  if (/수주/.test(title)) return "수주";
-  if (/실적|가이던스|매출|earnings|revenue|guidance|results/.test(lower)) return "실적";
-  if (/sec|공시|filing|8-k|10-q/.test(lower)) return "공시";
-  if (/파트너십|제휴|partnership|customer/.test(lower)) return "파트너십";
-  if (/제품|출시|인프라|launch|product|infrastructure/.test(lower)) return "제품";
-  const compact = title
-    .replace(/['"“”‘’]/g, "")
-    .split(/[,，:：\-–—]/)[0]
-    ?.trim();
-  return compact && compact.length <= 10 ? compact : "뉴스";
-}
-
-function supportFromDetail(detail: string): string {
-  if (/수급|외국인|기관|순매수|사는 중/.test(detail)) return "수급도 붙었어요";
-  if (/거래량|거래가|거래도/.test(detail)) return "거래도 붙었어요";
-  if (/동종|섹터|종목들 중/.test(detail)) return "동종 종목 비교도 붙었어요";
-  return "직접 재료가 붙었어요";
-}
-
-function compactMaterialHeadline(detail: string): string | undefined {
-  const clean = stripSourceAndTime(detail);
-  if (!clean) return undefined;
-  const topic = topicFromMaterial(clean);
-  const support = supportFromDetail(clean);
-  return topic === "뉴스" ? support : `${topic}에 ${support}`;
-}
-
 function eventRefFrom(event: DiscoveryEvent | undefined): CardHeadline["eventRef"] | undefined {
   if (!event) return undefined;
   const ref: NonNullable<CardHeadline["eventRef"]> = {
@@ -130,11 +78,12 @@ function eventRefFrom(event: DiscoveryEvent | undefined): CardHeadline["eventRef
   return ref;
 }
 
-function isUsableSynthesis(text: string | undefined, sourceTitle: string | undefined): text is string {
+function isUsableHeadline(text: string | undefined, sourceTitle: string | undefined): text is string {
   const clean = cleanInline(text);
   if (!clean || EMPTY_PATTERN.test(clean)) return false;
-  if (ABSTRACT_MATERIAL_PATTERN.test(clean)) return false;
-  if (isRawTitleLike(clean, sourceTitle)) return false;
+  if (hasForbiddenCopy(clean) || isAbstractTemplate(clean)) return false;
+  if (isRawTitleCopy(clean, sourceTitle)) return false;
+  if (sourceTitle && !hasConcreteSourceValue(clean, sourceTitle)) return false;
   return true;
 }
 
@@ -142,38 +91,73 @@ function isMaterialEvent(event: DiscoveryEvent | undefined): boolean {
   return event?.kind === "news_mention" || event?.kind === "disclosure";
 }
 
-export function resolveCardHeadline(input: ResolveCardHeadlineInput): CardHeadline {
-  const synthesis = input.synthesis ?? synthesizeDiscoveryInsight(input.candidate);
+function ruleHeadlineFromMaterial(
+  candidate: DiscoveryCandidate,
+  primary: DiscoveryEvent | undefined,
+  sourceTitle: string | undefined
+): string | undefined {
+  if (!isMaterialEvent(primary)) return undefined;
+  const title = sourceTitle ?? primary?.sourceTitle ?? primary?.label ?? primary?.headlineHook;
+  if (!title) return undefined;
+  return ruleReprocessNewsHook({
+    stock: candidate.ticker,
+    sector: candidate.sector,
+    title,
+    source: primary?.sourceName ?? primary?.source,
+    changePct: primary?.changePct,
+    asOf: primary?.publishedAt ?? primary?.asOf ?? candidate.asOf,
+  });
+}
+
+async function resolveSynthesis(input: ResolveCardHeadlineInput): Promise<{
+  synthesis: DiscoveryInsightSynthesis;
+  method: CardHeadlineMethod;
+}> {
+  if (input.synthesis) {
+    return { synthesis: input.synthesis, method: input.synthesisMethod ?? "rule" };
+  }
+  const result = await synthesizeWhyDrivenInsight(input.candidate);
+  if (result.insight) {
+    return {
+      synthesis: result.insight,
+      method: result.method === "ai" ? "ai" : "rule",
+    };
+  }
+  return {
+    synthesis: synthesizeDiscoveryInsight(input.candidate),
+    method: "rule",
+  };
+}
+
+export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Promise<CardHeadline> {
+  const { synthesis, method } = await resolveSynthesis(input);
   const primary = synthesis.primary;
   const sourceTitle = primary?.sourceTitle?.trim() ?? sourceTitleFromLabel(input.sourceLabel);
   const reasonParts = splitReasonDetail(input.reason);
   const reasonDetail = reasonParts.detail ?? input.reason;
 
-  if (isUsableSynthesis(synthesis.headline, sourceTitle)) {
+  if (isUsableHeadline(synthesis.headline, sourceTitle)) {
     const eventRef = eventRefFrom(primary);
     return {
       text: cleanInline(synthesis.headline),
       provenance: "synthesis",
-      method: input.candidate.synthesizedInsight ? "ai" : "rule",
+      method,
       ...(eventRef ? { eventRef } : {}),
     };
   }
 
-  if (isMaterialEvent(primary)) {
-    const materialSeed = sourceTitle ?? primary?.headlineHook ?? primary?.label ?? reasonDetail;
-    const materialHeadline = materialSeed ? compactMaterialHeadline(materialSeed) : undefined;
-    if (materialHeadline && !ABSTRACT_MATERIAL_PATTERN.test(materialHeadline)) {
-      const eventRef = eventRefFrom(primary);
-      return {
-        text: materialHeadline,
-        provenance: "rule",
-        method: "rule",
-        ...(eventRef ? { eventRef } : {}),
-      };
-    }
+  const materialHeadline = ruleHeadlineFromMaterial(input.candidate, primary, sourceTitle);
+  if (isUsableHeadline(materialHeadline, sourceTitle)) {
+    const eventRef = eventRefFrom(primary);
+    return {
+      text: cleanInline(materialHeadline),
+      provenance: "rule",
+      method: "rule",
+      ...(eventRef ? { eventRef } : {}),
+    };
   }
 
-  if (isUsableSynthesis(reasonDetail, sourceTitle) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
+  if (isUsableHeadline(reasonDetail, sourceTitle) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
     const eventRef = eventRefFrom(primary);
     return {
       text: cleanInline(reasonDetail),
@@ -185,7 +169,7 @@ export function resolveCardHeadline(input: ResolveCardHeadlineInput): CardHeadli
 
   const eventRef = eventRefFrom(primary);
   return {
-    text: FALLBACK_TEXT,
+    text: "",
     provenance: "suppressed",
     method: "none",
     ...(eventRef ? { eventRef } : {}),
