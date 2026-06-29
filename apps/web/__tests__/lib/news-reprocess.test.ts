@@ -44,10 +44,27 @@ describe("news hook reprocessing", () => {
     expect(ruleReprocessNewsHook({ ...base, title: "소식이 나왔어요." })).toBeUndefined();
   });
 
+  it("turns concrete US material titles into Korean rule hooks", () => {
+    expect(
+      ruleReprocessNewsHook({
+        ...base,
+        stock: "디웨이브퀀텀",
+        title: "D-Wave Quantum Announces New Partnership With Aerospace Customer",
+      })
+    ).toBe("Aerospace 고객과 제휴 발표");
+    expect(
+      ruleReprocessNewsHook({
+        ...base,
+        title: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
+      })
+    ).toBe("1분기 실적 발표");
+  });
+
   it("rejects abstract template fillers instead of letting them reach the card", () => {
     expect(validateReprocessedNewsHook("계약 재료가 새로 확인됐어요", base)).toBeUndefined();
     expect(validateReprocessedNewsHook("직접 재료가 붙었어요", base)).toBeUndefined();
     expect(validateReprocessedNewsHook("소식에 반응", base)).toBeUndefined();
+    expect(validateReprocessedNewsHook("NIO Stock Eyes June Delivery", base)).toBeUndefined();
   });
 
   it("rejects source names, raw-title paste, forbidden advice, and added numbers", () => {

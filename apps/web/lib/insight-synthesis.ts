@@ -6,6 +6,7 @@ import {
   type DiscoveryEvent,
   type DiscoveryInsightSynthesis,
 } from "@fomo/core";
+import { hasExcessiveLatinHeadline, hasForbiddenCopy, isAbstractTemplate } from "./copy-guards";
 
 export interface WhySynthesisResult {
   insight: DiscoveryInsightSynthesis;
@@ -118,6 +119,18 @@ function numbersIn(text: string): string[] {
   return [...text.matchAll(/[+-]?\d+(?:\.\d+)?/g)].map((match) => match[0]!.replace(/^\+/, ""));
 }
 
+function englishQuarterNumbers(text: string): string[] {
+  const quarterMap: Record<string, string> = {
+    first: "1",
+    second: "2",
+    third: "3",
+    fourth: "4",
+  };
+  return [...text.matchAll(/\b(first|second|third|fourth)\s+quarter\b/gi)]
+    .map((match) => quarterMap[match[1]!.toLowerCase()])
+    .filter((value): value is string => Boolean(value));
+}
+
 function inputText(candidate: DiscoveryCandidate): string {
   return [
     candidate.ticker,
@@ -145,7 +158,8 @@ function inputText(candidate: DiscoveryCandidate): string {
 }
 
 function inputNumbers(candidate: DiscoveryCandidate): Set<string> {
-  const nums = numbersIn(inputText(candidate));
+  const input = inputText(candidate);
+  const nums = [...numbersIn(input), ...englishQuarterNumbers(input)];
   const rounded = nums.flatMap(numberVariants);
   return new Set(rounded.map((num) => num.replace(/^\+/, "")));
 }
@@ -249,6 +263,8 @@ export function whyInsightRejectionReasons(
   const fullText = textParts(insight).join(" ");
   if (!insight.headline || insight.headline.length > 64) reasons.push("headline-length");
   if (!hasConcreteWhy(insight.headline, candidate)) reasons.push("no-concrete-why");
+  if (hasExcessiveLatinHeadline(insight.headline)) reasons.push("latin-headline");
+  if (hasForbiddenCopy(insight.headline) || isAbstractTemplate(insight.headline)) reasons.push("headline-guard");
   if (ADVICE_PATTERN.test(fullText)) reasons.push("advice");
   if (ABSTRACT_PATTERN.test(fullText) || hasAbstractDiscoveryFiller(fullText)) reasons.push("abstract");
   if (hasSourceLeak(insight.headline, candidate)) reasons.push("source-leak");
@@ -307,8 +323,13 @@ function systemPrompt(): string {
   ];
   return [
     "너는 주식 발견 카드의 Why 문장 엔진이다.",
+    "입력이 영어 미국 종목 뉴스/공시여도 출력 헤드라인은 반드시 한국어로 쓴다.",
     "헤드라인은 [주체/규모가 박힌 사건 또는 숫자] + [이 종목에 일어난 일] 한 줄이다.",
+    "원문에서 무엇을·누구와·얼마·언제 중 확인 가능한 구체값을 최소 1개 포함한다.",
     "반드시 입력 JSON에 있는 숫자 또는 고유명사만 쓴다. 입력에 없으면 쓰지 않는다.",
+    "영문 기사 제목을 그대로 번역하거나 복붙하지 말고, 종목 보유자 관점의 한국어 한 줄로 압축한다.",
+    "좋은 예: '1분기 매출 성장·가이던스 상향', 'Aerospace 고객과 제휴 발표', '8-K 중요계약 공시 확인'.",
+    "나쁜 예: 'partnership news announced', '제휴 소식이 나왔어요', 'D-Wave Quantum Announces New Partnership With Aerospace Customer'.",
     `${banned.join(", ")} 금지.`,
     "투자 조언과 방향 예측 금지. 사실과 해석까지만 쓴다.",
     "출력은 JSON {\"headline\":\"...\",\"observations\":[\"...\"],\"synthesis\":\"...\",\"evidence\":[\"...\"]}.",

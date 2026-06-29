@@ -63,12 +63,12 @@ describe("discovery material news filter", () => {
     expect(cleanMaterialTitle("장중 시황, 반도체주 차익 실현")).toBeUndefined();
   });
 
-  it("turns concrete US catalyst titles into material hooks instead of generic foreign-news labels", () => {
+  it("keeps concrete US catalyst titles as synthesis input instead of generic foreign-news labels", () => {
     expect(cleanUsMaterialTitle("SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance")).toBe(
-      "SoundHound AI, 실적·가이던스 소식이 나왔어요."
+      "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance"
     );
     expect(cleanUsMaterialTitle("D-Wave Quantum Announces New Partnership With Aerospace Customer")).toBe(
-      "D-Wave Quantum, 고객·파트너십 소식이 나왔어요."
+      "D-Wave Quantum Announces New Partnership With Aerospace Customer"
     );
     expect(cleanUsMaterialTitle("Analyst raises price target on Micron shares")).toBeUndefined();
     expect(cleanUsMaterialTitle("D-Wave Quantum (QBTS) Is Down 11.3% After U.S. Quantum Orders And Funding News")).toBeUndefined();

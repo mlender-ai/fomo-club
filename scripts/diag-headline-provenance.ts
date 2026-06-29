@@ -6,7 +6,7 @@ import {
   type DiscoveryResponse,
   type DiscoveryStockPayload,
 } from "../apps/web/lib/discovery-supply";
-import { hasConcreteSourceValue, isAbstractTemplate, isRawTitleCopy } from "../apps/web/lib/copy-guards";
+import { hasConcreteSourceValue, hasExcessiveLatinHeadline, isAbstractTemplate, isRawTitleCopy } from "../apps/web/lib/copy-guards";
 import type { DiscoveryCountryScope } from "../apps/web/lib/market-source-types";
 
 type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallback_no_event";
@@ -91,12 +91,26 @@ function finalVisibleHeadline(stock: DiscoveryStockPayload): string {
 
 function sourceTitleFrom(stock: DiscoveryStockPayload): string | undefined {
   const label = cleanInline(stock.sourceLabel);
-  if (!label) return undefined;
-  return label.split(/\s+·\s+/)[0]?.trim();
+  if (label) return label.split(/\s+·\s+/)[0]?.trim();
+  return cleanInline(stock.headlineProvenance?.eventRef?.title) || undefined;
 }
 
 function classifyEventKind(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed | undefined, headline: string): ProvenanceEventKind {
-  const haystack = [headline, stock.reason, stock.whyShown, stock.insightTag, stock.sourceLabel, stock.sourceUrl, front?.signals.newsEventLabel, front?.signals.newsEventSource]
+  const explicitKind = stock.headlineProvenance?.eventRef?.kind;
+  if (explicitKind === "news_mention" || explicitKind === "disclosure") return explicitKind;
+  const haystack = [
+    headline,
+    stock.reason,
+    stock.whyShown,
+    stock.insightTag,
+    stock.sourceLabel,
+    stock.sourceUrl,
+    stock.headlineProvenance?.eventRef?.source,
+    stock.headlineProvenance?.eventRef?.title,
+    stock.headlineProvenance?.eventRef?.url,
+    front?.signals.newsEventLabel,
+    front?.signals.newsEventSource,
+  ]
     .map(cleanInline)
     .filter(Boolean)
     .join(" ");
@@ -111,6 +125,7 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
     return "fallback_no_event";
   }
   const title = sourceTitleFrom(stock);
+  if (hasExcessiveLatinHeadline(headline)) return "raw_title";
   if (title && isRawTitleCopy(headline, title)) return "raw_title";
   if (ABSTRACT_TEMPLATE_PATTERN.test(headline) || ADDITIONAL_ABSTRACT_TEMPLATE_PATTERN.test(headline) || isAbstractTemplate(headline)) return "abstract_template";
   if (eventKind === "none") return "fallback_no_event";
@@ -131,6 +146,7 @@ function increment<T extends string>(bucket: Record<T, number>, key: T): void {
 }
 
 function isConcreteHeadline(stock: DiscoveryStockPayload, headline: string): boolean {
+  if (hasExcessiveLatinHeadline(headline)) return false;
   const sourceTitle = sourceTitleFrom(stock);
   if (sourceTitle && hasConcreteSourceValue(headline, sourceTitle)) return true;
   return /\d/.test(headline) || /[A-Z]{2,}|[가-힣A-Za-z0-9]+(?:와|과)\s*[가-힣A-Za-z0-9]+/.test(headline);

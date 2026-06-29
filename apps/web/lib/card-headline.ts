@@ -7,6 +7,7 @@ import {
 import {
   cleanInline,
   hasConcreteSourceValue,
+  hasExcessiveLatinHeadline,
   hasForbiddenCopy,
   isAbstractTemplate,
   isRawTitleCopy,
@@ -91,6 +92,7 @@ function eventSourceTitle(event: DiscoveryEvent | undefined): string | undefined
 function isUsableHeadline(text: string | undefined, sourceTitle: string | undefined): text is string {
   const clean = cleanInline(text);
   if (!clean || EMPTY_PATTERN.test(clean)) return false;
+  if (hasExcessiveLatinHeadline(clean)) return false;
   if (hasForbiddenCopy(clean) || isAbstractTemplate(clean)) return false;
   if (isRawTitleCopy(clean, sourceTitle)) return false;
   if (sourceTitle && !hasConcreteSourceValue(clean, sourceTitle)) return false;

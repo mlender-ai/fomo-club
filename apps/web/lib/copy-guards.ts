@@ -46,6 +46,50 @@ export function numbersIn(text: string | undefined): string[] {
     .filter(Boolean);
 }
 
+export function englishQuarterNumbers(text: string | undefined): string[] {
+  const quarterMap: Record<string, string> = {
+    first: "1",
+    second: "2",
+    third: "3",
+    fourth: "4",
+  };
+  return [...cleanInline(text).matchAll(/\b(first|second|third|fourth)\s+quarter\b/gi)]
+    .map((match) => quarterMap[match[1]!.toLowerCase()])
+    .filter((value): value is string => Boolean(value));
+}
+
+export function englishMonthNumbers(text: string | undefined): string[] {
+  const monthMap: Record<string, string> = {
+    january: "1",
+    jan: "1",
+    february: "2",
+    feb: "2",
+    march: "3",
+    mar: "3",
+    april: "4",
+    apr: "4",
+    may: "5",
+    june: "6",
+    jun: "6",
+    july: "7",
+    jul: "7",
+    august: "8",
+    aug: "8",
+    september: "9",
+    sep: "9",
+    sept: "9",
+    october: "10",
+    oct: "10",
+    november: "11",
+    nov: "11",
+    december: "12",
+    dec: "12",
+  };
+  return [...cleanInline(text).matchAll(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/gi)]
+    .map((match) => monthMap[match[1]!.toLowerCase()])
+    .filter((value): value is string => Boolean(value));
+}
+
 export function numberVariants(value: string): string[] {
   const n = Number(value.replace(/^\+/, ""));
   if (!Number.isFinite(n)) return [value];
@@ -131,7 +175,11 @@ function concreteCandidates(title: string): string[] {
       /([가-힣A-Za-z0-9&().+-]{2,24})\s*(?:공급계약|계약|수주|발표|체결|확보|개발|출시|승인|허가|실적|가이던스|인수전|클러스터|투자|파트너십|제휴)/g
     ),
   ].map((match) => match[1]!);
-  return [...quoted, ...amounts, ...latin, ...korean, ...nounBeforeEvent].map(cleanInline).filter((token) => token.length >= 2);
+  const englishQuarter = englishQuarterNumbers(clean).map((value) => `${value}분기`);
+  const englishMonth = englishMonthNumbers(clean).map((value) => `${value}월`);
+  return [...quoted, ...amounts, ...latin, ...korean, ...nounBeforeEvent, ...englishQuarter, ...englishMonth]
+    .map(cleanInline)
+    .filter((token) => token.length >= 2);
 }
 
 export function hasConcreteSourceValue(hook: string | undefined, sourceTitle: string | undefined): boolean {
@@ -139,10 +187,47 @@ export function hasConcreteSourceValue(hook: string | undefined, sourceTitle: st
   const cleanTitle = cleanInline(sourceTitle);
   if (!cleanHook || !cleanTitle) return false;
   const titleNumbers = new Set(numbersIn(cleanTitle).flatMap(numberVariants).map((num) => num.replace(/^\+/, "")));
+  englishQuarterNumbers(cleanTitle).forEach((num) => {
+    numberVariants(num).forEach((variant) => titleNumbers.add(variant.replace(/^\+/, "")));
+  });
+  englishMonthNumbers(cleanTitle).forEach((num) => {
+    numberVariants(num).forEach((variant) => titleNumbers.add(variant.replace(/^\+/, "")));
+  });
   if (numbersIn(cleanHook).some((num) => numberVariants(num).some((variant) => titleNumbers.has(variant.replace(/^\+/, ""))))) {
     return true;
   }
+  const normalizedHook = cleanHook.toLowerCase();
+  const normalizedTitle = cleanTitle.toLowerCase();
+  const knownTranslations: Array<[string, string]> = [
+    ["엔비디아", "nvidia"],
+    ["미 육군", "army"],
+    ["반도체 제조 시스템", "chipmaking systems"],
+    ["반도체 제조 시스템", "chipmaking system"],
+    ["미국 항공우주", "aerospace"],
+  ];
+  if (
+    knownTranslations.some(
+      ([ko, en]) => normalizedHook.includes(ko.toLowerCase()) && normalizedTitle.includes(en.toLowerCase())
+    )
+  ) {
+    return true;
+  }
   return concreteCandidates(cleanTitle).some((token) => cleanHook.includes(token));
+}
+
+export function hasExcessiveLatinHeadline(text: string | undefined): boolean {
+  const clean = cleanInline(text);
+  if (!clean) return false;
+  const latinWords = clean.match(/[A-Za-z][A-Za-z0-9&'().-]*/g) ?? [];
+  if (latinWords.length === 0) return false;
+  const meaningfulLatin = latinWords.filter((word) => !/^(?:AI|GPU|CPU|SEC|KRX|DART|KOSPI|KOSDAQ|NYSE|NASDAQ|ETF|IPO|ESS)$/i.test(word));
+  const latinChars = meaningfulLatin.join("").length;
+  const koChars = (clean.match(/[가-힣]/g) ?? []).length;
+  const totalLetters = latinChars + koChars;
+  if (latinChars >= 12 && koChars === 0) return true;
+  if (meaningfulLatin.length >= 4 && koChars < 4) return true;
+  if (meaningfulLatin.length <= 2 && koChars >= 3) return false;
+  return totalLetters > 0 && latinChars / totalLetters >= 0.4 && koChars < 8;
 }
 
 export function hasForbiddenCopy(text: string | undefined): boolean {
