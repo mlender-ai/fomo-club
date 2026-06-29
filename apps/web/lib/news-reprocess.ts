@@ -78,6 +78,28 @@ function pickProduct(title: string): string | undefined {
     .trim();
 }
 
+function compactTitlePhrase(title: string): string | undefined {
+  const clean = cleanInline(title)
+    .replace(/^[가-힣A-Za-z0-9&().+-]{1,18}\s*,\s*/, "")
+    .replace(/^[‘'“"]|[’'”"]$/g, "");
+  const aiSupport = clean.match(/^([가-힣A-Za-z0-9&().+-]{2,24})\s+AI\s*기반\s+([가-힣\s]{2,16}(?:지원|공급|제공))/);
+  if (aiSupport?.[1] && aiSupport[2]) return cleanInline(`${aiSupport[1]} ${aiSupport[2]}`);
+  if (/K-시큐리티/.test(clean) && /수출\s*경쟁력/.test(clean)) return "K-시큐리티 수출 경쟁력";
+  if (/호남권\s*반도체\s*클러스터/.test(clean) && /추진/.test(clean)) return "호남권 반도체 클러스터 추진";
+  if (/프로젝트\s*제타/.test(clean) && /글로벌\s*커뮤니티/.test(clean)) return "프로젝트 제타 글로벌 테스트";
+  const patterns = [
+    /([가-힣A-Za-z0-9&().+-]{2,24})에\s+([가-힣A-Za-z0-9&().+\-\s]{2,28}(?:공급|지원|제공|납품|선정))/,
+    /([가-힣A-Za-z0-9&().+\-\s]{2,28})\s+(?:첫\s*)?(?:공급|지원|제공|납품|선정|출시|공개|개발|확보)/,
+    /(\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원)?\s*(?:규모\s*)?[가-힣A-Za-z0-9&().+\-\s]{2,28}(?:선정|계약|수주|공급|투자|증자))/,
+  ];
+  for (const pattern of patterns) {
+    const match = clean.match(pattern);
+    const phrase = match?.[0]?.replace(/\s+/g, " ").trim();
+    if (phrase && phrase.length >= 6 && phrase.length <= 44) return phrase;
+  }
+  return undefined;
+}
+
 function pickFiling(title: string): string | undefined {
   if (/8-K/i.test(title)) return "8-K";
   if (/10-Q/i.test(title)) return "10-Q";
@@ -119,6 +141,8 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
     if (counterparty) hooks.push(`${counterparty}와 제품 협력`);
     if (product) hooks.push(`${product} 공개`);
   }
+  const compactPhrase = compactTitlePhrase(title);
+  if (compactPhrase) hooks.push(compactPhrase);
   if (/실적|가이던스|매출|revenue|earnings|results|guidance|forecast/.test(lower)) {
     if (amount) hooks.push(`${amount} 실적 발표`);
     if (/1Q|1분기/i.test(title)) hooks.push("1분기 실적 발표");

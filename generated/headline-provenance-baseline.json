@@ -1,35 +1,35 @@
 {
   "KR": {
-    "generatedAt": "2026-06-29T06:35:15.503Z",
+    "generatedAt": "2026-06-29T07:04:08.575Z",
     "asOf": "2026-06-29",
     "country": "KR",
     "limit": 50,
-    "total": 43,
+    "total": 50,
     "distributions": {
       "path": {
         "raw_title": 0,
         "abstract_template": 0,
-        "why_synthesis": 43,
+        "why_synthesis": 50,
         "fallback_no_event": 0
       },
       "method": {
         "ai": 0,
-        "rule": 43,
+        "rule": 50,
         "fallback": 0,
         "none": 0
       },
       "eventKind": {
-        "news_mention": 43,
+        "news_mention": 50,
         "disclosure": 0,
         "volume_spike": 0,
         "none": 0
       },
       "hasEvent": {
-        "true": 43,
+        "true": 50,
         "false": 0
       },
       "concrete": {
-        "true": 43,
+        "true": 50,
         "false": 0
       }
     },
@@ -101,19 +101,6 @@
       },
       {
         "index": 6,
-        "ticker": "금호건설",
-        "country": "KR",
-        "headline": "호남 투자 발표에 관련주로 언급",
-        "path": "why_synthesis",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "concrete": true,
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "호남이면 일단 ‘상한가’ 친다?…반도체 ‘메가프로젝트’ 투자 앞두 · 서울경제"
-      },
-      {
-        "index": 7,
         "ticker": "광동제약",
         "country": "KR",
         "headline": "‘광동 V라인 슬림핏’ 출시",
@@ -126,7 +113,7 @@
         "sourceLabel": "광동제약, ‘광동 V라인 슬림핏’ 출시 · 스포츠동아"
       },
       {
-        "index": 8,
+        "index": 7,
         "ticker": "남양유업",
         "country": "KR",
         "headline": "흑자 후 전략 전환",
@@ -139,10 +126,10 @@
         "sourceLabel": "남양유업, 급식·수출로 몸집 키운다…흑자 후 전략 전환 · 동행미디어 시대"
       },
       {
-        "index": 9,
+        "index": 8,
         "ticker": "한양증권",
         "country": "KR",
-        "headline": "500억 규모 유상증자 결정",
+        "headline": "500억 규모 유상증자",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
@@ -152,7 +139,7 @@
         "sourceLabel": "한양증권, 500억 규모 유상증자 결정…중형 증권사로 도약 · 머니투데이"
       },
       {
-        "index": 10,
+        "index": 9,
         "ticker": "DS단석",
         "country": "KR",
         "headline": "VMR 첫 상용제품 글로벌 공개",
@@ -165,7 +152,7 @@
         "sourceLabel": "DS단석, VMR 첫 상용제품 글로벌 공급…도시광산 사업 본격화 · 조선비즈"
       },
       {
-        "index": 11,
+        "index": 10,
         "ticker": "SJG세종",
         "country": "KR",
         "headline": "모비어스 RCPS 부담",
@@ -178,17 +165,30 @@
         "sourceLabel": "SJG세종, 모비어스 RCPS 부담 ...'중복상장' 논란 잠재울까 · 블로터"
       },
       {
-        "index": 12,
+        "index": 11,
         "ticker": "자이에스앤디",
         "country": "KR",
-        "headline": "1400억 부동산 유동화",
+        "headline": "주택 공급계약 체결",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
         "eventKind": "news_mention",
         "concrete": true,
         "insightTag": "뉴스 재료",
-        "sourceLabel": "자이에스앤디 1400억 부동산 유동화…신사업 투자 유동성 대응 · 블로터"
+        "sourceLabel": "자이에스앤디는, 주택 수주 1조 돌파…브랜드 저력 통했다 · 한국경제"
+      },
+      {
+        "index": 12,
+        "ticker": "엠로",
+        "country": "KR",
+        "headline": "코오롱인더스트리 구매 지원",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "엠로, 코오롱인더스트리 AI 기반 구매 지원 · 뉴스1"
       },
       {
         "index": 13,
@@ -233,7 +233,7 @@
         "index": 16,
         "ticker": "스맥",
         "country": "KR",
-        "headline": "中 파시니와 손잡고 휴머노이드 자율가공 개발",
+        "headline": "파시니와 손잡고 휴머노이드 자율가공 개발",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
@@ -259,20 +259,33 @@
         "index": 18,
         "ticker": "자람테크놀로지",
         "country": "KR",
-        "headline": "XGS-PON ASIC 양산 PO 공급계약 체결",
+        "headline": "XGS-PON ASIC 첫 양산 PO 공급계약 체결",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
         "eventKind": "news_mention",
         "concrete": true,
         "insightTag": "뉴스 재료",
-        "sourceLabel": "자람테크놀로지, XGS-PON ASIC 양산 PO 수주 · 뉴시스"
+        "sourceLabel": "자람테크놀로지, XGS-PON ASIC 첫 양산 PO 수주…개발 넘어 양산 매출 · 이데일리"
       },
       {
         "index": 19,
+        "ticker": "나노엔텍",
+        "country": "KR",
+        "headline": "카이트파마에 자동화 세포분석 로봇 공급",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "나노엔텍, 길리어드 자회사 카이트파마에 자동화 세포분석 로봇 공급 · 이데일리"
+      },
+      {
+        "index": 20,
         "ticker": "녹십자웰빙",
         "country": "KR",
-        "headline": "'차세대 지방분해주사' 국내 독점 상업화 권리 확보",
+        "headline": "국내 독점 상업화 권리 확보",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
@@ -282,7 +295,7 @@
         "sourceLabel": "GC녹십자웰빙, '차세대 지방분해주사' 국내 독점 상업화 권리 확보 · 전자신문"
       },
       {
-        "index": 20,
+        "index": 21,
         "ticker": "AP위성",
         "country": "KR",
         "headline": "'적자전환' , 400억 CB '20% 할증' 발행",
@@ -295,7 +308,7 @@
         "sourceLabel": "'적자전환' AP위성, 400억 CB '20% 할증' 발행…신사업 기대감 · 머니투데이"
       },
       {
-        "index": 21,
+        "index": 22,
         "ticker": "플리토",
         "country": "KR",
         "headline": "대 AI 데이터 공급계약 체결",
@@ -308,7 +321,7 @@
         "sourceLabel": "플리토, 300억대 AI 데이터 계약 확보…3분기만에 작년 수출액 추월 · 블로터"
       },
       {
-        "index": 22,
+        "index": 23,
         "ticker": "박셀바이오",
         "country": "KR",
         "headline": "첨생법 NK세포 치료 ‘저위험’ 조정",
@@ -321,7 +334,7 @@
         "sourceLabel": "첨생법 NK세포 치료 ‘저위험’ 조정…박셀바이오 최대 수혜 기대 · 이데일리"
       },
       {
-        "index": 23,
+        "index": 24,
         "ticker": "DMS",
         "country": "KR",
         "headline": "디스플레이패널 장비 공급 공급계약 체결",
@@ -334,7 +347,33 @@
         "sourceLabel": "DMS, 677억 규모 디스플레이패널 장비 공급 계약 · 뉴시스"
       },
       {
-        "index": 24,
+        "index": 25,
+        "ticker": "웨이비스",
+        "country": "KR",
+        "headline": "AX 원스톱 바우처 지원",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "웨이비스, 26억 규모 'AX 원스톱 바우처 지원사업' 주관 선정 · 뉴시스"
+      },
+      {
+        "index": 26,
+        "ticker": "지니언스",
+        "country": "KR",
+        "headline": "K-시큐리티 수출 경쟁력",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "실전에서 검증된 K-시큐리티, 방산과 결합해 수출 경쟁력 높여야 · 디지털데일리"
+      },
+      {
+        "index": 27,
         "ticker": "노머스",
         "country": "KR",
         "headline": "8억원 자사주 취득 신탁",
@@ -347,7 +386,7 @@
         "sourceLabel": "노머스, 8억원 규모 자사주 소각 결정 · 이데일리"
       },
       {
-        "index": 25,
+        "index": 28,
         "ticker": "엑셈",
         "country": "KR",
         "headline": "AI 기반 SQL 튜닝 서비스 출시",
@@ -360,7 +399,7 @@
         "sourceLabel": "엑셈, AI 기반 SQL 튜닝 서비스 출시 예정 · 한국경제TV"
       },
       {
-        "index": 26,
+        "index": 29,
         "ticker": "남화토건",
         "country": "KR",
         "headline": "호남 투자 발표에 관련주로 언급",
@@ -373,7 +412,7 @@
         "sourceLabel": "호남이면 일단 ‘상한가’ 친다?…반도체 ‘메가프로젝트’ 투자 앞두 · 서울경제"
       },
       {
-        "index": 27,
+        "index": 30,
         "ticker": "그래디언트",
         "country": "KR",
         "headline": "'내 배당금이 5배로'",
@@ -386,7 +425,7 @@
         "sourceLabel": "'내 배당금이 5배로'…비과세 특별배당 쏜 이 회사 · 한국경제"
       },
       {
-        "index": 28,
+        "index": 31,
         "ticker": "티앤알바이오팹",
         "country": "KR",
         "headline": "심장질환 치료용 고순도 심근세포 정제 기술 특허 확",
@@ -399,7 +438,7 @@
         "sourceLabel": "티앤알바이오팹, 심장질환 치료용 고순도 심근세포 정제 기술 특허 확 · 머니투데이"
       },
       {
-        "index": 29,
+        "index": 32,
         "ticker": "한성크린텍",
         "country": "KR",
         "headline": "호남 투자 발표에 관련주로 언급",
@@ -412,7 +451,7 @@
         "sourceLabel": "한성크린텍, 호남 반도체 공장 추진 등 AI 반도체 투자 확대 수혜 기대 · 아시아경제"
       },
       {
-        "index": 30,
+        "index": 33,
         "ticker": "한컴위드",
         "country": "KR",
         "headline": "30% 실적 발표",
@@ -425,7 +464,7 @@
         "sourceLabel": "한컴위드, 한컴 지분 30% 눈앞…연결 편입 땐 매출 1조 그룹으로 · 머니투데이"
       },
       {
-        "index": 31,
+        "index": 34,
         "ticker": "아우토크립트",
         "country": "KR",
         "headline": "'국토교통 R&D 우수성과 20선' 선정",
@@ -435,10 +474,10 @@
         "eventKind": "news_mention",
         "concrete": true,
         "insightTag": "뉴스 재료",
-        "sourceLabel": "아우토크립트, '국토교통 R&D 우수성과 20선' 선정 · 블로터"
+        "sourceLabel": "아우토크립트, '국토교통 R&D 우수성과 20선' 선정 · 머니투데이"
       },
       {
-        "index": 32,
+        "index": 35,
         "ticker": "포바이포",
         "country": "KR",
         "headline": "AI 픽셀 데스크톱 버전 출시",
@@ -451,7 +490,20 @@
         "sourceLabel": "포바이포, AI 픽셀 데스크톱 버전 출시 · 아시아경제"
       },
       {
-        "index": 33,
+        "index": 36,
+        "ticker": "서한",
+        "country": "KR",
+        "headline": "호남권 반도체 클러스터 추진",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "'호남권 반도체 클러스터' 추진에 이인선·이상휘 국회의원, 청와대에 · 대구MBC"
+      },
+      {
+        "index": 37,
         "ticker": "엠오티",
         "country": "KR",
         "headline": "자사주 취득 신탁 공급계약 체결",
@@ -464,7 +516,7 @@
         "sourceLabel": "엠오티, 30억 규모 자사주 취득 신탁계약 · 뉴시스"
       },
       {
-        "index": 34,
+        "index": 38,
         "ticker": "특수건설",
         "country": "KR",
         "headline": "384억원 도로시설개량공사 공급계약 체결",
@@ -477,7 +529,7 @@
         "sourceLabel": "특수건설, 384억원 규모 도로시설개량공사 계약 · 이데일리"
       },
       {
-        "index": 35,
+        "index": 39,
         "ticker": "에이직랜드",
         "country": "KR",
         "headline": "SK하이닉스 차세대 eSSD 공급계약 체결",
@@ -490,20 +542,20 @@
         "sourceLabel": "에이직랜드, SK하이닉스 차세대 eSSD 개발 참여…319억 계약 · 아이뉴스24"
       },
       {
-        "index": 36,
+        "index": 40,
         "ticker": "롯데손해보험",
         "country": "KR",
-        "headline": "피인수설 보도에 장초반 상한가",
+        "headline": "'인수전 기대감'에 상한가 마감",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
         "eventKind": "news_mention",
         "concrete": true,
         "insightTag": "뉴스 재료",
-        "sourceLabel": "롯데손해보험, 피인수설 보도에 장초반 상한가 · 연합뉴스"
+        "sourceLabel": "롯데손해보험, 새 주인 찾나?…'인수전 기대감'에 상한가 마감 · SBS Biz"
       },
       {
-        "index": 37,
+        "index": 41,
         "ticker": "아이에스동서",
         "country": "KR",
         "headline": "‘펜타힐즈W 1단지’, 오늘 특별공급 청약 접수",
@@ -516,7 +568,7 @@
         "sourceLabel": "아이에스동서 ‘펜타힐즈W 1단지’, 오늘 특별공급 청약 접수 · 한국경제TV"
       },
       {
-        "index": 38,
+        "index": 42,
         "ticker": "SK케미칼",
         "country": "KR",
         "headline": "J2H와 MASH 치료제 공동 개발",
@@ -529,7 +581,20 @@
         "sourceLabel": "SK케미칼, J2H와 MASH 치료제 공동개발 의향서 체결 · 서울경제"
       },
       {
-        "index": 39,
+        "index": 43,
+        "ticker": "영풍",
+        "country": "KR",
+        "headline": "후보에 박유경 전 APG 본부장 선정",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "영풍·MBK, 고려아연 사외이사 후보에 박유경 전 APG 본부장 선정 · 지디넷코리아"
+      },
+      {
+        "index": 44,
         "ticker": "롯데웰푸드",
         "country": "KR",
         "headline": "마가렛트와 복호두 만났다",
@@ -542,10 +607,10 @@
         "sourceLabel": "마가렛트와 복호두 만났다…롯데웰푸드, 디저트 협업 신제품 · 노컷뉴스"
       },
       {
-        "index": 40,
+        "index": 45,
         "ticker": "지엔씨에너지",
         "country": "KR",
-        "headline": "AIDC 전력 공급 안정성 높인다",
+        "headline": "와 맞손...AIDC 전력 공급",
         "path": "why_synthesis",
         "method": "rule",
         "hasEvent": true,
@@ -555,7 +620,20 @@
         "sourceLabel": "LGU+, 지엔씨에너지와 맞손...AIDC 전력 공급 안정성 높인다 · 서울경제"
       },
       {
-        "index": 41,
+        "index": 46,
+        "ticker": "한일시멘트",
+        "country": "KR",
+        "headline": "중대재해 예방 안전 세미나 협력 발표",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "한일시멘트, 노사·협력사 합동 '중대재해 예방 안전 세미나' 개최 · 머니투데이"
+      },
+      {
+        "index": 47,
         "ticker": "서진시스템",
         "country": "KR",
         "headline": "삼성SDI와 북미 ESS용 배터리 인클로저 임가공 공급계약 체결",
@@ -568,7 +646,7 @@
         "sourceLabel": "서진시스템, 삼성SDI와 북미 ESS용 배터리 인클로저 임가공계약 체결 · 머니투데이"
       },
       {
-        "index": 42,
+        "index": 48,
         "ticker": "HD한국조선해양",
         "country": "KR",
         "headline": "70척분 공급 공급계약 체결",
@@ -581,7 +659,7 @@
         "sourceLabel": "HD한국조선해양, LNG추진선 고압펌프 국산화… 70척분 공급 계약 확보 · 동아일보"
       },
       {
-        "index": 43,
+        "index": 49,
         "ticker": "카카오",
         "country": "KR",
         "headline": "최대 실적에도 52주 신저가 찍은 의 역설",
@@ -592,25 +670,38 @@
         "concrete": true,
         "insightTag": "뉴스 재료",
         "sourceLabel": "최대 실적에도 52주 신저가 찍은 카카오의 역설… 경영 · 조선비즈"
+      },
+      {
+        "index": 50,
+        "ticker": "크래프톤",
+        "country": "KR",
+        "headline": "프로젝트 제타 글로벌 테스트",
+        "path": "why_synthesis",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "concrete": true,
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "크래프톤 신작 '프로젝트 제타', 오는 28일까지 첫 글로벌 커뮤니티 테 · OSEN"
       }
     ]
   },
   "US": {
-    "generatedAt": "2026-06-29T06:35:04.934Z",
+    "generatedAt": "2026-06-29T07:04:50.878Z",
     "asOf": "2026-06-29",
     "country": "US",
     "limit": 50,
-    "total": 30,
+    "total": 35,
     "distributions": {
       "path": {
         "raw_title": 0,
         "abstract_template": 0,
         "why_synthesis": 30,
-        "fallback_no_event": 0
+        "fallback_no_event": 5
       },
       "method": {
         "ai": 0,
-        "rule": 30,
+        "rule": 35,
         "fallback": 0,
         "none": 0
       },
@@ -618,15 +709,15 @@
         "news_mention": 23,
         "disclosure": 7,
         "volume_spike": 0,
-        "none": 0
+        "none": 5
       },
       "hasEvent": {
         "true": 30,
-        "false": 0
+        "false": 5
       },
       "concrete": {
         "true": 30,
-        "false": 0
+        "false": 5
       }
     },
     "cards": [
@@ -1019,6 +1110,66 @@
         "concrete": true,
         "insightTag": "뉴스 재료",
         "sourceLabel": "Prediction: This Artificial Intelligence (AI) Semiconductor Stock Will Join the $1 Trillion Club by 2028 · Yahoo Finance"
+      },
+      {
+        "index": 31,
+        "ticker": "몽고DB",
+        "country": "US",
+        "headline": "Is MongoDB (MDB) One Of The Tech",
+        "path": "fallback_no_event",
+        "method": "rule",
+        "hasEvent": false,
+        "eventKind": "none",
+        "concrete": false,
+        "insightTag": "정직한 빈 신호"
+      },
+      {
+        "index": 32,
+        "ticker": "사운드하운드AI",
+        "country": "US",
+        "headline": "Roadzen Named Deep Learning",
+        "path": "fallback_no_event",
+        "method": "rule",
+        "hasEvent": false,
+        "eventKind": "none",
+        "concrete": false,
+        "insightTag": "정직한 빈 신호"
+      },
+      {
+        "index": 33,
+        "ticker": "빅베어AI",
+        "country": "US",
+        "headline": "Is BigBear.ai Becoming a",
+        "path": "fallback_no_event",
+        "method": "rule",
+        "hasEvent": false,
+        "eventKind": "none",
+        "concrete": false,
+        "insightTag": "정직한 빈 신호"
+      },
+      {
+        "index": 34,
+        "ticker": "GE버노바",
+        "country": "US",
+        "headline": "Microsoft Solves AI’s Biggest",
+        "path": "fallback_no_event",
+        "method": "rule",
+        "hasEvent": false,
+        "eventKind": "none",
+        "concrete": false,
+        "insightTag": "정직한 빈 신호"
+      },
+      {
+        "index": 35,
+        "ticker": "아스테라랩스",
+        "country": "US",
+        "headline": "Stifel Raises Texas Instruments",
+        "path": "fallback_no_event",
+        "method": "rule",
+        "hasEvent": false,
+        "eventKind": "none",
+        "concrete": false,
+        "insightTag": "정직한 빈 신호"
       }
     ]
   }

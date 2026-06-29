@@ -78,6 +78,16 @@ function eventRefFrom(event: DiscoveryEvent | undefined): CardHeadline["eventRef
   return ref;
 }
 
+function eventSourceTitle(event: DiscoveryEvent | undefined): string | undefined {
+  const sourceTitle = cleanInline(event?.sourceTitle);
+  if (sourceTitle && !isAbstractTemplate(sourceTitle)) return sourceTitle;
+  const headlineHook = cleanInline(event?.headlineHook);
+  if (headlineHook && !isAbstractTemplate(headlineHook)) return headlineHook;
+  const label = cleanInline(event?.label);
+  if (label && !isAbstractTemplate(label)) return label;
+  return undefined;
+}
+
 function isUsableHeadline(text: string | undefined, sourceTitle: string | undefined): text is string {
   const clean = cleanInline(text);
   if (!clean || EMPTY_PATTERN.test(clean)) return false;
@@ -91,13 +101,18 @@ function isMaterialEvent(event: DiscoveryEvent | undefined): boolean {
   return event?.kind === "news_mention" || event?.kind === "disclosure";
 }
 
+function materialEventFrom(candidate: DiscoveryCandidate, primary: DiscoveryEvent | undefined): DiscoveryEvent | undefined {
+  if (isMaterialEvent(primary)) return primary;
+  return candidate.events.find(isMaterialEvent);
+}
+
 function ruleHeadlineFromMaterial(
   candidate: DiscoveryCandidate,
   primary: DiscoveryEvent | undefined,
   sourceTitle: string | undefined
 ): string | undefined {
   if (!isMaterialEvent(primary)) return undefined;
-  const title = sourceTitle ?? primary?.sourceTitle ?? primary?.label ?? primary?.headlineHook;
+  const title = sourceTitle ?? eventSourceTitle(primary);
   if (!title) return undefined;
   return ruleReprocessNewsHook({
     stock: candidate.ticker,
@@ -132,12 +147,14 @@ async function resolveSynthesis(input: ResolveCardHeadlineInput): Promise<{
 export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Promise<CardHeadline> {
   const { synthesis, method } = await resolveSynthesis(input);
   const primary = synthesis.primary;
-  const sourceTitle = primary?.sourceTitle?.trim() ?? sourceTitleFromLabel(input.sourceLabel);
+  const materialEvent = materialEventFrom(input.candidate, primary);
+  const sourceTitle =
+    eventSourceTitle(materialEvent) ?? eventSourceTitle(primary) ?? sourceTitleFromLabel(input.sourceLabel);
   const reasonParts = splitReasonDetail(input.reason);
   const reasonDetail = reasonParts.detail ?? input.reason;
 
   if (isUsableHeadline(synthesis.headline, sourceTitle)) {
-    const eventRef = eventRefFrom(primary);
+    const eventRef = eventRefFrom(primary ?? materialEvent);
     return {
       text: cleanInline(synthesis.headline),
       provenance: "synthesis",
@@ -146,9 +163,9 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
     };
   }
 
-  const materialHeadline = ruleHeadlineFromMaterial(input.candidate, primary, sourceTitle);
+  const materialHeadline = ruleHeadlineFromMaterial(input.candidate, materialEvent, sourceTitle);
   if (isUsableHeadline(materialHeadline, sourceTitle)) {
-    const eventRef = eventRefFrom(primary);
+    const eventRef = eventRefFrom(materialEvent ?? primary);
     return {
       text: cleanInline(materialHeadline),
       provenance: "rule",
@@ -158,7 +175,7 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
   }
 
   if (isUsableHeadline(reasonDetail, sourceTitle) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
-    const eventRef = eventRefFrom(primary);
+    const eventRef = eventRefFrom(primary ?? materialEvent);
     return {
       text: cleanInline(reasonDetail),
       provenance: "rule",
@@ -167,7 +184,7 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
     };
   }
 
-  const eventRef = eventRefFrom(primary);
+  const eventRef = eventRefFrom(primary ?? materialEvent);
   return {
     text: "",
     provenance: "suppressed",
