@@ -143,7 +143,7 @@ describe("resolveCardHeadline", () => {
     expect(result.provenance).toBe("rule");
   });
 
-  it("allows strong US momentum only as an honest non-material headline", async () => {
+  it("suppresses strong US non-material moves instead of filling the deck", async () => {
     const event: DiscoveryEvent = {
       kind: "price_move",
       firstSeen: true,
@@ -167,9 +167,11 @@ describe("resolveCardHeadline", () => {
       synthesis: synthesis({ primary: event }),
     });
 
-    expect(result.provenance).toBe("rule_nonmaterial");
-    expect(result.text).toContain("+12.4%");
-    expect(result.text).not.toMatch(/계기\s*없음|직접\s*재료|소식에\s*반응/);
+    expect(result).toMatchObject({
+      text: "",
+      provenance: "suppressed",
+      method: "none",
+    });
   });
 
   it("suppresses weak US non-material moves instead of filling the deck", async () => {

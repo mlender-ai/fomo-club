@@ -15,7 +15,7 @@ import {
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { ruleReprocessNewsHook } from "./news-reprocess";
 
-export type CardHeadlineProvenance = "synthesis" | "rule" | "rule_nonmaterial" | "suppressed";
+export type CardHeadlineProvenance = "synthesis" | "rule" | "suppressed";
 export type CardHeadlineMethod = "ai" | "rule" | "none";
 
 export interface CardHeadline {
@@ -40,8 +40,6 @@ export interface ResolveCardHeadlineInput {
 }
 
 const DISCOVERY_REASON_JOINER = " — ";
-const NONMATERIAL_CHANGE_THRESHOLD = 7;
-const NONMATERIAL_VOLUME_THRESHOLD = 3;
 
 const EMPTY_PATTERN = /아직\s*공개된\s*계기\s*없음|뚜렷한\s*이유는\s*아직|더\s*살펴볼|더\s*확인할|발견\s*풀/;
 const WHAT_ONLY_PATTERN =
@@ -103,36 +101,6 @@ function isUsableHeadline(text: string | undefined, sourceTitle: string | undefi
 
 function isMaterialEvent(event: DiscoveryEvent | undefined): boolean {
   return event?.kind === "news_mention" || event?.kind === "disclosure";
-}
-
-function pctText(value: number): string {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(Math.abs(value) >= 10 ? 1 : 1)}%`;
-}
-
-function nonMaterialSignal(candidate: DiscoveryCandidate): { headline: string; event: DiscoveryEvent } | undefined {
-  if (candidate.country !== "US") return undefined;
-
-  const volume = candidate.events.find((event) => event.kind === "volume_spike" && (event.volumeRatio ?? 0) >= NONMATERIAL_VOLUME_THRESHOLD);
-  const move = candidate.events.find((event) =>
-    (event.kind === "price_move" || event.kind === "market_context" || event.kind === "theme_link") &&
-    Math.abs(event.changePct ?? 0) >= NONMATERIAL_CHANGE_THRESHOLD
-  );
-  const event = volume ?? move;
-  if (!event) return undefined;
-
-  const change = typeof event.changePct === "number" ? event.changePct : candidate.events.find((item) => typeof item.changePct === "number")?.changePct;
-  const volumeRatio = volume?.volumeRatio;
-  const pieces: string[] = [];
-  if (typeof volumeRatio === "number") pieces.push(`거래량 ${volumeRatio.toFixed(1)}배`);
-  if (typeof change === "number") pieces.push(`${pctText(change)} ${change >= 0 ? "상승" : "하락"}`);
-  if (pieces.length === 0) return undefined;
-  const prefix = candidate.sector && candidate.sector !== "미국주식" ? `${candidate.sector}에서 ` : "";
-
-  return {
-    headline: `${prefix}공개 재료로 설명하긴 이른데, 오늘 ${pieces.join("·")}했습니다`,
-    event,
-  };
 }
 
 function materialEventFrom(candidate: DiscoveryCandidate, primary: DiscoveryEvent | undefined): DiscoveryEvent | undefined {
@@ -213,17 +181,6 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
     return {
       text: cleanInline(reasonDetail),
       provenance: "rule",
-      method: "rule",
-      ...(eventRef ? { eventRef } : {}),
-    };
-  }
-
-  const nonMaterial = nonMaterialSignal(input.candidate);
-  if (nonMaterial && isUsableHeadline(nonMaterial.headline, undefined)) {
-    const eventRef = eventRefFrom(nonMaterial.event);
-    return {
-      text: cleanInline(nonMaterial.headline),
-      provenance: "rule_nonmaterial",
       method: "rule",
       ...(eventRef ? { eventRef } : {}),
     };

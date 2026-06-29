@@ -9,10 +9,10 @@ import {
 import { hasConcreteSourceValue, hasExcessiveLatinHeadline, isAbstractTemplate, isRawTitleCopy } from "../apps/web/lib/copy-guards";
 import type { DiscoveryCountryScope } from "../apps/web/lib/market-source-types";
 
-type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "rule_nonmaterial" | "fallback_no_event";
+type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallback_no_event";
 type HeadlineMethod = "ai" | "rule" | "fallback" | "none";
 type ProvenanceEventKind = "news_mention" | "disclosure" | "volume_spike" | "price_move" | "market_context" | "theme_link" | "none";
-type HeadlineTrack = "A_material" | "B_momentum" | "suppressed";
+type HeadlineTrack = "A_material" | "suppressed";
 
 interface Args {
   country: DiscoveryCountryScope;
@@ -136,7 +136,6 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
   if (stock.headlineProvenance?.provenance === "suppressed" || !headline || FALLBACK_PATTERN.test(headline)) {
     return "fallback_no_event";
   }
-  if (stock.headlineProvenance?.provenance === "rule_nonmaterial") return "rule_nonmaterial";
   const title = sourceTitleFrom(stock);
   if (hasExcessiveLatinHeadline(headline)) return "raw_title";
   if (title && isRawTitleCopy(headline, title)) return "raw_title";
@@ -146,7 +145,6 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
 }
 
 function classifyTrack(path: HeadlinePath, eventKind: ProvenanceEventKind): HeadlineTrack {
-  if (path === "rule_nonmaterial") return "B_momentum";
   if (path === "fallback_no_event") return "suppressed";
   if (eventKind === "news_mention" || eventKind === "disclosure") return "A_material";
   return "suppressed";
@@ -180,7 +178,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     const eventKind = classifyEventKind(stock, front, headline);
     const path = classifyPath(stock, headline, eventKind);
     const track = classifyTrack(path, eventKind);
-    const concrete = (path === "why_synthesis" || path === "rule_nonmaterial") && isConcreteHeadline(stock, headline);
+    const concrete = path === "why_synthesis" && isConcreteHeadline(stock, headline);
     return {
       index: index + 1,
       ticker: stock.canonical,
@@ -201,12 +199,10 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     raw_title: 0,
     abstract_template: 0,
     why_synthesis: 0,
-    rule_nonmaterial: 0,
     fallback_no_event: 0,
   };
   const trackCounts: Record<HeadlineTrack, number> = {
     A_material: 0,
-    B_momentum: 0,
     suppressed: 0,
   };
   const methodCounts: Record<HeadlineMethod, number> = {
