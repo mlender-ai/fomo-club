@@ -413,6 +413,19 @@ export interface DiscoveryStockResponse {
   symbol?: string;
   marquee: boolean;
   sector: string;
+  headline?: string;
+  headlineProvenance?: {
+    text: string;
+    provenance: "synthesis" | "rule" | "suppressed";
+    method: "ai" | "rule" | "none";
+    eventRef?: {
+      kind: string;
+      source?: string;
+      asOf?: string;
+      title?: string;
+      url?: string;
+    };
+  };
   whyShown?: string;
   reason?: string;
   sourceLabel?: string;

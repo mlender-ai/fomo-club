@@ -1,20 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  fomoCardView,
-  selectFomoHook,
-  selectMultiAxisHook,
-  type AxisSignal,
-  type MultiAxisHookSelection,
-} from "@fomo/core";
-import {
   buildDiscoveryResponse,
   type DiscoveryFrontSeed,
   type DiscoveryResponse,
   type DiscoveryStockPayload,
 } from "../apps/web/lib/discovery-supply";
 import type { DiscoveryCountryScope } from "../apps/web/lib/market-source-types";
-import { compactDiscoveryCardHeadline } from "../apps/fomo-web/lib/discoveryHeadline";
 
 type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallback_no_event";
 type HeadlineMethod = "ai" | "rule" | "fallback" | "none";
@@ -53,11 +45,6 @@ interface HeadlineProvenanceReport {
   cards: HeadlineProvenanceRow[];
 }
 
-const PRICE_ONLY_REASON_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요/;
-const SURFACE_FILLER_HOOK_PATTERN =
-  /(?:더\s*(?:살펴볼|확인할)|발견\s*풀|조용한\s*자리|신호를\s*확인하는\s*중|오늘은\s*뚜렷한\s*신호\s*없음|근거는\s*얇|이유\s*얇|흐름\s*(?:이|도)?\s*붙|확인되는\s*화면|눈에\s*띄었어요|한\s*가지\s*숫자만)/;
-const SURFACE_PRICE_HOOK_PATTERN = /(?:^오늘 가격이|^가격 먼저 움직임$|^가격은 .*거래량|^가격은 .*뉴스)/;
-
 const FALLBACK_PATTERN =
   /아직\s*공개된\s*계기\s*없음|뚜렷한\s*이유|아직\s*안\s*보여|확인되지\s*않았|재료\s*확인\s*안|원문\s*근거/;
 const ABSTRACT_TEMPLATE_PATTERN =
@@ -68,27 +55,6 @@ const VOLUME_PATTERN = /거래량|거래가|평소\s*\d+(?:\.\d+)?배/;
 
 function cleanInline(text: string | undefined): string {
   return (text ?? "").replace(/\s+/g, " ").trim();
-}
-
-function nonPriceOnlyHeadline(text: string | undefined): string | undefined {
-  const clean = cleanInline(text);
-  if (!clean || PRICE_ONLY_REASON_PATTERN.test(clean) || SURFACE_PRICE_HOOK_PATTERN.test(clean) || SURFACE_FILLER_HOOK_PATTERN.test(clean)) {
-    return undefined;
-  }
-  return clean;
-}
-
-function compactReasonHeadlineSeed(text: string | undefined): string | undefined {
-  const clean = cleanInline(text)
-    .replace(
-      /^(?:오늘|최근)\s+(?:이 종목을 직접 언급한 뉴스가 있어요|이 종목을 직접 다룬 리서치가 있어요|이 종목 뉴스 탭에 함께 묶인 흐름이 있어요|공시가 확인됐어요):\s*/,
-      ""
-    )
-    .trim();
-  if (!clean) return undefined;
-  if (!/오늘|최근|공시|뉴스|리서치|수급|외국인|기관|거래량|가격|테마|흐름|순매수|신고가|계약|공급|실적|가이던스|revenue|guidance|earnings|contract|supply|partnership|SEC|filing/i.test(clean)) return undefined;
-  if (/전문\s?기업|플랫폼\s?리더|도약\s?중|안정화\s?예상|사업\s?영역|서비스\s?제공/.test(clean)) return undefined;
-  return clean.length > 56 ? `${clean.slice(0, 55)}…` : clean;
 }
 
 function parseArgs(): Args {
@@ -107,44 +73,8 @@ function parseArgs(): Args {
   return { country, limit, output };
 }
 
-function finalVisibleHeadline(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed | undefined): string {
-  const rawReasonHeadline = nonPriceOnlyHeadline(stock.reason);
-  const surfaceReasonHeadline =
-    rawReasonHeadline ??
-    compactDiscoveryCardHeadline({
-      reason: stock.reason,
-      sector: stock.sector,
-      ticker: stock.canonical,
-      marketCapRank: front?.signals.marketCapRank?.rank,
-    });
-  const reasonHeadlineSeed = surfaceReasonHeadline ?? compactReasonHeadlineSeed(stock.reason);
-  const discoveryHeadline = nonPriceOnlyHeadline(reasonHeadlineSeed);
-  if (discoveryHeadline) return discoveryHeadline;
-
-  const axisHook: MultiAxisHookSelection | undefined =
-    stock.axisHook ?? front?.axisHook ?? (front?.axisSignals ? selectMultiAxisHook(front.axisSignals as AxisSignal[]) : undefined);
-  const axisHeadline = nonPriceOnlyHeadline(axisHook?.hookText);
-  if (axisHeadline) return axisHeadline;
-
-  if (front) {
-    const legacyHook = selectFomoHook({
-      fomo: front.fomo,
-      signals: front.signals,
-    });
-    const legacyHeadline = nonPriceOnlyHeadline(legacyHook.headline);
-    if (legacyHeadline) return legacyHeadline;
-
-    const baseView = fomoCardView(front.fomo, {
-      sector: stock.sector,
-      ...(stock.reason ? { reason: stock.reason } : {}),
-      ...(typeof front.signals.changePct === "number" ? { changePct: front.signals.changePct } : {}),
-      ...(typeof front.signals.marketCapRank?.rank === "number" ? { marketCapRank: front.signals.marketCapRank.rank } : {}),
-    });
-    const baseHeadline = nonPriceOnlyHeadline(baseView.headline);
-    if (baseHeadline) return baseHeadline;
-  }
-
-  return nonPriceOnlyHeadline(stock.reason) ?? "아직 공개된 계기 없음";
+function finalVisibleHeadline(stock: DiscoveryStockPayload): string {
+  return cleanInline(stock.headline) || "아직 공개된 계기 없음";
 }
 
 function sourceTitleFrom(stock: DiscoveryStockPayload): string | undefined {
@@ -165,7 +95,9 @@ function classifyEventKind(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
 }
 
 function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind: ProvenanceEventKind): HeadlinePath {
-  if (!headline || FALLBACK_PATTERN.test(headline) || eventKind === "none") return "fallback_no_event";
+  if (stock.headlineProvenance?.provenance === "suppressed" || !headline || FALLBACK_PATTERN.test(headline) || eventKind === "none") {
+    return "fallback_no_event";
+  }
   const title = sourceTitleFrom(stock);
   if (title) {
     const normalizedTitle = cleanInline(title).replace(/[.。]+$/g, "");
@@ -182,12 +114,12 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
   return "why_synthesis";
 }
 
-function classifyMethod(path: HeadlinePath, headline: string): HeadlineMethod {
+function classifyMethod(stock: DiscoveryStockPayload, path: HeadlinePath, headline: string): HeadlineMethod {
+  const declared = stock.headlineProvenance?.method;
+  if (declared === "ai" || declared === "rule") return declared;
+  if (declared === "none") return "none";
   if (!headline) return "none";
   if (path === "fallback_no_event") return "fallback";
-  // The production response does not expose the ai/fallback method yet. Phase 0
-  // intentionally avoids changing product payloads, so visible non-fallback text
-  // is conservatively marked as rule-derived.
   return "rule";
 }
 
@@ -199,7 +131,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
   const stocks = payload.stocks.slice(0, args.limit);
   const rows = stocks.map((stock, index): HeadlineProvenanceRow => {
     const front = payload.fronts[stock.canonical];
-    const headline = finalVisibleHeadline(stock, front);
+    const headline = finalVisibleHeadline(stock);
     const eventKind = classifyEventKind(stock, front, headline);
     const path = classifyPath(stock, headline, eventKind);
     return {
@@ -208,7 +140,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       country: stock.country ?? payload.country ?? args.country,
       headline,
       path,
-      method: classifyMethod(path, headline),
+      method: classifyMethod(stock, path, headline),
       hasEvent: eventKind !== "none",
       eventKind,
       ...(stock.insightTag ? { insightTag: stock.insightTag } : {}),

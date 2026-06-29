@@ -31,6 +31,13 @@ export type DeckStock = Omit<SectorStock, "sector"> & {
   kind?: "stock";
   reason?: string;
   whyShown?: string;
+  headline?: string;
+  headlineProvenance?: {
+    text: string;
+    provenance: string;
+    method: string;
+    eventRef?: Record<string, string>;
+  };
   insightTag?: string;
   sourceLabel?: string;
   sourceUrl?: string;

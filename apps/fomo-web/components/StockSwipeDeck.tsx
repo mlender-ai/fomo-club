@@ -1,7 +1,7 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, selectFomoHook, selectMultiAxisHook, sparklinePath } from "@fomo/core";
+import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
 import type {
   AxisSignal,
   CardFrontSignals,
@@ -19,7 +19,6 @@ import type { DeckStock } from "@/lib/discoveryDeck";
 import { isThemeBundleCard, type DiscoveryDeckCard, type DeckThemeBundle } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
-import { compactDiscoveryCardHeadline } from "@/lib/discoveryHeadline";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 
@@ -162,15 +161,6 @@ function FomoMeter({ score, color }: { score: number; color: string }) {
 
 /** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
-const PRICE_ONLY_REASON_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요/;
-const SURFACE_FILLER_HOOK_PATTERN =
-  /(?:더\s*(?:살펴볼|확인할)|발견\s*풀|조용한\s*자리|신호를\s*확인하는\s*중|오늘은\s*뚜렷한\s*신호\s*없음|근거는\s*얇|이유\s*얇|흐름\s*(?:이|도)?\s*붙|확인되는\s*화면|눈에\s*띄었어요|한\s*가지\s*숫자만)/;
-const SURFACE_PRICE_HOOK_PATTERN = /(?:^오늘 가격이|^가격 먼저 움직임$|^가격은 .*거래량|^가격은 .*뉴스)/;
-
-function nonPriceOnlyHeadline(text: string | undefined): string | undefined {
-  if (!text || PRICE_ONLY_REASON_PATTERN.test(text) || SURFACE_PRICE_HOOK_PATTERN.test(text) || SURFACE_FILLER_HOOK_PATTERN.test(text)) return undefined;
-  return text;
-}
 
 function clampStyle(lines: number): CSSProperties {
   return {
@@ -181,18 +171,9 @@ function clampStyle(lines: number): CSSProperties {
   };
 }
 
-function compactReasonHeadlineSeed(text: string | undefined): string | undefined {
-  const clean = (text ?? "")
-    .replace(/\s+/g, " ")
-    .replace(
-      /^(?:오늘|최근)\s+(?:이 종목을 직접 언급한 뉴스가 있어요|이 종목을 직접 다룬 리서치가 있어요|이 종목 뉴스 탭에 함께 묶인 흐름이 있어요|공시가 확인됐어요):\s*/,
-      ""
-    )
-    .trim();
-  if (!clean) return undefined;
-  if (!/오늘|최근|공시|뉴스|리서치|수급|외국인|기관|거래량|가격|테마|흐름|순매수|신고가|계약|공급|실적|가이던스|revenue|guidance|earnings|contract|supply|partnership|SEC|filing/i.test(clean)) return undefined;
-  if (/전문\s?기업|플랫폼\s?리더|도약\s?중|안정화\s?예상|사업\s?영역|서비스\s?제공/.test(clean)) return undefined;
-  return clean.length > 56 ? `${clean.slice(0, 55)}…` : clean;
+function cleanServerHeadline(text: string | undefined): string | undefined {
+  const clean = (text ?? "").replace(/\s+/g, " ").trim();
+  return clean || undefined;
 }
 
 function FeedSignalStrip({
@@ -564,64 +545,37 @@ export function StockSwipeDeck({
   // 긴 원문 재료는 why/depth 로 보내고, 앞면은 잘리지 않는 핵심 독해만 남긴다.
   const cardFor = (stock: DeckStock): { view: FomoCardView; subLine?: string; usedDiscoveryHeadline?: boolean } => {
     const e = front[stock.canonical];
+    const serverHeadline = cleanServerHeadline(stock.headline);
     if (!e) {
-      const discoveryHeadline = nonPriceOnlyHeadline(stock.reason) ?? compactDiscoveryCardHeadline({
-        reason: stock.reason,
-        sector: stock.sector,
-        ticker: stock.canonical,
-      });
       const view: FomoCardView = {
         scoreText: "",
         emoji: "",
         badge: "신호 확인 중",
-        headline: nonPriceOnlyHeadline(discoveryHeadline) ?? "가격·거래량 근거를 맞춰 불러오고 있어요.",
+        headline: serverHeadline ?? "신호를 불러오고 있어요.",
         tone: "calm",
         isLeading: false,
       };
-      return { view, ...(discoveryHeadline ? { usedDiscoveryHeadline: true } : { subLine: "가격·거래량 신호를 불러오고 있어요." }) };
+      return { view, ...(serverHeadline ? { usedDiscoveryHeadline: true } : { subLine: "가격·수급·원문 근거를 맞춰 불러오고 있어요." }) };
     }
     const fomo = e?.fomo ?? EMPTY_FOMO;
-    const rawReasonHeadline = nonPriceOnlyHeadline(stock.reason);
-    const surfaceReasonHeadline =
-      rawReasonHeadline ??
-      compactDiscoveryCardHeadline({
-        reason: stock.reason,
-        sector: stock.sector,
-        ticker: stock.canonical,
-        marketCapRank: e?.signals.marketCapRank?.rank,
-      });
-    const reasonHeadlineSeed = surfaceReasonHeadline ?? compactReasonHeadlineSeed(stock.reason);
-    const discoveryHeadline = nonPriceOnlyHeadline(reasonHeadlineSeed);
     const signalsForHook: CardFrontSignals = {
       ...(e?.signals ?? {}),
-      ...(!e?.signals.newsEventLabel && discoveryHeadline ? { newsEventLabel: discoveryHeadline } : {}),
+      ...(!e?.signals.newsEventLabel && serverHeadline ? { newsEventLabel: serverHeadline } : {}),
     };
     const legacyHook = selectFomoHook({
       fomo,
       signals: signalsForHook,
       ...(e?.taFact ? { taFact: e.taFact } : {}),
     });
-    const axisHook =
-      stock.axisHook ??
-      e?.axisHook ??
-      (e?.axisSignals ? selectMultiAxisHook(e.axisSignals) : undefined);
     const baseView = fomoCardView(fomo, {
       sector: stock.sector,
       ...(stock.reason ? { reason: stock.reason } : {}),
       ...(typeof e?.signals.changePct === "number" ? { changePct: e.signals.changePct } : {}),
       ...(typeof e?.signals.marketCapRank?.rank === "number" ? { marketCapRank: e.signals.marketCapRank.rank } : {}),
     });
-    const fallbackHeadline =
-      nonPriceOnlyHeadline(stock.reason) ??
-      nonPriceOnlyHeadline(baseView.headline) ??
-      "아직 공개된 계기 없음";
-    const headline =
-      discoveryHeadline ??
-      nonPriceOnlyHeadline(axisHook?.hookText) ??
-      nonPriceOnlyHeadline(legacyHook.headline) ??
-      fallbackHeadline;
+    const headline = serverHeadline ?? "신호를 불러오고 있어요.";
     const view = { ...baseView, headline };
-    const usedDiscoveryHeadline = !!discoveryHeadline && !!surfaceReasonHeadline;
+    const usedDiscoveryHeadline = !!serverHeadline;
     return {
       view,
       ...(!usedDiscoveryHeadline && legacyHook.subLine ? { subLine: legacyHook.subLine } : {}),

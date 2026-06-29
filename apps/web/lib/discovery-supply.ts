@@ -38,6 +38,7 @@ import { relatedTo, type RelatedNode } from "./relation-graph";
 import { fetchRecentSecFilings } from "./sec-edgar";
 import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
+import { resolveCardHeadline, type CardHeadline } from "./card-headline";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
@@ -112,6 +113,8 @@ export interface DiscoveryFrontSeed {
 export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
   sector: string;
   symbol?: string;
+  headline?: string;
+  headlineProvenance?: CardHeadline;
   whyShown?: string;
   reason?: string;
   insightTag?: string;
@@ -910,6 +913,12 @@ function stockPayload(
   const sourceTitle = sourceEvent?.sourceTitle?.trim();
   const sourceName = (sourceEvent?.sourceName ?? sourceEvent?.source)?.trim();
   const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName ?? frontReason?.sourceLabel;
+  const headline = resolveCardHeadline({
+    candidate,
+    synthesis,
+    reason: why,
+    ...(sourceLabel ? { sourceLabel } : {}),
+  });
   return {
     canonical: candidate.ticker,
     market: row.market,
@@ -918,6 +927,8 @@ function stockPayload(
     symbol: row.symbol,
     marquee: def?.marquee === true,
     sector: sector ?? inferDiscoverySectorLabel(candidate.ticker, candidate.events, undefined, candidate.asOf),
+    headline: headline.text,
+    headlineProvenance: headline,
     ...(why ? { whyShown: why, reason: why, insightTag: frontReason && !sourceEvent ? "뉴스 재료" : synthesis.tag } : {}),
     ...(sourceLabel ? { sourceLabel } : {}),
     ...(sourceEvent?.sourceUrl ? { sourceUrl: sourceEvent.sourceUrl } : {}),

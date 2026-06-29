@@ -1,0 +1,108 @@
+import { describe, expect, it } from "vitest";
+import { resolveCardHeadline } from "../../lib/card-headline";
+import type {
+  DiscoveryCandidate,
+  DiscoveryEvent,
+  DiscoveryInsightSynthesis,
+} from "@fomo/core";
+
+const baseEvent: DiscoveryEvent = {
+  kind: "news_mention",
+  firstSeen: true,
+  strength: 0.9,
+  source: "news",
+  asOf: "2026-06-29",
+  confidence: "H",
+};
+
+function candidate(events: DiscoveryEvent[]): DiscoveryCandidate {
+  return {
+    ticker: "롯데손해보험",
+    market: "KOSPI",
+    country: "KR",
+    sector: "금융",
+    events,
+    asOf: "2026-06-29",
+  };
+}
+
+function synthesis(overrides: Partial<DiscoveryInsightSynthesis>): DiscoveryInsightSynthesis {
+  return {
+    headline: "아직 공개된 계기 없음",
+    headlineState: "조용",
+    tag: "정직 폴백",
+    tone: "empty",
+    observations: [],
+    synthesis: "",
+    evidence: [],
+    ...overrides,
+  };
+}
+
+describe("resolveCardHeadline", () => {
+  it("does not pass raw article titles through as the surface headline", () => {
+    const title = "롯데손보 8월 매물 나온다…한국투자·신한 인수전 뛰어드나";
+    const event: DiscoveryEvent = {
+      ...baseEvent,
+      label: title,
+      sourceTitle: title,
+      sourceName: "뉴시스",
+      sourceUrl: "https://example.com/news",
+    };
+
+    const result = resolveCardHeadline({
+      candidate: candidate([event]),
+      synthesis: synthesis({
+        headline: title,
+        tone: "material",
+        primary: event,
+      }),
+      sourceLabel: `${title} · 뉴시스`,
+    });
+
+    expect(result.text).not.toBe(title);
+    expect(result.provenance).not.toBe("synthesis");
+    expect(result.eventRef).toMatchObject({
+      kind: "news_mention",
+      source: "뉴시스",
+      asOf: "2026-06-29",
+      title,
+      url: "https://example.com/news",
+    });
+  });
+
+  it("returns the same headline for the same input", () => {
+    const event: DiscoveryEvent = {
+      ...baseEvent,
+      label: "공급계약 공시와 거래 증가가 같이 확인됐어요.",
+      sourceTitle: "티이엠씨씨엔에스, 180억원 반도체 장비 공급계약 체결",
+      sourceName: "DART",
+    };
+    const input = {
+      candidate: candidate([event]),
+      synthesis: synthesis({
+        headline: "공급계약에 거래도 붙었어요",
+        tone: "material",
+        primary: event,
+      }),
+      sourceLabel: "티이엠씨씨엔에스, 180억원 반도체 장비 공급계약 체결 · DART",
+    };
+
+    const outputs = Array.from({ length: 10 }, () => resolveCardHeadline(input).text);
+
+    expect(new Set(outputs).size).toBe(1);
+  });
+
+  it("marks empty candidates as suppressed instead of inventing a headline", () => {
+    const result = resolveCardHeadline({
+      candidate: candidate([]),
+      synthesis: synthesis({}),
+    });
+
+    expect(result).toMatchObject({
+      text: "아직 공개된 계기 없음",
+      provenance: "suppressed",
+      method: "none",
+    });
+  });
+});
