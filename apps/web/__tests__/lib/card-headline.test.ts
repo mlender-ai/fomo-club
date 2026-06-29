@@ -108,4 +108,38 @@ describe("resolveCardHeadline", () => {
       method: "none",
     });
   });
+
+  it("does not let English US source titles reach the card surface", async () => {
+    const title = "D-Wave Quantum Announces New Partnership With Aerospace Customer";
+    const event: DiscoveryEvent = {
+      ...baseEvent,
+      label: title,
+      sourceTitle: title,
+      sourceName: "Yahoo Finance",
+      sourceUrl: "https://example.com/dwave",
+    };
+    const usCandidate: DiscoveryCandidate = {
+      ticker: "디웨이브퀀텀",
+      market: "NYSE",
+      country: "US",
+      sector: "양자",
+      events: [event],
+      asOf: "2026-06-29",
+    };
+
+    const result = await resolveCardHeadline({
+      candidate: usCandidate,
+      synthesis: synthesis({
+        headline: title,
+        tone: "material",
+        primary: event,
+      }),
+      synthesisMethod: "ai",
+      sourceLabel: `${title} · Yahoo Finance`,
+    });
+
+    expect(result.text).toBe("Aerospace 고객과 제휴 발표");
+    expect(result.text).not.toContain("D-Wave");
+    expect(result.provenance).toBe("rule");
+  });
 });

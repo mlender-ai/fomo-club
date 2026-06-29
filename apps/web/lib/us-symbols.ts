@@ -35,7 +35,7 @@ export const US_DISCOVERY_SYMBOLS: UsDiscoverySymbol[] = [
   { canonical: "디웨이브퀀텀", symbol: "QBTS", market: "NYSE", sector: "양자", fameRank: 650 },
   { canonical: "사운드하운드AI", symbol: "SOUN", market: "NASDAQ", sector: "AI", fameRank: 540 },
   { canonical: "빅베어AI", symbol: "BBAI", market: "NYSE", sector: "AI", fameRank: 690 },
-  { canonical: "세레브라스", symbol: "CRWV", market: "NASDAQ", sector: "AI", fameRank: 430 },
+  { canonical: "코어위브", symbol: "CRWV", market: "NASDAQ", sector: "AI", fameRank: 430 },
   { canonical: "아스테라랩스", symbol: "ALAB", market: "NASDAQ", sector: "반도체", fameRank: 310 },
   { canonical: "램리서치", symbol: "LRCX", market: "NASDAQ", sector: "반도체", fameRank: 80 },
   { canonical: "어플라이드머티어리얼즈", symbol: "AMAT", market: "NASDAQ", sector: "반도체", fameRank: 75 },

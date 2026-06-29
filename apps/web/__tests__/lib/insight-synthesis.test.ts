@@ -72,6 +72,53 @@ describe("why-driven insight synthesis guard", () => {
     expect(validateWhyInsightOutput({ headline: "엔비디아와 금호타이어가 정부 투자에 묶임" }, candidate)).toBeUndefined();
   });
 
+  it("rejects English US headlines and accepts Korean concrete synthesis from English quarter text", () => {
+    const candidate: DiscoveryCandidate = {
+      ticker: "사운드하운드AI",
+      market: "NASDAQ",
+      country: "US",
+      sector: "AI",
+      asOf,
+      events: [
+        {
+          kind: "news_mention",
+          firstSeen: true,
+          strength: 0.9,
+          source: "news",
+          asOf,
+          confidence: "H",
+          label: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
+          sourceTitle: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
+          sourceName: "Yahoo Finance",
+        },
+      ],
+    };
+
+    expect(
+      validateWhyInsightOutput(
+        {
+          headline: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
+          observations: ["SoundHound AI first quarter revenue growth"],
+          synthesis: "First quarter revenue and guidance are both mentioned in the same article.",
+          evidence: ["SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance · Yahoo Finance · 2026-06-24"],
+        },
+        candidate
+      )
+    ).toBeUndefined();
+
+    const insight = validateWhyInsightOutput(
+      {
+        headline: "1분기 매출 성장·가이던스 상향",
+        observations: ["영문 원문에 first quarter revenue growth와 guidance raise가 함께 언급됨"],
+        synthesis: "실적과 전망 조정이 같은 기사 안에서 함께 확인된 재료예요",
+        evidence: ["SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance · Yahoo Finance · 2026-06-24"],
+      },
+      candidate
+    );
+
+    expect(insight?.headline).toBe("1분기 매출 성장·가이던스 상향");
+  });
+
   it("keeps observations, synthesis, and evidence as separate blocks", () => {
     expect(blockOverlapRatio("금호타이어 +11.9% / 자동차 1/4", "금호타이어 +11.9% / 자동차 1/4")).toBe(1);
     expect(blockOverlapRatio("금호타이어 +11.9% / 자동차 1/4", "기사 제목보다 정부 호남 투자 예고를 먼저 봅니다")).toBeLessThan(0.7);

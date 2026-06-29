@@ -41,6 +41,7 @@ import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock
 import { resolveCardHeadline, type CardHeadline } from "./card-headline";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
+import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { isAbstractTemplate } from "./copy-guards";
@@ -68,7 +69,7 @@ const MATERIAL_NEWS_NOISE =
 const MATERIAL_NEWS_CATALYST =
   /공시|계약|공급계약|수주|납품|실적|매출|영업이익|순이익|가이던스|전망치|컨센서스|어닝|흑자|적자|턴어라운드|임상|허가|승인|FDA|품목허가|신약|치료제|기술이전|라이선스|증설|공장|양산|수율|수주잔고|M&A|인수|합병|지분|투자|유상증자|무상증자|자사주|배당|분할|상장|정부|정책|규제|지원|보조금|관세|제재|신제품|출시|개발|특허|공급|독점|선정|채택|수출|수입|국책|프로젝트|수혜|클러스터|산단|거점|밸류체인|관련주|부각|모멘텀|호재|주목|협력|제휴/i;
 const US_MATERIAL_NEWS_NOISE =
-  /price\s?target|target price|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|buy,\s*sell,\s*or\s*hold|should you buy|stock to buy|better buy|which .* stock|what investors should know|motley fool|zacks|benzinga|investorplace|approach with caution|missing link|strain inside|what you|can it|market rotation|running out of power|internet.?s .+ odd duck|all-time low|gaining ground|more significant dip|boom is|fears hit|gains as market dips|limps along|afterglow is gone|and more stocks|more stocks that|stocks that|stock market today|market roundup|why .* stock (?:is )?(?:up|down|rising|falling)|\b(?:is|are|was|were)?\s*(?:up|down|higher|lower|gains?|loses?|rises?|falls?)\s+\d+(?:\.\d+)?%|\b(?:is|are|was|were)\s+(?:up|down|higher|lower)\b|shares? (?:rise|fall|slip|jump|gain|lose) after hours/i;
+  /price\s?target|target price|\braises?\s+PT\b|\bPT\s+on\b|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|buy,\s*sell,\s*or\s*hold|should you buy|stock to buy|better buy|which .* stock|what investors should know|\b[A-Z]{1,6}\s+investors?\b|investors?\s+(?:have|can|should|alert|deadline|opportunity|reminder|notice)|shareholders?|class action|lawsuit|law firm|securities fraud|motley fool|zacks|benzinga|investorplace|approach with caution|missing link|strain inside|what you|can it|market rotation|running out of power|internet.?s .+ odd duck|all-time low|gaining ground|more significant dip|boom is|fears hit|gains as market dips|limps along|afterglow is gone|and more stocks|more stocks that|stocks that|stock market today|market roundup|why .* stock (?:is )?(?:up|down|rising|falling)|\b(?:is|are|was|were)?\s*(?:up|down|higher|lower|gains?|loses?|rises?|falls?)\s+\d+(?:\.\d+)?%|\b(?:is|are|was|were)\s+(?:up|down|higher|lower)\b|shares? (?:rise|fall|slip|jump|gain|lose) after hours/i;
 const US_MATERIAL_NEWS_CATALYST =
   /earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]|contract|deal|order|supply|supplier|customer|partnership|launch|unveil|product|chip|gpu|ai|data center|approval|fda|trial|drug|sec|8-k|10-q|filing|acquisition|merger|stake|investment|buyback authorization|dividend/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_DEFAULT_ENABLED
@@ -306,7 +307,7 @@ export function cleanMaterialTitle(title: string): string | undefined {
   return isFrontHookSafe(`${compact} 소식이 나왔어요.`) ? compact : undefined;
 }
 
-export function cleanUsMaterialTitle(title: string, subjectHint?: string): string | undefined {
+export function cleanUsMaterialTitle(title: string): string | undefined {
   const cleaned = decodeHtmlEntities(title)
     .replace(/^\s*(?:\[[^\]]+\]|【[^】]+】|\([^)]*\))\s*/g, "")
     .replace(/[“”"]/g, "")
@@ -318,7 +319,7 @@ export function cleanUsMaterialTitle(title: string, subjectHint?: string): strin
   }
   if (!US_MATERIAL_NEWS_CATALYST.test(cleaned)) return undefined;
   if (/[\[\]{}<>]/.test(cleaned)) return undefined;
-  return translateUsMaterialTitle(cleaned, subjectHint);
+  return cleaned;
 }
 
 function isPrimaryStockArticle(canonical: string, article: RawArticle): boolean {
@@ -343,39 +344,93 @@ function pickTargetedMaterialArticle(canonical: string, articles: readonly RawAr
   );
 }
 
-function usSubject(title: string): string | undefined {
-  const match = title.match(/^([A-Z][A-Za-z0-9 .&'-]{1,42}?)(?:\s+\([A-Z.]+\))?\s+(?:Reports|Raises|Announces|Unveils|Launches|Introduces|Signs|Secures|Expands|Files|Receives|Wins|Posts|Beats)\b/i);
-  return match?.[1]?.trim().replace(/\s+/g, " ");
+const US_ARTICLE_ALIAS_OVERRIDES: Record<string, string[]> = {
+  AMD: ["Advanced Micro Devices"],
+  ARM: ["Arm Holdings"],
+  APP: ["AppLovin"],
+  AVGO: ["Broadcom"],
+  BBAI: ["BigBear.ai", "BigBear AI"],
+  BE: ["Bloom Energy"],
+  COIN: ["Coinbase"],
+  CRWD: ["CrowdStrike"],
+  DDOG: ["Datadog"],
+  DUOL: ["Duolingo"],
+  GEV: ["GE Vernova"],
+  HOOD: ["Robinhood"],
+  IONQ: ["IonQ"],
+  LCID: ["Lucid", "Lucid Group"],
+  MDB: ["MongoDB"],
+  MRVL: ["Marvell"],
+  MU: ["Micron"],
+  NIO: ["NIO"],
+  NVDA: ["Nvidia", "NVIDIA"],
+  PLTR: ["Palantir"],
+  QBTS: ["D-Wave", "D-Wave Quantum"],
+  RGTI: ["Rigetti"],
+  RIVN: ["Rivian"],
+  RKLB: ["Rocket Lab"],
+  SMCI: ["Super Micro", "Supermicro"],
+  SOFI: ["SoFi"],
+  SOUN: ["SoundHound", "SoundHound AI"],
+  SQ: ["Block"],
+  TSM: ["Taiwan Semiconductor", "TSMC"],
+  TSLA: ["Tesla"],
+  UPST: ["Upstart"],
+  VRT: ["Vertiv"],
+  VST: ["Vistra"],
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function translateUsMaterialTitle(title: string, subjectHint?: string): string | undefined {
-  const subject = subjectHint?.trim() || usSubject(title);
-  if (!subject) return undefined;
-  const lower = title.toLowerCase();
-  let detail: string | undefined;
-  if (/revenue|earnings|results|guidance|forecast|margin|profit/.test(lower)) {
-    detail = "실적·가이던스 소식";
-  } else if (/partnership|customer|deal|contract|order|supply|supplier/.test(lower)) {
-    detail = "고객·파트너십 소식";
-  } else if (/sec|8-k|10-q|filing/.test(lower)) {
-    detail = "SEC 공시";
-  } else if (/approval|fda|trial|drug/.test(lower)) {
-    detail = "신약·허가 소식";
-  } else if (/acquisition|merger|stake|investment/.test(lower)) {
-    detail = "인수·투자 소식";
-  } else if (/launch|unveil|introduce|product|chip|gpu|ai|data center|solution/.test(lower)) {
-    detail = "제품·AI 인프라 소식";
-  } else if (/delivery|deliveries/.test(lower)) {
-    detail = "인도량 확인 이슈";
-  } else if (/funding|securitization|liquidity/.test(lower)) {
-    detail = "자금조달·유동화 이슈";
-  } else if (/nuclear|reactor|reactors/.test(lower)) {
-    detail = "원전 설계·개발 이슈";
+function usAliasesForRow(row: DiscoveryMarketRow): string[] {
+  const symbol = row.symbol.trim().toUpperCase();
+  const symbolDef = US_DISCOVERY_SYMBOLS.find((item) => item.symbol === symbol || item.canonical === row.canonical);
+  return [
+    symbol,
+    row.canonical,
+    ...(symbolDef ? [symbolDef.canonical] : []),
+    ...(US_ARTICLE_ALIAS_OVERRIDES[symbol] ?? []),
+  ]
+    .map((alias) => alias.trim())
+    .filter((alias, index, all) => alias.length >= 2 && all.indexOf(alias) === index);
+}
+
+function usAliasMatchScore(text: string, aliases: readonly string[]): number {
+  const clean = decodeHtmlEntities(text).replace(/\s+/g, " ").trim();
+  if (!clean) return 0;
+  let score = 0;
+  for (const alias of aliases) {
+    if (/^[A-Z0-9.]{1,6}$/.test(alias)) {
+      const pattern = new RegExp(`(?:^|[^A-Za-z0-9])${escapeRegExp(alias)}(?:$|[^A-Za-z0-9])`, "i");
+      if (pattern.test(clean)) score = Math.max(score, 5);
+      continue;
+    }
+    if (/^[가-힣]/.test(alias)) {
+      if (clean.includes(alias)) score = Math.max(score, 3);
+      continue;
+    }
+    const pattern = new RegExp(`(?:^|[^A-Za-z0-9])${escapeRegExp(alias)}(?:$|[^A-Za-z0-9])`, "i");
+    if (pattern.test(clean)) score = Math.max(score, Math.min(8, Math.max(4, alias.length / 4)));
   }
-  if (!detail) return undefined;
-  const particle = /(공시|이슈)$/.test(detail) ? "가" : "이";
-  const translated = `${subject}, ${detail}${particle} 나왔어요.`;
-  return isFrontHookSafe(translated) ? translated : undefined;
+  return score;
+}
+
+function usArticleMatchScore(row: DiscoveryMarketRow, article: RawArticle): number {
+  if (!cleanUsMaterialTitle(article.title)) return 0;
+  const aliases = usAliasesForRow(row);
+  const titleScore = usAliasMatchScore(article.title, aliases);
+  const summaryScore = article.summary ? usAliasMatchScore(article.summary, aliases) : 0;
+  if (titleScore <= 0 && summaryScore <= 0) return 0;
+  return titleScore * 3 + summaryScore;
+}
+
+function pickUsTargetedMaterialArticle(row: DiscoveryMarketRow, articles: readonly RawArticle[]): RawArticle | undefined {
+  return articles
+    .map((article) => ({ article, score: usArticleMatchScore(row, article) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)[0]?.article;
 }
 
 function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
@@ -414,8 +469,8 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
   };
 }
 
-function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string, subjectHint?: string): DiscoveryEvent | null {
-  const label = cleanUsMaterialTitle(article.title, subjectHint);
+function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
+  const label = cleanUsMaterialTitle(article.title);
   if (!label) return null;
   const sourceName = article.source || sourceFallback;
   const sourceTitle = decodeHtmlEntities(article.title).replace(/\s+/g, " ").trim();
@@ -505,11 +560,8 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
         sourceName: filing.source,
       };
     }
-    const stockNews =
-      newsResult.status === "fulfilled"
-        ? newsResult.value.find((article) => materialEventFromUsArticle(article, asOf, "Yahoo Finance", row.canonical) !== null)
-        : undefined;
-    return stockNews ? materialEventFromUsArticle(stockNews, asOf, "Yahoo Finance", row.canonical) : null;
+    const stockNews = newsResult.status === "fulfilled" ? pickUsTargetedMaterialArticle(row, newsResult.value) : undefined;
+    return stockNews ? materialEventFromUsArticle(stockNews, asOf, "Yahoo Finance") : null;
   }
   if (!row.naverCode || !/^\d{6}$/.test(row.naverCode)) return null;
   const disclosure = (await fetchDartDisclosuresForCode(row.naverCode, row.canonical, asOf).catch(
@@ -899,6 +951,20 @@ function frontMaterialReason(front: DiscoveryFrontSeed | undefined): { reason: s
   return undefined;
 }
 
+function headlineCandidate(
+  row: DiscoveryMarketRow,
+  candidate: DiscoveryCandidate,
+  sector: string | undefined
+): DiscoveryCandidate {
+  const { synthesizedInsight: _previousSynthesis, ...rest } = candidate;
+  const events = candidate.events.map((event) => withRuleHeadlineHook(event, candidate.ticker, sector, row, candidate.asOf));
+  return {
+    ...rest,
+    ...(sector ? { sector } : {}),
+    events,
+  };
+}
+
 async function stockPayload(
   row: DiscoveryMarketRow,
   candidate: DiscoveryCandidate,
@@ -906,7 +972,9 @@ async function stockPayload(
 ): Promise<DiscoveryStockPayload> {
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
-  const synthesis = synthesizeDiscoveryInsight(candidate);
+  const resolvedCandidate = headlineCandidate(row, candidate, sector);
+  const whyDriven = await synthesizeWhyDrivenInsight(resolvedCandidate);
+  const synthesis = whyDriven.insight;
   const frontReason = frontMaterialReason(front);
   const synthesizedWhy = synthesis.headline;
   const why = isConcreteMaterialReason(synthesizedWhy) ? synthesizedWhy : frontReason?.reason ?? synthesizedWhy;
@@ -915,7 +983,9 @@ async function stockPayload(
   const sourceName = (sourceEvent?.sourceName ?? sourceEvent?.source)?.trim();
   const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName ?? frontReason?.sourceLabel;
   const headline = await resolveCardHeadline({
-    candidate,
+    candidate: resolvedCandidate,
+    synthesis,
+    synthesisMethod: whyDriven.method === "ai" ? "ai" : "rule",
     reason: why,
     ...(sourceLabel ? { sourceLabel } : {}),
   });
@@ -1554,6 +1624,14 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const stock = await stockPayload(row, candidate, front);
     const headline = stock.headline?.trim();
     if (stock.headlineProvenance?.provenance === "suppressed" || !headline) continue;
+    const isUsStock = row.country === "US" || candidate.country === "US" || stock.country === "US";
+    if (isUsStock) {
+      const headlineEvent = stock.headlineProvenance?.eventRef;
+      const headlineEventKind = headlineEvent?.kind;
+      const hasSurfaceMaterial = headlineEventKind === "news_mention" || headlineEventKind === "disclosure";
+      const hasGroundedMaterial = Boolean(stock.sourceLabel && (stock.sourceUrl || headlineEvent?.url));
+      if (!hasSurfaceMaterial || !hasGroundedMaterial) continue;
+    }
     stocks.push(stock);
     fronts[candidate.ticker] = front;
   }

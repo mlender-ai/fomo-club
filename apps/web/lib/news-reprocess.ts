@@ -1,7 +1,10 @@
 import { callAI, isAiConfigured } from "@fomo/shared";
 import {
   cleanInline,
+  englishMonthNumbers,
+  englishQuarterNumbers,
   hasConcreteSourceValue,
+  hasExcessiveLatinHeadline,
   hasForbiddenCopy,
   isAbstractTemplate,
   isRawTitleCopy,
@@ -34,9 +37,16 @@ function cacheKey(input: NewsHookInput): string {
 export function validateReprocessedNewsHook(hook: string | undefined, input: NewsHookInput): string | undefined {
   const clean = cleanInline(hook);
   if (!clean || clean.length > 44) return undefined;
+  if (hasExcessiveLatinHeadline(clean)) return undefined;
   if (hasForbiddenCopy(clean) || SOURCE_NAME_PATTERN.test(clean) || isAbstractTemplate(clean)) return undefined;
   if (isRawTitleCopy(clean, input.title)) return undefined;
   const allowedNumbers = new Set(numbersIn(input.title).flatMap(numberVariants));
+  englishQuarterNumbers(input.title).forEach((num) => {
+    numberVariants(num).forEach((value) => allowedNumbers.add(value));
+  });
+  englishMonthNumbers(input.title).forEach((num) => {
+    numberVariants(num).forEach((value) => allowedNumbers.add(value));
+  });
   if (typeof input.changePct === "number" && Number.isFinite(input.changePct)) {
     numberVariants(String(Math.abs(input.changePct))).forEach((value) => allowedNumbers.add(value));
   }
@@ -63,8 +73,8 @@ function pickCounterparty(title: string): string | undefined {
   if (pair?.[1] && pair[2]) return `${pair[1]}·${pair[2]}`;
   const ko = title.match(/([가-힣A-Za-z0-9&().+-]{2,24})(?:와|과|와의|과의)\s*(?:공급계약|계약|제휴|협력|파트너십|인수전|수주)/);
   if (ko?.[1]) return ko[1].trim();
-  const en = title.match(/\b(?:with|from|by)\s+([A-Z][A-Za-z0-9&().+-]{1,24})/);
-  return en?.[1]?.trim();
+  const en = title.match(/\b(?:with|from|by|for)\s+([A-Z][A-Za-z0-9&().+-]{1,24}(?:\s+[A-Z][A-Za-z0-9&().+-]{1,24}){0,1})/i);
+  return cleanEnglishPhrase(en?.[1]);
 }
 
 function pickProduct(title: string): string | undefined {
@@ -76,6 +86,84 @@ function pickProduct(title: string): string | undefined {
     .replace(/\s*(?:공급|수주|계약)$/i, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function pickQuarterLabel(title: string): string | undefined {
+  const q = title.match(/\bQ([1-4])\b/i)?.[1] ?? englishQuarterNumbers(title)[0];
+  return q ? `${q}분기` : undefined;
+}
+
+function pickMonthLabel(title: string): string | undefined {
+  const month = englishMonthNumbers(title)[0];
+  return month ? `${month}월` : undefined;
+}
+
+function cleanEnglishPhrase(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (/\baerospace\s+customer\b/i.test(value)) return "Aerospace 고객";
+  const cleaned = value
+    .replace(/\b(?:Inc|Corp|Corporation|Co|Company|Ltd|PLC|LLC|Holdings?|Group|The)\b\.?/gi, "")
+    .replace(
+      /\b(?:new|major|strategic|global|retail|media|data|hub|customer|customers|partnership|deal|contract|order|key|as|role|seat)\b/gi,
+      ""
+    )
+    .replace(/\b(?:with|from|by|for|of)\b/gi, "")
+    .replace(/^\d+[-\s]*/, "")
+    .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned || cleaned.length < 2) return undefined;
+  return localizeEnglishPhrase(cleaned.split(/\s+/).slice(0, 3).join(" "));
+}
+
+function localizeEnglishPhrase(value: string): string {
+  const clean = value.replace(/\s+/g, " ").trim();
+  const normalized = clean.toLowerCase();
+  const exact: Record<string, string> = {
+    aerospace: "Aerospace",
+    "aerospace customer": "Aerospace 고객",
+    army: "미 육군",
+    "army role": "미 육군",
+    nvidia: "엔비디아",
+    "chipmaking systems": "반도체 제조 시스템",
+    "chipmaking system": "반도체 제조 시스템",
+    "seat es8": "ES8",
+    "5-seat es8": "ES8",
+  };
+  return exact[normalized] ?? clean;
+}
+
+function phraseAfterVerb(title: string, verbs: string): string | undefined {
+  const match = title.match(new RegExp(`\\b(?:${verbs})\\s+(?:a\\s+|an\\s+|the\\s+|new\\s+|suite\\s+of\\s+new\\s+)?([^:;,.()]{2,64})`, "i"));
+  return cleanEnglishPhrase(match?.[1]);
+}
+
+function phraseBeforeKeyword(title: string, keyword: string): string | undefined {
+  const match = title.match(new RegExp(`([A-Z][A-Za-z0-9&().+-]{1,24}(?:\\s+[A-Z][A-Za-z0-9&().+-]{1,24}){0,2})\\s+${keyword}`, "i"));
+  return cleanEnglishPhrase(match?.[1]);
+}
+
+function pickBacklog(title: string): string | undefined {
+  const match = title.match(/\$?\s?(\d+(?:\.\d+)?)\s*(Billion|Million)\s+Backlog/i);
+  if (!match?.[1] || !match[2]) return undefined;
+  return `${match[1]} ${match[2]} 수주잔고`;
+}
+
+function pickDeliveryProduct(title: string): string | undefined {
+  const quoted = pickQuoted(title);
+  if (quoted) return cleanEnglishPhrase(quoted);
+  const beforePreorder = title.match(/([A-Z][A-Za-z0-9&().+-]{1,24}(?:\s+[A-Z0-9][A-Za-z0-9&().+-]{1,24}){0,2})\s+Preorders?/i)?.[1];
+  if (beforePreorder) return cleanEnglishPhrase(beforePreorder);
+  const beforeLaunch = title.match(/([A-Z][A-Za-z0-9&().+-]{1,24}(?:\s+[A-Z0-9][A-Za-z0-9&().+-]{1,24}){0,2})\s+(?:Launch|Launches|Launches? Ahead|Debut)/i)?.[1];
+  return cleanEnglishPhrase(beforeLaunch);
+}
+
+function withAndParticle(value: string): string {
+  const last = value.trim().at(-1);
+  if (!last) return value;
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return `${value}와`;
+  return (code - 0xac00) % 28 === 0 ? `${value}와` : `${value}과`;
 }
 
 function compactTitlePhrase(title: string): string | undefined {
@@ -115,13 +203,35 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
   const counterparty = pickCounterparty(title);
   const product = pickProduct(title);
   const filing = pickFiling(title);
+  const quarter = pickQuarterLabel(title);
+  const month = pickMonthLabel(title);
   const hooks: string[] = [];
+
+  if (counterparty && /launch(?:es|ed)?|introduc|unveil|product|platform|solution/i.test(title)) {
+    hooks.push(`${withAndParticle(counterparty)} 제품 협력`);
+  }
+
+  if (/deliver(?:y|ies|ed)|preorders?|launch(?:es|ed)?|debut/i.test(title)) {
+    const deliveryProduct = pickDeliveryProduct(title) ?? product;
+    if (/preorders?/i.test(title) && month && deliveryProduct) hooks.push(`${deliveryProduct} ${month} 출시 전 사전예약`);
+    if (/preorders?/i.test(title) && deliveryProduct) hooks.push(`${deliveryProduct} 사전예약 시작`);
+    if (/deliver/i.test(title) && quarter) hooks.push(`${quarter} 인도량 발표`);
+    if (/deliver/i.test(title) && month) hooks.push(`${month} 인도량 발표`);
+    if (/launch|debut/i.test(title) && month && deliveryProduct) hooks.push(`${deliveryProduct} ${month} 출시 일정`);
+  }
 
   if (/정부|국책|투자|클러스터|산단|호남/.test(title) && /관련주|부각|묶|투자/.test(title)) {
     if (/호남/.test(title)) hooks.push("호남 투자 발표에 관련주로 언급");
     if (amount) hooks.push(`${amount} 투자 발표에 관련주로 언급`);
   }
-  if (/공급계약|계약|수주|contract|deal|order|supply/.test(lower)) {
+  if (/partnership|collaboration|deal/.test(lower) && counterparty) {
+    hooks.push(`${withAndParticle(counterparty)} 제휴 발표`);
+  }
+  if (/공급계약|계약|수주|contract|order|supply/.test(lower)) {
+    const securedCounterparty = phraseAfterVerb(title, "secures?|wins?|lands?|receives?|signs?");
+    const backlog = pickBacklog(title);
+    if (backlog) hooks.push(`${backlog} 확보`);
+    if (securedCounterparty && /contract|order|supply/i.test(title)) hooks.push(`${securedCounterparty} 공급계약 체결`);
     if (amount && product) hooks.push(`${amount} ${product} 공급계약 체결`);
     if (amount) hooks.push(`${amount} 공급계약 체결`);
     if (counterparty) hooks.push(`${counterparty} 공급계약 체결`);
@@ -138,18 +248,27 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
     if (amount) hooks.push(`${amount} 매각 이슈`);
   }
   if (/제품|신제품|AI 인프라|data center|solution|launch|unveil|introduce|product/.test(lower)) {
-    if (counterparty) hooks.push(`${counterparty}와 제품 협력`);
+    const launched = phraseAfterVerb(title, "launches?|introduces?|unveils?|extends?|debuts?|announces?");
+    if (launched && /extend/i.test(title)) hooks.push(`${launched} 제품 확장`);
+    if (launched && !/extend/i.test(title)) hooks.push(`${launched} 제품 공개`);
+    if (counterparty) hooks.push(`${withAndParticle(counterparty)} 제품 협력`);
     if (product) hooks.push(`${product} 공개`);
   }
   const compactPhrase = compactTitlePhrase(title);
   if (compactPhrase) hooks.push(compactPhrase);
   if (/실적|가이던스|매출|revenue|earnings|results|guidance|forecast/.test(lower)) {
     if (amount) hooks.push(`${amount} 실적 발표`);
-    if (/1Q|1분기/i.test(title)) hooks.push("1분기 실적 발표");
-    if (/2Q|2분기/i.test(title)) hooks.push("2분기 실적 발표");
+    if (quarter) hooks.push(`${quarter} 실적 발표`);
   }
   if (/파트너십|제휴|협력|고객|partnership|customer/.test(lower)) {
-    if (counterparty) hooks.push(`${counterparty}와 제휴 발표`);
+    if (counterparty) hooks.push(`${withAndParticle(counterparty)} 제휴 발표`);
+    const partnershipCounterparty =
+      phraseAfterVerb(title, "partners?\\s+with") ??
+      (counterparty ? undefined : phraseBeforeKeyword(title, "partnership")) ??
+      phraseAfterVerb(title, "lands?|announces?");
+    if (partnershipCounterparty && partnershipCounterparty !== counterparty) {
+      hooks.push(`${withAndParticle(partnershipCounterparty)} 파트너십 체결`);
+    }
     if (product) hooks.push(`${product} 협력 발표`);
   }
   if (/SEC|8-K|10-Q|10-K|filing|공시/i.test(title) && filing) {
@@ -251,12 +370,17 @@ function systemPrompt(): string {
   const banned = ["매" + "수/매" + "도", "목표" + "가", "예측", "과장", "매체명", "기사 제목 복붙"];
   return [
     "너는 주식 발견 카드의 뉴스 제목을 종목 관점 한 줄로 압축한다.",
+    "입력이 영문 미국 종목 뉴스/공시여도 출력은 반드시 한국어다.",
     "제목에 있는 사실만 사용한다.",
     "무엇을·누구와·얼마·언제 중 확인 가능한 구체값을 최소 1개 포함한다.",
     "계약/수주/실적/공시/뉴스/소식/재료 같은 카테고리 명사만으로 끝내지 않는다.",
     "상대방·금액·제품·수치 중 하나가 없으면 빈 hook을 반환한다.",
+    "영문 기사 제목을 그대로 번역하지 말고 종목 보유자 관점으로 압축한다.",
     "좋은 예: 원문 '티이엠씨씨엔에스, 180억원 반도체 장비 공급계약 체결' -> '180억원 반도체 장비 공급계약 체결'.",
-    "나쁜 예: '계약 재료가 새로 확인됐어요', '직접 재료가 붙었어요', '소식에 반응'.",
+    "좋은 예: 원문 'D-Wave Quantum Announces New Partnership With Aerospace Customer' -> 'Aerospace 고객과 제휴 발표'.",
+    "좋은 예: 원문 'SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance' -> '1분기 매출 성장·가이던스 상향'.",
+    "나쁜 예: 'NIO Stock Eyes June Delivery', '팔란티어 제휴 발표', '아이온큐 공개'.",
+    "나쁜 예: 카테고리만 말하는 추상 문장, 원문 사건 없이 반응만 말하는 문장.",
     `${banned.join(", ")} 금지.`,
     "결과는 한국어 44자 이하 JSON {\"hook\":\"...\"}.",
     "연결을 못 만들면 {\"hook\":\"\"}.",
