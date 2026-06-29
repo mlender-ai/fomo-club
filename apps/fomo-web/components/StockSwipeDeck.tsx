@@ -20,7 +20,7 @@ import { isThemeBundleCard, type DiscoveryDeckCard, type DeckThemeBundle } from 
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
-import { stockLogoApiSrc } from "@/lib/stockLogo";
+import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 
 /**
@@ -90,9 +90,10 @@ function LogoBadge({
 }) {
   const [failed, setFailed] = useState(false);
   const ch = name.trim().slice(0, 1) || "·";
+  const usSymbol = symbol && !isKrStockCode(symbol.trim()) ? symbol : undefined;
   const src =
-    stockLogoApiSrc({ naverCode, name }) ??
-    (symbol ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(symbol)}` : undefined);
+    stockLogoApiSrcForStock({ naverCode, symbol, name }) ??
+    (usSymbol ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(usSymbol)}` : undefined);
 
   useEffect(() => {
     setFailed(false);

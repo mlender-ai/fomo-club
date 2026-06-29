@@ -3,6 +3,7 @@ import {
   isKrStockCode,
   krStockLogoUrl,
   stockLogoApiSrc,
+  stockLogoApiSrcForStock,
   stockLogoFallbackSvg,
 } from "../lib/stockLogo";
 
@@ -19,6 +20,13 @@ describe("stockLogo", () => {
       "/api/stock-logo?code=005930&name=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90",
     );
     expect(stockLogoApiSrc({ naverCode: "AAPL", name: "애플" })).toBeUndefined();
+  });
+
+  it("uses a six-digit symbol as the KR logo code when naverCode is missing", () => {
+    expect(stockLogoApiSrcForStock({ symbol: "058630", name: "엠게임" })).toBe(
+      "/api/stock-logo?code=058630&name=%EC%97%A0%EA%B2%8C%EC%9E%84",
+    );
+    expect(stockLogoApiSrcForStock({ symbol: "LCID", name: "루시드" })).toBeUndefined();
   });
 
   it("keeps the upstream URL fixed to Naver's stock-logo host", () => {

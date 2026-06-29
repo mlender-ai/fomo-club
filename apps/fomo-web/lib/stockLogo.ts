@@ -15,6 +15,11 @@ export function isKrStockCode(value: string | undefined | null): value is string
   return typeof value === "string" && KR_STOCK_CODE_RE.test(value);
 }
 
+export function normalizeKrStockCode(value: string | undefined | null): string | undefined {
+  const code = value?.trim();
+  return isKrStockCode(code) ? code : undefined;
+}
+
 export function krStockLogoUrl(code: string): string {
   return `https://ssl.pstatic.net/imgstock/fn/real/logo/stock/Stock${code}.svg`;
 }
@@ -23,12 +28,21 @@ export function stockLogoApiSrc(input: {
   naverCode?: string | undefined;
   name?: string | undefined;
 }): string | undefined {
-  const code = input.naverCode?.trim();
-  if (!isKrStockCode(code)) return undefined;
+  const code = normalizeKrStockCode(input.naverCode);
+  if (!code) return undefined;
   const params = new URLSearchParams({ code });
   const name = input.name?.trim();
   if (name) params.set("name", name.slice(0, 24));
   return `/api/stock-logo?${params.toString()}`;
+}
+
+export function stockLogoApiSrcForStock(input: {
+  naverCode?: string | undefined;
+  symbol?: string | undefined;
+  name?: string | undefined;
+}): string | undefined {
+  const code = normalizeKrStockCode(input.naverCode) ?? normalizeKrStockCode(input.symbol);
+  return stockLogoApiSrc({ naverCode: code, name: input.name });
 }
 
 export function stockLogoInitial(name: string | undefined | null): string {

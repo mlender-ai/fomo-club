@@ -10,7 +10,7 @@ import {
   type DiscoveryUpdatedDetail,
 } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { MIN_DISCOVERY_STOCKS, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
+import { MIN_DISCOVERY_STOCKS, normalizeDiscoveryDeckCards, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
 
 interface TodayDiscoveryDeckProps {
@@ -53,7 +53,8 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
   useEffect(() => {
     let alive = true;
     const applyDiscovery = (discovery: DiscoveryResponse) => {
-      const cards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
+      const rawCards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
+      const cards = normalizeDiscoveryDeckCards(rawCards);
       if (cards.length === 0) {
         setState({ kind: "error" });
         return;

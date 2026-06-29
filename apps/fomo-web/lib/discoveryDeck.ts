@@ -14,6 +14,7 @@ import {
 } from "@fomo/core";
 import { getWatchlist } from "./watchlist";
 import { recentSeenStocks, stockInteractionSummary, stockInterestScore } from "./stockInterest";
+import { normalizeKrStockCode } from "./stockLogo";
 
 export const MAX_DISCOVERY_STOCKS = 60;
 export const MIN_DISCOVERY_STOCKS = 30;
@@ -83,6 +84,29 @@ export type DiscoveryDeckCard = DeckStock | DeckThemeBundle;
 
 export function isThemeBundleCard(card: DiscoveryDeckCard): card is DeckThemeBundle {
   return card.kind === "theme_bundle";
+}
+
+function normalizeDeckStockIdentifiers(stock: DeckStock): DeckStock {
+  if (stock.country !== "KR") return stock;
+  const naverCode = normalizeKrStockCode(stock.naverCode) ?? normalizeKrStockCode(stock.symbol);
+  return naverCode ? { ...stock, naverCode } : stock;
+}
+
+function normalizeThemeBundleIdentifiers(bundle: DeckThemeBundle): DeckThemeBundle {
+  return {
+    ...bundle,
+    items: bundle.items.map((item) => {
+      if (item.country !== "KR") return item;
+      const naverCode = normalizeKrStockCode(item.naverCode) ?? normalizeKrStockCode(item.symbol);
+      return naverCode ? { ...item, naverCode } : item;
+    }),
+  };
+}
+
+export function normalizeDiscoveryDeckCards(cards: readonly DiscoveryDeckCard[]): DiscoveryDeckCard[] {
+  return cards.map((card) =>
+    isThemeBundleCard(card) ? normalizeThemeBundleIdentifiers(card) : normalizeDeckStockIdentifiers(card)
+  );
 }
 
 export interface AxisSnapshotLike {

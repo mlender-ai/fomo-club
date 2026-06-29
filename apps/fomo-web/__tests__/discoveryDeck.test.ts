@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AxisSignal, HookAxis, KeywordCard, MultiAxisHookSelection, SectorStock, StockSector } from "@fomo/core";
-import { applyAxisSnapshotToStocks, buildTodayDiscoveryStocks, MAX_DISCOVERY_STOCKS } from "../lib/discoveryDeck";
+import { applyAxisSnapshotToStocks, buildTodayDiscoveryStocks, MAX_DISCOVERY_STOCKS, normalizeDiscoveryDeckCards } from "../lib/discoveryDeck";
 
 const storage = new Map<string, string>();
 
@@ -35,6 +35,22 @@ function pools(count: number) {
 }
 
 describe("buildTodayDiscoveryStocks", () => {
+  it("restores KR naverCode from a six-digit discovery symbol", () => {
+    const result = normalizeDiscoveryDeckCards([
+      {
+        kind: "stock",
+        canonical: "엠게임",
+        market: "KOSDAQ",
+        country: "KR",
+        sector: "게임",
+        symbol: "058630",
+        marquee: false,
+      },
+    ]);
+
+    expect(result[0]).toMatchObject({ canonical: "엠게임", naverCode: "058630" });
+  });
+
   it("dedupes canonical stocks and caps the discovery deck", () => {
     const cards = [
       {
