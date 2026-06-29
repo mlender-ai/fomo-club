@@ -41,6 +41,10 @@ interface HeadlineProvenanceReport {
     path: Record<HeadlinePath, number>;
     method: Record<HeadlineMethod, number>;
     eventKind: Record<ProvenanceEventKind, number>;
+    hasEvent: {
+      true: number;
+      false: number;
+    };
   };
   cards: HeadlineProvenanceRow[];
 }
@@ -49,6 +53,8 @@ const FALLBACK_PATTERN =
   /아직\s*공개된\s*계기\s*없음|뚜렷한\s*이유|아직\s*안\s*보여|확인되지\s*않았|재료\s*확인\s*안|원문\s*근거/;
 const ABSTRACT_TEMPLATE_PATTERN =
   /^(?:뉴스|공시|계약|수주|실적|제품|파트너십|공급계약|해외\s*수주)에\s+(?:직접\s*)?재료가\s*붙었어요$|(?:외국인|기관)?\s*수급이\s*먼저\s*들어온\s*종목이에요|직접\s*재료가\s*붙었어요|뉴스\s*재료|공시\s*먼저|계약\s*재료|수주\s*재료/;
+const ADDITIONAL_ABSTRACT_TEMPLATE_PATTERN =
+  /수급도\s*붙었어요|거래도\s*붙었어요|동종\s*(?:종목\s*비교도|흐름도)\s*붙었어요|(?:뉴스|공시|계약|수주|실적|제품|파트너십|공급계약|해외\s*수주)(?:에|\s*재료(?:가|를)?)\s*(?:직접\s*)?(?:새로\s*)?(?:재료가\s*)?(?:붙었어요|확인됐어요|나왔어요|반응했어요)|공시\s*원문이\s*새로\s*확인됐|(?:자금조달|계약|수주|실적|공시|뉴스|소식|파트너십|제품)\s*이슈가\s*확인됐|(?:계약|수주|실적|공시|뉴스|소식|재료|파트너십|제품)\s*(?:재료)?\s*(?:가|이)?\s*(?:새로\s*)?(?:확인됐|나왔|반응|붙었)|소식에\s*반응|다시\s*확인됐|새\s*움직임이\s*붙었|먼저\s*반응이\s*붙었/;
 const DISCLOSURE_PATTERN = /공시|DART|SEC|8-K|10-Q|filing/i;
 const NEWS_PATTERN = /뉴스|외신|리서치|기사|소식|Reuters|Bloomberg|연합뉴스|뉴시스|매일경제|한국경제|뉴스1/i;
 const VOLUME_PATTERN = /거래량|거래가|평소\s*\d+(?:\.\d+)?배/;
@@ -95,7 +101,7 @@ function classifyEventKind(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
 }
 
 function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind: ProvenanceEventKind): HeadlinePath {
-  if (stock.headlineProvenance?.provenance === "suppressed" || !headline || FALLBACK_PATTERN.test(headline) || eventKind === "none") {
+  if (stock.headlineProvenance?.provenance === "suppressed" || !headline || FALLBACK_PATTERN.test(headline)) {
     return "fallback_no_event";
   }
   const title = sourceTitleFrom(stock);
@@ -110,7 +116,8 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
       return "raw_title";
     }
   }
-  if (ABSTRACT_TEMPLATE_PATTERN.test(headline)) return "abstract_template";
+  if (ABSTRACT_TEMPLATE_PATTERN.test(headline) || ADDITIONAL_ABSTRACT_TEMPLATE_PATTERN.test(headline)) return "abstract_template";
+  if (eventKind === "none") return "fallback_no_event";
   return "why_synthesis";
 }
 
@@ -166,10 +173,19 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     volume_spike: 0,
     none: 0,
   };
+  const hasEventCounts = {
+    true: 0,
+    false: 0,
+  };
   rows.forEach((row) => {
     increment(pathCounts, row.path);
     increment(methodCounts, row.method);
     increment(eventCounts, row.eventKind);
+    if (row.hasEvent) {
+      hasEventCounts.true += 1;
+    } else {
+      hasEventCounts.false += 1;
+    }
   });
 
   return {
@@ -182,6 +198,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       path: pathCounts,
       method: methodCounts,
       eventKind: eventCounts,
+      hasEvent: hasEventCounts,
     },
     cards: rows,
   };
@@ -206,6 +223,12 @@ function printReport(report: HeadlineProvenanceReport): void {
   console.log("- eventKind");
   (Object.keys(report.distributions.eventKind) as ProvenanceEventKind[]).forEach((key) => {
     const value = report.distributions.eventKind[key];
+    const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
+    console.log(`  - ${key}: ${value} (${pct}%)`);
+  });
+  console.log("- hasEvent");
+  (Object.keys(report.distributions.hasEvent) as Array<"true" | "false">).forEach((key) => {
+    const value = report.distributions.hasEvent[key];
     const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
     console.log(`  - ${key}: ${value} (${pct}%)`);
   });

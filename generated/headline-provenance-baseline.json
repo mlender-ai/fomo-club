@@ -1,6 +1,6 @@
 {
   "KR": {
-    "generatedAt": "2026-06-29T02:49:03.792Z",
+    "generatedAt": "2026-06-29T05:39:17.922Z",
     "asOf": "2026-06-29",
     "country": "KR",
     "limit": 50,
@@ -8,13 +8,13 @@
     "distributions": {
       "path": {
         "raw_title": 0,
-        "abstract_template": 47,
-        "why_synthesis": 3,
+        "abstract_template": 50,
+        "why_synthesis": 0,
         "fallback_no_event": 0
       },
       "method": {
-        "ai": 6,
-        "rule": 44,
+        "ai": 10,
+        "rule": 40,
         "fallback": 0,
         "none": 0
       },
@@ -23,6 +23,10 @@
         "disclosure": 0,
         "volume_spike": 0,
         "none": 0
+      },
+      "hasEvent": {
+        "true": 50,
+        "false": 0
       }
     },
     "cards": [
@@ -40,54 +44,6 @@
       },
       {
         "index": 2,
-        "ticker": "현대차증권",
-        "country": "KR",
-        "headline": "직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "AI 투자 부담 커진 빅테크…반도체 변동성 더 커질 것 · 조선비즈"
-      },
-      {
-        "index": 3,
-        "ticker": "한섬",
-        "country": "KR",
-        "headline": "한섬에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "한섬, 오프라인 채널 중심 회복세...백화점 호황에 덩달아 수혜 · 블로터"
-      },
-      {
-        "index": 4,
-        "ticker": "광주신세계",
-        "country": "KR",
-        "headline": "직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "‘삼전닉스 호남 반도체 클러스터’ 소식에…광주신세계, 1 · 조선비즈"
-      },
-      {
-        "index": 5,
-        "ticker": "DB증권",
-        "country": "KR",
-        "headline": "DB증권 삼성바이오에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "DB증권 삼성바이오, 2분기 영업이익 5868억 달성 기대 · 동행미디어 시대"
-      },
-      {
-        "index": 6,
         "ticker": "금호건설",
         "country": "KR",
         "headline": "직접 재료가 붙었어요",
@@ -99,7 +55,7 @@
         "sourceLabel": "호남이면 일단 ‘상한가’ 친다?…반도체 ‘메가프로젝트’ 투자 앞두 · 서울경제"
       },
       {
-        "index": 7,
+        "index": 3,
         "ticker": "광동제약",
         "country": "KR",
         "headline": "제품에 직접 재료가 붙었어요",
@@ -111,7 +67,7 @@
         "sourceLabel": "광동제약, ‘광동 V라인 슬림핏’ 출시 · 스포츠동아"
       },
       {
-        "index": 8,
+        "index": 4,
         "ticker": "남양유업",
         "country": "KR",
         "headline": "남양유업에 직접 재료가 붙었어요",
@@ -123,7 +79,7 @@
         "sourceLabel": "남양유업, 급식·수출로 몸집 키운다…흑자 후 전략 전환 · 동행미디어 시대"
       },
       {
-        "index": 9,
+        "index": 5,
         "ticker": "한양증권",
         "country": "KR",
         "headline": "한양증권에 직접 재료가 붙었어요",
@@ -135,11 +91,11 @@
         "sourceLabel": "한양증권, 500억 규모 유상증자 결정…중형 증권사로 도약 · 머니투데이"
       },
       {
-        "index": 10,
+        "index": 6,
         "ticker": "DS단석",
         "country": "KR",
         "headline": "신제품 소식에 반응",
-        "path": "why_synthesis",
+        "path": "abstract_template",
         "method": "ai",
         "hasEvent": true,
         "eventKind": "news_mention",
@@ -147,11 +103,23 @@
         "sourceLabel": "DS단석, VMR 첫 상용제품 글로벌 공급…도시광산 사업 본격화 · 조선비즈"
       },
       {
-        "index": 11,
+        "index": 7,
+        "ticker": "SJG세종",
+        "country": "KR",
+        "headline": "SJG세종에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "SJG세종, 모비어스 RCPS 부담 ...'중복상장' 논란 잠재울까 · 블로터"
+      },
+      {
+        "index": 8,
         "ticker": "자이에스앤디",
         "country": "KR",
         "headline": "자금조달 이슈가 확인됐어요",
-        "path": "why_synthesis",
+        "path": "abstract_template",
         "method": "ai",
         "hasEvent": true,
         "eventKind": "news_mention",
@@ -159,43 +127,7 @@
         "sourceLabel": "자이에스앤디 1400억 부동산 유동화…신사업 투자 유동성 대응 · 블로터"
       },
       {
-        "index": 12,
-        "ticker": "골프존",
-        "country": "KR",
-        "headline": "골프존홀딩스에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "골프존홀딩스, 상장 폐지 추진…'개미' 지분 사들인다 · SBS Biz"
-      },
-      {
-        "index": 13,
-        "ticker": "골프존홀딩스",
-        "country": "KR",
-        "headline": "골프존홀딩스에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "골프존홀딩스, 상장 폐지 추진…'개미' 지분 사들인다 · SBS Biz"
-      },
-      {
-        "index": 14,
-        "ticker": "큐리오시스",
-        "country": "KR",
-        "headline": "큐리오시스에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "큐리오시스, 100% 무상증자 결정…주주가치 제고 · 뉴시스"
-      },
-      {
-        "index": 15,
+        "index": 9,
         "ticker": "엠로",
         "country": "KR",
         "headline": "엠로에 직접 재료가 붙었어요",
@@ -207,7 +139,7 @@
         "sourceLabel": "엠로, 코오롱인더스트리 AI 기반 구매 지원 · 뉴스1"
       },
       {
-        "index": 16,
+        "index": 10,
         "ticker": "셀바스AI",
         "country": "KR",
         "headline": "셀바스AI에 직접 재료가 붙었어요",
@@ -219,7 +151,7 @@
         "sourceLabel": "셀바스AI, 의료진 전용 플랫폼 '인터엠디'와 협력…메디보이스 채널 · 머니투데이"
       },
       {
-        "index": 17,
+        "index": 11,
         "ticker": "나이벡",
         "country": "KR",
         "headline": "나이벡에 직접 재료가 붙었어요",
@@ -231,7 +163,19 @@
         "sourceLabel": "나이벡, 바이오 USA서 NP-201 글로벌 임상 전략 및 후속 파이프라인 성 · 한국경제"
       },
       {
-        "index": 18,
+        "index": 12,
+        "ticker": "쓰리빌리언",
+        "country": "KR",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "AI 신약개발 바이오텍 도약 쓰리빌리언, 유전체 데이터로 승부수 · 파이낸셜뉴스"
+      },
+      {
+        "index": 13,
         "ticker": "스맥",
         "country": "KR",
         "headline": "스맥에 직접 재료가 붙었어요",
@@ -243,19 +187,31 @@
         "sourceLabel": "스맥, 中 파시니와 손잡고 휴머노이드 자율가공 개발…피지컬 AI 제조 · 이데일리"
       },
       {
-        "index": 19,
-        "ticker": "나무가",
+        "index": 14,
+        "ticker": "아이엘",
         "country": "KR",
-        "headline": "나무가에 직접 재료가 붙었어요",
+        "headline": "제품에 직접 재료가 붙었어요",
         "path": "abstract_template",
         "method": "rule",
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "나무가, 프랑스 드론 기업 패럿에 카메라 단독 공급 · 지디넷코리아"
+        "sourceLabel": "아이엘로보틱스, 휴머노이드 로봇 렌탈 서비스 출시 · 이데일리"
       },
       {
-        "index": 20,
+        "index": 15,
+        "ticker": "자람테크놀로지",
+        "country": "KR",
+        "headline": "수주 재료가 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "자람테크놀로지, XGS-PON ASIC 양산 PO 수주 · 뉴시스"
+      },
+      {
+        "index": 16,
         "ticker": "나노엔텍",
         "country": "KR",
         "headline": "나노엔텍에 직접 재료가 붙었어요",
@@ -267,7 +223,7 @@
         "sourceLabel": "나노엔텍, 길리어드 자회사 카이트파마에 자동화 세포분석 로봇 공급 · 이데일리"
       },
       {
-        "index": 21,
+        "index": 17,
         "ticker": "녹십자웰빙",
         "country": "KR",
         "headline": "GC녹십자웰빙에 직접 재료가 붙었어요",
@@ -279,7 +235,19 @@
         "sourceLabel": "GC녹십자웰빙, '차세대 지방분해주사' 국내 독점 상업화 권리 확보 · 전자신문"
       },
       {
-        "index": 22,
+        "index": 18,
+        "ticker": "AP위성",
+        "country": "KR",
+        "headline": "AP위성에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "AP위성, 레이더 위성 개발 본격화…첫 CB 발행 · 블로터"
+      },
+      {
+        "index": 19,
         "ticker": "DMS",
         "country": "KR",
         "headline": "계약 재료가 새로 확인됐어요",
@@ -291,7 +259,7 @@
         "sourceLabel": "DMS, 677억 규모 디스플레이패널 장비 공급 계약 · 뉴시스"
       },
       {
-        "index": 23,
+        "index": 20,
         "ticker": "박셀바이오",
         "country": "KR",
         "headline": "직접 재료가 붙었어요",
@@ -303,31 +271,7 @@
         "sourceLabel": "첨생법 NK세포 치료 ‘저위험’ 조정…박셀바이오 최대 수혜 기대 · 이데일리"
       },
       {
-        "index": 24,
-        "ticker": "KCC건설",
-        "country": "KR",
-        "headline": "제품에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "KCC건설, 주거 플랫폼 '스윗온' 출시…생활서비스 한 곳에 · 파이낸셜뉴스"
-      },
-      {
-        "index": 25,
-        "ticker": "웨이비스",
-        "country": "KR",
-        "headline": "웨이비스에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "웨이비스, 26억 규모 'AX 원스톱 바우처 지원사업' 주관 선정 · 뉴시스"
-      },
-      {
-        "index": 26,
+        "index": 21,
         "ticker": "지니언스",
         "country": "KR",
         "headline": "실전에서 검증된 K에 직접 재료가 붙었어요",
@@ -339,7 +283,7 @@
         "sourceLabel": "실전에서 검증된 K-시큐리티, 방산과 결합해 수출 경쟁력 높여야 · 디지털데일리"
       },
       {
-        "index": 27,
+        "index": 22,
         "ticker": "노머스",
         "country": "KR",
         "headline": "노머스에 직접 재료가 붙었어요",
@@ -351,19 +295,7 @@
         "sourceLabel": "노머스, 8억원 규모 자사주 소각 결정 · 이데일리"
       },
       {
-        "index": 28,
-        "ticker": "한성크린텍",
-        "country": "KR",
-        "headline": "한성크린텍에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "한성크린텍, 호남 반도체 공장 추진 등 AI 반도체 투자 확대 수혜 기대 · 아시아경제"
-      },
-      {
-        "index": 29,
+        "index": 23,
         "ticker": "남화토건",
         "country": "KR",
         "headline": "직접 재료가 붙었어요",
@@ -375,7 +307,31 @@
         "sourceLabel": "호남이면 일단 ‘상한가’ 친다?…반도체 ‘메가프로젝트’ 투자 앞두 · 서울경제"
       },
       {
-        "index": 30,
+        "index": 24,
+        "ticker": "그래디언트",
+        "country": "KR",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "'내 배당금이 5배로'…비과세 특별배당 쏜 이 회사 · 한국경제"
+      },
+      {
+        "index": 25,
+        "ticker": "한성크린텍",
+        "country": "KR",
+        "headline": "한성크린텍에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "한성크린텍, 호남 반도체 공장 추진 등 AI 반도체 투자 확대 수혜 기대 · 아시아경제"
+      },
+      {
+        "index": 26,
         "ticker": "티앤알바이오팹",
         "country": "KR",
         "headline": "티앤알바이오팹에 직접 재료가 붙었어요",
@@ -387,19 +343,19 @@
         "sourceLabel": "티앤알바이오팹, 심장질환 치료용 고순도 심근세포 정제 기술 특허 확 · 머니투데이"
       },
       {
-        "index": 31,
-        "ticker": "그래디언트",
+        "index": 27,
+        "ticker": "액트로",
         "country": "KR",
-        "headline": "그래디언트에 직접 재료가 붙었어요",
+        "headline": "액트로에 직접 재료가 붙었어요",
         "path": "abstract_template",
         "method": "rule",
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "그래디언트, 특별배당·자사주 소각…기업가치 제고 방안 발표 · 뉴스1"
+        "sourceLabel": "액트로, 북미 완성차향 자율주행 부품 '첫 공급' · 이데일리"
       },
       {
-        "index": 32,
+        "index": 28,
         "ticker": "한컴위드",
         "country": "KR",
         "headline": "실적에 직접 재료가 붙었어요",
@@ -411,7 +367,7 @@
         "sourceLabel": "한컴위드, 한컴 지분 30% 눈앞…연결 편입 땐 매출 1조 그룹으로 · 머니투데이"
       },
       {
-        "index": 33,
+        "index": 29,
         "ticker": "아우토크립트",
         "country": "KR",
         "headline": "실적에 직접 재료가 붙었어요",
@@ -423,19 +379,7 @@
         "sourceLabel": "아우토크립트, 글로벌 부품사 일렉트로비트와 맞손…사상 최대 실적 · 머니투데이"
       },
       {
-        "index": 34,
-        "ticker": "서한",
-        "country": "KR",
-        "headline": "직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "'호남권 반도체 클러스터' 추진에 이인선·이상휘 국회의원, 청와대에 · 대구MBC"
-      },
-      {
-        "index": 35,
+        "index": 30,
         "ticker": "포바이포",
         "country": "KR",
         "headline": "제품에 직접 재료가 붙었어요",
@@ -447,7 +391,19 @@
         "sourceLabel": "포바이포, AI 픽셀 데스크톱 버전 출시 · 아시아경제"
       },
       {
-        "index": 36,
+        "index": 31,
+        "ticker": "서한",
+        "country": "KR",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "'호남권 반도체 클러스터' 추진에 이인선·이상휘 국회의원, 청와대에 · 대구MBC"
+      },
+      {
+        "index": 32,
         "ticker": "엠오티",
         "country": "KR",
         "headline": "계약 재료가 새로 확인됐어요",
@@ -456,10 +412,22 @@
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "엠오티, 30억 규모 자사주 취득 신탁계약 체결 · 헤럴드경제"
+        "sourceLabel": "엠오티, 30억 규모 자사주 취득 신탁계약 · 뉴시스"
       },
       {
-        "index": 37,
+        "index": 33,
+        "ticker": "특수건설",
+        "country": "KR",
+        "headline": "계약 재료가 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "특수건설, 384억원 규모 도로시설개량공사 계약 · 이데일리"
+      },
+      {
+        "index": 34,
         "ticker": "에이직랜드",
         "country": "KR",
         "headline": "계약 재료가 새로 확인됐어요",
@@ -468,22 +436,22 @@
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "에이직랜드, SK하이닉스 eSSD 개발 맡는다…319억 설계 계약 · 헤럴드경제"
+        "sourceLabel": "에이직랜드, SK하이닉스 차세대 eSSD 개발 참여…319억 계약 · 아이뉴스24"
       },
       {
-        "index": 38,
-        "ticker": "LF",
+        "index": 35,
+        "ticker": "아이에스동서",
         "country": "KR",
-        "headline": "제품에 직접 재료가 붙었어요",
+        "headline": "직접 재료가 붙었어요",
         "path": "abstract_template",
         "method": "rule",
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "31만개 팔린 LF 아떼 '립밤', 카카오톡서 신규 색상 단독출시 · 머니투데이"
+        "sourceLabel": "아이에스동서 ‘펜타힐즈W 1단지’, 오늘 특별공급 청약 접수 · 한국경제TV"
       },
       {
-        "index": 39,
+        "index": 36,
         "ticker": "SK케미칼",
         "country": "KR",
         "headline": "SK케미칼에 직접 재료가 붙었어요",
@@ -495,19 +463,7 @@
         "sourceLabel": "SK케미칼, J2H와 MASH 치료제 공동개발 의향서 체결 · 서울경제"
       },
       {
-        "index": 40,
-        "ticker": "아이에스동서",
-        "country": "KR",
-        "headline": "펜타힐즈W 1단지에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "펜타힐즈W 1단지, 29일 특별공급 시작…본격 청약 일정 돌입 · 이코노미스트"
-      },
-      {
-        "index": 41,
+        "index": 37,
         "ticker": "롯데손해보험",
         "country": "KR",
         "headline": "롯데손해보험에 직접 재료가 붙었어요",
@@ -516,14 +472,14 @@
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "롯데손해보험, 새 주인 찾기 재시동... 신한·한투 인수 검토 · 조세일보"
+        "sourceLabel": "롯데손해보험, 피인수설 보도에 장초반 상한가 · 연합뉴스"
       },
       {
-        "index": 42,
+        "index": 38,
         "ticker": "롯데웰푸드",
         "country": "KR",
         "headline": "신제품 소식에 반응",
-        "path": "why_synthesis",
+        "path": "abstract_template",
         "method": "ai",
         "hasEvent": true,
         "eventKind": "news_mention",
@@ -531,19 +487,7 @@
         "sourceLabel": "마가렛트와 복호두 만났다…롯데웰푸드, 디저트 협업 신제품 · 노컷뉴스"
       },
       {
-        "index": 43,
-        "ticker": "지엔씨에너지",
-        "country": "KR",
-        "headline": "LGU+에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "LGU+, 지엔씨에너지와 맞손...AIDC 전력 공급 안정성 높인다 · 서울경제"
-      },
-      {
-        "index": 44,
+        "index": 39,
         "ticker": "한일시멘트",
         "country": "KR",
         "headline": "한일시멘트에 직접 재료가 붙었어요",
@@ -555,7 +499,19 @@
         "sourceLabel": "한일시멘트, 노사·협력사 합동 '중대재해 예방 안전 세미나' 개최 · 머니투데이"
       },
       {
-        "index": 45,
+        "index": 40,
+        "ticker": "지엔씨에너지",
+        "country": "KR",
+        "headline": "LGU+에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "LGU+, 지엔씨에너지와 맞손...AIDC 전력 공급 안정성 높인다 · 서울경제"
+      },
+      {
+        "index": 41,
         "ticker": "교보증권",
         "country": "KR",
         "headline": "실적에 직접 재료가 붙었어요",
@@ -567,8 +523,8 @@
         "sourceLabel": "교보증권 두산 AI 인프라 투자 수혜 지속…실적 성장 기대 · 동행미디어 시대"
       },
       {
-        "index": 46,
-        "ticker": "IPARK현대산업개발",
+        "index": 42,
+        "ticker": "NHN",
         "country": "KR",
         "headline": "직접 재료가 붙었어요",
         "path": "abstract_template",
@@ -576,34 +532,58 @@
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "IPARK현대산업개발, KCC와 '아이파크' 색채 표준화 맞손 · 뉴시스"
+        "sourceLabel": "NHN 팩토리엑스 GPU 클러스터, 슈퍼컴퓨터 톱500 국내 최고 성적 · 데일리안"
+      },
+      {
+        "index": 43,
+        "ticker": "IPARK현대산업개발",
+        "country": "KR",
+        "headline": "수주 재료가 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "IPARK현대산업개발, 3777억 규모 온천5구역 재개발정비사업 수주 · 헤럴드경제"
+      },
+      {
+        "index": 44,
+        "ticker": "대웅제약",
+        "country": "KR",
+        "headline": "계약 재료가 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "대웅제약, '엔블로' 중동 8개국 수출...계약금 926억 · 한국경제TV"
+      },
+      {
+        "index": 45,
+        "ticker": "한글과컴퓨터",
+        "country": "KR",
+        "headline": "실적에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "한컴위드, 한컴 지분 30% 눈앞…연결 편입 땐 매출 1조 그룹으로 · 머니투데이"
+      },
+      {
+        "index": 46,
+        "ticker": "녹십자",
+        "country": "KR",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "백신명가 GC녹십자…콕 집은 '신약후보' 5종은 · 뉴시스"
       },
       {
         "index": 47,
-        "ticker": "삼성SDI",
-        "country": "KR",
-        "headline": "2Q26에 직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "2Q26, 7개 분기만의 영업흑자 전환 예상 · 미래에셋증권 리서치"
-      },
-      {
-        "index": 48,
-        "ticker": "디앤디파마텍",
-        "country": "KR",
-        "headline": "직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "디앤디파마텍 MASH 신약으로 K-바이오 이정표 세울 것 · 머니투데이"
-      },
-      {
-        "index": 49,
         "ticker": "올릭스",
         "country": "KR",
         "headline": "올릭스에 직접 재료가 붙었어요",
@@ -613,6 +593,30 @@
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
         "sourceLabel": "올릭스, 로레알 협력 확대 기대감에 25%↑ · 뉴시스"
+      },
+      {
+        "index": 48,
+        "ticker": "HD한국조선해양",
+        "country": "KR",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "외산 독점 깼다…HD한국조선해양, LNG 추진선 핵심 '고압펌프' 국산화 · 한경비즈니스"
+      },
+      {
+        "index": 49,
+        "ticker": "카카오",
+        "country": "KR",
+        "headline": "카카오에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "카카오, 오늘 파업...현대차 노조 순이익 30% 성과급으로 · YTN"
       },
       {
         "index": 50,
@@ -629,58 +633,50 @@
     ]
   },
   "US": {
-    "generatedAt": "2026-06-29T02:48:58.760Z",
-    "asOf": "2026-06-26",
+    "generatedAt": "2026-06-29T05:39:10.522Z",
+    "asOf": "2026-06-29",
     "country": "US",
     "limit": 50,
     "total": 47,
     "distributions": {
       "path": {
         "raw_title": 0,
-        "abstract_template": 7,
-        "why_synthesis": 3,
-        "fallback_no_event": 37
+        "abstract_template": 33,
+        "why_synthesis": 0,
+        "fallback_no_event": 14
       },
       "method": {
-        "ai": 5,
-        "rule": 5,
+        "ai": 14,
+        "rule": 19,
         "fallback": 0,
-        "none": 37
+        "none": 14
       },
       "eventKind": {
-        "news_mention": 8,
-        "disclosure": 2,
+        "news_mention": 23,
+        "disclosure": 10,
         "volume_spike": 0,
-        "none": 37
+        "none": 14
+      },
+      "hasEvent": {
+        "true": 33,
+        "false": 14
       }
     },
     "cards": [
       {
         "index": 1,
-        "ticker": "사운드하운드AI",
+        "ticker": "뉴스케일파워",
         "country": "US",
-        "headline": "직접 재료가 붙었어요",
+        "headline": "계약 재료가 새로 확인됐어요",
         "path": "abstract_template",
-        "method": "rule",
+        "method": "ai",
         "hasEvent": true,
-        "eventKind": "news_mention",
+        "eventKind": "disclosure",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "Roadzen Named Deep Learning Company of the Year in 2026 AI Breakthrough Awards · Yahoo Finance"
+        "sourceLabel": "NuScale Power (SMR) Secures Paragon Contract As SMR Rollout Gets More Real · Yahoo Finance"
       },
       {
         "index": 2,
-        "ticker": "빅베어AI",
-        "country": "US",
-        "headline": "직접 재료가 붙었어요",
-        "path": "abstract_template",
-        "method": "rule",
-        "hasEvent": true,
-        "eventKind": "news_mention",
-        "insightTag": "뉴스 재료",
-        "sourceLabel": "Is BigBear.ai Becoming a Pure-Play Government GenAI Stock? · Yahoo Finance"
-      },
-      {
-        "index": 3,
         "ticker": "니오",
         "country": "US",
         "headline": "계약 재료가 새로 확인됐어요",
@@ -692,11 +688,11 @@
         "sourceLabel": "NIO Stock Eyes June Delivery Test: Deutsche Bank Tracker Shows Nio Orders Beating Tesla In China · Yahoo Finance"
       },
       {
-        "index": 4,
+        "index": 3,
         "ticker": "업스타트",
         "country": "US",
         "headline": "공시 원문이 새로 확인됐어요",
-        "path": "why_synthesis",
+        "path": "abstract_template",
         "method": "ai",
         "hasEvent": true,
         "eventKind": "disclosure",
@@ -704,7 +700,7 @@
         "sourceLabel": "Renewed Funding And Securitization Might Change The Case For Investing In Upstart Holdings (UPST) · Yahoo Finance"
       },
       {
-        "index": 5,
+        "index": 4,
         "ticker": "어펌",
         "country": "US",
         "headline": "파트너십에 직접 재료가 붙었어요",
@@ -716,8 +712,8 @@
         "sourceLabel": "How Affirm’s Backcountry Partnership Expands Its Outdoor Footprint And Diversification Narrative At AFRM · Yahoo Finance"
       },
       {
-        "index": 6,
-        "ticker": "아스테라랩스",
+        "index": 5,
+        "ticker": "리비안",
         "country": "US",
         "headline": "직접 재료가 붙었어요",
         "path": "abstract_template",
@@ -725,14 +721,74 @@
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "Stifel Raises Texas Instruments (TXN) Target After Semiconductor Momentum Improves · Yahoo Finance"
+        "sourceLabel": "More Layoffs, Acquisitions, and SpaceX Becomes AI Company · Yahoo Finance"
+      },
+      {
+        "index": 6,
+        "ticker": "레딧",
+        "country": "US",
+        "headline": "공시 원문이 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "They Asked Millennials How They Are Preparing 'The Old Folks' In Their Lives For A 22% Cut To Social Security? 'We Must Help Them Prepare Now' · Yahoo Finance"
       },
       {
         "index": 7,
+        "ticker": "스노우플레이크",
+        "country": "US",
+        "headline": "파트너십에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Snowflake (SNOW) Lands Unlimitail Retail Media Data Hub Partnership · Yahoo Finance"
+      },
+      {
+        "index": 8,
+        "ticker": "데이터독",
+        "country": "US",
+        "headline": "NOW에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "NOW, WDAY, ADBE, CRM: Software Stocks On The Rebound As OpenAI Threat Weakens · Yahoo Finance"
+      },
+      {
+        "index": 9,
+        "ticker": "아이온큐",
+        "country": "US",
+        "headline": "신제품 소식에 반응",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "IonQ (IONQ) Launches Clavis XG Multiplex For Quantum Security On Metro Fiber · Yahoo Finance"
+      },
+      {
+        "index": 10,
+        "ticker": "세레브라스",
+        "country": "US",
+        "headline": "공시 원문이 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "CoreWeave (CRWV) Secures $99 Billion Backlog With Nvidia, Meta, Microsoft And OpenAI · Yahoo Finance"
+      },
+      {
+        "index": 11,
         "ticker": "오클로",
         "country": "US",
         "headline": "공시 원문이 새로 확인됐어요",
-        "path": "why_synthesis",
+        "path": "abstract_template",
         "method": "ai",
         "hasEvent": true,
         "eventKind": "disclosure",
@@ -740,8 +796,44 @@
         "sourceLabel": "Oklo Is Using AI to Design Nuclear Reactors Faster. Here's Why OKLO Stock Deserves a Second Look. · Yahoo Finance"
       },
       {
-        "index": 8,
-        "ticker": "GE버노바",
+        "index": 12,
+        "ticker": "로빈후드",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "More Layoffs, Acquisitions, and SpaceX Becomes AI Company · Yahoo Finance"
+      },
+      {
+        "index": 13,
+        "ticker": "코인베이스",
+        "country": "US",
+        "headline": "공시 원문이 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Bitcoin Has Had a Terrible 2026. What Can Make the Second Half of the Year Better? · Yahoo Finance"
+      },
+      {
+        "index": 14,
+        "ticker": "크라우드스트라이크",
+        "country": "US",
+        "headline": "공시 원문이 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "CrowdStrike (CRWD) Extends Falcon AIDR to Create Unified AI Security Control Plane · Yahoo Finance"
+      },
+      {
+        "index": 15,
+        "ticker": "웨스턴디지털",
         "country": "US",
         "headline": "계약 재료가 새로 확인됐어요",
         "path": "abstract_template",
@@ -749,10 +841,94 @@
         "hasEvent": true,
         "eventKind": "news_mention",
         "insightTag": "뉴스 재료",
-        "sourceLabel": "Microsoft Solves AI’s Biggest Bottleneck With Chevron Deal · Yahoo Finance"
+        "sourceLabel": "Western Digital (WDC) Stock Rallies As Micron’s $100 Billion AI Deals Lift Storage Demand · Yahoo Finance"
       },
       {
-        "index": 9,
+        "index": 16,
+        "ticker": "슈퍼마이크로",
+        "country": "US",
+        "headline": "제품에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Odine Partners with Supermicro (SMCI) to Accelerate AI Infrastructure Development in Türkiye · Yahoo Finance"
+      },
+      {
+        "index": 17,
+        "ticker": "비스트라",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "The Ultimate AI Power Supercycle Winner: NextEra Energy or Vistra Stock? · Yahoo Finance"
+      },
+      {
+        "index": 18,
+        "ticker": "마벨테크놀로지",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Is Broadcom (AVGO) One of the Best Trending AI Stocks to Watch in 2026? · Yahoo Finance"
+      },
+      {
+        "index": 19,
+        "ticker": "버티브",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Vertiv (VRT) Expands AI Cooling Reach With ThermoKey And Strategic Thermal Labs · Yahoo Finance"
+      },
+      {
+        "index": 20,
+        "ticker": "마이크론",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Why Retail Traders Couldn’t Take Their Eyes Off These Stocks Last Week: AAPL, MU, MSFT, INFQ, RKLB · Yahoo Finance"
+      },
+      {
+        "index": 21,
+        "ticker": "콘스텔레이션에너지",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "AI’s Energy Crunch Has Investors Searching for Next IPO Winners · Yahoo Finance"
+      },
+      {
+        "index": 22,
+        "ticker": "팔란티어",
+        "country": "US",
+        "headline": "파트너십에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Zeta Global (ZETA) Enters into a Strategic Partnership with Palantir Technologies · Yahoo Finance"
+      },
+      {
+        "index": 23,
         "ticker": "램리서치",
         "country": "US",
         "headline": "직접 재료가 붙었어요",
@@ -764,11 +940,23 @@
         "sourceLabel": "What Lam Research Stock Gave Up To Become An AI Giant · Yahoo Finance"
       },
       {
-        "index": 10,
+        "index": 24,
+        "ticker": "어플라이드머티어리얼즈",
+        "country": "US",
+        "headline": "신제품 소식에 반응",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Applied Materials (AMAT) Introduces Suite of New Chipmaking Systems · Yahoo Finance"
+      },
+      {
+        "index": 25,
         "ticker": "이튼",
         "country": "US",
         "headline": "신제품 소식에 반응",
-        "path": "why_synthesis",
+        "path": "abstract_template",
         "method": "ai",
         "hasEvent": true,
         "eventKind": "news_mention",
@@ -776,7 +964,103 @@
         "sourceLabel": "Data Center Delays Create Opportunity in These 3 Stocks · Yahoo Finance"
       },
       {
-        "index": 11,
+        "index": 26,
+        "ticker": "ARM",
+        "country": "US",
+        "headline": "공시 원문이 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Arm Holdings (ARM) Is A Part Of A Second “1776,” Says Newsletter · Yahoo Finance"
+      },
+      {
+        "index": 27,
+        "ticker": "테슬라",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Tesla Reports Q2 Deliveries in a Matter of Days. Here's the Number That Matters. · Yahoo Finance"
+      },
+      {
+        "index": 28,
+        "ticker": "마이크로소프트",
+        "country": "US",
+        "headline": "공시 원문이 새로 확인됐어요",
+        "path": "abstract_template",
+        "method": "ai",
+        "hasEvent": true,
+        "eventKind": "disclosure",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "CrowdStrike (CRWD) Extends Falcon AIDR to Create Unified AI Security Control Plane · Yahoo Finance"
+      },
+      {
+        "index": 29,
+        "ticker": "애플",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "AAPL Stock Rises Overnight: After Price Hikes, Apple Reportedly Seeks US Approval To Buy Chinese Memory Chips · Yahoo Finance"
+      },
+      {
+        "index": 30,
+        "ticker": "AMD",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Taiwan Semiconductor Manufacturing Company (TSM)’s Monthly Sales Rise · Yahoo Finance"
+      },
+      {
+        "index": 31,
+        "ticker": "TSMC",
+        "country": "US",
+        "headline": "China에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "China, India See Top Firms Lose Market Cap Share in AI Lag · Yahoo Finance"
+      },
+      {
+        "index": 32,
+        "ticker": "브로드컴",
+        "country": "US",
+        "headline": "직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Broadcom Inc. (AVGO) is Avoiding Acquisitions in Favor of AI Organic Development · Yahoo Finance"
+      },
+      {
+        "index": 33,
+        "ticker": "엔비디아",
+        "country": "US",
+        "headline": "Prediction에 직접 재료가 붙었어요",
+        "path": "abstract_template",
+        "method": "rule",
+        "hasEvent": true,
+        "eventKind": "news_mention",
+        "insightTag": "뉴스 재료",
+        "sourceLabel": "Prediction: This Artificial Intelligence (AI) Semiconductor Stock Will Join the $1 Trillion Club by 2028 · Yahoo Finance"
+      },
+      {
+        "index": 34,
         "ticker": "루시드",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
@@ -787,7 +1071,7 @@
         "insightTag": "정직한 빈 신호"
       },
       {
-        "index": 12,
+        "index": 35,
         "ticker": "몽고DB",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
@@ -798,261 +1082,8 @@
         "insightTag": "정직한 빈 신호"
       },
       {
-        "index": 13,
-        "ticker": "리비안",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 14,
-        "ticker": "스노우플레이크",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 15,
-        "ticker": "데이터독",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 16,
-        "ticker": "로빈후드",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 17,
-        "ticker": "코인베이스",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 18,
-        "ticker": "디웨이브퀀텀",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 19,
-        "ticker": "앱러빈",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 20,
-        "ticker": "소파이",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 21,
-        "ticker": "레딧",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 22,
-        "ticker": "인페이즈에너지",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 23,
-        "ticker": "뉴스케일파워",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 24,
-        "ticker": "크라우드스트라이크",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 25,
-        "ticker": "팔란티어",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 26,
-        "ticker": "마이크로소프트",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 27,
-        "ticker": "넷플릭스",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 28,
-        "ticker": "애플",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 29,
-        "ticker": "테슬라",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 30,
-        "ticker": "웨스턴디지털",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 31,
-        "ticker": "시게이트",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 32,
-        "ticker": "블룸에너지",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 33,
-        "ticker": "콘스텔레이션에너지",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 34,
-        "ticker": "비스트라",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
-        "index": 35,
-        "ticker": "버티브",
-        "country": "US",
-        "headline": "아직 공개된 계기 없음",
-        "path": "fallback_no_event",
-        "method": "none",
-        "hasEvent": false,
-        "eventKind": "none",
-        "insightTag": "정직한 빈 신호"
-      },
-      {
         "index": 36,
-        "ticker": "마이크론",
+        "ticker": "사운드하운드AI",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1063,7 +1094,7 @@
       },
       {
         "index": 37,
-        "ticker": "어플라이드머티어리얼즈",
+        "ticker": "디웨이브퀀텀",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1074,7 +1105,7 @@
       },
       {
         "index": 38,
-        "ticker": "AMD",
+        "ticker": "앱러빈",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1085,7 +1116,7 @@
       },
       {
         "index": 39,
-        "ticker": "ARM",
+        "ticker": "소파이",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1096,7 +1127,7 @@
       },
       {
         "index": 40,
-        "ticker": "마벨테크놀로지",
+        "ticker": "인페이즈에너지",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1107,7 +1138,7 @@
       },
       {
         "index": 41,
-        "ticker": "슈퍼마이크로",
+        "ticker": "빅베어AI",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1118,7 +1149,7 @@
       },
       {
         "index": 42,
-        "ticker": "아이온큐",
+        "ticker": "넷플릭스",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1129,7 +1160,7 @@
       },
       {
         "index": 43,
-        "ticker": "세레브라스",
+        "ticker": "시게이트",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1140,7 +1171,7 @@
       },
       {
         "index": 44,
-        "ticker": "리게티",
+        "ticker": "블룸에너지",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1151,7 +1182,7 @@
       },
       {
         "index": 45,
-        "ticker": "TSMC",
+        "ticker": "GE버노바",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1162,7 +1193,7 @@
       },
       {
         "index": 46,
-        "ticker": "브로드컴",
+        "ticker": "아스테라랩스",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
@@ -1173,7 +1204,7 @@
       },
       {
         "index": 47,
-        "ticker": "엔비디아",
+        "ticker": "리게티",
         "country": "US",
         "headline": "아직 공개된 계기 없음",
         "path": "fallback_no_event",
