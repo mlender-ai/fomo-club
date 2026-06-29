@@ -13,10 +13,7 @@ describe("compactDiscoveryCardHeadline", () => {
       marketCapRank: 236,
     });
 
-    expect(headline).toBe("해외 수주에 동종 종목 비교도 붙었어요");
-    expect(headline).not.toContain("마키나락스");
-    expect(headline).not.toContain("20%");
-    expect(headline).not.toMatch(bannedSurfaceCopy);
+    expect(headline).toBeUndefined();
   });
 
   it("does not turn obscure theme movement into a headline without a catalyst", () => {
@@ -44,6 +41,6 @@ describe("compactDiscoveryCardHeadline", () => {
     const parts = splitDiscoveryReason("뉴스 재료 붙은 종목 — 오늘 공급계약 공시 · 한국경제.");
 
     expect(parts.state).toBe("뉴스 재료 붙은 종목");
-    expect(compactDiscoveryCardHeadline({ reason: `${parts.state} — ${parts.detail}` })).toContain("공급계약");
+    expect(compactDiscoveryCardHeadline({ reason: `${parts.state} — ${parts.detail}` })).toBeUndefined();
   });
 });

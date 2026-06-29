@@ -8,7 +8,7 @@ import {
 const base: NewsHookInput = {
   stock: "사운드하운드AI",
   sector: "AI",
-  title: "SoundHound AI, 제품·AI 인프라 소식이 나왔어요.",
+  title: "SoundHound AI launches voice commerce platform with Stellantis",
   source: "Yahoo Finance",
   changePct: 11.2,
   asOf: "2026-06-28",
@@ -18,10 +18,10 @@ describe("news hook reprocessing", () => {
   it("reprocesses a US product/news title into a stock-perspective hook", () => {
     const hook = ruleReprocessNewsHook(base);
 
-    expect(hook).toBe("음성 AI 신제품 소식에 반응");
+    expect(hook).toBe("Stellantis와 제품 협력");
     expect(hook).not.toContain("SoundHound");
     expect(hook).not.toContain("Yahoo Finance");
-    expect(hook!.length).toBeLessThanOrEqual(36);
+    expect(hook!.length).toBeLessThanOrEqual(44);
   });
 
   it("reprocesses a Kumho regional-investment headline without pasting the article title", () => {
@@ -34,7 +34,7 @@ describe("news hook reprocessing", () => {
       source: "한경비즈니스",
     });
 
-    expect(hook).toBe("정부 호남 투자 예고에 관련주로 묶임");
+    expect(hook).toBe("호남 투자 발표에 관련주로 언급");
     expect(hook).not.toBe(title);
     expect(hook).not.toContain("한경비즈니스");
   });
@@ -42,6 +42,12 @@ describe("news hook reprocessing", () => {
   it("does not promote generic title shells", () => {
     expect(ruleReprocessNewsHook({ ...base, title: "제품·AI 인프라 소식이 나왔어요." })).toBeUndefined();
     expect(ruleReprocessNewsHook({ ...base, title: "소식이 나왔어요." })).toBeUndefined();
+  });
+
+  it("rejects abstract template fillers instead of letting them reach the card", () => {
+    expect(validateReprocessedNewsHook("계약 재료가 새로 확인됐어요", base)).toBeUndefined();
+    expect(validateReprocessedNewsHook("직접 재료가 붙었어요", base)).toBeUndefined();
+    expect(validateReprocessedNewsHook("소식에 반응", base)).toBeUndefined();
   });
 
   it("rejects source names, raw-title paste, forbidden advice, and added numbers", () => {

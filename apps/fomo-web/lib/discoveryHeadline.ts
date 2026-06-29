@@ -51,31 +51,6 @@ function normalizeSurfaceCopy(text: string): string {
     .trim();
 }
 
-function topicFromMaterial(detail: string): string {
-  const title = stripSourceAndTime(detail);
-  const lower = title.toLowerCase();
-  if (/해외\s*수주/.test(title)) return "해외 수주";
-  if (/공급계약/.test(title)) return "공급계약";
-  if (/계약|contract|deal|order/.test(lower)) return "계약";
-  if (/수주/.test(title)) return "수주";
-  if (/실적|가이던스|매출|earnings|revenue|guidance|results/.test(lower)) return "실적";
-  if (/sec|공시|filing|8-k|10-q/.test(lower)) return "공시";
-  if (/파트너십|제휴|partnership|customer/.test(lower)) return "파트너십";
-  if (/제품|출시|인프라|launch|product|infrastructure/.test(lower)) return "제품";
-  const compact = title
-    .replace(/['"“”‘’]/g, "")
-    .split(/[,，:：\-–—]/)[0]
-    ?.trim();
-  return compact && compact.length <= 10 ? compact : "뉴스";
-}
-
-function supportFromDetail(detail: string): string {
-  if (/수급|외국인|기관|순매수|사는 중/.test(detail)) return "수급도 붙었어요";
-  if (/거래량|거래가|거래도/.test(detail)) return "거래도 붙었어요";
-  if (/동종|섹터|종목들 중/.test(detail)) return "동종 종목 비교도 붙었어요";
-  return "직접 재료가 붙었어요";
-}
-
 function clipped(text: string, max = 34): string {
   const clean = cleanInline(text);
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
@@ -94,12 +69,6 @@ export function compactDiscoveryCardHeadline({
   const parts = splitDiscoveryReason(clean);
   const state = parts.state;
   const detail = parts.detail ?? clean;
-
-  if (state === "뉴스 재료 붙은 종목" || state === "공시 먼저 뜬 종목" || (!state && /뉴스|공시|소식|계약|수주/.test(clean))) {
-    const topic = topicFromMaterial(detail);
-    const support = supportFromDetail(detail);
-    return topic === "뉴스" ? support : `${topic}에 ${support}`;
-  }
 
   if (state?.includes("수급")) {
     if (/외국인/.test(detail)) return "외국인 수급이 먼저 들어왔어요";

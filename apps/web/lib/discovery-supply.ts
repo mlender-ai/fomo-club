@@ -43,6 +43,7 @@ import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
+import { isAbstractTemplate } from "./copy-guards";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
@@ -898,11 +899,11 @@ function frontMaterialReason(front: DiscoveryFrontSeed | undefined): { reason: s
   return undefined;
 }
 
-function stockPayload(
+async function stockPayload(
   row: DiscoveryMarketRow,
   candidate: DiscoveryCandidate,
   front?: DiscoveryFrontSeed
-): DiscoveryStockPayload {
+): Promise<DiscoveryStockPayload> {
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
   const synthesis = synthesizeDiscoveryInsight(candidate);
@@ -913,9 +914,8 @@ function stockPayload(
   const sourceTitle = sourceEvent?.sourceTitle?.trim();
   const sourceName = (sourceEvent?.sourceName ?? sourceEvent?.source)?.trim();
   const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName ?? frontReason?.sourceLabel;
-  const headline = resolveCardHeadline({
+  const headline = await resolveCardHeadline({
     candidate,
-    synthesis,
     reason: why,
     ...(sourceLabel ? { sourceLabel } : {}),
   });
@@ -1199,7 +1199,7 @@ async function hydrateReachedWhySynthesis(candidates: readonly DiscoveryCandidat
     const found = results.find((row) => row.status === "fulfilled" && row.value.ticker === candidate.ticker);
     if (!found || found.status !== "fulfilled") return candidate;
     const insight = found.value.result.insight;
-    if (!insight.primary || insight.headline === "아직 공개된 계기 없음") return candidate;
+    if (!insight.primary || isAbstractTemplate(insight.headline)) return candidate;
     return {
       ...candidate,
       reason: insight.headline,
@@ -1551,7 +1551,10 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     if (!row) continue;
     const attention = attentionMap[candidate.ticker];
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
-    stocks.push(stockPayload(row, candidate, front));
+    const stock = await stockPayload(row, candidate, front);
+    const headline = stock.headline?.trim();
+    if (stock.headlineProvenance?.provenance === "suppressed" || !headline) continue;
+    stocks.push(stock);
     fronts[candidate.ticker] = front;
   }
   const raritySets = applyAxisRarity(stocks.map((stock) => fronts[stock.canonical]?.axisSignals ?? []));
