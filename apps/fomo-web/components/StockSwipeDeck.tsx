@@ -20,6 +20,7 @@ import { isThemeBundleCard, type DiscoveryDeckCard, type DeckThemeBundle } from 
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
+import { stockLogoApiSrc } from "@/lib/stockLogo";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 
 /**
@@ -77,7 +78,7 @@ function normalizeChangeText(text: string | undefined): string | undefined {
   return text.replace(/^--+/, "-").replace(/^\+\++/, "+");
 }
 
-/** 종목 로고 — 국내는 네이버 심볼, 미국은 티커 로고(Parqet), 실패 시 이니셜 원형 폴백. */
+/** 종목 로고 — 국내는 same-origin 로고 프록시, 미국은 티커 로고(Parqet), 실패 시 이니셜 원형 폴백. */
 function LogoBadge({
   name,
   naverCode,
@@ -89,11 +90,14 @@ function LogoBadge({
 }) {
   const [failed, setFailed] = useState(false);
   const ch = name.trim().slice(0, 1) || "·";
-  const src = naverCode
-    ? `https://ssl.pstatic.net/imgstock/fn/real/logo/stock/Stock${naverCode}.svg`
-    : symbol
-      ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(symbol)}`
-      : undefined;
+  const src =
+    stockLogoApiSrc({ naverCode, name }) ??
+    (symbol ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(symbol)}` : undefined);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
   if (src && !failed) {
     return (
       <img
