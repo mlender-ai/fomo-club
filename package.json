@@ -55,6 +55,7 @@
     "eval:understanding:live": "tsx scripts/eval-understanding-live.ts",
     "diag:collection": "tsx scripts/diag-collection.ts",
     "diag:discovery-reasons": "tsx scripts/discovery-reason-baseline.ts",
+    "diag:headline": "tsx scripts/diag-headline-provenance.ts",
     "monitor:pipeline": "tsx scripts/pipeline-monitor.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
