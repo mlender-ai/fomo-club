@@ -7,6 +7,7 @@ import {
 import {
   cleanInline,
   hasConcreteSourceValue,
+  hasEnglishFragmentHeadline,
   hasExcessiveLatinHeadline,
   hasForbiddenCopy,
   isAbstractTemplate,
@@ -44,6 +45,8 @@ const DISCOVERY_REASON_JOINER = " — ";
 const EMPTY_PATTERN = /아직\s*공개된\s*계기\s*없음|뚜렷한\s*이유는\s*아직|더\s*살펴볼|더\s*확인할|발견\s*풀/;
 const WHAT_ONLY_PATTERN =
   /거래가|거래량|평소\s*\d|변동성|상대강도|시장\s*위치|종목\s+중|시총\s*\d|오늘\s*[+-]?\d|움직였|강했|셌|\d+\s*\/\s*\d+/;
+const SURFACE_METRIC_PATTERN =
+  /[+\-]\d+(?:\.\d+)?%|거래량\s*\d+(?:\.\d+)?배|외국인|기관|순매수|순매도|동종 평균보다|억|조|달러/;
 
 function splitReasonDetail(text: string | undefined): { state?: string; detail?: string } {
   const clean = cleanInline(text);
@@ -89,13 +92,26 @@ function eventSourceTitle(event: DiscoveryEvent | undefined): string | undefined
   return undefined;
 }
 
-function isUsableHeadline(text: string | undefined, sourceTitle: string | undefined): text is string {
+function eventSourceText(event: DiscoveryEvent | undefined): string | undefined {
+  const parts = [event?.sourceTitle, event?.summary, event?.headlineHook, event?.label]
+    .map(cleanInline)
+    .filter(Boolean)
+    .filter((text) => !isAbstractTemplate(text));
+  return parts.length > 0 ? parts.join(" ") : undefined;
+}
+
+function isUsableHeadline(
+  text: string | undefined,
+  sourceText: string | undefined,
+  rawTitle: string | undefined
+): text is string {
   const clean = cleanInline(text);
   if (!clean || EMPTY_PATTERN.test(clean)) return false;
-  if (hasExcessiveLatinHeadline(clean)) return false;
+  if (hasExcessiveLatinHeadline(clean) || hasEnglishFragmentHeadline(clean)) return false;
   if (hasForbiddenCopy(clean) || isAbstractTemplate(clean)) return false;
-  if (isRawTitleCopy(clean, sourceTitle)) return false;
-  if (sourceTitle && !hasConcreteSourceValue(clean, sourceTitle)) return false;
+  if (isRawTitleCopy(clean, rawTitle ?? sourceText)) return false;
+  if (sourceText && !hasConcreteSourceValue(clean, sourceText)) return false;
+  if (!SURFACE_METRIC_PATTERN.test(clean)) return false;
   return true;
 }
 
@@ -106,6 +122,13 @@ function isMaterialEvent(event: DiscoveryEvent | undefined): boolean {
 function materialEventFrom(candidate: DiscoveryCandidate, primary: DiscoveryEvent | undefined): DiscoveryEvent | undefined {
   if (isMaterialEvent(primary)) return primary;
   return candidate.events.find(isMaterialEvent);
+}
+
+function strongestChangePct(candidate: DiscoveryCandidate): number | undefined {
+  return candidate.events
+    .map((event) => event.changePct)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .sort((a, b) => Math.abs(b) - Math.abs(a))[0];
 }
 
 function ruleHeadlineFromMaterial(
@@ -120,8 +143,9 @@ function ruleHeadlineFromMaterial(
     stock: candidate.ticker,
     sector: candidate.sector,
     title,
+    summary: primary?.summary,
     source: primary?.sourceName ?? primary?.source,
-    changePct: primary?.changePct,
+    changePct: primary?.changePct ?? strongestChangePct(candidate),
     asOf: primary?.publishedAt ?? primary?.asOf ?? candidate.asOf,
   });
 }
@@ -150,12 +174,14 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
   const { synthesis, method } = await resolveSynthesis(input);
   const primary = synthesis.primary;
   const materialEvent = materialEventFrom(input.candidate, primary);
-  const sourceTitle =
+  const rawTitle =
     eventSourceTitle(materialEvent) ?? eventSourceTitle(primary) ?? sourceTitleFromLabel(input.sourceLabel);
+  const sourceText =
+    eventSourceText(materialEvent) ?? eventSourceText(primary) ?? sourceTitleFromLabel(input.sourceLabel);
   const reasonParts = splitReasonDetail(input.reason);
   const reasonDetail = reasonParts.detail ?? input.reason;
 
-  if (isUsableHeadline(synthesis.headline, sourceTitle)) {
+  if (isUsableHeadline(synthesis.headline, sourceText, rawTitle)) {
     const eventRef = eventRefFrom(primary ?? materialEvent);
     return {
       text: cleanInline(synthesis.headline),
@@ -165,8 +191,8 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
     };
   }
 
-  const materialHeadline = ruleHeadlineFromMaterial(input.candidate, materialEvent, sourceTitle);
-  if (isUsableHeadline(materialHeadline, sourceTitle)) {
+  const materialHeadline = ruleHeadlineFromMaterial(input.candidate, materialEvent, rawTitle);
+  if (isUsableHeadline(materialHeadline, sourceText, rawTitle)) {
     const eventRef = eventRefFrom(materialEvent ?? primary);
     return {
       text: cleanInline(materialHeadline),
@@ -176,7 +202,7 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
     };
   }
 
-  if (isUsableHeadline(reasonDetail, sourceTitle) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
+  if (isUsableHeadline(reasonDetail, sourceText, rawTitle) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
     const eventRef = eventRefFrom(primary ?? materialEvent);
     return {
       text: cleanInline(reasonDetail),

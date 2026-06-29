@@ -22,6 +22,8 @@ export interface DiscoveryEvent {
   label?: string;
   direction?: "up" | "down" | "flat";
   sourceTitle?: string;
+  /** Short body/description excerpt from the source. Evidence only; never a raw surface headline. */
+  summary?: string;
   sourceName?: string;
   sourceUrl?: string;
   publishedAt?: string;
@@ -336,7 +338,7 @@ function eventKindTone(event: DiscoveryEvent | undefined): DiscoverySynthesisTon
 }
 
 function displayTag(event: DiscoveryEvent | undefined): string {
-  if (!event) return "아직 공개된 계기 없음";
+  if (!event) return "미노출";
   if (event.kind === "disclosure") return "공시 재료";
   if (event.kind === "news_mention") return "뉴스 재료";
   if (event.kind === "flow_entry") return "💎 수급 선행";
@@ -655,7 +657,7 @@ export function synthesizeDiscoveryInsight(candidate: DiscoveryCandidate): Disco
   const support = chooseSupportEvent(candidate, primary);
   if (!primary) {
     return {
-      headline: "아직 공개된 계기 없음",
+      headline: "",
       headlineState: "빈 신호",
       tag: "정직한 빈 신호",
       tone: "empty",

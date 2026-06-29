@@ -90,6 +90,7 @@ describe("why-driven insight synthesis guard", () => {
           label: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
           sourceTitle: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
           sourceName: "Yahoo Finance",
+          changePct: 3.2,
         },
       ],
     };
@@ -108,15 +109,15 @@ describe("why-driven insight synthesis guard", () => {
 
     const insight = validateWhyInsightOutput(
       {
-        headline: "1분기 매출 성장·가이던스 상향",
-        observations: ["영문 원문에 first quarter revenue growth와 guidance raise가 함께 언급됨"],
-        synthesis: "실적과 전망 조정이 같은 기사 안에서 함께 확인된 재료예요",
+        headline: "1분기 매출 성장·가이던스 상향에 +3.2%",
+        observations: ["1분기 매출 성장과 가이던스 상향", "+3.2%"],
+        synthesis: "실적 재료와 당일 가격 반응을 나눠 확인하는 카드예요",
         evidence: ["SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance · Yahoo Finance · 2026-06-24"],
       },
       candidate
     );
 
-    expect(insight?.headline).toBe("1분기 매출 성장·가이던스 상향");
+    expect(insight?.headline).toBe("1분기 매출 성장·가이던스 상향에 +3.2%");
   });
 
   it("keeps observations, synthesis, and evidence as separate blocks", () => {

@@ -69,7 +69,7 @@ describe("WO-05 discovery supply engine", () => {
     priceUp.events[0]!.direction = "up";
     expect(hasDeckDisplayEvent(priceUp)).toBe(false);
     expect(hasDisplayWhyEvent(priceUp)).toBe(false);
-    expect(discoveryWhy(priceUp)).toBe("아직 공개된 계기 없음");
+    expect(discoveryWhy(priceUp)).toBe("");
     const news = candidate("뉴스", 0.6, "news_mention");
     news.events[0]!.headlineHook = "계약 재료가 새로 확인됐어요";
     expect(discoveryWhy(news)).toContain("계약 재료");
@@ -234,7 +234,7 @@ describe("WO-05 discovery supply engine", () => {
 
     const insight = synthesizeDiscoveryInsight(row);
 
-    expect(insight.headline).toBe("아직 공개된 계기 없음");
+    expect(insight.headline).toBe("");
     expect(insight.evidence).toEqual([]);
   });
 
@@ -244,7 +244,7 @@ describe("WO-05 discovery supply engine", () => {
 
     const insight = synthesizeDiscoveryInsight(row);
 
-    expect(insight.headline).toBe("아직 공개된 계기 없음");
+    expect(insight.headline).toBe("");
     expect(insight.tag).toBe("정직한 빈 신호");
     expect(insight.observations).toEqual([]);
   });
@@ -269,7 +269,7 @@ describe("WO-05 discovery supply engine", () => {
     expect(hasDisplayWhyEvent(theme)).toBe(false);
     expect(hasRankableDiscoverySignal(theme)).toBe(true);
     expect(isWeakDiscoveryCandidate(theme)).toBe(false);
-    expect(discoveryWhy(theme)).toBe("아직 공개된 계기 없음");
+    expect(discoveryWhy(theme)).toBe("");
     expect(discoveryWhy(theme)).not.toContain("근거는 얇");
     expect(discoveryWhy(theme)).not.toContain("흐름도 붙");
     expect(discoveryWhy(theme)).not.toContain("시총");
@@ -282,7 +282,7 @@ describe("WO-05 discovery supply engine", () => {
     row.events[0]!.direction = "up";
 
     const insight = synthesizeDiscoveryInsight(row);
-    expect(insight.headline).toBe("아직 공개된 계기 없음");
+    expect(insight.headline).toBe("");
     expect(insight.headline).not.toContain("시총 411위");
     expect(insight.headline).not.toMatch(/\d+\/\d+/);
     expect(insight.synthesis).toContain("가격만으로 이유를 만들지 않습니다");

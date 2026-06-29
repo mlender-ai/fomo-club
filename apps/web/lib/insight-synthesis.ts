@@ -6,7 +6,13 @@ import {
   type DiscoveryEvent,
   type DiscoveryInsightSynthesis,
 } from "@fomo/core";
-import { hasExcessiveLatinHeadline, hasForbiddenCopy, isAbstractTemplate } from "./copy-guards";
+import {
+  hasEnglishFragmentHeadline,
+  hasExcessiveLatinHeadline,
+  hasForbiddenCopy,
+  isAbstractTemplate,
+  isRawTitleCopy,
+} from "./copy-guards";
 
 export interface WhySynthesisResult {
   insight: DiscoveryInsightSynthesis;
@@ -33,6 +39,12 @@ const ADVICE_PATTERN = new RegExp(
     "팔" + "아야",
     "오를\\s*것",
     "상승" + "할",
+    "기대",
+    "전망",
+    "수혜",
+    "유망",
+    "때문에",
+    "덕분에",
     "찬스",
   ].join("|"),
   "i"
@@ -142,6 +154,7 @@ function inputText(candidate: DiscoveryCandidate): string {
       event.label,
       event.headlineHook,
       event.sourceTitle,
+      event.summary,
       event.sourceName,
       event.source,
       event.asOf,
@@ -155,6 +168,10 @@ function inputText(candidate: DiscoveryCandidate): string {
       event.themeRelativeChangePct,
     ]),
   ].filter((value) => value !== undefined && value !== null).join(" ");
+}
+
+export function __debugInsightInputText(candidate: DiscoveryCandidate): string {
+  return inputText(candidate);
 }
 
 function inputNumbers(candidate: DiscoveryCandidate): Set<string> {
@@ -188,10 +205,13 @@ function inputLatinTokens(candidate: DiscoveryCandidate): Set<string> {
 }
 
 function hasConcreteWhy(headline: string, candidate: DiscoveryCandidate): boolean {
-  if (numbersIn(headline).length > 0) return true;
   const knownKo = inputKoreanTokens(candidate);
   const knownLatin = inputLatinTokens(candidate);
-  return koreanTokens(headline).some((token) => knownKo.has(token)) || latinTokens(headline).some((token) => knownLatin.has(token));
+  return (
+    koreanTokens(headline).some((token) => knownKo.has(token)) ||
+    latinTokens(headline).some((token) => knownLatin.has(token)) ||
+    translatedProperNounIsBacked(headline, candidate)
+  );
 }
 
 function hasSourceLeak(text: string, candidate: DiscoveryCandidate): boolean {
@@ -208,11 +228,143 @@ function hasAddedNumber(text: string, candidate: DiscoveryCandidate): boolean {
 
 function hasAddedProperNoun(text: string, candidate: DiscoveryCandidate): boolean {
   const knownLatin = inputLatinTokens(candidate);
-  const badLatin = latinTokens(text).some((token) => !knownLatin.has(token) && !["ai", "sec", "krx"].includes(token));
+  const allowedLatin = new Set([
+    "ai",
+    "gpu",
+    "cpu",
+    "sec",
+    "krx",
+    "dart",
+    "kospi",
+    "kosdaq",
+    "nyse",
+    "nasdaq",
+    "etf",
+    "ipo",
+    "ess",
+    "fda",
+    "sk",
+    "8-k",
+    "10-q",
+    "10-k",
+  ]);
+  const badLatin = latinTokens(text).some((token) => !knownLatin.has(token) && !allowedLatin.has(token));
   if (badLatin) return true;
   const input = inputText(candidate);
   const addedKnownCompany = text.match(KNOWN_COMPANY_NAME_PATTERN)?.[0];
-  return !!addedKnownCompany && !input.includes(addedKnownCompany);
+  return !!addedKnownCompany && !input.includes(addedKnownCompany) && !translatedProperNounIsBacked(text, candidate);
+}
+
+const TRANSLATED_PROPER_NOUNS: Array<[RegExp, RegExp]> = [
+  [/엔비디아/i, /\bNVIDIA\b/i],
+  [/테슬라/i, /\bTesla\b/i],
+  [/스텔란티스/i, /\bStellantis\b/i],
+  [/항공우주/i, /\bAerospace\b/i],
+  [/음성\s*커머스\s*플랫폼/i, /\bvoice\s+commerce\s+platform\b/i],
+  [/매출/i, /\brevenue\b/i],
+  [/가이던스/i, /\bguidance\b/i],
+  [/성장/i, /\bgrowth\b/i],
+  [/상향/i, /\brais(?:e|es|ed|ing)\b/i],
+];
+
+function translatedProperNounIsBacked(text: string, candidate: DiscoveryCandidate): boolean {
+  const input = inputText(candidate);
+  return TRANSLATED_PROPER_NOUNS.some(([ko, source]) => ko.test(text) && source.test(input));
+}
+
+function formatSignedPercent(value: number): string {
+  const rounded = Math.abs(value) >= 10 ? value.toFixed(0) : value.toFixed(1);
+  return `${value > 0 ? "+" : ""}${rounded.replace(/\.0$/, "")}%`;
+}
+
+function formatVolumeRatio(value: number): string {
+  const rounded = value >= 10 ? value.toFixed(0) : value.toFixed(1);
+  return `거래량 ${rounded.replace(/\.0$/, "")}배`;
+}
+
+function strongestMetric(candidate: DiscoveryCandidate): string | undefined {
+  const metricEvents = candidate.events
+    .map((event) => {
+      const change = typeof event.changePct === "number" && Number.isFinite(event.changePct) ? Math.abs(event.changePct) : 0;
+      const volume = typeof event.volumeRatio === "number" && Number.isFinite(event.volumeRatio) ? event.volumeRatio : 0;
+      const relative =
+        typeof event.themeRelativeChangePct === "number" && Number.isFinite(event.themeRelativeChangePct)
+          ? Math.abs(event.themeRelativeChangePct)
+          : 0;
+      return { event, score: Math.max(change / 6, volume / 3, relative / 3) };
+    })
+    .sort((a, b) => b.score - a.score);
+  const event = metricEvents[0]?.event;
+  if (!event) return undefined;
+  if (typeof event.volumeRatio === "number" && event.volumeRatio >= 2.5) return formatVolumeRatio(event.volumeRatio);
+  if (typeof event.changePct === "number" && Math.abs(event.changePct) >= 1) return formatSignedPercent(event.changePct);
+  if (event.flowAmountText) return event.flowAmountText;
+  if (typeof event.themeRelativeChangePct === "number" && Math.abs(event.themeRelativeChangePct) >= 1) {
+    return `동종 평균보다 ${formatSignedPercent(event.themeRelativeChangePct)}p`;
+  }
+  return undefined;
+}
+
+function materialPhrase(event: DiscoveryEvent | undefined): string | undefined {
+  const candidates = [event?.headlineHook, event?.label, event?.sourceTitle]
+    .map(cleanInline)
+    .filter(Boolean)
+    .filter((text) => !hasEnglishFragmentHeadline(text))
+    .filter((text) => !hasForbiddenCopy(text) && !isAbstractTemplate(text))
+    .filter((text) => !/^(?:뉴스|소식|공시|재료|계약|수주)(?:이|가)?\s*(?:나왔|확인)/.test(text));
+  return candidates[0];
+}
+
+function materialEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
+  return candidate.events.find((event) => event.kind === "news_mention" || event.kind === "disclosure");
+}
+
+function hasMetricContext(headline: string): boolean {
+  return /[+\-]\d+(?:\.\d+)?%|거래량\s*\d+(?:\.\d+)?배|외국인|기관|순매수|순매도|동종 평균보다|억|조|달러/.test(headline);
+}
+
+function hasMaterialContext(headline: string, candidate: DiscoveryCandidate): boolean {
+  const event = materialEvent(candidate);
+  if (!event) return false;
+  if (hasConcreteWhy(headline, candidate)) return true;
+  return /특허|공시|계약|수주|제휴|협력|파트너십|실적|매출|가이던스|인도량|공급|선정|투자|증자|자사주|인수전|클러스터|임상|승인|허가|제품|개발|확보|체결|발표|8-K|10-Q|SEC|리테일|고객|우선협상자|관리운영/.test(
+    headline
+  );
+}
+
+function hasSoWhatHeadline(headline: string, candidate: DiscoveryCandidate): boolean {
+  return hasMaterialContext(headline, candidate) && hasMetricContext(headline);
+}
+
+function hasBrokenEnding(headline: string): boolean {
+  return (
+    /\s[가-힣]$/.test(headline) ||
+    /(?:특허\s*확|계약\s*체|수주\s*확|우선협상자\s*선|제휴\s*발|협력\s*소|공시\s*확)$/.test(headline)
+  );
+}
+
+function isRawCopyFromAnySource(headline: string, candidate: DiscoveryCandidate): boolean {
+  return candidate.events.some((event) => event.sourceTitle && isRawTitleCopy(headline, event.sourceTitle));
+}
+
+function buildSoWhatFallback(candidate: DiscoveryCandidate, fallback: DiscoveryInsightSynthesis): DiscoveryInsightSynthesis | undefined {
+  const event = materialEvent(candidate);
+  const phrase = materialPhrase(event);
+  const metric = strongestMetric(candidate);
+  if (!event || !phrase || !metric) return undefined;
+  const headline = cleanInline(`${phrase}에 ${metric}`);
+  const evidence = [
+    [event.sourceTitle ?? event.label, event.sourceName ?? event.source, event.asOf].map(cleanInline).filter(Boolean).join(" · "),
+  ].filter(Boolean);
+  const insight: DiscoveryInsightSynthesis = {
+    ...fallback,
+    primary: event,
+    headline,
+    observations: [phrase, metric],
+    synthesis: `${phrase}와 ${metric}이 같은 날 확인됐어요.`,
+    evidence: evidence.length > 0 ? evidence : fallback.evidence,
+  };
+  return whyInsightRejectionReasons(insight, candidate).length === 0 ? insight : undefined;
 }
 
 export function blockOverlapRatio(a: string, b: string): number {
@@ -263,8 +415,11 @@ export function whyInsightRejectionReasons(
   const fullText = textParts(insight).join(" ");
   if (!insight.headline || insight.headline.length > 64) reasons.push("headline-length");
   if (!hasConcreteWhy(insight.headline, candidate)) reasons.push("no-concrete-why");
-  if (hasExcessiveLatinHeadline(insight.headline)) reasons.push("latin-headline");
+  if (hasExcessiveLatinHeadline(insight.headline) || hasEnglishFragmentHeadline(insight.headline)) reasons.push("latin-headline");
   if (hasForbiddenCopy(insight.headline) || isAbstractTemplate(insight.headline)) reasons.push("headline-guard");
+  if (isRawCopyFromAnySource(insight.headline, candidate)) reasons.push("raw-copy");
+  if (hasBrokenEnding(insight.headline)) reasons.push("broken-ending");
+  if (!hasSoWhatHeadline(insight.headline, candidate)) reasons.push("no-so-what");
   if (ADVICE_PATTERN.test(fullText)) reasons.push("advice");
   if (ABSTRACT_PATTERN.test(fullText) || hasAbstractDiscoveryFiller(fullText)) reasons.push("abstract");
   if (hasSourceLeak(insight.headline, candidate)) reasons.push("source-leak");
@@ -296,6 +451,7 @@ function cacheKey(candidate: DiscoveryCandidate): string {
       label: event.label,
       hook: event.headlineHook,
       sourceTitle: event.sourceTitle,
+      summary: event.summary,
       asOf: event.asOf,
       changePct: event.changePct,
       volumeRatio: event.volumeRatio,
@@ -304,6 +460,8 @@ function cacheKey(candidate: DiscoveryCandidate): string {
       flowAmountText: event.flowAmountText,
       themeRank: event.themeRank,
       themePeerCount: event.themePeerCount,
+      themeAverageChangePct: event.themeAverageChangePct,
+      themeRelativeChangePct: event.themeRelativeChangePct,
     })),
   });
 }
@@ -323,13 +481,16 @@ function systemPrompt(): string {
   ];
   return [
     "너는 주식 발견 카드의 Why 문장 엔진이다.",
-    "입력이 영어 미국 종목 뉴스/공시여도 출력 헤드라인은 반드시 한국어로 쓴다.",
-    "헤드라인은 [주체/규모가 박힌 사건 또는 숫자] + [이 종목에 일어난 일] 한 줄이다.",
-    "원문에서 무엇을·누구와·얼마·언제 중 확인 가능한 구체값을 최소 1개 포함한다.",
-    "반드시 입력 JSON에 있는 숫자 또는 고유명사만 쓴다. 입력에 없으면 쓰지 않는다.",
-    "영문 기사 제목을 그대로 번역하거나 복붙하지 말고, 종목 보유자 관점의 한국어 한 줄로 압축한다.",
-    "좋은 예: '1분기 매출 성장·가이던스 상향', 'Aerospace 고객과 제휴 발표', '8-K 중요계약 공시 확인'.",
-    "나쁜 예: 'partnership news announced', '제휴 소식이 나왔어요', 'D-Wave Quantum Announces New Partnership With Aerospace Customer'.",
+    "출력 헤드라인은 100% 한국어다. 영어 단어를 한국어 조사에 섞지 마라('Aerospace 고객과', 'its NVIDIA와' 금지).",
+    "회사명은 한국어 표기로 쓴다(NVIDIA→엔비디아, Tesla→테슬라). 한국어 표기가 없는 소형주는 회사명을 생략하고 사건만 쓴다.",
+    "영문 약어·관사('its', 'the', 'with', 'and', 'HpO')를 그대로 남기지 마라.",
+    "헤드라인 = [재료: 무엇이 일어났나] + [가장 두드러진 지표 1개]를 동시성으로 결합한 한 줄이다.",
+    "지표는 입력 JSON의 changePct·volumeRatio·flowAmountText·themeRelativeChangePct 중 가장 강한 1개만 쓴다.",
+    "동시성 표현('~에', '~당일', '~소식에')만 쓴다. 인과어('때문에', '덕분에') 금지.",
+    "제목을 자르거나 복붙하지 마라. 입력에 없는 숫자·고유명사 금지. 글자를 어절 중간에서 끊지 마라('특허 확' 금지).",
+    "예측·기대·전망·수혜·유망 등 미래 단정 금지. 사실과 해석까지만 쓴다.",
+    "좋은 예: '엔비디아와 제품 협력 소식에 +34%', '심근세포 정제 특허 확보 당일 +16%', '유럽 리테일 파트너십 공시에 거래량 3배'.",
+    "나쁜 예: 'its NVIDIA와 제품 협력', 'Aerospace 고객과 제휴 발표', '특허 확', '제휴 소식이 나왔어요', '수혜 기대'.",
     `${banned.join(", ")} 금지.`,
     "투자 조언과 방향 예측 금지. 사실과 해석까지만 쓴다.",
     "출력은 JSON {\"headline\":\"...\",\"observations\":[\"...\"],\"synthesis\":\"...\",\"evidence\":[\"...\"]}.",
@@ -363,6 +524,7 @@ async function aiSynthesize(candidate: DiscoveryCandidate, fallback: DiscoveryIn
             label: event.label,
             stockPerspectiveHook: event.headlineHook,
             sourceTitle: event.sourceTitle,
+            summary: event.summary,
             sourceKind: event.kind === "news_mention" ? "news" : event.kind === "disclosure" ? "official" : "market",
             asOf: event.asOf,
             changePct: event.changePct,
@@ -390,7 +552,12 @@ export async function synthesizeWhyDrivenInsight(candidate: DiscoveryCandidate):
   if (hit) return hit;
   const fallback = synthesizeDiscoveryInsight(candidate);
   const ai = await aiSynthesize(candidate, fallback);
-  const result: WhySynthesisResult = ai ? { insight: ai, method: "ai" } : { insight: fallback, method: "fallback" };
+  const rule = ai ? undefined : buildSoWhatFallback(candidate, fallback);
+  const result: WhySynthesisResult = ai
+    ? { insight: ai, method: "ai" }
+    : rule
+      ? { insight: rule, method: "fallback" }
+      : { insight: fallback, method: "fallback" };
   cache.set(key, result);
   return result;
 }

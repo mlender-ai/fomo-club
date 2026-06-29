@@ -49,9 +49,18 @@ describe("resolveCardHeadline", () => {
       sourceName: "뉴시스",
       sourceUrl: "https://example.com/news",
     };
+    const priceEvent: DiscoveryEvent = {
+      kind: "price_move",
+      firstSeen: true,
+      strength: 0.5,
+      source: "market",
+      asOf: "2026-06-29",
+      confidence: "M",
+      changePct: 3.3,
+    };
 
     const result = await resolveCardHeadline({
-      candidate: candidate([event]),
+      candidate: candidate([event, priceEvent]),
       synthesis: synthesis({
         headline: title,
         tone: "material",
@@ -62,7 +71,7 @@ describe("resolveCardHeadline", () => {
 
     expect(result.text).not.toBe(title);
     expect(result.provenance).toBe("rule");
-    expect(result.text).toBe("한국투자·신한 인수전 참여");
+    expect(result.text).toBe("한국투자·신한 인수전 참여에 +3.3%");
     expect(result.eventRef).toMatchObject({
       kind: "news_mention",
       source: "뉴시스",
@@ -117,6 +126,7 @@ describe("resolveCardHeadline", () => {
       sourceTitle: title,
       sourceName: "Yahoo Finance",
       sourceUrl: "https://example.com/dwave",
+      changePct: 8.4,
     };
     const usCandidate: DiscoveryCandidate = {
       ticker: "디웨이브퀀텀",
@@ -138,8 +148,9 @@ describe("resolveCardHeadline", () => {
       sourceLabel: `${title} · Yahoo Finance`,
     });
 
-    expect(result.text).toBe("Aerospace 고객과 제휴 발표");
+    expect(result.text).toBe("항공우주 고객과 제휴 발표에 +8.4%");
     expect(result.text).not.toContain("D-Wave");
+    expect(result.text).not.toContain("Aerospace");
     expect(result.provenance).toBe("rule");
   });
 

@@ -18,8 +18,9 @@ describe("news hook reprocessing", () => {
   it("reprocesses a US product/news title into a stock-perspective hook", () => {
     const hook = ruleReprocessNewsHook(base);
 
-    expect(hook).toBe("Stellantis와 제품 협력");
+    expect(hook).toBe("스텔란티스와 제품 협력에 +11%");
     expect(hook).not.toContain("SoundHound");
+    expect(hook).not.toContain("Stellantis");
     expect(hook).not.toContain("Yahoo Finance");
     expect(hook!.length).toBeLessThanOrEqual(44);
   });
@@ -34,7 +35,7 @@ describe("news hook reprocessing", () => {
       source: "한경비즈니스",
     });
 
-    expect(hook).toBe("호남 투자 발표에 관련주로 언급");
+    expect(hook).toBe("호남 투자 발표에 관련주로 언급에 +11%");
     expect(hook).not.toBe(title);
     expect(hook).not.toContain("한경비즈니스");
   });
@@ -51,13 +52,13 @@ describe("news hook reprocessing", () => {
         stock: "디웨이브퀀텀",
         title: "D-Wave Quantum Announces New Partnership With Aerospace Customer",
       })
-    ).toBe("Aerospace 고객과 제휴 발표");
+    ).toBe("항공우주 고객과 제휴 발표에 +11%");
     expect(
       ruleReprocessNewsHook({
         ...base,
         title: "SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance",
       })
-    ).toBe("1분기 실적 발표");
+    ).toBe("1분기 실적 발표에 +11%");
   });
 
   it("rejects abstract template fillers instead of letting them reach the card", () => {

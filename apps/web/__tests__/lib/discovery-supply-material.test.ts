@@ -179,14 +179,14 @@ describe("discovery specific hook copy", () => {
 
     expect(hasDisplayWhyEvent(geumho)).toBe(false);
     expect(hasRankableDiscoverySignal(geumho)).toBe(true);
-    expect(discoveryWhy(geumho)).toBe("아직 공개된 계기 없음");
+    expect(discoveryWhy(geumho)).toBe("");
     expect(discoveryWhy(geumho)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(geumho)).not.toMatch(bannedFillerPattern);
     expect(discoveryWhy(geumho)).not.toMatch(bannedSurfaceMovementPattern);
 
     expect(hasDisplayWhyEvent(lucid)).toBe(false);
     expect(hasRankableDiscoverySignal(lucid)).toBe(true);
-    expect(discoveryWhy(lucid)).toBe("아직 공개된 계기 없음");
+    expect(discoveryWhy(lucid)).toBe("");
     expect(discoveryWhy(lucid)).not.toMatch(/시총|\d+\/\d+/);
     expect(discoveryWhy(lucid)).not.toMatch(bannedFillerPattern);
     expect(discoveryWhy(lucid)).not.toMatch(bannedSurfaceMovementPattern);
@@ -224,7 +224,7 @@ describe("discovery empty-deck recovery", () => {
     expect(recovered.map((row) => row.ticker)).toEqual(["발굴A", "발굴B", "대형주"]);
     expect(recovered.map((row) => row.ticker)).not.toContain("가격상승");
     expect(recovered.map((row) => row.ticker)).not.toContain("하락주");
-    expect(recovered.every((row) => row.reason && row.reason.length > 0)).toBe(true);
+    expect(recovered.every((row) => !row.reason)).toBe(true);
     expect(recovered.every((row) => !/^오늘 가격이/.test(row.reason ?? ""))).toBe(true);
   });
 

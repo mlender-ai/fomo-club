@@ -6,7 +6,13 @@ import {
   type DiscoveryResponse,
   type DiscoveryStockPayload,
 } from "../apps/web/lib/discovery-supply";
-import { hasConcreteSourceValue, hasExcessiveLatinHeadline, isAbstractTemplate, isRawTitleCopy } from "../apps/web/lib/copy-guards";
+import {
+  hasConcreteSourceValue,
+  hasEnglishFragmentHeadline,
+  hasExcessiveLatinHeadline,
+  isAbstractTemplate,
+  isRawTitleCopy,
+} from "../apps/web/lib/copy-guards";
 import type { DiscoveryCountryScope } from "../apps/web/lib/market-source-types";
 
 type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallback_no_event";
@@ -33,6 +39,9 @@ interface HeadlineProvenanceRow {
   insightTag?: string;
   sourceLabel?: string;
   concrete: boolean;
+  soWhat: boolean;
+  trimmed: boolean;
+  latinMixed: boolean;
 }
 
 interface HeadlineProvenanceReport {
@@ -51,6 +60,18 @@ interface HeadlineProvenanceReport {
       false: number;
     };
     concrete: {
+      true: number;
+      false: number;
+    };
+    soWhat: {
+      true: number;
+      false: number;
+    };
+    trimmed: {
+      true: number;
+      false: number;
+    };
+    latinMixed: {
       true: number;
       false: number;
     };
@@ -137,7 +158,7 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
     return "fallback_no_event";
   }
   const title = sourceTitleFrom(stock);
-  if (hasExcessiveLatinHeadline(headline)) return "raw_title";
+  if (hasExcessiveLatinHeadline(headline) || hasEnglishFragmentHeadline(headline)) return "raw_title";
   if (title && isRawTitleCopy(headline, title)) return "raw_title";
   if (ABSTRACT_TEMPLATE_PATTERN.test(headline) || ADDITIONAL_ABSTRACT_TEMPLATE_PATTERN.test(headline) || isAbstractTemplate(headline)) return "abstract_template";
   if (eventKind === "none") return "fallback_no_event";
@@ -164,10 +185,26 @@ function increment<T extends string>(bucket: Record<T, number>, key: T): void {
 }
 
 function isConcreteHeadline(stock: DiscoveryStockPayload, headline: string): boolean {
-  if (hasExcessiveLatinHeadline(headline)) return false;
+  if (hasExcessiveLatinHeadline(headline) || hasEnglishFragmentHeadline(headline)) return false;
   const sourceTitle = sourceTitleFrom(stock);
   if (sourceTitle && hasConcreteSourceValue(headline, sourceTitle)) return true;
   return /\d/.test(headline) || /[A-Z]{2,}|[가-힣A-Za-z0-9]+(?:와|과)\s*[가-힣A-Za-z0-9]+/.test(headline);
+}
+
+const MATERIAL_CONTEXT_PATTERN =
+  /특허|공시|계약|수주|제휴|협력|파트너십|실적|매출|가이던스|인도량|공급|선정|투자|증자|자사주|인수전|클러스터|임상|승인|허가|제품|개발|확보|체결|발표|8-K|10-Q|SEC|리테일|고객|우선협상자|관리운영|급여|진입|출시|치료|서비스|상한가|신탁|상업화|권리|할증|렌탈|무료\s*지원|전략\s*전환|지원|종료|공개|항공우주|플랫폼|제네릭|협업|표준화|판매|데이터|분기|준수율|내부통제/i;
+const METRIC_CONTEXT_PATTERN =
+  /[+\-]\d+(?:\.\d+)?%|거래량\s*\d+(?:\.\d+)?배|외국인|기관|순매수|순매도|동종 평균보다|억|조|달러/;
+
+function isSoWhatHeadline(headline: string): boolean {
+  return MATERIAL_CONTEXT_PATTERN.test(headline) && METRIC_CONTEXT_PATTERN.test(headline);
+}
+
+function isTrimmedHeadline(headline: string): boolean {
+  return (
+    /…|\.{3}/.test(headline) ||
+    /(?:특허\s*확(?:에)?|계약\s*체|수주\s*확|우선협상자\s*선|제휴\s*발|협력\s*소|공시\s*확)$/.test(headline)
+  );
 }
 
 function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenanceReport {
@@ -179,6 +216,9 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     const path = classifyPath(stock, headline, eventKind);
     const track = classifyTrack(path, eventKind);
     const concrete = path === "why_synthesis" && isConcreteHeadline(stock, headline);
+    const soWhat = path === "why_synthesis" && isSoWhatHeadline(headline);
+    const trimmed = isTrimmedHeadline(headline);
+    const latinMixed = hasExcessiveLatinHeadline(headline) || hasEnglishFragmentHeadline(headline);
     return {
       index: index + 1,
       ticker: stock.canonical,
@@ -190,6 +230,9 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       hasEvent: eventKind !== "none",
       eventKind,
       concrete,
+      soWhat,
+      trimmed,
+      latinMixed,
       ...(stock.insightTag ? { insightTag: stock.insightTag } : {}),
       ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
     };
@@ -228,6 +271,18 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     true: 0,
     false: 0,
   };
+  const soWhatCounts = {
+    true: 0,
+    false: 0,
+  };
+  const trimmedCounts = {
+    true: 0,
+    false: 0,
+  };
+  const latinMixedCounts = {
+    true: 0,
+    false: 0,
+  };
   rows.forEach((row) => {
     increment(pathCounts, row.path);
     increment(trackCounts, row.track);
@@ -242,6 +297,21 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       concreteCounts.true += 1;
     } else {
       concreteCounts.false += 1;
+    }
+    if (row.soWhat) {
+      soWhatCounts.true += 1;
+    } else {
+      soWhatCounts.false += 1;
+    }
+    if (row.trimmed) {
+      trimmedCounts.true += 1;
+    } else {
+      trimmedCounts.false += 1;
+    }
+    if (row.latinMixed) {
+      latinMixedCounts.true += 1;
+    } else {
+      latinMixedCounts.false += 1;
     }
   });
 
@@ -258,6 +328,9 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       eventKind: eventCounts,
       hasEvent: hasEventCounts,
       concrete: concreteCounts,
+      soWhat: soWhatCounts,
+      trimmed: trimmedCounts,
+      latinMixed: latinMixedCounts,
     },
     cards: rows,
   };
@@ -300,6 +373,24 @@ function printReport(report: HeadlineProvenanceReport): void {
   console.log("- concrete");
   (Object.keys(report.distributions.concrete) as Array<"true" | "false">).forEach((key) => {
     const value = report.distributions.concrete[key];
+    const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
+    console.log(`  - ${key}: ${value} (${pct}%)`);
+  });
+  console.log("- soWhat");
+  (Object.keys(report.distributions.soWhat) as Array<"true" | "false">).forEach((key) => {
+    const value = report.distributions.soWhat[key];
+    const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
+    console.log(`  - ${key}: ${value} (${pct}%)`);
+  });
+  console.log("- trimmed");
+  (Object.keys(report.distributions.trimmed) as Array<"true" | "false">).forEach((key) => {
+    const value = report.distributions.trimmed[key];
+    const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
+    console.log(`  - ${key}: ${value} (${pct}%)`);
+  });
+  console.log("- latinMixed");
+  (Object.keys(report.distributions.latinMixed) as Array<"true" | "false">).forEach((key) => {
+    const value = report.distributions.latinMixed[key];
     const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
     console.log(`  - ${key}: ${value} (${pct}%)`);
   });

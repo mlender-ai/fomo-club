@@ -39,7 +39,7 @@ export interface DiscoveryGateResult {
   findings: DiscoveryGateFinding[];
 }
 
-const DEFAULT_MIN_CARDS = intFromEnv("DISCOVERY_GATE_MIN_CARDS", 50);
+const DEFAULT_MIN_CARDS = intFromEnv("DISCOVERY_GATE_MIN_CARDS", 40);
 const DEFAULT_FRONT_BAND = intFromEnv("DISCOVERY_GATE_FRONT_BAND", 16);
 const DEFAULT_MAX_DUPLICATE_FRONT_REASON = intFromEnv("DISCOVERY_GATE_MAX_DUPLICATE_FRONT_REASON", 3);
 const DEFAULT_FAMOUS_FRONT_BLOCKLIST = [
@@ -75,7 +75,7 @@ export function evaluateDiscoveryPayload(
   };
 
   if (stocks.length < minCards) {
-    add("deck.too_short", `발견 덱 카드 수가 ${stocks.length}장입니다. 기본 목표는 ${minCards}장입니다.`);
+    add("deck.too_short", `발견 덱 카드 수가 ${stocks.length}장입니다. 재료 없는 카드를 채우지 않는 품질 하한은 ${minCards}장입니다.`);
   }
 
   const frontStocks = stocks.slice(0, frontBand);

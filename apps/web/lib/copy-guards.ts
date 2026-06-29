@@ -10,6 +10,12 @@ export const FORBIDDEN_COPY = new RegExp(
     "팔" + "아야",
     "오를\\s*것",
     "상승" + "할",
+    "기대",
+    "전망",
+    "수혜",
+    "유망",
+    "때문에",
+    "덕분에",
     "수혜\\s*확정",
     "찬스",
   ].join("|"),
@@ -202,6 +208,10 @@ export function hasConcreteSourceValue(hook: string | undefined, sourceTitle: st
   const normalizedTitle = cleanTitle.toLowerCase();
   const knownTranslations: Array<[string, string]> = [
     ["엔비디아", "nvidia"],
+    ["테슬라", "tesla"],
+    ["스텔란티스", "stellantis"],
+    ["항공우주", "aerospace"],
+    ["음성 커머스 플랫폼", "voice commerce platform"],
     ["미 육군", "army"],
     ["반도체 제조 시스템", "chipmaking systems"],
     ["반도체 제조 시스템", "chipmaking system"],
@@ -222,7 +232,9 @@ export function hasExcessiveLatinHeadline(text: string | undefined): boolean {
   if (!clean) return false;
   const latinWords = clean.match(/[A-Za-z][A-Za-z0-9&'().-]*/g) ?? [];
   if (latinWords.length === 0) return false;
-  const meaningfulLatin = latinWords.filter((word) => !/^(?:AI|GPU|CPU|SEC|KRX|DART|KOSPI|KOSDAQ|NYSE|NASDAQ|ETF|IPO|ESS)$/i.test(word));
+  const meaningfulLatin = latinWords.filter(
+    (word) => !/^(?:AI|GPU|CPU|SEC|KRX|DART|KOSPI|KOSDAQ|NYSE|NASDAQ|ETF|IPO|ESS|FDA|8-K|10-Q|10-K)$/i.test(word)
+  );
   const latinChars = meaningfulLatin.join("").length;
   const koChars = (clean.match(/[가-힣]/g) ?? []).length;
   const totalLetters = latinChars + koChars;
@@ -232,7 +244,25 @@ export function hasExcessiveLatinHeadline(text: string | undefined): boolean {
   return totalLetters > 0 && latinChars / totalLetters >= 0.4 && koChars < 8;
 }
 
+const LATIN_ALLOWED_TOKEN = /^(?:AI|GPU|CPU|SEC|KRX|DART|KOSPI|KOSDAQ|NYSE|NASDAQ|ETF|IPO|ESS|FDA|8-K|10-Q|10-K|SK)$/i;
+const ENGLISH_FRAGMENT_TOKEN = /^(?:its|the|with|and|for|from|by|of|to|in|on|as|a|an|inc|corp|co|company|holdings?|group|plc|llc)$/i;
+
+export function hasEnglishFragmentHeadline(text: string | undefined): boolean {
+  const clean = cleanInline(text);
+  if (!clean) return false;
+  const latinWords = clean.match(/[A-Za-z][A-Za-z0-9&'().-]*/g) ?? [];
+  if (latinWords.length === 0) return false;
+  const koChars = (clean.match(/[가-힣]/g) ?? []).length;
+  const meaningful = latinWords.filter((word) => !LATIN_ALLOWED_TOKEN.test(word));
+  if (meaningful.some((word) => ENGLISH_FRAGMENT_TOKEN.test(word))) return true;
+  if (koChars === 0 && meaningful.length > 0) return true;
+  if (meaningful.length >= 2) return true;
+  const latinChars = meaningful.join("").length;
+  const totalLetters = latinChars + koChars;
+  return totalLetters > 0 && latinChars / totalLetters >= 0.35 && koChars < 10;
+}
+
 export function hasForbiddenCopy(text: string | undefined): boolean {
   const clean = cleanInline(text);
-  return FORBIDDEN_COPY.test(clean) || SOURCE_NAME_PATTERN.test(clean) || isAbstractTemplate(clean);
+  return FORBIDDEN_COPY.test(clean) || SOURCE_NAME_PATTERN.test(clean) || isAbstractTemplate(clean) || hasEnglishFragmentHeadline(clean);
 }

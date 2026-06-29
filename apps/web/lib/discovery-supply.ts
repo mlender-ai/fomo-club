@@ -419,11 +419,30 @@ function usAliasMatchScore(text: string, aliases: readonly string[]): number {
 
 function usArticleMatchScore(row: DiscoveryMarketRow, article: RawArticle): number {
   if (!cleanUsMaterialTitle(article.title)) return 0;
+  if (isUsBundleArticleTitle(article.title)) return 0;
   const aliases = usAliasesForRow(row);
   const titleScore = usAliasMatchScore(article.title, aliases);
   const summaryScore = article.summary ? usAliasMatchScore(article.summary, aliases) : 0;
-  if (titleScore <= 0 && summaryScore <= 0) return 0;
-  return titleScore * 3 + summaryScore;
+  if (titleScore <= 0) return 0;
+  return titleScore * 3 + Math.min(summaryScore, titleScore);
+}
+
+function isUsBundleArticleTitle(title: string | undefined): boolean {
+  const clean = decodeHtmlEntities(title ?? "").replace(/\s+/g, " ").trim();
+  if (!clean) return false;
+  const beforeColon = clean.split(":")[0] ?? "";
+  const tickers = beforeColon.match(/\b[A-Z]{2,5}\b/g) ?? [];
+  if (tickers.length >= 2 && /,|and|&/i.test(beforeColon)) return true;
+  return /\bwhy\s+these\s+stocks\b/i.test(clean) && tickers.length >= 2;
+}
+
+function cleanMaterialSummary(summary: string | undefined): string | undefined {
+  const clean = decodeHtmlEntities(summary ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean || clean.length < 12) return undefined;
+  return clean.slice(0, 420);
 }
 
 function pickUsTargetedMaterialArticle(row: DiscoveryMarketRow, articles: readonly RawArticle[]): RawArticle | undefined {
@@ -439,6 +458,7 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
   const isResearch = /리서치|증권|투자증권|자산운용|Research/i.test(`${article.source} ${article.category ?? ""}`);
   const isLinked = /종목뉴스\s?연결/i.test(article.source || sourceFallback);
   const sourceName = article.source || sourceFallback;
+  const summary = cleanMaterialSummary(article.summary);
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -448,6 +468,7 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
     confidence: "H",
     label,
     sourceTitle: label,
+    ...(summary ? { summary } : {}),
     sourceName,
     sourceUrl: article.url,
     publishedAt: article.publishedAt,
@@ -464,6 +485,7 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
     confidence: "H",
     label: disclosure.label,
     sourceTitle: disclosure.label,
+    summary: disclosure.label,
     sourceName: disclosure.source,
     ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
   };
@@ -474,6 +496,7 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
   if (!label) return null;
   const sourceName = article.source || sourceFallback;
   const sourceTitle = decodeHtmlEntities(article.title).replace(/\s+/g, " ").trim();
+  const summary = cleanMaterialSummary(article.summary);
   return {
     kind: "news_mention",
     firstSeen: true,
@@ -483,6 +506,7 @@ function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFal
     confidence: "M",
     label,
     sourceTitle: sourceTitle || label,
+    ...(summary ? { summary } : {}),
     sourceName,
     sourceUrl: article.url,
     publishedAt: article.publishedAt,
@@ -502,6 +526,7 @@ function materialEventFromAttentionSignal(attention: StockAttentionSignal | unde
     confidence: "M",
     label,
     sourceTitle: label,
+    summary: label,
     sourceName: attention?.newsEventSource || "뉴스 언급",
   };
 }
@@ -520,6 +545,7 @@ function newsHookInputFor(
     stock,
     ...(sector ? { sector } : {}),
     title,
+    summary: event.summary,
     source: event.sourceName ?? event.source,
     ...(typeof row?.changePct === "number" ? { changePct: row.changePct } : {}),
     asOf,
@@ -557,6 +583,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
         confidence: "H",
         label: filing.label,
         sourceTitle: filing.label,
+        summary: filing.label,
         sourceName: filing.source,
       };
     }
@@ -823,6 +850,22 @@ function enrichEventWithRow(
   };
 }
 
+export function attachMaterialEventIndicators(
+  event: DiscoveryEvent,
+  indicators: { changePct?: number; volumeRatio?: number }
+): DiscoveryEvent {
+  if (event.kind !== "news_mention" && event.kind !== "disclosure") return event;
+  return {
+    ...event,
+    ...(typeof event.changePct === "number" || typeof indicators.changePct !== "number"
+      ? {}
+      : { changePct: indicators.changePct }),
+    ...(typeof event.volumeRatio === "number" || typeof indicators.volumeRatio !== "number"
+      ? {}
+      : { volumeRatio: indicators.volumeRatio }),
+  };
+}
+
 function addStaticRecoveryRows(byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>, asOf: string): void {
   let added = 0;
   for (const def of STOCK_VOCAB) {
@@ -957,7 +1000,14 @@ function headlineCandidate(
   sector: string | undefined
 ): DiscoveryCandidate {
   const { synthesizedInsight: _previousSynthesis, ...rest } = candidate;
-  const events = candidate.events.map((event) => withRuleHeadlineHook(event, candidate.ticker, sector, row, candidate.asOf));
+  const volumeEvent = candidate.events.find((event) => event.kind === "volume_spike" && typeof event.volumeRatio === "number");
+  const indicators = {
+    ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
+    ...(typeof volumeEvent?.volumeRatio === "number" ? { volumeRatio: volumeEvent.volumeRatio } : {}),
+  };
+  const events = candidate.events.map((event) =>
+    attachMaterialEventIndicators(withRuleHeadlineHook(event, candidate.ticker, sector, row, candidate.asOf), indicators)
+  );
   return {
     ...rest,
     ...(sector ? { sector } : {}),

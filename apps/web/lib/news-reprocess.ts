@@ -4,6 +4,7 @@ import {
   englishMonthNumbers,
   englishQuarterNumbers,
   hasConcreteSourceValue,
+  hasEnglishFragmentHeadline,
   hasExcessiveLatinHeadline,
   hasForbiddenCopy,
   isAbstractTemplate,
@@ -17,6 +18,7 @@ export interface NewsHookInput {
   stock: string;
   sector?: string | undefined;
   title: string;
+  summary?: string | undefined;
   source?: string | undefined;
   changePct?: number | undefined;
   asOf: string;
@@ -31,33 +33,64 @@ const cache = new Map<string, NewsHookResult>();
 const GENERIC_TITLE_PATTERN = /^(?:(?:제품·AI 인프라|실적·가이던스|고객·파트너십|인도량 확인|자금조달·유동화)\s*소식|SEC 공시|소식|뉴스)(?:이|가)?\s*나왔어요\.?$/i;
 
 function cacheKey(input: NewsHookInput): string {
-  return [input.asOf.slice(0, 10), input.stock, input.sector ?? "", input.title, input.source ?? ""].join("\u001f");
+  return [input.asOf.slice(0, 10), input.stock, input.sector ?? "", input.title, input.summary ?? "", input.changePct ?? "", input.source ?? ""].join("\u001f");
 }
 
 export function validateReprocessedNewsHook(hook: string | undefined, input: NewsHookInput): string | undefined {
   const clean = cleanInline(hook);
   if (!clean || clean.length > 44) return undefined;
-  if (hasExcessiveLatinHeadline(clean)) return undefined;
+  if (hasExcessiveLatinHeadline(clean) || hasEnglishFragmentHeadline(clean)) return undefined;
   if (hasForbiddenCopy(clean) || SOURCE_NAME_PATTERN.test(clean) || isAbstractTemplate(clean)) return undefined;
+  if (/(?:특허\s*확|계약\s*체|수주\s*확|우선협상자\s*선|제휴\s*발|협력\s*소)$/.test(clean)) return undefined;
   if (isRawTitleCopy(clean, input.title)) return undefined;
-  const allowedNumbers = new Set(numbersIn(input.title).flatMap(numberVariants));
-  englishQuarterNumbers(input.title).forEach((num) => {
+  const sourceText = [input.title, input.summary].map(cleanInline).filter(Boolean).join(" ");
+  const allowedNumbers = new Set(numbersIn(sourceText).flatMap(numberVariants));
+  englishQuarterNumbers(sourceText).forEach((num) => {
     numberVariants(num).forEach((value) => allowedNumbers.add(value));
   });
-  englishMonthNumbers(input.title).forEach((num) => {
+  englishMonthNumbers(sourceText).forEach((num) => {
     numberVariants(num).forEach((value) => allowedNumbers.add(value));
   });
   if (typeof input.changePct === "number" && Number.isFinite(input.changePct)) {
     numberVariants(String(Math.abs(input.changePct))).forEach((value) => allowedNumbers.add(value));
   }
   if (numbersIn(clean).some((n) => !allowedNumbers.has(n) && !allowedNumbers.has(n.replace(/\.0+$/, "")))) return undefined;
-  if (!hasConcreteSourceValue(clean, input.title)) return undefined;
+  if (!hasConcreteSourceValue(clean, sourceText)) return undefined;
   return clean;
+}
+
+function formatSignedPercent(value: number): string {
+  const rounded = Math.abs(value) >= 10 ? value.toFixed(0) : value.toFixed(1);
+  return `${value > 0 ? "+" : ""}${rounded.replace(/\.0$/, "")}%`;
+}
+
+function metricText(input: NewsHookInput): string | undefined {
+  return typeof input.changePct === "number" && Number.isFinite(input.changePct) && Math.abs(input.changePct) >= 1
+    ? formatSignedPercent(input.changePct)
+    : undefined;
+}
+
+function normalizeHookPhrase(hook: string): string {
+  return cleanInline(hook)
+    .replace(/특허\s*확$/, "특허 확보")
+    .replace(/공급\s+공급계약/g, "공급계약")
+    .replace(/신탁\s+공급계약\s+체결/g, "신탁");
+}
+
+function withMetric(hook: string, input: NewsHookInput): string {
+  const normalized = normalizeHookPhrase(hook);
+  const metric = metricText(input);
+  if (!metric || normalized.includes(metric)) return normalized;
+  return `${normalized}에 ${metric}`;
 }
 
 function stripStockName(text: string, stock: string): string {
   const escaped = stock.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return text.replace(new RegExp(escaped, "gi"), "").replace(/^[,\s]+|[,\s]+$/g, "").trim();
+  return text
+    .replace(new RegExp(`${escaped}(?:와의|과의|와|과|이|가|은|는|을|를)?`, "gi"), "")
+    .replace(/^[,\s]+|[,\s]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function pickAmount(title: string): string | undefined {
@@ -100,7 +133,7 @@ function pickMonthLabel(title: string): string | undefined {
 
 function cleanEnglishPhrase(value: string | undefined): string | undefined {
   if (!value) return undefined;
-  if (/\baerospace\s+customer\b/i.test(value)) return "Aerospace 고객";
+  if (/\baerospace\s+customer\b/i.test(value)) return "항공우주 고객";
   const cleaned = value
     .replace(/\b(?:Inc|Corp|Corporation|Co|Company|Ltd|PLC|LLC|Holdings?|Group|The)\b\.?/gi, "")
     .replace(
@@ -120,11 +153,15 @@ function localizeEnglishPhrase(value: string): string {
   const clean = value.replace(/\s+/g, " ").trim();
   const normalized = clean.toLowerCase();
   const exact: Record<string, string> = {
-    aerospace: "Aerospace",
-    "aerospace customer": "Aerospace 고객",
+    aerospace: "항공우주",
+    "aerospace customer": "항공우주 고객",
     army: "미 육군",
     "army role": "미 육군",
     nvidia: "엔비디아",
+    tesla: "테슬라",
+    stellantis: "스텔란티스",
+    "soundhound ai": "사운드하운드AI",
+    "voice commerce platform": "음성 커머스 플랫폼",
     "chipmaking systems": "반도체 제조 시스템",
     "chipmaking system": "반도체 제조 시스템",
     "seat es8": "ES8",
@@ -207,6 +244,10 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
   const month = pickMonthLabel(title);
   const hooks: string[] = [];
 
+  if (/AIDC|전력\s*공급|공급\s*안정/.test(title)) {
+    hooks.push("전력 공급 안정화");
+  }
+
   if (counterparty && /launch(?:es|ed)?|introduc|unveil|product|platform|solution/i.test(title)) {
     hooks.push(`${withAndParticle(counterparty)} 제품 협력`);
   }
@@ -218,6 +259,10 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
     if (/deliver/i.test(title) && quarter) hooks.push(`${quarter} 인도량 발표`);
     if (/deliver/i.test(title) && month) hooks.push(`${month} 인도량 발표`);
     if (/launch|debut/i.test(title) && month && deliveryProduct) hooks.push(`${deliveryProduct} ${month} 출시 일정`);
+  }
+
+  if (/투자/.test(title)) {
+    hooks.push(amount ? `${amount} 투자` : "대규모 투자");
   }
 
   if (/정부|국책|투자|클러스터|산단|호남/.test(title) && /관련주|부각|묶|투자/.test(title)) {
@@ -347,7 +392,10 @@ export function ruleReprocessNewsHook(input: NewsHookInput): string | undefined 
   if (!title || GENERIC_TITLE_PATTERN.test(title)) return undefined;
 
   for (const hook of candidateHooks(input, title)) {
-    const validated = validateReprocessedNewsHook(hook, input);
+    const normalized = normalizeHookPhrase(hook);
+    const validated =
+      validateReprocessedNewsHook(withMetric(normalized, input), input) ??
+      validateReprocessedNewsHook(normalized, input);
     if (validated) return validated;
   }
   return undefined;
@@ -370,16 +418,16 @@ function systemPrompt(): string {
   const banned = ["매" + "수/매" + "도", "목표" + "가", "예측", "과장", "매체명", "기사 제목 복붙"];
   return [
     "너는 주식 발견 카드의 뉴스 제목을 종목 관점 한 줄로 압축한다.",
-    "입력이 영문 미국 종목 뉴스/공시여도 출력은 반드시 한국어다.",
-    "제목에 있는 사실만 사용한다.",
-    "무엇을·누구와·얼마·언제 중 확인 가능한 구체값을 최소 1개 포함한다.",
+    "출력은 100% 한국어다. 영어 단어를 한국어 조사에 섞지 마라.",
+    "제목과 본문에 있는 사실만 사용한다.",
+    "무엇을·누구와·얼마·언제 중 확인 가능한 구체값을 최소 1개 포함하고, 가능하면 입력 changePct를 함께 붙인다.",
     "계약/수주/실적/공시/뉴스/소식/재료 같은 카테고리 명사만으로 끝내지 않는다.",
     "상대방·금액·제품·수치 중 하나가 없으면 빈 hook을 반환한다.",
     "영문 기사 제목을 그대로 번역하지 말고 종목 보유자 관점으로 압축한다.",
     "좋은 예: 원문 '티이엠씨씨엔에스, 180억원 반도체 장비 공급계약 체결' -> '180억원 반도체 장비 공급계약 체결'.",
-    "좋은 예: 원문 'D-Wave Quantum Announces New Partnership With Aerospace Customer' -> 'Aerospace 고객과 제휴 발표'.",
-    "좋은 예: 원문 'SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance' -> '1분기 매출 성장·가이던스 상향'.",
-    "나쁜 예: 'NIO Stock Eyes June Delivery', '팔란티어 제휴 발표', '아이온큐 공개'.",
+    "좋은 예: 원문 'D-Wave Quantum Announces New Partnership With Aerospace Customer' -> '항공우주 고객 제휴 발표에 +8%'.",
+    "좋은 예: 원문 'SoundHound AI Reports First Quarter Revenue Growth and Raises Guidance' -> '1분기 매출 성장에 +3%'.",
+    "나쁜 예: 'NIO Stock Eyes June Delivery', 'Aerospace 고객과 제휴 발표', '팔란티어 제휴 발표', '아이온큐 공개'.",
     "나쁜 예: 카테고리만 말하는 추상 문장, 원문 사건 없이 반응만 말하는 문장.",
     `${banned.join(", ")} 금지.`,
     "결과는 한국어 44자 이하 JSON {\"hook\":\"...\"}.",
@@ -410,6 +458,7 @@ async function aiReprocessNewsHook(input: NewsHookInput): Promise<string | undef
           stock: input.stock,
           sector: input.sector,
           title: input.title,
+          summary: input.summary,
           source: input.source,
           changePct: input.changePct,
         }),
