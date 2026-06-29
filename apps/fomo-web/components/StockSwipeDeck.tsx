@@ -842,7 +842,7 @@ export function StockSwipeDeck({
 
   return (
     <div className="w-full">
-      <div className="relative mx-auto h-[60svh] min-h-[460px] max-h-[580px] w-full select-none sm:min-h-[500px]">
+      <div className="relative mx-auto h-[52svh] min-h-[380px] max-h-[520px] w-full select-none sm:min-h-[420px]">
         {/* 다음 카드 — 뒤에 살짝 드러나는 스택(틴더식 peek). 위 카드가 불투명이라 body 통과 비침은 없음. */}
         {stocks.length > 1 && (
           <div
