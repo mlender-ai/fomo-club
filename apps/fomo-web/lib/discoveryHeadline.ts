@@ -96,8 +96,6 @@ export function compactDiscoveryCardHeadline({
   const detail = parts.detail ?? clean;
 
   if (state === "뉴스 재료 붙은 종목" || state === "공시 먼저 뜬 종목" || (!state && /뉴스|공시|소식|계약|수주/.test(clean))) {
-    const material = normalizeSurfaceCopy(detail);
-    if (isSurfaceMaterial(material)) return clipped(material, 44);
     const topic = topicFromMaterial(detail);
     const support = supportFromDetail(detail);
     return topic === "뉴스" ? support : `${topic}에 ${support}`;
@@ -112,7 +110,7 @@ export function compactDiscoveryCardHeadline({
   if (state?.includes("거래") || state?.includes("새 가격대")) return undefined;
 
   const normalized = normalizeSurfaceCopy(detail);
-  if (isSurfaceMaterial(normalized)) return clipped(normalized, 44);
+  if (isSurfaceMaterial(normalized) && !/뉴스|공시|소식|계약|수주/.test(clean)) return clipped(normalized, 44);
 
   return undefined;
 }
