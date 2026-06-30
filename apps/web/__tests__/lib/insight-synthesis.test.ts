@@ -136,7 +136,8 @@ describe("why-driven insight synthesis guard", () => {
       const second = await synthesizeWhyDrivenInsight(candidate);
       expect(first).toEqual(second);
       expect(first.method).toBe("fallback");
-      expect(first.insight.headline).toContain("정부 호남 투자 예고");
+      expect(first.insight.headline).toContain("대규모 투자");
+      expect(first.insight.headline).toContain("+12%");
       expect(first.insight.headline).not.toContain("한경비즈니스");
     } finally {
       if (oldUrl !== undefined) process.env["AI_API_URL"] = oldUrl;
