@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { DiscoveryCandidate } from "@fomo/core";
+import { synthesizeDiscoveryInsight, type DiscoveryCandidate } from "@fomo/core";
 import {
   blockOverlapRatio,
   synthesizeWhyDrivenInsight,
   validateWhyInsightOutput,
+  whyInsightRejectionReasons,
 } from "../../lib/insight-synthesis";
 
 const asOf = "2026-06-24";
@@ -70,6 +71,16 @@ describe("why-driven insight synthesis guard", () => {
     expect(validateWhyInsightOutput({ headline: "금호타이어 지금 사" + "야 하는 자리" }, candidate)).toBeUndefined();
     expect(validateWhyInsightOutput({ headline: "금호타이어 +28%, 정부 호남 투자 예고" }, candidate)).toBeUndefined();
     expect(validateWhyInsightOutput({ headline: "엔비디아와 금호타이어가 정부 투자에 묶임" }, candidate)).toBeUndefined();
+  });
+
+  it("개발 플래그로 advice reason 토글 — 해제 시 통과, false 로 복원", () => {
+    const candidate = baseCandidate();
+    const base = synthesizeDiscoveryInsight(candidate);
+    const adviceInsight = { ...base, synthesis: `${base.synthesis} 지금 매수 추천` };
+    // 복원(false): 투자조언 reason 다시 발생
+    expect(whyInsightRejectionReasons(adviceInsight, candidate, { liftDevConstraints: false })).toContain("advice");
+    // 해제(true): 투자조언 reason 제거(개발 자유) — 사실/품질 reason 은 무관하게 그대로
+    expect(whyInsightRejectionReasons(adviceInsight, candidate, { liftDevConstraints: true })).not.toContain("advice");
   });
 
   it("rejects English US headlines and accepts Korean concrete synthesis from English quarter text", () => {

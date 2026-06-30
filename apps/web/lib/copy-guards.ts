@@ -1,3 +1,12 @@
+/**
+ * 개발 단계 한시 제약 해제 플래그 — `docs/CONSTRAINT_OVERRIDE_DEV.md`(ACTIVE) 와 동기화한다.
+ *  - true:  투자조언·예측·인과 표현 차단 해제(개발 자유). 출시 전 개발 속도용.
+ *  - false: 전체 복원(원래 제약 재발효).
+ * ⚠️ 사실 정확성 가드(가짜 숫자·종목 오매칭·한영혼용·복붙·트리밍)는 이 플래그와 **무관하게 항상** 켜져 있다.
+ * ⚠️ 공개 출시 전 반드시 false 로 되돌릴 것. 이 한 줄(또는 CONSTRAINT_OVERRIDE_DEV.md ACTIVE:false)이 단일 토글.
+ */
+export const DEV_CONSTRAINTS_LIFTED = true;
+
 export const FORBIDDEN_COPY = new RegExp(
   [
     "목표" + "가",
@@ -308,12 +317,18 @@ export function hasEnglishFragmentHeadline(text: string | undefined): boolean {
   return totalLetters > 0 && latinChars / totalLetters >= 0.35 && koChars < 10;
 }
 
-export function hasForbiddenCopy(text: string | undefined): boolean {
+export function hasForbiddenCopy(
+  text: string | undefined,
+  opts?: { liftDevConstraints?: boolean }
+): boolean {
   const clean = cleanInline(text);
+  const lifted = opts?.liftDevConstraints ?? DEV_CONSTRAINTS_LIFTED;
+  // 투자조언·예측·인과 표현(FORBIDDEN_COPY)만 개발 플래그로 해제. 나머지는 사실/품질 가드라 항상 유지.
+  const adviceBlocked = !lifted && FORBIDDEN_COPY.test(neutralizeSupplyFactTerms(clean));
   return (
-    FORBIDDEN_COPY.test(neutralizeSupplyFactTerms(clean)) ||
-    SOURCE_NAME_PATTERN.test(clean) ||
-    isAbstractTemplate(clean) ||
-    hasEnglishFragmentHeadline(clean)
+    adviceBlocked ||
+    SOURCE_NAME_PATTERN.test(clean) || // 매체명 노출(품질) — 유지
+    isAbstractTemplate(clean) || // 추상 슬롭(품질) — 유지
+    hasEnglishFragmentHeadline(clean) // 한영혼용(사실/가독성) — 유지
   );
 }
