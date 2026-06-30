@@ -32,9 +32,9 @@ export interface NewsHookResult {
 const cache = new Map<string, NewsHookResult>();
 const GENERIC_TITLE_PATTERN = /^(?:(?:제품·AI 인프라|실적·가이던스|고객·파트너십|인도량 확인|자금조달·유동화)\s*소식|SEC 공시|소식|뉴스)(?:이|가)?\s*나왔어요\.?$/i;
 const US_MARKET_NOISE_PATTERN =
-  /\b(?:what\s+you\s+should\s+know|can\s+it\s+rebound|is\s+it\s+time\s+to|better\s+buy|price\s+target|stock\s+eyes|why\s+these\s+stocks|these\s+stocks|stocks\s+posted|after[-\s]?hours?)\b/i;
+  /\b(?:what\s+you\s+should\s+know|can\s+it\s+rebound|is\s+it\s+time\s+to|better\s+buy|should\s+you\s+buy|buy,\s*sell|price\s+target|stock\s+eyes|which\s+stock|ultimate\s+.*winner|supercycle\s+winner|why\s+these\s+stocks|these\s+stocks|stocks\s+posted|after[-\s]?hours?)\b/i;
 const MATERIAL_CONTEXT_PATTERN =
-  /특허|공시|계약|수주|제휴|협력|파트너십|실적|매출|가이던스|인도량|공급|선정|투자|증자|자사주|인수전|클러스터|임상|승인|허가|제품|개발|확보|체결|발표|8-K|10-Q|SEC|리테일|고객|우선협상자|관리운영|급여|출시|치료|서비스|상한가|신탁|상업화|권리|할증|렌탈|지원|종료|공개|항공우주|플랫폼|협업|판매|데이터|분기|준수율|내부통제|파업|전환|발행|처분|사업|위탁|공장|신규|후보물질|배터리|반도체|AI|FDA|조달|매각|인수|합병|계열사|자회사/;
+  /특허|공시|계약|수주|제휴|협력|파트너십|실적|매출|가이던스|인도량|공급|선정|투자|증자|자사주|인수전|클러스터|임상|승인|허가|제품|개발|확보|체결|발표|8-K|10-Q|SEC|리테일|고객|우선협상자|관리운영|급여|출시|치료|서비스|상한가|신탁|상업화|권리|할증|렌탈|지원|종료|공개|항공우주|플랫폼|협업|판매|데이터|분기|준수율|내부통제|파업|전환|발행|처분|사업|위탁|공장|신규|후보물질|배터리|반도체|AI|FDA|조달|매각|인수|합병|계열사|자회사|소송|담합|반독점/;
 
 function cacheKey(input: NewsHookInput): string {
   return [input.asOf.slice(0, 10), input.stock, input.sector ?? "", input.title, input.summary ?? "", input.changePct ?? "", input.source ?? ""].join("\u001f");
@@ -58,7 +58,13 @@ export function validateReprocessedNewsHook(hook: string | undefined, input: New
   if (typeof input.changePct === "number" && Number.isFinite(input.changePct)) {
     numberVariants(String(Math.abs(input.changePct))).forEach((value) => allowedNumbers.add(value));
   }
-  if (numbersIn(clean).some((n) => !allowedNumbers.has(n) && !allowedNumbers.has(n.replace(/\.0+$/, "")))) return undefined;
+  if (
+    numbersIn(clean).some(
+      (n) => !numberVariants(n).some((variant) => allowedNumbers.has(variant) || allowedNumbers.has(variant.replace(/\.0+$/, "")))
+    )
+  ) {
+    return undefined;
+  }
   if (!hasConcreteSourceValue(clean, sourceText) && !MATERIAL_CONTEXT_PATTERN.test(clean)) return undefined;
   return clean;
 }
@@ -98,7 +104,19 @@ function stripStockName(text: string, stock: string): string {
 }
 
 function pickAmount(title: string): string | undefined {
-  return title.match(/\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원|%)/i)?.[0]?.replace(/\s+/g, "");
+  const korean = title.match(/\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원|%)/i)?.[0];
+  if (korean) return korean.replace(/\s+/g, "");
+  const commaUsd = title.match(/(?:US)?\$\s*(\d{1,3}(?:,\d{3})+)(?:\.\d+)?/i);
+  if (commaUsd?.[1]) {
+    const value = Number(commaUsd[1].replace(/,/g, ""));
+    if (Number.isFinite(value) && value >= 1_000_000_000) return `${Number((value / 1_000_000_000).toFixed(1))}십억달러`;
+    if (Number.isFinite(value) && value >= 1_000_000) return `${Math.round(value / 1_000_000)}백만달러`;
+  }
+  const usd = title.match(/(?:US)?\$?\s*(\d+(?:\.\d+)?)\s*[-\s]?(billion|million|bn|m|b)\b/i);
+  if (!usd?.[1] || !usd[2]) return undefined;
+  const unit = usd[2].toLowerCase();
+  const label = unit === "billion" || unit === "bn" || unit === "b" ? "십억달러" : "백만달러";
+  return `${usd[1]}${label}`;
 }
 
 function pickQuoted(title: string): string | undefined {
@@ -184,6 +202,25 @@ function localizeKnownEnglishCompany(value: string | undefined): string | undefi
     [/\bLucid\b/i, "루시드"],
     [/\bRivian\b/i, "리비안"],
     [/\bNIO\b/i, "니오"],
+    [/\bIonQ\b/i, "아이온큐"],
+    [/\bRocket Lab\b/i, "로켓랩"],
+    [/\bIridium\b/i, "이리듐"],
+    [/\bNuScale\b/i, "뉴스케일파워"],
+    [/\bParagon\b/i, "파라곤"],
+    [/\bUpstart\b/i, "업스타트"],
+    [/\bNeuberger\b/i, "노이버거"],
+    [/\bAffirm\b/i, "어펌"],
+    [/\bBackcountry\b/i, "백컨트리"],
+    [/\bSnowflake\b/i, "스노우플레이크"],
+    [/\bUnlimitail\b/i, "언리미테일"],
+    [/\bAxon\b/i, "액손"],
+    [/\bCoreWeave\b/i, "코어위브"],
+    [/\bRobinhood\b/i, "로빈후드"],
+    [/\bMicroStrategy\b|\bStrategy\b/i, "마이크로스트래티지"],
+    [/\bDoorDash\b/i, "도어대시"],
+    [/\bMarvell\b/i, "마벨"],
+    [/\bIBM\b/i, "아이비엠"],
+    [/\bWaymo\b/i, "웨이모"],
   ];
   return known.find(([pattern]) => pattern.test(clean))?.[1];
 }
@@ -191,6 +228,30 @@ function localizeKnownEnglishCompany(value: string | undefined): string | undefi
 function localizeEnglishPhrase(value: string): string {
   const clean = value.replace(/\s+/g, " ").trim();
   const normalized = clean.toLowerCase();
+  const fuzzy: Array<[RegExp, string]> = [
+    [/\bclavis\s*xg\b/i, "클라비스 XG"],
+    [/\bfalcon\s+aidr\b/i, "팔콘 AIDR"],
+    [/\btrainium\b/i, "트레이니움"],
+    [/\bground\s+level\s+images?\b/i, "지상 이미지 데이터"],
+    [/\bai\s+supply\s+chain\s+apps?\b/i, "AI 공급망 앱"],
+    [/\bretail\s+media\s+data\s+hub\b/i, "리테일 미디어 데이터 허브"],
+    [/\bsatellite\s+communications?\b|\bsatellite\s+communications?\s+market\b/i, "위성통신 사업"],
+    [/\bcommercial\s+iot\s+business\b|\biot\s+business\b/i, "IoT 사업"],
+    [/\bconsumer\s+loans?\b/i, "소비자대출"],
+    [/\bbitcoin\s+sales?\b|\bbitcoin\s+sale\b/i, "비트코인 매각"],
+    [/\bsub[-\s]?1nm\s+chip\b/i, "서브 1나노 칩"],
+    [/\bvoice\s+commerce\s+platform\b/i, "음성 커머스 플랫폼"],
+    [/\bchipmaking\s+systems?\b/i, "반도체 제조 시스템"],
+    [/\b5[-\s]?seat\s+es8\b|\bseat\s+es8\b/i, "ES8"],
+    [/\bbackcountry\b/i, "백컨트리"],
+    [/\bparagon\b/i, "파라곤"],
+    [/\biridium\b/i, "이리듐"],
+    [/\bunlimitail\b/i, "언리미테일"],
+    [/\bprecisely\b/i, "프리사이슬리"],
+    [/\bwaymo\b/i, "웨이모"],
+  ];
+  const fuzzyHit = fuzzy.find(([pattern]) => pattern.test(clean))?.[1];
+  if (fuzzyHit) return fuzzyHit;
   const exact: Record<string, string> = {
     aerospace: "항공우주",
     "aerospace customer": "항공우주 고객",
@@ -222,6 +283,20 @@ function localizeEnglishPhrase(value: string): string {
     "chipmaking system": "반도체 제조 시스템",
     "seat es8": "ES8",
     "5-seat es8": "ES8",
+    "falcon aidr": "팔콘 AIDR",
+    "clavis xg": "클라비스 XG",
+    "retail media data hub": "리테일 미디어 데이터 허브",
+    "ai supply chain apps": "AI 공급망 앱",
+    "ground level images": "지상 이미지 데이터",
+    "satellite communications": "위성통신 사업",
+    "consumer loans": "소비자대출",
+    trainium: "트레이니움",
+    backcountry: "백컨트리",
+    paragon: "파라곤",
+    iridium: "이리듐",
+    unlimitail: "언리미테일",
+    precisely: "프리사이슬리",
+    waymo: "웨이모",
   };
   return exact[normalized] ?? clean;
 }
@@ -299,6 +374,40 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
   const quarter = pickQuarterLabel(title);
   const month = pickMonthLabel(title);
   const hooks: string[] = [];
+
+  if (/clavis\s*xg/i.test(title)) hooks.push("클라비스 XG 출시");
+  if (/falcon\s+aidr/i.test(title)) hooks.push("팔콘 AIDR 제품 확장");
+  if (/retail\s+media\s+data\s+hub/i.test(title)) hooks.push("리테일 미디어 데이터 허브 제휴");
+  if (/ground\s+level\s+images?/i.test(title)) hooks.push("지상 이미지 데이터 공개");
+  if (/ai\s+supply\s+chain\s+apps?/i.test(title)) hooks.push("AI 공급망 앱 공개");
+  if (/trainium/i.test(title)) hooks.push("트레이니움 칩 판매 이슈");
+  if (/sub[-\s]?1nm\s+chip/i.test(title)) hooks.push("서브 1나노 칩 공개");
+  if (/bitcoin\s+sales?|sale\s+of\s+bitcoin|sell\s+bitcoin/i.test(title)) hooks.push("비트코인 매각 프레임워크 공개");
+  if (/antitrust\s+lawsuit|price[-\s]?fixing|price[-\s]?gouging/i.test(title)) {
+    hooks.push("가격담합 소송 제기");
+  }
+  if (/trading\s+activity.*new\s+highs?|new\s+highs?.*trading\s+activity/i.test(title)) {
+    hooks.push(month ? `${month} 거래활동 신기록` : "거래활동 신기록");
+  }
+  if (/backcountry/i.test(title) && /partner|partnership|deal|collaboration/i.test(title)) {
+    hooks.push("백컨트리 파트너십 체결");
+  }
+  if (/unlimitail/i.test(title) && /partnership|data\s+hub|retail\s+media/i.test(title)) {
+    hooks.push("언리미테일 리테일 데이터 제휴");
+  }
+  if (/iridium/i.test(title) && /acquir|acquisition|deal|commercial\s+iot/i.test(title)) {
+    hooks.push(amount ? `이리듐 IoT 사업 ${amount} 인수 발표` : "이리듐 IoT 사업 인수 발표");
+  }
+  if (/paragon/i.test(title) && /contract|secures?|signs?|rollout/i.test(title)) {
+    hooks.push("파라곤 공급계약 체결");
+  }
+  if (/consumer\s+loans?|securitization/i.test(title) && amount) {
+    hooks.push(`${amount} 소비자대출 유동화`);
+  }
+  if (/backlog/i.test(title)) {
+    const backlog = pickBacklog(title);
+    if (backlog) hooks.push(`${backlog} 확보`);
+  }
 
   if (/AIDC|전력\s*공급|공급\s*안정/.test(title)) {
     hooks.push("전력 공급 안정화");
@@ -446,8 +555,9 @@ function pickLeadClause(title: string): string | undefined {
 export function ruleReprocessNewsHook(input: NewsHookInput): string | undefined {
   const title = cleanInline(stripStockName(input.title, input.stock));
   if (!title || GENERIC_TITLE_PATTERN.test(title) || US_MARKET_NOISE_PATTERN.test(title)) return undefined;
+  const extractionText = cleanInline([title, input.summary].filter(Boolean).join(" "));
 
-  for (const hook of candidateHooks(input, title)) {
+  for (const hook of candidateHooks(input, extractionText)) {
     const normalized = normalizeHookPhrase(hook);
     const validated =
       validateReprocessedNewsHook(withMetric(normalized, input), input) ??

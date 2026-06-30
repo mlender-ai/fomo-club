@@ -346,39 +346,71 @@ function pickTargetedMaterialArticle(canonical: string, articles: readonly RawAr
 }
 
 const US_ARTICLE_ALIAS_OVERRIDES: Record<string, string[]> = {
+  ABNB: ["Airbnb"],
+  ADBE: ["Adobe"],
+  AMZN: ["Amazon"],
   AMD: ["Advanced Micro Devices"],
+  ANET: ["Arista", "Arista Networks"],
   ARM: ["Arm Holdings"],
   APP: ["AppLovin"],
   AVGO: ["Broadcom"],
+  AXON: ["Axon", "Axon Enterprise"],
   BBAI: ["BigBear.ai", "BigBear AI"],
   BE: ["Bloom Energy"],
   COIN: ["Coinbase"],
+  CRM: ["Salesforce"],
   CRWD: ["CrowdStrike"],
+  CSCO: ["Cisco"],
+  DASH: ["DoorDash"],
   DDOG: ["Datadog"],
+  DELL: ["Dell", "Dell Technologies"],
   DUOL: ["Duolingo"],
   GEV: ["GE Vernova"],
+  GOOG: ["Alphabet", "Google"],
+  GOOGL: ["Alphabet", "Google"],
+  HIMS: ["Hims", "Hims & Hers"],
   HOOD: ["Robinhood"],
+  HPE: ["Hewlett Packard Enterprise", "HPE"],
+  IBM: ["IBM", "International Business Machines"],
   IONQ: ["IonQ"],
+  INTC: ["Intel"],
+  ISRG: ["Intuitive Surgical"],
+  KLAC: ["KLA"],
   LCID: ["Lucid", "Lucid Group"],
   MDB: ["MongoDB"],
+  META: ["Meta", "Meta Platforms", "Facebook"],
+  MSTR: ["MicroStrategy", "Strategy"],
   MRVL: ["Marvell"],
   MU: ["Micron"],
+  NET: ["Cloudflare"],
   NIO: ["NIO"],
   NVDA: ["Nvidia", "NVIDIA"],
+  OKTA: ["Okta"],
+  ORCL: ["Oracle"],
+  PANW: ["Palo Alto Networks"],
   PLTR: ["Palantir"],
   QBTS: ["D-Wave", "D-Wave Quantum"],
+  QCOM: ["Qualcomm"],
+  RIOT: ["Riot Platforms"],
   RGTI: ["Rigetti"],
   RIVN: ["Rivian"],
   RKLB: ["Rocket Lab"],
+  SNDK: ["SanDisk", "Sandisk"],
   SMCI: ["Super Micro", "Supermicro"],
   SOFI: ["SoFi"],
   SOUN: ["SoundHound", "SoundHound AI"],
   SQ: ["Block"],
+  STX: ["Seagate"],
   TSM: ["Taiwan Semiconductor", "TSMC"],
   TSLA: ["Tesla"],
+  TTD: ["Trade Desk", "The Trade Desk"],
+  TXN: ["Texas Instruments"],
+  UBER: ["Uber"],
   UPST: ["Upstart"],
   VRT: ["Vertiv"],
   VST: ["Vistra"],
+  WDC: ["Western Digital"],
+  ZS: ["Zscaler"],
 };
 
 function escapeRegExp(value: string): string {
@@ -575,7 +607,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
   if (row.country !== "KR") {
     const [filingResult, newsResult] = await Promise.allSettled([
       fetchRecentSecFilings(row.symbol, 2),
-      fetchYahooStockNews(row.symbol, 6),
+      fetchYahooStockNews(row.symbol, 10),
     ]);
     const filing = filingResult.status === "fulfilled" ? filingResult.value[0] : undefined;
     if (filing) {
@@ -590,6 +622,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
         sourceTitle: filing.label,
         summary: filing.label,
         sourceName: filing.source,
+        ...(filing.url ? { sourceUrl: filing.url } : {}),
       };
     }
     const stockNews = newsResult.status === "fulfilled" ? pickUsTargetedMaterialArticle(row, newsResult.value) : undefined;

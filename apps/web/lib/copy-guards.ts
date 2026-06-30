@@ -216,6 +216,41 @@ export function hasConcreteSourceValue(hook: string | undefined, sourceTitle: st
     ["반도체 제조 시스템", "chipmaking systems"],
     ["반도체 제조 시스템", "chipmaking system"],
     ["미국 항공우주", "aerospace"],
+    ["아이온큐", "ionq"],
+    ["클라비스", "clavis"],
+    ["로켓랩", "rocket lab"],
+    ["이리듐", "iridium"],
+    ["뉴스케일", "nuscale"],
+    ["파라곤", "paragon"],
+    ["업스타트", "upstart"],
+    ["노이버거", "neuberger"],
+    ["어펌", "affirm"],
+    ["백컨트리", "backcountry"],
+    ["스노우플레이크", "snowflake"],
+    ["언리미테일", "unlimitail"],
+    ["액손", "axon"],
+    ["코어위브", "coreweave"],
+    ["메타", "meta"],
+    ["마이크로소프트", "microsoft"],
+    ["오픈AI", "openai"],
+    ["로빈후드", "robinhood"],
+    ["마이크로스트래티지", "microstrategy"],
+    ["도어대시", "doordash"],
+    ["크라우드스트라이크", "crowdstrike"],
+    ["팔콘", "falcon"],
+    ["마벨", "marvell"],
+    ["트레이니움", "trainium"],
+    ["아이비엠", "ibm"],
+    ["오라클", "oracle"],
+    ["웨이모", "waymo"],
+    ["지상 이미지", "ground level image"],
+    ["AI 공급망 앱", "ai supply chain app"],
+    ["리테일 미디어 데이터", "retail media data"],
+    ["위성통신", "satellite communication"],
+    ["IoT 사업", "iot business"],
+    ["소비자대출", "consumer loan"],
+    ["비트코인 매각", "bitcoin sale"],
+    ["서브 1나노", "sub-1nm"],
   ];
   if (
     knownTranslations.some(
@@ -244,7 +279,7 @@ export function hasExcessiveLatinHeadline(text: string | undefined): boolean {
   return totalLetters > 0 && latinChars / totalLetters >= 0.4 && koChars < 8;
 }
 
-const LATIN_ALLOWED_TOKEN = /^(?:AI|GPU|CPU|SEC|KRX|DART|KOSPI|KOSDAQ|NYSE|NASDAQ|ETF|IPO|ESS|FDA|8-K|10-Q|10-K|SK)$/i;
+const LATIN_ALLOWED_TOKEN = /^(?:AI|AIDR|GPU|CPU|SEC|KRX|DART|KOSPI|KOSDAQ|NYSE|NASDAQ|ETF|IPO|ESS|FDA|8-K|10-Q|10-K|SK)$/i;
 const ENGLISH_FRAGMENT_TOKEN =
   /^(?:its|the|with|and|for|from|by|of|to|in|on|as|a|an|can|why|these|stocks?|stock|posted|double|digit|after|hours?|today|eyes?|june|delivery|deliveries|moved|more|market|inc|corp|co|company|holdings?|group|plc|llc)$/i;
 const LATIN_WITH_KOREAN_PARTICLE_PATTERN =

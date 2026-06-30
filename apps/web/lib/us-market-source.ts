@@ -1,6 +1,6 @@
 import type { DiscoveryMarket } from "@fomo/core";
 import type { DiscoveryMarketRow } from "./market-source-types";
-import { usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
+import { usDiscoverySeedForSymbol, usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
 
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
 const TWELVE_TIME_SERIES_URL = "https://api.twelvedata.com/time_series";
@@ -14,7 +14,7 @@ const US_DYNAMIC_UNIVERSE_LIMIT = 260;
 const US_QUOTE_BATCH_SIZE = 80;
 const US_SPARKLINE_LIMIT = 90;
 const US_NASDAQ_SCREENER_LIMIT = 7000;
-const US_NASDAQ_FALLBACK_LIMIT = 50;
+const US_NASDAQ_FALLBACK_LIMIT = 120;
 const US_NASDAQ_FALLBACK_CONCURRENCY = 12;
 const US_MOVER_TYPES = ["gainers", "losers", "most_active"] as const;
 
@@ -301,6 +301,26 @@ function parseNasdaqScreenerRow(row: NasdaqScreenerRow): DiscoveryMarketRow | nu
   };
 }
 
+function mergeCuratedSeed(row: DiscoveryMarketRow, seed: UsDiscoverySymbol): DiscoveryMarketRow {
+  return {
+    ...row,
+    canonical: seed.canonical,
+    market: marketFor(seed.market, row.market),
+    sectorHint: seed.sector,
+    ...(seed.fameRank ? { marketCapRank: seed.fameRank, marketCapRankSource: "curated" as const } : {}),
+  };
+}
+
+function curatedScreenerRows(rows: readonly DiscoveryMarketRow[], seeds: readonly UsDiscoverySymbol[]): DiscoveryMarketRow[] {
+  const seedBySymbol = new Map(seeds.map((seed) => [seed.symbol.toUpperCase(), seed]));
+  return rows
+    .map((row) => {
+      const seed = seedBySymbol.get(row.symbol.toUpperCase());
+      return seed ? mergeCuratedSeed(row, seed) : null;
+    })
+    .filter((row): row is DiscoveryMarketRow => row !== null);
+}
+
 function nasdaqMoverScore(row: DiscoveryMarketRow): number {
   const pct = Math.abs(row.changePct ?? 0);
   const volume = Math.log10(Math.max(1, row.tradingValue ?? 0));
@@ -552,16 +572,6 @@ function buildDynamicSeed(symbol: string, quote: TwelveQuote | undefined): UsDis
   };
 }
 
-function seedFromMarketRow(row: DiscoveryMarketRow): UsDiscoverySymbol {
-  return {
-    canonical: row.canonical,
-    symbol: row.symbol.toUpperCase(),
-    market: row.market === "NYSE" ? "NYSE" : "NASDAQ",
-    sector: row.sectorHint ?? inferredSector(row.symbol, row.canonical),
-    ...(row.marketCapRank ? { fameRank: row.marketCapRank } : {}),
-  };
-}
-
 function strongMomentumRows(rows: readonly DiscoveryMarketRow[]): number {
   return rows.filter((row) => Math.abs(row.changePct ?? 0) >= 7).length;
 }
@@ -573,6 +583,29 @@ function mergeSparkline(row: DiscoveryMarketRow, fallback: DiscoveryMarketRow | 
     sparkline: fallback.sparkline,
     ...(fallback.sessionLabel ? { sessionLabel: fallback.sessionLabel } : {}),
   };
+}
+
+function mergePreferredRows(primary: readonly DiscoveryMarketRow[], fallback: readonly DiscoveryMarketRow[]): DiscoveryMarketRow[] {
+  const primarySymbols = new Set(primary.map((row) => row.symbol.toUpperCase()));
+  const rowsBySymbol = new Map<string, DiscoveryMarketRow>();
+
+  for (const row of fallback) {
+    rowsBySymbol.set(row.symbol.toUpperCase(), row);
+  }
+  for (const row of primary) {
+    const key = row.symbol.toUpperCase();
+    rowsBySymbol.set(key, mergeSparkline(row, rowsBySymbol.get(key)));
+  }
+
+  return [...rowsBySymbol.values()].sort((a, b) => {
+    const aPrimary = primarySymbols.has(a.symbol.toUpperCase());
+    const bPrimary = primarySymbols.has(b.symbol.toUpperCase());
+    if (aPrimary !== bPrimary) return aPrimary ? -1 : 1;
+    const aRank = a.marketCapRank ?? 9999;
+    const bRank = b.marketCapRank ?? 9999;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.symbol.localeCompare(b.symbol);
+  });
 }
 
 async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]; diagnostics: UsMarketDiagnostics }> {
@@ -592,20 +625,17 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
   });
 
   if (!key) {
-    const screenerRows = await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []);
+    const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
     if (screenerRows.length > 0) {
-      const sparkRows = await fetchNasdaqRows(screenerRows.slice(0, US_NASDAQ_FALLBACK_LIMIT).map(seedFromMarketRow)).catch(
-        (): DiscoveryMarketRow[] => [],
-      );
-      const sparkBySymbol = new Map(sparkRows.map((row) => [row.symbol.toUpperCase(), row]));
-      const rows = screenerRows.map((row) => mergeSparkline(row, sparkBySymbol.get(row.symbol.toUpperCase())));
+      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+      const rows = mergePreferredRows(screenerRows, nasdaqRows);
       return {
         rows,
         diagnostics: {
           ...fallbackDiagnostics(rows, "nasdaq-screener"),
           moverSymbols: screenerRows.length,
-          quoteSymbols: screenerRows.length,
-          dynamicRows: rows.length,
+          quoteSymbols: rows.length,
+          dynamicRows: screenerRows.length,
         },
       };
     }
@@ -615,7 +645,7 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
   }
   const bySymbol = new Map(seeds.map((seed) => [seed.symbol.toUpperCase(), seed]));
   try {
-    const moverSymbols = await fetchMoverSymbols(key);
+    const moverSymbols = (await fetchMoverSymbols(key)).filter((symbol) => bySymbol.has(symbol.toUpperCase()));
     const symbols = [...new Set([...moverSymbols, ...seeds.map((seed) => seed.symbol)])]
       .filter((symbol) => /^[A-Z.]{1,6}$/.test(symbol))
       .slice(0, US_DYNAMIC_UNIVERSE_LIMIT);
@@ -631,7 +661,7 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
     for (const symbol of symbols) {
       const upper = symbol.toUpperCase();
       const quote = quotes[upper];
-      const seed = bySymbol.get(upper) ?? buildDynamicSeed(upper, quote);
+      const seed = bySymbol.get(upper) ?? usDiscoverySeedForSymbol(upper) ?? buildDynamicSeed(upper, quote);
       const row = parseQuote(seed, quote, sparklines[upper]);
       if (row) rows.push(row);
     }
@@ -665,20 +695,17 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
     };
   } catch (err) {
     console.warn("[us-market-source] Twelve Data quote failed", (err as Error)?.message);
-    const screenerRows = await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []);
+    const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
     if (screenerRows.length > 0) {
-      const sparkRows = await fetchNasdaqRows(screenerRows.slice(0, US_NASDAQ_FALLBACK_LIMIT).map(seedFromMarketRow)).catch(
-        (): DiscoveryMarketRow[] => [],
-      );
-      const sparkBySymbol = new Map(sparkRows.map((row) => [row.symbol.toUpperCase(), row]));
-      const rows = screenerRows.map((row) => mergeSparkline(row, sparkBySymbol.get(row.symbol.toUpperCase())));
+      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+      const rows = mergePreferredRows(screenerRows, nasdaqRows);
       return {
         rows,
         diagnostics: {
           ...fallbackDiagnostics(rows, "nasdaq-screener"),
           moverSymbols: screenerRows.length,
-          quoteSymbols: screenerRows.length,
-          dynamicRows: rows.length,
+          quoteSymbols: rows.length,
+          dynamicRows: screenerRows.length,
         },
       };
     }

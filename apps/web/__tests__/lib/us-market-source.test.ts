@@ -85,16 +85,19 @@ describe("US market source", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("market_movers") && url.includes("type=gainers")) {
-        return Response.json({ values: [{ symbol: "OPEN" }] });
+        return Response.json({ values: [{ symbol: "MRVL" }, { symbol: "OPEN" }] });
       }
       if (url.includes("market_movers") && url.includes("type=losers")) {
-        return Response.json({ values: [{ symbol: "KULR" }] });
+        return Response.json({ values: [{ symbol: "SNDK" }, { symbol: "KULR" }] });
       }
       if (url.includes("market_movers") && url.includes("type=most_active")) {
-        return Response.json({ values: [{ symbol: "SERV" }] });
+        return Response.json({ values: [{ symbol: "META" }, { symbol: "SERV" }] });
       }
       if (url.includes("quote")) {
         return Response.json({
+          MRVL: { symbol: "MRVL", price: "75.20", change: "4.42", percent_change: "6.25", volume: "23000000", exchange: "NASDAQ" },
+          SNDK: { symbol: "SNDK", price: "60.10", change: "-3.15", percent_change: "-4.98", volume: "190000000", exchange: "NASDAQ" },
+          META: { symbol: "META", price: "705.80", change: "12.20", percent_change: "1.76", volume: "85000000", exchange: "NASDAQ" },
           OPEN: { symbol: "OPEN", price: "2.80", change: "0.42", percent_change: "17.65", volume: "23000000", exchange: "NASDAQ" },
           KULR: { symbol: "KULR", price: "1.10", change: "-0.15", percent_change: "-12.00", volume: "190000000", exchange: "NYSE" },
           SERV: { symbol: "SERV", price: "18.80", change: "2.20", percent_change: "13.25", volume: "85000000", exchange: "NASDAQ" },
@@ -108,14 +111,17 @@ describe("US market source", () => {
     const { fetchUsMarketDiagnostics, fetchUsMarketRows } = await import("../../lib/us-market-source");
 
     const rows = await fetchUsMarketRows();
-    expect(rows.some((row) => row.symbol === "OPEN")).toBe(true);
-    expect(rows.some((row) => row.symbol === "KULR")).toBe(true);
-    expect(rows.some((row) => row.symbol === "SERV")).toBe(true);
+    expect(rows.some((row) => row.symbol === "MRVL")).toBe(true);
+    expect(rows.some((row) => row.symbol === "SNDK")).toBe(true);
+    expect(rows.some((row) => row.symbol === "META")).toBe(true);
+    expect(rows.some((row) => row.symbol === "OPEN")).toBe(false);
+    expect(rows.some((row) => row.symbol === "KULR")).toBe(false);
+    expect(rows.some((row) => row.symbol === "SERV")).toBe(false);
 
     const diag = await fetchUsMarketDiagnostics();
     expect(diag.moverSymbols).toBeGreaterThanOrEqual(3);
     expect(diag.dynamicRows).toBeGreaterThanOrEqual(3);
-    expect(diag.quoteSymbols).toBeGreaterThan(diag.seedCount);
+    expect(diag.quoteSymbols).toBe(diag.seedCount);
   });
 
   it("uses Nasdaq screener as a dynamic no-key universe before curated seeds", async () => {
@@ -127,6 +133,30 @@ describe("US market source", () => {
           data: {
             rows: [
               {
+                symbol: "MRVL",
+                name: "Marvell Technology Inc Common Stock",
+                lastsale: "$75.20",
+                netchange: "0.42",
+                pctchange: "6.25%",
+                volume: "23000000",
+                marketCap: "60000000000",
+                country: "United States",
+                sector: "Technology",
+                industry: "Semiconductors",
+              },
+              {
+                symbol: "META",
+                name: "Meta Platforms Inc Class A Common Stock",
+                lastsale: "$705.80",
+                netchange: "-0.15",
+                pctchange: "-1.20%",
+                volume: "190000000",
+                marketCap: "1800000000000",
+                country: "United States",
+                sector: "Technology",
+                industry: "Internet Services",
+              },
+              {
                 symbol: "OPEN",
                 name: "Opendoor Technologies Inc Common Stock",
                 lastsale: "$2.80",
@@ -137,18 +167,6 @@ describe("US market source", () => {
                 country: "United States",
                 sector: "Technology",
                 industry: "Computer Software",
-              },
-              {
-                symbol: "KULR",
-                name: "KULR Technology Group Inc Common Stock",
-                lastsale: "$1.10",
-                netchange: "-0.15",
-                pctchange: "-12.00%",
-                volume: "190000000",
-                marketCap: "350000000",
-                country: "United States",
-                sector: "Industrials",
-                industry: "Industrial Machinery",
               },
               {
                 symbol: "AACB",
@@ -171,14 +189,16 @@ describe("US market source", () => {
     const { fetchUsMarketDiagnostics, fetchUsMarketRows } = await import("../../lib/us-market-source");
 
     const rows = await fetchUsMarketRows();
-    expect(rows.map((row) => row.symbol)).toEqual(expect.arrayContaining(["OPEN", "KULR"]));
+    expect(rows.map((row) => row.symbol)).toEqual(expect.arrayContaining(["MRVL", "META"]));
+    expect(rows.some((row) => row.symbol === "OPEN")).toBe(false);
     expect(rows.some((row) => row.symbol === "AACB")).toBe(false);
-    expect(rows.find((row) => row.symbol === "OPEN")?.changePct).toBe(17.65);
+    expect(rows.find((row) => row.symbol === "MRVL")?.changePct).toBe(6.25);
+    expect(rows.find((row) => row.symbol === "MRVL")?.canonical).toBe("마벨테크놀로지");
 
     const diag = await fetchUsMarketDiagnostics();
     expect(diag.source).toBe("nasdaq-screener");
     expect(diag.dynamicRows).toBeGreaterThanOrEqual(2);
-    expect(diag.strongMomentumRows).toBeGreaterThanOrEqual(2);
+    expect(diag.strongMomentumRows).toBe(0);
   });
 
   it("does not wire Yahoo chart endpoints into the US quote adapter", () => {

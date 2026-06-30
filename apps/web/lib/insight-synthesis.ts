@@ -13,6 +13,7 @@ import {
   isAbstractTemplate,
   isRawTitleCopy,
 } from "./copy-guards";
+import { ruleReprocessNewsHook } from "./news-reprocess";
 
 export interface WhySynthesisResult {
   insight: DiscoveryInsightSynthesis;
@@ -230,6 +231,7 @@ function hasAddedProperNoun(text: string, candidate: DiscoveryCandidate): boolea
   const knownLatin = inputLatinTokens(candidate);
   const allowedLatin = new Set([
     "ai",
+    "aidr",
     "gpu",
     "cpu",
     "sec",
@@ -265,6 +267,22 @@ const TRANSLATED_PROPER_NOUNS: Array<[RegExp, RegExp]> = [
   [/가이던스/i, /\bguidance\b/i],
   [/성장/i, /\bgrowth\b/i],
   [/상향/i, /\brais(?:e|es|ed|ing)\b/i],
+  [/아이온큐|클라비스/i, /\bIonQ\b|\bClavis\b/i],
+  [/로켓랩|이리듐|위성통신|IoT\s*사업/i, /\bRocket\s+Lab\b|\bIridium\b|\bsatellite\s+communications?\b|\bIoT\b/i],
+  [/뉴스케일|파라곤/i, /\bNuScale\b|\bParagon\b/i],
+  [/업스타트|노이버거|소비자대출/i, /\bUpstart\b|\bNeuberger\b|\bconsumer\s+loans?\b/i],
+  [/어펌|백컨트리/i, /\bAffirm\b|\bBackcountry\b/i],
+  [/스노우플레이크|언리미테일|리테일\s*미디어\s*데이터/i, /\bSnowflake\b|\bUnlimitail\b|\bretail\s+media\s+data\b/i],
+  [/액손/i, /\bAxon\b/i],
+  [/코어위브|메타|마이크로소프트|오픈AI/i, /\bCoreWeave\b|\bMeta\b|\bMicrosoft\b|\bOpenAI\b/i],
+  [/로빈후드/i, /\bRobinhood\b/i],
+  [/마이크로스트래티지|비트코인\s*매각/i, /\bMicroStrategy\b|\bStrategy\b|\bBitcoin\s+sales?\b/i],
+  [/도어대시|지상\s*이미지/i, /\bDoorDash\b|\bground\s+level\s+images?\b/i],
+  [/크라우드스트라이크|팔콘/i, /\bCrowdStrike\b|\bFalcon\b/i],
+  [/마벨|트레이니움/i, /\bMarvell\b|\bTrainium\b/i],
+  [/아이비엠|서브\s*1나노/i, /\bIBM\b|\bsub[-\s]?1nm\b/i],
+  [/오라클|AI\s*공급망\s*앱/i, /\bOracle\b|\bAI\s+supply\s+chain\s+apps?\b/i],
+  [/웨이모/i, /\bWaymo\b/i],
 ];
 
 function translatedProperNounIsBacked(text: string, candidate: DiscoveryCandidate): boolean {
@@ -319,6 +337,21 @@ function materialEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefine
   return candidate.events.find((event) => event.kind === "news_mention" || event.kind === "disclosure");
 }
 
+function ruleMaterialPhrase(candidate: DiscoveryCandidate, event: DiscoveryEvent | undefined): string | undefined {
+  if (!event) return undefined;
+  const title = cleanInline(event.sourceTitle ?? event.headlineHook ?? event.label);
+  if (!title) return undefined;
+  return ruleReprocessNewsHook({
+    stock: candidate.ticker,
+    sector: candidate.sector,
+    title,
+    summary: event.summary,
+    source: event.sourceName ?? event.source,
+    changePct: event.changePct,
+    asOf: event.publishedAt ?? event.asOf ?? candidate.asOf,
+  });
+}
+
 function hasMetricContext(headline: string): boolean {
   return /[+\-]\d+(?:\.\d+)?%|거래량\s*\d+(?:\.\d+)?배|외국인|기관|순매수|순매도|동종 평균보다|억|조|달러/.test(headline);
 }
@@ -349,7 +382,7 @@ function isRawCopyFromAnySource(headline: string, candidate: DiscoveryCandidate)
 
 function buildSoWhatFallback(candidate: DiscoveryCandidate, fallback: DiscoveryInsightSynthesis): DiscoveryInsightSynthesis | undefined {
   const event = materialEvent(candidate);
-  const phrase = materialPhrase(event);
+  const phrase = ruleMaterialPhrase(candidate, event) ?? materialPhrase(event);
   const metric = strongestMetric(candidate);
   if (!event || !phrase || !metric) return undefined;
   const headline = cleanInline(hasMetricContext(phrase) ? phrase : `${phrase}에 ${metric}`);
