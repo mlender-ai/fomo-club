@@ -60,7 +60,10 @@ describe("resolveCardHeadline", () => {
     };
 
     const result = await resolveCardHeadline({
-      candidate: candidate([event, priceEvent]),
+      candidate: {
+        ...candidate([event, priceEvent]),
+        dominantAxis: "price",
+      },
       synthesis: synthesis({
         headline: title,
         tone: "material",

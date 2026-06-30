@@ -117,6 +117,10 @@ export function isAbstractTemplate(text: string | undefined): boolean {
   return !!clean && ABSTRACT_TEMPLATE_BLOCKLIST.some((pattern) => pattern.test(clean));
 }
 
+export function neutralizeSupplyFactTerms(text: string | undefined): string {
+  return cleanInline(text).replace(/순매수|순매도/g, "수급");
+}
+
 function koreanTokens(text: string): string[] {
   return [...text.matchAll(/[가-힣A-Za-z0-9][가-힣A-Za-z0-9&().+-]{1,}/g)]
     .map((match) => match[0]!)
@@ -306,5 +310,10 @@ export function hasEnglishFragmentHeadline(text: string | undefined): boolean {
 
 export function hasForbiddenCopy(text: string | undefined): boolean {
   const clean = cleanInline(text);
-  return FORBIDDEN_COPY.test(clean) || SOURCE_NAME_PATTERN.test(clean) || isAbstractTemplate(clean) || hasEnglishFragmentHeadline(clean);
+  return (
+    FORBIDDEN_COPY.test(neutralizeSupplyFactTerms(clean)) ||
+    SOURCE_NAME_PATTERN.test(clean) ||
+    isAbstractTemplate(clean) ||
+    hasEnglishFragmentHeadline(clean)
+  );
 }

@@ -144,4 +144,53 @@ describe("why-driven insight synthesis guard", () => {
       if (oldKey !== undefined) process.env["AI_API_KEY"] = oldKey;
     }
   });
+
+  it("uses the code-selected supply axis without falling back to the price template", async () => {
+    const oldUrl = process.env["AI_API_URL"];
+    const oldKey = process.env["AI_API_KEY"];
+    delete process.env["AI_API_URL"];
+    delete process.env["AI_API_KEY"];
+    try {
+      const candidate: DiscoveryCandidate = {
+        ...baseCandidate(),
+        dominantAxis: "supply",
+        events: [
+          {
+            kind: "news_mention",
+            firstSeen: true,
+            strength: 0.9,
+            source: "뉴스",
+            asOf,
+            confidence: "H",
+            label: "심근세포 정제 특허 확보",
+            sourceTitle: "티앤알바이오팹, 심근세포 정제 특허 확보",
+            sourceName: "한국경제",
+            changePct: 11.9,
+          },
+          {
+            kind: "flow_entry",
+            firstSeen: true,
+            strength: 0.8,
+            source: "수급",
+            asOf,
+            confidence: "M",
+            label: "기관 순매수",
+            flowActor: "institution",
+            flowDays: 5,
+            flowAmountText: "42억원",
+          },
+        ],
+      };
+
+      const result = await synthesizeWhyDrivenInsight(candidate);
+
+      expect(result.method).toBe("fallback");
+      expect(result.insight.headline).toContain("심근세포 정제 특허");
+      expect(result.insight.headline).toContain("기관 5일 연속 순매수");
+      expect(result.insight.headline).not.toContain("+12%");
+    } finally {
+      if (oldUrl !== undefined) process.env["AI_API_URL"] = oldUrl;
+      if (oldKey !== undefined) process.env["AI_API_KEY"] = oldKey;
+    }
+  });
 });

@@ -56,6 +56,7 @@ export interface DiscoveryCandidate {
   reason?: string;
   marquee?: boolean;
   marketCapRank?: number;
+  dominantAxis?: "price" | "supply" | "material";
   synthesizedInsight?: DiscoveryInsightSynthesis;
 }
 

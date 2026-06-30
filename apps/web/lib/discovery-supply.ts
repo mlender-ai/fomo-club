@@ -39,6 +39,7 @@ import { fetchRecentSecFilings } from "./sec-edgar";
 import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { resolveCardHeadline, type CardHeadline } from "./card-headline";
+import { selectDominantAxis } from "./card-axis";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
 import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
@@ -1058,10 +1059,14 @@ function headlineCandidate(
   const events = candidate.events.map((event) =>
     attachMaterialEventIndicators(withRuleHeadlineHook(event, candidate.ticker, sector, row, candidate.asOf), indicators)
   );
-  return {
+  const resolved: DiscoveryCandidate = {
     ...rest,
     ...(sector ? { sector } : {}),
     events,
+  };
+  return {
+    ...resolved,
+    dominantAxis: selectDominantAxis(resolved),
   };
 }
 

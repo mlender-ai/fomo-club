@@ -15,6 +15,7 @@ import {
 } from "./copy-guards";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { ruleReprocessNewsHook } from "./news-reprocess";
+import { resolvedCardAxis, type CardAxis } from "./card-axis";
 
 export type CardHeadlineProvenance = "synthesis" | "rule" | "suppressed";
 export type CardHeadlineMethod = "ai" | "rule" | "none";
@@ -23,6 +24,7 @@ export interface CardHeadline {
   text: string;
   provenance: CardHeadlineProvenance;
   method: CardHeadlineMethod;
+  axis?: CardAxis;
   eventRef?: {
     kind: DiscoveryEvent["kind"];
     source?: string;
@@ -105,14 +107,17 @@ function eventSourceText(event: DiscoveryEvent | undefined): string | undefined 
 function isUsableHeadline(
   text: string | undefined,
   sourceText: string | undefined,
-  rawTitle: string | undefined
+  rawTitle: string | undefined,
+  axis: CardAxis
 ): text is string {
   const clean = cleanInline(text);
   if (!clean || EMPTY_PATTERN.test(clean)) return false;
   if (hasExcessiveLatinHeadline(clean) || hasEnglishFragmentHeadline(clean)) return false;
   if (hasForbiddenCopy(clean) || isAbstractTemplate(clean)) return false;
   if (isRawTitleCopy(clean, rawTitle ?? sourceText)) return false;
-  if (!SURFACE_METRIC_PATTERN.test(clean)) return false;
+  if (axis === "price" && !/[+\-]\d+(?:\.\d+)?%/.test(clean)) return false;
+  if (axis === "supply" && !/(?:외국인|기관|개인|수급).{0,16}(?:\d+일|연속|순매수)|순매수/.test(clean)) return false;
+  if (axis !== "material" && !SURFACE_METRIC_PATTERN.test(clean)) return false;
   const hasSourceConcrete = sourceText ? hasConcreteSourceValue(clean, sourceText) : false;
   if (!hasSourceConcrete && !MATERIAL_CONTEXT_PATTERN.test(clean)) return false;
   return true;
@@ -140,6 +145,7 @@ function ruleHeadlineFromMaterial(
   sourceTitle: string | undefined
 ): string | undefined {
   if (!isMaterialEvent(primary)) return undefined;
+  if (resolvedCardAxis(candidate) !== "price") return undefined;
   const title = sourceTitle ?? eventSourceTitle(primary);
   if (!title) return undefined;
   return ruleReprocessNewsHook({
@@ -175,6 +181,7 @@ async function resolveSynthesis(input: ResolveCardHeadlineInput): Promise<{
 
 export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Promise<CardHeadline> {
   const { synthesis, method } = await resolveSynthesis(input);
+  const axis = resolvedCardAxis(input.candidate);
   const primary = synthesis.primary;
   const materialEvent = materialEventFrom(input.candidate, primary);
   const rawTitle =
@@ -184,33 +191,36 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
   const reasonParts = splitReasonDetail(input.reason);
   const reasonDetail = reasonParts.detail ?? input.reason;
 
-  if (isUsableHeadline(synthesis.headline, sourceText, rawTitle)) {
+  if (isUsableHeadline(synthesis.headline, sourceText, rawTitle, axis)) {
     const eventRef = eventRefFrom(primary ?? materialEvent);
     return {
       text: cleanInline(synthesis.headline),
       provenance: "synthesis",
       method,
+      axis,
       ...(eventRef ? { eventRef } : {}),
     };
   }
 
   const materialHeadline = ruleHeadlineFromMaterial(input.candidate, materialEvent, rawTitle);
-  if (isUsableHeadline(materialHeadline, sourceText, rawTitle)) {
+  if (isUsableHeadline(materialHeadline, sourceText, rawTitle, axis)) {
     const eventRef = eventRefFrom(materialEvent ?? primary);
     return {
       text: cleanInline(materialHeadline),
       provenance: "rule",
       method: "rule",
+      axis,
       ...(eventRef ? { eventRef } : {}),
     };
   }
 
-  if (isUsableHeadline(reasonDetail, sourceText, rawTitle) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
+  if (isUsableHeadline(reasonDetail, sourceText, rawTitle, axis) && !WHAT_ONLY_PATTERN.test(reasonDetail ?? "")) {
     const eventRef = eventRefFrom(primary ?? materialEvent);
     return {
       text: cleanInline(reasonDetail),
       provenance: "rule",
       method: "rule",
+      axis,
       ...(eventRef ? { eventRef } : {}),
     };
   }
@@ -220,6 +230,7 @@ export async function resolveCardHeadline(input: ResolveCardHeadlineInput): Prom
     text: "",
     provenance: "suppressed",
     method: "none",
+    axis,
     ...(eventRef ? { eventRef } : {}),
   };
 }

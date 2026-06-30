@@ -19,6 +19,7 @@ type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallb
 type HeadlineMethod = "ai" | "rule" | "fallback" | "none";
 type ProvenanceEventKind = "news_mention" | "disclosure" | "volume_spike" | "price_move" | "market_context" | "theme_link" | "none";
 type HeadlineTrack = "A_material" | "suppressed";
+type HeadlineAxis = "price" | "supply" | "material" | "unknown";
 
 interface Args {
   country: DiscoveryCountryScope;
@@ -33,6 +34,7 @@ interface HeadlineProvenanceRow {
   headline: string;
   path: HeadlinePath;
   track: HeadlineTrack;
+  axis: HeadlineAxis;
   method: HeadlineMethod;
   hasEvent: boolean;
   eventKind: ProvenanceEventKind;
@@ -53,6 +55,7 @@ interface HeadlineProvenanceReport {
   distributions: {
     path: Record<HeadlinePath, number>;
     track: Record<HeadlineTrack, number>;
+    axis: Record<HeadlineAxis, number>;
     method: Record<HeadlineMethod, number>;
     eventKind: Record<ProvenanceEventKind, number>;
     hasEvent: {
@@ -226,6 +229,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
       headline,
       path,
       track,
+      axis: stock.headlineProvenance?.axis ?? "unknown",
       method: classifyMethod(stock, path, headline),
       hasEvent: eventKind !== "none",
       eventKind,
@@ -253,6 +257,12 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     rule: 0,
     fallback: 0,
     none: 0,
+  };
+  const axisCounts: Record<HeadlineAxis, number> = {
+    price: 0,
+    supply: 0,
+    material: 0,
+    unknown: 0,
   };
   const eventCounts: Record<ProvenanceEventKind, number> = {
     news_mention: 0,
@@ -286,6 +296,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
   rows.forEach((row) => {
     increment(pathCounts, row.path);
     increment(trackCounts, row.track);
+    increment(axisCounts, row.axis);
     increment(methodCounts, row.method);
     increment(eventCounts, row.eventKind);
     if (row.hasEvent) {
@@ -324,6 +335,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
     distributions: {
       path: pathCounts,
       track: trackCounts,
+      axis: axisCounts,
       method: methodCounts,
       eventKind: eventCounts,
       hasEvent: hasEventCounts,
@@ -355,6 +367,12 @@ function printReport(report: HeadlineProvenanceReport): void {
   console.log("- method");
   (Object.keys(report.distributions.method) as HeadlineMethod[]).forEach((key) => {
     const value = report.distributions.method[key];
+    const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
+    console.log(`  - ${key}: ${value} (${pct}%)`);
+  });
+  console.log("- axis");
+  (Object.keys(report.distributions.axis) as HeadlineAxis[]).forEach((key) => {
+    const value = report.distributions.axis[key];
     const pct = report.total > 0 ? Math.round((value / report.total) * 100) : 0;
     console.log(`  - ${key}: ${value} (${pct}%)`);
   });
@@ -396,7 +414,7 @@ function printReport(report: HeadlineProvenanceReport): void {
   });
   console.log("\nTop samples");
   report.cards.slice(0, 12).forEach((row) => {
-    console.log(`${String(row.index).padStart(2, "0")}. ${row.ticker} [${row.track}/${row.path}/${row.eventKind}] ${row.headline}`);
+    console.log(`${String(row.index).padStart(2, "0")}. ${row.ticker} [${row.axis}/${row.track}/${row.path}/${row.eventKind}] ${row.headline}`);
   });
 }
 

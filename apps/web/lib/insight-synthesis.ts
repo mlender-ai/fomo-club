@@ -12,7 +12,9 @@ import {
   hasForbiddenCopy,
   isAbstractTemplate,
   isRawTitleCopy,
+  neutralizeSupplyFactTerms,
 } from "./copy-guards";
+import { formatAxisMetric, resolvedCardAxis, type CardAxis } from "./card-axis";
 import { ruleReprocessNewsHook } from "./news-reprocess";
 
 export interface WhySynthesisResult {
@@ -151,6 +153,7 @@ function inputText(candidate: DiscoveryCandidate): string {
     candidate.market,
     candidate.marketCapRank,
     candidate.asOf,
+    candidate.dominantAxis,
     ...candidate.events.flatMap((event) => [
       event.label,
       event.headlineHook,
@@ -161,6 +164,7 @@ function inputText(candidate: DiscoveryCandidate): string {
       event.asOf,
       event.changePct,
       event.volumeRatio,
+      event.flowActor,
       event.flowDays,
       event.flowAmountText,
       event.themeRank,
@@ -290,36 +294,8 @@ function translatedProperNounIsBacked(text: string, candidate: DiscoveryCandidat
   return TRANSLATED_PROPER_NOUNS.some(([ko, source]) => ko.test(text) && source.test(input));
 }
 
-function formatSignedPercent(value: number): string {
-  const rounded = Math.abs(value) >= 10 ? value.toFixed(0) : value.toFixed(1);
-  return `${value > 0 ? "+" : ""}${rounded.replace(/\.0$/, "")}%`;
-}
-
-function formatVolumeRatio(value: number): string {
-  const rounded = value >= 10 ? value.toFixed(0) : value.toFixed(1);
-  return `거래량 ${rounded.replace(/\.0$/, "")}배`;
-}
-
-function strongestMetric(candidate: DiscoveryCandidate): string | undefined {
-  const metricEvents = candidate.events
-    .map((event) => {
-      const change = typeof event.changePct === "number" && Number.isFinite(event.changePct) ? Math.abs(event.changePct) : 0;
-      const volume = typeof event.volumeRatio === "number" && Number.isFinite(event.volumeRatio) ? event.volumeRatio : 0;
-      const relative =
-        typeof event.themeRelativeChangePct === "number" && Number.isFinite(event.themeRelativeChangePct)
-          ? Math.abs(event.themeRelativeChangePct)
-          : 0;
-      return { event, score: Math.max(change / 6, volume / 3, relative / 3) };
-    })
-    .sort((a, b) => b.score - a.score);
-  const event = metricEvents[0]?.event;
-  if (!event) return undefined;
-  if (typeof event.volumeRatio === "number" && event.volumeRatio >= 2.5) return formatVolumeRatio(event.volumeRatio);
-  if (typeof event.changePct === "number" && Math.abs(event.changePct) >= 1) return formatSignedPercent(event.changePct);
-  if (event.flowAmountText) return event.flowAmountText;
-  if (typeof event.themeRelativeChangePct === "number" && Math.abs(event.themeRelativeChangePct) >= 1) {
-    return `동종 평균보다 ${formatSignedPercent(event.themeRelativeChangePct)}p`;
-  }
+function metricForAxis(candidate: DiscoveryCandidate, axis: CardAxis): string | undefined {
+  if (axis === "price" || axis === "supply") return formatAxisMetric(candidate, axis);
   return undefined;
 }
 
@@ -356,6 +332,13 @@ function hasMetricContext(headline: string): boolean {
   return /[+\-]\d+(?:\.\d+)?%|거래량\s*\d+(?:\.\d+)?배|외국인|기관|순매수|순매도|동종 평균보다|억|조|달러/.test(headline);
 }
 
+function hasAxisContext(headline: string, candidate: DiscoveryCandidate): boolean {
+  const axis = resolvedCardAxis(candidate);
+  if (axis === "price") return /[+\-]\d+(?:\.\d+)?%/.test(headline);
+  if (axis === "supply") return /(?:외국인|기관|개인|수급).{0,16}(?:\d+일|연속|순매수)|순매수/.test(headline);
+  return true;
+}
+
 function hasMaterialContext(headline: string, candidate: DiscoveryCandidate): boolean {
   const event = materialEvent(candidate);
   if (!event) return false;
@@ -366,7 +349,9 @@ function hasMaterialContext(headline: string, candidate: DiscoveryCandidate): bo
 }
 
 function hasSoWhatHeadline(headline: string, candidate: DiscoveryCandidate): boolean {
-  return hasMaterialContext(headline, candidate) && hasMetricContext(headline);
+  const axis = resolvedCardAxis(candidate);
+  if (axis === "material") return hasMaterialContext(headline, candidate);
+  return hasMaterialContext(headline, candidate) && hasMetricContext(headline) && hasAxisContext(headline, candidate);
 }
 
 function hasBrokenEnding(headline: string): boolean {
@@ -382,10 +367,15 @@ function isRawCopyFromAnySource(headline: string, candidate: DiscoveryCandidate)
 
 function buildSoWhatFallback(candidate: DiscoveryCandidate, fallback: DiscoveryInsightSynthesis): DiscoveryInsightSynthesis | undefined {
   const event = materialEvent(candidate);
-  const phrase = ruleMaterialPhrase(candidate, event) ?? materialPhrase(event);
-  const metric = strongestMetric(candidate);
-  if (!event || !phrase || !metric) return undefined;
-  const headline = cleanInline(hasMetricContext(phrase) ? phrase : `${phrase}에 ${metric}`);
+  const axis = resolvedCardAxis(candidate);
+  const phrase =
+    axis === "price"
+      ? ruleMaterialPhrase(candidate, event) ?? materialPhrase(event)
+      : materialPhrase(event) ?? ruleMaterialPhrase(candidate, event)?.replace(/\s*에\s*[+\-]?\d+(?:\.\d+)?%$/, "");
+  const metric = metricForAxis(candidate, axis);
+  if (!event || !phrase) return undefined;
+  if (axis !== "material" && !metric) return undefined;
+  const headline = cleanInline(axis === "material" || hasMetricContext(phrase) ? phrase : `${phrase}에 ${metric}`);
   const evidence = [
     [event.sourceTitle ?? event.label, event.sourceName ?? event.source, event.asOf].map(cleanInline).filter(Boolean).join(" · "),
   ].filter(Boolean);
@@ -393,8 +383,13 @@ function buildSoWhatFallback(candidate: DiscoveryCandidate, fallback: DiscoveryI
     ...fallback,
     primary: event,
     headline,
-    observations: [`재료: ${phrase}`, `지표: ${metric}`],
-    synthesis: "재료 확인과 시장 반응이 같은 날 겹친 카드예요.",
+    observations: axis === "material" ? [`재료: ${phrase}`] : [`재료: ${phrase}`, `축: ${axis}`, `지표: ${metric}`],
+    synthesis:
+      axis === "supply"
+        ? "공개된 사건과 기관·외국인 수급 흐름을 같은 날 나눠 보는 카드예요."
+        : axis === "price"
+          ? "공개된 사건과 당일 가격 반응을 같은 날 나눠 보는 카드예요."
+          : "공개된 사건 자체를 먼저 보는 카드예요.",
     evidence: evidence.length > 0 ? evidence : fallback.evidence,
   };
   return whyInsightRejectionReasons(insight, candidate).length === 0 ? insight : undefined;
@@ -453,7 +448,7 @@ export function whyInsightRejectionReasons(
   if (isRawCopyFromAnySource(insight.headline, candidate)) reasons.push("raw-copy");
   if (hasBrokenEnding(insight.headline)) reasons.push("broken-ending");
   if (!hasSoWhatHeadline(insight.headline, candidate)) reasons.push("no-so-what");
-  if (ADVICE_PATTERN.test(fullText)) reasons.push("advice");
+  if (ADVICE_PATTERN.test(neutralizeSupplyFactTerms(fullText))) reasons.push("advice");
   if (ABSTRACT_PATTERN.test(fullText) || hasAbstractDiscoveryFiller(fullText)) reasons.push("abstract");
   if (hasSourceLeak(insight.headline, candidate)) reasons.push("source-leak");
   if (hasAddedNumber(fullText, candidate)) reasons.push("added-number");
@@ -479,6 +474,7 @@ function cacheKey(candidate: DiscoveryCandidate): string {
     market: candidate.market,
     marketCapRank: candidate.marketCapRank,
     asOf: candidate.asOf.slice(0, 10),
+    dominantAxis: resolvedCardAxis(candidate),
     events: candidate.events.map((event) => ({
       kind: event.kind,
       label: event.label,
@@ -517,12 +513,16 @@ function systemPrompt(): string {
     "출력 헤드라인은 100% 한국어다. 영어 단어를 한국어 조사에 섞지 마라('Aerospace 고객과', 'its NVIDIA와' 금지).",
     "회사명은 한국어 표기로 쓴다(NVIDIA→엔비디아, Tesla→테슬라). 한국어 표기가 없는 소형주는 회사명을 생략하고 사건만 쓴다.",
     "영문 약어·관사('its', 'the', 'with', 'and', 'HpO')를 그대로 남기지 마라.",
-    "헤드라인 = [재료: 무엇이 일어났나] + [가장 두드러진 지표 1개]를 동시성으로 결합한 한 줄이다.",
-    "지표는 입력 JSON의 changePct·volumeRatio·flowAmountText·themeRelativeChangePct 중 가장 강한 1개만 쓴다.",
+    "입력 JSON의 dominantAxis는 코드가 결정론으로 고른 축이다. 축을 바꾸거나 섞지 마라.",
+    "dominantAxis=price이면 헤드라인 = [재료: 무엇이 일어났나] + [당일 등락률]을 동시성으로 결합한 한 줄이다.",
+    "dominantAxis=supply이면 헤드라인 = [재료: 무엇이 일어났나] + [기관/외국인 N일 연속 순매수]를 동시성으로 결합한 한 줄이다. 등락률은 쓰지 마라.",
+    "dominantAxis=material이면 헤드라인 = [재료: 무엇이 일어났나]만 쓴다. 약한 가격·수급 지표를 억지로 붙이지 마라.",
     "동시성 표현('~에', '~당일', '~소식에')만 쓴다. 인과어('때문에', '덕분에') 금지.",
     "제목을 자르거나 복붙하지 마라. 입력에 없는 숫자·고유명사 금지. 글자를 어절 중간에서 끊지 마라('특허 확' 금지).",
     "예측·기대·전망·수혜·유망 등 미래 단정 금지. 사실과 해석까지만 쓴다.",
-    "좋은 예: '엔비디아와 제품 협력 소식에 +34%', '심근세포 정제 특허 확보 당일 +16%', '유럽 리테일 파트너십 공시에 거래량 3배'.",
+    "좋은 예(price): '엔비디아와 제품 협력 소식에 +34%', '심근세포 정제 특허 확보 당일 +16%'.",
+    "좋은 예(supply): '심근세포 정제 특허 확보에 기관 5일 연속 순매수', '공급계약 발표에 외국인 32만주 순매수'.",
+    "좋은 예(material): '유럽 리테일 파트너십 공시'.",
     "나쁜 예: 'its NVIDIA와 제품 협력', 'Aerospace 고객과 제휴 발표', '특허 확', '제휴 소식이 나왔어요', '수혜 기대'.",
     `${banned.join(", ")} 금지.`,
     "투자 조언과 방향 예측 금지. 사실과 해석까지만 쓴다.",
@@ -552,6 +552,7 @@ async function aiSynthesize(candidate: DiscoveryCandidate, fallback: DiscoveryIn
           market: candidate.market,
           marketCapRank: candidate.marketCapRank,
           asOf: candidate.asOf,
+          dominantAxis: resolvedCardAxis(candidate),
           events: candidate.events.map((event) => ({
             kind: event.kind,
             label: event.label,
