@@ -40,6 +40,7 @@ import { fetchStockDaily } from "./stock-front";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { resolveCardHeadline, type CardHeadline } from "./card-headline";
 import { selectDominantAxis } from "./card-axis";
+import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
 import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
@@ -59,6 +60,10 @@ const DISCOVERY_RECOVERY_MIN_CARDS = 12;
 const DISCOVERY_RECOVERY_FAMOUS_FRONT_CUTOFF = 30;
 const TARGETED_MATERIAL_DEFAULT_ENABLED = process.env.DISCOVERY_TARGETED_MATERIAL !== "0";
 const DISCOVERY_FLOW_CACHE_ENABLED = process.env.DISCOVERY_FLOW_CACHE !== "0";
+const DISCOVERY_LIVE_FLOW_ENABLED = process.env.DISCOVERY_LIVE_FLOW !== "0";
+const DISCOVERY_LIVE_FLOW_LIMIT = Math.max(0, Math.min(96, Number(process.env.DISCOVERY_LIVE_FLOW_LIMIT ?? 72) || 72));
+const DISCOVERY_LIVE_FLOW_CONCURRENCY = Math.max(1, Math.min(8, Number(process.env.DISCOVERY_LIVE_FLOW_CONCURRENCY ?? 4) || 4));
+const DISCOVERY_LIVE_FLOW_TIMEOUT_MS = Math.max(2_000, Math.min(12_000, Number(process.env.DISCOVERY_LIVE_FLOW_TIMEOUT_MS ?? 8_000) || 8_000));
 const THEME_BUNDLE_MAX_CARDS = 2;
 const THEME_BUNDLE_MIN_ITEMS = 2;
 const THEME_BUNDLE_MAX_ITEMS = 4;
@@ -847,11 +852,50 @@ function eventFromFlowHistory(history: readonly InvestorFlow[]): DiscoveryEvent 
     source: "KRX 수급",
     asOf: history[0]?.date ?? todayKst(),
     confidence: "H",
-    label: `${actor} ${n}일째 사는 중이에요.`,
+    label: `${actor} ${n}일 연속 순매수 중이에요.`,
     flowActor: useForeign ? "foreign" : "institution",
     flowDays: n,
     ...(typeof latestNet === "number" && latestNet > 0 ? { flowAmountText: flowSharesText(latestNet) } : {}),
   };
+}
+
+function hasFlowEvent(events: readonly DiscoveryEvent[]): boolean {
+  return events.some((event) => event.kind === "flow_entry");
+}
+
+function hasMaterialEvent(events: readonly DiscoveryEvent[]): boolean {
+  return events.some((event) => event.kind === "disclosure" || event.kind === "news_mention");
+}
+
+async function hydrateLiveFlowEvents(byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>): Promise<void> {
+  if (!DISCOVERY_LIVE_FLOW_ENABLED || DISCOVERY_LIVE_FLOW_LIMIT <= 0) return;
+  const targets = [...byTicker.entries()]
+    .filter(([, value]) => value.row.country === "KR" && !!value.row.naverCode && !hasFlowEvent(value.events))
+    .sort((a, b) => {
+      const aMaterial = Number(hasMaterialEvent(a[1].events));
+      const bMaterial = Number(hasMaterialEvent(b[1].events));
+      const aStrength = Math.max(0, ...a[1].events.map((event) => event.strength));
+      const bStrength = Math.max(0, ...b[1].events.map((event) => event.strength));
+      const aMove = Math.abs(a[1].row.changePct ?? 0);
+      const bMove = Math.abs(b[1].row.changePct ?? 0);
+      return bMaterial - aMaterial || bStrength - aStrength || bMove - aMove || a[0].localeCompare(b[0]);
+    })
+    .slice(0, DISCOVERY_LIVE_FLOW_LIMIT);
+
+  const live = await mapLimit(targets, DISCOVERY_LIVE_FLOW_CONCURRENCY, async ([ticker, value]) => {
+    const code = value.row.naverCode;
+    if (!code) return null;
+    const history = await fetchSupplyDemand(code, DISCOVERY_LIVE_FLOW_TIMEOUT_MS);
+    const event = eventFromFlowHistory(history);
+    return event ? { ticker, event } : null;
+  });
+
+  for (const result of live) {
+    if (result.status !== "fulfilled" || !result.value) continue;
+    const current = byTicker.get(result.value.ticker);
+    if (!current || hasFlowEvent(current.events)) continue;
+    byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
+  }
 }
 
 function volumeRatioFromVolumes(volumes: readonly number[]): number | undefined {
@@ -1642,6 +1686,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       byTicker.set(ticker, { ...current, events: [...current.events, event] });
     }
   }
+  await hydrateLiveFlowEvents(byTicker);
 
   for (const [ticker, current] of byTicker.entries()) {
     if (current.row.country !== "KR") continue;

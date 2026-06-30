@@ -106,7 +106,7 @@ export function evaluateDiscoveryPayload(
       add("hook.price_only", `앞단 ${index + 1}번 카드 '${name}'가 가격-only 또는 움직임 재진술 문장입니다.`, hook);
     }
 
-    if (FORBIDDEN_ADVICE_PATTERN.test(allCopy)) {
+    if (FORBIDDEN_ADVICE_PATTERN.test(neutralizeSupplyFactTerms(allCopy))) {
       add("copy.forbidden_advice", `앞단 ${index + 1}번 카드 '${name}'에 금칙어가 있습니다.`, allCopy);
     }
   }
@@ -141,6 +141,10 @@ function visibleHook(stock: DiscoveryGateStock): string {
 
 function visibleCopy(stock: DiscoveryGateStock): string {
   return [stock.reason, stock.whyShown, stock.headline, stock.axisHook?.hookText].filter(Boolean).join(" ").trim();
+}
+
+function neutralizeSupplyFactTerms(text: string): string {
+  return text.replace(/순매수|순매도/g, "수급");
 }
 
 function duplicateVisibleHooks(stocks: readonly DiscoveryGateStock[]): Array<[string, number]> {

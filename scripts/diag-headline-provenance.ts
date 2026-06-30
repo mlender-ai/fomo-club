@@ -17,8 +17,16 @@ import type { DiscoveryCountryScope } from "../apps/web/lib/market-source-types"
 
 type HeadlinePath = "raw_title" | "abstract_template" | "why_synthesis" | "fallback_no_event";
 type HeadlineMethod = "ai" | "rule" | "fallback" | "none";
-type ProvenanceEventKind = "news_mention" | "disclosure" | "volume_spike" | "price_move" | "market_context" | "theme_link" | "none";
-type HeadlineTrack = "A_material" | "suppressed";
+type ProvenanceEventKind =
+  | "news_mention"
+  | "disclosure"
+  | "flow_entry"
+  | "volume_spike"
+  | "price_move"
+  | "market_context"
+  | "theme_link"
+  | "none";
+type HeadlineTrack = "A_material" | "B_supply" | "suppressed";
 type HeadlineAxis = "price" | "supply" | "material" | "unknown";
 
 interface Args {
@@ -127,6 +135,7 @@ function classifyEventKind(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
   if (
     explicitKind === "news_mention" ||
     explicitKind === "disclosure" ||
+    explicitKind === "flow_entry" ||
     explicitKind === "volume_spike" ||
     explicitKind === "price_move" ||
     explicitKind === "market_context" ||
@@ -152,6 +161,7 @@ function classifyEventKind(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
     .join(" ");
   if (DISCLOSURE_PATTERN.test(haystack)) return "disclosure";
   if (NEWS_PATTERN.test(haystack) || !!stock.sourceUrl || !!stock.sourceLabel || !!front?.signals.newsEventLabel) return "news_mention";
+  if (/(?:외국인|기관|개인|수급).{0,20}(?:\d+일|연속|순매수)|순매수/.test(haystack)) return "flow_entry";
   if (VOLUME_PATTERN.test(haystack)) return "volume_spike";
   return "none";
 }
@@ -171,6 +181,7 @@ function classifyPath(stock: DiscoveryStockPayload, headline: string, eventKind:
 function classifyTrack(path: HeadlinePath, eventKind: ProvenanceEventKind): HeadlineTrack {
   if (path === "fallback_no_event") return "suppressed";
   if (eventKind === "news_mention" || eventKind === "disclosure") return "A_material";
+  if (eventKind === "flow_entry") return "B_supply";
   return "suppressed";
 }
 
@@ -250,6 +261,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
   };
   const trackCounts: Record<HeadlineTrack, number> = {
     A_material: 0,
+    B_supply: 0,
     suppressed: 0,
   };
   const methodCounts: Record<HeadlineMethod, number> = {
@@ -267,6 +279,7 @@ function buildReport(payload: DiscoveryResponse, args: Args): HeadlineProvenance
   const eventCounts: Record<ProvenanceEventKind, number> = {
     news_mention: 0,
     disclosure: 0,
+    flow_entry: 0,
     volume_spike: 0,
     price_move: 0,
     market_context: 0,

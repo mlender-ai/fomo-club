@@ -562,13 +562,13 @@ function whyFactFor(event: DiscoveryEvent, candidate: DiscoveryCandidate): WhyFa
     const days = flowDaysOf(event);
     if (!actor || !days) return undefined;
     const amount = event.flowAmountText ? ` ${event.flowAmountText}` : "";
-    const headline = `${actor} ${days}일째${amount} 담는 ${ticker}`;
+    const headline = `${actor} ${days}일 연속 순매수${amount} — ${ticker}`;
     return {
       headline,
       state: "수급",
       observation: `${actor} ${days}일 연속 순매수${event.flowAmountText ? ` / ${event.flowAmountText}` : ""}.`,
       synthesis: `핵심 숫자는 ${actor} ${days}일 연속 수급입니다. 장마감 확정 자료라 장중 추정과 분리해서 봅니다.`,
-      evidence: `${event.source} · ${event.asOf.slice(0, 10)} · ${actor} ${days}일`,
+      evidence: `${event.source} · ${event.asOf.slice(0, 10)} · ${actor} ${days}일 연속 순매수`,
     };
   }
 
