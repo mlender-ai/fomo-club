@@ -50,6 +50,7 @@ const GOVERNANCE_FILES = [
   /^\.rules$/,
   /^\.cursor\/rules\//,
   /^docs\/templates\//,
+  /^docs\/CONSTRAINT_OVERRIDE_DEV\.md$/, // 제약 오버라이드 정책 문서(거버넌스) — 예시 단어 스캔 제외
   /^\.github\/workflows\/spec-analyze\.yml$/,
   /^scripts\/spec-analyze\.ts$/,
   /^scripts\/__tests__\/spec-analyze\.test\.ts$/,

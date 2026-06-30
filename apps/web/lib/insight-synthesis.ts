@@ -7,6 +7,7 @@ import {
   type DiscoveryInsightSynthesis,
 } from "@fomo/core";
 import {
+  DEV_CONSTRAINTS_LIFTED,
   hasEnglishFragmentHeadline,
   hasExcessiveLatinHeadline,
   hasForbiddenCopy,
@@ -428,27 +429,31 @@ function normalizeOutput(output: AiWhyOutput, fallback: DiscoveryInsightSynthesi
 export function validateWhyInsightOutput(
   output: AiWhyOutput | undefined,
   candidate: DiscoveryCandidate,
-  fallback = synthesizeDiscoveryInsight(candidate)
+  fallback = synthesizeDiscoveryInsight(candidate),
+  opts?: { liftDevConstraints?: boolean }
 ): DiscoveryInsightSynthesis | undefined {
   if (!output) return undefined;
   const insight = normalizeOutput(output, fallback);
-  return whyInsightRejectionReasons(insight, candidate).length === 0 ? insight : undefined;
+  return whyInsightRejectionReasons(insight, candidate, opts).length === 0 ? insight : undefined;
 }
 
 export function whyInsightRejectionReasons(
   insight: DiscoveryInsightSynthesis,
-  candidate: DiscoveryCandidate
+  candidate: DiscoveryCandidate,
+  opts?: { liftDevConstraints?: boolean }
 ): string[] {
+  const lifted = opts?.liftDevConstraints ?? DEV_CONSTRAINTS_LIFTED;
   const reasons: string[] = [];
   const fullText = textParts(insight).join(" ");
   if (!insight.headline || insight.headline.length > 64) reasons.push("headline-length");
   if (!hasMaterialContext(insight.headline, candidate)) reasons.push("no-concrete-why");
   if (hasExcessiveLatinHeadline(insight.headline) || hasEnglishFragmentHeadline(insight.headline)) reasons.push("latin-headline");
-  if (hasForbiddenCopy(insight.headline) || isAbstractTemplate(insight.headline)) reasons.push("headline-guard");
+  if (hasForbiddenCopy(insight.headline, { liftDevConstraints: lifted }) || isAbstractTemplate(insight.headline)) reasons.push("headline-guard");
   if (isRawCopyFromAnySource(insight.headline, candidate)) reasons.push("raw-copy");
   if (hasBrokenEnding(insight.headline)) reasons.push("broken-ending");
   if (!hasSoWhatHeadline(insight.headline, candidate)) reasons.push("no-so-what");
-  if (ADVICE_PATTERN.test(neutralizeSupplyFactTerms(fullText))) reasons.push("advice");
+  // 투자조언·예측·인과 표현 차단 — 개발 플래그로 해제(사실/품질 reason 들은 위에서 그대로 적용).
+  if (!lifted && ADVICE_PATTERN.test(neutralizeSupplyFactTerms(fullText))) reasons.push("advice");
   if (ABSTRACT_PATTERN.test(fullText) || hasAbstractDiscoveryFiller(fullText)) reasons.push("abstract");
   if (hasSourceLeak(insight.headline, candidate)) reasons.push("source-leak");
   if (hasAddedNumber(fullText, candidate)) reasons.push("added-number");

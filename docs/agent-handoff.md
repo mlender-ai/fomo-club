@@ -1,5 +1,7 @@
 # Agent Handoff
 
+> ⚠ 현재 `docs/CONSTRAINT_OVERRIDE_DEV.md`(ACTIVE)가 발효 중 — 개발 단계 동안 **투자조언·예측·표현 제약은 해제**, **사실 정확성 제약만 유지**. 본 문서·하위 문서의 해당 표현 제약은 그 문서가 우선해 오버라이드됨(개별 제약 문구는 복원 위해 원문 보존). 출시 전 ACTIVE:false 로 복원.
+
 This document is for the next coding agent who picks up the repo.
 Use it as the fastest orientation guide before touching code.
 
