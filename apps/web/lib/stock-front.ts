@@ -14,6 +14,7 @@ import {
   type FomoScoreResult,
   type DailyOhlcv,
   type TaFact,
+  type TechnicalAnalysisSnapshot,
   type AxisSignal,
   type MultiAxisHookSelection,
 } from "@fomo/core";
@@ -140,6 +141,8 @@ export interface StockFrontData {
   fomo: FomoScoreResult;
   /** TA 셀렉터가 고른 사실 1개 — 점수/진열이 아니라 카드·상세 보조 문맥. */
   taFact?: TaFact;
+  /** 차트분석(TA) 전체 스냅샷 — 뎁스 '차트분석' 탭용. 관측 서술 facts 배열(non-lite에서만). */
+  ta?: TechnicalAnalysisSnapshot;
   /** 최근 3개월 종가(스파크라인) — 없으면 빈 배열. */
   sparkline: number[];
   /** 현재가 — 예 "354,000원"(카드 1행 표기용). */
@@ -311,6 +314,7 @@ export async function assembleStockFront(
     signals,
     fomo,
     ...(taFact ? { taFact } : {}),
+    ...(ta ? { ta } : {}),
     sparkline: daily.closes.slice(lite ? -42 : -66),
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),
     ...(basics?.changeText ? { changeText: basics.changeText } : {}),
