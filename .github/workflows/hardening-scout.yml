@@ -1,0 +1,78 @@
+name: Hardening Scout
+
+# 백엔드·인프라·보안·API·DB·성능 강화 이슈 생성기(결정론, LLM 불필요).
+# ISO 주차로 영역 로테이션 → 매주 다른 축. 자동 구현 없이 검토 이슈까지만.
+
+on:
+  workflow_dispatch:
+    inputs:
+      area:
+        description: "강제 영역(security|infra|api|db|perf). 비우면 주차 로테이션"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 0 * * 2" # 매주 화 09:00 KST
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hardening-scout
+  cancel-in-progress: false
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run hardening scout
+        env:
+          HARDENING_AREA: ${{ github.event.inputs.area }}
+        run: npm run hardening:scout
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardening-scout
+          path: hardening-reports/*
+      - name: Create or update review issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const summary = JSON.parse(fs.readFileSync("hardening-reports/latest.json", "utf8"));
+            if (!summary.findingCount) {
+              core.info(`이번 영역(${summary.area}) 강화 후보 없음 — 이슈 생략`);
+              return;
+            }
+            const body = fs.readFileSync("hardening-reports/latest.md", "utf8");
+            const labels = [
+              { name: "agent-ops", color: "1d76db", description: "Agent operations and tooling" },
+              { name: "hardening-scout", color: "0e8a16", description: "백엔드/인프라/보안/API 강화 스카우트" },
+              { name: "needs-ceo-review", color: "d93f0b", description: "Requires Gwanghyuk review/approval" }
+            ];
+            const { owner, repo } = context.repo;
+            for (const label of labels) {
+              try { await github.rest.issues.createLabel({ owner, repo, ...label }); }
+              catch (error) { if (error.status !== 422) throw error; }
+            }
+            const marker = "<!-- hardening-scout -->";
+            const title = `🛠 강화 스카우트 [${summary.area}] ${summary.generatedDateKst}`;
+            const issueBody = `${marker}\n\n${body}`;
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner, repo, state: "open", labels: "hardening-scout", per_page: 30
+            });
+            const existing = openIssues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, body: issueBody, labels: labels.map((l) => l.name) });
+              core.info(`Updated issue #${existing.number}`);
+            } else {
+              const created = await github.rest.issues.create({ owner, repo, title, body: issueBody, labels: labels.map((l) => l.name) });
+              core.info(`Created issue #${created.data.number}`);
+            }

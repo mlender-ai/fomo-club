@@ -77,6 +77,59 @@ const STRONG_SEED_MIN_SCORE = 65;
 const RUNNER_UP_MAX_SCORE_GAP = 8;
 const REPORT_DIR = "agent-tooling-reports";
 
+/**
+ * 카테고리 풀 — ISO 주차로 로테이션해 매주 다른 축을 탐색한다(반복 후보 방지).
+ * env(TOOLING_SCOUT_SEED_REPOS/SEARCH_QUERIES) 가 오면 그게 우선(수동 dispatch).
+ */
+const CATEGORY_POOL: Array<{ key: string; label: string; seeds: string[]; queries: string[] }> = [
+  { key: "agent-skills", label: "에이전트·스킬", seeds: ["anthropics/claude-code", "openai/codex", "github/github-mcp-server"], queries: ["claude code skills", "codex agent tooling", "ai coding agent skills"] },
+  { key: "mcp-tooling", label: "MCP·워크플로우", seeds: ["modelcontextprotocol/servers", "microsoft/playwright-mcp"], queries: ["mcp server tooling", "model context protocol", "mcp agent workflow"] },
+  { key: "spec-driven", label: "스펙주도·평가", seeds: ["github/spec-kit"], queries: ["spec driven development ai", "llm eval framework", "ai coding spec workflow"] },
+  { key: "tech-debt-scalability", label: "기술부채·확장성", seeds: [], queries: ["typescript monorepo tooling", "codebase refactor automation", "dependency upgrade bot", "code migration tool"] },
+  { key: "testing-observability", label: "테스트·관측", seeds: [], queries: ["llm observability tracing", "ai evaluation framework", "prompt regression testing", "playwright ai testing"] },
+];
+
+/** ISO 주차(월요일 시작). */
+export function isoWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+  return 1 + Math.round((d.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000));
+}
+
+export function pickCategory(date: Date, override?: string): (typeof CATEGORY_POOL)[number] {
+  const found = override ? CATEGORY_POOL.find((c) => c.key === override) : undefined;
+  return found ?? CATEGORY_POOL[isoWeek(date) % CATEGORY_POOL.length]!;
+}
+
+/** dedup 메모리 — 과거 스카우트 이슈(open+closed) 본문에서 제안된 repo 를 뽑아 재제안 제외. */
+export function proposedReposFromIssues(bodies: Array<string | undefined | null>): Set<string> {
+  const out = new Set<string>();
+  for (const body of bodies) {
+    for (const m of (body ?? "").matchAll(/github\.com\/([\w.-]+\/[\w.-]+)/gi)) {
+      out.add(m[1]!.toLowerCase().replace(/[).,]+$/, ""));
+    }
+  }
+  return out;
+}
+
+async function fetchProposedRepos(errors: string[]): Promise<Set<string>> {
+  const repo = env("GITHUB_REPOSITORY");
+  if (!repo) return new Set(); // 로컬/토큰 없음 → dedup 생략
+  try {
+    const issues = await githubRequest<Array<{ body?: string }>>(
+      `/repos/${repo}/issues?labels=tooling-scout&state=all&per_page=100`
+    );
+    return proposedReposFromIssues(issues.map((i) => i.body));
+  } catch (error) {
+    errors.push(`dedup skip: ${(error as Error).message}`);
+    return new Set();
+  }
+}
+
 const FIT_SIGNALS: Array<{ pattern: RegExp; points: number; label: string }> = [
   { pattern: /\bagents?\b/i, points: 18, label: "agent" },
   { pattern: /\bskills?\b/i, points: 18, label: "skill" },
@@ -319,6 +372,7 @@ function collectSelectedCandidates(candidates: ToolingCandidate[]): ToolingCandi
 }
 
 function renderReport(params: {
+  category: string;
   seedRepos: string[];
   searchQueries: string[];
   updatedDays: number;
@@ -331,10 +385,11 @@ function renderReport(params: {
   const [primary, runnerUp] = params.selectedCandidates;
 
   return [
-    "# 오늘의 에이전트 툴링 후보",
+    "# 이번 주 에이전트·생태계 툴링 후보",
     "",
     `- 생성일(KST): ${generatedDateKst}`,
-    `- 기준: stars ${params.minStars.toLocaleString("en-US")}개 이상, 최근 ${params.updatedDays}일 내 업데이트, archived 제외`,
+    `- 이번 주 카테고리(로테이션): ${params.category}`,
+    `- 기준: stars ${params.minStars.toLocaleString("en-US")}개 이상, 최근 ${params.updatedDays}일 내 업데이트, archived 제외, 과거 제안 repo 제외(dedup)`,
     `- 로컬 기준: ${git(["branch", "--show-current"])}@${git(["rev-parse", "--short", "HEAD"])}`,
     "",
     "## 오늘의 1순위",
@@ -393,8 +448,9 @@ function pickSummary(candidate: ToolingCandidate): Pick<ToolingCandidate, "fullN
 }
 
 async function main(): Promise<void> {
-  const seedRepos = parseList(env("TOOLING_SCOUT_SEED_REPOS") ?? env("TOOLING_SCOUT_REPOS"), DEFAULT_SEED_REPOS);
-  const searchQueries = parseList(env("TOOLING_SCOUT_SEARCH_QUERIES"), DEFAULT_SEARCH_QUERIES);
+  const category = pickCategory(new Date(), env("TOOLING_SCOUT_CATEGORY"));
+  const seedRepos = parseList(env("TOOLING_SCOUT_SEED_REPOS") ?? env("TOOLING_SCOUT_REPOS"), category.seeds.length ? category.seeds : DEFAULT_SEED_REPOS);
+  const searchQueries = parseList(env("TOOLING_SCOUT_SEARCH_QUERIES"), category.queries.length ? category.queries : DEFAULT_SEARCH_QUERIES);
   const updatedDays = parsePositiveInt(env("TOOLING_SCOUT_UPDATED_DAYS") ?? env("TOOLING_SCOUT_DAYS"), DEFAULT_UPDATED_DAYS, 120);
   const minStars = parsePositiveInt(env("TOOLING_SCOUT_MIN_STARS"), DEFAULT_MIN_STARS, 1_000_000);
   const generatedAt = new Date().toISOString();
@@ -423,8 +479,10 @@ async function main(): Promise<void> {
     .map(({ repo, source, sourceLabel }) => scoreRepo(repo, source, sourceLabel))
     .filter((candidate): candidate is ToolingCandidate => Boolean(candidate));
 
-  const selectedCandidates = collectSelectedCandidates(candidates);
-  const report = renderReport({ seedRepos, searchQueries, updatedDays, minStars, selectedCandidates, errors, generatedAt });
+  const proposed = await fetchProposedRepos(errors);
+  const freshCandidates = candidates.filter((candidate) => !proposed.has(candidate.fullName.toLowerCase()));
+  const selectedCandidates = collectSelectedCandidates(freshCandidates);
+  const report = renderReport({ category: category.label, seedRepos, searchQueries, updatedDays, minStars, selectedCandidates, errors, generatedAt });
   const summary = buildSummary(generatedAt, selectedCandidates, errors);
   const date = kstDate(new Date(generatedAt));
   const outputDir = path.resolve(process.cwd(), REPORT_DIR);
@@ -443,7 +501,9 @@ async function main(): Promise<void> {
   console.log(path.join(REPORT_DIR, "latest.md"));
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (process.env["TOOLING_SCOUT_TEST"] !== "1") {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
