@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
 import type {
   AxisSignal,
@@ -11,12 +11,13 @@ import type {
   TaFact,
 } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
+import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
 import type { DeckStock } from "@/lib/discoveryDeck";
-import { isThemeBundleCard, type DiscoveryDeckCard, type DeckThemeBundle } from "@/lib/discoveryDeck";
+import { stockDeckCards, type DeckCard, type DeckThemeBundle, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
@@ -56,7 +57,7 @@ export type FrontEntry = {
 type UndoEntry = {
   idx: number;
   dir: "left" | "right";
-  stock: DiscoveryDeckCard;
+  card: DeckCard;
 };
 
 function prefersReducedMotion(): boolean {
@@ -212,16 +213,18 @@ function FeedSignalStrip({
   );
 }
 
-function cardKey(card: DiscoveryDeckCard): string {
-  return isThemeBundleCard(card) ? card.id : card.canonical;
+function cardKey(card: DeckCard): string {
+  return card.type === "stock" ? card.data.canonical : card.data.id;
 }
 
-function cardLabel(card: DiscoveryDeckCard): string {
-  return isThemeBundleCard(card) ? card.title : card.canonical;
+function cardLabel(card: DeckCard): string {
+  if (card.type === "stock") return card.data.canonical;
+  if (card.type === "sector") return `${card.data.sector} 섹터`;
+  return "콘텐츠";
 }
 
-function isStockCard(card: DiscoveryDeckCard): card is DeckStock {
-  return !isThemeBundleCard(card);
+function isStockCard(card: DeckCard): card is Extract<DeckCard, { type: "stock" }> {
+  return card.type === "stock";
 }
 
 function relationLabel(relation: DeckThemeBundle["items"][number]["relation"]): string {
@@ -464,7 +467,8 @@ function StockCardLoadingFace({
 }
 
 interface StockSwipeDeckProps {
-  stocks: DiscoveryDeckCard[];
+  cards?: DeckCard[];
+  stocks?: DiscoveryDeckCard[];
   initialFronts?: Record<string, FrontEntry>;
   contextLabel?: string | undefined;
   loggedIn?: boolean | undefined;
@@ -472,12 +476,14 @@ interface StockSwipeDeckProps {
 }
 
 export function StockSwipeDeck({
+  cards,
   stocks,
   initialFronts,
   contextLabel,
   loggedIn,
   onRequireLogin,
 }: StockSwipeDeckProps) {
+  const deckCards = useMemo(() => cards ?? stockDeckCards(stocks ?? []), [cards, stocks]);
   // 무한: 풀을 순환(modulo)해 끝나지 않는다(§7 "무한히 풀만큼").
   const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
@@ -508,11 +514,12 @@ export function StockSwipeDeck({
     setFront((prev) => ({ ...prev, ...initialFronts }));
   }, [initialFronts]);
 
-  const at = (i: number) => stocks[((i % stocks.length) + stocks.length) % stocks.length]!;
+  const at = (i: number) => deckCards[((i % deckCards.length) + deckCards.length) % deckCards.length]!;
 
   const ensureFront = useCallback(
-    (stock: DiscoveryDeckCard) => {
-      if (isThemeBundleCard(stock)) return;
+    (card: DeckCard) => {
+      if (!isStockCard(card)) return;
+      const stock = card.data;
       const key = stock.canonical;
       if (front[key] || inflight.current.has(key)) return;
       if (!stock.naverCode) {
@@ -606,8 +613,14 @@ export function StockSwipeDeck({
   const saveDiscovery = (stock: DeckStock) => {
     upsertWatch(stock.canonical, Date.now(), { sector: stock.sector, reason: whyFor(stock) });
   };
-  const renderFace = (stock: DiscoveryDeckCard, progress?: string) => {
-    if (isThemeBundleCard(stock)) return <BundleCardFace bundle={stock} progress={progress} />;
+  const renderFace = (card: DeckCard, progress?: string) => {
+    if (card.type === "sector") return <SectorCard card={card.data} progress={progress} />;
+    if (card.type === "content") {
+      return (
+        <div className="h-full" />
+      );
+    }
+    const stock = card.data;
     const e = front[stock.canonical];
     if (!e) {
       return <StockCardLoadingFace stock={stock} themeLabel={stock.sector} progress={progress} />;
@@ -667,21 +680,23 @@ export function StockSwipeDeck({
   // 패스(좌) — 관심 없음, 다음 카드로. 저장 없음(로그인 불필요).
   const advance = useCallback(
     (dir: "left" | "right") => {
-      const stock = at(idx);
-      if (isThemeBundleCard(stock)) {
-        setUndoEntry({ idx, dir, stock });
+      const card = at(idx);
+      if (!isStockCard(card)) {
+        setUndoEntry({ idx, dir, card });
+        if (card.type === "sector") recordTaste("theme", card.data.sector, dir === "right" ? "more" : "less");
         recordDiscoveryEvent("swipe", { direction: dir, hydrated: true });
         flingNext(dir);
         return;
       }
-      setUndoEntry({ idx, dir, stock });
+      const stock = card.data;
+      setUndoEntry({ idx, dir, card });
       if (dir === "right") saveDiscovery(stock);
       recordDiscoveryEvent("swipe", { direction: dir, hydrated: !!front[stock.canonical] });
       recordStockInterest(stock.canonical, dir === "right" ? "more" : "less", Date.now());
       recordTaste("stock", stock.canonical, dir === "right" ? "more" : "less"); // 트랙 B 적재
       flingNext(dir);
     },
-    [idx, stocks, flingNext, front]
+    [idx, deckCards, flingNext, front]
   );
 
   const undoLast = useCallback(() => {
@@ -709,12 +724,17 @@ export function StockSwipeDeck({
   // 관심(우/관심버튼)·슈퍼관심(위/별버튼) 공통 — 매칭 모먼트 띄운 뒤 상세(뎁스) 페이지로 진입.
   // 비로그인은 로그인 유도 후 스냅백(저장·매칭 없음). kind는 매칭 모먼트 표현만 다름(하트/별).
   const interest = useCallback((kind: "like" | "super") => {
-    const stock = at(idx);
-    if (isThemeBundleCard(stock)) {
+    const card = at(idx);
+    if (!isStockCard(card)) {
+      if (card.type === "sector") {
+        recordTaste("theme", card.data.sector, "more");
+        fireMatch(`${card.data.sector} 섹터`, kind);
+      }
       recordDiscoveryEvent("swipe", { direction: "right", hydrated: true });
       flingNext("right");
       return;
     }
+    const stock = card.data;
     if (!loggedIn && onRequireLogin) {
       onRequireLogin();
       setDx(0);
@@ -741,7 +761,7 @@ export function StockSwipeDeck({
     setExiting(kind === "super" ? "up" : "right");
     window.setTimeout(openAfter, 760);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, stocks, front, fireMatch, loggedIn, onRequireLogin]);
+  }, [idx, deckCards, front, fireMatch, loggedIn, onRequireLogin]);
 
   const openDepth = (stock: DeckStock, source: "card" | "interest_button" = "card") => {
     if (!loggedIn && onRequireLogin) {
@@ -758,7 +778,7 @@ export function StockSwipeDeck({
     setSelected(stock);
   };
   const closeDepth = () => {
-    if (selected) setUndoEntry({ idx, dir: "left", stock: selected });
+    if (selected) setUndoEntry({ idx, dir: "left", card: { type: "stock", data: selected } });
     setSelected(null);
     window.setTimeout(() => flingNext("left"), 40);
   };
@@ -766,7 +786,7 @@ export function StockSwipeDeck({
   const onPointerDown = (e: React.PointerEvent) => {
     if (exiting || restoring) return;
     const current = at(idx);
-    if (isStockCard(current) && !front[current.canonical]) return;
+    if (isStockCard(current) && !front[current.data.canonical]) return;
     dragging.current = true;
     moved.current = false;
     startX.current = e.clientX;
@@ -806,28 +826,28 @@ export function StockSwipeDeck({
 
   useEffect(() => {
     setUndoEntry(null);
-  }, [stocks]);
+  }, [deckCards]);
 
   useEffect(() => {
     const card = at(idx);
-    const stock = isStockCard(card) ? card.canonical : card.id;
+    const stock = cardKey(card);
     if (!firstCardRecorded.current) {
       firstCardRecorded.current = true;
       recordDiscoveryEvent("first_card_display");
     }
     if (lastSeenStock.current === stock) return;
     lastSeenStock.current = stock;
-    recordStockInterest(stock, "seen", Date.now());
-  }, [idx, stocks]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isStockCard(card)) recordStockInterest(card.data.canonical, "seen", Date.now());
+  }, [idx, deckCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const card = at(idx);
     if (!isStockCard(card)) return;
-    const stock = card.canonical;
+    const stock = card.data.canonical;
     if (!front[stock] || hydratedRecorded.current.has(stock)) return;
     hydratedRecorded.current.add(stock);
     recordDiscoveryEvent("card_hydrate");
-  }, [idx, front, stocks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idx, front, deckCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const top = at(idx);
   const flingTransform = (dir: "left" | "right") =>
@@ -840,13 +860,13 @@ export function StockSwipeDeck({
         : flingTransform(exiting)
       : `translate(${dx}px, ${dy}px) rotate(${dx * 0.04}deg)`;
   const topTransition = dragging.current || restorePrimed ? "none" : `transform ${EXIT_MS}ms cubic-bezier(0.22,1,0.36,1)`;
-  const topReady = isThemeBundleCard(top) ? true : !!front[top.canonical];
+  const topReady = isStockCard(top) ? !!front[top.data.canonical] : true;
 
   return (
     <div className="w-full">
       <div className="relative mx-auto h-[52svh] min-h-[380px] max-h-[520px] w-full select-none sm:min-h-[420px]">
         {/* 다음 카드 — 뒤에 살짝 드러나는 스택(틴더식 peek). 위 카드가 불투명이라 body 통과 비침은 없음. */}
-        {stocks.length > 1 && (
+        {deckCards.length > 1 && (
           <div
             aria-hidden
             className="absolute inset-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
@@ -863,7 +883,7 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (topReady && isStockCard(top) && !moved.current && !exiting && !restoring) openDepth(top, "card");
+            if (topReady && isStockCard(top) && !moved.current && !exiting && !restoring) openDepth(top.data, "card");
           }}
           className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
           style={{ transform: topTransform, transition: topTransition }}
@@ -887,7 +907,7 @@ export function StockSwipeDeck({
           >
             <StarIcon size={72} />
           </span>
-          {renderFace(top, `${(idx % stocks.length) + 1} / ${stocks.length}`)}
+          {renderFace(top, `${(idx % deckCards.length) + 1} / ${deckCards.length}`)}
         </div>
 
         {/* 매칭 모먼트 — 관심/슈퍼관심 확인 연출(담담·자동 해제). 투자 신호 아님. */}
@@ -908,8 +928,8 @@ export function StockSwipeDeck({
         <button
           onClick={undoLast}
           disabled={!!exiting || restoring || !undoEntry}
-          aria-label={undoEntry ? `${cardLabel(undoEntry.stock)} 카드로 돌아가기` : "이전 카드 없음"}
-          title={undoEntry ? `${cardLabel(undoEntry.stock)} 다시 보기` : "이전 카드 없음"}
+          aria-label={undoEntry ? `${cardLabel(undoEntry.card)} 카드로 돌아가기` : "이전 카드 없음"}
+          title={undoEntry ? `${cardLabel(undoEntry.card)} 다시 보기` : "이전 카드 없음"}
           className="flex h-14 w-14 items-center justify-center rounded-full border border-hairline-soft bg-surface-raised text-muted transition-colors hover:text-whiteout disabled:opacity-30"
         >
           <UndoIcon size={24} />
