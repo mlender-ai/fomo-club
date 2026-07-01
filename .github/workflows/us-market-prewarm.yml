@@ -60,3 +60,17 @@ jobs:
           else
             curl -fsS "$URL"
           fi
+
+      - name: Warm US discovery after both slots
+        if: steps.slot.outputs.slot == '1'
+        run: |
+          set -euo pipefail
+          curl -fsS "https://fomo-club-backend.vercel.app/api/fomo/discovery?country=US" > /tmp/us-discovery.json
+          node -e '
+            const fs = require("fs");
+            const json = JSON.parse(fs.readFileSync("/tmp/us-discovery.json", "utf8"));
+            const fronts = Object.values(json.fronts || {});
+            const priced = fronts.filter((front) => front && front.priceText && front.priceText !== "$0.00").length;
+            const spark = fronts.filter((front) => Array.isArray(front && front.sparkline) && front.sparkline.length >= 2).length;
+            console.log(JSON.stringify({ stocks: json.stocks?.length || 0, cards: json.cards?.length || 0, fronts: fronts.length, priced, spark }));
+          '

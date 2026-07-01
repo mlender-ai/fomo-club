@@ -6,6 +6,6 @@ export function shouldUseTargetedMaterial(country: DiscoveryCountryScope, fast: 
 }
 
 export function targetedMaterialLimitFor(country: DiscoveryCountryScope, fast: boolean): number | undefined {
-  if (fast) return country === "US" ? 8 : 36;
-  return country === "US" ? 24 : 120;
+  if (fast) return country === "US" ? 12 : 36;
+  return country === "US" ? 64 : 120;
 }

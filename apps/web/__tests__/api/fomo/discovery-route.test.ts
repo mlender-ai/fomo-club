@@ -15,8 +15,8 @@ describe("discovery route loading policy", () => {
 
   it("caps targeted material work on fast routes instead of disabling hooks", () => {
     expect(targetedMaterialLimitFor("KR", true)).toBe(36);
-    expect(targetedMaterialLimitFor("US", true)).toBe(8);
+    expect(targetedMaterialLimitFor("US", true)).toBe(12);
     expect(targetedMaterialLimitFor("KR", false)).toBe(120);
-    expect(targetedMaterialLimitFor("US", false)).toBe(24);
+    expect(targetedMaterialLimitFor("US", false)).toBe(64);
   });
 });
