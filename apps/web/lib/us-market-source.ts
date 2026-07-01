@@ -629,10 +629,16 @@ function strongMomentumRows(rows: readonly DiscoveryMarketRow[]): number {
 }
 
 function mergeSparkline(row: DiscoveryMarketRow, fallback: DiscoveryMarketRow | undefined): DiscoveryMarketRow {
-  if (!fallback?.sparkline || (row.sparkline?.length ?? 0) >= 2) return row;
+  if (!fallback) return row;
+  const needsQuoteFallback = !row.priceText || row.priceText === "$0.00";
   return {
     ...row,
-    sparkline: fallback.sparkline,
+    ...(needsQuoteFallback && fallback.priceText ? { priceText: fallback.priceText } : {}),
+    ...(needsQuoteFallback && typeof fallback.changePct === "number" ? { changePct: fallback.changePct } : {}),
+    ...(needsQuoteFallback && fallback.changeText ? { changeText: fallback.changeText } : {}),
+    ...(needsQuoteFallback && fallback.changeDir ? { changeDir: fallback.changeDir } : {}),
+    ...(needsQuoteFallback && typeof fallback.tradingValue === "number" ? { tradingValue: fallback.tradingValue } : {}),
+    ...(fallback.sparkline && (row.sparkline?.length ?? 0) < 2 ? { sparkline: fallback.sparkline } : {}),
     ...(fallback.sessionLabel ? { sessionLabel: fallback.sessionLabel } : {}),
   };
 }
