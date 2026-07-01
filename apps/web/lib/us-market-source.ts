@@ -78,6 +78,7 @@ interface NasdaqScreenerRow {
 export interface UsMarketRowsSourceOptions {
   slot?: number;
   slotCount?: number;
+  hydrateSparklineFallback?: boolean;
 }
 
 function tdKey(): string | undefined {
@@ -721,7 +722,11 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
       const fallbackRows = nasdaqRows.length > 0 ? nasdaqRows : seedRows();
       return { rows: fallbackRows, diagnostics: fallbackDiagnostics(fallbackRows, nasdaqRows.length > 0 ? "nasdaq-fallback" : "seed") };
     }
-    const hydratedRows = rows;
+    const fallbackRows =
+      options.hydrateSparklineFallback && rows.some((row) => (row.sparkline?.length ?? 0) < 2)
+        ? await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => [])
+        : [];
+    const hydratedRows = fallbackRows.length > 0 ? mergePreferredRows(rows, fallbackRows) : rows;
     return {
       rows: hydratedRows,
       diagnostics: {

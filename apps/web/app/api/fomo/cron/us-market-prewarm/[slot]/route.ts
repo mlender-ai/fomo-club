@@ -30,7 +30,7 @@ export async function GET(request: Request, context: { params: Promise<{ slot?: 
     return NextResponse.json({ ok: false, error: "invalid_slot", slot: params.slot, slotCount: SLOT_COUNT }, { status: 400 });
   }
 
-  const rows = await fetchUsMarketRowsFromSource({ slot, slotCount: SLOT_COUNT });
+  const rows = await fetchUsMarketRowsFromSource({ slot, slotCount: SLOT_COUNT, hydrateSparklineFallback: true });
   const written = await writeUsMarketQuoteRows(rows, {
     slot,
     sessionDate: latestUsSessionAsOf().date,
