@@ -5,7 +5,7 @@ import type { StockSector } from "@fomo/core";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { fetchAxisSnapshot, fetchSectorStocks, getCachedKeywords, warmKeywords } from "@/lib/fomoApi";
-import { applyAxisSnapshotToStocks, buildSectorDiscoveryStocks, type DeckStock } from "@/lib/discoveryDeck";
+import { applyAxisSnapshotToStocks, buildSectorDiscoveryStocks, stockDeckCards, type DeckStock } from "@/lib/discoveryDeck";
 
 interface SectorDeckProps {
   sector: StockSector;
@@ -83,7 +83,7 @@ export function SectorStockDeck({ sector, loggedIn, onRequireLogin }: SectorDeck
 
   return (
     <StockSwipeDeck
-      stocks={state.stocks}
+      cards={stockDeckCards(state.stocks)}
       contextLabel={sector}
       loggedIn={loggedIn}
       onRequireLogin={onRequireLogin}

@@ -10,7 +10,7 @@ import {
   type DiscoveryUpdatedDetail,
 } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { MIN_DISCOVERY_STOCKS, normalizeDiscoveryDeckCards, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
+import { buildDiscoveryDeckCards, MIN_DISCOVERY_STOCKS, type DeckCard, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
 
 interface TodayDiscoveryDeckProps {
@@ -19,6 +19,7 @@ interface TodayDiscoveryDeckProps {
 }
 
 const INITIAL_RETRY_DELAYS_MS = [1_200, 2_400] as const;
+type DiscoveryTabCountry = Extract<DiscoveryCountryScope, "KR" | "US">;
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -42,24 +43,25 @@ function DiscoveryEmpty({ onRetry }: { onRetry: () => void }) {
 }
 
 export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryDeckProps) {
-  const [country, setCountry] = useState<DiscoveryCountryScope>("KR");
+  const [country, setCountry] = useState<DiscoveryTabCountry>("KR");
   const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "error" }
-    | { kind: "ready"; cards: DiscoveryDeckCard[]; fronts: Record<string, FrontEntry> }
+    | { kind: "ready"; cards: DeckCard[]; fronts: Record<string, FrontEntry> }
   >({ kind: "loading" });
 
   useEffect(() => {
     let alive = true;
     const applyDiscovery = (discovery: DiscoveryResponse) => {
       const rawCards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
-      const cards = normalizeDiscoveryDeckCards(rawCards);
+      const fronts = discovery.fronts as Record<string, FrontEntry>;
+      const cards = buildDiscoveryDeckCards(rawCards, { country, fronts });
       if (cards.length === 0) {
         setState({ kind: "error" });
         return;
       }
-      setState({ kind: "ready", cards, fronts: discovery.fronts as Record<string, FrontEntry> });
+      setState({ kind: "ready", cards, fronts });
     };
     const onDiscoveryUpdated = (event: Event) => {
       const detail = (event as CustomEvent<DiscoveryUpdatedDetail>).detail;
@@ -116,7 +118,7 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
             type="button"
             role="tab"
             aria-selected={active}
-            onClick={() => setCountry(value as DiscoveryCountryScope)}
+            onClick={() => setCountry(value as DiscoveryTabCountry)}
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
               active ? "border-whiteout bg-whiteout text-canvas" : "border-hairline text-muted hover:text-whiteout"
             }`}
@@ -150,7 +152,7 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
       {scopeTabs}
       <StockSwipeDeck
         key={country}
-        stocks={state.cards.slice(0, Math.max(MIN_DISCOVERY_STOCKS, state.cards.length))}
+        cards={state.cards.slice(0, Math.max(MIN_DISCOVERY_STOCKS, state.cards.length))}
         initialFronts={state.fronts}
         contextLabel={country === "US" ? "미국 발견" : "오늘의 발견"}
         loggedIn={loggedIn}

@@ -9,6 +9,8 @@ import {
   type StockCountry,
   type StockMarket,
   type StockSector,
+  type ThemeStance,
+  SECTORS,
   resolveStock,
   stocksBySector,
 } from "@fomo/core";
@@ -82,8 +84,50 @@ export interface DeckThemeBundle {
 
 export type DiscoveryDeckCard = DeckStock | DeckThemeBundle;
 
+export interface DeckSectorStock {
+  canonical: string;
+  market: StockMarket;
+  country: StockCountry;
+  naverCode?: string;
+  symbol?: string;
+  marquee?: boolean;
+  changePct?: number;
+  flowSignal?: string;
+  volumeSignal?: string;
+}
+
+export interface DeckSectorCardData {
+  id: string;
+  sector: string;
+  country: StockCountry;
+  stance: ThemeStance;
+  stanceNote: string;
+  stocks: DeckSectorStock[];
+}
+
+export interface DeckContentCardData {
+  kind: "reserved";
+  id: string;
+}
+
+export type DeckCard =
+  | { type: "stock"; data: DeckStock }
+  | { type: "sector"; data: DeckSectorCardData }
+  | { type: "content"; data: DeckContentCardData };
+
+export const SECTOR_CARD_INTERVAL = 5;
+
 export function isThemeBundleCard(card: DiscoveryDeckCard): card is DeckThemeBundle {
   return card.kind === "theme_bundle";
+}
+
+export function deckCardFromDiscovery(card: DiscoveryDeckCard): DeckCard | null {
+  if (isThemeBundleCard(card)) return null;
+  return { type: "stock", data: card };
+}
+
+export function stockDeckCards(cards: readonly DiscoveryDeckCard[]): DeckCard[] {
+  return cards.map(deckCardFromDiscovery).filter((card): card is DeckCard => card !== null);
 }
 
 function normalizeDeckStockIdentifiers(stock: DeckStock): DeckStock {
@@ -367,4 +411,205 @@ export function applyAxisSnapshotToStocks(
     axisHook: hook,
     axisSignals: hook.axisSignals,
   }));
+}
+
+interface DeckFrontLike {
+  signals?: {
+    changePct?: number;
+    volumeRatio?: number;
+  };
+  axisSignals?: AxisSignal[];
+  axisHook?: MultiAxisHookSelection;
+}
+
+interface SectorDeckBuildOptions {
+  country: StockCountry;
+  fronts?: Record<string, DeckFrontLike>;
+  interval?: number;
+}
+
+function changePctFor(stock: DeckStock, fronts: Record<string, DeckFrontLike>): number | undefined {
+  return fronts[stock.canonical]?.signals?.changePct;
+}
+
+function volumeSignalFor(stock: DeckStock, fronts: Record<string, DeckFrontLike>): string | undefined {
+  const ratio = fronts[stock.canonical]?.signals?.volumeRatio;
+  if (typeof ratio !== "number" || ratio < 1.5) return undefined;
+  return `거래량 ${ratio.toFixed(1)}배`;
+}
+
+function flowSignalFor(stock: DeckStock, fronts: Record<string, DeckFrontLike>): string | undefined {
+  const front = fronts[stock.canonical];
+  const hook = front?.axisHook ?? stock.axisHook;
+  if (hook?.axis === "flow" && hook.hookText) return hook.hookText;
+  const signal = (front?.axisSignals ?? stock.axisSignals ?? []).find((item) => item.axis === "flow" && item.fired);
+  return signal?.hookText;
+}
+
+function stockSectorKey(stock: DeckStock): string {
+  return stock.sector.trim() || "기타";
+}
+
+function curatedSectorStocks(sector: string, country: StockCountry): SectorStock[] {
+  if (!(SECTORS as readonly string[]).includes(sector)) return [];
+  return stocksBySector(sector as StockSector).filter((stock) => stock.country === country);
+}
+
+function isCoreSector(sector: string): sector is StockSector {
+  return (SECTORS as readonly string[]).includes(sector);
+}
+
+function sectorStanceFor(
+  sector: string,
+  country: StockCountry,
+  stocks: readonly DeckSectorStock[],
+  fronts: Record<string, DeckFrontLike>
+): { stance: ThemeStance; note: string; score: number } {
+  const changes = stocks.map((stock) => stock.changePct).filter((value): value is number => typeof value === "number");
+  const avg = changes.length > 0 ? changes.reduce((sum, value) => sum + value, 0) / changes.length : 0;
+  const positive = changes.filter((value) => value > 0.2).length;
+  const negative = changes.filter((value) => value < -0.2).length;
+  const support =
+    country === "KR"
+      ? stocks.filter((stock) => Boolean(stock.flowSignal)).length
+      : stocks.filter((stock) => {
+        const ratio = fronts[stock.canonical]?.signals?.volumeRatio;
+        return typeof ratio === "number" && ratio >= 1.5;
+      }).length;
+  const bullScore = positive * 1.3 + Math.max(0, avg) * 0.35 + support * 0.7;
+  const bearScore = negative * 1.3 + Math.max(0, -avg) * 0.35;
+  const stance: ThemeStance =
+    bullScore >= bearScore + 1 ? "bull-dominant" : bearScore >= bullScore + 1 ? "bear-dominant" : "balanced";
+  const avgText = changes.length > 0 ? `평균 등락률 ${avg >= 0 ? "+" : ""}${avg.toFixed(1)}%` : "등락률 확인 중";
+  const supportText = country === "KR" ? `수급 신호 ${support}개` : `거래량 확대 ${support}개`;
+  return {
+    stance,
+    note: `${sector} ${avgText}, ${supportText} 기준으로 오늘 흐름을 묶었어요.`,
+    score: bullScore - bearScore + stocks.length * 0.08,
+  };
+}
+
+function toSectorStock(
+  stock: DeckStock,
+  fronts: Record<string, DeckFrontLike>
+): DeckSectorStock {
+  const changePct = changePctFor(stock, fronts);
+  const flowSignal = stock.country === "KR" ? flowSignalFor(stock, fronts) : undefined;
+  const volumeSignal = stock.country === "US" ? volumeSignalFor(stock, fronts) : undefined;
+  return {
+    canonical: stock.canonical,
+    market: stock.market,
+    country: stock.country,
+    ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
+    ...(stock.symbol ? { symbol: stock.symbol } : {}),
+    ...(stock.marquee ? { marquee: stock.marquee } : {}),
+    ...(typeof changePct === "number" ? { changePct } : {}),
+    ...(flowSignal ? { flowSignal } : {}),
+    ...(volumeSignal ? { volumeSignal } : {}),
+  };
+}
+
+export function buildSectorDeckCards(
+  stocks: readonly DeckStock[],
+  { country, fronts = {} }: SectorDeckBuildOptions
+): DeckCard[] {
+  const bySector = new Map<string, DeckStock[]>();
+  for (const stock of stocks) {
+    if (stock.country !== country) continue;
+    const sector = stockSectorKey(stock);
+    const arr = bySector.get(sector) ?? [];
+    arr.push(stock);
+    bySector.set(sector, arr);
+  }
+
+  const cards: Array<{ card: Extract<DeckCard, { type: "sector" }>; score: number }> = [];
+  for (const [sector, currentStocks] of bySector.entries()) {
+    if (country === "KR" && !isCoreSector(sector)) continue;
+    const curated = curatedSectorStocks(sector, country);
+    const byName = new Map<string, DeckStock>();
+    for (const stock of curated) {
+      byName.set(stock.canonical, { ...stock, sector });
+    }
+    for (const stock of currentStocks) byName.set(stock.canonical, stock);
+    const rows = [...byName.values()]
+      .filter((stock) => stock.country === country)
+      .sort((a, b) => {
+        const aChange = changePctFor(a, fronts) ?? -999;
+        const bChange = changePctFor(b, fronts) ?? -999;
+        return bChange - aChange || Number(b.marquee) - Number(a.marquee) || a.canonical.localeCompare(b.canonical);
+      })
+      .map((stock) => toSectorStock(stock, fronts));
+    const withSignal = rows.filter((stock) => typeof stock.changePct === "number" || stock.flowSignal || stock.volumeSignal);
+    const displayRows = (withSignal.length >= 2 ? withSignal : rows).slice(0, 5);
+    if (displayRows.length < 2) continue;
+    const stance = sectorStanceFor(sector, country, displayRows, fronts);
+    cards.push({
+      score: stance.score,
+      card: {
+        type: "sector",
+        data: {
+          id: `sector:${country}:${sector}`,
+          sector,
+          country,
+          stance: stance.stance,
+          stanceNote: stance.note,
+          stocks: displayRows,
+        },
+      },
+    });
+  }
+  return cards.sort((a, b) => b.score - a.score || a.card.data.sector.localeCompare(b.card.data.sector)).map((item) => item.card);
+}
+
+function nextSectorCard(cards: readonly DeckCard[], cursor: number, lastSector: string | null): { card: DeckCard; cursor: number } | null {
+  if (cards.length === 0) return null;
+  for (let offset = 0; offset < cards.length; offset += 1) {
+    const index = (cursor + offset) % cards.length;
+    const card = cards[index];
+    if (card?.type !== "sector") continue;
+    if (cards.length > 1 && card.data.sector === lastSector) continue;
+    return { card, cursor: index + 1 };
+  }
+  const card = cards[cursor % cards.length];
+  return card ? { card, cursor: cursor + 1 } : null;
+}
+
+export function interleaveSectorCards(
+  stockCards: readonly DeckCard[],
+  sectorCards: readonly DeckCard[],
+  interval = SECTOR_CARD_INTERVAL
+): DeckCard[] {
+  if (sectorCards.length === 0 || interval <= 0) return [...stockCards];
+  const out: DeckCard[] = [];
+  let sectorCursor = 0;
+  let lastSector: string | null = null;
+  let stockCount = 0;
+  let inserted = 0;
+  for (const card of stockCards) {
+    out.push(card);
+    if (card.type !== "stock") continue;
+    stockCount += 1;
+    if (stockCount % interval !== 0) continue;
+    const next = nextSectorCard(sectorCards, sectorCursor, lastSector);
+    if (!next) continue;
+    out.push(next.card);
+    inserted += 1;
+    sectorCursor = next.cursor;
+    lastSector = next.card.type === "sector" ? next.card.data.sector : lastSector;
+  }
+  if (inserted === 0 && stockCount > 0) {
+    const next = nextSectorCard(sectorCards, sectorCursor, lastSector);
+    if (next) out.push(next.card);
+  }
+  return out;
+}
+
+export function buildDiscoveryDeckCards(
+  discoveryCards: readonly DiscoveryDeckCard[],
+  options: SectorDeckBuildOptions
+): DeckCard[] {
+  const stocks = normalizeDiscoveryDeckCards(discoveryCards).filter((card): card is DeckStock => !isThemeBundleCard(card));
+  const stockCards = stockDeckCards(stocks);
+  const sectorCards = buildSectorDeckCards(stocks, options);
+  return interleaveSectorCards(stockCards, sectorCards, options.interval ?? SECTOR_CARD_INTERVAL);
 }
