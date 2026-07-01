@@ -173,19 +173,6 @@ async function fetchIndexNetwork({
   sameOriginTimeoutMs?: number;
   backendTimeoutMs?: number;
 } = {}): Promise<FomoIndexResponse> {
-  try {
-    return await fetchJsonWithTimeout<FomoIndexResponse>(
-      "/api/fomo/index",
-      { cache: "no-store", credentials: "same-origin" },
-      sameOriginTimeoutMs,
-      "GET /api/fomo/index"
-    );
-  } catch (sameOriginErr) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("[fetchIndex] same-origin failed; retrying backend", sameOriginErr);
-    }
-  }
-
   let lastError: unknown = null;
   for (const origin of backendOrigins()) {
     try {
@@ -199,6 +186,21 @@ async function fetchIndexNetwork({
       lastError = err;
     }
   }
+
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      return await fetchJsonWithTimeout<FomoIndexResponse>(
+        "/api/fomo/index",
+        { cache: "no-store", credentials: "same-origin" },
+        sameOriginTimeoutMs,
+        "GET /api/fomo/index"
+      );
+    } catch (sameOriginErr) {
+      lastError = sameOriginErr;
+      console.warn("[fetchIndex] backend failed; retrying same-origin fallback failed", sameOriginErr);
+    }
+  }
+
   throw lastError instanceof Error ? lastError : new Error("GET /api/fomo/index failed");
 }
 
