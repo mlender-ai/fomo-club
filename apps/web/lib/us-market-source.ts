@@ -758,7 +758,7 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
   }
   const bySymbol = new Map(seeds.map((seed) => [seed.symbol.toUpperCase(), seed]));
   try {
-    const moverSymbols: string[] = [];
+    const moverSymbols = await fetchMoverSymbols(key).catch((): string[] => []);
     const symbols = [...new Set([...moverSymbols, ...seeds.map((seed) => seed.symbol)])]
       .filter((symbol) => /^[A-Z.]{1,6}$/.test(symbol))
       .slice(0, US_DYNAMIC_UNIVERSE_LIMIT);

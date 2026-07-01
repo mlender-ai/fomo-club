@@ -20,6 +20,9 @@ import {
 } from "@fomo/core";
 import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
 import { fetchUsDailyCandles } from "./us-market-source";
+import type { DiscoveryMarketRow } from "./market-source-types";
+import { readUsMarketQuoteRows } from "./us-market-cache";
+import { usSymbolForStock } from "./us-symbols";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
 
@@ -167,7 +170,7 @@ export interface StockFrontOptions {
   lite?: boolean;
   /** 동적 발견 종목(STOCK_VOCAB 미등재)용 네이버 코드. 있으면 vocab 없이도 캔들·TA 조회. */
   naverCode?: string;
-  /** 미장 심볼(예: NVDA). 네이버 코드가 없을 때 US 일봉(TwelveData)으로 TA 계산. depth(non-lite)만. */
+  /** US 종목은 네이버 코드가 없으므로 symbol 기반 quote cache를 쓰고, non-lite에서는 US 일봉 TA도 보강한다. */
   symbol?: string;
 }
 
@@ -249,35 +252,7 @@ function buildFeedPoints(
   };
 }
 
-/**
- * 한 종목의 카드 앞면 데이터 조립 + 포모 점수 산출(척추 단일 출처).
- * baseline(가격·52주) + 라이브 수급 streak + 거래량 회전·추세 + 시총순위 + 스파크라인 → computeFomoScore.
- * rankMap 은 비싸므로 호출부에서 받아 재사용(없으면 순위 생략).
- */
-export async function assembleStockFront(
-  stock: string,
-  rankMap?: Record<string, RankEntry>,
-  coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {},
-  options: StockFrontOptions = {}
-): Promise<StockFrontData> {
-  const def = resolveStock(stock);
-  const code = options.naverCode ?? def?.naverCode;
-  // 미장: 네이버 코드가 없고 심볼이 있으면 US 일봉(TwelveData)로 캔들·TA. 카드(lite)는 비용 회피로 스킵.
-  const usSymbol = !code && options.symbol ? options.symbol.trim() : undefined;
-  if (!code && !usSymbol) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
-  const lite = options.lite === true;
-
-  const [basics, history, daily] = await Promise.all([
-    code ? (lite ? fetchStockBasicsLite(stock) : fetchStockBasics(stock)).catch(() => null) : Promise.resolve(null),
-    code ? readSupplyDemandHistory(code).catch(() => []) : Promise.resolve([] as Awaited<ReturnType<typeof readSupplyDemandHistory>>),
-    usSymbol
-      ? lite
-        ? Promise.resolve({ candles: [], closes: [], volumes: [] })
-        : fetchUsDailyCandles(usSymbol, 260)
-      : fetchStockDaily(code!, lite ? 110 : 420),
-  ]);
-
-  const signals: CardFrontSignals = basics ? signalsFromBasics(basics) : {};
+function mergeCoverageSignals(signals: CardFrontSignals, coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal }): void {
   if (coverage.attention) {
     signals.mentionCount = coverage.attention.mentionCount;
     signals.mentionScore = coverage.attention.mentionScore;
@@ -291,6 +266,127 @@ export async function assembleStockFront(
     signals.themeAverageChangePct = coverage.themeRelative.themeAverageChangePct;
     signals.themeRelativeChangePct = coverage.themeRelative.themeRelativeChangePct;
   }
+}
+
+function usRowMatches(row: DiscoveryMarketRow, stock: string, symbol: string | undefined): boolean {
+  const requested = stock.trim().toUpperCase();
+  const rowSymbol = row.symbol.trim().toUpperCase();
+  return (
+    (symbol ? rowSymbol === symbol.trim().toUpperCase() : false) ||
+    rowSymbol === requested ||
+    row.canonical.trim() === stock.trim()
+  );
+}
+
+async function assembleUsCachedStockFront(
+  stock: string,
+  coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal },
+  options: StockFrontOptions
+): Promise<StockFrontData | null> {
+  const symbol = options.symbol?.trim().toUpperCase() ?? usSymbolForStock(stock);
+  const rows = await readUsMarketQuoteRows({ maxAgeHours: 24 });
+  const row = rows.find((item) => usRowMatches(item, stock, symbol));
+  if (!row) return null;
+
+  const signals: CardFrontSignals = {};
+  if (typeof row.changePct === "number") signals.changePct = row.changePct;
+  if (typeof row.marketCapRank === "number") {
+    signals.marketCapRank = { scope: "market", market: row.market, rank: row.marketCapRank };
+  }
+  if (row.sectorHint) signals.themeLabel = row.sectorHint;
+  mergeCoverageSignals(signals, coverage);
+
+  const sparkline = row.sparkline?.filter((value) => typeof value === "number" && Number.isFinite(value)).slice(-42) ?? [];
+  const trend = trendStrength(sparkline);
+  const fomo = computeFomoScore({
+    ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
+    ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+    ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
+  });
+  const feedPoints = buildFeedPoints(signals, row.changeDir, row.changeText);
+  const axisSignals = buildAxisSignals({ signals });
+  const axisHook = selectMultiAxisHook(axisSignals);
+
+  return {
+    signals,
+    fomo,
+    sparkline,
+    ...(row.priceText ? { priceText: row.priceText } : {}),
+    ...(row.changeText ? { changeText: row.changeText } : {}),
+    ...(row.changeDir ? { changeDir: row.changeDir } : {}),
+    ...(feedPoints.bull ? { feedBull: feedPoints.bull } : {}),
+    ...(feedPoints.bear ? { feedBear: feedPoints.bear } : {}),
+    axisSignals,
+    axisHook,
+  };
+}
+
+/**
+ * 한 종목의 카드 앞면 데이터 조립 + 포모 점수 산출(척추 단일 출처).
+ * baseline(가격·52주) + 라이브 수급 streak + 거래량 회전·추세 + 시총순위 + 스파크라인 → computeFomoScore.
+ * rankMap 은 비싸므로 호출부에서 받아 재사용(없으면 순위 생략).
+ */
+export async function assembleStockFront(
+  stock: string,
+  rankMap?: Record<string, RankEntry>,
+  coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {},
+  options: StockFrontOptions = {}
+): Promise<StockFrontData> {
+  const def = resolveStock(stock);
+  const code = options.naverCode ?? def?.naverCode;
+  if (!code) {
+    const usSymbol = options.symbol?.trim().toUpperCase() ?? usSymbolForStock(stock);
+    if (!usSymbol) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+    const cachedFront = await assembleUsCachedStockFront(stock, coverage, { ...options, symbol: usSymbol }).catch(() => null);
+    if (options.lite === true) return cachedFront ?? { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+
+    const daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
+    if (!cachedFront && daily.closes.length === 0) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+
+    const signals: CardFrontSignals = { ...(cachedFront?.signals ?? {}) };
+    mergeCoverageSignals(signals, coverage);
+    const volRatio = volumeTurnover(daily.volumes);
+    if (typeof volRatio === "number") signals.volumeRatio = volRatio;
+    const ta = computeTechnicalAnalysis(daily.candles);
+    const sparkline = (daily.closes.length > 0 ? daily.closes : cachedFront?.sparkline ?? []).slice(-66);
+    const trend = ta.inputs.trendStrength ?? trendStrength(sparkline);
+    const fomo = computeFomoScore({
+      ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
+      ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
+      ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+      ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
+      ...(ta.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
+      ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
+    });
+    const taFact = selectTaFact(fomo, ta);
+    const feedPoints = buildFeedPoints(signals, cachedFront?.changeDir, cachedFront?.changeText);
+    const axisSignals = buildAxisSignals({ signals });
+    const axisHook = selectMultiAxisHook(axisSignals);
+    return {
+      signals,
+      fomo,
+      ...(taFact ? { taFact } : {}),
+      ta,
+      sparkline,
+      ...(cachedFront?.priceText ? { priceText: cachedFront.priceText } : {}),
+      ...(cachedFront?.changeText ? { changeText: cachedFront.changeText } : {}),
+      ...(cachedFront?.changeDir ? { changeDir: cachedFront.changeDir } : {}),
+      ...(feedPoints.bull ? { feedBull: feedPoints.bull } : {}),
+      ...(feedPoints.bear ? { feedBear: feedPoints.bear } : {}),
+      axisSignals,
+      axisHook,
+    };
+  }
+  const lite = options.lite === true;
+
+  const [basics, history, daily] = await Promise.all([
+    (lite ? fetchStockBasicsLite(stock) : fetchStockBasics(stock)).catch(() => null),
+    readSupplyDemandHistory(code).catch(() => []),
+    fetchStockDaily(code, lite ? 110 : 420),
+  ]);
+
+  const signals: CardFrontSignals = basics ? signalsFromBasics(basics) : {};
+  mergeCoverageSignals(signals, coverage);
 
   if (history.length > 0) {
     const streak = investorNetStreak(history);

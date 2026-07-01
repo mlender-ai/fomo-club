@@ -322,6 +322,22 @@ describe("buildTodayDiscoveryStocks", () => {
     expect(usCards.flatMap((card) => (card.type === "sector" ? card.data.stocks : [])).some((row) => row.flowSignal)).toBe(false);
   });
 
+  it("skips US sector cards when fewer than two rows have real price signals", () => {
+    const stocks: DeckStock[] = [
+      deckStock("마벨테크놀로지", "반도체", "US"),
+      deckStock("엔비디아", "반도체", "US"),
+      deckStock("마이크론", "반도체", "US"),
+    ];
+    const cards = buildSectorDeckCards(stocks, {
+      country: "US",
+      fronts: {
+        마벨테크놀로지: { signals: { changePct: 7.3, volumeRatio: 1.8 } },
+      },
+    });
+
+    expect(cards.some((card) => card.type === "sector" && card.data.sector === "반도체")).toBe(false);
+  });
+
   it("interleaves one sector card after every five stock cards without consecutive same sectors", () => {
     const stocks: DeckCard[] = Array.from({ length: 11 }, (_, i) => ({ type: "stock", data: deckStock(`종목${i}`, "AI") }));
     const sectors: DeckCard[] = [

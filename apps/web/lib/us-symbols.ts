@@ -102,6 +102,8 @@ export const US_DISCOVERY_SYMBOLS: UsDiscoverySymbol[] = [
   { canonical: "인튜이티브서지컬", symbol: "ISRG", market: "NASDAQ", sector: "바이오", fameRank: 42 },
   { canonical: "힘스앤허스", symbol: "HIMS", market: "NYSE", sector: "헬스케어", fameRank: 340 },
   { canonical: "깅코바이오웍스", symbol: "DNA", market: "NYSE", sector: "바이오", fameRank: 760 },
+  { canonical: "네비우스", symbol: "NBIS", market: "NASDAQ", sector: "AI 인프라", fameRank: 520 },
+  { canonical: "스페이스X", symbol: "SPCX", market: "NASDAQ", sector: "우주", fameRank: 18 },
   { canonical: "로켓랩", symbol: "RKLB", market: "NASDAQ", sector: "우주", fameRank: 480 },
   { canonical: "인튜이티브머신스", symbol: "LUNR", market: "NASDAQ", sector: "우주", fameRank: 720 },
   { canonical: "아처에비에이션", symbol: "ACHR", market: "NYSE", sector: "항공", fameRank: 650 },

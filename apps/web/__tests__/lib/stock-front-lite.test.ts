@@ -3,8 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../lib/supply-demand-store", () => ({
   readSupplyDemandHistory: vi.fn().mockResolvedValue([]),
 }));
+vi.mock("../../lib/us-market-cache", () => ({
+  readUsMarketQuoteRows: vi.fn().mockResolvedValue([]),
+}));
 
 import { assembleStockFront } from "../../lib/stock-front";
+import { readUsMarketQuoteRows } from "../../lib/us-market-cache";
 
 const dailyText = `
 [
@@ -86,5 +90,32 @@ describe("assembleStockFront lite", () => {
     expect(front.feedBear).toEqual({ text: "반도체 평균보다 덜 움직였어요.", source: "테마" });
     expect(front.axisSignals?.some((signal) => signal.axis === "time" && signal.fired)).toBe(true);
     expect(front.axisHook?.axis).toBe("time");
+  });
+
+  it("미국 종목은 symbol 기반 quote cache에서 가격과 차트를 반환한다", async () => {
+    vi.mocked(readUsMarketQuoteRows).mockResolvedValueOnce([
+      {
+        canonical: "메타",
+        symbol: "META",
+        market: "NASDAQ",
+        country: "US",
+        currency: "USD",
+        priceText: "$705.80",
+        changeText: "+12.20 (+1.76%)",
+        changeDir: "up",
+        changePct: 1.76,
+        sparkline: [690, 696, 705.8],
+        sectorHint: "AI",
+      },
+    ]);
+
+    const front = await assembleStockFront("메타", undefined, {}, { lite: true, symbol: "META" });
+
+    expect(front.priceText).toBe("$705.80");
+    expect(front.changeText).toBe("+12.20 (+1.76%)");
+    expect(front.signals.changePct).toBe(1.76);
+    expect(front.sparkline).toEqual([690, 696, 705.8]);
+    expect(front.fomo.inputs.price).toBeDefined();
+    expect(front.axisSignals?.some((signal) => signal.axis === "price")).toBe(true);
   });
 });

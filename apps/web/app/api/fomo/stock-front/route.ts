@@ -80,7 +80,7 @@ export async function GET(req: Request) {
   const stock = url.searchParams.get("stock")?.trim();
   const lite = url.searchParams.get("lite") === "1";
   const naverCode = url.searchParams.get("naverCode")?.trim() || undefined;
-  const symbol = url.searchParams.get("symbol")?.trim() || undefined;
+  const symbol = url.searchParams.get("symbol")?.trim().toUpperCase() || undefined;
   if (!stock) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }

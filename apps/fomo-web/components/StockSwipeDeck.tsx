@@ -525,7 +525,7 @@ export function StockSwipeDeck({
       const stock = card.data;
       const key = stock.canonical;
       if (front[key] || inflight.current.has(key)) return;
-      if (!stock.naverCode) {
+      if (!stock.naverCode && !stock.symbol) {
         setFront((prev) => ({
           ...prev,
           [key]: { signals: {}, fomo: EMPTY_FOMO, sparkline: [] },
@@ -533,7 +533,11 @@ export function StockSwipeDeck({
         return;
       }
       inflight.current.add(key);
-      fetchStockFront(key, { lite: true })
+      fetchStockFront(key, {
+        lite: true,
+        ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
+        ...(stock.symbol ? { symbol: stock.symbol } : {}),
+      })
         .then((d) =>
           setFront((prev) => ({
             ...prev,

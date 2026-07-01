@@ -70,6 +70,11 @@ describe("discovery material news filter", () => {
     expect(cleanUsMaterialTitle("D-Wave Quantum Announces New Partnership With Aerospace Customer")).toBe(
       "D-Wave Quantum Announces New Partnership With Aerospace Customer"
     );
+    expect(cleanUsMaterialTitle("SpaceX IPO set to trade on Nasdaq under ticker SPCX")).toBe(
+      "SpaceX IPO set to trade on Nasdaq under ticker SPCX"
+    );
+    expect(cleanUsMaterialTitle("스페이스X, 나스닥100 조기 편입")).toBe("스페이스X, 나스닥100 조기 편입");
+    expect(cleanUsMaterialTitle("메타, 엔비디아와 장기 AI 인프라 제휴")).toBe("메타, 엔비디아와 장기 AI 인프라 제휴");
     expect(cleanUsMaterialTitle("Analyst raises price target on Micron shares")).toBeUndefined();
     expect(cleanUsMaterialTitle("D-Wave Quantum (QBTS) Is Down 11.3% After U.S. Quantum Orders And Funding News")).toBeUndefined();
     expect(cleanUsMaterialTitle("SoundHound AI vs. C3.ai: Which AI Stock Is the Better Buy Now")).toBeUndefined();

@@ -80,7 +80,7 @@ describe("US market source", () => {
     expect(smci?.sectorHint).toBe("AI");
   });
 
-  it("keeps the keyed request path capped to the curated quote batch", async () => {
+  it("uses Twelve Data movers while keeping the keyed request path capped", async () => {
     vi.stubEnv("TWELVE_DATA_API_KEY", "td-test");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -114,14 +114,14 @@ describe("US market source", () => {
     expect(rows.some((row) => row.symbol === "MRVL")).toBe(true);
     expect(rows.some((row) => row.symbol === "SNDK")).toBe(true);
     expect(rows.some((row) => row.symbol === "META")).toBe(true);
-    expect(rows.some((row) => row.symbol === "OPEN")).toBe(false);
-    expect(rows.some((row) => row.symbol === "KULR")).toBe(false);
-    expect(rows.some((row) => row.symbol === "SERV")).toBe(false);
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("market_movers"))).toBe(false);
+    expect(rows.some((row) => row.symbol === "OPEN")).toBe(true);
+    expect(rows.some((row) => row.symbol === "KULR")).toBe(true);
+    expect(rows.some((row) => row.symbol === "SERV")).toBe(true);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("market_movers"))).toBe(true);
 
     const diag = await fetchUsMarketDiagnostics();
-    expect(diag.moverSymbols).toBe(0);
-    expect(diag.dynamicRows).toBe(0);
+    expect(diag.moverSymbols).toBe(6);
+    expect(diag.dynamicRows).toBeGreaterThanOrEqual(6);
     expect(diag.quoteSymbols).toBeLessThanOrEqual(60);
     expect(diag.quoteSymbols).toBeLessThan(diag.seedCount);
   });

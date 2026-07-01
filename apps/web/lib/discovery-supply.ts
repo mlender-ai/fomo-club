@@ -38,7 +38,7 @@ import {
   fetchDartInsiderPurchasesForCode,
   type DartDisclosureHit,
 } from "./dart-disclosures";
-import { fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
+import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
 import { relatedTo, type RelatedNode } from "./relation-graph";
 import { fetchRecentSecFilings } from "./sec-edgar";
@@ -88,7 +88,7 @@ const MATERIAL_NEWS_CATALYST =
 const US_MATERIAL_NEWS_NOISE =
   /price\s?target|target price|\braises?\s+PT\b|\bPT\s+on\b|analyst|rating|upgrade|downgrade|initiates?|maintains?|reiterates?|buybacks?\s+explained|history of|buy,\s*sell,\s*or\s*hold|should you buy|stock to buy|better buy|which .* stock|what investors should know|\b[A-Z]{1,6}\s+investors?\b|investors?\s+(?:have|can|should|alert|deadline|opportunity|reminder|notice)|shareholders?|class action|lawsuit|law firm|securities fraud|motley fool|zacks|benzinga|investorplace|approach with caution|missing link|strain inside|what you|can it|market rotation|running out of power|internet.?s .+ odd duck|all-time low|gaining ground|more significant dip|boom is|fears hit|gains as market dips|limps along|afterglow is gone|and more stocks|more stocks that|stocks that|stock market today|market roundup|why .* stock (?:is )?(?:up|down|rising|falling)|\b(?:is|are|was|were)?\s*(?:up|down|higher|lower|gains?|loses?|rises?|falls?)\s+\d+(?:\.\d+)?%|\b(?:is|are|was|were)\s+(?:up|down|higher|lower)\b|shares? (?:rise|fall|slip|jump|gain|lose) after hours/i;
 const US_MATERIAL_NEWS_CATALYST =
-  /earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]|contract|deal|order|supply|supplier|customer|partnership|launch|unveil|product|chip|gpu|ai|data center|approval|fda|trial|drug|sec|8-k|10-q|filing|acquisition|merger|stake|investment|buyback authorization|dividend/i;
+  /earnings|results|revenue|profit|margin|guidance|forecast|quarter|q[1-4]|contract|deal|order|supply|supplier|customer|partnership|launch|unveil|product|chip|gpu|ai|data center|approval|fda|trial|drug|sec|8-k|10-q|filing|acquisition|merger|stake|investment|buyback authorization|dividend|ipo|public offering|listing|nasdaq[-\s]?100|index inclusion|상장|편입/i;
 const DISCOVERY_SOURCE_LABEL = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? "네이버/KR 시세·DART·수급 캐시·Twelve Data/US 시세·SEC"
   : "시장 시세·공시·수급 캐시";
@@ -375,7 +375,7 @@ export function cleanUsMaterialTitle(title: string): string | undefined {
     return undefined;
   }
   if (isUsBundleArticleTitle(cleaned)) return undefined;
-  if (!US_MATERIAL_NEWS_CATALYST.test(cleaned)) return undefined;
+  if (!US_MATERIAL_NEWS_CATALYST.test(cleaned) && !MATERIAL_NEWS_CATALYST.test(cleaned)) return undefined;
   if (/[\[\]{}<>]/.test(cleaned)) return undefined;
   return cleaned;
 }
@@ -437,6 +437,7 @@ const US_ARTICLE_ALIAS_OVERRIDES: Record<string, string[]> = {
   MDB: ["MongoDB"],
   META: ["Meta", "Meta Platforms", "Facebook"],
   MSTR: ["MicroStrategy", "Strategy"],
+  NBIS: ["Nebius", "Nebius Group"],
   MRVL: ["Marvell"],
   MU: ["Micron"],
   NET: ["Cloudflare"],
@@ -456,6 +457,7 @@ const US_ARTICLE_ALIAS_OVERRIDES: Record<string, string[]> = {
   SMCI: ["Super Micro", "Supermicro"],
   SOFI: ["SoFi"],
   SOUN: ["SoundHound", "SoundHound AI"],
+  SPCX: ["SpaceX", "Starlink"],
   SQ: ["Block"],
   STX: ["Seagate"],
   TSM: ["Taiwan Semiconductor", "TSMC"],
@@ -711,6 +713,27 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
   if (research) return materialEventFromArticle(research, asOf, "네이버 증권 리서치");
 
   return null;
+}
+
+async function hydrateUsMarketWideMaterial(
+  byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>,
+  asOf: string
+): Promise<void> {
+  const articles = await fetchAllNews().catch((): RawArticle[] => []);
+  if (articles.length === 0) return;
+  const candidates = [...byTicker.entries()]
+    .filter(([, value]) => value.row.country === "US")
+    .filter(([, value]) => !value.events.some((event) => event.kind === "disclosure" || event.kind === "news_mention"))
+    .sort((a, b) => Math.abs(b[1].row.changePct ?? 0) - Math.abs(a[1].row.changePct ?? 0))
+    .slice(0, US_TARGETED_MATERIAL_CANDIDATE_LIMIT);
+
+  for (const [ticker, current] of candidates) {
+    const article = pickUsTargetedMaterialArticle(current.row, articles);
+    if (!article) continue;
+    const event = materialEventFromUsArticle(article, asOf, article.source || "시장 뉴스");
+    if (!event) continue;
+    byTicker.set(ticker, { ...current, events: [...current.events, event] });
+  }
 }
 
 function buildThemeMoveSignals(rows: readonly DiscoveryMarketRow[]): Map<string, ThemeMoveSignal> {
@@ -1883,6 +1906,10 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       if (!current) continue;
       byTicker.set(result.value.ticker, { ...current, events: [...current.events, result.value.event] });
     }
+  }
+
+  if (scope === "US") {
+    await hydrateUsMarketWideMaterial(byTicker, asOf);
   }
 
   if (DISCOVERY_FLOW_CACHE_ENABLED) {

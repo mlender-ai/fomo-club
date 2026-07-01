@@ -595,7 +595,7 @@ export function buildSectorDeckCards(
       })
       .map((stock) => toSectorStock(stock, fronts));
     const withSignal = rows.filter((stock) => typeof stock.changePct === "number" || stock.flowSignal || stock.volumeSignal);
-    const displayRows = (withSignal.length >= 2 ? withSignal : rows).slice(0, 5);
+    const displayRows = withSignal.slice(0, 5);
     if (displayRows.length < 2) continue;
     const stance = sectorStanceFor(sector, country, displayRows, fronts);
     cards.push({

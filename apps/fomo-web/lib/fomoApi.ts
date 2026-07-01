@@ -404,7 +404,9 @@ export const fetchStockFront = (stock: string, opts: { lite?: boolean; naverCode
       get<StockFrontResponse>(
         `/api/fomo/stock-front?stock=${encodeURIComponent(stock)}${opts.lite ? "&lite=1" : ""}${
           opts.naverCode ? `&naverCode=${encodeURIComponent(opts.naverCode)}` : ""
-        }${opts.symbol ? `&symbol=${encodeURIComponent(opts.symbol)}` : ""}`
+        }${
+          opts.symbol ? `&symbol=${encodeURIComponent(opts.symbol)}` : ""
+        }`
       ),
     CACHE_TTL.stockFront
   );
