@@ -706,15 +706,7 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
       const fallbackRows = nasdaqRows.length > 0 ? nasdaqRows : seedRows();
       return { rows: fallbackRows, diagnostics: fallbackDiagnostics(fallbackRows, nasdaqRows.length > 0 ? "nasdaq-fallback" : "seed") };
     }
-    let hydratedRows = rows;
-    if (Object.keys(sparklines).length === 0) {
-      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
-      const nasdaqBySymbol = new Map(nasdaqRows.map((row) => [row.symbol.toUpperCase(), row]));
-      hydratedRows = rows.map((row) => {
-        const fallback = nasdaqBySymbol.get(row.symbol.toUpperCase());
-        return fallback?.sparkline && (row.sparkline?.length ?? 0) < 2 ? { ...row, sparkline: fallback.sparkline } : row;
-      });
-    }
+    const hydratedRows = rows;
     return {
       rows: hydratedRows,
       diagnostics: {
