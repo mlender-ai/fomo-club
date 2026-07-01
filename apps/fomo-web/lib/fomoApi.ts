@@ -380,6 +380,7 @@ export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
   fomo: import("@fomo/core").FomoScoreResult;
   taFact?: import("@fomo/core").TaFact;
+  ta?: import("@fomo/core").TechnicalAnalysisSnapshot;
   sparkline: number[];
   priceText?: string;
   changeText?: string;

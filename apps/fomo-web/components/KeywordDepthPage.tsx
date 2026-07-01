@@ -369,6 +369,7 @@ function mergeFrontSeed(
     signals: { ...seed.signals, ...fresh.signals },
     fomo: fresh.fomo ?? seed.fomo,
     ...(fresh.taFact ?? seed.taFact ? { taFact: fresh.taFact ?? seed.taFact } : {}),
+    ...(fresh.ta ?? seed.ta ? { ta: fresh.ta ?? seed.ta } : {}),
     sparkline: fresh.sparkline.length >= 2 ? fresh.sparkline : seed.sparkline,
     ...(fresh.priceText ?? seed.priceText ? { priceText: fresh.priceText ?? seed.priceText } : {}),
     ...(fresh.changeText ?? seed.changeText ? { changeText: fresh.changeText ?? seed.changeText } : {}),
@@ -1003,6 +1004,94 @@ function CommunityWordingBlock({ insight }: { insight: CondensedInsight | null }
   );
 }
 
+/** 뎁스 2탭 바 — 왜 움직였나(재료·수급) / 차트분석(TA). 기본 '왜 움직였나'. */
+function DepthTabBar({ tab, onChange }: { tab: "why" | "ta"; onChange: (t: "why" | "ta") => void }) {
+  const tabs: Array<{ key: "why" | "ta"; label: string }> = [
+    { key: "why", label: "왜 움직였나" },
+    { key: "ta", label: "차트분석" },
+  ];
+  return (
+    <div className="mb-4 flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist">
+      {tabs.map((t) => {
+        const active = tab === t.key;
+        return (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(t.key)}
+            className="flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: active ? "#D8FF3A" : "transparent",
+              color: active ? "#0a0a0a" : "#94a3b8",
+            }}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const TA_ROLE_GROUPS: Array<{ role: "event" | "balance" | "confirmation"; label: string }> = [
+  { role: "event", label: "추세·모멘텀" },
+  { role: "balance", label: "균형·경계" },
+  { role: "confirmation", label: "보조 확인" },
+];
+
+/**
+ * 차트분석(TA) 탭 — 엔진(technical-analysis.ts)이 관측한 사실을 role 별로 그대로 노출.
+ * 매수/매도/목표가 문구 추가 금지(관측 서술만). facts 0개면 정직한 빈 상태.
+ * 데이터 부족 지표(MA120·52주)는 엔진이 이미 스킵하므로 여기선 자연히 안 뜬다.
+ */
+function ChartAnalysisTab({ ta, basisDays }: { ta?: StockFrontResponse["ta"]; basisDays: number }) {
+  const facts = ta?.facts ?? [];
+  if (facts.length === 0) {
+    return (
+      <section className="mt-2">
+        {basisDays > 0 && (
+          <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
+        )}
+        <div className="rounded-lg border border-hairline bg-surface px-3 py-5 text-center">
+          <p className="text-sm leading-6 text-muted">차트에서 두드러진 신호는 아직 없어요.</p>
+          <p className="mt-1 text-[11px] leading-5 text-muted">데이터가 더 쌓이면 지표가 여기에 붙어요.</p>
+        </div>
+        <p className="mt-4 text-center text-[11px] leading-5 text-muted">차트에서 관측되는 사실이에요 · 매수·매도 판단은 아니에요.</p>
+      </section>
+    );
+  }
+  return (
+    <section className="mt-2">
+      {basisDays > 0 && (
+        <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
+      )}
+      <div className="space-y-4">
+        {TA_ROLE_GROUPS.map(({ role, label }) => {
+          const rows = facts.filter((f) => f.role === role);
+          if (rows.length === 0) return null;
+          return (
+            <div key={role}>
+              <p className="font-pixel text-sm text-whiteout">{label}</p>
+              <ul className="mt-2 space-y-2">
+                {rows.map((f, i) => (
+                  <li key={`${role}-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+                    <span className="block text-sm leading-6 text-whiteout">{f.text}</span>
+                    {f.confidence === "low" && (
+                      <span className="mt-1 block text-[11px] leading-4 text-muted">참고 신호(신뢰도 낮음)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-5 text-center text-[11px] leading-5 text-muted">차트에서 관측되는 사실이에요 · 매수·매도 판단은 아니에요.</p>
+    </section>
+  );
+}
+
 export function StockInsightView({
   stock,
   context,
@@ -1020,11 +1109,14 @@ export function StockInsightView({
   // 포모 상태(히어로) — 카드(②)와 동일 출처(FomoScoreResult). 단일 출처 보장.
   const [front, setFront] = useState<StockFrontResponse | null>(context?.frontSeed ?? null);
   const [frontLoaded, setFrontLoaded] = useState(!!context?.frontSeed);
+  // 뎁스 2탭 — 기본 '왜 움직였나'. 종목 바뀌면 리셋.
+  const [depthTab, setDepthTab] = useState<"why" | "ta">("why");
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
   useEffect(() => {
     setWatchedState(isWatched(stock));
+    setDepthTab("why");
   }, [stock]);
 
   const toggleWatched = () => {
@@ -1131,6 +1223,11 @@ export function StockInsightView({
             <StockDepthLoadingBlock />
           ) : (
           <>
+          <DepthTabBar tab={depthTab} onChange={setDepthTab} />
+          {depthTab === "ta" ? (
+            <ChartAnalysisTab ta={front?.ta} basisDays={front?.sparkline?.length ?? 0} />
+          ) : (
+          <>
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
 
@@ -1200,6 +1297,8 @@ export function StockInsightView({
           <p className="mt-6 text-center text-[11px] leading-5 text-muted">
             원문을 친구처럼 풀어드린 거예요. 투자 조언은 아니에요.
           </p>
+          </>
+          )}
           </>
           )}
         </div>
