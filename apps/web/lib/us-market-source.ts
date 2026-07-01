@@ -1,5 +1,6 @@
 import type { DiscoveryMarket } from "@fomo/core";
 import type { DiscoveryMarketRow } from "./market-source-types";
+import { readUsMarketQuoteRows } from "./us-market-cache";
 import { usDiscoverySeedForSymbol, usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
 
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
@@ -12,7 +13,8 @@ const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const US_DYNAMIC_UNIVERSE_LIMIT = 60;
 const US_QUOTE_BATCH_SIZE = 60;
-const US_SPARKLINE_LIMIT = 20;
+const US_SPARKLINE_LIMIT = 30;
+const US_PREWARM_CACHE_MAX_AGE_HOURS = 18;
 const US_NASDAQ_SCREENER_LIMIT = 7000;
 const US_NASDAQ_FALLBACK_LIMIT = 120;
 const US_NASDAQ_FALLBACK_CONCURRENCY = 3;
@@ -71,6 +73,11 @@ interface NasdaqScreenerRow {
   country?: string;
   sector?: string;
   industry?: string;
+}
+
+export interface UsMarketRowsSourceOptions {
+  slot?: number;
+  slotCount?: number;
 }
 
 function tdKey(): string | undefined {
@@ -446,6 +453,14 @@ function seedRows(): DiscoveryMarketRow[] {
   }));
 }
 
+function selectPrewarmSeeds(seeds: readonly UsDiscoverySymbol[], options: UsMarketRowsSourceOptions): UsDiscoverySymbol[] {
+  if (typeof options.slot !== "number" || typeof options.slotCount !== "number" || options.slotCount <= 1) return [...seeds];
+  const slot = Math.trunc(options.slot);
+  const slotCount = Math.trunc(options.slotCount);
+  if (slot < 0 || slot >= slotCount) return [];
+  return seeds.filter((_, index) => index % slotCount === slot);
+}
+
 function normalizeQuoteResponse(data: unknown): Record<string, TwelveQuote> {
   if (!data || typeof data !== "object") return {};
   const root = data as Record<string, unknown>;
@@ -644,9 +659,9 @@ function mergePreferredRows(primary: readonly DiscoveryMarketRow[], fallback: re
   });
 }
 
-async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]; diagnostics: UsMarketDiagnostics }> {
+async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}): Promise<{ rows: DiscoveryMarketRow[]; diagnostics: UsMarketDiagnostics }> {
   const key = tdKey();
-  const seeds = usDiscoveryUniverse();
+  const seeds = selectPrewarmSeeds(usDiscoveryUniverse(), options);
   const seedSymbols = new Set(seeds.map((seed) => seed.symbol.toUpperCase()));
   const fallbackDiagnostics = (rows: DiscoveryMarketRow[], source: UsMarketDiagnostics["source"]): UsMarketDiagnostics => ({
     seedCount: seeds.length,
@@ -748,8 +763,17 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
  * If the key is absent or the upstream fails, return a verified seed universe without price data.
  * We never synthesize quotes: price/change fields are present only when a live source returns them.
  */
+export async function fetchUsMarketRowsFromSource(options: UsMarketRowsSourceOptions = {}): Promise<DiscoveryMarketRow[]> {
+  return (await fetchUsMarketRowsInternal(options)).rows;
+}
+
 export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
-  return (await fetchUsMarketRowsInternal()).rows;
+  return fetchUsMarketRowsFromSource();
+}
+
+export async function fetchCachedUsMarketRows(): Promise<DiscoveryMarketRow[]> {
+  const rows = await readUsMarketQuoteRows({ maxAgeHours: US_PREWARM_CACHE_MAX_AGE_HOURS });
+  return rows.length > 0 ? rows : seedRows();
 }
 
 export async function fetchUsMarketDiagnostics(): Promise<UsMarketDiagnostics> {

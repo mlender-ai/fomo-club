@@ -42,7 +42,7 @@ import { resolveCardHeadline, type CardHeadline } from "./card-headline";
 import { selectDominantAxis } from "./card-axis";
 import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
-import { fetchUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
+import { fetchCachedUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
 import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
@@ -295,7 +295,7 @@ async function fetchKrMarketRows(): Promise<DiscoveryMarketRow[]> {
 
 async function fetchMarketRows(scope: DiscoveryCountryScope): Promise<DiscoveryMarketRow[]> {
   const sources: Array<Promise<DiscoveryMarketRow[]>> =
-    scope === "US" ? [fetchUsMarketRows()] : scope === "all" ? [fetchKrMarketRows(), fetchUsMarketRows()] : [fetchKrMarketRows()];
+    scope === "US" ? [fetchCachedUsMarketRows()] : scope === "all" ? [fetchKrMarketRows(), fetchCachedUsMarketRows()] : [fetchKrMarketRows()];
   const settled = await Promise.allSettled(sources);
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }
