@@ -1785,7 +1785,9 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   const asOf = discoveryAsOf(scope);
   const [rows, attentionMap] = await Promise.all([
     fetchMarketRows(scope),
-    computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({})),
+    scope === "US"
+      ? Promise.resolve({} as Record<string, StockAttentionSignal>)
+      : computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({})),
   ]);
   const vocabByCode = new Map(STOCK_VOCAB.filter((s) => s.naverCode).map((s) => [s.naverCode!, s]));
   const scopedRows = rows.filter((row) => isDiscoveryRowAllowedForScope(row, scope));
