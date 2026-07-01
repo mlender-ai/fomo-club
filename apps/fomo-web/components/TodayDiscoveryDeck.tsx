@@ -5,9 +5,11 @@ import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import {
   DISCOVERY_UPDATED_EVENT,
   fetchDiscovery,
+  fetchFeed,
   type DiscoveryCountryScope,
   type DiscoveryResponse,
   type DiscoveryUpdatedDetail,
+  type FeedResponse,
 } from "@/lib/fomoApi";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { buildDiscoveryDeckCards, MIN_DISCOVERY_STOCKS, type DeckCard, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
@@ -53,10 +55,11 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
 
   useEffect(() => {
     let alive = true;
-    const applyDiscovery = (discovery: DiscoveryResponse) => {
+    let lastFeed: FeedResponse | null = null;
+    const applyDiscovery = (discovery: DiscoveryResponse, feed: FeedResponse | null = lastFeed) => {
       const rawCards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
       const fronts = discovery.fronts as Record<string, FrontEntry>;
-      const cards = buildDiscoveryDeckCards(rawCards, { country, fronts });
+      const cards = buildDiscoveryDeckCards(rawCards, { country, fronts, contentCards: feed?.content ?? [] });
       if (cards.length === 0) {
         setState({ kind: "error" });
         return;
@@ -76,9 +79,20 @@ export function TodayDiscoveryDeck({ loggedIn, onRequireLogin }: TodayDiscoveryD
       let lastError: unknown = null;
       for (let attempt = 0; attempt <= INITIAL_RETRY_DELAYS_MS.length; attempt += 1) {
         try {
+          const feedPromise = fetchFeed().catch((err) => {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn("[TodayDiscoveryDeck] feed content failed", err);
+            }
+            return null;
+          });
           const discovery = await fetchDiscovery(country);
           if (!alive) return;
-          applyDiscovery(discovery);
+          applyDiscovery(discovery, null);
+          void feedPromise.then((feedResult) => {
+            if (!alive || !feedResult) return;
+            lastFeed = feedResult;
+            applyDiscovery(discovery, feedResult);
+          });
           return;
         } catch (err) {
           lastError = err;

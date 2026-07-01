@@ -147,7 +147,7 @@ export async function fetchFredDocsForStock(
   return fetchFredDocsForSeries(fredSeriesForStock(stock, opts), makeId);
 }
 
-async function fetchFredDocsForSeries(series: readonly string[], makeId: () => string): Promise<SourceDoc[]> {
+export async function fetchFredDocsForSeries(series: readonly string[], makeId: () => string): Promise<SourceDoc[]> {
   const target = uniqueSeries(series);
   if (target.length === 0) return [];
   const settled = await Promise.allSettled(

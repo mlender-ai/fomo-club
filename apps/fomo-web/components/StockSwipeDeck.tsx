@@ -11,6 +11,7 @@ import type {
   TaFact,
 } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
+import { ContentCard } from "@/components/ContentCard";
 import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
@@ -220,7 +221,7 @@ function cardKey(card: DeckCard): string {
 function cardLabel(card: DeckCard): string {
   if (card.type === "stock") return card.data.canonical;
   if (card.type === "sector") return `${card.data.sector} 섹터`;
-  return "콘텐츠";
+  return card.data.headline;
 }
 
 function isStockCard(card: DeckCard): card is Extract<DeckCard, { type: "stock" }> {
@@ -615,11 +616,7 @@ export function StockSwipeDeck({
   };
   const renderFace = (card: DeckCard, progress?: string) => {
     if (card.type === "sector") return <SectorCard card={card.data} progress={progress} />;
-    if (card.type === "content") {
-      return (
-        <div className="h-full" />
-      );
-    }
+    if (card.type === "content") return <ContentCard card={card.data} progress={progress} />;
     const stock = card.data;
     const e = front[stock.canonical];
     if (!e) {
@@ -729,6 +726,8 @@ export function StockSwipeDeck({
       if (card.type === "sector") {
         recordTaste("theme", card.data.sector, "more");
         fireMatch(`${card.data.sector} 섹터`, kind);
+      } else {
+        fireMatch(card.data.contentType === "whale" ? "고래 동향" : "시장 메모", kind);
       }
       recordDiscoveryEvent("swipe", { direction: "right", hydrated: true });
       flingNext("right");

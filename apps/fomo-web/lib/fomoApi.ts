@@ -9,6 +9,7 @@ import type {
   MoodSignal,
   ScoredArticle,
 } from "@fomo/core";
+import type { DeckContent } from "./discoveryDeck";
 import { getSessionId } from "@/lib/session";
 import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
 import { discoveryMatchesCountry, type DiscoveryCountryScope } from "./discoveryCountryScope";
@@ -256,6 +257,7 @@ export const fetchBanner = () => get<BannerResponse>("/api/fomo/banner");
 export interface FeedResponse {
   cards: FeedCards;
   moods: MoodSignal[];
+  content?: DeckContent[];
 }
 export const fetchFeed = () => get<FeedResponse>("/api/fomo/feed");
 

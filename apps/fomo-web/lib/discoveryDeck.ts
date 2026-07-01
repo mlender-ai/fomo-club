@@ -82,7 +82,26 @@ export interface DeckThemeBundle {
   items: DeckThemeBundleItem[];
 }
 
-export type DiscoveryDeckCard = DeckStock | DeckThemeBundle;
+export type DeckContentType = "macro" | "index" | "whale";
+export type DeckContentScope = "domestic" | "world" | "global";
+
+export interface DeckContentFact {
+  label: string;
+  value: string;
+}
+
+export interface DeckContent {
+  kind: "content";
+  id: string;
+  contentType: DeckContentType;
+  scope: DeckContentScope;
+  headline: string;
+  facts: DeckContentFact[];
+  source: string;
+  asOf: string;
+}
+
+export type DiscoveryDeckCard = DeckStock | DeckThemeBundle | DeckContent;
 
 export interface DeckSectorStock {
   canonical: string;
@@ -105,15 +124,10 @@ export interface DeckSectorCardData {
   stocks: DeckSectorStock[];
 }
 
-export interface DeckContentCardData {
-  kind: "reserved";
-  id: string;
-}
-
 export type DeckCard =
   | { type: "stock"; data: DeckStock }
   | { type: "sector"; data: DeckSectorCardData }
-  | { type: "content"; data: DeckContentCardData };
+  | { type: "content"; data: DeckContent };
 
 export const SECTOR_CARD_INTERVAL = 5;
 
@@ -121,8 +135,13 @@ export function isThemeBundleCard(card: DiscoveryDeckCard): card is DeckThemeBun
   return card.kind === "theme_bundle";
 }
 
+export function isContentCard(card: DiscoveryDeckCard): card is DeckContent {
+  return card.kind === "content";
+}
+
 export function deckCardFromDiscovery(card: DiscoveryDeckCard): DeckCard | null {
   if (isThemeBundleCard(card)) return null;
+  if (isContentCard(card)) return { type: "content", data: card };
   return { type: "stock", data: card };
 }
 
@@ -149,7 +168,7 @@ function normalizeThemeBundleIdentifiers(bundle: DeckThemeBundle): DeckThemeBund
 
 export function normalizeDiscoveryDeckCards(cards: readonly DiscoveryDeckCard[]): DiscoveryDeckCard[] {
   return cards.map((card) =>
-    isThemeBundleCard(card) ? normalizeThemeBundleIdentifiers(card) : normalizeDeckStockIdentifiers(card)
+    isThemeBundleCard(card) ? normalizeThemeBundleIdentifiers(card) : isContentCard(card) ? card : normalizeDeckStockIdentifiers(card)
   );
 }
 
@@ -426,6 +445,7 @@ interface SectorDeckBuildOptions {
   country: StockCountry;
   fronts?: Record<string, DeckFrontLike>;
   interval?: number;
+  contentCards?: readonly DeckContent[];
 }
 
 function changePctFor(stock: DeckStock, fronts: Record<string, DeckFrontLike>): number | undefined {
@@ -561,13 +581,13 @@ export function buildSectorDeckCards(
   return cards.sort((a, b) => b.score - a.score || a.card.data.sector.localeCompare(b.card.data.sector)).map((item) => item.card);
 }
 
-function nextSectorCard(cards: readonly DeckCard[], cursor: number, lastSector: string | null): { card: DeckCard; cursor: number } | null {
+function nextSupplementalCard(cards: readonly DeckCard[], cursor: number, lastSector: string | null): { card: DeckCard; cursor: number } | null {
   if (cards.length === 0) return null;
   for (let offset = 0; offset < cards.length; offset += 1) {
     const index = (cursor + offset) % cards.length;
     const card = cards[index];
-    if (card?.type !== "sector") continue;
-    if (cards.length > 1 && card.data.sector === lastSector) continue;
+    if (!card || card.type === "stock") continue;
+    if (card.type === "sector" && cards.length > 1 && card.data.sector === lastSector) continue;
     return { card, cursor: index + 1 };
   }
   const card = cards[cursor % cards.length];
@@ -579,9 +599,58 @@ export function interleaveSectorCards(
   sectorCards: readonly DeckCard[],
   interval = SECTOR_CARD_INTERVAL
 ): DeckCard[] {
-  if (sectorCards.length === 0 || interval <= 0) return [...stockCards];
+  return interleaveSupplementalCards(stockCards, sectorCards, interval);
+}
+
+function scopeMatchesCountry(scope: DeckContentScope, country: StockCountry): boolean {
+  if (scope === "global") return true;
+  return country === "KR" ? scope === "domestic" : scope === "world";
+}
+
+function contentPriority(type: DeckContentType): number {
+  switch (type) {
+    case "index":
+      return 0;
+    case "macro":
+      return 1;
+    case "whale":
+      return 2;
+  }
+}
+
+export function buildContentDeckCards(
+  contentCards: readonly DeckContent[] = [],
+  country: StockCountry,
+  limit = 3
+): DeckCard[] {
+  return contentCards
+    .filter((card) => card.kind === "content" && scopeMatchesCountry(card.scope, country))
+    .filter((card) => card.headline.trim().length > 0 && card.facts.length > 0)
+    .sort((a, b) => contentPriority(a.contentType) - contentPriority(b.contentType) || a.id.localeCompare(b.id))
+    .slice(0, limit)
+    .map((card) => ({ type: "content", data: card }) satisfies DeckCard);
+}
+
+function alternateSupplementalCards(sectorCards: readonly DeckCard[], contentCards: readonly DeckCard[]): DeckCard[] {
   const out: DeckCard[] = [];
-  let sectorCursor = 0;
+  const max = Math.max(sectorCards.length, contentCards.length);
+  for (let i = 0; i < max; i += 1) {
+    const sector = sectorCards[i];
+    const content = contentCards[i];
+    if (sector) out.push(sector);
+    if (content) out.push(content);
+  }
+  return out;
+}
+
+export function interleaveSupplementalCards(
+  stockCards: readonly DeckCard[],
+  supplementalCards: readonly DeckCard[],
+  interval = SECTOR_CARD_INTERVAL
+): DeckCard[] {
+  if (supplementalCards.length === 0 || interval <= 0) return [...stockCards];
+  const out: DeckCard[] = [];
+  let supplementalCursor = 0;
   let lastSector: string | null = null;
   let stockCount = 0;
   let inserted = 0;
@@ -590,15 +659,15 @@ export function interleaveSectorCards(
     if (card.type !== "stock") continue;
     stockCount += 1;
     if (stockCount % interval !== 0) continue;
-    const next = nextSectorCard(sectorCards, sectorCursor, lastSector);
+    const next = nextSupplementalCard(supplementalCards, supplementalCursor, lastSector);
     if (!next) continue;
     out.push(next.card);
     inserted += 1;
-    sectorCursor = next.cursor;
+    supplementalCursor = next.cursor;
     lastSector = next.card.type === "sector" ? next.card.data.sector : lastSector;
   }
   if (inserted === 0 && stockCount > 0) {
-    const next = nextSectorCard(sectorCards, sectorCursor, lastSector);
+    const next = nextSupplementalCard(supplementalCards, supplementalCursor, lastSector);
     if (next) out.push(next.card);
   }
   return out;
@@ -608,8 +677,14 @@ export function buildDiscoveryDeckCards(
   discoveryCards: readonly DiscoveryDeckCard[],
   options: SectorDeckBuildOptions
 ): DeckCard[] {
-  const stocks = normalizeDiscoveryDeckCards(discoveryCards).filter((card): card is DeckStock => !isThemeBundleCard(card));
+  const normalized = normalizeDiscoveryDeckCards(discoveryCards);
+  const stocks = normalized.filter((card): card is DeckStock => !isThemeBundleCard(card) && !isContentCard(card));
   const stockCards = stockDeckCards(stocks);
   const sectorCards = buildSectorDeckCards(stocks, options);
-  return interleaveSectorCards(stockCards, sectorCards, options.interval ?? SECTOR_CARD_INTERVAL);
+  const contentCards = buildContentDeckCards(
+    [...normalized.filter(isContentCard), ...(options.contentCards ?? [])],
+    options.country
+  );
+  const supplementalCards = alternateSupplementalCards(sectorCards, contentCards);
+  return interleaveSupplementalCards(stockCards, supplementalCards, options.interval ?? SECTOR_CARD_INTERVAL);
 }

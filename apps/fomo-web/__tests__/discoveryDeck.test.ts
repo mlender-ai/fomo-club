@@ -3,12 +3,15 @@ import type { AxisSignal, HookAxis, KeywordCard, MultiAxisHookSelection, SectorS
 import {
   applyAxisSnapshotToStocks,
   buildDiscoveryDeckCards,
+  buildContentDeckCards,
   buildSectorDeckCards,
   buildTodayDiscoveryStocks,
+  interleaveSupplementalCards,
   interleaveSectorCards,
   MAX_DISCOVERY_STOCKS,
   normalizeDiscoveryDeckCards,
   type DeckCard,
+  type DeckContent,
   type DeckStock,
 } from "../lib/discoveryDeck";
 
@@ -83,6 +86,19 @@ function sectorCard(cards: readonly DeckCard[], sector: string) {
   return cards.find((card) => card.type === "sector" && card.data.sector === sector) as
     | Extract<DeckCard, { type: "sector" }>
     | undefined;
+}
+
+function contentCard(id: string, scope: DeckContent["scope"], contentType: DeckContent["contentType"] = "index"): DeckContent {
+  return {
+    kind: "content",
+    id,
+    contentType,
+    scope,
+    headline: id,
+    facts: [{ label: "테스트", value: "+1.20%" }],
+    source: "테스트",
+    asOf: "2026-07-01",
+  };
 }
 
 function pools(count: number) {
@@ -300,11 +316,48 @@ describe("buildTodayDiscoveryStocks", () => {
     expect(result.map((card) => card.type)).toEqual(["stock", "stock", "sector"]);
   });
 
+  it("filters content cards by country scope while allowing global cards", () => {
+    const content = [
+      contentCard("domestic-index", "domestic"),
+      contentCard("world-index", "world"),
+      contentCard("global-whale", "global", "whale"),
+    ];
+
+    expect(buildContentDeckCards(content, "KR").map((card) => (card.type === "content" ? card.data.id : ""))).toEqual([
+      "domestic-index",
+      "global-whale",
+    ]);
+    expect(buildContentDeckCards(content, "US").map((card) => (card.type === "content" ? card.data.id : ""))).toEqual([
+      "world-index",
+      "global-whale",
+    ]);
+  });
+
+  it("interleaves sector and content cards after stock intervals", () => {
+    const stocks: DeckCard[] = Array.from({ length: 11 }, (_, i) => ({ type: "stock", data: deckStock(`종목${i}`, "AI") }));
+    const sector: DeckCard = {
+      type: "sector",
+      data: { id: "sector:KR:AI", sector: "AI", country: "KR", stance: "bull-dominant", stanceNote: "테스트", stocks: [] },
+    };
+    const content: DeckCard = { type: "content", data: contentCard("domestic-index", "domestic") };
+
+    const result = interleaveSupplementalCards(stocks, [sector, content], 5);
+
+    expect(result[5]?.type).toBe("sector");
+    expect(result[11]?.type).toBe("content");
+  });
+
   it("builds discovery deck cards with stock and sector card types", () => {
-    const stocks = Array.from({ length: 6 }, (_, i) => deckStock(`국내${i}`, i < 3 ? "반도체" : "AI", "KR"));
-    const result = buildDiscoveryDeckCards(stocks, { country: "KR", fronts: frontsFor(stocks) });
+    const stocks = Array.from({ length: 11 }, (_, i) => deckStock(`국내${i}`, i < 6 ? "반도체" : "AI", "KR"));
+    const result = buildDiscoveryDeckCards(stocks, {
+      country: "KR",
+      fronts: frontsFor(stocks),
+      contentCards: [contentCard("domestic-index", "domestic"), contentCard("world-index", "world")],
+    });
 
     expect(result.some((card) => card.type === "sector")).toBe(true);
-    expect(result.filter((card) => card.type === "stock")).toHaveLength(6);
+    expect(result.some((card) => card.type === "content" && card.data.id === "domestic-index")).toBe(true);
+    expect(result.some((card) => card.type === "content" && card.data.id === "world-index")).toBe(false);
+    expect(result.filter((card) => card.type === "stock")).toHaveLength(11);
   });
 });
