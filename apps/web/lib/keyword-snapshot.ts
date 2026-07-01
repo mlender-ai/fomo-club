@@ -52,21 +52,45 @@ export async function readLatestKeywordSnapshot(date: string): Promise<KeywordSn
   }
 }
 
+/**
+ * 일시적 커넥션 포화 오류 여부. Supabase 세션 풀러가 꽉 차면
+ * `FATAL: ... max clients reached in session mode`(EMAXCONNSESSION) 나 P2024 를 던진다.
+ * 다른 클라이언트가 커넥션을 반납하면 재시도로 회복 가능 — 영구 실패와 구분한다.
+ */
+function isTransientConnectionError(err: unknown): boolean {
+  const code = (err as { code?: string })?.code;
+  if (code === "P2024") return true; // Prisma: Timed out fetching a connection from the pool
+  const msg = (err as Error)?.message ?? "";
+  return /EMAXCONNSESSION|max clients reached|too many connections|Timed out fetching a connection/i.test(msg);
+}
+
 /** 스냅샷 upsert(날짜 unique). cron 전용. 실패 시 throw — 스크립트가 비정상 종료로 가시화. */
 export async function writeKeywordSnapshot(
   date: string,
   snapshot: Omit<KeywordSnapshot, "date">
 ): Promise<void> {
-  await prisma.keywordCardSnapshot.upsert({
-    where: { date },
-    create: {
-      date,
-      cards: snapshot.cards as unknown as object,
-      confidence: snapshot.confidence,
-    },
-    update: {
-      cards: snapshot.cards as unknown as object,
-      confidence: snapshot.confidence,
-    },
-  });
+  const data = {
+    cards: snapshot.cards as unknown as object,
+    confidence: snapshot.confidence,
+  };
+  // 일시적 풀러 포화는 짧은 백오프로 재시도. 소진 후에도 실패면 throw(정직한 숫자: 누락을 숨기지 않음).
+  const maxAttempts = 4;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await prisma.keywordCardSnapshot.upsert({
+        where: { date },
+        create: { date, ...data },
+        update: data,
+      });
+      return;
+    } catch (err) {
+      if (attempt >= maxAttempts || !isTransientConnectionError(err)) throw err;
+      const delayMs = 500 * 2 ** (attempt - 1); // 0.5s, 1s, 2s
+      console.warn(
+        `[keyword-snapshot] write transient error (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms:`,
+        (err as Error)?.message
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
 }

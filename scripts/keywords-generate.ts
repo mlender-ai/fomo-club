@@ -39,9 +39,23 @@ async function main() {
   console.log(`[keywords:generate] 스냅샷 저장 완료: ${date}`);
 }
 
+// 세션 모드 풀러 커넥션을 즉시 반납해 동시 실행 간 풀 포화를 줄인다(EMAXCONNSESSION 완화).
+async function disconnect() {
+  try {
+    const { prisma } = await import("../apps/web/lib/prisma");
+    await prisma.$disconnect();
+  } catch (err) {
+    console.warn("[keywords:generate] disconnect 실패", err instanceof Error ? err.message : String(err));
+  }
+}
+
 main()
-  .then(() => process.exit(0))
-  .catch((err) => {
+  .then(async () => {
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
     console.error("[keywords:generate] 실패", err);
+    await disconnect();
     process.exit(1);
   });
