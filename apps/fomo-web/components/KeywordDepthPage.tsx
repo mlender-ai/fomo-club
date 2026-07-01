@@ -1042,7 +1042,7 @@ const TA_ROLE_GROUPS: Array<{ role: "event" | "balance" | "confirmation"; label:
 
 /**
  * 차트분석(TA) 탭 — 엔진(technical-analysis.ts)이 관측한 사실을 role 별로 그대로 노출.
- * 매수/매도/목표가 문구 추가 금지(관측 서술만). facts 0개면 정직한 빈 상태.
+ * 추천·예측성 문구 추가 금지(관측 서술만 노출). facts 0개면 정직한 빈 상태.
  * 데이터 부족 지표(MA120·52주)는 엔진이 이미 스킵하므로 여기선 자연히 안 뜬다.
  */
 function ChartAnalysisTab({ ta, basisDays }: { ta?: StockFrontResponse["ta"]; basisDays: number }) {
