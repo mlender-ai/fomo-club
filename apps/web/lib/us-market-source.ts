@@ -1,4 +1,4 @@
-import type { DiscoveryMarket } from "@fomo/core";
+import type { DiscoveryMarket, DailyOhlcv } from "@fomo/core";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
 import { usDiscoverySeedForSymbol, usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
@@ -572,6 +572,61 @@ async function fetchQuoteBatches(symbols: readonly string[], key: string): Promi
     if (index < batches.length - 1) await sleep(TWELVE_BATCH_PAUSE_MS);
   }
   return out;
+}
+
+function parseUsOhlcv(data: unknown): { candles: DailyOhlcv[]; closes: number[]; volumes: number[] } {
+  const empty = { candles: [] as DailyOhlcv[], closes: [] as number[], volumes: [] as number[] };
+  if (!data || typeof data !== "object") return empty;
+  const values = (data as { values?: Array<Record<string, string>> }).values;
+  if (!Array.isArray(values)) return empty;
+  const candles: DailyOhlcv[] = [];
+  for (const v of [...values].reverse()) {
+    // TwelveData 는 최신순 → reverse 해 오름차순(TA 는 오래된→최신 기대).
+    const open = num(v.open);
+    const high = num(v.high);
+    const low = num(v.low);
+    const close = num(v.close);
+    const volume = num(v.volume);
+    if (open === undefined || high === undefined || low === undefined || close === undefined) continue;
+    candles.push({ ...(v.datetime ? { date: v.datetime } : {}), open, high, low, close, volume: volume ?? 0 });
+  }
+  return { candles, closes: candles.map((c) => c.close), volumes: candles.map((c) => c.volume) };
+}
+
+/**
+ * US 일봉 OHLCV(TwelveData time_series) — TA용 풀 히스토리(기본 260 거래일, MA120·52주 활성화).
+ * 종목 1개 단위(depth lazy) 호출 — 상위(front 라우트 unstable_cache)에서 캐시되므로 자체 캐시 불필요.
+ * 유니버스 일괄 조회가 아니라 단일 심볼이라 discovery 504 경로와 무관.
+ */
+export async function fetchUsDailyCandles(
+  symbol: string,
+  outputsize = 260
+): Promise<{ candles: DailyOhlcv[]; closes: number[]; volumes: number[] }> {
+  const empty = { candles: [] as DailyOhlcv[], closes: [] as number[], volumes: [] as number[] };
+  const key = tdKey();
+  const clean = symbol.trim().toUpperCase();
+  if (!key || !clean) return empty;
+  const url = new URL(TWELVE_TIME_SERIES_URL);
+  url.searchParams.set("symbol", clean);
+  url.searchParams.set("interval", "1day");
+  url.searchParams.set("outputsize", String(Math.max(20, Math.min(5000, outputsize))));
+  url.searchParams.set("apikey", key);
+  for (let attempt = 0; attempt < TWELVE_RETRY_DELAYS_MS.length; attempt += 1) {
+    const delay = TWELVE_RETRY_DELAYS_MS[attempt] ?? 0;
+    if (delay > 0) await sleep(delay);
+    try {
+      const res = await fetch(url.toString(), {
+        headers: { accept: "application/json", "user-agent": UA },
+        signal: AbortSignal.timeout(6_000),
+        next: { revalidate: 21_600 },
+      });
+      if (res.ok) return parseUsOhlcv(await res.json());
+      if (!shouldRetryTwelveStatus(res.status)) return empty;
+    } catch {
+      // 소규모 재시도 예산 내 일시 오류는 무시.
+    }
+  }
+  return empty;
 }
 
 async function fetchSparklines(symbols: readonly string[], key: string): Promise<Record<string, number[]>> {

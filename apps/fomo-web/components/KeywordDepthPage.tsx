@@ -1138,7 +1138,10 @@ export function StockInsightView({
     setBasicsLoaded(false);
     setFrontLoaded(!!seed);
     // 가격 헤더만 먼저 허용하고, 아래 가변 섹션은 세 요청이 모두 끝난 뒤 한 번에 연다.
-    fetchStockFront(stock, context?.naverCode ? { naverCode: context.naverCode } : {})
+    fetchStockFront(stock, {
+      ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
+      ...(context?.symbol ? { symbol: context.symbol } : {}),
+    })
       .then((r) => alive && setFront(mergeFrontSeed(seed, r)))
       .catch(() => alive && setFront(seed))
       .finally(() => alive && setFrontLoaded(true));

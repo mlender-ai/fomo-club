@@ -19,6 +19,7 @@ import {
   type MultiAxisHookSelection,
 } from "@fomo/core";
 import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
+import { fetchUsDailyCandles } from "./us-market-source";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
 
@@ -166,6 +167,8 @@ export interface StockFrontOptions {
   lite?: boolean;
   /** 동적 발견 종목(STOCK_VOCAB 미등재)용 네이버 코드. 있으면 vocab 없이도 캔들·TA 조회. */
   naverCode?: string;
+  /** 미장 심볼(예: NVDA). 네이버 코드가 없을 때 US 일봉(TwelveData)으로 TA 계산. depth(non-lite)만. */
+  symbol?: string;
 }
 
 export interface FeedSignalPoint {
@@ -259,13 +262,19 @@ export async function assembleStockFront(
 ): Promise<StockFrontData> {
   const def = resolveStock(stock);
   const code = options.naverCode ?? def?.naverCode;
-  if (!code) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+  // 미장: 네이버 코드가 없고 심볼이 있으면 US 일봉(TwelveData)로 캔들·TA. 카드(lite)는 비용 회피로 스킵.
+  const usSymbol = !code && options.symbol ? options.symbol.trim() : undefined;
+  if (!code && !usSymbol) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
   const lite = options.lite === true;
 
   const [basics, history, daily] = await Promise.all([
-    (lite ? fetchStockBasicsLite(stock) : fetchStockBasics(stock)).catch(() => null),
-    readSupplyDemandHistory(code).catch(() => []),
-    fetchStockDaily(code, lite ? 110 : 420),
+    code ? (lite ? fetchStockBasicsLite(stock) : fetchStockBasics(stock)).catch(() => null) : Promise.resolve(null),
+    code ? readSupplyDemandHistory(code).catch(() => []) : Promise.resolve([] as Awaited<ReturnType<typeof readSupplyDemandHistory>>),
+    usSymbol
+      ? lite
+        ? Promise.resolve({ candles: [], closes: [], volumes: [] })
+        : fetchUsDailyCandles(usSymbol, 260)
+      : fetchStockDaily(code!, lite ? 110 : 420),
   ]);
 
   const signals: CardFrontSignals = basics ? signalsFromBasics(basics) : {};
@@ -289,7 +298,7 @@ export async function assembleStockFront(
     if (streak.institution !== 0) signals.institutionNetStreak = streak.institution;
   }
 
-  const rank = lite ? undefined : rankMap?.[code];
+  const rank = lite || !code ? undefined : rankMap?.[code];
   if (rank) signals.marketCapRank = { scope: "market", market: rank.market, rank: rank.rank };
 
   // ── 포모 점수(척추) — 거래량 회전·가격(등락·추세)·수급. 언급량·prevScore 는 후속(없으면 제외). ──

@@ -50,7 +50,7 @@ async function getThemeRelativeMap(sector: StockSector): Promise<Record<string, 
   return load();
 }
 
-async function getFront(stock: string, lite = false, naverCode?: string): Promise<StockFrontData> {
+async function getFront(stock: string, lite = false, naverCode?: string, symbol?: string): Promise<StockFrontData> {
   const today = kstDate();
   const load = unstable_cache(
     async () => {
@@ -67,9 +67,9 @@ async function getFront(stock: string, lite = false, naverCode?: string): Promis
       return assembleStockFront(stock, rankMap, {
         ...(attentionMap[canonical] ? { attention: attentionMap[canonical] } : {}),
         ...(themeRelativeMap[canonical] ? { themeRelative: themeRelativeMap[canonical] } : {}),
-      }, { lite, ...(naverCode ? { naverCode } : {}) });
+      }, { lite, ...(naverCode ? { naverCode } : {}), ...(symbol ? { symbol } : {}) });
     },
-    ["fomo-stock-front", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? ""],
+    ["fomo-stock-front", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
     { revalidate: REVALIDATE_S }
   );
   return load();
@@ -80,11 +80,12 @@ export async function GET(req: Request) {
   const stock = url.searchParams.get("stock")?.trim();
   const lite = url.searchParams.get("lite") === "1";
   const naverCode = url.searchParams.get("naverCode")?.trim() || undefined;
+  const symbol = url.searchParams.get("symbol")?.trim() || undefined;
   if (!stock) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }
   try {
-    const data = await getFront(stock, lite, naverCode);
+    const data = await getFront(stock, lite, naverCode, symbol);
     return withCors(
       NextResponse.json(data, {
         headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400" },
