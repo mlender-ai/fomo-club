@@ -40,6 +40,7 @@ const DART_ROUTINE_REPORT =
   /사업보고서|반기보고서|분기보고서|증권발행실적|투자설명서|첨부정정|정정신고|임원ㆍ주요주주|임원·주요주주|주식등의대량보유|최대주주등소유주식변동/i;
 const DART_INSIDER_OWNERSHIP_REPORT = /임원[ㆍ·]?\s*주요주주.*특정증권.*소유상황보고서/i;
 const DART_INSIDER_PURCHASE_TEXT = /장내매수|매수|취득/i;
+const DART_INSIDER_LOOKBACK_DAYS = 7;
 
 function dartKey(): string | undefined {
   if (process.env.DISCOVERY_DART_LIVE === "0") return undefined;
@@ -53,6 +54,16 @@ function yyyymmdd(date: string): string {
 function isoFromDartDate(date: string | undefined, fallback: string): string {
   if (!date || !/^\d{8}$/.test(date)) return fallback;
   return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+}
+
+function isoOffset(date: string, offsetDays: number): string {
+  const base = new Date(`${date.slice(0, 10)}T12:00:00+09:00`);
+  base.setUTCDate(base.getUTCDate() + offsetDays);
+  return base.toISOString().slice(0, 10);
+}
+
+function recentDates(date: string, days: number): string[] {
+  return Array.from({ length: days }, (_, index) => isoOffset(date, -index));
 }
 
 function dartReportUrl(rceptNo: string | undefined): string | undefined {
@@ -204,17 +215,19 @@ export async function fetchDartInsiderPurchasesByStock(asOf: string): Promise<Re
   const byCode = new Map(STOCK_VOCAB.filter((stock) => stock.naverCode).map((stock) => [stock.naverCode!, stock.canonical]));
   const out: Record<string, DartDisclosureHit> = {};
 
-  for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
-    const data = await fetchDartPage(key, asOf, page).catch(() => null);
-    if (!data?.list?.length || (data.status && data.status !== "000")) break;
-    for (const item of data.list) {
-      const code = item.stock_code?.trim();
-      const ticker = code ? byCode.get(code) : undefined;
-      if (!ticker || out[ticker] || !cleanInsiderReportName(item.report_nm)) continue;
-      const hit = await insiderPurchaseFromDartItem(ticker, item, asOf);
-      if (hit) out[ticker] = hit;
+  for (const date of recentDates(asOf, DART_INSIDER_LOOKBACK_DAYS)) {
+    for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
+      const data = await fetchDartPage(key, date, page).catch(() => null);
+      if (!data?.list?.length || (data.status && data.status !== "000")) break;
+      for (const item of data.list) {
+        const code = item.stock_code?.trim();
+        const ticker = code ? byCode.get(code) : undefined;
+        if (!ticker || out[ticker] || !cleanInsiderReportName(item.report_nm)) continue;
+        const hit = await insiderPurchaseFromDartItem(ticker, item, date);
+        if (hit) out[ticker] = hit;
+      }
+      if (typeof data.total_page === "number" && page >= data.total_page) break;
     }
-    if (typeof data.total_page === "number" && page >= data.total_page) break;
   }
 
   return out;
@@ -262,15 +275,17 @@ export async function fetchDartInsiderPurchasesForCode(
   if (!key || !/^\d{6}$/.test(normalized)) return [];
 
   const out: DartDisclosureHit[] = [];
-  for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
-    const data = await fetchDartPage(key, asOf, page).catch(() => null);
-    if (!data?.list?.length || (data.status && data.status !== "000")) break;
-    for (const item of data.list) {
-      if (item.stock_code?.trim() !== normalized || !cleanInsiderReportName(item.report_nm)) continue;
-      const hit = await insiderPurchaseFromDartItem(stock, item, asOf);
-      if (hit) out.push(hit);
+  for (const date of recentDates(asOf, DART_INSIDER_LOOKBACK_DAYS)) {
+    for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
+      const data = await fetchDartPage(key, date, page).catch(() => null);
+      if (!data?.list?.length || (data.status && data.status !== "000")) break;
+      for (const item of data.list) {
+        if (item.stock_code?.trim() !== normalized || !cleanInsiderReportName(item.report_nm)) continue;
+        const hit = await insiderPurchaseFromDartItem(stock, item, date);
+        if (hit) out.push(hit);
+      }
+      if (typeof data.total_page === "number" && page >= data.total_page) break;
     }
-    if (typeof data.total_page === "number" && page >= data.total_page) break;
   }
   return out;
 }

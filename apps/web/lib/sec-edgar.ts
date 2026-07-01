@@ -19,6 +19,7 @@ export interface SecFilingHit {
 const SEC_ARCHIVES = "https://www.sec.gov/Archives/edgar/data";
 const SEC_SUBMISSIONS = "https://data.sec.gov/submissions";
 const SEC_INSIDER_PURCHASE_MIN_VALUE = 100_000;
+const SEC_RECENT_FORM_SCAN_LIMIT = 80;
 
 function secUserAgent(): string | undefined {
   return process.env.SEC_EDGAR_USER_AGENT?.trim();
@@ -169,17 +170,19 @@ export async function fetchRecentSecFilings(symbol: string, limit = 4): Promise<
     const recent = data.filings?.recent;
     if (!recent?.form?.length) return [];
     const out: SecFilingHit[] = [];
-    for (let i = 0; i < recent.form.length && out.length < limit; i += 1) {
+    for (let i = 0; i < recent.form.length && i < SEC_RECENT_FORM_SCAN_LIMIT && out.length < limit; i += 1) {
       const form = recent.form[i];
-      if (form !== "8-K" && form !== "10-Q" && form !== "10-K" && form !== "4") continue;
+      const accession = recent.accessionNumber?.[i];
+      if (form !== "4" || !accession) continue;
+      const hit = await fetchForm4InsiderPurchase(symbol, cik, accession, recent.primaryDocument?.[i], userAgent).catch(() => null);
+      if (hit) out.push(hit);
+    }
+    for (let i = 0; i < recent.form.length && i < SEC_RECENT_FORM_SCAN_LIMIT && out.length < limit; i += 1) {
+      const form = recent.form[i];
+      if (form !== "8-K" && form !== "10-Q" && form !== "10-K") continue;
       const asOf = recent.filingDate?.[i];
       const accession = recent.accessionNumber?.[i];
       if (!asOf || !accession) continue;
-      if (form === "4") {
-        const hit = await fetchForm4InsiderPurchase(symbol, cik, accession, recent.primaryDocument?.[i], userAgent).catch(() => null);
-        if (hit) out.push(hit);
-        continue;
-      }
       out.push({
         symbol: symbol.toUpperCase(),
         label: `${form} 공시가 확인됐어요.`,
