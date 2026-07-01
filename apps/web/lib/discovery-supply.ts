@@ -1920,7 +1920,9 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   if (targetedMaterialLimit > 0 && scope !== "US") {
     ranked = await hydrateFrontBandMaterial(ranked, rowsByTicker, asOf);
   }
-  ranked = await hydrateReachedNewsHooks(ranked, rowsByTicker, asOf);
+  if (scope !== "US") {
+    ranked = await hydrateReachedNewsHooks(ranked, rowsByTicker, asOf);
+  }
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
 
@@ -1942,7 +1944,9 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     dailyRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.daily] as const] : []))
   );
   ranked = attachReachedVolumeEvents(ranked, rowsByTicker, dailyByTicker, asOf);
-  ranked = await hydrateReachedWhySynthesis(ranked);
+  if (scope !== "US") {
+    ranked = await hydrateReachedWhySynthesis(ranked);
+  }
   logDiscoverySignalCoverage("after-rank", ranked);
   const sparklineByTicker = new Map(
     [...dailyByTicker.entries()].map(([ticker, daily]) => [ticker, daily.closes.slice(-42)] as const)
