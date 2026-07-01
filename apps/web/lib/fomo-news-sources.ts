@@ -44,7 +44,7 @@ async function fetchYahooSymbol(symbol: string, nowIso: string): Promise<RawArti
     url.searchParams.set("lang", "en-US");
     const res = await fetch(url.toString(), {
       headers: { "user-agent": UA, accept: "application/rss+xml, application/xml" },
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(3_500),
       // 10분 데이터 캐시 — Yahoo 레이트리밋 보호.
       next: { revalidate: 600 },
     });

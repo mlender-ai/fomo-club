@@ -26,7 +26,7 @@ export async function fetchRecentSecFilings(symbol: string, limit = 4): Promise<
   try {
     const res = await fetch(`${SEC_SUBMISSIONS}/CIK${cik}.json`, {
       headers: { accept: "application/json", "user-agent": userAgent },
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(3_500),
       next: { revalidate: 3_600 },
     });
     if (!res.ok) return [];
