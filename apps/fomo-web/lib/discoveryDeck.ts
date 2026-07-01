@@ -101,7 +101,36 @@ export interface DeckContent {
   asOf: string;
 }
 
-export type DiscoveryDeckCard = DeckStock | DeckThemeBundle | DeckContent;
+export interface DeckNarrativeStock {
+  ticker: string;
+  name: string;
+  market: StockMarket;
+  country: StockCountry;
+  relation: "trigger" | DeckRelationKind;
+  relationReason: string;
+  changePct: number;
+  naverCode?: string;
+  symbol?: string;
+}
+
+export interface DeckNarrative {
+  kind: "narrative";
+  id: string;
+  scope: Extract<StockCountry, "KR" | "US">;
+  trigger: {
+    headline: string;
+    source: string;
+    asOf: string;
+    anchorTicker: string;
+    url?: string;
+  };
+  headline: string;
+  stocks: DeckNarrativeStock[];
+  source: string;
+  asOf: string;
+}
+
+export type DiscoveryDeckCard = DeckStock | DeckThemeBundle | DeckContent | DeckNarrative;
 
 export interface DeckSectorStock {
   canonical: string;
@@ -127,7 +156,8 @@ export interface DeckSectorCardData {
 export type DeckCard =
   | { type: "stock"; data: DeckStock }
   | { type: "sector"; data: DeckSectorCardData }
-  | { type: "content"; data: DeckContent };
+  | { type: "content"; data: DeckContent }
+  | { type: "narrative"; data: DeckNarrative };
 
 export const SECTOR_CARD_INTERVAL = 5;
 
@@ -139,9 +169,14 @@ export function isContentCard(card: DiscoveryDeckCard): card is DeckContent {
   return card.kind === "content";
 }
 
+export function isNarrativeCard(card: DiscoveryDeckCard): card is DeckNarrative {
+  return card.kind === "narrative";
+}
+
 export function deckCardFromDiscovery(card: DiscoveryDeckCard): DeckCard | null {
   if (isThemeBundleCard(card)) return null;
   if (isContentCard(card)) return { type: "content", data: card };
+  if (isNarrativeCard(card)) return { type: "narrative", data: card };
   return { type: "stock", data: card };
 }
 
@@ -168,7 +203,7 @@ function normalizeThemeBundleIdentifiers(bundle: DeckThemeBundle): DeckThemeBund
 
 export function normalizeDiscoveryDeckCards(cards: readonly DiscoveryDeckCard[]): DiscoveryDeckCard[] {
   return cards.map((card) =>
-    isThemeBundleCard(card) ? normalizeThemeBundleIdentifiers(card) : isContentCard(card) ? card : normalizeDeckStockIdentifiers(card)
+    isThemeBundleCard(card) ? normalizeThemeBundleIdentifiers(card) : isContentCard(card) || isNarrativeCard(card) ? card : normalizeDeckStockIdentifiers(card)
   );
 }
 
@@ -631,13 +666,32 @@ export function buildContentDeckCards(
     .map((card) => ({ type: "content", data: card }) satisfies DeckCard);
 }
 
-function alternateSupplementalCards(sectorCards: readonly DeckCard[], contentCards: readonly DeckCard[]): DeckCard[] {
+export function buildNarrativeDeckCards(
+  narrativeCards: readonly DeckNarrative[] = [],
+  country: StockCountry,
+  limit = 2
+): DeckCard[] {
+  return narrativeCards
+    .filter((card) => card.kind === "narrative" && card.scope === country)
+    .filter((card) => card.headline.trim().length > 0 && card.trigger.headline.trim().length > 0)
+    .filter((card) => card.stocks.length >= 2 && card.stocks.every((stock) => stock.country === country && typeof stock.changePct === "number"))
+    .slice(0, limit)
+    .map((card) => ({ type: "narrative", data: card }) satisfies DeckCard);
+}
+
+function alternateSupplementalCards(
+  sectorCards: readonly DeckCard[],
+  narrativeCards: readonly DeckCard[],
+  contentCards: readonly DeckCard[]
+): DeckCard[] {
   const out: DeckCard[] = [];
-  const max = Math.max(sectorCards.length, contentCards.length);
+  const max = Math.max(sectorCards.length, narrativeCards.length, contentCards.length);
   for (let i = 0; i < max; i += 1) {
     const sector = sectorCards[i];
+    const narrative = narrativeCards[i];
     const content = contentCards[i];
     if (sector) out.push(sector);
+    if (narrative) out.push(narrative);
     if (content) out.push(content);
   }
   return out;
@@ -678,13 +732,14 @@ export function buildDiscoveryDeckCards(
   options: SectorDeckBuildOptions
 ): DeckCard[] {
   const normalized = normalizeDiscoveryDeckCards(discoveryCards);
-  const stocks = normalized.filter((card): card is DeckStock => !isThemeBundleCard(card) && !isContentCard(card));
+  const stocks = normalized.filter((card): card is DeckStock => !isThemeBundleCard(card) && !isContentCard(card) && !isNarrativeCard(card));
   const stockCards = stockDeckCards(stocks);
   const sectorCards = buildSectorDeckCards(stocks, options);
+  const narrativeCards = buildNarrativeDeckCards(normalized.filter(isNarrativeCard), options.country);
   const contentCards = buildContentDeckCards(
     [...normalized.filter(isContentCard), ...(options.contentCards ?? [])],
     options.country
   );
-  const supplementalCards = alternateSupplementalCards(sectorCards, contentCards);
+  const supplementalCards = alternateSupplementalCards(sectorCards, narrativeCards, contentCards);
   return interleaveSupplementalCards(stockCards, supplementalCards, options.interval ?? SECTOR_CARD_INTERVAL);
 }

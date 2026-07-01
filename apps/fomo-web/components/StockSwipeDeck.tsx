@@ -12,6 +12,7 @@ import type {
 } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
+import { NarrativeCard } from "@/components/NarrativeCard";
 import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
@@ -221,6 +222,7 @@ function cardKey(card: DeckCard): string {
 function cardLabel(card: DeckCard): string {
   if (card.type === "stock") return card.data.canonical;
   if (card.type === "sector") return `${card.data.sector} 섹터`;
+  if (card.type === "narrative") return card.data.headline;
   return card.data.headline;
 }
 
@@ -616,6 +618,7 @@ export function StockSwipeDeck({
   };
   const renderFace = (card: DeckCard, progress?: string) => {
     if (card.type === "sector") return <SectorCard card={card.data} progress={progress} />;
+    if (card.type === "narrative") return <NarrativeCard card={card.data} progress={progress} />;
     if (card.type === "content") return <ContentCard card={card.data} progress={progress} />;
     const stock = card.data;
     const e = front[stock.canonical];
@@ -681,6 +684,7 @@ export function StockSwipeDeck({
       if (!isStockCard(card)) {
         setUndoEntry({ idx, dir, card });
         if (card.type === "sector") recordTaste("theme", card.data.sector, dir === "right" ? "more" : "less");
+        if (card.type === "narrative") recordTaste("stock", card.data.trigger.anchorTicker, dir === "right" ? "more" : "less");
         recordDiscoveryEvent("swipe", { direction: dir, hydrated: true });
         flingNext(dir);
         return;
@@ -726,6 +730,9 @@ export function StockSwipeDeck({
       if (card.type === "sector") {
         recordTaste("theme", card.data.sector, "more");
         fireMatch(`${card.data.sector} 섹터`, kind);
+      } else if (card.type === "narrative") {
+        recordTaste("stock", card.data.trigger.anchorTicker, "more");
+        fireMatch("사건 흐름", kind);
       } else {
         fireMatch(card.data.contentType === "whale" ? "고래 동향" : "시장 메모", kind);
       }
