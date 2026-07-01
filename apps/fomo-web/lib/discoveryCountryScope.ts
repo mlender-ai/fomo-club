@@ -18,11 +18,17 @@ export interface DiscoveryScopeThemeBundle {
   items: DiscoveryScopeStock[];
 }
 
+export interface DiscoveryScopeNarrative {
+  kind: "narrative";
+  scope?: Extract<DiscoveryCountryScope, "KR" | "US">;
+  stocks: DiscoveryScopeStock[];
+}
+
 export interface DiscoveryScopeResponse {
   asOf?: string;
   country?: DiscoveryCountryScope;
   stocks: DiscoveryScopeStock[];
-  cards?: Array<DiscoveryScopeStock | DiscoveryScopeThemeBundle>;
+  cards?: Array<DiscoveryScopeStock | DiscoveryScopeThemeBundle | DiscoveryScopeNarrative>;
   fronts: Record<string, unknown>;
   confidence?: "L" | "M" | "H";
   source?: string;
@@ -34,9 +40,10 @@ function stockMatchesCountry(stock: DiscoveryScopeStock, country: DiscoveryCount
   return stock.country === "US" && (stock.market === "NASDAQ" || stock.market === "NYSE") && !!stock.symbol && !stock.naverCode;
 }
 
-function cardMatchesCountry(card: DiscoveryScopeStock | DiscoveryScopeThemeBundle, country: DiscoveryCountryScope): boolean {
+function cardMatchesCountry(card: DiscoveryScopeStock | DiscoveryScopeThemeBundle | DiscoveryScopeNarrative, country: DiscoveryCountryScope): boolean {
   if (country === "all") return true;
   if (card.kind === "theme_bundle") return card.items.length > 0 && card.items.every((item) => stockMatchesCountry(item, country));
+  if (card.kind === "narrative") return card.stocks.length > 0 && card.stocks.every((item) => stockMatchesCountry(item, country));
   return stockMatchesCountry(card, country);
 }
 

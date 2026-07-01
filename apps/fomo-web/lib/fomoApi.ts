@@ -465,7 +465,36 @@ export interface DiscoveryThemeBundleResponse {
   items: DiscoveryThemeBundleItemResponse[];
 }
 
-export type DiscoveryCardResponse = DiscoveryStockResponse | DiscoveryThemeBundleResponse;
+export interface DiscoveryNarrativeStockResponse {
+  ticker: string;
+  name: string;
+  market: import("@fomo/core").StockMarket;
+  country: import("@fomo/core").StockCountry;
+  relation: "trigger" | "customer" | "supplier" | "material" | "peer" | "beneficiary";
+  relationReason: string;
+  changePct: number;
+  naverCode?: string;
+  symbol?: string;
+}
+
+export interface DiscoveryNarrativeResponse {
+  kind: "narrative";
+  id: string;
+  scope: Extract<DiscoveryCountryScope, "KR" | "US">;
+  trigger: {
+    headline: string;
+    source: string;
+    asOf: string;
+    anchorTicker: string;
+    url?: string;
+  };
+  headline: string;
+  stocks: DiscoveryNarrativeStockResponse[];
+  source: string;
+  asOf: string;
+}
+
+export type DiscoveryCardResponse = DiscoveryStockResponse | DiscoveryThemeBundleResponse | DiscoveryNarrativeResponse;
 
 export interface DiscoveryResponse {
   asOf: string;
@@ -511,6 +540,13 @@ function cardCopyFields(card: DiscoveryCardResponse): string[] {
     return [card.title, card.subtitle, ...card.items.map((item) => item.reason)].filter(
       (text): text is string => typeof text === "string" && text.trim().length > 0
     );
+  }
+  if (card.kind === "narrative") {
+    return [
+      card.headline,
+      card.trigger.headline,
+      ...card.stocks.map((stock) => stock.relationReason),
+    ].filter((text): text is string => typeof text === "string" && text.trim().length > 0);
   }
   return stockCopyFields(card);
 }

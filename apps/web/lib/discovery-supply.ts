@@ -67,6 +67,9 @@ const DISCOVERY_LIVE_FLOW_TIMEOUT_MS = Math.max(2_000, Math.min(12_000, Number(p
 const THEME_BUNDLE_MAX_CARDS = 2;
 const THEME_BUNDLE_MIN_ITEMS = 2;
 const THEME_BUNDLE_MAX_ITEMS = 4;
+const NARRATIVE_MAX_CARDS = 1;
+const NARRATIVE_MIN_STOCKS = 2;
+const NARRATIVE_MAX_STOCKS = 4;
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? Math.max(0, Math.min(720, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 720) || 720))
   : 0;
@@ -134,7 +137,37 @@ export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
 
 export type DiscoveryDeckCardPayload =
   | ({ kind: "stock" } & DiscoveryStockPayload)
-  | DiscoveryThemeBundleCard;
+  | DiscoveryThemeBundleCard
+  | DiscoveryNarrativeCardPayload;
+
+export interface DiscoveryNarrativeStockPayload {
+  ticker: string;
+  name: string;
+  market: DiscoveryMarket;
+  country: StockCountry;
+  relation: RelatedNode["relation"] | "trigger";
+  relationReason: string;
+  changePct: number;
+  naverCode?: string;
+  symbol?: string;
+}
+
+export interface DiscoveryNarrativeCardPayload {
+  kind: "narrative";
+  id: string;
+  scope: Extract<DiscoveryCountryScope, "KR" | "US">;
+  trigger: {
+    headline: string;
+    source: string;
+    asOf: string;
+    anchorTicker: string;
+    url?: string;
+  };
+  headline: string;
+  stocks: DiscoveryNarrativeStockPayload[];
+  source: string;
+  asOf: string;
+}
 
 export interface DiscoveryResponse {
   asOf: string;
@@ -1514,6 +1547,25 @@ function bundleAnchorEvent(candidate: DiscoveryCandidate): DiscoveryEvent | unde
     })[0];
 }
 
+function narrativeAnchorEvent(candidate: DiscoveryCandidate): DiscoveryEvent | undefined {
+  return candidate.events
+    .filter((event) => isDeckDisplayEvent(event, candidate))
+    .filter((event) => event.kind === "disclosure" || event.kind === "news_mention")
+    .filter((event) => Boolean(narrativeTriggerHeadline(event)))
+    .sort((a, b) => {
+      const priority = (event: DiscoveryEvent) => (event.kind === "disclosure" ? 0 : 1);
+      return priority(a) - priority(b) || b.strength - a.strength || a.kind.localeCompare(b.kind);
+    })[0];
+}
+
+function narrativeTriggerHeadline(event: DiscoveryEvent): string | undefined {
+  const text = (event.headlineHook ?? event.label ?? "").replace(/\s+/g, " ").trim();
+  if (!text || text.length < 8) return undefined;
+  return text
+    .replace(/\s*에\s*[+-]?\d+(?:\.\d+)?%$/g, "")
+    .replace(/[.!?。]+$/g, "");
+}
+
 function relationItemFromNode(
   node: RelatedNode,
   row: DiscoveryMarketRow,
@@ -1532,6 +1584,127 @@ function relationItemFromNode(
     ...(row.naverCode ?? node.naverCode ? { naverCode: row.naverCode ?? node.naverCode } : {}),
     ...(row.symbol ?? node.symbol ? { symbol: row.symbol ?? node.symbol } : {}),
   };
+}
+
+function narrativeStockFromRow(
+  row: DiscoveryMarketRow,
+  relation: DiscoveryNarrativeStockPayload["relation"],
+  relationReason: string,
+): DiscoveryNarrativeStockPayload | null {
+  if (typeof row.changePct !== "number") return null;
+  return {
+    ticker: row.canonical,
+    name: row.canonical,
+    market: row.market,
+    country: row.country as StockCountry,
+    relation,
+    relationReason,
+    changePct: row.changePct,
+    ...(row.naverCode ? { naverCode: row.naverCode } : {}),
+    ...(row.symbol ? { symbol: row.symbol } : {}),
+  };
+}
+
+function sameThemeNarrativeStocks(
+  anchor: DiscoveryCandidate,
+  ranked: readonly DiscoveryCandidate[],
+  rowsByTicker: ReadonlyMap<string, DiscoveryMarketRow>,
+): DiscoveryNarrativeStockPayload[] {
+  if (!anchor.sector || !anchor.country) return [];
+  return ranked
+    .filter((candidate) => candidate.ticker !== anchor.ticker)
+    .filter((candidate) => candidate.country === anchor.country && candidate.sector === anchor.sector)
+    .map((candidate) => {
+      const row = rowsByTicker.get(candidate.ticker);
+      if (!row) return null;
+      return narrativeStockFromRow(row, "peer", `같은 ${anchor.sector} 테마에서 오늘 등락률이 함께 확인됐어요.`);
+    })
+    .filter((item): item is DiscoveryNarrativeStockPayload => item !== null)
+    .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct) || a.ticker.localeCompare(b.ticker));
+}
+
+function narrativeHeadline(trigger: string, stocks: readonly DiscoveryNarrativeStockPayload[], sector: string | undefined): string {
+  const positive = stocks.filter((stock) => stock.changePct > 0).length;
+  const theme = sector ? `${sector} ` : "";
+  const direction = positive >= Math.ceil(stocks.length / 2) ? "동반 강세" : "동반 움직임";
+  return `${trigger}에 ${theme}연결 종목 ${direction}`;
+}
+
+export function buildNarrativeCards(
+  ranked: readonly DiscoveryCandidate[],
+  rowsByTicker: ReadonlyMap<string, DiscoveryMarketRow>,
+): DiscoveryNarrativeCardPayload[] {
+  const cards: DiscoveryNarrativeCardPayload[] = [];
+  const usedTriggers = new Set<string>();
+  const usedSectorScopes = new Set<string>();
+  for (const candidate of ranked) {
+    if (cards.length >= NARRATIVE_MAX_CARDS) break;
+    if (candidate.country !== "KR" && candidate.country !== "US") continue;
+    const anchorRow = rowsByTicker.get(candidate.ticker);
+    if (!anchorRow || anchorRow.country !== candidate.country) continue;
+    const event = narrativeAnchorEvent(candidate);
+    const triggerHeadline = event ? narrativeTriggerHeadline(event) : undefined;
+    if (!event || !triggerHeadline) continue;
+    const triggerKey = `${candidate.ticker}:${event.kind}:${triggerHeadline}`;
+    if (usedTriggers.has(triggerKey)) continue;
+    const sectorScopeKey = candidate.sector ? `${candidate.country}:${candidate.sector}` : undefined;
+    if (sectorScopeKey && usedSectorScopes.has(sectorScopeKey)) continue;
+
+    const anchorStock = narrativeStockFromRow(
+      anchorRow,
+      "trigger",
+      event.kind === "disclosure" ? "이 공시의 직접 당사자입니다." : "이 뉴스에서 직접 언급된 종목입니다."
+    );
+    if (!anchorStock) continue;
+
+    const relationStocks = relatedTo({
+      kind: "event",
+      ticker: candidate.ticker,
+      ...(candidate.sector ? { theme: candidate.sector } : {}),
+    })
+      .filter((node) => node.ticker !== candidate.ticker)
+      .map((node) => {
+        const row = rowsByTicker.get(node.ticker);
+        if (!row || row.country !== candidate.country) return null;
+        return narrativeStockFromRow(row, node.relation, node.reason);
+      })
+      .filter((item): item is DiscoveryNarrativeStockPayload => item !== null);
+
+    const seen = new Set([anchorStock.ticker]);
+    const related = [...relationStocks, ...sameThemeNarrativeStocks(candidate, ranked, rowsByTicker)]
+      .filter((stock) => {
+        if (seen.has(stock.ticker)) return false;
+        seen.add(stock.ticker);
+        return true;
+      })
+      .sort((a, b) => {
+        const relationRank = (stock: DiscoveryNarrativeStockPayload) => (stock.relation === "peer" ? 1 : 0);
+        return relationRank(a) - relationRank(b) || Math.abs(b.changePct) - Math.abs(a.changePct) || a.ticker.localeCompare(b.ticker);
+      })
+      .slice(0, NARRATIVE_MAX_STOCKS - 1);
+
+    const stocks = [anchorStock, ...related].slice(0, NARRATIVE_MAX_STOCKS);
+    if (stocks.length < NARRATIVE_MIN_STOCKS) continue;
+    cards.push({
+      kind: "narrative",
+      id: `narrative:${candidate.country}:${candidate.ticker}:${event.kind}:${event.asOf.slice(0, 10)}`,
+      scope: candidate.country,
+      trigger: {
+        headline: triggerHeadline,
+        source: event.sourceName ?? event.source,
+        asOf: (event.publishedAt ?? event.asOf).slice(0, 10),
+        anchorTicker: candidate.ticker,
+        ...(event.sourceUrl ? { url: event.sourceUrl } : {}),
+      },
+      headline: narrativeHeadline(triggerHeadline, stocks, candidate.sector),
+      stocks,
+      source: event.sourceName ?? event.source,
+      asOf: (event.publishedAt ?? event.asOf).slice(0, 10),
+    });
+    usedTriggers.add(triggerKey);
+    if (sectorScopeKey) usedSectorScopes.add(sectorScopeKey);
+  }
+  return cards;
 }
 
 export function buildThemeBundleCards(
@@ -1586,13 +1759,18 @@ export function buildThemeBundleCards(
 function interleaveThemeBundles(
   stocks: readonly DiscoveryStockPayload[],
   bundles: readonly DiscoveryThemeBundleCard[],
+  narratives: readonly DiscoveryNarrativeCardPayload[] = [],
 ): DiscoveryDeckCardPayload[] {
   const cards: DiscoveryDeckCardPayload[] = stocks.map((stock) => ({ kind: "stock", ...stock }));
-  if (bundles.length === 0 || cards.length < 8) return cards;
+  if ((bundles.length === 0 && narratives.length === 0) || cards.length < 8) return cards;
   const out = [...cards];
   bundles.forEach((bundle, index) => {
     const insertAt = Math.min(out.length, 6 + index * 10);
     out.splice(insertAt, 0, bundle);
+  });
+  narratives.forEach((narrative, index) => {
+    const insertAt = Math.min(out.length, 8 + index * 12);
+    out.splice(insertAt, 0, narrative);
   });
   return out;
 }
@@ -1830,12 +2008,13 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     };
   });
   const bundleCards = buildThemeBundleCards(ranked, rowsByTicker);
+  const narrativeCards = buildNarrativeCards(ranked, rowsByTicker);
 
   return {
     asOf,
     country: scope,
     stocks,
-    cards: interleaveThemeBundles(stocks, bundleCards),
+    cards: interleaveThemeBundles(stocks, bundleCards, narrativeCards),
     fronts,
     confidence: stocks.length >= deckCardCount ? "H" : stocks.length >= Math.min(30, Math.ceil(deckCardCount * 0.75)) ? "M" : "L",
     source: targetedMaterialEnabled ? DISCOVERY_SOURCE_LABEL : "시장 시세·공시·수급 캐시",

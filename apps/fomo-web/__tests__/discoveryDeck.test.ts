@@ -4,6 +4,7 @@ import {
   applyAxisSnapshotToStocks,
   buildDiscoveryDeckCards,
   buildContentDeckCards,
+  buildNarrativeDeckCards,
   buildSectorDeckCards,
   buildTodayDiscoveryStocks,
   interleaveSupplementalCards,
@@ -12,6 +13,7 @@ import {
   normalizeDiscoveryDeckCards,
   type DeckCard,
   type DeckContent,
+  type DeckNarrative,
   type DeckStock,
 } from "../lib/discoveryDeck";
 
@@ -97,6 +99,44 @@ function contentCard(id: string, scope: DeckContent["scope"], contentType: DeckC
     headline: id,
     facts: [{ label: "테스트", value: "+1.20%" }],
     source: "테스트",
+    asOf: "2026-07-01",
+  };
+}
+
+function narrativeCard(id: string, scope: "KR" | "US" = "KR"): DeckNarrative {
+  const market = scope === "KR" ? "KOSPI" : "NASDAQ";
+  return {
+    kind: "narrative",
+    id,
+    scope,
+    trigger: {
+      headline: "반도체 공급망 사건",
+      source: "테스트뉴스",
+      asOf: "2026-07-01",
+      anchorTicker: scope === "KR" ? "삼성전자" : "엔비디아",
+    },
+    headline: "반도체 공급망 사건에 연결 종목 동반 강세",
+    stocks: [
+      {
+        ticker: scope === "KR" ? "삼성전자" : "엔비디아",
+        name: scope === "KR" ? "삼성전자" : "엔비디아",
+        market,
+        country: scope,
+        relation: "trigger",
+        relationReason: "이 뉴스에서 직접 언급된 종목입니다.",
+        changePct: 2.4,
+      },
+      {
+        ticker: scope === "KR" ? "SK하이닉스" : "VRT",
+        name: scope === "KR" ? "SK하이닉스" : "VRT",
+        market,
+        country: scope,
+        relation: "beneficiary",
+        relationReason: "관계맵에서 확인된 연결 종목입니다.",
+        changePct: 3.1,
+      },
+    ],
+    source: "테스트뉴스",
     asOf: "2026-07-01",
   };
 }
@@ -333,18 +373,25 @@ describe("buildTodayDiscoveryStocks", () => {
     ]);
   });
 
+  it("filters narrative cards by country scope and requires real linked stocks", () => {
+    const thin = { ...narrativeCard("thin", "KR"), stocks: [narrativeCard("thin", "KR").stocks[0]!] };
+    expect(buildNarrativeDeckCards([narrativeCard("kr-story", "KR"), narrativeCard("us-story", "US"), thin], "KR").map((card) => card.type === "narrative" ? card.data.id : "")).toEqual(["kr-story"]);
+    expect(buildNarrativeDeckCards([narrativeCard("kr-story", "KR"), narrativeCard("us-story", "US")], "US").map((card) => card.type === "narrative" ? card.data.id : "")).toEqual(["us-story"]);
+  });
+
   it("interleaves sector and content cards after stock intervals", () => {
     const stocks: DeckCard[] = Array.from({ length: 11 }, (_, i) => ({ type: "stock", data: deckStock(`종목${i}`, "AI") }));
     const sector: DeckCard = {
       type: "sector",
       data: { id: "sector:KR:AI", sector: "AI", country: "KR", stance: "bull-dominant", stanceNote: "테스트", stocks: [] },
     };
+    const narrative: DeckCard = { type: "narrative", data: narrativeCard("kr-story", "KR") };
     const content: DeckCard = { type: "content", data: contentCard("domestic-index", "domestic") };
 
-    const result = interleaveSupplementalCards(stocks, [sector, content], 5);
+    const result = interleaveSupplementalCards(stocks, [sector, narrative, content], 5);
 
     expect(result[5]?.type).toBe("sector");
-    expect(result[11]?.type).toBe("content");
+    expect(result[11]?.type).toBe("narrative");
   });
 
   it("builds discovery deck cards with stock and sector card types", () => {
@@ -352,10 +399,12 @@ describe("buildTodayDiscoveryStocks", () => {
     const result = buildDiscoveryDeckCards(stocks, {
       country: "KR",
       fronts: frontsFor(stocks),
+      interval: 3,
       contentCards: [contentCard("domestic-index", "domestic"), contentCard("world-index", "world")],
     });
 
     expect(result.some((card) => card.type === "sector")).toBe(true);
+    expect(buildDiscoveryDeckCards([...stocks, narrativeCard("kr-story", "KR")], { country: "KR", fronts: frontsFor(stocks), interval: 3 }).some((card) => card.type === "narrative")).toBe(true);
     expect(result.some((card) => card.type === "content" && card.data.id === "domestic-index")).toBe(true);
     expect(result.some((card) => card.type === "content" && card.data.id === "world-index")).toBe(false);
     expect(result.filter((card) => card.type === "stock")).toHaveLength(11);
