@@ -262,7 +262,11 @@ async function fetchKrMarketRows(): Promise<DiscoveryMarketRow[]> {
 
 async function fetchMarketRows(scope: DiscoveryCountryScope): Promise<DiscoveryMarketRow[]> {
   const sources: Array<Promise<DiscoveryMarketRow[]>> =
-    scope === "US" ? [fetchUsMarketRows()] : scope === "all" ? [fetchKrMarketRows(), fetchUsMarketRows()] : [fetchKrMarketRows()];
+    scope === "US"
+      ? [fetchUsMarketRows({ live: false })]
+      : scope === "all"
+        ? [fetchKrMarketRows(), fetchUsMarketRows({ live: false })]
+        : [fetchKrMarketRows()];
   const settled = await Promise.allSettled(sources);
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }

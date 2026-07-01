@@ -19,7 +19,15 @@ const US_NASDAQ_FALLBACK_LIMIT = 48;
 const US_NASDAQ_FALLBACK_CONCURRENCY = 3;
 const US_TWELVE_RETRY_DELAY_MS = 900;
 const US_TWELVE_BATCH_DELAY_MS = 250;
+const US_TWELVE_REQUEST_TIMEOUT_MS = 2_500;
+const US_YAHOO_CHART_TIMEOUT_MS = 2_500;
+const US_YAHOO_FALLBACK_CONCURRENCY = 4;
 const US_MOVER_TYPES = ["gainers", "losers", "most_active"] as const;
+
+interface TwelveFetchOptions {
+  attempts?: number;
+  timeoutMs?: number;
+}
 
 interface TwelveQuote {
   symbol?: string;
@@ -426,14 +434,18 @@ function parseYahooChartPoints(data: unknown): NasdaqDailyPoint[] {
   return points.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function parseYahooChartRow(row: DiscoveryMarketRow, points: readonly NasdaqDailyPoint[]): DiscoveryMarketRow | null {
-  const seed: UsDiscoverySymbol = {
+function seedFromUsRow(row: DiscoveryMarketRow): UsDiscoverySymbol {
+  return {
     canonical: row.canonical,
     symbol: row.symbol,
     market: row.market === "NYSE" ? "NYSE" : "NASDAQ",
     sector: row.sectorHint ?? "미국주식",
     ...(typeof row.marketCapRank === "number" ? { fameRank: row.marketCapRank } : {}),
   };
+}
+
+function parseYahooChartRow(row: DiscoveryMarketRow, points: readonly NasdaqDailyPoint[]): DiscoveryMarketRow | null {
+  const seed = seedFromUsRow(row);
   const parsed = parseNasdaqRow(seed, points);
   if (!parsed) return null;
   return {
@@ -454,7 +466,7 @@ async function fetchYahooChartRow(row: DiscoveryMarketRow): Promise<DiscoveryMar
   url.searchParams.set("interval", "1d");
   const res = await fetch(url.toString(), {
     headers: { accept: "application/json", "user-agent": UA },
-    signal: AbortSignal.timeout(4_000),
+    signal: AbortSignal.timeout(US_YAHOO_CHART_TIMEOUT_MS),
     next: { revalidate: 1_800 },
   });
   if (!res.ok) return null;
@@ -586,23 +598,25 @@ async function fetchMoverSymbols(key: string): Promise<string[]> {
   return [...out];
 }
 
-async function fetchTwelveJson(url: URL, revalidate: number): Promise<unknown | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+async function fetchTwelveJson(url: URL, revalidate: number, options: TwelveFetchOptions = {}): Promise<unknown | null> {
+  const attempts = Math.max(1, options.attempts ?? 2);
+  const timeoutMs = options.timeoutMs ?? 8_000;
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const res = await fetch(url.toString(), {
       headers: { accept: "application/json", "user-agent": UA },
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(timeoutMs),
       next: { revalidate },
     });
     if (res.ok) {
       const data = await res.json();
       const code = typeof data === "object" && data ? Number((data as Record<string, unknown>).code) : undefined;
-      if (code === 429 && attempt === 0) {
+      if (code === 429 && attempt < attempts - 1) {
         await sleep(US_TWELVE_RETRY_DELAY_MS);
         continue;
       }
       return data;
     }
-    if ((res.status === 429 || res.status >= 500) && attempt === 0) {
+    if ((res.status === 429 || res.status >= 500) && attempt < attempts - 1) {
       await sleep(US_TWELVE_RETRY_DELAY_MS);
       continue;
     }
@@ -611,39 +625,39 @@ async function fetchTwelveJson(url: URL, revalidate: number): Promise<unknown | 
   return null;
 }
 
-async function fetchQuotes(symbols: readonly string[], key: string): Promise<Record<string, TwelveQuote>> {
+async function fetchQuotes(symbols: readonly string[], key: string, options?: TwelveFetchOptions): Promise<Record<string, TwelveQuote>> {
   if (symbols.length === 0) return {};
   const url = new URL(TWELVE_DATA_URL);
   url.searchParams.set("symbol", symbols.join(","));
   url.searchParams.set("apikey", key);
-  const data = await fetchTwelveJson(url, 600);
+  const data = await fetchTwelveJson(url, 600, options);
   return normalizeQuoteResponse(data);
 }
 
-async function fetchQuoteBatches(symbols: readonly string[], key: string): Promise<Record<string, TwelveQuote>> {
+async function fetchQuoteBatches(symbols: readonly string[], key: string, options?: TwelveFetchOptions): Promise<Record<string, TwelveQuote>> {
   const out: Record<string, TwelveQuote> = {};
   for (const batch of chunks(symbols, US_QUOTE_BATCH_SIZE)) {
-    Object.assign(out, await fetchQuotes(batch, key).catch((): Record<string, TwelveQuote> => ({})));
+    Object.assign(out, await fetchQuotes(batch, key, options).catch((): Record<string, TwelveQuote> => ({})));
     if (symbols.length > US_QUOTE_BATCH_SIZE) await sleep(US_TWELVE_BATCH_DELAY_MS);
   }
   return out;
 }
 
-async function fetchSparklines(symbols: readonly string[], key: string): Promise<Record<string, number[]>> {
+async function fetchSparklines(symbols: readonly string[], key: string, options?: TwelveFetchOptions): Promise<Record<string, number[]>> {
   if (symbols.length === 0) return {};
   const url = new URL(TWELVE_TIME_SERIES_URL);
   url.searchParams.set("symbol", symbols.join(","));
   url.searchParams.set("interval", "1day");
   url.searchParams.set("outputsize", "42");
   url.searchParams.set("apikey", key);
-  const data = await fetchTwelveJson(url, 1_800);
+  const data = await fetchTwelveJson(url, 1_800, options);
   return normalizeTimeSeriesResponse(data);
 }
 
-async function fetchSparklineBatches(symbols: readonly string[], key: string): Promise<Record<string, number[]>> {
+async function fetchSparklineBatches(symbols: readonly string[], key: string, options?: TwelveFetchOptions): Promise<Record<string, number[]>> {
   const out: Record<string, number[]> = {};
   for (const batch of chunks(symbols, US_QUOTE_BATCH_SIZE)) {
-    Object.assign(out, await fetchSparklines(batch, key).catch((): Record<string, number[]> => ({})));
+    Object.assign(out, await fetchSparklines(batch, key, options).catch((): Record<string, number[]> => ({})));
     if (symbols.length > US_QUOTE_BATCH_SIZE) await sleep(US_TWELVE_BATCH_DELAY_MS);
   }
   return out;
@@ -712,26 +726,37 @@ export async function hydrateUsMarketRowsForSymbols(
     .slice(0, US_SPARKLINE_LIMIT);
   if (selected.length === 0) return [...rows];
 
-  const sparklineBySymbol = key
-    ? await fetchSparklineBatches(
-      selected.filter((row) => (row.sparkline?.length ?? 0) < 2).map((row) => row.symbol),
-      key
-    ).catch((): Record<string, number[]> => ({}))
-    : {};
+  const requestOptions: TwelveFetchOptions = { attempts: 1, timeoutMs: US_TWELVE_REQUEST_TIMEOUT_MS };
+  const [quoteBySymbol, sparklineBySymbol] = key
+    ? await Promise.all([
+      fetchQuoteBatches(selected.filter((row) => typeof row.changePct !== "number").map((row) => row.symbol), key, requestOptions),
+      fetchSparklineBatches(selected.filter((row) => (row.sparkline?.length ?? 0) < 2).map((row) => row.symbol), key, requestOptions),
+    ]).catch((): [Record<string, TwelveQuote>, Record<string, number[]>] => [{}, {}])
+    : [{}, {}];
 
   const hydratedBySymbol = new Map<string, DiscoveryMarketRow>();
   for (const row of selected) {
-    const sparkline = sparklineBySymbol[row.symbol.toUpperCase()];
-    const withTwelveSparkline = sparkline && sparkline.length >= 2 ? { ...row, sparkline } : row;
-    if (!rowNeedsPriceSupport(withTwelveSparkline)) {
-      hydratedBySymbol.set(row.symbol.toUpperCase(), withTwelveSparkline);
-      continue;
-    }
-    const yahoo = await fetchYahooChartRow(withTwelveSparkline).catch((): DiscoveryMarketRow | null => null);
-    hydratedBySymbol.set(row.symbol.toUpperCase(), yahoo ?? withTwelveSparkline);
+    const upper = row.symbol.toUpperCase();
+    const sparkline = sparklineBySymbol[upper] ?? row.sparkline;
+    const quoteRow = parseQuote(seedFromUsRow(row), quoteBySymbol[upper], sparkline);
+    const withTwelve = quoteRow ? { ...row, ...quoteRow } : { ...row, ...(sparkline && sparkline.length >= 2 ? { sparkline } : {}) };
+    hydratedBySymbol.set(upper, withTwelve);
+  }
+
+  const stillMissing = selected
+    .map((row) => hydratedBySymbol.get(row.symbol.toUpperCase()) ?? row)
+    .filter(rowNeedsPriceSupport);
+  const yahooRows = await mapLimit(stillMissing, US_YAHOO_FALLBACK_CONCURRENCY, fetchYahooChartRow);
+  for (const result of yahooRows) {
+    if (result.status !== "fulfilled" || !result.value) continue;
+    hydratedBySymbol.set(result.value.symbol.toUpperCase(), result.value);
   }
 
   return rows.map((row) => hydratedBySymbol.get(row.symbol.toUpperCase()) ?? row);
+}
+
+interface FetchUsMarketRowsOptions {
+  live?: boolean;
 }
 
 async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]; diagnostics: UsMarketDiagnostics }> {
@@ -847,7 +872,8 @@ async function fetchUsMarketRowsInternal(): Promise<{ rows: DiscoveryMarketRow[]
  * If the key is absent or the upstream fails, return a verified seed universe without price data.
  * We never synthesize quotes: price/change fields are present only when a live source returns them.
  */
-export async function fetchUsMarketRows(): Promise<DiscoveryMarketRow[]> {
+export async function fetchUsMarketRows(options: FetchUsMarketRowsOptions = {}): Promise<DiscoveryMarketRow[]> {
+  if (options.live === false) return seedRows();
   return (await fetchUsMarketRowsInternal()).rows;
 }
 
