@@ -39,6 +39,8 @@ export interface DiscoveryEvent {
   flowDays?: number;
   /** Human-scale net amount, e.g. 12만주. */
   flowAmountText?: string;
+  /** Confirmed insider open-market purchase from SEC Form 4 or DART ownership report. */
+  insiderPurchase?: boolean;
   themeRank?: number;
   themePeerCount?: number;
   themeAverageChangePct?: number;
@@ -340,6 +342,7 @@ function eventKindTone(event: DiscoveryEvent | undefined): DiscoverySynthesisTon
 
 function displayTag(event: DiscoveryEvent | undefined): string {
   if (!event) return "미노출";
+  if (event.insiderPurchase) return "내부자 매수";
   if (event.kind === "disclosure") return "공시 재료";
   if (event.kind === "news_mention") return "뉴스 재료";
   if (event.kind === "flow_entry") return "💎 수급 선행";
@@ -351,6 +354,7 @@ function displayTag(event: DiscoveryEvent | undefined): string {
 }
 
 function eventGroup(event: DiscoveryEvent): "material" | "flow" | "volume" | "context" | "price" {
+  if (event.insiderPurchase) return "flow";
   if (event.kind === "disclosure" || event.kind === "news_mention") return "material";
   if (event.kind === "flow_entry") return "flow";
   if (event.kind === "volume_spike") return "volume";
