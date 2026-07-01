@@ -395,12 +395,14 @@ export interface FeedSignalPoint {
   text: string;
   source: "뉴스" | "수급" | "테마" | "가격" | "주목" | "위치" | "거래";
 }
-export const fetchStockFront = (stock: string, opts: { lite?: boolean } = {}) =>
+export const fetchStockFront = (stock: string, opts: { lite?: boolean; naverCode?: string } = {}) =>
   cachedGet(
-    `stock-front:${opts.lite ? "lite" : "full"}:${stock}`,
+    `stock-front:${opts.lite ? "lite" : "full"}:${stock}:${opts.naverCode ?? ""}`,
     () =>
       get<StockFrontResponse>(
-        `/api/fomo/stock-front?stock=${encodeURIComponent(stock)}${opts.lite ? "&lite=1" : ""}`
+        `/api/fomo/stock-front?stock=${encodeURIComponent(stock)}${opts.lite ? "&lite=1" : ""}${
+          opts.naverCode ? `&naverCode=${encodeURIComponent(opts.naverCode)}` : ""
+        }`
       ),
     CACHE_TTL.stockFront
   );

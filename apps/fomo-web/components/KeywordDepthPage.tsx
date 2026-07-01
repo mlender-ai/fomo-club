@@ -1011,7 +1011,7 @@ function DepthTabBar({ tab, onChange }: { tab: "why" | "ta"; onChange: (t: "why"
     { key: "ta", label: "차트분석" },
   ];
   return (
-    <div className="mb-4 flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist">
+    <div className="mt-6 mb-5 flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist">
       {tabs.map((t) => {
         const active = tab === t.key;
         return (
@@ -1138,7 +1138,7 @@ export function StockInsightView({
     setBasicsLoaded(false);
     setFrontLoaded(!!seed);
     // 가격 헤더만 먼저 허용하고, 아래 가변 섹션은 세 요청이 모두 끝난 뒤 한 번에 연다.
-    fetchStockFront(stock)
+    fetchStockFront(stock, context?.naverCode ? { naverCode: context.naverCode } : {})
       .then((r) => alive && setFront(mergeFrontSeed(seed, r)))
       .catch(() => alive && setFront(seed))
       .finally(() => alive && setFrontLoaded(true));

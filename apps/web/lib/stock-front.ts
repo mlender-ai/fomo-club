@@ -164,6 +164,8 @@ export interface StockFrontData {
 export interface StockFrontOptions {
   /** 카드 앞면용 경량 경로. 시총순위·TA·상세 지표를 빼고 가격/수급/언급/짧은 차트만 쓴다. */
   lite?: boolean;
+  /** 동적 발견 종목(STOCK_VOCAB 미등재)용 네이버 코드. 있으면 vocab 없이도 캔들·TA 조회. */
+  naverCode?: string;
 }
 
 export interface FeedSignalPoint {
@@ -256,7 +258,7 @@ export async function assembleStockFront(
   options: StockFrontOptions = {}
 ): Promise<StockFrontData> {
   const def = resolveStock(stock);
-  const code = def?.naverCode;
+  const code = options.naverCode ?? def?.naverCode;
   if (!code) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
   const lite = options.lite === true;
 
