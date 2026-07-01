@@ -143,11 +143,40 @@ async function scanInfra(): Promise<AreaReport> {
 async function scanApi(): Promise<AreaReport> {
   const findings: Finding[] = [];
   const routes = gitGrep(["-lE", "export async function (GET|POST|PUT|PATCH|DELETE)", "--", "apps/web/app/api", "apps/fomo-web/app/api"]);
-  const noValidation = routes.filter((f) => {
+  // 입력을 실제로 받는가(body/query). 안 받으면(정적 GET) 검증 대상 아님 → 오탐 제거.
+  const TAKES_INPUT = /req(?:uest)?\.(?:json|formData|text)\(|searchParams|context\.params|params\./;
+  const LIB_VALIDATION = /zod|\.parse\(|safeParse|\bschema\b|z\.object/i;
+  // 수동 검증 흔적(라이브러리 안 써도 손으로 막는 경우).
+  const MANUAL_VALIDATION = /if\s*\(!|typeof\s|\.test\(|\.length\s*[<>]=?|===\s*""|status:\s*400|code:\s*"(?:MISSING|BAD_|INVALID)/;
+
+  const genuinelyUnvalidated: string[] = [];
+  let manualOnly = 0;
+  let noInput = 0;
+  for (const f of routes) {
     const text = execFileSync("git", ["show", `HEAD:${f}`], { encoding: "utf8" }).slice(0, 20000);
-    return !/zod|\.parse\(|safeParse|validate|schema|z\./i.test(text);
+    if (!TAKES_INPUT.test(text)) {
+      noInput += 1;
+      continue; // 입력 안 받는 라우트는 스킵(오탐 방지)
+    }
+    if (LIB_VALIDATION.test(text)) continue; // 스키마 검증 있음
+    if (MANUAL_VALIDATION.test(text)) {
+      manualOnly += 1;
+      continue; // 수동 검증 있음(약할 수 있으나 문지기는 있음)
+    }
+    genuinelyUnvalidated.push(f);
+  }
+
+  if (genuinelyUnvalidated.length > 0) {
+    findings.push({
+      title: `입력을 받는데 검증 흔적이 전혀 없는 라우트 ${genuinelyUnvalidated.length}개`,
+      detail: `${genuinelyUnvalidated.slice(0, 12).join(", ")}${genuinelyUnvalidated.length > 12 ? " 외" : ""} — 경계 입력검증(allowlist/스키마) 추가. docs/SECURITY_CHECKLIST.md '입력 검증' 참조.`,
+    });
+  }
+  // 투명성: 전체 그림(스캐너가 부풀리지 않도록 분모 공개).
+  findings.push({
+    title: `참고: 라우트 ${routes.length}개 중 입력無(정적 GET) ${noInput}개 · 수동검증만 ${manualOnly}개 · 진짜 무검증 ${genuinelyUnvalidated.length}개`,
+    detail: `수동검증만(${manualOnly}개)은 스키마 라이브러리는 아니지만 문지기는 있음 — 여유 될 때 공용 검증 헬퍼로 표준화 검토.`,
   });
-  findings.push({ title: `API 라우트 ${routes.length}개 중 명시적 입력검증 흔적 없는 라우트 ${noValidation.length}개`, detail: `${noValidation.slice(0, 10).join(", ")}${noValidation.length > 10 ? " 외" : ""} — 경계 입력검증(allowlist/zod) 점검. docs/SECURITY_CHECKLIST.md '입력 검증' 참조.` });
   return {
     area: "api",
     label: "API 경계·입력검증",
