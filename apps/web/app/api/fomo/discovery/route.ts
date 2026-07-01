@@ -6,7 +6,7 @@ import type { DiscoveryCountryScope } from "../../../../lib/market-source-types"
 import { shouldUseTargetedMaterial, targetedMaterialLimitFor } from "../../../../lib/discovery-route-policy";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const REVALIDATE_S = 600;
 
