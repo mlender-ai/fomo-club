@@ -19,7 +19,7 @@ on:
         required: false
         default: "60"
   schedule:
-    - cron: "0 0 * * *" # 09:00 KST
+    - cron: "0 0 * * 1" # 매주 월 09:00 KST (주간 카테고리 로테이션)
 
 permissions:
   contents: read
@@ -94,7 +94,7 @@ jobs:
               return `${values.year}-${values.month}-${values.day}`;
             };
             const date = summary.generatedDateKst || kstDate();
-            const title = `오늘의 에이전트 툴링 후보 - ${date}`;
+            const title = `이번 주 에이전트·생태계 툴링 후보 - ${date}`;
             const marker = "<!-- agent-tooling-scout -->";
             const issueBody = `${marker}\n\n${body}`;
             const { data: openIssues } = await github.rest.issues.listForRepo({

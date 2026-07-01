@@ -41,6 +41,7 @@
     "research:issues": "tsx scripts/research-agent-issues.ts",
     "research:newsletter": "tsx scripts/research-newsletter.ts",
     "agent:tooling-scout": "tsx scripts/agent-tooling-scout.ts",
+    "hardening:scout": "tsx scripts/hardening-scout.ts",
     "fomo:index": "tsx scripts/fomo-index-pipeline.ts",
     "keywords:generate": "tsx scripts/keywords-generate.ts",
     "warm:insights": "tsx scripts/warm-insights.ts",
