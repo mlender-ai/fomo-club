@@ -31,7 +31,13 @@ import {
   type StockCountry,
   type RawArticle,
 } from "@fomo/core";
-import { fetchDartDisclosuresByStock, fetchDartDisclosuresForCode, type DartDisclosureHit } from "./dart-disclosures";
+import {
+  fetchDartDisclosuresByStock,
+  fetchDartDisclosuresForCode,
+  fetchDartInsiderPurchasesByStock,
+  fetchDartInsiderPurchasesForCode,
+  type DartDisclosureHit,
+} from "./dart-disclosures";
 import { fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
 import { relatedTo, type RelatedNode } from "./relation-graph";
@@ -564,10 +570,11 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
 }
 
 function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEvent {
+  const insiderPurchase = Boolean(disclosure.insiderPurchase);
   return {
     kind: "disclosure",
     firstSeen: true,
-    strength: 0.96,
+    strength: insiderPurchase ? 0.99 : 0.96,
     source: disclosure.source,
     asOf: disclosure.asOf,
     confidence: "H",
@@ -575,6 +582,7 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
     sourceTitle: disclosure.label,
     summary: disclosure.label,
     sourceName: disclosure.source,
+    ...(insiderPurchase ? { headlineHook: disclosure.label, insiderPurchase: true } : {}),
     ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
   };
 }
@@ -657,15 +665,16 @@ function withRuleHeadlineHook(
 async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string): Promise<DiscoveryEvent | null> {
   if (row.country !== "KR") {
     const [filingResult, newsResult] = await Promise.allSettled([
-      fetchRecentSecFilings(row.symbol, 2),
+      fetchRecentSecFilings(row.symbol, 6),
       fetchYahooStockNews(row.symbol, 10),
     ]);
-    const filing = filingResult.status === "fulfilled" ? filingResult.value[0] : undefined;
+    const filings = filingResult.status === "fulfilled" ? filingResult.value : [];
+    const filing = filings.find((item) => item.insiderPurchase) ?? filings[0];
     if (filing) {
       return {
         kind: "disclosure",
         firstSeen: true,
-        strength: 0.92,
+        strength: filing.insiderPurchase ? 0.99 : 0.92,
         source: filing.source,
         asOf: filing.asOf,
         confidence: "H",
@@ -673,6 +682,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
         sourceTitle: filing.label,
         summary: filing.label,
         sourceName: filing.source,
+        ...(filing.insiderPurchase ? { headlineHook: filing.label, insiderPurchase: true } : {}),
         ...(filing.url ? { sourceUrl: filing.url } : {}),
       };
     }
@@ -680,6 +690,11 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
     return stockNews ? materialEventFromUsArticle(stockNews, asOf, "Yahoo Finance") : null;
   }
   if (!row.naverCode || !/^\d{6}$/.test(row.naverCode)) return null;
+  const insider = (await fetchDartInsiderPurchasesForCode(row.naverCode, row.canonical, asOf).catch(
+    (): DartDisclosureHit[] => []
+  ))[0];
+  if (insider) return materialEventFromDisclosure(insider);
+
   const disclosure = (await fetchDartDisclosuresForCode(row.naverCode, row.canonical, asOf).catch(
     (): DartDisclosureHit[] => []
   ))[0];
@@ -1063,7 +1078,7 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
     event.kind !== "news_mention"
   ) return null;
   const axis =
-    event.kind === "theme_link" ? "herd" : event.kind === "flow_entry" ? "flow" : "time";
+    event.kind === "theme_link" ? "herd" : event.kind === "flow_entry" || event.insiderPurchase ? "flow" : "time";
   const sourceKind =
     event.kind === "theme_link"
       ? "market"
@@ -1078,7 +1093,9 @@ function eventAxisSignal(event: DiscoveryEvent, candidate: DiscoveryCandidate): 
     strength:
       event.kind === "theme_link"
           ? Math.max(0.91, event.strength)
-          : event.kind === "news_mention"
+          : event.insiderPurchase
+            ? Math.max(0.98, event.strength)
+            : event.kind === "news_mention"
             ? Math.max(0.94, event.strength)
             : Math.max(0.93, event.strength),
     rarity: 0,
@@ -1816,10 +1833,9 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     if (events.length > 0) byTicker.set(ticker, { row: { ...row, canonical: ticker }, events });
   }
 
-  const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
-  for (const [ticker, disclosure] of Object.entries(disclosureMap)) {
+  const addDartDisclosure = (ticker: string, disclosure: DartDisclosureHit) => {
     const def = resolveStock(ticker);
-    if (!def?.naverCode || !eligibleTickers.has(def.canonical)) continue;
+    if (!def?.naverCode || !eligibleTickers.has(def.canonical)) return;
     const row =
       normalizedRows.find((r) => r.naverCode === def.naverCode) ??
       ({
@@ -1833,6 +1849,17 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const current = byTicker.get(def.canonical);
     const event = materialEventFromDisclosure(disclosure);
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
+  };
+
+  const insiderDisclosureMap = await fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  for (const [ticker, disclosure] of Object.entries(insiderDisclosureMap)) {
+    addDartDisclosure(ticker, disclosure);
+  }
+
+  const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  for (const [ticker, disclosure] of Object.entries(disclosureMap)) {
+    if (insiderDisclosureMap[ticker]) continue;
+    addDartDisclosure(ticker, disclosure);
   }
 
   const targetedRows = [...byTicker.entries()]
