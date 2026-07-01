@@ -44,6 +44,17 @@ describe("discovery regression gate", () => {
     expect(result.findings.map((finding) => finding.code)).toContain("hook.price_only");
   });
 
+  it("allows material so-what hooks with price context", () => {
+    const payload = makePayload([
+      { canonical: "SJG세종", sector: "자동차", reason: "자사주 처분→소각 선회 '주주가치 제고'에 +3.8%" },
+      ...filler(49),
+    ]);
+
+    const result = evaluateDiscoveryPayload(payload);
+
+    expect(result.findings.map((finding) => finding.code)).not.toContain("hook.price_only");
+  });
+
   it("rejects market labels used as chips", () => {
     const payload = makePayload([
       { canonical: "로킷헬스케어", sector: "KOSDAQ", reason: "오늘 이 종목을 직접 언급한 뉴스가 있어요." },
@@ -80,4 +91,3 @@ function filler(count: number): NonNullable<DiscoveryGatePayload["stocks"]> {
     reason: `오늘 ${index % 2 === 0 ? "AI" : "방산"} 흐름에서 확인할 원문 근거 ${index + 1}번이 있어요.`,
   }));
 }
-

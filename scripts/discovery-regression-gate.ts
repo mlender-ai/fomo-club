@@ -58,6 +58,8 @@ const PRICE_ONLY_PATTERN =
   /(?:오늘\s*)?(?:가격|주가|등락|시총\s*\d+위권).{0,28}[+-]?\d+(?:\.\d+)?%|[+-]?\d+(?:\.\d+)?%\s*(?:움직|상승|하락|강했|약했)/;
 const PRICE_ONLY_EXACT_PATTERN = /^오늘 가격이 [+-]?\d+(?:\.\d+)?% 움직였어요\.?$/;
 const GENERIC_MOVEMENT_HOOK_PATTERN = /(?:움직였어요|움직임|강하게 움직|먼저 움직|버텼어요|강했어요|약했어요)/;
+const MATERIAL_HOOK_CONTEXT_PATTERN =
+  /특허|공시|계약|수주|제휴|협력|파트너십|실적|매출|가이던스|인도량|공급|선정|투자|증자|자사주|인수전|클러스터|임상|승인|허가|제품|개발|확보|체결|발표|리테일|고객|우선협상자|관리운영|급여|출시|치료|서비스|상한가|신탁|상업화|권리|할증|렌탈|지원|종료|공개|항공우주|플랫폼|협업|판매|데이터|분기|준수율|내부통제|파업|전환|발행|처분|사업|위탁|공장|신규|후보물질|배터리|반도체|FDA|조달|매각|인수|합병|계열사|자회사|소송|담합|반독점|소각|주주가치/;
 const FORBIDDEN_ADVICE_PATTERN = /매수|매도|목표가|추천|급등\s*임박|반등\s*예상|곧\s*오른|사야|팔아야|텐베거/i;
 
 export function evaluateDiscoveryPayload(
@@ -97,12 +99,12 @@ export function evaluateDiscoveryPayload(
       add("hook.missing", `앞단 ${index + 1}번 카드 '${name}'에 표면 후킹멘트가 없습니다.`);
     }
 
-    if (
+    const hasMaterialHookContext = MATERIAL_HOOK_CONTEXT_PATTERN.test(hook);
+    const hasPriceOnlySignal =
       PRICE_ONLY_EXACT_PATTERN.test(hook) ||
       PRICE_ONLY_PATTERN.test(hook) ||
-      GENERIC_MOVEMENT_HOOK_PATTERN.test(hook) ||
-      NO_MATERIAL_PATTERN.test(hook)
-    ) {
+      GENERIC_MOVEMENT_HOOK_PATTERN.test(hook);
+    if ((hasPriceOnlySignal && !hasMaterialHookContext) || NO_MATERIAL_PATTERN.test(hook)) {
       add("hook.price_only", `앞단 ${index + 1}번 카드 '${name}'가 가격-only 또는 움직임 재진술 문장입니다.`, hook);
     }
 
