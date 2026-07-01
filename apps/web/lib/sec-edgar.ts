@@ -20,6 +20,7 @@ const SEC_ARCHIVES = "https://www.sec.gov/Archives/edgar/data";
 const SEC_SUBMISSIONS = "https://data.sec.gov/submissions";
 const SEC_INSIDER_PURCHASE_MIN_VALUE = 100_000;
 const SEC_RECENT_FORM_SCAN_LIMIT = 80;
+const SEC_FORM4_XML_SCAN_LIMIT = 8;
 
 function secUserAgent(): string | undefined {
   return process.env.SEC_EDGAR_USER_AGENT?.trim();
@@ -32,7 +33,15 @@ function accessionPath(cik: string, accession: string): string {
 function documentPath(cik: string, accession: string, document: string | undefined): string | undefined {
   const doc = document?.trim();
   if (!doc) return undefined;
-  return `${SEC_ARCHIVES}/${String(Number(cik))}/${accession.replace(/-/g, "")}/${encodeURIComponent(doc)}`;
+  const encodedDocPath = doc.split("/").map((part) => encodeURIComponent(part)).join("/");
+  return `${SEC_ARCHIVES}/${String(Number(cik))}/${accession.replace(/-/g, "")}/${encodedDocPath}`;
+}
+
+function form4DocumentPaths(cik: string, accession: string, document: string | undefined): string[] {
+  const primary = documentPath(cik, accession, document);
+  const basename = document?.split("/").filter(Boolean).at(-1);
+  const raw = basename && basename !== document ? documentPath(cik, accession, basename) : undefined;
+  return [primary, raw].filter((url): url is string => Boolean(url));
 }
 
 function xmlText(value: string): string {
@@ -132,15 +141,22 @@ async function fetchForm4InsiderPurchase(
   primaryDocument: string | undefined,
   userAgent: string,
 ): Promise<SecFilingHit | null> {
-  const url = documentPath(cik, accession, primaryDocument);
-  if (!url) return null;
-  const res = await fetch(url, {
-    headers: { accept: "application/xml,text/xml,text/plain", "user-agent": userAgent },
-    signal: AbortSignal.timeout(4_500),
-    next: { revalidate: 3_600 },
-  });
-  if (!res.ok) return null;
-  const purchase = parseForm4InsiderPurchase(symbol, await res.text());
+  let xml: string | undefined;
+  for (const url of form4DocumentPaths(cik, accession, primaryDocument)) {
+    const res = await fetch(url, {
+      headers: { accept: "application/xml,text/xml,text/plain", "user-agent": userAgent },
+      signal: AbortSignal.timeout(4_500),
+      next: { revalidate: 3_600 },
+    });
+    if (!res.ok) continue;
+    const text = await res.text();
+    if (/<ownershipDocument[\s>]/i.test(text)) {
+      xml = text;
+      break;
+    }
+  }
+  if (!xml) return null;
+  const purchase = parseForm4InsiderPurchase(symbol, xml);
   if (!purchase) return null;
   const label = `${purchase.ownerRole} ${purchase.ownerName}이 ${formatUsd(purchase.value)} 규모 자사주 매수 · ${mmdd(purchase.transactionDate)}`;
   return {
@@ -170,10 +186,13 @@ export async function fetchRecentSecFilings(symbol: string, limit = 4): Promise<
     const recent = data.filings?.recent;
     if (!recent?.form?.length) return [];
     const out: SecFilingHit[] = [];
+    let form4XmlScans = 0;
     for (let i = 0; i < recent.form.length && i < SEC_RECENT_FORM_SCAN_LIMIT && out.length < limit; i += 1) {
       const form = recent.form[i];
       const accession = recent.accessionNumber?.[i];
       if (form !== "4" || !accession) continue;
+      if (form4XmlScans >= SEC_FORM4_XML_SCAN_LIMIT) break;
+      form4XmlScans += 1;
       const hit = await fetchForm4InsiderPurchase(symbol, cik, accession, recent.primaryDocument?.[i], userAgent).catch(() => null);
       if (hit) out.push(hit);
     }
