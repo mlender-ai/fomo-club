@@ -149,11 +149,54 @@ describe("news hook reprocessing", () => {
         },
         "가격담합 소송 제기에 -1.3%",
       ],
+      [
+        {
+          stock: "블룸에너지",
+          title: "Brookfield Expands Bloom Energy AI Power Partnership to $25 Billion",
+          changePct: 10.069,
+        },
+        "브룩필드 AI 전력 파트너십 25십억달러 확대에 +10%",
+      ],
+      [
+        {
+          stock: "조비에비에이션",
+          title: "Joby Aviation and Toyota form joint venture for air taxi production",
+          changePct: 3.36,
+        },
+        "토요타와 에어택시 합작사 설립에 +3.4%",
+      ],
+      [
+        {
+          stock: "HPE",
+          title: "ScanSource Announces Expansion of HPE Networking Partnership to Include HPE Juniper Networking",
+          changePct: 1.57,
+        },
+        "스캔소스 주니퍼 네트워킹 파트너십 확대에 +1.6%",
+      ],
+      [
+        {
+          stock: "IBM",
+          title: "International Business Machines (IBM) Unveils World’s First 0.7-Nanometer Semiconductor Tech",
+          changePct: 1.15,
+        },
+        "0.7나노 반도체 기술 공개에 +1.1%",
+      ],
     ];
 
     for (const [input, expected] of cases) {
       expect(ruleReprocessNewsHook({ ...base, ...input })).toBe(expected);
     }
+  });
+
+  it("does not promote broad market-question headlines just to increase US card count", () => {
+    expect(
+      ruleReprocessNewsHook({
+        ...base,
+        stock: "KLA",
+        title: "Can KLA Corporation (KLAC) Capture Its Share of a $250 Billion Global Chip Equipment Market?",
+        changePct: 8.377,
+      })
+    ).toBeUndefined();
   });
 
   it("keeps bundle articles out of single-stock headlines", () => {

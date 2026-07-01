@@ -1127,7 +1127,10 @@ async function stockPayload(
   const frontReason = frontMaterialReason(front);
   const synthesizedWhy = synthesis.headline;
   const why = isConcreteMaterialReason(synthesizedWhy) ? synthesizedWhy : frontReason?.reason ?? synthesizedWhy;
-  const sourceEvent = synthesis.primary?.kind === "news_mention" || synthesis.primary?.kind === "disclosure" ? synthesis.primary : undefined;
+  const sourceEvent =
+    synthesis.primary?.kind === "news_mention" || synthesis.primary?.kind === "disclosure"
+      ? synthesis.primary
+      : resolvedCandidate.events.find((event) => event.kind === "news_mention" || event.kind === "disclosure");
   const sourceTitle = sourceEvent?.sourceTitle?.trim();
   const sourceName = (sourceEvent?.sourceName ?? sourceEvent?.source)?.trim();
   const sourceLabel = sourceTitle ? `${sourceTitle}${sourceName ? ` · ${sourceName}` : ""}` : sourceName ?? frontReason?.sourceLabel;
@@ -1775,6 +1778,19 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const stock = await stockPayload(row, candidate, front);
     const headline = stock.headline?.trim();
     if (stock.headlineProvenance?.provenance === "suppressed" || !headline) {
+      if ((row.country === "US" || candidate.country === "US") && process.env.DISCOVERY_DEBUG_US_DROPS === "1") {
+        const material = candidate.events.find((event) => event.kind === "news_mention" || event.kind === "disclosure");
+        console.warn("[US drop suppressed]", {
+          ticker: candidate.ticker,
+          axis: stock.headlineProvenance?.axis,
+          eventKind: stock.headlineProvenance?.eventRef?.kind,
+          materialKind: material?.kind,
+          materialTitle: material?.sourceTitle ?? material?.headlineHook ?? material?.label,
+          materialSource: material?.sourceName ?? material?.source,
+          materialUrl: material?.sourceUrl,
+          changePct: material?.changePct,
+        });
+      }
       continue;
     }
     const isUsStock = row.country === "US" || candidate.country === "US" || stock.country === "US";
@@ -1783,7 +1799,21 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       const headlineEventKind = headlineEvent?.kind;
       const hasSurfaceMaterial = headlineEventKind === "news_mention" || headlineEventKind === "disclosure";
       const hasGroundedMaterial = Boolean(stock.sourceLabel && (stock.sourceUrl || headlineEvent?.url));
-      if (!hasSurfaceMaterial || !hasGroundedMaterial) continue;
+      if (!hasSurfaceMaterial || !hasGroundedMaterial) {
+        if (process.env.DISCOVERY_DEBUG_US_DROPS === "1") {
+          console.warn("[US drop ungrounded]", {
+            ticker: candidate.ticker,
+            headline,
+            headlineEventKind,
+            hasSurfaceMaterial,
+            hasGroundedMaterial,
+            sourceLabel: stock.sourceLabel,
+            sourceUrl: stock.sourceUrl,
+            eventUrl: headlineEvent?.url,
+          });
+        }
+        continue;
+      }
     }
     stocks.push(stock);
     fronts[candidate.ticker] = front;

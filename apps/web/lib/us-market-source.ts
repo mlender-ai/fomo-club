@@ -11,11 +11,13 @@ const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const US_DYNAMIC_UNIVERSE_LIMIT = 260;
-const US_QUOTE_BATCH_SIZE = 80;
-const US_SPARKLINE_LIMIT = 90;
+const US_QUOTE_BATCH_SIZE = 60;
+const US_SPARKLINE_LIMIT = 60;
 const US_NASDAQ_SCREENER_LIMIT = 7000;
 const US_NASDAQ_FALLBACK_LIMIT = 120;
-const US_NASDAQ_FALLBACK_CONCURRENCY = 12;
+const US_NASDAQ_FALLBACK_CONCURRENCY = 3;
+const TWELVE_BATCH_PAUSE_MS = 350;
+const TWELVE_RETRY_DELAYS_MS = [0, 1_200, 2_800] as const;
 const US_MOVER_TYPES = ["gainers", "losers", "most_active"] as const;
 
 interface TwelveQuote {
@@ -89,6 +91,14 @@ function chunks<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size) as T[]);
   return out;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryTwelveStatus(status: number): boolean {
+  return status === 429 || status >= 500;
 }
 
 function marketFor(defMarket: string, exchange: string | undefined): DiscoveryMarket {
@@ -516,21 +526,34 @@ async function fetchQuotes(symbols: readonly string[], key: string): Promise<Rec
   const url = new URL(TWELVE_DATA_URL);
   url.searchParams.set("symbol", symbols.join(","));
   url.searchParams.set("apikey", key);
-  const res = await fetch(url.toString(), {
-    headers: { accept: "application/json", "user-agent": UA },
-    signal: AbortSignal.timeout(8_000),
-    next: { revalidate: 600 },
-  });
-  if (!res.ok) return {};
-  return normalizeQuoteResponse(await res.json());
+  for (let attempt = 0; attempt < TWELVE_RETRY_DELAYS_MS.length; attempt += 1) {
+    const delay = TWELVE_RETRY_DELAYS_MS[attempt] ?? 0;
+    if (delay > 0) await sleep(delay);
+    try {
+      const res = await fetch(url.toString(), {
+        headers: { accept: "application/json", "user-agent": UA },
+        signal: AbortSignal.timeout(8_000),
+        next: { revalidate: 600 },
+      });
+      if (res.ok) return normalizeQuoteResponse(await res.json());
+      if (!shouldRetryTwelveStatus(res.status)) return {};
+    } catch {
+      // Retry transient network/timeouts within the small Twelve Data budget.
+    }
+  }
+  return {};
 }
 
 async function fetchQuoteBatches(symbols: readonly string[], key: string): Promise<Record<string, TwelveQuote>> {
   const out: Record<string, TwelveQuote> = {};
-  const settled = await Promise.allSettled(chunks(symbols, US_QUOTE_BATCH_SIZE).map((batch) => fetchQuotes(batch, key)));
-  for (const result of settled) {
-    if (result.status !== "fulfilled") continue;
-    Object.assign(out, result.value);
+  const batches = chunks(symbols, US_QUOTE_BATCH_SIZE);
+  for (let index = 0; index < batches.length; index += 1) {
+    try {
+      Object.assign(out, await fetchQuotes(batches[index] ?? [], key));
+    } catch {
+      // A failed quote batch should not drop already fetched rows.
+    }
+    if (index < batches.length - 1) await sleep(TWELVE_BATCH_PAUSE_MS);
   }
   return out;
 }
@@ -542,21 +565,34 @@ async function fetchSparklines(symbols: readonly string[], key: string): Promise
   url.searchParams.set("interval", "1day");
   url.searchParams.set("outputsize", "42");
   url.searchParams.set("apikey", key);
-  const res = await fetch(url.toString(), {
-    headers: { accept: "application/json", "user-agent": UA },
-    signal: AbortSignal.timeout(8_000),
-    next: { revalidate: 1_800 },
-  });
-  if (!res.ok) return {};
-  return normalizeTimeSeriesResponse(await res.json());
+  for (let attempt = 0; attempt < TWELVE_RETRY_DELAYS_MS.length; attempt += 1) {
+    const delay = TWELVE_RETRY_DELAYS_MS[attempt] ?? 0;
+    if (delay > 0) await sleep(delay);
+    try {
+      const res = await fetch(url.toString(), {
+        headers: { accept: "application/json", "user-agent": UA },
+        signal: AbortSignal.timeout(8_000),
+        next: { revalidate: 1_800 },
+      });
+      if (res.ok) return normalizeTimeSeriesResponse(await res.json());
+      if (!shouldRetryTwelveStatus(res.status)) return {};
+    } catch {
+      // Retry transient network/timeouts within the small Twelve Data budget.
+    }
+  }
+  return {};
 }
 
 async function fetchSparklineBatches(symbols: readonly string[], key: string): Promise<Record<string, number[]>> {
   const out: Record<string, number[]> = {};
-  const settled = await Promise.allSettled(chunks(symbols, US_QUOTE_BATCH_SIZE).map((batch) => fetchSparklines(batch, key)));
-  for (const result of settled) {
-    if (result.status !== "fulfilled") continue;
-    Object.assign(out, result.value);
+  const batches = chunks(symbols, US_QUOTE_BATCH_SIZE);
+  for (let index = 0; index < batches.length; index += 1) {
+    try {
+      Object.assign(out, await fetchSparklines(batches[index] ?? [], key));
+    } catch {
+      // A failed chart batch should not drop already fetched sparklines.
+    }
+    if (index < batches.length - 1) await sleep(TWELVE_BATCH_PAUSE_MS);
   }
   return out;
 }

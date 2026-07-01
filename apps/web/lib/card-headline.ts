@@ -145,7 +145,7 @@ function ruleHeadlineFromMaterial(
   sourceTitle: string | undefined
 ): string | undefined {
   if (!isMaterialEvent(primary)) return undefined;
-  if (resolvedCardAxis(candidate) !== "price") return undefined;
+  if (resolvedCardAxis(candidate) === "supply") return undefined;
   const title = sourceTitle ?? eventSourceTitle(primary);
   if (!title) return undefined;
   return ruleReprocessNewsHook({

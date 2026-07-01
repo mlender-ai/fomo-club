@@ -157,6 +157,42 @@ describe("resolveCardHeadline", () => {
     expect(result.provenance).toBe("rule");
   });
 
+  it("allows concrete material-axis US headlines instead of suppressing them", async () => {
+    const title = "ScanSource Announces Expansion of HPE Networking Partnership to Include HPE Juniper Networking";
+    const event: DiscoveryEvent = {
+      ...baseEvent,
+      label: title,
+      sourceTitle: title,
+      sourceName: "Yahoo Finance",
+      sourceUrl: "https://example.com/hpe",
+      changePct: 1.57,
+      strength: 0.88,
+    };
+    const usCandidate: DiscoveryCandidate = {
+      ticker: "HPE",
+      market: "NYSE",
+      country: "US",
+      sector: "클라우드",
+      events: [event],
+      asOf: "2026-06-29",
+    };
+
+    const result = await resolveCardHeadline({
+      candidate: usCandidate,
+      synthesis: synthesis({
+        headline: title,
+        tone: "material",
+        primary: event,
+      }),
+      synthesisMethod: "ai",
+      sourceLabel: `${title} · Yahoo Finance`,
+    });
+
+    expect(result.text).toBe("스캔소스 주니퍼 네트워킹 파트너십 확대에 +1.6%");
+    expect(result.axis).toBe("material");
+    expect(result.provenance).toBe("rule");
+  });
+
   it("suppresses strong US non-material moves instead of filling the deck", async () => {
     const event: DiscoveryEvent = {
       kind: "price_move",

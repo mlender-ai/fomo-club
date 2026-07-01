@@ -221,6 +221,12 @@ function localizeKnownEnglishCompany(value: string | undefined): string | undefi
     [/\bMarvell\b/i, "마벨"],
     [/\bIBM\b/i, "아이비엠"],
     [/\bWaymo\b/i, "웨이모"],
+    [/\bBrookfield\b/i, "브룩필드"],
+    [/\bBloom Energy\b/i, "블룸에너지"],
+    [/\bToyota\b/i, "토요타"],
+    [/\bScanSource\b/i, "스캔소스"],
+    [/\bJuniper\b/i, "주니퍼"],
+    [/\bKLA\b|\bKLAC\b/i, "KLA"],
   ];
   return known.find(([pattern]) => pattern.test(clean))?.[1];
 }
@@ -249,6 +255,10 @@ function localizeEnglishPhrase(value: string): string {
     [/\bunlimitail\b/i, "언리미테일"],
     [/\bprecisely\b/i, "프리사이슬리"],
     [/\bwaymo\b/i, "웨이모"],
+    [/\bbloom\s+energy\s+ai\s+power\b|\bai\s+power\s+partnership\b/i, "AI 전력 파트너십"],
+    [/\bair\s+taxi\s+production\b|\bair\s+taxi\b/i, "에어택시 생산"],
+    [/\bhpe\s+juniper\s+networking\b|\bjuniper\s+networking\b/i, "주니퍼 네트워킹"],
+    [/\b0\.7[-\s]?nanometer\s+semiconductor\s+tech\b/i, "0.7나노 반도체 기술"],
   ];
   const fuzzyHit = fuzzy.find(([pattern]) => pattern.test(clean))?.[1];
   if (fuzzyHit) return fuzzyHit;
@@ -382,6 +392,18 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
   if (/ai\s+supply\s+chain\s+apps?/i.test(title)) hooks.push("AI 공급망 앱 공개");
   if (/trainium/i.test(title)) hooks.push("트레이니움 칩 판매 이슈");
   if (/sub[-\s]?1nm\s+chip/i.test(title)) hooks.push("서브 1나노 칩 공개");
+  if (/brookfield.*expands?.*bloom\s+energy.*ai\s+power\s+partnership/i.test(title)) {
+    hooks.push(amount ? `브룩필드 AI 전력 파트너십 ${amount} 확대` : "브룩필드 AI 전력 파트너십 확대");
+  }
+  if (/joby\s+aviation.*toyota.*joint\s+venture.*air\s+taxi/i.test(title)) {
+    hooks.push("토요타와 에어택시 합작사 설립");
+  }
+  if (/scansource.*expansion.*(?:hpe\s+)?networking\s+partnership.*juniper/i.test(title)) {
+    hooks.push("스캔소스 주니퍼 네트워킹 파트너십 확대");
+  }
+  if (/international\s+business\s+machines|\bibm\b/i.test(title) && /0\.7[-\s]?nanometer\s+semiconductor/i.test(title)) {
+    hooks.push("0.7나노 반도체 기술 공개");
+  }
   if (/bitcoin\s+sales?|sale\s+of\s+bitcoin|sell\s+bitcoin/i.test(title)) hooks.push("비트코인 매각 프레임워크 공개");
   if (/new\s+billion[-\s]?dollar\s+deal|billion[-\s]?dollar\s+deal|inks?\s+new\s+billion/i.test(title)) {
     hooks.push("십억달러 규모 계약 체결");
