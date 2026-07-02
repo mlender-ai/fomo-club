@@ -53,6 +53,7 @@ import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { isAbstractTemplate } from "./copy-guards";
+import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
@@ -76,6 +77,8 @@ const THEME_BUNDLE_MAX_ITEMS = 4;
 const NARRATIVE_MAX_CARDS = 1;
 const NARRATIVE_MIN_STOCKS = 2;
 const NARRATIVE_MAX_STOCKS = 4;
+const US_DISCOVERY_MIN_RESPONSE_CARDS = 10;
+const US_DISCOVERY_CONTENT_CARD_LIMIT = 12;
 const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? Math.max(0, Math.min(720, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 720) || 720))
   : 0;
@@ -144,7 +147,8 @@ export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
 export type DiscoveryDeckCardPayload =
   | ({ kind: "stock" } & DiscoveryStockPayload)
   | DiscoveryThemeBundleCard
-  | DiscoveryNarrativeCardPayload;
+  | DiscoveryNarrativeCardPayload
+  | DeckContentCard;
 
 export interface DiscoveryNarrativeStockPayload {
   ticker: string;
@@ -1800,9 +1804,25 @@ function interleaveThemeBundles(
   stocks: readonly DiscoveryStockPayload[],
   bundles: readonly DiscoveryThemeBundleCard[],
   narratives: readonly DiscoveryNarrativeCardPayload[] = [],
+  contents: readonly DeckContentCard[] = [],
 ): DiscoveryDeckCardPayload[] {
   const cards: DiscoveryDeckCardPayload[] = stocks.map((stock) => ({ kind: "stock", ...stock }));
-  if ((bundles.length === 0 && narratives.length === 0) || cards.length < 8) return cards;
+  if (bundles.length === 0 && narratives.length === 0 && contents.length === 0) return cards;
+  if (cards.length < 8) {
+    const supplemental: DiscoveryDeckCardPayload[] = [...bundles, ...narratives, ...contents];
+    if (cards.length === 0) return supplemental;
+    const out: DiscoveryDeckCardPayload[] = [];
+    let supplementalIndex = 0;
+    cards.forEach((card, index) => {
+      out.push(card);
+      if ((index + 1) % 2 === 0 && supplementalIndex < supplemental.length) {
+        out.push(supplemental[supplementalIndex]!);
+        supplementalIndex += 1;
+      }
+    });
+    out.push(...supplemental.slice(supplementalIndex));
+    return out;
+  }
   const out = [...cards];
   bundles.forEach((bundle, index) => {
     const insertAt = Math.min(out.length, 6 + index * 10);
@@ -1811,6 +1831,10 @@ function interleaveThemeBundles(
   narratives.forEach((narrative, index) => {
     const insertAt = Math.min(out.length, 8 + index * 12);
     out.splice(insertAt, 0, narrative);
+  });
+  contents.forEach((content, index) => {
+    const insertAt = Math.min(out.length, 5 + index * 7);
+    out.splice(insertAt, 0, content);
   });
   return out;
 }
@@ -1823,6 +1847,13 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     ? targetedMaterialCandidateLimit(scope, options.targetedMaterialLimit)
     : 0;
   const asOf = discoveryAsOf(scope);
+  const discoveryContentPromise =
+    scope === "US"
+      ? fetchDeckContentCards().catch((err) => {
+        console.warn("[discovery-supply] US content cards failed", err);
+        return [] as DeckContentCard[];
+      })
+      : Promise.resolve([] as DeckContentCard[]);
   const [rows, attentionMap] = await Promise.all([
     fetchMarketRows(scope),
     scope === "US"
@@ -2069,12 +2100,21 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   });
   const bundleCards = buildThemeBundleCards(ranked, rowsByTicker);
   const narrativeCards = buildNarrativeCards(ranked, rowsByTicker);
+  const rawContentCards = await discoveryContentPromise;
+  const usContentLimit =
+    scope === "US"
+      ? Math.min(
+        US_DISCOVERY_CONTENT_CARD_LIMIT,
+        Math.max(3, US_DISCOVERY_MIN_RESPONSE_CARDS - stocks.length - bundleCards.length - narrativeCards.length)
+      )
+      : 0;
+  const contentCards = scope === "US" ? expandDeckContentCardsForScope(rawContentCards, "world", usContentLimit) : [];
 
   return {
     asOf,
     country: scope,
     stocks,
-    cards: interleaveThemeBundles(stocks, bundleCards, narrativeCards),
+    cards: interleaveThemeBundles(stocks, bundleCards, narrativeCards, contentCards),
     fronts,
     confidence: stocks.length >= deckCardCount ? "H" : stocks.length >= Math.min(30, Math.ceil(deckCardCount * 0.75)) ? "M" : "L",
     source: targetedMaterialEnabled ? DISCOVERY_SOURCE_LABEL : "시장 시세·공시·수급 캐시",
