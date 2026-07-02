@@ -1,0 +1,130 @@
+import { NextResponse } from "next/server";
+import { withCors } from "../../../../lib/fomo";
+import type { StockCountry, StockMarket } from "@fomo/core";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 20;
+
+const YAHOO_HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
+const YAHOO_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const MAX_ITEMS = 40;
+
+interface PriceRequestItem {
+  stock: string;
+  symbol?: string;
+  naverCode?: string;
+  market?: StockMarket;
+  country?: StockCountry;
+}
+
+interface PriceResponseItem {
+  stock: string;
+  yahooSymbol: string;
+  currentPrice: number;
+  asOf: string;
+}
+
+function yahooSymbolFor(item: PriceRequestItem): string | null {
+  const rawSymbol = item.symbol?.trim().toUpperCase();
+  if (item.country === "US" || item.market === "NASDAQ" || item.market === "NYSE") {
+    return rawSymbol || item.stock.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "");
+  }
+  const code = item.naverCode?.trim() || (/^\d{6}$/.test(rawSymbol ?? "") ? rawSymbol : "");
+  if (code && item.market === "KOSDAQ") return `${code}.KQ`;
+  if (code && item.market === "KOSPI") return `${code}.KS`;
+  return null;
+}
+
+async function fetchYahooPrice(yahooSymbol: string): Promise<{ currentPrice: number; asOf: string } | null> {
+  for (const host of YAHOO_HOSTS) {
+    try {
+      const url = `${host}/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?range=3mo&interval=1d`;
+      const res = await fetch(url, {
+        headers: { accept: "application/json", "user-agent": YAHOO_UA },
+        signal: AbortSignal.timeout(7_000),
+        next: { revalidate: 600 },
+      });
+      if (!res.ok) continue;
+      const payload = (await res.json()) as {
+        chart?: {
+          result?: {
+            meta?: { regularMarketPrice?: number };
+            timestamp?: number[];
+            indicators?: { quote?: { close?: (number | null)[] }[] };
+          }[];
+        };
+      };
+      const result = payload.chart?.result?.[0];
+      const closes = result?.indicators?.quote?.[0]?.close?.filter(
+        (value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0
+      );
+      const currentPrice =
+        typeof result?.meta?.regularMarketPrice === "number" && result.meta.regularMarketPrice > 0
+          ? result.meta.regularMarketPrice
+          : closes?.at(-1);
+      if (typeof currentPrice !== "number" || !Number.isFinite(currentPrice) || currentPrice <= 0) continue;
+      const lastTs = result?.timestamp?.at(-1);
+      return {
+        currentPrice,
+        asOf: lastTs ? new Date(lastTs * 1000).toISOString() : new Date().toISOString(),
+      };
+    } catch {
+      // Try the next Yahoo host.
+    }
+  }
+  return null;
+}
+
+async function mapLimit<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += limit) {
+    const chunk = items.slice(i, i + limit);
+    out.push(...(await Promise.all(chunk.map(worker))));
+  }
+  return out;
+}
+
+export function OPTIONS() {
+  return withCors(new NextResponse(null, { status: 204 }));
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as { items?: PriceRequestItem[] };
+    const items = Array.isArray(body.items) ? body.items.slice(0, MAX_ITEMS) : [];
+    const jobs = items
+      .map((item) => ({ item, yahooSymbol: yahooSymbolFor(item) }))
+      .filter((job): job is { item: PriceRequestItem; yahooSymbol: string } => !!job.yahooSymbol && !!job.item.stock);
+
+    const rows = await mapLimit(jobs, 5, async ({ item, yahooSymbol }): Promise<PriceResponseItem | null> => {
+      const price = await fetchYahooPrice(yahooSymbol);
+      if (!price) return null;
+      return { stock: item.stock, yahooSymbol, ...price };
+    });
+
+    const prices = Object.fromEntries(
+      rows
+        .filter((row): row is PriceResponseItem => row !== null)
+        .map((row) => [
+          row.stock,
+          {
+            yahooSymbol: row.yahooSymbol,
+            currentPrice: row.currentPrice,
+            asOf: row.asOf,
+          },
+        ])
+    );
+
+    return withCors(
+      NextResponse.json(
+        { prices },
+        {
+          headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600" },
+        }
+      )
+    );
+  } catch {
+    return withCors(NextResponse.json({ prices: {} }, { status: 200 }));
+  }
+}

@@ -16,6 +16,7 @@ import { NarrativeCard } from "@/components/NarrativeCard";
 import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
+import { recordDiscoverySeen } from "@/lib/discoveryPerformance";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
 import type { DeckStock } from "@/lib/discoveryDeck";
@@ -847,8 +848,14 @@ export function StockSwipeDeck({
     }
     if (lastSeenStock.current === stock) return;
     lastSeenStock.current = stock;
-    if (isStockCard(card)) recordStockInterest(card.data.canonical, "seen", Date.now());
-  }, [idx, deckCards]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isStockCard(card)) {
+      const now = Date.now();
+      recordStockInterest(card.data.canonical, "seen", now);
+      recordDiscoverySeen(card.data, now, {
+        ...(front[card.data.canonical] ? { front: front[card.data.canonical] } : {}),
+      });
+    }
+  }, [idx, deckCards, front]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const card = at(idx);
@@ -856,6 +863,7 @@ export function StockSwipeDeck({
     const stock = card.data.canonical;
     if (!front[stock] || hydratedRecorded.current.has(stock)) return;
     hydratedRecorded.current.add(stock);
+    recordDiscoverySeen(card.data, Date.now(), { front: front[stock], reason: whyFor(card.data) });
     recordDiscoveryEvent("card_hydrate");
   }, [idx, front, deckCards]); // eslint-disable-line react-hooks/exhaustive-deps
 

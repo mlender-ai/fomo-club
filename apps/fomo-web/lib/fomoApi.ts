@@ -30,6 +30,7 @@ const CACHE_TTL = {
   stockBasics: 6 * HOUR,
   themeInsight: 6 * HOUR,
   stockInsight: 6 * HOUR,
+  performancePrices: 10 * MINUTE,
 } as const;
 export const KEYWORDS_UPDATED_EVENT = "fomo:keywords-updated";
 export const DISCOVERY_UPDATED_EVENT = "fomo:discovery-updated";
@@ -412,6 +413,56 @@ export const fetchStockFront = (stock: string, opts: { lite?: boolean; naverCode
       ),
     CACHE_TTL.stockFront
   );
+
+export interface DiscoveryPerformancePriceRequestItem {
+  stock: string;
+  symbol?: string;
+  naverCode?: string;
+  market?: import("@fomo/core").StockMarket;
+  country?: import("@fomo/core").StockCountry;
+}
+
+export interface DiscoveryPerformancePrice {
+  yahooSymbol: string;
+  currentPrice: number;
+  asOf: string;
+}
+
+export interface DiscoveryPerformancePricesResponse {
+  prices: Record<string, DiscoveryPerformancePrice>;
+}
+
+export async function fetchDiscoveryPerformancePrices(
+  items: readonly DiscoveryPerformancePriceRequestItem[]
+): Promise<DiscoveryPerformancePricesResponse> {
+  const clean = items
+    .filter((item) => item.stock)
+    .slice(0, 40)
+    .map((item) => ({
+      stock: item.stock,
+      ...(item.symbol ? { symbol: item.symbol } : {}),
+      ...(item.naverCode ? { naverCode: item.naverCode } : {}),
+      ...(item.market ? { market: item.market } : {}),
+      ...(item.country ? { country: item.country } : {}),
+    }));
+  const key = `performance-prices:${clean
+    .map((item) => `${item.stock}:${item.symbol ?? ""}:${item.naverCode ?? ""}:${item.market ?? ""}:${item.country ?? ""}`)
+    .join("|")}`;
+  return cachedGet(
+    key,
+    async () => {
+      const res = await fetch(`${API_BASE}/api/fomo/performance-prices`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ items: clean }),
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`POST /api/fomo/performance-prices ${res.status}`);
+      return res.json() as Promise<DiscoveryPerformancePricesResponse>;
+    },
+    CACHE_TTL.performancePrices
+  );
+}
 
 export interface DiscoveryStockResponse {
   kind?: "stock";
