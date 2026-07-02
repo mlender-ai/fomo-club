@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withCors } from "../../../../lib/fomo";
+import { assembleStockFront } from "../../../../lib/stock-front";
 import type { StockCountry, StockMarket } from "@fomo/core";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,29 @@ async function fetchYahooPrice(yahooSymbol: string): Promise<{ currentPrice: num
   return null;
 }
 
+function parsePriceText(text: string | undefined): number | null {
+  if (!text) return null;
+  const raw = text.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/u)?.[0];
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+async function fetchStockFrontFallback(item: PriceRequestItem): Promise<{ currentPrice: number; asOf: string } | null> {
+  try {
+    const front = await assembleStockFront(item.stock, {}, {}, {
+      lite: true,
+      ...(item.naverCode ? { naverCode: item.naverCode } : {}),
+      ...(item.symbol ? { symbol: item.symbol } : {}),
+    });
+    const currentPrice = parsePriceText(front.priceText);
+    if (!currentPrice) return null;
+    return { currentPrice, asOf: new Date().toISOString() };
+  } catch {
+    return null;
+  }
+}
+
 async function mapLimit<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];
   for (let i = 0; i < items.length; i += limit) {
@@ -98,7 +122,7 @@ export async function POST(req: Request) {
       .filter((job): job is { item: PriceRequestItem; yahooSymbol: string } => !!job.yahooSymbol && !!job.item.stock);
 
     const rows = await mapLimit(jobs, 5, async ({ item, yahooSymbol }): Promise<PriceResponseItem | null> => {
-      const price = await fetchYahooPrice(yahooSymbol);
+      const price = (await fetchYahooPrice(yahooSymbol)) ?? (await fetchStockFrontFallback(item));
       if (!price) return null;
       return { stock: item.stock, yahooSymbol, ...price };
     });
