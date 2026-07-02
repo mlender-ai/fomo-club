@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
 import { CaretUpIcon, CaretDownIcon, XMarkIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
-import { LoginPage } from "@/components/LoginPage";
 import type {
   FomoIndexResponse,
   TallyResponse,
@@ -23,13 +22,10 @@ import type {
  * (감정 게이트/캘린더/한마디 props는 보존 차원에서 시그니처에 남기되 미사용 — flag로 숨김 유지.)
  */
 type Tab = "card" | "history";
-const FIRST_VISIT_NOTICE_KEY = "fomo_first_visit_notice_v1";
 const NEON = "#D8FF3A";
 
 export function HomeView({
   index,
-  loggedIn,
-  onLoggedIn,
 }: {
   index: FomoIndexResponse | null;
   tally: TallyResponse | null;
@@ -45,20 +41,8 @@ export function HomeView({
   onLoggedIn: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("card");
-  const [authOpen, setAuthOpen] = useState(false);
-  const [noticeOpen, setNoticeOpen] = useState(false);
-  const [noticeChecked, setNoticeChecked] = useState(true);
   const [indexHelpOpen, setIndexHelpOpen] = useState(false);
   const color = index ? scoreToColor(index.score) : undefined;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      setNoticeOpen(window.localStorage.getItem(FIRST_VISIT_NOTICE_KEY) !== "accepted");
-    } catch {
-      setNoticeOpen(true);
-    }
-  }, []);
 
   /**
    * 전체 폴백 판정: 기본 온도만 있는 상태다.
@@ -76,15 +60,9 @@ export function HomeView({
   return (
     <>
       <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-20 pt-4">
-        {/* 상단 얇은 띠: 로고 + 로그인(취향 기억) */}
+        {/* 상단 얇은 띠: 로고 */}
         <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="text-xs text-muted transition-colors hover:text-whiteout"
-          >
-            {loggedIn ? "내 계정" : "로그인"}
-          </button>
         </div>
 
         {/* 시장 온도(FOMO Index) */}
@@ -124,7 +102,7 @@ export function HomeView({
 
         <div className={`mt-3 flex flex-1 flex-col ${tab === "card" ? "justify-center" : ""}`}>
           {tab === "card" ? (
-            <KeywordCardFeed loggedIn={loggedIn} onRequireLogin={() => setAuthOpen(true)} />
+            <KeywordCardFeed loggedIn={true} />
           ) : (
             <KeywordHistory />
           )}
@@ -139,27 +117,7 @@ export function HomeView({
         </div>
       </nav>
 
-      {authOpen && (
-        <LoginPage loggedIn={loggedIn} onClose={() => setAuthOpen(false)} onAuthed={onLoggedIn} />
-      )}
-
       {indexHelpOpen && <FomoIndexInfoSheet index={index} onClose={() => setIndexHelpOpen(false)} />}
-
-      {noticeOpen && (
-        <FirstVisitNoticeSheet
-          checked={noticeChecked}
-          onCheckedChange={setNoticeChecked}
-          onAccept={() => {
-            if (!noticeChecked) return;
-            try {
-              window.localStorage.setItem(FIRST_VISIT_NOTICE_KEY, "accepted");
-            } catch {
-              /* localStorage 실패 시에도 이번 세션 흐름은 막지 않는다. */
-            }
-            setNoticeOpen(false);
-          }}
-        />
-      )}
     </>
   );
 }

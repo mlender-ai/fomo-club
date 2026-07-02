@@ -8,7 +8,7 @@ import {
   type SurpriseStock,
 } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
-import { TodayDiscoveryDeck } from "@/components/TodayDiscoveryDeck";
+import { UnifiedDailyDeck } from "@/components/UnifiedDailyDeck";
 import { KEYWORDS_UPDATED_EVENT, fetchKeywords, fetchThemeInsight, recordTaste, type KeywordsResponse } from "@/lib/fomoApi";
 import { keywordInterestScore, recordInterest } from "@/lib/keywordInterest";
 import { recordViewed, getHistory } from "@/lib/keywordHistory";
@@ -146,7 +146,7 @@ interface FeedGate {
 }
 
 export function KeywordCardFeed({ loggedIn, onRequireLogin }: FeedGate = {}) {
-  return <TodayDiscoveryDeck loggedIn={loggedIn} onRequireLogin={onRequireLogin} />;
+  return <UnifiedDailyDeck loggedIn={loggedIn} onRequireLogin={onRequireLogin} />;
 }
 
 /** "오늘" 탭 — 기존 쏠림(키워드) 피드(무변경). */

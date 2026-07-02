@@ -31,6 +31,7 @@ const CACHE_TTL = {
   themeInsight: 6 * HOUR,
   stockInsight: 6 * HOUR,
   performancePrices: 10 * MINUTE,
+  daily30: HOUR,
 } as const;
 export const KEYWORDS_UPDATED_EVENT = "fomo:keywords-updated";
 export const DISCOVERY_UPDATED_EVENT = "fomo:discovery-updated";
@@ -46,6 +47,10 @@ export type { DiscoveryCountryScope } from "./discoveryCountryScope";
 
 function discoveryFastPath(country: DiscoveryCountryScope = "KR"): string {
   return `/api/fomo/discovery?fast=1&country=${encodeURIComponent(country)}`;
+}
+
+function daily30Path(): string {
+  return "/api/fomo/daily-30";
 }
 
 function kstDateKey(now = new Date()): string {
@@ -549,7 +554,13 @@ export interface DiscoveryNarrativeResponse {
   asOf: string;
 }
 
-export type DiscoveryCardResponse = DiscoveryStockResponse | DiscoveryThemeBundleResponse | DiscoveryNarrativeResponse;
+export type DiscoveryContentResponse = DeckContent;
+
+export type DiscoveryCardResponse =
+  | DiscoveryStockResponse
+  | DiscoveryThemeBundleResponse
+  | DiscoveryNarrativeResponse
+  | DiscoveryContentResponse;
 
 export interface DiscoveryResponse {
   asOf: string;
@@ -559,6 +570,23 @@ export interface DiscoveryResponse {
   fronts: Record<string, StockFrontResponse>;
   confidence: "L" | "M" | "H";
   source: string;
+}
+
+export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
+
+export interface Daily30Response extends DiscoveryResponse {
+  country: "all";
+  meta?: {
+    targetCount: number;
+    cards: Array<{
+      id: string;
+      assetClass: Daily30AssetClass;
+      quietScore: number;
+      signalScore: number;
+      hypePenalty: number;
+    }>;
+    assetCounts: Record<Daily30AssetClass, number>;
+  };
 }
 
 export interface DiscoveryUpdatedDetail {
@@ -602,6 +630,11 @@ function cardCopyFields(card: DiscoveryCardResponse): string[] {
       card.trigger.headline,
       ...card.stocks.map((stock) => stock.relationReason),
     ].filter((text): text is string => typeof text === "string" && text.trim().length > 0);
+  }
+  if (card.kind === "content") {
+    return [card.headline, ...card.facts.map((fact) => `${fact.label} ${fact.value}`)].filter(
+      (text): text is string => typeof text === "string" && text.trim().length > 0
+    );
   }
   return stockCopyFields(card);
 }
@@ -733,6 +766,52 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
 }
 
 export const warmDiscovery = (country: DiscoveryCountryScope = "KR") => fetchDiscovery(country);
+
+function hasDaily30Cards(value: Daily30Response | null | undefined): value is Daily30Response {
+  return hasDiscoveryCards(value, "all") && value.country === "all" && (value.cards?.length ?? 0) > 0;
+}
+
+async function fetchDaily30Network(): Promise<Daily30Response> {
+  const path = daily30Path();
+  try {
+    return await fetchJsonWithTimeout<Daily30Response>(
+      path,
+      { cache: "no-store", credentials: "same-origin" },
+      DISCOVERY_SAME_ORIGIN_TIMEOUT_MS,
+      `GET ${path}`
+    );
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[fomoApi] same-origin daily-30 failed; retrying backend", err);
+    }
+  }
+
+  let lastError: unknown = null;
+  for (const origin of backendOrigins()) {
+    try {
+      return await fetchJsonWithTimeout<Daily30Response>(
+        `${origin}${path}`,
+        { cache: "no-store" },
+        DISCOVERY_BACKEND_TIMEOUT_MS,
+        `GET ${origin}${path}`
+      );
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("GET /api/fomo/daily-30 failed");
+}
+
+export async function fetchDaily30(): Promise<Daily30Response> {
+  const key = `daily-30:${DISCOVERY_CACHE_VERSION}:${kstDateKey()}`;
+  const cached = readCached<Daily30Response>(key);
+  if (hasDaily30Cards(cached)) return cached;
+  const fresh = await cachedGet(key, fetchDaily30Network, CACHE_TTL.daily30);
+  if (!hasDaily30Cards(fresh)) throw new Error("GET /api/fomo/daily-30 returned invalid deck");
+  return fresh;
+}
+
+export const warmDaily30 = () => fetchDaily30();
 
 export interface AxisSnapshotEntry {
   axisSignals: import("@fomo/core").AxisSignal[];

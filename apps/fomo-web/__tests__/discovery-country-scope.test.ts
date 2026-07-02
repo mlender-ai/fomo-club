@@ -65,4 +65,30 @@ describe("discovery country scope", () => {
 
     expect(discoveryMatchesCountry(polluted, "US")).toBe(false);
   });
+
+  it("accepts scoped content cards in the matching discovery deck", async () => {
+    expect(
+      discoveryMatchesCountry(
+        {
+          ...baseDiscovery,
+          cards: [
+            ...(baseDiscovery.cards ?? []),
+            { kind: "content", scope: "world" },
+            { kind: "content", scope: "global" },
+          ],
+        },
+        "US"
+      )
+    ).toBe(true);
+
+    expect(
+      discoveryMatchesCountry(
+        {
+          ...baseDiscovery,
+          cards: [...(baseDiscovery.cards ?? []), { kind: "content", scope: "domestic" }],
+        },
+        "US"
+      )
+    ).toBe(false);
+  });
 });
