@@ -18,13 +18,19 @@ describe("headline latin fragment guard", () => {
 
 describe("개발 단계 제약 해제 토글 (DEV_CONSTRAINTS_LIFTED)", () => {
   const advice = "엔비디아 지금 매수 추천, 추가 상승 기대";
+  const decision = "와이코프 스프링 확인, 지지선 위 매수 시점으로 보이고 목표가 12만원·손절선 10만원";
 
   it("해제(lifted) 상태에서는 투자조언·예측 표현을 통과시킨다", () => {
     expect(hasForbiddenCopy(advice, { liftDevConstraints: true })).toBe(false);
   });
 
+  it("해제(lifted) 상태에서는 매수/매도 판단·목표가·TA 표현도 통과시킨다", () => {
+    expect(hasForbiddenCopy(decision, { liftDevConstraints: true })).toBe(false);
+  });
+
   it("복원(false) 상태에서는 투자조언·예측 표현을 다시 막는다 — 단일 토글로 복원", () => {
     expect(hasForbiddenCopy(advice, { liftDevConstraints: false })).toBe(true);
+    expect(hasForbiddenCopy(decision, { liftDevConstraints: false })).toBe(true);
   });
 
   it("현재 기본 플래그가 해제 상태이므로 옵션 없이도 통과한다", () => {

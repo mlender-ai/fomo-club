@@ -76,7 +76,10 @@ describe("why-driven insight synthesis guard", () => {
   it("개발 플래그로 advice reason 토글 — 해제 시 통과, false 로 복원", () => {
     const candidate = baseCandidate();
     const base = synthesizeDiscoveryInsight(candidate);
-    const adviceInsight = { ...base, synthesis: `${base.synthesis} 지금 매수 추천` };
+    const adviceInsight = {
+      ...base,
+      synthesis: `${base.synthesis} 지금 매수 추천, 목표가와 손절선 기준을 함께 보는 자리`,
+    };
     // 복원(false): 투자조언 reason 다시 발생
     expect(whyInsightRejectionReasons(adviceInsight, candidate, { liftDevConstraints: false })).toContain("advice");
     // 해제(true): 투자조언 reason 제거(개발 자유) — 사실/품질 reason 은 무관하게 그대로
