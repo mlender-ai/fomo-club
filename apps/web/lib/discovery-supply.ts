@@ -760,8 +760,11 @@ function insiderClusterLabel(candidate: InsiderClusterCandidate): string {
     typeof delta === "number" && delta >= 1
       ? `내부자 ${candidate.insiderCount}명 클러스터 · 지분 ${Math.round(delta)}% 확대 · ${valueText}`
       : `내부자 ${candidate.insiderCount}명 클러스터 매집 · ${valueText}`;
+  // 현재가 소스 부재(Yahoo egress 차단·TwelveData 쿼터) → 공시된 내부자 취득가를 진입 기준선으로 노출(현재가 아님).
+  const priceText = insiderMoney(candidate.buyPrice);
+  const withPrice = priceText ? `${base} · 취득가 ${priceText}` : base;
   const quiet = typeof candidate.quote?.changePct === "number" && Math.abs(candidate.quote.changePct) < 2;
-  return quiet ? `${base} · 아직 조용한 구간` : base;
+  return quiet ? `${withPrice} · 아직 조용한 구간` : withPrice;
 }
 
 function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): DiscoveryEvent {
