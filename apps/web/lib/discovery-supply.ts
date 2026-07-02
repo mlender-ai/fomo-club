@@ -49,6 +49,7 @@ import { selectDominantAxis } from "./card-axis";
 import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchCachedUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
+import { fetchInsiderClusterCandidates, type InsiderClusterCandidate } from "./insider-source";
 import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
@@ -737,6 +738,109 @@ async function hydrateUsMarketWideMaterial(
     const event = materialEventFromUsArticle(article, asOf, article.source || "시장 뉴스");
     if (!event) continue;
     byTicker.set(ticker, { ...current, events: [...current.events, event] });
+  }
+}
+
+function insiderValueText(usd: number): string {
+  if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(usd >= 10_000_000 ? 0 : 1)}M`;
+  if (usd >= 1_000) return `$${Math.round(usd / 1_000)}K`;
+  return `$${Math.round(usd)}`;
+}
+
+function insiderMoney(price: number | undefined): string | undefined {
+  if (typeof price !== "number" || !Number.isFinite(price)) return undefined;
+  return `$${price >= 100 ? price.toLocaleString("en-US", { maximumFractionDigits: 2 }) : price.toFixed(2)}`;
+}
+
+/** 내부자 클러스터 매수 → 관측 서술 카피(사실만·판단/예측 없음). "클러스터" 키워드로 재료성 확보. */
+function insiderClusterLabel(candidate: InsiderClusterCandidate): string {
+  const valueText = insiderValueText(candidate.valueUsd);
+  const delta = candidate.ownershipDeltaPct;
+  const base =
+    typeof delta === "number" && delta >= 1
+      ? `내부자 ${candidate.insiderCount}명 클러스터 · 지분 ${Math.round(delta)}% 확대 · ${valueText}`
+      : `내부자 ${candidate.insiderCount}명 클러스터 매집 · ${valueText}`;
+  const quiet = typeof candidate.quote?.changePct === "number" && Math.abs(candidate.quote.changePct) < 2;
+  return quiet ? `${base} · 아직 조용한 구간` : base;
+}
+
+function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): DiscoveryEvent {
+  const label = insiderClusterLabel(candidate);
+  // 발굴(오늘 노출) 시점 기준 — addStaticRecoveryRows 와 동일 패턴. 실제 공시일은 summary 로 명시(정직).
+  const filingText = /^\d{4}-\d{2}-\d{2}$/.test(candidate.filingDate)
+    ? `${candidate.filingDate} 공시`
+    : "최근 공시";
+  return {
+    kind: "disclosure",
+    firstSeen: true,
+    strength: 0.99,
+    source: "SEC Form 4 · openinsider",
+    asOf,
+    confidence: "H",
+    direction: "flat",
+    label,
+    sourceTitle: `${filingText} · 내부자 ${candidate.insiderCount}명 공개시장 매수 (SEC Form 4)`,
+    summary: `${filingText} · 내부자 ${candidate.insiderCount}명 공개시장 매수`,
+    sourceName: "SEC Form 4",
+    headlineHook: label,
+    insiderPurchase: true,
+    sourceUrl: `http://openinsider.com/${candidate.symbol}`,
+  };
+}
+
+/** openinsider 영문 업종 → 한글 섹터(INDUSTRY_HINTS 매칭). 못 맞추면 undefined(다운스트림 폴백). */
+function insiderSectorHint(symbol: string, industry: string | undefined): string | undefined {
+  if (!industry) return undefined;
+  const label = inferDiscoverySectorLabel(symbol, [
+    { kind: "market_context", firstSeen: false, strength: 0, source: "", asOf: "", confidence: "L", label: industry },
+  ]);
+  return label === "기타 업종" ? undefined : label;
+}
+
+function insiderClusterRow(candidate: InsiderClusterCandidate): DiscoveryMarketRow {
+  const quote = candidate.quote;
+  const changePct = quote?.changePct;
+  const changeDir: "up" | "down" | "flat" =
+    typeof changePct !== "number" ? "flat" : changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
+  const priceText = insiderMoney(quote?.price);
+  return {
+    canonical: candidate.symbol,
+    symbol: candidate.symbol,
+    market: "NASDAQ",
+    country: "US",
+    currency: "USD",
+    marketCapRank: 900,
+    ...(priceText ? { priceText } : {}),
+    ...(typeof changePct === "number" ? { changePct, changeDir } : {}),
+    ...(quote?.sparkline && quote.sparkline.length >= 2 ? { sparkline: quote.sparkline } : {}),
+    ...(insiderSectorHint(candidate.symbol, candidate.industry) ? { sectorHint: insiderSectorHint(candidate.symbol, candidate.industry)! } : {}),
+    sessionLabel: latestUsSessionAsOf().label,
+  };
+}
+
+/**
+ * US 내부자 클러스터 매수 발굴 — 조용한 종목까지 덱에 주입한다.
+ * 이미 유니버스에 있으면 내부자 이벤트만 보강, 없으면 합성 row+event를 직접 주입(eligible 게이트 우회).
+ * openinsider 실패 시 조용히 no-op(fail-open).
+ */
+async function hydrateUsInsiderClusterRows(
+  byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>,
+  asOf: string
+): Promise<void> {
+  const candidates = await fetchInsiderClusterCandidates().catch((): InsiderClusterCandidate[] => []);
+  if (candidates.length === 0) return;
+  for (const candidate of candidates) {
+    const event = insiderClusterEvent(candidate, asOf);
+    const existing = [...byTicker.entries()].find(
+      ([, value]) => value.row.country === "US" && value.row.symbol?.toUpperCase() === candidate.symbol
+    );
+    if (existing) {
+      const [ticker, current] = existing;
+      if (current.events.some((e) => e.insiderPurchase)) continue;
+      byTicker.set(ticker, { ...current, events: [...current.events, event] });
+      continue;
+    }
+    byTicker.set(candidate.symbol, { row: insiderClusterRow(candidate), events: [event] });
   }
 }
 
@@ -1940,6 +2044,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   }
 
   if (scope === "US") {
+    await hydrateUsInsiderClusterRows(byTicker, asOf);
     await hydrateUsMarketWideMaterial(byTicker, asOf);
   }
 
