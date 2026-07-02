@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MOCK_KEYWORD_CARDS, scoreToColor, type KeywordCard } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { MyDiscoveryPreview } from "@/components/MyDiscoveryPreview";
+import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
 import { getHistory } from "@/lib/keywordHistory";
+import { DISCOVERY_PERFORMANCE_UPDATED_EVENT, getDiscoverySeen } from "@/lib/discoveryPerformance";
 import { getWatchlist, type WatchItem } from "@/lib/watchlist";
 
 /**
@@ -23,10 +25,21 @@ function relativeTime(ts: number): string {
 export function KeywordHistory() {
   const [history] = useState(() => getHistory());
   const [watchlist] = useState(() => getWatchlist());
+  const [seenItems, setSeenItems] = useState(() => getDiscoverySeen());
   const [selected, setSelected] = useState<KeywordCard | null>(null);
   const [stockSel, setStockSel] = useState<WatchItem | null>(null);
 
-  if (history.length === 0 && watchlist.length === 0) {
+  useEffect(() => {
+    const refresh = () => setSeenItems(getDiscoverySeen());
+    window.addEventListener(DISCOVERY_PERFORMANCE_UPDATED_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(DISCOVERY_PERFORMANCE_UPDATED_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  if (history.length === 0 && watchlist.length === 0 && seenItems.length === 0) {
     return (
       <p className="mt-16 text-center text-sm leading-6 text-muted">
         아직 관심 둔 게 없어요.
@@ -38,6 +51,7 @@ export function KeywordHistory() {
 
   return (
     <div className="w-full">
+      <PerformanceProofPanel items={seenItems} />
       <MyDiscoveryPreview items={watchlist} onOpen={setStockSel} />
 
       {history.length > 0 && <p className="mb-3 px-1 text-xs text-muted">내가 본 키워드</p>}
