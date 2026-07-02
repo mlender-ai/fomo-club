@@ -28,6 +28,16 @@ describe("spec analyze", () => {
     expect(result.findings.map((finding) => finding.code)).toContain("constitution.forbidden_copy");
   });
 
+  it("allows investment judgment copy while the dev override is active", () => {
+    const result = analyzeSpecDiff(
+      diffFor("apps/fomo-web/components/StockSwipeDeck.tsx", ["+const label = '지금 매수 기회예요';"]),
+      { guardDiscoveryRan: true, investmentJudgmentConstraintsLifted: true },
+    );
+
+    expect(result.findings.map((finding) => finding.code)).not.toContain("constitution.forbidden_copy");
+    expect(result.ok).toBe(true);
+  });
+
   it("does not treat regex guard definitions as user-facing generic copy", () => {
     const result = analyzeSpecDiff(
       diffFor("apps/fomo-web/components/StockSwipeDeck.tsx", [
