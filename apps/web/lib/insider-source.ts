@@ -2,11 +2,14 @@
  * 내부자 클러스터 매수 발굴 소스 (US, DATA_ENGINE_STRATEGY 선행/수급 축).
  *
  * openinsider "latest cluster buys"(여러 내부자가 동반 매수한 공개시장 매수, SEC Form 4 집계)를
- * 매일 수집해 조용한 종목까지 발굴 카드로 띄운다. 현재가/스파크라인은 Yahoo chart(무료·무차단)로 보강한다.
+ * 매일 수집해 조용한 종목까지 발굴 카드로 띄운다. 현재가/스파크라인은 Nasdaq(Vercel egress 통과)
+ * 우선·Yahoo 폴백으로 보강한다.
  *
  * 순수 데이터(LLM 0). 관측 서술만 — 매수·매도 판단/예측 없음.
  * openinsider가 막히거나 비면 조용히 빈 배열(fail-open) — 제품은 기존 US 유니버스로 정상 동작.
  */
+
+import { fetchNasdaqQuote } from "./us-market-source";
 
 const OPENINSIDER_CLUSTER_URL = "http://openinsider.com/latest-cluster-buys";
 /** Yahoo chart 호스트 폴백(둘 다 429 나면 시세는 best-effort 생략, 카드는 openinsider 근거로 정상). */
@@ -157,6 +160,20 @@ function dedupeAndRank(rows: InsiderClusterBuy[]): InsiderClusterBuy[] {
   return [...best.values()].sort((a, b) => b.valueUsd - a.valueUsd).slice(0, MAX_CLUSTER_ROWS);
 }
 
+/** 시세 보강: Nasdaq(Vercel egress 통과) 우선, 실패 시 Yahoo 폴백. */
+async function fetchSymbolQuote(symbol: string): Promise<InsiderClusterQuote | undefined> {
+  const nasdaq = await fetchNasdaqQuote(symbol).catch(() => null);
+  if (nasdaq) {
+    return {
+      price: nasdaq.price,
+      currency: "USD",
+      ...(typeof nasdaq.changePct === "number" ? { changePct: nasdaq.changePct } : {}),
+      ...(nasdaq.sparkline && nasdaq.sparkline.length >= 2 ? { sparkline: nasdaq.sparkline } : {}),
+    };
+  }
+  return fetchYahooQuote(symbol);
+}
+
 async function fetchYahooQuote(symbol: string): Promise<InsiderClusterQuote | undefined> {
   let text: string | null = null;
   for (const host of YAHOO_CHART_HOSTS) {
@@ -217,6 +234,6 @@ export async function fetchInsiderClusterCandidates(): Promise<InsiderClusterCan
   if (!html) return [];
   const ranked = dedupeAndRank(parseOpenInsiderClusterBuys(html));
   if (ranked.length === 0) return [];
-  const quotes = await mapLimit(ranked, YAHOO_CONCURRENCY, (row) => fetchYahooQuote(row.symbol).catch(() => undefined));
+  const quotes = await mapLimit(ranked, YAHOO_CONCURRENCY, (row) => fetchSymbolQuote(row.symbol).catch(() => undefined));
   return ranked.map((row, i) => ({ ...row, ...(quotes[i] ? { quote: quotes[i] } : {}) }));
 }
