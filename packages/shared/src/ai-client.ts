@@ -45,6 +45,60 @@ interface LlmResponse {
   choices?: Array<{ message?: { content?: string } }>;
 }
 
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+
+function isGeminiEndpoint(url: string): boolean {
+  return /generativelanguage\.googleapis\.com|\/google\/|googleapis\.com\/v1beta\/openai/i.test(url);
+}
+
+function isGeminiModel(model: string): boolean {
+  return /^gemini(?:-|\/)/i.test(model) || /gemini-2\.5-flash/i.test(model);
+}
+
+function geminiApiAllowed(): boolean {
+  return process.env["ALLOW_GEMINI_API"] === "1";
+}
+
+function groqKey(): string {
+  return process.env["GROQ_API_KEY"] ?? "";
+}
+
+function groqModel(): string {
+  return process.env["GROQ_MODEL"] || DEFAULT_GROQ_MODEL;
+}
+
+function resolveRuntimeConfig(opts: Pick<CallAiOptions, "apiUrl" | "apiKey" | "model">): {
+  url: string;
+  key: string;
+  model: string;
+  blockedProvider?: "gemini";
+} {
+  let url = aiApiUrl(opts.apiUrl);
+  let key = resolveAiKey(opts.apiKey);
+  let model = resolveModel(opts.model);
+
+  if (!url && groqKey()) {
+    url = GROQ_API_URL;
+    key = groqKey();
+    model = groqModel();
+  }
+
+  if ((isGeminiEndpoint(url) || isGeminiModel(model)) && !geminiApiAllowed()) {
+    const fallbackKey = groqKey();
+    if (fallbackKey) {
+      return {
+        url: GROQ_API_URL,
+        key: fallbackKey,
+        model: groqModel(),
+      };
+    }
+    return { url: "", key: "", model, blockedProvider: "gemini" };
+  }
+
+  return { url, key, model };
+}
+
 /** AI_API_KEY → (공란/USE_GITHUB_TOKEN) GITHUB_TOKEN 폴백. 7곳 중복이던 키 해소 로직 단일화. */
 export function resolveAiKey(apiKey?: string): string {
   const configured = apiKey ?? process.env["AI_API_KEY"] ?? "";
@@ -64,7 +118,11 @@ export function resolveModel(model?: string): string {
 
 /** 호출 가능 여부(URL+키). 미설정이면 호출 생략하고 정직한 빈 결과. */
 export function isAiConfigured(apiUrl?: string, apiKey?: string): boolean {
-  return Boolean(aiApiUrl(apiUrl)) && Boolean(resolveAiKey(apiKey));
+  const runtime = resolveRuntimeConfig({
+    ...(apiUrl !== undefined ? { apiUrl } : {}),
+    ...(apiKey !== undefined ? { apiKey } : {}),
+  });
+  return Boolean(runtime.url) && Boolean(runtime.key);
 }
 
 /**
@@ -72,10 +130,13 @@ export function isAiConfigured(apiUrl?: string, apiKey?: string): boolean {
  * 예외를 던지지 않는다 — 호출부는 result.ok 로 분기하고 자체 폴백을 유지한다.
  */
 export async function callAI(opts: CallAiOptions): Promise<CallAiResult> {
-  const url = aiApiUrl(opts.apiUrl);
-  const key = resolveAiKey(opts.apiKey);
-  const model = resolveModel(opts.model);
+  const runtime = resolveRuntimeConfig(opts);
+  const { url, key, model } = runtime;
   const result: CallAiResult = { content: "", ok: false, status: 0, model };
+  if (runtime.blockedProvider === "gemini") {
+    console.warn("[ai-client] Gemini API 호출 차단: GROQ_API_KEY가 없어 LLM 호출을 생략합니다.");
+    return result;
+  }
   if (!url || !key) return result;
 
   const finishTrace = beginTrace(opts.trace, {
