@@ -4,9 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { FEATURE_EMOTION_VOTE, type EmotionType } from "@fomo/core";
 import { EmotionGate } from "@/components/EmotionGate";
 import { HomeView } from "@/components/HomeView";
-import { SplashScreen } from "@/components/SplashScreen";
 import { getSessionId } from "@/lib/session";
-import { hasSession } from "@/lib/auth";
 import {
   FOMO_INDEX_UPDATED_EVENT,
   fetchIndex,
@@ -16,7 +14,7 @@ import {
   fetchVoices,
   fetchFeed,
   fetchNews,
-  warmDiscovery,
+  warmDaily30,
   postVote,
   type FeedResponse,
   type NewsResponse,
@@ -28,23 +26,15 @@ import {
   type MarketScore,
 } from "@/lib/fomoApi";
 
-type Phase = "splash" | "splashLeaving" | "gate" | "home";
+type Phase = "gate" | "home";
 
 /**
  * 진입 여정 오케스트레이터 — 스플래시가 떠 있는 동안 발견 덱 데이터를 먼저 당긴다.
  * (감정 투표 flag 가 켜져 오늘 미선택이면 gate 로, 현재는 OFF 라 대부분 home.)
  */
 export default function Home() {
-  const [phase, setPhase] = useState<Phase>("splash");
+  const [phase, setPhase] = useState<Phase>("home");
   const [gateReopen, setGateReopen] = useState(false);
-  const splashDismissedRef = useRef(false);
-  const pendingGateRef = useRef(false);
-
-  const dismissSplash = useCallback(() => {
-    splashDismissedRef.current = true;
-    setPhase("splashLeaving");
-    setTimeout(() => setPhase(pendingGateRef.current ? "gate" : "home"), 500);
-  }, []);
 
   const [index, setIndex] = useState<FomoIndexResponse | null>(null);
   const [tally, setTally] = useState<TallyResponse | null>(null);
@@ -55,7 +45,6 @@ export default function Home() {
   const [feed, setFeed] = useState<FeedResponse | null>(null);
   const [news, setNews] = useState<NewsResponse | null>(null);
   const [mine, setMine] = useState<EmotionType | null>(null);
-  const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     const onIndexUpdated = (event: Event) => {
@@ -64,11 +53,6 @@ export default function Home() {
     };
     window.addEventListener(FOMO_INDEX_UPDATED_EVENT, onIndexUpdated);
     return () => window.removeEventListener(FOMO_INDEX_UPDATED_EVENT, onIndexUpdated);
-  }, []);
-
-  // 로그인 상태는 클라에서만 확정(SSR 불일치 방지).
-  useEffect(() => {
-    void hasSession().then(setLoggedIn);
   }, []);
 
   // 뉴스 피드는 외부 RSS 다중 수집이라 느릴 수 있다 — 스플래시를 막지 않고 별도로 로드.
@@ -86,9 +70,9 @@ export default function Home() {
     startedRef.current = true;
 
     const sid = getSessionId();
-    void warmDiscovery().catch((err) => {
+    void warmDaily30().catch((err) => {
       if (process.env.NODE_ENV !== "production") {
-        console.warn("[Home] discovery prewarm failed", err);
+        console.warn("[Home] daily-30 prewarm failed", err);
       }
     });
 
@@ -123,10 +107,8 @@ export default function Home() {
     });
 
     load.then((todays) => {
-      // CTA 전에는 스플래시를 절대 닫지 않는다. 게이트 필요 여부만 예약한다.
       if (FEATURE_EMOTION_VOTE && !todays) {
-        if (splashDismissedRef.current) setPhase("gate");
-        else pendingGateRef.current = true;
+        setPhase("gate");
       }
     });
   }, []);
@@ -169,20 +151,6 @@ export default function Home() {
     setPhase("home");
   }, []);
 
-  // 로그인 성공(SignupGate) → 토큰 기준으로 캘린더 재조회(익명+연결분 합쳐 표시).
-  const handleLoggedIn = useCallback(() => {
-    setLoggedIn(true);
-    fetchCalendar(getSessionId())
-      .then(setCalendar)
-      .catch(() => {
-        /* 조회 실패해도 게이트는 통과 — 다음 진입에 다시 시도 */
-      });
-  }, []);
-
-  if (phase === "splash" || phase === "splashLeaving") {
-    return <SplashScreen leaving={phase === "splashLeaving"} onDone={dismissSplash} />;
-  }
-
   if (phase === "gate") {
     return (
       <EmotionGate
@@ -207,8 +175,8 @@ export default function Home() {
       voices={voices}
       mine={mine}
       onReopenGate={reopenGate}
-      loggedIn={loggedIn}
-      onLoggedIn={handleLoggedIn}
+      loggedIn={true}
+      onLoggedIn={() => undefined}
     />
   );
 }
