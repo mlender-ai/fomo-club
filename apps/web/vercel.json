@@ -2,5 +2,11 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && npm ci",
   "buildCommand": "cd ../.. && npx prisma generate && npm run build:web",
-  "outputDirectory": ".next-build"
+  "outputDirectory": ".next-build",
+  "crons": [
+    {
+      "path": "/api/fomo/cron/daily-30",
+      "schedule": "0 21 * * *"
+    }
+  ]
 }
