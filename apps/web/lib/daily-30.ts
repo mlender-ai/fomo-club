@@ -156,11 +156,12 @@ function computeHypePenalty(stock: DiscoveryStockPayload, front: DiscoveryFrontS
 }
 
 function stockCandidate(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed | undefined): Daily30Candidate | null {
+  if (!hasPricedFront(front)) return null;
   if (FAMOUS_STOCKS.has(stock.canonical) && !strongQuietSignal(stock)) return null;
   const signalScore = computeStockSignal(stock, front);
   const hypePenalty = computeHypePenalty(stock, front);
   const quietScore = signalScore - hypePenalty;
-  if (quietScore < 6 && !hasPricedFront(front)) return null;
+  if (quietScore < 6) return null;
   return {
     kind: "stock",
     id: stockId(stock),
