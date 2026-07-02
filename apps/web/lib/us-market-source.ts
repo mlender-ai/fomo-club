@@ -432,6 +432,52 @@ async function fetchNasdaqDaily(seed: UsDiscoverySymbol): Promise<DiscoveryMarke
   return parseNasdaqRow(seed, parseNasdaqHistorical(await res.json()));
 }
 
+export interface NasdaqSymbolQuote {
+  price: number;
+  changePct?: number;
+  sparkline?: number[];
+  sessionLabel?: string;
+}
+
+/**
+ * 임의 US 심볼의 시세(현재가·등락·스파크라인) — api.nasdaq.com historical 재사용.
+ * Yahoo egress 차단·TwelveData 쿼터와 무관하게 Vercel 에서 동작(스크리너와 동일 경로).
+ * 실패 시 null(fail-open).
+ */
+export async function fetchNasdaqQuote(symbol: string): Promise<NasdaqSymbolQuote | null> {
+  const sym = symbol.trim().toUpperCase();
+  if (!sym) return null;
+  const { from, to } = historyRange();
+  const url = new URL(`${NASDAQ_HISTORICAL_URL}/${encodeURIComponent(sym)}/historical`);
+  url.searchParams.set("assetclass", "stocks");
+  url.searchParams.set("fromdate", from);
+  url.searchParams.set("todate", to);
+  url.searchParams.set("limit", "42");
+  const res = await fetch(url.toString(), {
+    headers: {
+      accept: "application/json, text/plain, */*",
+      "user-agent": NASDAQ_UA,
+      origin: "https://www.nasdaq.com",
+      referer: "https://www.nasdaq.com/",
+    },
+    signal: AbortSignal.timeout(6_000),
+    next: { revalidate: 1_800 },
+  }).catch(() => null);
+  if (!res || !res.ok) return null;
+  const points = parseNasdaqHistorical(await res.json().catch(() => null)).filter((p) => Number.isFinite(p.close));
+  if (points.length < 1) return null;
+  const latest = points.at(-1)!;
+  const previous = points.length >= 2 ? points.at(-2) : undefined;
+  const changePct = previous && previous.close !== 0 ? ((latest.close - previous.close) / previous.close) * 100 : undefined;
+  const sparkline = points.slice(-30).map((p) => p.close);
+  return {
+    price: latest.close,
+    ...(typeof changePct === "number" ? { changePct } : {}),
+    ...(sparkline.length >= 2 ? { sparkline } : {}),
+    sessionLabel: usSessionAsOfLabel(latest.date).label,
+  };
+}
+
 async function fetchNasdaqRows(seeds: readonly UsDiscoverySymbol[]): Promise<DiscoveryMarketRow[]> {
   const settled = await mapLimit(seeds.slice(0, US_NASDAQ_FALLBACK_LIMIT), US_NASDAQ_FALLBACK_CONCURRENCY, fetchNasdaqDaily);
   return settled
