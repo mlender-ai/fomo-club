@@ -1,0 +1,76 @@
+name: Feed Content Prewarm
+
+# 피드 콘텐츠 강화(WO) — 브리핑/버즈/회고를 크론이 빌드해 캐시에 쓴다(요청 경로 LLM/fetch 0).
+# - morning 20:30 UTC = 05:30 KST: 간밤의 미장 브리핑 (06:00 KST daily-30 빌드 전에)
+# - close   07:10 UTC = 16:10 KST: 오늘의 국장 브리핑 + 버즈 스토리 (장마감 후)
+# - weekly  금 07:40 UTC = 16:40 KST: "일주일 전에 샀으면" 주간 회고
+# 빌드 후 daily-30 을 다시 워밍해 새 콘텐츠가 응답에 실리게 한다.
+
+on:
+  schedule:
+    - cron: "30 20 * * *"
+    - cron: "10 7 * * 1-5"
+    - cron: "40 7 * * 5"
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Slot to run (morning | close | weekly). Defaults by schedule time."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feed-content
+  cancel-in-progress: false
+
+jobs:
+  prewarm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve slot
+        id: slot
+        env:
+          INPUT_SLOT: ${{ github.event.inputs.slot }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_SLOT:-}" ]; then
+            SLOT="$INPUT_SLOT"
+          else
+            HOUR="$(date -u +%H)"; MINUTE="$(date -u +%M)"
+            if [ "$HOUR" = "20" ]; then
+              SLOT="morning"
+            elif [ "$HOUR" = "07" ] && [ "$MINUTE" -ge 30 ]; then
+              SLOT="weekly"
+            else
+              SLOT="close"
+            fi
+          fi
+          case "$SLOT" in morning|close|weekly) ;; *) echo "invalid slot: $SLOT" >&2; exit 1;; esac
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+
+      - name: Build feed content
+        env:
+          SLOT: ${{ steps.slot.outputs.slot }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/cron/feed-content?slot=${SLOT}"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl -fsS "$URL" -H "Authorization: Bearer ${CRON_SECRET}"
+          else
+            curl -fsS "$URL"
+          fi
+
+      - name: Rewarm daily-30 with fresh content
+        run: |
+          set -euo pipefail
+          curl -fsS "https://fomo-club-backend.vercel.app/api/fomo/daily-30" > /tmp/daily30.json
+          node -e '
+            const fs = require("fs");
+            const json = JSON.parse(fs.readFileSync("/tmp/daily30.json", "utf8"));
+            const contents = (json.cards || []).filter((c) => c.kind === "content");
+            const kinds = contents.map((c) => c.contentType);
+            console.log(JSON.stringify({ cards: json.cards?.length || 0, contents: contents.length, kinds }));
+          '

@@ -17,7 +17,8 @@ export async function GET() {
     const load = unstable_cache(
       () => buildDaily30Response(),
       ["fomo-daily-30", cacheVersion(), kstDate()],
-      { revalidate: REVALIDATE_S }
+      // 태그: feed-content 크론(브리핑/버즈/회고 갱신)이 revalidateTag 로 즉시 재빌드 유도.
+      { revalidate: REVALIDATE_S, tags: ["daily-30"] }
     );
     return withCors(
       NextResponse.json(await load(), {
