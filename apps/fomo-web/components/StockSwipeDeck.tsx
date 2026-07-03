@@ -399,23 +399,7 @@ function StockCardFace({
         </div>
       )}
 
-      {/* 포모 점수 + 강도 미터 + 라벨 (척추) — 숫자=픽셀 디스플레이(라틴), 한글 라벨=Pretendard. 주목도(품질 아님). */}
-      {view.scoreText && (
-        <div className="mt-3.5 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[10px] uppercase tracking-wide text-text-secondary">포모</span>
-            <span className="font-number text-3xl font-bold leading-none" style={{ color: NEON }}>
-              {view.scoreText.replace(/[^0-9]/g, "")}
-            </span>
-          </div>
-          <FomoMeter score={Number(view.scoreText.replace(/[^0-9]/g, "")) || 0} color={NEON} />
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-whiteout">
-            {view.emoji === "🔥" && <FlameIcon size={15} />}
-            {view.emoji === "💎" && <GemIcon size={15} />}
-            {view.badge}
-          </span>
-        </div>
-      )}
+      {/* 포모 점수는 카드 메인에서 제거(WO 1.5 E) — 뎁스 하단 배지로 강등. 몰입은 종목·재료·판단이 담당. */}
 
       {/* 테마 태그 */}
       {themeLabel && (
@@ -929,8 +913,9 @@ export function StockSwipeDeck({
   const topReady = isStockCard(top) ? !!front[top.data.canonical] : true;
 
   return (
-    <div className="w-full">
-      <div className="relative mx-auto h-[52svh] min-h-[380px] max-h-[520px] w-full select-none sm:min-h-[420px]">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+      {/* 풀스크린 틴더 카드(WO 1.5 E) — 부모 flex 안에서 남는 높이를 전부 차지. max-h 캡 제거(잘림 방지). */}
+      <div className="relative mx-auto min-h-[52svh] w-full flex-1 select-none">
         {/* 다음 카드 — 뒤에 살짝 드러나는 스택(틴더식 peek). 위 카드가 불투명이라 body 통과 비침은 없음. */}
         {deckCards.length > 1 && (
           <div
@@ -990,7 +975,7 @@ export function StockSwipeDeck({
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-4">
+      <div className="mt-4 flex shrink-0 items-center justify-center gap-4">
         <button
           onClick={undoLast}
           disabled={!!exiting || restoring || !undoEntry}

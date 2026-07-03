@@ -24,15 +24,15 @@ function validNaverCode(code: string | null): string | undefined {
   return c && /^\d{6}$/.test(c) ? c : undefined;
 }
 
-async function getBasics(stock: string, naverCode?: string): Promise<StockBasics> {
+async function getBasics(stock: string, naverCode?: string, symbol?: string): Promise<StockBasics> {
   const today = kstDate();
-  const key = `${today}:${stock}:${naverCode ?? ""}`;
+  const key = `${today}:${stock}:${naverCode ?? ""}:${symbol ?? ""}`;
   const running = inflight.get(key);
   if (running) return running;
 
   const load = unstable_cache(
-    async () => fetchStockBasics(stock, naverCode),
-    ["fomo-stock-basics", cacheVersion(), today, stock, naverCode ?? ""],
+    async () => fetchStockBasics(stock, naverCode, symbol),
+    ["fomo-stock-basics", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
     { revalidate: REVALIDATE_S }
   );
   const p = load().finally(() => inflight.delete(key));
@@ -46,7 +46,8 @@ export async function GET(req: Request) {
   if (!stock) {
     return withCors(NextResponse.json({ error: "stock required" }, { status: 400 }));
   }
-  const payload = await getBasics(stock, validNaverCode(url.searchParams.get("code")));
+  const symbol = url.searchParams.get("symbol")?.trim().toUpperCase() || undefined;
+  const payload = await getBasics(stock, validNaverCode(url.searchParams.get("code")), symbol);
   return withCors(
     NextResponse.json(payload, {
       headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800" },
