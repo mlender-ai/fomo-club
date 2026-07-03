@@ -380,6 +380,8 @@ function mergeFrontSeed(
     ...(fresh.axisHook ?? seed.axisHook ? { axisHook: fresh.axisHook ?? seed.axisHook } : {}),
     // 판단 층 단일 진실(WO 1.5 A) — 카드(seed)의 verdict 우선. 카드=뎁스 stance 모순 금지.
     ...(seed.verdict ?? fresh.verdict ? { verdict: seed.verdict ?? fresh.verdict } : {}),
+    // 차트 시리즈(WO 1.6 D)는 non-lite 응답(fresh)에만 실린다.
+    ...(fresh.chartSeries ?? seed.chartSeries ? { chartSeries: fresh.chartSeries ?? seed.chartSeries } : {}),
   };
 }
 
@@ -1042,54 +1044,203 @@ const TA_ROLE_GROUPS: Array<{ role: "event" | "balance" | "confirmation"; label:
   { role: "confirmation", label: "보조 확인" },
 ];
 
-/**
- * 차트분석(TA) 탭 — 엔진(technical-analysis.ts)이 관측한 사실을 role 별로 그대로 노출.
- * 추천·예측성 문구 추가 금지(관측 서술만 노출). facts 0개면 정직한 빈 상태.
- * 데이터 부족 지표(MA120·52주)는 엔진이 이미 스킵하므로 여기선 자연히 안 뜬다.
- */
-function ChartAnalysisTab({ ta, basisDays }: { ta?: StockFrontResponse["ta"]; basisDays: number }) {
-  const facts = ta?.facts ?? [];
-  if (facts.length === 0) {
-    return (
-      <section className="mt-2">
-        {basisDays > 0 && (
-          <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
+// 차트 선 색 — 등락색 금지 원칙 유지. 종가=밝음, MA는 회색 계조 + 주목 오렌지, 무효선=라임 점선.
+const CHART_COLOR = {
+  close: "#FAFAFA",
+  ma20: "#FF8A50",
+  ma60: "#9A9A96",
+  ma120: "#5A5A57",
+  invalidation: "#D8FF3A",
+  volume: "rgba(255,255,255,0.18)",
+} as const;
+
+/** 종가+MA20/60/120+거래량+무효화 레벨선(WO 1.6 D-1) — 기존 svg 방식 확장, 라이브러리 없음. */
+function AnalysisChart({
+  series,
+  invalidationLevel,
+}: {
+  series: NonNullable<StockFrontResponse["chartSeries"]>;
+  invalidationLevel?: number | undefined;
+}) {
+  const W = 320;
+  const PRICE_H = 132;
+  const VOL_TOP = 142;
+  const VOL_H = 36;
+  const H = VOL_TOP + VOL_H;
+  const n = series.closes.length;
+  if (n < 2) return null;
+
+  const lineValues = [
+    ...series.closes,
+    ...series.ma20.filter((v): v is number => v !== null),
+    ...series.ma60.filter((v): v is number => v !== null),
+    ...series.ma120.filter((v): v is number => v !== null),
+  ];
+  // 무효 레벨이 가격대 근처(±25%)면 스케일에 포함해 화면 안에 그린다.
+  const includeLevel =
+    typeof invalidationLevel === "number" &&
+    invalidationLevel > Math.min(...series.closes) * 0.75 &&
+    invalidationLevel < Math.max(...series.closes) * 1.25;
+  if (includeLevel) lineValues.push(invalidationLevel!);
+  const min = Math.min(...lineValues);
+  const max = Math.max(...lineValues);
+  const span = max - min || 1;
+  const x = (i: number) => (i / (n - 1)) * W;
+  const y = (v: number) => 4 + (1 - (v - min) / span) * (PRICE_H - 8);
+
+  const linePath = (values: Array<number | null>): string => {
+    let d = "";
+    let pen = false;
+    values.forEach((v, i) => {
+      if (v === null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+      pen = true;
+    });
+    return d;
+  };
+
+  const maxVol = Math.max(...series.volumes, 1);
+  const barW = Math.max(1, W / n - 0.6);
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="종가·이동평균·거래량 차트">
+        {series.volumes.map((v, i) => {
+          const h = (v / maxVol) * VOL_H;
+          return <rect key={`v-${i}`} x={x(i) - barW / 2} y={VOL_TOP + (VOL_H - h)} width={barW} height={h} fill={CHART_COLOR.volume} />;
+        })}
+        <path d={linePath(series.ma120)} fill="none" stroke={CHART_COLOR.ma120} strokeWidth="1.1" />
+        <path d={linePath(series.ma60)} fill="none" stroke={CHART_COLOR.ma60} strokeWidth="1.1" />
+        <path d={linePath(series.ma20)} fill="none" stroke={CHART_COLOR.ma20} strokeWidth="1.2" />
+        <path d={linePath(series.closes.map((v) => v))} fill="none" stroke={CHART_COLOR.close} strokeWidth="1.6" />
+        {includeLevel && (
+          <>
+            <line
+              x1="0"
+              x2={W}
+              y1={y(invalidationLevel!)}
+              y2={y(invalidationLevel!)}
+              stroke={CHART_COLOR.invalidation}
+              strokeWidth="1.2"
+              strokeDasharray="5 4"
+            />
+            <text x={W - 4} y={Math.max(10, y(invalidationLevel!) - 4)} textAnchor="end" fontSize="9" fill={CHART_COLOR.invalidation}>
+              무효 레벨
+            </text>
+          </>
         )}
+      </svg>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
+        <span><span style={{ color: CHART_COLOR.close }}>—</span> 종가</span>
+        <span><span style={{ color: CHART_COLOR.ma20 }}>—</span> MA20</span>
+        <span><span style={{ color: CHART_COLOR.ma60 }}>—</span> MA60</span>
+        <span><span style={{ color: CHART_COLOR.ma120 }}>—</span> MA120</span>
+        {includeLevel && <span><span style={{ color: CHART_COLOR.invalidation }}>┄</span> 무효화 레벨</span>}
+      </div>
+    </div>
+  );
+}
+
+/** 관측 문장에 수치(WO 1.6 D-3) — latest 지표값을 fact 종류별로 붙인다. 값 없으면 원문 그대로. */
+function taFactValueSuffix(kind: string, latest: NonNullable<StockFrontResponse["ta"]>["latest"]): string | undefined {
+  if (!latest) return undefined;
+  if ((kind === "rsi_overbought" || kind === "rsi_oversold") && typeof latest.rsi14 === "number") {
+    return `RSI ${Math.round(latest.rsi14)} · 기준 ${kind === "rsi_overbought" ? "70 초과" : "30 미만"}`;
+  }
+  if (kind === "bollinger_squeeze" && typeof latest.bollingerWidthPct === "number") {
+    return `밴드 폭 ${latest.bollingerWidthPct}%`;
+  }
+  if (kind === "atr_expanded" && typeof latest.atrPct === "number") {
+    return `하루 변동폭 ${latest.atrPct}%`;
+  }
+  if (kind === "near_52w_high" && typeof latest.closeTo52WeekHighPct === "number") {
+    return `고점 대비 -${(Math.round((100 - latest.closeTo52WeekHighPct) * 10) / 10).toFixed(1)}%`;
+  }
+  if (kind === "near_52w_low" && typeof latest.closeTo52WeekLowPct === "number") {
+    return `저점 대비 +${(Math.round((latest.closeTo52WeekLowPct - 100) * 10) / 10).toFixed(1)}%`;
+  }
+  return undefined;
+}
+
+/**
+ * 차트분석 탭(WO 1.6 D) — 실제 차트(종가+MA+거래량+무효선) + 와이코프 국면 뱃지 + 수치 붙은 관측.
+ * 이 관측들은 판단(verdict)의 근거다 — 제약 잔재 문구 금지.
+ */
+function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | null; basisDays: number }) {
+  const ta = front?.ta;
+  const facts = ta?.facts ?? [];
+  const verdict = front?.verdict;
+  const phaseText = verdict?.phase ? DEPTH_PHASE_TEXT[verdict.phase] : undefined;
+  const series = front?.chartSeries;
+
+  return (
+    <section className="mt-2">
+      {/* 와이코프 국면 뱃지 — verdict.phase 실계산분만(억지 금지). */}
+      {phaseText && verdict?.phase && (
+        <div className="mb-3 flex items-center gap-2">
+          <span
+            className="inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
+            style={{ borderColor: "#D8FF3A", color: "#D8FF3A" }}
+          >
+            국면: {verdict.phase === "accumulation" ? "축적" : verdict.phase === "markup" ? "상승" : verdict.phase === "distribution" ? "분산" : "하락"}
+          </span>
+          <span className="min-w-0 text-[11px] leading-4 text-muted">{phaseText}</span>
+        </div>
+      )}
+
+      {/* 실제 차트 — 뭘 보고 판단하는지 눈에 보이게. */}
+      {series && series.closes.length >= 2 ? (
+        <div className="rounded-xl border border-hairline bg-surface px-3 pb-2 pt-3">
+          <AnalysisChart series={series} invalidationLevel={verdict?.invalidationLevel} />
+          {verdict?.invalidation && (
+            <p className="mt-1.5 border-t border-hairline pt-2 text-[11px] leading-4" style={{ color: "#D8FF3A" }}>
+              {verdict.invalidation}
+            </p>
+          )}
+        </div>
+      ) : (
+        basisDays > 0 && <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
+      )}
+
+      {facts.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {TA_ROLE_GROUPS.map(({ role, label }) => {
+            const rows = facts.filter((f) => f.role === role);
+            if (rows.length === 0) return null;
+            return (
+              <div key={role}>
+                <p className="font-pixel text-sm text-whiteout">{label}</p>
+                <ul className="mt-2 space-y-2">
+                  {rows.map((f, i) => {
+                    const valueSuffix = taFactValueSuffix(f.kind, ta?.latest);
+                    return (
+                      <li key={`${role}-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
+                        <span className="block text-sm leading-6 text-whiteout">{f.text}</span>
+                        {valueSuffix && (
+                          <span className="mt-0.5 block font-number text-[11px] leading-4 text-muted">{valueSuffix}</span>
+                        )}
+                        {f.confidence === "low" && (
+                          <span className="mt-1 block text-[11px] leading-4 text-muted">참고 신호(신뢰도 낮음)</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {facts.length === 0 && !series && (
         <div className="rounded-lg border border-hairline bg-surface px-3 py-5 text-center">
           <p className="text-sm leading-6 text-muted">차트에서 두드러진 신호는 아직 없어요.</p>
           <p className="mt-1 text-[11px] leading-5 text-muted">데이터가 더 쌓이면 지표가 여기에 붙어요.</p>
         </div>
-        <p className="mt-4 text-center text-[11px] leading-5 text-muted">차트에서 관측되는 사실이에요 · 매수·매도 판단은 아니에요.</p>
-      </section>
-    );
-  }
-  return (
-    <section className="mt-2">
-      {basisDays > 0 && (
-        <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
       )}
-      <div className="space-y-4">
-        {TA_ROLE_GROUPS.map(({ role, label }) => {
-          const rows = facts.filter((f) => f.role === role);
-          if (rows.length === 0) return null;
-          return (
-            <div key={role}>
-              <p className="font-pixel text-sm text-whiteout">{label}</p>
-              <ul className="mt-2 space-y-2">
-                {rows.map((f, i) => (
-                  <li key={`${role}-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                    <span className="block text-sm leading-6 text-whiteout">{f.text}</span>
-                    {f.confidence === "low" && (
-                      <span className="mt-1 block text-[11px] leading-4 text-muted">참고 신호(신뢰도 낮음)</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-5 text-center text-[11px] leading-5 text-muted">차트에서 관측되는 사실이에요 · 매수·매도 판단은 아니에요.</p>
+      <p className="mt-5 text-center text-[11px] leading-5 text-muted">이 관측들이 위 판단의 근거예요.</p>
     </section>
   );
 }
@@ -1426,7 +1577,7 @@ export function StockInsightView({
           <>
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (
-            <ChartAnalysisTab ta={front?.ta} basisDays={front?.sparkline?.length ?? 0} />
+            <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} />
           ) : (
           <>
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}

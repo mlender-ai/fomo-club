@@ -155,8 +155,20 @@ function computeHypePenalty(stock: DiscoveryStockPayload, front: DiscoveryFrontS
   return penalty;
 }
 
+/**
+ * 렌더 전 표준 검증 게이트(WO 1.6 C) — 바이오비쥬 포맷 필수 필드.
+ * 가격·등락률·헤드라인·verdict 미달 카드는 30장에서 제외(다음 quietScore 후보가 채움). 에러 카드 노출 0.
+ */
+function meetsCardStandard(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed | undefined): boolean {
+  if (!hasPricedFront(front)) return false;
+  if (typeof frontSignals(front).changePct !== "number") return false;
+  if (!(stock.headline ?? "").trim()) return false;
+  if (!front?.verdict) return false;
+  return true;
+}
+
 function stockCandidate(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed | undefined): Daily30Candidate | null {
-  if (!hasPricedFront(front)) return null;
+  if (!meetsCardStandard(stock, front)) return null;
   if (FAMOUS_STOCKS.has(stock.canonical) && !strongQuietSignal(stock)) return null;
   const signalScore = computeStockSignal(stock, front);
   const hypePenalty = computeHypePenalty(stock, front);

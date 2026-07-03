@@ -71,9 +71,22 @@ describe("computeCardVerdict — 결정론 판단 엔진", () => {
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 
-  it("캔들 30거래일 미만 → 판단 보류(undefined)", () => {
+  it("캔들 30거래일 미만 → 최소 verdict(관망·신호 축적, 무효화 레벨 없음 — 가짜 레벨 금지)", () => {
     const few = mkCandles([{ days: 20, from: 10000, to: 10100, vol: 500_000 }]);
-    expect(computeCardVerdict({ candles: few })).toBeUndefined();
+    const v = computeCardVerdict({ candles: few, insider: { insiderCount: 3, valueUsd: 500_000 } });
+    expect(v).toBeDefined();
+    expect(v.stance).toBe("watch");
+    expect(v.confidence).toBe("low");
+    expect(v.invalidation).toBeUndefined();
+    expect(v.invalidationLevel).toBeUndefined();
+    expect(v.evidence.some((line) => line.includes("내부자"))).toBe(true);
+  });
+
+  it("구조 verdict 엔 무효화 텍스트와 실계산 레벨이 항상 짝으로 붙는다", () => {
+    const v = computeCardVerdict({ candles: accumulationCandles(), foreignNetStreak: 5, currency: "KRW" });
+    expect(v.invalidation).toBeTruthy();
+    expect(typeof v.invalidationLevel).toBe("number");
+    expect(v.invalidation).toContain(formatVerdictLevel(v.invalidationLevel!, "KRW"));
   });
 
   it("60거래일 미만 → 국면(phase) 억지 판정 없음, 판단은 가능", () => {

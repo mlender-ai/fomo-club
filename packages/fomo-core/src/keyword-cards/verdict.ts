@@ -35,8 +35,10 @@ export interface CardVerdict {
   phase?: WyckoffPhase;
   /** 근거 최대 3개 — 전부 실데이터 문장. */
   evidence: string[];
-  /** 무효화 조건 1개 — 실제 캔들에서 계산한 레벨 기반. */
-  invalidation: string;
+  /** 무효화 조건 — 실제 캔들에서 계산한 레벨 기반. 캔들 자체가 부족한 최소 verdict 엔 없다(가짜 레벨 금지). */
+  invalidation?: string;
+  /** 무효화 레벨 실계산 값 — 차트 무효선(WO 1.6 D) 렌더용. invalidation 과 항상 짝. */
+  invalidationLevel?: number;
   confidence: "high" | "medium" | "low";
 }
 
@@ -195,7 +197,8 @@ interface Factor {
   text: string;
 }
 
-function bullFactors(input: VerdictInput, s: PriceStructure): Factor[] {
+/** 가격 구조 없이도 확인 가능한 강세 신호(내부자·수급·재료·거래량) — 최소 verdict 의 근거이기도 하다. */
+function signalBullFactors(input: VerdictInput): Factor[] {
   const out: Factor[] = [];
   const insiderCount = input.insider?.insiderCount;
   if (num(insiderCount) && insiderCount >= 2) {
@@ -217,13 +220,10 @@ function bullFactors(input: VerdictInput, s: PriceStructure): Factor[] {
   if (num(input.volumeRatio) && input.volumeRatio >= 1.5) {
     out.push({ kind: "volume", text: `거래량이 20일 평균의 ${input.volumeRatio.toFixed(1)}배` });
   }
-  if (num(s.ma20) && num(s.ma60) && s.ma20 > s.ma60 && s.close > s.ma20) {
-    out.push({ kind: "trend", text: "20·60일선 정배열 위에서 가격 유지 중" });
-  }
   return out;
 }
 
-function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undefined): Factor[] {
+function signalBearFactors(input: VerdictInput): Factor[] {
   const out: Factor[] = [];
   if (num(input.foreignNetStreak) && input.foreignNetStreak <= -3) {
     out.push({ kind: "flow", text: `외국인 ${Math.abs(input.foreignNetStreak)}일 연속 순매도` });
@@ -231,6 +231,19 @@ function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undef
   if (num(input.institutionNetStreak) && input.institutionNetStreak <= -3) {
     out.push({ kind: "flow", text: `기관 ${Math.abs(input.institutionNetStreak)}일 연속 순매도` });
   }
+  return out;
+}
+
+function bullFactors(input: VerdictInput, s: PriceStructure): Factor[] {
+  const out = signalBullFactors(input);
+  if (num(s.ma20) && num(s.ma60) && s.ma20 > s.ma60 && s.close > s.ma20) {
+    out.push({ kind: "trend", text: "20·60일선 정배열 위에서 가격 유지 중" });
+  }
+  return out;
+}
+
+function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undefined): Factor[] {
+  const out = signalBearFactors(input);
   if (num(rsi) && rsi >= 70) {
     out.push({ kind: "overheat", text: `RSI ${Math.round(rsi)} — 단기 과열 영역` });
   }
@@ -255,37 +268,57 @@ function phaseEvidence(phase: WyckoffPhase, s: PriceStructure, currency: "KRW" |
   return { kind: "phase", text: PHASE_TEXT[phase] };
 }
 
-function invalidationText(
+function invalidationOf(
   stance: VerdictStance,
   driver: Driver,
   s: PriceStructure,
   currency: "KRW" | "USD"
-): string {
+): { text: string; level: number } {
   if (stance === "enter") {
-    if (driver === "accumulation_inflow") {
-      return `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈 시 이 관점은 무효예요.`;
+    if (driver === "accumulation_inflow" || !num(s.ma20)) {
+      return {
+        text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈 시 이 관점은 무효예요.`,
+        level: s.windowLow,
+      };
     }
-    if (num(s.ma20)) {
-      return `20일선 ${formatVerdictLevel(s.ma20, currency)} 아래 마감 시 이 관점은 무효예요.`;
-    }
-    return `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈 시 이 관점은 무효예요.`;
+    return { text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 아래 마감 시 이 관점은 무효예요.`, level: s.ma20 };
   }
   if (stance === "avoid") {
     if (num(s.ma20)) {
-      return `20일선 ${formatVerdictLevel(s.ma20, currency)} 위 마감 시 약세 관점은 무효예요.`;
+      return { text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 위 마감 시 약세 관점은 무효예요.`, level: s.ma20 };
     }
-    return `${s.windowText} 고점 ${formatVerdictLevel(s.windowHigh, currency)} 회복 시 약세 관점은 무효예요.`;
+    return {
+      text: `${s.windowText} 고점 ${formatVerdictLevel(s.windowHigh, currency)} 회복 시 약세 관점은 무효예요.`,
+      level: s.windowHigh,
+    };
   }
-  return `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈 여부가 다음 판단 기준이에요.`;
+  return {
+    text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈 여부가 다음 판단 기준이에요.`,
+    level: s.windowLow,
+  };
+}
+
+/**
+ * 최소 verdict(WO 1.6 B) — 가격 구조가 부족해도 verdict 박스는 항상 있다.
+ * 억지 enter/avoid 금지: 항상 관망 + 확인된 신호 근거만. 레벨을 계산할 수 없으니 무효화는 생략(가짜 레벨 금지).
+ */
+function minimalVerdict(input: VerdictInput): CardVerdict {
+  const evidence = [...signalBullFactors(input), ...signalBearFactors(input)].slice(0, 3).map((f) => f.text);
+  return {
+    stance: "watch",
+    stanceText: "가격 이력이 짧아 신호가 쌓이는 중이에요 — 지금은 관찰 구간이에요.",
+    evidence,
+    confidence: "low",
+  };
 }
 
 /**
  * 카드 판단 계산 — 결정론(같은 입력 → 같은 출력).
- * 캔들 30거래일 미만이면 undefined(판단 보류 — 가짜 판단 금지).
+ * 캔들 30거래일 미만이면 최소 verdict(관망·신호 축적) — 판단 박스 없는 카드 금지(WO 1.6).
  */
-export function computeCardVerdict(input: VerdictInput): CardVerdict | undefined {
+export function computeCardVerdict(input: VerdictInput): CardVerdict {
   const s = priceStructure(input.candles);
-  if (!s) return undefined;
+  if (!s) return minimalVerdict(input);
   const currency = input.currency ?? "KRW";
   const ta = computeTechnicalAnalysis(input.candles);
   const rsi = ta.latest?.rsi14;
@@ -335,12 +368,14 @@ export function computeCardVerdict(input: VerdictInput): CardVerdict | undefined
   const confidence: CardVerdict["confidence"] =
     phase && sidedCount >= 2 ? "high" : phase || sidedCount >= 2 ? "medium" : "low";
 
+  const invalidation = invalidationOf(stance, driver, s, currency);
   return {
     stance,
     stanceText: stanceText(stance, driver, sided[0]?.kind),
     ...(phase ? { phase } : {}),
     evidence,
-    invalidation: invalidationText(stance, driver, s, currency),
+    invalidation: invalidation.text,
+    invalidationLevel: invalidation.level,
     confidence,
   };
 }
