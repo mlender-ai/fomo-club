@@ -60,47 +60,35 @@ export function HomeView({
   return (
     <>
       <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-20 pt-4">
-        {/* 상단 얇은 띠: 로고 */}
+        {/* 상단 얇은 띠: 로고 + 시장 온도 축약 배지(WO 1.5 E — 큰 바는 몰입 방해라 접었다. 탭하면 설명 시트). */}
         <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
+          <button
+            type="button"
+            onClick={() => setIndexHelpOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
+            aria-label="오늘의 시장 온도 계산 방식 보기"
+          >
+            <span>온도</span>
+            {index ? (
+              <>
+                <span className="font-number text-sm font-bold leading-none" style={{ color }}>
+                  {index.score}
+                </span>
+                {!isFullFallback && index.prevDayDelta !== 0 && (
+                  <span className="inline-flex items-center" style={{ color }}>
+                    {index.prevDayDelta > 0 ? <CaretUpIcon size={9} /> : <CaretDownIcon size={9} />}
+                    {Math.abs(index.prevDayDelta)}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span>—</span>
+            )}
+          </button>
         </div>
 
-        {/* 시장 온도(FOMO Index) */}
-        {index ? (
-          <button
-            type="button"
-            onClick={() => setIndexHelpOpen(true)}
-            className="mt-3 flex w-full items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-2.5 text-left transition-colors hover:border-whiteout/20"
-            aria-label="오늘의 시장 온도 계산 방식 보기"
-          >
-            <span className="text-xs text-muted">오늘의 시장 온도</span>
-            <div className="flex items-baseline gap-2">
-              <span className="font-number text-xl font-bold leading-none" style={{ color }}>
-                {index.score}
-              </span>
-              <span className="font-pixel text-[11px] text-muted">{index.state}</span>
-              {!isFullFallback && index.prevDayDelta !== 0 && (
-                <span className="inline-flex items-center gap-0.5 text-[11px] font-medium" style={{ color }}>
-                  · 어제보다
-                  {index.prevDayDelta > 0 ? <CaretUpIcon size={10} /> : <CaretDownIcon size={10} />}
-                  {index.prevDayDelta > 0 ? `+${index.prevDayDelta}` : `${index.prevDayDelta}`}
-                </span>
-              )}
-            </div>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIndexHelpOpen(true)}
-            className="mt-3 flex w-full items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-2.5 text-left transition-colors hover:border-whiteout/20"
-            aria-label="오늘의 시장 온도 계산 방식 보기"
-          >
-            <span className="text-xs text-muted">오늘의 시장 온도</span>
-            <span className="font-pixel text-[11px] text-muted">데이터 수집 중…</span>
-          </button>
-        )}
-
-        <div className={`mt-3 flex flex-1 flex-col ${tab === "card" ? "justify-center" : ""}`}>
+        <div className="mt-3 flex min-h-0 flex-1 flex-col">
           {tab === "card" ? (
             <KeywordCardFeed loggedIn={true} />
           ) : (

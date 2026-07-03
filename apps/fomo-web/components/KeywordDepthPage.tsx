@@ -378,6 +378,8 @@ function mergeFrontSeed(
     ...(fresh.feedBear ?? seed.feedBear ? { feedBear: fresh.feedBear ?? seed.feedBear } : {}),
     ...(fresh.axisSignals?.length ? { axisSignals: fresh.axisSignals } : seed.axisSignals?.length ? { axisSignals: seed.axisSignals } : {}),
     ...(fresh.axisHook ?? seed.axisHook ? { axisHook: fresh.axisHook ?? seed.axisHook } : {}),
+    // 판단 층 단일 진실(WO 1.5 A) — 카드(seed)의 verdict 우선. 카드=뎁스 stance 모순 금지.
+    ...(seed.verdict ?? fresh.verdict ? { verdict: seed.verdict ?? fresh.verdict } : {}),
   };
 }
 
@@ -1106,57 +1108,81 @@ const DEPTH_CONFIDENCE_TEXT: Record<string, string> = {
   low: "신뢰도는 낮은 편이라 가볍게 봐야 해요.",
 };
 
-/** 뎁스 3문단(왜 사나/뭘 보고 있나/언제 틀리나) — verdict+관찰 신호에서 결정론 조립. 30초 독해. */
-function buildConvictionParagraphs(
+/** 근거 확장 줄 중복 제거 — 이미 있는 줄과 사실상 같은 내용이면 버린다. */
+function pushEvidence(out: string[], line: string | undefined): void {
+  const clean = (line ?? "").trim();
+  if (!clean) return;
+  if (out.some((existing) => copyRestates(existing, clean))) return;
+  out.push(clean);
+}
+
+/**
+ * 뎁스 판단 섹션(WO 1.5 A+B+C) — 카드와 동일한 verdict 를 렌더(단일 진실, 모순 금지).
+ * 근거는 카드 근거 + TA 실수치·수급·재료로 확장. 데이터 없는 섹션은 생략(보일러플레이트 금지).
+ */
+function buildVerdictSections(
   front: StockFrontResponse | null,
   insight: CondensedInsight | null
-): { why: string; watching: string; wrong: string } {
+): { stanceText?: string; confidenceText?: string; evidence: string[]; invalidation?: string } {
   const verdict = front?.verdict;
-  const points = buildReadPoints(front, insight);
+  const evidence: string[] = [];
 
-  const why: string[] = [];
-  if (verdict) {
-    why.push(verdict.stanceText);
-    if (verdict.evidence.length > 0) why.push(`확인된 근거는 ${verdict.evidence.join(" / ")}.`);
-    else why.push("확인된 근거는 아직 얇아요.");
-    why.push(DEPTH_CONFIDENCE_TEXT[verdict.confidence] ?? "");
-  } else {
-    why.push("아직 판단을 세울 만큼 가격 데이터가 쌓이지 않았어요.");
-    why.push("카드에 보인 재료와 아래 신호만 확인하고, 판단은 보류하는 게 맞아요.");
-  }
+  // 1) 카드와 동일한 근거(단일 진실) 먼저.
+  for (const line of verdict?.evidence ?? []) pushEvidence(evidence, line);
 
-  const watching: string[] = [];
+  // 2) 국면 상세 — 카드 근거에 국면이 없을 때만 추가.
   if (verdict?.phase && DEPTH_PHASE_TEXT[verdict.phase]) {
-    watching.push(`차트 구조는 ${DEPTH_PHASE_TEXT[verdict.phase]}로 읽혀요.`);
-  } else {
-    watching.push("국면을 확정할 만큼 차트 구조가 뚜렷하진 않아요.");
+    pushEvidence(evidence, `차트 구조: ${DEPTH_PHASE_TEXT[verdict.phase]}`);
   }
+
+  // 3) 수급 확장 — 외국인·기관 모두(카드는 1~2줄만 실림).
   const foreignStreak = front?.signals.foreignNetStreak;
   const instStreak = front?.signals.institutionNetStreak;
   if (typeof foreignStreak === "number" && foreignStreak !== 0) {
-    watching.push(`수급은 외국인이 ${Math.abs(foreignStreak)}일 연속 ${foreignStreak > 0 ? "순매수" : "순매도"} 중이에요.`);
-  } else if (typeof instStreak === "number" && instStreak !== 0) {
-    watching.push(`수급은 기관이 ${Math.abs(instStreak)}일 연속 ${instStreak > 0 ? "순매수" : "순매도"} 중이에요.`);
+    pushEvidence(evidence, `외국인 ${Math.abs(foreignStreak)}일 연속 ${foreignStreak > 0 ? "순매수" : "순매도"}`);
+  }
+  if (typeof instStreak === "number" && instStreak !== 0) {
+    pushEvidence(evidence, `기관 ${Math.abs(instStreak)}일 연속 ${instStreak > 0 ? "순매수" : "순매도"}`);
+  }
+
+  // 4) TA 실수치 — 있는 지표만(가짜 금지).
+  const latest = front?.ta?.latest;
+  if (typeof latest?.rsi14 === "number") pushEvidence(evidence, `RSI ${Math.round(latest.rsi14)}`);
+  if (typeof latest?.closeTo52WeekHighPct === "number") {
+    const gap = Math.round((100 - latest.closeTo52WeekHighPct) * 10) / 10;
+    pushEvidence(evidence, gap <= 0.5 ? "52주 고점권" : `52주 고점 대비 -${gap}%`);
+  }
+  if (typeof front?.signals.volumeRatio === "number" && front.signals.volumeRatio >= 1.2) {
+    pushEvidence(evidence, `거래량 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배`);
   }
   const taText = front?.taFact ? translateTaFact(front.taFact) : undefined;
-  if (taText) watching.push(taText);
-  const material = insight && insight.confidence !== "insufficient" ? cleanText(insight.whyHot).split(/(?<=요\.|다\.)/)[0]?.trim() : undefined;
-  if (material && watching.length < 4) watching.push(material);
+  if (taText) pushEvidence(evidence, taText);
 
-  const wrong: string[] = [];
-  wrong.push(verdict?.invalidation ?? "무효화 레벨을 계산할 가격 데이터가 아직 부족해요.");
-  const counter = points.bear[0]?.text;
-  if (counter && !wrong[0]!.includes(counter)) wrong.push(`반대쪽 신호로는 ${counter.replace(/\.$/, "")}는 점도 있어요.`);
-  wrong.push("이 조건을 벗어나면 관점을 버리고 다시 관찰로 돌아가는 게 규칙이에요.");
+  // 5) 재료 — 원문 grounded 1문장.
+  const material =
+    insight && insight.confidence !== "insufficient"
+      ? cleanText(insight.whyHot).split(/(?<=요\.|다\.)/)[0]?.trim()
+      : undefined;
+  if (material) pushEvidence(evidence, material);
 
   return {
-    why: why.filter(Boolean).join(" "),
-    watching: watching.filter(Boolean).slice(0, 4).join(" "),
-    wrong: wrong.filter(Boolean).slice(0, 4).join(" "),
+    ...(verdict ? { stanceText: verdict.stanceText } : {}),
+    ...(verdict ? { confidenceText: DEPTH_CONFIDENCE_TEXT[verdict.confidence] } : {}),
+    evidence: evidence.slice(0, 6),
+    ...(verdict?.invalidation ? { invalidation: verdict.invalidation } : {}),
   };
 }
 
-/** 뎁스 본문 — 딱 3문단. 섹션 나열식 폐기(WO Phase 1). 원문 근거 링크는 하단 OfficialFactsBlock 유지. */
+const STANCE_BADGE: Record<string, { label: string; color: string }> = {
+  enter: { label: "진입 검토", color: "#D8FF3A" },
+  watch: { label: "관망", color: "#C9C9C4" },
+  avoid: { label: "회피", color: "#8A8A86" },
+};
+
+/**
+ * 뎁스 본문(WO 1.5) — 판단 / 근거 / 무효 조건. 카드 verdict 와 동일 stance(모순 금지).
+ * 데이터 없는 블록은 통째로 생략 — 전 종목 공통 보일러플레이트 금지.
+ */
 function ConvictionParagraphs({
   front,
   insight,
@@ -1164,37 +1190,94 @@ function ConvictionParagraphs({
   front: StockFrontResponse | null;
   insight: CondensedInsight | null;
 }) {
-  const p = buildConvictionParagraphs(front, insight);
+  const s = buildVerdictSections(front, insight);
   const stance = front?.verdict?.stance;
-  const stanceMeta =
-    stance === "enter"
-      ? { label: "진입 검토", color: "#D8FF3A" }
-      : stance === "avoid"
-        ? { label: "회피", color: "#8A8A86" }
-        : stance === "watch"
-          ? { label: "관망", color: "#C9C9C4" }
-          : undefined;
-  const blocks: Array<{ title: string; body: string }> = [
-    { title: "왜 사나", body: p.why },
-    { title: "뭘 보고 있나", body: p.watching },
-    { title: "언제 틀리나", body: p.wrong },
-  ];
+  const badge = stance ? STANCE_BADGE[stance] : undefined;
+  if (!s.stanceText && s.evidence.length === 0 && !s.invalidation) return null;
+
   return (
     <section className="mt-6 space-y-4">
-      {stanceMeta && (
-        <span
-          className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold"
-          style={{ borderColor: stanceMeta.color, color: stanceMeta.color }}
-        >
-          {stanceMeta.label}
-        </span>
-      )}
-      {blocks.map((block) => (
-        <div key={block.title} className="rounded-2xl border border-hairline bg-surface px-4 py-4">
-          <p className="font-pixel text-sm text-whiteout">{block.title}</p>
-          <p className="mt-2 text-sm leading-6 text-whiteout">{block.body}</p>
+      {s.stanceText && (
+        <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
+          <div className="flex items-center gap-2.5">
+            <p className="font-pixel text-sm text-whiteout">판단</p>
+            {badge && (
+              <span
+                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
+                style={{ borderColor: badge.color, color: badge.color }}
+              >
+                {badge.label}
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-whiteout">{s.stanceText}</p>
+          {s.confidenceText && <p className="mt-1 text-[12px] leading-5 text-muted">{s.confidenceText}</p>}
         </div>
-      ))}
+      )}
+
+      {s.evidence.length > 0 && (
+        <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
+          <p className="font-pixel text-sm text-whiteout">근거</p>
+          <ul className="mt-2 space-y-1.5">
+            {s.evidence.map((line, i) => (
+              <li key={`vd-ev-${i}`} className="text-sm leading-6 text-whiteout">
+                · {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {s.invalidation && (
+        <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
+          <p className="font-pixel text-sm text-whiteout">무효 조건</p>
+          <p className="mt-2 text-sm leading-6 text-whiteout">{s.invalidation}</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 재무 한눈에(WO 1.5 F) — "이 회사 돈 잘 버나" 최소셋. 시총·PER·실적 추세를 한 줄씩.
+ * KR=네이버 금융, US=Yahoo quoteSummary(이미 연결된 소스). 없는 항목은 생략(가짜 금지).
+ */
+function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
+  if (!basics) return null;
+  const lines: Array<{ label: string; value: string; note?: string }> = [];
+  if (basics.marketCap) lines.push({ label: "시가총액", value: basics.marketCap });
+  for (const m of basics.metrics.slice(0, 4)) {
+    lines.push({ label: m.term ? `${m.label} (${m.term})` : m.label, value: m.value });
+  }
+  const fin = basics.financials;
+  if (fin && fin.periods.length >= 2) {
+    for (const row of fin.rows.slice(0, 2)) {
+      const last = fin.periods.length - 1;
+      const prev = last - 1;
+      const prevVal = row.values[prev];
+      const lastVal = row.values[last];
+      if (prevVal && lastVal && prevVal !== "—" && lastVal !== "—") {
+        lines.push({
+          label: row.label,
+          value: `${fin.periods[prev]!.title} ${prevVal} → ${fin.periods[last]!.title} ${lastVal}${fin.periods[last]!.estimate ? " (추정)" : ""}`,
+        });
+      }
+    }
+  }
+  if (lines.length === 0) return null;
+  const source = fin?.note?.includes("Nasdaq") ? "Nasdaq" : "네이버 금융";
+  return (
+    <section className="mt-4 rounded-2xl border border-hairline bg-surface px-4 py-4">
+      <p className="font-pixel text-sm text-whiteout">재무 한눈에</p>
+      <ul className="mt-2 space-y-1.5">
+        {lines.slice(0, 5).map((line, i) => (
+          <li key={`fin-${i}`} className="flex items-baseline justify-between gap-3 text-sm leading-6">
+            <span className="shrink-0 text-muted">{line.label}</span>
+            <span className="min-w-0 text-right text-whiteout">{line.value}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[10px] leading-4 text-muted">출처: {source}</p>
     </section>
   );
 }
@@ -1252,7 +1335,10 @@ export function StockInsightView({
       .then((r) => alive && setFront(mergeFrontSeed(seed, r)))
       .catch(() => alive && setFront(seed))
       .finally(() => alive && setFrontLoaded(true));
-    fetchStockBasics(stock, context?.naverCode ? { naverCode: context.naverCode } : {})
+    fetchStockBasics(stock, {
+      ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
+      ...(context?.symbol ? { symbol: context.symbol } : {}),
+    })
       .then((r) => alive && setBasics(r))
       .catch(() => alive && setBasics(null))
       .finally(() => alive && setBasicsLoaded(true));
@@ -1341,17 +1427,25 @@ export function StockInsightView({
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
 
-          {/* 뎁스 본문 — 딱 3문단(왜 사나/뭘 보고 있나/언제 틀리나). 30초 독해(WO Phase 1). */}
+          {/* 뎁스 본문 — 판단/근거/무효 조건(WO 1.5). 카드 verdict 와 단일 진실, 부족 블록은 생략. */}
           <ConvictionParagraphs front={front} insight={insight} />
 
-          {/* 원문 근거 링크 — 하단 유지. */}
-          <OfficialFactsBlock facts={insight?.officialFacts} />
+          {/* 재무 한눈에(WO 1.5 F) — 근거 아래. KR=네이버·US=Yahoo, 없으면 생략. */}
+          <FinanceGlanceBlock basics={basics} />
 
           {showThinSourceFootnote && (
             <p className="mt-5 text-[12px] leading-5 text-muted">
               {hasVerifiedFloor
                 ? "원문 기반 요약은 아직 얇아요."
                 : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
+            </p>
+          )}
+
+          {/* 포모 점수 — 카드 메인에서 강등된 배지(WO 1.5 E). 주목도 참고용, 판단 아님. */}
+          {typeof front?.fomo?.fomoScore === "number" && (
+            <p className="mt-6 text-center text-[11px] leading-5 text-muted">
+              포모 <span className="font-number font-bold" style={{ color: "#D8FF3A" }}>{front.fomo.fomoScore}</span>
+              {` · ${fomoStateSummary(front.fomo)}`}
             </p>
           )}
 
