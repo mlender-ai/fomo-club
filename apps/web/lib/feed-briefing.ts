@@ -129,7 +129,8 @@ async function synthesizeBriefingCopy(
         role: "system",
         content:
           "너는 시장 브리핑 에디터다. 입력 JSON의 실데이터만 근거로 답한다. " +
-          "각 무버의 material(기사 제목)을 한국어 한 줄(24자 이내, 사실 서술)로 눌러써라. material이 null이면 빈 문자열. " +
+          "각 무버의 material(기사 제목)을 한국어 한 줄(24자 이내, 사실 서술)로 눌러써라. " +
+          "material이 null이거나 해당 종목의 changePct 방향을 설명하지 못하면 빈 문자열(억지로 만들지 마라). " +
           "note는 오늘 시장 전체의 해석 1~2문장(한국어) — 숫자·퍼센트 언급 금지(수치는 카드가 보여준다), 입력에 없는 종목·사실 언급 금지, 매수·매도 권유 금지. " +
           'JSON만 출력: {"movers":[{"name":"...","why":"..."}],"note":"..."}',
       },
@@ -211,6 +212,13 @@ async function moverMaterialTitleKr(naverCode: string | undefined, name: string)
   return relevantTitle(articles, name);
 }
 
+/** 등락 방향과 모순되는 "왜"(예: -14% 종목에 "주가 상승") 폐기 — LLM 압축 오류 방어. */
+function directionConflict(why: string, changePct: number): boolean {
+  if (changePct < 0 && /상승|급등|강세|올랐/.test(why)) return true;
+  if (changePct > 0 && /하락|급락|약세|내렸/.test(why)) return true;
+  return false;
+}
+
 function moverFacts(
   movers: readonly MoverInput[],
   whyByName: ReadonlyMap<string, string>,
@@ -219,7 +227,8 @@ function moverFacts(
   return movers.map((m) => {
     // LLM 압축이 1순위, 없으면(미설정·실패) 한국어 재료 제목을 그대로 — 영어 제목은 폴백 금지.
     const fallback = koreanMaterialFallback ? safeWhy(m.materialTitle) : undefined;
-    const why = whyByName.get(m.name) ?? fallback;
+    const candidate = whyByName.get(m.name) ?? fallback;
+    const why = candidate && !directionConflict(candidate, m.changePct) ? candidate : undefined;
     return {
       label: m.name,
       value: signedPct(m.changePct),
