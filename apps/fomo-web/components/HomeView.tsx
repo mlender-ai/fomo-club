@@ -5,6 +5,7 @@ import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
 import { CaretUpIcon, CaretDownIcon, XMarkIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
+import { DesktopDashboard, useIsDesktop } from "@/components/DesktopDashboard";
 import type {
   FomoIndexResponse,
   TallyResponse,
@@ -42,6 +43,7 @@ export function HomeView({
 }) {
   const [tab, setTab] = useState<Tab>("card");
   const [indexHelpOpen, setIndexHelpOpen] = useState(false);
+  const isDesktop = useIsDesktop();
   const color = index ? scoreToColor(index.score) : undefined;
 
   /**
@@ -56,6 +58,36 @@ export function HomeView({
       index.components.whale === 0 &&
       !index.aiSummary
     : false;
+
+  // PC(≥1024px) — WO-PC-VERSION 3컬럼 대시보드. lg 미만 모바일 트리는 아래 그대로(틴더 덱 불가침).
+  if (isDesktop) {
+    return (
+      <>
+        <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 py-5">
+          <div className="flex shrink-0 items-center justify-between">
+            <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
+            <button
+              type="button"
+              onClick={() => setIndexHelpOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
+              aria-label="오늘의 시장 온도 계산 방식 보기"
+            >
+              <span>온도</span>
+              {index ? (
+                <span className="font-number text-sm font-bold leading-none" style={{ color }}>
+                  {index.score}
+                </span>
+              ) : (
+                <span>—</span>
+              )}
+            </button>
+          </div>
+          <DesktopDashboard />
+        </main>
+        {indexHelpOpen && <FomoIndexInfoSheet index={index} onClose={() => setIndexHelpOpen(false)} />}
+      </>
+    );
+  }
 
   return (
     <>
