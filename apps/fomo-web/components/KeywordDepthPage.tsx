@@ -667,18 +667,24 @@ function FomoHero({ front, rankLabel, headlineOverride }: { front: StockFrontRes
 
 type ChartRange = "3m" | "1y";
 type ChartLayer = "ma" | "events" | "flow" | "phase" | "levels" | "volume" | "invalidation";
+type ChartTooltip = { title: string; body: string };
 
 const DETAIL_CHART = {
   W: 320,
-  PRICE_H: 154,
-  VOL_TOP: 162,
-  VOL_H: 38,
-  H: 206,
-  up: "#D8FF3A",
-  down: "rgba(250,250,250,0.48)",
+  PRICE_H: 170,
+  VOL_TOP: 180,
+  VOL_H: 42,
+  H: 228,
+  up: "#22C55E",
+  down: "#EF4444",
   wick: "rgba(250,250,250,0.54)",
-  grid: "rgba(255,255,255,0.10)",
-  muted: "rgba(255,255,255,0.34)",
+  grid: "rgba(255,255,255,0.08)",
+  muted: "rgba(255,255,255,0.40)",
+  ma20: "#F59E0B",
+  ma60: "#60A5FA",
+  ma120: "#A78BFA",
+  invalidation: "#F59E0B",
+  flow: "#60A5FA",
 } as const;
 
 function finiteNumber(value: number | undefined): value is number {
@@ -786,11 +792,39 @@ function markerDateLabel(candle: DailyOhlcv | undefined): string {
   return raw.slice(5, 10) || raw;
 }
 
+function chartLayerTooltip(
+  layer: ChartLayer,
+  data: {
+    note: string;
+    phaseText?: string;
+    invalidation?: string;
+    materialLabel?: string;
+    flowDays: number;
+  }
+): ChartTooltip {
+  switch (layer) {
+    case "ma":
+      return { title: "이동평균", body: "MA20·60·120의 기울기와 배열로 단기 추세가 위인지 아래인지 봅니다." };
+    case "levels":
+      return { title: "지지·저항", body: "최근 고점·저점 피벗에서 반복 확인된 가격대를 표시합니다." };
+    case "volume":
+      return { title: "거래량", body: "평균 대비 튄 거래량과 거래량이 말라붙은 구간을 분리해 보여줍니다." };
+    case "phase":
+      return { title: "국면", body: data.phaseText ?? data.note };
+    case "events":
+      return { title: "재료", body: data.materialLabel ? `최근 원문 재료: ${data.materialLabel}` : "뉴스·공시로 확인된 재료 위치입니다." };
+    case "flow":
+      return { title: "수급", body: data.flowDays > 0 ? `최근 ${data.flowDays}거래일 연속 수급 흐름을 표시합니다.` : "외국인·기관 연속 수급이 잡히면 표시합니다." };
+    case "invalidation":
+      return { title: "무효선", body: data.invalidation ?? "이 가격대를 이탈하면 현재 관점의 힘이 약해지는 기준입니다." };
+  }
+}
+
 /** 상세 차트 — 실제 OHLC 캔들 + MA/거래량/무효선/근거 레이어. */
 function DetailChart({ front }: { front: StockFrontResponse | null }) {
   const [range, setRange] = useState<ChartRange>("3m");
   const [activeLayer, setActiveLayer] = useState<ChartLayer | null>(null);
-  const [tooltip, setTooltip] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<ChartTooltip | null>(null);
   const sourceCandles = useMemo(() => {
     const candles = front?.candles?.filter((c) =>
       [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)
@@ -862,6 +896,21 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
     { key: "flow", label: "수급", enabled: flowDays > 0 },
     { key: "invalidation", label: "무효선", enabled: includeInvalidation },
   ];
+  const openLayerTooltip = (layer: ChartLayer) => {
+    const next = activeLayer === layer ? null : layer;
+    setActiveLayer(next);
+    setTooltip(
+      next
+        ? chartLayerTooltip(next, {
+            note,
+            ...(phaseText ? { phaseText } : {}),
+            ...(front?.verdict?.invalidation ? { invalidation: front.verdict.invalidation } : {}),
+            ...(materialLabel ? { materialLabel } : {}),
+            flowDays,
+          })
+        : null
+    );
+  };
 
   return (
     <section className="mt-6">
@@ -884,7 +933,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
           ))}
         </div>
       </div>
-      <div className="relative mt-3 rounded-xl border border-hairline bg-surface px-2.5 py-3">
+      <div className="relative mt-3 rounded-xl border border-hairline bg-surface px-3 py-3">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 분석 차트">
           <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke={DETAIL_CHART.grid} />
           {phaseText && (
@@ -893,8 +942,8 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
               y="0"
               width={W * 0.38}
               height={PRICE_H}
-              fill={phase === "accumulation" || phase === "markup" ? "#D8FF3A" : "#FAFAFA"}
-              opacity={activeLayer === "phase" ? 0.12 : 0.055}
+              fill="rgba(148,163,184,0.9)"
+              opacity={activeLayer === "phase" ? 0.14 : 0.045}
             />
           )}
           {flowDays > 0 && (
@@ -904,7 +953,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
               width={Math.max(8, W - x(flowStart))}
               height="4"
               rx="2"
-              fill="#D8FF3A"
+              fill={DETAIL_CHART.flow}
               opacity={activeLayer === "flow" ? 0.72 : 0.34}
             />
           )}
@@ -927,6 +976,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
             const h = maxVol > 0 ? (c.volume / maxVol) * VOL_H : 0;
             const isUp = c.close >= c.open;
             const spike = vol.spikes.has(i);
+            const fill = isUp ? "rgba(34,197,94,0.34)" : "rgba(239,68,68,0.28)";
             return (
               <rect
                 key={`vol-${i}`}
@@ -934,7 +984,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
                 y={VOL_TOP + (VOL_H - h)}
                 width={bodyW}
                 height={Math.max(0.5, h)}
-                fill={spike ? DETAIL_CHART.up : isUp ? "rgba(216,255,58,0.22)" : "rgba(255,255,255,0.16)"}
+                fill={spike ? "rgba(245,158,11,0.62)" : fill}
                 opacity={spike && activeLayer === "volume" ? 0.9 : spike ? 0.58 : 1}
               />
             );
@@ -949,15 +999,15 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
           ))}
           {includeInvalidation && (
             <g opacity={activeLayer === "invalidation" ? 1 : 0.72}>
-              <line x1="0" x2={W} y1={y(invalidationLevel!)} y2={y(invalidationLevel!)} stroke={DETAIL_CHART.up} strokeWidth="1.2" strokeDasharray="5 4" />
-              <text x={W - 4} y={Math.max(10, y(invalidationLevel!) - 5)} textAnchor="end" fontSize="9" fill={DETAIL_CHART.up}>
+              <line x1="0" x2={W} y1={y(invalidationLevel!)} y2={y(invalidationLevel!)} stroke={DETAIL_CHART.invalidation} strokeWidth="1.2" strokeDasharray="5 4" />
+              <text x={W - 4} y={Math.max(10, y(invalidationLevel!) - 5)} textAnchor="end" fontSize="9" fill={DETAIL_CHART.invalidation}>
                 무효선 {formatChartPrice(invalidationLevel!)}
               </text>
             </g>
           )}
-          <path d={seriesPath(ma120, x, y)} fill="none" stroke="#5A5A57" strokeWidth={activeLayer === "ma" ? "1.8" : "1.1"} opacity={activeLayer === "ma" ? 1 : 0.78} />
-          <path d={seriesPath(ma60, x, y)} fill="none" stroke="#9A9A96" strokeWidth={activeLayer === "ma" ? "1.8" : "1.1"} opacity={activeLayer === "ma" ? 1 : 0.78} />
-          <path d={seriesPath(ma20, x, y)} fill="none" stroke="#D8FF3A" strokeWidth={activeLayer === "ma" ? "2" : "1.2"} opacity={activeLayer === "ma" ? 0.95 : 0.62} />
+          <path d={seriesPath(ma120, x, y)} fill="none" stroke={DETAIL_CHART.ma120} strokeWidth={activeLayer === "ma" ? "1.6" : "1"} opacity={activeLayer === "ma" ? 0.88 : 0.34} />
+          <path d={seriesPath(ma60, x, y)} fill="none" stroke={DETAIL_CHART.ma60} strokeWidth={activeLayer === "ma" ? "1.6" : "1"} opacity={activeLayer === "ma" ? 0.9 : 0.42} />
+          <path d={seriesPath(ma20, x, y)} fill="none" stroke={DETAIL_CHART.ma20} strokeWidth={activeLayer === "ma" ? "1.8" : "1.1"} opacity={activeLayer === "ma" ? 0.95 : 0.58} />
           {candles.map((c, i) => {
             const cx = x(i);
             const isUp = c.close >= c.open;
@@ -975,30 +1025,30 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
             <g
               role="button"
               tabIndex={0}
-              onClick={() => setTooltip(`${markerDateLabel(latest)} · ${materialLabel}`)}
+              onClick={() => setTooltip({ title: "재료", body: `${markerDateLabel(latest)} · ${materialLabel}` })}
               onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") setTooltip(`${markerDateLabel(latest)} · ${materialLabel}`);
+                if (event.key === "Enter" || event.key === " ") setTooltip({ title: "재료", body: `${markerDateLabel(latest)} · ${materialLabel}` });
               }}
               aria-label="재료 발생일"
               style={{ cursor: "pointer" }}
             >
-              <circle cx={x(candles.length - 1)} cy={y(latest.close) - 10} r={4} fill={DETAIL_CHART.up} opacity={activeLayer === "events" ? 1 : 0.78} />
+              <circle cx={x(candles.length - 1)} cy={y(latest.close) - 10} r={4} fill={DETAIL_CHART.ma20} opacity={activeLayer === "events" ? 1 : 0.78} />
             </g>
           )}
           {hasInsider && latest && (
             <g
               role="button"
               tabIndex={0}
-              onClick={() => setTooltip(`${markerDateLabel(latest)} · 내부자 매수 공시 확인`)}
+              onClick={() => setTooltip({ title: "내부자 공시", body: `${markerDateLabel(latest)} · 내부자 매수 공시 확인` })}
               onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") setTooltip(`${markerDateLabel(latest)} · 내부자 매수 공시 확인`);
+                if (event.key === "Enter" || event.key === " ") setTooltip({ title: "내부자 공시", body: `${markerDateLabel(latest)} · 내부자 매수 공시 확인` });
               }}
               aria-label="내부자 매수일"
               style={{ cursor: "pointer" }}
             >
               <path
                 d={`M${x(candles.length - 1) - 5},${y(latest.close) + 13} L${x(candles.length - 1) + 5},${y(latest.close) + 13} L${x(candles.length - 1)},${y(latest.close) + 3} Z`}
-                fill={DETAIL_CHART.up}
+                fill={DETAIL_CHART.ma20}
                 opacity={activeLayer === "events" ? 1 : 0.78}
               />
             </g>
@@ -1008,9 +1058,10 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
           <button
             type="button"
             onClick={() => setTooltip(null)}
-            className="absolute left-3 top-3 max-w-[86%] rounded-lg border border-hairline bg-black/90 px-2.5 py-1.5 text-left text-[11px] leading-4 text-whiteout"
+            className="absolute left-3 right-3 top-3 z-10 rounded-xl border border-whiteout/15 bg-black/90 px-3 py-2.5 text-left shadow-2xl backdrop-blur"
           >
-            {tooltip}
+            <span className="block text-[11px] font-bold text-whiteout">{tooltip.title}</span>
+            <span className="mt-1 block text-[11px] leading-4 text-muted">{tooltip.body}</span>
           </button>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -1018,14 +1069,12 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
             <button
               key={layer.key}
               type="button"
-              onClick={() => {
-                setActiveLayer(activeLayer === layer.key ? null : layer.key);
-                setTooltip(null);
-              }}
+              onClick={() => openLayerTooltip(layer.key)}
               className="rounded-full border px-2 py-1 text-[10px] transition-colors"
               style={{
-                borderColor: activeLayer === layer.key ? "#D8FF3A" : "rgba(255,255,255,0.12)",
-                color: activeLayer === layer.key ? "#D8FF3A" : "#9A9A96",
+                borderColor: activeLayer === layer.key ? "rgba(250,250,250,0.72)" : "rgba(255,255,255,0.12)",
+                color: activeLayer === layer.key ? "#FAFAFA" : "#9A9A96",
+                backgroundColor: activeLayer === layer.key ? "rgba(255,255,255,0.08)" : "transparent",
               }}
             >
               {layer.label}
@@ -1033,8 +1082,14 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
           ))}
         </div>
       </div>
-      <p className="mt-2 text-sm leading-6 text-muted">{note}</p>
-      {phaseText && <p className="mt-1 text-[11px] leading-5 text-muted">국면: {phaseText}</p>}
+      <button
+        type="button"
+        onClick={() => setTooltip({ title: "차트 해석", body: phaseText ? `${note} ${phaseText}` : note })}
+        className="mt-2 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-left transition-colors hover:border-whiteout/20"
+      >
+        <span className="block text-[11px] text-muted">차트 해석</span>
+        <span className="mt-0.5 block truncate text-sm text-whiteout">{phaseText ? `${note} · ${phaseText}` : note}</span>
+      </button>
     </section>
   );
 }
@@ -1391,34 +1446,50 @@ const TA_ROLE_GROUPS: Array<{ role: "event" | "balance" | "confirmation"; label:
   { role: "confirmation", label: "보조 확인" },
 ];
 
-// 차트 선 색 — 등락색 금지 원칙 유지. 종가=밝음, MA는 회색 계조 + 주목 오렌지, 무효선=라임 점선.
 const CHART_COLOR = {
-  close: "#FAFAFA",
-  ma20: "#FF8A50",
-  ma60: "#9A9A96",
-  ma120: "#5A5A57",
-  invalidation: "#D8FF3A",
-  volume: "rgba(255,255,255,0.18)",
+  up: "#22C55E",
+  down: "#EF4444",
+  wick: "rgba(250,250,250,0.52)",
+  ma20: "#F59E0B",
+  ma60: "#60A5FA",
+  ma120: "#A78BFA",
+  invalidation: "#F59E0B",
+  volumeUp: "rgba(34,197,94,0.32)",
+  volumeDown: "rgba(239,68,68,0.24)",
 } as const;
 
-/** 종가+MA20/60/120+거래량+무효화 레벨선(WO 1.6 D-1) — 기존 svg 방식 확장, 라이브러리 없음. */
+/** 캔들+MA20/60/120+거래량+무효화 레벨선(WO 1.6 D-1) — 라인차트 금지, 라이브러리 없음. */
 function AnalysisChart({
   series,
   invalidationLevel,
+  candles,
 }: {
   series: NonNullable<StockFrontResponse["chartSeries"]>;
   invalidationLevel?: number | undefined;
+  candles?: DailyOhlcv[] | undefined;
 }) {
   const W = 320;
   const PRICE_H = 132;
   const VOL_TOP = 142;
   const VOL_H = 36;
   const H = VOL_TOP + VOL_H;
-  const n = series.closes.length;
+  const renderedCandles =
+    candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-series.closes.length) ??
+    series.closes.map((close, i, arr) => {
+      const open = i > 0 ? arr[i - 1]! : close;
+      return {
+        open,
+        close,
+        high: Math.max(open, close),
+        low: Math.min(open, close),
+        volume: series.volumes[i] ?? 0,
+      } satisfies DailyOhlcv;
+    });
+  const n = renderedCandles.length;
   if (n < 2) return null;
 
   const lineValues = [
-    ...series.closes,
+    ...renderedCandles.flatMap((c) => [c.high, c.low]),
     ...series.ma20.filter((v): v is number => v !== null),
     ...series.ma60.filter((v): v is number => v !== null),
     ...series.ma120.filter((v): v is number => v !== null),
@@ -1449,20 +1520,44 @@ function AnalysisChart({
     return d;
   };
 
-  const maxVol = Math.max(...series.volumes, 1);
-  const barW = Math.max(1, W / n - 0.6);
+  const maxVol = Math.max(...renderedCandles.map((c) => c.volume), 1);
+  const step = W / Math.max(1, n - 1);
+  const barW = Math.max(1, Math.min(4.5, step * 0.56));
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="종가·이동평균·거래량 차트">
-        {series.volumes.map((v, i) => {
-          const h = (v / maxVol) * VOL_H;
-          return <rect key={`v-${i}`} x={x(i) - barW / 2} y={VOL_TOP + (VOL_H - h)} width={barW} height={h} fill={CHART_COLOR.volume} />;
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 차트">
+        <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.08)" />
+        {renderedCandles.map((c, i) => {
+          const h = (c.volume / maxVol) * VOL_H;
+          const isUp = c.close >= c.open;
+          return (
+            <rect
+              key={`v-${i}`}
+              x={x(i) - barW / 2}
+              y={VOL_TOP + (VOL_H - h)}
+              width={barW}
+              height={Math.max(0.5, h)}
+              fill={isUp ? CHART_COLOR.volumeUp : CHART_COLOR.volumeDown}
+            />
+          );
         })}
         <path d={linePath(series.ma120)} fill="none" stroke={CHART_COLOR.ma120} strokeWidth="1.1" />
         <path d={linePath(series.ma60)} fill="none" stroke={CHART_COLOR.ma60} strokeWidth="1.1" />
         <path d={linePath(series.ma20)} fill="none" stroke={CHART_COLOR.ma20} strokeWidth="1.2" />
-        <path d={linePath(series.closes.map((v) => v))} fill="none" stroke={CHART_COLOR.close} strokeWidth="1.6" />
+        {renderedCandles.map((c, i) => {
+          const cx = x(i);
+          const isUp = c.close >= c.open;
+          const color = isUp ? CHART_COLOR.up : CHART_COLOR.down;
+          const top = y(Math.max(c.open, c.close));
+          const bottom = y(Math.min(c.open, c.close));
+          return (
+            <g key={`c-${i}`}>
+              <line x1={cx} x2={cx} y1={y(c.high)} y2={y(c.low)} stroke={CHART_COLOR.wick} strokeWidth="0.9" />
+              <rect x={cx - barW / 2} y={top} width={barW} height={Math.max(1.2, bottom - top)} rx="0.7" fill={color} />
+            </g>
+          );
+        })}
         {includeLevel && (
           <>
             <line
@@ -1481,7 +1576,8 @@ function AnalysisChart({
         )}
       </svg>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
-        <span><span style={{ color: CHART_COLOR.close }}>—</span> 종가</span>
+        <span><span style={{ color: CHART_COLOR.up }}>■</span> 상승</span>
+        <span><span style={{ color: CHART_COLOR.down }}>■</span> 하락</span>
         <span><span style={{ color: CHART_COLOR.ma20 }}>—</span> MA20</span>
         <span><span style={{ color: CHART_COLOR.ma60 }}>—</span> MA60</span>
         <span><span style={{ color: CHART_COLOR.ma120 }}>—</span> MA120</span>
@@ -1522,30 +1618,41 @@ function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | nu
   const verdict = front?.verdict;
   const phaseText = verdict?.phase ? DEPTH_PHASE_TEXT[verdict.phase] : undefined;
   const series = front?.chartSeries;
+  const invalidation = verdict?.invalidation;
+  const [factTooltip, setFactTooltip] = useState<ChartTooltip | null>(null);
 
   return (
     <section className="mt-2">
       {/* 와이코프 국면 뱃지 — verdict.phase 실계산분만(억지 금지). */}
       {phaseText && verdict?.phase && (
-        <div className="mb-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFactTooltip({ title: "국면 해석", body: phaseText })}
+          className="mb-3 flex w-full items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2 text-left transition-colors hover:border-whiteout/20"
+        >
           <span
             className="inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
-            style={{ borderColor: "#D8FF3A", color: "#D8FF3A" }}
+            style={{ borderColor: "rgba(250,250,250,0.32)", color: "#FAFAFA" }}
           >
             국면: {verdict.phase === "accumulation" ? "축적" : verdict.phase === "markup" ? "상승" : verdict.phase === "distribution" ? "분산" : "하락"}
           </span>
-          <span className="min-w-0 text-[11px] leading-4 text-muted">{phaseText}</span>
-        </div>
+          <span className="min-w-0 truncate text-[11px] leading-4 text-muted">{phaseText}</span>
+        </button>
       )}
 
       {/* 실제 차트 — 뭘 보고 판단하는지 눈에 보이게. */}
       {series && series.closes.length >= 2 ? (
-        <div className="rounded-xl border border-hairline bg-surface px-3 pb-2 pt-3">
-          <AnalysisChart series={series} invalidationLevel={verdict?.invalidationLevel} />
-          {verdict?.invalidation && (
-            <p className="mt-1.5 border-t border-hairline pt-2 text-[11px] leading-4" style={{ color: "#D8FF3A" }}>
-              {verdict.invalidation}
-            </p>
+        <div className="rounded-xl border border-hairline bg-surface px-3 pb-3 pt-3">
+          <AnalysisChart series={series} invalidationLevel={verdict?.invalidationLevel} candles={front?.candles} />
+          {invalidation && (
+            <button
+              type="button"
+              onClick={() => setFactTooltip({ title: "무효 조건", body: invalidation })}
+              className="mt-2 w-full rounded-lg border border-hairline bg-black/20 px-2.5 py-2 text-left transition-colors hover:border-whiteout/20"
+            >
+              <span className="block text-[11px] text-muted">무효 조건</span>
+              <span className="mt-0.5 block truncate text-xs text-whiteout">{invalidation}</span>
+            </button>
           )}
         </div>
       ) : (
@@ -1553,32 +1660,52 @@ function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | nu
       )}
 
       {facts.length > 0 && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 rounded-xl border border-hairline bg-surface px-3 py-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="font-pixel text-sm text-whiteout">분석 신호</p>
+            <span className="text-[11px] text-muted">탭해서 근거 보기</span>
+          </div>
+          <div className="space-y-3">
           {TA_ROLE_GROUPS.map(({ role, label }) => {
             const rows = facts.filter((f) => f.role === role);
             if (rows.length === 0) return null;
             return (
               <div key={role}>
-                <p className="font-pixel text-sm text-whiteout">{label}</p>
-                <ul className="mt-2 space-y-2">
+                <p className="text-[11px] font-bold text-muted">{label}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   {rows.map((f, i) => {
                     const valueSuffix = taFactValueSuffix(f.kind, ta?.latest);
                     return (
-                      <li key={`${role}-${i}`} className="rounded-lg border border-hairline bg-surface px-3 py-2">
-                        <span className="block text-sm leading-6 text-whiteout">{f.text}</span>
-                        {valueSuffix && (
-                          <span className="mt-0.5 block font-number text-[11px] leading-4 text-muted">{valueSuffix}</span>
-                        )}
-                        {f.confidence === "low" && (
-                          <span className="mt-1 block text-[11px] leading-4 text-muted">참고 신호(신뢰도 낮음)</span>
-                        )}
-                      </li>
+                      <button
+                        key={`${role}-${i}`}
+                        type="button"
+                        onClick={() =>
+                          setFactTooltip({
+                            title: shortSignalLabel(f.text, 24) ?? label,
+                            body: [f.text, valueSuffix, f.confidence === "low" ? "참고 신호(신뢰도 낮음)" : undefined].filter(Boolean).join(" · "),
+                          })
+                        }
+                        className="rounded-full border border-hairline px-2.5 py-1.5 text-[11px] text-whiteout transition-colors hover:border-whiteout/25"
+                      >
+                        {shortSignalLabel(f.text, 18) ?? label}
+                      </button>
                     );
                   })}
-                </ul>
+                </div>
               </div>
             );
           })}
+          </div>
+          {factTooltip && (
+            <button
+              type="button"
+              onClick={() => setFactTooltip(null)}
+              className="mt-3 w-full rounded-xl border border-whiteout/15 bg-black/70 px-3 py-2.5 text-left shadow-xl"
+            >
+              <span className="block text-[11px] font-bold text-whiteout">{factTooltip.title}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted">{factTooltip.body}</span>
+            </button>
+          )}
         </div>
       )}
       {facts.length === 0 && !series && (
@@ -1587,7 +1714,7 @@ function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | nu
           <p className="mt-1 text-[11px] leading-5 text-muted">데이터가 더 쌓이면 지표가 여기에 붙어요.</p>
         </div>
       )}
-      <p className="mt-5 text-center text-[11px] leading-5 text-muted">이 관측들이 위 판단의 근거예요.</p>
+      <p className="mt-4 text-center text-[11px] leading-5 text-muted">차트 신호는 관측값이에요. 가격 예측은 아니에요.</p>
     </section>
   );
 }
