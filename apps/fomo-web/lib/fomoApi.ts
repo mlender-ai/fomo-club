@@ -808,9 +808,17 @@ export async function fetchDaily30(): Promise<Daily30Response> {
   const key = `daily-30:${DISCOVERY_CACHE_VERSION}:${kstDateKey()}`;
   const cached = readCached<Daily30Response>(key);
   if (hasDaily30Cards(cached)) return cached;
-  const fresh = await cachedGet(key, fetchDaily30Network, CACHE_TTL.daily30);
-  if (!hasDaily30Cards(fresh)) throw new Error("GET /api/fomo/daily-30 returned invalid deck");
-  return fresh;
+  // 유효성 검사를 fetcher 안에서 던진다 — 빈/무효 덱이 cachedGet 에 저장돼 재시도가 캐시된 빈 덱으로
+  // 단락되는 오염을 막는다(서버 콜드빌드 폴백 200-빈덱 대응). 검사 통과분만 캐시된다.
+  return cachedGet(
+    key,
+    async () => {
+      const fresh = await fetchDaily30Network();
+      if (!hasDaily30Cards(fresh)) throw new Error("GET /api/fomo/daily-30 returned invalid deck");
+      return fresh;
+    },
+    CACHE_TTL.daily30
+  );
 }
 
 export const warmDaily30 = () => fetchDaily30();
