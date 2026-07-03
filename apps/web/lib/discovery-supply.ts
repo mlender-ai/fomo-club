@@ -17,6 +17,9 @@ import {
   selectMultiAxisHook,
   stockMentionRole,
   synthesizeDiscoveryInsight,
+  computeCardVerdict,
+  type CardVerdict,
+  type DailyOhlcv,
   type AxisSignal,
   type CardFrontSignals,
   type DiscoveryCandidate,
@@ -131,6 +134,8 @@ export interface DiscoveryFrontSeed {
   changeDir?: "up" | "down" | "flat";
   axisSignals?: AxisSignal[];
   axisHook?: MultiAxisHookSelection;
+  /** 판단 층(WO Phase 1) — 캔들이 있는 종목만(가짜 판단 금지). */
+  verdict?: CardVerdict;
 }
 
 export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
@@ -1671,6 +1676,41 @@ function frontSeed(
   };
 }
 
+/**
+ * 덱 카드 판단 층 — 실제 캔들 + 확인된 이벤트(수급 streak·내부자·재료·거래량)만 입력.
+ * 캔들이 없으면(주로 US 덱 경로) 판단을 만들지 않는다 — 가짜 판단 금지.
+ */
+function verdictForCandidate(candidate: DiscoveryCandidate, candles: readonly DailyOhlcv[]): CardVerdict | undefined {
+  if (candles.length === 0) return undefined;
+  let foreignNetStreak: number | undefined;
+  let institutionNetStreak: number | undefined;
+  let insiderConfirmed = false;
+  let materialStrength: number | undefined;
+  let volumeRatio: number | undefined;
+  for (const event of candidate.events) {
+    if (event.kind === "flow_entry" && typeof event.flowDays === "number") {
+      if (event.flowActor === "foreign") foreignNetStreak = event.flowDays;
+      if (event.flowActor === "institution") institutionNetStreak = event.flowDays;
+    }
+    if (event.insiderPurchase === true) insiderConfirmed = true;
+    if ((event.kind === "news_mention" || event.kind === "disclosure") && Number.isFinite(event.strength)) {
+      materialStrength = Math.max(materialStrength ?? 0, Math.max(0, Math.min(1, event.strength)));
+    }
+    if (event.kind === "volume_spike" && typeof event.volumeRatio === "number") {
+      volumeRatio = event.volumeRatio;
+    }
+  }
+  return computeCardVerdict({
+    candles,
+    ...(typeof foreignNetStreak === "number" ? { foreignNetStreak } : {}),
+    ...(typeof institutionNetStreak === "number" ? { institutionNetStreak } : {}),
+    ...(insiderConfirmed ? { insider: { confirmed: true } } : {}),
+    ...(typeof materialStrength === "number" ? { materialStrength } : {}),
+    ...(typeof volumeRatio === "number" ? { volumeRatio } : {}),
+    currency: candidate.country === "US" ? "USD" : "KRW",
+  });
+}
+
 function relationCopy(relation: RelatedNode["relation"]): string {
   switch (relation) {
     case "customer":
@@ -2152,6 +2192,8 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     if (!row) continue;
     const attention = attentionMap[candidate.ticker];
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
+    const verdict = verdictForCandidate(candidate, dailyByTicker.get(candidate.ticker)?.candles ?? []);
+    if (verdict) front.verdict = verdict;
     const stock = await stockPayload(row, candidate, front);
     const headline = stock.headline?.trim();
     if (stock.headlineProvenance?.provenance === "suppressed" || !headline) {

@@ -399,6 +399,8 @@ export interface StockFrontResponse {
   feedBear?: FeedSignalPoint;
   axisSignals?: import("@fomo/core").AxisSignal[];
   axisHook?: import("@fomo/core").MultiAxisHookSelection;
+  /** 판단 층(WO Phase 1) — stance/근거/무효화. 캔들 부족 종목은 없음. */
+  verdict?: import("@fomo/core").CardVerdict;
 }
 
 export interface FeedSignalPoint {

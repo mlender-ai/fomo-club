@@ -10,6 +10,8 @@ import {
   selectMultiAxisHook,
   computeTechnicalAnalysis,
   selectTaFact,
+  computeCardVerdict,
+  type CardVerdict,
   type CardFrontSignals,
   type FomoScoreResult,
   type DailyOhlcv,
@@ -163,6 +165,8 @@ export interface StockFrontData {
   axisSignals?: AxisSignal[];
   /** 다축 후킹 대표 문장. 카드/상세 헤드라인의 우선 출처. */
   axisHook?: MultiAxisHookSelection;
+  /** 판단 층(WO Phase 1) — 결정론 verdict 엔진. 캔들 부족 시 생략(가짜 판단 금지). */
+  verdict?: CardVerdict;
 }
 
 export interface StockFrontOptions {
@@ -362,11 +366,20 @@ export async function assembleStockFront(
     const feedPoints = buildFeedPoints(signals, cachedFront?.changeDir, cachedFront?.changeText);
     const axisSignals = buildAxisSignals({ signals });
     const axisHook = selectMultiAxisHook(axisSignals);
+    const verdict = computeCardVerdict({
+      candles: daily.candles,
+      ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
+      ...(signals.newsEventLabel && typeof signals.mentionScore === "number"
+        ? { materialStrength: signals.mentionScore / 100 }
+        : {}),
+      currency: "USD",
+    });
     return {
       signals,
       fomo,
       ...(taFact ? { taFact } : {}),
       ta,
+      ...(verdict ? { verdict } : {}),
       sparkline,
       ...(cachedFront?.priceText ? { priceText: cachedFront.priceText } : {}),
       ...(cachedFront?.changeText ? { changeText: cachedFront.changeText } : {}),
@@ -416,12 +429,23 @@ export async function assembleStockFront(
   const feedPoints = buildFeedPoints(signals, basics?.changeDir, basics?.changeText);
   const axisSignals = buildAxisSignals({ signals });
   const axisHook = selectMultiAxisHook(axisSignals);
+  const verdict = computeCardVerdict({
+    candles: daily.candles,
+    ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),
+    ...(typeof signals.institutionNetStreak === "number" ? { institutionNetStreak: signals.institutionNetStreak } : {}),
+    ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
+    ...(signals.newsEventLabel && typeof signals.mentionScore === "number"
+      ? { materialStrength: signals.mentionScore / 100 }
+      : {}),
+    currency: "KRW",
+  });
 
   return {
     signals,
     fomo,
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
+    ...(verdict ? { verdict } : {}),
     sparkline: daily.closes.slice(lite ? -42 : -66),
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),
     ...(basics?.changeText ? { changeText: basics.changeText } : {}),

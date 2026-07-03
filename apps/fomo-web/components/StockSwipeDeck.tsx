@@ -5,6 +5,7 @@ import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@
 import type {
   AxisSignal,
   CardFrontSignals,
+  CardVerdict,
   FomoScoreResult,
   FomoCardView,
   MultiAxisHookSelection,
@@ -55,6 +56,7 @@ export type FrontEntry = {
   feedBear?: FeedSignalPoint;
   axisSignals?: AxisSignal[];
   axisHook?: MultiAxisHookSelection;
+  verdict?: CardVerdict;
 };
 
 type UndoEntry = {
@@ -293,9 +295,44 @@ function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progres
   );
 }
 
+// 판단 층(WO Phase 1) stance 표기 — enter=라임(발견 액센트), watch=중립, avoid=회색. 공포색 금지.
+const STANCE_META: Record<CardVerdict["stance"], { label: string; color: string }> = {
+  enter: { label: "진입 검토", color: NEON },
+  watch: { label: "관망", color: "#C9C9C4" },
+  avoid: { label: "회피", color: "#8A8A86" },
+};
+
+/** 카드 판단 층 — 판단 1줄 + 근거 최대 3 + 무효화 1줄. 스와이프 UX 불변, 카드 안에서 스크롤 없음. */
+function VerdictBlock({ verdict }: { verdict: CardVerdict }) {
+  const meta = STANCE_META[verdict.stance];
+  return (
+    <div className="mt-2.5 shrink-0 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
+      <p className="text-sm leading-5 text-whiteout" style={clampStyle(2)}>
+        <span className="font-bold" style={{ color: meta.color }}>
+          {meta.label}
+        </span>
+        <span className="mx-1.5 text-muted/60">·</span>
+        {verdict.stanceText}
+      </p>
+      {verdict.evidence.length > 0 && (
+        <ul className="mt-1.5 space-y-0.5">
+          {verdict.evidence.slice(0, 3).map((line, i) => (
+            <li key={`ev-${i}`} className="text-xs leading-4 text-muted" style={clampStyle(1)}>
+              · {line}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-1.5 text-[10px] leading-4 text-muted/80" style={clampStyle(1)}>
+        {verdict.invalidation}
+      </p>
+    </div>
+  );
+}
+
 /**
  * 종목 카드 앞면 — 포모 점수(척추 ②, 단일 출처)로 점수·라벨·헤드라인·톤. 휴리스틱 대체.
- * 정체성 / 현재가 / 포모점수+라벨 / 테마태그 / 헤드라인 / 스파크라인 / 재료. 점수=주목도(품질 아님), 예측 0.
+ * 정체성 / 현재가 / 포모점수+라벨 / 테마태그 / 헤드라인 / 판단 층 / 스파크라인. 점수=주목도(품질 아님).
  */
 function StockCardFace({
   stock,
@@ -311,6 +348,7 @@ function StockCardFace({
   feedBull,
   feedBear,
   why,
+  verdict,
   progress,
 }: {
   stock: DeckStock;
@@ -326,6 +364,7 @@ function StockCardFace({
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
   why?: string | undefined;
+  verdict?: CardVerdict | undefined;
   progress?: string | undefined;
 }) {
   const displayChangeText = normalizeChangeText(changeText);
@@ -391,23 +430,30 @@ function StockCardFace({
         {view.headline}
       </p>
 
-      {why && (
-        <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
-          <span className="shrink-0 text-[10px] leading-5 text-muted">이유</span>
-          <span className="min-w-0 flex-1 text-sm leading-5 text-whiteout" style={clampStyle(1)}>
-            {why}
-          </span>
-        </div>
-      )}
+      {/* 판단 층(WO Phase 1) — 있으면 이유/신호 스트립을 대체(카드 밀도 유지, 스크롤 금지). */}
+      {verdict ? (
+        <VerdictBlock verdict={verdict} />
+      ) : (
+        <>
+          {why && (
+            <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
+              <span className="shrink-0 text-[10px] leading-5 text-muted">이유</span>
+              <span className="min-w-0 flex-1 text-sm leading-5 text-whiteout" style={clampStyle(1)}>
+                {why}
+              </span>
+            </div>
+          )}
 
-      <FeedSignalStrip bull={feedBull} bear={feedBear} />
+          <FeedSignalStrip bull={feedBull} bear={feedBear} />
 
-      {subLine && !why && !feedBull && !feedBear && (
-        <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-1.5">
-          <span className="text-sm leading-5 text-muted" style={clampStyle(1)}>
-            {subLine}
-          </span>
-        </div>
+          {subLine && !why && !feedBull && !feedBear && (
+            <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-1.5">
+              <span className="text-sm leading-5 text-muted" style={clampStyle(1)}>
+                {subLine}
+              </span>
+            </div>
+          )}
+        </>
       )}
 
       {/* 미니 스파크라인(최근 흐름) — lite 응답도 짧은 라인차트를 싣는다. */}
@@ -554,6 +600,7 @@ export function StockSwipeDeck({
               ...(d.feedBear ? { feedBear: d.feedBear } : {}),
               ...(d.axisSignals ? { axisSignals: d.axisSignals } : {}),
               ...(d.axisHook ? { axisHook: d.axisHook } : {}),
+              ...(d.verdict ? { verdict: d.verdict } : {}),
             },
           }))
         )
@@ -654,6 +701,7 @@ export function StockSwipeDeck({
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
         why={deduped.why}
+        verdict={e?.verdict}
         progress={progress}
       />
     );
