@@ -413,6 +413,8 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     ta,
     verdict,
     ...(chartSeries ? { chartSeries } : {}),
+    // 캔들차트(Phase A) — 국·미와 동일하게 non-lite 에서 실제 일봉 제공.
+    ...(snapshot.candles.length > 0 ? { candles: snapshot.candles.slice(-260) } : {}),
   };
 }
 
