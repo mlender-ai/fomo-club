@@ -1092,6 +1092,113 @@ function ChartAnalysisTab({ ta, basisDays }: { ta?: StockFrontResponse["ta"]; ba
   );
 }
 
+// 판단 층(WO Phase 1) — 와이코프 국면 표기(뎁스 문단용).
+const DEPTH_PHASE_TEXT: Record<string, string> = {
+  accumulation: "저점권 횡보에 거래가 수축된 축적형 구조",
+  markup: "이동평균 정배열에 거래량이 붙은 상승 국면",
+  distribution: "고점권에서 거래는 늘고 가격은 정체된 분산형 구조",
+  markdown: "이동평균 역배열에 저점을 갱신 중인 하락 국면",
+};
+
+const DEPTH_CONFIDENCE_TEXT: Record<string, string> = {
+  high: "여러 신호가 같은 방향을 가리키고 있어요.",
+  medium: "근거가 일부 신호에 몰려 있어 무게는 중간이에요.",
+  low: "신뢰도는 낮은 편이라 가볍게 봐야 해요.",
+};
+
+/** 뎁스 3문단(왜 사나/뭘 보고 있나/언제 틀리나) — verdict+관찰 신호에서 결정론 조립. 30초 독해. */
+function buildConvictionParagraphs(
+  front: StockFrontResponse | null,
+  insight: CondensedInsight | null
+): { why: string; watching: string; wrong: string } {
+  const verdict = front?.verdict;
+  const points = buildReadPoints(front, insight);
+
+  const why: string[] = [];
+  if (verdict) {
+    why.push(verdict.stanceText);
+    if (verdict.evidence.length > 0) why.push(`확인된 근거는 ${verdict.evidence.join(" / ")}.`);
+    else why.push("확인된 근거는 아직 얇아요.");
+    why.push(DEPTH_CONFIDENCE_TEXT[verdict.confidence] ?? "");
+  } else {
+    why.push("아직 판단을 세울 만큼 가격 데이터가 쌓이지 않았어요.");
+    why.push("카드에 보인 재료와 아래 신호만 확인하고, 판단은 보류하는 게 맞아요.");
+  }
+
+  const watching: string[] = [];
+  if (verdict?.phase && DEPTH_PHASE_TEXT[verdict.phase]) {
+    watching.push(`차트 구조는 ${DEPTH_PHASE_TEXT[verdict.phase]}로 읽혀요.`);
+  } else {
+    watching.push("국면을 확정할 만큼 차트 구조가 뚜렷하진 않아요.");
+  }
+  const foreignStreak = front?.signals.foreignNetStreak;
+  const instStreak = front?.signals.institutionNetStreak;
+  if (typeof foreignStreak === "number" && foreignStreak !== 0) {
+    watching.push(`수급은 외국인이 ${Math.abs(foreignStreak)}일 연속 ${foreignStreak > 0 ? "순매수" : "순매도"} 중이에요.`);
+  } else if (typeof instStreak === "number" && instStreak !== 0) {
+    watching.push(`수급은 기관이 ${Math.abs(instStreak)}일 연속 ${instStreak > 0 ? "순매수" : "순매도"} 중이에요.`);
+  }
+  const taText = front?.taFact ? translateTaFact(front.taFact) : undefined;
+  if (taText) watching.push(taText);
+  const material = insight && insight.confidence !== "insufficient" ? cleanText(insight.whyHot).split(/(?<=요\.|다\.)/)[0]?.trim() : undefined;
+  if (material && watching.length < 4) watching.push(material);
+
+  const wrong: string[] = [];
+  wrong.push(verdict?.invalidation ?? "무효화 레벨을 계산할 가격 데이터가 아직 부족해요.");
+  const counter = points.bear[0]?.text;
+  if (counter && !wrong[0]!.includes(counter)) wrong.push(`반대쪽 신호로는 ${counter.replace(/\.$/, "")}는 점도 있어요.`);
+  wrong.push("이 조건을 벗어나면 관점을 버리고 다시 관찰로 돌아가는 게 규칙이에요.");
+
+  return {
+    why: why.filter(Boolean).join(" "),
+    watching: watching.filter(Boolean).slice(0, 4).join(" "),
+    wrong: wrong.filter(Boolean).slice(0, 4).join(" "),
+  };
+}
+
+/** 뎁스 본문 — 딱 3문단. 섹션 나열식 폐기(WO Phase 1). 원문 근거 링크는 하단 OfficialFactsBlock 유지. */
+function ConvictionParagraphs({
+  front,
+  insight,
+}: {
+  front: StockFrontResponse | null;
+  insight: CondensedInsight | null;
+}) {
+  const p = buildConvictionParagraphs(front, insight);
+  const stance = front?.verdict?.stance;
+  const stanceMeta =
+    stance === "enter"
+      ? { label: "진입 검토", color: "#D8FF3A" }
+      : stance === "avoid"
+        ? { label: "회피", color: "#8A8A86" }
+        : stance === "watch"
+          ? { label: "관망", color: "#C9C9C4" }
+          : undefined;
+  const blocks: Array<{ title: string; body: string }> = [
+    { title: "왜 사나", body: p.why },
+    { title: "뭘 보고 있나", body: p.watching },
+    { title: "언제 틀리나", body: p.wrong },
+  ];
+  return (
+    <section className="mt-6 space-y-4">
+      {stanceMeta && (
+        <span
+          className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold"
+          style={{ borderColor: stanceMeta.color, color: stanceMeta.color }}
+        >
+          {stanceMeta.label}
+        </span>
+      )}
+      {blocks.map((block) => (
+        <div key={block.title} className="rounded-2xl border border-hairline bg-surface px-4 py-4">
+          <p className="font-pixel text-sm text-whiteout">{block.title}</p>
+          <p className="mt-2 text-sm leading-6 text-whiteout">{block.body}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export function StockInsightView({
   stock,
   context,
@@ -1234,52 +1341,11 @@ export function StockInsightView({
           {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
           <DetailChart front={front} />
 
-          <StockSynthesisBlock
-            front={front}
-            insight={insight}
-            contextReason={contextReason}
-            contextSourceLabel={context?.sourceLabel}
-          />
+          {/* 뎁스 본문 — 딱 3문단(왜 사나/뭘 보고 있나/언제 틀리나). 30초 독해(WO Phase 1). */}
+          <ConvictionParagraphs front={front} insight={insight} />
 
-          {/* 핵심 해석 — 강세/약세 원문이 부족해도 가격·차트·수급으로 읽을 재료를 먼저 보여준다. */}
-          <StockReadGuide front={front} insight={insight} loading={false} context={context} />
-
-          {/* 포모 상태 — 카드와 같은 단일 출처지만, 상세의 첫 주인공은 가격/차트가 담당. */}
-          <div className="mt-6">
-            <FomoHero
-              front={front}
-              {...(context?.axisHeadline ? { headlineOverride: context.axisHeadline } : {})}
-              {...(front?.signals.marketCapRank ? { rankLabel: `시총 ${front.signals.marketCapRank.rank}위` } : {})}
-            />
-          </div>
-
-          {/* 원문/공식 데이터 — 있으면 보여주고, 없으면 위 '오늘 읽는 법'에서 부족 상태를 이미 설명한다. */}
-          {hasInsight && (
-            <section className="mt-6">
-              <p className="font-pixel text-sm text-whiteout">원문 요약</p>
-              <p className="mt-2 text-sm leading-6 text-muted">{cleanText(insight!.whyHot)}</p>
-              {insight!.lean.bullCount + insight!.lean.bearCount > 0 && (
-                <p className="mt-2 text-[11px] leading-5 text-muted">
-                  원문 쏠림 · <span style={{ color: "var(--up, #ff5a5f)" }}>강세 {insight!.lean.bullCount}</span>
-                  {" : "}
-                  <span style={{ color: "var(--down, #4f8cff)" }}>약세 {insight!.lean.bearCount}</span>
-                  {insight!.lean.oneSided ? " · 반대 관점 안 보임" : ""}
-                </p>
-              )}
-              {insight!.singleOutlet && insight!.outlets.length > 0 && (
-                <p className="mt-2 rounded-lg border border-hairline bg-surface px-3 py-2 text-[11px] leading-5 text-muted">
-                  오늘은 <span className="text-whiteout">{insight!.outlets[0]}</span> 한 곳 기준이에요.
-                </p>
-              )}
-            </section>
-          )}
-
+          {/* 원문 근거 링크 — 하단 유지. */}
           <OfficialFactsBlock facts={insight?.officialFacts} />
-          <CommunityWordingBlock insight={insight} />
-
-          <div className="mt-7">
-            <StockFundamentalsBlock basics={basics} front={front} />
-          </div>
 
           {showThinSourceFootnote && (
             <p className="mt-5 text-[12px] leading-5 text-muted">
