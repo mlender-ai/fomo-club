@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { StockInsightView, type StockContext } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
+import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckContent, type DeckNarrative, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
@@ -11,7 +11,7 @@ import { stockDeckCards, type DeckCard, type DeckContent, type DeckNarrative, ty
 /**
  * 피드 표면(WO-GNB-TWO-SURFACES ②) — 콘텐츠 전용 세로 스크롤.
  * 소스 = daily-30(메인 덱·PC 우측 컬럼과 동일 — 이원화 금지). 종목 카드는 제외, 콘텐츠만 모은다.
- * 내러티브 = 사건→종목 스토리(탭 시 앵커 종목 뎁스), 매크로/지수/고래 = 사실 카드.
+ * 내러티브 = 사건→스토리 뎁스→종목 뎁스, 매크로/지수/고래 = 사실 카드.
  */
 
 /** 피드에 담기는 콘텐츠 카드(내러티브·매크로/지수/고래). 종목·섹터 카드는 메인 덱 소관. */
@@ -30,29 +30,10 @@ function feedItemsFromDaily30(discovery: Daily30Response): FeedItem[] {
   return items;
 }
 
-function narrativeAnchorContext(card: DeckNarrative): { stock: string; context: StockContext } | null {
-  // 트리거 앵커 티커 우선, 없으면 첫 종목. 뎁스 진입에 필요한 식별자(코드/심볼)를 넘긴다.
-  const anchor =
-    card.stocks.find((s) => s.ticker === card.trigger.anchorTicker) ?? card.stocks[0];
-  if (!anchor) return null;
-  return {
-    stock: anchor.name,
-    context: {
-      reason: card.headline,
-      sourceLabel: card.source,
-      ...(card.trigger.url ? { sourceUrl: card.trigger.url } : {}),
-      ...(anchor.naverCode ? { naverCode: anchor.naverCode } : {}),
-      ...(anchor.symbol ? { symbol: anchor.symbol } : {}),
-      market: anchor.market,
-      country: anchor.country,
-    },
-  };
-}
-
 export function FeedView() {
   const [items, setItems] = useState<FeedItem[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [selected, setSelected] = useState<{ stock: string; context: StockContext } | null>(null);
+  const [selected, setSelected] = useState<DeckNarrative | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -90,14 +71,12 @@ export function FeedView() {
     <div className="space-y-3 pb-4">
       {content.map((item) => {
         if (item.type === "narrative") {
-          const anchor = narrativeAnchorContext(item.data);
           return (
             <button
               key={item.data.id}
               type="button"
-              onClick={() => anchor && setSelected(anchor)}
-              disabled={!anchor}
-              className="block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors enabled:hover:border-whiteout/20 disabled:cursor-default"
+              onClick={() => setSelected(item.data)}
+              className="block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
             >
               <NarrativeCard card={item.data} />
             </button>
@@ -110,9 +89,7 @@ export function FeedView() {
         );
       })}
 
-      {selected && (
-        <StockInsightView stock={selected.stock} context={selected.context} onClose={() => setSelected(null)} />
-      )}
+      {selected && <NarrativeDepthPage card={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }

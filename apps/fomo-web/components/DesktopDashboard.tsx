@@ -5,6 +5,7 @@ import type { CardVerdict } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
+import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
@@ -152,17 +153,18 @@ export function DesktopDashboard() {
     () => (filter === "all" ? cards : cards.filter((card) => cardTag(card) === filter)),
     [cards, filter]
   );
+  const contentCards = allCards.filter((card): card is Extract<DeckCard, { type: "content" }> => card.type === "content");
+  const narrativeCards = allCards.filter((card): card is Extract<DeckCard, { type: "narrative" }> => card.type === "narrative");
+  const selectableCards = useMemo(() => [...filtered, ...narrativeCards], [filtered, narrativeCards]);
 
   // 첫 진입 — 1번 카드 뎁스 자동 표시(빈 화면 금지). 필터로 목록이 바뀌어 선택이 사라지면 첫 항목로.
   useEffect(() => {
     if (filtered.length === 0) return;
-    if (selectedId && filtered.some((card) => cardId(card) === selectedId)) return;
+    if (selectedId && selectableCards.some((card) => cardId(card) === selectedId)) return;
     setSelectedId(cardId(filtered[0]!));
-  }, [filtered, selectedId]);
+  }, [filtered, selectableCards, selectedId]);
 
-  const selected = filtered.find((card) => cardId(card) === selectedId) ?? filtered[0];
-  const contentCards = allCards.filter((card): card is Extract<DeckCard, { type: "content" }> => card.type === "content");
-  const narrativeCards = allCards.filter((card): card is Extract<DeckCard, { type: "narrative" }> => card.type === "narrative");
+  const selected = selectableCards.find((card) => cardId(card) === selectedId) ?? filtered[0];
 
   const depthContext = (stock: DeckStock) => ({
     fromTheme: stock.sector,
@@ -246,6 +248,8 @@ export function DesktopDashboard() {
             onClose={() => undefined}
             inline
           />
+        ) : selected?.type === "narrative" ? (
+          <NarrativeDepthPage key={selected.data.id} card={selected.data} onClose={() => filtered[0] && setSelectedId(cardId(filtered[0]))} inline />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted">종목을 선택해 주세요.</div>
         )}
@@ -259,9 +263,16 @@ export function DesktopDashboard() {
           </div>
         ))}
         {narrativeCards.slice(0, 2).map((card) => (
-          <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
+          <button
+            key={card.data.id}
+            type="button"
+            onClick={() => setSelectedId(cardId(card))}
+            aria-pressed={cardId(card) === selectedId}
+            className="block w-full rounded-2xl border bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
+            style={{ borderColor: cardId(card) === selectedId ? NEON : "var(--hairline, #2a2a2a)" }}
+          >
             <NarrativeCard card={card.data} />
-          </div>
+          </button>
         ))}
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
           <PerformanceProofPanel items={seenItems} />

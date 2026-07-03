@@ -14,13 +14,14 @@ import type {
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
+import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
 import { recordDiscoverySeen } from "@/lib/discoveryPerformance";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
-import type { DeckStock } from "@/lib/discoveryDeck";
+import type { DeckNarrative, DeckStock } from "@/lib/discoveryDeck";
 import { stockDeckCards, type DeckCard, type DeckThemeBundle, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
@@ -529,6 +530,7 @@ export function StockSwipeDeck({
   const [restoreStart, setRestoreStart] = useState<null | "left" | "right">(null);
   const [restorePrimed, setRestorePrimed] = useState(false);
   const [selected, setSelected] = useState<DeckStock | null>(null);
+  const [selectedNarrative, setSelectedNarrative] = useState<DeckNarrative | null>(null);
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   // 매칭 모먼트 — 관심(우)·슈퍼관심(위) 넘길 때 짧게 뜨는 담담한 확인 연출(표현 레이어).
   const [matchMoment, setMatchMoment] = useState<null | { name: string; kind: "like" | "super" }>(null);
@@ -827,6 +829,15 @@ export function StockSwipeDeck({
     setSelected(null);
     window.setTimeout(() => flingNext("left"), 40);
   };
+  const openNarrativeDepth = (card: DeckNarrative) => {
+    recordDiscoveryEvent("depth_open");
+    setSelectedNarrative(card);
+  };
+  const closeNarrativeDepth = () => {
+    if (selectedNarrative) setUndoEntry({ idx, dir: "left", card: { type: "narrative", data: selectedNarrative } });
+    setSelectedNarrative(null);
+    window.setTimeout(() => flingNext("left"), 40);
+  };
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (exiting || restoring) return;
@@ -936,7 +947,9 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (topReady && isStockCard(top) && !moved.current && !exiting && !restoring) openDepth(top.data, "card");
+            if (!topReady || moved.current || exiting || restoring) return;
+            if (isStockCard(top)) openDepth(top.data, "card");
+            else if (top.type === "narrative") openNarrativeDepth(top.data);
           }}
           className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
           style={{ transform: topTransform, transition: topTransition }}
@@ -1034,6 +1047,7 @@ export function StockSwipeDeck({
           onClose={closeDepth}
         />
       )}
+      {selectedNarrative && <NarrativeDepthPage card={selectedNarrative} onClose={closeNarrativeDepth} />}
     </div>
   );
 }
