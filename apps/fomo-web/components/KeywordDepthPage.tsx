@@ -1286,10 +1286,13 @@ export function StockInsightView({
   stock,
   context,
   onClose,
+  inline = false,
 }: {
   stock: string;
   context?: StockContext;
   onClose: () => void;
+  /** PC 대시보드 중앙 컬럼용(WO-PC-VERSION) — 풀스크린 오버레이 대신 부모 컨테이너 안에 렌더. 모바일 기본 불변. */
+  inline?: boolean;
 }) {
   const [insight, setInsight] = useState<CondensedInsight | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1373,13 +1376,15 @@ export function StockInsightView({
     !hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black">
-      <div className="mx-auto flex h-full max-w-md flex-col">
+    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] bg-black"}>
+      <div className={inline ? "flex h-full min-h-0 flex-col" : "mx-auto flex h-full max-w-md flex-col"}>
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">
-            <button onClick={onClose} className="font-pixel text-sm text-muted hover:text-whiteout" aria-label="뒤로">
-              ← 뒤로
-            </button>
+            {!inline && (
+              <button onClick={onClose} className="font-pixel text-sm text-muted hover:text-whiteout" aria-label="뒤로">
+                ← 뒤로
+              </button>
+            )}
             <span className="text-lg font-bold text-whiteout">{cleanText(stock)}</span>
           </div>
           <button
