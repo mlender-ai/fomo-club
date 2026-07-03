@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     );
   } catch (err) {
     console.warn("[fomo/discovery] failed", (err as Error)?.message);
+    // 실패는 비200으로 — 200-빈덱을 성공으로 취급하면 재시도/폴백 경로가 빈 덱에서 멈춘다.
     return withCors(
       NextResponse.json(
         {
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
           confidence: "L",
           source: "데이터 없음",
         } satisfies DiscoveryResponse,
-        { headers: { "Cache-Control": "no-store" } }
+        { status: 503, headers: { "Cache-Control": "no-store" } }
       )
     );
   }

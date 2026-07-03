@@ -26,6 +26,7 @@ export async function GET() {
     );
   } catch (err) {
     console.warn("[fomo/daily-30] failed", (err as Error)?.message);
+    // 실패는 반드시 비200으로 — 200-빈덱을 성공으로 캐시/렌더하면 클라 재시도가 멈춘다(빈 덱 stuck).
     return withCors(
       NextResponse.json(
         {
@@ -42,7 +43,7 @@ export async function GET() {
             assetCounts: { "kr-stock": 0, "us-stock": 0, coin: 0, macro: 0 },
           },
         } satisfies Daily30Response,
-        { headers: { "Cache-Control": "no-store" } }
+        { status: 503, headers: { "Cache-Control": "no-store" } }
       )
     );
   }
