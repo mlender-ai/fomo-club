@@ -323,9 +323,11 @@ function VerdictBlock({ verdict }: { verdict: CardVerdict }) {
           ))}
         </ul>
       )}
-      <p className="mt-1.5 text-[10px] leading-4 text-muted/80" style={clampStyle(1)}>
-        {verdict.invalidation}
-      </p>
+      {verdict.invalidation && (
+        <p className="mt-1.5 text-[10px] leading-4 text-muted/80" style={clampStyle(1)}>
+          {verdict.invalidation}
+        </p>
+      )}
     </div>
   );
 }

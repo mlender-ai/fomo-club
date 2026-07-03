@@ -83,6 +83,33 @@ export async function fetchStockDaily(
   }
 }
 
+/** 차트분석 탭용 시리즈(WO 1.6 D) — 종가·거래량 + MA20/60/120 정렬 배열(창 이전 구간은 null). */
+export interface StockChartSeries {
+  closes: number[];
+  volumes: number[];
+  ma20: Array<number | null>;
+  ma60: Array<number | null>;
+  ma120: Array<number | null>;
+}
+
+function buildChartSeries(candles: readonly DailyOhlcv[], window = 120): StockChartSeries | undefined {
+  const clean = candles.filter((c) => Number.isFinite(c.close) && c.close > 0);
+  if (clean.length < 20) return undefined;
+  const closes = clean.map((c) => c.close);
+  const volumes = clean.map((c) => (Number.isFinite(c.volume) && c.volume > 0 ? c.volume : 0));
+  const maAt = (i: number, n: number): number | null =>
+    i + 1 >= n ? closes.slice(i + 1 - n, i + 1).reduce((a, b) => a + b, 0) / n : null;
+  const start = Math.max(0, closes.length - window);
+  const idx = Array.from({ length: closes.length - start }, (_, k) => start + k);
+  return {
+    closes: idx.map((i) => closes[i]!),
+    volumes: idx.map((i) => volumes[i]!),
+    ma20: idx.map((i) => maAt(i, 20)),
+    ma60: idx.map((i) => maAt(i, 60)),
+    ma120: idx.map((i) => maAt(i, 120)),
+  };
+}
+
 /** 평소 대비 거래량 배수(거래량 회전) — 최신일 / 직전 ~20거래일 평균. 데이터 부족이면 undefined(가짜숫자 금지). */
 function volumeTurnover(volumes: number[]): number | undefined {
   if (volumes.length < 6) return undefined;
@@ -165,8 +192,10 @@ export interface StockFrontData {
   axisSignals?: AxisSignal[];
   /** 다축 후킹 대표 문장. 카드/상세 헤드라인의 우선 출처. */
   axisHook?: MultiAxisHookSelection;
-  /** 판단 층(WO Phase 1) — 결정론 verdict 엔진. 캔들 부족 시 생략(가짜 판단 금지). */
+  /** 판단 층(WO Phase 1) — 결정론 verdict 엔진. 캔들 부족 시 최소 verdict(관망·신호 축적). */
   verdict?: CardVerdict;
+  /** 차트분석 탭 시리즈(WO 1.6 D) — 종가+MA20/60/120+거래량. non-lite 에서만. */
+  chartSeries?: StockChartSeries;
 }
 
 export interface StockFrontOptions {
@@ -374,12 +403,14 @@ export async function assembleStockFront(
         : {}),
       currency: "USD",
     });
+    const chartSeries = buildChartSeries(daily.candles);
     return {
       signals,
       fomo,
       ...(taFact ? { taFact } : {}),
       ta,
-      ...(verdict ? { verdict } : {}),
+      verdict,
+      ...(chartSeries ? { chartSeries } : {}),
       sparkline,
       ...(cachedFront?.priceText ? { priceText: cachedFront.priceText } : {}),
       ...(cachedFront?.changeText ? { changeText: cachedFront.changeText } : {}),
@@ -439,13 +470,15 @@ export async function assembleStockFront(
       : {}),
     currency: "KRW",
   });
+  const chartSeries = lite ? undefined : buildChartSeries(daily.candles);
 
   return {
     signals,
     fomo,
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
-    ...(verdict ? { verdict } : {}),
+    verdict,
+    ...(chartSeries ? { chartSeries } : {}),
     sparkline: daily.closes.slice(lite ? -42 : -66),
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),
     ...(basics?.changeText ? { changeText: basics.changeText } : {}),

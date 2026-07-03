@@ -51,7 +51,7 @@ import { resolveCardHeadline, type CardHeadline } from "./card-headline";
 import { selectDominantAxis } from "./card-axis";
 import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
-import { fetchCachedUsMarketRows, latestUsSessionAsOf } from "./us-market-source";
+import { fetchCachedUsMarketRows, fetchNasdaqDailyCandles, latestUsSessionAsOf } from "./us-market-source";
 import { fetchInsiderClusterCandidates, type InsiderClusterCandidate } from "./insider-source";
 import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
@@ -1678,10 +1678,9 @@ function frontSeed(
 
 /**
  * 덱 카드 판단 층 — 실제 캔들 + 확인된 이벤트(수급 streak·내부자·재료·거래량)만 입력.
- * 캔들이 없으면(주로 US 덱 경로) 판단을 만들지 않는다 — 가짜 판단 금지.
+ * 캔들이 부족하면 엔진이 최소 verdict(관망·신호 축적)로 강등 — verdict 박스 없는 카드 금지(WO 1.6).
  */
-function verdictForCandidate(candidate: DiscoveryCandidate, candles: readonly DailyOhlcv[]): CardVerdict | undefined {
-  if (candles.length === 0) return undefined;
+function verdictForCandidate(candidate: DiscoveryCandidate, candles: readonly DailyOhlcv[]): CardVerdict {
   let foreignNetStreak: number | undefined;
   let institutionNetStreak: number | undefined;
   let insiderConfirmed = false;
@@ -2164,16 +2163,29 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   const dailyRows = await mapLimit(
     ranked.slice(0, deckCardCount),
     SPARKLINE_CONCURRENCY,
-    async (candidate) => ({
-      ticker: candidate.ticker,
-      daily: candidate.naverCode
-        ? await fetchStockDaily(candidate.naverCode, 110)
-        : {
-          candles: [],
+    async (candidate) => {
+      if (candidate.naverCode) {
+        return { ticker: candidate.ticker, daily: await fetchStockDaily(candidate.naverCode, 110) };
+      }
+      // US(내부자 포함) — Nasdaq OHLCV 로 verdict 엔진까지 캔들 공급(WO 1.6 A/B: 국/미 무차별 표준).
+      const usSymbol = rowsByTicker.get(candidate.ticker)?.symbol;
+      if (candidate.country === "US" && usSymbol) {
+        const daily = await fetchNasdaqDailyCandles(usSymbol, 270).catch(() => ({
+          candles: [] as DailyOhlcv[],
+          closes: [] as number[],
+          volumes: [] as number[],
+        }));
+        if (daily.closes.length >= 2) return { ticker: candidate.ticker, daily };
+      }
+      return {
+        ticker: candidate.ticker,
+        daily: {
+          candles: [] as DailyOhlcv[],
           closes: rowsByTicker.get(candidate.ticker)?.sparkline ?? [],
-          volumes: [],
+          volumes: [] as number[],
         },
-    })
+      };
+    }
   );
   const dailyByTicker = new Map(
     dailyRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.daily] as const] : []))
@@ -2192,8 +2204,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     if (!row) continue;
     const attention = attentionMap[candidate.ticker];
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
-    const verdict = verdictForCandidate(candidate, dailyByTicker.get(candidate.ticker)?.candles ?? []);
-    if (verdict) front.verdict = verdict;
+    front.verdict = verdictForCandidate(candidate, dailyByTicker.get(candidate.ticker)?.candles ?? []);
     const stock = await stockPayload(row, candidate, front);
     const headline = stock.headline?.trim();
     if (stock.headlineProvenance?.provenance === "suppressed" || !headline) {

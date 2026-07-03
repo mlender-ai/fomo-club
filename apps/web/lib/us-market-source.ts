@@ -440,6 +440,58 @@ export interface NasdaqSymbolQuote {
 }
 
 /**
+ * 임의 US 심볼의 일봉 OHLCV(WO 1.6 A/B — 덱 verdict 배선용).
+ * api.nasdaq.com historical 재사용(쿼터 무관·Vercel egress 통과, TwelveData 대체 경로).
+ * 실패 시 빈 배열(fail-open) — verdict 는 최소 verdict 로 강등된다.
+ */
+export async function fetchNasdaqDailyCandles(
+  symbol: string,
+  calendarDays = 270
+): Promise<{ candles: DailyOhlcv[]; closes: number[]; volumes: number[] }> {
+  const empty = { candles: [] as DailyOhlcv[], closes: [] as number[], volumes: [] as number[] };
+  const sym = symbol.trim().toUpperCase();
+  if (!sym) return empty;
+  const to = latestUsSessionDate();
+  const fromDate = new Date(`${to}T12:00:00Z`);
+  fromDate.setUTCDate(fromDate.getUTCDate() - calendarDays);
+  const url = new URL(`${NASDAQ_HISTORICAL_URL}/${encodeURIComponent(sym)}/historical`);
+  url.searchParams.set("assetclass", "stocks");
+  url.searchParams.set("fromdate", fromDate.toISOString().slice(0, 10));
+  url.searchParams.set("todate", to);
+  url.searchParams.set("limit", String(Math.max(30, Math.min(300, Math.round(calendarDays * 0.72)))));
+  const res = await fetch(url.toString(), {
+    headers: {
+      accept: "application/json, text/plain, */*",
+      "user-agent": NASDAQ_UA,
+      origin: "https://www.nasdaq.com",
+      referer: "https://www.nasdaq.com/",
+    },
+    signal: AbortSignal.timeout(6_000),
+    next: { revalidate: 1_800 },
+  }).catch(() => null);
+  if (!res || !res.ok) return empty;
+  const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  const rows = ((data?.data as Record<string, unknown> | undefined)?.tradesTable as Record<string, unknown> | undefined)?.rows;
+  if (!Array.isArray(rows)) return empty;
+  const candles = rows
+    .map((row): DailyOhlcv | null => {
+      if (!row || typeof row !== "object") return null;
+      const record = row as Record<string, unknown>;
+      const date = isoFromNasdaqDate(String(record.date ?? ""));
+      const close = num(String(record.close ?? ""));
+      if (!date || typeof close !== "number" || close <= 0) return null;
+      const open = num(String(record.open ?? "")) ?? close;
+      const high = num(String(record.high ?? "")) ?? close;
+      const low = num(String(record.low ?? "")) ?? close;
+      const volume = num(String(record.volume ?? "")) ?? 0;
+      return { date, open, high: Math.max(high, close), low: Math.min(low, close), close, volume };
+    })
+    .filter((row): row is DailyOhlcv => row !== null)
+    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+  return { candles, closes: candles.map((c) => c.close), volumes: candles.map((c) => c.volume) };
+}
+
+/**
  * 임의 US 심볼의 시세(현재가·등락·스파크라인) — api.nasdaq.com historical 재사용.
  * Yahoo egress 차단·TwelveData 쿼터와 무관하게 Vercel 에서 동작(스크리너와 동일 경로).
  * 실패 시 null(fail-open).
