@@ -7,6 +7,7 @@ import {
   type DiscoveryStockPayload,
 } from "./discovery-supply";
 import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
+import { buildCoinDiscoveryResponse } from "./coin-discovery";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -335,9 +336,13 @@ function responseFromSelected(
 }
 
 export async function buildDaily30Response(): Promise<Daily30Response> {
-  const [kr, us, rawContent] = await Promise.all([
+  const [kr, us, coin, rawContent] = await Promise.all([
     buildDiscoveryResponse({ country: "KR", targetedMaterial: true, targetedMaterialLimit: 36 }),
     buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 12 }),
+    // 코인(WO Phase C) — Upbit 캐시 발굴. 신호 없으면 stocks 0(쿼터 강제 없음 — 정직).
+    buildCoinDiscoveryResponse().catch(
+      (): DiscoveryResponse => ({ asOf: "", stocks: [], fronts: {}, confidence: "L", source: "coin unavailable" })
+    ),
     fetchDeckContentCards().catch(() => [] as DeckContentCard[]),
   ]);
   const content = [
@@ -349,6 +354,7 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
   const seen = new Set<string>();
   addStockCandidates(candidates, kr, seen);
   addStockCandidates(candidates, us, seen);
+  addStockCandidates(candidates, coin, seen);
   addContentCandidates(candidates, content, seen);
 
   // WO-GNB 두 표면 분리: 덱 = 종목 30장(내러티브·콘텐츠 제외), 피드 = 콘텐츠·내러티브(중요도순).
@@ -358,5 +364,5 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
     .sort((a, b) => b.quietScore - a.quietScore || a.id.localeCompare(b.id))
     .slice(0, FEED_CARD_LIMIT);
   const deck = selectDaily30Candidates(stockCandidates, DAILY_CARD_TARGET);
-  return responseFromSelected(deck, feedCandidates, [kr, us], kr.asOf > us.asOf ? kr.asOf : us.asOf);
+  return responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
 }

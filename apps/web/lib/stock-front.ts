@@ -24,6 +24,7 @@ import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
 import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
+import { readCoinMarketSnapshots } from "./coin-market-source";
 import { usSymbolForStock } from "./us-symbols";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
@@ -357,6 +358,65 @@ async function assembleUsCachedStockFront(
 }
 
 /**
+ * 코인 카드 앞면·뎁스(WO Phase C) — Upbit 프리웜 캐시만 읽어 조립(요청 경로 외부 fetch 0).
+ * 주식과 같은 표준: TA·verdict·chartSeries 전부 같은 엔진에 캔들만 공급. 재무는 코인 미해당.
+ */
+async function assembleCoinStockFront(market: string, lite: boolean): Promise<StockFrontData> {
+  const snapshots = await readCoinMarketSnapshots().catch(() => []);
+  const snapshot = snapshots.find((s) => s.market.toUpperCase() === market);
+  if (!snapshot) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+
+  const fullValues = snapshot.tradeValues.slice(0, -1);
+  const avg20 = fullValues.length >= 5 ? fullValues.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, fullValues.length) : 0;
+  const volRatio = avg20 > 0 ? snapshot.accTradePrice24h / avg20 : undefined;
+  const signals: CardFrontSignals = {
+    changePct: Number(snapshot.changePct.toFixed(2)),
+    ...(typeof volRatio === "number" ? { volumeRatio: Number(volRatio.toFixed(2)) } : {}),
+  };
+  const closes = snapshot.candles.map((c) => c.close);
+  const sparkline = closes.slice(-66);
+  const priceText =
+    snapshot.price >= 1000
+      ? `${Math.round(snapshot.price).toLocaleString("ko-KR")}원`
+      : `${snapshot.price.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}원`;
+  const changeText = `${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(2)}%`;
+  const changeDir: "up" | "down" | "flat" = snapshot.changePct > 0 ? "up" : snapshot.changePct < 0 ? "down" : "flat";
+  const base = {
+    signals,
+    sparkline,
+    priceText,
+    changeText,
+    changeDir,
+  };
+  if (lite) {
+    return { ...base, fomo: computeFomoScore({ ...signals }) };
+  }
+  const ta = computeTechnicalAnalysis(snapshot.candles);
+  const trend = ta.inputs.trendStrength ?? trendStrength(sparkline);
+  const fomo = computeFomoScore({
+    ...signals,
+    ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+    ...(ta.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
+    ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
+  });
+  const taFact = selectTaFact(fomo, ta);
+  const verdict = computeCardVerdict({
+    candles: snapshot.candles,
+    ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
+    currency: "KRW",
+  });
+  const chartSeries = buildChartSeries(snapshot.candles);
+  return {
+    ...base,
+    fomo,
+    ...(taFact ? { taFact } : {}),
+    ta,
+    verdict,
+    ...(chartSeries ? { chartSeries } : {}),
+  };
+}
+
+/**
  * 한 종목의 카드 앞면 데이터 조립 + 포모 점수 산출(척추 단일 출처).
  * baseline(가격·52주) + 라이브 수급 streak + 거래량 회전·추세 + 시총순위 + 스파크라인 → computeFomoScore.
  * rankMap 은 비싸므로 호출부에서 받아 재사용(없으면 순위 생략).
@@ -367,6 +427,11 @@ export async function assembleStockFront(
   coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {},
   options: StockFrontOptions = {}
 ): Promise<StockFrontData> {
+  // 코인(WO Phase C) — symbol 이 Upbit 마켓 코드("KRW-*")면 코인 캐시 경로(요청 경로 외부 fetch 0).
+  const coinMarket = options.symbol?.trim().toUpperCase();
+  if (coinMarket?.startsWith("KRW-")) {
+    return assembleCoinStockFront(coinMarket, options.lite === true);
+  }
   const def = resolveStock(stock);
   const code = options.naverCode ?? def?.naverCode;
   if (!code) {
