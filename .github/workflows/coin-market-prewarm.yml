@@ -1,0 +1,32 @@
+name: Coin Market Prewarm
+
+# 코인은 24/7 거래 — 시간당 1회 Upbit 일봉·시세를 프리웜해 캐시에 쓴다(WO Phase C).
+# 요청 경로는 캐시만 읽는다(504 원칙). Vercel native cron 미지원 플랜이라 GH Actions 로 트리거.
+
+on:
+  schedule:
+    - cron: "20 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coin-market-prewarm
+  cancel-in-progress: false
+
+jobs:
+  prewarm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call production coin prewarm endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/cron/coin-market-prewarm"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl -fsS "$URL" -H "Authorization: Bearer ${CRON_SECRET}"
+          else
+            curl -fsS "$URL"
+          fi
