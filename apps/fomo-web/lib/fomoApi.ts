@@ -10,6 +10,7 @@ import type {
   ScoredArticle,
 } from "@fomo/core";
 import type { DeckContent } from "./discoveryDeck";
+import { isDiscoveryCopySafe } from "./discoveryCopySafe";
 import { getSessionId } from "@/lib/session";
 import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
 import { discoveryMatchesCountry, type DiscoveryCountryScope } from "./discoveryCountryScope";
@@ -603,8 +604,6 @@ const discoveryStorageKey = (country: DiscoveryCountryScope = "KR") =>
   `fomo:discovery:${DISCOVERY_CACHE_VERSION}:${country}:${kstDateKey()}`;
 const LAST_DISCOVERY_STORAGE_KEY = `fomo:discovery:last-good:${DISCOVERY_CACHE_VERSION}`;
 const lastDiscoveryStorageKey = (country: DiscoveryCountryScope = "KR") => `${LAST_DISCOVERY_STORAGE_KEY}:${country}`;
-const UNSAFE_DISCOVERY_COPY_PATTERN =
-  /\b(?:its|the|with|and)\b\s+[A-Za-z]|[A-Za-z]{2,}\s*(?:와|과|의|가|이|은|는|을|를|에|에서|로|으로)|SHPH\s*,\s*ILLR|설명하긴\s*이른데|아직\s*공개된\s*계기/i;
 
 function isDiscoveryResponse(value: unknown): value is DiscoveryResponse {
   const candidate = value as Partial<DiscoveryResponse> | null;
@@ -644,7 +643,7 @@ function cardCopyFields(card: DiscoveryCardResponse): string[] {
 function hasUnsafeDiscoveryCopy(value: DiscoveryResponse | null | undefined): boolean {
   if (!value) return false;
   const fields = [...value.stocks.flatMap(stockCopyFields), ...(value.cards ?? []).flatMap(cardCopyFields)];
-  return fields.some((text) => UNSAFE_DISCOVERY_COPY_PATTERN.test(text));
+  return fields.some((text) => !isDiscoveryCopySafe(text));
 }
 
 function hasDiscoveryCards(value: DiscoveryResponse | null | undefined, country: DiscoveryCountryScope = "all"): value is DiscoveryResponse {
