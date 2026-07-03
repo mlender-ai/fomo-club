@@ -5,6 +5,7 @@ import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
 import { CaretUpIcon, CaretDownIcon, XMarkIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
+import { FeedView } from "@/components/FeedView";
 import { DesktopDashboard, useIsDesktop } from "@/components/DesktopDashboard";
 import type {
   FomoIndexResponse,
@@ -22,7 +23,7 @@ import type {
  * 열면 바로 카드(스와이프 덱). 큰 마스코트 제거, 지수는 상단 얇은 띠. 본 카드는 히스토리 탭에.
  * (감정 게이트/캘린더/한마디 props는 보존 차원에서 시그니처에 남기되 미사용 — flag로 숨김 유지.)
  */
-type Tab = "card" | "history";
+type Tab = "main" | "feed" | "history";
 const NEON = "#D8FF3A";
 
 export function HomeView({
@@ -41,7 +42,7 @@ export function HomeView({
   loggedIn: boolean;
   onLoggedIn: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("card");
+  const [tab, setTab] = useState<Tab>("main");
   const [indexHelpOpen, setIndexHelpOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const color = index ? scoreToColor(index.score) : undefined;
@@ -120,19 +121,22 @@ export function HomeView({
           </button>
         </div>
 
-        <div className="mt-3 flex min-h-0 flex-1 flex-col">
-          {tab === "card" ? (
+        <div className={`mt-3 flex min-h-0 flex-1 flex-col ${tab === "feed" ? "overflow-y-auto scrollbar-none" : ""}`}>
+          {tab === "main" ? (
             <KeywordCardFeed loggedIn={true} />
+          ) : tab === "feed" ? (
+            <FeedView />
           ) : (
             <KeywordHistory />
           )}
         </div>
       </main>
 
-      {/* 하단 탭: 카드 / 히스토리 */}
+      {/* 하단 GNB: 메인 / 피드 / 히스토리 (WO-GNB — 두 표면 분리) */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black">
         <div className="mx-auto flex max-w-md">
-          <TabButton active={tab === "card"} onClick={() => setTab("card")} label="카드" />
+          <TabButton active={tab === "main"} onClick={() => setTab("main")} label="메인" />
+          <TabButton active={tab === "feed"} onClick={() => setTab("feed")} label="피드" />
           <TabButton active={tab === "history"} onClick={() => setTab("history")} label="히스토리" />
         </div>
       </nav>

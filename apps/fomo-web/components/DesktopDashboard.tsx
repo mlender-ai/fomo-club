@@ -35,12 +35,12 @@ export function useIsDesktop(): boolean {
 
 type FilterTag = "all" | "kr" | "us" | "coin" | "macro";
 
+// 좌 리스트는 종목 전용(WO-GNB) — 매크로는 우측 콘텐츠 컬럼 소관이라 필터에서 뺀다.
 const FILTER_TABS: Array<{ key: FilterTag; label: string }> = [
   { key: "all", label: "전체" },
   { key: "kr", label: "국장" },
   { key: "us", label: "미장" },
   { key: "coin", label: "코인" },
-  { key: "macro", label: "매크로" },
 ];
 
 /** 카드 → 필터 태그 분류(daily-30 assetClass 규칙과 동일 기준, 클라 재계산). */
@@ -138,11 +138,14 @@ export function DesktopDashboard() {
     };
   }, []);
 
-  const cards = useMemo<DeckCard[]>(() => {
+  const allCards = useMemo<DeckCard[]>(() => {
     if (!daily) return [];
     const raw = ((daily.cards?.length ? daily.cards : daily.stocks) ?? []) as DiscoveryDeckCard[];
-    return stockDeckCards(raw).slice(0, 30);
+    return stockDeckCards(raw);
   }, [daily]);
+
+  // 좌 리스트 = 종목 30장(WO-GNB 메인과 동일). 우 컬럼 = 콘텐츠·내러티브(피드와 동일 소스).
+  const cards = useMemo(() => allCards.filter((card) => card.type === "stock").slice(0, 30), [allCards]);
 
   const fronts = (daily?.fronts ?? {}) as Record<string, FrontEntry>;
   const filtered = useMemo(
@@ -158,8 +161,8 @@ export function DesktopDashboard() {
   }, [filtered, selectedId]);
 
   const selected = filtered.find((card) => cardId(card) === selectedId) ?? filtered[0];
-  const contentCards = cards.filter((card): card is Extract<DeckCard, { type: "content" }> => card.type === "content");
-  const narrativeCards = cards.filter((card): card is Extract<DeckCard, { type: "narrative" }> => card.type === "narrative");
+  const contentCards = allCards.filter((card): card is Extract<DeckCard, { type: "content" }> => card.type === "content");
+  const narrativeCards = allCards.filter((card): card is Extract<DeckCard, { type: "narrative" }> => card.type === "narrative");
 
   const depthContext = (stock: DeckStock) => ({
     fromTheme: stock.sector,
@@ -243,16 +246,8 @@ export function DesktopDashboard() {
             onClose={() => undefined}
             inline
           />
-        ) : selected?.type === "content" ? (
-          <div className="mx-auto h-full max-w-lg px-8 py-8">
-            <ContentCard card={selected.data} />
-          </div>
-        ) : selected?.type === "narrative" ? (
-          <div className="mx-auto h-full max-w-lg px-8 py-8">
-            <NarrativeCard card={selected.data} />
-          </div>
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">카드를 선택해 주세요.</div>
+          <div className="flex h-full items-center justify-center text-sm text-muted">종목을 선택해 주세요.</div>
         )}
       </section>
 

@@ -287,8 +287,12 @@ export function selectDaily30Candidates(candidates: readonly Daily30Candidate[],
   return selected;
 }
 
+/** 피드 표면(WO-GNB)용 콘텐츠·내러티브 최대치 — 덱 30장과 별개로 응답에 함께 싣는다. */
+const FEED_CARD_LIMIT = 16;
+
 function responseFromSelected(
-  selected: readonly Daily30Candidate[],
+  deck: readonly Daily30Candidate[],
+  feed: readonly Daily30Candidate[],
   discoveries: readonly DiscoveryResponse[],
   asOf: string
 ): Daily30Response {
@@ -298,25 +302,27 @@ function responseFromSelected(
   for (const discovery of discoveries) {
     for (const [ticker, front] of Object.entries(discovery.fronts)) fronts[ticker] = front;
   }
-  for (const candidate of selected) {
+  for (const candidate of deck) {
     if (!candidate.stock) continue;
     if (stockById.has(candidate.id)) continue;
     stockById.set(candidate.id, candidate.stock);
     stocks.push(candidate.stock);
   }
+  // cards = 덱(종목 30장) + 피드(콘텐츠·내러티브). 클라가 표면별로 필터: 메인=stock, 피드=content/narrative.
+  const all = [...deck, ...feed];
   const assetCounts: Record<Daily30AssetClass, number> = { "kr-stock": 0, "us-stock": 0, coin: 0, macro: 0 };
-  for (const candidate of selected) assetCounts[candidate.assetClass] += 1;
+  for (const candidate of all) assetCounts[candidate.assetClass] += 1;
   return {
     asOf,
     country: "all",
     stocks,
-    cards: selected.map((candidate) => candidate.card),
+    cards: all.map((candidate) => candidate.card),
     fronts,
-    confidence: selected.length >= DAILY_CARD_TARGET ? "H" : selected.length >= 20 ? "M" : "L",
+    confidence: deck.length >= DAILY_CARD_TARGET ? "H" : deck.length >= 20 ? "M" : "L",
     source: "KR/US discovery·수급·내부자·거래량·고래·매크로 통합 quietScore",
     meta: {
       targetCount: DAILY_CARD_TARGET,
-      cards: selected.map((candidate) => ({
+      cards: all.map((candidate) => ({
         id: candidate.id,
         assetClass: candidate.assetClass,
         quietScore: Number(candidate.quietScore.toFixed(2)),
@@ -344,6 +350,13 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
   addStockCandidates(candidates, kr, seen);
   addStockCandidates(candidates, us, seen);
   addContentCandidates(candidates, content, seen);
-  const selected = selectDaily30Candidates(candidates, DAILY_CARD_TARGET);
-  return responseFromSelected(selected, [kr, us], kr.asOf > us.asOf ? kr.asOf : us.asOf);
+
+  // WO-GNB 두 표면 분리: 덱 = 종목 30장(내러티브·콘텐츠 제외), 피드 = 콘텐츠·내러티브(중요도순).
+  const stockCandidates = candidates.filter((c) => c.kind === "stock");
+  const feedCandidates = candidates
+    .filter((c) => c.kind === "content" || c.kind === "narrative")
+    .sort((a, b) => b.quietScore - a.quietScore || a.id.localeCompare(b.id))
+    .slice(0, FEED_CARD_LIMIT);
+  const deck = selectDaily30Candidates(stockCandidates, DAILY_CARD_TARGET);
+  return responseFromSelected(deck, feedCandidates, [kr, us], kr.asOf > us.asOf ? kr.asOf : us.asOf);
 }

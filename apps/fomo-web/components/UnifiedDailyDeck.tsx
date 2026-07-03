@@ -5,6 +5,7 @@ import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
+import { stockOnlyDeckCards } from "@/components/FeedView";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
 
 interface UnifiedDailyDeckProps {
@@ -38,7 +39,8 @@ function Daily30Empty({ onRetry }: { onRetry: () => void }) {
 function cardsFromDaily30(discovery: Daily30Response): { cards: DeckCard[]; fronts: Record<string, FrontEntry> } {
   const rawCards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
   const fronts = discovery.fronts as Record<string, FrontEntry>;
-  return { cards: stockDeckCards(rawCards).slice(0, 30), fronts };
+  // 메인 덱 = 종목 발굴 전용(WO-GNB). 콘텐츠·내러티브는 피드 표면으로 이관.
+  return { cards: stockOnlyDeckCards(stockDeckCards(rawCards)).slice(0, 30), fronts };
 }
 
 export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDailyDeckProps) {
