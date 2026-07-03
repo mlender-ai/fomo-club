@@ -21,7 +21,7 @@ import {
   type MultiAxisHookSelection,
 } from "@fomo/core";
 import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
-import { fetchUsDailyCandles } from "./us-market-source";
+import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
 import { usSymbolForStock } from "./us-symbols";
@@ -375,7 +375,10 @@ export async function assembleStockFront(
     const cachedFront = await assembleUsCachedStockFront(stock, coverage, { ...options, symbol: usSymbol }).catch(() => null);
     if (options.lite === true) return cachedFront ?? { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
 
-    const daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
+    let daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
+    if (daily.candles.length === 0) {
+      daily = await fetchNasdaqDailyCandles(usSymbol, 365).catch(() => ({ candles: [], closes: [], volumes: [] }));
+    }
     if (!cachedFront && daily.closes.length === 0) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
 
     const signals: CardFrontSignals = { ...(cachedFront?.signals ?? {}) };
