@@ -294,7 +294,7 @@ async function fetchMarketPage(market: DiscoveryMarket, page: number): Promise<D
   return (data.stocks ?? []).map((row) => parseMarketRow(row, market)).filter((row): row is DiscoveryMarketRow => row !== null);
 }
 
-async function fetchKrMarketRows(): Promise<DiscoveryMarketRow[]> {
+export async function fetchKrMarketRows(): Promise<DiscoveryMarketRow[]> {
   const settled = await Promise.allSettled(
     MARKETS.flatMap((market) => Array.from({ length: PAGES_PER_MARKET }, (_, i) => fetchMarketPage(market, i + 1)))
   );

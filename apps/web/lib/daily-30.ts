@@ -8,6 +8,7 @@ import {
 } from "./discovery-supply";
 import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
 import { buildCoinDiscoveryResponse } from "./coin-discovery";
+import { readTodayFeedContent, type TodayFeedContent } from "./feed-briefing";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -189,9 +190,21 @@ function stockCandidate(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed 
   };
 }
 
-function contentCandidate(card: DeckContentCard): Daily30Candidate | null {
+/** 피드 정렬(WO 피드 강화): 브리핑 상단 → 버즈 → 회고 → 기존(지수·거시·고래). 핀(급변동일)은 그 위. */
+const CONTENT_SIGNAL_SCORE: Record<DeckContentCard["contentType"], number> = {
+  briefing: 72,
+  buzz: 60,
+  recap: 52,
+  index: 42,
+  macro: 38,
+  whale: 34,
+};
+const PINNED_SCORE_BONUS = 30;
+
+function contentCandidate(card: DeckContentCard, pinnedIds?: ReadonlySet<string>): Daily30Candidate | null {
   if (!card.headline.trim() || card.facts.length === 0) return null;
-  const signalScore = card.contentType === "index" ? 42 : card.contentType === "macro" ? 38 : 34;
+  const pinned = pinnedIds?.has(card.id) === true;
+  const signalScore = CONTENT_SIGNAL_SCORE[card.contentType] + (pinned ? PINNED_SCORE_BONUS : 0);
   const hypePenalty = card.contentType === "whale" ? 6 : 2;
   return {
     kind: "content",
@@ -252,9 +265,14 @@ function addStockCandidates(
   }
 }
 
-function addContentCandidates(out: Daily30Candidate[], content: readonly DeckContentCard[], seen: Set<string>): void {
+function addContentCandidates(
+  out: Daily30Candidate[],
+  content: readonly DeckContentCard[],
+  seen: Set<string>,
+  pinnedIds?: ReadonlySet<string>
+): void {
   for (const card of content) {
-    const candidate = contentCandidate(card);
+    const candidate = contentCandidate(card, pinnedIds);
     if (!candidate || seen.has(candidate.id)) continue;
     seen.add(candidate.id);
     out.push(candidate);
@@ -336,7 +354,7 @@ function responseFromSelected(
 }
 
 export async function buildDaily30Response(): Promise<Daily30Response> {
-  const [kr, us, coin, rawContent] = await Promise.all([
+  const [kr, us, coin, rawContent, feedContent] = await Promise.all([
     buildDiscoveryResponse({ country: "KR", targetedMaterial: true, targetedMaterialLimit: 36 }),
     buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 12 }),
     // 코인(WO Phase C) — Upbit 캐시 발굴. 신호 없으면 stocks 0(쿼터 강제 없음 — 정직).
@@ -344,18 +362,29 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
       (): DiscoveryResponse => ({ asOf: "", stocks: [], fronts: {}, confidence: "L", source: "coin unavailable" })
     ),
     fetchDeckContentCards().catch(() => [] as DeckContentCard[]),
+    // 피드 강화(WO) — 브리핑·버즈·회고. 크론이 채운 캐시만 읽는다(외부 fetch 0).
+    readTodayFeedContent().catch((): TodayFeedContent => ({ cards: [], pinnedIds: new Set() })),
   ]);
+  // MARKET NOTE 해석 1줄(WO — 숫자만 금지): 국내 지수 카드에 섹터 펄스(실데이터) 주입.
+  const enrichedRawContent = feedContent.indexNote
+    ? rawContent.map((card) =>
+        card.contentType === "index" && card.scope === "domestic" && !card.note
+          ? { ...card, note: feedContent.indexNote! }
+          : card
+      )
+    : rawContent;
   const content = [
-    ...expandDeckContentCardsForScope(rawContent, "domestic", 3),
-    ...expandDeckContentCardsForScope(rawContent, "world", 3),
-    ...expandDeckContentCardsForScope(rawContent, "global", 2),
+    ...feedContent.cards,
+    ...expandDeckContentCardsForScope(enrichedRawContent, "domestic", 3),
+    ...expandDeckContentCardsForScope(enrichedRawContent, "world", 3),
+    ...expandDeckContentCardsForScope(enrichedRawContent, "global", 2),
   ];
   const candidates: Daily30Candidate[] = [];
   const seen = new Set<string>();
   addStockCandidates(candidates, kr, seen);
   addStockCandidates(candidates, us, seen);
   addStockCandidates(candidates, coin, seen);
-  addContentCandidates(candidates, content, seen);
+  addContentCandidates(candidates, content, seen, feedContent.pinnedIds);
 
   // WO-GNB 두 표면 분리: 덱 = 종목 30장(내러티브·콘텐츠 제외), 피드 = 콘텐츠·내러티브(중요도순).
   const stockCandidates = candidates.filter((c) => c.kind === "stock");
