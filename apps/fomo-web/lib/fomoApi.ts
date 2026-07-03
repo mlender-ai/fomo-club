@@ -392,6 +392,8 @@ export interface StockFrontResponse {
   fomo: import("@fomo/core").FomoScoreResult;
   taFact?: import("@fomo/core").TaFact;
   ta?: import("@fomo/core").TechnicalAnalysisSnapshot;
+  /** 캔들차트용 실제 일봉 OHLCV. non-lite 응답에 최대 260거래일. */
+  candles?: import("@fomo/core").DailyOhlcv[];
   sparkline: number[];
   priceText?: string;
   changeText?: string;

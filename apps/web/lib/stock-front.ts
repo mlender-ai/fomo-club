@@ -176,6 +176,8 @@ export interface StockFrontData {
   taFact?: TaFact;
   /** 차트분석(TA) 전체 스냅샷 — 뎁스 '차트분석' 탭용. 관측 서술 facts 배열(non-lite에서만). */
   ta?: TechnicalAnalysisSnapshot;
+  /** 캔들차트용 실제 일봉 OHLCV. non-lite 에서 최대 260거래일만 내려준다. */
+  candles?: DailyOhlcv[];
   /** 최근 3개월 종가(스파크라인) — 없으면 빈 배열. */
   sparkline: number[];
   /** 현재가 — 예 "354,000원"(카드 1행 표기용). */
@@ -410,6 +412,7 @@ export async function assembleStockFront(
       ...(taFact ? { taFact } : {}),
       ta,
       verdict,
+      ...(daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
       ...(chartSeries ? { chartSeries } : {}),
       sparkline,
       ...(cachedFront?.priceText ? { priceText: cachedFront.priceText } : {}),
@@ -478,6 +481,7 @@ export async function assembleStockFront(
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
     verdict,
+    ...(!lite && daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
     ...(chartSeries ? { chartSeries } : {}),
     sparkline: daily.closes.slice(lite ? -42 : -66),
     ...(basics?.priceText ? { priceText: basics.priceText } : {}),

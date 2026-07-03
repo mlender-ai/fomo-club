@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   scoreToColor,
   cleanText,
@@ -11,8 +11,7 @@ import {
   selectFomoHook,
   translateTaFact,
   confidenceGrade,
-  sparklinePath,
-  seriesIsUp,
+  type DailyOhlcv,
   type KeywordCard,
   type FomoTone,
 } from "@fomo/core";
@@ -370,6 +369,7 @@ function mergeFrontSeed(
     fomo: fresh.fomo ?? seed.fomo,
     ...(fresh.taFact ?? seed.taFact ? { taFact: fresh.taFact ?? seed.taFact } : {}),
     ...(fresh.ta ?? seed.ta ? { ta: fresh.ta ?? seed.ta } : {}),
+    ...(fresh.candles?.length ? { candles: fresh.candles } : seed.candles?.length ? { candles: seed.candles } : {}),
     sparkline: fresh.sparkline.length >= 2 ? fresh.sparkline : seed.sparkline,
     ...(fresh.priceText ?? seed.priceText ? { priceText: fresh.priceText ?? seed.priceText } : {}),
     ...(fresh.changeText ?? seed.changeText ? { changeText: fresh.changeText ?? seed.changeText } : {}),
@@ -665,29 +665,376 @@ function FomoHero({ front, rankLabel, headlineOverride }: { front: StockFrontRes
   );
 }
 
-/** 상세 미니 차트 — 3개월 종가 + 정직한 상태 한 줄(예측 아님, 현재 상태 묘사). */
+type ChartRange = "3m" | "1y";
+type ChartLayer = "ma" | "events" | "flow" | "phase" | "levels" | "volume" | "invalidation";
+
+const DETAIL_CHART = {
+  W: 320,
+  PRICE_H: 154,
+  VOL_TOP: 162,
+  VOL_H: 38,
+  H: 206,
+  up: "#D8FF3A",
+  down: "rgba(250,250,250,0.48)",
+  wick: "rgba(250,250,250,0.54)",
+  grid: "rgba(255,255,255,0.10)",
+  muted: "rgba(255,255,255,0.34)",
+} as const;
+
+function finiteNumber(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function formatChartPrice(value: number): string {
+  if (value >= 1000) return Math.round(value).toLocaleString("ko-KR");
+  if (value >= 100) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
+function syntheticCandlesFromSparkline(series: readonly number[]): DailyOhlcv[] {
+  return series
+    .filter((v) => Number.isFinite(v) && v > 0)
+    .map((close, i, arr) => {
+      const open = i > 0 ? arr[i - 1]! : close;
+      return {
+        open,
+        close,
+        high: Math.max(open, close),
+        low: Math.min(open, close),
+        volume: 0,
+      };
+    });
+}
+
+function smaValues(candles: readonly DailyOhlcv[], period: number): Array<number | null> {
+  const closes = candles.map((c) => c.close);
+  return closes.map((_, i) =>
+    i + 1 >= period ? closes.slice(i + 1 - period, i + 1).reduce((a, b) => a + b, 0) / period : null
+  );
+}
+
+function seriesPath(values: Array<number | null>, x: (i: number) => number, y: (v: number) => number): string {
+  let d = "";
+  let pen = false;
+  values.forEach((value, i) => {
+    if (value === null) {
+      pen = false;
+      return;
+    }
+    d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(value).toFixed(1)}`;
+    pen = true;
+  });
+  return d;
+}
+
+function swingLevels(candles: readonly DailyOhlcv[]): Array<{ kind: "support" | "resistance"; value: number }> {
+  if (candles.length < 12) return [];
+  const pivots: Array<{ kind: "support" | "resistance"; value: number; index: number; score: number }> = [];
+  const window = 2;
+  for (let i = window; i < candles.length - window; i += 1) {
+    const c = candles[i]!;
+    const before = candles.slice(i - window, i);
+    const after = candles.slice(i + 1, i + 1 + window);
+    const highPivot = [...before, ...after].every((p) => c.high >= p.high);
+    const lowPivot = [...before, ...after].every((p) => c.low <= p.low);
+    if (highPivot) pivots.push({ kind: "resistance", value: c.high, index: i, score: c.high - Math.min(...before.map((p) => p.low), ...after.map((p) => p.low)) });
+    if (lowPivot) pivots.push({ kind: "support", value: c.low, index: i, score: Math.max(...before.map((p) => p.high), ...after.map((p) => p.high)) - c.low });
+  }
+  const lastClose = candles[candles.length - 1]!.close;
+  const picked: Array<{ kind: "support" | "resistance"; value: number }> = [];
+  for (const kind of ["support", "resistance"] as const) {
+    const candidates = pivots
+      .filter((p) => p.kind === kind && (kind === "support" ? p.value <= lastClose * 1.03 : p.value >= lastClose * 0.97))
+      .sort((a, b) => b.index - a.index || b.score - a.score);
+    for (const p of candidates) {
+      if (picked.filter((x) => x.kind === kind).length >= 2) break;
+      if (picked.some((x) => Math.abs(x.value / p.value - 1) < 0.015)) continue;
+      picked.push({ kind, value: p.value });
+    }
+  }
+  return picked.slice(0, 3);
+}
+
+function volumeSignals(candles: readonly DailyOhlcv[]): {
+  spikes: Set<number>;
+  vacuums: Array<{ start: number; end: number }>;
+} {
+  const spikes = new Set<number>();
+  const vacuums: Array<{ start: number; end: number }> = [];
+  let vacuumStart: number | null = null;
+  candles.forEach((c, i) => {
+    const prev = candles.slice(Math.max(0, i - 20), i).map((p) => p.volume).filter((v) => v > 0);
+    const avg = prev.length >= 5 ? prev.reduce((a, b) => a + b, 0) / prev.length : undefined;
+    const isSpike = finiteNumber(avg) && c.volume > 0 && c.volume >= avg * 1.8;
+    const isVacuum = finiteNumber(avg) && c.volume > 0 && c.volume <= avg * 0.45;
+    if (isSpike) spikes.add(i);
+    if (isVacuum) {
+      if (vacuumStart === null) vacuumStart = i;
+    } else if (vacuumStart !== null) {
+      if (i - vacuumStart >= 3) vacuums.push({ start: vacuumStart, end: i - 1 });
+      vacuumStart = null;
+    }
+  });
+  if (vacuumStart !== null && candles.length - vacuumStart >= 3) vacuums.push({ start: vacuumStart, end: candles.length - 1 });
+  return { spikes, vacuums };
+}
+
+function markerDateLabel(candle: DailyOhlcv | undefined): string {
+  const raw = candle?.date;
+  if (!raw) return "최근 거래일";
+  if (/^\d{8}$/.test(raw)) return `${raw.slice(4, 6)}/${raw.slice(6, 8)}`;
+  return raw.slice(5, 10) || raw;
+}
+
+/** 상세 차트 — 실제 OHLC 캔들 + MA/거래량/무효선/근거 레이어. */
 function DetailChart({ front }: { front: StockFrontResponse | null }) {
-  const series = front?.sparkline ?? [];
-  if (series.length < 2) return null;
-  const paths = sparklinePath(series, 320, 64);
-  if (!paths) return null;
-  const up = seriesIsUp(series);
-  const stroke = "#D8FF3A"; // 픽셀 차트 단색(브랜드 네온), 등락색 아님
+  const [range, setRange] = useState<ChartRange>("3m");
+  const [activeLayer, setActiveLayer] = useState<ChartLayer | null>(null);
+  const [tooltip, setTooltip] = useState<string | null>(null);
+  const sourceCandles = useMemo(() => {
+    const candles = front?.candles?.filter((c) =>
+      [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)
+    );
+    if (candles && candles.length >= 2) return candles;
+    return syntheticCandlesFromSparkline(front?.sparkline ?? []);
+  }, [front?.candles, front?.sparkline]);
+
+  const candles = useMemo(() => sourceCandles.slice(-(range === "3m" ? 66 : 260)), [sourceCandles, range]);
+  if (candles.length < 2) return null;
+
+  const W = DETAIL_CHART.W;
+  const PRICE_H = DETAIL_CHART.PRICE_H;
+  const VOL_TOP = DETAIL_CHART.VOL_TOP;
+  const VOL_H = DETAIL_CHART.VOL_H;
+  const H = DETAIL_CHART.H;
+  const ma20 = smaValues(candles, 20);
+  const ma60 = smaValues(candles, 60);
+  const ma120 = smaValues(candles, 120);
+  const levels = swingLevels(candles);
+  const invalidationLevel = front?.verdict?.invalidationLevel;
+  const priceValues = [
+    ...candles.flatMap((c) => [c.high, c.low]),
+    ...ma20.filter((v): v is number => v !== null),
+    ...ma60.filter((v): v is number => v !== null),
+    ...ma120.filter((v): v is number => v !== null),
+    ...levels.map((l) => l.value),
+  ];
+  const includeInvalidation =
+    finiteNumber(invalidationLevel) &&
+    invalidationLevel > Math.min(...priceValues) * 0.78 &&
+    invalidationLevel < Math.max(...priceValues) * 1.22;
+  if (includeInvalidation) priceValues.push(invalidationLevel);
+  const minRaw = Math.min(...priceValues);
+  const maxRaw = Math.max(...priceValues);
+  const pad = Math.max((maxRaw - minRaw) * 0.08, maxRaw * 0.005);
+  const min = minRaw - pad;
+  const max = maxRaw + pad;
+  const span = max - min || 1;
+  const x = (i: number) => (i / (candles.length - 1)) * W;
+  const y = (v: number) => 6 + (1 - (v - min) / span) * (PRICE_H - 12);
+  const step = W / Math.max(1, candles.length - 1);
+  const bodyW = Math.max(1.3, Math.min(range === "3m" ? 5.2 : 2.4, step * 0.58));
+  const maxVol = Math.max(...candles.map((c) => c.volume), 1);
+  const vol = volumeSignals(candles);
+  const phase = front?.verdict?.phase;
+  const phaseText = phase ? DEPTH_PHASE_TEXT[phase] : undefined;
+  const up = candles[candles.length - 1]!.close >= candles[0]!.close;
   const lead = (front?.fomo.leadSignal ?? 0) >= 60;
-  // 차트가 뒷받침하나 — 현재 상태 묘사만(예측 금지).
+  const rangeLabel = range === "3m" ? "최근 3개월" : "최근 1년";
   const note = translateTaFact(front?.taFact) ?? (lead && !up
     ? "차트는 아직 안 따라왔어요 — 수급이 가격보다 먼저 움직이는 자리예요."
     : up
-      ? "이미 위로 올라온 자리예요(최근 3개월)."
-      : "최근 3개월은 차분한 흐름이에요.");
+      ? `이미 위로 올라온 자리예요(${rangeLabel}).`
+      : `${rangeLabel}은 차분한 흐름이에요.`);
+  const latest = candles[candles.length - 1];
+  const materialLabel = shortSignalLabel(front?.signals.newsEventLabel || front?.axisHook?.hookText, 30);
+  const hasInsider = /내부자|Form\s?4|임원|대주주/i.test(`${front?.axisHook?.hookText ?? ""} ${front?.signals.newsEventLabel ?? ""} ${front?.verdict?.evidence?.join(" ") ?? ""}`);
+  const foreignStreak = front?.signals.foreignNetStreak ?? 0;
+  const institutionStreak = front?.signals.institutionNetStreak ?? 0;
+  const flowDays = Math.max(foreignStreak > 0 ? foreignStreak : 0, institutionStreak > 0 ? institutionStreak : 0);
+  const flowStart = flowDays > 0 ? Math.max(0, candles.length - flowDays) : -1;
+  const chartLayers: Array<{ key: ChartLayer; label: string; enabled: boolean }> = [
+    { key: "ma", label: "MA", enabled: true },
+    { key: "levels", label: "지지·저항", enabled: levels.length > 0 },
+    { key: "volume", label: "거래량", enabled: vol.spikes.size > 0 || vol.vacuums.length > 0 },
+    { key: "phase", label: "국면", enabled: Boolean(phaseText) },
+    { key: "events", label: "재료", enabled: Boolean(materialLabel || hasInsider) },
+    { key: "flow", label: "수급", enabled: flowDays > 0 },
+    { key: "invalidation", label: "무효선", enabled: includeInvalidation },
+  ];
+
   return (
     <section className="mt-6">
-      <p className="font-pixel text-sm text-whiteout">차트 흐름</p>
-      <svg viewBox="0 0 320 64" preserveAspectRatio="none" className="mt-2 h-16 w-full" aria-hidden>
-        <path d={paths.area} fill={stroke} opacity={0.1} />
-        <path d={paths.line} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinejoin="round" />
-      </svg>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-pixel text-sm text-whiteout">차트 흐름</p>
+        <div className="flex rounded-full border border-hairline bg-surface p-0.5">
+          {(["3m", "1y"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setRange(key);
+                setTooltip(null);
+              }}
+              className="rounded-full px-2.5 py-1 font-pixel text-[10px]"
+              style={{ backgroundColor: range === key ? "#D8FF3A" : "transparent", color: range === key ? "#0A0A0A" : "#9A9A96" }}
+            >
+              {key === "3m" ? "3개월" : "1년"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="relative mt-3 rounded-xl border border-hairline bg-surface px-2.5 py-3">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 분석 차트">
+          <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke={DETAIL_CHART.grid} />
+          {phaseText && (
+            <rect
+              x={W * 0.62}
+              y="0"
+              width={W * 0.38}
+              height={PRICE_H}
+              fill={phase === "accumulation" || phase === "markup" ? "#D8FF3A" : "#FAFAFA"}
+              opacity={activeLayer === "phase" ? 0.12 : 0.055}
+            />
+          )}
+          {flowDays > 0 && (
+            <rect
+              x={x(flowStart)}
+              y={VOL_TOP - 6}
+              width={Math.max(8, W - x(flowStart))}
+              height="4"
+              rx="2"
+              fill="#D8FF3A"
+              opacity={activeLayer === "flow" ? 0.72 : 0.34}
+            />
+          )}
+          {vol.vacuums.map((box, i) => (
+            <g key={`vac-${i}`} opacity={activeLayer === "volume" ? 0.9 : 0.48}>
+              <rect
+                x={Math.max(0, x(box.start) - bodyW)}
+                y={VOL_TOP}
+                width={Math.min(W, x(box.end) - x(box.start) + bodyW * 2)}
+                height={VOL_H}
+                fill="none"
+                stroke={DETAIL_CHART.muted}
+                strokeDasharray="3 3"
+              />
+              {i === 0 && <text x={Math.max(4, x(box.start))} y={VOL_TOP - 3} fontSize="8" fill={DETAIL_CHART.muted}>거래량 진공</text>}
+            </g>
+          ))}
+          {candles.map((c, i) => {
+            const cx = x(i);
+            const h = maxVol > 0 ? (c.volume / maxVol) * VOL_H : 0;
+            const isUp = c.close >= c.open;
+            const spike = vol.spikes.has(i);
+            return (
+              <rect
+                key={`vol-${i}`}
+                x={cx - bodyW / 2}
+                y={VOL_TOP + (VOL_H - h)}
+                width={bodyW}
+                height={Math.max(0.5, h)}
+                fill={spike ? DETAIL_CHART.up : isUp ? "rgba(216,255,58,0.22)" : "rgba(255,255,255,0.16)"}
+                opacity={spike && activeLayer === "volume" ? 0.9 : spike ? 0.58 : 1}
+              />
+            );
+          })}
+          {levels.map((level, i) => (
+            <g key={`${level.kind}-${i}`} opacity={activeLayer === "levels" ? 0.88 : 0.46}>
+              <line x1="0" x2={W} y1={y(level.value)} y2={y(level.value)} stroke={DETAIL_CHART.muted} strokeWidth="0.8" />
+              <text x={W - 4} y={Math.max(9, y(level.value) - 3)} textAnchor="end" fontSize="8" fill={DETAIL_CHART.muted}>
+                {level.kind === "support" ? "지지" : "저항"} {formatChartPrice(level.value)}
+              </text>
+            </g>
+          ))}
+          {includeInvalidation && (
+            <g opacity={activeLayer === "invalidation" ? 1 : 0.72}>
+              <line x1="0" x2={W} y1={y(invalidationLevel!)} y2={y(invalidationLevel!)} stroke={DETAIL_CHART.up} strokeWidth="1.2" strokeDasharray="5 4" />
+              <text x={W - 4} y={Math.max(10, y(invalidationLevel!) - 5)} textAnchor="end" fontSize="9" fill={DETAIL_CHART.up}>
+                무효선 {formatChartPrice(invalidationLevel!)}
+              </text>
+            </g>
+          )}
+          <path d={seriesPath(ma120, x, y)} fill="none" stroke="#5A5A57" strokeWidth={activeLayer === "ma" ? "1.8" : "1.1"} opacity={activeLayer === "ma" ? 1 : 0.78} />
+          <path d={seriesPath(ma60, x, y)} fill="none" stroke="#9A9A96" strokeWidth={activeLayer === "ma" ? "1.8" : "1.1"} opacity={activeLayer === "ma" ? 1 : 0.78} />
+          <path d={seriesPath(ma20, x, y)} fill="none" stroke="#D8FF3A" strokeWidth={activeLayer === "ma" ? "2" : "1.2"} opacity={activeLayer === "ma" ? 0.95 : 0.62} />
+          {candles.map((c, i) => {
+            const cx = x(i);
+            const isUp = c.close >= c.open;
+            const color = isUp ? DETAIL_CHART.up : DETAIL_CHART.down;
+            const top = y(Math.max(c.open, c.close));
+            const bottom = y(Math.min(c.open, c.close));
+            return (
+              <g key={`c-${i}`}>
+                <line x1={cx} x2={cx} y1={y(c.high)} y2={y(c.low)} stroke={DETAIL_CHART.wick} strokeWidth="0.9" />
+                <rect x={cx - bodyW / 2} y={top} width={bodyW} height={Math.max(1.2, bottom - top)} rx="0.7" fill={color} />
+              </g>
+            );
+          })}
+          {materialLabel && latest && (
+            <g
+              role="button"
+              tabIndex={0}
+              onClick={() => setTooltip(`${markerDateLabel(latest)} · ${materialLabel}`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") setTooltip(`${markerDateLabel(latest)} · ${materialLabel}`);
+              }}
+              aria-label="재료 발생일"
+              style={{ cursor: "pointer" }}
+            >
+              <circle cx={x(candles.length - 1)} cy={y(latest.close) - 10} r={4} fill={DETAIL_CHART.up} opacity={activeLayer === "events" ? 1 : 0.78} />
+            </g>
+          )}
+          {hasInsider && latest && (
+            <g
+              role="button"
+              tabIndex={0}
+              onClick={() => setTooltip(`${markerDateLabel(latest)} · 내부자 매수 공시 확인`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") setTooltip(`${markerDateLabel(latest)} · 내부자 매수 공시 확인`);
+              }}
+              aria-label="내부자 매수일"
+              style={{ cursor: "pointer" }}
+            >
+              <path
+                d={`M${x(candles.length - 1) - 5},${y(latest.close) + 13} L${x(candles.length - 1) + 5},${y(latest.close) + 13} L${x(candles.length - 1)},${y(latest.close) + 3} Z`}
+                fill={DETAIL_CHART.up}
+                opacity={activeLayer === "events" ? 1 : 0.78}
+              />
+            </g>
+          )}
+        </svg>
+        {tooltip && (
+          <button
+            type="button"
+            onClick={() => setTooltip(null)}
+            className="absolute left-3 top-3 max-w-[86%] rounded-lg border border-hairline bg-black/90 px-2.5 py-1.5 text-left text-[11px] leading-4 text-whiteout"
+          >
+            {tooltip}
+          </button>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {chartLayers.filter((l) => l.enabled).map((layer) => (
+            <button
+              key={layer.key}
+              type="button"
+              onClick={() => {
+                setActiveLayer(activeLayer === layer.key ? null : layer.key);
+                setTooltip(null);
+              }}
+              className="rounded-full border px-2 py-1 text-[10px] transition-colors"
+              style={{
+                borderColor: activeLayer === layer.key ? "#D8FF3A" : "rgba(255,255,255,0.12)",
+                color: activeLayer === layer.key ? "#D8FF3A" : "#9A9A96",
+              }}
+            >
+              {layer.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="mt-2 text-sm leading-6 text-muted">{note}</p>
+      {phaseText && <p className="mt-1 text-[11px] leading-5 text-muted">국면: {phaseText}</p>}
     </section>
   );
 }
