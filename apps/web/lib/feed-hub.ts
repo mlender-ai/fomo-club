@@ -7,6 +7,7 @@ import { fetchDartDisclosuresByStock } from "./dart-disclosures";
 import { fetchRecentSecFilings } from "./sec-edgar";
 import { fetchFredSeriesHistory } from "./fred";
 import { fetchStockDaily } from "./stock-front";
+import { readTodayFulfilledSearches } from "./symbol-index";
 import { kstDate } from "./fomo";
 import type { DiscoveryMarketRow } from "./market-source-types";
 
@@ -339,6 +340,26 @@ export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
   // 5) 거시 이슈 (임계 변동일만).
   for (const card of macroIssues) {
     push({ type: "macro-issue", scope: "US", content: card }, card.id);
+  }
+  // 6) 검색 알림 신청 처리분(WO 검색 ④) — "요청하신 종목 카드가 준비됐어요". 재방문 노출(무로그인).
+  const fulfilled = await readTodayFulfilledSearches().catch(() => []);
+  const rowByName = new Map([...krRows, ...usRows].map((row) => [row.canonical, row]));
+  for (const entry of fulfilled) {
+    if (entry.country === "GLOBAL") continue; // 코인 요청은 코인 파이프라인 소관
+    const row = rowByName.get(entry.canonical);
+    const issue: FeedStockIssue = {
+      id: `feed:requested:${entry.symbol}:${asOf}`,
+      stock: entry.canonical,
+      market: entry.market,
+      country: entry.country,
+      ...(entry.naverCode ? { naverCode: entry.naverCode } : {}),
+      ...(entry.country === "US" ? { symbol: entry.symbol } : {}),
+      ...(typeof row?.changePct === "number" ? { changePct: row.changePct } : {}),
+      headline: "요청하신 종목 카드가 준비됐어요 — 눌러서 시세·차트·판단을 확인하세요.",
+      source: "검색 요청",
+      asOf,
+    };
+    push({ type: "stock-issue", scope: entry.country, stockIssue: issue }, issue.id);
   }
 
   const ordered = interleaveFeedItems(items);

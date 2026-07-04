@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { scoreToColor, type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
-import { CaretUpIcon, CaretDownIcon, XMarkIcon } from "@/components/icons";
+import { CaretUpIcon, CaretDownIcon, SearchIcon, XMarkIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
 import { FeedView } from "@/components/FeedView";
+import { SearchOverlay } from "@/components/SearchOverlay";
 import { DesktopDashboard, useIsDesktop } from "@/components/DesktopDashboard";
 import type {
   FomoIndexResponse,
@@ -44,6 +45,7 @@ export function HomeView({
 }) {
   const [tab, setTab] = useState<Tab>("main");
   const [indexHelpOpen, setIndexHelpOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const color = index ? scoreToColor(index.score) : undefined;
 
@@ -67,25 +69,37 @@ export function HomeView({
         <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 py-5">
           <div className="flex shrink-0 items-center justify-between">
             <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
-            <button
-              type="button"
-              onClick={() => setIndexHelpOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
-              aria-label="오늘의 시장 온도 계산 방식 보기"
-            >
-              <span>온도</span>
-              {index ? (
-                <span className="font-number text-sm font-bold leading-none" style={{ color }}>
-                  {index.score}
-                </span>
-              ) : (
-                <span>—</span>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
+                aria-label="종목 검색"
+              >
+                <SearchIcon size={13} />
+                <span>검색</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIndexHelpOpen(true)}
+                className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
+                aria-label="오늘의 시장 온도 계산 방식 보기"
+              >
+                <span>온도</span>
+                {index ? (
+                  <span className="font-number text-sm font-bold leading-none" style={{ color }}>
+                    {index.score}
+                  </span>
+                ) : (
+                  <span>—</span>
+                )}
+              </button>
+            </div>
           </div>
           <DesktopDashboard />
         </main>
         {indexHelpOpen && <FomoIndexInfoSheet index={index} onClose={() => setIndexHelpOpen(false)} />}
+        {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
       </>
     );
   }
@@ -96,29 +110,39 @@ export function HomeView({
         {/* 상단 얇은 띠: 로고 + 시장 온도 축약 배지(WO 1.5 E — 큰 바는 몰입 방해라 접었다. 탭하면 설명 시트). */}
         <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
-          <button
-            type="button"
-            onClick={() => setIndexHelpOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
-            aria-label="오늘의 시장 온도 계산 방식 보기"
-          >
-            <span>온도</span>
-            {index ? (
-              <>
-                <span className="font-number text-sm font-bold leading-none" style={{ color }}>
-                  {index.score}
-                </span>
-                {!isFullFallback && index.prevDayDelta !== 0 && (
-                  <span className="inline-flex items-center" style={{ color }}>
-                    {index.prevDayDelta > 0 ? <CaretUpIcon size={9} /> : <CaretDownIcon size={9} />}
-                    {Math.abs(index.prevDayDelta)}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center rounded-full border border-hairline p-1.5 text-muted transition-colors hover:border-whiteout/20"
+              aria-label="종목 검색"
+            >
+              <SearchIcon size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIndexHelpOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
+              aria-label="오늘의 시장 온도 계산 방식 보기"
+            >
+              <span>온도</span>
+              {index ? (
+                <>
+                  <span className="font-number text-sm font-bold leading-none" style={{ color }}>
+                    {index.score}
                   </span>
-                )}
-              </>
-            ) : (
-              <span>—</span>
-            )}
-          </button>
+                  {!isFullFallback && index.prevDayDelta !== 0 && (
+                    <span className="inline-flex items-center" style={{ color }}>
+                      {index.prevDayDelta > 0 ? <CaretUpIcon size={9} /> : <CaretDownIcon size={9} />}
+                      {Math.abs(index.prevDayDelta)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span>—</span>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className={`mt-3 flex min-h-0 flex-1 flex-col ${tab === "feed" ? "overflow-y-auto scrollbar-none" : ""}`}>
@@ -142,6 +166,7 @@ export function HomeView({
       </nav>
 
       {indexHelpOpen && <FomoIndexInfoSheet index={index} onClose={() => setIndexHelpOpen(false)} />}
+      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
     </>
   );
 }
