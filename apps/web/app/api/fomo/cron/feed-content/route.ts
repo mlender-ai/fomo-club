@@ -9,6 +9,7 @@ import {
   buildWeeklyRecap,
   type FeedBriefingRow,
 } from "../../../../../lib/feed-briefing";
+import { processSearchQueue, rebuildSymbolIndex } from "../../../../../lib/symbol-index";
 
 /**
  * 피드 콘텐츠 프리웜 크론 (WO 피드 강화) — ?slot=morning|close|weekly
@@ -49,6 +50,19 @@ export async function GET(request: Request) {
       await writeFeedContent(id, row);
       written.push(id);
     };
+    if (slot === "index") {
+      // 심볼 마스터 인덱스 재구축(일 1회) + 검색 알림 신청 큐 처리(WO 검색 ①·④).
+      const stats = await rebuildSymbolIndex();
+      const queue = await processSearchQueue();
+      revalidateTag("daily-30", { expire: 0 });
+      revalidateTag("feed-hub", { expire: 0 });
+      return withCors(
+        NextResponse.json(
+          { ok: true, slot, index: stats, queue, elapsedMs: Date.now() - startedAt },
+          { headers: { "Cache-Control": "no-store" } }
+        )
+      );
+    }
     if (slot === "morning") {
       await save(`briefing:us:${date}`, await buildUsBriefing());
     } else if (slot === "close") {
@@ -57,7 +71,7 @@ export async function GET(request: Request) {
     } else if (slot === "weekly") {
       await save(`recap:${isoWeekOf()}`, await buildWeeklyRecap());
     } else {
-      return withCors(NextResponse.json({ ok: false, error: "slot must be morning|close|weekly" }, { status: 400 }));
+      return withCors(NextResponse.json({ ok: false, error: "slot must be morning|close|weekly|index" }, { status: 400 }));
     }
     // daily-30·feed-hub 서버 캐시 즉시 만료 — 다음 요청이 새 콘텐츠를 포함해 재빌드.
     revalidateTag("daily-30", { expire: 0 });

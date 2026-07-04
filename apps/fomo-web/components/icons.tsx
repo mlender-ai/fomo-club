@@ -77,3 +77,13 @@ export function UndoIcon({ size = 18, className }: IconProps) {
     </svg>
   );
 }
+
+/** 🔍 대체 — 검색(WO 검색). */
+export function SearchIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M20 20l-4.7-4.7" />
+    </svg>
+  );
+}
