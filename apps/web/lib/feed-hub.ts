@@ -115,10 +115,10 @@ function buildSectorCards(rows: readonly DiscoveryMarketRow[], country: "KR" | "
     })
     .sort((a, b) => Math.abs(b.avg) - Math.abs(a.avg));
 
-  const picks = [
-    ranked.find((entry) => entry.avg > 0.8), // 강세 1
-    ranked.find((entry) => entry.avg < -0.8), // 약세 1
-  ].filter((entry): entry is NonNullable<typeof entry> => !!entry);
+  // 강세 최대 2 + 약세 최대 2, 국가당 총 3 — 다양성·수량 목표(하루 20~30) 기여.
+  const bulls = ranked.filter((entry) => entry.avg > 0.8).slice(0, 2);
+  const bears = ranked.filter((entry) => entry.avg < -0.8).slice(0, 2);
+  const picks = [...bulls, ...bears].slice(0, 3);
 
   return picks.map((entry) => {
     const stance: FeedSectorCard["stance"] = entry.avg > 0.8 ? "bull-dominant" : "bear-dominant";
