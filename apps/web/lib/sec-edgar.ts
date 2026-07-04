@@ -23,7 +23,8 @@ const SEC_RECENT_FORM_SCAN_LIMIT = 80;
 const SEC_FORM4_XML_SCAN_LIMIT = 8;
 
 function secUserAgent(): string | undefined {
-  return process.env.SEC_EDGAR_USER_AGENT?.trim();
+  // SEC 은 연락처 포함 UA 를 요구 — env 미설정이면 기본 UA 폴백(피드 종목이슈가 env 없이도 동작).
+  return process.env.SEC_EDGAR_USER_AGENT?.trim() || "FomoClub/1.0 (contact: fomo-club@users.noreply.github.com)";
 }
 
 function accessionPath(cik: string, accession: string): string {
