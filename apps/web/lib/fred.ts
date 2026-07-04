@@ -105,6 +105,36 @@ async function fetchJsonLatest(seriesId: string): Promise<{ date: string; value:
   }
 }
 
+/** CSV 전체 파싱 — 최근 구간 시계열(과거→최신). 거시 이슈 임계 감지 + 매크로 뎁스 추이차트용. */
+function parseFredCsvSeries(csv: string): Array<{ date: string; value: number }> {
+  if (!csv) return [];
+  const out: Array<{ date: string; value: number }> = [];
+  for (const line of csv.trim().split(/\r?\n/).slice(1)) {
+    const [date, raw] = line.trim().split(",");
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const v = Number.parseFloat(raw ?? "");
+    if (Number.isFinite(v)) out.push({ date, value: v });
+  }
+  return out;
+}
+
+/** 시리즈 최근 ~150일 시계열(키리스 CSV — 이미 받던 페이로드를 전체 파싱). 실패 시 빈 배열. */
+export async function fetchFredSeriesHistory(seriesId: string): Promise<Array<{ date: string; value: number }>> {
+  try {
+    const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}&cosd=${cosd()}`;
+    const res = await fetch(url, {
+      headers: { "user-agent": UA, accept: "text/csv,*/*" },
+      signal: AbortSignal.timeout(15_000),
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    return parseFredCsvSeries(await res.text());
+  } catch (err) {
+    console.warn(`[fred] series ${seriesId} error`, err);
+    return [];
+  }
+}
+
 /** 테마의 FRED 공식 데이터 SourceDoc[]. idStart 부터 id 부여(S{n}). 미매핑/실패 시 빈 배열. */
 export async function fetchFredDocs(theme: string, makeId: () => string): Promise<SourceDoc[]> {
   const series = FRED_THEME_SERIES[theme];

@@ -8,8 +8,8 @@ const FRED_WORLD_SERIES = ["DGS10", "VIXCLS"] as const;
 const FRED_CONTENT_TIMEOUT_MS = 4_500;
 
 export type DeckContentScope = "domestic" | "world" | "global";
-/** briefing=데일리 브리핑, buzz=떠들썩 스토리, recap=주간 회고 (WO 피드 강화 — 숫자에 이야기를 붙인다). */
-export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap";
+/** briefing=데일리 브리핑, buzz=떠들썩 스토리, recap=주간 회고, macro-issue=거시 이슈(임계 변동). */
+export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap" | "macro-issue";
 
 export interface DeckContentFact {
   label: string;
@@ -300,6 +300,8 @@ function contentTypePriority(type: DeckContentType): number {
       return -2;
     case "recap":
       return -1;
+    case "macro-issue":
+      return -1;
     case "index":
       return 0;
     case "macro":
@@ -319,7 +321,7 @@ function factCardId(baseId: string, fact: DeckContentFact, index: number): strin
 
 function splitFactCards(card: DeckContentCard): DeckContentCard[] {
   // 브리핑·버즈·회고는 구성체(무버+지수+노트) — 조각내면 이야기가 깨진다.
-  if (card.contentType === "briefing" || card.contentType === "buzz" || card.contentType === "recap") return [];
+  if (card.contentType === "briefing" || card.contentType === "buzz" || card.contentType === "recap" || card.contentType === "macro-issue") return [];
   if (card.facts.length <= 1) return [];
   return card.facts.map((fact, index) => ({
     ...card,

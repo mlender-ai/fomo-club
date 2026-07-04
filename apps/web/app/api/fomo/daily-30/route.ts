@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
-import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
-import { buildDaily30Response, type Daily30Response } from "../../../../lib/daily-30";
+import { withCors, kstDate } from "../../../../lib/fomo";
+import { getCachedDaily30Response, type Daily30Response } from "../../../../lib/daily-30";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const REVALIDATE_S = 60 * 60 * 12;
 
 export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
@@ -14,14 +11,8 @@ export function OPTIONS() {
 
 export async function GET() {
   try {
-    const load = unstable_cache(
-      () => buildDaily30Response(),
-      ["fomo-daily-30", cacheVersion(), kstDate()],
-      // 태그: feed-content 크론(브리핑/버즈/회고 갱신)이 revalidateTag 로 즉시 재빌드 유도.
-      { revalidate: REVALIDATE_S, tags: ["daily-30"] }
-    );
     return withCors(
-      NextResponse.json(await load(), {
+      NextResponse.json(await getCachedDaily30Response(), {
         headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
       })
     );

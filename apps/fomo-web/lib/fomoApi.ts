@@ -9,7 +9,7 @@ import type {
   MoodSignal,
   ScoredArticle,
 } from "@fomo/core";
-import type { DeckContent } from "./discoveryDeck";
+import type { DeckContent, DeckNarrative } from "./discoveryDeck";
 import { isDiscoveryCopySafe } from "./discoveryCopySafe";
 import { getSessionId } from "@/lib/session";
 import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
@@ -269,6 +269,51 @@ export interface FeedResponse {
   content?: DeckContent[];
 }
 export const fetchFeed = () => get<FeedResponse>("/api/fomo/feed");
+
+/** 피드 집계(feed-hub, WO 피드 통합) — FeedView·PC 우측 컬럼의 단일 소스. */
+export interface FeedHubSectorStockRef {
+  canonical: string;
+  market: string;
+  country: string;
+  naverCode?: string;
+  symbol?: string;
+  changePct?: number;
+}
+export interface FeedHubSectorCard {
+  id: string;
+  sector: string;
+  country: "KR" | "US";
+  stance: "bull-dominant" | "bear-dominant" | "balanced" | "insufficient";
+  stanceNote: string;
+  stocks: FeedHubSectorStockRef[];
+}
+export interface FeedHubStockIssue {
+  id: string;
+  stock: string;
+  market: string;
+  country: "KR" | "US";
+  naverCode?: string;
+  symbol?: string;
+  changePct?: number;
+  headline: string;
+  source: string;
+  url?: string;
+  asOf: string;
+}
+export type FeedHubItem =
+  | { type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue"; scope: "KR" | "US" | "GLOBAL"; content: DeckContent & { series?: number[] } }
+  | { type: "narrative"; scope: "KR" | "US"; narrative: DeckNarrative }
+  | { type: "sector"; scope: "KR" | "US"; sector: FeedHubSectorCard }
+  | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedHubStockIssue };
+export interface FeedHubResponse {
+  asOf: string;
+  items: FeedHubItem[];
+  typeCounts: Record<string, number>;
+  scopeCounts: { KR: number; US: number; GLOBAL: number };
+  source: string;
+}
+export const fetchFeedHub = () =>
+  cachedGet(`feed-hub:${kstDateKey()}`, () => get<FeedHubResponse>("/api/fomo/feed-hub"), 15 * MINUTE);
 
 /** 뉴스 덱 — 한국 뉴스(점수순) + 차트 카드 인터리브, 스와이프용(피드 탭). */
 export type { ScoredArticle, ChartCard, DeckCard } from "@fomo/core";

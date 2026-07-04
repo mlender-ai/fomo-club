@@ -8,10 +8,13 @@ import { NarrativeCard } from "@/components/NarrativeCard";
 import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
-import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
+import { fetchDaily30, fetchFeedHub, type Daily30Response, type FeedHubItem } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckStock, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { getDiscoverySeen } from "@/lib/discoveryPerformance";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
+import { FeedDepthPage } from "@/components/FeedDepthPage";
+import { SectorCard } from "@/components/SectorCard";
+import { StockIssueCard, sectorCardData } from "@/components/FeedView";
 
 /**
  * PC(≥1024px) 3컬럼 대시보드 — WO-PC-VERSION.
@@ -127,6 +130,9 @@ export function DesktopDashboard() {
   const [failed, setFailed] = useState(false);
   const [filter, setFilter] = useState<FilterTag>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 우측 컬럼(feed-hub) 항목 선택 — 중앙에 해당 뎁스 렌더(WO 피드 통합 §3: 막다른 클릭 0).
+  const [feedItem, setFeedItem] = useState<FeedHubItem | null>(null);
+  const [feedItems, setFeedItems] = useState<FeedHubItem[]>([]);
   const [seenItems] = useState(() => getDiscoverySeen());
 
   useEffect(() => {
@@ -134,6 +140,9 @@ export function DesktopDashboard() {
     fetchDaily30()
       .then((d) => alive && setDaily(d))
       .catch(() => alive && setFailed(true));
+    fetchFeedHub()
+      .then((d) => alive && setFeedItems(d.items))
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -238,9 +247,13 @@ export function DesktopDashboard() {
         </div>
       </section>
 
-      {/* ② 중앙 — 선택 카드 뎁스(병렬 보기 = PC 핵심 가치) */}
+      {/* ② 중앙 — 선택 카드 뎁스(병렬 보기 = PC 핵심 가치). 우측 항목 클릭 시 해당 뎁스가 우선. */}
       <section className="min-h-0 overflow-hidden rounded-2xl border border-hairline bg-surface">
-        {selected?.type === "stock" ? (
+        {feedItem?.type === "narrative" ? (
+          <NarrativeDepthPage key={feedItem.narrative.id} card={feedItem.narrative} onClose={() => setFeedItem(null)} inline />
+        ) : feedItem ? (
+          <FeedDepthPage key={feedItemId(feedItem)} item={feedItem} onClose={() => setFeedItem(null)} inline />
+        ) : selected?.type === "stock" ? (
           <StockInsightView
             key={selected.data.canonical}
             stock={selected.data.canonical}
@@ -255,29 +268,62 @@ export function DesktopDashboard() {
         )}
       </section>
 
-      {/* ③ 우 — 콘텐츠·시장 + 성과 되짚기 */}
+      {/* ③ 우 — feed-hub(피드 탭과 동일 소스·이원화 금지) + 성과 되짚기. 클릭 → 중앙 뎁스. */}
       <section className="scrollbar-none min-h-0 space-y-3 overflow-y-auto">
-        {contentCards.slice(0, 4).map((card) => (
-          <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
-            <ContentCard card={card.data} />
-          </div>
-        ))}
-        {narrativeCards.slice(0, 2).map((card) => (
-          <button
-            key={card.data.id}
-            type="button"
-            onClick={() => setSelectedId(cardId(card))}
-            aria-pressed={cardId(card) === selectedId}
-            className="block w-full rounded-2xl border bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
-            style={{ borderColor: cardId(card) === selectedId ? NEON : "var(--hairline, #2a2a2a)" }}
-          >
-            <NarrativeCard card={card.data} />
-          </button>
-        ))}
+        {(feedItems.length > 0 ? feedItems : []).slice(0, 8).map((item) => {
+          const id = feedItemId(item);
+          const active = feedItem ? feedItemId(feedItem) === id : false;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setFeedItem(item)}
+              aria-pressed={active}
+              className="block w-full rounded-2xl border bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
+              style={{ borderColor: active ? NEON : "var(--hairline, #2a2a2a)" }}
+            >
+              {item.type === "narrative" ? (
+                <NarrativeCard card={item.narrative} />
+              ) : item.type === "sector" ? (
+                <SectorCard card={sectorCardData(item)} />
+              ) : item.type === "stock-issue" ? (
+                <StockIssueCard item={item} />
+              ) : (
+                <ContentCard card={item.content} />
+              )}
+            </button>
+          );
+        })}
+        {feedItems.length === 0 &&
+          contentCards.slice(0, 4).map((card) => (
+            <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
+              <ContentCard card={card.data} />
+            </div>
+          ))}
+        {feedItems.length === 0 &&
+          narrativeCards.slice(0, 2).map((card) => (
+            <button
+              key={card.data.id}
+              type="button"
+              onClick={() => setSelectedId(cardId(card))}
+              aria-pressed={cardId(card) === selectedId}
+              className="block w-full rounded-2xl border bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
+              style={{ borderColor: cardId(card) === selectedId ? NEON : "var(--hairline, #2a2a2a)" }}
+            >
+              <NarrativeCard card={card.data} />
+            </button>
+          ))}
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
           <PerformanceProofPanel items={seenItems} />
         </div>
       </section>
     </div>
   );
+}
+
+function feedItemId(item: FeedHubItem): string {
+  if (item.type === "narrative") return item.narrative.id;
+  if (item.type === "sector") return item.sector.id;
+  if (item.type === "stock-issue") return item.stockIssue.id;
+  return item.content.id;
 }
