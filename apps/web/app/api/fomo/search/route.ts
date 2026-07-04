@@ -14,14 +14,19 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
+/** todayCard 뱃지는 best-effort — 캐시가 식었을 때 daily-30 풀빌드가 검색을 막지 않게 짧게 레이스. */
+function daily30Quick(timeoutMs = 800): Promise<Awaited<ReturnType<typeof getCachedDaily30Response>> | null> {
+  return Promise.race([
+    getCachedDaily30Response().catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+  ]);
+}
+
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
   if (!q) return withCors(NextResponse.json({ results: [], indexReady: await symbolIndexReady() }));
   try {
-    const [results, daily30] = await Promise.all([
-      searchSymbols(q, 10),
-      getCachedDaily30Response().catch(() => null),
-    ]);
+    const [results, daily30] = await Promise.all([searchSymbols(q, 10), daily30Quick()]);
     const todayStocks = new Set((daily30?.stocks ?? []).map((s) => s.canonical));
     const todaySymbols = new Set((daily30?.stocks ?? []).map((s) => s.symbol?.toUpperCase()).filter(Boolean));
     return withCors(
