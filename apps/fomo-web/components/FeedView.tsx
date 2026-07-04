@@ -1,51 +1,79 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
 import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
+import { SectorCard } from "@/components/SectorCard";
+import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
-import { stockDeckCards, type DeckCard, type DeckContent, type DeckNarrative, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
+import { fetchFeedHub, type FeedHubItem } from "@/lib/fomoApi";
+import type { DeckCard, DeckNarrative, DeckSectorCardData } from "@/lib/discoveryDeck";
 
 /**
- * 피드 표면(WO-GNB-TWO-SURFACES ②) — 콘텐츠 전용 세로 스크롤.
- * 소스 = daily-30(메인 덱·PC 우측 컬럼과 동일 — 이원화 금지). 종목 카드는 제외, 콘텐츠만 모은다.
- * 내러티브 = 사건→스토리 뎁스→종목 뎁스, 매크로/지수/고래 = 사실 카드.
+ * 피드 표면(WO 피드 통합) — 소스는 feed-hub 단일(브리핑·버즈·회고·내러티브·섹터·지수·거시·고래·종목이슈·거시이슈).
+ * ⚠️ daily-30 만 읽던 배선이 피드 다양성 붕괴의 원인이었다 — feed-hub 외 소스로 되돌리지 말 것.
+ * 모든 항목은 탭 → 뎁스 도달(막다른 탭 0): 내러티브→스토리 뎁스, 나머지→FeedDepthPage.
  */
 
-/** 피드에 담기는 콘텐츠 카드(내러티브·매크로/지수/고래). 종목·섹터 카드는 메인 덱 소관. */
-type FeedItem =
-  | { type: "narrative"; data: DeckNarrative }
-  | { type: "content"; data: DeckContent };
+function valueTone(value: number | undefined): string {
+  if (typeof value !== "number") return "rgba(250,250,250,0.78)";
+  if (value > 0) return "#FF4D4D";
+  if (value < 0) return "#3B82F6";
+  return "#8A8A86";
+}
 
-function feedItemsFromDaily30(discovery: Daily30Response): FeedItem[] {
-  const raw = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
-  // daily-30 cards 순서 = quietScore 랭킹 = 중요도순. 그 순서를 보존하며 콘텐츠만 추린다.
-  const items: FeedItem[] = [];
-  for (const card of stockDeckCards(raw)) {
-    if (card.type === "narrative") items.push({ type: "narrative", data: card.data });
-    else if (card.type === "content") items.push({ type: "content", data: card.data });
-  }
-  return items;
+export function sectorCardData(item: Extract<FeedHubItem, { type: "sector" }>): DeckSectorCardData {
+  return {
+    id: item.sector.id,
+    sector: item.sector.sector,
+    country: item.sector.country,
+    stance: item.sector.stance,
+    stanceNote: item.sector.stanceNote,
+    stocks: item.sector.stocks.map((stock) => ({
+      canonical: stock.canonical,
+      market: stock.market as DeckSectorCardData["stocks"][number]["market"],
+      country: stock.country as DeckSectorCardData["stocks"][number]["country"],
+      ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
+      ...(stock.symbol ? { symbol: stock.symbol } : {}),
+      ...(typeof stock.changePct === "number" ? { changePct: stock.changePct } : {}),
+    })),
+  };
+}
+
+export function StockIssueCard({ item }: { item: Extract<FeedHubItem, { type: "stock-issue" }> }) {
+  const issue = item.stockIssue;
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <span className="font-pixel text-[10px] uppercase tracking-wide text-muted">
+          STOCK ISSUE · {issue.country === "US" ? "미국" : "국내"}
+        </span>
+        <p className="mt-2 text-base font-bold leading-6 text-whiteout">{issue.stock}</p>
+        <p className="mt-1 text-sm leading-5 text-muted">{issue.headline}</p>
+      </div>
+      <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: valueTone(issue.changePct) }}>
+        {typeof issue.changePct === "number" ? `${issue.changePct > 0 ? "+" : ""}${issue.changePct.toFixed(2)}%` : ""}
+      </span>
+    </div>
+  );
 }
 
 export function FeedView() {
-  const [items, setItems] = useState<FeedItem[] | null>(null);
+  const [items, setItems] = useState<FeedHubItem[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [selected, setSelected] = useState<DeckNarrative | null>(null);
+  const [selected, setSelected] = useState<FeedHubItem | null>(null);
+  const [narrative, setNarrative] = useState<DeckNarrative | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetchDaily30()
-      .then((d) => alive && setItems(feedItemsFromDaily30(d)))
+    fetchFeedHub()
+      .then((d) => alive && setItems(d.items))
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
     };
   }, []);
-
-  const content = useMemo(() => items ?? [], [items]);
 
   if (failed) {
     return (
@@ -57,7 +85,7 @@ export function FeedView() {
   if (!items) {
     return <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />;
   }
-  if (content.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="mt-16 px-8 text-center text-sm leading-6 text-whiteout">
         오늘은 콘텐츠가 잠깐 비었어요.
@@ -67,34 +95,47 @@ export function FeedView() {
     );
   }
 
+  const cardShell =
+    "block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20";
+
   return (
     <div className="space-y-3 pb-4">
-      {content.map((item) => {
+      {items.map((item) => {
         if (item.type === "narrative") {
           return (
-            <button
-              key={item.data.id}
-              type="button"
-              onClick={() => setSelected(item.data)}
-              className="block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
-            >
-              <NarrativeCard card={item.data} />
+            <button key={item.narrative.id} type="button" onClick={() => setNarrative(item.narrative)} className={cardShell}>
+              <NarrativeCard card={item.narrative} />
+            </button>
+          );
+        }
+        if (item.type === "sector") {
+          return (
+            <button key={item.sector.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+              <SectorCard card={sectorCardData(item)} />
+            </button>
+          );
+        }
+        if (item.type === "stock-issue") {
+          return (
+            <button key={item.stockIssue.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+              <StockIssueCard item={item} />
             </button>
           );
         }
         return (
-          <div key={item.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
-            <ContentCard card={item.data} />
-          </div>
+          <button key={item.content.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+            <ContentCard card={item.content} />
+          </button>
         );
       })}
 
-      {selected && <NarrativeDepthPage card={selected} onClose={() => setSelected(null)} />}
+      {narrative && <NarrativeDepthPage card={narrative} onClose={() => setNarrative(null)} />}
+      {selected && <FeedDepthPage item={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
 
-/** 메인 덱 필터(WO-GNB) — daily-30 카드에서 종목 카드만. 콘텐츠·섹터·내러티브는 피드로 이관. */
+/** 메인 덱 필터(WO-GNB) — daily-30 카드에서 종목 카드만. 콘텐츠·섹터·내러티브는 피드(feed-hub) 소관. */
 export function stockOnlyDeckCards(cards: readonly DeckCard[]): DeckCard[] {
   return cards.filter((card) => card.type === "stock");
 }

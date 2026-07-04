@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import type { CardFrontSignals, StockCountry } from "@fomo/core";
+import { cacheVersion, kstDate as kstDateOf } from "./fomo";
 import {
   buildDiscoveryResponse,
   type DiscoveryDeckCardPayload,
@@ -195,6 +197,7 @@ const CONTENT_SIGNAL_SCORE: Record<DeckContentCard["contentType"], number> = {
   briefing: 72,
   buzz: 60,
   recap: 52,
+  "macro-issue": 48,
   index: 42,
   macro: 38,
   whale: 34,
@@ -394,4 +397,17 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
     .slice(0, FEED_CARD_LIMIT);
   const deck = selectDaily30Candidates(stockCandidates, DAILY_CARD_TARGET);
   return responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
+}
+
+/**
+ * 공유 캐시 getter — daily-30 라우트와 feed-hub 가 같은 캐시 엔트리를 쓴다(중복 빌드 방지).
+ * feed-content 크론이 tags 로 즉시 무효화한다.
+ */
+export async function getCachedDaily30Response(): Promise<Daily30Response> {
+  const load = unstable_cache(
+    () => buildDaily30Response(),
+    ["fomo-daily-30", cacheVersion(), kstDateOf()],
+    { revalidate: 60 * 60 * 12, tags: ["daily-30"] }
+  );
+  return load();
 }

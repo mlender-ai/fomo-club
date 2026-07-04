@@ -59,8 +59,9 @@ export async function GET(request: Request) {
     } else {
       return withCors(NextResponse.json({ ok: false, error: "slot must be morning|close|weekly" }, { status: 400 }));
     }
-    // daily-30 서버 캐시 즉시 만료 — 다음 요청이 새 콘텐츠를 포함해 재빌드.
+    // daily-30·feed-hub 서버 캐시 즉시 만료 — 다음 요청이 새 콘텐츠를 포함해 재빌드.
     revalidateTag("daily-30", { expire: 0 });
+    revalidateTag("feed-hub", { expire: 0 });
     return withCors(
       NextResponse.json(
         { ok: true, slot, written, elapsedMs: Date.now() - startedAt },
