@@ -110,14 +110,16 @@ describe("스냅샷 없음 (라이브 계산)", () => {
 
 // ─── 3. 폴백 — DB 전체 장애 ────────────────────────────────────────────────────
 describe("DB 전체 장애", () => {
-  it("snapshot 조회 실패 → 500 + INDEX_ERROR", async () => {
+  it("snapshot 조회 실패 → 라이브/중립 폴백 200 반환", async () => {
     mockSnapshot.mockRejectedValueOnce(new Error("DB connection refused"));
 
     const res = await GET();
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.code).toBe("INDEX_ERROR");
+    expect(body.live).toBe(true);
+    expect(body.score).toBe(45);
+    expect(body.state).toBe("관심");
   });
 });
 
