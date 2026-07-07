@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 로그인 상태면 Bearer 토큰의 userId를 우선(클라 위조 방지), 없으면 body.userId 폴백.
+    // userId 는 검증된 Bearer 토큰에서만 — body.userId 는 임의 유저에게 기록을 귀속시킬 수 있어 수용 안 함.
     const tokenUserId = verifyToken(extractBearerToken(req.headers.get("authorization")) ?? "");
-    const userId = tokenUserId ?? body.userId ?? null;
+    const userId = tokenUserId ?? null;
 
     // M4 구조화 한마디 — 두 키가 모두 유효할 때만 저장(가드레일의 서버측 짝).
     const hasVoice = isSituationKey(body.situationKey) && isResolveKey(body.resolveKey);

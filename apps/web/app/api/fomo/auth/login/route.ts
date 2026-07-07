@@ -7,6 +7,9 @@ import { exceedsBcryptPasswordLimit } from "@/lib/auth/passwordPolicy";
 
 export const dynamic = "force-dynamic";
 
+// 타이밍 균일화용 고정 더미 해시(cost 10) — 실제 계정과 무관, 어떤 비밀번호와도 일치하지 않음.
+const DUMMY_BCRYPT_HASH = "$2b$10$C6UzMDM.H6dfI/f/IKcEeO6cBmOQdD3jH9M4qzYlrx1PBGU0y0e6a";
+
 export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
@@ -31,7 +34,10 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    const ok = user?.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
+    // 미존재 계정도 동일 비용의 해시 비교를 수행 — 응답시간 차로 계정 존재가 새는 것 방지(계정 열거 차단의 짝).
+    const ok = user?.passwordHash
+      ? await bcrypt.compare(password, user.passwordHash)
+      : (await bcrypt.compare(password, DUMMY_BCRYPT_HASH), false);
     if (!user || !ok) {
       return corsJson({ error: "이메일 또는 비밀번호가 맞지 않아.", code: "BAD_CREDENTIALS" }, { status: 401 });
     }
