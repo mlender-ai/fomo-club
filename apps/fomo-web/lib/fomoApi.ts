@@ -58,6 +58,32 @@ function kstDateKey(now = new Date()): string {
   return new Date(now.getTime() + 9 * HOUR).toISOString().slice(0, 10);
 }
 
+/**
+ * 날짜 키(fomo:index:*, fomo:keywords:*, fomo:discovery:*)로 매일 새 항목이 쌓이는데
+ * 지우는 곳이 없어 localStorage 가 무한 누적된다(quota 초과 시 이후 모든 저장이 조용히 실패
+ * → 오프라인 캐시·취향 기록 등 영속 기능 사망). 오늘이 아닌 날짜가 박힌 fomo:* 키를 정리한다.
+ * 날짜가 없는 키(fomo:discovery:last-good:* 등)는 건드리지 않는다. 세션당 1회.
+ */
+let stalePruned = false;
+function pruneStaleDatedCache(): void {
+  if (typeof window === "undefined" || stalePruned) return;
+  stalePruned = true;
+  try {
+    const today = kstDateKey();
+    const datedFomoKey = /^fomo:(index|keywords|discovery):.*(\d{4}-\d{2}-\d{2})/;
+    const stale: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (!key) continue;
+      const m = datedFomoKey.exec(key);
+      if (m && m[2] !== today) stale.push(key);
+    }
+    for (const key of stale) window.localStorage.removeItem(key);
+  } catch (err) {
+    console.warn("[fomoApi] stale cache prune failed", err);
+  }
+}
+
 export interface FomoIndexResponse {
   date: string;
   score: number;
@@ -116,6 +142,7 @@ function readStoredIndex(): FomoIndexResponse | null {
 function writeStoredIndex(value: FomoIndexResponse): void {
   if (typeof window === "undefined") return;
   try {
+    pruneStaleDatedCache();
     window.localStorage.setItem(indexStorageKey(), JSON.stringify(value));
   } catch (err) {
     console.warn("[fetchIndex] localStorage write failed", err);
@@ -355,6 +382,7 @@ function readStoredKeywords(): KeywordsResponse | null {
 function writeStoredKeywords(value: KeywordsResponse): void {
   if (typeof window === "undefined") return;
   try {
+    pruneStaleDatedCache();
     window.localStorage.setItem(keywordsStorageKey(), JSON.stringify(value));
   } catch (err) {
     console.warn("[fetchKeywords] localStorage write failed", err);
@@ -730,6 +758,7 @@ function writeStoredDiscovery(value: DiscoveryResponse, country: DiscoveryCountr
   if (typeof window === "undefined") return;
   if (!hasDiscoveryCards(value, country)) return;
   try {
+    pruneStaleDatedCache();
     window.localStorage.setItem(discoveryStorageKey(country), JSON.stringify(value));
     window.localStorage.setItem(lastDiscoveryStorageKey(country), JSON.stringify(value));
   } catch (err) {
