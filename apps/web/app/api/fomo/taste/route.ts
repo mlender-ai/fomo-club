@@ -28,6 +28,10 @@ interface TasteBody {
   sessionId?: string;
 }
 
+// 입력 상한 — 정상 subject(테마/종목명)·sessionId 는 짧다. 초과는 오용(임의 문자열 DB 적재 차단).
+const MAX_SUBJECT_LEN = 80;
+const MAX_SESSION_ID_LEN = 128;
+
 export async function POST(req: NextRequest) {
   // 로그인 유저면 userId, 아니면 익명(sessionId). 둘 다 없으면 폐기(주인 식별 불가).
   const userId = verifyToken(extractBearerToken(req.headers.get("authorization")) ?? "");
@@ -36,11 +40,14 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as TasteBody;
     const subjectType = SUBJECT_TYPES[body.subjectType as keyof typeof SUBJECT_TYPES];
     const signal = SIGNALS[body.signal as keyof typeof SIGNALS];
-    const subject = body.subject?.trim();
-    const sessionId = body.sessionId?.trim() || null;
+    const subject = typeof body.subject === "string" ? body.subject.trim() : "";
+    const sessionId = (typeof body.sessionId === "string" ? body.sessionId.trim() : "") || null;
 
     if (!subjectType || !signal || !subject) {
       return corsJson({ error: "subjectType·subject·signal 필요", code: "BAD_INPUT" }, { status: 400 });
+    }
+    if (subject.length > MAX_SUBJECT_LEN || (sessionId && sessionId.length > MAX_SESSION_ID_LEN)) {
+      return corsJson({ error: "입력이 너무 깁니다", code: "BAD_INPUT" }, { status: 400 });
     }
     // 익명 적재라도 주인(userId 또는 sessionId)은 있어야 한다 — 둘 다 없으면 의미 없는 행.
     if (!userId && !sessionId) {

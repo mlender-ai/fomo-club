@@ -43,7 +43,8 @@ interface KeywordsPayload {
 //   이후 모든 인스턴스가 즉시 읽기. DDL/외부 KV 불필요. revalidate 30분(시장 변동 반영) + 익일 자동 새 키.
 // snapshot-first(§4.6)는 그대로 — cron 스냅샷이 있으면 그게 1순위. 이 캐시는 라이브 폴백 경로의 영속화.
 // mock 폴백은 캐시 밖(실패를 굳히지 않게). inflight 로 인스턴스 내 동시 요청 dedup.
-let inflight: Promise<KeywordsPayload> | null = null;
+// 날짜로 키잉 — 자정 넘김 시점에 이전 날짜의 산출 Promise 를 새 날짜 요청이 공유하지 않게.
+let inflight: { date: string; p: Promise<KeywordsPayload> } | null = null;
 
 /** 라이브 산출(공유 파이프라인). 성공분만 Data Cache 에 영속. 실패해도 throw 없이 mock 폴백. */
 async function computeLive(date: string): Promise<KeywordsPayload> {
@@ -111,11 +112,12 @@ async function getSnapshotPayload(date: string): Promise<KeywordsPayload> {
 
 /** 명시적 live=1 확인용 경로 — Data Cache 가 영속 캐시, inflight 가 인스턴스 내 동시 dedup. */
 async function getLivePayload(date: string): Promise<KeywordsPayload> {
-  if (inflight) return inflight;
-  inflight = computeLive(date).finally(() => {
-    inflight = null;
+  if (inflight && inflight.date === date) return inflight.p;
+  const p = computeLive(date).finally(() => {
+    if (inflight?.p === p) inflight = null;
   });
-  return inflight;
+  inflight = { date, p };
+  return p;
 }
 
 export async function GET(request: Request) {
