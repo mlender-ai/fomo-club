@@ -542,6 +542,15 @@ export function StockSwipeDeck({
   const firstCardRecorded = useRef(false);
   const hydratedRecorded = useRef<Set<string>>(new Set());
   const matchTimer = useRef<number | null>(null);
+  // 진행 중 연출 타이머(플링/열기) — 언마운트 후 발화하면 사라진 덱에서 setState/openDepth 가 돈다 → 전부 정리.
+  const pendingTimers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const t of pendingTimers.current) window.clearTimeout(t);
+      if (matchTimer.current) window.clearTimeout(matchTimer.current);
+    },
+    []
+  );
 
   // 앞면 FOMO 신호 — ④ 정렬 때 풀 전체를 이미 받아 seed(initialFronts). 빠진 종목만 도달 시 lazy 보강.
   const [front, setFront] = useState<Record<string, FrontEntry>>(initialFronts ?? {});
@@ -703,12 +712,14 @@ export function StockSwipeDeck({
       return;
     }
     setExiting(dir);
-    window.setTimeout(() => {
-      setExiting(null);
-      setDx(0);
-      setDy(0);
-      setIdx((i) => i + 1);
-    }, EXIT_MS);
+    pendingTimers.current.push(
+      window.setTimeout(() => {
+        setExiting(null);
+        setDx(0);
+        setDy(0);
+        setIdx((i) => i + 1);
+      }, EXIT_MS)
+    );
   }, []);
 
   // 매칭 모먼트 — 짧게 띄우고 자동 해제(애니메이션 끔 설정이면 더 짧게).
@@ -806,7 +817,7 @@ export function StockSwipeDeck({
     }
     // 카드 날리는 연출(관심=우로, 슈퍼관심=위로) — 스와이프·버튼 완전 동일. 날아간 뒤 매칭 보고 상세로.
     setExiting(kind === "super" ? "up" : "right");
-    window.setTimeout(openAfter, 760);
+    pendingTimers.current.push(window.setTimeout(openAfter, 760));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, deckCards, front, fireMatch, loggedIn, onRequireLogin]);
 

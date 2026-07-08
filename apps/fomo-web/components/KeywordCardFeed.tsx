@@ -219,7 +219,9 @@ function KeywordDeck({
     return new Set(getHistory().filter((h) => kstDay(h.ts) === today).map((h) => h.id));
   })[0];
   const [replay, setReplay] = useState(false);
-  const personalizedCards = personalizedKeywordCards(cards);
+  // 개인화 순서는 마운트 1회 고정 — 스와이프가 관심 점수를 갱신하는데 매 렌더 재정렬하면
+  // idx(위치 인덱스) 밑에서 덱이 바뀌어 카드가 건너뛰거나 반복된다.
+  const personalizedCards = useState(() => personalizedKeywordCards(cards))[0];
   const sectorCards = replay ? personalizedCards : personalizedCards.filter((c) => !viewedIds.has(c.id));
   const deck = toDeckItems(sectorCards);
 

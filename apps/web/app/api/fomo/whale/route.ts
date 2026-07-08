@@ -27,10 +27,10 @@ export async function GET() {
   const items: string[] = [];
   try {
     const [globalRes, marketsRes] = await Promise.allSettled([
-      fetch("https://api.coingecko.com/api/v3/global", { next: { revalidate: 300 } }),
+      fetch("https://api.coingecko.com/api/v3/global", { next: { revalidate: 300 }, signal: AbortSignal.timeout(8_000) }),
       fetch(
         "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&price_change_percentage=24h",
-        { next: { revalidate: 300 } }
+        { next: { revalidate: 300 }, signal: AbortSignal.timeout(8_000) }
       ),
     ]);
 

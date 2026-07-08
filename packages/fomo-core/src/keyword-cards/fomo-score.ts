@@ -105,8 +105,9 @@ export interface FomoScoreResult {
   };
 }
 
-const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
-const clamp100 = (x: number) => (x < 0 ? 0 : x > 100 ? 100 : x);
+// NaN/±Infinity 는 0 으로 — 비유한 입력이 점수로 둔갑("포모 NaN")하는 것 차단(discovery-supply 와 동일 규약).
+const clamp01 = (x: number) => (!Number.isFinite(x) ? 0 : x < 0 ? 0 : x > 1 ? 1 : x);
+const clamp100 = (x: number) => (!Number.isFinite(x) ? 0 : x < 0 ? 0 : x > 100 ? 100 : x);
 
 function volTo100(ratio: number): number {
   return clamp01((ratio - 1) / (FOMO_NORM.volTopX - 1)) * 100;

@@ -3,6 +3,7 @@ import { challengePointsFor } from "@fomo/core";
 import { prisma } from "../../../../lib/prisma";
 import { kstDate, corsJson, withCors } from "../../../../lib/fomo";
 import { extractBearerToken, verifyToken } from "@/lib/auth/jwt";
+import { isValidSessionIdFormat, verifySession } from "../../../../lib/session-hmac";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export function OPTIONS() {
 
 interface ChallengeBody {
   sessionId?: string;
+  sessionSignature?: string;
   action?: string;
   userId?: string;
   date?: string;
@@ -52,6 +54,10 @@ export async function GET(req: NextRequest) {
     if (!sessionId) {
       return corsJson({ error: "sessionId 필요", code: "MISSING_SESSION" }, { status: 400 });
     }
+    // vote 와 동일한 형식 게이트 — 임의 문자열로 타 세션 포인트 조회/열거 차단.
+    if (!isValidSessionIdFormat(sessionId)) {
+      return corsJson({ error: "세션 형식이 유효하지 않습니다", code: "INVALID_SESSION_FORMAT" }, { status: 400 });
+    }
 
     const row = await prisma.challengeState.findUnique({
       where: { sessionId_challengeDate: { sessionId, challengeDate: date } },
@@ -78,6 +84,13 @@ export async function POST(req: NextRequest) {
     if (!sessionId) {
       return corsJson({ error: "sessionId 필요", code: "MISSING_SESSION" }, { status: 400 });
     }
+    // vote 와 동일한 게이트(형식 + HMAC) — 임의 sessionId 로 포인트 적립 위조 차단.
+    if (!isValidSessionIdFormat(sessionId)) {
+      return corsJson({ error: "세션 형식이 유효하지 않습니다", code: "INVALID_SESSION_FORMAT" }, { status: 400 });
+    }
+    if (verifySession(sessionId, body.sessionSignature).tampered) {
+      return corsJson({ error: "세션이 유효하지 않습니다", code: "TAMPERED_SESSION" }, { status: 403 });
+    }
     if (action !== "accept" && action !== "complete") {
       return corsJson(
         { error: "action은 accept|complete 중 하나", code: "BAD_ACTION" },
@@ -85,9 +98,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 로그인 상태면 Bearer 토큰의 userId를 우선(클라 위조 방지), 없으면 body.userId 폴백.
+    // userId 는 검증된 Bearer 토큰에서만 — body.userId 는 임의 유저에게 기록을 귀속시킬 수 있어 수용 안 함.
     const tokenUserId = verifyToken(extractBearerToken(req.headers.get("authorization")) ?? "");
-    const userId = tokenUserId ?? body.userId ?? null;
+    const userId = tokenUserId ?? null;
 
     const key = { sessionId_challengeDate: { sessionId, challengeDate: date } };
 
