@@ -61,10 +61,16 @@ export async function writeUsMarketQuoteRows(
 ): Promise<UsMarketQuoteCacheStats> {
   await ensureUsMarketQuoteCacheTable();
   const quoteRows = rows.filter((row) => row.country === "US" && hasUsQuote(row));
-  for (const row of quoteRows) {
+  // 벌크 UPSERT(unnest) — 유니버스 500 확장 후 순차 INSERT 500회가 함수 타임아웃의 원인이었다.
+  const CHUNK = 200;
+  for (let i = 0; i < quoteRows.length; i += CHUNK) {
+    const chunk = quoteRows.slice(i, i + CHUNK);
+    const symbols = chunk.map((row) => row.symbol.toUpperCase());
+    const payloads = chunk.map((row) => JSON.stringify(row));
     await prisma.$executeRaw`
       INSERT INTO "UsMarketQuoteCache" ("symbol", "row", "sessionDate", "slot", "updatedAt")
-      VALUES (${row.symbol.toUpperCase()}, ${JSON.stringify(row)}::jsonb, ${options.sessionDate}, ${options.slot}, NOW())
+      SELECT s, p::jsonb, ${options.sessionDate}, ${options.slot}, NOW()
+      FROM unnest(${symbols}::text[], ${payloads}::text[]) AS t(s, p)
       ON CONFLICT ("symbol") DO UPDATE
       SET "row" = EXCLUDED."row",
           "sessionDate" = EXCLUDED."sessionDate",
