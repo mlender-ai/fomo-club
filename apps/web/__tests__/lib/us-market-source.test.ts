@@ -201,7 +201,8 @@ describe("US market source", () => {
 
     const diag = await fetchUsMarketDiagnostics();
     expect(diag.source).toBe("nasdaq-screener");
-    expect(diag.dynamicRows).toBeGreaterThanOrEqual(2);
+    // dynamicRows = 비큐레이션 행 수(의미 정교화) — 픽스처에선 OPEN 1건.
+    expect(diag.dynamicRows).toBeGreaterThanOrEqual(1);
     expect(diag.strongMomentumRows).toBe(0);
   });
 
