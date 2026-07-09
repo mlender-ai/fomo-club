@@ -201,9 +201,9 @@ describe("US market source", () => {
 
     const diag = await fetchUsMarketDiagnostics();
     expect(diag.source).toBe("nasdaq-screener");
-    // dynamicRows = 비큐레이션 행 수(의미 정교화) — 픽스처에선 OPEN 1건.
+    // dynamicRows = 비큐레이션 행 수(의미 정교화) — 픽스처에선 OPEN 1건(+17.65% → 강모멘텀도 1).
     expect(diag.dynamicRows).toBeGreaterThanOrEqual(1);
-    expect(diag.strongMomentumRows).toBe(0);
+    expect(diag.strongMomentumRows).toBe(1);
   });
 
   it("does not wire Yahoo chart endpoints into the US quote adapter", () => {
