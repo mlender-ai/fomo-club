@@ -2229,6 +2229,14 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       const headlineEventKind = headlineEvent?.kind;
       const hasSurfaceMaterial = headlineEventKind === "news_mention" || headlineEventKind === "disclosure";
       const hasGroundedMaterial = Boolean(stock.sourceLabel && (stock.sourceUrl || headlineEvent?.url));
+      // 시세 사실 신호(WO 미장·코인 확충) — Nasdaq OHLCV 실측(거래량 이상·신고가)은 그 자체가 근거라
+      // 재료(뉴스·공시) 없이도 카드 진입 허용. 카피 가드·verdict 표준은 그대로(품질 게이트 유지).
+      const hasMarketFactSignal = headlineEventKind === "volume_spike" || headlineEventKind === "new_high";
+      if (hasMarketFactSignal) {
+        stocks.push(stock);
+        fronts[candidate.ticker] = front;
+        continue;
+      }
       if (!hasSurfaceMaterial || !hasGroundedMaterial) {
         if (process.env.DISCOVERY_DEBUG_US_DROPS === "1") {
           console.warn("[US drop ungrounded]", {

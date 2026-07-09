@@ -11,7 +11,8 @@ const NASDAQ_SCREENER_URL = "https://api.nasdaq.com/api/screener/stocks";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const US_DYNAMIC_UNIVERSE_LIMIT = 60;
+// WO 미장·코인 확충 — 큐레이션 ~125 + 60 상한이 US 5장의 원인. 스크리너(1콜·전종목)에서 상위 500 유지.
+const US_DYNAMIC_UNIVERSE_LIMIT = 500;
 const US_QUOTE_BATCH_SIZE = 60;
 const US_SPARKLINE_LIMIT = 30;
 const US_PREWARM_CACHE_MAX_AGE_HOURS = 18;

@@ -31,7 +31,7 @@ describe("coin discovery signals", () => {
     expect(hasDiscoverySignal(s, signal)).toBe(false);
   });
 
-  it("거래대금 이상(2배+)이면 발굴 신호", () => {
+  it("거래대금 이상(1.5배+)이면 커버리지 신호", () => {
     const s = snapshot({ accTradePrice24h: 1.5e10 }); // 평소 3배
     const signal = computeCoinSignal(s)!;
     expect(signal.volumeRatio).toBeCloseTo(3.0, 1);
@@ -47,11 +47,11 @@ describe("coin discovery signals", () => {
     expect(hasDiscoverySignal(s, signal)).toBe(true);
   });
 
-  it("이미 급등한 코인(±12%+)은 발굴 제외 — 잡코인 러시 방어", () => {
-    const s = snapshot({ accTradePrice24h: 2e10, changePct: 30.5 });
+  it("급등락(±5%+)은 커버리지 신호 — 시총 상위 30에선 그 자체가 사건(WO: 급등 제외 폐기)", () => {
+    const s = snapshot({ changePct: 7.2 }); // 거래대금 평소 수준이어도
     const signal = computeCoinSignal(s)!;
-    expect(signal.volumeRatio).toBeGreaterThan(2);
-    expect(hasDiscoverySignal(s, signal)).toBe(false);
+    expect(signal.bigMove).toBe(true);
+    expect(hasDiscoverySignal(s, signal)).toBe(true);
   });
 
   it("캔들 부족(25일 미만) 마켓은 신호 계산 불가", () => {
@@ -63,8 +63,14 @@ describe("coin discovery signals", () => {
   });
 
   it("헤드라인은 사실+수치 관측 서술", () => {
-    const signal: CoinSignal = { volumeRatio: 6.24, vacuumInflow: false, quiet: true };
+    const signal: CoinSignal = { volumeRatio: 6.24, vacuumInflow: false, bigMove: false, quiet: true };
     const s = snapshot({ athChangePct: -62 });
     expect(coinHeadline(s, signal)).toBe("24시간 거래대금 평소 6.2배 · 전고점 대비 62% 아래 · 아직 조용한 구간");
+  });
+
+  it("급등락 헤드라인 — 등락 사실이 앞에", () => {
+    const signal: CoinSignal = { volumeRatio: 2.1, vacuumInflow: false, bigMove: true, quiet: false };
+    const s = snapshot({ changePct: 7.23 });
+    expect(coinHeadline(s, signal)).toBe("하루 +7.2% · 24시간 거래대금 평소 2.1배");
   });
 });

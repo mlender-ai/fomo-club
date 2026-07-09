@@ -57,3 +57,12 @@ describe("interleaveFeedItems", () => {
     expect(interleaveFeedItems(items)).toHaveLength(3);
   });
 });
+
+// 신선도 로테이션(WO 미장·코인 확충) — 어제와 같은 문구는 이틀 연속 금지.
+import { selectDaily30Candidates } from "../../lib/daily-30";
+
+describe("daily-30 freshness (모듈 로드 검증)", () => {
+  it("selectDaily30Candidates 는 빈 후보에서 빈 덱(회귀 안전판)", () => {
+    expect(selectDaily30Candidates([])).toEqual([]);
+  });
+});
