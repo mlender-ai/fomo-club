@@ -838,21 +838,23 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
     source,
   });
 
+  // 스크리너(무료·전종목·1콜)를 키 유무와 무관하게 1차 소스로(WO 미장·코인 확충) —
+  // TwelveData 키가 있으면 keyed 경로(쿼터 60개 안팎)를 타서 유니버스가 말랐다(프리웜 실측 fetched 48).
+  const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
+  if (screenerRows.length >= 100 || (!key && screenerRows.length > 0)) {
+    const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+    const rows = mergePreferredRows(screenerRows, nasdaqRows);
+    return {
+      rows,
+      diagnostics: {
+        ...fallbackDiagnostics(rows, "nasdaq-screener"),
+        moverSymbols: screenerRows.length,
+        quoteSymbols: rows.length,
+        dynamicRows: screenerRows.length,
+      },
+    };
+  }
   if (!key) {
-    const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
-    if (screenerRows.length > 0) {
-      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
-      const rows = mergePreferredRows(screenerRows, nasdaqRows);
-      return {
-        rows,
-        diagnostics: {
-          ...fallbackDiagnostics(rows, "nasdaq-screener"),
-          moverSymbols: screenerRows.length,
-          quoteSymbols: rows.length,
-          dynamicRows: screenerRows.length,
-        },
-      };
-    }
     const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
     const rows = nasdaqRows.length > 0 ? nasdaqRows : seedRows();
     return { rows, diagnostics: fallbackDiagnostics(rows, nasdaqRows.length > 0 ? "nasdaq-fallback" : "seed") };
