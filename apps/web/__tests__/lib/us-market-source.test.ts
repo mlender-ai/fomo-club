@@ -192,7 +192,9 @@ describe("US market source", () => {
 
     const rows = await fetchUsMarketRows();
     expect(rows.map((row) => row.symbol)).toEqual(expect.arrayContaining(["MRVL", "META"]));
-    expect(rows.some((row) => row.symbol === "OPEN")).toBe(false);
+    // WO 미장·코인 확충 — 비큐레이션 정상주(Opendoor)도 유니버스 포함(큐레이션 125 상한 폐기).
+    expect(rows.some((row) => row.symbol === "OPEN")).toBe(true);
+    // 품질 게이트는 유지 — SPAC/블랭크체크(AACB)는 여전히 제외.
     expect(rows.some((row) => row.symbol === "AACB")).toBe(false);
     expect(rows.find((row) => row.symbol === "MRVL")?.changePct).toBe(6.25);
     expect(rows.find((row) => row.symbol === "MRVL")?.canonical).toBe("마벨테크놀로지");
