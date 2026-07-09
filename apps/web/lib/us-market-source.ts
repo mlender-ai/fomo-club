@@ -846,7 +846,12 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
   const curated = curatedScreenerRows(rawScreenerRows, seeds);
   const curatedSymbols = new Set(curated.map((row) => row.symbol.toUpperCase()));
   const dynamicScreener = rawScreenerRows.filter((row) => !curatedSymbols.has(row.symbol.toUpperCase()));
-  const screenerRows = [...curated, ...dynamicScreener];
+  // 프리웜 슬롯 분할(다이내믹 행) — 500행 전부를 한 슬롯이 쓰면 함수 타임아웃(크론 슬롯 확장 원칙).
+  const slottedDynamic =
+    typeof options.slot === "number" && typeof options.slotCount === "number" && options.slotCount > 1
+      ? dynamicScreener.filter((_, index) => index % options.slotCount! === options.slot)
+      : dynamicScreener;
+  const screenerRows = [...curated, ...slottedDynamic];
   if (screenerRows.length >= 100 || (!key && screenerRows.length > 0)) {
     const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
     const rows = mergePreferredRows(screenerRows, nasdaqRows);
@@ -856,7 +861,7 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
         ...fallbackDiagnostics(rows, "nasdaq-screener"),
         moverSymbols: screenerRows.length,
         quoteSymbols: rows.length,
-        dynamicRows: dynamicScreener.length,
+        dynamicRows: slottedDynamic.length,
       },
     };
   }
