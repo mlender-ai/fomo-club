@@ -840,7 +840,13 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
 
   // 스크리너(무료·전종목·1콜)를 키 유무와 무관하게 1차 소스로(WO 미장·코인 확충) —
   // TwelveData 키가 있으면 keyed 경로(쿼터 60개 안팎)를 타서 유니버스가 말랐다(프리웜 실측 fetched 48).
-  const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
+  const rawScreenerRows = await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []);
+  // 큐레이션 교집합(시드 메타 병합) + **비큐레이션 다이내믹 행**(WO 미장·코인 확충) —
+  // curatedScreenerRows 만 쓰면 전종목 스크리너가 큐레이션 ~125로 다시 말라붙는다(프리웜 실측 48의 실체).
+  const curated = curatedScreenerRows(rawScreenerRows, seeds);
+  const curatedSymbols = new Set(curated.map((row) => row.symbol.toUpperCase()));
+  const dynamicScreener = rawScreenerRows.filter((row) => !curatedSymbols.has(row.symbol.toUpperCase()));
+  const screenerRows = [...curated, ...dynamicScreener];
   if (screenerRows.length >= 100 || (!key && screenerRows.length > 0)) {
     const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
     const rows = mergePreferredRows(screenerRows, nasdaqRows);
@@ -850,7 +856,7 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
         ...fallbackDiagnostics(rows, "nasdaq-screener"),
         moverSymbols: screenerRows.length,
         quoteSymbols: rows.length,
-        dynamicRows: screenerRows.length,
+        dynamicRows: dynamicScreener.length,
       },
     };
   }
