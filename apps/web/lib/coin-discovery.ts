@@ -5,35 +5,33 @@ import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-
 import type { DiscoveryFrontSeed, DiscoveryResponse, DiscoveryStockPayload } from "./discovery-supply";
 
 /**
- * 코인 발굴 (WO Phase C) — 캐시된 Upbit 스냅샷에서 신호 계산 → 표준 카드(바이오비쥬 포맷).
+ * 코인 카드 (WO 미장·코인 확충 — Phase C 알트 발굴 폐기, User Zero 결정) —
+ * 코인은 발굴이 아니라 **커버리지**다. 유니버스 = 시총 상위 30 고정(소스에서 선정),
+ * BTC·ETH 등 메이저도 신호 있으면 카드 OK(화제성 감점 없음). 그중 오늘 신호 있는 3~5장.
  *
  * 요청 경로 외부 fetch 0 (캐시만 읽음). 신호 없으면 0장(쿼터 강제 금지 — 정직).
- * 발굴 정체성: BTC·ETH 등 메이저는 marquee 감점으로 자연 탈락, 신호 강한 조용한 알트 우선.
  * 관측 서술만 — 매수·매도 판단/예측 없음(verdict 는 결정론 엔진의 관측 요약).
  */
 
-/** 메이저(누구나 아는 대장) — marquee 지정 → daily-30 화제성 감점(+28). 발굴 대상 아님. */
-const MAJOR_COIN_SYMBOLS = new Set([
-  "BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "TRX", "USDT", "USDC", "BCH", "LINK", "AVAX", "XLM", "DOT",
-]);
-
-/** 발굴 신호 임계 — 24h 거래대금 / 직전 20일(완결 일봉) 평균. */
-const VOLUME_ANOMALY_RATIO = 2.0;
+/** 신호 임계 — 24h 거래대금 / 직전 20일(완결 일봉) 평균. 커버리지 모드라 발굴(2.0)보다 완화. */
+const VOLUME_ANOMALY_RATIO = 1.5;
 /** 진공 후 유입: 직전 5일 평균이 30일 평균의 55% 미만(진공)이었는데 오늘 유입. */
 const VACUUM_RATIO = 0.55;
-const VACUUM_INFLOW_RATIO = 1.6;
+const VACUUM_INFLOW_RATIO = 1.4;
+/** 급등락 재료 — 하루 등락 절대값(시총 상위 30에선 그 자체가 사건). */
+const BIG_MOVE_PCT = 5;
 /** 조용한 구간 — 등락률 절대값. */
 const QUIET_CHANGE_PCT = 3;
-/** 이미 달린 코인 제외 — 발굴은 "신호는 강한데 조용한" 자리. 급등 중 잡코인 러시는 발굴이 아니다. */
-const ALREADY_MOVED_CHANGE_PCT = 12;
-/** 카드 상한(신호 있어도 최대 N — quietScore 경쟁은 daily-30 이 함) */
-const COIN_CARD_LIMIT = 8;
+/** 카드 상한(WO: 3~5장) — quietScore 경쟁은 daily-30 이 함. */
+const COIN_CARD_LIMIT = 5;
 
 export interface CoinSignal {
   /** 24h 거래대금 / 직전 20일 평균. */
   volumeRatio: number;
   /** 진공(직전 5일 저조) 후 첫 유입 여부. */
   vacuumInflow: boolean;
+  /** 급등락 재료(±5%+) — 시총 상위 30에선 그 자체가 오늘의 사건. */
+  bigMove: boolean;
   quiet: boolean;
 }
 
@@ -55,13 +53,14 @@ export function computeCoinSignal(snapshot: CoinMarketSnapshot): CoinSignal | nu
   return {
     volumeRatio,
     vacuumInflow,
+    bigMove: Math.abs(snapshot.changePct) >= BIG_MOVE_PCT,
     quiet: Math.abs(snapshot.changePct) < QUIET_CHANGE_PCT,
   };
 }
 
-export function hasDiscoverySignal(snapshot: CoinMarketSnapshot, signal: CoinSignal): boolean {
-  if (Math.abs(snapshot.changePct) >= ALREADY_MOVED_CHANGE_PCT) return false; // 이미 달림 — 발굴 아님
-  return signal.volumeRatio >= VOLUME_ANOMALY_RATIO || signal.vacuumInflow;
+/** 커버리지 신호 — 거래량 이상 / 진공 후 유입 / 급등락. 메이저 제외·급등 제외 없음(WO: Phase C 폐기). */
+export function hasDiscoverySignal(_snapshot: CoinMarketSnapshot, signal: CoinSignal): boolean {
+  return signal.volumeRatio >= VOLUME_ANOMALY_RATIO || signal.vacuumInflow || signal.bigMove;
 }
 
 function krw(price: number): string {
@@ -83,9 +82,12 @@ function ratioText(ratio: number): string {
 /** 관측 서술 헤드라인 — 사실+수치만. 예측·판단 없음. */
 export function coinHeadline(snapshot: CoinMarketSnapshot, signal: CoinSignal): string {
   const parts: string[] = [];
+  if (signal.bigMove) {
+    parts.push(`하루 ${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(1)}%`);
+  }
   if (signal.vacuumInflow) {
     parts.push(`거래 진공 뒤 첫 유입 · 24시간 거래대금 평소 ${ratioText(signal.volumeRatio)}`);
-  } else {
+  } else if (signal.volumeRatio >= VOLUME_ANOMALY_RATIO || signal.bigMove) {
     parts.push(`24시간 거래대금 평소 ${ratioText(signal.volumeRatio)}`);
   }
   if (typeof snapshot.athChangePct === "number" && snapshot.athChangePct <= -30) {
@@ -117,20 +119,21 @@ function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal): Discov
 }
 
 function coinStockPayload(snapshot: CoinMarketSnapshot, signal: CoinSignal, headline: string): DiscoveryStockPayload {
-  const marquee = MAJOR_COIN_SYMBOLS.has(snapshot.symbol.toUpperCase()) || snapshot.tradeValueRank <= 3;
-  // 뎁스 보조(재무 블록 미해당) — 거래소·거래대금·순위 사실 표기. 시총은 소스에 없어 표기하지 않는다(지어내기 금지).
-  const reason = `Upbit 원화마켓 · 24시간 거래대금 ${eok(snapshot.accTradePrice24h)} · 거래대금 ${snapshot.tradeValueRank}위`;
+  // 뎁스 보조(재무 블록 미해당) — 거래소·거래대금·시총 순위(CoinGecko) 사실 표기.
+  const capText = typeof snapshot.marketCapRank === "number" ? ` · 시총 ${snapshot.marketCapRank}위` : "";
+  const reason = `Upbit 원화마켓 · 24시간 거래대금 ${eok(snapshot.accTradePrice24h)}${capText}`;
   return {
     canonical: snapshot.koreanName,
     market: "COIN",
     country: "GLOBAL",
-    marquee,
+    // 커버리지 모드(WO) — 메이저 화제성 감점 없음. BTC·ETH도 신호 있으면 카드.
+    marquee: false,
     sector: "코인",
     symbol: snapshot.market,
     headline,
     whyShown: headline,
     reason,
-    insightTag: signal.vacuumInflow ? "₿ 진공 후 유입" : "₿ 거래대금 이상",
+    insightTag: signal.vacuumInflow ? "₿ 진공 후 유입" : signal.bigMove ? "₿ 급등락" : "₿ 거래대금 이상",
     sourceLabel: "Upbit 일봉 · CoinGecko",
     sourceUrl: `https://upbit.com/exchange?code=CRIX.UPBIT.${snapshot.market}`,
   };
@@ -145,10 +148,12 @@ export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
   const stocks: DiscoveryStockPayload[] = [];
   const fronts: Record<string, DiscoveryFrontSeed> = {};
 
+  const strength = (x: { snapshot: CoinMarketSnapshot; signal: CoinSignal }): number =>
+    x.signal.volumeRatio + (x.signal.bigMove ? Math.abs(x.snapshot.changePct) / 2 : 0);
   const scored = snapshots
     .map((snapshot) => ({ snapshot, signal: computeCoinSignal(snapshot) }))
     .filter((x): x is { snapshot: CoinMarketSnapshot; signal: CoinSignal } => x.signal !== null && hasDiscoverySignal(x.snapshot, x.signal))
-    .sort((a, b) => b.signal.volumeRatio - a.signal.volumeRatio)
+    .sort((a, b) => strength(b) - strength(a))
     .slice(0, COIN_CARD_LIMIT);
 
   for (const { snapshot, signal } of scored) {

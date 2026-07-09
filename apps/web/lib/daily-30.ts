@@ -11,6 +11,7 @@ import {
 import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
 import { buildCoinDiscoveryResponse } from "./coin-discovery";
 import { readTodayFeedContent, type TodayFeedContent } from "./feed-briefing";
+import { readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -28,6 +29,8 @@ export interface Daily30Response extends DiscoveryResponse {
     targetCount: number;
     cards: Daily30MetaCard[];
     assetCounts: Record<Daily30AssetClass, number>;
+    /** 어제 30장 대비 종목 중복률(0~1) — 신선도 수용 지표(≤0.5). */
+    repeatRatio?: number;
   };
 }
 
@@ -68,10 +71,11 @@ const FAMOUS_STOCKS = new Set([
   "버크셔해서웨이",
 ]);
 
+/** 소프트 목표(WO 미장·코인 확충): KR ~15 / US 8~10 / 코인 3~5 — 쿼터 강제가 아니라 풀 확대로 자연 도달. */
 const ASSET_CAPS: Record<Daily30AssetClass, number> = {
-  "kr-stock": 12,
+  "kr-stock": 15,
   "us-stock": 12,
-  coin: 3,
+  coin: 5,
   macro: 6,
 };
 
@@ -171,11 +175,35 @@ function meetsCardStandard(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
   return true;
 }
 
-function stockCandidate(stock: DiscoveryStockPayload, front: DiscoveryFrontSeed | undefined): Daily30Candidate | null {
+/**
+ * 신선도 로테이션(WO 미장·코인 확충) — 어제 30장 스냅샷 대비:
+ * 같은 종목·같은 문구 → 이틀 연속 금지(제외, 다음 후보 로테이션).
+ * 같은 종목·다른 문구(신호 갱신) → 감점만(연속 등장은 갱신된 신호일 때만 정당).
+ */
+export interface FreshnessSnapshot {
+  /** canonical → 어제 헤드라인. */
+  headlines: Map<string, string>;
+}
+const STALE_REPEAT_PENALTY = 8;
+
+function normalizeHeadline(text: string | undefined): string {
+  return (text ?? "").replace(/\s+/g, " ").trim();
+}
+
+function stockCandidate(
+  stock: DiscoveryStockPayload,
+  front: DiscoveryFrontSeed | undefined,
+  freshness?: FreshnessSnapshot
+): Daily30Candidate | null {
   if (!meetsCardStandard(stock, front)) return null;
   if (FAMOUS_STOCKS.has(stock.canonical) && !strongQuietSignal(stock)) return null;
+  const yesterdayHeadline = freshness?.headlines.get(stock.canonical);
+  const repeatStale =
+    typeof yesterdayHeadline === "string" && normalizeHeadline(yesterdayHeadline) === normalizeHeadline(stock.headline);
+  if (repeatStale) return null; // 같은 문구 이틀 연속 금지 — 신호 갱신 없으면 다음 후보로
   const signalScore = computeStockSignal(stock, front);
-  const hypePenalty = computeHypePenalty(stock, front);
+  const hypePenalty =
+    computeHypePenalty(stock, front) + (typeof yesterdayHeadline === "string" ? STALE_REPEAT_PENALTY : 0);
   const quietScore = signalScore - hypePenalty;
   if (quietScore < 6) return null;
   return {
@@ -240,7 +268,8 @@ function narrativeCandidate(card: DiscoveryDeckCardPayload): Daily30Candidate | 
 function addStockCandidates(
   out: Daily30Candidate[],
   discovery: DiscoveryResponse,
-  seen: Set<string>
+  seen: Set<string>,
+  freshness?: FreshnessSnapshot
 ): void {
   const cards = discovery.cards?.length ? discovery.cards : discovery.stocks.map((stock) => ({ kind: "stock", ...stock }) satisfies DiscoveryDeckCardPayload);
   for (const card of cards) {
@@ -249,7 +278,7 @@ function addStockCandidates(
       const id = stockId(stock);
       if (seen.has(id)) continue;
       seen.add(id);
-      const candidate = stockCandidate(stock, discovery.fronts[stock.canonical]);
+      const candidate = stockCandidate(stock, discovery.fronts[stock.canonical], freshness);
       if (candidate) out.push(candidate);
       continue;
     }
@@ -263,7 +292,7 @@ function addStockCandidates(
     const id = stockId(stock);
     if (seen.has(id)) continue;
     seen.add(id);
-    const candidate = stockCandidate(stock, discovery.fronts[stock.canonical]);
+    const candidate = stockCandidate(stock, discovery.fronts[stock.canonical], freshness);
     if (candidate) out.push(candidate);
   }
 }
@@ -356,17 +385,37 @@ function responseFromSelected(
   };
 }
 
+interface Daily30PicksSnapshot {
+  date: string;
+  picks: Array<{ canonical: string; headline?: string }>;
+}
+
+/** 어제(가장 최근, 오늘 제외) 30장 스냅샷 — 신선도 로테이션 기준. 없으면 빈 맵(첫날). */
+async function readYesterdayPicks(today: string): Promise<FreshnessSnapshot> {
+  const rows = await readFeedContentByPrefix<Daily30PicksSnapshot>("daily30-picks:", 3).catch(
+    () => [] as Array<{ id: string; row: Daily30PicksSnapshot }>
+  );
+  const yesterday = rows.map((r) => r.row).find((row) => row?.date && row.date !== today);
+  const headlines = new Map<string, string>();
+  for (const pick of yesterday?.picks ?? []) {
+    if (pick.canonical) headlines.set(pick.canonical, pick.headline ?? "");
+  }
+  return { headlines };
+}
+
 export async function buildDaily30Response(): Promise<Daily30Response> {
-  const [kr, us, coin, rawContent, feedContent] = await Promise.all([
+  const today = kstDateOf();
+  const [kr, us, coin, rawContent, feedContent, freshness] = await Promise.all([
     buildDiscoveryResponse({ country: "KR", targetedMaterial: true, targetedMaterialLimit: 36 }),
-    buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 12 }),
-    // 코인(WO Phase C) — Upbit 캐시 발굴. 신호 없으면 stocks 0(쿼터 강제 없음 — 정직).
+    buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 16 }),
+    // 코인(WO 미장·코인 확충) — 시총 상위 30 커버리지. 신호 없으면 stocks 0(쿼터 강제 없음 — 정직).
     buildCoinDiscoveryResponse().catch(
       (): DiscoveryResponse => ({ asOf: "", stocks: [], fronts: {}, confidence: "L", source: "coin unavailable" })
     ),
     fetchDeckContentCards().catch(() => [] as DeckContentCard[]),
     // 피드 강화(WO) — 브리핑·버즈·회고. 크론이 채운 캐시만 읽는다(외부 fetch 0).
     readTodayFeedContent().catch((): TodayFeedContent => ({ cards: [], pinnedIds: new Set() })),
+    readYesterdayPicks(kstDateOf()),
   ]);
   // MARKET NOTE 해석 1줄(WO — 숫자만 금지): 국내 지수 카드에 섹터 펄스(실데이터) 주입.
   const enrichedRawContent = feedContent.indexNote
@@ -384,9 +433,9 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
   ];
   const candidates: Daily30Candidate[] = [];
   const seen = new Set<string>();
-  addStockCandidates(candidates, kr, seen);
-  addStockCandidates(candidates, us, seen);
-  addStockCandidates(candidates, coin, seen);
+  addStockCandidates(candidates, kr, seen, freshness);
+  addStockCandidates(candidates, us, seen, freshness);
+  addStockCandidates(candidates, coin, seen, freshness);
   addContentCandidates(candidates, content, seen, feedContent.pinnedIds);
 
   // WO-GNB 두 표면 분리: 덱 = 종목 30장(내러티브·콘텐츠 제외), 피드 = 콘텐츠·내러티브(중요도순).
@@ -396,7 +445,21 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
     .sort((a, b) => b.quietScore - a.quietScore || a.id.localeCompare(b.id))
     .slice(0, FEED_CARD_LIMIT);
   const deck = selectDaily30Candidates(stockCandidates, DAILY_CARD_TARGET);
-  return responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
+
+  // 신선도 스냅샷 저장 — 내일 빌드의 로테이션 기준. 실패해도 응답은 정상(fail-open).
+  const picks: Daily30PicksSnapshot = {
+    date: today,
+    picks: deck
+      .filter((c) => c.stock)
+      .map((c) => ({ canonical: c.stock!.canonical, ...(c.stock!.headline ? { headline: c.stock!.headline } : {}) })),
+  };
+  await writeFeedContent(`daily30-picks:${today}`, picks).catch(() => {});
+  // 중복률(어제 대비) — 수용 지표(≤50%) 모니터링용.
+  const repeatCount = picks.picks.filter((p) => freshness.headlines.has(p.canonical)).length;
+  const repeatRatio = picks.picks.length > 0 ? Math.round((repeatCount / picks.picks.length) * 100) / 100 : 0;
+
+  const response = responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
+  return { ...response, meta: { ...response.meta, repeatRatio } };
 }
 
 /**

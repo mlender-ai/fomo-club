@@ -18,10 +18,17 @@ const UPBIT_TICKER_URL = "https://api.upbit.com/v1/ticker";
 const UPBIT_DAILY_CANDLES_URL = "https://api.upbit.com/v1/candles/days";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 
-/** 잡코인 방어선 — 24h 거래대금 하한(KRW). 미달 마켓은 발굴 유니버스 제외. */
-const MIN_TRADE_PRICE_24H_KRW = 3_000_000_000; // 30억
-/** 유니버스 상한 — 거래대금 상위 N 마켓만 캔들 수집(비용·집중). */
-const COIN_UNIVERSE_LIMIT = 60;
+/**
+ * 유니버스 = 시총 상위 30 고정 (WO 미장·코인 확충 — User Zero 결정).
+ * 코인은 발굴이 아니라 커버리지 — CoinGecko 시총 순 ∩ Upbit KRW 상장 상위 30.
+ * 상위 30이면 잡코인·유의 방어선 불필요(Phase C 알트 서치 폐기).
+ * CoinGecko 실패 시 24h 거래대금 상위 30 폴백(정직한 근사).
+ */
+const COIN_UNIVERSE_LIMIT = 30;
+const COINGECKO_MARKETS_URL =
+  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=krw&order=market_cap_desc&per_page=150&page=1";
+/** 스테이블코인 — 가격 고정이라 신호·카드 가치가 없다(잡코인 방어선 아님, 자산 성격상 제외). */
+const STABLECOIN_SYMBOLS = new Set(["USDT", "USDC", "USDS", "DAI", "FDUSD", "TUSD", "USDE", "PYUSD", "USD1", "USDP"]);
 /** 일봉 목표 개수(WO: 260) — Upbit 1회 최대 200이라 2회 페이지네이션. */
 const COIN_CANDLE_TARGET = 260;
 /** Upbit quotation 그룹 rate limit ~10 req/s — 동시 2 + 요청당 페이스로 ~4 req/s 유지(429 방지). */
@@ -44,8 +51,10 @@ export interface CoinMarketSnapshot {
   changePct: number;
   /** 24h 누적 거래대금(KRW). */
   accTradePrice24h: number;
-  /** KRW 마켓 내 24h 거래대금 순위(1=최대). 메이저 감점·유동성 참고. */
+  /** KRW 마켓 내 24h 거래대금 순위(1=최대). */
   tradeValueRank: number;
+  /** 시총 순위(CoinGecko, 1=최대) — 유니버스 선정 기준. 폴백(거래대금 선정) 시 없음. */
+  marketCapRank?: number;
   /** 일봉(과거→최신). verdict·TA 엔진 공급용. */
   candles: DailyOhlcv[];
   /** 일봉과 정렬된 일별 거래대금(KRW) — 거래대금 이상·진공 신호용. */
@@ -124,16 +133,24 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return out;
 }
 
-/** KRW 마켓 목록 — 유의 지정(warning) 제외. */
+/** KRW 마켓 전체 — 시총 상위 30 유니버스라 유의/잡코인 방어선 불필요(WO: Phase C 필터 제거). */
 async function fetchKrwMarkets(): Promise<UpbitMarketInfo[]> {
   const all = await fetchJson<UpbitMarketInfo[]>(UPBIT_MARKET_ALL_URL);
   if (!Array.isArray(all)) return [];
-  return all.filter(
-    (m) =>
-      m.market?.startsWith("KRW-") &&
-      m.market_event?.warning !== true &&
-      m.market_warning !== "CAUTION"
-  );
+  return all.filter((m) => m.market?.startsWith("KRW-"));
+}
+
+/** CoinGecko 시총 순 심볼 목록(KRW 기준, 상위 150) — 유니버스 선정용. 실패 시 null(거래대금 폴백). */
+async function fetchMarketCapOrder(): Promise<Map<string, number> | null> {
+  const rows = await fetchJson<Array<{ symbol?: string; market_cap_rank?: number }>>(COINGECKO_MARKETS_URL);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const out = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.symbol) continue;
+    const symbol = row.symbol.toUpperCase();
+    if (!out.has(symbol)) out.set(symbol, row.market_cap_rank ?? out.size + 1);
+  }
+  return out;
 }
 
 async function fetchTickers(markets: readonly string[]): Promise<Map<string, UpbitTicker>> {
@@ -177,20 +194,31 @@ function toOhlcv(candle: UpbitDayCandle): DailyOhlcv {
 }
 
 /**
- * 크론 전용 — Upbit 유니버스 수집(유의 제외·거래대금 하한·상위 N) + 캔들 260 + CoinGecko 전고점 보강.
+ * 크론 전용 — 시총 상위 30 유니버스(CoinGecko ∩ Upbit) + 캔들 260 + CoinGecko 전고점 보강.
  * 요청 경로에서 절대 호출 금지.
  */
 export async function fetchUpbitCoinSnapshots(): Promise<CoinMarketSnapshot[]> {
   const markets = await fetchKrwMarkets();
   if (markets.length === 0) return [];
   const tickers = await fetchTickers(markets.map((m) => m.market));
+  const capOrder = await fetchMarketCapOrder().catch(() => null);
 
-  const liquid = markets
+  const withTicker = markets
     .map((m) => ({ info: m, ticker: tickers.get(m.market) }))
     .filter((x): x is { info: UpbitMarketInfo; ticker: UpbitTicker } => !!x.ticker)
-    .filter((x) => x.ticker.acc_trade_price_24h >= MIN_TRADE_PRICE_24H_KRW)
-    .sort((a, b) => b.ticker.acc_trade_price_24h - a.ticker.acc_trade_price_24h)
-    .slice(0, COIN_UNIVERSE_LIMIT);
+    .filter((x) => !STABLECOIN_SYMBOLS.has(x.info.market.replace(/^KRW-/, "").toUpperCase()));
+
+  // 시총 상위 30(User Zero 결정). CoinGecko 실패 시 거래대금 상위 30 폴백(정직한 근사).
+  const universe = capOrder
+    ? withTicker
+        .map((x) => ({ ...x, capRank: capOrder.get(x.info.market.replace(/^KRW-/, "").toUpperCase()) }))
+        .filter((x): x is typeof x & { capRank: number } => typeof x.capRank === "number")
+        .sort((a, b) => a.capRank - b.capRank)
+        .slice(0, COIN_UNIVERSE_LIMIT)
+    : withTicker
+        .map((x) => ({ ...x, capRank: undefined as number | undefined }))
+        .sort((a, b) => b.ticker.acc_trade_price_24h - a.ticker.acc_trade_price_24h)
+        .slice(0, COIN_UNIVERSE_LIMIT);
 
   // 전고점 대비(CoinGecko fetchWhale) — 크론 시점에 한 번만. 실패해도 파이프라인 정상(fail-open).
   const whale = await fetchWhale().catch(() => ({ marketCapChange24h: null, coins: [] }));
@@ -200,7 +228,7 @@ export async function fetchUpbitCoinSnapshots(): Promise<CoinMarketSnapshot[]> {
   }
 
   const fetchedAt = new Date().toISOString();
-  const snapshots = await mapLimit(liquid, CANDLE_CONCURRENCY, async (entry): Promise<CoinMarketSnapshot | null> => {
+  const snapshots = await mapLimit(universe, CANDLE_CONCURRENCY, async (entry): Promise<CoinMarketSnapshot | null> => {
     const raw = await fetchDailyCandles(entry.info.market).catch((): UpbitDayCandle[] => []);
     if (raw.length < 30) return null; // verdict 최소 캔들 미달 마켓 제외
     const symbol = entry.info.market.replace(/^KRW-/, "");
@@ -214,6 +242,7 @@ export async function fetchUpbitCoinSnapshots(): Promise<CoinMarketSnapshot[]> {
       changePct: entry.ticker.signed_change_rate * 100,
       accTradePrice24h: entry.ticker.acc_trade_price_24h,
       tradeValueRank: 0, // 아래에서 채움
+      ...(typeof entry.capRank === "number" ? { marketCapRank: entry.capRank } : {}),
       candles: raw.map(toOhlcv),
       tradeValues: raw.map((c) => c.candle_acc_trade_price),
       ...(typeof ath === "number" ? { athChangePct: ath } : {}),
@@ -278,6 +307,13 @@ export async function writeCoinMarketSnapshots(snapshots: readonly CoinMarketSna
       SET "row" = EXCLUDED."row", "updatedAt" = NOW()
     `;
     written += 1;
+  }
+  // 유니버스 재정의(시총 상위 30) 이후 구 유니버스(알트) 잔존 행 정리 — read가 옛 코인을 되살리지 않게.
+  if (written > 0) {
+    const keep = snapshots.map((s) => s.market);
+    await prisma.$executeRaw`
+      DELETE FROM "CoinMarketCache" WHERE NOT ("market" = ANY(${keep}))
+    `.catch(() => {});
   }
   return { rows: written, rowsWithCandles: snapshots.filter((s) => s.candles.length >= 30).length };
 }

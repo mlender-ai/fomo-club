@@ -11,6 +11,9 @@ const NASDAQ_SCREENER_URL = "https://api.nasdaq.com/api/screener/stocks";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+// WO 미장·코인 확충 — 큐레이션 ~125 + 60 상한이 US 5장의 원인. 스크리너(1콜·전종목)는 상위 500,
+// TwelveData(키 있을 때) 경로는 쿼터 보호를 위해 기존 60 유지.
+const US_SCREENER_UNIVERSE_LIMIT = 500;
 const US_DYNAMIC_UNIVERSE_LIMIT = 60;
 const US_QUOTE_BATCH_SIZE = 60;
 const US_SPARKLINE_LIMIT = 30;
@@ -372,7 +375,7 @@ async function fetchNasdaqScreenerRows(): Promise<DiscoveryMarketRow[]> {
       const byScore = nasdaqMoverScore(b) - nasdaqMoverScore(a);
       return byScore !== 0 ? byScore : a.symbol.localeCompare(b.symbol);
     })
-    .slice(0, US_DYNAMIC_UNIVERSE_LIMIT);
+    .slice(0, US_SCREENER_UNIVERSE_LIMIT);
 }
 
 function parseNasdaqRow(seed: UsDiscoverySymbol, points: readonly NasdaqDailyPoint[]): DiscoveryMarketRow | null {
