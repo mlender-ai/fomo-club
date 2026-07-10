@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { isDiscoveryCopySafe } from "@fomo/core";
 import type { CardFrontSignals, StockCountry } from "@fomo/core";
 import { cacheVersion, kstDate as kstDateOf } from "./fomo";
 import {
@@ -172,6 +173,12 @@ function meetsCardStandard(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
   if (typeof frontSignals(front).changePct !== "number") return false;
   if (!(stock.headline ?? "").trim()) return false;
   if (!front?.verdict) return false;
+  // 카피 세이프(클라와 동일 패턴, @fomo/core 단일 원본) — 오염 카드 1장이 클라에서
+  // 덱 30장 전체를 무효 처리한 사고(SKAI "TSID와" 실측) 재발 방지. 탈락분은 다음 후보가 채운다.
+  const copyFields = [stock.canonical, stock.headline, stock.whyShown, stock.reason, stock.insightTag, stock.sourceLabel];
+  for (const field of copyFields) {
+    if (typeof field === "string" && field.trim() && !isDiscoveryCopySafe(field)) return false;
+  }
   return true;
 }
 

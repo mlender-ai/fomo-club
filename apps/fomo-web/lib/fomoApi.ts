@@ -723,16 +723,21 @@ function cardCopyFields(card: DiscoveryCardResponse): string[] {
   return stockCopyFields(card);
 }
 
-function hasUnsafeDiscoveryCopy(value: DiscoveryResponse | null | undefined): boolean {
-  if (!value) return false;
-  const fields = [...value.stocks.flatMap(stockCopyFields), ...(value.cards ?? []).flatMap(cardCopyFields)];
-  return fields.some((text) => !isDiscoveryCopySafe(text));
+/**
+ * 오염 카피 카드만 제거(카드 단위 드랍) — 서버도 같은 패턴(@fomo/core)으로 거르므로 평소엔 no-op.
+ * ⚠️ 과거엔 1장 오염이 덱 30장 전체를 무효 처리해 홈이 비었다(SKAI "TSID와" 실측) —
+ * 전체 거부로 되돌리지 말 것. 30장 유지가 우선, 오염은 해당 카드만 잃는다.
+ */
+function sanitizeDiscoveryCopy<T extends DiscoveryResponse>(value: T): T {
+  const stocks = value.stocks.filter((stock) => stockCopyFields(stock).every((text) => isDiscoveryCopySafe(text)));
+  const cards = value.cards?.filter((card) => cardCopyFields(card).every((text) => isDiscoveryCopySafe(text)));
+  if (stocks.length === value.stocks.length && (cards?.length ?? 0) === (value.cards?.length ?? 0)) return value;
+  return { ...value, stocks, ...(cards ? { cards } : {}) };
 }
 
 function hasDiscoveryCards(value: DiscoveryResponse | null | undefined, country: DiscoveryCountryScope = "all"): value is DiscoveryResponse {
   return (
     discoveryMatchesCountry(value, country) &&
-    !hasUnsafeDiscoveryCopy(value) &&
     (value.stocks.length > 0 || (value.cards?.length ?? 0) > 0)
   );
 }
@@ -743,7 +748,7 @@ function readStoredDiscovery(country: DiscoveryCountryScope = "KR"): DiscoveryRe
     const raw = window.localStorage.getItem(discoveryStorageKey(country)) ?? window.localStorage.getItem(lastDiscoveryStorageKey(country));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    const discovery = isDiscoveryResponse(parsed) ? parsed : null;
+    const discovery = isDiscoveryResponse(parsed) ? sanitizeDiscoveryCopy(parsed) : null;
     if (hasDiscoveryCards(discovery, country)) return discovery;
     window.localStorage.removeItem(discoveryStorageKey(country));
     window.localStorage.removeItem(lastDiscoveryStorageKey(country));
@@ -830,7 +835,8 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
         }),
       CACHE_TTL.stockFront
       )
-      .then((fresh) => {
+      .then((raw) => {
+        const fresh = sanitizeDiscoveryCopy(raw);
         if (!hasDiscoveryCards(fresh, country)) return;
         writeStoredDiscovery(fresh, country);
         emitDiscoveryUpdated(country, fresh);
@@ -843,7 +849,7 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
     return stored;
   }
 
-  const fresh = await fetchDiscoveryNetwork({ country });
+  const fresh = sanitizeDiscoveryCopy(await fetchDiscoveryNetwork({ country }));
   if (!hasDiscoveryCards(fresh, country)) throw new Error(`GET /api/fomo/discovery returned invalid ${country} deck`);
   setCached(key, fresh, CACHE_TTL.stockFront);
   writeStoredDiscovery(fresh, country);
@@ -896,7 +902,7 @@ export async function fetchDaily30(): Promise<Daily30Response> {
   return cachedGet(
     key,
     async () => {
-      const fresh = await fetchDaily30Network();
+      const fresh = sanitizeDiscoveryCopy(await fetchDaily30Network());
       if (!hasDaily30Cards(fresh)) throw new Error("GET /api/fomo/daily-30 returned invalid deck");
       return fresh;
     },
