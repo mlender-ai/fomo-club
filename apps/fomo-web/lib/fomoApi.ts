@@ -342,6 +342,25 @@ export interface FeedHubResponse {
 export const fetchFeedHub = () =>
   cachedGet(`feed-hub:${kstDateKey()}`, () => get<FeedHubResponse>("/api/fomo/feed-hub"), 15 * MINUTE);
 
+/** 무로그인 대기함(WO 검색 요청→다음날 카드) — 익명 deviceId(=sessionId)의 요청 상태. */
+export interface MyRequestResolved {
+  canonical: string;
+  symbol: string;
+  market: string;
+  country: "KR" | "US" | "GLOBAL";
+  naverCode?: string;
+  sector?: string;
+}
+export interface MyRequestRow {
+  query: string;
+  status: "pending" | "fulfilled" | "not-found";
+  requestedAt: string;
+  processedAt?: string;
+  resolved?: MyRequestResolved;
+}
+export const fetchMyRequests = (deviceId: string) =>
+  get<{ requests: MyRequestRow[] }>(`/api/fomo/my-requests?deviceId=${encodeURIComponent(deviceId)}`);
+
 /** 뉴스 덱 — 한국 뉴스(점수순) + 차트 카드 인터리브, 스와이프용(피드 탭). */
 export type { ScoredArticle, ChartCard, DeckCard } from "@fomo/core";
 export interface NewsResponse {

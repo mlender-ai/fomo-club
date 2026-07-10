@@ -264,7 +264,7 @@ export async function symbolIndexReady(): Promise<boolean> {
   return (await loadIndex()) !== null;
 }
 
-// ── 알림 신청 큐 (③ 분기 — 무로그인: 재방문 시 피드 노출) ─────────────────────
+// ── 알림 신청 큐 (③ 분기 — 무로그인 대기함: 익명 deviceId 귀속, 재방문 시 노출) ──
 
 export interface SearchRequestRow {
   query: string;
@@ -272,19 +272,53 @@ export interface SearchRequestRow {
   requestedAt: string;
   resolved?: SymbolIndexEntry;
   processedAt?: string;
+  /** 요청한 익명 기기 ID들(무로그인 — 로그인·개인정보 아님). 재방문 시 "내 요청" 매칭 기준. */
+  deviceIds?: string[];
 }
+
+/** 같은 쿼리를 요청한 기기 수 상한 — 행 비대 방지. */
+const REQUEST_DEVICE_CAP = 100;
 
 function requestId(query: string): string {
   return `searchreq:${normalize(query).slice(0, 60)}`;
 }
 
-export async function saveSearchRequest(query: string): Promise<SearchRequestRow> {
+export async function saveSearchRequest(query: string, deviceId?: string): Promise<SearchRequestRow> {
   const clean = query.replace(/\s+/g, " ").trim().slice(0, 60);
+  const device = deviceId?.trim().slice(0, 64);
   const existing = await readFeedContent<SearchRequestRow>(requestId(clean));
-  if (existing) return existing;
-  const row: SearchRequestRow = { query: clean, status: "pending", requestedAt: new Date().toISOString() };
+  if (existing) {
+    // 같은 쿼리를 다른 기기가 또 요청 — deviceId 만 병합(상태·처리결과 유지).
+    if (device && !(existing.deviceIds ?? []).includes(device)) {
+      const merged: SearchRequestRow = {
+        ...existing,
+        deviceIds: [...(existing.deviceIds ?? []), device].slice(0, REQUEST_DEVICE_CAP),
+      };
+      await writeFeedContent(requestId(clean), merged);
+      return merged;
+    }
+    return existing;
+  }
+  const row: SearchRequestRow = {
+    query: clean,
+    status: "pending",
+    requestedAt: new Date().toISOString(),
+    ...(device ? { deviceIds: [device] } : {}),
+  };
   await writeFeedContent(requestId(clean), row);
   return row;
+}
+
+/** 재방문 시 "내 요청" 조회 — 해당 기기가 신청한 요청만(무로그인 대기함의 핵심). */
+export async function readRequestsForDevice(deviceId: string, limit = 20): Promise<SearchRequestRow[]> {
+  const device = deviceId.trim();
+  if (!device) return [];
+  const rows = await readFeedContentByPrefix<SearchRequestRow>("searchreq:", 100);
+  return rows
+    .map((r) => r.row)
+    .filter((row) => row && Array.isArray(row.deviceIds) && row.deviceIds.includes(device))
+    .sort((a, b) => (b.requestedAt ?? "").localeCompare(a.requestedAt ?? ""))
+    .slice(0, limit);
 }
 
 export async function readSearchRequests(limit = 30): Promise<SearchRequestRow[]> {

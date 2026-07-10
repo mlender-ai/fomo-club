@@ -15,12 +15,13 @@ export function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json().catch(() => ({}))) as { query?: string };
+    const body = (await req.json().catch(() => ({}))) as { query?: string; deviceId?: string };
     const query = body.query?.replace(/\s+/g, " ").trim();
     if (!query || query.length < 1 || query.length > 60) {
       return withCors(NextResponse.json({ ok: false, error: "query required (1~60자)" }, { status: 400 }));
     }
-    const row = await saveSearchRequest(query);
+    // deviceId = 익명 기기 ID(무로그인 대기함) — 재방문 시 "내 요청" 매칭용. 로그인·개인정보 아님.
+    const row = await saveSearchRequest(query, body.deviceId);
     return withCors(NextResponse.json({ ok: true, request: row }, { headers: { "Cache-Control": "no-store" } }));
   } catch (err) {
     console.warn("[fomo/search/request] failed", (err as Error)?.message);
