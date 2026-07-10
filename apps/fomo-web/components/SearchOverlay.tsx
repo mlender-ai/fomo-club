@@ -6,6 +6,7 @@ import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { SearchIcon, XMarkIcon } from "@/components/icons";
 import { fetchDaily30, fetchStockFront } from "@/lib/fomoApi";
 import { getDiscoverySeen } from "@/lib/discoveryPerformance";
+import { getSessionId } from "@/lib/session";
 
 /**
  * 검색 오버레이 (WO 검색) — 심볼 인덱스 자동완성 + 3분기.
@@ -146,7 +147,8 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
       await fetch(`${API_BASE}/api/fomo/search/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q }),
+        // deviceId = 익명 기기 ID(무로그인 대기함) — 재방문 시 "내 요청"으로 이 기기에서만 노출.
+        body: JSON.stringify({ query: q, deviceId: getSessionId() }),
         signal: AbortSignal.timeout(6_000),
       });
     } catch {
@@ -210,11 +212,11 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
               <p className="mt-2 text-sm leading-6 text-muted">
                 알림 신청하면 <span className="text-whiteout">다음날 카드로 만들어드려요</span>.
                 <br />
-                준비되면 피드 상단에서 알려드릴게요.
+                이 기기에서 내일 다시 열면 맨 앞에서 기다리고 있을 거예요.
               </p>
               {branch.sent ? (
                 <p className="mt-4 font-pixel text-sm" style={{ color: NEON }}>
-                  접수됐어요 — 내일 피드에서 만나요
+                  접수됐어요 — 내일 이 기기에서 맨 앞에 보여드릴게요
                 </p>
               ) : (
                 <button
