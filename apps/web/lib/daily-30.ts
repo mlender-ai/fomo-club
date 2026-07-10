@@ -177,20 +177,25 @@ function meetsCardStandard(stock: DiscoveryStockPayload, front: DiscoveryFrontSe
 
 /**
  * 신선도 로테이션(WO 미장·코인 확충) — 어제 30장 스냅샷 대비:
- * 같은 종목·같은 문구 → 이틀 연속 금지(제외, 다음 후보 로테이션).
+ * 같은 종목·같은 문구 → **최후순위 폴백**(신선한 후보가 항상 이기고, 30장을 못 채울 때만 재노출).
  * 같은 종목·다른 문구(신호 갱신) → 감점만(연속 등장은 갱신된 신호일 때만 정당).
+ *
+ * ⚠️ 하드 제외 금지: 주말·휴장일엔 시세·재료가 안 바뀌어 문구가 같을 수밖에 없는데,
+ * 제외해버리면 덱이 마른다(프로덕션 실측 30→20 붕괴). "30장 유지"가 신선도보다 우선.
  */
 export interface FreshnessSnapshot {
   /** canonical → 어제 헤드라인. */
   headlines: Map<string, string>;
 }
 const STALE_REPEAT_PENALTY = 8;
+/** 이틀 연속 같은 문구 — 순위를 바닥으로 보내되 후보에서 빼지 않는다(30장 채움 폴백). */
+const STALE_REPEAT_FLOOR = -1000;
 
 function normalizeHeadline(text: string | undefined): string {
   return (text ?? "").replace(/\s+/g, " ").trim();
 }
 
-function stockCandidate(
+export function stockCandidate(
   stock: DiscoveryStockPayload,
   front: DiscoveryFrontSeed | undefined,
   freshness?: FreshnessSnapshot
@@ -200,12 +205,12 @@ function stockCandidate(
   const yesterdayHeadline = freshness?.headlines.get(stock.canonical);
   const repeatStale =
     typeof yesterdayHeadline === "string" && normalizeHeadline(yesterdayHeadline) === normalizeHeadline(stock.headline);
-  if (repeatStale) return null; // 같은 문구 이틀 연속 금지 — 신호 갱신 없으면 다음 후보로
   const signalScore = computeStockSignal(stock, front);
   const hypePenalty =
     computeHypePenalty(stock, front) + (typeof yesterdayHeadline === "string" ? STALE_REPEAT_PENALTY : 0);
-  const quietScore = signalScore - hypePenalty;
-  if (quietScore < 6) return null;
+  let quietScore = signalScore - hypePenalty;
+  if (!repeatStale && quietScore < 6) return null;
+  if (repeatStale) quietScore = STALE_REPEAT_FLOOR + quietScore; // 신선 후보가 전부 소진된 뒤에만 뽑힘
   return {
     kind: "stock",
     id: stockId(stock),
