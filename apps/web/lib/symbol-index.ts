@@ -101,11 +101,13 @@ function parseSymbolDir(text: string, kind: "nasdaq" | "other"): SymbolIndexEntr
       const [symbol, name, , testIssue, , , etf] = cols;
       if (!symbol || !name || testIssue === "Y" || etf === "Y") continue;
       if (/File Creation Time/i.test(symbol)) continue;
+      if (/warrant|right(s)?\b|\bunit(s)?\b/i.test(name)) continue; // 워런트·라이츠·유닛 — 종목 아님(RGTIW 오염 실측)
       out.push({ canonical: cleanUsName(name), englishName: cleanUsName(name), symbol: symbol.trim(), market: "NASDAQ", country: "US" });
     } else {
       const [symbol, name, exchange, , etf, , testIssue] = cols;
       if (!symbol || !name || testIssue === "Y" || etf === "Y") continue;
       if (/File Creation Time/i.test(symbol)) continue;
+      if (/warrant|right(s)?\b|\bunit(s)?\b/i.test(name)) continue; // 워런트·라이츠·유닛 — 종목 아님
       const market = exchange === "N" ? "NYSE" : exchange === "A" ? "NYSE" : "NYSE"; // AMEX·기타는 NYSE 그룹으로 표기
       out.push({ canonical: cleanUsName(name), englishName: cleanUsName(name), symbol: symbol.trim(), market, country: "US" });
     }
@@ -249,6 +251,8 @@ export async function searchSymbols(query: string, limit = 10): Promise<SymbolSe
     for (const key of keys) {
       if (key === q) score = Math.max(score, 3);
       else if (key.startsWith(q)) score = Math.max(score, 2);
+      // 역방향 포함 — 쿼리가 키보다 길 때("리게티컴퓨팅" ⊃ 인덱스 "리게티"). 큐 확정(score≥2)도 통과.
+      else if (key.length >= 2 && q.length > key.length && q.includes(key)) score = Math.max(score, 2);
       else if (q.length >= 2 && key.includes(q)) score = Math.max(score, 1);
     }
     // 본명(표시명/티커) 정확 일치는 별칭 일치보다 위 — "META"에서 코인 별칭이 Meta Platforms 를 이기지 않게.
