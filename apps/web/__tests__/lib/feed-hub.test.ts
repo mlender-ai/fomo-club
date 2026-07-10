@@ -66,3 +66,49 @@ describe("daily-30 freshness (모듈 로드 검증)", () => {
     expect(selectDaily30Candidates([])).toEqual([]);
   });
 });
+
+// 신선도 폴백(30장 유지) — 하드 제외가 주말(문구 불변)에 덱을 말린 회귀(실측 30→20) 방지.
+import { stockCandidate, type FreshnessSnapshot } from "../../lib/daily-30";
+import type { DiscoveryFrontSeed, DiscoveryStockPayload } from "../../lib/discovery-supply";
+
+function stubStock(name: string, headline: string): DiscoveryStockPayload {
+  return {
+    canonical: name,
+    market: "KOSPI",
+    country: "KR",
+    marquee: false,
+    sector: "반도체",
+    naverCode: "000001",
+    headline,
+  } as DiscoveryStockPayload;
+}
+
+function stubFront(): DiscoveryFrontSeed {
+  return {
+    signals: { changePct: 2.1, volumeRatio: 2.4 },
+    fomo: { score: 50 } as unknown as DiscoveryFrontSeed["fomo"],
+    sparkline: [100, 101, 102],
+    priceText: "10,000원",
+    verdict: { stance: "watch", stanceText: "관망", evidence: [], confidence: "low" } as NonNullable<DiscoveryFrontSeed["verdict"]>,
+  };
+}
+
+describe("daily-30 신선도 폴백 (30장 유지 > 신선도)", () => {
+  it("같은 문구 이틀 연속이어도 제외하지 않고 최후순위로 강등한다", () => {
+    const freshness: FreshnessSnapshot = { headlines: new Map([["테스트종목", "거래량 평소 2.4배"]]) };
+    const stale = stockCandidate(stubStock("테스트종목", "거래량 평소 2.4배"), stubFront(), freshness);
+    expect(stale).not.toBeNull(); // 하드 제외 금지 — 30장 채움 폴백으로 살아있어야 한다
+    expect(stale!.quietScore).toBeLessThan(-500); // 신선 후보가 항상 우선하도록 바닥 순위
+
+    const fresh = stockCandidate(stubStock("다른종목", "새 재료가 나온 종목"), stubFront(), freshness);
+    expect(fresh).not.toBeNull();
+    expect(fresh!.quietScore).toBeGreaterThan(stale!.quietScore); // 신선 > 재탕
+  });
+
+  it("문구가 갱신되면(신호 갱신) 감점만 받고 정상 순위를 유지한다", () => {
+    const freshness: FreshnessSnapshot = { headlines: new Map([["테스트종목", "어제 문구"]]) };
+    const updated = stockCandidate(stubStock("테스트종목", "오늘 새 문구"), stubFront(), freshness);
+    expect(updated).not.toBeNull();
+    expect(updated!.quietScore).toBeGreaterThan(0);
+  });
+});
