@@ -7,6 +7,7 @@ export * from "./comment";
 export * from "./josa";
 export * from "./stocks";
 export * from "./card-front-hook";
+export * from "./discovery-copy-safe";
 export * from "./multi-axis-hook";
 export * from "./discovery-supply";
 export * from "./fomo-score";
