@@ -796,40 +796,12 @@ function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): 
   };
 }
 
-/** openinsider 영문 업종 → 한글 섹터(INDUSTRY_HINTS 매칭). 못 맞추면 undefined(다운스트림 폴백). */
-function insiderSectorHint(symbol: string, industry: string | undefined): string | undefined {
-  if (!industry) return undefined;
-  const label = inferDiscoverySectorLabel(symbol, [
-    { kind: "market_context", firstSeen: false, strength: 0, source: "", asOf: "", confidence: "L", label: industry },
-  ]);
-  return label === "기타 업종" ? undefined : label;
-}
-
-function insiderClusterRow(candidate: InsiderClusterCandidate): DiscoveryMarketRow {
-  const quote = candidate.quote;
-  const changePct = quote?.changePct;
-  const changeDir: "up" | "down" | "flat" =
-    typeof changePct !== "number" ? "flat" : changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
-  const priceText = insiderMoney(quote?.price);
-  return {
-    canonical: candidate.symbol,
-    symbol: candidate.symbol,
-    market: "NASDAQ",
-    country: "US",
-    currency: "USD",
-    marketCapRank: 900,
-    ...(priceText ? { priceText } : {}),
-    ...(typeof changePct === "number" ? { changePct, changeDir } : {}),
-    ...(quote?.sparkline && quote.sparkline.length >= 2 ? { sparkline: quote.sparkline } : {}),
-    ...(insiderSectorHint(candidate.symbol, candidate.industry) ? { sectorHint: insiderSectorHint(candidate.symbol, candidate.industry)! } : {}),
-    sessionLabel: latestUsSessionAsOf().label,
-  };
-}
-
 /**
- * US 내부자 클러스터 매수 발굴 — 조용한 종목까지 덱에 주입한다.
- * 이미 유니버스에 있으면 내부자 이벤트만 보강, 없으면 합성 row+event를 직접 주입(eligible 게이트 우회).
- * openinsider 실패 시 조용히 no-op(fail-open).
+ * US 내부자 클러스터 매수 — 유니버스(시총 큐레이션 통과) 종목에 이벤트를 보강한다(attach-only).
+ * 2026-07-11 User Zero: 합성 row 직접 주입(eligible 게이트 우회) 폐기 — openinsider 클러스터는
+ * 마이크로캡이 대부분이라 "아무도 모르는 잡주"(CREX·FCBM·DPC·SWZ 실측)가 미장 덱을 지배했다.
+ * 내부자 신호는 시총 하한(US_DYNAMIC_MIN_MARKET_CAP_USD·큐레이션 시드)을 통과한 종목의
+ * 보강 재료로만 쓴다. openinsider 실패 시 조용히 no-op(fail-open).
  */
 async function hydrateUsInsiderClusterRows(
   byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>,
@@ -838,17 +810,13 @@ async function hydrateUsInsiderClusterRows(
   const candidates = await fetchInsiderClusterCandidates().catch((): InsiderClusterCandidate[] => []);
   if (candidates.length === 0) return;
   for (const candidate of candidates) {
-    const event = insiderClusterEvent(candidate, asOf);
     const existing = [...byTicker.entries()].find(
       ([, value]) => value.row.country === "US" && value.row.symbol?.toUpperCase() === candidate.symbol
     );
-    if (existing) {
-      const [ticker, current] = existing;
-      if (current.events.some((e) => e.insiderPurchase)) continue;
-      byTicker.set(ticker, { ...current, events: [...current.events, event] });
-      continue;
-    }
-    byTicker.set(candidate.symbol, { row: insiderClusterRow(candidate), events: [event] });
+    if (!existing) continue; // 유니버스 밖(시총 미달 마이크로캡) — 주입하지 않는다.
+    const [ticker, current] = existing;
+    if (current.events.some((e) => e.insiderPurchase)) continue;
+    byTicker.set(ticker, { ...current, events: [...current.events, insiderClusterEvent(candidate, asOf)] });
   }
 }
 

@@ -19,12 +19,12 @@ const UPBIT_DAILY_CANDLES_URL = "https://api.upbit.com/v1/candles/days";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 
 /**
- * 유니버스 = 시총 상위 30 고정 (WO 미장·코인 확충 — User Zero 결정).
- * 코인은 발굴이 아니라 커버리지 — CoinGecko 시총 순 ∩ Upbit KRW 상장 상위 30.
- * 상위 30이면 잡코인·유의 방어선 불필요(Phase C 알트 서치 폐기).
- * CoinGecko 실패 시 24h 거래대금 상위 30 폴백(정직한 근사).
+ * 유니버스 = 시총 상위 10 고정 (2026-07-11 User Zero 재결정 — "코인은 시총 10위권만").
+ * 코인은 발굴이 아니라 커버리지 — CoinGecko 시총 순 ∩ Upbit KRW 상장 상위 10.
+ * (30→10 축소: DOT·UNI 등 10위권 밖 코인이 덱에 올라와 잡코인 인상 — 상위 10만.)
+ * CoinGecko 실패 시 24h 거래대금 상위 10 폴백(정직한 근사).
  */
-const COIN_UNIVERSE_LIMIT = 30;
+const COIN_UNIVERSE_LIMIT = 10;
 const COINGECKO_MARKETS_URL =
   "https://api.coingecko.com/api/v3/coins/markets?vs_currency=krw&order=market_cap_desc&per_page=150&page=1";
 /** 스테이블코인 — 가격 고정이라 신호·카드 가치가 없다(잡코인 방어선 아님, 자산 성격상 제외). */
