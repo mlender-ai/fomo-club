@@ -15,6 +15,10 @@ const NASDAQ_UA =
 // TwelveData(키 있을 때) 경로는 쿼터 보호를 위해 기존 60 유지.
 const US_SCREENER_UNIVERSE_LIMIT = 500;
 const US_DYNAMIC_UNIVERSE_LIMIT = 60;
+// 2026-07-11 User Zero: "미장은 시총 높은 걸로 — 상위권 기업 아니면 핫한 기업만".
+// 다이내믹(비큐레이션) 스크리너 행에 시총 하한 — 마이크로캡 잡주(EQPT·CREX·FBRX류)가
+// 모멘텀 점수만으로 덱에 오르던 경로 차단. 큐레이션 시드 98종(핫 종목 포함)은 하한 우회.
+const US_DYNAMIC_MIN_MARKET_CAP_USD = Number(process.env.US_DYNAMIC_MIN_MARKET_CAP_USD ?? 20_000_000_000);
 const US_QUOTE_BATCH_SIZE = 60;
 const US_SPARKLINE_LIMIT = 30;
 const US_PREWARM_CACHE_MAX_AGE_HOURS = 18;
@@ -365,8 +369,13 @@ async function fetchNasdaqScreenerRows(): Promise<DiscoveryMarketRow[]> {
     next: { revalidate: 900 },
   });
   if (!res.ok) return [];
+  const seedSymbols = new Set(usDiscoveryUniverse().map((seed) => seed.symbol.toUpperCase()));
   const deduped = new Map<string, DiscoveryMarketRow>();
   for (const row of normalizeNasdaqScreenerRows(await res.json())) {
+    // 다이내믹 행 시총 하한(2026-07-11) — 큐레이션 시드는 우회, 시총 미상은 보수적으로 제외.
+    const cap = num(row.marketCap);
+    const symbol = String(row.symbol ?? "").toUpperCase();
+    if (!seedSymbols.has(symbol) && (typeof cap !== "number" || cap < US_DYNAMIC_MIN_MARKET_CAP_USD)) continue;
     const parsed = parseNasdaqScreenerRow(row);
     if (parsed) deduped.set(parsed.symbol.toUpperCase(), parsed);
   }
