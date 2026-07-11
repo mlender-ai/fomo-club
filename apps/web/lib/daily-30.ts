@@ -241,6 +241,11 @@ const CONTENT_SIGNAL_SCORE: Record<DeckContentCard["contentType"], number> = {
   index: 42,
   macro: 38,
   whale: 34,
+  // 2026-07-11 베리에이션 — 피드 전용 타입(덱 합류 없음)이지만 Record 완결성 유지.
+  "coin-issue": 44,
+  "hot-issue": 58,
+  term: 20,
+  event: 46,
 };
 const PINNED_SCORE_BONUS = 30;
 

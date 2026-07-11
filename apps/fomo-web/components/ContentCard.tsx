@@ -26,6 +26,18 @@ function typeLabel(type: DeckContent["contentType"]): string {
       return "버즈";
     case "recap":
       return "주간";
+    case "macro-issue":
+      return "거시 이슈";
+    case "coin-issue":
+      return "코인";
+    case "hot-issue":
+      return "이슈";
+    case "term":
+      return "용어";
+    case "event":
+      return "일정";
+    default:
+      return "노트";
   }
 }
 
@@ -44,6 +56,10 @@ function cardLabel(type: DeckContent["contentType"]): string {
   if (type === "briefing") return "DAILY BRIEFING";
   if (type === "buzz") return "BUZZ STORY";
   if (type === "recap") return "WEEKLY RECAP";
+  if (type === "coin-issue") return "COIN ISSUE";
+  if (type === "hot-issue") return "HOT ISSUE";
+  if (type === "term") return "오늘의 용어";
+  if (type === "event") return "MARKET CALENDAR";
   return "MARKET NOTE";
 }
 

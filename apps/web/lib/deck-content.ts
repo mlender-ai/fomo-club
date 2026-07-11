@@ -9,7 +9,19 @@ const FRED_CONTENT_TIMEOUT_MS = 4_500;
 
 export type DeckContentScope = "domestic" | "world" | "global";
 /** briefing=데일리 브리핑, buzz=떠들썩 스토리, recap=주간 회고, macro-issue=거시 이슈(임계 변동). */
-export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap" | "macro-issue";
+export type DeckContentType =
+  | "macro"
+  | "index"
+  | "whale"
+  | "briefing"
+  | "buzz"
+  | "recap"
+  | "macro-issue"
+  // 2026-07-11 베리에이션(User Zero: "매번 지수 얘기뿐"): 코인 핫이슈·뉴스 핫이슈·경제용어·시장 일정.
+  | "coin-issue"
+  | "hot-issue"
+  | "term"
+  | "event";
 
 export interface DeckContentFact {
   label: string;
@@ -308,6 +320,15 @@ function contentTypePriority(type: DeckContentType): number {
       return 1;
     case "whale":
       return 2;
+    // 2026-07-11 베리에이션 타입 — 덱 합류 시 기존 콘텐츠 뒤(피드 정렬은 feed-hub TYPE_PRIORITY가 담당).
+    case "coin-issue":
+      return 3;
+    case "hot-issue":
+      return 3;
+    case "event":
+      return 4;
+    case "term":
+      return 5;
   }
 }
 

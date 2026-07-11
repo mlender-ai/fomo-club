@@ -82,7 +82,7 @@ export interface DeckThemeBundle {
   items: DeckThemeBundleItem[];
 }
 
-export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap";
+export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event";
 export type DeckContentScope = "domestic" | "world" | "global";
 
 export interface DeckContentFact {
@@ -662,6 +662,8 @@ function contentPriority(type: DeckContentType): number {
       return 1;
     case "whale":
       return 2;
+    default:
+      return 3; // 신규 타입(macro-issue·coin-issue·hot-issue·term·event) — 기존 콘텐츠 뒤
   }
 }
 
