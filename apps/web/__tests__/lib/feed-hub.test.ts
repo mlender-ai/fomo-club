@@ -19,6 +19,10 @@ describe("feed-hub 타입 레지스트리", () => {
       "whale",
       "stock-issue",
       "macro-issue",
+      "coin-issue",
+      "hot-issue",
+      "term",
+      "event",
     ];
     for (const type of REQUIRED_TYPES) {
       expect(FEED_ITEM_TYPES, `타입 "${type}" 이 레지스트리에서 사라졌다 — 명시 지시 없는 타입 제거는 금지`).toContain(type);
@@ -110,5 +114,23 @@ describe("daily-30 신선도 폴백 (30장 유지 > 신선도)", () => {
     const updated = stockCandidate(stubStock("테스트종목", "오늘 새 문구"), stubFront(), freshness);
     expect(updated).not.toBeNull();
     expect(updated!.quietScore).toBeGreaterThan(0);
+  });
+});
+
+describe("capFeedItemsByType (2026-07-11 베리에이션)", () => {
+  it("지수 카드는 상한 2장 — 팩트 분할 도배 차단, 다른 타입은 보존", async () => {
+    const { capFeedItemsByType } = await import("../../lib/feed-hub");
+    const items = [
+      contentItem("index", "i1"),
+      contentItem("index", "i2"),
+      contentItem("index", "i3"),
+      contentItem("index", "i4"),
+      contentItem("macro", "m1"),
+      contentItem("whale", "w1"),
+    ];
+    const capped = capFeedItemsByType(items);
+    expect(capped.filter((item) => item.type === "index")).toHaveLength(2);
+    expect(capped.filter((item) => item.type === "macro")).toHaveLength(1);
+    expect(capped.filter((item) => item.type === "whale")).toHaveLength(1);
   });
 });

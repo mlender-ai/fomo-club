@@ -9,6 +9,7 @@ import { fetchFredSeriesHistory } from "./fred";
 import { fetchStockDaily } from "./stock-front";
 import { readTodayFulfilledSearches } from "./symbol-index";
 import { kstDate } from "./fomo";
+import { buildCoinIssueCards, buildEventCard, buildHotIssueCards, buildTermCard } from "./feed-extras";
 import type { DiscoveryMarketRow } from "./market-source-types";
 
 /**
@@ -30,6 +31,10 @@ export const FEED_ITEM_TYPES = [
   "whale", // 고래·코인 시장
   "stock-issue", // 종목 이슈 단신(공시·실적 1줄) — 신규
   "macro-issue", // 거시 이슈(환율·유가·금리 임계 변동) — 신규
+  "coin-issue", // 코인 핫이슈(시총 10위권 무버) — 2026-07-11 베리에이션
+  "hot-issue", // 미장·국장 뉴스 핫이슈(다수 소스 겹침 사건) — 2026-07-11 베리에이션
+  "term", // 오늘의 경제용어(정적 사전 로테이션) — 2026-07-11 베리에이션
+  "event", // 시장 일정(만기·FOMC D-day) — 2026-07-11 베리에이션
 ] as const;
 export type FeedItemType = (typeof FEED_ITEM_TYPES)[number];
 
@@ -67,7 +72,11 @@ export interface FeedStockIssue {
 }
 
 export type FeedHubItem =
-  | { type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue"; scope: "KR" | "US" | "GLOBAL"; content: DeckContentCard & { series?: number[] } }
+  | {
+      type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event";
+      scope: "KR" | "US" | "GLOBAL";
+      content: DeckContentCard & { series?: number[] };
+    }
   | { type: "narrative"; scope: "KR" | "US"; narrative: DiscoveryNarrativeCardPayload }
   | { type: "sector"; scope: "KR" | "US"; sector: FeedSectorCard }
   | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedStockIssue };
@@ -258,15 +267,47 @@ async function attachIndexSeries(cards: Array<DeckContentCard & { series?: numbe
 const TYPE_PRIORITY: Record<FeedItemType, number> = {
   briefing: 0,
   buzz: 1,
-  "macro-issue": 2,
-  recap: 3,
-  narrative: 4,
-  sector: 5,
-  index: 6,
-  "stock-issue": 7,
-  macro: 8,
-  whale: 9,
+  "hot-issue": 2,
+  "macro-issue": 3,
+  recap: 4,
+  narrative: 5,
+  "coin-issue": 6,
+  sector: 7,
+  event: 8,
+  index: 9,
+  "stock-issue": 10,
+  macro: 11,
+  whale: 12,
+  term: 13,
 };
+
+// 2026-07-11 타입별 상한(User Zero: "매번 지수 얘기뿐") — 지수·거시가 팩트 분할로
+// 피드를 도배하던 것을 캡. interleave의 "억지 삭제 금지"는 유지하되, 같은 타입의
+// 과잉 생산분만 상한에서 잘라 다양성을 만든다(우선순위 정렬 후 앞에서부터 유지).
+const TYPE_CAPS: Partial<Record<FeedItemType, number>> = {
+  index: 2,
+  macro: 2,
+  whale: 1,
+  sector: 4,
+  "stock-issue": 4,
+  "hot-issue": 2,
+  "coin-issue": 1,
+  term: 1,
+  event: 1,
+};
+
+export function capFeedItemsByType(items: readonly FeedHubItem[]): FeedHubItem[] {
+  const counts = new Map<FeedItemType, number>();
+  const out: FeedHubItem[] = [];
+  for (const item of items) {
+    const cap = TYPE_CAPS[item.type];
+    const count = counts.get(item.type) ?? 0;
+    if (typeof cap === "number" && count >= cap) continue;
+    counts.set(item.type, count + 1);
+    out.push(item);
+  }
+  return out;
+}
 
 export function interleaveFeedItems(items: readonly FeedHubItem[]): FeedHubItem[] {
   const sorted = [...items].sort((a, b) => TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type]);
@@ -341,6 +382,15 @@ export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
   for (const card of macroIssues) {
     push({ type: "macro-issue", scope: "US", content: card }, card.id);
   }
+  // 5.5) 베리에이션(2026-07-11): 코인 핫이슈·뉴스 핫이슈·경제용어·시장 일정 — 전부 결정론.
+  const [coinIssues, hotIssues] = await Promise.all([
+    buildCoinIssueCards().catch((): DeckContentCard[] => []),
+    buildHotIssueCards().catch((): DeckContentCard[] => []),
+  ]);
+  for (const card of coinIssues) push({ type: "coin-issue", scope: "GLOBAL", content: card }, card.id);
+  for (const card of hotIssues) push({ type: "hot-issue", scope: card.scope === "domestic" ? "KR" : "US", content: card }, card.id);
+  for (const card of buildTermCard()) push({ type: "term", scope: "GLOBAL", content: card }, card.id);
+  for (const card of buildEventCard()) push({ type: "event", scope: "GLOBAL", content: card }, card.id);
   // 6) 검색 알림 신청 처리분(WO 검색 ④) — "요청하신 종목 카드가 준비됐어요". 재방문 노출(무로그인).
   const fulfilled = await readTodayFulfilledSearches().catch(() => []);
   const rowByName = new Map([...krRows, ...usRows].map((row) => [row.canonical, row]));
@@ -362,7 +412,7 @@ export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
     push({ type: "stock-issue", scope: entry.country, stockIssue: issue }, issue.id);
   }
 
-  const ordered = interleaveFeedItems(items);
+  const ordered = interleaveFeedItems(capFeedItemsByType([...items].sort((a, b) => TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type])));
   const typeCounts: Record<string, number> = {};
   for (const type of FEED_ITEM_TYPES) typeCounts[type] = 0;
   const scopeCounts = { KR: 0, US: 0, GLOBAL: 0 };
