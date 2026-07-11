@@ -215,7 +215,6 @@ function parseQuote(seed: UsDiscoverySymbol, quote: TwelveQuote | undefined, spa
       : {}),
     changeDir: dir,
     ...(volume ? { tradingValue: volume } : {}),
-    ...(typeof marketCapUsd === "number" && marketCapUsd > 0 ? { marketCapUsd } : {}),
     ...(sparkline && sparkline.length >= 2 ? { sparkline } : {}),
     sectorHint: seed.sector,
     sessionLabel: session.label,
@@ -314,6 +313,7 @@ function parseNasdaqScreenerRow(row: NasdaqScreenerRow): DiscoveryMarketRow | nu
     country: "US",
     currency: "USD",
     ...(volume ? { tradingValue: volume } : {}),
+    ...(typeof marketCapUsd === "number" && marketCapUsd > 0 ? { marketCapUsd } : {}),
     ...(priceText ? { priceText } : {}),
     ...(typeof pct === "number" ? { changePct: pct } : {}),
     ...(typeof pct === "number" || typeof change === "number"

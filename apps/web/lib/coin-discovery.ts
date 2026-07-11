@@ -97,6 +97,18 @@ export function coinHeadline(snapshot: CoinMarketSnapshot, signal: CoinSignal): 
   return parts.join(" · ");
 }
 
+/** 커버리지(무신호) 헤드라인 — 시총 순위·거래대금 사실만. 신호 문구를 흉내내지 않는다. */
+export function coinCoverageHeadline(snapshot: CoinMarketSnapshot, signal: CoinSignal): string {
+  const parts: string[] = [];
+  if (typeof snapshot.marketCapRank === "number") parts.push(`시총 ${snapshot.marketCapRank}위`);
+  parts.push(`24시간 거래대금 평소 ${ratioText(signal.volumeRatio)}`);
+  if (typeof snapshot.athChangePct === "number" && snapshot.athChangePct <= -30) {
+    parts.push(`전고점 대비 ${Math.round(Math.abs(snapshot.athChangePct))}% 아래`);
+  }
+  if (signal.quiet) parts.push("아직 조용한 구간");
+  return parts.join(" · ");
+}
+
 function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal): DiscoveryFrontSeed {
   const changePct = Number(snapshot.changePct.toFixed(2));
   const volumeRatio = Number(signal.volumeRatio.toFixed(2));
@@ -133,7 +145,13 @@ function coinStockPayload(snapshot: CoinMarketSnapshot, signal: CoinSignal, head
     headline,
     whyShown: headline,
     reason,
-    insightTag: signal.vacuumInflow ? "₿ 진공 후 유입" : signal.bigMove ? "₿ 급등락" : "₿ 거래대금 이상",
+    insightTag: signal.vacuumInflow
+      ? "₿ 진공 후 유입"
+      : signal.bigMove
+        ? "₿ 급등락"
+        : signal.volumeRatio >= VOLUME_ANOMALY_RATIO
+          ? "₿ 거래대금 이상"
+          : "₿ 시총 상위",
     sourceLabel: "Upbit 일봉 · CoinGecko",
     sourceUrl: `https://upbit.com/exchange?code=CRIX.UPBIT.${snapshot.market}`,
   };
@@ -162,6 +180,25 @@ export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
     const payload = coinStockPayload(snapshot, signal, headline);
     stocks.push(payload);
     fronts[payload.canonical] = coinFrontSeed(snapshot, signal);
+  }
+
+  // 2026-07-11 User Zero: 코인은 발굴이 아니라 커버리지(#820) — 시총 10위권 유니버스에서
+  // 신호 코인이 쿼터 미달이면 시총순으로 채운다(조용한 날 코인 탭 공백 방지). 카피는 사실만.
+  if (stocks.length < COIN_CARD_LIMIT) {
+    const usedMarkets = new Set(stocks.map((s) => s.symbol));
+    const fillers = snapshots
+      .map((snapshot) => ({ snapshot, signal: computeCoinSignal(snapshot) }))
+      .filter((x): x is { snapshot: CoinMarketSnapshot; signal: CoinSignal } => x.signal !== null)
+      .filter((x) => !usedMarkets.has(x.snapshot.market))
+      .sort((a, b) => (a.snapshot.marketCapRank ?? 999) - (b.snapshot.marketCapRank ?? 999))
+      .slice(0, COIN_CARD_LIMIT - stocks.length);
+    for (const { snapshot, signal } of fillers) {
+      const headline = coinCoverageHeadline(snapshot, signal);
+      if (!isFrontHookSafe(headline)) continue;
+      const payload = coinStockPayload(snapshot, signal, headline);
+      stocks.push(payload);
+      fronts[payload.canonical] = coinFrontSeed(snapshot, signal);
+    }
   }
 
   return {
