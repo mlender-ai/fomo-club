@@ -1,6 +1,6 @@
 import type { DiscoveryMarket, DailyOhlcv } from "@fomo/core";
 import type { DiscoveryMarketRow } from "./market-source-types";
-import { readUsMarketQuoteRows } from "./us-market-cache";
+import { readUsMarketQuoteRows, US_DYNAMIC_MIN_MARKET_CAP_USD } from "./us-market-cache";
 import { usDiscoverySeedForSymbol, usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
 
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
@@ -15,10 +15,7 @@ const NASDAQ_UA =
 // TwelveData(키 있을 때) 경로는 쿼터 보호를 위해 기존 60 유지.
 const US_SCREENER_UNIVERSE_LIMIT = 500;
 const US_DYNAMIC_UNIVERSE_LIMIT = 60;
-// 2026-07-11 User Zero: "미장은 시총 높은 걸로 — 상위권 기업 아니면 핫한 기업만".
-// 다이내믹(비큐레이션) 스크리너 행에 시총 하한 — 마이크로캡 잡주(EQPT·CREX·FBRX류)가
-// 모멘텀 점수만으로 덱에 오르던 경로 차단. 큐레이션 시드 98종(핫 종목 포함)은 하한 우회.
-const US_DYNAMIC_MIN_MARKET_CAP_USD = Number(process.env.US_DYNAMIC_MIN_MARKET_CAP_USD ?? 20_000_000_000);
+// 시총 하한 상수는 us-market-cache(읽기 경로 재검증)와 공유 — 그쪽이 정의 원본.
 const US_QUOTE_BATCH_SIZE = 60;
 const US_SPARKLINE_LIMIT = 30;
 const US_PREWARM_CACHE_MAX_AGE_HOURS = 18;
@@ -218,6 +215,7 @@ function parseQuote(seed: UsDiscoverySymbol, quote: TwelveQuote | undefined, spa
       : {}),
     changeDir: dir,
     ...(volume ? { tradingValue: volume } : {}),
+    ...(typeof marketCapUsd === "number" && marketCapUsd > 0 ? { marketCapUsd } : {}),
     ...(sparkline && sparkline.length >= 2 ? { sparkline } : {}),
     sectorHint: seed.sector,
     sessionLabel: session.label,
@@ -303,6 +301,7 @@ function parseNasdaqScreenerRow(row: NasdaqScreenerRow): DiscoveryMarketRow | nu
   const pct = num(row.pctchange);
   const change = num(row.netchange);
   const volume = num(row.volume);
+  const marketCapUsd = num(row.marketCap);
   const priceText = money(price);
   const session = latestUsSessionAsOf();
   const canonical = String(row.name ?? symbol)
