@@ -18,7 +18,7 @@ import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
-import { recordDiscoverySeen } from "@/lib/discoveryPerformance";
+import { recordDiscoverySeen, markDiscoverySeenAction } from "@/lib/discoveryPerformance";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
 import type { DeckNarrative, DeckStock } from "@/lib/discoveryDeck";
@@ -743,6 +743,8 @@ export function StockSwipeDeck({
       }
       const stock = card.data;
       setUndoEntry({ idx, dir, card });
+      // R1 후회 영수증: 스와이프 결과 기록(넘긴 카드 성과 복기용). 발견가는 recordDiscoverySeen 이 캡처.
+      markDiscoverySeenAction(stock.canonical, dir === "right" ? "save" : "skip");
       if (dir === "right") saveDiscovery(stock);
       recordDiscoveryEvent("swipe", { direction: dir, hydrated: !!front[stock.canonical] });
       recordStockInterest(stock.canonical, dir === "right" ? "more" : "less", Date.now());

@@ -5,6 +5,7 @@ import { MOCK_KEYWORD_CARDS, scoreToColor, type KeywordCard } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { MyDiscoveryPreview } from "@/components/MyDiscoveryPreview";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
+import { RegretReceiptPanel } from "@/components/RegretReceiptPanel";
 import { getHistory } from "@/lib/keywordHistory";
 import { DISCOVERY_PERFORMANCE_UPDATED_EVENT, getDiscoverySeen } from "@/lib/discoveryPerformance";
 import { getWatchlist, type WatchItem } from "@/lib/watchlist";
@@ -65,6 +66,7 @@ export function KeywordHistory() {
 
   return (
     <div className="w-full">
+      <RegretReceiptPanel items={seenItems} />
       <PerformanceProofPanel items={seenItems} />
       <MyDiscoveryPreview items={watchlist} onOpen={setStockSel} />
 

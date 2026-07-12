@@ -7,6 +7,7 @@ import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
 import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
+import { RegretReceiptPanel } from "@/components/RegretReceiptPanel";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { fetchDaily30, fetchFeedHub, type Daily30Response, type FeedHubItem } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckStock, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
@@ -314,6 +315,7 @@ export function DesktopDashboard() {
             </button>
           ))}
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
+          <RegretReceiptPanel items={seenItems} />
           <PerformanceProofPanel items={seenItems} />
         </div>
       </section>

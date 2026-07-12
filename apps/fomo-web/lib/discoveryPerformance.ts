@@ -21,6 +21,9 @@ export interface DiscoverySeenItem {
   country?: StockCountry;
   sector?: string;
   reason?: string;
+  /** R1 후회 영수증(2026-07-12): 스와이프 결과. undefined=봤다만, skip=넘김(X), save=담음(★). */
+  action?: "skip" | "save";
+  actionAt?: number;
 }
 
 export interface DiscoverySeenInput {
@@ -71,6 +74,8 @@ function read(): DiscoverySeenItem[] {
           ...(typeof candidate.country === "string" ? { country: candidate.country as StockCountry } : {}),
           ...(typeof candidate.sector === "string" ? { sector: candidate.sector } : {}),
           ...(typeof candidate.reason === "string" ? { reason: candidate.reason } : {}),
+          ...(candidate.action === "skip" || candidate.action === "save" ? { action: candidate.action } : {}),
+          ...(typeof candidate.actionAt === "number" ? { actionAt: candidate.actionAt } : {}),
         };
       })
       .filter((row): row is DiscoverySeenItem => row !== null);
@@ -140,6 +145,30 @@ export function recordDiscoverySeen(
     return;
   }
   write([next, ...items]);
+}
+
+/**
+ * R1 후회 영수증: 카드의 스와이프 결과를 기록한다(발견가는 recordDiscoverySeen 이 이미 캡처).
+ * view → skip/save 는 확정이므로 항상 갱신. 대상이 없으면(관측 누락) 최소 항목 생성.
+ */
+export function markDiscoverySeenAction(stockName: string, action: "skip" | "save", nowMs = Date.now()): void {
+  if (typeof window === "undefined" || !stockName) return;
+  const items = read();
+  const index = items.findIndex((item) => item.stock === stockName);
+  if (index >= 0) {
+    items[index] = { ...items[index]!, action, actionAt: nowMs };
+    write(items);
+  } else {
+    write([{ stock: stockName, firstSeenAt: nowMs, action, actionAt: nowMs }, ...items]);
+  }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(DISCOVERY_PERFORMANCE_UPDATED_EVENT));
+}
+
+/** 넘긴(X) 카드만 — 발견가가 있는 것만(성과 계산 가능). 최신순. */
+export function getSkippedSeen(): DiscoverySeenItem[] {
+  return read()
+    .filter((item) => item.action === "skip" && typeof item.firstSeenPrice === "number")
+    .sort((a, b) => (b.actionAt ?? b.firstSeenAt) - (a.actionAt ?? a.firstSeenAt));
 }
 
 export function daysSince(ts: number, nowMs = Date.now()): number {

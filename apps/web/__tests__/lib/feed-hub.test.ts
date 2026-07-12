@@ -23,6 +23,7 @@ describe("feed-hub 타입 레지스트리", () => {
       "hot-issue",
       "term",
       "event",
+      "daily-receipt",
     ];
     for (const type of REQUIRED_TYPES) {
       expect(FEED_ITEM_TYPES, `타입 "${type}" 이 레지스트리에서 사라졌다 — 명시 지시 없는 타입 제거는 금지`).toContain(type);

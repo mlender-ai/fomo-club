@@ -36,6 +36,8 @@ function typeLabel(type: DeckContent["contentType"]): string {
       return "용어";
     case "event":
       return "일정";
+    case "daily-receipt":
+      return "영수증";
     default:
       return "노트";
   }
@@ -60,6 +62,7 @@ function cardLabel(type: DeckContent["contentType"]): string {
   if (type === "hot-issue") return "HOT ISSUE";
   if (type === "term") return "오늘의 용어";
   if (type === "event") return "MARKET CALENDAR";
+  if (type === "daily-receipt") return "어제의 영수증";
   return "MARKET NOTE";
 }
 
