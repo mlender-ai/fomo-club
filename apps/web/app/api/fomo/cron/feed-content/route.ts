@@ -10,6 +10,8 @@ import {
   type FeedBriefingRow,
 } from "../../../../../lib/feed-briefing";
 import { processSearchQueue, rebuildSymbolIndex } from "../../../../../lib/symbol-index";
+import { translateAndStoreUsTitles } from "../../../../../lib/content-i18n";
+import { fetchAllNews } from "../../../../../lib/fomo-news-sources";
 
 /**
  * 피드 콘텐츠 프리웜 크론 (WO 피드 강화) — ?slot=morning|close|weekly
@@ -65,9 +67,13 @@ export async function GET(request: Request) {
     }
     if (slot === "morning") {
       await save(`briefing:us:${date}`, await buildUsBriefing());
+      const translated = await translateAndStoreUsTitles(await fetchAllNews().catch(() => [])).catch(() => 0);
+      if (translated > 0) written.push(`i18n:us-titles(${translated})`);
     } else if (slot === "close") {
       await save(`briefing:kr:${date}`, await buildKrBriefing());
       await save(`buzz:${date}`, await buildBuzzStory());
+      const translated = await translateAndStoreUsTitles(await fetchAllNews().catch(() => [])).catch(() => 0);
+      if (translated > 0) written.push(`i18n:us-titles(${translated})`);
     } else if (slot === "weekly") {
       await save(`recap:${isoWeekOf()}`, await buildWeeklyRecap());
     } else {

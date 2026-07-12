@@ -79,6 +79,13 @@ const ASSET_CAPS: Record<Daily30AssetClass, number> = {
   coin: 5,
   macro: 6,
 };
+// 2026-07-12 프로덕션 미장 1장 사고: KR이 quietScore 상위를 독식해(2패스 캡 완화 시 KR 24장)
+// 미장·코인이 굶었다. 자산군 최소 바닥 — 미장 탭이 비지 않도록 US를 우선 확보한다.
+// (후보가 바닥보다 적으면 있는 만큼만 — 억지 생성 없음. 코인 5=캡과 동일.)
+const ASSET_FLOORS: Partial<Record<Daily30AssetClass, number>> = {
+  "us-stock": 8,
+  coin: 5,
+};
 
 function isStockCard(card: DiscoveryDeckCardPayload): card is { kind: "stock" } & DiscoveryStockPayload {
   return !("kind" in card) || card.kind === "stock";
@@ -208,7 +215,8 @@ export function stockCandidate(
   freshness?: FreshnessSnapshot
 ): Daily30Candidate | null {
   if (!meetsCardStandard(stock, front)) return null;
-  if (FAMOUS_STOCKS.has(stock.canonical) && !strongQuietSignal(stock)) return null;
+  // 유명주 강신호 게이트는 국장 발굴 정체성 전용 — 미장은 "시총 높은·아는 기업"이 제품(2026-07-12).
+  if (stock.country !== "US" && FAMOUS_STOCKS.has(stock.canonical) && !strongQuietSignal(stock)) return null;
   const yesterdayHeadline = freshness?.headlines.get(stock.canonical);
   const repeatStale =
     typeof yesterdayHeadline === "string" && normalizeHeadline(yesterdayHeadline) === normalizeHeadline(stock.headline);
@@ -346,6 +354,19 @@ export function selectDaily30Candidates(candidates: readonly Daily30Candidate[],
     return selected.length >= targetCount;
   };
 
+  // 0) 자산군 최소 바닥 — KR 독식 방지(2026-07-12 미장 1장 사고). 바닥은 자산군 캡을 우선하되
+  //    섹터 과밀 캡은 존중. 있는 후보만큼만 채운다(억지 생성 없음).
+  for (const [assetClass, floor] of Object.entries(ASSET_FLOORS) as Array<[Daily30AssetClass, number]>) {
+    let taken = 0;
+    for (const candidate of ranked) {
+      if (taken >= floor) break;
+      if (candidate.assetClass !== assetClass || seen.has(candidate.id)) continue;
+      if (candidate.sector && (sectorCounts.get(candidate.sector) ?? 0) >= 5) continue;
+      const full = tryTake(candidate, false);
+      taken += 1;
+      if (full) return selected;
+    }
+  }
   for (const candidate of ranked) {
     if (tryTake(candidate, true)) return selected;
   }

@@ -10,6 +10,7 @@ import { fetchStockDaily } from "./stock-front";
 import { readTodayFulfilledSearches } from "./symbol-index";
 import { kstDate } from "./fomo";
 import { buildCoinIssueCards, buildEventCard, buildHotIssueCards, buildTermCard } from "./feed-extras";
+import { hydrateKoreanTitles } from "./content-i18n";
 import type { DiscoveryMarketRow } from "./market-source-types";
 
 /**
@@ -330,6 +331,7 @@ export function interleaveFeedItems(items: readonly FeedHubItem[]): FeedHubItem[
 
 export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
   const asOf = kstDate();
+  await hydrateKoreanTitles(); // US 뉴스 제목 한글 번역 캐시 적재(hot-issue·narrative 동기 조회용).
   const [daily30, deckContent, krRows, usRows] = await Promise.all([
     getCachedDaily30Response().catch(() => null),
     fetchDeckContentCards().catch(() => [] as DeckContentCard[]),
