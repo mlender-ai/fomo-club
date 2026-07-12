@@ -21,7 +21,8 @@ export type DeckContentType =
   | "coin-issue"
   | "hot-issue"
   | "term"
-  | "event";
+  | "event"
+  | "daily-receipt"; // R1 후회 영수증(2026-07-12)
 
 export interface DeckContentFact {
   label: string;
@@ -329,6 +330,8 @@ function contentTypePriority(type: DeckContentType): number {
       return 4;
     case "term":
       return 5;
+    case "daily-receipt":
+      return -2; // 후회 영수증 = 데일리 습관 훅, 상단 근처(브리핑 다음)
   }
 }
 

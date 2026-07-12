@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { isDiscoveryCopySafe } from "@fomo/core";
 import type { CardFrontSignals, StockCountry } from "@fomo/core";
 import { cacheVersion, kstDate as kstDateOf } from "./fomo";
+import { parsePriceText } from "./quote-prices";
 import {
   buildDiscoveryResponse,
   type DiscoveryDeckCardPayload,
@@ -256,6 +257,7 @@ const CONTENT_SIGNAL_SCORE: Record<DeckContentCard["contentType"], number> = {
   "hot-issue": 58,
   term: 20,
   event: 46,
+  "daily-receipt": 66, // 후회 영수증 = 데일리 습관 훅(브리핑 다음). 덱 합류 없음(피드 전용)
 };
 const PINNED_SCORE_BONUS = 30;
 
@@ -427,7 +429,9 @@ function responseFromSelected(
 
 interface Daily30PicksSnapshot {
   date: string;
-  picks: Array<{ canonical: string; headline?: string }>;
+  // R1 후회 영수증(2026-07-12): 발견가·식별자 추가 — 다음날 "어제의 영수증"이 발견가 대비 성과를
+  // 계산한다(전향적, 소급 조작 없음). 구버전 스냅샷(price 없음)은 영수증에서 자연 제외.
+  picks: Array<{ canonical: string; headline?: string; price?: number; symbol?: string; naverCode?: string; market?: string; country?: string }>;
 }
 
 /** 어제(가장 최근, 오늘 제외) 30장 스냅샷 — 신선도 로테이션 기준. 없으면 빈 맵(첫날). */
@@ -491,7 +495,19 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
     date: today,
     picks: deck
       .filter((c) => c.stock)
-      .map((c) => ({ canonical: c.stock!.canonical, ...(c.stock!.headline ? { headline: c.stock!.headline } : {}) })),
+      .map((c) => {
+        const stock = c.stock!;
+        const price = parsePriceText(c.front?.priceText);
+        return {
+          canonical: stock.canonical,
+          ...(stock.headline ? { headline: stock.headline } : {}),
+          ...(typeof price === "number" ? { price } : {}),
+          ...(stock.symbol ? { symbol: stock.symbol } : {}),
+          ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
+          ...(stock.market ? { market: stock.market } : {}),
+          ...(stock.country ? { country: stock.country } : {}),
+        };
+      }),
   };
   await writeFeedContent(`daily30-picks:${today}`, picks).catch(() => {});
   // 중복률(어제 대비) — 수용 지표(≤50%) 모니터링용.

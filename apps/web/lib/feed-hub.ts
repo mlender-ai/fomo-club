@@ -11,6 +11,7 @@ import { readTodayFulfilledSearches } from "./symbol-index";
 import { kstDate } from "./fomo";
 import { buildCoinIssueCards, buildEventCard, buildHotIssueCards, buildTermCard } from "./feed-extras";
 import { hydrateKoreanTitles } from "./content-i18n";
+import { buildDailyReceiptCard } from "./feed-receipt";
 import type { DiscoveryMarketRow } from "./market-source-types";
 
 /**
@@ -36,6 +37,7 @@ export const FEED_ITEM_TYPES = [
   "hot-issue", // 미장·국장 뉴스 핫이슈(다수 소스 겹침 사건) — 2026-07-11 베리에이션
   "term", // 오늘의 경제용어(정적 사전 로테이션) — 2026-07-11 베리에이션
   "event", // 시장 일정(만기·FOMC D-day) — 2026-07-11 베리에이션
+  "daily-receipt", // 어제의 영수증(어제 30장 성과) — 2026-07-12 R1 후회 영수증
 ] as const;
 export type FeedItemType = (typeof FEED_ITEM_TYPES)[number];
 
@@ -74,7 +76,7 @@ export interface FeedStockIssue {
 
 export type FeedHubItem =
   | {
-      type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event";
+      type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event" | "daily-receipt";
       scope: "KR" | "US" | "GLOBAL";
       content: DeckContentCard & { series?: number[] };
     }
@@ -280,6 +282,7 @@ const TYPE_PRIORITY: Record<FeedItemType, number> = {
   macro: 11,
   whale: 12,
   term: 13,
+  "daily-receipt": 3, // 데일리 습관 훅 — 상단 근처(hot-issue 인접)
 };
 
 // 2026-07-11 타입별 상한(User Zero: "매번 지수 얘기뿐") — 지수·거시가 팩트 분할로
@@ -393,6 +396,9 @@ export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
   for (const card of hotIssues) push({ type: "hot-issue", scope: card.scope === "domestic" ? "KR" : "US", content: card }, card.id);
   for (const card of buildTermCard()) push({ type: "term", scope: "GLOBAL", content: card }, card.id);
   for (const card of buildEventCard()) push({ type: "event", scope: "GLOBAL", content: card }, card.id);
+  for (const card of await buildDailyReceiptCard().catch((): DeckContentCard[] => [])) {
+    push({ type: "daily-receipt", scope: "GLOBAL", content: card }, card.id);
+  }
   // 6) 검색 알림 신청 처리분(WO 검색 ④) — "요청하신 종목 카드가 준비됐어요". 재방문 노출(무로그인).
   const fulfilled = await readTodayFulfilledSearches().catch(() => []);
   const rowByName = new Map([...krRows, ...usRows].map((row) => [row.canonical, row]));

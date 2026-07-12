@@ -82,7 +82,7 @@ export interface DeckThemeBundle {
   items: DeckThemeBundleItem[];
 }
 
-export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event";
+export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event" | "daily-receipt";
 export type DeckContentScope = "domestic" | "world" | "global";
 
 export interface DeckContentFact {
