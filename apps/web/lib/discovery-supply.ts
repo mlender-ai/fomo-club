@@ -54,7 +54,7 @@ import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchCachedUsMarketRows, fetchNasdaqDailyCandles, latestUsSessionAsOf } from "./us-market-source";
 import { fetchInsiderClusterCandidates, type InsiderClusterCandidate } from "./insider-source";
-import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
+import { US_DISCOVERY_SYMBOLS, usDiscoverySeedForSymbol } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { isAbstractTemplate } from "./copy-guards";
@@ -1551,6 +1551,17 @@ async function hydrateReachedNewsHooks(
   return out;
 }
 
+/**
+ * 큐레이션 US 대형주 폴백 카피(2026-07-12) — US 뉴스가 Vercel egress에서 차단돼 재료가 없을 때,
+ * "시총 높은 아는 기업"(User Zero)을 verdict + 섹터 맥락으로 노출한다. 가격-only 아님(섹터·판정 맥락).
+ * 사용자가 신뢰하는 3축(볼륨·유동성·레벨)은 차트에서 보이고, 카드 카피는 사실만.
+ */
+function usLargeCapContextHeadline(seed: { canonical: string; sector: string }, front?: DiscoveryFrontSeed): string | undefined {
+  const stance = front?.verdict?.stanceText?.trim();
+  const base = `${seed.canonical} · ${seed.sector} 대표주`;
+  return stance ? `${base} · 현재 ${stance}` : base;
+}
+
 function attachReachedVolumeEvents(
   candidates: readonly DiscoveryCandidate[],
   rowsByTicker: ReadonlyMap<string, DiscoveryMarketRow>,
@@ -2178,6 +2189,17 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
     front.verdict = verdictForCandidate(candidate, dailyByTicker.get(candidate.ticker)?.candles ?? []);
     const stock = await stockPayload(row, candidate, front);
+    // 2026-07-12: US 큐레이션 대형주는 뉴스 재료가 없어도(Vercel egress에서 US 뉴스 차단) verdict 맥락으로
+    // 진입 — "시총 높은 아는 기업"(User Zero). 국장 발굴 정체성은 불변(KR 은 이 분기 안 탐).
+    const usSeed =
+      (row.country === "US" || candidate.country === "US") ? usDiscoverySeedForSymbol(row.symbol) : undefined;
+    if (usSeed && front.verdict && (stock.headlineProvenance?.provenance === "suppressed" || !stock.headline?.trim())) {
+      const ctx = usLargeCapContextHeadline(usSeed, front);
+      if (ctx) {
+        stock.headline = ctx;
+        stock.headlineProvenance = { text: ctx, provenance: "rule", method: "rule" };
+      }
+    }
     const headline = stock.headline?.trim();
     if (stock.headlineProvenance?.provenance === "suppressed" || !headline) {
       if ((row.country === "US" || candidate.country === "US") && process.env.DISCOVERY_DEBUG_US_DROPS === "1") {
@@ -2204,7 +2226,8 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       // 시세 사실 신호(WO 미장·코인 확충) — Nasdaq OHLCV 실측(거래량 이상·신고가)은 그 자체가 근거라
       // 재료(뉴스·공시) 없이도 카드 진입 허용. 카피 가드·verdict 표준은 그대로(품질 게이트 유지).
       const hasMarketFactSignal = headlineEventKind === "volume_spike" || headlineEventKind === "new_high";
-      if (hasMarketFactSignal) {
+      // 큐레이션 대형주는 curation 자체가 품질 근거 — verdict 맥락으로 진입(2026-07-12, US 뉴스 egress 차단 대응).
+      if (hasMarketFactSignal || (usSeed && front.verdict)) {
         stocks.push(stock);
         fronts[candidate.ticker] = front;
         continue;
