@@ -1,3 +1,4 @@
+import { hydrateKoreanTitles, koreanTitle } from "./content-i18n";
 import {
   STOCK_VOCAB,
   applyAxisRarity,
@@ -600,7 +601,8 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
 }
 
 function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
-  const label = cleanUsMaterialTitle(article.title);
+  // 한글 번역(크론 캐시) 우선 — 없으면 원문 클린 폴백(무회귀). 제품 한국어 우선(2026-07-12).
+  const label = koreanTitle(article.url) ?? cleanUsMaterialTitle(article.title);
   if (!label) return null;
   const sourceName = article.source || sourceFallback;
   const sourceTitle = decodeHtmlEntities(article.title).replace(/\s+/g, " ").trim();
@@ -1961,6 +1963,8 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     ? targetedMaterialCandidateLimit(scope, options.targetedMaterialLimit)
     : 0;
   const asOf = discoveryAsOf(scope);
+  // 2026-07-12: US 뉴스 제목 한글 번역 캐시를 모듈 맵에 적재(요청 경로 동기 조회용). fail-open.
+  await hydrateKoreanTitles();
   const discoveryContentPromise =
     scope === "US"
       ? fetchDeckContentCards().catch((err) => {

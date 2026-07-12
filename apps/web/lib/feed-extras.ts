@@ -15,6 +15,7 @@ import type { DeckContentCard, DeckContentFact } from "./deck-content";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
 import { computeCoinSignal } from "./coin-discovery";
 import { fetchAllNews } from "./fomo-news-sources";
+import { koreanTitle } from "./content-i18n";
 
 function kstNow(): Date {
   return new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -116,20 +117,25 @@ export async function buildHotIssueCards(): Promise<DeckContentCard[]> {
     const top = ranked[0]!;
     if (clusterScore(top, tokenFreq) < HOT_ISSUE_MIN_CLUSTER) continue;
     const topTokens = new Set(tokenize(top.title));
+    // en 클러스터는 한글 번역(크론 캐시) 우선 — 미번역 en 헤드라인은 노출 금지(2026-07-12).
+    const koTitle = (article: (typeof ranked)[number]): string | undefined => (lang === "en" ? koreanTitle(article.url) : article.title);
+    const topKo = koTitle(top);
+    if (lang === "en" && !topKo) continue; // 번역 없으면 영문 헤드라인 노출하지 않는다
     const related = ranked
       .slice(1)
       .filter((article) => tokenize(article.title).some((token) => topTokens.has(token)))
+      .filter((article) => lang === "ko" || koTitle(article))
       .slice(0, 3);
-    const facts: DeckContentFact[] = related.map((article) => ({
-      label: article.source,
-      value: article.title.length > 60 ? `${article.title.slice(0, 57)}…` : article.title,
-    }));
+    const facts: DeckContentFact[] = related.map((article) => {
+      const title = koTitle(article) ?? article.title;
+      return { label: article.source, value: title.length > 60 ? `${title.slice(0, 57)}…` : title };
+    });
     cards.push({
       kind: "content",
       id: `content:hot-issue:${lang}:${kstDate()}`,
       contentType: "hot-issue",
       scope: lang === "ko" ? "domestic" : "world",
-      headline: top.title,
+      headline: topKo ?? top.title,
       facts,
       sourceUrl: top.url,
       source: top.source,

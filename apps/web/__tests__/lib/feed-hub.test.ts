@@ -71,6 +71,29 @@ describe("daily-30 freshness (모듈 로드 검증)", () => {
   });
 });
 
+describe("daily-30 자산군 바닥 (2026-07-12 미장 1장 사고)", () => {
+  const cand = (id: string, assetClass: "kr-stock" | "us-stock" | "coin", quietScore: number) =>
+    ({ kind: "stock", id, assetClass, quietScore, signalScore: quietScore, hypePenalty: 0 }) as unknown as Parameters<typeof selectDaily30Candidates>[0][number];
+
+  it("KR이 quietScore 상위를 독식해도 미장은 바닥(8) 만큼 확보된다", () => {
+    // KR 40장(전부 고득점) + US 10장(저득점). 바닥 없으면 US 0~1, 바닥 있으면 8.
+    const kr = Array.from({ length: 40 }, (_, i) => cand(`kr${i}`, "kr-stock", 100 - i));
+    const us = Array.from({ length: 10 }, (_, i) => cand(`us${i}`, "us-stock", 10 - i * 0.1));
+    const deck = selectDaily30Candidates([...kr, ...us], 30);
+    const usInDeck = deck.filter((c) => c.assetClass === "us-stock").length;
+    expect(usInDeck).toBeGreaterThanOrEqual(8);
+    expect(deck).toHaveLength(30);
+  });
+
+  it("US 후보가 바닥보다 적으면 있는 만큼만(억지 생성 없음)", () => {
+    const kr = Array.from({ length: 40 }, (_, i) => cand(`kr${i}`, "kr-stock", 100 - i));
+    const us = [cand("us0", "us-stock", 5), cand("us1", "us-stock", 4)];
+    const deck = selectDaily30Candidates([...kr, ...us], 30);
+    expect(deck.filter((c) => c.assetClass === "us-stock")).toHaveLength(2);
+    expect(deck).toHaveLength(30);
+  });
+});
+
 // 신선도 폴백(30장 유지) — 하드 제외가 주말(문구 불변)에 덱을 말린 회귀(실측 30→20) 방지.
 import { stockCandidate, type FreshnessSnapshot } from "../../lib/daily-30";
 import type { DiscoveryFrontSeed, DiscoveryStockPayload } from "../../lib/discovery-supply";
