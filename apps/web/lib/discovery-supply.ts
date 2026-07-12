@@ -1557,9 +1557,9 @@ async function hydrateReachedNewsHooks(
  * 사용자가 신뢰하는 3축(볼륨·유동성·레벨)은 차트에서 보이고, 카드 카피는 사실만.
  */
 function usLargeCapContextHeadline(seed: { canonical: string; sector: string }, front?: DiscoveryFrontSeed): string | undefined {
-  const stance = front?.verdict?.stanceText?.trim();
-  const base = `${seed.canonical} · ${seed.sector} 대표주`;
-  return stance ? `${base} · 현재 ${stance}` : base;
+  // 간결한 섹터 맥락만 — verdict 전체 문장은 카드 UI 가 별도로 보여준다(헤드라인 반복 방지).
+  void front;
+  return `${seed.canonical} · ${seed.sector} 대표주`;
 }
 
 function attachReachedVolumeEvents(
@@ -1816,6 +1816,8 @@ export function buildNarrativeCards(
     const event = narrativeAnchorEvent(candidate);
     const triggerHeadline = event ? narrativeTriggerHeadline(event) : undefined;
     if (!event || !triggerHeadline) continue;
+    // 2026-07-12: US 스토리 트리거가 한글 아니면(번역 캐시 미적용 원문 영어) 노출 안 함 — 제품 한국어 우선.
+    if (candidate.country === "US" && !/[가-힣]/.test(triggerHeadline)) continue;
     const triggerKey = `${candidate.ticker}:${event.kind}:${triggerHeadline}`;
     if (usedTriggers.has(triggerKey)) continue;
     const sectorScopeKey = candidate.sector ? `${candidate.country}:${candidate.sector}` : undefined;
