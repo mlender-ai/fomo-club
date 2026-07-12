@@ -32,6 +32,8 @@ export interface Daily30Response extends DiscoveryResponse {
     assetCounts: Record<Daily30AssetClass, number>;
     /** 어제 30장 대비 종목 중복률(0~1) — 신선도 수용 지표(≤0.5). */
     repeatRatio?: number;
+    /** 2026-07-12 US 파이프라인 진단(임시). */
+    debug?: Record<string, number>;
   };
 }
 
@@ -497,7 +499,14 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
   const repeatRatio = picks.picks.length > 0 ? Math.round((repeatCount / picks.picks.length) * 100) / 100 : 0;
 
   const response = responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
-  return { ...response, meta: { ...response.meta, repeatRatio } };
+  // 2026-07-12 진단: US 파이프라인 각 단계 카운트 — 미장 1장 원인이 discovery/후보/셀렉션 어디인지.
+  const debug = {
+    usDiscoveryCards: (us.cards?.length ?? us.stocks.length),
+    usStockCandidates: stockCandidates.filter((c) => c.assetClass === "us-stock").length,
+    usDeck: deck.filter((c) => c.assetClass === "us-stock").length,
+    krStockCandidates: stockCandidates.filter((c) => c.assetClass === "kr-stock").length,
+  };
+  return { ...response, meta: { ...response.meta, repeatRatio, debug } };
 }
 
 /**

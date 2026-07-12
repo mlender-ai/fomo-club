@@ -11,6 +11,7 @@ import {
 } from "../../../../../lib/feed-briefing";
 import { processSearchQueue, rebuildSymbolIndex } from "../../../../../lib/symbol-index";
 import { translateAndStoreUsTitles } from "../../../../../lib/content-i18n";
+import { isAiConfigured } from "@fomo/shared";
 import { fetchAllNews } from "../../../../../lib/fomo-news-sources";
 
 /**
@@ -67,8 +68,9 @@ export async function GET(request: Request) {
     }
     if (slot === "morning") {
       await save(`briefing:us:${date}`, await buildUsBriefing());
-      const translated = await translateAndStoreUsTitles(await fetchAllNews().catch(() => [])).catch(() => 0);
-      if (translated > 0) written.push(`i18n:us-titles(${translated})`);
+      const news = await fetchAllNews().catch(() => []);
+      const translated = await translateAndStoreUsTitles(news).catch(() => 0);
+      written.push(`ai=${isAiConfigured()} enNews=${news.filter((a) => (a.lang ?? "en") === "en").length} translated=${translated}`);
     } else if (slot === "close") {
       await save(`briefing:kr:${date}`, await buildKrBriefing());
       await save(`buzz:${date}`, await buildBuzzStory());
