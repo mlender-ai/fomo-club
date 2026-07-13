@@ -84,6 +84,30 @@ function tokenize(title: string): string[] {
     .filter((token) => token.length >= 2 && !/^\d+$/.test(token));
 }
 
+/**
+ * 신디케이트 중복 판정 키 — 같은 통신사 기사가 여러 매체에 재게재되면 제목이 사실상 동일하다.
+ * (종합)·[속보] 류 태그·공백·기호를 걷어낸 소문자 제목. 2026-07-13 "같은 제목 3줄" 사건 방지.
+ */
+export function normalizedTitleKey(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[\[(（【][^\])）】]{0,12}[\])）】]/g, " ") // (종합)·[속보]·【단독】 등 짧은 태그 제거
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+/** 정규화 제목 기준 중복 제거 — 첫 기사만 남긴다(순서 보존). */
+function dedupeByTitle(articles: readonly RawArticle[]): RawArticle[] {
+  const seen = new Set<string>();
+  const out: RawArticle[] = [];
+  for (const article of articles) {
+    const key = normalizedTitleKey(article.title);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(article);
+  }
+  return out;
+}
+
 function clusterScore(article: RawArticle, tokenFreq: Map<string, number>): number {
   const tokens = new Set(tokenize(article.title));
   let shared = 0;
@@ -107,7 +131,8 @@ export async function buildHotIssueCards(): Promise<DeckContentCard[]> {
   const now = new Date();
   const cards: DeckContentCard[] = [];
   for (const lang of ["ko", "en"] as const) {
-    const pool = articles.filter((article) => article.lang === lang && isFresh(article, now));
+    // 클러스터링 전 제목 dedup — 신디케이트 사본이 토큰 빈도를 부풀려 진짜 사건(다매체·다른 제목)을 밀어내는 것 방지.
+    const pool = dedupeByTitle(articles.filter((article) => article.lang === lang && isFresh(article, now)));
     if (pool.length < HOT_ISSUE_MIN_CLUSTER) continue;
     const tokenFreq = new Map<string, number>();
     for (const article of pool) {
@@ -121,10 +146,18 @@ export async function buildHotIssueCards(): Promise<DeckContentCard[]> {
     const koTitle = (article: (typeof ranked)[number]): string | undefined => (lang === "en" ? koreanTitle(article.url) : article.title);
     const topKo = koTitle(top);
     if (lang === "en" && !topKo) continue; // 번역 없으면 영문 헤드라인 노출하지 않는다
+    // related 팩트도 노출 제목 기준으로 한 번 더 dedup — 헤드라인과 같은 제목·서로 같은 제목 금지.
+    const usedTitleKeys = new Set([normalizedTitleKey(topKo ?? top.title)]);
     const related = ranked
       .slice(1)
       .filter((article) => tokenize(article.title).some((token) => topTokens.has(token)))
       .filter((article) => lang === "ko" || koTitle(article))
+      .filter((article) => {
+        const key = normalizedTitleKey(koTitle(article) ?? article.title);
+        if (!key || usedTitleKeys.has(key)) return false;
+        usedTitleKeys.add(key);
+        return true;
+      })
       .slice(0, 3);
     const facts: DeckContentFact[] = related.map((article) => {
       const title = koTitle(article) ?? article.title;

@@ -110,7 +110,8 @@ async function synthesizeBriefingCopy(
   market: "미국" | "한국",
   movers: readonly MoverInput[],
   indices: ReadonlyArray<{ label: string; changePct: number }>,
-  sectorPulse?: string
+  sectorPulse?: string,
+  marketNews?: readonly string[]
 ): Promise<{ whyBySymbol: Map<string, string>; note?: string } | null> {
   if (!isAiConfigured()) return null;
   const data = {
@@ -122,6 +123,7 @@ async function synthesizeBriefingCopy(
     })),
     indices: indices.map((i) => ({ label: i.label, changePct: Number(i.changePct.toFixed(2)) })),
     ...(sectorPulse ? { sectorPulse } : {}),
+    ...(marketNews && marketNews.length > 0 ? { marketNews: marketNews.slice(0, 4) } : {}),
   };
   const res = await callAI({
     messages: [
@@ -132,6 +134,7 @@ async function synthesizeBriefingCopy(
           "각 무버의 material(기사 제목)을 한국어 한 줄(24자 이내, 사실 서술)로 눌러써라. " +
           "material이 null이거나 해당 종목의 changePct 방향을 설명하지 못하면 빈 문자열(억지로 만들지 마라). " +
           "note는 오늘 시장 전체의 해석 1~2문장(한국어) — 숫자·퍼센트 언급 금지(수치는 카드가 보여준다), 입력에 없는 종목·사실 언급 금지, 매수·매도 권유 금지. " +
+          "marketNews(여러 매체가 함께 다룬 오늘 시장 헤드라인)가 있고 그 사건이 지수 방향을 설명하면, note 첫 문장에 그 사건을 사실로 짚어라 — 헤드라인에 없는 인과·전망 창작 금지. 설명하지 못하면 무시하라. " +
           'JSON만 출력: {"movers":[{"name":"...","why":"..."}],"note":"..."}',
       },
       { role: "user", content: JSON.stringify(data) },
@@ -241,6 +244,16 @@ function indexFacts(indices: ReadonlyArray<{ label: string; changePct: number }>
   return indices.map((i) => ({ label: `${i.label} 지수`, value: signedPct(i.changePct) }));
 }
 
+/**
+ * 스테일 세션 가드 — 소스가 준 거래일이 오늘(KST)과 다르면 true.
+ * 전 거래일 데이터가 "오늘의 국장"으로 발행된 2026-07-13 사건의 최후 방어선.
+ * 거래일 미제공(undefined)은 통과 — 가드는 확인 가능한 불일치만 막는다(fail-closed는 호출부).
+ * 휴장일(월요일 새벽 등)엔 거래일=전 거래일이라 자연히 발행이 스킵된다(정직한 무카드).
+ */
+export function isStaleSession(tradedAt: string | undefined, today: string): boolean {
+  return typeof tradedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(tradedAt) && tradedAt !== today;
+}
+
 function briefingDateLabel(date: string): string {
   const [, m, d] = date.match(/^\d{4}-(\d{2})-(\d{2})$/) ?? [];
   return m && d ? `${Number(m)}월 ${Number(d)}일` : date;
@@ -261,7 +274,8 @@ export async function buildUsBriefing(): Promise<FeedBriefingRow | null> {
       ...(materialTitle ? { materialTitle } : {}),
     });
   }
-  const macro = await fetchMacro().catch(() => []);
+  // fresh: 캐시 우회 — 브리핑은 크론 시점 실측만(2026-07-13 전 거래일 데이터 사건과 동일 계열 방지).
+  const macro = await fetchMacro({ fresh: true }).catch(() => []);
   const indices = macro
     .filter((q) => ["spx", "ndq", "sox"].includes(q.key) && typeof q.change === "number")
     .map((q) => ({ label: q.label, changePct: q.change as number }));
@@ -283,8 +297,32 @@ export async function buildUsBriefing(): Promise<FeedBriefingRow | null> {
   };
 }
 
+/**
+ * 오늘 시장 전반 사건 헤드라인 — 국장 핫이슈 클러스터(다매체·결정론)의 헤드라인+관련 제목.
+ * 브리핑 노트 LLM의 '왜' 재료. 실패/없음 → [] (노트는 기존 경로로 정직 폴백).
+ */
+async function todayMarketEventHeadlines(): Promise<string[]> {
+  const { buildHotIssueCards } = await import("./feed-extras");
+  const cards = await buildHotIssueCards().catch(() => []);
+  const ko = cards.find((card) => card.scope === "domestic");
+  if (!ko) return [];
+  return [ko.headline, ...ko.facts.map((f) => String(f.value))].filter(Boolean).slice(0, 4);
+}
+
 /** ① 오늘의 국장 브리핑 — 장마감 크론. 네이버 시세 + 종목뉴스 재료 + LLM 1콜. 급변동일 고정. */
 export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
+  const date = kstDate();
+  // fresh: 캐시 우회 — 브리핑은 반드시 크론 시점의 실측이어야 한다(2026-07-13 전 거래일 데이터 사건).
+  const macro = await fetchMacro({ fresh: true }).catch(() => []);
+  const krQuotes = macro.filter((q) => ["kospi", "kosdaq"].includes(q.key));
+  // 거래일 가드(fail-closed) — 소스 거래일 ≠ 오늘이면 발행하지 않는다. 틀린 카드보다 무카드.
+  const staleQuote = krQuotes.find((q) => isStaleSession(q.tradedAt, date));
+  if (staleQuote) {
+    console.error(
+      `[feed-briefing] KR 브리핑 발행 차단 — ${staleQuote.label} 거래일(${staleQuote.tradedAt}) ≠ 오늘(${date}). 스테일 데이터.`
+    );
+    return null;
+  }
   const rows = await fetchKrMarketRows().catch((): DiscoveryMarketRow[] => []);
   if (rows.length === 0) return null;
   const moverRows = pickMovers(rows);
@@ -297,18 +335,18 @@ export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
       ...(materialTitle ? { materialTitle } : {}),
     });
   }
-  const macro = await fetchMacro().catch(() => []);
-  const indices = macro
-    .filter((q) => ["kospi", "kosdaq"].includes(q.key) && typeof q.change === "number")
+  const indices = krQuotes
+    .filter((q) => typeof q.change === "number")
     .map((q) => ({ label: q.label, changePct: q.change as number }));
   const kospiChange = indices.find((i) => i.label.includes("코스피") || i.label.toUpperCase().includes("KOSPI"))?.changePct;
   const bigMove = typeof kospiChange === "number" && Math.abs(kospiChange) >= BIG_MOVE_PCT;
   const sectorPulse = computeSectorPulse(rows);
-  const ai = await synthesizeBriefingCopy("한국", movers, indices, sectorPulse).catch(() => null);
+  // 시장 전반 사건 헤드라인(다매체 클러스터) — 폭락/급등의 '왜'가 노트에 실리도록 LLM 입력에 연결(WO-21 Phase 1).
+  const marketNews = await todayMarketEventHeadlines().catch(() => []);
+  const ai = await synthesizeBriefingCopy("한국", movers, indices, sectorPulse, marketNews).catch(() => null);
   const baseNote = ai?.note ?? ruleNote(rows, "한국");
   // 급변동일 — 원인(섹터 펄스) 확장. 전부 실데이터.
   const note = bigMove && sectorPulse ? `크게 출렁인 날이에요. ${sectorPulse} ${baseNote}` : baseNote;
-  const date = kstDate();
   return {
     card: {
       kind: "content",
@@ -324,6 +362,81 @@ export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
     ...(bigMove ? { pinned: true } : {}),
     ...(sectorPulse ? { sectorPulse } : {}),
   };
+}
+
+// ── 장중 급변 펄스 (WO-21 Phase 1) ───────────────────────────────────────────
+// 폭락/급등이 "그날 마감 후"가 아니라 장중에 피드에 뜨게 한다. LLM 없음(결정론) — 장중 크론 전용.
+
+/** 장중 급변 임계(%) — 코스피/코스닥. 서킷브레이커(-8%)보다 훨씬 이른 감지선. */
+const PULSE_KOSPI_PCT = 2;
+const PULSE_KOSDAQ_PCT = 2.5;
+
+export interface KrMarketPulseInput {
+  date: string;
+  /** KST 관측 시각 "10:30" — 카드가 스스로 시점을 밝힌다(정직한 시점). */
+  timeLabel: string;
+  indices: ReadonlyArray<{ key: "kospi" | "kosdaq"; label: string; changePct: number }>;
+  movers: ReadonlyArray<{ name: string; changePct: number }>;
+  /** 다매체가 함께 다루는 오늘 사건 헤드라인(실데이터) — 있으면 노트에 사실로 병기. */
+  eventHeadline?: string;
+}
+
+/** 급변 펄스 카드 합성(순수) — 임계 미달이면 null(억지 생성 금지). 판단·전망·위로 없음. */
+export function composeKrMarketPulse(input: KrMarketPulseInput): FeedBriefingRow | null {
+  const kospi = input.indices.find((i) => i.key === "kospi");
+  const kosdaq = input.indices.find((i) => i.key === "kosdaq");
+  const trigger =
+    kospi && Math.abs(kospi.changePct) >= PULSE_KOSPI_PCT
+      ? kospi
+      : kosdaq && Math.abs(kosdaq.changePct) >= PULSE_KOSDAQ_PCT
+        ? kosdaq
+        : undefined;
+  if (!trigger) return null;
+  const dirWord = trigger.changePct < 0 ? "급락" : "급등";
+  const noteParts = [
+    `장중 ${input.timeLabel} 기준으로 ${trigger.label}가 크게 ${trigger.changePct < 0 ? "내리는" : "오르는"} 중이에요.`,
+    ...(input.eventHeadline ? [`여러 매체가 함께 다루는 소식: ${input.eventHeadline}`] : []),
+    "마감 후 '오늘의 국장 요약'으로 갱신돼요.",
+  ];
+  return {
+    card: {
+      kind: "content",
+      id: `content:briefing:kr-pulse:${input.date}`,
+      contentType: "briefing",
+      scope: "domestic",
+      headline: `${trigger.label} ${dirWord} 중 — 장중 ${input.timeLabel}`,
+      facts: [
+        ...input.indices.map((i) => ({ label: `${i.label} 지수`, value: signedPct(i.changePct) })),
+        ...input.movers.slice(0, 3).map((m) => ({ label: m.name, value: signedPct(m.changePct) })),
+      ],
+      note: noteParts.join(" "),
+      source: "네이버 시세(장중)",
+      asOf: input.date,
+    },
+    pinned: true,
+  };
+}
+
+/** 장중 급변 감지 — pulse 크론(장중 시간당). 임계 미달·스테일·휴장이면 null. */
+export async function buildKrMarketPulse(): Promise<FeedBriefingRow | null> {
+  const date = kstDate();
+  const macro = await fetchMacro({ fresh: true }).catch(() => []);
+  const indices = macro
+    .filter((q) => ["kospi", "kosdaq"].includes(q.key) && typeof q.change === "number")
+    .map((q) => ({ key: q.key as "kospi" | "kosdaq", label: q.label, changePct: q.change as number, tradedAt: q.tradedAt }));
+  if (indices.length === 0) return null;
+  // 거래일 가드 — 휴장/장 시작 전(전 거래일 데이터)이면 발화하지 않는다.
+  if (indices.some((i) => isStaleSession(i.tradedAt, date))) return null;
+  const timeLabel = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+  // 임계 미달이면 시세 페이지 fetch 전에 빠지도록 — 먼저 지수만으로 판정.
+  const probe = composeKrMarketPulse({ date, timeLabel, indices, movers: [] });
+  if (!probe) return null;
+  const rows = await fetchKrMarketRows().catch((): DiscoveryMarketRow[] => []);
+  const movers = pickMovers(rows, 3)
+    .filter((row) => typeof row.changePct === "number")
+    .map((row) => ({ name: row.canonical, changePct: row.changePct! }));
+  const eventHeadline = (await todayMarketEventHeadlines().catch(() => []))[0];
+  return composeKrMarketPulse({ date, timeLabel, indices, movers, ...(eventHeadline ? { eventHeadline } : {}) });
 }
 
 interface MentionSnapshot {
@@ -508,13 +621,15 @@ export interface TodayFeedContent {
 export async function readTodayFeedContent(): Promise<TodayFeedContent> {
   const date = kstDate();
   const week = isoWeek();
-  const [us, kr, buzz, recap] = await Promise.all([
+  const [us, kr, pulse, buzz, recap] = await Promise.all([
     readFeedContent<FeedBriefingRow>(`briefing:us:${date}`),
     readFeedContent<FeedBriefingRow>(`briefing:kr:${date}`),
+    readFeedContent<FeedBriefingRow>(`briefing:kr-pulse:${date}`),
     readFeedContent<FeedBriefingRow>(`buzz:${date}`),
     readFeedContent<FeedBriefingRow>(`recap:${week}`),
   ]);
-  const rowsFound = [us, kr, buzz, recap].filter((row): row is FeedBriefingRow => !!row?.card);
+  // 장중 펄스는 마감 브리핑이 생기면 그쪽이 정본 — 함께 노출하지 않는다.
+  const rowsFound = [us, kr, kr?.card ? null : pulse, buzz, recap].filter((row): row is FeedBriefingRow => !!row?.card);
   const pinnedIds = new Set(rowsFound.filter((row) => row.pinned).map((row) => row.card.id));
   const indexNote = kr?.sectorPulse;
   return {

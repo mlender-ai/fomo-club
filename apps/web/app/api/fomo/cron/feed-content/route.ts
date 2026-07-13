@@ -5,6 +5,7 @@ import { writeFeedContent } from "../../../../../lib/feed-content-store";
 import {
   buildBuzzStory,
   buildKrBriefing,
+  buildKrMarketPulse,
   buildUsBriefing,
   buildWeeklyRecap,
   type FeedBriefingRow,
@@ -76,10 +77,13 @@ export async function GET(request: Request) {
       await save(`buzz:${date}`, await buildBuzzStory());
       const translated = await translateAndStoreUsTitles(await fetchAllNews().catch(() => [])).catch(() => 0);
       if (translated > 0) written.push(`i18n:us-titles(${translated})`);
+    } else if (slot === "pulse") {
+      // 장중 급변 감지(WO-21 Phase 1) — 임계 미달·휴장·스테일이면 아무것도 쓰지 않는다(결정론·LLM 없음).
+      await save(`briefing:kr-pulse:${date}`, await buildKrMarketPulse());
     } else if (slot === "weekly") {
       await save(`recap:${isoWeekOf()}`, await buildWeeklyRecap());
     } else {
-      return withCors(NextResponse.json({ ok: false, error: "slot must be morning|close|weekly|index" }, { status: 400 }));
+      return withCors(NextResponse.json({ ok: false, error: "slot must be morning|close|weekly|index|pulse" }, { status: 400 }));
     }
     // daily-30·feed-hub 서버 캐시 즉시 만료 — 다음 요청이 새 콘텐츠를 포함해 재빌드.
     revalidateTag("daily-30", { expire: 0 });

@@ -12,10 +12,11 @@ on:
     - cron: "10 7 * * 1-5"
     - cron: "40 7 * * 5"
     - cron: "0 20 * * *" # index 05:00 KST — 심볼 인덱스 재구축 + 검색 큐 처리(WO 검색)
+    - cron: "30 0-5 * * 1-5" # pulse 09:30~14:30 KST 시간당 — 장중 급변 감지(WO-21). 임계 미달이면 no-op
   workflow_dispatch:
     inputs:
       slot:
-        description: "Slot to run (morning | close | weekly). Defaults by schedule time."
+        description: "Slot to run (morning | close | weekly | index | pulse). Defaults by schedule mapping."
         required: false
         default: ""
 
@@ -34,23 +35,25 @@ jobs:
         id: slot
         env:
           INPUT_SLOT: ${{ github.event.inputs.slot }}
+          CRON_EXPR: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
+          # 슬롯은 "어느 크론이 발화했나"(github.event.schedule)로만 결정한다.
+          # ⚠️ wall-clock 판정 금지 — GH cron은 수 시간 지연될 수 있고, 지연된 야간 크론이
+          # else→close 폴스루로 장 시작 전 새벽에 "오늘의 국장"을 전 거래일 데이터로 발행했다(2026-07-13 사건, WO-21).
           if [ -n "${INPUT_SLOT:-}" ]; then
             SLOT="$INPUT_SLOT"
           else
-            HOUR="$(date -u +%H)"; MINUTE="$(date -u +%M)"
-            if [ "$HOUR" = "20" ] && [ "$MINUTE" -lt 15 ]; then
-              SLOT="index"
-            elif [ "$HOUR" = "20" ]; then
-              SLOT="morning"
-            elif [ "$HOUR" = "07" ] && [ "$MINUTE" -ge 30 ]; then
-              SLOT="weekly"
-            else
-              SLOT="close"
-            fi
+            case "$CRON_EXPR" in
+              "0 20 * * *")     SLOT="index" ;;
+              "30 20 * * *")    SLOT="morning" ;;
+              "10 7 * * 1-5")   SLOT="close" ;;
+              "40 7 * * 5")     SLOT="weekly" ;;
+              "30 0-5 * * 1-5") SLOT="pulse" ;;
+              *) echo "unknown schedule: ${CRON_EXPR:-<empty>} — 슬롯 미지정 실행 거부" >&2; exit 1 ;;
+            esac
           fi
-          case "$SLOT" in morning|close|weekly|index) ;; *) echo "invalid slot: $SLOT" >&2; exit 1;; esac
+          case "$SLOT" in morning|close|weekly|index|pulse) ;; *) echo "invalid slot: $SLOT" >&2; exit 1;; esac
           echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
 
       - name: Build feed content
