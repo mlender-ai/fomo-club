@@ -49,6 +49,8 @@ export interface NaverIndexRaw {
   compareToPreviousPrice?: string | { code?: string; text?: string; name?: string } | null;
   /** 거래 시각 "2026-07-13T18:59:00+09:00" — 발행측 거래일 검증(스테일 가드)용. */
   localTradedAt?: string;
+  /** "PREOPEN" | "OPEN" | "CLOSE" 등 — PREOPEN 은 등락률 0.00 + 현재시각 localTradedAt 을 주므로 발행 차단 재료. */
+  marketStatus?: string;
 }
 
 function parseLooseNumber(v: unknown): number | null {
@@ -67,6 +69,8 @@ export function parseNaverIndexQuote(raw: NaverIndexRaw | null | undefined): {
   close: number;
   /** 거래일 "YYYY-MM-DD"(KST 문자열 그대로) — 없으면 생략. */
   tradedAt?: string;
+  /** 대문자 정규화된 장 상태("PREOPEN"/"OPEN"/"CLOSE" 등) — 없으면 생략. */
+  marketStatus?: string;
 } | null {
   if (!raw) return null;
   const close = parseLooseNumber(raw.closePrice);
@@ -88,7 +92,13 @@ export function parseNaverIndexQuote(raw: NaverIndexRaw | null | undefined): {
         ? mag
         : ratio;
   const tradedDate = raw.localTradedAt?.slice(0, 10);
-  return { change, close, ...(tradedDate && /^\d{4}-\d{2}-\d{2}$/.test(tradedDate) ? { tradedAt: tradedDate } : {}) };
+  const marketStatus = typeof raw.marketStatus === "string" && raw.marketStatus.trim() ? raw.marketStatus.trim().toUpperCase() : undefined;
+  return {
+    change,
+    close,
+    ...(tradedDate && /^\d{4}-\d{2}-\d{2}$/.test(tradedDate) ? { tradedAt: tradedDate } : {}),
+    ...(marketStatus ? { marketStatus } : {}),
+  };
 }
 
 function macroChange(quotes: MacroQuote[], key: MacroQuote["key"]): number | null {

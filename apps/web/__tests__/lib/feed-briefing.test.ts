@@ -83,3 +83,32 @@ describe("isStaleSession (거래일 가드)", () => {
     expect(safeInternals.isStaleSession("어제", "2026-07-13")).toBe(false);
   });
 });
+
+// 2026-07-14 실측 사각지대 — PREOPEN 에 네이버가 localTradedAt=오늘(현재시각)·등락률 0.00 껍데기를 준다.
+describe("krPublishBlockReason (발행 가드)", () => {
+  it("PREOPEN → 차단 (거래일이 오늘이어도)", () => {
+    const reason = safeInternals.krPublishBlockReason(
+      [{ label: "코스피", tradedAt: "2026-07-14", marketStatus: "PREOPEN" }],
+      "2026-07-14"
+    );
+    expect(reason).toContain("PREOPEN");
+  });
+  it("스테일 거래일 → 차단", () => {
+    const reason = safeInternals.krPublishBlockReason([{ label: "코스피", tradedAt: "2026-07-10" }], "2026-07-13");
+    expect(reason).toContain("2026-07-10");
+  });
+  it("정상(CLOSE·오늘 거래일) → 통과", () => {
+    expect(
+      safeInternals.krPublishBlockReason(
+        [
+          { label: "코스피", tradedAt: "2026-07-13", marketStatus: "CLOSE" },
+          { label: "코스닥", tradedAt: "2026-07-13", marketStatus: "CLOSE" },
+        ],
+        "2026-07-13"
+      )
+    ).toBeNull();
+  });
+  it("status/거래일 미제공 → 통과(확인 가능한 것만 차단)", () => {
+    expect(safeInternals.krPublishBlockReason([{ label: "코스피" }], "2026-07-13")).toBeNull();
+  });
+});

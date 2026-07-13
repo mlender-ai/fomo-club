@@ -35,6 +35,12 @@ export async function writeFeedContent(id: string, row: unknown): Promise<void> 
   `;
 }
 
+/** 행 삭제 — 발행 가드가 차단한 날, 앞서 잘못 발행된 같은 키(장전 껍데기 등)를 걷어내는 self-heal 용. */
+export async function deleteFeedContent(id: string): Promise<void> {
+  await ensureFeedContentTable();
+  await prisma.$executeRaw`DELETE FROM "FeedContentCache" WHERE "id" = ${id}`;
+}
+
 export async function readFeedContent<T>(id: string): Promise<T | null> {
   try {
     const records = await prisma.$queryRaw<Array<{ row: unknown }>>`

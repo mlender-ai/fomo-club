@@ -51,7 +51,7 @@ export async function fetchNaverIndex(
   naver: string,
   scope: NaverScope,
   { fresh = false }: { fresh?: boolean } = {}
-): Promise<{ change: number; close: number; tradedAt?: string } | null> {
+): Promise<{ change: number; close: number; tradedAt?: string; marketStatus?: string } | null> {
   const url =
     scope === "domestic"
       ? `https://m.stock.naver.com/api/index/${encodeURIComponent(naver)}/basic`
@@ -160,6 +160,7 @@ export async function fetchMacro({ fresh = false }: { fresh?: boolean } = {}): P
           change: naver.change,
           close: naver.close,
           ...(naver.tradedAt ? { tradedAt: naver.tradedAt } : {}),
+          ...(naver.marketStatus ? { marketStatus: naver.marketStatus } : {}),
         };
 
       const closes = await fetchIndexCloses(s.symbol);
