@@ -12,10 +12,11 @@ on:
     - cron: "10 7 * * 1-5"
     - cron: "40 7 * * 5"
     - cron: "0 20 * * *" # index 05:00 KST — 심볼 인덱스 재구축 + 검색 큐 처리(WO 검색)
+    - cron: "30 0-5 * * 1-5" # pulse 09:30~14:30 KST 시간당 — 장중 급변 감지(WO-21). 임계 미달이면 no-op
   workflow_dispatch:
     inputs:
       slot:
-        description: "Slot to run (morning | close | weekly). Defaults by schedule time."
+        description: "Slot to run (morning | close | weekly | index | pulse). Defaults by schedule mapping."
         required: false
         default: ""
 
@@ -44,14 +45,15 @@ jobs:
             SLOT="$INPUT_SLOT"
           else
             case "$CRON_EXPR" in
-              "0 20 * * *")   SLOT="index" ;;
-              "30 20 * * *")  SLOT="morning" ;;
-              "10 7 * * 1-5") SLOT="close" ;;
-              "40 7 * * 5")   SLOT="weekly" ;;
+              "0 20 * * *")     SLOT="index" ;;
+              "30 20 * * *")    SLOT="morning" ;;
+              "10 7 * * 1-5")   SLOT="close" ;;
+              "40 7 * * 5")     SLOT="weekly" ;;
+              "30 0-5 * * 1-5") SLOT="pulse" ;;
               *) echo "unknown schedule: ${CRON_EXPR:-<empty>} — 슬롯 미지정 실행 거부" >&2; exit 1 ;;
             esac
           fi
-          case "$SLOT" in morning|close|weekly|index) ;; *) echo "invalid slot: $SLOT" >&2; exit 1;; esac
+          case "$SLOT" in morning|close|weekly|index|pulse) ;; *) echo "invalid slot: $SLOT" >&2; exit 1;; esac
           echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
 
       - name: Build feed content
