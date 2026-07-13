@@ -26,6 +26,7 @@ import {
   type StockFrontResponse,
 } from "@/lib/fomoApi";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
+import { describe52wGap, describeRsi } from "@/lib/depthCopy";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 
 /**
@@ -1770,15 +1771,15 @@ function buildVerdictSections(
     pushEvidence(evidence, `기관 ${Math.abs(instStreak)}일 연속 ${instStreak > 0 ? "순매수" : "순매도"}`);
   }
 
-  // 4) TA 실수치 — 있는 지표만(가짜 금지).
+  // 4) TA 실수치 — 있는 지표만(가짜 금지) + 의미 병기(WO-22: "RSI 39" 단독 나열 금지).
   const latest = front?.ta?.latest;
-  if (typeof latest?.rsi14 === "number") pushEvidence(evidence, `RSI ${Math.round(latest.rsi14)}`);
+  if (typeof latest?.rsi14 === "number") pushEvidence(evidence, describeRsi(latest.rsi14));
   if (typeof latest?.closeTo52WeekHighPct === "number") {
     const gap = Math.round((100 - latest.closeTo52WeekHighPct) * 10) / 10;
-    pushEvidence(evidence, gap <= 0.5 ? "52주 고점권" : `52주 고점 대비 -${gap}%`);
+    pushEvidence(evidence, describe52wGap(gap));
   }
   if (typeof front?.signals.volumeRatio === "number" && front.signals.volumeRatio >= 1.2) {
-    pushEvidence(evidence, `거래량 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배`);
+    pushEvidence(evidence, `거래량이 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배 — 평소보다 눈에 띄게 붙은 상태`);
   }
   const taText = front?.taFact ? translateTaFact(front.taFact) : undefined;
   if (taText) pushEvidence(evidence, taText);
@@ -1858,6 +1859,103 @@ function ConvictionParagraphs({
           <p className="font-pixel text-sm text-whiteout">무효 조건</p>
           <p className="mt-2 text-sm leading-6 text-whiteout">{s.invalidation}</p>
         </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 무슨 일이 있었나(WO-22) — 크론 LLM 인사이트의 전체 재료를 뎁스에 복원.
+ * whyHot 전문 + 강세/약세 양면(원문 보기 링크) + 공식 지표 + 출처 정직 표기.
+ * PRODUCT_VISION §6: 사실·출처·시점·양면. 데이터 없으면 통째로 생략(보일러플레이트 금지).
+ */
+function StockWhyHappened({ insight }: { insight: CondensedInsight | null }) {
+  if (!insight) return null;
+  // 공식 지표(수급 마감 확정 등)는 LLM 코퍼스와 무관한 객관 사실 — 원문이 얇아도(insufficient) 보여준다.
+  const insufficient = insight.confidence === "insufficient";
+  const officialFacts = insight.officialFacts ?? [];
+  if (insufficient && officialFacts.length === 0) return null;
+  const hasSides = !insufficient && insight.bull.length + insight.bear.length > 0;
+  const why = insufficient ? "" : cleanText(insight.whyHot);
+  if (!why && !hasSides && officialFacts.length === 0) return null;
+
+  const srcOf = (id: string) => insight.sources.find((s) => s.id === id);
+  const kindLabel = (kind?: string) =>
+    kind === "official" ? "공식 데이터" : kind === "community" ? "커뮤니티" : kind === "news" ? "뉴스" : "";
+  const sideList = (title: string, tone: string, points: CondensedInsight["bull"], empty: string) => (
+    <div className="rounded-lg border border-hairline bg-black/20 px-3 py-3">
+      <p className="font-pixel text-xs" style={{ color: tone }}>
+        {title}
+      </p>
+      {points.length > 0 ? (
+        <ul className="mt-2 space-y-2">
+          {points.slice(0, 3).map((p, i) => {
+            const s = srcOf(p.sourceId);
+            const kl = kindLabel(s?.kind);
+            const label = `${s?.source ?? s?.title ?? ""}${kl ? ` · ${kl}` : ""}`;
+            return (
+              <li key={`${title}-${i}`}>
+                <span className="block text-sm leading-6 text-whiteout">{cleanText(p.claim)}</span>
+                {s &&
+                  (s.url ? (
+                    <a href={s.url} target="_blank" rel="noreferrer" className="mt-0.5 block text-[11px] text-muted hover:text-whiteout">
+                      ↳ {label} · 원문 보기 →
+                    </a>
+                  ) : (
+                    <span className="mt-0.5 block text-[11px] text-muted">↳ {label}</span>
+                  ))}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-muted">{empty}</p>
+      )}
+    </div>
+  );
+
+  return (
+    <section className="mt-4 rounded-2xl border border-hairline bg-surface px-4 py-4">
+      <p className="font-pixel text-sm text-whiteout">{why || hasSides ? "무슨 일이 있었나" : "확인된 공식 지표"}</p>
+      {why && <p className="mt-2 text-sm leading-6 text-whiteout">{why}</p>}
+
+      {hasSides && (
+        <div className="mt-3 grid gap-2">
+          {sideList("강세 쪽 근거", "var(--up, #ff5a5f)", insight.bull, "오늘 원문에서 강세 쪽으로 확인된 근거는 없어요.")}
+          {sideList("약세·주의 근거", "var(--down, #4f8cff)", insight.bear, "오늘 원문에서 약세 쪽으로 확인된 근거는 없어요.")}
+        </div>
+      )}
+
+      {officialFacts.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {officialFacts.slice(0, 3).map((f, i) => (
+            <li key={`swf-of-${i}`} className="rounded-lg border border-hairline bg-black/20 px-3 py-2">
+              <span className="block text-sm leading-5 text-whiteout">{cleanText(f.label)}</span>
+              {f.url ? (
+                <a href={f.url} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
+                  ↳ {f.source} · 공식 데이터 →
+                </a>
+              ) : (
+                <span className="mt-1 block text-[11px] text-muted">↳ {f.source} · 공식 데이터</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {insight.lean.bullCount + insight.lean.bearCount > 0 && (
+        <p className="mt-3 text-[11px] leading-5 text-muted">
+          오늘 쏠림 · <span style={{ color: "var(--up, #ff5a5f)" }}>강세 {insight.lean.bullCount}</span>
+          {" : "}
+          <span style={{ color: "var(--down, #4f8cff)" }}>약세 {insight.lean.bearCount}</span>
+          {insight.lean.oneSided ? " · 반대 관점 안 보임" : ""}
+        </p>
+      )}
+
+      {insight.singleOutlet && insight.outlets.length > 0 && (
+        <p className="mt-2 text-[11px] leading-5 text-muted">
+          오늘은 <span className="text-whiteout">{insight.outlets[0]}</span> 한 곳 기준이에요 — 한 매체 안의 시각일 수 있어요.
+        </p>
       )}
     </section>
   );
@@ -2062,6 +2160,9 @@ export function StockInsightView({
 
           {/* 뎁스 본문 — 판단/근거/무효 조건(WO 1.5). 카드 verdict 와 단일 진실, 부족 블록은 생략. */}
           <ConvictionParagraphs front={front} insight={insight} />
+
+          {/* 무슨 일이 있었나(WO-22) — 원문 인사이트 전체(양면·출처·공식지표). 카드 대비 뎁스의 정보 우위. */}
+          <StockWhyHappened insight={insight} />
 
           {/* 재무 한눈에(WO 1.5 F) — 근거 아래. KR=네이버·US=Yahoo, 없으면 생략. */}
           <FinanceGlanceBlock basics={basics} />
