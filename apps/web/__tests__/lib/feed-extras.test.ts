@@ -1,5 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { buildEventCard, buildTermCard, upcomingMarketEvents } from "../../lib/feed-extras";
+import { describe, expect, it, vi } from "vitest";
+import type { RawArticle } from "@fomo/core";
+
+vi.mock("../../lib/fomo-news-sources", () => ({ fetchAllNews: vi.fn(async () => mockedNews) }));
+
+import { buildEventCard, buildHotIssueCards, buildTermCard, normalizedTitleKey, upcomingMarketEvents } from "../../lib/feed-extras";
+
+const NOW = new Date().toISOString();
+function article(id: string, title: string, source: string): RawArticle {
+  return { id, title, url: `https://news.example/${id}`, source, publishedAt: NOW, lang: "ko" };
+}
+
+// 신디케이트 사본(같은 제목, 다른 매체) 3건 + 진짜 다매체 사건(다른 제목, 토큰 공유) 3건.
+let mockedNews: RawArticle[] = [];
 
 describe("feed-extras (2026-07-11 콘텐츠 베리에이션)", () => {
   it("오늘의 경제용어 — 날짜 결정론 로테이션, 정의·예시 사실 서술", () => {
@@ -41,5 +53,34 @@ describe("feed-extras (2026-07-11 콘텐츠 베리에이션)", () => {
   it("한국 동시만기 — 3·6·9·12월 둘째 목요일 규칙 검산 (2026-09-10)", () => {
     const events = upcomingMarketEvents("2026-09-01", 10);
     expect(events.some((event) => event.date === "2026-09-10" && event.label.includes("동시만기"))).toBe(true);
+  });
+});
+
+// 2026-07-13 사건 회귀(WO-21) — HOT ISSUE가 같은 신디케이트 제목 3줄을 반복하고 진짜 사건을 밀어냈다.
+describe("hot-issue 제목 dedup", () => {
+  it("normalizedTitleKey — (종합)·[속보] 태그·기호·공백 무시하고 같은 기사로 판정", () => {
+    expect(normalizedTitleKey("SNS 미담주·3대 메가 수혜주…급락장서 튀어 오른 테마주들(종합)")).toBe(
+      normalizedTitleKey("[속보] SNS 미담주·3대 메가 수혜주…급락장서 튀어오른 테마주들")
+    );
+    expect(normalizedTitleKey("코스피 급락")).not.toBe(normalizedTitleKey("코스닥 급락"));
+  });
+
+  it("신디케이트 사본은 1건으로 접히고, 다매체·다른 제목 사건이 헤드라인을 차지한다", async () => {
+    mockedNews = [
+      article("s1", "SNS 미담주 3대 메가 수혜주 급락장서 튀어 오른 테마주들(종합)", "A일보"),
+      article("s2", "SNS 미담주 3대 메가 수혜주 급락장서 튀어 오른 테마주들", "B경제"),
+      article("s3", "[속보] SNS 미담주 3대 메가 수혜주 급락장서 튀어 오른 테마주들", "C뉴스"),
+      article("w1", "이란 전쟁 격화에 코스피 폭락 마감", "연합뉴스"),
+      article("w2", "중동 이란 리스크에 코스피 코스닥 동반 폭락", "한국경제"),
+      article("w3", "이란 사태로 코스피 역대급 하락 국면", "매일경제"),
+    ];
+    const cards = await buildHotIssueCards();
+    const ko = cards.find((card) => card.scope === "domestic");
+    expect(ko).toBeDefined();
+    // 관련 기사 팩트에 같은 제목 반복 금지 + 헤드라인과 같은 제목 금지
+    const titles = [normalizedTitleKey(ko!.headline), ...ko!.facts.map((f) => normalizedTitleKey(String(f.value)))];
+    expect(new Set(titles).size).toBe(titles.length);
+    // 신디케이트 1건 vs 다매체 사건 3건 — 사건이 이겨야 한다
+    expect(ko!.headline).toMatch(/이란|코스피/);
   });
 });

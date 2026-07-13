@@ -289,7 +289,8 @@ function parseMarketRow(row: RawNaverStock, market: DiscoveryMarket): DiscoveryM
 
 async function fetchMarketPage(market: DiscoveryMarket, page: number): Promise<DiscoveryMarketRow[]> {
   const url = `https://m.stock.naver.com/api/stocks/marketValue/${market}?page=${page}&pageSize=${PAGE_SIZE}`;
-  const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
+  // no-store 명시 — 시세는 캐시/빌드시점 고정 금지(2026-07-13 전 거래일 브리핑 사건). Next 기본값에 의존하지 않는다.
+  const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000), cache: "no-store" });
   if (!res.ok) throw new Error(`naver market ${market} ${page} ${res.status}`);
   const data = (await res.json()) as { stocks?: RawNaverStock[] };
   return (data.stocks ?? []).map((row) => parseMarketRow(row, market)).filter((row): row is DiscoveryMarketRow => row !== null);

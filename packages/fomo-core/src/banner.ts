@@ -154,6 +154,8 @@ export interface MacroQuote {
   change?: number | null;
   /** 최근 종가(표시용). */
   close?: number | null;
+  /** 데이터의 거래일 "YYYY-MM-DD" — 소스가 주는 경우만. 발행측 스테일 가드용. */
+  tradedAt?: string;
 }
 
 const MACRO_META: Record<MacroQuote["key"], { emoji: string; sourceUrl: string; note: string }> = {

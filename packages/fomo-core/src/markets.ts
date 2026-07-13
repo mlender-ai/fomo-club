@@ -45,8 +45,10 @@ export interface MarketScore {
 export interface NaverIndexRaw {
   closePrice?: string | number;
   fluctuationsRatio?: string | number;
-  /** "상승" | "하락" | "보합" — 문자열 또는 {text}/{name} 객체. */
-  compareToPreviousPrice?: string | { text?: string; name?: string } | null;
+  /** "상승" | "하락" | "보합" — 문자열 또는 {code}/{text}/{name} 객체(code: 2=상승 3=보합 5=하락, name: RISING/FALLING). */
+  compareToPreviousPrice?: string | { code?: string; text?: string; name?: string } | null;
+  /** 거래 시각 "2026-07-13T18:59:00+09:00" — 발행측 거래일 검증(스테일 가드)용. */
+  localTradedAt?: string;
 }
 
 function parseLooseNumber(v: unknown): number | null {
@@ -63,6 +65,8 @@ function parseLooseNumber(v: unknown): number | null {
 export function parseNaverIndexQuote(raw: NaverIndexRaw | null | undefined): {
   change: number;
   close: number;
+  /** 거래일 "YYYY-MM-DD"(KST 문자열 그대로) — 없으면 생략. */
+  tradedAt?: string;
 } | null {
   if (!raw) return null;
   const close = parseLooseNumber(raw.closePrice);
@@ -71,10 +75,20 @@ export function parseNaverIndexQuote(raw: NaverIndexRaw | null | undefined): {
 
   const dirRaw = raw.compareToPreviousPrice;
   const dir =
-    typeof dirRaw === "string" ? dirRaw : (dirRaw?.text ?? dirRaw?.name ?? "");
+    typeof dirRaw === "string"
+      ? dirRaw
+      : `${dirRaw?.code ?? ""} ${dirRaw?.text ?? ""} ${dirRaw?.name ?? ""}`;
   const mag = Math.abs(ratio);
-  const change = dir.includes("하락") ? -mag : dir.includes("보합") ? 0 : mag || ratio;
-  return { change, close };
+  // 방향 표기(한/영/코드) 우선, 미매치면 ratio 부호를 그대로 신뢰 — 양수 편향 폴백 금지(2026-07-13 사건).
+  const change = /하락|FALLING|(^|\s)5(\s|$)/.test(dir)
+    ? -mag
+    : /보합|EVEN|FLAT|(^|\s)3(\s|$)/.test(dir)
+      ? 0
+      : /상승|RISING|(^|\s)2(\s|$)/.test(dir)
+        ? mag
+        : ratio;
+  const tradedDate = raw.localTradedAt?.slice(0, 10);
+  return { change, close, ...(tradedDate && /^\d{4}-\d{2}-\d{2}$/.test(tradedDate) ? { tradedAt: tradedDate } : {}) };
 }
 
 function macroChange(quotes: MacroQuote[], key: MacroQuote["key"]): number | null {

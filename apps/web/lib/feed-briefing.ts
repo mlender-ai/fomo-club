@@ -241,6 +241,16 @@ function indexFacts(indices: ReadonlyArray<{ label: string; changePct: number }>
   return indices.map((i) => ({ label: `${i.label} 지수`, value: signedPct(i.changePct) }));
 }
 
+/**
+ * 스테일 세션 가드 — 소스가 준 거래일이 오늘(KST)과 다르면 true.
+ * 전 거래일 데이터가 "오늘의 국장"으로 발행된 2026-07-13 사건의 최후 방어선.
+ * 거래일 미제공(undefined)은 통과 — 가드는 확인 가능한 불일치만 막는다(fail-closed는 호출부).
+ * 휴장일(월요일 새벽 등)엔 거래일=전 거래일이라 자연히 발행이 스킵된다(정직한 무카드).
+ */
+export function isStaleSession(tradedAt: string | undefined, today: string): boolean {
+  return typeof tradedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(tradedAt) && tradedAt !== today;
+}
+
 function briefingDateLabel(date: string): string {
   const [, m, d] = date.match(/^\d{4}-(\d{2})-(\d{2})$/) ?? [];
   return m && d ? `${Number(m)}월 ${Number(d)}일` : date;
@@ -261,7 +271,8 @@ export async function buildUsBriefing(): Promise<FeedBriefingRow | null> {
       ...(materialTitle ? { materialTitle } : {}),
     });
   }
-  const macro = await fetchMacro().catch(() => []);
+  // fresh: 캐시 우회 — 브리핑은 크론 시점 실측만(2026-07-13 전 거래일 데이터 사건과 동일 계열 방지).
+  const macro = await fetchMacro({ fresh: true }).catch(() => []);
   const indices = macro
     .filter((q) => ["spx", "ndq", "sox"].includes(q.key) && typeof q.change === "number")
     .map((q) => ({ label: q.label, changePct: q.change as number }));
@@ -285,6 +296,18 @@ export async function buildUsBriefing(): Promise<FeedBriefingRow | null> {
 
 /** ① 오늘의 국장 브리핑 — 장마감 크론. 네이버 시세 + 종목뉴스 재료 + LLM 1콜. 급변동일 고정. */
 export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
+  const date = kstDate();
+  // fresh: 캐시 우회 — 브리핑은 반드시 크론 시점의 실측이어야 한다(2026-07-13 전 거래일 데이터 사건).
+  const macro = await fetchMacro({ fresh: true }).catch(() => []);
+  const krQuotes = macro.filter((q) => ["kospi", "kosdaq"].includes(q.key));
+  // 거래일 가드(fail-closed) — 소스 거래일 ≠ 오늘이면 발행하지 않는다. 틀린 카드보다 무카드.
+  const staleQuote = krQuotes.find((q) => isStaleSession(q.tradedAt, date));
+  if (staleQuote) {
+    console.error(
+      `[feed-briefing] KR 브리핑 발행 차단 — ${staleQuote.label} 거래일(${staleQuote.tradedAt}) ≠ 오늘(${date}). 스테일 데이터.`
+    );
+    return null;
+  }
   const rows = await fetchKrMarketRows().catch((): DiscoveryMarketRow[] => []);
   if (rows.length === 0) return null;
   const moverRows = pickMovers(rows);
@@ -297,9 +320,8 @@ export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
       ...(materialTitle ? { materialTitle } : {}),
     });
   }
-  const macro = await fetchMacro().catch(() => []);
-  const indices = macro
-    .filter((q) => ["kospi", "kosdaq"].includes(q.key) && typeof q.change === "number")
+  const indices = krQuotes
+    .filter((q) => typeof q.change === "number")
     .map((q) => ({ label: q.label, changePct: q.change as number }));
   const kospiChange = indices.find((i) => i.label.includes("코스피") || i.label.toUpperCase().includes("KOSPI"))?.changePct;
   const bigMove = typeof kospiChange === "number" && Math.abs(kospiChange) >= BIG_MOVE_PCT;
@@ -308,7 +330,6 @@ export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
   const baseNote = ai?.note ?? ruleNote(rows, "한국");
   // 급변동일 — 원인(섹터 펄스) 확장. 전부 실데이터.
   const note = bigMove && sectorPulse ? `크게 출렁인 날이에요. ${sectorPulse} ${baseNote}` : baseNote;
-  const date = kstDate();
   return {
     card: {
       kind: "content",
