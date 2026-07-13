@@ -107,11 +107,13 @@ export async function GET(request: Request) {
         `ai=${isAiConfigured()} enNews=${news.filter((a) => (a.lang ?? "en") === "en").length} usDeck=${usDeck.length} translated=${translated}`
       );
     } else if (slot === "close") {
-      await save(`briefing:kr:${date}`, await buildKrBriefing());
+      const kr = await buildKrBriefing();
+      if (kr) await save(`briefing:kr:${date}`, kr);
+      else written.push("briefing:kr=skipped");
       await save(`buzz:${date}`, await buildBuzzStory());
       const usDeck = await fetchUsDeckArticles().catch(() => []);
       const translated = await translateAndStoreUsTitles([...usDeck, ...(await fetchAllNews().catch(() => []))]).catch(() => 0);
-      if (translated > 0) written.push(`i18n:us-titles(${translated})`);
+      written.push(`i18n:usDeck=${usDeck.length} translated=${translated}`);
     } else if (slot === "pulse") {
       // 장중 급변 감지(WO-21 Phase 1) — 임계 미달·휴장·스테일이면 아무것도 쓰지 않는다(결정론·LLM 없음).
       await save(`briefing:kr-pulse:${date}`, await buildKrMarketPulse());

@@ -6,7 +6,7 @@ import { fetchKrMarketRows } from "./discovery-supply";
 import { fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
 import { computeStockAttentionSignals } from "./stock-signal-coverage";
 import { hasForbiddenCopy } from "./copy-guards";
-import { readFeedContent, readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
+import { deleteFeedContent, readFeedContent, readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
 import { fetchStockDaily } from "./stock-front";
 import { relatedTo } from "./relation-graph";
 import { kstDate } from "./fomo";
@@ -254,6 +254,22 @@ export function isStaleSession(tradedAt: string | undefined, today: string): boo
   return typeof tradedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(tradedAt) && tradedAt !== today;
 }
 
+/**
+ * KR 지수 발행 차단 사유(없으면 null) — 거래일 불일치 + 장 시작 전(PREOPEN).
+ * PREOPEN 사각지대(2026-07-14 실측): 네이버가 localTradedAt=현재시각(오늘)·등락률 0.00 껍데기를 줘서
+ * 거래일 가드만으로는 통과된다 → marketStatus 로 차단. 미제공 status 는 통과(확인 가능한 것만 막는다).
+ */
+export function krPublishBlockReason(
+  quotes: ReadonlyArray<{ label: string; tradedAt?: string; marketStatus?: string }>,
+  today: string
+): string | null {
+  for (const q of quotes) {
+    if (isStaleSession(q.tradedAt, today)) return `${q.label} 거래일(${q.tradedAt}) ≠ 오늘(${today}) — 스테일 데이터`;
+    if (q.marketStatus === "PREOPEN") return `${q.label} 장 시작 전(PREOPEN) — 등락률 0.00 껍데기 데이터`;
+  }
+  return null;
+}
+
 function briefingDateLabel(date: string): string {
   const [, m, d] = date.match(/^\d{4}-(\d{2})-(\d{2})$/) ?? [];
   return m && d ? `${Number(m)}월 ${Number(d)}일` : date;
@@ -315,12 +331,13 @@ export async function buildKrBriefing(): Promise<FeedBriefingRow | null> {
   // fresh: 캐시 우회 — 브리핑은 반드시 크론 시점의 실측이어야 한다(2026-07-13 전 거래일 데이터 사건).
   const macro = await fetchMacro({ fresh: true }).catch(() => []);
   const krQuotes = macro.filter((q) => ["kospi", "kosdaq"].includes(q.key));
-  // 거래일 가드(fail-closed) — 소스 거래일 ≠ 오늘이면 발행하지 않는다. 틀린 카드보다 무카드.
-  const staleQuote = krQuotes.find((q) => isStaleSession(q.tradedAt, date));
-  if (staleQuote) {
-    console.error(
-      `[feed-briefing] KR 브리핑 발행 차단 — ${staleQuote.label} 거래일(${staleQuote.tradedAt}) ≠ 오늘(${date}). 스테일 데이터.`
-    );
+  // 발행 가드(fail-closed) — 스테일 거래일·장 시작 전(PREOPEN)이면 발행하지 않는다. 틀린 카드보다 무카드.
+  const blockReason = krPublishBlockReason(krQuotes, date);
+  if (blockReason) {
+    console.error(`[feed-briefing] KR 브리핑 발행 차단 — ${blockReason}`);
+    // self-heal: 같은 날 앞서 잘못 발행된 행(장전 껍데기 등)이 남아 있으면 걷어낸다.
+    // 가드 차단이 확실할 때만 삭제 — 일시 장애(rows 부족)에는 손대지 않는다.
+    await deleteFeedContent(`briefing:kr:${date}`).catch(() => {});
     return null;
   }
   const rows = await fetchKrMarketRows().catch((): DiscoveryMarketRow[] => []);
@@ -423,10 +440,16 @@ export async function buildKrMarketPulse(): Promise<FeedBriefingRow | null> {
   const macro = await fetchMacro({ fresh: true }).catch(() => []);
   const indices = macro
     .filter((q) => ["kospi", "kosdaq"].includes(q.key) && typeof q.change === "number")
-    .map((q) => ({ key: q.key as "kospi" | "kosdaq", label: q.label, changePct: q.change as number, tradedAt: q.tradedAt }));
+    .map((q) => ({
+      key: q.key as "kospi" | "kosdaq",
+      label: q.label,
+      changePct: q.change as number,
+      ...(q.tradedAt ? { tradedAt: q.tradedAt } : {}),
+      ...(q.marketStatus ? { marketStatus: q.marketStatus } : {}),
+    }));
   if (indices.length === 0) return null;
-  // 거래일 가드 — 휴장/장 시작 전(전 거래일 데이터)이면 발화하지 않는다.
-  if (indices.some((i) => isStaleSession(i.tradedAt, date))) return null;
+  // 발행 가드 — 휴장·장 시작 전(스테일/PREOPEN 껍데기)이면 발화하지 않는다.
+  if (krPublishBlockReason(indices, date)) return null;
   const timeLabel = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
   // 임계 미달이면 시세 페이지 fetch 전에 빠지도록 — 먼저 지수만으로 판정.
   const probe = composeKrMarketPulse({ date, timeLabel, indices, movers: [] });
