@@ -13,7 +13,8 @@ import {
 import { processSearchQueue, rebuildSymbolIndex } from "../../../../../lib/symbol-index";
 import { translateAndStoreUsTitles } from "../../../../../lib/content-i18n";
 import { isAiConfigured } from "@fomo/shared";
-import { fetchAllNews } from "../../../../../lib/fomo-news-sources";
+import { fetchAllNews, fetchYahooStockNews } from "../../../../../lib/fomo-news-sources";
+import { readUsMarketQuoteRows } from "../../../../../lib/us-market-cache";
 
 /**
  * 피드 콘텐츠 프리웜 크론 (WO 피드 강화) — ?slot=morning|close|weekly
@@ -29,6 +30,35 @@ function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return true;
   return request.headers.get("authorization") === `Bearer ${secret}`;
+}
+
+/**
+ * US 덱 재료 기사 수집(WO-22) — 무버 상위 심볼별 Yahoo RSS 제목을 번역 캐시에 적재해
+ * 발견 카드/뎁스 훅(koreanTitle)이 영어 원문으로 떨어지지 않게 한다. 실패는 [](fail-open).
+ */
+const US_DECK_I18N_SYMBOLS = 25;
+const US_DECK_I18N_PER_SYMBOL = 3;
+const US_DECK_I18N_CONCURRENCY = 6;
+
+async function fetchUsDeckArticles(): Promise<Array<{ url: string; title: string; lang?: string }>> {
+  const rows = await readUsMarketQuoteRows().catch(() => []);
+  const symbols = rows
+    .filter((row) => typeof row.changePct === "number")
+    .sort((a, b) => Math.abs(b.changePct!) - Math.abs(a.changePct!))
+    .slice(0, US_DECK_I18N_SYMBOLS)
+    .map((row) => row.symbol);
+  const out: Array<{ url: string; title: string; lang?: string }> = [];
+  let cursor = 0;
+  async function worker() {
+    for (;;) {
+      const index = cursor++;
+      if (index >= symbols.length) return;
+      const articles = await fetchYahooStockNews(symbols[index]!, US_DECK_I18N_PER_SYMBOL).catch(() => []);
+      for (const a of articles) out.push({ url: a.url, title: a.title, lang: a.lang });
+    }
+  }
+  await Promise.all(Array.from({ length: US_DECK_I18N_CONCURRENCY }, () => worker()));
+  return out;
 }
 
 function isoWeekOf(date = new Date()): string {
@@ -70,12 +100,17 @@ export async function GET(request: Request) {
     if (slot === "morning") {
       await save(`briefing:us:${date}`, await buildUsBriefing());
       const news = await fetchAllNews().catch(() => []);
-      const translated = await translateAndStoreUsTitles(news).catch(() => 0);
-      written.push(`ai=${isAiConfigured()} enNews=${news.filter((a) => (a.lang ?? "en") === "en").length} translated=${translated}`);
+      const usDeck = await fetchUsDeckArticles().catch(() => []);
+      // 덱 훅 제목이 우선(가시 표면) — 번역 상한(MAX_TITLES_PER_RUN)에 걸려도 덱부터 채운다.
+      const translated = await translateAndStoreUsTitles([...usDeck, ...news]).catch(() => 0);
+      written.push(
+        `ai=${isAiConfigured()} enNews=${news.filter((a) => (a.lang ?? "en") === "en").length} usDeck=${usDeck.length} translated=${translated}`
+      );
     } else if (slot === "close") {
       await save(`briefing:kr:${date}`, await buildKrBriefing());
       await save(`buzz:${date}`, await buildBuzzStory());
-      const translated = await translateAndStoreUsTitles(await fetchAllNews().catch(() => [])).catch(() => 0);
+      const usDeck = await fetchUsDeckArticles().catch(() => []);
+      const translated = await translateAndStoreUsTitles([...usDeck, ...(await fetchAllNews().catch(() => []))]).catch(() => 0);
       if (translated > 0) written.push(`i18n:us-titles(${translated})`);
     } else if (slot === "pulse") {
       // 장중 급변 감지(WO-21 Phase 1) — 임계 미달·휴장·스테일이면 아무것도 쓰지 않는다(결정론·LLM 없음).
