@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     const stats = await writeCoinMarketSnapshots(snapshots);
     revalidateTag("daily-30", { expire: 0 });
     revalidateTag("feed-hub", { expire: 0 });
+    revalidateTag("coin-stock-front", { expire: 0 });
     return withCors(
       NextResponse.json(
         {

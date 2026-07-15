@@ -38,6 +38,7 @@ export async function GET(request: Request, context: { params: Promise<{ slot?: 
   });
   revalidateTag("daily-30", { expire: 0 });
   revalidateTag("feed-hub", { expire: 0 });
+  revalidateTag("us-stock-front", { expire: 0 });
 
   return NextResponse.json({
     ok: true,

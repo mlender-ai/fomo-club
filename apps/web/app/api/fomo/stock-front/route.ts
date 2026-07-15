@@ -52,6 +52,11 @@ async function getThemeRelativeMap(sector: StockSector): Promise<Record<string, 
 
 async function getFront(stock: string, lite = false, naverCode?: string, symbol?: string): Promise<StockFrontData> {
   const today = kstDate();
+  const marketTag = symbol?.startsWith("KRW-")
+    ? "coin-stock-front"
+    : symbol && !naverCode
+      ? "us-stock-front"
+      : undefined;
   const load = unstable_cache(
     async () => {
       const def = resolveStock(stock);
@@ -70,7 +75,7 @@ async function getFront(stock: string, lite = false, naverCode?: string, symbol?
       }, { lite, ...(naverCode ? { naverCode } : {}), ...(symbol ? { symbol } : {}) });
     },
     ["fomo-stock-front", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
-    { revalidate: REVALIDATE_S }
+    { revalidate: REVALIDATE_S, ...(marketTag ? { tags: [marketTag] } : {}) }
   );
   return load();
 }
