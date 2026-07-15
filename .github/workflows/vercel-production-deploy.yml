@@ -27,11 +27,8 @@ jobs:
       - name: Pull Vercel environment
         run: npx --yes vercel@latest pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
 
-      - name: Build production artifact
-        run: npx --yes vercel@latest build --prod --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Deploy production artifact
-        run: npx --yes vercel@latest deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      - name: Deploy with Vercel production runtime
+        run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
 
   deploy-fomo-web:
     runs-on: ubuntu-latest
@@ -47,8 +44,5 @@ jobs:
       - name: Pull Vercel environment
         run: npx --yes vercel@latest pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
 
-      - name: Build production artifact
-        run: npx --yes vercel@latest build --prod --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Deploy production artifact
-        run: npx --yes vercel@latest deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      - name: Deploy with Vercel production runtime
+        run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
