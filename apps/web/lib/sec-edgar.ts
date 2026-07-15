@@ -24,7 +24,10 @@ const SEC_FORM4_XML_SCAN_LIMIT = 8;
 
 function secUserAgent(): string | undefined {
   // SEC 은 연락처 포함 UA 를 요구 — env 미설정이면 기본 UA 폴백(피드 종목이슈가 env 없이도 동작).
-  return process.env.SEC_EDGAR_USER_AGENT?.trim() || "FomoClub/1.0 (contact: fomo-club@users.noreply.github.com)";
+  // ⚠️ UA 형식 주의(2026-07-15 실측): "이름/버전 email@domain" 평문만 200.
+  // 괄호 "(contact: …)" 형식·users.noreply.github.com 주소는 SEC WAF가 403 — 프로덕션에서
+  // fetchRecentSecFilings가 전부 []로 죽어 US 브리핑 '왜'·stock-issue가 통째로 사라졌던 원인.
+  return process.env.SEC_EDGAR_USER_AGENT?.trim() || "FomoClub/1.0 fomo-club@example.com";
 }
 
 function accessionPath(cik: string, accession: string): string {
