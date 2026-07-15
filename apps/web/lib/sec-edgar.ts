@@ -121,10 +121,14 @@ const SEC_8K_ITEM_LABELS: Record<string, string> = {
 // 급변동 원인으로서의 정보 가치 순 — 실적(2.02)이 최우선(가장 흔한 급변동 원인).
 const SEC_8K_ITEM_PRIORITY = ["2.02", "2.05", "2.06", "1.01", "1.02", "3.01", "5.02", "4.01", "7.01", "8.01"];
 
-function eightKLabel(items: string | undefined): string {
+/**
+ * ⚠️ 문구 제약: "공시가 확인됐어요" 류는 copy-guards의 추상 슬롭 블록리스트(공시…확인됐)에 걸려
+ * 브리핑 detail(safeWhy→hasForbiddenCopy)에서 통째로 폐기된다 — 사실 명사구 형태를 유지할 것.
+ */
+function eightKLabel(items: string | undefined, asOf: string): string {
   const codes = (items ?? "").split(",").map((c) => c.trim()).filter(Boolean);
   const hit = SEC_8K_ITEM_PRIORITY.find((code) => codes.includes(code));
-  return hit ? `${SEC_8K_ITEM_LABELS[hit]} 8-K 공시가 확인됐어요.` : "8-K 공시가 확인됐어요.";
+  return hit ? `${SEC_8K_ITEM_LABELS[hit]} 8-K 공시 · ${mmdd(asOf)}` : `8-K 공시 제출 · ${mmdd(asOf)}`;
 }
 
 function parseForm4InsiderPurchase(symbol: string, xml: string): SecFilingHit["insiderPurchase"] | undefined {
@@ -240,7 +244,7 @@ export async function fetchRecentSecFilings(symbol: string, limit = 4): Promise<
       if (!asOf || !accession) continue;
       out.push({
         symbol: symbol.toUpperCase(),
-        label: form === "8-K" ? eightKLabel(recent.items?.[i]) : `${form} 공시가 확인됐어요.`,
+        label: form === "8-K" ? eightKLabel(recent.items?.[i], asOf) : `${form} 공시 제출 · ${mmdd(asOf)}`,
         source: "SEC EDGAR",
         asOf,
         url: accessionPath(cik, accession),
