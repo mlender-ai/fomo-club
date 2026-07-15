@@ -602,8 +602,11 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
 }
 
 function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
-  // 한글 번역(크론 캐시) 우선 — 없으면 원문 클린 폴백(무회귀). 제품 한국어 우선(2026-07-12).
-  const label = koreanTitle(article.url) ?? cleanUsMaterialTitle(article.title);
+  // cleanUsMaterialTitle 은 "이 기사가 재료로 쓸 만한가" 품질 게이트로만 쓴다(영문 표시 금지, 2026-07-15).
+  if (!cleanUsMaterialTitle(article.title)) return null;
+  // 한글 번역(크론 캐시) 필수 — 없으면 카드 노출 안 함. 개별 심볼 Yahoo URL은 번역 캐시에 거의 없어
+  // 예전엔 원문 영문이 그대로 새어나갔다("미장 카드 어떤 건 영문·어떤 건 한글" 사건).
+  const label = koreanTitle(article.url);
   if (!label) return null;
   const sourceName = article.source || sourceFallback;
   const sourceTitle = decodeHtmlEntities(article.title).replace(/\s+/g, " ").trim();

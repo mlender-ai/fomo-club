@@ -3,7 +3,8 @@ import { sectorOf } from "@fomo/core";
 import { fetchMacro } from "./fomo-market-sources";
 import { readUsMarketQuoteRows } from "./us-market-cache";
 import { fetchKrMarketRows } from "./discovery-supply";
-import { fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
+import { fetchNaverStockNews } from "./fomo-news-sources";
+import { fetchRecentSecFilings } from "./sec-edgar";
 import { computeStockAttentionSignals } from "./stock-signal-coverage";
 import { hasForbiddenCopy } from "./copy-guards";
 import { deleteFeedContent, readFeedContent, readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
@@ -204,9 +205,15 @@ function relevantTitle(articles: ReadonlyArray<{ title: string }>, name: string)
   return hit?.title?.trim() || undefined;
 }
 
+/**
+ * SEC EDGAR 전용(2026-07-15 User Zero: "IBM 실적 배경이 전혀 안 보인다").
+ * Yahoo 심볼별 RSS는 프로덕션 egress 차단으로 사실상 항상 빈 배열이라 "왜"가 나올 수 없었다.
+ * SEC는 Yahoo와 무관하고, 8-K Item 코드로 실적/구조조정 등 실제 사유를 구분한다(전부 한국어 — 영문 폴백 없음).
+ */
 async function moverMaterialTitleUs(symbol: string): Promise<string | undefined> {
-  const articles = await fetchYahooStockNews(symbol, 4).catch(() => []);
-  return articles[0]?.title?.trim() || undefined; // Yahoo는 심볼별 RSS라 자체적으로 관련 보장
+  const filings = await fetchRecentSecFilings(symbol, 3).catch(() => []);
+  const hit = filings.find((f) => f.insiderPurchase) ?? filings[0];
+  return hit?.label;
 }
 
 async function moverMaterialTitleKr(naverCode: string | undefined, name: string): Promise<string | undefined> {
@@ -305,7 +312,8 @@ export async function buildUsBriefing(): Promise<FeedBriefingRow | null> {
       contentType: "briefing",
       scope: "world",
       headline: `간밤의 미장 요약 — ${briefingDateLabel(date)}`,
-      facts: [...moverFacts(movers, ai?.whyBySymbol ?? new Map()), ...indexFacts(indices)],
+      // koreanMaterialFallback: true — materialTitle 은 이제 SEC 라벨(한국어)뿐이라 LLM 실패해도 안전.
+      facts: [...moverFacts(movers, ai?.whyBySymbol ?? new Map(), { koreanMaterialFallback: true }), ...indexFacts(indices)],
       note,
       source: "미장 시세·수집 뉴스",
       asOf: date,

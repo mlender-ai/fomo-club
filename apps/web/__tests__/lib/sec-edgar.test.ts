@@ -64,4 +64,54 @@ describe("SEC EDGAR Form 4 insider purchases", () => {
       transactionDate: "2026-06-15",
     });
   });
+
+  // 2026-07-15 User Zero: "IBM 실적 부진 8-K가 왜 그냥 '공시 확인'이냐" — Item 코드로 실제 사유 표시.
+  it("8-K의 items 필드(2.02=실적 발표)를 한국어 사유로 반영한다", async () => {
+    vi.stubEnv("SEC_EDGAR_USER_AGENT", "fomo-test contact@example.com");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("data.sec.gov/submissions")) {
+        return Response.json({
+          filings: {
+            recent: {
+              form: ["8-K"],
+              filingDate: ["2026-07-14"],
+              primaryDocument: ["form8k.htm"],
+              accessionNumber: ["0001045810-26-000200"],
+              items: ["2.02,9.01"],
+            },
+          },
+        });
+      }
+      return Response.json({});
+    });
+
+    const { fetchRecentSecFilings } = await import("../../lib/sec-edgar");
+    const hits = await fetchRecentSecFilings("IBM", 2);
+    expect(hits[0]?.label).toBe("실적 발표 8-K 공시가 확인됐어요.");
+  });
+
+  it("items 필드가 없거나 매핑되지 않은 코드면 기존 일반 문구로 폴백한다", async () => {
+    vi.stubEnv("SEC_EDGAR_USER_AGENT", "fomo-test contact@example.com");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("data.sec.gov/submissions")) {
+        return Response.json({
+          filings: {
+            recent: {
+              form: ["8-K"],
+              filingDate: ["2026-07-14"],
+              primaryDocument: ["form8k.htm"],
+              accessionNumber: ["0001045810-26-000201"],
+            },
+          },
+        });
+      }
+      return Response.json({});
+    });
+
+    const { fetchRecentSecFilings } = await import("../../lib/sec-edgar");
+    const hits = await fetchRecentSecFilings("IBM", 2);
+    expect(hits[0]?.label).toBe("8-K 공시가 확인됐어요.");
+  });
 });

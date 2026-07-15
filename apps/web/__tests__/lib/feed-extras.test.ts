@@ -2,8 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import type { RawArticle } from "@fomo/core";
 
 vi.mock("../../lib/fomo-news-sources", () => ({ fetchAllNews: vi.fn(async () => mockedNews) }));
+vi.mock("../../lib/coin-market-source", () => ({ readCoinMarketSnapshots: vi.fn(async () => []) }));
 
-import { buildEventCard, buildHotIssueCards, buildTermCard, normalizedTitleKey, upcomingMarketEvents } from "../../lib/feed-extras";
+import {
+  buildCoinIssueCards,
+  buildEventCard,
+  buildHotIssueCards,
+  buildTermCard,
+  normalizedTitleKey,
+  upcomingMarketEvents,
+} from "../../lib/feed-extras";
 
 const NOW = new Date().toISOString();
 function article(id: string, title: string, source: string): RawArticle {
@@ -82,5 +90,33 @@ describe("hot-issue 제목 dedup", () => {
     expect(new Set(titles).size).toBe(titles.length);
     // 신디케이트 1건 vs 다매체 사건 3건 — 사건이 이겨야 한다
     expect(ko!.headline).toMatch(/이란|코스피/);
+  });
+});
+
+// 2026-07-15 User Zero: "체인링크 1% 오른 게 뭐가 중요해" — 코인 핫이슈는 매크로/규제 사건 우선.
+describe("coin-issue 매크로 우선", () => {
+  it("코인 전문 매체의 규제·법안 기사가 있으면 헤드라인을 차지한다(가격 무버 무시)", async () => {
+    mockedNews = [
+      article("c1", "국회, 가상자산 클래리티 법안 본회의 통과", "토큰포스트"),
+      article("c2", "비트코인, 오늘 소폭 상승 마감", "블록미디어"),
+    ];
+    const [card] = await buildCoinIssueCards();
+    expect(card).toBeDefined();
+    expect(card!.contentType).toBe("coin-issue");
+    expect(card!.headline).toBe("국회, 가상자산 클래리티 법안 본회의 통과");
+    expect(card!.source).toBe("토큰포스트");
+  });
+
+  it("코인 전문 매체가 아니면(일반 경제지) 매크로 키워드가 있어도 무시한다", async () => {
+    mockedNews = [article("m1", "가상자산 ETF 승인 임박", "매일경제")];
+    const cards = await buildCoinIssueCards();
+    // 스냅샷도 없고(mock=[]) 매크로 기사도 자격 미달 — 정직하게 카드 없음.
+    expect(cards).toEqual([]);
+  });
+
+  it("코인 전문 매체라도 매크로 키워드가 없는 단순 가격 기사는 무시한다", async () => {
+    mockedNews = [article("c3", "리플, 오늘도 조용한 하루", "토큰포스트")];
+    const cards = await buildCoinIssueCards();
+    expect(cards).toEqual([]);
   });
 });
