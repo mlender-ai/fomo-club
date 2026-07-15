@@ -58,6 +58,8 @@ export type FrontEntry = {
   axisSignals?: AxisSignal[];
   axisHook?: MultiAxisHookSelection;
   verdict?: CardVerdict;
+  candles?: NonNullable<StockFrontResponse["candles"]>;
+  chartSeries?: NonNullable<StockFrontResponse["chartSeries"]>;
 };
 
 type UndoEntry = {

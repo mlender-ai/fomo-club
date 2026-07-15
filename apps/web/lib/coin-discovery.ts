@@ -3,6 +3,7 @@ import type { CardFrontSignals } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
 import type { DiscoveryFrontSeed, DiscoveryResponse, DiscoveryStockPayload } from "./discovery-supply";
+import { buildChartSeries } from "./stock-front";
 
 /**
  * 코인 카드 (WO 미장·코인 확충 — Phase C 알트 발굴 폐기, User Zero 결정) —
@@ -109,12 +110,14 @@ export function coinCoverageHeadline(snapshot: CoinMarketSnapshot, signal: CoinS
   return parts.join(" · ");
 }
 
-function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal): DiscoveryFrontSeed {
+export function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal): DiscoveryFrontSeed {
   const changePct = Number(snapshot.changePct.toFixed(2));
   const volumeRatio = Number(signal.volumeRatio.toFixed(2));
   const signals: CardFrontSignals = { changePct, volumeRatio };
   const closes = snapshot.candles.map((c) => c.close);
   const changeDir: "up" | "down" | "flat" = snapshot.changePct > 0 ? "up" : snapshot.changePct < 0 ? "down" : "flat";
+  const candles = snapshot.candles.slice(-120);
+  const chartSeries = buildChartSeries(candles);
   return {
     signals,
     fomo: computeFomoScore({ changePct, volumeRatio, asOf: kstDate() }),
@@ -127,6 +130,8 @@ function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal): Discov
       volumeRatio: signal.volumeRatio,
       currency: "KRW",
     }),
+    candles,
+    ...(chartSeries ? { chartSeries } : {}),
   };
 }
 

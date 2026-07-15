@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeCoinSignal, hasDiscoverySignal, coinHeadline, type CoinSignal } from "../../lib/coin-discovery";
+import { coinFrontSeed, computeCoinSignal, hasDiscoverySignal, coinHeadline, type CoinSignal } from "../../lib/coin-discovery";
 import type { CoinMarketSnapshot } from "../../lib/coin-market-source";
 
 function snapshot(overrides: Partial<CoinMarketSnapshot> = {}): CoinMarketSnapshot {
@@ -72,5 +72,17 @@ describe("coin discovery signals", () => {
     const signal: CoinSignal = { volumeRatio: 2.1, vacuumInflow: false, bigMove: true, quiet: false };
     const s = snapshot({ changePct: 7.23 });
     expect(coinHeadline(s, signal)).toBe("하루 +7.2% · 24시간 거래대금 평소 2.1배");
+  });
+
+  it("프리웜에서 확보한 실제 캔들과 차트 시리즈를 카드 seed에 유지", () => {
+    const s = snapshot({ accTradePrice24h: 1.5e10 });
+    const signal = computeCoinSignal(s)!;
+    const front = coinFrontSeed(s, signal);
+
+    expect(front.candles).toHaveLength(40);
+    expect(front.candles?.[0]).toEqual(s.candles[0]);
+    expect(front.chartSeries?.closes).toHaveLength(40);
+    expect(front.chartSeries?.volumes).toHaveLength(40);
+    expect(front.chartSeries?.ma20.at(-1)).toBe(1500);
   });
 });

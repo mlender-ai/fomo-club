@@ -93,7 +93,7 @@ export interface StockChartSeries {
   ma120: Array<number | null>;
 }
 
-function buildChartSeries(candles: readonly DailyOhlcv[], window = 120): StockChartSeries | undefined {
+export function buildChartSeries(candles: readonly DailyOhlcv[], window = 120): StockChartSeries | undefined {
   const clean = candles.filter((c) => Number.isFinite(c.close) && c.close > 0);
   if (clean.length < 20) return undefined;
   const closes = clean.map((c) => c.close);

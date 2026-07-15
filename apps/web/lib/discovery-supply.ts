@@ -137,6 +137,15 @@ export interface DiscoveryFrontSeed {
   axisHook?: MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — 캔들이 있는 종목만(가짜 판단 금지). */
   verdict?: CardVerdict;
+  /** 프리웜이 이미 확보한 실제 일봉. 코인은 상세 첫 렌더의 차트 바닥으로 재사용한다. */
+  candles?: DailyOhlcv[];
+  chartSeries?: {
+    closes: number[];
+    volumes: number[];
+    ma20: Array<number | null>;
+    ma60: Array<number | null>;
+    ma120: Array<number | null>;
+  };
 }
 
 export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
