@@ -91,9 +91,14 @@ export async function GET(req: Request) {
   }
   try {
     const data = await getFront(stock, lite, naverCode, symbol);
+    const prewarmedMarket = symbol?.startsWith("KRW-") || (!!symbol && !naverCode);
     return withCors(
       NextResponse.json(data, {
-        headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400" },
+        headers: {
+          "Cache-Control": prewarmedMarket
+            ? "no-store"
+            : "public, s-maxage=600, stale-while-revalidate=86400",
+        },
       })
     );
   } catch (err) {
