@@ -1,7 +1,7 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
+import { fomoCardView, computeFomoScore, selectFomoHook } from "@fomo/core";
 import type {
   AxisSignal,
   CardFrontSignals,
@@ -27,8 +27,8 @@ import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
+import { discoveryStatus, verdictBalance, type DiscoveryStatusView } from "@/lib/discoveryPresentation";
 import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
-import { FlickerSpinner } from "@/components/FlickerSpinner";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -126,33 +126,6 @@ function LogoBadge({
     >
       {ch}
     </span>
-  );
-}
-
-/** 미니 라인차트 — 가격 흐름만 조용히 보여준다. 프라이머리 컬러는 점수/CTA에만 남긴다. */
-function Sparkline({ series }: { series: number[] }) {
-  const pts = series.filter((v) => typeof v === "number" && Number.isFinite(v));
-  if (pts.length < 2) return null;
-  const W = 300;
-  const H = 44;
-  const paths = sparklinePath(pts, W, H);
-  if (!paths) return null;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-2 h-8 w-full shrink-0" aria-hidden>
-      <path d={paths.line} fill="none" stroke="rgba(250,250,250,0.52)" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChartSlot({ series, supported }: { series?: number[] | undefined; supported: boolean }) {
-  if (series && series.length >= 2) return <Sparkline series={series} />;
-  return (
-    <div className="mt-2 flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-hairline bg-white/[0.03]">
-      {supported && <FlickerSpinner size={14} />}
-      <span className="font-pixel text-[10px] text-muted">
-        {supported ? "차트 불러오는 중" : "차트 데이터 없음"}
-      </span>
-    </div>
   );
 }
 
@@ -296,37 +269,33 @@ function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progres
   );
 }
 
-// 판단 층(WO Phase 1) stance 표기 — enter=라임(발견 액센트), watch=중립, avoid=회색. 공포색 금지.
-const STANCE_META: Record<CardVerdict["stance"], { label: string; color: string }> = {
-  enter: { label: "진입 검토", color: NEON },
-  watch: { label: "관망", color: "#C9C9C4" },
-  avoid: { label: "회피", color: "#8A8A86" },
-};
-
-/** 카드 판단 층 — 판단 1줄 + 근거 최대 3 + 무효화 1줄. 스와이프 UX 불변, 카드 안에서 스크롤 없음. */
-function VerdictBlock({ verdict }: { verdict: CardVerdict }) {
-  const meta = STANCE_META[verdict.stance];
+/** 발견 상태와 차트 균형을 분리해 보여준다. 매매 행동처럼 읽히는 라벨은 쓰지 않는다. */
+function DiscoverySignalBlock({
+  status,
+  score,
+  verdict,
+  contextLine,
+}: {
+  status: DiscoveryStatusView;
+  score: number;
+  verdict?: CardVerdict | undefined;
+  contextLine?: string | undefined;
+}) {
+  const balance = verdictBalance(verdict);
   return (
     <div className="mt-2.5 shrink-0 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
-      <p className="text-sm leading-5 text-whiteout" style={clampStyle(2)}>
-        <span className="font-bold" style={{ color: meta.color }}>
-          {meta.label}
-        </span>
-        <span className="mx-1.5 text-muted/60">·</span>
-        {verdict.stanceText}
-      </p>
-      {verdict.evidence.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5">
-          {verdict.evidence.slice(0, 3).map((line, i) => (
-            <li key={`ev-${i}`} className="text-xs leading-4 text-muted" style={clampStyle(1)}>
-              · {line}
-            </li>
-          ))}
-        </ul>
-      )}
-      {verdict.invalidation && (
-        <p className="mt-1.5 text-[10px] leading-4 text-muted/80" style={clampStyle(1)}>
-          {verdict.invalidation}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-bold" style={{ color: status.color }}>{status.label}</span>
+        {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
+      </div>
+      <p className="mt-1 text-xs leading-5 text-muted" style={clampStyle(2)}>{status.summary}</p>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-[10px] text-muted">관심 온도</span>
+        <FomoMeter score={score} color={status.color} />
+      </div>
+      {contextLine && (
+        <p className="mt-1.5 text-xs leading-4 text-whiteout" style={clampStyle(1)}>
+          <span className="text-muted">포착 근거 · </span>{contextLine}
         </p>
       )}
     </div>
@@ -335,7 +304,7 @@ function VerdictBlock({ verdict }: { verdict: CardVerdict }) {
 
 /**
  * 종목 카드 앞면 — 포모 점수(척추 ②, 단일 출처)로 점수·라벨·헤드라인·톤. 휴리스틱 대체.
- * 정체성 / 현재가 / 포모점수+라벨 / 테마태그 / 헤드라인 / 판단 층 / 스파크라인. 점수=주목도(품질 아님).
+ * 정체성 / 현재가 / 테마태그 / 헤드라인 / 발견 상태 / 근거. 차트는 뎁스에서만 보여준다.
  */
 function StockCardFace({
   stock,
@@ -345,12 +314,12 @@ function StockCardFace({
   changeText,
   changeDir,
   rankLabel,
-  sparkline,
-  chartSupported,
   subLine,
   feedBull,
   feedBear,
   why,
+  fomo,
+  discoveryContext,
   verdict,
   progress,
 }: {
@@ -361,12 +330,12 @@ function StockCardFace({
   changeText?: string | undefined;
   changeDir?: "up" | "down" | "flat" | undefined;
   rankLabel?: string | undefined;
-  sparkline?: number[] | undefined;
-  chartSupported: boolean;
   subLine?: string | undefined;
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
   why?: string | undefined;
+  fomo: FomoScoreResult;
+  discoveryContext?: string | undefined;
   verdict?: CardVerdict | undefined;
   progress?: string | undefined;
 }) {
@@ -417,9 +386,9 @@ function StockCardFace({
         {view.headline}
       </p>
 
-      {/* 판단 층(WO Phase 1) — 있으면 이유/신호 스트립을 대체(카드 밀도 유지, 스크롤 금지). */}
+      {/* 발견 상태와 차트 균형은 서로 다른 축이다. */}
       {verdict ? (
-        <VerdictBlock verdict={verdict} />
+        <DiscoverySignalBlock status={discoveryStatus(fomo)} score={fomo.fomoScore} verdict={verdict} contextLine={discoveryContext} />
       ) : (
         <>
           {why && (
@@ -443,8 +412,7 @@ function StockCardFace({
         </>
       )}
 
-      {/* 미니 스파크라인(최근 흐름) — lite 응답도 짧은 라인차트를 싣는다. */}
-      <ChartSlot series={sparkline} supported={chartSupported} />
+      {verdict && <FeedSignalStrip bull={feedBull} bear={feedBear} />}
 
       <div className="mt-auto flex shrink-0 items-center justify-between pt-2">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
@@ -683,6 +651,14 @@ export function StockSwipeDeck({
       subLine,
       preserveGroundedReason: false,
     });
+    const normalizedHeadline = view.headline.replace(/\s+/g, "").toLowerCase();
+    const groundedContext = stock.reason?.trim();
+    const discoveryContext =
+      deduped.why ??
+      deduped.feedBull?.text ??
+      (groundedContext && groundedContext.replace(/\s+/g, "").toLowerCase() !== normalizedHeadline
+        ? groundedContext
+        : undefined);
     return (
       <StockCardFace
         stock={stock}
@@ -692,12 +668,12 @@ export function StockSwipeDeck({
         changeText={e?.changeText}
         changeDir={e?.changeDir}
         rankLabel={rankLabelFor(stock)}
-        sparkline={e?.sparkline}
-        chartSupported={(e?.sparkline?.length ?? 0) >= 2}
         subLine={deduped.subLine}
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
         why={deduped.why}
+        fomo={e.fomo}
+        discoveryContext={discoveryContext}
         verdict={e?.verdict}
         progress={progress}
       />

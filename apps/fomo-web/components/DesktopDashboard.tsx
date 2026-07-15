@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CardVerdict } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
@@ -17,6 +16,7 @@ import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { StockIssueCard, sectorCardData } from "@/components/FeedView";
 import { CalendarCard } from "@/components/CalendarCard";
+import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
 
 /**
  * PC(≥1024px) 3컬럼 대시보드 — WO-PC-VERSION.
@@ -61,12 +61,6 @@ function cardTag(card: DeckCard): FilterTag {
   return stock.country === "US" ? "us" : "kr";
 }
 
-const STANCE_BADGE: Record<CardVerdict["stance"], { label: string; color: string }> = {
-  enter: { label: "진입 검토", color: NEON },
-  watch: { label: "관망", color: "#C9C9C4" },
-  avoid: { label: "회피", color: "#8A8A86" },
-};
-
 function cardId(card: DeckCard): string {
   if (card.type === "stock") return `stock:${card.data.canonical}`;
   return `${card.type}:${card.data.id}`;
@@ -84,8 +78,8 @@ function CardListRow({
   active: boolean;
   onSelect: () => void;
 }) {
-  const verdict = front?.verdict;
-  const badge = verdict ? STANCE_BADGE[verdict.stance] : undefined;
+  const status = card.type === "stock" ? discoveryStatus(front?.fomo) : undefined;
+  const balance = card.type === "stock" ? verdictBalance(front?.verdict) : undefined;
   const title =
     card.type === "stock" ? card.data.canonical : card.type === "sector" ? `${card.data.sector} 섹터` : card.data.headline;
   const hook = card.type === "stock" ? card.data.headline ?? card.data.reason : card.type === "content" ? card.data.facts[0]?.label : undefined;
@@ -110,16 +104,19 @@ function CardListRow({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-bold text-whiteout">{title}</span>
-        {badge && (
+        {status && (
           <span
             className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold"
-            style={{ borderColor: badge.color, color: badge.color }}
+            style={{ borderColor: status.color, color: status.color }}
           >
-            {badge.label}
+            {status.label}
           </span>
         )}
       </div>
-      <div className="mt-0.5 text-[11px] text-muted">{kicker}</div>
+      <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-muted">
+        <span>{kicker}</span>
+        {balance && <span style={{ color: balance.color }}>{balance.label}</span>}
+      </div>
       {hook && (
         <p className="mt-1 truncate text-xs leading-5 text-muted">{hook}</p>
       )}
@@ -272,12 +269,12 @@ export function DesktopDashboard() {
 
       {/* ③ 우 — feed-hub(피드 탭과 동일 소스·이원화 금지) + 성과 되짚기. 클릭 → 중앙 뎁스. */}
       <section className="scrollbar-none min-h-0 space-y-3 overflow-y-auto">
-        {(feedItems.length > 0 ? feedItems : []).slice(0, 8).map((item) => {
+        {(feedItems.length > 0 ? feedItems : []).slice(0, 8).map((item, index) => {
           const id = feedItemId(item);
-          const active = feedItem ? feedItemId(feedItem) === id : false;
+          const active = feedItem === item;
           return (
             <button
-              key={id}
+              key={`${id}:${index}`}
               type="button"
               onClick={() => setFeedItem(item)}
               aria-pressed={active}

@@ -27,6 +27,7 @@ import {
 } from "@/lib/fomoApi";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { describe52wGap, describeRsi } from "@/lib/depthCopy";
+import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 
 /**
@@ -462,7 +463,7 @@ function frontSignalMetrics(front: StockFrontResponse | null): BasicMetricView[]
       term: "시장 내 위치",
     });
   }
-  if (typeof s.volumeRatio === "number" && s.volumeRatio > 0) {
+  if (typeof s.volumeRatio === "number" && s.volumeRatio >= 0.1) {
     metrics.push({
       label: "거래량",
       value: `평소 ${formatRatio(s.volumeRatio)}`,
@@ -697,19 +698,12 @@ function formatChartPrice(value: number): string {
   return value.toFixed(2);
 }
 
-function syntheticCandlesFromSparkline(series: readonly number[]): DailyOhlcv[] {
-  return series
-    .filter((v) => Number.isFinite(v) && v > 0)
-    .map((close, i, arr) => {
-      const open = i > 0 ? arr[i - 1]! : close;
-      return {
-        open,
-        close,
-        high: Math.max(open, close),
-        low: Math.min(open, close),
-        volume: 0,
-      };
-    });
+function formatAxisPrice(value: number): string {
+  if (value >= 100_000_000) return `${Math.round(value / 1_000_000)}M`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+  if (value >= 10_000) return `${Math.round(value / 1_000)}K`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return formatChartPrice(value);
 }
 
 function smaValues(candles: readonly DailyOhlcv[], period: number): Array<number | null> {
@@ -811,7 +805,7 @@ function movementFacts(front: StockFrontResponse | null): ChartTooltip[] {
       body: `오늘 ${front.changeDir === "up" ? "상승" : front.changeDir === "down" ? "하락" : "보합"} ${normalizeChangeText(front.changeText)}`,
     });
   }
-  if (finiteNumber(front.signals.volumeRatio) && front.signals.volumeRatio > 0) {
+  if (finiteNumber(front.signals.volumeRatio) && front.signals.volumeRatio >= 0.1) {
     facts.push({
       title: "거래 참여",
       body: `오늘 거래량은 최근 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배예요.`,
@@ -830,22 +824,21 @@ function movementFacts(front: StockFrontResponse | null): ChartTooltip[] {
   return facts.slice(0, 3);
 }
 
-/** 왜 움직였나 — 기술 지표가 아니라 최근 가격·거래량 반응만 보여준다. */
+/** 발견 이유 — 선택 기간의 가격·거래량을 정직하게 보여준다. 임의의 사건 반응 기간을 만들지 않는다. */
 function MovementResponseChart({ front }: { front: StockFrontResponse | null }) {
   const [range, setRange] = useState<MovementRange>("1m");
   const [tooltip, setTooltip] = useState<ChartTooltip | null>(null);
   const sourceCandles = useMemo(() => {
-    const candles = front?.candles?.filter((c) =>
+    return front?.candles?.filter((c) =>
       [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)
-    );
-    if (candles && candles.length >= 2) return candles;
-    return syntheticCandlesFromSparkline(front?.sparkline ?? []);
-  }, [front?.candles, front?.sparkline]);
+    ) ?? [];
+  }, [front?.candles]);
 
   const candles = useMemo(() => sourceCandles.slice(-(range === "1m" ? 22 : 66)), [sourceCandles, range]);
   if (candles.length < 2) return null;
 
   const W = DETAIL_CHART.W;
+  const PLOT_W = 278;
   const PRICE_H = DETAIL_CHART.PRICE_H;
   const VOL_TOP = DETAIL_CHART.VOL_TOP;
   const VOL_H = DETAIL_CHART.VOL_H;
@@ -857,23 +850,24 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
   const min = minRaw - pad;
   const max = maxRaw + pad;
   const span = max - min || 1;
-  const x = (i: number) => (i / (candles.length - 1)) * W;
+  const x = (i: number) => (i / (candles.length - 1)) * PLOT_W;
   const y = (v: number) => 6 + (1 - (v - min) / span) * (PRICE_H - 12);
-  const step = W / Math.max(1, candles.length - 1);
+  const step = PLOT_W / Math.max(1, candles.length - 1);
   const bodyW = Math.max(2, Math.min(range === "1m" ? 8 : 4.8, step * 0.58));
   const maxVol = Math.max(...candles.map((c) => c.volume), 1);
   const latest = candles[candles.length - 1];
-  const reactionStart = Math.max(0, candles.length - 5);
-  const reactionBase = candles[reactionStart]!.open;
-  const reactionPct = reactionBase > 0 ? ((latest!.close / reactionBase) - 1) * 100 : 0;
-  const reactionColor = reactionPct >= 0 ? DETAIL_CHART.up : DETAIL_CHART.down;
+  const rangeBase = candles[0]!.open;
+  const rangePct = rangeBase > 0 ? ((latest!.close / rangeBase) - 1) * 100 : 0;
+  const rangeColor = rangePct >= 0 ? DETAIL_CHART.up : DETAIL_CHART.down;
+  const rangeLabel = range === "1m" ? "1개월" : "3개월";
+  const priceTicks = [maxRaw, (maxRaw + minRaw) / 2, minRaw];
 
   return (
     <section className="mt-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="font-pixel text-sm text-whiteout">시장 반응</p>
-          <p className="mt-1 text-[11px] text-muted">재료와 같은 기간에 가격·거래가 어떻게 움직였는지 봐요.</p>
+          <p className="font-pixel text-sm text-whiteout">가격 흐름</p>
+          <p className="mt-1 text-[11px] text-muted">선택한 기간의 가격과 거래 참여를 함께 봐요.</p>
         </div>
         <div className="flex rounded-full border border-hairline bg-surface p-0.5">
           {(["1m", "3m"] as const).map((key) => (
@@ -892,28 +886,38 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
           ))}
         </div>
       </div>
-      <div className="relative mt-3 rounded-xl border border-hairline bg-surface px-3 py-3">
+      <div className="relative mt-3 rounded-lg border border-white/15 bg-[#050706] px-3 py-3 shadow-inner">
+        <div className="mb-2 flex items-center justify-between gap-3 border-b border-white/10 pb-2">
+          <span className="font-pixel text-[10px] text-muted">{rangeLabel} · {markerDateLabel(latest)}</span>
+          <span className="font-number text-xs font-bold" style={{ color: rangeColor }}>
+            {rangePct >= 0 ? "+" : ""}{rangePct.toFixed(1)}%
+          </span>
+        </div>
+        <div className="mb-2 grid grid-cols-4 gap-2 text-[9px] text-muted">
+          <span>O <b className="text-whiteout">{formatAxisPrice(latest!.open)}</b></span>
+          <span>H <b className="text-whiteout">{formatAxisPrice(latest!.high)}</b></span>
+          <span>L <b className="text-whiteout">{formatAxisPrice(latest!.low)}</b></span>
+          <span>C <b style={{ color: latest!.close >= latest!.open ? DETAIL_CHART.up : DETAIL_CHART.down }}>{formatAxisPrice(latest!.close)}</b></span>
+        </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="최근 가격·거래량 반응 차트">
           {[0.25, 0.5, 0.75].map((ratio) => (
-            <line key={ratio} x1="0" x2={W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke={DETAIL_CHART.grid} />
+            <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke={DETAIL_CHART.grid} />
           ))}
-          <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke={DETAIL_CHART.grid} />
-          <rect
-            x={Math.max(0, x(reactionStart) - bodyW)}
-            y="0"
-            width={Math.max(bodyW * 2, W - x(reactionStart) + bodyW)}
-            height={PRICE_H}
-            fill="rgba(255,255,255,0.035)"
-          />
+          <line x1="0" x2={PLOT_W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.16)" />
           <line
-            x1={Math.max(0, x(reactionStart) - bodyW)}
-            x2={W}
-            y1={y(reactionBase)}
-            y2={y(reactionBase)}
-            stroke="rgba(250,250,250,0.34)"
-            strokeDasharray="4 4"
+            x1="0"
+            x2={PLOT_W}
+            y1={y(latest!.close)}
+            y2={y(latest!.close)}
+            stroke={rangeColor}
+            strokeWidth="0.8"
+            strokeDasharray="2 3"
           />
-          <text x={Math.max(4, x(reactionStart))} y="11" fontSize="8" fill={DETAIL_CHART.muted}>최근 5거래일 반응</text>
+          {priceTicks.map((price) => (
+            <text key={price} x={PLOT_W + 6} y={Math.max(8, Math.min(PRICE_H - 2, y(price) + 3))} fontSize="7.5" fill={DETAIL_CHART.muted}>
+              {formatAxisPrice(price)}
+            </text>
+          ))}
           {candles.map((c, i) => {
             const cx = x(i);
             const h = maxVol > 0 ? (c.volume / maxVol) * VOL_H : 0;
@@ -943,9 +947,9 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
               </g>
             );
           })}
-          <rect x={W - 72} y={y(latest!.close) - 10} width="70" height="18" rx="4" fill="rgba(10,10,10,0.92)" stroke={reactionColor} />
-          <text x={W - 6} y={y(latest!.close) + 2} textAnchor="end" fontSize="9" fontWeight="700" fill={reactionColor}>
-            5D {reactionPct >= 0 ? "+" : ""}{reactionPct.toFixed(1)}%
+          <rect x={PLOT_W + 1} y={Math.max(1, Math.min(PRICE_H - 16, y(latest!.close) - 8))} width="40" height="16" rx="2" fill={rangeColor} />
+          <text x={PLOT_W + 38} y={Math.max(12, Math.min(PRICE_H - 5, y(latest!.close) + 3))} textAnchor="end" fontSize="7.5" fontWeight="700" fill="#050706">
+            {formatAxisPrice(latest!.close)}
           </text>
         </svg>
         {tooltip && (
@@ -963,12 +967,12 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
           <button
             type="button"
             onClick={() => setTooltip({
-              title: "최근 반응 구간",
-              body: `최근 5거래일 시작가 ${formatChartPrice(reactionBase)}에서 최신 종가 ${formatChartPrice(latest!.close)}까지 ${reactionPct >= 0 ? "+" : ""}${reactionPct.toFixed(1)}% 움직였어요.`,
+              title: `${rangeLabel} 가격 변화`,
+              body: `${markerDateLabel(candles[0])} 시작가 ${formatChartPrice(rangeBase)}에서 ${markerDateLabel(latest)} 종가 ${formatChartPrice(latest!.close)}까지 ${rangePct >= 0 ? "+" : ""}${rangePct.toFixed(1)}% 차이가 났어요.`,
             })}
             className="rounded-md border border-hairline px-2 py-1 text-whiteout"
           >
-            5일 반응 자세히
+            기간 변화 자세히
           </button>
           <span>{markerDateLabel(latest)}</span>
         </div>
@@ -1014,7 +1018,7 @@ function WhyMovementTab({
       {facts.length > 0 && (
         <div className="mt-4 rounded-xl border border-hairline bg-surface px-3 py-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-pixel text-sm text-whiteout">함께 확인된 반응</p>
+            <p className="font-pixel text-sm text-whiteout">오늘 함께 확인된 신호</p>
             <span className="text-[11px] text-muted">탭해서 수치 보기</span>
           </div>
           <div
@@ -1046,7 +1050,7 @@ function WhyMovementTab({
         </div>
       )}
       <p className="mt-3 text-[11px] leading-5 text-muted">
-        확인된 재료와 같은 기간의 반응을 나란히 보여줘요. 둘 사이의 인과를 추정해 붙이지 않아요.
+        확인된 재료와 선택한 기간의 가격 흐름을 나란히 보여줘요. 둘 사이의 인과를 추정해 붙이지 않아요.
       </p>
     </section>
   );
@@ -1368,11 +1372,11 @@ function CommunityWordingBlock({ insight }: { insight: CondensedInsight | null }
   );
 }
 
-/** 뎁스 2탭 바 — 왜 움직였나(재료·수급) / 차트분석(TA). 기본 '왜 움직였나'. */
+/** 뎁스 2탭 바 — 발견 이유(재료·수급) / 차트 보기(TA). 기본은 발견 이유. */
 function DepthTabBar({ tab, onChange }: { tab: "why" | "ta"; onChange: (t: "why" | "ta") => void }) {
   const tabs: Array<{ key: "why" | "ta"; label: string }> = [
-    { key: "why", label: "왜 움직였나" },
-    { key: "ta", label: "차트분석" },
+    { key: "why", label: "발견 이유" },
+    { key: "ta", label: "차트 보기" },
   ];
   return (
     <div className="mt-6 mb-5 flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist">
@@ -1395,6 +1399,60 @@ function DepthTabBar({ tab, onChange }: { tab: "why" | "ta"; onChange: (t: "why"
         );
       })}
     </div>
+  );
+}
+
+function DiscoveryOverview({
+  front,
+  insight,
+  context,
+}: {
+  front: StockFrontResponse | null;
+  insight: CondensedInsight | null;
+  context?: StockContext | undefined;
+}) {
+  const status = discoveryStatus(front?.fomo);
+  const balance = verdictBalance(front?.verdict);
+  const trigger = movementTrigger(front, insight, context);
+  const asOf = front?.fomo.asOf;
+  const source = context?.sourceLabel ?? front?.signals.newsEventSource;
+  const chips = [
+    finiteNumber(front?.signals.volumeRatio) && front.signals.volumeRatio >= 0.1
+      ? `거래량 ${front.signals.volumeRatio.toFixed(1)}배`
+      : undefined,
+    front?.changeText ? `오늘 ${normalizeChangeText(front.changeText)}` : undefined,
+    balance?.label,
+  ].filter((item): item is string => !!item);
+
+  return (
+    <section className="mt-5 border-y border-hairline bg-black/20 px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-pixel text-xs text-muted">오늘 발견 포인트</p>
+        <span className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={{ borderColor: status.color, color: status.color }}>
+          {status.label}
+        </span>
+      </div>
+      <p className="mt-2 text-base font-bold leading-6 text-whiteout">
+        {trigger ?? status.summary}
+      </p>
+      {trigger && <p className="mt-1 text-xs leading-5 text-muted">{status.summary}</p>}
+      {chips.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <span key={chip} className="rounded-md border border-hairline bg-surface px-2 py-1 text-[10px] text-muted">{chip}</span>
+          ))}
+        </div>
+      )}
+      {(source || asOf) && (
+        context?.sourceUrl ? (
+          <a href={context.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 block text-[10px] text-muted hover:text-whiteout">
+            {[source, asOf].filter(Boolean).join(" · ")} · 원문 보기 →
+          </a>
+        ) : (
+          <p className="mt-3 text-[10px] text-muted">{[source, asOf].filter(Boolean).join(" · ")}</p>
+        )
+      )}
+    </section>
   );
 }
 
@@ -1427,6 +1485,7 @@ function AnalysisChart({
   candles?: DailyOhlcv[] | undefined;
 }) {
   const W = 320;
+  const PLOT_W = 278;
   const PRICE_H = 166;
   const VOL_TOP = 178;
   const VOL_H = 42;
@@ -1464,7 +1523,7 @@ function AnalysisChart({
   const min = rawMin - padding;
   const max = rawMax + padding;
   const span = max - min || 1;
-  const x = (i: number) => (i / (n - 1)) * W;
+  const x = (i: number) => (i / (n - 1)) * PLOT_W;
   const y = (v: number) => 4 + (1 - (v - min) / span) * (PRICE_H - 8);
 
   const linePath = (values: Array<number | null>): string => {
@@ -1482,7 +1541,7 @@ function AnalysisChart({
   };
 
   const maxVol = Math.max(...renderedCandles.map((c) => c.volume), 1);
-  const step = W / Math.max(1, n - 1);
+  const step = PLOT_W / Math.max(1, n - 1);
   const barW = Math.max(1, Math.min(4.5, step * 0.56));
   const latest = renderedCandles[n - 1]!;
   const levelCandidates = swingLevels(renderedCandles);
@@ -1496,14 +1555,26 @@ function AnalysisChart({
     (level): level is { kind: "support" | "resistance"; value: number } =>
       Boolean(level) && (!includeLevel || Math.abs(level!.value / invalidationLevel! - 1) >= 0.018)
   );
+  const priceTicks = [rawMax, (rawMax + rawMin) / 2, rawMin];
 
   return (
     <div>
+      <div className="mb-2 grid grid-cols-4 gap-2 border-b border-white/10 pb-2 text-[9px] text-muted">
+        <span>O <b className="text-whiteout">{formatAxisPrice(latest.open)}</b></span>
+        <span>H <b className="text-whiteout">{formatAxisPrice(latest.high)}</b></span>
+        <span>L <b className="text-whiteout">{formatAxisPrice(latest.low)}</b></span>
+        <span>C <b style={{ color: latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down }}>{formatAxisPrice(latest.close)}</b></span>
+      </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 차트">
         {[0.2, 0.4, 0.6, 0.8].map((ratio) => (
-          <line key={ratio} x1="0" x2={W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke="rgba(255,255,255,0.065)" />
+          <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke="rgba(255,255,255,0.09)" />
         ))}
-        <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.08)" />
+        <line x1="0" x2={PLOT_W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.16)" />
+        {priceTicks.map((price) => (
+          <text key={price} x={PLOT_W + 6} y={Math.max(8, Math.min(PRICE_H - 2, y(price) + 3))} fontSize="7.5" fill="rgba(250,250,250,0.45)">
+            {formatAxisPrice(price)}
+          </text>
+        ))}
         {renderedCandles.map((c, i) => {
           const h = (c.volume / maxVol) * VOL_H;
           const isUp = c.close >= c.open;
@@ -1525,7 +1596,7 @@ function AnalysisChart({
           <g key={`${level.kind}-${index}`}>
             <line
               x1="0"
-              x2={W}
+              x2={PLOT_W}
               y1={y(level.value)}
               y2={y(level.value)}
               stroke="rgba(250,250,250,0.28)"
@@ -1550,30 +1621,39 @@ function AnalysisChart({
             </g>
           );
         })}
-        <rect
-          x={W - 70}
-          y={Math.max(1, Math.min(PRICE_H - 17, y(latest.close) - 8))}
-          width="68"
-          height="17"
-          rx="4"
-          fill="rgba(10,10,10,0.94)"
+        <line
+          x1="0"
+          x2={PLOT_W}
+          y1={y(latest.close)}
+          y2={y(latest.close)}
           stroke={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
+          strokeWidth="0.8"
+          strokeDasharray="2 3"
+          opacity="0.72"
+        />
+        <rect
+          x={PLOT_W + 1}
+          y={Math.max(1, Math.min(PRICE_H - 17, y(latest.close) - 8))}
+          width="40"
+          height="16"
+          rx="2"
+          fill={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
         />
         <text
-          x={W - 6}
+          x={PLOT_W + 38}
           y={Math.max(12, Math.min(PRICE_H - 5, y(latest.close) + 3))}
           textAnchor="end"
-          fontSize="9"
+          fontSize="7.5"
           fontWeight="700"
-          fill={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
+          fill="#050706"
         >
-          {formatChartPrice(latest.close)}
+          {formatAxisPrice(latest.close)}
         </text>
         {includeLevel && (
           <>
             <line
               x1="0"
-              x2={W}
+              x2={PLOT_W}
               y1={y(invalidationLevel!)}
               y2={y(invalidationLevel!)}
               stroke={CHART_COLOR.invalidation}
@@ -1583,7 +1663,7 @@ function AnalysisChart({
           </>
         )}
         <text x="0" y={H - 1} fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(renderedCandles[0])}</text>
-        <text x={W} y={H - 1} textAnchor="end" fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(latest)}</text>
+        <text x={PLOT_W} y={H - 1} textAnchor="end" fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(latest)}</text>
       </svg>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
         <span><span style={{ color: CHART_COLOR.up }}>■</span> 상승</span>
@@ -1591,7 +1671,7 @@ function AnalysisChart({
         <span><span style={{ color: CHART_COLOR.ma20 }}>—</span> MA20</span>
         <span><span style={{ color: CHART_COLOR.ma60 }}>—</span> MA60</span>
         <span><span style={{ color: CHART_COLOR.ma120 }}>—</span> MA120</span>
-        {includeLevel && <span><span style={{ color: CHART_COLOR.invalidation }}>┄</span> 무효화 레벨</span>}
+        {includeLevel && <span><span style={{ color: CHART_COLOR.invalidation }}>┄</span> 관점 경계</span>}
       </div>
     </div>
   );
@@ -1619,6 +1699,21 @@ function taFactValueSuffix(kind: string, latest: NonNullable<StockFrontResponse[
 }
 
 type StructureMetric = ChartTooltip & { value: string };
+type StructureRange = "1m" | "3m" | "6m";
+
+function sliceChartSeries(
+  series: NonNullable<StockFrontResponse["chartSeries"]>,
+  days: number
+): NonNullable<StockFrontResponse["chartSeries"]> {
+  const start = Math.max(0, series.closes.length - days);
+  return {
+    closes: series.closes.slice(start),
+    volumes: series.volumes.slice(start),
+    ma20: series.ma20.slice(start),
+    ma60: series.ma60.slice(start),
+    ma120: series.ma120.slice(start),
+  };
+}
 
 function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
   const series = front?.chartSeries;
@@ -1647,7 +1742,7 @@ function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
     ? `RSI ${Math.round(latest.rsi14)}`
     : finiteNumber(latest?.atrPct)
       ? `변동폭 ${latest.atrPct.toFixed(1)}%`
-      : finiteNumber(front?.signals.volumeRatio)
+      : finiteNumber(front?.signals.volumeRatio) && front.signals.volumeRatio >= 0.1
         ? `거래량 ${front.signals.volumeRatio.toFixed(1)}배`
         : "지표 축적 중";
 
@@ -1693,7 +1788,14 @@ function ChartAnalysisTab({
   const invalidation = verdict?.invalidation;
   const [factTooltip, setFactTooltip] = useState<ChartTooltip | null>(null);
   const [structureTooltip, setStructureTooltip] = useState<ChartTooltip | null>(null);
+  const [range, setRange] = useState<StructureRange>("3m");
   const metrics = structureMetrics(front);
+  const rangeDays = range === "1m" ? 22 : range === "3m" ? 66 : 120;
+  const visibleSeries = useMemo(() => (series ? sliceChartSeries(series, rangeDays) : undefined), [series, rangeDays]);
+  const visibleCandles = useMemo(
+    () => front?.candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-rangeDays),
+    [front?.candles, rangeDays]
+  );
 
   return (
     <section className="mt-2">
@@ -1714,7 +1816,7 @@ function ChartAnalysisTab({
       </div>
 
       {metrics.length > 0 && (
-        <div className="mb-3 grid grid-cols-3 gap-2">
+        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {metrics.map((metric) => (
             <button
               key={metric.title}
@@ -1723,7 +1825,7 @@ function ChartAnalysisTab({
               className="min-w-0 rounded-lg border border-hairline bg-surface px-2.5 py-2.5 text-left transition-colors hover:border-whiteout/25"
             >
               <span className="block text-[10px] text-muted">{metric.title}</span>
-              <span className="mt-1 block truncate text-[11px] font-bold text-whiteout">{metric.value}</span>
+              <span className="mt-1 block break-words text-[11px] font-bold leading-4 text-whiteout">{metric.value}</span>
             </button>
           ))}
         </div>
@@ -1741,16 +1843,32 @@ function ChartAnalysisTab({
       )}
 
       {/* 실제 차트 — 뭘 보고 판단하는지 눈에 보이게. */}
-      {series && series.closes.length >= 2 ? (
-        <div className="rounded-xl border border-hairline bg-surface px-3 pb-3 pt-3">
-          <AnalysisChart series={series} invalidationLevel={verdict?.invalidationLevel} candles={front?.candles} />
+      {visibleSeries && visibleSeries.closes.length >= 2 ? (
+        <div className="rounded-lg border border-white/15 bg-[#050706] px-3 pb-3 pt-3 shadow-inner">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="font-pixel text-[10px] text-muted">일봉 · {range === "1m" ? "1개월" : range === "3m" ? "3개월" : "6개월"}</span>
+            <div className="flex rounded-md border border-white/10 p-0.5">
+              {(["1m", "3m", "6m"] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setRange(key)}
+                  className="rounded px-2 py-1 text-[9px] font-bold"
+                  style={{ backgroundColor: range === key ? "#F4F4EF" : "transparent", color: range === key ? "#050706" : "#8A8A86" }}
+                >
+                  {key === "1m" ? "1M" : key === "3m" ? "3M" : "6M"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <AnalysisChart series={visibleSeries} invalidationLevel={verdict?.invalidationLevel} candles={visibleCandles} />
           {invalidation && (
             <button
               type="button"
-              onClick={() => setStructureTooltip({ title: "무효 조건", body: invalidation })}
+              onClick={() => setStructureTooltip({ title: "경계 가격", body: invalidation })}
               className="mt-2 w-full rounded-lg border border-hairline bg-black/20 px-2.5 py-2 text-left transition-colors hover:border-whiteout/20"
             >
-              <span className="block text-[11px] text-muted">무효 조건</span>
+              <span className="block text-[11px] text-muted">경계 가격</span>
               <span className="mt-0.5 block truncate text-xs text-whiteout">{invalidation}</span>
             </button>
           )}
@@ -1762,7 +1880,7 @@ function ChartAnalysisTab({
       {facts.length > 0 && (
         <div className="mt-4 rounded-xl border border-hairline bg-surface px-3 py-3">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="font-pixel text-sm text-whiteout">분석 신호</p>
+            <p className="font-pixel text-sm text-whiteout">차트에서 보이는 것</p>
             <span className="text-[11px] text-muted">탭해서 근거 보기</span>
           </div>
           <div className="space-y-3">
@@ -1891,8 +2009,10 @@ function buildVerdictSections(
       : undefined;
   if (material) pushEvidence(evidence, material);
 
+  const balance = verdictBalance(verdict);
+
   return {
-    ...(verdict ? { stanceText: verdict.stanceText } : {}),
+    ...(balance ? { stanceText: balance.summary } : {}),
     ...(verdict ? { confidenceText: DEPTH_CONFIDENCE_TEXT[verdict.confidence] } : {}),
     evidence: evidence.slice(0, 6),
     ...(verdict?.invalidation ? { invalidation: verdict.invalidation } : {}),
@@ -1900,13 +2020,13 @@ function buildVerdictSections(
 }
 
 const STANCE_BADGE: Record<string, { label: string; color: string }> = {
-  enter: { label: "진입 검토", color: "#D8FF3A" },
-  watch: { label: "관망", color: "#C9C9C4" },
-  avoid: { label: "회피", color: "#8A8A86" },
+  enter: { label: "강세 신호 우세", color: "#22C55E" },
+  watch: { label: "신호 혼조", color: "#C9C9C4" },
+  avoid: { label: "약세 신호 우세", color: "#EF4444" },
 };
 
 /**
- * 뎁스 본문(WO 1.5) — 판단 / 근거 / 무효 조건. 카드 verdict 와 동일 stance(모순 금지).
+ * 뎁스 본문(WO 1.5) — 차트 균형 / 근거 / 다음 확인. 카드와 같은 관측값을 쓴다.
  * 데이터 없는 블록은 통째로 생략 — 전 종목 공통 보일러플레이트 금지.
  */
 function ConvictionParagraphs({
@@ -1926,7 +2046,7 @@ function ConvictionParagraphs({
       {s.stanceText && (
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
           <div className="flex items-center gap-2.5">
-            <p className="font-pixel text-sm text-whiteout">판단</p>
+            <p className="font-pixel text-sm text-whiteout">차트 균형</p>
             {badge && (
               <span
                 className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
@@ -1956,7 +2076,7 @@ function ConvictionParagraphs({
 
       {s.invalidation && (
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
-          <p className="font-pixel text-sm text-whiteout">무효 조건</p>
+          <p className="font-pixel text-sm text-whiteout">다음 확인</p>
           <p className="mt-2 text-sm leading-6 text-whiteout">{s.invalidation}</p>
         </div>
       )}
@@ -2150,11 +2270,12 @@ export function StockInsightView({
   useEffect(() => {
     let alive = true;
     const seed = context?.frontSeed ?? null;
-    setLoading(true);
+    const isCoin = context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true;
+    setLoading(!isCoin);
     setInsight(null);
     setBasics(null);
     setFront(seed);
-    setBasicsLoaded(false);
+    setBasicsLoaded(isCoin);
     setFrontLoaded(!!seed);
     // 가격 헤더만 먼저 허용하고, 아래 가변 섹션은 세 요청이 모두 끝난 뒤 한 번에 연다.
     fetchStockFront(stock, {
@@ -2164,22 +2285,24 @@ export function StockInsightView({
       .then((r) => alive && setFront(mergeFrontSeed(seed, r)))
       .catch(() => alive && setFront(seed))
       .finally(() => alive && setFrontLoaded(true));
-    fetchStockBasics(stock, {
-      ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
-      ...(context?.symbol ? { symbol: context.symbol } : {}),
-    })
-      .then((r) => alive && setBasics(r))
-      .catch(() => alive && setBasics(null))
-      .finally(() => alive && setBasicsLoaded(true));
-    fetchStockInsight(stock, {
-      ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
-      ...(context?.symbol ? { symbol: context.symbol } : {}),
-      ...(context?.market ? { market: context.market } : {}),
-      ...(context?.country ? { country: context.country } : {}),
-    })
-      .then((r) => alive && setInsight(r))
-      .catch(() => alive && setInsight(null))
-      .finally(() => alive && setLoading(false));
+    if (!isCoin) {
+      fetchStockBasics(stock, {
+        ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
+        ...(context?.symbol ? { symbol: context.symbol } : {}),
+      })
+        .then((r) => alive && setBasics(r))
+        .catch(() => alive && setBasics(null))
+        .finally(() => alive && setBasicsLoaded(true));
+      fetchStockInsight(stock, {
+        ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
+        ...(context?.symbol ? { symbol: context.symbol } : {}),
+        ...(context?.market ? { market: context.market } : {}),
+        ...(context?.country ? { country: context.country } : {}),
+      })
+        .then((r) => alive && setInsight(r))
+        .catch(() => alive && setInsight(null))
+        .finally(() => alive && setLoading(false));
+    }
     return () => {
       alive = false;
     };
@@ -2188,14 +2311,6 @@ export function StockInsightView({
   const hasInsight =
     !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
   const detailsReady = !loading && basicsLoaded && frontLoaded;
-  const contextReason =
-    context?.reason && !copyRestates(context.reason, context.axisHeadline)
-      ? context.reason
-      : undefined;
-  const displayContextReason =
-    contextReason && !copyRestates(contextReason, movementTrigger(front, insight, context))
-      ? contextReason
-      : undefined;
   const hasVerifiedFloor = !!(
     basics?.marketCap ||
     (basics?.metrics?.length ?? 0) > 0 ||
@@ -2232,21 +2347,6 @@ export function StockInsightView({
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
-          {/* B — "왜 너한테 보여줬나" 상단 한 줄(추천 맥락이 있으면). 납득 먼저. */}
-          {displayContextReason && (
-            <div className="mb-5 rounded-lg border border-hairline bg-surface px-3 py-2">
-              <span className="block text-[11px] text-muted">
-                {context?.fromTheme ? `‘${cleanText(context.fromTheme)}’ 흐름에서 보여주는 이유` : "보여주는 이유"}
-              </span>
-              <span className="mt-1 block text-sm leading-6 text-whiteout">{cleanText(displayContextReason)}</span>
-              {context?.sourceUrl && (
-                <a href={context.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
-                  ↳ {cleanText(context.sourceLabel ?? "원문")} · 원문 보기 →
-                </a>
-              )}
-            </div>
-          )}
-
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
 
@@ -2254,6 +2354,7 @@ export function StockInsightView({
             <StockDepthLoadingBlock />
           ) : (
           <>
+          <DiscoveryOverview front={front} insight={insight} context={context} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (
             <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
