@@ -16,6 +16,7 @@ import type { FrontEntry } from "@/components/StockSwipeDeck";
 import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { StockIssueCard, sectorCardData } from "@/components/FeedView";
+import { CalendarCard } from "@/components/CalendarCard";
 
 /**
  * PC(≥1024px) 3컬럼 대시보드 — WO-PC-VERSION.
@@ -289,6 +290,8 @@ export function DesktopDashboard() {
                 <SectorCard card={sectorCardData(item)} />
               ) : item.type === "stock-issue" ? (
                 <StockIssueCard item={item} />
+              ) : item.type === "calendar" ? (
+                <CalendarCard calendar={item.calendar} />
               ) : (
                 <ContentCard card={item.content} />
               )}
@@ -327,5 +330,6 @@ function feedItemId(item: FeedHubItem): string {
   if (item.type === "narrative") return item.narrative.id;
   if (item.type === "sector") return item.sector.id;
   if (item.type === "stock-issue") return item.stockIssue.id;
+  if (item.type === "calendar") return item.calendar.id;
   return item.content.id;
 }

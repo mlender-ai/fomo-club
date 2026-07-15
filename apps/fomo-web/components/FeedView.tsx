@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CalendarCard } from "@/components/CalendarCard";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
 import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
@@ -120,6 +121,14 @@ export function FeedView() {
             <button key={item.stockIssue.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
               <StockIssueCard item={item} />
             </button>
+          );
+        }
+        if (item.type === "calendar") {
+          // 캘린더는 인라인 완결(전체 정보가 카드 안) — 뎁스 불요, 막다른 탭 아님.
+          return (
+            <div key={item.calendar.id} className="w-full rounded-2xl border border-hairline bg-surface px-5 py-5">
+              <CalendarCard calendar={item.calendar} />
+            </div>
           );
         }
         return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CalendarCard } from "@/components/CalendarCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import type { FeedHubItem, FeedHubSectorStockRef } from "@/lib/fomoApi";
 import { sparklinePath } from "@fomo/core";
@@ -163,6 +164,8 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
     }
     // 내러티브는 NarrativeDepthPage 소관 — 방어적 빈 렌더(호출부가 분기함).
     if (item.type === "narrative") return null;
+    // 캘린더는 카드 자체가 완결 정보 — 뎁스에서도 같은 카드를 그대로(PC 우측 클릭 경로).
+    if (item.type === "calendar") return <CalendarCard calendar={item.calendar} />;
     // content 계열(briefing·recap·buzz·index·macro·whale·macro-issue) — 사실 전체 + 노트 + 추이.
     const card = item.content;
     const label =

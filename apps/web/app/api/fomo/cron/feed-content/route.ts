@@ -12,6 +12,7 @@ import {
 } from "../../../../../lib/feed-briefing";
 import { processSearchQueue, rebuildSymbolIndex } from "../../../../../lib/symbol-index";
 import { translateAndStoreUsTitles } from "../../../../../lib/content-i18n";
+import { buildAndStoreWeeklyCalendar } from "../../../../../lib/earnings-calendar";
 import { isAiConfigured } from "@fomo/shared";
 import { fetchAllNews, fetchYahooStockNews } from "../../../../../lib/fomo-news-sources";
 import { readUsMarketQuoteRows } from "../../../../../lib/us-market-cache";
@@ -88,11 +89,13 @@ export async function GET(request: Request) {
       // 심볼 마스터 인덱스 재구축(일 1회) + 검색 알림 신청 큐 처리(WO 검색 ①·④).
       const stats = await rebuildSymbolIndex();
       const queue = await processSearchQueue();
+      // 주간 판단 캘린더(2026-07-15) — Nasdaq 어닝 7일치 + 매크로 일정 프리웜.
+      const calendar = await buildAndStoreWeeklyCalendar().catch(() => null);
       revalidateTag("daily-30", { expire: 0 });
       revalidateTag("feed-hub", { expire: 0 });
       return withCors(
         NextResponse.json(
-          { ok: true, slot, index: stats, queue, elapsedMs: Date.now() - startedAt },
+          { ok: true, slot, index: stats, queue, calendarDays: calendar?.days.length ?? null, elapsedMs: Date.now() - startedAt },
           { headers: { "Cache-Control": "no-store" } }
         )
       );

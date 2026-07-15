@@ -12,6 +12,7 @@ import { kstDate } from "./fomo";
 import { buildCoinIssueCards, buildEventCard, buildHotIssueCards, buildTermCard } from "./feed-extras";
 import { hydrateKoreanTitles } from "./content-i18n";
 import { buildDailyReceiptCard } from "./feed-receipt";
+import { readWeeklyCalendar, type WeeklyCalendar } from "./earnings-calendar";
 import type { DiscoveryMarketRow } from "./market-source-types";
 
 /**
@@ -38,6 +39,7 @@ export const FEED_ITEM_TYPES = [
   "term", // 오늘의 경제용어(정적 사전 로테이션) — 2026-07-11 베리에이션
   "event", // 시장 일정(만기·FOMC D-day) — 2026-07-11 베리에이션
   "daily-receipt", // 어제의 영수증(어제 30장 성과) — 2026-07-12 R1 후회 영수증
+  "calendar", // 주간 판단 캘린더(어닝+매크로, 내 카드 조인은 클라 localStorage) — 2026-07-15
 ] as const;
 export type FeedItemType = (typeof FEED_ITEM_TYPES)[number];
 
@@ -82,7 +84,8 @@ export type FeedHubItem =
     }
   | { type: "narrative"; scope: "KR" | "US"; narrative: DiscoveryNarrativeCardPayload }
   | { type: "sector"; scope: "KR" | "US"; sector: FeedSectorCard }
-  | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedStockIssue };
+  | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedStockIssue }
+  | { type: "calendar"; scope: "GLOBAL"; calendar: WeeklyCalendar & { id: string } };
 
 export interface FeedHubResponse {
   asOf: string;
@@ -270,6 +273,7 @@ async function attachIndexSeries(cards: Array<DeckContentCard & { series?: numbe
 const TYPE_PRIORITY: Record<FeedItemType, number> = {
   briefing: 0,
   buzz: 1,
+  calendar: 2, // 주간 판단 캘린더 — 브리핑 다음(이번 주 무엇이 시험대인지)
   "hot-issue": 2,
   "macro-issue": 3,
   recap: 4,
@@ -298,6 +302,7 @@ const TYPE_CAPS: Partial<Record<FeedItemType, number>> = {
   "coin-issue": 1,
   term: 1,
   event: 1,
+  calendar: 1,
 };
 
 export function capFeedItemsByType(items: readonly FeedHubItem[]): FeedHubItem[] {
@@ -398,6 +403,12 @@ export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
   for (const card of buildEventCard()) push({ type: "event", scope: "GLOBAL", content: card }, card.id);
   for (const card of await buildDailyReceiptCard().catch((): DeckContentCard[] => [])) {
     push({ type: "daily-receipt", scope: "GLOBAL", content: card }, card.id);
+  }
+  // 5.6) 주간 판단 캘린더(2026-07-15) — 크론 프리웜 캐시만 읽는다(요청 경로 fetch 0). 없으면 미노출(정직).
+  const weeklyCalendar = await readWeeklyCalendar().catch(() => null);
+  if (weeklyCalendar && weeklyCalendar.days.length > 0) {
+    const calendarId = `feed:calendar:${weeklyCalendar.asOf}`;
+    push({ type: "calendar", scope: "GLOBAL", calendar: { ...weeklyCalendar, id: calendarId } }, calendarId);
   }
   // 6) 검색 알림 신청 처리분(WO 검색 ④) — "요청하신 종목 카드가 준비됐어요". 재방문 노출(무로그인).
   const fulfilled = await readTodayFulfilledSearches().catch(() => []);

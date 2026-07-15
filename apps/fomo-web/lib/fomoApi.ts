@@ -327,11 +327,28 @@ export interface FeedHubStockIssue {
   url?: string;
   asOf: string;
 }
+export interface FeedHubCalendarStockRef {
+  canonical: string;
+  symbol: string;
+  session?: "장전" | "장후";
+}
+export interface FeedHubCalendarEvent {
+  kind: "earnings" | "macro";
+  title: string;
+  detail?: string;
+  stocks?: FeedHubCalendarStockRef[];
+}
+export interface FeedHubCalendar {
+  id: string;
+  asOf: string;
+  days: Array<{ date: string; events: FeedHubCalendarEvent[] }>;
+}
 export type FeedHubItem =
   | { type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue"; scope: "KR" | "US" | "GLOBAL"; content: DeckContent & { series?: number[] } }
   | { type: "narrative"; scope: "KR" | "US"; narrative: DeckNarrative }
   | { type: "sector"; scope: "KR" | "US"; sector: FeedHubSectorCard }
-  | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedHubStockIssue };
+  | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedHubStockIssue }
+  | { type: "calendar"; scope: "GLOBAL"; calendar: FeedHubCalendar };
 export interface FeedHubResponse {
   asOf: string;
   items: FeedHubItem[];
