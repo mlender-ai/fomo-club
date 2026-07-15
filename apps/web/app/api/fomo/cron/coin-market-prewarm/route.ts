@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { withCors } from "../../../../../lib/fomo";
 import { fetchUpbitCoinSnapshots, writeCoinMarketSnapshots } from "../../../../../lib/coin-market-source";
 
@@ -25,6 +26,8 @@ export async function GET(request: Request) {
   try {
     const snapshots = await fetchUpbitCoinSnapshots();
     const stats = await writeCoinMarketSnapshots(snapshots);
+    revalidateTag("daily-30", { expire: 0 });
+    revalidateTag("feed-hub", { expire: 0 });
     return withCors(
       NextResponse.json(
         {
