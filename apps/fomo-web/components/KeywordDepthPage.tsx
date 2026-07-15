@@ -666,8 +666,7 @@ function FomoHero({ front, rankLabel, headlineOverride }: { front: StockFrontRes
   );
 }
 
-type ChartRange = "3m" | "1y";
-type ChartLayer = "ma" | "events" | "flow" | "phase" | "levels" | "volume" | "invalidation";
+type MovementRange = "1m" | "3m";
 type ChartTooltip = { title: string; body: string };
 
 const DETAIL_CHART = {
@@ -793,38 +792,47 @@ function markerDateLabel(candle: DailyOhlcv | undefined): string {
   return raw.slice(5, 10) || raw;
 }
 
-function chartLayerTooltip(
-  layer: ChartLayer,
-  data: {
-    note: string;
-    phaseText?: string;
-    invalidation?: string;
-    materialLabel?: string;
-    flowDays: number;
-  }
-): ChartTooltip {
-  switch (layer) {
-    case "ma":
-      return { title: "이동평균", body: "MA20·60·120의 기울기와 배열로 단기 추세가 위인지 아래인지 봅니다." };
-    case "levels":
-      return { title: "지지·저항", body: "최근 고점·저점 피벗에서 반복 확인된 가격대를 표시합니다." };
-    case "volume":
-      return { title: "거래량", body: "평균 대비 튄 거래량과 거래량이 말라붙은 구간을 분리해 보여줍니다." };
-    case "phase":
-      return { title: "국면", body: data.phaseText ?? data.note };
-    case "events":
-      return { title: "재료", body: data.materialLabel ? `최근 원문 재료: ${data.materialLabel}` : "뉴스·공시로 확인된 재료 위치입니다." };
-    case "flow":
-      return { title: "수급", body: data.flowDays > 0 ? `최근 ${data.flowDays}거래일 연속 수급 흐름을 표시합니다.` : "외국인·기관 연속 수급이 잡히면 표시합니다." };
-    case "invalidation":
-      return { title: "무효선", body: data.invalidation ?? "이 가격대를 이탈하면 현재 관점의 힘이 약해지는 기준입니다." };
-  }
+function movementTrigger(
+  front: StockFrontResponse | null,
+  insight: CondensedInsight | null,
+  context: StockContext | undefined
+): string | undefined {
+  if (insight && insight.confidence !== "insufficient" && insight.whyHot.trim()) return cleanText(insight.whyHot);
+  const material = front?.signals.newsEventLabel ?? (front?.axisHook?.axis === "time" ? front.axisHook.hookText : undefined);
+  return cleanText(material ?? context?.reason ?? "") || undefined;
 }
 
-/** 상세 차트 — 실제 OHLC 캔들 + MA/거래량/무효선/근거 레이어. */
-function DetailChart({ front }: { front: StockFrontResponse | null }) {
-  const [range, setRange] = useState<ChartRange>("3m");
-  const [activeLayer, setActiveLayer] = useState<ChartLayer | null>(null);
+function movementFacts(front: StockFrontResponse | null): ChartTooltip[] {
+  if (!front) return [];
+  const facts: ChartTooltip[] = [];
+  if (front.changeText) {
+    facts.push({
+      title: "가격 반응",
+      body: `오늘 ${front.changeDir === "up" ? "상승" : front.changeDir === "down" ? "하락" : "보합"} ${normalizeChangeText(front.changeText)}`,
+    });
+  }
+  if (finiteNumber(front.signals.volumeRatio) && front.signals.volumeRatio > 0) {
+    facts.push({
+      title: "거래 참여",
+      body: `오늘 거래량은 최근 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배예요.`,
+    });
+  }
+  const flow = [
+    { actor: "외국인", days: front.signals.foreignNetStreak ?? 0 },
+    { actor: "기관", days: front.signals.institutionNetStreak ?? 0 },
+  ].sort((a, b) => Math.abs(b.days) - Math.abs(a.days))[0];
+  if (flow && flow.days !== 0) {
+    facts.push({
+      title: "수급 동행",
+      body: `${flow.actor}이 ${Math.abs(flow.days)}거래일 연속 ${flow.days > 0 ? "순매수" : "순매도"}했어요.`,
+    });
+  }
+  return facts.slice(0, 3);
+}
+
+/** 왜 움직였나 — 기술 지표가 아니라 최근 가격·거래량 반응만 보여준다. */
+function MovementResponseChart({ front }: { front: StockFrontResponse | null }) {
+  const [range, setRange] = useState<MovementRange>("1m");
   const [tooltip, setTooltip] = useState<ChartTooltip | null>(null);
   const sourceCandles = useMemo(() => {
     const candles = front?.candles?.filter((c) =>
@@ -834,7 +842,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
     return syntheticCandlesFromSparkline(front?.sparkline ?? []);
   }, [front?.candles, front?.sparkline]);
 
-  const candles = useMemo(() => sourceCandles.slice(-(range === "3m" ? 66 : 260)), [sourceCandles, range]);
+  const candles = useMemo(() => sourceCandles.slice(-(range === "1m" ? 22 : 66)), [sourceCandles, range]);
   if (candles.length < 2) return null;
 
   const W = DETAIL_CHART.W;
@@ -842,23 +850,7 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
   const VOL_TOP = DETAIL_CHART.VOL_TOP;
   const VOL_H = DETAIL_CHART.VOL_H;
   const H = DETAIL_CHART.H;
-  const ma20 = smaValues(candles, 20);
-  const ma60 = smaValues(candles, 60);
-  const ma120 = smaValues(candles, 120);
-  const levels = swingLevels(candles);
-  const invalidationLevel = front?.verdict?.invalidationLevel;
-  const priceValues = [
-    ...candles.flatMap((c) => [c.high, c.low]),
-    ...ma20.filter((v): v is number => v !== null),
-    ...ma60.filter((v): v is number => v !== null),
-    ...ma120.filter((v): v is number => v !== null),
-    ...levels.map((l) => l.value),
-  ];
-  const includeInvalidation =
-    finiteNumber(invalidationLevel) &&
-    invalidationLevel > Math.min(...priceValues) * 0.78 &&
-    invalidationLevel < Math.max(...priceValues) * 1.22;
-  if (includeInvalidation) priceValues.push(invalidationLevel);
+  const priceValues = candles.flatMap((c) => [c.high, c.low]);
   const minRaw = Math.min(...priceValues);
   const maxRaw = Math.max(...priceValues);
   const pad = Math.max((maxRaw - minRaw) * 0.08, maxRaw * 0.005);
@@ -868,57 +860,23 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
   const x = (i: number) => (i / (candles.length - 1)) * W;
   const y = (v: number) => 6 + (1 - (v - min) / span) * (PRICE_H - 12);
   const step = W / Math.max(1, candles.length - 1);
-  const bodyW = Math.max(1.3, Math.min(range === "3m" ? 5.2 : 2.4, step * 0.58));
+  const bodyW = Math.max(2, Math.min(range === "1m" ? 8 : 4.8, step * 0.58));
   const maxVol = Math.max(...candles.map((c) => c.volume), 1);
-  const vol = volumeSignals(candles);
-  const phase = front?.verdict?.phase;
-  const phaseText = phase ? DEPTH_PHASE_TEXT[phase] : undefined;
-  const up = candles[candles.length - 1]!.close >= candles[0]!.close;
-  const lead = (front?.fomo.leadSignal ?? 0) >= 60;
-  const rangeLabel = range === "3m" ? "최근 3개월" : "최근 1년";
-  const note = translateTaFact(front?.taFact) ?? (lead && !up
-    ? "차트는 아직 안 따라왔어요 — 수급이 가격보다 먼저 움직이는 자리예요."
-    : up
-      ? `이미 위로 올라온 자리예요(${rangeLabel}).`
-      : `${rangeLabel}은 차분한 흐름이에요.`);
   const latest = candles[candles.length - 1];
-  const materialLabel = shortSignalLabel(front?.signals.newsEventLabel || front?.axisHook?.hookText, 30);
-  const hasInsider = /내부자|Form\s?4|임원|대주주/i.test(`${front?.axisHook?.hookText ?? ""} ${front?.signals.newsEventLabel ?? ""} ${front?.verdict?.evidence?.join(" ") ?? ""}`);
-  const foreignStreak = front?.signals.foreignNetStreak ?? 0;
-  const institutionStreak = front?.signals.institutionNetStreak ?? 0;
-  const flowDays = Math.max(foreignStreak > 0 ? foreignStreak : 0, institutionStreak > 0 ? institutionStreak : 0);
-  const flowStart = flowDays > 0 ? Math.max(0, candles.length - flowDays) : -1;
-  const chartLayers: Array<{ key: ChartLayer; label: string; enabled: boolean }> = [
-    { key: "ma", label: "MA", enabled: true },
-    { key: "levels", label: "지지·저항", enabled: levels.length > 0 },
-    { key: "volume", label: "거래량", enabled: vol.spikes.size > 0 || vol.vacuums.length > 0 },
-    { key: "phase", label: "국면", enabled: Boolean(phaseText) },
-    { key: "events", label: "재료", enabled: Boolean(materialLabel || hasInsider) },
-    { key: "flow", label: "수급", enabled: flowDays > 0 },
-    { key: "invalidation", label: "무효선", enabled: includeInvalidation },
-  ];
-  const openLayerTooltip = (layer: ChartLayer) => {
-    const next = activeLayer === layer ? null : layer;
-    setActiveLayer(next);
-    setTooltip(
-      next
-        ? chartLayerTooltip(next, {
-            note,
-            ...(phaseText ? { phaseText } : {}),
-            ...(front?.verdict?.invalidation ? { invalidation: front.verdict.invalidation } : {}),
-            ...(materialLabel ? { materialLabel } : {}),
-            flowDays,
-          })
-        : null
-    );
-  };
+  const reactionStart = Math.max(0, candles.length - 5);
+  const reactionBase = candles[reactionStart]!.open;
+  const reactionPct = reactionBase > 0 ? ((latest!.close / reactionBase) - 1) * 100 : 0;
+  const reactionColor = reactionPct >= 0 ? DETAIL_CHART.up : DETAIL_CHART.down;
 
   return (
-    <section className="mt-6">
+    <section className="mt-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-pixel text-sm text-whiteout">차트 흐름</p>
+        <div>
+          <p className="font-pixel text-sm text-whiteout">시장 반응</p>
+          <p className="mt-1 text-[11px] text-muted">재료와 같은 기간에 가격·거래가 어떻게 움직였는지 봐요.</p>
+        </div>
         <div className="flex rounded-full border border-hairline bg-surface p-0.5">
-          {(["3m", "1y"] as const).map((key) => (
+          {(["1m", "3m"] as const).map((key) => (
             <button
               key={key}
               type="button"
@@ -929,54 +887,37 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
               className="rounded-full px-2.5 py-1 font-pixel text-[10px]"
               style={{ backgroundColor: range === key ? "#D8FF3A" : "transparent", color: range === key ? "#0A0A0A" : "#9A9A96" }}
             >
-              {key === "3m" ? "3개월" : "1년"}
+              {key === "1m" ? "1개월" : "3개월"}
             </button>
           ))}
         </div>
       </div>
       <div className="relative mt-3 rounded-xl border border-hairline bg-surface px-3 py-3">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 분석 차트">
-          <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke={DETAIL_CHART.grid} />
-          {phaseText && (
-            <rect
-              x={W * 0.62}
-              y="0"
-              width={W * 0.38}
-              height={PRICE_H}
-              fill="rgba(148,163,184,0.9)"
-              opacity={activeLayer === "phase" ? 0.14 : 0.045}
-            />
-          )}
-          {flowDays > 0 && (
-            <rect
-              x={x(flowStart)}
-              y={VOL_TOP - 6}
-              width={Math.max(8, W - x(flowStart))}
-              height="4"
-              rx="2"
-              fill={DETAIL_CHART.flow}
-              opacity={activeLayer === "flow" ? 0.72 : 0.34}
-            />
-          )}
-          {vol.vacuums.map((box, i) => (
-            <g key={`vac-${i}`} opacity={activeLayer === "volume" ? 0.9 : 0.48}>
-              <rect
-                x={Math.max(0, x(box.start) - bodyW)}
-                y={VOL_TOP}
-                width={Math.min(W, x(box.end) - x(box.start) + bodyW * 2)}
-                height={VOL_H}
-                fill="none"
-                stroke={DETAIL_CHART.muted}
-                strokeDasharray="3 3"
-              />
-              {i === 0 && <text x={Math.max(4, x(box.start))} y={VOL_TOP - 3} fontSize="8" fill={DETAIL_CHART.muted}>거래량 진공</text>}
-            </g>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="최근 가격·거래량 반응 차트">
+          {[0.25, 0.5, 0.75].map((ratio) => (
+            <line key={ratio} x1="0" x2={W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke={DETAIL_CHART.grid} />
           ))}
+          <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke={DETAIL_CHART.grid} />
+          <rect
+            x={Math.max(0, x(reactionStart) - bodyW)}
+            y="0"
+            width={Math.max(bodyW * 2, W - x(reactionStart) + bodyW)}
+            height={PRICE_H}
+            fill="rgba(255,255,255,0.035)"
+          />
+          <line
+            x1={Math.max(0, x(reactionStart) - bodyW)}
+            x2={W}
+            y1={y(reactionBase)}
+            y2={y(reactionBase)}
+            stroke="rgba(250,250,250,0.34)"
+            strokeDasharray="4 4"
+          />
+          <text x={Math.max(4, x(reactionStart))} y="11" fontSize="8" fill={DETAIL_CHART.muted}>최근 5거래일 반응</text>
           {candles.map((c, i) => {
             const cx = x(i);
             const h = maxVol > 0 ? (c.volume / maxVol) * VOL_H : 0;
             const isUp = c.close >= c.open;
-            const spike = vol.spikes.has(i);
             const fill = isUp ? "rgba(34,197,94,0.34)" : "rgba(239,68,68,0.28)";
             return (
               <rect
@@ -985,30 +926,10 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
                 y={VOL_TOP + (VOL_H - h)}
                 width={bodyW}
                 height={Math.max(0.5, h)}
-                fill={spike ? "rgba(245,158,11,0.62)" : fill}
-                opacity={spike && activeLayer === "volume" ? 0.9 : spike ? 0.58 : 1}
+                fill={fill}
               />
             );
           })}
-          {levels.map((level, i) => (
-            <g key={`${level.kind}-${i}`} opacity={activeLayer === "levels" ? 0.88 : 0.46}>
-              <line x1="0" x2={W} y1={y(level.value)} y2={y(level.value)} stroke={DETAIL_CHART.muted} strokeWidth="0.8" />
-              <text x={W - 4} y={Math.max(9, y(level.value) - 3)} textAnchor="end" fontSize="8" fill={DETAIL_CHART.muted}>
-                {level.kind === "support" ? "지지" : "저항"} {formatChartPrice(level.value)}
-              </text>
-            </g>
-          ))}
-          {includeInvalidation && (
-            <g opacity={activeLayer === "invalidation" ? 1 : 0.72}>
-              <line x1="0" x2={W} y1={y(invalidationLevel!)} y2={y(invalidationLevel!)} stroke={DETAIL_CHART.invalidation} strokeWidth="1.2" strokeDasharray="5 4" />
-              <text x={W - 4} y={Math.max(10, y(invalidationLevel!) - 5)} textAnchor="end" fontSize="9" fill={DETAIL_CHART.invalidation}>
-                무효선 {formatChartPrice(invalidationLevel!)}
-              </text>
-            </g>
-          )}
-          <path d={seriesPath(ma120, x, y)} fill="none" stroke={DETAIL_CHART.ma120} strokeWidth={activeLayer === "ma" ? "1.6" : "1"} opacity={activeLayer === "ma" ? 0.88 : 0.34} />
-          <path d={seriesPath(ma60, x, y)} fill="none" stroke={DETAIL_CHART.ma60} strokeWidth={activeLayer === "ma" ? "1.6" : "1"} opacity={activeLayer === "ma" ? 0.9 : 0.42} />
-          <path d={seriesPath(ma20, x, y)} fill="none" stroke={DETAIL_CHART.ma20} strokeWidth={activeLayer === "ma" ? "1.8" : "1.1"} opacity={activeLayer === "ma" ? 0.95 : 0.58} />
           {candles.map((c, i) => {
             const cx = x(i);
             const isUp = c.close >= c.open;
@@ -1022,38 +943,10 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
               </g>
             );
           })}
-          {materialLabel && latest && (
-            <g
-              role="button"
-              tabIndex={0}
-              onClick={() => setTooltip({ title: "재료", body: `${markerDateLabel(latest)} · ${materialLabel}` })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") setTooltip({ title: "재료", body: `${markerDateLabel(latest)} · ${materialLabel}` });
-              }}
-              aria-label="재료 발생일"
-              style={{ cursor: "pointer" }}
-            >
-              <circle cx={x(candles.length - 1)} cy={y(latest.close) - 10} r={4} fill={DETAIL_CHART.ma20} opacity={activeLayer === "events" ? 1 : 0.78} />
-            </g>
-          )}
-          {hasInsider && latest && (
-            <g
-              role="button"
-              tabIndex={0}
-              onClick={() => setTooltip({ title: "내부자 공시", body: `${markerDateLabel(latest)} · 내부자 매수 공시 확인` })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") setTooltip({ title: "내부자 공시", body: `${markerDateLabel(latest)} · 내부자 매수 공시 확인` });
-              }}
-              aria-label="내부자 매수일"
-              style={{ cursor: "pointer" }}
-            >
-              <path
-                d={`M${x(candles.length - 1) - 5},${y(latest.close) + 13} L${x(candles.length - 1) + 5},${y(latest.close) + 13} L${x(candles.length - 1)},${y(latest.close) + 3} Z`}
-                fill={DETAIL_CHART.ma20}
-                opacity={activeLayer === "events" ? 1 : 0.78}
-              />
-            </g>
-          )}
+          <rect x={W - 72} y={y(latest!.close) - 10} width="70" height="18" rx="4" fill="rgba(10,10,10,0.92)" stroke={reactionColor} />
+          <text x={W - 6} y={y(latest!.close) + 2} textAnchor="end" fontSize="9" fontWeight="700" fill={reactionColor}>
+            5D {reactionPct >= 0 ? "+" : ""}{reactionPct.toFixed(1)}%
+          </text>
         </svg>
         {tooltip && (
           <button
@@ -1065,32 +958,96 @@ function DetailChart({ front }: { front: StockFrontResponse | null }) {
             <span className="mt-1 block text-[11px] leading-4 text-muted">{tooltip.body}</span>
           </button>
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {chartLayers.filter((l) => l.enabled).map((layer) => (
-            <button
-              key={layer.key}
-              type="button"
-              onClick={() => openLayerTooltip(layer.key)}
-              className="rounded-full border px-2 py-1 text-[10px] transition-colors"
-              style={{
-                borderColor: activeLayer === layer.key ? "rgba(250,250,250,0.72)" : "rgba(255,255,255,0.12)",
-                color: activeLayer === layer.key ? "#FAFAFA" : "#9A9A96",
-                backgroundColor: activeLayer === layer.key ? "rgba(255,255,255,0.08)" : "transparent",
-              }}
-            >
-              {layer.label}
-            </button>
-          ))}
+        <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-muted">
+          <span>{markerDateLabel(candles[0])}</span>
+          <button
+            type="button"
+            onClick={() => setTooltip({
+              title: "최근 반응 구간",
+              body: `최근 5거래일 시작가 ${formatChartPrice(reactionBase)}에서 최신 종가 ${formatChartPrice(latest!.close)}까지 ${reactionPct >= 0 ? "+" : ""}${reactionPct.toFixed(1)}% 움직였어요.`,
+            })}
+            className="rounded-md border border-hairline px-2 py-1 text-whiteout"
+          >
+            5일 반응 자세히
+          </button>
+          <span>{markerDateLabel(latest)}</span>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => setTooltip({ title: "차트 해석", body: phaseText ? `${note} ${phaseText}` : note })}
-        className="mt-2 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-left transition-colors hover:border-whiteout/20"
-      >
-        <span className="block text-[11px] text-muted">차트 해석</span>
-        <span className="mt-0.5 block truncate text-sm text-whiteout">{phaseText ? `${note} · ${phaseText}` : note}</span>
-      </button>
+    </section>
+  );
+}
+
+function WhyMovementTab({
+  front,
+  insight,
+  context,
+}: {
+  front: StockFrontResponse | null;
+  insight: CondensedInsight | null;
+  context?: StockContext | undefined;
+}) {
+  const trigger = movementTrigger(front, insight, context);
+  const facts = movementFacts(front);
+  const [selectedFact, setSelectedFact] = useState<ChartTooltip | null>(null);
+  const sources = insight?.sources.filter((source) => source.url).slice(0, 2) ?? [];
+
+  return (
+    <section className="mt-2">
+      <div className="rounded-xl border border-hairline bg-surface px-4 py-4">
+        <p className="text-[11px] font-bold text-muted">확인된 계기</p>
+        <p className="mt-2 text-sm leading-6 text-whiteout">
+          {trigger ?? "가격 움직임과 직접 연결된 뉴스·공시 근거는 아직 확인되지 않았어요."}
+        </p>
+        {sources.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-hairline pt-3">
+            {sources.map((source) => (
+              <a key={source.id} href={source.url} target="_blank" rel="noreferrer" className="text-[11px] text-muted hover:text-whiteout">
+                {cleanText(source.source ?? source.title)} 원문 →
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <MovementResponseChart front={front} />
+
+      {facts.length > 0 && (
+        <div className="mt-4 rounded-xl border border-hairline bg-surface px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-pixel text-sm text-whiteout">함께 확인된 반응</p>
+            <span className="text-[11px] text-muted">탭해서 수치 보기</span>
+          </div>
+          <div
+            className="mt-3 grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${facts.length}, minmax(0, 1fr))` }}
+          >
+            {facts.map((fact) => (
+              <button
+                key={fact.title}
+                type="button"
+                onClick={() => setSelectedFact(selectedFact?.title === fact.title ? null : fact)}
+                className="min-w-0 rounded-lg border border-hairline bg-black/20 px-2 py-2.5 text-left transition-colors hover:border-whiteout/25"
+              >
+                <span className="block text-[10px] text-muted">{fact.title}</span>
+                <span className="mt-1 block truncate text-xs font-bold text-whiteout">{shortSignalLabel(fact.body, 13)}</span>
+              </button>
+            ))}
+          </div>
+          {selectedFact && (
+            <button
+              type="button"
+              onClick={() => setSelectedFact(null)}
+              className="mt-3 w-full rounded-lg border border-whiteout/15 bg-black/80 px-3 py-2.5 text-left shadow-xl"
+            >
+              <span className="block text-[11px] font-bold text-whiteout">{selectedFact.title}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted">{selectedFact.body}</span>
+            </button>
+          )}
+        </div>
+      )}
+      <p className="mt-3 text-[11px] leading-5 text-muted">
+        확인된 재료와 같은 기간의 반응을 나란히 보여줘요. 둘 사이의 인과를 추정해 붙이지 않아요.
+      </p>
     </section>
   );
 }
@@ -1470,10 +1427,10 @@ function AnalysisChart({
   candles?: DailyOhlcv[] | undefined;
 }) {
   const W = 320;
-  const PRICE_H = 132;
-  const VOL_TOP = 142;
-  const VOL_H = 36;
-  const H = VOL_TOP + VOL_H;
+  const PRICE_H = 166;
+  const VOL_TOP = 178;
+  const VOL_H = 42;
+  const H = VOL_TOP + VOL_H + 12;
   const renderedCandles =
     candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-series.closes.length) ??
     series.closes.map((close, i, arr) => {
@@ -1501,8 +1458,11 @@ function AnalysisChart({
     invalidationLevel > Math.min(...series.closes) * 0.75 &&
     invalidationLevel < Math.max(...series.closes) * 1.25;
   if (includeLevel) lineValues.push(invalidationLevel!);
-  const min = Math.min(...lineValues);
-  const max = Math.max(...lineValues);
+  const rawMin = Math.min(...lineValues);
+  const rawMax = Math.max(...lineValues);
+  const padding = Math.max((rawMax - rawMin) * 0.08, rawMax * 0.004);
+  const min = rawMin - padding;
+  const max = rawMax + padding;
   const span = max - min || 1;
   const x = (i: number) => (i / (n - 1)) * W;
   const y = (v: number) => 4 + (1 - (v - min) / span) * (PRICE_H - 8);
@@ -1524,10 +1484,25 @@ function AnalysisChart({
   const maxVol = Math.max(...renderedCandles.map((c) => c.volume), 1);
   const step = W / Math.max(1, n - 1);
   const barW = Math.max(1, Math.min(4.5, step * 0.56));
+  const latest = renderedCandles[n - 1]!;
+  const levelCandidates = swingLevels(renderedCandles);
+  const nearestSupport = levelCandidates
+    .filter((level) => level.kind === "support" && level.value <= latest.close)
+    .sort((a, b) => b.value - a.value)[0];
+  const nearestResistance = levelCandidates
+    .filter((level) => level.kind === "resistance" && level.value >= latest.close)
+    .sort((a, b) => a.value - b.value)[0];
+  const levels = [nearestSupport, nearestResistance].filter(
+    (level): level is { kind: "support" | "resistance"; value: number } =>
+      Boolean(level) && (!includeLevel || Math.abs(level!.value / invalidationLevel! - 1) >= 0.018)
+  );
 
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 차트">
+        {[0.2, 0.4, 0.6, 0.8].map((ratio) => (
+          <line key={ratio} x1="0" x2={W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke="rgba(255,255,255,0.065)" />
+        ))}
         <line x1="0" x2={W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.08)" />
         {renderedCandles.map((c, i) => {
           const h = (c.volume / maxVol) * VOL_H;
@@ -1546,6 +1521,22 @@ function AnalysisChart({
         <path d={linePath(series.ma120)} fill="none" stroke={CHART_COLOR.ma120} strokeWidth="1.1" />
         <path d={linePath(series.ma60)} fill="none" stroke={CHART_COLOR.ma60} strokeWidth="1.1" />
         <path d={linePath(series.ma20)} fill="none" stroke={CHART_COLOR.ma20} strokeWidth="1.2" />
+        {levels.map((level, index) => (
+          <g key={`${level.kind}-${index}`}>
+            <line
+              x1="0"
+              x2={W}
+              y1={y(level.value)}
+              y2={y(level.value)}
+              stroke="rgba(250,250,250,0.28)"
+              strokeWidth="0.8"
+              strokeDasharray="3 4"
+            />
+            <text x="4" y={Math.max(9, y(level.value) - 3)} fontSize="8" fill="rgba(250,250,250,0.48)">
+              {level.kind === "support" ? "지지" : "저항"} {formatChartPrice(level.value)}
+            </text>
+          </g>
+        ))}
         {renderedCandles.map((c, i) => {
           const cx = x(i);
           const isUp = c.close >= c.open;
@@ -1559,6 +1550,25 @@ function AnalysisChart({
             </g>
           );
         })}
+        <rect
+          x={W - 70}
+          y={Math.max(1, Math.min(PRICE_H - 17, y(latest.close) - 8))}
+          width="68"
+          height="17"
+          rx="4"
+          fill="rgba(10,10,10,0.94)"
+          stroke={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
+        />
+        <text
+          x={W - 6}
+          y={Math.max(12, Math.min(PRICE_H - 5, y(latest.close) + 3))}
+          textAnchor="end"
+          fontSize="9"
+          fontWeight="700"
+          fill={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
+        >
+          {formatChartPrice(latest.close)}
+        </text>
         {includeLevel && (
           <>
             <line
@@ -1570,11 +1580,10 @@ function AnalysisChart({
               strokeWidth="1.2"
               strokeDasharray="5 4"
             />
-            <text x={W - 4} y={Math.max(10, y(invalidationLevel!) - 4)} textAnchor="end" fontSize="9" fill={CHART_COLOR.invalidation}>
-              무효 레벨
-            </text>
           </>
         )}
+        <text x="0" y={H - 1} fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(renderedCandles[0])}</text>
+        <text x={W} y={H - 1} textAnchor="end" fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(latest)}</text>
       </svg>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
         <span><span style={{ color: CHART_COLOR.up }}>■</span> 상승</span>
@@ -1609,11 +1618,73 @@ function taFactValueSuffix(kind: string, latest: NonNullable<StockFrontResponse[
   return undefined;
 }
 
+type StructureMetric = ChartTooltip & { value: string };
+
+function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
+  const series = front?.chartSeries;
+  if (!series || series.closes.length < 2) return [];
+  const last = series.closes[series.closes.length - 1]!;
+  const lastValue = (values: Array<number | null>) => values[values.length - 1] ?? undefined;
+  const ma20 = lastValue(series.ma20);
+  const ma60 = lastValue(series.ma60);
+  const ma120 = lastValue(series.ma120);
+  let structure = "배열 확인 중";
+  if (finiteNumber(ma20) && finiteNumber(ma60)) {
+    if (last > ma20 && ma20 > ma60) structure = "단기 상승 배열";
+    else if (last < ma20 && ma20 < ma60) structure = "단기 하락 배열";
+    else structure = "방향 혼조";
+  }
+
+  const candles = front?.candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)) ?? [];
+  const levels = swingLevels(candles.slice(-series.closes.length));
+  const support = levels.filter((level) => level.kind === "support" && level.value <= last).sort((a, b) => b.value - a.value)[0];
+  const resistance = levels.filter((level) => level.kind === "resistance" && level.value >= last).sort((a, b) => a.value - b.value)[0];
+  const levelValue = [support ? `지지 ${formatChartPrice(support.value)}` : undefined, resistance ? `저항 ${formatChartPrice(resistance.value)}` : undefined]
+    .filter(Boolean)
+    .join(" · ") || "레벨 축적 중";
+  const latest = front?.ta?.latest;
+  const momentumValue = finiteNumber(latest?.rsi14)
+    ? `RSI ${Math.round(latest.rsi14)}`
+    : finiteNumber(latest?.atrPct)
+      ? `변동폭 ${latest.atrPct.toFixed(1)}%`
+      : finiteNumber(front?.signals.volumeRatio)
+        ? `거래량 ${front.signals.volumeRatio.toFixed(1)}배`
+        : "지표 축적 중";
+
+  return [
+    {
+      title: "추세 구조",
+      value: structure,
+      body: `현재 종가 ${formatChartPrice(last)}${finiteNumber(ma20) ? ` · MA20 ${formatChartPrice(ma20)}` : ""}${finiteNumber(ma60) ? ` · MA60 ${formatChartPrice(ma60)}` : ""}${finiteNumber(ma120) ? ` · MA120 ${formatChartPrice(ma120)}` : ""}`,
+    },
+    {
+      title: "핵심 가격대",
+      value: levelValue,
+      body: levelValue === "레벨 축적 중" ? "반복 확인된 최근 피벗이 아직 부족해요." : `최근 고점·저점 피벗에서 계산한 ${levelValue} 구간이에요.`,
+    },
+    {
+      title: "모멘텀",
+      value: momentumValue,
+      body: finiteNumber(latest?.rsi14)
+        ? `RSI 14 기준 ${Math.round(latest.rsi14)}예요.${finiteNumber(latest?.atrPct) ? ` 최근 하루 변동폭은 ${latest.atrPct.toFixed(1)}%예요.` : ""}`
+        : "현재 연결된 변동성·모멘텀 관측값을 보여줘요.",
+    },
+  ];
+}
+
 /**
  * 차트분석 탭(WO 1.6 D) — 실제 차트(종가+MA+거래량+무효선) + 와이코프 국면 뱃지 + 수치 붙은 관측.
  * 이 관측들은 판단(verdict)의 근거다 — 제약 잔재 문구 금지.
  */
-function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | null; basisDays: number }) {
+function ChartAnalysisTab({
+  front,
+  basisDays,
+  insight,
+}: {
+  front: StockFrontResponse | null;
+  basisDays: number;
+  insight: CondensedInsight | null;
+}) {
   const ta = front?.ta;
   const facts = ta?.facts ?? [];
   const verdict = front?.verdict;
@@ -1621,23 +1692,51 @@ function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | nu
   const series = front?.chartSeries;
   const invalidation = verdict?.invalidation;
   const [factTooltip, setFactTooltip] = useState<ChartTooltip | null>(null);
+  const [structureTooltip, setStructureTooltip] = useState<ChartTooltip | null>(null);
+  const metrics = structureMetrics(front);
 
   return (
     <section className="mt-2">
-      {/* 와이코프 국면 뱃지 — verdict.phase 실계산분만(억지 금지). */}
-      {phaseText && verdict?.phase && (
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div>
+          <p className="font-pixel text-sm text-whiteout">가격 구조</p>
+          <p className="mt-1 text-[11px] leading-5 text-muted">캔들 배열·추세·핵심 가격대로 다음 확인 지점을 읽어요.</p>
+        </div>
+        {phaseText && verdict?.phase && (
+          <button
+            type="button"
+            onClick={() => setStructureTooltip({ title: "국면 해석", body: phaseText })}
+            className="shrink-0 rounded-md border border-whiteout/20 px-2 py-1 text-[10px] font-bold text-whiteout"
+          >
+            {verdict.phase === "accumulation" ? "축적" : verdict.phase === "markup" ? "상승" : verdict.phase === "distribution" ? "분산" : "하락"} 국면
+          </button>
+        )}
+      </div>
+
+      {metrics.length > 0 && (
+        <div className="mb-3 grid grid-cols-3 gap-2">
+          {metrics.map((metric) => (
+            <button
+              key={metric.title}
+              type="button"
+              onClick={() => setStructureTooltip(structureTooltip?.title === metric.title ? null : metric)}
+              className="min-w-0 rounded-lg border border-hairline bg-surface px-2.5 py-2.5 text-left transition-colors hover:border-whiteout/25"
+            >
+              <span className="block text-[10px] text-muted">{metric.title}</span>
+              <span className="mt-1 block truncate text-[11px] font-bold text-whiteout">{metric.value}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {structureTooltip && (
         <button
           type="button"
-          onClick={() => setFactTooltip({ title: "국면 해석", body: phaseText })}
-          className="mb-3 flex w-full items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2 text-left transition-colors hover:border-whiteout/20"
+          onClick={() => setStructureTooltip(null)}
+          className="mb-3 w-full rounded-lg border border-whiteout/15 bg-surface px-3 py-2.5 text-left shadow-xl"
         >
-          <span
-            className="inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
-            style={{ borderColor: "rgba(250,250,250,0.32)", color: "#FAFAFA" }}
-          >
-            국면: {verdict.phase === "accumulation" ? "축적" : verdict.phase === "markup" ? "상승" : verdict.phase === "distribution" ? "분산" : "하락"}
-          </span>
-          <span className="min-w-0 truncate text-[11px] leading-4 text-muted">{phaseText}</span>
+          <span className="block text-[11px] font-bold text-whiteout">{structureTooltip.title}</span>
+          <span className="mt-1 block text-xs leading-5 text-muted">{structureTooltip.body}</span>
         </button>
       )}
 
@@ -1648,7 +1747,7 @@ function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | nu
           {invalidation && (
             <button
               type="button"
-              onClick={() => setFactTooltip({ title: "무효 조건", body: invalidation })}
+              onClick={() => setStructureTooltip({ title: "무효 조건", body: invalidation })}
               className="mt-2 w-full rounded-lg border border-hairline bg-black/20 px-2.5 py-2 text-left transition-colors hover:border-whiteout/20"
             >
               <span className="block text-[11px] text-muted">무효 조건</span>
@@ -1715,6 +1814,7 @@ function ChartAnalysisTab({ front, basisDays }: { front: StockFrontResponse | nu
           <p className="mt-1 text-[11px] leading-5 text-muted">데이터가 더 쌓이면 지표가 여기에 붙어요.</p>
         </div>
       )}
+      <ConvictionParagraphs front={front} insight={insight} />
       <p className="mt-4 text-center text-[11px] leading-5 text-muted">차트 신호는 관측값이에요. 가격 예측은 아니에요.</p>
     </section>
   );
@@ -2092,6 +2192,10 @@ export function StockInsightView({
     context?.reason && !copyRestates(context.reason, context.axisHeadline)
       ? context.reason
       : undefined;
+  const displayContextReason =
+    contextReason && !copyRestates(contextReason, movementTrigger(front, insight, context))
+      ? contextReason
+      : undefined;
   const hasVerifiedFloor = !!(
     basics?.marketCap ||
     (basics?.metrics?.length ?? 0) > 0 ||
@@ -2129,12 +2233,12 @@ export function StockInsightView({
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
           {/* B — "왜 너한테 보여줬나" 상단 한 줄(추천 맥락이 있으면). 납득 먼저. */}
-          {contextReason && (
+          {displayContextReason && (
             <div className="mb-5 rounded-lg border border-hairline bg-surface px-3 py-2">
               <span className="block text-[11px] text-muted">
                 {context?.fromTheme ? `‘${cleanText(context.fromTheme)}’ 흐름에서 보여주는 이유` : "보여주는 이유"}
               </span>
-              <span className="mt-1 block text-sm leading-6 text-whiteout">{cleanText(contextReason)}</span>
+              <span className="mt-1 block text-sm leading-6 text-whiteout">{cleanText(displayContextReason)}</span>
               {context?.sourceUrl && (
                 <a href={context.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[11px] text-muted hover:text-whiteout">
                   ↳ {cleanText(context.sourceLabel ?? "원문")} · 원문 보기 →
@@ -2152,14 +2256,11 @@ export function StockInsightView({
           <>
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (
-            <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} />
+            <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
           ) : (
           <>
-          {/* 차트 — 가격 다음으로 현재 흐름을 확인. */}
-          <DetailChart front={front} />
-
-          {/* 뎁스 본문 — 판단/근거/무효 조건(WO 1.5). 카드 verdict 와 단일 진실, 부족 블록은 생략. */}
-          <ConvictionParagraphs front={front} insight={insight} />
+          {/* 재료와 같은 기간의 가격·거래 반응 — 기술적 구조는 차트분석 탭으로 분리. */}
+          <WhyMovementTab front={front} insight={insight} context={context} />
 
           {/* 무슨 일이 있었나(WO-22) — 원문 인사이트 전체(양면·출처·공식지표). 카드 대비 뎁스의 정보 우위. */}
           <StockWhyHappened insight={insight} />
