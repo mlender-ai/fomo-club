@@ -15,9 +15,6 @@ concurrency:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
     env:
       VERCEL_ORG_ID: team_wfSGvSkBTXHZXDsG26LtLT1B
       VERCEL_PROJECT_ID: prj_B68xJxWVEbeZ0Y0McN8rSvZTjh9G
@@ -38,9 +35,6 @@ jobs:
 
   deploy-fomo-web:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/fomo-web
     env:
       VERCEL_ORG_ID: team_wfSGvSkBTXHZXDsG26LtLT1B
       VERCEL_PROJECT_ID: prj_dfwSKviFgdUg7MocHAqiBEPmaxcV
