@@ -36,13 +36,55 @@ function krwText(price: number): string {
   return `${price.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
 }
 
-/** 코인 핫이슈 1장 — 시총 10위권(캐시) 중 오늘 가장 크게 움직인 코인 + 상위 4종 시세표. */
+// 코인 전문 매체(토큰포스트·블록미디어)만 — 일반 경제지의 우연한 코인 언급 잡음 배제.
+// isFresh(아래 hot-issue 절 정의, HOT_ISSUE_WINDOW_HOURS=30h)를 그대로 재사용한다.
+const CRYPTO_NEWS_SOURCES = new Set(["토큰포스트", "블록미디어"]);
+// 규제·법안·ETF·거시 지표 등 "왜 중요한가"가 있는 사건만 — 순수 가격 변동 기사(예: "OO 코인 5% 상승")는 걸러낸다.
+const COIN_MACRO_PATTERN = /(법안|규제|승인|입법|반감기|스테이블코인|클래리티|CLARITY|의회|채택|정책|과세|세제|ETF|연준|금리|물가|CPI|PPI)/;
+
+function priceTableFacts(withSignal: readonly { snapshot: CoinMarketSnapshot }[]): DeckContentFact[] {
+  return [...withSignal]
+    .sort((a, b) => (a.snapshot.marketCapRank ?? 999) - (b.snapshot.marketCapRank ?? 999))
+    .slice(0, 4)
+    .map(({ snapshot }) => ({
+      label: snapshot.koreanName,
+      value: `${signedPct(snapshot.changePct)} · ${krwText(snapshot.price)}`,
+    }));
+}
+
+/**
+ * 코인 핫이슈 1장 — 매크로/규제 사건 우선, 없는 날만 가격·거래대금 무버로 폴백
+ * (2026-07-15 User Zero: "체인링크 1% 오른 게 뭐가 중요해 — 클래리티 법안·반감기 같은 게 핫이슈지").
+ */
 export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
   const snapshots = await readCoinMarketSnapshots().catch((): CoinMarketSnapshot[] => []);
-  if (snapshots.length === 0) return [];
   const withSignal = snapshots
     .map((snapshot) => ({ snapshot, signal: computeCoinSignal(snapshot) }))
     .filter((x): x is { snapshot: CoinMarketSnapshot; signal: NonNullable<ReturnType<typeof computeCoinSignal>> } => x.signal !== null);
+
+  const now = new Date();
+  const articles = await fetchAllNews().catch((): RawArticle[] => []);
+  const macroArticle = dedupeByTitle(
+    articles.filter((a) => CRYPTO_NEWS_SOURCES.has(a.source) && isFresh(a, now) && COIN_MACRO_PATTERN.test(a.title))
+  ).sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0];
+
+  if (macroArticle) {
+    return [
+      {
+        kind: "content",
+        id: `content:coin-issue:${kstDate()}`,
+        contentType: "coin-issue",
+        scope: "global",
+        headline: macroArticle.title,
+        facts: priceTableFacts(withSignal),
+        sourceUrl: macroArticle.url,
+        source: macroArticle.source,
+        asOf: kstDate(),
+      },
+    ];
+  }
+
+  // 매크로 뉴스 없는 조용한 날 — 기존 가격·거래대금 무버 폴백(정직: 없는 사건을 지어내지 않는다).
   if (withSignal.length === 0) return [];
   const mover = [...withSignal].sort(
     (a, b) => Math.abs(b.snapshot.changePct) + b.signal.volumeRatio - (Math.abs(a.snapshot.changePct) + a.signal.volumeRatio)
@@ -50,13 +92,6 @@ export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
   const headlineParts = [`${mover.snapshot.koreanName} 하루 ${signedPct(mover.snapshot.changePct)}`];
   if (mover.signal.volumeRatio >= 1.3) headlineParts.push(`거래대금 평소 ${mover.signal.volumeRatio.toFixed(1)}배`);
   if (typeof mover.snapshot.marketCapRank === "number") headlineParts.push(`시총 ${mover.snapshot.marketCapRank}위`);
-  const facts: DeckContentFact[] = [...withSignal]
-    .sort((a, b) => (a.snapshot.marketCapRank ?? 999) - (b.snapshot.marketCapRank ?? 999))
-    .slice(0, 4)
-    .map(({ snapshot }) => ({
-      label: snapshot.koreanName,
-      value: `${signedPct(snapshot.changePct)} · ${krwText(snapshot.price)}`,
-    }));
   return [
     {
       kind: "content",
@@ -64,7 +99,7 @@ export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
       contentType: "coin-issue",
       scope: "global",
       headline: headlineParts.join(" · "),
-      facts,
+      facts: priceTableFacts(withSignal),
       source: "Upbit · CoinGecko",
       asOf: kstDate(),
     },
@@ -258,6 +293,14 @@ export function buildTermCard(): DeckContentCard[] {
  */
 const FOMC_2026_DECISION_DATES = ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"];
 
+/**
+ * 미국 CPI/PPI 2026 발표일 — BLS 공개 일정(2026-07-15 User Zero: "오늘 PPI 발표인데 반영이 안 된다").
+ * 출처: bls.gov 2026 release schedule. 고용보고서(NFP)는 2026년 셧다운으로 일정 자체가 재조정된
+ * 이력이 확인돼(예: 1월분 발표가 연기) 정적 표로 못박기엔 리스크가 커서 이번 표에서 제외한다.
+ */
+const CPI_2026_DATES = ["2026-01-13", "2026-02-13", "2026-03-11", "2026-04-10", "2026-05-12", "2026-06-10", "2026-07-14", "2026-08-12", "2026-09-11", "2026-10-14", "2026-11-10", "2026-12-10"];
+const PPI_2026_DATES = ["2026-01-14", "2026-01-30", "2026-02-27", "2026-03-18", "2026-04-14", "2026-06-11", "2026-07-15", "2026-08-13", "2026-09-10", "2026-10-15", "2026-11-13", "2026-12-15"];
+
 function nthWeekdayOfMonth(year: number, month: number, weekday: number, nth: number): Date {
   const first = new Date(Date.UTC(year, month, 1));
   const offset = (weekday - first.getUTCDay() + 7) % 7;
@@ -300,6 +343,12 @@ export function upcomingMarketEvents(todayIso: string, limit = 3): MarketEvent[]
   for (const date of FOMC_2026_DECISION_DATES) {
     events.push({ date, label: "FOMC 금리 결정", detail: "미 연준 통화정책 발표 · 한국시간 새벽" });
   }
+  for (const date of CPI_2026_DATES) {
+    events.push({ date, label: "미국 CPI 발표", detail: "소비자물가지수 · 한국시간 밤 10시 전후" });
+  }
+  for (const date of PPI_2026_DATES) {
+    events.push({ date, label: "미국 PPI 발표", detail: "생산자물가지수 · 한국시간 밤 10시 전후" });
+  }
   return events
     .filter((event) => event.date >= todayIso)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -328,7 +377,7 @@ export function buildEventCard(): DeckContentCard[] {
         label: `${event.date.slice(5).replace("-", "/")} · ${dDayText(date, event.date)}`,
         value: `${event.label} — ${event.detail}`,
       })),
-      source: "거래소 규칙 · Fed 공개 일정",
+      source: "거래소 규칙 · Fed·BLS 공개 일정",
       asOf: date,
     },
   ];
