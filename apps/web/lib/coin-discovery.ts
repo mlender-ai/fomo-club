@@ -213,20 +213,29 @@ export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
     fronts[payload.canonical] = coinFrontSeed(snapshot, signal, issues);
   }
 
-  // 2026-07-11 User Zero: 코인은 발굴이 아니라 커버리지(#820) — 시총 10위권 유니버스에서
-  // 신호 코인이 쿼터 미달이면 시총순으로 채운다(조용한 날 코인 탭 공백 방지). 카피는 사실만.
+  // 재료 파이프라인 WO: 신호 쿼터를 채우기 위한 통계 filler 금지. 남는 자리는 실제 코인별
+  // 재료가 있는 종목만 보강한다. 재료도 거래 이상도 없으면 카드 수를 줄이는 편이 정직하다.
   if (stocks.length < COIN_CARD_LIMIT) {
     const usedMarkets = new Set(stocks.map((s) => s.symbol));
     const fillers = snapshots
-      .map((snapshot) => ({ snapshot, signal: computeCoinSignal(snapshot) }))
-      .filter((x): x is { snapshot: CoinMarketSnapshot; signal: CoinSignal } => x.signal !== null)
+      .map((snapshot) => {
+        const issues = issuesForSymbol(materialCache, snapshot.symbol);
+        return {
+          snapshot,
+          signal: computeCoinSignal(snapshot),
+          issues,
+          primaryIssue: issues.find((issue) => issue.scope === "coin"),
+        };
+      })
+      .filter(
+        (x): x is typeof x & { signal: CoinSignal; primaryIssue: CoinMaterialItem } =>
+          x.signal !== null && x.primaryIssue !== undefined
+      )
       .filter((x) => !usedMarkets.has(x.snapshot.market))
       .sort((a, b) => (a.snapshot.marketCapRank ?? 999) - (b.snapshot.marketCapRank ?? 999))
       .slice(0, COIN_CARD_LIMIT - stocks.length);
-    for (const { snapshot, signal } of fillers) {
-      const issues = issuesForSymbol(materialCache, snapshot.symbol);
-      const primaryIssue = issues.find((issue) => issue.scope === "coin");
-      const headline = primaryIssue ? materialHeadline(primaryIssue, snapshot) : coinCoverageHeadline(snapshot, signal);
+    for (const { snapshot, signal, issues, primaryIssue } of fillers) {
+      const headline = materialHeadline(primaryIssue, snapshot);
       if (!isFrontHookSafe(headline)) continue;
       const payload = coinStockPayload(snapshot, signal, headline, primaryIssue);
       stocks.push(payload);
