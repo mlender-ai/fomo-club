@@ -281,10 +281,16 @@ async function judgeWordingsSafety(
   return out;
 }
 
-/** 공식 데이터(FRED 등 kind=official) 원문을 중립 팩트 리스트로(방향성 주장 아님 — C-2). */
-function officialFactsFrom(docs: readonly SourceDoc[]): OfficialFact[] {
+/**
+ * 공식 데이터(kind=official) 원문을 중립 팩트 리스트로(방향성 주장 아님 — C-2).
+ * 종목(stock) 뎁스의 "확인된 공식 지표"는 종목 직접 공시(DART·SEC)만 — FRED 거시(나스닥지수·미 국채 등)는
+ * 종목과 무관한 배경 지표라 제외한다(2026-07-17 User Zero: "신일제약에 공식 지표가 왜 붙어").
+ * 테마 뎁스(금리·거시 키워드)에는 FRED 가 그 자체로 주제 지표라 유지.
+ */
+function officialFactsFrom(docs: readonly SourceDoc[], kind: "theme" | "stock" = "theme"): OfficialFact[] {
   return docs
     .filter((d) => d.kind === "official" && d.source && d.tier)
+    .filter((d) => kind !== "stock" || d.source !== "FRED(미 연준)")
     .map((d) => ({
       label: d.title,
       ...(d.body ? { detail: d.body } : {}),
@@ -515,8 +521,9 @@ export async function runUnderstanding(
 ): Promise<ThemeInsight> {
   if (docs.length === 0) return emptyThemeInsight(subject, "수집된 원문이 없음(소스 도달 실패 또는 매칭 0)");
 
-  // 공식 지표 팩트(FRED) — LLM 결과와 별개로 항상 노출(있으면). 강세/약세로 해석하지 않는다.
-  const officialFacts = officialFactsFrom(docs);
+  // 공식 지표 팩트 — LLM 결과와 별개로 항상 노출(있으면). 강세/약세로 해석하지 않는다.
+  // 종목이면 DART·SEC 직접 공시만(FRED 거시 제외).
+  const officialFacts = officialFactsFrom(docs, kind);
   const withFacts = (insight: ThemeInsight): ThemeInsight =>
     officialFacts.length > 0 ? { ...insight, officialFacts } : insight;
 
