@@ -1,5 +1,5 @@
 import { callAI, isAiConfigured } from "@fomo/shared";
-import { sectorOf } from "@fomo/core";
+import { sectorOf, stockDef } from "@fomo/core";
 import { fetchMacro } from "./fomo-market-sources";
 import { readUsMarketQuoteRows } from "./us-market-cache";
 import { fetchKrMarketRows } from "./discovery-supply";
@@ -491,6 +491,9 @@ export async function buildBuzzStory(): Promise<FeedBriefingRow | null> {
     return values.reduce((a, b) => a + b, 0) / values.length;
   };
   const candidates = Object.entries(attention)
+    // 버즈는 국장 스토리 — KR 종목 앵커만. 코인 매체 소스(#840) 유입 후 '비트코인'이 언급량으로
+    // 앵커를 차지해 코인 거래소 헤드라인이 버즈로 발행되던 것 차단(2026-07-17 User Zero).
+    .filter(([stock]) => stockDef(stock)?.country === "KR")
     .filter(([, signal]) => (signal.newsEventLabel ?? "").trim().length >= 8)
     .map(([stock, signal]) => {
       const avg = avgFor(stock);

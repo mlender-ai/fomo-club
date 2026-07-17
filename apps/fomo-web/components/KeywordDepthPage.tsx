@@ -368,7 +368,9 @@ function mergeFrontSeed(
   if (!hasUsableFront(fresh)) return seed;
   return {
     signals: { ...seed.signals, ...fresh.signals },
-    fomo: fresh.fomo ?? seed.fomo,
+    // 상태 배지 단일 진실(카드=뎁스 모순 금지) — 카드(seed)의 포모 라벨 우선. 라이브 재계산(fresh)은
+    // 시점·입력이 달라 "카드는 '가격 먼저'인데 뎁스는 '주목 집중'" 불일치를 만든다(2026-07-17 User Zero).
+    fomo: seed.fomo ?? fresh.fomo,
     ...(fresh.taFact ?? seed.taFact ? { taFact: fresh.taFact ?? seed.taFact } : {}),
     ...(fresh.ta ?? seed.ta ? { ta: fresh.ta ?? seed.ta } : {}),
     ...(fresh.candles?.length ? { candles: fresh.candles } : seed.candles?.length ? { candles: seed.candles } : {}),
