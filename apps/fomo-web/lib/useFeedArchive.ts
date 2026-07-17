@@ -83,14 +83,13 @@ export function useFeedArchive(enabled: boolean, existingIds?: ReadonlySet<strin
         : null;
     observer?.observe(el);
 
-    let ticking = false;
+    // rAF 스로틀 금지 — 히든 탭에선 rAF 가 멈춰 핸들러가 죽는다(실측). 타임스탬프 스로틀로.
+    let lastRun = 0;
     const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        ticking = false;
-        if (nearViewport()) void loadMore();
-      });
+      const now = Date.now();
+      if (now - lastRun < 200) return;
+      lastRun = now;
+      if (nearViewport()) void loadMore();
     };
     window.addEventListener("scroll", onScroll, { capture: true, passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
