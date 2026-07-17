@@ -56,18 +56,49 @@ export function useFeedArchive(enabled: boolean, existingIds?: ReadonlySet<strin
     }
   }, [existingIds]);
 
+  // 활성화 즉시 첫 페이지 프리페치 — 스크롤 전에 피드가 이미 깊어 보이게(끊김 0).
+  useEffect(() => {
+    if (enabled && !done) void loadMore();
+  }, [enabled, done, loadMore]);
+
   useEffect(() => {
     if (!enabled || done) return;
     const el = sentinelRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) void loadMore();
-      },
-      { rootMargin: "600px 0px" } // 바닥 도달 전에 미리 당겨 끊김 없는 스크롤
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    if (!el) return;
+
+    const nearViewport = () => {
+      const rect = el.getBoundingClientRect();
+      return rect.top < (window.innerHeight || 0) + 600 && rect.bottom > -600;
+    };
+
+    // IntersectionObserver 기본 + 캡처 단계 scroll 폴백(중첩 스크롤 컨테이너·IO 미발화 환경 대비).
+    const observer =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            (entries) => {
+              if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+            },
+            { rootMargin: "600px 0px" }
+          )
+        : null;
+    observer?.observe(el);
+
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        if (nearViewport()) void loadMore();
+      });
+    };
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      window.removeEventListener("resize", onScroll);
+    };
   }, [enabled, done, loadMore]);
 
   return { archive, sentinelRef, done };
