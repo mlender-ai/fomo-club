@@ -2,6 +2,14 @@ import { computeCardVerdict, computeFomoScore, isFrontHookSafe } from "@fomo/cor
 import type { CardFrontSignals } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
+import {
+  buildCoinCause,
+  composeCoinVerdict,
+  issuesForSymbol,
+  materialHeadline,
+  readLatestCoinMaterials,
+  type CoinMaterialItem,
+} from "./coin-materials";
 import type { DiscoveryFrontSeed, DiscoveryResponse, DiscoveryStockPayload } from "./discovery-supply";
 import { buildChartSeries } from "./stock-front";
 
@@ -70,12 +78,6 @@ function krw(price: number): string {
   return `${price.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}원`;
 }
 
-function eok(valueKrw: number): string {
-  const eokValue = valueKrw / 1e8;
-  if (eokValue >= 10_000) return `${(eokValue / 10_000).toFixed(1)}조`;
-  return `${Math.round(eokValue).toLocaleString("ko-KR")}억`;
-}
-
 function ratioText(ratio: number): string {
   return ratio >= 10 ? `${Math.round(ratio)}배` : `${ratio.toFixed(1)}배`;
 }
@@ -98,11 +100,13 @@ export function coinHeadline(snapshot: CoinMarketSnapshot, signal: CoinSignal): 
   return parts.join(" · ");
 }
 
-/** 커버리지(무신호) 헤드라인 — 시총 순위·거래대금 사실만. 신호 문구를 흉내내지 않는다. */
+/** 커버리지(무신호) 헤드라인 — 순위는 보조 메타로만 두고 가격·수급 상태를 말한다. */
 export function coinCoverageHeadline(snapshot: CoinMarketSnapshot, signal: CoinSignal): string {
   const parts: string[] = [];
-  if (typeof snapshot.marketCapRank === "number") parts.push(`시총 ${snapshot.marketCapRank}위`);
-  parts.push(`24시간 거래대금 평소 ${ratioText(signal.volumeRatio)}`);
+  if (Math.abs(snapshot.changePct) >= 1) {
+    parts.push(`하루 ${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(1)}%`);
+  }
+  parts.push(`거래 참여 평소 ${ratioText(signal.volumeRatio)}`);
   if (typeof snapshot.athChangePct === "number" && snapshot.athChangePct <= -30) {
     parts.push(`전고점 대비 ${Math.round(Math.abs(snapshot.athChangePct))}% 아래`);
   }
@@ -110,7 +114,11 @@ export function coinCoverageHeadline(snapshot: CoinMarketSnapshot, signal: CoinS
   return parts.join(" · ");
 }
 
-export function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal): DiscoveryFrontSeed {
+export function coinFrontSeed(
+  snapshot: CoinMarketSnapshot,
+  signal: CoinSignal,
+  coinIssues: readonly CoinMaterialItem[] = []
+): DiscoveryFrontSeed {
   const changePct = Number(snapshot.changePct.toFixed(2));
   const volumeRatio = Number(signal.volumeRatio.toFixed(2));
   const signals: CardFrontSignals = { changePct, volumeRatio };
@@ -118,27 +126,38 @@ export function coinFrontSeed(snapshot: CoinMarketSnapshot, signal: CoinSignal):
   const changeDir: "up" | "down" | "flat" = snapshot.changePct > 0 ? "up" : snapshot.changePct < 0 ? "down" : "flat";
   const candles = snapshot.candles.slice(-120);
   const chartSeries = buildChartSeries(candles);
+  const baseVerdict = computeCardVerdict({
+    candles: snapshot.candles,
+    volumeRatio: signal.volumeRatio,
+    currency: "KRW",
+  });
+  const coinCause = buildCoinCause(snapshot, coinIssues);
+  const primaryIssue = coinIssues.find((issue) => issue.scope === "coin");
   return {
-    signals,
+    signals: {
+      ...signals,
+      ...(primaryIssue ? { newsEventLabel: primaryIssue.title, newsEventSource: primaryIssue.source } : {}),
+    },
     fomo: computeFomoScore({ changePct, volumeRatio, asOf: kstDate() }),
     sparkline: closes.slice(-30),
     priceText: krw(snapshot.price),
     changeText: `${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(2)}%`,
     changeDir,
-    verdict: computeCardVerdict({
-      candles: snapshot.candles,
-      volumeRatio: signal.volumeRatio,
-      currency: "KRW",
-    }),
+    verdict: composeCoinVerdict(baseVerdict, coinIssues),
     candles,
     ...(chartSeries ? { chartSeries } : {}),
+    ...(coinIssues.length ? { coinIssues: [...coinIssues].slice(0, 3) } : {}),
+    ...(coinCause ? { coinCause } : {}),
   };
 }
 
-function coinStockPayload(snapshot: CoinMarketSnapshot, signal: CoinSignal, headline: string): DiscoveryStockPayload {
-  // 뎁스 보조(재무 블록 미해당) — 거래소·거래대금·시총 순위(CoinGecko) 사실 표기.
-  const capText = typeof snapshot.marketCapRank === "number" ? ` · 시총 ${snapshot.marketCapRank}위` : "";
-  const reason = `Upbit 원화마켓 · 24시간 거래대금 ${eok(snapshot.accTradePrice24h)}${capText}`;
+function coinStockPayload(
+  snapshot: CoinMarketSnapshot,
+  signal: CoinSignal,
+  headline: string,
+  primaryIssue?: CoinMaterialItem
+): DiscoveryStockPayload {
+  const reason = primaryIssue?.title ?? headline;
   return {
     canonical: snapshot.koreanName,
     market: "COIN",
@@ -150,15 +169,17 @@ function coinStockPayload(snapshot: CoinMarketSnapshot, signal: CoinSignal, head
     headline,
     whyShown: headline,
     reason,
-    insightTag: signal.vacuumInflow
+    insightTag: primaryIssue
+      ? `₿ ${primaryIssue.typeLabel}`
+      : signal.vacuumInflow
       ? "₿ 진공 후 유입"
       : signal.bigMove
         ? "₿ 급등락"
         : signal.volumeRatio >= VOLUME_ANOMALY_RATIO
           ? "₿ 거래대금 이상"
-          : "₿ 시총 상위",
-    sourceLabel: "Upbit 일봉 · CoinGecko",
-    sourceUrl: `https://upbit.com/exchange?code=CRIX.UPBIT.${snapshot.market}`,
+          : "₿ 시장 관찰",
+    sourceLabel: primaryIssue ? `${primaryIssue.source} · ${primaryIssue.typeLabel}` : "Upbit 일봉 · CoinGecko",
+    sourceUrl: primaryIssue?.url ?? `https://upbit.com/exchange?code=CRIX.UPBIT.${snapshot.market}`,
   };
 }
 
@@ -167,7 +188,10 @@ function coinStockPayload(snapshot: CoinMarketSnapshot, signal: CoinSignal, head
  * 캐시 비었거나 신호 없으면 stocks 0(정직) — 파이프라인은 정상.
  */
 export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
-  const snapshots = await readCoinMarketSnapshots().catch((): CoinMarketSnapshot[] => []);
+  const [snapshots, materialCache] = await Promise.all([
+    readCoinMarketSnapshots().catch((): CoinMarketSnapshot[] => []),
+    readLatestCoinMaterials().catch(() => null),
+  ]);
   const stocks: DiscoveryStockPayload[] = [];
   const fronts: Record<string, DiscoveryFrontSeed> = {};
 
@@ -180,11 +204,13 @@ export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
     .slice(0, COIN_CARD_LIMIT);
 
   for (const { snapshot, signal } of scored) {
-    const headline = coinHeadline(snapshot, signal);
+    const issues = issuesForSymbol(materialCache, snapshot.symbol);
+    const primaryIssue = issues.find((issue) => issue.scope === "coin");
+    const headline = primaryIssue ? materialHeadline(primaryIssue, snapshot) : coinHeadline(snapshot, signal);
     if (!isFrontHookSafe(headline)) continue; // 카피 가드 — 발굴 문구도 예외 없음
-    const payload = coinStockPayload(snapshot, signal, headline);
+    const payload = coinStockPayload(snapshot, signal, headline, primaryIssue);
     stocks.push(payload);
-    fronts[payload.canonical] = coinFrontSeed(snapshot, signal);
+    fronts[payload.canonical] = coinFrontSeed(snapshot, signal, issues);
   }
 
   // 2026-07-11 User Zero: 코인은 발굴이 아니라 커버리지(#820) — 시총 10위권 유니버스에서
@@ -198,11 +224,13 @@ export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
       .sort((a, b) => (a.snapshot.marketCapRank ?? 999) - (b.snapshot.marketCapRank ?? 999))
       .slice(0, COIN_CARD_LIMIT - stocks.length);
     for (const { snapshot, signal } of fillers) {
-      const headline = coinCoverageHeadline(snapshot, signal);
+      const issues = issuesForSymbol(materialCache, snapshot.symbol);
+      const primaryIssue = issues.find((issue) => issue.scope === "coin");
+      const headline = primaryIssue ? materialHeadline(primaryIssue, snapshot) : coinCoverageHeadline(snapshot, signal);
       if (!isFrontHookSafe(headline)) continue;
-      const payload = coinStockPayload(snapshot, signal, headline);
+      const payload = coinStockPayload(snapshot, signal, headline, primaryIssue);
       stocks.push(payload);
-      fronts[payload.canonical] = coinFrontSeed(snapshot, signal);
+      fronts[payload.canonical] = coinFrontSeed(snapshot, signal, issues);
     }
   }
 
@@ -211,6 +239,6 @@ export async function buildCoinDiscoveryResponse(): Promise<DiscoveryResponse> {
     stocks,
     fronts,
     confidence: stocks.length > 0 ? "H" : "L",
-    source: "Upbit 일봉·거래대금 캐시 · CoinGecko",
+    source: "코인 뉴스 재료 캐시 · Upbit 일봉·거래대금 · CoinGecko",
   };
 }

@@ -386,6 +386,8 @@ function mergeFrontSeed(
     ...(seed.verdict ?? fresh.verdict ? { verdict: seed.verdict ?? fresh.verdict } : {}),
     // 차트 시리즈(WO 1.6 D)는 non-lite 응답(fresh)에만 실린다.
     ...(fresh.chartSeries ?? seed.chartSeries ? { chartSeries: fresh.chartSeries ?? seed.chartSeries } : {}),
+    ...(fresh.coinIssues?.length ? { coinIssues: fresh.coinIssues } : seed.coinIssues?.length ? { coinIssues: seed.coinIssues } : {}),
+    ...(fresh.coinCause ?? seed.coinCause ? { coinCause: fresh.coinCause ?? seed.coinCause } : {}),
   };
 }
 
@@ -793,6 +795,7 @@ function movementTrigger(
   insight: CondensedInsight | null,
   context: StockContext | undefined
 ): string | undefined {
+  if (front?.coinCause?.text) return cleanText(front.coinCause.text);
   if (insight && insight.confidence !== "insufficient" && insight.whyHot.trim()) return cleanText(insight.whyHot);
   // 원인 연결 엔진(WO 뎁스 재건 A) — 급변동일 때 시간창 매칭된 재료가 일반 재료·대표주 카피보다 우선.
   if (insight?.cause?.kind === "material") return cleanText(insight.cause.text);
@@ -1014,6 +1017,11 @@ function WhyMovementTab({
             ↳ {insight.cause.sourceLabel ?? "출처"} · 원문 보기 →
           </a>
         )}
+        {front?.coinCause?.url && (
+          <a href={front.coinCause.url} target="_blank" rel="noreferrer" className="mt-2 block text-[11px] text-muted hover:text-whiteout">
+            ↳ {front.coinCause.sourceLabel} · 원문 보기 →
+          </a>
+        )}
         {sources.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-hairline pt-3">
             {sources.map((source) => (
@@ -1064,6 +1072,44 @@ function WhyMovementTab({
       <p className="mt-3 text-[11px] leading-5 text-muted">
         확인된 재료와 선택한 기간의 가격 흐름을 나란히 보여줘요. 둘 사이의 인과를 추정해 붙이지 않아요.
       </p>
+    </section>
+  );
+}
+
+function CoinIssuesBlock({ issues }: { issues: NonNullable<StockFrontResponse["coinIssues"]> }) {
+  if (issues.length === 0) return null;
+  return (
+    <section className="mt-6 border-y border-hairline py-1">
+      <div className="flex items-center justify-between gap-3 py-3">
+        <div>
+          <p className="font-pixel text-sm text-whiteout">지금 이슈</p>
+          <p className="mt-1 text-[11px] text-muted">이 코인과 연결된 최근 보도와 시장 공통 변수</p>
+        </div>
+        <span className="font-number text-[11px] text-muted">{issues.length}건</span>
+      </div>
+      <div className="divide-y divide-hairline">
+        {issues.slice(0, 3).map((issue) => (
+          <a
+            key={issue.id}
+            href={issue.url}
+            target="_blank"
+            rel="noreferrer"
+            className="group block py-4"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded border border-whiteout/20 px-1.5 py-0.5 text-[10px] font-bold text-whiteout">
+                {issue.typeLabel}
+              </span>
+              {issue.scope === "market" && <span className="text-[10px] text-muted">시장 공통</span>}
+              <span className="ml-auto text-[10px] text-muted">
+                {issue.source} · {issue.publishedAt.slice(0, 10)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-bold leading-5 text-whiteout group-hover:underline">{cleanText(issue.title)}</p>
+            <p className="mt-1.5 text-[12px] leading-5 text-muted">{cleanText(issue.meaning)}</p>
+          </a>
+        ))}
+      </div>
     </section>
   );
 }
@@ -2375,6 +2421,10 @@ export function StockInsightView({
           <>
           {/* 재료와 같은 기간의 가격·거래 반응 — 기술적 구조는 차트분석 탭으로 분리. */}
           <WhyMovementTab front={front} insight={insight} context={context} />
+
+          {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
+            <CoinIssuesBlock issues={front?.coinIssues ?? []} />
+          )}
 
           {/* 무슨 일이 있었나(WO-22) — 원문 인사이트 전체(양면·출처·공식지표). 카드 대비 뎁스의 정보 우위. */}
           <StockWhyHappened insight={insight} />

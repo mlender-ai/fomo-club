@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withCors } from "../../../../../lib/fomo";
 import { fetchUpbitCoinSnapshots, writeCoinMarketSnapshots } from "../../../../../lib/coin-market-source";
+import { collectAndStoreCoinMaterials } from "../../../../../lib/coin-materials";
 
 /**
  * 코인 시세·캔들 프리웜 크론 (WO Phase C) — us-market-prewarm 패턴.
@@ -24,7 +25,13 @@ export async function GET(request: Request) {
   }
   const startedAt = Date.now();
   try {
-    const snapshots = await fetchUpbitCoinSnapshots();
+    const [snapshots, materialsResult] = await Promise.all([
+      fetchUpbitCoinSnapshots(),
+      collectAndStoreCoinMaterials().then(
+        (stats) => ({ ok: true as const, ...stats }),
+        (error: unknown) => ({ ok: false as const, error: (error as Error)?.message ?? "coin material prewarm failed" })
+      ),
+    ]);
     const stats = await writeCoinMarketSnapshots(snapshots);
     revalidateTag("daily-30", { expire: 0 });
     revalidateTag("feed-hub", { expire: 0 });
@@ -36,6 +43,7 @@ export async function GET(request: Request) {
           universe: snapshots.length,
           written: stats.rows,
           withCandles: stats.rowsWithCandles,
+          materials: materialsResult,
           elapsedMs: Date.now() - startedAt,
         },
         { headers: { "Cache-Control": "no-store" } }

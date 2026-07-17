@@ -103,6 +103,7 @@ const KR_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] 
 const CRYPTO_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] = [
   { id: "tokenpost", url: "https://www.tokenpost.kr/rss", source: "토큰포스트", tier: "news-mid" },
   { id: "blockmedia", url: "https://www.blockmedia.co.kr/feed", source: "블록미디어", tier: "news-mid" },
+  { id: "coindesk-korea", url: "https://www.coindeskkorea.com/feed", source: "코인데스크코리아", tier: "news-mid" },
 ];
 
 // ───────────────────────── 네이버 금융 뉴스 (JSON) ─────────────────────────
@@ -274,6 +275,16 @@ export const NEWS_SOURCES: readonly NewsSource[] = [
   ...KR_FEEDS.map(makeKoreanRssSource),
   ...CRYPTO_FEEDS.map(makeKoreanRssSource),
 ];
+
+const CRYPTO_NEWS_SOURCES: readonly NewsSource[] = CRYPTO_FEEDS.map(makeKoreanRssSource);
+
+/** 코인 카드 재료 크론 전용 수집. 요청 경로에서는 호출하지 않고 프리웜 결과만 읽는다. */
+export async function fetchCryptoNews(): Promise<RawArticle[]> {
+  const settled = await Promise.allSettled(CRYPTO_NEWS_SOURCES.map((source) => source.fetch()));
+  const out: RawArticle[] = [];
+  for (const result of settled) if (result.status === "fulfilled") out.push(...result.value);
+  return out;
+}
 
 /** 모든 enabled 소스를 병렬 수집해 정규화 기사 배열로 합산. */
 export async function fetchAllNews(): Promise<RawArticle[]> {

@@ -3,6 +3,33 @@ import type { RawArticle } from "@fomo/core";
 
 vi.mock("../../lib/fomo-news-sources", () => ({ fetchAllNews: vi.fn(async () => mockedNews) }));
 vi.mock("../../lib/coin-market-source", () => ({ readCoinMarketSnapshots: vi.fn(async () => mockedSnapshots) }));
+vi.mock("../../lib/coin-materials", () => ({
+  readLatestCoinMaterials: vi.fn(async () => {
+    const cryptoSources = new Set(["토큰포스트", "블록미디어", "코인데스크코리아"]);
+    const qualified = mockedNews.filter(
+      (item) => cryptoSources.has(item.source) && /(법안|규제|승인|CLARITY|클래리티|ETF|반감기|업그레이드|금리|CPI|PPI)/i.test(item.title)
+    );
+    if (qualified.length === 0) return null;
+    return {
+      asOf: NOW.slice(0, 10),
+      collectedAt: NOW,
+      bySymbol: {},
+      global: qualified.map((item) => ({
+        id: item.id,
+        symbols: [],
+        scope: "market",
+        type: /반감기|업그레이드/i.test(item.title) ? "network" : "regulation",
+        typeLabel: /반감기|업그레이드/i.test(item.title) ? "네트워크" : "규제·법안",
+        direction: "neutral",
+        title: item.title,
+        meaning: "코인 시장 공통 이슈",
+        source: item.source,
+        url: item.url,
+        publishedAt: item.publishedAt,
+      })),
+    };
+  }),
+}));
 
 import {
   buildCoinIssueCards,

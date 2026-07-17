@@ -25,6 +25,14 @@ import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
 import { readCoinMarketSnapshots } from "./coin-market-source";
+import {
+  buildCoinCause,
+  composeCoinVerdict,
+  issuesForSymbol,
+  readLatestCoinMaterials,
+  type CoinCause,
+  type CoinMaterialItem,
+} from "./coin-materials";
 import { usSymbolForStock } from "./us-symbols";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
@@ -199,6 +207,10 @@ export interface StockFrontData {
   verdict?: CardVerdict;
   /** 차트분석 탭 시리즈(WO 1.6 D) — 종가+MA20/60/120+거래량. non-lite 에서만. */
   chartSeries?: StockChartSeries;
+  /** 코인 전용 최근 재료. 크론 캐시에서만 읽는다. */
+  coinIssues?: CoinMaterialItem[];
+  /** 코인 가격 변동과 기사 발행 시각의 결정론적 연결. */
+  coinCause?: CoinCause;
 }
 
 export interface StockFrontOptions {
@@ -362,9 +374,16 @@ async function assembleUsCachedStockFront(
  * 주식과 같은 표준: TA·verdict·chartSeries 전부 같은 엔진에 캔들만 공급. 재무는 코인 미해당.
  */
 async function assembleCoinStockFront(market: string, lite: boolean): Promise<StockFrontData> {
-  const snapshots = await readCoinMarketSnapshots().catch(() => []);
+  const [snapshots, materialCache] = await Promise.all([
+    readCoinMarketSnapshots().catch(() => []),
+    readLatestCoinMaterials().catch(() => null),
+  ]);
   const snapshot = snapshots.find((s) => s.market.toUpperCase() === market);
   if (!snapshot) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+
+  const coinIssues = issuesForSymbol(materialCache, snapshot.symbol);
+  const coinCause = buildCoinCause(snapshot, coinIssues);
+  const primaryIssue = coinIssues.find((issue) => issue.scope === "coin");
 
   const fullValues = snapshot.tradeValues.slice(0, -1);
   const avg20 = fullValues.length >= 5 ? fullValues.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, fullValues.length) : 0;
@@ -372,6 +391,7 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
   const signals: CardFrontSignals = {
     changePct: Number(snapshot.changePct.toFixed(2)),
     ...(typeof volRatio === "number" ? { volumeRatio: Number(volRatio.toFixed(2)) } : {}),
+    ...(primaryIssue ? { newsEventLabel: primaryIssue.title, newsEventSource: primaryIssue.source } : {}),
   };
   const closes = snapshot.candles.map((c) => c.close);
   const sparkline = closes.slice(-66);
@@ -387,6 +407,8 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     priceText,
     changeText,
     changeDir,
+    ...(coinIssues.length ? { coinIssues } : {}),
+    ...(coinCause ? { coinCause } : {}),
   };
   if (lite) {
     return { ...base, fomo: computeFomoScore({ ...signals }) };
@@ -400,11 +422,11 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
   });
   const taFact = selectTaFact(fomo, ta);
-  const verdict = computeCardVerdict({
+  const verdict = composeCoinVerdict(computeCardVerdict({
     candles: snapshot.candles,
     ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
     currency: "KRW",
-  });
+  }), coinIssues);
   const chartSeries = buildChartSeries(snapshot.candles);
   return {
     ...base,

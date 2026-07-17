@@ -60,6 +60,8 @@ export type FrontEntry = {
   verdict?: CardVerdict;
   candles?: NonNullable<StockFrontResponse["candles"]>;
   chartSeries?: NonNullable<StockFrontResponse["chartSeries"]>;
+  coinIssues?: NonNullable<StockFrontResponse["coinIssues"]>;
+  coinCause?: NonNullable<StockFrontResponse["coinCause"]>;
 };
 
 type UndoEntry = {
@@ -568,6 +570,8 @@ export function StockSwipeDeck({
               ...(d.axisSignals ? { axisSignals: d.axisSignals } : {}),
               ...(d.axisHook ? { axisHook: d.axisHook } : {}),
               ...(d.verdict ? { verdict: d.verdict } : {}),
+              ...(d.coinIssues ? { coinIssues: d.coinIssues } : {}),
+              ...(d.coinCause ? { coinCause: d.coinCause } : {}),
             },
           }))
         )
