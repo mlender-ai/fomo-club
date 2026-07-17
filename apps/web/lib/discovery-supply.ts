@@ -60,6 +60,7 @@ import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { isAbstractTemplate } from "./copy-guards";
 import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
+import type { CoinCause, CoinMaterialItem } from "./coin-materials";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
@@ -147,6 +148,10 @@ export interface DiscoveryFrontSeed {
     ma60: Array<number | null>;
     ma120: Array<number | null>;
   };
+  /** 코인 전용: 크론에서 수집·분류한 최근 이슈. 요청 경로 외부 fetch 없음. */
+  coinIssues?: CoinMaterialItem[];
+  /** 가격 변동과 이슈 발행 시각의 결정론적 시간창 연결. */
+  coinCause?: CoinCause;
 }
 
 export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {

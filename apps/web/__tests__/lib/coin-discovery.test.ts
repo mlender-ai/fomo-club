@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { coinFrontSeed, computeCoinSignal, hasDiscoverySignal, coinHeadline, type CoinSignal } from "../../lib/coin-discovery";
+import { coinCoverageHeadline, coinFrontSeed, computeCoinSignal, hasDiscoverySignal, coinHeadline, type CoinSignal } from "../../lib/coin-discovery";
 import type { CoinMarketSnapshot } from "../../lib/coin-market-source";
+import type { CoinMaterialItem } from "../../lib/coin-materials";
 
 function snapshot(overrides: Partial<CoinMarketSnapshot> = {}): CoinMarketSnapshot {
   const days = 40;
@@ -74,6 +75,14 @@ describe("coin discovery signals", () => {
     expect(coinHeadline(s, signal)).toBe("하루 +7.2% · 24시간 거래대금 평소 2.1배");
   });
 
+  it("무신호 커버리지 헤드라인에도 시총·거래대금 순위를 단독 재료로 쓰지 않음", () => {
+    const signal: CoinSignal = { volumeRatio: 0.9, vacuumInflow: false, bigMove: false, quiet: true };
+    const headline = coinCoverageHeadline(snapshot({ marketCapRank: 1 }), signal);
+    expect(headline).not.toContain("시총 1위");
+    expect(headline).not.toContain("거래대금 1위");
+    expect(headline).toContain("거래 참여 평소 0.9배");
+  });
+
   it("프리웜에서 확보한 실제 캔들과 차트 시리즈를 카드 seed에 유지", () => {
     const s = snapshot({ accTradePrice24h: 1.5e10 });
     const signal = computeCoinSignal(s)!;
@@ -84,5 +93,29 @@ describe("coin discovery signals", () => {
     expect(front.chartSeries?.closes).toHaveLength(40);
     expect(front.chartSeries?.volumes).toHaveLength(40);
     expect(front.chartSeries?.ma20.at(-1)).toBe(1500);
+  });
+
+  it("코인 재료를 카드 seed의 계기·이슈·verdict에 같은 계약으로 전달", () => {
+    const s = snapshot({ accTradePrice24h: 1.5e10, changePct: 4.1 });
+    const signal = computeCoinSignal(s)!;
+    const issue: CoinMaterialItem = {
+      id: "btc-etf",
+      symbols: ["TEST"],
+      scope: "coin",
+      type: "regulation",
+      typeLabel: "규제·법안",
+      direction: "positive",
+      title: "테스트코인 현물 ETF 순유입 확인",
+      meaning: "기관 접근성에 영향을 주는 이슈입니다.",
+      source: "토큰포스트",
+      url: "https://example.com/btc-etf",
+      publishedAt: "2026-07-02T12:00:00Z",
+    };
+    const front = coinFrontSeed(s, signal, [issue]);
+
+    expect(front.signals.newsEventLabel).toBe(issue.title);
+    expect(front.coinCause?.relation).toBe("same-window");
+    expect(front.coinIssues).toEqual([issue]);
+    expect(front.verdict?.stanceText).toContain(issue.title);
   });
 });

@@ -2,7 +2,7 @@
  * 콘텐츠 피드 베리에이션 빌더 (2026-07-11 User Zero: "매번 지수 얘기뿐 — 다양하게").
  *
  * 신규 4타입 — 전부 결정론(LLM 없음, 요청 경로 안전):
- * - coin-issue : 코인 핫이슈 — 시총 10위권 스냅샷 캐시에서 최대 무버·거래대금 이상.
+ * - coin-issue : 크론 코인 재료 캐시 우선 + 시세 스냅샷의 유의미한 무버 보조.
  * - hot-issue  : 미장·국장 뉴스 핫이슈 — 이미 수집된 기사에서 다수 소스가 겹치는 사건.
  * - term       : 오늘의 경제용어 — 정적 용어사전 날짜 로테이션(사실 서술만).
  * - event      : 시장 일정 — 규칙 계산 만기일(3째 금요일/둘째 목요일) + Fed 공개 FOMC 일정.
@@ -15,6 +15,7 @@ import type { DeckContentCard, DeckContentFact } from "./deck-content";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
 import { computeCoinSignal } from "./coin-discovery";
 import { fetchAllNews } from "./fomo-news-sources";
+import { readLatestCoinMaterials } from "./coin-materials";
 import { koreanTitle } from "./content-i18n";
 
 function kstNow(): Date {
@@ -36,12 +37,6 @@ function krwText(price: number): string {
   return `${price.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`;
 }
 
-// 코인 전문 매체(토큰포스트·블록미디어)만 — 일반 경제지의 우연한 코인 언급 잡음 배제.
-// isFresh(아래 hot-issue 절 정의, HOT_ISSUE_WINDOW_HOURS=30h)를 그대로 재사용한다.
-const CRYPTO_NEWS_SOURCES = new Set(["토큰포스트", "블록미디어"]);
-// 규제·법안·ETF·거시 지표 등 "왜 중요한가"가 있는 사건만 — 순수 가격 변동 기사(예: "OO 코인 5% 상승")는 걸러낸다.
-const COIN_MACRO_PATTERN = /(법안|규제|승인|입법|반감기|스테이블코인|클래리티|CLARITY|의회|채택|정책|과세|세제|ETF|연준|금리|물가|CPI|PPI)/;
-
 function priceTableFacts(withSignal: readonly { snapshot: CoinMarketSnapshot }[]): DeckContentFact[] {
   return [...withSignal]
     .sort((a, b) => (a.snapshot.marketCapRank ?? 999) - (b.snapshot.marketCapRank ?? 999))
@@ -62,16 +57,27 @@ const COIN_MOVER_MIN_VOLUME_RATIO = 1.5;
  * 별도 카드로 함께 노출한다(최대 2장). 매크로 없는 조용한 날은 기존처럼 무버 폴백만.
  */
 export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
-  const snapshots = await readCoinMarketSnapshots().catch((): CoinMarketSnapshot[] => []);
+  const [snapshots, materialCache] = await Promise.all([
+    readCoinMarketSnapshots().catch((): CoinMarketSnapshot[] => []),
+    readLatestCoinMaterials().catch(() => null),
+  ]);
   const withSignal = snapshots
     .map((snapshot) => ({ snapshot, signal: computeCoinSignal(snapshot) }))
     .filter((x): x is { snapshot: CoinMarketSnapshot; signal: NonNullable<ReturnType<typeof computeCoinSignal>> } => x.signal !== null);
 
-  const now = new Date();
-  const articles = await fetchAllNews().catch((): RawArticle[] => []);
-  const macroArticle = dedupeByTitle(
-    articles.filter((a) => CRYPTO_NEWS_SOURCES.has(a.source) && isFresh(a, now) && COIN_MACRO_PATTERN.test(a.title))
-  ).sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0];
+  const allIssues = materialCache
+    ? [...materialCache.global, ...Object.values(materialCache.bySymbol).flat()]
+    : [];
+  const seenIssues = new Set<string>();
+  const macroArticle = allIssues
+    .filter((issue) => issue.type === "regulation" || issue.type === "network" || issue.type === "macro")
+    .filter((issue) => {
+      const key = normalizedTitleKey(issue.title);
+      if (!key || seenIssues.has(key)) return false;
+      seenIssues.add(key);
+      return true;
+    })
+    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0];
 
   const cards: DeckContentCard[] = [];
   if (macroArticle) {
@@ -99,7 +105,6 @@ export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
     if (!macroArticle || significant) {
       const headlineParts = [`${mover.snapshot.koreanName} 하루 ${signedPct(mover.snapshot.changePct)}`];
       if (mover.signal.volumeRatio >= 1.3) headlineParts.push(`거래대금 평소 ${mover.signal.volumeRatio.toFixed(1)}배`);
-      if (typeof mover.snapshot.marketCapRank === "number") headlineParts.push(`시총 ${mover.snapshot.marketCapRank}위`);
       cards.push({
         kind: "content",
         id: macroArticle ? `content:coin-issue:mover:${kstDate()}` : `content:coin-issue:${kstDate()}`,

@@ -521,6 +521,27 @@ export interface StockFrontResponse {
     ma60: Array<number | null>;
     ma120: Array<number | null>;
   };
+  coinIssues?: Array<{
+    id: string;
+    symbols: string[];
+    scope: "coin" | "market";
+    type: "regulation" | "network" | "institution" | "onchain" | "macro";
+    typeLabel: string;
+    direction: "positive" | "negative" | "neutral";
+    title: string;
+    meaning: string;
+    source: string;
+    url: string;
+    publishedAt: string;
+  }>;
+  coinCause?: {
+    text: string;
+    relation: "same-window" | "recent-context";
+    sourceLabel: string;
+    url: string;
+    asOf: string;
+    issueId: string;
+  };
 }
 
 export interface FeedSignalPoint {
