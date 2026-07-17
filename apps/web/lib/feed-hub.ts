@@ -131,10 +131,10 @@ function buildSectorCards(rows: readonly DiscoveryMarketRow[], country: "KR" | "
     })
     .sort((a, b) => Math.abs(b.avg) - Math.abs(a.avg));
 
-  // 강세 최대 2 + 약세 최대 2, 국가당 총 3 — 다양성·수량 목표(하루 20~30) 기여.
+  // 강세 최대 2 + 약세 최대 2, 국가당 총 4 — 다양성·수량 목표(하루 30+) 기여.
   const bulls = ranked.filter((entry) => entry.avg > 0.8).slice(0, 2);
   const bears = ranked.filter((entry) => entry.avg < -0.8).slice(0, 2);
-  const picks = [...bulls, ...bears].slice(0, 3);
+  const picks = [...bulls, ...bears].slice(0, 4);
 
   return picks.map((entry) => {
     const stance: FeedSectorCard["stance"] = entry.avg > 0.8 ? "bull-dominant" : "bear-dominant";
@@ -163,8 +163,9 @@ function buildSectorCards(rows: readonly DiscoveryMarketRow[], country: "KR" | "
 
 // ── 종목 이슈 단신 (신규 ① — 공시·실적 1줄, 수집 재료 재활용) ────────────────
 
-const KR_ISSUE_LIMIT = 3;
-const US_ISSUE_LIMIT = 3;
+// 피드 보강(2026-07-17): 하루 30개+ 목표 — 공시·SEC 단신은 재료가 있는 만큼 더 싣는다.
+const KR_ISSUE_LIMIT = 6;
+const US_ISSUE_LIMIT = 5;
 const US_ISSUE_MOVER_MIN_PCT = 3;
 
 async function buildKrStockIssues(rows: readonly DiscoveryMarketRow[], asOf: string): Promise<FeedStockIssue[]> {
@@ -292,15 +293,17 @@ const TYPE_PRIORITY: Record<FeedItemType, number> = {
 // 2026-07-11 타입별 상한(User Zero: "매번 지수 얘기뿐") — 지수·거시가 팩트 분할로
 // 피드를 도배하던 것을 캡. interleave의 "억지 삭제 금지"는 유지하되, 같은 타입의
 // 과잉 생산분만 상한에서 잘라 다양성을 만든다(우선순위 정렬 후 앞에서부터 유지).
+// 피드 보강(2026-07-17, "무제한 스와이프" 볼륨): 지수·거시 캡은 유지(도배 재발 방지)하고
+// 다양한 타입(섹터·종목이슈·코인·핫이슈·용어·고래)에서 상한을 올려 하루 30개+를 만든다.
 const TYPE_CAPS: Partial<Record<FeedItemType, number>> = {
   index: 2,
   macro: 2,
-  whale: 1,
-  sector: 4,
-  "stock-issue": 4,
-  "hot-issue": 2,
-  "coin-issue": 1,
-  term: 1,
+  whale: 2,
+  sector: 6,
+  "stock-issue": 8,
+  "hot-issue": 4,
+  "coin-issue": 2,
+  term: 2,
   event: 1,
   calendar: 1,
 };
