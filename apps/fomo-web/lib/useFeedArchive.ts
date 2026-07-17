@@ -56,9 +56,15 @@ export function useFeedArchive(enabled: boolean, existingIds?: ReadonlySet<strin
     }
   }, [existingIds]);
 
-  // 활성화 즉시 첫 페이지 프리페치 — 스크롤 전에 피드가 이미 깊어 보이게(끊김 0).
+  // 활성화 즉시 3페이지(~9일치) 프리페치 — 스크롤 전에 피드가 이미 깊게(끊김 0, 페이지당 몇 KB).
+  // 스크롤·IO 이벤트가 죽는 환경(히든 탭 등)에서도 최소 열흘치 피드는 보장된다.
+  const prefetchedRef = useRef(false);
   useEffect(() => {
-    if (enabled && !done) void loadMore();
+    if (!enabled || done || prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    void (async () => {
+      for (let i = 0; i < 3; i += 1) await loadMore();
+    })();
   }, [enabled, done, loadMore]);
 
   useEffect(() => {
