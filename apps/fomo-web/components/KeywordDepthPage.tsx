@@ -794,8 +794,12 @@ function movementTrigger(
   context: StockContext | undefined
 ): string | undefined {
   if (insight && insight.confidence !== "insufficient" && insight.whyHot.trim()) return cleanText(insight.whyHot);
+  // 원인 연결 엔진(WO 뎁스 재건 A) — 급변동일 때 시간창 매칭된 재료가 일반 재료·대표주 카피보다 우선.
+  if (insight?.cause?.kind === "material") return cleanText(insight.cause.text);
   const material = front?.signals.newsEventLabel ?? (front?.axisHook?.axis === "time" ? front.axisHook.hookText : undefined);
-  return cleanText(material ?? context?.reason ?? "") || undefined;
+  const base = cleanText(material ?? context?.reason ?? "") || undefined;
+  // 재료가 없으면 지수 동반·정직한 미확인(±3% 급변동 한정)이라도 답한다 — 자백 템플릿 금지.
+  return base ?? (insight?.cause ? cleanText(insight.cause.text) : undefined);
 }
 
 function movementFacts(front: StockFrontResponse | null): ChartTooltip[] {
@@ -944,7 +948,8 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
             const bottom = y(Math.min(c.open, c.close));
             return (
               <g key={`c-${i}`}>
-                <line x1={cx} x2={cx} y1={y(c.high)} y2={y(c.low)} stroke={DETAIL_CHART.wick} strokeWidth="0.9" />
+                {/* 꼬리 = 몸통 색(WO 뎁스 재건 D) — 회색 단일 꼬리는 차트 신뢰감을 깎는다. */}
+                <line x1={cx} x2={cx} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth="0.9" />
                 <rect x={cx - bodyW / 2} y={top} width={bodyW} height={Math.max(1.2, bottom - top)} rx="0.7" fill={color} />
               </g>
             );
@@ -1002,8 +1007,13 @@ function WhyMovementTab({
       <div className="rounded-xl border border-hairline bg-surface px-4 py-4">
         <p className="text-[11px] font-bold text-muted">확인된 계기</p>
         <p className="mt-2 text-sm leading-6 text-whiteout">
-          {trigger ?? "가격 움직임과 직접 연결된 뉴스·공시 근거는 아직 확인되지 않았어요."}
+          {trigger ?? "오늘은 큰 재료 없이 흐른 날이에요 — 아래 신호와 차트로 흐름을 확인해요."}
         </p>
+        {insight?.cause?.url && insight.cause.kind === "material" && (
+          <a href={insight.cause.url} target="_blank" rel="noreferrer" className="mt-2 block text-[11px] text-muted hover:text-whiteout">
+            ↳ {insight.cause.sourceLabel ?? "출처"} · 원문 보기 →
+          </a>
+        )}
         {sources.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-hairline pt-3">
             {sources.map((source) => (
@@ -1618,7 +1628,8 @@ function AnalysisChart({
           const bottom = y(Math.min(c.open, c.close));
           return (
             <g key={`c-${i}`}>
-              <line x1={cx} x2={cx} y1={y(c.high)} y2={y(c.low)} stroke={CHART_COLOR.wick} strokeWidth="0.9" />
+              {/* 꼬리 = 몸통 색(WO 뎁스 재건 D). */}
+              <line x1={cx} x2={cx} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth="0.9" />
               <rect x={cx - barW / 2} y={top} width={barW} height={Math.max(1.2, bottom - top)} rx="0.7" fill={color} />
             </g>
           );

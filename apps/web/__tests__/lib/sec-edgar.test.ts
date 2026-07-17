@@ -88,7 +88,9 @@ describe("SEC EDGAR Form 4 insider purchases", () => {
 
     const { fetchRecentSecFilings } = await import("../../lib/sec-edgar");
     const hits = await fetchRecentSecFilings("IBM", 2);
-    expect(hits[0]?.label).toBe("실적 발표 8-K 공시 · 7/14");
+    // WO 뎁스 재건 B — 규제 용어(8-K) 원문 노출 금지, 쉬운말 라벨.
+    expect(hits[0]?.label).toBe("분기 실적 발표 (공식 공시) · 7/14");
+    expect(hits[0]?.label).not.toMatch(/8-K|10-Q|10-K/);
     // 브리핑 detail 경로(safeWhy→hasForbiddenCopy)에서 폐기되지 않아야 한다 —
     // "공시가 확인됐어요" 시절 라벨이 추상 슬롭 블록리스트에 걸려 IBM '왜'가 통째로 사라졌던 회귀 방지.
     const { hasForbiddenCopy } = await import("../../lib/copy-guards");
@@ -116,7 +118,8 @@ describe("SEC EDGAR Form 4 insider purchases", () => {
 
     const { fetchRecentSecFilings } = await import("../../lib/sec-edgar");
     const hits = await fetchRecentSecFilings("IBM", 2);
-    expect(hits[0]?.label).toBe("8-K 공시 제출 · 7/14");
+    expect(hits[0]?.label).toBe("주요 공시 제출 · 7/14");
+    expect(hits[0]?.label).not.toMatch(/8-K|10-Q|10-K/);
     const { hasForbiddenCopy } = await import("../../lib/copy-guards");
     expect(hasForbiddenCopy(hits[0]!.label)).toBe(false);
   });

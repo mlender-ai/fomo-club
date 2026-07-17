@@ -25,6 +25,10 @@ import { fetchDcStockTitles } from "./dcinside";
 import { fetchDartDisclosuresForCode } from "./dart-disclosures";
 import { fetchRecentSecFilings } from "./sec-edgar";
 import { usSymbolForStock } from "./us-symbols";
+import { computePriceCause, PRICE_CAUSE_MIN_MOVE_PCT } from "./price-cause";
+import { fetchStockDaily } from "./stock-front";
+import { readUsMarketQuoteRows } from "./us-market-cache";
+import { fetchMacro } from "./fomo-market-sources";
 
 /**
  * 이해 레이어 오케스트레이션 — DATA_ENGINE_STRATEGY §4 Track A. (네트워크 + LLM)
@@ -507,7 +511,47 @@ export async function collectThemeStocks(
 
 /** 개별 종목 이해·구조화(작업3, BM 심장) — 테마와 동일 구조/가드. 자료 적으면 정직한 빈 상태. */
 export async function understandStock(stock: string, opts: StockUnderstandingOptions = {}): Promise<ThemeInsight> {
-  return runUnderstanding(stock, await collectStockDocs(stock, opts), "stock");
+  const docs = await collectStockDocs(stock, opts);
+  const insight = await runUnderstanding(stock, docs, "stock");
+  // 원인 연결 엔진(WO 뎁스 재건 A) — 이미 수집한 공시·뉴스와 당일 급변동을 시간창으로 잇는다.
+  // 실패해도 인사이트 본체는 정상(fail-open).
+  const cause = await resolvePriceCause(stock, opts, docs).catch(() => undefined);
+  return cause ? { ...insight, cause } : insight;
+}
+
+/** 당일 등락률·지수 동반을 조회해 cause 엔진에 공급한다. 등락률을 못 구하면 개입하지 않는다(가짜 금지). */
+async function resolvePriceCause(
+  stock: string,
+  opts: StockUnderstandingOptions,
+  docs: readonly SourceDoc[]
+): Promise<import("@fomo/core").PriceCause | undefined> {
+  const def = stockDef(stock);
+  const code = validNaverCode(opts.naverCode) ?? def?.naverCode;
+  const symbol = opts.symbol ?? usSymbolForStock(stock);
+  const country = opts.country ?? def?.country ?? (code ? "KR" : symbol ? "US" : undefined);
+  if (!country || country === "GLOBAL") return undefined;
+
+  let changePct: number | undefined;
+  if (country === "KR" && code) {
+    const daily = await fetchStockDaily(code, 12).catch(() => ({ closes: [] as number[] }));
+    const closes = daily.closes;
+    const last = closes[closes.length - 1];
+    const prev = closes[closes.length - 2];
+    if (typeof last === "number" && typeof prev === "number" && prev > 0) changePct = ((last - prev) / prev) * 100;
+  } else if (country === "US" && symbol) {
+    const rows = await readUsMarketQuoteRows().catch(() => []);
+    const row = rows.find((r) => r.symbol === symbol);
+    if (typeof row?.changePct === "number") changePct = row.changePct;
+  }
+  if (typeof changePct !== "number" || Math.abs(changePct) < PRICE_CAUSE_MIN_MOVE_PCT) return undefined;
+
+  const macro = await fetchMacro().catch(() => []);
+  const indexKeys = country === "KR" ? ["kospi", "kosdaq"] : ["spx", "ndq", "sox"];
+  const indexMoves = macro
+    .filter((q) => indexKeys.includes(q.key) && typeof q.change === "number")
+    .map((q) => ({ label: q.label, changePct: q.change as number }));
+
+  return computePriceCause({ today: todayKst(), changePct, docs, indexMoves });
 }
 
 /**

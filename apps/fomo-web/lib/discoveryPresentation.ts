@@ -18,18 +18,20 @@ const STATUS_BY_LABEL: Record<FomoScoreResult["label"], DiscoveryStatusView> = {
   },
   lone: {
     label: "가격 먼저",
-    summary: "가격이 먼저 움직였고 거래·언급의 확인은 더 필요해요.",
+    // 자백 템플릿("확인은 더 필요해요") 금지(WO 뎁스 재건 A) — 사실 서술로.
+    summary: "가격이 먼저 움직였고, 거래·언급은 아직 잠잠해요.",
     tone: "moving",
     color: "#F59E0B",
   },
   warming: {
-    label: "관심 붙는 중",
+    // "관심 붙는 중"은 의미가 모호(WO 뎁스 재건 C) — 무엇이 늘고 있는지 즉시 읽히게.
+    label: "거래·언급 느는 중",
     summary: "가격이나 거래에서 평소와 다른 움직임이 붙었어요.",
     tone: "warming",
     color: "#D8FF3A",
   },
   incoming: {
-    label: "먼저 포착",
+    label: "수급 먼저",
     summary: "가격보다 수급이나 관심 신호가 먼저 확인됐어요.",
     tone: "early",
     color: "#38BDF8",
