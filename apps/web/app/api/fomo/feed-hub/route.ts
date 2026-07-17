@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { withCors, kstDate, cacheVersion } from "../../../../lib/fomo";
-import { buildFeedHubResponse, type FeedHubResponse } from "../../../../lib/feed-hub";
+import { buildFeedArchiveResponse, buildFeedHubResponse, type FeedHubResponse } from "../../../../lib/feed-hub";
 
 /**
  * 피드 집계 API (WO 피드 파이프라인 통합) — FeedView·PC 우측 컬럼의 단일 소스.
@@ -16,8 +16,23 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // 아카이브 모드(무한 피드) — ?before=YYYY-MM-DD 커서로 지난 브리핑·버즈·회고를 페이지 단위 제공.
+    const before = new URL(request.url).searchParams.get("before")?.trim();
+    if (before && /^\d{4}-\d{2}-\d{2}$/.test(before)) {
+      const loadArchive = unstable_cache(
+        () => buildFeedArchiveResponse(before),
+        ["fomo-feed-archive", cacheVersion(), before],
+        { revalidate: 21_600 } // 지난 콘텐츠는 사실상 불변 — 6h
+      );
+      return withCors(
+        NextResponse.json(await loadArchive(), {
+          headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
+        })
+      );
+    }
+
     const load = unstable_cache(
       () => buildFeedHubResponse(),
       ["fomo-feed-hub", cacheVersion(), kstDate()],

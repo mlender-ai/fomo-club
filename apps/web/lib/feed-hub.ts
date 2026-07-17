@@ -13,6 +13,7 @@ import { buildCoinIssueCards, buildEventCard, buildHotIssueCards, buildTermCard 
 import { hydrateKoreanTitles } from "./content-i18n";
 import { buildDailyReceiptCard } from "./feed-receipt";
 import { readWeeklyCalendar, type WeeklyCalendar } from "./earnings-calendar";
+import { readFeedContent } from "./feed-content-store";
 import type { DiscoveryMarketRow } from "./market-source-types";
 
 /**
@@ -451,4 +452,79 @@ export async function buildFeedHubResponse(): Promise<FeedHubResponse> {
     scopeCounts,
     source: "브리핑·버즈·회고·내러티브·섹터·지수·거시·고래·종목이슈·거시이슈 통합(feed-hub)",
   };
+}
+
+// ── 아카이브(무한 피드) — 지난 날짜의 브리핑·버즈·회고를 이어 붙인다 ─────────
+//
+// 2026-07-18 User Zero: "피드가 너무 없어 — 무한스크롤처럼 계속 보여줘". 오늘치(위)가 끝나면
+// 클라이언트가 before 커서로 지난 콘텐츠를 페이지 단위로 이어 받는다. 전부 이미 발행된
+// 실콘텐츠(FeedContentCache 영구 행)만 — 과거를 재생성하거나 지어내지 않는다(정직).
+
+/** 브리핑 계열 저장 행(feed-briefing.ts 규약) — 카드만 읽는다. */
+interface ArchivedBriefingRow {
+  card?: DeckContentCard;
+}
+
+export interface FeedArchiveResponse {
+  /** 이 페이지의 지난 콘텐츠(날짜 내림차순). */
+  items: FeedHubItem[];
+  /** 다음 페이지 커서(exclusive) — null 이면 아카이브 끝. */
+  nextBefore: string | null;
+}
+
+const ARCHIVE_PAGE_DAYS = 3;
+const ARCHIVE_MAX_LOOKBACK_DAYS = 30;
+
+function isoWeekOfDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function shiftDate(iso: string, days: number): string {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * 아카이브 페이지 — before(exclusive)부터 과거 3일치의 발행 콘텐츠(브리핑 US/KR·버즈·주간 회고).
+ * 주말·휴장일은 행이 없어 빈 페이지일 수 있다 — nextBefore 로 계속 넘겨 최대 30일까지 훑는다.
+ */
+export async function buildFeedArchiveResponse(before: string): Promise<FeedArchiveResponse> {
+  const today = kstDate();
+  const oldestAllowed = shiftDate(today, -ARCHIVE_MAX_LOOKBACK_DAYS);
+  const start = before <= today ? before : today;
+  const dates = Array.from({ length: ARCHIVE_PAGE_DAYS }, (_, i) => shiftDate(start, -(i + 1))).filter((d) => d >= oldestAllowed);
+  if (dates.length === 0) return { items: [], nextBefore: null };
+
+  const items: FeedHubItem[] = [];
+  const seen = new Set<string>();
+  const push = (card: DeckContentCard | undefined, type: FeedItemType) => {
+    if (!card || seen.has(card.id)) return;
+    seen.add(card.id);
+    items.push({ type: type as "briefing", scope: contentScope(card), content: card });
+  };
+
+  const seenWeeks = new Set<string>([isoWeekOfDate(today)]); // 이번 주 회고는 오늘 피드가 담당 — 중복 금지
+  for (const date of dates) {
+    const [us, kr, buzz] = await Promise.all([
+      readFeedContent<ArchivedBriefingRow>(`briefing:us:${date}`).catch(() => null),
+      readFeedContent<ArchivedBriefingRow>(`briefing:kr:${date}`).catch(() => null),
+      readFeedContent<ArchivedBriefingRow>(`buzz:${date}`).catch(() => null),
+    ]);
+    push(us?.card, "briefing");
+    push(kr?.card, "briefing");
+    push(buzz?.card, "buzz");
+    const week = isoWeekOfDate(date);
+    if (!seenWeeks.has(week)) {
+      seenWeeks.add(week);
+      const recap = await readFeedContent<ArchivedBriefingRow>(`recap:${week}`).catch(() => null);
+      push(recap?.card, "recap");
+    }
+  }
+
+  const oldest = dates[dates.length - 1]!;
+  return { items, nextBefore: oldest > oldestAllowed ? oldest : null };
 }
