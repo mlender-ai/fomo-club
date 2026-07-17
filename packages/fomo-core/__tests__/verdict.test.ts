@@ -181,3 +181,126 @@ describe("computeCardVerdict — 결정론 판단 엔진", () => {
     expect(allowed.some((level) => v!.invalidation.includes(level))).toBe(true);
   });
 });
+
+// ── WO 카드 품질 2차 (2026-07-17) — stanceText 탈템플릿 + 근거 수치화 반복도 게이트 ──
+describe("stanceText 조합 조립 — 돌려막기 회귀 방지 (WO 2차 A/B)", () => {
+  /** 프로덕션 30장을 흉내 낸 다양한 입력 30개 — 결정론(난수 없음), 시나리오·파라미터 스윕. */
+  function thirtyInputs(): VerdictInput[] {
+    const inputs: VerdictInput[] = [];
+    // 축적 6종 — 수급·내부자 변주
+    for (let i = 0; i < 6; i += 1) {
+      const scale = 1 + i * 0.13;
+      const candles = [
+        ...mkCandles([{ days: 80, from: 20000 * scale, to: 10000 * scale, vol: 1_000_000 }]),
+        ...mkCandles([{ days: 40, from: 10200 * scale, to: 10250 * scale, vol: 800_000 }]),
+        ...mkCandles([{ days: 20, from: 10250 * scale, to: 10200 * scale, vol: 480_000 }]),
+      ];
+      inputs.push(
+        i % 2 === 0
+          ? { candles, foreignNetStreak: 3 + i, currency: "KRW" }
+          : { candles, insider: { insiderCount: 2 + i, valueUsd: 300_000 * (i + 1) }, currency: "KRW" }
+      );
+    }
+    // 상승 6종 — 거래량 배수 변주
+    for (let i = 0; i < 6; i += 1) {
+      const candles: DailyOhlcv[] = [];
+      let close = 8000 + i * 700;
+      for (let d = 0; d < 140; d += 1) {
+        close *= d % 2 === 0 ? 1.014 + i * 0.0004 : 0.992;
+        candles.push({ open: close / 1.01, high: close * 1.01, low: close * 0.99, close, volume: d >= 120 ? 1_400_000 : 1_000_000 });
+      }
+      inputs.push({ candles, volumeRatio: 1.5 + i * 0.17, currency: "KRW" });
+    }
+    // 하락 6종 — 기울기·수급 이탈 변주
+    for (let i = 0; i < 6; i += 1) {
+      const candles = mkCandles([
+        { days: 60, from: 20000 + i * 900, to: 17000 + i * 500, vol: 1_000_000 },
+        { days: 80, from: 17000 + i * 500, to: 9000 + i * 350, vol: 1_000_000 },
+      ]);
+      inputs.push(i % 2 === 0 ? { candles, currency: "KRW" } : { candles, institutionNetStreak: -(3 + i), currency: "KRW" });
+    }
+    // 혼조/조용 6종 — 횡보 이격 변주
+    for (let i = 0; i < 6; i += 1) {
+      const base = 10000 + i * 1300;
+      const candles = mkCandles([
+        { days: 70, from: base, to: base * 1.02, vol: 700_000 },
+        { days: 50, from: base * 1.02, to: base * (0.97 + i * 0.012), vol: 700_000 },
+      ]);
+      inputs.push(i % 2 === 0 ? { candles, foreignNetStreak: 3 + i, institutionNetStreak: -(3 + i), currency: "KRW" } : { candles, currency: "KRW" });
+    }
+    // 분산 3종 + 이력 부족 3종
+    for (let i = 0; i < 3; i += 1) {
+      const scale = 1 + i * 0.21;
+      inputs.push({
+        candles: [
+          ...mkCandles([{ days: 100, from: 10000 * scale, to: 20000 * scale, vol: 900_000 }]),
+          ...mkCandles([{ days: 20, from: 19900 * scale, to: 19800 * scale, vol: 1_000_000 }]),
+          ...mkCandles([{ days: 20, from: 19850 * scale, to: 19900 * scale, vol: 1_600_000 }]),
+        ],
+        foreignNetStreak: -(3 + i),
+        currency: "KRW",
+      });
+      inputs.push({
+        candles: mkCandles([{ days: 15 + i * 5, from: 5000 * scale, to: 5100 * scale, vol: 300_000 }]),
+        ...(i === 0 ? { insider: { insiderCount: 2, valueUsd: 250_000 } } : {}),
+        currency: "KRW",
+      });
+    }
+    return inputs.slice(0, 30);
+  }
+
+  it("30장 기준 동일 stanceText ≤3회, 유니크 ≥10종 (돌려막기 금지 CI 게이트)", () => {
+    const verdicts = thirtyInputs().map((input) => computeCardVerdict(input));
+    expect(verdicts).toHaveLength(30);
+    const counts = new Map<string, number>();
+    for (const v of verdicts) counts.set(v.stanceText, (counts.get(v.stanceText) ?? 0) + 1);
+    const maxRepeat = Math.max(...counts.values());
+    expect(maxRepeat, `가장 많이 반복된 문장 ${maxRepeat}회: "${[...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0]}"`).toBeLessThanOrEqual(3);
+    expect(counts.size, "stanceText 유니크 종수").toBeGreaterThanOrEqual(10);
+  });
+
+  it("모든 근거(evidence) 문장에 실측치(숫자) 포함 — 무수치 일반문 0 (WO 2차 B 게이트)", () => {
+    const verdicts = thirtyInputs().map((input) => computeCardVerdict(input));
+    for (const v of verdicts) {
+      for (const line of v.evidence) {
+        expect(/\d/.test(line), `무수치 근거: "${line}"`).toBe(true);
+      }
+    }
+  });
+
+  it("동일 근거 문장 반복 ≤30% (근거도 돌려막기 금지)", () => {
+    const verdicts = thirtyInputs().map((input) => computeCardVerdict(input));
+    const counts = new Map<string, number>();
+    let total = 0;
+    for (const v of verdicts) {
+      for (const line of v.evidence) {
+        counts.set(line, (counts.get(line) ?? 0) + 1);
+        total += 1;
+      }
+    }
+    const maxRepeat = Math.max(...counts.values());
+    expect(maxRepeat / total, `최다 반복 근거 "${[...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0]}"`).toBeLessThanOrEqual(0.3);
+  });
+
+  it("phase 판정률 — 구조가 뚜렷한 시나리오(축적·상승·하락·분산)에서 판정 누락 없음", () => {
+    const structured = [
+      computeCardVerdict({ candles: accumulationCandles(), foreignNetStreak: 5 }),
+      computeCardVerdict({ candles: markupCandles(), volumeRatio: 1.6 }),
+      computeCardVerdict({ candles: markdownCandles() }),
+      computeCardVerdict({ candles: distributionCandles(), foreignNetStreak: -4 }),
+    ];
+    for (const v of structured) expect(v.phase).toBeDefined();
+  });
+
+  it("완화 폴백 — 거래량 확인 없는 뚜렷한 정배열 추세도 markup 으로 분류(억지 아님·배열 1%+ 이격)", () => {
+    const candles: DailyOhlcv[] = [];
+    let close = 10000;
+    for (let d = 0; d < 140; d += 1) {
+      close *= d % 2 === 0 ? 1.012 : 0.994; // 완만 상승, 거래량 확대 없음
+      candles.push({ open: close / 1.01, high: close * 1.01, low: close * 0.99, close, volume: 1_000_000 });
+    }
+    const v = computeCardVerdict({ candles });
+    expect(v.phase).toBe("markup");
+    expect(v.stance).toBe("watch"); // 유입·거래량 확인 없이는 enter 아님 — 판별 규율 유지
+  });
+});

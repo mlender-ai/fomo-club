@@ -1,0 +1,33 @@
+name: KR Candle Prewarm
+
+# KR 일봉 260거래일 프리웜 (WO 카드 품질 2차 C) — 52주·MA120·와이코프 phase 판정의 연료.
+# 04:40 KST(화~토) = 전 거래일 마감 데이터 확보 후, 05:00 index 크론·06:00 daily-30 빌드 전.
+# 요청 경로는 캐시만 읽는다(504 원칙). GH cron 지연은 상수 — 몇 시간 늦어도 같은 날 데이터라 무해.
+
+on:
+  schedule:
+    - cron: "40 19 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kr-candle-prewarm
+  cancel-in-progress: false
+
+jobs:
+  prewarm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call production KR candle prewarm endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/cron/kr-candle-prewarm"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl -fsS "$URL" -H "Authorization: Bearer ${CRON_SECRET}"
+          else
+            curl -fsS "$URL"
+          fi

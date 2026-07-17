@@ -89,6 +89,8 @@ interface PriceStructure {
   stall10: number;
   /** MA20의 10일 기울기(비율) — 상승 지속(양수 큼) vs 고점 정체(≈0) 판별자. */
   ma20Slope10?: number;
+  /** 20/60일선 배열 연속 일수 — 양수=정배열 N일째, 음수=역배열 N일째. 근거 수치화(WO 2차 B)용. */
+  alignStreak?: number;
   days: number;
 }
 
@@ -112,6 +114,25 @@ function priceStructure(candles: readonly DailyOhlcv[]): PriceStructure | undefi
   const ma120 = sma(closes, 120);
   const ma20Prev10 = closes.length >= 30 ? sma(closes.slice(0, -10), 20) : undefined;
   const ma20Slope10 = num(ma20) && num(ma20Prev10) && ma20Prev10 > 0 ? ma20 / ma20Prev10 - 1 : undefined;
+  // 20/60일선 배열 연속 일수 — 프리픽스합으로 일별 SMA를 계산해 현재 배열이 며칠째인지 센다(결정론).
+  let alignStreak: number | undefined;
+  if (closes.length >= 60) {
+    const prefix: number[] = [0];
+    for (const c of closes) prefix.push(prefix[prefix.length - 1]! + c);
+    const smaAt = (i: number, n: number): number | undefined => (i + 1 >= n ? (prefix[i + 1]! - prefix[i + 1 - n]!) / n : undefined);
+    const alignSign = (i: number): number => {
+      const a = smaAt(i, 20);
+      const b = smaAt(i, 60);
+      if (!num(a) || !num(b) || a === b) return 0;
+      return a > b ? 1 : -1;
+    };
+    const last = alignSign(closes.length - 1);
+    if (last !== 0) {
+      let count = 0;
+      for (let i = closes.length - 1; i >= 0 && alignSign(i) === last; i -= 1) count += 1;
+      alignStreak = last * count;
+    }
+  }
   return {
     close,
     ...(num(ma20) ? { ma20 } : {}),
@@ -124,6 +145,7 @@ function priceStructure(candles: readonly DailyOhlcv[]): PriceStructure | undefi
     recentNewLow: min10Low <= windowLow * 1.005,
     stall10: num(first10Close) && first10Close > 0 ? close / first10Close - 1 : 0,
     ...(num(ma20Slope10) ? { ma20Slope10 } : {}),
+    ...(num(alignStreak) ? { alignStreak } : {}),
     days: clean.length,
   };
 }
@@ -149,15 +171,12 @@ function wyckoffPhase(s: PriceStructure, squeeze: boolean, volumeRatio: number |
   if (nearLow && volumeContracting && flat && !s.recentNewLow) return "accumulation";
   if (nearHigh && volumeExpanding && s.stall10 <= 0.02 && ma20Flat) return "distribution";
   if (bullAligned && s.close > s.ma20 && volumeExpanding) return "markup";
+  // 완화 폴백(WO 2차 D — 판정률 80% 목표): 거래량 확인·저점 갱신이 없어도 배열이 뚜렷하면(≥1% 이격)
+  // 추세 국면으로 분류한다. 배열이 붙어 있는 애매한 중간 지대만 정직하게 "없음"으로 남긴다.
+  if (bullAligned && s.ma20 > s.ma60 * 1.01 && s.close > s.ma20) return "markup";
+  if (bearAligned && s.ma20 < s.ma60 * 0.99 && s.close < s.ma20) return "markdown";
   return undefined;
 }
-
-const PHASE_TEXT: Record<WyckoffPhase, string> = {
-  accumulation: "저점권 횡보에 거래가 수축된 축적형 구조",
-  markup: "이동평균 정배열에 거래량이 붙은 상승 국면",
-  distribution: "고점권에서 거래는 늘고 가격은 정체된 분산형 구조",
-  markdown: "이동평균 역배열에 저점을 갱신 중인 하락 국면",
-};
 
 type Driver =
   | "accumulation_inflow"
@@ -170,55 +189,114 @@ type Driver =
   | "markdown"
   | "signal_drain";
 
-function stanceText(stance: VerdictStance, driver: Driver, primaryEvidenceKind: string | undefined): string {
-  if (stance === "enter") {
-    if (driver === "accumulation_inflow") {
-      return primaryEvidenceKind === "insider"
-        ? "저점 다지기 구간에 내부자 매수가 겹쳐, 분할 진입을 검토할 만한 자리로 보여요."
-        : "저점 다지기 구간에 기관·외국인 유입이 붙어, 분할 진입을 검토할 만한 자리로 보여요.";
-    }
-    if (driver === "markup_confirmed") {
-      return "추세 초입에 거래량 확인이 붙어, 흐름을 따라가 볼 만한 자리로 보여요.";
-    }
-    return "가격 구조보다 신호 조합이 먼저 좋아진 상태 — 가볍게 진입을 검토할 만해요.";
-  }
-  if (stance === "avoid") {
-    if (driver === "phase_exit") return "고점권 분산에 수급 이탈이 겹쳐, 지금 들어갈 자리는 아니에요.";
-    if (driver === "markdown") return "하락 추세가 진행 중이라, 바닥 확인 전엔 피하는 게 맞아요.";
-    return "확인되는 신호가 약세 쪽에 몰려 있어, 지금은 피할 구간이에요.";
-  }
-  if (driver === "overheat") return "추세는 살아 있지만 단기 과열 상태 — 눌림을 기다려 볼 구간이에요.";
-  if (driver === "mixed") return "강세·약세 신호가 상충해, 지금은 지켜볼 구간이에요.";
-  return "판단을 기울일 확인 신호가 아직 부족해요. 관찰 목록에 두는 정도가 맞아요.";
+/** 받침 유무 기반 조사 선택 — 조립 문장의 "이/가"·"은/는" 깨짐 방지. 비한글 끝은 받침 없음으로 처리. */
+function josa(word: string, withBatchim: string, withoutBatchim: string): string {
+  const last = word.trim().at(-1);
+  if (!last) return withoutBatchim;
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return withoutBatchim;
+  return (code - 0xac00) % 28 === 0 ? withoutBatchim : withBatchim;
 }
 
 interface Factor {
   kind: string;
+  /** 근거 문장 — 반드시 실측치(숫자) 포함(WO 2차 B 게이트). */
   text: string;
+  /** stanceText 조립용 짧은 구절 — [주도 신호 실측치]+[반대 신호 실측치] 형태(WO 2차 A). */
+  short: string;
 }
 
-/** 가격 구조 없이도 확인 가능한 강세 신호(내부자·수급·재료·거래량) — 최소 verdict 의 근거이기도 하다. */
+/** 근거 수치화 게이트(WO 2차 B) — 숫자 없는 일반문 근거는 카드에 싣지 않는다. */
+export function hasMeasuredValue(text: string): boolean {
+  return /\d/.test(text);
+}
+
+/**
+ * 판단 1줄 조립(WO 2차 A) — stance별 고정 문장 대신 실제 신호 조합에서 조립한다.
+ * 형태: [주도 신호 실측치] + [반대/부족 신호 실측치] + stance 결론. 결정론(같은 입력→같은 출력).
+ */
+function assembleStanceText(
+  stance: VerdictStance,
+  driver: Driver,
+  bulls: readonly Factor[],
+  bears: readonly Factor[],
+  s: PriceStructure,
+  rsi: number | undefined,
+  currency: "KRW" | "USD"
+): string {
+  const bullLead = bulls[0];
+  const bearLead = bears[0];
+  if (stance === "enter") {
+    if (driver === "accumulation_inflow" && bullLead) {
+      return `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 위 다지기에 ${bullLead.short}${josa(bullLead.short, "이", "가")} 붙어 — 분할 진입을 검토할 자리예요.`;
+    }
+    if (driver === "markup_confirmed" && bullLead) {
+      const trendClause = num(s.alignStreak) && s.alignStreak > 0 ? `정배열 ${s.alignStreak}일째 추세` : "상승 추세";
+      const confirm = bulls.find((f) => f.kind === "volume" || f.kind === "insider" || f.kind === "flow") ?? bullLead;
+      return `${trendClause}에 ${confirm.short} 확인 — 흐름을 따라가 볼 자리예요.`;
+    }
+    if (bulls.length >= 2) {
+      return `${bulls[0]!.short}에 ${bulls[1]!.short}까지 겹쳐 — 가볍게 진입을 검토할 만해요.`;
+    }
+    return `${bullLead?.short ?? "확인 신호"}${josa(bullLead?.short ?? "확인 신호", "이", "가")} 먼저 좋아졌어요 — 가볍게 진입을 검토할 만해요.`;
+  }
+  if (stance === "avoid") {
+    if (driver === "phase_exit") {
+      const highGap = ((1 - s.close / s.windowHigh) * 100).toFixed(1);
+      const tail = bearLead ? `에 ${bearLead.short}${josa(bearLead.short, "이", "가")} 겹쳐` : "라";
+      return `${s.windowText} 고점 대비 -${highGap}% 분산 구간${tail} — 지금 들어갈 자리는 아니에요.`;
+    }
+    if (driver === "markdown") {
+      const streakClause = num(s.alignStreak) && s.alignStreak < 0 ? `역배열 ${Math.abs(s.alignStreak)}일째` : "하락 추세";
+      const extra = bears.find((f) => f.kind !== "trend" && f.kind !== "newlow");
+      return extra
+        ? `${streakClause} 하락에 ${extra.short}까지 — 바닥 확인 전엔 피할 구간이에요.`
+        : `${streakClause}, ${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 부근 — 바닥 확인 전엔 피할 구간이에요.`;
+    }
+    if (bears.length >= 2) {
+      return `${bears[0]!.short}·${bears[1]!.short} — 약세 신호가 쌓여 지금은 피할 구간이에요.`;
+    }
+    return `${bearLead?.short ?? "약세 신호"} 쪽에 무게가 실려 — 지금은 피할 구간이에요.`;
+  }
+  // watch
+  if (driver === "overheat" && num(rsi)) {
+    const trendClause = bullLead ? bullLead.short : num(s.alignStreak) && s.alignStreak > 0 ? `정배열 ${s.alignStreak}일째` : "추세";
+    return `${trendClause}로 추세는 살아 있는데 RSI ${Math.round(rsi)} 과열이 맞서요 — 식는지 볼 구간이에요.`;
+  }
+  if (driver === "mixed" && bullLead && bearLead) {
+    return `${bullLead.short}${josa(bullLead.short, "은", "는")} 강세인데 ${bearLead.short}${josa(bearLead.short, "이", "가")} 맞서요 — 우세가 갈릴 때까지 볼 구간이에요.`;
+  }
+  // quiet — 카드마다 다른 실측치(20일선 이격)로 문장을 만들어 돌려막기를 없앤다.
+  if (num(s.ma20) && s.ma20 > 0) {
+    const gap = ((s.close / s.ma20 - 1) * 100).toFixed(1);
+    return `20일선 대비 ${Number(gap) >= 0 ? "+" : ""}${gap}% 자리, 판단을 기울일 확인 신호는 아직 — 관찰 구간이에요.`;
+  }
+  return `가격 이력 ${s.days}거래일 — 확인 신호가 쌓일 때까지 관찰 구간이에요.`;
+}
+
+/** 가격 구조 없이도 확인 가능한 강세 신호(내부자·수급·재료·거래량) — 최소 verdict 의 근거이기도 하다. 전 문장 실측치 포함. */
 function signalBullFactors(input: VerdictInput): Factor[] {
   const out: Factor[] = [];
   const insiderCount = input.insider?.insiderCount;
   if (num(insiderCount) && insiderCount >= 2) {
     const valueUsd = input.insider?.valueUsd;
     const valueText = num(valueUsd) && valueUsd > 0 ? ` 총 $${Math.round(valueUsd / 1000).toLocaleString("en-US")}k` : "";
-    out.push({ kind: "insider", text: `내부자 ${insiderCount}인이${valueText} 동반 매수(공시 확인)` });
+    out.push({ kind: "insider", text: `내부자 ${insiderCount}인이${valueText} 동반 매수(공시 확인)`, short: `내부자 ${insiderCount}인 동반 매수` });
   } else if (input.insider?.confirmed === true) {
-    out.push({ kind: "insider", text: "내부자 공개시장 매수 공시 확인" });
+    out.push({ kind: "insider", text: "내부자 공개시장 매수 공시 1건 이상 확인", short: "내부자 매수 공시 확인" });
   }
   if (num(input.foreignNetStreak) && input.foreignNetStreak >= 3) {
-    out.push({ kind: "flow", text: `외국인 ${input.foreignNetStreak}일 연속 순매수` });
+    out.push({ kind: "flow", text: `외국인 ${input.foreignNetStreak}일 연속 순매수`, short: `외국인 ${input.foreignNetStreak}일 연속 순매수` });
   }
   if (num(input.institutionNetStreak) && input.institutionNetStreak >= 3) {
-    out.push({ kind: "flow", text: `기관 ${input.institutionNetStreak}일 연속 순매수` });
+    out.push({ kind: "flow", text: `기관 ${input.institutionNetStreak}일 연속 순매수`, short: `기관 ${input.institutionNetStreak}일 연속 순매수` });
   }
   if (num(input.materialStrength) && input.materialStrength >= 0.6) {
-    out.push({ kind: "material", text: "이 종목을 직접 언급한 재료(뉴스·공시)가 확인됨" });
+    const pct = Math.round(input.materialStrength * 100);
+    out.push({ kind: "material", text: `이 종목을 직접 언급한 재료(뉴스·공시) 확인 — 신호 강도 ${pct}%`, short: `직접 재료(강도 ${pct}%)` });
   }
   if (num(input.volumeRatio) && input.volumeRatio >= 1.5) {
-    out.push({ kind: "volume", text: `거래량이 20일 평균의 ${input.volumeRatio.toFixed(1)}배` });
+    out.push({ kind: "volume", text: `거래량이 20일 평균의 ${input.volumeRatio.toFixed(1)}배`, short: `거래량 ${input.volumeRatio.toFixed(1)}배` });
   }
   return out;
 }
@@ -226,32 +304,50 @@ function signalBullFactors(input: VerdictInput): Factor[] {
 function signalBearFactors(input: VerdictInput): Factor[] {
   const out: Factor[] = [];
   if (num(input.foreignNetStreak) && input.foreignNetStreak <= -3) {
-    out.push({ kind: "flow", text: `외국인 ${Math.abs(input.foreignNetStreak)}일 연속 순매도` });
+    const days = Math.abs(input.foreignNetStreak);
+    out.push({ kind: "flow", text: `외국인 ${days}일 연속 순매도`, short: `외국인 ${days}일 연속 순매도` });
   }
   if (num(input.institutionNetStreak) && input.institutionNetStreak <= -3) {
-    out.push({ kind: "flow", text: `기관 ${Math.abs(input.institutionNetStreak)}일 연속 순매도` });
+    const days = Math.abs(input.institutionNetStreak);
+    out.push({ kind: "flow", text: `기관 ${days}일 연속 순매도`, short: `기관 ${days}일 연속 순매도` });
   }
   return out;
 }
 
-function bullFactors(input: VerdictInput, s: PriceStructure): Factor[] {
+function bullFactors(input: VerdictInput, s: PriceStructure, currency: "KRW" | "USD"): Factor[] {
   const out = signalBullFactors(input);
   if (num(s.ma20) && num(s.ma60) && s.ma20 > s.ma60 && s.close > s.ma20) {
-    out.push({ kind: "trend", text: "20·60일선 정배열 위에서 가격 유지 중" });
+    const gap = ((s.close / s.ma20 - 1) * 100).toFixed(1);
+    const streakText = num(s.alignStreak) && s.alignStreak > 0 ? ` — 정배열 ${s.alignStreak}일째` : "";
+    out.push({
+      kind: "trend",
+      text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 위 +${gap}%${streakText}`,
+      short: num(s.alignStreak) && s.alignStreak > 0 ? `정배열 ${s.alignStreak}일째` : `20일선 위 +${gap}%`,
+    });
   }
   return out;
 }
 
-function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undefined): Factor[] {
+function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undefined, currency: "KRW" | "USD"): Factor[] {
   const out = signalBearFactors(input);
   if (num(rsi) && rsi >= 70) {
-    out.push({ kind: "overheat", text: `RSI ${Math.round(rsi)} — 단기 과열 영역` });
+    out.push({ kind: "overheat", text: `RSI ${Math.round(rsi)} — 단기 과열 영역`, short: `RSI ${Math.round(rsi)} 단기 과열` });
   }
   if (num(s.ma20) && num(s.ma60) && s.ma20 < s.ma60 && s.close < s.ma20) {
-    out.push({ kind: "trend", text: "20·60일선 역배열 아래에서 가격 하락 중" });
+    const gap = ((1 - s.close / s.ma20) * 100).toFixed(1);
+    const streakText = num(s.alignStreak) && s.alignStreak < 0 ? ` — 역배열 ${Math.abs(s.alignStreak)}일째` : "";
+    out.push({
+      kind: "trend",
+      text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 아래 -${gap}% 이격${streakText}`,
+      short: num(s.alignStreak) && s.alignStreak < 0 ? `역배열 ${Math.abs(s.alignStreak)}일째` : `20일선 아래 -${gap}%`,
+    });
   }
   if (s.recentNewLow) {
-    out.push({ kind: "newlow", text: `${s.windowText} 저점을 최근 갱신` });
+    out.push({
+      kind: "newlow",
+      text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)}을 최근 10일 내 갱신`,
+      short: `${s.windowText} 저점 갱신`,
+    });
   }
   return out;
 }
@@ -259,13 +355,36 @@ function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undef
 function phaseEvidence(phase: WyckoffPhase, s: PriceStructure, currency: "KRW" | "USD"): Factor {
   if (phase === "accumulation") {
     const pct = ((s.close / s.windowLow - 1) * 100).toFixed(1);
-    return { kind: "phase", text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 대비 +${pct}% — ${PHASE_TEXT[phase]}` };
+    return {
+      kind: "phase",
+      text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 대비 +${pct}% — 저점권 횡보에 거래가 수축된 축적형 구조`,
+      short: "저점권 축적 구조",
+    };
   }
   if (phase === "distribution") {
     const pct = ((1 - s.close / s.windowHigh) * 100).toFixed(1);
-    return { kind: "phase", text: `${s.windowText} 고점 ${formatVerdictLevel(s.windowHigh, currency)} 대비 -${pct}% — ${PHASE_TEXT[phase]}` };
+    return {
+      kind: "phase",
+      text: `${s.windowText} 고점 ${formatVerdictLevel(s.windowHigh, currency)} 대비 -${pct}% — 고점권에서 거래는 늘고 가격은 정체된 분산형 구조`,
+      short: "고점권 분산 구조",
+    };
   }
-  return { kind: "phase", text: PHASE_TEXT[phase] };
+  if (phase === "markup") {
+    const gap = num(s.ma20) && s.ma20 > 0 ? ((s.close / s.ma20 - 1) * 100).toFixed(1) : undefined;
+    const streakText = num(s.alignStreak) && s.alignStreak > 0 ? `정배열 ${s.alignStreak}일째` : "이동평균 정배열";
+    return {
+      kind: "phase",
+      text: `${streakText}${gap ? `·20일선 위 +${gap}%` : ""} — 상승 국면`,
+      short: streakText,
+    };
+  }
+  const lowGap = ((s.close / s.windowLow - 1) * 100).toFixed(1);
+  const streakText = num(s.alignStreak) && s.alignStreak < 0 ? `역배열 ${Math.abs(s.alignStreak)}일째` : "이동평균 역배열";
+  return {
+    kind: "phase",
+    text: `${streakText}·${s.windowText} 저점 대비 +${lowGap}% — 하락 국면`,
+    short: streakText,
+  };
 }
 
 function invalidationOf(
@@ -303,10 +422,14 @@ function invalidationOf(
  * 억지 enter/avoid 금지: 항상 관망 + 확인된 신호 근거만. 레벨을 계산할 수 없으니 무효화는 생략(가짜 레벨 금지).
  */
 function minimalVerdict(input: VerdictInput): CardVerdict {
-  const evidence = [...signalBullFactors(input), ...signalBearFactors(input)].slice(0, 3).map((f) => f.text);
+  const evidence = [...signalBullFactors(input), ...signalBearFactors(input)]
+    .slice(0, 3)
+    .map((f) => f.text)
+    .filter(hasMeasuredValue);
+  const days = input.candles.length;
   return {
     stance: "watch",
-    stanceText: "가격 이력이 짧아 신호가 쌓이는 중이에요 — 지금은 관찰 구간이에요.",
+    stanceText: `가격 이력 ${days}거래일뿐이라 신호가 쌓이는 중 — 지금은 관찰 구간이에요.`,
     evidence,
     confidence: "low",
   };
@@ -325,8 +448,8 @@ export function computeCardVerdict(input: VerdictInput): CardVerdict {
   const squeeze = ta.inputs.bollingerSqueeze === true;
   const phase = wyckoffPhase(s, squeeze, input.volumeRatio);
 
-  const bulls = bullFactors(input, s);
-  const bears = bearFactors(input, s, rsi);
+  const bulls = bullFactors(input, s, currency);
+  const bears = bearFactors(input, s, rsi, currency);
   const hasInflow = bulls.some((f) => f.kind === "insider" || f.kind === "flow");
   const hasOutflow = bears.some((f) => f.kind === "flow");
   const overheated = num(rsi) && rsi >= 70;
@@ -361,7 +484,7 @@ export function computeCardVerdict(input: VerdictInput): CardVerdict {
   if (phase) evidence.push(phaseEvidence(phase, s, currency).text);
   for (const f of sided) {
     if (evidence.length >= 3) break;
-    if (!evidence.includes(f.text)) evidence.push(f.text);
+    if (!evidence.includes(f.text) && hasMeasuredValue(f.text)) evidence.push(f.text);
   }
 
   const sidedCount = stance === "enter" ? bulls.length : stance === "avoid" ? bears.length : Math.max(bulls.length, bears.length);
@@ -371,7 +494,7 @@ export function computeCardVerdict(input: VerdictInput): CardVerdict {
   const invalidation = invalidationOf(stance, driver, s, currency);
   return {
     stance,
-    stanceText: stanceText(stance, driver, sided[0]?.kind),
+    stanceText: assembleStanceText(stance, driver, bulls, bears, s, rsi, currency),
     ...(phase ? { phase } : {}),
     evidence,
     invalidation: invalidation.text,
