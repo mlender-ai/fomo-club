@@ -91,8 +91,9 @@ export function computePriceCause(input: CauseDateWindowInput): PriceCause | und
     .filter((d) => CAUSE_NEWS_PATTERN.test(`${d.title} ${d.body ?? ""}`))
     .sort((a, b) => ((a.publishedAt ?? "") < (b.publishedAt ?? "") ? 1 : -1))[0];
   if (news) {
+    const newsDate = news.publishedAt ? `${mmdd(news.publishedAt)} ` : "";
     return {
-      text: `같은 날 보도된 재료: "${news.title.trim()}"`,
+      text: `${newsDate}보도된 재료: "${news.title.trim()}"`,
       kind: "material",
       ...(news.source ? { sourceLabel: news.source } : {}),
       ...(news.url ? { url: news.url } : {}),
