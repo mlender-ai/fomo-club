@@ -84,7 +84,12 @@ function normalizeHookPhrase(hook: string): string {
   return cleanInline(hook)
     .replace(/특허\s*확$/, "특허 확보")
     .replace(/공급\s+공급계약/g, "공급계약")
-    .replace(/신탁\s+공급계약\s+체결/g, "신탁");
+    .replace(/신탁\s+공급계약\s+체결/g, "신탁")
+    // 종목명 스트립 뒤 고아 조사로 시작하는 훅("가 구글 플레이…") 방지.
+    .replace(/^(?:이|가|은|는|을|를|과|와)\s+/, "")
+    // 트레일링 구분자("리포트 ·")가 남으면 "에 +x%" 접미와 붙어 "·에"로 깨진다.
+    .replace(/[·ㆍ:：;；,…\-–—]+$/, "")
+    .trim();
 }
 
 function withMetric(hook: string, input: NewsHookInput): string {
@@ -354,13 +359,18 @@ function compactTitlePhrase(title: string): string | undefined {
   if (/호남권\s*반도체\s*클러스터/.test(clean) && /추진/.test(clean)) return "호남권 반도체 클러스터 추진";
   if (/프로젝트\s*제타/.test(clean) && /글로벌\s*커뮤니티/.test(clean)) return "프로젝트 제타 글로벌 테스트";
   const patterns = [
-    /([가-힣A-Za-z0-9&().+-]{2,24})에\s+([가-힣A-Za-z0-9&().+\-\s]{2,28}(?:공급|지원|제공|납품|선정))/,
-    /([가-힣A-Za-z0-9&().+\-\s]{2,28})\s+(?:첫\s*)?(?:공급|지원|제공|납품|선정|출시|공개|개발|확보)/,
-    /(\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원)?\s*(?:규모\s*)?[가-힣A-Za-z0-9&().+\-\s]{2,28}(?:선정|계약|수주|공급|투자|증자))/,
+    /(?<=^|\s)([가-힣A-Za-z0-9&().+-]{2,24})에\s+([가-힣A-Za-z0-9&().+\-\s]{2,28}(?:공급|지원|제공|납품|선정))/,
+    /(?<=^|\s)([가-힣A-Za-z0-9&().+\-\s]{2,28})\s+(?:첫\s*)?(?:공급|지원|제공|납품|선정|출시|공개|개발|확보)/,
+    /(?<=^|\s)(\d+(?:\.\d+)?\s*(?:억|조|만|천)?\s*(?:원|달러|USD|억원|조원)?\s*(?:규모\s*)?[가-힣A-Za-z0-9&().+\-\s]{2,28}(?:선정|계약|수주|공급|투자|증자))/,
   ];
   for (const pattern of patterns) {
     const match = clean.match(pattern);
-    const phrase = match?.[0]?.replace(/\s+/g, " ").trim();
+    // 문자 클래스에 '.'과 공백이 있어 문장 경계를 넘을 수 있다 — 마지막 문장 경계 이후만 취한다.
+    const phrase = match?.[0]
+      ?.replace(/^.*[.…:：]\s*/, "")
+      .replace(/^(?:이|가|은|는|을|를|과|와)\s+/, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (phrase && phrase.length >= 6 && phrase.length <= 44) return phrase;
   }
   return undefined;
@@ -482,7 +492,8 @@ function candidateHooks(input: NewsHookInput, title: string): string[] {
     const backlog = pickBacklog(title);
     if (backlog) hooks.push(`${backlog} 확보`);
     if (securedCounterparty && /contract|order|supply/i.test(title)) hooks.push(`${securedCounterparty} 공급계약 체결`);
-    if (amount && product) hooks.push(`${amount} ${product} 공급계약 체결`);
+    // product 구절이 이미 금액을 품고 있으면("상반기 196억달러") 금액을 덧붙이지 않는다 — "196억달러 상반기 196억달러" 중복 방지.
+    if (amount && product) hooks.push(product.includes(amount) ? `${product} 공급계약 체결` : `${amount} ${product} 공급계약 체결`);
     if (amount) hooks.push(`${amount} 공급계약 체결`);
     if (counterparty) hooks.push(`${counterparty} 공급계약 체결`);
     if (product) hooks.push(`${product} 공급계약 체결`);
@@ -569,11 +580,16 @@ function pickEventPhrase(title: string): string | undefined {
   for (const keyword of keywords) {
     const idx = clean.indexOf(keyword);
     if (idx < 0) continue;
-    const before = clean
-      .slice(Math.max(0, idx - 28), idx)
+    const windowStart = Math.max(0, idx - 28);
+    let before = clean
+      .slice(windowStart, idx)
       .replace(/^.*[.…:：]/, "")
-      .replace(/^[,\s]+|[,\s]+$/g, "")
-      .trim();
+      .replace(/^[,\s]+|[,\s]+$/g, "");
+    // 고정 폭 윈도우가 어절 중간에서 시작하면 잘린 첫 토큰·고아 조사가 남는다.
+    if (windowStart > 0 && !/\s/.test(clean.charAt(windowStart - 1))) {
+      before = before.replace(/^\S+\s*/, "");
+    }
+    before = before.replace(/^(?:이|가|은|는|을|를|과|와)\s+/, "").trim();
     const phrase = cleanInline(`${before} ${keyword}`);
     if (phrase.length >= 6 && phrase.length <= 44) return phrase;
   }
@@ -583,8 +599,9 @@ function pickEventPhrase(title: string): string | undefined {
 function pickLeadClause(title: string): string | undefined {
   const clean = cleanInline(title.replace(/^[가-힣A-Za-z0-9&().+-]{1,18}\s*,\s*/, ""));
   const clause = clean
-    .split(/…|\.{2,}|[!?]|…|;|；/)
-    .map((part) => cleanInline(part))
+    // 단문 마침표(소수점 제외)도 절 경계 — "…되찾았다. 출시"처럼 문장 두 개가 이어붙는 것 방지.
+    .split(/…|\.{2,}|\.(?!\d)|[!?]|;|；/)
+    .map((part) => cleanInline(part).replace(/^(?:이|가|은|는|을|를|과|와)\s+/, ""))
     .find((part) => part.length >= 8 && !/^(?:소식|뉴스|공시|재료|오늘)/.test(part));
   if (!clause) return undefined;
   const shortened = clause.length > 34 ? `${clause.slice(0, 34).replace(/\s+\S*$/, "")}` : clause;

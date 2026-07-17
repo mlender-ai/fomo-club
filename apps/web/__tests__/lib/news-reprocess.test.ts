@@ -223,4 +223,47 @@ describe("news hook reprocessing", () => {
     expect(validateReprocessedNewsHook("지금 매수 기회", base)).toBeUndefined();
     expect(validateReprocessedNewsHook("매출 99% 성장 확인", base)).toBeUndefined();
   });
+
+  it("does not start a hook with an orphan particle after the stock name is stripped", () => {
+    const hook = ruleReprocessNewsHook({
+      ...base,
+      stock: "넷마블",
+      sector: "게임",
+      title: "넷마블 '세븐나이츠 리버스'가 구글 플레이 매출 1위를 이틀 만에 되찾았다. 글로벌 출시 효과",
+      changePct: 2.3,
+    });
+
+    if (hook) {
+      expect(hook).not.toMatch(/^(?:이|가|은|는|을|를|과|와)\s/);
+      expect(hook).not.toContain("되찾았다.");
+    }
+  });
+
+  it("does not duplicate the amount when the product phrase already contains it", () => {
+    const hook = ruleReprocessNewsHook({
+      ...base,
+      stock: "HD한국조선해양",
+      sector: "조선",
+      title: "HD한국조선해양, 상반기 196억달러 공급계약 체결",
+      changePct: 5.7,
+    });
+
+    expect(hook).toBeDefined();
+    expect(hook!.match(/196억달러/g)?.length ?? 0).toBe(1);
+  });
+
+  it("does not leave a trailing separator glued to the metric suffix", () => {
+    const hook = ruleReprocessNewsHook({
+      ...base,
+      stock: "서울보증보험",
+      sector: "보험",
+      title: "배당 매력에 턴어라운드 기대까지 서울보증보험 종목 리포트 · 한국경제TV",
+      changePct: 2.7,
+    });
+
+    if (hook) {
+      expect(hook).not.toMatch(/[·ㆍ:：;；,…]에\s/);
+      expect(hook).not.toContain("·에");
+    }
+  });
 });

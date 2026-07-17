@@ -30,7 +30,8 @@ async function bodyText(page: Page): Promise<string> {
 }
 
 function ignoredConsole(text: string): boolean {
-  return /favicon|chrome-extension|ResizeObserver loop/i.test(text);
+  // upgrade-insecure-requests: report-only CSP에 대한 무해한 브라우저 고지 — 매일 warn 노이즈 방지.
+  return /favicon|chrome-extension|ResizeObserver loop|upgrade-insecure-requests.*report-only/i.test(text);
 }
 
 async function runJourney(): Promise<{
@@ -61,35 +62,34 @@ async function runJourney(): Promise<{
       pageErrors.push(error.message.slice(0, 500));
     });
 
+    // 현재 여정(#798 이후): 스플래시 없이 홈이 바로 오늘의 30장 덱으로 열린다.
     await page.goto(WEB_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    const cta = page.getByRole("button", { name: "발견 시작" });
-    await cta.waitFor({ state: "visible", timeout: 10000 });
+    const passButton = page.getByRole("button", { name: "덜 관심" });
+    await passButton.waitFor({ state: "visible", timeout: 10000 });
 
     await page.waitForTimeout(HOLD_MS);
     const beforeText = await bodyText(page);
-    const splashStillVisible = await cta.isVisible().catch(() => false);
-    if (!splashStillVisible) {
-      findings.push({ severity: "critical", message: `CTA를 누르기 전 ${HOLD_MS}ms 안에 스플래쉬가 사라졌습니다.` });
+    if (beforeText.includes("오늘의 30장을 불러오지 못했어요")) {
+      findings.push({ severity: "critical", message: "오늘의 30장 덱이 에러 상태입니다 (불러오기 실패)." });
     }
-    if (!beforeText.includes("취향투자 클럽") || !beforeText.includes("발견 시작")) {
-      findings.push({ severity: "critical", message: "스플래쉬 핵심 문구 또는 CTA가 첫 화면에 없습니다." });
+    if (!beforeText.includes("FOMO CLUB")) {
+      findings.push({ severity: "critical", message: "홈 헤더(FOMO CLUB)가 첫 화면에 없습니다." });
+    }
+    if (!/(신호 혼조|강세 신호|약세 신호)/.test(beforeText)) {
+      findings.push({ severity: "warn", message: "첫 카드의 신호 라벨을 확인하지 못했습니다." });
     }
 
-    if (splashStillVisible) {
-      await cta.click();
-      await page.waitForTimeout(1400);
-    }
+    // '덜 관심'(pass)은 비로그인에도 서버 부작용 없이 다음 카드로 넘어간다 — 덱 전환 확인.
+    await passButton.click();
+    await page.waitForTimeout(1400);
 
     const afterText = await bodyText(page);
-    const ctaAfterClick = await cta.isVisible().catch(() => false);
-    if (ctaAfterClick) {
-      findings.push({ severity: "critical", message: "CTA 클릭 후에도 스플래쉬 CTA가 남아 있습니다." });
+    const deckStillAlive = await passButton.isVisible().catch(() => false);
+    if (!deckStillAlive) {
+      findings.push({ severity: "critical", message: "'덜 관심' 클릭 후 덱이 사라졌습니다." });
     }
     if (!afterText || afterText === beforeText) {
-      findings.push({ severity: "critical", message: "CTA 클릭 후 메인 화면 텍스트로 전환되지 않았습니다." });
-    }
-    if (!/(오늘의 시장 온도|관심|카드|FOMO CLUB)/.test(afterText)) {
-      findings.push({ severity: "warn", message: "CTA 이후 홈 화면의 핵심 텍스트를 확인하지 못했습니다." });
+      findings.push({ severity: "critical", message: "'덜 관심' 클릭 후 다음 카드로 전환되지 않았습니다." });
     }
 
     for (const error of pageErrors) {
@@ -100,12 +100,13 @@ async function runJourney(): Promise<{
     }
 
     if (findings.length === 0) {
-      findings.push({ severity: "ok", message: "스플래쉬가 CTA 전까지 유지되고, CTA 후 메인 화면으로 전환됩니다." });
+      findings.push({ severity: "ok", message: "홈이 오늘의 30장 덱으로 열리고, '덜 관심' 후 다음 카드로 전환됩니다." });
     }
 
     return { findings, beforeText, afterText, consoleErrors, pageErrors };
   } catch (error) {
-    findings.push({ severity: "critical", message: `웹 여정 스모크 실행 실패: ${error instanceof Error ? error.message : String(error)}` });
+    // 메시지는 한 줄로 평탄화 — 멀티라인이 md 리스트·GITHUB_OUTPUT 포맷을 깨뜨린다.
+    findings.push({ severity: "critical", message: `웹 여정 스모크 실행 실패: ${compact(error instanceof Error ? error.message : String(error))}` });
     return { findings, beforeText: "", afterText: "", consoleErrors, pageErrors };
   } finally {
     await browser?.close().catch(() => undefined);
@@ -122,8 +123,8 @@ function renderMarkdown(report: Awaited<ReturnType<typeof runJourney>> & { date:
     ...report.findings.map((finding) => `- ${finding.severity.toUpperCase()}: ${finding.message}`),
     "",
     "## Snapshot",
-    `- Before CTA: ${compact(report.beforeText)}`,
-    `- After CTA: ${compact(report.afterText)}`,
+    `- Before pass: ${compact(report.beforeText)}`,
+    `- After pass: ${compact(report.afterText)}`,
     "",
   ].join("\n");
 }
