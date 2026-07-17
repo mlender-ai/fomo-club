@@ -185,18 +185,55 @@ async function scanApi(): Promise<AreaReport> {
   };
 }
 
+function prismaIndexFields(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((field) => field.trim().replace(/\(.+\)$/, ""))
+    .filter(Boolean);
+}
+
+export function findUnindexedRelationFields(schema: string): string[] {
+  const missing: string[] = [];
+  const modelPattern = /^\s*model\s+(\w+)\s*\{([\s\S]*?)^\s*\}/gm;
+
+  for (const model of schema.matchAll(modelPattern)) {
+    const modelName = model[1]!;
+    const body = model[2]!;
+    const indexedPrefixes: string[][] = [];
+
+    for (const line of body.split("\n")) {
+      const field = line.match(/^\s*(\w+)\s+[^\n]+\s@(id|unique)\b/);
+      if (field) indexedPrefixes.push([field[1]!]);
+    }
+
+    for (const index of body.matchAll(/@@(?:id|unique|index)\s*\(\s*\[([^\]]+)\]/g)) {
+      indexedPrefixes.push(prismaIndexFields(index[1]!));
+    }
+
+    for (const relation of body.matchAll(/@relation\s*\(([^)]*)\)/g)) {
+      const relationFields = relation[1]!.match(/fields\s*:\s*\[([^\]]+)\]/);
+      if (!relationFields) continue;
+
+      const fields = prismaIndexFields(relationFields[1]!);
+      const covered = indexedPrefixes.some((indexFields) =>
+        fields.every((field, index) => indexFields[index] === field)
+      );
+      if (!covered) missing.push(`${modelName}.${fields.join("+")}`);
+    }
+  }
+
+  return missing;
+}
+
 async function scanDb(): Promise<AreaReport> {
   const findings: Finding[] = [];
   const schema = await readIfExists("prisma/schema.prisma");
   if (schema) {
     const models = [...schema.matchAll(/^model\s+(\w+)/gm)].map((m) => m[1]!);
     const indexCount = (schema.match(/@@index/g) ?? []).length;
-    const relationNoIndex = models.filter((m) => {
-      const block = schema.slice(schema.indexOf(`model ${m}`), schema.indexOf("}", schema.indexOf(`model ${m}`)));
-      return /@relation/.test(block) && !/@@index/.test(block);
-    });
-    if (relationNoIndex.length > 0) {
-      findings.push({ title: `@relation 있으나 @@index 없는 모델 ${relationNoIndex.length}개`, detail: `${relationNoIndex.join(", ")} — FK 조회 느려질 수 있음(인덱스 검토). 모델 ${models.length}개, 인덱스 ${indexCount}개.` });
+    const unindexedRelations = findUnindexedRelationFields(schema);
+    if (unindexedRelations.length > 0) {
+      findings.push({ title: `관계 FK 인덱스 누락 ${unindexedRelations.length}개`, detail: `${unindexedRelations.join(", ")} — FK 조회 느려질 수 있음(인덱스 검토). 모델 ${models.length}개, 인덱스 ${indexCount}개.` });
     }
   }
   return {

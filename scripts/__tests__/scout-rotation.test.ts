@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeAll } from "vitest";
+import { readFileSync } from "node:fs";
 
 // import 시 main() 자동실행 방지(네트워크/파일 쓰기).
 beforeAll(() => {
@@ -45,6 +46,52 @@ describe("반복 방지 — 카테고리·영역 로테이션 + dedup", async ()
   it("Hardening: override 영역 강제 선택", () => {
     expect(hardening.pickArea(new Date(), "security")).toBe("security");
     expect(hardening.pickArea(new Date(), "bogus")).not.toBe("bogus");
+  });
+
+  it("Hardening DB: unique와 복합 인덱스의 선두 FK는 누락으로 잡지 않는다", () => {
+    const schema = `
+      model Bot {
+        id     String @id
+        userId String?
+        user   User?  @relation(fields: [userId], references: [id])
+      }
+
+      model Strategy {
+        id    String @id
+        botId String
+        key   String
+        bot   Bot    @relation(fields: [botId], references: [id])
+
+        @@unique([botId, key])
+      }
+
+      model ResearchProfile {
+        id     String @id
+        userId String @unique
+        user   User   @relation(fields: [userId], references: [id])
+      }
+
+      model Alert {
+        id         String @id
+        botId      String
+        strategyId String?
+        bot        Bot       @relation(fields: [botId], references: [id])
+        strategy   Strategy? @relation(fields: [strategyId], references: [id])
+
+        @@index([botId, strategyId])
+      }
+    `;
+
+    expect(hardening.findUnindexedRelationFields(schema)).toEqual([
+      "Bot.userId",
+      "Alert.strategyId",
+    ]);
+  });
+
+  it("Hardening DB: 운영 Prisma 스키마의 모든 관계 FK가 인덱스로 보호된다", () => {
+    const schema = readFileSync(new URL("../../prisma/schema.prisma", import.meta.url), "utf8");
+
+    expect(hardening.findUnindexedRelationFields(schema)).toEqual([]);
   });
 
   it("isoWeek 는 연속 주에 증가한다", () => {
