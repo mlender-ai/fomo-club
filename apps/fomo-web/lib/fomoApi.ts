@@ -365,8 +365,9 @@ export interface FeedArchiveResponse {
   /** 다음 페이지 커서 — null 이면 아카이브 끝. */
   nextBefore: string | null;
 }
-export const fetchFeedArchive = (before: string) =>
-  cachedGet(`feed-archive:${before}`, () => get<FeedArchiveResponse>(`/api/fomo/feed-hub?before=${before}`), 60 * MINUTE);
+// 로컬 캐시 없이 항상 신선 조회 — 서버 콜드 실패로 빈 페이지가 오면 캐시에 남지 않고 다음 스크롤에서 재시도.
+// 정상 페이지는 CDN(s-maxage 1h)이 이미 방패라 클라 캐시가 불필요하다.
+export const fetchFeedArchive = (before: string) => get<FeedArchiveResponse>(`/api/fomo/feed-hub?before=${before}`);
 
 /** 오늘(KST) YYYY-MM-DD — 아카이브 첫 커서용. */
 export const feedArchiveStartCursor = () => kstDateKey();
