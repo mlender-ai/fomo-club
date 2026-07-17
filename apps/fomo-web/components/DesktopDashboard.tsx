@@ -15,6 +15,7 @@ import type { FrontEntry } from "@/components/StockSwipeDeck";
 import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { StockIssueCard, sectorCardData } from "@/components/FeedView";
+import { useFeedArchive } from "@/lib/useFeedArchive";
 import { CalendarCard } from "@/components/CalendarCard";
 import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
 
@@ -133,6 +134,9 @@ export function DesktopDashboard() {
   const [feedItem, setFeedItem] = useState<FeedHubItem | null>(null);
   const [feedItems, setFeedItems] = useState<FeedHubItem[]>([]);
   const [seenItems] = useState(() => getDiscoverySeen());
+  // 무한 피드(2026-07-18) — 오늘치 아래로 지난 브리핑·버즈·회고를 계속 이어 붙인다.
+  const feedTodayIds = useMemo(() => new Set(feedItems.map(feedItemId)), [feedItems]);
+  const { archive: feedArchive, sentinelRef: feedSentinelRef, done: feedArchiveDone } = useFeedArchive(feedItems.length > 0, feedTodayIds);
 
   useEffect(() => {
     let alive = true;
@@ -268,8 +272,9 @@ export function DesktopDashboard() {
       </section>
 
       {/* ③ 우 — feed-hub(피드 탭과 동일 소스·이원화 금지) + 성과 되짚기. 클릭 → 중앙 뎁스. */}
+      {/* 2026-07-18 User Zero "피드 10장도 안 돼": slice(0,8) 제한 제거 — 오늘치 전부 + 지난 콘텐츠 무한 이어 붙이기. */}
       <section className="scrollbar-none min-h-0 space-y-3 overflow-y-auto">
-        {(feedItems.length > 0 ? feedItems : []).slice(0, 8).map((item, index) => {
+        {[...feedItems, ...(feedItems.length > 0 ? feedArchive : [])].map((item, index) => {
           const id = feedItemId(item);
           const active = feedItem === item;
           return (
@@ -295,6 +300,7 @@ export function DesktopDashboard() {
             </button>
           );
         })}
+        {feedItems.length > 0 && !feedArchiveDone && <div ref={feedSentinelRef} className="h-8" aria-hidden />}
         {feedItems.length === 0 &&
           contentCards.slice(0, 4).map((card) => (
             <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">

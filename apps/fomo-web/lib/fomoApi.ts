@@ -359,6 +359,18 @@ export interface FeedHubResponse {
 export const fetchFeedHub = () =>
   cachedGet(`feed-hub:${kstDateKey()}`, () => get<FeedHubResponse>("/api/fomo/feed-hub"), 15 * MINUTE);
 
+/** 피드 아카이브(무한 스크롤) — before(exclusive) 이전의 지난 브리핑·버즈·회고 페이지. */
+export interface FeedArchiveResponse {
+  items: FeedHubItem[];
+  /** 다음 페이지 커서 — null 이면 아카이브 끝. */
+  nextBefore: string | null;
+}
+export const fetchFeedArchive = (before: string) =>
+  cachedGet(`feed-archive:${before}`, () => get<FeedArchiveResponse>(`/api/fomo/feed-hub?before=${before}`), 60 * MINUTE);
+
+/** 오늘(KST) YYYY-MM-DD — 아카이브 첫 커서용. */
+export const feedArchiveStartCursor = () => kstDateKey();
+
 /** 무로그인 대기함(WO 검색 요청→다음날 카드) — 익명 deviceId(=sessionId)의 요청 상태. */
 export interface MyRequestResolved {
   canonical: string;

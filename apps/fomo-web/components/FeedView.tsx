@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarCard } from "@/components/CalendarCard";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
@@ -9,6 +9,7 @@ import { SectorCard } from "@/components/SectorCard";
 import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import { fetchFeedHub, type FeedHubItem } from "@/lib/fomoApi";
+import { feedItemKey, useFeedArchive } from "@/lib/useFeedArchive";
 import type { DeckCard, DeckNarrative, DeckSectorCardData } from "@/lib/discoveryDeck";
 
 /**
@@ -65,6 +66,8 @@ export function FeedView() {
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<FeedHubItem | null>(null);
   const [narrative, setNarrative] = useState<DeckNarrative | null>(null);
+  const todayIds = useMemo(() => new Set((items ?? []).map(feedItemKey)), [items]);
+  const { archive, sentinelRef, done: archiveDone } = useFeedArchive(!!items && items.length > 0, todayIds);
 
   useEffect(() => {
     let alive = true;
@@ -99,44 +102,56 @@ export function FeedView() {
   const cardShell =
     "block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20";
 
+  const renderItem = (item: FeedHubItem) => {
+    if (item.type === "narrative") {
+      return (
+        <button key={item.narrative.id} type="button" onClick={() => setNarrative(item.narrative)} className={cardShell}>
+          <NarrativeCard card={item.narrative} />
+        </button>
+      );
+    }
+    if (item.type === "sector") {
+      return (
+        <button key={item.sector.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+          <SectorCard card={sectorCardData(item)} />
+        </button>
+      );
+    }
+    if (item.type === "stock-issue") {
+      return (
+        <button key={item.stockIssue.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+          <StockIssueCard item={item} />
+        </button>
+      );
+    }
+    if (item.type === "calendar") {
+      // 캘린더는 인라인 완결(전체 정보가 카드 안) — 뎁스 불요, 막다른 탭 아님.
+      return (
+        <div key={item.calendar.id} className="w-full rounded-2xl border border-hairline bg-surface px-5 py-5">
+          <CalendarCard calendar={item.calendar} />
+        </div>
+      );
+    }
+    return (
+      <button key={item.content.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+        <ContentCard card={item.content} />
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-3 pb-4">
-      {items.map((item) => {
-        if (item.type === "narrative") {
-          return (
-            <button key={item.narrative.id} type="button" onClick={() => setNarrative(item.narrative)} className={cardShell}>
-              <NarrativeCard card={item.narrative} />
-            </button>
-          );
-        }
-        if (item.type === "sector") {
-          return (
-            <button key={item.sector.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
-              <SectorCard card={sectorCardData(item)} />
-            </button>
-          );
-        }
-        if (item.type === "stock-issue") {
-          return (
-            <button key={item.stockIssue.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
-              <StockIssueCard item={item} />
-            </button>
-          );
-        }
-        if (item.type === "calendar") {
-          // 캘린더는 인라인 완결(전체 정보가 카드 안) — 뎁스 불요, 막다른 탭 아님.
-          return (
-            <div key={item.calendar.id} className="w-full rounded-2xl border border-hairline bg-surface px-5 py-5">
-              <CalendarCard calendar={item.calendar} />
-            </div>
-          );
-        }
-        return (
-          <button key={item.content.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
-            <ContentCard card={item.content} />
-          </button>
-        );
-      })}
+      {items.map(renderItem)}
+
+      {/* 무한 피드(2026-07-18) — 오늘치가 끝나면 지난 브리핑·버즈·회고를 계속 이어 붙인다. */}
+      {archive.length > 0 && (
+        <p className="pt-3 text-center font-pixel text-[11px] text-muted">지난 콘텐츠</p>
+      )}
+      {archive.map(renderItem)}
+      {!archiveDone && <div ref={sentinelRef} className="h-8" aria-hidden />}
+      {archiveDone && archive.length > 0 && (
+        <p className="py-4 text-center text-[11px] text-muted">최근 한 달 콘텐츠를 전부 봤어요.</p>
+      )}
 
       {narrative && <NarrativeDepthPage card={narrative} onClose={() => setNarrative(null)} />}
       {selected && <FeedDepthPage item={selected} onClose={() => setSelected(null)} />}
