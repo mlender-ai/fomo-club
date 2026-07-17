@@ -43,7 +43,7 @@ import {
   type DartDisclosureHit,
 } from "./dart-disclosures";
 import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
-import { readKrCandleCache } from "./kr-candle-cache";
+import { readKrCandleCache, writeKrCandleCache } from "./kr-candle-cache";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
 import { relatedTo, type RelatedNode } from "./relation-graph";
 import { fetchRecentSecFilings } from "./sec-edgar";
@@ -2165,7 +2165,6 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     async (candidate) => {
       if (candidate.naverCode) {
         // WO 카드 품질 2차 C: 프리웜 캐시(260거래일)를 우선 — 52주·MA120·와이코프 phase 판정의 연료.
-        // 캐시 미스면 기존 110일력 직접 fetch 폴백(요청 경로에 260일 fetch 추가 금지 — 504 원칙).
         const cached = await readKrCandleCache(candidate.naverCode).catch(() => null);
         if (cached) {
           return {
@@ -2173,7 +2172,11 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
             daily: { candles: cached, closes: cached.map((c) => c.close), volumes: cached.map((c) => c.volume) },
           };
         }
-        return { ticker: candidate.ticker, daily: await fetchStockDaily(candidate.naverCode, 110) };
+        // 캐시 미스(프리웜 유니버스 450 밖 소형주 등) — 같은 1회 호출로 창만 420일력으로 넓혀 받고
+        // write-through 로 캐시를 채운다(호출 수 불변 — 504 원칙 유지, 폴레드·신일제약류 '4개월 저점' 해소).
+        const daily = await fetchStockDaily(candidate.naverCode, 420);
+        if (daily.candles.length >= 120) void writeKrCandleCache(candidate.naverCode, daily.candles).catch(() => {});
+        return { ticker: candidate.ticker, daily };
       }
       // US(내부자 포함) — Nasdaq OHLCV 로 verdict 엔진까지 캔들 공급(WO 1.6 A/B: 국/미 무차별 표준).
       const usSymbol = rowsByTicker.get(candidate.ticker)?.symbol;
