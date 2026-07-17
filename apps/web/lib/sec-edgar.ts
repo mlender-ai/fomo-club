@@ -107,22 +107,32 @@ function mmdd(date: string): string {
  * 8-K Item 코드 → 한국어 사유(2026-07-15 User Zero: "IBM 실적 부진 8-K가 왜 그냥 '공시 확인'이냐").
  * SEC submissions.json 의 items 필드(예: "2.02,9.01")를 그대로 쓴다 — 본문 파싱·수치 추정 없음(사실만).
  */
+/**
+ * 쉬운말 라벨(WO 뎁스 재건 B — "8-K가 뭔지 모르겠다"): 규제 용어 원문 노출 금지.
+ * 원문 링크·출처(SEC EDGAR)는 유지하고 표기만 쉬운말로.
+ */
 const SEC_8K_ITEM_LABELS: Record<string, string> = {
-  "1.01": "주요 계약 체결",
-  "1.02": "계약 종료",
-  "2.01": "자산 인수·처분 완료",
-  "2.02": "실적 발표",
-  "2.05": "구조조정 비용 계획",
-  "2.06": "자산 손상",
-  "3.01": "상장 요건 미달",
-  "4.01": "감사인 변경",
-  "5.02": "임원·이사 변경",
-  "5.03": "정관 변경",
-  "7.01": "Reg FD 자료 공개",
-  "8.01": "기타 중요사항",
+  "1.01": "대형 계약 체결 공시",
+  "1.02": "계약 종료 공시",
+  "2.01": "자산 인수·처분 공시",
+  "2.02": "분기 실적 발표 (공식 공시)",
+  "2.05": "구조조정 계획 공시",
+  "2.06": "자산 손상 공시",
+  "3.01": "상장 요건 미달 공시",
+  "4.01": "감사인 변경 공시",
+  "5.02": "임원·이사 변경 공시",
+  "5.03": "정관 변경 공시",
+  "7.01": "투자자 대상 자료 공개 (공식 공시)",
+  "8.01": "기타 중요사항 공시",
 };
 // 급변동 원인으로서의 정보 가치 순 — 실적(2.02)이 최우선(가장 흔한 급변동 원인).
 const SEC_8K_ITEM_PRIORITY = ["2.02", "2.05", "2.06", "1.01", "1.02", "3.01", "5.02", "4.01", "7.01", "8.01"];
+
+/** 8-K 외 폼 → 쉬운말(원문 노출 금지). 미등록 폼은 일반어 폴백. */
+const SEC_FORM_LABELS: Record<string, string> = {
+  "10-Q": "분기 보고서 공시",
+  "10-K": "연간 보고서 공시",
+};
 
 /**
  * ⚠️ 문구 제약: "공시가 확인됐어요" 류는 copy-guards의 추상 슬롭 블록리스트(공시…확인됐)에 걸려
@@ -131,7 +141,7 @@ const SEC_8K_ITEM_PRIORITY = ["2.02", "2.05", "2.06", "1.01", "1.02", "3.01", "5
 function eightKLabel(items: string | undefined, asOf: string): string {
   const codes = (items ?? "").split(",").map((c) => c.trim()).filter(Boolean);
   const hit = SEC_8K_ITEM_PRIORITY.find((code) => codes.includes(code));
-  return hit ? `${SEC_8K_ITEM_LABELS[hit]} 8-K 공시 · ${mmdd(asOf)}` : `8-K 공시 제출 · ${mmdd(asOf)}`;
+  return hit ? `${SEC_8K_ITEM_LABELS[hit]} · ${mmdd(asOf)}` : `주요 공시 제출 · ${mmdd(asOf)}`;
 }
 
 function parseForm4InsiderPurchase(symbol: string, xml: string): SecFilingHit["insiderPurchase"] | undefined {
@@ -247,7 +257,7 @@ export async function fetchRecentSecFilings(symbol: string, limit = 4): Promise<
       if (!asOf || !accession) continue;
       out.push({
         symbol: symbol.toUpperCase(),
-        label: form === "8-K" ? eightKLabel(recent.items?.[i], asOf) : `${form} 공시 제출 · ${mmdd(asOf)}`,
+        label: form === "8-K" ? eightKLabel(recent.items?.[i], asOf) : `${SEC_FORM_LABELS[form] ?? "공식 공시 제출"} · ${mmdd(asOf)}`,
         source: "SEC EDGAR",
         asOf,
         url: accessionPath(cik, accession),

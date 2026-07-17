@@ -4,7 +4,7 @@ import { discoveryStatus, verdictBalance } from "../lib/discoveryPresentation";
 describe("discovery presentation", () => {
   it("keeps attention state separate from bearish chart balance", () => {
     expect(discoveryStatus({ label: "warming", fomoScore: 31 })).toMatchObject({
-      label: "관심 붙는 중",
+      label: "거래·언급 느는 중",
       tone: "warming",
     });
     expect(verdictBalance({ stance: "avoid" })).toMatchObject({ label: "약세 신호 우세" });

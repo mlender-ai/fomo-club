@@ -33,8 +33,8 @@ export interface Daily30Response extends DiscoveryResponse {
     assetCounts: Record<Daily30AssetClass, number>;
     /** 어제 30장 대비 종목 중복률(0~1) — 신선도 수용 지표(≤0.5). */
     repeatRatio?: number;
-    /** 2026-07-12 US 파이프라인 진단(임시). */
-    debug?: Record<string, number>;
+    /** 2026-07-12 US 파이프라인 진단(임시) + 원인 설명률(WO 뎁스 재건 E) causeCoverage. */
+    debug?: Record<string, number | { movers: number; explained: number; ratio: number }>;
   };
 }
 
@@ -516,11 +516,33 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
 
   const response = responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
   // 2026-07-12 진단: US 파이프라인 각 단계 카운트 — 미장 1장 원인이 discovery/후보/셀렉션 어디인지.
+  // 원인 설명률(WO 뎁스 재건 E — 해자의 측정): ±3% 무버 중 원인(원문 연결·재료 서술)이 붙은 비율.
+  // 북극성 지표 ≥0.9 — 급등락 카드를 눌렀을 때 열에 아홉은 답이 있어야 BM을 붙일 자격이 생긴다.
+  const movers = deck.filter((c) => {
+    const change = frontSignals(c.front).changePct;
+    return !!c.stock && typeof change === "number" && Math.abs(change) >= 3;
+  });
+  const explainedMovers = movers.filter((c) => {
+    const s = c.stock!;
+    return (
+      Boolean(s.sourceUrl) ||
+      /공시|실적|계약|수주|투자|증자|자사주|인수|합병|승인|허가|매출|가이던스|발표|보도|리포트|임상|매수|매도|배당|출시/.test(signalText(s))
+    );
+  });
+  const causeCoverage = {
+    movers: movers.length,
+    explained: explainedMovers.length,
+    ratio: movers.length > 0 ? Math.round((explainedMovers.length / movers.length) * 100) / 100 : 1,
+  };
+  if (causeCoverage.ratio < 0.9) {
+    console.warn("[daily-30] 원인 설명률 미달", JSON.stringify({ ...causeCoverage, unexplained: movers.filter((c) => !explainedMovers.includes(c)).map((c) => c.stock!.canonical) }));
+  }
   const debug = {
     usDiscoveryCards: (us.cards?.length ?? us.stocks.length),
     usStockCandidates: stockCandidates.filter((c) => c.assetClass === "us-stock").length,
     usDeck: deck.filter((c) => c.assetClass === "us-stock").length,
     krStockCandidates: stockCandidates.filter((c) => c.assetClass === "kr-stock").length,
+    causeCoverage,
   };
   // 소스 장애 가드(fail-closed, WO-21 원칙) — 2026-07-17 실사고: 네이버 egress 장애 중 빌드가
   // KR 0장 덱을 12h 캐시에 박았다. KR 시세는 시총 리스트라 휴장일에도 0이 될 수 없다 —

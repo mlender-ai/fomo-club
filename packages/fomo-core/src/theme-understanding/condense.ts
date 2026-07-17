@@ -64,6 +64,8 @@ export interface CondensedInsight {
   wordingAudit?: import("./types").WordingVerdict[];
   /** 공식 지표 팩트(FRED 등) — 중립 사실 숫자(C-2). 강세/약세와 별개. */
   officialFacts?: import("./types").OfficialFact[];
+  /** 가격 급변동 원인(WO 뎁스 재건 A) — "왜 움직였나"의 답. A의 cause 그대로 통과. */
+  cause?: import("./types").PriceCause;
   /** 숨은 연관주(BM 발굴 엔진) — 대장주 아닌, grounded 연관 근거가 있는 종목. 없으면 빈 배열. */
   relatedStocks: import("./discover").RelatedStock[];
 }
@@ -116,6 +118,7 @@ export function condenseThemeInsight(
     ...(insight.officialFacts && insight.officialFacts.length > 0
       ? { officialFacts: insight.officialFacts }
       : {}),
+    ...(insight.cause ? { cause: insight.cause } : {}),
   };
 
   // 정직한 빈 상태 — A가 근거를 못 뽑았으면 응축도 비운다(가짜 생성 금지).
