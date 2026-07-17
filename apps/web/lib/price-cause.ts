@@ -16,8 +16,12 @@ import type { PriceCause, SourceDoc } from "@fomo/core";
 export const PRICE_CAUSE_MIN_MOVE_PCT = 3;
 /** 공시 시간창 — 공시일 ±2거래일 ≈ 달력 3일. */
 const OFFICIAL_WINDOW_DAYS = 3;
-/** 뉴스 시간창 — 당일 ±1일(전일 저녁 보도가 다음 날 반영되는 케이스). */
-const NEWS_WINDOW_DAYS = 1;
+/**
+ * 뉴스 시간창 — 3일력(공시와 동일). 실측(제닉스로보틱스): 7/15 자사주 신탁 보도가 7/17 +5.6%로
+ * 반영 — 재료 보도 후 2~3일 뒤 가격 반응은 흔하다(±1일은 주말·시차에도 깨짐). 원인 패턴 필터가
+ * 무관 기사 연결을 막는다.
+ */
+const NEWS_WINDOW_DAYS = 3;
 /** 지수 동반 판정 — 같은 방향 ±1.5% 이상. */
 const CO_MOVE_MIN_INDEX_PCT = 1.5;
 

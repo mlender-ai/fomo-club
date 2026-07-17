@@ -68,6 +68,33 @@ describe("원인 연결 엔진 (price-cause)", () => {
     expect(cause!.sourceLabel).toBe("연합뉴스");
   });
 
+  it("제닉스로보틱스 케이스 — 3일 전 재료 보도(자사주 신탁)도 원인으로 잇는다(실측 회귀)", () => {
+    const news: SourceDoc = {
+      id: "S5",
+      kind: "news",
+      title: "제닉스로보틱스, 10억원 규모 자사주 취득 신탁계약",
+      source: "이데일리",
+      publishedAt: "2026-07-15T07:49:00.000Z",
+      tier: "news-mid",
+    };
+    const cause = computePriceCause({ today: "2026-07-18", changePct: 5.58, docs: [news] });
+    expect(cause!.kind).toBe("material");
+    expect(cause!.text).toContain("자사주");
+  });
+
+  it("시간창(3일) 밖 뉴스는 잇지 않는다", () => {
+    const news: SourceDoc = {
+      id: "S6",
+      kind: "news",
+      title: "OO, 대규모 수주 계약 체결",
+      source: "이데일리",
+      publishedAt: "2026-07-10T00:00:00.000Z",
+      tier: "news-mid",
+    };
+    const cause = computePriceCause({ today: "2026-07-18", changePct: 5, docs: [news] });
+    expect(cause!.kind).not.toBe("material");
+  });
+
   it("재료가 없고 지수가 같은 방향 ±1.5%+면 동반 사실로 설명한다", () => {
     const cause = computePriceCause({
       today: TODAY,
