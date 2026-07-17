@@ -522,6 +522,12 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
     usDeck: deck.filter((c) => c.assetClass === "us-stock").length,
     krStockCandidates: stockCandidates.filter((c) => c.assetClass === "kr-stock").length,
   };
+  // 소스 장애 가드(fail-closed, WO-21 원칙) — 2026-07-17 실사고: 네이버 egress 장애 중 빌드가
+  // KR 0장 덱을 12h 캐시에 박았다. KR 시세는 시총 리스트라 휴장일에도 0이 될 수 없다 —
+  // 0이면 소스 장애로 보고 빌드를 실패시켜 캐시 오염을 막는다(다음 요청이 재시도).
+  if (debug.krStockCandidates === 0) {
+    throw new Error("daily-30 build aborted: KR 후보 0 — 시세 소스 장애 의심, 캐시 오염 방지");
+  }
   return { ...response, meta: { ...response.meta, repeatRatio, debug } };
 }
 
