@@ -52,9 +52,14 @@ function priceTableFacts(withSignal: readonly { snapshot: CoinMarketSnapshot }[]
     }));
 }
 
+/** 무버 카드 자격 — "체인링크 1% 오른" 잡음 차단선. 매크로 카드와 병행 노출 시엔 이 문턱을 넘어야 한다. */
+const COIN_MOVER_MIN_PCT = 5;
+const COIN_MOVER_MIN_VOLUME_RATIO = 1.5;
+
 /**
- * 코인 핫이슈 1장 — 매크로/규제 사건 우선, 없는 날만 가격·거래대금 무버로 폴백
- * (2026-07-15 User Zero: "체인링크 1% 오른 게 뭐가 중요해 — 클래리티 법안·반감기 같은 게 핫이슈지").
+ * 코인 핫이슈 — 매크로/규제 사건 우선(2026-07-15 User Zero: "클래리티 법안·반감기 같은 게 핫이슈지").
+ * 피드 보강(2026-07-17): 매크로 카드에 더해, 진짜 무버(±5%+ 또는 거래대금 1.5배+)가 있으면
+ * 별도 카드로 함께 노출한다(최대 2장). 매크로 없는 조용한 날은 기존처럼 무버 폴백만.
  */
 export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
   const snapshots = await readCoinMarketSnapshots().catch((): CoinMarketSnapshot[] => []);
@@ -68,42 +73,46 @@ export async function buildCoinIssueCards(): Promise<DeckContentCard[]> {
     articles.filter((a) => CRYPTO_NEWS_SOURCES.has(a.source) && isFresh(a, now) && COIN_MACRO_PATTERN.test(a.title))
   ).sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0];
 
+  const cards: DeckContentCard[] = [];
   if (macroArticle) {
-    return [
-      {
-        kind: "content",
-        id: `content:coin-issue:${kstDate()}`,
-        contentType: "coin-issue",
-        scope: "global",
-        headline: macroArticle.title,
-        facts: priceTableFacts(withSignal),
-        sourceUrl: macroArticle.url,
-        source: macroArticle.source,
-        asOf: kstDate(),
-      },
-    ];
-  }
-
-  // 매크로 뉴스 없는 조용한 날 — 기존 가격·거래대금 무버 폴백(정직: 없는 사건을 지어내지 않는다).
-  if (withSignal.length === 0) return [];
-  const mover = [...withSignal].sort(
-    (a, b) => Math.abs(b.snapshot.changePct) + b.signal.volumeRatio - (Math.abs(a.snapshot.changePct) + a.signal.volumeRatio)
-  )[0]!;
-  const headlineParts = [`${mover.snapshot.koreanName} 하루 ${signedPct(mover.snapshot.changePct)}`];
-  if (mover.signal.volumeRatio >= 1.3) headlineParts.push(`거래대금 평소 ${mover.signal.volumeRatio.toFixed(1)}배`);
-  if (typeof mover.snapshot.marketCapRank === "number") headlineParts.push(`시총 ${mover.snapshot.marketCapRank}위`);
-  return [
-    {
+    cards.push({
       kind: "content",
       id: `content:coin-issue:${kstDate()}`,
       contentType: "coin-issue",
       scope: "global",
-      headline: headlineParts.join(" · "),
+      headline: macroArticle.title,
       facts: priceTableFacts(withSignal),
-      source: "Upbit · CoinGecko",
+      sourceUrl: macroArticle.url,
+      source: macroArticle.source,
       asOf: kstDate(),
-    },
-  ];
+    });
+  }
+
+  // 가격·거래대금 무버 — 매크로 카드가 없으면 폴백(문턱 없음, 정직: 조용한 날은 조용한 대로),
+  // 매크로 카드가 있으면 진짜 무버(±5%+ 또는 거래대금 1.5배+)일 때만 두 번째 카드로 병행.
+  if (withSignal.length > 0) {
+    const mover = [...withSignal].sort(
+      (a, b) => Math.abs(b.snapshot.changePct) + b.signal.volumeRatio - (Math.abs(a.snapshot.changePct) + a.signal.volumeRatio)
+    )[0]!;
+    const significant =
+      Math.abs(mover.snapshot.changePct) >= COIN_MOVER_MIN_PCT || mover.signal.volumeRatio >= COIN_MOVER_MIN_VOLUME_RATIO;
+    if (!macroArticle || significant) {
+      const headlineParts = [`${mover.snapshot.koreanName} 하루 ${signedPct(mover.snapshot.changePct)}`];
+      if (mover.signal.volumeRatio >= 1.3) headlineParts.push(`거래대금 평소 ${mover.signal.volumeRatio.toFixed(1)}배`);
+      if (typeof mover.snapshot.marketCapRank === "number") headlineParts.push(`시총 ${mover.snapshot.marketCapRank}위`);
+      cards.push({
+        kind: "content",
+        id: macroArticle ? `content:coin-issue:mover:${kstDate()}` : `content:coin-issue:${kstDate()}`,
+        contentType: "coin-issue",
+        scope: "global",
+        headline: headlineParts.join(" · "),
+        facts: priceTableFacts(withSignal),
+        source: "Upbit · CoinGecko",
+        asOf: kstDate(),
+      });
+    }
+  }
+  return cards;
 }
 
 // ── hot-issue ────────────────────────────────────────────────────────────────
@@ -159,7 +168,10 @@ function isFresh(article: RawArticle, now: Date): boolean {
   return now.getTime() - published <= HOT_ISSUE_WINDOW_HOURS * 60 * 60 * 1000;
 }
 
-/** 미장(en)·국장(ko) 각 1장 — 여러 소스가 동시에 다루는 사건의 헤드라인+관련 기사(사실만, LLM 없음). */
+/** 언어당 최대 클러스터 수 — 피드 보강(2026-07-17): 하루 사건이 하나뿐이지 않다. 서로 다른 사건만 2번째 허용. */
+const HOT_ISSUE_CLUSTERS_PER_LANG = 2;
+
+/** 미장(en)·국장(ko) 각 최대 2장 — 여러 소스가 동시에 다루는 사건의 헤드라인+관련 기사(사실만, LLM 없음). */
 export async function buildHotIssueCards(): Promise<DeckContentCard[]> {
   const articles = await fetchAllNews().catch((): RawArticle[] => []);
   if (articles.length === 0) return [];
@@ -174,41 +186,50 @@ export async function buildHotIssueCards(): Promise<DeckContentCard[]> {
       for (const token of new Set(tokenize(article.title))) tokenFreq.set(token, (tokenFreq.get(token) ?? 0) + 1);
     }
     const ranked = [...pool].sort((a, b) => clusterScore(b, tokenFreq) - clusterScore(a, tokenFreq));
-    const top = ranked[0]!;
-    if (clusterScore(top, tokenFreq) < HOT_ISSUE_MIN_CLUSTER) continue;
-    const topTokens = new Set(tokenize(top.title));
     // en 클러스터는 한글 번역(크론 캐시) 우선 — 미번역 en 헤드라인은 노출 금지(2026-07-12).
     const koTitle = (article: (typeof ranked)[number]): string | undefined => (lang === "en" ? koreanTitle(article.url) : article.title);
-    const topKo = koTitle(top);
-    if (lang === "en" && !topKo) continue; // 번역 없으면 영문 헤드라인 노출하지 않는다
-    // related 팩트도 노출 제목 기준으로 한 번 더 dedup — 헤드라인과 같은 제목·서로 같은 제목 금지.
-    const usedTitleKeys = new Set([normalizedTitleKey(topKo ?? top.title)]);
-    const related = ranked
-      .slice(1)
-      .filter((article) => tokenize(article.title).some((token) => topTokens.has(token)))
-      .filter((article) => lang === "ko" || koTitle(article))
-      .filter((article) => {
-        const key = normalizedTitleKey(koTitle(article) ?? article.title);
-        if (!key || usedTitleKeys.has(key)) return false;
-        usedTitleKeys.add(key);
-        return true;
-      })
-      .slice(0, 3);
-    const facts: DeckContentFact[] = related.map((article) => {
-      const title = koTitle(article) ?? article.title;
-      return { label: article.source, value: title.length > 60 ? `${title.slice(0, 57)}…` : title };
-    });
-    cards.push({
-      kind: "content",
-      id: `content:hot-issue:${lang}:${kstDate()}`,
-      contentType: "hot-issue",
-      scope: lang === "ko" ? "domestic" : "world",
-      headline: topKo ?? top.title,
-      facts,
-      sourceUrl: top.url,
-      source: top.source,
-      asOf: kstDate(),
-    });
+    const usedEventTokens = new Set<string>();
+    let made = 0;
+    for (const top of ranked) {
+      if (made >= HOT_ISSUE_CLUSTERS_PER_LANG) break;
+      if (clusterScore(top, tokenFreq) < HOT_ISSUE_MIN_CLUSTER) break; // 정렬돼 있으므로 이후도 미달
+      const topTokens = new Set(tokenize(top.title));
+      // 두 번째 카드는 첫 사건과 "다른 사건"이어야 한다 — 이미 쓴 사건 토큰과 2개 이상 겹치면 같은 사건으로 본다.
+      const overlap = [...topTokens].filter((token) => usedEventTokens.has(token)).length;
+      if (made > 0 && overlap >= 2) continue;
+      const topKo = koTitle(top);
+      if (lang === "en" && !topKo) continue; // 번역 없으면 영문 헤드라인 노출하지 않는다
+      // related 팩트도 노출 제목 기준으로 한 번 더 dedup — 헤드라인과 같은 제목·서로 같은 제목 금지.
+      const usedTitleKeys = new Set([normalizedTitleKey(topKo ?? top.title)]);
+      const related = ranked
+        .filter((article) => article !== top)
+        .filter((article) => tokenize(article.title).some((token) => topTokens.has(token)))
+        .filter((article) => lang === "ko" || koTitle(article))
+        .filter((article) => {
+          const key = normalizedTitleKey(koTitle(article) ?? article.title);
+          if (!key || usedTitleKeys.has(key)) return false;
+          usedTitleKeys.add(key);
+          return true;
+        })
+        .slice(0, 3);
+      const facts: DeckContentFact[] = related.map((article) => {
+        const title = koTitle(article) ?? article.title;
+        return { label: article.source, value: title.length > 60 ? `${title.slice(0, 57)}…` : title };
+      });
+      cards.push({
+        kind: "content",
+        id: made === 0 ? `content:hot-issue:${lang}:${kstDate()}` : `content:hot-issue:${lang}:${made + 1}:${kstDate()}`,
+        contentType: "hot-issue",
+        scope: lang === "ko" ? "domestic" : "world",
+        headline: topKo ?? top.title,
+        facts,
+        sourceUrl: top.url,
+        source: top.source,
+        asOf: kstDate(),
+      });
+      for (const token of topTokens) usedEventTokens.add(token);
+      made += 1;
+    }
   }
   return cards;
 }
@@ -263,26 +284,25 @@ const ECON_TERMS: EconTerm[] = [
   { term: "시가총액", definition: "주가 × 발행주식수. 기업의 시장 가치 총액이다.", example: "시총 상위 종목은 지수 영향력이 커서 지수 흐름과 동조하기 쉽다." },
 ];
 
-/** 오늘의 경제용어 1장 — 날짜 기반 결정론 로테이션(재현 가능). */
+/** 오늘의 경제용어 2장 — 날짜 기반 결정론 로테이션(재현 가능). 두 번째는 사전 절반 오프셋(겹침 없음). */
 export function buildTermCard(): DeckContentCard[] {
   const date = kstDate();
   const dayIndex = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
-  const entry = ECON_TERMS[dayIndex % ECON_TERMS.length]!;
-  return [
-    {
-      kind: "content",
-      id: `content:term:${date}`,
-      contentType: "term",
-      scope: "global",
-      headline: `오늘의 경제용어 — ${entry.term}`,
-      facts: [
-        { label: "정의", value: entry.definition },
-        { label: "예시", value: entry.example },
-      ],
-      source: "FOMO 용어사전",
-      asOf: date,
-    },
-  ];
+  const half = Math.floor(ECON_TERMS.length / 2);
+  const picks = [ECON_TERMS[dayIndex % ECON_TERMS.length]!, ECON_TERMS[(dayIndex + half) % ECON_TERMS.length]!];
+  return picks.map((entry, index) => ({
+    kind: "content" as const,
+    id: index === 0 ? `content:term:${date}` : `content:term:${index + 1}:${date}`,
+    contentType: "term",
+    scope: "global",
+    headline: `오늘의 경제용어 — ${entry.term}`,
+    facts: [
+      { label: "정의", value: entry.definition },
+      { label: "예시", value: entry.example },
+    ],
+    source: "FOMO 용어사전",
+    asOf: date,
+  }));
 }
 
 // ── event (시장 일정) ─────────────────────────────────────────────────────────
@@ -360,10 +380,10 @@ function dDayText(todayIso: string, dateIso: string): string {
   return diff === 0 ? "오늘" : `D-${diff}`;
 }
 
-/** 다가오는 시장 일정 1장 — 만기·FOMC 등 사실 일정만(해석·예측 없음). */
+/** 다가오는 시장 일정 1장 — 만기·FOMC·CPI/PPI 등 사실 일정만(해석·예측 없음). 5건까지 담는다. */
 export function buildEventCard(): DeckContentCard[] {
   const date = kstDate();
-  const events = upcomingMarketEvents(date, 3);
+  const events = upcomingMarketEvents(date, 5);
   if (events.length === 0) return [];
   const next = events[0]!;
   return [

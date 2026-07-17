@@ -652,6 +652,8 @@ export interface TodayFeedContent {
 export async function readTodayFeedContent(): Promise<TodayFeedContent> {
   const date = kstDate();
   const week = isoWeek();
+  const yesterday = new Date(Date.now() + 9 * 60 * 60 * 1000 - 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // KST 기준 어제
+  const prevWeek = isoWeek(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
   const [us, kr, pulse, buzz, recap] = await Promise.all([
     readFeedContent<FeedBriefingRow>(`briefing:us:${date}`),
     readFeedContent<FeedBriefingRow>(`briefing:kr:${date}`),
@@ -659,8 +661,12 @@ export async function readTodayFeedContent(): Promise<TodayFeedContent> {
     readFeedContent<FeedBriefingRow>(`buzz:${date}`),
     readFeedContent<FeedBriefingRow>(`recap:${week}`),
   ]);
+  // 피드 공백 메우기(2026-07-17): 버즈는 장마감(close)에야 생성 — 오늘분이 없으면 어제분(asOf 그대로, 정직)으로.
+  // 회고는 금요일 빌드 후 주가 바뀌면 키가 사라져 월~목 공백이었다 — 지난주분으로 폴백해 주 내내 노출.
+  const buzzRow = buzz?.card ? buzz : await readFeedContent<FeedBriefingRow>(`buzz:${yesterday}`).catch(() => null);
+  const recapRow = recap?.card ? recap : await readFeedContent<FeedBriefingRow>(`recap:${prevWeek}`).catch(() => null);
   // 장중 펄스는 마감 브리핑이 생기면 그쪽이 정본 — 함께 노출하지 않는다.
-  const rowsFound = [us, kr, kr?.card ? null : pulse, buzz, recap].filter((row): row is FeedBriefingRow => !!row?.card);
+  const rowsFound = [us, kr, kr?.card ? null : pulse, buzzRow, recapRow].filter((row): row is FeedBriefingRow => !!row?.card);
   const pinnedIds = new Set(rowsFound.filter((row) => row.pinned).map((row) => row.card.id));
   const indexNote = kr?.sectorPulse;
   return {
