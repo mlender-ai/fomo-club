@@ -19,16 +19,17 @@ export function OPTIONS() {
 export async function GET(request: Request) {
   try {
     // 아카이브 모드(무한 피드) — ?before=YYYY-MM-DD 커서로 지난 브리핑·버즈·회고를 페이지 단위 제공.
+    // ⚠️ 서버 캐시(unstable_cache) 금지 — 배포 직후 콜드 DB 읽기 실패가 "빈 페이지"로 6h 박히는
+    // 오염 실사고(2026-07-18, daily-30 KR 0장과 같은 계열). DB 점조회 3~4개라 캐시 없이도 싸다.
+    // 빈 페이지는 CDN 도 no-store — 실패와 진짜 없음을 구분할 수 없으니 캐시하지 않는 게 정직.
     const before = new URL(request.url).searchParams.get("before")?.trim();
     if (before && /^\d{4}-\d{2}-\d{2}$/.test(before)) {
-      const loadArchive = unstable_cache(
-        () => buildFeedArchiveResponse(before),
-        ["fomo-feed-archive", cacheVersion(), before],
-        { revalidate: 21_600 } // 지난 콘텐츠는 사실상 불변 — 6h
-      );
+      const archive = await buildFeedArchiveResponse(before);
       return withCors(
-        NextResponse.json(await loadArchive(), {
-          headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
+        NextResponse.json(archive, {
+          headers: {
+            "Cache-Control": archive.items.length > 0 ? "public, s-maxage=3600, stale-while-revalidate=86400" : "no-store",
+          },
         })
       );
     }
