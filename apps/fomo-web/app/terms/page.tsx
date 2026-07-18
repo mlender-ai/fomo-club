@@ -4,7 +4,7 @@ export default function TermsPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-10 text-whiteout">
       <h1 className="font-pixel text-lg">이용약관</h1>
-      <p className="mt-2 text-[12px] text-muted">시행일: 2026년 6월 22일 · 버전 1.1</p>
+      <p className="mt-2 text-[12px] text-muted">시행일: 2026년 7월 19일 · 버전 1.2</p>
 
       <section className="mt-6 space-y-5 text-sm leading-6 text-muted">
         <div>
@@ -27,6 +27,10 @@ export default function TermsPage() {
         <div>
           <p className="font-pixel text-whiteout">데이터와 콘텐츠의 한계</p>
           <p>가격, 거래량, 수급, 뉴스, 기술적 지표 등은 지연되거나 누락될 수 있습니다. 투자 결정 전 공식 공시, 거래소, 증권사 등 독립적인 출처를 직접 확인해야 합니다.</p>
+        </div>
+        <div>
+          <p className="font-pixel text-whiteout">계정 · 동의 · 탈퇴</p>
+          <p>소셜 로그인(카카오·구글·애플) 또는 이메일로 계정을 만들 수 있습니다. 가입 시 이용약관과 개인정보 수집·이용에 대한 동의가 필요하며(필수), 마케팅 정보 수신은 선택입니다. 계정 정보는 정확하게 유지해야 하며, 설정에서 언제든 탈퇴할 수 있고 탈퇴 시 개인 데이터는 개인정보 처리방침에 따라 파기됩니다.</p>
         </div>
         <div>
           <p className="font-pixel text-whiteout">금지 행위</p>
