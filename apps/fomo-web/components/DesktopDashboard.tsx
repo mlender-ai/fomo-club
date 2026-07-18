@@ -128,6 +128,7 @@ function CardListRow({
 export function DesktopDashboard() {
   const [daily, setDaily] = useState<Daily30Response | null>(null);
   const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [filter, setFilter] = useState<FilterTag>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // 우측 컬럼(feed-hub) 항목 선택 — 중앙에 해당 뎁스 렌더(WO 피드 통합 §3: 막다른 클릭 0).
@@ -140,6 +141,7 @@ export function DesktopDashboard() {
 
   useEffect(() => {
     let alive = true;
+    setFailed(false);
     fetchDaily30()
       .then((d) => alive && setDaily(d))
       .catch(() => alive && setFailed(true));
@@ -149,7 +151,16 @@ export function DesktopDashboard() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [retryKey]);
+
+  // 신규일 daily-30 콜드 빌드(~40s)는 클라 타임아웃(~30s)보다 느려 첫 로드가 실패한다.
+  // 빌드가 데워지면 사용자 조작 없이 뜨도록 자동 재시도(모바일 UnifiedDailyDeck 과 동일 정책).
+  // 이게 없어서 데스크톱(≥1024px)은 에러로 굳고, 레이아웃 축소로 모바일 remount 될 때만 회복됐다.
+  useEffect(() => {
+    if (!failed) return;
+    const timer = window.setTimeout(() => setRetryKey((value) => value + 1), 4_000);
+    return () => window.clearTimeout(timer);
+  }, [failed]);
 
   const allCards = useMemo<DeckCard[]>(() => {
     if (!daily) return [];
@@ -191,9 +202,18 @@ export function DesktopDashboard() {
   });
 
   if (failed) {
+    // 자동 재시도 중 — 콜드 빌드가 데워지면 곧 뜬다. 죽은 "새로고침해 주세요" 대신 회복 중임을 알린다.
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-muted">
-        오늘의 30장을 불러오지 못했어요. 새로고침해 주세요.
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-sm text-muted">
+        <FlickerSpinner size={36} />
+        <p>오늘의 30장을 준비하고 있어요 — 잠시만요.</p>
+        <button
+          type="button"
+          onClick={() => setRetryKey((value) => value + 1)}
+          className="rounded-full border border-hairline bg-surface px-5 py-2 text-xs font-semibold text-whiteout transition-colors hover:border-whiteout/30"
+        >
+          지금 다시 불러오기
+        </button>
       </div>
     );
   }
