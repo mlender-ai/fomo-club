@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import {
   scoreToColor,
   cleanText,
@@ -1362,24 +1363,6 @@ function StockSynthesisBlock({
   );
 }
 
-function StockDepthLoadingBlock() {
-  return (
-    <section
-      className="mt-6 rounded-2xl border border-hairline bg-surface px-4 py-5"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <p className="font-pixel text-sm text-whiteout">페이지 불러오는 중</p>
-      <p className="mt-2 text-sm leading-6 text-muted">
-        가격·차트·원문 근거를 한 번에 맞춰 불러오고 있어요.
-      </p>
-      <div className="mt-5 flex justify-center">
-        <FlickerSpinner size={36} />
-      </div>
-    </section>
-  );
-}
-
 function OfficialFactsBlock({ facts }: { facts: CondensedInsight["officialFacts"] | undefined }) {
   if (!facts || facts.length === 0) return null;
   return (
@@ -2406,13 +2389,14 @@ export function StockInsightView({
         </div>
 
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
-          {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
-          <StockPriceHeader basics={basics} front={front} />
-
+          {/* 전부 로드 전엔 아무것도 노출하지 않는다(2026-07-18 User Zero: "정보가 나왔다가 바뀌어 어색") —
+              가격 헤더 선노출·seed→fresh 교체 없이 메인홈과 동일한 로딩 하나만. */}
           {!detailsReady ? (
-            <StockDepthLoadingBlock />
+            <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />
           ) : (
           <>
+          {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
+          <StockPriceHeader basics={basics} front={front} />
           <DiscoveryOverview front={front} insight={insight} context={context} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (
@@ -2428,6 +2412,20 @@ export function StockInsightView({
 
           {/* 무슨 일이 있었나(WO-22) — 원문 인사이트 전체(양면·출처·공식지표). 카드 대비 뎁스의 정보 우위. */}
           <StockWhyHappened insight={insight} />
+
+          {/* 어떤 회사예요 — 2026-07-18 User Zero "이 회사가 뭔데 왜 투자해볼 만한지 내용이 없다".
+              하단 한 줄 강등을 정식 섹션으로 승격. KR=네이버 기업개요, US=Nasdaq profile 한국어 요약. */}
+          {basics?.summary && (
+            <section className="mt-4 rounded-2xl border border-hairline bg-surface px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-pixel text-sm text-whiteout">어떤 회사예요</p>
+                {basics.sector && (
+                  <span className="rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted">{cleanText(basics.sector)}</span>
+                )}
+              </div>
+              <p className="mt-2 text-sm leading-6 text-whiteout">{cleanText(basics.summary)}</p>
+            </section>
+          )}
 
           {/* 재무 한눈에(WO 1.5 F) — 근거 아래. KR=네이버·US=Yahoo, 없으면 생략. */}
           <FinanceGlanceBlock basics={basics} />
@@ -2445,14 +2443,6 @@ export function StockInsightView({
             <p className="mt-6 text-center text-[11px] leading-5 text-muted">
               포모 <span className="font-number font-bold" style={{ color: "#D8FF3A" }}>{front.fomo.fomoScore}</span>
               {` · ${fomoStateSummary(front.fomo)}`}
-            </p>
-          )}
-
-          {/* 회사가 뭐 하는 곳 — 맨 아래 한 줄로 강등(긴 blurb 폐기). */}
-          {basics?.summary && (
-            <p className="mt-8 border-t border-hairline pt-4 text-[12px] leading-5 text-muted">
-              <span className="text-muted/70">회사 </span>
-              {cleanText(basics.summary).split(/[.\n]/)[0]}
             </p>
           )}
 

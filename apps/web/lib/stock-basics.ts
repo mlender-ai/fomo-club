@@ -1,4 +1,5 @@
 import { assembleStockBasics, parseNaverStockBasic, resolveStock, type StockBasics } from "@fomo/core";
+import { getUsCompanyAbout } from "./us-company-about";
 
 /**
  * 종목 기본 정보(바닥) 수집 — STOCK_SCREEN_REDESIGN §2.
@@ -123,9 +124,11 @@ interface NasdaqLabelValue {
 
 /** Nasdaq summary+financials → StockBasics. 시총·52주·배당 + 연간 매출/영업이익. PER 미제공 시 생략(정직). */
 export async function fetchUsStockBasics(name: string, symbol: string): Promise<StockBasics | null> {
-  const [summaryRaw, financialsRaw] = await Promise.all([
+  const [summaryRaw, financialsRaw, about] = await Promise.all([
     getNasdaqJson(`https://api.nasdaq.com/api/quote/${encodeURIComponent(symbol)}/summary?assetclass=stocks`),
     getNasdaqJson(`https://api.nasdaq.com/api/company/${encodeURIComponent(symbol)}/financials?frequency=1`),
+    // 회사 소개(User Zero: "무슨 회사인지 없다") — company-profile 영문 → 한국어 요약, 심볼당 1회 영구 캐시.
+    getUsCompanyAbout(name, symbol).catch(() => undefined),
   ]);
 
   const summary = (summaryRaw as { data?: { summaryData?: Record<string, NasdaqLabelValue> } } | null)?.data?.summaryData;
@@ -174,6 +177,7 @@ export async function fetchUsStockBasics(name: string, symbol: string): Promise<
     ...(market ? { market } : {}),
     ...(marketCap ? { marketCap } : {}),
     ...(sector ? { sector } : {}),
+    ...(about ? { summary: about } : {}),
     metrics,
     ...(financials ? { financials } : {}),
   };
