@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarCard } from "@/components/CalendarCard";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
@@ -153,10 +154,22 @@ export function FeedView() {
         <p className="py-4 text-center text-[11px] text-muted">최근 한 달 콘텐츠를 전부 봤어요.</p>
       )}
 
-      {narrative && <NarrativeDepthPage card={narrative} onClose={() => setNarrative(null)} />}
-      {selected && <FeedDepthPage item={selected} onClose={() => setSelected(null)} />}
+      {/* 뎁스 오버레이는 body 로 portal — 피드 탭의 overflow-y-auto 스크롤 컨테이너 안에서
+          fixed 가 갇혀(iOS standalone) "뎁스가 안 뜨던" 문제 해소. 컨테이너 밖 뷰포트 기준 렌더. */}
+      <OverlayPortal>
+        {narrative && <NarrativeDepthPage card={narrative} onClose={() => setNarrative(null)} />}
+        {selected && <FeedDepthPage item={selected} onClose={() => setSelected(null)} />}
+      </OverlayPortal>
     </div>
   );
+}
+
+/** 스크롤 컨테이너 탈출용 body 포털 — 마운트 후에만(SSR 안전). */
+function OverlayPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || typeof document === "undefined") return null;
+  return createPortal(children, document.body);
 }
 
 /** 메인 덱 필터(WO-GNB) — daily-30 카드에서 종목 카드만. 콘텐츠·섹터·내러티브는 피드(feed-hub) 소관. */
