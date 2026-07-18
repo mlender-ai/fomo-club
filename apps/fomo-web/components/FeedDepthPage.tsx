@@ -241,7 +241,7 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
 
   return (
     <div className="fixed inset-0 z-[70] overflow-y-auto bg-canvas">
-      <div className="mx-auto max-w-xl px-6 pb-16 pt-6">
+      <div className="mx-auto max-w-xl px-6 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))]">
         <button type="button" onClick={onClose} className="mb-5 font-pixel text-xs text-muted underline">
           ← 피드로
         </button>

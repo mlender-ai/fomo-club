@@ -92,7 +92,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black">
+    <div className="fixed inset-0 z-[60] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex h-full max-w-md flex-col">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -2380,7 +2380,7 @@ export function StockInsightView({
     !hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0;
 
   return (
-    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] bg-black"}>
+    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
       <div className={inline ? "flex h-full min-h-0 flex-col" : "mx-auto flex h-full max-w-md flex-col"}>
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">

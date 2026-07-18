@@ -175,7 +175,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-canvas">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-5">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pb-[env(safe-area-inset-bottom)] pt-[calc(1.25rem+env(safe-area-inset-top))]">
         {/* 검색 입력 */}
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-hairline bg-white/[0.04] px-4 py-3">

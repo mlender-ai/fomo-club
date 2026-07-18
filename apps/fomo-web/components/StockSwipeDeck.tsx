@@ -947,7 +947,9 @@ export function StockSwipeDeck({
             else if (top.type === "narrative") openNarrativeDepth(top.data);
           }}
           className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
-          style={{ transform: topTransform, transition: topTransition }}
+          // touch-action: none — iOS(특히 standalone PWA)가 가로 드래그를 스크롤·뒤로가기 제스처로
+          // 가로채 pointermove 가 안 오던 스와이프 불능 해소. 카드 위 제스처는 덱이 전담한다.
+          style={{ transform: topTransform, transition: topTransition, touchAction: "none" }}
         >
           {/* 드래그 스탬프(틴더식 아이콘) — 거리에 비례해 또렷·확대. 우=관심(하트)·좌=패스(X)·위=슈퍼관심(별). */}
           <span

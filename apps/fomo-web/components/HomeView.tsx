@@ -66,7 +66,7 @@ export function HomeView({
   if (isDesktop) {
     return (
       <>
-        <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 py-5">
+        <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
           <div className="flex shrink-0 items-center justify-between">
             <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
             <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export function HomeView({
 
   return (
     <>
-      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-20 pt-4">
+      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]">
         {/* 상단 얇은 띠: 로고 + 시장 온도 축약 배지(WO 1.5 E — 큰 바는 몰입 방해라 접었다. 탭하면 설명 시트). */}
         <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
@@ -157,7 +157,7 @@ export function HomeView({
       </main>
 
       {/* 하단 GNB: 메인 / 피드 / 히스토리 (WO-GNB — 두 표면 분리) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-md">
           <TabButton active={tab === "main"} onClick={() => setTab("main")} label="메인" />
           <TabButton active={tab === "feed"} onClick={() => setTab("feed")} label="피드" />
