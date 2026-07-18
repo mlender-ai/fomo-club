@@ -29,6 +29,9 @@ const securityHeaders = [
       "font-src 'self' data:",
       "connect-src 'self' https://fomo-club-backend.vercel.app https://kauth.kakao.com https://kapi.kakao.com",
       "frame-src https://kauth.kakao.com https://accounts.kakao.com",
+      // PWA — 서비스워커(sw.js)·매니페스트 self 허용.
+      "worker-src 'self'",
+      "manifest-src 'self'",
       "upgrade-insecure-requests",
     ].join("; "),
   },
