@@ -286,7 +286,8 @@ jobs:
           const findings = Array.isArray(report.findings) ? report.findings : [];
           const critical = findings.filter((f) => f.severity === "critical").length;
           const warn = findings.filter((f) => f.severity === "warn").length;
-          const summary = findings.map((f) => `${String(f.severity).toUpperCase()}: ${f.message}`).slice(0, 3).join(" / ") || "ok";
+          const oneLine = (s) => String(s).replace(/\s+/g, " ").trim().slice(0, 300);
+          const summary = findings.map((f) => `${String(f.severity).toUpperCase()}: ${oneLine(f.message)}`).slice(0, 3).join(" / ") || "ok";
           console.log(`critical_count=${critical}`);
           console.log(`warn_count=${warn}`);
           console.log(`summary=${summary}`);

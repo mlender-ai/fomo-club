@@ -94,4 +94,21 @@ export interface ThemeInsight {
   wordingAudit?: import("./wording-filter").WordingVerdict[];
   /** 공식 지표 팩트(FRED 등) — 강세/약세와 별개로 중립 사실 노출(C-2). */
   officialFacts?: OfficialFact[];
+  /** 가격 급변동 원인(WO 뎁스 재건 A) — 수집 원문·공시와 시간창 매칭한 "왜 움직였나"의 답. */
+  cause?: PriceCause;
+}
+
+/**
+ * 가격 급변동 원인(WO 뎁스 재건 A — "왜 움직였나의 가장 쉬운 답").
+ * 시간창 매칭(±2거래일)·재료 패턴·지수 동반까지 전부 실데이터 — 추측 인과 금지.
+ */
+export interface PriceCause {
+  /** 원인 한 줄(쉬운말). */
+  text: string;
+  /** material=재료 연결 · co-move=지수 동반 사실 · unknown=정직한 미확인(±3% 카드 중 ≤10% 목표). */
+  kind: "material" | "co-move" | "unknown";
+  /** 연결된 원문·공시 출처 라벨(있으면). */
+  sourceLabel?: string;
+  url?: string;
+  asOf?: string;
 }

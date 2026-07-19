@@ -1,70 +1,84 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { StockInsightView, type StockContext } from "@/components/KeywordDepthPage";
+import { createPortal } from "react-dom";
+import { CalendarCard } from "@/components/CalendarCard";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
+import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
+import { SectorCard } from "@/components/SectorCard";
+import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
-import { stockDeckCards, type DeckCard, type DeckContent, type DeckNarrative, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
+import { fetchFeedHub, type FeedHubItem } from "@/lib/fomoApi";
+import { feedItemKey, useFeedArchive } from "@/lib/useFeedArchive";
+import type { DeckCard, DeckNarrative, DeckSectorCardData } from "@/lib/discoveryDeck";
 
 /**
- * 피드 표면(WO-GNB-TWO-SURFACES ②) — 콘텐츠 전용 세로 스크롤.
- * 소스 = daily-30(메인 덱·PC 우측 컬럼과 동일 — 이원화 금지). 종목 카드는 제외, 콘텐츠만 모은다.
- * 내러티브 = 사건→종목 스토리(탭 시 앵커 종목 뎁스), 매크로/지수/고래 = 사실 카드.
+ * 피드 표면(WO 피드 통합) — 소스는 feed-hub 단일(브리핑·버즈·회고·내러티브·섹터·지수·거시·고래·종목이슈·거시이슈).
+ * ⚠️ daily-30 만 읽던 배선이 피드 다양성 붕괴의 원인이었다 — feed-hub 외 소스로 되돌리지 말 것.
+ * 모든 항목은 탭 → 뎁스 도달(막다른 탭 0): 내러티브→스토리 뎁스, 나머지→FeedDepthPage.
  */
 
-/** 피드에 담기는 콘텐츠 카드(내러티브·매크로/지수/고래). 종목·섹터 카드는 메인 덱 소관. */
-type FeedItem =
-  | { type: "narrative"; data: DeckNarrative }
-  | { type: "content"; data: DeckContent };
-
-function feedItemsFromDaily30(discovery: Daily30Response): FeedItem[] {
-  const raw = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
-  // daily-30 cards 순서 = quietScore 랭킹 = 중요도순. 그 순서를 보존하며 콘텐츠만 추린다.
-  const items: FeedItem[] = [];
-  for (const card of stockDeckCards(raw)) {
-    if (card.type === "narrative") items.push({ type: "narrative", data: card.data });
-    else if (card.type === "content") items.push({ type: "content", data: card.data });
-  }
-  return items;
+function valueTone(value: number | undefined): string {
+  if (typeof value !== "number") return "rgba(250,250,250,0.78)";
+  if (value > 0) return "#FF4D4D";
+  if (value < 0) return "#3B82F6";
+  return "#8A8A86";
 }
 
-function narrativeAnchorContext(card: DeckNarrative): { stock: string; context: StockContext } | null {
-  // 트리거 앵커 티커 우선, 없으면 첫 종목. 뎁스 진입에 필요한 식별자(코드/심볼)를 넘긴다.
-  const anchor =
-    card.stocks.find((s) => s.ticker === card.trigger.anchorTicker) ?? card.stocks[0];
-  if (!anchor) return null;
+export function sectorCardData(item: Extract<FeedHubItem, { type: "sector" }>): DeckSectorCardData {
   return {
-    stock: anchor.name,
-    context: {
-      reason: card.headline,
-      sourceLabel: card.source,
-      ...(card.trigger.url ? { sourceUrl: card.trigger.url } : {}),
-      ...(anchor.naverCode ? { naverCode: anchor.naverCode } : {}),
-      ...(anchor.symbol ? { symbol: anchor.symbol } : {}),
-      market: anchor.market,
-      country: anchor.country,
-    },
+    id: item.sector.id,
+    sector: item.sector.sector,
+    country: item.sector.country,
+    stance: item.sector.stance,
+    stanceNote: item.sector.stanceNote,
+    stocks: item.sector.stocks.map((stock) => ({
+      canonical: stock.canonical,
+      market: stock.market as DeckSectorCardData["stocks"][number]["market"],
+      country: stock.country as DeckSectorCardData["stocks"][number]["country"],
+      ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
+      ...(stock.symbol ? { symbol: stock.symbol } : {}),
+      ...(typeof stock.changePct === "number" ? { changePct: stock.changePct } : {}),
+    })),
   };
 }
 
+export function StockIssueCard({ item }: { item: Extract<FeedHubItem, { type: "stock-issue" }> }) {
+  const issue = item.stockIssue;
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <span className="font-pixel text-[10px] uppercase tracking-wide text-muted">
+          STOCK ISSUE · {issue.country === "US" ? "미국" : "국내"}
+        </span>
+        <p className="mt-2 text-base font-bold leading-6 text-whiteout">{issue.stock}</p>
+        <p className="mt-1 text-sm leading-5 text-muted">{issue.headline}</p>
+      </div>
+      <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: valueTone(issue.changePct) }}>
+        {typeof issue.changePct === "number" ? `${issue.changePct > 0 ? "+" : ""}${issue.changePct.toFixed(2)}%` : ""}
+      </span>
+    </div>
+  );
+}
+
 export function FeedView() {
-  const [items, setItems] = useState<FeedItem[] | null>(null);
+  const [items, setItems] = useState<FeedHubItem[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [selected, setSelected] = useState<{ stock: string; context: StockContext } | null>(null);
+  const [selected, setSelected] = useState<FeedHubItem | null>(null);
+  const [narrative, setNarrative] = useState<DeckNarrative | null>(null);
+  const todayIds = useMemo(() => new Set((items ?? []).map(feedItemKey)), [items]);
+  const { archive, sentinelRef, done: archiveDone } = useFeedArchive(!!items && items.length > 0, todayIds);
 
   useEffect(() => {
     let alive = true;
-    fetchDaily30()
-      .then((d) => alive && setItems(feedItemsFromDaily30(d)))
+    fetchFeedHub()
+      .then((d) => alive && setItems(d.items))
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
     };
   }, []);
-
-  const content = useMemo(() => items ?? [], [items]);
 
   if (failed) {
     return (
@@ -76,7 +90,7 @@ export function FeedView() {
   if (!items) {
     return <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />;
   }
-  if (content.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="mt-16 px-8 text-center text-sm leading-6 text-whiteout">
         오늘은 콘텐츠가 잠깐 비었어요.
@@ -86,38 +100,79 @@ export function FeedView() {
     );
   }
 
+  const cardShell =
+    "block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20";
+
+  const renderItem = (item: FeedHubItem) => {
+    if (item.type === "narrative") {
+      return (
+        <button key={item.narrative.id} type="button" onClick={() => setNarrative(item.narrative)} className={cardShell}>
+          <NarrativeCard card={item.narrative} />
+        </button>
+      );
+    }
+    if (item.type === "sector") {
+      return (
+        <button key={item.sector.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+          <SectorCard card={sectorCardData(item)} />
+        </button>
+      );
+    }
+    if (item.type === "stock-issue") {
+      return (
+        <button key={item.stockIssue.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+          <StockIssueCard item={item} />
+        </button>
+      );
+    }
+    if (item.type === "calendar") {
+      // 캘린더는 인라인 완결(전체 정보가 카드 안) — 뎁스 불요, 막다른 탭 아님.
+      return (
+        <div key={item.calendar.id} className="w-full rounded-2xl border border-hairline bg-surface px-5 py-5">
+          <CalendarCard calendar={item.calendar} />
+        </div>
+      );
+    }
+    return (
+      <button key={item.content.id} type="button" onClick={() => setSelected(item)} className={cardShell}>
+        <ContentCard card={item.content} />
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-3 pb-4">
-      {content.map((item) => {
-        if (item.type === "narrative") {
-          const anchor = narrativeAnchorContext(item.data);
-          return (
-            <button
-              key={item.data.id}
-              type="button"
-              onClick={() => anchor && setSelected(anchor)}
-              disabled={!anchor}
-              className="block w-full rounded-2xl border border-hairline bg-surface px-5 py-5 text-left transition-colors enabled:hover:border-whiteout/20 disabled:cursor-default"
-            >
-              <NarrativeCard card={item.data} />
-            </button>
-          );
-        }
-        return (
-          <div key={item.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
-            <ContentCard card={item.data} />
-          </div>
-        );
-      })}
+      {items.map(renderItem)}
 
-      {selected && (
-        <StockInsightView stock={selected.stock} context={selected.context} onClose={() => setSelected(null)} />
+      {/* 무한 피드(2026-07-18) — 오늘치가 끝나면 지난 브리핑·버즈·회고를 계속 이어 붙인다. */}
+      {archive.length > 0 && (
+        <p className="pt-3 text-center font-pixel text-[11px] text-muted">지난 콘텐츠</p>
       )}
+      {archive.map(renderItem)}
+      {!archiveDone && <div ref={sentinelRef} className="h-8" aria-hidden />}
+      {archiveDone && archive.length > 0 && (
+        <p className="py-4 text-center text-[11px] text-muted">최근 한 달 콘텐츠를 전부 봤어요.</p>
+      )}
+
+      {/* 뎁스 오버레이는 body 로 portal — 피드 탭의 overflow-y-auto 스크롤 컨테이너 안에서
+          fixed 가 갇혀(iOS standalone) "뎁스가 안 뜨던" 문제 해소. 컨테이너 밖 뷰포트 기준 렌더. */}
+      <OverlayPortal>
+        {narrative && <NarrativeDepthPage card={narrative} onClose={() => setNarrative(null)} />}
+        {selected && <FeedDepthPage item={selected} onClose={() => setSelected(null)} />}
+      </OverlayPortal>
     </div>
   );
 }
 
-/** 메인 덱 필터(WO-GNB) — daily-30 카드에서 종목 카드만. 콘텐츠·섹터·내러티브는 피드로 이관. */
+/** 스크롤 컨테이너 탈출용 body 포털 — 마운트 후에만(SSR 안전). */
+function OverlayPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+}
+
+/** 메인 덱 필터(WO-GNB) — daily-30 카드에서 종목 카드만. 콘텐츠·섹터·내러티브는 피드(feed-hub) 소관. */
 export function stockOnlyDeckCards(cards: readonly DeckCard[]): DeckCard[] {
   return cards.filter((card) => card.type === "stock");
 }

@@ -52,6 +52,11 @@ async function getThemeRelativeMap(sector: StockSector): Promise<Record<string, 
 
 async function getFront(stock: string, lite = false, naverCode?: string, symbol?: string): Promise<StockFrontData> {
   const today = kstDate();
+  const marketTag = symbol?.startsWith("KRW-")
+    ? "coin-stock-front"
+    : symbol && !naverCode
+      ? "us-stock-front"
+      : undefined;
   const load = unstable_cache(
     async () => {
       const def = resolveStock(stock);
@@ -69,8 +74,8 @@ async function getFront(stock: string, lite = false, naverCode?: string, symbol?
         ...(themeRelativeMap[canonical] ? { themeRelative: themeRelativeMap[canonical] } : {}),
       }, { lite, ...(naverCode ? { naverCode } : {}), ...(symbol ? { symbol } : {}) });
     },
-    ["fomo-stock-front", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
-    { revalidate: REVALIDATE_S }
+    ["fomo-stock-front", "company-score-v1", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
+    { revalidate: REVALIDATE_S, ...(marketTag ? { tags: [marketTag] } : {}) }
   );
   return load();
 }
@@ -86,9 +91,14 @@ export async function GET(req: Request) {
   }
   try {
     const data = await getFront(stock, lite, naverCode, symbol);
+    const prewarmedMarket = symbol?.startsWith("KRW-") || (!!symbol && !naverCode);
     return withCors(
       NextResponse.json(data, {
-        headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400" },
+        headers: {
+          "Cache-Control": prewarmedMarket
+            ? "no-store"
+            : "public, s-maxage=600, stale-while-revalidate=86400",
+        },
       })
     );
   } catch (err) {

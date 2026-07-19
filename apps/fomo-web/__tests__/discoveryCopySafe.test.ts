@@ -9,6 +9,12 @@ describe("isDiscoveryCopySafe — 금칙 카피 오탐 방지", () => {
     expect(isDiscoveryCopySafe("외국인 5일 연속 순매수 — LG이노텍")).toBe(true);
   });
 
+  it("2~3자 대문자 시장 약어와 조사는 정상 카피로 통과", () => {
+    expect(isDiscoveryCopySafe("IPO와 제품 협력에 -9.7%")).toBe(true);
+    expect(isDiscoveryCopySafe("AI가 반도체 수요를 이끌었어요")).toBe(true);
+    expect(isDiscoveryCopySafe("ETF에 자금이 들어왔어요")).toBe(true);
+  });
+
   it("실제 미번역 영문+조사 잔여물은 오염으로 판정", () => {
     expect(isDiscoveryCopySafe("AAPL의 실적이 좋았다")).toBe(false);
     expect(isDiscoveryCopySafe("Nvidia와 경쟁하는 중")).toBe(false);

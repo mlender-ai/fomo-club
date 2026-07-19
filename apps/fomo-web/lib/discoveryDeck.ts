@@ -82,12 +82,14 @@ export interface DeckThemeBundle {
   items: DeckThemeBundleItem[];
 }
 
-export type DeckContentType = "macro" | "index" | "whale";
+export type DeckContentType = "macro" | "index" | "whale" | "briefing" | "buzz" | "recap" | "macro-issue" | "coin-issue" | "hot-issue" | "term" | "event" | "daily-receipt";
 export type DeckContentScope = "domestic" | "world" | "global";
 
 export interface DeckContentFact {
   label: string;
   value: string;
+  /** "왜" 1줄 — 무버의 재료(브리핑·회고·버즈). */
+  detail?: string;
 }
 
 export interface DeckContent {
@@ -97,6 +99,10 @@ export interface DeckContent {
   scope: DeckContentScope;
   headline: string;
   facts: DeckContentFact[];
+  /** Editor's Note / 해석 — 사실 기반 관측·해석(WO 피드 강화). */
+  note?: string;
+  /** 원문 링크(버즈 스토리). */
+  sourceUrl?: string;
   source: string;
   asOf: string;
 }
@@ -644,12 +650,20 @@ function scopeMatchesCountry(scope: DeckContentScope, country: StockCountry): bo
 
 function contentPriority(type: DeckContentType): number {
   switch (type) {
+    case "briefing":
+      return -3; // 피드 최상단(WO 피드 강화)
+    case "buzz":
+      return -2;
+    case "recap":
+      return -1;
     case "index":
       return 0;
     case "macro":
       return 1;
     case "whale":
       return 2;
+    default:
+      return 3; // 신규 타입(macro-issue·coin-issue·hot-issue·term·event) — 기존 콘텐츠 뒤
   }
 }
 

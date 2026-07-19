@@ -9,7 +9,7 @@ import type {
   MoodSignal,
   ScoredArticle,
 } from "@fomo/core";
-import type { DeckContent } from "./discoveryDeck";
+import type { DeckContent, DeckNarrative } from "./discoveryDeck";
 import { isDiscoveryCopySafe } from "./discoveryCopySafe";
 import { getSessionId } from "@/lib/session";
 import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
@@ -56,6 +56,32 @@ function daily30Path(): string {
 
 function kstDateKey(now = new Date()): string {
   return new Date(now.getTime() + 9 * HOUR).toISOString().slice(0, 10);
+}
+
+/**
+ * 날짜 키(fomo:index:*, fomo:keywords:*, fomo:discovery:*)로 매일 새 항목이 쌓이는데
+ * 지우는 곳이 없어 localStorage 가 무한 누적된다(quota 초과 시 이후 모든 저장이 조용히 실패
+ * → 오프라인 캐시·취향 기록 등 영속 기능 사망). 오늘이 아닌 날짜가 박힌 fomo:* 키를 정리한다.
+ * 날짜가 없는 키(fomo:discovery:last-good:* 등)는 건드리지 않는다. 세션당 1회.
+ */
+let stalePruned = false;
+function pruneStaleDatedCache(): void {
+  if (typeof window === "undefined" || stalePruned) return;
+  stalePruned = true;
+  try {
+    const today = kstDateKey();
+    const datedFomoKey = /^fomo:(index|keywords|discovery):.*(\d{4}-\d{2}-\d{2})/;
+    const stale: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (!key) continue;
+      const m = datedFomoKey.exec(key);
+      if (m && m[2] !== today) stale.push(key);
+    }
+    for (const key of stale) window.localStorage.removeItem(key);
+  } catch (err) {
+    console.warn("[fomoApi] stale cache prune failed", err);
+  }
 }
 
 export interface FomoIndexResponse {
@@ -116,6 +142,7 @@ function readStoredIndex(): FomoIndexResponse | null {
 function writeStoredIndex(value: FomoIndexResponse): void {
   if (typeof window === "undefined") return;
   try {
+    pruneStaleDatedCache();
     window.localStorage.setItem(indexStorageKey(), JSON.stringify(value));
   } catch (err) {
     console.warn("[fetchIndex] localStorage write failed", err);
@@ -270,6 +297,100 @@ export interface FeedResponse {
 }
 export const fetchFeed = () => get<FeedResponse>("/api/fomo/feed");
 
+/** 피드 집계(feed-hub, WO 피드 통합) — FeedView·PC 우측 컬럼의 단일 소스. */
+export interface FeedHubSectorStockRef {
+  canonical: string;
+  market: string;
+  country: string;
+  naverCode?: string;
+  symbol?: string;
+  changePct?: number;
+}
+export interface FeedHubSectorCard {
+  id: string;
+  sector: string;
+  country: "KR" | "US";
+  stance: "bull-dominant" | "bear-dominant" | "balanced" | "insufficient";
+  stanceNote: string;
+  stocks: FeedHubSectorStockRef[];
+}
+export interface FeedHubStockIssue {
+  id: string;
+  stock: string;
+  market: string;
+  country: "KR" | "US";
+  naverCode?: string;
+  symbol?: string;
+  changePct?: number;
+  headline: string;
+  source: string;
+  url?: string;
+  asOf: string;
+}
+export interface FeedHubCalendarStockRef {
+  canonical: string;
+  symbol: string;
+  session?: "장전" | "장후";
+}
+export interface FeedHubCalendarEvent {
+  kind: "earnings" | "macro";
+  title: string;
+  detail?: string;
+  stocks?: FeedHubCalendarStockRef[];
+}
+export interface FeedHubCalendar {
+  id: string;
+  asOf: string;
+  days: Array<{ date: string; events: FeedHubCalendarEvent[] }>;
+}
+export type FeedHubItem =
+  | { type: "briefing" | "buzz" | "recap" | "index" | "macro" | "whale" | "macro-issue"; scope: "KR" | "US" | "GLOBAL"; content: DeckContent & { series?: number[] } }
+  | { type: "narrative"; scope: "KR" | "US"; narrative: DeckNarrative }
+  | { type: "sector"; scope: "KR" | "US"; sector: FeedHubSectorCard }
+  | { type: "stock-issue"; scope: "KR" | "US"; stockIssue: FeedHubStockIssue }
+  | { type: "calendar"; scope: "GLOBAL"; calendar: FeedHubCalendar };
+export interface FeedHubResponse {
+  asOf: string;
+  items: FeedHubItem[];
+  typeCounts: Record<string, number>;
+  scopeCounts: { KR: number; US: number; GLOBAL: number };
+  source: string;
+}
+export const fetchFeedHub = () =>
+  cachedGet(`feed-hub:${kstDateKey()}`, () => get<FeedHubResponse>("/api/fomo/feed-hub"), 15 * MINUTE);
+
+/** 피드 아카이브(무한 스크롤) — before(exclusive) 이전의 지난 브리핑·버즈·회고 페이지. */
+export interface FeedArchiveResponse {
+  items: FeedHubItem[];
+  /** 다음 페이지 커서 — null 이면 아카이브 끝. */
+  nextBefore: string | null;
+}
+// 로컬 캐시 없이 항상 신선 조회 — 서버 콜드 실패로 빈 페이지가 오면 캐시에 남지 않고 다음 스크롤에서 재시도.
+// 정상 페이지는 CDN(s-maxage 1h)이 이미 방패라 클라 캐시가 불필요하다.
+export const fetchFeedArchive = (before: string) => get<FeedArchiveResponse>(`/api/fomo/feed-hub?before=${before}`);
+
+/** 오늘(KST) YYYY-MM-DD — 아카이브 첫 커서용. */
+export const feedArchiveStartCursor = () => kstDateKey();
+
+/** 무로그인 대기함(WO 검색 요청→다음날 카드) — 익명 deviceId(=sessionId)의 요청 상태. */
+export interface MyRequestResolved {
+  canonical: string;
+  symbol: string;
+  market: string;
+  country: "KR" | "US" | "GLOBAL";
+  naverCode?: string;
+  sector?: string;
+}
+export interface MyRequestRow {
+  query: string;
+  status: "pending" | "fulfilled" | "not-found";
+  requestedAt: string;
+  processedAt?: string;
+  resolved?: MyRequestResolved;
+}
+export const fetchMyRequests = (deviceId: string) =>
+  get<{ requests: MyRequestRow[] }>(`/api/fomo/my-requests?deviceId=${encodeURIComponent(deviceId)}`);
+
 /** 뉴스 덱 — 한국 뉴스(점수순) + 차트 카드 인터리브, 스와이프용(피드 탭). */
 export type { ScoredArticle, ChartCard, DeckCard } from "@fomo/core";
 export interface NewsResponse {
@@ -310,6 +431,7 @@ function readStoredKeywords(): KeywordsResponse | null {
 function writeStoredKeywords(value: KeywordsResponse): void {
   if (typeof window === "undefined") return;
   try {
+    pruneStaleDatedCache();
     window.localStorage.setItem(keywordsStorageKey(), JSON.stringify(value));
   } catch (err) {
     console.warn("[fetchKeywords] localStorage write failed", err);
@@ -385,11 +507,22 @@ export const fetchStockBasics = (stock: string, opts: { naverCode?: string; symb
 /** 카드 앞면 FOMO 신호(rev2 후속) — baseline·라이브 수급 streak·시총순위·3개월 스파크라인. 도달 종목 lazy. */
 export type { CardFrontSignals } from "@fomo/core";
 export type { FomoScoreResult } from "@fomo/core";
+export type { CompanyScoreResult } from "@fomo/core";
 export type { TaFact } from "@fomo/core";
 export type { AxisSignal, MultiAxisHookSelection } from "@fomo/core";
 export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
   fomo: import("@fomo/core").FomoScoreResult;
+  companyScore?: import("@fomo/core").CompanyScoreResult;
+  committeeReview?: {
+    runId: string;
+    reviewedAt: string;
+    tradingView: string;
+    fundamentalView: string;
+    timingGrade: "A" | "B" | "C";
+    valuationGrade: "A" | "B" | "C";
+    factChecked: true;
+  };
   taFact?: import("@fomo/core").TaFact;
   ta?: import("@fomo/core").TechnicalAnalysisSnapshot;
   /** 캔들차트용 실제 일봉 OHLCV. non-lite 응답에 최대 260거래일. */
@@ -404,6 +537,8 @@ export interface StockFrontResponse {
   axisHook?: import("@fomo/core").MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — stance/근거/무효화. 캔들 부족 시 최소 verdict(관망). */
   verdict?: import("@fomo/core").CardVerdict;
+  /** 결정론 와이코프 구간·이벤트 분석. non-lite 응답에만. */
+  wyckoff?: import("@fomo/core").WyckoffAnalysis;
   /** 차트분석 탭 시리즈(WO 1.6 D) — 종가+MA20/60/120+거래량. non-lite 응답에만. */
   chartSeries?: {
     closes: number[];
@@ -412,25 +547,55 @@ export interface StockFrontResponse {
     ma60: Array<number | null>;
     ma120: Array<number | null>;
   };
+  coinIssues?: Array<{
+    id: string;
+    symbols: string[];
+    scope: "coin" | "market";
+    type: "regulation" | "network" | "institution" | "onchain" | "macro";
+    typeLabel: string;
+    direction: "positive" | "negative" | "neutral";
+    title: string;
+    meaning: string;
+    source: string;
+    url: string;
+    publishedAt: string;
+  }>;
+  coinCause?: {
+    text: string;
+    relation: "same-window" | "recent-context";
+    sourceLabel: string;
+    url: string;
+    asOf: string;
+    issueId: string;
+  };
 }
 
 export interface FeedSignalPoint {
   text: string;
   source: "뉴스" | "수급" | "테마" | "가격" | "주목" | "위치" | "거래";
 }
-export const fetchStockFront = (stock: string, opts: { lite?: boolean; naverCode?: string; symbol?: string } = {}) =>
-  cachedGet(
-    `stock-front:${opts.lite ? "lite" : "full"}:${stock}:${opts.naverCode ?? ""}:${opts.symbol ?? ""}`,
-    () =>
-      get<StockFrontResponse>(
-        `/api/fomo/stock-front?stock=${encodeURIComponent(stock)}${opts.lite ? "&lite=1" : ""}${
-          opts.naverCode ? `&naverCode=${encodeURIComponent(opts.naverCode)}` : ""
-        }${
-          opts.symbol ? `&symbol=${encodeURIComponent(opts.symbol)}` : ""
-        }`
-      ),
+export const fetchStockFront = (stock: string, opts: { lite?: boolean; naverCode?: string; symbol?: string } = {}) => {
+  const path = `/api/fomo/stock-front?stock=${encodeURIComponent(stock)}${opts.lite ? "&lite=1" : ""}${
+    opts.naverCode ? `&naverCode=${encodeURIComponent(opts.naverCode)}` : ""
+  }${opts.symbol ? `&symbol=${encodeURIComponent(opts.symbol)}` : ""}`;
+
+  return cachedGet(
+    `stock-front:v3-company-score:${opts.lite ? "lite" : "full"}:${stock}:${opts.naverCode ?? ""}:${opts.symbol ?? ""}`,
+    async () => {
+      try {
+        return await fetchJsonWithTimeout<StockFrontResponse>(
+          path,
+          { cache: "no-store", credentials: "same-origin" },
+          12_000,
+          `GET ${path}`
+        );
+      } catch {
+        return get<StockFrontResponse>(path);
+      }
+    },
     CACHE_TTL.stockFront
   );
+};
 
 export interface DiscoveryPerformancePriceRequestItem {
   stock: string;
@@ -599,6 +764,14 @@ export interface Daily30Response extends DiscoveryResponse {
       hypePenalty: number;
     }>;
     assetCounts: Record<Daily30AssetClass, number>;
+    committee?: {
+      runId: string;
+      version: string;
+      reviewedAt: string;
+      candidateCount: number;
+      selectedCount: number;
+      callCount: number;
+    };
   };
 }
 
@@ -650,16 +823,21 @@ function cardCopyFields(card: DiscoveryCardResponse): string[] {
   return stockCopyFields(card);
 }
 
-function hasUnsafeDiscoveryCopy(value: DiscoveryResponse | null | undefined): boolean {
-  if (!value) return false;
-  const fields = [...value.stocks.flatMap(stockCopyFields), ...(value.cards ?? []).flatMap(cardCopyFields)];
-  return fields.some((text) => !isDiscoveryCopySafe(text));
+/**
+ * 오염 카피 카드만 제거(카드 단위 드랍) — 서버도 같은 패턴(@fomo/core)으로 거르므로 평소엔 no-op.
+ * ⚠️ 과거엔 1장 오염이 덱 30장 전체를 무효 처리해 홈이 비었다(SKAI "TSID와" 실측) —
+ * 전체 거부로 되돌리지 말 것. 30장 유지가 우선, 오염은 해당 카드만 잃는다.
+ */
+function sanitizeDiscoveryCopy<T extends DiscoveryResponse>(value: T): T {
+  const stocks = value.stocks.filter((stock) => stockCopyFields(stock).every((text) => isDiscoveryCopySafe(text)));
+  const cards = value.cards?.filter((card) => cardCopyFields(card).every((text) => isDiscoveryCopySafe(text)));
+  if (stocks.length === value.stocks.length && (cards?.length ?? 0) === (value.cards?.length ?? 0)) return value;
+  return { ...value, stocks, ...(cards ? { cards } : {}) };
 }
 
 function hasDiscoveryCards(value: DiscoveryResponse | null | undefined, country: DiscoveryCountryScope = "all"): value is DiscoveryResponse {
   return (
     discoveryMatchesCountry(value, country) &&
-    !hasUnsafeDiscoveryCopy(value) &&
     (value.stocks.length > 0 || (value.cards?.length ?? 0) > 0)
   );
 }
@@ -670,7 +848,7 @@ function readStoredDiscovery(country: DiscoveryCountryScope = "KR"): DiscoveryRe
     const raw = window.localStorage.getItem(discoveryStorageKey(country)) ?? window.localStorage.getItem(lastDiscoveryStorageKey(country));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    const discovery = isDiscoveryResponse(parsed) ? parsed : null;
+    const discovery = isDiscoveryResponse(parsed) ? sanitizeDiscoveryCopy(parsed) : null;
     if (hasDiscoveryCards(discovery, country)) return discovery;
     window.localStorage.removeItem(discoveryStorageKey(country));
     window.localStorage.removeItem(lastDiscoveryStorageKey(country));
@@ -685,6 +863,7 @@ function writeStoredDiscovery(value: DiscoveryResponse, country: DiscoveryCountr
   if (typeof window === "undefined") return;
   if (!hasDiscoveryCards(value, country)) return;
   try {
+    pruneStaleDatedCache();
     window.localStorage.setItem(discoveryStorageKey(country), JSON.stringify(value));
     window.localStorage.setItem(lastDiscoveryStorageKey(country), JSON.stringify(value));
   } catch (err) {
@@ -756,7 +935,8 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
         }),
       CACHE_TTL.stockFront
       )
-      .then((fresh) => {
+      .then((raw) => {
+        const fresh = sanitizeDiscoveryCopy(raw);
         if (!hasDiscoveryCards(fresh, country)) return;
         writeStoredDiscovery(fresh, country);
         emitDiscoveryUpdated(country, fresh);
@@ -769,7 +949,7 @@ export async function fetchDiscovery(country: DiscoveryCountryScope = "KR"): Pro
     return stored;
   }
 
-  const fresh = await fetchDiscoveryNetwork({ country });
+  const fresh = sanitizeDiscoveryCopy(await fetchDiscoveryNetwork({ country }));
   if (!hasDiscoveryCards(fresh, country)) throw new Error(`GET /api/fomo/discovery returned invalid ${country} deck`);
   setCached(key, fresh, CACHE_TTL.stockFront);
   writeStoredDiscovery(fresh, country);
@@ -822,7 +1002,7 @@ export async function fetchDaily30(): Promise<Daily30Response> {
   return cachedGet(
     key,
     async () => {
-      const fresh = await fetchDaily30Network();
+      const fresh = sanitizeDiscoveryCopy(await fetchDaily30Network());
       if (!hasDaily30Cards(fresh)) throw new Error("GET /api/fomo/daily-30 returned invalid deck");
       return fresh;
     },

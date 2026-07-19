@@ -64,4 +64,63 @@ describe("SEC EDGAR Form 4 insider purchases", () => {
       transactionDate: "2026-06-15",
     });
   });
+
+  // 2026-07-15 User Zero: "IBM 실적 부진 8-K가 왜 그냥 '공시 확인'이냐" — Item 코드로 실제 사유 표시.
+  it("8-K의 items 필드(2.02=실적 발표)를 한국어 사유로 반영한다", async () => {
+    vi.stubEnv("SEC_EDGAR_USER_AGENT", "fomo-test contact@example.com");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("data.sec.gov/submissions")) {
+        return Response.json({
+          filings: {
+            recent: {
+              form: ["8-K"],
+              filingDate: ["2026-07-14"],
+              primaryDocument: ["form8k.htm"],
+              accessionNumber: ["0001045810-26-000200"],
+              items: ["2.02,9.01"],
+            },
+          },
+        });
+      }
+      return Response.json({});
+    });
+
+    const { fetchRecentSecFilings } = await import("../../lib/sec-edgar");
+    const hits = await fetchRecentSecFilings("IBM", 2);
+    // WO 뎁스 재건 B — 규제 용어(8-K) 원문 노출 금지, 쉬운말 라벨.
+    expect(hits[0]?.label).toBe("분기 실적 발표 (공식 공시) · 7/14");
+    expect(hits[0]?.label).not.toMatch(/8-K|10-Q|10-K/);
+    // 브리핑 detail 경로(safeWhy→hasForbiddenCopy)에서 폐기되지 않아야 한다 —
+    // "공시가 확인됐어요" 시절 라벨이 추상 슬롭 블록리스트에 걸려 IBM '왜'가 통째로 사라졌던 회귀 방지.
+    const { hasForbiddenCopy } = await import("../../lib/copy-guards");
+    expect(hasForbiddenCopy(hits[0]!.label)).toBe(false);
+  });
+
+  it("items 필드가 없거나 매핑되지 않은 코드면 기존 일반 문구로 폴백한다", async () => {
+    vi.stubEnv("SEC_EDGAR_USER_AGENT", "fomo-test contact@example.com");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("data.sec.gov/submissions")) {
+        return Response.json({
+          filings: {
+            recent: {
+              form: ["8-K"],
+              filingDate: ["2026-07-14"],
+              primaryDocument: ["form8k.htm"],
+              accessionNumber: ["0001045810-26-000201"],
+            },
+          },
+        });
+      }
+      return Response.json({});
+    });
+
+    const { fetchRecentSecFilings } = await import("../../lib/sec-edgar");
+    const hits = await fetchRecentSecFilings("IBM", 2);
+    expect(hits[0]?.label).toBe("주요 공시 제출 · 7/14");
+    expect(hits[0]?.label).not.toMatch(/8-K|10-Q|10-K/);
+    const { hasForbiddenCopy } = await import("../../lib/copy-guards");
+    expect(hasForbiddenCopy(hits[0]!.label)).toBe(false);
+  });
 });

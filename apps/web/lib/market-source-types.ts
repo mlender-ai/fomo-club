@@ -10,6 +10,8 @@ export interface DiscoveryMarketRow {
   country: StockCountry;
   marketCapRank?: number;
   marketCapRankSource?: "live" | "curated";
+  /** 시총(USD) — US 다이내믹 행 큐레이션 하한 검증용(2026-07-11). 스크리너 원천값. */
+  marketCapUsd?: number;
   priceText?: string;
   changeText?: string;
   changeDir?: "up" | "down" | "flat";

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scoreToColor, scoreToDescription } from "@fomo/core";
+import { computeFomoIndex, scoreToColor, scoreToDescription } from "@fomo/core";
 import { prisma } from "../../../../lib/prisma";
 import { kstDate, computeLiveFomoIndex, corsJson, withCors } from "../../../../lib/fomo";
 import { createLogger } from "../../../../lib/logger";
@@ -17,7 +17,16 @@ export function OPTIONS() {
 export async function GET() {
   const date = kstDate();
   try {
-    const snap = await prisma.fomoIndexSnapshot.findUnique({ where: { date } });
+    let snap: Awaited<ReturnType<typeof prisma.fomoIndexSnapshot.findUnique>> = null;
+    try {
+      snap = await prisma.fomoIndexSnapshot.findUnique({ where: { date } });
+    } catch (err) {
+      log.warn("snapshot lookup failed — using live fallback", {
+        date,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     if (snap) {
       return corsJson({
         date: snap.date,
@@ -60,10 +69,29 @@ export async function GET() {
       live: true,
     });
   } catch (err) {
-    log.error("FOMO Index 조회 실패", {
+    log.error("FOMO Index live fallback failed — returning neutral index", {
       date,
       err: err instanceof Error ? err.message : String(err),
     });
-    return corsJson({ error: "FOMO Index 조회 실패", code: "INDEX_ERROR" }, { status: 500 });
+    const idx = computeFomoIndex({}, date);
+    const comp = (k: string) => idx.components.find((c) => c.key === k)?.score ?? 0;
+    return corsJson({
+      date:             idx.date,
+      score:            idx.score,
+      state:            idx.state,
+      zoneColor:        scoreToColor(idx.score),
+      zoneDescription:  scoreToDescription(idx.score),
+      components: {
+        market:    comp("market"),
+        community: comp("community"),
+        emotion:   comp("emotion"),
+        whale:     comp("whale"),
+      },
+      aiSummary:    "",
+      prevDayDelta: 0,
+      avg30Delta:   0,
+      live: true,
+      fallback: true,
+    });
   }
 }

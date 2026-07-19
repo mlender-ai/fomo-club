@@ -154,6 +154,10 @@ export interface MacroQuote {
   change?: number | null;
   /** 최근 종가(표시용). */
   close?: number | null;
+  /** 데이터의 거래일 "YYYY-MM-DD" — 소스가 주는 경우만. 발행측 스테일 가드용. */
+  tradedAt?: string;
+  /** 장 상태("PREOPEN"/"OPEN"/"CLOSE" 등, 대문자) — PREOPEN 은 0.00% 껍데기라 발행 차단 재료. */
+  marketStatus?: string;
 }
 
 const MACRO_META: Record<MacroQuote["key"], { emoji: string; sourceUrl: string; note: string }> = {

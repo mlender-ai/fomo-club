@@ -31,6 +31,31 @@ describe("parseNaverIndexQuote", () => {
     expect(parseNaverIndexQuote(null)).toBeNull();
     expect(parseNaverIndexQuote({ closePrice: "", fluctuationsRatio: "" })).toBeNull();
   });
+
+  // 2026-07-13 사건 회귀(WO-21) — 방향 표기 미매치 시 양수 편향 폴백이 폭락을 상승으로 뒤집을 수 있었다.
+  it("방향 미제공 + 음수 ratio → ratio 부호 신뢰(음수 유지)", () => {
+    expect(parseNaverIndexQuote({ closePrice: "6,806.93", fluctuationsRatio: "-8.95" })?.change).toBe(-8.95);
+    expect(parseNaverIndexQuote({ closePrice: "100", fluctuationsRatio: "-1.2", compareToPreviousPrice: {} })?.change).toBe(-1.2);
+  });
+
+  it("영문 name/code 방향 인식 — FALLING·code 5=하락, RISING·code 2=상승, EVEN=보합", () => {
+    expect(parseNaverIndexQuote({ closePrice: "100", fluctuationsRatio: "8.95", compareToPreviousPrice: { name: "FALLING" } })?.change).toBe(-8.95);
+    expect(parseNaverIndexQuote({ closePrice: "100", fluctuationsRatio: "-2", compareToPreviousPrice: { code: "2" } })?.change).toBe(2);
+    expect(parseNaverIndexQuote({ closePrice: "100", fluctuationsRatio: "2", compareToPreviousPrice: { code: "5" } })?.change).toBe(-2);
+    expect(parseNaverIndexQuote({ closePrice: "100", fluctuationsRatio: "0.1", compareToPreviousPrice: { name: "EVEN", code: "3" } })?.change).toBe(0);
+  });
+
+  it("localTradedAt → tradedAt(YYYY-MM-DD) 전달 — 발행측 스테일 가드 재료", () => {
+    const q = parseNaverIndexQuote({
+      closePrice: "6,806.93",
+      fluctuationsRatio: "-8.95",
+      compareToPreviousPrice: { code: "5", text: "하락", name: "FALLING" },
+      localTradedAt: "2026-07-13T18:59:00+09:00",
+    });
+    expect(q).toEqual({ change: -8.95, close: 6806.93, tradedAt: "2026-07-13" });
+    // 미제공이면 생략(기존 호출부 무회귀)
+    expect(parseNaverIndexQuote({ closePrice: "100", fluctuationsRatio: "1", compareToPreviousPrice: "상승" })).toEqual({ change: 1, close: 100 });
+  });
 });
 
 describe("assetHeatScore", () => {

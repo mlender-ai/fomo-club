@@ -171,6 +171,18 @@ describe("US market source", () => {
                 industry: "Computer Software",
               },
               {
+                symbol: "BKNG",
+                name: "Booking Holdings Inc Common Stock",
+                lastsale: "$5200.00",
+                netchange: "403.00",
+                pctchange: "8.40%",
+                volume: "400000",
+                marketCap: "170000000000",
+                country: "United States",
+                sector: "Consumer Discretionary",
+                industry: "Transportation Services",
+              },
+              {
                 symbol: "AACB",
                 name: "Artius II Acquisition Inc Class A Ordinary Shares",
                 lastsale: "$10.49",
@@ -192,15 +204,19 @@ describe("US market source", () => {
 
     const rows = await fetchUsMarketRows();
     expect(rows.map((row) => row.symbol)).toEqual(expect.arrayContaining(["MRVL", "META"]));
+    // 2026-07-11 User Zero — 다이내믹 행 시총 하한($20B): 마이크로캡(Opendoor $2B)은 급등해도 제외.
     expect(rows.some((row) => row.symbol === "OPEN")).toBe(false);
+    // 품질 게이트는 유지 — SPAC/블랭크체크(AACB)는 여전히 제외.
     expect(rows.some((row) => row.symbol === "AACB")).toBe(false);
     expect(rows.find((row) => row.symbol === "MRVL")?.changePct).toBe(6.25);
     expect(rows.find((row) => row.symbol === "MRVL")?.canonical).toBe("마벨테크놀로지");
 
     const diag = await fetchUsMarketDiagnostics();
     expect(diag.source).toBe("nasdaq-screener");
-    expect(diag.dynamicRows).toBeGreaterThanOrEqual(2);
-    expect(diag.strongMomentumRows).toBe(0);
+    // dynamicRows = 비큐레이션 행 수 — 시총 하한($20B) 통과한 BKNG 1건(+8.40% → 강모멘텀 1).
+    // 마이크로캡 OPEN(+17.65%, $2B)은 하한 미달로 다이내믹 경로에서도 제외(2026-07-11).
+    expect(diag.dynamicRows).toBeGreaterThanOrEqual(1);
+    expect(diag.strongMomentumRows).toBe(1);
   });
 
   it("does not wire Yahoo chart endpoints into the US quote adapter", () => {

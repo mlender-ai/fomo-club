@@ -15,12 +15,17 @@ export interface DiscoverySeenItem {
   firstSeenPrice?: number;
   firstSeenPriceText?: string;
   firstSeenPriceCapturedAt?: number;
+  companyScore?: number;
+  companyScoreLabel?: string;
   symbol?: string;
   naverCode?: string;
   market?: StockMarket;
   country?: StockCountry;
   sector?: string;
   reason?: string;
+  /** R1 후회 영수증(2026-07-12): 스와이프 결과. undefined=봤다만, skip=넘김(X), save=담음(★). */
+  action?: "skip" | "save";
+  actionAt?: number;
 }
 
 export interface DiscoverySeenInput {
@@ -35,6 +40,7 @@ export interface DiscoverySeenInput {
 
 interface PriceFront {
   priceText?: string;
+  companyScore?: { score: number | null; label: string };
 }
 
 function parsePriceText(text: string | undefined): number | undefined {
@@ -65,12 +71,16 @@ function read(): DiscoverySeenItem[] {
           ...(typeof candidate.firstSeenPriceCapturedAt === "number"
             ? { firstSeenPriceCapturedAt: candidate.firstSeenPriceCapturedAt }
             : {}),
+          ...(typeof candidate.companyScore === "number" ? { companyScore: candidate.companyScore } : {}),
+          ...(typeof candidate.companyScoreLabel === "string" ? { companyScoreLabel: candidate.companyScoreLabel } : {}),
           ...(typeof candidate.symbol === "string" ? { symbol: candidate.symbol } : {}),
           ...(typeof candidate.naverCode === "string" ? { naverCode: candidate.naverCode } : {}),
           ...(typeof candidate.market === "string" ? { market: candidate.market as StockMarket } : {}),
           ...(typeof candidate.country === "string" ? { country: candidate.country as StockCountry } : {}),
           ...(typeof candidate.sector === "string" ? { sector: candidate.sector } : {}),
           ...(typeof candidate.reason === "string" ? { reason: candidate.reason } : {}),
+          ...(candidate.action === "skip" || candidate.action === "save" ? { action: candidate.action } : {}),
+          ...(typeof candidate.actionAt === "number" ? { actionAt: candidate.actionAt } : {}),
         };
       })
       .filter((row): row is DiscoverySeenItem => row !== null);
@@ -116,6 +126,11 @@ export function recordDiscoverySeen(
     typeof price === "number" &&
     typeof base.firstSeenPrice !== "number" &&
     nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
+  const score = opts.front?.companyScore?.score;
+  const canCaptureScore =
+    typeof score === "number" &&
+    typeof base.companyScore !== "number" &&
+    nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
 
   const next: DiscoverySeenItem = {
     ...base,
@@ -132,6 +147,12 @@ export function recordDiscoverySeen(
           ...(opts.front?.priceText ? { firstSeenPriceText: opts.front.priceText } : {}),
         }
       : {}),
+    ...(canCaptureScore
+      ? {
+          companyScore: score,
+          ...(opts.front?.companyScore?.label ? { companyScoreLabel: opts.front.companyScore.label } : {}),
+        }
+      : {}),
   };
 
   if (index >= 0) {
@@ -140,6 +161,30 @@ export function recordDiscoverySeen(
     return;
   }
   write([next, ...items]);
+}
+
+/**
+ * R1 후회 영수증: 카드의 스와이프 결과를 기록한다(발견가는 recordDiscoverySeen 이 이미 캡처).
+ * view → skip/save 는 확정이므로 항상 갱신. 대상이 없으면(관측 누락) 최소 항목 생성.
+ */
+export function markDiscoverySeenAction(stockName: string, action: "skip" | "save", nowMs = Date.now()): void {
+  if (typeof window === "undefined" || !stockName) return;
+  const items = read();
+  const index = items.findIndex((item) => item.stock === stockName);
+  if (index >= 0) {
+    items[index] = { ...items[index]!, action, actionAt: nowMs };
+    write(items);
+  } else {
+    write([{ stock: stockName, firstSeenAt: nowMs, action, actionAt: nowMs }, ...items]);
+  }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(DISCOVERY_PERFORMANCE_UPDATED_EVENT));
+}
+
+/** 넘긴(X) 카드만 — 발견가가 있는 것만(성과 계산 가능). 최신순. */
+export function getSkippedSeen(): DiscoverySeenItem[] {
+  return read()
+    .filter((item) => item.action === "skip" && typeof item.firstSeenPrice === "number")
+    .sort((a, b) => (b.actionAt ?? b.firstSeenAt) - (a.actionAt ?? a.firstSeenAt));
 }
 
 export function daysSince(ts: number, nowMs = Date.now()): number {

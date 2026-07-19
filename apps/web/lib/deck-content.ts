@@ -8,11 +8,27 @@ const FRED_WORLD_SERIES = ["DGS10", "VIXCLS"] as const;
 const FRED_CONTENT_TIMEOUT_MS = 4_500;
 
 export type DeckContentScope = "domestic" | "world" | "global";
-export type DeckContentType = "macro" | "index" | "whale";
+/** briefing=데일리 브리핑, buzz=떠들썩 스토리, recap=주간 회고, macro-issue=거시 이슈(임계 변동). */
+export type DeckContentType =
+  | "macro"
+  | "index"
+  | "whale"
+  | "briefing"
+  | "buzz"
+  | "recap"
+  | "macro-issue"
+  // 2026-07-11 베리에이션(User Zero: "매번 지수 얘기뿐"): 코인 핫이슈·뉴스 핫이슈·경제용어·시장 일정.
+  | "coin-issue"
+  | "hot-issue"
+  | "term"
+  | "event"
+  | "daily-receipt"; // R1 후회 영수증(2026-07-12)
 
 export interface DeckContentFact {
   label: string;
   value: string;
+  /** "왜" 1줄 — 무버의 재료(수집 기사에서). 브리핑·회고 무버 행에만. */
+  detail?: string;
 }
 
 export interface DeckContentCard {
@@ -22,6 +38,10 @@ export interface DeckContentCard {
   scope: DeckContentScope;
   headline: string;
   facts: DeckContentFact[];
+  /** Editor's Note / 해석 1~2문장 — 크론 시점 LLM 1콜 캐시(수치는 실데이터만) 또는 규칙 폴백. */
+  note?: string;
+  /** 원문 링크(버즈 스토리). */
+  sourceUrl?: string;
   source: string;
   asOf: string;
 }
@@ -287,12 +307,31 @@ function contentScopeMatches(scope: DeckContentScope, target: DeckContentScope):
 
 function contentTypePriority(type: DeckContentType): number {
   switch (type) {
+    case "briefing":
+      return -3; // 피드 최상단(WO 피드 강화)
+    case "buzz":
+      return -2;
+    case "recap":
+      return -1;
+    case "macro-issue":
+      return -1;
     case "index":
       return 0;
     case "macro":
       return 1;
     case "whale":
       return 2;
+    // 2026-07-11 베리에이션 타입 — 덱 합류 시 기존 콘텐츠 뒤(피드 정렬은 feed-hub TYPE_PRIORITY가 담당).
+    case "coin-issue":
+      return 3;
+    case "hot-issue":
+      return 3;
+    case "event":
+      return 4;
+    case "term":
+      return 5;
+    case "daily-receipt":
+      return -2; // 후회 영수증 = 데일리 습관 훅, 상단 근처(브리핑 다음)
   }
 }
 
@@ -305,6 +344,8 @@ function factCardId(baseId: string, fact: DeckContentFact, index: number): strin
 }
 
 function splitFactCards(card: DeckContentCard): DeckContentCard[] {
+  // 브리핑·버즈·회고는 구성체(무버+지수+노트) — 조각내면 이야기가 깨진다.
+  if (card.contentType === "briefing" || card.contentType === "buzz" || card.contentType === "recap" || card.contentType === "macro-issue") return [];
   if (card.facts.length <= 1) return [];
   return card.facts.map((fact, index) => ({
     ...card,

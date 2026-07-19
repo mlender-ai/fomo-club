@@ -11,19 +11,33 @@ import {
   computeTechnicalAnalysis,
   selectTaFact,
   computeCardVerdict,
+  computeWyckoffAnalysis,
+  computeCompanyScore,
+  companyFinancialsFromBasics,
   type CardVerdict,
   type CardFrontSignals,
   type FomoScoreResult,
   type DailyOhlcv,
   type TaFact,
   type TechnicalAnalysisSnapshot,
+  type WyckoffAnalysis,
+  type CompanyScoreResult,
   type AxisSignal,
   type MultiAxisHookSelection,
 } from "@fomo/core";
-import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
+import { fetchStockBasics, fetchStockBasicsLite, fetchUsStockBasics } from "./stock-basics";
 import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
+import { readCoinMarketSnapshots } from "./coin-market-source";
+import {
+  buildCoinCause,
+  composeCoinVerdict,
+  issuesForSymbol,
+  readLatestCoinMaterials,
+  type CoinCause,
+  type CoinMaterialItem,
+} from "./coin-materials";
 import { usSymbolForStock } from "./us-symbols";
 import { readSupplyDemandHistory } from "./supply-demand-store";
 import type { StockAttentionSignal, ThemeRelativeSignal } from "./stock-signal-coverage";
@@ -92,7 +106,7 @@ export interface StockChartSeries {
   ma120: Array<number | null>;
 }
 
-function buildChartSeries(candles: readonly DailyOhlcv[], window = 120): StockChartSeries | undefined {
+export function buildChartSeries(candles: readonly DailyOhlcv[], window = 120): StockChartSeries | undefined {
   const clean = candles.filter((c) => Number.isFinite(c.close) && c.close > 0);
   if (clean.length < 20) return undefined;
   const closes = clean.map((c) => c.close);
@@ -172,6 +186,8 @@ export interface StockFrontData {
   signals: CardFrontSignals;
   /** 포모 점수(척추) — C·L·라벨. 카드 점수/라벨/헤드라인의 단일 출처. */
   fomo: FomoScoreResult;
+  /** 실데이터가 있는 축만 동일 가중치로 재정규화한 종합 기업 점수. */
+  companyScore?: CompanyScoreResult;
   /** TA 셀렉터가 고른 사실 1개 — 점수/진열이 아니라 카드·상세 보조 문맥. */
   taFact?: TaFact;
   /** 차트분석(TA) 전체 스냅샷 — 뎁스 '차트분석' 탭용. 관측 서술 facts 배열(non-lite에서만). */
@@ -196,8 +212,14 @@ export interface StockFrontData {
   axisHook?: MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — 결정론 verdict 엔진. 캔들 부족 시 최소 verdict(관망·신호 축적). */
   verdict?: CardVerdict;
+  /** 와이코프 구간·스프링/업스러스트·임펄스/눌림목 결정론 분석. non-lite에서만. */
+  wyckoff?: WyckoffAnalysis;
   /** 차트분석 탭 시리즈(WO 1.6 D) — 종가+MA20/60/120+거래량. non-lite 에서만. */
   chartSeries?: StockChartSeries;
+  /** 코인 전용 최근 재료. 크론 캐시에서만 읽는다. */
+  coinIssues?: CoinMaterialItem[];
+  /** 코인 가격 변동과 기사 발행 시각의 결정론적 연결. */
+  coinCause?: CoinCause;
 }
 
 export interface StockFrontOptions {
@@ -357,6 +379,91 @@ async function assembleUsCachedStockFront(
 }
 
 /**
+ * 코인 카드 앞면·뎁스(WO Phase C) — Upbit 프리웜 캐시만 읽어 조립(요청 경로 외부 fetch 0).
+ * 주식과 같은 표준: TA·verdict·chartSeries 전부 같은 엔진에 캔들만 공급. 재무는 코인 미해당.
+ */
+async function assembleCoinStockFront(market: string, lite: boolean): Promise<StockFrontData> {
+  const [snapshots, materialCache] = await Promise.all([
+    readCoinMarketSnapshots().catch(() => []),
+    readLatestCoinMaterials().catch(() => null),
+  ]);
+  const snapshot = snapshots.find((s) => s.market.toUpperCase() === market);
+  if (!snapshot) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+
+  const coinIssues = issuesForSymbol(materialCache, snapshot.symbol);
+  const coinCause = buildCoinCause(snapshot, coinIssues);
+  const primaryIssue = coinIssues.find((issue) => issue.scope === "coin");
+
+  const fullValues = snapshot.tradeValues.slice(0, -1);
+  const avg20 = fullValues.length >= 5 ? fullValues.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, fullValues.length) : 0;
+  const volRatio = avg20 > 0 ? snapshot.accTradePrice24h / avg20 : undefined;
+  const signals: CardFrontSignals = {
+    changePct: Number(snapshot.changePct.toFixed(2)),
+    ...(typeof volRatio === "number" ? { volumeRatio: Number(volRatio.toFixed(2)) } : {}),
+    ...(primaryIssue ? { newsEventLabel: primaryIssue.title, newsEventSource: primaryIssue.source } : {}),
+  };
+  const closes = snapshot.candles.map((c) => c.close);
+  const sparkline = closes.slice(-66);
+  const priceText =
+    snapshot.price >= 1000
+      ? `${Math.round(snapshot.price).toLocaleString("ko-KR")}원`
+      : `${snapshot.price.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}원`;
+  const changeText = `${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(2)}%`;
+  const changeDir: "up" | "down" | "flat" = snapshot.changePct > 0 ? "up" : snapshot.changePct < 0 ? "down" : "flat";
+  const base = {
+    signals,
+    sparkline,
+    priceText,
+    changeText,
+    changeDir,
+    ...(coinIssues.length ? { coinIssues } : {}),
+    ...(coinCause ? { coinCause } : {}),
+  };
+  if (lite) {
+    return { ...base, fomo: computeFomoScore({ ...signals }) };
+  }
+  const ta = computeTechnicalAnalysis(snapshot.candles);
+  const trend = ta.inputs.trendStrength ?? trendStrength(sparkline);
+  const fomo = computeFomoScore({
+    ...signals,
+    ...(typeof trend === "number" ? { trendStrength: trend } : {}),
+    ...(ta.inputs.accumulationDivergence ? { accumulationDivergence: true } : {}),
+    ...(ta.inputs.bollingerSqueeze ? { bollingerSqueeze: true } : {}),
+  });
+  const taFact = selectTaFact(fomo, ta);
+  const verdict = composeCoinVerdict(computeCardVerdict({
+    candles: snapshot.candles,
+    ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
+    currency: "KRW",
+  }), coinIssues);
+  const wyckoff = computeWyckoffAnalysis({
+    candles: snapshot.candles,
+    ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+    currency: "KRW",
+  });
+  const chartSeries = buildChartSeries(snapshot.candles);
+  const companyScore = computeCompanyScore({
+    signals,
+    verdict,
+    wyckoff,
+    currentPrice: snapshot.price,
+    asOf: snapshot.fetchedAt,
+  });
+  return {
+    ...base,
+    fomo,
+    ...(taFact ? { taFact } : {}),
+    ta,
+    verdict,
+    wyckoff,
+    companyScore,
+    ...(chartSeries ? { chartSeries } : {}),
+    // 캔들차트(Phase A) — 국·미와 동일하게 non-lite 에서 실제 일봉 제공.
+    ...(snapshot.candles.length > 0 ? { candles: snapshot.candles.slice(-260) } : {}),
+  };
+}
+
+/**
  * 한 종목의 카드 앞면 데이터 조립 + 포모 점수 산출(척추 단일 출처).
  * baseline(가격·52주) + 라이브 수급 streak + 거래량 회전·추세 + 시총순위 + 스파크라인 → computeFomoScore.
  * rankMap 은 비싸므로 호출부에서 받아 재사용(없으면 순위 생략).
@@ -367,6 +474,11 @@ export async function assembleStockFront(
   coverage: { attention?: StockAttentionSignal; themeRelative?: ThemeRelativeSignal } = {},
   options: StockFrontOptions = {}
 ): Promise<StockFrontData> {
+  // 코인(WO Phase C) — symbol 이 Upbit 마켓 코드("KRW-*")면 코인 캐시 경로(요청 경로 외부 fetch 0).
+  const coinMarket = options.symbol?.trim().toUpperCase();
+  if (coinMarket?.startsWith("KRW-")) {
+    return assembleCoinStockFront(coinMarket, options.lite === true);
+  }
   const def = resolveStock(stock);
   const code = options.naverCode ?? def?.naverCode;
   if (!code) {
@@ -375,6 +487,7 @@ export async function assembleStockFront(
     const cachedFront = await assembleUsCachedStockFront(stock, coverage, { ...options, symbol: usSymbol }).catch(() => null);
     if (options.lite === true) return cachedFront ?? { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
 
+    const basicsPromise = fetchUsStockBasics(stock, usSymbol, false).catch(() => null);
     let daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
     if (daily.candles.length === 0) {
       daily = await fetchNasdaqDailyCandles(usSymbol, 365).catch(() => ({ candles: [], closes: [], volumes: [] }));
@@ -408,6 +521,22 @@ export async function assembleStockFront(
         : {}),
       currency: "USD",
     });
+    const wyckoff = computeWyckoffAnalysis({
+      candles: daily.candles,
+      ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+      currency: "USD",
+    });
+    const basics = await basicsPromise;
+    const financials = companyFinancialsFromBasics(basics);
+    const latestPrice = daily.closes.at(-1);
+    const companyScore = computeCompanyScore({
+      ...(financials ? { financials } : {}),
+      signals,
+      verdict,
+      wyckoff,
+      ...(typeof latestPrice === "number" ? { currentPrice: latestPrice } : {}),
+      ...(signals.asOf ? { asOf: signals.asOf } : {}),
+    });
     const chartSeries = buildChartSeries(daily.candles);
     return {
       signals,
@@ -415,6 +544,8 @@ export async function assembleStockFront(
       ...(taFact ? { taFact } : {}),
       ta,
       verdict,
+      wyckoff,
+      companyScore,
       ...(daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
       ...(chartSeries ? { chartSeries } : {}),
       sparkline,
@@ -476,6 +607,23 @@ export async function assembleStockFront(
       : {}),
     currency: "KRW",
   });
+  const wyckoff = computeWyckoffAnalysis({
+    candles: daily.candles,
+    ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),
+    ...(typeof signals.institutionNetStreak === "number" ? { institutionNetStreak: signals.institutionNetStreak } : {}),
+    ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+    currency: "KRW",
+  });
+  const financials = companyFinancialsFromBasics(basics);
+  const latestPrice = daily.closes.at(-1);
+  const companyScore = computeCompanyScore({
+    ...(financials ? { financials } : {}),
+    signals,
+    verdict,
+    wyckoff,
+    ...(typeof latestPrice === "number" ? { currentPrice: latestPrice } : {}),
+    ...(signals.asOf ? { asOf: signals.asOf } : {}),
+  });
   const chartSeries = lite ? undefined : buildChartSeries(daily.candles);
 
   return {
@@ -484,6 +632,8 @@ export async function assembleStockFront(
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
     verdict,
+    companyScore,
+    ...(!lite ? { wyckoff } : {}),
     ...(!lite && daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
     ...(chartSeries ? { chartSeries } : {}),
     sparkline: daily.closes.slice(lite ? -42 : -66),

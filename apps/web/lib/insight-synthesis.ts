@@ -611,12 +611,16 @@ async function aiSynthesize(candidate: DiscoveryCandidate, fallback: DiscoveryIn
   return validateWhyInsightOutput(parseAiJson(res.content), candidate, fallback);
 }
 
-export async function synthesizeWhyDrivenInsight(candidate: DiscoveryCandidate): Promise<WhySynthesisResult> {
-  const key = cacheKey(candidate);
+export async function synthesizeWhyDrivenInsight(
+  candidate: DiscoveryCandidate,
+  options: { allowAi?: boolean } = {}
+): Promise<WhySynthesisResult> {
+  const allowAi = options.allowAi ?? true;
+  const key = `${cacheKey(candidate)}:ai=${allowAi ? "1" : "0"}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const fallback = synthesizeDiscoveryInsight(candidate);
-  const ai = await aiSynthesize(candidate, fallback);
+  const ai = allowAi ? await aiSynthesize(candidate, fallback) : undefined;
   const rule = ai ? undefined : buildSoWhatFallback(candidate, fallback);
   const result: WhySynthesisResult = ai
     ? { insight: ai, method: "ai" }

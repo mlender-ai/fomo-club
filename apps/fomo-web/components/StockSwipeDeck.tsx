@@ -1,11 +1,12 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, selectFomoHook, sparklinePath } from "@fomo/core";
+import { fomoCardView, computeFomoScore, selectFomoHook } from "@fomo/core";
 import type {
   AxisSignal,
   CardFrontSignals,
   CardVerdict,
+  CompanyScoreResult,
   FomoScoreResult,
   FomoCardView,
   MultiAxisHookSelection,
@@ -14,20 +15,21 @@ import type {
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
+import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { fetchStockFront, recordTaste } from "@/lib/fomoApi";
 import type { FeedSignalPoint, StockFrontResponse } from "@/lib/fomoApi";
-import { recordDiscoverySeen } from "@/lib/discoveryPerformance";
+import { recordDiscoverySeen, markDiscoverySeenAction } from "@/lib/discoveryPerformance";
 import { recordStockInterest } from "@/lib/stockInterest";
 import { upsertWatch } from "@/lib/watchlist";
-import type { DeckStock } from "@/lib/discoveryDeck";
+import type { DeckNarrative, DeckStock } from "@/lib/discoveryDeck";
 import { stockDeckCards, type DeckCard, type DeckThemeBundle, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
-import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
-import { FlickerSpinner } from "@/components/FlickerSpinner";
+import { verdictBalance } from "@/lib/discoveryPresentation";
+import { GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -47,6 +49,8 @@ const EMPTY_FOMO = computeFomoScore({});
 export type FrontEntry = {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
+  companyScore?: CompanyScoreResult;
+  committeeReview?: NonNullable<StockFrontResponse["committeeReview"]>;
   taFact?: TaFact;
   sparkline: number[];
   priceText?: string;
@@ -57,6 +61,11 @@ export type FrontEntry = {
   axisSignals?: AxisSignal[];
   axisHook?: MultiAxisHookSelection;
   verdict?: CardVerdict;
+  wyckoff?: NonNullable<StockFrontResponse["wyckoff"]>;
+  candles?: NonNullable<StockFrontResponse["candles"]>;
+  chartSeries?: NonNullable<StockFrontResponse["chartSeries"]>;
+  coinIssues?: NonNullable<StockFrontResponse["coinIssues"]>;
+  coinCause?: NonNullable<StockFrontResponse["coinCause"]>;
 };
 
 type UndoEntry = {
@@ -124,50 +133,6 @@ function LogoBadge({
       aria-hidden
     >
       {ch}
-    </span>
-  );
-}
-
-/** 미니 라인차트 — 가격 흐름만 조용히 보여준다. 프라이머리 컬러는 점수/CTA에만 남긴다. */
-function Sparkline({ series }: { series: number[] }) {
-  const pts = series.filter((v) => typeof v === "number" && Number.isFinite(v));
-  if (pts.length < 2) return null;
-  const W = 300;
-  const H = 44;
-  const paths = sparklinePath(pts, W, H);
-  if (!paths) return null;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-2 h-8 w-full shrink-0" aria-hidden>
-      <path d={paths.line} fill="none" stroke="rgba(250,250,250,0.52)" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChartSlot({ series, supported }: { series?: number[] | undefined; supported: boolean }) {
-  if (series && series.length >= 2) return <Sparkline series={series} />;
-  return (
-    <div className="mt-2 flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-hairline bg-white/[0.03]">
-      {supported && <FlickerSpinner size={14} />}
-      <span className="font-pixel text-[10px] text-muted">
-        {supported ? "차트 불러오는 중" : "차트 데이터 없음"}
-      </span>
-    </div>
-  );
-}
-
-/** 포모 강도 미터(DESIGN.md §8 모티프) — 10 도트 세그먼트, 점수만큼 오렌지 fill·나머지 dim. */
-function FomoMeter({ score, color }: { score: number; color: string }) {
-  const normalized = Math.max(0, Math.min(100, score));
-  const filled = normalized > 0 ? Math.max(1, Math.ceil(normalized / 10)) : 0;
-  return (
-    <span className="inline-flex items-center gap-[3px]" aria-hidden>
-      {Array.from({ length: 10 }, (_, i) => (
-        <span
-          key={i}
-          className="h-2 w-2 rounded-[1px]"
-          style={{ backgroundColor: i < filled ? color : "rgba(255,255,255,0.12)" }}
-        />
-      ))}
     </span>
   );
 }
@@ -295,37 +260,36 @@ function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progres
   );
 }
 
-// 판단 층(WO Phase 1) stance 표기 — enter=라임(발견 액센트), watch=중립, avoid=회색. 공포색 금지.
-const STANCE_META: Record<CardVerdict["stance"], { label: string; color: string }> = {
-  enter: { label: "진입 검토", color: NEON },
-  watch: { label: "관망", color: "#C9C9C4" },
-  avoid: { label: "회피", color: "#8A8A86" },
-};
-
-/** 카드 판단 층 — 판단 1줄 + 근거 최대 3 + 무효화 1줄. 스와이프 UX 불변, 카드 안에서 스크롤 없음. */
-function VerdictBlock({ verdict }: { verdict: CardVerdict }) {
-  const meta = STANCE_META[verdict.stance];
+/** 카드에서는 종합점수와 조합 라벨만 가볍게 노출하고, 축별 산식은 뎁스에서 푼다. */
+function CompanyScoreBlock({
+  companyScore,
+  verdict,
+  contextLine,
+}: {
+  companyScore?: CompanyScoreResult | undefined;
+  verdict?: CardVerdict | undefined;
+  contextLine?: string | undefined;
+}) {
+  const balance = verdictBalance(verdict);
   return (
-    <div className="mt-2.5 shrink-0 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
-      <p className="text-sm leading-5 text-whiteout" style={clampStyle(2)}>
-        <span className="font-bold" style={{ color: meta.color }}>
-          {meta.label}
-        </span>
-        <span className="mx-1.5 text-muted/60">·</span>
-        {verdict.stanceText}
-      </p>
-      {verdict.evidence.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5">
-          {verdict.evidence.slice(0, 3).map((line, i) => (
-            <li key={`ev-${i}`} className="text-xs leading-4 text-muted" style={clampStyle(1)}>
-              · {line}
-            </li>
-          ))}
-        </ul>
-      )}
-      {verdict.invalidation && (
-        <p className="mt-1.5 text-[10px] leading-4 text-muted/80" style={clampStyle(1)}>
-          {verdict.invalidation}
+    <div className="mt-2.5 shrink-0 border-y border-hairline py-2.5">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-number text-3xl font-bold leading-none" style={{ color: NEON }}>
+              {companyScore?.score ?? "—"}
+            </span>
+            <span className="text-xs font-semibold text-muted">점</span>
+          </div>
+          <p className="mt-1 truncate text-sm font-semibold text-whiteout">
+            {companyScore?.label ?? "근거 축 수집 중"}
+          </p>
+        </div>
+        {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
+      </div>
+      {contextLine && (
+        <p className="mt-1.5 text-xs leading-4 text-whiteout" style={clampStyle(1)}>
+          <span className="text-muted">포착 근거 · </span>{contextLine}
         </p>
       )}
     </div>
@@ -334,7 +298,7 @@ function VerdictBlock({ verdict }: { verdict: CardVerdict }) {
 
 /**
  * 종목 카드 앞면 — 포모 점수(척추 ②, 단일 출처)로 점수·라벨·헤드라인·톤. 휴리스틱 대체.
- * 정체성 / 현재가 / 포모점수+라벨 / 테마태그 / 헤드라인 / 판단 층 / 스파크라인. 점수=주목도(품질 아님).
+ * 정체성 / 현재가 / 테마태그 / 헤드라인 / 발견 상태 / 근거. 차트는 뎁스에서만 보여준다.
  */
 function StockCardFace({
   stock,
@@ -344,12 +308,12 @@ function StockCardFace({
   changeText,
   changeDir,
   rankLabel,
-  sparkline,
-  chartSupported,
   subLine,
   feedBull,
   feedBear,
   why,
+  companyScore,
+  discoveryContext,
   verdict,
   progress,
 }: {
@@ -360,12 +324,12 @@ function StockCardFace({
   changeText?: string | undefined;
   changeDir?: "up" | "down" | "flat" | undefined;
   rankLabel?: string | undefined;
-  sparkline?: number[] | undefined;
-  chartSupported: boolean;
   subLine?: string | undefined;
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
   why?: string | undefined;
+  companyScore?: CompanyScoreResult | undefined;
+  discoveryContext?: string | undefined;
   verdict?: CardVerdict | undefined;
   progress?: string | undefined;
 }) {
@@ -416,10 +380,9 @@ function StockCardFace({
         {view.headline}
       </p>
 
-      {/* 판단 층(WO Phase 1) — 있으면 이유/신호 스트립을 대체(카드 밀도 유지, 스크롤 금지). */}
-      {verdict ? (
-        <VerdictBlock verdict={verdict} />
-      ) : (
+      <CompanyScoreBlock companyScore={companyScore} verdict={verdict} contextLine={discoveryContext} />
+
+      {!verdict && (
         <>
           {why && (
             <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
@@ -442,8 +405,7 @@ function StockCardFace({
         </>
       )}
 
-      {/* 미니 스파크라인(최근 흐름) — lite 응답도 짧은 라인차트를 싣는다. */}
-      <ChartSlot series={sparkline} supported={chartSupported} />
+      {verdict && <FeedSignalStrip bull={feedBull} bear={feedBear} />}
 
       <div className="mt-auto flex shrink-0 items-center justify-between pt-2">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
@@ -529,6 +491,7 @@ export function StockSwipeDeck({
   const [restoreStart, setRestoreStart] = useState<null | "left" | "right">(null);
   const [restorePrimed, setRestorePrimed] = useState(false);
   const [selected, setSelected] = useState<DeckStock | null>(null);
+  const [selectedNarrative, setSelectedNarrative] = useState<DeckNarrative | null>(null);
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   // 매칭 모먼트 — 관심(우)·슈퍼관심(위) 넘길 때 짧게 뜨는 담담한 확인 연출(표현 레이어).
   const [matchMoment, setMatchMoment] = useState<null | { name: string; kind: "like" | "super" }>(null);
@@ -540,6 +503,15 @@ export function StockSwipeDeck({
   const firstCardRecorded = useRef(false);
   const hydratedRecorded = useRef<Set<string>>(new Set());
   const matchTimer = useRef<number | null>(null);
+  // 진행 중 연출 타이머(플링/열기) — 언마운트 후 발화하면 사라진 덱에서 setState/openDepth 가 돈다 → 전부 정리.
+  const pendingTimers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      for (const t of pendingTimers.current) window.clearTimeout(t);
+      if (matchTimer.current) window.clearTimeout(matchTimer.current);
+    },
+    []
+  );
 
   // 앞면 FOMO 신호 — ④ 정렬 때 풀 전체를 이미 받아 seed(initialFronts). 빠진 종목만 도달 시 lazy 보강.
   const [front, setFront] = useState<Record<string, FrontEntry>>(initialFronts ?? {});
@@ -577,6 +549,7 @@ export function StockSwipeDeck({
             [key]: {
               signals: d.signals,
               fomo: d.fomo,
+              ...(d.companyScore ? { companyScore: d.companyScore } : {}),
               ...(d.taFact ? { taFact: d.taFact } : {}),
               sparkline: d.sparkline,
               ...(d.priceText ? { priceText: d.priceText } : {}),
@@ -587,6 +560,9 @@ export function StockSwipeDeck({
               ...(d.axisSignals ? { axisSignals: d.axisSignals } : {}),
               ...(d.axisHook ? { axisHook: d.axisHook } : {}),
               ...(d.verdict ? { verdict: d.verdict } : {}),
+              ...(d.wyckoff ? { wyckoff: d.wyckoff } : {}),
+              ...(d.coinIssues ? { coinIssues: d.coinIssues } : {}),
+              ...(d.coinCause ? { coinCause: d.coinCause } : {}),
             },
           }))
         )
@@ -672,6 +648,14 @@ export function StockSwipeDeck({
       subLine,
       preserveGroundedReason: false,
     });
+    const normalizedHeadline = view.headline.replace(/\s+/g, "").toLowerCase();
+    const groundedContext = stock.reason?.trim();
+    const discoveryContext =
+      deduped.why ??
+      deduped.feedBull?.text ??
+      (groundedContext && groundedContext.replace(/\s+/g, "").toLowerCase() !== normalizedHeadline
+        ? groundedContext
+        : undefined);
     return (
       <StockCardFace
         stock={stock}
@@ -681,12 +665,12 @@ export function StockSwipeDeck({
         changeText={e?.changeText}
         changeDir={e?.changeDir}
         rankLabel={rankLabelFor(stock)}
-        sparkline={e?.sparkline}
-        chartSupported={(e?.sparkline?.length ?? 0) >= 2}
         subLine={deduped.subLine}
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
         why={deduped.why}
+        companyScore={e.companyScore}
+        discoveryContext={discoveryContext}
         verdict={e?.verdict}
         progress={progress}
       />
@@ -701,12 +685,14 @@ export function StockSwipeDeck({
       return;
     }
     setExiting(dir);
-    window.setTimeout(() => {
-      setExiting(null);
-      setDx(0);
-      setDy(0);
-      setIdx((i) => i + 1);
-    }, EXIT_MS);
+    pendingTimers.current.push(
+      window.setTimeout(() => {
+        setExiting(null);
+        setDx(0);
+        setDy(0);
+        setIdx((i) => i + 1);
+      }, EXIT_MS)
+    );
   }, []);
 
   // 매칭 모먼트 — 짧게 띄우고 자동 해제(애니메이션 끔 설정이면 더 짧게).
@@ -730,6 +716,8 @@ export function StockSwipeDeck({
       }
       const stock = card.data;
       setUndoEntry({ idx, dir, card });
+      // R1 후회 영수증: 스와이프 결과 기록(넘긴 카드 성과 복기용). 발견가는 recordDiscoverySeen 이 캡처.
+      markDiscoverySeenAction(stock.canonical, dir === "right" ? "save" : "skip");
       if (dir === "right") saveDiscovery(stock);
       recordDiscoveryEvent("swipe", { direction: dir, hydrated: !!front[stock.canonical] });
       recordStockInterest(stock.canonical, dir === "right" ? "more" : "less", Date.now());
@@ -804,7 +792,7 @@ export function StockSwipeDeck({
     }
     // 카드 날리는 연출(관심=우로, 슈퍼관심=위로) — 스와이프·버튼 완전 동일. 날아간 뒤 매칭 보고 상세로.
     setExiting(kind === "super" ? "up" : "right");
-    window.setTimeout(openAfter, 760);
+    pendingTimers.current.push(window.setTimeout(openAfter, 760));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, deckCards, front, fireMatch, loggedIn, onRequireLogin]);
 
@@ -825,6 +813,15 @@ export function StockSwipeDeck({
   const closeDepth = () => {
     if (selected) setUndoEntry({ idx, dir: "left", card: { type: "stock", data: selected } });
     setSelected(null);
+    window.setTimeout(() => flingNext("left"), 40);
+  };
+  const openNarrativeDepth = (card: DeckNarrative) => {
+    recordDiscoveryEvent("depth_open");
+    setSelectedNarrative(card);
+  };
+  const closeNarrativeDepth = () => {
+    if (selectedNarrative) setUndoEntry({ idx, dir: "left", card: { type: "narrative", data: selectedNarrative } });
+    setSelectedNarrative(null);
     window.setTimeout(() => flingNext("left"), 40);
   };
 
@@ -936,10 +933,14 @@ export function StockSwipeDeck({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={() => {
-            if (topReady && isStockCard(top) && !moved.current && !exiting && !restoring) openDepth(top.data, "card");
+            if (!topReady || moved.current || exiting || restoring) return;
+            if (isStockCard(top)) openDepth(top.data, "card");
+            else if (top.type === "narrative") openNarrativeDepth(top.data);
           }}
           className="absolute inset-0 z-10 cursor-pointer overflow-hidden rounded-2xl border border-hairline-soft bg-surface-raised px-6 py-7"
-          style={{ transform: topTransform, transition: topTransition }}
+          // touch-action: none — iOS(특히 standalone PWA)가 가로 드래그를 스크롤·뒤로가기 제스처로
+          // 가로채 pointermove 가 안 오던 스와이프 불능 해소. 카드 위 제스처는 덱이 전담한다.
+          style={{ transform: topTransform, transition: topTransition, touchAction: "none" }}
         >
           {/* 드래그 스탬프(틴더식 아이콘) — 거리에 비례해 또렷·확대. 우=관심(하트)·좌=패스(X)·위=슈퍼관심(별). */}
           <span
@@ -1034,6 +1035,7 @@ export function StockSwipeDeck({
           onClose={closeDepth}
         />
       )}
+      {selectedNarrative && <NarrativeDepthPage card={selectedNarrative} onClose={closeNarrativeDepth} />}
     </div>
   );
 }

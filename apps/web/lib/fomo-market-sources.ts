@@ -42,11 +42,16 @@ export const INDICES: {
 const NAVER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-/** 네이버 금융 지수 1개 → {change(%), close}. 실패 시 null. */
+/**
+ * 네이버 금융 지수 1개 → {change(%), close, tradedAt?}. 실패 시 null.
+ * fresh: 크론(브리핑 빌드) 경로 — 캐시 우회 강제. SWR 스테일 서빙이 전 거래일 데이터를
+ * "오늘"로 발행시킨 2026-07-13 사건 방지. 요청 경로는 기존 5분 캐시 유지(레이트리밋 보호).
+ */
 export async function fetchNaverIndex(
   naver: string,
-  scope: NaverScope
-): Promise<{ change: number; close: number } | null> {
+  scope: NaverScope,
+  { fresh = false }: { fresh?: boolean } = {}
+): Promise<{ change: number; close: number; tradedAt?: string; marketStatus?: string } | null> {
   const url =
     scope === "domestic"
       ? `https://m.stock.naver.com/api/index/${encodeURIComponent(naver)}/basic`
@@ -55,8 +60,8 @@ export async function fetchNaverIndex(
     const res = await fetch(url, {
       headers: { accept: "application/json", "user-agent": NAVER_UA },
       signal: AbortSignal.timeout(8_000),
-      // 5분 데이터 캐시 — 레이트리밋 보호.
-      next: { revalidate: 300 },
+      // fresh: 캐시 우회(no-store) / 기본: 5분 데이터 캐시 — 레이트리밋 보호.
+      ...(fresh ? { cache: "no-store" as const } : { next: { revalidate: 300 } }),
     });
     if (!res.ok) return null;
     return parseNaverIndexQuote(await res.json());
@@ -135,9 +140,11 @@ async function fetchMacroTwelveData(): Promise<
 /**
  * 거시 지수 변화율 수집. 소스 우선순위: Twelve Data(키) → 네이버 → Yahoo.
  * 네이버/Yahoo 폴백은 지수별 병렬 — Yahoo 순차 누적 타임아웃(함수 데드라인) 회피.
+ * fresh(크론 브리핑 경로): Twelve Data 건너뛰고 네이버 no-store 직행 — 지연·캐시 데이터가
+ * "오늘"로 발행되는 것 방지(2026-07-13 사건). tradedAt 있는 소스(네이버)는 그대로 전달.
  */
-export async function fetchMacro(): Promise<MacroQuote[]> {
-  const td = await fetchMacroTwelveData();
+export async function fetchMacro({ fresh = false }: { fresh?: boolean } = {}): Promise<MacroQuote[]> {
+  const td = fresh ? new Map<MacroQuote["key"], { change: number; close: number }>() : await fetchMacroTwelveData();
 
   const settled = await Promise.allSettled(
     INDICES.map(async (s): Promise<MacroQuote | null> => {
@@ -145,8 +152,16 @@ export async function fetchMacro(): Promise<MacroQuote[]> {
       if (hit) return { key: s.key, label: s.label, change: hit.change, close: hit.close };
 
       // Twelve Data 누락(키 없음 포함) → 네이버(Node에서 안정) → Yahoo(429 가능).
-      const naver = await fetchNaverIndex(s.naver, s.naverScope);
-      if (naver) return { key: s.key, label: s.label, change: naver.change, close: naver.close };
+      const naver = await fetchNaverIndex(s.naver, s.naverScope, { fresh });
+      if (naver)
+        return {
+          key: s.key,
+          label: s.label,
+          change: naver.change,
+          close: naver.close,
+          ...(naver.tradedAt ? { tradedAt: naver.tradedAt } : {}),
+          ...(naver.marketStatus ? { marketStatus: naver.marketStatus } : {}),
+        };
 
       const closes = await fetchIndexCloses(s.symbol);
       const parsed = closes ? yahooChange(closes) : null;
@@ -166,10 +181,10 @@ export async function fetchMacro(): Promise<MacroQuote[]> {
 export async function fetchWhale(): Promise<WhaleInput> {
   try {
     const [globalRes, marketsRes] = await Promise.allSettled([
-      fetch("https://api.coingecko.com/api/v3/global", { next: { revalidate: 300 } }),
+      fetch("https://api.coingecko.com/api/v3/global", { next: { revalidate: 300 }, signal: AbortSignal.timeout(8_000) }),
       fetch(
         "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&price_change_percentage=24h",
-        { next: { revalidate: 300 } }
+        { next: { revalidate: 300 }, signal: AbortSignal.timeout(8_000) }
       ),
     ]);
 

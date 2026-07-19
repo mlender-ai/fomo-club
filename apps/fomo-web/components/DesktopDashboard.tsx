@@ -1,16 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CardVerdict } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
 import { NarrativeCard } from "@/components/NarrativeCard";
+import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
+import { RegretReceiptPanel } from "@/components/RegretReceiptPanel";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
-import { fetchDaily30, type Daily30Response } from "@/lib/fomoApi";
+import { fetchDaily30, fetchFeedHub, type Daily30Response, type FeedHubItem } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckStock, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { getDiscoverySeen } from "@/lib/discoveryPerformance";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
+import { FeedDepthPage } from "@/components/FeedDepthPage";
+import { SectorCard } from "@/components/SectorCard";
+import { StockIssueCard, sectorCardData } from "@/components/FeedView";
+import { useFeedArchive } from "@/lib/useFeedArchive";
+import { CalendarCard } from "@/components/CalendarCard";
+import { verdictBalance } from "@/lib/discoveryPresentation";
 
 /**
  * PC(≥1024px) 3컬럼 대시보드 — WO-PC-VERSION.
@@ -55,12 +62,6 @@ function cardTag(card: DeckCard): FilterTag {
   return stock.country === "US" ? "us" : "kr";
 }
 
-const STANCE_BADGE: Record<CardVerdict["stance"], { label: string; color: string }> = {
-  enter: { label: "진입 검토", color: NEON },
-  watch: { label: "관망", color: "#C9C9C4" },
-  avoid: { label: "회피", color: "#8A8A86" },
-};
-
 function cardId(card: DeckCard): string {
   if (card.type === "stock") return `stock:${card.data.canonical}`;
   return `${card.type}:${card.data.id}`;
@@ -78,8 +79,8 @@ function CardListRow({
   active: boolean;
   onSelect: () => void;
 }) {
-  const verdict = front?.verdict;
-  const badge = verdict ? STANCE_BADGE[verdict.stance] : undefined;
+  const companyScore = card.type === "stock" ? front?.companyScore : undefined;
+  const balance = card.type === "stock" ? verdictBalance(front?.verdict) : undefined;
   const title =
     card.type === "stock" ? card.data.canonical : card.type === "sector" ? `${card.data.sector} 섹터` : card.data.headline;
   const hook = card.type === "stock" ? card.data.headline ?? card.data.reason : card.type === "content" ? card.data.facts[0]?.label : undefined;
@@ -104,19 +105,23 @@ function CardListRow({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-bold text-whiteout">{title}</span>
-        {badge && (
+        {typeof companyScore?.score === "number" && (
           <span
             className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold"
-            style={{ borderColor: badge.color, color: badge.color }}
+            style={{ borderColor: NEON, color: NEON }}
           >
-            {badge.label}
+            {companyScore.score}점
           </span>
         )}
       </div>
-      <div className="mt-0.5 text-[11px] text-muted">{kicker}</div>
+      <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-muted">
+        <span>{kicker}</span>
+        {balance && <span style={{ color: balance.color }}>{balance.label}</span>}
+      </div>
       {hook && (
         <p className="mt-1 truncate text-xs leading-5 text-muted">{hook}</p>
       )}
+      {companyScore?.label && <p className="mt-1 truncate text-[10px] leading-4 text-whiteout">{companyScore.label}</p>}
     </button>
   );
 }
@@ -124,19 +129,39 @@ function CardListRow({
 export function DesktopDashboard() {
   const [daily, setDaily] = useState<Daily30Response | null>(null);
   const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [filter, setFilter] = useState<FilterTag>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 우측 컬럼(feed-hub) 항목 선택 — 중앙에 해당 뎁스 렌더(WO 피드 통합 §3: 막다른 클릭 0).
+  const [feedItem, setFeedItem] = useState<FeedHubItem | null>(null);
+  const [feedItems, setFeedItems] = useState<FeedHubItem[]>([]);
   const [seenItems] = useState(() => getDiscoverySeen());
+  // 무한 피드(2026-07-18) — 오늘치 아래로 지난 브리핑·버즈·회고를 계속 이어 붙인다.
+  const feedTodayIds = useMemo(() => new Set(feedItems.map(feedItemId)), [feedItems]);
+  const { archive: feedArchive, sentinelRef: feedSentinelRef, done: feedArchiveDone } = useFeedArchive(feedItems.length > 0, feedTodayIds);
 
   useEffect(() => {
     let alive = true;
+    setFailed(false);
     fetchDaily30()
       .then((d) => alive && setDaily(d))
       .catch(() => alive && setFailed(true));
+    fetchFeedHub()
+      .then((d) => alive && setFeedItems(d.items))
+      .catch(() => {});
     return () => {
       alive = false;
     };
-  }, []);
+  }, [retryKey]);
+
+  // 신규일 daily-30 콜드 빌드(~40s)는 클라 타임아웃(~30s)보다 느려 첫 로드가 실패한다.
+  // 빌드가 데워지면 사용자 조작 없이 뜨도록 자동 재시도(모바일 UnifiedDailyDeck 과 동일 정책).
+  // 이게 없어서 데스크톱(≥1024px)은 에러로 굳고, 레이아웃 축소로 모바일 remount 될 때만 회복됐다.
+  useEffect(() => {
+    if (!failed) return;
+    const timer = window.setTimeout(() => setRetryKey((value) => value + 1), 4_000);
+    return () => window.clearTimeout(timer);
+  }, [failed]);
 
   const allCards = useMemo<DeckCard[]>(() => {
     if (!daily) return [];
@@ -152,17 +177,18 @@ export function DesktopDashboard() {
     () => (filter === "all" ? cards : cards.filter((card) => cardTag(card) === filter)),
     [cards, filter]
   );
+  const contentCards = allCards.filter((card): card is Extract<DeckCard, { type: "content" }> => card.type === "content");
+  const narrativeCards = allCards.filter((card): card is Extract<DeckCard, { type: "narrative" }> => card.type === "narrative");
+  const selectableCards = useMemo(() => [...filtered, ...narrativeCards], [filtered, narrativeCards]);
 
   // 첫 진입 — 1번 카드 뎁스 자동 표시(빈 화면 금지). 필터로 목록이 바뀌어 선택이 사라지면 첫 항목로.
   useEffect(() => {
     if (filtered.length === 0) return;
-    if (selectedId && filtered.some((card) => cardId(card) === selectedId)) return;
+    if (selectedId && selectableCards.some((card) => cardId(card) === selectedId)) return;
     setSelectedId(cardId(filtered[0]!));
-  }, [filtered, selectedId]);
+  }, [filtered, selectableCards, selectedId]);
 
-  const selected = filtered.find((card) => cardId(card) === selectedId) ?? filtered[0];
-  const contentCards = allCards.filter((card): card is Extract<DeckCard, { type: "content" }> => card.type === "content");
-  const narrativeCards = allCards.filter((card): card is Extract<DeckCard, { type: "narrative" }> => card.type === "narrative");
+  const selected = selectableCards.find((card) => cardId(card) === selectedId) ?? filtered[0];
 
   const depthContext = (stock: DeckStock) => ({
     fromTheme: stock.sector,
@@ -177,9 +203,18 @@ export function DesktopDashboard() {
   });
 
   if (failed) {
+    // 자동 재시도 중 — 콜드 빌드가 데워지면 곧 뜬다. 죽은 "새로고침해 주세요" 대신 회복 중임을 알린다.
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-muted">
-        오늘의 30장을 불러오지 못했어요. 새로고침해 주세요.
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-sm text-muted">
+        <FlickerSpinner size={36} />
+        <p>오늘의 30장을 준비하고 있어요 — 잠시만요.</p>
+        <button
+          type="button"
+          onClick={() => setRetryKey((value) => value + 1)}
+          className="rounded-full border border-hairline bg-surface px-5 py-2 text-xs font-semibold text-whiteout transition-colors hover:border-whiteout/30"
+        >
+          지금 다시 불러오기
+        </button>
       </div>
     );
   }
@@ -236,9 +271,13 @@ export function DesktopDashboard() {
         </div>
       </section>
 
-      {/* ② 중앙 — 선택 카드 뎁스(병렬 보기 = PC 핵심 가치) */}
+      {/* ② 중앙 — 선택 카드 뎁스(병렬 보기 = PC 핵심 가치). 우측 항목 클릭 시 해당 뎁스가 우선. */}
       <section className="min-h-0 overflow-hidden rounded-2xl border border-hairline bg-surface">
-        {selected?.type === "stock" ? (
+        {feedItem?.type === "narrative" ? (
+          <NarrativeDepthPage key={feedItem.narrative.id} card={feedItem.narrative} onClose={() => setFeedItem(null)} inline />
+        ) : feedItem ? (
+          <FeedDepthPage key={feedItemId(feedItem)} item={feedItem} onClose={() => setFeedItem(null)} inline />
+        ) : selected?.type === "stock" ? (
           <StockInsightView
             key={selected.data.canonical}
             stock={selected.data.canonical}
@@ -246,27 +285,75 @@ export function DesktopDashboard() {
             onClose={() => undefined}
             inline
           />
+        ) : selected?.type === "narrative" ? (
+          <NarrativeDepthPage key={selected.data.id} card={selected.data} onClose={() => filtered[0] && setSelectedId(cardId(filtered[0]))} inline />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted">종목을 선택해 주세요.</div>
         )}
       </section>
 
-      {/* ③ 우 — 콘텐츠·시장 + 성과 되짚기 */}
+      {/* ③ 우 — feed-hub(피드 탭과 동일 소스·이원화 금지) + 성과 되짚기. 클릭 → 중앙 뎁스. */}
+      {/* 2026-07-18 User Zero "피드 10장도 안 돼": slice(0,8) 제한 제거 — 오늘치 전부 + 지난 콘텐츠 무한 이어 붙이기. */}
       <section className="scrollbar-none min-h-0 space-y-3 overflow-y-auto">
-        {contentCards.slice(0, 4).map((card) => (
-          <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
-            <ContentCard card={card.data} />
-          </div>
-        ))}
-        {narrativeCards.slice(0, 2).map((card) => (
-          <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
-            <NarrativeCard card={card.data} />
-          </div>
-        ))}
+        {[...feedItems, ...(feedItems.length > 0 ? feedArchive : [])].map((item, index) => {
+          const id = feedItemId(item);
+          const active = feedItem === item;
+          return (
+            <button
+              key={`${id}:${index}`}
+              type="button"
+              onClick={() => setFeedItem(item)}
+              aria-pressed={active}
+              className="block w-full rounded-2xl border bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
+              style={{ borderColor: active ? NEON : "var(--hairline, #2a2a2a)" }}
+            >
+              {item.type === "narrative" ? (
+                <NarrativeCard card={item.narrative} />
+              ) : item.type === "sector" ? (
+                <SectorCard card={sectorCardData(item)} />
+              ) : item.type === "stock-issue" ? (
+                <StockIssueCard item={item} />
+              ) : item.type === "calendar" ? (
+                <CalendarCard calendar={item.calendar} />
+              ) : (
+                <ContentCard card={item.content} />
+              )}
+            </button>
+          );
+        })}
+        {feedItems.length > 0 && !feedArchiveDone && <div ref={feedSentinelRef} className="h-8" aria-hidden />}
+        {feedItems.length === 0 &&
+          contentCards.slice(0, 4).map((card) => (
+            <div key={card.data.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
+              <ContentCard card={card.data} />
+            </div>
+          ))}
+        {feedItems.length === 0 &&
+          narrativeCards.slice(0, 2).map((card) => (
+            <button
+              key={card.data.id}
+              type="button"
+              onClick={() => setSelectedId(cardId(card))}
+              aria-pressed={cardId(card) === selectedId}
+              className="block w-full rounded-2xl border bg-surface px-5 py-5 text-left transition-colors hover:border-whiteout/20"
+              style={{ borderColor: cardId(card) === selectedId ? NEON : "var(--hairline, #2a2a2a)" }}
+            >
+              <NarrativeCard card={card.data} />
+            </button>
+          ))}
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
+          <RegretReceiptPanel items={seenItems} />
           <PerformanceProofPanel items={seenItems} />
         </div>
       </section>
     </div>
   );
+}
+
+function feedItemId(item: FeedHubItem): string {
+  if (item.type === "narrative") return item.narrative.id;
+  if (item.type === "sector") return item.sector.id;
+  if (item.type === "stock-issue") return item.stockIssue.id;
+  if (item.type === "calendar") return item.calendar.id;
+  return item.content.id;
 }

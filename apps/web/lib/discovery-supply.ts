@@ -1,3 +1,4 @@
+import { hydrateKoreanTitles, koreanTitle } from "./content-i18n";
 import {
   STOCK_VOCAB,
   applyAxisRarity,
@@ -18,7 +19,10 @@ import {
   stockMentionRole,
   synthesizeDiscoveryInsight,
   computeCardVerdict,
+  computeCompanyScore,
+  computeWyckoffAnalysis,
   type CardVerdict,
+  type CompanyScoreResult,
   type DailyOhlcv,
   type AxisSignal,
   type CardFrontSignals,
@@ -30,6 +34,7 @@ import {
   type FomoScoreResult,
   type InvestorFlow,
   type MultiAxisHookSelection,
+  type WyckoffAnalysis,
   type SectorStock,
   type StockCountry,
   type RawArticle,
@@ -42,6 +47,7 @@ import {
   type DartDisclosureHit,
 } from "./dart-disclosures";
 import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
+import { readKrCandleCache, writeKrCandleCache } from "./kr-candle-cache";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
 import { relatedTo, type RelatedNode } from "./relation-graph";
 import { fetchRecentSecFilings } from "./sec-edgar";
@@ -53,11 +59,12 @@ import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchCachedUsMarketRows, fetchNasdaqDailyCandles, latestUsSessionAsOf } from "./us-market-source";
 import { fetchInsiderClusterCandidates, type InsiderClusterCandidate } from "./insider-source";
-import { US_DISCOVERY_SYMBOLS } from "./us-symbols";
+import { US_DISCOVERY_SYMBOLS, usDiscoverySeedForSymbol } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
 import { isAbstractTemplate } from "./copy-guards";
 import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
+import type { CoinCause, CoinMaterialItem } from "./coin-materials";
 
 const UA = { "User-Agent": "Mozilla/5.0", Accept: "application/json,text/plain,*/*" };
 const MARKETS: DiscoveryMarket[] = ["KOSPI", "KOSDAQ"];
@@ -128,6 +135,17 @@ const INDUSTRY_HINTS: Array<{ label: string; pattern: RegExp }> = [
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
+  companyScore?: CompanyScoreResult;
+  /** 일일 위원회가 사실 게이트를 통과시킨 전문 분석. 요청 경로에서는 생성하지 않고 승인 스냅샷만 읽는다. */
+  committeeReview?: {
+    runId: string;
+    reviewedAt: string;
+    tradingView: string;
+    fundamentalView: string;
+    timingGrade: "A" | "B" | "C";
+    valuationGrade: "A" | "B" | "C";
+    factChecked: true;
+  };
   sparkline: number[];
   priceText?: string;
   changeText?: string;
@@ -136,6 +154,20 @@ export interface DiscoveryFrontSeed {
   axisHook?: MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — 캔들이 있는 종목만(가짜 판단 금지). */
   verdict?: CardVerdict;
+  wyckoff?: WyckoffAnalysis;
+  /** 프리웜이 이미 확보한 실제 일봉. 코인은 상세 첫 렌더의 차트 바닥으로 재사용한다. */
+  candles?: DailyOhlcv[];
+  chartSeries?: {
+    closes: number[];
+    volumes: number[];
+    ma20: Array<number | null>;
+    ma60: Array<number | null>;
+    ma120: Array<number | null>;
+  };
+  /** 코인 전용: 크론에서 수집·분류한 최근 이슈. 요청 경로 외부 fetch 없음. */
+  coinIssues?: CoinMaterialItem[];
+  /** 가격 변동과 이슈 발행 시각의 결정론적 시간창 연결. */
+  coinCause?: CoinCause;
 }
 
 export interface DiscoveryStockPayload extends Omit<SectorStock, "sector"> {
@@ -199,6 +231,8 @@ export interface BuildDiscoveryResponseOptions {
   targetedMaterial?: boolean;
   targetedMaterialLimit?: number;
   country?: DiscoveryCountryScope;
+  /** 위원회 후보 생산처럼 결정론 출력이 필요한 경로에서 false. 공개 기본 동작은 유지한다. */
+  allowAiSynthesis?: boolean;
 }
 
 interface RawNaverStock {
@@ -288,13 +322,14 @@ function parseMarketRow(row: RawNaverStock, market: DiscoveryMarket): DiscoveryM
 
 async function fetchMarketPage(market: DiscoveryMarket, page: number): Promise<DiscoveryMarketRow[]> {
   const url = `https://m.stock.naver.com/api/stocks/marketValue/${market}?page=${page}&pageSize=${PAGE_SIZE}`;
-  const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
+  // no-store 명시 — 시세는 캐시/빌드시점 고정 금지(2026-07-13 전 거래일 브리핑 사건). Next 기본값에 의존하지 않는다.
+  const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000), cache: "no-store" });
   if (!res.ok) throw new Error(`naver market ${market} ${page} ${res.status}`);
   const data = (await res.json()) as { stocks?: RawNaverStock[] };
   return (data.stocks ?? []).map((row) => parseMarketRow(row, market)).filter((row): row is DiscoveryMarketRow => row !== null);
 }
 
-async function fetchKrMarketRows(): Promise<DiscoveryMarketRow[]> {
+export async function fetchKrMarketRows(): Promise<DiscoveryMarketRow[]> {
   const settled = await Promise.allSettled(
     MARKETS.flatMap((market) => Array.from({ length: PAGES_PER_MARKET }, (_, i) => fetchMarketPage(market, i + 1)))
   );
@@ -600,7 +635,11 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
 }
 
 function materialEventFromUsArticle(article: RawArticle, asOf: string, sourceFallback: string): DiscoveryEvent | null {
-  const label = cleanUsMaterialTitle(article.title);
+  // cleanUsMaterialTitle 은 "이 기사가 재료로 쓸 만한가" 품질 게이트로만 쓴다(영문 표시 금지, 2026-07-15).
+  if (!cleanUsMaterialTitle(article.title)) return null;
+  // 한글 번역(크론 캐시) 필수 — 없으면 카드 노출 안 함. 개별 심볼 Yahoo URL은 번역 캐시에 거의 없어
+  // 예전엔 원문 영문이 그대로 새어나갔다("미장 카드 어떤 건 영문·어떤 건 한글" 사건).
+  const label = koreanTitle(article.url);
   if (!label) return null;
   const sourceName = article.source || sourceFallback;
   const sourceTitle = decodeHtmlEntities(article.title).replace(/\s+/g, " ").trim();
@@ -796,40 +835,12 @@ function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): 
   };
 }
 
-/** openinsider 영문 업종 → 한글 섹터(INDUSTRY_HINTS 매칭). 못 맞추면 undefined(다운스트림 폴백). */
-function insiderSectorHint(symbol: string, industry: string | undefined): string | undefined {
-  if (!industry) return undefined;
-  const label = inferDiscoverySectorLabel(symbol, [
-    { kind: "market_context", firstSeen: false, strength: 0, source: "", asOf: "", confidence: "L", label: industry },
-  ]);
-  return label === "기타 업종" ? undefined : label;
-}
-
-function insiderClusterRow(candidate: InsiderClusterCandidate): DiscoveryMarketRow {
-  const quote = candidate.quote;
-  const changePct = quote?.changePct;
-  const changeDir: "up" | "down" | "flat" =
-    typeof changePct !== "number" ? "flat" : changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
-  const priceText = insiderMoney(quote?.price);
-  return {
-    canonical: candidate.symbol,
-    symbol: candidate.symbol,
-    market: "NASDAQ",
-    country: "US",
-    currency: "USD",
-    marketCapRank: 900,
-    ...(priceText ? { priceText } : {}),
-    ...(typeof changePct === "number" ? { changePct, changeDir } : {}),
-    ...(quote?.sparkline && quote.sparkline.length >= 2 ? { sparkline: quote.sparkline } : {}),
-    ...(insiderSectorHint(candidate.symbol, candidate.industry) ? { sectorHint: insiderSectorHint(candidate.symbol, candidate.industry)! } : {}),
-    sessionLabel: latestUsSessionAsOf().label,
-  };
-}
-
 /**
- * US 내부자 클러스터 매수 발굴 — 조용한 종목까지 덱에 주입한다.
- * 이미 유니버스에 있으면 내부자 이벤트만 보강, 없으면 합성 row+event를 직접 주입(eligible 게이트 우회).
- * openinsider 실패 시 조용히 no-op(fail-open).
+ * US 내부자 클러스터 매수 — 유니버스(시총 큐레이션 통과) 종목에 이벤트를 보강한다(attach-only).
+ * 2026-07-11 User Zero: 합성 row 직접 주입(eligible 게이트 우회) 폐기 — openinsider 클러스터는
+ * 마이크로캡이 대부분이라 "아무도 모르는 잡주"(CREX·FCBM·DPC·SWZ 실측)가 미장 덱을 지배했다.
+ * 내부자 신호는 시총 하한(US_DYNAMIC_MIN_MARKET_CAP_USD·큐레이션 시드)을 통과한 종목의
+ * 보강 재료로만 쓴다. openinsider 실패 시 조용히 no-op(fail-open).
  */
 async function hydrateUsInsiderClusterRows(
   byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>,
@@ -838,17 +849,13 @@ async function hydrateUsInsiderClusterRows(
   const candidates = await fetchInsiderClusterCandidates().catch((): InsiderClusterCandidate[] => []);
   if (candidates.length === 0) return;
   for (const candidate of candidates) {
-    const event = insiderClusterEvent(candidate, asOf);
     const existing = [...byTicker.entries()].find(
       ([, value]) => value.row.country === "US" && value.row.symbol?.toUpperCase() === candidate.symbol
     );
-    if (existing) {
-      const [ticker, current] = existing;
-      if (current.events.some((e) => e.insiderPurchase)) continue;
-      byTicker.set(ticker, { ...current, events: [...current.events, event] });
-      continue;
-    }
-    byTicker.set(candidate.symbol, { row: insiderClusterRow(candidate), events: [event] });
+    if (!existing) continue; // 유니버스 밖(시총 미달 마이크로캡) — 주입하지 않는다.
+    const [ticker, current] = existing;
+    if (current.events.some((e) => e.insiderPurchase)) continue;
+    byTicker.set(ticker, { ...current, events: [...current.events, insiderClusterEvent(candidate, asOf)] });
   }
 }
 
@@ -1306,12 +1313,13 @@ function headlineCandidate(
 async function stockPayload(
   row: DiscoveryMarketRow,
   candidate: DiscoveryCandidate,
-  front?: DiscoveryFrontSeed
+  front?: DiscoveryFrontSeed,
+  allowAiSynthesis = true
 ): Promise<DiscoveryStockPayload> {
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
   const resolvedCandidate = headlineCandidate(row, candidate, sector);
-  const whyDriven = await synthesizeWhyDrivenInsight(resolvedCandidate);
+  const whyDriven = await synthesizeWhyDrivenInsight(resolvedCandidate, { allowAi: allowAiSynthesis });
   const synthesis = whyDriven.insight;
   const frontReason = frontMaterialReason(front);
   const synthesizedWhy = synthesis.headline;
@@ -1581,6 +1589,17 @@ async function hydrateReachedNewsHooks(
   return out;
 }
 
+/**
+ * 큐레이션 US 대형주 폴백 카피(2026-07-12) — US 뉴스가 Vercel egress에서 차단돼 재료가 없을 때,
+ * "시총 높은 아는 기업"(User Zero)을 verdict + 섹터 맥락으로 노출한다. 가격-only 아님(섹터·판정 맥락).
+ * 사용자가 신뢰하는 3축(볼륨·유동성·레벨)은 차트에서 보이고, 카드 카피는 사실만.
+ */
+function usLargeCapContextHeadline(seed: { canonical: string; sector: string }, front?: DiscoveryFrontSeed): string | undefined {
+  // 간결한 섹터 맥락만 — verdict 전체 문장은 카드 UI 가 별도로 보여준다(헤드라인 반복 방지).
+  void front;
+  return `${seed.canonical} · ${seed.sector} 대표주`;
+}
+
 function attachReachedVolumeEvents(
   candidates: readonly DiscoveryCandidate[],
   rowsByTicker: ReadonlyMap<string, DiscoveryMarketRow>,
@@ -1601,10 +1620,13 @@ function attachReachedVolumeEvents(
   });
 }
 
-async function hydrateReachedWhySynthesis(candidates: readonly DiscoveryCandidate[]): Promise<DiscoveryCandidate[]> {
+async function hydrateReachedWhySynthesis(
+  candidates: readonly DiscoveryCandidate[],
+  allowAiSynthesis = true
+): Promise<DiscoveryCandidate[]> {
   const results = await mapLimit(candidates, 3, async (candidate) => ({
     ticker: candidate.ticker,
-    result: await synthesizeWhyDrivenInsight(candidate),
+    result: await synthesizeWhyDrivenInsight(candidate, { allowAi: allowAiSynthesis }),
   }));
   return candidates.map((candidate) => {
     const found = results.find((row) => row.status === "fulfilled" && row.value.ticker === candidate.ticker);
@@ -1641,6 +1663,9 @@ function frontSeed(
       : typeof materialMentionScore === "number"
         ? { mentionCount: 1, mentionScore: materialMentionScore }
         : undefined;
+  const flowEvents = candidate.events.filter((event) => event.kind === "flow_entry" && typeof event.flowDays === "number");
+  const foreignNetStreak = flowEvents.find((event) => event.flowActor === "foreign")?.flowDays;
+  const institutionNetStreak = flowEvents.find((event) => event.flowActor === "institution")?.flowDays;
   const signals: CardFrontSignals = {
     ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
     ...(typeof volumeEvent?.volumeRatio === "number" ? { volumeRatio: volumeEvent.volumeRatio } : {}),
@@ -1648,6 +1673,8 @@ function frontSeed(
     ...(currentNewsEventLabel ? { newsEventLabel: currentNewsEventLabel } : {}),
     ...(currentNewsEvent?.source ? { newsEventSource: currentNewsEvent.source } : {}),
     ...(row.marketCapRank && row.marketCapRankSource !== "curated" ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
+    ...(typeof foreignNetStreak === "number" ? { foreignNetStreak } : {}),
+    ...(typeof institutionNetStreak === "number" ? { institutionNetStreak } : {}),
     ...(theme ? {
       themeLabel: theme.sector,
       themeRelativeRank: theme.rank,
@@ -1835,6 +1862,8 @@ export function buildNarrativeCards(
     const event = narrativeAnchorEvent(candidate);
     const triggerHeadline = event ? narrativeTriggerHeadline(event) : undefined;
     if (!event || !triggerHeadline) continue;
+    // 2026-07-12: US 스토리 트리거가 한글 아니면(번역 캐시 미적용 원문 영어) 노출 안 함 — 제품 한국어 우선.
+    if (candidate.country === "US" && !/[가-힣]/.test(triggerHeadline)) continue;
     const triggerKey = `${candidate.ticker}:${event.kind}:${triggerHeadline}`;
     if (usedTriggers.has(triggerKey)) continue;
     const sectorScopeKey = candidate.sector ? `${candidate.country}:${candidate.sector}` : undefined;
@@ -1987,12 +2016,15 @@ function interleaveThemeBundles(
 
 export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOptions = {}): Promise<DiscoveryResponse> {
   const scope = options.country ?? "KR";
+  const allowAiSynthesis = options.allowAiSynthesis ?? true;
   const targetedMaterialEnabled = options.targetedMaterial ?? TARGETED_MATERIAL_DEFAULT_ENABLED;
   const deckCardCount = discoveryDeckCardCount(scope);
   const targetedMaterialLimit = targetedMaterialEnabled
     ? targetedMaterialCandidateLimit(scope, options.targetedMaterialLimit)
     : 0;
   const asOf = discoveryAsOf(scope);
+  // 2026-07-12: US 뉴스 제목 한글 번역 캐시를 모듈 맵에 적재(요청 경로 동기 조회용). fail-open.
+  await hydrateKoreanTitles();
   const discoveryContentPromise =
     scope === "US"
       ? fetchDeckContentCards().catch((err) => {
@@ -2165,7 +2197,19 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     SPARKLINE_CONCURRENCY,
     async (candidate) => {
       if (candidate.naverCode) {
-        return { ticker: candidate.ticker, daily: await fetchStockDaily(candidate.naverCode, 110) };
+        // WO 카드 품질 2차 C: 프리웜 캐시(260거래일)를 우선 — 52주·MA120·와이코프 phase 판정의 연료.
+        const cached = await readKrCandleCache(candidate.naverCode).catch(() => null);
+        if (cached) {
+          return {
+            ticker: candidate.ticker,
+            daily: { candles: cached, closes: cached.map((c) => c.close), volumes: cached.map((c) => c.volume) },
+          };
+        }
+        // 캐시 미스(프리웜 유니버스 450 밖 소형주 등) — 같은 1회 호출로 창만 420일력으로 넓혀 받고
+        // write-through 로 캐시를 채운다(호출 수 불변 — 504 원칙 유지, 폴레드·신일제약류 '4개월 저점' 해소).
+        const daily = await fetchStockDaily(candidate.naverCode, 420);
+        if (daily.candles.length >= 120) void writeKrCandleCache(candidate.naverCode, daily.candles).catch(() => {});
+        return { ticker: candidate.ticker, daily };
       }
       // US(내부자 포함) — Nasdaq OHLCV 로 verdict 엔진까지 캔들 공급(WO 1.6 A/B: 국/미 무차별 표준).
       const usSymbol = rowsByTicker.get(candidate.ticker)?.symbol;
@@ -2192,7 +2236,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   );
   ranked = attachReachedVolumeEvents(ranked, rowsByTicker, dailyByTicker, asOf);
   if (scope !== "US") {
-    ranked = await hydrateReachedWhySynthesis(ranked);
+    ranked = await hydrateReachedWhySynthesis(ranked, allowAiSynthesis);
   }
   logDiscoverySignalCoverage("after-rank", ranked);
   const sparklineByTicker = new Map(
@@ -2204,8 +2248,36 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     if (!row) continue;
     const attention = attentionMap[candidate.ticker];
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
-    front.verdict = verdictForCandidate(candidate, dailyByTicker.get(candidate.ticker)?.candles ?? []);
-    const stock = await stockPayload(row, candidate, front);
+    const candidateCandles = dailyByTicker.get(candidate.ticker)?.candles ?? [];
+    front.verdict = verdictForCandidate(candidate, candidateCandles);
+    const wyckoff = computeWyckoffAnalysis({
+      candles: candidateCandles,
+      ...(typeof front.signals.foreignNetStreak === "number" ? { foreignNetStreak: front.signals.foreignNetStreak } : {}),
+      ...(typeof front.signals.institutionNetStreak === "number" ? { institutionNetStreak: front.signals.institutionNetStreak } : {}),
+      ...(typeof front.verdict.invalidationLevel === "number" ? { invalidationLevel: front.verdict.invalidationLevel } : {}),
+      currency: candidate.country === "US" ? "USD" : "KRW",
+    });
+    front.wyckoff = wyckoff;
+    front.companyScore = computeCompanyScore({
+      signals: front.signals,
+      verdict: front.verdict,
+      wyckoff,
+      insiderPurchaseConfirmed: candidate.events.some((event) => event.insiderPurchase === true),
+      ...(typeof candidateCandles.at(-1)?.close === "number" ? { currentPrice: candidateCandles.at(-1)!.close } : {}),
+      asOf,
+    });
+    const stock = await stockPayload(row, candidate, front, allowAiSynthesis);
+    // 2026-07-12: US 큐레이션 대형주는 뉴스 재료가 없어도(Vercel egress에서 US 뉴스 차단) verdict 맥락으로
+    // 진입 — "시총 높은 아는 기업"(User Zero). 국장 발굴 정체성은 불변(KR 은 이 분기 안 탐).
+    const usSeed =
+      (row.country === "US" || candidate.country === "US") ? usDiscoverySeedForSymbol(row.symbol) : undefined;
+    if (usSeed && front.verdict && (stock.headlineProvenance?.provenance === "suppressed" || !stock.headline?.trim())) {
+      const ctx = usLargeCapContextHeadline(usSeed, front);
+      if (ctx) {
+        stock.headline = ctx;
+        stock.headlineProvenance = { text: ctx, provenance: "rule", method: "rule" };
+      }
+    }
     const headline = stock.headline?.trim();
     if (stock.headlineProvenance?.provenance === "suppressed" || !headline) {
       if ((row.country === "US" || candidate.country === "US") && process.env.DISCOVERY_DEBUG_US_DROPS === "1") {
@@ -2229,6 +2301,15 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       const headlineEventKind = headlineEvent?.kind;
       const hasSurfaceMaterial = headlineEventKind === "news_mention" || headlineEventKind === "disclosure";
       const hasGroundedMaterial = Boolean(stock.sourceLabel && (stock.sourceUrl || headlineEvent?.url));
+      // 시세 사실 신호(WO 미장·코인 확충) — Nasdaq OHLCV 실측(거래량 이상·신고가)은 그 자체가 근거라
+      // 재료(뉴스·공시) 없이도 카드 진입 허용. 카피 가드·verdict 표준은 그대로(품질 게이트 유지).
+      const hasMarketFactSignal = headlineEventKind === "volume_spike" || headlineEventKind === "new_high";
+      // 큐레이션 대형주는 curation 자체가 품질 근거 — verdict 맥락으로 진입(2026-07-12, US 뉴스 egress 차단 대응).
+      if (hasMarketFactSignal || (usSeed && front.verdict)) {
+        stocks.push(stock);
+        fronts[candidate.ticker] = front;
+        continue;
+      }
       if (!hasSurfaceMaterial || !hasGroundedMaterial) {
         if (process.env.DISCOVERY_DEBUG_US_DROPS === "1") {
           console.warn("[US drop ungrounded]", {

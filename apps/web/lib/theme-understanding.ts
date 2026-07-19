@@ -25,6 +25,10 @@ import { fetchDcStockTitles } from "./dcinside";
 import { fetchDartDisclosuresForCode } from "./dart-disclosures";
 import { fetchRecentSecFilings } from "./sec-edgar";
 import { usSymbolForStock } from "./us-symbols";
+import { computePriceCause, PRICE_CAUSE_MIN_MOVE_PCT } from "./price-cause";
+import { fetchStockDaily } from "./stock-front";
+import { readUsMarketQuoteRows } from "./us-market-cache";
+import { fetchMacro } from "./fomo-market-sources";
 
 /**
  * 이해 레이어 오케스트레이션 — DATA_ENGINE_STRATEGY §4 Track A. (네트워크 + LLM)
@@ -281,10 +285,16 @@ async function judgeWordingsSafety(
   return out;
 }
 
-/** 공식 데이터(FRED 등 kind=official) 원문을 중립 팩트 리스트로(방향성 주장 아님 — C-2). */
-function officialFactsFrom(docs: readonly SourceDoc[]): OfficialFact[] {
+/**
+ * 공식 데이터(kind=official) 원문을 중립 팩트 리스트로(방향성 주장 아님 — C-2).
+ * 종목(stock) 뎁스의 "확인된 공식 지표"는 종목 직접 공시(DART·SEC)만 — FRED 거시(나스닥지수·미 국채 등)는
+ * 종목과 무관한 배경 지표라 제외한다(2026-07-17 User Zero: "신일제약에 공식 지표가 왜 붙어").
+ * 테마 뎁스(금리·거시 키워드)에는 FRED 가 그 자체로 주제 지표라 유지.
+ */
+function officialFactsFrom(docs: readonly SourceDoc[], kind: "theme" | "stock" = "theme"): OfficialFact[] {
   return docs
     .filter((d) => d.kind === "official" && d.source && d.tier)
+    .filter((d) => kind !== "stock" || d.source !== "FRED(미 연준)")
     .map((d) => ({
       label: d.title,
       ...(d.body ? { detail: d.body } : {}),
@@ -501,7 +511,47 @@ export async function collectThemeStocks(
 
 /** 개별 종목 이해·구조화(작업3, BM 심장) — 테마와 동일 구조/가드. 자료 적으면 정직한 빈 상태. */
 export async function understandStock(stock: string, opts: StockUnderstandingOptions = {}): Promise<ThemeInsight> {
-  return runUnderstanding(stock, await collectStockDocs(stock, opts), "stock");
+  const docs = await collectStockDocs(stock, opts);
+  const insight = await runUnderstanding(stock, docs, "stock");
+  // 원인 연결 엔진(WO 뎁스 재건 A) — 이미 수집한 공시·뉴스와 당일 급변동을 시간창으로 잇는다.
+  // 실패해도 인사이트 본체는 정상(fail-open).
+  const cause = await resolvePriceCause(stock, opts, docs).catch(() => undefined);
+  return cause ? { ...insight, cause } : insight;
+}
+
+/** 당일 등락률·지수 동반을 조회해 cause 엔진에 공급한다. 등락률을 못 구하면 개입하지 않는다(가짜 금지). */
+async function resolvePriceCause(
+  stock: string,
+  opts: StockUnderstandingOptions,
+  docs: readonly SourceDoc[]
+): Promise<import("@fomo/core").PriceCause | undefined> {
+  const def = stockDef(stock);
+  const code = validNaverCode(opts.naverCode) ?? def?.naverCode;
+  const symbol = opts.symbol ?? usSymbolForStock(stock);
+  const country = opts.country ?? def?.country ?? (code ? "KR" : symbol ? "US" : undefined);
+  if (!country || country === "GLOBAL") return undefined;
+
+  let changePct: number | undefined;
+  if (country === "KR" && code) {
+    const daily = await fetchStockDaily(code, 12).catch(() => ({ closes: [] as number[] }));
+    const closes = daily.closes;
+    const last = closes[closes.length - 1];
+    const prev = closes[closes.length - 2];
+    if (typeof last === "number" && typeof prev === "number" && prev > 0) changePct = ((last - prev) / prev) * 100;
+  } else if (country === "US" && symbol) {
+    const rows = await readUsMarketQuoteRows().catch(() => []);
+    const row = rows.find((r) => r.symbol === symbol);
+    if (typeof row?.changePct === "number") changePct = row.changePct;
+  }
+  if (typeof changePct !== "number" || Math.abs(changePct) < PRICE_CAUSE_MIN_MOVE_PCT) return undefined;
+
+  const macro = await fetchMacro().catch(() => []);
+  const indexKeys = country === "KR" ? ["kospi", "kosdaq"] : ["spx", "ndq", "sox"];
+  const indexMoves = macro
+    .filter((q) => indexKeys.includes(q.key) && typeof q.change === "number")
+    .map((q) => ({ label: q.label, changePct: q.change as number }));
+
+  return computePriceCause({ today: todayKst(), changePct, docs, indexMoves });
 }
 
 /**
@@ -515,8 +565,9 @@ export async function runUnderstanding(
 ): Promise<ThemeInsight> {
   if (docs.length === 0) return emptyThemeInsight(subject, "수집된 원문이 없음(소스 도달 실패 또는 매칭 0)");
 
-  // 공식 지표 팩트(FRED) — LLM 결과와 별개로 항상 노출(있으면). 강세/약세로 해석하지 않는다.
-  const officialFacts = officialFactsFrom(docs);
+  // 공식 지표 팩트 — LLM 결과와 별개로 항상 노출(있으면). 강세/약세로 해석하지 않는다.
+  // 종목이면 DART·SEC 직접 공시만(FRED 거시 제외).
+  const officialFacts = officialFactsFrom(docs, kind);
   const withFacts = (insight: ThemeInsight): ThemeInsight =>
     officialFacts.length > 0 ? { ...insight, officialFacts } : insight;
 

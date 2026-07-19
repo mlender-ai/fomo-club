@@ -7,6 +7,7 @@ import {
   formatReturnPct,
   type DiscoverySeenItem,
 } from "@/lib/discoveryPerformance";
+import { companyScoreBandStats } from "@/lib/companyScorePerformance";
 
 const NEON = "#D8FF3A";
 
@@ -106,6 +107,7 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
     .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   const winRate = returns.length > 0 ? Math.round((returns.filter((value) => value > 0).length / returns.length) * 100) : null;
   const medianReturn = median(returns);
+  const scoreBands = companyScoreBandStats(rows);
 
   if (items.length === 0) return null;
 
@@ -134,6 +136,24 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
         </p>
       </div>
 
+      <div className="mt-3 border-y border-hairline py-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold text-whiteout">점수대별 30일 후 승률</p>
+          <span className="text-[10px] text-muted">전체 기록 기준</span>
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {scoreBands.map((band) => (
+            <div key={band.label}>
+              <p className="text-[10px] text-muted">{band.label}</p>
+              <p className="mt-1 font-number text-base font-bold text-whiteout">
+                {band.winRate === null ? "축적 중" : `${band.winRate}%`}
+              </p>
+              <p className="text-[9px] text-muted">표본 {band.count}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-3 flex flex-col gap-2.5">
         {rows.slice(0, 10).map((row) => {
           const up = typeof row.returnPct === "number" && row.returnPct > 0;
@@ -155,6 +175,11 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
                       <span> · 발견가 {row.item.firstSeenPriceText ?? asPrice(row.item.firstSeenPrice, row.item.country)}</span>
                     )}
                   </p>
+                  {typeof row.item.companyScore === "number" && (
+                    <p className="mt-1 text-[11px] text-muted">
+                      발견 당시 {row.item.companyScore}점{row.item.companyScoreLabel ? ` · ${row.item.companyScoreLabel}` : ""}
+                    </p>
+                  )}
                 </div>
                 <span
                   className="shrink-0 rounded-full border border-hairline-soft px-2.5 py-1 text-sm font-bold tabular-nums"

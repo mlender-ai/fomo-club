@@ -1,8 +1,27 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import type { DiscoveryMarketRow } from "./market-source-types";
+import { usDiscoveryUniverse } from "./us-symbols";
 
 const US_MARKET_QUOTE_CACHE_MAX_AGE_HOURS = 18;
+
+// 2026-07-11 User Zero: "미장은 시총 높은 걸로 — 상위권 기업 아니면 핫한 기업만".
+// 다이내믹(비큐레이션) 행 시총 하한. 쓰기(스크리너 파스)와 읽기(캐시 재검증) 양쪽에서 적용 —
+// 캐시는 UPSERT-only라 구 마이크로캡 행이 18h 잔존하므로 읽기 재검증이 필수(배포 즉시 효력).
+export const US_DYNAMIC_MIN_MARKET_CAP_USD = Number(process.env.US_DYNAMIC_MIN_MARKET_CAP_USD ?? 20_000_000_000);
+
+let curatedSymbolCache: Set<string> | null = null;
+
+function isCuratedSymbol(symbol: string): boolean {
+  curatedSymbolCache ??= new Set(usDiscoveryUniverse().map((seed) => seed.symbol.toUpperCase()));
+  return curatedSymbolCache.has(symbol.toUpperCase());
+}
+
+/** 큐레이션 시드는 하한 우회, 그 외는 시총 하한 충족 필수(시총 미상 구캐시 행은 보수적 제외). */
+function passesUsCapCuration(row: DiscoveryMarketRow): boolean {
+  if (isCuratedSymbol(row.symbol)) return true;
+  return typeof row.marketCapUsd === "number" && row.marketCapUsd >= US_DYNAMIC_MIN_MARKET_CAP_USD;
+}
 
 export interface UsMarketQuoteCacheWriteOptions {
   sessionDate: string;
@@ -61,10 +80,16 @@ export async function writeUsMarketQuoteRows(
 ): Promise<UsMarketQuoteCacheStats> {
   await ensureUsMarketQuoteCacheTable();
   const quoteRows = rows.filter((row) => row.country === "US" && hasUsQuote(row));
-  for (const row of quoteRows) {
+  // 벌크 UPSERT(unnest) — 유니버스 500 확장 후 순차 INSERT 500회가 함수 타임아웃의 원인이었다.
+  const CHUNK = 200;
+  for (let i = 0; i < quoteRows.length; i += CHUNK) {
+    const chunk = quoteRows.slice(i, i + CHUNK);
+    const symbols = chunk.map((row) => row.symbol.toUpperCase());
+    const payloads = chunk.map((row) => JSON.stringify(row));
     await prisma.$executeRaw`
       INSERT INTO "UsMarketQuoteCache" ("symbol", "row", "sessionDate", "slot", "updatedAt")
-      VALUES (${row.symbol.toUpperCase()}, ${JSON.stringify(row)}::jsonb, ${options.sessionDate}, ${options.slot}, NOW())
+      SELECT s, p::jsonb, ${options.sessionDate}, ${options.slot}, NOW()
+      FROM unnest(${symbols}::text[], ${payloads}::text[]) AS t(s, p)
       ON CONFLICT ("symbol") DO UPDATE
       SET "row" = EXCLUDED."row",
           "sessionDate" = EXCLUDED."sessionDate",
@@ -92,7 +117,8 @@ export async function readUsMarketQuoteRows(options: UsMarketQuoteCacheReadOptio
     return records
       .map((record) => record.row)
       .filter(isUsMarketRow)
-      .filter(hasUsQuote);
+      .filter(hasUsQuote)
+      .filter(passesUsCapCuration);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2010") return [];
     return [];

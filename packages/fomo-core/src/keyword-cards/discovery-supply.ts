@@ -707,7 +707,9 @@ function freshnessBoost(candidate: DiscoveryCandidate): number {
   return candidate.events.some((event) => event.firstSeen) ? 0.16 : 0;
 }
 
-export function famePenalty(rank?: number): number {
+export function famePenalty(rank?: number, country?: StockCountry): number {
+  // 2026-07-11 User Zero: 미장은 "시총 높은·아는 기업"이 제품 — 유명세 감점은 국장 전용.
+  if (country === "US") return 0;
   if (typeof rank !== "number" || !Number.isFinite(rank) || rank <= 0) return 0;
   const fameRatio = clamp01((DISCOVERY_FAME_RANK_FLOOR - Math.min(rank, DISCOVERY_FAME_RANK_FLOOR)) / DISCOVERY_FAME_RANK_FLOOR);
   return -DISCOVERY_FAME_MAX_PENALTY * fameRatio;
@@ -715,6 +717,8 @@ export function famePenalty(rank?: number): number {
 
 export function awakeningBoost(candidate: DiscoveryCandidate): number {
   if (!candidate.events.some((event) => event.firstSeen)) return 0;
+  // 미장은 무명 가점 없음(위와 동일 결정) — 국장 발굴 정체성은 유지.
+  if (candidate.country === "US") return 0;
   const rank = candidate.marketCapRank;
   const obscure =
     typeof rank === "number" && Number.isFinite(rank)
@@ -745,7 +749,7 @@ function eventScore(candidate: DiscoveryCandidate): number {
     freshnessBoost(candidate) +
     Math.min(0.12, diversity * 0.03) +
     materialBoost +
-    famePenalty(candidate.marketCapRank) +
+    famePenalty(candidate.marketCapRank, candidate.country) +
     awakeningBoost(candidate) +
     directionPenalty(candidate)
   );

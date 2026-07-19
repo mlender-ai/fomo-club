@@ -207,6 +207,8 @@ model Bot {
   alerts                 Alert[]
   dailySummaries         DailySummary[]
   systemLogs             SystemLog[]
+
+  @@index([userId])
 }
 
 model Strategy {
@@ -307,6 +309,8 @@ model StrategyRun {
   strategy          Strategy          @relation(fields: [strategyId], references: [id])
   session           StrategySession?  @relation(fields: [sessionId], references: [id])
 
+  @@index([botId])
+  @@index([strategyId])
   @@index([sessionId, executedAt])
 }
 
@@ -340,6 +344,7 @@ model Position {
   trades          Trade[]
 
   @@index([botId, symbol, status])
+  @@index([strategyId])
   @@index([sessionId, status])
 }
 
@@ -372,6 +377,8 @@ model Trade {
   session         StrategySession? @relation(fields: [sessionId], references: [id])
 
   @@index([botId, executedAt])
+  @@index([strategyId])
+  @@index([positionId])
   @@index([sessionId, executedAt])
 }
 
@@ -390,6 +397,10 @@ model Alert {
   bot        Bot              @relation(fields: [botId], references: [id])
   strategy   Strategy?        @relation(fields: [strategyId], references: [id])
   session    StrategySession? @relation(fields: [sessionId], references: [id])
+
+  @@index([botId])
+  @@index([strategyId])
+  @@index([sessionId])
 }
 
 model MarketCandle {
@@ -420,6 +431,7 @@ model SystemLog {
   createdAt DateTime       @default(now())
   bot       Bot?           @relation(fields: [botId], references: [id])
 
+  @@index([botId])
   @@index([createdAt])
 }
 
@@ -491,6 +503,7 @@ model NewsletterDigest {
   updatedAt    DateTime               @updatedAt
   profile      ResearchProfile?       @relation(fields: [profileId], references: [id])
 
+  @@index([profileId])
   @@index([generatedAt])
   @@index([status, scheduledFor])
 }
@@ -596,6 +609,7 @@ model TarotDrawHistoryCard {
   card        TarotCard        @relation(fields: [cardId], references: [id])
 
   @@index([drawId])
+  @@index([cardId])
 }
 
 // 관심 종목/섹터 즐겨찾기
@@ -639,6 +653,8 @@ model TarotReport {
   user      User              @relation(fields: [userId], references: [id])
   draw      TarotDrawHistory  @relation(fields: [drawId], references: [id])
 
+  @@index([userId])
+  @@index([drawId])
   @@index([status, createdAt])
 }
 
@@ -668,6 +684,7 @@ model TarotCardCollection {
 
   @@unique([userId, cardId])
   @@index([userId])
+  @@index([cardId])
 }
 
 // 모바일 앱 이벤트 트래킹

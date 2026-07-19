@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { scoreToColor, type EmotionType } from "@fomo/core";
+import { type EmotionType } from "@fomo/core";
 import { KeywordCardFeed } from "@/components/KeywordCardFeed";
-import { CaretUpIcon, CaretDownIcon, XMarkIcon } from "@/components/icons";
+import { SearchIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
 import { FeedView } from "@/components/FeedView";
+import { SearchOverlay } from "@/components/SearchOverlay";
 import { DesktopDashboard, useIsDesktop } from "@/components/DesktopDashboard";
 import type {
   FomoIndexResponse,
@@ -43,81 +44,47 @@ export function HomeView({
   onLoggedIn: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("main");
-  const [indexHelpOpen, setIndexHelpOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const isDesktop = useIsDesktop();
-  const color = index ? scoreToColor(index.score) : undefined;
-
-  /**
-   * 전체 폴백 판정: 기본 온도만 있는 상태다.
-   * 이 경우에도 "수집 중"으로 고정하지 않고 온도 자체는 보여주되, 어제 대비처럼
-   * 실제 비교 데이터가 필요한 디테일만 숨긴다.
-   */
-  const isFullFallback = index
-    ? index.components.market === 15 &&
-      index.components.community === 15 &&
-      index.components.emotion === 15 &&
-      index.components.whale === 0 &&
-      !index.aiSummary
-    : false;
+  void index;
 
   // PC(≥1024px) — WO-PC-VERSION 3컬럼 대시보드. lg 미만 모바일 트리는 아래 그대로(틴더 덱 불가침).
   if (isDesktop) {
     return (
       <>
-        <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 py-5">
+        <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
           <div className="flex shrink-0 items-center justify-between">
             <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
             <button
               type="button"
-              onClick={() => setIndexHelpOpen(true)}
+              onClick={() => setSearchOpen(true)}
               className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
-              aria-label="오늘의 시장 온도 계산 방식 보기"
+              aria-label="종목 검색"
             >
-              <span>온도</span>
-              {index ? (
-                <span className="font-number text-sm font-bold leading-none" style={{ color }}>
-                  {index.score}
-                </span>
-              ) : (
-                <span>—</span>
-              )}
+              <SearchIcon size={13} />
+              <span>검색</span>
             </button>
           </div>
           <DesktopDashboard />
         </main>
-        {indexHelpOpen && <FomoIndexInfoSheet index={index} onClose={() => setIndexHelpOpen(false)} />}
+        {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
       </>
     );
   }
 
   return (
     <>
-      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-20 pt-4">
-        {/* 상단 얇은 띠: 로고 + 시장 온도 축약 배지(WO 1.5 E — 큰 바는 몰입 방해라 접었다. 탭하면 설명 시트). */}
+      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]">
+        {/* 상단은 제품명과 검색만 남긴다. 시장 온도는 종합 기업 점수와 무관해 제거했다. */}
         <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
           <button
             type="button"
-            onClick={() => setIndexHelpOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
-            aria-label="오늘의 시장 온도 계산 방식 보기"
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center rounded-full border border-hairline p-1.5 text-muted transition-colors hover:border-whiteout/20"
+            aria-label="종목 검색"
           >
-            <span>온도</span>
-            {index ? (
-              <>
-                <span className="font-number text-sm font-bold leading-none" style={{ color }}>
-                  {index.score}
-                </span>
-                {!isFullFallback && index.prevDayDelta !== 0 && (
-                  <span className="inline-flex items-center" style={{ color }}>
-                    {index.prevDayDelta > 0 ? <CaretUpIcon size={9} /> : <CaretDownIcon size={9} />}
-                    {Math.abs(index.prevDayDelta)}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span>—</span>
-            )}
+            <SearchIcon size={14} />
           </button>
         </div>
 
@@ -133,7 +100,7 @@ export function HomeView({
       </main>
 
       {/* 하단 GNB: 메인 / 피드 / 히스토리 (WO-GNB — 두 표면 분리) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-md">
           <TabButton active={tab === "main"} onClick={() => setTab("main")} label="메인" />
           <TabButton active={tab === "feed"} onClick={() => setTab("feed")} label="피드" />
@@ -141,75 +108,8 @@ export function HomeView({
         </div>
       </nav>
 
-      {indexHelpOpen && <FomoIndexInfoSheet index={index} onClose={() => setIndexHelpOpen(false)} />}
+      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
     </>
-  );
-}
-
-function FomoIndexInfoSheet({
-  index,
-  onClose,
-}: {
-  index: FomoIndexResponse | null;
-  onClose: () => void;
-}) {
-  const rows = [
-    { key: "market" as const, label: "시장 움직임", points: "30점", desc: "주요 지수와 거래 흐름이 뜨거운지 봅니다." },
-    { key: "community" as const, label: "뉴스·언급", points: "30점", desc: "공개 뉴스와 글에서 특정 종목·섹터 언급이 늘었는지 봅니다." },
-    { key: "emotion" as const, label: "사용자 반응", points: "30점", desc: "앱 안에서 남긴 관심·반응 데이터가 충분할 때 보조로 반영합니다." },
-    { key: "whale" as const, label: "외부 보조 신호", points: "10점", desc: "국내장 밖의 큰 흐름은 작게만 참고합니다." },
-  ];
-  const components = index?.components;
-
-  return (
-    <div className="fixed inset-0 z-[85]" role="dialog" aria-modal="true" aria-labelledby="fomo-index-info-title">
-      <button className="absolute inset-0 bg-black/72 backdrop-blur-md" onClick={onClose} aria-label="닫기" type="button" />
-      <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md">
-        <section className="fomo-sheet-rise rounded-t-[28px] border border-hairline bg-[#1A1A1A] px-6 pb-[calc(24px+env(safe-area-inset-bottom))] pt-5">
-          <div className="mx-auto h-1 w-14 rounded-full bg-white/20" />
-          <div className="mt-6 flex items-start justify-between gap-4">
-            <div>
-              <p className="font-pixel text-[11px] text-muted">FOMO INDEX</p>
-              <h1 id="fomo-index-info-title" className="mt-2 text-2xl font-semibold text-whiteout">
-                시장 온도는 이렇게 계산해요
-              </h1>
-            </div>
-            <button
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-hairline text-muted transition-colors hover:text-whiteout"
-              onClick={onClose}
-              type="button"
-              aria-label="닫기"
-            >
-              <XMarkIcon size={20} />
-            </button>
-          </div>
-
-          <p className="mt-5 text-sm leading-6 text-muted">
-            오늘의 시장 온도는 발견 덱 위에 얹는 0~100점 분위기 지표예요. 카드의 개별 포모 점수와는 별도로,
-            시장 전체가 얼마나 뜨겁거나 차분한지 빠르게 보여줍니다.
-          </p>
-
-          <div className="mt-6 space-y-3">
-            {rows.map((row) => (
-              <div key={row.label} className="rounded-2xl border border-hairline bg-white/[0.035] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-whiteout">{row.label}</span>
-                  <span className="font-number text-sm font-semibold" style={{ color: NEON }}>
-                    {components?.[row.key] ?? "—"} / {row.points}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-muted">{row.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-5 text-xs leading-5 text-muted">
-            데이터가 부족한 항목은 낮은 신뢰도로 반영돼요. 이 점수는 시장 분위기를 읽기 위한 정보이며,
-            투자 자문·매수·매도 신호가 아닙니다.
-          </p>
-        </section>
-      </div>
-    </div>
   );
 }
 

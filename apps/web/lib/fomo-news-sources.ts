@@ -98,6 +98,14 @@ const KR_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] 
   { id: "einfomax", url: "https://news.einfomax.co.kr/rss/S1N2.xml", source: "연합인포맥스", tier: "news-mid" },
 ];
 
+// 코인 전문 매체 — 코인 핫이슈가 가격 무버 노이즈에 그치지 않고 규제·법안·ETF 등 매크로 사건을
+// 우선 잡도록(2026-07-15 User Zero: "체인링크 1% 오른 게 뭐가 중요해"). Node fetch 200 확인.
+const CRYPTO_FEEDS: { id: string; url: string; source: string; tier: SourceTier }[] = [
+  { id: "tokenpost", url: "https://www.tokenpost.kr/rss", source: "토큰포스트", tier: "news-mid" },
+  { id: "blockmedia", url: "https://www.blockmedia.co.kr/feed", source: "블록미디어", tier: "news-mid" },
+  { id: "coindesk-korea", url: "https://www.coindeskkorea.com/feed", source: "코인데스크코리아", tier: "news-mid" },
+];
+
 // ───────────────────────── 네이버 금융 뉴스 (JSON) ─────────────────────────
 // 해외 증시 실시간 뉴스(이미 한국어). api.stock.naver.com/news/worldNews.
 const NAVER_NEWS_URL = "https://api.stock.naver.com/news/worldNews?pageSize=20&page=1";
@@ -265,7 +273,18 @@ export const NEWS_SOURCES: readonly NewsSource[] = [
   yahooSource,
   naverNewsSource,
   ...KR_FEEDS.map(makeKoreanRssSource),
+  ...CRYPTO_FEEDS.map(makeKoreanRssSource),
 ];
+
+const CRYPTO_NEWS_SOURCES: readonly NewsSource[] = CRYPTO_FEEDS.map(makeKoreanRssSource);
+
+/** 코인 카드 재료 크론 전용 수집. 요청 경로에서는 호출하지 않고 프리웜 결과만 읽는다. */
+export async function fetchCryptoNews(): Promise<RawArticle[]> {
+  const settled = await Promise.allSettled(CRYPTO_NEWS_SOURCES.map((source) => source.fetch()));
+  const out: RawArticle[] = [];
+  for (const result of settled) if (result.status === "fulfilled") out.push(...result.value);
+  return out;
+}
 
 /** 모든 enabled 소스를 병렬 수집해 정규화 기사 배열로 합산. */
 export async function fetchAllNews(): Promise<RawArticle[]> {

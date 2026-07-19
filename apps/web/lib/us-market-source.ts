@@ -1,6 +1,6 @@
 import type { DiscoveryMarket, DailyOhlcv } from "@fomo/core";
 import type { DiscoveryMarketRow } from "./market-source-types";
-import { readUsMarketQuoteRows } from "./us-market-cache";
+import { readUsMarketQuoteRows, US_DYNAMIC_MIN_MARKET_CAP_USD } from "./us-market-cache";
 import { usDiscoverySeedForSymbol, usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
 
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
@@ -11,7 +11,11 @@ const NASDAQ_SCREENER_URL = "https://api.nasdaq.com/api/screener/stocks";
 const UA = "Mozilla/5.0 (compatible; FomoClubBot/1.0)";
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+// WO 미장·코인 확충 — 큐레이션 ~125 + 60 상한이 US 5장의 원인. 스크리너(1콜·전종목)는 상위 500,
+// TwelveData(키 있을 때) 경로는 쿼터 보호를 위해 기존 60 유지.
+const US_SCREENER_UNIVERSE_LIMIT = 500;
 const US_DYNAMIC_UNIVERSE_LIMIT = 60;
+// 시총 하한 상수는 us-market-cache(읽기 경로 재검증)와 공유 — 그쪽이 정의 원본.
 const US_QUOTE_BATCH_SIZE = 60;
 const US_SPARKLINE_LIMIT = 30;
 const US_PREWARM_CACHE_MAX_AGE_HOURS = 18;
@@ -296,6 +300,7 @@ function parseNasdaqScreenerRow(row: NasdaqScreenerRow): DiscoveryMarketRow | nu
   const pct = num(row.pctchange);
   const change = num(row.netchange);
   const volume = num(row.volume);
+  const marketCapUsd = num(row.marketCap);
   const priceText = money(price);
   const session = latestUsSessionAsOf();
   const canonical = String(row.name ?? symbol)
@@ -308,6 +313,7 @@ function parseNasdaqScreenerRow(row: NasdaqScreenerRow): DiscoveryMarketRow | nu
     country: "US",
     currency: "USD",
     ...(volume ? { tradingValue: volume } : {}),
+    ...(typeof marketCapUsd === "number" && marketCapUsd > 0 ? { marketCapUsd } : {}),
     ...(priceText ? { priceText } : {}),
     ...(typeof pct === "number" ? { changePct: pct } : {}),
     ...(typeof pct === "number" || typeof change === "number"
@@ -362,8 +368,13 @@ async function fetchNasdaqScreenerRows(): Promise<DiscoveryMarketRow[]> {
     next: { revalidate: 900 },
   });
   if (!res.ok) return [];
+  const seedSymbols = new Set(usDiscoveryUniverse().map((seed) => seed.symbol.toUpperCase()));
   const deduped = new Map<string, DiscoveryMarketRow>();
   for (const row of normalizeNasdaqScreenerRows(await res.json())) {
+    // 다이내믹 행 시총 하한(2026-07-11) — 큐레이션 시드는 우회, 시총 미상은 보수적으로 제외.
+    const cap = num(row.marketCap);
+    const symbol = String(row.symbol ?? "").toUpperCase();
+    if (!seedSymbols.has(symbol) && (typeof cap !== "number" || cap < US_DYNAMIC_MIN_MARKET_CAP_USD)) continue;
     const parsed = parseNasdaqScreenerRow(row);
     if (parsed) deduped.set(parsed.symbol.toUpperCase(), parsed);
   }
@@ -372,7 +383,7 @@ async function fetchNasdaqScreenerRows(): Promise<DiscoveryMarketRow[]> {
       const byScore = nasdaqMoverScore(b) - nasdaqMoverScore(a);
       return byScore !== 0 ? byScore : a.symbol.localeCompare(b.symbol);
     })
-    .slice(0, US_DYNAMIC_UNIVERSE_LIMIT);
+    .slice(0, US_SCREENER_UNIVERSE_LIMIT);
 }
 
 function parseNasdaqRow(seed: UsDiscoverySymbol, points: readonly NasdaqDailyPoint[]): DiscoveryMarketRow | null {
@@ -835,21 +846,34 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
     source,
   });
 
+  // 스크리너(무료·전종목·1콜)를 키 유무와 무관하게 1차 소스로(WO 미장·코인 확충) —
+  // TwelveData 키가 있으면 keyed 경로(쿼터 60개 안팎)를 타서 유니버스가 말랐다(프리웜 실측 fetched 48).
+  const rawScreenerRows = await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []);
+  // 큐레이션 교집합(시드 메타 병합) + **비큐레이션 다이내믹 행**(WO 미장·코인 확충) —
+  // curatedScreenerRows 만 쓰면 전종목 스크리너가 큐레이션 ~125로 다시 말라붙는다(프리웜 실측 48의 실체).
+  const curated = curatedScreenerRows(rawScreenerRows, seeds);
+  const curatedSymbols = new Set(curated.map((row) => row.symbol.toUpperCase()));
+  const dynamicScreener = rawScreenerRows.filter((row) => !curatedSymbols.has(row.symbol.toUpperCase()));
+  // 프리웜 슬롯 분할(다이내믹 행) — 500행 전부를 한 슬롯이 쓰면 함수 타임아웃(크론 슬롯 확장 원칙).
+  const slottedDynamic =
+    typeof options.slot === "number" && typeof options.slotCount === "number" && options.slotCount > 1
+      ? dynamicScreener.filter((_, index) => index % options.slotCount! === options.slot)
+      : dynamicScreener;
+  const screenerRows = [...curated, ...slottedDynamic];
+  if (screenerRows.length >= 100 || (!key && screenerRows.length > 0)) {
+    const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
+    const rows = mergePreferredRows(screenerRows, nasdaqRows);
+    return {
+      rows,
+      diagnostics: {
+        ...fallbackDiagnostics(rows, "nasdaq-screener"),
+        moverSymbols: screenerRows.length,
+        quoteSymbols: rows.length,
+        dynamicRows: slottedDynamic.length,
+      },
+    };
+  }
   if (!key) {
-    const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
-    if (screenerRows.length > 0) {
-      const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
-      const rows = mergePreferredRows(screenerRows, nasdaqRows);
-      return {
-        rows,
-        diagnostics: {
-          ...fallbackDiagnostics(rows, "nasdaq-screener"),
-          moverSymbols: screenerRows.length,
-          quoteSymbols: rows.length,
-          dynamicRows: screenerRows.length,
-        },
-      };
-    }
     const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
     const rows = nasdaqRows.length > 0 ? nasdaqRows : seedRows();
     return { rows, diagnostics: fallbackDiagnostics(rows, nasdaqRows.length > 0 ? "nasdaq-fallback" : "seed") };

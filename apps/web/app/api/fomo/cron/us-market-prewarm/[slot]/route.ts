@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { writeUsMarketQuoteRows } from "@/lib/us-market-cache";
 import { fetchUsMarketRowsFromSource, latestUsSessionAsOf } from "@/lib/us-market-source";
 
@@ -35,6 +36,9 @@ export async function GET(request: Request, context: { params: Promise<{ slot?: 
     slot,
     sessionDate: latestUsSessionAsOf().date,
   });
+  revalidateTag("daily-30", { expire: 0 });
+  revalidateTag("feed-hub", { expire: 0 });
+  revalidateTag("us-stock-front", { expire: 0 });
 
   return NextResponse.json({
     ok: true,
