@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchLedgerTimeline, type LedgerTimelineEntry } from "@/lib/fomoApi";
+import {
+  formatSignalResumeBadge,
+  normalizeSignalTypeCodes,
+  signalTypeLabel,
+  type SignalTypeCode,
+} from "@fomo/core";
+import { fetchLedgerTimeline, type LedgerTimelineEntry, type TrackMetric } from "@/lib/fomoApi";
 
 const KIND_LABEL: Record<LedgerTimelineEntry["kind"], string> = {
   signal: "신호",
@@ -15,7 +21,7 @@ const KIND_LABEL: Record<LedgerTimelineEntry["kind"], string> = {
 function summary(entry: LedgerTimelineEntry): string {
   const payload = entry.payload;
   if (entry.kind === "signal") {
-    const types = Array.isArray(payload.types) ? payload.types.filter((item): item is string => typeof item === "string") : [];
+    const types = signalTypes(entry).map(signalTypeLabel);
     return [types.join(" · "), typeof payload.headline === "string" ? payload.headline : ""].filter(Boolean).join(" — ");
   }
   if (entry.kind === "verdict") return typeof payload.stanceText === "string" ? payload.stanceText : "결정론 판단 기록";
@@ -33,17 +39,31 @@ function summary(entry: LedgerTimelineEntry): string {
   return `${days} 성과 ${value}`.trim();
 }
 
+function signalTypes(entry: LedgerTimelineEntry): SignalTypeCode[] {
+  if (entry.kind !== "signal") return [];
+  const raw = Array.isArray(entry.payload.signalTypes)
+    ? entry.payload.signalTypes
+    : Array.isArray(entry.payload.types)
+      ? entry.payload.types
+      : [];
+  return normalizeSignalTypeCodes(raw);
+}
+
 function price(value: number): string {
   return value >= 1_000 ? value.toLocaleString("ko-KR", { maximumFractionDigits: 2 }) : value.toLocaleString("en-US", { maximumFractionDigits: 4 });
 }
 
 export function JudgmentTimeline({ canonical }: { canonical: string }) {
   const [entries, setEntries] = useState<LedgerTimelineEntry[]>([]);
+  const [signalHistory30, setSignalHistory30] = useState<Record<string, TrackMetric>>({});
   useEffect(() => {
     let alive = true;
     void fetchLedgerTimeline(canonical)
       .then((result) => {
-        if (alive) setEntries(result.entries);
+        if (alive) {
+          setEntries(result.entries);
+          setSignalHistory30(result.signalHistory30);
+        }
       })
       .catch(() => {});
     return () => {
@@ -59,18 +79,29 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
         <span className="text-[10px] text-muted">수정되지 않는 시점 기록</span>
       </div>
       <div className="mt-3 divide-y divide-hairline">
-        {visible.map((entry) => (
-          <div key={`${entry.id}-${entry.date}`} className="grid grid-cols-[70px_1fr] gap-3 py-2.5">
-            <div>
-              <p className="text-[10px] font-semibold text-muted">{KIND_LABEL[entry.kind]}</p>
-              <p className="mt-0.5 font-number text-[10px] text-muted">{entry.date.slice(5)}</p>
+        {visible.map((entry) => {
+          const resumes = signalTypes(entry).flatMap((code) => {
+            const metric = signalHistory30[code];
+            return metric ? [{ code, metric }] : [];
+          });
+          return (
+            <div key={`${entry.id}-${entry.date}`} className="grid grid-cols-[70px_1fr] gap-3 py-2.5">
+              <div>
+                <p className="text-[10px] font-semibold text-muted">{KIND_LABEL[entry.kind]}</p>
+                <p className="mt-0.5 font-number text-[10px] text-muted">{entry.date.slice(5)}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs leading-5 text-whiteout">{summary(entry)}</p>
+                {resumes.map(({ code, metric }) => (
+                  <p key={code} className="mt-1 text-[10px] leading-4 text-muted">
+                    {formatSignalResumeBadge(code, metric)}
+                  </p>
+                ))}
+                <p className="mt-0.5 text-[10px] text-muted">당시 가격 {price(entry.priceAt)}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs leading-5 text-whiteout">{summary(entry)}</p>
-              <p className="mt-0.5 text-[10px] text-muted">당시 가격 {price(entry.priceAt)}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

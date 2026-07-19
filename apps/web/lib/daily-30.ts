@@ -1,6 +1,14 @@
 import { unstable_cache } from "next/cache";
-import { isDiscoveryCopySafe, withCompanyQuietScore } from "@fomo/core";
-import type { CardFrontSignals, StockCountry } from "@fomo/core";
+import {
+  isDiscoveryCopySafe,
+  inferStandardSignalTypes,
+  signalPerformanceBonus,
+  withCompanyQuietScore,
+  type CardFrontSignals,
+  type SignalResumeMetric,
+  type SignalTypeCode,
+  type StockCountry,
+} from "@fomo/core";
 import { cacheVersion, kstDate as kstDateOf } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import {
@@ -19,6 +27,7 @@ import {
   writeDaily30Ledger,
 } from "./judgment-ledger";
 import type { PublishedCommitteeSnapshot } from "./expert-review-store";
+import { getCachedTrackRecord } from "./ledger-track-record";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -28,6 +37,8 @@ export interface Daily30MetaCard {
   quietScore: number;
   signalScore: number;
   hypePenalty: number;
+  signalTypes?: SignalTypeCode[];
+  signalPerformanceBonus?: number;
 }
 
 export interface Daily30Response extends DiscoveryResponse {
@@ -67,7 +78,11 @@ export interface Daily30Candidate {
   signalScore: number;
   hypePenalty: number;
   quietScore: number;
+  signalTypes: SignalTypeCode[];
+  signalPerformanceBonus: number;
 }
+
+type SignalPerformanceMetrics = Readonly<Partial<Record<SignalTypeCode, SignalResumeMetric>>>;
 
 const DAILY_CARD_TARGET = 30;
 const FAMOUS_STOCKS = new Set([
@@ -231,7 +246,8 @@ function normalizeHeadline(text: string | undefined): string {
 export function stockCandidate(
   stock: DiscoveryStockPayload,
   front: DiscoveryFrontSeed | undefined,
-  freshness?: FreshnessSnapshot
+  freshness?: FreshnessSnapshot,
+  performance: SignalPerformanceMetrics = {}
 ): Daily30Candidate | null {
   if (!meetsCardStandard(stock, front)) return null;
   // 유명주 강신호 게이트는 국장 발굴 정체성 전용 — 미장은 "시총 높은·아는 기업"이 제품(2026-07-12).
@@ -242,7 +258,17 @@ export function stockCandidate(
   const signalScore = computeStockSignal(stock, front);
   const hypePenalty =
     computeHypePenalty(stock, front) + (typeof yesterdayHeadline === "string" ? STALE_REPEAT_PENALTY : 0);
-  let quietScore = signalScore - hypePenalty;
+  const signalTypes = inferStandardSignalTypes({
+    ...(stock.headline ? { headline: stock.headline } : {}),
+    ...(stock.reason ?? stock.whyShown ? { reason: stock.reason ?? stock.whyShown } : {}),
+    ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
+    ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
+    ...(front?.signals ? { signals: front.signals } : {}),
+    ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
+    ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
+  });
+  const performanceBonus = signalPerformanceBonus(signalTypes, performance);
+  let quietScore = signalScore - hypePenalty + performanceBonus;
   if (!repeatStale && quietScore < 6) return null;
   if (repeatStale) quietScore = STALE_REPEAT_FLOOR + quietScore; // 신선 후보가 전부 소진된 뒤에만 뽑힘
   return {
@@ -256,6 +282,8 @@ export function stockCandidate(
     signalScore,
     hypePenalty,
     quietScore,
+    signalTypes,
+    signalPerformanceBonus: performanceBonus,
   };
 }
 
@@ -290,6 +318,8 @@ function contentCandidate(card: DeckContentCard, pinnedIds?: ReadonlySet<string>
     signalScore,
     hypePenalty,
     quietScore: signalScore - hypePenalty,
+    signalTypes: [],
+    signalPerformanceBonus: 0,
   };
 }
 
@@ -307,6 +337,8 @@ function narrativeCandidate(card: DiscoveryDeckCardPayload): Daily30Candidate | 
     signalScore,
     hypePenalty: famousPenalty,
     quietScore: signalScore - famousPenalty,
+    signalTypes: [],
+    signalPerformanceBonus: 0,
   };
 }
 
@@ -314,7 +346,8 @@ function addStockCandidates(
   out: Daily30Candidate[],
   discovery: DiscoveryResponse,
   seen: Set<string>,
-  freshness?: FreshnessSnapshot
+  freshness?: FreshnessSnapshot,
+  performance: SignalPerformanceMetrics = {}
 ): void {
   const cards = discovery.cards?.length ? discovery.cards : discovery.stocks.map((stock) => ({ kind: "stock", ...stock }) satisfies DiscoveryDeckCardPayload);
   for (const card of cards) {
@@ -323,7 +356,7 @@ function addStockCandidates(
       const id = stockId(stock);
       if (seen.has(id)) continue;
       seen.add(id);
-      const candidate = stockCandidate(stock, discovery.fronts[stock.canonical], freshness);
+      const candidate = stockCandidate(stock, discovery.fronts[stock.canonical], freshness, performance);
       if (candidate) out.push(candidate);
       continue;
     }
@@ -337,7 +370,7 @@ function addStockCandidates(
     const id = stockId(stock);
     if (seen.has(id)) continue;
     seen.add(id);
-    const candidate = stockCandidate(stock, discovery.fronts[stock.canonical], freshness);
+    const candidate = stockCandidate(stock, discovery.fronts[stock.canonical], freshness, performance);
     if (candidate) out.push(candidate);
   }
 }
@@ -453,6 +486,10 @@ function responseFromSelected(
         quietScore: Number(candidate.quietScore.toFixed(2)),
         signalScore: Number(candidate.signalScore.toFixed(2)),
         hypePenalty: Number(candidate.hypePenalty.toFixed(2)),
+        ...(candidate.signalTypes.length ? { signalTypes: candidate.signalTypes } : {}),
+        ...(candidate.signalPerformanceBonus > 0
+          ? { signalPerformanceBonus: candidate.signalPerformanceBonus }
+          : {}),
       })),
       assetCounts,
     },
@@ -485,7 +522,7 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
   const targetCount = Math.max(1, Math.min(50, options.targetCount ?? DAILY_CARD_TARGET));
   const persistPicks = options.persistPicks ?? true;
   const today = kstDateOf();
-  const [kr, us, coin, rawContent, feedContent, freshness] = await Promise.all([
+  const [kr, us, coin, rawContent, feedContent, freshness, signalPerformance] = await Promise.all([
     buildDiscoveryResponse({ country: "KR", targetedMaterial: true, targetedMaterialLimit: 36, allowAiSynthesis: false }),
     buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 16, allowAiSynthesis: false }),
     // 코인(WO 미장·코인 확충) — 시총 상위 30 커버리지. 신호 없으면 stocks 0(쿼터 강제 없음 — 정직).
@@ -496,6 +533,9 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
     // 피드 강화(WO) — 브리핑·버즈·회고. 크론이 채운 캐시만 읽는다(외부 fetch 0).
     readTodayFeedContent().catch((): TodayFeedContent => ({ cards: [], pinnedIds: new Set() })),
     readYesterdayPicks(kstDateOf()),
+    getCachedTrackRecord()
+      .then((record) => record.signalHistory30)
+      .catch((): SignalPerformanceMetrics => ({})),
   ]);
   // MARKET NOTE 해석 1줄(WO — 숫자만 금지): 국내 지수 카드에 섹터 펄스(실데이터) 주입.
   const enrichedRawContent = feedContent.indexNote
@@ -513,9 +553,9 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
   ];
   const candidates: Daily30Candidate[] = [];
   const seen = new Set<string>();
-  addStockCandidates(candidates, kr, seen, freshness);
-  addStockCandidates(candidates, us, seen, freshness);
-  addStockCandidates(candidates, coin, seen, freshness);
+  addStockCandidates(candidates, kr, seen, freshness, signalPerformance);
+  addStockCandidates(candidates, us, seen, freshness, signalPerformance);
+  addStockCandidates(candidates, coin, seen, freshness, signalPerformance);
   addContentCandidates(candidates, content, seen, feedContent.pinnedIds);
 
   // WO-GNB 두 표면 분리: 덱 = 종목 30장(내러티브·콘텐츠 제외), 피드 = 콘텐츠·내러티브(중요도순).

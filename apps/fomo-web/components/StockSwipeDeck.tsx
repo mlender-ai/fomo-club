@@ -1,7 +1,15 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fomoCardView, computeFomoScore, selectFomoHook } from "@fomo/core";
+import {
+  fomoCardView,
+  computeFomoScore,
+  formatSignalResumeBadge,
+  inferStandardSignalTypes,
+  isSignalTypeCode,
+  normalizeSignalTypeCodes,
+  selectFomoHook,
+} from "@fomo/core";
 import type {
   AxisSignal,
   CardFrontSignals,
@@ -11,6 +19,7 @@ import type {
   FomoCardView,
   MultiAxisHookSelection,
   TaFact,
+  SignalTypeCode,
 } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
@@ -40,18 +49,6 @@ const UP_THRESHOLD = 90; // 위로 끌어 슈퍼관심(강한 관심)
 const EXIT_MS = 320;
 // DESIGN.md §2 브랜드 액센트(역할 인코딩). 오렌지=주목 열기/강도, 네온=발견·💎·CTA. 등락엔 절대 금지.
 const NEON = "#D8FF3A";
-const SIGNAL_TRACK_LABEL: Record<string, string> = {
-  insider: "내부자 매수",
-  flow: "수급",
-  volume: "거래량",
-  material: "재료",
-  chart: "차트",
-  price: "가격",
-  time: "시점",
-  herd: "화제성",
-  affinity: "관심",
-};
-
 /** 포모 점수 로드 전 placeholder(빈 입력 → silent·점수 보류). */
 const EMPTY_FOMO = computeFomoScore({});
 
@@ -76,6 +73,7 @@ export type FrontEntry = {
   chartSeries?: NonNullable<StockFrontResponse["chartSeries"]>;
   coinIssues?: NonNullable<StockFrontResponse["coinIssues"]>;
   coinCause?: NonNullable<StockFrontResponse["coinCause"]>;
+  signalTypes?: SignalTypeCode[];
 };
 
 type UndoEntry = {
@@ -342,7 +340,7 @@ function StockCardFace({
   companyScore?: CompanyScoreResult | undefined;
   discoveryContext?: string | undefined;
   verdict?: CardVerdict | undefined;
-  signalTrack?: { label: string; metric: TrackMetric } | undefined;
+  signalTrack?: { code: SignalTypeCode; metric: TrackMetric } | undefined;
   progress?: string | undefined;
 }) {
   const displayChangeText = normalizeChangeText(changeText);
@@ -419,9 +417,9 @@ function StockCardFace({
 
       {verdict && <FeedSignalStrip bull={feedBull} bear={feedBear} />}
 
-      {signalTrack && signalTrack.metric.winRate !== null && (
+      {signalTrack && (
         <p className="mt-2 shrink-0 text-[11px] leading-4 text-muted">
-          이런 {signalTrack.label} 신호의 역대 30일 승률 {signalTrack.metric.winRate}% (n={signalTrack.metric.n})
+          {formatSignalResumeBadge(signalTrack.code, signalTrack.metric)}
         </p>
       )}
 
@@ -583,6 +581,7 @@ export function StockSwipeDeck({
               ...(d.wyckoff ? { wyckoff: d.wyckoff } : {}),
               ...(d.coinIssues ? { coinIssues: d.coinIssues } : {}),
               ...(d.coinCause ? { coinCause: d.coinCause } : {}),
+              ...(prev[key]?.signalTypes ? { signalTypes: prev[key]!.signalTypes } : {}),
             },
           }))
         )
@@ -650,15 +649,22 @@ export function StockSwipeDeck({
   const saveDiscovery = (stock: DeckStock) => {
     upsertWatch(stock.canonical, Date.now(), { sector: stock.sector, reason: whyFor(stock) });
   };
-  const signalTrackFor = (entry: FrontEntry | undefined): { label: string; metric: TrackMetric } | undefined => {
+  const signalTrackFor = (stock: DeckStock, entry: FrontEntry | undefined): { code: SignalTypeCode; metric: TrackMetric } | undefined => {
     if (!entry || !signalHistory30) return undefined;
-    const candidates: string[] = (entry.axisSignals ?? [])
-      .filter((signal) => signal.fired)
-      .map((signal) => signal.axis);
-    if (entry.verdict?.phase) candidates.push("chart");
-    return [...new Set(candidates)]
-      .flatMap((label) => signalHistory30[label] ? [{ label: SIGNAL_TRACK_LABEL[label] ?? label, metric: signalHistory30[label]! }] : [])
-      .sort((a, b) => b.metric.n - a.metric.n)[0];
+    const stored = normalizeSignalTypeCodes(entry.signalTypes ?? []);
+    const candidates = stored.length > 0
+      ? stored
+      : inferStandardSignalTypes({
+          ...(stock.headline ? { headline: stock.headline } : {}),
+          ...(stock.reason ?? stock.whyShown ? { reason: stock.reason ?? stock.whyShown } : {}),
+          ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
+          ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
+          signals: entry.signals,
+          ...(entry.wyckoff ? { wyckoff: entry.wyckoff } : {}),
+          ...(typeof entry.companyScore?.score === "number" ? { companyScore: entry.companyScore.score } : {}),
+        });
+    const code = candidates.find((value) => isSignalTypeCode(value) && signalHistory30[value]);
+    return code ? { code, metric: signalHistory30[code]! } : undefined;
   };
   const renderFace = (card: DeckCard, progress?: string) => {
     if (card.type === "sector") return <SectorCard card={card.data} progress={progress} />;
@@ -702,7 +708,7 @@ export function StockSwipeDeck({
         companyScore={e.companyScore}
         discoveryContext={discoveryContext}
         verdict={e?.verdict}
-        signalTrack={signalTrackFor(e)}
+        signalTrack={signalTrackFor(stock, e)}
         progress={progress}
       />
     );

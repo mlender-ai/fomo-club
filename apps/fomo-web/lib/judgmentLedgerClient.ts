@@ -46,6 +46,8 @@ export interface TrackWindowResult {
 export interface TrackRecordResponse {
   generatedAt: string;
   methodology: "all-final-selections-fixed-windows";
+  signalTaxonomyVersion: string;
+  signalMinimumSample: number;
   windows: TrackWindowResult[];
   signalHistory30: Record<string, TrackMetric>;
 }
@@ -95,9 +97,12 @@ export async function fetchTrackRecord(): Promise<TrackRecordResponse> {
   return res.json() as Promise<TrackRecordResponse>;
 }
 
-export async function fetchLedgerTimeline(canonical: string): Promise<{ entries: LedgerTimelineEntry[] }> {
+export async function fetchLedgerTimeline(canonical: string): Promise<{
+  entries: LedgerTimelineEntry[];
+  signalHistory30: Record<string, TrackMetric>;
+}> {
   const query = new URLSearchParams({ canonical, sessionId: getSessionId() });
   const res = await fetch(`/api/fomo/ledger/timeline?${query}`, { cache: "no-store", credentials: "same-origin" });
   if (!res.ok) throw new Error(`GET /api/fomo/ledger/timeline ${res.status}`);
-  return res.json() as Promise<{ entries: LedgerTimelineEntry[] }>;
+  return res.json() as Promise<{ entries: LedgerTimelineEntry[]; signalHistory30: Record<string, TrackMetric> }>;
 }

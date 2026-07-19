@@ -22,7 +22,7 @@ function selection(overrides: Partial<LedgerSelectionView> = {}): LedgerSelectio
     subject: { asset: "us-stock", canonical: "ACME", symbol: "ACME" },
     priceAt: 100,
     actor: "engine",
-    payload: { signalTypes: ["insider"], companyScore: 82, scoreBand: "80-100" },
+    payload: { signalTypes: ["insider_cluster"], companyScore: 82, scoreBand: "80-100" },
     ...overrides,
   };
 }
@@ -40,10 +40,16 @@ describe("Judgment Ledger", () => {
   });
 
   it("신호 유형과 점수대를 결정론적으로 분류한다", () => {
-    expect(inferSignalTypes({ headline: "CEO Form 4 매수와 거래량 확대", reason: "SEC 공시" })).toEqual([
-      "insider",
-      "material",
-      "volume",
+    expect(inferSignalTypes({
+      headline: "내부자 3명 클러스터 매수와 공급계약",
+      signals: { institutionNetStreak: 4, foreignNetStreak: 3 },
+      companyScore: 82,
+    })).toEqual([
+      "insider_cluster",
+      "institution_streak",
+      "foreign_streak",
+      "material_contract",
+      "score_80_plus",
     ]);
     expect([scoreBand(90), scoreBand(70), scoreBand(40), scoreBand(null)]).toEqual([
       "80-100",
@@ -86,6 +92,10 @@ describe("Judgment Ledger", () => {
     expect(candidates.map((entry) => entry.kind)).toEqual(["signal", "verdict", "score"]);
     expect(selected.map((entry) => entry.kind)).toEqual(["signal", "verdict", "score", "selection"]);
     expect(selected.every((entry) => entry.priceAt === 123.45 && entry.actor === "committee")).toBe(true);
+    expect(selected.find((entry) => entry.kind === "signal")?.payload).toMatchObject({
+      taxonomyVersion: "m2.v1",
+      signalTypes: ["score_80_plus"],
+    });
     const selectionEntry = selected.find((entry) => entry.kind === "selection")!;
     const restored = daily30ResponseFromSelections([selection({
       actor: "committee",
@@ -107,7 +117,7 @@ describe("track record fixed-window aggregation", () => {
     selectedPrice: 100,
     returnPct: 10,
     asset: "us-stock",
-    signalTypes: ["insider", "flow"],
+    signalTypes: ["insider_cluster", "institution_streak"],
     scoreBand: "80-100",
     companyScore: 84,
   };
@@ -115,13 +125,14 @@ describe("track record fixed-window aggregation", () => {
   it("손실을 포함해 승률·중앙값·n을 전체와 분해축에 동일하게 계산한다", () => {
     const record = buildTrackRecord([
       base,
-      { ...base, selectionId: "s2", returnPct: -4, asset: "kr-stock", signalTypes: ["flow"], scoreBand: "60-79" },
-      { ...base, selectionId: "s3", returnPct: 2, asset: "us-stock", signalTypes: ["insider"], scoreBand: "80-100" },
+      { ...base, selectionId: "s2", returnPct: -4, asset: "kr-stock", signalTypes: ["institution_streak"], scoreBand: "60-79" },
+      { ...base, selectionId: "s3", returnPct: 2, asset: "us-stock", signalTypes: ["insider_cluster"], scoreBand: "80-100" },
     ], "2026-07-20T00:00:00.000Z");
     const month = record.windows.find((window) => window.days === 30)!;
     expect(month.overall).toEqual({ n: 3, winRate: 66.7, medianReturn: 2 });
     expect(month.byAsset["us-stock"]).toEqual({ n: 2, winRate: 100, medianReturn: 6 });
-    expect(month.bySignal.flow).toEqual({ n: 2, winRate: 50, medianReturn: 3 });
+    expect(month.bySignal.institution_streak).toEqual({ n: 2, winRate: null, medianReturn: null });
+    expect(month.bySignal.insider_cluster).toEqual({ n: 2, winRate: null, medianReturn: null });
     expect(month.byScoreBand["80-100"]?.n).toBe(2);
   });
 
@@ -129,6 +140,19 @@ describe("track record fixed-window aggregation", () => {
     const record = buildTrackRecord([]);
     expect(record.windows.map((window) => window.days)).toEqual([7, 30, 90]);
     expect(record.windows.every((window) => window.overall.n === 0 && window.overall.winRate === null)).toBe(true);
+    expect(Object.keys(record.signalHistory30)).toHaveLength(15);
+    expect(record.signalHistory30.insider_cluster).toEqual({ n: 0, winRate: null, medianReturn: null });
+  });
+
+  it("신호 승률은 30개 표본부터만 공개한다", () => {
+    const outcomes = Array.from({ length: 30 }, (_, index): OutcomePayload => ({
+      ...base,
+      selectionId: `qualified-${index}`,
+      returnPct: index < 21 ? 4 : -2,
+      signalTypes: ["material_contract"],
+    }));
+    const metric = buildTrackRecord(outcomes).signalHistory30.material_contract;
+    expect(metric).toEqual({ n: 30, winRate: 70, medianReturn: 4 });
   });
 
   it("선정 당시 박제된 캔들에서 목표일 또는 다음 거래일 종가를 먼저 사용한다", async () => {

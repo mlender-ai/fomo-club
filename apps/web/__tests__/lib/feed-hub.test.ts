@@ -140,6 +140,21 @@ describe("daily-30 신선도 폴백 (30장 유지 > 신선도)", () => {
     expect(updated).not.toBeNull();
     expect(updated!.quietScore).toBeGreaterThan(0);
   });
+
+  it("30개 이상 검증된 신호 성과만 quietScore에 소폭 가점한다", () => {
+    const stock = stubStock("성과종목", "외국인 4일 연속 순매수");
+    const front = { ...stubFront(), signals: { ...stubFront().signals, foreignNetStreak: 4 } };
+    const baseline = stockCandidate(stock, front)!;
+    const boosted = stockCandidate(stock, front, undefined, {
+      foreign_streak: { n: 60, winRate: 70, medianReturn: 3 },
+    })!;
+    const smallSample = stockCandidate(stock, front, undefined, {
+      foreign_streak: { n: 29, winRate: 100, medianReturn: 10 },
+    })!;
+    expect(boosted.signalTypes).toContain("foreign_streak");
+    expect(boosted.quietScore - baseline.quietScore).toBe(2);
+    expect(smallSample.quietScore).toBe(baseline.quietScore);
+  });
 });
 
 describe("capFeedItemsByType (2026-07-11 베리에이션)", () => {

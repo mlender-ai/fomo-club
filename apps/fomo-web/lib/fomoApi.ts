@@ -763,6 +763,8 @@ export interface Daily30Response extends DiscoveryResponse {
       quietScore: number;
       signalScore: number;
       hypePenalty: number;
+      signalTypes?: import("@fomo/core").SignalTypeCode[];
+      signalPerformanceBonus?: number;
     }>;
     assetCounts: Record<Daily30AssetClass, number>;
     committee?: {

@@ -15,3 +15,4 @@ export * from "./technical-analysis";
 export * from "./verdict";
 export * from "./wyckoff-analysis";
 export * from "./company-score";
+export * from "./signal-resume";
