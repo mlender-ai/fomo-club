@@ -253,6 +253,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
+    maxTokens: 2_500,
     timeoutMs: 45_000,
     trace: args.trace,
     metadata: { committeeVersion: COMMITTEE_VERSION, role: args.role },

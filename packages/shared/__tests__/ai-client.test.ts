@@ -54,7 +54,7 @@ describe("ai-client provider routing", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     expect(isAiConfigured()).toBe(true);
-    const res = await callAI({ messages: [{ role: "user", content: "hello" }] });
+    const res = await callAI({ messages: [{ role: "user", content: "hello" }], maxTokens: 2500 });
 
     expect(res.ok).toBe(true);
     expect(res.content).toBe("ok");
@@ -65,8 +65,9 @@ describe("ai-client provider routing", () => {
         headers: expect.objectContaining({ Authorization: "Bearer groq-key" }),
       })
     );
-    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string) as { model: string };
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string) as { model: string; max_tokens: number };
     expect(body.model).toBe("llama-3.3-70b-versatile");
+    expect(body.max_tokens).toBe(2500);
   });
 
   it("uses Groq by default when only GROQ_API_KEY is configured", async () => {

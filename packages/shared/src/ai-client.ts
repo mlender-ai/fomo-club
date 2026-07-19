@@ -24,6 +24,8 @@ export interface CallAiOptions {
   /** 미지정 시 AI_MODEL env. 호출별 오버라이드로 모델 비교·라우팅. */
   model?: string;
   temperature?: number;
+  /** OpenAI 호환 max_tokens. 생략 시 공급자 기본값, 비용/TPM 게이트 경로는 반드시 명시한다. */
+  maxTokens?: number;
   /** 기본 25_000ms. */
   timeoutMs?: number;
   apiUrl?: string;
@@ -152,6 +154,7 @@ export async function callAI(opts: CallAiOptions): Promise<CallAiResult> {
       body: JSON.stringify({
         model,
         ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+        ...(opts.maxTokens !== undefined ? { max_tokens: opts.maxTokens } : {}),
         messages: opts.messages,
       }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 25_000),
