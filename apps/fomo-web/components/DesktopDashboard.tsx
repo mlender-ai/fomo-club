@@ -17,7 +17,7 @@ import { SectorCard } from "@/components/SectorCard";
 import { StockIssueCard, sectorCardData } from "@/components/FeedView";
 import { useFeedArchive } from "@/lib/useFeedArchive";
 import { CalendarCard } from "@/components/CalendarCard";
-import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
+import { verdictBalance } from "@/lib/discoveryPresentation";
 
 /**
  * PC(≥1024px) 3컬럼 대시보드 — WO-PC-VERSION.
@@ -79,7 +79,7 @@ function CardListRow({
   active: boolean;
   onSelect: () => void;
 }) {
-  const status = card.type === "stock" ? discoveryStatus(front?.fomo) : undefined;
+  const companyScore = card.type === "stock" ? front?.companyScore : undefined;
   const balance = card.type === "stock" ? verdictBalance(front?.verdict) : undefined;
   const title =
     card.type === "stock" ? card.data.canonical : card.type === "sector" ? `${card.data.sector} 섹터` : card.data.headline;
@@ -105,12 +105,12 @@ function CardListRow({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-bold text-whiteout">{title}</span>
-        {status && (
+        {typeof companyScore?.score === "number" && (
           <span
             className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold"
-            style={{ borderColor: status.color, color: status.color }}
+            style={{ borderColor: NEON, color: NEON }}
           >
-            {status.label}
+            {companyScore.score}점
           </span>
         )}
       </div>
@@ -121,6 +121,7 @@ function CardListRow({
       {hook && (
         <p className="mt-1 truncate text-xs leading-5 text-muted">{hook}</p>
       )}
+      {companyScore?.label && <p className="mt-1 truncate text-[10px] leading-4 text-whiteout">{companyScore.label}</p>}
     </button>
   );
 }

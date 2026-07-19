@@ -25,6 +25,8 @@ export interface StockFinancialRow {
   label: string;
   /** 기간별 값(친구 단위로 포맷). periods 순서와 매칭. */
   values: string[];
+  /** 동일 기간의 원시 숫자. YoY·마진 같은 결정론 계산에만 쓰며 결측은 null. */
+  rawValues?: Array<number | null>;
 }
 
 export interface StockFinancials {
@@ -32,6 +34,14 @@ export interface StockFinancials {
   rows: StockFinancialRow[];
   /** 이익 안정성 한 줄(A) — *사실까지만*. 예 "남기는 돈이 해마다 출렁여". */
   note?: string;
+}
+
+export interface StockValuationHistory {
+  periods: string[];
+  per?: number[];
+  pbr?: number[];
+  psr?: number[];
+  label: string;
 }
 
 /** PER → "이게 무슨 뜻" 한 줄(사실: 시장 기대 수준 묘사. 싸다/비싸다 단정 금지). */
@@ -74,6 +84,8 @@ export interface StockBasics {
   metrics: StockMetric[];
   /** 연간 재무(매출·영업이익·순이익 등). 없으면 undefined. */
   financials?: StockFinancials;
+  /** 실제 연간 배수 이력. 확보된 기간만 명시하며 5년 미만을 5년으로 부풀리지 않는다. */
+  valuationHistory?: StockValuationHistory;
 }
 
 const num = (s: string): number | null => {
@@ -202,12 +214,13 @@ export function parseNaverFinanceAnnual(json: unknown): {
     const r = rowList.find((x) => typeof x.title === "string" && (x.title as string).includes(want.match));
     if (!r) continue;
     const cols = (r.columns ?? {}) as Record<string, { value?: string }>;
+    const rawValues = periods.map((p) => num(cols[p.key]?.value ?? ""));
     const values = periods.map((p) => {
       const raw = cols[p.key]?.value;
       return raw ? formatEok(raw) ?? raw : "—";
     });
     // 전부 결측이면 행 자체를 넣지 않는다(가짜로 안 채움).
-    if (values.some((v) => v !== "—")) rows.push({ label: want.label, values });
+    if (values.some((v) => v !== "—")) rows.push({ label: want.label, values, rawValues });
   }
   if (rows.length > 0) {
     const financials: StockFinancials = {
@@ -237,6 +250,19 @@ export function assembleStockBasics(
   const b = parseNaverStockBasic(basic);
   const ti = parseNaverTotalInfos(integration);
   const fa = parseNaverFinanceAnnual(financeAnnual);
+  const finance = (financeAnnual ?? {}) as { financeInfo?: { trTitleList?: Array<{ title?: string; key?: string; isConsensus?: string }>; rowList?: Array<{ title?: string; columns?: Record<string, { value?: string }> }> } };
+  const periodRows = finance.financeInfo?.trTitleList ?? [];
+  const actualPeriods = periodRows.filter((period) => period.isConsensus !== "Y" && period.key);
+  const valuationRow = (title: string) => finance.financeInfo?.rowList?.find((row) => row.title === title);
+  const valuationValues = (title: string) => {
+    const row = valuationRow(title);
+    const values = actualPeriods.map((period) => num(row?.columns?.[period.key!]?.value ?? "")).filter((value): value is number => value !== null && value > 0);
+    return values.length >= 3 ? values : undefined;
+  };
+  const perHistory = valuationValues("PER");
+  const pbrHistory = valuationValues("PBR");
+  const psrHistory = valuationValues("PSR");
+  const historyYears = Math.max(perHistory?.length ?? 0, pbrHistory?.length ?? 0, psrHistory?.length ?? 0);
   return {
     name: b.name || name,
     ...(b.market ? { market: b.market } : {}),
@@ -247,5 +273,16 @@ export function assembleStockBasics(
     ...(fa.summary ? { summary: fa.summary } : {}),
     metrics: ti.metrics,
     ...(fa.financials ? { financials: fa.financials } : {}),
+    ...(historyYears >= 3
+      ? {
+          valuationHistory: {
+            periods: actualPeriods.map((period) => (period.title ?? "").replace(/\.$/, "")),
+            ...(perHistory ? { per: perHistory } : {}),
+            ...(pbrHistory ? { pbr: pbrHistory } : {}),
+            ...(psrHistory ? { psr: psrHistory } : {}),
+            label: `최근 ${historyYears}개년`,
+          },
+        }
+      : {}),
   };
 }

@@ -1,4 +1,4 @@
-import { computeCardVerdict, computeFomoScore, isFrontHookSafe } from "@fomo/core";
+import { computeCardVerdict, computeCompanyScore, computeFomoScore, computeWyckoffAnalysis, isFrontHookSafe } from "@fomo/core";
 import type { CardFrontSignals } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
@@ -131,6 +131,12 @@ export function coinFrontSeed(
     volumeRatio: signal.volumeRatio,
     currency: "KRW",
   });
+  const verdict = composeCoinVerdict(baseVerdict, coinIssues);
+  const wyckoff = computeWyckoffAnalysis({
+    candles: snapshot.candles,
+    ...(typeof verdict.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+    currency: "KRW",
+  });
   const coinCause = buildCoinCause(snapshot, coinIssues);
   const primaryIssue = coinIssues.find((issue) => issue.scope === "coin");
   return {
@@ -143,7 +149,15 @@ export function coinFrontSeed(
     priceText: krw(snapshot.price),
     changeText: `${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(2)}%`,
     changeDir,
-    verdict: composeCoinVerdict(baseVerdict, coinIssues),
+    verdict,
+    wyckoff,
+    companyScore: computeCompanyScore({
+      signals,
+      verdict,
+      wyckoff,
+      currentPrice: snapshot.price,
+      asOf: snapshot.fetchedAt,
+    }),
     candles,
     ...(chartSeries ? { chartSeries } : {}),
     ...(coinIssues.length ? { coinIssues: [...coinIssues].slice(0, 3) } : {}),
