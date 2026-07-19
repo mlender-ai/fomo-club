@@ -11,11 +11,11 @@ import type {
 } from "@fomo/core";
 import type { DeckContent, DeckNarrative } from "./discoveryDeck";
 import { isDiscoveryCopySafe } from "./discoveryCopySafe";
-import { getSessionId } from "@/lib/session";
 import { cachedGet, readCached, refreshCached, setCached } from "./apiCache";
 import { discoveryMatchesCountry, type DiscoveryCountryScope } from "./discoveryCountryScope";
 
 export type { BannerItem } from "@fomo/core";
+export * from "./judgmentLedgerClient";
 
 const DEFAULT_API_BASE = "https://fomo-club-backend.vercel.app";
 const API_BASE =
@@ -1127,14 +1127,10 @@ export function recordTaste(
   subject: string,
   signal: TasteSignalKind
 ): void {
-  if (typeof window === "undefined" || !subject) return;
-  void fetch("/api/fomo/taste", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
-    body: JSON.stringify({ subjectType, subject, signal, sessionId: getSessionId() }),
-    keepalive: true, // 화면 전환/언마운트 중에도 전송 보장
-  }).catch((err) => console.warn("[recordTaste] failed", err));
+  // WO-M1: priceAt 없는 TasteSignal 이중 기록은 폐기. 종목 덱은 recordJudgmentAction을 사용한다.
+  void subjectType;
+  void subject;
+  void signal;
 }
 
 // ── 트랙 B: 이메일+비밀번호 인증 ────────────────────────────────────────────
@@ -1143,16 +1139,7 @@ export function recordTaste(
 
 /** 익명 sessionId 취향 신호 → 내 계정 연결(로그인 직후 1회). 실패해도 흐름 안 막음. */
 async function linkTaste(): Promise<void> {
-  try {
-    await fetch("/api/fomo/taste/link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ sessionId: getSessionId() }),
-    });
-  } catch (err) {
-    console.warn("[linkTaste] failed", err);
-  }
+  // WO-M1: append-only actor는 수정하지 않는다. 히스토리 조회가 uid와 현재 session actor를 함께 읽는다.
 }
 
 async function authPost(path: string, email: string, password: string): Promise<LoginResponse> {

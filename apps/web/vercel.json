@@ -15,6 +15,10 @@
     {
       "path": "/api/fomo/cron/daily-30/editor",
       "schedule": "20 21 * * *"
+    },
+    {
+      "path": "/api/fomo/cron/ledger-outcomes",
+      "schedule": "40 21 * * *"
     }
   ]
 }

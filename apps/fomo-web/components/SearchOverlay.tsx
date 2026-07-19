@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { SearchIcon, XMarkIcon } from "@/components/icons";
-import { fetchDaily30, fetchStockFront } from "@/lib/fomoApi";
-import { getDiscoverySeen } from "@/lib/discoveryPerformance";
+import { fetchDaily30, fetchJudgmentHistory, fetchStockFront } from "@/lib/fomoApi";
 import { getSessionId } from "@/lib/session";
 
 /**
@@ -66,11 +65,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
   const [searching, setSearching] = useState(false);
   const [branch, setBranch] = useState<Branch>({ kind: "list" });
   const [popular, setPopular] = useState<Array<{ stock: string; naverCode?: string; symbol?: string }>>([]);
-  const [recent] = useState(() =>
-    getDiscoverySeen()
-      .slice(0, 6)
-      .map((item) => ({ stock: item.stock, naverCode: item.naverCode, symbol: item.symbol }))
-  );
+  const [recent, setRecent] = useState<Array<{ stock: string; naverCode?: string; symbol?: string }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const seqRef = useRef(0);
 
@@ -88,6 +83,13 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
           }))
         )
       )
+      .catch(() => {});
+    fetchJudgmentHistory()
+      .then((result) => setRecent(result.items.slice(0, 6).map((item) => ({
+        stock: item.stock,
+        ...(item.naverCode ? { naverCode: item.naverCode } : {}),
+        ...(item.symbol ? { symbol: item.symbol } : {}),
+      }))))
       .catch(() => {});
     return () => {
       document.body.style.overflow = "";

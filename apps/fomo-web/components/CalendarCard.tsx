@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import type { FeedHubCalendar, FeedHubCalendarStockRef } from "@/lib/fomoApi";
+import { useEffect, useMemo, useState } from "react";
+import { fetchJudgmentHistory, type FeedHubCalendar, type FeedHubCalendarStockRef } from "@/lib/fomoApi";
 import { getWatchlist } from "@/lib/watchlist";
-import { getDiscoverySeen } from "@/lib/discoveryPerformance";
 
 /**
  * 주간 판단 캘린더 (2026-07-15) — 해자: 일정 나열이 아니라 "내 카드의 시험대".
@@ -27,11 +26,18 @@ function kstToday(): string {
 }
 
 export function CalendarCard({ calendar }: { calendar: FeedHubCalendar }) {
-  // 내 카드 조인 — 담은(★) 종목과 본 종목. 렌더 시점 1회면 충분(캘린더는 하루 단위 데이터).
-  const { mineSet, seenSet } = useMemo(() => {
-    const mine = new Set(getWatchlist().map((w) => w.stock));
-    const seen = new Set(getDiscoverySeen().map((s) => s.stock));
-    return { mineSet: mine, seenSet: seen };
+  const mineSet = useMemo(() => new Set(getWatchlist().map((item) => item.stock)), []);
+  const [seenSet, setSeenSet] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let alive = true;
+    void fetchJudgmentHistory()
+      .then((result) => {
+        if (alive) setSeenSet(new Set(result.items.map((item) => item.stock)));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const today = kstToday();

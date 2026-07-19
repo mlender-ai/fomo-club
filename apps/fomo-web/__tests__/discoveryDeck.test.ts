@@ -16,6 +16,7 @@ import {
   type DeckNarrative,
   type DeckStock,
 } from "../lib/discoveryDeck";
+import { recordStockInterest, resetStockInterestProjection } from "../lib/stockInterest";
 
 const storage = new Map<string, string>();
 
@@ -32,6 +33,7 @@ function installLocalStorage() {
 afterEach(() => {
   vi.unstubAllGlobals();
   storage.clear();
+  resetStockInterestProjection();
 });
 
 function stock(i: number, sector: StockSector = "AI", marquee = false): SectorStock {
@@ -216,13 +218,8 @@ describe("buildTodayDiscoveryStocks", () => {
   it("pushes recently seen and lessed stocks out of the first 20 when there is enough pool", () => {
     installLocalStorage();
     const now = Date.now();
-    storage.set(
-      "fomo_stock_interest",
-      JSON.stringify([
-        { stock: "테스트0", signal: "seen", ts: now },
-        { stock: "테스트1", signal: "less", ts: now },
-      ])
-    );
+    recordStockInterest("테스트0", "seen", now);
+    recordStockInterest("테스트1", "less", now);
 
     const result = buildTodayDiscoveryStocks(pools(45), [], ["AI"]);
     const first20 = result.slice(0, 20).map((s) => s.canonical);
@@ -234,7 +231,7 @@ describe("buildTodayDiscoveryStocks", () => {
   it("downranks sectors that the user recently dismissed", () => {
     installLocalStorage();
     const now = Date.now();
-    storage.set("fomo_stock_interest", JSON.stringify([{ stock: "삼성전자", signal: "less", ts: now }]));
+    recordStockInterest("삼성전자", "less", now);
 
     const cards = [
       {

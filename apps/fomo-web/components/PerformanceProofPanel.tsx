@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchDiscoveryPerformancePrices, type DiscoveryPerformancePrice } from "@/lib/fomoApi";
+import { fetchDiscoveryPerformancePrices, fetchTrackRecord, type DiscoveryPerformancePrice, type TrackRecordResponse } from "@/lib/fomoApi";
 import {
   daysSince,
   formatReturnPct,
@@ -61,6 +61,7 @@ async function shareRow(row: PerformanceRow): Promise<void> {
 export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeenItem[] }) {
   const [prices, setPrices] = useState<Record<string, DiscoveryPerformancePrice>>({});
   const [loading, setLoading] = useState(false);
+  const [trackRecord, setTrackRecord] = useState<TrackRecordResponse | null>(null);
   const pricedItems = useMemo(
     () => items.filter((item) => typeof item.firstSeenPrice === "number").slice(0, 40),
     [items]
@@ -85,6 +86,10 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
     };
   }, [pricedItems]);
 
+  useEffect(() => {
+    void fetchTrackRecord().then(setTrackRecord).catch(() => {});
+  }, []);
+
   const rows: PerformanceRow[] = useMemo(
     () =>
       items.slice(0, 40).map((item) => {
@@ -107,14 +112,20 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
     .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   const winRate = returns.length > 0 ? Math.round((returns.filter((value) => value > 0).length / returns.length) * 100) : null;
   const medianReturn = median(returns);
-  const scoreBands = companyScoreBandStats(rows);
+  const localScoreBands = companyScoreBandStats(rows);
+  const trackedBands = trackRecord?.windows.find((window) => window.days === 30)?.byScoreBand;
+  const scoreBands = localScoreBands.map((band, index) => {
+    const key = index === 0 ? "80-100" : index === 1 ? "60-79" : "0-59";
+    const tracked = trackedBands?.[key];
+    return tracked ? { ...band, count: tracked.n, winRate: tracked.winRate } : band;
+  });
 
   if (items.length === 0) return null;
 
   return (
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between px-1">
-        <p className="text-xs text-muted">먼저 짚은 성과</p>
+        <a href="/track-record" className="text-xs text-muted underline decoration-hairline underline-offset-4">포모클럽의 성적표</a>
         <span className="text-[10px] font-medium text-muted">{returns.length}/{items.length}</span>
       </div>
 
