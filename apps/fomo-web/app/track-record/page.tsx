@@ -40,10 +40,10 @@ function MetricBlock({ label, metric, value }: { label: string; metric: TrackMet
       : metric.winRate === null ? "축적 중" : `${metric.winRate.toFixed(1)}%`;
   const note = value === "winRate" ? "수익률 0% 초과" : value === "median" ? "전체 수익률 중앙값" : "상승·하락 모두 포함";
   return (
-    <div className="border-l border-hairline pl-3 first:border-l-0 first:pl-0">
-      <p className="text-[10px] text-muted">{label}</p>
-      <p className="mt-1 font-number text-xl font-bold text-whiteout">{display}</p>
-      <p className="mt-0.5 text-[10px] text-muted">{note}</p>
+    <div className="min-w-0 border-l border-hairline pl-3 first:border-l-0 first:pl-0">
+      <p className="break-words text-[10px] leading-4 text-muted">{label}</p>
+      <p className="mt-1 break-words font-number text-lg font-bold leading-6 text-whiteout sm:text-xl">{display}</p>
+      <p className="mt-0.5 break-words text-[10px] leading-4 text-muted">{note}</p>
     </div>
   );
 }
@@ -115,7 +115,7 @@ export default function TrackRecordPage() {
       <header className="pb-6 pt-10">
         <p className="font-pixel text-[10px] text-muted">JUDGMENT LEDGER</p>
         <h1 className="mt-2 text-3xl font-bold text-whiteout">포모클럽의 성적표</h1>
-        <p className="mt-3 max-w-xl break-words text-sm leading-6 text-muted">
+        <p className="mt-3 max-w-xl break-words text-sm leading-6 text-muted [overflow-wrap:anywhere]">
           선정 당시 가격을 바꾸지 않고 박제한 뒤, 7·30·90일의 실제 종가로 전부 채점합니다. 오른 카드와 내린 카드를 모두 포함합니다.
         </p>
       </header>
@@ -156,7 +156,7 @@ export default function TrackRecordPage() {
         </>
       )}
 
-      <footer className="break-words border-t border-hairline pt-5 text-[11px] leading-5 text-muted">
+      <footer className="break-words border-t border-hairline pt-5 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
         수익률은 선정 시점 가격 대비 목표일 당일 또는 다음 첫 거래일 종가입니다. 거래비용·세금·환율 효과는 포함하지 않습니다.
       </footer>
     </main>
