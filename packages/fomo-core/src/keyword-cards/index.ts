@@ -13,3 +13,4 @@ export * from "./discovery-supply";
 export * from "./fomo-score";
 export * from "./technical-analysis";
 export * from "./verdict";
+export * from "./wyckoff-analysis";

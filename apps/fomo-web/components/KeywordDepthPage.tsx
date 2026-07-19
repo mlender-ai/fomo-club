@@ -15,6 +15,8 @@ import {
   type DailyOhlcv,
   type KeywordCard,
   type FomoTone,
+  type WyckoffAnalysis,
+  type WyckoffEvent,
 } from "@fomo/core";
 import {
   fetchThemeInsight,
@@ -385,6 +387,8 @@ function mergeFrontSeed(
     ...(fresh.axisHook ?? seed.axisHook ? { axisHook: fresh.axisHook ?? seed.axisHook } : {}),
     // 판단 층 단일 진실(WO 1.5 A) — 카드(seed)의 verdict 우선. 카드=뎁스 stance 모순 금지.
     ...(seed.verdict ?? fresh.verdict ? { verdict: seed.verdict ?? fresh.verdict } : {}),
+    // 전문 구간 분석은 260일 캔들을 받은 non-lite 응답을 우선한다.
+    ...(fresh.wyckoff ?? seed.wyckoff ? { wyckoff: fresh.wyckoff ?? seed.wyckoff } : {}),
     // 차트 시리즈(WO 1.6 D)는 non-lite 응답(fresh)에만 실린다.
     ...(fresh.chartSeries ?? seed.chartSeries ? { chartSeries: fresh.chartSeries ?? seed.chartSeries } : {}),
     ...(fresh.coinIssues?.length ? { coinIssues: fresh.coinIssues } : seed.coinIssues?.length ? { coinIssues: seed.coinIssues } : {}),
@@ -1504,15 +1508,19 @@ const TA_ROLE_GROUPS: Array<{ role: "event" | "balance" | "confirmation"; label:
 ];
 
 const CHART_COLOR = {
-  up: "#22C55E",
-  down: "#EF4444",
+  up: "#D8FF3A",
+  down: "#777873",
   wick: "rgba(250,250,250,0.52)",
   ma20: "#F59E0B",
   ma60: "#60A5FA",
   ma120: "#A78BFA",
   invalidation: "#F59E0B",
-  volumeUp: "rgba(34,197,94,0.32)",
-  volumeDown: "rgba(239,68,68,0.24)",
+  volumeUp: "rgba(216,255,58,0.34)",
+  volumeDown: "rgba(119,120,115,0.28)",
+  accumulation: "rgba(216,255,58,0.10)",
+  distribution: "rgba(148,163,184,0.12)",
+  markup: "rgba(216,255,58,0.07)",
+  markdown: "rgba(119,120,115,0.10)",
 } as const;
 
 /** 캔들+MA20/60/120+거래량+무효화 레벨선(WO 1.6 D-1) — 라인차트 금지, 라이브러리 없음. */
@@ -1520,11 +1528,14 @@ function AnalysisChart({
   series,
   invalidationLevel,
   candles,
+  analysis,
 }: {
   series: NonNullable<StockFrontResponse["chartSeries"]>;
   invalidationLevel?: number | undefined;
   candles?: DailyOhlcv[] | undefined;
+  analysis?: WyckoffAnalysis | undefined;
 }) {
+  const [selectedEvent, setSelectedEvent] = useState<WyckoffEvent | null>(null);
   const W = 320;
   const PLOT_W = 278;
   const PRICE_H = 166;
@@ -1545,6 +1556,7 @@ function AnalysisChart({
     });
   const n = renderedCandles.length;
   if (n < 2) return null;
+  const visibleStart = Math.max(0, (analysis?.sourceLength ?? n) - n);
 
   const lineValues = [
     ...renderedCandles.flatMap((c) => [c.high, c.low]),
@@ -1565,6 +1577,7 @@ function AnalysisChart({
   const max = rawMax + padding;
   const span = max - min || 1;
   const x = (i: number) => (i / (n - 1)) * PLOT_W;
+  const xAbsolute = (index: number) => x(index - visibleStart);
   const y = (v: number) => 4 + (1 - (v - min) / span) * (PRICE_H - 8);
 
   const linePath = (values: Array<number | null>): string => {
@@ -1597,6 +1610,13 @@ function AnalysisChart({
       Boolean(level) && (!includeLevel || Math.abs(level!.value / invalidationLevel! - 1) >= 0.018)
   );
   const priceTicks = [rawMax, (rawMax + rawMin) / 2, rawMin];
+  const visibleZones = (analysis?.zones ?? []).filter((zone) => zone.endIndex >= visibleStart && zone.startIndex <= visibleStart + n - 1);
+  const visibleEvents = (analysis?.events ?? []).filter((event) => event.index >= visibleStart && event.index <= visibleStart + n - 1);
+  const zoneName = (kind: (typeof visibleZones)[number]["kind"]) =>
+    kind === "accumulation" ? "매집" : kind === "distribution" ? "분산" : kind === "markup" ? "상승" : "하락";
+  const zoneColor = (kind: (typeof visibleZones)[number]["kind"]) => CHART_COLOR[kind];
+  const markerText = (kind: WyckoffEvent["kind"]) =>
+    kind === "spring" ? "S" : kind === "upthrust" ? "UT" : kind === "impulse" ? "I" : "P";
 
   return (
     <div>
@@ -1607,6 +1627,31 @@ function AnalysisChart({
         <span>C <b style={{ color: latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down }}>{formatAxisPrice(latest.close)}</b></span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 차트">
+        {visibleZones.map((zone) => {
+          const start = Math.max(zone.startIndex, visibleStart);
+          const end = Math.min(zone.endIndex, visibleStart + n - 1);
+          const left = xAbsolute(start);
+          const right = xAbsolute(end);
+          const top = Math.max(2, y(Math.min(max, zone.high)));
+          const bottom = Math.min(PRICE_H - 1, y(Math.max(min, zone.low)));
+          return (
+            <g key={`${zone.kind}-${zone.startIndex}`}>
+              <rect
+                x={left}
+                y={top}
+                width={Math.max(2, right - left)}
+                height={Math.max(10, bottom - top)}
+                fill={zoneColor(zone.kind)}
+                stroke={zone.kind === "accumulation" ? "rgba(216,255,58,0.38)" : "rgba(250,250,250,0.22)"}
+                strokeWidth="0.7"
+                strokeDasharray="3 3"
+              />
+              <text x={left + 3} y={Math.min(PRICE_H - 4, top + 10)} fontSize="7.5" fontWeight="700" fill="rgba(250,250,250,0.72)">
+                {zoneName(zone.kind)} {zone.weeks}주차
+              </text>
+            </g>
+          );
+        })}
         {[0.2, 0.4, 0.6, 0.8].map((ratio) => (
           <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke="rgba(255,255,255,0.09)" />
         ))}
@@ -1704,9 +1749,56 @@ function AnalysisChart({
             />
           </>
         )}
+        {visibleEvents.map((event) => {
+          const cx = xAbsolute(event.index);
+          const cy = Math.max(10, Math.min(PRICE_H - 10, y(event.price)));
+          const isBoundary = event.kind === "spring" || event.kind === "upthrust";
+          const fill = event.kind === "spring" || (event.kind === "impulse" && event.direction === "up") || event.kind === "pullback"
+            ? CHART_COLOR.up
+            : "#D5D6D1";
+          return (
+            <g
+              key={`${event.kind}-${event.index}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${event.label}: ${event.explanation}`}
+              onClick={() => setSelectedEvent(selectedEvent?.kind === event.kind && selectedEvent.index === event.index ? null : event)}
+              onKeyDown={(keyboardEvent) => {
+                if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") setSelectedEvent(event);
+              }}
+              className="cursor-pointer"
+            >
+              {isBoundary ? (
+                <polygon
+                  points={event.kind === "spring" ? `${cx},${cy - 7} ${cx - 5},${cy + 3} ${cx + 5},${cy + 3}` : `${cx},${cy + 7} ${cx - 5},${cy - 3} ${cx + 5},${cy - 3}`}
+                  fill={fill}
+                  stroke="#050706"
+                  strokeWidth="1"
+                />
+              ) : event.kind === "impulse" ? (
+                <polygon points={`${cx},${cy - 6} ${cx + 5},${cy} ${cx},${cy + 6} ${cx - 5},${cy}`} fill={fill} stroke="#050706" strokeWidth="1" />
+              ) : (
+                <circle cx={cx} cy={cy} r="5" fill={fill} stroke="#050706" strokeWidth="1" />
+              )}
+              <text x={cx} y={cy + 2.5} textAnchor="middle" fontSize={event.kind === "upthrust" ? "4.7" : "6"} fontWeight="900" fill="#050706">
+                {markerText(event.kind)}
+              </text>
+            </g>
+          );
+        })}
         <text x="0" y={H - 1} fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(renderedCandles[0])}</text>
         <text x={PLOT_W} y={H - 1} textAnchor="end" fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(latest)}</text>
       </svg>
+      {selectedEvent && (
+        <button
+          type="button"
+          onClick={() => setSelectedEvent(null)}
+          className="mt-2 w-full rounded-md border border-white/15 bg-black/50 px-3 py-2 text-left"
+        >
+          <span className="block text-[11px] font-bold text-whiteout">{selectedEvent.label}</span>
+          <span className="mt-1 block text-[10px] leading-4 text-muted">{selectedEvent.explanation}</span>
+        </button>
+      )}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
         <span><span style={{ color: CHART_COLOR.up }}>■</span> 상승</span>
         <span><span style={{ color: CHART_COLOR.down }}>■</span> 하락</span>
@@ -1714,6 +1806,8 @@ function AnalysisChart({
         <span><span style={{ color: CHART_COLOR.ma60 }}>—</span> MA60</span>
         <span><span style={{ color: CHART_COLOR.ma120 }}>—</span> MA120</span>
         {includeLevel && <span><span style={{ color: CHART_COLOR.invalidation }}>┄</span> 관점 경계</span>}
+        {visibleZones.length > 0 && <span>▧ 구간</span>}
+        {visibleEvents.length > 0 && <span>◆ 이벤트</span>}
       </div>
     </div>
   );
@@ -1825,6 +1919,9 @@ function ChartAnalysisTab({
   const ta = front?.ta;
   const facts = ta?.facts ?? [];
   const verdict = front?.verdict;
+  const wyckoff = front?.wyckoff;
+  const currentZone = wyckoff?.currentZone;
+  const hasProfessionalAnalysis = Boolean(wyckoff?.summary || wyckoff?.events.length);
   const phaseText = verdict?.phase ? DEPTH_PHASE_TEXT[verdict.phase] : undefined;
   const series = front?.chartSeries;
   const invalidation = verdict?.invalidation;
@@ -1843,19 +1940,33 @@ function ChartAnalysisTab({
     <section className="mt-2">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
-          <p className="font-pixel text-sm text-whiteout">가격 구조</p>
-          <p className="mt-1 text-[11px] leading-5 text-muted">캔들 배열·추세·핵심 가격대로 다음 확인 지점을 읽어요.</p>
+          <p className="font-pixel text-sm text-whiteout">구간·파동 분석</p>
+          <p className="mt-1 text-[11px] leading-5 text-muted">가격 구간과 거래량 사건을 같은 시간축에서 읽어요.</p>
         </div>
-        {phaseText && verdict?.phase && (
+        {(currentZone || (phaseText && verdict?.phase)) && (
           <button
             type="button"
-            onClick={() => setStructureTooltip({ title: "국면 해석", body: phaseText })}
+            onClick={() =>
+              setStructureTooltip({
+                title: currentZone ? "현재 구간 근거" : "국면 해석",
+                body: currentZone ? currentZone.evidence.join(" · ") : phaseText!,
+              })
+            }
             className="shrink-0 rounded-md border border-whiteout/20 px-2 py-1 text-[10px] font-bold text-whiteout"
           >
-            {verdict.phase === "accumulation" ? "축적" : verdict.phase === "markup" ? "상승" : verdict.phase === "distribution" ? "분산" : "하락"} 국면
+            {currentZone
+              ? currentZone.label
+              : `${verdict!.phase === "accumulation" ? "축적" : verdict!.phase === "markup" ? "상승" : verdict!.phase === "distribution" ? "분산" : "하락"} 국면`}
           </button>
         )}
       </div>
+
+      {wyckoff?.summary && (
+        <div className="mb-3 border-l-2 border-[#D8FF3A] bg-[#D8FF3A]/[0.06] px-3 py-3">
+          <p className="font-pixel text-[10px] text-[#D8FF3A]">지금 구간 요약</p>
+          <p className="mt-1.5 text-sm font-medium leading-6 text-whiteout">{wyckoff.summary}</p>
+        </div>
+      )}
 
       {metrics.length > 0 && (
         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -1903,7 +2014,7 @@ function ChartAnalysisTab({
               ))}
             </div>
           </div>
-          <AnalysisChart series={visibleSeries} invalidationLevel={verdict?.invalidationLevel} candles={visibleCandles} />
+          <AnalysisChart series={visibleSeries} invalidationLevel={verdict?.invalidationLevel} candles={visibleCandles} analysis={wyckoff} />
           {invalidation && (
             <button
               type="button"
@@ -1919,7 +2030,29 @@ function ChartAnalysisTab({
         basisDays > 0 && <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
       )}
 
-      {facts.length > 0 && (
+      {wyckoff && wyckoff.events.length > 0 && (
+        <div className="mt-4 border-y border-hairline py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-pixel text-sm text-whiteout">구간 이벤트</p>
+            <span className="text-[10px] text-muted">실제 캔들·거래량 조건</span>
+          </div>
+          <div className="mt-2 space-y-2">
+            {wyckoff.events.slice(-4).reverse().map((event) => (
+              <button
+                key={`${event.kind}-${event.index}`}
+                type="button"
+                onClick={() => setStructureTooltip({ title: event.label, body: event.explanation })}
+                className="w-full border-l border-white/20 px-3 py-1.5 text-left transition-colors hover:border-[#D8FF3A]"
+              >
+                <span className="block text-xs font-bold text-whiteout">{event.label}</span>
+                <span className="mt-0.5 block text-[11px] leading-5 text-muted">{event.explanation}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {facts.length > 0 && !hasProfessionalAnalysis && (
         <div className="mt-4 rounded-xl border border-hairline bg-surface px-3 py-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="font-pixel text-sm text-whiteout">차트에서 보이는 것</p>
@@ -1968,7 +2101,7 @@ function ChartAnalysisTab({
           )}
         </div>
       )}
-      {facts.length === 0 && !series && (
+      {facts.length === 0 && !series && !hasProfessionalAnalysis && (
         <div className="rounded-lg border border-hairline bg-surface px-3 py-5 text-center">
           <p className="text-sm leading-6 text-muted">차트에서 두드러진 신호는 아직 없어요.</p>
           <p className="mt-1 text-[11px] leading-5 text-muted">데이터가 더 쌓이면 지표가 여기에 붙어요.</p>
