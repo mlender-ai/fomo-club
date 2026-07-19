@@ -18,11 +18,11 @@ const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 13;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
-const DEFAULT_COMMITTEE_MODEL = "llama-3.3-70b-versatile";
-const DEFAULT_CALL_INTERVAL_MS = 40_000;
+const DEFAULT_COMMITTEE_MODEL = "qwen/qwen3.6-27b";
+const DEFAULT_CALL_INTERVAL_MS = 62_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
@@ -254,7 +254,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: args.role === "editor" ? 2_500 : 1_500,
+    maxTokens: args.role === "editor" ? 2_500 : 1_800,
     timeoutMs: 45_000,
     trace: args.trace,
     metadata: { committeeVersion: COMMITTEE_VERSION, role: args.role },
