@@ -1,0 +1,38 @@
+name: Judgment Ledger Bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      # The partitioned table is intentionally managed by exact SQL. Running a whole-schema
+      # `prisma db push` here could touch unrelated cache tables in a drifted production DB.
+      - name: Apply append-only ledger schema
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma db execute --file prisma/sql/2026-07-20_judgment_ledger.sql --schema prisma/schema.prisma
+
+      - name: Backfill immutable selections and due outcomes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npx tsx scripts/migrate-judgment-ledger.ts
+          npx tsx scripts/materialize-ledger-outcomes.ts
+
+      - name: Verify append-only enforcement
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/verify-judgment-ledger-append-only.ts

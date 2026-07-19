@@ -35,10 +35,11 @@ FOMO Club의 신호, 판단, 점수, 선정, 사용자 행동, 성과를 당시 
 
 ## 배포 순서
 
-1. `prisma/sql/2026-07-20_judgment_ledger.sql`로 파티션 테이블과 불변 트리거를 먼저 만든다.
-2. `prisma db push`로 Prisma 스키마를 동기화한다.
-3. `npm run ledger:migrate`로 가격이 있는 `daily30-picks:` 레거시 선정분을 백필한다.
-4. `npm run ledger:outcomes`로 기한이 지난 고정창 성과를 생성한다.
-5. `npm run ledger:verify`로 UPDATE/DELETE 거부를 실제 DB에서 확인한다. 검증 probe도 삭제하지 않는다.
+1. `Judgment Ledger Bootstrap` 워크플로가 `prisma/sql/2026-07-20_judgment_ledger.sql`로 파티션 테이블과 불변 트리거를 만든다.
+2. 같은 워크플로가 `npm run ledger:migrate`로 가격이 있는 `daily30-picks:` 레거시 선정분을 백필한다.
+3. `npm run ledger:outcomes`로 기한이 지난 고정창 성과를 생성한다.
+4. `npm run ledger:verify`로 UPDATE/DELETE 거부를 실제 DB에서 확인한다. 검증 probe도 삭제하지 않는다.
+
+원장은 Prisma가 직접 표현하지 못하는 파티션·RLS·트리거를 포함하므로 정확한 SQL만 적용한다. 이 작업에서 전체 `prisma db push`를 실행하지 않는다. 운영 스키마 드리프트가 있는 경우 원장과 무관한 캐시 테이블 삭제를 제안할 수 있기 때문이다.
 
 `TasteSignal`은 발견가가 없어 소급 가격을 만들 수 없으므로 백필 대상에서 제외한다. 신규 쓰기는 410으로 닫혀 있으며, 브라우저의 기존 `fomo_discovery_seen` 중 실제 발견가가 있는 행만 첫 방문 때 원장으로 옮긴 뒤 삭제한다.

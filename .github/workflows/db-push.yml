@@ -67,20 +67,4 @@ jobs:
         if: ${{ !inputs.dry_run }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          npx prisma db execute --file prisma/sql/2026-07-20_judgment_ledger.sql --schema prisma/schema.prisma
-          npx prisma db push
-
-      - name: Backfill immutable selections and due outcomes
-        if: ${{ !inputs.dry_run }}
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          npx tsx scripts/migrate-judgment-ledger.ts
-          npx tsx scripts/materialize-ledger-outcomes.ts
-
-      - name: Verify append-only enforcement
-        if: ${{ !inputs.dry_run }}
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx scripts/verify-judgment-ledger-append-only.ts
+        run: npx prisma db push
