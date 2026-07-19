@@ -12,6 +12,7 @@ import {
   type LedgerSelectionView,
 } from "../../lib/judgment-ledger";
 import { buildTrackRecord, type OutcomePayload } from "../../lib/ledger-track-record";
+import { fetchHistoricalPrices } from "../../lib/quote-prices";
 
 function selection(overrides: Partial<LedgerSelectionView> = {}): LedgerSelectionView {
   return {
@@ -128,5 +129,21 @@ describe("track record fixed-window aggregation", () => {
     const record = buildTrackRecord([]);
     expect(record.windows.map((window) => window.days)).toEqual([7, 30, 90]);
     expect(record.windows.every((window) => window.overall.n === 0 && window.overall.winRate === null)).toBe(true);
+  });
+
+  it("선정 당시 박제된 캔들에서 목표일 또는 다음 거래일 종가를 먼저 사용한다", async () => {
+    const prices = await fetchHistoricalPrices([{
+      key: "selection-1:7",
+      stock: "ACME",
+      symbol: "ACME",
+      country: "US",
+      market: "NASDAQ",
+      targetDate: "2026-07-12",
+      candles: [
+        { date: "20260710", open: 98, high: 101, low: 97, close: 100, volume: 10 },
+        { date: "20260713", open: 101, high: 105, low: 100, close: 104, volume: 20 },
+      ],
+    }]);
+    expect(prices.get("selection-1:7")).toEqual({ date: "2026-07-13", price: 104 });
   });
 });

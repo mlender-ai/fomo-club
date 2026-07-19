@@ -4,8 +4,11 @@
  * 어제의 영수증 등 서버 콘텐츠가 "발견가 대비 지금" 성과를 계산할 때 쓴다. 소급 조작 없음(실시세만).
  */
 
-import type { StockCountry, StockMarket } from "@fomo/core";
+import type { DailyOhlcv, StockCountry, StockMarket } from "@fomo/core";
 import { readCoinMarketSnapshots } from "./coin-market-source";
+import { readKrCandleCache } from "./kr-candle-cache";
+import { fetchStockDaily } from "./stock-front";
+import { fetchNasdaqDailyCandles } from "./us-market-source";
 
 const YAHOO_HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
 const YAHOO_UA =
@@ -33,6 +36,8 @@ export function yahooSymbolFor(item: QuoteRequestItem): string | null {
 
 export interface HistoricalQuoteRequestItem extends QuoteRequestItem {
   targetDate: string;
+  /** Selection-time immutable candles. Preferred over every network source when available. */
+  candles?: DailyOhlcv[];
 }
 
 export interface HistoricalPricePoint {
@@ -108,6 +113,24 @@ function isCoin(item: QuoteRequestItem): boolean {
   return item.market === "COIN" || item.country === "GLOBAL";
 }
 
+function candleDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const digits = value.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (digits) return `${digits[1]}-${digits[2]}-${digits[3]}`;
+  const iso = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function historicalPoint(candles: readonly DailyOhlcv[] | undefined, targetDate: string): HistoricalPricePoint | null {
+  const point = (candles ?? [])
+    .flatMap((row) => {
+      const date = candleDate(row.date);
+      return date && date >= targetDate && Number.isFinite(row.close) && row.close > 0 ? [{ date, price: row.close }] : [];
+    })
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  return point ?? null;
+}
+
 async function mapLimit<T, R>(items: readonly T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];
   for (let i = 0; i < items.length; i += limit) {
@@ -153,6 +176,11 @@ export async function fetchHistoricalPrices(items: readonly HistoricalQuoteReque
   const coinItems = items.filter(isCoin);
   const stockItems = items.filter((item) => !isCoin(item));
 
+  for (const item of items) {
+    const point = historicalPoint(item.candles, item.targetDate);
+    if (point) prices.set(item.key, point);
+  }
+
   if (coinItems.length > 0) {
     const snapshots = await readCoinMarketSnapshots().catch(() => []);
     const bySymbol = new Map(snapshots.map((snapshot) => [snapshot.symbol.toUpperCase(), snapshot] as const));
@@ -166,7 +194,37 @@ export async function fetchHistoricalPrices(items: readonly HistoricalQuoteReque
     }
   }
 
-  const jobs = stockItems.flatMap((item) => {
+  const unresolvedStocks = () => stockItems.filter((item) => !prices.has(item.key));
+
+  // KR prewarm candles are the primary legacy path. If the cache is stale/missing, the cron may
+  // fetch Naver once; public requests never execute this function.
+  await mapLimit(
+    unresolvedStocks().filter((item) => Boolean(item.naverCode) && item.country !== "US"),
+    3,
+    async (item) => {
+      const code = item.naverCode!;
+      const cached = await readKrCandleCache(code).catch(() => null);
+      const candles = cached ?? (await fetchStockDaily(code, 420)).candles;
+      const point = historicalPoint(candles, item.targetDate);
+      if (point) prices.set(item.key, point);
+    }
+  );
+
+  // Nasdaq historical is independent of Yahoo's shared edge quota and covers migrated US picks.
+  await mapLimit(
+    unresolvedStocks().filter((item) => item.country === "US" || item.market === "NASDAQ" || item.market === "NYSE"),
+    3,
+    async (item) => {
+      const symbol = yahooSymbolFor(item)?.replace(/\.(?:KS|KQ)$/i, "") ?? "";
+      if (!symbol) return;
+      const { candles } = await fetchNasdaqDailyCandles(symbol, 180);
+      const point = historicalPoint(candles, item.targetDate);
+      if (point) prices.set(item.key, point);
+    }
+  );
+
+  // Yahoo remains a last resort only. Its edge frequently returns 429 under batch workloads.
+  const jobs = unresolvedStocks().flatMap((item) => {
     const yahooSymbol = yahooSymbolFor(item);
     return yahooSymbol ? [{ item, yahooSymbol }] : [];
   });

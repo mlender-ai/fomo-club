@@ -82,6 +82,7 @@ function quoteFor(selection: LedgerSelectionView, windowDays: TrackWindow): Hist
     ...(selection.payload.naverCode ? { naverCode: selection.payload.naverCode } : {}),
     ...(selection.payload.market ? { market: selection.payload.market } : {}),
     ...(selection.payload.country ? { country: selection.payload.country } : {}),
+    ...(selection.payload.front?.candles?.length ? { candles: selection.payload.front.candles } : {}),
   };
 }
 
