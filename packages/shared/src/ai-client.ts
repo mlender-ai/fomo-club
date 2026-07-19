@@ -26,6 +26,8 @@ export interface CallAiOptions {
   temperature?: number;
   /** OpenAI 호환 max_tokens. 생략 시 공급자 기본값, 비용/TPM 게이트 경로는 반드시 명시한다. */
   maxTokens?: number;
+  /** OpenAI 호환 JSON object 응답 모드. 구조화된 검수 결과처럼 파싱 계약이 필요한 호출에 사용한다. */
+  jsonMode?: boolean;
   /** 기본 25_000ms. */
   timeoutMs?: number;
   apiUrl?: string;
@@ -156,6 +158,7 @@ export async function callAI(opts: CallAiOptions): Promise<CallAiResult> {
         model,
         ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
         ...(opts.maxTokens !== undefined ? { max_tokens: opts.maxTokens } : {}),
+        ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
         messages: opts.messages,
       }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 25_000),
