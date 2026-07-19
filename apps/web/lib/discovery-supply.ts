@@ -136,6 +136,16 @@ export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
   companyScore?: CompanyScoreResult;
+  /** 일일 위원회가 사실 게이트를 통과시킨 전문 분석. 요청 경로에서는 생성하지 않고 승인 스냅샷만 읽는다. */
+  committeeReview?: {
+    runId: string;
+    reviewedAt: string;
+    tradingView: string;
+    fundamentalView: string;
+    timingGrade: "A" | "B" | "C";
+    valuationGrade: "A" | "B" | "C";
+    factChecked: true;
+  };
   sparkline: number[];
   priceText?: string;
   changeText?: string;
@@ -221,6 +231,8 @@ export interface BuildDiscoveryResponseOptions {
   targetedMaterial?: boolean;
   targetedMaterialLimit?: number;
   country?: DiscoveryCountryScope;
+  /** 위원회 후보 생산처럼 결정론 출력이 필요한 경로에서 false. 공개 기본 동작은 유지한다. */
+  allowAiSynthesis?: boolean;
 }
 
 interface RawNaverStock {
@@ -1301,12 +1313,13 @@ function headlineCandidate(
 async function stockPayload(
   row: DiscoveryMarketRow,
   candidate: DiscoveryCandidate,
-  front?: DiscoveryFrontSeed
+  front?: DiscoveryFrontSeed,
+  allowAiSynthesis = true
 ): Promise<DiscoveryStockPayload> {
   const def = resolveStock(candidate.ticker);
   const sector = cleanSectorLabel(candidate.sector) ?? (def ? sectorOf(def.canonical) : undefined);
   const resolvedCandidate = headlineCandidate(row, candidate, sector);
-  const whyDriven = await synthesizeWhyDrivenInsight(resolvedCandidate);
+  const whyDriven = await synthesizeWhyDrivenInsight(resolvedCandidate, { allowAi: allowAiSynthesis });
   const synthesis = whyDriven.insight;
   const frontReason = frontMaterialReason(front);
   const synthesizedWhy = synthesis.headline;
@@ -1607,10 +1620,13 @@ function attachReachedVolumeEvents(
   });
 }
 
-async function hydrateReachedWhySynthesis(candidates: readonly DiscoveryCandidate[]): Promise<DiscoveryCandidate[]> {
+async function hydrateReachedWhySynthesis(
+  candidates: readonly DiscoveryCandidate[],
+  allowAiSynthesis = true
+): Promise<DiscoveryCandidate[]> {
   const results = await mapLimit(candidates, 3, async (candidate) => ({
     ticker: candidate.ticker,
-    result: await synthesizeWhyDrivenInsight(candidate),
+    result: await synthesizeWhyDrivenInsight(candidate, { allowAi: allowAiSynthesis }),
   }));
   return candidates.map((candidate) => {
     const found = results.find((row) => row.status === "fulfilled" && row.value.ticker === candidate.ticker);
@@ -2000,6 +2016,7 @@ function interleaveThemeBundles(
 
 export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOptions = {}): Promise<DiscoveryResponse> {
   const scope = options.country ?? "KR";
+  const allowAiSynthesis = options.allowAiSynthesis ?? true;
   const targetedMaterialEnabled = options.targetedMaterial ?? TARGETED_MATERIAL_DEFAULT_ENABLED;
   const deckCardCount = discoveryDeckCardCount(scope);
   const targetedMaterialLimit = targetedMaterialEnabled
@@ -2219,7 +2236,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   );
   ranked = attachReachedVolumeEvents(ranked, rowsByTicker, dailyByTicker, asOf);
   if (scope !== "US") {
-    ranked = await hydrateReachedWhySynthesis(ranked);
+    ranked = await hydrateReachedWhySynthesis(ranked, allowAiSynthesis);
   }
   logDiscoverySignalCoverage("after-rank", ranked);
   const sparklineByTicker = new Map(
@@ -2249,7 +2266,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       ...(typeof candidateCandles.at(-1)?.close === "number" ? { currentPrice: candidateCandles.at(-1)!.close } : {}),
       asOf,
     });
-    const stock = await stockPayload(row, candidate, front);
+    const stock = await stockPayload(row, candidate, front, allowAiSynthesis);
     // 2026-07-12: US 큐레이션 대형주는 뉴스 재료가 없어도(Vercel egress에서 US 뉴스 차단) verdict 맥락으로
     // 진입 — "시총 높은 아는 기업"(User Zero). 국장 발굴 정체성은 불변(KR 은 이 분기 안 탐).
     const usSeed =

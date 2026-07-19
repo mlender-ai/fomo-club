@@ -14,6 +14,7 @@ import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContent
 import { buildCoinDiscoveryResponse } from "./coin-discovery";
 import { readTodayFeedContent, type TodayFeedContent } from "./feed-briefing";
 import { readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
+import { readPublishedCommitteeSnapshot } from "./expert-review-store";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -35,12 +36,21 @@ export interface Daily30Response extends DiscoveryResponse {
     repeatRatio?: number;
     /** 2026-07-12 US 파이프라인 진단(임시) + 원인 설명률(WO 뎁스 재건 E) causeCoverage. */
     debug?: Record<string, number | { movers: number; explained: number; ratio: number }>;
+    /** 일일 전문가 위원회 승인 정보. 없으면 아직 위원회 발행 전인 레거시 응답이다. */
+    committee?: {
+      runId: string;
+      version: string;
+      reviewedAt: string;
+      candidateCount: number;
+      selectedCount: number;
+      callCount: number;
+    };
   };
 }
 
 type CandidateKind = "stock" | "content" | "narrative";
 
-interface Daily30Candidate {
+export interface Daily30Candidate {
   kind: CandidateKind;
   id: string;
   card: DiscoveryDeckCardPayload;
@@ -387,7 +397,8 @@ function responseFromSelected(
   deck: readonly Daily30Candidate[],
   feed: readonly Daily30Candidate[],
   discoveries: readonly DiscoveryResponse[],
-  asOf: string
+  asOf: string,
+  targetCount = DAILY_CARD_TARGET
 ): Daily30Response {
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
@@ -429,7 +440,7 @@ function responseFromSelected(
     confidence: deck.length >= DAILY_CARD_TARGET ? "H" : deck.length >= 20 ? "M" : "L",
     source: "KR/US discovery·수급·내부자·거래량·고래·매크로 통합 quietScore",
     meta: {
-      targetCount: DAILY_CARD_TARGET,
+      targetCount,
       cards: all.map((candidate) => ({
         id: candidate.id,
         assetClass: candidate.assetClass,
@@ -449,6 +460,29 @@ interface Daily30PicksSnapshot {
   picks: Array<{ canonical: string; headline?: string; price?: number; symbol?: string; naverCode?: string; market?: string; country?: string }>;
 }
 
+export async function writeDaily30PicksSnapshot(response: Daily30Response): Promise<void> {
+  const date = kstDateOf();
+  const stocksByCanonical = new Map(response.stocks.map((stock) => [stock.canonical, stock]));
+  const picks: Daily30PicksSnapshot = {
+    date,
+    picks: Object.entries(response.fronts).flatMap(([canonical, front]) => {
+      const stock = stocksByCanonical.get(canonical);
+      if (!stock) return [];
+      const price = parsePriceText(front.priceText);
+      return [{
+        canonical,
+        ...(stock.headline ? { headline: stock.headline } : {}),
+        ...(typeof price === "number" ? { price } : {}),
+        ...(stock.symbol ? { symbol: stock.symbol } : {}),
+        ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
+        ...(stock.market ? { market: stock.market } : {}),
+        ...(stock.country ? { country: stock.country } : {}),
+      }];
+    }),
+  };
+  await writeFeedContent(`daily30-picks:${date}`, picks);
+}
+
 /** 어제(가장 최근, 오늘 제외) 30장 스냅샷 — 신선도 로테이션 기준. 없으면 빈 맵(첫날). */
 async function readYesterdayPicks(today: string): Promise<FreshnessSnapshot> {
   const rows = await readFeedContentByPrefix<Daily30PicksSnapshot>("daily30-picks:", 3).catch(
@@ -462,11 +496,18 @@ async function readYesterdayPicks(today: string): Promise<FreshnessSnapshot> {
   return { headlines };
 }
 
-export async function buildDaily30Response(): Promise<Daily30Response> {
+interface Daily30BuildOptions {
+  targetCount?: number;
+  persistPicks?: boolean;
+}
+
+async function buildDaily30ResponseWithOptions(options: Daily30BuildOptions = {}): Promise<Daily30Response> {
+  const targetCount = Math.max(1, Math.min(50, options.targetCount ?? DAILY_CARD_TARGET));
+  const persistPicks = options.persistPicks ?? true;
   const today = kstDateOf();
   const [kr, us, coin, rawContent, feedContent, freshness] = await Promise.all([
-    buildDiscoveryResponse({ country: "KR", targetedMaterial: true, targetedMaterialLimit: 36 }),
-    buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 16 }),
+    buildDiscoveryResponse({ country: "KR", targetedMaterial: true, targetedMaterialLimit: 36, allowAiSynthesis: false }),
+    buildDiscoveryResponse({ country: "US", targetedMaterial: true, targetedMaterialLimit: 16, allowAiSynthesis: false }),
     // 코인(WO 미장·코인 확충) — 시총 상위 30 커버리지. 신호 없으면 stocks 0(쿼터 강제 없음 — 정직).
     buildCoinDiscoveryResponse().catch(
       (): DiscoveryResponse => ({ asOf: "", stocks: [], fronts: {}, confidence: "L", source: "coin unavailable" })
@@ -503,7 +544,7 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
     .filter((c) => c.kind === "content" || c.kind === "narrative")
     .sort((a, b) => b.quietScore - a.quietScore || a.id.localeCompare(b.id))
     .slice(0, FEED_CARD_LIMIT);
-  const deck = selectDaily30Candidates(stockCandidates, DAILY_CARD_TARGET);
+  const deck = selectDaily30Candidates(stockCandidates, targetCount);
 
   // 신선도 스냅샷 저장 — 내일 빌드의 로테이션 기준. 실패해도 응답은 정상(fail-open).
   const picks: Daily30PicksSnapshot = {
@@ -524,12 +565,18 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
         };
       }),
   };
-  await writeFeedContent(`daily30-picks:${today}`, picks).catch(() => {});
+  if (persistPicks) await writeFeedContent(`daily30-picks:${today}`, picks).catch(() => {});
   // 중복률(어제 대비) — 수용 지표(≤50%) 모니터링용.
   const repeatCount = picks.picks.filter((p) => freshness.headlines.has(p.canonical)).length;
   const repeatRatio = picks.picks.length > 0 ? Math.round((repeatCount / picks.picks.length) * 100) / 100 : 0;
 
-  const response = responseFromSelected(deck, feedCandidates, [kr, us, coin], kr.asOf > us.asOf ? kr.asOf : us.asOf);
+  const response = responseFromSelected(
+    deck,
+    feedCandidates,
+    [kr, us, coin],
+    kr.asOf > us.asOf ? kr.asOf : us.asOf,
+    targetCount
+  );
   // 2026-07-12 진단: US 파이프라인 각 단계 카운트 — 미장 1장 원인이 discovery/후보/셀렉션 어디인지.
   // 원인 설명률(WO 뎁스 재건 E — 해자의 측정): ±3% 무버 중 원인(원문 연결·재료 서술)이 붙은 비율.
   // 북극성 지표 ≥0.9 — 급등락 카드를 눌렀을 때 열에 아홉은 답이 있어야 BM을 붙일 자격이 생긴다.
@@ -568,15 +615,31 @@ export async function buildDaily30Response(): Promise<Daily30Response> {
   return { ...response, meta: { ...response.meta, repeatRatio, debug } };
 }
 
+export async function buildDaily30Response(): Promise<Daily30Response> {
+  return buildDaily30ResponseWithOptions();
+}
+
+/**
+ * 위원회 크론 입력. 공개 요청에서 호출하지 않는다.
+ * 기존 결정론 품질 게이트·quietScore·자산군 보정을 그대로 쓰되 편집장이 고를 여유 후보만 50장까지 만든다.
+ */
+export async function buildDaily30CandidatePoolResponse(targetCount = 50): Promise<Daily30Response> {
+  return buildDaily30ResponseWithOptions({ targetCount, persistPicks: false });
+}
+
 /**
  * 공유 캐시 getter — daily-30 라우트와 feed-hub 가 같은 캐시 엔트리를 쓴다(중복 빌드 방지).
  * feed-content 크론이 tags 로 즉시 무효화한다.
  */
 export async function getCachedDaily30Response(): Promise<Daily30Response> {
   const load = unstable_cache(
-    () => buildDaily30Response(),
-    ["fomo-daily-30", cacheVersion(), kstDateOf()],
-    { revalidate: 60 * 60 * 12, tags: ["daily-30"] }
+    async () => {
+      const snapshot = await readPublishedCommitteeSnapshot();
+      if (!snapshot?.response) throw new Error("expert committee has not published a deck yet");
+      return snapshot.response;
+    },
+    ["fomo-daily-30-approved", cacheVersion(), kstDateOf()],
+    { revalidate: 60 * 5, tags: ["daily-30"] }
   );
   return load();
 }
