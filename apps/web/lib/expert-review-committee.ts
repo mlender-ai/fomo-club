@@ -213,8 +213,13 @@ function parseAnalystBatch(text: string, expectedIds: readonly string[]): RawAna
     return [{ ...row, concerns: row.concerns } as RawAnalystReview];
   });
   const byId = new Map(rows.map((row) => [row.candidateId, row]));
-  if (expectedIds.some((id) => !byId.has(id))) throw new Error("analyst omitted candidate");
-  return expectedIds.map((id) => byId.get(id)!);
+  return expectedIds.map((id) => byId.get(id) ?? {
+    candidateId: id,
+    approved: false,
+    grade: "C",
+    paragraph: "검수 응답이 누락되어 이 후보는 이번 위원회 선별에서 제외합니다.",
+    concerns: ["에이전트 검수 응답 누락"],
+  });
 }
 
 function tradingFallback(input: CommitteeCandidateInput): string {
