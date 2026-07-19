@@ -18,11 +18,13 @@ const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
-const BATCH_SIZE = 13;
+// Groq free/developer 조직의 TPM을 넘지 않도록 한 호출의 후보 수를 작게 유지한다.
+// 후보 50장 기준 분석가 5콜 + 5콜, 편집장 1콜로 일일 11콜이다.
+const BATCH_SIZE = 10;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "qwen/qwen3.6-27b";
-const DEFAULT_CALL_INTERVAL_MS = 62_000;
+const DEFAULT_CALL_INTERVAL_MS = 20_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
@@ -324,7 +326,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: args.role === "editor" ? 2_500 : 1_800,
+    maxTokens: args.role === "editor" ? 2_500 : 1_400,
     timeoutMs: 45_000,
     trace: args.trace,
     metadata: { committeeVersion: COMMITTEE_VERSION, role: args.role },
@@ -428,7 +430,7 @@ function compactAnalystInput(role: AnalystRole, input: CommitteeCandidateInput):
         zone?.label,
         ...(zone?.evidence ?? []),
         ...(input.trading.wyckoff?.events.slice(-2).map((event) => event.label) ?? []),
-      ].filter(Boolean).slice(0, 8),
+      ].filter(Boolean).slice(0, 6),
     };
   }
   const metricFacts = input.financial.metrics.slice(0, 5).map((metric) => `${metric.label} ${metric.value}`);
@@ -447,7 +449,7 @@ function compactAnalystInput(role: AnalystRole, input: CommitteeCandidateInput):
       ...metricFacts,
       ...scoreFacts,
       ...financialFacts,
-    ].slice(0, 12),
+    ].slice(0, 8),
   };
 }
 
