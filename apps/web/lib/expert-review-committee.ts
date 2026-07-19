@@ -1,4 +1,4 @@
-import { callAI, isAiConfigured, resolveModel } from "@fomo/shared";
+import { callAI, isAiConfigured } from "@fomo/shared";
 import { companyFinancialsFromBasics, computeCompanyScore, type StockBasics } from "@fomo/core";
 import { buildDaily30CandidatePoolResponse, writeDaily30PicksSnapshot, type Daily30Response } from "./daily-30";
 import type { DiscoveryDeckCardPayload, DiscoveryFrontSeed, DiscoveryStockPayload } from "./discovery-supply";
@@ -17,9 +17,11 @@ const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
-const BATCH_SIZE = 5;
-const BATCH_CONCURRENCY = 2;
+const BATCH_SIZE = 50;
+const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
+const DEFAULT_COMMITTEE_MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_CALL_INTERVAL_MS = 65_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
@@ -99,10 +101,12 @@ interface EditorOutput {
 interface CallState {
   callCount: number;
   model: string;
+  lastCallAt: number;
+  minCallIntervalMs: number;
 }
 
 export interface CommitteeAgentCaller {
-  (args: { role: AnalystRole | "editor"; system: string; input: unknown; trace: string }): Promise<{ ok: boolean; content: string; model: string }>;
+  (args: { role: AnalystRole | "editor"; system: string; input: unknown; trace: string }): Promise<{ ok: boolean; content: string; model: string; status?: number }>;
 }
 
 export interface CommitteeRunResult {
@@ -243,7 +247,7 @@ export function applyAnalystFactGate(
 
 async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
   const result = await callAI({
-    ...(process.env.COMMITTEE_AI_MODEL ? { model: process.env.COMMITTEE_AI_MODEL } : {}),
+    model: process.env.COMMITTEE_AI_MODEL || DEFAULT_COMMITTEE_MODEL,
     messages: [
       { role: "system", content: args.system },
       { role: "user", content: JSON.stringify(args.input) },
@@ -264,12 +268,14 @@ async function callWithRetry(
   let lastError = "agent call failed";
   for (let attempt = 0; attempt < 2; attempt += 1) {
     if (state.callCount >= MAX_CALLS) throw new Error(`committee call cap exceeded: ${MAX_CALLS}`);
+    const waitMs = Math.max(0, state.lastCallAt + state.minCallIntervalMs - Date.now());
+    if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
     state.callCount += 1;
     const result = await caller(args);
+    state.lastCallAt = Date.now();
     if (result.model) state.model = result.model;
     if (result.ok && result.content.trim()) return result.content;
-    lastError = `${args.role} agent call failed`;
-    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 750));
+    lastError = `${args.role} agent call failed${result.status ? ` HTTP ${result.status}` : ""}`;
   }
   throw new Error(lastError);
 }
@@ -277,14 +283,14 @@ async function callWithRetry(
 const TRADING_SYSTEM = `당신은 FOMO Club의 트레이딩 분석 검수자다.
 입력 JSON의 signals, verdict, wyckoff, candleSummary만 근거로 구간 판정의 타당성을 검수한다.
 입력에 없는 숫자를 새로 만들거나 계산하지 않는다. approved=false는 엔진 판정과 입력 데이터가 명백히 충돌할 때만 사용한다.
-각 후보에 timing grade A/B/C와 한국어 한 문단을 쓴다. 예측 확정이 아니라 구간, 타이밍, 무효화 근거를 설명한다.
+각 후보에 timing grade A/B/C와 서로 다른 한국어 한 문장을 45~90자로 쓴다. 예측 확정이 아니라 구간, 타이밍, 무효화 근거를 설명한다.
 반드시 {"reviews":[{"candidateId":"...","approved":true,"grade":"A","paragraph":"...","concerns":[]}]} JSON만 반환한다.`;
 
 const FINANCIAL_SYSTEM = `당신은 FOMO Club의 재무 분석 검수자다.
 입력 JSON의 financial, material, companyScore 근거만 사용해 수익성, 성장, 밸류와 핵심 리스크를 검수한다.
 입력에 없는 숫자를 새로 만들거나 계산하지 않는다. 재무가 얇으면 C 등급과 보류 문장을 쓰되 그 이유만으로 반려하지 않는다.
 approved=false는 표시된 사실이 서로 명백히 충돌하거나 품질상 발행할 수 없을 때만 사용한다.
-각 후보에 valuation grade A/B/C와 한국어 한 문단을 쓴다.
+각 후보에 valuation grade A/B/C와 서로 다른 한국어 한 문장을 45~90자로 쓴다.
 반드시 {"reviews":[{"candidateId":"...","approved":true,"grade":"A","paragraph":"...","concerns":[]}]} JSON만 반환한다.`;
 
 const EDITOR_SYSTEM = `당신은 FOMO Club 편집장이다.
@@ -317,7 +323,7 @@ async function runAnalyst(
   );
   const system = role === "trading" ? TRADING_SYSTEM : FINANCIAL_SYSTEM;
   const results = await mapConcurrent(batches, BATCH_CONCURRENCY, async (batch) => {
-    const input = batch.map((candidate) => candidate.input);
+    const input = batch.map((candidate) => compactAnalystInput(role, candidate.input));
     const text = await callWithRetry(caller, {
       role,
       system,
@@ -329,6 +335,47 @@ async function runAnalyst(
     );
   });
   return new Map(results.flat().map((review) => [review.candidateId, review]));
+}
+
+function compactAnalystInput(role: AnalystRole, input: CommitteeCandidateInput): unknown {
+  const base = {
+    candidateId: input.candidateId,
+    stock: { canonical: input.stock.canonical, symbol: input.stock.symbol, assetClass: input.assetClass },
+    headline: input.material.headline?.slice(0, 120),
+  };
+  if (role === "trading") {
+    const zone = input.trading.wyckoff?.currentZone;
+    return {
+      ...base,
+      facts: [
+        input.trading.verdict?.stanceText,
+        ...(input.trading.verdict?.evidence ?? []),
+        input.trading.verdict?.invalidation,
+        input.trading.wyckoff?.summary,
+        zone?.label,
+        ...(zone?.evidence ?? []),
+        ...(input.trading.wyckoff?.events.slice(-2).map((event) => event.label) ?? []),
+      ].filter(Boolean).slice(0, 8),
+    };
+  }
+  const metricFacts = input.financial.metrics.slice(0, 5).map((metric) => `${metric.label} ${metric.value}`);
+  const scoreFacts = input.financial.scoreAxes.flatMap((axis) => [`${axis.label} ${axis.score}점`, ...axis.evidence]).slice(0, 8);
+  const periods = input.financial.financials?.periods.map((period) => period.title) ?? [];
+  const financialFacts = input.financial.financials?.rows.slice(0, 3).flatMap((row) => {
+    const latest = row.rawValues?.at(-1);
+    const previous = row.rawValues?.at(-2);
+    return [`${row.label} ${periods.at(-2) ?? "직전"} ${previous ?? "결측"} / ${periods.at(-1) ?? "최근"} ${latest ?? "결측"}`];
+  }) ?? [];
+  return {
+    ...base,
+    companySummary: input.financial.companySummary?.slice(0, 120),
+    facts: [
+      ...(input.financial.marketCap ? [`시가총액 ${input.financial.marketCap}`] : []),
+      ...metricFacts,
+      ...scoreFacts,
+      ...financialFacts,
+    ].slice(0, 12),
+  };
 }
 
 function enforceAnalystCopyQuality(
@@ -405,8 +452,6 @@ async function runEditor(
       quietScore: candidate.quietScore,
       timingGrade: trading.get(candidate.id)!.grade,
       valuationGrade: financial.get(candidate.id)!.grade,
-      tradingView: trading.get(candidate.id)!.paragraph,
-      fundamentalView: financial.get(candidate.id)!.paragraph,
       analystConcerns: [...trading.get(candidate.id)!.concerns, ...financial.get(candidate.id)!.concerns],
     })),
   };
@@ -599,6 +644,7 @@ export interface CommitteeRunOptions {
   publish?: (snapshot: PublishedCommitteeSnapshot, report: CommitteeRunReport) => Promise<void>;
   writeFailure?: (report: CommitteeRunReport) => Promise<void>;
   writePicks?: (response: Daily30Response) => Promise<void>;
+  minCallIntervalMs?: number;
 }
 
 export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}): Promise<CommitteeRunResult> {
@@ -606,7 +652,13 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
   const date = kstDate();
   const runId = `${date}-${startedAt.getTime().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
   const previous = await (options.readPrevious ?? readPublishedCommitteeSnapshot)().catch(() => null);
-  const state: CallState = { callCount: 0, model: resolveModel(process.env.COMMITTEE_AI_MODEL) };
+  const configuredInterval = Number(process.env.COMMITTEE_MIN_CALL_INTERVAL_MS ?? DEFAULT_CALL_INTERVAL_MS);
+  const state: CallState = {
+    callCount: 0,
+    model: process.env.COMMITTEE_AI_MODEL || DEFAULT_COMMITTEE_MODEL,
+    lastCallAt: 0,
+    minCallIntervalMs: options.minCallIntervalMs ?? (Number.isFinite(configuredInterval) ? Math.max(0, configuredInterval) : DEFAULT_CALL_INTERVAL_MS),
+  };
   let candidateCount = 0;
   try {
     if (!(options.caller ?? (isAiConfigured() ? defaultAgentCaller : undefined))) {
