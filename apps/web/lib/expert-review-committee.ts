@@ -18,13 +18,13 @@ const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
-// Groq free/developer 조직의 TPM을 넘지 않도록 한 호출의 후보 수를 작게 유지한다.
-// 후보 50장 기준 분석가 4콜 + 4콜, 편집장 1콜로 일일 9콜이다.
-const BATCH_SIZE = 13;
+// Groq free/developer 조직의 TPM을 넘지 않도록 입력을 압축하고 호출 수를 줄인다.
+// 후보 50장 기준 분석가 3콜 + 3콜, 편집장 1콜로 일일 7콜이다.
+const BATCH_SIZE = 20;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
-const DEFAULT_COMMITTEE_MODEL = "qwen/qwen3.6-27b";
-const DEFAULT_CALL_INTERVAL_MS = 5_000;
+const DEFAULT_COMMITTEE_MODEL = "llama-3.1-8b-instant";
+const DEFAULT_CALL_INTERVAL_MS = 3_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
@@ -326,7 +326,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: args.role === "editor" ? 2_500 : 1_800,
+    maxTokens: args.role === "editor" ? 1_000 : 1_300,
     timeoutMs: 45_000,
     trace: args.trace,
     metadata: { committeeVersion: COMMITTEE_VERSION, role: args.role },
@@ -349,11 +349,12 @@ async function callWithRetry(
     state.lastCallAt = Date.now();
     if (result.model) state.model = result.model;
     if (result.ok && result.content.trim()) return result.content;
-    if (result.status === 429 && result.retryAfterMs && result.retryAfterMs > 0) {
-      if (result.retryAfterMs > 15_000) {
-        throw new Error(`${args.role} agent rate limited; retry after ${Math.ceil(result.retryAfterMs / 1_000)}s`);
+    if (result.status === 429) {
+      if (!result.retryAfterMs || result.retryAfterMs > 15_000) {
+        const retryAfter = result.retryAfterMs ? `; retry after ${Math.ceil(result.retryAfterMs / 1_000)}s` : "";
+        throw new Error(`${args.role} agent rate limited${retryAfter}`);
       }
-      // Retry-After가 있으면 다음 시도까지의 대기 시간을 정확히 반영한다.
+      // 짧은 Retry-After만 한 번 존중하고, 긴 대기는 크론을 붙잡지 않는다.
       state.lastCallAt = Date.now() + result.retryAfterMs - state.minCallIntervalMs;
     }
     lastError = `${args.role} agent call failed${result.status ? ` HTTP ${result.status}` : ""}`;
@@ -548,14 +549,16 @@ async function runEditor(
       canonical: candidate.card.canonical,
       assetClass: candidate.assetClass,
       sector: candidate.card.sector,
-      headline: candidate.card.headline,
+      headline: candidate.card.headline?.slice(0, 100),
       companyScore: candidate.front.companyScore?.score,
       quietScore: candidate.quietScore,
       timingGrade: trading.get(candidate.id)!.grade,
       valuationGrade: financial.get(candidate.id)!.grade,
       tradingApproved: trading.get(candidate.id)!.approved,
       financialApproved: financial.get(candidate.id)!.approved,
-      analystConcerns: [...trading.get(candidate.id)!.concerns, ...financial.get(candidate.id)!.concerns],
+      analystConcerns: [...trading.get(candidate.id)!.concerns, ...financial.get(candidate.id)!.concerns]
+        .slice(0, 2)
+        .map((concern) => concern.slice(0, 80)),
     })),
   };
   const text = await callWithRetry(caller, { role: "editor", system: EDITOR_SYSTEM, input, trace: "expert-committee-editor" }, state);
