@@ -149,7 +149,7 @@ describe("expert committee orchestration", () => {
     expect(result.ok).toBe(true);
     expect(result.report.candidateCount).toBe(40);
     expect(result.report.selectedCount).toBe(30);
-    expect(result.report.callCount).toBe(3);
+    expect(result.report.callCount).toBe(5);
     expect(result.response?.stocks).toHaveLength(30);
     expect(result.response?.fronts["테스트코인0"]?.committeeReview?.factChecked).toBe(true);
     expect(publish).toHaveBeenCalledOnce();
