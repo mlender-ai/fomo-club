@@ -271,4 +271,62 @@ describe("expert committee orchestration", () => {
     expect(editor).toMatchObject({ ok: true, stage: "editor", selectedCount: 30, callCount: 9 });
     expect(publish).toHaveBeenCalledOnce();
   });
+
+  it("분석가가 같은 문장을 반복해도 승인 후보를 전부 잃지 않고 엔진 문장으로 보강한다", async () => {
+    let stored: unknown = null;
+    const caller: CommitteeAgentCaller = async ({ role, input }) => {
+      if (role === "editor") {
+        const candidates = (input as { candidates: Array<{ candidateId: string }> }).candidates;
+        return {
+          ok: true,
+          model: "test-model",
+          content: JSON.stringify({
+            selectedIds: candidates.slice(0, 30).map((candidate) => candidate.candidateId),
+            rejected: [],
+            compositionSummary: "중복을 줄이고 자산군을 나눠 구성했습니다.",
+          }),
+        };
+      }
+      const candidates = input as Array<{ candidateId: string }>;
+      return {
+        ok: true,
+        model: "test-model",
+        content: JSON.stringify({
+          reviews: candidates.map((candidate) => ({
+            candidateId: candidate.candidateId,
+            approved: true,
+            grade: "B",
+            paragraph: "모든 후보에 동일한 분석 문장을 반복해 반환합니다.",
+            concerns: [],
+          })),
+        }),
+      };
+    };
+    const stageStorage = {
+      read: async () => stored,
+      write: async (_date: string, value: unknown) => { stored = value; },
+    };
+    const common = {
+      caller,
+      buildPool: async () => fakePool(),
+      readPrevious: async () => null,
+      publish: async () => {},
+      writeFailure: async () => {},
+      writePicks: async () => {},
+      minCallIntervalMs: 0,
+      stageStorage,
+    };
+
+    await runExpertReviewCommitteeStage("trading", common);
+    await runExpertReviewCommitteeStage("financial", common);
+    const editor = await runExpertReviewCommitteeStage("editor", common);
+
+    expect(editor).toMatchObject({ ok: true, selectedCount: 30 });
+    const rows = stored as {
+      trading: Array<[string, { approved: boolean; factFallback: boolean }]>,
+      financial: Array<[string, { approved: boolean; factFallback: boolean }]>,
+    };
+    expect(rows.trading.every(([, review]) => review.approved && review.factFallback)).toBe(true);
+    expect(rows.financial.every(([, review]) => review.approved && review.factFallback)).toBe(true);
+  });
 });
