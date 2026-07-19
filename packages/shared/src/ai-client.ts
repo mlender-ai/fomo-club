@@ -41,6 +41,7 @@ export interface CallAiResult {
   ok: boolean;
   status: number;
   model: string;
+  retryAfterMs?: number;
 }
 
 interface LlmResponse {
@@ -161,6 +162,10 @@ export async function callAI(opts: CallAiOptions): Promise<CallAiResult> {
     });
     result.status = res.status;
     if (!res.ok) {
+      const retryAfterSeconds = Number.parseFloat(res.headers.get("retry-after") ?? "");
+      if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+        result.retryAfterMs = Math.round(retryAfterSeconds * 1_000);
+      }
       console.warn(`[ai-client] ${opts.trace ?? "call"} HTTP ${res.status}`);
       finishTrace({ ok: false, status: res.status });
       return result;
