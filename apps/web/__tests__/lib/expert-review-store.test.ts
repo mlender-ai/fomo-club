@@ -1,14 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { writeFeedContent } = vi.hoisted(() => ({ writeFeedContent: vi.fn() }));
-
-vi.mock("../../lib/feed-content-store", () => ({
+const { readFeedContent, readFeedContentByPrefix, writeFeedContent } = vi.hoisted(() => ({
   readFeedContent: vi.fn(),
   readFeedContentByPrefix: vi.fn(),
+  writeFeedContent: vi.fn(),
+}));
+
+vi.mock("../../lib/feed-content-store", () => ({
+  readFeedContent,
+  readFeedContentByPrefix,
   writeFeedContent,
 }));
 
-import { publishCommitteeSnapshot, writeFailedCommitteeRun, type CommitteeRunReport } from "../../lib/expert-review-store";
+import {
+  publishCommitteeSnapshot,
+  readRecentPublishedCommitteeSnapshot,
+  writeFailedCommitteeRun,
+  type CommitteeRunReport,
+  type PublishedCommitteeSnapshot,
+} from "../../lib/expert-review-store";
 
 const report: CommitteeRunReport = {
   runId: "run-1",
@@ -29,7 +39,11 @@ const report: CommitteeRunReport = {
 };
 
 describe("expert committee publication ordering", () => {
-  beforeEach(() => writeFeedContent.mockReset());
+  beforeEach(() => {
+    readFeedContent.mockReset();
+    readFeedContentByPrefix.mockReset();
+    writeFeedContent.mockReset();
+  });
 
   it("실패 실행은 이력만 쓰고 활성 승인본을 교체하지 않는다", async () => {
     await writeFailedCommitteeRun(report);
@@ -50,7 +64,36 @@ describe("expert committee publication ordering", () => {
     await publishCommitteeSnapshot(snapshot, published);
     expect(writeFeedContent.mock.calls.map((call) => call[0])).toEqual([
       "expert-committee:run:2026-07-19:run-1",
+      "expert-committee:snapshot:2026-07-19:run-1",
       "expert-committee:active",
     ]);
+  });
+
+  it("오늘 캐시 키와 무관하게 최근 3일 안의 최신 발행본을 찾는다", async () => {
+    const response = {
+      stocks: Array.from({ length: 30 }, (_, index) => ({ canonical: `종목${index}` })),
+      cards: Array.from({ length: 30 }, (_, index) => ({ canonical: `종목${index}` })),
+    } as never;
+    const recent = {
+      runId: "run-recent",
+      version: "committee-v1",
+      reviewedAt: "2026-07-19T01:00:00.000Z",
+      response,
+      report: { ...report, runId: "run-recent", date: "2026-07-19" },
+    } satisfies PublishedCommitteeSnapshot;
+    const expired = {
+      ...recent,
+      runId: "run-expired",
+      reviewedAt: "2026-07-15T01:00:00.000Z",
+      report: { ...recent.report, runId: "run-expired", date: "2026-07-15" },
+    };
+    readFeedContent.mockResolvedValue(null);
+    readFeedContentByPrefix.mockResolvedValue([
+      { id: "expert-committee:snapshot:2026-07-15:run-expired", row: expired },
+      { id: "expert-committee:snapshot:2026-07-19:run-recent", row: recent },
+    ]);
+
+    await expect(readRecentPublishedCommitteeSnapshot("2026-07-20", 3)).resolves.toEqual(recent);
+    expect(readFeedContentByPrefix).toHaveBeenCalledWith("expert-committee:snapshot:", 10);
   });
 });

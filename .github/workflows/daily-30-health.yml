@@ -1,0 +1,54 @@
+name: Daily 30 Availability
+
+on:
+  schedule:
+    # Vercel editor cron(21:20 UTC, max 5m) 종료 뒤 공개 응답을 검증한다.
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+    inputs:
+      rerun_committee:
+        description: "Run trading, financial and editor stages before verification"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-30-availability
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rerun committee stages
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.rerun_committee }}
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          for STAGE in trading financial editor; do
+            URL="https://fomo-club-backend.vercel.app/api/fomo/cron/daily-30/${STAGE}"
+            if [ -n "${CRON_SECRET:-}" ]; then
+              curl -fsS --max-time 320 "$URL" -H "Authorization: Bearer ${CRON_SECRET}"
+            else
+              curl -fsS --max-time 320 "$URL"
+            fi
+          done
+
+      - name: Verify published daily-30
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 320 "https://fomo-club-backend.vercel.app/api/fomo/daily-30" > /tmp/daily30.json
+          node -e '
+            const fs = require("fs");
+            const json = JSON.parse(fs.readFileSync("/tmp/daily30.json", "utf8"));
+            const cards = Math.max(json.cards?.length || 0, json.stocks?.length || 0);
+            console.log(JSON.stringify({ cards, stale: json.meta?.stale || null, source: json.source }));
+            if (cards < 20) {
+              console.error(`daily-30 availability check failed: ${cards}/20 cards`);
+              process.exit(1);
+            }
+          '

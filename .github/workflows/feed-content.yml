@@ -78,5 +78,10 @@ jobs:
             const json = JSON.parse(fs.readFileSync("/tmp/daily30.json", "utf8"));
             const contents = (json.cards || []).filter((c) => c.kind === "content");
             const kinds = contents.map((c) => c.contentType);
-            console.log(JSON.stringify({ cards: json.cards?.length || 0, contents: contents.length, kinds }));
+            const cards = Math.max(json.cards?.length || 0, json.stocks?.length || 0);
+            console.log(JSON.stringify({ cards, contents: contents.length, kinds, stale: json.meta?.stale || null }));
+            if (cards < 20) {
+              console.error(`daily-30 self-check failed: ${cards}/20 cards`);
+              process.exit(1);
+            }
           '

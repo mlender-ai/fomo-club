@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withCors, kstDate } from "../../../../../lib/fomo";
 import { runExpertReviewCommitteeStage, type CommitteeStage } from "../../../../../lib/expert-review-committee";
+import { daily30CardCount, resolveDaily30Response } from "../../../../../lib/daily-30";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -24,7 +25,15 @@ export async function GET(request: Request) {
     }
     const stage = requestedStage as CommitteeStage;
     const result = await runExpertReviewCommitteeStage(stage);
-    if (result.ok && stage === "editor") revalidateTag("daily-30", { expire: 0 });
+    let verifiedCards: number | undefined;
+    if (result.ok && stage === "editor") {
+      revalidateTag("daily-30", { expire: 0 });
+      const published = await resolveDaily30Response();
+      verifiedCards = daily30CardCount(published);
+      if (verifiedCards < 20) {
+        throw new Error(`daily-30 post-publish verification failed: ${verifiedCards}/20 cards`);
+      }
+    }
     return withCors(
       NextResponse.json(
         {
@@ -36,6 +45,7 @@ export async function GET(request: Request) {
           calls: result.callCount,
           candidates: result.candidateCount,
           selected: result.selectedCount,
+          ...(verifiedCards !== undefined ? { verifiedCards } : {}),
           previousRunRetained: result.previousRunRetained,
           ...(result.error ? { error: result.error } : {}),
           elapsedMs: Date.now() - startedAt,
