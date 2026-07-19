@@ -19,8 +19,8 @@ const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
 // Groq free/developer 조직의 TPM을 넘지 않도록 입력을 압축하고 호출 수를 줄인다.
-// 후보 50장 기준 분석가 3콜 + 3콜, 편집장 1콜로 일일 7콜이다.
-const BATCH_SIZE = 20;
+// 후보 50장 기준 분석가 5콜 + 5콜, 편집장 1콜로 일일 11콜이다.
+const BATCH_SIZE = 10;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "llama-3.1-8b-instant";
@@ -326,7 +326,8 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: args.role === "editor" ? 1_000 : 1_300,
+    maxTokens: args.role === "editor" ? 900 : 1_500,
+    jsonMode: true,
     timeoutMs: 45_000,
     trace: args.trace,
     metadata: { committeeVersion: COMMITTEE_VERSION, role: args.role },
