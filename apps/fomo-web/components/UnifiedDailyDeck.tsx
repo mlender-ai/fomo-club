@@ -83,7 +83,14 @@ function Daily30Empty({ onRetry }: { onRetry: () => void }) {
 
 function cardsFromDaily30(discovery: Daily30Response): { cards: DeckCard[]; fronts: Record<string, FrontEntry> } {
   const rawCards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
-  const fronts = discovery.fronts as Record<string, FrontEntry>;
+  const metaById = new Map((discovery.meta?.cards ?? []).map((card) => [card.id, card]));
+  const fronts = Object.fromEntries(Object.entries(discovery.fronts).map(([canonical, front]) => {
+    const stock = discovery.stocks.find((item) => item.canonical === canonical);
+    if (!stock) return [canonical, front as FrontEntry];
+    const id = `stock:${stock.country}:${stock.symbol ?? stock.naverCode ?? stock.canonical}:${stock.canonical}`;
+    const signalTypes = metaById.get(id)?.signalTypes;
+    return [canonical, { ...front, ...(signalTypes?.length ? { signalTypes } : {}) } as FrontEntry];
+  }));
   // 메인 덱 = 종목 발굴 전용(WO-GNB). 콘텐츠·내러티브는 피드 표면으로 이관.
   return { cards: stockOnlyDeckCards(stockDeckCards(rawCards)).slice(0, 30), fronts };
 }

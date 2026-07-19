@@ -1,6 +1,14 @@
 import { Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
+import {
+  SIGNAL_RESUME_MIN_SAMPLE,
+  SIGNAL_TAXONOMY_VERSION,
+  SIGNAL_TYPE_CODES,
+  normalizeSignalTypeCodes,
+  type SignalTypeCode,
+} from "@fomo/core";
 import { appendJudgmentLedger, ledgerKey, readLedgerSelections, type LedgerSelectionView } from "./judgment-ledger";
-import { kstDate } from "./fomo";
+import { cacheVersion, kstDate } from "./fomo";
 import { prisma } from "./prisma";
 import { fetchHistoricalPrices, type HistoricalQuoteRequestItem } from "./quote-prices";
 
@@ -24,8 +32,10 @@ export interface TrackWindowResult {
 export interface TrackRecordResponse {
   generatedAt: string;
   methodology: "all-final-selections-fixed-windows";
+  signalTaxonomyVersion: typeof SIGNAL_TAXONOMY_VERSION;
+  signalMinimumSample: typeof SIGNAL_RESUME_MIN_SAMPLE;
   windows: TrackWindowResult[];
-  signalHistory30: Record<string, TrackMetric>;
+  signalHistory30: Record<SignalTypeCode, TrackMetric>;
 }
 
 export interface OutcomePayload {
@@ -36,7 +46,7 @@ export interface OutcomePayload {
   selectedPrice: number;
   returnPct: number;
   asset: string;
-  signalTypes: string[];
+  signalTypes: SignalTypeCode[];
   scoreBand?: string;
   companyScore?: number;
 }
@@ -67,7 +77,7 @@ function asOutcome(payload: Prisma.JsonValue): OutcomePayload | null {
     selectedPrice: value.selectedPrice,
     returnPct: value.returnPct,
     asset: value.asset,
-    signalTypes: Array.isArray(value.signalTypes) ? value.signalTypes.filter((item): item is string => typeof item === "string") : [],
+    signalTypes: normalizeSignalTypeCodes(Array.isArray(value.signalTypes) ? value.signalTypes : []),
     ...(typeof value.scoreBand === "string" ? { scoreBand: value.scoreBand } : {}),
     ...(typeof value.companyScore === "number" ? { companyScore: value.companyScore } : {}),
   };
@@ -184,6 +194,19 @@ function grouped(outcomes: readonly OutcomePayload[], keyOf: (outcome: OutcomePa
   return Object.fromEntries([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, values]) => [key, metric(values)]));
 }
 
+function publicSignalMetric(value: TrackMetric | undefined): TrackMetric {
+  if (!value) return { n: 0, winRate: null, medianReturn: null };
+  if (value.n < SIGNAL_RESUME_MIN_SAMPLE) return { n: value.n, winRate: null, medianReturn: null };
+  return value;
+}
+
+function signalMetrics(outcomes: readonly OutcomePayload[]): Record<SignalTypeCode, TrackMetric> {
+  const measured = grouped(outcomes, (outcome) => outcome.signalTypes);
+  return Object.fromEntries(
+    SIGNAL_TYPE_CODES.map((code) => [code, publicSignalMetric(measured[code])])
+  ) as Record<SignalTypeCode, TrackMetric>;
+}
+
 export async function readTrackRecord(): Promise<TrackRecordResponse> {
   const rows = await prisma.judgmentLedger.findMany({
     where: { kind: "outcome", actor: "engine" },
@@ -204,14 +227,25 @@ export function buildTrackRecord(outcomes: readonly OutcomePayload[], generatedA
       days,
       overall: metric(values.map((outcome) => outcome.returnPct)),
       byAsset: grouped(values, (outcome) => [outcome.asset]),
-      bySignal: grouped(values, (outcome) => outcome.signalTypes),
+      bySignal: signalMetrics(values),
       byScoreBand: grouped(values, (outcome) => outcome.scoreBand ? [outcome.scoreBand] : []),
     };
   });
   return {
     generatedAt,
     methodology: "all-final-selections-fixed-windows",
+    signalTaxonomyVersion: SIGNAL_TAXONOMY_VERSION,
+    signalMinimumSample: SIGNAL_RESUME_MIN_SAMPLE,
     windows,
-    signalHistory30: windows.find((window) => window.days === 30)?.bySignal ?? {},
+    signalHistory30: (windows.find((window) => window.days === 30)?.bySignal ?? signalMetrics([])) as Record<SignalTypeCode, TrackMetric>,
   };
+}
+
+/** Vercel Data Cache projection; the append-only ledger remains the only persisted source. */
+export async function getCachedTrackRecord(): Promise<TrackRecordResponse> {
+  const load = unstable_cache(readTrackRecord, ["judgment-ledger-track-record", cacheVersion()], {
+    revalidate: 60 * 60 * 24,
+    tags: ["judgment-ledger"],
+  });
+  return load();
 }

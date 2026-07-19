@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import type { CardVerdict, CompanyScoreResult } from "@fomo/core";
+import {
+  SIGNAL_TAXONOMY_VERSION,
+  inferStandardSignalTypes,
+  normalizeSignalTypeCodes,
+  type CardVerdict,
+  type CompanyScoreResult,
+  type SignalTypeCode,
+  type WyckoffAnalysis,
+} from "@fomo/core";
 import { prisma } from "./prisma";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
@@ -36,7 +44,7 @@ export interface LedgerSelectionPayload {
   naverCode?: string;
   sourceLabel?: string;
   sourceUrl?: string;
-  signalTypes: string[];
+  signalTypes: SignalTypeCode[];
   quietScore?: number;
   signalScore?: number;
   hypePenalty?: number;
@@ -163,19 +171,15 @@ export function scoreBand(score: number | null | undefined): string | undefined 
 export function inferSignalTypes(input: {
   headline?: string;
   reason?: string;
+  sourceLabel?: string;
+  sourceUrl?: string;
   axisSignals?: Array<{ axis?: string; fired?: boolean }>;
   verdict?: CardVerdict;
-}): string[] {
-  const text = `${input.headline ?? ""} ${input.reason ?? ""}`;
-  const out = new Set<string>();
-  for (const signal of input.axisSignals ?? []) if (signal.fired && signal.axis) out.add(signal.axis);
-  if (/내부자|Form\s?4|insider|임원.*매수|대주주.*매수/i.test(text)) out.add("insider");
-  if (/외국인|기관|순매수|수급|고래/i.test(text)) out.add("flow");
-  if (/거래량|volume|진공/i.test(text)) out.add("volume");
-  if (/공시|계약|수주|실적|승인|허가|SEC|DART|filing|earnings/i.test(text)) out.add("material");
-  if (input.verdict?.phase) out.add("chart");
-  if (out.size === 0) out.add("material");
-  return [...out].sort();
+  signals?: DiscoveryFrontSeed["signals"];
+  wyckoff?: WyckoffAnalysis;
+  companyScore?: number;
+}): SignalTypeCode[] {
+  return inferStandardSignalTypes(input);
 }
 
 function cleanScore(score: CompanyScoreResult | undefined): Record<string, unknown> | null {
@@ -217,8 +221,13 @@ export function buildDaily30LedgerEntries(
     const signals = inferSignalTypes({
       ...(stock.headline ? { headline: stock.headline } : {}),
       ...(stock.reason ?? stock.whyShown ? { reason: stock.reason ?? stock.whyShown } : {}),
+      ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
+      ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
       ...(front?.axisSignals ? { axisSignals: front.axisSignals } : {}),
       ...(front?.verdict ? { verdict: front.verdict } : {}),
+      ...(front?.signals ? { signals: front.signals } : {}),
+      ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
+      ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
     });
     const score = cleanScore(front?.companyScore);
     const baseKey = `${date}:${resolvedActor}:${asset}:${stock.symbol ?? stock.naverCode ?? stock.canonical}`;
@@ -227,7 +236,8 @@ export function buildDaily30LedgerEntries(
       subject,
       kind: "signal",
       payload: {
-        types: signals,
+        taxonomyVersion: SIGNAL_TAXONOMY_VERSION,
+        signalTypes: signals,
         headline: stock.headline ?? stock.reason ?? stock.whyShown ?? "",
         ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
         ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
@@ -328,6 +338,19 @@ function asSelection(row: {
     ? (row.payload as unknown as LedgerSelectionPayload)
     : null;
   if (!payload) return null;
+  const storedSignalTypes = normalizeSignalTypeCodes(Array.isArray(payload.signalTypes) ? payload.signalTypes : []);
+  const projectedCompanyScore = payload.companyScore ?? payload.front?.companyScore?.score;
+  const projectedSignalTypes = storedSignalTypes.length > 0
+    ? storedSignalTypes
+    : inferStandardSignalTypes({
+        ...(payload.stock?.headline ?? payload.headline ? { headline: payload.stock?.headline ?? payload.headline } : {}),
+        ...(payload.stock?.reason ?? payload.stock?.whyShown ? { reason: payload.stock?.reason ?? payload.stock?.whyShown } : {}),
+        ...(payload.stock?.sourceLabel ?? payload.sourceLabel ? { sourceLabel: payload.stock?.sourceLabel ?? payload.sourceLabel } : {}),
+        ...(payload.stock?.sourceUrl ?? payload.sourceUrl ? { sourceUrl: payload.stock?.sourceUrl ?? payload.sourceUrl } : {}),
+        ...(payload.front?.signals ? { signals: payload.front.signals } : {}),
+        ...(payload.front?.wyckoff ? { wyckoff: payload.front.wyckoff } : {}),
+        ...(typeof projectedCompanyScore === "number" ? { companyScore: projectedCompanyScore } : {}),
+      });
   return {
     id: row.id,
     date: row.date,
@@ -339,7 +362,7 @@ function asSelection(row: {
     },
     priceAt: row.priceAt.toNumber(),
     actor: row.actor as "engine" | "committee",
-    payload: { ...payload, signalTypes: Array.isArray(payload.signalTypes) ? payload.signalTypes : [] },
+    payload: { ...payload, signalTypes: projectedSignalTypes },
   };
 }
 
@@ -540,13 +563,28 @@ export async function readSubjectTimeline(
     orderBy: { ts: "desc" },
     take: Math.max(1, Math.min(take, 200)),
   });
-  return rows.map((row) => ({
-    id: row.id,
-    date: row.date,
-    ts: row.ts.toISOString(),
-    kind: row.kind as LedgerKind,
-    actor: row.actor,
-    priceAt: row.priceAt.toNumber(),
-    payload: row.payload as Record<string, unknown>,
-  }));
+  return rows.map((row) => {
+    const payload = row.payload as Record<string, unknown>;
+    const signalTypes = row.kind === "signal"
+      ? normalizeSignalTypeCodes(Array.isArray(payload.signalTypes) ? payload.signalTypes : [])
+      : [];
+    const projected = row.kind === "signal" && signalTypes.length === 0
+      ? inferStandardSignalTypes({
+          ...(typeof payload.headline === "string" ? { headline: payload.headline } : {}),
+          ...(typeof payload.sourceLabel === "string" ? { sourceLabel: payload.sourceLabel } : {}),
+          ...(typeof payload.sourceUrl === "string" ? { sourceUrl: payload.sourceUrl } : {}),
+        })
+      : signalTypes;
+    return {
+      id: row.id,
+      date: row.date,
+      ts: row.ts.toISOString(),
+      kind: row.kind as LedgerKind,
+      actor: row.actor,
+      priceAt: row.priceAt.toNumber(),
+      payload: row.kind === "signal"
+        ? { ...payload, taxonomyVersion: SIGNAL_TAXONOMY_VERSION, signalTypes: projected }
+        : payload,
+    };
+  });
 }

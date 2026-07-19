@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SIGNAL_TYPE_CODES, SIGNAL_TYPE_LABELS } from "@fomo/core";
 import { fetchTrackRecord, type TrackMetric, type TrackRecordResponse, type TrackWindowResult } from "@/lib/fomoApi";
 
 const NEON = "#D8FF3A";
@@ -10,17 +11,7 @@ const ASSET_LABEL: Record<string, string> = {
   coin: "코인",
   macro: "거시",
 };
-const SIGNAL_LABEL: Record<string, string> = {
-  insider: "내부자 매수",
-  flow: "수급",
-  volume: "거래량",
-  material: "재료",
-  chart: "차트",
-  price: "가격",
-  time: "시점",
-  herd: "화제성",
-  affinity: "관심",
-};
+const SIGNAL_LABEL: Record<string, string> = SIGNAL_TYPE_LABELS;
 const SCORE_LABEL: Record<string, string> = {
   "80-100": "80점 이상",
   "60-79": "60–79점",
@@ -79,7 +70,7 @@ function Breakdown({
               <span className="min-w-0 truncate text-sm text-whiteout">{labels[key] ?? key}</span>
               <div className="min-w-16 text-right">
                 <p className="font-number text-sm font-bold" style={{ color: metric.winRate !== null && metric.winRate >= 50 ? NEON : "#A3A3A0" }}>
-                  {metric.winRate === null ? "—" : `${metric.winRate.toFixed(1)}%`}
+                  {metric.winRate === null ? "축적 중" : `${metric.winRate.toFixed(1)}%`}
                 </p>
                 <p className="mt-0.5 text-[10px] text-muted">n={metric.n}</p>
               </div>
@@ -146,7 +137,12 @@ export default function TrackRecordPage() {
             <MetricBlock label="전체 표본" metric={windowResult.overall} value="n" />
           </section>
           <Breakdown title="자산군별" values={windowResult.byAsset} labels={ASSET_LABEL} />
-          <Breakdown title="신호 유형별" values={windowResult.bySignal} labels={SIGNAL_LABEL} />
+          <Breakdown
+            title="신호 유형별 · n<30 비공개"
+            values={windowResult.bySignal}
+            labels={SIGNAL_LABEL}
+            order={[...SIGNAL_TYPE_CODES]}
+          />
           <Breakdown
             title="종합 점수대별"
             values={windowResult.byScoreBand}
