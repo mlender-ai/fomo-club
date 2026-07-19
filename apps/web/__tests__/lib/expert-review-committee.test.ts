@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyAnalystFactGate,
   runExpertReviewCommittee,
+  runExpertReviewCommitteeStage,
   validateAgentNumbers,
   type CommitteeAgentCaller,
   type CommitteeCandidateInput,
@@ -149,7 +150,7 @@ describe("expert committee orchestration", () => {
     expect(result.ok).toBe(true);
     expect(result.report.candidateCount).toBe(40);
     expect(result.report.selectedCount).toBe(30);
-    expect(result.report.callCount).toBe(5);
+    expect(result.report.callCount).toBe(9);
     expect(result.response?.stocks).toHaveLength(30);
     expect(result.response?.fronts["테스트코인0"]?.committeeReview?.factChecked).toBe(true);
     expect(publish).toHaveBeenCalledOnce();
@@ -171,5 +172,66 @@ describe("expert committee orchestration", () => {
     expect(result.previousRunRetained).toBe(true);
     expect(publish).not.toHaveBeenCalled();
     expect(writeFailure).toHaveBeenCalledOnce();
+  });
+
+  it("3단 크론은 동일 후보를 이어받아 editor 성공 때만 활성본을 발행한다", async () => {
+    const caller: CommitteeAgentCaller = async ({ role, input }) => {
+      if (role === "editor") {
+        const candidates = (input as { candidates: Array<{ candidateId: string }> }).candidates;
+        return {
+          ok: true,
+          model: "test-model",
+          content: JSON.stringify({
+            selectedIds: candidates.slice(0, 30).map((candidate) => candidate.candidateId),
+            rejected: candidates.slice(30).map((candidate) => ({ candidateId: candidate.candidateId, reasons: ["구성 중복"] })),
+            compositionSummary: "등급과 조용함을 함께 검수한 구성입니다.",
+          }),
+        };
+      }
+      const candidates = input as Array<{ candidateId: string; stock: { symbol?: string } }>;
+      return {
+        ok: true,
+        model: "test-model",
+        content: JSON.stringify({
+          reviews: candidates.map((candidate) => ({
+            candidateId: candidate.candidateId,
+            approved: true,
+            grade: "B",
+            paragraph: role === "trading"
+              ? `${candidate.stock.symbol}의 구간·거래량·무효화 근거를 서로 대조해 타이밍을 검수했습니다.`
+              : `${candidate.stock.symbol}의 공개 재무와 카드 재료를 대조해 기업 체력과 자료 한계를 함께 검수했습니다.`,
+            concerns: [],
+          })),
+        }),
+      };
+    };
+    let stored: unknown = null;
+    const stageStorage = {
+      read: async () => stored,
+      write: async (_date: string, value: unknown) => { stored = value; },
+    };
+    const publish = vi.fn(async () => {});
+    const common = {
+      caller,
+      buildPool: async () => fakePool(),
+      readPrevious: async () => null,
+      publish,
+      writeFailure: async () => {},
+      writePicks: async () => {},
+      minCallIntervalMs: 0,
+      stageStorage,
+    };
+
+    const trading = await runExpertReviewCommitteeStage("trading", common);
+    expect(trading).toMatchObject({ ok: true, stage: "trading", candidateCount: 40, callCount: 4 });
+    expect(publish).not.toHaveBeenCalled();
+
+    const financial = await runExpertReviewCommitteeStage("financial", common);
+    expect(financial).toMatchObject({ ok: true, stage: "financial", callCount: 8 });
+    expect(publish).not.toHaveBeenCalled();
+
+    const editor = await runExpertReviewCommitteeStage("editor", common);
+    expect(editor).toMatchObject({ ok: true, stage: "editor", selectedCount: 30, callCount: 9 });
+    expect(publish).toHaveBeenCalledOnce();
   });
 });

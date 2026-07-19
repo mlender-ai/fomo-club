@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withCors, kstDate } from "../../../../../lib/fomo";
-import { runExpertReviewCommittee } from "../../../../../lib/expert-review-committee";
+import { runExpertReviewCommitteeStage, type CommitteeStage } from "../../../../../lib/expert-review-committee";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -18,22 +18,26 @@ export async function GET(request: Request) {
   }
   const startedAt = Date.now();
   try {
-    const result = await runExpertReviewCommittee();
-    if (result.ok) revalidateTag("daily-30", { expire: 0 });
+    const requestedStage = new URL(request.url).searchParams.get("stage") ?? "trading";
+    if (!(["trading", "financial", "editor"] as string[]).includes(requestedStage)) {
+      return withCors(NextResponse.json({ ok: false, error: "stage must be trading|financial|editor" }, { status: 400 }));
+    }
+    const stage = requestedStage as CommitteeStage;
+    const result = await runExpertReviewCommitteeStage(stage);
+    if (result.ok && stage === "editor") revalidateTag("daily-30", { expire: 0 });
     return withCors(
       NextResponse.json(
         {
           ok: result.ok,
-          runId: result.report.runId,
-          status: result.report.status,
+          runId: result.runId,
+          stage,
+          status: result.ok ? (stage === "editor" ? "published" : "ready") : "failed",
           date: kstDate(),
-          model: result.report.model,
-          calls: result.report.callCount,
-          candidates: result.report.candidateCount,
-          selected: result.report.selectedCount,
-          assetCounts: result.report.assetCounts,
+          calls: result.callCount,
+          candidates: result.candidateCount,
+          selected: result.selectedCount,
           previousRunRetained: result.previousRunRetained,
-          ...(result.report.error ? { error: result.report.error } : {}),
+          ...(result.error ? { error: result.error } : {}),
           elapsedMs: Date.now() - startedAt,
         },
         { status: result.ok ? 200 : 503, headers: { "Cache-Control": "no-store" } }

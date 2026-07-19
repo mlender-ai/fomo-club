@@ -12,16 +12,17 @@ import {
 } from "./expert-review-store";
 import { fetchStockBasics } from "./stock-basics";
 import { kstDate } from "./fomo";
+import { readFeedContent, writeFeedContent } from "./feed-content-store";
 
 const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 10;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "llama-3.3-70b-versatile";
-const DEFAULT_CALL_INTERVAL_MS = 35_000;
+const DEFAULT_CALL_INTERVAL_MS = 40_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
@@ -253,7 +254,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: 2_500,
+    maxTokens: args.role === "editor" ? 2_500 : 1_500,
     timeoutMs: 45_000,
     trace: args.trace,
     metadata: { committeeVersion: COMMITTEE_VERSION, role: args.role },
@@ -646,6 +647,10 @@ export interface CommitteeRunOptions {
   writeFailure?: (report: CommitteeRunReport) => Promise<void>;
   writePicks?: (response: Daily30Response) => Promise<void>;
   minCallIntervalMs?: number;
+  stageStorage?: {
+    read: (date: string) => Promise<unknown | null>;
+    write: (date: string, value: unknown) => Promise<void>;
+  };
 }
 
 export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}): Promise<CommitteeRunResult> {
@@ -753,5 +758,208 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
     };
     await (options.writeFailure ?? writeFailedCommitteeRun)(report).catch(() => {});
     return { ok: false, report, previousRunRetained: Boolean(previous) };
+  }
+}
+
+export type CommitteeStage = "trading" | "financial" | "editor";
+
+interface StoredCommitteeStage {
+  runId: string;
+  version: string;
+  date: string;
+  startedAt: string;
+  model: string;
+  totalCallCount: number;
+  pool: Daily30Response;
+  candidates: CandidateRecord[];
+  trading?: Array<[string, CheckedAnalystReview]>;
+  financial?: Array<[string, CheckedAnalystReview]>;
+}
+
+export interface CommitteeStageResult {
+  ok: boolean;
+  stage: CommitteeStage;
+  runId: string;
+  candidateCount: number;
+  selectedCount: number;
+  callCount: number;
+  previousRunRetained: boolean;
+  error?: string;
+}
+
+const committeeStageId = (date: string) => `expert-committee:stage:${date}`;
+
+function callState(options: Pick<CommitteeRunOptions, "minCallIntervalMs">, model?: string): CallState {
+  const configuredInterval = Number(process.env.COMMITTEE_MIN_CALL_INTERVAL_MS ?? DEFAULT_CALL_INTERVAL_MS);
+  return {
+    callCount: 0,
+    model: model || process.env.COMMITTEE_AI_MODEL || DEFAULT_COMMITTEE_MODEL,
+    lastCallAt: 0,
+    minCallIntervalMs: options.minCallIntervalMs ?? (Number.isFinite(configuredInterval) ? Math.max(0, configuredInterval) : DEFAULT_CALL_INTERVAL_MS),
+  };
+}
+
+function reviewAudits(
+  candidates: readonly CandidateRecord[],
+  selectedIds: readonly string[],
+  editor: EditorOutput,
+  trading: Map<string, CheckedAnalystReview>,
+  financial: Map<string, CheckedAnalystReview>
+): CommitteeReviewAudit[] {
+  const selected = new Set(selectedIds);
+  return candidates.map((candidate) => {
+    const tradingReview = trading.get(candidate.id)!;
+    const financialReview = financial.get(candidate.id)!;
+    return {
+      candidateId: candidate.id,
+      canonical: candidate.card.canonical,
+      approved: selected.has(candidate.id),
+      timingGrade: tradingReview.grade,
+      valuationGrade: financialReview.grade,
+      tradingView: tradingReview.paragraph,
+      fundamentalView: financialReview.paragraph,
+      rejectionReasons: rejectionReasons(candidate, selected, editor, tradingReview, financialReview),
+      factGate: {
+        tradingFallback: tradingReview.factFallback,
+        financialFallback: financialReview.factFallback,
+        invalidNumbers: [...new Set([...tradingReview.invalidNumbers, ...financialReview.invalidNumbers])],
+      },
+    };
+  });
+}
+
+/**
+ * Vercel 300초 상한과 Groq 조직 TPM을 함께 지키는 일일 3단 실행.
+ * trading → financial → editor 순서로 같은 날짜 stage JSON을 이어받고 editor 성공 때만 활성 덱을 교체한다.
+ */
+export async function runExpertReviewCommitteeStage(
+  stage: CommitteeStage,
+  options: CommitteeRunOptions = {}
+): Promise<CommitteeStageResult> {
+  const date = kstDate();
+  const previous = await (options.readPrevious ?? readPublishedCommitteeSnapshot)().catch(() => null);
+  let stored = options.stageStorage
+    ? (await options.stageStorage.read(date).catch(() => null)) as StoredCommitteeStage | null
+    : await readFeedContent<StoredCommitteeStage>(committeeStageId(date)).catch(() => null);
+  const now = new Date();
+  const fallbackRunId = `${date}-${now.getTime().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+  const state = callState(options, stored?.model);
+  const caller = options.caller ?? (isAiConfigured() ? defaultAgentCaller : undefined);
+
+  try {
+    if (!caller) throw new Error("committee AI is not configured");
+
+    if (stage === "trading") {
+      const pool = await (options.buildPool ?? (() => buildDaily30CandidatePoolResponse(CANDIDATE_TARGET)))();
+      const candidates = await candidateRecords(pool);
+      if (candidates.length < MIN_CANDIDATES) throw new Error(`committee candidate pool ${candidates.length}/${MIN_CANDIDATES}`);
+      const trading = enforceAnalystCopyQuality(await runAnalyst("trading", candidates, caller, state), candidates);
+      stored = {
+        runId: fallbackRunId,
+        version: COMMITTEE_VERSION,
+        date,
+        startedAt: now.toISOString(),
+        model: state.model,
+        totalCallCount: state.callCount,
+        pool,
+        candidates,
+        trading: [...trading],
+      };
+      if (options.stageStorage) await options.stageStorage.write(date, stored);
+      else await writeFeedContent(committeeStageId(date), stored);
+      return { ok: true, stage, runId: stored.runId, candidateCount: candidates.length, selectedCount: 0, callCount: stored.totalCallCount, previousRunRetained: Boolean(previous) };
+    }
+
+    if (!stored?.trading?.length) throw new Error("trading stage is not ready");
+    const trading = new Map(stored.trading);
+
+    if (stage === "financial") {
+      const financial = enforceAnalystCopyQuality(await runAnalyst("financial", stored.candidates, caller, state), stored.candidates);
+      stored = {
+        ...stored,
+        model: state.model,
+        totalCallCount: stored.totalCallCount + state.callCount,
+        financial: [...financial],
+      };
+      if (options.stageStorage) await options.stageStorage.write(date, stored);
+      else await writeFeedContent(committeeStageId(date), stored);
+      return { ok: true, stage, runId: stored.runId, candidateCount: stored.candidates.length, selectedCount: 0, callCount: stored.totalCallCount, previousRunRetained: Boolean(previous) };
+    }
+
+    if (!stored.financial?.length) throw new Error("financial stage is not ready");
+    const financial = new Map(stored.financial);
+    const editor = await runEditor(stored.candidates, trading, financial, caller, state);
+    const totalCallCount = stored.totalCallCount + state.callCount;
+    const completedAt = new Date().toISOString();
+    const committeeMeta = {
+      runId: stored.runId,
+      version: COMMITTEE_VERSION,
+      reviewedAt: completedAt,
+      candidateCount: stored.candidates.length,
+      selectedCount: editor.selectedIds.length,
+      callCount: totalCallCount,
+    };
+    const response = finalResponse(stored.pool, stored.candidates, editor.selectedIds, trading, financial, committeeMeta);
+    const reviews = reviewAudits(stored.candidates, editor.selectedIds, editor, trading, financial);
+    const report: CommitteeRunReport = {
+      runId: stored.runId,
+      version: COMMITTEE_VERSION,
+      date,
+      status: "published",
+      startedAt: stored.startedAt,
+      completedAt,
+      model: state.model,
+      callCount: totalCallCount,
+      candidateCount: stored.candidates.length,
+      selectedCount: editor.selectedIds.length,
+      selectedIds: editor.selectedIds,
+      reviews,
+      compositionSummary: editor.compositionSummary,
+      assetCounts: response.meta.assetCounts,
+    };
+    const { reviews: _reviews, ...reportSummary } = report;
+    void _reviews;
+    const snapshot: PublishedCommitteeSnapshot = {
+      runId: stored.runId,
+      version: COMMITTEE_VERSION,
+      reviewedAt: completedAt,
+      response,
+      report: reportSummary,
+    };
+    await (options.publish ?? publishCommitteeSnapshot)(snapshot, report);
+    await (options.writePicks ?? writeDaily30PicksSnapshot)(response).catch(() => {});
+    return { ok: true, stage, runId: stored.runId, candidateCount: stored.candidates.length, selectedCount: editor.selectedIds.length, callCount: totalCallCount, previousRunRetained: false };
+  } catch (error) {
+    const runId = stored?.runId ?? fallbackRunId;
+    const totalCallCount = (stored?.totalCallCount ?? 0) + state.callCount;
+    const report: CommitteeRunReport = {
+      runId,
+      version: COMMITTEE_VERSION,
+      date,
+      status: "failed",
+      startedAt: stored?.startedAt ?? now.toISOString(),
+      completedAt: new Date().toISOString(),
+      model: state.model,
+      callCount: totalCallCount,
+      candidateCount: stored?.candidates.length ?? 0,
+      selectedCount: 0,
+      selectedIds: [],
+      reviews: [],
+      compositionSummary: `${stage} 단계 실패로 직전 승인 덱을 유지했습니다.`,
+      assetCounts: previous?.response.meta.assetCounts ?? {},
+      error: error instanceof Error ? error.message : String(error),
+      previousRunRetained: Boolean(previous),
+    };
+    await (options.writeFailure ?? writeFailedCommitteeRun)(report).catch(() => {});
+    return {
+      ok: false,
+      stage,
+      runId,
+      candidateCount: report.candidateCount,
+      selectedCount: 0,
+      callCount: totalCallCount,
+      previousRunRetained: Boolean(previous),
+      ...(report.error ? { error: report.error } : {}),
+    };
   }
 }
