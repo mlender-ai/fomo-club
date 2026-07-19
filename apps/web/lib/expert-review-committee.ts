@@ -86,6 +86,7 @@ interface RawAnalystReview {
   grade: Grade;
   paragraph: string;
   concerns: string[];
+  responseMissing?: boolean;
 }
 
 interface CheckedAnalystReview extends RawAnalystReview {
@@ -210,7 +211,7 @@ function parseAnalystBatch(text: string, expectedIds: readonly string[]): RawAna
       !Array.isArray(row.concerns) ||
       !row.concerns.every((item) => typeof item === "string")
     ) return [];
-    return [{ ...row, concerns: row.concerns } as RawAnalystReview];
+    return [{ ...row, concerns: row.concerns, responseMissing: false } as RawAnalystReview];
   });
   const byId = new Map(rows.map((row) => [row.candidateId, row]));
   return expectedIds.map((id) => byId.get(id) ?? {
@@ -219,6 +220,7 @@ function parseAnalystBatch(text: string, expectedIds: readonly string[]): RawAna
     grade: "C",
     paragraph: "검수 응답이 누락되어 이 후보는 이번 위원회 선별에서 제외합니다.",
     concerns: ["에이전트 검수 응답 누락"],
+    responseMissing: true,
   });
 }
 
@@ -301,7 +303,8 @@ approved=false는 표시된 사실이 서로 명백히 충돌하거나 품질상
 반드시 {"reviews":[{"candidateId":"...","approved":true,"grade":"A","paragraph":"...","concerns":[]}]} JSON만 반환한다.`;
 
 const EDITOR_SYSTEM = `당신은 FOMO Club 편집장이다.
-두 분석가가 승인한 후보 중 정확히 targetCount개를 고른다. companyScore, quietScore, 두 등급, 자산군 다양성, 문구 중복을 함께 본다.
+정상 응답이 있는 후보 중 정확히 targetCount개를 고른다. 두 분석가의 approved 플래그와 concerns는 참고 의견이며,
+companyScore, quietScore, 두 등급, 자산군 다양성, 문구 중복을 함께 보고 최종 승인 여부를 결정한다.
 입력에 없는 후보를 고르지 말고 입력에 없는 숫자를 쓰지 않는다. selectedIds는 중복 없이 정확히 targetCount개다.
 반드시 {"selectedIds":["..."],"rejected":[{"candidateId":"...","reasons":["..."]}],"compositionSummary":"..."} JSON만 반환한다.`;
 
@@ -452,7 +455,13 @@ async function runEditor(
   caller: CommitteeAgentCaller,
   state: CallState
 ): Promise<EditorOutput> {
-  const eligible = candidates.filter((candidate) => trading.get(candidate.id)?.approved && financial.get(candidate.id)?.approved);
+  // 분석가의 approved는 편집장이 참고하는 검수 의견이다. 정상 JSON 응답이 있으면
+  // 편집장이 반려 사유·등급·조용함을 종합해 최종 결정한다. 응답 누락만 hard reject다.
+  const eligible = candidates.filter((candidate) => {
+    const tradingReview = trading.get(candidate.id);
+    const financialReview = financial.get(candidate.id);
+    return Boolean(tradingReview && financialReview && !tradingReview.responseMissing && !financialReview.responseMissing);
+  });
   if (eligible.length < FINAL_TARGET) throw new Error(`committee eligible candidates ${eligible.length}/${FINAL_TARGET}`);
   const assetCounts = eligible.reduce<Record<string, number>>((counts, candidate) => {
     counts[candidate.assetClass] = (counts[candidate.assetClass] ?? 0) + 1;
@@ -472,6 +481,8 @@ async function runEditor(
       quietScore: candidate.quietScore,
       timingGrade: trading.get(candidate.id)!.grade,
       valuationGrade: financial.get(candidate.id)!.grade,
+      tradingApproved: trading.get(candidate.id)!.approved,
+      financialApproved: financial.get(candidate.id)!.approved,
       analystConcerns: [...trading.get(candidate.id)!.concerns, ...financial.get(candidate.id)!.concerns],
     })),
   };
@@ -648,12 +659,12 @@ function rejectionReasons(
   trading: CheckedAnalystReview,
   financial: CheckedAnalystReview
 ): string[] {
-  if (selected.has(candidate.id)) return [];
   const reasons = [
     ...(!trading.approved ? trading.concerns : []),
     ...(!financial.approved ? financial.concerns : []),
-    ...(editor.rejected.find((row) => row.candidateId === candidate.id)?.reasons ?? []),
+    ...(!selected.has(candidate.id) ? (editor.rejected.find((row) => row.candidateId === candidate.id)?.reasons ?? []) : []),
   ].filter(Boolean);
+  if (selected.has(candidate.id)) return reasons;
   return reasons.length > 0 ? reasons : ["최종 구성의 중복·다양성 기준에서 제외"];
 }
 

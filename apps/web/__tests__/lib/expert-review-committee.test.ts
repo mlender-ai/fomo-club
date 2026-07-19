@@ -329,4 +329,56 @@ describe("expert committee orchestration", () => {
     expect(rows.trading.every(([, review]) => review.approved && review.factFallback)).toBe(true);
     expect(rows.financial.every(([, review]) => review.approved && review.factFallback)).toBe(true);
   });
+
+  it("분석가의 반려 의견이 있어도 정상 응답이면 편집장이 최종 선별한다", async () => {
+    let stored: unknown = null;
+    const caller: CommitteeAgentCaller = async ({ role, input }) => {
+      if (role === "editor") {
+        const candidates = (input as { candidates: Array<{ candidateId: string }> }).candidates;
+        return {
+          ok: true,
+          model: "test-model",
+          content: JSON.stringify({
+            selectedIds: candidates.slice(0, 30).map((candidate) => candidate.candidateId),
+            rejected: [],
+            compositionSummary: "분석가 의견과 조용함·다양성을 함께 반영했습니다.",
+          }),
+        };
+      }
+      const candidates = input as Array<{ candidateId: string; stock: { symbol?: string } }>;
+      return {
+        ok: true,
+        model: "test-model",
+        content: JSON.stringify({
+          reviews: candidates.map((candidate) => ({
+            candidateId: candidate.candidateId,
+            approved: false,
+            grade: "C",
+            paragraph: `${candidate.stock.symbol}의 검수 근거와 자료 한계를 확인해 편집장 판단 대상으로 남깁니다.`,
+            concerns: ["분석가 관찰 의견"],
+          })),
+        }),
+      };
+    };
+    const stageStorage = {
+      read: async () => stored,
+      write: async (_date: string, value: unknown) => { stored = value; },
+    };
+    const common = {
+      caller,
+      buildPool: async () => fakePool(),
+      readPrevious: async () => null,
+      publish: async () => {},
+      writeFailure: async () => {},
+      writePicks: async () => {},
+      minCallIntervalMs: 0,
+      stageStorage,
+    };
+
+    await runExpertReviewCommitteeStage("trading", common);
+    await runExpertReviewCommitteeStage("financial", common);
+    const editor = await runExpertReviewCommitteeStage("editor", common);
+
+    expect(editor).toMatchObject({ ok: true, selectedCount: 30 });
+  });
 });
