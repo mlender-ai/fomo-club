@@ -420,6 +420,7 @@ function compactAnalystInput(role: AnalystRole, input: CommitteeCandidateInput):
 }
 
 function enforceAnalystCopyQuality(
+  role: AnalystRole,
   reviews: Map<string, CheckedAnalystReview>,
   candidates: readonly CandidateRecord[]
 ): Map<string, CheckedAnalystReview> {
@@ -435,13 +436,25 @@ function enforceAnalystCopyQuality(
   }
   const repeatedIds = new Set([...keys.values()].filter((ids) => ids.length >= 3).flat());
   return new Map([...reviews].map(([id, review]) => {
+    const candidate = candidates.find((item) => item.id === id);
     const tooShort = review.paragraph.replace(/\s+/g, "").length < 30;
     if (!tooShort && !repeatedIds.has(id)) return [id, review];
+    const qualityReason = tooShort ? "전문 분석 문단이 지나치게 짧음" : "후보 간 분석 문구 반복";
+    // 모델이 후보별로 같은 문장을 반복하면 문구만 엔진 근거로 교체한다.
+    // 승인 자체를 전부 취소하면 정상 후보 40~50장이 편집장 단계에 0장으로 전달될 수 있다.
+    if (review.approved && candidate) {
+      return [id, {
+        ...review,
+        paragraph: role === "trading" ? tradingFallback(candidate.input) : financialFallback(candidate.input),
+        concerns: [...review.concerns, `${qualityReason} — 결정론 엔진 문장으로 보강`],
+        factFallback: true,
+      }];
+    }
     return [id, {
       ...review,
       approved: false,
       grade: "C",
-      concerns: [...review.concerns, tooShort ? "전문 분석 문단이 지나치게 짧음" : "후보 간 분석 문구 반복"],
+      concerns: [...review.concerns, qualityReason],
     }];
   }));
 }
@@ -714,8 +727,8 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
     const candidates = await candidateRecords(pool);
     candidateCount = candidates.length;
     if (candidateCount < MIN_CANDIDATES) throw new Error(`committee candidate pool ${candidateCount}/${MIN_CANDIDATES}`);
-    const trading = enforceAnalystCopyQuality(await runAnalyst("trading", candidates, caller, state), candidates);
-    const financial = enforceAnalystCopyQuality(await runAnalyst("financial", candidates, caller, state), candidates);
+    const trading = enforceAnalystCopyQuality("trading", await runAnalyst("trading", candidates, caller, state), candidates);
+    const financial = enforceAnalystCopyQuality("financial", await runAnalyst("financial", candidates, caller, state), candidates);
     const editor = await runEditor(candidates, trading, financial, caller, state);
     const completedAt = new Date().toISOString();
     const committeeMeta = {
@@ -892,7 +905,7 @@ export async function runExpertReviewCommitteeStage(
       const pool = await (options.buildPool ?? (() => buildDaily30CandidatePoolResponse(CANDIDATE_TARGET)))();
       const candidates = await candidateRecords(pool);
       if (candidates.length < MIN_CANDIDATES) throw new Error(`committee candidate pool ${candidates.length}/${MIN_CANDIDATES}`);
-      const trading = enforceAnalystCopyQuality(await runAnalyst("trading", candidates, caller, state), candidates);
+      const trading = enforceAnalystCopyQuality("trading", await runAnalyst("trading", candidates, caller, state), candidates);
       stored = {
         runId: fallbackRunId,
         version: COMMITTEE_VERSION,
@@ -913,7 +926,7 @@ export async function runExpertReviewCommitteeStage(
     const trading = new Map(stored.trading);
 
     if (stage === "financial") {
-      const financial = enforceAnalystCopyQuality(await runAnalyst("financial", stored.candidates, caller, state), stored.candidates);
+      const financial = enforceAnalystCopyQuality("financial", await runAnalyst("financial", stored.candidates, caller, state), stored.candidates);
       stored = {
         ...stored,
         model: state.model,
