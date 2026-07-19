@@ -87,7 +87,14 @@ function quoteFor(selection: LedgerSelectionView, windowDays: TrackWindow): Hist
 }
 
 /** Cron-only: append exact 7/30/90-day outcomes for every final selection that is due. */
-export async function materializeLedgerOutcomes(today = kstDate(), maxOutcomes = 240): Promise<{ due: number; appended: number }> {
+export async function materializeLedgerOutcomes(today = kstDate(), maxOutcomes = 240): Promise<{
+  due: number;
+  priced: number;
+  appended: number;
+  unpriced: number;
+  targetDates: string[];
+  assetCounts: Record<string, number>;
+}> {
   const fromDate = addDays(today, -100);
   const selections = await readLedgerSelections({ fromDate, take: 5_000 });
   const existingRows = await prisma.judgmentLedger.findMany({
@@ -105,10 +112,19 @@ export async function materializeLedgerOutcomes(today = kstDate(), maxOutcomes =
     TRACK_WINDOWS.flatMap((windowDays) => {
       const targetDate = addDays(selection.date, windowDays);
       const key = `${selection.id}:${windowDays}`;
-      return targetDate <= today && !existing.has(key) ? [{ selection, windowDays, targetDate, key }] : [];
+      // A calendar date is not an observable outcome until its market session has completed.
+      // The next daily cron evaluates it using that date or the following first trading day.
+      return targetDate < today && !existing.has(key) ? [{ selection, windowDays, targetDate, key }] : [];
     })
   ).slice(0, maxOutcomes);
-  if (due.length === 0) return { due: 0, appended: 0 };
+  const targetDates = [...new Set(due.map((item) => item.targetDate))].sort();
+  const assetCounts = Object.fromEntries(
+    [...new Set(due.map((item) => item.selection.subject.asset))].sort().map((asset) => [
+      asset,
+      due.filter((item) => item.selection.subject.asset === asset).length,
+    ])
+  );
+  if (due.length === 0) return { due: 0, priced: 0, appended: 0, unpriced: 0, targetDates, assetCounts };
 
   const prices = await fetchHistoricalPrices(due.map((item) => quoteFor(item.selection, item.windowDays)));
   const entries = due.flatMap(({ selection, windowDays, targetDate, key }) => {
@@ -139,7 +155,7 @@ export async function materializeLedgerOutcomes(today = kstDate(), maxOutcomes =
     }];
   });
   const appended = await appendJudgmentLedger(entries);
-  return { due: due.length, appended };
+  return { due: due.length, priced: entries.length, appended, unpriced: due.length - entries.length, targetDates, assetCounts };
 }
 
 function metric(values: readonly number[]): TrackMetric {
