@@ -144,11 +144,12 @@ describe("expert committee orchestration", () => {
       publish,
       writeFailure: async () => {},
       writePicks: async () => {},
+      minCallIntervalMs: 0,
     });
     expect(result.ok).toBe(true);
     expect(result.report.candidateCount).toBe(40);
     expect(result.report.selectedCount).toBe(30);
-    expect(result.report.callCount).toBe(17);
+    expect(result.report.callCount).toBe(3);
     expect(result.response?.stocks).toHaveLength(30);
     expect(result.response?.fronts["테스트코인0"]?.committeeReview?.factChecked).toBe(true);
     expect(publish).toHaveBeenCalledOnce();
@@ -164,6 +165,7 @@ describe("expert committee orchestration", () => {
       publish,
       writeFailure,
       writePicks: async () => {},
+      minCallIntervalMs: 0,
     });
     expect(result.ok).toBe(false);
     expect(result.previousRunRetained).toBe(true);
