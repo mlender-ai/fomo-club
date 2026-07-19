@@ -5,8 +5,16 @@
   "outputDirectory": ".next-build",
   "crons": [
     {
-      "path": "/api/fomo/cron/daily-30",
+      "path": "/api/fomo/cron/daily-30/trading",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/fomo/cron/daily-30/financial",
+      "schedule": "10 21 * * *"
+    },
+    {
+      "path": "/api/fomo/cron/daily-30/editor",
+      "schedule": "20 21 * * *"
     }
   ]
 }
