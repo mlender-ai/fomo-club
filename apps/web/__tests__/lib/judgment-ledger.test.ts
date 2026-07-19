@@ -7,6 +7,7 @@ import {
   daily30ResponseFromSelections,
   inferSignalTypes,
   ledgerKey,
+  projectTimelineSignalTypes,
   scoreBand,
   userLedgerActor,
   type LedgerSelectionView,
@@ -57,6 +58,16 @@ describe("Judgment Ledger", () => {
       "0-59",
       undefined,
     ]);
+  });
+
+  it("레거시 타임라인 신호는 같은 선정 스냅샷의 표준 유형으로 보강한다", () => {
+    expect(projectTimelineSignalTypes({
+      types: ["chart", "herd"],
+      headline: "클라우드 대표주",
+    }, ["score_60_79"])).toEqual(["score_60_79"]);
+    expect(projectTimelineSignalTypes({
+      headline: "대형 공급계약 공시",
+    }, ["score_80_plus"])).toEqual(["material_contract", "score_80_plus"]);
   });
 
   it("익명 식별자는 안정적으로 해시하고 원문 sessionId를 actor에 노출하지 않는다", () => {
