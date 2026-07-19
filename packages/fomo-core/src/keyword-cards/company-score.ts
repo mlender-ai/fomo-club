@@ -307,36 +307,12 @@ export function withCompanyQuietScore(
   };
 }
 
-/**
- * 일일 큐레이션(seed)의 수급·조용함 축과 상세 조회(fresh)의 재무·차트 축을 합친다.
- * 같은 축은 일일 큐레이션 값을 우선하고, 상세 조회는 없던 축만 보강한다.
- * 카드와 상세가 서로 다른 캐시 시점을 읽어 같은 축의 점수가 흔들리는 일을 막는다.
- */
+/** 카드에서 찍힌 기준 시점 점수를 상세에서도 고정한다. 검색 진입처럼 seed가 없을 때만 최신 점수를 쓴다. */
 export function mergeCompanyScoreResults(
   seed: CompanyScoreResult | undefined,
   fresh: CompanyScoreResult | undefined
 ): CompanyScoreResult | undefined {
-  if (!seed) return fresh;
-  if (!fresh) return seed;
-  const byKey = new Map<CompanyScoreAxisKey, CompanyScoreAxis>();
-  for (const axis of fresh.axes) byKey.set(axis.key, axis);
-  for (const axis of seed.axes) byKey.set(axis.key, axis);
-  const axes = ALL_AXES.flatMap((key) => {
-    const axis = byKey.get(key);
-    return axis ? [axis] : [];
-  });
-  const score = axes.length > 0 ? Math.round(axes.reduce((sum, axis) => sum + axis.score, 0) / axes.length) : null;
-  const label = scoreLabel(axes, {});
-  const asOf = fresh.asOf ?? seed.asOf;
-  return {
-    score,
-    label,
-    interpretation: interpretation(axes, label),
-    axes,
-    availableAxisCount: axes.length,
-    omittedAxes: ALL_AXES.filter((key) => !byKey.has(key)),
-    ...(asOf ? { asOf } : {}),
-  };
+  return seed ?? fresh;
 }
 
 function metricNumber(basics: StockBasics, term: string): number | undefined {

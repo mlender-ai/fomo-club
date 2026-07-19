@@ -84,7 +84,7 @@ describe("company score", () => {
     expect(result.axes.find((axis) => axis.key === "quiet")?.score).toBe(69);
   });
 
-  it("preserves daily flow and quiet axes when fresh financial and chart axes arrive", () => {
+  it("keeps the daily card score stable when a fresh detail score arrives", () => {
     const seed = computeCompanyScore({
       signals: { foreignNetStreak: 5 },
       quiet: { quietScore: 64, signalScore: 78, hypePenalty: 14 },
@@ -97,21 +97,8 @@ describe("company score", () => {
     });
     const merged = mergeCompanyScoreResults(seed, fresh)!;
 
-    expect(merged.axes.map((axis) => axis.key)).toEqual([
-      "valuation",
-      "growth",
-      "profitability",
-      "flow",
-      "chart",
-      "quiet",
-    ]);
-    expect(merged.score).toBe(
-      Math.round(merged.axes.reduce((sum, axis) => sum + axis.score, 0) / merged.axes.length)
-    );
-    expect(merged.axes.find((axis) => axis.key === "flow")).toEqual(
-      seed.axes.find((axis) => axis.key === "flow")
-    );
-    expect(merged.availableAxisCount).toBe(6);
+    expect(merged).toEqual(seed);
+    expect(mergeCompanyScoreResults(undefined, fresh)).toEqual(fresh);
   });
 
   it("is deterministic and produces discriminating scores across five profiles", () => {
