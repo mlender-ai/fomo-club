@@ -88,4 +88,26 @@ describe("ai-client provider routing", () => {
     expect(res.model).toBe("llama-3.3-70b-versatile");
     expect(fetchMock).toHaveBeenCalledWith("https://api.groq.com/openai/v1/chat/completions", expect.any(Object));
   });
+
+  it("preserves an explicit non-Gemini model when bypassing the global Gemini endpoint", async () => {
+    snapshotEnv();
+    process.env.AI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    process.env.AI_API_KEY = "gemini-key";
+    process.env.GROQ_API_KEY = "groq-key";
+    process.env.GROQ_MODEL = "qwen/qwen3.6-27b";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await callAI({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(res.ok).toBe(true);
+    expect(res.model).toBe("llama-3.1-8b-instant");
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string) as { model: string };
+    expect(body.model).toBe("llama-3.1-8b-instant");
+  });
 });

@@ -95,7 +95,10 @@ function resolveRuntimeConfig(opts: Pick<CallAiOptions, "apiUrl" | "apiKey" | "m
       return {
         url: GROQ_API_URL,
         key: fallbackKey,
-        model: groqModel(),
+        // 호출부가 명시한 비-Gemini 모델은 보존한다. 전역 Gemini 설정을
+        // 우회하는 위원회처럼 호출별 비용·품질 게이트가 있는 경로가
+        // GROQ_MODEL 환경값에 의해 다시 무거운 모델로 올라가지 않게 한다.
+        model: isGeminiModel(model) ? groqModel() : model,
       };
     }
     return { url: "", key: "", model, blockedProvider: "gemini" };
