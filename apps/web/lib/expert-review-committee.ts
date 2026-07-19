@@ -236,18 +236,47 @@ function parseAnalystBatch(text: string, expectedIds: readonly string[]): RawAna
   const parsed = parseJsonObjects(text) as Array<{ reviews?: unknown[]; candidateId?: unknown }>;
   const values = parsed.flatMap((value) => Array.isArray(value.reviews) ? value.reviews : value.candidateId ? [value] : []);
   const rows = values.flatMap((value) => {
-    const row = value as Partial<RawAnalystReview>;
-    if (
-      typeof row.candidateId !== "string" ||
-      typeof row.approved !== "boolean" ||
-      !isGrade(row.grade) ||
-      typeof row.paragraph !== "string" ||
-      !Array.isArray(row.concerns) ||
-      !row.concerns.every((item) => typeof item === "string")
-    ) return [];
-    return [{ ...row, concerns: row.concerns, responseMissing: false } as RawAnalystReview];
+    const row = value as Partial<RawAnalystReview> & { candidateId?: unknown };
+    const approved = typeof row.approved === "boolean"
+      ? row.approved
+      : row.approved === "true"
+        ? true
+        : row.approved === "false"
+          ? false
+          : undefined;
+    const grade = typeof row.grade === "string" && isGrade(row.grade.toUpperCase())
+      ? row.grade.toUpperCase() as Grade
+      : undefined;
+    const concerns = Array.isArray(row.concerns)
+      ? row.concerns.filter((item): item is string => typeof item === "string")
+      : [];
+    if (approved === undefined || !grade || typeof row.paragraph !== "string") return [];
+    return [{
+      candidateId: typeof row.candidateId === "string" ? row.candidateId : undefined,
+      approved,
+      grade,
+      paragraph: row.paragraph,
+      concerns,
+    }];
   });
-  const byId = new Map(rows.map((row) => [row.candidateId, row]));
+  const expected = new Set(expectedIds);
+  const byId = new Map<string, RawAnalystReview>();
+  const unassigned: Array<Omit<RawAnalystReview, "candidateId" | "responseMissing">> = [];
+  for (const row of rows) {
+    if (row.candidateId && expected.has(row.candidateId) && !byId.has(row.candidateId)) {
+      byId.set(row.candidateId, { ...row, candidateId: row.candidateId, responseMissing: false });
+    } else {
+      // 일부 모델은 JSON 스키마는 지키지만 긴 candidateId를 생략하거나 변형한다.
+      // 배치 순서가 유지된 응답만 남은 후보에 순서대로 붙이고, 실제 누락 행은 아래에서 hard reject한다.
+      unassigned.push(row);
+    }
+  }
+  const remainingIds = expectedIds.filter((id) => !byId.has(id));
+  for (const row of unassigned) {
+    const candidateId = remainingIds.shift();
+    if (!candidateId) break;
+    byId.set(candidateId, { ...row, candidateId, responseMissing: false });
+  }
   return expectedIds.map((id) => byId.get(id) ?? {
     candidateId: id,
     approved: false,

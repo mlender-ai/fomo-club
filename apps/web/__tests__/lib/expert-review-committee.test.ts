@@ -212,6 +212,41 @@ describe("expert committee orchestration", () => {
     expect(trading.filter(([, review]) => review.grade === "C")).toHaveLength(4);
   });
 
+  it("분석가가 candidateId를 생략해도 배치 순서로 정상 응답을 복원한다", async () => {
+    let stored: unknown = null;
+    const result = await runExpertReviewCommitteeStage("trading", {
+      caller: async ({ input }) => {
+        const candidates = input as Array<{ candidateId: string; stock: { symbol?: string } }>;
+        return {
+          ok: true,
+          model: "test-model",
+          content: JSON.stringify({
+            reviews: candidates.map((candidate) => ({
+              approved: true,
+              grade: "B",
+              paragraph: `${candidate.stock.symbol}의 구간과 거래량 근거를 대조해 현재 타이밍을 검수했습니다.`,
+              concerns: [],
+            })),
+          }),
+        };
+      },
+      buildPool: async () => fakePool(),
+      readPrevious: async () => null,
+      writeFailure: async () => {},
+      writePicks: async () => {},
+      minCallIntervalMs: 0,
+      stageStorage: {
+        read: async () => stored,
+        write: async (_date, value) => { stored = value; },
+      },
+    });
+
+    expect(result).toMatchObject({ ok: true, candidateCount: 40 });
+    const trading = (stored as { trading: Array<[string, { responseMissing?: boolean }]> }).trading;
+    expect(trading).toHaveLength(40);
+    expect(trading.every(([, review]) => review.responseMissing === false)).toBe(true);
+  });
+
   it("3단 크론은 동일 후보를 이어받아 editor 성공 때만 활성본을 발행한다", async () => {
     const caller: CommitteeAgentCaller = async ({ role, input }) => {
       if (role === "editor") {
