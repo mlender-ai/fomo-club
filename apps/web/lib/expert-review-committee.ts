@@ -185,12 +185,46 @@ export function validateAgentNumbers(text: string, input: unknown): string[] {
   return [...new Set(numericTokens(text).filter((token) => !allowed.has(token)))];
 }
 
-function parseJsonObject(text: string): unknown {
+function parseJsonObjects(text: string): unknown[] {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("agent output is not JSON");
-  return JSON.parse(cleaned.slice(start, end + 1));
+  const objects: unknown[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < cleaned.length; index += 1) {
+    const character = cleaned[index]!;
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+    if (character === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+      continue;
+    }
+    if (character !== "}" || depth === 0) continue;
+    depth -= 1;
+    if (depth !== 0 || start < 0) continue;
+    try {
+      objects.push(JSON.parse(cleaned.slice(start, index + 1)));
+    } catch {
+      // Keep scanning: a later complete object can still contain valid reviews.
+    }
+    start = -1;
+  }
+  if (objects.length === 0) throw new Error("agent output is not JSON");
+  return objects;
+}
+
+function parseJsonObject(text: string): unknown {
+  return parseJsonObjects(text).at(-1);
 }
 
 function isGrade(value: unknown): value is Grade {
@@ -198,9 +232,9 @@ function isGrade(value: unknown): value is Grade {
 }
 
 function parseAnalystBatch(text: string, expectedIds: readonly string[]): RawAnalystReview[] {
-  const parsed = parseJsonObject(text) as { reviews?: unknown[] };
-  if (!Array.isArray(parsed.reviews)) throw new Error("analyst reviews missing");
-  const rows = parsed.reviews.flatMap((value) => {
+  const parsed = parseJsonObjects(text) as Array<{ reviews?: unknown[]; candidateId?: unknown }>;
+  const values = parsed.flatMap((value) => Array.isArray(value.reviews) ? value.reviews : value.candidateId ? [value] : []);
+  const rows = values.flatMap((value) => {
     const row = value as Partial<RawAnalystReview>;
     if (
       typeof row.candidateId !== "string" ||
