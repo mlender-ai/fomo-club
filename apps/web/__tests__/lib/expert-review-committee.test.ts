@@ -150,7 +150,7 @@ describe("expert committee orchestration", () => {
     expect(result.ok).toBe(true);
     expect(result.report.candidateCount).toBe(40);
     expect(result.report.selectedCount).toBe(30);
-    expect(result.report.callCount).toBe(17);
+    expect(result.report.callCount).toBe(11);
     expect(result.response?.stocks).toHaveLength(30);
     expect(result.response?.fronts["테스트코인0"]?.committeeReview?.factChecked).toBe(true);
     expect(publish).toHaveBeenCalledOnce();
@@ -208,8 +208,8 @@ describe("expert committee orchestration", () => {
     expect(result.ok).toBe(true);
     const trading = (stored as { trading: Array<[string, { approved: boolean; grade: string; concerns: string[] }]> }).trading;
     expect(trading).toHaveLength(40);
-    expect(trading.filter(([, review]) => !review.approved)).toHaveLength(8);
-    expect(trading.filter(([, review]) => review.grade === "C")).toHaveLength(8);
+    expect(trading.filter(([, review]) => !review.approved)).toHaveLength(5);
+    expect(trading.filter(([, review]) => review.grade === "C")).toHaveLength(5);
   });
 
   it("분석가가 candidateId를 생략해도 배치 순서로 정상 응답을 복원한다", async () => {
@@ -296,15 +296,15 @@ describe("expert committee orchestration", () => {
     };
 
     const trading = await runExpertReviewCommitteeStage("trading", common);
-    expect(trading).toMatchObject({ ok: true, stage: "trading", candidateCount: 40, callCount: 8 });
+    expect(trading).toMatchObject({ ok: true, stage: "trading", candidateCount: 40, callCount: 5 });
     expect(publish).not.toHaveBeenCalled();
 
     const financial = await runExpertReviewCommitteeStage("financial", common);
-    expect(financial).toMatchObject({ ok: true, stage: "financial", callCount: 16 });
+    expect(financial).toMatchObject({ ok: true, stage: "financial", callCount: 10 });
     expect(publish).not.toHaveBeenCalled();
 
     const editor = await runExpertReviewCommitteeStage("editor", common);
-    expect(editor).toMatchObject({ ok: true, stage: "editor", selectedCount: 30, callCount: 17 });
+    expect(editor).toMatchObject({ ok: true, stage: "editor", selectedCount: 30, callCount: 11 });
     expect(publish).toHaveBeenCalledOnce();
   });
 
