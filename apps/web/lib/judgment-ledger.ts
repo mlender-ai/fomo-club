@@ -550,6 +550,19 @@ export interface LedgerTimelineEntry {
   payload: Record<string, unknown>;
 }
 
+export function projectTimelineSignalTypes(
+  payload: Record<string, unknown>,
+  selectionTypes: readonly SignalTypeCode[] = []
+): SignalTypeCode[] {
+  const stored = normalizeSignalTypeCodes(Array.isArray(payload.signalTypes) ? payload.signalTypes : []);
+  const inferred = inferStandardSignalTypes({
+    ...(typeof payload.headline === "string" ? { headline: payload.headline } : {}),
+    ...(typeof payload.sourceLabel === "string" ? { sourceLabel: payload.sourceLabel } : {}),
+    ...(typeof payload.sourceUrl === "string" ? { sourceUrl: payload.sourceUrl } : {}),
+  });
+  return normalizeSignalTypeCodes([...stored, ...inferred, ...selectionTypes]);
+}
+
 export async function readSubjectTimeline(
   canonical: string,
   take = 80,
@@ -563,18 +576,22 @@ export async function readSubjectTimeline(
     orderBy: { ts: "desc" },
     take: Math.max(1, Math.min(take, 200)),
   });
+  const selectionTypes = new Map<string, SignalTypeCode[]>();
+  for (const row of rows) {
+    if (row.kind !== "selection") continue;
+    const selection = asSelection(row);
+    if (!selection) continue;
+    selectionTypes.set(`${row.date}\u001f${row.actor}`, selection.payload.signalTypes);
+    if (!selectionTypes.has(row.date)) selectionTypes.set(row.date, selection.payload.signalTypes);
+  }
   return rows.map((row) => {
     const payload = row.payload as Record<string, unknown>;
-    const signalTypes = row.kind === "signal"
-      ? normalizeSignalTypeCodes(Array.isArray(payload.signalTypes) ? payload.signalTypes : [])
+    const projected = row.kind === "signal"
+      ? projectTimelineSignalTypes(
+          payload,
+          selectionTypes.get(`${row.date}\u001f${row.actor}`) ?? selectionTypes.get(row.date) ?? []
+        )
       : [];
-    const projected = row.kind === "signal" && signalTypes.length === 0
-      ? inferStandardSignalTypes({
-          ...(typeof payload.headline === "string" ? { headline: payload.headline } : {}),
-          ...(typeof payload.sourceLabel === "string" ? { sourceLabel: payload.sourceLabel } : {}),
-          ...(typeof payload.sourceUrl === "string" ? { sourceUrl: payload.sourceUrl } : {}),
-        })
-      : signalTypes;
     return {
       id: row.id,
       date: row.date,
