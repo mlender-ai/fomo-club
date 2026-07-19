@@ -3,7 +3,8 @@ import { withCors, kstDate } from "../../../../lib/fomo";
 import { getCachedDaily30Response, type Daily30Response } from "../../../../lib/daily-30";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// 위원회·스냅샷 동시 부재 때 결정론 엔진 직생성까지 허용하는 최후 비상 경로.
+export const maxDuration = 300;
 
 export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
@@ -11,9 +12,13 @@ export function OPTIONS() {
 
 export async function GET() {
   try {
+    const response = await getCachedDaily30Response();
+    const cacheControl = response.meta.stale
+      ? "public, s-maxage=60, stale-while-revalidate=300"
+      : "public, s-maxage=3600, stale-while-revalidate=86400";
     return withCors(
-      NextResponse.json(await getCachedDaily30Response(), {
-        headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
+      NextResponse.json(response, {
+        headers: { "Cache-Control": cacheControl },
       })
     );
   } catch (err) {

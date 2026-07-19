@@ -14,7 +14,11 @@ import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContent
 import { buildCoinDiscoveryResponse } from "./coin-discovery";
 import { readTodayFeedContent, type TodayFeedContent } from "./feed-briefing";
 import { readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
-import { readPublishedCommitteeSnapshot } from "./expert-review-store";
+import {
+  readPublishedCommitteeSnapshot,
+  readRecentPublishedCommitteeSnapshot,
+  type PublishedCommitteeSnapshot,
+} from "./expert-review-store";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -45,6 +49,8 @@ export interface Daily30Response extends DiscoveryResponse {
       selectedCount: number;
       callCount: number;
     };
+    /** 위원회 미발행 시 사용한 비상 공급 경로. 정상 발행본에는 없다. */
+    stale?: "committee-yesterday" | "engine-direct";
   };
 }
 
@@ -496,12 +502,12 @@ async function readYesterdayPicks(today: string): Promise<FreshnessSnapshot> {
   return { headlines };
 }
 
-interface Daily30BuildOptions {
+export interface Daily30BuildOptions {
   targetCount?: number;
   persistPicks?: boolean;
 }
 
-async function buildDaily30ResponseWithOptions(options: Daily30BuildOptions = {}): Promise<Daily30Response> {
+export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptions = {}): Promise<Daily30Response> {
   const targetCount = Math.max(1, Math.min(50, options.targetCount ?? DAILY_CARD_TARGET));
   const persistPicks = options.persistPicks ?? true;
   const today = kstDateOf();
@@ -627,17 +633,67 @@ export async function buildDaily30CandidatePoolResponse(targetCount = 50): Promi
   return buildDaily30ResponseWithOptions({ targetCount, persistPicks: false });
 }
 
+export function daily30CardCount(response: Daily30Response | null | undefined): number {
+  if (!response) return 0;
+  return Math.max(response.cards?.length ?? 0, response.stocks?.length ?? 0);
+}
+
+function withFallbackMeta(
+  response: Daily30Response,
+  stale: NonNullable<Daily30Response["meta"]["stale"]>
+): Daily30Response {
+  return { ...response, meta: { ...response.meta, stale } };
+}
+
+export interface Daily30FallbackDependencies {
+  today?: string;
+  readToday?: () => Promise<PublishedCommitteeSnapshot | null>;
+  readRecent?: (today: string, maxAgeDays: number) => Promise<PublishedCommitteeSnapshot | null>;
+  buildDirect?: () => Promise<Daily30Response>;
+}
+
+/**
+ * 공개 요청의 공급 체인. 위원회 장애는 사용자 장애로 전파하지 않고 최근 승인본,
+ * 결정론 엔진 순서로 격리한다. 20장 미만 응답은 빈 덱과 동일하게 다음 단계로 넘긴다.
+ */
+export async function resolveDaily30Response(
+  dependencies: Daily30FallbackDependencies = {}
+): Promise<Daily30Response> {
+  const today = dependencies.today ?? kstDateOf();
+  const readToday = dependencies.readToday ?? readPublishedCommitteeSnapshot;
+  const readRecent = dependencies.readRecent ?? readRecentPublishedCommitteeSnapshot;
+  const buildDirect =
+    dependencies.buildDirect ?? (() => buildDaily30ResponseWithOptions({ targetCount: DAILY_CARD_TARGET }));
+
+  const active = await readToday().catch((error) => {
+    console.warn("[daily-30] active committee snapshot unavailable", (error as Error)?.message);
+    return null;
+  });
+  if (active?.report.date === today && daily30CardCount(active.response) >= 20) {
+    return active.response;
+  }
+
+  const recent = await readRecent(today, 3).catch((error) => {
+    console.warn("[daily-30] recent committee snapshot unavailable", (error as Error)?.message);
+    return null;
+  });
+  if (recent && recent.report.date !== today && daily30CardCount(recent.response) >= 20) {
+    return withFallbackMeta(recent.response, "committee-yesterday");
+  }
+
+  const direct = await buildDirect();
+  const directCount = daily30CardCount(direct);
+  if (directCount >= 20) return withFallbackMeta(direct, "engine-direct");
+  throw new Error(`daily-30 fallback exhausted: engine produced ${directCount}/20 cards`);
+}
+
 /**
  * 공유 캐시 getter — daily-30 라우트와 feed-hub 가 같은 캐시 엔트리를 쓴다(중복 빌드 방지).
  * feed-content 크론이 tags 로 즉시 무효화한다.
  */
 export async function getCachedDaily30Response(): Promise<Daily30Response> {
   const load = unstable_cache(
-    async () => {
-      const snapshot = await readPublishedCommitteeSnapshot();
-      if (!snapshot?.response) throw new Error("expert committee has not published a deck yet");
-      return snapshot.response;
-    },
+    resolveDaily30Response,
     ["fomo-daily-30-approved", cacheVersion(), kstDateOf()],
     { revalidate: 60 * 5, tags: ["daily-30"] }
   );

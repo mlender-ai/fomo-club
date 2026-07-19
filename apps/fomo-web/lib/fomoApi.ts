@@ -32,7 +32,8 @@ const CACHE_TTL = {
   themeInsight: 6 * HOUR,
   stockInsight: 6 * HOUR,
   performancePrices: 10 * MINUTE,
-  daily30: HOUR,
+  // 비상 스냅샷/엔진 응답이 오늘 위원회 발행 뒤 빠르게 정상본으로 교체되도록 짧게 유지한다.
+  daily30: 5 * MINUTE,
 } as const;
 export const KEYWORDS_UPDATED_EVENT = "fomo:keywords-updated";
 export const DISCOVERY_UPDATED_EVENT = "fomo:discovery-updated";
@@ -772,6 +773,7 @@ export interface Daily30Response extends DiscoveryResponse {
       selectedCount: number;
       callCount: number;
     };
+    stale?: "committee-yesterday" | "engine-direct";
   };
 }
 

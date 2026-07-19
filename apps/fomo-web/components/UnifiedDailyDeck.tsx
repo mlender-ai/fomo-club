@@ -93,7 +93,12 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "error" }
-    | { kind: "ready"; cards: DeckCard[]; fronts: Record<string, FrontEntry> }
+    | {
+        kind: "ready";
+        cards: DeckCard[];
+        fronts: Record<string, FrontEntry>;
+        stale?: "committee-yesterday" | "engine-direct";
+      }
   >({ kind: "loading" });
   // 무로그인 대기함 배너 — ready N개 / not_found 안내(각 1회).
   const [requestBanner, setRequestBanner] = useState<{ ready: number; notFound: string[] } | null>(null);
@@ -130,7 +135,12 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
             setRequestBanner({ ready: readyRows.length, notFound: notFoundRows.map((row) => row.query) });
             ackRequests([...readyRows, ...notFoundRows].map((row) => row.query));
           }
-          setState({ kind: "ready", cards: [...requestCards, ...next.cards], fronts: next.fronts });
+          setState({
+            kind: "ready",
+            cards: [...requestCards, ...next.cards],
+            fronts: next.fronts,
+            ...(discovery.meta?.stale ? { stale: discovery.meta.stale } : {}),
+          });
           return;
         } catch (err) {
           lastError = err;
@@ -165,6 +175,13 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {state.stale && (
+        <p className="mb-2 shrink-0 px-1 text-[11px] leading-4 text-muted" role="status">
+          {state.stale === "committee-yesterday"
+            ? "어제 기준 카드예요 · 갱신 중"
+            : "검수 갱신 중인 카드예요"}
+        </p>
+      )}
       {requestBanner && (
         <div className="mb-2 shrink-0 rounded-xl border border-hairline px-3.5 py-2" style={{ backgroundColor: "rgba(216,255,58,0.10)" }}>
           <p className="text-xs leading-5 text-whiteout">

@@ -232,6 +232,13 @@ export function DesktopDashboard() {
       <section className="flex min-h-0 flex-col rounded-2xl border border-hairline bg-surface">
         <div className="border-b border-hairline px-4 py-3">
           <p className="font-pixel text-sm text-whiteout">오늘의 30장</p>
+          {daily.meta?.stale && (
+            <p className="mt-1 text-[10px] leading-4 text-muted" role="status">
+              {daily.meta.stale === "committee-yesterday"
+                ? "어제 기준 카드예요 · 갱신 중"
+                : "검수 갱신 중인 카드예요"}
+            </p>
+          )}
           <div className="mt-2.5 flex flex-wrap gap-1.5" role="tablist" aria-label="시장 필터">
             {FILTER_TABS.map((tab) => {
               const active = filter === tab.key;
