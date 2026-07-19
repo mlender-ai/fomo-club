@@ -1,8 +1,8 @@
 # FOMO Club
 
-> **현재 최우선 제품: FOMO Club** — 스와이프로 투자 취향을 학습해 테마·종목 정보를 쉽게 매칭하는 피드.
-> 해자는 **취향 매칭 × 쉬운 번역**이며, 판단과 결정은 사용자 몫이다.
-> 제품 정본은 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md), 에이전트 규칙은 [`CLAUDE.md`](CLAUDE.md).
+> **현재 최우선 제품: FOMO Club** — 매일 30개의 조용한 신호를 발견하고, 당시 판단과 사후 성과를 함께 축적하는 스와이프 피드.
+> 해자는 **판단 원장(Judgment Ledger)**이다. 신호·판단·당시 가격·사용자 행동·사후 성과가 날짜별로 쌓인다.
+> 해자 정본은 [`docs/FOMO_MOAT_DOCTRINE.md`](docs/FOMO_MOAT_DOCTRINE.md), 제품 정본은 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md), 에이전트 규칙은 [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
@@ -23,10 +23,10 @@
 
 ## FOMO Club 한눈에
 
-- **핵심 경험**: 오늘의 테마·종목 카드를 넘기고, 관심 신호와 상세 열람을 바탕으로 점점 개인화된 피드를 만든다.
+- **핵심 경험**: 오늘의 30장을 넘기고, 당시 카드 판단과 내 선택이 실제 결과로 어떻게 이어졌는지 되짚는다.
 - **데이터 원칙**: 실제 출처와 confidence를 함께 제공하고, 근거가 없으면 임의로 채우지 않는다.
-- **제품 단계**: 카드 공급 엔진과 이해 레이어를 고도화한 뒤 취향 기반 재정렬을 얹는다.
-- **역할 경계**: 제품은 매칭과 쉬운 번역을 담당하며 매수·매도 판단은 대신하지 않는다.
+- **제품 단계**: 판단 원장 통합(M1)을 먼저 완성하고 신호 이력서·품질 SLO·개인 복기 레이어를 그 위에 얹는다.
+- **역할 경계**: 제품의 해자는 기능 수가 아니라 날짜가 박힌 판단과 정직한 사후 채점이다.
 
 ---
 
@@ -58,7 +58,8 @@ npx prisma validate         # 스키마 변경 시
 
 ```
 CLAUDE.md                          ← 에이전트 진입점·행동 규칙 (최상위)
-docs/PRODUCT_VISION.md             ← 향하는 곳: 취향 매칭 × 쉬운 번역
+docs/FOMO_MOAT_DOCTRINE.md         ← 해자·우선순위·BM 정본
+docs/PRODUCT_VISION.md             ← 제품 정체성: 틴더형 발견 UX
 docs/DATA_ENGINE_STRATEGY.md       ← 카드 공급·이해 엔진 전략
 docs/AGENT_REDESIGN.md             ← 에이전트 운영 모델
 AGENTS.md                          ← 에이전트 역할·라우팅

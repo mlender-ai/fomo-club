@@ -1,14 +1,14 @@
 # FOMO Club AI Agent Constitution
 
 > **이 파일이 모든 AI 에이전트의 헌법이다.** Claude Code, Codex, Cursor, Gemini, Antigravity, OpenCode 등 어떤 도구를 쓰더라도 이 문서를 먼저 따른다.
-> 정본 우선순위는 `docs/PRODUCT_VISION.md` > `AGENTS.md` > `docs/DATA_ENGINE_STRATEGY.md` 이다. 충돌하면 위 순서가 이긴다.
+> 정본 권한은 영역별로 나눈다. 제품 정체성·틴더 UX는 `docs/PRODUCT_VISION.md`, 해자·투자 우선순위·BM은 `docs/FOMO_MOAT_DOCTRINE.md`, 에이전트 행동은 `AGENTS.md`, 데이터 구현은 `docs/DATA_ENGINE_STRATEGY.md`가 지배한다.
 > 에이전트별 진입 파일(`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*`, `.rules`, `ANTIGRAVITY.md`)은 이 파일을 가리키는 포인터일 뿐이며, 규약 본문은 여기 한 곳에만 둔다.
 
 ## Spec-Driven 작업 규약
 
 spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순서를 따른다.
 
-1. **Constitution**: `docs/PRODUCT_VISION.md`, `AGENTS.md`, `docs/DATA_ENGINE_STRATEGY.md`의 절대 제약을 먼저 확인한다.
+1. **Constitution**: `docs/PRODUCT_VISION.md`, `docs/FOMO_MOAT_DOCTRINE.md`, `AGENTS.md`, `docs/DATA_ENGINE_STRATEGY.md`의 절대 제약을 먼저 확인한다.
 2. **Spec**: 새 작업은 `docs/templates/SPEC_TEMPLATE.md` 형식으로 무엇/왜/성공지표/비범위/절대제약을 고정한다.
 3. **Plan**: 구현 전 `docs/templates/PLAN_TEMPLATE.md` 형식으로 파일, 데이터 흐름, 리스크, 검증을 정한다.
 4. **Tasks**: 실제 작업은 `docs/templates/TASKS_TEMPLATE.md` 형식으로 파일별 태스크와 병렬 가능 작업을 나눈다.
@@ -31,15 +31,16 @@ spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순
 
 > 정본: `AGENT_REDESIGN.md`. 아래 "🟢 운영 모델"·"🔴 최우선 지시"는 **옛 정체성(감정 시각화·FOMO Index·마스코트·자율 기획)** 기준이라 **폐기**. 참고용으로만 남긴다.
 
-### SSOT (모든 에이전트는 이 문서들을 읽고 그 안에서만 움직인다 — 최상위는 PRODUCT_VISION)
-1. `docs/PRODUCT_VISION.md` — **제품 정체성 정본(SSOT)**: 주식시장의 틴더 v5 — 두 표면(발견 스와이프 + 콘텐츠 읽기)·한 엔진(포모 점수 + 💎). 충돌 시 이 문서가 이긴다.
-2. `docs/PRODUCT_TRUTH.md` — 제품 정의·폐기물(VISION 에 정합)
-3. `docs/KEYWORD_ENGINE_SPEC.md` — 발견 엔진 스펙(종목 카드·포모 점수·💎)
-4. `docs/DATA_ENGINE_STRATEGY.md` — 데이터 엔진 고도화(수집→이해→재가공→응축, 발견 카드의 연료), tier, 머지정책 §5.5
+### SSOT (모든 에이전트는 이 문서들을 읽고 그 안에서만 움직인다)
+1. `docs/PRODUCT_VISION.md` — **제품 정체성 정본**: 주식시장의 틴더 UX와 발견 경험.
+2. `docs/FOMO_MOAT_DOCTRINE.md` — **해자·우선순위·BM 정본**: 판단 원장(Judgment Ledger), M1→M5.
+3. `docs/PRODUCT_TRUTH.md` — 제품 정의·폐기물(VISION·독트린에 정합)
+4. `docs/KEYWORD_ENGINE_SPEC.md` — 발견 엔진 스펙(종목 카드·점수·조기 발견)
+5. `docs/DATA_ENGINE_STRATEGY.md` — 판단 원장에 재료를 공급하는 데이터 엔진, tier, 머지정책 §5.5
 
 ### 현재 방향 (한 줄)
-**정체성 = 주식시장의 틴더**(PRODUCT_VISION v5 확정): **두 표면, 한 엔진.** ① 발견(종목 카드 스와이프, 심장·종목 전용) ② 콘텐츠(뉴스·브리핑 읽기, 별도 표면). 둘 다 **포모 점수 + 💎 조기 발견** 엔진으로 돈다. 한 줄: "머니터링은 종목을 분석해주고, FOMO Club은 너를 안다." 분석 아닌 **발견·취향**. 판단은 유저 몫.
-**지금 만드는 것 = 발견 척추 + 그 연료인 데이터 엔진** — 종목 카드(포모 점수·💎) + 이해 레이어(grounded 강세/약세/워딩·수급). 취향 매칭·발굴 성적표는 그 위에 얹는다.
+**정체성 = 주식시장의 틴더**(PRODUCT_VISION): 하나의 스와이프 발견 경험을 유지한다. **해자 = 판단 원장**(FOMO_MOAT_DOCTRINE): 모든 신호·판단·점수·당시 가격·사용자 행동을 날짜별로 봉인하고 사후 성과로 공개 채점한다.
+**지금 만드는 것 = M1 판단 원장 통합.** 신호 유형별 이력서(M2), 품질 SLO(M3), 사용자 복기(M5)는 M1 위에만 만든다. 조용한 돈 추적망(M4)만 병렬 가능하다.
 
 ### 3원칙
 1. **약한 곳 위임 / 강한 곳 직접.** 에이전트 = 리서치·소스발굴·정합성·백엔드 모니터링·규제검증. 광혁 직접 = 디자인·UX·카피·PM/PO·기획·방향.
