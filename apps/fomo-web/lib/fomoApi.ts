@@ -526,6 +526,8 @@ export interface StockFrontResponse {
   axisHook?: import("@fomo/core").MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — stance/근거/무효화. 캔들 부족 시 최소 verdict(관망). */
   verdict?: import("@fomo/core").CardVerdict;
+  /** 결정론 와이코프 구간·이벤트 분석. non-lite 응답에만. */
+  wyckoff?: import("@fomo/core").WyckoffAnalysis;
   /** 차트분석 탭 시리즈(WO 1.6 D) — 종가+MA20/60/120+거래량. non-lite 응답에만. */
   chartSeries?: {
     closes: number[];

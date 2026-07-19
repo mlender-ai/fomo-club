@@ -74,7 +74,7 @@ async function getFront(stock: string, lite = false, naverCode?: string, symbol?
         ...(themeRelativeMap[canonical] ? { themeRelative: themeRelativeMap[canonical] } : {}),
       }, { lite, ...(naverCode ? { naverCode } : {}), ...(symbol ? { symbol } : {}) });
     },
-    ["fomo-stock-front", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
+    ["fomo-stock-front", "wyckoff-v1", lite ? "lite" : "full", cacheVersion(), today, stock, naverCode ?? "", symbol ?? ""],
     { revalidate: REVALIDATE_S, ...(marketTag ? { tags: [marketTag] } : {}) }
   );
   return load();

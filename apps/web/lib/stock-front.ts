@@ -11,12 +11,14 @@ import {
   computeTechnicalAnalysis,
   selectTaFact,
   computeCardVerdict,
+  computeWyckoffAnalysis,
   type CardVerdict,
   type CardFrontSignals,
   type FomoScoreResult,
   type DailyOhlcv,
   type TaFact,
   type TechnicalAnalysisSnapshot,
+  type WyckoffAnalysis,
   type AxisSignal,
   type MultiAxisHookSelection,
 } from "@fomo/core";
@@ -205,6 +207,8 @@ export interface StockFrontData {
   axisHook?: MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — 결정론 verdict 엔진. 캔들 부족 시 최소 verdict(관망·신호 축적). */
   verdict?: CardVerdict;
+  /** 와이코프 구간·스프링/업스러스트·임펄스/눌림목 결정론 분석. non-lite에서만. */
+  wyckoff?: WyckoffAnalysis;
   /** 차트분석 탭 시리즈(WO 1.6 D) — 종가+MA20/60/120+거래량. non-lite 에서만. */
   chartSeries?: StockChartSeries;
   /** 코인 전용 최근 재료. 크론 캐시에서만 읽는다. */
@@ -427,6 +431,11 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     ...(typeof volRatio === "number" ? { volumeRatio: volRatio } : {}),
     currency: "KRW",
   }), coinIssues);
+  const wyckoff = computeWyckoffAnalysis({
+    candles: snapshot.candles,
+    ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+    currency: "KRW",
+  });
   const chartSeries = buildChartSeries(snapshot.candles);
   return {
     ...base,
@@ -434,6 +443,7 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     ...(taFact ? { taFact } : {}),
     ta,
     verdict,
+    wyckoff,
     ...(chartSeries ? { chartSeries } : {}),
     // 캔들차트(Phase A) — 국·미와 동일하게 non-lite 에서 실제 일봉 제공.
     ...(snapshot.candles.length > 0 ? { candles: snapshot.candles.slice(-260) } : {}),
@@ -497,6 +507,11 @@ export async function assembleStockFront(
         : {}),
       currency: "USD",
     });
+    const wyckoff = computeWyckoffAnalysis({
+      candles: daily.candles,
+      ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+      currency: "USD",
+    });
     const chartSeries = buildChartSeries(daily.candles);
     return {
       signals,
@@ -504,6 +519,7 @@ export async function assembleStockFront(
       ...(taFact ? { taFact } : {}),
       ta,
       verdict,
+      wyckoff,
       ...(daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
       ...(chartSeries ? { chartSeries } : {}),
       sparkline,
@@ -565,6 +581,13 @@ export async function assembleStockFront(
       : {}),
     currency: "KRW",
   });
+  const wyckoff = computeWyckoffAnalysis({
+    candles: daily.candles,
+    ...(typeof signals.foreignNetStreak === "number" ? { foreignNetStreak: signals.foreignNetStreak } : {}),
+    ...(typeof signals.institutionNetStreak === "number" ? { institutionNetStreak: signals.institutionNetStreak } : {}),
+    ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
+    currency: "KRW",
+  });
   const chartSeries = lite ? undefined : buildChartSeries(daily.candles);
 
   return {
@@ -573,6 +596,7 @@ export async function assembleStockFront(
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
     verdict,
+    ...(!lite ? { wyckoff } : {}),
     ...(!lite && daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
     ...(chartSeries ? { chartSeries } : {}),
     sparkline: daily.closes.slice(lite ? -42 : -66),
