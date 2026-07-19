@@ -17,11 +17,11 @@ const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 20;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "llama-3.3-70b-versatile";
-const DEFAULT_CALL_INTERVAL_MS = 65_000;
+const DEFAULT_CALL_INTERVAL_MS = 35_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
