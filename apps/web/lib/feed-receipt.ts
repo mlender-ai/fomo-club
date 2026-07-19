@@ -12,7 +12,7 @@
  */
 
 import type { DeckContentCard, DeckContentFact } from "./deck-content";
-import { readFeedContentByPrefix } from "./feed-content-store";
+import { readLatestSelectionSnapshotBefore } from "./judgment-ledger";
 import { fetchCurrentPrices, type QuoteRequestItem } from "./quote-prices";
 import { kstDate } from "./fomo";
 
@@ -25,11 +25,6 @@ interface PickSnapshot {
   market?: string;
   country?: string;
 }
-interface Daily30PicksSnapshot {
-  date: string;
-  picks: PickSnapshot[];
-}
-
 const RECEIPT_MOVE_THRESHOLD_PCT = 10; // ±10% 이상만 하이라이트(R1 지시서)
 const RECEIPT_MAX_FACTS = 5;
 
@@ -43,11 +38,16 @@ function signedPct(value: number): string {
  */
 export async function buildDailyReceiptCard(): Promise<DeckContentCard[]> {
   const today = kstDate();
-  const rows = await readFeedContentByPrefix<Daily30PicksSnapshot>("daily30-picks:", 3).catch(
-    () => [] as Array<{ id: string; row: Daily30PicksSnapshot }>
-  );
-  const yesterday = rows.map((r) => r.row).find((row) => row?.date && row.date !== today);
-  const priced = (yesterday?.picks ?? []).filter(
+  const yesterday = await readLatestSelectionSnapshotBefore(today).catch(() => []);
+  const priced = yesterday.map((row): PickSnapshot => ({
+    canonical: row.subject.canonical,
+    price: row.priceAt,
+    ...(row.payload.headline ? { headline: row.payload.headline } : {}),
+    ...(row.subject.symbol ? { symbol: row.subject.symbol } : {}),
+    ...(row.payload.naverCode ? { naverCode: row.payload.naverCode } : {}),
+    ...(row.payload.market ? { market: row.payload.market } : {}),
+    ...(row.payload.country ? { country: row.payload.country } : {}),
+  })).filter(
     (p): p is PickSnapshot & { price: number } => typeof p.price === "number" && p.price > 0
   );
   if (priced.length === 0) return [];

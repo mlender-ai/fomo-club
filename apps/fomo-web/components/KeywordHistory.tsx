@@ -7,9 +7,13 @@ import { MyDiscoveryPreview } from "@/components/MyDiscoveryPreview";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
 import { RegretReceiptPanel } from "@/components/RegretReceiptPanel";
 import { getHistory } from "@/lib/keywordHistory";
-import { DISCOVERY_PERFORMANCE_UPDATED_EVENT, getDiscoverySeen } from "@/lib/discoveryPerformance";
+import {
+  DISCOVERY_PERFORMANCE_UPDATED_EVENT,
+  migrateLegacyDiscoverySeen,
+  type DiscoverySeenItem,
+} from "@/lib/discoveryPerformance";
 import { getWatchlist, type WatchItem } from "@/lib/watchlist";
-import { fetchMyRequests, type MyRequestRow } from "@/lib/fomoApi";
+import { fetchJudgmentHistory, fetchMyRequests, type MyRequestRow } from "@/lib/fomoApi";
 import { getSessionId } from "@/lib/session";
 
 /**
@@ -28,7 +32,7 @@ function relativeTime(ts: number): string {
 export function KeywordHistory() {
   const [history] = useState(() => getHistory());
   const [watchlist] = useState(() => getWatchlist());
-  const [seenItems, setSeenItems] = useState(() => getDiscoverySeen());
+  const [seenItems, setSeenItems] = useState<DiscoverySeenItem[]>([]);
   const [selected, setSelected] = useState<KeywordCard | null>(null);
   const [stockSel, setStockSel] = useState<WatchItem | null>(null);
   // 무로그인 대기함(WO 검색 요청→다음날 카드) — 이 기기의 요청 누적("내 요청").
@@ -45,12 +49,19 @@ export function KeywordHistory() {
   }, []);
 
   useEffect(() => {
-    const refresh = () => setSeenItems(getDiscoverySeen());
+    let alive = true;
+    const refresh = () => {
+      void fetchJudgmentHistory()
+        .then((result) => {
+          if (alive) setSeenItems(result.items as DiscoverySeenItem[]);
+        })
+        .catch(() => {});
+    };
+    void migrateLegacyDiscoverySeen().catch(() => 0).finally(refresh);
     window.addEventListener(DISCOVERY_PERFORMANCE_UPDATED_EVENT, refresh);
-    window.addEventListener("storage", refresh);
     return () => {
+      alive = false;
       window.removeEventListener(DISCOVERY_PERFORMANCE_UPDATED_EVENT, refresh);
-      window.removeEventListener("storage", refresh);
     };
   }, []);
 

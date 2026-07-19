@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { fetchDaily30, fetchMyRequests, type Daily30Response, type MyRequestRow } from "@/lib/fomoApi";
+import { fetchDaily30, fetchMyRequests, fetchTrackRecord, type Daily30Response, type MyRequestRow, type TrackMetric } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckStock, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { stockOnlyDeckCards } from "@/components/FeedView";
 import { getSessionId } from "@/lib/session";
@@ -102,6 +102,19 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
   >({ kind: "loading" });
   // 무로그인 대기함 배너 — ready N개 / not_found 안내(각 1회).
   const [requestBanner, setRequestBanner] = useState<{ ready: number; notFound: string[] } | null>(null);
+  const [signalHistory30, setSignalHistory30] = useState<Record<string, TrackMetric>>({});
+
+  useEffect(() => {
+    let alive = true;
+    void fetchTrackRecord()
+      .then((record) => {
+        if (alive) setSignalHistory30(record.signalHistory30);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -203,6 +216,7 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
         contextLabel="오늘의 30장"
         loggedIn={loggedIn}
         onRequireLogin={onRequireLogin}
+        signalHistory30={signalHistory30}
       />
     </div>
   );

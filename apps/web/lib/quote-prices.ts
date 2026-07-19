@@ -20,7 +20,7 @@ export interface QuoteRequestItem {
   country?: StockCountry | string;
 }
 
-function yahooSymbolFor(item: QuoteRequestItem): string | null {
+export function yahooSymbolFor(item: QuoteRequestItem): string | null {
   const rawSymbol = item.symbol?.trim().toUpperCase();
   if (item.country === "US" || item.market === "NASDAQ" || item.market === "NYSE") {
     return rawSymbol || item.stock.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "");
@@ -28,6 +28,50 @@ function yahooSymbolFor(item: QuoteRequestItem): string | null {
   const code = item.naverCode?.trim() || (/^\d{6}$/.test(rawSymbol ?? "") ? rawSymbol : "");
   if (code && item.market === "KOSDAQ") return `${code}.KQ`;
   if (code && item.market === "KOSPI") return `${code}.KS`;
+  return null;
+}
+
+export interface HistoricalQuoteRequestItem extends QuoteRequestItem {
+  targetDate: string;
+}
+
+export interface HistoricalPricePoint {
+  price: number;
+  date: string;
+}
+
+async function fetchYahooHistoricalPrice(yahooSymbol: string, targetDate: string): Promise<HistoricalPricePoint | null> {
+  const targetMs = Date.parse(`${targetDate}T00:00:00.000Z`);
+  if (!Number.isFinite(targetMs)) return null;
+  const period1 = Math.floor((targetMs - 2 * 86_400_000) / 1000);
+  const period2 = Math.floor((targetMs + 9 * 86_400_000) / 1000);
+  for (const host of YAHOO_HOSTS) {
+    try {
+      const url = `${host}/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?period1=${period1}&period2=${period2}&interval=1d&events=history`;
+      const res = await fetch(url, {
+        headers: { accept: "application/json", "user-agent": YAHOO_UA },
+        signal: AbortSignal.timeout(7_000),
+        next: { revalidate: 86_400 },
+      });
+      if (!res.ok) continue;
+      const payload = (await res.json()) as {
+        chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<{ close?: Array<number | null> }> } }> };
+      };
+      const result = payload.chart?.result?.[0];
+      const timestamps = result?.timestamp ?? [];
+      const closes = result?.indicators?.quote?.[0]?.close ?? [];
+      const candidates = timestamps.flatMap((timestamp, index) => {
+        const close = closes[index];
+        return timestamp * 1000 >= targetMs && typeof close === "number" && Number.isFinite(close) && close > 0
+          ? [{ timestamp, close }]
+          : [];
+      });
+      const point = candidates.sort((a, b) => a.timestamp - b.timestamp)[0];
+      if (point) return { price: point.close, date: new Date(point.timestamp * 1000).toISOString().slice(0, 10) };
+    } catch {
+      // 다음 Yahoo 호스트 시도.
+    }
+  }
   return null;
 }
 
@@ -96,6 +140,39 @@ export async function fetchCurrentPrices(items: readonly QuoteRequestItem[]): Pr
   await mapLimit(jobs, 5, async ({ item, yahooSymbol }) => {
     const price = await fetchYahooPrice(yahooSymbol);
     if (typeof price === "number" && price > 0) prices.set(item.key, price);
+  });
+  return prices;
+}
+
+/**
+ * 목표일 당일 또는 그 뒤 첫 거래일 종가. 주말·휴장일은 최대 8일 안의 다음 실제 봉을 사용한다.
+ * 성과 원장 크론 전용이며 요청 경로에서 호출하지 않는다.
+ */
+export async function fetchHistoricalPrices(items: readonly HistoricalQuoteRequestItem[]): Promise<Map<string, HistoricalPricePoint>> {
+  const prices = new Map<string, HistoricalPricePoint>();
+  const coinItems = items.filter(isCoin);
+  const stockItems = items.filter((item) => !isCoin(item));
+
+  if (coinItems.length > 0) {
+    const snapshots = await readCoinMarketSnapshots().catch(() => []);
+    const bySymbol = new Map(snapshots.map((snapshot) => [snapshot.symbol.toUpperCase(), snapshot] as const));
+    const byName = new Map(snapshots.map((snapshot) => [snapshot.koreanName, snapshot] as const));
+    for (const item of coinItems) {
+      const snapshot = (item.symbol ? bySymbol.get(item.symbol.toUpperCase()) : undefined) ?? byName.get(item.stock);
+      const candle = snapshot?.candles
+        .filter((row) => typeof row.date === "string" && row.date.slice(0, 10) >= item.targetDate && row.close > 0)
+        .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))[0];
+      if (candle) prices.set(item.key, { price: candle.close, date: candle.date!.slice(0, 10) });
+    }
+  }
+
+  const jobs = stockItems.flatMap((item) => {
+    const yahooSymbol = yahooSymbolFor(item);
+    return yahooSymbol ? [{ item, yahooSymbol }] : [];
+  });
+  await mapLimit(jobs, 5, async ({ item, yahooSymbol }) => {
+    const point = await fetchYahooHistoricalPrice(yahooSymbol, item.targetDate);
+    if (point && point.price > 0) prices.set(item.key, point);
   });
   return prices;
 }

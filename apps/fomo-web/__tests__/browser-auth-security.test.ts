@@ -42,6 +42,9 @@ describe("FOMO Web browser auth security", () => {
     expect(isAllowedProxyRequest("discovery", "GET")).toBe(true);
     expect(isAllowedProxyRequest("feed", "GET")).toBe(true);
     expect(isAllowedProxyRequest("performance-prices", "POST")).toBe(true);
+    expect(isAllowedProxyRequest("ledger/actions", "POST")).toBe(true);
+    expect(isAllowedProxyRequest("ledger/history", "GET")).toBe(true);
+    expect(isAllowedProxyRequest("track-record", "GET")).toBe(true);
     expect(isAllowedProxyRequest("stock-front", "GET")).toBe(true);
     expect(isAllowedProxyRequest("emotions/calendar", "GET")).toBe(true);
     expect(isAllowedProxyRequest("account", "DELETE")).toBe(true);

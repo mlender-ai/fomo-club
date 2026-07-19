@@ -8,9 +8,9 @@ import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
 import { RegretReceiptPanel } from "@/components/RegretReceiptPanel";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
-import { fetchDaily30, fetchFeedHub, type Daily30Response, type FeedHubItem } from "@/lib/fomoApi";
+import { fetchDaily30, fetchFeedHub, fetchJudgmentHistory, type Daily30Response, type FeedHubItem } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckStock, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
-import { getDiscoverySeen } from "@/lib/discoveryPerformance";
+import { migrateLegacyDiscoverySeen, type DiscoverySeenItem } from "@/lib/discoveryPerformance";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
 import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { SectorCard } from "@/components/SectorCard";
@@ -135,7 +135,7 @@ export function DesktopDashboard() {
   // 우측 컬럼(feed-hub) 항목 선택 — 중앙에 해당 뎁스 렌더(WO 피드 통합 §3: 막다른 클릭 0).
   const [feedItem, setFeedItem] = useState<FeedHubItem | null>(null);
   const [feedItems, setFeedItems] = useState<FeedHubItem[]>([]);
-  const [seenItems] = useState(() => getDiscoverySeen());
+  const [seenItems, setSeenItems] = useState<DiscoverySeenItem[]>([]);
   // 무한 피드(2026-07-18) — 오늘치 아래로 지난 브리핑·버즈·회고를 계속 이어 붙인다.
   const feedTodayIds = useMemo(() => new Set(feedItems.map(feedItemId)), [feedItems]);
   const { archive: feedArchive, sentinelRef: feedSentinelRef, done: feedArchiveDone } = useFeedArchive(feedItems.length > 0, feedTodayIds);
@@ -153,6 +153,20 @@ export function DesktopDashboard() {
       alive = false;
     };
   }, [retryKey]);
+
+  useEffect(() => {
+    let alive = true;
+    void migrateLegacyDiscoverySeen()
+      .catch(() => 0)
+      .then(() => fetchJudgmentHistory())
+      .then((result) => {
+        if (alive) setSeenItems(result.items as DiscoverySeenItem[]);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // 신규일 daily-30 콜드 빌드(~40s)는 클라 타임아웃(~30s)보다 느려 첫 로드가 실패한다.
   // 빌드가 데워지면 사용자 조작 없이 뜨도록 자동 재시도(모바일 UnifiedDailyDeck 과 동일 정책).

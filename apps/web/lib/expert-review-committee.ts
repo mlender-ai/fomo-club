@@ -1,6 +1,7 @@
 import { callAI, isAiConfigured } from "@fomo/shared";
 import { companyFinancialsFromBasics, computeCompanyScore, type StockBasics } from "@fomo/core";
-import { buildDaily30CandidatePoolResponse, writeDaily30PicksSnapshot, type Daily30Response } from "./daily-30";
+import { buildDaily30CandidatePoolResponse, type Daily30Response } from "./daily-30";
+import { writeDaily30Ledger } from "./judgment-ledger";
 import type { DiscoveryDeckCardPayload, DiscoveryFrontSeed, DiscoveryStockPayload } from "./discovery-supply";
 import {
   publishCommitteeSnapshot,
@@ -759,6 +760,7 @@ export interface CommitteeRunOptions {
   publish?: (snapshot: PublishedCommitteeSnapshot, report: CommitteeRunReport) => Promise<void>;
   writeFailure?: (report: CommitteeRunReport) => Promise<void>;
   writePicks?: (response: Daily30Response) => Promise<void>;
+  writeCandidates?: (response: Daily30Response) => Promise<void>;
   minCallIntervalMs?: number;
   stageStorage?: {
     read: (date: string) => Promise<unknown | null>;
@@ -785,6 +787,10 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
     }
     const caller = options.caller ?? defaultAgentCaller;
     const pool = await (options.buildPool ?? (() => buildDaily30CandidatePoolResponse(CANDIDATE_TARGET)))();
+    const writeCandidates = options.writeCandidates ?? (
+      process.env.NODE_ENV === "test" ? async () => {} : (value: Daily30Response) => writeDaily30Ledger(value, "engine", { includeSelection: false }).then(() => {})
+    );
+    await writeCandidates(pool);
     const candidates = await candidateRecords(pool);
     candidateCount = candidates.length;
     if (candidateCount < MIN_CANDIDATES) throw new Error(`committee candidate pool ${candidateCount}/${MIN_CANDIDATES}`);
@@ -846,8 +852,8 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
       response,
       report: reportSummary,
     };
+    await (options.writePicks ?? ((value) => writeDaily30Ledger(value, "committee")))(response);
     await (options.publish ?? publishCommitteeSnapshot)(snapshot, report);
-    await (options.writePicks ?? writeDaily30PicksSnapshot)(response).catch(() => {});
     return { ok: true, report, response, previousRunRetained: false };
   } catch (error) {
     const completedAt = new Date().toISOString();
@@ -964,6 +970,10 @@ export async function runExpertReviewCommitteeStage(
 
     if (stage === "trading") {
       const pool = await (options.buildPool ?? (() => buildDaily30CandidatePoolResponse(CANDIDATE_TARGET)))();
+      const writeCandidates = options.writeCandidates ?? (
+        process.env.NODE_ENV === "test" ? async () => {} : (value: Daily30Response) => writeDaily30Ledger(value, "engine", { includeSelection: false }).then(() => {})
+      );
+      await writeCandidates(pool);
       const candidates = await candidateRecords(pool);
       if (candidates.length < MIN_CANDIDATES) throw new Error(`committee candidate pool ${candidates.length}/${MIN_CANDIDATES}`);
       const trading = enforceAnalystCopyQuality("trading", await runAnalyst("trading", candidates, caller, state), candidates);
@@ -1039,8 +1049,8 @@ export async function runExpertReviewCommitteeStage(
       response,
       report: reportSummary,
     };
+    await (options.writePicks ?? ((value) => writeDaily30Ledger(value, "committee")))(response);
     await (options.publish ?? publishCommitteeSnapshot)(snapshot, report);
-    await (options.writePicks ?? writeDaily30PicksSnapshot)(response).catch(() => {});
     return { ok: true, stage, runId: stored.runId, candidateCount: stored.candidates.length, selectedCount: editor.selectedIds.length, callCount: totalCallCount, previousRunRetained: false };
   } catch (error) {
     const runId = stored?.runId ?? fallbackRunId;

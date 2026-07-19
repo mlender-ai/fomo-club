@@ -1,11 +1,20 @@
 "use client";
 
 import type { StockCountry, StockMarket } from "@fomo/core";
-import type { DeckStock } from "@/lib/discoveryDeck";
+import type { DeckStock } from "./discoveryDeck";
+import {
+  recordJudgmentAction,
+  recordJudgmentActions,
+  type JudgmentActionInput,
+  type LedgerAsset,
+} from "./judgmentLedgerClient";
 
-const KEY = "fomo_discovery_seen";
+// Legacy-only key. New history is never written here; a first visit migrates priced rows to JudgmentLedger and removes it.
+const LEGACY_KEY = "fomo_discovery_seen";
 const CAP = 240;
 const PRICE_CAPTURE_GRACE_MS = 10 * 60_000;
+const memory = new Map<string, DiscoverySeenItem>();
+const recordedSeen = new Set<string>();
 
 export const DISCOVERY_PERFORMANCE_UPDATED_EVENT = "fomo:discovery-performance-updated";
 
@@ -23,7 +32,6 @@ export interface DiscoverySeenItem {
   country?: StockCountry;
   sector?: string;
   reason?: string;
-  /** R1 후회 영수증(2026-07-12): 스와이프 결과. undefined=봤다만, skip=넘김(X), save=담음(★). */
   action?: "skip" | "save";
   actionAt?: number;
 }
@@ -51,56 +59,41 @@ function parsePriceText(text: string | undefined): number | undefined {
   return Number.isFinite(price) && price > 0 ? price : undefined;
 }
 
-function read(): DiscoverySeenItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((row): DiscoverySeenItem | null => {
-        if (!row || typeof row !== "object") return null;
-        const candidate = row as Partial<DiscoverySeenItem>;
-        if (typeof candidate.stock !== "string" || typeof candidate.firstSeenAt !== "number") return null;
-        return {
-          stock: candidate.stock,
-          firstSeenAt: candidate.firstSeenAt,
-          ...(typeof candidate.firstSeenPrice === "number" ? { firstSeenPrice: candidate.firstSeenPrice } : {}),
-          ...(typeof candidate.firstSeenPriceText === "string" ? { firstSeenPriceText: candidate.firstSeenPriceText } : {}),
-          ...(typeof candidate.firstSeenPriceCapturedAt === "number"
-            ? { firstSeenPriceCapturedAt: candidate.firstSeenPriceCapturedAt }
-            : {}),
-          ...(typeof candidate.companyScore === "number" ? { companyScore: candidate.companyScore } : {}),
-          ...(typeof candidate.companyScoreLabel === "string" ? { companyScoreLabel: candidate.companyScoreLabel } : {}),
-          ...(typeof candidate.symbol === "string" ? { symbol: candidate.symbol } : {}),
-          ...(typeof candidate.naverCode === "string" ? { naverCode: candidate.naverCode } : {}),
-          ...(typeof candidate.market === "string" ? { market: candidate.market as StockMarket } : {}),
-          ...(typeof candidate.country === "string" ? { country: candidate.country as StockCountry } : {}),
-          ...(typeof candidate.sector === "string" ? { sector: candidate.sector } : {}),
-          ...(typeof candidate.reason === "string" ? { reason: candidate.reason } : {}),
-          ...(candidate.action === "skip" || candidate.action === "save" ? { action: candidate.action } : {}),
-          ...(typeof candidate.actionAt === "number" ? { actionAt: candidate.actionAt } : {}),
-        };
-      })
-      .filter((row): row is DiscoverySeenItem => row !== null);
-  } catch {
-    return [];
-  }
+function assetOf(item: Pick<DiscoverySeenItem, "country" | "market">): LedgerAsset {
+  if (item.market === "COIN" || item.country === "GLOBAL") return "coin";
+  return item.country === "US" ? "us-stock" : "kr-stock";
 }
 
-function write(items: DiscoverySeenItem[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(items.slice(0, CAP)));
-    window.dispatchEvent(new CustomEvent(DISCOVERY_PERFORMANCE_UPDATED_EVENT));
-  } catch {
-    /* localStorage failure should not block the deck */
-  }
+function detailsOf(item: DiscoverySeenItem): Record<string, string | number | boolean | undefined> {
+  return {
+    ...(item.firstSeenPriceText ? { firstSeenPriceText: item.firstSeenPriceText } : {}),
+    ...(typeof item.companyScore === "number" ? { companyScore: item.companyScore } : {}),
+    ...(item.companyScoreLabel ? { companyScoreLabel: item.companyScoreLabel } : {}),
+    ...(item.naverCode ? { naverCode: item.naverCode } : {}),
+    ...(item.market ? { market: item.market } : {}),
+    ...(item.country ? { country: item.country } : {}),
+    ...(item.sector ? { sector: item.sector } : {}),
+    ...(item.reason ? { reason: item.reason } : {}),
+  };
 }
 
-export function getDiscoverySeen(): DiscoverySeenItem[] {
-  return read().sort((a, b) => b.firstSeenAt - a.firstSeenAt);
+function actionEntry(item: DiscoverySeenItem, action: JudgmentActionInput["action"], occurredAt: number): JudgmentActionInput | null {
+  if (typeof item.firstSeenPrice !== "number" || item.firstSeenPrice <= 0) return null;
+  return {
+    action,
+    occurredAt,
+    subject: {
+      asset: assetOf(item),
+      canonical: item.stock,
+      ...(item.symbol || item.naverCode ? { symbol: item.symbol ?? item.naverCode } : {}),
+    },
+    priceAt: item.firstSeenPrice,
+    details: detailsOf(item),
+  };
+}
+
+function notify(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(DISCOVERY_PERFORMANCE_UPDATED_EVENT));
 }
 
 export function recordDiscoverySeen(
@@ -111,80 +104,97 @@ export function recordDiscoverySeen(
   if (typeof window === "undefined") return;
   const stockName = "canonical" in stock ? stock.canonical : stock.stock;
   if (!stockName) return;
-
+  const existing = memory.get(stockName);
   const price = parsePriceText(opts.front?.priceText);
-  const items = read();
-  const index = items.findIndex((item) => item.stock === stockName);
-  const existing = index >= 0 ? items[index] : undefined;
-  const base: DiscoverySeenItem =
-    existing ??
-    ({
-      stock: stockName,
-      firstSeenAt: nowMs,
-    } satisfies DiscoverySeenItem);
-  const canCapturePrice =
-    typeof price === "number" &&
-    typeof base.firstSeenPrice !== "number" &&
-    nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
   const score = opts.front?.companyScore?.score;
-  const canCaptureScore =
-    typeof score === "number" &&
-    typeof base.companyScore !== "number" &&
-    nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
-
+  const base: DiscoverySeenItem = existing ?? { stock: stockName, firstSeenAt: nowMs };
+  const withinCaptureWindow = nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
   const next: DiscoverySeenItem = {
     ...base,
-    ...(("symbol" in stock && stock.symbol) ? { symbol: stock.symbol } : {}),
-    ...(("naverCode" in stock && stock.naverCode) ? { naverCode: stock.naverCode } : {}),
-    ...(("market" in stock && stock.market) ? { market: stock.market } : {}),
-    ...(("country" in stock && stock.country) ? { country: stock.country } : {}),
-    ...(("sector" in stock && stock.sector) ? { sector: stock.sector } : {}),
-    ...(opts.reason ? { reason: opts.reason } : base.reason ? { reason: base.reason } : {}),
-    ...(canCapturePrice
+    ...("symbol" in stock && stock.symbol ? { symbol: stock.symbol } : {}),
+    ...("naverCode" in stock && stock.naverCode ? { naverCode: stock.naverCode } : {}),
+    ...("market" in stock && stock.market ? { market: stock.market } : {}),
+    ...("country" in stock && stock.country ? { country: stock.country } : {}),
+    ...("sector" in stock && stock.sector ? { sector: stock.sector } : {}),
+    ...(opts.reason ? { reason: opts.reason } : {}),
+    ...(withinCaptureWindow && typeof price === "number" && typeof base.firstSeenPrice !== "number"
       ? {
           firstSeenPrice: price,
-          firstSeenPriceCapturedAt: nowMs,
           ...(opts.front?.priceText ? { firstSeenPriceText: opts.front.priceText } : {}),
+          firstSeenPriceCapturedAt: nowMs,
         }
       : {}),
-    ...(canCaptureScore
+    ...(withinCaptureWindow && typeof score === "number" && typeof base.companyScore !== "number"
       ? {
           companyScore: score,
           ...(opts.front?.companyScore?.label ? { companyScoreLabel: opts.front.companyScore.label } : {}),
         }
       : {}),
   };
+  memory.set(stockName, next);
 
-  if (index >= 0) {
-    items[index] = next;
-    write(items.sort((a, b) => b.firstSeenAt - a.firstSeenAt));
-    return;
+  if (!recordedSeen.has(stockName)) {
+    const entry = actionEntry(next, "seen", next.firstSeenAt);
+    if (entry) {
+      recordedSeen.add(stockName);
+      recordJudgmentAction(entry);
+      notify();
+    }
   }
-  write([next, ...items]);
 }
 
-/**
- * R1 후회 영수증: 카드의 스와이프 결과를 기록한다(발견가는 recordDiscoverySeen 이 이미 캡처).
- * view → skip/save 는 확정이므로 항상 갱신. 대상이 없으면(관측 누락) 최소 항목 생성.
- */
 export function markDiscoverySeenAction(stockName: string, action: "skip" | "save", nowMs = Date.now()): void {
-  if (typeof window === "undefined" || !stockName) return;
-  const items = read();
-  const index = items.findIndex((item) => item.stock === stockName);
-  if (index >= 0) {
-    items[index] = { ...items[index]!, action, actionAt: nowMs };
-    write(items);
-  } else {
-    write([{ stock: stockName, firstSeenAt: nowMs, action, actionAt: nowMs }, ...items]);
-  }
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(DISCOVERY_PERFORMANCE_UPDATED_EVENT));
+  const item = memory.get(stockName);
+  if (!item) return;
+  const next = { ...item, action, actionAt: nowMs } satisfies DiscoverySeenItem;
+  memory.set(stockName, next);
+  const entry = actionEntry(next, action === "skip" ? "pass" : "star", nowMs);
+  if (entry) recordJudgmentAction(entry);
+  notify();
 }
 
-/** 넘긴(X) 카드만 — 발견가가 있는 것만(성과 계산 가능). 최신순. */
-export function getSkippedSeen(): DiscoverySeenItem[] {
-  return read()
-    .filter((item) => item.action === "skip" && typeof item.firstSeenPrice === "number")
-    .sort((a, b) => (b.actionAt ?? b.firstSeenAt) - (a.actionAt ?? a.firstSeenAt));
+export function recordDiscoveryDepth(stockName: string, nowMs = Date.now()): void {
+  const item = memory.get(stockName);
+  if (!item) return;
+  const entry = actionEntry(item, "depth", nowMs);
+  if (entry) recordJudgmentAction(entry);
+}
+
+function readLegacy(): DiscoverySeenItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LEGACY_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((row) => {
+      if (!row || typeof row !== "object") return [];
+      const item = row as Partial<DiscoverySeenItem>;
+      if (typeof item.stock !== "string" || typeof item.firstSeenAt !== "number") return [];
+      return [{ ...item, stock: item.stock, firstSeenAt: item.firstSeenAt } as DiscoverySeenItem];
+    }).slice(0, CAP);
+  } catch {
+    return [];
+  }
+}
+
+/** One-way migration. Rows without an actually captured discovery price are not invented or backfilled. */
+export async function migrateLegacyDiscoverySeen(): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  const legacy = readLegacy();
+  const entries = legacy.flatMap((item): JudgmentActionInput[] => {
+    if (typeof item.firstSeenPrice !== "number" || item.firstSeenPrice <= 0) return [];
+    const seen = actionEntry(item, "seen", item.firstSeenAt);
+    const action = item.action
+      ? actionEntry(item, item.action === "skip" ? "pass" : "star", item.actionAt ?? item.firstSeenAt)
+      : null;
+    return [seen, action].filter((entry): entry is JudgmentActionInput => !!entry).map((entry) => ({ ...entry, imported: true }));
+  });
+  let appended = 0;
+  for (let index = 0; index < entries.length; index += 80) {
+    const result = await recordJudgmentActions(entries.slice(index, index + 80));
+    appended += result.appended;
+  }
+  window.localStorage.removeItem(LEGACY_KEY);
+  return appended;
 }
 
 export function daysSince(ts: number, nowMs = Date.now()): number {
@@ -193,6 +203,5 @@ export function daysSince(ts: number, nowMs = Date.now()): number {
 }
 
 export function formatReturnPct(value: number): string {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(1)}%`;
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 }

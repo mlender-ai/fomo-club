@@ -15,6 +15,8 @@ import {
   type DailyOhlcv,
   type KeywordCard,
   type FomoTone,
+  type StockCountry,
+  type StockMarket,
   type WyckoffAnalysis,
   type WyckoffEvent,
 } from "@fomo/core";
@@ -33,6 +35,8 @@ import { describe52wGap, describeRsi } from "@/lib/depthCopy";
 import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
+import { JudgmentTimeline } from "@/components/JudgmentTimeline";
+import { markDiscoverySeenAction, recordDiscoveryDepth, recordDiscoverySeen } from "@/lib/discoveryPerformance";
 
 /**
  * 키워드 뎁스 페이지 — 카드/히스토리에서 공용. KEYWORD_CARD_FEED_DEV_SPEC v3 §3.
@@ -2468,7 +2472,7 @@ export function StockInsightView({
       ...(context?.reason ? { reason: context.reason } : {}),
     });
     setWatchedState(now);
-    recordTaste("stock", stock, now ? "more" : "less"); // 서버 취향 신호(트랙 B 재사용)
+    markDiscoverySeenAction(stock, now ? "save" : "skip");
   };
 
   useEffect(() => {
@@ -2500,8 +2504,8 @@ export function StockInsightView({
       fetchStockInsight(stock, {
         ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
         ...(context?.symbol ? { symbol: context.symbol } : {}),
-        ...(context?.market ? { market: context.market } : {}),
-        ...(context?.country ? { country: context.country } : {}),
+        ...(context?.market ? { market: context.market as StockMarket } : {}),
+        ...(context?.country ? { country: context.country as StockCountry } : {}),
       })
         .then((r) => alive && setInsight(r))
         .catch(() => alive && setInsight(null))
@@ -2511,6 +2515,24 @@ export function StockInsightView({
       alive = false;
     };
   }, [stock, context?.frontSeed, context?.naverCode, context?.symbol, context?.market, context?.country]);
+
+  useEffect(() => {
+    if (!frontLoaded || !front?.priceText) return;
+    const now = Date.now();
+    recordDiscoverySeen(
+      {
+        stock,
+        ...(context?.symbol ? { symbol: context.symbol } : {}),
+        ...(context?.naverCode ? { naverCode: context.naverCode } : {}),
+        ...(context?.market ? { market: context.market as StockMarket } : {}),
+        ...(context?.country ? { country: context.country as StockCountry } : {}),
+        ...(context?.fromTheme ? { sector: context.fromTheme } : {}),
+      },
+      now,
+      { front, ...(context?.reason ? { reason: context.reason } : {}) }
+    );
+    recordDiscoveryDepth(stock, now);
+  }, [stock, frontLoaded, front?.priceText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasInsight =
     !!insight && insight.confidence !== "insufficient" && insight.bull.length + insight.bear.length > 0;
@@ -2562,6 +2584,7 @@ export function StockInsightView({
           <CompanyScoreRadar result={front?.companyScore} />
           <ExpertCommitteeReview review={front?.committeeReview} />
           <DiscoveryOverview front={front} insight={insight} context={context} />
+          <JudgmentTimeline canonical={stock} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (
             <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />

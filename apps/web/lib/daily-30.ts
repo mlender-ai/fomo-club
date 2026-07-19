@@ -13,12 +13,12 @@ import {
 import { expandDeckContentCardsForScope, fetchDeckContentCards, type DeckContentCard } from "./deck-content";
 import { buildCoinDiscoveryResponse } from "./coin-discovery";
 import { readTodayFeedContent, type TodayFeedContent } from "./feed-briefing";
-import { readFeedContentByPrefix, writeFeedContent } from "./feed-content-store";
 import {
-  readPublishedCommitteeSnapshot,
-  readRecentPublishedCommitteeSnapshot,
-  type PublishedCommitteeSnapshot,
-} from "./expert-review-store";
+  readDaily30ResponseFromLedger,
+  readLatestSelectionSnapshotBefore,
+  writeDaily30Ledger,
+} from "./judgment-ledger";
+import type { PublishedCommitteeSnapshot } from "./expert-review-store";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
 
@@ -466,38 +466,12 @@ interface Daily30PicksSnapshot {
   picks: Array<{ canonical: string; headline?: string; price?: number; symbol?: string; naverCode?: string; market?: string; country?: string }>;
 }
 
-export async function writeDaily30PicksSnapshot(response: Daily30Response): Promise<void> {
-  const date = kstDateOf();
-  const stocksByCanonical = new Map(response.stocks.map((stock) => [stock.canonical, stock]));
-  const picks: Daily30PicksSnapshot = {
-    date,
-    picks: Object.entries(response.fronts).flatMap(([canonical, front]) => {
-      const stock = stocksByCanonical.get(canonical);
-      if (!stock) return [];
-      const price = parsePriceText(front.priceText);
-      return [{
-        canonical,
-        ...(stock.headline ? { headline: stock.headline } : {}),
-        ...(typeof price === "number" ? { price } : {}),
-        ...(stock.symbol ? { symbol: stock.symbol } : {}),
-        ...(stock.naverCode ? { naverCode: stock.naverCode } : {}),
-        ...(stock.market ? { market: stock.market } : {}),
-        ...(stock.country ? { country: stock.country } : {}),
-      }];
-    }),
-  };
-  await writeFeedContent(`daily30-picks:${date}`, picks);
-}
-
-/** 어제(가장 최근, 오늘 제외) 30장 스냅샷 — 신선도 로테이션 기준. 없으면 빈 맵(첫날). */
+/** 어제(가장 최근, 오늘 제외) 원장 선정분 — 신선도 로테이션 기준. 없으면 빈 맵(첫날). */
 async function readYesterdayPicks(today: string): Promise<FreshnessSnapshot> {
-  const rows = await readFeedContentByPrefix<Daily30PicksSnapshot>("daily30-picks:", 3).catch(
-    () => [] as Array<{ id: string; row: Daily30PicksSnapshot }>
-  );
-  const yesterday = rows.map((r) => r.row).find((row) => row?.date && row.date !== today);
+  const yesterday = await readLatestSelectionSnapshotBefore(today).catch(() => []);
   const headlines = new Map<string, string>();
-  for (const pick of yesterday?.picks ?? []) {
-    if (pick.canonical) headlines.set(pick.canonical, pick.headline ?? "");
+  for (const pick of yesterday) {
+    if (pick.subject.canonical) headlines.set(pick.subject.canonical, pick.payload.headline ?? "");
   }
   return { headlines };
 }
@@ -571,7 +545,6 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
         };
       }),
   };
-  if (persistPicks) await writeFeedContent(`daily30-picks:${today}`, picks).catch(() => {});
   // 중복률(어제 대비) — 수용 지표(≤50%) 모니터링용.
   const repeatCount = picks.picks.filter((p) => freshness.headlines.has(p.canonical)).length;
   const repeatRatio = picks.picks.length > 0 ? Math.round((repeatCount / picks.picks.length) * 100) / 100 : 0;
@@ -618,7 +591,12 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
   if (debug.krStockCandidates === 0) {
     throw new Error("daily-30 build aborted: KR 후보 0 — 시세 소스 장애 의심, 캐시 오염 방지");
   }
-  return { ...response, meta: { ...response.meta, repeatRatio, debug } };
+  const finalized = { ...response, meta: { ...response.meta, repeatRatio, debug } };
+  // WO-M1: daily30-picks 업서트는 폐기했다. 선정·신호·판단·점수를 append-only 원장에 한 번만 남긴다.
+  if (persistPicks) {
+    await writeDaily30Ledger(finalized, "engine");
+  }
+  return finalized;
 }
 
 export async function buildDaily30Response(): Promise<Daily30Response> {
@@ -647,9 +625,23 @@ function withFallbackMeta(
 
 export interface Daily30FallbackDependencies {
   today?: string;
-  readToday?: () => Promise<PublishedCommitteeSnapshot | null>;
-  readRecent?: (today: string, maxAgeDays: number) => Promise<PublishedCommitteeSnapshot | null>;
+  readToday?: () => Promise<PublishedCommitteeSnapshot | Daily30Response | null>;
+  readRecent?: (today: string, maxAgeDays: number) => Promise<PublishedCommitteeSnapshot | Daily30Response | null>;
   buildDirect?: () => Promise<Daily30Response>;
+}
+
+function storedDaily30Response(value: PublishedCommitteeSnapshot | Daily30Response): Daily30Response {
+  return "response" in value ? value.response : value;
+}
+
+function storedDaily30Date(value: PublishedCommitteeSnapshot | Daily30Response): string {
+  return "report" in value ? value.report.date : value.asOf.slice(0, 10);
+}
+
+function dateMinusDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() - days);
+  return value.toISOString().slice(0, 10);
 }
 
 /**
@@ -660,8 +652,9 @@ export async function resolveDaily30Response(
   dependencies: Daily30FallbackDependencies = {}
 ): Promise<Daily30Response> {
   const today = dependencies.today ?? kstDateOf();
-  const readToday = dependencies.readToday ?? readPublishedCommitteeSnapshot;
-  const readRecent = dependencies.readRecent ?? readRecentPublishedCommitteeSnapshot;
+  const readToday = dependencies.readToday ?? (() => readDaily30ResponseFromLedger({ date: today }));
+  const readRecent = dependencies.readRecent ?? ((date, maxAgeDays) =>
+    readDaily30ResponseFromLedger({ fromDate: dateMinusDays(date, maxAgeDays) }));
   const buildDirect =
     dependencies.buildDirect ?? (() => buildDaily30ResponseWithOptions({ targetCount: DAILY_CARD_TARGET }));
 
@@ -669,16 +662,16 @@ export async function resolveDaily30Response(
     console.warn("[daily-30] active committee snapshot unavailable", (error as Error)?.message);
     return null;
   });
-  if (active?.report.date === today && daily30CardCount(active.response) >= 20) {
-    return active.response;
+  if (active && storedDaily30Date(active) === today && daily30CardCount(storedDaily30Response(active)) >= 20) {
+    return storedDaily30Response(active);
   }
 
   const recent = await readRecent(today, 3).catch((error) => {
     console.warn("[daily-30] recent committee snapshot unavailable", (error as Error)?.message);
     return null;
   });
-  if (recent && recent.report.date !== today && daily30CardCount(recent.response) >= 20) {
-    return withFallbackMeta(recent.response, "committee-yesterday");
+  if (recent && storedDaily30Date(recent) !== today && daily30CardCount(storedDaily30Response(recent)) >= 20) {
+    return withFallbackMeta(storedDaily30Response(recent), "committee-yesterday");
   }
 
   const direct = await buildDirect();
