@@ -179,18 +179,18 @@ describe("expert committee orchestration", () => {
     const result = await runExpertReviewCommitteeStage("trading", {
       caller: async ({ input }) => {
         const candidates = input as Array<{ candidateId: string; stock: { symbol?: string } }>;
+        const reviews = candidates.slice(0, -1).map((candidate) => ({
+          candidateId: candidate.candidateId,
+          approved: true,
+          grade: "B",
+          paragraph: `${candidate.stock.symbol}의 구간과 거래량 근거를 대조해 현재 타이밍을 검수했습니다.`,
+          concerns: [],
+        }));
+        const middle = Math.ceil(reviews.length / 2);
         return {
           ok: true,
           model: "test-model",
-          content: JSON.stringify({
-            reviews: candidates.slice(0, -1).map((candidate) => ({
-              candidateId: candidate.candidateId,
-              approved: true,
-              grade: "B",
-              paragraph: `${candidate.stock.symbol}의 구간과 거래량 근거를 대조해 현재 타이밍을 검수했습니다.`,
-              concerns: [],
-            })),
-          }),
+          content: `${JSON.stringify({ reviews: reviews.slice(0, middle) })}${JSON.stringify({ reviews: reviews.slice(middle) })}`,
         };
       },
       buildPool: async () => fakePool(),
@@ -204,6 +204,7 @@ describe("expert committee orchestration", () => {
       },
     });
 
+    expect(result.error).toBeUndefined();
     expect(result.ok).toBe(true);
     const trading = (stored as { trading: Array<[string, { approved: boolean; grade: string; concerns: string[] }]> }).trading;
     expect(trading).toHaveLength(40);
