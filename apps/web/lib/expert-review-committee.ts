@@ -19,12 +19,12 @@ const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
 // Groq free/developer 조직의 TPM을 넘지 않도록 한 호출의 후보 수를 작게 유지한다.
-// 후보 50장 기준 분석가 10콜 + 10콜, 편집장 1콜로 일일 21콜이다.
-const BATCH_SIZE = 5;
+// 후보 50장 기준 분석가 7콜 + 7콜, 편집장 1콜로 일일 15콜이다.
+const BATCH_SIZE = 8;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "qwen/qwen3.6-27b";
-const DEFAULT_CALL_INTERVAL_MS = 20_000;
+const DEFAULT_CALL_INTERVAL_MS = 5_000;
 
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
