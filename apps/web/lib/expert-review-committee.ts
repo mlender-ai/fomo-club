@@ -26,6 +26,14 @@ const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "llama-3.1-8b-instant";
 const DEFAULT_CALL_INTERVAL_MS = 3_000;
 
+function committeeModel(): string {
+  const configured = process.env.COMMITTEE_AI_MODEL?.trim();
+  // qwen/qwen3.6-27b는 무료 조직의 TPM을 쉽게 초과하므로 명시적 opt-in 전에는
+  // 위원회에서 사용하지 않는다. 전역 AI 모델 설정과 위원회 비용 게이트를 분리한다.
+  if (configured && configured !== "qwen/qwen3.6-27b") return configured;
+  return process.env.COMMITTEE_FAST_MODEL?.trim() || DEFAULT_COMMITTEE_MODEL;
+}
+
 type Grade = "A" | "B" | "C";
 type AnalystRole = "trading" | "financial";
 
@@ -320,7 +328,7 @@ export function applyAnalystFactGate(
 
 async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
   const result = await callAI({
-    model: process.env.COMMITTEE_AI_MODEL || DEFAULT_COMMITTEE_MODEL,
+    model: committeeModel(),
     messages: [
       { role: "system", content: args.system },
       { role: "user", content: JSON.stringify(args.input) },
@@ -766,7 +774,7 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
   const configuredInterval = Number(process.env.COMMITTEE_MIN_CALL_INTERVAL_MS ?? DEFAULT_CALL_INTERVAL_MS);
   const state: CallState = {
     callCount: 0,
-    model: process.env.COMMITTEE_AI_MODEL || DEFAULT_COMMITTEE_MODEL,
+    model: committeeModel(),
     lastCallAt: 0,
     minCallIntervalMs: options.minCallIntervalMs ?? (Number.isFinite(configuredInterval) ? Math.max(0, configuredInterval) : DEFAULT_CALL_INTERVAL_MS),
   };
@@ -898,7 +906,7 @@ function callState(options: Pick<CommitteeRunOptions, "minCallIntervalMs">, mode
   const configuredInterval = Number(process.env.COMMITTEE_MIN_CALL_INTERVAL_MS ?? DEFAULT_CALL_INTERVAL_MS);
   return {
     callCount: 0,
-    model: model || process.env.COMMITTEE_AI_MODEL || DEFAULT_COMMITTEE_MODEL,
+    model: model || committeeModel(),
     lastCallAt: 0,
     minCallIntervalMs: options.minCallIntervalMs ?? (Number.isFinite(configuredInterval) ? Math.max(0, configuredInterval) : DEFAULT_CALL_INTERVAL_MS),
   };
@@ -948,7 +956,7 @@ export async function runExpertReviewCommitteeStage(
     : await readFeedContent<StoredCommitteeStage>(committeeStageId(date)).catch(() => null);
   const now = new Date();
   const fallbackRunId = `${date}-${now.getTime().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
-  const state = callState(options, stored?.model);
+  const state = callState(options, stage === "trading" ? undefined : stored?.model);
   const caller = options.caller ?? (isAiConfigured() ? defaultAgentCaller : undefined);
 
   try {
