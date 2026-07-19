@@ -11,6 +11,11 @@ interface JourneyFinding {
 const DEFAULT_WEB_URL = "https://fomo-web-mlender-ais-projects.vercel.app";
 const WEB_URL = (process.env.FOMO_WEB_URL ?? DEFAULT_WEB_URL).replace(/\/$/, "");
 const TIMEOUT_MS = positiveInt(process.env.FOMO_WEB_SMOKE_TIMEOUT_MS, 15000);
+// '덜 관심' 버튼은 UnifiedDailyDeck 이 fetchDaily30() 를 끝낸 뒤에야 뜬다. 이 덱은 자체 재시도
+// 예산(1.2s+2.4s 대기 × 최대 3회)을 가지고 있고, stock_front/insight p95 가 ~7s 라 느린 날엔
+// 정상 로드조차 10s 를 넘긴다. 예전 하드코딩 10s 는 이 예산보다 짧아 느림을 '깨짐'으로 오탐했다.
+// 앱의 실제 로드 예산에 맞춰 넉넉히 잡되, 그 안에도 안 뜨면 여전히 critical 로 잡는다.
+const DECK_WAIT_MS = positiveInt(process.env.FOMO_WEB_SMOKE_DECK_WAIT_MS, 30000);
 const HOLD_MS = positiveInt(process.env.FOMO_WEB_SMOKE_HOLD_MS, 4500);
 const OUT_JSON = process.env.FOMO_WEB_SMOKE_JSON_OUT ?? "fomo-web-journey-smoke.json";
 const OUT_MD = process.env.FOMO_WEB_SMOKE_MD_OUT ?? "fomo-web-journey-smoke.md";
@@ -65,7 +70,28 @@ async function runJourney(): Promise<{
     // 현재 여정(#798 이후): 스플래시 없이 홈이 바로 오늘의 30장 덱으로 열린다.
     await page.goto(WEB_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
     const passButton = page.getByRole("button", { name: "덜 관심" });
-    await passButton.waitFor({ state: "visible", timeout: 10000 });
+    try {
+      await passButton.waitFor({ state: "visible", timeout: DECK_WAIT_MS });
+    } catch {
+      // 버튼이 예산 안에 안 떴다 — 덱 에러 상태(불러오기 실패)인지, 아직 로딩/느림인지 구분해 보고한다.
+      // 원인을 명시해야 ops 가 '진짜 깨짐(에러)'과 '느림'을 구분할 수 있다(opaque 타임아웃 대신).
+      const text = await bodyText(page);
+      if (text.includes("오늘의 30장을 불러오지 못했어요")) {
+        findings.push({ severity: "critical", message: "오늘의 30장 덱이 에러 상태입니다 (불러오기 실패)." });
+      } else {
+        findings.push({
+          severity: "critical",
+          message: `홈 덱이 ${Math.round(DECK_WAIT_MS / 1000)}초 안에 뜨지 않았습니다('덜 관심' 버튼 미표시).`,
+        });
+      }
+      for (const error of pageErrors) {
+        findings.push({ severity: "critical", message: `브라우저 pageerror: ${error}` });
+      }
+      for (const error of consoleErrors) {
+        findings.push({ severity: "warn", message: `브라우저 console.error: ${error}` });
+      }
+      return { findings, beforeText: text, afterText: "", consoleErrors, pageErrors };
+    }
 
     await page.waitForTimeout(HOLD_MS);
     const beforeText = await bodyText(page);
