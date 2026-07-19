@@ -50,6 +50,7 @@ export type FrontEntry = {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
   companyScore?: CompanyScoreResult;
+  committeeReview?: NonNullable<StockFrontResponse["committeeReview"]>;
   taFact?: TaFact;
   sparkline: number[];
   priceText?: string;

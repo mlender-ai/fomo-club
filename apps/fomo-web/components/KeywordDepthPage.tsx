@@ -371,6 +371,9 @@ function mergeFrontSeed(
     // 시점·입력이 달라 "카드는 '가격 먼저'인데 뎁스는 '주목 집중'" 불일치를 만든다(2026-07-17 User Zero).
     fomo: seed.fomo ?? fresh.fomo,
     ...(companyScore ? { companyScore } : {}),
+    ...(seed.committeeReview ?? fresh.committeeReview
+      ? { committeeReview: seed.committeeReview ?? fresh.committeeReview }
+      : {}),
     ...(fresh.taFact ?? seed.taFact ? { taFact: fresh.taFact ?? seed.taFact } : {}),
     ...(fresh.ta ?? seed.ta ? { ta: fresh.ta ?? seed.ta } : {}),
     ...(fresh.candles?.length ? { candles: fresh.candles } : seed.candles?.length ? { candles: seed.candles } : {}),
@@ -1441,6 +1444,35 @@ function DepthTabBar({ tab, onChange }: { tab: "why" | "ta"; onChange: (t: "why"
         );
       })}
     </div>
+  );
+}
+
+function ExpertCommitteeReview({ review }: { review: StockFrontResponse["committeeReview"] | undefined }) {
+  if (!review) return null;
+  const gradeTone = (grade: "A" | "B" | "C") => grade === "A" ? "#D8FF3A" : grade === "B" ? "#f4f5f7" : "#8a8f98";
+  return (
+    <section className="mt-4 border-y border-hairline bg-surface/70 px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-pixel text-sm text-whiteout">전문 분석</p>
+        <span className="text-[10px] text-muted">사실 대조 완료 · {review.reviewedAt.slice(0, 10)}</span>
+      </div>
+      <div className="mt-4 grid gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold text-muted">차트·타이밍</p>
+            <span className="font-pixel text-xs" style={{ color: gradeTone(review.timingGrade) }}>{review.timingGrade}</span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-whiteout">{cleanText(review.tradingView)}</p>
+        </div>
+        <div className="border-t border-hairline pt-4">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold text-muted">기업·재무</p>
+            <span className="font-pixel text-xs" style={{ color: gradeTone(review.valuationGrade) }}>{review.valuationGrade}</span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-whiteout">{cleanText(review.fundamentalView)}</p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2528,6 +2560,7 @@ export function StockInsightView({
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
           <CompanyScoreRadar result={front?.companyScore} />
+          <ExpertCommitteeReview review={front?.committeeReview} />
           <DiscoveryOverview front={front} insight={insight} context={context} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (

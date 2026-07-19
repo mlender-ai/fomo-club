@@ -514,6 +514,15 @@ export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
   fomo: import("@fomo/core").FomoScoreResult;
   companyScore?: import("@fomo/core").CompanyScoreResult;
+  committeeReview?: {
+    runId: string;
+    reviewedAt: string;
+    tradingView: string;
+    fundamentalView: string;
+    timingGrade: "A" | "B" | "C";
+    valuationGrade: "A" | "B" | "C";
+    factChecked: true;
+  };
   taFact?: import("@fomo/core").TaFact;
   ta?: import("@fomo/core").TechnicalAnalysisSnapshot;
   /** 캔들차트용 실제 일봉 OHLCV. non-lite 응답에 최대 260거래일. */
@@ -755,6 +764,14 @@ export interface Daily30Response extends DiscoveryResponse {
       hypePenalty: number;
     }>;
     assetCounts: Record<Daily30AssetClass, number>;
+    committee?: {
+      runId: string;
+      version: string;
+      reviewedAt: string;
+      candidateCount: number;
+      selectedCount: number;
+      callCount: number;
+    };
   };
 }
 
