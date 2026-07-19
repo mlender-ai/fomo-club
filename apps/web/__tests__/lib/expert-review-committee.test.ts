@@ -174,6 +174,43 @@ describe("expert committee orchestration", () => {
     expect(writeFailure).toHaveBeenCalledOnce();
   });
 
+  it("분석가가 배치 후보를 누락하면 해당 후보만 C등급 반려하고 단계를 유지한다", async () => {
+    let stored: unknown = null;
+    const result = await runExpertReviewCommitteeStage("trading", {
+      caller: async ({ input }) => {
+        const candidates = input as Array<{ candidateId: string; stock: { symbol?: string } }>;
+        return {
+          ok: true,
+          model: "test-model",
+          content: JSON.stringify({
+            reviews: candidates.slice(0, -1).map((candidate) => ({
+              candidateId: candidate.candidateId,
+              approved: true,
+              grade: "B",
+              paragraph: `${candidate.stock.symbol}의 구간과 거래량 근거를 대조해 현재 타이밍을 검수했습니다.`,
+              concerns: [],
+            })),
+          }),
+        };
+      },
+      buildPool: async () => fakePool(),
+      readPrevious: async () => null,
+      writeFailure: async () => {},
+      writePicks: async () => {},
+      minCallIntervalMs: 0,
+      stageStorage: {
+        read: async () => stored,
+        write: async (_date, value) => { stored = value; },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const trading = (stored as { trading: Array<[string, { approved: boolean; grade: string; concerns: string[] }]> }).trading;
+    expect(trading).toHaveLength(40);
+    expect(trading.filter(([, review]) => !review.approved)).toHaveLength(4);
+    expect(trading.filter(([, review]) => review.grade === "C")).toHaveLength(4);
+  });
+
   it("3단 크론은 동일 후보를 이어받아 editor 성공 때만 활성본을 발행한다", async () => {
     const caller: CommitteeAgentCaller = async ({ role, input }) => {
       if (role === "editor") {
