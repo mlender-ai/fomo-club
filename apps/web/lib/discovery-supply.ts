@@ -19,7 +19,10 @@ import {
   stockMentionRole,
   synthesizeDiscoveryInsight,
   computeCardVerdict,
+  computeCompanyScore,
+  computeWyckoffAnalysis,
   type CardVerdict,
+  type CompanyScoreResult,
   type DailyOhlcv,
   type AxisSignal,
   type CardFrontSignals,
@@ -31,6 +34,7 @@ import {
   type FomoScoreResult,
   type InvestorFlow,
   type MultiAxisHookSelection,
+  type WyckoffAnalysis,
   type SectorStock,
   type StockCountry,
   type RawArticle,
@@ -131,6 +135,7 @@ const INDUSTRY_HINTS: Array<{ label: string; pattern: RegExp }> = [
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
+  companyScore?: CompanyScoreResult;
   sparkline: number[];
   priceText?: string;
   changeText?: string;
@@ -139,6 +144,7 @@ export interface DiscoveryFrontSeed {
   axisHook?: MultiAxisHookSelection;
   /** 판단 층(WO Phase 1) — 캔들이 있는 종목만(가짜 판단 금지). */
   verdict?: CardVerdict;
+  wyckoff?: WyckoffAnalysis;
   /** 프리웜이 이미 확보한 실제 일봉. 코인은 상세 첫 렌더의 차트 바닥으로 재사용한다. */
   candles?: DailyOhlcv[];
   chartSeries?: {
@@ -1641,6 +1647,9 @@ function frontSeed(
       : typeof materialMentionScore === "number"
         ? { mentionCount: 1, mentionScore: materialMentionScore }
         : undefined;
+  const flowEvents = candidate.events.filter((event) => event.kind === "flow_entry" && typeof event.flowDays === "number");
+  const foreignNetStreak = flowEvents.find((event) => event.flowActor === "foreign")?.flowDays;
+  const institutionNetStreak = flowEvents.find((event) => event.flowActor === "institution")?.flowDays;
   const signals: CardFrontSignals = {
     ...(typeof row.changePct === "number" ? { changePct: row.changePct } : {}),
     ...(typeof volumeEvent?.volumeRatio === "number" ? { volumeRatio: volumeEvent.volumeRatio } : {}),
@@ -1648,6 +1657,8 @@ function frontSeed(
     ...(currentNewsEventLabel ? { newsEventLabel: currentNewsEventLabel } : {}),
     ...(currentNewsEvent?.source ? { newsEventSource: currentNewsEvent.source } : {}),
     ...(row.marketCapRank && row.marketCapRankSource !== "curated" ? { marketCapRank: { scope: "market", market: row.market, rank: row.marketCapRank } } : {}),
+    ...(typeof foreignNetStreak === "number" ? { foreignNetStreak } : {}),
+    ...(typeof institutionNetStreak === "number" ? { institutionNetStreak } : {}),
     ...(theme ? {
       themeLabel: theme.sector,
       themeRelativeRank: theme.rank,
@@ -2220,7 +2231,24 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     if (!row) continue;
     const attention = attentionMap[candidate.ticker];
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
-    front.verdict = verdictForCandidate(candidate, dailyByTicker.get(candidate.ticker)?.candles ?? []);
+    const candidateCandles = dailyByTicker.get(candidate.ticker)?.candles ?? [];
+    front.verdict = verdictForCandidate(candidate, candidateCandles);
+    const wyckoff = computeWyckoffAnalysis({
+      candles: candidateCandles,
+      ...(typeof front.signals.foreignNetStreak === "number" ? { foreignNetStreak: front.signals.foreignNetStreak } : {}),
+      ...(typeof front.signals.institutionNetStreak === "number" ? { institutionNetStreak: front.signals.institutionNetStreak } : {}),
+      ...(typeof front.verdict.invalidationLevel === "number" ? { invalidationLevel: front.verdict.invalidationLevel } : {}),
+      currency: candidate.country === "US" ? "USD" : "KRW",
+    });
+    front.wyckoff = wyckoff;
+    front.companyScore = computeCompanyScore({
+      signals: front.signals,
+      verdict: front.verdict,
+      wyckoff,
+      insiderPurchaseConfirmed: candidate.events.some((event) => event.insiderPurchase === true),
+      ...(typeof candidateCandles.at(-1)?.close === "number" ? { currentPrice: candidateCandles.at(-1)!.close } : {}),
+      asOf,
+    });
     const stock = await stockPayload(row, candidate, front);
     // 2026-07-12: US 큐레이션 대형주는 뉴스 재료가 없어도(Vercel egress에서 US 뉴스 차단) verdict 맥락으로
     // 진입 — "시총 높은 아는 기업"(User Zero). 국장 발굴 정체성은 불변(KR 은 이 분기 안 탐).

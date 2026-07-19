@@ -12,6 +12,8 @@ import {
   selectTaFact,
   computeCardVerdict,
   computeWyckoffAnalysis,
+  computeCompanyScore,
+  companyFinancialsFromBasics,
   type CardVerdict,
   type CardFrontSignals,
   type FomoScoreResult,
@@ -19,10 +21,11 @@ import {
   type TaFact,
   type TechnicalAnalysisSnapshot,
   type WyckoffAnalysis,
+  type CompanyScoreResult,
   type AxisSignal,
   type MultiAxisHookSelection,
 } from "@fomo/core";
-import { fetchStockBasics, fetchStockBasicsLite } from "./stock-basics";
+import { fetchStockBasics, fetchStockBasicsLite, fetchUsStockBasics } from "./stock-basics";
 import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
@@ -183,6 +186,8 @@ export interface StockFrontData {
   signals: CardFrontSignals;
   /** 포모 점수(척추) — C·L·라벨. 카드 점수/라벨/헤드라인의 단일 출처. */
   fomo: FomoScoreResult;
+  /** 실데이터가 있는 축만 동일 가중치로 재정규화한 종합 기업 점수. */
+  companyScore?: CompanyScoreResult;
   /** TA 셀렉터가 고른 사실 1개 — 점수/진열이 아니라 카드·상세 보조 문맥. */
   taFact?: TaFact;
   /** 차트분석(TA) 전체 스냅샷 — 뎁스 '차트분석' 탭용. 관측 서술 facts 배열(non-lite에서만). */
@@ -437,6 +442,13 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     currency: "KRW",
   });
   const chartSeries = buildChartSeries(snapshot.candles);
+  const companyScore = computeCompanyScore({
+    signals,
+    verdict,
+    wyckoff,
+    currentPrice: snapshot.price,
+    asOf: snapshot.fetchedAt,
+  });
   return {
     ...base,
     fomo,
@@ -444,6 +456,7 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     ta,
     verdict,
     wyckoff,
+    companyScore,
     ...(chartSeries ? { chartSeries } : {}),
     // 캔들차트(Phase A) — 국·미와 동일하게 non-lite 에서 실제 일봉 제공.
     ...(snapshot.candles.length > 0 ? { candles: snapshot.candles.slice(-260) } : {}),
@@ -474,6 +487,7 @@ export async function assembleStockFront(
     const cachedFront = await assembleUsCachedStockFront(stock, coverage, { ...options, symbol: usSymbol }).catch(() => null);
     if (options.lite === true) return cachedFront ?? { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
 
+    const basicsPromise = fetchUsStockBasics(stock, usSymbol, false).catch(() => null);
     let daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
     if (daily.candles.length === 0) {
       daily = await fetchNasdaqDailyCandles(usSymbol, 365).catch(() => ({ candles: [], closes: [], volumes: [] }));
@@ -512,6 +526,17 @@ export async function assembleStockFront(
       ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
       currency: "USD",
     });
+    const basics = await basicsPromise;
+    const financials = companyFinancialsFromBasics(basics);
+    const latestPrice = daily.closes.at(-1);
+    const companyScore = computeCompanyScore({
+      ...(financials ? { financials } : {}),
+      signals,
+      verdict,
+      wyckoff,
+      ...(typeof latestPrice === "number" ? { currentPrice: latestPrice } : {}),
+      ...(signals.asOf ? { asOf: signals.asOf } : {}),
+    });
     const chartSeries = buildChartSeries(daily.candles);
     return {
       signals,
@@ -520,6 +545,7 @@ export async function assembleStockFront(
       ta,
       verdict,
       wyckoff,
+      companyScore,
       ...(daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
       ...(chartSeries ? { chartSeries } : {}),
       sparkline,
@@ -588,6 +614,16 @@ export async function assembleStockFront(
     ...(typeof verdict?.invalidationLevel === "number" ? { invalidationLevel: verdict.invalidationLevel } : {}),
     currency: "KRW",
   });
+  const financials = companyFinancialsFromBasics(basics);
+  const latestPrice = daily.closes.at(-1);
+  const companyScore = computeCompanyScore({
+    ...(financials ? { financials } : {}),
+    signals,
+    verdict,
+    wyckoff,
+    ...(typeof latestPrice === "number" ? { currentPrice: latestPrice } : {}),
+    ...(signals.asOf ? { asOf: signals.asOf } : {}),
+  });
   const chartSeries = lite ? undefined : buildChartSeries(daily.candles);
 
   return {
@@ -596,6 +632,7 @@ export async function assembleStockFront(
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
     verdict,
+    companyScore,
     ...(!lite ? { wyckoff } : {}),
     ...(!lite && daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
     ...(chartSeries ? { chartSeries } : {}),

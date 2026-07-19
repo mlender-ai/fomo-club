@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import {
-  scoreToColor,
   cleanText,
   cleanQuote,
   communityWordings,
@@ -12,6 +11,7 @@ import {
   selectFomoHook,
   translateTaFact,
   confidenceGrade,
+  mergeCompanyScoreResults,
   type DailyOhlcv,
   type KeywordCard,
   type FomoTone,
@@ -32,6 +32,7 @@ import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { describe52wGap, describeRsi } from "@/lib/depthCopy";
 import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
+import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
 
 /**
  * 키워드 뎁스 페이지 — 카드/히스토리에서 공용. KEYWORD_CARD_FEED_DEV_SPEC v3 §3.
@@ -42,7 +43,6 @@ import { FlickerSpinner } from "@/components/FlickerSpinner";
  * 메인 카드·스와이프는 안 건드린다 — 뎁스 콘텐츠만.
  */
 export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose: () => void }) {
-  const color = scoreToColor(card.fomoScore);
   const [insight, setInsight] = useState<CondensedInsight | null>(null);
   const [loading, setLoading] = useState(true);
   // 숨은 연관주 탭 → 종목 전용 화면(stock-insight 재활용). null 이면 안 띄움.
@@ -98,12 +98,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
     <div className="fixed inset-0 z-[60] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex h-full max-w-md flex-col">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
-            <span className="text-sm font-semibold" style={{ color }}>
-              포모 {card.fomoScore}
-            </span>
-          </div>
+          <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
           <button onClick={onClose} className="font-pixel text-sm text-muted hover:text-whiteout">
             닫기
           </button>
@@ -369,11 +364,13 @@ function mergeFrontSeed(
 ): StockFrontResponse | null {
   if (!hasUsableFront(seed)) return fresh ?? null;
   if (!hasUsableFront(fresh)) return seed;
+  const companyScore = mergeCompanyScoreResults(seed.companyScore, fresh.companyScore);
   return {
     signals: { ...seed.signals, ...fresh.signals },
     // 상태 배지 단일 진실(카드=뎁스 모순 금지) — 카드(seed)의 포모 라벨 우선. 라이브 재계산(fresh)은
     // 시점·입력이 달라 "카드는 '가격 먼저'인데 뎁스는 '주목 집중'" 불일치를 만든다(2026-07-17 User Zero).
     fomo: seed.fomo ?? fresh.fomo,
+    ...(companyScore ? { companyScore } : {}),
     ...(fresh.taFact ?? seed.taFact ? { taFact: fresh.taFact ?? seed.taFact } : {}),
     ...(fresh.ta ?? seed.ta ? { ta: fresh.ta ?? seed.ta } : {}),
     ...(fresh.candles?.length ? { candles: fresh.candles } : seed.candles?.length ? { candles: seed.candles } : {}),
@@ -2530,6 +2527,7 @@ export function StockInsightView({
           <>
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
+          <CompanyScoreRadar result={front?.companyScore} />
           <DiscoveryOverview front={front} insight={insight} context={context} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (
@@ -2568,14 +2566,6 @@ export function StockInsightView({
               {hasVerifiedFloor
                 ? "원문 기반 요약은 아직 얇아요."
                 : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
-            </p>
-          )}
-
-          {/* 포모 점수 — 카드 메인에서 강등된 배지(WO 1.5 E). 주목도 참고용, 판단 아님. */}
-          {typeof front?.fomo?.fomoScore === "number" && (
-            <p className="mt-6 text-center text-[11px] leading-5 text-muted">
-              포모 <span className="font-number font-bold" style={{ color: "#D8FF3A" }}>{front.fomo.fomoScore}</span>
-              {` · ${fomoStateSummary(front.fomo)}`}
             </p>
           )}
 

@@ -15,6 +15,8 @@ export interface DiscoverySeenItem {
   firstSeenPrice?: number;
   firstSeenPriceText?: string;
   firstSeenPriceCapturedAt?: number;
+  companyScore?: number;
+  companyScoreLabel?: string;
   symbol?: string;
   naverCode?: string;
   market?: StockMarket;
@@ -38,6 +40,7 @@ export interface DiscoverySeenInput {
 
 interface PriceFront {
   priceText?: string;
+  companyScore?: { score: number | null; label: string };
 }
 
 function parsePriceText(text: string | undefined): number | undefined {
@@ -68,6 +71,8 @@ function read(): DiscoverySeenItem[] {
           ...(typeof candidate.firstSeenPriceCapturedAt === "number"
             ? { firstSeenPriceCapturedAt: candidate.firstSeenPriceCapturedAt }
             : {}),
+          ...(typeof candidate.companyScore === "number" ? { companyScore: candidate.companyScore } : {}),
+          ...(typeof candidate.companyScoreLabel === "string" ? { companyScoreLabel: candidate.companyScoreLabel } : {}),
           ...(typeof candidate.symbol === "string" ? { symbol: candidate.symbol } : {}),
           ...(typeof candidate.naverCode === "string" ? { naverCode: candidate.naverCode } : {}),
           ...(typeof candidate.market === "string" ? { market: candidate.market as StockMarket } : {}),
@@ -121,6 +126,11 @@ export function recordDiscoverySeen(
     typeof price === "number" &&
     typeof base.firstSeenPrice !== "number" &&
     nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
+  const score = opts.front?.companyScore?.score;
+  const canCaptureScore =
+    typeof score === "number" &&
+    typeof base.companyScore !== "number" &&
+    nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
 
   const next: DiscoverySeenItem = {
     ...base,
@@ -135,6 +145,12 @@ export function recordDiscoverySeen(
           firstSeenPrice: price,
           firstSeenPriceCapturedAt: nowMs,
           ...(opts.front?.priceText ? { firstSeenPriceText: opts.front.priceText } : {}),
+        }
+      : {}),
+    ...(canCaptureScore
+      ? {
+          companyScore: score,
+          ...(opts.front?.companyScore?.label ? { companyScoreLabel: opts.front.companyScore.label } : {}),
         }
       : {}),
   };

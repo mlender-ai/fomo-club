@@ -507,11 +507,13 @@ export const fetchStockBasics = (stock: string, opts: { naverCode?: string; symb
 /** 카드 앞면 FOMO 신호(rev2 후속) — baseline·라이브 수급 streak·시총순위·3개월 스파크라인. 도달 종목 lazy. */
 export type { CardFrontSignals } from "@fomo/core";
 export type { FomoScoreResult } from "@fomo/core";
+export type { CompanyScoreResult } from "@fomo/core";
 export type { TaFact } from "@fomo/core";
 export type { AxisSignal, MultiAxisHookSelection } from "@fomo/core";
 export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
   fomo: import("@fomo/core").FomoScoreResult;
+  companyScore?: import("@fomo/core").CompanyScoreResult;
   taFact?: import("@fomo/core").TaFact;
   ta?: import("@fomo/core").TechnicalAnalysisSnapshot;
   /** 캔들차트용 실제 일봉 OHLCV. non-lite 응답에 최대 260거래일. */
@@ -569,7 +571,7 @@ export const fetchStockFront = (stock: string, opts: { lite?: boolean; naverCode
   }${opts.symbol ? `&symbol=${encodeURIComponent(opts.symbol)}` : ""}`;
 
   return cachedGet(
-    `stock-front:v2:${opts.lite ? "lite" : "full"}:${stock}:${opts.naverCode ?? ""}:${opts.symbol ?? ""}`,
+    `stock-front:v3-company-score:${opts.lite ? "lite" : "full"}:${stock}:${opts.naverCode ?? ""}:${opts.symbol ?? ""}`,
     async () => {
       try {
         return await fetchJsonWithTimeout<StockFrontResponse>(

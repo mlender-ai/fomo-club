@@ -123,12 +123,12 @@ interface NasdaqLabelValue {
 }
 
 /** Nasdaq summary+financials → StockBasics. 시총·52주·배당 + 연간 매출/영업이익. PER 미제공 시 생략(정직). */
-export async function fetchUsStockBasics(name: string, symbol: string): Promise<StockBasics | null> {
+export async function fetchUsStockBasics(name: string, symbol: string, includeAbout = true): Promise<StockBasics | null> {
   const [summaryRaw, financialsRaw, about] = await Promise.all([
     getNasdaqJson(`https://api.nasdaq.com/api/quote/${encodeURIComponent(symbol)}/summary?assetclass=stocks`),
     getNasdaqJson(`https://api.nasdaq.com/api/company/${encodeURIComponent(symbol)}/financials?frequency=1`),
     // 회사 소개(User Zero: "무슨 회사인지 없다") — company-profile 영문 → 한국어 요약, 심볼당 1회 영구 캐시.
-    getUsCompanyAbout(name, symbol).catch(() => undefined),
+    includeAbout ? getUsCompanyAbout(name, symbol).catch(() => undefined) : Promise.resolve(undefined),
   ]);
 
   const summary = (summaryRaw as { data?: { summaryData?: Record<string, NasdaqLabelValue> } } | null)?.data?.summaryData;
@@ -153,13 +153,18 @@ export async function fetchUsStockBasics(name: string, symbol: string): Promise<
   } | null)?.data?.incomeStatementTable;
   if (income?.headers && income.rows?.length) {
     // headers: value2=최신 → value4=과거. 최근 3개 연도를 오래된→최신으로.
-    const keys = (["value4", "value3", "value2"] as const).filter((k) => income.headers?.[k]);
+    const keys = (["value5", "value4", "value3", "value2"] as const).filter((k) => income.headers?.[k]);
     const periods = keys.map((k) => ({ title: income.headers![k]!, estimate: false }));
     const pickRow = (label: RegExp) => income.rows!.find((row) => label.test(row.value1 ?? ""));
     const buildRow = (label: string, source: Record<string, string> | undefined) => {
       if (!source) return null;
       const values = keys.map((k) => formatUsdThousands(source[k]) ?? "—");
-      return values.some((v) => v !== "—") ? { label, values } : null;
+      const rawValues = keys.map((k) => {
+        const value = String(source[k] ?? "").replace(/[^\d.-]/g, "");
+        const parsed = value && value !== "--" ? Number(value) : NaN;
+        return Number.isFinite(parsed) ? parsed : null;
+      });
+      return values.some((v) => v !== "—") ? { label, values, rawValues } : null;
     };
     const rows = [
       buildRow("벌어들인 돈(매출)", pickRow(/^Total Revenue$/i)),

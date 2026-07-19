@@ -6,6 +6,7 @@ import type {
   AxisSignal,
   CardFrontSignals,
   CardVerdict,
+  CompanyScoreResult,
   FomoScoreResult,
   FomoCardView,
   MultiAxisHookSelection,
@@ -27,8 +28,8 @@ import { whyShown } from "@/lib/whyShown";
 import { dedupeCardCopy } from "@/lib/cardCopyDedupe";
 import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
-import { discoveryStatus, verdictBalance, type DiscoveryStatusView } from "@/lib/discoveryPresentation";
-import { FlameIcon, GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
+import { verdictBalance } from "@/lib/discoveryPresentation";
+import { GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -48,6 +49,7 @@ const EMPTY_FOMO = computeFomoScore({});
 export type FrontEntry = {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
+  companyScore?: CompanyScoreResult;
   taFact?: TaFact;
   sparkline: number[];
   priceText?: string;
@@ -58,6 +60,7 @@ export type FrontEntry = {
   axisSignals?: AxisSignal[];
   axisHook?: MultiAxisHookSelection;
   verdict?: CardVerdict;
+  wyckoff?: NonNullable<StockFrontResponse["wyckoff"]>;
   candles?: NonNullable<StockFrontResponse["candles"]>;
   chartSeries?: NonNullable<StockFrontResponse["chartSeries"]>;
   coinIssues?: NonNullable<StockFrontResponse["coinIssues"]>;
@@ -129,23 +132,6 @@ function LogoBadge({
       aria-hidden
     >
       {ch}
-    </span>
-  );
-}
-
-/** 포모 강도 미터(DESIGN.md §8 모티프) — 10 도트 세그먼트, 점수만큼 오렌지 fill·나머지 dim. */
-function FomoMeter({ score, color }: { score: number; color: string }) {
-  const normalized = Math.max(0, Math.min(100, score));
-  const filled = normalized > 0 ? Math.max(1, Math.ceil(normalized / 10)) : 0;
-  return (
-    <span className="inline-flex items-center gap-[3px]" aria-hidden>
-      {Array.from({ length: 10 }, (_, i) => (
-        <span
-          key={i}
-          className="h-2 w-2 rounded-[1px]"
-          style={{ backgroundColor: i < filled ? color : "rgba(255,255,255,0.12)" }}
-        />
-      ))}
     </span>
   );
 }
@@ -273,29 +259,32 @@ function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progres
   );
 }
 
-/** 발견 상태와 차트 균형을 분리해 보여준다. 매매 행동처럼 읽히는 라벨은 쓰지 않는다. */
-function DiscoverySignalBlock({
-  status,
-  score,
+/** 카드에서는 종합점수와 조합 라벨만 가볍게 노출하고, 축별 산식은 뎁스에서 푼다. */
+function CompanyScoreBlock({
+  companyScore,
   verdict,
   contextLine,
 }: {
-  status: DiscoveryStatusView;
-  score: number;
+  companyScore?: CompanyScoreResult | undefined;
   verdict?: CardVerdict | undefined;
   contextLine?: string | undefined;
 }) {
   const balance = verdictBalance(verdict);
   return (
-    <div className="mt-2.5 shrink-0 rounded-lg border border-hairline bg-white/[0.035] px-3 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-bold" style={{ color: status.color }}>{status.label}</span>
+    <div className="mt-2.5 shrink-0 border-y border-hairline py-2.5">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-number text-3xl font-bold leading-none" style={{ color: NEON }}>
+              {companyScore?.score ?? "—"}
+            </span>
+            <span className="text-xs font-semibold text-muted">점</span>
+          </div>
+          <p className="mt-1 truncate text-sm font-semibold text-whiteout">
+            {companyScore?.label ?? "근거 축 수집 중"}
+          </p>
+        </div>
         {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
-      </div>
-      <p className="mt-1 text-xs leading-5 text-muted" style={clampStyle(2)}>{status.summary}</p>
-      <div className="mt-2 flex items-center gap-2">
-        <span className="text-[10px] text-muted">관심 온도</span>
-        <FomoMeter score={score} color={status.color} />
       </div>
       {contextLine && (
         <p className="mt-1.5 text-xs leading-4 text-whiteout" style={clampStyle(1)}>
@@ -322,7 +311,7 @@ function StockCardFace({
   feedBull,
   feedBear,
   why,
-  fomo,
+  companyScore,
   discoveryContext,
   verdict,
   progress,
@@ -338,7 +327,7 @@ function StockCardFace({
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
   why?: string | undefined;
-  fomo: FomoScoreResult;
+  companyScore?: CompanyScoreResult | undefined;
   discoveryContext?: string | undefined;
   verdict?: CardVerdict | undefined;
   progress?: string | undefined;
@@ -390,10 +379,9 @@ function StockCardFace({
         {view.headline}
       </p>
 
-      {/* 발견 상태와 차트 균형은 서로 다른 축이다. */}
-      {verdict ? (
-        <DiscoverySignalBlock status={discoveryStatus(fomo)} score={fomo.fomoScore} verdict={verdict} contextLine={discoveryContext} />
-      ) : (
+      <CompanyScoreBlock companyScore={companyScore} verdict={verdict} contextLine={discoveryContext} />
+
+      {!verdict && (
         <>
           {why && (
             <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
@@ -560,6 +548,7 @@ export function StockSwipeDeck({
             [key]: {
               signals: d.signals,
               fomo: d.fomo,
+              ...(d.companyScore ? { companyScore: d.companyScore } : {}),
               ...(d.taFact ? { taFact: d.taFact } : {}),
               sparkline: d.sparkline,
               ...(d.priceText ? { priceText: d.priceText } : {}),
@@ -570,6 +559,7 @@ export function StockSwipeDeck({
               ...(d.axisSignals ? { axisSignals: d.axisSignals } : {}),
               ...(d.axisHook ? { axisHook: d.axisHook } : {}),
               ...(d.verdict ? { verdict: d.verdict } : {}),
+              ...(d.wyckoff ? { wyckoff: d.wyckoff } : {}),
               ...(d.coinIssues ? { coinIssues: d.coinIssues } : {}),
               ...(d.coinCause ? { coinCause: d.coinCause } : {}),
             },
@@ -678,7 +668,7 @@ export function StockSwipeDeck({
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
         why={deduped.why}
-        fomo={e.fomo}
+        companyScore={e.companyScore}
         discoveryContext={discoveryContext}
         verdict={e?.verdict}
         progress={progress}

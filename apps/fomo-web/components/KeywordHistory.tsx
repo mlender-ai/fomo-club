@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MOCK_KEYWORD_CARDS, scoreToColor, type KeywordCard } from "@fomo/core";
+import { MOCK_KEYWORD_CARDS, type KeywordCard } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { MyDiscoveryPreview } from "@/components/MyDiscoveryPreview";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
@@ -106,7 +106,6 @@ export function KeywordHistory() {
       {history.length > 0 && <p className="mb-3 px-1 text-xs text-muted">내가 본 키워드</p>}
       <div className="flex flex-col gap-2.5">
         {history.map((h) => {
-          const color = scoreToColor(h.fomoScore);
           const full = MOCK_KEYWORD_CARDS.find((c) => c.id === h.id) ?? null;
           return (
             <button
@@ -119,12 +118,7 @@ export function KeywordHistory() {
                 <span className="text-base font-semibold text-whiteout">{h.keyword}</span>
                 <span aria-hidden>{h.emoji}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold" style={{ color }}>
-                  {h.fomoScore}
-                </span>
-                <span className="text-[11px] text-muted">{relativeTime(h.ts)}</span>
-              </div>
+              <span className="text-[11px] text-muted">{relativeTime(h.ts)}</span>
             </button>
           );
         })}

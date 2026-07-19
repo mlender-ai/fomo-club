@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { isDiscoveryCopySafe } from "@fomo/core";
+import { isDiscoveryCopySafe, withCompanyQuietScore } from "@fomo/core";
 import type { CardFrontSignals, StockCountry } from "@fomo/core";
 import { cacheVersion, kstDate as kstDateOf } from "./fomo";
 import { parsePriceText } from "./quote-prices";
@@ -400,6 +400,21 @@ function responseFromSelected(
     if (stockById.has(candidate.id)) continue;
     stockById.set(candidate.id, candidate.stock);
     stocks.push(candidate.stock);
+    const current = fronts[candidate.stock.canonical];
+    if (current) {
+      fronts[candidate.stock.canonical] = {
+        ...current,
+        companyScore: withCompanyQuietScore(
+          current.companyScore,
+          {
+            quietScore: candidate.quietScore,
+            signalScore: candidate.signalScore,
+            hypePenalty: candidate.hypePenalty,
+          },
+          asOf
+        ),
+      };
+    }
   }
   // cards = 덱(종목 30장) + 피드(콘텐츠·내러티브). 클라가 표면별로 필터: 메인=stock, 피드=content/narrative.
   const all = [...deck, ...feed];
