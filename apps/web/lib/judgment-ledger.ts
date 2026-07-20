@@ -178,8 +178,10 @@ export function inferSignalTypes(input: {
   signals?: DiscoveryFrontSeed["signals"];
   wyckoff?: WyckoffAnalysis;
   companyScore?: number;
+  quietMoney?: DiscoveryFrontSeed["quietMoney"];
 }): SignalTypeCode[] {
-  return inferStandardSignalTypes(input);
+  const { quietMoney, ...rest } = input;
+  return inferStandardSignalTypes({ ...rest, ...(quietMoney ? { quietMoney } : {}) });
 }
 
 function cleanScore(score: CompanyScoreResult | undefined): Record<string, unknown> | null {
@@ -227,6 +229,7 @@ export function buildDaily30LedgerEntries(
       ...(front?.verdict ? { verdict: front.verdict } : {}),
       ...(front?.signals ? { signals: front.signals } : {}),
       ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
+      ...(front?.quietMoney ? { quietMoney: front.quietMoney } : {}),
       ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
     });
     const score = cleanScore(front?.companyScore);
@@ -242,6 +245,7 @@ export function buildDaily30LedgerEntries(
         ...(stock.sourceLabel ? { sourceLabel: stock.sourceLabel } : {}),
         ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
         axisSignals: front?.axisSignals?.filter((item) => item.fired) ?? [],
+        ...(front?.quietMoney?.cluster ? { quietMoneyCluster: front.quietMoney.cluster } : {}),
       },
       priceAt,
       actor: resolvedActor,
@@ -349,6 +353,7 @@ function asSelection(row: {
         ...(payload.stock?.sourceUrl ?? payload.sourceUrl ? { sourceUrl: payload.stock?.sourceUrl ?? payload.sourceUrl } : {}),
         ...(payload.front?.signals ? { signals: payload.front.signals } : {}),
         ...(payload.front?.wyckoff ? { wyckoff: payload.front.wyckoff } : {}),
+        ...(payload.front?.quietMoney ? { quietMoney: payload.front.quietMoney } : {}),
         ...(typeof projectedCompanyScore === "number" ? { companyScore: projectedCompanyScore } : {}),
       });
   return {

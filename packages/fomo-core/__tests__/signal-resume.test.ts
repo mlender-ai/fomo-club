@@ -52,4 +52,24 @@ describe("signal resume taxonomy", () => {
     expect(signalPerformanceBonus(["foreign_streak"], { foreign_streak: { n: 80, winRate: 95, medianReturn: 5 } })).toBe(3);
     expect(signalPerformanceBonus(["foreign_streak"], { foreign_streak: { n: 80, winRate: 42, medianReturn: -2 } })).toBe(0);
   });
+
+  it("다중 주체 클러스터를 독립 이력 코드로 기록한다", () => {
+    expect(inferStandardSignalTypes({
+      quietMoney: {
+        asOf: "2026-07-17",
+        events: [],
+        cluster: {
+          type: "cluster_multi",
+          windowTradingDays: 10,
+          actors: ["insider", "institution"],
+          actorCount: 2,
+          startDate: "2026-07-10",
+          endDate: "2026-07-17",
+          strength: 3,
+          headline: "내부자·기관 동시 유입 · 10거래일 내 2개 주체",
+          evidence: [],
+        },
+      },
+    })).toEqual(["cluster_multi"]);
+  });
 });

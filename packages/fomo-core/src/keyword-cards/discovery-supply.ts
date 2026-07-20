@@ -1,4 +1,5 @@
 import type { StockCountry, StockMarket } from "./stocks";
+import type { QuietMoneyEvent } from "./quiet-money";
 
 export type DiscoveryMarket = Extract<StockMarket, "KOSPI" | "KOSDAQ" | "NASDAQ" | "NYSE">;
 
@@ -41,6 +42,8 @@ export interface DiscoveryEvent {
   flowAmountText?: string;
   /** Confirmed insider open-market purchase from SEC Form 4 or DART ownership report. */
   insiderPurchase?: boolean;
+  /** 조용한 돈 타임라인에 그대로 보존할 구조화 이벤트. */
+  quietMoneyEvent?: QuietMoneyEvent;
   themeRank?: number;
   themePeerCount?: number;
   themeAverageChangePct?: number;

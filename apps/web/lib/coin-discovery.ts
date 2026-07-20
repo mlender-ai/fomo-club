@@ -1,5 +1,5 @@
-import { computeCardVerdict, computeCompanyScore, computeFomoScore, computeWyckoffAnalysis, isFrontHookSafe } from "@fomo/core";
-import type { CardFrontSignals } from "@fomo/core";
+import { buildQuietMoneyTimeline, computeCardVerdict, computeCompanyScore, computeFomoScore, computeWyckoffAnalysis, isFrontHookSafe } from "@fomo/core";
+import type { CardFrontSignals, QuietMoneyEvent } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
 import {
@@ -139,6 +139,28 @@ export function coinFrontSeed(
   });
   const coinCause = buildCoinCause(snapshot, coinIssues);
   const primaryIssue = coinIssues.find((issue) => issue.scope === "coin");
+  const quietMoneyEvents = coinIssues.flatMap((issue): QuietMoneyEvent[] => {
+    if (issue.type !== "onchain" || !/고래|whale/i.test(issue.title)) return [];
+    const inflow = /(?:고래.{0,18}(?:매수|매집|축적|순유입)|(?:매수|매집|축적|순유입).{0,18}고래|whale.{0,18}(?:buy|accumulat|inflow))/i.test(issue.title);
+    const outflow = /(?:고래.{0,18}(?:매도|분배|순유출)|(?:매도|분배|순유출).{0,18}고래|whale.{0,18}(?:sell|distribut|outflow))/i.test(issue.title);
+    if (!inflow && !outflow) return [];
+    const date = issue.publishedAt.slice(0, 10);
+    const priceAt = snapshot.candles.find((candle) => candle.date === date)?.close;
+    return [{
+      date,
+      actor: "whale",
+      direction: inflow ? "inflow" : "outflow",
+      source: issue.source,
+      label: issue.title,
+      ...(typeof priceAt === "number" && priceAt > 0 ? { priceAt } : {}),
+      sourceUrl: issue.url,
+    }];
+  });
+  const quietMoney = buildQuietMoneyTimeline({
+    asOf: snapshot.fetchedAt.slice(0, 10),
+    events: quietMoneyEvents,
+    tradingDates: snapshot.candles.flatMap((candle) => candle.date ? [candle.date] : []),
+  });
   return {
     signals: {
       ...signals,
@@ -155,9 +177,11 @@ export function coinFrontSeed(
       signals,
       verdict,
       wyckoff,
+      ...(quietMoney.events.length ? { quietMoney } : {}),
       currentPrice: snapshot.price,
       asOf: snapshot.fetchedAt,
     }),
+    ...(quietMoney.events.length ? { quietMoney } : {}),
     candles,
     ...(chartSeries ? { chartSeries } : {}),
     ...(coinIssues.length ? { coinIssues: [...coinIssues].slice(0, 3) } : {}),

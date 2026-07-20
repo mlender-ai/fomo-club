@@ -21,6 +21,7 @@ import {
   computeCardVerdict,
   computeCompanyScore,
   computeWyckoffAnalysis,
+  buildQuietMoneyTimeline,
   type CardVerdict,
   type CompanyScoreResult,
   type DailyOhlcv,
@@ -34,6 +35,8 @@ import {
   type FomoScoreResult,
   type InvestorFlow,
   type MultiAxisHookSelection,
+  type QuietMoneyEvent,
+  type QuietMoneyTimeline,
   type WyckoffAnalysis,
   type SectorStock,
   type StockCountry,
@@ -136,6 +139,8 @@ export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
   fomo: FomoScoreResult;
   companyScore?: CompanyScoreResult;
+  /** 내부자·기관·외국인·고래의 실데이터 통합 타임라인. */
+  quietMoney?: QuietMoneyTimeline;
   /** 일일 위원회가 사실 게이트를 통과시킨 전문 분석. 요청 경로에서는 생성하지 않고 승인 스냅샷만 읽는다. */
   committeeReview?: {
     runId: string;
@@ -618,6 +623,7 @@ function materialEventFromArticle(article: RawArticle, asOf: string, sourceFallb
 
 function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEvent {
   const insiderPurchase = Boolean(disclosure.insiderPurchase);
+  const purchase = disclosure.insiderPurchase;
   return {
     kind: "disclosure",
     firstSeen: true,
@@ -630,6 +636,19 @@ function materialEventFromDisclosure(disclosure: DartDisclosureHit): DiscoveryEv
     summary: disclosure.label,
     sourceName: disclosure.source,
     ...(insiderPurchase ? { headlineHook: disclosure.label, insiderPurchase: true } : {}),
+    ...(purchase ? {
+      quietMoneyEvent: {
+        date: purchase.transactionDate,
+        actor: "insider",
+        direction: "inflow",
+        source: disclosure.source,
+        label: disclosure.label,
+        ...(typeof purchase.value === "number" ? { amount: purchase.value, amountUnit: "KRW" as const } :
+          typeof purchase.shares === "number" ? { amount: purchase.shares, amountUnit: "shares" as const } : {}),
+        ...(typeof purchase.price === "number" ? { priceAt: purchase.price } : {}),
+        ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
+      },
+    } : {}),
     ...(disclosure.url ? { sourceUrl: disclosure.url } : {}),
   };
 }
@@ -722,6 +741,7 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
     const filings = filingResult.status === "fulfilled" ? filingResult.value : [];
     const filing = filings.find((item) => item.insiderPurchase) ?? filings[0];
     if (filing) {
+      const purchase = filing.insiderPurchase;
       return {
         kind: "disclosure",
         firstSeen: true,
@@ -734,6 +754,19 @@ async function eventFromTargetedMaterial(row: DiscoveryMarketRow, asOf: string):
         summary: filing.label,
         sourceName: filing.source,
         ...(filing.insiderPurchase ? { headlineHook: filing.label, insiderPurchase: true } : {}),
+        ...(purchase ? {
+          quietMoneyEvent: {
+            date: purchase.transactionDate,
+            actor: "insider",
+            direction: "inflow",
+            source: filing.source,
+            label: filing.label,
+            amount: purchase.value,
+            amountUnit: "USD",
+            priceAt: purchase.price,
+            ...(filing.url ? { sourceUrl: filing.url } : {}),
+          },
+        } : {}),
         ...(filing.url ? { sourceUrl: filing.url } : {}),
       };
     }
@@ -831,6 +864,18 @@ function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): 
     sourceName: "SEC Form 4",
     headlineHook: label,
     insiderPurchase: true,
+    quietMoneyEvent: {
+      date: candidate.tradeDate,
+      actor: "insider",
+      direction: "inflow",
+      source: "SEC Form 4",
+      label,
+      amount: candidate.valueUsd,
+      amountUnit: "USD",
+      streakDays: 1,
+      ...(candidate.buyPrice ? { priceAt: candidate.buyPrice } : {}),
+      sourceUrl: `http://openinsider.com/${candidate.symbol}`,
+    },
     sourceUrl: `http://openinsider.com/${candidate.symbol}`,
   };
 }
@@ -1737,6 +1782,75 @@ function verdictForCandidate(candidate: DiscoveryCandidate, candles: readonly Da
   });
 }
 
+function candlePriceAt(candles: readonly DailyOhlcv[], date: string): number | undefined {
+  const exact = candles.find((candle) => candle.date === date)?.close;
+  if (typeof exact === "number" && Number.isFinite(exact) && exact > 0) return exact;
+  return undefined;
+}
+
+function flowQuietMoneyEvents(
+  history: readonly InvestorFlow[],
+  candles: readonly DailyOhlcv[]
+): QuietMoneyEvent[] {
+  const streak = investorNetStreak(history);
+  const newest = [...history].sort((a, b) => b.date.localeCompare(a.date))[0]?.date;
+  return history.flatMap((flow) => {
+    const priceAt = candlePriceAt(candles, flow.date);
+    const rows: QuietMoneyEvent[] = [];
+    const add = (actor: "institution" | "foreign", net: number, streakDays: number) => {
+      if (!Number.isFinite(net) || net === 0) return;
+      const actorLabel = actor === "institution" ? "기관" : "외국인";
+      const direction = net > 0 ? "inflow" : "outflow";
+      rows.push({
+        date: flow.date,
+        actor,
+        direction,
+        source: "KRX 확정 순매매",
+        label: `${actorLabel} ${Math.abs(net).toLocaleString("ko-KR")}주 순${net > 0 ? "매수" : "매도"}`,
+        amount: Math.abs(net),
+        amountUnit: "shares",
+        ...(flow.date === newest && Math.sign(streakDays) === Math.sign(net) ? { streakDays: Math.abs(streakDays) } : {}),
+        ...(priceAt ? { priceAt } : {}),
+      });
+    };
+    add("institution", flow.institutionNet, streak.institution);
+    add("foreign", flow.foreignNet, streak.foreign);
+    return rows;
+  });
+}
+
+function candidateQuietMoneyTimeline(
+  candidate: DiscoveryCandidate,
+  history: readonly InvestorFlow[],
+  candles: readonly DailyOhlcv[]
+): QuietMoneyTimeline {
+  const structured = candidate.events.flatMap((event) => event.quietMoneyEvent ? [event.quietMoneyEvent] : []);
+  const historyEvents = flowQuietMoneyEvents(history, candles);
+  const structuredActors = new Set([...structured, ...historyEvents].map((event) => event.actor));
+  const fallbackFlows = candidate.events.flatMap((event): QuietMoneyEvent[] => {
+    if (event.kind !== "flow_entry" || !event.flowActor || structuredActors.has(event.flowActor)) return [];
+    const days = event.flowDays ?? 0;
+    if (days === 0) return [];
+    const priceAt = candlePriceAt(candles, event.asOf);
+    return [{
+      date: event.asOf,
+      actor: event.flowActor,
+      direction: days > 0 ? "inflow" : "outflow",
+      source: event.source,
+      label: event.label ?? `${event.flowActor === "foreign" ? "외국인" : "기관"} ${Math.abs(days)}일 연속 순${days > 0 ? "매수" : "매도"}`,
+      streakDays: Math.abs(days),
+      ...(priceAt ? { priceAt } : {}),
+      ...(event.sourceUrl ? { sourceUrl: event.sourceUrl } : {}),
+    }];
+  });
+  return buildQuietMoneyTimeline({
+    asOf: candidate.asOf,
+    events: [...structured, ...historyEvents, ...fallbackFlows],
+    tradingDates: candles.flatMap((candle) => candle.date ? [candle.date] : []),
+    windowTradingDays: 10,
+  });
+}
+
 function relationCopy(relation: RelatedNode["relation"]): string {
   switch (relation) {
     case "customer":
@@ -2122,10 +2236,11 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     await hydrateUsMarketWideMaterial(byTicker, asOf);
   }
 
+  let flowHistories: Record<string, InvestorFlow[]> = {};
   if (DISCOVERY_FLOW_CACHE_ENABLED) {
     const krTickers = [...byTicker.entries()].filter(([, value]) => value.row.country === "KR").map(([ticker]) => ticker);
-    const histories = krTickers.length > 0 ? await readSupplyDemandHistoryByTickers(krTickers, 10) : {};
-    for (const [ticker, history] of Object.entries(histories)) {
+    flowHistories = krTickers.length > 0 ? await readSupplyDemandHistoryByTickers(krTickers, 10) : {};
+    for (const [ticker, history] of Object.entries(flowHistories)) {
       const event = eventFromFlowHistory(history);
       if (!event) continue;
       const current = byTicker.get(ticker);
@@ -2249,6 +2364,8 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const attention = attentionMap[candidate.ticker];
     const front = frontSeed(row, candidate, attention, themeSignals.get(candidate.ticker), sparklineByTicker.get(candidate.ticker) ?? []);
     const candidateCandles = dailyByTicker.get(candidate.ticker)?.candles ?? [];
+    const quietMoney = candidateQuietMoneyTimeline(candidate, flowHistories[candidate.ticker] ?? [], candidateCandles);
+    if (quietMoney.events.length > 0) front.quietMoney = quietMoney;
     front.verdict = verdictForCandidate(candidate, candidateCandles);
     const wyckoff = computeWyckoffAnalysis({
       candles: candidateCandles,
@@ -2263,6 +2380,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       verdict: front.verdict,
       wyckoff,
       insiderPurchaseConfirmed: candidate.events.some((event) => event.insiderPurchase === true),
+      ...(front.quietMoney ? { quietMoney: front.quietMoney } : {}),
       ...(typeof candidateCandles.at(-1)?.close === "number" ? { currentPrice: candidateCandles.at(-1)!.close } : {}),
       asOf,
     });
