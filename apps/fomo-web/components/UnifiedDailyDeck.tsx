@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { StockSwipeDeck } from "@/components/StockSwipeDeck";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
-import { fetchDaily30, fetchMyRequests, fetchTrackRecord, type Daily30Response, type MyRequestRow, type TrackMetric } from "@/lib/fomoApi";
+import { fetchDaily30, fetchJudgmentReview, fetchMyRequests, fetchTrackRecord, type Daily30Response, type MyRequestRow, type TrackMetric } from "@/lib/fomoApi";
 import { stockDeckCards, type DeckCard, type DeckStock, type DiscoveryDeckCard } from "@/lib/discoveryDeck";
 import { stockOnlyDeckCards } from "@/components/FeedView";
 import { getSessionId } from "@/lib/session";
+import { prioritizeStrongSignalCards } from "@/lib/judgmentReview";
 import type { FrontEntry } from "@/components/StockSwipeDeck";
 
 interface UnifiedDailyDeckProps {
@@ -81,7 +82,7 @@ function Daily30Empty({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function cardsFromDaily30(discovery: Daily30Response): { cards: DeckCard[]; fronts: Record<string, FrontEntry> } {
+function cardsFromDaily30(discovery: Daily30Response, strongSignalCodes: readonly string[] = []): { cards: DeckCard[]; fronts: Record<string, FrontEntry> } {
   const rawCards = ((discovery.cards?.length ? discovery.cards : discovery.stocks) ?? []) as DiscoveryDeckCard[];
   const metaById = new Map((discovery.meta?.cards ?? []).map((card) => [card.id, card]));
   const fronts = Object.fromEntries(Object.entries(discovery.fronts).map(([canonical, front]) => {
@@ -92,7 +93,8 @@ function cardsFromDaily30(discovery: Daily30Response): { cards: DeckCard[]; fron
     return [canonical, { ...front, ...(signalTypes?.length ? { signalTypes } : {}) } as FrontEntry];
   }));
   // 메인 덱 = 종목 발굴 전용(WO-GNB). 콘텐츠·내러티브는 피드 표면으로 이관.
-  return { cards: stockOnlyDeckCards(stockDeckCards(rawCards)).slice(0, 30), fronts };
+  const cards = stockOnlyDeckCards(stockDeckCards(rawCards)).slice(0, 30);
+  return { cards: prioritizeStrongSignalCards(cards, fronts, strongSignalCodes), fronts };
 }
 
 export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDailyDeckProps) {
@@ -104,6 +106,7 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
         kind: "ready";
         cards: DeckCard[];
         fronts: Record<string, FrontEntry>;
+        strongSignalCodes: string[];
         stale?: "committee-yesterday" | "engine-direct";
       }
   >({ kind: "loading" });
@@ -134,9 +137,13 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
       let lastError: unknown = null;
       for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
         try {
-          const discovery = await fetchDaily30();
+          const [discovery, review] = await Promise.all([
+            fetchDaily30(),
+            fetchJudgmentReview().catch(() => null),
+          ]);
           if (!alive) return;
-          const next = cardsFromDaily30(discovery);
+          const strongSignalCodes = review?.strongSignals.map((signal) => signal.code) ?? [];
+          const next = cardsFromDaily30(discovery, strongSignalCodes);
           if (next.cards.length === 0) {
             setState({ kind: "error" });
             return;
@@ -159,6 +166,7 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
             kind: "ready",
             cards: [...requestCards, ...next.cards],
             fronts: next.fronts,
+            strongSignalCodes,
             ...(discovery.meta?.stale ? { stale: discovery.meta.stale } : {}),
           });
           return;
@@ -224,6 +232,7 @@ export function UnifiedDailyDeck({ loggedIn = true, onRequireLogin }: UnifiedDai
         loggedIn={loggedIn}
         onRequireLogin={onRequireLogin}
         signalHistory30={signalHistory30}
+        strongSignalCodes={state.strongSignalCodes}
       />
     </div>
   );

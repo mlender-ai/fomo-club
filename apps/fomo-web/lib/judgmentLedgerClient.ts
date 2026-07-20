@@ -62,6 +62,42 @@ export interface LedgerTimelineEntry {
   payload: Record<string, unknown>;
 }
 
+export type ReviewStance = "enter" | "watch" | "avoid";
+export type ReviewAction = "star" | "pass" | "seen";
+
+export interface JudgmentReviewRow {
+  selectionId: string;
+  canonical: string;
+  symbol?: string;
+  asset: LedgerAsset;
+  selectionDate: string;
+  actionAt: string;
+  stance: ReviewStance;
+  action: ReviewAction;
+  returnPct: number;
+  outcome: "up" | "down";
+  signalTypes: string[];
+}
+
+export interface JudgmentReviewResponse {
+  generatedAt: string;
+  windowDays: 30;
+  rows: JudgmentReviewRow[];
+  pendingCount: number;
+  matrix: Array<{ key: string; label: string; note: string; count: number }>;
+  userRate: { n: number; winRate: number | null };
+  cardRate: { n: number; winRate: number | null };
+  weekly: null | {
+    from: string;
+    to: string;
+    count: number;
+    best?: JudgmentReviewRow;
+    missed?: JudgmentReviewRow;
+    disagreements: JudgmentReviewRow[];
+  };
+  strongSignals: Array<{ code: string; label: string; n: number; winRate: number }>;
+}
+
 export async function recordJudgmentActions(entries: readonly JudgmentActionInput[]): Promise<{ appended: number }> {
   if (entries.length === 0) return { appended: 0 };
   const res = await fetch("/api/fomo/ledger/actions", {
@@ -89,6 +125,15 @@ export async function fetchJudgmentHistory(): Promise<{ items: JudgmentHistoryIt
   });
   if (!res.ok) throw new Error(`GET /api/fomo/ledger/history ${res.status}`);
   return res.json() as Promise<{ items: JudgmentHistoryItem[] }>;
+}
+
+export async function fetchJudgmentReview(): Promise<JudgmentReviewResponse> {
+  const res = await fetch(`/api/fomo/ledger/review?sessionId=${encodeURIComponent(getSessionId())}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`GET /api/fomo/ledger/review ${res.status}`);
+  return res.json() as Promise<JudgmentReviewResponse>;
 }
 
 export async function fetchTrackRecord(): Promise<TrackRecordResponse> {

@@ -48,6 +48,7 @@ describe("FOMO Web browser auth security", () => {
     expect(isAllowedProxyRequest("stock-front", "GET")).toBe(true);
     expect(isAllowedProxyRequest("emotions/calendar", "GET")).toBe(true);
     expect(isAllowedProxyRequest("account", "DELETE")).toBe(true);
+    expect(isAllowedProxyRequest("ledger/review", "GET")).toBe(true);
     expect(isAllowedProxyRequest("auth/login", "GET")).toBe(false);
     expect(isAllowedProxyRequest("discovery", "POST")).toBe(false);
     expect(isAllowedProxyRequest("performance-prices", "GET")).toBe(false);

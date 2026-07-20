@@ -9,6 +9,7 @@ import {
   isSignalTypeCode,
   normalizeSignalTypeCodes,
   selectFomoHook,
+  signalTypeLabel,
 } from "@fomo/core";
 import type {
   AxisSignal,
@@ -324,6 +325,7 @@ function StockCardFace({
   discoveryContext,
   verdict,
   signalTrack,
+  personalStrongSignal,
   progress,
 }: {
   stock: DeckStock;
@@ -341,6 +343,7 @@ function StockCardFace({
   discoveryContext?: string | undefined;
   verdict?: CardVerdict | undefined;
   signalTrack?: { code: SignalTypeCode; metric: TrackMetric } | undefined;
+  personalStrongSignal?: SignalTypeCode | undefined;
   progress?: string | undefined;
 }) {
   const displayChangeText = normalizeChangeText(changeText);
@@ -423,6 +426,12 @@ function StockCardFace({
         </p>
       )}
 
+      {personalStrongSignal && (
+        <p className="mt-1 shrink-0 text-[11px] font-semibold leading-4" style={{ color: NEON }}>
+          당신이 강한 신호 · {signalTypeLabel(personalStrongSignal)}
+        </p>
+      )}
+
       <div className="mt-auto flex shrink-0 items-center justify-between pt-2">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
         {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
@@ -488,6 +497,7 @@ interface StockSwipeDeckProps {
   loggedIn?: boolean | undefined;
   onRequireLogin?: (() => void) | undefined;
   signalHistory30?: Record<string, TrackMetric> | undefined;
+  strongSignalCodes?: string[] | undefined;
 }
 
 export function StockSwipeDeck({
@@ -498,6 +508,7 @@ export function StockSwipeDeck({
   loggedIn,
   onRequireLogin,
   signalHistory30,
+  strongSignalCodes = [],
 }: StockSwipeDeckProps) {
   const deckCards = useMemo(() => cards ?? stockDeckCards(stocks ?? []), [cards, stocks]);
   // 무한: 풀을 순환(modulo)해 끝나지 않는다(§7 "무한히 풀만큼").
@@ -709,6 +720,7 @@ export function StockSwipeDeck({
         discoveryContext={discoveryContext}
         verdict={e?.verdict}
         signalTrack={signalTrackFor(stock, e)}
+        personalStrongSignal={normalizeSignalTypeCodes(e.signalTypes ?? []).find((code) => strongSignalCodes.includes(code))}
         progress={progress}
       />
     );

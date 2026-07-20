@@ -13,6 +13,7 @@ const ALLOWED_PROXY_REQUESTS = new Map<string, ReadonlySet<string>>([
   ["performance-prices", new Set(["POST"])],
   ["ledger/actions", new Set(["POST"])],
   ["ledger/history", new Set(["GET"])],
+  ["ledger/review", new Set(["GET"])],
   ["ledger/timeline", new Set(["GET"])],
   ["track-record", new Set(["GET"])],
   ["stock-front", new Set(["GET"])],
