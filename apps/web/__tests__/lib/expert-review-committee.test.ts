@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   applyAnalystFactGate,
+  completeEditorSelectedIds,
   parseEditorOutput,
   runExpertReviewCommittee,
   runExpertReviewCommitteeStage,
@@ -114,6 +115,13 @@ describe("expert committee orchestration", () => {
       rejected: [],
       compositionSummary: "자산군·등급·조용함을 함께 보고 중복을 줄인 구성입니다.",
     });
+  });
+
+  it("편집장이 20개 이상 고른 경우에만 결정론 순위로 30개를 완성한다", () => {
+    const ranked = Array.from({ length: 35 }, (_, index) => `candidate-${index}`);
+    expect(completeEditorSelectedIds(ranked.slice(0, 28), ranked)).toEqual(ranked.slice(0, 30));
+    expect(completeEditorSelectedIds(ranked.slice(0, 19), ranked)).toHaveLength(19);
+    expect(completeEditorSelectedIds([ranked[0]!, ranked[0]!, "unknown", ...ranked.slice(1, 20)], ranked)).toHaveLength(30);
   });
 
   it("후보 40장을 두 분석가와 편집장이 검수해 승인 30장만 발행한다", async () => {

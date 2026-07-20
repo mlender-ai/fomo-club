@@ -542,6 +542,22 @@ export function parseEditorOutput(text: string): EditorOutput {
   return { selectedIds, rejected, compositionSummary };
 }
 
+export function completeEditorSelectedIds(
+  selectedIds: readonly string[],
+  rankedEligibleIds: readonly string[],
+  targetCount = FINAL_TARGET,
+  minimumModelSelections = 20
+): string[] {
+  const eligible = new Set(rankedEligibleIds);
+  const selected = [...new Set(selectedIds)].filter((id) => eligible.has(id));
+  if (selected.length < minimumModelSelections) return selected;
+  for (const id of rankedEligibleIds) {
+    if (selected.length >= targetCount) break;
+    if (!selected.includes(id)) selected.push(id);
+  }
+  return selected.slice(0, targetCount);
+}
+
 async function runEditor(
   candidates: readonly CandidateRecord[],
   trading: Map<string, CheckedAnalystReview>,
@@ -584,9 +600,25 @@ async function runEditor(
   };
   const text = await callWithRetry(caller, { role: "editor", system: EDITOR_SYSTEM, input, trace: "expert-committee-editor" }, state);
   const output = parseEditorOutput(text);
-  const known = new Set(eligible.map((candidate) => candidate.id));
-  const selected = [...new Set(output.selectedIds)];
-  if (selected.length !== FINAL_TARGET || selected.some((id) => !known.has(id))) {
+  const gradeScore = (grade: Grade) => grade === "A" ? 3 : grade === "B" ? 2 : 1;
+  const rankedEligibleIds = [...eligible]
+    .sort((a, b) => {
+      const aTrading = trading.get(a.id)!;
+      const bTrading = trading.get(b.id)!;
+      const aFinancial = financial.get(a.id)!;
+      const bFinancial = financial.get(b.id)!;
+      const aRank = gradeScore(aTrading.grade) + gradeScore(aFinancial.grade)
+        + (aTrading.approved ? 1 : 0) + (aFinancial.approved ? 1 : 0);
+      const bRank = gradeScore(bTrading.grade) + gradeScore(bFinancial.grade)
+        + (bTrading.approved ? 1 : 0) + (bFinancial.approved ? 1 : 0);
+      return bRank - aRank
+        || (b.front.companyScore?.score ?? -1) - (a.front.companyScore?.score ?? -1)
+        || b.quietScore - a.quietScore
+        || a.id.localeCompare(b.id);
+    })
+    .map((candidate) => candidate.id);
+  const selected = completeEditorSelectedIds(output.selectedIds, rankedEligibleIds);
+  if (selected.length !== FINAL_TARGET) {
     throw new Error(`editor selection invalid: ${selected.length}/${FINAL_TARGET}`);
   }
   const summaryInvalid = validateAgentNumbers(output.compositionSummary, input);
