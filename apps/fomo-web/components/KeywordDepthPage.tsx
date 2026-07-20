@@ -1979,7 +1979,7 @@ function taFactValueSuffix(kind: string, latest: NonNullable<StockFrontResponse[
 }
 
 type StructureMetric = ChartTooltip & { value: string };
-type StructureRange = "1m" | "3m" | "6m";
+type StructureRange = "3m" | "1y";
 
 function sliceChartSeries(
   series: NonNullable<StockFrontResponse["chartSeries"]>,
@@ -2073,7 +2073,7 @@ function ChartAnalysisTab({
   const [structureTooltip, setStructureTooltip] = useState<ChartTooltip | null>(null);
   const [range, setRange] = useState<StructureRange>("3m");
   const metrics = structureMetrics(front);
-  const rangeDays = range === "1m" ? 22 : range === "3m" ? 66 : 120;
+  const rangeDays = range === "3m" ? 66 : 260;
   const visibleSeries = useMemo(() => (series ? sliceChartSeries(series, rangeDays) : undefined), [series, rangeDays]);
   const visibleCandles = useMemo(
     () => front?.candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-rangeDays),
@@ -2143,9 +2143,9 @@ function ChartAnalysisTab({
       {visibleSeries && visibleSeries.closes.length >= 2 ? (
         <div className="rounded-lg border border-white/15 bg-[#050706] px-3 pb-3 pt-3 shadow-inner">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="font-pixel text-[10px] text-muted">일봉 · {range === "1m" ? "1개월" : range === "3m" ? "3개월" : "6개월"}</span>
+            <span className="font-pixel text-[10px] text-muted">일봉 · {range === "3m" ? "3개월" : "1년"}</span>
             <div className="flex rounded-md border border-white/10 p-0.5">
-              {(["1m", "3m", "6m"] as const).map((key) => (
+              {(["3m", "1y"] as const).map((key) => (
                 <button
                   key={key}
                   type="button"
@@ -2153,7 +2153,7 @@ function ChartAnalysisTab({
                   className="rounded px-2 py-1 text-[9px] font-bold"
                   style={{ backgroundColor: range === key ? "#F4F4EF" : "transparent", color: range === key ? "#050706" : "#8A8A86" }}
                 >
-                  {key === "1m" ? "1M" : key === "3m" ? "3M" : "6M"}
+                  {key === "3m" ? "3M" : "1Y"}
                 </button>
               ))}
             </div>
