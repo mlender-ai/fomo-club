@@ -9,6 +9,7 @@ import {
   type CommitteeCandidateInput,
 } from "../../lib/expert-review-committee";
 import type { Daily30Response } from "../../lib/daily-30";
+import type { CommitteeRunReport } from "../../lib/expert-review-store";
 
 const input: CommitteeCandidateInput = {
   candidateId: "stock:KR:000000:테스트",
@@ -150,7 +151,7 @@ describe("expert committee orchestration", () => {
     expect(result.ok).toBe(true);
     expect(result.report.candidateCount).toBe(40);
     expect(result.report.selectedCount).toBe(30);
-    expect(result.report.callCount).toBe(9);
+    expect(result.report.callCount).toBe(11);
     expect(result.response?.stocks).toHaveLength(30);
     expect(result.response?.fronts["테스트코인0"]?.committeeReview?.factChecked).toBe(true);
     expect(publish).toHaveBeenCalledOnce();
@@ -208,8 +209,8 @@ describe("expert committee orchestration", () => {
     expect(result.ok).toBe(true);
     const trading = (stored as { trading: Array<[string, { approved: boolean; grade: string; concerns: string[] }]> }).trading;
     expect(trading).toHaveLength(40);
-    expect(trading.filter(([, review]) => !review.approved)).toHaveLength(4);
-    expect(trading.filter(([, review]) => review.grade === "C")).toHaveLength(4);
+    expect(trading.filter(([, review]) => !review.approved)).toHaveLength(5);
+    expect(trading.filter(([, review]) => review.grade === "C")).toHaveLength(5);
   });
 
   it("분석가가 candidateId를 생략해도 배치 순서로 정상 응답을 복원한다", async () => {
@@ -296,16 +297,42 @@ describe("expert committee orchestration", () => {
     };
 
     const trading = await runExpertReviewCommitteeStage("trading", common);
-    expect(trading).toMatchObject({ ok: true, stage: "trading", candidateCount: 40, callCount: 4 });
+    expect(trading).toMatchObject({ ok: true, stage: "trading", candidateCount: 40, callCount: 5 });
     expect(publish).not.toHaveBeenCalled();
 
     const financial = await runExpertReviewCommitteeStage("financial", common);
-    expect(financial).toMatchObject({ ok: true, stage: "financial", callCount: 8 });
+    expect(financial).toMatchObject({ ok: true, stage: "financial", callCount: 10 });
     expect(publish).not.toHaveBeenCalled();
 
     const editor = await runExpertReviewCommitteeStage("editor", common);
-    expect(editor).toMatchObject({ ok: true, stage: "editor", selectedCount: 30, callCount: 9 });
+    expect(editor).toMatchObject({ ok: true, stage: "editor", selectedCount: 30, callCount: 11 });
     expect(publish).toHaveBeenCalledOnce();
+  });
+
+  it("단계 실패 리포트에 실제 후보 수와 실패 지점을 남긴다", async () => {
+    let stored: unknown = null;
+    const reports: CommitteeRunReport[] = [];
+    const result = await runExpertReviewCommitteeStage("trading", {
+      caller: async () => ({ ok: false, content: "", model: "test-model", status: 429, retryAfterMs: 61_000 }),
+      buildPool: async () => fakePool(),
+      readPrevious: async () => null,
+      writeFailure: async (report) => { reports.push(report); },
+      writePicks: async () => {},
+      minCallIntervalMs: 0,
+      stageStorage: {
+        read: async () => stored,
+        write: async (_date, value) => { stored = value; },
+      },
+    });
+
+    expect(result).toMatchObject({ ok: false, stage: "trading", candidateCount: 40, callCount: 1 });
+    expect(reports[0]).toMatchObject({
+      status: "failed",
+      stage: "trading",
+      failureStep: "trading-agent",
+      candidateCount: 40,
+      callCount: 1,
+    });
   });
 
   it("분석가가 같은 문장을 반복해도 승인 후보를 전부 잃지 않고 엔진 문장으로 보강한다", async () => {

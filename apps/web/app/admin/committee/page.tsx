@@ -41,6 +41,7 @@ export default async function CommitteeAuditPage() {
             ["승인", latest.selectedCount],
             ["AI 호출", latest.callCount],
             ["모델", latest.model],
+            ["실패 지점", latest.failureStep ?? "-"],
           ].map(([label, value]) => (
             <div key={String(label)} style={{ padding: "18px 16px", borderRight: "1px solid #25262a" }}>
               <div className="eyebrow">{label}</div>
@@ -54,10 +55,11 @@ export default async function CommitteeAuditPage() {
         <p className="eyebrow">RUN HISTORY</p>
         <div style={{ marginTop: 12, display: "grid", gap: 1, background: "#25262a" }}>
           {runs.map((run) => (
-            <div key={run.runId} style={{ display: "grid", gridTemplateColumns: "140px minmax(180px, 1fr) 90px 90px 90px", gap: 12, padding: "12px 14px", background: "#0c0d10", fontSize: 13 }}>
+            <div key={`${run.runId}:${run.completedAt}`} style={{ display: "grid", gridTemplateColumns: "110px minmax(180px, 1fr) 80px 90px 90px minmax(140px, 1fr)", gap: 12, padding: "12px 14px", background: "#0c0d10", fontSize: 13 }}>
               <span>{run.date}</span><span style={{ fontFamily: "var(--font-mono)", color: "#a6acb6" }}>{run.runId}</span>
-              <span style={{ color: run.status === "published" ? "#d8ff3a" : "#e16a5a" }}>{run.status}</span>
-              <span>{run.selectedCount}/{run.candidateCount}</span><span>{run.callCount} calls</span>
+              <span style={{ color: run.status === "published" ? "#d8ff3a" : run.status === "ready" ? "#f4f5f7" : "#e16a5a" }}>{run.status}</span>
+              <span>{run.stage ?? "-"}</span><span>{run.callCount} calls</span>
+              <span style={{ color: run.error ? "#e16a5a" : "#8a8f98", overflowWrap: "anywhere" }}>{run.failureStep ?? run.error ?? `${run.selectedCount}/${run.candidateCount}`}</span>
             </div>
           ))}
           {runs.length === 0 && <div style={{ padding: 18, background: "#0c0d10", color: "#8a8f98" }}>실행 이력이 없습니다.</div>}
@@ -67,6 +69,7 @@ export default async function CommitteeAuditPage() {
       {latest && (
         <section style={{ padding: "24px 0" }}>
           <p className="eyebrow">LATEST DECISIONS</p>
+          {latest.error && <p style={{ marginTop: 10, color: "#e16a5a", lineHeight: 1.7 }}>{latest.failureStep ?? latest.stage ?? "unknown"}: {latest.error}</p>}
           <p style={{ marginTop: 10, color: "#a6acb6", lineHeight: 1.7 }}>{latest.compositionSummary}</p>
           <div style={{ marginTop: 18, borderTop: "1px solid #25262a" }}>
             {latest.reviews.map((review) => (

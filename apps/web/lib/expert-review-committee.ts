@@ -6,7 +6,9 @@ import type { DiscoveryDeckCardPayload, DiscoveryFrontSeed, DiscoveryStockPayloa
 import {
   publishCommitteeSnapshot,
   readPublishedCommitteeSnapshot,
+  writeCommitteeRunReport,
   writeFailedCommitteeRun,
+  type CommitteeFailureStep,
   type CommitteeReviewAudit,
   type CommitteeRunReport,
   type PublishedCommitteeSnapshot,
@@ -20,12 +22,13 @@ const CANDIDATE_TARGET = 50;
 const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
 // Groq free/developer 조직의 TPM을 넘지 않도록 입력을 압축하고 호출 수를 줄인다.
-// 후보 50장 기준 분석가 5콜 + 5콜, 편집장 1콜로 일일 11콜이다.
-const BATCH_SIZE = 10;
+// 후보 50장 기준 분석가 7콜 + 7콜, 편집장 1콜이다. 작은 배치와 25초 간격으로
+// 무료 조직 TPM을 시간축에 분산하고 각 Vercel stage는 300초 안에 끝낸다.
+const BATCH_SIZE = 8;
 const BATCH_CONCURRENCY = 1;
 const MAX_CALLS = 110;
 const DEFAULT_COMMITTEE_MODEL = "llama-3.1-8b-instant";
-const DEFAULT_CALL_INTERVAL_MS = 3_000;
+const DEFAULT_CALL_INTERVAL_MS = 25_000;
 
 function committeeModel(): string {
   const configured = process.env.COMMITTEE_AI_MODEL?.trim();
@@ -335,7 +338,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: args.role === "editor" ? 900 : 1_500,
+    maxTokens: 900,
     jsonMode: true,
     timeoutMs: 45_000,
     trace: args.trace,
@@ -360,7 +363,7 @@ async function callWithRetry(
     if (result.model) state.model = result.model;
     if (result.ok && result.content.trim()) return result.content;
     if (result.status === 429) {
-      if (!result.retryAfterMs || result.retryAfterMs > 15_000) {
+      if (!result.retryAfterMs || result.retryAfterMs > 60_000) {
         const retryAfter = result.retryAfterMs ? `; retry after ${Math.ceil(result.retryAfterMs / 1_000)}s` : "";
         throw new Error(`${args.role} agent rate limited${retryAfter}`);
       }
@@ -832,6 +835,7 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
       version: COMMITTEE_VERSION,
       date,
       status: "published",
+      stage: "full",
       startedAt: startedAt.toISOString(),
       completedAt,
       model: state.model,
@@ -862,6 +866,8 @@ export async function runExpertReviewCommittee(options: CommitteeRunOptions = {}
       version: COMMITTEE_VERSION,
       date,
       status: "failed",
+      stage: "full",
+      failureStep: state.callCount === 0 ? "configuration" : "fact-gate",
       startedAt: startedAt.toISOString(),
       completedAt,
       model: state.model,
@@ -964,6 +970,14 @@ export async function runExpertReviewCommitteeStage(
   const fallbackRunId = `${date}-${now.getTime().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
   const state = callState(options, stage === "trading" ? undefined : stored?.model);
   const caller = options.caller ?? (isAiConfigured() ? defaultAgentCaller : undefined);
+  let stageCandidateCount = stored?.candidates.length ?? 0;
+  let failureStep: CommitteeFailureStep = !caller
+    ? "configuration"
+    : stage === "trading"
+      ? "candidate-load"
+      : stage === "financial"
+        ? "financial-agent"
+        : "editor-agent";
 
   try {
     if (!caller) throw new Error("committee AI is not configured");
@@ -975,7 +989,9 @@ export async function runExpertReviewCommitteeStage(
       );
       await writeCandidates(pool);
       const candidates = await candidateRecords(pool);
+      stageCandidateCount = candidates.length;
       if (candidates.length < MIN_CANDIDATES) throw new Error(`committee candidate pool ${candidates.length}/${MIN_CANDIDATES}`);
+      failureStep = "trading-agent";
       const trading = enforceAnalystCopyQuality("trading", await runAnalyst("trading", candidates, caller, state), candidates);
       stored = {
         runId: fallbackRunId,
@@ -988,8 +1004,28 @@ export async function runExpertReviewCommitteeStage(
         candidates,
         trading: [...trading],
       };
+      failureStep = "stage-persist";
       if (options.stageStorage) await options.stageStorage.write(date, stored);
       else await writeFeedContent(committeeStageId(date), stored);
+      const report: CommitteeRunReport = {
+        runId: stored.runId,
+        version: COMMITTEE_VERSION,
+        date,
+        status: "ready",
+        stage,
+        startedAt: stored.startedAt,
+        completedAt: new Date().toISOString(),
+        model: stored.model,
+        callCount: stored.totalCallCount,
+        candidateCount: candidates.length,
+        selectedCount: 0,
+        selectedIds: [],
+        reviews: [],
+        compositionSummary: "트레이딩 검수 완료 · 재무 검수 대기",
+        assetCounts: pool.meta.assetCounts,
+        previousRunRetained: Boolean(previous),
+      };
+      await (options.writeFailure ?? writeCommitteeRunReport)(report).catch(() => {});
       return { ok: true, stage, runId: stored.runId, candidateCount: candidates.length, selectedCount: 0, callCount: stored.totalCallCount, previousRunRetained: Boolean(previous) };
     }
 
@@ -997,6 +1033,7 @@ export async function runExpertReviewCommitteeStage(
     const trading = new Map(stored.trading);
 
     if (stage === "financial") {
+      failureStep = "financial-agent";
       const financial = enforceAnalystCopyQuality("financial", await runAnalyst("financial", stored.candidates, caller, state), stored.candidates);
       stored = {
         ...stored,
@@ -1004,13 +1041,34 @@ export async function runExpertReviewCommitteeStage(
         totalCallCount: stored.totalCallCount + state.callCount,
         financial: [...financial],
       };
+      failureStep = "stage-persist";
       if (options.stageStorage) await options.stageStorage.write(date, stored);
       else await writeFeedContent(committeeStageId(date), stored);
+      const report: CommitteeRunReport = {
+        runId: stored.runId,
+        version: COMMITTEE_VERSION,
+        date,
+        status: "ready",
+        stage,
+        startedAt: stored.startedAt,
+        completedAt: new Date().toISOString(),
+        model: stored.model,
+        callCount: stored.totalCallCount,
+        candidateCount: stored.candidates.length,
+        selectedCount: 0,
+        selectedIds: [],
+        reviews: [],
+        compositionSummary: "트레이딩·재무 검수 완료 · 편집장 발행 대기",
+        assetCounts: stored.pool.meta.assetCounts,
+        previousRunRetained: Boolean(previous),
+      };
+      await (options.writeFailure ?? writeCommitteeRunReport)(report).catch(() => {});
       return { ok: true, stage, runId: stored.runId, candidateCount: stored.candidates.length, selectedCount: 0, callCount: stored.totalCallCount, previousRunRetained: Boolean(previous) };
     }
 
     if (!stored.financial?.length) throw new Error("financial stage is not ready");
     const financial = new Map(stored.financial);
+    failureStep = "editor-agent";
     const editor = await runEditor(stored.candidates, trading, financial, caller, state);
     const totalCallCount = stored.totalCallCount + state.callCount;
     const completedAt = new Date().toISOString();
@@ -1024,11 +1082,14 @@ export async function runExpertReviewCommitteeStage(
     };
     const response = finalResponse(stored.pool, stored.candidates, editor.selectedIds, trading, financial, committeeMeta);
     const reviews = reviewAudits(stored.candidates, editor.selectedIds, editor, trading, financial);
+    const factGateFallbacks = reviews.filter((review) => review.factGate.tradingFallback || review.factGate.financialFallback).length;
+    const factGateInvalidNumberCount = reviews.reduce((sum, review) => sum + review.factGate.invalidNumbers.length, 0);
     const report: CommitteeRunReport = {
       runId: stored.runId,
       version: COMMITTEE_VERSION,
       date,
       status: "published",
+      stage,
       startedAt: stored.startedAt,
       completedAt,
       model: state.model,
@@ -1039,6 +1100,8 @@ export async function runExpertReviewCommitteeStage(
       reviews,
       compositionSummary: editor.compositionSummary,
       assetCounts: response.meta.assetCounts,
+      factGateFallbacks,
+      factGateInvalidNumberCount,
     };
     const { reviews: _reviews, ...reportSummary } = report;
     void _reviews;
@@ -1049,7 +1112,9 @@ export async function runExpertReviewCommitteeStage(
       response,
       report: reportSummary,
     };
+    failureStep = "ledger-write";
     await (options.writePicks ?? ((value) => writeDaily30Ledger(value, "committee")))(response);
+    failureStep = "publish";
     await (options.publish ?? publishCommitteeSnapshot)(snapshot, report);
     return { ok: true, stage, runId: stored.runId, candidateCount: stored.candidates.length, selectedCount: editor.selectedIds.length, callCount: totalCallCount, previousRunRetained: false };
   } catch (error) {
@@ -1060,11 +1125,13 @@ export async function runExpertReviewCommitteeStage(
       version: COMMITTEE_VERSION,
       date,
       status: "failed",
+      stage,
+      failureStep,
       startedAt: stored?.startedAt ?? now.toISOString(),
       completedAt: new Date().toISOString(),
       model: state.model,
       callCount: totalCallCount,
-      candidateCount: stored?.candidates.length ?? 0,
+      candidateCount: stageCandidateCount,
       selectedCount: 0,
       selectedIds: [],
       reviews: [],

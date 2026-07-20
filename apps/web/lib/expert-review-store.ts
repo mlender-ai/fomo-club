@@ -5,7 +5,18 @@ const ACTIVE_ID = "expert-committee:active";
 const RUN_PREFIX = "expert-committee:run:";
 const SNAPSHOT_PREFIX = "expert-committee:snapshot:";
 
-export type CommitteeRunStatus = "published" | "failed";
+export type CommitteeRunStatus = "ready" | "published" | "failed";
+export type CommitteeRunStage = "full" | "trading" | "financial" | "editor";
+export type CommitteeFailureStep =
+  | "configuration"
+  | "candidate-load"
+  | "trading-agent"
+  | "financial-agent"
+  | "editor-agent"
+  | "fact-gate"
+  | "stage-persist"
+  | "ledger-write"
+  | "publish";
 
 export interface CommitteeReviewAudit {
   candidateId: string;
@@ -28,6 +39,8 @@ export interface CommitteeRunReport {
   version: string;
   date: string;
   status: CommitteeRunStatus;
+  stage?: CommitteeRunStage;
+  failureStep?: CommitteeFailureStep;
   startedAt: string;
   completedAt: string;
   model: string;
@@ -38,6 +51,8 @@ export interface CommitteeRunReport {
   reviews: CommitteeReviewAudit[];
   compositionSummary: string;
   assetCounts: Record<string, number>;
+  factGateFallbacks?: number;
+  factGateInvalidNumberCount?: number;
   error?: string;
   previousRunRetained?: boolean;
 }
@@ -128,6 +143,11 @@ export async function publishCommitteeSnapshot(
 }
 
 export async function writeFailedCommitteeRun(report: CommitteeRunReport): Promise<void> {
+  await writeFeedContent(`${RUN_PREFIX}${report.date}:${report.runId}`, report);
+}
+
+/** Intermediate stages overwrite only their own run report; the active approved deck is untouched. */
+export async function writeCommitteeRunReport(report: CommitteeRunReport): Promise<void> {
   await writeFeedContent(`${RUN_PREFIX}${report.date}:${report.runId}`, report);
 }
 

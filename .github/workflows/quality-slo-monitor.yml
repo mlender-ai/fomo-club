@@ -12,6 +12,31 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      - name: Expose latest committee run report
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/committee-report?limit=3"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl -fsS "$URL" -H "Authorization: Bearer ${CRON_SECRET}" > /tmp/committee-report.json
+          else
+            curl -fsS "$URL" > /tmp/committee-report.json
+          fi
+          node - <<'NODE'
+          const fs = require("fs");
+          const result = JSON.parse(fs.readFileSync("/tmp/committee-report.json", "utf8"));
+          const run = result.runs?.[0];
+          if (!result.ok || !run) {
+            console.log("::warning title=Committee report::No committee run report is available");
+            process.exit(0);
+          }
+          const line = `${run.date} ${run.status} stage=${run.stage ?? "unknown"} step=${run.failureStep ?? "-"} calls=${run.callCount} candidates=${run.candidateCount} selected=${run.selectedCount}${run.error ? ` error=${run.error}` : ""}`;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Committee run\n\n${line}\n`);
+          console.log(line);
+          if (run.status === "failed") console.log(`::warning title=Committee failed::${line}`);
+          NODE
+
       - name: Materialize and read latest quality row
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
