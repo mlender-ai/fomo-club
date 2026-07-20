@@ -1,9 +1,22 @@
 import { readTrackRecord } from "../apps/web/lib/ledger-track-record";
+import { readLedgerSelections } from "../apps/web/lib/judgment-ledger";
 import { prisma } from "../apps/web/lib/prisma";
 
 async function main() {
-  const [selectionCount, sample, trackRecord] = await Promise.all([
+  const [selectionCount, selectionDates, finalSelections, outcomeActors, sample, trackRecord] = await Promise.all([
     prisma.judgmentLedger.count({ where: { kind: "selection", actor: "backfill" } }),
+    prisma.judgmentLedger.groupBy({
+      by: ["date"],
+      where: { kind: "selection", actor: "backfill" },
+      _count: { _all: true },
+      orderBy: { date: "asc" },
+    }),
+    readLedgerSelections({ fromDate: "2025-01-01", take: 10_000 }),
+    prisma.judgmentLedger.groupBy({
+      by: ["actor"],
+      where: { kind: "outcome" },
+      _count: { _all: true },
+    }),
     prisma.judgmentLedger.findFirst({
       where: { kind: "selection", actor: "backfill" },
       orderBy: { ts: "asc" },
@@ -21,6 +34,11 @@ async function main() {
     .map(([signal]) => signal);
   const result = {
     selectionCount,
+    selectionDates: selectionDates.map((row) => ({ date: row.date, count: row._count._all })),
+    finalSelectionCount: finalSelections.length,
+    finalSelectionDates: [...new Set(finalSelections.map((row) => row.date))].sort(),
+    finalSelectionActors: [...new Set(finalSelections.map((row) => row.actor))].sort(),
+    outcomeActors,
     maxOverallN,
     windows: trackRecord.windows.map((window) => ({ days: window.days, ...window.overall })),
     litSignals,
