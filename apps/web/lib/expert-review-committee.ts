@@ -514,15 +514,23 @@ function enforceAnalystCopyQuality(
   }));
 }
 
-function parseEditor(text: string): EditorOutput {
-  const parsed = parseJsonObject(text) as Partial<EditorOutput>;
+export function parseEditorOutput(text: string): EditorOutput {
+  const parsed = parseJsonObject(text) as Partial<EditorOutput> & {
+    selected_ids?: unknown;
+    composition_summary?: unknown;
+  };
+  const selectedIds = Array.isArray(parsed.selectedIds) ? parsed.selectedIds : parsed.selected_ids;
+  const rejectedInput = Array.isArray(parsed.rejected) ? parsed.rejected : [];
+  const compositionSummary = typeof parsed.compositionSummary === "string"
+    ? parsed.compositionSummary
+    : typeof parsed.composition_summary === "string"
+      ? parsed.composition_summary
+      : "자산군·등급·조용함을 함께 보고 중복을 줄인 구성입니다.";
   if (
-    !Array.isArray(parsed.selectedIds) ||
-    !parsed.selectedIds.every((id) => typeof id === "string") ||
-    !Array.isArray(parsed.rejected) ||
-    typeof parsed.compositionSummary !== "string"
+    !Array.isArray(selectedIds) ||
+    !selectedIds.every((id) => typeof id === "string")
   ) throw new Error("editor output invalid");
-  const rejected = parsed.rejected.flatMap((item) => {
+  const rejected = rejectedInput.flatMap((item) => {
     if (
       !item ||
       typeof item.candidateId !== "string" ||
@@ -531,7 +539,7 @@ function parseEditor(text: string): EditorOutput {
     ) return [];
     return [{ candidateId: item.candidateId, reasons: item.reasons }];
   });
-  return { selectedIds: parsed.selectedIds, rejected, compositionSummary: parsed.compositionSummary };
+  return { selectedIds, rejected, compositionSummary };
 }
 
 async function runEditor(
@@ -575,7 +583,7 @@ async function runEditor(
     })),
   };
   const text = await callWithRetry(caller, { role: "editor", system: EDITOR_SYSTEM, input, trace: "expert-committee-editor" }, state);
-  const output = parseEditor(text);
+  const output = parseEditorOutput(text);
   const known = new Set(eligible.map((candidate) => candidate.id));
   const selected = [...new Set(output.selectedIds)];
   if (selected.length !== FINAL_TARGET || selected.some((id) => !known.has(id))) {

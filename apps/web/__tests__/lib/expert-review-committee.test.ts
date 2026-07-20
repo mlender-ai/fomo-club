@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   applyAnalystFactGate,
+  parseEditorOutput,
   runExpertReviewCommittee,
   runExpertReviewCommitteeStage,
   validateAgentNumbers,
@@ -107,6 +108,14 @@ function fakePool(count = 40): Daily30Response {
 }
 
 describe("expert committee orchestration", () => {
+  it("편집장 핵심 선정 ID가 있으면 누락된 부가 필드를 결정론 기본값으로 보완한다", () => {
+    expect(parseEditorOutput(JSON.stringify({ selected_ids: ["a", "b"] }))).toEqual({
+      selectedIds: ["a", "b"],
+      rejected: [],
+      compositionSummary: "자산군·등급·조용함을 함께 보고 중복을 줄인 구성입니다.",
+    });
+  });
+
   it("후보 40장을 두 분석가와 편집장이 검수해 승인 30장만 발행한다", async () => {
     const caller: CommitteeAgentCaller = async ({ role, input }) => {
       if (role === "editor") {

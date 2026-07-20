@@ -2,6 +2,15 @@ name: Committee Recovery
 
 on:
   workflow_dispatch:
+    inputs:
+      stage:
+        description: Reuse stored analyst stages and rerun only the editor when requested
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - editor
 
 permissions:
   contents: read
@@ -28,9 +37,11 @@ jobs:
       - run: npm ci
 
       - name: Trading analyst
+        if: inputs.stage == 'all'
         run: npx tsx scripts/run-expert-committee-stage.ts trading
 
       - name: Financial analyst
+        if: inputs.stage == 'all'
         run: npx tsx scripts/run-expert-committee-stage.ts financial
 
       - name: Editor and publish
