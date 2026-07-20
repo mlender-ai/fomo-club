@@ -23,6 +23,11 @@ on:
         description: "Alias target for an existing web deployment (bypasses promotion limits)"
         required: false
         default: ""
+      bootstrap_ledger:
+        description: "Apply and verify the append-only Judgment Ledger in the backend production database"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: vercel-production-deploy
@@ -42,6 +47,23 @@ jobs:
 
       - name: Pull Vercel environment
         run: npx --yes vercel@latest pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Install dependencies for ledger bootstrap
+        if: ${{ inputs.bootstrap_ledger }}
+        run: npm ci
+
+      - name: Bootstrap ledger in backend production database
+        if: ${{ inputs.bootstrap_ledger }}
+        shell: bash
+        run: |
+          set -a
+          source .vercel/.env.production.local
+          set +a
+          : "${DATABASE_URL:?DATABASE_URL is missing from the backend production environment}"
+          npx prisma db execute --file prisma/sql/2026-07-20_judgment_ledger.sql --schema prisma/schema.prisma
+          npx tsx scripts/migrate-judgment-ledger.ts
+          npx tsx scripts/materialize-ledger-outcomes.ts
+          npx tsx scripts/verify-judgment-ledger-append-only.ts
 
       - name: Deploy with Vercel production runtime
         if: ${{ inputs.backend_deployment == '' }}
