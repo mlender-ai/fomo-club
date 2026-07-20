@@ -22,6 +22,7 @@ import {
   computeCompanyScore,
   computeWyckoffAnalysis,
   buildQuietMoneyTimeline,
+  normalizeQuietMoneyDate,
   type CardVerdict,
   type CompanyScoreResult,
   type DailyOhlcv,
@@ -1783,7 +1784,8 @@ function verdictForCandidate(candidate: DiscoveryCandidate, candles: readonly Da
 }
 
 function candlePriceAt(candles: readonly DailyOhlcv[], date: string): number | undefined {
-  const exact = candles.find((candle) => candle.date === date)?.close;
+  const target = normalizeQuietMoneyDate(date);
+  const exact = candles.find((candle) => normalizeQuietMoneyDate(candle.date) === target)?.close;
   if (typeof exact === "number" && Number.isFinite(exact) && exact > 0) return exact;
   return undefined;
 }
@@ -1846,7 +1848,7 @@ function candidateQuietMoneyTimeline(
   return buildQuietMoneyTimeline({
     asOf: candidate.asOf,
     events: [...structured, ...historyEvents, ...fallbackFlows],
-    tradingDates: candles.flatMap((candle) => candle.date ? [candle.date] : []),
+    tradingDates: candles.flatMap((candle) => normalizeQuietMoneyDate(candle.date) ?? []),
     windowTradingDays: 10,
   });
 }

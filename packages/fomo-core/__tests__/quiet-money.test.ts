@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildQuietMoneyTimeline, quietMoneyStrength, type QuietMoneyEvent } from "../src";
+import { buildQuietMoneyTimeline, normalizeQuietMoneyDate, quietMoneyStrength, type QuietMoneyEvent } from "../src";
 
 const tradingDates = [
   "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10",
@@ -19,6 +19,12 @@ function event(actor: QuietMoneyEvent["actor"], date: string, overrides: Partial
 }
 
 describe("quiet money timeline", () => {
+  it("KR 캔들 날짜 포맷을 ISO 거래일로 정규화한다", () => {
+    expect(normalizeQuietMoneyDate("20260716")).toBe("2026-07-16");
+    expect(normalizeQuietMoneyDate("2026.07.16")).toBe("2026-07-16");
+    expect(normalizeQuietMoneyDate("2026-07-16")).toBe("2026-07-16");
+  });
+
   it("10거래일 안 서로 다른 주체 2개부터 cluster_multi를 만든다", () => {
     const timeline = buildQuietMoneyTimeline({
       asOf: "2026-07-17",

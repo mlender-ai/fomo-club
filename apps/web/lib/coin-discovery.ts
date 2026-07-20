@@ -1,4 +1,4 @@
-import { buildQuietMoneyTimeline, computeCardVerdict, computeCompanyScore, computeFomoScore, computeWyckoffAnalysis, isFrontHookSafe } from "@fomo/core";
+import { buildQuietMoneyTimeline, computeCardVerdict, computeCompanyScore, computeFomoScore, computeWyckoffAnalysis, isFrontHookSafe, normalizeQuietMoneyDate } from "@fomo/core";
 import type { CardFrontSignals, QuietMoneyEvent } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
@@ -145,7 +145,7 @@ export function coinFrontSeed(
     const outflow = /(?:고래.{0,18}(?:매도|분배|순유출)|(?:매도|분배|순유출).{0,18}고래|whale.{0,18}(?:sell|distribut|outflow))/i.test(issue.title);
     if (!inflow && !outflow) return [];
     const date = issue.publishedAt.slice(0, 10);
-    const priceAt = snapshot.candles.find((candle) => candle.date === date)?.close;
+    const priceAt = snapshot.candles.find((candle) => normalizeQuietMoneyDate(candle.date) === date)?.close;
     return [{
       date,
       actor: "whale",
@@ -159,7 +159,7 @@ export function coinFrontSeed(
   const quietMoney = buildQuietMoneyTimeline({
     asOf: snapshot.fetchedAt.slice(0, 10),
     events: quietMoneyEvents,
-    tradingDates: snapshot.candles.flatMap((candle) => candle.date ? [candle.date] : []),
+    tradingDates: snapshot.candles.flatMap((candle) => normalizeQuietMoneyDate(candle.date) ?? []),
   });
   return {
     signals: {

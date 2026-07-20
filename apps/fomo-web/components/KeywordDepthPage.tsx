@@ -12,6 +12,7 @@ import {
   translateTaFact,
   confidenceGrade,
   mergeCompanyScoreResults,
+  normalizeQuietMoneyDate,
   type DailyOhlcv,
   type KeywordCard,
   type FomoTone,
@@ -1718,7 +1719,10 @@ function AnalysisChart({
   const priceTicks = [rawMax, (rawMax + rawMin) / 2, rawMin];
   const visibleZones = (analysis?.zones ?? []).filter((zone) => zone.endIndex >= visibleStart && zone.startIndex <= visibleStart + n - 1);
   const visibleEvents = (analysis?.events ?? []).filter((event) => event.index >= visibleStart && event.index <= visibleStart + n - 1);
-  const candleIndexByDate = new Map(renderedCandles.flatMap((candle, index) => candle.date ? [[candle.date, index] as const] : []));
+  const candleIndexByDate = new Map(renderedCandles.flatMap((candle, index) => {
+    const date = normalizeQuietMoneyDate(candle.date);
+    return date ? [[date, index] as const] : [];
+  }));
   const quietActors = ["insider", "institution", "foreign", "whale"] as const;
   const visibleQuietEvents = (quietMoney?.events ?? []).flatMap((event) => {
     const index = candleIndexByDate.get(event.date);
