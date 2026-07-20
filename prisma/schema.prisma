@@ -720,7 +720,7 @@ model AdminLoginAttempt {
 // 어드민 액션 감사 로그 — 모든 변경 사항 기록
 model AdminAuditLog {
   id         String   @id @default(cuid())
-  action     String   // "card.update", "prompt.activate", "report.resolve" 등
+  action     String // "card.update", "prompt.activate", "report.resolve" 등
   targetId   String?
   targetType String?
   before     Json?
@@ -862,6 +862,22 @@ model JudgmentLedger {
   @@index([canonical, date])
   @@index([actor, date])
   @@map("JudgmentLedger")
+}
+
+// FOMO Club 품질 SLO 원장 — 일별 daily-30 스냅샷에서 결정론적으로 계산한 품질 지표를 박제한다.
+// 운영 DB에서는 date RANGE 파티션 테이블이며, SQL 트리거가 UPDATE/DELETE를 항상 거부한다.
+model QualityLedger {
+  id             String   @default(cuid())
+  date           String // YYYY-MM-DD (KST), 파티션 키
+  ts             DateTime @default(now())
+  idempotencyKey String // quality:YYYY-MM-DD
+  payload        Json
+  actor          String   @default("engine")
+
+  @@id([id, date])
+  @@unique([idempotencyKey, date])
+  @@index([date])
+  @@map("QualityLedger")
 }
 
 // 일별 투자자 수급(외국인·기관 순매매) 누적 — SUPPLY DEMAND SCORE HANDOFF §2.

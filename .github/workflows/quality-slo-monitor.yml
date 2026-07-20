@@ -1,0 +1,45 @@
+name: Quality SLO Monitor
+
+on:
+  schedule:
+    - cron: "35 21 * * *" # 06:35 KST, committee editor and quality cron 이후
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Materialize and read latest quality row
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/cron/quality-slo"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            curl -fsS "$URL" -H "Authorization: Bearer ${CRON_SECRET}" > /tmp/quality-slo.json
+          else
+            curl -fsS "$URL" > /tmp/quality-slo.json
+          fi
+
+      - name: Enforce fixed SLO targets
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const result = JSON.parse(fs.readFileSync("/tmp/quality-slo.json", "utf8"));
+          const latest = result.latest;
+          if (!result.ok || !latest) {
+            console.log("::error title=Quality SLO ledger::Latest quality row is unavailable");
+            process.exit(1);
+          }
+          const failures = Array.isArray(latest.failures) ? latest.failures : [];
+          const summary = `${latest.date}: ${latest.passed ? "PASS" : `FAIL (${failures.join(", ")})`}`;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Quality SLO\n\n${summary}\n`);
+          if (!latest.passed) {
+            console.log(`::warning title=Quality SLO missed::${summary}`);
+            process.exit(1);
+          }
+          console.log(summary);
+          NODE

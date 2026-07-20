@@ -1,0 +1,34 @@
+name: Quality SLO Ledger Bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Apply append-only quality ledger schema
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma db execute --file prisma/sql/2026-07-20_quality_slo_ledger.sql --schema prisma/schema.prisma
+
+      - name: Materialize two immutable daily snapshots
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/materialize-quality-slo.ts --limit=2
+
+      - name: Verify append-only enforcement
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/verify-quality-ledger-append-only.ts
