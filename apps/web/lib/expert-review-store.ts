@@ -54,6 +54,32 @@ export async function readPublishedCommitteeSnapshot(): Promise<PublishedCommitt
   return readFeedContent<PublishedCommitteeSnapshot>(ACTIVE_ID);
 }
 
+/** 날짜별 최종 위원회 발행본. M1 원장 도입 전의 실제 발행 이력도 보존한다. */
+export async function readPublishedCommitteeSnapshotHistory(
+  limit = 30
+): Promise<PublishedCommitteeSnapshot[]> {
+  const rows = await readFeedContentByPrefix<PublishedCommitteeSnapshot>(
+    SNAPSHOT_PREFIX,
+    Math.max(1, Math.min(limit * 3, 50))
+  );
+  const byDate = new Map<string, PublishedCommitteeSnapshot>();
+  for (const { row } of rows) {
+    const date = row?.report?.date || row?.response?.asOf || row?.reviewedAt?.slice(0, 10);
+    if (!date || row.report?.status !== "published" || !row.response) continue;
+    const current = byDate.get(date);
+    if (!current || Date.parse(row.reviewedAt) > Date.parse(current.reviewedAt)) {
+      byDate.set(date, row);
+    }
+  }
+  return [...byDate.values()]
+    .sort(
+      (a, b) =>
+        b.report.date.localeCompare(a.report.date) ||
+        Date.parse(b.reviewedAt) - Date.parse(a.reviewedAt)
+    )
+    .slice(0, Math.max(1, Math.min(limit, 30)));
+}
+
 function snapshotAgeDays(snapshot: PublishedCommitteeSnapshot, today: string): number {
   const snapshotDate = snapshot.report.date || snapshot.reviewedAt.slice(0, 10);
   const todayMs = Date.parse(`${today}T00:00:00.000Z`);
