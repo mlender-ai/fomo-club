@@ -9,6 +9,7 @@ import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { SectorCard } from "@/components/SectorCard";
 import { FeedDepthPage } from "@/components/FeedDepthPage";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
+import { JudgmentReviewPanel } from "@/components/JudgmentReviewPanel";
 import { fetchFeedHub, type FeedHubItem } from "@/lib/fomoApi";
 import { feedItemKey, useFeedArchive } from "@/lib/useFeedArchive";
 import type { DeckCard, DeckNarrative, DeckSectorCardData } from "@/lib/discoveryDeck";
@@ -142,6 +143,7 @@ export function FeedView() {
 
   return (
     <div className="space-y-3 pb-4">
+      <JudgmentReviewPanel weeklyOnly />
       {items.map(renderItem)}
 
       {/* 무한 피드(2026-07-18) — 오늘치가 끝나면 지난 브리핑·버즈·회고를 계속 이어 붙인다. */}

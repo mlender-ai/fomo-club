@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MOCK_KEYWORD_CARDS, type KeywordCard } from "@fomo/core";
 import { KeywordDepthPage, StockInsightView } from "@/components/KeywordDepthPage";
 import { MyDiscoveryPreview } from "@/components/MyDiscoveryPreview";
+import { JudgmentReviewPanel } from "@/components/JudgmentReviewPanel";
 import { PerformanceProofPanel } from "@/components/PerformanceProofPanel";
 import { RegretReceiptPanel } from "@/components/RegretReceiptPanel";
 import { getHistory } from "@/lib/keywordHistory";
@@ -77,6 +78,7 @@ export function KeywordHistory() {
 
   return (
     <div className="w-full">
+      <JudgmentReviewPanel />
       <RegretReceiptPanel items={seenItems} />
       <PerformanceProofPanel items={seenItems} />
       <MyDiscoveryPreview items={watchlist} onOpen={setStockSel} />

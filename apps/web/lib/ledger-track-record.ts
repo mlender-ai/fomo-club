@@ -57,7 +57,7 @@ function addDays(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
-function asOutcome(payload: Prisma.JsonValue): OutcomePayload | null {
+export function asOutcome(payload: Prisma.JsonValue): OutcomePayload | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const value = payload as Record<string, unknown>;
   if (
