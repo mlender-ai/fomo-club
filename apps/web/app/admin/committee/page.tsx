@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { readCommitteeRunReports, readPublishedCommitteeSnapshot } from "../../../lib/expert-review-store";
 
@@ -23,6 +24,10 @@ export default async function CommitteeAuditPage() {
           <h1 style={{ marginTop: 8, fontSize: 28 }}>전문가 위원회 감사</h1>
         </div>
         <div style={{ textAlign: "right", color: "#a6acb6", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+          <nav style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 8 }}>
+            <Link href="/admin/committee" style={{ color: "#d8ff3a" }}>위원회</Link>
+            <Link href="/admin/quality" style={{ color: "#a6acb6" }}>품질 SLO</Link>
+          </nav>
           <div>{active ? `ACTIVE ${active.runId}` : "NO ACTIVE RUN"}</div>
           <div style={{ marginTop: 5 }}>{active?.reviewedAt ?? "-"}</div>
         </div>
