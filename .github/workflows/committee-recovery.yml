@@ -1,0 +1,51 @@
+name: Committee Recovery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: expert-committee-production
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: llama-3.1-8b-instant
+      COMMITTEE_AI_MODEL: llama-3.1-8b-instant
+      COMMITTEE_MIN_CALL_INTERVAL_MS: "25000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+
+      - name: Trading analyst
+        run: npx tsx scripts/run-expert-committee-stage.ts trading
+
+      - name: Financial analyst
+        run: npx tsx scripts/run-expert-committee-stage.ts financial
+
+      - name: Editor and publish
+        run: npx tsx scripts/run-expert-committee-stage.ts editor
+
+      - name: Report published run
+        if: always()
+        run: |
+          npx tsx -e '
+            import { readCommitteeRunReports, readPublishedCommitteeSnapshot } from "./apps/web/lib/expert-review-store";
+            import { prisma } from "./apps/web/lib/prisma";
+            void (async () => {
+              const [active, runs] = await Promise.all([readPublishedCommitteeSnapshot(), readCommitteeRunReports(3)]);
+              const report = { active: active?.report ?? null, latest: runs[0] ?? null };
+              console.log(JSON.stringify(report));
+              await prisma.$disconnect();
+            })();
+          '
