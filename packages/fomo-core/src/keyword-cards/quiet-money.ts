@@ -51,8 +51,17 @@ const ACTOR_LABEL: Record<QuietMoneyActor, string> = {
   whale: "고래",
 };
 
+export function normalizeQuietMoneyDate(value: string | undefined): string | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  const digits = raw.replace(/[^\d]/g, "");
+  if (digits.length !== 8) return undefined;
+  const normalized = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+  return Number.isFinite(Date.parse(`${normalized}T00:00:00Z`)) ? normalized : undefined;
+}
+
 function validDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`));
+  return normalizeQuietMoneyDate(value) !== undefined;
 }
 
 function clampStrength(value: number): 1 | 2 | 3 | 4 | 5 {
@@ -60,7 +69,7 @@ function clampStrength(value: number): 1 | 2 | 3 | 4 | 5 {
 }
 
 function recentCutoff(asOf: string, tradingDates: readonly string[] | undefined, window: number): string {
-  const dates = [...new Set((tradingDates ?? []).filter(validDate))].sort();
+  const dates = [...new Set((tradingDates ?? []).flatMap((date) => normalizeQuietMoneyDate(date) ?? []))].sort();
   const eligible = dates.filter((date) => date <= asOf);
   if (eligible.length > 0) return eligible[Math.max(0, eligible.length - window)]!;
   const cutoff = new Date(`${asOf}T00:00:00Z`);
@@ -89,8 +98,13 @@ export function quietMoneyStrength(events: readonly QuietMoneyEvent[], actorCoun
 export function buildQuietMoneyTimeline(input: BuildQuietMoneyTimelineInput): QuietMoneyTimeline {
   const window = Math.max(2, Math.floor(input.windowTradingDays ?? 10));
   const seen = new Set<string>();
+  const normalizedAsOf = normalizeQuietMoneyDate(input.asOf) ?? input.asOf;
   const events = input.events
-    .filter((event) => validDate(event.date) && validDate(input.asOf) && event.date <= input.asOf)
+    .flatMap((event) => {
+      const date = normalizeQuietMoneyDate(event.date);
+      return date ? [{ ...event, date }] : [];
+    })
+    .filter((event) => validDate(normalizedAsOf) && event.date <= normalizedAsOf)
     .filter((event) => {
       const key = eventKey(event);
       if (seen.has(key)) return false;
@@ -99,10 +113,10 @@ export function buildQuietMoneyTimeline(input: BuildQuietMoneyTimelineInput): Qu
     })
     .sort((a, b) => b.date.localeCompare(a.date) || ACTOR_ORDER.indexOf(a.actor) - ACTOR_ORDER.indexOf(b.actor));
 
-  const cutoff = recentCutoff(input.asOf, input.tradingDates, window);
+  const cutoff = recentCutoff(normalizedAsOf, input.tradingDates, window);
   const recentInflows = events.filter((event) => event.direction === "inflow" && event.date >= cutoff);
   const actors = ACTOR_ORDER.filter((actor) => recentInflows.some((event) => event.actor === actor));
-  if (actors.length < 2) return { asOf: input.asOf, events };
+  if (actors.length < 2) return { asOf: normalizedAsOf, events };
 
   const strength = quietMoneyStrength(recentInflows, actors.length);
   const startDate = recentInflows.reduce((min, event) => (event.date < min ? event.date : min), recentInflows[0]!.date);
@@ -123,7 +137,7 @@ export function buildQuietMoneyTimeline(input: BuildQuietMoneyTimelineInput): Qu
     headline: `${actorLabels(actors)} 동시 유입 · ${window}거래일 내 ${actors.length}개 주체`,
     evidence,
   };
-  return { asOf: input.asOf, events, cluster };
+  return { asOf: normalizedAsOf, events, cluster };
 }
 
 export function quietMoneyActorLabel(actor: QuietMoneyActor): string {
