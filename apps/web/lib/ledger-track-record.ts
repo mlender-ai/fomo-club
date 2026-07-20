@@ -160,7 +160,7 @@ export async function materializeLedgerOutcomes(today = kstDate(), maxOutcomes =
       kind: "outcome" as const,
       payload: payload as unknown as Record<string, unknown>,
       priceAt,
-      actor: "engine" as const,
+      actor: selection.actor === "backfill" ? "backfill" as const : "engine" as const,
       idempotencyKey: ledgerKey("outcome", selection.id, windowDays),
     }];
   });
@@ -209,7 +209,7 @@ function signalMetrics(outcomes: readonly OutcomePayload[]): Record<SignalTypeCo
 
 export async function readTrackRecord(): Promise<TrackRecordResponse> {
   const rows = await prisma.judgmentLedger.findMany({
-    where: { kind: "outcome", actor: "engine" },
+    where: { kind: "outcome", actor: { in: ["engine", "backfill"] } },
     select: { payload: true },
     orderBy: { ts: "asc" },
   });

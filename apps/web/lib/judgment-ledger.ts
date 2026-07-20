@@ -18,7 +18,7 @@ import type { DiscoveryFrontSeed, DiscoveryStockPayload } from "./discovery-supp
 export const LEDGER_KINDS = ["signal", "verdict", "score", "selection", "user_action", "outcome"] as const;
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
 export type LedgerAsset = Daily30AssetClass;
-export type LedgerActor = "engine" | "committee" | `user:${string}`;
+export type LedgerActor = "engine" | "committee" | "backfill" | `user:${string}`;
 
 export interface LedgerSubject {
   asset: LedgerAsset;
@@ -113,7 +113,7 @@ function assertAppendInput(input: LedgerAppendInput): void {
   if (!ASSET_SET.has(input.subject.asset)) throw new Error(`invalid ledger asset: ${input.subject.asset}`);
   if (!input.subject.canonical.trim()) throw new Error("ledger canonical is required");
   if (!Number.isFinite(input.priceAt) || input.priceAt <= 0) throw new Error("ledger priceAt must be positive");
-  if (!(input.actor === "engine" || input.actor === "committee" || input.actor.startsWith("user:"))) {
+  if (!(input.actor === "engine" || input.actor === "committee" || input.actor === "backfill" || input.actor.startsWith("user:"))) {
     throw new Error(`invalid ledger actor: ${input.actor}`);
   }
   if (!input.idempotencyKey.trim()) throw new Error("ledger idempotencyKey is required");
@@ -337,7 +337,7 @@ function asSelection(row: {
   actor: string;
   payload: Prisma.JsonValue;
 }): LedgerSelectionView | null {
-  if (!ASSET_SET.has(row.asset) || !(row.actor === "engine" || row.actor === "committee")) return null;
+  if (!ASSET_SET.has(row.asset) || !(row.actor === "engine" || row.actor === "committee" || row.actor === "backfill")) return null;
   const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
     ? (row.payload as unknown as LedgerSelectionPayload)
     : null;
@@ -366,18 +366,21 @@ function asSelection(row: {
       ...(row.symbol ? { symbol: row.symbol } : {}),
     },
     priceAt: row.priceAt.toNumber(),
-    actor: row.actor as "engine" | "committee",
+    actor: row.actor as "engine" | "committee" | "backfill",
     payload: { ...payload, signalTypes: projectedSignalTypes },
   };
 }
 
-/** One final pick per date/subject. Committee approval supersedes the engine emergency selection. */
+const selectionActorPriority = (actor: LedgerActor): number =>
+  actor === "committee" ? 3 : actor === "engine" ? 2 : actor === "backfill" ? 1 : 0;
+
+/** One final pick per date/subject. Live publication always supersedes an imported snapshot. */
 export function finalSelections(rows: readonly LedgerSelectionView[]): LedgerSelectionView[] {
   const selected = new Map<string, LedgerSelectionView>();
   for (const row of rows) {
     const key = `${row.date}\u001f${row.subject.asset}\u001f${row.subject.canonical}`;
     const current = selected.get(key);
-    const actorWins = current?.actor === "engine" && row.actor === "committee";
+    const actorWins = current ? selectionActorPriority(row.actor) > selectionActorPriority(current.actor) : false;
     const sameActorIsNewer = current?.actor === row.actor && row.ts > current.ts;
     if (!current || actorWins || sameActorIsNewer) {
       selected.set(key, row);
@@ -395,7 +398,7 @@ export async function readLedgerSelections(options: {
   const rows = await prisma.judgmentLedger.findMany({
     where: {
       kind: "selection",
-      actor: { in: ["engine", "committee"] },
+      actor: { in: ["engine", "committee", "backfill"] },
       ...(options.date
         ? { date: options.date }
         : options.beforeDate || options.fromDate

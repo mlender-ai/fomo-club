@@ -61,6 +61,7 @@
     "ledger:migrate": "tsx scripts/migrate-judgment-ledger.ts",
     "ledger:outcomes": "tsx scripts/materialize-ledger-outcomes.ts",
     "ledger:verify": "tsx scripts/verify-judgment-ledger-append-only.ts",
+    "ledger:verify-backfill": "tsx scripts/verify-ledger-backfill.ts",
     "quality-slo:materialize": "tsx scripts/materialize-quality-slo.ts",
     "quality-slo:verify": "tsx scripts/verify-quality-ledger-append-only.ts",
     "prisma:generate": "prisma generate",

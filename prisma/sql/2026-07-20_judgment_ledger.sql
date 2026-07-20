@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS "JudgmentLedger" (
     "kind" IN ('signal', 'verdict', 'score', 'selection', 'user_action', 'outcome')
   ),
   CONSTRAINT "JudgmentLedger_actor_valid" CHECK (
-    "actor" IN ('engine', 'committee') OR "actor" LIKE 'user:%'
+    "actor" IN ('engine', 'committee', 'backfill') OR "actor" LIKE 'user:%'
   )
 ) PARTITION BY RANGE ("date");
 
@@ -57,6 +57,13 @@ CREATE INDEX IF NOT EXISTS "JudgmentLedger_canonical_date_idx"
 CREATE INDEX IF NOT EXISTS "JudgmentLedger_actor_date_idx"
   ON "JudgmentLedger" ("actor", "date");
 
+-- Existing production ledgers predate the transparent backfill actor. Reapply the parent
+-- constraint idempotently before the one-off historical import.
+ALTER TABLE "JudgmentLedger" DROP CONSTRAINT IF EXISTS "JudgmentLedger_actor_valid";
+ALTER TABLE "JudgmentLedger" ADD CONSTRAINT "JudgmentLedger_actor_valid" CHECK (
+  "actor" IN ('engine', 'committee', 'backfill') OR "actor" LIKE 'user:%'
+);
+
 CREATE OR REPLACE FUNCTION fomo_reject_judgment_ledger_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -83,7 +90,7 @@ DROP POLICY IF EXISTS "JudgmentLedger_insert" ON "JudgmentLedger";
 CREATE POLICY "JudgmentLedger_insert" ON "JudgmentLedger"
   FOR INSERT WITH CHECK (
     "priceAt" > 0
-    AND ("actor" IN ('engine', 'committee') OR "actor" LIKE 'user:%')
+    AND ("actor" IN ('engine', 'committee', 'backfill') OR "actor" LIKE 'user:%')
   );
 
 REVOKE UPDATE, DELETE, TRUNCATE ON "JudgmentLedger" FROM PUBLIC;

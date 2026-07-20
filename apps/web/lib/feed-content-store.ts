@@ -68,3 +68,29 @@ export async function readFeedContentByPrefix<T>(prefix: string, limit = 10): Pr
     return [];
   }
 }
+
+/**
+ * One-off migrations need the persisted timestamp, not a synthesized date. Keep this separate
+ * from the hot-path reader so normal requests retain the small 50-row ceiling.
+ */
+export async function readFeedContentHistoryByPrefix<T>(
+  prefix: string,
+  limit = 5_000
+): Promise<Array<{ id: string; row: T; updatedAt: Date }>> {
+  try {
+    const records = await prisma.$queryRaw<Array<{ id: string; row: unknown; updatedAt: Date }>>`
+      SELECT "id", "row", "updatedAt" FROM "FeedContentCache"
+      WHERE "id" LIKE ${`${prefix}%`}
+      ORDER BY "updatedAt" ASC, "id" ASC
+      LIMIT ${Math.max(1, Math.min(5_000, limit))}
+    `;
+    return records.map((record) => ({
+      id: record.id,
+      row: record.row as T,
+      updatedAt: record.updatedAt,
+    }));
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2010") return [];
+    return [];
+  }
+}

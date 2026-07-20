@@ -13,6 +13,7 @@ import {
   type LedgerSelectionView,
 } from "../../lib/judgment-ledger";
 import { buildTrackRecord, type OutcomePayload } from "../../lib/ledger-track-record";
+import { buildLegacyDaily30BackfillEntries } from "../../lib/ledger-backfill";
 import { fetchHistoricalPrices } from "../../lib/quote-prices";
 import { SIGNAL_TAXONOMY_VERSION, SIGNAL_TYPE_CODES } from "@fomo/core";
 
@@ -39,6 +40,38 @@ describe("Judgment Ledger", () => {
     });
     expect(finalSelections([engine, committee])).toEqual([committee]);
     expect(finalSelections([{ ...engine, ts: new Date("2026-07-20T02:00:00Z") }, committee])).toEqual([committee]);
+  });
+
+  it("백필 선정은 원본 시각·가격을 보존하고 실시간 선정본을 덮지 않는다", () => {
+    const updatedAt = new Date("2026-06-18T21:03:04.000Z");
+    const entries = buildLegacyDaily30BackfillEntries([{
+      id: "daily30-picks:2026-06-19",
+      updatedAt,
+      row: {
+        date: "2026-06-19",
+        picks: [
+          { canonical: "ACME", headline: "대형 공급계약 체결", price: 101.25, symbol: "ACME", country: "US", market: "NASDAQ" },
+          { canonical: "NO-PRICE" },
+        ],
+      },
+    }]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      date: "2026-06-19",
+      ts: updatedAt,
+      actor: "backfill",
+      priceAt: 101.25,
+      payload: {
+        signalTypes: ["material_contract"],
+        sourceSnapshotId: "daily30-picks:2026-06-19",
+        sourceSnapshotUpdatedAt: updatedAt.toISOString(),
+      },
+    });
+    const backfill = selection({ id: "selection-backfill", actor: "backfill", ts: updatedAt });
+    const engine = selection({ ts: new Date("2026-06-19T00:00:00.000Z") });
+    const committee = selection({ id: "selection-committee", actor: "committee", ts: new Date("2026-06-19T01:00:00.000Z") });
+    expect(finalSelections([backfill, engine])).toEqual([engine]);
+    expect(finalSelections([committee, backfill, engine])).toEqual([committee]);
   });
 
   it("신호 유형과 점수대를 결정론적으로 분류한다", () => {
@@ -84,6 +117,7 @@ describe("Judgment Ledger", () => {
     expect(sql).toContain("JudgmentLedger is append-only");
     expect(sql).toContain("FORCE ROW LEVEL SECURITY");
     expect(sql).toContain("REVOKE UPDATE, DELETE, TRUNCATE");
+    expect(sql).toContain("'backfill'");
   });
 
   it("후보는 신호·판단·점수만, 최종 선정은 selection까지 모두 당시 가격으로 만든다", () => {

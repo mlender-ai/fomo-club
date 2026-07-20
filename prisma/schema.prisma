@@ -853,7 +853,7 @@ model JudgmentLedger {
   kind           String // signal | verdict | score | selection | user_action | outcome
   payload        Json
   priceAt        Decimal  @db.Decimal(30, 10)
-  actor          String // engine | committee | user:session:* | user:uid:*
+  actor          String // engine | committee | backfill | user:session:* | user:uid:*
   idempotencyKey String
 
   @@id([id, date])
