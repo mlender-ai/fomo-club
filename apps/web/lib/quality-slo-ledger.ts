@@ -10,7 +10,9 @@ import {
 import {
   daily30ResponseFromSelections,
   readDaily30ResponseFromLedger,
+  readLedgerSelections,
   readLatestSelectionSnapshotBefore,
+  type LedgerSelectionView,
 } from "./judgment-ledger";
 import { parsePriceText } from "./quote-prices";
 import { prisma } from "./prisma";
@@ -419,6 +421,70 @@ export async function recordQualityForPublishedResponse(
   return { entry: { ...snapshot, recordedAt: snapshot.computedAt }, appended: appended > 0 };
 }
 
+/**
+ * M1 이전 daily30-picks 마이그레이션 행은 당시 가격·식별자·헤드라인만 보존한다.
+ * 기록되지 않은 차트·판단·뎁스는 채우지 않아 해당 SLO가 정직하게 실패하도록 한다.
+ */
+function legacyDaily30Response(
+  date: string,
+  rows: readonly LedgerSelectionView[]
+): Daily30Response | null {
+  const selections = rows.filter((row) => Number.isFinite(row.priceAt) && row.priceAt > 0);
+  if (selections.length === 0) return null;
+  const stocks = selections.map((row) => ({
+    canonical: row.subject.canonical,
+    market: (row.payload.market || (row.subject.asset === "kr-stock"
+      ? "KOSPI"
+      : row.subject.asset === "coin"
+      ? "COIN"
+      : "NASDAQ")) as Daily30Response["stocks"][number]["market"],
+    country: (row.payload.country === "KR" || row.payload.country === "US"
+      ? row.payload.country
+      : row.subject.asset === "kr-stock"
+      ? "KR"
+      : "US") as Daily30Response["stocks"][number]["country"],
+    marquee: false,
+    sector: "기타 업종" as Daily30Response["stocks"][number]["sector"],
+    ...(row.payload.naverCode ? { naverCode: row.payload.naverCode } : {}),
+    ...(row.subject.symbol ? { symbol: row.subject.symbol } : {}),
+    ...(row.payload.headline ? { headline: row.payload.headline } : {}),
+    ...(row.payload.sourceLabel ? { sourceLabel: row.payload.sourceLabel } : {}),
+    ...(row.payload.sourceUrl ? { sourceUrl: row.payload.sourceUrl } : {}),
+  }));
+  const fronts = Object.fromEntries(selections.map((row) => [
+    row.subject.canonical,
+    {
+      signals: {},
+      fomo: {},
+      sparkline: [],
+      priceText: String(row.priceAt),
+    } as unknown as Daily30Response["fronts"][string],
+  ]));
+  const assetCounts = selections.reduce<Daily30Response["meta"]["assetCounts"]>(
+    (counts, row) => ({ ...counts, [row.subject.asset]: counts[row.subject.asset] + 1 }),
+    { "kr-stock": 0, "us-stock": 0, coin: 0, macro: 0 }
+  );
+  const cards = selections.map((row) => ({
+    id: `legacy:${date}:${row.subject.asset}:${row.subject.canonical}`,
+    assetClass: row.subject.asset,
+    signalTypes: row.payload.signalTypes,
+  })) as Daily30Response["meta"]["cards"];
+  return {
+    asOf: date,
+    country: "all",
+    stocks,
+    cards: stocks.map((stock) => ({ kind: "stock", ...stock })),
+    fronts,
+    confidence: "L",
+    source: "legacy-judgment-ledger",
+    meta: {
+      targetCount: selections.length,
+      cards,
+      assetCounts,
+    },
+  };
+}
+
 /** Catch-up appends only missing rows from immutable selection or committee publication history. */
 export async function materializeRecentQualitySnapshots(limit = 2): Promise<{
   entries: QualityLedgerEntry[];
@@ -440,7 +506,10 @@ export async function materializeRecentQualitySnapshots(limit = 2): Promise<{
     responses.set(snapshot.report.date || snapshot.response.asOf, snapshot.response);
   }
   for (const { date } of ledgerDates) {
-    const response = await readDaily30ResponseFromLedger({ date });
+    const response = await readDaily30ResponseFromLedger({ date }) ?? legacyDaily30Response(
+      date,
+      await readLedgerSelections({ date, take: 500 })
+    );
     if (response) responses.set(date, response);
   }
   const dates = [...responses.keys()]
