@@ -238,6 +238,7 @@ export interface FreshnessSnapshot {
 const STALE_REPEAT_PENALTY = 8;
 /** 이틀 연속 같은 문구 — 순위를 바닥으로 보내되 후보에서 빼지 않는다(30장 채움 폴백). */
 const STALE_REPEAT_FLOOR = -1000;
+const QUIET_MONEY_CLUSTER_BASE_BONUS = 10;
 
 function normalizeHeadline(text: string | undefined): string {
   return (text ?? "").replace(/\s+/g, " ").trim();
@@ -265,17 +266,28 @@ export function stockCandidate(
     ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
     ...(front?.signals ? { signals: front.signals } : {}),
     ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
+    ...(front?.quietMoney ? { quietMoney: front.quietMoney } : {}),
     ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
   });
   const performanceBonus = signalPerformanceBonus(signalTypes, performance);
-  let quietScore = signalScore - hypePenalty + performanceBonus;
+  const cluster = front?.quietMoney?.cluster;
+  const clusterBonus = cluster ? QUIET_MONEY_CLUSTER_BASE_BONUS + cluster.strength * 2 : 0;
+  let quietScore = signalScore - hypePenalty + performanceBonus + clusterBonus;
   if (!repeatStale && quietScore < 6) return null;
   if (repeatStale) quietScore = STALE_REPEAT_FLOOR + quietScore; // 신선 후보가 전부 소진된 뒤에만 뽑힘
+  const elevatedStock: DiscoveryStockPayload = cluster
+    ? {
+        ...stock,
+        headline: cluster.headline,
+        whyShown: `${cluster.headline} · ${cluster.evidence.join(" · ")}`,
+        reason: `${cluster.headline} · ${cluster.evidence.join(" · ")}`,
+      }
+    : stock;
   return {
     kind: "stock",
     id: stockId(stock),
-    card: { kind: "stock", ...stock },
-    stock,
+    card: { kind: "stock", ...elevatedStock },
+    stock: elevatedStock,
     ...(front ? { front } : {}),
     assetClass: stockAssetClass(stock),
     sector: stock.sector,

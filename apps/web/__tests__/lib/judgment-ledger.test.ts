@@ -14,6 +14,7 @@ import {
 } from "../../lib/judgment-ledger";
 import { buildTrackRecord, type OutcomePayload } from "../../lib/ledger-track-record";
 import { fetchHistoricalPrices } from "../../lib/quote-prices";
+import { SIGNAL_TAXONOMY_VERSION, SIGNAL_TYPE_CODES } from "@fomo/core";
 
 function selection(overrides: Partial<LedgerSelectionView> = {}): LedgerSelectionView {
   return {
@@ -104,7 +105,7 @@ describe("Judgment Ledger", () => {
     expect(selected.map((entry) => entry.kind)).toEqual(["signal", "verdict", "score", "selection"]);
     expect(selected.every((entry) => entry.priceAt === 123.45 && entry.actor === "committee")).toBe(true);
     expect(selected.find((entry) => entry.kind === "signal")?.payload).toMatchObject({
-      taxonomyVersion: "m2.v1",
+      taxonomyVersion: SIGNAL_TAXONOMY_VERSION,
       signalTypes: ["score_80_plus"],
     });
     const selectionEntry = selected.find((entry) => entry.kind === "selection")!;
@@ -151,7 +152,7 @@ describe("track record fixed-window aggregation", () => {
     const record = buildTrackRecord([]);
     expect(record.windows.map((window) => window.days)).toEqual([7, 30, 90]);
     expect(record.windows.every((window) => window.overall.n === 0 && window.overall.winRate === null)).toBe(true);
-    expect(Object.keys(record.signalHistory30)).toHaveLength(15);
+    expect(Object.keys(record.signalHistory30)).toHaveLength(SIGNAL_TYPE_CODES.length);
     expect(record.signalHistory30.insider_cluster).toEqual({ n: 0, winRate: null, medianReturn: null });
   });
 

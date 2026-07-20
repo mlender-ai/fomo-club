@@ -2,6 +2,7 @@ import type { StockBasics } from "../stock-basics";
 import type { CardFrontSignals } from "./card-front-hook";
 import type { CardVerdict } from "./verdict";
 import type { WyckoffAnalysis } from "./wyckoff-analysis";
+import type { QuietMoneyTimeline } from "./quiet-money";
 
 export type CompanyScoreAxisKey = "valuation" | "growth" | "profitability" | "flow" | "chart" | "quiet";
 
@@ -36,6 +37,7 @@ export interface CompanyScoreInput {
   signals?: Pick<CardFrontSignals, "foreignNetStreak" | "institutionNetStreak">;
   insiderPurchaseConfirmed?: boolean;
   whaleStrength?: number;
+  quietMoney?: QuietMoneyTimeline;
   verdict?: CardVerdict;
   wyckoff?: WyckoffAnalysis;
   currentPrice?: number;
@@ -165,7 +167,8 @@ function flowAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
   const foreign = input.signals?.foreignNetStreak;
   const institution = input.signals?.institutionNetStreak;
   const whale = input.whaleStrength;
-  if (!finite(foreign) && !finite(institution) && input.insiderPurchaseConfirmed !== true && !finite(whale)) return undefined;
+  const quietMoney = input.quietMoney;
+  if (!finite(foreign) && !finite(institution) && input.insiderPurchaseConfirmed !== true && !finite(whale) && !quietMoney?.cluster) return undefined;
   let score = 50;
   const evidence: string[] = [];
   if (finite(foreign) && foreign !== 0) {
@@ -183,6 +186,10 @@ function flowAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
   if (finite(whale)) {
     score += clamp(whale, -1, 1) * 25;
     evidence.push(`고래 신호 강도 ${whale.toFixed(2)}`);
+  }
+  if (quietMoney?.cluster) {
+    score += quietMoney.cluster.strength * 4;
+    evidence.push(`${quietMoney.cluster.headline} · 강도 ${quietMoney.cluster.strength}/5`);
   }
   return { key: "flow", label: AXIS_LABEL.flow, score: Math.round(clamp(score)), evidence };
 }

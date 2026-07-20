@@ -264,6 +264,7 @@ export function calculateQualitySloSnapshot(input: {
       ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
       ...(front?.signals ? { signals: front.signals } : {}),
       ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
+      ...(front?.quietMoney ? { quietMoney: front.quietMoney } : {}),
       ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
     });
     const hasSignalHistory = inferredTypes.length > 0;

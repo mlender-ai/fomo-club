@@ -84,6 +84,28 @@ describe("company score", () => {
     expect(result.axes.find((axis) => axis.key === "quiet")?.score).toBe(69);
   });
 
+  it("feeds verified multi-actor strength into the flow axis", () => {
+    const result = computeCompanyScore({
+      quietMoney: {
+        asOf: "2026-07-17",
+        events: [],
+        cluster: {
+          type: "cluster_multi",
+          windowTradingDays: 10,
+          actors: ["insider", "institution"],
+          actorCount: 2,
+          startDate: "2026-07-10",
+          endDate: "2026-07-17",
+          strength: 4,
+          headline: "내부자·기관 동시 유입 · 10거래일 내 2개 주체",
+          evidence: [],
+        },
+      },
+    });
+    expect(result.axes.find((axis) => axis.key === "flow")).toMatchObject({ score: 66 });
+    expect(result.axes.find((axis) => axis.key === "flow")?.evidence[0]).toContain("강도 4/5");
+  });
+
   it("keeps the daily card score stable when a fresh detail score arrives", () => {
     const seed = computeCompanyScore({
       signals: { foreignNetStreak: 5 },

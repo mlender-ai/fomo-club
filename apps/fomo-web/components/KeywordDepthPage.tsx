@@ -375,6 +375,7 @@ function mergeFrontSeed(
     // 시점·입력이 달라 "카드는 '가격 먼저'인데 뎁스는 '주목 집중'" 불일치를 만든다(2026-07-17 User Zero).
     fomo: seed.fomo ?? fresh.fomo,
     ...(companyScore ? { companyScore } : {}),
+    ...(fresh.quietMoney ?? seed.quietMoney ? { quietMoney: fresh.quietMoney ?? seed.quietMoney } : {}),
     ...(seed.committeeReview ?? fresh.committeeReview
       ? { committeeReview: seed.committeeReview ?? fresh.committeeReview }
       : {}),
@@ -1480,6 +1481,75 @@ function ExpertCommitteeReview({ review }: { review: StockFrontResponse["committ
   );
 }
 
+const QUIET_MONEY_ACTOR_LABEL = {
+  insider: "내부자",
+  institution: "기관",
+  foreign: "외국인",
+  whale: "고래",
+} as const;
+
+function quietMoneyAmount(event: NonNullable<StockFrontResponse["quietMoney"]>["events"][number]): string | undefined {
+  if (typeof event.amount !== "number" || !Number.isFinite(event.amount)) return undefined;
+  if (event.amountUnit === "KRW") {
+    return event.amount >= 100_000_000
+      ? `${(event.amount / 100_000_000).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억원`
+      : `${Math.round(event.amount).toLocaleString("ko-KR")}원`;
+  }
+  if (event.amountUnit === "USD") {
+    return event.amount >= 1_000_000
+      ? `$${(event.amount / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 1 })}M`
+      : `$${Math.round(event.amount).toLocaleString("en-US")}`;
+  }
+  if (event.amountUnit === "shares") return `${Math.round(event.amount).toLocaleString("ko-KR")}주`;
+  return event.amount.toLocaleString("ko-KR");
+}
+
+function QuietMoneyBlock({ timeline }: { timeline: StockFrontResponse["quietMoney"] | undefined }) {
+  if (!timeline?.events.length) return null;
+  return (
+    <section className="mt-4 border-y border-hairline py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-pixel text-sm text-whiteout">조용한 돈</p>
+          <p className="mt-1 text-[11px] text-muted">공시·KRX 확정치·온체인 근거를 한 시간축으로 묶었어요.</p>
+        </div>
+        {timeline.cluster && (
+          <span className="shrink-0 rounded-md border border-[#D8FF3A]/50 px-2 py-1 text-[10px] font-bold text-[#D8FF3A]">
+            강도 {timeline.cluster.strength}/5
+          </span>
+        )}
+      </div>
+      {timeline.cluster && (
+        <div className="mt-3 border-l-2 border-[#D8FF3A] bg-[#D8FF3A]/[0.06] px-3 py-2.5">
+          <p className="text-sm font-bold text-whiteout">{cleanText(timeline.cluster.headline)}</p>
+          <p className="mt-1 text-[11px] leading-5 text-muted">{cleanText(timeline.cluster.evidence.join(" · "))}</p>
+        </div>
+      )}
+      <ol className="mt-3 space-y-0">
+        {timeline.events.slice(0, 12).map((event, index) => {
+          const amount = quietMoneyAmount(event);
+          const content = (
+            <>
+              <span className="block text-xs font-bold text-whiteout">
+                {QUIET_MONEY_ACTOR_LABEL[event.actor]} · 순{event.direction === "inflow" ? "유입" : "유출"}
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-5 text-muted">{cleanText(event.label)}</span>
+              <span className="mt-0.5 block text-[10px] text-muted">
+                {event.date}{amount ? ` · ${amount}` : ""}{typeof event.priceAt === "number" ? ` · 당시가 ${formatChartPrice(event.priceAt)}` : ""} · {cleanText(event.source)}
+              </span>
+            </>
+          );
+          return (
+            <li key={`${event.date}-${event.actor}-${index}`} className="border-l border-white/15 px-3 py-2">
+              {event.sourceUrl ? <a href={event.sourceUrl} target="_blank" rel="noreferrer" className="block hover:border-[#D8FF3A]">{content}</a> : content}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 function DiscoveryOverview({
   front,
   insight,
@@ -1562,11 +1632,13 @@ function AnalysisChart({
   invalidationLevel,
   candles,
   analysis,
+  quietMoney,
 }: {
   series: NonNullable<StockFrontResponse["chartSeries"]>;
   invalidationLevel?: number | undefined;
   candles?: DailyOhlcv[] | undefined;
   analysis?: WyckoffAnalysis | undefined;
+  quietMoney?: StockFrontResponse["quietMoney"] | undefined;
 }) {
   const [selectedEvent, setSelectedEvent] = useState<WyckoffEvent | null>(null);
   const W = 320;
@@ -1574,8 +1646,9 @@ function AnalysisChart({
   const PRICE_H = 166;
   const VOL_TOP = 178;
   const VOL_H = 42;
-  const H = VOL_TOP + VOL_H + 12;
-  const renderedCandles =
+  const QUIET_LANE_TOP = VOL_TOP + VOL_H + 10;
+  const QUIET_LANE_GAP = 8;
+  const renderedCandles: DailyOhlcv[] =
     candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-series.closes.length) ??
     series.closes.map((close, i, arr) => {
       const open = i > 0 ? arr[i - 1]! : close;
@@ -1645,6 +1718,13 @@ function AnalysisChart({
   const priceTicks = [rawMax, (rawMax + rawMin) / 2, rawMin];
   const visibleZones = (analysis?.zones ?? []).filter((zone) => zone.endIndex >= visibleStart && zone.startIndex <= visibleStart + n - 1);
   const visibleEvents = (analysis?.events ?? []).filter((event) => event.index >= visibleStart && event.index <= visibleStart + n - 1);
+  const candleIndexByDate = new Map(renderedCandles.flatMap((candle, index) => candle.date ? [[candle.date, index] as const] : []));
+  const quietActors = ["insider", "institution", "foreign", "whale"] as const;
+  const visibleQuietEvents = (quietMoney?.events ?? []).flatMap((event) => {
+    const index = candleIndexByDate.get(event.date);
+    return typeof index === "number" ? [{ event, index }] : [];
+  });
+  const H = visibleQuietEvents.length > 0 ? QUIET_LANE_TOP + QUIET_LANE_GAP * 4 + 12 : VOL_TOP + VOL_H + 12;
   const zoneName = (kind: (typeof visibleZones)[number]["kind"]) =>
     kind === "accumulation" ? "매집" : kind === "distribution" ? "분산" : kind === "markup" ? "상승" : "하락";
   const zoneColor = (kind: (typeof visibleZones)[number]["kind"]) => CHART_COLOR[kind];
@@ -1819,6 +1899,32 @@ function AnalysisChart({
             </g>
           );
         })}
+        {quietActors.map((actor, actorIndex) => {
+          const laneEvents = visibleQuietEvents.filter((item) => item.event.actor === actor);
+          if (laneEvents.length === 0) return null;
+          const laneY = QUIET_LANE_TOP + actorIndex * QUIET_LANE_GAP;
+          return (
+            <g key={`quiet-lane-${actor}`}>
+              <line x1="0" x2={PLOT_W} y1={laneY} y2={laneY} stroke="rgba(255,255,255,0.10)" strokeWidth="0.6" />
+              <text x={PLOT_W + 4} y={laneY + 2.5} fontSize="6.5" fill="rgba(250,250,250,0.52)">
+                {QUIET_MONEY_ACTOR_LABEL[actor]}
+              </text>
+              {laneEvents.map(({ event, index }, markerIndex) => (
+                <g key={`${actor}-${event.date}-${markerIndex}`}>
+                  <title>{`${event.date} · ${event.label}`}</title>
+                  <circle
+                    cx={x(index)}
+                    cy={laneY}
+                    r="2.6"
+                    fill={event.direction === "inflow" ? CHART_COLOR.up : CHART_COLOR.down}
+                    stroke="#050706"
+                    strokeWidth="0.8"
+                  />
+                </g>
+              ))}
+            </g>
+          );
+        })}
         <text x="0" y={H - 1} fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(renderedCandles[0])}</text>
         <text x={PLOT_W} y={H - 1} textAnchor="end" fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(latest)}</text>
       </svg>
@@ -1841,6 +1947,7 @@ function AnalysisChart({
         {includeLevel && <span><span style={{ color: CHART_COLOR.invalidation }}>┄</span> 관점 경계</span>}
         {visibleZones.length > 0 && <span>▧ 구간</span>}
         {visibleEvents.length > 0 && <span>◆ 이벤트</span>}
+        {visibleQuietEvents.length > 0 && <span>● 조용한 돈</span>}
       </div>
     </div>
   );
@@ -2047,7 +2154,7 @@ function ChartAnalysisTab({
               ))}
             </div>
           </div>
-          <AnalysisChart series={visibleSeries} invalidationLevel={verdict?.invalidationLevel} candles={visibleCandles} analysis={wyckoff} />
+          <AnalysisChart series={visibleSeries} invalidationLevel={verdict?.invalidationLevel} candles={visibleCandles} analysis={wyckoff} quietMoney={front?.quietMoney} />
           {invalidation && (
             <button
               type="button"
@@ -2584,6 +2691,7 @@ export function StockInsightView({
           <CompanyScoreRadar result={front?.companyScore} />
           <ExpertCommitteeReview review={front?.committeeReview} />
           <DiscoveryOverview front={front} insight={insight} context={context} />
+          <QuietMoneyBlock timeline={front?.quietMoney} />
           <JudgmentTimeline canonical={stock} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
           {depthTab === "ta" ? (

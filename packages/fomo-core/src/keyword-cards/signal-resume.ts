@@ -1,11 +1,13 @@
 import type { CardFrontSignals } from "./card-front-hook";
 import type { WyckoffAnalysis } from "./wyckoff-analysis";
+import type { QuietMoneyTimeline } from "./quiet-money";
 
-export const SIGNAL_TAXONOMY_VERSION = "m2.v1" as const;
+export const SIGNAL_TAXONOMY_VERSION = "m2.v2" as const;
 export const SIGNAL_RESUME_MIN_SAMPLE = 30;
 
 export const SIGNAL_TYPE_CODES = [
   "insider_cluster",
+  "cluster_multi",
   "institution_streak",
   "foreign_streak",
   "volume_vacuum",
@@ -26,6 +28,7 @@ export type SignalTypeCode = (typeof SIGNAL_TYPE_CODES)[number];
 
 export const SIGNAL_TYPE_LABELS: Record<SignalTypeCode, string> = {
   insider_cluster: "내부자 클러스터 매수",
+  cluster_multi: "다중 주체 클러스터",
   institution_streak: "기관 연속 순매수",
   foreign_streak: "외국인 연속 순매수",
   volume_vacuum: "거래량 진공",
@@ -58,6 +61,7 @@ export interface StandardSignalInput {
   signals?: Partial<CardFrontSignals>;
   wyckoff?: WyckoffAnalysis;
   companyScore?: number;
+  quietMoney?: QuietMoneyTimeline;
 }
 
 const CONTRACT = /계약|수주|공급|납품|파트너십|contract|order|supply|partnership/i;
@@ -91,6 +95,9 @@ export function inferStandardSignalTypes(input: StandardSignalInput): SignalType
 
   if (/내부자.{0,16}(?:클러스터|동반\s*매수)|(?:내부자|임원)\s*\d+\s*(?:명|인).{0,16}매수|insider.{0,16}cluster/i.test(text)) {
     types.push("insider_cluster");
+  }
+  if (input.quietMoney?.cluster?.type === "cluster_multi" || /(?:다중\s*주체|동시\s*유입).{0,20}(?:클러스터|주체)/i.test(text)) {
+    types.push("cluster_multi");
   }
   if ((input.signals?.institutionNetStreak ?? 0) >= 3 || /기관.{0,12}\d+일.{0,12}(?:연속\s*)?순매수/i.test(text)) {
     types.push("institution_streak");

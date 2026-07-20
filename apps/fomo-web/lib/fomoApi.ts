@@ -515,6 +515,7 @@ export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
   fomo: import("@fomo/core").FomoScoreResult;
   companyScore?: import("@fomo/core").CompanyScoreResult;
+  quietMoney?: import("@fomo/core").QuietMoneyTimeline;
   committeeReview?: {
     runId: string;
     reviewedAt: string;

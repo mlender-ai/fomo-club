@@ -155,6 +155,33 @@ describe("daily-30 신선도 폴백 (30장 유지 > 신선도)", () => {
     expect(boosted.quietScore - baseline.quietScore).toBe(2);
     expect(smallSample.quietScore).toBe(baseline.quietScore);
   });
+
+  it("다중 주체 클러스터는 quietScore 강가점과 카드 헤드라인 승격을 받는다", () => {
+    const stock = stubStock("클러스터종목", "기존 재료");
+    const front: DiscoveryFrontSeed = {
+      ...stubFront(),
+      quietMoney: {
+        asOf: "2026-07-17",
+        events: [],
+        cluster: {
+          type: "cluster_multi",
+          windowTradingDays: 10,
+          actors: ["insider", "institution"],
+          actorCount: 2,
+          startDate: "2026-07-10",
+          endDate: "2026-07-17",
+          strength: 4,
+          headline: "내부자·기관 동시 유입 · 10거래일 내 2개 주체",
+          evidence: ["내부자 공개시장 매수", "기관 6일 지속"],
+        },
+      },
+    };
+    const baseline = stockCandidate(stock, stubFront())!;
+    const clustered = stockCandidate(stock, front)!;
+    expect(clustered.signalTypes).toContain("cluster_multi");
+    expect(clustered.quietScore - baseline.quietScore).toBe(18);
+    expect(clustered.stock?.headline).toBe("내부자·기관 동시 유입 · 10거래일 내 2개 주체");
+  });
 });
 
 describe("capFeedItemsByType (2026-07-11 베리에이션)", () => {
