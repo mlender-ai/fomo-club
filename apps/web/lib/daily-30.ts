@@ -26,7 +26,11 @@ import {
   readLatestSelectionSnapshotBefore,
   writeDaily30Ledger,
 } from "./judgment-ledger";
-import type { PublishedCommitteeSnapshot } from "./expert-review-store";
+import {
+  readPublishedCommitteeSnapshot,
+  readRecentPublishedCommitteeSnapshot,
+  type PublishedCommitteeSnapshot,
+} from "./expert-review-store";
 import { getCachedTrackRecord } from "./ledger-track-record";
 
 export type Daily30AssetClass = "kr-stock" | "us-stock" | "coin" | "macro";
@@ -690,6 +694,10 @@ function storedDaily30Date(value: PublishedCommitteeSnapshot | Daily30Response):
   return "report" in value ? value.report.date : value.asOf.slice(0, 10);
 }
 
+function isCommitteeApproved(value: PublishedCommitteeSnapshot | Daily30Response): boolean {
+  return "report" in value ? value.report.status === "published" : Boolean(value.meta.committee?.runId);
+}
+
 function dateMinusDays(date: string, days: number): string {
   const value = new Date(`${date}T00:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() - days);
@@ -704,9 +712,18 @@ export async function resolveDaily30Response(
   dependencies: Daily30FallbackDependencies = {}
 ): Promise<Daily30Response> {
   const today = dependencies.today ?? kstDateOf();
-  const readToday = dependencies.readToday ?? (() => readDaily30ResponseFromLedger({ date: today }));
-  const readRecent = dependencies.readRecent ?? ((date, maxAgeDays) =>
-    readDaily30ResponseFromLedger({ fromDate: dateMinusDays(date, maxAgeDays) }));
+  const readToday = dependencies.readToday ?? (async () => {
+    const published = await readPublishedCommitteeSnapshot().catch(() => null);
+    if (published && storedDaily30Date(published) === today) return published;
+    const ledger = await readDaily30ResponseFromLedger({ date: today }).catch(() => null);
+    return ledger?.meta.committee ? ledger : null;
+  });
+  const readRecent = dependencies.readRecent ?? (async (date, maxAgeDays) => {
+    const published = await readRecentPublishedCommitteeSnapshot(date, maxAgeDays).catch(() => null);
+    if (published && storedDaily30Date(published) !== date) return published;
+    const ledger = await readDaily30ResponseFromLedger({ fromDate: dateMinusDays(date, maxAgeDays) }).catch(() => null);
+    return ledger?.meta.committee && storedDaily30Date(ledger) !== date ? ledger : null;
+  });
   const buildDirect =
     dependencies.buildDirect ?? (() => buildDaily30ResponseWithOptions({ targetCount: DAILY_CARD_TARGET }));
 
@@ -714,7 +731,12 @@ export async function resolveDaily30Response(
     console.warn("[daily-30] active committee snapshot unavailable", (error as Error)?.message);
     return null;
   });
-  if (active && storedDaily30Date(active) === today && daily30CardCount(storedDaily30Response(active)) >= 20) {
+  if (
+    active &&
+    isCommitteeApproved(active) &&
+    storedDaily30Date(active) === today &&
+    daily30CardCount(storedDaily30Response(active)) >= 20
+  ) {
     return storedDaily30Response(active);
   }
 
@@ -722,7 +744,12 @@ export async function resolveDaily30Response(
     console.warn("[daily-30] recent committee snapshot unavailable", (error as Error)?.message);
     return null;
   });
-  if (recent && storedDaily30Date(recent) !== today && daily30CardCount(storedDaily30Response(recent)) >= 20) {
+  if (
+    recent &&
+    isCommitteeApproved(recent) &&
+    storedDaily30Date(recent) !== today &&
+    daily30CardCount(storedDaily30Response(recent)) >= 20
+  ) {
     return withFallbackMeta(storedDaily30Response(recent), "committee-yesterday");
   }
 

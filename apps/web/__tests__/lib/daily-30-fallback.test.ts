@@ -70,6 +70,19 @@ describe("daily-30 availability fallback", () => {
     expect(result.meta.stale).toBeUndefined();
   });
 
+  it("오늘 엔진 원장 투영본을 위원회 승인본으로 오인하지 않는다", async () => {
+    const engineProjection = response(24);
+    const direct = response(30);
+    const result = await resolveDaily30Response({
+      today: "2026-07-20",
+      readToday: vi.fn().mockResolvedValue(engineProjection),
+      readRecent: vi.fn().mockResolvedValue(null),
+      buildDirect: vi.fn().mockResolvedValue(direct),
+    });
+    expect(result.meta.stale).toBe("engine-direct");
+    expect(result.stocks).toHaveLength(30);
+  });
+
   it("오늘 발행 실패 시 최근 3일 승인본을 stale 표시와 함께 반환한다", async () => {
     const recent = snapshot("2026-07-19");
     const buildDirect = vi.fn();
