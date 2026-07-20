@@ -3,7 +3,10 @@ import { Prisma } from "@prisma/client";
 import { inferStandardSignalTypes } from "@fomo/core";
 import type { Daily30Response } from "./daily-30";
 import type { CommitteeRunReport } from "./expert-review-store";
-import { readCommitteeRunReports } from "./expert-review-store";
+import {
+  readCommitteeRunReports,
+  readPublishedCommitteeSnapshotHistory,
+} from "./expert-review-store";
 import {
   daily30ResponseFromSelections,
   readDaily30ResponseFromLedger,
@@ -416,23 +419,39 @@ export async function recordQualityForPublishedResponse(
   return { entry: { ...snapshot, recordedAt: snapshot.computedAt }, appended: appended > 0 };
 }
 
-/** Catch-up only appends missing rows from immutable selection snapshots; it never recalculates existing days. */
+/** Catch-up appends only missing rows from immutable selection or committee publication history. */
 export async function materializeRecentQualitySnapshots(limit = 2): Promise<{
   entries: QualityLedgerEntry[];
   appended: number;
 }> {
-  const dates = await prisma.judgmentLedger.findMany({
-    where: { kind: "selection", actor: { in: ["engine", "committee"] } },
-    select: { date: true },
-    distinct: ["date"],
-    orderBy: { date: "desc" },
-    take: Math.max(1, Math.min(limit, 30)),
-  });
+  const requested = Math.max(1, Math.min(limit, 30));
+  const [ledgerDates, publishedHistory] = await Promise.all([
+    prisma.judgmentLedger.findMany({
+      where: { kind: "selection", actor: { in: ["engine", "committee"] } },
+      select: { date: true },
+      distinct: ["date"],
+      orderBy: { date: "desc" },
+      take: requested,
+    }),
+    readPublishedCommitteeSnapshotHistory(requested).catch(() => []),
+  ]);
+  const responses = new Map<string, Daily30Response>();
+  for (const snapshot of publishedHistory) {
+    responses.set(snapshot.report.date || snapshot.response.asOf, snapshot.response);
+  }
+  for (const { date } of ledgerDates) {
+    const response = await readDaily30ResponseFromLedger({ date });
+    if (response) responses.set(date, response);
+  }
+  const dates = [...responses.keys()]
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, requested)
+    .sort();
   const reports = await readCommitteeRunReports(45).catch(() => []);
   const entries: QualityLedgerEntry[] = [];
   let appended = 0;
-  for (const date of dates.map((row) => row.date).sort()) {
-    const response = await readDaily30ResponseFromLedger({ date });
+  for (const date of dates) {
+    const response = responses.get(date);
     if (!response) continue;
     const result = await recordQualityForPublishedResponse(
       date,
