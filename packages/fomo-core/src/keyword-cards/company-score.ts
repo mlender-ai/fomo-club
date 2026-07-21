@@ -104,16 +104,21 @@ function valuationAxis(financials: CompanyFinancialScoreInput | undefined): Comp
   if (!financials) return undefined;
   const operating = lastTwo(financials.operatingIncome)?.[1];
   const useSales = finite(operating) && operating <= 0;
+  const psrCandidate = { term: "PSR", value: financials.currentPsr, history: financials.psrHistory };
   const candidates = useSales
-    ? [{ term: "PSR", value: financials.currentPsr, history: financials.psrHistory }]
+    ? [psrCandidate]
     : [
         { term: "PER", value: financials.currentPer, history: financials.perHistory },
         { term: "PBR", value: financials.currentPbr, history: financials.pbrHistory },
       ];
-  const available = candidates.flatMap((candidate) => {
-    const position = historicalPosition(candidate.value, candidate.history);
-    return finite(candidate.value) && finite(position) ? [{ ...candidate, position }] : [];
-  });
+  const resolve = (list: readonly typeof psrCandidate[]) =>
+    list.flatMap((candidate) => {
+      const position = historicalPosition(candidate.value, candidate.history);
+      return finite(candidate.value) && finite(position) ? [{ ...candidate, position }] : [];
+    });
+  // PER/PBR 미도달(미장 등) 시 PSR 로 폴백 — PSR 도 실밸류 지표. 축 자체를 죽이지 않는다(WO-VAL).
+  let available = resolve(candidates);
+  if (available.length === 0 && !useSales) available = resolve([psrCandidate]);
   if (available.length === 0) return undefined;
   const score = Math.round(available.reduce((sum, item) => sum + (100 - item.position), 0) / available.length);
   const band = financials.valuationHistoryLabel ?? `최근 ${available[0]!.history?.length ?? 0}개년`;

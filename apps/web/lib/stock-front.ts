@@ -25,6 +25,7 @@ import {
   type MultiAxisHookSelection,
 } from "@fomo/core";
 import { fetchStockBasics, fetchStockBasicsLite, fetchUsStockBasics } from "./stock-basics";
+import { usValuationBand } from "./us-valuation";
 import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
@@ -517,8 +518,14 @@ export async function assembleStockFront(
       currency: "USD",
     });
     const basics = await basicsPromise;
-    const financials = companyFinancialsFromBasics(basics);
     const latestPrice = daily.closes.at(-1);
+    // 미장 밸류축 복구(WO-VAL) — 무료 소스에 PER/PBR/밴드가 없어, 실일봉+실매출+시총으로 PSR 밴드 역산.
+    const usValuation = usValuationBand(basics, daily.closes, latestPrice);
+    const baseFinancials = companyFinancialsFromBasics(basics);
+    const financials =
+      usValuation && (baseFinancials || usValuation.currentPsr)
+        ? { ...(baseFinancials ?? {}), ...usValuation }
+        : baseFinancials;
     const companyScore = computeCompanyScore({
       ...(financials ? { financials } : {}),
       signals,
