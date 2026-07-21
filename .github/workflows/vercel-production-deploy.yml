@@ -66,8 +66,17 @@ jobs:
           npx tsx scripts/verify-judgment-ledger-append-only.ts
 
       - name: Deploy with Vercel production runtime
+        id: deploy_backend
         if: ${{ inputs.backend_deployment == '' }}
-        run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        shell: bash
+        run: |
+          deployment_url="$(npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}")"
+          printf '%s\n' "$deployment_url"
+          echo "url=$(printf '%s\n' "$deployment_url" | tail -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Alias canonical backend domain
+        if: ${{ inputs.backend_deployment == '' }}
+        run: npx --yes vercel@latest alias set "${{ steps.deploy_backend.outputs.url }}" "fomo-club-backend.vercel.app" --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Promote existing deployment
         if: ${{ inputs.backend_deployment != '' && inputs.backend_alias == '' }}
@@ -92,8 +101,17 @@ jobs:
         run: npx --yes vercel@latest pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy with Vercel production runtime
+        id: deploy_web
         if: ${{ inputs.web_deployment == '' }}
-        run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        shell: bash
+        run: |
+          deployment_url="$(npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}")"
+          printf '%s\n' "$deployment_url"
+          echo "url=$(printf '%s\n' "$deployment_url" | tail -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Alias canonical web domain
+        if: ${{ inputs.web_deployment == '' }}
+        run: npx --yes vercel@latest alias set "${{ steps.deploy_web.outputs.url }}" "fomo-web-mlender-ais-projects.vercel.app" --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Promote existing deployment
         if: ${{ inputs.web_deployment != '' && inputs.web_alias == '' }}
