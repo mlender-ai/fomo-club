@@ -76,7 +76,10 @@ describe("company score", () => {
     expect(result.omittedAxes).toEqual([]);
     expect(result.label).toBe("역사 밴드 하단 + 매집 7주차");
     expect(result.axes.find((axis) => axis.key === "valuation")?.evidence[0]).toContain("PER 6.40배");
-    expect(result.axes.find((axis) => axis.key === "quiet")?.evidence[0]).toBe("신호 74.0 - 화제성 12.0 = 62.0");
+    // 조용함 축 근거는 사람 언어 — 계산식(신호-화제성=) 노출 금지(WO 번역 레이어).
+    const quietEvidence = result.axes.find((axis) => axis.key === "quiet")?.evidence[0] ?? "";
+    expect(quietEvidence).not.toMatch(/=|화제성/);
+    expect(quietEvidence.length).toBeGreaterThan(0);
   });
 
   it("excludes missing financial axes and re-normalizes the remaining axes", () => {
@@ -181,5 +184,23 @@ describe("company score", () => {
     const result = computeCompanyScore({ financials: input });
     expect(result.axes.map((axis) => axis.key)).toEqual(["growth", "profitability", "flow", "chart"]);
     expect(result.omittedAxes).toContain("valuation");
+  });
+
+  // WO 번역 레이어 — 화면 노출 문자열(interpretation·조용함 축)에 엔진 내부어 누수 금지.
+  it("종합 요약·조용함 축에 계산식·화제성·quietScore 은어가 새지 않는다", () => {
+    const result = withCompanyQuietScore(computeCompanyScore(accumulation), {
+      quietScore: 92.5,
+      signalScore: 92.5,
+      hypePenalty: 0,
+    });
+    // "신호 92.5 - 화제성 0.0 = 92.5" 계산식이 화면 요약에 실리던 원흉(WO 실측) 회귀 방지.
+    expect(result.interpretation).not.toMatch(/=|화제성|quietScore|hypePenalty|toFixed|YoY|PSR|PBR|n\s*=/);
+    const quietAxis = result.axes.find((axis) => axis.key === "quiet");
+    expect(quietAxis).toBeDefined();
+    for (const line of quietAxis!.evidence) {
+      expect(line, `조용함 축 근거 누수: "${line}"`).not.toMatch(/=|화제성|quietScore|hypePenalty/);
+    }
+    // 강한 축이 조용함일 때 사람 언어("아직 아무도 주목 안 하는데 신호는 강해요")로 나온다.
+    expect(quietAxis!.score).toBeGreaterThanOrEqual(60);
   });
 });
