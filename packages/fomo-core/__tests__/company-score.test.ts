@@ -186,6 +186,25 @@ describe("company score", () => {
     expect(result.omittedAxes).toContain("valuation");
   });
 
+  // WO-VAL — 미장 밸류축: PER/PBR 미도달 시 PSR 밴드로 폴백(흑자기업도), 축을 죽이지 않는다.
+  it("PER/PBR 없고 흑자여도 PSR 밴드가 있으면 밸류축을 채운다", () => {
+    const psrHistory = Array.from({ length: 40 }, (_, i) => 2 + (i % 20) * 0.1); // 2.0~3.9
+    const result = computeCompanyScore({
+      financials: {
+        revenue: [100, 120, 150],
+        operatingIncome: [10, 15, 24], // 흑자 → 원래 PER/PBR 경로(둘 다 없음)
+        periods: ["2023", "2024", "2025"],
+        currentPsr: 2.1,
+        psrHistory,
+        valuationHistoryLabel: "최근 1년",
+      },
+    });
+    const valuation = result.axes.find((axis) => axis.key === "valuation");
+    expect(valuation, "PSR 폴백으로 밸류축이 살아야 함").toBeDefined();
+    expect(valuation!.evidence[0]).toContain("PSR");
+    expect(result.omittedAxes).not.toContain("valuation");
+  });
+
   // WO 번역 레이어 — 화면 노출 문자열(interpretation·조용함 축)에 엔진 내부어 누수 금지.
   it("종합 요약·조용함 축에 계산식·화제성·quietScore 은어가 새지 않는다", () => {
     const result = withCompanyQuietScore(computeCompanyScore(accumulation), {
