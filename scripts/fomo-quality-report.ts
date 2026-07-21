@@ -169,6 +169,84 @@ function rate(count: number, total: number): number {
   return total > 0 ? count / total : 0;
 }
 
+// WO-LASTMILE 공통: 크론 자가검증에 "밸류축 확보율 · 트랙레코드 n" 추가 → 0/미달이면 액션 경고.
+// "머지≠배포/재생성" 재발 방지: 코드가 살아있어도 덱 재생성·원장 누적이 멈추면 여기서 잡힌다.
+const VALUATION_WARN_RATE = 0.8; // 주식 밸류축 확보율 목표(북극성)
+const VALUATION_CRITICAL_RATE = 0.4; // 이 밑이면 전종목 결손급 = critical
+
+interface Daily30Like {
+  fronts?: Record<string, { score?: { axes?: { key?: string }[] } }>;
+  cards?: { kind?: string; canonical?: string; country?: string; market?: string }[];
+}
+interface TrackRecordLike {
+  windows?: { days?: number; overall?: { n?: number; winRate?: number | null } }[];
+}
+
+interface SelfCheck {
+  valuation: { stocks: number; withAxis: number; rate: number; us: number; usWithAxis: number };
+  trackRecord: { maxN: number; best: { days: number; n: number; winRate: number | null } | null };
+}
+
+function evaluateSelfCheck(
+  daily30: Daily30Like | undefined,
+  track: TrackRecordLike | undefined
+): { selfCheck: SelfCheck; findings: { severity: "ok" | "warn" | "critical"; message: string }[] } {
+  const findings: { severity: "ok" | "warn" | "critical"; message: string }[] = [];
+  const fronts = daily30?.fronts ?? {};
+  const cardByName = new Map((daily30?.cards ?? []).filter((c) => c.kind === "stock").map((c) => [c.canonical ?? "", c]));
+  let stocks = 0;
+  let withAxis = 0;
+  let us = 0;
+  let usWithAxis = 0;
+  for (const [name, front] of Object.entries(fronts)) {
+    const card = cardByName.get(name);
+    if (!card || card.market === "COIN") continue; // 주식만 — 코인은 밸류축 대상 아님
+    stocks += 1;
+    const hasVal = (front.score?.axes ?? []).some((axis) => axis.key === "valuation");
+    if (hasVal) withAxis += 1;
+    if (card.country === "US") {
+      us += 1;
+      if (hasVal) usWithAxis += 1;
+    }
+  }
+  const valRate = rate(withAxis, stocks);
+  if (stocks > 0) {
+    if (valRate < VALUATION_CRITICAL_RATE) {
+      findings.push({
+        severity: "critical",
+        message: `덱 밸류축 확보율 ${Math.round(valRate * 100)}% (${withAxis}/${stocks}, US ${usWithAxis}/${us}) — 전종목 결손급. 덱 재생성(committee) 또는 밸류 주입 경로 점검 필요.`,
+      });
+    } else if (valRate < VALUATION_WARN_RATE) {
+      findings.push({
+        severity: "warn",
+        message: `덱 밸류축 확보율 ${Math.round(valRate * 100)}% (${withAxis}/${stocks}, US ${usWithAxis}/${us}) — 목표 ${Math.round(VALUATION_WARN_RATE * 100)}% 미달.`,
+      });
+    }
+  }
+
+  const windows = (track?.windows ?? []).map((w) => ({
+    days: Number(w.days ?? 0),
+    n: Number(w.overall?.n ?? 0),
+    winRate: w.overall?.winRate ?? null,
+  }));
+  const maxN = windows.length > 0 ? Math.max(...windows.map((w) => w.n)) : 0;
+  const best = windows.length > 0 ? windows.reduce((a, b) => (b.n > a.n ? b : a)) : null;
+  if (maxN === 0) {
+    findings.push({
+      severity: "warn",
+      message: "트랙레코드 outcome n=0 — 원장 outcome 산출(ledger-outcomes 크론)이 멈췄거나 아직 horizon 미도래. 크론 실행 여부 확인 필요.",
+    });
+  }
+
+  return {
+    selfCheck: {
+      valuation: { stocks, withAxis, rate: valRate, us, usWithAxis },
+      trackRecord: { maxN, best },
+    },
+    findings,
+  };
+}
+
 async function main() {
   const date = kstDate();
   const samples: LatencySample[] = [];
@@ -232,8 +310,15 @@ async function main() {
     insightCount: insights.length,
     insufficientInsightCount: insights.filter((insight) => insight.confidence === "insufficient").length,
   };
+  // WO-LASTMILE 공통 자가검증 — 덱 밸류축 확보율 + 트랙레코드 n (GET 2회, LLM 없음).
+  const daily30 = await timedJson<Daily30Like>("daily_30", `${API_BASE}/api/fomo/daily-30`);
+  const trackRecord = await timedJson<TrackRecordLike>("track_record", `${API_BASE}/api/fomo/track-record`);
+  samples.push(daily30, trackRecord);
+  rawResults.push(daily30 as TimedResult<unknown>, trackRecord as TimedResult<unknown>);
+  const { selfCheck, findings: selfCheckFindings } = evaluateSelfCheck(daily30.data, trackRecord.data);
+
   const latency = summarizeLatencies(samples);
-  const findings = evaluateQuality(keywordInput, stockInput, latency);
+  const findings = [...evaluateQuality(keywordInput, stockInput, latency), ...selfCheckFindings];
   const liteTierDist = distribution(liteHooks.map((hook) => hookTier(hook.kind)));
   const liteKindDist = distribution(liteHooks.map((hook) => hook.kind));
   const fullTierDist = distribution(fullHooks.map((hook) => hookTier(hook.kind)));
@@ -260,6 +345,7 @@ async function main() {
       fullTier: fullTierDist,
     },
     liteCoverage,
+    selfCheck,
     findings,
     rawErrors: rawResults
       .filter((row) => !row.ok)
@@ -289,6 +375,16 @@ async function main() {
         [
           "Depth insufficient",
           stockInput.insightCount > 0 ? `${stockInput.insufficientInsightCount}/${stockInput.insightCount}` : "N/A",
+        ],
+        [
+          "덱 밸류축 확보율",
+          `${formatPercent(selfCheck.valuation.rate)} (${selfCheck.valuation.withAxis}/${selfCheck.valuation.stocks}, US ${selfCheck.valuation.usWithAxis}/${selfCheck.valuation.us})`,
+        ],
+        [
+          "트랙레코드 n",
+          selfCheck.trackRecord.best
+            ? `${selfCheck.trackRecord.maxN} (${selfCheck.trackRecord.best.days}일 승률 ${selfCheck.trackRecord.best.winRate ?? "N/A"}%)`
+            : "0",
         ],
       ]
     ),
