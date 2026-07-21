@@ -232,10 +232,16 @@ function chartAxis(input: CompanyScoreInput): CompanyScoreAxis {
 function quietAxis(quiet: CompanyQuietScoreInput | undefined): CompanyScoreAxis | undefined {
   if (!quiet || !finite(quiet.quietScore)) return undefined;
   const score = Math.round(clamp((quiet.quietScore / 80) * 100));
-  const equation = finite(quiet.signalScore) && finite(quiet.hypePenalty)
-    ? `신호 ${quiet.signalScore.toFixed(1)} - 화제성 ${quiet.hypePenalty.toFixed(1)} = ${quiet.quietScore.toFixed(1)}`
-    : `quietScore ${quiet.quietScore.toFixed(1)}`;
-  return { key: "quiet", label: AXIS_LABEL.quiet, score, evidence: [equation] };
+  // 사람 언어만 — 계산식(신호 X - 화제성 Y = Z)·quietScore 는 화면에 노출 금지(WO 번역 레이어).
+  // 화제성(hypePenalty)이 낮을수록 "아직 조용한데 신호는 살아 있다"는 뜻.
+  const quietHype = finite(quiet.hypePenalty) && quiet.hypePenalty <= 1;
+  const evidence =
+    score >= 60
+      ? quietHype
+        ? "아직 크게 주목받지 않은 채 가격·거래 신호만 조용히 쌓이고 있어요."
+        : "화제보다 실제 신호가 앞선 조용한 구간이에요."
+      : "관심이 붙기 시작해 조용함은 옅어지는 중이에요.";
+  return { key: "quiet", label: AXIS_LABEL.quiet, score, evidence: [evidence] };
 }
 
 function axisOf(axes: readonly CompanyScoreAxis[], key: CompanyScoreAxisKey): CompanyScoreAxis | undefined {
@@ -265,11 +271,36 @@ function scoreLabel(axes: readonly CompanyScoreAxis[], input: CompanyScoreInput)
     const distribution = input.verdict?.phase === "distribution" || chart?.evidence.some((item) => item.includes("분산"));
     return `${distribution ? "분산" : "하락"} 신호 우세`;
   }
-  if ((flow?.score ?? 0) >= 70 && (quiet?.score ?? 0) >= 65) return "조용한 수급 유입 + 낮은 화제성";
+  if ((flow?.score ?? 0) >= 70 && (quiet?.score ?? 0) >= 65) return "조용한 수급 유입 · 아직 낮은 관심";
   if ((chart?.score ?? 0) >= 65) return weeks ? `매집 추정 ${weeks}주차` : "차트 타이밍 우위";
   if ((growth?.score ?? 0) >= 70) return "성장 가속이 가장 강한 축";
   const top = [...axes].sort((a, b) => b.score - a.score).slice(0, 2);
   return top.length > 0 ? `${top.map((axis) => axis.label).join(" + ")} 우위` : "근거 축 수집 중";
+}
+
+/**
+ * 축을 사람 언어로 — 요약문에 원시 evidence(YoY·PSR 밴드·수식·quietScore 등 엔진어)를 그대로
+ * 싣지 않는다(WO 번역 레이어). 점수 구간별 의미만. 화면엔 계산식·통계용어·영문 약어 금지.
+ */
+function axisMeaning(axis: CompanyScoreAxis): string {
+  const strong = axis.score >= 65;
+  const weak = axis.score <= 40;
+  switch (axis.key) {
+    case "valuation":
+      return strong ? "값이 싼 편" : weak ? "값이 비싼 편" : "값은 보통 수준";
+    case "growth":
+      return strong ? "매출이 빠르게 크는 중" : weak ? "성장은 더딘 편" : "성장은 완만한 편";
+    case "profitability":
+      return strong ? "돈을 잘 버는 회사" : weak ? "수익성은 아직 약한 편" : "수익성은 보통";
+    case "flow":
+      return strong ? "기관·외국인 등 큰손이 담는 중" : weak ? "큰손 매수세는 아직" : "수급은 엇갈리는 중";
+    case "chart":
+      return strong ? "차트 자리가 좋은 편" : weak ? "차트 흐름은 약한 편" : "차트는 눈치보는 자리";
+    case "quiet":
+      return strong ? "아직 아무도 주목 안 하는데 신호는 강해요" : "관심이 붙기 시작한 구간";
+    default:
+      return "";
+  }
 }
 
 function interpretation(axes: readonly CompanyScoreAxis[], label: string): string {
@@ -277,9 +308,9 @@ function interpretation(axes: readonly CompanyScoreAxis[], label: string): strin
   const sorted = [...axes].sort((a, b) => b.score - a.score);
   const top = sorted[0]!;
   const bottom = sorted.at(-1)!;
-  const leadEvidence = top.evidence[0] ?? "확인된 근거";
-  if (top.key === bottom.key) return `${label}. ${leadEvidence}를 근거로 계산했어요.`;
-  return `${label}. 가장 강한 축은 ${top.label} ${top.score}점(${leadEvidence})이고, ${bottom.label} ${bottom.score}점이 상대적으로 약해요.`;
+  if (top.key === bottom.key) return `${label}. ${axisMeaning(top)}.`;
+  // "가장 강한 축=의미 / 가장 약한 축=의미" — 숫자 점수는 육각형·리스트에 이미 있으니 문장은 뜻만.
+  return `${label}. 지금 가장 돋보이는 건 '${axisMeaning(top)}', 반대로 '${axisMeaning(bottom)}'은 약한 편이에요.`;
 }
 
 function axisStates(axes: readonly CompanyScoreAxis[]): CompanyScoreAxisState[] {
