@@ -3,7 +3,7 @@ import { computeCompanyScore, withCompanyQuietScore } from "@fomo/core";
 
 vi.mock("next/cache", () => ({ unstable_cache: (factory: () => unknown) => factory }));
 
-import { buildUnifiedCardSnapshot, type Daily30AssetClass } from "../../lib/daily-30";
+import { buildUnifiedCardSnapshot, normalizeDaily30Response, type Daily30AssetClass, type Daily30Response } from "../../lib/daily-30";
 import type { DiscoveryFrontSeed, DiscoveryStockPayload } from "../../lib/discovery-supply";
 
 function stock(assetClass: Daily30AssetClass): DiscoveryStockPayload {
@@ -40,5 +40,45 @@ describe("daily-30 unified card schema", () => {
       "assetClass", "canonical", "changeDir", "changeText", "country", "headline", "market", "priceText", "score", "sparkline", "tag", "verdict",
     ]);
     expect(cards.every((card) => card.score.status === "ready" && card.sparkline.length > 0)).toBe(true);
+  });
+
+  it("upgrades legacy snapshots with flow, chart, and quiet as guaranteed minimum axes", () => {
+    const legacy = {
+      asOf: "2026-07-20",
+      country: "all",
+      stocks: [stock("us-stock")],
+      cards: [],
+      fronts: {
+        "us-stock": {
+          signals: {},
+          sparkline: [100, 101],
+          companyScore: {
+            score: 70,
+            label: "legacy",
+            interpretation: "legacy",
+            axes: [
+              { key: "growth", label: "성장", score: 70, evidence: ["실적"] },
+              { key: "chart", label: "차트", score: 60, evidence: ["구간"] },
+              { key: "quiet", label: "조용함", score: 80, evidence: ["조용함"] },
+            ],
+            availableAxisCount: 3,
+            omittedAxes: ["valuation", "profitability", "flow"],
+          },
+        },
+      },
+      confidence: "M",
+      source: "legacy",
+      meta: {
+        targetCount: 1,
+        cards: [{ id: "legacy", assetClass: "us-stock", quietScore: 64, signalScore: 70, hypePenalty: 6 }],
+        assetCounts: { "kr-stock": 0, "us-stock": 1, coin: 0, macro: 0 },
+      },
+    } as unknown as Daily30Response;
+    const normalized = normalizeDaily30Response(legacy).fronts["us-stock"]!;
+    expect(normalized.score?.axisStates.filter((axis) => ["flow", "chart", "quiet"].includes(axis.key)).map((axis) => axis.status)).toEqual([
+      "available", "available", "available",
+    ]);
+    expect(normalized).not.toHaveProperty("fomo");
+    expect(normalized).not.toHaveProperty("companyScore");
   });
 });
