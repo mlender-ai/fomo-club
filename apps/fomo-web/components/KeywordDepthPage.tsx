@@ -461,7 +461,7 @@ function formatRatio(value: number): string {
 
 function frontSignalMetrics(front: StockFrontResponse | null): BasicMetricView[] {
   if (!front) return [];
-  const s = front.signals;
+  const s = front.signals ?? {};
   const metrics: BasicMetricView[] = [];
   if (s.marketCapRank) {
     metrics.push({
@@ -593,7 +593,7 @@ function shortSignalLabel(text: string | undefined, max = 24): string | undefine
 
 function stockWatchPoint(front: StockFrontResponse | null): string {
   if (!front) return "";
-  const s = front.signals;
+  const s = front.signals ?? {};
   const headline = shortSignalLabel(front.axisHook?.hookText || s.newsEventLabel, 28);
   if (headline && (front.axisHook?.axis === "time" || s.newsEventLabel)) {
     return `‘${headline}’ 이후 거래가 실제로 붙는지 봐요.`;
@@ -752,7 +752,7 @@ function movementTrigger(
   if (insight && insight.confidence !== "insufficient" && insight.whyHot.trim()) return cleanText(insight.whyHot);
   // 원인 연결 엔진(WO 뎁스 재건 A) — 급변동일 때 시간창 매칭된 재료가 일반 재료·대표주 카피보다 우선.
   if (insight?.cause?.kind === "material") return cleanText(insight.cause.text);
-  const material = front?.signals.newsEventLabel ?? (front?.axisHook?.axis === "time" ? front.axisHook.hookText : undefined);
+  const material = front?.signals?.newsEventLabel ?? (front?.axisHook?.axis === "time" ? front.axisHook.hookText : undefined);
   const base = cleanText(material ?? context?.reason ?? "") || undefined;
   // 재료가 없으면 지수 동반·정직한 미확인(±3% 급변동 한정)이라도 답한다 — 자백 템플릿 금지.
   return base ?? (insight?.cause ? cleanText(insight.cause.text) : undefined);
@@ -760,6 +760,7 @@ function movementTrigger(
 
 function movementFacts(front: StockFrontResponse | null): ChartTooltip[] {
   if (!front) return [];
+  const signals = front.signals ?? {};
   const facts: ChartTooltip[] = [];
   if (front.changeText) {
     facts.push({
@@ -767,15 +768,15 @@ function movementFacts(front: StockFrontResponse | null): ChartTooltip[] {
       body: `오늘 ${front.changeDir === "up" ? "상승" : front.changeDir === "down" ? "하락" : "보합"} ${normalizeChangeText(front.changeText)}`,
     });
   }
-  if (finiteNumber(front.signals.volumeRatio) && front.signals.volumeRatio >= 0.1) {
+  if (finiteNumber(signals.volumeRatio) && signals.volumeRatio >= 0.1) {
     facts.push({
       title: "거래 참여",
-      body: `오늘 거래량은 최근 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배예요.`,
+      body: `오늘 거래량은 최근 20일 평균의 ${signals.volumeRatio.toFixed(1)}배예요.`,
     });
   }
   const flow = [
-    { actor: "외국인", days: front.signals.foreignNetStreak ?? 0 },
-    { actor: "기관", days: front.signals.institutionNetStreak ?? 0 },
+    { actor: "외국인", days: signals.foreignNetStreak ?? 0 },
+    { actor: "기관", days: signals.institutionNetStreak ?? 0 },
   ].sort((a, b) => Math.abs(b.days) - Math.abs(a.days))[0];
   if (flow && flow.days !== 0) {
     facts.push({
@@ -1137,7 +1138,7 @@ function buildReadPoints(front: StockFrontResponse | null, insight: CondensedIns
     if (ta?.side === "bear") bear.push({ text: ta.text, source: "차트" });
     if (ta?.side === "watch") watch.push({ text: ta.text, source: "차트" });
 
-    const { foreignNetStreak, institutionNetStreak } = front.signals;
+    const { foreignNetStreak, institutionNetStreak } = front.signals ?? {};
     if (typeof foreignNetStreak === "number" && foreignNetStreak > 0) {
       bull.push({ text: `외국인이 ${foreignNetStreak}일째 사는 중이에요.`, source: "수급" });
     }
@@ -1509,11 +1510,12 @@ function DiscoveryOverview({
     color: "#8A8A86",
   };
   const trigger = movementTrigger(front, insight, context);
-  const asOf = front?.score?.asOf ?? front?.signals.asOf;
-  const source = context?.sourceLabel ?? front?.signals.newsEventSource;
+  const signals = front?.signals ?? {};
+  const asOf = front?.score?.asOf ?? signals.asOf;
+  const source = context?.sourceLabel ?? signals.newsEventSource;
   const chips = [
-    finiteNumber(front?.signals.volumeRatio) && front.signals.volumeRatio >= 0.1
-      ? `거래량 ${front.signals.volumeRatio.toFixed(1)}배`
+    finiteNumber(signals.volumeRatio) && signals.volumeRatio >= 0.1
+      ? `거래량 ${signals.volumeRatio.toFixed(1)}배`
       : undefined,
     front?.changeText ? `오늘 ${normalizeChangeText(front.changeText)}` : undefined,
     balance?.label,
@@ -1968,7 +1970,7 @@ function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
     ? `RSI ${Math.round(latest.rsi14)}`
     : finiteNumber(latest?.atrPct)
       ? `변동폭 ${latest.atrPct.toFixed(1)}%`
-      : finiteNumber(front?.signals.volumeRatio) && front.signals.volumeRatio >= 0.1
+      : finiteNumber(front?.signals?.volumeRatio) && front.signals.volumeRatio >= 0.1
         ? `거래량 ${front.signals.volumeRatio.toFixed(1)}배`
         : "지표 축적 중";
 
@@ -2245,8 +2247,8 @@ function buildVerdictSections(
   }
 
   // 3) 수급 확장 — 외국인·기관 모두(카드는 1~2줄만 실림).
-  const foreignStreak = front?.signals.foreignNetStreak;
-  const instStreak = front?.signals.institutionNetStreak;
+  const foreignStreak = front?.signals?.foreignNetStreak;
+  const instStreak = front?.signals?.institutionNetStreak;
   if (typeof foreignStreak === "number" && foreignStreak !== 0) {
     pushEvidence(evidence, `외국인 ${Math.abs(foreignStreak)}일 연속 ${foreignStreak > 0 ? "순매수" : "순매도"}`);
   }
@@ -2261,7 +2263,7 @@ function buildVerdictSections(
     const gap = Math.round((100 - latest.closeTo52WeekHighPct) * 10) / 10;
     pushEvidence(evidence, describe52wGap(gap));
   }
-  if (typeof front?.signals.volumeRatio === "number" && front.signals.volumeRatio >= 1.2) {
+  if (typeof front?.signals?.volumeRatio === "number" && front.signals.volumeRatio >= 1.2) {
     pushEvidence(evidence, `거래량이 20일 평균의 ${front.signals.volumeRatio.toFixed(1)}배 — 평소보다 눈에 띄게 붙은 상태`);
   }
   const taText = front?.taFact ? translateTaFact(front.taFact) : undefined;

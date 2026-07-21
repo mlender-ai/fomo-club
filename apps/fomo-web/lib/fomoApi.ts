@@ -512,7 +512,8 @@ export type { CompanyScoreResult } from "@fomo/core";
 export type { TaFact } from "@fomo/core";
 export type { AxisSignal, MultiAxisHookSelection } from "@fomo/core";
 export interface StockFrontResponse {
-  signals: import("@fomo/core").CardFrontSignals;
+  /** Daily-deck seeds can hydrate price and score before the full signal payload arrives. */
+  signals?: import("@fomo/core").CardFrontSignals;
   score?: import("@fomo/core").CompanyScoreResult;
   card?: {
     canonical: string;
