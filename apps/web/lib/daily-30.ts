@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import {
   isDiscoveryCopySafe,
+  computeCompanyScore,
   inferStandardSignalTypes,
   signalPerformanceBonus,
   withCompanyQuietScore,
@@ -271,7 +272,7 @@ export function stockCandidate(
     ...(front?.signals ? { signals: front.signals } : {}),
     ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
     ...(front?.quietMoney ? { quietMoney: front.quietMoney } : {}),
-    ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
+    ...(typeof front?.score?.score === "number" ? { companyScore: front.score.score } : {}),
   });
   const performanceBonus = signalPerformanceBonus(signalTypes, performance);
   const cluster = front?.quietMoney?.cluster;
@@ -448,6 +449,31 @@ export function selectDaily30Candidates(candidates: readonly Daily30Candidate[],
 /** 피드 표면(WO-GNB)용 콘텐츠·내러티브 최대치 — 덱 30장과 별개로 응답에 함께 싣는다. */
 const FEED_CARD_LIMIT = 16;
 
+export function buildUnifiedCardSnapshot(
+  stock: DiscoveryStockPayload,
+  assetClass: Daily30AssetClass,
+  front: DiscoveryFrontSeed | undefined,
+  score: NonNullable<DiscoveryFrontSeed["score"]>
+): NonNullable<DiscoveryFrontSeed["card"]> {
+  return {
+    canonical: stock.canonical,
+    assetClass,
+    market: stock.market,
+    country: stock.country,
+    priceText: front?.priceText ?? null,
+    changeText: front?.changeText ?? null,
+    changeDir: front?.changeDir ?? null,
+    tag: stock.sector || null,
+    headline: stock.headline ?? stock.reason ?? stock.canonical,
+    score: { value: score.score, status: score.status, label: score.label },
+    verdict: {
+      stance: front?.verdict?.stance ?? null,
+      summary: front?.verdict?.stanceText ?? "데이터 없음",
+    },
+    sparkline: front?.sparkline ?? [],
+  };
+}
+
 function responseFromSelected(
   deck: readonly Daily30Candidate[],
   feed: readonly Daily30Candidate[],
@@ -455,32 +481,36 @@ function responseFromSelected(
   asOf: string,
   targetCount = DAILY_CARD_TARGET
 ): Daily30Response {
+  const sourceFronts: Record<string, DiscoveryFrontSeed> = {};
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
   const stockById = new Map<string, DiscoveryStockPayload>();
   for (const discovery of discoveries) {
-    for (const [ticker, front] of Object.entries(discovery.fronts)) fronts[ticker] = front;
+    for (const [ticker, front] of Object.entries(discovery.fronts)) sourceFronts[ticker] = front;
   }
   for (const candidate of deck) {
     if (!candidate.stock) continue;
     if (stockById.has(candidate.id)) continue;
     stockById.set(candidate.id, candidate.stock);
     stocks.push(candidate.stock);
-    const current = fronts[candidate.stock.canonical];
-    if (current) {
-      fronts[candidate.stock.canonical] = {
-        ...current,
-        companyScore: withCompanyQuietScore(
-          current.companyScore,
-          {
-            quietScore: candidate.quietScore,
-            signalScore: candidate.signalScore,
-            hypePenalty: candidate.hypePenalty,
-          },
-          asOf
-        ),
-      };
-    }
+    const current = sourceFronts[candidate.stock.canonical] ?? candidate.front;
+    const baseScore = current?.score ?? computeCompanyScore({ asOf });
+    const score = withCompanyQuietScore(
+      baseScore,
+      {
+        quietScore: candidate.quietScore,
+        signalScore: candidate.signalScore,
+        hypePenalty: candidate.hypePenalty,
+      },
+      asOf
+    );
+    const signals = current?.signals ?? {};
+    const sparkline = current?.sparkline ?? [];
+    fronts[candidate.stock.canonical] = {
+      ...(current ?? { signals, sparkline }),
+      score,
+      card: buildUnifiedCardSnapshot(candidate.stock, candidate.assetClass, current, score),
+    };
   }
   // cards = 덱(종목 30장) + 피드(콘텐츠·내러티브). 클라가 표면별로 필터: 메인=stock, 피드=content/narrative.
   const all = [...deck, ...feed];
@@ -679,6 +709,41 @@ function withFallbackMeta(
   return { ...response, meta: { ...response.meta, stale } };
 }
 
+/** 이전 발행 스냅샷도 현재 단일 카드 계약으로 읽는다. 원본 append-only 행은 건드리지 않는다. */
+export function normalizeDaily30Response(response: Daily30Response): Daily30Response {
+  const normalizedFronts: Record<string, DiscoveryFrontSeed> = {};
+  response.stocks.forEach((stock, index) => {
+    const raw = response.fronts[stock.canonical] as (DiscoveryFrontSeed & {
+      fomo?: unknown;
+      companyScore?: NonNullable<DiscoveryFrontSeed["score"]>;
+    }) | undefined;
+    const meta = response.meta.cards[index];
+    const base = raw?.score ?? raw?.companyScore ?? computeCompanyScore({
+      signals: raw?.signals ?? {},
+      ...(raw?.verdict ? { verdict: raw.verdict } : {}),
+      ...(raw?.wyckoff ? { wyckoff: raw.wyckoff } : {}),
+      asOf: response.asOf,
+    });
+    const score = meta
+      ? withCompanyQuietScore(base, {
+          quietScore: meta.quietScore,
+          signalScore: meta.signalScore,
+          hypePenalty: meta.hypePenalty,
+        }, response.asOf)
+      : base;
+    const { fomo: _legacyFomo, companyScore: _legacyScore, ...clean } = raw ?? { signals: {}, sparkline: [] };
+    const assetClass = meta?.assetClass ?? (stock.market === "COIN" ? "coin" : stock.country === "US" ? "us-stock" : "kr-stock");
+    normalizedFronts[stock.canonical] = {
+      ...clean,
+      signals: raw?.signals ?? {},
+      sparkline: raw?.sparkline ?? [],
+      score,
+      card: buildUnifiedCardSnapshot(stock, assetClass, raw, score),
+    };
+  });
+  return { ...response, fronts: normalizedFronts };
+}
+
 export interface Daily30FallbackDependencies {
   today?: string;
   readToday?: () => Promise<PublishedCommitteeSnapshot | Daily30Response | null>;
@@ -737,7 +802,7 @@ export async function resolveDaily30Response(
     storedDaily30Date(active) === today &&
     daily30CardCount(storedDaily30Response(active)) >= 20
   ) {
-    return storedDaily30Response(active);
+    return normalizeDaily30Response(storedDaily30Response(active));
   }
 
   const recent = await readRecent(today, 3).catch((error) => {
@@ -750,12 +815,12 @@ export async function resolveDaily30Response(
     storedDaily30Date(recent) !== today &&
     daily30CardCount(storedDaily30Response(recent)) >= 20
   ) {
-    return withFallbackMeta(storedDaily30Response(recent), "committee-yesterday");
+    return withFallbackMeta(normalizeDaily30Response(storedDaily30Response(recent)), "committee-yesterday");
   }
 
   const direct = await buildDirect();
   const directCount = daily30CardCount(direct);
-  if (directCount >= 20) return withFallbackMeta(direct, "engine-direct");
+  if (directCount >= 20) return withFallbackMeta(normalizeDaily30Response(direct), "engine-direct");
   throw new Error(`daily-30 fallback exhausted: engine produced ${directCount}/20 cards`);
 }
 

@@ -513,8 +513,21 @@ export type { TaFact } from "@fomo/core";
 export type { AxisSignal, MultiAxisHookSelection } from "@fomo/core";
 export interface StockFrontResponse {
   signals: import("@fomo/core").CardFrontSignals;
-  fomo: import("@fomo/core").FomoScoreResult;
-  companyScore?: import("@fomo/core").CompanyScoreResult;
+  score?: import("@fomo/core").CompanyScoreResult;
+  card?: {
+    canonical: string;
+    assetClass: "kr-stock" | "us-stock" | "coin" | "macro";
+    market: string;
+    country: string;
+    priceText: string | null;
+    changeText: string | null;
+    changeDir: "up" | "down" | "flat" | null;
+    tag: string | null;
+    headline: string;
+    score: { value: number | null; status: "ready" | "accumulating"; label: string };
+    verdict: { stance: string | null; summary: string };
+    sparkline: number[];
+  };
   quietMoney?: import("@fomo/core").QuietMoneyTimeline;
   committeeReview?: {
     runId: string;

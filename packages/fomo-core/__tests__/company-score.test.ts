@@ -54,9 +54,25 @@ const accumulation: CompanyScoreInput = {
 };
 
 describe("company score", () => {
+  it("always exposes six explicit axis states and withholds scores below three axes", () => {
+    const accumulating = computeCompanyScore({});
+    expect(accumulating.status).toBe("accumulating");
+    expect(accumulating.score).toBeNull();
+    expect(accumulating.label).toBe("분석 축적 중");
+    expect(accumulating.axisStates).toHaveLength(6);
+    expect(accumulating.axisStates.filter((axis) => axis.status === "missing").every((axis) => axis.missingReason === "데이터 없음")).toBe(true);
+    expect(accumulating.axes.map((axis) => axis.key)).toEqual(["flow", "chart"]);
+
+    const ready = withCompanyQuietScore(accumulating, { quietScore: 40 });
+    expect(ready.status).toBe("ready");
+    expect(ready.availableAxisCount).toBe(3);
+    expect(ready.score).not.toBeNull();
+  });
+
   it("uses six evidence-backed axes and derives the combined label", () => {
     const result = computeCompanyScore(accumulation);
     expect(result.availableAxisCount).toBe(6);
+    expect(result.axisStates.every((axis) => axis.status === "available")).toBe(true);
     expect(result.omittedAxes).toEqual([]);
     expect(result.label).toBe("역사 밴드 하단 + 매집 7주차");
     expect(result.axes.find((axis) => axis.key === "valuation")?.evidence[0]).toContain("PER 6.40배");
@@ -163,7 +179,7 @@ describe("company score", () => {
     };
     const input = companyFinancialsFromBasics(basics)!;
     const result = computeCompanyScore({ financials: input });
-    expect(result.axes.map((axis) => axis.key)).toEqual(["growth", "profitability"]);
+    expect(result.axes.map((axis) => axis.key)).toEqual(["growth", "profitability", "flow", "chart"]);
     expect(result.omittedAxes).toContain("valuation");
   });
 });

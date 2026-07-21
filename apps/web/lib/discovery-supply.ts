@@ -3,7 +3,6 @@ import {
   STOCK_VOCAB,
   applyAxisRarity,
   buildAxisSignals,
-  computeFomoScore,
   decodeHtmlEntities,
   discoveryWhy,
   eligibleUniverse,
@@ -33,7 +32,6 @@ import {
   type DiscoveryThemeBundleItem,
   type DiscoveryEvent,
   type DiscoveryMarket,
-  type FomoScoreResult,
   type InvestorFlow,
   type MultiAxisHookSelection,
   type QuietMoneyEvent,
@@ -138,8 +136,23 @@ const INDUSTRY_HINTS: Array<{ label: string; pattern: RegExp }> = [
 
 export interface DiscoveryFrontSeed {
   signals: CardFrontSignals;
-  fomo: FomoScoreResult;
-  companyScore?: CompanyScoreResult;
+  /** 백엔드가 확정한 단일 종합점수. 카드와 상세는 이 값을 그대로 사용한다. */
+  score?: CompanyScoreResult;
+  /** 일일 통합 덱이 자산군과 무관하게 제공하는 고정 카드 필드 집합. */
+  card?: {
+    canonical: string;
+    assetClass: "kr-stock" | "us-stock" | "coin" | "macro";
+    market: string;
+    country: string;
+    priceText: string | null;
+    changeText: string | null;
+    changeDir: "up" | "down" | "flat" | null;
+    tag: string | null;
+    headline: string;
+    score: { value: number | null; status: "ready" | "accumulating"; label: string };
+    verdict: { stance: string | null; summary: string };
+    sparkline: number[];
+  };
   /** 내부자·기관·외국인·고래의 실데이터 통합 타임라인. */
   quietMoney?: QuietMoneyTimeline;
   /** 일일 위원회가 사실 게이트를 통과시킨 전문 분석. 요청 경로에서는 생성하지 않고 승인 스냅샷만 읽는다. */
@@ -1730,16 +1743,11 @@ function frontSeed(
     } : {}),
     asOf: candidate.asOf,
   };
-  const fomo = computeFomoScore({
-    ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
-    ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
-  });
   const eventSignals = candidate.events.map((event) => eventAxisSignal(event, candidate)).filter((signal): signal is AxisSignal => signal !== null);
   const axisSignals = [...buildAxisSignals({ signals }), ...eventSignals];
   const axisHook = selectMultiAxisHook(axisSignals);
   return {
     signals,
-    fomo,
     sparkline,
     ...(row.priceText ? { priceText: row.priceText } : {}),
     ...(row.changeText ? { changeText: row.changeText } : {}),
@@ -2377,7 +2385,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       currency: candidate.country === "US" ? "USD" : "KRW",
     });
     front.wyckoff = wyckoff;
-    front.companyScore = computeCompanyScore({
+    front.score = computeCompanyScore({
       signals: front.signals,
       verdict: front.verdict,
       wyckoff,

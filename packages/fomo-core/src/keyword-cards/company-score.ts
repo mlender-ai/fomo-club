@@ -13,6 +13,15 @@ export interface CompanyScoreAxis {
   evidence: string[];
 }
 
+export interface CompanyScoreAxisState {
+  key: CompanyScoreAxisKey;
+  label: string;
+  status: "available" | "missing";
+  score: number | null;
+  evidence: string[];
+  missingReason?: "데이터 없음";
+}
+
 export interface CompanyFinancialScoreInput {
   currentPer?: number;
   currentPbr?: number;
@@ -47,9 +56,11 @@ export interface CompanyScoreInput {
 
 export interface CompanyScoreResult {
   score: number | null;
+  status: "ready" | "accumulating";
   label: string;
   interpretation: string;
   axes: CompanyScoreAxis[];
+  axisStates: CompanyScoreAxisState[];
   availableAxisCount: number;
   omittedAxes: CompanyScoreAxisKey[];
   asOf?: string;
@@ -163,12 +174,11 @@ function profitabilityAxis(financials: CompanyFinancialScoreInput | undefined): 
   };
 }
 
-function flowAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
+function flowAxis(input: CompanyScoreInput): CompanyScoreAxis {
   const foreign = input.signals?.foreignNetStreak;
   const institution = input.signals?.institutionNetStreak;
   const whale = input.whaleStrength;
   const quietMoney = input.quietMoney;
-  if (!finite(foreign) && !finite(institution) && input.insiderPurchaseConfirmed !== true && !finite(whale) && !quietMoney?.cluster) return undefined;
   let score = 50;
   const evidence: string[] = [];
   if (finite(foreign) && foreign !== 0) {
@@ -191,13 +201,13 @@ function flowAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
     score += quietMoney.cluster.strength * 4;
     evidence.push(`${quietMoney.cluster.headline} · 강도 ${quietMoney.cluster.strength}/5`);
   }
+  if (evidence.length === 0) evidence.push("확인된 연속 수급·내부자·고래 유입 신호 없음");
   return { key: "flow", label: AXIS_LABEL.flow, score: Math.round(clamp(score)), evidence };
 }
 
-function chartAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
+function chartAxis(input: CompanyScoreInput): CompanyScoreAxis {
   const phase = input.wyckoff?.currentZone?.kind ?? input.verdict?.phase;
   const events = input.wyckoff?.events ?? [];
-  if (!phase && events.length === 0 && !finite(input.verdict?.invalidationLevel)) return undefined;
   const phaseScore = { accumulation: 74, markup: 64, distribution: 26, markdown: 30 } as const;
   let score = phase ? phaseScore[phase] : 50;
   const evidence: string[] = [];
@@ -215,6 +225,7 @@ function chartAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
     else if (distance < 0) score -= 16;
     evidence.push(`무효선 거리 ${pct(distance)}`);
   }
+  if (evidence.length === 0) evidence.push("판정 가능한 차트 구간·이벤트 없음");
   return { key: "chart", label: AXIS_LABEL.chart, score: Math.round(clamp(score)), evidence };
 }
 
@@ -262,13 +273,46 @@ function scoreLabel(axes: readonly CompanyScoreAxis[], input: CompanyScoreInput)
 }
 
 function interpretation(axes: readonly CompanyScoreAxis[], label: string): string {
-  if (axes.length === 0) return "계산에 필요한 실데이터가 아직 부족해 종합 점수를 보류했어요.";
+  if (axes.length < 3) return "검증 가능한 분석 축이 3개 미만이라 종합 점수를 보류했어요.";
   const sorted = [...axes].sort((a, b) => b.score - a.score);
   const top = sorted[0]!;
   const bottom = sorted.at(-1)!;
   const leadEvidence = top.evidence[0] ?? "확인된 근거";
   if (top.key === bottom.key) return `${label}. ${leadEvidence}를 근거로 계산했어요.`;
   return `${label}. 가장 강한 축은 ${top.label} ${top.score}점(${leadEvidence})이고, ${bottom.label} ${bottom.score}점이 상대적으로 약해요.`;
+}
+
+function axisStates(axes: readonly CompanyScoreAxis[]): CompanyScoreAxisState[] {
+  return ALL_AXES.map((key) => {
+    const axis = axisOf(axes, key);
+    return axis
+      ? { ...axis, status: "available" as const }
+      : {
+          key,
+          label: AXIS_LABEL[key],
+          status: "missing" as const,
+          score: null,
+          evidence: [],
+          missingReason: "데이터 없음" as const,
+        };
+  });
+}
+
+function resultFromAxes(axes: CompanyScoreAxis[], input: CompanyScoreInput, asOf?: string): CompanyScoreResult {
+  const ready = axes.length >= 3;
+  const score = ready ? Math.round(axes.reduce((sum, axis) => sum + axis.score, 0) / axes.length) : null;
+  const label = ready ? scoreLabel(axes, input) : "분석 축적 중";
+  return {
+    score,
+    status: ready ? "ready" : "accumulating",
+    label,
+    interpretation: interpretation(axes, label),
+    axes,
+    axisStates: axisStates(axes),
+    availableAxisCount: axes.length,
+    omittedAxes: ALL_AXES.filter((key) => !axes.some((axis) => axis.key === key)),
+    ...(asOf ? { asOf } : {}),
+  };
 }
 
 export function computeCompanyScore(input: CompanyScoreInput): CompanyScoreResult {
@@ -280,17 +324,7 @@ export function computeCompanyScore(input: CompanyScoreInput): CompanyScoreResul
     chartAxis(input),
     quietAxis(input.quiet),
   ].filter((axis): axis is CompanyScoreAxis => axis !== undefined);
-  const score = axes.length > 0 ? Math.round(axes.reduce((sum, axis) => sum + axis.score, 0) / axes.length) : null;
-  const label = scoreLabel(axes, input);
-  return {
-    score,
-    label,
-    interpretation: interpretation(axes, label),
-    axes,
-    availableAxisCount: axes.length,
-    omittedAxes: ALL_AXES.filter((key) => !axes.some((axis) => axis.key === key)),
-    ...(input.asOf ? { asOf: input.asOf } : {}),
-  };
+  return resultFromAxes(axes, input, input.asOf);
 }
 
 export function withCompanyQuietScore(
@@ -300,18 +334,8 @@ export function withCompanyQuietScore(
 ): CompanyScoreResult {
   const quietScoreAxis = quietAxis(quiet);
   const axes = [...(base?.axes ?? []).filter((axis) => axis.key !== "quiet"), ...(quietScoreAxis ? [quietScoreAxis] : [])];
-  const score = axes.length > 0 ? Math.round(axes.reduce((sum, axis) => sum + axis.score, 0) / axes.length) : null;
-  const label = scoreLabel(axes, {});
   const resultAsOf = asOf ?? base?.asOf;
-  return {
-    score,
-    label,
-    interpretation: interpretation(axes, label),
-    axes,
-    availableAxisCount: axes.length,
-    omittedAxes: ALL_AXES.filter((key) => !axes.some((axis) => axis.key === key)),
-    ...(resultAsOf ? { asOf: resultAsOf } : {}),
-  };
+  return resultFromAxes(axes, {}, resultAsOf);
 }
 
 /** 카드에서 찍힌 기준 시점 점수를 상세에서도 고정한다. 검색 진입처럼 seed가 없을 때만 최신 점수를 쓴다. */

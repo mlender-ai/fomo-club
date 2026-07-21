@@ -6,16 +6,11 @@ import {
   cleanText,
   cleanQuote,
   communityWordings,
-  fomoCardView,
-  fomoStateSummary,
-  selectFomoHook,
   translateTaFact,
-  confidenceGrade,
   mergeCompanyScoreResults,
   normalizeQuietMoneyDate,
   type DailyOhlcv,
   type KeywordCard,
-  type FomoTone,
   type StockCountry,
   type StockMarket,
   type WyckoffAnalysis,
@@ -33,7 +28,7 @@ import {
 } from "@/lib/fomoApi";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { describe52wGap, describeRsi } from "@/lib/depthCopy";
-import { discoveryStatus, verdictBalance } from "@/lib/discoveryPresentation";
+import { verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
 import { JudgmentTimeline } from "@/components/JudgmentTimeline";
@@ -343,7 +338,7 @@ export interface StockContext {
   fromTheme?: string;
   /** 피드 60장 기준 다축 셀렉터가 고른 카드 헤드라인. 상세에서도 같은 관통선을 유지한다. */
   axisHeadline?: string | undefined;
-  /** 발견 덱이 이미 가진 가격·포모·차트 seed. 상세 fetch 실패 시 비어 보이지 않게 한다. */
+  /** 발견 덱이 이미 가진 가격·점수·차트 seed. 상세 fetch 실패 시 비어 보이지 않게 한다. */
   frontSeed?: StockFrontResponse | undefined;
   /** 발견 공급 엔진이 가진 네이버 종목 코드. STOCK_VOCAB 미등록 발견주 기본지표 조회용. */
   naverCode?: string | undefined;
@@ -369,13 +364,10 @@ function mergeFrontSeed(
 ): StockFrontResponse | null {
   if (!hasUsableFront(seed)) return fresh ?? null;
   if (!hasUsableFront(fresh)) return seed;
-  const companyScore = mergeCompanyScoreResults(seed.companyScore, fresh.companyScore);
+  const score = mergeCompanyScoreResults(seed.score, fresh.score);
   return {
     signals: { ...seed.signals, ...fresh.signals },
-    // 상태 배지 단일 진실(카드=뎁스 모순 금지) — 카드(seed)의 포모 라벨 우선. 라이브 재계산(fresh)은
-    // 시점·입력이 달라 "카드는 '가격 먼저'인데 뎁스는 '주목 집중'" 불일치를 만든다(2026-07-17 User Zero).
-    fomo: seed.fomo ?? fresh.fomo,
-    ...(companyScore ? { companyScore } : {}),
+    ...(score ? { score } : {}),
     ...(fresh.quietMoney ?? seed.quietMoney ? { quietMoney: fresh.quietMoney ?? seed.quietMoney } : {}),
     ...(seed.committeeReview ?? fresh.committeeReview
       ? { committeeReview: seed.committeeReview ?? fresh.committeeReview }
@@ -593,15 +585,6 @@ function StockFundamentalsBlock({ basics, front }: { basics: StockBasics | null;
   );
 }
 
-/** 포모 톤 → 색(카드 ②와 동일 매핑, 단일 출처 일관). */
-const DETAIL_TONE_COLOR: Record<FomoTone, string> = {
-  hot: "#D8FF3A",
-  incoming: "#A855F7",
-  warming: "#F59E0B",
-  calm: "#94A3B8",
-  cooling: "#3B82F6",
-};
-
 function shortSignalLabel(text: string | undefined, max = 24): string | undefined {
   const cleaned = cleanText(text ?? "").replace(/\s+/g, " ").trim();
   if (!cleaned) return undefined;
@@ -639,47 +622,6 @@ function stockWatchPoint(front: StockFrontResponse | null): string {
     return `${translateTaFact(front.taFact)} 흐름이 이어지는지 봐요.`;
   }
   return "새로 확인되는 수급·거래 신호가 있는지 봐요.";
-}
-
-/**
- * 포모 상태 히어로(척추 ③ 주인공) — 큰 포모 점수(C) + 라벨 + 근거등급 + 왜(해부).
- * 카드(②)와 *동일 출처*(fetchStockFront 의 FomoScoreResult). 강도 비례 톤, 예측·판정 0.
- */
-function FomoHero({ front, rankLabel, headlineOverride }: { front: StockFrontResponse | null; rankLabel?: string; headlineOverride?: string }) {
-  if (!front) {
-    return <div className="h-24 animate-pulse rounded-xl border border-hairline bg-surface" />;
-  }
-  const { fomo } = front;
-  const hook = selectFomoHook({
-    fomo,
-    signals: front.signals,
-    ...(front.taFact ? { taFact: front.taFact } : {}),
-  });
-  const view = { ...fomoCardView(fomo), headline: hook.headline };
-  view.headline = headlineOverride ?? front.axisHook?.hookText ?? view.headline;
-  const tone = DETAIL_TONE_COLOR[view.tone] ?? "#94A3B8";
-  const grade = confidenceGrade(fomo.confidence);
-  return (
-    <section className="rounded-2xl border border-hairline bg-surface p-5">
-      <div className="flex items-center justify-between">
-        <span className="font-pixel text-xs text-muted">포모 상태</span>
-        {rankLabel && <span className="font-pixel text-[11px] text-muted">{rankLabel}</span>}
-      </div>
-      <div className="mt-1.5 flex items-end gap-2">
-        <span className="font-number text-4xl font-bold leading-none" style={{ color: tone }}>
-          {view.scoreText ? fomo.fomoScore : "—"}
-        </span>
-        <span className="pb-1 text-base font-bold" style={{ color: tone }}>
-          {view.emoji && <span aria-hidden>{view.emoji} </span>}
-          {view.badge}
-        </span>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-whiteout">{view.headline}</p>
-      <span className="mt-3 inline-flex items-center rounded-full border border-hairline px-2.5 py-1 font-pixel text-[11px] text-muted">
-        {grade}
-      </span>
-    </section>
-  );
 }
 
 type MovementRange = "1m" | "3m";
@@ -1230,7 +1172,7 @@ function readGuideLead(front: StockFrontResponse | null, insight: CondensedInsig
   if (front && points.bull.length === 0 && points.bear.length === 0) {
     return "아직 강한 근거는 적어요. 확인된 가격·차트·수급만 분리해서 봐요.";
   }
-  return front ? fomoStateSummary(front.fomo) : "";
+  return front?.verdict?.stanceText ?? "확인된 가격·차트·수급 근거를 나눠 확인해요.";
 }
 
 function PointList({ title, tone, points, empty }: { title: string; tone: string; points: ReadPoint[]; empty: string }) {
@@ -1560,10 +1502,14 @@ function DiscoveryOverview({
   insight: CondensedInsight | null;
   context?: StockContext | undefined;
 }) {
-  const status = discoveryStatus(front?.fomo);
   const balance = verdictBalance(front?.verdict);
+  const status = balance ?? {
+    label: "근거 확인 중",
+    summary: "확인된 가격·차트·수급 근거를 기준으로 보여줘요.",
+    color: "#8A8A86",
+  };
   const trigger = movementTrigger(front, insight, context);
-  const asOf = front?.fomo.asOf;
+  const asOf = front?.score?.asOf ?? front?.signals.asOf;
   const source = context?.sourceLabel ?? front?.signals.newsEventSource;
   const chips = [
     finiteNumber(front?.signals.volumeRatio) && front.signals.volumeRatio >= 0.1
@@ -2564,7 +2510,7 @@ export function StockInsightView({
   // 기본 정보(바닥) — 원문 무관 객관 사실. 빠른 네이버 fetch라 해석(LLM)과 분리해 먼저 깐다.
   const [basics, setBasics] = useState<StockBasics | null>(null);
   const [basicsLoaded, setBasicsLoaded] = useState(false);
-  // 포모 상태(히어로) — 카드(②)와 동일 출처(FomoScoreResult). 단일 출처 보장.
+  // 카드와 동일한 백엔드 점수 스냅샷을 상세에서도 유지한다.
   const [front, setFront] = useState<StockFrontResponse | null>(context?.frontSeed ?? null);
   const [frontLoaded, setFrontLoaded] = useState(!!context?.frontSeed);
   // 뎁스 2탭 — 기본 '왜 움직였나'. 종목 바뀌면 리셋.
@@ -2692,7 +2638,7 @@ export function StockInsightView({
           <>
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
-          <CompanyScoreRadar result={front?.companyScore} />
+          <CompanyScoreRadar result={front?.score} />
           <ExpertCommitteeReview review={front?.committeeReview} />
           <DiscoveryOverview front={front} insight={insight} context={context} />
           <QuietMoneyBlock timeline={front?.quietMoney} />

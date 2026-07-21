@@ -18,7 +18,7 @@ function card(canonical: string): DeckCard {
 }
 
 function front(signalTypes: NonNullable<FrontEntry["signalTypes"]>): FrontEntry {
-  return { signals: {}, fomo: {} as never, sparkline: [], signalTypes };
+  return { signals: {}, sparkline: [], signalTypes };
 }
 
 describe("judgment review taste seed", () => {

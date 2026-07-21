@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { computeFomoScore } from "@fomo/core";
 import type { DeckStock } from "../lib/discoveryDeck";
 import { whyShown } from "../lib/whyShown";
 
@@ -18,7 +17,6 @@ describe("whyShown", () => {
   it("uses grounded discovery reason as the highest-priority display reason", () => {
     const text = whyShown({
       stock: { ...baseStock, reason: "실리콘 음극재 원문 근거" },
-      fomoLabel: "incoming",
       signals: { mentionScore: 90, mentionCount: 6 },
     });
 
@@ -46,12 +44,10 @@ describe("whyShown", () => {
     expect(text).not.toMatch(FORBIDDEN);
   });
 
-  it("explains incoming stocks without sounding like investment advice", () => {
-    const incoming = computeFomoScore({ foreignNetStreak: 4, changePct: 0.3 });
-    const text = whyShown({ stock: baseStock, fomoLabel: incoming.label });
+  it("explains incoming supply from observed streaks", () => {
+    const text = whyShown({ stock: baseStock, signals: { foreignNetStreak: 4, changePct: 0.3 } });
 
-    expect(incoming.label).toBe("incoming");
-    expect(text).toBe("아직 조용한데 수급이 먼저 들어오는 중이에요.");
+    expect(text).toContain("외국인");
     expect(text).not.toMatch(FORBIDDEN);
   });
 

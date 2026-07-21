@@ -103,6 +103,18 @@ function jsonSafe(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== "_ledger")
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
 function normalizeDate(value: string | undefined, ts: Date): string {
   if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(ts);
@@ -124,6 +136,18 @@ export function ledgerKey(...parts: Array<string | number | undefined>): string 
   return createHash("sha256").update(parts.map((part) => String(part ?? "")).join("\u001f")).digest("hex");
 }
 
+/** Actor와 재시도 시각을 제외한 원장 내용 자체의 멱등 키. */
+export function ledgerContentKey(input: Pick<LedgerAppendInput, "date" | "ts" | "subject" | "kind" | "payload">): string {
+  const ts = input.ts ?? new Date();
+  return ledgerKey(
+    normalizeDate(input.date, ts),
+    input.subject.asset,
+    input.subject.canonical.trim(),
+    input.kind,
+    stableJson(input.payload)
+  );
+}
+
 export function userLedgerActor(input: { userId?: string | null; sessionId?: string | null }): `user:${string}` | null {
   if (input.userId?.trim()) return `user:uid:${ledgerKey(input.userId.trim()).slice(0, 32)}`;
   if (input.sessionId?.trim()) return `user:session:${ledgerKey(input.sessionId.trim()).slice(0, 32)}`;
@@ -137,19 +161,52 @@ export function userLedgerActor(input: { userId?: string | null; sessionId?: str
 export async function appendJudgmentLedger(entries: readonly LedgerAppendInput[]): Promise<number> {
   if (entries.length === 0) return 0;
   for (const entry of entries) assertAppendInput(entry);
-  const rows = entries.map((entry) => {
+  const normalized = entries.map((entry) => {
     const ts = entry.ts ?? new Date();
+    return { entry, ts, date: normalizeDate(entry.date, ts), contentKey: ledgerContentKey({ ...entry, ts }) };
+  });
+  const scoreLookups = normalized.filter(({ entry }) => entry.kind === "score");
+  const previousScores = scoreLookups.length > 0
+    ? await prisma.judgmentLedger.findMany({
+        where: {
+          kind: "score",
+          OR: scoreLookups.map(({ entry, date }) => ({
+            date,
+            asset: entry.subject.asset,
+            canonical: entry.subject.canonical.trim(),
+          })),
+        },
+        orderBy: { ts: "desc" },
+        select: { id: true, date: true, asset: true, canonical: true, payload: true },
+      })
+    : [];
+  const latestScore = new Map<string, (typeof previousScores)[number]>();
+  for (const row of previousScores) {
+    const key = `${row.date}\u001f${row.asset}\u001f${row.canonical}`;
+    if (!latestScore.has(key)) latestScore.set(key, row);
+  }
+  const rows = normalized.map(({ entry, ts, date, contentKey }) => {
+    let payload: Record<string, unknown> = entry.payload;
+    if (entry.kind === "score") {
+      const previous = latestScore.get(`${date}\u001f${entry.subject.asset}\u001f${entry.subject.canonical.trim()}`);
+      if (previous && stableJson(previous.payload) !== stableJson(entry.payload)) {
+        payload = {
+          ...entry.payload,
+          _ledger: { supersedes: previous.id, reason: "same-day-recalculation" },
+        };
+      }
+    }
     return {
-      date: normalizeDate(entry.date, ts),
+      date,
       ts,
       asset: entry.subject.asset,
       canonical: entry.subject.canonical.trim(),
       symbol: entry.subject.symbol?.trim() || null,
       kind: entry.kind,
-      payload: jsonSafe(entry.payload),
+      payload: jsonSafe(payload),
       priceAt: new Prisma.Decimal(entry.priceAt),
       actor: entry.actor,
-      idempotencyKey: entry.idempotencyKey,
+      idempotencyKey: contentKey,
     };
   });
   const result = await prisma.judgmentLedger.createMany({ data: rows, skipDuplicates: true });
@@ -188,9 +245,11 @@ function cleanScore(score: CompanyScoreResult | undefined): Record<string, unkno
   if (!score || typeof score.score !== "number") return null;
   return {
     score: score.score,
+    status: score.status,
     label: score.label,
     interpretation: score.interpretation,
     axes: score.axes,
+    axisStates: score.axisStates,
     availableAxisCount: score.availableAxisCount,
     omittedAxes: score.omittedAxes,
     ...(score.asOf ? { asOf: score.asOf } : {}),
@@ -230,10 +289,10 @@ export function buildDaily30LedgerEntries(
       ...(front?.signals ? { signals: front.signals } : {}),
       ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
       ...(front?.quietMoney ? { quietMoney: front.quietMoney } : {}),
-      ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
+      ...(typeof front?.score?.score === "number" ? { companyScore: front.score.score } : {}),
     });
-    const score = cleanScore(front?.companyScore);
-    const baseKey = `${date}:${resolvedActor}:${asset}:${stock.symbol ?? stock.naverCode ?? stock.canonical}`;
+    const score = cleanScore(front?.score);
+    const baseKey = `${date}:${asset}:${stock.symbol ?? stock.naverCode ?? stock.canonical}`;
     entries.push({
       date,
       subject,
@@ -273,7 +332,7 @@ export function buildDaily30LedgerEntries(
         idempotencyKey: ledgerKey(baseKey, "score"),
       });
     }
-    const band = scoreBand(front?.companyScore?.score);
+    const band = scoreBand(front?.score?.score);
     const selectionPayload: LedgerSelectionPayload = {
       ...(stock.headline ? { headline: stock.headline } : {}),
       ...(stock.market ? { market: stock.market } : {}),
@@ -283,9 +342,9 @@ export function buildDaily30LedgerEntries(
       ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
       signalTypes: signals,
       ...(meta ? { quietScore: meta.quietScore, signalScore: meta.signalScore, hypePenalty: meta.hypePenalty } : {}),
-      ...(front?.companyScore?.score != null ? { companyScore: front.companyScore.score } : {}),
+      ...(front?.score?.score != null ? { companyScore: front.score.score } : {}),
       ...(band ? { scoreBand: band } : {}),
-      ...(front?.companyScore?.label ? { companyScoreLabel: front.companyScore.label } : {}),
+      ...(front?.score?.label ? { companyScoreLabel: front.score.label } : {}),
       ...(response.meta.committee?.runId ? { committeeRunId: response.meta.committee.runId } : {}),
       stock,
       ...(front ? { front } : {}),
@@ -343,7 +402,7 @@ function asSelection(row: {
     : null;
   if (!payload) return null;
   const storedSignalTypes = normalizeSignalTypeCodes(Array.isArray(payload.signalTypes) ? payload.signalTypes : []);
-  const projectedCompanyScore = payload.companyScore ?? payload.front?.companyScore?.score;
+  const projectedCompanyScore = payload.companyScore ?? payload.front?.score?.score;
   const projectedSignalTypes = storedSignalTypes.length > 0
     ? storedSignalTypes
     : inferStandardSignalTypes({
@@ -571,6 +630,73 @@ export function projectTimelineSignalTypes(
   return normalizeSignalTypeCodes([...stored, ...inferred, ...selectionTypes]);
 }
 
+function timelineScore(entry: LedgerTimelineEntry): number | undefined {
+  if (entry.kind !== "score") return undefined;
+  return typeof entry.payload.score === "number" ? entry.payload.score : undefined;
+}
+
+function selectionScore(entry: LedgerTimelineEntry | undefined): number | undefined {
+  if (!entry || entry.kind !== "selection") return undefined;
+  if (typeof entry.payload.companyScore === "number") return entry.payload.companyScore;
+  const front = entry.payload.front;
+  if (!front || typeof front !== "object" || Array.isArray(front)) return undefined;
+  const score = (front as Record<string, unknown>).score;
+  return score && typeof score === "object" && !Array.isArray(score) && typeof (score as Record<string, unknown>).score === "number"
+    ? (score as Record<string, number>).score
+    : undefined;
+}
+
+function timelinePriority(entry: LedgerTimelineEntry, preferredActor?: string): number {
+  const preferred = preferredActor && entry.actor === preferredActor ? 100 : 0;
+  const actor = entry.actor === "committee" ? 30 : entry.actor === "engine" ? 20 : entry.actor === "backfill" ? 10 : 0;
+  return preferred + actor;
+}
+
+/** Append-only 원장에서 화면에 보여줄 당일 최종 상태만 투영한다. 원본 행은 삭제하지 않는다. */
+export function projectFinalTimeline(entries: readonly LedgerTimelineEntry[]): LedgerTimelineEntry[] {
+  const exact = new Map<string, LedgerTimelineEntry>();
+  for (const entry of entries) {
+    const key = `${entry.date}\u001f${entry.kind}\u001f${stableJson(entry.payload)}`;
+    const current = exact.get(key);
+    const priority = timelinePriority(entry);
+    const currentPriority = current ? timelinePriority(current) : -1;
+    if (!current || priority > currentPriority || (priority === currentPriority && entry.ts > current.ts)) exact.set(key, entry);
+  }
+  const rows = [...exact.values()];
+  const byDate = new Map<string, LedgerTimelineEntry[]>();
+  for (const row of rows) byDate.set(row.date, [...(byDate.get(row.date) ?? []), row]);
+  const projected: LedgerTimelineEntry[] = [];
+  for (const dateRows of byDate.values()) {
+    const selections = dateRows.filter((row) => row.kind === "selection");
+    const finalSelection = selections.sort((a, b) =>
+      timelinePriority(b) - timelinePriority(a) || b.ts.localeCompare(a.ts)
+    )[0];
+    const preferredActor = finalSelection?.actor;
+    const pickFinal = (candidates: LedgerTimelineEntry[]) => candidates.sort((a, b) =>
+      timelinePriority(b, preferredActor) - timelinePriority(a, preferredActor) || b.ts.localeCompare(a.ts)
+    )[0];
+    if (finalSelection) projected.push(finalSelection);
+    for (const kind of ["signal", "verdict"] as const) {
+      const row = pickFinal(dateRows.filter((item) => item.kind === kind));
+      if (row) projected.push(row);
+    }
+    const scores = dateRows.filter((row) => row.kind === "score");
+    const targetScore = selectionScore(finalSelection);
+    const matching = typeof targetScore === "number" ? scores.filter((row) => timelineScore(row) === targetScore) : [];
+    const score = pickFinal(matching.length > 0 ? matching : scores);
+    if (score) projected.push(score);
+    const passthrough = new Map<string, LedgerTimelineEntry>();
+    for (const row of dateRows.filter((item) => item.kind === "user_action" || item.kind === "outcome")) {
+      const discriminator = row.kind === "user_action" ? row.payload.action : row.payload.windowDays;
+      const key = `${row.kind}\u001f${row.actor}\u001f${String(discriminator ?? "")}\u001f${stableJson(row.payload)}`;
+      const current = passthrough.get(key);
+      if (!current || row.ts > current.ts) passthrough.set(key, row);
+    }
+    projected.push(...passthrough.values());
+  }
+  return projected.sort((a, b) => b.ts.localeCompare(a.ts));
+}
+
 export async function readSubjectTimeline(
   canonical: string,
   take = 80,
@@ -579,7 +705,7 @@ export async function readSubjectTimeline(
   const rows = await prisma.judgmentLedger.findMany({
     where: {
       canonical,
-      actor: { in: ["engine", "committee", ...userActors] },
+      actor: { in: ["engine", "committee", "backfill", ...userActors] },
     },
     orderBy: { ts: "desc" },
     take: Math.max(1, Math.min(take, 200)),
@@ -592,7 +718,7 @@ export async function readSubjectTimeline(
     selectionTypes.set(`${row.date}\u001f${row.actor}`, selection.payload.signalTypes);
     if (!selectionTypes.has(row.date)) selectionTypes.set(row.date, selection.payload.signalTypes);
   }
-  return rows.map((row) => {
+  const timeline = rows.map((row) => {
     const payload = row.payload as Record<string, unknown>;
     const projected = row.kind === "signal"
       ? projectTimelineSignalTypes(
@@ -612,4 +738,5 @@ export async function readSubjectTimeline(
         : payload,
     };
   });
+  return projectFinalTimeline(timeline).slice(0, Math.max(1, Math.min(take, 200)));
 }

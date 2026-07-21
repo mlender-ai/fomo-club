@@ -81,7 +81,7 @@ export interface CommitteeCandidateInput {
     signals: DiscoveryFrontSeed["signals"];
     verdict?: DiscoveryFrontSeed["verdict"];
     wyckoff?: DiscoveryFrontSeed["wyckoff"];
-    companyChartAxis?: DiscoveryFrontSeed["companyScore"];
+    companyChartAxis?: DiscoveryFrontSeed["score"];
     candleSummary: ReturnType<typeof summarizeCandles>;
   };
   financial: {
@@ -90,7 +90,7 @@ export interface CommitteeCandidateInput {
     metrics: StockBasics["metrics"];
     financials?: StockBasics["financials"];
     valuationHistory?: StockBasics["valuationHistory"];
-    scoreAxes: NonNullable<DiscoveryFrontSeed["companyScore"]>["axes"];
+    scoreAxes: NonNullable<DiscoveryFrontSeed["score"]>["axes"];
   };
 }
 
@@ -587,7 +587,7 @@ async function runEditor(
       assetClass: candidate.assetClass,
       sector: candidate.card.sector,
       headline: candidate.card.headline?.slice(0, 100),
-      companyScore: candidate.front.companyScore?.score,
+      companyScore: candidate.front.score?.score,
       quietScore: candidate.quietScore,
       timingGrade: trading.get(candidate.id)!.grade,
       valuationGrade: financial.get(candidate.id)!.grade,
@@ -612,7 +612,7 @@ async function runEditor(
       const bRank = gradeScore(bTrading.grade) + gradeScore(bFinancial.grade)
         + (bTrading.approved ? 1 : 0) + (bFinancial.approved ? 1 : 0);
       return bRank - aRank
-        || (b.front.companyScore?.score ?? -1) - (a.front.companyScore?.score ?? -1)
+        || (b.front.score?.score ?? -1) - (a.front.score?.score ?? -1)
         || b.quietScore - a.quietScore
         || a.id.localeCompare(b.id);
     })
@@ -669,7 +669,7 @@ async function candidateRecords(response: Daily30Response): Promise<CandidateRec
       },
       asOf: candidate.front.signals.asOf ?? response.asOf,
     });
-    const front: DiscoveryFrontSeed = { ...candidate.front, companyScore };
+    const front: DiscoveryFrontSeed = { ...candidate.front, score: companyScore };
     const scoreAxes = companyScore.axes;
     return {
       ...candidate,

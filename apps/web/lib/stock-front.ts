@@ -16,7 +16,6 @@ import {
   companyFinancialsFromBasics,
   type CardVerdict,
   type CardFrontSignals,
-  type FomoScoreResult,
   type DailyOhlcv,
   type TaFact,
   type TechnicalAnalysisSnapshot,
@@ -184,10 +183,8 @@ export async function fetchMarketCapRankMap(): Promise<Record<string, RankEntry>
 export interface StockFrontData {
   /** 엔진에 넣을 신호(가격·52주·수급 streak·시총순위·정체성). */
   signals: CardFrontSignals;
-  /** 포모 점수(척추) — C·L·라벨. 카드 점수/라벨/헤드라인의 단일 출처. */
-  fomo: FomoScoreResult;
-  /** 실데이터가 있는 축만 동일 가중치로 재정규화한 종합 기업 점수. */
-  companyScore?: CompanyScoreResult;
+  /** 백엔드가 확정한 종합 기업 점수. 프론트는 재계산하지 않는다. */
+  score: CompanyScoreResult;
   /** TA 셀렉터가 고른 사실 1개 — 점수/진열이 아니라 카드·상세 보조 문맥. */
   taFact?: TaFact;
   /** 차트분석(TA) 전체 스냅샷 — 뎁스 '차트분석' 탭용. 관측 서술 facts 배열(non-lite에서만). */
@@ -354,19 +351,13 @@ async function assembleUsCachedStockFront(
   mergeCoverageSignals(signals, coverage);
 
   const sparkline = row.sparkline?.filter((value) => typeof value === "number" && Number.isFinite(value)).slice(-42) ?? [];
-  const trend = trendStrength(sparkline);
-  const fomo = computeFomoScore({
-    ...(typeof signals.changePct === "number" ? { changePct: signals.changePct } : {}),
-    ...(typeof trend === "number" ? { trendStrength: trend } : {}),
-    ...(typeof signals.mentionScore === "number" ? { mentionScore: signals.mentionScore } : {}),
-  });
   const feedPoints = buildFeedPoints(signals, row.changeDir, row.changeText);
   const axisSignals = buildAxisSignals({ signals });
   const axisHook = selectMultiAxisHook(axisSignals);
 
   return {
     signals,
-    fomo,
+    score: computeCompanyScore({ signals, ...(signals.asOf ? { asOf: signals.asOf } : {}) }),
     sparkline,
     ...(row.priceText ? { priceText: row.priceText } : {}),
     ...(row.changeText ? { changeText: row.changeText } : {}),
@@ -388,7 +379,7 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     readLatestCoinMaterials().catch(() => null),
   ]);
   const snapshot = snapshots.find((s) => s.market.toUpperCase() === market);
-  if (!snapshot) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+  if (!snapshot) return { signals: {}, score: computeCompanyScore({}), sparkline: [] };
 
   const coinIssues = issuesForSymbol(materialCache, snapshot.symbol);
   const coinCause = buildCoinCause(snapshot, coinIssues);
@@ -420,7 +411,7 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
     ...(coinCause ? { coinCause } : {}),
   };
   if (lite) {
-    return { ...base, fomo: computeFomoScore({ ...signals }) };
+    return { ...base, score: computeCompanyScore({ signals, asOf: snapshot.fetchedAt }) };
   }
   const ta = computeTechnicalAnalysis(snapshot.candles);
   const trend = ta.inputs.trendStrength ?? trendStrength(sparkline);
@@ -451,12 +442,11 @@ async function assembleCoinStockFront(market: string, lite: boolean): Promise<St
   });
   return {
     ...base,
-    fomo,
+    score: companyScore,
     ...(taFact ? { taFact } : {}),
     ta,
     verdict,
     wyckoff,
-    companyScore,
     ...(chartSeries ? { chartSeries } : {}),
     // 캔들차트(Phase A) — 국·미와 동일하게 non-lite 에서 실제 일봉 제공.
     ...(snapshot.candles.length > 0 ? { candles: snapshot.candles.slice(-260) } : {}),
@@ -483,16 +473,16 @@ export async function assembleStockFront(
   const code = options.naverCode ?? def?.naverCode;
   if (!code) {
     const usSymbol = options.symbol?.trim().toUpperCase() ?? usSymbolForStock(stock);
-    if (!usSymbol) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+    if (!usSymbol) return { signals: {}, score: computeCompanyScore({}), sparkline: [] };
     const cachedFront = await assembleUsCachedStockFront(stock, coverage, { ...options, symbol: usSymbol }).catch(() => null);
-    if (options.lite === true) return cachedFront ?? { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+    if (options.lite === true) return cachedFront ?? { signals: {}, score: computeCompanyScore({}), sparkline: [] };
 
     const basicsPromise = fetchUsStockBasics(stock, usSymbol, false).catch(() => null);
     let daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
     if (daily.candles.length === 0) {
       daily = await fetchNasdaqDailyCandles(usSymbol, 365).catch(() => ({ candles: [], closes: [], volumes: [] }));
     }
-    if (!cachedFront && daily.closes.length === 0) return { signals: {}, fomo: computeFomoScore({}), sparkline: [] };
+    if (!cachedFront && daily.closes.length === 0) return { signals: {}, score: computeCompanyScore({}), sparkline: [] };
 
     const signals: CardFrontSignals = { ...(cachedFront?.signals ?? {}) };
     mergeCoverageSignals(signals, coverage);
@@ -540,12 +530,11 @@ export async function assembleStockFront(
     const chartSeries = buildChartSeries(daily.candles);
     return {
       signals,
-      fomo,
+      score: companyScore,
       ...(taFact ? { taFact } : {}),
       ta,
       verdict,
       wyckoff,
-      companyScore,
       ...(daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
       ...(chartSeries ? { chartSeries } : {}),
       sparkline,
@@ -628,11 +617,10 @@ export async function assembleStockFront(
 
   return {
     signals,
-    fomo,
+    score: companyScore,
     ...(taFact ? { taFact } : {}),
     ...(ta ? { ta } : {}),
     verdict,
-    companyScore,
     ...(!lite ? { wyckoff } : {}),
     ...(!lite && daily.candles.length > 0 ? { candles: daily.candles.slice(-260) } : {}),
     ...(chartSeries ? { chartSeries } : {}),

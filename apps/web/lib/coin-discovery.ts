@@ -1,4 +1,4 @@
-import { buildQuietMoneyTimeline, computeCardVerdict, computeCompanyScore, computeFomoScore, computeWyckoffAnalysis, isFrontHookSafe, normalizeQuietMoneyDate } from "@fomo/core";
+import { buildQuietMoneyTimeline, computeCardVerdict, computeCompanyScore, computeWyckoffAnalysis, isFrontHookSafe, normalizeQuietMoneyDate } from "@fomo/core";
 import type { CardFrontSignals, QuietMoneyEvent } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { readCoinMarketSnapshots, type CoinMarketSnapshot } from "./coin-market-source";
@@ -166,14 +166,13 @@ export function coinFrontSeed(
       ...signals,
       ...(primaryIssue ? { newsEventLabel: primaryIssue.title, newsEventSource: primaryIssue.source } : {}),
     },
-    fomo: computeFomoScore({ changePct, volumeRatio, asOf: kstDate() }),
     sparkline: closes.slice(-30),
     priceText: krw(snapshot.price),
     changeText: `${snapshot.changePct > 0 ? "+" : ""}${snapshot.changePct.toFixed(2)}%`,
     changeDir,
     verdict,
     wyckoff,
-    companyScore: computeCompanyScore({
+    score: computeCompanyScore({
       signals,
       verdict,
       wyckoff,

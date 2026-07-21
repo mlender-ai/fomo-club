@@ -79,7 +79,7 @@ function CardListRow({
   active: boolean;
   onSelect: () => void;
 }) {
-  const companyScore = card.type === "stock" ? front?.companyScore : undefined;
+  const companyScore = card.type === "stock" ? front?.score : undefined;
   const balance = card.type === "stock" ? verdictBalance(front?.verdict) : undefined;
   const title =
     card.type === "stock" ? card.data.canonical : card.type === "sector" ? `${card.data.sector} 섹터` : card.data.headline;

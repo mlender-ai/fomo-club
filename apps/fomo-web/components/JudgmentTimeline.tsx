@@ -18,6 +18,15 @@ const KIND_LABEL: Record<LedgerTimelineEntry["kind"], string> = {
   outcome: "성과",
 };
 
+const KIND_STYLE: Record<LedgerTimelineEntry["kind"], { icon: string; color: string }> = {
+  signal: { icon: "●", color: "#D8FF3A" },
+  verdict: { icon: "V", color: "#60A5FA" },
+  score: { icon: "#", color: "#D8FF3A" },
+  selection: { icon: "✓", color: "#FAFAFA" },
+  user_action: { icon: "★", color: "#A78BFA" },
+  outcome: { icon: "↗", color: "#C9C9C4" },
+};
+
 function summary(entry: LedgerTimelineEntry): string {
   const payload = entry.payload;
   if (entry.kind === "signal") {
@@ -74,12 +83,18 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
   if (visible.length === 0) return null;
   return (
     <section className="mt-4 border-y border-hairline py-4">
-      <div className="flex items-center justify-between">
-        <p className="font-pixel text-sm text-whiteout">판단 원장</p>
-        <span className="text-[10px] text-muted">수정되지 않는 시점 기록</span>
+      <div>
+        <div className="flex items-center justify-between">
+          <p className="font-pixel text-sm text-whiteout">이 종목 판단 기록</p>
+          <span className="text-[10px] text-muted">지워지지 않는 시점 기록</span>
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-muted">
+          포모클럽이 이 종목을 언제 뭐라 봤는지, 그때 가격과 함께 지워지지 않게 남긴 기록이에요.
+        </p>
       </div>
       <div className="mt-3 divide-y divide-hairline">
         {visible.map((entry) => {
+          const style = KIND_STYLE[entry.kind];
           const resumes = signalTypes(entry).flatMap((code) => {
             const metric = signalHistory30[code];
             return metric ? [{ code, metric }] : [];
@@ -87,7 +102,12 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
           return (
             <div key={`${entry.id}-${entry.date}`} className="grid grid-cols-[70px_1fr] gap-3 py-2.5">
               <div>
-                <p className="text-[10px] font-semibold text-muted">{KIND_LABEL[entry.kind]}</p>
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: style.color }}>
+                  <span aria-hidden className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[9px]" style={{ borderColor: style.color }}>
+                    {style.icon}
+                  </span>
+                  {KIND_LABEL[entry.kind]}
+                </p>
                 <p className="mt-0.5 font-number text-[10px] text-muted">{entry.date.slice(5)}</p>
               </div>
               <div className="min-w-0">

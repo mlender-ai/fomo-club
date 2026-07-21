@@ -48,7 +48,7 @@ export interface DiscoverySeenInput {
 
 interface PriceFront {
   priceText?: string;
-  companyScore?: { score: number | null; label: string };
+  score?: { score: number | null; label: string };
 }
 
 function parsePriceText(text: string | undefined): number | undefined {
@@ -106,7 +106,7 @@ export function recordDiscoverySeen(
   if (!stockName) return;
   const existing = memory.get(stockName);
   const price = parsePriceText(opts.front?.priceText);
-  const score = opts.front?.companyScore?.score;
+  const score = opts.front?.score?.score;
   const base: DiscoverySeenItem = existing ?? { stock: stockName, firstSeenAt: nowMs };
   const withinCaptureWindow = nowMs - base.firstSeenAt <= PRICE_CAPTURE_GRACE_MS;
   const next: DiscoverySeenItem = {
@@ -127,7 +127,7 @@ export function recordDiscoverySeen(
     ...(withinCaptureWindow && typeof score === "number" && typeof base.companyScore !== "number"
       ? {
           companyScore: score,
-          ...(opts.front?.companyScore?.label ? { companyScoreLabel: opts.front.companyScore.label } : {}),
+          ...(opts.front?.score?.label ? { companyScoreLabel: opts.front.score.label } : {}),
         }
       : {}),
   };

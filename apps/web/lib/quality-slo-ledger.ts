@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import { inferStandardSignalTypes } from "@fomo/core";
+import { computeCompanyScore, inferStandardSignalTypes } from "@fomo/core";
 import type { Daily30Response } from "./daily-30";
 import type { CommitteeRunReport } from "./expert-review-store";
 import {
@@ -214,7 +214,7 @@ export function calculateQualitySloSnapshot(input: {
     else stanceCounts.missing += 1;
     const verdictText = normalizedSentence(front?.verdict?.stanceText);
     if (verdictText) verdictTexts.push(verdictText);
-    for (const value of [stock.headline, stock.whyShown, stock.reason, front?.verdict?.stanceText, front?.companyScore?.interpretation]) {
+    for (const value of [stock.headline, stock.whyShown, stock.reason, front?.verdict?.stanceText, front?.score?.interpretation]) {
       const sentence = normalizedSentence(value);
       if (sentence) sentences.push(sentence);
     }
@@ -253,7 +253,7 @@ export function calculateQualitySloSnapshot(input: {
   stocks.forEach((stock, index) => {
     const front = response.fronts[stock.canonical];
     const hasFinancial = Boolean(front?.committeeReview?.fundamentalView?.trim()) || Boolean(
-      front?.companyScore?.axes.some((axis) => FINANCIAL_AXES.has(axis.key))
+      front?.score?.axes.some((axis) => FINANCIAL_AXES.has(axis.key))
     );
     const hasTheme = Boolean(stock.sector?.trim()) && stock.sector !== "기타 업종";
     const storedTypes = response.meta.cards[index]?.signalTypes ?? [];
@@ -265,7 +265,7 @@ export function calculateQualitySloSnapshot(input: {
       ...(front?.signals ? { signals: front.signals } : {}),
       ...(front?.wyckoff ? { wyckoff: front.wyckoff } : {}),
       ...(front?.quietMoney ? { quietMoney: front.quietMoney } : {}),
-      ...(typeof front?.companyScore?.score === "number" ? { companyScore: front.companyScore.score } : {}),
+      ...(typeof front?.score?.score === "number" ? { companyScore: front.score.score } : {}),
     });
     const hasSignalHistory = inferredTypes.length > 0;
     if (hasFinancial) financial += 1;
@@ -456,7 +456,7 @@ function legacyDaily30Response(
     row.subject.canonical,
     {
       signals: {},
-      fomo: {},
+      score: computeCompanyScore({}),
       sparkline: [],
       priceText: String(row.priceAt),
     } as unknown as Daily30Response["fronts"][string],

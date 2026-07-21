@@ -1,4 +1,4 @@
-import type { CardFrontSignals, FomoLabel, StockSector } from "@fomo/core";
+import type { CardFrontSignals, StockSector } from "@fomo/core";
 import { stocksBySector } from "@fomo/core";
 import { getWatchlist } from "./watchlist";
 import { stockInterestScore } from "./stockInterest";
@@ -9,7 +9,6 @@ const MAX_INLINE_REASON = 34;
 
 interface WhyShownInput {
   stock: DeckStock;
-  fomoLabel?: FomoLabel | undefined;
   signals?: CardFrontSignals | undefined;
   nowMs?: number | undefined;
 }
@@ -33,7 +32,7 @@ function compactInline(text: string | undefined): string {
   return clean.length > MAX_INLINE_REASON ? `${clean.slice(0, MAX_INLINE_REASON - 1)}…` : clean;
 }
 
-export function whyShown({ stock, fomoLabel, signals, nowMs = Date.now() }: WhyShownInput): string {
+export function whyShown({ stock, signals, nowMs = Date.now() }: WhyShownInput): string {
   if (stock.whyShown) return stock.whyShown;
   const changePct = signals?.changePct;
   const isDown = typeof changePct === "number" && changePct < -1;
@@ -57,6 +56,11 @@ export function whyShown({ stock, fomoLabel, signals, nowMs = Date.now() }: WhyS
   if (isDown && hasSupplyBuy) {
     const actor = foreign >= 3 && institution >= 3 ? "외국인·기관" : foreign >= 3 ? "외국인" : "기관";
     return `가격은 빠졌지만 ${actor} 수급이 이어져서 확인 대상으로 보여줘요.`;
+  }
+  if (hasSupplyBuy) {
+    const actor = foreign >= 3 && institution >= 3 ? "외국인·기관" : foreign >= 3 ? "외국인" : "기관";
+    const days = Math.max(foreign, institution);
+    return `${actor} 수급이 ${days}일 이어져서 확인 대상으로 보여줘요.`;
   }
   if (
     typeof signals?.themeAverageChangePct === "number" &&
@@ -86,9 +90,6 @@ export function whyShown({ stock, fomoLabel, signals, nowMs = Date.now() }: WhyS
   }
   if (stockInterestScore(stock.canonical, nowMs) >= HIGH_INTEREST_SCORE) {
     return "네가 자주 멈춘 종목 흐름과 닮았어요.";
-  }
-  if (fomoLabel === "incoming") {
-    return "아직 조용한데 수급이 먼저 들어오는 중이에요.";
   }
   if (
     mentionStrong

@@ -66,7 +66,9 @@ describe("daily-30 availability fallback", () => {
       readRecent: vi.fn(),
       buildDirect: vi.fn(),
     });
-    expect(result).toBe(current.response);
+    expect(result.stocks).toEqual(current.response.stocks);
+    expect(Object.keys(result.fronts)).toHaveLength(30);
+    expect(result.fronts["종목0"]?.score?.axisStates).toHaveLength(6);
     expect(result.meta.stale).toBeUndefined();
   });
 
