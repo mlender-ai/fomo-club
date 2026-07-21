@@ -29,6 +29,17 @@ async function main() {
     JSON.stringify({ date, count: cards.length, confidence }, null, 2)
   );
 
+  // 정직한 숫자: confidence="fallback" = 실 키워드 0건 → mock 카드다(KEYWORD_ENGINE_SPEC §5).
+  // 이걸 오늘 스냅샷으로 저장하면 (a) 마지막 정상 스냅샷을 mock 으로 덮어써 사용자가 보는 카드 신뢰도가 떨어지고,
+  // (b) 라우트 path 1 이 이 mock 을 stale=false 로 서빙해 "오늘 신선한 데이터"로 위장된다.
+  // → 저장을 건너뛰고 비정상 종료로 가시화한다. API 는 readLatestKeywordSnapshot(path 2)로
+  //   마지막 정상 스냅샷을 stale=true 로 계속 서빙하고, 파이프라인은 빨간불 + Slack 실패 알림으로 원인(수집 저하)을 노출한다.
+  if (confidence === "fallback") {
+    throw new Error(
+      `confidence=fallback (실 키워드 0건) — 스냅샷 저장 건너뜀(마지막 정상 스냅샷 보존). 수집 소스 점검 필요.`
+    );
+  }
+
   if (!process.env.DATABASE_URL) {
     console.log("[keywords:generate] DATABASE_URL 없음 — 드라이런(저장 안 함).");
     return;
