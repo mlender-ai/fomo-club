@@ -23,6 +23,10 @@ const FINAL_TARGET = 30;
 // 최종 30장보다 5장 많은 품질 후보면 편집 검수에 충분하다. 후보 40개 하드 게이트는
 // 소스가 얇은 날 35개 실후보가 있어도 분석가 호출 전에 전일본으로 후퇴시켰다.
 const MIN_CANDIDATES = FINAL_TARGET + 5;
+const COMMITTEE_ASSET_FLOORS: Readonly<Record<string, number>> = {
+  "us-stock": 8,
+  coin: 3,
+};
 // Groq free/developer 조직의 TPM을 넘지 않도록 입력을 압축하고 호출 수를 줄인다.
 // 후보 50장 기준 분석가 7콜 + 7콜, 편집장 1콜이다. 작은 배치와 25초 간격으로
 // 무료 조직 TPM을 시간축에 분산하고 각 Vercel stage는 300초 안에 끝낸다.
@@ -560,6 +564,47 @@ export function completeEditorSelectedIds(
   return selected.slice(0, targetCount);
 }
 
+/** 편집장 선택 뒤에도 daily-30 자산 다양성 바닥을 유지한다. 가용 후보 이상은 채우지 않는다. */
+export function enforceEditorAssetFloors(
+  selectedIds: readonly string[],
+  rankedEligibleIds: readonly string[],
+  assetById: Readonly<Record<string, string>>,
+  floors: Readonly<Record<string, number>> = COMMITTEE_ASSET_FLOORS
+): string[] {
+  const selected = [...selectedIds];
+  const availableCounts = rankedEligibleIds.reduce<Record<string, number>>((counts, id) => {
+    const asset = assetById[id];
+    if (asset) counts[asset] = (counts[asset] ?? 0) + 1;
+    return counts;
+  }, {});
+  const selectedCounts = selected.reduce<Record<string, number>>((counts, id) => {
+    const asset = assetById[id];
+    if (asset) counts[asset] = (counts[asset] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  for (const [asset, requestedFloor] of Object.entries(floors)) {
+    const floor = Math.min(requestedFloor, availableCounts[asset] ?? 0);
+    for (const candidateId of rankedEligibleIds) {
+      if ((selectedCounts[asset] ?? 0) >= floor) break;
+      if (assetById[candidateId] !== asset || selected.includes(candidateId)) continue;
+      const removableIndex = [...selected].reverse().findIndex((selectedId) => {
+        const selectedAsset = assetById[selectedId];
+        if (!selectedAsset) return true;
+        const selectedFloor = Math.min(floors[selectedAsset] ?? 0, availableCounts[selectedAsset] ?? 0);
+        return (selectedCounts[selectedAsset] ?? 0) > selectedFloor;
+      });
+      if (removableIndex < 0) break;
+      const index = selected.length - 1 - removableIndex;
+      const removedAsset = assetById[selected[index]!];
+      if (removedAsset) selectedCounts[removedAsset] = (selectedCounts[removedAsset] ?? 1) - 1;
+      selected[index] = candidateId;
+      selectedCounts[asset] = (selectedCounts[asset] ?? 0) + 1;
+    }
+  }
+  return selected;
+}
+
 async function runEditor(
   candidates: readonly CandidateRecord[],
   trading: Map<string, CheckedAnalystReview>,
@@ -619,7 +664,11 @@ async function runEditor(
         || a.id.localeCompare(b.id);
     })
     .map((candidate) => candidate.id);
-  const selected = completeEditorSelectedIds(output.selectedIds, rankedEligibleIds);
+  const selected = enforceEditorAssetFloors(
+    completeEditorSelectedIds(output.selectedIds, rankedEligibleIds),
+    rankedEligibleIds,
+    Object.fromEntries(eligible.map((candidate) => [candidate.id, candidate.assetClass]))
+  );
   if (selected.length !== FINAL_TARGET) {
     throw new Error(`editor selection invalid: ${selected.length}/${FINAL_TARGET}`);
   }

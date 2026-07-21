@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyAnalystFactGate,
   completeEditorSelectedIds,
+  enforceEditorAssetFloors,
   parseEditorOutput,
   runExpertReviewCommittee,
   runExpertReviewCommitteeStage,
@@ -122,6 +123,24 @@ describe("expert committee orchestration", () => {
     expect(completeEditorSelectedIds(ranked.slice(0, 28), ranked)).toEqual(ranked.slice(0, 30));
     expect(completeEditorSelectedIds(ranked.slice(0, 19), ranked)).toHaveLength(19);
     expect(completeEditorSelectedIds([ranked[0]!, ranked[0]!, "unknown", ...ranked.slice(1, 20)], ranked)).toHaveLength(30);
+  });
+
+  it("위원회 최종 30장에 가용한 미장 8장·코인 3장 바닥을 복원한다", () => {
+    const kr = Array.from({ length: 25 }, (_, index) => `kr-${index}`);
+    const us = Array.from({ length: 10 }, (_, index) => `us-${index}`);
+    const coin = Array.from({ length: 5 }, (_, index) => `coin-${index}`);
+    const ranked = [...kr, ...us, ...coin];
+    const assets = Object.fromEntries([
+      ...kr.map((id) => [id, "kr-stock"]),
+      ...us.map((id) => [id, "us-stock"]),
+      ...coin.map((id) => [id, "coin"]),
+    ]);
+
+    const selected = enforceEditorAssetFloors([...kr, ...us.slice(0, 5)], ranked, assets);
+
+    expect(selected).toHaveLength(30);
+    expect(selected.filter((id) => assets[id] === "us-stock")).toHaveLength(8);
+    expect(selected.filter((id) => assets[id] === "coin")).toHaveLength(3);
   });
 
   it("후보 35장이면 반려 여유 5장을 두고 승인 30장을 발행한다", async () => {
