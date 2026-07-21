@@ -570,7 +570,7 @@ export function StockSwipeDeck({
           setFront((prev) => ({
             ...prev,
             [key]: {
-              signals: d.signals,
+              signals: d.signals ?? {},
               ...(d.score ? { score: d.score } : {}),
               ...(d.taFact ? { taFact: d.taFact } : {}),
               sparkline: d.sparkline,
