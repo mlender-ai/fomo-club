@@ -178,7 +178,7 @@ function FeedSignalStrip({
             {row.label}
           </span>
           <span className="min-w-0 flex-1 text-muted" style={clampStyle(1)}>
-            {row.point.text}
+            {easyMarketCopy(row.point.text, "card")}
           </span>
           <span className="shrink-0 text-[10px] text-muted/80">{row.point.source}</span>
         </div>
@@ -296,7 +296,7 @@ function CompanyScoreBlock({
             {score?.score != null && <span className="text-[10px] font-semibold text-muted">점</span>}
           </div>
           <p className="min-w-0 truncate text-xs font-semibold text-whiteout">
-            {score?.score == null ? `가용 분석축 ${score?.availableAxisCount ?? 0}/6` : score.label}
+            {score?.score == null ? `가용 분석축 ${score?.availableAxisCount ?? 0}/6` : easyMarketCopy(score.label, "card")}
           </p>
         </div>
         {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
@@ -422,8 +422,8 @@ function StockCardFace({
 
           {subLine && !feedBull && !feedBear && (
             <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-1.5">
-              <span className="text-sm leading-5 text-muted" style={clampStyle(1)}>
-                {subLine}
+                <span className="text-sm leading-5 text-muted" style={clampStyle(1)}>
+                {easyMarketCopy(subLine, "card")}
               </span>
             </div>
           )}
@@ -434,13 +434,13 @@ function StockCardFace({
 
       {signalTrack && (
         <p className="mt-2 shrink-0 text-[11px] leading-4 text-muted">
-          {formatSignalResumeBadge(signalTrack.code, signalTrack.metric)}
+          {easyMarketCopy(formatSignalResumeBadge(signalTrack.code, signalTrack.metric), "card")}
         </p>
       )}
 
       {personalStrongSignal && (
         <p className="mt-1 shrink-0 text-[11px] font-semibold leading-4" style={{ color: NEON }}>
-          당신이 강한 신호 · {signalTypeLabel(personalStrongSignal)}
+          당신이 강한 신호 · {easyMarketCopy(signalTypeLabel(personalStrongSignal), "card")}
         </p>
       )}
 
