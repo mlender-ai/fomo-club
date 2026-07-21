@@ -702,14 +702,36 @@ export async function readSubjectTimeline(
   take = 80,
   userActors: readonly `user:${string}`[] = []
 ): Promise<LedgerTimelineEntry[]> {
-  const rows = await prisma.judgmentLedger.findMany({
+  const boundedTake = Math.max(1, Math.min(take, 200));
+  const publicRows = await prisma.judgmentLedger.findMany({
     where: {
       canonical,
-      actor: { in: ["engine", "committee", "backfill", ...userActors] },
+      actor: { in: ["engine", "committee", "backfill"] },
     },
     orderBy: { ts: "desc" },
-    take: Math.max(1, Math.min(take, 200)),
+    take: boundedTake,
   });
+  let userRows: typeof publicRows = [];
+  if (userActors.length > 0) {
+    try {
+      const batches = await Promise.all(
+        [...new Set(userActors)].map((actor) =>
+          prisma.judgmentLedger.findMany({
+            where: { canonical, actor },
+            orderBy: { ts: "desc" },
+            take: boundedTake,
+          })
+        )
+      );
+      userRows = batches.flat();
+    } catch (error) {
+      // A user-scoped lookup must never hide the immutable public timeline.
+      console.warn("[judgment-ledger] user timeline read failed", error);
+    }
+  }
+  const rows = [...publicRows, ...userRows]
+    .sort((a, b) => b.ts.getTime() - a.ts.getTime())
+    .slice(0, boundedTake);
   const selectionTypes = new Map<string, SignalTypeCode[]>();
   for (const row of rows) {
     if (row.kind !== "selection") continue;
