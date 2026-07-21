@@ -1,0 +1,33 @@
+name: Judgment Ledger Daily
+
+# WO-LASTMILE ② — 매일 원장을 이어붙이고 horizon(7/30/90일) 도래분 outcome 을 계산한다.
+# 선정(selection)은 daily-30 이 이미 스냅샷하지만, 원장 append + outcome 산출은 여기서 관철한다.
+# append 는 idempotencyKey+skipDuplicates 로 멱등 → 매일 전체 재적재해도 중복 0. 프로덕션 DB 대상.
+on:
+  schedule:
+    - cron: "30 22 * * *" # 07:30 KST — 전 거래일 마감·시세 반영 후
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: judgment-ledger-daily
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Append new selections (idempotent) + materialize due outcomes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npx tsx scripts/migrate-judgment-ledger.ts
+          npx tsx scripts/materialize-ledger-outcomes.ts
