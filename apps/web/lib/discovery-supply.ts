@@ -19,6 +19,8 @@ import {
   synthesizeDiscoveryInsight,
   computeCardVerdict,
   computeCompanyScore,
+  companyFinancialsFromBasics,
+  type StockBasics,
   computeWyckoffAnalysis,
   buildQuietMoneyTimeline,
   normalizeQuietMoneyDate,
@@ -50,6 +52,8 @@ import {
 } from "./dart-disclosures";
 import { fetchAllNews, fetchNaverCompanyResearch, fetchNaverStockNews, fetchYahooStockNews } from "./fomo-news-sources";
 import { readKrCandleCache, writeKrCandleCache } from "./kr-candle-cache";
+import { fetchStockBasics, fetchUsStockBasics } from "./stock-basics";
+import { usValuationBand } from "./us-valuation";
 import type { DiscoveryCountryScope, DiscoveryMarketRow } from "./market-source-types";
 import { relatedTo, type RelatedNode } from "./relation-graph";
 import { fetchRecentSecFilings } from "./sec-edgar";
@@ -2359,6 +2363,23 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   const dailyByTicker = new Map(
     dailyRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.daily] as const] : []))
   );
+  // 밸류축 연료(WO-LASTMILE ①) — 덱 score 는 여기서 만들어지므로 basics(KR 재무·US Nasdaq)를 받아
+  // financials 로 주입해야 valuation 이 fronts.score.axes 까지 흐른다. 없으면 밸류축 전종목 결손.
+  // daily-30 은 12h 캐시+크론 프리웜이라 이 추가 fetch 는 요청 경로 상시 비용이 아니다(fail-open).
+  const basicsRows = await mapLimit(ranked.slice(0, deckCardCount), SPARKLINE_CONCURRENCY, async (candidate) => {
+    const row = rowsByTicker.get(candidate.ticker);
+    if (candidate.naverCode) {
+      return { ticker: candidate.ticker, basics: await fetchStockBasics(candidate.ticker, candidate.naverCode).catch(() => null) };
+    }
+    const usSymbol = row?.symbol;
+    if (candidate.country === "US" && usSymbol) {
+      return { ticker: candidate.ticker, basics: await fetchUsStockBasics(row?.canonical ?? candidate.ticker, usSymbol, false).catch(() => null) };
+    }
+    return { ticker: candidate.ticker, basics: null as StockBasics | null };
+  });
+  const basicsByTicker = new Map(
+    basicsRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.basics] as const] : []))
+  );
   ranked = attachReachedVolumeEvents(ranked, rowsByTicker, dailyByTicker, asOf);
   if (scope !== "US") {
     ranked = await hydrateReachedWhySynthesis(ranked, allowAiSynthesis);
@@ -2385,7 +2406,15 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       currency: candidate.country === "US" ? "USD" : "KRW",
     });
     front.wyckoff = wyckoff;
+    // 밸류축 주입(WO-LASTMILE ①): KR=네이버 재무(PER/PBR 밴드), US=Nasdaq+일봉 PSR 역산.
+    const basics = basicsByTicker.get(candidate.ticker) ?? null;
+    let financials = companyFinancialsFromBasics(basics);
+    if (candidate.country === "US" && candidateCandles.length > 0) {
+      const band = usValuationBand(basics, candidateCandles.map((c) => c.close), candidateCandles.at(-1)?.close);
+      if (band) financials = { ...(financials ?? {}), ...band };
+    }
     front.score = computeCompanyScore({
+      ...(financials ? { financials } : {}),
       signals: front.signals,
       verdict: front.verdict,
       wyckoff,
