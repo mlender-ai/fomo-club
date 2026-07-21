@@ -344,7 +344,7 @@ async function defaultAgentCaller(args: Parameters<CommitteeAgentCaller>[0]) {
       { role: "user", content: JSON.stringify(args.input) },
     ],
     temperature: 0.1,
-    maxTokens: 900,
+    maxTokens: args.role === "editor" ? 600 : 900,
     jsonMode: true,
     timeoutMs: 45_000,
     trace: args.trace,
@@ -398,7 +398,7 @@ const EDITOR_SYSTEM = `당신은 FOMO Club 편집장이다.
 정상 응답이 있는 후보 중 정확히 targetCount개를 고른다. 두 분석가의 approved 플래그와 concerns는 참고 의견이며,
 companyScore, quietScore, 두 등급, 자산군 다양성, 문구 중복을 함께 보고 최종 승인 여부를 결정한다.
 입력에 없는 후보를 고르지 말고 입력에 없는 숫자를 쓰지 않는다. selectedIds는 중복 없이 정확히 targetCount개다.
-반드시 {"selectedIds":["..."],"rejected":[{"candidateId":"...","reasons":["..."]}],"compositionSummary":"..."} JSON만 반환한다.`;
+candidateId는 이번 요청에서만 쓰는 짧은 별칭이다. 반드시 {"selectedIds":["c01","..."],"compositionSummary":"..."} JSON만 반환한다.`;
 
 async function mapConcurrent<T, R>(items: readonly T[], concurrency: number, worker: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);
@@ -624,29 +624,32 @@ async function runEditor(
     counts[candidate.assetClass] = (counts[candidate.assetClass] ?? 0) + 1;
     return counts;
   }, {});
+  // 긴 원본 후보 ID·헤드라인·분석 문단을 한 번에 전송하면 Groq 무료 조직의
+  // 요청 토큰 한도를 넘는다. 편집 판단에 필요한 검수 결과만 짧은 별칭으로 보낸다.
+  const aliases = new Map(eligible.map((candidate, index) => [candidate.id, `c${String(index + 1).padStart(2, "0")}`]));
+  const idsByAlias = new Map([...aliases].map(([id, alias]) => [alias, id]));
   const input = {
     targetCount: FINAL_TARGET,
     candidateCount: eligible.length,
     assetCounts,
     candidates: eligible.map((candidate) => ({
-      candidateId: candidate.id,
-      canonical: candidate.card.canonical,
-      assetClass: candidate.assetClass,
-      sector: candidate.card.sector,
-      headline: candidate.card.headline?.slice(0, 100),
-      companyScore: candidate.front.score?.score,
-      quietScore: candidate.quietScore,
-      timingGrade: trading.get(candidate.id)!.grade,
-      valuationGrade: financial.get(candidate.id)!.grade,
-      tradingApproved: trading.get(candidate.id)!.approved,
-      financialApproved: financial.get(candidate.id)!.approved,
-      analystConcerns: [...trading.get(candidate.id)!.concerns, ...financial.get(candidate.id)!.concerns]
-        .slice(0, 2)
-        .map((concern) => concern.slice(0, 80)),
+      candidateId: aliases.get(candidate.id),
+      name: candidate.card.canonical.slice(0, 24),
+      asset: candidate.assetClass,
+      sector: candidate.card.sector.slice(0, 16),
+      score: candidate.front.score?.score,
+      quiet: candidate.quietScore,
+      timing: trading.get(candidate.id)!.grade,
+      valuation: financial.get(candidate.id)!.grade,
+      approved: `${trading.get(candidate.id)!.approved ? 1 : 0}${financial.get(candidate.id)!.approved ? 1 : 0}`,
     })),
   };
   const text = await callWithRetry(caller, { role: "editor", system: EDITOR_SYSTEM, input, trace: "expert-committee-editor" }, state);
   const output = parseEditorOutput(text);
+  const selectedIds = output.selectedIds.flatMap((alias) => {
+    const id = idsByAlias.get(alias);
+    return id ? [id] : [];
+  });
   const gradeScore = (grade: Grade) => grade === "A" ? 3 : grade === "B" ? 2 : 1;
   const rankedEligibleIds = [...eligible]
     .sort((a, b) => {
@@ -665,7 +668,7 @@ async function runEditor(
     })
     .map((candidate) => candidate.id);
   const selected = enforceEditorAssetFloors(
-    completeEditorSelectedIds(output.selectedIds, rankedEligibleIds),
+    completeEditorSelectedIds(selectedIds, rankedEligibleIds),
     rankedEligibleIds,
     Object.fromEntries(eligible.map((candidate) => [candidate.id, candidate.assetClass]))
   );
@@ -673,9 +676,11 @@ async function runEditor(
     throw new Error(`editor selection invalid: ${selected.length}/${FINAL_TARGET}`);
   }
   const summaryInvalid = validateAgentNumbers(output.compositionSummary, input);
-  const rejected = output.rejected.map((row) => {
+  const rejected = output.rejected.flatMap((row) => {
+    const candidateId = idsByAlias.get(row.candidateId);
+    if (!candidateId) return [];
     const invalid = validateAgentNumbers(row.reasons.join(" "), input);
-    return invalid.length > 0 ? { candidateId: row.candidateId, reasons: ["편집 품질 기준 미달"] } : row;
+    return [invalid.length > 0 ? { candidateId, reasons: ["편집 품질 기준 미달"] } : { candidateId, reasons: row.reasons }];
   });
   return {
     selectedIds: selected,

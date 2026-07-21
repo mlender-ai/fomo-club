@@ -144,8 +144,10 @@ describe("expert committee orchestration", () => {
   });
 
   it("후보 35장이면 반려 여유 5장을 두고 승인 30장을 발행한다", async () => {
+    let editorInput: unknown;
     const caller: CommitteeAgentCaller = async ({ role, input }) => {
       if (role === "editor") {
+        editorInput = input;
         const candidates = (input as { candidates: Array<{ candidateId: string }> }).candidates;
         return {
           ok: true,
@@ -188,6 +190,11 @@ describe("expert committee orchestration", () => {
     expect(result.report.candidateCount).toBe(35);
     expect(result.report.selectedCount).toBe(30);
     expect(result.report.callCount).toBe(11);
+    expect(JSON.stringify(editorInput).length).toBeLessThan(8_000);
+    const compactCandidates = (editorInput as { candidates: Array<Record<string, unknown>> }).candidates;
+    expect(compactCandidates[0]).toMatchObject({ candidateId: "c01", asset: "coin" });
+    expect(compactCandidates[0]).not.toHaveProperty("headline");
+    expect(compactCandidates[0]).not.toHaveProperty("analystConcerns");
     expect(result.response?.stocks).toHaveLength(30);
     expect(result.response?.fronts["테스트코인0"]?.committeeReview?.factChecked).toBe(true);
     expect(publish).toHaveBeenCalledOnce();
