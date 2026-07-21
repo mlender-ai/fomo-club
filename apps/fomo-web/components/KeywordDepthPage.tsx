@@ -1420,7 +1420,7 @@ function ExpertCommitteeReview({
       aside={<span className="font-pixel text-xs" style={{ color: gradeTone(grade) }}>{grade}</span>}
     >
       <p className="text-sm leading-6 text-whiteout">
-        {cleanText(trading ? review.tradingView : review.fundamentalView)}
+        {easyMarketCopy(cleanText(trading ? review.tradingView : review.fundamentalView), "detail")}
       </p>
     </DepthSection>
   );
@@ -1431,7 +1431,7 @@ function JudgmentDecision({ front }: { front: StockFrontResponse | null }) {
   return (
     <DepthSection className="mt-4" title="현재 판단">
       <p className="text-sm font-medium leading-6 text-whiteout">
-        {verdict?.stanceText ?? "판단에 필요한 차트·수급 근거를 축적하고 있어요."}
+        {easyMarketCopy(verdict?.stanceText, "detail") ?? "판단에 필요한 차트·수급 근거를 축적하고 있어요."}
       </p>
       <div className="mt-4 border-t border-hairline pt-3">
         <p className="text-[11px] font-semibold text-muted">무효선·다음 확인</p>

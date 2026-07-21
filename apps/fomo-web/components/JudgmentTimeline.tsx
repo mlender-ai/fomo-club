@@ -10,6 +10,7 @@ import {
 import { fetchLedgerTimeline, type LedgerTimelineEntry, type TrackMetric } from "@/lib/fomoApi";
 import { DepthLine, DepthSection } from "@/components/DepthSection";
 import { chartTokens } from "@/lib/chartTokens";
+import { easyMarketCopy } from "@/lib/easyMarketCopy";
 
 const KIND_LABEL: Record<LedgerTimelineEntry["kind"], string> = {
   signal: "신호",
@@ -109,10 +110,10 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
                 <p className="mt-0.5 font-number text-[10px] text-muted">{entry.date.slice(5)}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-xs leading-5 text-whiteout">{summary(entry)}</p>
+                <p className="text-xs leading-5 text-whiteout">{easyMarketCopy(summary(entry), "detail")}</p>
                 {resumes.map(({ code, metric }) => (
                   <p key={code} className="mt-1 text-[10px] leading-4 text-muted">
-                    {formatSignalResumeBadge(code, metric)}
+                    {easyMarketCopy(formatSignalResumeBadge(code, metric), "detail")}
                   </p>
                 ))}
                 <p className="mt-0.5 text-[10px] text-muted">당시 가격 {price(entry.priceAt)}</p>
