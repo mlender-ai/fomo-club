@@ -124,7 +124,7 @@ describe("expert committee orchestration", () => {
     expect(completeEditorSelectedIds([ranked[0]!, ranked[0]!, "unknown", ...ranked.slice(1, 20)], ranked)).toHaveLength(30);
   });
 
-  it("후보 40장을 두 분석가와 편집장이 검수해 승인 30장만 발행한다", async () => {
+  it("후보 35장이면 반려 여유 5장을 두고 승인 30장을 발행한다", async () => {
     const caller: CommitteeAgentCaller = async ({ role, input }) => {
       if (role === "editor") {
         const candidates = (input as { candidates: Array<{ candidateId: string }> }).candidates;
@@ -158,7 +158,7 @@ describe("expert committee orchestration", () => {
     const publish = vi.fn(async () => {});
     const result = await runExpertReviewCommittee({
       caller,
-      buildPool: async () => fakePool(),
+      buildPool: async () => fakePool(35),
       readPrevious: async () => null,
       publish,
       writeFailure: async () => {},
@@ -166,7 +166,7 @@ describe("expert committee orchestration", () => {
       minCallIntervalMs: 0,
     });
     expect(result.ok).toBe(true);
-    expect(result.report.candidateCount).toBe(40);
+    expect(result.report.candidateCount).toBe(35);
     expect(result.report.selectedCount).toBe(30);
     expect(result.report.callCount).toBe(11);
     expect(result.response?.stocks).toHaveLength(30);

@@ -19,8 +19,10 @@ import { readFeedContent, writeFeedContent } from "./feed-content-store";
 
 const COMMITTEE_VERSION = "committee-v1";
 const CANDIDATE_TARGET = 50;
-const MIN_CANDIDATES = 40;
 const FINAL_TARGET = 30;
+// 최종 30장보다 5장 많은 품질 후보면 편집 검수에 충분하다. 후보 40개 하드 게이트는
+// 소스가 얇은 날 35개 실후보가 있어도 분석가 호출 전에 전일본으로 후퇴시켰다.
+const MIN_CANDIDATES = FINAL_TARGET + 5;
 // Groq free/developer 조직의 TPM을 넘지 않도록 입력을 압축하고 호출 수를 줄인다.
 // 후보 50장 기준 분석가 7콜 + 7콜, 편집장 1콜이다. 작은 배치와 25초 간격으로
 // 무료 조직 TPM을 시간축에 분산하고 각 Vercel stage는 300초 안에 끝낸다.
