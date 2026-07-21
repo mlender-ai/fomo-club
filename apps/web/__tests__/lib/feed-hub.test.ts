@@ -115,7 +115,6 @@ function stubStock(name: string, headline: string): DiscoveryStockPayload {
 function stubFront(): DiscoveryFrontSeed {
   return {
     signals: { changePct: 2.1, volumeRatio: 2.4 },
-    fomo: { score: 50 } as unknown as DiscoveryFrontSeed["fomo"],
     sparkline: [100, 101, 102],
     priceText: "10,000원",
     verdict: { stance: "watch", stanceText: "관망", evidence: [], confidence: "low" } as NonNullable<DiscoveryFrontSeed["verdict"]>,

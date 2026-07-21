@@ -6,16 +6,19 @@ import {
   buildDaily30LedgerEntries,
   daily30ResponseFromSelections,
   inferSignalTypes,
+  ledgerContentKey,
   ledgerKey,
+  projectFinalTimeline,
   projectTimelineSignalTypes,
   scoreBand,
   userLedgerActor,
   type LedgerSelectionView,
+  type LedgerTimelineEntry,
 } from "../../lib/judgment-ledger";
 import { buildTrackRecord, type OutcomePayload } from "../../lib/ledger-track-record";
 import { buildLegacyDaily30BackfillEntries } from "../../lib/ledger-backfill";
 import { fetchHistoricalPrices } from "../../lib/quote-prices";
-import { SIGNAL_TAXONOMY_VERSION, SIGNAL_TYPE_CODES } from "@fomo/core";
+import { computeCompanyScore, SIGNAL_TAXONOMY_VERSION, SIGNAL_TYPE_CODES } from "@fomo/core";
 
 function selection(overrides: Partial<LedgerSelectionView> = {}): LedgerSelectionView {
   return {
@@ -111,6 +114,38 @@ describe("Judgment Ledger", () => {
     expect(ledgerKey("a", 1)).toHaveLength(64);
   });
 
+  it("동일 날짜·대상·종류·payload는 actor와 키 입력이 달라도 같은 콘텐츠 해시를 쓴다", () => {
+    const base = {
+      date: "2026-07-20",
+      subject: { asset: "us-stock" as const, canonical: "ACME", symbol: "ACME" },
+      kind: "score" as const,
+      payload: { score: 62, label: "매집 추정" },
+    };
+    expect(ledgerContentKey(base)).toBe(ledgerContentKey({ ...base, payload: { label: "매집 추정", score: 62 } }));
+  });
+
+  it("같은 날 중복 선정과 재계산 점수는 최종 선정 점수 한 건으로 투영한다", () => {
+    const row = (id: string, kind: LedgerTimelineEntry["kind"], actor: string, ts: string, payload: Record<string, unknown>): LedgerTimelineEntry => ({
+      id,
+      date: "2026-07-20",
+      ts,
+      kind,
+      actor,
+      priceAt: 100,
+      payload,
+    });
+    const projected = projectFinalTimeline([
+      row("selection-engine", "selection", "engine", "2026-07-20T00:00:00.000Z", { companyScore: 62 }),
+      row("selection-committee", "selection", "committee", "2026-07-20T01:00:00.000Z", { companyScore: 62 }),
+      row("selection-committee-copy", "selection", "committee", "2026-07-20T02:00:00.000Z", { companyScore: 62 }),
+      row("score-old", "score", "engine", "2026-07-20T00:00:00.000Z", { score: 79 }),
+      row("score-final", "score", "committee", "2026-07-20T01:00:00.000Z", { score: 62, _ledger: { supersedes: "score-old" } }),
+    ]);
+    expect(projected.filter((entry) => entry.kind === "selection")).toHaveLength(1);
+    expect(projected.filter((entry) => entry.kind === "score")).toHaveLength(1);
+    expect(projected.find((entry) => entry.kind === "score")?.payload.score).toBe(62);
+  });
+
   it("운영 SQL이 UPDATE와 DELETE를 트리거로 거부하고 RLS를 강제한다", () => {
     const sql = readFileSync(resolve(process.cwd(), "prisma/sql/2026-07-20_judgment_ledger.sql"), "utf8");
     expect(sql).toContain("BEFORE UPDATE OR DELETE");
@@ -128,7 +163,7 @@ describe("Judgment Ledger", () => {
           priceText: "$123.45",
           axisSignals: [],
           verdict: { stance: "watch", stanceText: "구간 확인", evidence: [], confidence: "medium" },
-          companyScore: { score: 82, label: "저평가", interpretation: "근거", axes: [], availableAxisCount: 1, omittedAxes: [] },
+          score: computeCompanyScore({ quiet: { quietScore: 80 } }),
         },
       },
       meta: { cards: [{ id: "stock:US:ACME:ACME", assetClass: "us-stock", quietScore: 75, signalScore: 90, hypePenalty: 15 }], assetCounts: {}, targetCount: 1 },
@@ -140,7 +175,7 @@ describe("Judgment Ledger", () => {
     expect(selected.every((entry) => entry.priceAt === 123.45 && entry.actor === "committee")).toBe(true);
     expect(selected.find((entry) => entry.kind === "signal")?.payload).toMatchObject({
       taxonomyVersion: SIGNAL_TAXONOMY_VERSION,
-      signalTypes: ["score_80_plus"],
+      signalTypes: ["score_60_79"],
     });
     const selectionEntry = selected.find((entry) => entry.kind === "selection")!;
     const restored = daily30ResponseFromSelections([selection({

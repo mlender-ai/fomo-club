@@ -26,11 +26,21 @@ function polygon(score: number): string {
 
 export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | null | undefined }) {
   const [selected, setSelected] = useState<CompanyScoreAxisKey | null>(null);
-  const byKey = useMemo(() => new Map(result?.axes.map((axis) => [axis.key, axis]) ?? []), [result]);
+  const states = useMemo(() => {
+    if (!result) return [];
+    if (Array.isArray(result.axisStates)) return result.axisStates;
+    return ORDER.map((key) => {
+      const axis = result.axes.find((item) => item.key === key);
+      return axis
+        ? { ...axis, status: "available" as const }
+        : { key, label: LABEL[key], status: "missing" as const, score: null, evidence: [], missingReason: "데이터 없음" as const };
+    });
+  }, [result]);
+  const byKey = useMemo(() => new Map(states.map((axis) => [axis.key, axis])), [states]);
   const active = selected ? byKey.get(selected) : undefined;
   const dataPolygon = ORDER.map((key, index) => point(index, byKey.get(key)?.score ?? 0).join(",")).join(" ");
 
-  if (!result || result.score === null) return null;
+  if (!result) return null;
 
   return (
     <section className="mt-5 border-y border-hairline py-5" aria-labelledby="company-score-title">
@@ -38,10 +48,14 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
         <div>
           <p className="font-pixel text-[11px] text-muted">COMPANY SCORE</p>
           <div className="mt-1.5 flex items-baseline gap-2">
-            <span id="company-score-title" className="font-number text-4xl font-bold leading-none" style={{ color: NEON }}>
-              {result.score}
+            <span
+              id="company-score-title"
+              className={`font-number font-bold leading-none ${result.score == null ? "text-xl" : "text-4xl"}`}
+              style={{ color: NEON }}
+            >
+              {result.score ?? "분석 축적 중"}
             </span>
-            <span className="text-sm font-semibold text-muted">/ 100</span>
+            {result.score != null && <span className="text-sm font-semibold text-muted">/ 100</span>}
           </div>
         </div>
         <span className="max-w-[58%] text-right text-sm font-semibold leading-5 text-whiteout">{result.label}</span>
@@ -59,16 +73,17 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
           <polygon points={dataPolygon} fill="rgba(216,255,58,0.16)" stroke={NEON} strokeWidth="2" />
           {ORDER.map((key, index) => {
             const axis = byKey.get(key);
+            const available = axis?.status === "available" && axis.score != null;
             const [x, y] = point(index, axis?.score ?? 0);
             const [labelX, labelY] = point(index, 118);
             return (
               <g key={key}>
-                {axis && <circle cx={x} cy={y} r="3.5" fill={NEON} />}
-                <text x={labelX} y={labelY} textAnchor="middle" dominantBaseline="middle" fill={axis ? "#FAFAFA" : "#666"} fontSize="10">
+                {available && <circle cx={x} cy={y} r="3.5" fill={NEON} />}
+                <text x={labelX} y={labelY} textAnchor="middle" dominantBaseline="middle" fill={available ? "#FAFAFA" : "#666"} fontSize="10">
                   {LABEL[key]}
                 </text>
-                <text x={labelX} y={labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={axis ? NEON : "#666"} fontSize="9">
-                  {axis?.score ?? "—"}
+                <text x={labelX} y={labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={available ? NEON : "#666"} fontSize="9">
+                  {axis?.score ?? "없음"}
                 </text>
               </g>
             );
@@ -78,30 +93,33 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
 
       <p className="text-sm leading-6 text-whiteout">{result.interpretation}</p>
       <p className="mt-1 text-[10px] leading-4 text-muted">
-        실데이터가 없는 축은 종합점수에서 제외하고, 나머지 {result.availableAxisCount}개 축을 같은 비중으로 다시 계산했어요.
+        데이터가 없는 축은 명시적으로 제외하고, 가용한 {result.availableAxisCount}개 축을 같은 비중으로 계산했어요.
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
         {ORDER.map((key) => {
           const axis = byKey.get(key);
+          const available = axis?.status === "available" && axis.score != null;
           const isActive = selected === key;
           return (
             <button
               key={key}
               type="button"
-              disabled={!axis}
+              disabled={!available}
               onClick={() => setSelected(isActive ? null : key)}
               className="flex min-h-10 items-center justify-between border-b border-hairline py-2 text-left disabled:opacity-35"
               aria-expanded={isActive}
             >
               <span className="text-xs text-muted">{LABEL[key]}</span>
-              <span className="font-number text-sm font-bold" style={{ color: axis ? NEON : "#666" }}>{axis?.score ?? "—"}</span>
+              <span className="font-number text-sm font-bold" style={{ color: available ? NEON : "#666" }}>
+                {axis?.score ?? "데이터 없음"}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {active && (
+      {active?.status === "available" && active.score != null && (
         <div className="mt-3 border-l-2 pl-3" style={{ borderColor: NEON }}>
           <p className="text-xs font-semibold text-whiteout">{active.label} {active.score}점 근거</p>
           {active.evidence.map((evidence) => (

@@ -55,8 +55,8 @@ describe("assembleStockFront lite", () => {
 
     expect(front.sparkline).toEqual([1000, 1010, 1040, 1090, 1110, 1180]);
     expect(front.taFact).toBeUndefined();
-    expect(front.fomo.inputs.volume).toBeDefined();
-    expect(front.fomo.inputs.price).toBeDefined();
+    expect(front.score.axisStates).toHaveLength(6);
+    expect(front.score.axes.map((axis) => axis.key)).toContain("chart");
     expect(front.axisSignals?.some((signal) => signal.fired)).toBe(true);
     expect(front.axisHook?.hookText).toBeTruthy();
   });
@@ -115,7 +115,7 @@ describe("assembleStockFront lite", () => {
     expect(front.changeText).toBe("+12.20 (+1.76%)");
     expect(front.signals.changePct).toBe(1.76);
     expect(front.sparkline).toEqual([690, 696, 705.8]);
-    expect(front.fomo.inputs.price).toBeDefined();
+    expect(front.score.axisStates).toHaveLength(6);
     expect(front.axisSignals?.some((signal) => signal.axis === "price")).toBe(true);
   });
 });

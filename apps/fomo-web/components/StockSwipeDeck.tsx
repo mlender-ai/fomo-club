@@ -2,13 +2,10 @@
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  fomoCardView,
-  computeFomoScore,
   formatSignalResumeBadge,
   inferStandardSignalTypes,
   isSignalTypeCode,
   normalizeSignalTypeCodes,
-  selectFomoHook,
   signalTypeLabel,
 } from "@fomo/core";
 import type {
@@ -16,8 +13,6 @@ import type {
   CardFrontSignals,
   CardVerdict,
   CompanyScoreResult,
-  FomoScoreResult,
-  FomoCardView,
   MultiAxisHookSelection,
   TaFact,
   SignalTypeCode,
@@ -50,14 +45,12 @@ const UP_THRESHOLD = 90; // 위로 끌어 슈퍼관심(강한 관심)
 const EXIT_MS = 320;
 // DESIGN.md §2 브랜드 액센트(역할 인코딩). 오렌지=주목 열기/강도, 네온=발견·💎·CTA. 등락엔 절대 금지.
 const NEON = "#D8FF3A";
-/** 포모 점수 로드 전 placeholder(빈 입력 → silent·점수 보류). */
-const EMPTY_FOMO = computeFomoScore({});
+type CardFaceView = { headline: string; isLeading: boolean };
 
-/** 종목별 앞면 데이터(stock-front 응답 캐시). 포모 점수(척추)·스파크라인·가격. */
+/** 종목별 앞면 데이터(stock-front 응답 캐시). 종합점수·스파크라인·가격. */
 export type FrontEntry = {
   signals: CardFrontSignals;
-  fomo: FomoScoreResult;
-  companyScore?: CompanyScoreResult;
+  score?: CompanyScoreResult;
   committeeReview?: NonNullable<StockFrontResponse["committeeReview"]>;
   taFact?: TaFact;
   sparkline: number[];
@@ -271,11 +264,11 @@ function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progres
 
 /** 카드에서는 종합점수와 조합 라벨만 가볍게 노출하고, 축별 산식은 뎁스에서 푼다. */
 function CompanyScoreBlock({
-  companyScore,
+  score,
   verdict,
   contextLine,
 }: {
-  companyScore?: CompanyScoreResult | undefined;
+  score?: CompanyScoreResult | undefined;
   verdict?: CardVerdict | undefined;
   contextLine?: string | undefined;
 }) {
@@ -285,13 +278,16 @@ function CompanyScoreBlock({
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-baseline gap-1.5">
-            <span className="font-number text-3xl font-bold leading-none" style={{ color: NEON }}>
-              {companyScore?.score ?? "—"}
+            <span
+              className={`font-number font-bold leading-none ${score?.score == null ? "text-lg" : "text-3xl"}`}
+              style={{ color: NEON }}
+            >
+              {score?.score ?? "분석 축적 중"}
             </span>
-            <span className="text-xs font-semibold text-muted">점</span>
+            {score?.score != null && <span className="text-xs font-semibold text-muted">점</span>}
           </div>
           <p className="mt-1 truncate text-sm font-semibold text-whiteout">
-            {companyScore?.label ?? "근거 축 수집 중"}
+            {score?.score == null ? `가용 분석축 ${score?.availableAxisCount ?? 0}/6` : score.label}
           </p>
         </div>
         {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
@@ -306,7 +302,7 @@ function CompanyScoreBlock({
 }
 
 /**
- * 종목 카드 앞면 — 포모 점수(척추 ②, 단일 출처)로 점수·라벨·헤드라인·톤. 휴리스틱 대체.
+ * 종목 카드 앞면 — 백엔드가 확정한 종합점수·라벨·헤드라인을 그대로 표시한다.
  * 정체성 / 현재가 / 테마태그 / 헤드라인 / 발견 상태 / 근거. 차트는 뎁스에서만 보여준다.
  */
 function StockCardFace({
@@ -321,7 +317,7 @@ function StockCardFace({
   feedBull,
   feedBear,
   why,
-  companyScore,
+  score,
   discoveryContext,
   verdict,
   signalTrack,
@@ -329,7 +325,7 @@ function StockCardFace({
   progress,
 }: {
   stock: DeckStock;
-  view: FomoCardView;
+  view: CardFaceView;
   themeLabel?: string | undefined;
   priceText?: string | undefined;
   changeText?: string | undefined;
@@ -339,7 +335,7 @@ function StockCardFace({
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
   why?: string | undefined;
-  companyScore?: CompanyScoreResult | undefined;
+  score?: CompanyScoreResult | undefined;
   discoveryContext?: string | undefined;
   verdict?: CardVerdict | undefined;
   signalTrack?: { code: SignalTypeCode; metric: TrackMetric } | undefined;
@@ -364,7 +360,7 @@ function StockCardFace({
         </div>
       </div>
 
-      {/* 현재가 — 시총순위줄과 포모 점수 사이(시장 readout, 후킹 아님) */}
+      {/* 현재가 — 시장 readout. */}
       {priceText && (
         <div className="mt-2.5 flex shrink-0 items-baseline gap-2">
           <span className="text-lg font-bold text-whiteout">{priceText}</span>
@@ -377,8 +373,6 @@ function StockCardFace({
           )}
         </div>
       )}
-
-      {/* 포모 점수는 카드 메인에서 제거(WO 1.5 E) — 뎁스 하단 배지로 강등. 몰입은 종목·재료·판단이 담당. */}
 
       {/* 테마 태그 */}
       {themeLabel && (
@@ -393,7 +387,7 @@ function StockCardFace({
         {view.headline}
       </p>
 
-      <CompanyScoreBlock companyScore={companyScore} verdict={verdict} contextLine={discoveryContext} />
+      <CompanyScoreBlock score={score} verdict={verdict} contextLine={discoveryContext} />
 
       {!verdict && (
         <>
@@ -562,7 +556,7 @@ export function StockSwipeDeck({
       if (!stock.naverCode && !stock.symbol) {
         setFront((prev) => ({
           ...prev,
-          [key]: { signals: {}, fomo: EMPTY_FOMO, sparkline: [] },
+          [key]: { signals: {}, sparkline: [] },
         }));
         return;
       }
@@ -577,8 +571,7 @@ export function StockSwipeDeck({
             ...prev,
             [key]: {
               signals: d.signals,
-              fomo: d.fomo,
-              ...(d.companyScore ? { companyScore: d.companyScore } : {}),
+              ...(d.score ? { score: d.score } : {}),
               ...(d.taFact ? { taFact: d.taFact } : {}),
               sparkline: d.sparkline,
               ...(d.priceText ? { priceText: d.priceText } : {}),
@@ -602,44 +595,22 @@ export function StockSwipeDeck({
     [front]
   );
 
-  // 카드 표현 — 포모 점수(척추, 단일 출처) → fomoCardView.
-  // 긴 원문 재료는 why/depth 로 보내고, 앞면은 잘리지 않는 핵심 독해만 남긴다.
-  const cardFor = (stock: DeckStock): { view: FomoCardView; subLine?: string; usedDiscoveryHeadline?: boolean } => {
+  // 긴 원문 재료는 why/depth 로 보내고, 앞면은 백엔드가 확정한 핵심 헤드라인만 쓴다.
+  const cardFor = (stock: DeckStock): { view: CardFaceView; subLine?: string; usedDiscoveryHeadline?: boolean } => {
     const e = front[stock.canonical];
     const serverHeadline = cleanServerHeadline(stock.headline);
     if (!e) {
-      const view: FomoCardView = {
-        scoreText: "",
-        emoji: "",
-        badge: "신호 확인 중",
+      const view: CardFaceView = {
         headline: serverHeadline ?? "카드 준비 중",
-        tone: "calm",
         isLeading: false,
       };
       return { view, ...(serverHeadline ? { usedDiscoveryHeadline: true } : { subLine: "카드 내용을 준비하고 있어요." }) };
     }
-    const fomo = e?.fomo ?? EMPTY_FOMO;
-    const signalsForHook: CardFrontSignals = {
-      ...(e?.signals ?? {}),
-      ...(!e?.signals.newsEventLabel && serverHeadline ? { newsEventLabel: serverHeadline } : {}),
-    };
-    const legacyHook = selectFomoHook({
-      fomo,
-      signals: signalsForHook,
-      ...(e?.taFact ? { taFact: e.taFact } : {}),
-    });
-    const baseView = fomoCardView(fomo, {
-      sector: stock.sector,
-      ...(stock.reason ? { reason: stock.reason } : {}),
-      ...(typeof e?.signals.changePct === "number" ? { changePct: e.signals.changePct } : {}),
-      ...(typeof e?.signals.marketCapRank?.rank === "number" ? { marketCapRank: e.signals.marketCapRank.rank } : {}),
-    });
     const headline = serverHeadline ?? "카드 준비 중";
-    const view = { ...baseView, headline };
+    const view: CardFaceView = { headline, isLeading: false };
     const usedDiscoveryHeadline = !!serverHeadline;
     return {
       view,
-      ...(!usedDiscoveryHeadline && legacyHook.subLine ? { subLine: legacyHook.subLine } : {}),
       ...(usedDiscoveryHeadline ? { usedDiscoveryHeadline } : {}),
     };
   };
@@ -651,7 +622,6 @@ export function StockSwipeDeck({
     const e = front[stock.canonical];
     return whyShown({
       stock,
-      fomoLabel: e?.fomo.label,
       signals: e?.signals,
     });
   };
@@ -672,7 +642,7 @@ export function StockSwipeDeck({
           ...(stock.sourceUrl ? { sourceUrl: stock.sourceUrl } : {}),
           signals: entry.signals,
           ...(entry.wyckoff ? { wyckoff: entry.wyckoff } : {}),
-          ...(typeof entry.companyScore?.score === "number" ? { companyScore: entry.companyScore.score } : {}),
+          ...(typeof entry.score?.score === "number" ? { companyScore: entry.score.score } : {}),
         });
     const code = candidates.find((value) => isSignalTypeCode(value) && signalHistory30[value]);
     return code ? { code, metric: signalHistory30[code]! } : undefined;
@@ -716,7 +686,7 @@ export function StockSwipeDeck({
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
         why={deduped.why}
-        companyScore={e.companyScore}
+        score={e.score}
         discoveryContext={discoveryContext}
         verdict={e?.verdict}
         signalTrack={signalTrackFor(stock, e)}
