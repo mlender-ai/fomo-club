@@ -718,19 +718,29 @@ export function normalizeDaily30Response(response: Daily30Response): Daily30Resp
       companyScore?: NonNullable<DiscoveryFrontSeed["score"]>;
     }) | undefined;
     const meta = response.meta.cards[index];
-    const base = raw?.score ?? raw?.companyScore ?? computeCompanyScore({
+    const legacyScore = raw?.score ?? raw?.companyScore;
+    const deterministicBase = computeCompanyScore({
       signals: raw?.signals ?? {},
       ...(raw?.verdict ? { verdict: raw.verdict } : {}),
       ...(raw?.wyckoff ? { wyckoff: raw.wyckoff } : {}),
       asOf: response.asOf,
     });
+    const legacyFinancialAxes = legacyScore?.axes.filter((axis) =>
+      axis.key === "valuation" || axis.key === "growth" || axis.key === "profitability"
+    ) ?? [];
+    const base = legacyScore
+      ? { ...deterministicBase, axes: [...legacyFinancialAxes, ...deterministicBase.axes] }
+      : deterministicBase;
+    const legacyQuiet = legacyScore?.axes.find((axis) => axis.key === "quiet");
     const score = meta
       ? withCompanyQuietScore(base, {
           quietScore: meta.quietScore,
           signalScore: meta.signalScore,
           hypePenalty: meta.hypePenalty,
         }, response.asOf)
-      : base;
+      : legacyQuiet
+        ? withCompanyQuietScore(base, { quietScore: legacyQuiet.score * 0.8 }, response.asOf)
+        : deterministicBase;
     const { fomo: _legacyFomo, companyScore: _legacyScore, ...clean } = raw ?? { signals: {}, sparkline: [] };
     const assetClass = meta?.assetClass ?? (stock.market === "COIN" ? "coin" : stock.country === "US" ? "us-stock" : "kr-stock");
     normalizedFronts[stock.canonical] = {
@@ -831,7 +841,7 @@ export async function resolveDaily30Response(
 export async function getCachedDaily30Response(): Promise<Daily30Response> {
   const load = unstable_cache(
     resolveDaily30Response,
-    ["fomo-daily-30-approved", cacheVersion(), kstDateOf()],
+    ["fomo-daily-30-approved", "score-schema-v2", cacheVersion(), kstDateOf()],
     { revalidate: 60 * 5, tags: ["daily-30"] }
   );
   return load();
