@@ -1366,8 +1366,16 @@ function CommunityWordingBlock({ insight }: { insight: CondensedInsight | null }
 
 type DepthTab = "judgment" | "chart" | "company" | "history";
 
-/** 상세 정보 위계를 고정하는 4축 탭. 스크롤 컨테이너 상단에 계속 남는다. */
-function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTab) => void }) {
+/** 상세 정보 위계를 고정하는 4축 탭. 인라인에서는 스크롤 본문 밖의 고정 행으로 쓴다. */
+function DepthTabBar({
+  tab,
+  onChange,
+  inline = false,
+}: {
+  tab: DepthTab;
+  onChange: (tab: DepthTab) => void;
+  inline?: boolean;
+}) {
   const tabs: Array<{ key: DepthTab; label: string }> = [
     { key: "judgment", label: "판단" },
     { key: "chart", label: "차트·구간" },
@@ -1375,7 +1383,13 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
     { key: "history", label: "신호 이력" },
   ];
   return (
-    <div className="sticky top-0 z-30 -mx-6 mt-4 border-y border-hairline bg-black/95 px-6 py-2 backdrop-blur" role="tablist" aria-label="종목 상세">
+    <div
+      className={inline
+        ? "z-30 shrink-0 border-b border-hairline bg-black px-6 py-2"
+        : "sticky top-0 z-30 -mx-6 mt-4 border-y border-hairline bg-black/95 px-6 py-2 backdrop-blur"}
+      role="tablist"
+      aria-label="종목 상세"
+    >
       <div className="grid h-10 grid-cols-4 gap-1 rounded-md bg-surface p-1">
         {tabs.map((item) => {
           const active = tab === item.key;
@@ -1386,7 +1400,7 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
               aria-selected={active}
               aria-controls={`depth-panel-${item.key}`}
               onClick={() => onChange(item.key)}
-              className="min-w-0 rounded px-1 text-[11px] font-semibold transition-colors"
+              className="min-w-0 whitespace-nowrap rounded px-1 text-[11px] font-semibold transition-colors"
               style={{
                 backgroundColor: active ? chartTokens.up : "transparent",
                 color: active ? chartTokens.textOnAccent : chartTokens.neutral,
@@ -2673,6 +2687,10 @@ export function StockInsightView({
           </button>
         </div>
 
+        {inline && detailsReady && (
+          <DepthTabBar tab={depthTab} onChange={setDepthTab} inline />
+        )}
+
         <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
           {/* 전부 로드 전엔 아무것도 노출하지 않는다(2026-07-18 User Zero: "정보가 나왔다가 바뀌어 어색") —
               가격 헤더 선노출·seed→fresh 교체 없이 메인홈과 동일한 로딩 하나만. */}
@@ -2682,7 +2700,7 @@ export function StockInsightView({
           <>
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
-          <DepthTabBar tab={depthTab} onChange={setDepthTab} />
+          {!inline && <DepthTabBar tab={depthTab} onChange={setDepthTab} />}
           <div
             id={`depth-panel-${depthTab}`}
             role="tabpanel"
