@@ -661,6 +661,27 @@ function formatAxisPrice(value: number): string {
   return formatChartPrice(value);
 }
 
+/**
+ * 가격축 균등 눈금(WO-CHART-UI) — [min,max]를 "예쁜" 간격으로 나눈 눈금 값. 불규칙(118M·103M·89M) 방지.
+ * 1·2·2.5·5×10^k 스텝을 골라 4~5개 눈금을 균등 배치한다.
+ */
+function niceAxisTicks(min: number, max: number, target = 4): number[] {
+  const span = max - min;
+  if (!(span > 0)) return [max];
+  const rawStep = span / target;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const niceNorm = norm >= 5 ? 5 : norm >= 2.5 ? 2.5 : norm >= 2 ? 2 : 1;
+  const step = niceNorm * mag;
+  const start = Math.ceil(min / step) * step;
+  const ticks: number[] = [];
+  for (let v = start; v <= max + step * 0.001 && ticks.length < 8; v += step) ticks.push(v);
+  return ticks;
+}
+
+/** 이벤트 마커 우선순위 — 겹치면 높은 것만 표시(WO-CHART-UI 마커 과밀 해소). */
+const EVENT_PRIORITY: Record<string, number> = { spring: 4, upthrust: 4, impulse: 3, pullback: 2 };
+
 function smaValues(candles: readonly DailyOhlcv[], period: number): Array<number | null> {
   const closes = candles.map((c) => c.close);
   return closes.map((_, i) =>
@@ -1603,6 +1624,7 @@ function AnalysisChart({
   quietMoney?: StockFrontResponse["quietMoney"] | undefined;
 }) {
   const [selectedEvent, setSelectedEvent] = useState<WyckoffEvent | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
   const W = 320;
   const PLOT_W = 278;
   const PRICE_H = 166;
@@ -1677,9 +1699,23 @@ function AnalysisChart({
     (level): level is { kind: "support" | "resistance"; value: number } =>
       Boolean(level) && (!includeLevel || Math.abs(level!.value / invalidationLevel! - 1) >= 0.018)
   );
-  const priceTicks = [rawMax, (rawMax + rawMin) / 2, rawMin];
+  // 균등 눈금(WO-CHART-UI) — 현재가 눈금과 겹치는 것은 빼서 정렬 깔끔하게.
+  const priceTicks = niceAxisTicks(rawMin, rawMax, 4).filter(
+    (t) => Math.abs(y(t) - y(latest.close)) > 10
+  );
   const visibleZones = (analysis?.zones ?? []).filter((zone) => zone.endIndex >= visibleStart && zone.startIndex <= visibleStart + n - 1);
-  const visibleEvents = (analysis?.events ?? []).filter((event) => event.index >= visibleStart && event.index <= visibleStart + n - 1);
+  const allVisibleEvents = (analysis?.events ?? []).filter((event) => event.index >= visibleStart && event.index <= visibleStart + n - 1);
+  // 마커 과밀 해소(WO-CHART-UI): 우선순위 높은 순 → x 간격 확보(겹침 제거) → 최대 2개만. 나머지는 탭 안내.
+  const visibleEvents = [...allVisibleEvents]
+    .sort((a, b) => (EVENT_PRIORITY[b.kind] ?? 0) - (EVENT_PRIORITY[a.kind] ?? 0) || b.index - a.index)
+    .reduce<typeof allVisibleEvents>((kept, event) => {
+      const cx = xAbsolute(event.index);
+      if (kept.length >= 2) return kept;
+      if (kept.some((k) => Math.abs(xAbsolute(k.index) - cx) < 18)) return kept;
+      kept.push(event);
+      return kept;
+    }, []);
+  const hiddenEventCount = allVisibleEvents.length - visibleEvents.length;
   const candleIndexByDate = new Map(renderedCandles.flatMap((candle, index) => {
     const date = normalizeQuietMoneyDate(candle.date);
     return date ? [[date, index] as const] : [];
@@ -1712,6 +1748,11 @@ function AnalysisChart({
           const right = xAbsolute(end);
           const top = Math.max(2, y(Math.min(max, zone.high)));
           const bottom = Math.min(PRICE_H - 1, y(Math.max(min, zone.low)));
+          // 라벨은 캔들 위 겹침 금지(WO-CHART-UI) → 박스 상단 모서리에 작은 탭(배경 pill)으로.
+          const labelText = `${zoneName(zone.kind)} ${zone.weeks}주차`;
+          const tabW = labelText.length * 5.6 + 8;
+          const tabX = Math.min(left, PLOT_W - tabW);
+          const tabY = Math.max(1, top - 11);
           return (
             <g key={`${zone.kind}-${zone.startIndex}`}>
               <rect
@@ -1721,11 +1762,13 @@ function AnalysisChart({
                 height={Math.max(10, bottom - top)}
                 fill={zoneColor(zone.kind)}
                 stroke={zone.kind === "accumulation" ? chartTokens.zone.border : chartTokens.zone.mutedBorder}
-                strokeWidth="0.7"
-                strokeDasharray="3 3"
+                strokeWidth="0.6"
+                strokeDasharray="2 4"
+                opacity="0.7"
               />
-              <text x={left + 3} y={Math.min(PRICE_H - 4, top + 10)} fontSize="7.5" fontWeight="700" fill={chartTokens.zone.label}>
-                {zoneName(zone.kind)} {zone.weeks}주차
+              <rect x={tabX} y={tabY} width={tabW} height="10" rx="2" fill={chartTokens.surface} opacity="0.82" />
+              <text x={tabX + 4} y={tabY + 7.3} fontSize="7" fontWeight="700" fill={chartTokens.zone.label}>
+                {labelText}
               </text>
             </g>
           );
@@ -1753,9 +1796,11 @@ function AnalysisChart({
             />
           );
         })}
-        <path d={linePath(series.ma120)} fill="none" stroke={chartTokens.ma120} strokeWidth="1.1" />
-        <path d={linePath(series.ma60)} fill="none" stroke={chartTokens.ma60} strokeWidth="1.1" />
-        <path d={linePath(series.ma20)} fill="none" stroke={chartTokens.ma20} strokeWidth="1.2" />
+        {/* MA는 보조선(WO-CHART-UI 위계) — 옅게. 캔들이 주역이라 굵기·투명도 낮춤. */}
+        <path d={linePath(series.ma120)} fill="none" stroke={chartTokens.ma120} strokeWidth="0.8" opacity="0.4" />
+        <path d={linePath(series.ma60)} fill="none" stroke={chartTokens.ma60} strokeWidth="0.8" opacity="0.42" />
+        <path d={linePath(series.ma20)} fill="none" stroke={chartTokens.ma20} strokeWidth="1" opacity="0.58" />
+        {/* 지지/저항은 무효선보다 더 옅은 점선 + 우측 라벨만(WO-CHART-UI). */}
         {levels.map((level, index) => (
           <g key={`${level.kind}-${index}`}>
             <line
@@ -1764,10 +1809,11 @@ function AnalysisChart({
               y1={y(level.value)}
               y2={y(level.value)}
               stroke={chartTokens.level}
-              strokeWidth="0.8"
-              strokeDasharray="3 4"
+              strokeWidth="0.6"
+              strokeDasharray="2 5"
+              opacity="0.6"
             />
-            <text x="4" y={Math.max(9, y(level.value) - 3)} fontSize="8" fill={chartTokens.levelLabel}>
+            <text x={PLOT_W - 2} y={Math.max(8, y(level.value) - 2.5)} textAnchor="end" fontSize="7" fill={chartTokens.levelLabel}>
               {level.kind === "support" ? "지지" : "저항"} {formatChartPrice(level.value)}
             </text>
           </g>
@@ -1903,17 +1949,31 @@ function AnalysisChart({
           <span className="mt-1 block text-[10px] leading-4 text-muted">{easyMarketCopy(selectedEvent.explanation, "detail")}</span>
         </button>
       )}
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
-        <span><span style={{ color: chartTokens.up }}>■</span> 상승</span>
-        <span><span style={{ color: chartTokens.down }}>■</span> 하락</span>
-        <span><span style={{ color: chartTokens.ma20 }}>—</span> MA20</span>
-        <span><span style={{ color: chartTokens.ma60 }}>—</span> MA60</span>
-        <span><span style={{ color: chartTokens.ma120 }}>—</span> MA120</span>
-        {includeLevel && <span><span style={{ color: chartTokens.invalidation }}>┄</span> 관점 경계</span>}
-        {visibleZones.length > 0 && <span>▧ 구간</span>}
-        {visibleEvents.length > 0 && <span>◆ 이벤트</span>}
-        {visibleQuietEvents.length > 0 && <span>● 조용한 돈</span>}
-      </div>
+      {hiddenEventCount > 0 && !selectedEvent && (
+        <p className="mt-1.5 text-[10px] text-muted">마커를 탭하면 설명이 열려요 · 이벤트 {hiddenEventCount}개 더 있어요</p>
+      )}
+      {/* MA 범례는 공간 절약 위해 접기(WO-CHART-UI) — 기본 숨김, 탭하면 색·이름. */}
+      <button
+        type="button"
+        onClick={() => setShowLegend((v) => !v)}
+        className="mt-1.5 text-[10px] text-muted underline decoration-dotted underline-offset-2"
+        aria-expanded={showLegend}
+      >
+        범례 {showLegend ? "접기" : "보기"}
+      </button>
+      {showLegend && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
+          <span><span style={{ color: chartTokens.up }}>■</span> 상승</span>
+          <span><span style={{ color: chartTokens.down }}>■</span> 하락</span>
+          <span><span style={{ color: chartTokens.ma20 }}>—</span> MA20</span>
+          <span><span style={{ color: chartTokens.ma60 }}>—</span> MA60</span>
+          <span><span style={{ color: chartTokens.ma120 }}>—</span> MA120</span>
+          {includeLevel && <span><span style={{ color: chartTokens.invalidation }}>┄</span> 관점 경계</span>}
+          {visibleZones.length > 0 && <span>▧ 구간</span>}
+          {allVisibleEvents.length > 0 && <span>◆ 이벤트</span>}
+          {visibleQuietEvents.length > 0 && <span>● 조용한 돈</span>}
+        </div>
+      )}
     </div>
   );
 }
