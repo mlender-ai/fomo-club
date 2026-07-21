@@ -1,10 +1,11 @@
 "use client";
 
 import { sparklinePath, seriesIsUp } from "@fomo/core";
+import { chartTokens } from "@/lib/chartTokens";
 
 /**
  * 미니 추이선 — 종가 배열을 인라인 SVG로(라이브러리 없음). docs/PIVOT_FEED_FIRST.md.
- * 상승=빨강(과열), 하락=파랑(침체). 2점 미만이면 렌더 안 함(숫자 카드 폴백).
+ * 상승=라임, 하락=회색. 2점 미만이면 렌더 안 함(숫자 카드 폴백).
  */
 export function Sparkline({
   series,
@@ -18,7 +19,7 @@ export function Sparkline({
   const path = sparklinePath(series, width, height, 3);
   if (!path) return null;
   const up = seriesIsUp(series);
-  const color = up ? "#FF5A36" : "#38BDF8";
+  const color = up ? chartTokens.up : chartTokens.down;
   const gid = `spark-${up ? "up" : "down"}`;
 
   return (

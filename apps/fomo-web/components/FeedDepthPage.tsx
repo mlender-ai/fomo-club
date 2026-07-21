@@ -5,6 +5,7 @@ import { CalendarCard } from "@/components/CalendarCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import type { FeedHubItem, FeedHubSectorStockRef } from "@/lib/fomoApi";
 import { sparklinePath } from "@fomo/core";
+import { chartTokens } from "@/lib/chartTokens";
 
 /**
  * 피드 범용 뎁스 (WO 피드 통합 §3 — "탭했는데 안 가는 항목 0").
@@ -13,14 +14,12 @@ import { sparklinePath } from "@fomo/core";
  * 내러티브는 기존 NarrativeDepthPage 소관.
  */
 
-const NEON = "#D8FF3A";
-
 function valueTone(value: string): string {
   const number = Number.parseFloat(value.replace(/,/g, ""));
-  if (!Number.isFinite(number)) return "rgba(250,250,250,0.78)";
-  if (number > 0) return "#FF4D4D";
-  if (number < 0) return "#3B82F6";
-  return "#8A8A86";
+  if (!Number.isFinite(number)) return chartTokens.axis;
+  if (number > 0) return chartTokens.up;
+  if (number < 0) return chartTokens.down;
+  return chartTokens.neutral;
 }
 
 function TrendChart({ series }: { series: number[] }) {
@@ -34,7 +33,7 @@ function TrendChart({ series }: { series: number[] }) {
     <div className="mt-4 rounded-xl border border-hairline bg-white/[0.03] p-3">
       <p className="font-pixel text-[10px] uppercase tracking-wide text-muted">추이 (최근 구간)</p>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-2 h-16 w-full" aria-hidden>
-        <path d={paths.line} fill="none" stroke={NEON} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={paths.line} fill="none" stroke={chartTokens.up} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
     </div>
   );
@@ -155,7 +154,7 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
             {issue.source} · {issue.asOf}
           </p>
           {issue.url && (
-            <a href={issue.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs underline" style={{ color: NEON }}>
+            <a href={issue.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs underline" style={{ color: chartTokens.up }}>
               공시 원문 보기
             </a>
           )}
@@ -206,8 +205,8 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
         </div>
         {card.series && card.series.length >= 2 && <TrendChart series={card.series} />}
         {card.note && (
-          <div className="mt-4 rounded-xl px-4 py-3" style={{ backgroundColor: "rgba(216,255,58,0.12)" }}>
-            <p className="font-pixel text-[10px] uppercase tracking-wide" style={{ color: NEON }}>
+          <div className="mt-4 rounded-xl px-4 py-3" style={{ backgroundColor: chartTokens.zone.accumulation }}>
+            <p className="font-pixel text-[10px] uppercase tracking-wide" style={{ color: chartTokens.up }}>
               Editor&apos;s Note
             </p>
             <p className="mt-1 text-sm leading-6 text-whiteout">{card.note}</p>
@@ -217,7 +216,7 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
           {card.source} · {card.asOf}
         </p>
         {card.sourceUrl && (
-          <a href={card.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs underline" style={{ color: NEON }}>
+          <a href={card.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs underline" style={{ color: chartTokens.up }}>
             원문 보기
           </a>
         )}

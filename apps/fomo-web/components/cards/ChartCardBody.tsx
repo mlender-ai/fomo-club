@@ -3,6 +3,7 @@
 import { scoreToColor, assetHeatScore, scoreToFace, type ChartCard } from "@fomo/core";
 import { FomoFace } from "@/components/FomoFace";
 import { Sparkline } from "@/components/Sparkline";
+import { chartTokens } from "@/lib/chartTokens";
 
 /** 등락률 표기. */
 function pct(n: number): string {
@@ -16,11 +17,11 @@ function fmtValue(v: number): string {
 
 /**
  * 차트 카드 본문 — 포모 코멘트 + 자산명·현재가·등락% + 미니 추이선(있으면).
- * docs/PIVOT_FEED_FIRST.md. 등락 방향색(상승=빨강/하락=파랑). series 없으면 숫자만.
+ * docs/PIVOT_FEED_FIRST.md. 등락 방향색(상승=라임/하락=회색). series 없으면 숫자만.
  */
 export function ChartCardBody({ chart }: { chart: ChartCard }) {
   const up = chart.changePct >= 0;
-  const color = up ? "#FF5A36" : "#38BDF8";
+  const color = up ? chartTokens.up : chartTokens.down;
   const face = scoreToFace(assetHeatScore(chart.changePct));
 
   return (
