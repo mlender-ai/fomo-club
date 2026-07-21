@@ -34,6 +34,12 @@ import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
 import { JudgmentTimeline } from "@/components/JudgmentTimeline";
 import { DepthFold, DepthLine, DepthSection } from "@/components/DepthSection";
 import { chartTokens } from "@/lib/chartTokens";
+import {
+  MARKET_TERM_GLOSSARY,
+  easyMarketCopy,
+  termKeysForAnalysis,
+  type MarketTermKey,
+} from "@/lib/easyMarketCopy";
 import { markDiscoverySeenAction, recordDiscoveryDepth, recordDiscoverySeen } from "@/lib/discoveryPerformance";
 
 /**
@@ -1671,7 +1677,7 @@ function AnalysisChart({
   });
   const H = visibleQuietEvents.length > 0 ? QUIET_LANE_TOP + QUIET_LANE_GAP * 4 + 12 : VOL_TOP + VOL_H + 12;
   const zoneName = (kind: (typeof visibleZones)[number]["kind"]) =>
-    kind === "accumulation" ? "매집" : kind === "distribution" ? "분산" : kind === "markup" ? "상승" : "하락";
+    kind === "accumulation" ? "사 모으는 구간" : kind === "distribution" ? "고점 정체 구간" : kind === "markup" ? "상승" : "하락";
   const zoneColor = (kind: (typeof visibleZones)[number]["kind"]) => chartTokens.zone[kind];
   const markerText = (kind: WyckoffEvent["kind"]) =>
     kind === "spring" ? "S" : kind === "upthrust" ? "UT" : kind === "impulse" ? "I" : "P";
@@ -1819,7 +1825,7 @@ function AnalysisChart({
               key={`${event.kind}-${event.index}`}
               role="button"
               tabIndex={0}
-              aria-label={`${event.label}: ${event.explanation}`}
+              aria-label={`${easyMarketCopy(event.label, "detail")}: ${easyMarketCopy(event.explanation, "detail")}`}
               onClick={() => setSelectedEvent(selectedEvent?.kind === event.kind && selectedEvent.index === event.index ? null : event)}
               onKeyDown={(keyboardEvent) => {
                 if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") setSelectedEvent(event);
@@ -1879,8 +1885,8 @@ function AnalysisChart({
           onClick={() => setSelectedEvent(null)}
           className="mt-2 w-full rounded-md border border-white/15 bg-black/50 px-3 py-2 text-left"
         >
-          <span className="block text-[11px] font-bold text-whiteout">{selectedEvent.label}</span>
-          <span className="mt-1 block text-[10px] leading-4 text-muted">{selectedEvent.explanation}</span>
+          <span className="block text-[11px] font-bold text-whiteout">{easyMarketCopy(selectedEvent.label, "detail")}</span>
+          <span className="mt-1 block text-[10px] leading-4 text-muted">{easyMarketCopy(selectedEvent.explanation, "detail")}</span>
         </button>
       )}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
@@ -1960,7 +1966,9 @@ function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
     .join(" · ") || "레벨 축적 중";
   const latest = front?.ta?.latest;
   const momentumValue = finiteNumber(latest?.rsi14)
-    ? `RSI ${Math.round(latest.rsi14)}`
+    ? latest.rsi14 >= 70
+      ? `단기 과열(RSI ${Math.round(latest.rsi14)})`
+      : `RSI ${Math.round(latest.rsi14)}`
     : finiteNumber(latest?.atrPct)
       ? `변동폭 ${latest.atrPct.toFixed(1)}%`
       : finiteNumber(front?.signals?.volumeRatio) && front.signals.volumeRatio >= 0.1
@@ -1982,7 +1990,7 @@ function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
       title: "모멘텀",
       value: momentumValue,
       body: finiteNumber(latest?.rsi14)
-        ? `RSI 14 기준 ${Math.round(latest.rsi14)}예요.${finiteNumber(latest?.atrPct) ? ` 최근 하루 변동폭은 ${latest.atrPct.toFixed(1)}%예요.` : ""}`
+        ? `${latest.rsi14 >= 70 ? `단기 과열(RSI ${Math.round(latest.rsi14)})` : `RSI 14 기준 ${Math.round(latest.rsi14)}`}예요.${finiteNumber(latest?.atrPct) ? ` 최근 하루 변동폭은 ${latest.atrPct.toFixed(1)}%예요.` : ""}`
         : "현재 연결된 변동성·모멘텀 관측값을 보여줘요.",
     },
   ];
@@ -2020,6 +2028,14 @@ function ChartAnalysisTab({
     () => front?.candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-rangeDays),
     [front?.candles, rangeDays]
   );
+  const termKeys = useMemo(
+    () => termKeysForAnalysis(wyckoff, ta?.latest?.rsi14, verdict?.phase === "markup"),
+    [ta?.latest?.rsi14, verdict?.phase, wyckoff]
+  );
+  const showTerm = (key: MarketTermKey) => {
+    const term = MARKET_TERM_GLOSSARY[key];
+    setStructureTooltip({ title: term.detail, body: term.explanation });
+  };
 
   return (
     <section className="mt-2">
@@ -2040,8 +2056,10 @@ function ChartAnalysisTab({
             className="shrink-0 rounded-md border border-whiteout/20 px-2 py-1 text-[10px] font-bold text-whiteout"
           >
             {currentZone
-              ? currentZone.label
-              : `${verdict!.phase === "accumulation" ? "축적" : verdict!.phase === "markup" ? "상승" : verdict!.phase === "distribution" ? "분산" : "하락"} 국면`}
+              ? easyMarketCopy(currentZone.label, "detail")
+              : verdict!.phase === "accumulation"
+                ? "조용히 사 모으는 구간(매집)"
+                : `${verdict!.phase === "markup" ? "상승" : verdict!.phase === "distribution" ? "분산" : "하락"} 국면`}
           </button>
         )}
       </div>
@@ -2049,7 +2067,22 @@ function ChartAnalysisTab({
       {wyckoff?.summary && (
         <div className="mb-3 border-l-2 px-3 py-3" style={{ borderColor: chartTokens.zone.border, backgroundColor: chartTokens.zone.accumulation }}>
           <p className="font-pixel text-[10px]" style={{ color: chartTokens.up }}>지금 구간 요약</p>
-          <p className="mt-1.5 text-sm font-medium leading-6 text-whiteout">{wyckoff.summary}</p>
+          <p className="mt-1.5 text-sm font-medium leading-6 text-whiteout">{easyMarketCopy(wyckoff.summary, "detail")}</p>
+        </div>
+      )}
+
+      {termKeys.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5" aria-label="차트 용어 쉬운 설명">
+          {termKeys.map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => showTerm(key)}
+              className="rounded-full border border-hairline-soft bg-white/[0.03] px-2.5 py-1 text-[10px] text-whiteout transition-colors hover:border-whiteout/30"
+            >
+              {MARKET_TERM_GLOSSARY[key].detail}
+            </button>
+          ))}
         </div>
       )}
 
@@ -2127,11 +2160,11 @@ function ChartAnalysisTab({
               <button
                 key={`${event.kind}-${event.index}`}
                 type="button"
-                onClick={() => setStructureTooltip({ title: event.label, body: event.explanation })}
+                onClick={() => setStructureTooltip({ title: easyMarketCopy(event.label, "detail") ?? event.label, body: easyMarketCopy(event.explanation, "detail") ?? event.explanation })}
                 className="w-full border-l border-white/20 px-3 py-1.5 text-left transition-colors hover:border-whiteout"
               >
-                <span className="block text-xs font-bold text-whiteout">{event.label}</span>
-                <span className="mt-0.5 block text-[11px] leading-5 text-muted">{event.explanation}</span>
+                <span className="block text-xs font-bold text-whiteout">{easyMarketCopy(event.label, "detail")}</span>
+                <span className="mt-0.5 block text-[11px] leading-5 text-muted">{easyMarketCopy(event.explanation, "detail")}</span>
               </button>
             ))}
           </div>
@@ -2203,8 +2236,8 @@ function ChartAnalysisTab({
 
 // 판단 층(WO Phase 1) — 와이코프 국면 표기(뎁스 문단용).
 const DEPTH_PHASE_TEXT: Record<string, string> = {
-  accumulation: "저점권 횡보에 거래가 수축된 축적형 구조",
-  markup: "이동평균 정배열에 거래량이 붙은 상승 국면",
+  accumulation: "저점권 횡보에 거래가 줄어드는 조용히 사 모으는 구간(매집)",
+  markup: "이평선이 위로 정렬(정배열)되고 거래량이 붙은 상승 국면",
   distribution: "고점권에서 거래는 늘고 가격은 정체된 분산형 구조",
   markdown: "이동평균 역배열에 저점을 갱신 중인 하락 국면",
 };
@@ -2319,7 +2352,7 @@ function ConvictionParagraphs({
               </span>
             )}
           </div>
-          <p className="mt-2 text-sm leading-6 text-whiteout">{s.stanceText}</p>
+          <p className="mt-2 text-sm leading-6 text-whiteout">{easyMarketCopy(s.stanceText, "detail")}</p>
           {s.confidenceText && <p className="mt-1 text-[12px] leading-5 text-muted">{s.confidenceText}</p>}
         </div>
       )}
@@ -2330,7 +2363,7 @@ function ConvictionParagraphs({
           <ul className="mt-2 space-y-1.5">
             {s.evidence.map((line, i) => (
               <li key={`vd-ev-${i}`} className="text-sm leading-6 text-whiteout">
-                · {line}
+                · {easyMarketCopy(line, "detail")}
               </li>
             ))}
           </ul>
