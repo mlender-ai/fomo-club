@@ -8,9 +8,14 @@ const chartCard = readFileSync(new URL("../components/cards/ChartCardBody.tsx", 
 const tokens = readFileSync(new URL("../lib/chartTokens.ts", import.meta.url), "utf8");
 
 describe("종목 뎁스 정보 구조", () => {
-  it("판단을 기본으로 열고 네 개의 sticky 탭을 고정한다", () => {
+  it("판단을 기본으로 열고 네 개의 탭을 레이아웃별로 고정한다", () => {
     expect(component).toContain('useState<DepthTab>("judgment")');
     expect(component).toContain("sticky top-0 z-30");
+    expect(component).toContain('inline = false');
+    expect(component).toContain('"z-30 shrink-0 border-b border-hairline bg-black px-6 py-2"');
+    expect(component).toContain("{inline && detailsReady && (");
+    expect(component).toContain('<DepthTabBar tab={depthTab} onChange={setDepthTab} inline />');
+    expect(component).toContain("{!inline && <DepthTabBar tab={depthTab} onChange={setDepthTab} />}");
     for (const label of ["판단", "차트·구간", "기업·재무", "신호 이력"]) {
       expect(component).toContain(`label: "${label}"`);
     }
