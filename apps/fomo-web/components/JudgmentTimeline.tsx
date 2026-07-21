@@ -8,6 +8,8 @@ import {
   type SignalTypeCode,
 } from "@fomo/core";
 import { fetchLedgerTimeline, type LedgerTimelineEntry, type TrackMetric } from "@/lib/fomoApi";
+import { DepthLine, DepthSection } from "@/components/DepthSection";
+import { chartTokens } from "@/lib/chartTokens";
 
 const KIND_LABEL: Record<LedgerTimelineEntry["kind"], string> = {
   signal: "신호",
@@ -19,11 +21,11 @@ const KIND_LABEL: Record<LedgerTimelineEntry["kind"], string> = {
 };
 
 const KIND_STYLE: Record<LedgerTimelineEntry["kind"], { icon: string; color: string }> = {
-  signal: { icon: "●", color: "#D8FF3A" },
-  verdict: { icon: "V", color: "#60A5FA" },
-  score: { icon: "#", color: "#D8FF3A" },
-  selection: { icon: "✓", color: "#FAFAFA" },
-  user_action: { icon: "★", color: "#A78BFA" },
+  signal: { icon: "●", color: chartTokens.up },
+  verdict: { icon: "V", color: chartTokens.ma60 },
+  score: { icon: "#", color: chartTokens.up },
+  selection: { icon: "✓", color: chartTokens.marker.event },
+  user_action: { icon: "★", color: chartTokens.ma120 },
   outcome: { icon: "↗", color: "#C9C9C4" },
 };
 
@@ -82,17 +84,13 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
   const visible = useMemo(() => entries.slice(0, 8), [entries]);
   if (visible.length === 0) return null;
   return (
-    <section className="mt-4 border-y border-hairline py-4">
-      <div>
-        <div className="flex items-center justify-between">
-          <p className="font-pixel text-sm text-whiteout">이 종목 판단 기록</p>
-          <span className="text-[10px] text-muted">지워지지 않는 시점 기록</span>
-        </div>
-        <p className="mt-2 text-[11px] leading-5 text-muted">
-          포모클럽이 이 종목을 언제 뭐라 봤는지, 그때 가격과 함께 지워지지 않게 남긴 기록이에요.
-        </p>
-      </div>
-      <div className="mt-3 divide-y divide-hairline">
+    <DepthSection
+      className="mt-4"
+      variant="list"
+      title="이 종목 판단 기록"
+      description="포모클럽이 이 종목을 언제 뭐라 봤는지, 그때 가격과 함께 지워지지 않게 남긴 기록이에요."
+      aside={<span className="text-[10px] text-muted">지워지지 않는 시점 기록</span>}
+    >
         {visible.map((entry) => {
           const style = KIND_STYLE[entry.kind];
           const resumes = signalTypes(entry).flatMap((code) => {
@@ -100,7 +98,7 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
             return metric ? [{ code, metric }] : [];
           });
           return (
-            <div key={`${entry.id}-${entry.date}`} className="grid grid-cols-[70px_1fr] gap-3 py-2.5">
+            <DepthLine key={`${entry.id}-${entry.date}`} className="grid grid-cols-[70px_1fr] gap-3">
               <div>
                 <p className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: style.color }}>
                   <span aria-hidden className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[9px]" style={{ borderColor: style.color }}>
@@ -119,10 +117,9 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
                 ))}
                 <p className="mt-0.5 text-[10px] text-muted">당시 가격 {price(entry.priceAt)}</p>
               </div>
-            </div>
+            </DepthLine>
           );
         })}
-      </div>
-    </section>
+    </DepthSection>
   );
 }

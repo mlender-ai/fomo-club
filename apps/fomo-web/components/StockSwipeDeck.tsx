@@ -34,6 +34,7 @@ import { recordDiscoveryEvent } from "@/lib/discoveryMetrics";
 import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
 import { verdictBalance } from "@/lib/discoveryPresentation";
 import { GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
+import { chartTokens } from "@/lib/chartTokens";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -44,7 +45,7 @@ const THRESHOLD = 90;
 const UP_THRESHOLD = 90; // 위로 끌어 슈퍼관심(강한 관심)
 const EXIT_MS = 320;
 // DESIGN.md §2 브랜드 액센트(역할 인코딩). 오렌지=주목 열기/강도, 네온=발견·💎·CTA. 등락엔 절대 금지.
-const NEON = "#D8FF3A";
+const NEON = chartTokens.up;
 type CardFaceView = { headline: string; isLeading: boolean };
 
 /** 종목별 앞면 데이터(stock-front 응답 캐시). 종합점수·스파크라인·가격. */
@@ -139,8 +140,8 @@ function LogoBadge({
   );
 }
 
-/** 봉인색 — 등락 데이터 전용(DESIGN.md §2). 브랜드(오렌지/네온)와 분리. 상승 적·하락 청(KR 관습). */
-const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
+/** 상세·미니 차트와 같은 방향 토큰을 사용한다. */
+const DIR_COLOR: Record<string, string> = { up: chartTokens.up, down: chartTokens.down, flat: chartTokens.neutral };
 
 function clampStyle(lines: number): CSSProperties {
   return {
@@ -164,10 +165,9 @@ function FeedSignalStrip({
   bear?: FeedSignalPoint | undefined;
 }) {
   if (!bull && !bear) return null;
-  const rows = [
-    bull ? { label: "강세", tone: "#FF4D4D", point: bull } : undefined,
-    bear ? { label: "약세", tone: "#3B82F6", point: bear } : undefined,
-  ].filter((row): row is { label: string; tone: string; point: FeedSignalPoint } => !!row);
+  const rows: Array<{ label: string; tone: string; point: FeedSignalPoint }> = [];
+  if (bull) rows.push({ label: "강세", tone: chartTokens.up, point: bull });
+  if (bear) rows.push({ label: "약세", tone: chartTokens.down, point: bear });
   return (
     <div className="mt-2 grid shrink-0 gap-1 rounded-lg border border-hairline bg-black/10 px-3 py-1.5">
       {rows.map((row) => (

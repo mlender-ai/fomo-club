@@ -1,0 +1,32 @@
+/** 모든 미니·상세 차트가 공유하는 단일 색상 소스. */
+export const chartTokens = {
+  up: "#D8FF3A",
+  down: "#777873",
+  neutral: "#9A9A96",
+  surface: "#050706",
+  textOnAccent: "#050706",
+  grid: "rgba(255,255,255,0.09)",
+  axis: "rgba(250,250,250,0.45)",
+  border: "rgba(255,255,255,0.16)",
+  level: "rgba(250,250,250,0.28)",
+  levelLabel: "rgba(250,250,250,0.48)",
+  ma20: "#F59E0B",
+  ma60: "#60A5FA",
+  ma120: "#A78BFA",
+  invalidation: "#D8FF3A",
+  volumeUp: "rgba(216,255,58,0.34)",
+  volumeDown: "rgba(119,120,115,0.28)",
+  zone: {
+    accumulation: "rgba(216,255,58,0.10)",
+    distribution: "rgba(148,163,184,0.12)",
+    markup: "rgba(216,255,58,0.07)",
+    markdown: "rgba(119,120,115,0.10)",
+    border: "rgba(216,255,58,0.38)",
+    mutedBorder: "rgba(250,250,250,0.22)",
+    label: "rgba(250,250,250,0.72)",
+  },
+  marker: {
+    event: "#FAFAFA",
+    money: "#D8FF3A",
+  },
+} as const;

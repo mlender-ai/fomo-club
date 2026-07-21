@@ -32,6 +32,8 @@ import { verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
 import { JudgmentTimeline } from "@/components/JudgmentTimeline";
+import { DepthFold, DepthLine, DepthSection } from "@/components/DepthSection";
+import { chartTokens } from "@/lib/chartTokens";
 import { markDiscoverySeenAction, recordDiscoveryDepth, recordDiscoverySeen } from "@/lib/discoveryPerformance";
 
 /**
@@ -435,7 +437,7 @@ function StockPriceHeader({ basics, front }: { basics: StockBasics | null; front
         <div className="mt-2">
           <span className="text-[32px] font-bold leading-none text-whiteout">{priceText}</span>
           {changeText && (
-            <span className="ml-2 align-baseline text-sm font-medium tabular-nums" style={up || down ? { color: up ? "#ff5a5f" : "#4f8cff" } : undefined}>
+            <span className="ml-2 align-baseline text-sm font-medium tabular-nums" style={up || down ? { color: up ? chartTokens.up : chartTokens.down } : undefined}>
               {up ? "▲" : down ? "▼" : ""} {changeText}
             </span>
           )}
@@ -627,22 +629,12 @@ function stockWatchPoint(front: StockFrontResponse | null): string {
 type MovementRange = "1m" | "3m";
 type ChartTooltip = { title: string; body: string };
 
-const DETAIL_CHART = {
+const DETAIL_CHART_LAYOUT = {
   W: 320,
   PRICE_H: 170,
   VOL_TOP: 180,
   VOL_H: 42,
   H: 228,
-  up: "#22C55E",
-  down: "#EF4444",
-  wick: "rgba(250,250,250,0.54)",
-  grid: "rgba(255,255,255,0.08)",
-  muted: "rgba(255,255,255,0.40)",
-  ma20: "#F59E0B",
-  ma60: "#60A5FA",
-  ma120: "#A78BFA",
-  invalidation: "#F59E0B",
-  flow: "#60A5FA",
 } as const;
 
 function finiteNumber(value: number | undefined): value is number {
@@ -800,12 +792,12 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
   const candles = useMemo(() => sourceCandles.slice(-(range === "1m" ? 22 : 66)), [sourceCandles, range]);
   if (candles.length < 2) return null;
 
-  const W = DETAIL_CHART.W;
+  const W = DETAIL_CHART_LAYOUT.W;
   const PLOT_W = 278;
-  const PRICE_H = DETAIL_CHART.PRICE_H;
-  const VOL_TOP = DETAIL_CHART.VOL_TOP;
-  const VOL_H = DETAIL_CHART.VOL_H;
-  const H = DETAIL_CHART.H;
+  const PRICE_H = DETAIL_CHART_LAYOUT.PRICE_H;
+  const VOL_TOP = DETAIL_CHART_LAYOUT.VOL_TOP;
+  const VOL_H = DETAIL_CHART_LAYOUT.VOL_H;
+  const H = DETAIL_CHART_LAYOUT.H;
   const priceValues = candles.flatMap((c) => [c.high, c.low]);
   const minRaw = Math.min(...priceValues);
   const maxRaw = Math.max(...priceValues);
@@ -821,7 +813,7 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
   const latest = candles[candles.length - 1];
   const rangeBase = candles[0]!.open;
   const rangePct = rangeBase > 0 ? ((latest!.close / rangeBase) - 1) * 100 : 0;
-  const rangeColor = rangePct >= 0 ? DETAIL_CHART.up : DETAIL_CHART.down;
+  const rangeColor = rangePct >= 0 ? chartTokens.up : chartTokens.down;
   const rangeLabel = range === "1m" ? "1개월" : "3개월";
   const priceTicks = [maxRaw, (maxRaw + minRaw) / 2, minRaw];
 
@@ -842,14 +834,14 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
                 setTooltip(null);
               }}
               className="rounded-full px-2.5 py-1 font-pixel text-[10px]"
-              style={{ backgroundColor: range === key ? "#D8FF3A" : "transparent", color: range === key ? "#0A0A0A" : "#9A9A96" }}
+              style={{ backgroundColor: range === key ? chartTokens.up : "transparent", color: range === key ? chartTokens.textOnAccent : chartTokens.neutral }}
             >
               {key === "1m" ? "1개월" : "3개월"}
             </button>
           ))}
         </div>
       </div>
-      <div className="relative mt-3 rounded-lg border border-white/15 bg-[#050706] px-3 py-3 shadow-inner">
+      <div className="relative mt-3 rounded-lg border border-white/15 px-3 py-3 shadow-inner" style={{ backgroundColor: chartTokens.surface }}>
         <div className="mb-2 flex items-center justify-between gap-3 border-b border-white/10 pb-2">
           <span className="font-pixel text-[10px] text-muted">{rangeLabel} · {markerDateLabel(latest)}</span>
           <span className="font-number text-xs font-bold" style={{ color: rangeColor }}>
@@ -860,13 +852,13 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
           <span>O <b className="text-whiteout">{formatAxisPrice(latest!.open)}</b></span>
           <span>H <b className="text-whiteout">{formatAxisPrice(latest!.high)}</b></span>
           <span>L <b className="text-whiteout">{formatAxisPrice(latest!.low)}</b></span>
-          <span>C <b style={{ color: latest!.close >= latest!.open ? DETAIL_CHART.up : DETAIL_CHART.down }}>{formatAxisPrice(latest!.close)}</b></span>
+          <span>C <b style={{ color: latest!.close >= latest!.open ? chartTokens.up : chartTokens.down }}>{formatAxisPrice(latest!.close)}</b></span>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="최근 가격·거래량 반응 차트">
           {[0.25, 0.5, 0.75].map((ratio) => (
-            <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke={DETAIL_CHART.grid} />
+            <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke={chartTokens.grid} />
           ))}
-          <line x1="0" x2={PLOT_W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.16)" />
+          <line x1="0" x2={PLOT_W} y1={PRICE_H} y2={PRICE_H} stroke={chartTokens.border} />
           <line
             x1="0"
             x2={PLOT_W}
@@ -877,7 +869,7 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
             strokeDasharray="2 3"
           />
           {priceTicks.map((price) => (
-            <text key={price} x={PLOT_W + 6} y={Math.max(8, Math.min(PRICE_H - 2, y(price) + 3))} fontSize="7.5" fill={DETAIL_CHART.muted}>
+            <text key={price} x={PLOT_W + 6} y={Math.max(8, Math.min(PRICE_H - 2, y(price) + 3))} fontSize="7.5" fill={chartTokens.axis}>
               {formatAxisPrice(price)}
             </text>
           ))}
@@ -885,7 +877,7 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
             const cx = x(i);
             const h = maxVol > 0 ? (c.volume / maxVol) * VOL_H : 0;
             const isUp = c.close >= c.open;
-            const fill = isUp ? "rgba(34,197,94,0.34)" : "rgba(239,68,68,0.28)";
+            const fill = isUp ? chartTokens.volumeUp : chartTokens.volumeDown;
             return (
               <rect
                 key={`vol-${i}`}
@@ -900,7 +892,7 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
           {candles.map((c, i) => {
             const cx = x(i);
             const isUp = c.close >= c.open;
-            const color = isUp ? DETAIL_CHART.up : DETAIL_CHART.down;
+            const color = isUp ? chartTokens.up : chartTokens.down;
             const top = y(Math.max(c.open, c.close));
             const bottom = y(Math.min(c.open, c.close));
             return (
@@ -912,7 +904,7 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
             );
           })}
           <rect x={PLOT_W + 1} y={Math.max(1, Math.min(PRICE_H - 16, y(latest!.close) - 8))} width="40" height="16" rx="2" fill={rangeColor} />
-          <text x={PLOT_W + 38} y={Math.max(12, Math.min(PRICE_H - 5, y(latest!.close) + 3))} textAnchor="end" fontSize="7.5" fontWeight="700" fill="#050706">
+          <text x={PLOT_W + 38} y={Math.max(12, Math.min(PRICE_H - 5, y(latest!.close) + 3))} textAnchor="end" fontSize="7.5" fontWeight="700" fill={chartTokens.textOnAccent}>
             {formatAxisPrice(latest!.close)}
           </text>
         </svg>
@@ -1366,62 +1358,82 @@ function CommunityWordingBlock({ insight }: { insight: CondensedInsight | null }
   );
 }
 
-/** 뎁스 2탭 바 — 발견 이유(재료·수급) / 차트 보기(TA). 기본은 발견 이유. */
-function DepthTabBar({ tab, onChange }: { tab: "why" | "ta"; onChange: (t: "why" | "ta") => void }) {
-  const tabs: Array<{ key: "why" | "ta"; label: string }> = [
-    { key: "why", label: "발견 이유" },
-    { key: "ta", label: "차트 보기" },
+type DepthTab = "judgment" | "chart" | "company" | "history";
+
+/** 상세 정보 위계를 고정하는 4축 탭. 스크롤 컨테이너 상단에 계속 남는다. */
+function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTab) => void }) {
+  const tabs: Array<{ key: DepthTab; label: string }> = [
+    { key: "judgment", label: "판단" },
+    { key: "chart", label: "차트·구간" },
+    { key: "company", label: "기업·재무" },
+    { key: "history", label: "신호 이력" },
   ];
   return (
-    <div className="mt-6 mb-5 flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist">
-      {tabs.map((t) => {
-        const active = tab === t.key;
-        return (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(t.key)}
-            className="flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: active ? "#D8FF3A" : "transparent",
-              color: active ? "#0a0a0a" : "#94a3b8",
-            }}
-          >
-            {t.label}
-          </button>
-        );
-      })}
+    <div className="sticky top-0 z-30 -mx-6 mt-4 border-y border-hairline bg-black/95 px-6 py-2 backdrop-blur" role="tablist" aria-label="종목 상세">
+      <div className="grid h-10 grid-cols-4 gap-1 rounded-md bg-surface p-1">
+        {tabs.map((item) => {
+          const active = tab === item.key;
+          return (
+            <button
+              key={item.key}
+              role="tab"
+              aria-selected={active}
+              aria-controls={`depth-panel-${item.key}`}
+              onClick={() => onChange(item.key)}
+              className="min-w-0 rounded px-1 text-[11px] font-semibold transition-colors"
+              style={{
+                backgroundColor: active ? chartTokens.up : "transparent",
+                color: active ? chartTokens.textOnAccent : chartTokens.neutral,
+              }}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function ExpertCommitteeReview({ review }: { review: StockFrontResponse["committeeReview"] | undefined }) {
+function ExpertCommitteeReview({
+  review,
+  view,
+}: {
+  review: StockFrontResponse["committeeReview"] | undefined;
+  view: "trading" | "financial";
+}) {
   if (!review) return null;
-  const gradeTone = (grade: "A" | "B" | "C") => grade === "A" ? "#D8FF3A" : grade === "B" ? "#f4f5f7" : "#8a8f98";
+  const gradeTone = (grade: "A" | "B" | "C") => grade === "A" ? chartTokens.up : grade === "B" ? chartTokens.marker.event : chartTokens.neutral;
+  const trading = view === "trading";
+  const grade = trading ? review.timingGrade : review.valuationGrade;
   return (
-    <section className="mt-4 border-y border-hairline bg-surface/70 px-4 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-pixel text-sm text-whiteout">전문 분석</p>
-        <span className="text-[10px] text-muted">사실 대조 완료 · {review.reviewedAt.slice(0, 10)}</span>
+    <DepthSection
+      className="mt-4"
+      title={trading ? "트레이딩 전문 분석" : "기업·재무 전문 분석"}
+      description={`사실 대조 완료 · ${review.reviewedAt.slice(0, 10)}`}
+      aside={<span className="font-pixel text-xs" style={{ color: gradeTone(grade) }}>{grade}</span>}
+    >
+      <p className="text-sm leading-6 text-whiteout">
+        {cleanText(trading ? review.tradingView : review.fundamentalView)}
+      </p>
+    </DepthSection>
+  );
+}
+
+function JudgmentDecision({ front }: { front: StockFrontResponse | null }) {
+  const verdict = front?.verdict;
+  return (
+    <DepthSection className="mt-4" title="현재 판단">
+      <p className="text-sm font-medium leading-6 text-whiteout">
+        {verdict?.stanceText ?? "판단에 필요한 차트·수급 근거를 축적하고 있어요."}
+      </p>
+      <div className="mt-4 border-t border-hairline pt-3">
+        <p className="text-[11px] font-semibold text-muted">무효선·다음 확인</p>
+        <p className="mt-1 text-sm leading-6 text-whiteout">
+          {verdict?.invalidation ?? "검증 가능한 무효화 가격은 아직 계산 중이에요."}
+        </p>
       </div>
-      <div className="mt-4 grid gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-bold text-muted">차트·타이밍</p>
-            <span className="font-pixel text-xs" style={{ color: gradeTone(review.timingGrade) }}>{review.timingGrade}</span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-whiteout">{cleanText(review.tradingView)}</p>
-        </div>
-        <div className="border-t border-hairline pt-4">
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-bold text-muted">기업·재무</p>
-            <span className="font-pixel text-xs" style={{ color: gradeTone(review.valuationGrade) }}>{review.valuationGrade}</span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-whiteout">{cleanText(review.fundamentalView)}</p>
-        </div>
-      </div>
-    </section>
+    </DepthSection>
   );
 }
 
@@ -1451,25 +1463,20 @@ function quietMoneyAmount(event: NonNullable<StockFrontResponse["quietMoney"]>["
 function QuietMoneyBlock({ timeline }: { timeline: StockFrontResponse["quietMoney"] | undefined }) {
   if (!timeline?.events.length) return null;
   return (
-    <section className="mt-4 border-y border-hairline py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-pixel text-sm text-whiteout">조용한 돈</p>
-          <p className="mt-1 text-[11px] text-muted">공시·KRX 확정치·온체인 근거를 한 시간축으로 묶었어요.</p>
-        </div>
-        {timeline.cluster && (
-          <span className="shrink-0 rounded-md border border-[#D8FF3A]/50 px-2 py-1 text-[10px] font-bold text-[#D8FF3A]">
-            강도 {timeline.cluster.strength}/5
-          </span>
-        )}
-      </div>
+    <DepthSection
+      className="mt-4"
+      variant="list"
+      title="조용한 돈"
+      description="공시·KRX 확정치·온체인 근거를 한 시간축으로 묶었어요."
+      aside={timeline.cluster ? <span className="text-[10px] font-bold" style={{ color: chartTokens.up }}>강도 {timeline.cluster.strength}/5</span> : undefined}
+    >
       {timeline.cluster && (
-        <div className="mt-3 border-l-2 border-[#D8FF3A] bg-[#D8FF3A]/[0.06] px-3 py-2.5">
+        <DepthLine className="border-l-2 px-3" style={{ borderColor: chartTokens.up }}>
           <p className="text-sm font-bold text-whiteout">{cleanText(timeline.cluster.headline)}</p>
           <p className="mt-1 text-[11px] leading-5 text-muted">{cleanText(timeline.cluster.evidence.join(" · "))}</p>
-        </div>
+        </DepthLine>
       )}
-      <ol className="mt-3 space-y-0">
+      <ol>
         {timeline.events.slice(0, 12).map((event, index) => {
           const amount = quietMoneyAmount(event);
           const content = (
@@ -1484,13 +1491,15 @@ function QuietMoneyBlock({ timeline }: { timeline: StockFrontResponse["quietMone
             </>
           );
           return (
-            <li key={`${event.date}-${event.actor}-${index}`} className="border-l border-white/15 px-3 py-2">
-              {event.sourceUrl ? <a href={event.sourceUrl} target="_blank" rel="noreferrer" className="block hover:border-[#D8FF3A]">{content}</a> : content}
+            <li key={`${event.date}-${event.actor}-${index}`} className="border-t border-hairline first:border-t-0">
+              <DepthLine className="px-0">
+                {event.sourceUrl ? <a href={event.sourceUrl} target="_blank" rel="noreferrer" className="block hover:text-whiteout">{content}</a> : content}
+              </DepthLine>
             </li>
           );
         })}
       </ol>
-    </section>
+    </DepthSection>
   );
 }
 
@@ -1522,13 +1531,13 @@ function DiscoveryOverview({
   ].filter((item): item is string => !!item);
 
   return (
-    <section className="mt-5 border-y border-hairline bg-black/20 px-4 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-pixel text-xs text-muted">오늘 발견 포인트</p>
-        <span className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={{ borderColor: status.color, color: status.color }}>
+    <DepthSection
+      className="mt-4"
+      title="오늘 발견 포인트"
+      aside={<span className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={{ borderColor: status.color, color: status.color }}>
           {status.label}
-        </span>
-      </div>
+        </span>}
+    >
       <p className="mt-2 text-base font-bold leading-6 text-whiteout">
         {trigger ?? status.summary}
       </p>
@@ -1549,7 +1558,7 @@ function DiscoveryOverview({
           <p className="mt-3 text-[10px] text-muted">{[source, asOf].filter(Boolean).join(" · ")}</p>
         )
       )}
-    </section>
+    </DepthSection>
   );
 }
 
@@ -1558,22 +1567,6 @@ const TA_ROLE_GROUPS: Array<{ role: "event" | "balance" | "confirmation"; label:
   { role: "balance", label: "균형·경계" },
   { role: "confirmation", label: "보조 확인" },
 ];
-
-const CHART_COLOR = {
-  up: "#D8FF3A",
-  down: "#777873",
-  wick: "rgba(250,250,250,0.52)",
-  ma20: "#F59E0B",
-  ma60: "#60A5FA",
-  ma120: "#A78BFA",
-  invalidation: "#F59E0B",
-  volumeUp: "rgba(216,255,58,0.34)",
-  volumeDown: "rgba(119,120,115,0.28)",
-  accumulation: "rgba(216,255,58,0.10)",
-  distribution: "rgba(148,163,184,0.12)",
-  markup: "rgba(216,255,58,0.07)",
-  markdown: "rgba(119,120,115,0.10)",
-} as const;
 
 /** 캔들+MA20/60/120+거래량+무효화 레벨선(WO 1.6 D-1) — 라인차트 금지, 라이브러리 없음. */
 function AnalysisChart({
@@ -1679,7 +1672,7 @@ function AnalysisChart({
   const H = visibleQuietEvents.length > 0 ? QUIET_LANE_TOP + QUIET_LANE_GAP * 4 + 12 : VOL_TOP + VOL_H + 12;
   const zoneName = (kind: (typeof visibleZones)[number]["kind"]) =>
     kind === "accumulation" ? "매집" : kind === "distribution" ? "분산" : kind === "markup" ? "상승" : "하락";
-  const zoneColor = (kind: (typeof visibleZones)[number]["kind"]) => CHART_COLOR[kind];
+  const zoneColor = (kind: (typeof visibleZones)[number]["kind"]) => chartTokens.zone[kind];
   const markerText = (kind: WyckoffEvent["kind"]) =>
     kind === "spring" ? "S" : kind === "upthrust" ? "UT" : kind === "impulse" ? "I" : "P";
 
@@ -1689,7 +1682,7 @@ function AnalysisChart({
         <span>O <b className="text-whiteout">{formatAxisPrice(latest.open)}</b></span>
         <span>H <b className="text-whiteout">{formatAxisPrice(latest.high)}</b></span>
         <span>L <b className="text-whiteout">{formatAxisPrice(latest.low)}</b></span>
-        <span>C <b style={{ color: latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down }}>{formatAxisPrice(latest.close)}</b></span>
+        <span>C <b style={{ color: latest.close >= latest.open ? chartTokens.up : chartTokens.down }}>{formatAxisPrice(latest.close)}</b></span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="캔들·이동평균·거래량 차트">
         {visibleZones.map((zone) => {
@@ -1707,22 +1700,22 @@ function AnalysisChart({
                 width={Math.max(2, right - left)}
                 height={Math.max(10, bottom - top)}
                 fill={zoneColor(zone.kind)}
-                stroke={zone.kind === "accumulation" ? "rgba(216,255,58,0.38)" : "rgba(250,250,250,0.22)"}
+                stroke={zone.kind === "accumulation" ? chartTokens.zone.border : chartTokens.zone.mutedBorder}
                 strokeWidth="0.7"
                 strokeDasharray="3 3"
               />
-              <text x={left + 3} y={Math.min(PRICE_H - 4, top + 10)} fontSize="7.5" fontWeight="700" fill="rgba(250,250,250,0.72)">
+              <text x={left + 3} y={Math.min(PRICE_H - 4, top + 10)} fontSize="7.5" fontWeight="700" fill={chartTokens.zone.label}>
                 {zoneName(zone.kind)} {zone.weeks}주차
               </text>
             </g>
           );
         })}
         {[0.2, 0.4, 0.6, 0.8].map((ratio) => (
-          <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke="rgba(255,255,255,0.09)" />
+          <line key={ratio} x1="0" x2={PLOT_W} y1={PRICE_H * ratio} y2={PRICE_H * ratio} stroke={chartTokens.grid} />
         ))}
-        <line x1="0" x2={PLOT_W} y1={PRICE_H} y2={PRICE_H} stroke="rgba(255,255,255,0.16)" />
+        <line x1="0" x2={PLOT_W} y1={PRICE_H} y2={PRICE_H} stroke={chartTokens.border} />
         {priceTicks.map((price) => (
-          <text key={price} x={PLOT_W + 6} y={Math.max(8, Math.min(PRICE_H - 2, y(price) + 3))} fontSize="7.5" fill="rgba(250,250,250,0.45)">
+          <text key={price} x={PLOT_W + 6} y={Math.max(8, Math.min(PRICE_H - 2, y(price) + 3))} fontSize="7.5" fill={chartTokens.axis}>
             {formatAxisPrice(price)}
           </text>
         ))}
@@ -1736,13 +1729,13 @@ function AnalysisChart({
               y={VOL_TOP + (VOL_H - h)}
               width={barW}
               height={Math.max(0.5, h)}
-              fill={isUp ? CHART_COLOR.volumeUp : CHART_COLOR.volumeDown}
+              fill={isUp ? chartTokens.volumeUp : chartTokens.volumeDown}
             />
           );
         })}
-        <path d={linePath(series.ma120)} fill="none" stroke={CHART_COLOR.ma120} strokeWidth="1.1" />
-        <path d={linePath(series.ma60)} fill="none" stroke={CHART_COLOR.ma60} strokeWidth="1.1" />
-        <path d={linePath(series.ma20)} fill="none" stroke={CHART_COLOR.ma20} strokeWidth="1.2" />
+        <path d={linePath(series.ma120)} fill="none" stroke={chartTokens.ma120} strokeWidth="1.1" />
+        <path d={linePath(series.ma60)} fill="none" stroke={chartTokens.ma60} strokeWidth="1.1" />
+        <path d={linePath(series.ma20)} fill="none" stroke={chartTokens.ma20} strokeWidth="1.2" />
         {levels.map((level, index) => (
           <g key={`${level.kind}-${index}`}>
             <line
@@ -1750,11 +1743,11 @@ function AnalysisChart({
               x2={PLOT_W}
               y1={y(level.value)}
               y2={y(level.value)}
-              stroke="rgba(250,250,250,0.28)"
+              stroke={chartTokens.level}
               strokeWidth="0.8"
               strokeDasharray="3 4"
             />
-            <text x="4" y={Math.max(9, y(level.value) - 3)} fontSize="8" fill="rgba(250,250,250,0.48)">
+            <text x="4" y={Math.max(9, y(level.value) - 3)} fontSize="8" fill={chartTokens.levelLabel}>
               {level.kind === "support" ? "지지" : "저항"} {formatChartPrice(level.value)}
             </text>
           </g>
@@ -1762,7 +1755,7 @@ function AnalysisChart({
         {renderedCandles.map((c, i) => {
           const cx = x(i);
           const isUp = c.close >= c.open;
-          const color = isUp ? CHART_COLOR.up : CHART_COLOR.down;
+          const color = isUp ? chartTokens.up : chartTokens.down;
           const top = y(Math.max(c.open, c.close));
           const bottom = y(Math.min(c.open, c.close));
           return (
@@ -1778,7 +1771,7 @@ function AnalysisChart({
           x2={PLOT_W}
           y1={y(latest.close)}
           y2={y(latest.close)}
-          stroke={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
+          stroke={latest.close >= latest.open ? chartTokens.up : chartTokens.down}
           strokeWidth="0.8"
           strokeDasharray="2 3"
           opacity="0.72"
@@ -1789,7 +1782,7 @@ function AnalysisChart({
           width="40"
           height="16"
           rx="2"
-          fill={latest.close >= latest.open ? CHART_COLOR.up : CHART_COLOR.down}
+          fill={latest.close >= latest.open ? chartTokens.up : chartTokens.down}
         />
         <text
           x={PLOT_W + 38}
@@ -1797,7 +1790,7 @@ function AnalysisChart({
           textAnchor="end"
           fontSize="7.5"
           fontWeight="700"
-          fill="#050706"
+          fill={chartTokens.textOnAccent}
         >
           {formatAxisPrice(latest.close)}
         </text>
@@ -1808,7 +1801,7 @@ function AnalysisChart({
               x2={PLOT_W}
               y1={y(invalidationLevel!)}
               y2={y(invalidationLevel!)}
-              stroke={CHART_COLOR.invalidation}
+              stroke={chartTokens.invalidation}
               strokeWidth="1.2"
               strokeDasharray="5 4"
             />
@@ -1819,8 +1812,8 @@ function AnalysisChart({
           const cy = Math.max(10, Math.min(PRICE_H - 10, y(event.price)));
           const isBoundary = event.kind === "spring" || event.kind === "upthrust";
           const fill = event.kind === "spring" || (event.kind === "impulse" && event.direction === "up") || event.kind === "pullback"
-            ? CHART_COLOR.up
-            : "#D5D6D1";
+            ? chartTokens.up
+            : chartTokens.marker.event;
           return (
             <g
               key={`${event.kind}-${event.index}`}
@@ -1837,15 +1830,15 @@ function AnalysisChart({
                 <polygon
                   points={event.kind === "spring" ? `${cx},${cy - 7} ${cx - 5},${cy + 3} ${cx + 5},${cy + 3}` : `${cx},${cy + 7} ${cx - 5},${cy - 3} ${cx + 5},${cy - 3}`}
                   fill={fill}
-                  stroke="#050706"
+                  stroke={chartTokens.surface}
                   strokeWidth="1"
                 />
               ) : event.kind === "impulse" ? (
-                <polygon points={`${cx},${cy - 6} ${cx + 5},${cy} ${cx},${cy + 6} ${cx - 5},${cy}`} fill={fill} stroke="#050706" strokeWidth="1" />
+                <polygon points={`${cx},${cy - 6} ${cx + 5},${cy} ${cx},${cy + 6} ${cx - 5},${cy}`} fill={fill} stroke={chartTokens.surface} strokeWidth="1" />
               ) : (
-                <circle cx={cx} cy={cy} r="5" fill={fill} stroke="#050706" strokeWidth="1" />
+                <circle cx={cx} cy={cy} r="5" fill={fill} stroke={chartTokens.surface} strokeWidth="1" />
               )}
-              <text x={cx} y={cy + 2.5} textAnchor="middle" fontSize={event.kind === "upthrust" ? "4.7" : "6"} fontWeight="900" fill="#050706">
+              <text x={cx} y={cy + 2.5} textAnchor="middle" fontSize={event.kind === "upthrust" ? "4.7" : "6"} fontWeight="900" fill={chartTokens.textOnAccent}>
                 {markerText(event.kind)}
               </text>
             </g>
@@ -1857,8 +1850,8 @@ function AnalysisChart({
           const laneY = QUIET_LANE_TOP + actorIndex * QUIET_LANE_GAP;
           return (
             <g key={`quiet-lane-${actor}`}>
-              <line x1="0" x2={PLOT_W} y1={laneY} y2={laneY} stroke="rgba(255,255,255,0.10)" strokeWidth="0.6" />
-              <text x={PLOT_W + 4} y={laneY + 2.5} fontSize="6.5" fill="rgba(250,250,250,0.52)">
+              <line x1="0" x2={PLOT_W} y1={laneY} y2={laneY} stroke={chartTokens.grid} strokeWidth="0.6" />
+              <text x={PLOT_W + 4} y={laneY + 2.5} fontSize="6.5" fill={chartTokens.axis}>
                 {QUIET_MONEY_ACTOR_LABEL[actor]}
               </text>
               {laneEvents.map(({ event, index }, markerIndex) => (
@@ -1868,8 +1861,8 @@ function AnalysisChart({
                     cx={x(index)}
                     cy={laneY}
                     r="2.6"
-                    fill={event.direction === "inflow" ? CHART_COLOR.up : CHART_COLOR.down}
-                    stroke="#050706"
+                    fill={event.direction === "inflow" ? chartTokens.marker.money : chartTokens.down}
+                    stroke={chartTokens.surface}
                     strokeWidth="0.8"
                   />
                 </g>
@@ -1877,8 +1870,8 @@ function AnalysisChart({
             </g>
           );
         })}
-        <text x="0" y={H - 1} fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(renderedCandles[0])}</text>
-        <text x={PLOT_W} y={H - 1} textAnchor="end" fontSize="8" fill="rgba(250,250,250,0.42)">{markerDateLabel(latest)}</text>
+        <text x="0" y={H - 1} fontSize="8" fill={chartTokens.axis}>{markerDateLabel(renderedCandles[0])}</text>
+        <text x={PLOT_W} y={H - 1} textAnchor="end" fontSize="8" fill={chartTokens.axis}>{markerDateLabel(latest)}</text>
       </svg>
       {selectedEvent && (
         <button
@@ -1891,12 +1884,12 @@ function AnalysisChart({
         </button>
       )}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted">
-        <span><span style={{ color: CHART_COLOR.up }}>■</span> 상승</span>
-        <span><span style={{ color: CHART_COLOR.down }}>■</span> 하락</span>
-        <span><span style={{ color: CHART_COLOR.ma20 }}>—</span> MA20</span>
-        <span><span style={{ color: CHART_COLOR.ma60 }}>—</span> MA60</span>
-        <span><span style={{ color: CHART_COLOR.ma120 }}>—</span> MA120</span>
-        {includeLevel && <span><span style={{ color: CHART_COLOR.invalidation }}>┄</span> 관점 경계</span>}
+        <span><span style={{ color: chartTokens.up }}>■</span> 상승</span>
+        <span><span style={{ color: chartTokens.down }}>■</span> 하락</span>
+        <span><span style={{ color: chartTokens.ma20 }}>—</span> MA20</span>
+        <span><span style={{ color: chartTokens.ma60 }}>—</span> MA60</span>
+        <span><span style={{ color: chartTokens.ma120 }}>—</span> MA120</span>
+        {includeLevel && <span><span style={{ color: chartTokens.invalidation }}>┄</span> 관점 경계</span>}
         {visibleZones.length > 0 && <span>▧ 구간</span>}
         {visibleEvents.length > 0 && <span>◆ 이벤트</span>}
         {visibleQuietEvents.length > 0 && <span>● 조용한 돈</span>}
@@ -2054,8 +2047,8 @@ function ChartAnalysisTab({
       </div>
 
       {wyckoff?.summary && (
-        <div className="mb-3 border-l-2 border-[#D8FF3A] bg-[#D8FF3A]/[0.06] px-3 py-3">
-          <p className="font-pixel text-[10px] text-[#D8FF3A]">지금 구간 요약</p>
+        <div className="mb-3 border-l-2 px-3 py-3" style={{ borderColor: chartTokens.zone.border, backgroundColor: chartTokens.zone.accumulation }}>
+          <p className="font-pixel text-[10px]" style={{ color: chartTokens.up }}>지금 구간 요약</p>
           <p className="mt-1.5 text-sm font-medium leading-6 text-whiteout">{wyckoff.summary}</p>
         </div>
       )}
@@ -2089,7 +2082,7 @@ function ChartAnalysisTab({
 
       {/* 실제 차트 — 뭘 보고 판단하는지 눈에 보이게. */}
       {visibleSeries && visibleSeries.closes.length >= 2 ? (
-        <div className="rounded-lg border border-white/15 bg-[#050706] px-3 pb-3 pt-3 shadow-inner">
+        <div className="rounded-lg border border-white/15 px-3 pb-3 pt-3 shadow-inner" style={{ backgroundColor: chartTokens.surface }}>
           <div className="mb-2 flex items-center justify-between gap-3">
             <span className="font-pixel text-[10px] text-muted">일봉 · {range === "3m" ? "3개월" : "1년"}</span>
             <div className="flex rounded-md border border-white/10 p-0.5">
@@ -2099,7 +2092,7 @@ function ChartAnalysisTab({
                   type="button"
                   onClick={() => setRange(key)}
                   className="rounded px-2 py-1 text-[9px] font-bold"
-                  style={{ backgroundColor: range === key ? "#F4F4EF" : "transparent", color: range === key ? "#050706" : "#8A8A86" }}
+                  style={{ backgroundColor: range === key ? chartTokens.up : "transparent", color: range === key ? chartTokens.textOnAccent : chartTokens.neutral }}
                 >
                   {key === "3m" ? "3M" : "1Y"}
                 </button>
@@ -2122,26 +2115,27 @@ function ChartAnalysisTab({
         basisDays > 0 && <p className="mb-3 text-[11px] text-muted">최근 {basisDays}거래일 종가·거래량 기준</p>
       )}
 
+      <div className="mt-4">
+        <DepthFold
+          title="세부 이벤트·판단 근거"
+          summary={wyckoff?.events.length ? `구간 이벤트 ${wyckoff.events.length}건` : "관측 근거"}
+        >
       {wyckoff && wyckoff.events.length > 0 && (
-        <div className="mt-4 border-y border-hairline py-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-pixel text-sm text-whiteout">구간 이벤트</p>
-            <span className="text-[10px] text-muted">실제 캔들·거래량 조건</span>
-          </div>
+        <DepthSection variant="list" title="구간 이벤트" description="실제 캔들·거래량 조건">
           <div className="mt-2 space-y-2">
             {wyckoff.events.slice(-4).reverse().map((event) => (
               <button
                 key={`${event.kind}-${event.index}`}
                 type="button"
                 onClick={() => setStructureTooltip({ title: event.label, body: event.explanation })}
-                className="w-full border-l border-white/20 px-3 py-1.5 text-left transition-colors hover:border-[#D8FF3A]"
+                className="w-full border-l border-white/20 px-3 py-1.5 text-left transition-colors hover:border-whiteout"
               >
                 <span className="block text-xs font-bold text-whiteout">{event.label}</span>
                 <span className="mt-0.5 block text-[11px] leading-5 text-muted">{event.explanation}</span>
               </button>
             ))}
           </div>
-        </div>
+        </DepthSection>
       )}
 
       {facts.length > 0 && !hasProfessionalAnalysis && (
@@ -2200,6 +2194,8 @@ function ChartAnalysisTab({
         </div>
       )}
       <ConvictionParagraphs front={front} insight={insight} />
+        </DepthFold>
+      </div>
       <p className="mt-4 text-center text-[11px] leading-5 text-muted">차트 신호는 관측값이에요. 가격 예측은 아니에요.</p>
     </section>
   );
@@ -2287,9 +2283,9 @@ function buildVerdictSections(
 }
 
 const STANCE_BADGE: Record<string, { label: string; color: string }> = {
-  enter: { label: "강세 신호 우세", color: "#22C55E" },
+  enter: { label: "강세 신호 우세", color: chartTokens.up },
   watch: { label: "신호 혼조", color: "#C9C9C4" },
-  avoid: { label: "약세 신호 우세", color: "#EF4444" },
+  avoid: { label: "약세 신호 우세", color: chartTokens.down },
 };
 
 /**
@@ -2477,18 +2473,31 @@ function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
   if (lines.length === 0) return null;
   const source = fin?.note?.includes("Nasdaq") ? "Nasdaq" : "네이버 금융";
   return (
-    <section className="mt-4 rounded-2xl border border-hairline bg-surface px-4 py-4">
-      <p className="font-pixel text-sm text-whiteout">재무 한눈에</p>
-      <ul className="mt-2 space-y-1.5">
+    <DepthSection className="mt-4" variant="list" title="재무 한눈에" description={`출처: ${source}`}>
+      <ul>
         {lines.slice(0, 5).map((line, i) => (
-          <li key={`fin-${i}`} className="flex items-baseline justify-between gap-3 text-sm leading-6">
-            <span className="shrink-0 text-muted">{line.label}</span>
-            <span className="min-w-0 text-right text-whiteout">{line.value}</span>
+          <li key={`fin-${i}`}>
+            <DepthLine className="flex items-baseline justify-between gap-3 text-sm leading-6">
+              <span className="shrink-0 text-muted">{line.label}</span>
+              <span className="min-w-0 text-right text-whiteout">{line.value}</span>
+            </DepthLine>
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[10px] leading-4 text-muted">출처: {source}</p>
-    </section>
+    </DepthSection>
+  );
+}
+
+function CompanyProfileBlock({ basics }: { basics: StockBasics | null }) {
+  if (!basics?.summary) return null;
+  return (
+    <DepthSection
+      className="mt-4"
+      title="어떤 회사예요"
+      aside={basics.sector ? <span className="text-[11px] text-muted">{cleanText(basics.sector)}</span> : undefined}
+    >
+      <p className="text-sm leading-6 text-whiteout">{cleanText(basics.summary)}</p>
+    </DepthSection>
   );
 }
 
@@ -2515,14 +2524,14 @@ export function StockInsightView({
   // 카드와 동일한 백엔드 점수 스냅샷을 상세에서도 유지한다.
   const [front, setFront] = useState<StockFrontResponse | null>(context?.frontSeed ?? null);
   const [frontLoaded, setFrontLoaded] = useState(!!context?.frontSeed);
-  // 뎁스 2탭 — 기본 '왜 움직였나'. 종목 바뀌면 리셋.
-  const [depthTab, setDepthTab] = useState<"why" | "ta">("why");
+  // 상세는 판단을 첫 화면으로 열고 나머지 정보는 독립 탭에서만 렌더한다.
+  const [depthTab, setDepthTab] = useState<DepthTab>("judgment");
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
   useEffect(() => {
     setWatchedState(isWatched(stock));
-    setDepthTab("why");
+    setDepthTab("judgment");
   }, [stock]);
 
   const toggleWatched = () => {
@@ -2622,8 +2631,8 @@ export function StockInsightView({
             aria-label={watched ? "관심 해제" : "관심 등록"}
             className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
             style={{
-              borderColor: watched ? "#D8FF3A" : "var(--hairline, #2a2a2a)",
-              color: watched ? "#D8FF3A" : "#94a3b8",
+              borderColor: watched ? chartTokens.up : "var(--hairline, #2a2a2a)",
+              color: watched ? chartTokens.up : chartTokens.neutral,
             }}
           >
             <span aria-hidden>{watched ? "♥" : "♡"}</span>
@@ -2640,56 +2649,61 @@ export function StockInsightView({
           <>
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
-          <CompanyScoreRadar result={front?.score} />
-          <ExpertCommitteeReview review={front?.committeeReview} />
-          <DiscoveryOverview front={front} insight={insight} context={context} />
-          <QuietMoneyBlock timeline={front?.quietMoney} />
-          <JudgmentTimeline canonical={stock} />
           <DepthTabBar tab={depthTab} onChange={setDepthTab} />
-          {depthTab === "ta" ? (
-            <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
-          ) : (
-          <>
-          {/* 재료와 같은 기간의 가격·거래 반응 — 기술적 구조는 차트분석 탭으로 분리. */}
-          <WhyMovementTab front={front} insight={insight} context={context} />
+          <div
+            id={`depth-panel-${depthTab}`}
+            role="tabpanel"
+            aria-label={depthTab === "judgment" ? "판단" : depthTab === "chart" ? "차트와 구간" : depthTab === "company" ? "기업과 재무" : "신호 이력"}
+          >
+            {depthTab === "judgment" && (
+              <>
+                <CompanyScoreRadar result={front?.score} />
+                <JudgmentDecision front={front} />
+              </>
+            )}
 
-          {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
-            <CoinIssuesBlock issues={front?.coinIssues ?? []} />
-          )}
+            {depthTab === "chart" && (
+              <>
+                <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
+                <ExpertCommitteeReview review={front?.committeeReview} view="trading" />
+              </>
+            )}
 
-          {/* 무슨 일이 있었나(WO-22) — 원문 인사이트 전체(양면·출처·공식지표). 카드 대비 뎁스의 정보 우위. */}
-          <StockWhyHappened insight={insight} />
+            {depthTab === "company" && (
+              <>
+                <CompanyProfileBlock basics={basics} />
+                <FinanceGlanceBlock basics={basics} />
+                <ExpertCommitteeReview review={front?.committeeReview} view="financial" />
+              </>
+            )}
 
-          {/* 어떤 회사예요 — 2026-07-18 User Zero "이 회사가 뭔데 왜 투자해볼 만한지 내용이 없다".
-              하단 한 줄 강등을 정식 섹션으로 승격. KR=네이버 기업개요, US=Nasdaq profile 한국어 요약. */}
-          {basics?.summary && (
-            <section className="mt-4 rounded-2xl border border-hairline bg-surface px-4 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-pixel text-sm text-whiteout">어떤 회사예요</p>
-                {basics.sector && (
-                  <span className="rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted">{cleanText(basics.sector)}</span>
-                )}
-              </div>
-              <p className="mt-2 text-sm leading-6 text-whiteout">{cleanText(basics.summary)}</p>
-            </section>
-          )}
+            {depthTab === "history" && (
+              <>
+                <DiscoveryOverview front={front} insight={insight} context={context} />
+                <JudgmentTimeline canonical={stock} />
+                <QuietMoneyBlock timeline={front?.quietMoney} />
 
-          {/* 재무 한눈에(WO 1.5 F) — 근거 아래. KR=네이버·US=Yahoo, 없으면 생략. */}
-          <FinanceGlanceBlock basics={basics} />
-
-          {showThinSourceFootnote && (
-            <p className="mt-5 text-[12px] leading-5 text-muted">
-              {hasVerifiedFloor
-                ? "원문 기반 요약은 아직 얇아요."
-                : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
-            </p>
-          )}
-
-          <p className="mt-6 text-center text-[11px] leading-5 text-muted">
-            원문을 친구처럼 풀어드린 거예요. 투자 조언은 아니에요.
-          </p>
-          </>
-          )}
+                <div className="mt-4 space-y-3">
+                  <DepthFold title="재료·가격 반응" summary="선택 기간의 실데이터">
+                    <WhyMovementTab front={front} insight={insight} context={context} />
+                  </DepthFold>
+                  <DepthFold title="추가 근거·원문" summary="확인된 자료만">
+                    {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
+                      <CoinIssuesBlock issues={front?.coinIssues ?? []} />
+                    )}
+                    <StockWhyHappened insight={insight} />
+                    {showThinSourceFootnote && (
+                      <p className="mt-4 text-[12px] leading-5 text-muted">
+                        {hasVerifiedFloor
+                          ? "원문 기반 요약은 아직 얇아요."
+                          : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
+                      </p>
+                    )}
+                  </DepthFold>
+                </div>
+              </>
+            )}
+          </div>
           </>
           )}
         </div>

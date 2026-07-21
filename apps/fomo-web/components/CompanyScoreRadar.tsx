@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { CompanyScoreAxisKey, CompanyScoreResult } from "@fomo/core";
+import { DepthSection } from "@/components/DepthSection";
+import { chartTokens } from "@/lib/chartTokens";
 
-const NEON = "#D8FF3A";
 const ORDER: CompanyScoreAxisKey[] = ["valuation", "growth", "profitability", "flow", "chart", "quiet"];
 const LABEL: Record<CompanyScoreAxisKey, string> = {
   valuation: "밸류",
@@ -43,7 +44,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
   if (!result) return null;
 
   return (
-    <section className="mt-5 border-y border-hairline py-5" aria-labelledby="company-score-title">
+    <DepthSection className="mt-4" ariaLabelledby="company-score-title">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-pixel text-[11px] text-muted">COMPANY SCORE</p>
@@ -51,7 +52,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
             <span
               id="company-score-title"
               className={`font-number font-bold leading-none ${result.score == null ? "text-xl" : "text-4xl"}`}
-              style={{ color: NEON }}
+              style={{ color: chartTokens.up }}
             >
               {result.score ?? "분석 축적 중"}
             </span>
@@ -64,13 +65,13 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
       <div className="mt-4 flex justify-center">
         <svg viewBox="0 0 220 220" className="h-[250px] w-[250px] max-w-full" role="img" aria-label="종합 기업 점수 6축 레이더">
           {[25, 50, 75, 100].map((level) => (
-            <polygon key={level} points={polygon(level)} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
+            <polygon key={level} points={polygon(level)} fill="none" stroke={chartTokens.grid} strokeWidth="1" />
           ))}
           {ORDER.map((key, index) => {
             const [x, y] = point(index, 100);
-            return <line key={key} x1="110" y1="110" x2={x} y2={y} stroke="rgba(255,255,255,0.10)" strokeWidth="1" />;
+            return <line key={key} x1="110" y1="110" x2={x} y2={y} stroke={chartTokens.grid} strokeWidth="1" />;
           })}
-          <polygon points={dataPolygon} fill="rgba(216,255,58,0.16)" stroke={NEON} strokeWidth="2" />
+          <polygon points={dataPolygon} fill={chartTokens.zone.accumulation} stroke={chartTokens.up} strokeWidth="2" />
           {ORDER.map((key, index) => {
             const axis = byKey.get(key);
             const available = axis?.status === "available" && axis.score != null;
@@ -78,11 +79,11 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
             const [labelX, labelY] = point(index, 118);
             return (
               <g key={key}>
-                {available && <circle cx={x} cy={y} r="3.5" fill={NEON} />}
-                <text x={labelX} y={labelY} textAnchor="middle" dominantBaseline="middle" fill={available ? "#FAFAFA" : "#666"} fontSize="10">
+                {available && <circle cx={x} cy={y} r="3.5" fill={chartTokens.up} />}
+                <text x={labelX} y={labelY} textAnchor="middle" dominantBaseline="middle" fill={available ? chartTokens.marker.event : chartTokens.neutral} fontSize="10">
                   {LABEL[key]}
                 </text>
-                <text x={labelX} y={labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={available ? NEON : "#666"} fontSize="9">
+                <text x={labelX} y={labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={available ? chartTokens.up : chartTokens.neutral} fontSize="9">
                   {axis?.score ?? "없음"}
                 </text>
               </g>
@@ -111,7 +112,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
               aria-expanded={isActive}
             >
               <span className="text-xs text-muted">{LABEL[key]}</span>
-              <span className="font-number text-sm font-bold" style={{ color: available ? NEON : "#666" }}>
+              <span className="font-number text-sm font-bold" style={{ color: available ? chartTokens.up : chartTokens.neutral }}>
                 {axis?.score ?? "데이터 없음"}
               </span>
             </button>
@@ -120,13 +121,13 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
       </div>
 
       {active?.status === "available" && active.score != null && (
-        <div className="mt-3 border-l-2 pl-3" style={{ borderColor: NEON }}>
+        <div className="mt-3 border-l-2 pl-3" style={{ borderColor: chartTokens.up }}>
           <p className="text-xs font-semibold text-whiteout">{active.label} {active.score}점 근거</p>
           {active.evidence.map((evidence) => (
             <p key={evidence} className="mt-1 text-xs leading-5 text-muted">{evidence}</p>
           ))}
         </div>
       )}
-    </section>
+    </DepthSection>
   );
 }
