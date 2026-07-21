@@ -19,6 +19,7 @@ import type {
 } from "@fomo/core";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { ContentCard } from "@/components/ContentCard";
+import { Sparkline } from "@/components/Sparkline";
 import { NarrativeCard } from "@/components/NarrativeCard";
 import { NarrativeDepthPage } from "@/components/NarrativeDepthPage";
 import { SectorCard } from "@/components/SectorCard";
@@ -35,6 +36,7 @@ import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
 import { verdictBalance } from "@/lib/discoveryPresentation";
 import { GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 import { chartTokens } from "@/lib/chartTokens";
+import { buildCardHookCopy, easyMarketCopy, scoreSignalType, type CardHookCopy } from "@/lib/easyMarketCopy";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -266,44 +268,46 @@ function BundleCardFace({ bundle, progress }: { bundle: DeckThemeBundle; progres
 function CompanyScoreBlock({
   score,
   verdict,
-  contextLine,
+  scoreTrack,
 }: {
   score?: CompanyScoreResult | undefined;
   verdict?: CardVerdict | undefined;
-  contextLine?: string | undefined;
+  scoreTrack?: TrackMetric | undefined;
 }) {
   const balance = verdictBalance(verdict);
+  const metric = scoreTrack ?? { n: 0, winRate: null, medianReturn: null };
+  const historyText =
+    score?.score == null
+      ? "가용 분석축이 3개 미만이라 점수를 내지 않았어요."
+      : metric.n >= 30 && metric.winRate !== null
+      ? `이 점수대 역대 30일 승률 ${Number.isInteger(metric.winRate) ? metric.winRate.toFixed(0) : metric.winRate.toFixed(1)}% · n=${metric.n}`
+      : `이 점수대 성과 축적 중 · n=${metric.n}`;
   return (
-    <div className="mt-2.5 shrink-0 border-y border-hairline py-2.5">
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-1.5">
+    <div className="mt-2 shrink-0 border-y border-hairline py-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex shrink-0 items-baseline gap-1">
             <span
-              className={`font-number font-bold leading-none ${score?.score == null ? "text-lg" : "text-3xl"}`}
+              className={`font-number font-bold leading-none ${score?.score == null ? "text-sm" : "text-xl"}`}
               style={{ color: NEON }}
             >
               {score?.score ?? "분석 축적 중"}
             </span>
-            {score?.score != null && <span className="text-xs font-semibold text-muted">점</span>}
+            {score?.score != null && <span className="text-[10px] font-semibold text-muted">점</span>}
           </div>
-          <p className="mt-1 truncate text-sm font-semibold text-whiteout">
+          <p className="min-w-0 truncate text-xs font-semibold text-whiteout">
             {score?.score == null ? `가용 분석축 ${score?.availableAxisCount ?? 0}/6` : score.label}
           </p>
         </div>
         {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
       </div>
-      {contextLine && (
-        <p className="mt-1.5 text-xs leading-4 text-whiteout" style={clampStyle(1)}>
-          <span className="text-muted">포착 근거 · </span>{contextLine}
-        </p>
-      )}
+      <p className="mt-1 text-[10px] leading-4 text-muted">{historyText}</p>
     </div>
   );
 }
 
 /**
- * 종목 카드 앞면 — 백엔드가 확정한 종합점수·라벨·헤드라인을 그대로 표시한다.
- * 정체성 / 현재가 / 테마태그 / 헤드라인 / 발견 상태 / 근거. 차트는 뎁스에서만 보여준다.
+ * 종목 카드 앞면 — 오늘의 훅을 주인공으로 두고 백엔드 점수·성과 이력은 보조 근거로 표시한다.
  */
 function StockCardFace({
   stock,
@@ -316,10 +320,11 @@ function StockCardFace({
   subLine,
   feedBull,
   feedBear,
-  why,
   score,
-  discoveryContext,
+  sparkline,
+  hookCopy,
   verdict,
+  scoreTrack,
   signalTrack,
   personalStrongSignal,
   progress,
@@ -334,10 +339,11 @@ function StockCardFace({
   subLine?: string | undefined;
   feedBull?: FeedSignalPoint | undefined;
   feedBear?: FeedSignalPoint | undefined;
-  why?: string | undefined;
   score?: CompanyScoreResult | undefined;
-  discoveryContext?: string | undefined;
+  sparkline?: number[] | undefined;
+  hookCopy: CardHookCopy;
   verdict?: CardVerdict | undefined;
+  scoreTrack?: TrackMetric | undefined;
   signalTrack?: { code: SignalTypeCode; metric: TrackMetric } | undefined;
   personalStrongSignal?: SignalTypeCode | undefined;
   progress?: string | undefined;
@@ -384,25 +390,37 @@ function StockCardFace({
       {/* 헤드라인 = 종목별 후킹 사실 1개. 색 강조는 점수/미터/CTA에만 둔다. */}
       <p className="mt-3 shrink-0 text-lg font-bold leading-7 text-whiteout" style={clampStyle(2)}>
         {view.isLeading && <GemIcon size={18} className="mr-1 inline-block align-[-2px]" />}
-        {view.headline}
+        {easyMarketCopy(view.headline, "card")}
       </p>
 
-      <CompanyScoreBlock score={score} verdict={verdict} contextLine={discoveryContext} />
+      {hookCopy.chips.length > 0 && (
+        <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">
+          {hookCopy.chips.map((chip) => (
+            <span key={chip} className="rounded-full border border-hairline-soft bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-whiteout">
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {sparkline && sparkline.length >= 2 && (
+        <div className="mt-2 shrink-0 border-y border-hairline-soft py-1" aria-label="최근 30거래일 가격 흐름">
+          <Sparkline series={sparkline.slice(-30)} height={38} />
+        </div>
+      )}
+
+      <div className="mt-2 shrink-0 rounded-lg bg-black/15 px-3 py-2">
+        <span className="block text-[10px] font-semibold text-muted">왜 봐야 하나</span>
+        <p className="mt-0.5 text-sm font-semibold leading-5 text-whiteout" style={clampStyle(2)}>{hookCopy.hook}</p>
+      </div>
+
+      <CompanyScoreBlock score={score} verdict={verdict} scoreTrack={scoreTrack} />
 
       {!verdict && (
         <>
-          {why && (
-            <div className="mt-2.5 flex shrink-0 items-start gap-2 rounded-lg border border-hairline bg-white/[0.035] px-3 py-1.5">
-              <span className="shrink-0 text-[10px] leading-5 text-muted">이유</span>
-              <span className="min-w-0 flex-1 text-sm leading-5 text-whiteout" style={clampStyle(1)}>
-                {why}
-              </span>
-            </div>
-          )}
-
           <FeedSignalStrip bull={feedBull} bear={feedBear} />
 
-          {subLine && !why && !feedBull && !feedBear && (
+          {subLine && !feedBull && !feedBear && (
             <div className="mt-2 shrink-0 rounded-lg border border-hairline bg-black/10 px-3 py-1.5">
               <span className="text-sm leading-5 text-muted" style={clampStyle(1)}>
                 {subLine}
@@ -644,8 +662,12 @@ export function StockSwipeDeck({
           ...(entry.wyckoff ? { wyckoff: entry.wyckoff } : {}),
           ...(typeof entry.score?.score === "number" ? { companyScore: entry.score.score } : {}),
         });
-    const code = candidates.find((value) => isSignalTypeCode(value) && signalHistory30[value]);
+    const code = candidates.find((value) => !value.startsWith("score_") && isSignalTypeCode(value) && signalHistory30[value]);
     return code ? { code, metric: signalHistory30[code]! } : undefined;
+  };
+  const scoreTrackFor = (entry: FrontEntry | undefined): TrackMetric | undefined => {
+    if (typeof entry?.score?.score !== "number") return undefined;
+    return signalHistory30?.[scoreSignalType(entry.score.score)];
   };
   const renderFace = (card: DeckCard, progress?: string) => {
     if (card.type === "sector") return <SectorCard card={card.data} progress={progress} />;
@@ -673,6 +695,14 @@ export function StockSwipeDeck({
       (groundedContext && groundedContext.replace(/\s+/g, "").toLowerCase() !== normalizedHeadline
         ? groundedContext
         : undefined);
+    const signalTypes = normalizeSignalTypeCodes(e.signalTypes ?? []);
+    const hookCopy = buildCardHookCopy({
+      signals: e.signals,
+      signalTypes,
+      ...(e.wyckoff ? { wyckoff: e.wyckoff } : {}),
+      ...(e.verdict ? { verdict: e.verdict } : {}),
+      ...(discoveryContext ? { fallback: discoveryContext } : {}),
+    });
     return (
       <StockCardFace
         stock={stock}
@@ -685,12 +715,13 @@ export function StockSwipeDeck({
         subLine={deduped.subLine}
         feedBull={deduped.feedBull}
         feedBear={deduped.feedBear}
-        why={deduped.why}
         score={e.score}
-        discoveryContext={discoveryContext}
+        sparkline={e.sparkline}
+        hookCopy={hookCopy}
         verdict={e?.verdict}
+        scoreTrack={scoreTrackFor(e)}
         signalTrack={signalTrackFor(stock, e)}
-        personalStrongSignal={normalizeSignalTypeCodes(e.signalTypes ?? []).find((code) => strongSignalCodes.includes(code))}
+        personalStrongSignal={signalTypes.find((code) => strongSignalCodes.includes(code))}
         progress={progress}
       />
     );
