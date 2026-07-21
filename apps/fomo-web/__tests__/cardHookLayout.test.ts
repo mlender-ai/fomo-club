@@ -9,6 +9,8 @@ describe("메인 카드 후킹 구조", () => {
     expect(card).toContain("<Sparkline series={sparkline.slice(-30)}");
     expect(card).toContain("hookCopy.chips.map");
     expect(card).toContain("왜 봐야 하나");
+    expect(card).toContain('easyMarketCopy(score.label, "card")');
+    expect(card).toContain('easyMarketCopy(formatSignalResumeBadge(signalTrack.code, signalTrack.metric), "card")');
   });
 
   it("점수는 점수대 사후 성과나 축적 상태와 함께만 노출한다", () => {
