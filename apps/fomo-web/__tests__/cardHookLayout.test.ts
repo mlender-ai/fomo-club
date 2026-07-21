@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 const card = readFileSync(new URL("../components/StockSwipeDeck.tsx", import.meta.url), "utf8");
 const depth = readFileSync(new URL("../components/KeywordDepthPage.tsx", import.meta.url), "utf8");
+const radar = readFileSync(new URL("../components/CompanyScoreRadar.tsx", import.meta.url), "utf8");
+const timeline = readFileSync(new URL("../components/JudgmentTimeline.tsx", import.meta.url), "utf8");
 
 describe("메인 카드 후킹 구조", () => {
   it("실제 30거래일 스파크라인과 신호 칩, 후킹 한 줄을 함께 렌더한다", () => {
@@ -27,5 +29,8 @@ describe("뎁스 쉬운말 레이어", () => {
     expect(depth).toContain('aria-label="차트 용어 쉬운 설명"');
     expect(depth).toContain("term.explanation");
     expect(depth).toContain('easyMarketCopy(event.label, "detail")');
+    expect(depth).toContain('easyMarketCopy(cleanText(trading ? review.tradingView : review.fundamentalView), "detail")');
+    expect(radar).toContain('easyMarketCopy(result.interpretation, "detail")');
+    expect(timeline).toContain('easyMarketCopy(formatSignalResumeBadge(code, metric), "detail")');
   });
 });

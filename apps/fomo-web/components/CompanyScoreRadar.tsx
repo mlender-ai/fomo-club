@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { CompanyScoreAxisKey, CompanyScoreResult } from "@fomo/core";
 import { DepthSection } from "@/components/DepthSection";
 import { chartTokens } from "@/lib/chartTokens";
+import { easyMarketCopy } from "@/lib/easyMarketCopy";
 
 const ORDER: CompanyScoreAxisKey[] = ["valuation", "growth", "profitability", "flow", "chart", "quiet"];
 const LABEL: Record<CompanyScoreAxisKey, string> = {
@@ -59,7 +60,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
             {result.score != null && <span className="text-sm font-semibold text-muted">/ 100</span>}
           </div>
         </div>
-        <span className="max-w-[58%] text-right text-sm font-semibold leading-5 text-whiteout">{result.label}</span>
+        <span className="max-w-[58%] text-right text-sm font-semibold leading-5 text-whiteout">{easyMarketCopy(result.label, "detail")}</span>
       </div>
 
       <div className="mt-4 flex justify-center">
@@ -92,7 +93,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
         </svg>
       </div>
 
-      <p className="text-sm leading-6 text-whiteout">{result.interpretation}</p>
+      <p className="text-sm leading-6 text-whiteout">{easyMarketCopy(result.interpretation, "detail")}</p>
       <p className="mt-1 text-[10px] leading-4 text-muted">
         데이터가 없는 축은 명시적으로 제외하고, 가용한 {result.availableAxisCount}개 축을 같은 비중으로 계산했어요.
       </p>
@@ -124,7 +125,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
         <div className="mt-3 border-l-2 pl-3" style={{ borderColor: chartTokens.up }}>
           <p className="text-xs font-semibold text-whiteout">{active.label} {active.score}점 근거</p>
           {active.evidence.map((evidence) => (
-            <p key={evidence} className="mt-1 text-xs leading-5 text-muted">{evidence}</p>
+            <p key={evidence} className="mt-1 text-xs leading-5 text-muted">{easyMarketCopy(evidence, "detail")}</p>
           ))}
         </div>
       )}
