@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 
 async function isAuthorized(request: Request): Promise<boolean> {
   const cronSecret = process.env.CRON_SECRET?.trim();
-  if (cronSecret && request.headers.get("authorization") === `Bearer ${cronSecret}`) return true;
+  // CRON_SECRET 미설정 시 관대 — cron/prewarm·quality-slo 라우트와 동일 규약. 설정되면 Bearer 강제.
+  // (미설정 상태로 두면 Quality SLO Monitor 등 CRON_SECRET 없는 워크플로우가 401 로 하드 실패했었다.)
+  if (!cronSecret) return true;
+  if (request.headers.get("authorization") === `Bearer ${cronSecret}`) return true;
   const password = process.env.DASHBOARD_PASSWORD;
   return Boolean(password) && (await cookies()).get("dashboard_session")?.value === password;
 }
