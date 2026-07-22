@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StockBasics } from "@fomo/core";
-import { parseUsdCompact, usValuationBand } from "../../lib/us-valuation";
+import { parseUsdCompact, usValuationBand, usValuationBandWithDiagnostics } from "../../lib/us-valuation";
 
 // WO-VAL — 미장 밸류축 복구. 실일봉+실매출+시총으로 PSR 밴드 역산(가짜 금지).
 describe("parseUsdCompact", () => {
@@ -44,5 +44,14 @@ describe("usValuationBand", () => {
     expect(usValuationBand(basics("", 1_000_000), closes, 100)).toBeUndefined();
     expect(usValuationBand(null, closes, 100)).toBeUndefined();
     expect(usValuationBand(basics("$2.59B", 1_000_000), [], 100)).toBeUndefined();
+  });
+
+  it("밴드 계산 실패 원인을 입력별로 구조화해 남긴다", () => {
+    const noRevenue: StockBasics = { name: "테스트", marketCap: "$2.59B", metrics: [] };
+    expect(usValuationBandWithDiagnostics(null, [90, 100, 110], 100).diagnostic.reason).toBe("basics-missing");
+    expect(usValuationBandWithDiagnostics(basics("", 1_000_000), [90, 100, 110], 100).diagnostic.reason).toBe("market-cap-missing");
+    expect(usValuationBandWithDiagnostics(noRevenue, [90, 100, 110], 100).diagnostic.reason).toBe("revenue-missing");
+    expect(usValuationBandWithDiagnostics(basics("$2.59B", 1_000_000), [90, 100, 110], undefined).diagnostic.reason).toBe("latest-price-missing");
+    expect(usValuationBandWithDiagnostics(basics("$2.59B", 1_000_000), [100], 100).diagnostic.reason).toBe("closes-insufficient");
   });
 });
