@@ -832,6 +832,31 @@ async function candidateRecords(response: Daily30Response): Promise<CandidateRec
   });
 }
 
+// WO-3 — 편집장이 두 소견을 종합한 한 줄 총평. 에이전트가 낸 등급(A/B/C)만으로 결정론 조립하므로
+// 수치가 없어 사실 게이트를 자동 통과한다(미검증 수치 폐기 원칙의 가장 안전한 형태).
+const COMMITTEE_TIMING_CLAUSE: Record<Grade, string> = {
+  A: "차트 타이밍이 좋은데",
+  B: "차트는 아직 애매한데",
+  C: "차트 흐름은 약한데",
+};
+const COMMITTEE_VALUATION_CLAUSE: Record<Grade, string> = {
+  A: "재무가 탄탄해서",
+  B: "재무는 무난해서",
+  C: "재무가 부실해서",
+};
+export function committeeSummary(timing: Grade, valuation: Grade): string {
+  const timingStrong = timing === "A";
+  const valuationStrong = valuation === "A";
+  const close = timingStrong && valuationStrong
+    ? "지금은 조건이 두루 맞는 편이에요."
+    : !timingStrong && valuationStrong
+      ? "자리만 잡히면 볼 만한 종목이에요."
+      : timingStrong && !valuationStrong
+        ? "재무 확인이 붙으면 더 볼 만해요."
+        : "아직은 지켜보는 자리예요.";
+  return `${COMMITTEE_TIMING_CLAUSE[timing]} ${COMMITTEE_VALUATION_CLAUSE[valuation]}, ${close}`;
+}
+
 function finalResponse(
   pool: Daily30Response,
   candidates: readonly CandidateRecord[],
@@ -865,6 +890,7 @@ function finalResponse(
         fundamentalView: financialReview.paragraph,
         timingGrade: tradingReview.grade,
         valuationGrade: financialReview.grade,
+        summary: committeeSummary(tradingReview.grade, financialReview.grade),
         factChecked: true,
       },
     };

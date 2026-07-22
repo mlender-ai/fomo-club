@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { computeCompanyScore } from "@fomo/core";
 import {
   applyAnalystFactGate,
+  committeeSummary,
   completeEditorSelectedIds,
   enforceEditorAssetFloors,
   mergeCommitteeCompanyScore,
@@ -513,5 +514,19 @@ describe("expert committee orchestration", () => {
     const editor = await runExpertReviewCommitteeStage("editor", common);
 
     expect(editor).toMatchObject({ ok: true, selectedCount: 30 });
+  });
+
+  // WO-3 — 편집장 한 줄 총평: 등급 조합으로 달라지고, 수치가 없어 사실 게이트를 자동 통과한다.
+  it("committeeSummary는 등급 조합별로 달라지고 수치를 담지 않는다", () => {
+    const grades = ["A", "B", "C"] as const;
+    const all = grades.flatMap((t) => grades.map((v) => committeeSummary(t, v)));
+    expect(new Set(all).size).toBeGreaterThanOrEqual(6); // 조합별 상이
+    for (const line of all) {
+      expect(line, `총평에 수치 누수: "${line}"`).not.toMatch(/\d/u);
+      expect(line).not.toMatch(/격차|비대칭|점으로 뚜렷/u);
+    }
+    // WO 예시 구조: 타이밍 B + 재무 A → "차트는 아직 애매한데 재무가 탄탄해서, 자리만 잡히면 볼 만한 종목이에요."
+    expect(committeeSummary("B", "A")).toContain("자리만 잡히면");
+    expect(committeeSummary("A", "A")).toContain("두루 맞는");
   });
 });
