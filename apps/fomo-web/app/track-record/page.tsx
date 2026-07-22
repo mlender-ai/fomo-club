@@ -85,11 +85,23 @@ function Breakdown({
 export default function TrackRecordPage() {
   const [record, setRecord] = useState<TrackRecordResponse | null>(null);
   const [days, setDays] = useState<7 | 30 | 90>(30);
+  const [userPicked, setUserPicked] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     void fetchTrackRecord().then(setRecord).catch(() => setFailed(true));
   }, []);
+
+  // 아직 도래한 outcome 이 특정 창(초기엔 7일)에만 쌓여 있을 수 있다. 유저가 탭을 직접 고르기 전엔
+  // 표본이 가장 많은 창을 기본 선택해, 첫 진입에서 "축적 중"(n=0) 대신 살아있는 성적표가 보이게 한다.
+  useEffect(() => {
+    if (!record || userPicked) return;
+    const best = record.windows.reduce<{ days: 7 | 30 | 90; n: number } | null>((acc, w) => {
+      const d = w.days as 7 | 30 | 90;
+      return acc && acc.n >= w.overall.n ? acc : { days: d, n: w.overall.n };
+    }, null);
+    if (best && best.n > 0 && best.days !== days) setDays(best.days);
+  }, [record, userPicked, days]);
 
   const windowResult = useMemo<TrackWindowResult | null>(
     () => record?.windows.find((item) => item.days === days) ?? null,
@@ -116,7 +128,10 @@ export default function TrackRecordPage() {
           <button
             key={value}
             type="button"
-            onClick={() => setDays(value)}
+            onClick={() => {
+              setUserPicked(true);
+              setDays(value);
+            }}
             className="min-w-20 rounded-md px-4 py-2 text-xs font-semibold"
             style={days === value ? { backgroundColor: NEON, color: "#0A0A0A" } : { color: "#A3A3A0" }}
           >
