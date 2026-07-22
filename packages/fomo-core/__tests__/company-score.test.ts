@@ -257,6 +257,30 @@ describe("company score", () => {
     expect(result.omittedAxes).not.toContain("valuation");
   });
 
+  it("적자기업은 PSR을 우선하고 PSR이 없을 때만 실측 PBR 밴드를 사용한다", () => {
+    const pbrOnly = computeCompanyScore({
+      financials: {
+        currentPbr: 0.83,
+        pbrHistory: [0.56, 0.4, 0.6],
+        operatingIncome: [20, -82, -61],
+        valuationHistoryLabel: "최근 3개년",
+      },
+    });
+    expect(pbrOnly.axes.find((axis) => axis.key === "valuation")?.evidence[0]).toContain("PBR 0.83배");
+
+    const psrPreferred = computeCompanyScore({
+      financials: {
+        currentPbr: 0.83,
+        pbrHistory: [0.56, 0.4, 0.6],
+        currentPsr: 1.2,
+        psrHistory: [0.8, 1, 1.4],
+        operatingIncome: [20, -82, -61],
+      },
+    });
+    const evidence = psrPreferred.axes.find((axis) => axis.key === "valuation")?.evidence ?? [];
+    expect(evidence).toEqual([expect.stringContaining("PSR 1.20배")]);
+  });
+
   // WO 번역 레이어 — 화면 노출 문자열(interpretation·조용함 축)에 엔진 내부어 누수 금지.
   it("종합 요약·조용함 축에 계산식·화제성·quietScore 은어가 새지 않는다", () => {
     const result = withCompanyQuietScore(computeCompanyScore(accumulation), {

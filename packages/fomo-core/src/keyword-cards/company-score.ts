@@ -105,19 +105,24 @@ function valuationAxis(financials: CompanyFinancialScoreInput | undefined): Comp
   const operating = lastTwo(financials.operatingIncome)?.[1];
   const useSales = finite(operating) && operating <= 0;
   const psrCandidate = { term: "PSR", value: financials.currentPsr, history: financials.psrHistory };
+  const pbrCandidate = { term: "PBR", value: financials.currentPbr, history: financials.pbrHistory };
   const candidates = useSales
-    ? [psrCandidate]
+    ? [psrCandidate, pbrCandidate]
     : [
         { term: "PER", value: financials.currentPer, history: financials.perHistory },
-        { term: "PBR", value: financials.currentPbr, history: financials.pbrHistory },
+        pbrCandidate,
       ];
   const resolve = (list: readonly typeof psrCandidate[]) =>
     list.flatMap((candidate) => {
       const position = historicalPosition(candidate.value, candidate.history);
       return finite(candidate.value) && finite(position) ? [{ ...candidate, position }] : [];
     });
-  // PER/PBR 미도달(미장 등) 시 PSR 로 폴백 — PSR 도 실밸류 지표. 축 자체를 죽이지 않는다(WO-VAL).
+  // 적자기업은 PSR을 우선하되 PSR 밴드가 없는 경우 실측 PBR 밴드를 사용한다.
+  // 흑자기업의 PER/PBR 미도달(미장 등) 시에는 PSR로 폴백한다.
   let available = resolve(candidates);
+  if (useSales && available.some((item) => item.term === "PSR")) {
+    available = available.filter((item) => item.term === "PSR");
+  }
   if (available.length === 0 && !useSales) available = resolve([psrCandidate]);
   if (available.length === 0) return undefined;
   const score = Math.round(available.reduce((sum, item) => sum + (100 - item.position), 0) / available.length);
