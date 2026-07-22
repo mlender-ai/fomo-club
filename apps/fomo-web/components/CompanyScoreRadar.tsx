@@ -7,13 +7,57 @@ import { chartTokens } from "@/lib/chartTokens";
 import { easyMarketCopy } from "@/lib/easyMarketCopy";
 
 const ORDER: CompanyScoreAxisKey[] = ["valuation", "growth", "profitability", "flow", "chart", "quiet"];
+
+// WO-1 — 유저어 표시 라벨(내부 키는 유지). 리스트엔 풀 네임, 육각형 꼭짓점엔 좁은 자리용 축약.
 const LABEL: Record<CompanyScoreAxisKey, string> = {
-  valuation: "밸류",
+  valuation: "가격 매력",
   growth: "성장",
-  profitability: "체력",
-  flow: "수급",
+  profitability: "돈 버는 힘",
+  flow: "큰손 움직임",
+  chart: "차트 자리",
+  quiet: "덜 알려짐",
+};
+const HEX_LABEL: Record<CompanyScoreAxisKey, string> = {
+  valuation: "가격",
+  growth: "성장",
+  profitability: "수익력",
+  flow: "큰손",
   chart: "차트",
-  quiet: "조용함",
+  quiet: "덜알려짐",
+};
+// 이름 밑에 항상 붙는 한 줄 뜻(툴팁 금지 — 상시 노출).
+const MEANING: Record<CompanyScoreAxisKey, string> = {
+  valuation: "과거 대비 지금 싼 편인가",
+  growth: "매출이 크고 있나",
+  profitability: "실제로 이익을 내고 있나",
+  flow: "기관·외국인·내부자가 사고 있나",
+  chart: "지금 차트 위치가 좋은가",
+  quiet: "아직 사람들이 안 보고 있나",
+};
+
+type Tone = "strength" | "neutral" | "weakness";
+
+// 점수 → 그 점수의 의미 한 조각. 축마다 좋고 나쁨이 달라 개별 문구 사전으로.
+// 모든 축은 점수가 높을수록 좋다(덜 알려짐 100 = 아무도 안 봄 = 강점).
+const READING: Record<CompanyScoreAxisKey, Record<Tone, string>> = {
+  valuation: { strength: "싼 편", neutral: "보통 수준", weakness: "비싼 편" },
+  growth: { strength: "잘 크는 중", neutral: "완만한 편", weakness: "둔한 편" },
+  profitability: { strength: "잘 버는 중", neutral: "보통", weakness: "아직 약함" },
+  flow: { strength: "큰손이 담는 중", neutral: "뚜렷한 매수세는 아직", weakness: "큰손 이탈 우세" },
+  chart: { strength: "자리 좋음", neutral: "눈치보는 자리", weakness: "흐름 약함" },
+  quiet: { strength: "거의 아무도 안 보는 중", neutral: "관심 붙는 중", weakness: "이미 주목받는 중" },
+};
+
+function toneOf(score: number): Tone {
+  if (score >= 65) return "strength";
+  if (score <= 40) return "weakness";
+  return "neutral";
+}
+
+const TONE_COLOR: Record<Tone, string> = {
+  strength: chartTokens.up, // 라임 = 강점
+  neutral: "#FAFAFA", // 무채색 = 중립
+  weakness: chartTokens.neutral, // 회색 = 약점
 };
 
 function point(index: number, score: number, radius = 82, center = 110): [number, number] {
@@ -63,8 +107,13 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
         {result.score != null && <span className="max-w-[58%] text-right text-sm font-semibold leading-5 text-whiteout">{easyMarketCopy(result.label, "detail")}</span>}
       </div>
 
-      <div className="mt-4 flex justify-center">
-        <svg viewBox="0 0 220 220" className="h-[250px] w-[250px] max-w-full" role="img" aria-label="종합 기업 점수 6축 레이더">
+      {/* 육각형 읽는 법 — 유저는 레이더 읽는 법을 모른다(WO-1). */}
+      <p className="mt-4 text-center text-[11px] text-muted">
+        여섯 방향으로 <span style={{ color: chartTokens.up }}>바깥쪽까지 넓을수록</span> 좋아요
+      </p>
+
+      <div className="mt-1 flex justify-center">
+        <svg viewBox="0 0 220 232" className="h-[250px] w-[250px] max-w-full" role="img" aria-label="종합 기업 점수 6축 레이더">
           {[25, 50, 75, 100].map((level) => (
             <polygon key={level} points={polygon(level)} fill="none" stroke={chartTokens.grid} strokeWidth="1" />
           ))}
@@ -76,15 +125,16 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
           {ORDER.map((key, index) => {
             const axis = byKey.get(key);
             const available = axis?.status === "available" && axis.score != null;
+            const tone = available ? toneOf(axis!.score!) : null;
             const [x, y] = point(index, axis?.score ?? 0);
-            const [labelX, labelY] = point(index, 118);
+            const [labelX, labelY] = point(index, 120);
             return (
               <g key={key}>
-                {available && <circle cx={x} cy={y} r="3.5" fill={chartTokens.up} />}
+                {available && <circle cx={x} cy={y} r="3.5" fill={tone ? TONE_COLOR[tone] : chartTokens.up} />}
                 <text x={labelX} y={labelY} textAnchor="middle" dominantBaseline="middle" fill={available ? chartTokens.marker.event : chartTokens.neutral} fontSize="10">
-                  {LABEL[key]}
+                  {HEX_LABEL[key]}
                 </text>
-                <text x={labelX} y={labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={available ? chartTokens.up : chartTokens.neutral} fontSize="9">
+                <text x={labelX} y={labelY + 12} textAnchor="middle" dominantBaseline="middle" fill={available && tone ? TONE_COLOR[tone] : chartTokens.neutral} fontSize="9" fontWeight="700">
                   {axis?.score ?? "없음"}
                 </text>
               </g>
@@ -100,10 +150,13 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
         </p>
       </>}
 
-      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+      {/* 축별: 이름 + 한 줄 뜻(상시) + 점수 + 점수 해석. 강점=라임·약점=회색·중립=무채색. */}
+      <div className="mt-4 flex flex-col">
         {ORDER.map((key) => {
           const axis = byKey.get(key);
           const available = axis?.status === "available" && axis.score != null;
+          const tone = available ? toneOf(axis!.score!) : null;
+          const color = tone ? TONE_COLOR[tone] : chartTokens.neutral;
           const isActive = selected === key;
           return (
             <button
@@ -111,12 +164,22 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
               type="button"
               disabled={!available}
               onClick={() => setSelected(isActive ? null : key)}
-              className="flex min-h-10 items-center justify-between border-b border-hairline py-2 text-left disabled:opacity-35"
+              className="flex items-start justify-between gap-3 border-b border-hairline py-2.5 text-left disabled:opacity-45"
               aria-expanded={isActive}
             >
-              <span className="text-xs text-muted">{LABEL[key]}</span>
-              <span className="font-number text-sm font-bold" style={{ color: available ? chartTokens.up : chartTokens.neutral }}>
-                {axis?.score ?? "데이터 없음"}
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-whiteout">{LABEL[key]}</span>
+                <span className="mt-0.5 block text-[11px] leading-4 text-muted">{MEANING[key]}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="font-number text-base font-bold leading-none" style={{ color }}>
+                  {axis?.score ?? "정보 없음"}
+                </span>
+                {available && tone && (
+                  <span className="mt-1 block text-[11px] leading-4" style={{ color }}>
+                    {READING[key][tone]}
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -125,7 +188,7 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
 
       {active?.status === "available" && active.score != null && (
         <div className="mt-3 border-l-2 pl-3" style={{ borderColor: chartTokens.up }}>
-          <p className="text-xs font-semibold text-whiteout">{active.label} {active.score}점 근거</p>
+          <p className="text-xs font-semibold text-whiteout">{LABEL[active.key]} {active.score}점 근거</p>
           {active.evidence.map((evidence) => (
             <p key={evidence} className="mt-1 text-xs leading-5 text-muted">{easyMarketCopy(evidence, "detail")}</p>
           ))}
