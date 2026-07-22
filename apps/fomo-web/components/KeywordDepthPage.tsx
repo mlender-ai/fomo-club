@@ -1426,27 +1426,54 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
   );
 }
 
-function ExpertCommitteeReview({
-  review,
-  view,
-}: {
-  review: StockFrontResponse["committeeReview"] | undefined;
-  view: "trading" | "financial";
-}) {
+// WO-3 — 금융 에이전트(위원회) 산출물을 판단 탭 주인공으로. 총평 한 줄 + 두 분석가 소견(등급·작성 주체·
+// 사실 대조 뱃지). 위원회 미발행 종목은 블록 전체를 숨긴다('축적 중' 문구 금지). 숫자보다 사람 말이 먼저.
+function ExpertOpinionBlock({ review }: { review: StockFrontResponse["committeeReview"] | undefined }) {
   if (!review) return null;
   const gradeTone = (grade: "A" | "B" | "C") => grade === "A" ? chartTokens.up : grade === "B" ? chartTokens.marker.event : chartTokens.neutral;
-  const trading = view === "trading";
-  const grade = trading ? review.timingGrade : review.valuationGrade;
+  const gradeLabel = (grade: "A" | "B" | "C") => grade === "A" ? "좋음" : grade === "B" ? "보통" : "주의";
+  const rows = [
+    { role: "차트·타이밍", author: "트레이딩 분석가", grade: review.timingGrade, text: review.tradingView },
+    { role: "기업·재무", author: "재무 분석가", grade: review.valuationGrade, text: review.fundamentalView },
+  ] as const;
   return (
     <DepthSection
       className="mt-4"
-      title={trading ? "트레이딩 전문 분석" : "기업·재무 전문 분석"}
-      description={`사실 대조 완료 · ${review.reviewedAt.slice(0, 10)}`}
-      aside={<span className="font-pixel text-xs" style={{ color: gradeTone(grade) }}>{grade}</span>}
+      title="전문가 소견"
+      aside={
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          style={{ backgroundColor: "rgba(216,255,58,0.12)", color: chartTokens.up }}
+        >
+          ✓ 사실 대조 완료 · {review.reviewedAt.slice(5, 10)}
+        </span>
+      }
     >
-      <p className="text-sm leading-6 text-whiteout">
-        {easyMarketCopy(cleanText(trading ? review.tradingView : review.fundamentalView), "detail")}
-      </p>
+      {review.summary && (
+        <p className="mb-3 text-base font-bold leading-7 text-whiteout">
+          {easyMarketCopy(cleanText(review.summary), "detail")}
+        </p>
+      )}
+      <div className="flex flex-col divide-y divide-hairline">
+        {rows.map((row) => (
+          <div key={row.role} className="py-3 first:pt-0">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-muted">
+                {row.role} <span className="text-[11px] font-normal">· {row.author}</span>
+              </span>
+              <span
+                className="shrink-0 rounded px-1.5 py-0.5 font-pixel text-xs"
+                style={{ color: gradeTone(row.grade), backgroundColor: "rgba(255,255,255,0.05)" }}
+              >
+                {row.grade} · {gradeLabel(row.grade)}
+              </span>
+            </div>
+            <p className="mt-1.5 text-sm leading-6 text-whiteout">
+              {easyMarketCopy(cleanText(row.text), "detail")}
+            </p>
+          </div>
+        ))}
+      </div>
     </DepthSection>
   );
 }
@@ -2758,23 +2785,21 @@ export function StockInsightView({
           >
             {depthTab === "judgment" && (
               <>
+                {/* WO-3: 숫자(점수·육각형)보다 사람(전문가)의 말이 먼저 — 신뢰는 사람 소견에서 생긴다. */}
+                <ExpertOpinionBlock review={front?.committeeReview} />
                 <CompanyScoreRadar result={front?.score} />
                 <JudgmentDecision front={front} />
               </>
             )}
 
             {depthTab === "chart" && (
-              <>
-                <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
-                <ExpertCommitteeReview review={front?.committeeReview} view="trading" />
-              </>
+              <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
             )}
 
             {depthTab === "company" && (
               <>
                 <CompanyProfileBlock basics={basics} />
                 <FinanceGlanceBlock basics={basics} />
-                <ExpertCommitteeReview review={front?.committeeReview} view="financial" />
               </>
             )}
 

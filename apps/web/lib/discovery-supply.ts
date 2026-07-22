@@ -167,6 +167,8 @@ export interface DiscoveryFrontSeed {
     fundamentalView: string;
     timingGrade: "A" | "B" | "C";
     valuationGrade: "A" | "B" | "C";
+    /** 편집장이 두 소견을 종합한 한 줄 총평(WO-3). 등급 기반 결정론 조립 — 수치 없음(사실 게이트 자동 통과). */
+    summary?: string;
     factChecked: true;
   };
   sparkline: number[];

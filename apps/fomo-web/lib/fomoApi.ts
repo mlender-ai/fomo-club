@@ -537,6 +537,7 @@ export interface StockFrontResponse {
     fundamentalView: string;
     timingGrade: "A" | "B" | "C";
     valuationGrade: "A" | "B" | "C";
+    summary?: string;
     factChecked: true;
   };
   taFact?: import("@fomo/core").TaFact;
