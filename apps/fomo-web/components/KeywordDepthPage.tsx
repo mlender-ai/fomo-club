@@ -1387,16 +1387,8 @@ function CommunityWordingBlock({ insight }: { insight: CondensedInsight | null }
 
 type DepthTab = "judgment" | "chart" | "company" | "history";
 
-/** 상세 정보 위계를 고정하는 4축 탭. 인라인에서는 스크롤 본문 밖의 고정 행으로 쓴다. */
-function DepthTabBar({
-  tab,
-  onChange,
-  inline = false,
-}: {
-  tab: DepthTab;
-  onChange: (tab: DepthTab) => void;
-  inline?: boolean;
-}) {
+/** 상세 정보 위계를 고정하는 4축 탭. 모든 화면에서 스크롤 본문 밖의 고정 행으로 쓴다. */
+function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTab) => void }) {
   const tabs: Array<{ key: DepthTab; label: string }> = [
     { key: "judgment", label: "판단" },
     { key: "chart", label: "차트·구간" },
@@ -1405,9 +1397,7 @@ function DepthTabBar({
   ];
   return (
     <div
-      className={inline
-        ? "z-30 shrink-0 border-b border-hairline bg-black px-6 py-2"
-        : "sticky top-0 z-30 -mx-6 mt-4 border-y border-hairline bg-black/95 px-6 py-2 backdrop-blur"}
+      className="z-30 shrink-0 border-b border-hairline bg-black px-6 py-2"
       role="tablist"
       aria-label="종목 상세"
     >
@@ -2747,11 +2737,11 @@ export function StockInsightView({
           </button>
         </div>
 
-        {inline && detailsReady && (
-          <DepthTabBar tab={depthTab} onChange={setDepthTab} inline />
+        {detailsReady && (
+          <DepthTabBar tab={depthTab} onChange={setDepthTab} />
         )}
 
-        <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6">
           {/* 전부 로드 전엔 아무것도 노출하지 않는다(2026-07-18 User Zero: "정보가 나왔다가 바뀌어 어색") —
               가격 헤더 선노출·seed→fresh 교체 없이 메인홈과 동일한 로딩 하나만. */}
           {!detailsReady ? (
@@ -2760,7 +2750,6 @@ export function StockInsightView({
           <>
           {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
           <StockPriceHeader basics={basics} front={front} />
-          {!inline && <DepthTabBar tab={depthTab} onChange={setDepthTab} />}
           <div
             id={`depth-panel-${depthTab}`}
             role="tabpanel"
