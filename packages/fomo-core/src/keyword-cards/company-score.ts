@@ -353,7 +353,7 @@ function interpretation(axes: readonly CompanyScoreAxis[], label: string): strin
     return `성장 ${top.score}점이 가장 빠르게 앞서고 ${runnerUp.label}도 ${runnerUp.score}점으로 받쳐줘요. ${bottom.label} ${bottom.score}점과의 격차는 ${gap}점이에요.`;
   }
   if (top.key === "flow") {
-    return `실제 돈의 움직임을 반영한 수급이 ${top.score}점으로 선두예요. 다음 강점은 ${runnerUp.label} ${runnerUp.score}점이고, ${bottom.label}과는 ${gap}점 차이예요.`;
+    return `검증된 수급이 ${top.score}점으로 선두예요. 다음 강점은 ${runnerUp.label} ${runnerUp.score}점이고, ${bottom.label}과는 ${gap}점 차이예요.`;
   }
   if (top.key === "chart") {
     return `차트 타이밍이 ${top.score}점으로 가장 낫고 ${runnerUp.label}은 ${runnerUp.score}점이에요. 가장 약한 ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이에요.`;
