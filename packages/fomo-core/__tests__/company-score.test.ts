@@ -61,12 +61,12 @@ describe("company score", () => {
     expect(accumulating.label).toBe("분석 축적 중");
     expect(accumulating.axisStates).toHaveLength(6);
     expect(accumulating.axisStates.filter((axis) => axis.status === "missing").every((axis) => axis.missingReason === "데이터 없음")).toBe(true);
-    expect(accumulating.axes.map((axis) => axis.key)).toEqual(["flow", "chart"]);
+    expect(accumulating.axes.map((axis) => axis.key)).toEqual(["chart"]);
 
     const ready = withCompanyQuietScore(accumulating, { quietScore: 40 });
-    expect(ready.status).toBe("ready");
-    expect(ready.availableAxisCount).toBe(3);
-    expect(ready.score).not.toBeNull();
+    expect(ready.status).toBe("accumulating");
+    expect(ready.availableAxisCount).toBe(2);
+    expect(ready.score).toBeNull();
   });
 
   it("uses six evidence-backed axes and derives the combined label", () => {
@@ -182,8 +182,60 @@ describe("company score", () => {
     };
     const input = companyFinancialsFromBasics(basics)!;
     const result = computeCompanyScore({ financials: input });
-    expect(result.axes.map((axis) => axis.key)).toEqual(["growth", "profitability", "flow", "chart"]);
+    expect(result.axes.map((axis) => axis.key)).toEqual(["growth", "profitability", "chart"]);
     expect(result.omittedAxes).toContain("valuation");
+  });
+
+  it("treats absent flow evidence as missing and uses verified volume anomalies when present", () => {
+    const missing = computeCompanyScore({ financials: accumulation.financials, quiet: { quietScore: 40 } });
+    expect(missing.omittedAxes).toContain("flow");
+    expect(missing.axisStates.find((axis) => axis.key === "flow")).toMatchObject({
+      status: "missing",
+      score: null,
+      missingReason: "데이터 없음",
+    });
+
+    const measured = computeCompanyScore({
+      signals: { volumeRatio: 2.2, changePct: 4.1 },
+      quiet: { quietScore: 40 },
+    });
+    expect(measured.axes.find((axis) => axis.key === "flow")).toMatchObject({ score: 62 });
+    expect(measured.axes.find((axis) => axis.key === "flow")?.evidence[0]).toContain("거래량 평소 2.2배");
+  });
+
+  it("keeps 30 deterministic score explanations diverse without inventing missing flow", () => {
+    const profiles = Array.from({ length: 30 }, (_, index): CompanyScoreInput => {
+      const phase = (["accumulation", "markup", "distribution", "markdown"] as const)[index % 4]!;
+      const revenueGrowth = 8 + index * 1.7;
+      const margin = 4 + (index % 11) * 1.8;
+      const revenue = [100, 112 + (index % 5), 112 * (1 + revenueGrowth / 100)];
+      const operatingIncome = [7, 8 + (index % 4), revenue[2]! * (margin / 100)];
+      return {
+        financials: {
+          revenue,
+          operatingIncome,
+          periods: ["2024", "2025", "2026"],
+          ...(index % 3 === 0
+            ? { currentPsr: 1.4 + index * 0.04, psrHistory: [1.1, 1.5, 1.9, 2.3, 2.8] }
+            : {}),
+        },
+        signals:
+          index % 4 === 0
+            ? { volumeRatio: 1.55 + index * 0.03, changePct: index % 8 === 0 ? 3.2 : -2.4 }
+            : index % 5 === 0
+              ? { foreignNetStreak: 1 + (index % 7) }
+              : {},
+        verdict: { stance: "watch", stanceText: "관찰", phase, evidence: [], confidence: "medium" },
+        currentPrice: 100 + index,
+        quiet: { quietScore: 18 + index * 1.9, signalScore: 30 + index, hypePenalty: index % 9 },
+      };
+    });
+    const explanations = profiles.map((profile) => computeCompanyScore(profile).interpretation);
+    const counts = explanations.reduce((map, sentence) => map.set(sentence, (map.get(sentence) ?? 0) + 1), new Map<string, number>());
+
+    expect(new Set(explanations).size).toBeGreaterThanOrEqual(20);
+    expect(Math.max(...counts.values())).toBeLessThanOrEqual(3);
+    expect(explanations.every((sentence) => /\d+점/u.test(sentence))).toBe(true);
   });
 
   // WO-VAL — 미장 밸류축: PER/PBR 미도달 시 PSR 밴드로 폴백(흑자기업도), 축을 죽이지 않는다.

@@ -163,7 +163,10 @@ describe("Judgment Ledger", () => {
           priceText: "$123.45",
           axisSignals: [],
           verdict: { stance: "watch", stanceText: "구간 확인", evidence: [], confidence: "medium" },
-          score: computeCompanyScore({ quiet: { quietScore: 80 } }),
+          score: computeCompanyScore({
+            signals: { volumeRatio: 2, changePct: 3.1 },
+            quiet: { quietScore: 80 },
+          }),
         },
       },
       meta: { cards: [{ id: "stock:US:ACME:ACME", assetClass: "us-stock", quietScore: 75, signalScore: 90, hypePenalty: 15 }], assetCounts: {}, targetCount: 1 },
