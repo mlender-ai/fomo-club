@@ -270,103 +270,147 @@ function axisOf(axes: readonly CompanyScoreAxis[], key: CompanyScoreAxisKey): Co
   return axes.find((axis) => axis.key === key);
 }
 
-function chartWeeks(axes: readonly CompanyScoreAxis[], input: CompanyScoreInput): number | undefined {
-  const inputWeeks = input.wyckoff?.currentZone?.weeks;
-  if (finite(inputWeeks)) return inputWeeks;
-  const chartEvidence = axisOf(axes, "chart")?.evidence.join(" ") ?? "";
-  const parsed = Number(chartEvidence.match(/(\d+)주차/u)?.[1]);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+// WO-2 — 점수를 "숫자 나열"이 아니라 "평가"로. 결론(강약점 조합) → 근거(수치는 괄호 보조) → 관전 포인트.
+// 카드 훅 = 결론 문장, 뎁스 = 결론+근거+관전 3단 전체(같은 결론에서 파생). 분석가 어휘(격차·비대칭·뒤를 이어)·
+// 순위 나열·문장 첫 절의 수치는 금지 — 아래 사전은 전부 유저어 서술이고 수치는 근거절 괄호로만 들어간다.
+const STRONG_AXIS = 65;
+const WEAK_AXIS = 40;
+const VERY_STRONG_AXIS = 82; // 아주 강한 축 — 표현을 한 단계 세게
+const SEVERE_WEAK_AXIS = 25; // 심각한 약점 — 표현을 한 단계 세게
+
+// 결론절 [보통, 강함] — 강점 2개면 첫째는 연결형(~고), 마지막은 대조형(~는데)으로 약점 결론절 앞에 놓는다.
+const STRENGTH_MID: Record<CompanyScoreAxisKey, [string, string]> = {
+  valuation: ["값이 싸고", "아주 싸고"],
+  growth: ["빠르게 크고", "폭발적으로 크고"],
+  profitability: ["돈도 잘 벌고", "이익이 탄탄하고"],
+  flow: ["큰손이 담고 있고", "큰손이 강하게 담고 있고"],
+  chart: ["차트 자리도 좋고", "차트가 강하게 오르고"],
+  quiet: ["아직 아무도 안 보고", "완전히 소외돼 있고"],
+};
+const STRENGTH_LEAD: Record<CompanyScoreAxisKey, [string, string]> = {
+  valuation: ["값이 싼데", "아주 싼데"],
+  growth: ["빠르게 크는데", "폭발적으로 크는데"],
+  profitability: ["돈은 잘 버는데", "이익은 탄탄한데"],
+  flow: ["큰손이 담고 있는데", "큰손이 강하게 담는데"],
+  chart: ["차트 자리는 좋은데", "차트는 강하게 오르는데"],
+  quiet: ["아직 아무도 안 보는데", "완전히 소외돼 있는데"],
+};
+const WEAKNESS_TAIL: Record<CompanyScoreAxisKey, [string, string]> = {
+  valuation: ["값이 비싼 게 걸려요", "값이 너무 비싼 게 걸려요"],
+  growth: ["성장이 둔해진 게 걸려요", "성장이 멈춘 게 걸려요"],
+  profitability: ["이익이 얇은 게 걸려요", "적자라 체력이 약해요"],
+  flow: ["큰손은 아직 안 붙었어요", "큰손이 오히려 빠지는 중이에요"],
+  chart: ["차트 흐름이 약한 게 아쉬워요", "차트가 꺾인 게 걸려요"],
+  quiet: ["관심이 붙기 시작한 게 부담이에요", "이미 관심이 몰린 게 부담이에요"],
+};
+const strengthMid = (axis: CompanyScoreAxis): string => STRENGTH_MID[axis.key][axis.score >= VERY_STRONG_AXIS ? 1 : 0];
+const strengthLead = (axis: CompanyScoreAxis): string => STRENGTH_LEAD[axis.key][axis.score >= VERY_STRONG_AXIS ? 1 : 0];
+const weaknessTail = (axis: CompanyScoreAxis): string => WEAKNESS_TAIL[axis.key][axis.score <= SEVERE_WEAK_AXIS ? 1 : 0];
+
+// 근거절 — 유저어 서술 + 괄호 안 친근 라벨·수치(문장 주어가 되지 않게).
+const PAREN_LABEL: Record<CompanyScoreAxisKey, string> = {
+  valuation: "가격 매력",
+  growth: "성장",
+  profitability: "수익 체력",
+  flow: "큰손 수급",
+  chart: "차트 타이밍",
+  quiet: "주목도",
+};
+const STRENGTH_DETAIL: Record<CompanyScoreAxisKey, string> = {
+  valuation: "과거보다 싼 가격대에 있어요",
+  growth: "매출이 빠르게 크고 있어요",
+  profitability: "이익을 꾸준히 내고 있어요",
+  flow: "큰손이 담기 시작했어요",
+  chart: "차트 자리가 유리해요",
+  quiet: "아직 주목을 덜 받고 있어요",
+};
+const WEAKNESS_DETAIL: Record<CompanyScoreAxisKey, string> = {
+  valuation: "값이 부담스러운 수준이에요",
+  growth: "매출 성장이 둔해요",
+  profitability: "아직 이익이 얇아요",
+  flow: "큰손 매수는 아직이에요",
+  chart: "차트 흐름이 약해요",
+  quiet: "이미 관심이 많이 몰렸어요",
+};
+// 관전 포인트 — 무엇이 바뀌면 판단이 달라지나. 약점 축이 있으면 그 축을, 없으면 강점 유지 여부를 본다.
+const WEAKNESS_WATCH: Record<CompanyScoreAxisKey, string> = {
+  valuation: "비싼 값을 실적이 정당화하는지가 관건이에요.",
+  growth: "성장이 다시 살아나는 실적이 확인되면 그때가 신호예요.",
+  profitability: "적자가 줄어드는 흐름이 나오는지 봐야 해요.",
+  flow: "큰손이 들어오기 시작하면 그때가 신호예요.",
+  chart: "차트가 바닥을 다지고 돌아서는 자리가 관심 구간이에요.",
+  quiet: "과열이 식고 눌릴 때를 노려볼 만해요.",
+};
+
+function bandTone(score: number): string {
+  if (score >= 80) return "지금 조건이 꽤 잘 맞아떨어져요";
+  if (score >= 65) return "괜찮은 구석과 걸리는 구석이 같이 있어요";
+  if (score >= 50) return "아직은 지켜볼 자리예요";
+  return "지금은 좋게 보기 어려운 자리예요";
 }
 
-function scoreLabel(axes: readonly CompanyScoreAxis[], input: CompanyScoreInput): string {
-  const value = axisOf(axes, "valuation");
-  const growth = axisOf(axes, "growth");
-  const flow = axisOf(axes, "flow");
-  const chart = axisOf(axes, "chart");
-  const quiet = axisOf(axes, "quiet");
-  const weeks = chartWeeks(axes, input);
-  if ((value?.score ?? 0) >= 70 && (chart?.score ?? 0) >= 65) {
-    return `역사 밴드 하단 + ${weeks ? `매집 ${weeks}주차` : "차트 타이밍 우위"}`;
-  }
-  if ((growth?.score ?? 0) >= 70 && finite(value?.score) && value!.score <= 40) return "성장은 강하지만 밸류 부담";
-  if ((chart?.score ?? 0) <= 35) {
-    const distribution = input.verdict?.phase === "distribution" || chart?.evidence.some((item) => item.includes("분산"));
-    return `${distribution ? "분산" : "하락"} 신호 우세`;
-  }
-  if ((flow?.score ?? 0) >= 70 && (quiet?.score ?? 0) >= 65) return "조용한 수급 유입 · 아직 낮은 관심";
-  if ((chart?.score ?? 0) >= 65) return weeks ? `매집 추정 ${weeks}주차` : "차트 타이밍 우위";
-  if ((growth?.score ?? 0) >= 70) return "성장 가속이 가장 강한 축";
-  const top = [...axes].sort((a, b) => b.score - a.score).slice(0, 2);
-  return top.length > 0 ? `${top.map((axis) => axis.label).join(" + ")} 우위` : "근거 축 수집 중";
+function paren(axis: CompanyScoreAxis): string {
+  return `${PAREN_LABEL[axis.key]} ${axis.score}`;
+}
+
+interface Evaluation {
+  conclusion: string;
+  full: string;
 }
 
 /**
- * 축을 사람 언어로 — 요약문에 원시 evidence(YoY·PSR 밴드·수식·quietScore 등 엔진어)를 그대로
- * 싣지 않는다(WO 번역 레이어). 점수 구간별 의미만. 화면엔 계산식·통계용어·영문 약어 금지.
+ * 3단 평가 조립: [결론 한 줄] + [강점1·약점1 유저어, 수치는 괄호] + [관전 포인트].
+ * 결론은 강·약점 조합에서 도출하므로 종목마다 달라진다(순위·격차 나열 없음). axes+score 만으로 동작해
+ * withCompanyQuietScore 재도출(입력 {}) 에도 안전하다.
  */
-function axisMeaning(axis: CompanyScoreAxis): string {
-  const strong = axis.score >= 65;
-  const weak = axis.score <= 40;
-  switch (axis.key) {
-    case "valuation":
-      return strong ? "값이 싼 편" : weak ? "값이 비싼 편" : "값은 보통 수준";
-    case "growth":
-      return strong ? "매출이 빠르게 크는 중" : weak ? "성장은 더딘 편" : "성장은 완만한 편";
-    case "profitability":
-      return strong ? "돈을 잘 버는 회사" : weak ? "수익성은 아직 약한 편" : "수익성은 보통";
-    case "flow":
-      return strong ? "기관·외국인 등 큰손이 담는 중" : weak ? "큰손 매수세는 아직" : "수급은 엇갈리는 중";
-    case "chart":
-      return strong ? "차트 자리가 좋은 편" : weak ? "차트 흐름은 약한 편" : "차트는 눈치보는 자리";
-    case "quiet":
-      return strong ? "아직 아무도 주목 안 하는데 신호는 강해요" : "관심이 붙기 시작한 구간";
-    default:
-      return "";
-  }
-}
+function buildEvaluation(axes: readonly CompanyScoreAxis[], score: number): Evaluation {
+  const empty = "검증 가능한 분석 축이 3개 미만이라 종합 점수를 보류했어요.";
+  if (axes.length < 3) return { conclusion: "", full: empty };
+  const strengths = axes.filter((axis) => axis.score >= STRONG_AXIS).sort((a, b) => b.score - a.score);
+  const weaknesses = axes.filter((axis) => axis.score <= WEAK_AXIS).sort((a, b) => a.score - b.score);
+  const s1 = strengths[0];
+  const s2 = strengths[1];
+  const w1 = weaknesses[0];
 
-function rankAxes(axes: readonly CompanyScoreAxis[]): CompanyScoreAxis[] {
-  return [...axes].sort((a, b) => b.score - a.score || ALL_AXES.indexOf(a.key) - ALL_AXES.indexOf(b.key));
-}
+  // [1] 결론
+  let conclusion: string;
+  if (s1 && w1) {
+    const lead = s2 ? `${strengthMid(s1)} ${strengthLead(s2)}` : strengthLead(s1);
+    conclusion = `${lead}, ${weaknessTail(w1)}`;
+  } else if (s1) {
+    const lead = s2 ? `${strengthMid(s1)} ${strengthMid(s2)}` : strengthMid(s1);
+    conclusion = `${lead}, ${bandTone(score)}`;
+  } else if (w1) {
+    conclusion = `${bandTone(score)}. ${weaknessTail(w1)}`;
+  } else {
+    const top = [...axes].sort((a, b) => b.score - a.score)[0]!;
+    conclusion = `${bandTone(score)} — 그나마 ${PAREN_LABEL[top.key]}이 버텨주는 자리예요`;
+  }
 
-function interpretation(axes: readonly CompanyScoreAxis[], label: string): string {
-  if (axes.length < 3) return "검증 가능한 분석 축이 3개 미만이라 종합 점수를 보류했어요.";
-  const sorted = rankAxes(axes);
-  const top = sorted[0]!;
-  const runnerUp = sorted[1]!;
-  const bottom = sorted.at(-1)!;
-  if (top.key === bottom.key) return `${label}. ${axisMeaning(top)}.`;
-  const gap = top.score - bottom.score;
-  const leadGap = top.score - runnerUp.score;
-  const valuationMissing = !axisOf(axes, "valuation");
-  const growth = axisOf(axes, "growth");
+  // [2] 근거 (수치는 괄호 보조로만)
+  let evidence: string;
+  if (s1 && w1) {
+    evidence = `${STRENGTH_DETAIL[s1.key]}(${paren(s1)}). 다만 ${WEAKNESS_DETAIL[w1.key]}(${paren(w1)}).`;
+  } else if (s1) {
+    const extra = s2 ? ` ${STRENGTH_DETAIL[s2.key]}(${paren(s2)}).` : "";
+    evidence = `${STRENGTH_DETAIL[s1.key]}(${paren(s1)}).${extra}`;
+  } else if (w1) {
+    evidence = `${WEAKNESS_DETAIL[w1.key]}(${paren(w1)}).`;
+  } else {
+    const ranked = [...axes].sort((a, b) => b.score - a.score);
+    const top = ranked[0]!;
+    const bottom = ranked.at(-1)!;
+    evidence = `뚜렷하게 강한 축도, 크게 걸리는 축도 없어요. ${PAREN_LABEL[top.key]}(${top.score})가 그나마 낫고 ${PAREN_LABEL[bottom.key]}(${bottom.score})가 아쉬운 편이에요.`;
+  }
 
-  if (valuationMissing && (growth?.score ?? 0) >= 70) {
-    const operating = axisOf(axes, "profitability") ?? runnerUp;
-    return `성장 ${growth!.score}점이 앞서지만 비싼지 싼지는 아직 데이터가 부족해요. ${operating.label}은 ${operating.score}점이고, ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이에요.`;
-  }
-  if (gap <= 10) {
-    return `${top.label} ${top.score}점부터 ${bottom.label} ${bottom.score}점까지 격차가 ${gap}점뿐이에요. 한 축이 튀기보다 가용 ${axes.length}개 축이 고른 편이에요.`;
-  }
-  if (leadGap <= 5) {
-    return `${top.label} ${top.score}점과 ${runnerUp.label} ${runnerUp.score}점이 함께 앞서요. ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이라 약한 축도 같이 봐야 해요.`;
-  }
-  if (gap >= 35) {
-    return `${top.label}은 ${top.score}점으로 뚜렷하고 ${runnerUp.label} ${runnerUp.score}점이 뒤를 이어요. ${bottom.label} ${bottom.score}점까지 격차 ${gap}점이 큰 비대칭 구조예요.`;
-  }
-  if (top.key === "growth") {
-    return `성장 ${top.score}점이 가장 빠르게 앞서고 ${runnerUp.label}도 ${runnerUp.score}점으로 받쳐줘요. ${bottom.label} ${bottom.score}점과의 격차는 ${gap}점이에요.`;
-  }
-  if (top.key === "flow") {
-    return `검증된 수급이 ${top.score}점으로 선두예요. 다음 강점은 ${runnerUp.label} ${runnerUp.score}점이고, ${bottom.label}과는 ${gap}점 차이예요.`;
-  }
-  if (top.key === "chart") {
-    return `차트 타이밍이 ${top.score}점으로 가장 낫고 ${runnerUp.label}은 ${runnerUp.score}점이에요. 가장 약한 ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이에요.`;
-  }
-  if (top.key === "quiet") {
-    return `조용함 ${top.score}점이라 화제보다 신호가 앞서 있어요. ${runnerUp.label} ${runnerUp.score}점이 뒤를 잇고, ${bottom.label}과의 격차는 ${gap}점이에요.`;
-  }
-  return `${top.label} ${top.score}점이 가장 강하고 ${runnerUp.label} ${runnerUp.score}점이 다음이에요. ${bottom.label} ${bottom.score}점까지 ${gap}점 벌어져 있어요.`;
+  // [3] 관전 포인트
+  const watch = w1
+    ? WEAKNESS_WATCH[w1.key]
+    : s1
+      ? "지금 흐름이 이어지는지, 과열 신호가 없는지 보면 돼요."
+      : "방향이 잡히는지 조금 더 지켜보는 자리예요.";
+
+  return { conclusion, full: `${conclusion}. ${evidence} ${watch}` };
 }
 
 function axisStates(axes: readonly CompanyScoreAxis[]): CompanyScoreAxisState[] {
@@ -385,15 +429,16 @@ function axisStates(axes: readonly CompanyScoreAxis[]): CompanyScoreAxisState[] 
   });
 }
 
-function resultFromAxes(axes: CompanyScoreAxis[], input: CompanyScoreInput, asOf?: string): CompanyScoreResult {
+function resultFromAxes(axes: CompanyScoreAxis[], _input: CompanyScoreInput, asOf?: string): CompanyScoreResult {
   const ready = axes.length >= 3;
   const score = ready ? Math.round(axes.reduce((sum, axis) => sum + axis.score, 0) / axes.length) : null;
-  const label = ready ? scoreLabel(axes, input) : "";
+  // 카드 훅(label)=결론 문장, 뎁스(interpretation)=결론+근거+관전 — 같은 평가에서 파생(WO-2).
+  const evaluation = ready ? buildEvaluation(axes, score!) : { conclusion: "", full: "" };
   return {
     score,
     status: ready ? "ready" : "accumulating",
-    label,
-    interpretation: ready ? interpretation(axes, label) : "",
+    label: evaluation.conclusion,
+    interpretation: evaluation.full,
     axes,
     axisStates: axisStates(axes),
     availableAxisCount: axes.length,

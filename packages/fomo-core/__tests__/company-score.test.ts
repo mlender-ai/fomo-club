@@ -75,7 +75,10 @@ describe("company score", () => {
     expect(result.availableAxisCount).toBe(6);
     expect(result.axisStates.every((axis) => axis.status === "available")).toBe(true);
     expect(result.omittedAxes).toEqual([]);
-    expect(result.label).toBe("역사 밴드 하단 + 매집 7주차");
+    // WO-2: 카드 훅=결론 문장. 수치·분석가 어휘 없이 평가로 시작한다.
+    expect(result.label.length).toBeGreaterThan(0);
+    expect(result.label).not.toMatch(/\d/);
+    expect(result.label).not.toMatch(/격차|비대칭|뒤를 이어|가장 강한 축|상대적으로 약/);
     expect(result.axes.find((axis) => axis.key === "valuation")?.evidence[0]).toContain("PER 6.40배");
     // 조용함 축 근거는 사람 언어 — 계산식(신호-화제성=) 노출 금지(WO 번역 레이어).
     const quietEvidence = result.axes.find((axis) => axis.key === "quiet")?.evidence[0] ?? "";
@@ -205,38 +208,53 @@ describe("company score", () => {
   });
 
   it("keeps 30 deterministic score explanations diverse without inventing missing flow", () => {
+    // 실제 종목처럼 축을 서로소 모듈러로 독립 분산 — 성장/수익/밸류/수급/조용함이 제각기 강·중·약으로 흩어져
+    // 강약점 조합이 다양해진다(공식으로 단조 증가하면 인위적으로 한 조합에 뭉친다).
     const profiles = Array.from({ length: 30 }, (_, index): CompanyScoreInput => {
       const phase = (["accumulation", "markup", "distribution", "markdown"] as const)[index % 4]!;
-      const revenueGrowth = 8 + index * 1.7;
-      const margin = 4 + (index % 11) * 1.8;
-      const revenue = [100, 112 + (index % 5), 112 * (1 + revenueGrowth / 100)];
+      const revenueGrowth = ((index * 37) % 70) - 12; // -12 ~ 57%: 성장 강/중/약 분산
+      const margin = ((index * 53) % 26) - 3; // -3 ~ 22%: 수익성 흑/적자 분산
+      const revenue = [100, 108 + (index % 6), Math.max(40, 108 * (1 + revenueGrowth / 100))];
       const operatingIncome = [7, 8 + (index % 4), revenue[2]! * (margin / 100)];
+      const foreign = index % 3 === 0 ? ((index * 13) % 9) : 0;
       return {
         financials: {
           revenue,
           operatingIncome,
           periods: ["2024", "2025", "2026"],
-          ...(index % 3 === 0
-            ? { currentPsr: 1.4 + index * 0.04, psrHistory: [1.1, 1.5, 1.9, 2.3, 2.8] }
+          ...(index % 5 !== 0
+            ? { currentPsr: 1 + (((index * 17) % 30) / 10), psrHistory: [1.1, 1.5, 1.9, 2.3, 2.8] }
             : {}),
         },
         signals:
-          index % 4 === 0
-            ? { volumeRatio: 1.55 + index * 0.03, changePct: index % 8 === 0 ? 3.2 : -2.4 }
-            : index % 5 === 0
-              ? { foreignNetStreak: 1 + (index % 7) }
+          foreign > 0
+            ? { foreignNetStreak: foreign }
+            : index % 4 === 1
+              ? { volumeRatio: 1.4 + ((index * 7) % 12) / 10, changePct: index % 8 === 0 ? 3.2 : -2.4 }
               : {},
         verdict: { stance: "watch", stanceText: "관찰", phase, evidence: [], confidence: "medium" },
         currentPrice: 100 + index,
-        quiet: { quietScore: 18 + index * 1.9, signalScore: 30 + index, hypePenalty: index % 9 },
+        quiet: { quietScore: ((index * 23) % 88) + 6, signalScore: 30 + (index % 13) * 5, hypePenalty: index % 9 },
       };
     });
-    const explanations = profiles.map((profile) => computeCompanyScore(profile).interpretation);
-    const counts = explanations.reduce((map, sentence) => map.set(sentence, (map.get(sentence) ?? 0) + 1), new Map<string, number>());
+    const results = profiles.map((profile) => computeCompanyScore(profile));
+    const explanations = results.map((r) => r.interpretation);
+    const conclusions = results.map((r) => r.label);
+    const counts = conclusions.reduce((map, sentence) => map.set(sentence, (map.get(sentence) ?? 0) + 1), new Map<string, number>());
 
-    expect(new Set(explanations).size).toBeGreaterThanOrEqual(20);
+    // WO-2 결론 다양성: 강약점 조합에 따라 결론이 달라진다(30장 유니크 ≥15, 동일 3회 초과 실패).
+    expect(new Set(conclusions).size).toBeGreaterThanOrEqual(15);
     expect(Math.max(...counts.values())).toBeLessThanOrEqual(3);
-    expect(explanations.every((sentence) => /\d+점/u.test(sentence))).toBe(true);
+    // 분석가 어휘·순위 나열 차단(게이트).
+    const FORBIDDEN = /격차|비대칭|뒤를 이어|가장 강한 축|상대적으로 약|점으로 뚜렷|점이 뒤를/u;
+    for (const text of [...explanations, ...conclusions]) {
+      expect(text, `금지 어휘 누수: "${text}"`).not.toMatch(FORBIDDEN);
+    }
+    // 결론(카드 훅)은 평가 문장 — 수치가 문장 주어로 앞서지 않는다(숫자 없음).
+    expect(conclusions.every((c) => !/\d/u.test(c))).toBe(true);
+    // 수치는 근거절 괄호 보조로만 등장한다.
+    expect(explanations.every((text) => /\([^)]*\d+[^)]*\)/u.test(text))).toBe(true);
+    expect(explanations.every((text) => !/\d+점/u.test(text))).toBe(true);
   });
 
   // WO-VAL — 미장 밸류축: PER/PBR 미도달 시 PSR 밴드로 폴백(흑자기업도), 축을 죽이지 않는다.
