@@ -1,5 +1,12 @@
 import { callAI, isAiConfigured } from "@fomo/shared";
-import { companyFinancialsFromBasics, computeCompanyScore, type StockBasics } from "@fomo/core";
+import {
+  companyFinancialsFromBasics,
+  computeCompanyScore,
+  withCompanyQuietScore,
+  type CompanyQuietScoreInput,
+  type CompanyScoreResult,
+  type StockBasics,
+} from "@fomo/core";
 import { buildDaily30CandidatePoolResponse, type Daily30Response } from "./daily-30";
 import { writeDaily30Ledger } from "./judgment-ledger";
 import type { DiscoveryDeckCardPayload, DiscoveryFrontSeed, DiscoveryStockPayload } from "./discovery-supply";
@@ -14,7 +21,7 @@ import {
   type PublishedCommitteeSnapshot,
 } from "./expert-review-store";
 import { fetchStockBasics, fetchUsStockBasics } from "./stock-basics";
-import { usValuationBand } from "./us-valuation";
+import { usValuationBandWithDiagnostics, type UsValuationDiagnostic } from "./us-valuation";
 import { kstDate } from "./fomo";
 import { readFeedContent, writeFeedContent } from "./feed-content-store";
 
@@ -145,6 +152,25 @@ function isStockCard(card: DiscoveryDeckCardPayload): card is { kind: "stock" } 
 
 function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+const FINANCIAL_AXIS_KEYS = new Set(["valuation", "growth", "profitability"]);
+
+/** 위원회가 재무를 다시 읽지 못한 날에도 후보 풀에서 이미 계산된 실측 재무축을 지우지 않는다. */
+export function mergeCommitteeCompanyScore(
+  source: CompanyScoreResult | undefined,
+  recalculated: CompanyScoreResult,
+  quiet: CompanyQuietScoreInput,
+  asOf?: string
+): CompanyScoreResult {
+  const recalculatedKeys = new Set(recalculated.axes.map((axis) => axis.key));
+  const preservedFinancialAxes = (source?.axes ?? []).filter(
+    (axis) => FINANCIAL_AXIS_KEYS.has(axis.key) && !recalculatedKeys.has(axis.key)
+  );
+  const merged = preservedFinancialAxes.length > 0
+    ? { ...recalculated, axes: [...preservedFinancialAxes, ...recalculated.axes] }
+    : recalculated;
+  return withCompanyQuietScore(merged, quiet, asOf);
 }
 
 function summarizeCandles(front: DiscoveryFrontSeed) {
@@ -713,15 +739,18 @@ async function candidateRecords(response: Daily30Response): Promise<CandidateRec
         ? await fetchUsStockBasics(candidate.card.canonical, candidate.card.symbol ?? candidate.card.canonical, false).catch(() => undefined)
         : await fetchStockBasics(candidate.card.canonical, candidate.card.naverCode, candidate.card.symbol).catch(() => undefined);
     let financials = companyFinancialsFromBasics(basics);
-    const latestPrice = candidate.front.candles?.at(-1)?.close;
-    if (isUsStock) {
-      const usCloses = (candidate.front.candles ?? []).map((c) => c.close);
-      if (usCloses.length > 0) {
-        const band = usValuationBand(basics ?? null, usCloses, latestPrice);
-        if (band) financials = { ...(financials ?? {}), ...band };
-      }
+    const sourceHasValuation = candidate.front.score?.axes.some((axis) => axis.key === "valuation") ?? false;
+    const candleCloses = (candidate.front.candles ?? []).map((c) => c.close).filter((close) => finite(close) && close > 0);
+    const fallbackCloses = (candidate.front.sparkline ?? []).filter((close) => finite(close) && close > 0);
+    const usCloses = candleCloses.length > 0 ? candleCloses : fallbackCloses;
+    const latestPrice = candleCloses.at(-1) ?? fallbackCloses.at(-1);
+    let valuationDiagnostic: UsValuationDiagnostic | undefined;
+    if (isUsStock && !sourceHasValuation) {
+      const valuation = usValuationBandWithDiagnostics(basics ?? null, usCloses, latestPrice);
+      valuationDiagnostic = valuation.diagnostic;
+      if (valuation.band) financials = { ...(financials ?? {}), ...valuation.band };
     }
-    const companyScore = computeCompanyScore({
+    const recalculatedScore = computeCompanyScore({
       ...(financials ? { financials } : {}),
       signals: candidate.front.signals,
       ...(candidate.front.verdict ? { verdict: candidate.front.verdict } : {}),
@@ -732,13 +761,28 @@ async function candidateRecords(response: Daily30Response): Promise<CandidateRec
         candidate.card.reason,
       ].filter(Boolean).join(" ")),
       ...(finite(latestPrice) ? { currentPrice: latestPrice } : {}),
-      quiet: {
+      asOf: candidate.front.signals.asOf ?? response.asOf,
+    });
+    const companyScore = mergeCommitteeCompanyScore(
+      candidate.front.score,
+      recalculatedScore,
+      {
         quietScore: candidate.quietScore,
         signalScore: candidate.signalScore,
         hypePenalty: candidate.hypePenalty,
       },
-      asOf: candidate.front.signals.asOf ?? response.asOf,
-    });
+      candidate.front.signals.asOf ?? response.asOf
+    );
+    if (candidate.card.market !== "COIN" && !companyScore.axes.some((axis) => axis.key === "valuation")) {
+      console.warn("[expert-committee] valuation unavailable", {
+        canonical: candidate.card.canonical,
+        country: candidate.card.country,
+        symbol: candidate.card.symbol,
+        naverCode: candidate.card.naverCode,
+        sourceHasValuation,
+        diagnostic: valuationDiagnostic ?? { reason: basics ? "kr-valuation-unavailable" : "basics-missing" },
+      });
+    }
     const front: DiscoveryFrontSeed = { ...candidate.front, score: companyScore };
     const scoreAxes = companyScore.axes;
     return {

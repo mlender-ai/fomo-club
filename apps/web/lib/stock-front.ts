@@ -557,7 +557,7 @@ export async function assembleStockFront(
   const lite = options.lite === true;
 
   const [basics, history, daily] = await Promise.all([
-    (lite ? fetchStockBasicsLite(stock) : fetchStockBasics(stock)).catch(() => null),
+    (lite ? fetchStockBasicsLite(stock, 3500, code) : fetchStockBasics(stock, code, options.symbol)).catch(() => null),
     readSupplyDemandHistory(code).catch(() => []),
     fetchStockDaily(code, lite ? 110 : 420),
   ]);

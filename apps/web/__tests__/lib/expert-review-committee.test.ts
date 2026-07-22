@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
+import { computeCompanyScore } from "@fomo/core";
 import {
   applyAnalystFactGate,
   completeEditorSelectedIds,
   enforceEditorAssetFloors,
+  mergeCommitteeCompanyScore,
   parseEditorOutput,
   runExpertReviewCommittee,
   runExpertReviewCommitteeStage,
@@ -110,6 +112,31 @@ function fakePool(count = 40): Daily30Response {
 }
 
 describe("expert committee orchestration", () => {
+  it("후보 풀의 실측 밸류축을 위원회 라이트 재계산이 지우지 않는다", () => {
+    const source = computeCompanyScore({
+      financials: {
+        currentPsr: 2.5,
+        psrHistory: [1.9, 2.2, 2.8, 3.1],
+        valuationHistoryLabel: "최근 1년",
+      },
+    });
+    const recalculated = computeCompanyScore({
+      signals: { changePct: 2.1, volumeRatio: 1.4 },
+    });
+
+    const merged = mergeCommitteeCompanyScore(
+      source,
+      recalculated,
+      { quietScore: 72, signalScore: 80, hypePenalty: 8 },
+      "2026-07-22"
+    );
+
+    expect(merged.axes.find((axis) => axis.key === "valuation")).toMatchObject({
+      evidence: [expect.stringContaining("PSR 2.50배")],
+    });
+    expect(merged.axes.some((axis) => axis.key === "quiet")).toBe(true);
+  });
+
   it("편집장 핵심 선정 ID가 있으면 누락된 부가 필드를 결정론 기본값으로 보완한다", () => {
     expect(parseEditorOutput(JSON.stringify({ selected_ids: ["a", "b"] }))).toEqual({
       selectedIds: ["a", "b"],
