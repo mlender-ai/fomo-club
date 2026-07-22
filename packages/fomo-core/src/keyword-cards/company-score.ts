@@ -43,7 +43,7 @@ export interface CompanyQuietScoreInput {
 
 export interface CompanyScoreInput {
   financials?: CompanyFinancialScoreInput;
-  signals?: Pick<CardFrontSignals, "foreignNetStreak" | "institutionNetStreak">;
+  signals?: Pick<CardFrontSignals, "foreignNetStreak" | "institutionNetStreak" | "volumeRatio" | "changePct">;
   insiderPurchaseConfirmed?: boolean;
   whaleStrength?: number;
   quietMoney?: QuietMoneyTimeline;
@@ -179,9 +179,11 @@ function profitabilityAxis(financials: CompanyFinancialScoreInput | undefined): 
   };
 }
 
-function flowAxis(input: CompanyScoreInput): CompanyScoreAxis {
+function flowAxis(input: CompanyScoreInput): CompanyScoreAxis | undefined {
   const foreign = input.signals?.foreignNetStreak;
   const institution = input.signals?.institutionNetStreak;
+  const volumeRatio = input.signals?.volumeRatio;
+  const changePct = input.signals?.changePct;
   const whale = input.whaleStrength;
   const quietMoney = input.quietMoney;
   let score = 50;
@@ -198,6 +200,16 @@ function flowAxis(input: CompanyScoreInput): CompanyScoreAxis {
     score += 24;
     evidence.push("내부자 공개시장 매수 공시 확인");
   }
+  if (finite(volumeRatio) && volumeRatio >= 1.5) {
+    const direction = finite(changePct) && Math.abs(changePct) >= 0.3 ? Math.sign(changePct) : 0;
+    const adjustment = Math.min(18, Math.round((volumeRatio - 1) * 10));
+    score += adjustment * direction;
+    evidence.push(
+      `거래량 평소 ${volumeRatio.toFixed(1)}배${
+        direction > 0 ? " · 가격 동반 상승" : direction < 0 ? " · 가격 동반 하락" : " · 방향 확인 중"
+      }`
+    );
+  }
   if (finite(whale)) {
     score += clamp(whale, -1, 1) * 25;
     evidence.push(`고래 신호 강도 ${whale.toFixed(2)}`);
@@ -206,7 +218,7 @@ function flowAxis(input: CompanyScoreInput): CompanyScoreAxis {
     score += quietMoney.cluster.strength * 4;
     evidence.push(`${quietMoney.cluster.headline} · 강도 ${quietMoney.cluster.strength}/5`);
   }
-  if (evidence.length === 0) evidence.push("확인된 연속 수급·내부자·고래 유입 신호 없음");
+  if (evidence.length === 0) return undefined;
   return { key: "flow", label: AXIS_LABEL.flow, score: Math.round(clamp(score)), evidence };
 }
 
@@ -308,14 +320,48 @@ function axisMeaning(axis: CompanyScoreAxis): string {
   }
 }
 
+function rankAxes(axes: readonly CompanyScoreAxis[]): CompanyScoreAxis[] {
+  return [...axes].sort((a, b) => b.score - a.score || ALL_AXES.indexOf(a.key) - ALL_AXES.indexOf(b.key));
+}
+
 function interpretation(axes: readonly CompanyScoreAxis[], label: string): string {
   if (axes.length < 3) return "검증 가능한 분석 축이 3개 미만이라 종합 점수를 보류했어요.";
-  const sorted = [...axes].sort((a, b) => b.score - a.score);
+  const sorted = rankAxes(axes);
   const top = sorted[0]!;
+  const runnerUp = sorted[1]!;
   const bottom = sorted.at(-1)!;
   if (top.key === bottom.key) return `${label}. ${axisMeaning(top)}.`;
-  // "가장 강한 축=의미 / 가장 약한 축=의미" — 숫자 점수는 육각형·리스트에 이미 있으니 문장은 뜻만.
-  return `${label}. 지금 가장 돋보이는 건 '${axisMeaning(top)}', 반대로 '${axisMeaning(bottom)}'은 약한 편이에요.`;
+  const gap = top.score - bottom.score;
+  const leadGap = top.score - runnerUp.score;
+  const valuationMissing = !axisOf(axes, "valuation");
+  const growth = axisOf(axes, "growth");
+
+  if (valuationMissing && (growth?.score ?? 0) >= 70) {
+    const operating = axisOf(axes, "profitability") ?? runnerUp;
+    return `성장 ${growth!.score}점이 앞서지만 비싼지 싼지는 아직 데이터가 부족해요. ${operating.label}은 ${operating.score}점이고, ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이에요.`;
+  }
+  if (gap <= 10) {
+    return `${top.label} ${top.score}점부터 ${bottom.label} ${bottom.score}점까지 격차가 ${gap}점뿐이에요. 한 축이 튀기보다 가용 ${axes.length}개 축이 고른 편이에요.`;
+  }
+  if (leadGap <= 5) {
+    return `${top.label} ${top.score}점과 ${runnerUp.label} ${runnerUp.score}점이 함께 앞서요. ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이라 약한 축도 같이 봐야 해요.`;
+  }
+  if (gap >= 35) {
+    return `${top.label}은 ${top.score}점으로 뚜렷하고 ${runnerUp.label} ${runnerUp.score}점이 뒤를 이어요. ${bottom.label} ${bottom.score}점까지 격차 ${gap}점이 큰 비대칭 구조예요.`;
+  }
+  if (top.key === "growth") {
+    return `성장 ${top.score}점이 가장 빠르게 앞서고 ${runnerUp.label}도 ${runnerUp.score}점으로 받쳐줘요. ${bottom.label} ${bottom.score}점과의 격차는 ${gap}점이에요.`;
+  }
+  if (top.key === "flow") {
+    return `검증된 수급이 ${top.score}점으로 선두예요. 다음 강점은 ${runnerUp.label} ${runnerUp.score}점이고, ${bottom.label}과는 ${gap}점 차이예요.`;
+  }
+  if (top.key === "chart") {
+    return `차트 타이밍이 ${top.score}점으로 가장 낫고 ${runnerUp.label}은 ${runnerUp.score}점이에요. 가장 약한 ${bottom.label} ${bottom.score}점까지 격차는 ${gap}점이에요.`;
+  }
+  if (top.key === "quiet") {
+    return `조용함 ${top.score}점이라 화제보다 신호가 앞서 있어요. ${runnerUp.label} ${runnerUp.score}점이 뒤를 잇고, ${bottom.label}과의 격차는 ${gap}점이에요.`;
+  }
+  return `${top.label} ${top.score}점이 가장 강하고 ${runnerUp.label} ${runnerUp.score}점이 다음이에요. ${bottom.label} ${bottom.score}점까지 ${gap}점 벌어져 있어요.`;
 }
 
 function axisStates(axes: readonly CompanyScoreAxis[]): CompanyScoreAxisState[] {

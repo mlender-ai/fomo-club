@@ -30,7 +30,10 @@ function front(): DiscoveryFrontSeed {
 
 describe("daily-30 unified card schema", () => {
   it("KR/US/coin cards expose the exact same required field set", () => {
-    const score = withCompanyQuietScore(computeCompanyScore({}), { quietScore: 40 });
+    const score = withCompanyQuietScore(
+      computeCompanyScore({ signals: { volumeRatio: 2, changePct: 2.5 } }),
+      { quietScore: 40 }
+    );
     const cards = (["kr-stock", "us-stock", "coin"] as const).map((asset) =>
       buildUnifiedCardSnapshot(stock(asset), asset, front(), score)
     );
@@ -42,7 +45,7 @@ describe("daily-30 unified card schema", () => {
     expect(cards.every((card) => card.score.status === "ready" && card.sparkline.length > 0)).toBe(true);
   });
 
-  it("upgrades legacy snapshots with flow, chart, and quiet as guaranteed minimum axes", () => {
+  it("keeps legacy flow missing when the snapshot has no measured flow evidence", () => {
     const legacy = {
       asOf: "2026-07-20",
       country: "all",
@@ -76,7 +79,7 @@ describe("daily-30 unified card schema", () => {
     } as unknown as Daily30Response;
     const normalized = normalizeDaily30Response(legacy).fronts["us-stock"]!;
     expect(normalized.score?.axisStates.filter((axis) => ["flow", "chart", "quiet"].includes(axis.key)).map((axis) => axis.status)).toEqual([
-      "available", "available", "available",
+      "missing", "available", "available",
     ]);
     expect(normalized).not.toHaveProperty("fomo");
     expect(normalized).not.toHaveProperty("companyScore");
