@@ -121,7 +121,9 @@ function CardListRow({
       {hook && (
         <p className="mt-1 truncate text-xs leading-5 text-muted">{hook}</p>
       )}
-      {companyScore?.label && <p className="mt-1 truncate text-[10px] leading-4 text-whiteout">{companyScore.label}</p>}
+      {typeof companyScore?.score === "number" && companyScore.label && (
+        <p className="mt-1 truncate text-[10px] leading-4 text-whiteout">{companyScore.label}</p>
+      )}
     </button>
   );
 }

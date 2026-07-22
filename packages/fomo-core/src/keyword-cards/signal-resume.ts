@@ -135,9 +135,9 @@ function compactPercent(value: number): string {
 export function formatSignalResumeBadge(code: SignalTypeCode, metric: SignalResumeMetric): string {
   const label = signalTypeLabel(code);
   if (metric.n < SIGNAL_RESUME_MIN_SAMPLE || metric.winRate === null) {
-    return `${label} · 축적 중 (n=${metric.n})`;
+    return "";
   }
-  return `${label} · 역대 30일 승률 ${compactPercent(metric.winRate)}% · n=${metric.n}`;
+  return `${label} · 역대 30일 승률 ${compactPercent(metric.winRate)}%`;
 }
 
 /** Good long-run evidence can move ranking slightly, never dominate today's signal. */

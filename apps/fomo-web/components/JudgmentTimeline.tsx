@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   formatSignalResumeBadge,
   normalizeSignalTypeCodes,
+  SIGNAL_RESUME_MIN_SAMPLE,
   signalTypeLabel,
   type SignalTypeCode,
 } from "@fomo/core";
@@ -96,7 +97,7 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
           const style = KIND_STYLE[entry.kind];
           const resumes = signalTypes(entry).flatMap((code) => {
             const metric = signalHistory30[code];
-            return metric ? [{ code, metric }] : [];
+            return metric && metric.n >= SIGNAL_RESUME_MIN_SAMPLE && metric.winRate !== null ? [{ code, metric }] : [];
           });
           return (
             <DepthLine key={`${entry.id}-${entry.date}`} className="grid grid-cols-[70px_1fr] gap-3">

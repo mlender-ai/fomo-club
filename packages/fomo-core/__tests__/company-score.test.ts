@@ -58,7 +58,8 @@ describe("company score", () => {
     const accumulating = computeCompanyScore({});
     expect(accumulating.status).toBe("accumulating");
     expect(accumulating.score).toBeNull();
-    expect(accumulating.label).toBe("분석 축적 중");
+    expect(accumulating.label).toBe("");
+    expect(accumulating.interpretation).toBe("");
     expect(accumulating.axisStates).toHaveLength(6);
     expect(accumulating.axisStates.filter((axis) => axis.status === "missing").every((axis) => axis.missingReason === "데이터 없음")).toBe(true);
     expect(accumulating.axes.map((axis) => axis.key)).toEqual(["chart"]);

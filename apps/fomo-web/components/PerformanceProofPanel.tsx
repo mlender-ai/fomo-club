@@ -119,6 +119,7 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
     const tracked = trackedBands?.[key];
     return tracked ? { ...band, count: tracked.n, winRate: tracked.winRate } : band;
   });
+  const visibleScoreBands = scoreBands.filter((band) => band.count > 0 && band.winRate !== null);
 
   if (items.length === 0) return null;
 
@@ -129,7 +130,7 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
         <span className="text-[10px] font-medium text-muted">{returns.length}/{items.length}</span>
       </div>
 
-      <div className="rounded-2xl border border-hairline bg-surface-raised px-4 py-4">
+      {returns.length > 0 && <div className="rounded-2xl border border-hairline bg-surface-raised px-4 py-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <span className="text-[10px] text-muted">상승 비율</span>
@@ -145,25 +146,23 @@ export function PerformanceProofPanel({ items }: { items: readonly DiscoverySeen
         <p className="mt-3 text-xs leading-5 text-muted">
           처음 본 시점 가격과 현재가가 모두 있는 종목 전체 기준입니다.
         </p>
-      </div>
+      </div>}
 
-      <div className="mt-3 border-y border-hairline py-3">
+      {visibleScoreBands.length > 0 && <div className="mt-3 border-y border-hairline py-3">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-semibold text-whiteout">점수대별 30일 후 승률</p>
           <span className="text-[10px] text-muted">전체 기록 기준</span>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2">
-          {scoreBands.map((band) => (
+          {visibleScoreBands.map((band) => (
             <div key={band.label}>
               <p className="text-[10px] text-muted">{band.label}</p>
-              <p className="mt-1 font-number text-base font-bold text-whiteout">
-                {band.winRate === null ? "축적 중" : `${band.winRate}%`}
-              </p>
-              <p className="text-[9px] text-muted">표본 {band.count}</p>
+              <p className="mt-1 font-number text-base font-bold text-whiteout">{band.winRate}%</p>
+              <p className="text-[9px] text-muted">{band.count}건 기준</p>
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className="mt-3 flex flex-col gap-2.5">
         {rows.slice(0, 10).map((row) => {

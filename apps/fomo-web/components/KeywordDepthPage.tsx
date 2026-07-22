@@ -2027,7 +2027,7 @@ function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
   const resistance = levels.filter((level) => level.kind === "resistance" && level.value >= last).sort((a, b) => a.value - b.value)[0];
   const levelValue = [support ? `지지 ${formatChartPrice(support.value)}` : undefined, resistance ? `저항 ${formatChartPrice(resistance.value)}` : undefined]
     .filter(Boolean)
-    .join(" · ") || "레벨 축적 중";
+    .join(" · ");
   const latest = front?.ta?.latest;
   const momentumValue = finiteNumber(latest?.rsi14)
     ? latest.rsi14 >= 70
@@ -2037,27 +2037,28 @@ function structureMetrics(front: StockFrontResponse | null): StructureMetric[] {
       ? `변동폭 ${latest.atrPct.toFixed(1)}%`
       : finiteNumber(front?.signals?.volumeRatio) && front.signals.volumeRatio >= 0.1
         ? `거래량 ${front.signals.volumeRatio.toFixed(1)}배`
-        : "지표 축적 중";
+        : undefined;
 
-  return [
+  const metrics: StructureMetric[] = [
     {
       title: "추세 구조",
       value: structure,
       body: `현재 종가 ${formatChartPrice(last)}${finiteNumber(ma20) ? ` · MA20 ${formatChartPrice(ma20)}` : ""}${finiteNumber(ma60) ? ` · MA60 ${formatChartPrice(ma60)}` : ""}${finiteNumber(ma120) ? ` · MA120 ${formatChartPrice(ma120)}` : ""}`,
     },
-    {
+  ];
+  if (levelValue) metrics.push({
       title: "핵심 가격대",
       value: levelValue,
-      body: levelValue === "레벨 축적 중" ? "반복 확인된 최근 피벗이 아직 부족해요." : `최근 고점·저점 피벗에서 계산한 ${levelValue} 구간이에요.`,
-    },
-    {
+      body: `최근 고점·저점 피벗에서 계산한 ${levelValue} 구간이에요.`,
+    });
+  if (momentumValue) metrics.push({
       title: "모멘텀",
       value: momentumValue,
       body: finiteNumber(latest?.rsi14)
         ? `${latest.rsi14 >= 70 ? `단기 과열(RSI ${Math.round(latest.rsi14)})` : `RSI 14 기준 ${Math.round(latest.rsi14)}`}예요.${finiteNumber(latest?.atrPct) ? ` 최근 하루 변동폭은 ${latest.atrPct.toFixed(1)}%예요.` : ""}`
         : "현재 연결된 변동성·모멘텀 관측값을 보여줘요.",
-    },
-  ];
+    });
+  return metrics;
 }
 
 /**

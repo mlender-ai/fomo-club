@@ -45,22 +45,22 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
   if (!result) return null;
 
   return (
-    <DepthSection className="mt-4" ariaLabelledby="company-score-title">
+    <DepthSection className="mt-4" {...(result.score != null ? { ariaLabelledby: "company-score-title" } : {})}>
       <div className="flex items-start justify-between gap-4">
-        <div>
+        {result.score != null && <div>
           <p className="font-pixel text-[11px] text-muted">COMPANY SCORE</p>
           <div className="mt-1.5 flex items-baseline gap-2">
             <span
               id="company-score-title"
-              className={`font-number font-bold leading-none ${result.score == null ? "text-xl" : "text-4xl"}`}
+              className="font-number text-4xl font-bold leading-none"
               style={{ color: chartTokens.up }}
             >
-              {result.score ?? "분석 축적 중"}
+              {result.score}
             </span>
-            {result.score != null && <span className="text-sm font-semibold text-muted">/ 100</span>}
+            <span className="text-sm font-semibold text-muted">/ 100</span>
           </div>
-        </div>
-        <span className="max-w-[58%] text-right text-sm font-semibold leading-5 text-whiteout">{easyMarketCopy(result.label, "detail")}</span>
+        </div>}
+        {result.score != null && <span className="max-w-[58%] text-right text-sm font-semibold leading-5 text-whiteout">{easyMarketCopy(result.label, "detail")}</span>}
       </div>
 
       <div className="mt-4 flex justify-center">
@@ -93,10 +93,12 @@ export function CompanyScoreRadar({ result }: { result: CompanyScoreResult | nul
         </svg>
       </div>
 
-      <p className="text-sm leading-6 text-whiteout">{easyMarketCopy(result.interpretation, "detail")}</p>
-      <p className="mt-1 text-[10px] leading-4 text-muted">
-        데이터가 없는 축은 명시적으로 제외하고, 가용한 {result.availableAxisCount}개 축을 같은 비중으로 계산했어요.
-      </p>
+      {result.score != null && <>
+        <p className="text-sm leading-6 text-whiteout">{easyMarketCopy(result.interpretation, "detail")}</p>
+        <p className="mt-1 text-[10px] leading-4 text-muted">
+          데이터가 없는 축은 명시적으로 제외하고, 가용한 {result.availableAxisCount}개 축을 같은 비중으로 계산했어요.
+        </p>
+      </>}
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
         {ORDER.map((key) => {

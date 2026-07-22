@@ -18,17 +18,17 @@ const SCORE_LABEL: Record<string, string> = {
   "0-59": "60점 미만",
 };
 
-function signed(value: number | null): string {
-  if (value === null) return "축적 중";
+function signed(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 }
 
 function MetricBlock({ label, metric, value }: { label: string; metric: TrackMetric; value: "winRate" | "median" | "n" }) {
+  if ((value === "winRate" && metric.winRate === null) || (value === "median" && metric.medianReturn === null)) return null;
   const display = value === "n"
     ? metric.n.toLocaleString("ko-KR")
     : value === "median"
-      ? signed(metric.medianReturn)
-      : metric.winRate === null ? "축적 중" : `${metric.winRate.toFixed(1)}%`;
+      ? signed(metric.medianReturn!)
+      : `${metric.winRate!.toFixed(1)}%`;
   const note = value === "winRate" ? "수익률 0% 초과" : value === "median" ? "전체 수익률 중앙값" : "상승·하락 모두 포함";
   return (
     <div className="min-w-0 border-l border-hairline pl-3 first:border-l-0 first:pl-0">
@@ -51,33 +51,30 @@ function Breakdown({
   order?: string[];
 }) {
   const rank = new Map((order ?? []).map((key, index) => [key, index]));
-  const rows = Object.entries(values).sort((a, b) => {
+  const rows = Object.entries(values).filter(([, metric]) => metric.n > 0 && metric.winRate !== null).sort((a, b) => {
     if (order) return (rank.get(a[0]) ?? 999) - (rank.get(b[0]) ?? 999);
     return b[1].n - a[1].n || a[0].localeCompare(b[0]);
   });
+  if (rows.length === 0) return null;
   return (
     <section className="border-t border-hairline py-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-whiteout">{title}</h2>
         <span className="text-[10px] text-muted">상승·하락 전체</span>
       </div>
-      {rows.length === 0 ? (
-        <p className="py-4 text-sm text-muted">고정 기간이 지난 기록을 축적 중이에요.</p>
-      ) : (
-        <div className="divide-y divide-hairline">
+      <div className="divide-y divide-hairline">
           {rows.map(([key, metric]) => (
             <div key={key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3">
               <span className="min-w-0 truncate text-sm text-whiteout">{labels[key] ?? key}</span>
               <div className="min-w-16 text-right">
                 <p className="font-number text-sm font-bold" style={{ color: metric.winRate !== null && metric.winRate >= 50 ? NEON : "#A3A3A0" }}>
-                  {metric.winRate === null ? "축적 중" : `${metric.winRate.toFixed(1)}%`}
+                  {metric.winRate!.toFixed(1)}%
                 </p>
-                <p className="mt-0.5 text-[10px] text-muted">n={metric.n}</p>
+                <p className="mt-0.5 text-[10px] text-muted">{metric.n}건 기준</p>
               </div>
             </div>
           ))}
-        </div>
-      )}
+      </div>
     </section>
   );
 }
@@ -92,8 +89,7 @@ export default function TrackRecordPage() {
     void fetchTrackRecord().then(setRecord).catch(() => setFailed(true));
   }, []);
 
-  // 아직 도래한 outcome 이 특정 창(초기엔 7일)에만 쌓여 있을 수 있다. 유저가 탭을 직접 고르기 전엔
-  // 표본이 가장 많은 창을 기본 선택해, 첫 진입에서 "축적 중"(n=0) 대신 살아있는 성적표가 보이게 한다.
+  // 아직 도래한 outcome이 특정 창에만 있을 수 있어, 첫 진입은 기록이 가장 많은 창을 고른다.
   useEffect(() => {
     if (!record || userPicked) return;
     const best = record.windows.reduce<{ days: 7 | 30 | 90; n: number } | null>((acc, w) => {
@@ -144,7 +140,7 @@ export default function TrackRecordPage() {
         <p className="border-t border-hairline py-12 text-center text-sm text-muted">성과 원장을 불러오지 못했어요.</p>
       ) : !windowResult ? (
         <p className="border-t border-hairline py-12 text-center text-sm text-muted">성과 원장을 불러오는 중이에요.</p>
-      ) : (
+      ) : windowResult.overall.n > 0 ? (
         <>
           <section className="grid grid-cols-3 gap-4 border-y border-hairline py-5">
             <MetricBlock label={`${days}일 상승 비율`} metric={windowResult.overall} value="winRate" />
@@ -153,7 +149,7 @@ export default function TrackRecordPage() {
           </section>
           <Breakdown title="자산군별" values={windowResult.byAsset} labels={ASSET_LABEL} />
           <Breakdown
-            title="신호 유형별 · n<30 비공개"
+            title="신호 유형별"
             values={windowResult.bySignal}
             labels={SIGNAL_LABEL}
             order={[...SIGNAL_TYPE_CODES]}
@@ -165,7 +161,7 @@ export default function TrackRecordPage() {
             order={["80-100", "60-79", "0-59"]}
           />
         </>
-      )}
+      ) : null}
 
       <footer className="break-words border-t border-hairline pt-5 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
         수익률은 선정 시점 가격 대비 목표일 당일 또는 다음 첫 거래일 종가입니다. 거래비용·세금·환율 효과는 포함하지 않습니다.

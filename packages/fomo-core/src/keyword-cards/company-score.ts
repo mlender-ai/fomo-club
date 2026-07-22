@@ -388,12 +388,12 @@ function axisStates(axes: readonly CompanyScoreAxis[]): CompanyScoreAxisState[] 
 function resultFromAxes(axes: CompanyScoreAxis[], input: CompanyScoreInput, asOf?: string): CompanyScoreResult {
   const ready = axes.length >= 3;
   const score = ready ? Math.round(axes.reduce((sum, axis) => sum + axis.score, 0) / axes.length) : null;
-  const label = ready ? scoreLabel(axes, input) : "분석 축적 중";
+  const label = ready ? scoreLabel(axes, input) : "";
   return {
     score,
     status: ready ? "ready" : "accumulating",
     label,
-    interpretation: interpretation(axes, label),
+    interpretation: ready ? interpretation(axes, label) : "",
     axes,
     axisStates: axisStates(axes),
     availableAxisCount: axes.length,
