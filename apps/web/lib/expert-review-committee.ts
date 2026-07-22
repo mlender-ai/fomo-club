@@ -13,7 +13,8 @@ import {
   type CommitteeRunReport,
   type PublishedCommitteeSnapshot,
 } from "./expert-review-store";
-import { fetchStockBasics } from "./stock-basics";
+import { fetchStockBasics, fetchUsStockBasics } from "./stock-basics";
+import { usValuationBand } from "./us-valuation";
 import { kstDate } from "./fomo";
 import { readFeedContent, writeFeedContent } from "./feed-content-store";
 
@@ -702,11 +703,24 @@ async function candidateRecords(response: Daily30Response): Promise<CandidateRec
   }).slice(0, CANDIDATE_TARGET);
 
   return mapConcurrent(raw, 6, async (candidate): Promise<CandidateRecord> => {
+    // WO-LASTMILE ①: 위원회 재계산은 pool 점수를 덮어쓰므로, 여기서도 국/미 재무를 동일하게 주입해야
+    // 밸류축이 발행 스냅샷까지 흐른다. US 는 네이버가 없어 fetchUsStockBasics + 일봉 PSR 역산을 쓴다
+    // (fetchStockBasics 는 KR 전용 — US 에 쓰면 basics 결손 → 밸류축 전종목 유실).
+    const isUsStock = candidate.card.country === "US";
     const basics = candidate.card.market === "COIN"
       ? undefined
-      : await fetchStockBasics(candidate.card.canonical, candidate.card.naverCode, candidate.card.symbol).catch(() => undefined);
-    const financials = companyFinancialsFromBasics(basics);
+      : isUsStock
+        ? await fetchUsStockBasics(candidate.card.canonical, candidate.card.symbol ?? candidate.card.canonical, false).catch(() => undefined)
+        : await fetchStockBasics(candidate.card.canonical, candidate.card.naverCode, candidate.card.symbol).catch(() => undefined);
+    let financials = companyFinancialsFromBasics(basics);
     const latestPrice = candidate.front.candles?.at(-1)?.close;
+    if (isUsStock) {
+      const usCloses = (candidate.front.candles ?? []).map((c) => c.close);
+      if (usCloses.length > 0) {
+        const band = usValuationBand(basics ?? null, usCloses, latestPrice);
+        if (band) financials = { ...(financials ?? {}), ...band };
+      }
+    }
     const companyScore = computeCompanyScore({
       ...(financials ? { financials } : {}),
       signals: candidate.front.signals,
