@@ -15,10 +15,10 @@ describe("메인 카드 후킹 구조", () => {
     expect(card).toContain('easyMarketCopy(formatSignalResumeBadge(signalTrack.code, signalTrack.metric), "card")');
   });
 
-  it("점수는 점수대 사후 성과나 축적 상태와 함께만 노출한다", () => {
+  it("점수대 사후 성과는 충분한 실제 결과가 있을 때만 노출한다", () => {
     expect(card).toContain("이 점수대 역대 30일 승률");
-    expect(card).toContain("이 점수대 성과 축적 중");
-    expect(card).toContain("가용 분석축이 3개 미만이라 점수를 내지 않았어요");
+    expect(card).toContain("scoreTrack.n >= SIGNAL_RESUME_MIN_SAMPLE");
+    expect(card).toContain("if (score?.score == null) return null");
     expect(card).toContain("scoreTrack={scoreTrackFor(e)}");
   });
 });

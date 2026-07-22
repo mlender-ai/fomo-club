@@ -30,11 +30,17 @@ function actionLabel(action: ReviewAction): string {
 
 function reportText(review: JudgmentReviewResponse): string {
   const weekly = review.weekly;
-  if (!weekly) return "포모클럽 판단 복기 · 30일 결과를 축적 중이에요.";
+  if (!weekly) return "";
   const parts = [`포모클럽 주간 판단 복기 · 결과 ${weekly.count}건`];
   if (weekly.best) parts.push(`잘한 판단 ${weekly.best.canonical} ${signed(weekly.best.returnPct)}`);
   if (weekly.missed) parts.push(`아까운 판단 ${weekly.missed.canonical} ${signed(weekly.missed.returnPct)}`);
   return parts.join("\n");
+}
+
+function rateSummary(rate: JudgmentReviewResponse["userRate"]): string | null {
+  if (rate.n <= 0 || rate.winRate === null) return null;
+  const wins = Math.round((rate.n * rate.winRate) / 100);
+  return `${rate.n}번 중 ${wins}번`;
 }
 
 async function shareReview(review: JudgmentReviewResponse): Promise<void> {
@@ -98,14 +104,18 @@ function WeeklyCard({ review }: { review: JudgmentReviewResponse }) {
 }
 
 function HistoryReview({ review }: { review: JudgmentReviewResponse }) {
+  const userSummary = rateSummary(review.userRate);
+  const cardSummary = rateSummary(review.cardRate);
   const comparison = useMemo(() => {
     const user = review.userRate.winRate;
     const card = review.cardRate.winRate;
-    if (user === null || card === null) return "30일 결과가 쌓이면 두 판단을 같은 기준으로 비교해요.";
+    if (user === null || card === null) return null;
     if (user === card) return "현재 표본에서는 두 판단의 적중률이 같아요.";
     const gap = Math.abs(user - card).toFixed(1);
     return user > card ? `현재 표본에서 내 판단이 ${gap}%p 높아요.` : `현재 표본에서 카드 판단이 ${gap}%p 높아요.`;
   }, [review.cardRate.winRate, review.userRate.winRate]);
+
+  if (review.rows.length === 0) return null;
 
   return (
     <section className="mb-6">
@@ -114,21 +124,19 @@ function HistoryReview({ review }: { review: JudgmentReviewResponse }) {
         <span className="text-[10px] text-muted">확정 {review.rows.length} · 대기 {review.pendingCount}</span>
       </div>
 
-      <div className="rounded-lg border border-hairline bg-surface-raised p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
+      {(userSummary || cardSummary) && <div className="rounded-lg border border-hairline bg-surface-raised p-4">
+        <div className={`grid gap-3 ${userSummary && cardSummary ? "grid-cols-2" : "grid-cols-1"}`}>
+          {userSummary && <div>
             <p className="text-[10px] text-muted">내 판단 승률</p>
-            <p className="mt-1 text-2xl font-bold text-whiteout">{review.userRate.winRate === null ? "축적 중" : `${review.userRate.winRate}%`}</p>
-            <p className="text-[9px] text-muted">명시적 선택 n={review.userRate.n}</p>
-          </div>
-          <div>
+            <p className="mt-1 text-2xl font-bold text-whiteout">{userSummary}</p>
+          </div>}
+          {cardSummary && <div>
             <p className="text-[10px] text-muted">카드 판단 승률</p>
-            <p className="mt-1 text-2xl font-bold text-whiteout">{review.cardRate.winRate === null ? "축적 중" : `${review.cardRate.winRate}%`}</p>
-            <p className="text-[9px] text-muted">enter/avoid n={review.cardRate.n}</p>
-          </div>
+            <p className="mt-1 text-2xl font-bold text-whiteout">{cardSummary}</p>
+          </div>}
         </div>
-        <p className="mt-3 text-xs leading-5 text-muted">{comparison}</p>
-      </div>
+        {comparison && <p className="mt-3 text-xs leading-5 text-muted">{comparison}</p>}
+      </div>}
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         {review.matrix.map((cell) => (
@@ -148,7 +156,7 @@ function HistoryReview({ review }: { review: JudgmentReviewResponse }) {
           <div className="mt-2 flex flex-wrap gap-2">
             {review.strongSignals.map((signal) => (
               <span key={signal.code} className="rounded-full border border-hairline-soft px-2.5 py-1 text-[10px] text-whiteout">
-                {signal.label} · {signal.winRate}% · n={signal.n}
+                {signal.label} · {rateSummary(signal)}
               </span>
             ))}
           </div>

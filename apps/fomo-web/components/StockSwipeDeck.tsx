@@ -6,6 +6,7 @@ import {
   inferStandardSignalTypes,
   isSignalTypeCode,
   normalizeSignalTypeCodes,
+  SIGNAL_RESUME_MIN_SAMPLE,
   signalTypeLabel,
 } from "@fomo/core";
 import type {
@@ -274,34 +275,31 @@ function CompanyScoreBlock({
   verdict?: CardVerdict | undefined;
   scoreTrack?: TrackMetric | undefined;
 }) {
+  if (score?.score == null) return null;
   const balance = verdictBalance(verdict);
-  const metric = scoreTrack ?? { n: 0, winRate: null, medianReturn: null };
-  const historyText =
-    score?.score == null
-      ? "가용 분석축이 3개 미만이라 점수를 내지 않았어요."
-      : metric.n >= 30 && metric.winRate !== null
-      ? `이 점수대 역대 30일 승률 ${Number.isInteger(metric.winRate) ? metric.winRate.toFixed(0) : metric.winRate.toFixed(1)}% · n=${metric.n}`
-      : `이 점수대 성과 축적 중 · n=${metric.n}`;
+  const historyText = scoreTrack && scoreTrack.n >= SIGNAL_RESUME_MIN_SAMPLE && scoreTrack.winRate !== null
+    ? `이 점수대 역대 30일 승률 ${Number.isInteger(scoreTrack.winRate) ? scoreTrack.winRate.toFixed(0) : scoreTrack.winRate.toFixed(1)}%`
+    : null;
   return (
     <div className="mt-2 shrink-0 border-y border-hairline py-2">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="flex shrink-0 items-baseline gap-1">
             <span
-              className={`font-number font-bold leading-none ${score?.score == null ? "text-sm" : "text-xl"}`}
+              className="font-number text-xl font-bold leading-none"
               style={{ color: NEON }}
             >
-              {score?.score ?? "분석 축적 중"}
+              {score.score}
             </span>
-            {score?.score != null && <span className="text-[10px] font-semibold text-muted">점</span>}
+            <span className="text-[10px] font-semibold text-muted">점</span>
           </div>
           <p className="min-w-0 truncate text-xs font-semibold text-whiteout">
-            {score?.score == null ? `가용 분석축 ${score?.availableAxisCount ?? 0}/6` : easyMarketCopy(score.label, "card")}
+            {easyMarketCopy(score.label, "card")}
           </p>
         </div>
         {balance && <span className="text-[10px] font-medium" style={{ color: balance.color }}>{balance.label}</span>}
       </div>
-      <p className="mt-1 text-[10px] leading-4 text-muted">{historyText}</p>
+      {historyText && <p className="mt-1 text-[10px] leading-4 text-muted">{historyText}</p>}
     </div>
   );
 }
@@ -432,7 +430,7 @@ function StockCardFace({
 
       {verdict && <FeedSignalStrip bull={feedBull} bear={feedBear} />}
 
-      {signalTrack && (
+      {signalTrack && signalTrack.metric.n >= SIGNAL_RESUME_MIN_SAMPLE && signalTrack.metric.winRate !== null && (
         <p className="mt-2 shrink-0 text-[11px] leading-4 text-muted">
           {easyMarketCopy(formatSignalResumeBadge(signalTrack.code, signalTrack.metric), "card")}
         </p>

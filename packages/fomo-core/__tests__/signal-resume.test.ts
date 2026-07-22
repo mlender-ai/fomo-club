@@ -17,10 +17,16 @@ describe("signal resume taxonomy", () => {
     expect(new Set(SIGNAL_TYPE_CODES).size).toBe(SIGNAL_TYPE_CODES.length);
   });
 
-  it("n<30은 승률을 숨기고 표본수만 공개한다", () => {
+  it("표본 기준 미달이면 사용자용 문구를 만들지 않는다", () => {
     const text = formatSignalResumeBadge("insider_cluster", { n: SIGNAL_RESUME_MIN_SAMPLE - 1, winRate: 96.4, medianReturn: 12 });
-    expect(text).toBe("내부자 클러스터 매수 · 축적 중 (n=29)");
+    expect(text).toBe("");
     expect(text).not.toContain("96.4");
+  });
+
+  it("표본 기준을 충족해도 내부 표본 표기법을 사용자에게 노출하지 않는다", () => {
+    const text = formatSignalResumeBadge("insider_cluster", { n: SIGNAL_RESUME_MIN_SAMPLE, winRate: 63.3, medianReturn: 4.1 });
+    expect(text).toBe("내부자 클러스터 매수 · 역대 30일 승률 63.3%");
+    expect(text).not.toContain("n=");
   });
 
   it("실데이터 필드와 최근 와이코프 이벤트만 표준 코드로 판정한다", () => {
