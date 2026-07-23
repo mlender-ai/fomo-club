@@ -49,6 +49,8 @@ export interface OutcomePayload {
   signalTypes: SignalTypeCode[];
   scoreBand?: string;
   companyScore?: number;
+  /** 발행 계열 구분자(WO-G1A). "quiet"=조용한 픽. 없으면 daily-30 선정. 성적표 "전체 vs 조용한 픽만" 분리용. */
+  pickType?: string;
 }
 
 function addDays(date: string, days: number): string {
@@ -80,6 +82,7 @@ export function asOutcome(payload: Prisma.JsonValue): OutcomePayload | null {
     signalTypes: normalizeSignalTypeCodes(Array.isArray(value.signalTypes) ? value.signalTypes : []),
     ...(typeof value.scoreBand === "string" ? { scoreBand: value.scoreBand } : {}),
     ...(typeof value.companyScore === "number" ? { companyScore: value.companyScore } : {}),
+    ...(typeof value.pickType === "string" ? { pickType: value.pickType } : {}),
   };
 }
 
@@ -153,6 +156,7 @@ export async function materializeLedgerOutcomes(today = kstDate(), maxOutcomes =
       signalTypes: selection.payload.signalTypes,
       ...(selection.payload.scoreBand ? { scoreBand: selection.payload.scoreBand } : {}),
       ...(typeof selection.payload.companyScore === "number" ? { companyScore: selection.payload.companyScore } : {}),
+      ...(selection.payload.pickType ? { pickType: selection.payload.pickType } : {}),
     };
     return [{
       date: today,
@@ -207,7 +211,11 @@ function signalMetrics(outcomes: readonly OutcomePayload[]): Record<SignalTypeCo
   ) as Record<SignalTypeCode, TrackMetric>;
 }
 
-export async function readTrackRecord(): Promise<TrackRecordResponse> {
+/**
+ * 성적표. options.pickType 로 발행 계열을 나눠 본다(WO-G1A):
+ *   undefined → 전체 기록 · "quiet" → 조용한 픽만 · null → daily-30 선정만.
+ */
+export async function readTrackRecord(options: { pickType?: string | null } = {}): Promise<TrackRecordResponse> {
   const rows = await prisma.judgmentLedger.findMany({
     where: { kind: "outcome", actor: { in: ["engine", "backfill"] } },
     select: { payload: true },
@@ -217,7 +225,10 @@ export async function readTrackRecord(): Promise<TrackRecordResponse> {
     const value = asOutcome(row.payload);
     return value ? [value] : [];
   });
-  return buildTrackRecord(outcomes);
+  const filtered = options.pickType === undefined
+    ? outcomes
+    : outcomes.filter((o) => (options.pickType === null ? !o.pickType : o.pickType === options.pickType));
+  return buildTrackRecord(filtered);
 }
 
 export function buildTrackRecord(outcomes: readonly OutcomePayload[], generatedAt = new Date().toISOString()): TrackRecordResponse {
