@@ -213,6 +213,32 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
     expect((res.qualification.drops.no_verdict ?? 0) + (res.qualification.drops.insufficient_candles ?? 0)).toBeGreaterThanOrEqual(2);
   });
 
+  it("무효선 레벨이 0 이하면 탈락 ('0원 이탈' 무의미 문구 방지)", async () => {
+    const s = baseScenario();
+    const badInval: StockFrontData = {
+      ...frontFor("1,010원", 1),
+      verdict: { ...verdict(), invalidationLevel: 0, invalidation: "52주 저점 0원 이탈" },
+    };
+    s.fronts["조용외인"] = badInval;
+    s.fronts["다중클러스터"] = badInval;
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.length).toBe(0);
+    expect(res.qualification.drops.no_invalidation).toBeGreaterThanOrEqual(2);
+  });
+
+  it("US: front.signals.changePct 결측이어도 insider quote 등락률로 급등 컷", async () => {
+    const s = baseScenario();
+    s.attention["Hot Inc"] = quietAttention(5);
+    s.insiders = [
+      { symbol: "HOT", companyName: "Hot Inc", insiderCount: 3, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 4_600_000, buyPrice: 50, quote: { price: 60, changePct: 20 } },
+    ];
+    const { signals: _drop, ...noChange } = frontFor("$60", 1);
+    s.fronts["Hot Inc"] = { ...noChange, signals: {} };
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("Hot Inc");
+    expect(res.qualification.drops.changed_15).toBeGreaterThanOrEqual(1);
+  });
+
   it("신선도: 어제와 같은 종목·같은 신호 시작이면 제외", async () => {
     const s = baseScenario();
     const priorKeys = new Set<string>(["조용외인#2026-07-17"]); // 4일 streak 시작일

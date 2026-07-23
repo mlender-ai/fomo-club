@@ -246,6 +246,8 @@ interface SignalCandidate {
   startedAt: string;
   /** US 는 공시가 신호가격, KR 은 캔들에서 확정. */
   priceAtSignal?: number;
+  /** 당일 등락률 힌트(US=insider quote). front.signals.changePct 결측 시 폴백. */
+  changePctHint?: number;
   baseStrength: number;
   attentionKey: string;
 }
@@ -342,6 +344,7 @@ function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], 
       days: daysBetween(c.tradeDate, today),
       startedAt: c.tradeDate,
       priceAtSignal,
+      ...(typeof c.quote?.changePct === "number" ? { changePctHint: c.quote.changePct } : {}),
       baseStrength: 200 + c.insiderCount * 10 + Math.log10(Math.max(1, c.valueUsd)) * 5,
       attentionKey: c.companyName || c.symbol,
     });
@@ -428,11 +431,18 @@ export async function buildQuietPickResponse(options: {
     if (!front.verdict) { drop("no_verdict"); continue; }
     if ((front.candles?.length ?? 0) < MIN_CANDLES) { drop("insufficient_candles"); continue; }
 
+    // 무효선(실계산 레벨)이 없거나 0 이하면 픽 불가 — "0원 이탈" 같은 무의미 문구 노출 금지(실측 회귀).
+    const invalidationLevel = front.verdict.invalidationLevel;
+    if (typeof invalidationLevel !== "number" || invalidationLevel <= 0) { drop("no_invalidation"); continue; }
+
     const current = parsePriceText(front.priceText) ?? front.candles?.at(-1)?.close ?? null;
     if (!current || current <= 0) { drop("no_price"); continue; }
 
-    // 당일 등락 재확인(US 및 KR 공통 — front.signals.changePct 우선).
-    const changePct = front.signals.changePct;
+    // 당일 등락 재확인(US 및 KR 공통). front.signals.changePct → KR market row → US insider quote 순 폴백.
+    const rowChangePct = sig.subject.country === "KR" && sig.subject.naverCode
+      ? marketByCode.get(sig.subject.naverCode)?.changePct
+      : undefined;
+    const changePct = front.signals.changePct ?? rowChangePct ?? sig.changePctHint;
     if (typeof changePct === "number" && Math.abs(changePct) >= MAX_ABS_CHANGE_PCT) { drop("changed_15"); continue; }
 
     // 유동성(KR).
@@ -477,7 +487,7 @@ export async function buildQuietPickResponse(options: {
       },
       hook: buildQuietPickHook({ kind: sig.kind, actors: sig.actors, scale: sig.scale, days: sig.days }),
       invalidation: {
-        level: front.verdict.invalidationLevel ?? null,
+        level: invalidationLevel,
         text: front.verdict.invalidation ?? "무효선 계산에 캔들이 더 필요해요",
       },
       conviction: {
