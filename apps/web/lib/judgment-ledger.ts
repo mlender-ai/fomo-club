@@ -39,6 +39,10 @@ export interface LedgerAppendInput {
 
 export interface LedgerSelectionPayload {
   headline?: string;
+  /** 발행 계열 구분자(DDL 없이 kind=selection 재사용). "quiet"=조용한 픽(WO-G1A). 없으면 daily-30 선정. */
+  pickType?: string;
+  /** 조용한 픽 신호 페이로드(성적표 신호별 근거). */
+  signal?: Record<string, unknown>;
   market?: string;
   country?: string;
   naverCode?: string;
@@ -437,7 +441,8 @@ const selectionActorPriority = (actor: LedgerActor): number =>
 export function finalSelections(rows: readonly LedgerSelectionView[]): LedgerSelectionView[] {
   const selected = new Map<string, LedgerSelectionView>();
   for (const row of rows) {
-    const key = `${row.date}\u001f${row.subject.asset}\u001f${row.subject.canonical}`;
+    // pickType key inclusion: quiet pick and daily-30 selection graded separately even if same stock/date
+    const key = `${row.date}\u001f${row.subject.asset}\u001f${row.subject.canonical}\u001f${row.payload.pickType ?? ""}`;
     const current = selected.get(key);
     const actorWins = current ? selectionActorPriority(row.actor) > selectionActorPriority(current.actor) : false;
     const sameActorIsNewer = current?.actor === row.actor && row.ts > current.ts;
