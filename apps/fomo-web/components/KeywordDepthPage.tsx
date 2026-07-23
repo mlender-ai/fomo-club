@@ -1427,7 +1427,7 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
 }
 
 // WO-3 — 금융 에이전트(위원회) 산출물을 판단 탭 주인공으로. 총평 한 줄 + 두 분석가 소견(등급·작성 주체·
-// 사실 대조 뱃지). 위원회 미발행 종목은 블록 전체를 숨긴다('축적 중' 문구 금지). 숫자보다 사람 말이 먼저.
+// 사실 대조 뱃지). 위원회 미발행 종목은 블록 전체를 숨긴다(표본·근거 부족 시 상태 문구 노출 금지 — WO-C). 숫자보다 사람 말이 먼저.
 function ExpertOpinionBlock({ review }: { review: StockFrontResponse["committeeReview"] | undefined }) {
   if (!review) return null;
   const gradeTone = (grade: "A" | "B" | "C") => grade === "A" ? chartTokens.up : grade === "B" ? chartTokens.marker.event : chartTokens.neutral;
@@ -1480,17 +1480,19 @@ function ExpertOpinionBlock({ review }: { review: StockFrontResponse["committeeR
 
 function JudgmentDecision({ front }: { front: StockFrontResponse | null }) {
   const verdict = front?.verdict;
+  // 판단 근거(표본)가 없으면 블록 자체를 숨긴다 — "축적/계산 중" 상태 문구를 유저에게 노출하지 않는다(WO-C).
+  if (!verdict?.stanceText) return null;
   return (
     <DepthSection className="mt-4" title="현재 판단">
       <p className="text-sm font-medium leading-6 text-whiteout">
-        {easyMarketCopy(verdict?.stanceText, "detail") ?? "판단에 필요한 차트·수급 근거를 축적하고 있어요."}
+        {easyMarketCopy(verdict.stanceText, "detail")}
       </p>
-      <div className="mt-4 border-t border-hairline pt-3">
-        <p className="text-[11px] font-semibold text-muted">무효선·다음 확인</p>
-        <p className="mt-1 text-sm leading-6 text-whiteout">
-          {verdict?.invalidation ?? "검증 가능한 무효화 가격은 아직 계산 중이에요."}
-        </p>
-      </div>
+      {verdict.invalidation && (
+        <div className="mt-4 border-t border-hairline pt-3">
+          <p className="text-[11px] font-semibold text-muted">무효선·다음 확인</p>
+          <p className="mt-1 text-sm leading-6 text-whiteout">{verdict.invalidation}</p>
+        </div>
+      )}
     </DepthSection>
   );
 }

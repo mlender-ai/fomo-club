@@ -29,7 +29,7 @@ describe("뎁스 쉬운말 레이어", () => {
     expect(depth).toContain('aria-label="차트 용어 쉬운 설명"');
     expect(depth).toContain("term.explanation");
     expect(depth).toContain('easyMarketCopy(event.label, "detail")');
-    expect(depth).toContain('easyMarketCopy(cleanText(trading ? review.tradingView : review.fundamentalView), "detail")');
+    expect(depth).toContain('easyMarketCopy(cleanText(row.text), "detail")');
     expect(radar).toContain('easyMarketCopy(result.interpretation, "detail")');
     expect(timeline).toContain('easyMarketCopy(formatSignalResumeBadge(code, metric), "detail")');
   });
