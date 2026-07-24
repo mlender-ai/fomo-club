@@ -8,29 +8,37 @@ const chartCard = readFileSync(new URL("../components/cards/ChartCardBody.tsx", 
 const tokens = readFileSync(new URL("../lib/chartTokens.ts", import.meta.url), "utf8");
 
 describe("종목 뎁스 정보 구조", () => {
-  it("판단을 기본으로 열고 네 개의 탭을 모바일·데스크톱 모두 본문 밖에 고정한다", () => {
-    expect(component).toContain('useState<DepthTab>("judgment")');
-    expect(component).not.toContain("sticky top-0 z-30");
-    expect(component).toContain('className="z-30 shrink-0 border-b border-hairline bg-black px-6 py-2"');
-    expect(component).toContain("{detailsReady && (");
-    expect(component).toContain('<DepthTabBar tab={depthTab} onChange={setDepthTab} />');
+  it("WO-G1B: 탭 없는 단일 스크롤 「납득 문서」 — 질문 순서 5블록", () => {
+    // 탭 구조 소멸(사용처 제거).
+    expect(component).not.toContain("<DepthTabBar tab={depthTab}");
+    expect(component).not.toContain('role="tabpanel"');
+    expect(component).not.toContain('depthTab === "judgment"');
+    // 단일 스크롤 본문.
     expect(component).toContain('className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6"');
-    expect(component.indexOf("{detailsReady && (")).toBeLessThan(
-      component.indexOf('className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6"'),
-    );
-    for (const label of ["판단", "차트·구간", "기업·재무", "신호 이력"]) {
-      expect(component).toContain(`label: "${label}"`);
+    // 질문형 5블록 헤딩(위→아래).
+    for (const q of ["왜 이 회사인가", "왜 지금인가", "언제 틀리는가", "이 종목 판단 기록"]) {
+      expect(component).toContain(`<DepthDocHeading label="${q}" />`);
     }
-    expect(component).not.toContain('useState<"why" | "ta">');
+    // 블록 순서: 전문가 소견 → 왜 이 회사 → 왜 지금 → 언제 틀리나 → 판단 기록.
+    const order = [
+      "<ExpertOpinionBlock",
+      '<DepthDocHeading label="왜 이 회사인가"',
+      '<DepthDocHeading label="왜 지금인가"',
+      '<DepthDocHeading label="언제 틀리는가"',
+      '<DepthDocHeading label="이 종목 판단 기록"',
+    ].map((s) => component.indexOf(s));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    for (let i = 1; i < order.length; i += 1) expect(order[i]).toBeGreaterThan(order[i - 1]!);
   });
 
-  it("탭별 콘텐츠를 독립 패널로만 렌더한다", () => {
-    for (const tab of ["judgment", "chart", "company", "history"]) {
-      expect(component).toContain(`depthTab === "${tab}"`);
+  it("점수·육각형은 유저 화면에서 내린다(내부 선별용으로만 — 코드 보존)", () => {
+    // 유저 노출 렌더에서 육각형 제거.
+    expect(component).not.toContain("<CompanyScoreRadar");
+    // 납득 문서의 실제 블록 컴포넌트는 유지(이식·재배치).
+    for (const block of ["<ExpertOpinionBlock", "<CompanyProfileBlock", "<FinanceGlanceBlock", "<ChartAnalysisTab", "<JudgmentDecision", "<JudgmentTimeline"]) {
+      expect(component).toContain(block);
     }
-    expect(component).toContain('role="tabpanel"');
     expect(component).toContain('<DepthFold title="재료·가격 반응"');
-    expect(component).toContain('<DepthFold title="추가 근거·원문"');
   });
 
   it("요약은 카드형, 목록은 라인형 공용 컴포넌트를 제공한다", () => {

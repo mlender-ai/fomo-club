@@ -1426,6 +1426,15 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
   );
 }
 
+/** WO-G1B 납득 문서 블록 구분 헤딩 — "왜 이 회사인가" 등 질문형. */
+function DepthDocHeading({ label }: { label: string }) {
+  return (
+    <h2 className="mt-7 mb-1 border-t border-hairline pt-5 font-pixel text-[13px] font-semibold text-whiteout">
+      {label}
+    </h2>
+  );
+}
+
 // WO-3 — 금융 에이전트(위원회) 산출물을 판단 탭 주인공으로. 총평 한 줄 + 두 분석가 소견(등급·작성 주체·
 // 사실 대조 뱃지). 위원회 미발행 종목은 블록 전체를 숨긴다(표본·근거 부족 시 상태 문구 노출 금지 — WO-C). 숫자보다 사람 말이 먼저.
 function ExpertOpinionBlock({ review }: { review: StockFrontResponse["committeeReview"] | undefined }) {
@@ -2651,14 +2660,12 @@ export function StockInsightView({
   // 카드와 동일한 백엔드 점수 스냅샷을 상세에서도 유지한다.
   const [front, setFront] = useState<StockFrontResponse | null>(context?.frontSeed ?? null);
   const [frontLoaded, setFrontLoaded] = useState(!!context?.frontSeed);
-  // 상세는 판단을 첫 화면으로 열고 나머지 정보는 독립 탭에서만 렌더한다.
-  const [depthTab, setDepthTab] = useState<DepthTab>("judgment");
+  // WO-G1B — 탭 제거. 뎁스는 위→아래 단일 스크롤 「납득 문서」.
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
   useEffect(() => {
     setWatchedState(isWatched(stock));
-    setDepthTab("judgment");
   }, [stock]);
 
   const toggleWatched = () => {
@@ -2767,70 +2774,57 @@ export function StockInsightView({
           </button>
         </div>
 
-        {detailsReady && (
-          <DepthTabBar tab={depthTab} onChange={setDepthTab} />
-        )}
-
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          {/* 전부 로드 전엔 아무것도 노출하지 않는다(2026-07-18 User Zero: "정보가 나왔다가 바뀌어 어색") —
-              가격 헤더 선노출·seed→fresh 교체 없이 메인홈과 동일한 로딩 하나만. */}
+          {/* 전부 로드 전엔 아무것도 노출하지 않는다 — 메인홈과 동일한 로딩 하나만. */}
           {!detailsReady ? (
             <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />
           ) : (
           <>
-          {/* 가격 먼저 — 일반 주식 상세 화면의 첫 독해 지점. */}
+          {/* [0] 헤더 — 가격(카드 연속성) */}
           <StockPriceHeader basics={basics} front={front} />
-          <div
-            id={`depth-panel-${depthTab}`}
-            role="tabpanel"
-            aria-label={depthTab === "judgment" ? "판단" : depthTab === "chart" ? "차트와 구간" : depthTab === "company" ? "기업과 재무" : "신호 이력"}
-          >
-            {depthTab === "judgment" && (
-              <>
-                {/* WO-3: 숫자(점수·육각형)보다 사람(전문가)의 말이 먼저 — 신뢰는 사람 소견에서 생긴다. */}
-                <ExpertOpinionBlock review={front?.committeeReview} />
-                <CompanyScoreRadar result={front?.score} />
-                <JudgmentDecision front={front} />
-              </>
-            )}
 
-            {depthTab === "chart" && (
-              <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
-            )}
+          {/* WO-G1B — 탭 없는 단일 스크롤 「납득 문서」. 질문 순서대로 위→아래.
+              점수·육각형은 유저 화면에서 내림(선별 내부 기준으로만 — 코드 보존). */}
+          <div className="depth-doc">
+            {/* [1] 전문가 소견 — 사람의 말이 먼저 */}
+            <ExpertOpinionBlock review={front?.committeeReview} />
 
-            {depthTab === "company" && (
-              <>
-                <CompanyProfileBlock basics={basics} />
-                <FinanceGlanceBlock basics={basics} />
-              </>
-            )}
+            {/* [2] 왜 이 회사인가 */}
+            <DepthDocHeading label="왜 이 회사인가" />
+            <CompanyProfileBlock basics={basics} />
+            <FinanceGlanceBlock basics={basics} />
 
-            {depthTab === "history" && (
-              <>
-                <DiscoveryOverview front={front} insight={insight} context={context} />
-                <JudgmentTimeline canonical={stock} />
-                <QuietMoneyBlock timeline={front?.quietMoney} />
+            {/* [3] 왜 지금인가 — 차트 한 컷(매집 구간·신호 시작·눌림·무효선) */}
+            <DepthDocHeading label="왜 지금인가" />
+            <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
 
-                <div className="mt-4 space-y-3">
-                  <DepthFold title="재료·가격 반응" summary="선택 기간의 실데이터">
-                    <WhyMovementTab front={front} insight={insight} context={context} />
-                  </DepthFold>
-                  <DepthFold title="추가 근거·원문" summary="확인된 자료만">
-                    {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
-                      <CoinIssuesBlock issues={front?.coinIssues ?? []} />
-                    )}
-                    <StockWhyHappened insight={insight} />
-                    {showThinSourceFootnote && (
-                      <p className="mt-4 text-[12px] leading-5 text-muted">
-                        {hasVerifiedFloor
-                          ? "원문 기반 요약은 아직 얇아요."
-                          : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
-                      </p>
-                    )}
-                  </DepthFold>
-                </div>
-              </>
-            )}
+            {/* [4] 언제 틀리는가 — 무효선 계약 */}
+            <DepthDocHeading label="언제 틀리는가" />
+            <JudgmentDecision front={front} />
+
+            {/* [5] 이 종목 판단 기록 */}
+            <DepthDocHeading label="이 종목 판단 기록" />
+            <DiscoveryOverview front={front} insight={insight} context={context} />
+            <JudgmentTimeline canonical={stock} />
+            <QuietMoneyBlock timeline={front?.quietMoney} />
+            <div className="mt-4 space-y-3">
+              <DepthFold title="재료·가격 반응" summary="선택 기간의 실데이터">
+                <WhyMovementTab front={front} insight={insight} context={context} />
+              </DepthFold>
+              <DepthFold title="추가 근거·원문" summary="확인된 자료만">
+                {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
+                  <CoinIssuesBlock issues={front?.coinIssues ?? []} />
+                )}
+                <StockWhyHappened insight={insight} />
+                {showThinSourceFootnote && (
+                  <p className="mt-4 text-[12px] leading-5 text-muted">
+                    {hasVerifiedFloor
+                      ? "원문 기반 요약은 아직 얇아요."
+                      : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
+                  </p>
+                )}
+              </DepthFold>
+            </div>
           </div>
           </>
           )}
