@@ -25,6 +25,21 @@ function marketTag(pick: QuietPick): string {
   return "🇰🇷";
 }
 
+/**
+ * 표시용 회사명(WO-P1) — 미국 법인 접미사·주(州) 꼬리를 떼어 카드에서 읽히게.
+ * "Columbia Financial, Inc./Md/" → "Columbia Financial". 티커는 별도 행에 표기한다.
+ */
+export function displayName(pick: QuietPick): string {
+  const raw = pick.subject.canonical.trim();
+  if (pick.subject.country !== "US") return raw;
+  const cleaned = raw
+    .replace(/\/[A-Za-z]{2,3}\/?$/, "") // 주(州) 꼬리 "/Md/"
+    .replace(/,?\s*\b(Inc|Corp|Corporation|Incorporated|Co|Company|Ltd|LLC|PLC|Holdings?|Group|Trust)\b\.?/gi, "")
+    .replace(/[,\s/]+$/, "")
+    .trim();
+  return cleaned.length >= 3 ? cleaned : raw;
+}
+
 function daysChip(pick: QuietPick): string {
   const d = pick.signal.days;
   if (pick.signal.kind === "insider_cluster") return d > 0 ? `최근 ${d}일` : "최근";
@@ -55,16 +70,19 @@ export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: 
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* 1행 — 종목명 · 시장태그 · 관심 */}
+      {/* 1행 — 종목명(긴 이름 말줄임) · 티커 · 시장태그 · 관심 */}
       <div className="flex shrink-0 items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             <span className="text-xl" aria-hidden>{marketTag(pick)}</span>
-            <span className="truncate text-2xl font-bold text-whiteout">{pick.subject.canonical}</span>
+            <span className="truncate text-2xl font-bold text-whiteout">{displayName(pick)}</span>
           </div>
-          {pick.subject.identity && (
-            <span className="mt-0.5 block font-pixel text-xs text-muted">{pick.subject.identity}</span>
-          )}
+          <div className="mt-0.5 flex items-center gap-1.5 font-pixel text-xs text-muted">
+            {/* 티커 — 유저가 검색·매수하러 갈 때 필수(WO-P1). */}
+            {pick.subject.country === "US" && pick.subject.symbol && <span>{pick.subject.symbol}</span>}
+            {pick.subject.country === "US" && pick.subject.symbol && pick.subject.identity && <span aria-hidden>·</span>}
+            {pick.subject.identity && <span>{pick.subject.identity}</span>}
+          </div>
         </div>
         <button
           type="button"

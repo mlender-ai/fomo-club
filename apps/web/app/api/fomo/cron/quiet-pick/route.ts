@@ -34,6 +34,20 @@ export async function GET(request: Request) {
     const priorPickKeys = prior && prior.date !== date ? quietPickFreshnessKeys(prior) : new Set<string>();
 
     const response = await buildQuietPickResponse({ date, priorPickKeys });
+
+    // WO-P1 자가검증 — 발행 픽 전원 캔들 ≥200일. 게이트가 이미 걸렀으므로 여기서 걸리면 게이트 회귀다.
+    const thin = response.picks.filter((pick) => pick.dataQuality.candles < 200);
+    if (thin.length > 0) {
+      const detail = thin.map((pick) => `${pick.subject.canonical}:${pick.dataQuality.candles}`).join(", ");
+      console.error("[fomo/cron/quiet-pick] data completeness gate regression", detail);
+      return withCors(
+        NextResponse.json(
+          { ok: false, error: `데이터 미완결 픽 발행 시도: ${detail}`, date },
+          { status: 500 }
+        )
+      );
+    }
+
     await writeFeedContent(dateId(date), response);
     await writeFeedContent(ACTIVE_ID, response);
 
@@ -53,6 +67,13 @@ export async function GET(request: Request) {
         published: response.picks.length,
         ledgerAppended,
         qualification: response.qualification,
+        // 픽별 데이터 완결성 로그(WO-P1 수용 기준 — 하이드레이션 로그 첨부용).
+        dataQuality: response.picks.map((pick) => ({
+          stock: pick.subject.canonical,
+          ...pick.dataQuality,
+          tickerValue: pick.subject.symbol ?? null,
+          identityValue: pick.subject.identity ?? null,
+        })),
         ms: Date.now() - startedAt,
       })
     );

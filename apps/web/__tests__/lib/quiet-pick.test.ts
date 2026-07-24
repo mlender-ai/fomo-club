@@ -37,10 +37,11 @@ function flows(foreignDays: number, instDays: number): InvestorFlow[] {
   return out;
 }
 
-function candlesVol(volume: number): DailyOhlcv[] {
+function candlesVol(volume: number, count = 260): DailyOhlcv[] {
   const out: DailyOhlcv[] = [];
-  for (let i = 0; i < 80; i += 1) {
-    out.push({ date: `2026${String(5 + Math.floor(i / 31)).padStart(2, "0")}${String((i % 31) + 1).padStart(2, "0")}`, open: 1000, high: 1010, low: 990, close: 1000, volume });
+  for (let i = 0; i < count; i += 1) {
+    const day = new Date(Date.UTC(2025, 6, 1) + i * 86_400_000);
+    out.push({ date: day.toISOString().slice(0, 10).replace(/-/g, ""), open: 1000, high: 1010, low: 990, close: 1000, volume });
   }
   return out;
 }
@@ -102,6 +103,8 @@ function depsFrom(s: Scenario): Partial<QuietPickDeps> {
     fetchCachedUsMarketRows: async () => s.usRows ?? [],
     fetchMarketCapRankMap: async () => (s.rankMap ?? {}) as Awaited<ReturnType<QuietPickDeps["fetchMarketCapRankMap"]>>,
     assembleStockFront: async (stock: string) => s.fronts[stock] ?? frontFor("1,000원", 1),
+    // 봉인은 DB 라 테스트에서는 주입된 길이를 그대로 돌려준다(병합 없음).
+    writeUsCandleCache: async (_symbol: string, candles: readonly DailyOhlcv[]) => candles.length,
   };
 }
 
@@ -220,7 +223,7 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
   it("품질 게이트: verdict 없음·캔들 부족이면 탈락", async () => {
     const s = baseScenario();
     const { verdict: _omitVerdict, ...noVerdict } = frontFor("1,010원", 1);
-    const shortCandles: StockFrontData = { ...frontFor("1,010원", 1), candles: candles().slice(0, 30) };
+    const shortCandles: StockFrontData = { ...frontFor("1,010원", 1), candles: candlesVol(100_000, 60) };
     s.fronts["조용외인"] = noVerdict;
     s.fronts["다중클러스터"] = shortCandles;
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
@@ -322,5 +325,57 @@ describe("buildQuietPickResponse — 이례성·시총 상한(WO-G1A2)", () => {
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
     const pick = res.picks.find((p) => p.subject.canonical === "Small Bank Corp");
     expect(pick?.subject.identity).toBe("은행");
+  });
+});
+
+describe("buildQuietPickResponse — 데이터 완결성 게이트(WO-P1)", () => {
+  /** CLBK 재현: 무료 소스에 이력이 3봉뿐인 재상장 종목. */
+  function thinHistoryScenario(): Scenario {
+    const s = baseScenario();
+    s.attention["Relisted Corp"] = quietAttention(5);
+    s.insiders = [
+      { symbol: "RLST", companyName: "Relisted Corp", insiderCount: 16, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 4_800_000, buyPrice: 11, industry: "State Commercial Banks" },
+    ];
+    s.fronts["Relisted Corp"] = { ...frontFor("$11.01", -1), candles: candlesVol(100_000, 3) };
+    return s;
+  }
+
+  it("캔들 200일 미확보 종목은 하이드레이션 후에도 탈락(빈 껍데기 픽 금지)", async () => {
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(thinHistoryScenario()) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("Relisted Corp");
+    expect(res.qualification.drops.insufficient_candles).toBeGreaterThanOrEqual(1);
+  });
+
+  it("봉인 캐시가 긴 이력을 갖고 있으면 그 길이로 자격 판정(요청 경로가 재현 가능)", async () => {
+    const s = thinHistoryScenario();
+    const deps = {
+      ...depsFrom(s),
+      // 이전 픽에서 봉인해둔 250봉과 병합됐다고 가정.
+      writeUsCandleCache: async () => 250,
+    };
+    const res = await buildQuietPickResponse({ date: TODAY, deps });
+    const pick = res.picks.find((p) => p.subject.canonical === "Relisted Corp");
+    expect(pick).toBeDefined();
+    expect(pick!.dataQuality.candles).toBe(250);
+    expect(pick!.dataQuality.sealedCandles).toBe(250);
+  });
+
+  it("발행 픽 전원 dataQuality: 캔들 ≥200 · 티커 · 한국어 정체", async () => {
+    const s = baseScenario();
+    s.attention["Byrna Technologies Inc."] = quietAttention(5);
+    s.insiders = [
+      { symbol: "BYRN", companyName: "Byrna Technologies Inc.", insiderCount: 3, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 253_000, buyPrice: 3.3, industry: "Miscellaneous Electrical Machinery" },
+    ];
+    s.fronts["Byrna Technologies Inc."] = frontFor("$3.37", 4);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.length).toBeGreaterThan(0);
+    for (const pick of res.picks) {
+      expect(pick.dataQuality.candles).toBeGreaterThanOrEqual(200);
+      expect(pick.dataQuality.identity).toBe(true);
+      // 영문 원문 노출 금지 — 정체 한 줄은 항상 한국어(잘린 "Miscellaneous Electrical" 재발 차단).
+      expect(pick.subject.identity).toMatch(/[가-힣]/);
+      expect(pick.subject.identity).not.toMatch(/[A-Za-z]{4,}/);
+      if (pick.subject.country === "US") expect(pick.dataQuality.ticker).toBe(true);
+    }
   });
 });

@@ -33,6 +33,8 @@ import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock
 import { fetchKrMarketRows } from "./discovery-supply";
 import { fetchInsiderClusterCandidates, fetchInsiderPriorBuys, type InsiderClusterCandidate } from "./insider-source";
 import { fetchCachedUsMarketRows } from "./us-market-source";
+import { usDiscoverySeedForSymbol } from "./us-symbols";
+import { writeUsCandleCache } from "./us-candle-cache";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 
@@ -56,8 +58,14 @@ const MAX_MENTION_SCORE = 70;
 const TRADING_VALUE_TOP_RANK = 20;
 /** 신호 시작 후 누적 상승 상한(이미 재평가된 건 발굴 아님). */
 const MAX_CUMULATIVE_SINCE_SIGNAL_PCT = 30;
-/** 품질: verdict/phase 산출에 충분한 캔들(무효선=30, 와이코프 phase=60). */
-const MIN_CANDLES = 60;
+/**
+ * 품질 게이트(WO-P1) — 캔들 200거래일 강제. 예외 없음.
+ *
+ * 60이었을 때 CLBK(재상장으로 Nasdaq 이력 3봉)가 픽 시점 TwelveData 응답으로만 통과했다가
+ * 요청 시점엔 3봉으로 퇴화해 "가격 이력 3거래일" 빈 껍데기가 나갔다. 하이드레이션(캔들 봉인)
+ * 후에도 200일 미확보면 그 종목은 탈락 — 무료 소스에 없는 이력을 만들어낼 방법은 없다.
+ */
+const MIN_CANDLES = 200;
 /** 유동성 하한(KR 일 거래대금 10억원). */
 const KR_MIN_TRADING_VALUE = 1_000_000_000;
 /** 조용함 게이트: US 시총 상한($50B 초과=대형주, 정의상 조용할 수 없음 — Elevance 누출 차단). */
@@ -76,8 +84,18 @@ export interface QuietPickSubject {
   naverCode?: string;
   market: string;
   country: "KR" | "US";
-  /** 회사 정체 한 줄(8~15자) — 판단의 최소 조건. 없으면 생략. */
+  /** 회사 정체 한 줄(8~15자, 한국어 보장) — 판단의 최소 조건. */
   identity?: string;
+}
+
+/** 픽별 데이터 완결성 로그(WO-P1) — 어드민·자가검증에서 빈 껍데기 픽을 잡는 근거. */
+export interface QuietPickDataQuality {
+  candles: number;
+  /** 봉인(캐시) 후 확보된 캔들 길이 — 요청 경로가 재현할 수 있는 실제 길이. */
+  sealedCandles?: number;
+  fundamentals: boolean;
+  ticker: boolean;
+  identity: boolean;
 }
 
 export interface QuietPickSignal {
@@ -129,6 +147,8 @@ export interface QuietPick {
   conviction: QuietPickConviction;
   /** 종합점수(내부화 — 화면 노출 아님, 픽 근거·성적표 밴드용). */
   companyScore: number | null;
+  /** 데이터 완결성 게이트 로그(WO-P1). */
+  dataQuality: QuietPickDataQuality;
   qualifiedAt: string;
 }
 
@@ -163,6 +183,8 @@ export interface QuietPickDeps {
   fetchCachedUsMarketRows: typeof fetchCachedUsMarketRows;
   fetchMarketCapRankMap: typeof fetchMarketCapRankMap;
   assembleStockFront: typeof assembleStockFront;
+  /** 픽 시점 캔들 봉인(WO-P1) — 병합 후 확보된 길이를 돌려준다. */
+  writeUsCandleCache: typeof writeUsCandleCache;
 }
 
 const defaultDeps: QuietPickDeps = {
@@ -175,6 +197,7 @@ const defaultDeps: QuietPickDeps = {
   fetchCachedUsMarketRows,
   fetchMarketCapRankMap,
   assembleStockFront,
+  writeUsCandleCache,
 };
 
 // ── 수치 포매터(실측만) ────────────────────────────────────────────────
@@ -190,29 +213,67 @@ function formatUsd(value: number): string {
   return `$${Math.round(value)}`;
 }
 
-/** openinsider 영문 산업명 → 짧은 한국어(자주 나오는 것만; 없으면 원문 축약). */
+/**
+ * openinsider 영문 산업명(SIC 계열) → 짧은 한국어. WO-P1: **영문 원문 축약 노출 금지**
+ * ("Computer Processing & Da" 같은 잘린 영문이 카드에 뜨던 회귀). 매칭 실패 시 한국어 폴백.
+ */
 const INDUSTRY_KO: ReadonlyArray<[RegExp, string]> = [
-  [/bank|savings/i, "은행"],
-  [/insurance/i, "보험"],
-  [/software|internet/i, "소프트웨어"],
+  [/bank|savings institution|credit union/i, "은행"],
+  [/insurance|title insurance/i, "보험"],
+  [/blank check/i, "스팩"],
+  [/investment advice|security broker|asset manage|finance services|personal credit/i, "금융"],
   [/semiconductor/i, "반도체"],
-  [/biotech|pharmaceutic/i, "바이오·제약"],
-  [/oil|gas|energy/i, "에너지"],
-  [/real estate|reit/i, "부동산"],
-  [/retail|consumer/i, "소비재·유통"],
-  [/medical|health/i, "헬스케어"],
+  [/prepackaged software|software|computer processing|data preparation|information retrieval|internet/i, "소프트웨어"],
+  [/computer communications|telephone|communications services|radiotelephone/i, "통신"],
+  [/computer & office|computer storage|electronic computer/i, "컴퓨터·하드웨어"],
+  [/pharmaceutical|biological product|in vitro|medicinal chem/i, "바이오·제약"],
+  [/surgical|medical instrument|dental|orthopedic|laboratory analytic/i, "의료기기"],
+  [/health service|hospital|nursing|medical labor/i, "헬스케어"],
+  [/crude petroleum|natural gas|petroleum refin|oil & gas|drilling/i, "에너지"],
+  [/electric service|electric & other service|gas distribution|water suppl|cogeneration/i, "유틸리티"],
+  [/gold mining|metal mining|copper|coal|nonmetallic mineral/i, "광업"],
+  [/real estate|reit|land subdivider|operators of apartment/i, "부동산"],
+  [/eating & drinking|restaurant|grocer|food|beverage|bakery|sugar|dairy/i, "음식료"],
+  [/retail|catalog|department store|apparel & accessory|variety store/i, "소비재·유통"],
+  [/ordnance|guided missile|defense|arms/i, "방산"],
+  [/aircraft|aerospace|space vehicle/i, "항공우주"],
+  [/motor vehicle|automotive|truck|auto parts/i, "자동차"],
+  [/air transportation|trucking|railroad|water transportation|courier/i, "운송"],
+  [/electrical industrial|electric lighting|electronic component|electrical work|miscellaneous electrical/i, "전기·전자"],
+  [/industrial machinery|machine tool|construction machinery|special industry machinery|engines/i, "산업기계"],
+  [/general building|construction|heavy construction|water, sewer/i, "건설"],
+  [/chemical|plastics|paint|adhesive|industrial gas|fertilizer/i, "화학"],
+  [/steel|metal|iron|aluminum|fabricated/i, "철강·금속"],
+  [/paper|pulp|printing|publishing|newspaper/i, "제지·인쇄"],
+  [/textile|apparel|footwear|leather/i, "의류·섬유"],
+  [/tobacco|cigarette/i, "담배"],
+  [/hotel|amusement|recreation|motion picture|broadcast|television|cable/i, "미디어·레저"],
+  [/education|school/i, "교육"],
+  [/business service|management consult|help supply|advertising|engineering service|computer service/i, "기업서비스"],
+  [/agricultur|farm|forestry|fishing/i, "농업"],
+  [/wholesale|distribution/i, "도매·유통"],
+  [/instrument|measuring|photographic|optical|laboratory apparatus/i, "정밀기기"],
+  [/furniture|household appliance|lumber|glass|cement|concrete/i, "건자재·가구"],
+  [/toys|sporting goods|jewelry|musical/i, "생활용품"],
 ];
 
-/** 회사 정체 한 줄(8~15자 목표) — front 섹터 라벨 우선, 없으면 산업명. 없으면 생략. */
-function companyIdentity(front: StockFrontData, sig: SignalCandidate): string | undefined {
+const IDENTITY_FALLBACK: Record<"KR" | "US", string> = { KR: "기타 업종", US: "미국주식" };
+const HANGUL = /[가-힣]/;
+
+/**
+ * 회사 정체 한 줄(8~15자) — 한국어만. 우선순위: front 섹터 라벨 → 큐레이션 시드 섹터 →
+ * 영문 산업명 한국어 매핑 → 한국어 폴백. 영문 원문은 어떤 경로로도 노출되지 않는다(WO-P1).
+ */
+function companyIdentity(front: StockFrontData, sig: SignalCandidate): string {
   const theme = front.signals.themeLabel?.trim();
-  if (theme) return theme.slice(0, 20);
+  if (theme && HANGUL.test(theme)) return theme.slice(0, 20);
+  const seedSector = sig.subject.symbol ? usDiscoverySeedForSymbol(sig.subject.symbol)?.sector?.trim() : undefined;
+  if (seedSector && HANGUL.test(seedSector)) return seedSector.slice(0, 20);
   const industry = sig.industry?.trim();
   if (industry) {
     for (const [pattern, ko] of INDUSTRY_KO) if (pattern.test(industry)) return ko;
-    return industry.slice(0, 24);
   }
-  return undefined;
+  return IDENTITY_FALLBACK[sig.subject.country];
 }
 
 function daysBetween(fromDate: string, today: string): number {
@@ -519,7 +580,17 @@ export async function buildQuietPickResponse(options: {
   for (const { sig, front } of assembled) {
     if (!front) { drop("front_failed"); continue; }
     if (!front.verdict) { drop("no_verdict"); continue; }
-    if ((front.candles?.length ?? 0) < MIN_CANDLES) { drop("insufficient_candles"); continue; }
+
+    // ── 하이드레이션(WO-P1) — 픽 시점 캔들을 봉인. US 무료 소스는 날마다 다르게 답하므로
+    //    (TwelveData 쿼터·Nasdaq 종목별 이력) 봉인이 없으면 요청 경로가 3봉으로 퇴화한다.
+    const liveCandles = front.candles ?? [];
+    let sealedCandles = liveCandles.length;
+    if (sig.subject.country === "US" && sig.subject.symbol && liveCandles.length > 0) {
+      sealedCandles = await deps.writeUsCandleCache(sig.subject.symbol, liveCandles).catch(() => liveCandles.length);
+    }
+    // 자격 ③ 강제 — 하이드레이션 후에도 200일 미확보면 탈락. 예외 없음(빈 껍데기 픽 금지).
+    const availableCandles = Math.max(liveCandles.length, sealedCandles);
+    if (availableCandles < MIN_CANDLES) { drop("insufficient_candles"); continue; }
 
     // 무효선(실계산 레벨)이 없거나 0 이하면 픽 불가 — "0원 이탈" 같은 무의미 문구 노출 금지(실측 회귀).
     const invalidationLevel = front.verdict.invalidationLevel;
@@ -592,9 +663,16 @@ export async function buildQuietPickResponse(options: {
     const anomalies = computeQuietPickAnomalies(facts);
     if (anomalies.length === 0) { drop("no_anomaly"); continue; }
     const identity = companyIdentity(front, sig);
+    const dataQuality: QuietPickDataQuality = {
+      candles: availableCandles,
+      ...(sealedCandles !== liveCandles.length ? { sealedCandles } : {}),
+      fundamentals: typeof score === "number",
+      ticker: Boolean(sig.subject.symbol),
+      identity: identity.length > 0,
+    };
 
     picks.push({
-      subject: { ...sig.subject, ...(identity ? { identity } : {}) },
+      subject: { ...sig.subject, identity },
       price: {
         current,
         ...(front.priceText ? { currentText: front.priceText } : {}),
@@ -631,6 +709,7 @@ export async function buildQuietPickResponse(options: {
         },
       },
       companyScore: score,
+      dataQuality,
       qualifiedAt: date,
     });
   }

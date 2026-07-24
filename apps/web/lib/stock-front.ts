@@ -29,6 +29,7 @@ import { usValuationBand } from "./us-valuation";
 import { fetchNasdaqDailyCandles, fetchUsDailyCandles } from "./us-market-source";
 import type { DiscoveryMarketRow } from "./market-source-types";
 import { readUsMarketQuoteRows } from "./us-market-cache";
+import { mergeCandlesByDate, readUsCandleCache } from "./us-candle-cache";
 import { readCoinMarketSnapshots } from "./coin-market-source";
 import {
   buildCoinCause,
@@ -482,6 +483,17 @@ export async function assembleStockFront(
     let daily = await fetchUsDailyCandles(usSymbol, 260).catch(() => ({ candles: [], closes: [], volumes: [] }));
     if (daily.candles.length === 0) {
       daily = await fetchNasdaqDailyCandles(usSymbol, 365).catch(() => ({ candles: [], closes: [], volumes: [] }));
+    }
+    // WO-P1 — 픽 시점에 봉인된 일봉을 합집합 병합한다. 무료 소스(TwelveData 쿼터·Nasdaq 종목별 이력)가
+    // 그날따라 짧게 답해도 "가격 이력 3거래일" 화면으로 퇴화하지 않게 하는 유일한 방어선.
+    const sealed = await readUsCandleCache(usSymbol).catch(() => null);
+    if (sealed && sealed.length > daily.candles.length) {
+      const candles = mergeCandlesByDate(sealed, daily.candles);
+      daily = {
+        candles,
+        closes: candles.map((candle) => candle.close),
+        volumes: candles.map((candle) => candle.volume),
+      };
     }
     if (!cachedFront && daily.closes.length === 0) return { signals: {}, score: computeCompanyScore({}), sparkline: [] };
 

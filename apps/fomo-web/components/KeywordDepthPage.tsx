@@ -820,7 +820,16 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
     ) ?? [];
   }, [front?.candles]);
 
-  const candles = useMemo(() => sourceCandles.slice(-(range === "1m" ? 22 : 66)), [sourceCandles, range]);
+  // WO-P1 — 데이터가 있는 기간만 활성. 3봉짜리 종목에서 1개월=3개월 동일 화면이 뜨던 회귀 차단.
+  const availableRanges = useMemo(
+    () => (["1m", "3m"] as const).filter((key) => sourceCandles.length >= (key === "1m" ? 12 : 34)),
+    [sourceCandles.length]
+  );
+  const effectiveRange: MovementRange = availableRanges.includes(range) ? range : (availableRanges.at(-1) ?? "1m");
+  const candles = useMemo(
+    () => sourceCandles.slice(-(effectiveRange === "1m" ? 22 : 66)),
+    [sourceCandles, effectiveRange]
+  );
   if (candles.length < 2) return null;
 
   const W = DETAIL_CHART_LAYOUT.W;
@@ -839,13 +848,13 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
   const x = (i: number) => (i / (candles.length - 1)) * PLOT_W;
   const y = (v: number) => 6 + (1 - (v - min) / span) * (PRICE_H - 12);
   const step = PLOT_W / Math.max(1, candles.length - 1);
-  const bodyW = Math.max(2, Math.min(range === "1m" ? 8 : 4.8, step * 0.58));
+  const bodyW = Math.max(2, Math.min(effectiveRange === "1m" ? 8 : 4.8, step * 0.58));
   const maxVol = Math.max(...candles.map((c) => c.volume), 1);
   const latest = candles[candles.length - 1];
   const rangeBase = candles[0]!.open;
   const rangePct = rangeBase > 0 ? ((latest!.close / rangeBase) - 1) * 100 : 0;
   const rangeColor = rangePct >= 0 ? chartTokens.up : chartTokens.down;
-  const rangeLabel = range === "1m" ? "1개월" : "3개월";
+  const rangeLabel = effectiveRange === "1m" ? "1개월" : "3개월";
   const priceTicks = [maxRaw, (maxRaw + minRaw) / 2, minRaw];
 
   return (
@@ -855,22 +864,24 @@ function MovementResponseChart({ front }: { front: StockFrontResponse | null }) 
           <p className="font-pixel text-sm text-whiteout">가격 흐름</p>
           <p className="mt-1 text-[11px] text-muted">선택한 기간의 가격과 거래 참여를 함께 봐요.</p>
         </div>
-        <div className="flex rounded-full border border-hairline bg-surface p-0.5">
-          {(["1m", "3m"] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                setRange(key);
-                setTooltip(null);
-              }}
-              className="rounded-full px-2.5 py-1 font-pixel text-[10px]"
-              style={{ backgroundColor: range === key ? chartTokens.up : "transparent", color: range === key ? chartTokens.textOnAccent : chartTokens.neutral }}
-            >
-              {key === "1m" ? "1개월" : "3개월"}
-            </button>
-          ))}
-        </div>
+        {availableRanges.length > 1 && (
+          <div className="flex rounded-full border border-hairline bg-surface p-0.5">
+            {availableRanges.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setRange(key);
+                  setTooltip(null);
+                }}
+                className="rounded-full px-2.5 py-1 font-pixel text-[10px]"
+                style={{ backgroundColor: effectiveRange === key ? chartTokens.up : "transparent", color: effectiveRange === key ? chartTokens.textOnAccent : chartTokens.neutral }}
+              >
+                {key === "1m" ? "1개월" : "3개월"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="relative mt-3 rounded-lg border border-white/15 px-3 py-3 shadow-inner" style={{ backgroundColor: chartTokens.surface }}>
         <div className="mb-2 flex items-center justify-between gap-3 border-b border-white/10 pb-2">
@@ -1428,6 +1439,24 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
       </div>
     </div>
   );
+}
+
+/**
+ * 뎁스 헤더 표기명(WO-P1) — 미국 법인 접미사·주 꼬리를 떼고 티커를 병기한다.
+ * "Columbia Financial, Inc./Md/" + CLBK → "Columbia Financial (CLBK)".
+ */
+function depthDisplayName(stock: string, context?: StockContext): string {
+  const name = cleanText(stock).trim();
+  const isUs = context?.country === "US" || context?.market === "NASDAQ" || context?.market === "NYSE";
+  const ticker = context?.symbol?.trim().toUpperCase();
+  if (!isUs) return name;
+  const cleaned = name
+    .replace(/\/[A-Za-z]{2,3}\/?$/, "")
+    .replace(/,?\s*\b(Inc|Corp|Corporation|Incorporated|Co|Company|Ltd|LLC|PLC|Holdings?|Group|Trust)\b\.?/gi, "")
+    .replace(/[,\s/]+$/, "")
+    .trim();
+  const base = cleaned.length >= 3 ? cleaned : name;
+  return ticker && /^[A-Z][A-Z.]{0,5}$/.test(ticker) ? `${base} (${ticker})` : base;
 }
 
 /** WO-G1B 납득 문서 블록 구분 헤딩 — "왜 이 회사인가" 등 질문형. */
@@ -2162,7 +2191,15 @@ function ChartAnalysisTab({
   const [structureTooltip, setStructureTooltip] = useState<ChartTooltip | null>(null);
   const [range, setRange] = useState<StructureRange>("3m");
   const metrics = structureMetrics(front);
-  const rangeDays = range === "3m" ? 66 : 260;
+  // WO-P1 — 데이터 있는 기간만 활성(3봉 종목에서 3M=1Y 동일 화면 재발 금지).
+  const availableStructureRanges = useMemo(
+    () => (["3m", "1y"] as const).filter((key) => (series?.closes.length ?? 0) >= (key === "3m" ? 34 : 140)),
+    [series?.closes.length]
+  );
+  const effectiveRange: StructureRange = availableStructureRanges.includes(range)
+    ? range
+    : (availableStructureRanges.at(0) ?? "3m");
+  const rangeDays = effectiveRange === "3m" ? 66 : 260;
   const visibleSeries = useMemo(() => (series ? sliceChartSeries(series, rangeDays) : undefined), [series, rangeDays]);
   const visibleCandles = useMemo(
     () => front?.candles?.filter((c) => [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)).slice(-rangeDays),
@@ -2257,20 +2294,22 @@ function ChartAnalysisTab({
       {visibleSeries && visibleSeries.closes.length >= 2 ? (
         <div className="rounded-lg border border-white/15 px-3 pb-3 pt-3 shadow-inner" style={{ backgroundColor: chartTokens.surface }}>
           <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="font-pixel text-[10px] text-muted">일봉 · {range === "3m" ? "3개월" : "1년"}</span>
-            <div className="flex rounded-md border border-white/10 p-0.5">
-              {(["3m", "1y"] as const).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setRange(key)}
-                  className="rounded px-2 py-1 text-[9px] font-bold"
-                  style={{ backgroundColor: range === key ? chartTokens.up : "transparent", color: range === key ? chartTokens.textOnAccent : chartTokens.neutral }}
-                >
-                  {key === "3m" ? "3M" : "1Y"}
-                </button>
-              ))}
-            </div>
+            <span className="font-pixel text-[10px] text-muted">일봉 · {effectiveRange === "3m" ? "3개월" : "1년"}</span>
+            {availableStructureRanges.length > 1 && (
+              <div className="flex rounded-md border border-white/10 p-0.5">
+                {availableStructureRanges.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setRange(key)}
+                    className="rounded px-2 py-1 text-[9px] font-bold"
+                    style={{ backgroundColor: effectiveRange === key ? chartTokens.up : "transparent", color: effectiveRange === key ? chartTokens.textOnAccent : chartTokens.neutral }}
+                  >
+                    {key === "3m" ? "3M" : "1Y"}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <AnalysisChart series={visibleSeries} invalidationLevel={verdict?.invalidationLevel} candles={visibleCandles} analysis={wyckoff} quietMoney={front?.quietMoney} />
           {invalidation && (
@@ -2795,12 +2834,15 @@ export function StockInsightView({
                 ← {inlineBackLabel ?? "뒤로"}
               </button>
             )}
-            <span className="text-lg font-bold text-whiteout">{cleanText(stock)}</span>
+            {/* WO-P1 — 긴 미국 법인명은 한 줄 말줄임 + 티커 병기("Columbia Financial (CLBK)"). */}
+            <span className="min-w-0 flex-1 truncate text-lg font-bold text-whiteout" title={cleanText(stock)}>
+              {depthDisplayName(stock, context)}
+            </span>
           </div>
           <button
             onClick={toggleWatched}
             aria-label={watched ? "관심 해제" : "관심 등록"}
-            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
             style={{
               borderColor: watched ? chartTokens.up : "var(--hairline, #2a2a2a)",
               color: watched ? chartTokens.up : chartTokens.neutral,

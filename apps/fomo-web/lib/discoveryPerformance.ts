@@ -70,6 +70,9 @@ function detailsOf(item: DiscoverySeenItem): Record<string, string | number | bo
     ...(typeof item.companyScore === "number" ? { companyScore: item.companyScore } : {}),
     ...(item.companyScoreLabel ? { companyScoreLabel: item.companyScoreLabel } : {}),
     ...(item.naverCode ? { naverCode: item.naverCode } : {}),
+    // WO-P1 — symbol 을 details 에도 남긴다. subject.symbol 은 naverCode 와 혼용돼서
+    // 미국주 티커가 유실되면 넘긴 카드가 "현재가 없음"으로 굳었다.
+    ...(item.symbol ? { symbol: item.symbol } : {}),
     ...(item.market ? { market: item.market } : {}),
     ...(item.country ? { country: item.country } : {}),
     ...(item.sector ? { sector: item.sector } : {}),
