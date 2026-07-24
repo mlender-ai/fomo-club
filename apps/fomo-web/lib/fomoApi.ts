@@ -1032,6 +1032,107 @@ export async function fetchDaily30(): Promise<Daily30Response> {
 
 export const warmDaily30 = () => fetchDaily30();
 
+// ── 조용한 돈 픽(WO-G1A/B) ────────────────────────────────────────────────
+export type QuietPickSignalKind = "insider_cluster" | "institution_streak" | "foreign_streak" | "multi_cluster";
+export type QuietPickAnomalyKind = "frequency" | "participants" | "scale" | "silence";
+export interface QuietPickAnomaly {
+  kind: QuietPickAnomalyKind;
+  text: string;
+  strength: number;
+}
+export interface QuietPick {
+  subject: { canonical: string; symbol?: string; naverCode?: string; market: string; country: "KR" | "US"; identity?: string };
+  price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
+  signal: {
+    kind: QuietPickSignalKind;
+    code: string;
+    actors: string;
+    scale: string;
+    days: number;
+    priceAtSignal: number;
+    startedAt: string;
+    strength: number;
+  };
+  hook: string;
+  anomalies: QuietPickAnomaly[];
+  invalidation: { level: number | null; text: string };
+  conviction: {
+    whyCompany: string;
+    whyNow: { phase?: string; summary?: string; keyLevels?: { low?: number; high?: number } };
+    committee: {
+      tradingView?: string;
+      fundamentalView?: string;
+      timingGrade: "A" | "B" | "C";
+      valuationGrade: "A" | "B" | "C";
+      verdict1line: string;
+    };
+  };
+  companyScore: number | null;
+  qualifiedAt: string;
+}
+export interface QuietPicksResponse {
+  asOf: string;
+  date: string;
+  picks: QuietPick[];
+  qualification?: unknown;
+  source: string;
+}
+
+function quietPicksPath(): string {
+  return "/api/fomo/quiet-picks";
+}
+
+/** 발행됐지만 0장인 날은 정직한 상태(에러 아님) — picks 배열 존재만 확인. */
+function isQuietPicksResponse(value: QuietPicksResponse | null | undefined): value is QuietPicksResponse {
+  return !!value && Array.isArray(value.picks);
+}
+
+async function fetchQuietPicksNetwork(): Promise<QuietPicksResponse> {
+  const path = quietPicksPath();
+  try {
+    return await fetchJsonWithTimeout<QuietPicksResponse>(
+      path,
+      { cache: "no-store", credentials: "same-origin" },
+      DISCOVERY_SAME_ORIGIN_TIMEOUT_MS,
+      `GET ${path}`
+    );
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") console.warn("[fomoApi] same-origin quiet-picks failed; retrying backend", err);
+  }
+  let lastError: unknown = null;
+  for (const origin of backendOrigins()) {
+    try {
+      return await fetchJsonWithTimeout<QuietPicksResponse>(
+        `${origin}${path}`,
+        { cache: "no-store" },
+        DISCOVERY_BACKEND_TIMEOUT_MS,
+        `GET ${origin}${path}`
+      );
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("GET /api/fomo/quiet-picks failed");
+}
+
+/** 미발행(503)이면 throw(호출부가 재시도), 발행-0장이면 picks:[] 정상 반환. */
+export async function fetchQuietPicks(): Promise<QuietPicksResponse> {
+  const key = `quiet-picks:${DISCOVERY_CACHE_VERSION}:${kstDateKey()}`;
+  const cached = readCached<QuietPicksResponse>(key);
+  if (isQuietPicksResponse(cached) && cached.picks.length > 0) return cached;
+  return cachedGet(
+    key,
+    async () => {
+      const fresh = await fetchQuietPicksNetwork();
+      if (!isQuietPicksResponse(fresh)) throw new Error("GET /api/fomo/quiet-picks returned invalid payload");
+      return fresh;
+    },
+    CACHE_TTL.daily30
+  );
+}
+
+export const warmQuietPicks = () => fetchQuietPicks().catch(() => null);
+
 export interface AxisSnapshotEntry {
   axisSignals: import("@fomo/core").AxisSignal[];
   axisHook: import("@fomo/core").MultiAxisHookSelection;

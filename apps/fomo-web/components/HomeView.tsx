@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { type EmotionType } from "@fomo/core";
-import { KeywordCardFeed } from "@/components/KeywordCardFeed";
 import { SearchIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
-import { FeedView } from "@/components/FeedView";
+import { QuietPickDeck } from "@/components/QuietPickDeck";
 import { SearchOverlay } from "@/components/SearchOverlay";
-import { DesktopDashboard, useIsDesktop } from "@/components/DesktopDashboard";
 import type {
   FomoIndexResponse,
   TallyResponse,
@@ -24,7 +22,7 @@ import type {
  * 열면 바로 카드(스와이프 덱). 큰 마스코트 제거, 지수는 상단 얇은 띠. 본 카드는 히스토리 탭에.
  * (감정 게이트/캘린더/한마디 props는 보존 차원에서 시그니처에 남기되 미사용 — flag로 숨김 유지.)
  */
-type Tab = "main" | "feed" | "history";
+type Tab = "pick" | "mine";
 const NEON = "#D8FF3A";
 
 export function HomeView({
@@ -43,39 +41,15 @@ export function HomeView({
   loggedIn: boolean;
   onLoggedIn: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("main");
+  const [tab, setTab] = useState<Tab>("pick");
   const [searchOpen, setSearchOpen] = useState(false);
-  const isDesktop = useIsDesktop();
   void index;
 
-  // PC(≥1024px) — WO-PC-VERSION 3컬럼 대시보드. lg 미만 모바일 트리는 아래 그대로(틴더 덱 불가침).
-  if (isDesktop) {
-    return (
-      <>
-        <main className="fomo-phase-in mx-auto flex h-screen max-w-[1400px] flex-col gap-4 px-6 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
-          <div className="flex shrink-0 items-center justify-between">
-            <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-whiteout/20"
-              aria-label="종목 검색"
-            >
-              <SearchIcon size={13} />
-              <span>검색</span>
-            </button>
-          </div>
-          <DesktopDashboard />
-        </main>
-        {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
-      </>
-    );
-  }
-
+  // WO-G1B — 홈 = 오늘의 조용한 픽(모바일·PC 단일 경험). 30장 덱·자산 탭 소멸.
+  // 피드는 GNB에서 숨김(FeedView 코드 보존). DesktopDashboard 도 코드 보존(홈 미사용).
   return (
     <>
-      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-md flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]">
-        {/* 상단은 제품명과 검색만 남긴다. 시장 온도는 종합 기업 점수와 무관해 제거했다. */}
+      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-xl flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]">
         <div className="flex items-center justify-between">
           <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
           <button
@@ -88,23 +62,19 @@ export function HomeView({
           </button>
         </div>
 
-        <div className={`mt-3 flex min-h-0 flex-1 flex-col ${tab === "feed" ? "overflow-y-auto scrollbar-none" : ""}`}>
-          {tab === "main" ? (
-            <KeywordCardFeed loggedIn={true} />
-          ) : tab === "feed" ? (
-            <FeedView />
-          ) : (
-            <KeywordHistory />
-          )}
+        <div className="mt-3 flex min-h-0 flex-1 flex-col">
+          {tab === "pick" ? <QuietPickDeck /> : <KeywordHistory />}
         </div>
       </main>
 
-      {/* 하단 GNB: 메인 / 피드 / 히스토리 (WO-GNB — 두 표면 분리) */}
+      {/* GNB: 픽 / 성적표 / 내 기록 (WO-G1B — 피드 숨김) */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto flex max-w-md">
-          <TabButton active={tab === "main"} onClick={() => setTab("main")} label="메인" />
-          <TabButton active={tab === "feed"} onClick={() => setTab("feed")} label="피드" />
-          <TabButton active={tab === "history"} onClick={() => setTab("history")} label="히스토리" />
+        <div className="mx-auto flex max-w-xl">
+          <TabButton active={tab === "pick"} onClick={() => setTab("pick")} label="픽" />
+          <a href="/track-record" className="flex flex-1 flex-col items-center gap-1 py-3">
+            <span className="font-pixel text-xs" style={{ color: "#555" }}>성적표</span>
+          </a>
+          <TabButton active={tab === "mine"} onClick={() => setTab("mine")} label="내 기록" />
         </div>
       </nav>
 
