@@ -354,6 +354,10 @@ export interface StockContext {
   symbol?: string | undefined;
   market?: string | undefined;
   country?: string | undefined;
+  /** 조용한 픽에서 연 뎁스 — 위원회 총평·등급([전문가 소견] 블록 채움). daily-30 committeeReview 없을 때만 사용. */
+  pickCommittee?: { verdict1line: string; timingGrade: "A" | "B" | "C"; valuationGrade: "A" | "B" | "C" } | undefined;
+  /** 픽 카드 가격 seed — 상세 재조회 전/실패 시 헤더에 즉시 표시(빈 "연결 중" 방지). */
+  priceSeed?: { priceText?: string; changeText?: string; changeDir?: "up" | "down" | "flat" } | undefined;
 }
 
 function hasUsableFront(front: StockFrontResponse | null | undefined): front is StockFrontResponse {
@@ -418,11 +422,11 @@ function normalizeChangeText(text: string | undefined): string | undefined {
  * 종목 기본 정보 블록(바닥) — 항상 렌더. 주가·회사개요·시총·핵심지표·연간 재무.
  * "정확한 숫자 + 쉬운 라벨"(EPS→'한 주가 번 돈') 둘 다. 없는 값은 생략(가짜 금지), 추정치·출처 표기.
  */
-function StockPriceHeader({ basics, front }: { basics: StockBasics | null; front: StockFrontResponse | null }) {
-  const priceText = basics?.priceText ?? front?.priceText;
-  const changeText = normalizeChangeText(basics?.changeText ?? front?.changeText);
-  const changeDir = basics?.changeDir ?? front?.changeDir;
-  if (!basics && !front) {
+function StockPriceHeader({ basics, front, priceSeed }: { basics: StockBasics | null; front: StockFrontResponse | null; priceSeed?: StockContext["priceSeed"] }) {
+  const priceText = basics?.priceText ?? front?.priceText ?? priceSeed?.priceText;
+  const changeText = normalizeChangeText(basics?.changeText ?? front?.changeText ?? priceSeed?.changeText);
+  const changeDir = basics?.changeDir ?? front?.changeDir ?? priceSeed?.changeDir;
+  if (!basics && !front && !priceSeed?.priceText) {
     return (
       <div className="space-y-2" aria-busy="true">
         <div className="h-5 w-2/3 animate-pulse rounded bg-surface" />
@@ -1481,6 +1485,39 @@ function ExpertOpinionBlock({ review }: { review: StockFrontResponse["committeeR
               {easyMarketCopy(cleanText(row.text), "detail")}
             </p>
           </div>
+        ))}
+      </div>
+    </DepthSection>
+  );
+}
+
+/** 조용한 픽의 [전문가 소견] — daily-30 위원회 리뷰가 없을 때 픽의 사실 기반 총평·등급을 렌더(WO-G1B). */
+function PickVerdictBlock({ committee }: { committee: NonNullable<StockContext["pickCommittee"]> }) {
+  const gradeTone = (grade: "A" | "B" | "C") => (grade === "A" ? chartTokens.up : grade === "B" ? chartTokens.marker.event : chartTokens.neutral);
+  const gradeLabel = (grade: "A" | "B" | "C") => (grade === "A" ? "좋음" : grade === "B" ? "보통" : "주의");
+  const rows = [
+    { role: "차트·타이밍", grade: committee.timingGrade },
+    { role: "기업·재무", grade: committee.valuationGrade },
+  ] as const;
+  return (
+    <DepthSection
+      className="mt-4"
+      title="전문가 소견"
+      aside={
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "rgba(216,255,58,0.12)", color: chartTokens.up }}>
+          ✓ 사실 기반 총평
+        </span>
+      }
+    >
+      <p className="mb-3 text-base font-bold leading-7 text-whiteout">{easyMarketCopy(cleanText(committee.verdict1line), "detail")}</p>
+      <div className="flex flex-wrap gap-2">
+        {rows.map((row) => (
+          <span key={row.role} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
+            <span className="text-muted">{row.role}</span>
+            <span className="font-pixel" style={{ color: gradeTone(row.grade) }}>
+              {row.grade} · {gradeLabel(row.grade)}
+            </span>
+          </span>
         ))}
       </div>
     </DepthSection>
@@ -2781,13 +2818,17 @@ export function StockInsightView({
           ) : (
           <>
           {/* [0] 헤더 — 가격(카드 연속성) */}
-          <StockPriceHeader basics={basics} front={front} />
+          <StockPriceHeader basics={basics} front={front} priceSeed={context?.priceSeed} />
 
           {/* WO-G1B — 탭 없는 단일 스크롤 「납득 문서」. 질문 순서대로 위→아래.
               점수·육각형은 유저 화면에서 내림(선별 내부 기준으로만 — 코드 보존). */}
           <div className="depth-doc">
-            {/* [1] 전문가 소견 — 사람의 말이 먼저 */}
-            <ExpertOpinionBlock review={front?.committeeReview} />
+            {/* [1] 전문가 소견 — 사람의 말이 먼저. daily-30 위원회 리뷰가 있으면 그것, 없고 픽이면 픽 총평. */}
+            {front?.committeeReview ? (
+              <ExpertOpinionBlock review={front.committeeReview} />
+            ) : context?.pickCommittee ? (
+              <PickVerdictBlock committee={context.pickCommittee} />
+            ) : null}
 
             {/* [2] 왜 이 회사인가 */}
             <DepthDocHeading label="왜 이 회사인가" />
