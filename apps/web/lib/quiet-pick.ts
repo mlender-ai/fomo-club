@@ -14,6 +14,8 @@ import {
   STOCK_VOCAB,
   investorNetStreak,
   buildQuietPickHook,
+  computeQuietPickAnomalies,
+  buildCommitteeVerdictLine,
   type StockDef,
   type InvestorFlow,
   type CardVerdict,
@@ -21,13 +23,16 @@ import {
   type CompanyScoreResult,
   type SignalTypeCode,
   type QuietPickSignalKind,
+  type QuietPickAnomaly,
+  type QuietPickAnomalyFacts,
 } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { fetchKrMarketRows } from "./discovery-supply";
-import { fetchInsiderClusterCandidates, type InsiderClusterCandidate } from "./insider-source";
+import { fetchInsiderClusterCandidates, fetchInsiderPriorBuys, type InsiderClusterCandidate } from "./insider-source";
+import { fetchCachedUsMarketRows } from "./us-market-source";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 
@@ -55,6 +60,12 @@ const MAX_CUMULATIVE_SINCE_SIGNAL_PCT = 30;
 const MIN_CANDLES = 60;
 /** 유동성 하한(KR 일 거래대금 10억원). */
 const KR_MIN_TRADING_VALUE = 1_000_000_000;
+/** 조용함 게이트: US 시총 상한($50B 초과=대형주, 정의상 조용할 수 없음 — Elevance 누출 차단). */
+const US_MEGA_CAP_USD = 50_000_000_000;
+/** 조용함 게이트: KR 시총 순위 상위 N 제외(대형주는 조용할 수 없음). */
+const KR_MEGA_CAP_RANK = 100;
+/** KR 최장 streak 비교에 쓰는 조회 창(거래일). */
+const KR_STREAK_WINDOW = 40;
 /** 하루 최대 픽 수(미달이면 그 수만큼 — 억지 충원 금지). */
 export const QUIET_PICK_MAX = 10;
 
@@ -65,6 +76,8 @@ export interface QuietPickSubject {
   naverCode?: string;
   market: string;
   country: "KR" | "US";
+  /** 회사 정체 한 줄(8~15자) — 판단의 최소 조건. 없으면 생략. */
+  identity?: string;
 }
 
 export interface QuietPickSignal {
@@ -110,6 +123,8 @@ export interface QuietPick {
   price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
   signal: QuietPickSignal;
   hook: string;
+  /** 이례성 지표(카드 칩·훅 원료) — 최소 1개(0개면 발행 안 함). 강도 내림차순. */
+  anomalies: QuietPickAnomaly[];
   invalidation: QuietPickInvalidation;
   conviction: QuietPickConviction;
   /** 종합점수(내부화 — 화면 노출 아님, 픽 근거·성적표 밴드용). */
@@ -144,6 +159,8 @@ export interface QuietPickDeps {
   readSupplyDemandHistoryByTickers: typeof readSupplyDemandHistoryByTickers;
   computeStockAttentionSignals: typeof computeStockAttentionSignals;
   fetchInsiderClusterCandidates: typeof fetchInsiderClusterCandidates;
+  fetchInsiderPriorBuys: typeof fetchInsiderPriorBuys;
+  fetchCachedUsMarketRows: typeof fetchCachedUsMarketRows;
   fetchMarketCapRankMap: typeof fetchMarketCapRankMap;
   assembleStockFront: typeof assembleStockFront;
 }
@@ -154,6 +171,8 @@ const defaultDeps: QuietPickDeps = {
   readSupplyDemandHistoryByTickers,
   computeStockAttentionSignals,
   fetchInsiderClusterCandidates,
+  fetchInsiderPriorBuys,
+  fetchCachedUsMarketRows,
   fetchMarketCapRankMap,
   assembleStockFront,
 };
@@ -169,6 +188,31 @@ function formatUsd(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${Math.round(value / 1_000)}K`;
   return `$${Math.round(value)}`;
+}
+
+/** openinsider 영문 산업명 → 짧은 한국어(자주 나오는 것만; 없으면 원문 축약). */
+const INDUSTRY_KO: ReadonlyArray<[RegExp, string]> = [
+  [/bank|savings/i, "은행"],
+  [/insurance/i, "보험"],
+  [/software|internet/i, "소프트웨어"],
+  [/semiconductor/i, "반도체"],
+  [/biotech|pharmaceutic/i, "바이오·제약"],
+  [/oil|gas|energy/i, "에너지"],
+  [/real estate|reit/i, "부동산"],
+  [/retail|consumer/i, "소비재·유통"],
+  [/medical|health/i, "헬스케어"],
+];
+
+/** 회사 정체 한 줄(8~15자 목표) — front 섹터 라벨 우선, 없으면 산업명. 없으면 생략. */
+function companyIdentity(front: StockFrontData, sig: SignalCandidate): string | undefined {
+  const theme = front.signals.themeLabel?.trim();
+  if (theme) return theme.slice(0, 20);
+  const industry = sig.industry?.trim();
+  if (industry) {
+    for (const [pattern, ko] of INDUSTRY_KO) if (pattern.test(industry)) return ko;
+    return industry.slice(0, 24);
+  }
+  return undefined;
 }
 
 function daysBetween(fromDate: string, today: string): number {
@@ -205,7 +249,54 @@ function krCloseAtOrBefore(front: StockFrontData, startedAt: string): number | n
   return picked ?? candles[0]?.close ?? null;
 }
 
-// ── 위원회 소견(등급 기반 결정론 — LLM 없음, 사실 게이트 자동 통과) ──────────
+/** 20일 평균 거래량(주식수). 캔들 부족이면 undefined. */
+function avg20Volume(front: StockFrontData): number | undefined {
+  const vols = (front.candles ?? []).map((c) => c.volume).filter((v) => typeof v === "number" && v > 0);
+  const window = vols.slice(-20);
+  if (window.length < 5) return undefined;
+  return window.reduce((a, b) => a + b, 0) / window.length;
+}
+
+/** 창 내 최장 연속 순매수 일수(현재 streak 이 최장인지 판정용). */
+function maxPositiveRun(nets: readonly number[]): number {
+  let best = 0;
+  let run = 0;
+  for (const net of nets) {
+    if (net > 0) { run += 1; best = Math.max(best, run); } else run = 0;
+  }
+  return best;
+}
+
+// ── 후보(신호 검출 결과) ────────────────────────────────────────────────
+interface SignalCandidate {
+  subject: QuietPickSubject;
+  kind: QuietPickSignalKind;
+  code: SignalTypeCode;
+  /** 주체 명사(조사 붙이기 전) — "내부자"/"외국인"/"기관"/"외국인·기관". */
+  actorNoun: string;
+  actors: string;
+  scale: string;
+  days: number;
+  startedAt: string;
+  /** US 는 공시가 신호가격, KR 은 캔들에서 확정. */
+  priceAtSignal?: number;
+  /** 당일 등락률 힌트(US=insider quote). front.signals.changePct 결측 시 폴백. */
+  changePctHint?: number;
+  baseStrength: number;
+  attentionKey: string;
+  // 이례성 원료(검출 단계에서 확보).
+  insiderCount?: number;
+  valueUsd?: number;
+  buyPrice?: number;
+  industry?: string;
+  /** KR: 창 내 순매수 총량(dominant investor). scale·규모 상대화용. */
+  streakSum?: number;
+  /** KR: 현재 streak 이 창 내 최장인가. */
+  isLongestStreak?: boolean;
+  streakWindowDays?: number;
+}
+
+// ── 위원회 등급(등급 기반 결정론 — 소견 문장은 fomo-core buildCommitteeVerdictLine) ──
 function timingGradeOf(verdict?: CardVerdict): "A" | "B" | "C" {
   if (!verdict) return "C";
   if (verdict.stance === "enter") return verdict.confidence === "high" ? "A" : "B";
@@ -218,38 +309,6 @@ function valuationGradeOf(score: number | null): "A" | "B" | "C" {
   if (score >= 70) return "A";
   if (score >= 50) return "B";
   return "C";
-}
-
-const TIMING_CLAUSE: Record<"A" | "B" | "C", string> = {
-  A: "자리 좋아요",
-  B: "자리 보통이에요",
-  C: "자리는 지켜봐야 해요",
-};
-const VALUATION_CLAUSE: Record<"A" | "B" | "C", string> = {
-  A: "밸류 매력 있어요",
-  B: "밸류 무난해요",
-  C: "밸류는 아쉬워요",
-};
-
-function committeeVerdictLine(timing: "A" | "B" | "C", valuation: "A" | "B" | "C"): string {
-  return `${TIMING_CLAUSE[timing]}, ${VALUATION_CLAUSE[valuation]}`;
-}
-
-// ── 후보(신호 검출 결과) ────────────────────────────────────────────────
-interface SignalCandidate {
-  subject: QuietPickSubject;
-  kind: QuietPickSignalKind;
-  code: SignalTypeCode;
-  actors: string;
-  scale: string;
-  days: number;
-  startedAt: string;
-  /** US 는 공시가 신호가격, KR 은 캔들에서 확정. */
-  priceAtSignal?: number;
-  /** 당일 등락률 힌트(US=insider quote). front.signals.changePct 결측 시 폴백. */
-  changePctHint?: number;
-  baseStrength: number;
-  attentionKey: string;
 }
 
 /** ① 조용한 돈 신호 — KR 기관·외인·다중 클러스터. */
@@ -267,10 +326,13 @@ function detectKrSignals(
     const instQualified = streak.institution >= STREAK_MIN_DAYS;
     if (!foreignQualified && !instQualified) continue;
 
-    const foreignSeries = flows.map((f) => ({ net: f.foreignNet, date: f.date }));
-    const instSeries = flows.map((f) => ({ net: f.institutionNet, date: f.date }));
-    const foreign = positiveStreak(foreignSeries);
-    const inst = positiveStreak(instSeries);
+    const foreignNets = flows.map((f) => f.foreignNet);
+    const instNets = flows.map((f) => f.institutionNet);
+    const foreign = positiveStreak(flows.map((f) => ({ net: f.foreignNet, date: f.date })));
+    const inst = positiveStreak(flows.map((f) => ({ net: f.institutionNet, date: f.date })));
+    const foreignLongest = foreign.days >= maxPositiveRun(foreignNets);
+    const instLongest = inst.days >= maxPositiveRun(instNets);
+    const window = flows.length;
     const subject: QuietPickSubject = {
       canonical: def.canonical,
       symbol: def.naverCode,
@@ -285,36 +347,48 @@ function detectKrSignals(
         subject,
         kind: "multi_cluster",
         code: "cluster_multi",
+        actorNoun: "외국인·기관",
         actors: "외국인·기관",
         scale: `${formatShares(foreign.sum + inst.sum)} 매집`,
         days: Math.min(foreign.days, inst.days),
         startedAt: foreign.startedAt < inst.startedAt ? inst.startedAt : foreign.startedAt,
         baseStrength: 300 + Math.min(foreign.days, inst.days) * 5,
         attentionKey: def.canonical,
+        streakSum: foreign.sum + inst.sum,
+        isLongestStreak: foreignLongest && instLongest,
+        streakWindowDays: window,
       });
     } else if (foreignQualified) {
       out.push({
         subject,
         kind: "foreign_streak",
         code: "foreign_streak",
+        actorNoun: "외국인",
         actors: "외국인",
         scale: formatShares(foreign.sum),
         days: foreign.days,
         startedAt: foreign.startedAt,
         baseStrength: 100 + foreign.days * 10,
         attentionKey: def.canonical,
+        streakSum: foreign.sum,
+        isLongestStreak: foreignLongest,
+        streakWindowDays: window,
       });
     } else {
       out.push({
         subject,
         kind: "institution_streak",
         code: "institution_streak",
+        actorNoun: "기관",
         actors: "기관",
         scale: formatShares(inst.sum),
         days: inst.days,
         startedAt: inst.startedAt,
         baseStrength: 100 + inst.days * 10,
         attentionKey: def.canonical,
+        streakSum: inst.sum,
+        isLongestStreak: instLongest,
+        streakWindowDays: window,
       });
     }
   }
@@ -339,6 +413,7 @@ function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], 
       },
       kind: "insider_cluster",
       code: "insider_cluster",
+      actorNoun: "내부자",
       actors: `내부자 ${c.insiderCount}명`,
       scale: formatUsd(c.valueUsd),
       days: daysBetween(c.tradeDate, today),
@@ -347,6 +422,10 @@ function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], 
       ...(typeof c.quote?.changePct === "number" ? { changePctHint: c.quote.changePct } : {}),
       baseStrength: 200 + c.insiderCount * 10 + Math.log10(Math.max(1, c.valueUsd)) * 5,
       attentionKey: c.companyName || c.symbol,
+      insiderCount: c.insiderCount,
+      valueUsd: c.valueUsd,
+      ...(typeof c.buyPrice === "number" ? { buyPrice: c.buyPrice } : {}),
+      ...(c.industry ? { industry: c.industry } : {}),
     });
   }
   return out;
@@ -381,12 +460,13 @@ export async function buildQuietPickResponse(options: {
   // ── 신호 검출(①) ──
   const krDefs = deps.vocab.filter((d) => d.naverCode && !d.marquee);
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, marketRows, attention, rankMap] = await Promise.all([
-    deps.readSupplyDemandHistoryByTickers(krCodes, 12).catch(() => ({} as Record<string, InvestorFlow[]>)),
+  const [histories, insiderRaw, marketRows, attention, rankMap, usRows] = await Promise.all([
+    deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW).catch(() => ({} as Record<string, InvestorFlow[]>)),
     deps.fetchInsiderClusterCandidates().catch(() => [] as InsiderClusterCandidate[]),
     deps.fetchKrMarketRows().catch(() => [] as KrMarketRow[]),
     deps.computeStockAttentionSignals().catch(() => ({} as Record<string, StockAttentionSignal>)),
-    deps.fetchMarketCapRankMap().catch(() => ({})),
+    deps.fetchMarketCapRankMap().catch(() => ({} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>)),
+    deps.fetchCachedUsMarketRows().catch(() => [] as KrMarketRow[]),
   ]);
 
   const krSignals = detectKrSignals(krDefs, histories);
@@ -396,6 +476,9 @@ export async function buildQuietPickResponse(options: {
   // ── 아직 조용함(②) — 값싼 사전 필터 ──
   const marketByCode = new Map(marketRows.filter((r) => r.naverCode).map((r) => [r.naverCode!, r]));
   const topTurnover = tradingValueTopRanks(marketRows, TRADING_VALUE_TOP_RANK);
+  // US 시총 맵(대형주 게이트 + 규모 상대화). symbol → marketCapUsd.
+  const usMcap = new Map<string, number>();
+  for (const r of usRows) if (r.symbol && typeof r.marketCapUsd === "number") usMcap.set(r.symbol.toUpperCase(), r.marketCapUsd);
 
   const quietCandidates = allSignals.filter((sig) => {
     const mention = attention[sig.attentionKey]?.mentionScore ?? 0;
@@ -405,6 +488,13 @@ export async function buildQuietPickResponse(options: {
       const changePct = row?.changePct;
       if (typeof changePct === "number" && Math.abs(changePct) >= MAX_ABS_CHANGE_PCT) { drop("changed_15"); return false; }
       if (sig.subject.naverCode && topTurnover.has(sig.subject.naverCode)) { drop("turnover_top20"); return false; }
+      // 대형주 제외 — 시총 순위 상위 N.
+      const rank = sig.subject.naverCode ? rankMap[sig.subject.naverCode]?.rank : undefined;
+      if (typeof rank === "number" && rank <= KR_MEGA_CAP_RANK) { drop("mega_cap"); return false; }
+    } else {
+      // US 대형주 제외($50B 초과) — Elevance 급 누출 차단.
+      const cap = sig.subject.symbol ? usMcap.get(sig.subject.symbol.toUpperCase()) : undefined;
+      if (typeof cap === "number" && cap > US_MEGA_CAP_USD) { drop("mega_cap"); return false; }
     }
     return true;
   });
@@ -467,8 +557,44 @@ export async function buildQuietPickResponse(options: {
     const valuationGrade = valuationGradeOf(score);
     const zone = front.wyckoff?.currentZone;
 
+    // ── 이례성 지표(WO-G1A2) — 보유 수치만. 하나도 없으면 후킹 없는 픽 → 발행 제외. ──
+    const avgVol = avg20Volume(front);
+    let volumePct: number | undefined;
+    let mcapPct: number | undefined;
+    if (sig.subject.country === "KR") {
+      if (avgVol && sig.streakSum && sig.days > 0) volumePct = ((sig.streakSum / sig.days) / avgVol) * 100;
+    } else {
+      const shares = sig.valueUsd && sig.buyPrice ? sig.valueUsd / sig.buyPrice : undefined;
+      if (avgVol && shares) volumePct = (shares / avgVol) * 100;
+      const cap = sig.subject.symbol ? usMcap.get(sig.subject.symbol.toUpperCase()) : undefined;
+      if (cap && sig.valueUsd) mcapPct = (sig.valueUsd / cap) * 100;
+    }
+    // US 빈도(지난 12개월 내부자 매수 건수) — 생존 후보만 조회(비용 큰 per-ticker fetch).
+    let priorBuys12mo: number | undefined;
+    if (sig.subject.country === "US" && sig.subject.symbol) {
+      priorBuys12mo = await deps.fetchInsiderPriorBuys(sig.subject.symbol).catch(() => undefined);
+    }
+    const mentionCount = attention[sig.attentionKey]?.mentionCount;
+    const facts: QuietPickAnomalyFacts = {
+      kind: sig.kind,
+      actorNoun: sig.actorNoun,
+      scale: sig.scale,
+      days: sig.days,
+      ...(typeof sig.insiderCount === "number" ? { insiderCount: sig.insiderCount } : {}),
+      ...(typeof priorBuys12mo === "number" ? { priorBuys12mo } : {}),
+      ...(typeof volumePct === "number" ? { volumePct } : {}),
+      ...(typeof mcapPct === "number" ? { mcapPct } : {}),
+      ...(typeof mentionCount === "number" ? { mentionCount } : {}),
+      ...(typeof front.signals.volumeRatio === "number" ? { volumeElevated: front.signals.volumeRatio >= 1 } : {}),
+      ...(typeof sig.isLongestStreak === "boolean" ? { isLongestStreak: sig.isLongestStreak } : {}),
+      ...(typeof sig.streakWindowDays === "number" ? { streakWindowDays: sig.streakWindowDays } : {}),
+    };
+    const anomalies = computeQuietPickAnomalies(facts);
+    if (anomalies.length === 0) { drop("no_anomaly"); continue; }
+    const identity = companyIdentity(front, sig);
+
     picks.push({
-      subject: sig.subject,
+      subject: { ...sig.subject, ...(identity ? { identity } : {}) },
       price: {
         current,
         ...(front.priceText ? { currentText: front.priceText } : {}),
@@ -485,7 +611,8 @@ export async function buildQuietPickResponse(options: {
         startedAt: sig.startedAt,
         strength: sig.baseStrength,
       },
-      hook: buildQuietPickHook({ kind: sig.kind, actors: sig.actors, scale: sig.scale, days: sig.days }),
+      hook: buildQuietPickHook(facts),
+      anomalies,
       invalidation: {
         level: invalidationLevel,
         text: front.verdict.invalidation ?? "무효선 계산에 캔들이 더 필요해요",
@@ -500,7 +627,7 @@ export async function buildQuietPickResponse(options: {
         committee: {
           timingGrade,
           valuationGrade,
-          verdict1line: committeeVerdictLine(timingGrade, valuationGrade),
+          verdict1line: buildCommitteeVerdictLine(anomalies, timingGrade, valuationGrade),
         },
       },
       companyScore: score,

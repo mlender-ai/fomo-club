@@ -37,12 +37,16 @@ function flows(foreignDays: number, instDays: number): InvestorFlow[] {
   return out;
 }
 
-function candles(): DailyOhlcv[] {
+function candlesVol(volume: number): DailyOhlcv[] {
   const out: DailyOhlcv[] = [];
   for (let i = 0; i < 80; i += 1) {
-    out.push({ date: `2026${String(5 + Math.floor(i / 31)).padStart(2, "0")}${String((i % 31) + 1).padStart(2, "0")}`, open: 1000, high: 1010, low: 990, close: 1000, volume: 100_000 });
+    out.push({ date: `2026${String(5 + Math.floor(i / 31)).padStart(2, "0")}${String((i % 31) + 1).padStart(2, "0")}`, open: 1000, high: 1010, low: 990, close: 1000, volume });
   }
   return out;
+}
+
+function candles(): DailyOhlcv[] {
+  return candlesVol(100_000);
 }
 
 function score(value: number): CompanyScoreResult {
@@ -82,6 +86,9 @@ interface Scenario {
   histories: Record<string, InvestorFlow[]>;
   insiders: InsiderClusterCandidate[];
   fronts: Record<string, StockFrontData>;
+  priorBuys?: number;
+  usRows?: KrMarketRow[];
+  rankMap?: Record<string, { market: string; rank: number }>;
 }
 
 function depsFrom(s: Scenario): Partial<QuietPickDeps> {
@@ -91,10 +98,15 @@ function depsFrom(s: Scenario): Partial<QuietPickDeps> {
     computeStockAttentionSignals: async () => s.attention,
     fetchKrMarketRows: async () => s.marketRows,
     fetchInsiderClusterCandidates: async () => s.insiders,
-    fetchMarketCapRankMap: async () => ({}),
+    fetchInsiderPriorBuys: async () => s.priorBuys ?? 2,
+    fetchCachedUsMarketRows: async () => s.usRows ?? [],
+    fetchMarketCapRankMap: async () => (s.rankMap ?? {}) as Awaited<ReturnType<QuietPickDeps["fetchMarketCapRankMap"]>>,
     assembleStockFront: async (stock: string) => s.fronts[stock] ?? frontFor("1,000원", 1),
   };
 }
+
+const usRow = (symbol: string, marketCapUsd: number): KrMarketRow =>
+  ({ canonical: symbol, symbol, changePct: 1, marketCapUsd } as unknown as KrMarketRow);
 
 const quietRow = (naverCode: string, changePct: number, tradingValue: number): KrMarketRow =>
   ({ canonical: naverCode, symbol: naverCode, naverCode, changePct, tradingValue } as unknown as KrMarketRow);
@@ -189,7 +201,10 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
     const pick = res.picks.find((p) => p.subject.canonical === "BigCluster Inc")!;
     expect(pick.signal.actors).toBe("내부자 3명");
     expect(pick.signal.scale).toBe("$4.6M");
-    expect(pick.hook).toContain("$4.6M");
+    // 훅은 이례성으로 시작(실수치 포함) — 절대 규모가 아니라 "이례성"이 후킹.
+    expect(pick.anomalies.length).toBeGreaterThanOrEqual(1);
+    expect(pick.hook.startsWith(pick.anomalies[0]!.text)).toBe(true);
+    expect(/\d/.test(pick.hook)).toBe(true);
   });
 
   it("억지 충원 금지: 자격 통과가 적으면 그 수만큼만 발행", async () => {
@@ -245,5 +260,67 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s), priorPickKeys: priorKeys });
     expect(res.picks.map((p) => p.subject.canonical)).not.toContain("조용외인");
     expect(res.qualification.drops.stale_repeat).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("buildQuietPickResponse — 이례성·시총 상한(WO-G1A2)", () => {
+  it("전 픽에 이례성 지표 ≥1 + 훅이 이례성으로 시작", async () => {
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(baseScenario()) });
+    expect(res.picks.length).toBeGreaterThan(0);
+    for (const p of res.picks) {
+      expect(p.anomalies.length).toBeGreaterThanOrEqual(1);
+      expect(p.hook.startsWith(p.anomalies[0]!.text)).toBe(true);
+    }
+  });
+
+  it("이례성 지표가 하나도 없으면 발행 제외(no_anomaly)", async () => {
+    const s = baseScenario();
+    // 조용외인: 신호는 있으나 규모 미미(초대형 거래량)·화제 있음·streak 최장 아님 → 지표 0.
+    s.histories["111111"] = [
+      // 최신 3일 순매수 + 그 앞 6일 순매수(더 긴 과거 run) → 현재가 최장 아님.
+      ...[20, 19, 18].map((d) => ({ date: `2026-07-${d}`, foreignNet: 30_000, institutionNet: -5_000 })),
+      { date: "2026-07-17", foreignNet: -5_000, institutionNet: -5_000 },
+      ...[16, 15, 14, 13, 12, 11].map((d) => ({ date: `2026-07-${d}`, foreignNet: 30_000, institutionNet: -5_000 })),
+    ];
+    s.attention["조용외인"] = quietAttention(40); // 화제 있음(뉴스 0 아님)
+    s.fronts["조용외인"] = { ...frontFor("1,000원", 1), candles: candlesVol(100_000_000), signals: { changePct: 1, volumeRatio: 1.2, mentionCount: 40 } };
+    // 다중클러스터도 제거해 픽 0 확인.
+    s.histories["222222"] = flows(1, 1);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("조용외인");
+    expect(res.qualification.drops.no_anomaly).toBeGreaterThanOrEqual(1);
+  });
+
+  it("US 대형주($50B 초과)는 조용함 게이트에서 컷", async () => {
+    const s = baseScenario();
+    s.attention["Elevance Health"] = quietAttention(5);
+    s.insiders = [
+      { symbol: "ELV", companyName: "Elevance Health", insiderCount: 2, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 1_400_000, buyPrice: 389, industry: "Insurance" },
+    ];
+    s.usRows = [usRow("ELV", 90_000_000_000)];
+    s.fronts["Elevance Health"] = frontFor("$389", -1);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("Elevance Health");
+    expect(res.qualification.drops.mega_cap).toBeGreaterThanOrEqual(1);
+  });
+
+  it("KR 시총 상위 100위 이내는 조용함 게이트에서 컷", async () => {
+    const s = baseScenario();
+    s.rankMap = { "111111": { market: "KOSDAQ", rank: 50 } };
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("조용외인");
+    expect(res.qualification.drops.mega_cap).toBeGreaterThanOrEqual(1);
+  });
+
+  it("회사 정체 한 줄: 산업명 → 한국어 매핑(US)", async () => {
+    const s = baseScenario();
+    s.attention["Small Bank Corp"] = quietAttention(5);
+    s.insiders = [
+      { symbol: "SBC", companyName: "Small Bank Corp", insiderCount: 5, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 2_000_000, buyPrice: 20, industry: "Savings Institutions" },
+    ];
+    s.fronts["Small Bank Corp"] = frontFor("$21", 1);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    const pick = res.picks.find((p) => p.subject.canonical === "Small Bank Corp");
+    expect(pick?.subject.identity).toBe("은행");
   });
 });

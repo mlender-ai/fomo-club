@@ -141,6 +141,49 @@ function cellHasEnough(cells: RegExpMatchArray | null): cells is RegExpMatchArra
   return Boolean(cells && cells.length >= 13);
 }
 
+/**
+ * 종목별 "지난 12개월 내부자 매수 건수"(빈도 이례성용, WO-G1A2). 최근 N일(현재 클러스터)은 제외한
+ * baseline — "지난 1년 2건뿐인데 이번에 16명" 서사의 분모. openinsider screener 재사용(새 소스 아님).
+ * 실패/무결과면 undefined(가짜 금지 — 지표 생략).
+ */
+export async function fetchInsiderPriorBuys(
+  symbol: string,
+  excludeRecentDays = 14
+): Promise<number | undefined> {
+  const sym = symbol.trim().toUpperCase();
+  if (!/^[A-Z][A-Z.]{0,5}$/.test(sym)) return undefined;
+  const url = `http://openinsider.com/screener?s=${encodeURIComponent(sym)}&fd=365&xp=1&xs=0&cnt=500&sortcol=0&page=1`;
+  const html = await fetchText(url, UA);
+  if (html === null) return undefined; // 네트워크 실패 → 지표 생략(0 으로 둔갑 금지)
+  return parseTickerPriorPurchases(html, excludeRecentDays);
+}
+
+/**
+ * openinsider screener/종목 페이지 파싱 → [1년 전, 최근 excludeRecentDays일 전) 구간의 '매수(P)' 행 수.
+ * 16열: [1]Filing [2]Trade [3]Ticker [4]Insider [5]Title [6]TradeType [7]Price [8]Qty ... [11]Value.
+ * 클러스터 테이블과 열 인덱스가 다르므로 전용 파서. 결과 0이면 tinytable 부재 → 0.
+ */
+function parseTickerPriorPurchases(html: string, excludeRecentDays: number): number {
+  const tableMatch = html.match(/<table[^>]*class="tinytable"[^>]*>([\s\S]*?)<\/table>/i);
+  if (!tableMatch) return 0;
+  const rows = (tableMatch[1] ?? "").match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) ?? [];
+  const now = Date.now();
+  const upper = now - excludeRecentDays * 86_400_000;
+  const lower = now - 365 * 86_400_000;
+  let count = 0;
+  for (const rowHtml of rows) {
+    const cellMatches = rowHtml.match(/<td[^>]*>[\s\S]*?<\/td>/gi);
+    if (!cellHasEnough(cellMatches)) continue;
+    const cells = cellMatches.map((c) => stripTags(c));
+    if (!/purchase/i.test(cells[6] ?? "")) continue; // [6] TradeType
+    const trade = isoDate(cells[2]); // [2] Trade date
+    const t = trade ? Date.parse(`${trade}T00:00:00Z`) : NaN;
+    if (!Number.isFinite(t) || t < lower || t >= upper) continue;
+    count += 1;
+  }
+  return count;
+}
+
 function filingAgeDays(filingDate: string): number | undefined {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(filingDate)) return undefined;
   const filed = Date.parse(`${filingDate}T00:00:00Z`);
