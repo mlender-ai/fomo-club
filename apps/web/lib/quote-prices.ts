@@ -9,6 +9,7 @@ import { readCoinMarketSnapshots } from "./coin-market-source";
 import { readKrCandleCache } from "./kr-candle-cache";
 import { fetchStockDaily } from "./stock-front";
 import { fetchNasdaqDailyCandles } from "./us-market-source";
+import { usSymbolForStock } from "./us-symbols";
 
 const YAHOO_HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
 const YAHOO_UA =
@@ -26,11 +27,17 @@ export interface QuoteRequestItem {
 export function yahooSymbolFor(item: QuoteRequestItem): string | null {
   const rawSymbol = item.symbol?.trim().toUpperCase();
   if (item.country === "US" || item.market === "NASDAQ" || item.market === "NYSE") {
-    return rawSymbol || item.stock.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "");
+    if (rawSymbol) return rawSymbol;
+    // WO-P1 — symbol 유실 레코드는 한글명으로 티커 역해석(성적표·outcome 채점이 조용히 비지 않게).
+    const resolved = usSymbolForStock(item.stock);
+    if (resolved) return resolved.toUpperCase();
+    return item.stock.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "") || null;
   }
   const code = item.naverCode?.trim() || (/^\d{6}$/.test(rawSymbol ?? "") ? rawSymbol : "");
   if (code && item.market === "KOSDAQ") return `${code}.KQ`;
   if (code && item.market === "KOSPI") return `${code}.KS`;
+  const resolved = usSymbolForStock(item.stock);
+  if (resolved) return resolved.toUpperCase();
   return null;
 }
 

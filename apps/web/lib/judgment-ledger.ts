@@ -598,7 +598,7 @@ export async function readUserHistory(actors: readonly `user:${string}`[], take 
       base.firstSeenAt = row.ts.getTime();
       base.firstSeenPrice = row.priceAt.toNumber();
     }
-    for (const field of ["firstSeenPriceText", "companyScoreLabel", "naverCode", "market", "country", "sector", "reason"] as const) {
+    for (const field of ["firstSeenPriceText", "companyScoreLabel", "naverCode", "symbol", "market", "country", "sector", "reason"] as const) {
       if (typeof payload[field] === "string" && payload[field]) (base as unknown as Record<string, unknown>)[field] = payload[field];
     }
     if (typeof payload.companyScore === "number") base.companyScore = payload.companyScore;

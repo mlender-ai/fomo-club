@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withCors } from "../../../../lib/fomo";
 import { assembleStockFront } from "../../../../lib/stock-front";
+import { usSymbolForStock } from "../../../../lib/us-symbols";
 import type { StockCountry, StockMarket } from "@fomo/core";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +30,19 @@ interface PriceResponseItem {
 function yahooSymbolFor(item: PriceRequestItem): string | null {
   const rawSymbol = item.symbol?.trim().toUpperCase();
   if (item.country === "US" || item.market === "NASDAQ" || item.market === "NYSE") {
-    return rawSymbol || item.stock.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "");
+    if (rawSymbol) return rawSymbol;
+    // WO-P1 — 넘긴 카드가 symbol 없이 적재된 레코드("현재가 없음"의 원인): 한글 종목명으로 티커 역해석.
+    const resolved = usSymbolForStock(item.stock);
+    if (resolved) return resolved.toUpperCase();
+    const ascii = item.stock.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "");
+    return ascii || null;
   }
   const code = item.naverCode?.trim() || (/^\d{6}$/.test(rawSymbol ?? "") ? rawSymbol : "");
   if (code && item.market === "KOSDAQ") return `${code}.KQ`;
   if (code && item.market === "KOSPI") return `${code}.KS`;
+  // 국적·시장 정보가 유실된 레코드 — 한글명이 미국주 큐레이션에 있으면 US 로 취급(듀오링고·루시드 등).
+  const resolved = usSymbolForStock(item.stock);
+  if (resolved) return resolved.toUpperCase();
   return null;
 }
 
@@ -117,14 +126,16 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { items?: PriceRequestItem[] };
     const items = Array.isArray(body.items) ? body.items.slice(0, MAX_ITEMS) : [];
+    // WO-P1 — 심볼 역해석에 실패해도 항목을 버리지 않는다(그게 "현재가 없음"의 직접 원인이었다).
+    // 종목명 기반 stock-front 폴백까지 시도한 뒤에만 포기한다.
     const jobs = items
-      .map((item) => ({ item, yahooSymbol: yahooSymbolFor(item) }))
-      .filter((job): job is { item: PriceRequestItem; yahooSymbol: string } => !!job.yahooSymbol && !!job.item.stock);
+      .filter((item) => !!item.stock)
+      .map((item) => ({ item, yahooSymbol: yahooSymbolFor(item) }));
 
     const rows = await mapLimit(jobs, 5, async ({ item, yahooSymbol }): Promise<PriceResponseItem | null> => {
-      const price = (await fetchYahooPrice(yahooSymbol)) ?? (await fetchStockFrontFallback(item));
+      const price = (yahooSymbol ? await fetchYahooPrice(yahooSymbol) : null) ?? (await fetchStockFrontFallback(item));
       if (!price) return null;
-      return { stock: item.stock, yahooSymbol, ...price };
+      return { stock: item.stock, yahooSymbol: yahooSymbol ?? item.stock, ...price };
     });
 
     const prices = Object.fromEntries(
