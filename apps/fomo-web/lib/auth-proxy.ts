@@ -16,6 +16,8 @@ const ALLOWED_PROXY_REQUESTS = new Map<string, ReadonlySet<string>>([
   ["ledger/review", new Set(["GET"])],
   ["ledger/timeline", new Set(["GET"])],
   ["track-record", new Set(["GET"])],
+  ["track-record/picks", new Set(["GET"])],
+  ["quiet-picks", new Set(["GET"])],
   ["stock-front", new Set(["GET"])],
   ["emotions/calendar", new Set(["GET"])],
   ["emotions/link", new Set(["POST"])],
