@@ -42,7 +42,7 @@ function summary(entry: LedgerTimelineEntry): string {
     const score = typeof payload.score === "number" ? `${payload.score}점` : "점수 기록";
     return `${score}${typeof payload.label === "string" ? ` · ${payload.label}` : ""}`;
   }
-  if (entry.kind === "selection") return "오늘의 30장에 선정";
+  if (entry.kind === "selection") return entry.payload.pickType === "quiet" ? "조용한 픽으로 선정" : "오늘의 30장에 선정";
   if (entry.kind === "user_action") {
     const action = payload.action;
     return action === "seen" ? "처음 봄" : action === "pass" ? "넘김" : action === "star" ? "관심에 담음" : "상세 확인";
@@ -50,6 +50,11 @@ function summary(entry: LedgerTimelineEntry): string {
   const days = typeof payload.windowDays === "number" ? `${payload.windowDays}일` : "고정창";
   const value = typeof payload.returnPct === "number" ? `${payload.returnPct > 0 ? "+" : ""}${payload.returnPct.toFixed(1)}%` : "";
   return `${days} 성과 ${value}`.trim();
+}
+
+function kindLabel(entry: LedgerTimelineEntry): string {
+  if (entry.kind === "selection" && entry.payload.pickType === "quiet") return "조용한 픽";
+  return KIND_LABEL[entry.kind];
 }
 
 function signalTypes(entry: LedgerTimelineEntry): SignalTypeCode[] {
@@ -106,7 +111,7 @@ export function JudgmentTimeline({ canonical }: { canonical: string }) {
                   <span aria-hidden className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[9px]" style={{ borderColor: style.color }}>
                     {style.icon}
                   </span>
-                  {KIND_LABEL[entry.kind]}
+                  {kindLabel(entry)}
                 </p>
                 <p className="mt-0.5 font-number text-[10px] text-muted">{entry.date.slice(5)}</p>
               </div>
