@@ -142,6 +142,34 @@ export async function fetchTrackRecord(): Promise<TrackRecordResponse> {
   return res.json() as Promise<TrackRecordResponse>;
 }
 
+export interface ScorecardPickReturn {
+  returnPct: number;
+  evaluationDate: string;
+}
+export interface ScorecardPick {
+  canonical: string;
+  symbol?: string;
+  naverCode?: string;
+  market?: string;
+  country?: string;
+  date: string;
+  priceAt: number;
+  hook?: string;
+  pickType?: string;
+  signalTypes: string[];
+  returns: Record<"7" | "30" | "90", ScorecardPickReturn | null>;
+}
+export interface ScorecardPicksResponse {
+  generatedAt: string;
+  picks: ScorecardPick[];
+}
+
+export async function fetchScorecardPicks(): Promise<ScorecardPicksResponse> {
+  const res = await fetch("/api/fomo/track-record/picks", { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET /api/fomo/track-record/picks ${res.status}`);
+  return res.json() as Promise<ScorecardPicksResponse>;
+}
+
 export async function fetchLedgerTimeline(canonical: string): Promise<{
   entries: LedgerTimelineEntry[];
   signalHistory30: Record<string, TrackMetric>;

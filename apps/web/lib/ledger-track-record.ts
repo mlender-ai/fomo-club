@@ -260,3 +260,79 @@ export async function getCachedTrackRecord(): Promise<TrackRecordResponse> {
   });
   return load();
 }
+
+// ── 성적표 픽 리스트(WO-G1C ②) — 최신순 픽별 당시가·수익률·당시 훅 ──────────────
+export interface ScorecardPickReturn {
+  returnPct: number;
+  evaluationDate: string;
+}
+export interface ScorecardPick {
+  canonical: string;
+  symbol?: string;
+  naverCode?: string;
+  market?: string;
+  country?: string;
+  date: string;
+  priceAt: number;
+  /** 그때 뭐라 했는지 박제된 훅(payload.headline). */
+  hook?: string;
+  pickType?: string;
+  signalTypes: SignalTypeCode[];
+  /** 7/30/90일 고정 창 수익률(도래·채점된 창만; 미도래는 null). */
+  returns: Record<TrackWindow, ScorecardPickReturn | null>;
+}
+
+export interface ScorecardPicksResponse {
+  generatedAt: string;
+  picks: ScorecardPick[];
+}
+
+/** 최신 final selection 별로 당시가·훅·창별 수익률을 조립. 하락 포함(체리픽 없음). */
+export async function readScorecardPicks(limit = 80): Promise<ScorecardPicksResponse> {
+  const fromDate = addDays(kstDate(), -120);
+  const [selections, outcomeRows] = await Promise.all([
+    readLedgerSelections({ fromDate, take: 3_000 }),
+    prisma.judgmentLedger.findMany({
+      where: { kind: "outcome", actor: { in: ["engine", "backfill"] }, date: { gte: fromDate } },
+      select: { payload: true },
+      take: 30_000,
+    }),
+  ]);
+  const bySelection = new Map<string, Map<TrackWindow, ScorecardPickReturn>>();
+  for (const row of outcomeRows) {
+    const outcome = asOutcome(row.payload);
+    if (!outcome) continue;
+    const windows = bySelection.get(outcome.selectionId) ?? new Map<TrackWindow, ScorecardPickReturn>();
+    windows.set(outcome.windowDays, { returnPct: outcome.returnPct, evaluationDate: outcome.evaluationDate });
+    bySelection.set(outcome.selectionId, windows);
+  }
+  const picks: ScorecardPick[] = selections.slice(0, limit).map((selection) => {
+    const windows = bySelection.get(selection.id);
+    return {
+      canonical: selection.subject.canonical,
+      ...(selection.subject.symbol ? { symbol: selection.subject.symbol } : {}),
+      ...(selection.payload.naverCode ? { naverCode: selection.payload.naverCode } : {}),
+      ...(selection.payload.market ? { market: selection.payload.market } : {}),
+      ...(selection.payload.country ? { country: selection.payload.country } : {}),
+      date: selection.date,
+      priceAt: selection.priceAt,
+      ...(selection.payload.headline ? { hook: selection.payload.headline } : {}),
+      ...(selection.payload.pickType ? { pickType: selection.payload.pickType } : {}),
+      signalTypes: selection.payload.signalTypes,
+      returns: {
+        7: windows?.get(7) ?? null,
+        30: windows?.get(30) ?? null,
+        90: windows?.get(90) ?? null,
+      },
+    };
+  });
+  return { generatedAt: new Date().toISOString(), picks };
+}
+
+export async function getCachedScorecardPicks(): Promise<ScorecardPicksResponse> {
+  const load = unstable_cache(() => readScorecardPicks(80), ["judgment-ledger-scorecard-picks", cacheVersion()], {
+    revalidate: 60 * 60,
+    tags: ["judgment-ledger"],
+  });
+  return load();
+}
