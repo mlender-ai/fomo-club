@@ -61,6 +61,9 @@ describe("computeQuietPickAnomalies — 보유 수치로 이례성 언어화", (
   it("규모: 하루 거래량 대비·시총 대비", () => {
     const a = computeQuietPickAnomalies({ kind: "foreign_streak", actorNoun: "외국인", actors: "외국인", scale: "27만주", days: 5, volumePct: 40 });
     expect(a.some((x) => x.kind === "scale" && x.text.includes("40%"))).toBe(true);
+    // 100% 초과는 '배'로(522% 같은 비현실 % 방지).
+    const big = computeQuietPickAnomalies({ kind: "insider_cluster", actorNoun: "내부자", actors: "내부자 4명", scale: "$9M", days: 3, insiderCount: 4, priorBuys12mo: 30, volumePct: 522 });
+    expect(big.some((x) => x.kind === "scale" && x.text.includes("5배") && !x.text.includes("522"))).toBe(true);
     const b = computeQuietPickAnomalies({ kind: "insider_cluster", actorNoun: "내부자", actors: "내부자 3명", scale: "$9M", days: 3, insiderCount: 3, priorBuys12mo: 30, mcapPct: 3.2 });
     expect(b.some((x) => x.kind === "scale" && x.text.includes("시총의 3.2%"))).toBe(true);
   });

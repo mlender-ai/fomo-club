@@ -87,12 +87,15 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
     else if (f.insiderCount >= 4) out.push({ kind: "participants", strength: 2.8, text: `내부자 ${f.insiderCount}명이 함께 샀어요` });
   }
 
-  // ① 규모 상대화.
+  // ① 규모 상대화. 100% 초과는 %가 아니라 '배'로(초유동성 마이크로캡에서 522% 같은 비현실 표기 방지).
   if (typeof f.volumePct === "number" && f.volumePct >= 20) {
+    const magnitude = f.volumePct >= 100
+      ? `하루 거래량의 ${Math.round(f.volumePct / 100)}배를`
+      : `하루 거래량의 ${Math.round(f.volumePct)}%를`;
     out.push({
       kind: "scale",
       strength: f.volumePct >= 40 ? 3.2 : 2.2,
-      text: `${iGa(f.actorNoun)} 하루 거래량의 ${Math.round(f.volumePct)}%를 사들였어요`,
+      text: `${iGa(f.actorNoun)} ${magnitude} 사들였어요`,
     });
   }
   if (typeof f.mcapPct === "number" && f.mcapPct >= 1) {
