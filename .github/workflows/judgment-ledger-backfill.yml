@@ -1,0 +1,66 @@
+name: Judgment Ledger Backfill (manual)
+
+# WO-G1C 백필 집행 — 수동 워크플로. 실행 자체가 산출물(로그를 PR 본문에 첨부).
+# ① migrate: 과거 daily30-picks 스냅샷 → 불변 selection(actor=backfill, ts=원본, priceAt) 적재(멱등).
+# ② outcome 채점은 백엔드 크론(/api/fomo/cron/ledger-outcomes)으로 구동 —
+#    과거 7/30/90일 시세 재조회는 Vercel egress·프리웜 캔들 캐시가 있어야 성공한다
+#    (GH Actions tsx 직접 실행은 시세 egress 미확보라 priced:0). daily-30 시세가 나오는 그 환경을 쓴다.
+# ③ verify + /track-record overall n 실측 출력.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: judgment-ledger-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+
+      - name: Apply append-only ledger schema (idempotent)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma db execute --file prisma/sql/2026-07-20_judgment_ledger.sql --schema prisma/schema.prisma
+
+      - name: Backfill immutable selections (append-only, idempotent)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/migrate-judgment-ledger.ts
+
+      - name: Materialize outcomes via backend (Vercel egress + prewarmed caches)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          BASE="https://fomo-club-backend.vercel.app"
+          AUTH=()
+          if [ -n "${CRON_SECRET:-}" ]; then AUTH=(-H "Authorization: Bearer ${CRON_SECRET}"); fi
+          for i in $(seq 1 10); do
+            echo "== outcome round $i =="
+            resp=$(curl -fsS --max-time 300 "${AUTH[@]}" "$BASE/api/fomo/cron/ledger-outcomes") || { echo "round failed"; break; }
+            echo "$resp"
+            keep=$(printf '%s' "$resp" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log((j.appended>0 && j.due>0)?"1":"0")}catch{console.log("0")}})')
+            if [ "$keep" != "1" ]; then echo "no more due/priced — stop"; break; fi
+            sleep 3
+          done
+
+      - name: Track-record overall n (proof)
+        run: |
+          set -euo pipefail
+          curl -fsS "https://fomo-club-backend.vercel.app/api/fomo/track-record" > /tmp/tr.json
+          node -e 'const j=require("/tmp/tr.json"); const rows=(j.windows||[]).map(w=>({days:w.days,n:w.overall.n,winRate:w.overall.winRate,median:w.overall.medianReturn})); console.log(JSON.stringify(rows,null,2)); const maxN=Math.max(0,...rows.map(r=>r.n)); console.log("MAX_OVERALL_N="+maxN); if(maxN<1){console.log("::warning title=track-record::overall n is still 0")}'
+
+      - name: Verify backfill (selections + sample + resume badges)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/verify-ledger-backfill.ts
