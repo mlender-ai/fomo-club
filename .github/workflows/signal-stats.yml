@@ -1,0 +1,73 @@
+name: Signal Stats Backtest (monthly)
+
+# WO-P2 §1 — 신호 성적 백테스트. "내부자 매수하면 무조건 오르나?"에 카드가 답할 근거를 만든다.
+# 유형별로 과거 12개월 동일 신호를 역산해 7/30일 승률·중앙값·표본수를 산출하고
+# `signal-stats:{type}`(FeedContentCache)에 저장한다. 원장 실적이 n≥30 이 되면 카드가 실전 성적으로 자동 교체.
+#
+# 백엔드(Vercel)에서 도는 이유: openinsider·Nasdaq·네이버 시세 egress 가 거기서만 열린다
+# (judgment-ledger-backfill.yml 주석의 "GH Actions tsx 직접 실행은 시세 egress 미확보" 와 동일 제약).
+# 한 번 호출당 유니버스 일부(청크)만 처리하므로 done 이 나올 때까지 반복 호출한다.
+on:
+  schedule:
+    - cron: "0 21 1 * *" # 매월 1일 06:00 KST
+  workflow_dispatch:
+    inputs:
+      reset:
+        description: "진행 상태를 버리고 처음부터 재산출(월간 갱신)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: signal-stats
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run backtest chunks until done (per signal type)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RESET: ${{ github.event.inputs.reset || 'true' }}
+        run: |
+          set -euo pipefail
+          BASE="https://fomo-club-backend.vercel.app"
+          AUTH=()
+          if [ -n "${CRON_SECRET:-}" ]; then AUTH=(-H "Authorization: Bearer ${CRON_SECRET}"); fi
+
+          for TYPE in insider_cluster institution_streak foreign_streak; do
+            echo "===== $TYPE ====="
+            RESET_Q=""
+            if [ "${RESET}" = "true" ]; then RESET_Q="&reset=1"; fi
+            for i in $(seq 1 12); do
+              resp=$(curl -fsS --max-time 300 "${AUTH[@]}" "$BASE/api/fomo/cron/signal-stats?type=$TYPE&limit=24${RESET_Q}") || { echo "round $i failed"; break; }
+              echo "$resp"
+              RESET_Q="" # reset 은 첫 라운드에만
+              done_flag=$(printf '%s' "$resp" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.done?"1":"0")}catch{console.log("1")}})')
+              if [ "$done_flag" = "1" ]; then echo "$TYPE done"; break; fi
+              sleep 2
+            done
+          done
+
+      - name: Print stored signal stats (proof)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          BASE="https://fomo-club-backend.vercel.app"
+          curl -fsS "$BASE/api/fomo/signal-stats" > /tmp/stats.json || echo '{}' > /tmp/stats.json
+          node -e '
+            const j = require("/tmp/stats.json");
+            const rows = Object.values(j.stats || {}).map(s => ({
+              type: s.type, source: s.source,
+              n30: s.horizons?.["30"]?.n ?? null,
+              winRate: s.horizons?.["30"]?.winRate ?? null,
+              median: s.horizons?.["30"]?.medianReturn ?? null,
+              downRate: s.horizons?.["30"]?.downRate ?? null,
+            }));
+            console.log(JSON.stringify(rows, null, 2));
+            if (rows.length === 0) console.log("::warning title=signal-stats::no stats stored yet (표본 부족이면 카드는 블록을 숨긴다)");
+          '

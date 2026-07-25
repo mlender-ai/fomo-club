@@ -16,5 +16,6 @@ export * from "./verdict";
 export * from "./wyckoff-analysis";
 export * from "./company-score";
 export * from "./signal-resume";
+export * from "./signal-backtest";
 export * from "./quiet-money";
 export * from "./quiet-pick-hook";
