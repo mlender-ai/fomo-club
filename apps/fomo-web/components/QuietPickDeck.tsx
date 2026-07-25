@@ -6,6 +6,7 @@ import { fetchQuietPicks, recordTaste } from "@/lib/fomoApi";
 import { upsertWatch } from "@/lib/watchlist";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
+import { QuietPickDepth } from "@/components/QuietPickDepth";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
@@ -228,32 +229,7 @@ export function QuietPickDeck() {
         />
       )}
 
-      {selected && (
-        <StockInsightView
-          stock={selected.subject.canonical}
-          context={{
-            ...(selected.subject.symbol ? { symbol: selected.subject.symbol } : {}),
-            ...(selected.subject.naverCode ? { naverCode: selected.subject.naverCode } : {}),
-            ...(selected.subject.market ? { market: selected.subject.market } : {}),
-            ...(selected.subject.country ? { country: selected.subject.country } : {}),
-            pickCommittee: {
-              verdict1line: selected.conviction.committee.verdict1line,
-              timingGrade: selected.conviction.committee.timingGrade,
-              valuationGrade: selected.conviction.committee.valuationGrade,
-            },
-            priceSeed: {
-              priceText: selected.price.currentText ?? selected.price.current.toLocaleString("en-US"),
-              ...(typeof selected.price.changePct === "number"
-                ? {
-                    changeText: `${selected.price.changePct > 0 ? "+" : ""}${selected.price.changePct.toFixed(1)}%`,
-                    changeDir: selected.price.changePct > 0 ? "up" : selected.price.changePct < 0 ? "down" : "flat",
-                  }
-                : {}),
-            },
-          }}
-          onClose={() => setSelected(null)}
-        />
-      )}
+      {selected && <QuietPickDepth pick={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
