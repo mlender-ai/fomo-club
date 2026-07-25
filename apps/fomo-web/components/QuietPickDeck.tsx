@@ -2,14 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuietPick, QuietWatchItem } from "@/lib/fomoApi";
-import { fetchQuietPicks } from "@/lib/fomoApi";
+import { fetchQuietPicks, recordTaste } from "@/lib/fomoApi";
+import { upsertWatch } from "@/lib/watchlist";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
  * 오늘의 조용한 픽 덱 (WO-G1B 피벗 2호) — 홈의 얼굴.
- * 틴더 스와이프 유지. 30장 통합 덱·자산 탭 없음. 픽 0장인 날은 정직 화면(무리해서 고르지 않는다).
+ * 틴더 스와이프: **좌=넘김 / 우=관심(저장+취향 적재) / 탭=뎁스**(WO-P2 §3 복원).
+ * 30장 통합 덱·자산 탭 없음. 픽 0장인 날은 정직 화면(무리해서 고르지 않는다).
+ *
+ * iOS(특히 standalone PWA)는 touch-action 이 pan-y 면 가로 드래그를 스크롤·뒤로가기 제스처로
+ * 가로채 pointermove 가 오지 않는다 → 카드에 touchAction:"none" 을 준다(스와이프 불능 회귀 방지).
  */
 
 const THRESHOLD = 90;
@@ -48,16 +53,33 @@ export function QuietPickDeck() {
 
   useEffect(() => { load(); }, [load]);
 
-  const advance = useCallback((dir: "left" | "right") => {
-    setExiting(dir);
-    const after = () => {
-      setExiting(null);
-      setDx(0);
-      setIdx((i) => i + 1);
-    };
-    if (prefersReducedMotion()) after();
-    else window.setTimeout(after, EXIT_MS);
-  }, []);
+  // 진행 중 전환 타이머 — 언마운트 후 발화하면 사라진 덱에서 setState 가 돈다.
+  const exitTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (exitTimer.current) window.clearTimeout(exitTimer.current); }, []);
+
+  const advance = useCallback(
+    (dir: "left" | "right", pick?: QuietPick) => {
+      // 우스와이프 = 관심: 로컬 관심 목록에 저장 + 취향 신호 적재(넘김도 신호다).
+      if (pick) {
+        if (dir === "right") {
+          upsertWatch(pick.subject.canonical, Date.now(), {
+            ...(pick.subject.identity ? { sector: pick.subject.identity } : {}),
+            reason: pick.hook,
+          });
+        }
+        recordTaste("stock", pick.subject.canonical, dir === "right" ? "more" : "less");
+      }
+      setExiting(dir);
+      const after = () => {
+        setExiting(null);
+        setDx(0);
+        setIdx((i) => i + 1);
+      };
+      if (prefersReducedMotion()) after();
+      else exitTimer.current = window.setTimeout(after, EXIT_MS);
+    },
+    []
+  );
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (exiting) return;
@@ -75,8 +97,9 @@ export function QuietPickDeck() {
   const onPointerUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
-    if (dx > THRESHOLD) advance("right");
-    else if (dx < -THRESHOLD) advance("left");
+    const pick = picks[idx];
+    if (dx > THRESHOLD) advance("right", pick);
+    else if (dx < -THRESHOLD) advance("left", pick);
     else setDx(0);
   };
 
@@ -154,8 +177,13 @@ export function QuietPickDeck() {
           </div>
         )}
         <div
-          className="absolute inset-0 touch-pan-y rounded-3xl border border-hairline bg-[#14161c] p-5"
-          style={{ transform, transition: exiting ? `transform ${EXIT_MS}ms ease-in` : dragging.current ? "none" : "transform 160ms ease-out", cursor: "grab" }}
+          className="absolute inset-0 rounded-3xl border border-hairline bg-[#14161c] p-5"
+          style={{
+            transform,
+            transition: exiting ? `transform ${EXIT_MS}ms ease-in` : dragging.current ? "none" : "transform 160ms ease-out",
+            cursor: "grab",
+            touchAction: "none", // iOS PWA 가로 드래그 가로채기 방지(스와이프 불능 회귀)
+          }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -165,12 +193,27 @@ export function QuietPickDeck() {
           tabIndex={0}
           aria-label={`${current.subject.canonical} 자세히 보기`}
         >
+          {/* 드래그 스탬프 — 어느 쪽으로 놓으면 뭐가 되는지 즉시 보이게(틴더 감각). */}
+          <span
+            className="pointer-events-none absolute right-5 top-5 z-20 rounded-lg border-2 px-2 py-0.5 text-sm font-bold"
+            style={{ color: "var(--neon,#d8ff3a)", borderColor: "var(--neon,#d8ff3a)", opacity: Math.max(0, Math.min(1, dx / THRESHOLD)) }}
+            aria-hidden
+          >
+            관심 →
+          </span>
+          <span
+            className="pointer-events-none absolute left-5 top-5 z-20 rounded-lg border-2 px-2 py-0.5 text-sm font-bold"
+            style={{ color: "#8b8f98", borderColor: "#8b8f98", opacity: Math.max(0, Math.min(1, -dx / THRESHOLD)) }}
+            aria-hidden
+          >
+            ← 넘김
+          </span>
           <QuietPickCard pick={current} progress={`${idx + 1}/${picks.length}`} />
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-3 pb-2">
-        <button type="button" onClick={() => advance("left")} className="rounded-full border border-hairline px-5 py-2 text-sm text-muted">넘기기</button>
+        <button type="button" onClick={() => advance("left", current)} className="rounded-full border border-hairline px-5 py-2 text-sm text-muted">넘기기</button>
         <button type="button" onClick={() => setSelected(current)} className="rounded-full px-5 py-2 text-sm font-semibold text-black" style={{ backgroundColor: "var(--neon,#d8ff3a)" }}>자세히</button>
         <span className="ml-1 text-xs text-muted">{remaining}곳 남음</span>
       </div>

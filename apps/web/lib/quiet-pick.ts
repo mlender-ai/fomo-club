@@ -26,6 +26,8 @@ import {
   type QuietPickSignalKind,
   type QuietPickAnomaly,
   type QuietPickAnomalyFacts,
+  buildSignalStatsCopy,
+  type SignalStats,
 } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
@@ -39,6 +41,7 @@ import { fetchDartInsiderPurchasesByStock, type DartDisclosureHit } from "./dart
 import { writeUsCandleCache } from "./us-candle-cache";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
+import { readSignalStatsForCards } from "./signal-stats";
 
 /** discovery-supply 가 이름을 export 하지 않으므로 반환 타입에서 파생(구조적). */
 export type KrMarketRow = Awaited<ReturnType<typeof fetchKrMarketRows>>[number];
@@ -186,7 +189,35 @@ export interface QuietPick {
   dataQuality: QuietPickDataQuality;
   /** 유동성 경고(WO-P4) — 하한은 넘었지만 얇은 종목. 숨기지 않고 카드에 표기한다. */
   liquidityNote?: string;
+  /**
+   * 이 신호의 과거 성적(WO-P2 §2) — 승률·중앙값·하락비율 세트. 카드가 "무조건 오르나?"에 답하는 근거.
+   * 통계가 없는 유형이면 필드 자체가 없다 → 카드는 블록을 통째로 숨긴다(빈 껍데기 금지).
+   */
+  signalStats?: SignalStatsCard;
   qualifiedAt: string;
+}
+
+/** 카드에 실리는 신호 성적(표시에 필요한 값만 — 원본 SignalStats 의 30일 지평 축약). */
+export interface SignalStatsCard {
+  /** 표본 수. */
+  n: number;
+  /** 오른 건수 / 승률(%). */
+  up: number;
+  winRate: number;
+  /** 내린 건수 / 하락 비율(%) — 상승만 말하지 않기 위한 필수 짝. */
+  down: number;
+  downRate: number;
+  /** 수익률 중앙값(%). */
+  medianReturn: number;
+  /** 채점 지평(거래일). */
+  windowDays: number;
+  /** "과거 데이터 역산" | "우리 실전 기록". */
+  sourceLabel: string;
+  /** 방법론 한 줄(정직 규칙 ②). */
+  method: string;
+  /** 카드 문구 — 승률+하락이 한 문장 세트. */
+  headline: string;
+  detail: string;
 }
 
 /** 지켜보는 중 미달 사유 코드(WO-P4) — 유저어 문구는 reasonText. */
@@ -763,6 +794,11 @@ export async function buildQuietPickResponse(options: {
   const drops: Record<string, number> = {};
   const drop = (reason: string) => { drops[reason] = (drops[reason] ?? 0) + 1; };
 
+  // 신호 성적(WO-P2 §2) — 유형별 (원장 n≥30 ? 실전 : 백테스트). 없으면 카드가 블록을 숨긴다.
+  const signalStatsMap: Partial<Record<SignalTypeCode, SignalStats>> = await readSignalStatsForCards(date).catch(
+    () => ({}) as Partial<Record<SignalTypeCode, SignalStats>>
+  );
+
   // ── 신호 검출(①) ──
   const krDefs = deps.vocab.filter((d) => d.naverCode && !d.marquee);
   const krCodes = krDefs.map((d) => d.naverCode!);
@@ -1042,6 +1078,28 @@ export async function buildQuietPickResponse(options: {
       ...(typeof krTradingValue === "number" && krTradingValue < KR_THIN_TRADING_VALUE
         ? { liquidityNote: `거래가 얇아요 (일 ${formatWon(krTradingValue)})` }
         : {}),
+      ...(() => {
+        // "이런 신호, 과거엔 어땠나" — 승률·중앙값·하락비율을 한 세트로 실어 보낸다.
+        const stats = signalStatsMap[sig.code];
+        const copy = buildSignalStatsCopy(stats ?? null);
+        const h = stats?.horizons[30] ?? stats?.horizons[7];
+        if (!stats || !copy || !h) return {};
+        return {
+          signalStats: {
+            n: h.n,
+            up: h.up,
+            winRate: h.winRate,
+            down: h.down,
+            downRate: h.downRate,
+            medianReturn: h.medianReturn,
+            windowDays: stats.horizons[30] ? 30 : 7,
+            sourceLabel: copy.sourceLabel,
+            method: copy.method,
+            headline: copy.headline,
+            detail: copy.detail,
+          },
+        };
+      })(),
       qualifiedAt: date,
     });
   }

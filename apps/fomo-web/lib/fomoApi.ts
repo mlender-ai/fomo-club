@@ -800,7 +800,7 @@ export interface DiscoveryUpdatedDetail {
   discovery: DiscoveryResponse;
 }
 
-const DISCOVERY_CACHE_VERSION = "v6-headline-safety";
+const DISCOVERY_CACHE_VERSION = "v7-signal-stats";
 const discoveryKey = (country: DiscoveryCountryScope = "KR") =>
   `discovery:today:${DISCOVERY_CACHE_VERSION}:${country}:${kstDateKey()}`;
 const discoveryStorageKey = (country: DiscoveryCountryScope = "KR") =>
@@ -1073,7 +1073,24 @@ export interface QuietPick {
   companyScore: number | null;
   /** 유동성 경고(WO-P4) — 하한은 넘었지만 얇은 종목. */
   liquidityNote?: string;
+  /** 이 신호의 과거 성적(WO-P2) — 없으면 카드가 블록을 숨긴다. */
+  signalStats?: QuietPickSignalStats;
   qualifiedAt: string;
+}
+
+/** "이런 신호, 과거엔 어땠나" — 승률·중앙값·하락비율 세트(상승만 말하지 않는다). */
+export interface QuietPickSignalStats {
+  n: number;
+  up: number;
+  winRate: number;
+  down: number;
+  downRate: number;
+  medianReturn: number;
+  windowDays: number;
+  sourceLabel: string;
+  method: string;
+  headline: string;
+  detail: string;
 }
 /** 지켜보는 중(WO-P4) — 신호 있으나 픽 기준 미달. 픽 승격 아님. */
 export interface QuietWatchItem {

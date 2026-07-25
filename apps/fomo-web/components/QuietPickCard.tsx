@@ -6,6 +6,7 @@ import { chartTokens } from "@/lib/chartTokens";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
 
 /**
  * 카드 v3 (WO-G1B) — 한 장 = 발굴 + 증거 + 계약.
@@ -40,6 +41,13 @@ export function displayName(pick: QuietPick): string {
   return cleaned.length >= 3 ? cleaned : raw;
 }
 
+/** 화면에 병기할 티커 — US 는 심볼, KR 은 6자리 종목코드. 없으면 undefined. */
+function ticker(pick: QuietPick): string | undefined {
+  const symbol = pick.subject.symbol?.trim();
+  if (pick.subject.country === "US") return symbol || undefined;
+  return pick.subject.naverCode?.trim() || (symbol && /^\d{6}$/.test(symbol) ? symbol : undefined);
+}
+
 function daysChip(pick: QuietPick): string {
   const d = pick.signal.days;
   if (pick.signal.kind === "insider_cluster") return d > 0 ? `최근 ${d}일` : "최근";
@@ -72,16 +80,24 @@ export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: 
     <div className="flex h-full min-h-0 flex-col">
       {/* 1행 — 종목명(긴 이름 말줄임) · 티커 · 시장태그 · 관심 */}
       <div className="flex shrink-0 items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="text-xl" aria-hidden>{marketTag(pick)}</span>
-            <span className="truncate text-2xl font-bold text-whiteout">{displayName(pick)}</span>
-          </div>
-          <div className="mt-0.5 flex items-center gap-1.5 font-pixel text-xs text-muted">
-            {/* 티커 — 유저가 검색·매수하러 갈 때 필수(WO-P1). */}
-            {pick.subject.country === "US" && pick.subject.symbol && <span>{pick.subject.symbol}</span>}
-            {pick.subject.country === "US" && pick.subject.symbol && pick.subject.identity && <span aria-hidden>·</span>}
-            {pick.subject.identity && <span>{pick.subject.identity}</span>}
+        <div className="flex min-w-0 items-center gap-2">
+          {/* 로고(WO-P2 §3 복원) — KR 네이버 프록시 / US parqet, 실패 시 이니셜. */}
+          <StockLogoBadge
+            name={displayName(pick)}
+            naverCode={pick.subject.naverCode}
+            symbol={pick.subject.symbol}
+          />
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="text-xl" aria-hidden>{marketTag(pick)}</span>
+              <span className="truncate text-2xl font-bold text-whiteout">{displayName(pick)}</span>
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5 font-pixel text-xs text-muted">
+              {/* 티커 병기 — US 는 심볼, KR 은 종목코드(검색·매수 이동에 필수, WO-P2 §3). */}
+              {ticker(pick) && <span>{ticker(pick)}</span>}
+              {ticker(pick) && pick.subject.identity && <span aria-hidden>·</span>}
+              {pick.subject.identity && <span>{pick.subject.identity}</span>}
+            </div>
           </div>
         </div>
         <button
@@ -133,6 +149,21 @@ export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: 
           {pick.signal.actors} {pick.signal.scale}
         </span>
       </div>
+
+      {/* ── 이런 신호, 과거엔 어땠나 ── (WO-P2 §2)
+          승률 + 하락 확률 + 무효선 연결을 한 세트로. 통계 없으면 블록 통째 숨김(빈 껍데기 금지). */}
+      {pick.signalStats && (
+        <div className="mt-3 shrink-0 rounded-lg border border-hairline-soft bg-white/[0.03] px-3 py-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[10px] font-semibold text-muted">이런 신호, 과거엔 어땠나</span>
+            <span className="text-[10px] text-muted">{pick.signalStats.sourceLabel}</span>
+          </div>
+          <p className="mt-1 text-sm font-semibold leading-5 text-whiteout">{pick.signalStats.headline}</p>
+          <p className="mt-0.5 text-[12px] leading-5 text-muted">
+            {pick.signalStats.detail} — 그래서 아래 무효선이 있어요
+          </p>
+        </div>
+      )}
 
       {/* 스파크라인 30일 + 신호 시작점 ◆ */}
       {series.length >= 2 && (
