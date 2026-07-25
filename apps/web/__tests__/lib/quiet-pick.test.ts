@@ -50,6 +50,15 @@ function candles(): DailyOhlcv[] {
   return candlesVol(100_000);
 }
 
+/** 52주 저점에서 멀고 거래량이 평탄한 시리즈 — near_low·vacuum 이례성을 의도적으로 비활성. */
+function candlesNoAnomaly(volume = 100_000_000): DailyOhlcv[] {
+  return Array.from({ length: 260 }, (_, i) => {
+    const day = new Date(Date.UTC(2025, 6, 1) + i * 86_400_000);
+    const close = i < 40 ? 300 : 1000; // 초반 저점 300 → 현재 1000(저점 대비 +233%)
+    return { date: day.toISOString().slice(0, 10).replace(/-/g, ""), open: close, high: close + 10, low: close - 10, close, volume };
+  });
+}
+
 function score(value: number): CompanyScoreResult {
   return { score: value, status: "ready", label: "평가 라벨", interpretation: "결론·근거·관전", axes: [], axisStates: [], availableAxisCount: 5, omittedAxes: [] };
 }
@@ -90,6 +99,7 @@ interface Scenario {
   priorBuys?: number;
   usRows?: KrMarketRow[];
   rankMap?: Record<string, { market: string; rank: number }>;
+  dartInsiders?: Record<string, unknown>;
 }
 
 function depsFrom(s: Scenario): Partial<QuietPickDeps> {
@@ -105,6 +115,8 @@ function depsFrom(s: Scenario): Partial<QuietPickDeps> {
     assembleStockFront: async (stock: string) => s.fronts[stock] ?? frontFor("1,000원", 1),
     // 봉인은 DB 라 테스트에서는 주입된 길이를 그대로 돌려준다(병합 없음).
     writeUsCandleCache: async (_symbol: string, candles: readonly DailyOhlcv[]) => candles.length,
+    fetchDartInsiderPurchasesByStock: async () =>
+      (s.dartInsiders ?? {}) as Awaited<ReturnType<QuietPickDeps["fetchDartInsiderPurchasesByStock"]>>,
   };
 }
 
@@ -259,8 +271,9 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
 
   it("신선도: 어제와 같은 종목·같은 신호 시작이면 제외", async () => {
     const s = baseScenario();
-    const priorKeys = new Set<string>(["조용외인#2026-07-17"]); // 4일 streak 시작일
-    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s), priorPickKeys: priorKeys });
+    // 어제 픽과 같은 신호(변화 0) → 순수 반복이라 제외.
+    const priorPicks = new Map([["조용외인", { startedAt: "2026-07-17", days: 4, scale: "12만주" }]]);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s), priorPicks });
     expect(res.picks.map((p) => p.subject.canonical)).not.toContain("조용외인");
     expect(res.qualification.drops.stale_repeat).toBeGreaterThanOrEqual(1);
   });
@@ -286,7 +299,7 @@ describe("buildQuietPickResponse — 이례성·시총 상한(WO-G1A2)", () => {
       ...[16, 15, 14, 13, 12, 11].map((d) => ({ date: `2026-07-${d}`, foreignNet: 30_000, institutionNet: -5_000 })),
     ];
     s.attention["조용외인"] = quietAttention(40); // 화제 있음(뉴스 0 아님)
-    s.fronts["조용외인"] = { ...frontFor("1,000원", 1), candles: candlesVol(100_000_000), signals: { changePct: 1, volumeRatio: 1.2, mentionCount: 40 } };
+    s.fronts["조용외인"] = { ...frontFor("1,000원", 1), candles: candlesNoAnomaly(), signals: { changePct: 1, volumeRatio: 1.2, mentionCount: 40 } };
     // 다중클러스터도 제거해 픽 0 확인.
     s.histories["222222"] = flows(1, 1);
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
@@ -377,5 +390,90 @@ describe("buildQuietPickResponse — 데이터 완결성 게이트(WO-P1)", () =
       expect(pick.subject.identity).not.toMatch(/[A-Za-z]{4,}/);
       if (pick.subject.country === "US") expect(pick.dataQuality.ticker).toBe(true);
     }
+  });
+});
+
+describe("buildQuietPickResponse — 게이트 재교정 + 2단 구조(WO-P4)", () => {
+  it("유동성 3억~10억은 픽 + '거래가 얇아요' 표기(10억 컷은 자기모순이었다)", async () => {
+    const s = baseScenario();
+    s.marketRows = s.marketRows.map((row) =>
+      row.naverCode === "111111" ? ({ ...row, tradingValue: 500_000_000 } as KrMarketRow) : row
+    );
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    const pick = res.picks.find((p) => p.subject.canonical === "조용외인");
+    expect(pick).toBeDefined();
+    expect(pick!.liquidityNote).toContain("거래가 얇아요");
+  });
+
+  it("3억 미만은 픽 대신 '지켜보는 중'으로 — 사유를 유저어로 표기", async () => {
+    const s = baseScenario();
+    s.marketRows = s.marketRows.map((row) =>
+      row.naverCode === "111111" ? ({ ...row, tradingValue: 120_000_000 } as KrMarketRow) : row
+    );
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("조용외인");
+    const watch = res.watching.find((w) => w.subject.canonical === "조용외인");
+    expect(watch?.reasonCode).toBe("illiquid");
+    expect(watch?.reasonText).toContain("거래가 너무 얇아요");
+    expect(watch?.reasonText).toMatch(/\d/); // 수치까지 표기
+  });
+
+  it("US 대형주 조건부: 소액 2명(Elevance급)은 지켜보는 중, 내부자 5명+는 픽", async () => {
+    const base = baseScenario();
+    base.attention["Elevance Health"] = quietAttention(5);
+    base.attention["MegaCap Insiders"] = quietAttention(5);
+    base.insiders = [
+      { symbol: "ELV", companyName: "Elevance Health", insiderCount: 2, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 1_400_000, buyPrice: 389, industry: "Insurance" },
+      { symbol: "MEGA", companyName: "MegaCap Insiders", insiderCount: 6, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 3_000_000, buyPrice: 100, industry: "State Commercial Banks" },
+    ];
+    base.usRows = [usRow("ELV", 90_000_000_000), usRow("MEGA", 80_000_000_000)];
+    base.fronts["Elevance Health"] = frontFor("$389", -1);
+    base.fronts["MegaCap Insiders"] = frontFor("$100", 1);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(base) });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("Elevance Health");
+    expect(res.watching.find((w) => w.subject.canonical === "Elevance Health")?.reasonCode).toBe("mega_cap");
+    // 임원진 대거 매수(6명)는 대형주라도 통과 — "대형주라 무조건 제외"가 아니다.
+    expect(res.picks.map((p) => p.subject.canonical)).toContain("MegaCap Insiders");
+  });
+
+  it("신호 강화 시 재등장 — 'N일째 계속, 어제보다 …' 진행 문구", async () => {
+    const s = baseScenario();
+    // 어제는 3일째였고 오늘 4일째 → 강화.
+    const priorPicks = new Map([["조용외인", { startedAt: "2026-07-17", days: 3, scale: "9만주" }]]);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s), priorPicks });
+    const pick = res.picks.find((p) => p.subject.canonical === "조용외인");
+    expect(pick).toBeDefined();
+    expect(pick!.signal.progress).toContain("일째 계속");
+  });
+
+  it("DART 내부자 장내매수가 픽 후보로 올라온다(KR 내부자 신호 신설)", async () => {
+    const s = baseScenario();
+    s.histories["555555"] = flows(0, 0); // 수급 신호는 없는 종목
+    s.dartInsiders = {
+      무신호: {
+        ticker: "무신호",
+        label: "임원·주요주주가 3.2억원 규모 취득 신고",
+        source: "DART 내부자 공시",
+        asOf: "2026-07-19",
+        insiderPurchase: { ownerRole: "임원·주요주주", shares: 40_000, price: 8_000, value: 320_000_000, transactionDate: "2026-07-19" },
+      },
+    };
+    s.fronts["무신호"] = frontFor("1,000원", 1);
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    const pick = res.picks.find((p) => p.subject.canonical === "무신호");
+    expect(pick).toBeDefined();
+    expect(pick!.signal.code).toBe("insider_cluster");
+    expect(pick!.signal.scale).toContain("억원");
+  });
+
+  it("지켜보는 중은 최대 10곳 · 품질 실패 후보는 선반에도 오르지 않는다", async () => {
+    const s = baseScenario();
+    // 품질 실패(캔들 부족) 후보를 화제성 초과로도 만들어 둔다 → 선반에 오르면 안 됨.
+    s.attention["화제종목"] = quietAttention(95);
+    s.fronts["화제종목"] = { ...frontFor("1,000원", 1), candles: candlesVol(100_000, 20) };
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    expect(res.watching.length).toBeLessThanOrEqual(10);
+    expect(res.watching.map((w) => w.subject.canonical)).not.toContain("화제종목");
+    expect(res.qualification.watching).toBe(res.watching.length);
   });
 });

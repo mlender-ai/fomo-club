@@ -1052,6 +1052,9 @@ export interface QuietPick {
     priceAtSignal: number;
     startedAt: string;
     strength: number;
+    insiderCount?: number;
+    /** 신호 강화 재등장 문구(WO-P4). */
+    progress?: string;
   };
   hook: string;
   anomalies: QuietPickAnomaly[];
@@ -1068,12 +1071,24 @@ export interface QuietPick {
     };
   };
   companyScore: number | null;
+  /** 유동성 경고(WO-P4) — 하한은 넘었지만 얇은 종목. */
+  liquidityNote?: string;
   qualifiedAt: string;
 }
+/** 지켜보는 중(WO-P4) — 신호 있으나 픽 기준 미달. 픽 승격 아님. */
+export interface QuietWatchItem {
+  subject: QuietPick["subject"];
+  signal: { kind: QuietPickSignalKind; code: string; actors: string; scale: string; days: number };
+  price?: { current?: number; currentText?: string; changePct?: number };
+  reasonCode: string;
+  reasonText: string;
+}
+
 export interface QuietPicksResponse {
   asOf: string;
   date: string;
   picks: QuietPick[];
+  watching?: QuietWatchItem[];
   qualification?: unknown;
   source: string;
 }

@@ -34,6 +34,7 @@ import { fetchKrMarketRows } from "./discovery-supply";
 import { fetchInsiderClusterCandidates, fetchInsiderPriorBuys, type InsiderClusterCandidate } from "./insider-source";
 import { fetchCachedUsMarketRows } from "./us-market-source";
 import { usDiscoverySeedForSymbol } from "./us-symbols";
+import { fetchDartInsiderPurchasesByStock, type DartDisclosureHit } from "./dart-disclosures";
 import { writeUsCandleCache } from "./us-candle-cache";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
@@ -66,12 +67,30 @@ const MAX_CUMULATIVE_SINCE_SIGNAL_PCT = 30;
  * 후에도 200일 미확보면 그 종목은 탈락 — 무료 소스에 없는 이력을 만들어낼 방법은 없다.
  */
 const MIN_CANDLES = 200;
-/** 유동성 하한(KR 일 거래대금 10억원). */
-const KR_MIN_TRADING_VALUE = 1_000_000_000;
-/** 조용함 게이트: US 시총 상한($50B 초과=대형주, 정의상 조용할 수 없음 — Elevance 누출 차단). */
+/**
+ * 유동성 하한(WO-P4) — 3억원. 10억이었을 때 오늘 신호 17개 중 12개가 여기서 죽었다.
+ * "조용한 종목"을 찾으면서 "거래 적은 종목"을 자르는 자기모순이었다. 개인 기준 일 3억이면 매매 가능.
+ */
+const KR_MIN_TRADING_VALUE = 300_000_000;
+/** 이 미만은 픽 가능하되 카드에 "거래가 얇아요"를 표기한다(숨기지 않고 알린다). */
+const KR_THIN_TRADING_VALUE = 1_000_000_000;
+/** 대형주 판정선. 초과분은 '이진 컷'이 아니라 아래 조건부 통과 규칙을 적용한다. */
 const US_MEGA_CAP_USD = 50_000_000_000;
-/** 조용함 게이트: KR 시총 순위 상위 N 제외(대형주는 조용할 수 없음). */
+/** 대형주 조건부 통과 — 매수액이 시총의 이 % 이상이면 이례적이라 통과. */
+const MEGA_CAP_MIN_MCAP_PCT = 0.05;
+/** 대형주 조건부 통과 — 내부자 이 인원 이상이면 임원진 대거 매수라 통과. */
+const MEGA_CAP_MIN_INSIDERS = 5;
+/** 조용함 게이트: KR 시총 순위 상위 N(대형주). KR 도 조건부 — 다중 주체·규모 이례성이면 통과. */
 const KR_MEGA_CAP_RANK = 100;
+/** DART 내부자 장내매수 최소 규모(원) — 소액 신고 노이즈 컷. */
+const DART_INSIDER_MIN_VALUE = 50_000_000;
+/** 수급 전환 신호: 직전 N일 누적 순매도 → 최근 M일 순매수 전환. */
+const REVERSAL_LOOKBACK_DAYS = 20;
+const REVERSAL_CONFIRM_DAYS = 3;
+/** 지켜보는 중 선반 최대 노출(WO-P4). */
+export const QUIET_WATCH_MAX = 10;
+/** 프론트 조립 상한(크론 비용) — 강도순 상위만. 초과분은 로그로 남긴다(조용한 truncation 금지). */
+const MAX_FRONT_ASSEMBLIES = 60;
 /** KR 최장 streak 비교에 쓰는 조회 창(거래일). */
 const KR_STREAK_WINDOW = 40;
 /** 하루 최대 픽 수(미달이면 그 수만큼 — 억지 충원 금지). */
@@ -114,6 +133,13 @@ export interface QuietPickSignal {
   startedAt: string;
   /** 정렬용 신호 강도(다중 > 내부자 > 단일 streak). */
   strength: number;
+  /** 내부자 인원(US 클러스터) — 강화 재등장 판정에 쓴다. */
+  insiderCount?: number;
+  /**
+   * 신호 강화 재등장 문구(WO-P4) — 어제 픽과 같은 신호가 **더 강해졌을 때만** 채운다.
+   * 예 "5일째 계속 — 어제보다 2명 늘었어요". 순수 반복(변화 0)은 픽에서 제외된다.
+   */
+  progress?: string;
 }
 
 export interface QuietPickInvalidation {
@@ -149,7 +175,31 @@ export interface QuietPick {
   companyScore: number | null;
   /** 데이터 완결성 게이트 로그(WO-P1). */
   dataQuality: QuietPickDataQuality;
+  /** 유동성 경고(WO-P4) — 하한은 넘었지만 얇은 종목. 숨기지 않고 카드에 표기한다. */
+  liquidityNote?: string;
   qualifiedAt: string;
+}
+
+/** 지켜보는 중 미달 사유 코드(WO-P4) — 유저어 문구는 reasonText. */
+export type QuietWatchReasonCode =
+  | "illiquid"
+  | "mega_cap"
+  | "ran_30_since_signal"
+  | "changed_15"
+  | "mention_hot"
+  | "turnover_top20";
+
+/**
+ * 지켜보는 중(WO-P4) — 신호는 실재하는데 픽 자격 ②에 못 미친 후보.
+ * 간이 카드용 최소 정보만 담는다(픽 승격이 아니라 별도 선반).
+ */
+export interface QuietWatchItem {
+  subject: QuietPickSubject;
+  signal: Pick<QuietPickSignal, "kind" | "code" | "actors" | "scale" | "days">;
+  price?: { current?: number; currentText?: string; changePct?: number };
+  reasonCode: QuietWatchReasonCode;
+  /** 유저어 미달 사유 — "거래가 얇아요 (일 1.2억)" 처럼 수치까지. 이 섹션의 존재 이유다. */
+  reasonText: string;
 }
 
 /** 자격 통과·탈락 근거 로그(억지 충원 없음 검증용). */
@@ -161,6 +211,8 @@ export interface QuietPickQualification {
   afterQuiet: number;
   afterQuality: number;
   published: number;
+  /** 지켜보는 중 선반 노출 수(WO-P4). */
+  watching: number;
   drops: Record<string, number>;
 }
 
@@ -168,6 +220,8 @@ export interface QuietPickResponse {
   asOf: string;
   date: string;
   picks: QuietPick[];
+  /** 2단 구조 하단 선반(WO-P4) — 신호 있으나 픽 기준 미달. 픽 승격 아님. */
+  watching: QuietWatchItem[];
   qualification: QuietPickQualification;
   source: string;
 }
@@ -185,6 +239,8 @@ export interface QuietPickDeps {
   assembleStockFront: typeof assembleStockFront;
   /** 픽 시점 캔들 봉인(WO-P1) — 병합 후 확보된 길이를 돌려준다. */
   writeUsCandleCache: typeof writeUsCandleCache;
+  /** KR 내부자 장내매수 공시(WO-P4 신호망 확장). */
+  fetchDartInsiderPurchasesByStock: typeof fetchDartInsiderPurchasesByStock;
 }
 
 const defaultDeps: QuietPickDeps = {
@@ -198,6 +254,7 @@ const defaultDeps: QuietPickDeps = {
   fetchMarketCapRankMap,
   assembleStockFront,
   writeUsCandleCache,
+  fetchDartInsiderPurchasesByStock,
 };
 
 // ── 수치 포매터(실측만) ────────────────────────────────────────────────
@@ -205,6 +262,14 @@ function formatShares(shares: number): string {
   const abs = Math.abs(Math.round(shares));
   if (abs >= 10_000) return `${Math.round(abs / 10_000).toLocaleString("en-US")}만주`;
   return `${abs.toLocaleString("en-US")}주`;
+}
+
+/** 원화 규모 — "4.6억원" / "3,200만원". 실값만. */
+function formatWon(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 100_000_000) return `${(abs / 100_000_000).toFixed(1)}억원`;
+  if (abs >= 10_000) return `${Math.round(abs / 10_000).toLocaleString("ko-KR")}만원`;
+  return `${Math.round(abs).toLocaleString("ko-KR")}원`;
 }
 
 function formatUsd(value: number): string {
@@ -318,6 +383,31 @@ function avg20Volume(front: StockFrontData): number | undefined {
   return window.reduce((a, b) => a + b, 0) / window.length;
 }
 
+/**
+ * 거래량 진공 비율(WO-P4) — 최근 20일 평균 ÷ 그 앞 60일 평균. 0.6 이하면 "거래가 말라 있었다".
+ * 캔들만으로 계산(보유 데이터). 표본 부족이면 undefined(가짜 수치 금지).
+ */
+function volumeVacuumRatio(front: StockFrontData): number | undefined {
+  const vols = (front.candles ?? []).map((c) => c.volume).filter((v) => typeof v === "number" && v > 0);
+  if (vols.length < 80) return undefined;
+  const recent = vols.slice(-20);
+  const prior = vols.slice(-80, -20);
+  if (recent.length < 20 || prior.length < 40) return undefined;
+  const avg = (list: number[]) => list.reduce((a, b) => a + b, 0) / list.length;
+  const priorAvg = avg(prior);
+  if (priorAvg <= 0) return undefined;
+  return avg(recent) / priorAvg;
+}
+
+/** 52주 저점 대비 현재가 위치(%) — 캔들 보유분으로 계산. */
+function pctAboveYearLow(front: StockFrontData, current: number): number | undefined {
+  const lows = (front.candles ?? []).slice(-260).map((c) => c.low).filter((v) => typeof v === "number" && v > 0);
+  if (lows.length < 200) return undefined;
+  const low = Math.min(...lows);
+  if (!(low > 0)) return undefined;
+  return ((current - low) / low) * 100;
+}
+
 /** 창 내 최장 연속 순매수 일수(현재 streak 이 최장인지 판정용). */
 function maxPositiveRun(nets: readonly number[]): number {
   let best = 0;
@@ -355,6 +445,11 @@ interface SignalCandidate {
   /** KR: 현재 streak 이 창 내 최장인가. */
   isLongestStreak?: boolean;
   streakWindowDays?: number;
+  /** KR DART 내부자 매수 주식수·금액(원). */
+  insiderShares?: number;
+  insiderValueKrw?: number;
+  /** 수급 전환 신호인가(streak 이 아니라 방향 전환). */
+  isReversal?: boolean;
 }
 
 // ── 위원회 등급(등급 기반 결정론 — 소견 문장은 fomo-core buildCommitteeVerdictLine) ──
@@ -456,6 +551,102 @@ function detectKrSignals(
   return out;
 }
 
+/**
+ * ① 조용한 돈 신호 — KR DART 내부자 장내매수(WO-P4 신호망 확장, 새 소스 0).
+ * 임원·주요주주 특정증권등 소유상황보고서의 장내매수를 규모 하한으로 걸러 픽 후보로 올린다.
+ */
+function detectDartInsiderSignals(
+  vocab: readonly StockDef[],
+  hits: Record<string, DartDisclosureHit>,
+  today: string
+): SignalCandidate[] {
+  const byCanonical = new Map(vocab.map((def) => [def.canonical, def]));
+  const out: SignalCandidate[] = [];
+  for (const [canonical, hit] of Object.entries(hits)) {
+    const def = byCanonical.get(canonical);
+    const purchase = hit.insiderPurchase;
+    if (!def?.naverCode || def.marquee || !purchase) continue;
+    const value = purchase.value;
+    const shares = purchase.shares;
+    if (!value && !shares) continue; // 규모 미상 신고는 후보에서 제외(가짜 수치 금지)
+    if (typeof value === "number" && value < DART_INSIDER_MIN_VALUE) continue;
+    const startedAt = purchase.transactionDate || hit.asOf;
+    out.push({
+      subject: {
+        canonical,
+        symbol: def.naverCode,
+        naverCode: def.naverCode,
+        market: def.market,
+        country: "KR",
+      },
+      kind: "insider_cluster",
+      code: "insider_cluster",
+      actorNoun: "내부자",
+      actors: purchase.ownerRole || "임원·주요주주",
+      scale: typeof value === "number" ? formatWon(value) : formatShares(shares ?? 0),
+      days: Math.max(1, daysBetween(startedAt, today)),
+      startedAt,
+      baseStrength: 210 + (typeof value === "number" ? Math.log10(Math.max(1, value)) * 4 : 0),
+      attentionKey: canonical,
+      ...(typeof shares === "number" ? { insiderShares: shares } : {}),
+      ...(typeof value === "number" ? { insiderValueKrw: value } : {}),
+    });
+  }
+  return out;
+}
+
+/**
+ * ① 조용한 돈 신호 — KR 기관·외인 순매수 전환(WO-P4). 20일 누적 순매도 → 최근 3일 순매수.
+ * 방향 전환은 streak 보다 이른 신호라 "아직 조용한" 구간을 더 많이 잡는다.
+ */
+function detectFlowReversalSignals(
+  vocab: readonly StockDef[],
+  histories: Record<string, InvestorFlow[]>,
+  today: string
+): SignalCandidate[] {
+  const out: SignalCandidate[] = [];
+  for (const def of vocab) {
+    if (!def.naverCode || def.marquee) continue;
+    const flows = histories[def.naverCode];
+    if (!flows || flows.length < REVERSAL_LOOKBACK_DAYS) continue;
+    const recent = flows.slice(0, REVERSAL_CONFIRM_DAYS); // store 는 최신순
+    const prior = flows.slice(REVERSAL_CONFIRM_DAYS, REVERSAL_LOOKBACK_DAYS);
+    if (recent.length < REVERSAL_CONFIRM_DAYS || prior.length === 0) continue;
+
+    for (const actor of ["foreign", "institution"] as const) {
+      const pick = (flow: InvestorFlow) => (actor === "foreign" ? flow.foreignNet : flow.institutionNet);
+      const recentSum = recent.reduce((sum, flow) => sum + pick(flow), 0);
+      const priorSum = prior.reduce((sum, flow) => sum + pick(flow), 0);
+      // 전환 = 직전 구간 순매도, 최근 3일 전부 순매수.
+      if (priorSum >= 0 || recentSum <= 0) continue;
+      if (!recent.every((flow) => pick(flow) > 0)) continue;
+      const startedAt = recent.at(-1)?.date ?? today;
+      out.push({
+        subject: {
+          canonical: def.canonical,
+          symbol: def.naverCode,
+          naverCode: def.naverCode,
+          market: def.market,
+          country: "KR",
+        },
+        kind: actor === "foreign" ? "foreign_streak" : "institution_streak",
+        code: actor === "foreign" ? "foreign_streak" : "institution_streak",
+        actorNoun: actor === "foreign" ? "외국인" : "기관",
+        actors: actor === "foreign" ? "외국인" : "기관",
+        scale: formatShares(recentSum),
+        days: REVERSAL_CONFIRM_DAYS,
+        startedAt,
+        baseStrength: 120 + Math.min(40, Math.abs(priorSum) / Math.max(1, recentSum)),
+        attentionKey: def.canonical,
+        streakSum: recentSum,
+        isReversal: true,
+        streakWindowDays: flows.length,
+      });
+    }
+  }
+  return out;
+}
+
 /** ① 조용한 돈 신호 — US 내부자 클러스터(Form4). */
 function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], today: string): SignalCandidate[] {
   const out: SignalCandidate[] = [];
@@ -492,6 +683,46 @@ function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], 
   return out;
 }
 
+/** 어제 픽의 신호 상태(신선도·강화 판정용). */
+export interface QuietPickPriorState {
+  startedAt: string;
+  days: number;
+  insiderCount?: number;
+  scale: string;
+}
+
+/**
+ * 신호 강화 판정(WO-P4) — 같은 신호가 더 강해졌으면 진행 상황 문구를 돌려준다(재등장 허용).
+ * 변화가 없으면 undefined(순수 반복 → 픽 제외). "재탕"과 "진행 중"을 가르는 지점.
+ */
+function strengthenedProgress(prior: QuietPickPriorState, sig: SignalCandidate): string | undefined {
+  const addedPeople = typeof sig.insiderCount === "number" && typeof prior.insiderCount === "number"
+    ? sig.insiderCount - prior.insiderCount
+    : 0;
+  const addedDays = sig.days - prior.days;
+  if (addedPeople > 0) {
+    return `${sig.days}일째 계속 — 어제보다 ${addedPeople}명 늘었어요`;
+  }
+  if (addedDays > 0) {
+    return `${sig.days}일째 계속 — 어제보다 ${addedDays}일 더 이어졌어요`;
+  }
+  if (sig.scale !== prior.scale) {
+    return `${sig.days}일째 계속 — 규모가 ${sig.scale}로 늘었어요`;
+  }
+  return undefined;
+}
+
+/** 같은 종목에 여러 신호가 잡히면 강도 높은 하나만 남긴다(선반 중복 노출 방지). */
+function dedupeSignalsByStock(signals: readonly SignalCandidate[]): SignalCandidate[] {
+  const best = new Map<string, SignalCandidate>();
+  for (const sig of signals) {
+    const key = `${sig.subject.country}:${sig.subject.naverCode ?? sig.subject.symbol ?? sig.subject.canonical}`;
+    const prev = best.get(key);
+    if (!prev || sig.baseStrength > prev.baseStrength) best.set(key, sig);
+  }
+  return [...best.values()];
+}
+
 /** KR 거래대금 상위 N 종목의 naverCode 집합(시장 전체 랭킹 헬퍼 부재 → 여기서 산출). */
 function tradingValueTopRanks(rows: readonly KrMarketRow[], topN: number): Set<string> {
   const ranked = rows
@@ -508,76 +739,125 @@ function tradingValueTopRanks(rows: readonly KrMarketRow[], topN: number): Set<s
 export async function buildQuietPickResponse(options: {
   date?: string;
   deps?: Partial<QuietPickDeps>;
-  priorPickKeys?: ReadonlySet<string>;
+  /** 어제 픽의 신호 상태(WO-P4) — 순수 반복 제외 + 강화 시 재등장 판정에 쓴다. */
+  priorPicks?: ReadonlyMap<string, QuietPickPriorState>;
   limit?: number;
 } = {}): Promise<QuietPickResponse> {
   const deps = { ...defaultDeps, ...options.deps };
   const date = options.date ?? kstDate();
   const limit = options.limit ?? QUIET_PICK_MAX;
-  const priorPickKeys = options.priorPickKeys ?? new Set<string>();
+  const priorPicks = options.priorPicks ?? new Map<string, QuietPickPriorState>();
   const drops: Record<string, number> = {};
   const drop = (reason: string) => { drops[reason] = (drops[reason] ?? 0) + 1; };
 
   // ── 신호 검출(①) ──
   const krDefs = deps.vocab.filter((d) => d.naverCode && !d.marquee);
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, marketRows, attention, rankMap, usRows] = await Promise.all([
+  const [histories, insiderRaw, marketRows, attention, rankMap, usRows, dartInsiders] = await Promise.all([
     deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW).catch(() => ({} as Record<string, InvestorFlow[]>)),
     deps.fetchInsiderClusterCandidates().catch(() => [] as InsiderClusterCandidate[]),
     deps.fetchKrMarketRows().catch(() => [] as KrMarketRow[]),
     deps.computeStockAttentionSignals().catch(() => ({} as Record<string, StockAttentionSignal>)),
     deps.fetchMarketCapRankMap().catch(() => ({} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>)),
     deps.fetchCachedUsMarketRows().catch(() => [] as KrMarketRow[]),
+    deps.fetchDartInsiderPurchasesByStock(date).catch(() => ({} as Record<string, DartDisclosureHit>)),
   ]);
 
   const krSignals = detectKrSignals(krDefs, histories);
   const usSignals = detectUsInsiderSignals(insiderRaw, date);
-  const allSignals = [...krSignals, ...usSignals];
+  // WO-P4 신호망 확장 — KR 내부자(DART)·수급 전환. 같은 종목 중복은 강도 높은 쪽만 남긴다.
+  const dartSignals = detectDartInsiderSignals(krDefs, dartInsiders, date);
+  const reversalSignals = detectFlowReversalSignals(krDefs, histories, date);
+  const allSignals = dedupeSignalsByStock([...krSignals, ...usSignals, ...dartSignals, ...reversalSignals]);
 
-  // ── 아직 조용함(②) — 값싼 사전 필터 ──
+  // ── 아직 조용함(②) — 이제 '탈락'이 아니라 '태깅'이다(WO-P4 2단 구조).
+  //    신호가 실재하는 후보는 버리지 않고 미달 사유를 달아 '지켜보는 중' 선반으로 보낸다.
   const marketByCode = new Map(marketRows.filter((r) => r.naverCode).map((r) => [r.naverCode!, r]));
   const topTurnover = tradingValueTopRanks(marketRows, TRADING_VALUE_TOP_RANK);
-  // US 시총 맵(대형주 게이트 + 규모 상대화). symbol → marketCapUsd.
+  // US 시총 맵(대형주 판정 + 규모 상대화). symbol → marketCapUsd.
   const usMcap = new Map<string, number>();
   for (const r of usRows) if (r.symbol && typeof r.marketCapUsd === "number") usMcap.set(r.symbol.toUpperCase(), r.marketCapUsd);
 
-  const quietCandidates = allSignals.filter((sig) => {
+  /** 대형주 조건부 통과(WO-P4) — 이례적 규모·인원이면 대형주라도 픽. Elevance(0.0016%)는 여전히 탈락. */
+  const megaCapPasses = (sig: SignalCandidate, cap: number | undefined): boolean => {
+    if (typeof sig.insiderCount === "number" && sig.insiderCount >= MEGA_CAP_MIN_INSIDERS) return true;
+    if (cap && sig.valueUsd) return (sig.valueUsd / cap) * 100 >= MEGA_CAP_MIN_MCAP_PCT;
+    // KR 대형주는 다중 주체(외인+기관 동시)만 이례성으로 인정.
+    return sig.kind === "multi_cluster";
+  };
+
+  const tagged = allSignals.map((sig) => {
     const mention = attention[sig.attentionKey]?.mentionScore ?? 0;
-    if (mention > MAX_MENTION_SCORE) { drop("mention_hot"); return false; }
-    if (sig.subject.country === "KR") {
-      const row = sig.subject.naverCode ? marketByCode.get(sig.subject.naverCode) : undefined;
+    let near: { code: QuietWatchReasonCode; text: string } | null = null;
+    const row = sig.subject.naverCode ? marketByCode.get(sig.subject.naverCode) : undefined;
+
+    if (mention > MAX_MENTION_SCORE) {
+      near = { code: "mention_hot", text: "이미 뉴스에 많이 오른 종목이에요" };
+    } else if (sig.subject.country === "KR") {
       const changePct = row?.changePct;
-      if (typeof changePct === "number" && Math.abs(changePct) >= MAX_ABS_CHANGE_PCT) { drop("changed_15"); return false; }
-      if (sig.subject.naverCode && topTurnover.has(sig.subject.naverCode)) { drop("turnover_top20"); return false; }
-      // 대형주 제외 — 시총 순위 상위 N.
+      const tradingValue = row?.tradingValue;
       const rank = sig.subject.naverCode ? rankMap[sig.subject.naverCode]?.rank : undefined;
-      if (typeof rank === "number" && rank <= KR_MEGA_CAP_RANK) { drop("mega_cap"); return false; }
+      if (typeof changePct === "number" && Math.abs(changePct) >= MAX_ABS_CHANGE_PCT) {
+        near = { code: "changed_15", text: `오늘 이미 ${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}% 움직였어요` };
+      } else if (sig.subject.naverCode && topTurnover.has(sig.subject.naverCode)) {
+        near = { code: "turnover_top20", text: "오늘 거래대금 상위권이라 이미 붐볐어요" };
+      } else if (typeof rank === "number" && rank <= KR_MEGA_CAP_RANK && !megaCapPasses(sig, undefined)) {
+        near = { code: "mega_cap", text: `시총 ${rank}위권 대형주라 이미 알려져 있어요` };
+      } else if (typeof tradingValue === "number" && tradingValue < KR_MIN_TRADING_VALUE) {
+        near = { code: "illiquid", text: `거래가 너무 얇아요 (일 ${formatWon(tradingValue)})` };
+      }
     } else {
-      // US 대형주 제외($50B 초과) — Elevance 급 누출 차단.
       const cap = sig.subject.symbol ? usMcap.get(sig.subject.symbol.toUpperCase()) : undefined;
-      if (typeof cap === "number" && cap > US_MEGA_CAP_USD) { drop("mega_cap"); return false; }
+      if (typeof cap === "number" && cap > US_MEGA_CAP_USD && !megaCapPasses(sig, cap)) {
+        near = { code: "mega_cap", text: "이미 많이 알려진 대형주예요" };
+      }
     }
-    return true;
+    return { sig, near };
   });
+
+  // 프론트 조립은 비용이 크므로 강도순 상한을 둔다(잘린 수는 로그로 남긴다).
+  const ordered = [...tagged].sort((a, b) => b.sig.baseStrength - a.sig.baseStrength);
+  const considered = ordered.slice(0, MAX_FRONT_ASSEMBLIES);
+  if (ordered.length > considered.length) {
+    console.warn("[quiet-pick] front assembly capped", { total: ordered.length, considered: considered.length });
+  }
+  const quietCandidates = considered;
 
   // ── 품질 게이트(③) + 프론트 조립(생존 후보만 — 비용 큰 단계) ──
   const assembled = await Promise.all(
-    quietCandidates.map(async (sig) => {
+    quietCandidates.map(async ({ sig, near }) => {
       try {
         const attn = attention[sig.attentionKey];
         const coverage = attn ? { attention: attn } : {};
         const front = sig.subject.country === "KR"
           ? await deps.assembleStockFront(sig.subject.canonical, rankMap, coverage, sig.subject.naverCode ? { naverCode: sig.subject.naverCode } : {})
           : await deps.assembleStockFront(sig.subject.canonical, rankMap, coverage, sig.subject.symbol ? { symbol: sig.subject.symbol } : {});
-        return { sig, front };
+        return { sig, near, front };
       } catch {
-        return { sig, front: null as StockFrontData | null };
+        return { sig, near, front: null as StockFrontData | null };
       }
     })
   );
 
   const picks: QuietPick[] = [];
-  for (const { sig, front } of assembled) {
+  const watching: QuietWatchItem[] = [];
+  /** 신호는 실재하는데 ② 미달 — 지켜보는 중 선반으로. 품질(③) 실패는 여기 오지 않는다. */
+  const sendToWatch = (
+    sig: SignalCandidate,
+    reason: { code: QuietWatchReasonCode; text: string },
+    priceInfo?: { current?: number; currentText?: string; changePct?: number }
+  ) => {
+    drop(reason.code);
+    watching.push({
+      subject: sig.subject,
+      signal: { kind: sig.kind, code: sig.code, actors: sig.actors, scale: sig.scale, days: sig.days },
+      ...(priceInfo ? { price: priceInfo } : {}),
+      reasonCode: reason.code,
+      reasonText: reason.text,
+    });
+  };
+
+  for (const { sig, near, front } of assembled) {
     if (!front) { drop("front_failed"); continue; }
     if (!front.verdict) { drop("no_verdict"); continue; }
 
@@ -604,24 +884,45 @@ export async function buildQuietPickResponse(options: {
       ? marketByCode.get(sig.subject.naverCode)?.changePct
       : undefined;
     const changePct = front.signals.changePct ?? rowChangePct ?? sig.changePctHint;
-    if (typeof changePct === "number" && Math.abs(changePct) >= MAX_ABS_CHANGE_PCT) { drop("changed_15"); continue; }
-
-    // 유동성(KR).
-    if (sig.subject.country === "KR" && sig.subject.naverCode) {
-      const tv = marketByCode.get(sig.subject.naverCode)?.tradingValue;
-      if (typeof tv === "number" && tv < KR_MIN_TRADING_VALUE) { drop("illiquid"); continue; }
+    const priceInfo = {
+      current,
+      ...(front.priceText ? { currentText: front.priceText } : {}),
+      ...(typeof changePct === "number" ? { changePct } : {}),
+    };
+    if (typeof changePct === "number" && Math.abs(changePct) >= MAX_ABS_CHANGE_PCT) {
+      sendToWatch(sig, { code: "changed_15", text: `오늘 이미 ${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}% 움직였어요` }, priceInfo);
+      continue;
     }
+
+    // 유동성(KR) — 하한(3억) 미만은 지켜보는 중, 하한~10억은 픽 + "얇아요" 표기(WO-P4).
+    const krTradingValue = sig.subject.country === "KR" && sig.subject.naverCode
+      ? marketByCode.get(sig.subject.naverCode)?.tradingValue
+      : undefined;
+    if (typeof krTradingValue === "number" && krTradingValue < KR_MIN_TRADING_VALUE) {
+      sendToWatch(sig, { code: "illiquid", text: `거래가 너무 얇아요 (일 ${formatWon(krTradingValue)})` }, priceInfo);
+      continue;
+    }
+
+    // 사전 태깅된 ② 미달(화제성·대형주·거래대금 상위)도 여기서 선반으로 — 품질은 이미 통과했다.
+    if (near) { sendToWatch(sig, near, priceInfo); continue; }
 
     // 신호 시작가 확정 + 누적 상승 게이트(②).
     const priceAtSignal = sig.priceAtSignal
       ?? (sig.subject.country === "KR" ? krCloseAtOrBefore(front, sig.startedAt) : null)
       ?? current;
     const cumulativePct = ((current - priceAtSignal) / priceAtSignal) * 100;
-    if (cumulativePct >= MAX_CUMULATIVE_SINCE_SIGNAL_PCT) { drop("ran_30_since_signal"); continue; }
+    if (cumulativePct >= MAX_CUMULATIVE_SINCE_SIGNAL_PCT) {
+      sendToWatch(sig, { code: "ran_30_since_signal", text: `신호 후 이미 ${cumulativePct.toFixed(0)}% 올랐어요` }, priceInfo);
+      continue;
+    }
 
-    // 신선도 — 같은 종목·같은 신호 시작이면 제외(신호 갱신 시만 재편입).
-    const freshnessKey = `${sig.subject.canonical}#${sig.startedAt}`;
-    if (priorPickKeys.has(freshnessKey)) { drop("stale_repeat"); continue; }
+    // 신선도(WO-P4) — 순수 반복만 제외. 신호가 강해졌으면 진행 상황 문구와 함께 재등장한다.
+    const prior = priorPicks.get(sig.subject.canonical);
+    let progress: string | undefined;
+    if (prior && prior.startedAt === sig.startedAt) {
+      progress = strengthenedProgress(prior, sig);
+      if (!progress) { drop("stale_repeat"); continue; }
+    }
 
     const score = front.score?.score ?? null;
     const timingGrade = timingGradeOf(front.verdict);
@@ -633,13 +934,18 @@ export async function buildQuietPickResponse(options: {
     let volumePct: number | undefined;
     let mcapPct: number | undefined;
     if (sig.subject.country === "KR") {
-      if (avgVol && sig.streakSum && sig.days > 0) volumePct = ((sig.streakSum / sig.days) / avgVol) * 100;
+      if (avgVol && sig.insiderShares) volumePct = (sig.insiderShares / avgVol) * 100;
+      else if (avgVol && sig.streakSum && sig.days > 0) volumePct = ((sig.streakSum / sig.days) / avgVol) * 100;
     } else {
       const shares = sig.valueUsd && sig.buyPrice ? sig.valueUsd / sig.buyPrice : undefined;
       if (avgVol && shares) volumePct = (shares / avgVol) * 100;
       const cap = sig.subject.symbol ? usMcap.get(sig.subject.symbol.toUpperCase()) : undefined;
       if (cap && sig.valueUsd) mcapPct = (sig.valueUsd / cap) * 100;
     }
+    // WO-P4 신호망 확장 — 거래량 진공·52주 저점권(캔들 보유분으로 계산).
+    const vacuumRatio = volumeVacuumRatio(front);
+    const aboveLow = pctAboveYearLow(front, current);
+
     // US 빈도(지난 12개월 내부자 매수 건수) — 생존 후보만 조회(비용 큰 per-ticker fetch).
     let priorBuys12mo: number | undefined;
     if (sig.subject.country === "US" && sig.subject.symbol) {
@@ -659,6 +965,8 @@ export async function buildQuietPickResponse(options: {
       ...(typeof front.signals.volumeRatio === "number" ? { volumeElevated: front.signals.volumeRatio >= 1 } : {}),
       ...(typeof sig.isLongestStreak === "boolean" ? { isLongestStreak: sig.isLongestStreak } : {}),
       ...(typeof sig.streakWindowDays === "number" ? { streakWindowDays: sig.streakWindowDays } : {}),
+      ...(typeof vacuumRatio === "number" ? { volumeVacuumRatio: vacuumRatio } : {}),
+      ...(typeof aboveLow === "number" ? { pctAboveYearLow: aboveLow } : {}),
     };
     const anomalies = computeQuietPickAnomalies(facts);
     if (anomalies.length === 0) { drop("no_anomaly"); continue; }
@@ -688,6 +996,8 @@ export async function buildQuietPickResponse(options: {
         priceAtSignal,
         startedAt: sig.startedAt,
         strength: sig.baseStrength,
+        ...(typeof sig.insiderCount === "number" ? { insiderCount: sig.insiderCount } : {}),
+        ...(progress ? { progress } : {}),
       },
       hook: buildQuietPickHook(facts),
       anomalies,
@@ -710,6 +1020,9 @@ export async function buildQuietPickResponse(options: {
       },
       companyScore: score,
       dataQuality,
+      ...(typeof krTradingValue === "number" && krTradingValue < KR_THIN_TRADING_VALUE
+        ? { liquidityNote: `거래가 얇아요 (일 ${formatWon(krTradingValue)})` }
+        : {}),
       qualifiedAt: date,
     });
   }
@@ -717,11 +1030,14 @@ export async function buildQuietPickResponse(options: {
   // ── 강도순 정렬 + 상위 N(억지 충원 금지) ──
   picks.sort((a, b) => b.signal.strength - a.signal.strength);
   const published = picks.slice(0, limit);
+  // 지켜보는 중 — 미달 사유가 '기준 미달'인 것만(품질 실패는 애초에 오지 않는다). 최대 10곳.
+  const watchShelf = watching.slice(0, QUIET_WATCH_MAX);
 
   return {
     asOf: new Date().toISOString(),
     date,
     picks: published,
+    watching: watchShelf,
     qualification: {
       krUniverse: krDefs.length,
       krWithSignal: krSignals.length,
@@ -730,17 +1046,28 @@ export async function buildQuietPickResponse(options: {
       afterQuiet: quietCandidates.length,
       afterQuality: picks.length,
       published: published.length,
+      watching: watchShelf.length,
       drops,
     },
     source: "quiet-pick-engine",
   };
 }
 
-/** 신선도 비교용 키 — 어제 픽 응답에서 subject#startedAt 집합 추출. */
-export function quietPickFreshnessKeys(response: QuietPickResponse | null): Set<string> {
-  const keys = new Set<string>();
-  for (const pick of response?.picks ?? []) keys.add(`${pick.subject.canonical}#${pick.signal.startedAt}`);
-  return keys;
+/**
+ * 어제 픽 → 신호 상태 맵(WO-P4). 순수 반복 제외 + 강화 재등장 판정에 쓴다.
+ * canonical 기준(같은 종목이 어제와 같은 신호를 이어가는지 본다).
+ */
+export function quietPickPriorState(response: QuietPickResponse | null): Map<string, QuietPickPriorState> {
+  const out = new Map<string, QuietPickPriorState>();
+  for (const pick of response?.picks ?? []) {
+    out.set(pick.subject.canonical, {
+      startedAt: pick.signal.startedAt,
+      days: pick.signal.days,
+      scale: pick.signal.scale,
+      ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
+    });
+  }
+  return out;
 }
 
 /**

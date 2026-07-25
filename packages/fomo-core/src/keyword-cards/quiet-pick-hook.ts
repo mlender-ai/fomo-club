@@ -17,7 +17,7 @@ export type QuietPickSignalKind =
   | "foreign_streak"
   | "multi_cluster";
 
-export type QuietPickAnomalyKind = "frequency" | "participants" | "scale" | "silence";
+export type QuietPickAnomalyKind = "frequency" | "participants" | "scale" | "silence" | "vacuum" | "near_low";
 
 export interface QuietPickAnomaly {
   kind: QuietPickAnomalyKind;
@@ -50,6 +50,13 @@ export interface QuietPickAnomalyFacts {
   isLongestStreak?: boolean;
   /** KR: 최장 비교에 쓴 창(거래일). */
   streakWindowDays?: number;
+  /**
+   * 거래량 진공(WO-P4) — 최근 20일 평균이 그 앞 60일 평균의 몇 배인가(0.6 이하면 말라 있었다).
+   * "거래가 마른 자리에 돈이 들어왔다"는 이 제품에서 가장 좋은 후킹 재료다.
+   */
+  volumeVacuumRatio?: number;
+  /** 52주 저점 대비 현재가 위치(%). 15 이내면 저점권 조용한 매집. */
+  pctAboveYearLow?: number;
 }
 
 const iGa = (word: string) => `${word}${josa(word, "이가")}`;
@@ -106,6 +113,24 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
     });
   }
 
+  // ⑤ 거래량 진공 — 말라 있던 자리(WO-P4 신호망 확장).
+  if (typeof f.volumeVacuumRatio === "number" && f.volumeVacuumRatio <= 0.6) {
+    out.push({
+      kind: "vacuum",
+      strength: f.volumeVacuumRatio <= 0.4 ? 3.5 : 2.6,
+      text: `거래가 평소의 ${Math.round(f.volumeVacuumRatio * 100)}%로 말라 있던 자리예요`,
+    });
+  }
+
+  // ⑥ 52주 저점권 조용한 매집.
+  if (typeof f.pctAboveYearLow === "number" && f.pctAboveYearLow <= 15) {
+    out.push({
+      kind: "near_low",
+      strength: 2.4,
+      text: `52주 저점에서 ${Math.max(0, Math.round(f.pctAboveYearLow))}% 위 자리예요`,
+    });
+  }
+
   // ④ 침묵의 정도(보조 — 오늘 데이터 기준, 과장 금지).
   if (f.mentionCount === 0) out.push({ kind: "silence", strength: 1.2, text: "아직 뉴스엔 안 잡혀요" });
   if (f.volumeElevated === false) out.push({ kind: "silence", strength: 1.0, text: "거래량도 안 늘었어요" });
@@ -114,9 +139,10 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
 }
 
 /** 이례성 종류의 "계열"(중복 서사 방지 — 훅에서 서로 다른 계열을 짝짓는다). */
-function familyOf(kind: QuietPickAnomalyKind): "activity" | "size" | "quiet" {
+function familyOf(kind: QuietPickAnomalyKind): "activity" | "size" | "quiet" | "position" {
   if (kind === "frequency" || kind === "participants") return "activity";
   if (kind === "scale") return "size";
+  if (kind === "vacuum" || kind === "near_low") return "position";
   return "quiet";
 }
 
@@ -147,6 +173,8 @@ const DOMINANT_CLAUSE: Record<QuietPickAnomalyKind, string> = {
   participants: "내부자 참여 폭이 넓어 눈여겨볼 신호예요",
   scale: "매수 규모가 작지 않은 매집이에요",
   silence: "아직 조용해 초기 국면일 수 있어요",
+  vacuum: "거래가 마른 자리에 들어온 매수라 눈에 띄어요",
+  near_low: "저점권에서 들어온 매수예요",
 };
 /** 보조 이례성 뉘앙스 — 지배 이례성과 조합해 총평 유니크도를 높인다. */
 const SECONDARY_NUANCE: Record<QuietPickAnomalyKind, string> = {
@@ -154,6 +182,8 @@ const SECONDARY_NUANCE: Record<QuietPickAnomalyKind, string> = {
   participants: "참여 인원도 많고요",
   scale: "규모도 받쳐줘요",
   silence: "아직 화제 밖이라 더 그래요",
+  vacuum: "거래도 말라 있었고요",
+  near_low: "자리도 저점권이에요",
 };
 
 /**
