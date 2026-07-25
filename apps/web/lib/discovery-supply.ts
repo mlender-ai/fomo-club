@@ -329,7 +329,11 @@ function parseMarketRow(row: RawNaverStock, market: DiscoveryMarket): DiscoveryM
   const dir = changeDirFrom(row, rawPct);
   const changePct = typeof rawPct === "number" ? (dir === "down" ? -Math.abs(rawPct) : Math.abs(rawPct)) : undefined;
   const changeText = signedChangeText(row, dir, changePct);
-  const tradingValue = numberFromText(row.accumulatedTradingValue);
+  // 네이버 accumulatedTradingValue 는 **백만원 단위**다(실증: 삼성전자 6,628,392 ≈ 종가×거래량/1e6).
+  // 원 단위로 정규화해서 내려보낸다 — 이 필드로 임계 비교를 하는 소비자(quiet-pick 유동성 게이트)가
+  // 백만원을 원으로 오인해 전 종목을 "거래가 얇다"고 판정하던 버그의 뿌리(WO-P4 실측).
+  const tradingValueMillions = numberFromText(row.accumulatedTradingValue);
+  const tradingValue = typeof tradingValueMillions === "number" ? tradingValueMillions * 1_000_000 : undefined;
   return {
     canonical,
     symbol: naverCode,

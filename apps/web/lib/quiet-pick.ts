@@ -60,6 +60,11 @@ const TRADING_VALUE_TOP_RANK = 20;
 /** 신호 시작 후 누적 상승 상한(이미 재평가된 건 발굴 아님). */
 const MAX_CUMULATIVE_SINCE_SIGNAL_PCT = 30;
 /**
+ * 이 이상은 데이터 이상으로 본다(WO-P4 실측: TSM 445% — openinsider 원주 TWD 가격 vs ADR 달러가).
+ * 픽도 선반도 아니고 조용히 제외 — 틀린 숫자 노출이 빈 선반보다 나쁘다.
+ */
+const IMPLAUSIBLE_CUMULATIVE_PCT = 200;
+/**
  * 품질 게이트(WO-P1) — 캔들 200거래일 강제. 예외 없음.
  *
  * 60이었을 때 CLBK(재상장으로 Nasdaq 이력 3봉)가 픽 시점 TwelveData 응답으로만 통과했다가
@@ -68,8 +73,11 @@ const MAX_CUMULATIVE_SINCE_SIGNAL_PCT = 30;
  */
 const MIN_CANDLES = 200;
 /**
- * 유동성 하한(WO-P4) — 3억원. 10억이었을 때 오늘 신호 17개 중 12개가 여기서 죽었다.
- * "조용한 종목"을 찾으면서 "거래 적은 종목"을 자르는 자기모순이었다. 개인 기준 일 3억이면 매매 가능.
+ * 유동성 하한(WO-P4) — 원 단위 3억원. 개인 기준 일 3억이면 매매 가능.
+ *
+ * ★실측 정정: 어제 "illiquid 12"의 진짜 원인은 임계값(10억)이 아니라 **단위 불일치**였다.
+ * 네이버 accumulatedTradingValue 는 백만원 단위인데 원으로 비교해서 **삼성전자조차 탈락**하는
+ * 상태였다(6,628,392 < 1,000,000,000). discovery-supply 에서 원 단위로 정규화해 해결.
  */
 const KR_MIN_TRADING_VALUE = 300_000_000;
 /** 이 미만은 픽 가능하되 카드에 "거래가 얇아요"를 표기한다(숨기지 않고 알린다). */
@@ -912,6 +920,9 @@ export async function buildQuietPickResponse(options: {
       ?? current;
     const cumulativePct = ((current - priceAtSignal) / priceAtSignal) * 100;
     if (cumulativePct >= MAX_CUMULATIVE_SINCE_SIGNAL_PCT) {
+      // 비현실적 수치(TSM 같은 ADR/원주 통화 불일치로 445% 등)는 선반에도 올리지 않는다 —
+      // 틀린 숫자를 유저에게 보여주는 게 빈 선반보다 나쁘다(가짜 수치 노출 금지).
+      if (cumulativePct > IMPLAUSIBLE_CUMULATIVE_PCT) { drop("implausible_price"); continue; }
       sendToWatch(sig, { code: "ran_30_since_signal", text: `신호 후 이미 ${cumulativePct.toFixed(0)}% 올랐어요` }, priceInfo);
       continue;
     }
