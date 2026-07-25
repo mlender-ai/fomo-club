@@ -13,6 +13,7 @@
 import {
   STOCK_VOCAB,
   investorNetStreak,
+  sectorOf,
   buildQuietPickHook,
   computeQuietPickAnomalies,
   buildCommitteeVerdictLine,
@@ -340,6 +341,9 @@ const HANGUL = /[가-힣]/;
 function companyIdentity(front: StockFrontData, sig: SignalCandidate): string {
   const theme = front.signals.themeLabel?.trim();
   if (theme && HANGUL.test(theme)) return theme.slice(0, 20);
+  // KR 은 STOCK_VOCAB 섹터 사전을 쓴다(방산·AI·바이오·원자력·반도체…) — "기타 업종" 남발 방지.
+  const krSector = sig.subject.country === "KR" ? sectorOf(sig.subject.canonical) : undefined;
+  if (krSector && HANGUL.test(krSector)) return krSector;
   const seedSector = sig.subject.symbol ? usDiscoverySeedForSymbol(sig.subject.symbol)?.sector?.trim() : undefined;
   if (seedSector && HANGUL.test(seedSector)) return seedSector.slice(0, 20);
   const industry = sig.industry?.trim();
@@ -810,7 +814,9 @@ export async function buildQuietPickResponse(options: {
       } else if (sig.subject.naverCode && topTurnover.has(sig.subject.naverCode)) {
         near = { code: "turnover_top20", text: "오늘 거래대금 상위권이라 이미 붐볐어요" };
       } else if (typeof rank === "number" && rank <= KR_MEGA_CAP_RANK && !megaCapPasses(sig, undefined)) {
-        near = { code: "mega_cap", text: `시총 ${rank}위권 대형주라 이미 알려져 있어요` };
+        // 시장(코스피/코스닥)을 반드시 붙인다 — 코스닥 1위를 "시총 1위"로 읽히게 하면 오정보다.
+        const marketLabel = rankMap[sig.subject.naverCode!]?.market === "KOSDAQ" ? "코스닥" : "코스피";
+        near = { code: "mega_cap", text: `${marketLabel} 시총 ${rank}위권이라 이미 알려져 있어요` };
       } else if (typeof tradingValue === "number" && tradingValue < KR_MIN_TRADING_VALUE) {
         near = { code: "illiquid", text: `거래가 너무 얇아요 (일 ${formatWon(tradingValue)})` };
       }
