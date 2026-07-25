@@ -6,7 +6,7 @@ import { appendJudgmentLedger } from "../../../../../lib/judgment-ledger";
 import {
   buildQuietPickResponse,
   quietPickLedgerEntries,
-  quietPickFreshnessKeys,
+  quietPickPriorState,
   type QuietPickResponse,
 } from "../../../../../lib/quiet-pick";
 
@@ -31,9 +31,9 @@ export async function GET(request: Request) {
     const date = kstDate();
     // 신선도 — 어제 픽과 같은 종목·같은 신호 시작이면 제외(신호 갱신 시만 재편입).
     const prior = await readFeedContent<QuietPickResponse>(ACTIVE_ID).catch(() => null);
-    const priorPickKeys = prior && prior.date !== date ? quietPickFreshnessKeys(prior) : new Set<string>();
+    const priorPicks = prior && prior.date !== date ? quietPickPriorState(prior) : new Map();
 
-    const response = await buildQuietPickResponse({ date, priorPickKeys });
+    const response = await buildQuietPickResponse({ date, priorPicks });
 
     // WO-P1 자가검증 — 발행 픽 전원 캔들 ≥200일. 게이트가 이미 걸렀으므로 여기서 걸리면 게이트 회귀다.
     const thin = response.picks.filter((pick) => pick.dataQuality.candles < 200);

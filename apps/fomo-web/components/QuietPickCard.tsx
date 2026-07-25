@@ -114,6 +114,13 @@ export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: 
       {/* ★훅 — 이례성 앞 */}
       <p className="mt-3 shrink-0 text-lg font-bold leading-7 text-whiteout">{pick.hook}</p>
 
+      {/* 신호 강화 재등장 진행 문구(WO-P4) — 재탕이 아니라 "계속되는 중"임을 밝힌다. */}
+      {pick.signal.progress && (
+        <p className="mt-1.5 shrink-0 text-[12px] font-semibold" style={{ color: chartTokens.up }}>
+          {pick.signal.progress}
+        </p>
+      )}
+
       {/* 신호칩 */}
       <div className="mt-2.5 flex shrink-0 flex-wrap gap-1.5">
         <span className="rounded-full px-2 py-1 text-[10px] font-semibold" style={{ backgroundColor: "rgba(216,255,58,0.12)", color: chartTokens.up }}>
@@ -140,6 +147,11 @@ export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: 
         <span className="block text-[10px] font-semibold text-muted">무효선</span>
         <p className="mt-0.5 text-sm font-semibold leading-5 text-whiteout">{pick.invalidation.text}</p>
       </div>
+
+      {/* 유동성 경고(WO-P4) — 얇으면 숨기지 않고 알린다. */}
+      {pick.liquidityNote && (
+        <p className="mt-2 shrink-0 text-[11px] text-muted">⚠ {pick.liquidityNote}</p>
+      )}
 
       <div className="mt-auto flex shrink-0 items-center justify-between pt-3">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>

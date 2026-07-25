@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { QuietPick } from "@/lib/fomoApi";
+import type { QuietPick, QuietWatchItem } from "@/lib/fomoApi";
 import { fetchQuietPicks } from "@/lib/fomoApi";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
@@ -23,11 +23,13 @@ type Status = "loading" | "ready" | "error";
 
 export function QuietPickDeck() {
   const [picks, setPicks] = useState<QuietPick[]>([]);
+  const [watching, setWatching] = useState<QuietWatchItem[]>([]);
   const [status, setStatus] = useState<Status>("loading");
   const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
   const [selected, setSelected] = useState<QuietPick | null>(null);
+  const [watchSelected, setWatchSelected] = useState<QuietWatchItem | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
   const moved = useRef(false);
@@ -37,6 +39,7 @@ export function QuietPickDeck() {
     fetchQuietPicks()
       .then((res) => {
         setPicks(res.picks ?? []);
+        setWatching(res.watching ?? []);
         setIdx(0);
         setStatus("ready");
       })
@@ -89,14 +92,29 @@ export function QuietPickDeck() {
     );
   }
 
-  // 발행 0장 — 정직의 화면(빈 화면 아님).
+  // 발행 0장 — 픽 기준을 통과한 곳이 없다는 뜻. 신호는 있었다면 '지켜보는 중'으로 보여준다(WO-P4).
   if (picks.length === 0) {
     return (
-      <HonestScreen
-        title="오늘은 조용한 돈이 없어요"
-        body="무리해서 고르지 않아요. 뉴스 전에 돈이 먼저 들어간 곳이 없는 날이에요."
-        cta={{ label: "성적표 보기 →", href: "/track-record" }}
-      />
+      <div className="mx-auto flex w-full max-w-md flex-col">
+        <HonestScreen
+          title="오늘 픽 기준을 넘은 곳은 없어요"
+          body={
+            watching.length > 0
+              ? "기준을 낮춰 채우지 않아요. 대신 신호가 잡힌 곳을 아래에 그대로 보여드려요."
+              : "무리해서 고르지 않아요. 뉴스 전에 돈이 먼저 들어간 곳이 없는 날이에요."
+          }
+          cta={{ label: "성적표 보기 →", href: "/track-record" }}
+          compact={watching.length > 0}
+        />
+        <WatchShelf items={watching} onOpen={setWatchSelected} />
+        {watchSelected && (
+          <StockInsightView
+            stock={watchSelected.subject.canonical}
+            context={subjectContext(watchSelected.subject)}
+            onClose={() => setWatchSelected(null)}
+          />
+        )}
+      </div>
     );
   }
 
@@ -157,6 +175,16 @@ export function QuietPickDeck() {
         <span className="ml-1 text-xs text-muted">{remaining}곳 남음</span>
       </div>
 
+      <WatchShelf items={watching} onOpen={setWatchSelected} />
+
+      {watchSelected && (
+        <StockInsightView
+          stock={watchSelected.subject.canonical}
+          context={subjectContext(watchSelected.subject)}
+          onClose={() => setWatchSelected(null)}
+        />
+      )}
+
       {selected && (
         <StockInsightView
           stock={selected.subject.canonical}
@@ -192,14 +220,16 @@ function HonestScreen({
   body,
   cta,
   secondary,
+  compact = false,
 }: {
   title: string;
   body: string;
   cta?: { label: string; href?: string; onClick?: () => void };
   secondary?: { label: string; onClick: () => void };
+  compact?: boolean;
 }) {
   return (
-    <div className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-6 text-center">
+    <div className={`mx-auto flex w-full max-w-md flex-col items-center justify-center px-6 text-center ${compact ? "py-10" : "min-h-[60vh]"}`}>
       <h1 className="text-2xl font-bold text-whiteout">{title}</h1>
       <p className="mt-3 text-sm leading-6 text-muted">{body}</p>
       {cta && (
@@ -213,5 +243,65 @@ function HonestScreen({
         <button type="button" onClick={secondary.onClick} className="mt-3 text-xs text-muted underline">{secondary.label}</button>
       )}
     </div>
+  );
+}
+
+/** 픽/워치 공용 — 뎁스가 종목을 식별하는 최소 컨텍스트. */
+function subjectContext(subject: QuietPick["subject"]) {
+  return {
+    ...(subject.symbol ? { symbol: subject.symbol } : {}),
+    ...(subject.naverCode ? { naverCode: subject.naverCode } : {}),
+    ...(subject.market ? { market: subject.market } : {}),
+    ...(subject.country ? { country: subject.country } : {}),
+  };
+}
+
+const WATCH_SIGNAL_LABEL: Record<string, string> = {
+  insider_cluster: "내부자 매수",
+  multi_cluster: "외국인+기관",
+  institution_streak: "기관 매수",
+  foreign_streak: "외국인 매수",
+};
+
+/**
+ * 지켜보는 중(WO-P4) — 신호는 실재하는데 픽 기준에 못 미친 곳. **픽 승격이 아니다.**
+ * 회색 계열 간이 카드로 픽과 시각을 명확히 구분하고, 미달 사유를 유저어로 반드시 보여준다.
+ */
+function WatchShelf({ items, onOpen }: { items: QuietWatchItem[]; onOpen: (item: QuietWatchItem) => void }) {
+  if (items.length === 0) return null;
+  return (
+    <section className="mt-6 border-t border-hairline pt-5">
+      <div className="flex items-baseline justify-between px-1">
+        <h2 className="text-sm font-semibold text-muted">
+          지켜보는 중 <span className="text-whiteout">{items.length}곳</span>
+        </h2>
+        <span className="text-[10px] text-muted">신호는 있는데 픽 기준엔 못 미쳤어요</span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {items.map((item) => (
+          <li key={`${item.subject.canonical}-${item.reasonCode}`}>
+            <button
+              type="button"
+              onClick={() => onOpen(item)}
+              className="w-full rounded-xl border border-hairline bg-white/[0.02] px-4 py-3 text-left"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-sm font-semibold text-[#c9c9c4]">
+                  {item.subject.canonical}
+                  {item.subject.country === "US" && item.subject.symbol ? ` (${item.subject.symbol})` : ""}
+                </span>
+                <span className="shrink-0 text-[11px] text-muted">
+                  {WATCH_SIGNAL_LABEL[item.signal.kind] ?? "신호"} · {item.signal.days}일
+                </span>
+              </div>
+              <p className="mt-1 text-[12px] leading-5 text-muted">→ {item.reasonText}</p>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 px-1 text-[10px] leading-4 text-muted">
+        기준을 낮춰 픽에 넣지 않아요. 왜 못 넘었는지까지 그대로 보여드려요.
+      </p>
+    </section>
   );
 }
