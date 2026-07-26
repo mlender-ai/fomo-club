@@ -48,10 +48,18 @@ jobs:
             "https://m.stock.naver.com/api/stock/005930/basic" \
             "https://opendart.fss.or.kr/api/list.json" \
             "https://fomo-club-backend.vercel.app/api/fomo/track-record/picks" ; do
+            # Nasdaq 은 비브라우저 UA 를 막는다(1차 실측: curl 실패 / 브라우저 UA fetch 성공).
+            # UA 때문에 "소스가 막혔다"고 오판하지 않도록 브라우저 UA 로 확인한다.
             code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 \
-              -A "FOMO Club research contact@fomoclub.app" "$u" || echo "000")
+              -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36" "$u" || echo "000")
             echo "$code  $u"
           done
+
+      - name: Source key discovery (파서를 추측이 아니라 실제 응답에 맞춘다)
+        continue-on-error: true
+        env:
+          SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+        run: npx tsx scripts/audit/discover_source_keys.ts CLBK 185750
 
       - name: Card substance audit (§4-1)
         continue-on-error: true

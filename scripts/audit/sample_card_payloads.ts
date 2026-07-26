@@ -2,7 +2,7 @@
  * WO-SUB-00 §4-1 — 카드 페이로드 샘플링 + 함량 라벨링.
  *
  * 표본 프레임은 두 층이다(둘 다 실측하고, 각각 N 을 그대로 적는다):
- *   L1 라이브 페이로드 — /api/fomo/quiet-pick 오늘자 카드. **전체 필드**가 있다.
+ *   L1 라이브 페이로드 — /api/fomo/quiet-picks 오늘자 카드. **전체 필드**가 있다.
  *   L2 발행 이력       — /api/fomo/track-record/picks. 원장에 박제된 selection payload 로,
  *                        트리거 층(훅·신호)만 들어 있다.
  *
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const live = await getJson<{ picks?: QuietPickLike[]; watching?: QuietPickLike[] }>(`${base}/api/fomo/quiet-pick`);
+  const live = await getJson<{ picks?: QuietPickLike[]; watching?: QuietPickLike[] }>(`${base}/api/fomo/quiet-picks`);
   const history = await getJson<{ picks?: ScorecardPickLike[] }>(`${base}/api/fomo/track-record/picks`);
 
   const livePicks = [...(live.picks ?? []), ...(live.watching ?? [])];
