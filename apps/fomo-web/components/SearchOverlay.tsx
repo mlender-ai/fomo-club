@@ -6,6 +6,8 @@ import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { SearchIcon, XMarkIcon } from "@/components/icons";
 import { fetchDaily30, fetchJudgmentHistory, fetchStockFront } from "@/lib/fomoApi";
 import { getSessionId } from "@/lib/session";
+import { OverlayPortal } from "@/components/OverlayPortal";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { canonicalName } from "@/lib/companyDisplay";
 
 /**
@@ -177,6 +179,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[80] flex flex-col bg-canvas">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pb-[env(safe-area-inset-bottom)] pt-[calc(1.25rem+env(safe-area-inset-top))]">
         {/* 검색 입력 */}
@@ -243,7 +246,13 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
                   onClick={() => void openItem(item)}
                   className="flex w-full items-center justify-between gap-3 border-b border-hairline-soft px-1 py-3.5 text-left"
                 >
-                  <span className="min-w-0">
+                  <StockLogoBadge
+                    name={canonicalName(item.canonical)}
+                    naverCode={item.naverCode}
+                    symbol={item.symbol}
+                    size={28}
+                  />
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold text-whiteout">
                       {canonicalName(item.canonical)}
                       {item.englishName && <span className="ml-1.5 font-normal text-muted">{item.englishName}</span>}
@@ -317,5 +326,6 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+    </OverlayPortal>
   );
 }

@@ -6,6 +6,7 @@ import { SearchIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
 import { QuietPickDeck } from "@/components/QuietPickDeck";
 import { SearchOverlay } from "@/components/SearchOverlay";
+import { OverlayPortal } from "@/components/OverlayPortal";
 import type {
   FomoIndexResponse,
   TallyResponse,
@@ -100,6 +101,7 @@ function FirstVisitNoticeSheet({
   ];
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-labelledby="first-visit-title">
       <div className="absolute inset-0 bg-black/72 backdrop-blur-md" />
       <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md px-0">
@@ -153,6 +155,7 @@ function FirstVisitNoticeSheet({
         </section>
       </div>
     </div>
+    </OverlayPortal>
   );
 }
 

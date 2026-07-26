@@ -31,9 +31,14 @@ export function krStockLogoUrl(code: string): string {
 export function usStockLogoUrls(symbol: string): { url: string; source: string }[] {
   const sym = symbol.trim().toUpperCase();
   if (!sym) return [];
+  const enc = encodeURIComponent(sym);
+  // 순서 = 커버리지 넓은 순. 앞이 404 여도 다음 후보로 넘어가고, 전부 실패해야 이니셜 폴백이다.
+  // 전부 키 없이 접근 가능한 소스만 — 키가 필요한 소스는 조용히 실패해 빈 자리를 만든다.
   return [
-    { url: `https://assets.parqet.com/logos/symbol/${encodeURIComponent(sym)}`, source: "parqet" },
-    { url: `https://financialmodelingprep.com/image-stock/${encodeURIComponent(sym)}.png`, source: "fmp" },
+    { url: `https://assets.parqet.com/logos/symbol/${enc}`, source: "parqet" },
+    { url: `https://raw.githubusercontent.com/nvstly/icons/main/ticker_icons/${enc}.png`, source: "nvstly" },
+    { url: `https://eodhd.com/img/logos/US/${enc}.png`, source: "eodhd" },
+    { url: `https://financialmodelingprep.com/image-stock/${enc}.png`, source: "fmp" },
   ];
 }
 

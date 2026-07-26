@@ -5,33 +5,38 @@ const component = readFileSync(new URL("../components/KeywordDepthPage.tsx", imp
 const section = readFileSync(new URL("../components/DepthSection.tsx", import.meta.url), "utf8");
 const sparkline = readFileSync(new URL("../components/Sparkline.tsx", import.meta.url), "utf8");
 const chartCard = readFileSync(new URL("../components/cards/ChartCardBody.tsx", import.meta.url), "utf8");
+const timeline = readFileSync(new URL("../components/JudgmentTimeline.tsx", import.meta.url), "utf8");
 const tokens = readFileSync(new URL("../lib/chartTokens.ts", import.meta.url), "utf8");
 
 describe("종목 뎁스 정보 구조", () => {
-  it("WO-G1B: 탭 없는 단일 스크롤 「납득 문서」 — 질문 순서 5블록", () => {
-    // 탭 구조 소멸(사용처 제거).
-    expect(component).not.toContain("<DepthTabBar tab={depthTab}");
-    expect(component).not.toContain('role="tabpanel"');
-    expect(component).not.toContain('depthTab === "judgment"');
-    // 단일 스크롤 본문.
-    // 하단 잘림 수리(2026-07): py-6 → pt-6 + GNB·safe-area 만큼 하단 여백.
-    expect(component).toContain(
-      'className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]"'
-    );
-    // 질문형 5블록 헤딩(위→아래).
-    for (const q of ["왜 이 회사인가", "왜 지금인가", "언제 틀리는가", "이 종목 판단 기록"]) {
-      expect(component).toContain(`<DepthDocHeading label="${q}" />`);
+  it("WO-P7: 질문 3단계 — 한 화면에 전부 쌓지 않는다", () => {
+    // 단계 정의(이 회사 / 왜 지금 / 기록)와 탭 UI.
+    for (const label of ["이 회사", "왜 지금", "기록"]) {
+      expect(component).toContain(`label: "${label}"`);
     }
-    // 블록 순서: 전문가 소견 → 왜 이 회사 → 왜 지금 → 언제 틀리나 → 판단 기록.
-    const order = [
-      "<ExpertOpinionBlock",
-      '<DepthDocHeading label="왜 이 회사인가"',
-      '<DepthDocHeading label="왜 지금인가"',
-      '<DepthDocHeading label="언제 틀리는가"',
-      '<DepthDocHeading label="이 종목 판단 기록"',
-    ].map((s) => component.indexOf(s));
+    expect(component).toContain("<DepthStepTabs step={step} onStep={setStep} />");
+    expect(component).toContain('role="tabpanel"');
+
+    // 단계별로 본문이 갈린다 — 세 갈래가 모두 존재.
+    for (const key of ["company", "now", "record"]) {
+      expect(component).toContain(`step === "${key}"`);
+    }
+
+    // 순서: 이 회사 → 왜 지금 → 기록.
+    const order = ['step === "company"', 'step === "now"', 'step === "record"'].map((s) => component.indexOf(s));
     expect(order.every((i) => i >= 0)).toBe(true);
     for (let i = 1; i < order.length; i += 1) expect(order[i]).toBeGreaterThan(order[i - 1]!);
+
+    // 가격 헤더는 스크롤과 분리해 어느 단계에서도 고정(카드 연속성).
+    expect(component).toMatch(/shrink-0 border-b border-hairline px-6 pb-3 pt-4[\s\S]{0,200}<StockPriceHeader/);
+
+    // 본문 스크롤 컨테이너는 GNB·safe-area 만큼 하단을 비운다(마지막 블록 가림 금지).
+    expect(component).toContain("pb-[calc(6rem+env(safe-area-inset-bottom))]");
+  });
+
+  it("같은 제목을 두 번 쓰지 않는다 — JudgmentTimeline 이 자체 제목을 갖는다", () => {
+    expect(component).not.toContain('<DepthDocHeading label="이 종목 판단 기록"');
+    expect(timeline).toContain('title="이 종목 판단 기록"');
   });
 
   it("점수·육각형은 유저 화면에서 내린다(내부 선별용으로만 — 코드 보존)", () => {

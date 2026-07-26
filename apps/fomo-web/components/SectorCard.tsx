@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import type { DeckSectorCardData } from "@/lib/discoveryDeck";
 import { CaretDownIcon, CaretUpIcon } from "@/components/icons";
 import { canonicalName } from "@/lib/companyDisplay";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
 
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 
@@ -77,7 +78,15 @@ export function SectorCard({ card, progress }: { card: DeckSectorCardData; progr
           return (
             <div key={`${card.id}:${stock.canonical}`} className="border-b border-hairline-soft pb-2 last:border-b-0">
               <div className="flex min-w-0 items-center justify-between gap-3">
-                <span className="min-w-0 truncate text-base font-bold text-whiteout">{canonicalName(stock.canonical)}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <StockLogoBadge
+                    name={canonicalName(stock.canonical)}
+                    naverCode={stock.naverCode}
+                    symbol={stock.symbol}
+                    size={22}
+                  />
+                  <span className="min-w-0 truncate text-base font-bold text-whiteout">{canonicalName(stock.canonical)}</span>
+                </span>
                 <span className="inline-flex shrink-0 items-center gap-1 text-sm font-bold tabular-nums" style={{ color: DIR_COLOR[change.dir] ?? DIR_COLOR.flat }}>
                   {change.dir === "up" && <CaretUpIcon size={11} />}
                   {change.dir === "down" && <CaretDownIcon size={11} />}
