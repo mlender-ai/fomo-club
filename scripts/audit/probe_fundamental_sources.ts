@@ -13,7 +13,7 @@
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { AUDIT_SEED, fetchPublishedUniverse, seededShuffle, type UniverseEntry } from "./universe";
+import { AUDIT_SEED, fetchPublishedUniverse, flag, numericFlag, seededShuffle, type UniverseEntry } from "./universe";
 
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -117,15 +117,20 @@ interface XbrlUnitEntry {
   fy?: number;
 }
 interface CompanyFacts {
-  facts?: { "us-gaap"?: Record<string, { units?: Record<string, XbrlUnitEntry[]> }> };
+  facts?: Record<string, Record<string, { units?: Record<string, XbrlUnitEntry[]> }>>;
 }
 
-/** us-gaap 개념 중 먼저 존재하는 것의 USD 시계열. */
+/**
+ * 개념 시계열. 네임스페이스를 us-gaap 으로 한정하면 **주식수(dei)를 못 찾는다** —
+ * 2차 실측에서 대형주 PBR 이 0/11 로 나온 원인이었다. 전 네임스페이스를 훑는다.
+ */
 function conceptSeries(facts: CompanyFacts, concepts: readonly string[]): XbrlUnitEntry[] {
   for (const name of concepts) {
-    const units = facts.facts?.["us-gaap"]?.[name]?.units;
-    const usd = units?.USD ?? units?.["USD/shares"];
-    if (usd && usd.length > 0) return usd;
+    for (const ns of Object.values(facts.facts ?? {})) {
+      const units = ns?.[name]?.units;
+      const series = units?.USD ?? units?.["USD/shares"] ?? units?.shares ?? units?.pure;
+      if (series && series.length > 0) return series;
+    }
   }
   return [];
 }
@@ -183,7 +188,13 @@ async function probeSec(entry: UniverseEntry, result: ProbeResult): Promise<void
     "StockholdersEquity",
     "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
   ]);
-  const shares = conceptSeries(facts, ["CommonStockSharesOutstanding", "EntityCommonStockSharesOutstanding"]);
+  const shares = conceptSeries(facts, [
+    "EntityCommonStockSharesOutstanding", // dei 네임스페이스
+    "CommonStockSharesOutstanding",
+    "CommonStockSharesIssued",
+    "WeightedAverageNumberOfDilutedSharesOutstanding",
+  ]);
+  const eps = conceptSeries(facts, ["EarningsPerShareDiluted", "EarningsPerShareBasic"]);
   const dividend = conceptSeries(facts, ["CommonStockDividendsPerShareDeclared", "PaymentsOfDividendsCommonStock"]);
 
   const q = quarterlyCount(revenue);
@@ -208,7 +219,17 @@ async function probeSec(entry: UniverseEntry, result: ProbeResult): Promise<void
     source: "sec-xbrl",
     note: `자기자본 ${equity.length} / 주식수 ${shares.length}`,
   };
-  result.fields.dividend_history = { ok: dividend.length > 0, source: "sec-xbrl", note: `관측 ${dividend.length}개` };
+  // 배당은 Nasdaq summary(AnnualizedDividend/Yield)에도 있다 — 둘 중 하나면 확보로 본다.
+  if (!result.fields.dividend_history?.ok) {
+    result.fields.dividend_history = { ok: dividend.length > 0, source: "sec-xbrl", note: `관측 ${dividend.length}개` };
+  }
+  // PER TTM "계산 가능 여부" — 가격(Nasdaq)과 EPS(SEC)가 모두 있으면 계산 가능.
+  const hasPrice = result.fields.market_cap_shares?.ok === true;
+  result.fields.per_ttm = {
+    ok: hasPrice && eps.length > 0,
+    source: "nasdaq-price × sec-eps",
+    note: `EPS 관측 ${eps.length}개`,
+  };
 }
 
 // ── Nasdaq (현재 프로덕션이 쓰는 소스) ──────────────────────────────────────
@@ -227,19 +248,30 @@ async function probeNasdaq(entry: UniverseEntry, result: ProbeResult): Promise<v
     "nasdaq",
     { "User-Agent": NASDAQ_UA }
   );
+  // 실측한 키(2차 실측 CLBK 덤프): Exchange, Sector, Industry, OneYrTarget, TodayHighLow,
+  // ShareVolume, AverageVolume, PreviousClose, FiftTwoWeekHighLow, MarketCap,
+  // AnnualizedDividend, ExDividendDate, DividendPaymentDate, Yield
+  // → PERatio·BookValue 는 **이 엔드포인트에 없다.** 추측 키로 세면 0% 가 잘못 나온다.
   const s = summary?.data?.summaryData;
-  const num = (key: string): number | undefined => {
-    const raw = s?.[key]?.value?.replace(/[$,%\s]/g, "");
-    const parsed = raw ? Number(raw.replace(/[A-Za-z]/g, "")) : NaN;
-    return Number.isFinite(parsed) ? parsed : undefined;
-  };
   const capRaw = s?.MarketCap?.value?.replace(/[$,\s]/g, "");
-  const cap = capRaw ? Number(capRaw) : NaN;
+  const cap = capRaw ? Number(capRaw) : Number.NaN;
   if (Number.isFinite(cap) && cap > 0) result.marketCapUsd = cap;
 
-  result.fields.market_cap_shares = { ok: Number.isFinite(cap) && cap > 0, source: "nasdaq-summary" };
-  result.fields.per_ttm = { ok: num("PERatio") !== undefined, source: "nasdaq-summary" };
-  result.fields.sector_industry_code = { ok: !!s?.Sector?.value || !!s?.Industry?.value, source: "nasdaq-summary" };
+  result.fields.market_cap_shares = {
+    ok: Number.isFinite(cap) && cap > 0,
+    source: "nasdaq-summary.MarketCap",
+  };
+  result.fields.sector_industry_code = {
+    ok: !!s?.Sector?.value || !!s?.Industry?.value,
+    source: "nasdaq-summary.Sector/Industry",
+  };
+  const dividend = s?.AnnualizedDividend?.value?.trim();
+  const yieldVal = s?.Yield?.value?.trim();
+  result.fields.dividend_history = {
+    ok: !!(dividend && dividend !== "N/A") || !!(yieldVal && yieldVal !== "N/A"),
+    source: "nasdaq-summary.AnnualizedDividend/Yield",
+    note: `배당 ${dividend ?? "-"} / 수익률 ${yieldVal ?? "-"}`,
+  };
 
   await sleep(DELAY_MS.nasdaq);
   const profile = await getJson<{ data?: { CompanyDescription?: { value?: string } } }>(
@@ -254,19 +286,53 @@ async function probeNasdaq(entry: UniverseEntry, result: ProbeResult): Promise<v
     note: desc ? `${desc.length}자` : "없음",
   };
 
-  // 컨센서스 — 무료 경로가 있는지 실측한다. 없으면 없다고 적는다.
+  // 컨센서스 — 실측 구조: data.quarterlyForecast.rows[] / data.yearlyForecast.rows[]
+  // 각 행 키: fiscalEnd, consensusEPSForecast, highEPSForecast, lowEPSForecast, noOfEstimates, up, down
   await sleep(DELAY_MS.nasdaq);
-  const eps = await getJson<{ data?: { earningsForecastTable?: { rows?: unknown[] } } }>(
-    `https://api.nasdaq.com/api/analyst/${encodeURIComponent(symbol)}/earnings-forecast`,
+  const forecast = await getJson<{
+    data?: {
+      quarterlyForecast?: { rows?: Array<{ consensusEPSForecast?: string; noOfEstimates?: string }> };
+      yearlyForecast?: { rows?: Array<{ consensusEPSForecast?: string; noOfEstimates?: string }> };
+    };
+  }>(`https://api.nasdaq.com/api/analyst/${encodeURIComponent(symbol)}/earnings-forecast`, "nasdaq", {
+    "User-Agent": NASDAQ_UA,
+  });
+  const yearly = forecast?.data?.yearlyForecast?.rows ?? [];
+  const quarterly = forecast?.data?.quarterlyForecast?.rows ?? [];
+  const epsRows = [...yearly, ...quarterly].filter((r) => {
+    const v = r.consensusEPSForecast?.replace(/[$,\s]/g, "");
+    return !!v && v !== "N/A" && Number.isFinite(Number(v));
+  });
+  const estimates = Math.max(
+    0,
+    ...[...yearly, ...quarterly].map((r) => Number(r.noOfEstimates ?? 0)).filter((n) => Number.isFinite(n))
+  );
+  result.fields.consensus_eps_fwd = {
+    ok: epsRows.length > 0,
+    source: "nasdaq-analyst.earnings-forecast",
+    note: `예상 행 ${epsRows.length}개 / 애널리스트 최대 ${estimates}명`,
+  };
+  // 매출 컨센서스는 이 엔드포인트에 **없다**(EPS 만 제공) — 실측 결과 그대로.
+  result.fields.consensus_revenue_fwd = {
+    ok: false,
+    source: "nasdaq-analyst.earnings-forecast",
+    note: "EPS 예상만 제공. 매출 예상 필드 부재(실측)",
+  };
+
+  // 일별 종가 5년 — historical 엔드포인트. limit 을 충분히 올려 실제 반환 행수를 센다.
+  await sleep(DELAY_MS.nasdaq);
+  const from = new Date(Date.now() - 5 * 365 * 86_400_000).toISOString().slice(0, 10);
+  const to = new Date().toISOString().slice(0, 10);
+  const hist = await getJson<{ data?: { totalRecords?: number; tradesTable?: { rows?: unknown[] } } }>(
+    `https://api.nasdaq.com/api/quote/${encodeURIComponent(symbol)}/historical?assetclass=stocks&fromdate=${from}&todate=${to}&limit=9999`,
     "nasdaq",
     { "User-Agent": NASDAQ_UA }
   );
-  const epsRows = eps?.data?.earningsForecastTable?.rows?.length ?? 0;
-  result.fields.consensus_eps_fwd = { ok: epsRows > 0, source: "nasdaq-analyst", note: `행 ${epsRows}개` };
-  result.fields.consensus_revenue_fwd = {
-    ok: false,
-    source: "nasdaq-analyst",
-    note: "무료 경로에서 매출 컨센서스 미제공(실측)",
+  const rows = hist?.data?.tradesTable?.rows?.length ?? 0;
+  result.fields.daily_close_5y = {
+    ok: rows > 1000,
+    source: "nasdaq-historical",
+    note: `반환 행 ${rows}개(총 ${hist?.data?.totalRecords ?? 0})`,
   };
 }
 
@@ -279,58 +345,111 @@ async function probeNaver(entry: UniverseEntry, result: ProbeResult): Promise<vo
     return;
   }
   const base = `https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}`;
-  await sleep(DELAY_MS.naver);
-  const basic = await getJson<Record<string, unknown>>(`${base}/basic`, "naver");
-  await sleep(DELAY_MS.naver);
-  const integration = await getJson<Record<string, unknown>>(`${base}/integration`, "naver");
 
-  const hasCap = !!basic && (typeof basic.marketValue === "string" || typeof basic.marketValueHangeul === "string");
-  result.fields.market_cap_shares = { ok: hasCap, source: "naver-basic" };
+  // integration — 실측 구조: totalInfos[{code,key,value}](18개), industryCode, consensusInfo,
+  // industryCompareInfo[].marketValue. 시총·PER·PBR 은 **basic 이 아니라 여기** 있다.
+  await sleep(DELAY_MS.naver);
+  const integration = await getJson<{
+    totalInfos?: Array<{ code?: string; key?: string; value?: string }>;
+    industryCode?: string;
+    consensusInfo?: { recommMean?: string; priceTargetMean?: string } | null;
+  }>(`${base}/integration`, "naver");
 
-  // 네이버 integration 의 총관심/지표 블록에서 PER·PBR 유무 판정
-  const blob = JSON.stringify(integration ?? {});
-  result.fields.per_ttm = { ok: /"per"/i.test(blob), source: "naver-integration" };
-  result.fields.pbr = { ok: /"pbr"/i.test(blob), source: "naver-integration" };
-  result.fields.dividend_history = { ok: /"dividend/i.test(blob), source: "naver-integration" };
+  const infos = integration?.totalInfos ?? [];
+  const info = (...needles: string[]): string | undefined => {
+    const hit = infos.find((i) => needles.some((n) => i.code === n || i.key === n));
+    const v = hit?.value?.trim();
+    return v && v !== "-" && v !== "N/A" ? v : undefined;
+  };
+  result.fields.market_cap_shares = {
+    ok: !!info("marketValue", "시가총액", "marketValueHangeul"),
+    source: "naver-integration.totalInfos",
+    note: `totalInfos ${infos.length}개`,
+  };
+  result.fields.per_ttm = { ok: !!info("per", "PER"), source: "naver-integration.totalInfos" };
+  result.fields.pbr = { ok: !!info("pbr", "PBR"), source: "naver-integration.totalInfos" };
+  result.fields.dividend_history = {
+    ok: !!info("dividendYieldRatio", "배당수익률", "dvr"),
+    source: "naver-integration.totalInfos",
+  };
   result.fields.sector_industry_code = {
-    ok: /"industryCodeType"|"upjongName"|"industry"/i.test(blob),
-    source: "naver-integration",
+    ok: !!integration?.industryCode,
+    source: "naver-integration.industryCode",
+    note: integration?.industryCode ? `업종코드 ${integration.industryCode}` : "없음",
+  };
+  // 컨센서스 — 실측: recommMean(투자의견 평균)·priceTargetMean(목표주가)만 있다.
+  // **매출·EPS 예상치가 아니다.** 목표주가는 우리 원칙상 쓰지도 않는다.
+  result.fields.consensus_revenue_fwd = {
+    ok: false,
+    source: "naver-integration.consensusInfo",
+    note: "투자의견·목표주가만 제공. 매출 예상 부재(실측)",
   };
 
-  // 분기 재무 — 네이버 종목 API 에 재무 엔드포인트가 있는지 실측
+  // finance/quarter — 실측 구조: financeInfo.trTitleList[{isConsensus,title,key}],
+  // financeInfo.rowList[{title,columns}](16개), corporationSummary.comment1..3
   await sleep(DELAY_MS.naver);
-  const finance = await getJson<Record<string, unknown>>(`${base}/finance/annual`, "naver");
-  await sleep(DELAY_MS.naver);
-  const quarter = await getJson<Record<string, unknown>>(`${base}/finance/quarter`, "naver");
-  const qBlob = JSON.stringify(quarter ?? {});
-  const aBlob = JSON.stringify(finance ?? {});
-  const qRows = (qBlob.match(/"rowList"/g)?.length ?? 0) > 0 ? (qBlob.match(/"stac(?:Ym|_ym)"/gi)?.length ?? 0) : 0;
+  const quarter = await getJson<{
+    financeInfo?: {
+      trTitleList?: Array<{ isConsensus?: boolean; title?: string; key?: string }>;
+      rowList?: Array<{ title?: string; columns?: Record<string, unknown> }>;
+    };
+    corporationSummary?: { comment1?: string; comment2?: string; comment3?: string } | null;
+  }>(`${base}/finance/quarter`, "naver");
+
+  const rowList = quarter?.financeInfo?.rowList ?? [];
+  const titles = quarter?.financeInfo?.trTitleList ?? [];
+  const rowTitled = (...needles: string[]) =>
+    rowList.some((r) => needles.some((n) => (r.title ?? "").replace(/\s/g, "").includes(n)));
+  const periodCount = titles.filter((t) => !t.isConsensus).length;
+
   result.fields.quarterly_revenue_8q = {
-    ok: !!quarter && /매출|revenue|sales/i.test(qBlob),
-    source: "naver-finance-quarter",
-    note: `기간 관측 ${qRows}개`,
+    ok: rowTitled("매출액", "영업수익") && periodCount >= 4,
+    source: "naver-finance-quarter.rowList",
+    note: `확정 기간 ${periodCount}개 / 행 ${rowList.length}개`,
   };
   result.fields.quarterly_operating_income = {
-    ok: !!quarter && /영업이익|operatingProfit/i.test(qBlob),
-    source: "naver-finance-quarter",
+    ok: rowTitled("영업이익"),
+    source: "naver-finance-quarter.rowList",
   };
   result.fields.quarterly_net_income = {
-    ok: !!quarter && /당기순이익|netIncome/i.test(qBlob),
-    source: "naver-finance-quarter",
+    ok: rowTitled("당기순이익"),
+    source: "naver-finance-quarter.rowList",
   };
-  result.fields.annual_financials_5y = { ok: !!finance && aBlob.length > 200, source: "naver-finance-annual" };
+  // 예상 컬럼(isConsensus)이 있으면 forward 추정이 실제로 붙어 있다는 뜻.
+  const consensusCols = titles.filter((t) => t.isConsensus).length;
+  result.fields.consensus_eps_fwd = {
+    ok: consensusCols > 0,
+    source: "naver-finance-quarter.trTitleList[isConsensus]",
+    note: `예상 컬럼 ${consensusCols}개`,
+  };
 
-  // 일별 시세 5년
+  // **사업 설명이 있다** — 2차 실측에서 corporationSummary.comment1~3(한국어 3문장) 확인.
+  // 1차에서 하드코딩 false 로 둔 것은 틀린 판정이었다.
+  const summary = [quarter?.corporationSummary?.comment1, quarter?.corporationSummary?.comment2, quarter?.corporationSummary?.comment3]
+    .filter((c): c is string => !!c && c.trim().length > 0);
+  result.fields.business_description = {
+    ok: summary.join("").trim().length > 40,
+    source: "naver-finance-quarter.corporationSummary",
+    note: `문장 ${summary.length}개 / ${summary.join("").length}자`,
+  };
+
+  await sleep(DELAY_MS.naver);
+  const annual = await getJson<{ financeInfo?: { rowList?: unknown[] } }>(`${base}/finance/annual`, "naver");
+  result.fields.annual_financials_5y = {
+    ok: (annual?.financeInfo?.rowList?.length ?? 0) > 0,
+    source: "naver-finance-annual.rowList",
+  };
+
   await sleep(DELAY_MS.naver);
   const prices = await getJson<unknown[]>(
     `https://api.stock.naver.com/chart/domestic/item/${encodeURIComponent(code)}/day?startDateTime=202107150000&endDateTime=202607150000`,
     "naver"
   );
-  result.fields.daily_close_5y = { ok: Array.isArray(prices) && prices.length > 1000, source: "naver-chart" };
-
-  result.fields.business_description = { ok: false, source: "naver", note: "사업 설명 미제공 — DART 사업보고서 필요" };
-  result.fields.consensus_revenue_fwd = { ok: /"consensus"/i.test(blob), source: "naver-integration" };
-  result.fields.consensus_eps_fwd = { ok: /"consensus"/i.test(blob), source: "naver-integration" };
+  result.fields.daily_close_5y = {
+    ok: Array.isArray(prices) && prices.length > 1000,
+    source: "naver-chart-day",
+    note: Array.isArray(prices) ? `${prices.length}일` : "실패",
+  };
 }
 
 // ── DART (KR 공시 — 키 필요) ────────────────────────────────────────────────
@@ -418,9 +537,9 @@ export function summarize(results: readonly ProbeResult[]): Record<Group, Record
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const base = args[args.indexOf("--base") + 1] ?? process.env.AUDIT_BASE_URL ?? "";
-  const outDir = args[args.indexOf("--out") + 1] ?? "docs/audit";
-  const limit = Number(args[args.indexOf("--limit") + 1] ?? 130);
+  const base = flag(args, "--base") ?? process.env.AUDIT_BASE_URL ?? "";
+  const outDir = flag(args, "--out") ?? "docs/audit";
+  const limit = numericFlag(args, "--limit", 130);
   if (!base) {
     console.error("--base <프로덕션 URL> 필요 (발행 카드 유니버스를 여기서 가져온다)");
     process.exit(2);

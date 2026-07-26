@@ -13,7 +13,7 @@
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { AUDIT_SEED, seededShuffle } from "./universe";
+import { AUDIT_SEED, flag, numericFlag, seededShuffle } from "./universe";
 import { labelCard, ratio, type CardPayloadLike, type SubstanceLabels } from "./substance-labels";
 
 const TIMEOUT_MS = 20_000;
@@ -68,9 +68,10 @@ export function toCardPayload(pick: QuietPickLike, external?: string): CardPaylo
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const base = (args[args.indexOf("--base") + 1] ?? process.env.AUDIT_BASE_URL ?? "").replace(/\/$/, "");
-  const outDir = args[args.indexOf("--out") + 1] ?? "docs/audit";
-  const target = Number(args[args.indexOf("--target") + 1] ?? 200);
+  const base = (flag(args, "--base") ?? process.env.AUDIT_BASE_URL ?? "").replace(/\/$/, "");
+  const outDir = flag(args, "--out") ?? "docs/audit";
+  // 1차 실측 사고: --target 미전달 시 NaN 이 되어 표본이 0장으로 잘렸다. 기본값을 명시한다.
+  const target = numericFlag(args, "--target", 200);
   if (!base) {
     console.error("--base <프로덕션 URL> 필요");
     process.exit(2);

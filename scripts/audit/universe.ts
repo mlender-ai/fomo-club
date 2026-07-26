@@ -77,3 +77,19 @@ export async function fetchPublishedUniverse(baseUrl: string, timeoutMs = 20_000
   }
   return out;
 }
+
+/**
+ * 플래그 인자 파서. `args.indexOf("--x") + 1` 은 플래그가 없을 때 0 이 되어
+ * 엉뚱한 값(다음 플래그 이름)을 집는다 — 1차 실측에서 `--target` 이 NaN 이 되어
+ * 표본이 0장으로 잘린 사고가 실제로 났다. 없으면 명시적으로 기본값을 쓴다.
+ */
+export function flag(args: readonly string[], name: string): string | undefined {
+  const i = args.indexOf(name);
+  return i >= 0 && i + 1 < args.length ? args[i + 1] : undefined;
+}
+
+export function numericFlag(args: readonly string[], name: string, fallback: number): number {
+  const raw = flag(args, name);
+  const parsed = raw === undefined ? Number.NaN : Number(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}

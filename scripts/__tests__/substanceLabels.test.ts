@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { jaccard, labelCard, ratio, COPYPASTE_JACCARD } from "../audit/substance-labels";
-import { seededShuffle, seededRandom, AUDIT_SEED } from "../audit/universe";
+import { seededShuffle, seededRandom, AUDIT_SEED, flag, numericFlag } from "../audit/universe";
 
 /**
  * WO-SUB-00 §7 완료 조건 1·2 — 감사 스크립트는 시드 고정으로 재실행 시 동일 결과를 내야 하고,
@@ -107,5 +107,28 @@ describe("비율 산출", () => {
   it("절반이면 50%", () => {
     const items = [labelCard({ frameText: "있음" }), labelCard({ frameText: null })];
     expect(ratio(items, "has_frame")).toBe(50);
+  });
+});
+
+describe("인자 파싱 — 1차 실측 사고 재발 방지", () => {
+  it("플래그가 없으면 기본값을 쓴다(다음 토큰을 집지 않는다)", () => {
+    // 실제 사고: --target 없이 실행 → indexOf(-1)+1=0 → args[0]="--base" → Number(NaN)
+    // → slice(0, NaN) → 표본 0장. 로그에는 "13장 로드"가 찍혀 있어 눈치채기 어려웠다.
+    const args = ["--base", "https://x", "--out", "docs/audit"];
+    expect(numericFlag(args, "--target", 200)).toBe(200);
+    expect(flag(args, "--target")).toBeUndefined();
+  });
+
+  it("플래그가 있으면 그 값을 쓴다", () => {
+    expect(numericFlag(["--limit", "130"], "--limit", 999)).toBe(130);
+    expect(flag(["--base", "https://x"], "--base")).toBe("https://x");
+  });
+
+  it("값이 숫자가 아니면 기본값으로 떨어진다", () => {
+    expect(numericFlag(["--limit", "abc"], "--limit", 42)).toBe(42);
+  });
+
+  it("플래그가 마지막 토큰이면 값이 없다고 본다", () => {
+    expect(numericFlag(["--limit"], "--limit", 7)).toBe(7);
   });
 });
