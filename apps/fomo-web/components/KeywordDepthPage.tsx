@@ -2653,7 +2653,7 @@ function StockWhyHappened({ insight }: { insight: CondensedInsight | null }) {
  * 재무 한눈에(WO 1.5 F) — "이 회사 돈 잘 버나" 최소셋. 시총·PER·실적 추세를 한 줄씩.
  * KR=네이버 금융, US=Yahoo quoteSummary(이미 연결된 소스). 없는 항목은 생략(가짜 금지).
  */
-export function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
+export function FinanceGlanceBlock({ basics, maxLines = 5 }: { basics: StockBasics | null; maxLines?: number }) {
   if (!basics) return null;
   const lines: Array<{ label: string; value: string; note?: string }> = [];
   if (basics.marketCap) lines.push({ label: "시가총액", value: basics.marketCap });
@@ -2680,7 +2680,7 @@ export function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
   return (
     <DepthSection className="mt-4" variant="list" title="재무 한눈에" description={`출처: ${source}`}>
       <ul>
-        {lines.slice(0, 5).map((line, i) => (
+        {lines.slice(0, maxLines).map((line, i) => (
           <li key={`fin-${i}`}>
             <DepthLine className="flex items-baseline justify-between gap-3 text-sm leading-6">
               <span className="shrink-0 text-muted">{line.label}</span>
