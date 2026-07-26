@@ -59,6 +59,39 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
   });
 });
 
+describe("정보 위계(WO-P5 §2) — 눈이 갈 곳이 하나", () => {
+  it("카드 훅이 뎁스 첫 줄로 이어진다(맥락 단절 방지)", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    const hookIdx = body.indexOf("{pick.hook}");
+    const firstBlockIdx = body.indexOf("<ReadingBlock pick={pick} />");
+    expect(hookIdx).toBeGreaterThan(0);
+    expect(hookIdx).toBeLessThan(firstBlockIdx); // 훅이 ① 블록보다 위
+  });
+
+  it("타이포 3단 — 블록 제목(작게·회색) / 핵심 문장(크게·흰색) / 근거(작게·회색)", () => {
+    expect(depth).toContain('className="text-[11px] font-semibold tracking-wide text-muted"'); // 1단 제목
+    expect(depth).toContain("text-[19px] font-bold leading-7 text-whiteout"); // 2단 핵심(훅)
+    expect(depth).toContain('className="w-[92px] shrink-0 text-[12px] leading-6 text-muted"'); // 3단 라벨
+  });
+
+  it("강조는 화면당 1곳 — 성적 행에만 accent, 차트는 무채색", () => {
+    // accent 를 쓰는 행은 '이런 패턴의 성적' 하나뿐.
+    expect(depth.match(/accent$/gm)?.length ?? 0).toBe(1);
+    expect(depth).toContain('label="이런 패턴의 성적"');
+    // 차트 선·마커에 라임(chartTokens.up)을 쓰지 않는다.
+    const chart = depth.slice(depth.indexOf("function PickChart"), depth.indexOf("function RecordBlock"));
+    expect(chart).not.toContain("chartTokens.up");
+  });
+
+  it("블록 사이 구분선 + 여백이 있다", () => {
+    expect(depth).toContain("border-t border-hairline-soft pt-5");
+  });
+
+  it("② 재무 수치는 4줄까지만 나열한다", () => {
+    expect(depth).toContain("maxLines={4}");
+  });
+});
+
 describe("빈 섹션·상태 문구 금지(전 컴포넌트 스캔)", () => {
   // 데이터가 없으면 섹션을 렌더하지 않는다 — "아직 없어요/준비 중/불러오는 중" 류를 화면에 쓰지 않는다.
   const FORBIDDEN = ["아직 없어요", "아직 없습니다", "준비 중이에요", "준비중이에요", "생성 중이에요", "축적 중"];

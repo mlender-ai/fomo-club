@@ -27,21 +27,33 @@ import { chartTokens } from "@/lib/chartTokens";
 /** 하단 여백 — GNB(≈64px) + safe-area + 여유. 마지막 블록 잘림 방지(WO-P3 §2). */
 const BOTTOM_PAD = "pb-[calc(7rem+env(safe-area-inset-bottom))]";
 
+/**
+ * 블록 껍데기 — 타이포 3단 위계의 1단(제목: 작게·회색).
+ * 블록 사이에 구분선 + 넉넉한 여백을 둬 "어디서 끊기는지"가 눈에 보이게 한다(WO-P5 §2).
+ */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-5">
+    <section className="mt-7 border-t border-hairline-soft pt-5 first:mt-4 first:border-t-0 first:pt-0">
       <h3 className="text-[11px] font-semibold tracking-wide text-muted">{title}</h3>
-      <div className="mt-2">{children}</div>
+      <div className="mt-2.5">{children}</div>
     </section>
   );
 }
 
-/** ① 표 한 줄 — 라벨/값. 값이 비면 행 자체를 만들지 않는다(호출부 책임). */
-function ReadRow({ label, value }: { label: string; value: string }) {
+/**
+ * ① 표 한 줄 — 라벨(3단 위계 3단: 작게·회색) / 값(2단: 크게·흰색).
+ * accent 는 화면 전체에서 **성적 행 하나에만** 쓴다(강조 1곳 규칙, WO-P5 §2).
+ */
+function ReadRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <li className="flex gap-3 border-b border-hairline-soft py-2 last:border-b-0">
+    <li className="flex gap-3 border-b border-hairline-soft py-2.5 last:border-b-0">
       <span className="w-[92px] shrink-0 text-[12px] leading-6 text-muted">{label}</span>
-      <span className="min-w-0 flex-1 text-sm leading-6 text-whiteout">{value}</span>
+      <span
+        className={`min-w-0 flex-1 leading-6 ${accent ? "text-[15px] font-semibold" : "text-sm text-whiteout"}`}
+        {...(accent ? { style: { color: chartTokens.up } } : {})}
+      >
+        {value}
+      </span>
     </li>
   );
 }
@@ -60,9 +72,15 @@ function whoBought(pick: QuietPick): string {
 
 /** "얼마나 이례적인가" — 이례성 지표(G1-A2) 중 강한 것부터 최대 2개. 없으면 undefined → 행 생략. */
 function howUnusual(pick: QuietPick): string | undefined {
-  const texts = (pick.anomalies ?? []).map((a) => a.text.trim()).filter(Boolean);
-  if (texts.length === 0) return undefined;
-  return texts.slice(0, 2).join(" · ");
+  const all = (pick.anomalies ?? []).filter((a) => a.text?.trim());
+  if (all.length === 0) return undefined;
+  // 빈도(1년 0건→N명) → 규모(시총 %·거래량 배수) 순으로 최대 2개. 나머지는 훅이 이미 말한다.
+  const rank = (kind: string) => (kind === "frequency" ? 0 : kind === "scale" ? 1 : kind === "participants" ? 2 : 3);
+  return [...all]
+    .sort((a, b) => rank(a.kind) - rank(b.kind) || b.strength - a.strength)
+    .slice(0, 2)
+    .map((a) => a.text.trim())
+    .join(" · ");
 }
 
 /** ① 이 매수, 어떻게 읽나 — 뎁스의 심장. 성적(P2)·이례성(A2)을 한 표로. */
@@ -74,7 +92,13 @@ function ReadingBlock({ pick }: { pick: QuietPick }) {
       <ul className="rounded-xl border border-hairline-soft bg-white/[0.02] px-3">
         <ReadRow label="누가 샀나" value={whoBought(pick)} />
         {unusual && <ReadRow label="얼마나 이례적인가" value={unusual} />}
-        {stats && <ReadRow label="이런 패턴의 성적" value={`${stats.headline} · ${stats.windowDays}일 중앙값 ${stats.medianReturn > 0 ? "+" : ""}${stats.medianReturn}%`} />}
+        {stats && (
+          <ReadRow
+            label="이런 패턴의 성적"
+            accent
+            value={`${stats.headline} · ${stats.windowDays}일 중앙값 ${stats.medianReturn > 0 ? "+" : ""}${stats.medianReturn}%`}
+          />
+        )}
         {stats && (
           <ReadRow
             label="단, 이건 알고"
@@ -147,8 +171,9 @@ function PickChart({
       {invY !== null && (
         <line x1={pad} x2={w - pad} y1={invY} y2={invY} stroke="#8b8f98" strokeDasharray="4 4" strokeWidth="1" />
       )}
-      <path d={line} fill="none" stroke={chartTokens.up} strokeWidth="1.6" />
-      <circle cx={x(markerIdx)} cy={y(closes[markerIdx]!)} r="3.5" fill={chartTokens.up} />
+      {/* 라인·마커는 무채색 — 화면의 유일한 강조는 ①의 성적 수치다(WO-P5 §2). */}
+      <path d={line} fill="none" stroke="#c9c9c4" strokeWidth="1.6" />
+      <circle cx={x(markerIdx)} cy={y(closes[markerIdx]!)} r="3.5" fill="#c9c9c4" />
     </svg>
   );
 }
@@ -269,6 +294,10 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
       {/* 본문 — 단일 스크롤. 하단은 GNB·safe-area 만큼 비워 마지막 블록이 가리지 않게. */}
       <div className={`scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 pt-1 ${BOTTOM_PAD}`}>
+        {/* 카드 훅 이음 — 카드에서 본 그 문장이 뎁스 첫 줄로 이어져 맥락이 끊기지 않는다(WO-P5 §2).
+            타이포 3단의 2단(핵심 문장: 크게·흰색). */}
+        <p className="mt-4 text-[19px] font-bold leading-7 text-whiteout">{pick.hook}</p>
+
         {/* ① */}
         <ReadingBlock pick={pick} />
 
@@ -276,7 +305,8 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
         {(basics?.summary || basics?.marketCap || (basics?.metrics?.length ?? 0) > 0) && (
           <Section title="무슨 회사인가">
             <CompanyProfileBlock basics={basics} />
-            <FinanceGlanceBlock basics={basics} />
+            {/* 수치는 4줄까지 — 위계를 지키기 위해 나열을 제한한다(WO-P5 §1②). */}
+            <FinanceGlanceBlock basics={basics} maxLines={4} />
           </Section>
         )}
 
