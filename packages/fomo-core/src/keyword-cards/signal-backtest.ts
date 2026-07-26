@@ -19,8 +19,12 @@ import { SIGNAL_RESUME_MIN_SAMPLE, type SignalTypeCode } from "./signal-resume";
 export const BACKTEST_HORIZONS = [7, 30] as const;
 export type BacktestHorizon = (typeof BACKTEST_HORIZONS)[number];
 
-/** 표본이 이보다 적으면 통계를 노출하지 않는다(정직 — 3건으로 "승률 67%" 금지). */
-export const BACKTEST_MIN_SAMPLE = 12;
+/**
+ * 표본이 이보다 적으면 통계를 만들지도, 노출하지도 않는다.
+ * WO-P6: **n<30 이면 블록 자체를 띄우지 않는다**(원장 배지의 n≥30 마스킹과 같은 잣대 —
+ * 화면마다 다른 기준으로 숫자를 노출하지 않기 위해 SIGNAL_RESUME_MIN_SAMPLE 을 그대로 쓴다).
+ */
+export const BACKTEST_MIN_SAMPLE = SIGNAL_RESUME_MIN_SAMPLE;
 
 /** 백테스트 방법론 버전 — 산식이 바뀌면 올린다(저장된 통계와 함께 노출). */
 export const BACKTEST_METHOD_VERSION = "bt.v1" as const;

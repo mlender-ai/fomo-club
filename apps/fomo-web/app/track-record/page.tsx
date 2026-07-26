@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { normalizeCompanyName } from "@fomo/core";
 import { SIGNAL_TYPE_CODES, SIGNAL_TYPE_LABELS } from "@fomo/core";
 import {
   fetchTrackRecord,
@@ -101,7 +102,7 @@ function PickRow({ pick, days, onOpen }: { pick: ScorecardPick; days: 7 | 30 | 9
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <span aria-hidden>{marketTag(pick)}</span>
-          <span className="truncate text-sm font-semibold text-whiteout">{pick.canonical}</span>
+          <span className="truncate text-sm font-semibold text-whiteout">{normalizeCompanyName(pick.canonical)}</span>
           <span className="shrink-0 text-[10px] text-muted">{pick.date}</span>
         </div>
         {pick.hook && <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">“{pick.hook}”</p>}
@@ -154,7 +155,7 @@ async function shareScorecard(headline: string, picks: ScorecardPick[], days: 7 
   for (const pick of picks.slice(0, 5)) {
     const ret = pick.returns[String(days) as "7" | "30" | "90"];
     ctx.fillStyle = "#FAFAFA";
-    ctx.fillText(`${marketTag(pick)} ${pick.canonical}`.slice(0, 22), 72, y);
+    ctx.fillText(`${marketTag(pick)} ${normalizeCompanyName(pick.canonical)}`.slice(0, 22), 72, y);
     ctx.fillStyle = ret ? (ret.returnPct >= 0 ? NEON : "#F87171") : "#6B6B68";
     ctx.textAlign = "right";
     ctx.fillText(ret ? signed(ret.returnPct) : "채점 전", size - 72, y);

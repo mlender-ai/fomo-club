@@ -27,6 +27,7 @@ import {
   type QuietPickAnomaly,
   type QuietPickAnomalyFacts,
   buildSignalStatsCopy,
+  companyDisplay,
   type SignalStats,
 } from "@fomo/core";
 import { kstDate } from "./fomo";
@@ -109,7 +110,9 @@ const KR_STREAK_WINDOW = 40;
 export const QUIET_PICK_MAX = 10;
 
 // ── 스키마(카드·뎁스가 소비할 단일 페이로드) ──────────────────────────────
-export interface QuietPickSubject {
+/** 검출 단계의 종목 식별자(표기 정규화 전). 발행 시점에 QuietPickSubject 로 확정된다. */
+export interface QuietPickSubjectSeed {
+  /** 원장·조인 키(원문 유지 — 바꾸면 과거 기록과 끊긴다). 화면 표기엔 쓰지 않는다. */
   canonical: string;
   symbol?: string;
   naverCode?: string;
@@ -117,6 +120,16 @@ export interface QuietPickSubject {
   country: "KR" | "US";
   /** 회사 정체 한 줄(8~15자, 한국어 보장) — 판단의 최소 조건. */
   identity?: string;
+}
+
+export interface QuietPickSubject extends QuietPickSubjectSeed {
+  /**
+   * 화면 표기용 회사명(WO-P6 ③) — 법인 접미·주 꼬리 제거("Columbia Financial, Inc./Md/"
+   * → "Columbia Financial"). **카드·뎁스·성적표·원장·공유가 전부 이 값을 쓴다.**
+   */
+  displayName: string;
+  /** 티커(US 심볼 / KR 6자리 코드) — 이름과 분리해 병기용. */
+  ticker?: string;
 }
 
 /** 픽별 데이터 완결성 로그(WO-P1) — 어드민·자가검증에서 빈 껍데기 픽을 잡는 근거. */
@@ -147,6 +160,11 @@ export interface QuietPickSignal {
   strength: number;
   /** 내부자 인원(US 클러스터) — 강화 재등장 판정에 쓴다. */
   insiderCount?: number;
+  /**
+   * 신호 규모의 실수치(US=매수금액 USD, KR=순매수 총량). 화면에 직접 쓰진 않지만
+   * **내일 재등장 판정의 기준**이 된다(scale 문자열은 버킷이라 5% 증가를 못 본다).
+   */
+  amount?: number;
   /**
    * 신호 강화 재등장 문구(WO-P4) — 어제 픽과 같은 신호가 **더 강해졌을 때만** 채운다.
    * 예 "5일째 계속 — 어제보다 2명 늘었어요". 순수 반복(변화 0)은 픽에서 제외된다.
@@ -464,7 +482,7 @@ function maxPositiveRun(nets: readonly number[]): number {
 
 // ── 후보(신호 검출 결과) ────────────────────────────────────────────────
 interface SignalCandidate {
-  subject: QuietPickSubject;
+  subject: QuietPickSubjectSeed;
   kind: QuietPickSignalKind;
   code: SignalTypeCode;
   /** 주체 명사(조사 붙이기 전) — "내부자"/"외국인"/"기관"/"외국인·기관". */
@@ -533,7 +551,7 @@ function detectKrSignals(
     const foreignLongest = foreign.days >= maxPositiveRun(foreignNets);
     const instLongest = inst.days >= maxPositiveRun(instNets);
     const window = flows.length;
-    const subject: QuietPickSubject = {
+    const subject: QuietPickSubjectSeed = {
       canonical: def.canonical,
       symbol: def.naverCode,
       naverCode: def.naverCode,
@@ -733,13 +751,33 @@ export interface QuietPickPriorState {
   days: number;
   insiderCount?: number;
   scale: string;
+  /** 어제 규모의 실수치(US=매수금액 USD, KR=순매수 총량) — 문자열 scale 은 버킷이라 증가를 놓친다. */
+  amount?: number;
 }
 
 /**
  * 신호 강화 판정(WO-P4) — 같은 신호가 더 강해졌으면 진행 상황 문구를 돌려준다(재등장 허용).
  * 변화가 없으면 undefined(순수 반복 → 픽 제외). "재탕"과 "진행 중"을 가르는 지점.
  */
+/** 신호 규모의 실수치 — US 는 매수금액(USD), KR 은 창 내 순매수 총량. 없으면 undefined. */
+export function signalAmount(sig: {
+  valueUsd?: number;
+  insiderValueKrw?: number;
+  streakSum?: number;
+}): number | undefined {
+  const raw = sig.valueUsd ?? sig.insiderValueKrw ?? sig.streakSum;
+  return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : undefined;
+}
+
+/** 금액이 "의미 있게" 늘었다고 볼 최소 증가율 — 반올림 노이즈로 매일 재등장하지 않게. */
+const AMOUNT_GROWTH_MIN = 0.05;
+
 function strengthenedProgress(prior: QuietPickPriorState, sig: SignalCandidate): string | undefined {
+  // ⓐ 신호가 새로 시작됐으면 '반복'이 아니다 — 같은 종목이어도 별개 사건(이전엔 이걸 stale 로 죽였다).
+  if (sig.startedAt && prior.startedAt && sig.startedAt !== prior.startedAt) {
+    return `새로 시작된 신호예요 — ${sig.days}일째 이어지는 중`;
+  }
+
   const addedPeople = typeof sig.insiderCount === "number" && typeof prior.insiderCount === "number"
     ? sig.insiderCount - prior.insiderCount
     : 0;
@@ -749,6 +787,16 @@ function strengthenedProgress(prior: QuietPickPriorState, sig: SignalCandidate):
   }
   if (addedDays > 0) {
     return `${sig.days}일째 계속 — 어제보다 ${addedDays}일 더 이어졌어요`;
+  }
+
+  // ⓑ 금액 증가 — 문자열 scale 은 버킷("$4.8M")이라 5.2M 로 늘어도 같은 값이 나온다. 실수치로 본다.
+  const now = signalAmount(sig);
+  const before = prior.amount;
+  if (typeof now === "number" && typeof before === "number" && before > 0) {
+    const growth = now / before - 1;
+    if (growth >= AMOUNT_GROWTH_MIN) {
+      return `${sig.days}일째 계속 — 규모가 ${Math.round(growth * 100)}% 더 늘었어요`;
+    }
   }
   if (sig.scale !== prior.scale) {
     return `${sig.days}일째 계속 — 규모가 ${sig.scale}로 늘었어요`;
@@ -901,7 +949,7 @@ export async function buildQuietPickResponse(options: {
   ) => {
     drop(reason.code);
     watching.push({
-      subject: sig.subject,
+      subject: { ...sig.subject, ...companyDisplay(sig.subject) },
       signal: { kind: sig.kind, code: sig.code, actors: sig.actors, scale: sig.scale, days: sig.days },
       ...(priceInfo ? { price: priceInfo } : {}),
       reasonCode: reason.code,
@@ -977,6 +1025,7 @@ export async function buildQuietPickResponse(options: {
     if (prior && prior.startedAt === sig.startedAt) {
       progress = strengthenedProgress(prior, sig);
       if (!progress) { drop("stale_repeat"); continue; }
+      drop("repeat_strengthened"); // 탈락이 아니라 '재등장 허용' 카운터(관측용)
     }
 
     const score = front.score?.score ?? null;
@@ -1035,7 +1084,7 @@ export async function buildQuietPickResponse(options: {
     };
 
     picks.push({
-      subject: { ...sig.subject, identity },
+      subject: { ...sig.subject, ...companyDisplay(sig.subject), identity },
       price: {
         current,
         ...(front.priceText ? { currentText: front.priceText } : {}),
@@ -1052,6 +1101,10 @@ export async function buildQuietPickResponse(options: {
         startedAt: sig.startedAt,
         strength: sig.baseStrength,
         ...(typeof sig.insiderCount === "number" ? { insiderCount: sig.insiderCount } : {}),
+        ...(((): { amount?: number } => {
+          const amount = signalAmount(sig);
+          return amount === undefined ? {} : { amount };
+        })()),
         ...(progress ? { progress } : {}),
       },
       hook: buildQuietPickHook(facts),
@@ -1142,6 +1195,7 @@ export function quietPickPriorState(response: QuietPickResponse | null): Map<str
       days: pick.signal.days,
       scale: pick.signal.scale,
       ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
+      ...(typeof pick.signal.amount === "number" ? { amount: pick.signal.amount } : {}),
     });
   }
   return out;

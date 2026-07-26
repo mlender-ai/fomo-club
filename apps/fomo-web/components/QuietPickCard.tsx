@@ -31,6 +31,9 @@ function marketTag(pick: QuietPick): string {
  * "Columbia Financial, Inc./Md/" → "Columbia Financial". 티커는 별도 행에 표기한다.
  */
 export function displayName(pick: QuietPick): string {
+  // 데이터 계층에서 정규화된 값이 있으면 그걸 쓴다(성적표·원장·공유와 같은 값 — WO-P6 ③).
+  const fromData = pick.subject.displayName?.trim();
+  if (fromData) return fromData;
   const raw = pick.subject.canonical.trim();
   if (pick.subject.country !== "US") return raw;
   const cleaned = raw
@@ -43,6 +46,8 @@ export function displayName(pick: QuietPick): string {
 
 /** 화면에 병기할 티커 — US 는 심볼, KR 은 6자리 종목코드. 없으면 undefined. */
 function ticker(pick: QuietPick): string | undefined {
+  const fromData = pick.subject.ticker?.trim();
+  if (fromData) return fromData;
   const symbol = pick.subject.symbol?.trim();
   if (pick.subject.country === "US") return symbol || undefined;
   return pick.subject.naverCode?.trim() || (symbol && /^\d{6}$/.test(symbol) ? symbol : undefined);

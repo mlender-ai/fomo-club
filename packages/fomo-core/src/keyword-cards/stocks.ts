@@ -603,3 +603,50 @@ export function stockMatchesText(canonical: string, text: string): boolean {
   if (!m) return blob.includes(canonical.toLowerCase());
   return m.substrings.some((s) => blob.includes(s)) || m.regexes.some((re) => re.test(blob));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 회사명 표기 정규화 (WO-P6 ③) — **데이터 계층**에서 한 번만 정한다.
+//
+// 지금까지는 카드/뎁스 헤더에서만 잘라 썼고 데이터(canonical)엔 원문이 남아,
+// 성적표·원장·공유 이미지에는 "Columbia Financial, Inc./Md/" 가 그대로 나갔다.
+// 픽 생성 시점에 displayName 을 확정해 모든 화면이 같은 값을 쓰게 한다.
+// canonical 자체는 건드리지 않는다 — 원장·조인 키라 바꾸면 과거 기록과 끊긴다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 미국 법인 접미·주(州) 꼬리 — "…, Inc./Md/", "… Corp.", "… Holdings" 등. */
+const CORP_SUFFIX =
+  /,?\s*\b(Incorporated|Inc|Corporation|Corp|Company|Co|Limited|Ltd|LLC|L\.L\.C|PLC|N\.V|S\.A|AG|SE|Holdings?|Group|Trust|Partners|LP)\b\.?/gi;
+/** 이름 끝에 붙는 주(州) 약어 꼬리 — "/Md/", "/De/". */
+const STATE_TAIL = /\/[A-Za-z]{2,3}\/?\s*$/;
+
+/**
+ * 화면 표기용 회사명 — 법인 접미·주 꼬리 제거. 한글명은 그대로 둔다.
+ * 결과가 너무 짧아지면(2자 미만) 원문을 유지한다(과잉 삭제로 이름이 사라지지 않게).
+ */
+export function normalizeCompanyName(raw: string): string {
+  const source = (raw ?? "").trim();
+  if (!source) return source;
+  if (/[가-힣]/.test(source)) return source; // 한글 사명은 접미 규칙 대상 아님
+  const cleaned = source
+    .replace(STATE_TAIL, "")
+    .replace(CORP_SUFFIX, "")
+    .replace(/[,\s/]+$/, "")
+    .trim();
+  return cleaned.length >= 2 ? cleaned : source;
+}
+
+/** 표기 세트 — displayName(정규화) + ticker(US 심볼 / KR 6자리 코드). 화면은 이 둘만 쓴다. */
+export function companyDisplay(input: {
+  canonical: string;
+  symbol?: string | undefined;
+  naverCode?: string | undefined;
+  country?: "KR" | "US" | string | undefined;
+}): { displayName: string; ticker?: string } {
+  const displayName = normalizeCompanyName(input.canonical);
+  const symbol = input.symbol?.trim();
+  const ticker =
+    input.country === "KR"
+      ? input.naverCode?.trim() || (symbol && /^\d{6}$/.test(symbol) ? symbol : undefined)
+      : symbol || undefined;
+  return ticker ? { displayName, ticker } : { displayName };
+}
