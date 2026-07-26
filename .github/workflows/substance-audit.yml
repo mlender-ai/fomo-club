@@ -1,0 +1,79 @@
+name: Substance Audit (WO-SUB-00)
+
+# WO-SUB-00 §4-1·4-3 — 카드 함량 감사 + 펀더멘털 커버리지 실사.
+#
+# 여기서 도는 이유: 개발 샌드박스는 외부 egress 가 정책상 차단(CONNECT 403)돼 있어
+# 실측이 불가능하다. 실측 없이 매트릭스를 채우는 것은 이 WO 가 명시적으로 금지한다.
+#
+# 알려진 제약: 네이버·openinsider 는 GH Actions 러너 IP에서 막힐 수 있다
+# (signal-stats.yml 주석의 "GH Actions tsx 직접 실행은 시세 egress 미확보"와 동일 계열).
+# 막히면 막혔다고 결과에 남긴다 — 우회해서 추정치를 만들지 않는다.
+on:
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "scripts/audit/**"
+      - ".github/workflows/substance-audit.yml"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "프로브 표본 수"
+        type: string
+        default: "130"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: substance-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --no-audit --no-fund
+
+      - name: Reachability probe (어떤 소스가 이 러너에서 실제로 열리는지 먼저 실측)
+        run: |
+          for u in \
+            "https://www.sec.gov/files/company_tickers.json" \
+            "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json" \
+            "https://api.nasdaq.com/api/quote/AAPL/summary?assetclass=stocks" \
+            "https://m.stock.naver.com/api/stock/005930/basic" \
+            "https://opendart.fss.or.kr/api/list.json" \
+            "https://fomo-club-backend.vercel.app/api/fomo/track-record/picks" ; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 \
+              -A "FOMO Club research contact@fomoclub.app" "$u" || echo "000")
+            echo "$code  $u"
+          done
+
+      - name: Card substance audit (§4-1)
+        continue-on-error: true
+        env:
+          AUDIT_BASE_URL: https://fomo-club-backend.vercel.app
+        run: npx tsx scripts/audit/sample_card_payloads.ts --base "$AUDIT_BASE_URL" --out docs/audit
+
+      - name: Fundamental coverage probe (§4-3)
+        continue-on-error: true
+        env:
+          SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          npx tsx scripts/audit/probe_fundamental_sources.ts \
+            --base https://fomo-club-backend.vercel.app \
+            --out docs/audit \
+            --limit ${{ github.event.inputs.limit || '130' }}
+
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: substance-audit-raw
+          path: docs/audit/*.json
+          if-no-files-found: warn
