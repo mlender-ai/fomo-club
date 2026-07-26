@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DailyOhlcv } from "@fomo/core";
 import type { QuietPick, StockBasics } from "@/lib/fomoApi";
 import {
@@ -14,6 +14,7 @@ import { CompanyProfileBlock, FinanceGlanceBlock } from "@/components/KeywordDep
 import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { displayName } from "@/components/QuietPickCard";
 import { OverlayPortal } from "@/components/OverlayPortal";
+import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { chartTokens } from "@/lib/chartTokens";
 
 /**
@@ -260,6 +261,25 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     };
   }, [stock, pick.subject.naverCode, pick.subject.symbol]);
 
+  // WO-SUB-00 §4-2 — 뎁스 스크롤 깊이. 최대 도달 비율만 남기고 닫을 때 1회 보고한다.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const maxRatio = useRef(0);
+  useEffect(() => {
+    maxRatio.current = 0;
+    return () => {
+      recordPickTelemetry({ event: "detail_scroll_depth", maxRatio: maxRatio.current });
+      flushPickTelemetry();
+    };
+  }, [stock]);
+  const onDepthScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollable = el.scrollHeight - el.clientHeight;
+    // 스크롤이 필요 없을 만큼 짧은 문서는 100% 로 본다(짧아서 안 내린 것을 이탈로 세지 않는다).
+    const ratio = scrollable <= 8 ? 1 : (el.scrollTop + el.clientHeight) / el.scrollHeight;
+    if (ratio > maxRatio.current) maxRatio.current = Math.min(1, ratio);
+  };
+
   const candles = useMemo(() => front?.candles ?? [], [front]);
   const title = displayName(pick);
   const ticker = pick.subject.country === "US" ? pick.subject.symbol : pick.subject.naverCode;
@@ -296,7 +316,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       </header>
 
       {/* 본문 — 단일 스크롤. 하단은 GNB·safe-area 만큼 비워 마지막 블록이 가리지 않게. */}
-      <div className={`scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 pt-1 ${BOTTOM_PAD}`}>
+      <div ref={scrollRef} onScroll={onDepthScroll} className={`scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 pt-1 ${BOTTOM_PAD}`}>
         {/* 카드 훅 이음 — 카드에서 본 그 문장이 뎁스 첫 줄로 이어져 맥락이 끊기지 않는다(WO-P5 §2).
             타이포 3단의 2단(핵심 문장: 크게·흰색). */}
         <p className="mt-4 text-[19px] font-bold leading-7 text-whiteout">{pick.hook}</p>
