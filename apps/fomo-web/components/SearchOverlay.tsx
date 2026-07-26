@@ -6,6 +6,7 @@ import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { SearchIcon, XMarkIcon } from "@/components/icons";
 import { fetchDaily30, fetchJudgmentHistory, fetchStockFront } from "@/lib/fomoApi";
 import { getSessionId } from "@/lib/session";
+import { canonicalName } from "@/lib/companyDisplay";
 
 /**
  * 검색 오버레이 (WO 검색) — 심볼 인덱스 자동완성 + 3분기.
@@ -202,7 +203,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
           {branch.kind === "probing" && (
             <div className="mt-14 flex flex-col items-center gap-3">
               <FlickerSpinner size={20} />
-              <p className="text-sm text-muted">{branch.item.canonical} 데이터를 모으고 있어요…</p>
+              <p className="text-sm text-muted">{canonicalName(branch.item.canonical)} 데이터를 모으고 있어요…</p>
             </div>
           )}
 
@@ -244,7 +245,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-bold text-whiteout">
-                      {item.canonical}
+                      {canonicalName(item.canonical)}
                       {item.englishName && <span className="ml-1.5 font-normal text-muted">{item.englishName}</span>}
                     </span>
                     <span className="mt-0.5 block text-[11px] text-muted">

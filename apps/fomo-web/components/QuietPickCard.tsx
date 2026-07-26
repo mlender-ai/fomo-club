@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { QuietPick } from "@/lib/fomoApi";
 import { chartTokens } from "@/lib/chartTokens";
+import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
@@ -27,30 +28,16 @@ function marketTag(pick: QuietPick): string {
 }
 
 /**
- * 표시용 회사명(WO-P1) — 미국 법인 접미사·주(州) 꼬리를 떼어 카드에서 읽히게.
+ * 표시용 회사명(WO-P1·P6 ③) — 정규화는 전 화면 공통 창구(lib/companyDisplay)에 위임한다.
  * "Columbia Financial, Inc./Md/" → "Columbia Financial". 티커는 별도 행에 표기한다.
  */
 export function displayName(pick: QuietPick): string {
-  // 데이터 계층에서 정규화된 값이 있으면 그걸 쓴다(성적표·원장·공유와 같은 값 — WO-P6 ③).
-  const fromData = pick.subject.displayName?.trim();
-  if (fromData) return fromData;
-  const raw = pick.subject.canonical.trim();
-  if (pick.subject.country !== "US") return raw;
-  const cleaned = raw
-    .replace(/\/[A-Za-z]{2,3}\/?$/, "") // 주(州) 꼬리 "/Md/"
-    .replace(/,?\s*\b(Inc|Corp|Corporation|Incorporated|Co|Company|Ltd|LLC|PLC|Holdings?|Group|Trust)\b\.?/gi, "")
-    .replace(/[,\s/]+$/, "")
-    .trim();
-  return cleaned.length >= 3 ? cleaned : raw;
+  return subjectName(pick.subject);
 }
 
 /** 화면에 병기할 티커 — US 는 심볼, KR 은 6자리 종목코드. 없으면 undefined. */
 function ticker(pick: QuietPick): string | undefined {
-  const fromData = pick.subject.ticker?.trim();
-  if (fromData) return fromData;
-  const symbol = pick.subject.symbol?.trim();
-  if (pick.subject.country === "US") return symbol || undefined;
-  return pick.subject.naverCode?.trim() || (symbol && /^\d{6}$/.test(symbol) ? symbol : undefined);
+  return subjectTicker(pick.subject);
 }
 
 function daysChip(pick: QuietPick): string {
