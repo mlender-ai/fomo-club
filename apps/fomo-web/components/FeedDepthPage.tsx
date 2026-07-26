@@ -7,6 +7,8 @@ import type { FeedHubItem, FeedHubSectorStockRef } from "@/lib/fomoApi";
 import { sparklinePath } from "@fomo/core";
 import { chartTokens } from "@/lib/chartTokens";
 import { canonicalName } from "@/lib/companyDisplay";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
+import { OverlayPortal } from "@/components/OverlayPortal";
 
 /**
  * 피드 범용 뎁스 (WO 피드 통합 §3 — "탭했는데 안 가는 항목 0").
@@ -115,7 +117,15 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
                 onClick={() => setStockRef(sectorStockRef(stock, sector.stanceNote))}
                 className="flex items-center justify-between rounded-xl border border-hairline bg-white/[0.03] px-4 py-3 text-left transition-colors hover:border-whiteout/25"
               >
-                <span className="text-sm font-semibold text-whiteout">{canonicalName(stock.canonical)}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <StockLogoBadge
+                    name={canonicalName(stock.canonical)}
+                    naverCode={stock.naverCode}
+                    symbol={stock.symbol}
+                    size={22}
+                  />
+                  <span className="truncate text-sm font-semibold text-whiteout">{canonicalName(stock.canonical)}</span>
+                </span>
                 <span className="text-sm font-bold tabular-nums" style={{ color: valueTone(`${stock.changePct ?? ""}`) }}>
                   {typeof stock.changePct === "number" ? `${stock.changePct > 0 ? "+" : ""}${stock.changePct.toFixed(2)}%` : "—"}
                 </span>
@@ -240,6 +250,7 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
   }
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[70] overflow-y-auto bg-canvas">
       <div className="mx-auto max-w-xl px-6 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))]">
         <button type="button" onClick={onClose} className="mb-5 font-pixel text-xs text-muted underline">
@@ -248,5 +259,6 @@ export function FeedDepthPage({ item, onClose, inline = false }: { item: FeedHub
         {body}
       </div>
     </div>
+    </OverlayPortal>
   );
 }

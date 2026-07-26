@@ -33,7 +33,7 @@ body {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fomo-rise { animation: fomo-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fomo-rise { animation: fomo-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 /* 고래 배너 티커 — 전체 텍스트가 가로로 흐른다(줄임표 없이). 두 벌 복제로 끊김 없이 */
 @keyframes fomo-marquee {
@@ -52,7 +52,7 @@ body {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
-.fomo-splash-in { animation: fomo-splash-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fomo-splash-in { animation: fomo-splash-in 600ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 @keyframes fomo-fade-out {
   from { opacity: 1; }
@@ -65,13 +65,17 @@ body {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fomo-phase-in { animation: fomo-phase-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+/* fill-mode 는 반드시 backwards — both/forwards 면 애니메이션이 끝난 뒤에도 transform 이 남고,
+   transform 이 남은 요소는 자손 position:fixed 의 컨테이닝 블록이 된다.
+   그러면 이 안에서 열린 뎁스 오버레이가 뷰포트가 아니라 main 기준으로 잡혀 화면 아래가 잘린다.
+   (2026-07 하단 잘림 회귀의 진짜 원인 — 패딩 문제가 아니었다.) */
+.fomo-phase-in { animation: fomo-phase-in 460ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 @keyframes fomo-sheet-rise {
   from { opacity: 0; transform: translateY(28px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fomo-sheet-rise { animation: fomo-sheet-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fomo-sheet-rise { animation: fomo-sheet-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 /* 매칭 모먼트 — 아이콘 톡 튀고 페이드(짧게). */
 @keyframes fomo-match-pop {
@@ -80,7 +84,7 @@ body {
   55% { transform: scale(1); }
   100% { opacity: 1; transform: scale(1); }
 }
-.fomo-match-pop { animation: fomo-match-pop 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fomo-match-pop { animation: fomo-match-pop 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; }

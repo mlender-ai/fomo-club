@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { registerEmail, loginEmail, logout, deleteAccount } from "@/lib/fomoApi";
+import { OverlayPortal } from "@/components/OverlayPortal";
 
 /**
  * 로그인/가입 페이지 — 트랙 B(바텀시트 → 페이지 형태). 이메일+비밀번호.
@@ -40,6 +41,7 @@ export function LoginPage({
   };
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[80] bg-black">
       <div className="mx-auto flex h-full max-w-md flex-col">
         {/* 상단 바 */}
@@ -140,5 +142,6 @@ export function LoginPage({
         </div>
       </div>
     </div>
+    </OverlayPortal>
   );
 }

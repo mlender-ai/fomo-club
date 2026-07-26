@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 import {
   cleanText,
@@ -27,6 +27,7 @@ import {
   type StockFrontResponse,
 } from "@/lib/fomoApi";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { canonicalName } from "@/lib/companyDisplay";
 import { describe52wGap, describeRsi } from "@/lib/depthCopy";
 import { verdictBalance } from "@/lib/discoveryPresentation";
@@ -105,6 +106,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
   };
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[60] h-[100dvh] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex h-full max-w-md flex-col">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
@@ -328,6 +330,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
         <StockInsightView stock={stockSubject.stock} context={stockSubject} onClose={() => setStockSubject(null)} />
       )}
     </div>
+    </OverlayPortal>
   );
 }
 
@@ -1455,12 +1458,51 @@ function depthDisplayName(stock: string, context?: StockContext): string {
   return ticker && /^[A-Z][A-Z.]{0,5}$/.test(ticker) ? `${base} (${ticker})` : base;
 }
 
-/** WO-G1B 납득 문서 블록 구분 헤딩 — "왜 이 회사인가" 등 질문형. */
+/** 납득 문서 블록 구분 헤딩 — "언제 틀리는가" 등 질문형. */
 function DepthDocHeading({ label }: { label: string }) {
   return (
     <h2 className="mt-7 mb-1 border-t border-hairline pt-5 font-pixel text-[13px] font-semibold text-whiteout">
       {label}
     </h2>
+  );
+}
+
+/**
+ * 뎁스 위계(WO-P7) — 한 화면에 다 쌓지 않고 질문 3단계로 나눈다.
+ * 한 스크롤에 전부 있으면 "스크롤할 게 너무 많다"가 되고, 어디까지가 한 덩어리인지 안 읽힌다.
+ * 가격 헤더는 어느 단계에서도 고정 — 카드에서 넘어온 맥락이 끊기지 않게.
+ */
+const DEPTH_STEPS = [
+  { key: "company", label: "이 회사" },
+  { key: "now", label: "왜 지금" },
+  { key: "record", label: "기록" },
+] as const;
+type DepthStep = (typeof DEPTH_STEPS)[number]["key"];
+
+function DepthStepTabs({ step, onStep }: { step: DepthStep; onStep: (next: DepthStep) => void }) {
+  return (
+    <div role="tablist" aria-label="상세 단계" className="flex gap-1.5">
+      {DEPTH_STEPS.map((s) => {
+        const active = s.key === step;
+        return (
+          <button
+            key={s.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onStep(s.key)}
+            className="flex-1 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors"
+            style={{
+              borderColor: active ? "transparent" : "var(--hairline, #2a2a2a)",
+              backgroundColor: active ? "rgba(255,255,255,0.10)" : "transparent",
+              color: active ? "#FAFAFA" : "#8b8f98",
+            }}
+          >
+            {s.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -2726,7 +2768,8 @@ export function StockInsightView({
   // 카드와 동일한 백엔드 점수 스냅샷을 상세에서도 유지한다.
   const [front, setFront] = useState<StockFrontResponse | null>(context?.frontSeed ?? null);
   const [frontLoaded, setFrontLoaded] = useState(!!context?.frontSeed);
-  // WO-G1B — 탭 제거. 뎁스는 위→아래 단일 스크롤 「납득 문서」.
+  // WO-P7 — 질문 3단계(이 회사 / 왜 지금 / 기록). 한 화면에 전부 쌓지 않는다.
+  const [step, setStep] = useState<DepthStep>("company");
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
 
@@ -2814,7 +2857,12 @@ export function StockInsightView({
   const showThinSourceFootnote =
     !hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0;
 
+  // 오버레이는 body 직속(OverlayPortal) — 조상 transform 에 갇히면 화면 아래가 잘린다.
+  // 인라인(PC 중앙 컬럼)은 부모 안에 그대로 둔다.
+  const Shell = inline ? Fragment : OverlayPortal;
+
   return (
+    <Shell>
     <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] h-[100dvh] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
       <div className={inline ? "flex h-full min-h-0 flex-col" : "mx-auto flex h-full max-w-md flex-col"}>
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
@@ -2850,59 +2898,77 @@ export function StockInsightView({
           </button>
         </div>
 
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
-          {/* 전부 로드 전엔 아무것도 노출하지 않는다 — 메인홈과 동일한 로딩 하나만. */}
-          {!detailsReady ? (
+        {/* 전부 로드 전엔 아무것도 노출하지 않는다 — 메인홈과 동일한 로딩 하나만. */}
+        {!detailsReady ? (
+          <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
             <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />
-          ) : (
-          <>
-          {/* [0] 헤더 — 가격(카드 연속성) */}
-          <StockPriceHeader basics={basics} front={front} priceSeed={context?.priceSeed} />
-
-          {/* WO-G1B — 탭 없는 단일 스크롤 「납득 문서」. 질문 순서대로 위→아래.
-              점수·육각형은 유저 화면에서 내림(선별 내부 기준으로만 — 코드 보존). */}
-          <div className="depth-doc">
-            {/* [1] 전문가 소견 — 사람의 말이 먼저. daily-30 위원회 리뷰가 있으면 그것, 없고 픽이면 픽 총평. */}
-            {front?.committeeReview ? (
-              <ExpertOpinionBlock review={front.committeeReview} />
-            ) : context?.pickCommittee ? (
-              <PickVerdictBlock committee={context.pickCommittee} />
-            ) : null}
-
-            {/* [2] 왜 이 회사인가 */}
-            <DepthDocHeading label="왜 이 회사인가" />
-            <CompanyProfileBlock basics={basics} />
-            <FinanceGlanceBlock basics={basics} />
-
-            {/* [3] 왜 지금인가 — 차트 한 컷(매집 구간·신호 시작·눌림·무효선) */}
-            <DepthDocHeading label="왜 지금인가" />
-            <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
-
-            {/* [4] 언제 틀리는가 — 무효선 계약 */}
-            <DepthDocHeading label="언제 틀리는가" />
-            <JudgmentDecision front={front} />
-
-            {/* [5] 이 종목 판단 기록 */}
-            <DepthDocHeading label="이 종목 판단 기록" />
-            <DiscoveryOverview front={front} insight={insight} context={context} />
-            <JudgmentTimeline canonical={stock} />
-            <QuietMoneyBlock timeline={front?.quietMoney} />
-            <div className="mt-4 space-y-3">
-              <DepthFold title="재료·가격 반응" summary="선택 기간의 실데이터">
-                <WhyMovementTab front={front} insight={insight} context={context} />
-              </DepthFold>
-              <DepthFold title="추가 근거·원문" summary="확인된 자료만">
-                {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
-                  <CoinIssuesBlock issues={front?.coinIssues ?? []} />
-                )}
-                <StockWhyHappened insight={insight} />
-              </DepthFold>
-            </div>
           </div>
+        ) : (
+          <>
+            {/* [0] 가격 + 단계 탭 — 스크롤과 분리해 고정(카드에서 넘어온 맥락 유지). */}
+            <div className="shrink-0 border-b border-hairline px-6 pb-3 pt-4">
+              <StockPriceHeader basics={basics} front={front} priceSeed={context?.priceSeed} />
+              <div className="mt-3">
+                <DepthStepTabs step={step} onStep={setStep} />
+              </div>
+            </div>
+
+            {/* WO-P7 — 질문 3단계. 한 단계 안에서만 위→아래로 읽는다.
+                점수·육각형은 유저 화면에서 내림(선별 내부 기준으로만 — 코드 보존). */}
+            <div
+              key={step}
+              role="tabpanel"
+              className="scrollbar-none depth-doc min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-[calc(6rem+env(safe-area-inset-bottom))]"
+            >
+              {step === "company" && (
+                <>
+                  {/* 전문가 소견 — 사람의 말이 먼저. daily-30 위원회 리뷰가 있으면 그것, 없고 픽이면 픽 총평. */}
+                  {front?.committeeReview ? (
+                    <ExpertOpinionBlock review={front.committeeReview} />
+                  ) : context?.pickCommittee ? (
+                    <PickVerdictBlock committee={context.pickCommittee} />
+                  ) : null}
+                  <CompanyProfileBlock basics={basics} />
+                  <FinanceGlanceBlock basics={basics} />
+                </>
+              )}
+
+              {step === "now" && (
+                <>
+                  {/* 차트 한 컷(매집 구간·신호 시작·눌림·무효선) */}
+                  <ChartAnalysisTab front={front} basisDays={front?.sparkline?.length ?? 0} insight={insight} />
+                  {/* 언제 틀리는가 — 무효선 계약 */}
+                  <DepthDocHeading label="언제 틀리는가" />
+                  <JudgmentDecision front={front} />
+                  <div className="mt-4">
+                    <DepthFold title="재료·가격 반응" summary="선택 기간의 실데이터">
+                      <WhyMovementTab front={front} insight={insight} context={context} />
+                    </DepthFold>
+                  </div>
+                </>
+              )}
+
+              {step === "record" && (
+                <>
+                  {/* 판단 기록 — JudgmentTimeline 이 자체 제목을 갖는다(헤딩 중복 금지). */}
+                  <DiscoveryOverview front={front} insight={insight} context={context} />
+                  <JudgmentTimeline canonical={stock} />
+                  <QuietMoneyBlock timeline={front?.quietMoney} />
+                  <div className="mt-4">
+                    <DepthFold title="추가 근거·원문" summary="확인된 자료만">
+                      {(context?.market === "COIN" || context?.symbol?.toUpperCase().startsWith("KRW-") === true) && (
+                        <CoinIssuesBlock issues={front?.coinIssues ?? []} />
+                      )}
+                      <StockWhyHappened insight={insight} />
+                    </DepthFold>
+                  </div>
+                </>
+              )}
+            </div>
           </>
-          )}
-        </div>
+        )}
       </div>
     </div>
+    </Shell>
   );
 }
