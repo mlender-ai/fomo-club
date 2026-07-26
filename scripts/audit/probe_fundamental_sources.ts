@@ -53,7 +53,8 @@ export interface ProbeResult {
   group: Group;
   marketCapUsd?: number;
   /** 필드 → { ok, source, latestPeriod?, note? } */
-  fields: Partial<Record<Field, { ok: boolean; source: string; latestPeriod?: string; note?: string }>>;
+  /** unknown=true 면 "없다"가 아니라 "재보지 못했다" — 집계에서 분모에도 넣지 않는다. */
+  fields: Partial<Record<Field, { ok: boolean; unknown?: boolean; source: string; latestPeriod?: string; note?: string }>>;
   errors: string[];
 }
 
@@ -92,19 +93,36 @@ async function getJson<T>(url: string, source: string, headers: Record<string, s
 // ── SEC EDGAR ────────────────────────────────────────────────────────────────
 
 let cikMap: Map<string, string> | null = null;
+/** 매핑 로드가 실패했는지 — 실패했으면 US 필드를 "없음"이 아니라 "미확인"으로 처리해야 한다. */
+export let cikMapFailed = false;
 
-/** ticker → CIK(10자리 zero-pad). SEC 공식 매핑 파일 1회 로드. */
+/**
+ * ticker → CIK(10자리 zero-pad). SEC 공식 매핑 파일.
+ *
+ * 3차 실측에서 이 파일이 403 을 뱉어 CONTROL 그룹의 SEC 파생 필드가 전부 n=0 이 됐다.
+ * 그때 결과를 그대로 적었으면 "대형주 재무 확보 0%"라는 명백한 거짓이 문서에 박혔을 것이다.
+ * 백오프 재시도하고, 그래도 실패하면 실패 사실을 남겨 해당 필드를 집계에서 뺀다.
+ */
 async function loadCikMap(): Promise<Map<string, string>> {
   if (cikMap) return cikMap;
-  const json = await getJson<Record<string, { cik_str: number; ticker: string }>>(
-    "https://www.sec.gov/files/company_tickers.json",
-    "sec",
-    { "User-Agent": SEC_UA }
-  );
-  cikMap = new Map();
-  for (const row of Object.values(json ?? {})) {
-    if (row?.ticker) cikMap.set(row.ticker.toUpperCase(), String(row.cik_str).padStart(10, "0"));
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt > 0) await sleep(1_500 * attempt);
+    const json = await getJson<Record<string, { cik_str: number; ticker: string }>>(
+      "https://www.sec.gov/files/company_tickers.json",
+      "sec",
+      { "User-Agent": SEC_UA, "Accept-Encoding": "gzip, deflate" }
+    );
+    const entries = Object.values(json ?? {});
+    if (entries.length > 0) {
+      cikMap = new Map();
+      for (const row of entries) {
+        if (row?.ticker) cikMap.set(row.ticker.toUpperCase(), String(row.cik_str).padStart(10, "0"));
+      }
+      return cikMap;
+    }
   }
+  cikMapFailed = true;
+  cikMap = new Map();
   return cikMap;
 }
 
@@ -167,7 +185,14 @@ async function probeSec(entry: UniverseEntry, result: ProbeResult): Promise<void
   const map = await loadCikMap();
   const cik = map.get(symbol);
   if (!cik) {
-    result.errors.push(`sec: CIK 매핑 없음(${symbol})`);
+    const reason = cikMapFailed ? "sec: CIK 매핑 파일 로드 실패 — 미확인" : `sec: CIK 매핑 없음(${symbol})`;
+    result.errors.push(reason);
+    // 매핑 자체를 못 받은 경우는 "데이터가 없다"가 아니다. 미확인으로 남겨 분모에서 뺀다.
+    if (cikMapFailed) {
+      for (const f of ["quarterly_revenue_8q", "quarterly_operating_income", "quarterly_net_income", "annual_financials_5y", "pbr", "per_ttm"] as const) {
+        result.fields[f] = { ok: false, unknown: true, source: "sec-xbrl", note: "CIK 매핑 로드 실패" };
+      }
+    }
     return;
   }
   await sleep(DELAY_MS.sec);
@@ -402,10 +427,13 @@ async function probeNaver(entry: UniverseEntry, result: ProbeResult): Promise<vo
     rowList.some((r) => needles.some((n) => (r.title ?? "").replace(/\s/g, "").includes(n)));
   const periodCount = titles.filter((t) => !t.isConsensus).length;
 
+  // 매출 행 존재 여부만 본다. 앞선 실행에서 `periodCount >= 4` 조건을 걸었더니 매출만 0/45 가 됐는데,
+  // 영업이익·순이익은 44/45 였다 — 즉 데이터가 없는 게 아니라 **내 조건이 틀렸다**.
+  // trTitleList.isConsensus 의 의미를 확인하지 못했으므로 판정에 쓰지 않고 관측치만 남긴다.
   result.fields.quarterly_revenue_8q = {
-    ok: rowTitled("매출액", "영업수익") && periodCount >= 4,
+    ok: rowTitled("매출액", "영업수익", "매출"),
     source: "naver-finance-quarter.rowList",
-    note: `확정 기간 ${periodCount}개 / 행 ${rowList.length}개`,
+    note: `기간 컬럼 ${titles.length}개(비예상 ${periodCount}) / 행 ${rowList.length}개`,
   };
   result.fields.quarterly_operating_income = {
     ok: rowTitled("영업이익"),
@@ -416,11 +444,14 @@ async function probeNaver(entry: UniverseEntry, result: ProbeResult): Promise<vo
     source: "naver-finance-quarter.rowList",
   };
   // 예상 컬럼(isConsensus)이 있으면 forward 추정이 실제로 붙어 있다는 뜻.
+  // isConsensus 가 "예상치 컬럼"을 뜻하는지 확인하지 못했다. 의미 미확인 플래그를 근거로
+  // 확보율을 세면 잘못된 GO 판정으로 이어진다 → 미확인(unknown)으로 남긴다.
   const consensusCols = titles.filter((t) => t.isConsensus).length;
   result.fields.consensus_eps_fwd = {
-    ok: consensusCols > 0,
+    ok: false,
+    unknown: true,
     source: "naver-finance-quarter.trTitleList[isConsensus]",
-    note: `예상 컬럼 ${consensusCols}개`,
+    note: `isConsensus 컬럼 ${consensusCols}개 — 플래그 의미 미확인`,
   };
 
   // **사업 설명이 있다** — 2차 실측에서 corporationSummary.comment1~3(한국어 3문장) 확인.
@@ -517,17 +548,24 @@ export async function probeAll(entries: readonly UniverseEntry[]): Promise<Probe
   return results;
 }
 
-export function summarize(results: readonly ProbeResult[]): Record<Group, Record<Field, { ok: number; n: number }>> {
+export function summarize(
+  results: readonly ProbeResult[]
+): Record<Group, Record<Field, { ok: number; n: number; unknown: number }>> {
   const groups: Group[] = ["US-SMALL", "US-MICRO", "KR-SMALL", "CONTROL", "UNSIZED"];
-  const out = {} as Record<Group, Record<Field, { ok: number; n: number }>>;
+  const out = {} as Record<Group, Record<Field, { ok: number; n: number; unknown: number }>>;
   for (const g of groups) {
-    out[g] = {} as Record<Field, { ok: number; n: number }>;
-    for (const f of FIELDS) out[g][f] = { ok: 0, n: 0 };
+    out[g] = {} as Record<Field, { ok: number; n: number; unknown: number }>;
+    for (const f of FIELDS) out[g][f] = { ok: 0, n: 0, unknown: 0 };
   }
   for (const r of results) {
     for (const f of FIELDS) {
       const cell = r.fields[f];
       if (!cell) continue;
+      // 미확인은 분모에서 뺀다 — "재보지 못한 것"을 "없는 것"으로 세면 확보율이 낮게 왜곡된다.
+      if (cell.unknown) {
+        out[r.group][f].unknown += 1;
+        continue;
+      }
       out[r.group][f].n += 1;
       if (cell.ok) out[r.group][f].ok += 1;
     }

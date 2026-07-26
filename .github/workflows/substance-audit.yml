@@ -78,6 +78,22 @@ jobs:
             --out docs/audit \
             --limit ${{ github.event.inputs.limit || '130' }}
 
+      - name: Show unknown/error summary (미확인 셀을 눈으로 확인)
+        if: always()
+        run: |
+          test -f docs/audit/fundamental_coverage_raw.json || exit 0
+          node -e '
+            const d=require("./docs/audit/fundamental_coverage_raw.json");
+            const errs={};
+            for (const r of d.results||[]) for (const e of r.errors||[]) errs[e.split("(")[0]]=(errs[e.split("(")[0]]||0)+1;
+            console.log("== 오류 유형별 건수 =="); console.log(errs);
+            console.log("== 그룹별 표본 =="); 
+            const byGroup={}; for (const r of d.results||[]) byGroup[r.group]=(byGroup[r.group]||0)+1;
+            console.log(byGroup);
+            console.log("== KR 매출 note 샘플 ==");
+            console.log((d.results||[]).filter(r=>r.country==="KR").slice(0,3).map(r=>r.fields.quarterly_revenue_8q));
+          '
+
       - name: Upload raw results
         if: always()
         uses: actions/upload-artifact@v4
