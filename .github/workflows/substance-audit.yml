@@ -90,6 +90,11 @@ jobs:
             console.log("== 그룹별 표본 =="); 
             const byGroup={}; for (const r of d.results||[]) byGroup[r.group]=(byGroup[r.group]||0)+1;
             console.log(byGroup);
+            console.log("== 카드 함량(§4-1) ==");
+            try {
+              const b=require("./docs/audit/baseline_substance_raw.json");
+              for (const [k,v] of Object.entries(b.layers)) console.log(k, {n:v.n, biz:v.has_business_context_pct, fin:v.has_financial_fact_pct, frame:v.has_frame_pct});
+            } catch(e) { console.log("(§4-1 결과 없음)", e.message); }
             console.log("== KR 매출 note 샘플 ==");
             console.log((d.results||[]).filter(r=>r.country==="KR").slice(0,3).map(r=>r.fields.quarterly_revenue_8q));
           '

@@ -316,21 +316,24 @@ async function probeNasdaq(entry: UniverseEntry, result: ProbeResult): Promise<v
   await sleep(DELAY_MS.nasdaq);
   const forecast = await getJson<{
     data?: {
-      quarterlyForecast?: { rows?: Array<{ consensusEPSForecast?: string; noOfEstimates?: string }> };
-      yearlyForecast?: { rows?: Array<{ consensusEPSForecast?: string; noOfEstimates?: string }> };
+      quarterlyForecast?: { rows?: Array<{ consensusEPSForecast?: unknown; noOfEstimates?: unknown }> };
+      yearlyForecast?: { rows?: Array<{ consensusEPSForecast?: unknown; noOfEstimates?: unknown }> };
     };
   }>(`https://api.nasdaq.com/api/analyst/${encodeURIComponent(symbol)}/earnings-forecast`, "nasdaq", {
     "User-Agent": NASDAQ_UA,
   });
   const yearly = forecast?.data?.yearlyForecast?.rows ?? [];
   const quarterly = forecast?.data?.quarterlyForecast?.rows ?? [];
+  // 이 필드는 문자열로도 숫자로도 온다. 4차 실측에서 `.replace is not a function` 예외가 14건 났고,
+  // 그 예외가 해당 종목의 이후 조회를 통째로 중단시켜 US 표본이 잘렸다. 문자열로 강제한다.
+  const asText = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
   const epsRows = [...yearly, ...quarterly].filter((r) => {
-    const v = r.consensusEPSForecast?.replace(/[$,\s]/g, "");
+    const v = asText(r.consensusEPSForecast).replace(/[$,\s]/g, "");
     return !!v && v !== "N/A" && Number.isFinite(Number(v));
   });
   const estimates = Math.max(
     0,
-    ...[...yearly, ...quarterly].map((r) => Number(r.noOfEstimates ?? 0)).filter((n) => Number.isFinite(n))
+    ...[...yearly, ...quarterly].map((r) => Number(asText(r.noOfEstimates) || 0)).filter((n) => Number.isFinite(n))
   );
   result.fields.consensus_eps_fwd = {
     ok: epsRows.length > 0,
@@ -528,15 +531,23 @@ export async function probeAll(entries: readonly UniverseEntry[]): Promise<Probe
       fields: {},
       errors: [],
     };
+    /** 한 소스의 예외가 나머지 소스 조회를 죽이지 않게 격리한다(4차 실측에서 실제로 그랬다). */
+    const guarded = async (label: string, fn: () => Promise<void>): Promise<void> => {
+      try {
+        await fn();
+      } catch (error) {
+        result.errors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
     try {
       if (entry.country === "US") {
-        await probeNasdaq(entry, result);
-        await probeSec(entry, result);
+        await guarded("nasdaq", () => probeNasdaq(entry, result));
+        await guarded("sec", () => probeSec(entry, result));
         // 일별 종가 5년 — SEC/Nasdaq 무료 경로에 없음. 실측 결과를 그대로 남긴다.
         result.fields.daily_close_5y = { ok: false, source: "-", note: "무료 경로 미확보(실측)" };
       } else {
-        await probeNaver(entry, result);
-        await probeDart(entry, result);
+        await guarded("naver", () => probeNaver(entry, result));
+        await guarded("dart", () => probeDart(entry, result));
       }
     } catch (error) {
       result.errors.push(error instanceof Error ? error.message : String(error));
