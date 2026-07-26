@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isKrStockCode, stockLogoApiSrcForStock } from "@/lib/stockLogo";
+import { stockLogoApiSrcForStock } from "@/lib/stockLogo";
 
 /**
  * 종목 로고 배지 — KR 은 네이버 로고 프록시, US 는 parqet, 실패 시 이니셜 원형.
@@ -22,10 +22,8 @@ export function StockLogoBadge({
 }) {
   const [failed, setFailed] = useState(false);
   const ch = name.trim().slice(0, 1) || "·";
-  const usSymbol = symbol && !isKrStockCode(symbol.trim()) ? symbol : undefined;
-  const src =
-    stockLogoApiSrcForStock({ naverCode, symbol, name }) ??
-    (usSymbol ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(usSymbol)}` : undefined);
+  // KR·US 모두 서버 프록시 한 경로로 — 클라 직접 요청은 핫링크 차단·CORS 로 빈 자리가 된다.
+  const src = stockLogoApiSrcForStock({ naverCode, symbol, name });
 
   useEffect(() => {
     setFailed(false);

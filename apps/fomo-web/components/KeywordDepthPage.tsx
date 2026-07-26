@@ -32,6 +32,7 @@ import { verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
 import { JudgmentTimeline } from "@/components/JudgmentTimeline";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { DepthFold, DepthLine, DepthSection } from "@/components/DepthSection";
 import { chartTokens } from "@/lib/chartTokens";
 import {
@@ -103,7 +104,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed inset-0 z-[60] h-[100dvh] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex h-full max-w-md flex-col">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
@@ -112,7 +113,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           </button>
         </div>
 
-        <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+        <div className="scrollbar-none flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
           <p className="text-sm leading-6 text-whiteout">{cleanText(card.comment)}</p>
 
           {/* 왜 떴나 — LLM insight 를 기다리지 않고 카드 기본 depth 를 먼저 보여준다. */}
@@ -452,9 +453,7 @@ function StockPriceHeader({ basics, front, priceSeed }: { basics: StockBasics | 
             </span>
           )}
         </div>
-      ) : (
-        <p className="mt-2 text-sm leading-6 text-muted">가격 정보는 아직 연결 중이에요.</p>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -2399,12 +2398,6 @@ function ChartAnalysisTab({
           )}
         </div>
       )}
-      {facts.length === 0 && !series && !hasProfessionalAnalysis && (
-        <div className="rounded-lg border border-hairline bg-surface px-3 py-5 text-center">
-          <p className="text-sm leading-6 text-muted">차트에서 두드러진 신호는 아직 없어요.</p>
-          <p className="mt-1 text-[11px] leading-5 text-muted">데이터가 더 쌓이면 지표가 여기에 붙어요.</p>
-        </div>
-      )}
       <ConvictionParagraphs front={front} insight={insight} />
         </DepthFold>
       </div>
@@ -2660,7 +2653,7 @@ function StockWhyHappened({ insight }: { insight: CondensedInsight | null }) {
  * 재무 한눈에(WO 1.5 F) — "이 회사 돈 잘 버나" 최소셋. 시총·PER·실적 추세를 한 줄씩.
  * KR=네이버 금융, US=Yahoo quoteSummary(이미 연결된 소스). 없는 항목은 생략(가짜 금지).
  */
-function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
+export function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
   if (!basics) return null;
   const lines: Array<{ label: string; value: string; note?: string }> = [];
   if (basics.marketCap) lines.push({ label: "시가총액", value: basics.marketCap });
@@ -2700,7 +2693,7 @@ function FinanceGlanceBlock({ basics }: { basics: StockBasics | null }) {
   );
 }
 
-function CompanyProfileBlock({ basics }: { basics: StockBasics | null }) {
+export function CompanyProfileBlock({ basics }: { basics: StockBasics | null }) {
   if (!basics?.summary) return null;
   return (
     <DepthSection
@@ -2825,7 +2818,7 @@ export function StockInsightView({
     !hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0;
 
   return (
-    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
+    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] h-[100dvh] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
       <div className={inline ? "flex h-full min-h-0 flex-col" : "mx-auto flex h-full max-w-md flex-col"}>
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -2834,6 +2827,13 @@ export function StockInsightView({
                 ← {inlineBackLabel ?? "뒤로"}
               </button>
             )}
+            {/* 종목 로고 — KR·US 모두 프록시 경유(비어 보이지 않게). */}
+            <StockLogoBadge
+              name={cleanText(stock)}
+              naverCode={context?.naverCode}
+              symbol={context?.symbol}
+              size={26}
+            />
             {/* WO-P1 — 긴 미국 법인명은 한 줄 말줄임 + 티커 병기("Columbia Financial (CLBK)"). */}
             <span className="min-w-0 flex-1 truncate text-lg font-bold text-whiteout" title={cleanText(stock)}>
               {depthDisplayName(stock, context)}
@@ -2853,7 +2853,7 @@ export function StockInsightView({
           </button>
         </div>
 
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
           {/* 전부 로드 전엔 아무것도 노출하지 않는다 — 메인홈과 동일한 로딩 하나만. */}
           {!detailsReady ? (
             <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />
@@ -2899,13 +2899,6 @@ export function StockInsightView({
                   <CoinIssuesBlock issues={front?.coinIssues ?? []} />
                 )}
                 <StockWhyHappened insight={insight} />
-                {showThinSourceFootnote && (
-                  <p className="mt-4 text-[12px] leading-5 text-muted">
-                    {hasVerifiedFloor
-                      ? "원문 기반 요약은 아직 얇아요."
-                      : "이 종목으로 모인 원문은 아직 적어요. 확인된 자료가 들어오면 이 화면에 붙어요."}
-                  </p>
-                )}
               </DepthFold>
             </div>
           </div>
