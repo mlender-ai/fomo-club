@@ -27,6 +27,7 @@ import {
   type StockFrontResponse,
 } from "@/lib/fomoApi";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
+import { canonicalName } from "@/lib/companyDisplay";
 import { describe52wGap, describeRsi } from "@/lib/depthCopy";
 import { verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
@@ -1445,16 +1446,12 @@ function DepthTabBar({ tab, onChange }: { tab: DepthTab; onChange: (tab: DepthTa
  * "Columbia Financial, Inc./Md/" + CLBK → "Columbia Financial (CLBK)".
  */
 function depthDisplayName(stock: string, context?: StockContext): string {
+  // 정규화 규칙은 전 화면 공통 창구 하나만 쓴다(WO-P6 ③ — 화면별 회사명 제각각 금지).
   const name = cleanText(stock).trim();
   const isUs = context?.country === "US" || context?.market === "NASDAQ" || context?.market === "NYSE";
   const ticker = context?.symbol?.trim().toUpperCase();
-  if (!isUs) return name;
-  const cleaned = name
-    .replace(/\/[A-Za-z]{2,3}\/?$/, "")
-    .replace(/,?\s*\b(Inc|Corp|Corporation|Incorporated|Co|Company|Ltd|LLC|PLC|Holdings?|Group|Trust)\b\.?/gi, "")
-    .replace(/[,\s/]+$/, "")
-    .trim();
-  const base = cleaned.length >= 3 ? cleaned : name;
+  const base = canonicalName(name);
+  if (!isUs) return base;
   return ticker && /^[A-Z][A-Z.]{0,5}$/.test(ticker) ? `${base} (${ticker})` : base;
 }
 

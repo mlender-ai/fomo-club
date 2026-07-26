@@ -29,8 +29,9 @@ function sample(symbol: string, pct: number): BacktestSample {
 }
 
 describe("카드 문구 — 상승만 말하는 카드 0 (WO-P2 §2)", () => {
+  // 노출 게이트가 n>=30(WO-P6 — n<30 은 숫자 미노출)이라 표본을 그 위로 잡는다.
   const stats = backtestSignal(
-    [...Array.from({ length: 9 }, (_, i) => sample(`U${i}`, 8)), ...Array.from({ length: 5 }, (_, i) => sample(`D${i}`, -6))],
+    [...Array.from({ length: 27 }, (_, i) => sample(`U${i}`, 8)), ...Array.from({ length: 15 }, (_, i) => sample(`D${i}`, -6))],
     { type: "insider_cluster", computedAt: "2026-07-08" }
   );
 

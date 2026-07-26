@@ -1041,7 +1041,18 @@ export interface QuietPickAnomaly {
   strength: number;
 }
 export interface QuietPick {
-  subject: { canonical: string; symbol?: string; naverCode?: string; market: string; country: "KR" | "US"; identity?: string };
+  subject: {
+    canonical: string;
+    /** 화면 표기용 회사명(데이터 계층 정규화 — 전 화면 동일 값, WO-P6 ③). */
+    displayName?: string;
+    /** 티커(US 심볼 / KR 종목코드). */
+    ticker?: string;
+    symbol?: string;
+    naverCode?: string;
+    market: string;
+    country: "KR" | "US";
+    identity?: string;
+  };
   price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
   signal: {
     kind: QuietPickSignalKind;

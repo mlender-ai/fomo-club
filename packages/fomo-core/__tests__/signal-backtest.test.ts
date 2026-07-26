@@ -69,24 +69,25 @@ describe("scoreBacktestSample — 실데이터 역산만(가짜 미래 금지)",
 });
 
 describe("aggregateSignalStats — 승률과 하락률을 항상 함께 낸다", () => {
+  // 노출 게이트가 n>=30 이라(WO-P6) 표본을 그 위로 잡는다. 승 24 / 패 12 → 승률 66.7%.
   const mixed: BacktestSample[] = [
-    ...Array.from({ length: 8 }, (_, i) => sample(`UP${i}`, 6)),
-    ...Array.from({ length: 4 }, (_, i) => sample(`DOWN${i}`, -5)),
+    ...Array.from({ length: 24 }, (_, i) => sample(`UP${i}`, 6)),
+    ...Array.from({ length: 12 }, (_, i) => sample(`DOWN${i}`, -5)),
   ];
 
   it("승률·하락률·중앙값·표본수가 모두 산출된다", () => {
     const stats = backtestSignal(mixed, { type: "insider_cluster", computedAt: "2026-07-08" })!;
     const h = stats.horizons[30]!;
-    expect(h.n).toBe(12);
-    expect(h.up).toBe(8);
-    expect(h.down).toBe(4);
+    expect(h.n).toBe(36);
+    expect(h.up).toBe(24);
+    expect(h.down).toBe(12);
     expect(h.winRate).toBeCloseTo(66.7, 1);
     expect(h.downRate).toBeCloseTo(33.3, 1);
     expect(h.medianReturn).toBeGreaterThan(0);
   });
 
   it("표본 미달이면 통계를 만들지 않는다(3건으로 승률 금지)", () => {
-    const few = Array.from({ length: BACKTEST_MIN_SAMPLE - 1 }, (_, i) => sample(`A${i}`, 5));
+    const few = Array.from({ length: BACKTEST_MIN_SAMPLE - 1 }, (_, i) => sample(`A${i}`, 5)); // n<30
     expect(backtestSignal(few, { type: "insider_cluster", computedAt: "2026-07-08" })).toBeNull();
   });
 
@@ -112,7 +113,7 @@ describe("aggregateSignalStats — 승률과 하락률을 항상 함께 낸다",
 
 describe("preferLedgerStats — 실전 n≥30 이면 백테스트를 대체(정직 규칙 ③)", () => {
   const bt = backtestSignal(
-    Array.from({ length: 12 }, (_, i) => sample(`B${i}`, 5)),
+    Array.from({ length: 30 }, (_, i) => sample(`B${i}`, 5)),
     { type: "insider_cluster", computedAt: "2026-07-08" }
   );
   const makeLedger = (n: number): SignalStats => ({
@@ -125,7 +126,7 @@ describe("preferLedgerStats — 실전 n≥30 이면 백테스트를 대체(정�
   });
 
   it("원장 표본 30 미만이면 백테스트 유지", () => {
-    expect(preferLedgerStats(bt, makeLedger(12))?.source).toBe("backtest");
+    expect(preferLedgerStats(bt, makeLedger(29))?.source).toBe("backtest");
   });
   it("원장 표본 30 이상이면 실전 성적으로 승격", () => {
     expect(preferLedgerStats(bt, makeLedger(30))?.source).toBe("ledger");
@@ -138,8 +139,8 @@ describe("preferLedgerStats — 실전 n≥30 이면 백테스트를 대체(정�
 describe("buildSignalStatsCopy — 상승만 말하는 카드 금지", () => {
   const stats = backtestSignal(
     [
-      ...Array.from({ length: 8 }, (_, i) => sample(`U${i}`, 6)),
-      ...Array.from({ length: 4 }, (_, i) => sample(`D${i}`, -5)),
+      ...Array.from({ length: 24 }, (_, i) => sample(`U${i}`, 6)),
+      ...Array.from({ length: 12 }, (_, i) => sample(`D${i}`, -5)),
     ],
     { type: "insider_cluster", computedAt: "2026-07-08" }
   );
@@ -159,7 +160,7 @@ describe("buildSignalStatsCopy — 상승만 말하는 카드 금지", () => {
 
   it("승률 100% 표본이어도 '다음에도 그렇다는 뜻은 아니다'로 캐비앳을 남긴다", () => {
     const allUp = backtestSignal(
-      Array.from({ length: 12 }, (_, i) => sample(`A${i}`, 7)),
+      Array.from({ length: 30 }, (_, i) => sample(`A${i}`, 7)),
       { type: "insider_cluster", computedAt: "2026-07-08" }
     );
     const copy = buildSignalStatsCopy(allUp)!;

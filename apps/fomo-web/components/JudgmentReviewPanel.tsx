@@ -8,6 +8,7 @@ import {
   type ReviewAction,
   type ReviewStance,
 } from "@/lib/fomoApi";
+import { canonicalName } from "@/lib/companyDisplay";
 
 const NEON = "#D8FF3A";
 const MUTED = "#A3A3A0";
@@ -32,8 +33,8 @@ function reportText(review: JudgmentReviewResponse): string {
   const weekly = review.weekly;
   if (!weekly) return "";
   const parts = [`포모클럽 주간 판단 복기 · 결과 ${weekly.count}건`];
-  if (weekly.best) parts.push(`잘한 판단 ${weekly.best.canonical} ${signed(weekly.best.returnPct)}`);
-  if (weekly.missed) parts.push(`아까운 판단 ${weekly.missed.canonical} ${signed(weekly.missed.returnPct)}`);
+  if (weekly.best) parts.push(`잘한 판단 ${canonicalName(weekly.best.canonical)} ${signed(weekly.best.returnPct)}`);
+  if (weekly.missed) parts.push(`아까운 판단 ${canonicalName(weekly.missed.canonical)} ${signed(weekly.missed.returnPct)}`);
   return parts.join("\n");
 }
 
@@ -63,7 +64,7 @@ function ReviewRow({ row }: { row: JudgmentReviewRow }) {
   return (
     <div className="flex items-center justify-between gap-3 border-t border-hairline py-2.5 first:border-t-0">
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-whiteout">{row.canonical}</p>
+        <p className="truncate text-sm font-semibold text-whiteout">{canonicalName(row.canonical)}</p>
         <p className="mt-0.5 text-[10px] text-muted">{stanceLabel(row.stance)} · {actionLabel(row.action)}</p>
       </div>
       <span className="shrink-0 font-number text-sm font-bold" style={{ color: row.returnPct > 0 ? NEON : MUTED }}>
@@ -90,10 +91,10 @@ function WeeklyCard({ review }: { review: JudgmentReviewResponse }) {
       </div>
       <div className="mt-4">
         {weekly.best && (
-          <p className="text-sm leading-6 text-whiteout">잘한 판단 · <b>{weekly.best.canonical}</b> {signed(weekly.best.returnPct)}</p>
+          <p className="text-sm leading-6 text-whiteout">잘한 판단 · <b>{canonicalName(weekly.best.canonical)}</b> {signed(weekly.best.returnPct)}</p>
         )}
         {weekly.missed && (
-          <p className="text-sm leading-6 text-whiteout">아까운 판단 · <b>{weekly.missed.canonical}</b> {signed(weekly.missed.returnPct)}</p>
+          <p className="text-sm leading-6 text-whiteout">아까운 판단 · <b>{canonicalName(weekly.missed.canonical)}</b> {signed(weekly.missed.returnPct)}</p>
         )}
         {weekly.disagreements.length > 0 && (
           <p className="mt-1 text-xs leading-5 text-muted">카드와 갈린 판단 {weekly.disagreements.length}건 · 결과를 다음 선택의 기록으로 남겼어요.</p>

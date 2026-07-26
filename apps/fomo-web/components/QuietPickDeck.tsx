@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuietPick, QuietWatchItem } from "@/lib/fomoApi";
 import { fetchQuietPicks, recordTaste } from "@/lib/fomoApi";
 import { upsertWatch } from "@/lib/watchlist";
+import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
@@ -308,14 +309,14 @@ function WatchShelf({ items, onOpen }: { items: QuietWatchItem[]; onOpen: (item:
               <div className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2">
                   <StockLogoBadge
-                    name={item.subject.canonical}
+                    name={subjectName(item.subject)}
                     naverCode={item.subject.naverCode}
                     symbol={item.subject.symbol}
                     size={24}
                   />
                   <span className="min-w-0 truncate text-sm font-semibold text-[#c9c9c4]">
-                    {item.subject.canonical}
-                    {item.subject.symbol ? ` (${item.subject.symbol})` : item.subject.naverCode ? ` (${item.subject.naverCode})` : ""}
+                    {subjectName(item.subject)}
+                    {subjectTicker(item.subject) ? ` (${subjectTicker(item.subject)})` : ""}
                   </span>
                 </span>
                 <span className="shrink-0 text-[11px] text-muted">

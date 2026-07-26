@@ -38,6 +38,7 @@ import { verdictBalance } from "@/lib/discoveryPresentation";
 import { GemIcon, StarIcon, CaretUpIcon, CaretDownIcon, UndoIcon, HeartIcon, XMarkIcon } from "@/components/icons";
 import { chartTokens } from "@/lib/chartTokens";
 import { buildCardHookCopy, easyMarketCopy, scoreSignalType, type CardHookCopy } from "@/lib/easyMarketCopy";
+import { canonicalName } from "@/lib/companyDisplay";
 
 /**
  * 공통 종목 무한 스와이프 덱.
@@ -352,7 +353,7 @@ function StockCardFace({
         <LogoBadge name={stock.canonical} naverCode={stock.naverCode} symbol={stock.symbol} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
+            <span className="truncate text-2xl font-bold text-whiteout">{canonicalName(stock.canonical)}</span>
             {stock.marquee && <StarIcon size={14} className="shrink-0 text-text-secondary" />}
           </div>
           <span className="font-pixel text-xs text-muted">
@@ -463,7 +464,7 @@ function StockCardLoadingFace({
         <LogoBadge name={stock.canonical} naverCode={stock.naverCode} symbol={stock.symbol} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-2xl font-bold text-whiteout">{stock.canonical}</span>
+            <span className="truncate text-2xl font-bold text-whiteout">{canonicalName(stock.canonical)}</span>
             {stock.marquee && <StarIcon size={14} className="shrink-0 text-text-secondary" />}
           </div>
           <span className="font-pixel text-xs text-muted">{MARKET_LABEL[stock.market] ?? stock.market}</span>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchJudgmentHistory, type FeedHubCalendar, type FeedHubCalendarStockRef } from "@/lib/fomoApi";
 import { getWatchlist } from "@/lib/watchlist";
+import { canonicalName } from "@/lib/companyDisplay";
 
 /**
  * 주간 판단 캘린더 (2026-07-15) — 해자: 일정 나열이 아니라 "내 카드의 시험대".
@@ -69,7 +70,7 @@ export function CalendarCard({ calendar }: { calendar: FeedHubCalendar }) {
         }
       >
         {isMine && <span aria-hidden>★</span>}
-        {stock.canonical}
+        {canonicalName(stock.canonical)}
         {stock.session && <span className="text-[10px] opacity-70">{stock.session}</span>}
       </span>
     );
