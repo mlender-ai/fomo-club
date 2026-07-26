@@ -7,6 +7,7 @@ import { upsertWatch } from "@/lib/watchlist";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { FullPageLoading, LOADING_PRESETS } from "@/components/FullPageLoading";
 
 /**
@@ -304,10 +305,18 @@ function WatchShelf({ items, onOpen }: { items: QuietWatchItem[]; onOpen: (item:
               onClick={() => onOpen(item)}
               className="w-full rounded-xl border border-hairline bg-white/[0.02] px-4 py-3 text-left"
             >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 truncate text-sm font-semibold text-[#c9c9c4]">
-                  {item.subject.canonical}
-                  {item.subject.country === "US" && item.subject.symbol ? ` (${item.subject.symbol})` : ""}
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <StockLogoBadge
+                    name={item.subject.canonical}
+                    naverCode={item.subject.naverCode}
+                    symbol={item.subject.symbol}
+                    size={24}
+                  />
+                  <span className="min-w-0 truncate text-sm font-semibold text-[#c9c9c4]">
+                    {item.subject.canonical}
+                    {item.subject.symbol ? ` (${item.subject.symbol})` : item.subject.naverCode ? ` (${item.subject.naverCode})` : ""}
+                  </span>
                 </span>
                 <span className="shrink-0 text-[11px] text-muted">
                   {WATCH_SIGNAL_LABEL[item.signal.kind] ?? "신호"} · {item.signal.days}일

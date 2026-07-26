@@ -14,7 +14,10 @@ describe("종목 뎁스 정보 구조", () => {
     expect(component).not.toContain('role="tabpanel"');
     expect(component).not.toContain('depthTab === "judgment"');
     // 단일 스크롤 본문.
-    expect(component).toContain('className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6"');
+    // 하단 잘림 수리(2026-07): py-6 → pt-6 + GNB·safe-area 만큼 하단 여백.
+    expect(component).toContain(
+      'className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]"'
+    );
     // 질문형 5블록 헤딩(위→아래).
     for (const q of ["왜 이 회사인가", "왜 지금인가", "언제 틀리는가", "이 종목 판단 기록"]) {
       expect(component).toContain(`<DepthDocHeading label="${q}" />`);

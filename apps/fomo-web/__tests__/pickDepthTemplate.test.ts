@@ -87,6 +87,36 @@ describe("빈 섹션·상태 문구 금지(전 컴포넌트 스캔)", () => {
   });
 });
 
+describe("레거시 뎁스도 같은 수리를 받는다(워치·검색 경로)", () => {
+  const legacy = readFileSync(new URL("../components/KeywordDepthPage.tsx", import.meta.url), "utf8");
+
+  it("오버레이가 dvh 기준이고 스크롤 하단에 GNB·safe-area 여백이 있다", () => {
+    // 100vh 오버레이 + py-6 하단 여백이 '맨 밑 잘림'의 원인이었다.
+    expect(legacy).toContain("h-[100dvh]");
+    expect(legacy).toContain("pb-[calc(6rem+env(safe-area-inset-bottom))]");
+    expect(legacy).not.toContain('overflow-y-auto px-6 py-6"');
+  });
+
+  it("뎁스 헤더에 종목 로고가 붙는다", () => {
+    expect(legacy).toContain("<StockLogoBadge");
+  });
+});
+
+describe("로고 — KR·US 모두 서버 프록시로 채운다", () => {
+  const badge = readFileSync(new URL("../components/StockLogoBadge.tsx", import.meta.url), "utf8");
+  const lib = readFileSync(new URL("../lib/stockLogo.ts", import.meta.url), "utf8");
+
+  it("클라이언트가 외부 로고 호스트를 직접 때리지 않는다(핫링크 차단 → 빈 자리 방지)", () => {
+    expect(badge).not.toContain("assets.parqet.com");
+    expect(badge).toContain("stockLogoApiSrcForStock");
+  });
+
+  it("US 티커도 프록시 src 를 만든다", () => {
+    expect(lib).toContain("usStockLogoUrls");
+    expect(lib).toContain("symbol: symbol!");
+  });
+});
+
 describe("모바일 — 하단 잘림 방지", () => {
   it("본문 스크롤 영역에 GNB+safe-area 여백이 있다", () => {
     expect(depth).toContain("env(safe-area-inset-bottom)");

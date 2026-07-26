@@ -112,10 +112,8 @@ function LogoBadge({
 }) {
   const [failed, setFailed] = useState(false);
   const ch = name.trim().slice(0, 1) || "·";
-  const usSymbol = symbol && !isKrStockCode(symbol.trim()) ? symbol : undefined;
-  const src =
-    stockLogoApiSrcForStock({ naverCode, symbol, name }) ??
-    (usSymbol ? `https://assets.parqet.com/logos/symbol/${encodeURIComponent(usSymbol)}` : undefined);
+  // KR·US 모두 서버 프록시로(클라 직접 요청은 핫링크 차단으로 US 로고가 비어 보였다).
+  const src = stockLogoApiSrcForStock({ naverCode, symbol, name });
 
   useEffect(() => {
     setFailed(false);

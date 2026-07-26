@@ -32,6 +32,7 @@ import { verdictBalance } from "@/lib/discoveryPresentation";
 import { FlickerSpinner } from "@/components/FlickerSpinner";
 import { CompanyScoreRadar } from "@/components/CompanyScoreRadar";
 import { JudgmentTimeline } from "@/components/JudgmentTimeline";
+import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { DepthFold, DepthLine, DepthSection } from "@/components/DepthSection";
 import { chartTokens } from "@/lib/chartTokens";
 import {
@@ -103,7 +104,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed inset-0 z-[60] h-[100dvh] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex h-full max-w-md flex-col">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <span className="text-lg font-bold text-whiteout">{card.keyword}</span>
@@ -112,7 +113,7 @@ export function KeywordDepthPage({ card, onClose }: { card: KeywordCard; onClose
           </button>
         </div>
 
-        <div className="scrollbar-none flex-1 overflow-y-auto px-6 py-6">
+        <div className="scrollbar-none flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
           <p className="text-sm leading-6 text-whiteout">{cleanText(card.comment)}</p>
 
           {/* 왜 떴나 — LLM insight 를 기다리지 않고 카드 기본 depth 를 먼저 보여준다. */}
@@ -2817,7 +2818,7 @@ export function StockInsightView({
     !hasInsight && !insight?.officialFacts?.length && auditWordings(insight).length === 0;
 
   return (
-    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
+    <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] h-[100dvh] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
       <div className={inline ? "flex h-full min-h-0 flex-col" : "mx-auto flex h-full max-w-md flex-col"}>
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -2826,6 +2827,13 @@ export function StockInsightView({
                 ← {inlineBackLabel ?? "뒤로"}
               </button>
             )}
+            {/* 종목 로고 — KR·US 모두 프록시 경유(비어 보이지 않게). */}
+            <StockLogoBadge
+              name={cleanText(stock)}
+              naverCode={context?.naverCode}
+              symbol={context?.symbol}
+              size={26}
+            />
             {/* WO-P1 — 긴 미국 법인명은 한 줄 말줄임 + 티커 병기("Columbia Financial (CLBK)"). */}
             <span className="min-w-0 flex-1 truncate text-lg font-bold text-whiteout" title={cleanText(stock)}>
               {depthDisplayName(stock, context)}
@@ -2845,7 +2853,7 @@ export function StockInsightView({
           </button>
         </div>
 
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
           {/* 전부 로드 전엔 아무것도 노출하지 않는다 — 메인홈과 동일한 로딩 하나만. */}
           {!detailsReady ? (
             <FullPageLoading estimateMs={LOADING_PRESETS.main.estimateMs} steps={LOADING_PRESETS.main.steps} />
