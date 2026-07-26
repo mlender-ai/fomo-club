@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MOCK_STOCK_CARDS, type StockCard } from "@fomo/core";
+import { OverlayPortal } from "@/components/OverlayPortal";
 
 /**
  * 종목 카드 피드 — 릴스형 세로 스와이프(스크롤 스냅), 탭하면 뎁스 페이지. CARD_FEED_DEV_SPEC v2.
@@ -115,6 +116,7 @@ function StockCardSlide({
 function DepthPage({ card, onClose }: { card: StockCard; onClose: () => void }) {
   const color = changeColor(card.changePct);
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[60] bg-black">
       <div className="mx-auto flex h-full max-w-md flex-col">
         {/* 헤더 */}
@@ -166,5 +168,6 @@ function DepthPage({ card, onClose }: { card: StockCard; onClose: () => void }) 
         </div>
       </div>
     </div>
+    </OverlayPortal>
   );
 }

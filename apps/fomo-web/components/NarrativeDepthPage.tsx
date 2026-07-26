@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { StockInsightView, type StockContext } from "@/components/KeywordDepthPage";
 import type { DeckNarrative, DeckNarrativeStock } from "@/lib/discoveryDeck";
 import { CaretDownIcon, CaretUpIcon } from "@/components/icons";
+import { OverlayPortal } from "@/components/OverlayPortal";
 
 const DIR_COLOR: Record<string, string> = { up: "#FF4D4D", down: "#3B82F6", flat: "#8A8A86" };
 
@@ -126,7 +127,11 @@ export function NarrativeDepthPage({
     );
   }
 
+  // 오버레이는 body 직속 — 조상 transform 에 갇히면 하단이 잘린다. 인라인은 부모 안에 그대로.
+  const Shell = inline ? Fragment : OverlayPortal;
+
   return (
+    <Shell>
     <div className={inline ? "flex h-full min-h-0 flex-col" : "fixed inset-0 z-[70] bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"}>
       <div className={inline ? "flex h-full min-h-0 flex-col" : "mx-auto flex h-full max-w-md flex-col"}>
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
@@ -197,5 +202,6 @@ export function NarrativeDepthPage({
         </div>
       </div>
     </div>
+    </Shell>
   );
 }

@@ -13,6 +13,7 @@ import { fetchScorecardPicks, type ScorecardPick } from "@/lib/judgmentLedgerCli
 import { CompanyProfileBlock, FinanceGlanceBlock } from "@/components/KeywordDepthPage";
 import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { displayName } from "@/components/QuietPickCard";
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { chartTokens } from "@/lib/chartTokens";
 
 /**
@@ -241,6 +242,8 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   return (
     // h-[100dvh]: iOS Safari 주소창이 뜨면 100vh 가 실제 보이는 높이보다 커져 하단이 브라우저 UI 뒤로
     // 밀린다(레거시 뎁스의 잘림 원인). dvh 로 실제 뷰포트에 맞춘다.
+    // OverlayPortal: 조상 transform 에 갇혀 하단이 잘리지 않도록 body 직속으로 띄운다.
+    <OverlayPortal>
     <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-black pt-[env(safe-area-inset-top)]">
       {/* 상단 sticky 헤더 — 종목명(말줄임)·티커·가격. 스크롤 영역과 분리. */}
       <header className="flex shrink-0 items-center gap-2 border-b border-hairline px-5 py-3">
@@ -300,5 +303,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
         <RecordBlock picks={records} />
       </div>
     </div>
+    </OverlayPortal>
   );
 }
