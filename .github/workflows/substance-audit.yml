@@ -93,7 +93,10 @@ jobs:
             console.log("== 카드 함량(§4-1) ==");
             try {
               const b=require("./docs/audit/baseline_substance_raw.json");
-              for (const [k,v] of Object.entries(b.layers)) console.log(k, {n:v.n, biz:v.has_business_context_pct, fin:v.has_financial_fact_pct, frame:v.has_frame_pct});
+              for (const [k,v] of Object.entries(b.layers)) console.log(k, {n:v.n, compared:v.externalComparedN, biz:v.has_business_context_pct, fin:v.has_financial_fact_pct, frame:v.has_frame_pct});
+              const reasons={};
+              for (const it of (b.layers.L1_live_payload.items||[])) for (const r of it.labels.reasons) { const k=r.split(":")[0]+": "+r.split(":")[1].trim().slice(0,28); reasons[k]=(reasons[k]||0)+1; }
+              console.log("L1 판정 근거 분포", reasons);
             } catch(e) { console.log("(§4-1 결과 없음)", e.message); }
             console.log("== KR 매출 note 샘플 ==");
             console.log((d.results||[]).filter(r=>r.country==="KR").slice(0,3).map(r=>r.fields.quarterly_revenue_8q));

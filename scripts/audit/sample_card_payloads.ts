@@ -86,11 +86,18 @@ async function main(): Promise<void> {
   console.log(`[audit] L1 라이브 카드 ${livePicks.length}장 / L2 발행 이력 ${historyPicks.length}장`);
 
   // L1 — 전체 페이로드 감사(외부 원문과 대조).
-  const l1: Array<{ canonical: string; labels: SubstanceLabels }> = [];
+  // **비교 대상 원문을 실제로 받았는지 세는 것이 중요하다.** 원문을 못 받으면 복붙 판정이 불가능해
+  // "존재만으로 인정"으로 넘어가고, 그러면 has_business_context 가 실제보다 높게 나온다.
+  const l1: Array<{ canonical: string; externalCompared: boolean; labels: SubstanceLabels }> = [];
   for (const pick of seededShuffle(livePicks, AUDIT_SEED).slice(0, target)) {
     const external = await externalDescription(base, pick.subject.canonical, pick.subject.symbol);
-    l1.push({ canonical: pick.subject.canonical, labels: labelCard(toCardPayload(pick, external)) });
+    l1.push({
+      canonical: pick.subject.canonical,
+      externalCompared: !!external,
+      labels: labelCard(toCardPayload(pick, external)),
+    });
   }
+  const compared = l1.filter((i) => i.externalCompared).length;
 
   // L2 — 박제된 페이로드 감사. 사업/재무/해석 자리가 스키마에 없다는 사실 자체를 측정한다.
   const l2 = seededShuffle(historyPicks, AUDIT_SEED)
@@ -108,7 +115,10 @@ async function main(): Promise<void> {
     layers: {
       L1_live_payload: {
         n: l1.length,
-        note: "오늘자 발행 카드 전체 페이로드. 하루 발행량이 한 자릿수라 200장에 도달하지 않는다.",
+        externalComparedN: compared,
+        note:
+          "오늘자 발행 카드 전체 페이로드. 하루 발행량이 한 자릿수라 200장에 도달하지 않는다. " +
+          `외부 원문과 실제로 대조된 건 ${compared}/${l1.length} — 나머지는 복붙 판정 불가(존재만으로 인정)라 상향 편향이 있다.`,
         has_business_context_pct: ratio(l1.map((i) => i.labels), "has_business_context"),
         has_financial_fact_pct: ratio(l1.map((i) => i.labels), "has_financial_fact"),
         has_frame_pct: ratio(l1.map((i) => i.labels), "has_frame"),
