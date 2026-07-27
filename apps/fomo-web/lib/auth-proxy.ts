@@ -22,6 +22,7 @@ const ALLOWED_PROXY_REQUESTS = new Map<string, ReadonlySet<string>>([
   ["emotions/calendar", new Set(["GET"])],
   ["emotions/link", new Set(["POST"])],
   ["emotions/vote", new Set(["POST"])],
+  ["ux-metrics", new Set(["POST", "GET"])],
   ["taste", new Set(["POST"])],
   ["taste/link", new Set(["POST"])],
   ["account", new Set(["DELETE"])],

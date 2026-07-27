@@ -5,6 +5,7 @@ import type { QuietPick, QuietWatchItem } from "@/lib/fomoApi";
 import { fetchQuietPicks, recordTaste } from "@/lib/fomoApi";
 import { upsertWatch } from "@/lib/watchlist";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
+import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
@@ -60,6 +61,30 @@ export function QuietPickDeck() {
   const exitTimer = useRef<number | null>(null);
   useEffect(() => () => { if (exitTimer.current) window.clearTimeout(exitTimer.current); }, []);
 
+  // WO-SUB-00 §4-2 — 카드 노출·체류시간. 카드가 바뀌는 순간 이전 카드의 체류를 확정한다.
+  const cardShownAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (status !== "ready" || picks.length === 0 || idx >= picks.length) return;
+    recordPickTelemetry({ event: "card_view", position: idx + 1 });
+    const shownAt = Date.now();
+    cardShownAt.current = shownAt;
+    return () => {
+      recordPickTelemetry({ event: "card_dwell", durationMs: Date.now() - shownAt, position: idx + 1 });
+      cardShownAt.current = null;
+    };
+  }, [idx, status, picks.length]);
+
+  // 덱 완주 — 마지막 카드를 넘긴 시점 1회.
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (status !== "ready" || picks.length === 0) return;
+    if (idx >= picks.length && !completedRef.current) {
+      completedRef.current = true;
+      recordPickTelemetry({ event: "deck_complete", cardsConsumed: picks.length });
+      flushPickTelemetry();
+    }
+  }, [idx, status, picks.length]);
+
   const advance = useCallback(
     (dir: "left" | "right", pick?: QuietPick) => {
       // 우스와이프 = 관심: 로컬 관심 목록에 저장 + 취향 신호 적재(넘김도 신호다).
@@ -71,6 +96,12 @@ export function QuietPickDeck() {
           });
         }
         recordTaste("stock", pick.subject.canonical, dir === "right" ? "more" : "less");
+        // WO-SUB-00 §4-2 — 위치까지 남긴다(카드 위치별 이탈률).
+        recordPickTelemetry(
+          dir === "right"
+            ? { event: "card_watchlist_add", position: idx + 1 }
+            : { event: "card_skip", position: idx + 1 }
+        );
       }
       setExiting(dir);
       const after = () => {
@@ -81,7 +112,7 @@ export function QuietPickDeck() {
       if (prefersReducedMotion()) after();
       else exitTimer.current = window.setTimeout(after, EXIT_MS);
     },
-    []
+    [idx]
   );
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -191,7 +222,11 @@ export function QuietPickDeck() {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          onClick={() => { if (!moved.current) setSelected(current); }}
+          onClick={() => {
+            if (moved.current) return;
+            recordPickTelemetry({ event: "card_detail_open", entryPoint: "tap", position: idx + 1 });
+            setSelected(current);
+          }}
           role="button"
           tabIndex={0}
           aria-label={`${current.subject.canonical} 자세히 보기`}
@@ -217,7 +252,7 @@ export function QuietPickDeck() {
 
       <div className="mt-3 flex items-center justify-center gap-3 pb-2">
         <button type="button" onClick={() => advance("left", current)} className="rounded-full border border-hairline px-5 py-2 text-sm text-muted">넘기기</button>
-        <button type="button" onClick={() => setSelected(current)} className="rounded-full px-5 py-2 text-sm font-semibold text-black" style={{ backgroundColor: "var(--neon,#d8ff3a)" }}>자세히</button>
+        <button type="button" onClick={() => { recordPickTelemetry({ event: "card_detail_open", entryPoint: "button", position: idx + 1 }); setSelected(current); }} className="rounded-full px-5 py-2 text-sm font-semibold text-black" style={{ backgroundColor: "var(--neon,#d8ff3a)" }}>자세히</button>
         <span className="ml-1 text-xs text-muted">{remaining}곳 남음</span>
       </div>
 

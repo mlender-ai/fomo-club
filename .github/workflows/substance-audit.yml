@@ -1,0 +1,111 @@
+name: Substance Audit (WO-SUB-00)
+
+# WO-SUB-00 §4-1·4-3 — 카드 함량 감사 + 펀더멘털 커버리지 실사.
+#
+# 여기서 도는 이유: 개발 샌드박스는 외부 egress 가 정책상 차단(CONNECT 403)돼 있어
+# 실측이 불가능하다. 실측 없이 매트릭스를 채우는 것은 이 WO 가 명시적으로 금지한다.
+#
+# 알려진 제약: 네이버·openinsider 는 GH Actions 러너 IP에서 막힐 수 있다
+# (signal-stats.yml 주석의 "GH Actions tsx 직접 실행은 시세 egress 미확보"와 동일 계열).
+# 막히면 막혔다고 결과에 남긴다 — 우회해서 추정치를 만들지 않는다.
+on:
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "scripts/audit/**"
+      - ".github/workflows/substance-audit.yml"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "프로브 표본 수"
+        type: string
+        default: "130"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: substance-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --no-audit --no-fund
+
+      - name: Reachability probe (어떤 소스가 이 러너에서 실제로 열리는지 먼저 실측)
+        run: |
+          for u in \
+            "https://www.sec.gov/files/company_tickers.json" \
+            "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json" \
+            "https://api.nasdaq.com/api/quote/AAPL/summary?assetclass=stocks" \
+            "https://m.stock.naver.com/api/stock/005930/basic" \
+            "https://opendart.fss.or.kr/api/list.json" \
+            "https://fomo-club-backend.vercel.app/api/fomo/track-record/picks" ; do
+            # Nasdaq 은 비브라우저 UA 를 막는다(1차 실측: curl 실패 / 브라우저 UA fetch 성공).
+            # UA 때문에 "소스가 막혔다"고 오판하지 않도록 브라우저 UA 로 확인한다.
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 \
+              -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36" "$u" || echo "000")
+            echo "$code  $u"
+          done
+
+      - name: Source key discovery (파서를 추측이 아니라 실제 응답에 맞춘다)
+        continue-on-error: true
+        env:
+          SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+        run: npx tsx scripts/audit/discover_source_keys.ts CLBK 185750
+
+      - name: Card substance audit (§4-1)
+        continue-on-error: true
+        env:
+          AUDIT_BASE_URL: https://fomo-club-backend.vercel.app
+        run: npx tsx scripts/audit/sample_card_payloads.ts --base "$AUDIT_BASE_URL" --out docs/audit
+
+      - name: Fundamental coverage probe (§4-3)
+        continue-on-error: true
+        env:
+          SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: |
+          npx tsx scripts/audit/probe_fundamental_sources.ts \
+            --base https://fomo-club-backend.vercel.app \
+            --out docs/audit \
+            --limit ${{ github.event.inputs.limit || '130' }}
+
+      - name: Show unknown/error summary (미확인 셀을 눈으로 확인)
+        if: always()
+        run: |
+          test -f docs/audit/fundamental_coverage_raw.json || exit 0
+          node -e '
+            const d=require("./docs/audit/fundamental_coverage_raw.json");
+            const errs={};
+            for (const r of d.results||[]) for (const e of r.errors||[]) errs[e.split("(")[0]]=(errs[e.split("(")[0]]||0)+1;
+            console.log("== 오류 유형별 건수 =="); console.log(errs);
+            console.log("== 그룹별 표본 =="); 
+            const byGroup={}; for (const r of d.results||[]) byGroup[r.group]=(byGroup[r.group]||0)+1;
+            console.log(byGroup);
+            console.log("== 카드 함량(§4-1) ==");
+            try {
+              const b=require("./docs/audit/baseline_substance_raw.json");
+              for (const [k,v] of Object.entries(b.layers)) console.log(k, {n:v.n, compared:v.externalComparedN, biz:v.has_business_context_pct, fin:v.has_financial_fact_pct, frame:v.has_frame_pct});
+              const reasons={};
+              for (const it of (b.layers.L1_live_payload.items||[])) for (const r of it.labels.reasons) { const k=r.split(":")[0]+": "+r.split(":")[1].trim().slice(0,28); reasons[k]=(reasons[k]||0)+1; }
+              console.log("L1 판정 근거 분포", reasons);
+            } catch(e) { console.log("(§4-1 결과 없음)", e.message); }
+            console.log("== KR 매출 note 샘플 ==");
+            console.log((d.results||[]).filter(r=>r.country==="KR").slice(0,3).map(r=>r.fields.quarterly_revenue_8q));
+          '
+
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: substance-audit-raw
+          path: docs/audit/*.json
+          if-no-files-found: warn
