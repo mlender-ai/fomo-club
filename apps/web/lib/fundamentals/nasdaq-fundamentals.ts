@@ -7,6 +7,8 @@ import type { FactSheetClassification, FactSheetConsensus, ReportedNumber } from
  *  · **브라우저 UA 필수.** 비브라우저 UA 는 차단된다.
  *  · `summary` 에 **`PERatio`·`BookValue` 키가 없다.** PER 은 시가총액 ÷ SEC TTM 순이익으로 계산한다.
  *  · `summary` 는 간헐적으로 `summaryData: {}` 를 준다(실측). 재시도하고, 그래도 비면 결측으로 남긴다.
+ *  · `summary` 의 **키 집합이 종목마다 다르다**(실측: IBM 에는 `Yield`·`AnnualizedDividend` 가 없다).
+ *    없는 키를 결측으로 두고, `PreviousClose` 는 `info` 실패 시 가격 폴백으로 쓴다.
  *  · `analyst/earnings-forecast` 는 **EPS 예상만** 준다. 매출 예상 필드가 없다 → `revenue_fy*` 는 null.
  *  · `consensusEPSForecast` 는 **문자열로도 숫자로도** 온다. 문자열로 강제하지 않으면 예외가 난다.
  *  · `historical` 은 5년을 요청해도 소수 행만 주거나 타임아웃한다 → 일별 종가는
@@ -147,13 +149,18 @@ export async function fetchNasdaqFundamentals(symbol: string): Promise<NasdaqFun
   }
 
   const marketCap = parseNasdaqNumber(summary?.MarketCap?.value);
+  // info 가 실패했을 때의 가격 폴백 — summary 에 전일 종가가 있다. 기준시각은 모르므로 null 로 둔다(추측 금지).
+  const previousClose = parseNasdaqNumber(summary?.PreviousClose?.value);
+  const effectivePrice = price ?? previousClose;
+  const priceSource = price !== null ? "info.lastSalePrice" : previousClose !== null ? "summary.PreviousClose" : "none";
   result.marketData = {
     market_cap: marketCap,
     // Nasdaq 은 상장주식수를 주지 않는다. 시총 ÷ 현재가로 역산하고, SEC 보고 주식수가 있으면 상위에서 덮는다.
-    shares_outstanding: marketCap !== null && price !== null && price > 0 ? Math.round(marketCap / price) : null,
-    price,
-    price_as_of: priceAsOf,
-    source: "nasdaq_summary.MarketCap+info.lastSalePrice",
+    shares_outstanding:
+      marketCap !== null && effectivePrice !== null && effectivePrice > 0 ? Math.round(marketCap / effectivePrice) : null,
+    price: effectivePrice,
+    price_as_of: price !== null ? priceAsOf : null,
+    source: `nasdaq_summary.MarketCap+${priceSource}`,
   };
   const sector = summary?.Sector?.value?.trim();
   const industry = summary?.Industry?.value?.trim();
@@ -163,9 +170,18 @@ export async function fetchNasdaqFundamentals(symbol: string): Promise<NasdaqFun
     scheme: sector || industry ? "nasdaq_industry" : null,
     source: sector || industry ? "nasdaq_summary.Sector/Industry" : null,
   };
-  const yieldValue = parseNasdaqNumber(summary?.Yield?.value);
-  if (yieldValue !== null) {
-    result.reported.dividend_yield = { value: yieldValue, source: "nasdaq_summary.Yield", as_of: priceAsOf };
+  // 배당수익률 — `Yield` 키는 **종목마다 있기도 없기도 하다**(실측: IBM 은 summary 에 Yield·AnnualizedDividend 가
+  // 아예 없고 SpecialDividend* 만 N/A 로 온다). 연간배당금이 있으면 가격으로 나눠 쓰고, 그 사실을 출처에 남긴다.
+  const reportedYield = parseNasdaqNumber(summary?.Yield?.value);
+  const annualDividend = parseNasdaqNumber(summary?.AnnualizedDividend?.value);
+  if (reportedYield !== null) {
+    result.reported.dividend_yield = { value: reportedYield, source: "nasdaq_summary.Yield", as_of: priceAsOf };
+  } else if (annualDividend !== null && effectivePrice !== null && effectivePrice > 0) {
+    result.reported.dividend_yield = {
+      value: Number(((annualDividend / effectivePrice) * 100).toFixed(2)),
+      source: "computed:nasdaq_summary.AnnualizedDividend÷price",
+      as_of: priceAsOf,
+    };
   }
 
   await sleep(DELAY_MS);
