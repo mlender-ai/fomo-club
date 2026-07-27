@@ -61,6 +61,14 @@ jobs:
           SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
         run: npx tsx scripts/audit/discover_source_keys.ts CLBK 185750
 
+      # WO-SUB-01: DART 는 응답 구조를 한 번도 못 봐서 파서를 쓰지 않았다.
+      # 시크릿이 등록되면 여기서 구조가 찍히고, 그 덤프를 근거로 파서를 쓴다(추측 금지 규칙).
+      - name: DART key discovery (시크릿 있을 때만 — 판정 없이 구조만 덤프)
+        continue-on-error: true
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: npx tsx scripts/audit/discover_dart_keys.ts 185750 000660 --out docs/audit
+
       - name: Card substance audit (§4-1)
         continue-on-error: true
         env:

@@ -30,3 +30,4 @@ export * from "./index-engine/whaleEvents";
 export * from "./index-engine/naverFetcher";
 // @author 안티그래비티 — 1-A: Reddit 페처 export
 export * from "./index-engine/redditFetcher";
+export * from "./fundamentals";

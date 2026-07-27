@@ -4,6 +4,8 @@ node_modules
 .next-build
 dist
 coverage
+# 테스트 커버리지 산출물만 무시한다 — 소스 경로의 coverage 디렉터리(팩트시트 커버리지 API)는 추적한다.
+!apps/web/app/api/**/coverage/
 .turbo
 .DS_Store
 .vercel
@@ -23,6 +25,9 @@ test-results/
 playwright-report/
 playwright/.cache/
 fomo-index-health.json
+# 팩트시트 실측 원본(백필 스크립트 산출물 ~700KB) — 대시보드 마크다운만 추적한다.
+# 필요하면 npm run fundamentals:backfill 로 재생성하거나 워크플로 아티팩트로 받는다.
+docs/fundamentals/coverage_raw.json
 agent-tooling-reports/
 hardening-reports/
 .codebase-memory/
