@@ -1,5 +1,25 @@
 # WO-SUB-BATCH-01 GO/NO-GO 판정
 
+> ## ⚠️ 2026-07-28 정정 (WO-SUB-01 실측) — 🔴 컨센서스 보류를 부분 해제한다
+>
+> §2-4 의 "Forward **매출** 컨센서스 전 그룹 0%" 는 **KR 에서 틀렸다.**
+> 네이버 `trTitleList[].isConsensus` 는 boolean 이 아니라 문자열 `"Y"`/`"N"` 이고, 문자열 `"N"` 이 truthy 라서
+> "전 컬럼 true → 의미 없음" 으로 판정했던 것이다. 실제로는 마지막 한 컬럼만 `"Y"` 이며 그것이 예상치다.
+>
+> | 항목 | 원 판정 | 정정 |
+> |---|---|---|
+> | KR Forward 매출 컨센서스 | 0% | **51.2%** (57종목 실측) |
+> | KR Forward EPS 컨센서스 | 미확인 | **53.7%** |
+> | US Forward 매출 컨센서스 | 0% | 0% (변경 없음 — Nasdaq 은 EPS 예상만) |
+>
+> **후속 범위 재조정**: `WO-SUB-04` 의 "실적+예상 매출 막대"는 **KR 에서 그대로 구현할 수 있다.**
+> US 는 EPS 축으로 치환하거나 실적 구간만 그린다. §3 표의 `WO-SUB-04` 행을 이 정정으로 읽을 것.
+>
+> §2-3 의 "US 5년 일별 종가 0/11" 도 조건이 바뀌었다 — 이미 프로덕션이 쓰는 TwelveData `time_series`
+> (`TWELVE_DATA_API_KEY`)로 5년치를 시도한다. 다만 **프로덕션 실측은 미완**이므로 판정을 뒤집지는 않는다.
+>
+> 근거: `docs/fundamentals/SPEC_factsheet.md`, `docs/fundamentals/COVERAGE_dashboard.md`
+
 | 항목 | 값 |
 |---|---|
 | 판정일 | 2026-07-27 |

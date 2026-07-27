@@ -163,6 +163,17 @@ async function main(): Promise<void> {
   const report = summarizeCoverage(factsheets, { universe: entries.length });
   notes.push(`실행 모드: ${symbolsRaw ? "지정 종목" : "유니버스"}${dry ? " · --dry(저장 안 함)" : " · 저장함"}`);
   notes.push(`대상 ${entries.length}종목 전부 레코드 생성됨(${report.records}건) — 완료 조건 1`);
+  // 환경에 따라 확보율이 달라지는 축을 명시한다. 안 적으면 "무료 경로에 없다"와
+  // "이 실행 환경에 키가 없다"가 문서에서 구별되지 않는다.
+  notes.push(
+    `\`TWELVE_DATA_API_KEY\`: ${process.env.TWELVE_DATA_API_KEY ? "있음 — US 5년 종가 조회됨" : "**없음 — US 일별 종가가 0일로 측정된다.** 프로덕션 크론에서 재측정 필요"}`
+  );
+  notes.push(
+    `\`DATABASE_URL\`: ${process.env.DATABASE_URL ? "있음 — 봉인 캔들(us/kr-candles) 병합됨" : "**없음 — 봉인 캔들 캐시를 읽지 못한다.** KR/US 종가가 이 실행에서 짧게 잡힐 수 있다"}`
+  );
+  notes.push(
+    `\`DART_API_KEY\`: ${process.env.DART_API_KEY ? "있음(단 WO-SUB-01 은 DART 파서를 쓰지 않는다 — 구조 덤프 선행)" : "없음 — KR 8분기·실공시일·현금흐름은 미확보 상태다"}`
+  );
 
   if (outDir) {
     mkdirSync(outDir, { recursive: true });
