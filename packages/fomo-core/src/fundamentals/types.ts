@@ -1,0 +1,216 @@
+/**
+ * WO-SUB-01 펀더멘털 팩트 시트 — 스키마.
+ *
+ * **해석 없는 사실 스냅샷이다.** 등급·판단·문장은 여기 없다(WO-SUB-02·05의 일).
+ * 숫자와 출처와 시각뿐이다.
+ *
+ * 절대 규칙(WO-SUB-01 §4):
+ *  1. 추정·보간·전분기 복사 금지 → 없으면 `null` + `missing_fields`
+ *  2. 모든 수치에 `source` + `as_of`
+ *  3. 통화 환산 금지 — 원통화로 저장
+ *  4. look-ahead 금지 — `filed_at` 없는 분기 레코드는 만들지 않는다
+ *  5. 배치 사전계산 — 요청 시점 계산 금지
+ *  6. 동일 입력 → 동일 출력
+ */
+
+export type Currency = "KRW" | "USD";
+export type Market = "KR" | "US";
+export type CoverageFlag = "full" | "partial" | "none";
+export type MarginTrend = "expanding" | "flat" | "contracting" | "unknown";
+export type BandMetric = "per" | "pbr" | "psr";
+
+/** 분기 레코드. `filed_at` 이 없으면 이 레코드를 만들지 않는다(look-ahead 방지). */
+export interface QuarterRecord {
+  /** "2026Q1" — 회계연도 기준이 아니라 기간말 기준 라벨. */
+  period: string;
+  /** 기간말일 "2026-03-31". */
+  period_end: string;
+  /** 공시일. 없으면 레코드 자체를 만들지 않는다. */
+  filed_at: string;
+  /**
+   * `filed_at` 의 근거.
+   *  · `disclosed` — 소스가 실제 공시일을 준 경우(SEC `filed`, DART `rcept_no`)
+   *  · `statutory_deadline` — 소스에 공시일이 없어 **법정 제출기한**을 쓴 경우.
+   *    네이버 재무 표에는 공시일이 없다. 기한은 실제 공시일보다 **늦거나 같으므로**
+   *    look-ahead 를 만들지 않는다(보수적 상한). 대신 밴드의 유효 관측이 줄어든다.
+   * 값이 없으면 `disclosed` 로 본다.
+   */
+  filed_at_basis?: "disclosed" | "statutory_deadline";
+  revenue: number | null;
+  operating_income: number | null;
+  net_income: number | null;
+  eps_diluted: number | null;
+  /** 이 레코드를 만든 소스. "sec_xbrl" | "dart" | "naver_finance_quarter" */
+  source: string;
+  /**
+   * 어떤 원본 개념/행에서 왔는지(감사용). US=XBRL concept, KR=재무제표 계정명.
+   * 은행처럼 `Revenues` 가 없는 종목에서 무엇을 매출로 봤는지 추적하려면 이게 필수다.
+   */
+  concepts?: Partial<Record<"revenue" | "operating_income" | "net_income" | "eps_diluted", string>>;
+}
+
+/** 5년 밴드 통계. `sufficient: false` 면 `current_percentile` 은 반드시 `null`. */
+export interface BandStat {
+  p20: number | null;
+  p50: number | null;
+  p80: number | null;
+  current: number | null;
+  /** 0~100. `sufficient: false` 면 `null`. */
+  current_percentile: number | null;
+  /** 유효 관측 일수(비율이 계산된 거래일 수). */
+  observations: number;
+  /** 윈도우 내 거래일 수(분모). */
+  window_trading_days: number;
+  window_start: string;
+  window_end: string;
+  sufficient: boolean;
+  /** 불충분·미계산 사유. `sufficient: true` 면 `null`. */
+  insufficient_reason: string | null;
+  /**
+   * 비율을 어떻게 구성했는지. 수정주가 × 기준주식수 ÷ TTM 총액 방식이므로
+   * 기준주식수를 명시해야 값이 재현·감사 가능하다(WO §12 "분할 미조정 가격으로 밴드 계산" 방지).
+   */
+  basis: string;
+  shares_ref: number | null;
+  shares_ref_as_of: string | null;
+}
+
+export interface FactSheetFiscal {
+  /** 최근 8분기, period_end 오름차순. */
+  quarters: QuarterRecord[];
+  /** 최근 5회계연도, period_end 오름차순. */
+  annual: QuarterRecord[];
+  ttm: {
+    revenue: number | null;
+    operating_income: number | null;
+    net_income: number | null;
+    eps_diluted: number | null;
+    /** 어떤 분기들로 TTM 을 구성했는지. 4개 미달이면 값은 전부 null 이고 이 목록도 비지 않는다. */
+    composed_of: string[];
+  };
+  coverage_flag: CoverageFlag;
+  /** 결산월 변경·회계연도 변경 감지 결과. 감지되면 TTM 은 null 이고 coverage_flag 는 partial. */
+  fiscal_anomaly: string | null;
+}
+
+export interface FactSheetGrowth {
+  /** 최근 분기 전년동기 대비. */
+  revenue_yoy: number | null;
+  revenue_cagr_3y: number | null;
+  operating_income_yoy: number | null;
+}
+
+export interface FactSheetMargin {
+  operating_ttm: number | null;
+  net_ttm: number | null;
+  /** 최근 8분기 영업이익률 표본표준편차. 8분기 미만이면 null(WO-SUB-02 시클리컬 판정 불가). */
+  operating_stdev_8q: number | null;
+  trend_8q: MarginTrend;
+}
+
+export interface FactSheetValuation {
+  per_ttm: number | null;
+  pbr: number | null;
+  psr_ttm: number | null;
+  ev_ebitda: number | null;
+  dividend_yield: number | null;
+  /** 컨센서스 있을 때만. */
+  per_forward: number | null;
+  band_5y: {
+    /** 무엇을 밴드로 쓸지는 WO-SUB-02 가 결정한다. 여기서는 가능한 것 전부 계산. */
+    metric: BandMetric | null;
+    per: BandStat | null;
+    pbr: BandStat | null;
+    psr: BandStat | null;
+  };
+}
+
+export interface FactSheetBalance {
+  total_equity: number | null;
+  debt_to_equity: number | null;
+  net_cash: number | null;
+  cash_and_equivalents: number | null;
+  /** 최근 4분기 영업현금흐름 합이 음수일 때만 계산. 양수면 null("무한"이라 쓰지 않는다). */
+  cash_runway_quarters: number | null;
+  interest_coverage: number | null;
+}
+
+export interface FactSheetMarketData {
+  market_cap: number | null;
+  shares_outstanding: number | null;
+  price: number | null;
+  price_as_of: string | null;
+}
+
+export interface FactSheetConsensus {
+  available: boolean;
+  revenue_fy1: number | null;
+  revenue_fy2: number | null;
+  revenue_fy3: number | null;
+  eps_fy1: number | null;
+  eps_fy2: number | null;
+  source: string | null;
+  as_of: string | null;
+  analyst_count: number | null;
+  /**
+   * 예상 구간의 기간 라벨(있는 것만). PHASE 4 가 "실적 vs 예상" 막대를 그릴 때
+   * 어느 기간이 예상인지 알아야 연한 색 구간을 정할 수 있다.
+   */
+  periods: string[];
+}
+
+export interface FactSheetClassification {
+  sector: string | null;
+  industry: string | null;
+  /** "GICS" | "nasdaq_industry" | "naver_industry_code" */
+  scheme: string | null;
+  source: string | null;
+}
+
+export interface SourceManifestEntry {
+  source: string;
+  fetched_at: string;
+  /** 이 소스에서 무엇을 가져왔는지 + 알려진 제약(예: 수정주가 여부). */
+  note?: string;
+}
+
+export interface FactSheet {
+  symbol: string;
+  market: Market;
+  currency: Currency;
+  /** 이 레코드를 만든 시각. */
+  snapshot_at: string;
+  /** 화면 표기용 회사명(원장·성적표와 동일 규칙). */
+  display_name: string;
+  /** 원장 조인 키(원문 유지). */
+  canonical: string;
+
+  fiscal: FactSheetFiscal;
+  growth: FactSheetGrowth;
+  margin: FactSheetMargin;
+  valuation: FactSheetValuation;
+  balance: FactSheetBalance;
+  market_data: FactSheetMarketData;
+  consensus: FactSheetConsensus;
+  classification: FactSheetClassification;
+
+  /** 결측 필드의 전체 경로 목록. 필수. */
+  missing_fields: string[];
+  /**
+   * 스칼라 필드별 출처·기준시각(§4 규칙 2 "모든 수치는 source·as_of 동반").
+   * 키는 `missing_fields` 와 같은 필드 경로다 — 값이 있으면 여기에, 없으면 저기에 등재된다.
+   * 모든 필드를 `SourcedValue<T>` 로 감싸는 대신 경로 맵으로 둔 이유: 소비자(WO-SUB-04·05)가
+   * 숫자를 그대로 쓰면서도 출처 누락을 타입/테스트로 잡을 수 있다.
+   */
+  field_sources: Record<string, { source: string; as_of: string | null }>;
+  source_manifest: Record<string, SourceManifestEntry>;
+  /** 소스별 실패 사유(정직성) — "없음"과 "재보지 못함"을 구분한다. */
+  source_errors: string[];
+}
+
+/** 저장 레코드 — 팩트시트 + 해시. */
+export interface FactSheetRecord {
+  factsheet: FactSheet;
+  /** 정규화 JSON 의 안정적 해시(snapshot_at·fetched_at 제외). */
+  factsheet_hash: string;
+}
