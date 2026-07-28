@@ -150,19 +150,28 @@ interface Series {
   entries: XbrlEntry[];
 }
 
+/** 개념 선택 시 세는 관측 창(년). 우리가 실제로 쓰는 구간(8분기·5회계연도)보다 약간 넓게 잡는다. */
+const CONCEPT_SCORE_WINDOW_YEARS = 7;
+
 /**
- * 후보 개념 중 **쓸 수 있는 관측이 가장 많은 것**을 고른다.
+ * 후보 개념 중 **우리가 쓰는 구간에 관측이 가장 많은 것**을 고른다.
  *
- * "리스트 순서대로 처음 발견한 것"으로 두면 실제 데이터를 놓친다 — 실측: CLBK 는
- * `RevenueFromContractWithCustomerExcludingAssessedTax` 가 2건(2019년)뿐인데도 먼저 잡혀서
- * 매출이 전 분기 `null` 이 됐고, 정작 152건이 있는 `InterestAndDividendIncomeOperating`(은행 이자수익)이
- * 무시됐다. SHOP 도 같은 이유로 `Revenues`(18건) 대신 12건짜리가 잡혔다.
- * 동점이면 리스트 앞쪽(더 정확한 개념)을 쓴다.
+ * 두 번의 실측이 이 규칙을 강제했다.
+ *  ① "리스트 순서대로 처음 발견한 것"으로 두면 실데이터를 놓친다 — CLBK 는
+ *     `RevenueFromContractWithCustomerExcludingAssessedTax` 가 2건(2019년)뿐인데 먼저 잡혀
+ *     매출이 전 분기 `null` 이 됐고, 152건 있는 `InterestAndDividendIncomeOperating`(은행 이자수익)이 무시됐다.
+ *  ② **전 기간 관측 수로 세면 폐기된 개념이 이긴다** — NUE(철강)는 2018년 이전에만 태깅된
+ *     `SalesRevenueNet` 이 최근 개념보다 관측이 많아 선택됐고, 그 결과 최근 8분기 매출이 전부 `null` 이
+ *     되어 영업이익률·시클리컬 판정 입력이 통째로 사라졌다(WO-SUB-02 임계값 실측에서 20종목 중 12종목 결손).
+ *
+ * 그래서 **최근 7년 안의 관측만** 센다. 동점이면 리스트 앞쪽(더 정확한 개념)을 쓴다.
  */
 function findSeries(facts: CompanyFacts, key: ConceptKey, foreignUnits: Set<string>): Series | null {
   const instant = INSTANT_KEYS.has(key);
+  const cutoff = new Date(Date.now() - CONCEPT_SCORE_WINDOW_YEARS * 365 * 86_400_000).toISOString().slice(0, 10);
+  const recentCount = (map: Map<string, unknown>): number => [...map.keys()].filter((end) => end >= cutoff).length;
   let best: (Series & { score: number }) | null = null;
-  for (const [index, concept] of CONCEPTS[key].entries()) {
+  for (const concept of CONCEPTS[key]) {
     for (const namespace of Object.values(facts.facts ?? {})) {
       const units = namespace?.[concept]?.units;
       if (!units) continue;
@@ -174,13 +183,12 @@ function findSeries(facts: CompanyFacts, key: ConceptKey, foreignUnits: Set<stri
         continue;
       }
       const score = instant
-        ? instantByEnd(entries).size
-        : firstDisclosureByEnd(entries, MIN_QUARTER_DAYS, MAX_QUARTER_DAYS).size +
-          firstDisclosureByEnd(entries, MIN_ANNUAL_DAYS, MAX_ANNUAL_DAYS).size;
+        ? recentCount(instantByEnd(entries))
+        : recentCount(firstDisclosureByEnd(entries, MIN_QUARTER_DAYS, MAX_QUARTER_DAYS)) +
+          recentCount(firstDisclosureByEnd(entries, MIN_ANNUAL_DAYS, MAX_ANNUAL_DAYS));
       if (score === 0) continue;
       if (!best || score > best.score) best = { concept, entries, score };
     }
-    void index;
   }
   return best ? { concept: best.concept, entries: best.entries } : null;
 }
@@ -205,16 +213,31 @@ function isReport(entry: XbrlEntry): boolean {
   );
 }
 
+/** 공시 관측 하나. `fy`·`fp` 는 회계연도·회계분기 라벨의 근거다(달력에서 유추하지 않는다). */
+export interface Disclosure {
+  val: number;
+  filed: string;
+  restated: boolean;
+  fy?: number;
+  fp?: string;
+}
+
 /** 기간말 → { 최초 공시일, 최초 공시값, 정정 여부 }. 최초 공시를 정본으로 삼는 이유는 파일 상단 주석 참조. */
-function firstDisclosureByEnd(entries: readonly XbrlEntry[], min: number, max: number): Map<string, { val: number; filed: string; restated: boolean }> {
-  const out = new Map<string, { val: number; filed: string; restated: boolean }>();
+function firstDisclosureByEnd(entries: readonly XbrlEntry[], min: number, max: number): Map<string, Disclosure> {
+  const out = new Map<string, Disclosure>();
   const sorted = [...entries].filter(isReport).sort((a, b) => a.filed!.localeCompare(b.filed!));
   for (const entry of sorted) {
     const days = periodDays(entry);
     if (days === null || days < min || days > max) continue;
     const existing = out.get(entry.end!);
     if (!existing) {
-      out.set(entry.end!, { val: entry.val!, filed: entry.filed!, restated: false });
+      out.set(entry.end!, {
+        val: entry.val!,
+        filed: entry.filed!,
+        restated: false,
+        ...(typeof entry.fy === "number" ? { fy: entry.fy } : {}),
+        ...(entry.fp ? { fp: entry.fp } : {}),
+      });
       continue;
     }
     if (existing.val !== entry.val) existing.restated = true;
@@ -232,14 +255,23 @@ function instantByEnd(entries: readonly XbrlEntry[]): Map<string, { val: number;
   return out;
 }
 
-function periodLabel(periodEnd: string): string {
+/**
+ * 회계분기 라벨. **달력 월에서 유추하지 않는다** — 52/53주 회계연도를 쓰는 기업은
+ * 분기말이 달력 분기와 어긋난다. 실측: NUE(철강)는 분기말이 04-05·07-05·10-04 이라
+ * 월÷3 규칙이 04-05 를 Q2 로, 10-04 를 Q4 로 찍어 **연간에서 구성한 Q4(12-31)와 라벨이 충돌**했다
+ * (같은 종목에 `2025Q4` 레코드가 둘). SEC 가 주는 `fy`·`fp` 를 쓰면 그런 충돌이 없다.
+ */
+export function periodLabel(periodEnd: string, disclosure?: Pick<Disclosure, "fy" | "fp">): string {
+  const fy = disclosure?.fy;
+  const fp = disclosure?.fp;
+  if (typeof fy === "number" && fp && /^Q[1-4]$/.test(fp)) return `${fy}${fp}`;
   const month = Number(periodEnd.slice(5, 7));
   const quarter = Math.min(4, Math.max(1, Math.ceil(month / 3)));
   return `${periodEnd.slice(0, 4)}Q${quarter}`;
 }
 
-function annualLabel(periodEnd: string): string {
-  return `${periodEnd.slice(0, 4)}FY`;
+export function annualLabel(periodEnd: string, disclosure?: Pick<Disclosure, "fy">): string {
+  return `${disclosure?.fy ?? periodEnd.slice(0, 4)}FY`;
 }
 
 function toPoints(map: Map<string, { val: number; filed: string }>): PointObservation[] {
@@ -254,10 +286,10 @@ function toPoints(map: Map<string, { val: number; filed: string }>): PointObserv
  * EPS 는 분기별 희석주식수가 달라 차감이 정확하지 않으므로 **구성하지 않는다**(null).
  */
 export function composeQ4(
-  quarterVals: Map<string, { val: number; filed: string; restated: boolean }>,
-  annualVals: Map<string, { val: number; filed: string; restated: boolean }>
-): Map<string, { val: number; filed: string; restated: boolean }> {
-  const out = new Map<string, { val: number; filed: string; restated: boolean }>();
+  quarterVals: Map<string, Disclosure>,
+  annualVals: Map<string, Disclosure>
+): Map<string, Disclosure> {
+  const out = new Map<string, Disclosure>();
   for (const [annualEnd, annual] of annualVals) {
     const year = Number(annualEnd.slice(0, 4));
     const month = annualEnd.slice(5, 10);
@@ -275,6 +307,9 @@ export function composeQ4(
       // 공시일은 연간 보고서(10-K)가 나온 날이다 — 그때 처음 알 수 있었던 값이다.
       filed: annual.filed,
       restated: annual.restated,
+      // 회계연도는 연간 보고서의 것을 물려받고, 회계분기는 Q4 로 못박는다(라벨 충돌 방지).
+      ...(annual.fy !== undefined ? { fy: annual.fy } : {}),
+      fp: "Q4",
     });
     void year;
     void month;
@@ -282,27 +317,30 @@ export function composeQ4(
   return out;
 }
 
+type FlowKey = "revenue" | "operating_income" | "net_income" | "eps_diluted";
+const FLOW_KEYS = ["revenue", "operating_income", "net_income", "eps_diluted"] as const;
+
 function buildRecords(
   ends: readonly string[],
-  fields: Record<"revenue" | "operating_income" | "net_income" | "eps_diluted", Map<string, { val: number; filed: string }> | null>,
-  concepts: Partial<Record<"revenue" | "operating_income" | "net_income" | "eps_diluted", string>>,
-  label: (end: string) => string,
+  fields: Record<FlowKey, Map<string, Disclosure> | null>,
+  concepts: Partial<Record<FlowKey, string>>,
+  label: (end: string, disclosure?: Pick<Disclosure, "fy" | "fp">) => string,
   source: string
 ): QuarterRecord[] {
   const records: QuarterRecord[] = [];
   for (const end of [...ends].sort()) {
     // filed_at 은 이 기간을 구성하는 사실들 중 **가장 늦은** 공시일이다 — 그 시점에야 이 레코드가 완성된다.
-    const filedCandidates = (["revenue", "operating_income", "net_income", "eps_diluted"] as const)
-      .map((key) => fields[key]?.get(end)?.filed)
-      .filter((v): v is string => !!v);
+    const filedCandidates = FLOW_KEYS.map((key) => fields[key]?.get(end)?.filed).filter((v): v is string => !!v);
     if (filedCandidates.length === 0) continue; // 공시일 없으면 레코드를 만들지 않는다(§6-2)
     const filed = filedCandidates.sort()[filedCandidates.length - 1]!;
-    const pick = (key: "revenue" | "operating_income" | "net_income" | "eps_diluted"): number | null => {
+    const pick = (key: FlowKey): number | null => {
       const v = fields[key]?.get(end)?.val;
       return typeof v === "number" && Number.isFinite(v) ? v : null;
     };
+    // 회계연도·회계분기는 어느 항목에서든 같아야 하므로 먼저 찾은 것을 쓴다.
+    const stamped = FLOW_KEYS.map((key) => fields[key]?.get(end)).find((d) => d && (d.fy !== undefined || d.fp !== undefined));
     records.push({
-      period: label(end),
+      period: label(end, stamped),
       period_end: end,
       filed_at: filed,
       revenue: pick("revenue"),
@@ -362,8 +400,8 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
   }
 
   const flowKeys = ["revenue", "operating_income", "net_income", "eps_diluted"] as const;
-  const quarterMaps: Record<string, Map<string, { val: number; filed: string; restated: boolean }>> = {};
-  const annualMaps: Record<string, Map<string, { val: number; filed: string; restated: boolean }>> = {};
+  const quarterMaps: Record<string, Map<string, Disclosure>> = {};
+  const annualMaps: Record<string, Map<string, Disclosure>> = {};
   const concepts: Partial<Record<(typeof flowKeys)[number], string>> = {};
   for (const key of flowKeys) {
     const s = series[key];
@@ -373,16 +411,15 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
   }
 
   // Q4 구성 — EPS 는 제외(주석 참조).
-  const q4Composed: Record<string, Map<string, { val: number; filed: string; restated: boolean }>> = {};
+  const q4Composed: Record<string, Map<string, Disclosure>> = {};
   for (const key of ["revenue", "operating_income", "net_income"] as const) {
     q4Composed[key] = composeQ4(quarterMaps[key]!, annualMaps[key]!);
   }
 
-  const mergedQuarter: Record<string, Map<string, { val: number; filed: string }>> = {};
+  const mergedQuarter: Record<string, Map<string, Disclosure>> = {};
   for (const key of flowKeys) {
-    const merged = new Map<string, { val: number; filed: string }>();
-    for (const [end, v] of quarterMaps[key]!) merged.set(end, { val: v.val, filed: v.filed });
-    for (const [end, v] of q4Composed[key] ?? []) if (!merged.has(end)) merged.set(end, { val: v.val, filed: v.filed });
+    const merged = new Map<string, Disclosure>(quarterMaps[key]!);
+    for (const [end, v] of q4Composed[key] ?? []) if (!merged.has(end)) merged.set(end, v);
     mergedQuarter[key] = merged;
   }
 
@@ -413,10 +450,10 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
   const annual = buildRecords(
     [...annualEnds],
     {
-      revenue: new Map([...annualMaps.revenue!].map(([k, v]) => [k, { val: v.val, filed: v.filed }])),
-      operating_income: new Map([...annualMaps.operating_income!].map(([k, v]) => [k, { val: v.val, filed: v.filed }])),
-      net_income: new Map([...annualMaps.net_income!].map(([k, v]) => [k, { val: v.val, filed: v.filed }])),
-      eps_diluted: new Map([...annualMaps.eps_diluted!].map(([k, v]) => [k, { val: v.val, filed: v.filed }])),
+      revenue: annualMaps.revenue!,
+      operating_income: annualMaps.operating_income!,
+      net_income: annualMaps.net_income!,
+      eps_diluted: annualMaps.eps_diluted!,
     },
     concepts,
     annualLabel,

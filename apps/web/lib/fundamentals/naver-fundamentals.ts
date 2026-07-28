@@ -1,4 +1,5 @@
 import type { DailyClose, FactSheetClassification, FactSheetConsensus, PointObservation, QuarterRecord, SharesPoint } from "@fomo/core";
+import { krIndustryName } from "@fomo/core";
 import type { ReportedNumber } from "@fomo/core";
 
 /**
@@ -133,6 +134,32 @@ function rowValue(rows: readonly NaverFinanceRow[], key: string, titles: readonl
     if (parsed !== null) return parsed;
   }
   return null;
+}
+
+/**
+ * 업종 코드 → `classification`. 네이버는 숫자 코드만 주므로 이름은 고정 표(`KR_INDUSTRY_NAMES`)로 해석한다.
+ * 표에 없는 코드(잔여 버킷 `25 기타` 포함)는 **업종을 모르는 것**이므로 `sector`·`industry` 를 비운다 —
+ * 그래야 WO-SUB-02 가 `UNCLASSIFIED` 로 안전하게 떨어진다. 코드 자체는 감사용으로 `source` 에 남긴다.
+ */
+export function classificationOf(industryCode: string | null | undefined): FactSheetClassification {
+  const code = industryCode?.trim() || null;
+  const name = krIndustryName(code);
+  if (!name) {
+    return {
+      sector: null,
+      industry: null,
+      scheme: null,
+      source: code ? `naver_integration.industryCode=${code}(미등재)` : null,
+    };
+  }
+  return {
+    // 네이버 업종 체계는 GICS 계열 단일 레벨이다 — 섹터와 산업을 나눌 상위 축이 없으므로 같은 값을 넣고
+    // scheme 으로 그 사실을 밝힌다(WO-SUB-02 는 scheme 별 매핑 테이블로 읽는다).
+    sector: name,
+    industry: name,
+    scheme: "naver_industry",
+    source: `naver_integration.industryCode=${code}`,
+  };
 }
 
 export interface NaverFundamentals {
@@ -361,12 +388,7 @@ export async function fetchNaverFundamentals(naverCode: string, closesFrom: stri
       source: "naver_integration.totalInfos",
     },
     consensus,
-    classification: {
-      sector: null, // 네이버는 업종 코드만 준다 — 이름 매핑은 별도 사전이 필요하다(없으면 null)
-      industry: integration?.industryCode?.trim() || null,
-      scheme: integration?.industryCode ? "naver_industry_code" : null,
-      source: integration?.industryCode ? "naver_integration.industryCode" : null,
-    },
+    classification: classificationOf(integration?.industryCode),
     reported: {
       ...(reportedOf("per", "naver_integration.per") ? { per_ttm: reportedOf("per", "naver_integration.per")! } : {}),
       ...(reportedOf("pbr", "naver_integration.pbr") ? { pbr: reportedOf("pbr", "naver_integration.pbr")! } : {}),

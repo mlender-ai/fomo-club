@@ -105,6 +105,16 @@ export interface FactSheetMargin {
   net_ttm: number | null;
   /** 최근 8분기 영업이익률 표본표준편차. 8분기 미만이면 null(WO-SUB-02 시클리컬 판정 불가). */
   operating_stdev_8q: number | null;
+  /**
+   * 최근 연간 영업이익률의 표본표준편차 + 관측 연수.
+   *
+   * 왜 필요한가: 네이버 재무 표는 분기를 5개만 주므로 **KR 은 `operating_stdev_8q` 가 항상 `null`** 이다
+   * (WO-SUB-01 실측 0/40). 그러면 WO-SUB-02 의 시클리컬 판정이 국내에서 아예 발동하지 못한다.
+   * 연간 관측은 KR 에서도 3개가 확보되므로, 분기 통계가 없을 때의 **대체 입력**으로 둔다.
+   * 관측 수가 적어 임계값이 다르다 — WO-SUB-02 가 두 통계에 각각 임계값을 정한다.
+   */
+  operating_stdev_annual: number | null;
+  operating_stdev_annual_years: number;
   trend_8q: MarginTrend;
 }
 

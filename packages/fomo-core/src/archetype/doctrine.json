@@ -1,0 +1,668 @@
+{
+  "version": "archetype-v1.0.0",
+  "as_of": "2026-07-28",
+  "note": "이 파일이 아키타입 독트린의 정본이다. docs/archetype/DOCTRINE_archetype_frames.md 는 여기서 생성된다. 경고문·금지 지표를 코드나 컴포넌트에 복붙하지 말고 여기서 로드할 것. warning_short = 카드용(WO-SUB-08 텍스트 예산), warning_full = 디테일용.",
+  "archetypes": [
+    {
+      "code": "CYCLICAL_COMMODITY",
+      "label_ko": "경기순환",
+      "definition": "제품 가격이 업황 사이클에 따라 오르내리고, 그 가격이 이익의 대부분을 좌우하는 유형. 메모리 반도체·철강·화학·정유·해운·비철금속·건설기계.",
+      "boundary": "업종이 사이클 업종이면서 **영업이익률의 변동성이 실제로 큰** 경우만. 같은 업종이라도 마진이 안정적이면(예: 특수화학 장기계약) 이 유형이 아니다.",
+      "display_metrics": [
+        {
+          "path": "fiscal.quarters",
+          "label": "8분기 영업이익 추이",
+          "why": "사이클의 어느 구간인지는 수준이 아니라 방향에서 드러난다"
+        },
+        {
+          "path": "margin.operating_ttm",
+          "label": "영업이익률",
+          "why": "가격 사이클이 마진으로 먼저 나타난다"
+        },
+        {
+          "path": "margin.operating_stdev_8q",
+          "label": "영업이익률 변동성",
+          "why": "이 유형으로 분류된 근거 자체"
+        },
+        {
+          "path": "growth.revenue_yoy",
+          "label": "매출 전년동기 대비",
+          "why": "출하량과 가격 중 무엇이 움직였는지의 단서"
+        }
+      ],
+      "forbidden_metrics": [],
+      "requires_warning_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "reason": "이익이 정점일 때 PER 이 최저로 나오므로, 경고문 없이 낮은 PER 을 보여주면 정확히 반대로 읽힌다"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "reason": "PER 밴드 하위 구간이 사이클 정점과 겹친다"
+        }
+      ],
+      "band_metric": "pbr",
+      "band_note": "이익이 사이클을 타므로 PER 밴드는 축이 흔들린다. 자기자본은 상대적으로 완만해 PBR 밴드가 위치 비교에 더 안정적이다.",
+      "risks": [
+        "증설 물량 도래",
+        "재고 반전",
+        "다운사이클 전환",
+        "경쟁사 동시 증설"
+      ],
+      "examples": [
+        {
+          "name": "SK하이닉스",
+          "note": "메모리 — 이익 변동성이 가장 큰 국내 대표 사례"
+        },
+        {
+          "name": "WDC",
+          "note": "HDD·낸드 — 실측 영업이익률 표준편차 12.4%p"
+        },
+        {
+          "name": "MOS",
+          "note": "비료 — 곡물가·에너지가에 마진이 연동"
+        }
+      ],
+      "warning_short": "이 유형은 이익이 정점일 때 PER이 가장 낮게 나옵니다.",
+      "warning_full": "이 유형은 이익이 정점일 때 PER이 가장 낮게 나오는 경향이 있습니다. 지금의 낮은 PER은 값의 위치보다 이익의 위치를 반영하고 있을 수 있습니다.",
+      "unavailable_metrics": [
+        {
+          "label": "업계 증설 사이클",
+          "reason": "공개 무료 소스에 설비 증설 일정이 구조화되어 있지 않다"
+        }
+      ]
+    },
+    {
+      "code": "HYPERGROWTH_UNPROFITABLE",
+      "label_ko": "고성장·적자",
+      "definition": "매출이 빠르게 늘고 있으나 아직 순이익이 적자인 유형. 성장을 위해 선투자를 계속하는 구간.",
+      "boundary": "TTM 순이익이 적자이고 매출 전년동기 증가율이 임계값을 넘는 경우. 성장이 없는 적자는 `TURNAROUND_LOSS` 다.",
+      "display_metrics": [
+        {
+          "path": "growth.revenue_yoy",
+          "label": "매출 전년동기 대비",
+          "why": "이 유형의 유일한 핵심 변수"
+        },
+        {
+          "path": "valuation.psr_ttm",
+          "label": "P/S(주가매출비율)",
+          "why": "이익이 없으므로 매출이 유일한 분모"
+        },
+        {
+          "path": "balance.cash_runway_quarters",
+          "label": "현금 런웨이",
+          "why": "성장을 몇 분기 더 버틸 수 있는지"
+        },
+        {
+          "path": "balance.cash_and_equivalents",
+          "label": "현금성자산",
+          "why": "런웨이의 분자"
+        }
+      ],
+      "forbidden_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "reason": "적자라 계산되지 않거나, 계산되면 음수·왜곡값이다"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "reason": "적자 구간이 밴드에서 빠져 표본이 편향된다"
+        },
+        {
+          "path": "valuation.dividend_yield",
+          "reason": "이 유형은 배당을 하지 않는다. 0 을 보여주면 정보가 아니라 잡음이다"
+        }
+      ],
+      "requires_warning_metrics": [],
+      "band_metric": "psr",
+      "band_note": "이익 기반 배수를 쓸 수 없으므로 매출 기반 배수로만 위치를 잰다.",
+      "risks": [
+        "성장 둔화",
+        "현금 소진",
+        "자금 조달 희석",
+        "단일 고객 의존"
+      ],
+      "examples": [
+        {
+          "name": "CRWV",
+          "note": "AI 인프라 — 매출 급증 + 대규모 적자"
+        },
+        {
+          "name": "매출 급성장 SaaS",
+          "note": "영업 레버리지 도달 전 구간"
+        },
+        {
+          "name": "플랫폼 초기",
+          "note": "고객 획득 비용 선투자 구간"
+        }
+      ],
+      "warning_short": "이익이 없어 PER은 계산되지 않습니다.",
+      "warning_full": "이익이 없어 PER은 계산되지 않습니다. 이 유형에서 값의 배수는 매출 성장률과 함께 움직여 왔습니다.",
+      "unavailable_metrics": []
+    },
+    {
+      "code": "QUALITY_COMPOUNDER",
+      "label_ko": "성장·흑자",
+      "definition": "매출이 꾸준히 늘면서 이익도 내는 유형. 성장률과 배수가 함께 움직인다.",
+      "boundary": "3년 매출 CAGR 이 임계값을 넘고 TTM 순이익이 흑자. 성장률이 임계값 아래면 다른 유형이다.",
+      "display_metrics": [
+        {
+          "path": "growth.revenue_cagr_3y",
+          "label": "3년 매출 성장률",
+          "why": "이 유형의 정의 자체"
+        },
+        {
+          "path": "valuation.per_forward",
+          "label": "예상 PER",
+          "why": "성장이 배수에 얼마나 반영됐는지"
+        },
+        {
+          "path": "margin.trend_8q",
+          "label": "영업이익률 추이",
+          "why": "성장이 이익으로 전환되고 있는지"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "label": "PER 밴드 위치",
+          "why": "지금 배수가 자기 이력에서 어디인지"
+        }
+      ],
+      "forbidden_metrics": [],
+      "requires_warning_metrics": [],
+      "band_metric": "per",
+      "band_note": "이익이 안정적으로 나므로 PER 밴드가 가장 해석 가능하다.",
+      "risks": [
+        "성장 둔화 시 배수 동반 하락",
+        "경쟁 심화"
+      ],
+      "examples": [
+        {
+          "name": "SHOP",
+          "note": "커머스 플랫폼 — 매출 성장 + 흑자 전환 정착"
+        },
+        {
+          "name": "MSFT",
+          "note": "대형 소프트웨어 — 실측 영업이익률 표준편차 1.68%p"
+        },
+        {
+          "name": "NOW",
+          "note": "엔터프라이즈 SaaS"
+        }
+      ],
+      "warning_short": "성장률과 값의 배수가 함께 움직이는 유형입니다.",
+      "warning_full": "이 유형은 성장률과 값의 배수가 함께 움직입니다. 과거 성장이 둔화한 구간에서 배수도 함께 내려왔는지 확인해 보세요.",
+      "unavailable_metrics": []
+    },
+    {
+      "code": "BANK_FINANCIAL",
+      "label_ko": "은행·금융",
+      "definition": "예금·대출·보험·증권 등 금융 중개로 수익을 내는 유형. 자산·부채 구조 자체가 사업이다.",
+      "boundary": "업종이 은행·증권·보험·카드·기타금융. 핀테크는 수익 구조가 대출·예대마진이면 이쪽, 결제 수수료면 다른 유형.",
+      "display_metrics": [
+        {
+          "path": "valuation.pbr",
+          "label": "PBR",
+          "why": "자기자본이 곧 영업 기반이라 장부가 대비 위치가 핵심"
+        },
+        {
+          "path": "balance.total_equity",
+          "label": "자기자본",
+          "why": "PBR 의 분모이자 손실 흡수 여력"
+        },
+        {
+          "path": "margin.net_ttm",
+          "label": "순이익률",
+          "why": "ROE 를 직접 못 구할 때의 대체 관측"
+        },
+        {
+          "path": "valuation.band_5y.pbr",
+          "label": "PBR 밴드 위치",
+          "why": "은행은 절대 수준보다 자기 이력 대비 위치가 의미 있다"
+        }
+      ],
+      "forbidden_metrics": [
+        {
+          "path": "valuation.psr_ttm",
+          "reason": "은행의 '매출'은 이자수익이라 제조업 매출과 의미가 달라 배수 비교가 성립하지 않는다"
+        },
+        {
+          "path": "valuation.ev_ebitda",
+          "reason": "예금이 부채로 잡혀 EV 가 사업 규모와 무관한 값이 된다"
+        },
+        {
+          "path": "balance.net_cash",
+          "reason": "예금·차입이 영업 자체이므로 순현금이 재무 건전성을 뜻하지 않는다"
+        },
+        {
+          "path": "balance.debt_to_equity",
+          "reason": "은행은 구조적으로 8~12배가 정상이라 제조업 기준으로 읽으면 오독한다"
+        }
+      ],
+      "requires_warning_metrics": [
+        {
+          "path": "valuation.pbr",
+          "reason": "PBR 1배 미만이 정상 구간인 경우가 많다"
+        }
+      ],
+      "band_metric": "pbr",
+      "band_note": "장부가 기준이 유일하게 해석 가능한 축이다.",
+      "risks": [
+        "대손 급증",
+        "예금 이탈",
+        "금리 구조 변화",
+        "상업용 부동산 익스포저"
+      ],
+      "examples": [
+        {
+          "name": "CLBK",
+          "note": "뉴저지 지역은행 — 실측 PBR 0.96, 영업이익 개념 자체가 없다"
+        },
+        {
+          "name": "RBKB",
+          "note": "저축은행 지주"
+        },
+        {
+          "name": "국내 은행지주",
+          "note": "네이버 업종 코드 301"
+        }
+      ],
+      "warning_short": "은행은 PBR 1배 미만이 오래 유지되기도 합니다.",
+      "warning_full": "은행은 PBR이 1배 미만인 상태가 오래 유지되기도 합니다. 이 지표만으로는 값의 위치를 해석하기 어렵습니다.",
+      "unavailable_metrics": [
+        {
+          "label": "순이자마진(NIM)",
+          "reason": "SEC XBRL·네이버 어느 쪽도 표준 개념으로 태깅하지 않는다"
+        },
+        {
+          "label": "자본비율(CET1 등)",
+          "reason": "동일 — 감독 보고서 본문에만 있다"
+        },
+        {
+          "label": "ROE",
+          "reason": "자기자본 시계열은 있으나 분기 평균 자기자본이 필요해 현재 스키마로는 계산하지 않는다"
+        }
+      ]
+    },
+    {
+      "code": "PHARMA_STABLE",
+      "label_ko": "제약·매출형",
+      "definition": "이미 판매 중인 의약품에서 매출이 나오는 제약사. 개발 단계 바이오와 구분된다.",
+      "boundary": "업종이 제약이고 TTM 매출이 임계값 이상. 매출이 임계값 미만이면 `BIOTECH_PIPELINE` 이다.",
+      "display_metrics": [
+        {
+          "path": "fiscal.quarters",
+          "label": "매출·영업이익 추이",
+          "why": "주력 품목의 판매 흐름"
+        },
+        {
+          "path": "valuation.per_ttm",
+          "label": "PER",
+          "why": "이익이 안정적이라 해석 가능"
+        },
+        {
+          "path": "margin.operating_ttm",
+          "label": "영업이익률",
+          "why": "R&D 투자 강도가 마진으로 나타난다"
+        },
+        {
+          "path": "growth.revenue_yoy",
+          "label": "매출 전년동기 대비",
+          "why": "신제품·특허 만료의 영향"
+        }
+      ],
+      "forbidden_metrics": [],
+      "requires_warning_metrics": [],
+      "band_metric": "per",
+      "band_note": null,
+      "risks": [
+        "주력 품목 특허 만료",
+        "약가 인하",
+        "임상 실패로 파이프라인 공백",
+        "주력 품목 집중도"
+      ],
+      "examples": [
+        {
+          "name": "종근당",
+          "note": "국내 대형 제약 — 실측 TTM 매출 1.74조, 영업이익률 4.7%"
+        },
+        {
+          "name": "JNJ",
+          "note": "글로벌 제약·헬스케어"
+        },
+        {
+          "name": "국내 중견 제약",
+          "note": "네이버 업종 코드 261"
+        }
+      ],
+      "warning_short": null,
+      "warning_full": null,
+      "unavailable_metrics": [
+        {
+          "label": "R&D 비중",
+          "reason": "연구개발비가 XBRL·네이버 표에 일관되게 없다"
+        }
+      ]
+    },
+    {
+      "code": "BIOTECH_PIPELINE",
+      "label_ko": "바이오·개발단계",
+      "definition": "판매 중인 제품이 거의 없고, 임상 파이프라인의 성패가 기업가치를 결정하는 유형.",
+      "boundary": "업종이 생물공학·생명과학이고 TTM 매출이 임계값 미만. 매출이 있으면 `PHARMA_STABLE`.",
+      "display_metrics": [
+        {
+          "path": "balance.cash_runway_quarters",
+          "label": "현금 런웨이",
+          "why": "다음 자금 조달까지 몇 분기 남았는지가 최대 변수"
+        },
+        {
+          "path": "balance.cash_and_equivalents",
+          "label": "현금성자산",
+          "why": "런웨이의 분자"
+        },
+        {
+          "path": "fiscal.quarters",
+          "label": "분기 영업손실 추이",
+          "why": "소진 속도가 빨라지고 있는지"
+        }
+      ],
+      "forbidden_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "reason": "이익이 없다"
+        },
+        {
+          "path": "valuation.psr_ttm",
+          "reason": "매출이 없거나 미미해 배수가 무한대에 가깝다"
+        },
+        {
+          "path": "growth.revenue_yoy",
+          "reason": "기저가 거의 0 이라 증가율이 수백~수천 %로 튀어 의미가 없다"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "reason": "관측이 없다"
+        },
+        {
+          "path": "valuation.band_5y.psr",
+          "reason": "분모가 불안정해 밴드가 왜곡된다"
+        }
+      ],
+      "requires_warning_metrics": [],
+      "band_metric": null,
+      "band_note": "밸류에이션 배수로 위치를 잴 수 없다. 값의 상태 층을 렌더링하지 않는다.",
+      "risks": [
+        "임상 실패",
+        "런웨이 종료",
+        "규제 지연"
+      ],
+      "examples": [
+        {
+          "name": "매출 없는 신약 개발사",
+          "note": "네이버 업종 코드 286 생물공학"
+        },
+        {
+          "name": "임상 2상 단계 바이오텍",
+          "note": "현금 소진만이 관측 가능한 사실"
+        },
+        {
+          "name": "플랫폼 기술 바이오",
+          "note": "기술이전 수익이 비정기적"
+        }
+      ],
+      "warning_short": "매출이 거의 없어 밸류에이션 배수는 의미를 갖기 어렵습니다.",
+      "warning_full": "매출이 거의 없어 밸류에이션 배수는 계산되지 않거나 의미를 갖기 어렵습니다. 이 유형에서 관측 가능한 사실은 현금 소진 속도와 임상 일정입니다.",
+      "unavailable_metrics": [
+        {
+          "label": "최고 임상 단계",
+          "reason": "임상 데이터 소스 미확보"
+        },
+        {
+          "label": "다음 촉매 일정",
+          "reason": "동일"
+        }
+      ]
+    },
+    {
+      "code": "MATURE_INCOME",
+      "label_ko": "성숙·배당",
+      "definition": "성장은 낮지만 현금흐름이 안정적이고 배당으로 주주에게 환원하는 유형. 유틸리티·통신.",
+      "boundary": "배당수익률이 임계값 이상이고 3년 매출 CAGR 이 낮은 경우.",
+      "display_metrics": [
+        {
+          "path": "valuation.dividend_yield",
+          "label": "배당수익률",
+          "why": "이 유형을 보유하는 주된 이유"
+        },
+        {
+          "path": "balance.interest_coverage",
+          "label": "이자보상배율",
+          "why": "부채가 많은 유형이라 배당 지속 가능성의 전제"
+        },
+        {
+          "path": "margin.operating_ttm",
+          "label": "영업이익률",
+          "why": "규제 산업의 마진 안정성"
+        }
+      ],
+      "forbidden_metrics": [],
+      "requires_warning_metrics": [
+        {
+          "path": "growth.revenue_yoy",
+          "reason": "성장이 낮은 것이 이 유형의 정상 상태다. 성장 지표를 강조하면 잘못된 기대를 만든다"
+        }
+      ],
+      "band_metric": "per",
+      "band_note": "배당수익률 밴드가 이 유형에 더 맞지만, 배당 이력 시계열을 확보하지 못했다(WO-SUB-01 결손). 확보되면 배당수익률 밴드로 교체한다.",
+      "risks": [
+        "배당 삭감",
+        "FCF 악화",
+        "금리 상승 시 상대적 배당 이점 축소"
+      ],
+      "examples": [
+        {
+          "name": "VZ",
+          "note": "통신 — 실측 영업이익률 표준편차 3.82%p"
+        },
+        {
+          "name": "전기유틸리티",
+          "note": "네이버 업종 코드 325"
+        },
+        {
+          "name": "가스유틸리티",
+          "note": "네이버 업종 코드 312"
+        }
+      ],
+      "warning_short": "이 유형은 낮은 성장이 정상 구간입니다.",
+      "warning_full": "이 유형은 매출 성장이 낮은 상태가 정상 구간입니다. 성장률보다 배당이 유지될 수 있는지가 관측 지점입니다.",
+      "unavailable_metrics": [
+        {
+          "label": "배당성향",
+          "reason": "배당총액 시계열 미확보"
+        },
+        {
+          "label": "FCF 커버리지",
+          "reason": "자본적지출(CapEx) 미확보"
+        },
+        {
+          "label": "연속 배당 년수",
+          "reason": "배당 이력 시계열 미확보"
+        }
+      ]
+    },
+    {
+      "code": "TURNAROUND_LOSS",
+      "label_ko": "적자·전환구간",
+      "definition": "적자 상태이지만 고성장도 아닌 유형. 흑자 전환 여부가 최대 변수다.",
+      "boundary": "TTM 순이익이 적자이고 매출 증가율이 고성장 임계값 미만. 성장이 빠른 적자는 `HYPERGROWTH_UNPROFITABLE`.",
+      "display_metrics": [
+        {
+          "path": "fiscal.quarters",
+          "label": "분기 영업이익 부호",
+          "why": "전환의 유일한 관측 가능한 신호"
+        },
+        {
+          "path": "balance.debt_to_equity",
+          "label": "부채비율",
+          "why": "전환을 기다릴 시간이 있는지"
+        },
+        {
+          "path": "balance.interest_coverage",
+          "label": "이자보상배율",
+          "why": "이자를 영업이익으로 감당하는지"
+        },
+        {
+          "path": "balance.cash_runway_quarters",
+          "label": "현금 런웨이",
+          "why": "영업현금흐름이 음수인 경우"
+        }
+      ],
+      "forbidden_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "reason": "적자 구간의 PER 은 계산 불가이거나 부호가 뒤집혀 왜곡된다"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "reason": "적자 구간이 표본에서 빠져 밴드가 편향된다"
+        }
+      ],
+      "requires_warning_metrics": [],
+      "band_metric": "pbr",
+      "band_note": "이익 기반 배수를 쓸 수 없어 장부가 기준으로만 위치를 잰다.",
+      "risks": [
+        "전환 실패",
+        "부채 만기",
+        "유동성"
+      ],
+      "examples": [
+        {
+          "name": "구조조정 중 제조업",
+          "note": "분기 영업이익 부호가 오가는 구간"
+        },
+        {
+          "name": "수요 위축 소재기업",
+          "note": "사이클이 아니라 구조적 적자"
+        },
+        {
+          "name": "적자 전환 소형주",
+          "note": "성장 없이 적자"
+        }
+      ],
+      "warning_short": "적자 구간의 PER은 계산되지 않거나 크게 왜곡됩니다.",
+      "warning_full": "적자 구간에서 PER은 계산되지 않거나 부호가 뒤집혀 크게 왜곡됩니다. 이 유형에서 관측 지점은 분기 영업이익의 부호 변화입니다.",
+      "unavailable_metrics": []
+    },
+    {
+      "code": "ASSET_DEEP_VALUE",
+      "label_ko": "자산형",
+      "definition": "보유 자산(현금·부동산·지분)의 가치가 시가총액에 비해 큰 유형. 자산 재평가·환원이 변수다.",
+      "boundary": "PBR 1배 미만이고 순현금이 시가총액의 임계 비율 이상.",
+      "display_metrics": [
+        {
+          "path": "valuation.pbr",
+          "label": "PBR",
+          "why": "장부가 대비 할인 폭"
+        },
+        {
+          "path": "balance.net_cash",
+          "label": "순현금",
+          "why": "가장 확실한 자산"
+        },
+        {
+          "path": "balance.total_equity",
+          "label": "자기자본",
+          "why": "PBR 의 분모"
+        }
+      ],
+      "forbidden_metrics": [
+        {
+          "path": "growth.revenue_cagr_3y",
+          "reason": "성장은 이 유형의 논리가 아니다. 성장 지표를 병치하면 판단 축이 흐려진다"
+        }
+      ],
+      "requires_warning_metrics": [],
+      "band_metric": "pbr",
+      "band_note": null,
+      "risks": [
+        "자산 재평가 지연",
+        "지배구조",
+        "가치 실현 촉매 부재"
+      ],
+      "examples": [
+        {
+          "name": "순현금 과다 소형주",
+          "note": "시총의 30% 이상이 순현금"
+        },
+        {
+          "name": "지주회사",
+          "note": "네이버 업종 코드 276 복합기업"
+        },
+        {
+          "name": "자산 보유 제조업",
+          "note": "장부가 대비 할인"
+        }
+      ],
+      "warning_short": null,
+      "warning_full": null,
+      "unavailable_metrics": []
+    },
+    {
+      "code": "UNCLASSIFIED",
+      "label_ko": "분류 없음",
+      "definition": "규칙이 유형을 확정하지 못한 상태. **실패가 아니라 정상 결과다.**",
+      "boundary": "재무 결손, 업종 미확인, 또는 어느 규칙에도 매치되지 않음. 사유(`reason`)가 반드시 붙는다.",
+      "display_metrics": [],
+      "forbidden_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "reason": "해석 프레임이 없는 상태에서 배수를 보여주면 사용자가 임의의 프레임을 씌운다"
+        },
+        {
+          "path": "valuation.pbr",
+          "reason": "동일"
+        },
+        {
+          "path": "valuation.psr_ttm",
+          "reason": "동일"
+        },
+        {
+          "path": "valuation.ev_ebitda",
+          "reason": "동일"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "reason": "값의 상태 층 전체를 렌더링하지 않는다"
+        },
+        {
+          "path": "valuation.band_5y.pbr",
+          "reason": "동일"
+        },
+        {
+          "path": "valuation.band_5y.psr",
+          "reason": "동일"
+        }
+      ],
+      "requires_warning_metrics": [],
+      "band_metric": null,
+      "band_note": "값의 상태 층 전체를 렌더링하지 않는다.",
+      "risks": [],
+      "examples": [
+        {
+          "name": "NVO",
+          "note": "SEC 재무가 DKK 보고 — 통화 환산 금지로 재무 결손"
+        },
+        {
+          "name": "네이버 업종 '기타'",
+          "note": "1,500여 종목이 잔여 버킷에 있어 업종 미확인"
+        },
+        {
+          "name": "신규 상장 직후",
+          "note": "분기 관측 부족"
+        }
+      ],
+      "warning_short": "유형 분류가 되지 않아 값 해석을 제공하지 않습니다.",
+      "warning_full": "이 종목은 유형 분류가 되지 않아 값에 대한 해석을 제공하지 않습니다. 아래는 해석 없이 사실만 나열한 것입니다.",
+      "unavailable_metrics": []
+    }
+  ]
+}

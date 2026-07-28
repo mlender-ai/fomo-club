@@ -87,13 +87,21 @@ export function marginTrend(margins: readonly number[]): MarginTrend {
   return "flat";
 }
 
-export function deriveMargin(quarters: readonly QuarterRecord[], ttm: TtmResult): FactSheetMargin {
+export function deriveMargin(
+  quarters: readonly QuarterRecord[],
+  ttm: TtmResult,
+  annual: readonly QuarterRecord[] = []
+): FactSheetMargin {
   const margins = quarterlyOperatingMargins(quarters);
+  const annualMargins = quarterlyOperatingMargins(annual);
   return {
     operating_ttm: pct(ratio(ttm.operating_income, ttm.revenue)),
     net_ttm: pct(ratio(ttm.net_income, ttm.revenue)),
     // 8분기 미만이면 null → WO-SUB-02 가 시클리컬 판정 불가로 처리한다.
     operating_stdev_8q: margins.length >= STDEV_QUARTERS ? sampleStdev(margins) : null,
+    // 연간 대체 입력 — KR 은 분기 통계가 구조적으로 없다(네이버 5분기 상한).
+    operating_stdev_annual: sampleStdev(annualMargins),
+    operating_stdev_annual_years: annualMargins.length,
     trend_8q: marginTrend(margins),
   };
 }
