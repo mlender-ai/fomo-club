@@ -32,3 +32,4 @@ export * from "./index-engine/naverFetcher";
 export * from "./index-engine/redditFetcher";
 export * from "./fundamentals";
 export * from "./archetype";
+export * from "./business-context";
