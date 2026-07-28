@@ -43,3 +43,14 @@ describe("독트린 문서 동기화", () => {
     }
   });
 });
+
+describe("독트린이 인용하는 실측 원본은 추적돼야 한다", () => {
+  it("threshold_study_raw.json 이 저장소에 있다", () => {
+    // 렌더러가 이 파일을 읽어 §5 분포·임계값 근거를 채운다. gitignore 하면 CI 에서만 렌더가 달라져
+    // 동기화 테스트가 실패한다(실측: PR #986 repo-checks 실패). 근거 원본은 문서와 함께 추적한다.
+    const raw = readFileSync(join(process.cwd(), "docs", "archetype", "threshold_study_raw.json"), "utf8");
+    const study = JSON.parse(raw) as { labeled?: unknown[]; gateRestricted?: unknown };
+    expect(Array.isArray(study.labeled)).toBe(true);
+    expect(study.gateRestricted).toBeTruthy();
+  });
+});

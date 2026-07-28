@@ -1,0 +1,952 @@
+{
+  "studiedAt": "2026-07-28T11:27:05.794Z",
+  "statistic": "margin.operating_stdev_annual",
+  "statisticNote": "분기 통계(operating_stdev_8q)는 계절성이 경기순환성을 덮어써 쓰지 않는다 — 실측: INTU 18.7%p > 철강 CLF 3.75%p. KR 은 분기 통계가 구조적으로 null 이기도 하다.",
+  "cyclicalIndustrySet": [
+    "Semiconductors",
+    "Electronic Components",
+    "Steel/Iron Ore",
+    "Metal Mining",
+    "Major Chemicals",
+    "Integrated oil Companies",
+    "Oil Refining/Marketing",
+    "Agricultural Chemicals",
+    "Aluminum",
+    "Precious Metals",
+    "Marine Transportation",
+    "Construction/Ag Equipment/Trucks",
+    "Industrial Machinery/Components",
+    "Paints/Coatings",
+    "Containers/Packaging",
+    "Coal Mining",
+    "Oil & Gas Production"
+  ],
+  "labeled": [
+    {
+      "symbol": "MU",
+      "note": "메모리 반도체",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 23.04,
+      "stdevAnnual": 27.9,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 65.63,
+      "industry": "Semiconductors",
+      "errors": 2
+    },
+    {
+      "symbol": "WDC",
+      "note": "HDD·낸드",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 12.4,
+      "stdevAnnual": 13.51,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 24.37,
+      "industry": "Electronic Components",
+      "errors": 2
+    },
+    {
+      "symbol": "STX",
+      "note": "HDD",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 5.51,
+      "stdevAnnual": 9.98,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 28.18,
+      "industry": "Electronic Components",
+      "errors": 2
+    },
+    {
+      "symbol": "NUE",
+      "note": "철강",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "Steel/Iron Ore",
+      "errors": 3
+    },
+    {
+      "symbol": "X",
+      "note": "철강",
+      "label": "cyclical",
+      "industryGate": false,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 0,
+      "marginTtm": null,
+      "industry": null,
+      "errors": 3
+    },
+    {
+      "symbol": "CLF",
+      "note": "철강·철광석",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 3.75,
+      "stdevAnnual": 10.99,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": -4.19,
+      "industry": "Metal Mining",
+      "errors": 3
+    },
+    {
+      "symbol": "STLD",
+      "note": "철강",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 2.16,
+      "stdevAnnual": 7.06,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 9.15,
+      "industry": "Steel/Iron Ore",
+      "errors": 2
+    },
+    {
+      "symbol": "DOW",
+      "note": "화학",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "Major Chemicals",
+      "errors": 3
+    },
+    {
+      "symbol": "LYB",
+      "note": "화학",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 6.58,
+      "stdevAnnual": 6.03,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": -0.99,
+      "industry": "Major Chemicals",
+      "errors": 3
+    },
+    {
+      "symbol": "CE",
+      "note": "화학",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 29.75,
+      "stdevAnnual": 14.09,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": -7.8,
+      "industry": "Major Chemicals",
+      "errors": 3
+    },
+    {
+      "symbol": "VLO",
+      "note": "정유",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 2.78,
+      "stdevAnnual": 3.37,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 4.66,
+      "industry": "Integrated oil Companies",
+      "errors": 3
+    },
+    {
+      "symbol": "MPC",
+      "note": "정유",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 2.24,
+      "stdevAnnual": 3.53,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 6.65,
+      "industry": "Integrated oil Companies",
+      "errors": 3
+    },
+    {
+      "symbol": "PSX",
+      "note": "정유",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "Integrated oil Companies",
+      "errors": 3
+    },
+    {
+      "symbol": "CF",
+      "note": "비료",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 6.08,
+      "stdevAnnual": 8.42,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 36.56,
+      "industry": "Agricultural Chemicals",
+      "errors": 3
+    },
+    {
+      "symbol": "MOS",
+      "note": "비료",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 8.23,
+      "stdevAnnual": 8.6,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 0.89,
+      "industry": "Agricultural Chemicals",
+      "errors": 3
+    },
+    {
+      "symbol": "FCX",
+      "note": "구리",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 6.57,
+      "stdevAnnual": 4.56,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 27.83,
+      "industry": "Metal Mining",
+      "errors": 2
+    },
+    {
+      "symbol": "AA",
+      "note": "알루미늄",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "Aluminum",
+      "errors": 3
+    },
+    {
+      "symbol": "ZIM",
+      "note": "컨테이너 해운",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 0,
+      "marginTtm": null,
+      "industry": "Marine Transportation",
+      "errors": 3
+    },
+    {
+      "symbol": "MATX",
+      "note": "해운",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 5.19,
+      "stdevAnnual": 9.32,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 14.43,
+      "industry": "Marine Transportation",
+      "errors": 3
+    },
+    {
+      "symbol": "CAT",
+      "note": "건설기계",
+      "label": "cyclical",
+      "industryGate": true,
+      "stdev8q": 2.01,
+      "stdevAnnual": 3.19,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 16.48,
+      "industry": "Construction/Ag Equipment/Trucks",
+      "errors": 3
+    },
+    {
+      "symbol": "LIN",
+      "note": "산업용 가스 — 장기 계약",
+      "label": "cyclical_industry_stable",
+      "industryGate": true,
+      "stdev8q": 1.67,
+      "stdevAnnual": 5.24,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 26.48,
+      "industry": "Major Chemicals",
+      "errors": 2
+    },
+    {
+      "symbol": "APD",
+      "note": "산업용 가스 — 장기 계약",
+      "label": "cyclical_industry_stable",
+      "industryGate": true,
+      "stdev8q": 43.67,
+      "stdevAnnual": 15.95,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 18.41,
+      "industry": "Major Chemicals",
+      "errors": 3
+    },
+    {
+      "symbol": "SHW",
+      "note": "도료 — 브랜드·전가력",
+      "label": "cyclical_industry_stable",
+      "industryGate": false,
+      "stdev8q": null,
+      "stdevAnnual": 1.53,
+      "annualYears": 3,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "RETAIL: Building Materials",
+      "errors": 3
+    },
+    {
+      "symbol": "ECL",
+      "note": "특수화학 — 서비스 결합",
+      "label": "cyclical_industry_stable",
+      "industryGate": false,
+      "stdev8q": 3.7,
+      "stdevAnnual": 2.97,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 17.05,
+      "industry": "Package Goods/Cosmetics",
+      "errors": 3
+    },
+    {
+      "symbol": "PPG",
+      "note": "도료",
+      "label": "cyclical_industry_stable",
+      "industryGate": true,
+      "stdev8q": null,
+      "stdevAnnual": 1.55,
+      "annualYears": 3,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "Paints/Coatings",
+      "errors": 2
+    },
+    {
+      "symbol": "TXN",
+      "note": "아날로그 반도체 — 자체 팹·장수 제품",
+      "label": "cyclical_industry_stable",
+      "industryGate": true,
+      "stdev8q": 3.1,
+      "stdevAnnual": 7.65,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 37.29,
+      "industry": "Semiconductors",
+      "errors": 3
+    },
+    {
+      "symbol": "MSFT",
+      "note": "소프트웨어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 1.68,
+      "stdevAnnual": 1.86,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 46.8,
+      "industry": "Computer Software: Prepackaged Software",
+      "errors": 2
+    },
+    {
+      "symbol": "ADBE",
+      "note": "소프트웨어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 1.37,
+      "stdevAnnual": 2.2,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 36.07,
+      "industry": "Computer Software: Prepackaged Software",
+      "errors": 2
+    },
+    {
+      "symbol": "CRM",
+      "note": "소프트웨어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 1.91,
+      "stdevAnnual": 8.58,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 20.4,
+      "industry": "Computer Software: Prepackaged Software",
+      "errors": 2
+    },
+    {
+      "symbol": "NOW",
+      "note": "소프트웨어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 3.83,
+      "stdevAnnual": 4.26,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 11.4,
+      "industry": "Computer Software: Prepackaged Software",
+      "errors": 2
+    },
+    {
+      "symbol": "ORCL",
+      "note": "소프트웨어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 1.28,
+      "stdevAnnual": 2.38,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 30.59,
+      "industry": "Computer Software: Prepackaged Software",
+      "errors": 3
+    },
+    {
+      "symbol": "INTU",
+      "note": "소프트웨어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 18.7,
+      "stdevAnnual": 2.64,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 27.47,
+      "industry": "Computer Software: Prepackaged Software",
+      "errors": 2
+    },
+    {
+      "symbol": "V",
+      "note": "결제",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 3.92,
+      "stdevAnnual": 2.32,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 61.12,
+      "industry": "Business Services",
+      "errors": 3
+    },
+    {
+      "symbol": "MA",
+      "note": "결제",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 2.3,
+      "stdevAnnual": 1.52,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 57.91,
+      "industry": "Business Services",
+      "errors": 2
+    },
+    {
+      "symbol": "KO",
+      "note": "음료",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 7.4,
+      "stdevAnnual": 2.75,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 29.34,
+      "industry": "Beverages (Production/Distribution)",
+      "errors": 3
+    },
+    {
+      "symbol": "PEP",
+      "note": "음료·스낵",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 3.67,
+      "stdevAnnual": 0.75,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 14.82,
+      "industry": "Beverages (Production/Distribution)",
+      "errors": 2
+    },
+    {
+      "symbol": "PG",
+      "note": "생활용품",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 2.85,
+      "stdevAnnual": 1.02,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 23.24,
+      "industry": "Package Goods/Cosmetics",
+      "errors": 2
+    },
+    {
+      "symbol": "CL",
+      "note": "생활용품",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 6.87,
+      "stdevAnnual": 2.38,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 15.36,
+      "industry": "Package Goods/Cosmetics",
+      "errors": 2
+    },
+    {
+      "symbol": "JNJ",
+      "note": "제약·헬스케어",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": null,
+      "stdevAnnual": null,
+      "annualYears": 0,
+      "quarters": 8,
+      "marginTtm": null,
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "errors": 3
+    },
+    {
+      "symbol": "ABT",
+      "note": "의료기기",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 2.28,
+      "stdevAnnual": 1.59,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 17.07,
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "errors": 3
+    },
+    {
+      "symbol": "MCD",
+      "note": "외식",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 1.14,
+      "stdevAnnual": 2.29,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 46.27,
+      "industry": "Restaurants",
+      "errors": 3
+    },
+    {
+      "symbol": "COST",
+      "note": "소매",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 0.17,
+      "stdevAnnual": 0.18,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 3.82,
+      "industry": "Department/Specialty Retail Stores",
+      "errors": 2
+    },
+    {
+      "symbol": "WMT",
+      "note": "소매",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 0.32,
+      "stdevAnnual": 0.46,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 4.2,
+      "industry": "Department/Specialty Retail Stores",
+      "errors": 3
+    },
+    {
+      "symbol": "UNH",
+      "note": "건강보험",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 2.97,
+      "stdevAnnual": 1.91,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 4.19,
+      "industry": "Medical Specialities",
+      "errors": 2
+    },
+    {
+      "symbol": "VZ",
+      "note": "통신",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 3.82,
+      "stdevAnnual": 2.63,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 21.22,
+      "industry": "Telecommunications Equipment",
+      "errors": 3
+    },
+    {
+      "symbol": "T",
+      "note": "통신",
+      "label": "non_cyclical",
+      "industryGate": false,
+      "stdev8q": 4.87,
+      "stdevAnnual": 9.57,
+      "annualYears": 5,
+      "quarters": 8,
+      "marginTtm": 20.12,
+      "industry": "Telecommunications Equipment",
+      "errors": 3
+    }
+  ],
+  "naiveAllLabels": {
+    "threshold": 21.925,
+    "fp": 0,
+    "fn": 13,
+    "candidates": [
+      {
+        "threshold": 0.32,
+        "fp": 24,
+        "fn": 0
+      },
+      {
+        "threshold": 0.605,
+        "fp": 23,
+        "fn": 0
+      },
+      {
+        "threshold": 0.885,
+        "fp": 22,
+        "fn": 0
+      },
+      {
+        "threshold": 1.27,
+        "fp": 21,
+        "fn": 0
+      },
+      {
+        "threshold": 1.525,
+        "fp": 20,
+        "fn": 0
+      },
+      {
+        "threshold": 1.54,
+        "fp": 19,
+        "fn": 0
+      },
+      {
+        "threshold": 1.57,
+        "fp": 18,
+        "fn": 0
+      },
+      {
+        "threshold": 1.725,
+        "fp": 17,
+        "fn": 0
+      },
+      {
+        "threshold": 1.885,
+        "fp": 16,
+        "fn": 0
+      },
+      {
+        "threshold": 2.055,
+        "fp": 15,
+        "fn": 0
+      },
+      {
+        "threshold": 2.245,
+        "fp": 14,
+        "fn": 0
+      },
+      {
+        "threshold": 2.305,
+        "fp": 13,
+        "fn": 0
+      },
+      {
+        "threshold": 2.35,
+        "fp": 12,
+        "fn": 0
+      },
+      {
+        "threshold": 2.38,
+        "fp": 12,
+        "fn": 0
+      },
+      {
+        "threshold": 2.505,
+        "fp": 10,
+        "fn": 0
+      },
+      {
+        "threshold": 2.635,
+        "fp": 9,
+        "fn": 0
+      },
+      {
+        "threshold": 2.695,
+        "fp": 8,
+        "fn": 0
+      },
+      {
+        "threshold": 2.86,
+        "fp": 7,
+        "fn": 0
+      },
+      {
+        "threshold": 3.08,
+        "fp": 6,
+        "fn": 0
+      },
+      {
+        "threshold": 3.28,
+        "fp": 6,
+        "fn": 1
+      },
+      {
+        "threshold": 3.45,
+        "fp": 6,
+        "fn": 2
+      },
+      {
+        "threshold": 3.895,
+        "fp": 6,
+        "fn": 3
+      },
+      {
+        "threshold": 4.41,
+        "fp": 5,
+        "fn": 3
+      },
+      {
+        "threshold": 4.9,
+        "fp": 5,
+        "fn": 4
+      },
+      {
+        "threshold": 5.635,
+        "fp": 4,
+        "fn": 4
+      },
+      {
+        "threshold": 6.545,
+        "fp": 4,
+        "fn": 5
+      },
+      {
+        "threshold": 7.355,
+        "fp": 4,
+        "fn": 6
+      },
+      {
+        "threshold": 8.035,
+        "fp": 3,
+        "fn": 6
+      },
+      {
+        "threshold": 8.5,
+        "fp": 3,
+        "fn": 7
+      },
+      {
+        "threshold": 8.59,
+        "fp": 2,
+        "fn": 7
+      },
+      {
+        "threshold": 8.96,
+        "fp": 2,
+        "fn": 8
+      },
+      {
+        "threshold": 9.445,
+        "fp": 2,
+        "fn": 9
+      },
+      {
+        "threshold": 9.775,
+        "fp": 1,
+        "fn": 9
+      },
+      {
+        "threshold": 10.485,
+        "fp": 1,
+        "fn": 10
+      },
+      {
+        "threshold": 12.25,
+        "fp": 1,
+        "fn": 11
+      },
+      {
+        "threshold": 13.8,
+        "fp": 1,
+        "fn": 12
+      },
+      {
+        "threshold": 15.02,
+        "fp": 1,
+        "fn": 13
+      },
+      {
+        "threshold": 21.925,
+        "fp": 0,
+        "fn": 13
+      }
+    ]
+  },
+  "gateRestricted": {
+    "n": 18,
+    "byLabel": {
+      "cyclical": "n=14 min=3.19 p25=4.56 p50=8.42 p75=9.98 max=27.90",
+      "cyclical_industry_stable": "n=4 min=1.55 p25=1.55 p50=5.24 p75=7.65 max=15.95",
+      "non_cyclical": "관측 없음"
+    },
+    "chosen": {
+      "threshold": 21.925,
+      "fp": 0,
+      "fn": 13,
+      "candidates": [
+        {
+          "threshold": 2.37,
+          "fp": 3,
+          "fn": 0
+        },
+        {
+          "threshold": 3.28,
+          "fp": 3,
+          "fn": 1
+        },
+        {
+          "threshold": 3.45,
+          "fp": 3,
+          "fn": 2
+        },
+        {
+          "threshold": 4.045,
+          "fp": 3,
+          "fn": 3
+        },
+        {
+          "threshold": 4.9,
+          "fp": 3,
+          "fn": 4
+        },
+        {
+          "threshold": 5.635,
+          "fp": 2,
+          "fn": 4
+        },
+        {
+          "threshold": 6.545,
+          "fp": 2,
+          "fn": 5
+        },
+        {
+          "threshold": 7.355,
+          "fp": 2,
+          "fn": 6
+        },
+        {
+          "threshold": 8.035,
+          "fp": 1,
+          "fn": 6
+        },
+        {
+          "threshold": 8.51,
+          "fp": 1,
+          "fn": 7
+        },
+        {
+          "threshold": 8.96,
+          "fp": 1,
+          "fn": 8
+        },
+        {
+          "threshold": 9.65,
+          "fp": 1,
+          "fn": 9
+        },
+        {
+          "threshold": 10.485,
+          "fp": 1,
+          "fn": 10
+        },
+        {
+          "threshold": 12.25,
+          "fp": 1,
+          "fn": 11
+        },
+        {
+          "threshold": 13.8,
+          "fp": 1,
+          "fn": 12
+        },
+        {
+          "threshold": 15.02,
+          "fp": 1,
+          "fn": 13
+        },
+        {
+          "threshold": 21.925,
+          "fp": 0,
+          "fn": 13
+        }
+      ]
+    },
+    "excludedAtChosen": [
+      "WDC(cyclical, 13.51)",
+      "STX(cyclical, 9.98)",
+      "CLF(cyclical, 10.99)",
+      "STLD(cyclical, 7.06)",
+      "LYB(cyclical, 6.03)",
+      "CE(cyclical, 14.09)",
+      "VLO(cyclical, 3.37)",
+      "MPC(cyclical, 3.53)",
+      "CF(cyclical, 8.42)",
+      "MOS(cyclical, 8.6)",
+      "FCX(cyclical, 4.56)",
+      "MATX(cyclical, 9.32)",
+      "CAT(cyclical, 3.19)",
+      "LIN(cyclical_industry_stable, 5.24)",
+      "APD(cyclical_industry_stable, 15.95)",
+      "PPG(cyclical_industry_stable, 1.55)",
+      "TXN(cyclical_industry_stable, 7.65)"
+    ],
+    "excludedAt3": [
+      "PPG(cyclical_industry_stable, 1.55)"
+    ]
+  },
+  "reference": {
+    "nonCyclicalAnnual": "n=19 min=0.18 p25=1.52 p50=2.29 p75=2.63 max=9.57",
+    "nonCyclical8q": "n=19 min=0.17 p25=1.37 p50=2.85 p75=3.83 max=18.70",
+    "cyclical8q": "n=14 min=2.01 p25=2.78 p50=5.51 p75=6.58 max=29.75",
+    "gateFailedCyclicalLabels": [
+      "X(업종없음)"
+    ],
+    "gatePassedNonCyclicalLabels": []
+  }
+}

@@ -31,5 +31,3 @@ docs/fundamentals/coverage_raw.json
 agent-tooling-reports/
 hardening-reports/
 .codebase-memory/
-docs/archetype/threshold_study_raw.json
-docs/archetype/goldenset_raw.json
