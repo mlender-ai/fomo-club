@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isConsensusColumn, parseFinanceTable, parseNaverNumber, periodKeyToEnd } from "../../lib/fundamentals/naver-fundamentals";
 import { parseNasdaqDate, parseNasdaqNumber } from "../../lib/fundamentals/nasdaq-fundamentals";
-import { composeQ4 } from "../../lib/fundamentals/sec-xbrl";
+import { composeQ4, periodLabel } from "../../lib/fundamentals/sec-xbrl";
 
 /**
  * 어댑터 파싱 골든 픽스처 (WO-SUB-01 §11).
@@ -148,15 +148,27 @@ describe("Nasdaq 파싱", () => {
 
 describe("SEC Q4 구성 (실측: 10-K 는 분기형 사실을 태깅하지 않는다)", () => {
   const quarters = new Map([
-    ["2025-03-31", { val: 10, filed: "2025-05-09", restated: false }],
-    ["2025-06-30", { val: 12, filed: "2025-08-08", restated: false }],
-    ["2025-09-30", { val: 14, filed: "2025-11-07", restated: false }],
+    ["2025-03-31", { val: 10, filed: "2025-05-09", restated: false, fy: 2025, fp: "Q1" }],
+    ["2025-06-30", { val: 12, filed: "2025-08-08", restated: false, fy: 2025, fp: "Q2" }],
+    ["2025-09-30", { val: 14, filed: "2025-11-07", restated: false, fy: 2025, fp: "Q3" }],
   ]);
-  const annual = new Map([["2025-12-31", { val: 50, filed: "2026-03-06", restated: false }]]);
+  const annual = new Map([["2025-12-31", { val: 50, filed: "2026-03-06", restated: false, fy: 2025, fp: "FY" }]]);
 
   it("Q4 = 연간 − 1~3분기, 공시일은 연간 보고서 공시일", () => {
     const q4 = composeQ4(quarters, annual);
-    expect(q4.get("2025-12-31")).toEqual({ val: 14, filed: "2026-03-06", restated: false });
+    expect(q4.get("2025-12-31")).toEqual({ val: 14, filed: "2026-03-06", restated: false, fy: 2025, fp: "Q4" });
+  });
+
+  it("구성된 Q4 는 회계분기를 Q4 로 못박아 라벨이 충돌하지 않는다", () => {
+    // 실측(NUE): 52/53주 회계연도라 분기말이 10-04 → 달력 규칙으로는 Q4, 구성 Q4 는 12-31 → 역시 Q4.
+    // fy·fp 를 쓰면 각각 2025Q3 / 2025Q4 로 갈라진다.
+    expect(periodLabel("2025-10-04", { fy: 2025, fp: "Q3" })).toBe("2025Q3");
+    expect(periodLabel("2025-12-31", composeQ4(quarters, annual).get("2025-12-31"))).toBe("2025Q4");
+  });
+
+  it("fy·fp 가 없으면 달력 월로 폴백한다", () => {
+    expect(periodLabel("2026-03-31")).toBe("2026Q1");
+    expect(periodLabel("2026-06-30", { fy: 2026 })).toBe("2026Q2");
   });
 
   it("세 분기가 다 모이지 않으면 구성하지 않는다(부분 차감 금지)", () => {

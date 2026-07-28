@@ -109,7 +109,7 @@ function latestPoint(points: readonly PointObservation[]): PointObservation | nu
 export function assembleFactSheet(input: FactSheetInput): FactSheet {
   const fiscal = composeFiscal(input.quarters, input.annual);
   const growth = deriveGrowth(fiscal.quarters, fiscal.annual);
-  const margin = deriveMargin(fiscal.quarters, fiscal.ttm);
+  const margin = deriveMargin(fiscal.quarters, fiscal.ttm, fiscal.annual);
   const balance = deriveBalance({
     equity: input.equity,
     liabilities: input.liabilities,
@@ -198,6 +198,9 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
   noteDerived("margin.operating_ttm", margin.operating_ttm, ttmAsOf);
   noteDerived("margin.net_ttm", margin.net_ttm, ttmAsOf);
   noteDerived("margin.operating_stdev_8q", margin.operating_stdev_8q, ttmAsOf);
+  const annualAsOf = fiscal.annual[fiscal.annual.length - 1]?.period_end ?? null;
+  noteDerived("margin.operating_stdev_annual", margin.operating_stdev_annual, annualAsOf);
+  noteDerived("margin.operating_stdev_annual_years", margin.operating_stdev_annual_years, annualAsOf);
   noteDerived("balance.total_equity", balance.total_equity, equityPoint?.period_end ?? null);
   noteDerived("balance.debt_to_equity", balance.debt_to_equity, equityPoint?.period_end ?? null);
   noteDerived("balance.net_cash", balance.net_cash, latestPoint(input.cash)?.period_end ?? null);

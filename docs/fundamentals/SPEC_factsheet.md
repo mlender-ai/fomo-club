@@ -98,10 +98,25 @@ TTM 총액으로 나눈다. 이 근사가 깨지는 조건을 두 개의 가드�
 양수면 `null` — **"무한"이라고 쓰지 않는다.**
 
 ### 2-5. 마진 (§6-5)
-- `operating_stdev_8q` = 최근 8분기 영업이익률의 표본표준편차(n−1). 8분기 미만이면 `null` →
-  `WO-SUB-02` 에서 시클리컬 판정 불가로 처리된다.
+- `operating_stdev_8q` = 최근 8분기 영업이익률의 표본표준편차(n−1). 8분기 미만이면 `null`.
+- `operating_stdev_annual` = 최근 연간 영업이익률의 표본표준편차(n−1) + `operating_stdev_annual_years`(관측 연수).
 - `trend_8q` = 최근 4분기 평균 마진 − 이전 4분기 평균 마진. ±1.5%p 를 넘으면 expanding/contracting, 아니면 flat.
   8분기 미만이면 `unknown`.
+
+> **개정 2026-07-28 (WO-SUB-02 실측 반영).**
+> 원래 스펙은 시클리컬 판정 입력을 `operating_stdev_8q` 로 지정했다. **실측 결과 그 필드는 그 용도로 쓸 수 없다.**
+>
+> | 문제 | 실측 근거 |
+> |---|---|
+> | 분기 통계는 **계절성이 경기순환성을 덮어쓴다** | 라벨 40종목 중 INTU(소프트웨어) 18.7%p > CLF(철강) 3.75%p |
+> | KR 은 이 필드가 **구조적으로 항상 `null`** | 네이버 재무 표 분기 5개 상한 → WO-SUB-01 실측 0/40 |
+>
+> 그래서 `operating_stdev_annual` 을 추가하고, **`WO-SUB-02` 의 시클리컬 판정 입력을 이 필드로 확정했다**
+> (`docs/archetype/DOCTRINE_archetype_frames.md` §5). `operating_stdev_8q` 는 계속 계산·저장하지만
+> 분류 입력으로 쓰지 않는다 — 분기 마진의 변동 자체는 `CYCLICAL_COMMODITY` 의 표시 지표로 의미가 있다.
+>
+> 두 필드의 결측 규칙이 다르다: `operating_stdev_8q` 는 **8분기 미만이면 null**, `operating_stdev_annual` 은
+> **연간 관측 2개 미만이면 null**(표본표준편차의 최소 요건). KR 은 연간 3개가 확보되므로 후자는 채워진다.
 
 ### 2-6. 밸류에이션 현재값
 **한 기준으로 통일한다** — `시가총액 ÷ TTM 총액`. 소스마다 다른 EPS 정의(연환산·조정 EPS 등)를 섞으면
@@ -162,7 +177,7 @@ Stooq 등 CSV 경로는 봇 검증(JS proof-of-work)이 걸려 있어 쓰지 않
 | 기간 상한 | 분기 **5개**(+예상 1) / 연간 **3개**(+예상 1). 페이지네이션 없음(실측: `?page=2`·`/2`·`size=20` 모두 동일 응답) |
 | 공시일 | **없다** → `filed_at_basis: "statutory_deadline"` |
 | 일별 차트 | `api.stock.naver.com/chart/domestic/item/{code}/day` 는 **액면분할 조정 종가**다. 실측 검증: 카카오(035720) 2021-04-14 종가 112,000 — 분할 전 명목가 560,000 이 아니다 |
-| 업종 | `industryCode`(숫자 코드)만. 섹터 **이름**은 없다 → `classification.sector` 는 `null` |
+| 업종 | `industryCode`(숫자 코드)만 온다. **코드→이름은 고정 표로 해석한다**(`packages/fomo-core/src/fundamentals/kr-industry.ts`, 79개 그룹 실측). 네이버 업종 체계는 GICS 계열이라 은행/제약/생물공학/철강/해운이 분리되어 아키타입 분류에 그대로 쓸 수 있다. 잔여 버킷 `25 기타`(1,500여 종목)는 **표에 넣지 않는다** → `sector: null` → `UNCLASSIFIED`(안전) |
 
 ### 3-5. KR — DART (미착수)
 `DART_API_KEY` 는 Vercel 런타임에는 있으나 **GitHub Actions Secrets 에는 없고**(`gh secret list` 확인) 로컬에도 없다.
@@ -211,7 +226,7 @@ Stooq 등 CSV 경로는 봇 검증(JS proof-of-work)이 걸려 있어 쓰지 않
 | 항목 | 상태 | 해소 조건 |
 |---|---|---|
 | DART 재무·실공시일 | **미착수** | `DART_API_KEY` 를 GitHub Actions Secrets 에 등록 → 구조 덤프 후 파서 작성 |
-| KR 섹터 이름 | 결측 | `industryCode` → 업종명 사전 필요(별도 소스) |
+| ~~KR 섹터 이름~~ | **해소(2026-07-28)** | `m.stock.naver.com/api/stocks/industry?pageSize=100` 79개 그룹을 고정 표로 박제 |
 | US 매출 컨센서스 | 무료 경로 부재(실측) | `WO-SUB-04` 범위 결정 후 유료 소스 검토 |
 | US 5년 종가 | TwelveData 로 시도하나 프로덕션 실측 미완 | 크론 1회 실행 후 커버리지 대시보드 재생성 |
 | `ev_ebitda` (KR) | 감가상각비 소스 없음 | DART 전체 재무제표 |
