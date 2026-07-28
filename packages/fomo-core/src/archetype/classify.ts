@@ -127,21 +127,30 @@ export function classifyArchetype(factsheet: FactSheet): ArchetypeResult {
     return classified(factsheet, "BIOTECH_PIPELINE", "sector:biotech+revenue<floor");
   }
 
-  // 2. 손익 상태 — 적자면 밸류에이션 배수를 쓸 수 없어 유형이 갈린다.
+  // 2. 시클리컬 — **적자 판정보다 앞선다.**
+  //
+  // 지시서 §6-1 은 손익 상태(적자)를 시클리컬보다 먼저 본다. 골든셋 100종목 실측에서 그 순서가
+  // 최대 오분류원이었다: 다운사이클 구간의 화학·철강·정유는 **적자이므로** `TURNAROUND_LOSS` 로 갔다
+  // (LG화학·롯데케미칼·CLF·AA 등 9건). 그런데 사이클 업종의 적자는 "전환에 실패할 수도 있는 구조적 적자"가
+  // 아니라 **사이클의 저점**이다 — 유형을 나누는 사실 자체가 다르다.
+  //
+  // 게다가 이 오분류는 위험한 방향이다. `TURNAROUND_LOSS` 프레임은 "흑자 전환 여부"를 핵심 변수로 제시하는데,
+  // 시클리컬에서 봐야 하는 것은 "지금 사이클의 어디인가"다. 잘못된 프레임을 씌우는 쪽이므로 원칙 3 위반이다.
+  // 그래서 순서를 바꿨다 — 근거는 독트린 §5-4.
+  if (inIndustrySet(scheme, industry, "cyclical")) {
+    const verdict = cyclicalVerdict(factsheet.margin.operating_stdev_annual);
+    if (verdict.cyclical) {
+      return classified(factsheet, "CYCLICAL_COMMODITY", "industry:cyclical+stdev", verdict.confirmed);
+    }
+  }
+
+  // 3. 손익 상태 — 적자면 밸류에이션 배수를 쓸 수 없어 유형이 갈린다.
   if (netIncome !== null && netIncome < 0) {
     const yoy = factsheet.growth.revenue_yoy;
     if (yoy !== null && yoy > THRESHOLDS.hypergrowth_revenue_yoy_pct) {
       return classified(factsheet, "HYPERGROWTH_UNPROFITABLE", "loss+revenue_yoy>θ");
     }
     return classified(factsheet, "TURNAROUND_LOSS", "loss");
-  }
-
-  // 3. 시클리컬 — 업종 게이트 AND 마진 변동성(통계 없으면 업종 단독, 위 주석 참조).
-  if (inIndustrySet(scheme, industry, "cyclical")) {
-    const verdict = cyclicalVerdict(factsheet.margin.operating_stdev_annual);
-    if (verdict.cyclical) {
-      return classified(factsheet, "CYCLICAL_COMMODITY", "industry:cyclical+stdev", verdict.confirmed);
-    }
   }
 
   // 4. 제약 — 매출이 있는 제약은 개발단계 바이오와 다른 자를 쓴다.

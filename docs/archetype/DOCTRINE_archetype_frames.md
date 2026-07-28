@@ -548,12 +548,12 @@
 1. 섹터 우선
    industry ∈ bank                    -> BANK_FINANCIAL        # 적자여도 은행이다
    industry ∈ biotech && rev < floor  -> BIOTECH_PIPELINE
-2. 손익 상태
-   ni_ttm < 0 && yoy > 40%           -> HYPERGROWTH_UNPROFITABLE
-   ni_ttm < 0                         -> TURNAROUND_LOSS
-3. 시클리컬
+2. 시클리컬  ← 적자 판정보다 앞선다(§5-4)
    industry ∈ cyclical && stdev_annual > 3%p -> CYCLICAL_COMMODITY
    industry ∈ cyclical && stdev_annual == null  -> CYCLICAL_COMMODITY (stdev_confirmed=false, §4-3)
+3. 손익 상태
+   ni_ttm < 0 && yoy > 40%           -> HYPERGROWTH_UNPROFITABLE
+   ni_ttm < 0                         -> TURNAROUND_LOSS
 4. 제약
    industry ∈ pharma && rev >= floor  -> PHARMA_STABLE
 5. 성숙·배당
@@ -647,6 +647,18 @@ PER 경고문 부착, 밴드 지표가 PER→PBR.
 게이트의 특이도는 **업종 집합이 담당**하고(비시클리컬 라벨 20종목 중 게이트 통과 0개), stdev 게이트는 보조다.
 
 > 실측: `scripts/archetype-threshold-study.ts` · 2026-07-28T11:27:05.794Z · 원본 `docs/archetype/threshold_study_raw.json`
+
+### 5-4. 【정정】 시클리컬 판정이 적자 판정보다 앞선다
+
+지시서 §6-1 의 판정 순서는 손익 상태(적자)를 시클리컬보다 먼저 본다.
+**골든셋 100종목 실측에서 그 순서가 최대 오분류원이었다** — 다운사이클 구간의 화학·철강·정유는
+적자이므로 `TURNAROUND_LOSS` 로 분류됐다(LG화학·롯데케미칼·Cleveland-Cliffs·Alcoa 등 9건).
+
+사이클 업종의 적자는 "전환에 실패할 수도 있는 구조적 적자"가 아니라 **사이클의 저점**이다.
+유형을 나누는 사실 자체가 다르고, 두 유형이 제시하는 핵심 변수도 다르다 —
+`TURNAROUND_LOSS` 는 "흑자 전환 여부", `CYCLICAL_COMMODITY` 는 "지금 사이클의 어디인가".
+
+즉 이 오분류는 **잘못된 프레임을 씌우는 방향**이므로 WO §4 원칙 3 위반이다. 그래서 순서를 바꿨다.
 
 ## 6. 히스테리시스 규칙
 

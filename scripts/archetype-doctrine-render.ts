@@ -179,12 +179,12 @@ export function renderDoctrine(): string {
   lines.push("1. 섹터 우선");
   lines.push("   industry ∈ bank                    -> BANK_FINANCIAL        # 적자여도 은행이다");
   lines.push("   industry ∈ biotech && rev < floor  -> BIOTECH_PIPELINE");
-  lines.push("2. 손익 상태");
-  lines.push(`   ni_ttm < 0 && yoy > ${THRESHOLDS.hypergrowth_revenue_yoy_pct}%           -> HYPERGROWTH_UNPROFITABLE`);
-  lines.push("   ni_ttm < 0                         -> TURNAROUND_LOSS");
-  lines.push("3. 시클리컬");
+  lines.push("2. 시클리컬  ← 적자 판정보다 앞선다(§5-4)");
   lines.push(`   industry ∈ cyclical && stdev_annual > ${THRESHOLDS.cyclical_operating_stdev_annual_pp}%p -> CYCLICAL_COMMODITY`);
   lines.push("   industry ∈ cyclical && stdev_annual == null  -> CYCLICAL_COMMODITY (stdev_confirmed=false, §4-3)");
+  lines.push("3. 손익 상태");
+  lines.push(`   ni_ttm < 0 && yoy > ${THRESHOLDS.hypergrowth_revenue_yoy_pct}%           -> HYPERGROWTH_UNPROFITABLE`);
+  lines.push("   ni_ttm < 0                         -> TURNAROUND_LOSS");
   lines.push("4. 제약");
   lines.push("   industry ∈ pharma && rev >= floor  -> PHARMA_STABLE");
   lines.push("5. 성숙·배당");
@@ -291,6 +291,18 @@ export function renderDoctrine(): string {
     lines.push("");
   }
 
+  lines.push("### 5-4. 【정정】 시클리컬 판정이 적자 판정보다 앞선다");
+  lines.push("");
+  lines.push("지시서 §6-1 의 판정 순서는 손익 상태(적자)를 시클리컬보다 먼저 본다.");
+  lines.push("**골든셋 100종목 실측에서 그 순서가 최대 오분류원이었다** — 다운사이클 구간의 화학·철강·정유는");
+  lines.push("적자이므로 `TURNAROUND_LOSS` 로 분류됐다(LG화학·롯데케미칼·Cleveland-Cliffs·Alcoa 등 9건).");
+  lines.push("");
+  lines.push("사이클 업종의 적자는 \"전환에 실패할 수도 있는 구조적 적자\"가 아니라 **사이클의 저점**이다.");
+  lines.push("유형을 나누는 사실 자체가 다르고, 두 유형이 제시하는 핵심 변수도 다르다 —");
+  lines.push("`TURNAROUND_LOSS` 는 \"흑자 전환 여부\", `CYCLICAL_COMMODITY` 는 \"지금 사이클의 어디인가\".");
+  lines.push("");
+  lines.push("즉 이 오분류는 **잘못된 프레임을 씌우는 방향**이므로 WO §4 원칙 3 위반이다. 그래서 순서를 바꿨다.");
+  lines.push("");
   lines.push("## 6. 히스테리시스 규칙");
   lines.push("");
   lines.push("임계값 근처에서 분기마다 분류가 튀면 사용자 경험과 판단 원장이 함께 망가진다.");
