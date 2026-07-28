@@ -13,6 +13,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DOCTRINE } from "../packages/fomo-core/src/archetype/classify";
 import { KNOWN_CYCLICAL_GATE_MISSES, RULESET_VERSION, THRESHOLDS, BIO_REVENUE_FLOOR } from "../packages/fomo-core/src/archetype/ruleset";
+import { STDEV_MIN_YEARS } from "../packages/fomo-core/src/archetype/classify";
 import type { ArchetypeFrame } from "../packages/fomo-core/src/archetype/types";
 
 export const DOCTRINE_PATH = join("docs", "archetype", "DOCTRINE_archetype_frames.md");
@@ -179,9 +180,9 @@ export function renderDoctrine(): string {
   lines.push("1. 섹터 우선");
   lines.push("   industry ∈ bank                    -> BANK_FINANCIAL        # 적자여도 은행이다");
   lines.push("   industry ∈ biotech && rev < floor  -> BIOTECH_PIPELINE");
-  lines.push("2. 시클리컬  ← 적자 판정보다 앞선다(§5-4)");
-  lines.push(`   industry ∈ cyclical && stdev_annual > ${THRESHOLDS.cyclical_operating_stdev_annual_pp}%p -> CYCLICAL_COMMODITY`);
-  lines.push("   industry ∈ cyclical && stdev_annual == null  -> CYCLICAL_COMMODITY (stdev_confirmed=false, §4-3)");
+  lines.push("2. 시클리컬  ← 적자 판정보다 앞선다(§5-4). 단 적자+고성장은 예외");
+  lines.push(`   industry ∈ cyclical && 연간관측 >= ${STDEV_MIN_YEARS}개년 && stdev_annual > ${THRESHOLDS.cyclical_operating_stdev_annual_pp}%p -> CYCLICAL_COMMODITY`);
+  lines.push(`   industry ∈ cyclical && 연간관측 < ${STDEV_MIN_YEARS}개년       -> CYCLICAL_COMMODITY (업종 단독, stdev_confirmed=false, §4-3)`);
   lines.push("3. 손익 상태");
   lines.push(`   ni_ttm < 0 && yoy > ${THRESHOLDS.hypergrowth_revenue_yoy_pct}%           -> HYPERGROWTH_UNPROFITABLE`);
   lines.push("   ni_ttm < 0                         -> TURNAROUND_LOSS");
@@ -223,6 +224,10 @@ export function renderDoctrine(): string {
   lines.push("");
   lines.push("원칙 3은 *잘못된 프레임이 오도할 때* 적용하는 원칙이다. 시클리컬 경고는 오도하지 않는 방향의 프레임이므로");
   lines.push("이 유형에는 반대가 맞다. 그래서 **연간 통계가 없으면 업종 코드 단독으로 시클리컬 판정한다**(KR 이 여기 해당).");
+  lines.push("");
+  lines.push(`판정 기준은 **연간 관측 연수**다 — θ 를 도출한 라벨셋이 5개년이므로, 관측이 ${STDEV_MIN_YEARS}개년 미만이면`);
+  lines.push("통계를 쓰지 않고 업종 코드 단독으로 판정한다. 3개년 표본표준편차로 5개년 기준 임계값을 재는 것은 다른 자를 대는 것이다.");
+  lines.push("실측: 이 게이트 없이는 POSCO홀딩스·현대차·현대제철·팬오션 등 KR 시클리컬 20종목 중 14종목이 탈락했다.");
   lines.push("");
   lines.push("단 두 가지 조건을 붙인다.");
   lines.push("");
@@ -302,6 +307,10 @@ export function renderDoctrine(): string {
   lines.push("`TURNAROUND_LOSS` 는 \"흑자 전환 여부\", `CYCLICAL_COMMODITY` 는 \"지금 사이클의 어디인가\".");
   lines.push("");
   lines.push("즉 이 오분류는 **잘못된 프레임을 씌우는 방향**이므로 WO §4 원칙 3 위반이다. 그래서 순서를 바꿨다.");
+  lines.push("");
+  lines.push("**단 성장 단계의 적자는 사이클 저점이 아니다.** 매출이 급증하면서 적자인 기업은 업종이 사이클 업종이어도");
+  lines.push("제품 가격 사이클로 설명되지 않는다 — 실측: Rivian·Lucid 가 \"Auto Manufacturing\" 이라는 이유로");
+  lines.push("`CYCLICAL_COMMODITY` 로 갔다. 그래서 시클리컬 판정 앞에 \"적자 + 고성장\" 예외를 둔다(더 구체적인 규칙이 이긴다).");
   lines.push("");
   lines.push("## 6. 히스테리시스 규칙");
   lines.push("");

@@ -23,6 +23,12 @@ import type {
 
 export const DOCTRINE: ArchetypeDoctrine = doctrineJson as ArchetypeDoctrine;
 
+/**
+ * 연간 통계를 신뢰하려면 필요한 최소 관측 연수. θ_cyclical 을 도출한 라벨셋이 5개년이므로 같은 값을 쓴다.
+ * 이보다 적으면 통계를 쓰지 않고 업종 코드 단독으로 판정한다(독트린 §4-3).
+ */
+export const STDEV_MIN_YEARS = 5;
+
 const FRAMES = new Map<ArchetypeCode, ArchetypeFrame>(DOCTRINE.archetypes.map((frame) => [frame.code, frame]));
 
 /** 독트린에서 프레임을 읽는다. 경고문·금지 지표는 **반드시 이 경로로만** 가져간다(하드코딩 금지). */
@@ -103,8 +109,12 @@ function classified(
  *  · 과소 포함: 정유·철강에 경고 없이 PER 제시 → 독트린이 막으려던 바로 그 오독이 발생한다
  * 통계로 확인되지 않은 판정은 `stdev_confirmed: false` 로 남겨 사후 채점에서 분리 집계한다.
  */
-function cyclicalVerdict(stdev: number | null): { cyclical: boolean; confirmed: boolean } {
-  if (stdev === null) return { cyclical: true, confirmed: false };
+function cyclicalVerdict(stdev: number | null, years: number): { cyclical: boolean; confirmed: boolean } {
+  // 관측 연수가 임계값 도출 표본(5개년)에 못 미치면 통계를 신뢰하지 않는다.
+  // KR 은 네이버 연간 3개뿐이라 표본표준편차가 구조적으로 작게 나온다 — 실측: POSCO·현대차·현대제철·
+  // 팬오션이 전부 θ 아래로 떨어져 UNCLASSIFIED/TURNAROUND_LOSS 로 갔다(골든셋 KR 시클리컬 20개 중 14개).
+  // 3개년 통계로 5개년 기준 임계값을 재는 것은 다른 자를 대는 것이다.
+  if (stdev === null || years < STDEV_MIN_YEARS) return { cyclical: true, confirmed: false };
   return { cyclical: stdev > THRESHOLDS.cyclical_operating_stdev_annual_pp, confirmed: true };
 }
 
@@ -137,8 +147,17 @@ export function classifyArchetype(factsheet: FactSheet): ArchetypeResult {
   // 게다가 이 오분류는 위험한 방향이다. `TURNAROUND_LOSS` 프레임은 "흑자 전환 여부"를 핵심 변수로 제시하는데,
   // 시클리컬에서 봐야 하는 것은 "지금 사이클의 어디인가"다. 잘못된 프레임을 씌우는 쪽이므로 원칙 3 위반이다.
   // 그래서 순서를 바꿨다 — 근거는 독트린 §5-4.
-  if (inIndustrySet(scheme, industry, "cyclical")) {
-    const verdict = cyclicalVerdict(factsheet.margin.operating_stdev_annual);
+  //
+  // 단 **성장 단계의 적자는 사이클 저점이 아니다.** 매출이 급증하면서 적자인 기업(전기차 신생사 등)은
+  // 업종이 사이클 업종이어도 제품 가격 사이클로 설명되지 않는다 — 실측: RIVN·LCID 가 "Auto Manufacturing"
+  // 이라는 이유로 `CYCLICAL_COMMODITY` 로 갔다(골든셋 위험 오분류 2건). 더 구체적인 규칙이 이긴다.
+  const hypergrowthLoss =
+    netIncome !== null &&
+    netIncome < 0 &&
+    factsheet.growth.revenue_yoy !== null &&
+    factsheet.growth.revenue_yoy > THRESHOLDS.hypergrowth_revenue_yoy_pct;
+  if (!hypergrowthLoss && inIndustrySet(scheme, industry, "cyclical")) {
+    const verdict = cyclicalVerdict(factsheet.margin.operating_stdev_annual, factsheet.margin.operating_stdev_annual_years);
     if (verdict.cyclical) {
       return classified(factsheet, "CYCLICAL_COMMODITY", "industry:cyclical+stdev", verdict.confirmed);
     }

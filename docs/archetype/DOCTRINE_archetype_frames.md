@@ -548,9 +548,9 @@
 1. 섹터 우선
    industry ∈ bank                    -> BANK_FINANCIAL        # 적자여도 은행이다
    industry ∈ biotech && rev < floor  -> BIOTECH_PIPELINE
-2. 시클리컬  ← 적자 판정보다 앞선다(§5-4)
-   industry ∈ cyclical && stdev_annual > 3%p -> CYCLICAL_COMMODITY
-   industry ∈ cyclical && stdev_annual == null  -> CYCLICAL_COMMODITY (stdev_confirmed=false, §4-3)
+2. 시클리컬  ← 적자 판정보다 앞선다(§5-4). 단 적자+고성장은 예외
+   industry ∈ cyclical && 연간관측 >= 5개년 && stdev_annual > 3%p -> CYCLICAL_COMMODITY
+   industry ∈ cyclical && 연간관측 < 5개년       -> CYCLICAL_COMMODITY (업종 단독, stdev_confirmed=false, §4-3)
 3. 손익 상태
    ni_ttm < 0 && yoy > 40%           -> HYPERGROWTH_UNPROFITABLE
    ni_ttm < 0                         -> TURNAROUND_LOSS
@@ -592,6 +592,10 @@ PER 경고문 부착, 밴드 지표가 PER→PBR.
 
 원칙 3은 *잘못된 프레임이 오도할 때* 적용하는 원칙이다. 시클리컬 경고는 오도하지 않는 방향의 프레임이므로
 이 유형에는 반대가 맞다. 그래서 **연간 통계가 없으면 업종 코드 단독으로 시클리컬 판정한다**(KR 이 여기 해당).
+
+판정 기준은 **연간 관측 연수**다 — θ 를 도출한 라벨셋이 5개년이므로, 관측이 5개년 미만이면
+통계를 쓰지 않고 업종 코드 단독으로 판정한다. 3개년 표본표준편차로 5개년 기준 임계값을 재는 것은 다른 자를 대는 것이다.
+실측: 이 게이트 없이는 POSCO홀딩스·현대차·현대제철·팬오션 등 KR 시클리컬 20종목 중 14종목이 탈락했다.
 
 단 두 가지 조건을 붙인다.
 
@@ -659,6 +663,10 @@ PER 경고문 부착, 밴드 지표가 PER→PBR.
 `TURNAROUND_LOSS` 는 "흑자 전환 여부", `CYCLICAL_COMMODITY` 는 "지금 사이클의 어디인가".
 
 즉 이 오분류는 **잘못된 프레임을 씌우는 방향**이므로 WO §4 원칙 3 위반이다. 그래서 순서를 바꿨다.
+
+**단 성장 단계의 적자는 사이클 저점이 아니다.** 매출이 급증하면서 적자인 기업은 업종이 사이클 업종이어도
+제품 가격 사이클로 설명되지 않는다 — 실측: Rivian·Lucid 가 "Auto Manufacturing" 이라는 이유로
+`CYCLICAL_COMMODITY` 로 갔다. 그래서 시클리컬 판정 앞에 "적자 + 고성장" 예외를 둔다(더 구체적인 규칙이 이긴다).
 
 ## 6. 히스테리시스 규칙
 

@@ -375,3 +375,60 @@ describe("독트린 노출 (완료 조건 7·8)", () => {
     }
   });
 });
+
+describe("연간 관측 연수 게이트 (KR 업종 단독 판정 경로)", () => {
+  it("관측 연수가 5개년 미만이면 통계를 쓰지 않고 업종 단독으로 판정한다", () => {
+    // KR 은 네이버 연간 3개뿐이라 표본표준편차가 구조적으로 작게 나온다.
+    // 3개년 통계로 5개년 기준 임계값을 재면 POSCO·현대차 같은 명백한 시클리컬이 탈락한다(실측).
+    const result = classifyArchetype(
+      sheet({
+        market: "KR",
+        currency: "KRW",
+        scheme: "naver_industry",
+        industry: "철강",
+        stdevAnnual: 1.2,
+        stdevYears: 3,
+        netIncomeTtm: -100,
+      })
+    );
+    expect(result.code).toBe("CYCLICAL_COMMODITY");
+    expect(result.stdev_confirmed).toBe(false);
+  });
+
+  it("5개년이 확보되면 통계로 걸러낸다", () => {
+    const result = classifyArchetype(
+      sheet({ industry: "Paints/Coatings", stdevAnnual: 1.2, stdevYears: 5, netIncomeTtm: 400, cagr3y: 8 })
+    );
+    expect(result.code).not.toBe("CYCLICAL_COMMODITY");
+  });
+
+  it("사이클 업종의 적자는 TURNAROUND_LOSS 가 아니라 사이클의 저점이다", () => {
+    const result = classifyArchetype(
+      sheet({ industry: "Major Chemicals", stdevAnnual: 8, stdevYears: 5, netIncomeTtm: -500, revenueYoy: -10 })
+    );
+    expect(result.code).toBe("CYCLICAL_COMMODITY");
+  });
+});
+
+describe("성장 단계의 적자는 사이클 저점이 아니다", () => {
+  it("사이클 업종이어도 적자+고성장이면 HYPERGROWTH_UNPROFITABLE", () => {
+    // 실측: RIVN·LCID 가 "Auto Manufacturing" 이라는 이유로 CYCLICAL_COMMODITY 로 갔다.
+    const result = classifyArchetype(
+      sheet({
+        industry: "Auto Manufacturing",
+        stdevAnnual: 20,
+        stdevYears: 5,
+        netIncomeTtm: -5_000,
+        revenueYoy: THRESHOLDS.hypergrowth_revenue_yoy_pct + 20,
+      })
+    );
+    expect(result.code).toBe("HYPERGROWTH_UNPROFITABLE");
+  });
+
+  it("사이클 업종의 저성장 적자는 여전히 CYCLICAL_COMMODITY(다운사이클)", () => {
+    const result = classifyArchetype(
+      sheet({ industry: "Auto Manufacturing", stdevAnnual: 20, stdevYears: 5, netIncomeTtm: -5_000, revenueYoy: -8 })
+    );
+    expect(result.code).toBe("CYCLICAL_COMMODITY");
+  });
+});
