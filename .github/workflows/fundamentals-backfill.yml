@@ -1,0 +1,101 @@
+name: Fundamentals Backfill (manual)
+
+# WO-SUB-01 완료 조건 1 — "전 유니버스 팩트시트 생성률 100%".
+#
+# 왜 수동 워크플로가 필요한가: 유니버스가 원장 365일치라 **285종목**이고(프로덕션 실측),
+# 크론 1회는 청크 12종목만 처리한다(외부 소스 지연 × 종목 수 > 함수 시간 상한).
+# Vercel 크론은 하루 1회만 부르므로 그대로 두면 전수 갱신에 24일이 걸린다.
+# 그래서 `done: true` 가 나올 때까지 크론을 반복 호출하는 집행 워크플로를 둔다
+# (judgment-ledger-backfill 과 같은 방식 — 시세·공시 egress 가 확보된 Vercel 런타임을 쓴다).
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "1회 청크 종목 수"
+        type: string
+        default: "24"
+      rounds:
+        description: "최대 반복 횟수"
+        type: string
+        default: "20"
+      reset:
+        description: "커서를 버리고 처음부터"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fundamentals-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Refresh factsheets until done
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          LIMIT: ${{ github.event.inputs.limit || '24' }}
+          ROUNDS: ${{ github.event.inputs.rounds || '20' }}
+          RESET: ${{ github.event.inputs.reset }}
+        run: |
+          set -euo pipefail
+          BASE="https://fomo-club-backend.vercel.app"
+          AUTH=()
+          if [ -n "${CRON_SECRET:-}" ]; then AUTH=(-H "Authorization: Bearer ${CRON_SECRET}"); fi
+          reset_param=""
+          if [ "${RESET:-false}" = "true" ]; then reset_param="&reset=1"; fi
+
+          for i in $(seq 1 "$ROUNDS"); do
+            echo "== round $i =="
+            # 첫 라운드만 reset 을 붙인다 — 매 라운드 reset 하면 커서가 초기화돼 영원히 안 끝난다.
+            q="limit=${LIMIT}"
+            if [ "$i" = "1" ]; then q="${q}${reset_param}"; fi
+            resp=$(curl -fsS --max-time 300 "${AUTH[@]}" "$BASE/api/fomo/cron/fundamentals?${q}") || { echo "round $i failed"; break; }
+            node -e '
+              const r = JSON.parse(process.argv[1]);
+              const bad = (r.outcomes ?? []).filter((o) => o.coverage_flag === "none").map((o) => o.canonical);
+              console.log(`processed=${r.processed} remaining=${r.remaining} done=${r.done} universe=${r.universe}`);
+              if (bad.length) console.log(`  coverage none: ${bad.join(", ")}`);
+            ' "$resp"
+            if node -e 'process.exit(JSON.parse(process.argv[1]).done ? 0 : 1)' "$resp"; then
+              echo "== all done =="
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Coverage summary (저장된 팩트시트만 읽는다)
+        if: always()
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 120 "https://fomo-club-backend.vercel.app/api/fomo/fundamentals/coverage" > /tmp/cov.json || exit 0
+          node -e '
+            const r = require("/tmp/cov.json");
+            const lines = [];
+            lines.push(`# 팩트시트 커버리지 — 프로덕션 실측 (${r.date})`);
+            lines.push("");
+            lines.push(`- 유니버스 ${r.universe}종목 / 레코드 **${r.records}**종목`);
+            lines.push("");
+            for (const g of r.groups ?? []) {
+              lines.push(`## ${g.group} (n=${g.count})`);
+              lines.push("");
+              lines.push("| 필드 | 확보 |");
+              lines.push("|---|---|");
+              for (const [k, v] of Object.entries(g.fields)) lines.push(`| \`${k}\` | ${v.ok}/${v.n} (${v.pct}%) |`);
+              lines.push("");
+              lines.push(`- coverage flags: ${JSON.stringify(g.coverage_flags)} · 밴드 계산됨 ${g.band_sufficient}/${g.count} · 최신 분기 지연 중앙값 ${g.lag_days_median ?? "—"}일`);
+              lines.push("");
+            }
+            lines.push("## 밴드 미계산 사유");
+            lines.push("");
+            for (const [k, v] of Object.entries(r.band_insufficient_reasons ?? {})) lines.push(`- ${k}: ${v}`);
+            lines.push("");
+            lines.push(`## 실패·결손 ${(r.failures ?? []).length}종목`);
+            lines.push("");
+            for (const f of (r.failures ?? []).slice(0, 40)) lines.push(`- **${f.canonical}**(${f.market}, ${f.coverage_flag}, 결측 ${f.missing_count}) — ${f.errors.join(" · ") || "—"}`);
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+          '
