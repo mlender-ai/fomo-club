@@ -1,0 +1,90 @@
+{
+  "summary": {
+    "n": 10,
+    "recall": 100,
+    "rejectRate": 83.3,
+    "inconclusive": 0
+  },
+  "rows": [
+    {
+      "sentence": "뉴저지·뉴욕 지역 100개 지점 기반 예수금과 대출이 주된 사업",
+      "expected": true,
+      "actual": true,
+      "inconclusive": false,
+      "span": null,
+      "note": "압축·재배열은 지지된다"
+    },
+    {
+      "sentence": "주거용 모기지·상업용 부동산·다세대 대출에 예수금을 운용",
+      "expected": true,
+      "actual": true,
+      "inconclusive": false,
+      "span": null,
+      "note": "열거를 그대로 옮긴 경우"
+    },
+    {
+      "sentence": "장단기 금리차와 예금 조달비용이 순이자이익을 좌우",
+      "expected": true,
+      "actual": true,
+      "inconclusive": false,
+      "span": null,
+      "note": "의존 변수 서술"
+    },
+    {
+      "sentence": "구독료와 결제수수료 중심 매출, 결제수수료가 최대 비중",
+      "expected": true,
+      "actual": true,
+      "inconclusive": false,
+      "span": null,
+      "note": "매출 구성"
+    },
+    {
+      "sentence": "뉴저지·뉴욕 지역 250개 지점을 운영",
+      "expected": false,
+      "actual": false,
+      "inconclusive": false,
+      "span": "250개 지점",
+      "note": "수치 조작(100 → 250)"
+    },
+    {
+      "sentence": "캘리포니아 중심의 상업용 부동산 대출이 주력",
+      "expected": false,
+      "actual": false,
+      "inconclusive": false,
+      "span": "캘리포니아 중심의 상업용 부동산 대출",
+      "note": "지명 조작"
+    },
+    {
+      "sentence": "지점망 기반 지역 밀착 영업으로 경쟁 우위 확보",
+      "expected": false,
+      "actual": false,
+      "inconclusive": false,
+      "span": "지점망 기반 지역 밀착 영업",
+      "note": "청크에서 추론해야만 나오는 내용 + 평가"
+    },
+    {
+      "sentence": "예금 조달비용 상승으로 순이자마진이 하락했다",
+      "expected": false,
+      "actual": true,
+      "inconclusive": false,
+      "span": null,
+      "note": "인과 단정 + 청크에 없는 결과"
+    },
+    {
+      "sentence": "구독료가 매출의 70%를 차지",
+      "expected": false,
+      "actual": false,
+      "inconclusive": false,
+      "span": "구독료가 매출의 70%를 차지",
+      "note": "청크에 없는 비중 수치"
+    },
+    {
+      "sentence": "광고 매출이 성장의 핵심 동력",
+      "expected": false,
+      "actual": false,
+      "inconclusive": false,
+      "span": "광고 매출이 성장의 핵심 동력",
+      "note": "청크에 없는 사업"
+    }
+  ]
+}

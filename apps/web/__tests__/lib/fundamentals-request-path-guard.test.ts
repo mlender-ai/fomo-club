@@ -33,6 +33,9 @@ const FORBIDDEN_IDENTIFIERS = [
 /** 계산이 허용된 경로(레포 루트 기준 상대경로 접두사). */
 const ALLOWED_PREFIXES = [
   "lib/fundamentals/",
+  // 사업 실체 합성(WO-SUB-03)도 배치 경로다 — 팩트시트 어댑터를 소스 수집에 재사용한다.
+  // 이 가드가 막는 것은 **요청 경로**의 계산이고, 배치끼리의 재사용은 의도된 것이다.
+  "lib/business-context/",
   "app/api/fomo/cron/fundamentals/",
   "app/api/fomo/fundamentals/",
   "__tests__/",
