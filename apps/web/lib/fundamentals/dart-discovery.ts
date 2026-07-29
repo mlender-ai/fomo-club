@@ -236,13 +236,16 @@ export async function discoverDartStructure(stockCode = "185750", options: { ref
         )
       );
     }
-    // 4) 전체 재무제표 — 현금흐름·EPS 확보 가능성 확인.
-    dumps.push(
-      await probe(
-        "fnlttSinglAcntAll(FY,CFS)",
-        `${DART_BASE}/fnlttSinglAcntAll.json?crtfc_key=${key}&corp_code=${corpCode}&bsns_year=${year}&reprt_code=${REPORT_CODES.FY}&fs_div=CFS`
-      )
-    );
+    // 4) 전체 재무제표 — 현금흐름·EPS 확보 가능성. CFS 가 013(데이터 없음)으로 오는 것을
+    //    실측했으므로 OFS·전년도까지 같이 찍어 "없다"가 어느 축인지 가른다.
+    for (const [label, params] of [
+      ["fnlttSinglAcntAll(FY,CFS)", `bsns_year=${year}&reprt_code=${REPORT_CODES.FY}&fs_div=CFS`],
+      ["fnlttSinglAcntAll(FY,OFS)", `bsns_year=${year}&reprt_code=${REPORT_CODES.FY}&fs_div=OFS`],
+      ["fnlttSinglAcntAll(전년FY,CFS)", `bsns_year=${year - 1}&reprt_code=${REPORT_CODES.FY}&fs_div=CFS`],
+      ["fnlttSinglAcntAll(Q3,CFS)", `bsns_year=${year}&reprt_code=${REPORT_CODES.Q3}&fs_div=CFS`],
+    ] as const) {
+      dumps.push(await probe(label, `${DART_BASE}/fnlttSinglAcntAll.json?crtfc_key=${key}&corp_code=${corpCode}&${params}`));
+    }
   }
   return {
     probedAt,
