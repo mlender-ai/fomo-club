@@ -54,7 +54,7 @@ describe("DART 구조 덤프", () => {
     // DART 는 키 오류 시 ZIP 대신 XML 을 준다 — 그걸 조용히 빈 매핑으로 삼으면 원인이 사라진다.
     vi.stubGlobal("fetch", async () => new Response("<result><status>020</status></result>", { status: 200 }));
     const { fetchCorpCodeMap } = await import("../../lib/fundamentals/dart-discovery");
-    const map = await fetchCorpCodeMap("K");
+    const map = await fetchCorpCodeMap("K", { refresh: true });
     expect(map.listedEntries).toBe(0);
     expect(map.error).toContain("ZIP 시그니처 아님");
     expect(map.error).toContain("<status>020</status>");
@@ -79,7 +79,7 @@ describe("DART 구조 덤프", () => {
     const zip = Buffer.concat([header, name, body]);
     vi.stubGlobal("fetch", async () => new Response(zip, { status: 200 }));
     const { fetchCorpCodeMap } = await import("../../lib/fundamentals/dart-discovery");
-    const map = await fetchCorpCodeMap("K");
+    const map = await fetchCorpCodeMap("K", { refresh: true });
     expect(map.error).toBeNull();
     expect(map.totalEntries).toBe(3);
     expect(map.listedEntries).toBe(2);

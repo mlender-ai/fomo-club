@@ -15,6 +15,7 @@
  */
 
 import { inflateRawSync } from "node:zlib";
+import { readFeedContent, writeFeedContent } from "../feed-content-store";
 
 const DART_BASE = "https://opendart.fss.or.kr/api";
 const TIMEOUT_MS = 20_000;
@@ -99,22 +100,75 @@ export interface CorpCodeMap {
   totalEntries: number;
   listedEntries: number;
   error: string | null;
+  /** 단계별 소요(ms) — 60초 타임아웃의 원인이 전송인지 해동인지 파싱인지 구분한다. */
+  timing: { fetchMs: number; unzipMs: number; parseMs: number };
+  /** 캐시에서 읽었는가. 매핑은 하루에 몇 건 바뀌므로 매 호출 10만 행을 다시 받을 이유가 없다. */
+  fromCache: boolean;
 }
 
-/** 공식 매핑 파일을 받아 종목코드 → corp_code 표를 만든다. */
-export async function fetchCorpCodeMap(key: string): Promise<CorpCodeMap> {
-  const empty = (error: string): CorpCodeMap => ({ byStockCode: new Map(), totalEntries: 0, listedEntries: 0, error });
-  const res = await fetch(`${DART_BASE}/corpCode.xml?crtfc_key=${key}`, { signal: AbortSignal.timeout(60_000) }).catch(
-    (error: unknown) => ({ ok: false, status: 0, error }) as const
-  );
-  if (!("arrayBuffer" in res)) return empty(`corpCode.xml 요청 실패: ${String((res as { error?: unknown }).error)}`);
-  if (!res.ok) return empty(`corpCode.xml HTTP ${res.status}`);
+/** 매핑 캐시 키 — 기존 `FeedContentCache`(JSONB) 재사용, 신규 DDL 0. */
+const CORP_CODE_CACHE_KEY = "dart-corpcode-map";
+/**
+ * `corpCode.xml` 은 10만 행짜리 ZIP 이고 DART 전송이 느리다(실측: 60초 타임아웃).
+ * 매핑은 상장·상호 변경 때만 바뀌므로 캐시가 정답이다.
+ */
+const CORP_CODE_TTL_MS = 7 * 86_400_000;
+/** 전송이 느린 것이 확인됐으므로 여유를 준다(라우트 maxDuration 안). */
+const CORP_CODE_TIMEOUT_MS = 240_000;
+
+interface CachedCorpCodeMap {
+  fetchedAt: string;
+  totalEntries: number;
+  /** "종목코드:corp_code" 평문 배열 — JSONB 크기를 객체 키 오버헤드 없이 줄인다. */
+  pairs: string[];
+}
+
+/** 공식 매핑 파일을 받아 종목코드 → corp_code 표를 만든다. 캐시 우선. */
+export async function fetchCorpCodeMap(key: string, options: { refresh?: boolean } = {}): Promise<CorpCodeMap> {
+  const zero = { fetchMs: 0, unzipMs: 0, parseMs: 0 };
+  const empty = (error: string, timing = zero): CorpCodeMap => ({
+    byStockCode: new Map(),
+    totalEntries: 0,
+    listedEntries: 0,
+    error,
+    timing,
+    fromCache: false,
+  });
+
+  if (!options.refresh) {
+    const cached = await readFeedContent<CachedCorpCodeMap>(CORP_CODE_CACHE_KEY).catch(() => null);
+    const fetchedAt = cached ? Date.parse(cached.fetchedAt) : Number.NaN;
+    if (cached && Number.isFinite(fetchedAt) && Date.now() - fetchedAt < CORP_CODE_TTL_MS) {
+      const byStockCode = new Map<string, string>();
+      for (const pair of cached.pairs) {
+        const [stock, corp] = pair.split(":");
+        if (stock && corp) byStockCode.set(stock, corp);
+      }
+      return { byStockCode, totalEntries: cached.totalEntries, listedEntries: byStockCode.size, error: null, timing: zero, fromCache: true };
+    }
+  }
+
+  const startedAt = Date.now();
+  const res = await fetch(`${DART_BASE}/corpCode.xml?crtfc_key=${key}`, {
+    signal: AbortSignal.timeout(CORP_CODE_TIMEOUT_MS),
+  }).catch((error: unknown) => ({ ok: false, status: 0, error }) as const);
+  if (!("arrayBuffer" in res)) {
+    const elapsed = Date.now() - startedAt;
+    return empty(`corpCode.xml 요청 실패(${elapsed}ms): ${String((res as { error?: unknown }).error)}`, { ...zero, fetchMs: elapsed });
+  }
+  if (!res.ok) return empty(`corpCode.xml HTTP ${res.status}`, { ...zero, fetchMs: Date.now() - startedAt });
   const buffer = new Uint8Array(await res.arrayBuffer());
+  const fetchMs = Date.now() - startedAt;
+
+  const unzipAt = Date.now();
   const unzipped = unzipSingleEntry(buffer);
+  const unzipMs = Date.now() - unzipAt;
   if ("error" in unzipped) {
     // ZIP 이 아니면 대개 에러 XML 이다 — 본문을 남겨 원인을 보이게 한다.
-    return empty(`${unzipped.error} / head="${new TextDecoder().decode(buffer.subarray(0, 160))}"`);
+    return empty(`${unzipped.error} / head="${new TextDecoder().decode(buffer.subarray(0, 160))}"`, { fetchMs, unzipMs, parseMs: 0 });
   }
+
+  const parseAt = Date.now();
   const byStockCode = new Map<string, string>();
   let totalEntries = 0;
   for (const match of unzipped.xml.matchAll(/<list>([\s\S]*?)<\/list>/g)) {
@@ -124,7 +178,17 @@ export async function fetchCorpCodeMap(key: string): Promise<CorpCodeMap> {
     const stock = block.match(/<stock_code>([^<]*)<\/stock_code>/)?.[1]?.trim();
     if (corp && stock && /^\d{6}$/.test(stock)) byStockCode.set(stock, corp);
   }
-  return { byStockCode, totalEntries, listedEntries: byStockCode.size, error: null };
+  const parseMs = Date.now() - parseAt;
+
+  if (byStockCode.size > 0) {
+    const payload: CachedCorpCodeMap = {
+      fetchedAt: new Date().toISOString(),
+      totalEntries,
+      pairs: [...byStockCode].map(([stock, corp]) => `${stock}:${corp}`),
+    };
+    await writeFeedContent(CORP_CODE_CACHE_KEY, payload).catch(() => undefined);
+  }
+  return { byStockCode, totalEntries, listedEntries: byStockCode.size, error: null, timing: { fetchMs, unzipMs, parseMs }, fromCache: false };
 }
 
 export interface DartDiscoveryResult {
@@ -133,7 +197,7 @@ export interface DartDiscoveryResult {
   stockCode: string;
   corpCode: string | null;
   /** 매핑 파일 통계 — 확보율을 세기 전에 매핑이 열렸는지부터 보인다. */
-  corpCodeMap: { totalEntries: number; listedEntries: number; error: string | null };
+  corpCodeMap: { totalEntries: number; listedEntries: number; error: string | null; fromCache: boolean; timing: { fetchMs: number; unzipMs: number; parseMs: number } };
   dumps: DartDump[];
   note: string;
 }
@@ -141,18 +205,18 @@ export interface DartDiscoveryResult {
 /** 정기보고서 코드 — 1분기 / 반기 / 3분기 / 사업보고서. */
 const REPORT_CODES = { Q1: "11013", H1: "11012", Q3: "11014", FY: "11011" } as const;
 
-export async function discoverDartStructure(stockCode = "185750"): Promise<DartDiscoveryResult> {
+export async function discoverDartStructure(stockCode = "185750", options: { refresh?: boolean } = {}): Promise<DartDiscoveryResult> {
   const key = dartKey();
   const probedAt = new Date().toISOString();
   const note = "판정하지 않는다. 확보율·파서는 이 덤프를 근거로 그 다음에 만든다(WO-SUB-00 규칙).";
   if (!key) {
-    return { probedAt, keyPresent: false, stockCode, corpCode: null, corpCodeMap: { totalEntries: 0, listedEntries: 0, error: "DART_API_KEY 없음" }, dumps: [], note };
+    return { probedAt, keyPresent: false, stockCode, corpCode: null, corpCodeMap: { totalEntries: 0, listedEntries: 0, error: "DART_API_KEY 없음", fromCache: false, timing: { fetchMs: 0, unzipMs: 0, parseMs: 0 } }, dumps: [], note };
   }
 
   const year = new Date().getUTCFullYear() - 1;
   const dumps: DartDump[] = [];
   // 1) corp_code 매핑 — 이것이 열리지 않으면 나머지는 의미가 없다.
-  const map = await fetchCorpCodeMap(key);
+  const map = await fetchCorpCodeMap(key, options);
   const corpCode = map.byStockCode.get(stockCode) ?? null;
   // 2) 공시 목록 — rcept_no·rcept_dt 가 filed_at 의 근거다.
   //    corp_code 를 넣으면 기간 제한(3개월)이 풀린다(실측: 없으면 status 100).
@@ -185,7 +249,7 @@ export async function discoverDartStructure(stockCode = "185750"): Promise<DartD
     keyPresent: true,
     stockCode,
     corpCode,
-    corpCodeMap: { totalEntries: map.totalEntries, listedEntries: map.listedEntries, error: map.error },
+    corpCodeMap: { totalEntries: map.totalEntries, listedEntries: map.listedEntries, error: map.error, fromCache: map.fromCache, timing: map.timing },
     dumps,
     note,
   };
