@@ -44,6 +44,14 @@ export interface CallAiResult {
   status: number;
   model: string;
   retryAfterMs?: number;
+  /**
+   * 실패 응답 본문(앞부분). **429 진단에 필요하다** — 분당 토큰 한도(TPM)와 일일 쿼터(TPD)가
+   * 같은 상태 코드로 오고, 어느 쪽인지는 본문에만 있다. 이걸 버리면 페이싱 조정이 추측이 된다
+   * (WO-SUB-03.5 PART B-2: "진단 없이 페이싱 파라미터를 계속 조정하는 것은 추측이다").
+   */
+  errorBody?: string;
+  /** 레이트리밋 헤더 — 남은 한도와 리셋 시각. 제공자가 주는 경우만. */
+  rateLimit?: Record<string, string>;
 }
 
 interface LlmResponse {
@@ -167,13 +175,26 @@ export async function callAI(opts: CallAiOptions): Promise<CallAiResult> {
       signal: AbortSignal.timeout(opts.timeoutMs ?? 25_000),
     });
     result.status = res.status;
+    // 레이트리밋 헤더는 **성공 응답에도 온다.** 실패할 때만 읽으면 한도를 알기 위해 일부러 실패시켜야 한다.
+    const rateLimit: Record<string, string> = {};
+    res.headers.forEach((value, name) => {
+      if (/^x-ratelimit|^retry-after$/i.test(name)) rateLimit[name.toLowerCase()] = value;
+    });
+    if (Object.keys(rateLimit).length > 0) result.rateLimit = rateLimit;
     if (!res.ok) {
       const retryAfterSeconds = Number.parseFloat(res.headers.get("retry-after") ?? "");
       if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
         result.retryAfterMs = Math.round(retryAfterSeconds * 1_000);
       }
-      console.warn(`[ai-client] ${opts.trace ?? "call"} HTTP ${res.status}`);
-      finishTrace({ ok: false, status: res.status });
+      // 실패 원인을 호출부가 판정할 수 있게 본문과 레이트리밋 헤더를 남긴다.
+      // 본문 읽기가 실패해도 호출 자체를 실패로 만들지 않는다(fail-open 유지).
+      result.errorBody = await res.text().catch(() => "");
+      console.warn(
+        `[ai-client] ${opts.trace ?? "call"} HTTP ${res.status}` +
+          (result.errorBody ? ` body=${result.errorBody.slice(0, 300)}` : "") +
+          (result.rateLimit ? ` limits=${JSON.stringify(result.rateLimit)}` : "")
+      );
+      finishTrace({ ok: false, status: res.status, error: result.errorBody });
       return result;
     }
     const data = (await res.json()) as LlmResponse;

@@ -29,9 +29,41 @@ const RATE_LIMIT_RETRIES = 4;
 let lastCallAt = 0;
 /** 직렬화 큐 — 병렬 호출이 간격을 우회하지 못하게 한다. */
 let callChain: Promise<unknown> = Promise.resolve();
+/**
+ * 제공자가 알려준 남은 토큰과 리셋 시각. **고정 간격만으로는 부족하다** —
+ * 실측: 6초 간격에서도 일부 종목이 429 를 받았다(호출 크기가 종목마다 달라 분당 소비가 균일하지 않다).
+ * 이제 `x-ratelimit-*` 를 캡처하므로 **남은 양을 보고 기다린다**(추측 아님, 제공자 값 기준).
+ */
+let remainingTokens: number | null = null;
+let resetTokensMs = 0;
+/** 이 밑으로 남으면 리셋을 기다린다 — 큰 합성 호출 하나를 감당할 여유. */
+const TOKEN_FLOOR = 2_500;
+
+/** "3.165s" · "2m52.8s" → ms. 파싱 실패는 0(대기하지 않음). */
+export function parseResetDuration(text: string | undefined): number {
+  if (!text) return 0;
+  const match = text.match(/(?:(\d+(?:\.\d+)?)m)?\s*(?:(\d+(?:\.\d+)?)s)?/);
+  if (!match) return 0;
+  const minutes = Number.parseFloat(match[1] ?? "0") || 0;
+  const seconds = Number.parseFloat(match[2] ?? "0") || 0;
+  return Math.round((minutes * 60 + seconds) * 1_000);
+}
+
+function noteRateLimit(rateLimit: Record<string, string> | undefined): void {
+  if (!rateLimit) return;
+  const remaining = Number.parseInt(rateLimit["x-ratelimit-remaining-tokens"] ?? "", 10);
+  if (Number.isFinite(remaining)) remainingTokens = remaining;
+  const reset = parseResetDuration(rateLimit["x-ratelimit-reset-tokens"]);
+  if (reset > 0) resetTokensMs = reset;
+}
 
 async function paced<T>(run: () => Promise<T>): Promise<T> {
   const task = callChain.then(async () => {
+    // 남은 토큰이 바닥이면 리셋까지 기다린다. 제공자가 준 값이라 추측이 아니다.
+    if (remainingTokens !== null && remainingTokens < TOKEN_FLOOR && resetTokensMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, resetTokensMs + 500));
+      remainingTokens = null;
+    }
     const wait = MIN_CALL_INTERVAL_MS - (Date.now() - lastCallAt);
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
     lastCallAt = Date.now();
@@ -44,11 +76,15 @@ async function paced<T>(run: () => Promise<T>): Promise<T> {
 /** 429·5xx 는 백오프 재시도. 그 외 실패는 그대로 돌려준다(무한 재시도 금지). */
 async function callWithRetry(options: Parameters<typeof callAI>[0]): Promise<Awaited<ReturnType<typeof callAI>>> {
   let last = await paced(() => callAI(options));
+  noteRateLimit(last.rateLimit);
   for (let attempt = 1; attempt <= RATE_LIMIT_RETRIES; attempt += 1) {
     if (last.ok) return last;
     if (last.status !== 429 && last.status < 500) return last;
-    await new Promise((resolve) => setTimeout(resolve, 4_000 * attempt));
+    // 429 면 제공자가 준 리셋 시각을 우선 쓴다(retry-after → reset-tokens → 백오프).
+    const wait = last.retryAfterMs ?? parseResetDuration(last.rateLimit?.["x-ratelimit-reset-tokens"]) ?? 0;
+    await new Promise((resolve) => setTimeout(resolve, Math.max(wait, 4_000 * attempt) + 500));
     last = await paced(() => callAI(options));
+    noteRateLimit(last.rateLimit);
   }
   return last;
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-28T19:58:28.208Z",
+  "generatedAt": "2026-07-29T12:02:04.345Z",
   "variableFailures": [],
   "rows": [
     {
@@ -9,18 +9,18 @@
       "context": {
         "canonical": "CLBK",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:39:38.046Z",
+        "synthesized_at": "2026-07-29T11:41:08.014Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "",
         "slot1_revenue_source": null,
         "slot2_dependency": null,
         "slot3_dependency_state": null,
         "badge": "없음",
-        "insufficient_reason": "sec: 최근 연간보고서(10-K/20-F/40-F) 없음(recent + 과거 파일 0개 조회)",
+        "insufficient_reason": "sec: 섹션 추출 실패 — 유효 구간 없음(Item1 4곳 / Item1A 3곳)",
         "documents": [],
         "cited_chunks": [],
         "errors": [
-          "sec: 최근 연간보고서(10-K/20-F/40-F) 없음(recent + 과거 파일 0개 조회)"
+          "sec: 섹션 추출 실패 — 유효 구간 없음(Item1 4곳 / Item1A 3곳)"
         ]
       }
     },
@@ -31,14 +31,14 @@
       "context": {
         "canonical": "RBKB",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:40:19.824Z",
+        "synthesized_at": "2026-07-29T11:41:09.764Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
         "slot2_dependency": null,
         "slot3_dependency_state": null,
         "badge": "없음",
-        "insufficient_reason": "근거를 갖춘 문장을 만들지 못했습니다.",
+        "insufficient_reason": "공시 문서에 수익 구조나 매출 관련 정보가不存在합니다.",
         "documents": [
           {
             "doc_id": "sec:RBKB:000175178326000005",
@@ -46,15 +46,14 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1751783/000175178326000005/rbkb-20251231x10k.htm",
             "as_of": "2026-03-13",
-            "fetched_at": "2026-07-28T19:39:38.543Z",
+            "fetched_at": "2026-07-29T11:41:09.046Z",
             "snapshot_hash": "41f9f76c32716c8f",
             "chars": 126745
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "chunk: 예산 초과로 98개 제외(총 122개)",
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 120개 제외(총 122개)"
         ]
       }
     },
@@ -65,14 +64,22 @@
       "context": {
         "canonical": "BYRN",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:41:03.284Z",
+        "synthesized_at": "2026-07-29T11:41:27.715Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
-        "slot1_revenue_source": null,
+        "slot1_revenue_source": {
+          "text": "소비자 및 전문 보안 고객을 위한 개인용 보안 장치 판매",
+          "source_ids": [
+            "sec:BYRN:000143774926003206#2",
+            "sec:BYRN:000143774926003206#5"
+          ],
+          "kind": "disclosure",
+          "verified": true
+        },
         "slot2_dependency": null,
         "slot3_dependency_state": null,
-        "badge": "없음",
-        "insufficient_reason": "근거를 갖춘 문장을 만들지 못했습니다.",
+        "badge": "낮음",
+        "insufficient_reason": null,
         "documents": [
           {
             "doc_id": "sec:BYRN:000143774926003206",
@@ -80,15 +87,30 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1354866/000143774926003206/byrn20251130_10k.htm",
             "as_of": "2026-02-05",
-            "fetched_at": "2026-07-28T19:40:20.855Z",
+            "fetched_at": "2026-07-29T11:41:10.498Z",
             "snapshot_hash": "ab1b6ebef949417a",
             "chars": 29577
           }
         ],
-        "cited_chunks": [],
+        "cited_chunks": [
+          {
+            "source_id": "sec:BYRN:000143774926003206#2",
+            "doc_id": "sec:BYRN:000143774926003206",
+            "chunk_index": 2,
+            "kind": "disclosure",
+            "text": "handheld personal security devices and shoulder-fired launchers designed for use by consumers and professional security customers without the need for a background check or firearms license in most U.S. jurisdictions;"
+          },
+          {
+            "source_id": "sec:BYRN:000143774926003206#5",
+            "doc_id": "sec:BYRN:000143774926003206",
+            "chunk_index": 5,
+            "kind": "disclosure",
+            "text": "Our products are sold in both the consumer and security professional markets. In the consumer market, our solutions are designed to provide ordinary civilians with an effective, less-lethal tool to disable, disarm and deter would-be assailants and to escape harm s way. In the professional market, our products are designed to provide domestic and international law enforcement agencies, corrections and custodial officers, private security professionals, private investigators and other professional security users with a practical, less-lethal option to address threats and resolve conflicts without the need to resort to lethal force. Our products can be purchased in most U.S. locations quickly, simply and discreetly, generally without the requirement for a license, background check or waiting period, subject to applicable state and local laws."
+          }
+        ],
         "errors": [
-          "chunk: 예산 초과로 11개 제외(총 53개)",
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 47개 제외(총 53개)",
+          "slot2: 근거 미지지 — 폐기(미국 법률 및 규제)"
         ]
       }
     },
@@ -99,7 +121,7 @@
       "context": {
         "canonical": "GLOO",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:41:04.272Z",
+        "synthesized_at": "2026-07-29T11:41:29.512Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "",
         "slot1_revenue_source": null,
@@ -121,7 +143,7 @@
       "context": {
         "canonical": "CRWV",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:41:46.800Z",
+        "synthesized_at": "2026-07-29T11:42:15.948Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -136,15 +158,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1769628/000176962826000104/crwv-20251231.htm",
             "as_of": "2026-03-02",
-            "fetched_at": "2026-07-28T19:41:04.720Z",
+            "fetched_at": "2026-07-29T11:41:30.055Z",
             "snapshot_hash": "bc187c22f1b0ce21",
             "chars": 39622
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "chunk: 예산 초과로 15개 제외(총 35개)",
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 33개 제외(총 35개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -155,7 +177,7 @@
       "context": {
         "canonical": "SHOP",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:42:30.121Z",
+        "synthesized_at": "2026-07-29T11:43:04.534Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -170,14 +192,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1594805/000159480526000007/shop-20251231.htm",
             "as_of": "2026-02-11",
-            "fetched_at": "2026-07-28T19:41:47.772Z",
+            "fetched_at": "2026-07-29T11:42:16.906Z",
             "snapshot_hash": "c7166f449e0db3ff",
             "chars": 21611
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 17개 제외(총 20개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -188,7 +211,7 @@
       "context": {
         "canonical": "MU",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:43:13.401Z",
+        "synthesized_at": "2026-07-29T11:43:53.132Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -203,15 +226,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/723125/000072312525000028/mu-20250828.htm",
             "as_of": "2025-10-03",
-            "fetched_at": "2026-07-28T19:42:30.734Z",
+            "fetched_at": "2026-07-29T11:43:05.544Z",
             "snapshot_hash": "6b265a2074e8a721",
             "chars": 47313
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "chunk: 예산 초과로 31개 제외(총 78개)",
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 73개 제외(총 78개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -222,7 +245,7 @@
       "context": {
         "canonical": "NUE",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:43:14.972Z",
+        "synthesized_at": "2026-07-29T11:43:54.432Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "",
         "slot1_revenue_source": null,
@@ -244,7 +267,7 @@
       "context": {
         "canonical": "VLO",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:43:15.564Z",
+        "synthesized_at": "2026-07-29T11:43:55.242Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "",
         "slot1_revenue_source": null,
@@ -266,7 +289,7 @@
       "context": {
         "canonical": "MATX",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:43:58.202Z",
+        "synthesized_at": "2026-07-29T11:44:41.699Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -281,15 +304,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/3453/000110465926020944/matx-20251231x10k.htm",
             "as_of": "2026-02-27",
-            "fetched_at": "2026-07-28T19:43:16.899Z",
+            "fetched_at": "2026-07-29T11:43:56.148Z",
             "snapshot_hash": "891ab76591f287dc",
             "chars": 42836
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "chunk: 예산 초과로 31개 제외(총 83개)",
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 78개 제외(총 83개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -300,7 +323,7 @@
       "context": {
         "canonical": "IBM",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:44:41.404Z",
+        "synthesized_at": "2026-07-29T11:46:39.140Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -315,14 +338,16 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/51143/000005114326000010/ibm-20251231.htm",
             "as_of": "2026-02-24",
-            "fetched_at": "2026-07-28T19:43:58.804Z",
+            "fetched_at": "2026-07-29T11:44:42.430Z",
             "snapshot_hash": "4610f2f5c4487e39",
             "chars": 8029
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 5개 제외(총 7개)",
+          "slot1: 검증 판정 불가 — 폐기",
+          "slot2: 검증 판정 불가 — 폐기"
         ]
       }
     },
@@ -333,7 +358,7 @@
       "context": {
         "canonical": "ELV",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:45:24.879Z",
+        "synthesized_at": "2026-07-29T11:47:27.728Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -348,14 +373,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1156039/000115603926000013/elv-20251231.htm",
             "as_of": "2026-02-06",
-            "fetched_at": "2026-07-28T19:44:42.859Z",
+            "fetched_at": "2026-07-29T11:46:40.920Z",
             "snapshot_hash": "2ff06bea6a7a4d80",
             "chars": 8998
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 5개 제외(총 8개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -366,7 +392,7 @@
       "context": {
         "canonical": "ADBE",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:46:08.466Z",
+        "synthesized_at": "2026-07-29T11:48:16.329Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -381,15 +407,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/796343/000079634326000003/adbe-20251128.htm",
             "as_of": "2026-01-15",
-            "fetched_at": "2026-07-28T19:45:25.481Z",
+            "fetched_at": "2026-07-29T11:47:28.710Z",
             "snapshot_hash": "fa738f4721f145a9",
             "chars": 63432
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "chunk: 예산 초과로 38개 제외(총 59개)",
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 56개 제외(총 59개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -400,7 +426,7 @@
       "context": {
         "canonical": "DELL",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:46:51.929Z",
+        "synthesized_at": "2026-07-29T11:49:04.895Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -415,14 +441,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1571996/000157199626000008/dell-20260130.htm",
             "as_of": "2026-03-16",
-            "fetched_at": "2026-07-28T19:46:09.830Z",
+            "fetched_at": "2026-07-29T11:48:17.315Z",
             "snapshot_hash": "e1bef196270fb6f0",
             "chars": 17727
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 30개 제외(총 36개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -433,7 +460,7 @@
       "context": {
         "canonical": "ABNB",
         "market": "US",
-        "synthesized_at": "2026-07-28T19:47:35.436Z",
+        "synthesized_at": "2026-07-29T11:49:53.844Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -448,14 +475,15 @@
             "source": "sec_10k",
             "url": "https://www.sec.gov/Archives/edgar/data/1559720/000155972026000004/abnb-20251231.htm",
             "as_of": "2026-02-12",
-            "fetched_at": "2026-07-28T19:46:53.324Z",
+            "fetched_at": "2026-07-29T11:49:05.718Z",
             "snapshot_hash": "6eb52e40a233e8ce",
             "chars": 16047
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "chunk: 예산 초과로 28개 제외(총 33개)",
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -466,7 +494,7 @@
       "context": {
         "canonical": "185750",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:48:18.934Z",
+        "synthesized_at": "2026-07-29T11:50:42.608Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -481,14 +509,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/185750/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:47:35.437Z",
+            "fetched_at": "2026-07-29T11:49:53.844Z",
             "snapshot_hash": "a4f093f9ac56f2dc",
             "chars": 204
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -499,7 +527,7 @@
       "context": {
         "canonical": "000660",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:49:02.289Z",
+        "synthesized_at": "2026-07-29T11:51:31.362Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -514,14 +542,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/000660/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:48:18.934Z",
+            "fetched_at": "2026-07-29T11:50:42.608Z",
             "snapshot_hash": "51a8ce03db8f945b",
             "chars": 222
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -532,7 +560,7 @@
       "context": {
         "canonical": "005490",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:49:45.632Z",
+        "synthesized_at": "2026-07-29T11:52:20.123Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -547,14 +575,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/005490/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:49:02.289Z",
+            "fetched_at": "2026-07-29T11:51:31.362Z",
             "snapshot_hash": "200d4fafb4bab118",
             "chars": 231
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -565,7 +593,7 @@
       "context": {
         "canonical": "011200",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:50:28.969Z",
+        "synthesized_at": "2026-07-29T11:53:08.881Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -580,14 +608,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/011200/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:49:45.632Z",
+            "fetched_at": "2026-07-29T11:52:20.124Z",
             "snapshot_hash": "725686f3047a3de4",
             "chars": 237
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -598,7 +626,7 @@
       "context": {
         "canonical": "015760",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:51:12.312Z",
+        "synthesized_at": "2026-07-29T11:53:57.643Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -613,14 +641,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/015760/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:50:28.969Z",
+            "fetched_at": "2026-07-29T11:53:08.881Z",
             "snapshot_hash": "489032a405b97e17",
             "chars": 222
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -631,7 +659,7 @@
       "context": {
         "canonical": "105560",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:51:55.710Z",
+        "synthesized_at": "2026-07-29T11:54:46.211Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -646,14 +674,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/105560/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:51:12.312Z",
+            "fetched_at": "2026-07-29T11:53:57.643Z",
             "snapshot_hash": "e88e9e53622a12c1",
             "chars": 241
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -664,7 +692,7 @@
       "context": {
         "canonical": "000100",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:52:38.984Z",
+        "synthesized_at": "2026-07-29T11:55:34.809Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -679,14 +707,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/000100/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:51:55.710Z",
+            "fetched_at": "2026-07-29T11:54:46.211Z",
             "snapshot_hash": "c7093402c62e2ab8",
             "chars": 232
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -697,7 +725,7 @@
       "context": {
         "canonical": "012450",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:53:22.343Z",
+        "synthesized_at": "2026-07-29T11:56:23.393Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -712,14 +740,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/012450/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:52:38.984Z",
+            "fetched_at": "2026-07-29T11:55:34.809Z",
             "snapshot_hash": "a4a1c50d60f43340",
             "chars": 236
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -730,7 +758,7 @@
       "context": {
         "canonical": "051910",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:54:05.545Z",
+        "synthesized_at": "2026-07-29T11:57:12.153Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -745,14 +773,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/051910/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:53:22.343Z",
+            "fetched_at": "2026-07-29T11:56:23.394Z",
             "snapshot_hash": "e1f9a2d371061b7e",
             "chars": 241
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -763,14 +791,14 @@
       "context": {
         "canonical": "010950",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:54:51.634Z",
+        "synthesized_at": "2026-07-29T11:58:00.911Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
         "slot2_dependency": null,
         "slot3_dependency_state": null,
         "badge": "없음",
-        "insufficient_reason": "관련 정보가不存在",
+        "insufficient_reason": "근거를 갖춘 문장을 만들지 못했습니다.",
         "documents": [
           {
             "doc_id": "naver:010950:corporationSummary",
@@ -778,14 +806,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/010950/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:54:05.545Z",
+            "fetched_at": "2026-07-29T11:57:12.153Z",
             "snapshot_hash": "bf00082490e662a1",
             "chars": 204
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "slot1: 검증 판정 불가 — 폐기"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -796,7 +824,7 @@
       "context": {
         "canonical": "035420",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:55:34.991Z",
+        "synthesized_at": "2026-07-29T11:58:49.673Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -811,14 +839,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/035420/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:54:51.634Z",
+            "fetched_at": "2026-07-29T11:58:00.911Z",
             "snapshot_hash": "40dea160d2574f2c",
             "chars": 203
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -829,7 +857,7 @@
       "context": {
         "canonical": "069620",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:56:18.191Z",
+        "synthesized_at": "2026-07-29T11:59:38.429Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -844,14 +872,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/069620/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:55:34.992Z",
+            "fetched_at": "2026-07-29T11:58:49.673Z",
             "snapshot_hash": "5ef6b48966b00125",
             "chars": 225
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -862,7 +890,7 @@
       "context": {
         "canonical": "103140",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:57:01.667Z",
+        "synthesized_at": "2026-07-29T12:00:27.189Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -877,14 +905,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/103140/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:56:18.191Z",
+            "fetched_at": "2026-07-29T11:59:38.429Z",
             "snapshot_hash": "6f31f34f3eae3e40",
             "chars": 233
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -895,7 +923,7 @@
       "context": {
         "canonical": "298540",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:57:45.012Z",
+        "synthesized_at": "2026-07-29T12:01:15.758Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -910,14 +938,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/298540/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:57:01.667Z",
+            "fetched_at": "2026-07-29T12:00:27.189Z",
             "snapshot_hash": "58c3fad2cce32ade",
             "chars": 214
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     },
@@ -928,7 +956,7 @@
       "context": {
         "canonical": "477850",
         "market": "KR",
-        "synthesized_at": "2026-07-28T19:58:28.207Z",
+        "synthesized_at": "2026-07-29T12:02:04.344Z",
         "prompt_version": "3b4e0acdcc5bf266+f27b78f006252451",
         "model": "llama-3.3-70b-versatile",
         "slot1_revenue_source": null,
@@ -943,14 +971,14 @@
             "source": "naver_corporation_summary",
             "url": "https://m.stock.naver.com/api/stock/477850/finance/quarter",
             "as_of": null,
-            "fetched_at": "2026-07-28T19:57:45.012Z",
+            "fetched_at": "2026-07-29T12:01:15.759Z",
             "snapshot_hash": "17f165521b720d7f",
             "chars": 241
           }
         ],
         "cited_chunks": [],
         "errors": [
-          "ai: 합성 호출 실패(429)"
+          "ai: 합성 호출 실패(429) — 토큰 한도(TPM/TPD 구분 불가)"
         ]
       }
     }
