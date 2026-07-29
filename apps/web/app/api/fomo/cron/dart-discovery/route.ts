@@ -26,9 +26,12 @@ export async function GET(request: Request) {
   if (!authorized(request)) {
     return withCors(NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 }));
   }
-  const code = new URL(request.url).searchParams.get("code")?.trim() || "185750";
+  const params = new URL(request.url).searchParams;
+  const code = params.get("code")?.trim() || "185750";
+  // 매핑 파일은 캐시한다(10만 행 ZIP, DART 전송이 느리다). `refresh=1` 로만 다시 받는다.
+  const refresh = params.get("refresh") === "1";
   try {
-    const result = await discoverDartStructure(code);
+    const result = await discoverDartStructure(code, { refresh });
     return withCors(NextResponse.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } }));
   } catch (error) {
     return withCors(
