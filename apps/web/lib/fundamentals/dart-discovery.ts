@@ -1,146 +1,18 @@
-/**
- * DART 응답 구조 덤프 (WO-SUB-00 규칙: **확보율을 세기 전에 구조를 먼저 덤프해 근거를 만든다**).
- *
- * `DART_API_KEY` 는 **Vercel 런타임에만** 있다(GH Actions Secrets·로컬에 없음).
- * 그래서 이 코드는 크론 라우트로 노출해 프로덕션 런타임에서 돌린다 —
- * 키를 읽을 수 없는 것과 키를 쓸 수 없는 것은 다르다.
- *
- * **판정하지 않는다.** 확보율·파서는 이 덤프를 근거로 그 다음에 만든다.
- *
- * ## corp_code 매핑을 zip 없이 얻는 방법
- *
- * `fnlttSinglAcnt*` 는 8자리 `corp_code` 를 요구하고, 공식 매핑은 `corpCode.xml`(ZIP)이다.
- * 런타임에서 zip 을 풀지 않고도 얻을 수 있다 — `list.json` 응답의 각 행이
- * `corp_code` 와 `stock_code` 를 **함께** 준다. 정기공시(`pblntf_ty=A`)를 조회해 종목코드로 찾으면 된다.
- */
-
 import { inflateRawSync } from "node:zlib";
 import { readFeedContent, writeFeedContent } from "../feed-content-store";
 
+/**
+ * DART `corp_code` 매핑.
+ *
+ * 원래 이 파일은 구조 덤프 라우트(`/api/fomo/cron/dart-discovery`)의 본체였다. 그 라우트는
+ * **역할을 마쳐서 제거했다** — 인증 없이 호출되는 경로를 남겨 두면 외부에서 반복 호출해
+ * DART 쿼터를 태울 수 있다. 덤프 결과는 `docs/fundamentals/DUMP_dart_structure.md` 에 있고,
+ * 재현이 필요하면 그 문서의 요청 목록을 쓰면 된다.
+ *
+ * 남긴 것은 어댑터가 계속 쓰는 매핑 하나다.
+ */
+
 const DART_BASE = "https://opendart.fss.or.kr/api";
-const TIMEOUT_MS = 20_000;
-
-function dartKey(): string | undefined {
-  return process.env.DART_API_KEY || process.env.DART_CRTFC_KEY;
-}
-
-export interface DartDump {
-  endpoint: string;
-  url: string;
-  status: number | string;
-  contentType: string | null;
-  bytes: number;
-  /** JSON 이면 구조, 아니면 앞부분 문자열. 추측하지 않고 온 것을 그대로 남긴다. */
-  shape: unknown;
-}
-
-async function probe(endpoint: string, url: string): Promise<DartDump> {
-  try {
-    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-    const buffer = new Uint8Array(await res.arrayBuffer());
-    const text = new TextDecoder().decode(buffer);
-    let shape: unknown;
-    try {
-      const json = JSON.parse(text) as Record<string, unknown>;
-      const list = json.list;
-      shape = {
-        topKeys: Object.keys(json),
-        status: json.status,
-        message: json.message,
-        listLength: Array.isArray(list) ? list.length : null,
-        firstRowKeys: Array.isArray(list) && list[0] && typeof list[0] === "object" ? Object.keys(list[0] as object) : null,
-        firstRow: Array.isArray(list) ? list[0] : null,
-        // 재무제표 응답은 계정명이 핵심이다 — 어떤 계정이 오는지 그대로 뽑는다.
-        accountNames: Array.isArray(list)
-          ? [...new Set(list.map((row) => (row as { account_nm?: string }).account_nm).filter(Boolean))].slice(0, 60)
-          : null,
-        /**
-         * 재무제표 구분(`sj_div`) 전수 — **60계정 컷과 무관하게 센다.**
-         * `CF`(현금흐름표) 유무가 02R 의 자격 판정 입력이므로, 계정 목록이 잘려서
-         * "확인 못 함" 이 되는 상황을 없앤다.
-         */
-        statementCensus: Array.isArray(list)
-          ? Object.entries(
-              list.reduce<Record<string, number>>((acc, row) => {
-                const div = (row as { sj_div?: string }).sj_div ?? "?";
-                acc[div] = (acc[div] ?? 0) + 1;
-                return acc;
-              }, {})
-            )
-              .sort()
-              .map(([div, count]) => `${div}=${count}`)
-          : null,
-        /**
-         * `account_id` ↔ `account_nm` 쌍 전수.
-         *
-         * **매핑 파일을 이 덤프 없이 쓰면 추측 파서다**(WO-SUB-00 규칙). 표준 계정 ID 를
-         * 외부 지식으로 적어 넣는 것과, 이 응답이 실제로 준 값을 적는 것은 다르다.
-         * `-표준계정아님` 표시는 확장 계정(회사 고유)이라 매핑에 쓸 수 없다는 뜻이다.
-         */
-        accountIdPairs: Array.isArray(list)
-          ? [
-              ...new Set(
-                list
-                  .filter((row) => typeof (row as { account_id?: string }).account_id === "string")
-                  .map((row) => {
-                    const cast = row as { sj_div?: string; account_id?: string; account_nm?: string };
-                    return `${cast.sj_div}|${cast.account_id}|${cast.account_nm}`;
-                  })
-              ),
-            ]
-          : null,
-        /**
-         * 손익 주요 행의 기간 표기와 금액.
-         *
-         * **분기보고서 손익이 누적인지 3개월치인지 모르는 채 TTM 을 구성하면 가짜 숫자다.**
-         * Q1·H1·Q3·FY 의 매출액을 나란히 놓으면 확정된다 — H1 ≈ 2×Q1 이면 누적이다.
-         * 전기(`frmtrm`)가 전년 동기인지 전년 연간인지도 여기서 갈린다.
-         */
-        incomeRows: Array.isArray(list)
-          ? list
-              .filter((row) => {
-                const cast = row as { sj_div?: string; account_nm?: string };
-                return cast.sj_div === "IS" && ["매출액", "영업이익", "영업이익(손실)", "당기순이익", "당기순이익(손실)"].includes(cast.account_nm ?? "");
-              })
-              .map((row) => {
-                const cast = row as Record<string, string | undefined>;
-                return {
-                  account_nm: cast.account_nm,
-                  thstrm_nm: cast.thstrm_nm,
-                  thstrm_dt: cast.thstrm_dt,
-                  thstrm_amount: cast.thstrm_amount,
-                  frmtrm_nm: cast.frmtrm_nm,
-                  frmtrm_amount: cast.frmtrm_amount,
-                };
-              })
-          : null,
-        /** CF 로 확인된 계정명 — 런웨이·FCF 계산 가능성을 눈으로 본다. */
-        cashFlowAccounts: Array.isArray(list)
-          ? [
-              ...new Set(
-                list
-                  .filter((row) => (row as { sj_div?: string }).sj_div === "CF")
-                  .map((row) => (row as { account_nm?: string }).account_nm)
-                  .filter(Boolean)
-              ),
-            ]
-          : null,
-      };
-    } catch {
-      shape = { notJson: true, head: text.slice(0, 200) };
-    }
-    return { endpoint, url: url.replace(/crtfc_key=[^&]+/, "crtfc_key=***"), status: res.status, contentType: res.headers.get("content-type"), bytes: buffer.byteLength, shape };
-  } catch (error) {
-    return {
-      endpoint,
-      url: url.replace(/crtfc_key=[^&]+/, "crtfc_key=***"),
-      status: error instanceof Error ? error.name : "error",
-      contentType: null,
-      bytes: 0,
-      shape: { error: error instanceof Error ? error.message : String(error) },
-    };
-  }
-}
 
 /**
  * `corpCode.xml` ZIP 의 첫(유일) 엔트리를 푼다.
@@ -260,74 +132,4 @@ export async function fetchCorpCodeMap(key: string, options: { refresh?: boolean
     await writeFeedContent(CORP_CODE_CACHE_KEY, payload).catch(() => undefined);
   }
   return { byStockCode, totalEntries, listedEntries: byStockCode.size, error: null, timing: { fetchMs, unzipMs, parseMs }, fromCache: false };
-}
-
-export interface DartDiscoveryResult {
-  probedAt: string;
-  keyPresent: boolean;
-  stockCode: string;
-  corpCode: string | null;
-  /** 매핑 파일 통계 — 확보율을 세기 전에 매핑이 열렸는지부터 보인다. */
-  corpCodeMap: { totalEntries: number; listedEntries: number; error: string | null; fromCache: boolean; timing: { fetchMs: number; unzipMs: number; parseMs: number } };
-  dumps: DartDump[];
-  note: string;
-}
-
-/** 정기보고서 코드 — 1분기 / 반기 / 3분기 / 사업보고서. */
-const REPORT_CODES = { Q1: "11013", H1: "11012", Q3: "11014", FY: "11011" } as const;
-
-export async function discoverDartStructure(
-  stockCode = "185750",
-  options: { refresh?: boolean; year?: number } = {}
-): Promise<DartDiscoveryResult> {
-  const key = dartKey();
-  const probedAt = new Date().toISOString();
-  const note = "판정하지 않는다. 확보율·파서는 이 덤프를 근거로 그 다음에 만든다(WO-SUB-00 규칙).";
-  if (!key) {
-    return { probedAt, keyPresent: false, stockCode, corpCode: null, corpCodeMap: { totalEntries: 0, listedEntries: 0, error: "DART_API_KEY 없음", fromCache: false, timing: { fetchMs: 0, unzipMs: 0, parseMs: 0 } }, dumps: [], note };
-  }
-
-  const year = options.year ?? new Date().getUTCFullYear() - 1;
-  const dumps: DartDump[] = [];
-  // 1) corp_code 매핑 — 이것이 열리지 않으면 나머지는 의미가 없다.
-  const map = await fetchCorpCodeMap(key, options);
-  const corpCode = map.byStockCode.get(stockCode) ?? null;
-  // 2) 공시 목록 — rcept_no·rcept_dt 가 filed_at 의 근거다.
-  //    corp_code 를 넣으면 기간 제한(3개월)이 풀린다(실측: 없으면 status 100).
-  dumps.push(
-    await probe(
-      "list.json(정기공시)",
-      `${DART_BASE}/list.json?crtfc_key=${key}${corpCode ? `&corp_code=${corpCode}` : ""}&bgn_de=${year - 1}0101&end_de=${year}1231&pblntf_ty=A&page_count=20`
-    )
-  );
-  if (corpCode) {
-    // 3) 주요계정 — 분기별로 실제로 무엇이 오는지.
-    for (const [label, reprt] of Object.entries(REPORT_CODES)) {
-      dumps.push(
-        await probe(
-          `fnlttSinglAcnt(${label})`,
-          `${DART_BASE}/fnlttSinglAcnt.json?crtfc_key=${key}&corp_code=${corpCode}&bsns_year=${year}&reprt_code=${reprt}`
-        )
-      );
-    }
-    // 4) 전체 재무제표 — 현금흐름·EPS 확보 가능성. CFS 가 013(데이터 없음)으로 오는 것을
-    //    실측했으므로 OFS·전년도까지 같이 찍어 "없다"가 어느 축인지 가른다.
-    for (const [label, params] of [
-      ["fnlttSinglAcntAll(FY,CFS)", `bsns_year=${year}&reprt_code=${REPORT_CODES.FY}&fs_div=CFS`],
-      ["fnlttSinglAcntAll(FY,OFS)", `bsns_year=${year}&reprt_code=${REPORT_CODES.FY}&fs_div=OFS`],
-      ["fnlttSinglAcntAll(전년FY,CFS)", `bsns_year=${year - 1}&reprt_code=${REPORT_CODES.FY}&fs_div=CFS`],
-      ["fnlttSinglAcntAll(Q3,CFS)", `bsns_year=${year}&reprt_code=${REPORT_CODES.Q3}&fs_div=CFS`],
-    ] as const) {
-      dumps.push(await probe(label, `${DART_BASE}/fnlttSinglAcntAll.json?crtfc_key=${key}&corp_code=${corpCode}&${params}`));
-    }
-  }
-  return {
-    probedAt,
-    keyPresent: true,
-    stockCode,
-    corpCode,
-    corpCodeMap: { totalEntries: map.totalEntries, listedEntries: map.listedEntries, error: map.error, fromCache: map.fromCache, timing: map.timing },
-    dumps,
-    note,
-  };
 }

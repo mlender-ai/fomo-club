@@ -3,7 +3,9 @@
 > WO-SUB-00 규칙: **확보율을 세기 전에 응답 구조를 먼저 덤프해 근거를 만든다.** 이 문서는 그 근거다.
 > 여기서는 판정하지 않는다 — 확보율·파서는 이 표를 근거로 그 다음에 만든다.
 >
-> 재현: `GET /api/fomo/cron/dart-discovery?code=185750[&refresh=1]`
+> 재현: 이 문서의 요청 목록을 직접 호출한다. **덤프 라우트는 역할을 마쳐서 제거했다** —
+> 인증 없이 호출되는 경로를 남겨 두면 외부에서 반복 호출해 DART 쿼터를 태울 수 있다.
+> 재사용되는 것은 `corp_code` 매핑(`apps/web/lib/fundamentals/dart-discovery.ts`) 하나다.
 > 표본: 종근당(`185750`, DART `corp_code=00992871`), 사업연도 2025
 
 ## 0. 먼저 정정 — DART 는 막혀 있지 않았다
@@ -140,16 +142,88 @@ thstrm_nm, thstrm_amount, frmtrm_nm, frmtrm_amount, ord, currency
 사용권자산 · 리스부채 · 순확정급여부채 …
 ```
 
-현금흐름표(`sj_div: CF`)가 상위 계정 목록에서는 확인되지 않았다(덤프가 60개로 컷). CF 제공 여부는
-파서 설계 시 `sj_div` 값 집합을 따로 세어 확정한다 — **확인 전까지 현금흐름은 미확보로 취급한다.**
+### 현금흐름표 — 확보 확정
+
+`sj_div` 를 60계정 컷과 무관하게 전수 집계해 확정했다.
+
+```
+2024 FY CFS   BS=57 · CF=32 · CIS=11 · IS=17 · SCE=111
+2025 Q3 CFS   BS=57 · CF=33 · CIS=10 · IS=16 · SCE=90
+```
+
+`CF` 계정에 다음이 있다 — **02R 의 세 유형이 KR 에서 성립한다.**
+
+| 필요 지표 | 계정 | 쓰이는 유형 |
+|---|---|---|
+| 영업현금흐름 | `ifrs-full_CashFlowsFromUsedInOperatingActivities` | `HYPERGROWTH_UNPROFITABLE` · `BIOTECH_PIPELINE` |
+| 기말 현금 | `dart_CashAndCashEquivalentsAtEndOfPeriodCf` | 현금 런웨이 |
+| CapEx | `ifrs-full_PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities` | `MATURE_INCOME`(FCF) |
+| 배당 지급 | `ifrs-full_DividendsPaidClassifiedAsFinancingActivities` | FCF 커버리지 |
+| 이자 지급 | `ifrs-full_InterestPaidClassifiedAsOperatingActivities` | 이자보상 |
+
+**단 조건부다.** CF 는 전체 재무제표에만 있고 그것은 013 으로 빌 수 있다(위 표). 그래서
+`applicable_markets` 를 줄일 필요는 없지만, 결손 정직성(INV-12)이 필수다 — 가장 최근 분기에서
+현금흐름이 빠질 수 있고 그때 이전 분기 값으로 메우면 런웨이가 거짓이 된다.
+
+## 4-2. `013` 은 "데이터 없음" 이 아니다 — 일시적으로도 온다
+
+이것이 이 덤프에서 가장 비싸게 배운 사실이다.
+
+```
+BNK금융지주(138930) 2023 Q1 주요계정
+  1차 호출:  status 000, 34행
+  몇 분 뒤:  status 013 "조회된 데이타가 없습니다"
+같은 시점 list.json(2023 정기공시): status 000, 보고서 9건 — 보고서는 존재한다
+```
+
+문서상 `013` 은 데이터 부재지만 실제로는 일시적 실패로도 온다. 그래서
+
+- **013 을 부재로 단정하기 전에 재시도한다**(최대 2회, 점증 지연).
+- **캐시 TTL 을 비대칭으로 둔다: 성공 30일 / 부재 6시간.** 013 을 30일 부재로 굳히면 그 분기가
+  영구 결손이 된다. 실측에서 밴드 이력이 10분기에서 늘지 않은 원인이 정확히 이것이었고,
+  게다가 "조회 실패 0건" 으로 보고돼 원인이 보이지 않았다.
+- **부재와 실패를 구분해 센다**(`reportCensus {ok, absent, failed}`). 모든 non-000 을 부재로
+  삼키면 한도 초과도 "보고서 없음" 이 된다.
+
+## 4-3. 분기 손익은 누적이 아니다
+
+`thstrm_dt` 는 `"2025.01.01 ~ 2025.06.30"` 으로 **누적처럼 표기**하는데 `thstrm_amount` 는
+**그 분기 3개월치**다. 종근당 2025:
+
+```
+1분기  400,955,846,488   ← Q1
+반기   434,849,104,888   ← Q2 만. 2×Q1 이 아니다
+3분기  429,818,748,658   ← Q3
+사업  1,692,403,987,134  ← 연간
+Q1+Q2+Q3 = 1,265,623억 · FY − 합 = 426,780억 → Q4 로 정합
+```
+
+보고서 → 분기: `11013→Q1 · 11012→Q2 · 11014→Q3`, **Q4 = 연간 − 세 분기**.
+세 분기 중 하나라도 없으면 구성하지 않는다(부분 합으로 빼면 과대계상).
+
+## 4-4. 연결·개별이 한 응답에 함께 온다
+
+주요계정 응답에 같은 `매출액` 행이 **두 번** 온다(`fs_div: CFS` / `OFS`). 필터하지 않으면 어느 것을
+집는지가 응답 순서에 달린다. 연결 우선, 섞지 않는다.
+
+## 4-5. 은행지주는 `매출액`이 없다
+
+BNK금융지주 주요계정: `순이자손익` · `이자수익` · `이자비용` · `순수수료손익` · `영업이익(손실)` ·
+`당기순이익(손실)` · `예수부채` · `차입부채`. `매출액`이 없으므로 **PSR 관측이 0 인 것은 결함이 아니라
+사실**이고 `null` 로 남는 것이 옳다.
 
 ## 5. 이 덤프가 바꾸는 것
 
-| 문서 | 기존 기록 | 이 덤프 이후 |
+| 대상 | 기존 | 현재 |
 |---|---|---|
-| `SCOPE_kr_limitation.md` | KR 분기 5개 상한(네이버) | 상한 해소 경로 확보 — 재작성 대상 |
-| `SPEC_factsheet.md` | KR `filed_at_basis: statutory_deadline` | `disclosed` 로 승격 가능 |
-| `DOCTRINE_archetype_frames.md` | KR 시클리컬은 업종코드 단독, `stdev_confirmed: false` | 실측 stdev 로 확인 가능 — 재검토 |
-| `build.ts`(business-context) | KR 슬롯 1·2 는 `vendor_summary` | 사업보고서 "사업의 내용" 경로 검토 대상 |
+| `SPEC_factsheet.md` §2-2 | `filed_at_basis` 2값 | ✅ `filed_at_source` 3값 + 롤업 + 승격 시 밴드 재계산 명시 |
+| `SPEC_factsheet.md` §3-5 | "DART 미착수 — 키 없음" | ✅ 실측 함정 표로 교체, DART = KR 재무 1차 소스 |
+| `build.ts`(fundamentals) | 네이버 5분기 | ✅ DART 1차, 네이버는 시세·컨센서스·업종 담당 |
+| 계정 매핑 | 없음 | ✅ `dart-accounts.json`(`mapping_version` 찍음, 실측 `account_id` 만 등재) |
+| 밴드 입력 | 표시용 8분기(구조적 결함) | ✅ 분기 전체 이력 |
+| `DOCTRINE_archetype_frames.md` | KR 업종코드 단독, `stdev_confirmed: false` | ⏳ 02R 재검토 대상(분기 영업이익 확보로 실측 가능) |
+| `build.ts`(business-context) | KR 슬롯 1·2 = `vendor_summary` | ⏳ 사업보고서 "사업의 내용" 경로 미착수 |
 
-**아직 아무것도 고치지 않았다.** 위 표는 다음 단계의 작업 목록이고, 그 근거가 이 문서다.
+**남은 제약은 소스 자체의 것이다.** 013 불안정성 때문에 과거 연도 확보가 호출 시점에 따라
+흔들리고, 그만큼 밴드 이력 깊이도 흔들린다. 이것은 코드로 없앨 수 없고 재시도·캐시 비대칭으로
+줄일 수 있을 뿐이다.
