@@ -276,7 +276,10 @@ export interface DartDiscoveryResult {
 /** 정기보고서 코드 — 1분기 / 반기 / 3분기 / 사업보고서. */
 const REPORT_CODES = { Q1: "11013", H1: "11012", Q3: "11014", FY: "11011" } as const;
 
-export async function discoverDartStructure(stockCode = "185750", options: { refresh?: boolean } = {}): Promise<DartDiscoveryResult> {
+export async function discoverDartStructure(
+  stockCode = "185750",
+  options: { refresh?: boolean; year?: number } = {}
+): Promise<DartDiscoveryResult> {
   const key = dartKey();
   const probedAt = new Date().toISOString();
   const note = "판정하지 않는다. 확보율·파서는 이 덤프를 근거로 그 다음에 만든다(WO-SUB-00 규칙).";
@@ -284,7 +287,7 @@ export async function discoverDartStructure(stockCode = "185750", options: { ref
     return { probedAt, keyPresent: false, stockCode, corpCode: null, corpCodeMap: { totalEntries: 0, listedEntries: 0, error: "DART_API_KEY 없음", fromCache: false, timing: { fetchMs: 0, unzipMs: 0, parseMs: 0 } }, dumps: [], note };
   }
 
-  const year = new Date().getUTCFullYear() - 1;
+  const year = options.year ?? new Date().getUTCFullYear() - 1;
   const dumps: DartDump[] = [];
   // 1) corp_code 매핑 — 이것이 열리지 않으면 나머지는 의미가 없다.
   const map = await fetchCorpCodeMap(key, options);
