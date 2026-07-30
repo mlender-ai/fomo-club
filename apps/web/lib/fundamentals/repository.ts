@@ -63,6 +63,18 @@ export async function readFactSheet(market: string, canonical: string): Promise<
 }
 
 /** 해시로 스냅샷 조회 — WO-SUB-07 의 발행 시점 재현 경로. */
+/**
+ * 저장된 최신 팩트시트 전량 — **소급 스캔용**.
+ *
+ * 커버리지 리포트는 유니버스를 돌며 종목별로 읽는데(유니버스 기준 확보율을 재는 것이 목적),
+ * 소급 스캔은 "저장된 산출물 전량" 이 대상이라 유니버스에서 빠진 레코드도 봐야 한다.
+ * 불변식 위반이 유니버스 밖에 숨는 것을 막는다.
+ */
+export async function readAllFactSheets(limit = 2_000): Promise<FactSheet[]> {
+  const rows = await readFeedContentByPrefix<FactSheetRecord>(LATEST_PREFIX, limit).catch(() => []);
+  return rows.map((entry) => entry.row?.factsheet).filter((factsheet): factsheet is FactSheet => Boolean(factsheet));
+}
+
 export async function readFactSheetSnapshot(market: string, canonical: string, hash: string): Promise<FactSheetRecord | null> {
   return readFeedContent<FactSheetRecord>(`${SNAPSHOT_PREFIX}${market}:${canonical}:${hash}`).catch(() => null);
 }
