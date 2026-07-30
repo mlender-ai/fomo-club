@@ -19,6 +19,17 @@ export type CoverageFlag = "full" | "partial" | "none";
 export type MarginTrend = "expanding" | "flat" | "contracting" | "unknown";
 export type BandMetric = "per" | "pbr" | "psr";
 
+/**
+ * `filed_at` 의 출처 3값.
+ *  · `disclosed` — 소스가 실제 공시일을 줬다(SEC `filed`, DART `rcept_dt`).
+ *  · `statutory_deadline` — 소스에 공시일이 없어 **법정 제출기한**을 썼다. 기한은 실제
+ *    공시일보다 늦거나 같으므로 look-ahead 를 만들지 않는다(보수적 상한). 대신 밴드의
+ *    유효 관측이 줄어든다.
+ *  · `none` — 공시일 근거가 전혀 없다. 레코드 단위에서는 도달하지 않는다(그런 분기는
+ *    레코드를 만들지 않는다). 팩트시트 롤업에서 "분기 레코드가 0개" 를 뜻한다.
+ */
+export type FiledAtSource = "disclosed" | "statutory_deadline" | "none";
+
 /** 분기 레코드. `filed_at` 이 없으면 이 레코드를 만들지 않는다(look-ahead 방지). */
 export interface QuarterRecord {
   /** "2026Q1" — 회계연도 기준이 아니라 기간말 기준 라벨. */
@@ -28,14 +39,14 @@ export interface QuarterRecord {
   /** 공시일. 없으면 레코드 자체를 만들지 않는다. */
   filed_at: string;
   /**
-   * `filed_at` 의 근거.
-   *  · `disclosed` — 소스가 실제 공시일을 준 경우(SEC `filed`, DART `rcept_no`)
-   *  · `statutory_deadline` — 소스에 공시일이 없어 **법정 제출기한**을 쓴 경우.
-   *    네이버 재무 표에는 공시일이 없다. 기한은 실제 공시일보다 **늦거나 같으므로**
-   *    look-ahead 를 만들지 않는다(보수적 상한). 대신 밴드의 유효 관측이 줄어든다.
-   * 값이 없으면 `disclosed` 로 본다.
+   * `filed_at` 의 출처. 값이 없으면 `disclosed` 로 본다.
+   *
+   * **밴드 백분위의 유효성이 여기에 걸려 있다.** `statutory_deadline` 위에서 계산된
+   * 밴드는 시점 d 의 TTM 구성이 실제와 다를 수 있으므로, 나중에 실측으로 승격하면
+   * 밴드를 다시 계산해야 한다. 어느 쪽으로 계산한 값인지 구분되지 않으면
+   * WO-SUB-07 채점이 오염된다 — 그래서 레코드에 남긴다.
    */
-  filed_at_basis?: "disclosed" | "statutory_deadline";
+  filed_at_source?: FiledAtSource;
   revenue: number | null;
   operating_income: number | null;
   net_income: number | null;
@@ -76,6 +87,17 @@ export interface BandStat {
 }
 
 export interface FactSheetFiscal {
+  /**
+   * 분기 레코드의 `filed_at_source` 롤업.
+   *
+   *  · 전부 `disclosed` → `disclosed`
+   *  · 하나라도 추정이면 → `statutory_deadline` (**밴드가 추정 위에서 계산됐다는 뜻**)
+   *  · 레코드 0개 → `none`
+   *
+   * 보수적으로 내려 잡는다 — 섞여 있을 때 `disclosed` 로 표시하면 추정 위에서 계산된
+   * 밴드를 실측으로 착각하게 된다.
+   */
+  filed_at_source: FiledAtSource;
   /** 최근 8분기, period_end 오름차순. */
   quarters: QuarterRecord[];
   /** 최근 5회계연도, period_end 오름차순. */

@@ -1,4 +1,4 @@
-import type { CoverageFlag, FactSheetFiscal, QuarterRecord } from "./types";
+import type { CoverageFlag, FactSheetFiscal, FiledAtSource, QuarterRecord } from "./types";
 
 /**
  * TTM 구성 + look-ahead 가드 (WO-SUB-01 §6-1·§6-2).
@@ -123,10 +123,24 @@ export function composeFiscal(
     ? { revenue: null, operating_income: null, net_income: null, eps_diluted: null, composed_of: quarters.slice(-TTM_QUARTERS).map((q) => q.period) }
     : composeTtm(quarters);
   return {
+    filed_at_source: rollupFiledAtSource(quarters),
     quarters,
     annual,
     ttm,
     coverage_flag: coverageFlagOf(quarters, annual, anomaly),
     fiscal_anomaly: anomaly,
   };
+}
+
+/**
+ * 분기 레코드의 `filed_at_source` 롤업 — **보수적으로 내려 잡는다.**
+ *
+ * 섞여 있을 때 `disclosed` 로 표시하면 추정 공시일 위에서 계산된 밴드를 실측으로
+ * 착각하게 된다. 하나라도 추정이면 전체가 추정이다.
+ */
+export function rollupFiledAtSource(quarters: readonly QuarterRecord[]): FiledAtSource {
+  if (quarters.length === 0) return "none";
+  return quarters.some((quarter) => (quarter.filed_at_source ?? "disclosed") === "statutory_deadline")
+    ? "statutory_deadline"
+    : "disclosed";
 }
