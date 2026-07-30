@@ -140,7 +140,7 @@ export async function buildKrFactSheet(entry: UniverseEntry, now = new Date()): 
             {
               source: "opendart.fss.or.kr/api/fnlttSinglAcnt{,All}",
               fetched_at: dart.fetchedAt,
-              note: `분기·연간 손익/대차/현금흐름. filed_at = 접수일 실측(rcept_no). 계정 매핑 ${dart.mappingVersion}. 전체 재무제표 ${dart.detailedReports.opened}/${dart.detailedReports.attempted} 보고서 개방 — 닫힌 보고서는 현금흐름·EPS null`,
+              note: `분기·연간 손익/대차/현금흐름. filed_at = 접수일 실측(rcept_no). 계정 매핑 ${dart.mappingVersion}. 보고서 확보 ${dart.reportCensus.ok} · 부재 ${dart.reportCensus.absent} · 실패 ${dart.reportCensus.failed}. 전체 재무제표 ${dart.detailedReports.opened}/${dart.detailedReports.attempted} 개방 — 닫힌 보고서는 현금흐름·EPS null`,
             },
           ]
         : null,

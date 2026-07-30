@@ -167,7 +167,7 @@ function preferredFsDiv(rows: readonly DartRow[]): string {
 
 interface CachedReport {
   fetchedAt: string;
-  /** `null` = 그 보고서가 없다(013). 부재도 캐시해야 매번 다시 묻지 않는다. */
+  /** `null` = 그 보고서가 **실제로 없다**(013). 실패는 여기 들어오지 않는다. */
   data: Omit<ReportData, "spec"> | null;
 }
 
@@ -175,34 +175,68 @@ function reportCacheKey(corpCode: string, bsnsYear: number, code: string): strin
   return `dart-report:${corpCode}:${bsnsYear}:${code}`;
 }
 
-/** 캐시를 통과하는 보고서 조회. 과거 연도는 30일, 당해는 20시간. */
-async function fetchReportCached(corpCode: string, bsnsYear: number, spec: ReportSpec, currentYear: number): Promise<ReportData | null> {
+/**
+ * 캐시를 통과하는 보고서 조회. 과거 연도는 30일, 당해는 20시간.
+ *
+ * **실패는 캐시하지 않는다.** 한도 초과나 타임아웃을 "보고서 없음" 으로 굳히면
+ * 그 종목의 그 분기는 30일간 영구 결손이 된다.
+ */
+async function fetchReportCached(corpCode: string, bsnsYear: number, spec: ReportSpec, currentYear: number): Promise<ReportOutcome> {
   const key = reportCacheKey(corpCode, bsnsYear, spec.code);
   const ttl = bsnsYear < currentYear ? PAST_YEAR_TTL_MS : CURRENT_YEAR_TTL_MS;
   const cached = await readFeedContent<CachedReport>(key).catch(() => null);
   if (cached) {
     const age = Date.now() - Date.parse(cached.fetchedAt);
     if (Number.isFinite(age) && age < ttl) {
-      return cached.data ? { ...cached.data, spec } : null;
+      return cached.data ? { kind: "ok", data: { ...cached.data, spec } } : { kind: "absent" };
     }
   }
-  const fetched = await fetchReport(corpCode, bsnsYear, spec);
+  const outcome = await fetchReport(corpCode, bsnsYear, spec);
+  if (outcome.kind === "failed") return outcome;
   const payload: CachedReport = {
     fetchedAt: new Date().toISOString(),
-    data: fetched ? { bsnsYear: fetched.bsnsYear, filedAt: fetched.filedAt, rows: fetched.rows, fsDiv: fetched.fsDiv, detailed: fetched.detailed, errors: fetched.errors } : null,
+    data:
+      outcome.kind === "ok"
+        ? {
+            bsnsYear: outcome.data.bsnsYear,
+            filedAt: outcome.data.filedAt,
+            rows: outcome.data.rows,
+            fsDiv: outcome.data.fsDiv,
+            detailed: outcome.data.detailed,
+            errors: outcome.data.errors,
+          }
+        : null,
   };
   await writeFeedContent(key, payload).catch(() => undefined);
-  return fetched;
+  return outcome;
 }
 
-async function fetchReport(corpCode: string, bsnsYear: number, spec: ReportSpec): Promise<ReportData | null> {
+/**
+ * 보고서 조회 결과.
+ *
+ * **부재와 실패를 구분한다.** 앞 판은 모든 non-000 을 `null`(부재)로 삼켰는데, 그러면
+ * 한도 초과(`020`)·인증 오류(`013` 아닌 것)도 "보고서 없음" 으로 보이고 그 `null` 이 30일
+ * 캐시에 박힌다. 실측에서 6년을 요청했는데 3년치만 온 것이 이 구멍 때문이었다 —
+ * 원인이 응답에 남지 않아 보이지 않았다.
+ */
+type ReportOutcome =
+  | { kind: "ok"; data: ReportData }
+  /** `013` — 그 보고서가 실제로 없다. 캐시해도 된다. */
+  | { kind: "absent" }
+  /** 그 밖의 상태·네트워크 실패. **캐시하지 않는다.** */
+  | { kind: "failed"; status: string; message: string };
+
+async function fetchReport(corpCode: string, bsnsYear: number, spec: ReportSpec): Promise<ReportOutcome> {
   const main = await callDart("fnlttSinglAcnt.json", { corp_code: corpCode, bsns_year: String(bsnsYear), reprt_code: spec.code });
-  // 013 = 그 보고서가 없다. 실패가 아니라 부재이므로 조용히 건너뛴다.
-  if (main?.status !== "000" || !Array.isArray(main.list) || main.list.length === 0) return null;
+  if (!main) return { kind: "failed", status: "network", message: "응답 없음(타임아웃·네트워크)" };
+  if (main.status === "013") return { kind: "absent" };
+  if (main.status !== "000" || !Array.isArray(main.list) || main.list.length === 0) {
+    return { kind: "failed", status: main.status ?? "?", message: main.message ?? "본문 없음" };
+  }
 
   const filedAt = rceptDate((main.list[0] as { rcept_no?: string }).rcept_no);
   // look-ahead 방지: 공시일 없는 보고서는 레코드를 만들지 않는다.
-  if (!filedAt) return null;
+  if (!filedAt) return { kind: "failed", status: "no_rcept", message: "접수번호 없음 — look-ahead 를 만들 수 없어 폐기" };
 
   const rows: DartRow[] = [...main.list];
   const fsDiv = preferredFsDiv(rows);
@@ -218,7 +252,7 @@ async function fetchReport(corpCode: string, bsnsYear: number, spec: ReportSpec)
   if (detailed) rows.push(...all!.list!);
   else errors.push(`dart: 전체 재무제표 미제공(${bsnsYear} ${spec.label}) — 현금흐름·EPS 는 이 보고서에서 null`);
 
-  return { spec, bsnsYear, filedAt, rows, fsDiv, detailed, errors };
+  return { kind: "ok", data: { spec, bsnsYear, filedAt, rows, fsDiv, detailed, errors } };
 }
 
 /** 당기 금액 1개. 못 찾으면 `null` — 0 으로 읽으면 결측이 값이 된다. */
@@ -339,6 +373,8 @@ export interface DartFundamentals {
   detailedReports: { opened: number; attempted: number };
   /** Q4 를 구성한 연도 수. 구성 실패는 세 분기 결손이라는 뜻이다. */
   composedQ4: number;
+  /** 보고서 조회 결산 — 부재와 실패를 구분해 센다. */
+  reportCensus: { ok: number; absent: number; failed: number };
   errors: string[];
   fetchedAt: string;
 }
@@ -358,6 +394,7 @@ function emptyResult(errors: string[]): DartFundamentals {
     mappingVersion: DART_MAPPING_VERSION,
     detailedReports: { opened: 0, attempted: 0 },
     composedQ4: 0,
+    reportCensus: { ok: 0, absent: 0, failed: 0 },
     errors,
     fetchedAt: new Date().toISOString(),
   };
@@ -410,7 +447,7 @@ export async function fetchDartFundamentals(
     for (const spec of REPORTS) jobs.push({ bsnsYear: currentYear - offset, spec });
   }
 
-  const fetched = new Array<ReportData | null>(jobs.length);
+  const fetched = new Array<ReportOutcome>(jobs.length);
   let cursor = 0;
   await Promise.all(
     Array.from({ length: Math.min(REPORT_CONCURRENCY, jobs.length) }, async () => {
@@ -419,22 +456,40 @@ export async function fetchDartFundamentals(
         cursor += 1;
         if (index >= jobs.length) return;
         const job = jobs[index]!;
-        fetched[index] = await fetchReportCached(corpCode, job.bsnsYear, job.spec, currentYear).catch(() => null);
+        fetched[index] = await fetchReportCached(corpCode, job.bsnsYear, job.spec, currentYear).catch((error: unknown) => ({
+          kind: "failed" as const,
+          status: "exception",
+          message: error instanceof Error ? error.message : String(error),
+        }));
       }
     })
   );
 
   // 조립 — jobs 순서(연도 내림차순 × 보고서 순서)를 그대로 따른다.
   const byYear = new Map<number, ReportData[]>();
-  for (const [index, report] of fetched.entries()) {
-    if (!report) continue;
+  let absent = 0;
+  const failures: string[] = [];
+  for (const [index, outcome] of fetched.entries()) {
     const job = jobs[index]!;
+    if (outcome.kind === "absent") {
+      absent += 1;
+      continue;
+    }
+    if (outcome.kind === "failed") {
+      // 부재가 아니라 실패다 — 조용히 결손으로 만들지 않는다.
+      failures.push(`${job.bsnsYear} ${job.spec.label}: ${outcome.status} ${outcome.message}`);
+      continue;
+    }
+    const report = outcome.data;
     attempted += 1;
     if (report.detailed) opened += 1;
     errors.push(...report.errors);
     const bucket = byYear.get(job.bsnsYear) ?? [];
     bucket.push(report);
     byYear.set(job.bsnsYear, bucket);
+  }
+  if (failures.length > 0) {
+    errors.push(`dart: 보고서 조회 실패 ${failures.length}건 — ${failures.slice(0, 6).join(" / ")}`);
   }
 
   for (const bsnsYear of [...byYear.keys()].sort((a, b) => b - a)) {
@@ -528,6 +583,7 @@ export async function fetchDartFundamentals(
     mappingVersion: DART_MAPPING_VERSION,
     detailedReports: { opened, attempted },
     composedQ4,
+    reportCensus: { ok: attempted, absent, failed: failures.length },
     errors,
     fetchedAt: new Date().toISOString(),
   };
