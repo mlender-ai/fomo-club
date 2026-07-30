@@ -10,6 +10,7 @@ import {
 import { readUsCandleCache } from "../us-candle-cache";
 import { readKrCandleCache } from "../kr-candle-cache";
 import { fetchUsDailyCandles } from "../us-market-source";
+import { fetchDartFundamentals } from "./dart-fundamentals";
 import { fetchNaverFundamentals } from "./naver-fundamentals";
 import { fetchNasdaqFundamentals } from "./nasdaq-fundamentals";
 import { fetchSecFundamentals } from "./sec-xbrl";
@@ -62,6 +63,21 @@ export async function buildKrFactSheet(entry: UniverseEntry, now = new Date()): 
   }
 
   const naver = await fetchNaverFundamentals(code, windowStart(now));
+  /**
+   * DART 를 **재무의 1차 소스로 쓴다.**
+   *
+   * 네이버는 분기 5개 상한 + 공시일 없음이라 밴드 유효 관측이 윈도우의 10~25% 뿐이었다.
+   * DART 는 접수일(`rcept_no` 앞 8자리)을 주므로 `filed_at_source: "disclosed"` 로 올라가고,
+   * 연도를 올려 부르면 분기 상한이 없다. 시세·컨센서스·업종은 DART 에 없으므로 네이버가 계속 담당한다.
+   *
+   * DART 가 실패하면(키 미설정·매핑 없음) **조용히 빈 값으로 가지 않고** 네이버로 내려간다.
+   * 어느 쪽으로 만들었는지는 `filed_at_source` 와 소스 매니페스트에 남는다.
+   */
+  const dart = await fetchDartFundamentals(code, { now }).catch((error: unknown) => {
+    return { error } as const;
+  });
+  const dartOk = !("error" in dart) && dart.quarters.length > 0;
+  const dartErrors = "error" in dart ? [`dart: 예외 — ${String((dart as { error: unknown }).error)}`] : dart.errors;
   // 픽 크론이 봉인한 캔들이 더 길면 그것을 합친다(요청 경로와 같은 화면을 재현하기 위한 기존 캐시 재사용).
   const sealed = await readKrCandleCache(code).catch(() => null);
   const closesByDate = new Map(naver.closes.map((c) => [c.date, c.close]));
@@ -79,14 +95,17 @@ export async function buildKrFactSheet(entry: UniverseEntry, now = new Date()): 
     market: "KR",
     currency: "KRW",
     snapshotAt,
-    quarters: naver.quarters,
-    annual: naver.annual,
-    equity: naver.equity,
-    liabilities: liabilitiesFromDebtRatio(naver.equity, naver.reportedDebtRatioPct?.value ?? null),
-    totalDebt: [],
-    cash: [],
-    operatingCashFlow: [],
-    interestExpense: [],
+    quarters: dartOk ? dart.quarters : naver.quarters,
+    annual: dartOk && dart.annual.length > 0 ? dart.annual : naver.annual,
+    equity: dartOk && dart.equity.length > 0 ? dart.equity : naver.equity,
+    liabilities: dartOk && dart.liabilities.length > 0
+      ? dart.liabilities
+      : liabilitiesFromDebtRatio(naver.equity, naver.reportedDebtRatioPct?.value ?? null),
+    totalDebt: dartOk ? dart.totalDebt : [],
+    cash: dartOk ? dart.cash : [],
+    operatingCashFlow: dartOk ? dart.operatingCashFlow : [],
+    interestExpense: dartOk ? dart.interestExpense : [],
+    // 감가상각비는 DART 표본에 단독 계정이 없다 — 대체 지표로 만들지 않는다(EV/EBITDA null 유지).
     depreciation: [],
     closes,
     sharesSeries: naver.sharesSeries,
@@ -115,11 +134,21 @@ export async function buildKrFactSheet(entry: UniverseEntry, now = new Date()): 
           note: "액면분할 조정 종가(수정주가) — 실측 검증: 카카오 2021-04-14 종가 112,000(분할 전 명목가 아님)",
         },
       ],
+      dartOk
+        ? [
+            "dart_fnltt",
+            {
+              source: "opendart.fss.or.kr/api/fnlttSinglAcnt{,All}",
+              fetched_at: dart.fetchedAt,
+              note: `분기·연간 손익/대차/현금흐름. filed_at = 접수일 실측(rcept_no). 계정 매핑 ${dart.mappingVersion}. 전체 재무제표 ${dart.detailedReports.opened}/${dart.detailedReports.attempted} 보고서 개방 — 닫힌 보고서는 현금흐름·EPS null`,
+            },
+          ]
+        : null,
       sealed && sealed.length > 0
         ? ["kr_candle_cache", { source: "FeedContentCache:kr-candles", fetched_at: naver.fetchedAt, note: `봉인 캔들 ${sealed.length}일 병합` }]
         : null,
     ]),
-    sourceErrors: naver.errors,
+    sourceErrors: [...naver.errors, ...dartErrors],
   };
   return assembleFactSheet(input);
 }
