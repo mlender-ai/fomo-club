@@ -1,0 +1,16 @@
+{
+  "factsheets": 67,
+  "contexts": 13,
+  "violations": [],
+  "archetypeCounts": {
+    "MATURE_INCOME": 2,
+    "UNCLASSIFIED": 24,
+    "PHARMA_STABLE": 7,
+    "BIOTECH_PIPELINE": 3,
+    "CYCLICAL_COMMODITY": 9,
+    "BANK_FINANCIAL": 4,
+    "TURNAROUND_LOSS": 8,
+    "QUALITY_COMPOUNDER": 7,
+    "HYPERGROWTH_UNPROFITABLE": 3
+  }
+}
