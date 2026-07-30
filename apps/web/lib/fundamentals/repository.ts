@@ -88,6 +88,35 @@ export async function writeFactSheetIndex(date: string, entries: readonly FactSh
   await writeFeedContent(`${INDEX_PREFIX}${date}`, row);
 }
 
+const BUILD_FAILURE_PREFIX = "factsheet-fail:";
+
+export interface BuildFailureRow {
+  date: string;
+  canonical: string;
+  market: string;
+  error: string;
+  at: string;
+}
+
+/**
+ * 빌드 실패를 남긴다.
+ *
+ * 이전에는 실패 사유가 그 라운드의 HTTP 응답에만 있었고 백필 워크플로가 그것을 버렸다.
+ * 그래서 "커서는 done 인데 레코드는 없다" 는 상태의 원인을 사후에 알 수 없었다.
+ * 실패도 사실이므로 저장한다.
+ */
+export async function writeBuildFailure(row: Omit<BuildFailureRow, "at">): Promise<void> {
+  await writeFeedContent(`${BUILD_FAILURE_PREFIX}${row.date}:${row.market}:${row.canonical}`, {
+    ...row,
+    at: new Date().toISOString(),
+  } satisfies BuildFailureRow).catch(() => undefined);
+}
+
+export async function readBuildFailures(limit = 500): Promise<BuildFailureRow[]> {
+  const rows = await readFeedContentByPrefix<BuildFailureRow>(BUILD_FAILURE_PREFIX, limit).catch(() => []);
+  return rows.map((entry) => entry.row).filter((row): row is BuildFailureRow => Boolean(row?.canonical));
+}
+
 export async function readFactSheetIndex(date: string): Promise<FactSheetIndexRow | null> {
   return readFeedContent<FactSheetIndexRow>(`${INDEX_PREFIX}${date}`).catch(() => null);
 }

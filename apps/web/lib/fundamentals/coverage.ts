@@ -1,6 +1,6 @@
 import type { FactSheet } from "@fomo/core";
 import { kstDate } from "../fomo";
-import { readFactSheet } from "./repository";
+import { readBuildFailures, readFactSheet } from "./repository";
 import { loadFundamentalsUniverse } from "./universe";
 
 /**
@@ -70,6 +70,15 @@ export interface CoverageReport {
   failures: CoverageFailure[];
   /** 밴드가 왜 안 만들어졌는지 사유별 건수 — WO-SUB-04 게이팅 근거. */
   band_insufficient_reasons: Record<string, number>;
+  /**
+   * 유니버스에 있는데 **레코드가 없는** 종목.
+   *
+   * 이전에는 `if (record)` 로 조용히 버리고 `records: 202 / universe: 299` 만 남겼다.
+   * 97건이 왜 빠졌는지가 어디에도 없었다 — 조용한 결손은 배치 규칙 위반이다.
+   */
+  missing_records: Array<{ canonical: string; market: string }>;
+  /** 그날 배치가 기록한 빌드 실패 사유(있으면). */
+  build_failures: Array<{ canonical: string; market: string; error: string }>;
 }
 
 function pathValue(factsheet: FactSheet, path: string): unknown {
@@ -162,6 +171,8 @@ export function summarizeCoverage(
     groups,
     failures: failures.sort((a, b) => a.canonical.localeCompare(b.canonical)),
     band_insufficient_reasons: reasons,
+    missing_records: [],
+    build_failures: [],
   };
 }
 
@@ -169,9 +180,17 @@ export function summarizeCoverage(
 export async function buildCoverageReport(): Promise<CoverageReport> {
   const universe = await loadFundamentalsUniverse();
   const factsheets: FactSheet[] = [];
+  const missing: Array<{ canonical: string; market: string }> = [];
   for (const entry of universe) {
     const record = await readFactSheet(entry.country, entry.canonical);
     if (record) factsheets.push(record.factsheet);
+    // 조용히 버리지 않는다 — 무엇이 없는지가 확보율보다 중요한 정보다.
+    else missing.push({ canonical: entry.canonical, market: entry.country });
   }
-  return summarizeCoverage(factsheets, { universe: universe.length });
+  const failures = await readBuildFailures().catch(() => []);
+  return {
+    ...summarizeCoverage(factsheets, { universe: universe.length }),
+    missing_records: missing,
+    build_failures: failures,
+  };
 }
