@@ -54,13 +54,22 @@ export async function readFeedContent<T>(id: string): Promise<T | null> {
 }
 
 /** 접두사로 여러 개 읽기(최신순) — 언급 스냅샷 7일치 등. */
+/**
+ * 접두사 조회 상한.
+ *
+ * 50 이었는데 **조용히 잘랐다** — 전수 스캔(불변식 소급 검사)에서 300여 건 중 50 건만 보고
+ * "위반 0건" 이 나오면 그건 거짓 신호다. 호출자가 자기 상한을 주므로 이 값은 방어선일 뿐이고,
+ * 방어선이 진실을 자르는 위치에 있으면 안 된다.
+ */
+const MAX_PREFIX_ROWS = 2_000;
+
 export async function readFeedContentByPrefix<T>(prefix: string, limit = 10): Promise<Array<{ id: string; row: T }>> {
   try {
     const records = await prisma.$queryRaw<Array<{ id: string; row: unknown }>>`
       SELECT "id", "row" FROM "FeedContentCache"
       WHERE "id" LIKE ${`${prefix}%`}
       ORDER BY "updatedAt" DESC
-      LIMIT ${Math.max(1, Math.min(50, limit))}
+      LIMIT ${Math.max(1, Math.min(MAX_PREFIX_ROWS, limit))}
     `;
     return records.map((record) => ({ id: record.id, row: record.row as T }));
   } catch (err) {

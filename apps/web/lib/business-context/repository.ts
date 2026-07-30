@@ -40,6 +40,12 @@ export async function archiveSourceText(docId: string, snapshotHash: string, tex
   await writeFeedContent(key, { doc_id: docId, snapshot_hash: snapshotHash, text, archived_at: new Date().toISOString() });
 }
 
+/** 저장된 사업 실체 전량 — 소급 스캔용(유니버스 밖 레코드도 검사 대상이다). */
+export async function readAllBusinessContexts(limit = 2_000): Promise<BusinessContext[]> {
+  const rows = await readFeedContentByPrefix<BusinessContext>(LATEST_PREFIX, limit).catch(() => []);
+  return rows.map((entry) => entry.row).filter((row): row is BusinessContext => Boolean(row?.canonical));
+}
+
 export async function readArchivedSourceText(docId: string): Promise<string | null> {
   const row = await readFeedContent<{ text?: string }>(`${ARCHIVE_PREFIX}${docId}`).catch(() => null);
   return row?.text ?? null;
