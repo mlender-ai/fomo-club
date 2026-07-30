@@ -171,8 +171,20 @@ interface CachedReport {
   data: Omit<ReportData, "spec"> | null;
 }
 
+/**
+ * 캐시 키에 어댑터 로직 버전을 넣는다.
+ *
+ * 파싱·판정 로직이 바뀌면 **과거에 캐시한 결과의 의미가 달라진다.** 실측 사례: "실패를 부재로
+ * 삼키던" 판이 2021~2023 보고서를 `null` 로 30일 캐시에 박아, 로직을 고친 뒤에도 밴드분기가
+ * 10 에서 늘지 않았다. 키에 버전이 없으면 로직 수정이 데이터에 반영되지 않는다.
+ *
+ * 로직을 고칠 때 이 값을 올린다. `dart-accounts.json` 의 `mapping_version` 과는 축이 다르다
+ * (그건 계정 매핑, 이건 조회·판정 로직).
+ */
+const REPORT_CACHE_VERSION = "v2";
+
 function reportCacheKey(corpCode: string, bsnsYear: number, code: string): string {
-  return `dart-report:${corpCode}:${bsnsYear}:${code}`;
+  return `dart-report:${REPORT_CACHE_VERSION}:${corpCode}:${bsnsYear}:${code}`;
 }
 
 /**
