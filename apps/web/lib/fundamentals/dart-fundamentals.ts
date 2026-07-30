@@ -7,6 +7,7 @@ import {
   type PointObservation,
   type QuarterRecord,
 } from "@fomo/core";
+import { readFeedContent, writeFeedContent } from "../feed-content-store";
 import { fetchCorpCodeMap } from "./dart-discovery";
 
 /**
@@ -54,6 +55,36 @@ import { fetchCorpCodeMap } from "./dart-discovery";
 
 const DART_BASE = "https://opendart.fss.or.kr/api";
 const TIMEOUT_MS = 25_000;
+
+/**
+ * 보고서 동시 조회 수.
+ *
+ * 실측: 순차로 3년(보고서 12개 × 2콜)에 **135초**가 걸렸다 — 콜당 5.6초로 DART 응답이 느리다.
+ * 밴드 5년 윈도우를 덮으려면 6년치 분기가 필요한데(시점 d 의 TTM 은 그때 공시된 분기로 만든다)
+ * 순차로는 종목당 270초라 크론 안에 못 들어간다.
+ *
+ * DART 는 분당 한도를 공개하지 않으므로 **보수적으로 4** 로 둔다. 늘리기 전에 실측할 것.
+ */
+const REPORT_CONCURRENCY = 4;
+
+/**
+ * 밴드 5년 윈도우를 덮기 위한 조회 연수.
+ *
+ * 밴드는 `sufficient = 유효 관측 >= 0.6 × 5년 거래일` 을 요구하고, 각 거래일의 TTM 은
+ * **그 시점에 이미 공시된** 4분기로 만든다. 그래서 윈도우 시작점에도 4분기가 있어야 하므로
+ * 5년 + 1년 = 6년치가 필요하다. 3년으로는 최대 절반만 채워져 `sufficient: false` 가 된다(실측).
+ */
+const DEFAULT_YEARS = 6;
+
+/**
+ * 지난 사업연도 보고서 캐시 TTL.
+ *
+ * 확정된 과거 보고서는 사실상 바뀌지 않는다(정정공시가 예외). 캐시하지 않으면 KR 유니버스
+ * 전량 갱신에 종목당 48콜이 매일 나가는데, 그것은 DART 일 한도를 태우는 일이다.
+ * 당해 연도는 새 보고서가 올라오므로 짧게 잡는다.
+ */
+const PAST_YEAR_TTL_MS = 30 * 86_400_000;
+const CURRENT_YEAR_TTL_MS = 20 * 3_600_000;
 
 /**
  * 정기보고서 → 분기 대응.
@@ -132,6 +163,36 @@ interface ReportData {
 /** 연결이 있으면 연결, 없으면 개별. 섞지 않는다. */
 function preferredFsDiv(rows: readonly DartRow[]): string {
   return rows.some((row) => row.fs_div === "CFS") ? "CFS" : "OFS";
+}
+
+interface CachedReport {
+  fetchedAt: string;
+  /** `null` = 그 보고서가 없다(013). 부재도 캐시해야 매번 다시 묻지 않는다. */
+  data: Omit<ReportData, "spec"> | null;
+}
+
+function reportCacheKey(corpCode: string, bsnsYear: number, code: string): string {
+  return `dart-report:${corpCode}:${bsnsYear}:${code}`;
+}
+
+/** 캐시를 통과하는 보고서 조회. 과거 연도는 30일, 당해는 20시간. */
+async function fetchReportCached(corpCode: string, bsnsYear: number, spec: ReportSpec, currentYear: number): Promise<ReportData | null> {
+  const key = reportCacheKey(corpCode, bsnsYear, spec.code);
+  const ttl = bsnsYear < currentYear ? PAST_YEAR_TTL_MS : CURRENT_YEAR_TTL_MS;
+  const cached = await readFeedContent<CachedReport>(key).catch(() => null);
+  if (cached) {
+    const age = Date.now() - Date.parse(cached.fetchedAt);
+    if (Number.isFinite(age) && age < ttl) {
+      return cached.data ? { ...cached.data, spec } : null;
+    }
+  }
+  const fetched = await fetchReport(corpCode, bsnsYear, spec);
+  const payload: CachedReport = {
+    fetchedAt: new Date().toISOString(),
+    data: fetched ? { bsnsYear: fetched.bsnsYear, filedAt: fetched.filedAt, rows: fetched.rows, fsDiv: fetched.fsDiv, detailed: fetched.detailed, errors: fetched.errors } : null,
+  };
+  await writeFeedContent(key, payload).catch(() => undefined);
+  return fetched;
 }
 
 async function fetchReport(corpCode: string, bsnsYear: number, spec: ReportSpec): Promise<ReportData | null> {
@@ -305,8 +366,8 @@ function emptyResult(errors: string[]): DartFundamentals {
 /**
  * 종목코드로 DART 펀더멘털 일체.
  *
- * `years` 는 조회할 사업연도 수다. 한 해가 분기 3개 + Q4 구성 1개 = 4분기를 주므로
- * 8분기에는 2년, 밴드 여유까지 보면 3년이면 충분하다. 기본 3년(보고서 12개 × 2콜).
+ * `years` 는 조회할 사업연도 수다. 8분기에는 2년이면 되지만 **밴드 5년 윈도우** 때문에 6년이
+ * 기본이다(`DEFAULT_YEARS` 주석 참조). 조회는 병렬 + 캐시, 조립은 순서 고정.
  */
 export async function fetchDartFundamentals(
   naverCode: string,
@@ -321,7 +382,7 @@ export async function fetchDartFundamentals(
   if (!corpCode) return emptyResult([`dart: corp_code 없음(${naverCode}) — 비상장이거나 매핑에 없다`]);
 
   const now = options.now ?? new Date();
-  const years = options.years ?? 3;
+  const years = options.years ?? DEFAULT_YEARS;
   const errors: string[] = [];
   const quarters: QuarterRecord[] = [];
   const annual: QuarterRecord[] = [];
@@ -337,17 +398,49 @@ export async function fetchDartFundamentals(
   let attempted = 0;
   let composedQ4 = 0;
 
+  /**
+   * 보고서를 **먼저 전부 받고** 그 다음에 조립한다.
+   *
+   * 조회를 병렬로 하되 조립은 순서를 고정한다 — 병렬 완료 순서가 결과에 섞이면 같은 입력에
+   * 다른 팩트시트가 나올 수 있고, 그건 결정론 원칙 위반이다.
+   */
+  const currentYear = now.getUTCFullYear();
+  const jobs: Array<{ bsnsYear: number; spec: ReportSpec }> = [];
   for (let offset = 0; offset < years; offset += 1) {
-    const bsnsYear = now.getUTCFullYear() - offset;
+    for (const spec of REPORTS) jobs.push({ bsnsYear: currentYear - offset, spec });
+  }
+
+  const fetched = new Array<ReportData | null>(jobs.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(REPORT_CONCURRENCY, jobs.length) }, async () => {
+      for (;;) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= jobs.length) return;
+        const job = jobs[index]!;
+        fetched[index] = await fetchReportCached(corpCode, job.bsnsYear, job.spec, currentYear).catch(() => null);
+      }
+    })
+  );
+
+  // 조립 — jobs 순서(연도 내림차순 × 보고서 순서)를 그대로 따른다.
+  const byYear = new Map<number, ReportData[]>();
+  for (const [index, report] of fetched.entries()) {
+    if (!report) continue;
+    const job = jobs[index]!;
+    attempted += 1;
+    if (report.detailed) opened += 1;
+    errors.push(...report.errors);
+    const bucket = byYear.get(job.bsnsYear) ?? [];
+    bucket.push(report);
+    byYear.set(job.bsnsYear, bucket);
+  }
+
+  for (const bsnsYear of [...byYear.keys()].sort((a, b) => b - a)) {
     const annualForYear: QuarterRecord[] = [];
-
-    for (const spec of REPORTS) {
-      const report = await fetchReport(corpCode, bsnsYear, spec);
-      if (!report) continue;
-      attempted += 1;
-      if (report.detailed) opened += 1;
-      errors.push(...report.errors);
-
+    for (const report of byYear.get(bsnsYear)!) {
+      const spec = report.spec;
       // 기간말은 재무상태표 행에서 읽는다(손익 행은 누적 기간 표기라 분기말이 아니다).
       const bsRow = report.rows.find(
         (row) => row.sj_div === "BS" && row.fs_div === report.fsDiv && typeof (row as { thstrm_dt?: string }).thstrm_dt === "string"
@@ -372,17 +465,18 @@ export async function fetchDartFundamentals(
 
       // 사업보고서의 전기·전전기로 연간 시계열을 늘린다 — 한 응답이 3개 연도를 준다.
       if (!spec.quarter) {
-        const revenuePrior = priorAmounts(report, "revenue");
-        const operatingPrior = priorAmounts(report, "operating_income");
-        const netPrior = priorAmounts(report, "net_income");
-        for (const [back, label] of [
-          [1, "전기"],
-          [2, "전전기"],
+        const priors = {
+          revenue: priorAmounts(report, "revenue"),
+          operating_income: priorAmounts(report, "operating_income"),
+          net_income: priorAmounts(report, "net_income"),
+        };
+        for (const [back, key, label] of [
+          [1, "frmtrm", "전기"],
+          [2, "bfefrmtrm", "전전기"],
         ] as const) {
-          const pickKey = back === 1 ? "frmtrm" : "bfefrmtrm";
-          const revenue = revenuePrior[pickKey];
-          const operatingIncome = operatingPrior[pickKey];
-          const netIncome = netPrior[pickKey];
+          const revenue = priors.revenue[key];
+          const operatingIncome = priors.operating_income[key];
+          const netIncome = priors.net_income[key];
           if (revenue === null && operatingIncome === null && netIncome === null) continue;
           const priorYear = Number(periodEnd.slice(0, 4)) - back;
           annualForYear.push({
