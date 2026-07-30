@@ -124,6 +124,8 @@ export function composeFiscal(
     : composeTtm(quarters);
   return {
     filed_at_source: rollupFiledAtSource(quarters),
+    // 조립 단계에서 실제 밴드 입력 수로 덮어쓴다(composeFiscal 은 표시용만 안다).
+    band_quarters: quarters.length,
     quarters,
     annual,
     ttm,

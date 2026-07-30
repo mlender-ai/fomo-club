@@ -98,8 +98,16 @@ export interface FactSheetFiscal {
    * 밴드를 실측으로 착각하게 된다.
    */
   filed_at_source: FiledAtSource;
-  /** 최근 8분기, period_end 오름차순. */
+  /** 최근 8분기, period_end 오름차순. **표시용 상한이다.** */
   quarters: QuarterRecord[];
+  /**
+   * 밴드 계산에 실제로 들어간 분기 수.
+   *
+   * `quarters.length` 는 표시 상한(8)이라 밴드 입력량을 나타내지 않는다. 이 둘을 같은 값으로
+   * 쓴 것이 "어떤 종목도 band_sufficient 에 도달할 수 없는" 결함의 원인이었으므로,
+   * 구분해서 기록한다.
+   */
+  band_quarters: number;
   /** 최근 5회계연도, period_end 오름차순. */
   annual: QuarterRecord[];
   ttm: {

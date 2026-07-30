@@ -180,6 +180,7 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
    * US·KR 양쪽에 해당한다.
    */
   const bandQuarters = dedupeByPeriodEnd(input.quarters);
+  fiscal.band_quarters = bandQuarters.length;
   const bands = computeBands({
     closes: input.closes,
     quarters: bandQuarters,
