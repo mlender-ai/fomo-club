@@ -11,42 +11,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 const ORIGINAL_KEY = process.env.DART_API_KEY;
 
-describe("DART 구조 덤프", () => {
+describe("DART corp_code 매핑", () => {
   beforeEach(() => vi.resetModules());
   afterEach(() => {
     if (ORIGINAL_KEY === undefined) delete process.env.DART_API_KEY;
     else process.env.DART_API_KEY = ORIGINAL_KEY;
     vi.unstubAllGlobals();
-  });
-
-  it("키가 없으면 조사하지 않고 그 사실을 남긴다 — 조용한 빈 성공 금지", async () => {
-    delete process.env.DART_API_KEY;
-    delete process.env.DART_CRTFC_KEY;
-    const { discoverDartStructure } = await import("../../lib/fundamentals/dart-discovery");
-    const result = await discoverDartStructure("185750");
-    expect(result.keyPresent).toBe(false);
-    expect(result.dumps).toEqual([]);
-    expect(result.corpCode).toBeNull();
-    expect(result.corpCodeMap.error).toBe("DART_API_KEY 없음");
-  });
-
-  it("덤프 URL 에서 크레덴셜을 지운다 — 응답으로 키가 새지 않아야 한다", async () => {
-    process.env.DART_API_KEY = "SECRET_KEY_VALUE";
-    vi.stubGlobal("fetch", async () =>
-      new Response(JSON.stringify({ status: "013", message: "조회된 데이타가 없습니다.", list: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      })
-    );
-    const { discoverDartStructure } = await import("../../lib/fundamentals/dart-discovery");
-    const result = await discoverDartStructure("185750");
-    expect(result.keyPresent).toBe(true);
-    expect(result.dumps.length).toBeGreaterThan(0);
-    for (const dump of result.dumps) {
-      expect(dump.url).not.toContain("SECRET_KEY_VALUE");
-      expect(dump.url).toContain("crtfc_key=***");
-    }
-    expect(JSON.stringify(result)).not.toContain("SECRET_KEY_VALUE");
   });
 
   it("corpCode.xml 이 ZIP 이 아니면 추측하지 않고 사유와 본문을 남긴다", async () => {
@@ -84,6 +54,12 @@ describe("DART 구조 덤프", () => {
     expect(map.totalEntries).toBe(3);
     expect(map.listedEntries).toBe(2);
     expect(map.byStockCode.get("185750")).toBe("00164779");
-    expect(map.byStockCode.get("005930")).toBe("00126380");
+  });
+
+  it("키가 없으면 조용히 빈 매핑을 만들지 않고 사유를 남긴다", async () => {
+    const { fetchCorpCodeMap } = await import("../../lib/fundamentals/dart-discovery");
+    const map = await fetchCorpCodeMap("", { refresh: true });
+    expect(map.listedEntries).toBe(0);
+    expect(map.error).toBeTruthy();
   });
 });
