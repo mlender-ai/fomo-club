@@ -85,6 +85,20 @@ const DEFAULT_YEARS = 6;
  */
 const PAST_YEAR_TTL_MS = 30 * 86_400_000;
 const CURRENT_YEAR_TTL_MS = 20 * 3_600_000;
+/**
+ * **부재(013)는 짧게만 캐시한다.**
+ *
+ * 실측: 같은 요청(BNK금융지주 2023 Q1 주요계정)이 한 번은 `000` 34행, 몇 분 뒤에는
+ * `013 조회된 데이타가 없습니다` 로 왔다. DART 의 013 은 "데이터 없음" 이라고 문서화돼 있지만
+ * **실제로는 일시적 실패로도 온다.**
+ *
+ * 그래서 013 을 30일 부재로 굳히면 그 분기가 영구 결손이 된다 — 밴드분기가 10 에서 늘지 않은
+ * 진짜 원인이 이것이었다. 성공은 길게, 부재는 짧게 캐시한다. 비대칭이 의도된 것이다.
+ */
+const ABSENT_TTL_MS = 6 * 3_600_000;
+/** 013 재시도 횟수. 일시적 013 을 부재로 오인하지 않기 위한 최소 확인. */
+const ABSENT_RETRIES = 2;
+const ABSENT_RETRY_DELAY_MS = 700;
 
 /**
  * 정기보고서 → 분기 대응.
@@ -181,7 +195,7 @@ interface CachedReport {
  * 로직을 고칠 때 이 값을 올린다. `dart-accounts.json` 의 `mapping_version` 과는 축이 다르다
  * (그건 계정 매핑, 이건 조회·판정 로직).
  */
-const REPORT_CACHE_VERSION = "v2";
+const REPORT_CACHE_VERSION = "v3";
 
 function reportCacheKey(corpCode: string, bsnsYear: number, code: string): string {
   return `dart-report:${REPORT_CACHE_VERSION}:${corpCode}:${bsnsYear}:${code}`;
@@ -195,9 +209,10 @@ function reportCacheKey(corpCode: string, bsnsYear: number, code: string): strin
  */
 async function fetchReportCached(corpCode: string, bsnsYear: number, spec: ReportSpec, currentYear: number): Promise<ReportOutcome> {
   const key = reportCacheKey(corpCode, bsnsYear, spec.code);
-  const ttl = bsnsYear < currentYear ? PAST_YEAR_TTL_MS : CURRENT_YEAR_TTL_MS;
   const cached = await readFeedContent<CachedReport>(key).catch(() => null);
   if (cached) {
+    // 성공은 길게, **부재는 짧게** — 013 을 부재로 굳히면 그 분기가 영구 결손이 된다.
+    const ttl = cached.data ? (bsnsYear < currentYear ? PAST_YEAR_TTL_MS : CURRENT_YEAR_TTL_MS) : ABSENT_TTL_MS;
     const age = Date.now() - Date.parse(cached.fetchedAt);
     if (Number.isFinite(age) && age < ttl) {
       return cached.data ? { kind: "ok", data: { ...cached.data, spec } } : { kind: "absent" };
@@ -239,7 +254,15 @@ type ReportOutcome =
   | { kind: "failed"; status: string; message: string };
 
 async function fetchReport(corpCode: string, bsnsYear: number, spec: ReportSpec): Promise<ReportOutcome> {
-  const main = await callDart("fnlttSinglAcnt.json", { corp_code: corpCode, bsns_year: String(bsnsYear), reprt_code: spec.code });
+  // 013 은 일시적으로도 온다(실측) — 부재로 단정하기 전에 다시 물어본다.
+  let main: DartResponse | null = null;
+  let retried = 0;
+  for (let attempt = 0; attempt <= ABSENT_RETRIES; attempt += 1) {
+    main = await callDart("fnlttSinglAcnt.json", { corp_code: corpCode, bsns_year: String(bsnsYear), reprt_code: spec.code });
+    if (main?.status !== "013") break;
+    retried = attempt + 1;
+    if (attempt < ABSENT_RETRIES) await new Promise((resolve) => setTimeout(resolve, ABSENT_RETRY_DELAY_MS * (attempt + 1)));
+  }
   if (!main) return { kind: "failed", status: "network", message: "응답 없음(타임아웃·네트워크)" };
   if (main.status === "013") return { kind: "absent" };
   if (main.status !== "000" || !Array.isArray(main.list) || main.list.length === 0) {
@@ -253,6 +276,8 @@ async function fetchReport(corpCode: string, bsnsYear: number, spec: ReportSpec)
   const rows: DartRow[] = [...main.list];
   const fsDiv = preferredFsDiv(rows);
   const errors: string[] = [];
+  // 013 이 재시도로 뒤집혔다는 사실을 남긴다 — 이 소스의 신뢰도에 대한 증거다.
+  if (retried > 0) errors.push(`dart: ${bsnsYear} ${spec.label} 013 → 재시도 ${retried}회 후 확보(013 은 일시적으로도 온다)`);
 
   const all = await callDart("fnlttSinglAcntAll.json", {
     corp_code: corpCode,
