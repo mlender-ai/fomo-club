@@ -31,7 +31,12 @@ export async function GET(request: Request) {
   // 매핑 파일은 캐시한다(10만 행 ZIP, DART 전송이 느리다). `refresh=1` 로만 다시 받는다.
   const refresh = params.get("refresh") === "1";
   try {
-    const result = await discoverDartStructure(code, { refresh });
+    // 연도 축을 열어 둔다 — "과거 보고서가 부재인지 실패인지" 는 원시 응답으로만 갈린다.
+    const yearParam = Number.parseInt(params.get("year") ?? "", 10);
+    const result = await discoverDartStructure(code, {
+      refresh,
+      ...(Number.isFinite(yearParam) ? { year: yearParam } : {}),
+    });
     return withCors(NextResponse.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } }));
   } catch (error) {
     return withCors(
