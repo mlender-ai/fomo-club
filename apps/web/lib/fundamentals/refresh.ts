@@ -35,6 +35,15 @@ export interface RefreshOutcome {
   missing_count: number;
   quarters: number;
   band_sufficient: boolean;
+  /**
+   * 밴드별 진단 — 관측/분모/사유.
+   *
+   * 커버리지 리포트는 사유의 숫자를 `N` 으로 마스킹해 집계하므로(같은 사유를 묶기 위해),
+   * "왜 부족한가" 를 실제 수치로 볼 곳이 없었다. 그 상태로 파라미터를 조정하면 추측이다.
+   */
+  bands: Record<string, { observations: number; window_trading_days: number; sufficient: boolean; reason: string | null }>;
+  /** 밴드에 실제로 들어간 분기 수 — 표시용 8개와 구분해서 본다. */
+  band_quarters: number;
   errors: string[];
   /** 최신 분기 기간말 → 갱신 지연 측정(WO-SUB-00 §5 미완 항목). */
   latest_period_end: string | null;
@@ -66,6 +75,21 @@ function outcomeOf(factsheet: FactSheet, hash: string, today: string): RefreshOu
     coverage_flag: factsheet.fiscal.coverage_flag,
     missing_count: factsheet.missing_fields.length,
     quarters: factsheet.fiscal.quarters.length,
+    bands: Object.fromEntries(
+      (["per", "pbr", "psr"] as const).map((metric) => {
+        const band = factsheet.valuation.band_5y?.[metric];
+        return [
+          metric,
+          {
+            observations: band?.observations ?? 0,
+            window_trading_days: band?.window_trading_days ?? 0,
+            sufficient: band?.sufficient ?? false,
+            reason: band?.insufficient_reason ?? null,
+          },
+        ];
+      })
+    ),
+    band_quarters: factsheet.fiscal.band_quarters ?? 0,
     band_sufficient: Boolean(bands.per?.sufficient || bands.pbr?.sufficient || bands.psr?.sufficient),
     errors: factsheet.source_errors,
     latest_period_end: latest,
@@ -107,6 +131,8 @@ export async function refreshFactSheetsChunk(
         coverage_flag: "none",
         missing_count: 0,
         quarters: 0,
+        bands: {},
+        band_quarters: 0,
         band_sufficient: false,
         errors: [`build 실패: ${error instanceof Error ? error.message : String(error)}`],
         latest_period_end: null,
