@@ -1,0 +1,60 @@
+name: Invariant Retro Scan (manual)
+
+# WO-SUB-03.5 PART A-2 — 활성 불변식을 저장된 산출물 전량에 소급 실행한다.
+#
+# 왜 워크플로인가: 스캔은 저장소(DB)를 읽어야 하는데 `DATABASE_URL` 은 로컬에 없고
+# GitHub Actions Secrets 에는 있다. 진단용 HTTP 라우트를 새로 만드는 대안은 택하지 않았다 —
+# 인증 없이 호출되는 경로를 늘리는 것은 방금 제거한 문제를 되살리는 일이다.
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "리포트를 커밋할 브랜치(비우면 아티팩트만)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: invariant-retro-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Retro scan
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/invariant-retro-scan.ts --out docs/quality
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retro-invariant-scan
+          path: |
+            docs/quality/RETRO_invariant_scan.md
+            docs/quality/retro_invariant_scan_raw.json
+      - name: Commit report
+        if: inputs.commit != ''
+        env:
+          BRANCH: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add docs/quality/RETRO_invariant_scan.md docs/quality/retro_invariant_scan_raw.json
+          # 변경이 없으면 커밋하지 않는다 — 빈 커밋은 이력을 흐린다.
+          if git diff --cached --quiet; then
+            echo "변경 없음 — 커밋 생략"
+            exit 0
+          fi
+          git commit -m "docs(quality): 소급 불변식 스캔 결과 (PART A-2)"
+          git push origin "$BRANCH"
