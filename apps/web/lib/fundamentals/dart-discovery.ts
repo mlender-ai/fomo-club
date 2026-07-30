@@ -54,6 +54,33 @@ async function probe(endpoint: string, url: string): Promise<DartDump> {
         accountNames: Array.isArray(list)
           ? [...new Set(list.map((row) => (row as { account_nm?: string }).account_nm).filter(Boolean))].slice(0, 60)
           : null,
+        /**
+         * 재무제표 구분(`sj_div`) 전수 — **60계정 컷과 무관하게 센다.**
+         * `CF`(현금흐름표) 유무가 02R 의 자격 판정 입력이므로, 계정 목록이 잘려서
+         * "확인 못 함" 이 되는 상황을 없앤다.
+         */
+        statementCensus: Array.isArray(list)
+          ? Object.entries(
+              list.reduce<Record<string, number>>((acc, row) => {
+                const div = (row as { sj_div?: string }).sj_div ?? "?";
+                acc[div] = (acc[div] ?? 0) + 1;
+                return acc;
+              }, {})
+            )
+              .sort()
+              .map(([div, count]) => `${div}=${count}`)
+          : null,
+        /** CF 로 확인된 계정명 — 런웨이·FCF 계산 가능성을 눈으로 본다. */
+        cashFlowAccounts: Array.isArray(list)
+          ? [
+              ...new Set(
+                list
+                  .filter((row) => (row as { sj_div?: string }).sj_div === "CF")
+                  .map((row) => (row as { account_nm?: string }).account_nm)
+                  .filter(Boolean)
+              ),
+            ]
+          : null,
       };
     } catch {
       shape = { notJson: true, head: text.slice(0, 200) };
