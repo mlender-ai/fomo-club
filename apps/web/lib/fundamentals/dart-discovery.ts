@@ -89,6 +89,31 @@ async function probe(endpoint: string, url: string): Promise<DartDump> {
               ),
             ]
           : null,
+        /**
+         * 손익 주요 행의 기간 표기와 금액.
+         *
+         * **분기보고서 손익이 누적인지 3개월치인지 모르는 채 TTM 을 구성하면 가짜 숫자다.**
+         * Q1·H1·Q3·FY 의 매출액을 나란히 놓으면 확정된다 — H1 ≈ 2×Q1 이면 누적이다.
+         * 전기(`frmtrm`)가 전년 동기인지 전년 연간인지도 여기서 갈린다.
+         */
+        incomeRows: Array.isArray(list)
+          ? list
+              .filter((row) => {
+                const cast = row as { sj_div?: string; account_nm?: string };
+                return cast.sj_div === "IS" && ["매출액", "영업이익", "영업이익(손실)", "당기순이익", "당기순이익(손실)"].includes(cast.account_nm ?? "");
+              })
+              .map((row) => {
+                const cast = row as Record<string, string | undefined>;
+                return {
+                  account_nm: cast.account_nm,
+                  thstrm_nm: cast.thstrm_nm,
+                  thstrm_dt: cast.thstrm_dt,
+                  thstrm_amount: cast.thstrm_amount,
+                  frmtrm_nm: cast.frmtrm_nm,
+                  frmtrm_amount: cast.frmtrm_amount,
+                };
+              })
+          : null,
         /** CF 로 확인된 계정명 — 런웨이·FCF 계산 가능성을 눈으로 본다. */
         cashFlowAccounts: Array.isArray(list)
           ? [
