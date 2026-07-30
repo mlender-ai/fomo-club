@@ -70,6 +70,25 @@ async function probe(endpoint: string, url: string): Promise<DartDump> {
               .sort()
               .map(([div, count]) => `${div}=${count}`)
           : null,
+        /**
+         * `account_id` ↔ `account_nm` 쌍 전수.
+         *
+         * **매핑 파일을 이 덤프 없이 쓰면 추측 파서다**(WO-SUB-00 규칙). 표준 계정 ID 를
+         * 외부 지식으로 적어 넣는 것과, 이 응답이 실제로 준 값을 적는 것은 다르다.
+         * `-표준계정아님` 표시는 확장 계정(회사 고유)이라 매핑에 쓸 수 없다는 뜻이다.
+         */
+        accountIdPairs: Array.isArray(list)
+          ? [
+              ...new Set(
+                list
+                  .filter((row) => typeof (row as { account_id?: string }).account_id === "string")
+                  .map((row) => {
+                    const cast = row as { sj_div?: string; account_id?: string; account_nm?: string };
+                    return `${cast.sj_div}|${cast.account_id}|${cast.account_nm}`;
+                  })
+              ),
+            ]
+          : null,
         /** CF 로 확인된 계정명 — 런웨이·FCF 계산 가능성을 눈으로 본다. */
         cashFlowAccounts: Array.isArray(list)
           ? [
