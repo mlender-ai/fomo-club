@@ -2,7 +2,7 @@ import type { FactSheet } from "@fomo/core";
 import { kstDate } from "../fomo";
 import { readFeedContent, writeFeedContent } from "../feed-content-store";
 import { buildFactSheet } from "./build";
-import { readFactSheet, writeFactSheet, writeFactSheetIndex, type FactSheetIndexEntry } from "./repository";
+import { readFactSheet, writeBuildFailure, writeFactSheet, writeFactSheetIndex, type FactSheetIndexEntry } from "./repository";
 import { loadFundamentalsUniverse, type UniverseEntry } from "./universe";
 
 /**
@@ -123,7 +123,14 @@ export async function refreshFactSheetsChunk(
       const record = await writeFactSheet(factsheet);
       outcomes.push(outcomeOf(record.factsheet, record.factsheet_hash, date));
     } catch (error) {
-      // 한 종목의 실패가 배치를 죽이지 않는다. 실패도 사실이므로 기록한다.
+      // 한 종목의 실패가 배치를 죽이지 않는다. 실패도 사실이므로 **저장한다** —
+      // 응답에만 남기면 백필 워크플로가 버리고, 원인을 사후에 알 수 없다.
+      await writeBuildFailure({
+        date,
+        canonical: entry.canonical,
+        market: entry.country,
+        error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+      });
       outcomes.push({
         canonical: entry.canonical,
         market: entry.country,
