@@ -27,6 +27,7 @@ const FORBIDDEN_IDENTIFIERS = [
   "refreshFactSheetsChunk",
   "fetchSecFundamentals",
   "fetchNaverFundamentals",
+  "fetchDartFundamentals",
   "fetchNasdaqFundamentals",
 ];
 

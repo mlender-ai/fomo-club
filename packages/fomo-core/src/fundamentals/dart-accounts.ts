@@ -50,6 +50,14 @@ export function dartUnavailableReason(field: string): string | null {
 
 export interface DartRow {
   sj_div?: string;
+  /**
+   * 연결(`CFS`) / 개별(`OFS`).
+   *
+   * **주요계정 응답은 두 개를 함께 준다** — 같은 `매출액` 행이 두 번 나온다(실측). 필터하지 않으면
+   * 어느 것을 집는지가 응답 순서에 달리고, 연결과 개별을 섞으면 서로 다른 범위의 숫자가 한
+   * 레코드에 들어간다.
+   */
+  fs_div?: string;
   account_id?: string;
   account_nm?: string;
   thstrm_amount?: string;
@@ -72,9 +80,15 @@ export function parseDartAmount(raw: string | undefined): number | null {
  * `account_id` 가 있으면 그것으로(우선순위 순서), 없으면 계정명으로 찾는다 —
  * 어느 쪽으로 찾았는지 돌려주므로 감사에서 구분된다.
  */
-export function findDartRow(rows: readonly DartRow[], field: string): { row: DartRow; matchedBy: "account_id" | "account_nm"; key: string } | null {
+export function findDartRow(
+  rows: readonly DartRow[],
+  field: string,
+  fsDiv?: string
+): { row: DartRow; matchedBy: "account_id" | "account_nm"; key: string } | null {
   const spec = dartField(field);
-  const inStatement = rows.filter((row) => row.sj_div === spec.statement);
+  const inStatement = rows.filter(
+    (row) => row.sj_div === spec.statement && (fsDiv === undefined || row.fs_div === fsDiv)
+  );
   for (const id of spec.account_ids) {
     const row = inStatement.find((candidate) => candidate.account_id === id);
     if (row) return { row, matchedBy: "account_id", key: id };
