@@ -215,3 +215,63 @@ describe("percentileRank", () => {
     expect(percentileRank(1, [])).toBeNull();
   });
 });
+
+/**
+ * 밴드 입력은 표시 상한이 아니라 **분기 전체 이력**이어야 한다.
+ *
+ * 실측 결함: `assembleFactSheet` 가 표시용으로 8개로 자른 `fiscal.quarters` 를 밴드에 넘겨서,
+ * 5년 윈도우의 앞 3년이 전부 null 이 되고 어떤 종목도 `sufficient` 에 도달할 수 없었다.
+ * 몇 년을 수집하든 무관하게 막히는 구조라 회귀하면 다시 조용히 전부 false 가 된다.
+ */
+describe("밴드 입력 = 분기 전체 이력 (회귀 방지)", () => {
+  const YEARS = 6;
+
+  function syntheticQuarters(): QuarterRecord[] {
+    const out: QuarterRecord[] = [];
+    for (let index = 0; index < YEARS * 4; index += 1) {
+      const year = 2020 + Math.floor(index / 4);
+      const quarter = (index % 4) + 1;
+      const periodEnd = [`${year}-03-31`, `${year}-06-30`, `${year}-09-30`, `${year}-12-31`][quarter - 1]!;
+      out.push({
+        period: `${year}Q${quarter}`,
+        period_end: periodEnd,
+        // 기간말 45일 뒤 공시로 둔다 — look-ahead 가드가 실제로 걸리는 조건.
+        filed_at: new Date(Date.parse(periodEnd) + 45 * 86_400_000).toISOString().slice(0, 10),
+        filed_at_source: "disclosed",
+        revenue: 1_000_000,
+        operating_income: 100_000,
+        net_income: 80_000,
+        eps_diluted: null,
+        source: "test",
+      });
+    }
+    return out;
+  }
+
+  function closes(): DailyClose[] {
+    const out: DailyClose[] = [];
+    const start = Date.UTC(2020, 0, 1);
+    const end = Date.UTC(2026, 0, 1);
+    for (let time = start; time <= end; time += 86_400_000) {
+      const date = new Date(time);
+      // 주말 제외 — 거래일 근사.
+      if (date.getUTCDay() === 0 || date.getUTCDay() === 6) continue;
+      out.push({ date: date.toISOString().slice(0, 10), close: 10_000 });
+    }
+    return out;
+  }
+
+  const shared = { closes: closes(), equityPoints: [], sharesRef: 1_000_000, sharesRefAsOf: "2026-01-01", sharesSeries: [] };
+
+  it("전체 이력을 주면 PER 밴드가 충족된다", () => {
+    const bands = computeBands({ ...shared, quarters: syntheticQuarters() });
+    expect(bands.per.sufficient).toBe(true);
+    expect(bands.per.current_percentile).not.toBeNull();
+  });
+
+  it("표시 상한(최근 8개)만 주면 충족되지 않는다 — 이것이 실측 결함이었다", () => {
+    const bands = computeBands({ ...shared, quarters: syntheticQuarters().slice(-8) });
+    expect(bands.per.sufficient).toBe(false);
+    expect(bands.per.current_percentile).toBeNull();
+  });
+});

@@ -1,7 +1,7 @@
 import { computeBands, type DailyClose, type EquityPoint, type SharesPoint } from "./bands";
 import { deriveBalance, deriveGrowth, deriveMargin, type PointObservation } from "./derive";
 import { collectMissingFields } from "./missing";
-import { composeFiscal, TTM_QUARTERS } from "./ttm";
+import { composeFiscal, dedupeByPeriodEnd, TTM_QUARTERS } from "./ttm";
 import type {
   Currency,
   FactSheet,
@@ -167,9 +167,22 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
     .filter((p) => Number.isFinite(p.value))
     .map((p) => ({ period_end: p.period_end, filed_at: p.filed_at, equity: p.value }));
   const sharesRef = input.marketData.shares_outstanding;
+  /**
+   * 밴드에는 **분기 전체 이력**을 준다 — `fiscal.quarters` 가 아니다.
+   *
+   * `fiscal.quarters` 는 표시용으로 최근 8개(2년)만 남긴다. 그런데 밴드는
+   * `유효 관측 >= 0.6 × 5년 거래일` 을 요구하고 각 거래일의 TTM 은 **그 시점에 공시된**
+   * 4분기로 만든다. 2년치만 주면 윈도우의 앞 3년이 전부 `null` 이 되어
+   * **어떤 종목도 `sufficient` 에 도달할 수 없다** — 몇 년을 수집하든 무관하게.
+   *
+   * 실측으로 확인한 결함이다(재백필 후에도 전 종목 `band_sufficient: false`,
+   * 사유가 "유효 관측 하한 미달"). 표시 상한과 계산 입력을 같은 값으로 쓴 것이 원인이고,
+   * US·KR 양쪽에 해당한다.
+   */
+  const bandQuarters = dedupeByPeriodEnd(input.quarters);
   const bands = computeBands({
     closes: input.closes,
-    quarters: fiscal.quarters,
+    quarters: bandQuarters,
     equityPoints,
     sharesRef,
     sharesRefAsOf: input.marketData.price_as_of,
