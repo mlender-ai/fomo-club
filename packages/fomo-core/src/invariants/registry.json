@@ -1,0 +1,57 @@
+{
+  "registry_version": "inv-v1.0.0",
+  "note": "WO-SUB-09 품질 게이트의 정본. docs/quality/INVARIANTS.md 는 이 파일의 생성물이다.",
+  "invariants": [
+    {
+      "id": "INV-06",
+      "title": "아키타입 금지 지표 미노출",
+      "statement": "아키타입의 forbidden_metrics 에 등재된 경로는 어떤 렌더 투영에도 나타나지 않는다.",
+      "precondition": "WO-SUB-02 완료",
+      "status": "deferred",
+      "defer_reason": "WO-SUB-02R 에서 카탈로그(유형 목록·금지 지표)가 바뀐다. 지금 쓰면 카탈로그 확정 후 다시 써야 하므로 02R 과 함께 활성화한다.",
+      "source_of_truth": "packages/fomo-core/src/archetype/doctrine.json#forbidden_metrics"
+    },
+    {
+      "id": "INV-08",
+      "title": "수치 렌더 시 source + as_of 동반",
+      "statement": "렌더 투영에 실리는 모든 수치는 field_sources 에 source 와 as_of 를 가진다. 없으면 투영에서 제외된다.",
+      "precondition": "WO-SUB-01 완료",
+      "status": "active",
+      "source_of_truth": "packages/fomo-core/src/fundamentals/types.ts#FactSheet.field_sources"
+    },
+    {
+      "id": "INV-09",
+      "title": "금지어 사전",
+      "statement": "실체 배치가 생성한 모든 문장(사업 실체 슬롯·경고문·독트린 문안)은 투자자문·평가·인과·예측 어휘를 포함하지 않는다.",
+      "precondition": "무조건",
+      "status": "active",
+      "source_of_truth": "packages/fomo-core/src/invariants/banned-words.ts",
+      "scope_note": "기존 apps/web/lib/copy-guards.ts 의 FORBIDDEN_COPY 는 DEV_CONSTRAINTS_LIFTED=true 로 해제된 상태다(docs/CONSTRAINT_OVERRIDE_DEV.md ACTIVE). 그 플래그는 기존 피드 카피의 제품 결정이므로 이 WO 에서 뒤집지 않는다. 대신 실체 배치 사전은 그 플래그와 무관하게 항상 켜져 있다 — 배치의 절대 규칙은 개발 편의로 해제할 수 있는 것이 아니다."
+    },
+    {
+      "id": "INV-11",
+      "title": "경고문 강제 부착",
+      "statement": "requires_warning_metrics 에 등재된 지표를 렌더할 때 해당 유형의 경고문이 함께 나간다.",
+      "precondition": "WO-SUB-02 완료",
+      "status": "deferred",
+      "defer_reason": "INV-06 과 같은 이유 — 02R 에서 경고문 전종 문안이 재작성된다(사람 승인 게이트). 문안 확정 전에 부착 규칙을 고정하면 두 번 쓴다.",
+      "source_of_truth": "packages/fomo-core/src/archetype/doctrine.json#requires_warning_metrics"
+    },
+    {
+      "id": "INV-12",
+      "title": "결측 정직성",
+      "statement": "missing_fields 에 등재된 경로는 렌더 투영에 값으로 나타나지 않는다. 이전 기간 값으로 메우는 것도 금지다.",
+      "precondition": "WO-SUB-01 완료",
+      "status": "active",
+      "source_of_truth": "packages/fomo-core/src/fundamentals/missing.ts#collectMissingFields"
+    },
+    {
+      "id": "INV-14",
+      "title": "렌더 경로에서 계산/LLM 임포트 금지",
+      "statement": "렌더 경로는 저장된 레코드만 읽는다. 계산 조립·외부 fetch·LLM 호출을 임포트하지 않는다.",
+      "precondition": "WO-SUB-01 + 03 완료",
+      "status": "active",
+      "source_of_truth": "apps/web/__tests__/lib/*-request-path-guard.test.ts"
+    }
+  ]
+}

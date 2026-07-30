@@ -15,7 +15,7 @@ import type { ReportedNumber } from "@fomo/core";
  *    실제로는 **마지막 한 컬럼만 `"Y"`(예상치)** 이며, 그 컬럼이 매출·EPS 컨센서스다.
  *  · `consensusInfo` 의 `priceTargetMean`(목표주가)은 **우리 원칙상 금지 값**이라 읽지 않는다.
  *  · 재무 표 단위: 매출/이익 = **억원**, EPS/BPS/주당배당금 = 원, 비율 = %.
- *  · 재무 표에는 **공시일이 없다.** 법정 제출기한을 보수적 상한으로 쓴다(`filed_at_basis`).
+ *  · 재무 표에는 **공시일이 없다.** 법정 제출기한을 보수적 상한으로 쓴다(`filed_at_source`).
  *  · 일별 차트(`api.stock.naver.com/chart/domestic/item/{code}/day`)는 **액면분할 조정 종가**다.
  *    실측 검증: 카카오(035720) 2021-04-14 종가가 112,000(분할 전 명목가 560,000이 아니다).
  */
@@ -243,7 +243,7 @@ export function parseFinanceTable(
       period: periodLabel(periodEnd, annual),
       period_end: periodEnd,
       filed_at: addDays(periodEnd, annual ? ANNUAL_DEADLINE_DAYS : QUARTER_DEADLINE_DAYS),
-      filed_at_basis: "statutory_deadline",
+      filed_at_source: "statutory_deadline",
       revenue: revenue === null ? null : revenue * EOK,
       operating_income: operating === null ? null : operating * EOK,
       net_income: net === null ? null : net * EOK,

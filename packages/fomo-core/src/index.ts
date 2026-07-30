@@ -33,3 +33,4 @@ export * from "./index-engine/redditFetcher";
 export * from "./fundamentals";
 export * from "./archetype";
 export * from "./business-context";
+export * from "./invariants";

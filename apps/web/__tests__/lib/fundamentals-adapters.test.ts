@@ -97,7 +97,7 @@ describe("네이버 재무 표 파싱", () => {
 
   it("공시일이 없으므로 법정 제출기한을 쓰고 근거를 표기한다", () => {
     const record = parsed.records[2]!;
-    expect(record.filed_at_basis).toBe("statutory_deadline");
+    expect(record.filed_at_source).toBe("statutory_deadline");
     // 사업보고서 = 사업연도 종료 후 90일.
     expect(record.filed_at).toBe("2026-03-31");
     // 기한은 실제 공시일보다 늦거나 같다 → look-ahead 를 만들지 않는다.
