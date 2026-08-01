@@ -237,6 +237,9 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
   noteDerived("cashflow.dividend_paid_ttm", cashflow.dividend_paid_ttm, latestPoint(input.dividendPaid)?.period_end ?? null);
   noteDerived("cashflow.dividend_coverage", cashflow.dividend_coverage, cfAsOf);
   noteDerived("cashflow.burn_per_quarter", cashflow.burn_per_quarter, cfAsOf);
+  // 관측 분기 수도 수치다 — 출처를 붙인다(margin.operating_stdev_annual_years 와 같은 취급).
+  // 어느 데이터셋을 센 값인지 밝히지 않으면 "8분기"가 어디서 온 8인지 알 수 없다.
+  noteDerived("cashflow.observed_quarters", cashflow.observed_quarters, cfAsOf);
 
   for (const [path, value] of [
     ["market_data.market_cap", input.marketData.market_cap],

@@ -55,6 +55,27 @@ export function collectMissingFields(factsheet: FactSheet): string[] {
 }
 
 /**
+ * INV-08 이 출처를 요구하는 절.
+ *
+ * **절을 추가하면 여기도 추가해야 한다.** 목록에서 빠진 절은 "출처 없는 수치"를 조용히
+ * 통과시키고, 불변식이 켜져 있다는 착각만 남는다. `fundamentals-source-sections.test.ts`
+ * 가 새 절이 조용히 빠지는 것을 막는다.
+ *
+ * `fiscal` 은 여기 없다 — 분기 레코드는 스칼라가 아니라 **레코드 단위로 `source` 를 들고
+ * 있어서**(`QuarterRecord.source`) 경로별 출처 요구가 성립하지 않는다.
+ * `classification` 도 없다 — 값이 문자열이고 `classification.source` 로 절 전체가 대표된다.
+ */
+export const SOURCE_SCANNED_SECTIONS = [
+  "growth",
+  "margin",
+  "valuation",
+  "balance",
+  "cashflow",
+  "market_data",
+  "consensus",
+] as const;
+
+/**
  * 값이 있는 스칼라 필드에 출처가 붙어 있는지 검증한다(§4 규칙 2).
  * 반환값이 비어 있지 않으면 파이프라인 버그다 — 출처 없는 수치를 저장하려 한 것이다.
  */
@@ -72,7 +93,7 @@ export function fieldsMissingSource(factsheet: FactSheet): string[] {
       collect(child, path ? `${path}.${key}` : key);
     }
   };
-  for (const section of ["growth", "margin", "valuation", "balance", "market_data", "consensus"] as const) {
+  for (const section of SOURCE_SCANNED_SECTIONS) {
     collect(factsheet[section], section);
   }
   // 밴드 내부 통계는 밴드 자체의 출처(가격 소스)로 대표한다 — 개별 분위수마다 출처를 요구하지 않는다.
