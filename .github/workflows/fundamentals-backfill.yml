@@ -13,11 +13,14 @@ on:
       limit:
         description: "1회 청크 종목 수"
         type: string
-        default: "24"
+        # 24 는 상한에 붙어 있었다 — 크론 함수가 maxDuration=300 인데 종목당 ~10.6초라
+        # 24종목이 ~254초다. 실측(run 30693084858)에서 round 2 가 300초에 걸려 죽었다.
+        default: "12"
       rounds:
         description: "최대 반복 횟수"
         type: string
-        default: "20"
+        # 326종목 ÷ 12 = 28라운드. 20 이면 전량을 못 덮는다.
+        default: "30"
       reset:
         description: "커서를 버리고 처음부터"
         type: boolean
@@ -49,12 +52,22 @@ jobs:
           reset_param=""
           if [ "${RESET:-false}" = "true" ]; then reset_param="&reset=1"; fi
 
+          fails=0
           for i in $(seq 1 "$ROUNDS"); do
             echo "== round $i =="
             # 첫 라운드만 reset 을 붙인다 — 매 라운드 reset 하면 커서가 초기화돼 영원히 안 끝난다.
             q="limit=${LIMIT}"
             if [ "$i" = "1" ]; then q="${q}${reset_param}"; fi
-            resp=$(curl -fsS --max-time 300 "${AUTH[@]}" "$BASE/api/fomo/cron/fundamentals?${q}") || { echo "round $i failed"; break; }
+            # 한 라운드 실패로 전체를 포기하지 않는다 — 커서는 서버에 있으므로 다음 라운드가
+            # 이어서 처리한다. 연속 실패일 때만 중단한다(항구적 장애와 일시적 실패를 구분).
+            if ! resp=$(curl -fsS --max-time 290 "${AUTH[@]}" "$BASE/api/fomo/cron/fundamentals?${q}"); then
+              fails=$((fails + 1))
+              echo "round $i failed (연속 $fails)"
+              if [ "$fails" -ge 3 ]; then echo "연속 3회 실패 — 중단"; break; fi
+              sleep 20
+              continue
+            fi
+            fails=0
             node -e '
               const r = JSON.parse(process.argv[1]);
               const bad = (r.outcomes ?? []).filter((o) => o.coverage_flag === "none").map((o) => o.canonical);
@@ -72,7 +85,9 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          curl -fsS --max-time 120 "https://fomo-club-backend.vercel.app/api/fomo/fundamentals/coverage" > /tmp/cov.json || exit 0
+          # s-maxage=900 이라 그냥 부르면 15분 전 스냅샷을 읽는다 — 방금 채운 값이 안 보인다.
+          curl -fsS --max-time 120 -H "Cache-Control: no-cache" \
+            "https://fomo-club-backend.vercel.app/api/fomo/fundamentals/coverage?cb=${GITHUB_RUN_ID}" > /tmp/cov.json || exit 0
           node -e '
             const r = require("/tmp/cov.json");
             const lines = [];
