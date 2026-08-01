@@ -19,10 +19,21 @@
  *   2. 종목마다 `golden30_progress.jsonl` 에 append 하고, 전체 JSON·보고서를 다시 쓴다.
  *   3. `status` 는 running → partial → complete 로만 간다. 소비자(Summary 단계)는 이 값을 먼저 본다.
  *
+ * ## 배치 실행 (2026-08-01 추가) — 무료 티어를 유지한 채 완주한다
+ *
+ * TPM 12,000 에서 30종목 일괄 실행은 감속이 겹쳐 90분 안에 못 끝난다(실측). 유료 전환 대신
+ * **10종목씩 3배치**로 쪼갠다. 배치마다 러너와 타임아웃이 따로라 감속이 누적되지 않는다.
+ *
+ *   --slice 1/3  → 1~10번, --slice 2/3 → 11~20번, --slice 3/3 → 21~30번
+ *   --carry <jsonl>  이전 배치의 진행 로그를 이어받는다(누적 보고서를 만든다)
+ *
+ * 이어붙이기가 성립하는 이유가 증분 저장이다 — 각 배치가 JSONL 을 누적해서 남기므로
+ * 마지막 배치의 산출물이 곧 30종목 전체 결과다. `status: complete` 는 30행이 다 찼을 때만 된다.
+ *
  * 실행: npx tsx --env-file=.env scripts/business-context-goldenset.ts --out docs/business-context
  */
 
-import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BusinessContext } from "@fomo/core";
 import { buildBusinessContext } from "../apps/web/lib/business-context/build";
@@ -81,6 +92,33 @@ function entryOf(id: string, name: string): UniverseEntry {
 function flag(name: string): string | undefined {
   const index = process.argv.indexOf(name);
   return index >= 0 && index + 1 < process.argv.length ? process.argv[index + 1] : undefined;
+}
+
+/** `"2/3"` → 11~20번 종목. 범위를 벗어나면 실행을 멈춘다(조용히 빈 배치를 돌지 않는다). */
+function parseSlice(raw: string | undefined, total: number): { start: number; end: number; label: string } {
+  if (!raw) return { start: 0, end: total, label: "전체" };
+  const match = raw.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (!match) throw new Error(`--slice 형식이 "N/M" 이 아니다: ${raw}`);
+  const index = Number(match[1]);
+  const parts = Number(match[2]);
+  if (index < 1 || index > parts) throw new Error(`--slice 범위 밖: ${raw}`);
+  const size = Math.ceil(total / parts);
+  return { start: (index - 1) * size, end: Math.min(index * size, total), label: `${index}/${parts}` };
+}
+
+/** 이전 배치의 진행 로그. 없으면 빈 배열 — 1번 배치는 이어받을 것이 없다. */
+function readCarry(path: string | undefined): Row[] {
+  if (!path || !existsSync(path)) return [];
+  const rows: Row[] = [];
+  for (const line of readFileSync(path, "utf-8").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      rows.push(JSON.parse(line) as Row);
+    } catch {
+      // 잘린 마지막 줄은 버린다 — 죽는 순간 append 가 끊겼을 수 있다.
+    }
+  }
+  return rows;
 }
 
 interface Row {
@@ -210,14 +248,21 @@ type RunStatus = "running" | "partial" | "complete";
  * 전량 재작성이 비싸 보이지만 30행이라 무시할 수 있고, 대신 **어느 시점에 죽어도 파일이 정합**이다.
  * JSONL 은 재작성 없이 append 만 하므로 전량 재작성이 도중에 끊겨도 원본은 남는다.
  */
-function makeWriter(outDir: string | undefined, startedAt: string, variableFailures: () => readonly string[]) {
+function makeWriter(
+  outDir: string | undefined,
+  startedAt: string,
+  variableFailures: () => readonly string[],
+  carried: readonly Row[]
+) {
   if (!outDir) return { save: () => {}, jsonl: undefined };
   mkdirSync(outDir, { recursive: true });
   const rawPath = join(outDir, "golden30_raw.json");
   const reportPath = join(outDir, "EVAL_golden30.md");
   const jsonlPath = join(outDir, "golden30_progress.jsonl");
   // 낡은 진행 로그는 지운다 — 지난 실행의 행이 이번 실행 결과에 섞이면 안 된다.
+  // 이어받은 행은 그 자리에 **다시 써서** 이 배치의 산출물도 누적본이 되게 한다.
   rmSync(jsonlPath, { force: true });
+  for (const row of carried) appendFileSync(jsonlPath, `${JSON.stringify(row)}\n`);
 
   const save = (rows: readonly Row[], status: RunStatus): void => {
     writeFileSync(
@@ -242,8 +287,8 @@ function makeWriter(outDir: string | undefined, startedAt: string, variableFailu
     writeFileSync(reportPath, renderReport(rows, status));
   };
 
-  // 첫 종목 전에 죽어도 "이번 실행은 0행"이 남는다. 커밋본이 결과로 둔갑하지 않는다.
-  save([], "running");
+  // 첫 종목 전에 죽어도 "이번 실행은 이어받은 N행"이 남는다. 커밋본이 결과로 둔갑하지 않는다.
+  save(carried, carried.length >= GOLDEN.length ? "complete" : "running");
   return {
     save,
     jsonl: (row: Row) => appendFileSync(jsonlPath, `${JSON.stringify(row)}\n`),
@@ -253,16 +298,23 @@ function makeWriter(outDir: string | undefined, startedAt: string, variableFailu
 async function main(): Promise<void> {
   const outDir = flag("--out");
   const startedAt = new Date().toISOString();
+  const slice = parseSlice(flag("--slice"), GOLDEN.length);
+  // 이어받은 행 중 이번 배치가 다시 도는 종목은 새 결과로 덮는다(중복 행 금지).
+  const targets = GOLDEN.slice(slice.start, slice.end);
+  const targetIds = new Set(targets.map(([id]) => id));
+  const carried = readCarry(flag("--carry")).filter((row) => !targetIds.has(row.id));
+  console.log(`[golden30] 배치 ${slice.label} — ${targets.length}종목(${slice.start + 1}~${slice.end}) · 이어받음 ${carried.length}행`);
+
   let failures: readonly string[] = [];
-  const writer = makeWriter(outDir, startedAt, () => failures);
+  const writer = makeWriter(outDir, startedAt, () => failures, carried);
 
   console.log("[golden30] 의존 변수 관측값 수집…");
   const values = await fetchVariableObservations();
   failures = values.failed;
   console.log(`  변수 ${Object.keys(values.observations).length}개 확보, 실패 ${values.failed.length}개 ${values.failed.join(",")}`);
 
-  const rows: Row[] = [];
-  for (const [index, [id, name]] of GOLDEN.entries()) {
+  const rows: Row[] = [...carried];
+  for (const [index, [id, name]] of targets.entries()) {
     const context = await buildBusinessContext(entryOf(id, name), { observations: values.observations });
     const row: Row = { id, name, market: /^\d{6}$/.test(id) ? "KR" : "US", context };
     rows.push(row);
@@ -270,7 +322,7 @@ async function main(): Promise<void> {
     writer.jsonl?.(row);
     writer.save(rows, rows.length === GOLDEN.length ? "complete" : "partial");
     console.log(
-      `  [${index + 1}/${GOLDEN.length}] ${name.padEnd(22)} ${context.badge.padEnd(4)} s1=${context.slot1_revenue_source ? "O" : "-"} s2=${context.slot2_dependency ? "O" : "-"} s3=${context.slot3_dependency_state ? "O" : "-"} ${context.errors.length ? `err=${context.errors.length}` : ""}`
+      `  [${index + 1}/${targets.length} · 누적 ${rows.length}/${GOLDEN.length}] ${name.padEnd(22)} ${context.badge.padEnd(4)} s1=${context.slot1_revenue_source ? "O" : "-"} s2=${context.slot2_dependency ? "O" : "-"} s3=${context.slot3_dependency_state ? "O" : "-"} ${context.errors.length ? `err=${context.errors.length}` : ""}`
     );
     if (context.slot1_revenue_source) console.log(`        슬롯1: ${context.slot1_revenue_source.text}`);
     if (context.slot2_dependency) console.log(`        슬롯2: ${context.slot2_dependency.text}`);
@@ -282,7 +334,8 @@ async function main(): Promise<void> {
     ` 슬롯1 ${rows.filter((r) => r.context.slot1_revenue_source).length}/${rows.length} · 슬롯2 ${rows.filter((r) => r.context.slot2_dependency).length}/${rows.length} · 슬롯3 ${rows.filter((r) => r.context.slot3_dependency_state).length}/${rows.length}`
   );
 
-  writer.save(rows, "complete");
+  // 배치 실행에서는 마지막 배치만 30행을 채운다 — 중간 배치를 complete 로 쓰면 안 된다.
+  writer.save(rows, rows.length >= GOLDEN.length ? "complete" : "partial");
   if (outDir) console.log(`\n[golden30] 저장 — ${join(outDir, "EVAL_golden30.md")}`);
 }
 
