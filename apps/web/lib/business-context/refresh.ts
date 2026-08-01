@@ -1,5 +1,6 @@
 import type { BusinessContext } from "@fomo/core";
 import { promptOf } from "@fomo/core";
+import { resolveModel } from "@fomo/shared";
 import { kstDate } from "../fomo";
 import { readFeedContent, writeFeedContent } from "../feed-content-store";
 import { loadFundamentalsUniverse, type UniverseEntry } from "../fundamentals/universe";
@@ -131,9 +132,16 @@ async function refreshOne(
   force: boolean
 ): Promise<RefreshOutcome> {
   const existing = await readBusinessContext(entry.country, entry.canonical);
+  // 모델 축을 판정에 포함한다(WO-SUB-03.5 PART C-2) — 제공자가 모델을 갱신하면 저장본은 다른 모델의 산출물이다.
+  const currentModel = resolveModel();
   const verdict = force
     ? { needed: true, reason: "강제 재합성" }
-    : needsResynthesis(existing, promptVersion, existing?.documents.map((document) => document.snapshot_hash) ?? []);
+    : needsResynthesis(
+        existing,
+        promptVersion,
+        existing?.documents.map((document) => document.snapshot_hash) ?? [],
+        currentModel
+      );
 
   if (!verdict.needed && existing) {
     // 슬롯 3 만 갱신 — 변수 값이 매일 바뀐다. 슬롯 1·2 는 그대로 둔다(LLM 0콜).
