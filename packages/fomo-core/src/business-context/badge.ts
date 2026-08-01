@@ -30,7 +30,10 @@ export function computeBadge(context: {
 }): ContextBadge {
   const slot1 = isRenderable(context.slot1_revenue_source, "slot1");
   const slot2 = isRenderable(context.slot2_dependency, "slot2");
-  const slot3 = context.slot3_dependency_state !== null;
+  // 폴백(8분기 영업이익 추이)은 슬롯 3 이 **채워진 것으로 세지 않는다** — 배지 상향 금지.
+  // 관측 소스가 없어 후행 지표로 프레임만 준 상태이고, `충분` 은 그 상태에 줄 등급이 아니다.
+  const slot3State = context.slot3_dependency_state;
+  const slot3 = slot3State !== null && (slot3State.slot3_source ?? "observation") === "observation";
 
   if (!slot1 && !slot2) return "없음";
   if (slot1 && slot2) {

@@ -236,3 +236,47 @@ describe("프롬프트 (완료 조건 3)", () => {
     expect(promptOf("verify.v1").text).toContain("폐기하는 쪽으로");
   });
 });
+
+
+describe("슬롯3 폴백은 배지를 올리지 않는다 (WO-SUB-03.5 PART E-3 승인 조건)", () => {
+  const disclosure = (text: string) => ({
+    text,
+    source_ids: ["d1"] as [string, ...string[]],
+    kind: "disclosure" as const,
+    verified: true,
+  });
+  const state = (source?: "observation" | "fallback_operating_income") => ({
+    variable: "WTI",
+    label_ko: "국제유가(WTI)",
+    value_text: "$70",
+    as_of: "2026-07-25",
+    source: "FRED",
+    trend_text: null,
+    text: "국제유가(WTI)는 2026-07-25 기준 $70입니다.",
+    ...(source ? { slot3_source: source } : {}),
+  });
+
+  it("실관측 슬롯3 은 충분까지 올라간다", () => {
+    expect(computeBadge({
+      slot1_revenue_source: disclosure("어디서 돈을 버는가"),
+      slot2_dependency: disclosure("무엇에 걸려 있는가"),
+      slot3_dependency_state: state("observation"),
+    })).toBe("충분");
+  });
+
+  it("폴백(8분기 영업이익 추이)은 충분을 주지 않는다 — 배지 상향 금지", () => {
+    expect(computeBadge({
+      slot1_revenue_source: disclosure("어디서 돈을 버는가"),
+      slot2_dependency: disclosure("무엇에 걸려 있는가"),
+      slot3_dependency_state: state("fallback_operating_income"),
+    })).toBe("보통");
+  });
+
+  it("출처 미기록(과거 레코드)은 실관측으로 읽는다", () => {
+    expect(computeBadge({
+      slot1_revenue_source: disclosure("어디서 돈을 버는가"),
+      slot2_dependency: disclosure("무엇에 걸려 있는가"),
+      slot3_dependency_state: state(),
+    })).toBe("충분");
+  });
+});

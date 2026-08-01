@@ -32,9 +32,19 @@ const MAX_SECTION_CHARS = 200_000;
  * 골든셋에서 **분당 토큰 한도(TPM)** 를 계속 넘겨 429 가 재시도로도 풀리지 않았다
  * (일일 쿼터가 아니었다 — 작은 호출은 같은 시각에 200 이 돌아왔다. 무료 티어 70b 모델은 TPM 이 낮다).
  * 우리가 뽑는 것은 60자 문장 2개이고, "어디서 돈을 버는가"·"무엇에 걸려 있나"의 근거는
- * Item 1 앞부분(사업 개요)에 거의 다 있다. 입력을 키워도 출력이 좋아지지 않는다.
+ * Item 1 앞부분(사업 개요)에 있을 것으로 봤다.
+ *
+ * ⚠️ **"입력을 키워도 출력이 좋아지지 않는다"는 아직 검증되지 않았다**(WO-SUB-03.5 PART C-1).
+ * 실측: 이 예산이 청크의 중위 **89%** 를 버렸다(Rhinebeck 122개 → 2개). 그 상태의 골든셋은
+ * 429 로 23/30 이 합성조차 못 해 비교 근거가 되지 못한다. 페이싱 준수 재실행으로 3,500자 성적을
+ * 먼저 확보한 뒤 24,000자 A/B 필요 여부를 판단한다 — 그때까지 이 값은 **잠정**이다.
+ *
+ * A/B 재실행용으로 env 오버라이드를 둔다(코드 수정 없이 같은 커밋으로 두 조건을 돌리기 위함).
  */
-export const SECTION_PROMPT_CHARS = 3_500;
+export const SECTION_PROMPT_CHARS = ((): number => {
+  const override = Number.parseInt(process.env["SECTION_PROMPT_CHARS_OVERRIDE"] ?? "", 10);
+  return Number.isFinite(override) && override > 0 ? override : 3_500;
+})();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
