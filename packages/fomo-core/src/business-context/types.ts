@@ -70,6 +70,14 @@ export interface DependencyState {
   trend_text: string | null;
   /** 완성 문장(템플릿 렌더 결과). */
   text: string;
+  /**
+   * 이 값이 어디서 왔는가(WO-SUB-03.5 PART E-3 폴백 승인 조건).
+   *   `observation`               = 의존 변수 실관측(원래 슬롯 3)
+   *   `fallback_operating_income` = 원자재 등 관측 소스 부재 시 8분기 영업이익 추이로 대체한 **폴백**
+   * 폴백은 슬롯 3 의 대체가 아니다(현물가=선행 / 이익=후행) — **배지를 올리지 않는다.**
+   * 미지정(과거 레코드)은 `observation` 으로 읽는다.
+   */
+  slot3_source?: "observation" | "fallback_operating_income";
 }
 
 export type ContextBadge = "충분" | "보통" | "낮음" | "없음";

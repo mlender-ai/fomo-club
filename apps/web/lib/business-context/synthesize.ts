@@ -25,6 +25,48 @@ const TEMPERATURE = 0;
  */
 const MIN_CALL_INTERVAL_MS = 6_000;
 const RATE_LIMIT_RETRIES = 4;
+/**
+ * 429 재발 시 **자동 감속**(WO-SUB-03.5 PART C-1 재실행 요구사항).
+ *
+ * 고정 간격만으로는 부족하다 — 호출 크기가 종목마다 달라 분당 소비가 균일하지 않고,
+ * 제공자 한도는 예고 없이 바뀐다. 429 를 받으면 간격을 늘리고(곱셈), 연속 성공하면
+ * 천천히 회복한다(가법 회복 — 다시 벽에 부딪히지 않게 회복은 감속보다 느리게).
+ * 감속 이력은 결과에 남긴다(조용한 감속 금지 — 완주 시간이 왜 길어졌는지 보이게).
+ */
+const MAX_CALL_INTERVAL_MS = 30_000;
+const SLOWDOWN_FACTOR = 1.6;
+const RECOVERY_STEP_MS = 500;
+const RECOVERY_AFTER_SUCCESSES = 5;
+
+let currentIntervalMs = MIN_CALL_INTERVAL_MS;
+let consecutiveSuccesses = 0;
+/** 감속·회복 이벤트 로그. 배치가 결과에 첨부한다. */
+const pacingEvents: string[] = [];
+
+/** 429 를 받았을 때 — 간격을 곱셈으로 늘린다. */
+function slowDown(reason: string): void {
+  const before = currentIntervalMs;
+  currentIntervalMs = Math.min(MAX_CALL_INTERVAL_MS, Math.round(currentIntervalMs * SLOWDOWN_FACTOR));
+  consecutiveSuccesses = 0;
+  if (currentIntervalMs !== before) {
+    pacingEvents.push(`감속 ${before}ms → ${currentIntervalMs}ms (${reason})`);
+  }
+}
+
+/** 성공이 이어지면 조금씩 회복한다(감속보다 느리게). */
+function noteSuccess(): void {
+  consecutiveSuccesses += 1;
+  if (consecutiveSuccesses < RECOVERY_AFTER_SUCCESSES) return;
+  consecutiveSuccesses = 0;
+  const before = currentIntervalMs;
+  currentIntervalMs = Math.max(MIN_CALL_INTERVAL_MS, currentIntervalMs - RECOVERY_STEP_MS);
+  if (currentIntervalMs !== before) pacingEvents.push(`회복 ${before}ms → ${currentIntervalMs}ms`);
+}
+
+/** 배치가 읽어 결과에 남긴다. 감속이 있었다면 완주 시간이 길어진 이유가 여기 있다. */
+export function pacingReport(): { intervalMs: number; events: readonly string[] } {
+  return { intervalMs: currentIntervalMs, events: [...pacingEvents] };
+}
 
 let lastCallAt = 0;
 /** 직렬화 큐 — 병렬 호출이 간격을 우회하지 못하게 한다. */
@@ -64,7 +106,7 @@ async function paced<T>(run: () => Promise<T>): Promise<T> {
       await new Promise((resolve) => setTimeout(resolve, resetTokensMs + 500));
       remainingTokens = null;
     }
-    const wait = MIN_CALL_INTERVAL_MS - (Date.now() - lastCallAt);
+    const wait = currentIntervalMs - (Date.now() - lastCallAt);
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
     lastCallAt = Date.now();
     return run();
@@ -77,14 +119,18 @@ async function paced<T>(run: () => Promise<T>): Promise<T> {
 async function callWithRetry(options: Parameters<typeof callAI>[0]): Promise<Awaited<ReturnType<typeof callAI>>> {
   let last = await paced(() => callAI(options));
   noteRateLimit(last.rateLimit);
+  if (last.ok) noteSuccess();
   for (let attempt = 1; attempt <= RATE_LIMIT_RETRIES; attempt += 1) {
     if (last.ok) return last;
     if (last.status !== 429 && last.status < 500) return last;
-    // 429 면 제공자가 준 리셋 시각을 우선 쓴다(retry-after → reset-tokens → 백오프).
+    // 429 가 실제로 왔다 → 이후 호출 간격을 늘린다(자동 감속). 재시도만으로는 다음 종목에서 또 맞는다.
+    if (last.status === 429) slowDown(`429 재시도 ${attempt}회`);
+    // 제공자가 준 리셋 시각을 우선 쓴다(retry-after → reset-tokens → 백오프).
     const wait = last.retryAfterMs ?? parseResetDuration(last.rateLimit?.["x-ratelimit-reset-tokens"]) ?? 0;
     await new Promise((resolve) => setTimeout(resolve, Math.max(wait, 4_000 * attempt) + 500));
     last = await paced(() => callAI(options));
     noteRateLimit(last.rateLimit);
+    if (last.ok) noteSuccess();
   }
   return last;
 }

@@ -16,7 +16,9 @@ import { join } from "node:path";
 import type { BusinessContext } from "@fomo/core";
 import { buildBusinessContext } from "../apps/web/lib/business-context/build";
 import { fetchVariableObservations } from "../apps/web/lib/business-context/variable-values";
+import { pacingReport } from "../apps/web/lib/business-context/synthesize";
 import type { UniverseEntry } from "../apps/web/lib/fundamentals/universe";
+import { SECTION_PROMPT_CHARS } from "../apps/web/lib/business-context/sec-filing";
 
 /** [식별자, 표시명] — 6자리는 KR. 유니버스 성격(무명 롱테일 + 대표주)을 섞었다. */
 const GOLDEN: ReadonlyArray<readonly [string, string]> = [
@@ -205,7 +207,18 @@ async function main(): Promise<void> {
     writeFileSync(join(outDir, "EVAL_golden30.md"), renderReport(rows));
     writeFileSync(
       join(outDir, "golden30_raw.json"),
-      JSON.stringify({ generatedAt: new Date().toISOString(), variableFailures: values.failed, rows }, null, 2)
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          // 페이싱 실측 — 감속이 있었다면 완주 시간이 길어진 이유가 여기 있다(조용한 감속 금지).
+          pacing: pacingReport(),
+          inputChars: SECTION_PROMPT_CHARS,
+          variableFailures: values.failed,
+          rows,
+        },
+        null,
+        2
+      )
     );
     console.log(`\n[golden30] 저장 — ${join(outDir, "EVAL_golden30.md")}`);
   }
