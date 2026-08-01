@@ -1,5 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+/**
+ * WO-SUB-03.5 PART D — 네트워크 의존 제거(픽스처 고정).
+ *
+ * 라이브 폴백 경로(`computeLiveFomoIndex`)가 `fetchRedditSignals()` 로 실제 Reddit 을 호출해
+ * 러너 네트워크 상태에 따라 5초 타임아웃으로 **실행마다 실패 건수가 달라졌다**(main 에서도 재현).
+ * 이 테스트가 검증하려는 것은 감정투표 → 점수 로직이므로 커뮤니티 시그널은 빈 픽스처로 고정한다.
+ * (삭제·skip 이 아니라 결정론화 — PART D 규칙.)
+ */
+vi.mock("@fomo/core", async () => {
+  const actual = await vi.importActual<typeof import("@fomo/core")>("@fomo/core");
+  return { ...actual, fetchRedditSignals: vi.fn(async () => []) };
+});
+
 // prisma 모킹
 vi.mock("../../../lib/prisma", () => ({
   prisma: {

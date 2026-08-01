@@ -81,6 +81,12 @@ export interface BusinessContext {
   synthesized_at: string;
   /** 프롬프트 버전 — 재합성 트리거이자 결정론 기록. */
   prompt_version: string;
+  /**
+   * LLM 에 실제로 들어간 입력의 해시(WO-SUB-03.5 PART C-2 불변성 키).
+   * 프롬프트 버전·문서 해시만으로는 청크 예산·선택이 바뀐 것을 못 잡는다.
+   * 같은 (input_hash, prompt_version, model) 이면 재호출하지 않고 저장된 출력을 쓴다.
+   */
+  input_hash?: string;
   /** 합성에 쓴 모델. */
   model: string;
 

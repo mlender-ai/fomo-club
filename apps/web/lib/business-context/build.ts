@@ -36,6 +36,25 @@ import { synthesizeSlots, verifiedSentence, SYNTHESIZE_PROMPT_ID, VERIFY_PROMPT_
  * 섞지 말라는 것이고, 우리는 섞지 않고 구분해 표기한다. DART 가 열리면 KR 도 `disclosure` 로 올라간다.
  */
 
+/**
+ * LLM 입력 해시(WO-SUB-03.5 PART C-2 불변성 키) — 합성에 **실제로 들어간 것**만 넣는다.
+ * 프롬프트 버전·문서 해시로는 청크 예산/선택 변경을 못 잡는다(3,500자 → 24,000자 같은 변경).
+ */
+function computeInputHash(input: {
+  canonical: string;
+  archetype: string;
+  revenueSummary: string;
+  chunks: readonly { source_id: string; text: string }[];
+}): string {
+  const payload = [
+    input.canonical,
+    input.archetype,
+    input.revenueSummary,
+    ...input.chunks.map((chunk) => `${chunk.source_id}:${chunk.text}`),
+  ].join("\u001f");
+  return createHash("sha256").update(payload).digest("hex").slice(0, 32);
+}
+
 /** LLM 에 넣을 청크 총 문자 예산. */
 const CHUNK_BUDGET_CHARS = SECTION_PROMPT_CHARS;
 
@@ -141,6 +160,13 @@ export async function buildBusinessContext(entry: UniverseEntry, options: BuildO
       ? `TTM 매출 ${revenueTtm.toLocaleString("ko-KR")} ${factsheet?.factsheet.currency ?? ""}`
       : "매출 미확보";
 
+  const inputHash = computeInputHash({
+    canonical: entry.displayName || entry.canonical,
+    archetype,
+    revenueSummary,
+    chunks: used,
+  });
+
   const synthesis = await synthesizeSlots({
     canonical: entry.displayName || entry.canonical,
     archetype,
@@ -160,6 +186,7 @@ export async function buildBusinessContext(entry: UniverseEntry, options: BuildO
     market: entry.country,
     synthesized_at: new Date().toISOString(),
     prompt_version: `${promptOf(SYNTHESIZE_PROMPT_ID).hash}+${promptOf(VERIFY_PROMPT_ID).hash}`,
+    input_hash: inputHash,
     model: synthesis.model,
     slot1_revenue_source: slot1,
     slot2_dependency: slot2,

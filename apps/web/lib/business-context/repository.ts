@@ -81,12 +81,39 @@ export async function readLatestBusinessContextIndex(): Promise<{ date: string; 
 export function needsResynthesis(
   existing: BusinessContext | null,
   currentPromptVersion: string,
-  currentSnapshotHashes: readonly string[]
+  currentSnapshotHashes: readonly string[],
+  /** 현재 실행이 쓸 모델(WO-SUB-03.5 PART C-2). 모델이 바뀌면 저장된 출력을 재사용하지 않는다. */
+  currentModel?: string
 ): { needed: boolean; reason: string | null } {
   if (!existing) return { needed: true, reason: "레코드 없음" };
   if (existing.prompt_version !== currentPromptVersion) return { needed: true, reason: "프롬프트 버전 변경" };
+  // 모델이 바뀌면 같은 입력이라도 다른 출력이 나온다 — 저장본을 그대로 쓰면 정체를 숨기는 것이다.
+  // 기존 레코드에 model 이 비어 있으면(LLM 미호출 실패본) 이 축으로 판정하지 않는다.
+  if (currentModel && existing.model && existing.model !== currentModel) {
+    return { needed: true, reason: `모델 변경(${existing.model} → ${currentModel})` };
+  }
   const previous = new Set(existing.documents.map((document) => document.snapshot_hash));
   const changed = currentSnapshotHashes.some((hash) => !previous.has(hash));
   if (changed) return { needed: true, reason: "소스 문서 갱신" };
   return { needed: false, reason: null };
+}
+
+/**
+ * 불변성 게이트(WO-SUB-03.5 PART C-2).
+ *
+ * 원칙 7 을 "같은 입력에 같은 출력이 나온다"에서 **"같은 입력에 저장된 출력을 쓴다"**로 재해석한다.
+ * 외부 LLM 에 의존하는 한 전자는 보장할 수 없다(제공자가 모델을 갱신하면 출력이 바뀐다).
+ * 같은 (input_hash, prompt_version, model) 조합이면 재호출하지 않고 저장본을 그대로 쓴다.
+ * 재생성은 명시적 무효화(`force`)로만 발생한다.
+ */
+export function isImmutablyReusable(
+  existing: BusinessContext | null,
+  inputHash: string,
+  promptVersion: string,
+  model: string
+): boolean {
+  if (!existing?.input_hash) return false; // 해시가 없는 과거 레코드는 이 게이트로 재사용하지 않는다
+  return existing.input_hash === inputHash
+    && existing.prompt_version === promptVersion
+    && existing.model === model;
 }
