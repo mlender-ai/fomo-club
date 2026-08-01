@@ -11,6 +11,10 @@ import type { FactSheet } from "./types";
 const STATUS_NULL_PATHS = new Set<string>([
   "fiscal.fiscal_anomaly", // null = 이상 없음
   "valuation.band_5y.metric", // null = WO-SUB-02 가 아직 정하지 않음
+  // 아래 둘은 "데이터를 못 받았다"가 아니라 **해당 사항이 없다**는 뜻이다.
+  // 결손으로 세면 CF 확보율이 실제보다 낮게 보이고, 02R 자격 판정 입력이 오염된다.
+  "cashflow.burn_per_quarter", // null = 영업현금흐름 흑자(소진하지 않는다)
+  "cashflow.dividend_coverage", // null = 무배당이거나 영업현금흐름 ≤ 0
 ]);
 
 /** 결측 집계 대상이 아닌 메타 필드. */

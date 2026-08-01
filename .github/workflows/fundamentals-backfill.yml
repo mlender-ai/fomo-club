@@ -89,6 +89,14 @@ jobs:
               lines.push("");
               lines.push(`- coverage flags: ${JSON.stringify(g.coverage_flags)} · 밴드 계산됨 ${g.band_sufficient}/${g.count} · 최신 분기 지연 중앙값 ${g.lag_days_median ?? "—"}일`);
               lines.push("");
+              // 현금흐름 — 02R 자격 판정 입력. 확보율만이 아니라 "왜 없는지"(부분/전무)를 함께 낸다.
+              const cf = g.cashflow;
+              if (cf) {
+                const pct = g.count > 0 ? ((cf.operating_ttm / g.count) * 100).toFixed(1) : "—";
+                lines.push(`- **현금흐름**: 영업CF TTM ${cf.operating_ttm}/${g.count} (**${pct}%**) · 부분확보 ${cf.partial} · 전무 ${cf.none} · 관측분기 중앙값 ${cf.observed_quarters_median ?? "—"}`);
+                lines.push(`  - 배당 관측 ${cf.dividend_observed}종목(MATURE_INCOME 자격 근거) · 현금 소진 중 ${cf.burning}종목(HYPERGROWTH·BIOTECH 자격 근거)`);
+                lines.push("");
+              }
             }
             lines.push("## 밴드 미계산 사유");
             lines.push("");

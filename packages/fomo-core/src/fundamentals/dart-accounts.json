@@ -1,125 +1,204 @@
 {
-  "mapping_version": "dart-accounts-v1.0.0",
-  "evidenced_at": "2026-07-30",
-  "evidence": "docs/fundamentals/DUMP_dart_structure.md — 종근당(185750) 2024 FY CFS 전체 재무제표 129계정 실측 덤프",
-  "note": "IFRS 표준 계정 ID 를 외부 지식으로 적지 않았다. 실제 DART 응답이 준 account_id 값만 등재한다. 계정 체계가 바뀌면 mapping_version 을 올린다 — 버전 없이 고치면 과거 파싱 결과의 의미가 달라진다.",
-  "endpoints": {
-    "fnlttSinglAcntAll": {
-      "has_account_id": true,
-      "match_by": "account_id",
-      "note": "전체 재무제표. account_id 가 있어 문자열 매칭이 불필요하다."
-    },
-    "fnlttSinglAcnt": {
-      "has_account_id": false,
-      "match_by": "account_nm",
-      "note": "주요계정 응답에는 account_id 필드가 **없다**(실측: firstRowKeys 에 부재). 8분기 매출·영업이익 경로가 여기라서 계정명 매칭이 불가피하다 — 이 사실을 숨기지 않고 남긴다."
-    }
+ "mapping_version": "dart-accounts-v1.1.0",
+ "evidenced_at": "2026-07-30",
+ "evidence": "docs/fundamentals/DUMP_dart_structure.md — 종근당(185750) 2024 FY CFS 전체 재무제표 129계정 실측 덤프 · 배당금지급 계정은 같은 덤프 §3 '현금흐름표 — 확보 확정' 표에 실측 등재됨",
+ "note": "IFRS 표준 계정 ID 를 외부 지식으로 적지 않았다. 실제 DART 응답이 준 account_id 값만 등재한다. 계정 체계가 바뀌면 mapping_version 을 올린다 — 버전 없이 고치면 과거 파싱 결과의 의미가 달라진다.",
+ "endpoints": {
+  "fnlttSinglAcntAll": {
+   "has_account_id": true,
+   "match_by": "account_id",
+   "note": "전체 재무제표. account_id 가 있어 문자열 매칭이 불필요하다."
   },
-  "fields": [
-    {
-      "field": "revenue",
-      "statement": "IS",
-      "account_ids": ["ifrs-full_Revenue"],
-      "account_names": ["매출액", "영업수익"]
-    },
-    {
-      "field": "operating_income",
-      "statement": "IS",
-      "account_ids": ["dart_OperatingIncomeLoss"],
-      "account_names": ["영업이익", "영업이익(손실)"],
-      "note": "IFRS 표준이 아니라 DART 확장 계정이다(ifrs-full 접두사가 아님). 한국 공시 특유의 항목이라 그렇다."
-    },
-    {
-      "field": "net_income",
-      "statement": "IS",
-      "account_ids": ["ifrs-full_ProfitLossAttributableToOwnersOfParent", "ifrs-full_ProfitLoss"],
-      "account_names": ["지배주주순이익", "당기순이익", "당기순이익(손실)"],
-      "note": "지배주주 귀속분을 우선한다 — PER·EPS 의 표준 분자이고, 비지배지분을 섞으면 주당지표가 어긋난다. 배열 순서가 우선순위다."
-    },
-    {
-      "field": "eps_basic",
-      "statement": "IS",
-      "account_ids": ["ifrs-full_BasicEarningsLossPerShare"],
-      "account_names": ["기본및희석주당이익(원)", "기본주당이익(원)"],
-      "note": "**희석 EPS 가 아니다.** 계정 ID 가 Basic 이다. 이 종목은 기본·희석이 같아 한 줄로 오지만 그것을 희석으로 옮겨 적으면 안 된다 — 다른 지표다. 희석 전용 계정(ifrs-full_DilutedEarningsLossPerShare)은 이 표본에 없었다."
-    },
-    {
-      "field": "equity",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_Equity"],
-      "account_names": ["자본총계"]
-    },
-    {
-      "field": "equity_owners",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_EquityAttributableToOwnersOfParent"],
-      "account_names": ["지배기업의 소유주에게 귀속되는 자본"]
-    },
-    {
-      "field": "liabilities",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_Liabilities"],
-      "account_names": ["부채총계"]
-    },
-    {
-      "field": "assets",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_Assets"],
-      "account_names": ["자산총계"]
-    },
-    {
-      "field": "cash",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_CashAndCashEquivalents"],
-      "account_names": ["현금및현금성자산"]
-    },
-    {
-      "field": "short_term_borrowings",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings"],
-      "account_names": ["단기차입금"]
-    },
-    {
-      "field": "long_term_borrowings",
-      "statement": "BS",
-      "account_ids": ["ifrs-full_LongtermBorrowings"],
-      "account_names": ["차입금", "장기차입금"]
-    },
-    {
-      "field": "operating_cash_flow",
-      "statement": "CF",
-      "account_ids": ["ifrs-full_CashFlowsFromUsedInOperatingActivities"],
-      "account_names": ["영업활동현금흐름"]
-    },
-    {
-      "field": "capex",
-      "statement": "CF",
-      "account_ids": ["ifrs-full_PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"],
-      "account_names": ["유형자산의 취득"],
-      "note": "FCF = 영업활동현금흐름 − 유형자산의 취득. 무형자산 취득은 포함하지 않는다(정의를 넓히면 유형별 비교가 깨진다)."
-    },
-    {
-      "field": "cash_end_of_period",
-      "statement": "CF",
-      "account_ids": ["dart_CashAndCashEquivalentsAtEndOfPeriodCf"],
-      "account_names": ["기말현금및현금성자산"]
-    },
-    {
-      "field": "interest_paid",
-      "statement": "CF",
-      "account_ids": ["ifrs-full_InterestPaidClassifiedAsOperatingActivities"],
-      "account_names": ["이자지급"],
-      "note": "손익계산서의 금융비용(ifrs-full_FinanceCosts)을 쓰지 않는다 — 금융비용에는 이자 외 항목이 섞이므로 이자비용과 같은 지표가 아니다. 실제 지급액을 쓴다."
-    }
-  ],
-  "unavailable": [
-    {
-      "field": "depreciation",
-      "reason": "감가상각비 단독 계정이 실측 표본에 없다(비현금항목의 조정에 합산된다). 대체 지표로 만들지 않는다 → EV/EBITDA 는 KR 에서 null 유지."
-    },
-    {
-      "field": "eps_diluted",
-      "reason": "희석 전용 계정이 실측 표본에 없다. 기본 EPS 를 희석으로 옮겨 적지 않는다."
-    }
-  ]
+  "fnlttSinglAcnt": {
+   "has_account_id": false,
+   "match_by": "account_nm",
+   "note": "주요계정 응답에는 account_id 필드가 **없다**(실측: firstRowKeys 에 부재). 8분기 매출·영업이익 경로가 여기라서 계정명 매칭이 불가피하다 — 이 사실을 숨기지 않고 남긴다."
+  }
+ },
+ "fields": [
+  {
+   "field": "revenue",
+   "statement": "IS",
+   "account_ids": [
+    "ifrs-full_Revenue"
+   ],
+   "account_names": [
+    "매출액",
+    "영업수익"
+   ]
+  },
+  {
+   "field": "operating_income",
+   "statement": "IS",
+   "account_ids": [
+    "dart_OperatingIncomeLoss"
+   ],
+   "account_names": [
+    "영업이익",
+    "영업이익(손실)"
+   ],
+   "note": "IFRS 표준이 아니라 DART 확장 계정이다(ifrs-full 접두사가 아님). 한국 공시 특유의 항목이라 그렇다."
+  },
+  {
+   "field": "net_income",
+   "statement": "IS",
+   "account_ids": [
+    "ifrs-full_ProfitLossAttributableToOwnersOfParent",
+    "ifrs-full_ProfitLoss"
+   ],
+   "account_names": [
+    "지배주주순이익",
+    "당기순이익",
+    "당기순이익(손실)"
+   ],
+   "note": "지배주주 귀속분을 우선한다 — PER·EPS 의 표준 분자이고, 비지배지분을 섞으면 주당지표가 어긋난다. 배열 순서가 우선순위다."
+  },
+  {
+   "field": "eps_basic",
+   "statement": "IS",
+   "account_ids": [
+    "ifrs-full_BasicEarningsLossPerShare"
+   ],
+   "account_names": [
+    "기본및희석주당이익(원)",
+    "기본주당이익(원)"
+   ],
+   "note": "**희석 EPS 가 아니다.** 계정 ID 가 Basic 이다. 이 종목은 기본·희석이 같아 한 줄로 오지만 그것을 희석으로 옮겨 적으면 안 된다 — 다른 지표다. 희석 전용 계정(ifrs-full_DilutedEarningsLossPerShare)은 이 표본에 없었다."
+  },
+  {
+   "field": "equity",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_Equity"
+   ],
+   "account_names": [
+    "자본총계"
+   ]
+  },
+  {
+   "field": "equity_owners",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_EquityAttributableToOwnersOfParent"
+   ],
+   "account_names": [
+    "지배기업의 소유주에게 귀속되는 자본"
+   ]
+  },
+  {
+   "field": "liabilities",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_Liabilities"
+   ],
+   "account_names": [
+    "부채총계"
+   ]
+  },
+  {
+   "field": "assets",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_Assets"
+   ],
+   "account_names": [
+    "자산총계"
+   ]
+  },
+  {
+   "field": "cash",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_CashAndCashEquivalents"
+   ],
+   "account_names": [
+    "현금및현금성자산"
+   ]
+  },
+  {
+   "field": "short_term_borrowings",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings"
+   ],
+   "account_names": [
+    "단기차입금"
+   ]
+  },
+  {
+   "field": "long_term_borrowings",
+   "statement": "BS",
+   "account_ids": [
+    "ifrs-full_LongtermBorrowings"
+   ],
+   "account_names": [
+    "차입금",
+    "장기차입금"
+   ]
+  },
+  {
+   "field": "operating_cash_flow",
+   "statement": "CF",
+   "account_ids": [
+    "ifrs-full_CashFlowsFromUsedInOperatingActivities"
+   ],
+   "account_names": [
+    "영업활동현금흐름"
+   ]
+  },
+  {
+   "field": "capex",
+   "statement": "CF",
+   "account_ids": [
+    "ifrs-full_PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"
+   ],
+   "account_names": [
+    "유형자산의 취득"
+   ],
+   "note": "FCF = 영업활동현금흐름 − 유형자산의 취득. 무형자산 취득은 포함하지 않는다(정의를 넓히면 유형별 비교가 깨진다)."
+  },
+  {
+   "field": "cash_end_of_period",
+   "statement": "CF",
+   "account_ids": [
+    "dart_CashAndCashEquivalentsAtEndOfPeriodCf"
+   ],
+   "account_names": [
+    "기말현금및현금성자산"
+   ]
+  },
+  {
+   "field": "dividend_paid",
+   "statement": "CF",
+   "account_ids": [
+    "ifrs-full_DividendsPaidClassifiedAsFinancingActivities"
+   ],
+   "account_names": [
+    "배당금지급",
+    "배당금의 지급"
+   ],
+   "note": "MATURE_INCOME 의 관측 지점(배당 유지 가능성 = 배당금지급 / 영업활동현금흐름)이다. 부호 관행이 종목마다 다를 수 있어 소비 측에서 절대값으로 쓴다 — 배당 지급이 순유입인 경우는 없다."
+  },
+  {
+   "field": "interest_paid",
+   "statement": "CF",
+   "account_ids": [
+    "ifrs-full_InterestPaidClassifiedAsOperatingActivities"
+   ],
+   "account_names": [
+    "이자지급"
+   ],
+   "note": "손익계산서의 금융비용(ifrs-full_FinanceCosts)을 쓰지 않는다 — 금융비용에는 이자 외 항목이 섞이므로 이자비용과 같은 지표가 아니다. 실제 지급액을 쓴다."
+  }
+ ],
+ "unavailable": [
+  {
+   "field": "depreciation",
+   "reason": "감가상각비 단독 계정이 실측 표본에 없다(비현금항목의 조정에 합산된다). 대체 지표로 만들지 않는다 → EV/EBITDA 는 KR 에서 null 유지."
+  },
+  {
+   "field": "eps_diluted",
+   "reason": "희석 전용 계정이 실측 표본에 없다. 기본 EPS 를 희석으로 옮겨 적지 않는다."
+  }
+ ]
 }

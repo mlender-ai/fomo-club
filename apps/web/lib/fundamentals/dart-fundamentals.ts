@@ -343,6 +343,9 @@ function recordFrom(report: ReportData, periodEnd: string, period: string): Comp
       liabilities: amountOf(report, "liabilities").value,
       cash: amountOf(report, "cash").value,
       operating_cash_flow: report.detailed ? amountOf(report, "operating_cash_flow").value : null,
+      // CF 는 전체 재무제표에만 있다. 013(미제공) 보고서에서는 null 이고, 이전 분기로 메우지 않는다.
+      capex: report.detailed ? amountOf(report, "capex").value : null,
+      dividend_paid: report.detailed ? amountOf(report, "dividend_paid").value : null,
       short_term_borrowings: amountOf(report, "short_term_borrowings").value,
       long_term_borrowings: amountOf(report, "long_term_borrowings").value,
       interest_paid: report.detailed ? amountOf(report, "interest_paid").value : null,
@@ -402,6 +405,10 @@ export interface DartFundamentals {
   totalDebt: PointObservation[];
   cash: PointObservation[];
   operatingCashFlow: PointObservation[];
+  /** 분기 유형자산 취득. 전체 재무제표가 닫힌 보고서에서는 관측이 없다. */
+  capex: PointObservation[];
+  /** 분기 배당금지급. */
+  dividendPaid: PointObservation[];
   interestExpense: PointObservation[];
   /** DART 표본에 감가상각비 단독 계정이 없다 — 항상 비어 있다(EV/EBITDA null 유지). */
   depreciation: PointObservation[];
@@ -426,6 +433,8 @@ function emptyResult(errors: string[]): DartFundamentals {
     totalDebt: [],
     cash: [],
     operatingCashFlow: [],
+    capex: [],
+    dividendPaid: [],
     interestExpense: [],
     depreciation: [],
     mappingVersion: DART_MAPPING_VERSION,
@@ -465,6 +474,8 @@ export async function fetchDartFundamentals(
     liabilities: [],
     cash: [],
     operating_cash_flow: [],
+    capex: [],
+    dividend_paid: [],
     interest_paid: [],
     total_debt: [],
   };
@@ -546,7 +557,7 @@ export async function fetchDartFundamentals(
       else annualForYear.push(composed.record);
 
       const at = { period_end: composed.record.period_end, filed_at: composed.record.filed_at };
-      for (const field of ["equity", "liabilities", "cash", "operating_cash_flow", "interest_paid"]) {
+      for (const field of ["equity", "liabilities", "cash", "operating_cash_flow", "capex", "dividend_paid", "interest_paid"]) {
         const value = composed.points[field] ?? null;
         if (value !== null) series[field]!.push({ ...at, value });
       }
@@ -615,6 +626,8 @@ export async function fetchDartFundamentals(
     totalDebt: series.total_debt!,
     cash: series.cash!,
     operatingCashFlow: series.operating_cash_flow!,
+    capex: series.capex!,
+    dividendPaid: series.dividend_paid!,
     interestExpense: series.interest_paid!,
     depreciation: [],
     mappingVersion: DART_MAPPING_VERSION,

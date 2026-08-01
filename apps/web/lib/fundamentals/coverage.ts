@@ -26,6 +26,12 @@ export const COVERAGE_FIELDS = [
   "valuation.dividend_yield",
   "valuation.per_forward",
   "balance.total_equity",
+  // 현금흐름 (02R 자격 판정 입력). `dividend_coverage`·`burn_per_quarter` 는 해당 없음이
+  // 정상값이라 확보율로 세지 않는다 — 세면 무배당·흑자 기업이 결손으로 잡힌다.
+  "cashflow.operating_ttm",
+  "cashflow.capex_ttm",
+  "cashflow.free_cash_flow_ttm",
+  "cashflow.dividend_paid_ttm",
   "market_data.market_cap",
   "market_data.shares_outstanding",
   "market_data.price",
@@ -50,6 +56,26 @@ export interface CoverageGroupReport {
   band_sufficient: number;
   /** 최신 분기 기간말 → 오늘까지의 일수 중앙값(갱신 지연). */
   lag_days_median: number | null;
+  /**
+   * 현금흐름 확보 실태 (02R 자격 판정 입력).
+   *
+   * 확보율만으로는 "왜 없는지"가 안 보인다. KR 은 CF 가 전체 재무제표에만 있고 그 보고서가
+   * `013`(미제공)일 수 있어서, **소스에 없는 것**과 **파이프라인이 못 읽은 것**이 섞인다.
+   */
+  cashflow: {
+    /** 영업현금흐름 TTM 이 구성된 종목 수. */
+    operating_ttm: number;
+    /** 관측 분기가 1개 이상이지만 4개 미달인 종목 수(= 부분 확보). */
+    partial: number;
+    /** 관측이 0개인 종목 수(= 전체 재무제표를 한 번도 못 연 종목). */
+    none: number;
+    /** 배당 지급이 관측된 종목 수 — MATURE_INCOME 자격의 직접 근거. */
+    dividend_observed: number;
+    /** 현금 소진 중인 종목 수 — HYPERGROWTH·BIOTECH 자격의 직접 근거. */
+    burning: number;
+    /** 관측 분기 수 중앙값. */
+    observed_quarters_median: number | null;
+  };
 }
 
 export interface CoverageFailure {
@@ -127,6 +153,8 @@ export function summarizeCoverage(
     const flags: Record<string, number> = {};
     let bandSufficient = 0;
     const lags: number[] = [];
+    const cashflow = { operating_ttm: 0, partial: 0, none: 0, dividend_observed: 0, burning: 0 };
+    const cfQuarters: number[] = [];
     for (const factsheet of members) {
       flags[factsheet.fiscal.coverage_flag] = (flags[factsheet.fiscal.coverage_flag] ?? 0) + 1;
       const bands = factsheet.valuation.band_5y;
@@ -137,6 +165,15 @@ export function summarizeCoverage(
           const key = band.insufficient_reason.replace(/\d[\d.,]*/g, "N");
           reasons[key] = (reasons[key] ?? 0) + 1;
         }
+      }
+      const cf = factsheet.cashflow;
+      if (cf) {
+        cfQuarters.push(cf.observed_quarters);
+        if (cf.operating_ttm !== null) cashflow.operating_ttm += 1;
+        else if (cf.observed_quarters > 0) cashflow.partial += 1;
+        else cashflow.none += 1;
+        if (cf.dividend_paid_ttm !== null) cashflow.dividend_observed += 1;
+        if (cf.burn_per_quarter !== null) cashflow.burning += 1;
       }
       const latest = factsheet.fiscal.quarters[factsheet.fiscal.quarters.length - 1]?.period_end;
       if (latest) {
@@ -160,6 +197,7 @@ export function summarizeCoverage(
       coverage_flags: flags,
       band_sufficient: bandSufficient,
       lag_days_median: median(lags),
+      cashflow: { ...cashflow, observed_quarters_median: median(cfQuarters) },
     });
   }
 

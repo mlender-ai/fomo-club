@@ -53,6 +53,8 @@ export interface SecFundamentals {
   totalDebt: PointObservation[];
   cash: PointObservation[];
   operatingCashFlow: PointObservation[];
+  capex: PointObservation[];
+  dividendPaid: PointObservation[];
   interestExpense: PointObservation[];
   depreciation: PointObservation[];
   sharesSeries: SharesPoint[];
@@ -81,6 +83,10 @@ const CONCEPTS = {
   totalDebt: ["DebtLongtermAndShorttermCombinedAmount", "LongTermDebt", "LongTermDebtNoncurrent"],
   cash: ["CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"],
   operatingCashFlow: ["NetCashProvidedByUsedInOperatingActivities", "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
+  // 아래 둘은 **덤프 실측이 아니라 us-gaap 표준 개념 후보**다(KR 의 account_id 매핑과 신뢰도가 다르다).
+  // 빗나가면 관측이 빈 배열이 될 뿐 가짜 값이 생기지는 않는다 — 실제 적중률은 커버리지로 측정한다.
+  capex: ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
+  dividendPaid: ["PaymentsOfDividends", "PaymentsOfDividendsCommonStock", "PaymentsOfDistributionsToAffiliates"],
   interestExpense: ["InterestExpense", "InterestExpenseDebt", "InterestIncomeExpenseNet"],
   depreciation: [
     "DepreciationDepletionAndAmortization",
@@ -365,6 +371,8 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
     totalDebt: [],
     cash: [],
     operatingCashFlow: [],
+    capex: [],
+    dividendPaid: [],
     interestExpense: [],
     depreciation: [],
     sharesSeries: [],
@@ -484,6 +492,8 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
     totalDebt: instants("totalDebt"),
     cash: instants("cash"),
     operatingCashFlow: flows("operatingCashFlow"),
+    capex: flows("capex"),
+    dividendPaid: flows("dividendPaid"),
     interestExpense: flows("interestExpense"),
     depreciation: flows("depreciation"),
     sharesSeries,

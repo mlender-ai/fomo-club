@@ -1,5 +1,5 @@
 import { computeBands, type DailyClose, type EquityPoint, type SharesPoint } from "./bands";
-import { deriveBalance, deriveGrowth, deriveMargin, type PointObservation } from "./derive";
+import { deriveBalance, deriveCashflow, deriveGrowth, deriveMargin, type PointObservation } from "./derive";
 import { collectMissingFields } from "./missing";
 import { composeFiscal, dedupeByPeriodEnd, TTM_QUARTERS } from "./ttm";
 import type {
@@ -43,6 +43,10 @@ export interface FactSheetInput {
   totalDebt: readonly PointObservation[];
   cash: readonly PointObservation[];
   operatingCashFlow: readonly PointObservation[];
+  /** 분기 유형자산 취득. 소스가 CF 를 못 열면 빈 배열이다(0 이 아니다). */
+  capex: readonly PointObservation[];
+  /** 분기 배당금지급. */
+  dividendPaid: readonly PointObservation[];
   interestExpense: readonly PointObservation[];
   /** 감가상각비(분기) — EV/EBITDA 계산에만 쓴다. 없으면 EV/EBITDA 는 null. */
   depreciation: readonly PointObservation[];
@@ -118,6 +122,11 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
     operatingCashFlow: input.operatingCashFlow,
     interestExpense: input.interestExpense,
     ttmOperatingIncome: fiscal.ttm.operating_income,
+  });
+  const cashflow = deriveCashflow({
+    operatingCashFlow: input.operatingCashFlow,
+    capex: input.capex,
+    dividendPaid: input.dividendPaid,
   });
 
   const ttmAsOf = fiscal.quarters[fiscal.quarters.length - 1]?.period_end ?? null;
@@ -221,6 +230,13 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
   noteDerived("balance.cash_and_equivalents", balance.cash_and_equivalents, latestPoint(input.cash)?.period_end ?? null);
   noteDerived("balance.cash_runway_quarters", balance.cash_runway_quarters, latestPoint(input.operatingCashFlow)?.period_end ?? null);
   noteDerived("balance.interest_coverage", balance.interest_coverage, ttmAsOf);
+  const cfAsOf = latestPoint(input.operatingCashFlow)?.period_end ?? null;
+  noteDerived("cashflow.operating_ttm", cashflow.operating_ttm, cfAsOf);
+  noteDerived("cashflow.capex_ttm", cashflow.capex_ttm, latestPoint(input.capex)?.period_end ?? null);
+  noteDerived("cashflow.free_cash_flow_ttm", cashflow.free_cash_flow_ttm, cfAsOf);
+  noteDerived("cashflow.dividend_paid_ttm", cashflow.dividend_paid_ttm, latestPoint(input.dividendPaid)?.period_end ?? null);
+  noteDerived("cashflow.dividend_coverage", cashflow.dividend_coverage, cfAsOf);
+  noteDerived("cashflow.burn_per_quarter", cashflow.burn_per_quarter, cfAsOf);
 
   for (const [path, value] of [
     ["market_data.market_cap", input.marketData.market_cap],
@@ -270,6 +286,7 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
       },
     },
     balance,
+    cashflow,
     market_data: {
       market_cap: input.marketData.market_cap,
       shares_outstanding: input.marketData.shares_outstanding,
@@ -313,6 +330,8 @@ export function emptyFactSheet(seed: {
     totalDebt: [],
     cash: [],
     operatingCashFlow: [],
+    capex: [],
+    dividendPaid: [],
     interestExpense: [],
     depreciation: [],
     closes: [],

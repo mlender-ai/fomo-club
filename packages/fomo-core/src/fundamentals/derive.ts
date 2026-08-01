@@ -1,5 +1,5 @@
 import { STDEV_QUARTERS, TTM_QUARTERS } from "./ttm";
-import type { FactSheetBalance, FactSheetGrowth, FactSheetMargin, MarginTrend, QuarterRecord } from "./types";
+import type { FactSheetBalance, FactSheetCashflow, FactSheetGrowth, FactSheetMargin, MarginTrend, QuarterRecord } from "./types";
 import type { TtmResult } from "./ttm";
 
 /**
@@ -153,6 +153,57 @@ export function cashRunwayQuarters(cash: number | null, ocfQuarters: readonly nu
   const burnPerQuarter = Math.abs(total) / TTM_QUARTERS;
   if (burnPerQuarter <= 0) return null;
   return Number((cash / burnPerQuarter).toFixed(1));
+}
+
+export interface CashflowInput {
+  /** 분기 영업활동현금흐름(기간값). 원부호. */
+  operatingCashFlow: readonly PointObservation[];
+  /** 분기 유형자산 취득(기간값). 부호 관행이 섞여 절대값으로 쓴다. */
+  capex: readonly PointObservation[];
+  /** 분기 배당금지급(기간값). 절대값으로 쓴다. */
+  dividendPaid: readonly PointObservation[];
+}
+
+/** 기간 라벨과 값을 함께 뽑는다 — `composed_of` 가 "왜 null 인지"를 보여줘야 한다. */
+function lastNWithPeriods(points: readonly PointObservation[], n: number): Array<[string, number]> {
+  const byPeriod = new Map<string, number>();
+  for (const p of [...points].sort((a, b) => a.period_end.localeCompare(b.period_end) || a.filed_at.localeCompare(b.filed_at))) {
+    if (Number.isFinite(p.value)) byPeriod.set(p.period_end, p.value);
+  }
+  return [...byPeriod.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-n);
+}
+
+/** 4분기가 다 있을 때만 합. 부분 합은 TTM 이 아니다(3분기 합을 1년치로 읽게 된다). */
+function ttmSum(points: readonly PointObservation[], absolute: boolean): number | null {
+  const recent = lastNWithPeriods(points, TTM_QUARTERS);
+  if (recent.length < TTM_QUARTERS) return null;
+  const total = recent.reduce((sum, [, value]) => sum + (absolute ? Math.abs(value) : value), 0);
+  return Number(total.toFixed(0));
+}
+
+export function deriveCashflow(input: CashflowInput): FactSheetCashflow {
+  const composed = lastNWithPeriods(input.operatingCashFlow, TTM_QUARTERS);
+  const operating = ttmSum(input.operatingCashFlow, false);
+  const capex = ttmSum(input.capex, true);
+  const dividend = ttmSum(input.dividendPaid, true);
+  const observed = new Set(input.operatingCashFlow.filter((p) => Number.isFinite(p.value)).map((p) => p.period_end)).size;
+
+  return {
+    operating_ttm: operating,
+    capex_ttm: capex,
+    // 하나라도 없으면 null. 결측을 0 으로 읽으면 CapEx 가 큰 기업의 FCF 가 부풀려진다.
+    free_cash_flow_ttm: operating !== null && capex !== null ? operating - capex : null,
+    dividend_paid_ttm: dividend,
+    // 적자(영업CF ≤ 0)에서 배당 비율은 의미가 없다 — 배당을 이익이 아니라 곳간에서 준 것이라
+    // 비율로 표현하면 "0.3배라 안전"처럼 읽힌다.
+    dividend_coverage:
+      dividend !== null && operating !== null && operating > 0 ? Number((dividend / operating).toFixed(3)) : null,
+    burn_per_quarter:
+      operating !== null && operating < 0 ? Number((Math.abs(operating) / TTM_QUARTERS).toFixed(0)) : null,
+    composed_of: composed.map(([period]) => period),
+    observed_quarters: observed,
+    coverage_flag: operating === null ? (observed > 0 ? "partial" : "none") : "full",
+  };
 }
 
 export function deriveBalance(input: BalanceInput): FactSheetBalance {
