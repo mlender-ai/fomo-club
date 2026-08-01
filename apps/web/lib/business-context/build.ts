@@ -186,6 +186,7 @@ export async function buildBusinessContext(entry: UniverseEntry, options: BuildO
     market: entry.country,
     synthesized_at: new Date().toISOString(),
     prompt_version: `${promptOf(SYNTHESIZE_PROMPT_ID).hash}+${promptOf(VERIFY_PROMPT_ID).hash}`,
+    archetype,
     input_hash: inputHash,
     model: synthesis.model,
     slot1_revenue_source: slot1,
