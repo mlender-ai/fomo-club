@@ -8,10 +8,21 @@
  *
  * 선행: `business-context-verifier-check.ts` 로 검증기 신뢰도를 먼저 확인할 것.
  *
+ * ## 증분 저장 (2026-08-01 추가) — 타임아웃에도 결과가 남아야 한다
+ *
+ * 이전 구조는 30종목을 **다 돌고 나서야** 파일을 썼다. 실측(run 30678060170)에서 90분 타임아웃에
+ * 걸리자 71분치 LLM 호출이 전부 사라졌고, 더 나쁘게는 **아티팩트에 저장소 커밋본(07-29)이 그대로
+ * 올라가 새 결과처럼 보였다**(sha256 일치로 확인). 조용한 유실보다 조용한 오보가 위험하다.
+ *
+ * 그래서 세 가지를 한다.
+ *   1. 시작 시 출력 파일을 `status: "running"` 스텁으로 **덮어쓴다** — 낡은 커밋본이 결과로 둔갑할 수 없다.
+ *   2. 종목마다 `golden30_progress.jsonl` 에 append 하고, 전체 JSON·보고서를 다시 쓴다.
+ *   3. `status` 는 running → partial → complete 로만 간다. 소비자(Summary 단계)는 이 값을 먼저 본다.
+ *
  * 실행: npx tsx --env-file=.env scripts/business-context-goldenset.ts --out docs/business-context
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BusinessContext } from "@fomo/core";
 import { buildBusinessContext } from "../apps/web/lib/business-context/build";
@@ -94,7 +105,7 @@ function citedText(context: BusinessContext, sourceIds: readonly string[]): stri
     .slice(0, 400);
 }
 
-function renderReport(rows: readonly Row[]): string {
+function renderReport(rows: readonly Row[], status: RunStatus): string {
   const lines: string[] = [];
   const all = badgeCounts(rows);
   const kr = badgeCounts(rows.filter((row) => row.market === "KR"));
@@ -105,6 +116,12 @@ function renderReport(rows: readonly Row[]): string {
 
   lines.push("# 사업 실체 골든셋 30종목 (WO-SUB-03 §8)");
   lines.push("");
+  if (status !== "complete") {
+    lines.push(`> 🚧 **미완주 — ${rows.length}/${GOLDEN.length} 종목까지의 중간 상태다(\`status: ${status}\`).**`);
+    lines.push("> 실행이 끝나기 전 스냅샷이므로 채움률·분포를 성적으로 인용하지 않는다.");
+    lines.push("> 이 파일이 이 문구를 달고 있으면, 실행이 타임아웃·취소·실패로 중단된 것이다.");
+    lines.push("");
+  }
   lines.push(`> ⚠️ **이 표는 \`입력 ${SECTION_PROMPT_CHARS.toLocaleString("en-US")}자 조건 하 결과\`다 — AC#1 충족 판정에 쓰지 않는다.**`);
   lines.push("> 입력 크기가 품질 근거로 확정되기 전(WO-SUB-03.5 PART C-1)의 측정이라,");
   lines.push("> 여기서 통과율이 높게 나와도 \"사업 실체 합성이 잘 된다\"가 아니라");
@@ -185,16 +202,73 @@ function renderReport(rows: readonly Row[]): string {
   return lines.join("\n");
 }
 
+type RunStatus = "running" | "partial" | "complete";
+
+/**
+ * 증분 저장기. 종목 하나가 끝날 때마다 호출된다.
+ *
+ * 전량 재작성이 비싸 보이지만 30행이라 무시할 수 있고, 대신 **어느 시점에 죽어도 파일이 정합**이다.
+ * JSONL 은 재작성 없이 append 만 하므로 전량 재작성이 도중에 끊겨도 원본은 남는다.
+ */
+function makeWriter(outDir: string | undefined, startedAt: string, variableFailures: () => readonly string[]) {
+  if (!outDir) return { save: () => {}, jsonl: undefined };
+  mkdirSync(outDir, { recursive: true });
+  const rawPath = join(outDir, "golden30_raw.json");
+  const reportPath = join(outDir, "EVAL_golden30.md");
+  const jsonlPath = join(outDir, "golden30_progress.jsonl");
+  // 낡은 진행 로그는 지운다 — 지난 실행의 행이 이번 실행 결과에 섞이면 안 된다.
+  rmSync(jsonlPath, { force: true });
+
+  const save = (rows: readonly Row[], status: RunStatus): void => {
+    writeFileSync(
+      rawPath,
+      JSON.stringify(
+        {
+          status,
+          startedAt,
+          generatedAt: new Date().toISOString(),
+          completed: rows.length,
+          planned: GOLDEN.length,
+          // 페이싱 실측 — 감속이 있었다면 완주 시간이 길어진 이유가 여기 있다(조용한 감속 금지).
+          pacing: pacingReport(),
+          inputChars: SECTION_PROMPT_CHARS,
+          variableFailures: variableFailures(),
+          rows,
+        },
+        null,
+        2
+      )
+    );
+    writeFileSync(reportPath, renderReport(rows, status));
+  };
+
+  // 첫 종목 전에 죽어도 "이번 실행은 0행"이 남는다. 커밋본이 결과로 둔갑하지 않는다.
+  save([], "running");
+  return {
+    save,
+    jsonl: (row: Row) => appendFileSync(jsonlPath, `${JSON.stringify(row)}\n`),
+  };
+}
+
 async function main(): Promise<void> {
   const outDir = flag("--out");
+  const startedAt = new Date().toISOString();
+  let failures: readonly string[] = [];
+  const writer = makeWriter(outDir, startedAt, () => failures);
+
   console.log("[golden30] 의존 변수 관측값 수집…");
   const values = await fetchVariableObservations();
+  failures = values.failed;
   console.log(`  변수 ${Object.keys(values.observations).length}개 확보, 실패 ${values.failed.length}개 ${values.failed.join(",")}`);
 
   const rows: Row[] = [];
   for (const [index, [id, name]] of GOLDEN.entries()) {
     const context = await buildBusinessContext(entryOf(id, name), { observations: values.observations });
-    rows.push({ id, name, market: /^\d{6}$/.test(id) ? "KR" : "US", context });
+    const row: Row = { id, name, market: /^\d{6}$/.test(id) ? "KR" : "US", context };
+    rows.push(row);
+    // 종목마다 즉시 디스크로 — 다음 종목에서 죽어도 여기까지는 남는다.
+    writer.jsonl?.(row);
+    writer.save(rows, rows.length === GOLDEN.length ? "complete" : "partial");
     console.log(
       `  [${index + 1}/${GOLDEN.length}] ${name.padEnd(22)} ${context.badge.padEnd(4)} s1=${context.slot1_revenue_source ? "O" : "-"} s2=${context.slot2_dependency ? "O" : "-"} s3=${context.slot3_dependency_state ? "O" : "-"} ${context.errors.length ? `err=${context.errors.length}` : ""}`
     );
@@ -208,26 +282,8 @@ async function main(): Promise<void> {
     ` 슬롯1 ${rows.filter((r) => r.context.slot1_revenue_source).length}/${rows.length} · 슬롯2 ${rows.filter((r) => r.context.slot2_dependency).length}/${rows.length} · 슬롯3 ${rows.filter((r) => r.context.slot3_dependency_state).length}/${rows.length}`
   );
 
-  if (outDir) {
-    mkdirSync(outDir, { recursive: true });
-    writeFileSync(join(outDir, "EVAL_golden30.md"), renderReport(rows));
-    writeFileSync(
-      join(outDir, "golden30_raw.json"),
-      JSON.stringify(
-        {
-          generatedAt: new Date().toISOString(),
-          // 페이싱 실측 — 감속이 있었다면 완주 시간이 길어진 이유가 여기 있다(조용한 감속 금지).
-          pacing: pacingReport(),
-          inputChars: SECTION_PROMPT_CHARS,
-          variableFailures: values.failed,
-          rows,
-        },
-        null,
-        2
-      )
-    );
-    console.log(`\n[golden30] 저장 — ${join(outDir, "EVAL_golden30.md")}`);
-  }
+  writer.save(rows, "complete");
+  if (outDir) console.log(`\n[golden30] 저장 — ${join(outDir, "EVAL_golden30.md")}`);
 }
 
 main().catch((error) => {

@@ -61,6 +61,8 @@ function baseInput(overrides: Partial<FactSheetInput> = {}): FactSheetInput {
     totalDebt: [{ period_end: "2026-03-31", filed_at: "2026-05-15", value: 2_000 }],
     cash: [{ period_end: "2026-03-31", filed_at: "2026-05-15", value: 3_000 }],
     operatingCashFlow: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 50 })),
+    capex: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 12 })),
+    dividendPaid: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 5 })),
     interestExpense: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 10 })),
     depreciation: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 20 })),
     closes: [],

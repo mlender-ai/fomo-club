@@ -64,6 +64,16 @@ jobs:
             const d = require("./docs/business-context/golden30_raw.json");
             const rows = d.rows || [];
             const slot = (k) => rows.filter((r) => r.context?.[k]).length;
+            // status 를 가장 먼저 본다. 이 값이 없으면 저장소 커밋본(낡은 결과)을 읽고 있는 것이다 —
+            // 실측(run 30678060170)에서 타임아웃 시 커밋본이 새 결과처럼 업로드된 적이 있다.
+            if (!d.status) {
+              console.log("⚠️ status 없음 — 이번 실행의 산출물이 아니다(저장소 커밋본일 가능성). 아래 수치를 결과로 쓰지 말 것.");
+            } else if (d.status !== "complete") {
+              console.log("🚧 미완주:", d.status, `(${d.completed}/${d.planned} 종목)`);
+              console.log("   부분 결과다. 채움률을 성적으로 인용하지 않는다.");
+            } else {
+              console.log("✅ 완주:", d.completed + "/" + d.planned, "종목");
+            }
             console.log("입력 크기:", d.inputChars, "자");
             console.log("슬롯1", slot("slot1_revenue_source") + "/" + rows.length,
                         "· 슬롯2", slot("slot2_dependency") + "/" + rows.length,
@@ -92,4 +102,5 @@ jobs:
           path: |
             docs/business-context/EVAL_golden30.md
             docs/business-context/golden30_raw.json
+            docs/business-context/golden30_progress.jsonl
           if-no-files-found: warn

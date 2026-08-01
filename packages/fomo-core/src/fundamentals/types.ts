@@ -175,6 +175,44 @@ export interface FactSheetBalance {
   interest_coverage: number | null;
 }
 
+/**
+ * 현금흐름 (WO-SUB-03.5 → 02R 선행). **02R 자격 판정의 입력이다.**
+ *
+ * 왜 별도 절인가: `balance.cash_runway_quarters` 는 영업현금흐름을 **소비만** 하고 값을 남기지
+ * 않아서, "런웨이가 null 인 이유가 흑자여서인지 현금흐름을 못 받아서인지" 구분되지 않았다.
+ * 02R 의 세 유형(`HYPERGROWTH_UNPROFITABLE`·`BIOTECH_PIPELINE`·`MATURE_INCOME`)이 지목하는
+ * 관측 지점이 정확히 이 값들이라, 확보 여부가 유형 자격 조건이 된다(규칙 3).
+ *
+ * 부호 관행: DART·SEC 모두 유출을 음수로 주는 종목과 양수로 주는 종목이 섞인다. 그래서
+ * CapEx·배당은 **절대값으로 크기만** 쓴다 — 이 둘이 순유입인 경우는 없다. 영업현금흐름은
+ * 부호가 의미를 가지므로(적자 소진 판정) 원부호를 유지한다.
+ */
+export interface FactSheetCashflow {
+  /** TTM 영업활동현금흐름. 원부호 유지. 4분기 미달이면 null. */
+  operating_ttm: number | null;
+  /** TTM 유형자산 취득액(크기). 무형자산 취득은 포함하지 않는다. */
+  capex_ttm: number | null;
+  /** FCF = 영업현금흐름 − CapEx. 둘 중 하나라도 없으면 null(0으로 대체하지 않는다). */
+  free_cash_flow_ttm: number | null;
+  /** TTM 배당금지급액(크기). */
+  dividend_paid_ttm: number | null;
+  /**
+   * 배당 유지 가능성 = 배당금지급 / 영업활동현금흐름. `MATURE_INCOME` 의 관측 지점.
+   * 영업현금흐름이 0 이하면 `null` — 적자 기업의 배당 비율은 의미를 갖지 않는다.
+   */
+  dividend_coverage: number | null;
+  /**
+   * 분기당 현금 소진액(양수). 최근 4분기 영업현금흐름 합이 **음수일 때만** 값이 있다.
+   * `HYPERGROWTH_UNPROFITABLE`·`BIOTECH_PIPELINE` 의 관측 지점.
+   */
+  burn_per_quarter: number | null;
+  /** TTM 을 구성한 분기 라벨. 4개 미달이면 위 TTM 값들이 전부 null 인 이유가 여기 보인다. */
+  composed_of: string[];
+  /** 영업현금흐름이 관측된 분기 수. */
+  observed_quarters: number;
+  coverage_flag: CoverageFlag;
+}
+
 export interface FactSheetMarketData {
   market_cap: number | null;
   shares_outstanding: number | null;
@@ -230,6 +268,7 @@ export interface FactSheet {
   margin: FactSheetMargin;
   valuation: FactSheetValuation;
   balance: FactSheetBalance;
+  cashflow: FactSheetCashflow;
   market_data: FactSheetMarketData;
   consensus: FactSheetConsensus;
   classification: FactSheetClassification;

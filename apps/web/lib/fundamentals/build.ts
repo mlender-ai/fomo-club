@@ -104,6 +104,8 @@ export async function buildKrFactSheet(entry: UniverseEntry, now = new Date()): 
     totalDebt: dartOk ? dart.totalDebt : [],
     cash: dartOk ? dart.cash : [],
     operatingCashFlow: dartOk ? dart.operatingCashFlow : [],
+    capex: dartOk ? dart.capex : [],
+    dividendPaid: dartOk ? dart.dividendPaid : [],
     interestExpense: dartOk ? dart.interestExpense : [],
     // 감가상각비는 DART 표본에 단독 계정이 없다 — 대체 지표로 만들지 않는다(EV/EBITDA null 유지).
     depreciation: [],
@@ -206,6 +208,8 @@ export async function buildUsFactSheet(entry: UniverseEntry, now = new Date()): 
     totalDebt: sec.totalDebt,
     cash: sec.cash,
     operatingCashFlow: sec.operatingCashFlow,
+    capex: sec.capex,
+    dividendPaid: sec.dividendPaid,
     interestExpense: sec.interestExpense,
     depreciation: sec.depreciation,
     closes,

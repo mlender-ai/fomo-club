@@ -81,3 +81,47 @@
 | C | 대체 지표로 완화 | `MATURE_INCOME` 만 부분 가능(배당수익률+이익 추이). 나머지 둘은 대체 불가 |
 
 **A 를 하지 않으면 B 가 정답이다** — 데이터 없이 유형을 남겨두면 경고문이 가리키는 관측 지점이 빈다.
+
+---
+
+## 3. 결정: **A** — 스키마·파서에 CF 추가 (2026-08-01)
+
+> 지시: "현금흐름 = A. 스키마·파서에 CF 추가. account_id 기반, 013은 null + missing_fields 등재.
+> 단 실제 확보율을 먼저 실측하고, **60% 미만이면 B/C 재논의**."
+
+### 구현된 것
+
+| 지점 | 내용 |
+|---|---|
+| `dart-accounts.json` | `dividend_paid` 추가(`ifrs-full_DividendsPaidClassifiedAsFinancingActivities` — 덤프 §3 실측 등재분). `mapping_version` v1.0.0 → **v1.1.0** |
+| `dart-fundamentals.ts` | `capex`·`dividend_paid` 를 분기별로 추출. **`report.detailed` 가 false(013)면 `null`** — 이전 분기로 메우지 않는다 |
+| `types.ts` | `FactSheetCashflow` 절 신설 → `FactSheet.cashflow` |
+| `derive.ts` | `deriveCashflow()` — TTM 4분기 미달이면 전부 `null`(부분 합을 1년치로 읽지 않는다) |
+| `missing.ts` | `cashflow.*` 는 일반 walk 로 자동 등재. 단 `burn_per_quarter`·`dividend_coverage` 는 **상태 null**(흑자·무배당)이라 결손에서 제외 — 세면 확보율이 실제보다 낮게 보인다 |
+| `sec-xbrl.ts` | US 도 `capex`·`dividendPaid` 후보 개념 추가. **다만 KR 의 `account_id` 와 신뢰도가 다르다**(덤프 실측이 아니라 us-gaap 표준 개념 후보) — 적중률은 커버리지가 답한다 |
+| `coverage.ts` | 그룹별 `cashflow` 블록 — 확보/부분/전무를 나눠 센다 |
+
+### 부호 관행 — 절대값으로 크기만 쓴다
+
+DART·SEC 모두 유출을 음수로 주는 종목과 양수로 주는 종목이 섞인다. CapEx·배당은
+**절대값**으로 읽는다(이 둘이 순유입인 경우는 없다). 영업현금흐름은 부호가 판정 의미를
+가지므로(적자 소진) 원부호를 유지한다. `fundamentals-cashflow.test.ts` 가 두 부호 관행이
+같은 결과를 내는 것을 고정한다.
+
+### DART 쿼터를 다시 태우지 않는다
+
+`REPORT_CACHE_VERSION` 은 **올리지 않았다.** 캐시가 DART 응답 `rows` 를 통째로 들고 있어
+CapEx·배당은 **캐시된 원본에서 재추출**된다. 조회 로직이 바뀐 것이 아니라 읽는 계정이
+늘어난 것뿐이라, 버전을 올리면 6년치 재조회가 무의미하게 발생한다.
+
+### 남은 것 — 확보율 실측
+
+측정 경로: 백엔드 배포 → `fundamentals-backfill.yml` dispatch(`reset: true`) →
+`GET /api/fomo/fundamentals/coverage` 의 `groups[].cashflow`.
+
+판정 기준(지시): **KR `cashflow.operating_ttm` 확보율 60% 이상이면 A 유지, 미만이면 B/C 재논의.**
+
+상한이 걸려 있는 지점을 미리 적어 둔다 — `detailedReports.opened / attempted` 다.
+전체 재무제표가 `013` 인 보고서에서는 CF 가 구조적으로 없고, TTM 은 4분기가 다 있어야
+구성되므로 **한 분기만 013 이어도 그 종목의 `operating_ttm` 은 null** 이 된다.
+그래서 확보율은 "부분 확보"와 함께 읽어야 한다(커버리지가 둘을 나눠 낸다).
