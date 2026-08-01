@@ -664,5 +664,7 @@
       "warning_full": "이 종목은 유형 분류가 되지 않아 값에 대한 해석을 제공하지 않습니다. 아래는 해석 없이 사실만 나열한 것입니다.",
       "unavailable_metrics": []
     }
-  ]
+  ],
+  "warning_status": "draft",
+  "warning_status_note": "경고문 10종은 draft 다 — 02R PART D 에서 전종 함께 확정한다(사용자 판정 2026-08-01). 02R 이 카탈로그를 다시 짜면 유형이 병합·신설되므로 지금 확정하면 다시 쓰게 된다. INV-11 도 02R 이후로 유예돼 있다. 02R 이관 지적 3건: ①PHARMA_STABLE 은 경고문·금지지표·경고부착 3칸이 전부 비어 QUALITY_COMPOUNDER 와 구분할 근거가 없다(병합 후보 실측 확인) ②근거 없는 경험칙 단정을 톤 낮춘다 — HYPERGROWTH '함께 움직여 왔습니다'·MATURE_INCOME '정상 구간입니다' → CYCLICAL 의 '~하는 경향이 있습니다' 톤에 맞춘다 ③ASSET_DEEP_VALUE 의 무경고+하드금지 패턴은 좋다 — 경고문이 필요 없는 유형은 null 이 정답이고 사유 한 줄만 남긴다"
 }

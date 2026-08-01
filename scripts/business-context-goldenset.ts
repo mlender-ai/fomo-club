@@ -105,6 +105,12 @@ function renderReport(rows: readonly Row[]): string {
 
   lines.push("# 사업 실체 골든셋 30종목 (WO-SUB-03 §8)");
   lines.push("");
+  lines.push(`> ⚠️ **이 표는 \`입력 ${SECTION_PROMPT_CHARS.toLocaleString("en-US")}자 조건 하 결과\`다 — AC#1 충족 판정에 쓰지 않는다.**`);
+  lines.push("> 입력 크기가 품질 근거로 확정되기 전(WO-SUB-03.5 PART C-1)의 측정이라,");
+  lines.push("> 여기서 통과율이 높게 나와도 \"사업 실체 합성이 잘 된다\"가 아니라");
+  lines.push("> \"잘린 입력으로도 검증기를 통과하는 문장이 나온다\"로만 읽는다.");
+  lines.push("> **AC#1 은 C-1 로 확정된 입력 크기에서 재실행한 결과로만 판정한다.**");
+  lines.push("");
   lines.push("> **사람 검증용 표다.** 생성 문장과 그 문장이 인용한 청크 원문을 나란히 놓았다.");
   lines.push("> `사람 판정` 칸은 비어 있다 — 자동 검증기 판정으로 사람 판정을 대체하지 않는다(§10).");
   lines.push("> 완료 조건 1: 슬롯 1·2 가 사람 검증에서 \"근거 있음\"으로 판정되는 비율 ≥ 90%.");
