@@ -38,7 +38,7 @@ import { join } from "node:path";
 import type { BusinessContext } from "@fomo/core";
 import { buildBusinessContext } from "../apps/web/lib/business-context/build";
 import { fetchVariableObservations } from "../apps/web/lib/business-context/variable-values";
-import { pacingReport } from "../apps/web/lib/business-context/synthesize";
+import { pacingReport, quotaExhausted } from "../apps/web/lib/business-context/synthesize";
 import type { UniverseEntry } from "../apps/web/lib/fundamentals/universe";
 import { SECTION_PROMPT_CHARS } from "../apps/web/lib/business-context/sec-filing";
 
@@ -157,7 +157,12 @@ function renderReport(rows: readonly Row[], status: RunStatus): string {
   if (status !== "complete") {
     lines.push(`> 🚧 **미완주 — ${rows.length}/${GOLDEN.length} 종목까지의 중간 상태다(\`status: ${status}\`).**`);
     lines.push("> 실행이 끝나기 전 스냅샷이므로 채움률·분포를 성적으로 인용하지 않는다.");
-    lines.push("> 이 파일이 이 문구를 달고 있으면, 실행이 타임아웃·취소·실패로 중단된 것이다.");
+    if (status === "quota_exhausted") {
+      lines.push("> **중단 사유는 시간이 아니라 일일 LLM 토큰 한도(TPD) 소진이다.**");
+      lines.push("> 같은 날 안에서는 배치를 더 쪼개도 합계 한도가 같아 소용이 없다 — **날짜를 나눠** 재개한다.");
+    } else {
+      lines.push("> 이 파일이 이 문구를 달고 있으면, 실행이 타임아웃·취소·실패로 중단된 것이다.");
+    }
     lines.push("");
   }
   lines.push(`> ⚠️ **이 표는 \`입력 ${SECTION_PROMPT_CHARS.toLocaleString("en-US")}자 조건 하 결과\`다 — AC#1 충족 판정에 쓰지 않는다.**`);
@@ -240,7 +245,15 @@ function renderReport(rows: readonly Row[], status: RunStatus): string {
   return lines.join("\n");
 }
 
-type RunStatus = "running" | "partial" | "complete";
+/**
+ * `quota_exhausted` 는 `partial` 과 **원인이 다르다.**
+ *
+ * partial 은 "시간이 모자랐다"로 읽혀 배치를 더 쪼개는 대응으로 이어진다. 그런데 실측
+ * (run 30740841495)에서 3배치가 5/30 에 그친 원인은 시간이 아니라 **일일 토큰 한도**였고,
+ * 같은 날 안에서는 배치를 아무리 쪼개도 합계 한도가 같아 소용이 없다(날짜를 나눠야 한다).
+ * 두 상태를 한 이름으로 저장하면 다음 사람이 같은 자리에서 또 오진한다.
+ */
+type RunStatus = "running" | "partial" | "complete" | "quota_exhausted";
 
 /**
  * 증분 저장기. 종목 하나가 끝날 때마다 호출된다.
@@ -326,6 +339,16 @@ async function main(): Promise<void> {
     );
     if (context.slot1_revenue_source) console.log(`        슬롯1: ${context.slot1_revenue_source.text}`);
     if (context.slot2_dependency) console.log(`        슬롯2: ${context.slot2_dependency.text}`);
+    // 일일 한도가 소진되면 남은 종목은 전부 빈 결과가 된다 — 러너 시간을 태우지 않고 접는다.
+    if (quotaExhausted()) {
+      const { totalTokensUsed, billedCalls } = pacingReport();
+      const perStock = rows.length > 0 ? Math.round(totalTokensUsed / rows.length) : 0;
+      console.log(`\n[golden30] 일일 LLM 쿼터 소진 — ${index + 1}/${targets.length} 에서 중단한다.`);
+      console.log("           남은 종목은 오늘 안에 못 돈다. 날짜를 나눠 재개하라(배치를 더 쪼개도 소용없다).");
+      // 다음 계획을 추정으로 세우지 않도록 실측치를 남긴다.
+      console.log(`           이 배치 실측: ${totalTokensUsed.toLocaleString("en-US")}토큰 / ${billedCalls}콜 / ${rows.length}종목 = 종목당 ~${perStock.toLocaleString("en-US")}토큰`);
+      break;
+    }
   }
 
   const counts = badgeCounts(rows);
@@ -335,7 +358,8 @@ async function main(): Promise<void> {
   );
 
   // 배치 실행에서는 마지막 배치만 30행을 채운다 — 중간 배치를 complete 로 쓰면 안 된다.
-  writer.save(rows, rows.length >= GOLDEN.length ? "complete" : "partial");
+  // 쿼터로 멈춘 것은 `partial`(시간 부족)과 구분해서 남긴다 — 대응이 다르다.
+  writer.save(rows, rows.length >= GOLDEN.length ? "complete" : quotaExhausted() ? "quota_exhausted" : "partial");
   if (outDir) console.log(`\n[golden30] 저장 — ${join(outDir, "EVAL_golden30.md")}`);
 }
 
