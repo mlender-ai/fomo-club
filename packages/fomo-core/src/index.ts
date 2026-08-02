@@ -32,5 +32,6 @@ export * from "./index-engine/naverFetcher";
 export * from "./index-engine/redditFetcher";
 export * from "./fundamentals";
 export * from "./archetype";
+export * from "./valuation-chart";
 export * from "./business-context";
 export * from "./invariants";

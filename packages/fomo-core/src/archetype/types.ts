@@ -35,6 +35,40 @@ export interface UnavailableRef {
   reason: string;
 }
 
+/**
+ * 막대에 쓸 시계열. **팩트시트에 실제로 있는 것과 없는 것을 구분해서 이름 짓는다** —
+ * 없는 것을 이름만 붙여두고 그리면 규칙 2("없는 구간을 그리지 않는다") 위반이 된다.
+ * 빌더가 해석하지 못하는 값은 차트를 숨기고 사유를 남긴다.
+ */
+export type ChartBarSeries =
+  | "annual_revenue"
+  | "quarterly_operating_income"
+  | "annual_net_interest_income"
+  | "annual_dps"
+  | "quarterly_cash_balance"
+  | "annual_equity";
+
+/** 선(배수)에 쓸 지표 — `valuation` 절의 필드명과 같다. */
+export type ChartLineMetric = "per_ttm" | "per_forward" | "pbr" | "psr_ttm" | "dividend_yield";
+
+/**
+ * 차트 축 매핑 (WO-SUB-04 §5-2).
+ *
+ * **독트린이 축의 정본이다.** 코드에 표를 하드코딩하면 02R 이 유형 목록을 바꿀 때 전면 수정이 된다.
+ * 여기 있으면 유형 추가는 JSON 행 추가로 흡수된다.
+ * `null` 이면 차트를 표시하지 않는다(`UNCLASSIFIED`).
+ */
+export interface ChartAxes {
+  bar_series: ChartBarSeries;
+  bar_label: string;
+  /** `null` 이면 배수 선을 그리지 않는다(BIOTECH — 어떤 배수도 의미를 갖지 않는다). */
+  line_metric: ChartLineMetric | null;
+  line_label: string | null;
+  /** 1순위 지표가 없을 때 내려갈 지표. 내려갔다는 사실은 캡션에 남긴다. */
+  line_fallback_metric: ChartLineMetric | null;
+  note: string | null;
+}
+
 export interface ArchetypeFrame {
   code: ArchetypeCode;
   label_ko: string;
@@ -47,6 +81,8 @@ export interface ArchetypeFrame {
   requires_warning_metrics: ForbiddenRef[];
   band_metric: BandMetric | null;
   band_note: string | null;
+  /** WO-SUB-04 축 매핑. `null` 이면 차트 미표시. */
+  chart_axes: ChartAxes | null;
   /** 카드용 축약 문안(WO-SUB-08 텍스트 예산). 없으면 경고 없음. */
   warning_short: string | null;
   /** 디테일용 전체 문안. */
@@ -62,6 +98,7 @@ export interface ArchetypeDoctrine {
   as_of: string;
   note: string;
   archetypes: ArchetypeFrame[];
+  chart_axes_note?: string;
 }
 
 export interface ArchetypeResult {

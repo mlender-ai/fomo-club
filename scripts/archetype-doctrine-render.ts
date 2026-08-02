@@ -87,6 +87,25 @@ function renderFrame(frame: ArchetypeFrame, index: number): string[] {
   lines.push(`- 사용: ${frame.band_metric ? `\`${frame.band_metric}\`` : "**없음 — 값의 상태 층을 렌더링하지 않는다**"}`);
   if (frame.band_note) lines.push(`- 근거: ${frame.band_note}`);
   lines.push("");
+  lines.push("#### 값의 상태 차트 축 (WO-SUB-04)");
+  lines.push("");
+  if (!frame.chart_axes) {
+    lines.push("**차트 미표시.**");
+  } else {
+    const axes = frame.chart_axes;
+    lines.push("| 축 | 지표 |");
+    lines.push("|---|---|");
+    lines.push(`| 막대(우축) | ${axes.bar_label} — \`${axes.bar_series}\` |`);
+    lines.push(
+      `| 선(좌축) | ${axes.line_metric ? `${axes.line_label} — \`${axes.line_metric}\`` : "**없음**"} |`
+    );
+    if (axes.line_fallback_metric) lines.push(`| 대체 | \`${axes.line_fallback_metric}\` |`);
+    if (axes.note) {
+      lines.push("");
+      lines.push(`- ${axes.note}`);
+    }
+  }
+  lines.push("");
   lines.push("#### 해석 경고문 (최종 문안)");
   lines.push("");
   if (!frame.warning_full && !frame.warning_short) lines.push("경고문 없음.");
