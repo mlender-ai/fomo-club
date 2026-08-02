@@ -87,7 +87,19 @@ export function findDartRow(
 ): { row: DartRow; matchedBy: "account_id" | "account_nm"; key: string } | null {
   const spec = dartField(field);
   const inStatement = rows.filter(
-    (row) => row.sj_div === spec.statement && (fsDiv === undefined || row.fs_div === fsDiv)
+    (row) =>
+      row.sj_div === spec.statement &&
+      // **`fs_div` 가 없는 행을 배제하지 않는다.**
+      //
+      // 주요계정(`fnlttSinglAcnt`)은 같은 계정을 CFS/OFS 두 줄로 주므로 필터가 필수다.
+      // 그러나 전체 재무제표(`fnlttSinglAcntAll`)는 `fs_div` 를 **행에 담지 않는다** —
+      // 요청 파라미터로만 받고 응답 필드에는 없다(DUMP_dart_structure.md §4-1 필드 목록).
+      // 그 응답은 이미 요청한 `fs_div` 범위로만 오므로 행 단위 재확인이 불필요하고,
+      // `row.fs_div === fsDiv` 로 거르면 undefined 라 **한 건도 통과하지 못한다.**
+      //
+      // 실측 결과가 그 증거다: KR 현금흐름 확보율 0/238(전무 100%). 소스가 없어서가 아니라
+      // CF·EPS 처럼 전체 재무제표에만 있는 계정이 전부 이 필터에서 죽고 있었다.
+      (fsDiv === undefined || row.fs_div === undefined || row.fs_div === fsDiv)
   );
   for (const id of spec.account_ids) {
     const row = inStatement.find((candidate) => candidate.account_id === id);
