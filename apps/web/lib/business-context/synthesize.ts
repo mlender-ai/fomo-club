@@ -63,9 +63,84 @@ function noteSuccess(): void {
   if (currentIntervalMs !== before) pacingEvents.push(`회복 ${before}ms → ${currentIntervalMs}ms`);
 }
 
+/**
+ * 실제 소비 토큰 누계 — **일일 쿼터 예산의 유일한 근거다.**
+ *
+ * 07-29 진단의 종목당 ~1,600토큰 추정대로면 TPD 100,000 에 62종목이 들어가야 하는데
+ * 실측은 5종목에서 소진됐다(12배 차이). 다음 계획을 또 추정으로 세우지 않도록 실제 값을 센다.
+ */
+let totalTokensUsed = 0;
+let billedCalls = 0;
+
 /** 배치가 읽어 결과에 남긴다. 감속이 있었다면 완주 시간이 길어진 이유가 여기 있다. */
-export function pacingReport(): { intervalMs: number; events: readonly string[] } {
-  return { intervalMs: currentIntervalMs, events: [...pacingEvents] };
+export function pacingReport(): {
+  intervalMs: number;
+  events: readonly string[];
+  totalTokensUsed: number;
+  billedCalls: number;
+  quotaExhausted: boolean;
+} {
+  return {
+    intervalMs: currentIntervalMs,
+    events: [...pacingEvents],
+    totalTokensUsed,
+    billedCalls,
+    quotaExhausted: quotaExhausted(),
+  };
+}
+
+/**
+ * 일일 쿼터(TPD/RPD) 소진 — **분당 한도와 같은 429 로 오는데 대응이 정반대다.**
+ *
+ * TPM 은 기다리면 풀리지만 TPD 는 그날 안에 풀리지 않는다. 실측(run 30740841495):
+ *
+ *   on tokens per day (TPD): Limit 100000, Used 99966, Requested 1077
+ *   x-ratelimit-remaining-tokens: 12000   ← **분당 잔량은 가득 차 있었다**
+ *   retry-after: 902
+ *
+ * 페이싱은 분당 잔량만 보므로 "여유 있다"고 판단했고 재시도는 902초를 네 번 그대로 기다렸다.
+ * 골든셋 3배치가 각각 70분 스텝 타임아웃을 꽉 채우고 **5/30 종목**으로 끝난 진짜 원인이다.
+ * 감속(6초→30초 상한)도 소용이 없었다 — 벽이 분당 한도가 아니었다.
+ *
+ * 그래서 TPD 를 만나면 **기다리지 않고 즉시 접는다.** 남은 러너 시간을 태우는 대신
+ * 소진 사실을 페이싱 이력에 남겨 배치가 `quota_exhausted` 로 저장할 수 있게 한다.
+ */
+const DAILY_QUOTA_PATTERN = /\b(?:tokens|requests) per day\b|\((?:TPD|RPD)\)/i;
+
+let quotaExhaustedAt: string | null = null;
+
+/** 429 응답 본문이 **일일** 한도인지. 본문이 없으면 판별하지 않는다(추측으로 배치를 접지 않는다). */
+export function isDailyQuotaError(errorBody: string | undefined): boolean {
+  return Boolean(errorBody) && DAILY_QUOTA_PATTERN.test(errorBody as string);
+}
+
+/** 이 실행에서 일일 쿼터가 소진됐는가. 배치가 루프를 접는 근거로 쓴다. */
+export function quotaExhausted(): boolean {
+  return quotaExhaustedAt !== null;
+}
+
+/** 호출 결과에서 일일 쿼터 소진을 감지해 상태에 남긴다. */
+export function noteQuotaFrom(result: { ok: boolean; status: number; errorBody?: string }): void {
+  if (result.ok || result.status !== 429 || quotaExhaustedAt) return;
+  if (!isDailyQuotaError(result.errorBody)) return;
+  quotaExhaustedAt = new Date().toISOString();
+  // 조용한 중단 금지 — 왜 멈췄는지가 결과 파일에 남아야 한다.
+  pacingEvents.push(`일일 쿼터 소진 — 재시도 중단(${quotaExhaustedAt})`);
+}
+
+/** 제공자가 알려준 실제 소비량을 누적한다(추정 아님). */
+export function noteTokenUsage(totalTokens: number | undefined): void {
+  if (typeof totalTokens !== "number" || !Number.isFinite(totalTokens)) return;
+  totalTokensUsed += totalTokens;
+  billedCalls += 1;
+}
+
+/** 테스트용 — 모듈 전역 상태를 되돌린다. */
+export function resetQuotaState(): void {
+  quotaExhaustedAt = null;
+  pacingEvents.length = 0;
+  totalTokensUsed = 0;
+  billedCalls = 0;
 }
 
 let lastCallAt = 0;
@@ -117,12 +192,18 @@ async function paced<T>(run: () => Promise<T>): Promise<T> {
 
 /** 429·5xx 는 백오프 재시도. 그 외 실패는 그대로 돌려준다(무한 재시도 금지). */
 async function callWithRetry(options: Parameters<typeof callAI>[0]): Promise<Awaited<ReturnType<typeof callAI>>> {
+  // 이미 소진됐으면 호출하지 않는다 — 간격 대기까지 포함해 전부 낭비다.
+  if (quotaExhausted()) return { content: "", ok: false, status: 429, model: "", errorBody: "일일 쿼터 소진 — 호출 생략" };
   let last = await paced(() => callAI(options));
   noteRateLimit(last.rateLimit);
+  noteQuotaFrom(last);
+  noteTokenUsage(last.totalTokens);
   if (last.ok) noteSuccess();
   for (let attempt = 1; attempt <= RATE_LIMIT_RETRIES; attempt += 1) {
     if (last.ok) return last;
     if (last.status !== 429 && last.status < 500) return last;
+    // 일일 한도는 기다려도 그날 안에 안 풀린다 — 재시도하지 않고 그대로 돌려준다.
+    if (quotaExhausted()) return last;
     // 429 가 실제로 왔다 → 이후 호출 간격을 늘린다(자동 감속). 재시도만으로는 다음 종목에서 또 맞는다.
     if (last.status === 429) slowDown(`429 재시도 ${attempt}회`);
     // 제공자가 준 리셋 시각을 우선 쓴다(retry-after → reset-tokens → 백오프).
@@ -130,6 +211,8 @@ async function callWithRetry(options: Parameters<typeof callAI>[0]): Promise<Awa
     await new Promise((resolve) => setTimeout(resolve, Math.max(wait, 4_000 * attempt) + 500));
     last = await paced(() => callAI(options));
     noteRateLimit(last.rateLimit);
+    noteQuotaFrom(last);
+  noteTokenUsage(last.totalTokens);
     if (last.ok) noteSuccess();
   }
   return last;

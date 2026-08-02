@@ -52,10 +52,19 @@ export interface CallAiResult {
   errorBody?: string;
   /** 레이트리밋 헤더 — 남은 한도와 리셋 시각. 제공자가 주는 경우만. */
   rateLimit?: Record<string, string>;
+  /**
+   * 이 호출이 실제로 쓴 토큰(제공자 응답의 `usage`).
+   *
+   * **일일 쿼터(TPD) 예산을 세우려면 실측이 필요하다.** 07-29 진단은 종목당 ~1,600토큰으로
+   * 추정했고 그 값이면 TPD 100,000 에 62종목이 들어가야 하는데, 실측(run 30740841495)은
+   * 5종목에서 소진됐다 — 12배 차이다. 추정으로 배치 계획을 다시 세우면 같은 자리에서 또 틀린다.
+   */
+  totalTokens?: number;
 }
 
 interface LlmResponse {
   choices?: Array<{ message?: { content?: string } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 }
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -199,6 +208,8 @@ export async function callAI(opts: CallAiOptions): Promise<CallAiResult> {
     }
     const data = (await res.json()) as LlmResponse;
     result.content = data.choices?.[0]?.message?.content ?? "";
+    const totalTokens = data.usage?.total_tokens;
+    if (typeof totalTokens === "number" && Number.isFinite(totalTokens)) result.totalTokens = totalTokens;
     result.ok = true;
     finishTrace({ ok: true, status: res.status, content: result.content });
     return result;

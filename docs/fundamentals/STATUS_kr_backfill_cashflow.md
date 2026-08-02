@@ -2,6 +2,10 @@
 
 측정일: 2026-08-01 · 소스: 프로덕션 `GET /api/fomo/fundamentals/coverage` (generatedAt `2026-08-01T01:41:05Z`)
 
+> **결론은 §4 다** (2026-08-02 갱신): KR 현금흐름 확보율 **88.4%** — 기준 60% 를 넘어
+> **A(스키마·파서 추가) 유지 확정**. §2 의 "확보되지 않았다"와 §3 의 미확정 서술은
+> 그 판정에 이르기까지의 기록이다.
+
 ---
 
 ## 1. KR 재백필 — **완료됐다**
@@ -113,6 +117,73 @@ DART·SEC 모두 유출을 음수로 주는 종목과 양수로 주는 종목이
 `REPORT_CACHE_VERSION` 은 **올리지 않았다.** 캐시가 DART 응답 `rows` 를 통째로 들고 있어
 CapEx·배당은 **캐시된 원본에서 재추출**된다. 조회 로직이 바뀐 것이 아니라 읽는 계정이
 늘어난 것뿐이라, 버전을 올리면 6년치 재조회가 무의미하게 발생한다.
+
+---
+
+## 4. 확보율 실측 — **A 유지 확정** (2026-08-02)
+
+측정: `fundamentals-backfill.yml` run `30740836692` 완주(`done=true`, 유니버스 329) 직후
+저장된 팩트시트를 직접 집계. `fs_div` 버그 수정(#1020) 이후 첫 전량 백필이다.
+
+| 시장 | 영업CF TTM | 부분확보 | 전무 | 관측분기 중앙값 | CapEx | FCF | 배당 관측 | 소진 중 |
+|---|---|---|---|---|---|---|---|---|
+| **KR** | **213/241 (88.4%)** | 5 | 23 | 21 | 201 | 200 | 130 | 76 |
+| US | 77/88 (87.5%) | 4 | 7 | 10.5 | 77 | 77 | 30 | 19 |
+
+**판정: KR 88.4% ≥ 기준 60% → A(스키마·파서 추가) 유지. B/C 재논의는 하지 않는다.**
+
+`fs_div` 버그 수정 전 0/238(0.0%)에서 213/241 로 열렸다. KR 이 US 를 앞서고(88.4% vs 87.5%),
+관측 분기 중앙값은 KR 21분기로 US 10.5분기의 두 배다 — DART 6년치가 SEC 보다 깊다.
+
+### 결손 28건은 대부분 "기업이 아니다"
+
+| 성격 | 수 | 종목 | CF 가 있어야 하는가 |
+|---|---|---|---|
+| 암호화폐 | 9 | 비트코인·이더리움·리플·솔라나·에이다·도지코인·트론·체인링크·캔톤 | **아니오** — 발행 주체가 없다 |
+| ETF·액티브펀드 | 3 | TIME 글로벌AI·TIME 차이나AI·WON 반도체밸류체인 | **아니오** |
+| 우선주 | 2 | 삼성전자우·삼성전기우 | **아니오** — 본주에 있다(`corp_code` 없음이 정상) |
+| 네이버 종목코드 형식 오류 | 3 | 그린광학·메쥬 등(`0015G0` 형식) | 예 — 조회 경로 문제 |
+| DART 분기 결손·감가상각비 미확보 | 11 | 한미약품·나노신소재 등 | 예 — 부분 결손 |
+
+비기업 14종목을 분모에서 빼면 **213/227 (93.8%)** 이다. 다만 **판정에는 전체 모수
+88.4% 를 쓴다** — 분모를 유리하게 고르지 않는다. 어느 쪽으로 세도 60% 기준은 넘는다.
+
+### 02R PART B-3 에 주는 답
+
+세 유형의 자격이 **데이터로 확보됐다**(규칙 3: 데이터 확보 가능성이 자격 조건).
+
+| 유형 | 필요 지표 | 이전 판정 | 지금 |
+|---|---|---|---|
+| `HYPERGROWTH_UNPROFITABLE` | 현금 소진 속도 | 불가 | **가능** — KR 76종목에서 소진 관측 |
+| `BIOTECH_PIPELINE` | 현금 소진 속도 | 불가 | **가능** — 같은 근거 |
+| `MATURE_INCOME` | 배당 지속 가능성(배당금 vs 영업CF) | 부분 | **가능** — KR 130종목에서 배당 지급 관측 |
+
+### 측정 경로 주의 — 커버리지 엔드포인트를 쓰지 못했다
+
+백필 워크플로의 커버리지 요약이 `GITHUB_STEP_SUMMARY` 로만 나가는데 그건 **API 로 읽을 수
+없다.** 백필은 성공했는데 확보율을 사후에 확인할 길이 없어 저장소를 직접 집계했다.
+같은 일이 반복되지 않게 요약을 stdout 에도 찍게 고쳤다(`fundamentals-backfill.yml`).
+
+<details>
+<summary>재현 쿼리 (팩트시트 저장소 직접 집계 — 15분 캐시 §5-7 우회)</summary>
+
+```sql
+select f->>'market' as market, count(*) as n,
+  count(*) filter (where f->'cashflow'->>'operating_ttm' is not null) as op_ttm,
+  count(*) filter (where f->'cashflow'->>'operating_ttm' is null
+                     and (f->'cashflow'->>'observed_quarters')::int > 0) as partial,
+  count(*) filter (where f->'cashflow'->>'dividend_paid_ttm' is not null) as dividend_observed,
+  count(*) filter (where f->'cashflow'->>'burn_per_quarter' is not null) as burning
+from (select "row"->'factsheet' as f from "FeedContentCache" where id like 'factsheet:%') t
+group by 1;
+```
+
+`coverage.ts` 의 집계 정의와 같은 조건이다(`operating_ttm` null + `observed_quarters` > 0 = 부분확보).
+</details>
+
+---
+
+## 부록 — 실측 전 예측 (2026-08-01 시점 기록)
 
 ### 남은 것 — 확보율 실측
 

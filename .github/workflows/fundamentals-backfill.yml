@@ -120,5 +120,9 @@ jobs:
             lines.push(`## 실패·결손 ${(r.failures ?? []).length}종목`);
             lines.push("");
             for (const f of (r.failures ?? []).slice(0, 40)) lines.push(`- **${f.canonical}**(${f.market}, ${f.coverage_flag}, 결측 ${f.missing_count}) — ${f.errors.join(" · ") || "—"}`);
+            // **stdout 에도 찍는다.** Step Summary 는 API 로 못 읽는다 — 실측(run 30740836692)에서
+            // 백필은 성공했는데 확보율을 사후에 확인할 길이 없어 DB 를 직접 집계해야 했다.
+            // 결과를 한 군데에만 쓰면 그 한 군데를 못 볼 때 실행을 통째로 다시 돌리게 된다.
+            console.log(lines.join("\n"));
             require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
           '
