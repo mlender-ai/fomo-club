@@ -57,11 +57,6 @@ test("콘솔 에러가 없다", async ({ page }) => {
     const text = message.text();
     // favicon 404 는 프리뷰 라우트의 관심사가 아니다.
     if (/favicon/i.test(text)) return;
-    // `upgrade-insecure-requests` 가 Report-Only 정책에 들어 있어 브라우저가 무시하며 경고한다.
-    // **앱 전역 CSP 설정 문제이고 이 페이지의 렌더 결함이 아니다**(next.config.mjs:35).
-    // 여기서 통과시키는 대신 별도 작업으로 넘긴다 — 이 스펙에서 고치면 보안 헤더를
-    // 차트 WO 범위 밖에서 건드리는 일이 된다.
-    if (/upgrade-insecure-requests/.test(text)) return;
     errors.push(text);
   });
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
