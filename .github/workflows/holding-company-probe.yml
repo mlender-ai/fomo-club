@@ -1,0 +1,56 @@
+name: Holding Company Probe (manual)
+
+# WO-SUB-02R B1 — 지주회사 식별 축 실측.
+#
+# 왜 워크플로인가: DART 키가 로컬에 없고 저장소 시크릿에만 있다. 그리고 전수 데이터로
+# **지주회사가 업종 축에서 식별되지 않는다**는 것이 이미 확인됐다(`복합기업` 18종목은
+# 다각화 사업회사이고, 이름 패턴 92종목은 식품·철강·제약·은행으로 흩어져 있다).
+#
+# 549종목 수집을 시작하기 전에 축을 확정해야 한다 — 다 모은 뒤에 "판정할 표본이 없다"가
+# 되면 수집을 다시 해야 한다. 이 프로브가 경로 2(DART induty_code)의 성립 여부를 답한다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: holding-company-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - name: Probe DART company.json
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          # corp_code 매핑이 FeedContentCache 를 통과한다 — DB 없이는 매번 재다운로드가 된다.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # 결과를 stdout 과 Step Summary 양쪽에 남긴다. Step Summary 는 API 로 읽을 수 없어
+        # 그 한 군데에만 쓰면 실행을 통째로 다시 돌리게 된다(실측 교훈, run 30740836692).
+        run: |
+          set -o pipefail
+          npx tsx scripts/archetype/probe-holding-company.ts 2>&1 | tee /tmp/probe.log
+          {
+            echo '# 지주회사 식별 축 프로브 (02R B1)'
+            echo ''
+            echo '```'
+            cat /tmp/probe.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: holding-company-probe
+          path: /tmp/probe.log
+          if-no-files-found: warn
