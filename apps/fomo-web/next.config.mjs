@@ -32,7 +32,11 @@ const securityHeaders = [
       // PWA — 서비스워커(sw.js)·매니페스트 self 허용.
       "worker-src 'self'",
       "manifest-src 'self'",
-      "upgrade-insecure-requests",
+      // `upgrade-insecure-requests` 는 여기 두지 않는다. Report-Only 정책에서는 명세상
+      // **무시되며**, 브라우저가 전 페이지 콘솔에 경고를 남긴다. 관찰이 목적인 헤더에
+      // 관찰 자체가 불가능한 지시어를 넣는 셈이라 값이 0이다.
+      // 실효도 없다 — Vercel 은 HTTPS 로만 서빙하고 위 정책에 http: 출처가 하나도 없다.
+      // 이 Report-Only 정책을 강제(enforce)로 승격할 때, 그때 강제 헤더에 의도적으로 넣는다.
     ].join("; "),
   },
 ];
