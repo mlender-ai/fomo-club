@@ -159,6 +159,83 @@ describe("이미 수집하던 시계열을 노출한 뒤 (2026-08-03)", () => {
   });
 });
 
+describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된다", () => {
+  /**
+   * 남은 4유형(HYPERGROWTH·PHARMA_STABLE·MATURE_INCOME·TURNAROUND_LOSS)을 채운다.
+   * **"테스트가 있다"가 아니라 "그 유형의 축이 실제로 그 축인지"를 본다** — 독트린에서 축을
+   * 로드하므로, 독트린이 바뀌면 여기가 먼저 깨져야 한다(축이 조용히 바뀌는 것을 막는다).
+   */
+  function quarter(period: string, periodEnd: string, operatingIncome: number | null): QuarterRecord {
+    return {
+      period,
+      period_end: periodEnd,
+      filed_at: `${periodEnd.slice(0, 4)}-12-31`,
+      revenue: 1_000,
+      operating_income: operatingIncome,
+      net_income: 10,
+      eps_diluted: 1,
+      source: "sec_xbrl",
+    };
+  }
+
+  it("HYPERGROWTH_UNPROFITABLE — 매출 막대 + P/S 선(PER 을 쓰지 않는다)", () => {
+    const chart = buildValuationChart(withRevenue(), "HYPERGROWTH_UNPROFITABLE", RULESET);
+    expect(chart.renderable).toBe(true);
+    expect(chart.bar_metric).toBe("annual_revenue");
+    // 적자 유형이라 PER 은 의미가 없다 — 선이 PER 로 떨어지면 안 된다.
+    expect(chart.line_metric).toBe("psr_ttm");
+  });
+
+  it("PHARMA_STABLE — 매출 막대 + PER 선", () => {
+    const chart = buildValuationChart(withRevenue(), "PHARMA_STABLE", RULESET);
+    expect(chart.renderable).toBe(true);
+    expect(chart.bar_metric).toBe("annual_revenue");
+    expect(chart.line_metric).toBe("per_ttm");
+  });
+
+  it("TURNAROUND_LOSS — 분기 영업이익 막대(부호 유지) + PBR 선", () => {
+    const sheet = withRevenue();
+    const chart = buildValuationChart(
+      {
+        ...sheet,
+        fiscal: {
+          ...sheet.fiscal,
+          quarters: [
+            quarter("2025Q1", "2025-03-31", -50),
+            quarter("2025Q2", "2025-06-30", -20),
+            quarter("2025Q3", "2025-09-30", 10),
+          ],
+        },
+      },
+      "TURNAROUND_LOSS",
+      RULESET
+    );
+    expect(chart.renderable).toBe(true);
+    expect(chart.bar_metric).toBe("quarterly_operating_income");
+    // **부호를 절대값으로 바꾸지 않는다** — 적자에서 흑자로 넘어가는 것이 이 유형의 관측 지점이다.
+    expect(chart.bars.map((bar) => bar.value)).toEqual([-50, -20, 10]);
+    expect(chart.line_metric).toBe("pbr");
+  });
+
+  it("MATURE_INCOME — 주당배당금 시계열이 없어 숨긴다(배당수익률로 바꿔 그리지 않는다)", () => {
+    const chart = buildValuationChart(withRevenue(), "MATURE_INCOME", RULESET);
+    expect(chart.renderable).toBe(false);
+    expect(chart.unavailable_reason).toBe("bar_series_unavailable");
+    expect(chart.bars).toEqual([]);
+  });
+
+  it("10유형 전부가 이 파일에서 한 번은 빌드된다 — 빠뜨린 유형이 없다", () => {
+    const covered = DOCTRINE.archetypes.map((frame) => frame.code as ArchetypeCode);
+    expect(covered).toHaveLength(10);
+    for (const code of covered) {
+      // 던지지 않는 것 자체가 조건이다. 축이 없거나 데이터가 없으면 renderable: false 로 끝나야 한다.
+      const chart = buildValuationChart(withRevenue(), code, RULESET);
+      expect(typeof chart.renderable).toBe("boolean");
+      if (!chart.renderable) expect(chart.unavailable_reason).not.toBeNull();
+    }
+  });
+});
+
 describe("축 매핑은 독트린에서 온다", () => {
   it("10개 유형 전부가 축 매핑 항목을 갖는다(값이 null 이어도 명시적으로)", () => {
     expect(DOCTRINE.archetypes).toHaveLength(10);
