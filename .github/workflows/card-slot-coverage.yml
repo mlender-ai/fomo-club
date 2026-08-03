@@ -1,0 +1,47 @@
+name: Card Slot Coverage (manual)
+
+# WO-SUB-08 착수 조건 — 카드 3슬롯 커버리지.
+#
+# 08 §4-1 은 "②③이 모두 없는 카드의 비율이 곧 이 배치의 진척도" 라고 적는다.
+# 그 비율이 과반이면 **레이아웃 설계의 기준 자체가 바뀐다**("3슬롯 채워진 카드"가 아니라
+# "①만 있는 카드"가 기본형). 그래서 설계 전에 센다.
+#
+# 저장된 레코드만 읽는다 — 외부 소스를 두들기지 않으므로 몇 번을 돌려도 쿼터를 태우지 않는다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: card-slot-coverage
+  cancel-in-progress: false
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - name: Measure 3-slot coverage
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -o pipefail
+          npx tsx scripts/card-slot-coverage.ts --out docs/audit 2>&1 | tee /tmp/slots.log
+          cat docs/audit/COVERAGE_card_slots.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: card-slot-coverage
+          path: |
+            docs/audit/COVERAGE_card_slots.md
+            docs/audit/card_slots_raw.json
+          if-no-files-found: warn
