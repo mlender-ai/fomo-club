@@ -9,6 +9,8 @@ on:
     branches: [main]
     paths:
       - "apps/web/**"
+      - "apps/fomo-web/**"
+      - "packages/fomo-core/**"
       - "packages/shared/**"
       - ".github/workflows/auto-qa-web.yml"
   workflow_dispatch:
@@ -85,3 +87,44 @@ jobs:
               repo: context.repo.repo,
               body,
             });
+
+  # 사용자 화면 앱(apps/fomo-web) 렌더 스모크 (WO-SUB-04 Q3).
+  #
+  # 이 잡이 없던 동안 **사용자가 실제로 보는 앱에는 렌더 수준 CI 검증이 전혀 없었다.**
+  # WO-SUB-04 첫 프리뷰에서 "미분류 칸에 빈 상자가 남는" 결함이 나왔는데 빌드·타입체크·
+  # 유닛테스트는 전부 통과한 상태였다 — 서버를 띄워 렌더해보고서야 잡혔다.
+  # 완료 조건 2(빈 박스로 남지 않을 것)를 게이트로 지키려면 여기서 봐야 한다.
+  fomo-web-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install workspace deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+        working-directory: apps/fomo-web
+
+      - name: Build fomo-web (production)
+        run: npx next build
+        working-directory: apps/fomo-web
+
+      - name: Run render smoke
+        run: npm run e2e
+        working-directory: apps/fomo-web
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fomo-web-playwright-report
+          path: apps/fomo-web/playwright-report/
+          retention-days: 14

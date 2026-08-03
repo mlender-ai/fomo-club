@@ -114,6 +114,8 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
   const fiscal = composeFiscal(input.quarters, input.annual);
   const growth = deriveGrowth(fiscal.quarters, fiscal.annual);
   const margin = deriveMargin(fiscal.quarters, fiscal.ttm, fiscal.annual);
+  // 시계열 점에 출처가 없는 경로(SEC)를 위한 대체 출처. deriveBalance 보다 먼저 필요하다.
+  const fiscalSource = fiscal.quarters[fiscal.quarters.length - 1]?.source ?? input.annual[input.annual.length - 1]?.source ?? null;
   const balance = deriveBalance({
     equity: input.equity,
     liabilities: input.liabilities,
@@ -122,6 +124,7 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
     operatingCashFlow: input.operatingCashFlow,
     interestExpense: input.interestExpense,
     ttmOperatingIncome: fiscal.ttm.operating_income,
+    seriesFallbackSource: fiscalSource,
   });
   const cashflow = deriveCashflow({
     operatingCashFlow: input.operatingCashFlow,
@@ -210,7 +213,6 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
   note("valuation.dividend_yield", dividendYield);
   note("valuation.ev_ebitda", evEbitda);
 
-  const fiscalSource = fiscal.quarters[fiscal.quarters.length - 1]?.source ?? input.annual[input.annual.length - 1]?.source ?? null;
   const derivedSource = fiscalSource ? `derived:${fiscalSource}` : null;
   const noteDerived = (path: string, value: number | null, asOf: string | null): void => {
     if (value !== null && derivedSource) fieldSources[path] = { source: derivedSource, as_of: asOf };

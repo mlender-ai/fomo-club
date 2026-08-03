@@ -165,6 +165,26 @@ export interface FactSheetValuation {
   };
 }
 
+/**
+ * 시점값 시계열 한 점. `QuarterRecord` 와 달리 계정 하나만 담는다.
+ *
+ * **왜 스칼라가 아니라 시계열이 필요한가**: WO-SUB-04 의 막대축이 자기자본·현금잔고를
+ * 요구한다. 파이프라인은 이 둘을 이미 분기별로 수집하고 있었는데(`equity`·`cash`
+ * `PointObservation[]`) `assemble` 이 최신값만 스칼라로 남기고 나머지를 버렸다 —
+ * 그래서 `ASSET_DEEP_VALUE`·`BIOTECH_PIPELINE` 차트가 데이터 없음으로 숨겨져 있었다.
+ * 새로 수집하는 것이 아니라 **버리던 것을 남기는** 것이다.
+ */
+export interface BalancePoint {
+  /** "2026Q1" — 기간말 기준 라벨. */
+  period: string;
+  period_end: string;
+  /** look-ahead 판정용 공시일. */
+  filed_at: string;
+  value: number;
+  /** 이 점을 만든 소스. 없으면 회계 소스로 대체된다(SEC 경로는 점 단위 출처가 없다). */
+  source: string;
+}
+
 export interface FactSheetBalance {
   total_equity: number | null;
   debt_to_equity: number | null;
@@ -173,6 +193,16 @@ export interface FactSheetBalance {
   /** 최근 4분기 영업현금흐름 합이 음수일 때만 계산. 양수면 null("무한"이라 쓰지 않는다). */
   cash_runway_quarters: number | null;
   interest_coverage: number | null;
+  /**
+   * 분기별 자기자본, period_end 오름차순. 최근 20분기(5년) 상한.
+   * WO-SUB-04 `ASSET_DEEP_VALUE`·`BANK_FINANCIAL` 막대축 입력.
+   */
+  equity_quarters: BalancePoint[];
+  /**
+   * 분기별 현금및현금성자산, period_end 오름차순. 최근 20분기 상한.
+   * WO-SUB-04 `BIOTECH_PIPELINE` 막대축 + 런웨이 표기 입력.
+   */
+  cash_quarters: BalancePoint[];
 }
 
 /**

@@ -70,7 +70,15 @@
           "label": "업계 증설 사이클",
           "reason": "공개 무료 소스에 설비 증설 일정이 구조화되어 있지 않다"
         }
-      ]
+      ],
+      "chart_axes": {
+        "bar_series": "annual_revenue",
+        "bar_label": "매출",
+        "line_metric": "pbr",
+        "line_label": "PBR",
+        "line_fallback_metric": null,
+        "note": "PER 을 선으로 쓰지 않는다 — 이익이 정점일 때 PER 이 최저로 찍히는 역설을 차트가 재생산한다. 8분기 영업이익 추이는 보조 차트."
+      }
     },
     {
       "code": "HYPERGROWTH_UNPROFITABLE",
@@ -138,7 +146,15 @@
       ],
       "warning_short": "이익이 없어 PER은 계산되지 않습니다.",
       "warning_full": "이익이 없어 PER은 계산되지 않습니다. 이 유형에서 값의 배수는 매출 성장률과 함께 움직여 왔습니다.",
-      "unavailable_metrics": []
+      "unavailable_metrics": [],
+      "chart_axes": {
+        "bar_series": "annual_revenue",
+        "bar_label": "매출",
+        "line_metric": "psr_ttm",
+        "line_label": "PSR",
+        "line_fallback_metric": null,
+        "note": "적자라 PER 이 존재하지 않는다(금지 지표). 매출 대비 배수만 성립한다."
+      }
     },
     {
       "code": "QUALITY_COMPOUNDER",
@@ -191,7 +207,15 @@
       ],
       "warning_short": "성장률과 값의 배수가 함께 움직이는 유형입니다.",
       "warning_full": "이 유형은 성장률과 값의 배수가 함께 움직입니다. 과거 성장이 둔화한 구간에서 배수도 함께 내려왔는지 확인해 보세요.",
-      "unavailable_metrics": []
+      "unavailable_metrics": [],
+      "chart_axes": {
+        "bar_series": "annual_revenue",
+        "bar_label": "매출",
+        "line_metric": "per_forward",
+        "line_label": "Forward PER",
+        "line_fallback_metric": "per_ttm",
+        "note": "컨센서스가 없으면 PER TTM 으로 내려간다. 내려갔다는 사실은 캡션에 남긴다."
+      }
     },
     {
       "code": "BANK_FINANCIAL",
@@ -281,7 +305,15 @@
           "label": "ROE",
           "reason": "자기자본 시계열은 있으나 분기 평균 자기자본이 필요해 현재 스키마로는 계산하지 않는다"
         }
-      ]
+      ],
+      "chart_axes": {
+        "bar_series": "annual_net_interest_income",
+        "bar_label": "순이자이익",
+        "line_metric": "pbr",
+        "line_label": "PBR",
+        "line_fallback_metric": null,
+        "note": "은행은 매출 개념이 왜곡되므로 매출 막대를 쓰지 않는다(PSR·EV/EBITDA 도 금지). PBR 은 경고문 부착이 필수다."
+      }
     },
     {
       "code": "PHARMA_STABLE",
@@ -341,7 +373,15 @@
           "label": "R&D 비중",
           "reason": "연구개발비가 XBRL·네이버 표에 일관되게 없다"
         }
-      ]
+      ],
+      "chart_axes": {
+        "bar_series": "annual_revenue",
+        "bar_label": "매출",
+        "line_metric": "per_ttm",
+        "line_label": "PER",
+        "line_fallback_metric": null,
+        "note": null
+      }
     },
     {
       "code": "BIOTECH_PIPELINE",
@@ -420,7 +460,15 @@
           "label": "다음 촉매 일정",
           "reason": "동일"
         }
-      ]
+      ],
+      "chart_axes": {
+        "bar_series": "quarterly_cash_balance",
+        "bar_label": "분기말 현금잔고",
+        "line_metric": null,
+        "line_label": null,
+        "line_fallback_metric": null,
+        "note": "배수 선이 없다 — 매출·이익이 없어 어떤 배수도 의미를 갖지 않는다(PER·PSR 금지). 런웨이는 텍스트로 표기한다."
+      }
     },
     {
       "code": "MATURE_INCOME",
@@ -487,7 +535,15 @@
           "label": "연속 배당 년수",
           "reason": "배당 이력 시계열 미확보"
         }
-      ]
+      ],
+      "chart_axes": {
+        "bar_series": "annual_dps",
+        "bar_label": "주당배당금",
+        "line_metric": "dividend_yield",
+        "line_label": "배당수익률",
+        "line_fallback_metric": null,
+        "note": "성장률이 아니라 배당의 지속 가능성이 관측 지점이다."
+      }
     },
     {
       "code": "TURNAROUND_LOSS",
@@ -550,7 +606,15 @@
       ],
       "warning_short": "적자 구간의 PER은 계산되지 않거나 크게 왜곡됩니다.",
       "warning_full": "적자 구간에서 PER은 계산되지 않거나 부호가 뒤집혀 크게 왜곡됩니다. 이 유형에서 관측 지점은 분기 영업이익의 부호 변화입니다.",
-      "unavailable_metrics": []
+      "unavailable_metrics": [],
+      "chart_axes": {
+        "bar_series": "quarterly_operating_income",
+        "bar_label": "분기 영업이익",
+        "line_metric": "pbr",
+        "line_label": "PBR",
+        "line_fallback_metric": null,
+        "note": "0선을 강조한다 — 흑자 전환 여부가 관측 지점이다. 적자 구간 PER 은 금지 지표."
+      }
     },
     {
       "code": "ASSET_DEEP_VALUE",
@@ -604,7 +668,15 @@
       ],
       "warning_short": null,
       "warning_full": null,
-      "unavailable_metrics": []
+      "unavailable_metrics": [],
+      "chart_axes": {
+        "bar_series": "annual_equity",
+        "bar_label": "자기자본",
+        "line_metric": "pbr",
+        "line_label": "PBR",
+        "line_fallback_metric": null,
+        "note": null
+      }
     },
     {
       "code": "UNCLASSIFIED",
@@ -662,9 +734,11 @@
       ],
       "warning_short": "유형 분류가 되지 않아 값 해석을 제공하지 않습니다.",
       "warning_full": "이 종목은 유형 분류가 되지 않아 값에 대한 해석을 제공하지 않습니다. 아래는 해석 없이 사실만 나열한 것입니다.",
-      "unavailable_metrics": []
+      "unavailable_metrics": [],
+      "chart_axes": null
     }
   ],
   "warning_status": "draft",
-  "warning_status_note": "경고문 10종은 draft 다 — 02R PART D 에서 전종 함께 확정한다(사용자 판정 2026-08-01). 02R 이 카탈로그를 다시 짜면 유형이 병합·신설되므로 지금 확정하면 다시 쓰게 된다. INV-11 도 02R 이후로 유예돼 있다. 02R 이관 지적 3건: ①PHARMA_STABLE 은 경고문·금지지표·경고부착 3칸이 전부 비어 QUALITY_COMPOUNDER 와 구분할 근거가 없다(병합 후보 실측 확인) ②근거 없는 경험칙 단정을 톤 낮춘다 — HYPERGROWTH '함께 움직여 왔습니다'·MATURE_INCOME '정상 구간입니다' → CYCLICAL 의 '~하는 경향이 있습니다' 톤에 맞춘다 ③ASSET_DEEP_VALUE 의 무경고+하드금지 패턴은 좋다 — 경고문이 필요 없는 유형은 null 이 정답이고 사유 한 줄만 남긴다"
+  "warning_status_note": "경고문 10종은 draft 다 — 02R PART D 에서 전종 함께 확정한다(사용자 판정 2026-08-01). 02R 이 카탈로그를 다시 짜면 유형이 병합·신설되므로 지금 확정하면 다시 쓰게 된다. INV-11 도 02R 이후로 유예돼 있다. 02R 이관 지적 3건: ①PHARMA_STABLE 은 경고문·금지지표·경고부착 3칸이 전부 비어 QUALITY_COMPOUNDER 와 구분할 근거가 없다(병합 후보 실측 확인) ②근거 없는 경험칙 단정을 톤 낮춘다 — HYPERGROWTH '함께 움직여 왔습니다'·MATURE_INCOME '정상 구간입니다' → CYCLICAL 의 '~하는 경향이 있습니다' 톤에 맞춘다 ③ASSET_DEEP_VALUE 의 무경고+하드금지 패턴은 좋다 — 경고문이 필요 없는 유형은 null 이 정답이고 사유 한 줄만 남긴다",
+  "chart_axes_note": "WO-SUB-04 값의 상태 차트의 축 매핑. **이 표가 축의 정본이다** — 코드에 하드코딩하지 않는다. 유형이 늘어나면 여기에 행을 추가한다(02R 전환기에 코드 수정이 필요 없게). `chart_axes: null` 은 차트를 표시하지 않는다는 뜻이다."
 }
