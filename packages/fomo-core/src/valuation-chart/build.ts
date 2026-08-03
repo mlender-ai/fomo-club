@@ -56,8 +56,15 @@ function yearLabel(periodEnd: string): string {
  * 막대 시계열 해석.
  *
  * **팩트시트에 없는 시계열은 만들지 않는다.** `null` 을 돌려주면 차트가 숨겨진다.
- * 지금 확보된 것은 연간 매출과 분기 영업이익 두 가지뿐이다 — 순이자이익·주당배당금·
- * 자기자본·현금잔고는 팩트시트가 **스칼라만** 들고 있어 시계열이 없다(WO-SUB-01 확장 대상).
+ *
+ * 확보된 것 (2026-08-03 확장):
+ *  · `annual_revenue` · `quarterly_operating_income` — `fiscal` 절
+ *  · `quarterly_cash_balance` · `annual_equity` — `balance.cash_quarters`·`equity_quarters`.
+ *    파이프라인이 이미 분기별로 수집하고 있었는데 `assemble` 이 최신값만 남기고 버리던 것을
+ *    노출했다. 새 소스를 붙인 것이 아니다.
+ *
+ * 아직 없는 것: `annual_net_interest_income`(BANK) · `annual_dps`(MATURE_INCOME).
+ * 이 둘은 진짜로 소스에 매핑이 없다 — **다른 지표로 바꿔 그리지 않는다.**
  */
 function resolveBars(factsheet: FactSheet, series: ChartBarSeries): ChartBar[] | null {
   if (series === "annual_revenue") {
@@ -69,6 +76,27 @@ function resolveBars(factsheet: FactSheet, series: ChartBarSeries): ChartBar[] |
         kind: "actual" as const,
         source: row.source,
         as_of: row.period_end,
+      }));
+  }
+  if (series === "quarterly_cash_balance") {
+    return factsheet.balance.cash_quarters.map((point) => ({
+      label: point.period,
+      value: point.value,
+      kind: "actual" as const,
+      source: point.source,
+      as_of: point.period_end,
+    }));
+  }
+  if (series === "annual_equity") {
+    // 연간 막대다 — 회계연도말(12월 분기)만 남긴다. 분기를 섞으면 "연간"이 아니게 된다.
+    return factsheet.balance.equity_quarters
+      .filter((point) => point.period_end.slice(5, 7) === "12")
+      .map((point) => ({
+        label: yearLabel(point.period_end),
+        value: point.value,
+        kind: "actual" as const,
+        source: point.source,
+        as_of: point.period_end,
       }));
   }
   if (series === "quarterly_operating_income") {

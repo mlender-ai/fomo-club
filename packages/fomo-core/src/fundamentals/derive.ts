@@ -1,5 +1,5 @@
 import { STDEV_QUARTERS, TTM_QUARTERS } from "./ttm";
-import type { FactSheetBalance, FactSheetCashflow, FactSheetGrowth, FactSheetMargin, MarginTrend, QuarterRecord } from "./types";
+import type { BalancePoint, FactSheetBalance, FactSheetCashflow, FactSheetGrowth, FactSheetMargin, MarginTrend, QuarterRecord } from "./types";
 import type { TtmResult } from "./ttm";
 
 /**
@@ -111,6 +111,11 @@ export interface PointObservation {
   period_end: string;
   filed_at: string;
   value: number;
+  /**
+   * 이 관측을 만든 소스(감사용). 시계열을 팩트시트에 노출할 때 §4 규칙 2(모든 수치에 출처)를
+   * 지키려면 점마다 출처가 있어야 한다. 값이 없으면 소비 측이 회계 소스로 대체한다.
+   */
+  source?: string;
 }
 
 export interface BalanceInput {
@@ -123,6 +128,8 @@ export interface BalanceInput {
   /** 분기 이자비용(기간값). */
   interestExpense: readonly PointObservation[];
   ttmOperatingIncome: number | null;
+  /** 시계열 점에 출처가 없을 때 쓸 대체 출처(회계 소스). */
+  seriesFallbackSource?: string | null;
 }
 
 function latest(points: readonly PointObservation[]): number | null {
@@ -206,6 +213,41 @@ export function deriveCashflow(input: CashflowInput): FactSheetCashflow {
   };
 }
 
+/** 상한 — 5년. 밴드 윈도우와 같은 기간이라 화면이 다른 기간을 섞지 않는다. */
+export const BALANCE_SERIES_QUARTERS = 20;
+
+/** "2026-03-31" → "2026Q1". 기간말 기준 라벨(회계연도 기준이 아니다). */
+function quarterLabel(periodEnd: string): string {
+  const month = Number(periodEnd.slice(5, 7));
+  return `${periodEnd.slice(0, 4)}Q${Math.min(4, Math.max(1, Math.ceil(month / 3)))}`;
+}
+
+/**
+ * 시점값 시계열 → 팩트시트 노출 형태.
+ *
+ * 같은 기간말이 여러 보고서에서 오면 **나중에 공시된 것을 쓴다**(정정공시 반영).
+ * 오름차순 고정 + 상한 20분기.
+ */
+export function toBalanceSeries(points: readonly PointObservation[], fallbackSource: string | null): BalancePoint[] {
+  const byPeriod = new Map<string, PointObservation>();
+  for (const point of points) {
+    if (!Number.isFinite(point.value)) continue;
+    const prior = byPeriod.get(point.period_end);
+    if (prior === undefined || prior.filed_at.localeCompare(point.filed_at) <= 0) byPeriod.set(point.period_end, point);
+  }
+  return [...byPeriod.values()]
+    .sort((a, b) => a.period_end.localeCompare(b.period_end))
+    .slice(-BALANCE_SERIES_QUARTERS)
+    .map((point) => ({
+      period: quarterLabel(point.period_end),
+      period_end: point.period_end,
+      filed_at: point.filed_at,
+      value: point.value,
+      // 점 출처가 없는 경로(SEC)는 회계 소스로 대체한다. 빈 문자열로 두면 출처 없는 수치가 된다.
+      source: point.source ?? fallbackSource ?? "unknown",
+    }));
+}
+
 export function deriveBalance(input: BalanceInput): FactSheetBalance {
   const equity = latest(input.equity);
   const liabilities = latest(input.liabilities);
@@ -225,5 +267,8 @@ export function deriveBalance(input: BalanceInput): FactSheetBalance {
       input.ttmOperatingIncome !== null && interestSum !== null && interestSum > 0
         ? Number((input.ttmOperatingIncome / interestSum).toFixed(2))
         : null,
+    // 이미 수집하던 시계열을 버리지 않고 남긴다 — WO-SUB-04 막대축 입력.
+    equity_quarters: toBalanceSeries(input.equity, input.seriesFallbackSource ?? null),
+    cash_quarters: toBalanceSeries(input.cash, input.seriesFallbackSource ?? null),
   };
 }

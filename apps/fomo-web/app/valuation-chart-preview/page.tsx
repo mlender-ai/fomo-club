@@ -145,7 +145,7 @@ export default function ValuationChartPreviewPage() {
       </p>
       <div className="mt-6 space-y-8">
         {CASES.map((entry) => (
-          <section key={entry.title}>
+          <section key={entry.title} data-testid="chart-case" data-archetype={entry.data.archetype}>
             <h2 className="text-xs text-whiteout">{entry.title}</h2>
             <p className="mb-2 text-[10px] leading-4 text-muted">{entry.note}</p>
             {/*
@@ -155,7 +155,7 @@ export default function ValuationChartPreviewPage() {
               차트를 감싸는 쪽은 이 패턴을 그대로 따른다.
             */}
             {entry.data.renderable && (
-              <div className="rounded-xl border border-hairline bg-elevated p-3">
+              <div data-testid="chart-box" className="rounded-xl border border-hairline bg-elevated p-3">
                 <ValuationChart data={entry.data} />
               </div>
             )}

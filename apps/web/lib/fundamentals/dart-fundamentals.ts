@@ -556,7 +556,12 @@ export async function fetchDartFundamentals(
       if (spec.quarter) quarters.push(composed.record);
       else annualForYear.push(composed.record);
 
-      const at = { period_end: composed.record.period_end, filed_at: composed.record.filed_at };
+      // 출처를 점마다 싣는다 — 시계열이 팩트시트로 나가므로 점 단위 감사가 가능해야 한다.
+      const at = {
+        period_end: composed.record.period_end,
+        filed_at: composed.record.filed_at,
+        source: composed.record.source,
+      };
       for (const field of ["equity", "liabilities", "cash", "operating_cash_flow", "capex", "dividend_paid", "interest_paid"]) {
         const value = composed.points[field] ?? null;
         if (value !== null) series[field]!.push({ ...at, value });

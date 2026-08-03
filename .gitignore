@@ -32,3 +32,5 @@ agent-tooling-reports/
 hardening-reports/
 .codebase-memory/
 docs/archetype/market_universe_raw.json
+apps/fomo-web/test-results/
+apps/fomo-web/playwright-report/

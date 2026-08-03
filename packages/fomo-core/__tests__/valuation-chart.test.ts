@@ -68,18 +68,94 @@ describe("UNCLASSIFIED 폴백 — 02R 전환기에 화면이 깨지지 않는다
     expect(chart.renderable).toBe(false);
   });
 
-  it("막대 시계열이 없으면 숨긴다 — 다른 지표로 바꿔 그리지 않는다", () => {
-    // ASSET_DEEP_VALUE 의 축은 자기자본인데 팩트시트에 그 시계열이 없다.
-    const chart = buildValuationChart(withRevenue(), "ASSET_DEEP_VALUE", RULESET);
+  it("팩트시트에 없는 시계열은 숨긴다 — 다른 지표로 바꿔 그리지 않는다", () => {
+    // BANK_FINANCIAL 의 축은 순이자이익인데 소스에 그 계정 매핑이 없다.
+    // **매출로 바꿔 그리면 안 된다** — 은행 매출은 개념이 왜곡된다(독트린 금지 지표).
+    const chart = buildValuationChart(withRevenue(), "BANK_FINANCIAL", RULESET);
     expect(chart.renderable).toBe(false);
     expect(chart.unavailable_reason).toBe("bar_series_unavailable");
     expect(chart.bar_metric).toBeNull();
+  });
+
+  it("시계열 종류는 지원하는데 데이터가 없으면 no_bar_data 로 구분된다", () => {
+    // 사유를 구분하는 이유: "축을 못 만든다"와 "이 종목에 값이 없다"는 다른 문제다.
+    // 전자는 WO-SUB-01 확장 대상이고 후자는 그 종목의 결손이다.
+    const chart = buildValuationChart(withRevenue(), "ASSET_DEEP_VALUE", RULESET);
+    expect(chart.renderable).toBe(false);
+    expect(chart.unavailable_reason).toBe("no_bar_data");
   });
 
   it("축은 있는데 데이터가 비면 숨긴다", () => {
     const chart = buildValuationChart(base(), "QUALITY_COMPOUNDER", RULESET);
     expect(chart.renderable).toBe(false);
     expect(chart.unavailable_reason).toBe("no_bar_data");
+  });
+});
+
+describe("이미 수집하던 시계열을 노출한 뒤 (2026-08-03)", () => {
+  /**
+   * `equity`·`cash` 는 파이프라인이 6년치 분기로 수집하고 있었는데 `assemble` 이 최신값만
+   * 스칼라로 남기고 버렸다. 그래서 두 유형의 차트가 "데이터 없음"으로 숨겨져 있었다.
+   * 새 소스를 붙인 것이 아니라 버리던 것을 남긴 것이므로, 여기서 그 결과를 고정한다.
+   */
+  const point = (periodEnd: string, value: number) => ({
+    period: `${periodEnd.slice(0, 4)}Q${Math.ceil(Number(periodEnd.slice(5, 7)) / 3)}`,
+    period_end: periodEnd,
+    filed_at: `${periodEnd.slice(0, 4)}-12-31`,
+    value,
+    source: "dart:2025:사업보고서:CFS",
+  });
+
+  it("BIOTECH_PIPELINE — 현금잔고 막대가 살아나고 배수 선은 여전히 없다", () => {
+    const sheet = withRevenue();
+    const chart = buildValuationChart(
+      {
+        ...sheet,
+        balance: {
+          ...sheet.balance,
+          cash_quarters: [point("2025-03-31", 500), point("2025-06-30", 420), point("2025-09-30", 350)],
+        },
+      },
+      "BIOTECH_PIPELINE",
+      RULESET
+    );
+    expect(chart.renderable).toBe(true);
+    expect(chart.bars.map((bar) => bar.value)).toEqual([500, 420, 350]);
+    // 매출·이익이 없어 어떤 배수도 의미를 갖지 않는다 — 선을 만들어 붙이지 않는다.
+    expect(chart.line).toBeNull();
+    expect(chart.line_metric).toBeNull();
+  });
+
+  it("ASSET_DEEP_VALUE — 연간 막대라 회계연도말만 남는다(분기를 섞지 않는다)", () => {
+    const sheet = withRevenue();
+    const chart = buildValuationChart(
+      {
+        ...sheet,
+        balance: {
+          ...sheet.balance,
+          equity_quarters: [
+            point("2023-12-31", 1_000),
+            point("2024-06-30", 1_100), // 연간 막대에 섞이면 안 된다
+            point("2024-12-31", 1_200),
+          ],
+        },
+      },
+      "ASSET_DEEP_VALUE",
+      RULESET
+    );
+    expect(chart.renderable).toBe(true);
+    expect(chart.bars.map((bar) => bar.value)).toEqual([1_000, 1_200]);
+    expect(chart.line_metric).toBe("pbr");
+  });
+
+  it("막대 점마다 출처가 붙어 있다 — 시계열이 화면으로 나가므로 점 단위 감사가 가능해야 한다", () => {
+    const sheet = withRevenue();
+    const chart = buildValuationChart(
+      { ...sheet, balance: { ...sheet.balance, cash_quarters: [point("2025-09-30", 350)] } },
+      "BIOTECH_PIPELINE",
+      RULESET
+    );
+    expect(chart.bars.every((bar) => bar.source.length > 0 && bar.as_of.length > 0)).toBe(true);
   });
 });
 
