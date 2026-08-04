@@ -15,6 +15,13 @@ import { chartTokens } from "@/lib/chartTokens";
 
 const WIDTH = 320;
 const HEIGHT = 132;
+/**
+ * 카드 앞면용 축소판 높이.
+ *
+ * WO §12: "차트 축소판이 카드를 지배함" 이 실패 모드다. 카드에는 ①②③ 세 층이 들어가므로
+ * 차트가 절반을 먹으면 나머지가 읽히지 않는다. 디테일용 전체판의 절반 정도로 잡는다.
+ */
+const COMPACT_HEIGHT = 68;
 const PAD_X = 10;
 const PAD_TOP = 12;
 const AXIS_H = 18;
@@ -24,15 +31,26 @@ function firstEstimateIndex(data: ValuationChartData): number {
   return data.bars.findIndex((bar) => bar.kind === "estimate");
 }
 
-export function ValuationChart({ data }: { data: ValuationChartData }) {
+export function ValuationChart({
+  data,
+  /**
+   * 카드 앞면용 축소판. 캡션은 **첫 줄만** 남긴다 — 나머지는 디테일에서 본다.
+   * 경고문은 축소판에서도 유지한다: 공간을 아끼려고 강제 문안을 떼면 안 된다.
+   */
+  compact = false,
+}: {
+  data: ValuationChartData;
+  compact?: boolean;
+}) {
   // 완료 조건 2 — 그리지 못하면 영역 **자체를 감춘다**. 빈 박스로 남기지 않는다.
   if (!data.renderable || data.bars.length === 0) return null;
 
+  const height = compact ? COMPACT_HEIGHT : HEIGHT;
   const values = data.bars.map((bar) => bar.value ?? 0);
   const max = Math.max(...values, 0);
   const min = Math.min(...values, 0);
   const range = max - min || 1;
-  const plotH = HEIGHT - PAD_TOP - AXIS_H;
+  const plotH = height - PAD_TOP - AXIS_H;
   const slot = (WIDTH - PAD_X * 2) / data.bars.length;
   const barW = Math.max(6, slot * 0.62);
   const zeroY = PAD_TOP + (max / range) * plotH;
@@ -49,7 +67,7 @@ export function ValuationChart({ data }: { data: ValuationChartData }) {
 
   return (
     <figure className="w-full">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} className="block" role="img"
+      <svg viewBox={`0 0 ${WIDTH} ${height}`} width="100%" height={height} className="block" role="img"
         aria-label={`${data.bar_label ?? "실적"} 추이${data.line_label ? ` 및 ${data.line_label}` : ""}`}>
         {/* 0선 — 부호가 뒤집히는 지점이 보여야 한다(적자 전환 구간). */}
         {min < 0 && (
@@ -83,7 +101,7 @@ export function ValuationChart({ data }: { data: ValuationChartData }) {
               x1={PAD_X + slot * estimateFrom}
               y1={PAD_TOP - 4}
               x2={PAD_X + slot * estimateFrom}
-              y2={HEIGHT - AXIS_H}
+              y2={height - AXIS_H}
               stroke={chartTokens.axis}
               strokeWidth={1}
               strokeDasharray="3 3"
@@ -124,7 +142,7 @@ export function ValuationChart({ data }: { data: ValuationChartData }) {
           <text
             key={`label-${bar.label}-${index}`}
             x={xOf(index)}
-            y={HEIGHT - 5}
+            y={height - 5}
             fill={chartTokens.levelLabel}
             fontSize={9}
             textAnchor="middle"
@@ -134,8 +152,8 @@ export function ValuationChart({ data }: { data: ValuationChartData }) {
         ))}
       </svg>
 
-      <figcaption className="mt-2 space-y-1">
-        {data.captions.map((caption) => (
+      <figcaption className={compact ? "mt-1.5 space-y-1" : "mt-2 space-y-1"}>
+        {(compact ? data.captions.slice(0, 1) : data.captions).map((caption) => (
           <p key={caption} className="text-[11px] leading-4 text-muted">
             {caption}
           </p>

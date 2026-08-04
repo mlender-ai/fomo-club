@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { QuietPick, QuietWatchItem } from "@/lib/fomoApi";
-import { fetchQuietPicks, recordTaste } from "@/lib/fomoApi";
+import type { CardSlotPayload, QuietPick, QuietWatchItem } from "@/lib/fomoApi";
+import { fetchCardSlots, fetchQuietPicks, recordTaste } from "@/lib/fomoApi";
 import { upsertWatch } from "@/lib/watchlist";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
@@ -32,6 +32,13 @@ type Status = "loading" | "ready" | "error";
 
 export function QuietPickDeck() {
   const [picks, setPicks] = useState<QuietPick[]>([]);
+  /**
+   * WO-SUB-08 3슬롯 — canonical → ②③ 페이로드.
+   *
+   * **픽 로딩과 분리한다.** 슬롯 조립은 저장 레코드를 읽어 오는 별도 라우트이고, 실패해도
+   * 카드는 ①만으로 성립해야 한다(§4-1). 같은 `then` 에 묶으면 슬롯 실패가 덱을 죽인다.
+   */
+  const [slots, setSlots] = useState<Record<string, CardSlotPayload>>({});
   const [watching, setWatching] = useState<QuietWatchItem[]>([]);
   const [status, setStatus] = useState<Status>("loading");
   const [idx, setIdx] = useState(0);
@@ -56,6 +63,15 @@ export function QuietPickDeck() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // 슬롯은 별도로 받는다 — 실패하면 빈 맵이라 ②③ 만 안 보인다(카드는 그대로).
+  useEffect(() => {
+    let alive = true;
+    fetchCardSlots()
+      .then((res) => { if (alive) setSlots(res.slots ?? {}); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
 
   // 진행 중 전환 타이머 — 언마운트 후 발화하면 사라진 덱에서 setState 가 돈다.
   const exitTimer = useRef<number | null>(null);
@@ -207,7 +223,7 @@ export function QuietPickDeck() {
       <div className="relative h-[540px] select-none">
         {next && (
           <div className="absolute inset-0 scale-[0.97] rounded-3xl border border-hairline bg-[#111319] p-5 opacity-60" aria-hidden>
-            <QuietPickCard pick={next} />
+            <QuietPickCard pick={next} slots={slots[next.subject.canonical]} />
           </div>
         )}
         <div
@@ -246,7 +262,7 @@ export function QuietPickDeck() {
           >
             ← 넘김
           </span>
-          <QuietPickCard pick={current} progress={`${idx + 1}/${picks.length}`} />
+          <QuietPickCard pick={current} progress={`${idx + 1}/${picks.length}`} slots={slots[current.subject.canonical]} />
         </div>
       </div>
 
