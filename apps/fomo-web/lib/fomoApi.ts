@@ -8,6 +8,7 @@ import type {
   MarketScore,
   MoodSignal,
   ScoredArticle,
+  ValuationChartData,
 } from "@fomo/core";
 import type { DeckContent, DeckNarrative } from "./discoveryDeck";
 import { isDiscoveryCopySafe } from "./discoveryCopySafe";
@@ -1338,4 +1339,52 @@ export async function deleteAccount(): Promise<void> {
     credentials: "same-origin",
   });
   if (!res.ok) throw new Error(`delete ${res.status}`);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * WO-SUB-08 — 카드 3슬롯
+ *
+ * ① 트리거는 이미 `QuietPick` 안에 있다(수급 엔진). ②③ 은 배치가 만든 저장 레코드에서
+ * 백엔드가 조립해 준다. **프론트는 계산하지 않는다** — INV-14 경계다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/** ② 실체 — 카드 앞면에 낼 문장 하나. `kind`·`badge` 는 디테일에서만 쓴다(카드에 배지 금지). */
+export interface CardSubstanceSlot {
+  text: string;
+  kind: string;
+  badge: string;
+  vendor_only: boolean;
+}
+
+export interface CardSlotPayload {
+  canonical: string;
+  market: string;
+  /** `null` 이면 슬롯을 생략하고 아래가 올라온다(빈 공간 금지). */
+  substance: CardSubstanceSlot | null;
+  /** `null` 이면 차트 영역 자체가 사라진다(빈 박스 금지). 타입은 `@fomo/core` 의 계약을 따른다. */
+  valuation: ValuationChartData | null;
+  valuation_unavailable_reason: string | null;
+}
+
+export interface CardSlotsResponse {
+  date: string;
+  ruleset_version: string;
+  slots: Record<string, CardSlotPayload>;
+}
+
+function isCardSlotsResponse(value: unknown): value is CardSlotsResponse {
+  if (typeof value !== "object" || value === null) return false;
+  const slots = (value as { slots?: unknown }).slots;
+  return typeof slots === "object" && slots !== null;
+}
+
+/**
+ * 3슬롯 페이로드. **실패해도 카드는 그려져야 한다** — ②③ 은 선택 슬롯이고,
+ * 없으면 카드가 지금과 동일한 모습이 되는 것이 정상이다(08 §4-1). 그래서 던지지 않고 빈 맵을 준다.
+ */
+export async function fetchCardSlots(): Promise<CardSlotsResponse> {
+  const res = await fetch("/api/fomo/card-slots", { credentials: "same-origin" }).catch(() => null);
+  if (!res?.ok) return { date: "", ruleset_version: "", slots: {} };
+  const body: unknown = await res.json().catch(() => null);
+  return isCardSlotsResponse(body) ? body : { date: "", ruleset_version: "", slots: {} };
 }

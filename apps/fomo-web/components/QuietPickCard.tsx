@@ -1,17 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import type { QuietPick } from "@/lib/fomoApi";
+import type { CardSlotPayload, QuietPick } from "@/lib/fomoApi";
 import { chartTokens } from "@/lib/chartTokens";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 import { StockLogoBadge } from "@/components/StockLogoBadge";
+import { ValuationChart } from "@/components/ValuationChart";
 
 /**
- * 카드 v3 (WO-G1B) — 한 장 = 발굴 + 증거 + 계약.
- * 훅 + 신호칩 + 스파크라인(신호 시작점 ◆) + 무효선. 점수·육각형 노출 없음.
+ * 카드 v3 (WO-G1B) → 3슬롯 (WO-SUB-08).
+ *
+ * ① 트리거(수급) + ② 실체 + ③ 값의 위치 + 무효선. 점수·육각형 노출 없음.
+ *
+ * ## 슬롯이 비면 아래가 올라온다
+ *
+ * ②③ 은 **선택 슬롯**이다. 조건부 렌더만 쓰고 자리를 비워두는 컨테이너를 두지 않는다 —
+ * 빈 상자가 남는 것이 08 이 없애려는 바로 그 패턴이다(§4-1, 완료 조건 4).
+ *
+ * ## 실측 기준선 (2026-08-04)
+ *
+ * 유니버스 332장 중 **①만 128장(38.6%)** 이고 기본형은 **①③(58.7%)** 이다.
+ * ①②③ 완비는 4장(1.2%)뿐이다. `UNCLASSIFIED` 95 + `BANK_FINANCIAL` 19 +
+ * `MATURE_INCOME` 9 = 123장은 슬롯 ③ 축을 만들 수 없어 **지금과 동일하게 보이는 것이
+ * 정상이다.** 억지로 채우지 않는다 — 비율은 `/api/fomo/card-slots/coverage` 가 낸다.
+ *
+ * ## 배지는 카드에 두지 않는다
+ *
+ * 공시 근거와 벤더 요약의 구분(`kind`·`badge`·`vendor_only`)은 **디테일에서만** 표시한다.
+ * 카드 앞면은 2줄 예산이라 등급 칩이 들어가면 문장이 밀린다.
  */
 
 const SIGNAL_LABEL: Record<QuietPick["signal"]["kind"], string> = {
@@ -52,7 +71,16 @@ const DIR_COLOR: Record<"up" | "down" | "flat", string> = {
   flat: "#8b8f98",
 };
 
-export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: string }) {
+export function QuietPickCard({
+  pick,
+  progress,
+  /** 3슬롯 페이로드. 없으면 ②③ 을 그리지 않는다 — 카드는 그대로 성립한다. */
+  slots,
+}: {
+  pick: QuietPick;
+  progress?: string;
+  slots?: CardSlotPayload | undefined;
+}) {
   const [watched, setWatched] = useState(() => isWatched(pick.subject.canonical));
   const series = pick.price.sparkline ?? [];
   // 신호 시작점 = days 거래일 전 근처. "여기서 돈이 들어왔다".
@@ -162,6 +190,19 @@ export function QuietPickCard({ pick, progress }: { pick: QuietPick; progress?: 
         <div className="mt-3 shrink-0 border-y border-hairline-soft py-1.5" aria-label="최근 30거래일 가격 흐름 · ◆ 신호 시작점">
           <Sparkline series={series.slice(-30)} height={44} {...(markerIndex !== undefined ? { markerIndex } : {})} />
           <span className="mt-1 block text-[10px] text-muted">◆ 돈이 들어오기 시작한 자리</span>
+        </div>
+      )}
+
+      {/* ② 실체 — 어디서 돈을 버는가. 없으면 이 블록이 사라지고 아래가 올라온다. */}
+      {slots?.substance && (
+        <p className="mt-3 shrink-0 text-[13px] leading-5 text-whiteout">{slots.substance.text}</p>
+      )}
+
+      {/* ③ 값의 위치 — 막대 + 배수 선 축소판. `renderable: false` 면 컴포넌트가 null 을 준다.
+          **감싸는 박스도 조건부다** — 컴포넌트만 null 이면 빈 상자가 남는다(실측으로 겪은 결함). */}
+      {slots?.valuation && (
+        <div className="mt-3 shrink-0">
+          <ValuationChart data={slots.valuation} compact />
         </div>
       )}
 

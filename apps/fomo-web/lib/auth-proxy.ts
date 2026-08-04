@@ -18,6 +18,8 @@ const ALLOWED_PROXY_REQUESTS = new Map<string, ReadonlySet<string>>([
   ["track-record", new Set(["GET"])],
   ["track-record/picks", new Set(["GET"])],
   ["quiet-picks", new Set(["GET"])],
+  // WO-SUB-08 카드 3슬롯. **정확 일치**라 경로를 빠뜨리면 404 가 된다.
+  ["card-slots", new Set(["GET"])],
   ["stock-front", new Set(["GET"])],
   ["emotions/calendar", new Set(["GET"])],
   ["emotions/link", new Set(["POST"])],
