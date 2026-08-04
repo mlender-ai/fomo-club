@@ -66,10 +66,9 @@ jobs:
       - name: DART key discovery (시크릿 있을 때만 — 판정 없이 구조만 덤프)
         continue-on-error: true
         env:
-          # ⚠️ **이 값은 비어 있다.** `DART_API_KEY` 는 GitHub 시크릿에 존재하지 않고
-          # Vercel 환경변수에만 있다(실측 2026-08-03: `gh secret list` 에 부재).
-          # 즉 이 워크플로의 KR 경로는 **DART 없이** 돌고 있다 — 결과 해석 시 감안할 것.
-          # DART 가 필요한 실측은 백엔드 라우트를 부른다(holding-company-probe.yml 참조).
+          # 2026-08-04 등록됨. 그 전까지 이 값은 **비어 있었다** — GitHub 시크릿에 없고 Vercel
+          # 환경변수에만 있었다. 그래서 이 날짜 이전 실행의 KR 경로는 DART 없이 돌았다.
+          # 과거 결과를 인용할 때 감안할 것.
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: npx tsx scripts/audit/discover_dart_keys.ts 185750 000660 --out docs/audit
 
@@ -83,10 +82,9 @@ jobs:
         continue-on-error: true
         env:
           SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
-          # ⚠️ **이 값은 비어 있다.** `DART_API_KEY` 는 GitHub 시크릿에 존재하지 않고
-          # Vercel 환경변수에만 있다(실측 2026-08-03: `gh secret list` 에 부재).
-          # 즉 이 워크플로의 KR 경로는 **DART 없이** 돌고 있다 — 결과 해석 시 감안할 것.
-          # DART 가 필요한 실측은 백엔드 라우트를 부른다(holding-company-probe.yml 참조).
+          # 2026-08-04 등록됨. 그 전까지 이 값은 **비어 있었다** — GitHub 시크릿에 없고 Vercel
+          # 환경변수에만 있었다. 그래서 이 날짜 이전 실행의 KR 경로는 DART 없이 돌았다.
+          # 과거 결과를 인용할 때 감안할 것.
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: |
           npx tsx scripts/audit/probe_fundamental_sources.ts \
