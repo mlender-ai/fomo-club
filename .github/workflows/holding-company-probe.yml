@@ -2,12 +2,16 @@ name: Holding Company Probe (manual)
 
 # WO-SUB-02R B1 — 지주회사 식별 축 실측.
 #
-# 왜 워크플로인가: DART 키가 로컬에 없고 저장소 시크릿에만 있다. 그리고 전수 데이터로
-# **지주회사가 업종 축에서 식별되지 않는다**는 것이 이미 확인됐다(`복합기업` 18종목은
-# 다각화 사업회사이고, 이름 패턴 92종목은 식품·철강·제약·은행으로 흩어져 있다).
+# 왜 백엔드를 부르는가 (2026-08-03 실측):
+#   `DART_API_KEY` 가 **GitHub 시크릿에 없다.** Vercel 환경변수에만 있어서 워크플로가
+#   `secrets.DART_API_KEY` 를 참조해도 빈 값이 온다 — 첫 시도(run 30861831578)가 그래서
+#   "DART_API_KEY 없음" 으로 죽었고, 같은 이유로 `business-context-goldenset` 세 배치와
+#   `substance-audit` 도 그동안 DART 없이 돌고 있었다.
+#   → 키가 실제로 있는 곳(Vercel 런타임)에서 돌린다. 팩트시트 백필과 같은 방식이다.
 #
-# 549종목 수집을 시작하기 전에 축을 확정해야 한다 — 다 모은 뒤에 "판정할 표본이 없다"가
-# 되면 수집을 다시 해야 한다. 이 프로브가 경로 2(DART induty_code)의 성립 여부를 답한다.
+# 무엇을 답하는가: 전수 데이터로 **지주회사가 업종 축에서 식별되지 않는다**는 것이 이미
+# 확인됐다(`복합기업` 18종목은 다각화 사업회사, 이름 패턴 92종목은 여러 업종에 분산).
+# `induty_code` 가 지주군·비지주군을 분리하면 그것을 플래그로 쓴다.
 on:
   workflow_dispatch:
 
@@ -27,30 +31,60 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-      - run: npm ci --no-audit --no-fund
 
-      - name: Probe DART company.json
+      - name: Probe via backend (DART key lives in Vercel env)
         env:
-          DART_API_KEY: ${{ secrets.DART_API_KEY }}
-          # corp_code 매핑이 FeedContentCache 를 통과한다 — DB 없이는 매번 재다운로드가 된다.
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        # 결과를 stdout 과 Step Summary 양쪽에 남긴다. Step Summary 는 API 로 읽을 수 없어
-        # 그 한 군데에만 쓰면 실행을 통째로 다시 돌리게 된다(실측 교훈, run 30740836692).
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          set -o pipefail
-          npx tsx scripts/archetype/probe-holding-company.ts 2>&1 | tee /tmp/probe.log
-          {
-            echo '# 지주회사 식별 축 프로브 (02R B1)'
-            echo ''
-            echo '```'
-            cat /tmp/probe.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          BASE="https://fomo-club-backend.vercel.app"
+          AUTH=()
+          if [ -n "${CRON_SECRET:-}" ]; then AUTH=(-H "Authorization: Bearer ${CRON_SECRET}"); fi
+          curl -fsS --max-time 290 "${AUTH[@]}" "$BASE/api/fomo/cron/holding-probe" > /tmp/probe.json
+          node -e '
+            const r = require("/tmp/probe.json");
+            const lines = [];
+            lines.push("# 지주회사 식별 축 프로브 (02R B1)");
+            lines.push("");
+            lines.push(`측정: ${r.generatedAt}`);
+            lines.push("");
+            lines.push("## 판정");
+            lines.push("");
+            const mark = { path2_ok: "✅", path2_partial: "⚠️", path2_unavailable: "❌" }[r.verdict] ?? "?";
+            lines.push(`${mark} **${r.verdict}** — ${r.note}`);
+            lines.push("");
+            lines.push(`- 지주군 코드: ${r.holdingCodes.join(", ") || "(없음)"}`);
+            lines.push(`- 비지주군 코드: ${r.nonHoldingCodes.join(", ") || "(없음)"}`);
+            lines.push(`- 겹치는 코드: ${r.overlapCodes.join(", ") || "없음"}`);
+            lines.push("");
+            lines.push("## 응답 필드 (구조 실측 — 우리 코드가 처음 보는 엔드포인트다)");
+            lines.push("");
+            lines.push("```");
+            lines.push(r.responseKeys.join(", ") || "(응답 없음)");
+            lines.push("```");
+            lines.push("");
+            lines.push("## 표본별");
+            lines.push("");
+            lines.push("| 종목 | 사람 라벨 | induty_code | corp_cls | 비고 |");
+            lines.push("|---|---|---|---|---|");
+            for (const row of r.rows) {
+              lines.push(`| ${row.name} | ${row.expected} | \`${row.induty_code ?? "—"}\` | ${row.corp_cls ?? "—"} | ${row.induty_note ?? ""} |`);
+            }
+            if ((r.errors ?? []).length) {
+              lines.push("");
+              lines.push("## 경고");
+              lines.push("");
+              for (const error of r.errors) lines.push(`- ${error}`);
+            }
+            const out = lines.join("\n");
+            // stdout 과 Step Summary 양쪽에 남긴다 — Step Summary 는 API 로 못 읽는다.
+            console.log(out);
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, out + "\n");
+          '
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: holding-company-probe
-          path: /tmp/probe.log
+          path: /tmp/probe.json
           if-no-files-found: warn
