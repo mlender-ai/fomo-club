@@ -412,3 +412,47 @@ describe("모든 결과가 룰셋 버전을 동반한다", () => {
     expect(chart.ruleset_version).toBe(RULESET);
   });
 });
+
+describe("예상 막대 축 라벨 (2026-08-05 화면 실측)", () => {
+  /**
+   * 컨센서스가 `"202612"` 같은 원본 기간 코드를 준다. 그대로 축에 쓰면 실적 막대
+   * (`21 22 23 24 25`)와 자릿수가 달라 차트가 잘못 읽힌다 — 카드 화면에서 실제로 그렇게 나왔다.
+   */
+  function withConsensus(periods: string[]): FactSheet {
+    const sheet = withRevenue();
+    return {
+      ...sheet,
+      consensus: {
+        ...sheet.consensus,
+        available: true,
+        source: "naver_consensus",
+        as_of: "2026-08-01",
+        revenue_fy1: 2_000,
+        periods,
+      },
+    };
+  }
+
+  it("`202612` 는 `26` 으로 줄어든다", () => {
+    const chart = buildValuationChart(withConsensus(["202612"]), "QUALITY_COMPOUNDER", RULESET);
+    const estimate = chart.bars.filter((bar) => bar.kind === "estimate");
+    expect(estimate.map((bar) => bar.label)).toEqual(["26"]);
+  });
+
+  it("`2026-12` 도 `26` 이다", () => {
+    const chart = buildValuationChart(withConsensus(["2026-12"]), "QUALITY_COMPOUNDER", RULESET);
+    expect(chart.bars.filter((b) => b.kind === "estimate").map((b) => b.label)).toEqual(["26"]);
+  });
+
+  it("연도를 못 찾으면 마지막 실적 연도에서 이어 붙인다 — 원본 코드를 축에 흘리지 않는다", () => {
+    const chart = buildValuationChart(withConsensus(["FY+1"]), "QUALITY_COMPOUNDER", RULESET);
+    const labels = chart.bars.filter((b) => b.kind === "estimate").map((b) => b.label);
+    expect(labels).toEqual(["26"]);
+    expect(labels[0]).not.toContain("FY");
+  });
+
+  it("실적 라벨과 자릿수가 같다 — 축이 섞이지 않는다", () => {
+    const chart = buildValuationChart(withConsensus(["202612"]), "QUALITY_COMPOUNDER", RULESET);
+    expect(chart.bars.every((bar) => bar.label.length === 2)).toBe(true);
+  });
+});

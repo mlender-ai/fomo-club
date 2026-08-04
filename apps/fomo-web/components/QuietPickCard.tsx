@@ -147,6 +147,14 @@ export function QuietPickCard({
         )}
       </div>
 
+      {/*
+        증거 영역 — 훅 · 신호칩 · 스파크라인 · ② · ③.
+        **스크롤한다.** ③ 이 붙으면 카드 높이를 넘고, 그대로 두면 무효선과 푸터가 가려진다
+        (2026-08-05 화면 실측: 무효선 문장이 하단 버튼에 겹쳤다). WO §4-2 는 "UI 에서 자르지
+        않는다" 이므로 **강제 문안(경고문)을 떼지 않고** 영역을 스크롤한다.
+        무효선·푸터는 밖에 남겨 항상 보이게 한다 — 무효선은 계약이라 가려지면 안 된다.
+      */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
       {/* ★훅 — 이례성 앞 */}
       <p className="mt-3 shrink-0 text-lg font-bold leading-7 text-whiteout">{pick.hook}</p>
 
@@ -206,7 +214,9 @@ export function QuietPickCard({
         </div>
       )}
 
-      {/* 무효선 = 계약 */}
+      </div>
+
+      {/* 무효선 = 계약 — 스크롤 영역 **밖**이다. 항상 보여야 한다. */}
       <div className="mt-3 shrink-0 rounded-lg bg-black/15 px-3 py-2">
         <span className="block text-[10px] font-semibold text-muted">무효선</span>
         <p className="mt-0.5 text-sm font-semibold leading-5 text-whiteout">{pick.invalidation.text}</p>

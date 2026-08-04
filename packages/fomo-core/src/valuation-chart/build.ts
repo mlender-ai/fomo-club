@@ -53,6 +53,18 @@ function yearLabel(periodEnd: string): string {
 }
 
 /**
+ * 컨센서스가 준 기간 라벨을 축 라벨로 정규화한다.
+ *
+ * 소스가 `"202612"`·`"2026-12"`·`"2026"` 같은 원본 코드를 준다. 그대로 쓰면 실적 막대
+ * (`21 22 23 24 25`)와 **자릿수가 다른 라벨이 축에 섞여** 차트가 잘못 읽힌다(실측: 카드
+ * 화면에서 예상 막대만 `202612` 로 나왔다). 4자리 연도를 찾아 2자리로 줄인다.
+ */
+function estimateLabel(raw: string): string | null {
+  const year = raw.match(/(19|20)\d{2}/);
+  return year ? year[0].slice(2, 4) : (/^\d{2}$/.test(raw.trim()) ? raw.trim() : null);
+}
+
+/**
  * 막대 시계열 해석.
  *
  * **팩트시트에 없는 시계열은 만들지 않는다.** `null` 을 돌려주면 차트가 숨겨진다.
@@ -124,8 +136,9 @@ function estimateBars(factsheet: FactSheet, series: ChartBarSeries, lastActual: 
   for (const [index, value] of values.entries()) {
     if (value === null) continue;
     // 라벨은 컨센서스가 준 기간명을 우선하고, 없으면 마지막 실적 연도에서 이어 붙인다.
+    const fromSource = consensus.periods[index];
     const label =
-      consensus.periods[index] ??
+      (fromSource === undefined ? null : estimateLabel(fromSource)) ??
       (baseYear === null ? null : String(baseYear + index + 1).padStart(2, "0"));
     if (label === null) continue;
     bars.push({
