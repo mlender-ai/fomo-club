@@ -69,6 +69,10 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
           SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+          # ⚠️ **이 값은 비어 있다.** `DART_API_KEY` 는 GitHub 시크릿에 존재하지 않고
+          # Vercel 환경변수에만 있다(실측 2026-08-03: `gh secret list` 에 부재).
+          # 즉 이 워크플로의 KR 경로는 **DART 없이** 돌고 있다 — 결과 해석 시 감안할 것.
+          # DART 가 필요한 실측은 백엔드 라우트를 부른다(holding-company-probe.yml 참조).
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           SECTION_PROMPT_CHARS_OVERRIDE: ${{ github.event.inputs.input_chars }}
         # **스텝 타임아웃이다.** 잡 타임아웃으로 죽으면 잡 자체가 cancelled 가 되어
@@ -111,6 +115,10 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
           SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+          # ⚠️ **이 값은 비어 있다.** `DART_API_KEY` 는 GitHub 시크릿에 존재하지 않고
+          # Vercel 환경변수에만 있다(실측 2026-08-03: `gh secret list` 에 부재).
+          # 즉 이 워크플로의 KR 경로는 **DART 없이** 돌고 있다 — 결과 해석 시 감안할 것.
+          # DART 가 필요한 실측은 백엔드 라우트를 부른다(holding-company-probe.yml 참조).
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           SECTION_PROMPT_CHARS_OVERRIDE: ${{ github.event.inputs.input_chars }}
         # **스텝 타임아웃이다.** 잡 타임아웃으로 죽으면 잡 자체가 cancelled 가 되어
@@ -152,6 +160,10 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
           SEC_USER_AGENT: "FOMO Club research contact@fomoclub.app"
+          # ⚠️ **이 값은 비어 있다.** `DART_API_KEY` 는 GitHub 시크릿에 존재하지 않고
+          # Vercel 환경변수에만 있다(실측 2026-08-03: `gh secret list` 에 부재).
+          # 즉 이 워크플로의 KR 경로는 **DART 없이** 돌고 있다 — 결과 해석 시 감안할 것.
+          # DART 가 필요한 실측은 백엔드 라우트를 부른다(holding-company-probe.yml 참조).
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           SECTION_PROMPT_CHARS_OVERRIDE: ${{ github.event.inputs.input_chars }}
         # **스텝 타임아웃이다.** 잡 타임아웃으로 죽으면 잡 자체가 cancelled 가 되어
