@@ -175,9 +175,11 @@ export async function buildBusinessContext(entry: UniverseEntry, options: BuildO
   });
   errors.push(...synthesis.errors);
 
-  const kind = bundle.chunks[0]!.kind;
-  const slot1 = await verifiedSentence(synthesis.slot1, used, kind, errors, "slot1");
-  const slot2 = await verifiedSentence(synthesis.slot2, used, kind, errors, "slot2");
+  // 대체값일 뿐이다 — 실제 종류는 `verifiedSentence` 가 **인용한 청크**에서 뽑는다.
+  // 첫 청크로 정하면 혼합 번들에서 벤더 근거 문장이 공시로 표시된다(배지 부당 상향).
+  const fallbackKind = bundle.chunks[0]!.kind;
+  const slot1 = await verifiedSentence(synthesis.slot1, used, fallbackKind, errors, "slot1");
+  const slot2 = await verifiedSentence(synthesis.slot2, used, fallbackKind, errors, "slot2");
   const slot3 = slot2 ? buildSlot3(slot2.text, options.observations) : null;
 
   const citedIds = new Set([...(slot1?.source_ids ?? []), ...(slot2?.source_ids ?? [])]);

@@ -393,9 +393,25 @@ export async function verifySentence(sentence: string, citedChunks: readonly Sou
 }
 
 /** 합성 결과 한 슬롯을 검증까지 통과시켜 `SourcedSentence` 로 만든다. 실패하면 null. */
+/**
+ * **인용한 청크에서 종류를 뽑는다** — 번들의 첫 청크가 아니다.
+ *
+ * 왜 중요한가: 배지가 `충분` 에 도달하려면 슬롯 중 하나가 `vendor_summary` 가 아니어야 한다
+ * (`badge.ts` `onlyVendorBacked`). 번들 첫 청크로 종류를 정하면, 공시 청크와 벤더 청크가
+ * 섞인 번들에서 **벤더 근거로 만든 문장이 `disclosure` 로 표시되어 받을 자격 없는 배지를
+ * 받는다.** KR 슬롯1 을 공시로 승격하면 정확히 그 혼합 번들이 생긴다.
+ *
+ * 섞여 있으면 **약한 쪽(`vendor_summary`)** 으로 내려 잡는다. 오분류는 안전한 쪽으로.
+ */
+export function kindOfCited(cited: readonly SourceChunk[], fallback: BusinessSourceKind): BusinessSourceKind {
+  if (cited.length === 0) return fallback;
+  return cited.some((chunk) => chunk.kind === "vendor_summary") ? "vendor_summary" : cited[0]!.kind;
+}
+
 export async function verifiedSentence(
   slot: { text: string; sourceIds: string[] } | null,
   chunks: readonly SourceChunk[],
+  /** 인용 청크가 비었을 때만 쓰는 대체값. 정상 경로에서는 인용에서 뽑는다. */
   kind: BusinessSourceKind,
   errors: string[],
   label: string
@@ -411,7 +427,7 @@ export async function verifiedSentence(
     );
     return null;
   }
-  return sourcedSentence(slot.text, slot.sourceIds, kind, true);
+  return sourcedSentence(slot.text, slot.sourceIds, kindOfCited(cited, kind), true);
 }
 
 export const VERIFY_PROMPT_VERSION_ID = VERIFY_PROMPT_ID;

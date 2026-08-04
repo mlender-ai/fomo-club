@@ -75,6 +75,10 @@ export interface HoldingProbeResult {
   holdingCodes: string[];
   nonHoldingCodes: string[];
   overlapCodes: string[];
+  /** 지주군에서 2회 이상 나오고 비지주군에 없는 코드 — 플래그로 쓸 수 있는 것. */
+  flagCodes: string[];
+  /** 1회만 나와 업종 코드와 구분되지 않는 코드 — 플래그로 쓰면 오탐한다. */
+  inconclusiveCodes: string[];
   verdict: HoldingProbeVerdict;
   note: string;
   errors: string[];
@@ -111,6 +115,8 @@ export async function probeHoldingCompanyAxis(): Promise<HoldingProbeResult> {
       holdingCodes: [],
       nonHoldingCodes: [],
       overlapCodes: [],
+      flagCodes: [],
+      inconclusiveCodes: [],
       verdict: "path2_unavailable",
       note: "DART_API_KEY 없음 — 이 런타임에 키가 설정되지 않았다",
       errors: ["dart: 키 없음"],
@@ -148,18 +154,51 @@ export async function probeHoldingCompanyAxis(): Promise<HoldingProbeResult> {
   const nonHolding = codesOf("비지주");
   const overlap = [...holding].filter((code) => nonHolding.has(code)).sort();
 
-  // 판정은 여기서 한다 — 소비자(워크플로·문서)가 각자 해석하면 기준이 갈린다.
+  /**
+   * 판정은 여기서 한다 — 소비자가 각자 해석하면 기준이 갈린다.
+   *
+   * **"겹침 없음" 을 성립 근거로 쓰지 않는다.** 표본이 16종목이라, 지주 한 곳에서만 나온
+   * 코드는 그 회사의 **업종 코드**일 수 있고 겹치지 않은 것은 비지주 표본이 그 업종을
+   * 안 담았기 때문일 수 있다. 실측이 정확히 그랬다 — POSCO홀딩스 `2411`(제철)·
+   * 두산 `26221`(전자부품)이 지주군 단독으로 나왔지만, 시장에는 철강 54종목·
+   * 전자장비 97종목이 있어 그 코드를 지주 플래그로 쓰면 제조사를 대량 오탐한다.
+   *
+   * 그래서 **지주군에서 2회 이상 나오고 비지주군에 없는 코드**만 플래그 후보로 인정한다.
+   * 1회만 나온 코드는 판단 불가로 남긴다(업종 코드와 구분되지 않는다).
+   */
+  const holdingCounts = new Map<string, number>();
+  for (const row of rows) {
+    if (row.expected !== "지주" || row.induty_code === null) continue;
+    holdingCounts.set(row.induty_code, (holdingCounts.get(row.induty_code) ?? 0) + 1);
+  }
+  const flagCodes = [...holdingCounts.entries()]
+    .filter(([code, count]) => count >= 2 && !nonHolding.has(code))
+    .map(([code]) => code)
+    .sort();
+  const inconclusive = [...holdingCounts.entries()]
+    .filter(([, count]) => count < 2)
+    .map(([code]) => code)
+    .sort();
+  const holdingSamples = rows.filter((row) => row.expected === "지주").length;
+  const covered = rows.filter((row) => row.expected === "지주" && row.induty_code !== null && flagCodes.includes(row.induty_code)).length;
+
   let verdict: HoldingProbeVerdict;
   let note: string;
-  if (holding.size === 0) {
+  if (flagCodes.length === 0) {
     verdict = "path2_unavailable";
-    note = "지주군에서 induty_code 를 하나도 못 받았다 — 경로 2 불가";
-  } else if (overlap.length === 0) {
+    note =
+      holding.size === 0
+        ? "지주군에서 induty_code 를 하나도 못 받았다 — 경로 2 불가"
+        : `지주군 코드가 전부 1회씩만 나왔다(${inconclusive.join(", ")}) — 업종 코드와 구분되지 않아 플래그로 쓸 수 없다`;
+  } else if (covered === holdingSamples) {
     verdict = "path2_ok";
-    note = "induty_code 가 지주군·비지주군을 분리한다 — 이 코드 집합을 지주회사 플래그로 쓴다";
+    note = `${flagCodes.join(", ")} 가 지주 표본 전부를 덮는다 — 단독 플래그로 쓴다`;
   } else {
     verdict = "path2_partial";
-    note = `겹치는 코드 ${overlap.length}개 — 단독 판정 불가. 이름 패턴과 AND 로 쓰거나 경로 3(공정위 목록)으로 간다`;
+    note =
+      `${flagCodes.join(", ")} 가 지주 표본 ${covered}/${holdingSamples} 를 덮는다. ` +
+      `나머지는 사업 업종으로 분류돼(${inconclusive.join(", ")}) 이 축으로 못 잡는다 — ` +
+      `이름 패턴과 **OR** 로 합치고, 둘 다 안 걸리는 사업지주는 결손으로 기록한다`;
   }
 
   return {
@@ -169,6 +208,8 @@ export async function probeHoldingCompanyAxis(): Promise<HoldingProbeResult> {
     holdingCodes: [...holding].sort(),
     nonHoldingCodes: [...nonHolding].sort(),
     overlapCodes: overlap,
+    flagCodes,
+    inconclusiveCodes: inconclusive,
     verdict,
     note,
     errors,
