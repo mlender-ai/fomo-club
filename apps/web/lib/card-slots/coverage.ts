@@ -3,6 +3,7 @@ import {
   buildValuationChart,
   classifyArchetype,
   toRenderable,
+  type ArchetypeResult,
   type BusinessContext,
   type FactSheet,
 } from "@fomo/core";
@@ -53,6 +54,28 @@ export type Slot3Reason =
 /** 슬롯 ② 가 안 나오는 사유. */
 export type Slot2Reason = "no_record" | "not_renderable";
 
+/**
+ * `UNCLASSIFIED` 진단 (WO-SUB-FINISH [A-0]).
+ *
+ * `slot3_reason: "unclassified"` 만으로는 **02R 카탈로그 재도출이 그 카드를 구제하는지 알 수 없다.**
+ * A-0 은 그 판정을 착수 조건으로 걸었다 — `no_rule_matched` 만 카탈로그가 푸는 문제고
+ * `no_sector`(분류 코드 결손)·`no_fiscal`(재무 결손)은 아무리 규칙을 늘려도 그대로다.
+ * 그래서 사유와, 사유를 만든 관측값을 같이 남긴다.
+ */
+export interface UnclassifiedDiagnostic {
+  reason: string;
+  scheme: string | null;
+  industry: string | null;
+  coverage_flag: string;
+  net_income_ttm: number | null;
+  revenue_yoy: number | null;
+  revenue_cagr_3y: number | null;
+  dividend_yield: number | null;
+  pbr: number | null;
+  net_cash_ratio: number | null;
+  operating_stdev_annual_years: number;
+}
+
 export interface CardSlotRow {
   canonical: string;
   market: string;
@@ -63,6 +86,8 @@ export interface CardSlotRow {
   slot2_reason: Slot2Reason | null;
   slot3_reason: Slot3Reason | null;
   archetype: string | null;
+  /** `archetype === "UNCLASSIFIED"` 일 때만 채워진다. */
+  unclassified: UnclassifiedDiagnostic | null;
 }
 
 export interface CardSlotSummary {
@@ -73,6 +98,8 @@ export interface CardSlotSummary {
   slot3: number;
   slot2_reasons: Record<string, number>;
   slot3_reasons: Record<string, number>;
+  /** `slot3_reason === "unclassified"` 의 사유 분해 (A-0). 카탈로그가 푸는 것과 아닌 것을 나눈다. */
+  unclassified_reasons: Record<string, number>;
   /** 아키타입별 슬롯3 성공/실패 — 어느 유형이 구조적으로 못 그리는지 보인다. */
   by_archetype: Record<string, { n: number; slot3: number }>;
 }
@@ -85,6 +112,8 @@ export interface CardSlotCoverageReport {
   live_deck: CardSlotSummary;
   /** 365일 발행 이력. 표본이 커서 분포를 말할 수 있다. */
   universe: CardSlotSummary;
+  /** 오늘 덱에 든 종목 키 — `rows` 를 덱으로 좁히는 데 쓴다(행을 두 번 싣지 않는다). */
+  live_canonicals: string[];
   rows: CardSlotRow[];
 }
 
@@ -96,6 +125,7 @@ function emptySummary(): CardSlotSummary {
     slot3: 0,
     slot2_reasons: {},
     slot3_reasons: {},
+    unclassified_reasons: {},
     by_archetype: {},
   };
 }
@@ -110,6 +140,11 @@ export function summarizeCardSlots(rows: readonly CardSlotRow[]): CardSlotSummar
     else if (row.slot2_reason) out.slot2_reasons[row.slot2_reason] = (out.slot2_reasons[row.slot2_reason] ?? 0) + 1;
     if (row.slot3) out.slot3 += 1;
     else if (row.slot3_reason) out.slot3_reasons[row.slot3_reason] = (out.slot3_reasons[row.slot3_reason] ?? 0) + 1;
+    // 분류가 됐는데 다른 사유로 못 그리는 경우와 섞이지 않게 `unclassified` 사유만 센다.
+    if (!row.slot3 && row.slot3_reason === "unclassified" && row.unclassified) {
+      const reason = row.unclassified.reason;
+      out.unclassified_reasons[reason] = (out.unclassified_reasons[reason] ?? 0) + 1;
+    }
     const archetype = row.archetype ?? "(분류 불가)";
     const bucket = out.by_archetype[archetype] ?? { n: 0, slot3: 0 };
     bucket.n += 1;
@@ -130,21 +165,40 @@ function evaluateSlot3(factsheet: FactSheet | null): {
   ok: boolean;
   reason: Slot3Reason | null;
   archetype: string | null;
+  unclassified: UnclassifiedDiagnostic | null;
 } {
-  if (factsheet === null) return { ok: false, reason: "no_factsheet", archetype: null };
-  let archetype: string;
+  if (factsheet === null) return { ok: false, reason: "no_factsheet", archetype: null, unclassified: null };
+  let result: ArchetypeResult;
   try {
-    archetype = classifyArchetype(factsheet).code;
+    result = classifyArchetype(factsheet);
   } catch {
-    return { ok: false, reason: "build_error", archetype: null };
+    return { ok: false, reason: "build_error", archetype: null, unclassified: null };
   }
+  const archetype = result.code;
+  // 분류기가 이미 사유와 관측값을 돌려준다 — 여기서 다시 계산하면 두 벌이 어긋난다.
+  const unclassified: UnclassifiedDiagnostic | null =
+    result.code === "UNCLASSIFIED"
+      ? {
+          reason: result.reason ?? "unknown",
+          scheme: result.inputs.scheme,
+          industry: result.inputs.industry,
+          coverage_flag: result.inputs.coverage_flag,
+          net_income_ttm: result.inputs.net_income_ttm,
+          revenue_yoy: result.inputs.revenue_yoy,
+          revenue_cagr_3y: result.inputs.revenue_cagr_3y,
+          dividend_yield: result.inputs.dividend_yield,
+          pbr: result.inputs.pbr,
+          net_cash_ratio: result.inputs.net_cash_ratio,
+          operating_stdev_annual_years: result.inputs.operating_stdev_annual_years,
+        }
+      : null;
   try {
     // `frameOf` 는 독트린에 없는 코드에 대해 던진다 — 배치 루프가 통째로 죽지 않게 감싼다.
     const chart = buildValuationChart(factsheet, archetype as never, RULESET_VERSION);
-    if (chart.renderable) return { ok: true, reason: null, archetype };
-    return { ok: false, reason: (chart.unavailable_reason as Slot3Reason) ?? "build_error", archetype };
+    if (chart.renderable) return { ok: true, reason: null, archetype, unclassified };
+    return { ok: false, reason: (chart.unavailable_reason as Slot3Reason) ?? "build_error", archetype, unclassified };
   } catch {
-    return { ok: false, reason: "build_error", archetype };
+    return { ok: false, reason: "build_error", archetype, unclassified };
   }
 }
 
@@ -164,6 +218,7 @@ async function rowFor(market: string, canonical: string): Promise<CardSlotRow> {
     slot2_reason: slot2.reason,
     slot3_reason: slot3.reason,
     archetype: slot3.archetype,
+    unclassified: slot3.unclassified,
   };
 }
 
@@ -191,6 +246,7 @@ export async function buildCardSlotCoverage(): Promise<CardSlotCoverageReport> {
     ruleset_version: RULESET_VERSION,
     live_deck: summarizeCardSlots(liveRows),
     universe: summarizeCardSlots(rows),
+    live_canonicals: liveRows.map((row) => row.canonical),
     rows,
   };
 }
