@@ -14,7 +14,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { CardSlotCoverageReport, CardSlotSummary } from "../apps/web/lib/card-slots/coverage";
+import type { CardSlotCoverageReport, CardSlotRow, CardSlotSummary } from "../apps/web/lib/card-slots/coverage";
 
 function flag(name: string): string | undefined {
   const index = process.argv.indexOf(name);
@@ -53,12 +53,113 @@ function summaryTable(label: string, summary: CardSlotSummary): string[] {
     lines.push(`| ③ | \`${reason}\` | ${count} |`);
   }
   lines.push("");
+  const unclassifiedEntries = Object.entries(summary.unclassified_reasons).sort((a, b) => b[1] - a[1]);
+  if (unclassifiedEntries.length > 0) {
+    lines.push("| `unclassified` 사유 | 건수 | 02R 카탈로그가 푸나 |");
+    lines.push("|---|---|---|");
+    for (const [reason, count] of unclassifiedEntries) {
+      lines.push(`| \`${reason}\` | ${count} | ${CATALOG_VERDICT[reason] ?? "판정 없음"} |`);
+    }
+    lines.push("");
+  }
   lines.push("| 아키타입 | n | 슬롯③ 성공 |");
   lines.push("|---|---|---|");
   for (const [code, bucket] of Object.entries(summary.by_archetype).sort((a, b) => b[1].n - a[1].n)) {
     lines.push(`| \`${code}\` | ${bucket.n} | ${bucket.slot3} (${pct(bucket.slot3, bucket.n)}) |`);
   }
   lines.push("");
+  return lines;
+}
+
+/**
+ * A-0 판정표 — 사유별로 **카탈로그 재도출이 그 카드를 구제하는지**.
+ * WO-SUB-FINISH [A-0] 이 요구한 분류다. 여기서 "아니오" 인 건수에 02R 을 쓰면 헛수고다.
+ */
+const CATALOG_VERDICT: Record<string, string> = {
+  no_rule_matched: "**예** — 02R 이 정확히 이걸 푼다",
+  no_sector: "아니오 — 분류 코드 결손",
+  no_fiscal: "아니오 — 재무 데이터 결손",
+  unknown_scheme: "아니오 — 분류 체계 미지원",
+};
+
+function num(value: number | null, digits = 1): string {
+  return value === null || !Number.isFinite(value) ? "—" : value.toFixed(digits);
+}
+
+/** 미분류 종목별 관측값 — 사유 뒤에 있는 사실을 본다. 집계만 보면 왜 안 걸렸는지 모른다. */
+function unclassifiedRows(label: string, rows: readonly CardSlotRow[]): string[] {
+  const lines: string[] = [];
+  const targets = rows.filter((row) => row.unclassified !== null && row.slot3_reason === "unclassified");
+  lines.push(`### ${label} — 미분류 종목별 관측값 (n=${targets.length})`);
+  lines.push("");
+  if (targets.length === 0) {
+    lines.push("미분류 0.");
+    lines.push("");
+    return lines;
+  }
+  lines.push("| 종목 | 시장 | 사유 | 체계 | 업종 | 재무 | 순이익TTM | 매출YoY | CAGR3Y | 배당률 | PBR | 순현금비 | 연간관측 |");
+  lines.push("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const row of targets) {
+    const d = row.unclassified!;
+    lines.push(
+      `| \`${row.canonical}\` | ${row.market} | \`${d.reason}\` | ${d.scheme ?? "—"} | ${d.industry ?? "—"} | ${d.coverage_flag} | ` +
+        `${d.net_income_ttm === null ? "—" : d.net_income_ttm > 0 ? "흑자" : "적자"} | ${num(d.revenue_yoy)} | ${num(d.revenue_cagr_3y)} | ` +
+        `${num(d.dividend_yield, 2)} | ${num(d.pbr, 2)} | ${num(d.net_cash_ratio, 2)} | ${d.operating_stdev_annual_years} |`
+    );
+  }
+  lines.push("");
+  lines.push("> 단위: 매출YoY·CAGR3Y·배당률 = %, 순현금비 = 순현금/시가총액, 연간관측 = 영업이익률 표준편차 관측 연수(5 미만이면 통계 미신뢰).");
+  lines.push("");
+  return lines;
+}
+
+/** 사유 집계에서 카탈로그가 푸는 건수(= `no_rule_matched`)와 전체를 뽑는다. */
+function catalogSplit(summary: CardSlotSummary): { solvable: number; total: number } {
+  const reasons = summary.unclassified_reasons;
+  const total = Object.values(reasons).reduce((sum, count) => sum + count, 0);
+  return { solvable: reasons.no_rule_matched ?? 0, total };
+}
+
+/**
+ * A-0 판정 — B2(549종목 수집) 를 그대로 갈지, 줄일지, 멈출지.
+ *
+ * 덱은 n=10 이라 그것만으로 2~3일 수집을 결정할 수 없다. 그래서 **덱(질문의 대상)과
+ * 유니버스(표본이 큰 쪽)를 같이 낸다.** 임계값은 판정 기준을 문서에 고정하려고 여기 둔다 —
+ * 숫자를 보고 사후에 기준을 만들면 판정이 아니라 합리화가 된다.
+ */
+const A0_SOLVABLE_FLOOR = 0.5;
+
+function a0Verdict(live: CardSlotSummary, universe: CardSlotSummary): string[] {
+  const lines: string[] = ["### A-0 판정", ""];
+  const deck = catalogSplit(live);
+  const all = catalogSplit(universe);
+  lines.push("| 모집단 | 미분류 | `no_rule_matched` | 카탈로그 구제 가능 비율 |");
+  lines.push("|---|---|---|---|");
+  lines.push(`| 오늘 덱 | ${deck.total} | ${deck.solvable} | ${pct(deck.solvable, deck.total)} |`);
+  lines.push(`| 365일 유니버스 | ${all.total} | ${all.solvable} | ${pct(all.solvable, all.total)} |`);
+  lines.push("");
+  if (all.total === 0) {
+    lines.push("유니버스 미분류 0 — 02R 이 풀 대상이 없다. B2 를 돌릴 이유가 없다.");
+    lines.push("");
+    return lines;
+  }
+  const ratio = all.solvable / all.total;
+  lines.push(
+    ratio >= A0_SOLVABLE_FLOOR
+      ? `**유니버스 미분류의 ${pct(all.solvable, all.total)} 가 \`no_rule_matched\` 다 — 02R 이 푸는 종류다.**\n` +
+          `B2(549종목 표본 수집)를 설계대로 진행한다.`
+      : `**유니버스 미분류의 ${pct(all.solvable, all.total)} 만 \`no_rule_matched\` 다 (기준 ${A0_SOLVABLE_FLOOR * 100}%).**\n` +
+          `나머지는 분류 코드·재무 결손이라 카탈로그를 늘려도 그대로다. A-0 지시대로 **B2 축소 또는 중단을 사람이 판정**한다 —\n` +
+          `에이전트가 임의로 자르지 않는다. 결손 쪽(\`no_sector\`·\`no_fiscal\`)은 별도 소스 작업이다.`
+  );
+  lines.push("");
+  if (deck.total > 0 && deck.total < 20) {
+    lines.push(
+      `> 덱 표본은 n=${deck.total} 이다. 비율로 읽지 말고 **건수로** 읽는다 — ` +
+        `카탈로그가 구제할 수 있는 덱 카드는 최대 ${deck.solvable}장이고, 그것이 곧 02R 이 오늘 화면에 낼 수 있는 상한이다.`
+    );
+    lines.push("");
+  }
   return lines;
 }
 
@@ -93,7 +194,18 @@ function render(report: CardSlotCoverageReport): string {
   lines.push("## 2. 365일 발행 이력");
   lines.push("");
   lines.push(...summaryTable("universe", report.universe));
-  lines.push("## 3. 사유 읽는 법");
+  lines.push("## 3. 미분류 사유 분해 (WO-SUB-FINISH [A-0])");
+  lines.push("");
+  lines.push("> A-0: **549종목을 모으기 전에** 오늘 덱 미분류가 왜 미분류인지 사유별로 확인한다.");
+  lines.push("> `no_rule_matched` 가 소수면 B2(표본 수집)를 축소하거나 중단한다 —");
+  lines.push("> 카탈로그를 늘려도 안 풀리는 것에 2~3일을 쓰지 않는다.");
+  lines.push("");
+  const liveKeys = new Set(report.live_canonicals);
+  const liveRows = report.rows.filter((row) => liveKeys.has(row.canonical));
+  lines.push(...unclassifiedRows("live deck", liveRows));
+  lines.push(...unclassifiedRows("universe", report.rows));
+  lines.push(...a0Verdict(report.live_deck, report.universe));
+  lines.push("## 4. 사유 읽는 법");
   lines.push("");
   lines.push("| 사유 | 뜻 | 해소 경로 |");
   lines.push("|---|---|---|");
@@ -103,6 +215,15 @@ function render(report: CardSlotCoverageReport): string {
   lines.push("| `unclassified` | 아키타입 미분류 | 02R 카탈로그 재도출 |");
   lines.push("| `bar_series_unavailable` | 그 유형의 막대축 시계열이 소스에 없다 | **데이터를 더 모아도 안 된다** — 축 설계 문제 |");
   lines.push("| `no_bar_data` | 축은 되는데 이 종목에 값이 없다 | 그 종목의 결손 |");
+  lines.push("");
+  lines.push("`unclassified` 안쪽 사유(A-0):");
+  lines.push("");
+  lines.push("| 사유 | 뜻 | 02R 카탈로그가 푸나 |");
+  lines.push("|---|---|---|");
+  lines.push("| `no_rule_matched` | 규칙을 전부 통과했는데 어디에도 안 걸렸다 | **예** |");
+  lines.push("| `no_sector` | 업종·섹터 분류 코드가 없다 | 아니오 — 분류 코드 결손 |");
+  lines.push("| `no_fiscal` | 재무 커버리지가 `none` 이다 | 아니오 — 재무 데이터 결손 |");
+  lines.push("| `unknown_scheme` | 분류 체계를 업종 집합으로 해석할 수 없다 | 아니오 — 체계 매핑 부재 |");
   lines.push("");
   return lines.join("\n");
 }
