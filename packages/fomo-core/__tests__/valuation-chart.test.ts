@@ -69,12 +69,51 @@ describe("UNCLASSIFIED 폴백 — 02R 전환기에 화면이 깨지지 않는다
   });
 
   it("팩트시트에 없는 시계열은 숨긴다 — 다른 지표로 바꿔 그리지 않는다", () => {
-    // BANK_FINANCIAL 의 축은 순이자이익인데 소스에 그 계정 매핑이 없다.
-    // **매출로 바꿔 그리면 안 된다** — 은행 매출은 개념이 왜곡된다(독트린 금지 지표).
-    const chart = buildValuationChart(withRevenue(), "BANK_FINANCIAL", RULESET);
+    // MATURE_INCOME 의 축은 주당배당금인데 소스에 그 계정 매핑이 없다.
+    // **매출로 바꿔 그리면 안 된다** — 성숙·배당형에서 관측 지점은 배당의 지속 가능성이다.
+    const chart = buildValuationChart(withRevenue(), "MATURE_INCOME", RULESET);
     expect(chart.renderable).toBe(false);
     expect(chart.unavailable_reason).toBe("bar_series_unavailable");
     expect(chart.bar_metric).toBeNull();
+  });
+
+  it("BANK_FINANCIAL 은 자기자본 막대를 쓴다 — 매출로 바꿔 그리는 것이 아니다", () => {
+    /**
+     * WO-SUB-FINISH A-3(선택지 A). WO-SUB-04 축 표가 처음부터 "순이자이익 **또는 자기자본**"을
+     * 허용했고 순이자이익만 소스에 매핑이 없다. 즉 없는 지표를 다른 것으로 대체한 것이 아니라
+     * 명세의 두 번째 선택지를 쓰는 것이다. 매출 막대는 여전히 금지다.
+     */
+    const sheet = withRevenue();
+    const chart = buildValuationChart(
+      {
+        ...sheet,
+        balance: {
+          ...sheet.balance,
+          equity_quarters: [
+            { period: "2024Q4", period_end: "2024-12-31", filed_at: "2025-03-31", value: 4_000, source: "dart" },
+            { period: "2025Q2", period_end: "2025-06-30", filed_at: "2025-08-14", value: 4_200, source: "dart" },
+            { period: "2025Q4", period_end: "2025-12-31", filed_at: "2026-03-31", value: 4_500, source: "dart" },
+          ],
+        },
+      },
+      "BANK_FINANCIAL",
+      RULESET
+    );
+    expect(chart.renderable).toBe(true);
+    expect(chart.bar_metric).toBe("annual_equity");
+    expect(chart.bar_label).toBe("자기자본");
+    // 연간 막대라 회계연도말만 — 분기를 섞으면 "연간"이 아니게 된다.
+    expect(chart.bars.map((bar) => bar.value)).toEqual([4_000, 4_500]);
+    // 막대(분모)와 선(배수)이 같은 것을 두 각도에서 본다.
+    expect(chart.line_metric).toBe("pbr");
+    // 매출은 들어 있어도 쓰지 않는다.
+    expect(chart.bars.some((bar) => bar.value === sheet.fiscal.annual[0]?.revenue)).toBe(false);
+  });
+
+  it("자기자본 시계열이 없는 은행은 여전히 숨긴다 — 없는 것을 그리지 않는다", () => {
+    const chart = buildValuationChart(withRevenue(), "BANK_FINANCIAL", RULESET);
+    expect(chart.renderable).toBe(false);
+    expect(chart.unavailable_reason).toBe("no_bar_data");
   });
 
   it("시계열 종류는 지원하는데 데이터가 없으면 no_bar_data 로 구분된다", () => {
@@ -364,6 +403,15 @@ describe("캡션 — 템플릿만, 금지어 없음 (§4 규칙 1)", () => {
       }
       if (chart.warning) expect(findForbiddenWords(chart.warning)).toEqual([]);
     }
+  });
+
+  it("막대가 무엇인지 캡션이 밝힌다 — 유형마다 축이 달라 매출로 오해된다", () => {
+    // 2026-08-06 A-3 단서: "캡션에 막대가 무엇인지 명시할 것."
+    const chart = buildValuationChart(withRevenue(), "QUALITY_COMPOUNDER", RULESET);
+    expect(chart.captions.some((c) => c === `막대는 ${chart.bar_label}입니다.`)).toBe(true);
+    // 카드는 첫 캡션만 보여주므로 막대 캡션이 밴드 위치 문장을 밀어내면 안 된다.
+    expect(chart.captions.at(-1)).toBe(`막대는 ${chart.bar_label}입니다.`);
+    expect(chart.captions[0]).not.toContain("막대는");
   });
 
   it("금지어 사전이 실제로 잡는다", () => {

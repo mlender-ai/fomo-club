@@ -1,7 +1,7 @@
 import { frameOf } from "../archetype/classify";
 import type { ArchetypeCode, ChartAxes, ChartBarSeries, ChartLineMetric } from "../archetype/types";
 import type { BandStat, FactSheet } from "../fundamentals/types";
-import { bandCaption, estimateCaption, fallbackCaption } from "./caption";
+import { bandCaption, barSeriesCaption, estimateCaption, fallbackCaption } from "./caption";
 import type {
   ChartBar,
   ChartUnavailableReason,
@@ -244,6 +244,10 @@ export function buildValuationChart(
   if (bandText) captions.push(bandText);
   const estimateText = estimateCaption(estimateMeta, estimates[0]?.label ?? null);
   if (estimateText) captions.push(estimateText);
+  // 막대 정체는 **맨 뒤**에 붙인다. 카드(compact)는 첫 캡션만 보여주므로 앞에 넣으면
+  // 밴드 위치 문장을 밀어낸다 — 카드에서는 차트 안 축 라벨이 같은 사실을 말한다.
+  const barText = barSeriesCaption(axes.bar_label);
+  if (barText) captions.push(barText);
 
   return {
     symbol: factsheet.symbol,

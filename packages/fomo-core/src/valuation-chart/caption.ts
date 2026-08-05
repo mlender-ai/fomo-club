@@ -61,6 +61,17 @@ export function estimateCaption(meta: EstimateMeta, firstEstimateLabel: string |
   return `${firstEstimateLabel} 이후는 애널리스트 예상치입니다.${suffix}`;
 }
 
+/**
+ * 막대가 무엇인지 밝히는 캡션.
+ *
+ * 유형마다 막대축이 다르다(매출·분기 영업이익·현금잔고·자기자본). 라벨 없이 막대만 보면
+ * **가장 흔한 축인 매출로 오해된다** — 은행 카드의 자기자본 막대를 매출로 읽으면 규모를
+ * 완전히 잘못 읽는다. 그래서 축 이름을 화면 문장으로 남긴다(2026-08-06 A-3 단서).
+ */
+export function barSeriesCaption(barLabel: string | null): string | null {
+  return barLabel === null ? null : `막대는 ${barLabel}입니다.`;
+}
+
 /** 1순위 지표가 없어 대체 지표로 내려갔다는 사실 — 조용히 바꾸지 않는다. */
 export function fallbackCaption(fromLabel: string, toLabel: string): string {
   return `${fromLabel}이 확보되지 않아 ${toLabel} 기준으로 표시합니다.`;

@@ -69,6 +69,17 @@ export function ValuationChart({
     <figure className="w-full">
       <svg viewBox={`0 0 ${WIDTH} ${height}`} width="100%" height={height} className="block" role="img"
         aria-label={`${data.bar_label ?? "실적"} 추이${data.line_label ? ` 및 ${data.line_label}` : ""}`}>
+        {/*
+          막대 축 이름. 유형마다 막대가 다른데(매출·분기 영업이익·현금잔고·자기자본) 라벨이 없으면
+          가장 흔한 매출로 오해된다 — 은행의 자기자본 막대를 매출로 읽으면 규모를 잘못 읽는다.
+          카드(compact)는 캡션 첫 줄만 보여주므로 **여기가 카드에서 축을 밝히는 유일한 자리**다.
+        */}
+        {data.bar_label && (
+          <text x={PAD_X} y={PAD_TOP - 3} fill={chartTokens.levelLabel} fontSize={9}>
+            {data.bar_label}
+          </text>
+        )}
+
         {/* 0선 — 부호가 뒤집히는 지점이 보여야 한다(적자 전환 구간). */}
         {min < 0 && (
           <line x1={PAD_X} y1={zeroY} x2={WIDTH - PAD_X} y2={zeroY} stroke={chartTokens.axis} strokeWidth={1} />
