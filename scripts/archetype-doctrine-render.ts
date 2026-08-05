@@ -347,8 +347,15 @@ export function renderDoctrine(): string {
   lines.push("| 버전 | 날짜 | 변경 | 영향 범위 |");
   lines.push("|---|---|---|---|");
   lines.push(
-    `| \`archetype-v1.0.0\` | ${DOCTRINE.as_of} | 최초 확정. 유형 10종, 시클리컬 판정 입력을 분기→연간 통계로 교체, θ=${THRESHOLDS.cyclical_operating_stdev_annual_pp} | 전 페이즈(04·05·06)의 유일한 입력 |`
+    `| \`archetype-v1.0.0\` | 2026-07-28 | 최초 확정. 유형 10종, 시클리컬 판정 입력을 분기→연간 통계로 교체, θ=${THRESHOLDS.cyclical_operating_stdev_annual_pp} | 전 페이즈(04·05·06)의 유일한 입력 |`
   );
+  lines.push(
+    "| `archetype-v1.1.0` | 2026-08-06 | `BANK_FINANCIAL` 막대축을 순이자이익 → **자기자본**으로 교체(WO-SUB-FINISH A-3, 선택지 A). 분류 규칙·임계값은 바뀌지 않았다 | 차트 축만. 분류 결과와 `ruleset_version` 은 불변 |"
+  );
+  lines.push("");
+  lines.push("> 독트린 버전과 룰셋 버전은 다른 것을 가리킨다 — 독트린은 축·문안·금지 지표의 정본이고,");
+  lines.push("> `ruleset_version`(`ruleset.ts`)은 **분류 규칙**의 버전이다. v1.1.0 은 축만 바꿨으므로");
+  lines.push("> 룰셋 버전을 올리지 않는다. 올리면 히스테리시스 이력이 이유 없이 전량 무효화된다.");
   lines.push("");
   lines.push("> 임계값이 바뀌면 과거 분류의 의미가 달라진다. 판단 원장에 `ruleset_version` 을 함께 기록하고,");
   lines.push("> 버전을 올릴 때 이 표에 영향 범위를 적는다.");

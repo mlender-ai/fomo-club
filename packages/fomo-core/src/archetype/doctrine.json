@@ -1,6 +1,6 @@
 {
-  "version": "archetype-v1.0.0",
-  "as_of": "2026-07-28",
+  "version": "archetype-v1.1.0",
+  "as_of": "2026-08-06",
   "note": "이 파일이 아키타입 독트린의 정본이다. docs/archetype/DOCTRINE_archetype_frames.md 는 여기서 생성된다. 경고문·금지 지표를 코드나 컴포넌트에 복붙하지 말고 여기서 로드할 것. warning_short = 카드용(WO-SUB-08 텍스트 예산), warning_full = 디테일용.",
   "archetypes": [
     {
@@ -294,6 +294,10 @@
       "warning_full": "은행은 PBR이 1배 미만인 상태가 오래 유지되기도 합니다. 이 지표만으로는 값의 위치를 해석하기 어렵습니다.",
       "unavailable_metrics": [
         {
+          "label": "순이자이익",
+          "reason": "SEC XBRL·네이버 어느 쪽도 표준 계정으로 주지 않는다. 그래서 막대는 WO-SUB-04 가 허용한 두 번째 축(자기자본)을 쓴다"
+        },
+        {
           "label": "순이자마진(NIM)",
           "reason": "SEC XBRL·네이버 어느 쪽도 표준 개념으로 태깅하지 않는다"
         },
@@ -307,12 +311,12 @@
         }
       ],
       "chart_axes": {
-        "bar_series": "annual_net_interest_income",
-        "bar_label": "순이자이익",
+        "bar_series": "annual_equity",
+        "bar_label": "자기자본",
         "line_metric": "pbr",
         "line_label": "PBR",
         "line_fallback_metric": null,
-        "note": "은행은 매출 개념이 왜곡되므로 매출 막대를 쓰지 않는다(PSR·EV/EBITDA 도 금지). PBR 은 경고문 부착이 필수다."
+        "note": "은행은 매출 개념이 왜곡되므로 매출 막대를 쓰지 않는다(PSR·EV/EBITDA 도 금지). 막대는 자기자본이다 — WO-SUB-04 축 표가 처음부터 \"순이자이익 또는 자기자본\"을 허용했고, 순이자이익은 소스에 계정 매핑이 없다. 자기자본은 PBR 의 분모라 막대(분모)와 선(배수)이 같은 것을 두 각도에서 보는 구조가 된다. PBR 은 경고문 부착이 필수다."
       }
     },
     {
