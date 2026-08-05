@@ -43,6 +43,7 @@ import { writeUsCandleCache } from "./us-candle-cache";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 import { readSignalStatsForCards } from "./signal-stats";
+import type { PublicationStamp } from "./publication-stamp";
 
 /** discovery-supply 가 이름을 export 하지 않으므로 반환 타입에서 파생(구조적). */
 export type KrMarketRow = Awaited<ReturnType<typeof fetchKrMarketRows>>[number];
@@ -1206,7 +1207,14 @@ export function quietPickPriorState(response: QuietPickResponse | null): Map<str
  * kind="selection" 재사용(DDL 없음) · actor="committee"(픽=위원회 검수) · payload.pickType="quiet" 로 구분.
  * lean payload(stock/front/response 제외) → daily-30 덱 재조립에 섞이지 않음. materializeLedgerOutcomes 가 7/30/90일 자동 채점.
  */
-export function quietPickLedgerEntries(response: QuietPickResponse): LedgerAppendInput[] {
+export function quietPickLedgerEntries(
+  response: QuietPickResponse,
+  /**
+   * 발행 시점 스탬프(WO-SUB-07 [F]) — canonical → 스탬프. **소급 불가라 발행 순간에만 만들 수 있다.**
+   * 스탬프를 못 만든 픽은 스탬프 없이 기록한다 — 원장 기록 자체가 늦어지면 더 잃는다.
+   */
+  stamps?: ReadonlyMap<string, PublicationStamp>
+): LedgerAppendInput[] {
   return response.picks.map((pick, index) => {
     const asset = assetForStock({ country: pick.subject.country, market: pick.subject.market });
     const baseKey = `${response.date}:${asset}:${pick.subject.symbol ?? pick.subject.canonical}:quiet-pick`;
@@ -1228,6 +1236,7 @@ export function quietPickLedgerEntries(response: QuietPickResponse): LedgerAppen
         ...(scoreBand(pick.companyScore) ? { scoreBand: scoreBand(pick.companyScore) } : {}),
         ...(pick.companyScore != null ? { companyScore: pick.companyScore } : {}),
         order: index,
+        ...(stamps?.get(pick.subject.canonical) ? { publication: stamps.get(pick.subject.canonical) } : {}),
         signal: {
           kind: pick.signal.kind,
           actors: pick.signal.actors,

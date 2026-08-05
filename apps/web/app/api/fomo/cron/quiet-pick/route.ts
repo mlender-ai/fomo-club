@@ -9,6 +9,7 @@ import {
   quietPickPriorState,
   type QuietPickResponse,
 } from "../../../../../lib/quiet-pick";
+import { buildQuietPickStamps, type PublicationStamp } from "../../../../../lib/publication-stamp";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -52,9 +53,20 @@ export async function GET(request: Request) {
     await writeFeedContent(ACTIVE_ID, response);
 
     // 발행 즉시 원장 append(성적표 채점 원료 — G1-C). 원장 실패가 픽 발행을 막지 않는다.
+    //
+    // 발행 시점 스탬프(WO-SUB-07 [F])를 같이 싣는다. **소급 불가** — 이 순간을 놓치면 아키타입·
+    // 팩트시트 해시·무효선을 나중에 복원할 수 없다. 저장 레코드만 읽으므로 외부 소스 장애와 무관하고,
+    // 스탬프 조립이 실패해도 스탬프 없이 원장은 쓴다(기록 자체가 늦는 쪽이 더 큰 손실).
     let ledgerAppended = 0;
+    let stamps = new Map<string, PublicationStamp>();
     try {
-      ledgerAppended = await appendJudgmentLedger(quietPickLedgerEntries(response));
+      stamps = await buildQuietPickStamps(response);
+    } catch (error) {
+      // 스탬프 실패가 원장 기록을 막지 않는다 — 스탬프 없는 행이라도 발행 사실은 남아야 한다.
+      console.warn("[fomo/cron/quiet-pick] publication stamp skipped", error instanceof Error ? error.message : error);
+    }
+    try {
+      ledgerAppended = await appendJudgmentLedger(quietPickLedgerEntries(response, stamps));
     } catch (error) {
       console.warn("[fomo/cron/quiet-pick] ledger append deferred", error instanceof Error ? error.message : error);
     }
@@ -66,6 +78,15 @@ export async function GET(request: Request) {
         date,
         published: response.picks.length,
         ledgerAppended,
+        // 스탬프 확보 현황(WO-SUB-07 [F]) — 몇 장이 발행 시점 기록을 갖췄고 무엇이 비었는지.
+        // 소급 불가라 여기서 0 이 보이면 그날 기록은 영구 결손이다. 크론 응답에 그대로 노출한다.
+        stamped: stamps.size,
+        stampMissing: Object.entries(
+          [...stamps.values()].reduce<Record<string, number>>((acc, stamp) => {
+            for (const field of stamp.missing) acc[field] = (acc[field] ?? 0) + 1;
+            return acc;
+          }, {})
+        ).map(([field, count]) => ({ field, count })),
         qualification: response.qualification,
         // 픽별 데이터 완결성 로그(WO-P1 수용 기준 — 하이드레이션 로그 첨부용).
         dataQuality: response.picks.map((pick) => ({

@@ -14,6 +14,7 @@ import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import type { Daily30AssetClass, Daily30Response } from "./daily-30";
 import type { DiscoveryFrontSeed, DiscoveryStockPayload } from "./discovery-supply";
+import type { PublicationStamp } from "./publication-stamp";
 
 export const LEDGER_KINDS = ["signal", "verdict", "score", "selection", "user_action", "outcome"] as const;
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
@@ -43,6 +44,11 @@ export interface LedgerSelectionPayload {
   pickType?: string;
   /** 조용한 픽 신호 페이로드(성적표 신호별 근거). */
   signal?: Record<string, unknown>;
+  /**
+   * 발행 시점 스탬프(WO-SUB-07 [F]) — 아키타입·룰셋·팩트시트 해시·무효선·어닝일.
+   * **소급 불가**라 발행 순간에만 채울 수 있다. 없는 행은 스탬프 도입 전 발행분이다.
+   */
+  publication?: PublicationStamp;
   market?: string;
   country?: string;
   naverCode?: string;
