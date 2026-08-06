@@ -19,7 +19,17 @@
 
 ### `.mcp.json` 이식성
 
-`codebase-memory`·`headroom`은 커맨드가 로컬 절대경로(`/Users/cocteau/...`)라 **광혁 머신 전용**이다. 다른 머신·CI에서는 그 두 서버가 붙지 않는다(치명적이지 않음 — 없으면 안 붙을 뿐). `codegraph`는 PATH 기반이라 CLI만 설치돼 있으면 어느 머신에서든 동작한다. 새 MCP를 추가할 때는 PATH 기반을 우선한다.
+`codebase-memory`·`headroom`은 커맨드가 로컬 절대경로(`/Users/cocteau/...`)라 **광혁 머신 전용**이다. 다른 머신·CI에서는 그 두 서버가 붙지 않는다(치명적이지 않음 — 없으면 안 붙을 뿐).
+
+`codegraph`는 절대경로 대신 **로그인 셸 경유**(`zsh -lc "exec codegraph serve --mcp"`)로 등록했다. 하드코딩된 홈 경로가 없어 머신 간 이식성이 있고, 동시에 아래 함정을 피한다.
+
+> ⚠️ **실측 함정 — `command: "codegraph"` 만으로는 desktop 앱에서 안 뜬다.** Claude Code desktop 앱 프로세스의 PATH는 `/usr/bin:/bin:/usr/sbin:/sbin` 뿐이고, MCP stdio 서버는 그 환경을 그대로 물려받는다. `~/.local/bin`(codegraph 설치 위치)이 없으므로 PATH 기반 등록은 `command not found`로 죽는다. `sh -lc`도 안 된다 — `sh`는 `~/.zprofile`을 읽지 않는다. `zsh`는 최소 PATH에도 있고(`/bin/zsh`) 로그인 모드에서 `~/.zprofile`을 읽으므로 해석에 성공한다. 기존 두 서버가 지금까지 멀쩡했던 건 절대경로였기 때문이다.
+>
+> 전제: `~/.zprofile`(또는 `~/.zshenv`)에 `export PATH="$HOME/.local/bin:$PATH"` 가 있어야 한다 — §2 셋업에 포함.
+
+`codegraph install` 이 **유저 스코프**에 쓰는 항목(`~/.claude.json`, `~/.cursor/mcp.json`, `~/.codex/config.toml` 등)은 bare `codegraph` 라서 같은 함정에 걸린다. 터미널에서 띄우는 에이전트(Codex CLI 등)는 셸 PATH를 물려받아 정상 동작하지만, **desktop 앱은 위와 같이 고쳐야 한다.** `codegraph upgrade`(`--refresh`)가 그 항목을 되돌려 쓸 수 있으니 업그레이드 후 재확인한다.
+
+새 MCP를 추가할 때는 절대경로 하드코딩보다 이 로그인 셸 경유 패턴을 우선한다.
 
 ## 2. CodeGraph 셋업 (머신당 1회)
 
@@ -27,6 +37,12 @@ CLI는 각자 로컬에 설치한다. 레포에는 인덱스를 커밋하지 않
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
+```
+
+설치 스크립트는 `~/.local/bin/codegraph` 에 링크만 걸고 **PATH는 건드리지 않는다.** 없으면 추가한다(이게 없으면 MCP도 CLI도 안 잡힌다 — §1 실측 함정 참고).
+
+```bash
+grep -q '.local/bin' ~/.zprofile || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zprofile
 ```
 
 새 터미널을 열고 에이전트를 연결한다(Claude Code·Codex CLI·Antigravity·Cursor·Gemini 자동 감지).
