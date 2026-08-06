@@ -31,6 +31,9 @@ docs/fundamentals/coverage_raw.json
 agent-tooling-reports/
 hardening-reports/
 .codebase-memory/
+# CodeGraph 로컬 코드 그래프 인덱스 (머신별 산출물 — 커밋 금지, `codegraph init` 으로 재생성)
+.codegraph/
+.codegraph-*/
 docs/archetype/market_universe_raw.json
 apps/fomo-web/test-results/
 apps/fomo-web/playwright-report/

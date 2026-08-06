@@ -8,6 +8,7 @@
 
 spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순서를 따른다.
 
+0. **Graph**: 코드 통독(grep/Read 반복) 전 `codegraph_explore` 로 대상 기능의 구조를 한 번에 받는다. 변경 대상 심볼이 정해지면 `codegraph impact <symbol>` 로 영향반경을 확인한다. 상세는 아래 "코드 그래프 우선 규약".
 1. **Constitution**: `docs/PRODUCT_VISION.md`, `docs/FOMO_MOAT_DOCTRINE.md`, `AGENTS.md`, `docs/DATA_ENGINE_STRATEGY.md`의 절대 제약을 먼저 확인한다.
 2. **Spec**: 새 작업은 `docs/templates/SPEC_TEMPLATE.md` 형식으로 무엇/왜/성공지표/비범위/절대제약을 고정한다.
 3. **Plan**: 구현 전 `docs/templates/PLAN_TEMPLATE.md` 형식으로 파일, 데이터 흐름, 리스크, 검증을 정한다.
@@ -93,7 +94,20 @@ HANDOFF
 - 검증: <통과/실패한 게이트 — typecheck/test/build>
 - SSOT 변경: <PRODUCT_VISION 등 정본 영향 있으면 명시, 없으면 "없음">
 ```
-받는 쪽은 코드 통독 전 `codebase-memory` MCP(`get_architecture`/`search_graph`/`trace_path`)로 구조를 쿼리해 토큰을 아낀다. (출처: mattpocock /handoff)
+받는 쪽은 코드 통독 전 아래 **코드 그래프 우선 규약**으로 구조를 쿼리해 토큰을 아낀다. 인계 시 `impact 확인함: <symbol> → 영향 N곳` 한 줄을 HANDOFF에 남긴다. (출처: mattpocock /handoff)
+
+### 코드 그래프 우선 규약 (CodeGraph — 전 에이전트 필수)
+
+> 도입 근거·도구 현황: `docs/TOOLING.md`. 이건 **조회 도구**지 자동 실행이 아니다 — 블랙리스트(자율 기획 cron 신설 금지)는 그대로다.
+
+작업 착수 순서는 이렇게 고정한다.
+
+1. **통독 금지, 그래프 먼저.** grep/glob/Read 반복으로 구조를 재발굴하지 않는다. `codegraph_explore "<작업 대상 기능>"` (CLI: `codegraph explore "<query>"`) 한 번으로 관련 심볼의 원문 소스·호출 경로·blast radius를 받는다. 예: `codegraph_explore "discovery card reason synthesis pipeline"`.
+2. **바꾸기 전 영향반경.** 수정 대상 심볼이 정해지면 `codegraph impact <symbol>` 로 blast radius를 확인한 뒤 착수한다. 발견 덱·카드 훅·정렬·섹터 라벨·뎁스 reason·discovery API 등 **제품 불변식 영역이면 필수**이며, 기존 규정대로 `npm run guard:discovery` 를 병행한다. (MCP 기본 노출은 `codegraph_explore` 하나뿐이고 blast-radius 요약이 그 응답에 인라인으로 온다. 별도 `impact` 툴이 필요하면 CLI를 쓰거나 `CODEGRAPH_MCP_TOOLS=explore,impact` 로 노출한다.)
+3. **재검증 금지.** 그래프가 돌려준 소스는 **이미 읽은 것으로 취급**한다. 같은 파일을 grep/Read로 다시 확인하는 것은 토큰 낭비다. 단 편집 직후 **staleness 배너**가 뜨면 그 파일만 직접 Read 한다(자동 싱크 2초 디바운스).
+4. **HANDOFF 기록.** 회귀 추적용으로 `impact 확인함: <symbol> → 영향 N곳` 을 남긴다. #696류 과잉삭제 회귀는 착수 전에 잡는 것이 목표다.
+
+인덱스가 없으면(`codegraph status` 실패) 그래프 쿼리는 깔끔한 안내만 돌려준다 — 그때는 기본 도구로 진행하고, 로컬 셋업은 `docs/TOOLING.md`를 따른다. `codebase-memory` MCP(`get_architecture`/`search_graph`/`trace_path`)는 **레거시/보조**로 병존한다(정리 여부는 광혁 결정). 새 작업은 CodeGraph를 먼저 쓴다.
 
 ---
 

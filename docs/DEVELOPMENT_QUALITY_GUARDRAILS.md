@@ -6,9 +6,16 @@
 
 1. `docs/PRODUCT_VISION.md`를 최상위 정본으로 보고, `docs/PRODUCT_TRUTH.md`, `docs/DATA_ENGINE_STRATEGY.md`, `docs/KEYWORD_ENGINE_SPEC.md`, `docs/AGENT_REDESIGN.md`, `docs/SECURITY_CHECKLIST.md`, `AGENTS.md`, `CLAUDE.md`를 현재 작업 범위에 맞게 확인한다.
 2. 바꿀 것과 바꾸지 않을 것을 PR 본문 또는 HANDOFF에 적는다. 사용자가 지시하지 않은 UX, 카피, 정렬, 로딩 방식은 임의로 바꾸지 않는다.
-3. 코드 작성 전 게으름 사다리를 적용한다. 기존 함수, 타입, 테스트, 스크립트를 먼저 찾고 최소 변경으로 해결한다.
-4. 변경 전 원인과 변경 후 기대 결과를 하나의 문장으로 고정한다. 예: "카드가 가격-only로 퇴보했다 -> 앞단 카드의 가격-only 훅을 게이트에서 실패시킨다."
-5. 데이터가 없으면 지어내지 않는다. 대신 fallback, confidence, fail-closed 동작을 명시한다.
+3. 코드 작성 전 게으름 사다리를 적용한다. 기존 함수, 타입, 테스트, 스크립트를 먼저 찾고 최소 변경으로 해결한다. 기존 코드 탐색은 grep 크롤 대신 `codegraph explore "<대상 기능>"`(MCP: `codegraph_explore`)로 한 번에 받는다.
+4. **변경 전 영향반경(blast radius)을 확인한다.** 수정 대상 심볼이 정해지면 착수 전에 실행한다.
+
+   ```bash
+   codegraph impact <symbol>
+   ```
+
+   §2 제품 불변식에 닿는 심볼(발견 덱, 카드 훅, 카드 정렬, 섹터 라벨, discovery API, depth reason)이면 **필수**이며 §3 자동 게이트와 병행한다. 결과는 PR/HANDOFF에 `impact 확인함: <symbol> → 영향 N곳` 으로 남긴다 — 한 곳을 고치며 호출부를 과잉 삭제하는 회귀(#696류)를 착수 전에 잡는 것이 목적이다. 인덱스가 없거나 CodeGraph가 미설치면 `docs/TOOLING.md` 셋업을 먼저 하고, 그동안은 호출부를 직접 확인한 근거를 남긴다.
+5. 변경 전 원인과 변경 후 기대 결과를 하나의 문장으로 고정한다. 예: "카드가 가격-only로 퇴보했다 -> 앞단 카드의 가격-only 훅을 게이트에서 실패시킨다."
+6. 데이터가 없으면 지어내지 않는다. 대신 fallback, confidence, fail-closed 동작을 명시한다.
 
 ## 2. 제품 불변식
 
@@ -55,6 +62,7 @@ DISCOVERY_GATE_URL=https://fomo-web-mlender-ais-projects.vercel.app/api/fomo/dis
 
 | 변경 범위 | 필수 검증 |
 | --- | --- |
+| 모든 코드 변경 | 착수 전 `codegraph impact <symbol>` (§1-4) |
 | 발견 덱/카드/정렬/훅 | `npm run guard:discovery`, 관련 vitest, production 또는 local API smoke |
 | 뎁스 화면 | 카드 이유가 depth에 전달되는지, 기본 지표가 누락되지 않는지, 가격/차트/근거 섹션이 모순 없는지 확인 |
 | 시장 온도 | API 실패, stale cache, cold start에서도 무한 "데이터 수집 중"이 없는지 확인 |
