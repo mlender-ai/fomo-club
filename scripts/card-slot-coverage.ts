@@ -121,6 +121,26 @@ function catalogSplit(summary: CardSlotSummary): { solvable: number; total: numb
 }
 
 /**
+ * `no_rule_matched` 를 한 번 더 쪼갠다 (2026-08-06 실측으로 필요해짐).
+ *
+ * 유형을 추가해 대부분을 흡수한 뒤에는 **비율 판정이 오해를 만든다** — 실측에서 24건 중 20건이
+ * 순이익·CAGR `null` 로 **규칙에 도달조차 못 하는** 팩트시트 결손이었는데, 비율만 보면
+ * "53% 가 카탈로그 대상" 으로 읽혀 표본 수집을 더 하라는 결론이 나온다.
+ * 규칙을 늘려서 풀리는 것은 **도달한 뒤 안 걸린 건수**뿐이다.
+ */
+function ruleGapSplit(rows: readonly CardSlotRow[]): { unreachable: number; gap: number } {
+  let unreachable = 0;
+  let gap = 0;
+  for (const row of rows) {
+    const d = row.unclassified;
+    if (!d || d.reason !== "no_rule_matched") continue;
+    if (d.net_income_ttm === null || d.revenue_cagr_3y === null) unreachable += 1;
+    else gap += 1;
+  }
+  return { unreachable, gap };
+}
+
+/**
  * A-0 판정 — B2(549종목 수집) 를 그대로 갈지, 줄일지, 멈출지.
  *
  * 덱은 n=10 이라 그것만으로 2~3일 수집을 결정할 수 없다. 그래서 **덱(질문의 대상)과
@@ -129,7 +149,7 @@ function catalogSplit(summary: CardSlotSummary): { solvable: number; total: numb
  */
 const A0_SOLVABLE_FLOOR = 0.5;
 
-function a0Verdict(live: CardSlotSummary, universe: CardSlotSummary): string[] {
+function a0Verdict(live: CardSlotSummary, universe: CardSlotSummary, rows: readonly CardSlotRow[], liveKeys: ReadonlySet<string>): string[] {
   const lines: string[] = ["### A-0 판정", ""];
   const deck = catalogSplit(live);
   const all = catalogSplit(universe);
@@ -146,11 +166,26 @@ function a0Verdict(live: CardSlotSummary, universe: CardSlotSummary): string[] {
   const ratio = all.solvable / all.total;
   lines.push(
     ratio >= A0_SOLVABLE_FLOOR
-      ? `**유니버스 미분류의 ${pct(all.solvable, all.total)} 가 \`no_rule_matched\` 다 — 02R 이 푸는 종류다.**\n` +
-          `B2(549종목 표본 수집)를 설계대로 진행한다.`
-      : `**유니버스 미분류의 ${pct(all.solvable, all.total)} 만 \`no_rule_matched\` 다 (기준 ${A0_SOLVABLE_FLOOR * 100}%).**\n` +
-          `나머지는 분류 코드·재무 결손이라 카탈로그를 늘려도 그대로다. A-0 지시대로 **B2 축소 또는 중단을 사람이 판정**한다 —\n` +
-          `에이전트가 임의로 자르지 않는다. 결손 쪽(\`no_sector\`·\`no_fiscal\`)은 별도 소스 작업이다.`
+      ? `유니버스 미분류의 ${pct(all.solvable, all.total)} 가 \`no_rule_matched\` 다.`
+      : `유니버스 미분류의 ${pct(all.solvable, all.total)} 만 \`no_rule_matched\` 다 (기준 ${A0_SOLVABLE_FLOOR * 100}%). ` +
+          `나머지는 분류 코드·재무 결손이라 카탈로그를 늘려도 그대로다.`
+  );
+  lines.push("");
+  // **비율만으로 판정하지 않는다.** 규칙에 도달조차 못 한 건수를 빼야 "규칙을 늘려서 풀리는 수"가 나온다.
+  const deckGap = ruleGapSplit(rows.filter((row) => liveKeys.has(row.canonical)));
+  const allGap = ruleGapSplit(rows);
+  lines.push("`no_rule_matched` 를 한 번 더 쪼갠다 — 규칙을 늘려서 풀리는 것은 아래쪽뿐이다.");
+  lines.push("");
+  lines.push("| 모집단 | 규칙 도달 불가(순이익·CAGR `null`) | **실제 규칙 공백** |");
+  lines.push("|---|---|---|");
+  lines.push(`| 오늘 덱 | ${deckGap.unreachable} | **${deckGap.gap}** |`);
+  lines.push(`| 365일 유니버스 | ${allGap.unreachable} | **${allGap.gap}** |`);
+  lines.push("");
+  lines.push(
+    allGap.gap === 0
+      ? "**실제 규칙 공백 0 — 카탈로그를 늘려서 풀 대상이 없다.** 남은 것은 팩트시트 결손이므로 표본 수집이 아니라 소스 작업이다."
+      : `**실제 규칙 공백 ${allGap.gap}건.** 표본 수집 규모는 이 숫자로 정한다 — 도달 불가 ${allGap.unreachable}건은 ` +
+          `규칙을 아무리 늘려도 그대로이므로 분모에서 뺀다. **축소·중단 판정은 사람이 한다**(에이전트가 임의로 자르지 않는다).`
   );
   lines.push("");
   if (deck.total > 0 && deck.total < 20) {
@@ -249,7 +284,7 @@ function render(report: CardSlotCoverageReport): string {
   const liveRows = report.rows.filter((row) => liveKeys.has(row.canonical));
   lines.push(...unclassifiedRows("live deck", liveRows));
   lines.push(...unclassifiedRows("universe", report.rows));
-  lines.push(...a0Verdict(report.live_deck, report.universe));
+  lines.push(...a0Verdict(report.live_deck, report.universe, report.rows, liveKeys));
   lines.push(...barUnavailableSection(report.rows));
   lines.push("## 5. 사유 읽는 법");
   lines.push("");
