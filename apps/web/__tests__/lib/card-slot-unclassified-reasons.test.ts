@@ -36,6 +36,7 @@ function row(overrides: Partial<CardSlotRow>): CardSlotRow {
     slot3_reason: null,
     archetype: null,
     unclassified: null,
+    bar_unavailable: null,
     ...overrides,
   };
 }

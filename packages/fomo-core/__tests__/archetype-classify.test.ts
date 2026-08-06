@@ -139,7 +139,13 @@ describe("데이터 부족 선차단 (완료 조건 6)", () => {
   });
 
   it("어느 규칙에도 안 걸리면 UNCLASSIFIED(no_rule_matched)", () => {
-    const result = classifyArchetype(sheet({ cagr3y: 8, netIncomeTtm: 400, pbr: 3 }));
+    /**
+     * v1.2.0 에서 `STABLE_EARNINGS` 가 흑자·저성장·저배당 구간을 담당하므로, 여기 쓰는 케이스는
+     * **그 규칙도 통과하는 것**이어야 한다: 배당이 성숙형 임계값을 넘고(3 초과) 성장은 성장주
+     * 임계값에 못 미치는(5~15) 구간 — `MATURE_INCOME`(CAGR<5 요구)과 `STABLE_EARNINGS`
+     * (배당 ≤3 요구) 사이에 남은 실제 잔여 구간이다(02R 판정 카드에서 중성장 4건).
+     */
+    const result = classifyArchetype(sheet({ cagr3y: 8, netIncomeTtm: 400, pbr: 3, dividendYield: 4 }));
     expect(result.code).toBe("UNCLASSIFIED");
     expect(result.reason).toBe("no_rule_matched");
   });
@@ -245,6 +251,71 @@ describe("나머지 규칙", () => {
 
   it("순현금 비중이 임계값 이하면 자산형이 아니다", () => {
     expect(classifyArchetype(sheet({ pbr: 0.6, netCash: 1_000, marketCap: 10_000, cagr3y: 8 })).code).not.toBe("ASSET_DEEP_VALUE");
+  });
+});
+
+/**
+ * `STABLE_EARNINGS` (v1.2.0) — 02R 판정 카드가 지목한 빈 구간.
+ *
+ * 이 유형의 존재 이유는 **임계값을 느슨하게 하지 않고** 구간을 메우는 것이다.
+ * 그래서 두 가지를 같이 고정한다: (1) 여집합을 실제로 흡수한다 (2) **기존 유형을 가로채지 않는다.**
+ */
+describe("STABLE_EARNINGS — 성장·흑자와 성숙·배당형 사이", () => {
+  it("흑자 + 성장 임계값 미달 + 배당 임계값 이하 → STABLE_EARNINGS", () => {
+    const result = classifyArchetype(sheet({ cagr3y: 8, netIncomeTtm: 400, pbr: 3, dividendYield: 2 }));
+    expect(result.code).toBe("STABLE_EARNINGS");
+    expect(result.matched_rule).toBe("profit+cagr<θ_growth+dividend<=θ_mature");
+  });
+
+  it("배당이 아예 없어도(null) 걸린다 — 무배당이 배제 사유가 아니다", () => {
+    expect(classifyArchetype(sheet({ cagr3y: 2, netIncomeTtm: 400, pbr: 3, dividendYield: null })).code).toBe("STABLE_EARNINGS");
+  });
+
+  it("매출이 줄어드는 흑자 기업도 이 유형이다 — 성장이 관측 지점이 아니다", () => {
+    expect(classifyArchetype(sheet({ cagr3y: -6, netIncomeTtm: 400, pbr: 3 })).code).toBe("STABLE_EARNINGS");
+  });
+
+  it("임계값 경계 — CAGR 이 성장 임계값에 닿으면 QUALITY_COMPOUNDER 쪽이다", () => {
+    // 임계값을 내려서 쓸어담지 않는다는 것이 이 유형의 전제다. 경계는 기존 θ 그대로.
+    expect(classifyArchetype(sheet({ cagr3y: THRESHOLDS.growth_cagr_pct - 0.1, netIncomeTtm: 400 })).code).toBe("STABLE_EARNINGS");
+    expect(classifyArchetype(sheet({ cagr3y: THRESHOLDS.growth_cagr_pct + 0.1, netIncomeTtm: 400 })).code).toBe("QUALITY_COMPOUNDER");
+  });
+
+  it("배당이 성숙형 임계값을 넘으면 이 유형이 아니다", () => {
+    expect(
+      classifyArchetype(sheet({ cagr3y: 2, netIncomeTtm: 400, dividendYield: THRESHOLDS.mature_dividend_yield_pct + 0.1 })).code
+    ).toBe("MATURE_INCOME");
+    expect(classifyArchetype(sheet({ cagr3y: 2, netIncomeTtm: 400, dividendYield: THRESHOLDS.mature_dividend_yield_pct })).code).toBe(
+      "STABLE_EARNINGS"
+    );
+  });
+
+  it("적자면 이 유형이 아니다 — 흑자가 전제다", () => {
+    expect(classifyArchetype(sheet({ cagr3y: 2, netIncomeTtm: -100 })).code).toBe("TURNAROUND_LOSS");
+  });
+
+  it("기존 유형을 가로채지 않는다 — 규칙 순서가 마지막이다", () => {
+    // 전부 흑자·저성장·저배당 조건을 동시에 만족하지만, 더 구체적인 규칙이 먼저 이긴다.
+    expect(classifyArchetype(sheet({ industry: "Savings Institutions", cagr3y: 2, netIncomeTtm: 400 })).code).toBe("BANK_FINANCIAL");
+    expect(classifyArchetype(sheet({ industry: "Steel/Iron Ore", stdevAnnual: 7, cagr3y: 2, netIncomeTtm: 400 })).code).toBe(
+      "CYCLICAL_COMMODITY"
+    );
+    expect(classifyArchetype(sheet({ industry: "Major Pharmaceuticals", revenueTtm: 5_000_000_000, cagr3y: 2 })).code).toBe(
+      "PHARMA_STABLE"
+    );
+    expect(classifyArchetype(sheet({ pbr: 0.6, netCash: 4_000, marketCap: 10_000, cagr3y: 2, netIncomeTtm: 400 })).code).toBe(
+      "ASSET_DEEP_VALUE"
+    );
+  });
+
+  it("경고문에 판단어가 없고 관측 지점을 말한다", () => {
+    const frame = frameOf("STABLE_EARNINGS");
+    expect(frame.warning_full).toContain("관측 지점");
+    // MATURE_INCOME 초안의 "정상 구간입니다" 식 판단 표현을 쓰지 않는다(2026-08-06 단서).
+    expect(frame.warning_full).not.toContain("정상 구간");
+    expect(frame.warning_short).not.toContain("정상 구간");
+    // PER 단독 노출은 경고문 부착이 필수다(INV-11).
+    expect(frame.requires_warning_metrics.map((entry) => entry.path)).toContain("valuation.per_ttm");
   });
 });
 

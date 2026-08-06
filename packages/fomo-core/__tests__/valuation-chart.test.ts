@@ -198,7 +198,7 @@ describe("이미 수집하던 시계열을 노출한 뒤 (2026-08-03)", () => {
   });
 });
 
-describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된다", () => {
+describe("완료 조건 1 — 전 유형이 데이터 층에서 판정된다", () => {
   /**
    * 남은 4유형(HYPERGROWTH·PHARMA_STABLE·MATURE_INCOME·TURNAROUND_LOSS)을 채운다.
    * **"테스트가 있다"가 아니라 "그 유형의 축이 실제로 그 축인지"를 본다** — 독트린에서 축을
@@ -263,9 +263,10 @@ describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된�
     expect(chart.bars).toEqual([]);
   });
 
-  it("10유형 전부가 이 파일에서 한 번은 빌드된다 — 빠뜨린 유형이 없다", () => {
+  it("전 유형이 이 파일에서 한 번은 빌드된다 — 빠뜨린 유형이 없다", () => {
     const covered = DOCTRINE.archetypes.map((frame) => frame.code as ArchetypeCode);
-    expect(covered).toHaveLength(10);
+    // 유형 수를 상수로 박지 않는다 — 02R 이 유형을 늘리면 이 테스트가 그 유형까지 자동으로 돈다.
+    expect(covered.length).toBeGreaterThanOrEqual(11);
     for (const code of covered) {
       // 던지지 않는 것 자체가 조건이다. 축이 없거나 데이터가 없으면 renderable: false 로 끝나야 한다.
       const chart = buildValuationChart(withRevenue(), code, RULESET);
@@ -276,8 +277,8 @@ describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된�
 });
 
 describe("축 매핑은 독트린에서 온다", () => {
-  it("10개 유형 전부가 축 매핑 항목을 갖는다(값이 null 이어도 명시적으로)", () => {
-    expect(DOCTRINE.archetypes).toHaveLength(10);
+  it("전 유형이 축 매핑 항목을 갖는다(값이 null 이어도 명시적으로)", () => {
+    expect(DOCTRINE.archetypes.length).toBeGreaterThanOrEqual(11);
     for (const frame of DOCTRINE.archetypes) {
       expect(frame).toHaveProperty("chart_axes");
     }

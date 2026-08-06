@@ -10,6 +10,7 @@ export type ArchetypeCode =
   | "MATURE_INCOME"
   | "TURNAROUND_LOSS"
   | "ASSET_DEEP_VALUE"
+  | "STABLE_EARNINGS"
   | "UNCLASSIFIED";
 
 /** `UNCLASSIFIED` 사유 — 완료 조건 6: 반드시 붙는다. */

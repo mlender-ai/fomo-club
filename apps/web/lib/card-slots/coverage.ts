@@ -2,6 +2,7 @@ import {
   RULESET_VERSION,
   buildValuationChart,
   classifyArchetype,
+  frameOf,
   toRenderable,
   type ArchetypeResult,
   type BusinessContext,
@@ -76,6 +77,26 @@ export interface UnclassifiedDiagnostic {
   operating_stdev_annual_years: number;
 }
 
+/**
+ * `bar_series_unavailable` 진단 (2026-08-06).
+ *
+ * BANK 는 WO-SUB-04 가 허용한 두 번째 축(자기자본)으로 풀렸다. 남은 유형에도 같은 해법이
+ * 가능한지는 **대체 축의 입력이 실제로 있는지**에 달렸다 — 없는데 "나눗셈 한 번"이라고 판단하면
+ * 30분짜리가 아니게 된다. 그래서 판단 근거를 데이터로 남긴다.
+ */
+export interface BarUnavailableDiagnostic {
+  /** 독트린이 지정한 막대축(소스에 매핑이 없는 그 축). */
+  bar_series: string;
+  market: string;
+  /** 대체 축 후보의 입력 유무 — 있는 것과 없는 것을 구분해 센다. */
+  has_dividend_paid_ttm: boolean;
+  has_shares_outstanding: boolean;
+  /** 배당 시계열을 만들 수 있는지의 근거: 현금흐름이 관측된 분기 수. */
+  cashflow_observed_quarters: number;
+  /** 연간 시계열 후보 길이 — 연간 막대를 만들 수 있는 최소 조건. */
+  annual_periods: number;
+}
+
 export interface CardSlotRow {
   canonical: string;
   market: string;
@@ -88,6 +109,8 @@ export interface CardSlotRow {
   archetype: string | null;
   /** `archetype === "UNCLASSIFIED"` 일 때만 채워진다. */
   unclassified: UnclassifiedDiagnostic | null;
+  /** `slot3_reason === "bar_series_unavailable"` 일 때만 채워진다. */
+  bar_unavailable: BarUnavailableDiagnostic | null;
 }
 
 export interface CardSlotSummary {
@@ -166,13 +189,15 @@ function evaluateSlot3(factsheet: FactSheet | null): {
   reason: Slot3Reason | null;
   archetype: string | null;
   unclassified: UnclassifiedDiagnostic | null;
+  bar_unavailable: BarUnavailableDiagnostic | null;
 } {
-  if (factsheet === null) return { ok: false, reason: "no_factsheet", archetype: null, unclassified: null };
+  if (factsheet === null)
+    return { ok: false, reason: "no_factsheet", archetype: null, unclassified: null, bar_unavailable: null };
   let result: ArchetypeResult;
   try {
     result = classifyArchetype(factsheet);
   } catch {
-    return { ok: false, reason: "build_error", archetype: null, unclassified: null };
+    return { ok: false, reason: "build_error", archetype: null, unclassified: null, bar_unavailable: null };
   }
   const archetype = result.code;
   // 분류기가 이미 사유와 관측값을 돌려준다 — 여기서 다시 계산하면 두 벌이 어긋난다.
@@ -195,10 +220,28 @@ function evaluateSlot3(factsheet: FactSheet | null): {
   try {
     // `frameOf` 는 독트린에 없는 코드에 대해 던진다 — 배치 루프가 통째로 죽지 않게 감싼다.
     const chart = buildValuationChart(factsheet, archetype as never, RULESET_VERSION);
-    if (chart.renderable) return { ok: true, reason: null, archetype, unclassified };
-    return { ok: false, reason: (chart.unavailable_reason as Slot3Reason) ?? "build_error", archetype, unclassified };
+    if (chart.renderable) return { ok: true, reason: null, archetype, unclassified, bar_unavailable: null };
+    const reason = (chart.unavailable_reason as Slot3Reason) ?? "build_error";
+    return {
+      ok: false,
+      reason,
+      archetype,
+      unclassified,
+      bar_unavailable:
+        reason === "bar_series_unavailable"
+          ? {
+              // 독트린이 지정한 축 이름은 빌더가 숨길 때 페이로드에서 지워지므로 프레임에서 읽는다.
+              bar_series: frameOf(archetype as never).chart_axes?.bar_series ?? "(축 없음)",
+              market: factsheet.market,
+              has_dividend_paid_ttm: factsheet.cashflow.dividend_paid_ttm !== null,
+              has_shares_outstanding: factsheet.market_data.shares_outstanding !== null,
+              cashflow_observed_quarters: factsheet.cashflow.observed_quarters,
+              annual_periods: factsheet.fiscal.annual.length,
+            }
+          : null,
+    };
   } catch {
-    return { ok: false, reason: "build_error", archetype, unclassified };
+    return { ok: false, reason: "build_error", archetype, unclassified, bar_unavailable: null };
   }
 }
 
@@ -219,6 +262,7 @@ async function rowFor(market: string, canonical: string): Promise<CardSlotRow> {
     slot3_reason: slot3.reason,
     archetype: slot3.archetype,
     unclassified: slot3.unclassified,
+    bar_unavailable: slot3.bar_unavailable,
   };
 }
 
