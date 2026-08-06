@@ -288,7 +288,7 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
       ev_ebitda: evEbitda.value,
       dividend_yield: dividendYield.value,
       per_forward: perForward.value,
-      dps_annual: toBalanceSeries(input.dpsAnnual, fiscalSource),
+      dps_annual: toBalanceSeries(input.dpsAnnual, fiscalSource, "year"),
       band_5y: {
         metric: null, // WO-SUB-02 가 아키타입에 따라 결정한다. 여기서는 계산만 한다.
         per: bands.per,
