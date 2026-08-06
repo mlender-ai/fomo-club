@@ -254,3 +254,35 @@ describe("결정론 (완료 조건 3)", () => {
     expect(canonicalFactsheetJson(a)).not.toBe(canonicalFactsheetJson(b));
   });
 });
+
+/**
+ * 연간 주당배당금 (2026-08-06).
+ *
+ * 실 소스 경로에서 두 결함을 겪고 붙인 테스트다: ① 점에 출처를 안 실으면 조립 단계 폴백이
+ * **분기 표 출처**를 찍는다(연간표에서 온 값인데 `naver_finance_quarter` 로 기록됐다)
+ * ② 연간값에 분기 라벨(`2023Q4`)이 붙어 페이로드를 읽는 쪽이 분기값으로 오독한다.
+ */
+describe("연간 주당배당금 시계열", () => {
+  it("연도 라벨을 쓰고 점 출처를 그대로 보존한다", () => {
+    const sheet = assembleFactSheet(
+      baseInput({
+        dpsAnnual: [
+          { period_end: "2024-12-31", filed_at: "2025-03-31", value: 2_469, source: "naver_finance_annual.주당배당금" },
+          { period_end: "2025-12-31", filed_at: "2026-03-31", value: 1_651, source: "naver_finance_annual.주당배당금" },
+        ],
+      })
+    );
+    expect(sheet.valuation.dps_annual.map((point) => point.period)).toEqual(["2024", "2025"]);
+    // 출처가 분기 표로 덮이면 여기서 깨진다.
+    expect(sheet.valuation.dps_annual.every((point) => point.source === "naver_finance_annual.주당배당금")).toBe(true);
+    // 배당이 줄어든 연도를 평탄화하지 않는다.
+    expect(sheet.valuation.dps_annual.map((point) => point.value)).toEqual([2_469, 1_651]);
+  });
+
+  it("소스가 주당배당금을 주지 않으면 빈 배열이다 — 총액에서 역산하지 않는다", () => {
+    const sheet = assembleFactSheet(baseInput({ dpsAnnual: [] }));
+    expect(sheet.valuation.dps_annual).toEqual([]);
+    // 배당금지급 총액은 있어도(픽스처가 넣는다) 주당 값을 만들지 않는다.
+    expect(sheet.cashflow.dividend_paid_ttm).not.toBeNull();
+  });
+});

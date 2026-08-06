@@ -378,7 +378,14 @@ export async function fetchNaverFundamentals(naverCode: string, closesFrom: stri
     const dps = rowValue(annualParsed.rows, key, ["주당배당금"]);
     // 0 은 "배당을 하지 않았다"는 사실이므로 버리지 않는다. null 만 건너뛴다.
     if (dps === null) continue;
-    dpsAnnual.push({ period_end: record.period_end, filed_at: record.filed_at, value: dps });
+    // **출처를 점에 직접 싣는다.** 비워두면 조립 단계의 회계 소스 폴백(분기 표)이 찍혀
+    // 연간표에서 온 값이 `naver_finance_quarter` 로 기록된다 — 실측으로 겪은 결함이다.
+    dpsAnnual.push({
+      period_end: record.period_end,
+      filed_at: record.filed_at,
+      value: dps,
+      source: "naver_finance_annual.주당배당금",
+    });
   }
 
   const summary = [

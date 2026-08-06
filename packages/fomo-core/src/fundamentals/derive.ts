@@ -228,7 +228,15 @@ function quarterLabel(periodEnd: string): string {
  * 같은 기간말이 여러 보고서에서 오면 **나중에 공시된 것을 쓴다**(정정공시 반영).
  * 오름차순 고정 + 상한 20분기.
  */
-export function toBalanceSeries(points: readonly PointObservation[], fallbackSource: string | null): BalancePoint[] {
+export function toBalanceSeries(
+  points: readonly PointObservation[],
+  fallbackSource: string | null,
+  /**
+   * 라벨 단위. 연간 시계열에 분기 라벨(`2023Q4`)을 붙이면 페이로드를 읽는 쪽이 분기값으로
+   * 오독한다 — 화면은 연도만 쓰지만 감사·원장은 이 라벨을 본다.
+   */
+  labelUnit: "quarter" | "year" = "quarter"
+): BalancePoint[] {
   const byPeriod = new Map<string, PointObservation>();
   for (const point of points) {
     if (!Number.isFinite(point.value)) continue;
@@ -239,7 +247,7 @@ export function toBalanceSeries(points: readonly PointObservation[], fallbackSou
     .sort((a, b) => a.period_end.localeCompare(b.period_end))
     .slice(-BALANCE_SERIES_QUARTERS)
     .map((point) => ({
-      period: quarterLabel(point.period_end),
+      period: labelUnit === "year" ? point.period_end.slice(0, 4) : quarterLabel(point.period_end),
       period_end: point.period_end,
       filed_at: point.filed_at,
       value: point.value,
