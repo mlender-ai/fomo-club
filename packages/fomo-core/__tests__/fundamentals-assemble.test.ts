@@ -63,6 +63,8 @@ function baseInput(overrides: Partial<FactSheetInput> = {}): FactSheetInput {
     operatingCashFlow: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 50 })),
     capex: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 12 })),
     dividendPaid: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 5 })),
+    // 연간 주당배당금 — 소스가 주당 기준으로 직접 주는 값(총액 역산이 아니다).
+    dpsAnnual: ANNUAL.map((a) => ({ period_end: a.period_end, filed_at: a.filed_at, value: 300 })),
     interestExpense: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 10 })),
     depreciation: QUARTERS.map((q) => ({ period_end: q.period_end, filed_at: q.filed_at, value: 20 })),
     closes: [],

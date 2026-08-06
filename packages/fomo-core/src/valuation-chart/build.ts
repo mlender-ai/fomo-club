@@ -75,8 +75,11 @@ function estimateLabel(raw: string): string | null {
  *    파이프라인이 이미 분기별로 수집하고 있었는데 `assemble` 이 최신값만 남기고 버리던 것을
  *    노출했다. 새 소스를 붙인 것이 아니다.
  *
- * 아직 없는 것: `annual_net_interest_income`(BANK) · `annual_dps`(MATURE_INCOME).
- * 이 둘은 진짜로 소스에 매핑이 없다 — **다른 지표로 바꿔 그리지 않는다.**
+ * `annual_dps`(MATURE_INCOME) 는 2026-08-06 에 열렸다 — 네이버 연간표가 `주당배당금` 행을
+ * 그대로 준다(총액 역산이 아니다). US 는 SEC 연간 기간값 헬퍼가 없어 아직 빈 배열이다.
+ *
+ * 아직 없는 것: `annual_net_interest_income`(BANK — 자기자본 축으로 교체됨).
+ * **없는 것을 다른 지표로 바꿔 그리지 않는다.**
  */
 function resolveBars(factsheet: FactSheet, series: ChartBarSeries): ChartBar[] | null {
   if (series === "annual_revenue") {
@@ -110,6 +113,20 @@ function resolveBars(factsheet: FactSheet, series: ChartBarSeries): ChartBar[] |
         source: point.source,
         as_of: point.period_end,
       }));
+  }
+  if (series === "annual_dps") {
+    /**
+     * 주당배당금 — **소스가 주당 기준으로 직접 준 값만 쓴다**(2026-08-06).
+     * 배당총액 ÷ 현재 주식수로 만들지 않는다: 과거 연도에 현재 주식수를 대면 분할·증자 이력이
+     * 있는 종목에서 틀린 값이 나온다. `valuation.dps_annual` 은 연간 시계열이라 필터가 필요 없다.
+     */
+    return factsheet.valuation.dps_annual.map((point) => ({
+      label: yearLabel(point.period_end),
+      value: point.value,
+      kind: "actual" as const,
+      source: point.source,
+      as_of: point.period_end,
+    }));
   }
   if (series === "quarterly_operating_income") {
     return factsheet.fiscal.quarters
