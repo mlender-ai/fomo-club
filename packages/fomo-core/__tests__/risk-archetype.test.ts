@@ -57,6 +57,63 @@ describe("유형 리스크 문안 (독트린 정본)", () => {
     }
   });
 
+  /**
+   * 말투 통일 (사람 결정 A). 카드가 해요체인데 리스크만 합니다체면 같은 화면에서 톤이 갈려
+   * 리스크 섹션만 다른 앱에서 붙여온 것처럼 읽힌다. 새 문안이 합니다체로 들어오는 것을 막는다.
+   */
+  it("문안이 해요체다", () => {
+    const violations = ALL_RISKS.filter((risk) => /(습니다|합니다|입니다|됩니다)/.test(risk.text)).map((risk) => risk.id);
+    expect(violations).toEqual([]);
+  });
+
+  it("문안 길이가 60자를 넘지 않는다 — §6 UI 한 줄 예산", () => {
+    const over = ALL_RISKS.filter((risk) => risk.text.length > 60).map((risk) => `${risk.id}(${risk.text.length})`);
+    expect(over).toEqual([]);
+  });
+
+  /**
+   * 왕초보 어휘 — 제품이 "처음 보는 회사"를 보여주는데 설명이 더 어려우면 안 된다.
+   * 사용자가 지목한 트레이더 어휘를 사전으로 고정한다(§10 "보일러플레이트를 그대로 노출" 과 같은 계열의 실패).
+   */
+  const TRADER_TERMS = [
+    "익스포저",
+    "런웨이",
+    "잉여현금흐름",
+    "파이프라인",
+    "재조달",
+    "희석",
+    "자본 배치",
+    "순이자마진",
+    "밸류에이션",
+    "복제약",
+  ];
+
+  it("문안에 트레이더 어휘가 없다", () => {
+    const violations = ALL_RISKS.flatMap((risk) =>
+      TRADER_TERMS.filter((term) => risk.text.includes(term)).map((term) => `${risk.id}: ${term}`)
+    );
+    expect(violations).toEqual([]);
+  });
+
+  it("고지 문구도 해요체다 — 블록 안에서 톤이 갈리지 않는다", () => {
+    expect(ARCHETYPE_RISK_DISCLAIMER).not.toMatch(/(습니다|합니다|입니다|됩니다)/);
+  });
+
+  it("경고문 10종도 같은 말투·어휘 규칙을 지킨다", () => {
+    const copies = DOCTRINE.archetypes
+      .flatMap((frame) => [frame.warning_short, frame.warning_full])
+      .filter((text): text is string => Boolean(text));
+    expect(copies.length).toBeGreaterThan(0);
+    const violations = copies.flatMap((text) => {
+      const hits: string[] = [];
+      if (/(습니다|합니다|입니다|됩니다)/.test(text)) hits.push(`합니다체: ${text.slice(0, 30)}`);
+      for (const term of TRADER_TERMS) if (text.includes(term)) hits.push(`${term}: ${text.slice(0, 30)}`);
+      for (const hit of bannedWordHits(text)) hits.push(`${hit.rule}="${hit.matched}"`);
+      return hits;
+    });
+    expect(violations).toEqual([]);
+  });
+
   it("유형당 상한을 넘지 않는다", () => {
     for (const frame of DOCTRINE.archetypes) {
       expect(frame.risks.length, frame.code).toBeLessThanOrEqual(ARCHETYPE_RISK_MAX);

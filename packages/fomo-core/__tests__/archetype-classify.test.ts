@@ -308,9 +308,12 @@ describe("STABLE_EARNINGS — 성장·흑자와 성숙·배당형 사이", () =>
     );
   });
 
-  it("경고문에 판단어가 없고 관측 지점을 말한다", () => {
+  it("경고문에 판단어가 없고 무엇을 볼지 말한다", () => {
     const frame = frameOf("STABLE_EARNINGS");
-    expect(frame.warning_full).toContain("관측 지점");
+    // "관측 지점" 리터럴을 요구하던 단정문이었다. WO-SUB-06 문안 리라이트에서 왕초보 어휘로
+    // "확인할 지점" 으로 바뀌었고(사람 결정), 이 테스트의 의도는 특정 표현이 아니라 **판단 대신
+    // 볼 것을 지목하는가** 다. 표현 목록으로 넓히고 아래 판단어 금지는 그대로 둔다.
+    expect(frame.warning_full).toMatch(/(관측 지점|확인할 지점|확인할 수 있는)/);
     // MATURE_INCOME 초안의 "정상 구간입니다" 식 판단 표현을 쓰지 않는다(2026-08-06 단서).
     expect(frame.warning_full).not.toContain("정상 구간");
     expect(frame.warning_short).not.toContain("정상 구간");
