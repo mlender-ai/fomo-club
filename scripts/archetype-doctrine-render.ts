@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { DOCTRINE } from "../packages/fomo-core/src/archetype/classify";
 import { KNOWN_CYCLICAL_GATE_MISSES, RULESET_VERSION, THRESHOLDS, BIO_REVENUE_FLOOR } from "../packages/fomo-core/src/archetype/ruleset";
 import { STDEV_MIN_YEARS } from "../packages/fomo-core/src/archetype/classify";
-import type { ArchetypeFrame } from "../packages/fomo-core/src/archetype/types";
+import { ARCHETYPE_RISK_DISCLAIMER, type ArchetypeFrame } from "../packages/fomo-core/src/archetype/types";
 
 export const DOCTRINE_PATH = join("docs", "archetype", "DOCTRINE_archetype_frames.md");
 
@@ -117,7 +117,15 @@ function renderFrame(frame: ArchetypeFrame, index: number): string[] {
   lines.push("#### 리스크 템플릿 (WO-SUB-06 입력)");
   lines.push("");
   if (frame.risks.length === 0) lines.push("없음.");
-  else for (const risk of frame.risks) lines.push(`- ${risk}`);
+  else {
+    lines.push("| id | 항목 | 화면 문안 | 분류 |");
+    lines.push("|---|---|---|---|");
+    for (const risk of frame.risks) {
+      lines.push(`| \`${risk.id}\` | ${risk.label} | ${risk.text} | ${risk.category} |`);
+    }
+    lines.push("");
+    lines.push(`> 표시할 때 항상 병기: ${ARCHETYPE_RISK_DISCLAIMER}`);
+  }
   lines.push("");
   if (frame.unavailable_metrics.length > 0) {
     lines.push("#### 확보하지 못한 지표 (WO 카탈로그 요구 대비)");

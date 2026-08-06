@@ -70,6 +70,36 @@ export interface ChartAxes {
   note: string | null;
 }
 
+/**
+ * 유형 리스크 분류 (WO-SUB-06 §5-1).
+ *
+ * 사용자에게 보이는 축이 아니라 **점검용 축**이다. 한 유형의 리스크가 한 범주에만 몰려 있으면
+ * 그 유형의 리스크 목록이 한쪽 눈으로만 쓰였다는 신호다.
+ */
+export type ArchetypeRiskCategory = "supply" | "demand" | "financial" | "regulatory" | "concentration";
+
+export interface ArchetypeRiskItem {
+  /** `cyclical-capacity` 같은 안정 식별자. WO-SUB-07 이 이걸로 항목을 추적한다. */
+  id: string;
+  /** WO-SUB-02 가 확정한 항목명("증설 물량 도래"). 화면에 내지 않고 감사·추적용으로 둔다. */
+  label: string;
+  /** 화면 문안. 1문장, 조건형. 인과 단정·공포 조장 금지(INV-09 로 강제). */
+  text: string;
+  category: ArchetypeRiskCategory;
+}
+
+/**
+ * 유형 리스크에 항상 병기하는 고지 (WO-SUB-06 §5-1 · 완료 조건 1).
+ *
+ * **유형 리스크를 종목 고유 리스크처럼 보이게 하면 거짓말이다.** 그래서 문안 옆이 아니라
+ * 여기 상수로 두고, 렌더 경로가 이걸 함께 내지 않으면 테스트가 실패한다.
+ */
+export const ARCHETYPE_RISK_DISCLAIMER =
+  "이 유형의 종목에 일반적으로 해당하는 항목입니다. 이 회사 고유의 상황이 아닙니다.";
+
+/** 유형당 리스크 상한 — UI 에 다 들어가지 않는다. 넘치면 중요도 순으로 자른다. */
+export const ARCHETYPE_RISK_MAX = 4;
+
 export interface ArchetypeFrame {
   code: ArchetypeCode;
   label_ko: string;
@@ -88,7 +118,18 @@ export interface ArchetypeFrame {
   warning_short: string | null;
   /** 디테일용 전체 문안. */
   warning_full: string | null;
-  risks: string[];
+  /**
+   * 유형 리스크 (WO-SUB-06 §5-1).
+   *
+   * **라벨만으로는 화면에 낼 수 없다.** WO-SUB-02 가 확정한 것은 항목(무엇을 리스크로 볼지)이고,
+   * 사용자에게 보이는 것은 문장이다. "증설 물량 도래" 를 그대로 띄우면 무슨 뜻인지 전달되지 않는다.
+   * 그래서 항목마다 `label`(독트린이 확정한 항목명)과 `text`(화면 문안)를 함께 둔다.
+   *
+   * 문안이 독트린 밖(예: `packages/risk/`)에 있으면 경고문·금지 지표·축 매핑과 달리
+   * 리스크 문안만 SSOT 가 둘로 갈린다 — drift 방지가 독트린을 정본으로 유지하는 이유이므로
+   * 여기 둔다.
+   */
+  risks: ArchetypeRiskItem[];
   examples: Array<{ name: string; note: string }>;
   /** WO 카탈로그가 요구하지만 현재 소스로 확보하지 못한 지표. */
   unavailable_metrics: UnavailableRef[];
