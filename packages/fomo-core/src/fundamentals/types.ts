@@ -156,6 +156,14 @@ export interface FactSheetValuation {
   dividend_yield: number | null;
   /** 컨센서스 있을 때만. */
   per_forward: number | null;
+  /**
+   * 연간 주당배당금, period_end 오름차순. `MATURE_INCOME` 막대축 입력.
+   *
+   * **총액 ÷ 주식수로 만들지 않는다** — 과거 연도에 현재 주식수를 쓰면 분할·증자 이력이 있는
+   * 종목에서 틀린 값이 된다. 소스가 주당 기준으로 직접 주는 값만 싣는다(네이버 연간표 `주당배당금`).
+   * 컨센서스 열은 제외한다 — 지급된 배당과 예상 배당을 같은 막대에 섞지 않는다.
+   */
+  dps_annual: BalancePoint[];
   band_5y: {
     /** 무엇을 밴드로 쓸지는 WO-SUB-02 가 결정한다. 여기서는 가능한 것 전부 계산. */
     metric: BandMetric | null;

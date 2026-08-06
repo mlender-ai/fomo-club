@@ -1,5 +1,5 @@
 import { computeBands, type DailyClose, type EquityPoint, type SharesPoint } from "./bands";
-import { deriveBalance, deriveCashflow, deriveGrowth, deriveMargin, type PointObservation } from "./derive";
+import { deriveBalance, deriveCashflow, deriveGrowth, deriveMargin, toBalanceSeries, type PointObservation } from "./derive";
 import { collectMissingFields } from "./missing";
 import { composeFiscal, dedupeByPeriodEnd, TTM_QUARTERS } from "./ttm";
 import type {
@@ -47,6 +47,11 @@ export interface FactSheetInput {
   capex: readonly PointObservation[];
   /** 분기 배당금지급. */
   dividendPaid: readonly PointObservation[];
+  /**
+   * 연간 주당배당금 — 소스가 주당 기준으로 직접 주는 값만. 없으면 빈 배열이다.
+   * 총액에서 역산하지 않는다(연도별 주식수가 없으면 틀린 값이 된다).
+   */
+  dpsAnnual: readonly PointObservation[];
   interestExpense: readonly PointObservation[];
   /** 감가상각비(분기) — EV/EBITDA 계산에만 쓴다. 없으면 EV/EBITDA 는 null. */
   depreciation: readonly PointObservation[];
@@ -283,6 +288,7 @@ export function assembleFactSheet(input: FactSheetInput): FactSheet {
       ev_ebitda: evEbitda.value,
       dividend_yield: dividendYield.value,
       per_forward: perForward.value,
+      dps_annual: toBalanceSeries(input.dpsAnnual, fiscalSource),
       band_5y: {
         metric: null, // WO-SUB-02 가 아키타입에 따라 결정한다. 여기서는 계산만 한다.
         per: bands.per,
@@ -337,6 +343,7 @@ export function emptyFactSheet(seed: {
     operatingCashFlow: [],
     capex: [],
     dividendPaid: [],
+    dpsAnnual: [],
     interestExpense: [],
     depreciation: [],
     closes: [],

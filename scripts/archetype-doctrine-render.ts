@@ -352,6 +352,9 @@ export function renderDoctrine(): string {
   lines.push(
     "| `archetype-v1.1.0` | 2026-08-06 | `BANK_FINANCIAL` 막대축을 순이자이익 → **자기자본**으로 교체(WO-SUB-FINISH A-3, 선택지 A). 분류 규칙·임계값은 바뀌지 않았다 | 차트 축만. 분류 결과와 `ruleset_version` 은 불변 |"
   );
+  lines.push(
+    "| `archetype-v1.2.0` | 2026-08-06 | **`STABLE_EARNINGS` 신설** — 성장·흑자와 성숙·배당형 사이의 빈 구간(02R 판정 카드 64건). **기존 θ 를 그대로 쓰고 새 임계값을 도출하지 않는다.** 규칙 순서 마지막(자산형 뒤)이라 기존 9유형 판정은 불변 | 분류 규칙 변경 → `RULESET_VERSION` 도 v1.2.0. 히스테리시스 이력 무효화 |"
+  );
   lines.push("");
   lines.push("> 독트린 버전과 룰셋 버전은 다른 것을 가리킨다 — 독트린은 축·문안·금지 지표의 정본이고,");
   lines.push("> `ruleset_version`(`ruleset.ts`)은 **분류 규칙**의 버전이다. v1.1.0 은 축만 바꿨으므로");

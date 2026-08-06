@@ -201,7 +201,30 @@ export function classifyArchetype(factsheet: FactSheet): ArchetypeResult {
     return classified(factsheet, "ASSET_DEEP_VALUE", "pbr<1+net_cash_ratio>θ");
   }
 
-  // 8. 기본값 — 분류 실패는 정상 결과다.
+  // 8. 이익 안정 — 성장·배당·자산 어느 프레임도 아닌 흑자 기업.
+  //
+  // 02R 판정 카드(`docs/archetype/JUDGMENT_CARD_no_rule_matched.md`): `no_rule_matched` 82건 중
+  // **64건**이 `QUALITY_COMPOUNDER`(CAGR>15)와 `MATURE_INCOME`(배당>3 + CAGR<5) **사이의 빈 구간**에서
+  // 나왔다. 임계값을 느슨하게 해서 그 둘로 밀어 넣는 것은 자를 틀리게 대는 것이다 —
+  // 성장이 배수를 설명하지 않는 기업에 "성장률과 배수가 함께 움직인다" 프레임을 씌우게 되고,
+  // `MATURE_INCOME` 은 막대축(주당배당금)이 소스에 없어 커버리지도 오르지 않는다.
+  //
+  // **임계값은 그대로 쓴다.** 새 θ 를 도출하지 않고 기존 두 θ 의 여집합을 담당한다.
+  //
+  // 자리가 마지막인 것이 중요하다 — `ASSET_DEEP_VALUE` 뒤에 두면 기존 9유형의 판정이
+  // 하나도 바뀌지 않고 `UNCLASSIFIED` 만 흡수한다("더 구체적인 규칙이 이긴다"). 앞에 두면
+  // 저PBR·순현금 종목을 가로채 자산형 프레임이 사라진다.
+  if (
+    netIncome !== null &&
+    netIncome > 0 &&
+    cagr !== null &&
+    cagr < THRESHOLDS.growth_cagr_pct &&
+    (dividendYield === null || dividendYield <= THRESHOLDS.mature_dividend_yield_pct)
+  ) {
+    return classified(factsheet, "STABLE_EARNINGS", "profit+cagr<θ_growth+dividend<=θ_mature");
+  }
+
+  // 9. 기본값 — 분류 실패는 정상 결과다.
   return unclassified(factsheet, "no_rule_matched");
 }
 

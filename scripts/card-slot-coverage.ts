@@ -163,6 +163,51 @@ function a0Verdict(live: CardSlotSummary, universe: CardSlotSummary): string[] {
   return lines;
 }
 
+/**
+ * `bar_series_unavailable` 진단 — **대체 축이 가능한지를 데이터로 판정한다.**
+ *
+ * BANK 는 WO-SUB-04 가 허용한 두 번째 축(자기자본)으로 풀렸다. 남은 유형에 같은 해법을 쓰려면
+ * 대체 축의 입력이 실제로 있어야 한다. "총액 ÷ 주식수" 처럼 한 줄로 보이는 계산도 **시계열 축**
+ * 에서는 연도별 두 값이 다 필요하다 — 현재 시점 스칼라 하나로는 과거 막대를 만들 수 없다.
+ */
+function barUnavailableSection(rows: readonly CardSlotRow[]): string[] {
+  const lines: string[] = ["## 4. `bar_series_unavailable` 진단 — 대체 축이 가능한가", ""];
+  const targets = rows.filter((row) => row.bar_unavailable !== null);
+  if (targets.length === 0) {
+    lines.push("`bar_series_unavailable` 0 — 전 유형의 막대축이 소스에 있다.");
+    lines.push("");
+    return lines;
+  }
+  const byAxis = new Map<string, typeof targets>();
+  for (const row of targets) {
+    const key = `${row.archetype ?? "(?)"} · ${row.bar_unavailable!.bar_series}`;
+    byAxis.set(key, [...(byAxis.get(key) ?? []), row]);
+  }
+  lines.push("| 유형 · 축 | 건수 | 시장 | 배당지급 TTM 확보 | 현재 주식수 확보 | CF 관측 분기(중위) | 연간 기간 수(중위) |");
+  lines.push("|---|---|---|---|---|---|---|");
+  for (const [key, group] of [...byAxis.entries()].sort((a, b) => b[1].length - a[1].length)) {
+    const markets = new Map<string, number>();
+    for (const row of group) markets.set(row.market, (markets.get(row.market) ?? 0) + 1);
+    const med = (pick: (row: (typeof group)[number]) => number): number => {
+      const values = group.map(pick).sort((a, b) => a - b);
+      return values[Math.floor(values.length / 2)] ?? 0;
+    };
+    lines.push(
+      `| \`${key}\` | ${group.length} | ${[...markets].map(([m, c]) => `${m} ${c}`).join(" · ")} | ` +
+        `${group.filter((row) => row.bar_unavailable!.has_dividend_paid_ttm).length}/${group.length} | ` +
+        `${group.filter((row) => row.bar_unavailable!.has_shares_outstanding).length}/${group.length} | ` +
+        `${med((row) => row.bar_unavailable!.cashflow_observed_quarters)} | ` +
+        `${med((row) => row.bar_unavailable!.annual_periods)} |`
+    );
+  }
+  lines.push("");
+  lines.push("> 판정 규칙: **연간 막대는 연도별로 두 값이 다 있어야 만들어진다.** 배당지급 TTM 과");
+  lines.push("> 현재 주식수는 각각 스칼라 1개라 그것만으로는 막대 1개도 못 만든다(과거 연도에 현재");
+  lines.push("> 주식수를 쓰면 분할·증자 이력이 있는 종목에서 틀린 값이 된다 — 결측을 값으로 채우는 것이다).");
+  lines.push("");
+  return lines;
+}
+
 function render(report: CardSlotCoverageReport): string {
   const lines: string[] = [];
   const u = report.universe;
@@ -205,7 +250,8 @@ function render(report: CardSlotCoverageReport): string {
   lines.push(...unclassifiedRows("live deck", liveRows));
   lines.push(...unclassifiedRows("universe", report.rows));
   lines.push(...a0Verdict(report.live_deck, report.universe));
-  lines.push("## 4. 사유 읽는 법");
+  lines.push(...barUnavailableSection(report.rows));
+  lines.push("## 5. 사유 읽는 법");
   lines.push("");
   lines.push("| 사유 | 뜻 | 해소 경로 |");
   lines.push("|---|---|---|");

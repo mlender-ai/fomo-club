@@ -68,13 +68,44 @@ describe("UNCLASSIFIED 폴백 — 02R 전환기에 화면이 깨지지 않는다
     expect(chart.renderable).toBe(false);
   });
 
-  it("팩트시트에 없는 시계열은 숨긴다 — 다른 지표로 바꿔 그리지 않는다", () => {
-    // MATURE_INCOME 의 축은 주당배당금인데 소스에 그 계정 매핑이 없다.
-    // **매출로 바꿔 그리면 안 된다** — 성숙·배당형에서 관측 지점은 배당의 지속 가능성이다.
+  it("주당배당금이 없는 종목은 숨긴다 — 매출·배당수익률로 바꿔 그리지 않는다", () => {
+    /**
+     * MATURE_INCOME 의 축은 주당배당금이다. 2026-08-06 부터 축 자체는 지원하므로(네이버 연간표
+     * `주당배당금`) 사유가 `bar_series_unavailable` → `no_bar_data` 로 바뀐다 —
+     * "축을 못 만든다"와 "이 종목에 값이 없다"는 다른 문제이고 해소 경로도 다르다.
+     */
     const chart = buildValuationChart(withRevenue(), "MATURE_INCOME", RULESET);
     expect(chart.renderable).toBe(false);
-    expect(chart.unavailable_reason).toBe("bar_series_unavailable");
+    expect(chart.unavailable_reason).toBe("no_bar_data");
     expect(chart.bar_metric).toBeNull();
+  });
+
+  it("MATURE_INCOME — 주당배당금이 있으면 그 막대를 그린다(총액 역산 아님)", () => {
+    const sheet = withRevenue();
+    const chart = buildValuationChart(
+      {
+        ...sheet,
+        valuation: {
+          ...sheet.valuation,
+          dividend_yield: 4,
+          dps_annual: [
+            { period: "2023", period_end: "2023-12-31", filed_at: "2024-03-31", value: 2_158, source: "naver_finance_annual.주당배당금" },
+            { period: "2024", period_end: "2024-12-31", filed_at: "2025-03-31", value: 2_469, source: "naver_finance_annual.주당배당금" },
+            { period: "2025", period_end: "2025-12-31", filed_at: "2026-03-31", value: 1_651, source: "naver_finance_annual.주당배당금" },
+          ],
+        },
+      },
+      "MATURE_INCOME",
+      RULESET
+    );
+    expect(chart.renderable).toBe(true);
+    expect(chart.bar_metric).toBe("annual_dps");
+    expect(chart.bar_label).toBe("주당배당금");
+    // 배당이 줄어든 연도를 그대로 보여준다 — 평탄화하지 않는다.
+    expect(chart.bars.map((bar) => bar.value)).toEqual([2_158, 2_469, 1_651]);
+    expect(chart.line_metric).toBe("dividend_yield");
+    // 점 단위 출처가 주당 기준 소스여야 한다(총액 역산이면 여기가 달라진다).
+    expect(chart.bars.every((bar) => bar.source.includes("주당배당금"))).toBe(true);
   });
 
   it("BANK_FINANCIAL 은 자기자본 막대를 쓴다 — 매출로 바꿔 그리는 것이 아니다", () => {
@@ -198,7 +229,7 @@ describe("이미 수집하던 시계열을 노출한 뒤 (2026-08-03)", () => {
   });
 });
 
-describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된다", () => {
+describe("완료 조건 1 — 전 유형이 데이터 층에서 판정된다", () => {
   /**
    * 남은 4유형(HYPERGROWTH·PHARMA_STABLE·MATURE_INCOME·TURNAROUND_LOSS)을 채운다.
    * **"테스트가 있다"가 아니라 "그 유형의 축이 실제로 그 축인지"를 본다** — 독트린에서 축을
@@ -256,16 +287,17 @@ describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된�
     expect(chart.line_metric).toBe("pbr");
   });
 
-  it("MATURE_INCOME — 주당배당금 시계열이 없어 숨긴다(배당수익률로 바꿔 그리지 않는다)", () => {
+  it("MATURE_INCOME — 주당배당금 값이 없으면 숨긴다(배당수익률로 바꿔 그리지 않는다)", () => {
     const chart = buildValuationChart(withRevenue(), "MATURE_INCOME", RULESET);
     expect(chart.renderable).toBe(false);
-    expect(chart.unavailable_reason).toBe("bar_series_unavailable");
+    expect(chart.unavailable_reason).toBe("no_bar_data");
     expect(chart.bars).toEqual([]);
   });
 
-  it("10유형 전부가 이 파일에서 한 번은 빌드된다 — 빠뜨린 유형이 없다", () => {
+  it("전 유형이 이 파일에서 한 번은 빌드된다 — 빠뜨린 유형이 없다", () => {
     const covered = DOCTRINE.archetypes.map((frame) => frame.code as ArchetypeCode);
-    expect(covered).toHaveLength(10);
+    // 유형 수를 상수로 박지 않는다 — 02R 이 유형을 늘리면 이 테스트가 그 유형까지 자동으로 돈다.
+    expect(covered.length).toBeGreaterThanOrEqual(11);
     for (const code of covered) {
       // 던지지 않는 것 자체가 조건이다. 축이 없거나 데이터가 없으면 renderable: false 로 끝나야 한다.
       const chart = buildValuationChart(withRevenue(), code, RULESET);
@@ -276,8 +308,8 @@ describe("완료 조건 1 — 10유형 전부가 데이터 층에서 판정된�
 });
 
 describe("축 매핑은 독트린에서 온다", () => {
-  it("10개 유형 전부가 축 매핑 항목을 갖는다(값이 null 이어도 명시적으로)", () => {
-    expect(DOCTRINE.archetypes).toHaveLength(10);
+  it("전 유형이 축 매핑 항목을 갖는다(값이 null 이어도 명시적으로)", () => {
+    expect(DOCTRINE.archetypes.length).toBeGreaterThanOrEqual(11);
     for (const frame of DOCTRINE.archetypes) {
       expect(frame).toHaveProperty("chart_axes");
     }

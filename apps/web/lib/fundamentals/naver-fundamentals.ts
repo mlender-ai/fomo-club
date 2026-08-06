@@ -168,6 +168,12 @@ export interface NaverFundamentals {
   annual: QuarterRecord[];
   /** 자기자본 시점값 — BPS × 기준주식수로 만든다(주식수를 모르면 비어 있다). */
   equity: PointObservation[];
+  /**
+   * 연간 주당배당금 — 네이버 연간표 `주당배당금` 행. **주당 기준으로 직접 오는 값이다.**
+   * 배당총액 ÷ 주식수로 역산하지 않는다(연도별 주식수가 없어 과거 연도가 틀린 값이 된다).
+   * 컨센서스 열은 `parseFinanceTable` 이 실적 레코드에서 제외하므로 여기에도 안 들어온다.
+   */
+  dpsAnnual: PointObservation[];
   closes: DailyClose[];
   sharesSeries: SharesPoint[];
   marketData: {
@@ -272,6 +278,7 @@ export async function fetchNaverFundamentals(naverCode: string, closesFrom: stri
     quarters: [],
     annual: [],
     equity: [],
+    dpsAnnual: [],
     closes: [],
     sharesSeries: [],
     marketData: { market_cap: null, shares_outstanding: null, price: null, price_as_of: null, source: "naver_integration" },
@@ -358,6 +365,22 @@ export async function fetchNaverFundamentals(naverCode: string, closesFrom: stri
     }
   }
 
+  /**
+   * 연간 주당배당금 (2026-08-06).
+   *
+   * `MATURE_INCOME` 막대축(`annual_dps`)이 소스에 없다고 판정돼 유니버스 10장 전원 차트가
+   * 숨겨져 있었다. 실측하니 **네이버 연간표가 `주당배당금` 행을 그대로 준다** — 총액에서
+   * 역산할 필요가 없다. 원 단위이므로 억원 환산(EOK)을 하지 않는다.
+   */
+  const dpsAnnual: PointObservation[] = [];
+  for (const record of annualParsed.records) {
+    const key = `${record.period_end.slice(0, 4)}${record.period_end.slice(5, 7)}`;
+    const dps = rowValue(annualParsed.rows, key, ["주당배당금"]);
+    // 0 은 "배당을 하지 않았다"는 사실이므로 버리지 않는다. null 만 건너뛴다.
+    if (dps === null) continue;
+    dpsAnnual.push({ period_end: record.period_end, filed_at: record.filed_at, value: dps });
+  }
+
   const summary = [
     quarter?.corporationSummary?.comment1,
     quarter?.corporationSummary?.comment2,
@@ -378,6 +401,7 @@ export async function fetchNaverFundamentals(naverCode: string, closesFrom: stri
     quarters: quarterParsed.records,
     annual: annualParsed.records,
     equity,
+    dpsAnnual,
     closes,
     sharesSeries: shares !== null ? [{ as_of: closes[closes.length - 1]?.date ?? new Date().toISOString().slice(0, 10), shares }] : [],
     marketData: {

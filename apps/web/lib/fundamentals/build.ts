@@ -98,6 +98,8 @@ export async function buildKrFactSheet(entry: UniverseEntry, now = new Date()): 
     quarters: dartOk ? dart.quarters : naver.quarters,
     annual: dartOk && dart.annual.length > 0 ? dart.annual : naver.annual,
     equity: dartOk && dart.equity.length > 0 ? dart.equity : naver.equity,
+    // 주당배당금은 네이버 연간표만 준다 — DART 주요계정에 주당 기준 계정이 없다.
+    dpsAnnual: naver.dpsAnnual,
     liabilities: dartOk && dart.liabilities.length > 0
       ? dart.liabilities
       : liabilitiesFromDebtRatio(naver.equity, naver.reportedDebtRatioPct?.value ?? null),
@@ -210,6 +212,12 @@ export async function buildUsFactSheet(entry: UniverseEntry, now = new Date()): 
     operatingCashFlow: sec.operatingCashFlow,
     capex: sec.capex,
     dividendPaid: sec.dividendPaid,
+    /**
+     * US 주당배당금은 아직 없다 — SEC 의 `flows()` 가 분기 기간(MIN/MAX_QUARTER_DAYS)만 통과시켜
+     * 연간 기간값을 받지 못한다. 연간 헬퍼가 필요하다(부채 등재).
+     * 현재 유니버스 `MATURE_INCOME` 은 전원 KR 이라 화면에 영향이 없다.
+     */
+    dpsAnnual: [],
     interestExpense: sec.interestExpense,
     depreciation: sec.depreciation,
     closes,

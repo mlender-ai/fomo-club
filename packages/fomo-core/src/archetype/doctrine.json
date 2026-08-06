@@ -1,5 +1,5 @@
 {
-  "version": "archetype-v1.1.0",
+  "version": "archetype-v1.2.0",
   "as_of": "2026-08-06",
   "note": "이 파일이 아키타입 독트린의 정본이다. docs/archetype/DOCTRINE_archetype_frames.md 는 여기서 생성된다. 경고문·금지 지표를 코드나 컴포넌트에 복붙하지 말고 여기서 로드할 것. warning_short = 카드용(WO-SUB-08 텍스트 예산), warning_full = 디테일용.",
   "archetypes": [
@@ -680,6 +680,73 @@
         "line_label": "PBR",
         "line_fallback_metric": null,
         "note": null
+      }
+    },
+    {
+      "code": "STABLE_EARNINGS",
+      "label_ko": "이익 안정",
+      "definition": "흑자를 내지만 매출 성장률이 성장주 임계값에 못 미치고 배당도 성숙·배당형 임계값에 못 미치는 유형. 관측 지점이 성장률이 아니다.",
+      "boundary": "TTM 순이익 흑자 · 3년 매출 CAGR 이 성장 임계값 미달 · 배당수익률이 성숙·배당형 임계값 이하. 성장률이 임계값을 넘으면 성장·흑자, 배당이 임계값을 넘고 성장이 낮으면 성숙·배당형이다. 두 유형 사이의 구간을 담당한다.",
+      "display_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "label": "PER",
+          "why": "이익이 안정적으로 나므로 이익 대비 위치가 읽힌다"
+        },
+        {
+          "path": "valuation.band_5y.per",
+          "label": "PER 밴드 위치",
+          "why": "성장률이 값을 설명하지 않아 자기 이력 대비 위치가 관측 지점이 된다"
+        },
+        {
+          "path": "margin.operating_ttm",
+          "label": "영업이익률",
+          "why": "이익의 안정성을 보는 값"
+        },
+        {
+          "path": "growth.revenue_cagr_3y",
+          "label": "3년 매출 성장률",
+          "why": "성장이 관측 지점이 아님을 확인하는 값. 성장 프레임으로 읽지 않기 위해 함께 표시한다"
+        }
+      ],
+      "forbidden_metrics": [],
+      "requires_warning_metrics": [
+        {
+          "path": "valuation.per_ttm",
+          "reason": "성장이 관측 지점이 아니므로 PER 단독으로 값의 위치를 읽으면 오독한다"
+        }
+      ],
+      "band_metric": "per",
+      "band_note": "이익이 꾸준히 나므로 PER 밴드가 해석 가능하다. 성장률 대신 이 위치가 관측 지점이다.",
+      "risks": [
+        "이익 정체 장기화",
+        "매출 감소 국면 진입",
+        "배당·자본 배치 정책 변경"
+      ],
+      "examples": [
+        {
+          "name": "우진",
+          "note": "기계 — 실측 3년 CAGR 6.6%, 배당수익률 2.03%"
+        },
+        {
+          "name": "Albertsons Companies, Inc.",
+          "note": "식품 소매 — 실측 3년 CAGR 2.3%, 배당 관측 없음"
+        },
+        {
+          "name": "V F Corp",
+          "note": "의류 — 실측 3년 CAGR −6.2%(매출 감소 국면)"
+        }
+      ],
+      "warning_short": "성장률보다 이익의 안정성과 값의 위치가 관측 지점입니다.",
+      "warning_full": "이 유형에서 관측 지점은 성장률보다 이익의 안정성과 값의 위치입니다. 매출 성장률로 이 회사의 값을 설명하기 어려우므로, PER 을 자기 이력의 밴드 위치와 함께 보세요.",
+      "unavailable_metrics": [],
+      "chart_axes": {
+        "bar_series": "annual_revenue",
+        "bar_label": "매출",
+        "line_metric": "per_ttm",
+        "line_label": "PER",
+        "line_fallback_metric": "per_forward",
+        "note": "막대는 매출이지만 성장률이 관측 지점이 아니다 — 이익이 유지되는지와 PER 밴드 위치를 함께 본다. 실적 기반이 우선이라 PER TTM 을 1순위로 두고, 없으면 Forward PER 로 내려간다."
       }
     },
     {
