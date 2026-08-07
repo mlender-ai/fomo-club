@@ -48,39 +48,72 @@ async function dartJson<T>(path: string, params: Record<string, string>): Promis
 }
 
 /**
- * ZIP 의 모든 엔트리를 푼다.
+ * ZIP 의 모든 엔트리를 푼다 — **중앙 디렉터리 기준**.
  *
- * `dart-discovery.ts` 의 `unzipSingleEntry` 는 corpCode.xml(단일 엔트리) 전용이다.
- * `document.xml` 은 본문 + 첨부로 **여러 엔트리**가 올 수 있어 첫 엔트리만 보면 본문을 놓칠 수 있다.
+ * `dart-discovery.ts` 의 `unzipSingleEntry` 는 corpCode.xml(단일 엔트리) 전용이고 로컬 헤더의
+ * 크기 필드를 읽는다. `document.xml` 에는 그 방법이 통하지 않는다.
+ *
+ * **실측(2026-08-07, 4종목 전부)**: DART `document.xml` 은 **스트리밍 ZIP** 이다 — 로컬 헤더의
+ * `compressedSize` 가 0 이고 실제 크기는 본문 뒤 data descriptor 에 온다. 로컬 헤더만 읽으면
+ * 엔트리 0 개가 나오는데, 처음 짠 파서가 그때 **조용히 빈 배열을 돌려줬다**. 내가 이 파일 주석에
+ * 적어둔 "조용한 빈 결과 금지" 를 내 코드가 어긴 것이다. 그래서 지금은 (1) 중앙 디렉터리에서
+ * 크기·오프셋을 읽고 (2) 엔트리가 0 개면 사유를 만들어 올린다.
  */
-function unzipEntries(buffer: Uint8Array): Array<{ name: string; text: string }> {
-  const out: Array<{ name: string; text: string }> = [];
-  let offset = 0;
-  while (offset + 30 <= buffer.length) {
-    if (!(buffer[offset] === 0x50 && buffer[offset + 1] === 0x4b && buffer[offset + 2] === 0x03 && buffer[offset + 3] === 0x04)) break;
-    const view = new DataView(buffer.buffer, buffer.byteOffset + offset, 30);
-    const method = view.getUint16(8, true);
-    const compressedSize = view.getUint32(18, true);
-    const nameLength = view.getUint16(26, true);
-    const extraLength = view.getUint16(28, true);
-    const nameStart = offset + 30;
-    const name = new TextDecoder("utf-8").decode(buffer.subarray(nameStart, nameStart + nameLength));
-    const bodyStart = nameStart + nameLength + extraLength;
-    if (compressedSize === 0) break; // 스트리밍 ZIP(크기가 뒤에 옴) — 프로브에서는 다루지 않는다
+function unzipEntries(buffer: Uint8Array): { entries: Array<{ name: string; text: string }>; error: string | null } {
+  const decode = (raw: Uint8Array): string => {
+    // DART 본문은 EUC-KR 인 경우가 있다 — 둘 다 디코드해 한글이 많은 쪽을 쓴다.
+    const utf8 = new TextDecoder("utf-8").decode(raw);
+    const euckr = new TextDecoder("euc-kr").decode(raw);
+    const score = (text: string) => (text.match(/[가-힣]/g) ?? []).length;
+    return score(euckr) > score(utf8) ? euckr : utf8;
+  };
+
+  // EOCD(`PK\x05\x06`)는 파일 끝에서 최대 64KB 안에 있다.
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 66_000); i -= 1) {
+    if (buffer[i] === 0x50 && buffer[i + 1] === 0x4b && buffer[i + 2] === 0x05 && buffer[i + 3] === 0x06) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) return { entries: [], error: "EOCD(중앙 디렉터리 끝) 미발견" };
+
+  const eocdView = new DataView(buffer.buffer, buffer.byteOffset + eocd, 22);
+  const count = eocdView.getUint16(10, true);
+  const cdOffset = eocdView.getUint32(16, true);
+  const entries: Array<{ name: string; text: string }> = [];
+
+  let cursor = cdOffset;
+  for (let index = 0; index < count; index += 1) {
+    if (cursor + 46 > buffer.length) return { entries, error: `중앙 디렉터리 잘림(entry ${index})` };
+    if (!(buffer[cursor] === 0x50 && buffer[cursor + 1] === 0x4b && buffer[cursor + 2] === 0x01 && buffer[cursor + 3] === 0x02)) {
+      return { entries, error: `중앙 디렉터리 시그니처 아님(entry ${index})` };
+    }
+    const cd = new DataView(buffer.buffer, buffer.byteOffset + cursor, 46);
+    const method = cd.getUint16(10, true);
+    const compressedSize = cd.getUint32(20, true);
+    const nameLength = cd.getUint16(28, true);
+    const extraLength = cd.getUint16(30, true);
+    const commentLength = cd.getUint16(32, true);
+    const localOffset = cd.getUint32(42, true);
+    const name = decode(buffer.subarray(cursor + 46, cursor + 46 + nameLength));
+    cursor += 46 + nameLength + extraLength + commentLength;
+
+    // 로컬 헤더의 이름·extra 길이만 써서 본문 시작을 찾는다(크기는 중앙 디렉터리 값을 신뢰).
+    if (localOffset + 30 > buffer.length) {
+      entries.push({ name, text: `__error: 로컬 헤더 오프셋 범위 밖(${localOffset})` });
+      continue;
+    }
+    const lh = new DataView(buffer.buffer, buffer.byteOffset + localOffset, 30);
+    const bodyStart = localOffset + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
     const body = buffer.subarray(bodyStart, bodyStart + compressedSize);
     try {
-      const raw = method === 8 ? inflateRawSync(body) : Buffer.from(body);
-      // DART 본문은 EUC-KR 인 경우가 있다 — 둘 다 시도해 한글이 보이는 쪽을 쓴다.
-      const utf8 = new TextDecoder("utf-8").decode(raw);
-      const euckr = new TextDecoder("euc-kr").decode(raw);
-      const score = (text: string) => (text.match(/[가-힣]/g) ?? []).length;
-      out.push({ name, text: score(euckr) > score(utf8) ? euckr : utf8 });
+      entries.push({ name, text: decode(method === 8 ? inflateRawSync(body) : body) });
     } catch (error) {
-      out.push({ name, text: `__inflate_error: ${error instanceof Error ? error.message : String(error)}` });
+      entries.push({ name, text: `__inflate_error: ${error instanceof Error ? error.message : String(error)}` });
     }
-    offset = bodyStart + compressedSize;
   }
-  return out;
+  return { entries, error: entries.length === 0 ? `중앙 디렉터리 entry 수 ${count} 인데 해동 0건` : null };
 }
 
 /** DART 본문 XML 의 제목 태그 — 목차 구조가 여기 드러난다. */
@@ -141,10 +174,13 @@ async function main(): Promise<void> {
       console.log(`  ZIP 아님(head=${head}) 본문 앞 300자: ${new TextDecoder("utf-8").decode(buffer.slice(0, 300))}`);
       continue;
     }
-    const entries = unzipEntries(buffer);
-    console.log(`  ZIP 엔트리 ${entries.length}개: ${entries.map((e) => `${e.name}(${e.text.length}자)`).join(", ")}`);
+    const { entries, error: zipError } = unzipEntries(buffer);
+    console.log(`  ZIP ${buffer.length}바이트 → 엔트리 ${entries.length}개${zipError ? ` · ⚠ ${zipError}` : ""}: ${entries.map((e) => `${e.name}(${e.text.length}자)`).join(", ")}`);
+    if (entries.length === 0) continue;
 
-    const body = entries.reduce((best, entry) => (entry.text.length > best.text.length ? entry : best), entries[0] ?? { name: "-", text: "" });
+    const body = entries.reduce((best, entry) => (entry.text.length > best.text.length ? entry : best), entries[0]!);
+    // 목차가 TITLE 태그가 아닌 서식일 수 있으니 원문 일부도 남긴다.
+    console.log(`  본문 ${body.name} 앞 200자: ${body.text.slice(0, 200).replace(/\s+/g, " ")}`);
     const allTitles = titles(body.text);
     console.log(`  제목 태그 ${allTitles.length}개 — 상위 25개:`);
     for (const title of allTitles.slice(0, 25)) console.log(`    · ${title}`);
