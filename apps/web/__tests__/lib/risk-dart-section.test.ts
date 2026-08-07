@@ -98,4 +98,29 @@ describe("extractKrRiskSections", () => {
     expect(sections.map((section) => section.section)).toEqual(["business", "financial"]);
     expect(sections[1]!.text.length).toBeGreaterThan(short.length);
   });
+
+  it("겸영 발행사의 업종 접두어를 흘려보낸다 (실측: KT)", () => {
+    // 제조서비스업·금융업 절이 같은 번호로 두 벌 있고 제목에 접두어가 붙는다.
+    const xml = doc([
+      ["4. (제조서비스업)매출 및 수주상황", "매출"],
+      ["5. (제조서비스업)위험관리 및 파생거래", BODY_TEXT],
+      ["6. (제조서비스업)주요계약 및 연구개발활동", "계약"],
+      ["5. (금융업)재무건전성 등 기타 참고사항", NOTE_TEXT],
+      ["III. 재무에 관한 사항", "재무"],
+    ]);
+    const { sections } = extractKrRiskSections(xml);
+    // 둘 다 business 후보이므로 가장 긴 하나만 남는다
+    expect(sections).toHaveLength(1);
+    expect(sections[0]!.section).toBe("business");
+  });
+
+  it("주석 제목에 '의 목적 및 정책'이 없어도 financial 로 잡는다 (실측: KT)", () => {
+    const xml = doc([
+      ["5. 위험관리 및 파생거래", BODY_TEXT],
+      ["37. 재무위험관리 (연결)", NOTE_TEXT],
+      ["38. 특수관계자", "거래"],
+    ]);
+    const { sections } = extractKrRiskSections(xml);
+    expect(sections.map((section) => section.section)).toEqual(["business", "financial"]);
+  });
 });
