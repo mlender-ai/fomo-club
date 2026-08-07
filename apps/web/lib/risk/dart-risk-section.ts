@@ -40,9 +40,31 @@ const TITLE_RE = /<TITLE[^>]*>([\s\S]*?)<\/TITLE>/gi;
  * `business` = II. 사업의 내용 안의 사업 위험 서술, `financial` = 재무제표 주석의 재무위험관리.
  * 둘을 합치지 않는다 — 주석 쪽은 회계 정책 서술이라 사업 리스크로 읽히면 안 된다.
  */
+/**
+ * 절 번호와 **업종 접두어**를 흘려보내는 선행부.
+ *
+ * 실측(KT): 겸영 발행사는 같은 번호의 절이 업종별로 두 벌 있고 제목에 접두어가 붙는다 —
+ * `5. (제조서비스업)위험관리 및 파생거래` · `5. (금융업)재무건전성 등 기타 참고사항`.
+ * 접두어를 안 흘리면 제목 160개를 가진 정상 서식 발행사가 통째로 실패한다(첫 실측의 KT).
+ */
+const SECTION_PREFIX = String.raw`^\s*(?:\d+\s*[.\-]\s*)?(?:\([^)]{1,20}\)\s*)?`;
+
 const SECTION_PATTERNS: ReadonlyArray<{ section: KrRiskSection; pattern: RegExp }> = [
-  { section: "business", pattern: /^\s*\d+\s*\.\s*위험관리\s*및\s*파생거래/ },
-  { section: "financial", pattern: /재무위험관리의?\s*목적\s*및\s*정책/ },
+  // 일반 서식(제조·서비스). 절 번호는 발행사마다 달라 있어도 없어도 잡는다.
+  { section: "business", pattern: new RegExp(`${SECTION_PREFIX}위험관리(\\s*및\\s*파생거래)?\\s*$`) },
+  /**
+   * **금융업 서식은 다르다**(실측: BNK금융지주). `위험관리 및 파생거래` 절이 없고
+   * `5. 재무건전성 등 기타 참고사항` 이 그 자리다 — 제목 수도 70개로 일반 서식(143~158)의 절반이다.
+   * 메모리의 "은행지주는 매출액이 없다" 와 같은 계열의 서식 차이다. 이걸 안 넣으면
+   * `BANK_FINANCIAL` 유형이 KR 에서 통째로 빠지는데, 그건 소스가 없어서가 아니라
+   * 우리가 서식을 안 봐서 생기는 공백이다.
+   */
+  { section: "business", pattern: new RegExp(`${SECTION_PREFIX}재무건전성`) },
+  /**
+   * 주석의 재무위험관리. `의 목적 및 정책` 은 **있을 때만 있다** — 실측으로 KT 는
+   * `37. 재무위험관리 (연결)` 처럼 그 구절 없이 쓴다. 필수로 두면 그 발행사의 주석을 놓친다.
+   */
+  { section: "financial", pattern: /재무위험관리(의?\s*목적\s*및\s*정책)?/ },
 ];
 
 export type KrRiskSection = "business" | "financial";
@@ -145,7 +167,27 @@ export function extractKrRiskSections(bodyXml: string): { sections: KrRiskExtrac
     if (text.length < MIN_SECTION_CHARS || text.length > MAX_SECTION_CHARS) continue;
     sections.push({ section: hit.section, text, heading: current.heading });
   }
-  return { sections, titles: matches.length };
+  return { sections: dedupeBySection(sections), titles: matches.length };
+}
+
+/**
+ * 섹션 종류별로 하나만 남긴다 — **가장 긴 것**.
+ *
+ * 실측(종근당): `재무위험관리의 목적 및 정책` 이 연결·별도로 두 벌 있고 각각 하위 항목
+ * (29-1·29-2·29-3 / 30-1·30-2·30-3)으로 쪼개져 `financial` 이 6개 잡혔다. 전부 합성 입력에
+ * 넣으면 같은 내용으로 예산을 태운다 — WO-SUB-03 실측에서 청크 예산 3,500자가 근거의 중위
+ * 89% 를 버렸던 것이 이런 낭비와 겹칠 때 가장 아프다.
+ *
+ * 가장 긴 것을 고르는 이유: 하위로 쪼개진 조각보다 전문(연결 기준 본문)이 길다.
+ */
+function dedupeBySection(sections: readonly KrRiskExtraction[]): KrRiskExtraction[] {
+  const best = new Map<KrRiskSection, KrRiskExtraction>();
+  for (const section of sections) {
+    const current = best.get(section.section);
+    if (!current || section.text.length > current.text.length) best.set(section.section, section);
+  }
+  // 순서 고정 — business 먼저(사업 위험이 주된 소스이고 financial 은 회계 정책 서술이다).
+  return (["business", "financial"] as const).map((kind) => best.get(kind)).filter((entry): entry is KrRiskExtraction => Boolean(entry));
 }
 
 /**

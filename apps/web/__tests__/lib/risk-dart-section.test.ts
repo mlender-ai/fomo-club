@@ -65,4 +65,62 @@ describe("extractKrRiskSections", () => {
     const xml = doc([["5. 위험관리 및 파생거래", BODY_TEXT]]);
     expect(extractKrRiskSections(xml).sections).toHaveLength(1);
   });
+
+  it("금융업 서식('재무건전성 등 기타 참고사항')도 business 로 잡는다", () => {
+    // 실측(BNK금융지주): 위험관리 및 파생거래 절이 없고 이것이 그 자리다. 제목 수도 70개.
+    const xml = doc([
+      ["3. 파생상품거래 현황", "거래 내역"],
+      ["5. 재무건전성 등 기타 참고사항", BODY_TEXT],
+      ["III. 재무에 관한 사항", "재무"],
+    ]);
+    const { sections } = extractKrRiskSections(xml);
+    expect(sections).toHaveLength(1);
+    expect(sections[0]!.section).toBe("business");
+  });
+
+  it("절 번호가 없어도 잡는다", () => {
+    const xml = doc([["위험관리", BODY_TEXT], ["다음 절", "x"]]);
+    expect(extractKrRiskSections(xml).sections).toHaveLength(1);
+  });
+
+  it("financial 이 여러 벌이면 가장 긴 것만 남긴다 — 합성 예산 낭비 방지", () => {
+    // 실측(종근당): 연결·별도 × 하위 항목으로 financial 6개가 잡혔다.
+    const short = "짧은 주석입니다. ".repeat(25);
+    const long = "긴 주석 전문입니다. ".repeat(80);
+    const xml = doc([
+      ["5. 위험관리 및 파생거래", BODY_TEXT],
+      ["29-1. 재무위험관리의 목적 및 정책(위험관리) (연결)", long],
+      ["29-2. 재무위험관리의 목적 및 정책(위험관리) (연결)", short],
+      ["30-1. 재무위험관리의 목적 및 정책(위험관리)", short],
+      ["31. 특수관계자", "거래"],
+    ]);
+    const { sections } = extractKrRiskSections(xml);
+    expect(sections.map((section) => section.section)).toEqual(["business", "financial"]);
+    expect(sections[1]!.text.length).toBeGreaterThan(short.length);
+  });
+
+  it("겸영 발행사의 업종 접두어를 흘려보낸다 (실측: KT)", () => {
+    // 제조서비스업·금융업 절이 같은 번호로 두 벌 있고 제목에 접두어가 붙는다.
+    const xml = doc([
+      ["4. (제조서비스업)매출 및 수주상황", "매출"],
+      ["5. (제조서비스업)위험관리 및 파생거래", BODY_TEXT],
+      ["6. (제조서비스업)주요계약 및 연구개발활동", "계약"],
+      ["5. (금융업)재무건전성 등 기타 참고사항", NOTE_TEXT],
+      ["III. 재무에 관한 사항", "재무"],
+    ]);
+    const { sections } = extractKrRiskSections(xml);
+    // 둘 다 business 후보이므로 가장 긴 하나만 남는다
+    expect(sections).toHaveLength(1);
+    expect(sections[0]!.section).toBe("business");
+  });
+
+  it("주석 제목에 '의 목적 및 정책'이 없어도 financial 로 잡는다 (실측: KT)", () => {
+    const xml = doc([
+      ["5. 위험관리 및 파생거래", BODY_TEXT],
+      ["37. 재무위험관리 (연결)", NOTE_TEXT],
+      ["38. 특수관계자", "거래"],
+    ]);
+    const { sections } = extractKrRiskSections(xml);
+    expect(sections.map((section) => section.section)).toEqual(["business", "financial"]);
+  });
 });

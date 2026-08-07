@@ -22,11 +22,28 @@ const DART_BASE = "https://opendart.fss.or.kr/api";
 const KEY = process.env["DART_API_KEY"]?.trim() ?? "";
 
 /** 표본 — 유형이 갈리는 것끼리 고른다(제약·대형제조·은행지주·시클리컬). */
+/**
+ * 표본 좁히기 — `RISK_PROBE_SYMBOLS=030200,138930` 로 일부만 돌린다.
+ *
+ * **왜 필요한가(실측)**: 프로브를 짧은 시간에 네 번 돌린 뒤 6종목 전부가
+ * `list.json` 에서 `fetch failed` 로 죽었다. HTTP 상태가 아니라 네트워크 계층 실패라
+ * 쿼터 초과(status 020)가 아니고 DART 쪽 차단으로 보인다. 종목당 `document.xml` 이
+ * 5.9~7.7MB 라 전체 표본 한 번이 수십 MB다. 한 종목만 확인할 때 전체를 다시 받지 않는다.
+ */
+function selected<T extends { stockCode: string }>(all: readonly T[]): readonly T[] {
+  const raw = process.env["RISK_PROBE_SYMBOLS"]?.trim();
+  if (!raw) return all;
+  const wanted = new Set(raw.split(/[,\s]+/).filter(Boolean));
+  const picked = all.filter((entry) => wanted.has(entry.stockCode));
+  return picked.length > 0 ? picked : all;
+}
+
 const SAMPLE: Array<{ name: string; stockCode: string }> = [
   { name: "종근당", stockCode: "185750" },
   { name: "삼성전자", stockCode: "005930" },
   { name: "BNK금융지주", stockCode: "138930" },
   { name: "POSCO홀딩스", stockCode: "005490" },
+  { name: "KT", stockCode: "030200" },
 ];
 
 interface ListRow {
@@ -133,7 +150,7 @@ async function main(): Promise<void> {
   const map = await fetchCorpCodeMap("risk-probe");
   console.log(`corp_code 매핑: 전체 ${map.totalEntries} · 상장 ${map.listedEntries} · 캐시 ${map.fromCache}${map.error ? ` · error=${map.error}` : ""}`);
 
-  for (const target of SAMPLE) {
+  for (const target of selected(SAMPLE)) {
     const corpCode = map.byStockCode.get(target.stockCode);
     console.log(`\n=== ${target.name} (${target.stockCode}) corp_code=${corpCode ?? "없음"} ===`);
     if (!corpCode) continue;
