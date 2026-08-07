@@ -35,7 +35,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -o pipefail
-          npx tsx scripts/risk-kr-source-probe.ts 2>&1 | tee /tmp/kr-risk-probe.log
+          npx tsx scripts/risk-kr-source-probe.ts && npx tsx scripts/risk-kr-extract-probe.ts 2>&1 | tee /tmp/kr-risk-probe.log
           {
             echo '### KR 위험요소 소스 프로브'
             echo '```'
