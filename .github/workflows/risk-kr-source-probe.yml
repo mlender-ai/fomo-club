@@ -9,6 +9,11 @@ name: Risk KR Source Probe (manual)
 # (AGENTS.md 블랙리스트: 자율 실행 cron 신설 금지).
 on:
   workflow_dispatch:
+    inputs:
+      symbols:
+        description: "쉼표로 구분한 종목코드(비우면 전체 표본). DART 부하를 줄이려 일부만 돌릴 때 쓴다."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -33,6 +38,7 @@ jobs:
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RISK_PROBE_SYMBOLS: ${{ inputs.symbols }}
         run: |
           set -o pipefail
           npx tsx scripts/risk-kr-source-probe.ts && npx tsx scripts/risk-kr-extract-probe.ts 2>&1 | tee /tmp/kr-risk-probe.log
