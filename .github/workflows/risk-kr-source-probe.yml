@@ -1,0 +1,51 @@
+name: Risk KR Source Probe (manual)
+
+# WO-SUB-06 §5-2 — KR 위험요소 소스 실측.
+#
+# US 는 10-K Item 1A 라는 표준 섹션이 있지만 KR 사업보고서 서식에 그 대응물이 있는지는
+# **가정할 수 없다**. 파서를 쓰기 전에 실제 본문 목차를 본다.
+#
+# 로컬에는 DART_API_KEY 가 없어 여기서만 돌 수 있다. cron 없음 — 수동 실행 전용이다
+# (AGENTS.md 블랙리스트: 자율 실행 cron 신설 금지).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: risk-kr-source-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - name: Probe KR risk-factor source
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -o pipefail
+          npx tsx scripts/risk-kr-source-probe.ts 2>&1 | tee /tmp/kr-risk-probe.log
+          {
+            echo '### KR 위험요소 소스 프로브'
+            echo '```'
+            cat /tmp/kr-risk-probe.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kr-risk-probe
+          path: /tmp/kr-risk-probe.log
+          retention-days: 7
