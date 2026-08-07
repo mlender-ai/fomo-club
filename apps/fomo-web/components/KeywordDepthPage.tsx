@@ -13,6 +13,7 @@ import {
   type KeywordCard,
   type StockCountry,
   type StockMarket,
+  type WhereThisIsWrongBlock,
   type WyckoffAnalysis,
   type WyckoffEvent,
 } from "@fomo/core";
@@ -21,11 +22,13 @@ import {
   fetchStockInsight,
   fetchStockBasics,
   fetchStockFront,
+  fetchCardSlots,
   recordTaste,
   type CondensedInsight,
   type StockBasics,
   type StockFrontResponse,
 } from "@/lib/fomoApi";
+import { WhereThisIsWrong } from "@/components/WhereThisIsWrong";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { canonicalName } from "@/lib/companyDisplay";
@@ -2772,9 +2775,29 @@ export function StockInsightView({
   const [step, setStep] = useState<DepthStep>("company");
   // 종목 관심(C) — 명시적 취향 입력. 진입 자체도 암묵 신호(view_depth)로 적재됨.
   const [watched, setWatchedState] = useState(false);
+  /**
+   * "이게 틀리는 경우" 블록(WO-SUB-06 §6).
+   *
+   * 뎁스는 덱·피드·검색 여러 경로에서 열리므로 `context` 에 실어 오지 않고 여기서 받는다.
+   * `card-slots` 는 s-maxage 900 이라 반복 조회 비용이 낮다. 실패하면 섹션만 안 나오고
+   * 나머지 뎁스는 그대로다(선택 슬롯 원칙).
+   */
+  const [riskBlock, setRiskBlock] = useState<WhereThisIsWrongBlock | null>(null);
 
   useEffect(() => {
     setWatchedState(isWatched(stock));
+  }, [stock]);
+
+  useEffect(() => {
+    let alive = true;
+    setRiskBlock(null);
+    void fetchCardSlots().then((res) => {
+      if (!alive) return;
+      setRiskBlock(res.slots[stock]?.risk ?? null);
+    });
+    return () => {
+      alive = false;
+    };
   }, [stock]);
 
   const toggleWatched = () => {
@@ -2940,6 +2963,24 @@ export function StockInsightView({
                   {/* 언제 틀리는가 — 무효선 계약 */}
                   <DepthDocHeading label="언제 틀리는가" />
                   <JudgmentDecision front={front} />
+                  {riskBlock && (
+                    <WhereThisIsWrong
+                      symbol={{
+                        items: riskBlock.symbol.items,
+                        unavailableReason: riskBlock.symbol.unavailable_reason,
+                        unavailableText: riskBlock.symbol.unavailable_text,
+                      }}
+                      archetype={riskBlock.archetype}
+                      invalidation={{
+                        // 가격 무효선은 verdict 가 정본이다 — payload 로 두 번 내보내지 않는다.
+                        priceText: front?.verdict?.invalidation ?? null,
+                        businessText: riskBlock.invalidation.business_text,
+                        businessAbsentReason: riskBlock.invalidation.business_absent_reason,
+                        checkAt: riskBlock.invalidation.check_at,
+                        checkAtStatus: riskBlock.invalidation.check_at_status,
+                      }}
+                    />
+                  )}
                   <div className="mt-4">
                     <DepthFold title="재료·가격 반응" summary="선택 기간의 실데이터">
                       <WhyMovementTab front={front} insight={insight} context={context} />

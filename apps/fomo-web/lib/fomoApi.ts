@@ -9,6 +9,7 @@ import type {
   MoodSignal,
   ScoredArticle,
   ValuationChartData,
+  WhereThisIsWrongBlock,
 } from "@fomo/core";
 import type { DeckContent, DeckNarrative } from "./discoveryDeck";
 import { isDiscoveryCopySafe } from "./discoveryCopySafe";
@@ -1364,6 +1365,11 @@ export interface CardSlotPayload {
   /** `null` 이면 차트 영역 자체가 사라진다(빈 박스 금지). 타입은 `@fomo/core` 의 계약을 따른다. */
   valuation: ValuationChartData | null;
   valuation_unavailable_reason: string | null;
+  /**
+   * "이게 틀리는 경우" (WO-SUB-06 §6). 팩트시트가 없으면 `null` — 섹션을 그리지 않는다.
+   * 유형 리스크만 있고 종목 고유 리스크가 없는 상태는 `null` 이 아니다(설계된 정상 경로).
+   */
+  risk: WhereThisIsWrongBlock | null;
 }
 
 export interface CardSlotsResponse {

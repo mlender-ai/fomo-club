@@ -2,13 +2,17 @@ import {
   RULESET_VERSION,
   buildValuationChart,
   classifyArchetype,
+  composeWhereThisIsWrong,
+  hasWhereThisIsWrongContent,
   toRenderable,
   type ValuationChartData,
+  type WhereThisIsWrongBlock,
 } from "@fomo/core";
 import { readBusinessContext } from "../business-context/repository";
 import { readFeedContent } from "../feed-content-store";
 import { kstDate } from "../fomo";
 import { readFactSheet } from "../fundamentals/repository";
+import { readSymbolRisk } from "../risk/repository";
 
 /**
  * 카드 3슬롯 페이로드 (WO-SUB-08).
@@ -51,6 +55,17 @@ export interface CardSlotPayload {
   valuation: ValuationChartData | null;
   /** 왜 ③ 이 없는지. 화면에는 안 쓰지만 운영에서 "없음"과 "못 그림"을 구분해야 한다. */
   valuation_unavailable_reason: string | null;
+  /**
+   * "이게 틀리는 경우" 블록 (WO-SUB-06 §6).
+   *
+   * 팩트시트가 없으면 아키타입을 모르므로 `null` — 그때는 섹션을 그리지 않는다. 반대로 유형
+   * 리스크만 있고 종목 고유 리스크가 없는 상태는 `null` 이 아니다. 그건 §5-2 가 설계한 정상
+   * 경로이고 화면이 "확보하지 못했어요" 를 표시해야 한다(완료 조건 3).
+   *
+   * 가격 무효선(`price_text`)은 여기서 채우지 않는다 — `verdict` 에 있고 그건 카드/뎁스가 이미
+   * 갖고 있다. 같은 값을 두 경로로 내보내면 어긋난다.
+   */
+  risk: WhereThisIsWrongBlock | null;
 }
 
 export interface CardSlotsResponse {
@@ -61,9 +76,10 @@ export interface CardSlotsResponse {
 }
 
 async function payloadFor(market: string, canonical: string): Promise<CardSlotPayload> {
-  const [context, record] = await Promise.all([
+  const [context, record, riskRecord] = await Promise.all([
     readBusinessContext(market, canonical).catch(() => null),
     readFactSheet(market, canonical).catch(() => null),
+    readSymbolRisk(market, canonical).catch(() => null),
   ]);
 
   // ② — `toRenderable` 이 게이트다. 필드가 있어도 배지가 `없음`이거나 미검증이면 화면에 못 낸다.
@@ -80,19 +96,28 @@ async function payloadFor(market: string, canonical: string): Promise<CardSlotPa
   // ③ — 아키타입은 저장돼 있지 않아 팩트시트에서 다시 분류한다.
   let valuation: ValuationChartData | null = null;
   let reason: string | null = record ? null : "no_factsheet";
+  let risk: WhereThisIsWrongBlock | null = null;
   if (record) {
     try {
       const archetype = classifyArchetype(record.factsheet).code;
       const chart = buildValuationChart(record.factsheet, archetype, RULESET_VERSION);
       if (chart.renderable) valuation = chart;
       else reason = chart.unavailable_reason ?? "unknown";
+
+      // 리스크 블록은 차트와 독립이다 — 차트를 못 그려도(막대축 부재 등) 리스크는 낼 수 있다.
+      const block = composeWhereThisIsWrong({
+        archetype,
+        storedSymbolRisks: riskRecord?.items ?? null,
+        symbolUnavailableReason: riskRecord?.unavailable_reason ?? null,
+      });
+      risk = hasWhereThisIsWrongContent(block) ? block : null;
     } catch {
       // 독트린에 없는 코드는 `frameOf` 가 던진다 — 카드 하나가 덱 전체를 죽이지 않게 감싼다.
       reason = "build_error";
     }
   }
 
-  return { canonical, market, substance, valuation, valuation_unavailable_reason: reason };
+  return { canonical, market, substance, valuation, valuation_unavailable_reason: reason, risk };
 }
 
 interface LiveDeckShape {
