@@ -5,7 +5,9 @@ import type { SourceDocument } from "@fomo/core";
  * US 공시 원문 수집 + 사업 섹션 추출 (WO-SUB-03 §4-1·§4-2).
  *
  * 대상은 최근 연간보고서(10-K, 외국 발행사는 20-F)의 **Item 1. Business** 다.
- * Item 1A(Risk Factors)는 WO-SUB-06 용이라 여기서 쓰지 않는다.
+ *
+ * WO-SUB-06 §5-2 가 **Item 1A(Risk Factors)** 를 추가로 쓴다. 같은 문서·같은 다중 매치 함정을
+ * 공유하므로 파일을 나누지 않고 구간 판정을 일반화해(`pickSection`) 두 섹션이 함께 쓴다.
  *
  * ## 실측으로 확인한 함정 (2026-07-29)
  *
@@ -96,6 +98,13 @@ export function htmlToPlain(html: string): string {
  */
 const ITEM1_RE = /Items?\s*1(?:\s*(?:and|&|,)\s*2)?\.?\s*[—–\-:.]?\s*Business/gi;
 const ITEM1A_RE = /Item\s*1A\.?\s*[—–\-:.]?\s*Risk\s*Factors/gi;
+/**
+ * Item 1A 의 종료 헤더 후보. 표준 순서는 1B → 2 → 3 이고 발행사에 따라 앞의 것이 없다.
+ * `Properties` / `Legal Proceedings` 를 함께 요구해 목차 밖 상호참조("see Item 2")를 걸러낸다.
+ */
+const ITEM1B_RE = /Item\s*1B\.?\s*[—–\-:.]?\s*Unresolved\s*Staff\s*Comments/gi;
+const ITEM2_RE = /Item\s*2\.?\s*[—–\-:.]?\s*Properties/gi;
+const ITEM3_RE = /Item\s*3\.?\s*[—–\-:.]?\s*Legal\s*Proceedings/gi;
 
 export interface SectionExtraction {
   text: string | null;
@@ -109,12 +118,68 @@ export interface SectionExtraction {
  * 평문에서 Item 1 Business 구간을 뽑는다. 판정 방법은 파일 상단 주석 참조.
  * 실패는 정상 결과다 — 사유를 남기고 그 종목을 실패 목록에 넣는다.
  */
-export function extractBusinessSection(plain: string): SectionExtraction {
-  const starts = [...plain.matchAll(ITEM1_RE)].map((m) => m.index ?? -1).filter((i) => i >= 0);
-  const ends = [...plain.matchAll(ITEM1A_RE)].map((m) => m.index ?? -1).filter((i) => i >= 0);
+/**
+ * 참조 편입(incorporation by reference) 탐지 — WO-SUB-06 §5-2.
+ *
+ * **실측(USB 10-K, 2026-02-23 제출)**: Item 1A 본문이 위험요소가 아니라 안내문 한 단락이다 —
+ * "Information in response to this Item 1A can be found in the 2025 Annual Report on pages 135 to
+ * 150 under the heading Risk Factors. That information is incorporated into this report by
+ * reference." 1A~1B 구간이 224자뿐이라 하한(500자)에 **우연히** 막혔다.
+ *
+ * 우연에 기대면 안 된다: 안내문이 조금만 길면 그 문단이 "위험요소 확보"로 기록되고 LLM 입력으로
+ * 들어간다. 그러면 §4 규칙 1(소스 없는 리스크를 쓰지 않는다)이 조용히 깨진다 — 소스는 있는데
+ * 내용이 없는 경우다. 그래서 길이와 무관하게 문구로 판정한다.
+ *
+ * 실제 위험요소 본문은 별도 exhibit(보통 Exhibit 13 Annual Report)에 있다. 거기까지 따라갈지는
+ * 이 패턴의 실측 규모를 본 뒤 정한다 — 지금은 사유를 남기고 유형 리스크로 내려간다.
+ */
+const INCORPORATION_RE =
+  /incorporated\s+(?:in|into)\s+this\s+(?:report|Report|Form\s*10-K)?\s*by\s+reference|incorporated\s+herein\s+by\s+reference|response\s+to\s+this\s+Item\s*1A\s+can\s+be\s+found/i;
+
+export const INCORPORATED_BY_REFERENCE_REASON =
+  "Item 1A 본문이 참조 편입 안내문(위험요소 원문은 별도 exhibit)";
+
+/**
+ * 구간이 위험요소 본문이 아니라 참조 안내문인지.
+ *
+ * **헤더 직후 창으로만 판정한다.** 길이 기준(예: "구간이 4,000자 미만")은 오탐을 낸다 — 실제
+ * 위험요소 본문에도 "incorporated herein by reference" 상호참조가 섞이기 때문이다(테스트가 잡음).
+ * 참조 편입 발행사는 예외 없이 **헤더 바로 다음 문장**에서 어디를 보라고 말하므로, 그 창 밖의
+ * 같은 문구는 본문 안의 상호참조로 본다.
+ */
+const INCORPORATION_HEAD_CHARS = 400;
+
+export function isIncorporationByReference(text: string): boolean {
+  return INCORPORATION_RE.test(text.slice(0, INCORPORATION_HEAD_CHARS));
+}
+
+function offsetsOf(plain: string, pattern: RegExp): number[] {
+  return [...plain.matchAll(pattern)].map((match) => match.index ?? -1).filter((index) => index >= 0);
+}
+
+interface PickOptions {
+  startLabel: string;
+  endLabel: string;
+  minChars?: number;
+  maxChars?: number;
+}
+
+/**
+ * 시작 헤더 × 종료 헤더로 구간을 고른다 — 판정 방법은 파일 상단 주석 참조.
+ *
+ * 종료 헤더를 **배열**로 받는 이유: Item 1A 의 다음 헤더는 발행사마다 다르다. 표준은 Item 1B
+ * (Unresolved Staff Comments) 지만 소규모 발행사는 1B 를 생략하고 Item 2 로 바로 가며,
+ * Item 1·2 합본 발행사(Valero)는 Item 2 자체가 없어 Item 3 이 다음 헤더다. 하나만 보면
+ * 그 발행사 전체가 조용히 추출 실패로 빠진다.
+ */
+function pickSection(plain: string, startRe: RegExp, endRes: readonly RegExp[], options: PickOptions): SectionExtraction {
+  const minChars = options.minChars ?? MIN_SECTION_CHARS;
+  const maxChars = options.maxChars ?? MAX_SECTION_CHARS;
+  const starts = offsetsOf(plain, startRe);
+  const ends = endRes.flatMap((pattern) => offsetsOf(plain, pattern)).sort((a, b) => a - b);
   const diagnostics = { item1Matches: starts.length, item1aMatches: ends.length, candidates: 0, chosenChars: null as number | null };
-  if (starts.length === 0) return { text: null, reason: "Item 1 Business 헤더 미발견", diagnostics };
-  if (ends.length === 0) return { text: null, reason: "Item 1A Risk Factors 헤더 미발견(구간 종료점 없음)", diagnostics };
+  if (starts.length === 0) return { text: null, reason: `${options.startLabel} 헤더 미발견`, diagnostics };
+  if (ends.length === 0) return { text: null, reason: `${options.endLabel} 헤더 미발견(구간 종료점 없음)`, diagnostics };
 
   const spans = starts
     .map((start) => {
@@ -122,14 +187,54 @@ export function extractBusinessSection(plain: string): SectionExtraction {
       return end === undefined ? null : { start, end, chars: end - start };
     })
     .filter((span): span is { start: number; end: number; chars: number } => span !== null)
-    .filter((span) => span.chars >= MIN_SECTION_CHARS && span.chars <= MAX_SECTION_CHARS);
+    .filter((span) => span.chars >= minChars && span.chars <= maxChars);
   diagnostics.candidates = spans.length;
   if (spans.length === 0) {
-    return { text: null, reason: `유효 구간 없음(Item1 ${starts.length}곳 / Item1A ${ends.length}곳)`, diagnostics };
+    return {
+      text: null,
+      reason: `유효 구간 없음(${options.startLabel} ${starts.length}곳 / ${options.endLabel} ${ends.length}곳)`,
+      diagnostics,
+    };
   }
   const chosen = spans.reduce((best, span) => (span.chars > best.chars ? span : best), spans[0]!);
   diagnostics.chosenChars = chosen.chars;
   return { text: plain.slice(chosen.start, chosen.end).trim(), reason: null, diagnostics };
+}
+
+export function extractBusinessSection(plain: string): SectionExtraction {
+  return pickSection(plain, ITEM1_RE, [ITEM1A_RE], { startLabel: "Item 1 Business", endLabel: "Item 1A Risk Factors" });
+}
+
+/**
+ * Item 1A(Risk Factors) 구간 — WO-SUB-06 §5-2 의 US 소스.
+ *
+ * **소규모 발행사는 Item 1A 를 아예 쓰지 않는다**(Regulation S-K 가 smaller reporting company 에
+ * 위험요소 기재를 면제한다). 그때 헤더 미발견은 결함이 아니라 사실이므로 사유를 남기고 넘긴다 —
+ * §5-2 "확보 실패 시 유형 리스크만 표시" 경로로 간다.
+ *
+ * 하한을 사업 섹션보다 낮춘 이유: 위험요소는 목차 줄과 구별될 정도면 충분하고, 면제 발행사가
+ * "해당 없음" 한 줄만 쓰는 경우도 그 자체가 관측이다. 상한은 그대로 둔다(문서 전체 배제).
+ */
+export function extractRiskFactorsSection(plain: string): SectionExtraction {
+  const picked = pickSection(plain, ITEM1A_RE, [ITEM1B_RE, ITEM2_RE, ITEM3_RE], {
+    startLabel: "Item 1A Risk Factors",
+    endLabel: "Item 1B/2/3",
+    minChars: 500,
+  });
+  if (picked.text && isIncorporationByReference(picked.text)) {
+    return { text: null, reason: INCORPORATED_BY_REFERENCE_REASON, diagnostics: picked.diagnostics };
+  }
+  if (!picked.text) {
+    // 하한 미달로 걸린 구간이 실제로는 참조 편입 안내문일 수 있다 — 사유를 정확히 남긴다.
+    const start = offsetsOf(plain, ITEM1A_RE)[0];
+    if (start !== undefined) {
+      const peek = plain.slice(start, start + 1_200);
+      if (isIncorporationByReference(peek)) {
+        return { text: null, reason: INCORPORATED_BY_REFERENCE_REASON, diagnostics: picked.diagnostics };
+      }
+    }
+  }
+  return picked;
 }
 
 export interface FilingSection {
@@ -197,33 +302,76 @@ async function findAnnualFiling(cik: string): Promise<{ filing: AnnualFiling | n
   return { filing: null, errors };
 }
 
-/** 심볼 → 최근 연간보고서의 사업 섹션. CIK 매핑은 호출부가 넘긴다(SEC 매핑 재조회 중복 방지). */
-export async function fetchBusinessSection(symbol: string, cik: string): Promise<FilingSection> {
-  const numericCik = Number(cik);
+/** 연간보고서 평문 1회 조회 — 두 섹션 추출기가 같은 문서를 두 번 받지 않게 분리했다. */
+async function fetchAnnualPlain(
+  cik: string
+): Promise<{ plain: string | null; filing: AnnualFiling | null; url: string | null; errors: string[] }> {
   const { filing, errors } = await findAnnualFiling(cik);
-  if (!filing) return { document: null, text: null, errors, diagnostics: null };
-
-  const url = `https://www.sec.gov/Archives/edgar/data/${numericCik}/${filing.accession}/${filing.primaryDocument}`;
+  if (!filing) return { plain: null, filing: null, url: null, errors };
+  const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${filing.accession}/${filing.primaryDocument}`;
   await sleep(DELAY_MS);
   const html = await getText(url);
   if (!html) {
     errors.push(`sec: 보고서 본문 조회 실패(${url})`);
-    return { document: null, text: null, errors, diagnostics: null };
+    return { plain: null, filing, url, errors };
   }
-  const extraction = extractBusinessSection(htmlToPlain(html));
-  if (!extraction.text) {
-    errors.push(`sec: 섹션 추출 실패 — ${extraction.reason}`);
-    return { document: null, text: null, errors, diagnostics: extraction.diagnostics };
-  }
-  const document: SourceDocument = {
-    doc_id: `sec:${symbol.toUpperCase()}:${filing.accession}`,
+  return { plain: htmlToPlain(html), filing, url, errors };
+}
+
+/**
+ * 섹션 추출 결과 → `SourceDocument`.
+ *
+ * `doc_id` 에 섹션 구분(`suffix`)을 넣는 이유: 한 10-K 에서 사업 섹션과 위험요소를 각각 뽑으면
+ * accession 이 같다. 구분이 없으면 **다른 내용이 같은 doc_id 를 갖게 되고** WO-SUB-06 §4 규칙 2
+ * ("소스 종류를 분리한다")가 원장 수준에서 깨진다.
+ */
+function sectionDocument(symbol: string, filing: AnnualFiling, url: string, text: string, suffix: string): SourceDocument {
+  return {
+    doc_id: `sec:${symbol.toUpperCase()}:${filing.accession}:${suffix}`,
     kind: "disclosure",
     source: `sec_${filing.form.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
     url,
     as_of: filing.filedAt,
     fetched_at: new Date().toISOString(),
-    snapshot_hash: createHash("sha256").update(extraction.text).digest("hex").slice(0, 16),
-    chars: extraction.text.length,
+    snapshot_hash: createHash("sha256").update(text).digest("hex").slice(0, 16),
+    chars: text.length,
   };
-  return { document, text: extraction.text, errors, diagnostics: extraction.diagnostics };
+}
+
+/** 심볼 → 최근 연간보고서의 사업 섹션. CIK 매핑은 호출부가 넘긴다(SEC 매핑 재조회 중복 방지). */
+export async function fetchBusinessSection(symbol: string, cik: string): Promise<FilingSection> {
+  const { plain, filing, url, errors } = await fetchAnnualPlain(cik);
+  if (!plain || !filing || !url) return { document: null, text: null, errors, diagnostics: null };
+  const extraction = extractBusinessSection(plain);
+  if (!extraction.text) {
+    errors.push(`sec: 섹션 추출 실패 — ${extraction.reason}`);
+    return { document: null, text: null, errors, diagnostics: extraction.diagnostics };
+  }
+  return {
+    // 기존 doc_id 규약 유지 — 사업 섹션 레코드가 이미 저장돼 있어 suffix 를 붙이면 전량 재합성된다.
+    document: {
+      ...sectionDocument(symbol, filing, url, extraction.text, "business"),
+      doc_id: `sec:${symbol.toUpperCase()}:${filing.accession}`,
+    },
+    text: extraction.text,
+    errors,
+    diagnostics: extraction.diagnostics,
+  };
+}
+
+/** 심볼 → 최근 연간보고서의 위험요소(Item 1A) 섹션. WO-SUB-06 §5-2. */
+export async function fetchRiskFactorsSection(symbol: string, cik: string): Promise<FilingSection> {
+  const { plain, filing, url, errors } = await fetchAnnualPlain(cik);
+  if (!plain || !filing || !url) return { document: null, text: null, errors, diagnostics: null };
+  const extraction = extractRiskFactorsSection(plain);
+  if (!extraction.text) {
+    errors.push(`sec: 위험요소 추출 실패 — ${extraction.reason}`);
+    return { document: null, text: null, errors, diagnostics: extraction.diagnostics };
+  }
+  return {
+    document: sectionDocument(symbol, filing, url, extraction.text, "risk-factors"),
+    text: extraction.text,
+    errors,
+    diagnostics: extraction.diagnostics,
+  };
 }
