@@ -27,6 +27,7 @@ const SAMPLE: Array<{ name: string; stockCode: string }> = [
   { name: "삼성전자", stockCode: "005930" },
   { name: "BNK금융지주", stockCode: "138930" },
   { name: "POSCO홀딩스", stockCode: "005490" },
+  { name: "KT", stockCode: "030200" },
 ];
 
 interface ListRow {
