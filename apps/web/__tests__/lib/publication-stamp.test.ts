@@ -127,13 +127,19 @@ describe("발행 시점 스탬프", () => {
     expect(stamp.missing).not.toContain("earnings_date");
   });
 
-  it("사업 무효 조건은 06 미착수를 상태로 밝힌다 — 빈 문자열로 채우지 않는다", async () => {
+  /**
+   * 06 완료로 `pending_wo_sub_06` 이 풀렸다. 이제 세 상태로 갈린다 —
+   * 아키타입이 없어서(`no_archetype`) / 그 유형에 자동 판정 조건을 만들 수 없어서(`no_condition`)
+   * / 확보(`found`). 셋을 합치면 "소스가 없어서" 와 "만들 수 없어서" 가 섞인다.
+   */
+  it("팩트시트가 없으면 아키타입을 못 골라 no_archetype 이다", async () => {
     readFactSheet.mockResolvedValue(null);
 
     const stamp = await buildPublicationStamp({ market: "US", canonical: "AAA Corp" }, facts, await loadEarningsIndex());
 
     expect(stamp.invalidation_business).toBeNull();
-    expect(stamp.invalidation_business_status).toBe("pending_wo_sub_06");
+    expect(stamp.invalidation_business_rule).toBeNull();
+    expect(stamp.invalidation_business_status).toBe("no_archetype");
     expect(stamp.missing).toContain("invalidation_business");
   });
 
@@ -172,5 +178,78 @@ describe("발행 시점 스탬프", () => {
     expect(stamps.get("터지는회사")?.factsheet_hash).toBeNull();
     expect(stamps.get("정상회사")?.invalidation_price).toBe(1800);
     expect(stamps.get("정상회사")?.reference_price).toBe(2000);
+  });
+});
+
+/**
+ * WO-SUB-07 §5 — 06 완료로 채워진 필드들.
+ *
+ * 05(4축 등급)는 아직이라 `axes`/`formula_version` 은 **비어 있는 것이 정답**이다.
+ * 자리를 비워두면 "아직 안 함" 이 데이터로 남아 05 이후 발행분과 구분해 집계할 수 있다.
+ */
+describe("스탬프 v2 — 사업 무효 조건·값의 위치·4축 자리", () => {
+  it("아키타입이 잡히면 사업 무효 조건과 판정 규칙을 함께 남긴다", async () => {
+    readFactSheet.mockResolvedValue({ factsheet: factsheet(), factsheet_hash: "hash-abc" });
+
+    const stamp = await buildPublicationStamp({ market: "US", canonical: "AAA Corp", symbol: "AAA" }, facts, await loadEarningsIndex());
+
+    expect(stamp.invalidation_business_status).toBe("found");
+    expect(stamp.invalidation_business).toBeTruthy();
+    // 채점기가 문장을 다시 파싱하지 않도록 판정 입력을 그대로 싣는다.
+    expect(stamp.invalidation_business_rule?.metric).toBeTruthy();
+    expect(stamp.invalidation_business_rule?.direction).toBeTruthy();
+    expect(stamp.missing).not.toContain("invalidation_business");
+  });
+
+  it("조건을 만들 수 없는 유형은 no_condition — no_archetype 과 구분한다", async () => {
+    // PHARMA_STABLE·ASSET_DEEP_VALUE 는 실적 발표 데이터로 자동 판정할 조건이 없다.
+    readFactSheet.mockResolvedValue({
+      // 필드명은 실제 타입 그대로 쓴다 — 헬퍼는 최종 `as FactSheet` 캐스팅이라 느슨하지만
+      // override 는 엄격 검사를 받는다.
+      factsheet: factsheet({
+        classification: { scheme: "nasdaq_industry", sector: "Health Care", industry: "Major Pharmaceuticals", source: "nasdaq" },
+        growth: { revenue_yoy: 2, revenue_cagr_3y: 2, operating_income_yoy: null },
+      }),
+      factsheet_hash: "hash-pharma",
+    });
+
+    const stamp = await buildPublicationStamp({ market: "US", canonical: "PH Corp", symbol: "PH" }, facts, await loadEarningsIndex());
+
+    if (stamp.archetype === "PHARMA_STABLE" || stamp.archetype === "ASSET_DEEP_VALUE") {
+      expect(stamp.invalidation_business_status).toBe("no_condition");
+      expect(stamp.invalidation_business_rule).toBeNull();
+    } else {
+      // 분류가 다른 유형으로 가면 조건이 있는 것이 정상 — 상태가 no_archetype 이 아니면 된다.
+      expect(stamp.invalidation_business_status).not.toBe("no_archetype");
+    }
+  });
+
+  it("밴드가 부족하면 percentile 을 null 로 두고 sufficient 로 사실을 남긴다", async () => {
+    readFactSheet.mockResolvedValue({ factsheet: factsheet(), factsheet_hash: "hash-abc" });
+
+    const stamp = await buildPublicationStamp({ market: "US", canonical: "AAA Corp", symbol: "AAA" }, facts, await loadEarningsIndex());
+
+    expect(stamp.valuation_snapshot).not.toBeNull();
+    if (stamp.valuation_snapshot?.sufficient === false) {
+      expect(stamp.valuation_snapshot.percentile).toBeNull();
+    }
+  });
+
+  it("팩트시트가 없으면 값의 위치도 미확보로 등재한다", async () => {
+    readFactSheet.mockResolvedValue(null);
+    const stamp = await buildPublicationStamp({ market: "US", canonical: "AAA Corp" }, facts, await loadEarningsIndex());
+    expect(stamp.valuation_snapshot).toBeNull();
+    expect(stamp.missing).toContain("valuation_snapshot");
+  });
+
+  it("4축은 05 대기라 비어 있다 — 등급을 지어내지 않는다", async () => {
+    readFactSheet.mockResolvedValue({ factsheet: factsheet(), factsheet_hash: "hash-abc" });
+    const stamp = await buildPublicationStamp({ market: "US", canonical: "AAA Corp", symbol: "AAA" }, facts, await loadEarningsIndex());
+    expect(stamp.axes).toEqual([]);
+    expect(stamp.formula_version).toBeNull();
+  });
+
+  it("스키마 버전이 v2 다 — v1 행을 새 스키마로 읽지 않기 위해", () => {
+    expect(PUBLICATION_STAMP_VERSION).toBe("stamp.v2");
   });
 });

@@ -1,4 +1,10 @@
-import { RULESET_VERSION, classifyArchetype } from "@fomo/core";
+import {
+  RULESET_VERSION,
+  businessInvalidationFor,
+  classifyArchetype,
+  judgeability,
+  type BusinessInvalidation,
+} from "@fomo/core";
 import { readWeeklyCalendar } from "./earnings-calendar";
 import { readFactSheet } from "./fundamentals/repository";
 
@@ -35,8 +41,14 @@ export type EarningsDateStatus =
   /** 캘린더 자체를 못 읽었다(크론 미실행·저장 장애). */
   | "calendar_unavailable";
 
-/** 사업 무효 조건 확보 상태 — WO-SUB-06 산출물이라 아직 비어 있다. */
-export type BusinessInvalidationStatus = "found" | "pending_wo_sub_06";
+/**
+ * 사업 무효 조건 확보 상태.
+ *
+ * `pending_wo_sub_06` 은 **06 착수 전 발행분**에만 남는다(과거 행 해석용, 제거하지 않는다).
+ * 06 이 끝난 뒤 발행분은 `found` 또는 `no_condition` 이다 — 후자는 그 유형에 자동 판정 가능한
+ * 조건을 만들 수 없다는 뜻이고(PHARMA_STABLE·ASSET_DEEP_VALUE), 미확보와 구분해야 한다.
+ */
+export type BusinessInvalidationStatus = "found" | "no_condition" | "no_archetype" | "pending_wo_sub_06";
 
 export interface PublicationStamp {
   /** 이 스탬프의 스키마 버전. 필드를 늘리면 올린다 — 과거 행을 새 스키마로 읽지 않기 위해. */
@@ -56,9 +68,41 @@ export interface PublicationStamp {
   /** 가격 무효선. 확보하지 못하면 `null` — 픽 자체가 무효선 없이 발행되는 경우가 있다. */
   invalidation_price: number | null;
   invalidation_text: string | null;
-  /** 사업 무효 조건(06). 아직 없으므로 `null` + 상태로 남긴다. */
+  /** 사업 무효 조건(06). 문안과 판정 입력을 함께 남긴다 — 채점기가 문장을 다시 파싱하지 않게. */
   invalidation_business: string | null;
   invalidation_business_status: BusinessInvalidationStatus;
+  /**
+   * 자동 판정 입력. `judgeBusinessInvalidation()` 이 이 값으로 채점한다.
+   * 조건이 없으면 `null` — 그때 `invalidation_business_status` 가 이유를 말한다.
+   */
+  invalidation_business_rule: BusinessInvalidation | null;
+  /**
+   * 값의 위치 스냅샷 (WO-SUB-07 §5).
+   *
+   * 05(등급)가 아니라 01(팩트시트) 산출물이라 지금 채울 수 있다. 밴드가 `sufficient: false` 면
+   * `percentile` 은 반드시 `null` 이다(WO-SUB-01 규약) — 그 상태를 그대로 보존한다.
+   */
+  valuation_snapshot: {
+    band_metric: string | null;
+    percentile: number | null;
+    value: number | null;
+    sufficient: boolean;
+  } | null;
+  /**
+   * 4축 등급 — **WO-SUB-05 산출물이라 아직 비어 있다.**
+   *
+   * 자리를 비워두는 이유: 05 가 끝난 뒤 스키마를 다시 바꾸면 그 사이 발행분과 이후 발행분의
+   * 모양이 달라져 집계가 갈린다. 빈 배열 + `null` 버전으로 두면 "아직 안 함" 이 데이터로 남고,
+   * 05 이후 발행분과 구분해 집계할 수 있다.
+   */
+  axes: Array<{
+    axis: string;
+    grade: "A" | "B" | "C" | "D" | "N/A";
+    formula_id: string;
+    na_reason: string | null;
+  }>;
+  /** 등급 산정식 버전. 05 전에는 `null`. */
+  formula_version: string | null;
   /** 어닝 발표일. `null` 이면 반드시 `earnings_date_status` 로 뜻을 읽는다. */
   earnings_date: string | null;
   earnings_date_status: EarningsDateStatus;
@@ -66,7 +110,14 @@ export interface PublicationStamp {
   missing: string[];
 }
 
-export const PUBLICATION_STAMP_VERSION = "stamp.v1";
+/**
+ * 스탬프 스키마 버전.
+ *
+ * `v2`(2026-08-08): 사업 무효 조건(06 완료로 해제)·값의 위치 스냅샷·4축 자리를 추가했다.
+ * 과거 `v1` 행을 새 스키마로 읽지 않기 위해 올린다 — v1 에는 `invalidation_business_rule` 과
+ * `valuation_snapshot` 이 아예 없고, 그걸 `null` 로 읽으면 "확보 못 함" 으로 오독된다.
+ */
+export const PUBLICATION_STAMP_VERSION = "stamp.v2";
 
 export interface StampSubject {
   market: string;
@@ -158,8 +209,50 @@ export async function buildPublicationStamp(
 
   const invalidationPrice = facts.invalidation_price ?? null;
   if (invalidationPrice === null) missing.push("invalidation_price");
-  // 06 미착수 — 사업 무효 조건은 아직 아무 픽에도 없다. 상태로 남겨 나중에 분모에서 구분한다.
-  missing.push("invalidation_business");
+
+  /**
+   * 사업 무효 조건 (06 완료로 해제).
+   *
+   * 아키타입이 없으면 조건을 고를 수 없다(`no_archetype`). 아키타입이 있어도 자동 판정 가능한
+   * 조건을 만들 수 없는 유형이 있다(`no_condition` — PHARMA_STABLE 특허 만료일 등은 실적 발표
+   * 데이터에 없다). 두 상태를 합치면 "소스가 없어서" 와 "만들 수 없어서" 가 섞인다.
+   *
+   * 어닝 상태를 조건에 그대로 물려준다 — 확인 시점이 언제인지가 조건의 일부다.
+   */
+  let businessRule: BusinessInvalidation | null = null;
+  let businessStatus: BusinessInvalidationStatus;
+  if (!archetype) {
+    businessStatus = "no_archetype";
+    missing.push("invalidation_business");
+  } else {
+    businessRule = businessInvalidationFor(archetype as Parameters<typeof businessInvalidationFor>[0], {
+      date: earnings.date,
+      status: earnings.status === "found" ? "earnings_date" : earnings.status === "no_source_kr" ? "no_source_kr" : "outside_window",
+    });
+    // 형태만 갖추고 판정이 안 되는 조건은 기록하지 않는다 — 채점 시점에 조용히 통과한다.
+    if (businessRule && !judgeability(businessRule).judgeable) businessRule = null;
+    businessStatus = businessRule ? "found" : "no_condition";
+    if (!businessRule) missing.push("invalidation_business");
+  }
+
+  /**
+   * 값의 위치. 밴드가 부족하면 `percentile` 은 `null` 이고 그 사실을 `sufficient` 로 남긴다 —
+   * 백분위가 없는 것과 0 인 것은 다른 말이다.
+   */
+  const band = record?.factsheet?.valuation?.band_5y ?? null;
+  // 어느 배수를 밴드로 쓸지는 독트린이 정하고 팩트시트가 `metric` 에 남긴다(per|pbr|psr).
+  const bandMetric = band?.metric ?? null;
+  const bandStat = band && bandMetric ? band[bandMetric] : null;
+  const valuationSnapshot = record?.factsheet
+    ? {
+        band_metric: bandMetric,
+        // `sufficient: false` 면 `current_percentile` 은 반드시 null 이다(WO-SUB-01 규약).
+        percentile: bandStat?.current_percentile ?? null,
+        value: bandStat?.current ?? null,
+        sufficient: bandStat?.sufficient === true,
+      }
+    : null;
+  if (!valuationSnapshot) missing.push("valuation_snapshot");
 
   return {
     stamp_version: PUBLICATION_STAMP_VERSION,
@@ -173,8 +266,13 @@ export async function buildPublicationStamp(
     reference_price_as_of: facts.reference_price_as_of,
     invalidation_price: invalidationPrice,
     invalidation_text: facts.invalidation_text ?? null,
-    invalidation_business: null,
-    invalidation_business_status: "pending_wo_sub_06",
+    invalidation_business: businessRule?.condition_text ?? null,
+    invalidation_business_status: businessStatus,
+    invalidation_business_rule: businessRule,
+    valuation_snapshot: valuationSnapshot,
+    // 05 대기 — 자리를 비워두고 "아직 안 함" 을 데이터로 남긴다(AC_DEBT_LEDGER 등재).
+    axes: [],
+    formula_version: null,
     earnings_date: earnings.date,
     earnings_date_status: earnings.status,
     missing,
