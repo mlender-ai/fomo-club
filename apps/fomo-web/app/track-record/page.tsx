@@ -6,6 +6,9 @@ import { SIGNAL_TYPE_CODES, SIGNAL_TYPE_LABELS } from "@fomo/core";
 import {
   fetchTrackRecord,
   fetchScorecardPicks,
+  fetchInvalidationSummary,
+  type InvalidationMetric,
+  type InvalidationSummary,
   type TrackMetric,
   type TrackRecordResponse,
   type TrackWindowResult,
@@ -29,6 +32,65 @@ const SCORE_LABEL: Record<string, string> = {
 
 function signed(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+/**
+ * 무효 조건 블록 (WO-SUB-07 §8).
+ *
+ * **판정 불가를 미충족으로 세지 않는다**(§6-4). 셋을 모두 보여주고 표본 수(n)를 병기한다 —
+ * 표본이 작으면 작다고 보여야 한다(§8). 비율만 내면 3건의 33% 와 300건의 33% 가 같아 보인다.
+ *
+ * 데이터가 없으면 블록 자체를 숨긴다(빈 상자 금지). 성적이 나빠서 숨기는 것이 아니라
+ * 아직 판정할 발행분이 없다는 뜻이다 — 생기면 자동으로 나온다.
+ */
+function InvalidationRow({ label, metric, note }: { label: string; metric: InvalidationMetric; note: string }) {
+  if (metric.n === 0) return null;
+  return (
+    <div className="mt-3 first:mt-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-bold text-whiteout">{label}</span>
+        <span className="text-sm font-bold" style={{ color: NEON }}>
+          {metric.rate === null ? "—" : `${metric.rate.toFixed(1)}%`}
+          {/* 표본 수를 항상 병기한다(§8). 다만 영문 약어 표기는 내부 용어라 화면에서는 한국어로
+              쓴다 — WO §8 목업도 "판단 수 1,240" 형태이고, insufficientSampleCopyGuard 가 그 약어를 막는다. */}
+          <span className="ml-1.5 text-[11px] font-normal text-muted">판단 {metric.n.toLocaleString("ko-KR")}건</span>
+        </span>
+      </div>
+      <p className="mt-1 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">
+        도달 {metric.reached} · 미도달 {metric.notReached} · 판정 불가 {metric.undetermined}
+      </p>
+      <p className="mt-0.5 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">{note}</p>
+    </div>
+  );
+}
+
+function InvalidationBlock({ summary }: { summary: InvalidationSummary | null }) {
+  if (!summary) return null;
+  if (summary.price.n === 0 && summary.business.n === 0) return null;
+  const reasons = Object.entries(summary.businessUndeterminedReasons).sort((a, b) => b[1] - a[1]);
+  const versions = Object.entries(summary.rulesetVersions).sort((a, b) => b[1] - a[1]);
+  return (
+    <section className="mt-4 rounded-xl border border-hairline bg-white/[0.03] px-4 py-4">
+      <p className="text-sm font-bold text-whiteout">무효 조건</p>
+      <p className="mt-1 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">
+        발행할 때 &ldquo;이러면 이 관점은 틀린 겁니다&rdquo;라고 미리 적어둔 선이에요. 얼마나 도달했는지 그대로 셉니다.
+      </p>
+      <div className="mt-3">
+        <InvalidationRow label="가격 무효선 도달" metric={summary.price} note="발행 시점 무효선을 이후 관측 가격이 넘었는지" />
+        <InvalidationRow label="사업 무효 조건 도달" metric={summary.business} note="실적 데이터로 자동 판정한 결과" />
+      </div>
+      {reasons.length > 0 && (
+        <p className="mt-3 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
+          판정 불가 사유 · {reasons.map(([reason, count]) => `${reason} ${count}`).join(" · ")}
+        </p>
+      )}
+      {versions.length > 0 && (
+        <p className="mt-1 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
+          규칙 버전 분포 · {versions.map(([version, count]) => `${version} ${count}`).join(" · ")}
+        </p>
+      )}
+    </section>
+  );
 }
 
 function MetricBlock({ label, metric, value }: { label: string; metric: TrackMetric; value: "winRate" | "median" | "n" }) {
@@ -205,10 +267,13 @@ export default function TrackRecordPage() {
   const [userPicked, setUserPicked] = useState(false);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<ScorecardPick | null>(null);
+  // 무효 조건 성적 — 실패해도 성적표 나머지는 그대로다(선택 블록).
+  const [invalidation, setInvalidation] = useState<InvalidationSummary | null>(null);
 
   useEffect(() => {
     void fetchTrackRecord().then(setRecord).catch(() => setFailed(true));
     void fetchScorecardPicks().then((res) => setPicks(res.picks)).catch(() => undefined);
+    void fetchInvalidationSummary().then(setInvalidation).catch(() => undefined);
   }, []);
 
   // 아직 도래한 outcome이 특정 창에만 있을 수 있어, 첫 진입은 기록이 가장 많은 창을 고른다.
@@ -309,6 +374,8 @@ export default function TrackRecordPage() {
           />
         </>
       ) : null}
+
+      <InvalidationBlock summary={invalidation} />
 
       <PickList picks={picks} days={days} onOpen={setSelected} />
 
