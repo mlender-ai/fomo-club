@@ -91,8 +91,21 @@ export async function fetchCorpCodeMap(key: string, options: { refresh?: boolean
     }
   }
 
+  /**
+   * **키가 없으면 부르지 않는다.**
+   *
+   * 종전에는 빈 `crtfc_key` 로 요청을 보냈다. 성공할 수 없는 요청인데 타임아웃이 240초라
+   * (전송이 느린 파일이라 크게 잡아둔 값) 응답이 안 오면 그만큼 매달린다. 실측: CI 에서
+   * `dart-discovery.test.ts` 가 이 경로 때문에 5초 테스트 타임아웃에 걸렸다 — 로컬에서는
+   * DART 가 에러 XML 을 빨리 주니 우연히 통과했을 뿐이다.
+   *
+   * 사유를 남기고 즉시 돌려준다(조용한 빈 매핑 금지 원칙은 그대로).
+   */
+  const trimmedKey = key.trim();
+  if (!trimmedKey) return empty("DART_API_KEY 없음 — corpCode.xml 요청 생략");
+
   const startedAt = Date.now();
-  const res = await fetch(`${DART_BASE}/corpCode.xml?crtfc_key=${key}`, {
+  const res = await fetch(`${DART_BASE}/corpCode.xml?crtfc_key=${trimmedKey}`, {
     signal: AbortSignal.timeout(CORP_CODE_TIMEOUT_MS),
   }).catch((error: unknown) => ({ ok: false, status: 0, error }) as const);
   if (!("arrayBuffer" in res)) {
