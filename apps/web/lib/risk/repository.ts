@@ -32,6 +32,11 @@ export interface SymbolRiskRecord {
   synthesized_at: string;
   /** 합성에 쓴 프롬프트·모델 — 재합성 판단 입력(WO-SUB-03 결정론 정책과 같은 축). */
   prompt_id: string | null;
+  /**
+   * 프롬프트 **본문 해시**. 버전 문자열이 아니라 해시를 저장하는 이유: 문안만 고치고 버전을
+   * 안 올리면 id 비교로는 재합성이 트리거되지 않는다(WO-SUB-03.5 PART C-2 선례).
+   */
+  prompt_hash: string | null;
   model: string | null;
 }
 
