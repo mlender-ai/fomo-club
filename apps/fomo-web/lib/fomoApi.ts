@@ -1394,3 +1394,34 @@ export async function fetchCardSlots(): Promise<CardSlotsResponse> {
   const body: unknown = await res.json().catch(() => null);
   return isCardSlotsResponse(body) ? body : { date: "", ruleset_version: "", slots: {} };
 }
+
+/** 무효 조건 성적 (WO-SUB-07 §8). */
+export interface InvalidationMetric {
+  n: number;
+  reached: number;
+  notReached: number;
+  /** 판정하지 못한 수. **미충족으로 세지 않는다**(§6-4). */
+  undetermined: number;
+  rate: number | null;
+}
+
+export interface InvalidationSummary {
+  generatedAt: string;
+  price: InvalidationMetric;
+  business: InvalidationMetric;
+  businessUndeterminedReasons: Record<string, number>;
+  rulesetVersions: Record<string, number>;
+}
+
+/**
+ * 무효 조건 성적. **실패해도 성적표 나머지는 그려야 한다** — 선택 블록이다.
+ * 그래서 던지지 않고 null 을 준다.
+ */
+export async function fetchInvalidationSummary(): Promise<InvalidationSummary | null> {
+  const res = await fetch(`${API_BASE}/api/fomo/invalidation-summary`, { cache: "no-store" }).catch(() => null);
+  if (!res?.ok) return null;
+  const body: unknown = await res.json().catch(() => null);
+  if (!body || typeof body !== "object") return null;
+  const value = body as Partial<InvalidationSummary>;
+  return value.price && value.business ? (value as InvalidationSummary) : null;
+}
