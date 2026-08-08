@@ -190,8 +190,14 @@ async function paced<T>(run: () => Promise<T>): Promise<T> {
   return task;
 }
 
-/** 429·5xx 는 백오프 재시도. 그 외 실패는 그대로 돌려준다(무한 재시도 금지). */
-async function callWithRetry(options: Parameters<typeof callAI>[0]): Promise<Awaited<ReturnType<typeof callAI>>> {
+/**
+ * 429·5xx 는 백오프 재시도. 그 외 실패는 그대로 돌려준다(무한 재시도 금지).
+ *
+ * **export 하는 이유(WO-SUB-06.5)**: 리스크 합성 배치도 같은 LLM 한도를 쓴다. 배치마다 페이싱
+ * 상태를 따로 두면 둘이 각자 "분당 여유가 있다"고 판단해 합산 TPM 을 넘긴다 — 골든셋 1차에서
+ * 22종목을 429 로 잃은 것이 정확히 그 형태였다(페이싱 없는 연속 발사). 상태를 공유해야 한다.
+ */
+export async function callWithRetry(options: Parameters<typeof callAI>[0]): Promise<Awaited<ReturnType<typeof callAI>>> {
   // 이미 소진됐으면 호출하지 않는다 — 간격 대기까지 포함해 전부 낭비다.
   if (quotaExhausted()) return { content: "", ok: false, status: 429, model: "", errorBody: "일일 쿼터 소진 — 호출 생략" };
   let last = await paced(() => callAI(options));
@@ -272,7 +278,7 @@ function parseSlot(raw: RawSlot | null | undefined, validIds: ReadonlySet<string
 }
 
 /** JSON 응답 파싱 — 코드펜스·앞뒤 잡텍스트를 견딘다. */
-function parseJsonObject(content: string): Record<string, unknown> | null {
+export function parseJsonObject(content: string): Record<string, unknown> | null {
   const fenced = content.replace(/```json\s*|```/gi, "");
   const start = fenced.indexOf("{");
   const end = fenced.lastIndexOf("}");

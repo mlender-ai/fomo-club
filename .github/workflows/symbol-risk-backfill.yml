@@ -1,0 +1,87 @@
+name: Symbol Risk Backfill (manual)
+
+# WO-SUB-06.5 — 종목 고유 리스크 합성 배치.
+#
+# 프로덕션 크론 라우트를 `done: true` 까지 반복 호출한다(팩트시트 백필과 같은 패턴).
+# 라우트가 SEC·DART·LLM 을 부르므로 그 자격증명을 가진 실행 환경(Vercel)에서 돌아야 한다 —
+# 여기서 직접 스크립트를 돌리지 않고 라우트를 두들기는 이유다.
+#
+# **cron 스케줄 없음**(AGENTS.md 블랙리스트: 자율 실행 cron 신설 금지). 이 배치는 LLM 비용을
+# 쓰므로 의도적 수동 실행만 한다.
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "1회 청크 종목 수(기본 6). 종목당 최대 4콜 × 페이싱"
+        required: false
+        default: "6"
+      rounds:
+        description: "최대 반복 라운드(기본 20). done 이면 조기 종료"
+        required: false
+        default: "20"
+      only:
+        description: "쉼표로 구분한 종목(canonical 또는 심볼). 비우면 전 유니버스"
+        required: false
+        default: ""
+      reset:
+        description: "커서 초기화 — 첫 라운드에만 붙는다"
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: "전량 재합성(재합성 불필요 판정 무시). 비용 발생"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: symbol-risk-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Backfill symbol risks
+        env:
+          BASE: https://fomo-club-backend.vercel.app
+          LIMIT: ${{ inputs.limit }}
+          ROUNDS: ${{ inputs.rounds }}
+          ONLY: ${{ inputs.only }}
+          RESET: ${{ inputs.reset }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          rounds="${ROUNDS:-20}"
+          limit="${LIMIT:-6}"
+          summary=/tmp/symbol-risk.md
+          : > "$summary"
+          for i in $(seq 1 "$rounds"); do
+            url="$BASE/api/fomo/cron/symbol-risk?limit=$limit"
+            # reset 은 첫 라운드에만 — 붙여두면 매 라운드가 커서를 지워 무한 반복이 된다.
+            if [ "$i" = "1" ] && [ "$RESET" = "true" ]; then url="$url&reset=1"; fi
+            if [ "$FORCE" = "true" ]; then url="$url&force=1"; fi
+            if [ -n "$ONLY" ]; then url="$url&only=$(printf '%s' "$ONLY" | sed 's/ //g')"; fi
+            echo "round $i: $url"
+            body="$(curl -sS --max-time 320 "$url" || echo '{"ok":false,"error":"curl failed"}')"
+            printf '%s\n' "$body" | head -c 2000
+            echo
+            processed="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("processed","?"))' 2>/dev/null || echo "?")"
+            skipped="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("skipped","?"))' 2>/dev/null || echo "?")"
+            remaining="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("remaining","?"))' 2>/dev/null || echo "?")"
+            items="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(o.get("items",0) for o in d.get("outcomes",[])))' 2>/dev/null || echo "?")"
+            echo "| $i | $processed | $skipped | $items | $remaining |" >> "$summary"
+            done_flag="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("done"))' 2>/dev/null || echo "None")"
+            if [ "$done_flag" = "True" ]; then echo "done at round $i"; break; fi
+            sleep 3
+          done
+          {
+            echo '### 종목 리스크 백필'
+            echo '| 라운드 | 처리 | 건너뜀 | 확보 항목 | 남음 |'
+            echo '|---|---|---|---|---|'
+            cat "$summary"
+          } >> "$GITHUB_STEP_SUMMARY"

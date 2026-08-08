@@ -56,10 +56,23 @@ describe("DART corp_code 매핑", () => {
     expect(map.byStockCode.get("185750")).toBe("00164779");
   });
 
-  it("키가 없으면 조용히 빈 매핑을 만들지 않고 사유를 남긴다", async () => {
+  /**
+   * 네트워크를 **부르지 않는다**는 것까지 단정한다.
+   *
+   * 종전에는 fetch 를 스텁하지 않아 빈 키로 DART 에 실제 요청이 나갔다. 로컬에서는 에러 XML 이
+   * 빨리 와서 통과했지만 CI 에서 5초 테스트 타임아웃에 걸렸다(DART 응답이 느릴 때). 외부 fetch
+   * 계층까지 모킹해야 한다는 것은 이 레포의 기록된 교훈이다(WO-SUB-03.5 PART D).
+   */
+  it("키가 없으면 네트워크를 부르지 않고 사유를 남긴다", async () => {
+    let called = false;
+    vi.stubGlobal("fetch", async () => {
+      called = true;
+      throw new Error("키가 없는데 네트워크를 불렀다");
+    });
     const { fetchCorpCodeMap } = await import("../../lib/fundamentals/dart-discovery");
     const map = await fetchCorpCodeMap("", { refresh: true });
+    expect(called).toBe(false);
     expect(map.listedEntries).toBe(0);
-    expect(map.error).toBeTruthy();
+    expect(map.error).toContain("DART_API_KEY 없음");
   });
 });
