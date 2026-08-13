@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DailyOhlcv } from "@fomo/core";
+import type { DailyOhlcv, WhereThisIsWrongBlock } from "@fomo/core";
 import type { QuietPick, StockBasics } from "@/lib/fomoApi";
 import {
   fetchStockBasics,
@@ -10,7 +10,9 @@ import {
   type StockFrontResponse,
 } from "@/lib/fomoApi";
 import { fetchScorecardPicks, type ScorecardPick } from "@/lib/judgmentLedgerClient";
+import { fetchCardSlots } from "@/lib/fomoApi";
 import { CompanyProfileBlock, FinanceGlanceBlock } from "@/components/KeywordDepthPage";
+import { WhereThisIsWrong } from "@/components/WhereThisIsWrong";
 import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { displayName } from "@/components/QuietPickCard";
 import { OverlayPortal } from "@/components/OverlayPortal";
@@ -213,6 +215,30 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const [news, setNews] = useState<{ title: string; source?: string; url?: string }[]>([]);
   const [newsLoaded, setNewsLoaded] = useState(false);
   const [records, setRecords] = useState<ScorecardPick[]>([]);
+  /**
+   * "이게 틀리는 경우" 블록 (WO-SUB-FILL PART 5).
+   *
+   * **덱 뎁스에 이 섹션이 없었다.** 06 이 만든 `WhereThisIsWrong` 은 `StockInsightView` 에만
+   * 붙어 있어서 관심목록·검색·피드로 열 때만 보였다 — 정작 주 화면인 픽 카드의 "자세히" 는
+   * `QuietPickDepth`(이 파일)를 열고, 여기엔 없었다. 리스크 배치가 채워져도 주 화면에는
+   * 뜨지 않는 구조였다.
+   *
+   * `card-slots` 는 s-maxage 900 이라 반복 조회 비용이 낮다. 실패하면 이 섹션만 빠지고
+   * 나머지 뎁스는 그대로다(선택 슬롯 원칙).
+   */
+  const [riskBlock, setRiskBlock] = useState<WhereThisIsWrongBlock | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setRiskBlock(null);
+    void fetchCardSlots().then((res) => {
+      if (!alive) return;
+      setRiskBlock(res.slots[stock]?.risk ?? null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [stock]);
 
   useEffect(() => {
     let alive = true;
@@ -349,7 +375,28 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           </Section>
         )}
 
-        {/* ⑤ */}
+        {/* ⑤ 이게 틀리는 경우 — 차트(무효선) 바로 뒤에 둔다. 무효선을 본 직후가 "틀릴 조건" 을
+            읽을 자리다. 기록 블록 뒤로 밀면 반론이 결과 뒤에 오게 된다. */}
+        {riskBlock && (
+          <WhereThisIsWrong
+            symbol={{
+              items: riskBlock.symbol.items,
+              unavailableReason: riskBlock.symbol.unavailable_reason,
+              unavailableText: riskBlock.symbol.unavailable_text,
+            }}
+            archetype={riskBlock.archetype}
+            invalidation={{
+              // 가격 무효선은 픽의 것이 정본이다 — payload 로 두 번 내보내지 않는다.
+              priceText: pick.invalidation.text ?? null,
+              businessText: riskBlock.invalidation.business_text,
+              businessAbsentReason: riskBlock.invalidation.business_absent_reason,
+              checkAt: riskBlock.invalidation.check_at,
+              checkAtStatus: riskBlock.invalidation.check_at_status,
+            }}
+          />
+        )}
+
+        {/* ⑥ */}
         <RecordBlock picks={records} />
       </div>
     </div>
