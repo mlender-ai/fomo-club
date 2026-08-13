@@ -84,6 +84,7 @@ jobs:
           # 크게 두고(70×6=420 ≥ 유니버스 441 에 근접), 실제 비용은 TPD 소진이 멈춰 세운다.
           rounds="${ROUNDS:-70}"
           limit="${LIMIT:-6}"
+          STALL=0
           summary=/tmp/symbol-risk.md
           : > "$summary"
           for i in $(seq 1 "$rounds"); do
@@ -102,18 +103,38 @@ jobs:
             items="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(o.get("items",0) for o in d.get("outcomes",[])))' 2>/dev/null || echo "?")"
             echo "| $i | $processed | $skipped | $items | $remaining |" >> "$summary"
             done_flag="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("done"))' 2>/dev/null || echo "None")"
-            # 쿼터가 소진되면 남은 라운드는 전부 낭비다 — 간격 대기까지 포함해 버린다.
-            # `partial`(시간·라운드 부족)과 `quota_exhausted`(그날 안에 안 풀림)를 구분해 기록한다.
-            quota="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(int(any("쿼터" in (o.get("unavailable_reason") or "") or any("쿼터" in e for e in o.get("errors",[])) for o in d.get("outcomes",[]))))' 2>/dev/null || echo 0)"
-            if [ "$quota" = "1" ]; then echo "quota_exhausted at round $i"; STATUS=quota_exhausted; break; fi
+            # LLM 한도 상태를 라운드마다 읽는다.
+            #
+            # **처음 구현은 "쿼터" 라는 낱말만 봤고 동작하지 않았다**(실측: 라운드 4개가 전부
+            # 429 로 실패했는데 루프가 안 멈췄다). 저장되는 사유는 대부분
+            # `합성 호출 실패(HTTP 429)` 다 — 일일 한도(errorBody 에 "per day")일 때만
+            # "일일 쿼터 소진" 문구가 되고 분당 한도는 429 로 남는다. 낱말 감지는 새는 것이다.
+            #
+            # 그리고 **페이싱 상태는 라운드를 넘어 유지되지 않는다.** 라운드마다 새 서버리스
+            # 호출이라 in-process 감속이 초기화된다 — 3초 간격으로 몰아치면 매 라운드가 429 를
+            # 맞는다. 그래서 429 우세 라운드에는 간격을 크게 벌리고 연속 3회면 그친다.
+            state="$(printf '%s' "$body" | python3 -c 'import json,sys;o=json.load(sys.stdin).get("outcomes",[]);t=[((x.get("unavailable_reason") or "")+" "+" ".join(x.get("errors",[]))) for x in o];s=sum(1 for x in o if x.get("items",0)>0);print("empty" if not o else "quota_exhausted" if any("일일 쿼터" in v for v in t) else "rate_limited" if s==0 and all(("429" in v or "쿼터" in v) for v in t) else "progress")' 2>/dev/null || echo unknown)"
+            echo "state: $state"
+            if [ "$state" = "quota_exhausted" ]; then echo "일일 한도 소진 — round $i 에서 그친다"; STATUS=quota_exhausted; break; fi
             if [ "$done_flag" = "True" ]; then echo "done at round $i"; STATUS=done; break; fi
+            if [ "$state" = "rate_limited" ]; then
+              STALL=$((STALL + 1))
+              if [ "$STALL" -ge 3 ]; then echo "429 연속 3라운드 — round $i 에서 그친다"; STATUS=rate_limited; break; fi
+              echo "429 우세 — 60초 대기 후 재개 (연속 $STALL 회)"
+              sleep 60
+              continue
+            fi
+            STALL=0
             sleep 3
           done
           STATUS="${STATUS:-partial}"
           {
             echo '### 종목 리스크 백필'
             echo ''
-            echo "종료 상태: **$STATUS** (done = 유니버스 완주 · quota_exhausted = 일일 LLM 한도 · partial = 라운드 소진)"
+            echo "종료 상태: **$STATUS**"
+            echo ''
+            echo '`done` 완주 · `quota_exhausted` 일일 한도 · `rate_limited` 429 연속 3라운드 · `partial` 라운드 소진'
+
             echo ''
             echo '| 라운드 | 처리 | 건너뜀 | 확보 항목 | 남음 |'
             echo '|---|---|---|---|---|'
