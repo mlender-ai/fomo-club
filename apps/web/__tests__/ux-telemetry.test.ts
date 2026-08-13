@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  aggregateRows,
-  applyUxEvents,
-  normalizeSessionId,
-  percentile,
-  type UxSessionRow,
-} from "../lib/ux-telemetry";
+import { aggregateRows, applyUxEvents, normalizeSessionId, percentile, type UxSessionRow } from "../lib/ux-telemetry";
 
 /**
  * WO-SUB-00 §4-2 — 계측 적재·집계 규칙.
@@ -127,5 +121,98 @@ describe("집계", () => {
     expect(agg.skipRateByPosition["2"]).toBe(100); // 2번 위치 노출 1 중 이탈 1
     expect(agg.skipRateByPosition["1"]).toBe(0);
     expect(agg.dwellMsP50).toBe(2000);
+  });
+});
+
+/**
+ * WO-SUB-04 사후 비교 준비 — 슬롯 구성 라벨.
+ *
+ * A/B 검정력이 부족해(`POWER_wo_sub_04_ab.md`) 사후 비교로 내려왔고, 그러려면 이벤트에
+ * ③ 유무가 붙어야 한다. 종전에는 `position` 만 있어 두 군으로 쪼갤 수 없었다.
+ */
+describe("슬롯 구성 라벨 (사후 비교 입력)", () => {
+  const row = (): UxSessionRow => ({
+    sessionId: "s1",
+    date: "2026-08-08",
+    updatedAt: "",
+    counts: {},
+    dwellMs: [],
+    scrollRatios: [],
+    cardsConsumed: [],
+    viewByPosition: {},
+    skipByPosition: {},
+    bySlotGroup: {},
+  });
+
+  it("라벨별로 카운트를 나눈다", () => {
+    const next = applyUxEvents(row(), [
+      { event: "card_view", position: 1, hasChart: true, hasSubstance: true, hasRisk: true },
+      { event: "card_view", position: 2, hasChart: false, hasSubstance: false, hasRisk: false },
+      { event: "card_detail_open", position: 1, entryPoint: "tap", hasChart: true, hasSubstance: true, hasRisk: true },
+    ]);
+    expect(next.bySlotGroup?.["chart:1|substance:1|risk:1"]).toEqual({ card_view: 1, card_detail_open: 1 });
+    expect(next.bySlotGroup?.["chart:0|substance:0|risk:0"]).toEqual({ card_view: 1 });
+  });
+
+  /** 라벨이 없으면 `?` 군이다 — 조용히 제외하면 분모가 줄어 비율이 왜곡된다. */
+  it("라벨 없는 이벤트를 버리지 않고 ? 군에 남긴다", () => {
+    const next = applyUxEvents(row(), [{ event: "card_view", position: 1 }]);
+    expect(next.bySlotGroup?.["chart:?|substance:?|risk:?"]).toEqual({ card_view: 1 });
+  });
+
+  it("구버전 행(bySlotGroup 없음)을 읽어도 깨지지 않는다", () => {
+    const legacy = { ...row() };
+    delete (legacy as { bySlotGroup?: unknown }).bySlotGroup;
+    const next = applyUxEvents(legacy as UxSessionRow, [{ event: "card_view", position: 1, hasChart: true }]);
+    expect(next.bySlotGroup?.["chart:1|substance:?|risk:?"]).toEqual({ card_view: 1 });
+  });
+});
+
+describe("사후 비교 집계", () => {
+  function rowWith(groups: NonNullable<UxSessionRow["bySlotGroup"]>): UxSessionRow {
+    return {
+      sessionId: "s",
+      date: "2026-08-08",
+      updatedAt: "",
+      counts: {},
+      dwellMs: [],
+      scrollRatios: [],
+      cardsConsumed: [],
+      viewByPosition: {},
+      skipByPosition: {},
+      bySlotGroup: groups,
+    };
+  }
+
+  /** 표본이 적으면 성공 1건에 비율이 튄다 — 그 구간에서는 비율을 만들지 않는다. */
+  it("두 군 중 하나라도 표본이 부족하면 비율을 내지 않고 사유를 남긴다", () => {
+    const result = aggregateRows(
+      [rowWith({ "chart:1|substance:1|risk:1": { card_view: 5, card_detail_open: 1 } })],
+      "2026-08-08"
+    );
+    expect(result.slotComparison.withChart.detailOpenRate).toBeNull();
+    expect(result.slotComparison.insufficient).toContain("표본 부족");
+  });
+
+  it("두 군 모두 충분하면 비율을 낸다", () => {
+    const result = aggregateRows(
+      [
+        rowWith({
+          "chart:1|substance:1|risk:1": { card_view: 100, card_detail_open: 8 },
+          "chart:0|substance:0|risk:0": { card_view: 50, card_detail_open: 2 },
+        }),
+      ],
+      "2026-08-08"
+    );
+    expect(result.slotComparison.withChart.detailOpenRate).toBe(8);
+    expect(result.slotComparison.withoutChart.detailOpenRate).toBe(4);
+    expect(result.slotComparison.insufficient).toBeNull();
+  });
+
+  /** 인과로 읽으면 안 된다는 사실이 응답에 실려야 화면이 숨길 수 없다. */
+  it("무작위 배정이 아니라는 경고를 응답에 담는다", () => {
+    const result = aggregateRows([rowWith({})], "2026-08-08");
+    expect(result.slotComparison.caveat).toContain("무작위 배정이 아니다");
+    expect(result.slotComparison.caveat).toContain("선택 편향");
   });
 });
