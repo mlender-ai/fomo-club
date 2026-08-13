@@ -57,13 +57,25 @@ function metric(reached: number, notReached: number, undetermined: number): Inva
   return { n, reached, notReached, undetermined, rate: n > 0 ? (reached / n) * 100 : null };
 }
 
-/** 사유 문자열을 그대로 키로 쓰면 종류가 폭발한다 — 앞머리로 묶는다. */
+/**
+ * 사유 문자열을 그대로 키로 쓰면 종류가 폭발한다 — 앞머리로 묶는다.
+ *
+ * ## "수집" 이라는 단어로 묶지 않는다
+ *
+ * 종전에는 사유에 `수집` 이 있으면 전부 `지표 수집 미배선` 으로 묶었다. 대손 수집이 배선된 뒤
+ * (WO-SUB-CLOSE PART A) 그 사유가 "관측 0건(비은행이거나 SEC **수집** 실패)" 로 바뀌었는데,
+ * `수집` 이 들어 있다는 이유로 여전히 **미배선**으로 묶였다 — **배선된 것을 화면이 미배선이라고
+ * 말했다.** 원인 분포는 다음 작업을 정하는 데 쓰이므로, 이 오라벨은 이미 한 일을 다시 하게 만든다.
+ *
+ * 그래서 **파이프라인 부재는 `미배선` 이라는 말로만** 판정한다. 순서도 중요하다 —
+ * 관측 부족이 먼저 걸러져야 "관측 0건(… 수집 실패)" 가 미배선으로 새지 않는다.
+ */
 function reasonBucket(reason: string | null): string {
   if (!reason) return "기타";
-  if (reason.includes("수집")) return "지표 수집 미배선";
-  if (reason.includes("팩트시트")) return "팩트시트 없음";
-  if (reason.includes("관측")) return "관측 부족";
   if (reason.includes("스냅샷")) return "직전 스냅샷 필요";
+  if (reason.includes("관측") || reason.includes("분기 부족")) return "관측 부족";
+  if (reason.includes("팩트시트")) return "팩트시트 없음";
+  if (reason.includes("미배선")) return "지표 수집 미배선";
   return reason.slice(0, 24);
 }
 

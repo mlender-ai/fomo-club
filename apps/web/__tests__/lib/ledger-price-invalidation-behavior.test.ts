@@ -171,3 +171,60 @@ describe("발행가가 없으면 판정하지 않는다", () => {
     expect(summary.price.n).toBe(0);
   });
 });
+
+/**
+ * 판정 불가 **사유 분류**가 화면에서 진실을 말하는지 (WO-SUB-CLOSE PART A 후속).
+ *
+ * 이 분포는 "다음에 무엇을 해야 하나" 를 정하는 데 쓰인다. 이미 배선한 것이 `미배선` 으로
+ * 묶이면 같은 일을 다시 하게 된다 — 실제로 대손 수집을 붙인 직후 그 일이 일어났다.
+ * 사유에 `수집` 이라는 낱말이 있다는 이유로 `지표 수집 미배선` 에 묶였다.
+ */
+describe("판정 불가 사유가 오라벨되지 않는다", () => {
+  function judged(selectionId: string, verdict: string, reason: string | null): void {
+    outcomeRows.push({ payload: { outcomeKind: "business_invalidation", selectionId, verdict, reason } });
+  }
+
+  function publishWithRule(id: string): void {
+    selections.push({
+      id,
+      payload: {
+        publication: {
+          ruleset_version: "archetype-v1.2.0",
+          reference_price: 100,
+          invalidation_price: null,
+          invalidation_business_rule: { metric: "fiscal.quarters[].credit_loss_provision", direction: "consecutive_rise" },
+        },
+      },
+    });
+  }
+
+  it("관측 0건은 '관측 부족' 이다 — 사유에 '수집 실패' 가 들어 있어도 미배선이 아니다", async () => {
+    publishWithRule("s1");
+    judged("s1", "insufficient_data", "대손충당금 전입액 관측 0건(비은행이거나 SEC 수집 실패)");
+    const summary = await readInvalidationSummary();
+    expect(summary.businessUndeterminedReasons).toEqual({ "관측 부족": 1 });
+  });
+
+  it("진짜 미배선만 '지표 수집 미배선' 이다", async () => {
+    publishWithRule("s1");
+    judged("s1", "insufficient_data", "추세 전환은 직전 발행 시점 값이 필요(스냅샷 비교 미배선)");
+    const summary = await readInvalidationSummary();
+    // 스냅샷 사유는 스냅샷 버킷이 먼저 잡는다 — '미배선' 이라는 낱말이 있어도 원인이 다르다.
+    expect(summary.businessUndeterminedReasons).toEqual({ "직전 스냅샷 필요": 1 });
+  });
+
+  it("연속 분기 부족도 관측 문제로 묶인다", async () => {
+    publishWithRule("s1");
+    judged("s1", "insufficient_data", "대손 연속 분기 부족(관측 6건, 인접 분기 구간 최장 1개)");
+    const summary = await readInvalidationSummary();
+    expect(summary.businessUndeterminedReasons).toEqual({ "관측 부족": 1 });
+  });
+
+  it("판정된 건은 사유 분포에 들어가지 않는다", async () => {
+    publishWithRule("s1");
+    judged("s1", "invalidated", null);
+    const summary = await readInvalidationSummary();
+    expect(summary.business.reached).toBe(1);
+    expect(summary.businessUndeterminedReasons).toEqual({});
+  });
+});
