@@ -363,6 +363,13 @@ export interface VerifyOutcome {
   unsupportedSpan: string | null;
   /** 검증기가 판정하지 못한 경우(호출 실패·파싱 실패). 이때는 폐기한다. */
   inconclusive: boolean;
+  /**
+   * 판정 불가의 **원인**. `inconclusive` 만으로는 세 가지가 구분되지 않는다 —
+   * LLM 미설정 / 인용 없음 / 호출 실패(쿼터·429·타임아웃) / 응답 파싱 실패.
+   * 전부 같은 신호로 뭉개지면 배치가 왜 0건인지 알 수 없다(실측으로 겪은 문제다).
+   * 판정에는 쓰지 않는다 — 기록·진단용이다.
+   */
+  inconclusiveReason?: string;
 }
 
 /**
@@ -371,7 +378,8 @@ export interface VerifyOutcome {
  */
 export async function verifySentence(sentence: string, citedChunks: readonly SourceChunk[]): Promise<VerifyOutcome> {
   const prompt = promptOf(VERIFY_PROMPT_ID);
-  if (!isAiConfigured() || citedChunks.length === 0) return { supported: false, unsupportedSpan: null, inconclusive: true };
+  if (!isAiConfigured()) return { supported: false, unsupportedSpan: null, inconclusive: true, inconclusiveReason: "LLM 미설정" };
+  if (citedChunks.length === 0) return { supported: false, unsupportedSpan: null, inconclusive: true, inconclusiveReason: "인용 청크 없음" };
   const result = await callWithRetry({
     messages: [
       { role: "system", content: prompt.text },
@@ -388,9 +396,24 @@ export async function verifySentence(sentence: string, citedChunks: readonly Sou
     maxTokens: VERIFY_MAX_TOKENS,
     timeoutMs: VERIFY_TIMEOUT_MS,
   });
-  if (!result.ok) return { supported: false, unsupportedSpan: null, inconclusive: true };
+  if (!result.ok) {
+    return {
+      supported: false,
+      unsupportedSpan: null,
+      inconclusive: true,
+      inconclusiveReason: `검증 호출 실패(HTTP ${result.status})${result.errorBody ? `: ${result.errorBody.slice(0, 120)}` : ""}`,
+    };
+  }
   const parsed = parseJsonObject(result.content);
-  if (!parsed || typeof parsed.supported !== "boolean") return { supported: false, unsupportedSpan: null, inconclusive: true };
+  if (!parsed || typeof parsed.supported !== "boolean") {
+    // 응답 앞머리를 남긴다 — 잘린 JSON(토큰 상한)과 형식 위반을 구분할 수 있어야 한다.
+    return {
+      supported: false,
+      unsupportedSpan: null,
+      inconclusive: true,
+      inconclusiveReason: `검증 응답 파싱 실패(${result.content.length}자): ${result.content.slice(0, 120)}`,
+    };
+  }
   return {
     supported: parsed.supported,
     unsupportedSpan: typeof parsed.unsupported_span === "string" ? parsed.unsupported_span : null,

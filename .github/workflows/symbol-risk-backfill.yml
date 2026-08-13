@@ -1,4 +1,4 @@
-name: Symbol Risk Backfill (manual)
+name: Symbol Risk Backfill
 
 # WO-SUB-06.5 — 종목 고유 리스크 합성 배치.
 #
@@ -6,9 +6,19 @@ name: Symbol Risk Backfill (manual)
 # 라우트가 SEC·DART·LLM 을 부르므로 그 자격증명을 가진 실행 환경(Vercel)에서 돌아야 한다 —
 # 여기서 직접 스크립트를 돌리지 않고 라우트를 두들기는 이유다.
 #
-# **cron 스케줄 없음**(AGENTS.md 블랙리스트: 자율 실행 cron 신설 금지). 이 배치는 LLM 비용을
-# 쓰므로 의도적 수동 실행만 한다.
+# **일일 스케줄 배선**(WO-SUB-FILL PART 2 — 비용 사용 승인됨). 수동 실행에만 의존한 결과
+# 한 번도 돌지 않아 리스크 레코드가 1건이었다. AGENTS.md 블랙리스트는 *자율 기획* cron 을
+# 막는 것이고, 이건 데이터 배치다(팩트시트·사업실체와 같은 부류).
+#
+# Vercel 크론이 아닌 이유: 함수 1회 호출은 청크 하나(6종목)만 돈다 → 400종목에 67일.
+# 워크플로는 라운드를 이어 돌려 하루 TPD 한도까지 채운다.
+#
+# 스케줄 시각은 21:30 UTC = KST 06:30 — 사업실체 백필(19:00 UTC)과 겹치지 않게 둔다.
+# 두 배치가 같은 LLM 한도를 쓰므로 동시에 돌면 서로의 TPM 을 잡아먹는다(페이싱 상태는
+# 프로세스 안에서만 공유된다 — 별개 실행 사이에는 공유되지 않는다).
 on:
+  schedule:
+    - cron: "30 21 * * *"
   workflow_dispatch:
     inputs:
       limit:
@@ -56,7 +66,14 @@ jobs:
           FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
-          rounds="${ROUNDS:-20}"
+          # 스케줄 실행은 inputs 가 비어 있다 → 여기 기본값이 그날의 예산이 된다.
+          #
+          # TPD 실측 기준 종목당 1,486토큰 ≈ 하루 67종목. limit 6 × rounds 11 = 66종목.
+          # 이미 합성된 종목은 LLM 을 부르지 않고 `skipped` 로 지나가므로, 라운드는 커서가
+          # 유니버스를 훑는 속도이기도 하다 — 커서가 날짜별로 리셋되므로 라운드 수가 모자라면
+          # 매일 앞쪽 종목만 다시 훑고 새 진척이 0 이 된다. 그래서 **유니버스를 다 훑을 만큼**
+          # 크게 두고(70×6=420 ≥ 유니버스 441 에 근접), 실제 비용은 TPD 소진이 멈춰 세운다.
+          rounds="${ROUNDS:-70}"
           limit="${LIMIT:-6}"
           summary=/tmp/symbol-risk.md
           : > "$summary"
@@ -76,11 +93,19 @@ jobs:
             items="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(sum(o.get("items",0) for o in d.get("outcomes",[])))' 2>/dev/null || echo "?")"
             echo "| $i | $processed | $skipped | $items | $remaining |" >> "$summary"
             done_flag="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("done"))' 2>/dev/null || echo "None")"
-            if [ "$done_flag" = "True" ]; then echo "done at round $i"; break; fi
+            # 쿼터가 소진되면 남은 라운드는 전부 낭비다 — 간격 대기까지 포함해 버린다.
+            # `partial`(시간·라운드 부족)과 `quota_exhausted`(그날 안에 안 풀림)를 구분해 기록한다.
+            quota="$(printf '%s' "$body" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(int(any("쿼터" in (o.get("unavailable_reason") or "") or any("쿼터" in e for e in o.get("errors",[])) for o in d.get("outcomes",[]))))' 2>/dev/null || echo 0)"
+            if [ "$quota" = "1" ]; then echo "quota_exhausted at round $i"; STATUS=quota_exhausted; break; fi
+            if [ "$done_flag" = "True" ]; then echo "done at round $i"; STATUS=done; break; fi
             sleep 3
           done
+          STATUS="${STATUS:-partial}"
           {
             echo '### 종목 리스크 백필'
+            echo ''
+            echo "종료 상태: **$STATUS** (done = 유니버스 완주 · quota_exhausted = 일일 LLM 한도 · partial = 라운드 소진)"
+            echo ''
             echo '| 라운드 | 처리 | 건너뜀 | 확보 항목 | 남음 |'
             echo '|---|---|---|---|---|'
             cat "$summary"

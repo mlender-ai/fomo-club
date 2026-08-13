@@ -29,6 +29,10 @@
       "schedule": "40 21 * * *"
     },
     {
+      "path": "/api/fomo/cron/business-invalidation",
+      "schedule": "50 21 * * *"
+    },
+    {
       "path": "/api/fomo/cron/signal-stats",
       "schedule": "0 21 1 * *"
     },

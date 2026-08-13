@@ -156,7 +156,11 @@ export async function synthesizeSymbolRisk(input: SynthesizeSymbolRiskInput): Pr
     const cited = input.chunks.filter((chunk) => candidate.source_ids.includes(chunk.source_id));
     const outcome = await verifySentence(candidate.text, cited);
     if (!outcome.supported) {
-      errors.push(outcome.inconclusive ? "risk: 검증 판정 불가 — 폐기" : "risk: 근거 미지지 — 폐기");
+      errors.push(
+        outcome.inconclusive
+          ? `risk: 검증 판정 불가 — 폐기(${outcome.inconclusiveReason ?? "사유 미기록"})`
+          : "risk: 근거 미지지 — 폐기"
+      );
       continue;
     }
     /**
@@ -178,7 +182,33 @@ export async function synthesizeSymbolRisk(input: SynthesizeSymbolRiskInput): Pr
     verified.push({ ...candidate, source_kind: derived.kind, as_of: input.asOf });
   }
 
-  // 검증을 통과해도 규칙 게이트를 통과해야 한다(인과 단정·보일러플레이트는 검증이 못 잡는다).
-  const block = buildSymbolRiskBlock(verified, candidates.length === 0 ? "합성이 후보를 내지 못함" : null);
+  /**
+   * 검증을 통과해도 규칙 게이트를 통과해야 한다(인과 단정·보일러플레이트는 검증이 못 잡는다).
+   *
+   * ## 사유는 **실제로 일어난 일**이어야 한다 (WO-SUB-FILL PART 2)
+   *
+   * 종전에는 검증에서 후보가 전부 탈락하면 `buildSymbolRiskBlock` 에 `null` 을 넘겼고, 조립기는
+   * 넘어온 후보가 0건이라 **"위험요소 소스를 확보하지 못함"** 을 사유로 만들었다. 소스는 확보했고
+   * 후보까지 나왔는데 화면이 소스 탓을 했다.
+   *
+   * 그게 화면 문구만의 문제가 아니다 — `needsRiskResynthesis` 의 `RETRYABLE_REASON` 은
+   * "판정 불가" 같은 **일시적 실패**를 재시도 대상으로 본다. 소스 탓 문구는 거기 걸리지 않으므로
+   * 그 종목은 프롬프트가 바뀔 때까지 **영구히 빈 채로 남는다**. DART `013` 을 30일 부재로
+   * 굳혔던 것과 같은 종류의 사고다.
+   */
+  const droppedReason = ((): string | null => {
+    if (candidates.length === 0) return "합성이 후보를 내지 못함";
+    if (verified.length > 0) return null;
+    const inconclusive = errors.filter((entry) => entry.includes("검증 판정 불가")).length;
+    const unsupported = errors.filter((entry) => entry.includes("근거 미지지")).length;
+    const kindMismatch = errors.filter((entry) => entry.includes("소스 종류")).length;
+    const parts = [
+      inconclusive > 0 ? `검증 판정 불가 ${inconclusive}건` : null,
+      unsupported > 0 ? `근거 미지지 ${unsupported}건` : null,
+      kindMismatch > 0 ? `소스 종류 불일치 ${kindMismatch}건` : null,
+    ].filter((part): part is string => part !== null);
+    return `후보 ${candidates.length}건이 검증에서 전부 탈락(${parts.join(", ") || "사유 미기록"})`;
+  })();
+  const block = buildSymbolRiskBlock(verified, droppedReason);
   return { block, errors, model: result.model || null, promptId };
 }

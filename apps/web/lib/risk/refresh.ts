@@ -59,7 +59,7 @@ function promptHash(): string {
  * 완료" 로 취급하면 그 종목이 영구히 빈 채로 남는다 — DART `013` 을 30일 부재로 굳혔던 것과
  * 같은 종류의 사고다.
  */
-const RETRYABLE_REASON = /쿼터|호출 실패|LLM 미설정|판정 불가|매핑 없음|API_KEY/;
+const RETRYABLE_REASON = /쿼터|호출 실패|LLM 미설정|판정 불가|매핑 없음|API_KEY|검증에서 전부 탈락/;
 
 export async function needsRiskResynthesis(market: string, canonical: string, hash: string): Promise<boolean> {
   const record = await readSymbolRisk(market, canonical);
