@@ -15,6 +15,7 @@
  */
 
 import { CAUSAL_PATTERNS } from "../business-context/guards";
+import type { BusinessSourceKind } from "../business-context/types";
 import { bannedWordHits } from "../invariants/banned-words";
 import { boilerplateHits, type BoilerplateHit } from "./boilerplate";
 
@@ -96,6 +97,36 @@ function rejectionOf(candidate: SymbolRiskCandidate, seen: ReadonlySet<string>):
   if (boilerplate.length > 0) return { reason: "boilerplate", hits: boilerplate };
   if (seen.has(text)) return { reason: "duplicate" };
   return null;
+}
+
+/**
+ * 인용된 청크의 종류 → 리스크 항목에 찍을 소스 종류 (WO-SUB-CLOSE PART C-1).
+ *
+ * ## 왜 번들이 아니라 인용 청크에서 도출하는가
+ *
+ * 종전에는 합성 호출 한 건에 종류를 **하나** 선언하고 그 값을 모든 항목에 찍었다. 오늘은
+ * 번들이 US=SEC·KR=DART 둘 다 공시라서 라벨이 맞지만, 번들에 공시가 아닌 소스(벤더 요약 등)가
+ * 섞이는 순간 그 항목까지 `filing` 이 된다 — **출처 종류를 분리하라는 규칙이 조용히 깨진다.**
+ * 화면은 이 라벨로 "공시에서 확인했어요" 를 말하므로 오라벨은 사용자에게 거짓이 된다.
+ *
+ * ## 섞이면 만들지 않는다
+ *
+ * 한 문장이 공시와 벤더 요약을 함께 인용하면 어느 쪽이라고 찍어도 절반은 틀리다.
+ * 종류를 섞은 항목은 라벨을 고르지 않고 **버린다**(출처 없으면 항목 없음과 같은 원칙).
+ *
+ * `vendor_summary` 는 대응되는 리스크 소스 종류가 없다 — 공시가 아니므로 `filing` 이 아니고,
+ * 시세도 아니므로 `market_data` 도 아니다. 억지로 대응시키지 않고 사유를 남긴다.
+ */
+export function symbolRiskKindForChunks(
+  kinds: readonly BusinessSourceKind[]
+): { ok: true; kind: SymbolRiskSourceKind } | { ok: false; reason: string } {
+  const unique = [...new Set(kinds)];
+  if (unique.length === 0) return { ok: false, reason: "인용 청크 없음" };
+  if (unique.length > 1) return { ok: false, reason: `인용이 소스 종류를 섞음(${unique.sort().join("+")})` };
+  const kind = unique[0]!;
+  if (kind === "disclosure") return { ok: true, kind: "filing" };
+  if (kind === "market_data") return { ok: true, kind: "market_data" };
+  return { ok: false, reason: `${kind} 는 리스크 소스 종류로 대응되지 않음` };
 }
 
 /**

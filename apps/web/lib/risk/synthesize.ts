@@ -2,6 +2,7 @@ import { isAiConfigured } from "@fomo/shared";
 import {
   buildSymbolRiskBlock,
   riskPromptOf,
+  symbolRiskKindForChunks,
   type SourceChunk,
   type SymbolRiskBlock,
   type SymbolRiskCandidate,
@@ -158,7 +159,23 @@ export async function synthesizeSymbolRisk(input: SynthesizeSymbolRiskInput): Pr
       errors.push(outcome.inconclusive ? "risk: 검증 판정 불가 — 폐기" : "risk: 근거 미지지 — 폐기");
       continue;
     }
-    verified.push({ ...candidate, source_kind: input.sourceKind, as_of: input.asOf });
+    /**
+     * 소스 종류는 **인용된 청크에서** 도출한다(PART C-1).
+     *
+     * 종전에는 `input.sourceKind` 를 모든 항목에 찍었다. 번들에 공시가 아닌 소스가 섞이는 순간
+     * 그 항목까지 `filing` 이 되고, 화면은 그 라벨로 "공시에서 확인했어요" 를 말한다.
+     * 선언값과 도출값이 다르면 **선언을 믿지 않고 버린다** — 라벨을 고르는 쪽이 거짓을 만든다.
+     */
+    const derived = symbolRiskKindForChunks(cited.map((chunk) => chunk.kind));
+    if (!derived.ok) {
+      errors.push(`risk: 소스 종류 판정 불가 — 폐기(${derived.reason})`);
+      continue;
+    }
+    if (derived.kind !== input.sourceKind) {
+      errors.push(`risk: 선언한 소스 종류(${input.sourceKind})와 인용 청크(${derived.kind})가 불일치 — 폐기`);
+      continue;
+    }
+    verified.push({ ...candidate, source_kind: derived.kind, as_of: input.asOf });
   }
 
   // 검증을 통과해도 규칙 게이트를 통과해야 한다(인과 단정·보일러플레이트는 검증이 못 잡는다).
