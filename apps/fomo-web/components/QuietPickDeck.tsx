@@ -39,6 +39,24 @@ export function QuietPickDeck() {
    * 카드는 ①만으로 성립해야 한다(§4-1). 같은 `then` 에 묶으면 슬롯 실패가 덱을 죽인다.
    */
   const [slots, setSlots] = useState<Record<string, CardSlotPayload>>({});
+  /**
+   * 슬롯 구성 라벨 (WO-SUB-04 사후 비교 입력).
+   *
+   * 페이로드가 아직 안 왔으면 라벨을 **넘기지 않는다** — `false` 로 보내면 "③ 없는 카드" 로
+   * 잘못 분류된다. 서버가 미부착 이벤트를 `?` 군으로 따로 세므로 분모에서 빠지지 않는다.
+   */
+  const slotLabel = useCallback(
+    (canonical: string): { hasChart?: boolean; hasSubstance?: boolean; hasRisk?: boolean } => {
+      const payload = slots[canonical];
+      if (!payload) return {};
+      return {
+        hasChart: payload.valuation !== null,
+        hasSubstance: payload.substance !== null,
+        hasRisk: payload.risk !== null,
+      };
+    },
+    [slots]
+  );
   const [watching, setWatching] = useState<QuietWatchItem[]>([]);
   const [status, setStatus] = useState<Status>("loading");
   const [idx, setIdx] = useState(0);
@@ -81,7 +99,7 @@ export function QuietPickDeck() {
   const cardShownAt = useRef<number | null>(null);
   useEffect(() => {
     if (status !== "ready" || picks.length === 0 || idx >= picks.length) return;
-    recordPickTelemetry({ event: "card_view", position: idx + 1 });
+    recordPickTelemetry({ event: "card_view", position: idx + 1, ...slotLabel(current.subject.canonical) });
     const shownAt = Date.now();
     cardShownAt.current = shownAt;
     return () => {
@@ -240,7 +258,7 @@ export function QuietPickDeck() {
           onPointerCancel={onPointerUp}
           onClick={() => {
             if (moved.current) return;
-            recordPickTelemetry({ event: "card_detail_open", entryPoint: "tap", position: idx + 1 });
+            recordPickTelemetry({ event: "card_detail_open", entryPoint: "tap", position: idx + 1, ...slotLabel(current.subject.canonical) });
             setSelected(current);
           }}
           role="button"
@@ -268,7 +286,7 @@ export function QuietPickDeck() {
 
       <div className="mt-3 flex items-center justify-center gap-3 pb-2">
         <button type="button" onClick={() => advance("left", current)} className="rounded-full border border-hairline px-5 py-2 text-sm text-muted">넘기기</button>
-        <button type="button" onClick={() => { recordPickTelemetry({ event: "card_detail_open", entryPoint: "button", position: idx + 1 }); setSelected(current); }} className="rounded-full px-5 py-2 text-sm font-semibold text-black" style={{ backgroundColor: "var(--neon,#d8ff3a)" }}>자세히</button>
+        <button type="button" onClick={() => { recordPickTelemetry({ event: "card_detail_open", entryPoint: "button", position: idx + 1, ...slotLabel(current.subject.canonical) }); setSelected(current); }} className="rounded-full px-5 py-2 text-sm font-semibold text-black" style={{ backgroundColor: "var(--neon,#d8ff3a)" }}>자세히</button>
         <span className="ml-1 text-xs text-muted">{remaining}곳 남음</span>
       </div>
 

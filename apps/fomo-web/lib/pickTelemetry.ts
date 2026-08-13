@@ -10,10 +10,25 @@ import { getSessionId } from "@/lib/session";
  * 설계: 배치 + 이탈 시 flush. 실패는 삼킨다 — 계측이 제품 흐름을 막으면 안 된다.
  */
 
+/**
+ * 슬롯 구성 라벨 (WO-SUB-04 A/B 준비).
+ *
+ * A/B 검정력이 현재 트래픽으로는 절대 부족하다(`docs/audit/POWER_wo_sub_04_ab.md`).
+ * 그래서 사후 비교로 내려왔는데, 종전 이벤트에는 `position` 만 있고 **그 카드에 ③ 이 있었는지가
+ * 없었다** — 모아도 두 군으로 쪼갤 수 없다. 라벨을 심어 트래픽이 생겼을 때 비교가 가능하게 한다.
+ *
+ * 값을 **넘기지 않으면 서버에서 `?` 군**으로 들어간다(분모에서 빠지지 않는다).
+ */
+export interface PickSlotLabel {
+  hasChart?: boolean;
+  hasSubstance?: boolean;
+  hasRisk?: boolean;
+}
+
 export type PickTelemetryEvent =
-  | { event: "card_view"; position: number }
-  | { event: "card_dwell"; durationMs: number; position: number }
-  | { event: "card_detail_open"; entryPoint: "tap" | "button"; position: number }
+  | ({ event: "card_view"; position: number } & PickSlotLabel)
+  | ({ event: "card_dwell"; durationMs: number; position: number } & PickSlotLabel)
+  | ({ event: "card_detail_open"; entryPoint: "tap" | "button"; position: number } & PickSlotLabel)
   | { event: "detail_scroll_depth"; maxRatio: number }
   | { event: "card_watchlist_add"; position: number }
   | { event: "deck_complete"; cardsConsumed: number }

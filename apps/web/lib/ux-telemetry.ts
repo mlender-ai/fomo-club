@@ -26,7 +26,35 @@ export const UX_EVENTS = [
 ] as const;
 export type UxEvent = (typeof UX_EVENTS)[number];
 
-export interface UxEventInput {
+/**
+ * 슬롯 구성 라벨 (WO-SUB-04 A/B 준비).
+ *
+ * ## 왜 이게 필요한가
+ *
+ * A/B 검정력 산출 결과 현재 트래픽으로는 무작위 배정 실험이 불가능하다(`POWER_wo_sub_04_ab.md`:
+ * 일 노출 최대 23건 · 14일에 탐지 가능한 최소 효과가 상대 +323%). 그래서 지시대로 **사후 비교**
+ * 로 내려왔는데, 종전 이벤트에는 `position` 만 있고 **그 카드에 ③ 이 있었는지가 없었다.**
+ * 이벤트를 아무리 모아도 두 군으로 쪼갤 수 없다.
+ *
+ * 라벨을 심어두면 트래픽이 생겼을 때 사후 비교가 **가능해진다.** 지금 결론을 내는 것이 아니다 —
+ * 무작위 배정이 아니므로 인과는 약하고, 그 한계는 집계 응답과 문서에 명시한다.
+ */
+export interface UxSlotLabel {
+  /** ③ 값의 상태 차트가 그려졌는가 — 사후 비교의 처치 축. */
+  hasChart?: boolean;
+  /** ② 사업 실체 문장이 있었는가. */
+  hasSubstance?: boolean;
+  /** "이게 틀리는 경우" 블록이 있었는가(WO-SUB-06). */
+  hasRisk?: boolean;
+}
+
+/** 라벨 조합 키 — 집계에서 군을 나누는 축. `chart:1|substance:0|risk:1` 형태. */
+export function slotGroupKey(label: UxSlotLabel | undefined): string {
+  const bit = (value: boolean | undefined) => (value === true ? "1" : value === false ? "0" : "?");
+  return `chart:${bit(label?.hasChart)}|substance:${bit(label?.hasSubstance)}|risk:${bit(label?.hasRisk)}`;
+}
+
+export interface UxEventInput extends UxSlotLabel {
   event: UxEvent;
   /** 덱 내 위치(1-base). card_view/card_skip 에서 이탈 지점 분석에 쓴다. */
   position?: number;
@@ -52,6 +80,16 @@ export interface UxSessionRow {
   /** 위치별 노출/이탈 — 카드 위치별 이탈률용. */
   viewByPosition: Record<string, number>;
   skipByPosition: Record<string, number>;
+  /**
+   * 슬롯 구성별 카운트 — `{ "chart:1|substance:1|risk:1": { card_view: 3, card_detail_open: 1 } }`.
+   *
+   * 사후 비교(③ 있는 카드 vs 없는 카드)의 유일한 입력이다. 라벨이 안 붙은 이벤트는 `?` 로
+   * 들어가 **군에서 빠지지 않고 분모에 남는다** — 조용히 제외하면 비율이 왜곡된다.
+   *
+   * **optional 인 이유**: 이 필드를 심기 전에 저장된 행에는 없다. 필수로 두면 배포 직후
+   * 기존 행을 읽을 때 타입과 실제가 어긋난다 — 읽는 쪽이 `?? {}` 로 받는다.
+   */
+  bySlotGroup?: Record<string, Partial<Record<UxEvent, number>>>;
 }
 
 const MAX_SAMPLES = 200;
@@ -75,6 +113,7 @@ function emptyRow(sessionId: string, date: string): UxSessionRow {
     cardsConsumed: [],
     viewByPosition: {},
     skipByPosition: {},
+    bySlotGroup: {},
   };
 }
 
@@ -95,6 +134,8 @@ export function applyUxEvents(row: UxSessionRow, events: readonly UxEventInput[]
     cardsConsumed: [...row.cardsConsumed],
     viewByPosition: { ...row.viewByPosition },
     skipByPosition: { ...row.skipByPosition },
+    // 구버전 행에는 이 필드가 없다 — `??` 로 받아야 배포 직후 행이 깨지지 않는다.
+    bySlotGroup: Object.fromEntries(Object.entries(row.bySlotGroup ?? {}).map(([key, value]) => [key, { ...value }])),
     updatedAt: new Date().toISOString(),
   };
   for (const e of events) {
@@ -116,6 +157,16 @@ export function applyUxEvents(row: UxSessionRow, events: readonly UxEventInput[]
     const pos = clampPosition(e.position);
     if (pos && e.event === "card_view") next.viewByPosition[pos] = (next.viewByPosition[pos] ?? 0) + 1;
     if (pos && e.event === "card_skip") next.skipByPosition[pos] = (next.skipByPosition[pos] ?? 0) + 1;
+
+    /**
+     * 슬롯 구성별 카운트. 라벨이 없으면 `?` 키로 들어간다 — **군에서 빼지 않는다.**
+     * 빼면 라벨 미부착 이벤트가 조용히 사라져 분모가 줄고 비율이 왜곡된다.
+     */
+    const group = slotGroupKey(e);
+    const groups = (next.bySlotGroup ??= {});
+    const bucket = groups[group] ?? {};
+    bucket[e.event] = (bucket[e.event] ?? 0) + 1;
+    groups[group] = bucket;
   }
   return next;
 }
@@ -157,7 +208,40 @@ export interface UxBaseline {
   deckCompleteRate: number | null;
   /** 위치별 이탈률 = skip@n / view@n */
   skipRateByPosition: Record<string, number>;
+  /**
+   * 사후 비교 (WO-SUB-04 A/B 대체).
+   *
+   * ③ 있는 카드 vs 없는 카드의 더보기 클릭률. **무작위 배정이 아니므로 인과가 아니다** —
+   * ③ 이 그려지는 조건(팩트시트·밴드 확보)이 종목 특성과 상관돼 있어 선택 편향이 있다.
+   * 그 한계를 응답에 문자열로 싣는다(화면이 숨기지 못하게).
+   */
+  slotComparison: {
+    withChart: SlotArm;
+    withoutChart: SlotArm;
+    /** 라벨이 안 붙은 이벤트 — 분모에서 빼지 않고 여기 남긴다. */
+    unlabeled: SlotArm;
+    /** 표본이 임계치 미만이면 비율을 내지 않는 이유. 충분하면 null. */
+    insufficient: string | null;
+    caveat: string;
+  };
 }
+
+export interface SlotArm {
+  views: number;
+  detailOpens: number;
+  /** 표본이 임계치 미만이면 `null` — 0% 로 쓰지 않는다. */
+  detailOpenRate: number | null;
+}
+
+/**
+ * 사후 비교에 비율을 낼 최소 노출 수.
+ *
+ * 근거: 기저 클릭률 4.35% 에서 노출 30건이면 기대 성공이 1.3건이다. 그 아래에서는 성공 1건이
+ * 붙고 떨어지는 것만으로 비율이 0%↔3.3% 로 튀어 아무것도 말하지 않는다. 검정력 산출
+ * (`POWER_wo_sub_04_ab.md`)이 보여준 대로 유의성은 수천 건 단위라 이 값은 "유의하다" 는 뜻이
+ * 아니고 **표시할 가치가 있는 최소선**이다.
+ */
+export const SLOT_COMPARISON_MIN_VIEWS = 30;
 
 export function aggregateRows(rows: readonly UxSessionRow[], date: string): UxBaseline {
   const counts: Record<string, number> = {};
@@ -181,6 +265,33 @@ export function aggregateRows(rows: readonly UxSessionRow[], date: string): UxBa
     if (v > 0) skipRateByPosition[pos] = Number((((skipPos[pos] ?? 0) / v) * 100).toFixed(2));
   }
 
+  // ── 사후 비교: 슬롯 구성 라벨로 군을 나눈다 ──────────────────────────────
+  const arms = { with: { views: 0, opens: 0 }, without: { views: 0, opens: 0 }, unknown: { views: 0, opens: 0 } };
+  for (const row of rows) {
+    for (const [group, counts_] of Object.entries(row.bySlotGroup ?? {})) {
+      const chart = /chart:1/.test(group) ? "with" : /chart:0/.test(group) ? "without" : "unknown";
+      arms[chart].views += counts_.card_view ?? 0;
+      arms[chart].opens += counts_.card_detail_open ?? 0;
+    }
+  }
+  const arm = (a: { views: number; opens: number }): SlotArm => ({
+    views: a.views,
+    detailOpens: a.opens,
+    // 임계치 미만이면 비율을 만들지 않는다 — 성공 1건에 비율이 튀는 구간이다.
+    detailOpenRate: a.views >= SLOT_COMPARISON_MIN_VIEWS ? Number(((a.opens / a.views) * 100).toFixed(2)) : null,
+  });
+  const bothEnough = arms.with.views >= SLOT_COMPARISON_MIN_VIEWS && arms.without.views >= SLOT_COMPARISON_MIN_VIEWS;
+  const slotComparison: UxBaseline["slotComparison"] = {
+    withChart: arm(arms.with),
+    withoutChart: arm(arms.without),
+    unlabeled: arm(arms.unknown),
+    insufficient: bothEnough
+      ? null
+      : `표본 부족 — 두 군 모두 노출 ${SLOT_COMPARISON_MIN_VIEWS}건 이상이어야 비율을 낸다(있음 ${arms.with.views} · 없음 ${arms.without.views})`,
+    caveat:
+      "무작위 배정이 아니다. ③ 이 그려지는 조건(팩트시트·밴드 확보)이 종목 특성과 상관돼 있어 선택 편향이 있고, 인과로 읽으면 안 된다.",
+  };
+
   return {
     date,
     sessions: rows.length,
@@ -193,6 +304,7 @@ export function aggregateRows(rows: readonly UxSessionRow[], date: string): UxBa
     watchlistRate: rate(counts.card_watchlist_add, views),
     deckCompleteRate: rate(counts.deck_complete, viewPos["1"] ?? 0),
     skipRateByPosition,
+    slotComparison,
   };
 }
 
