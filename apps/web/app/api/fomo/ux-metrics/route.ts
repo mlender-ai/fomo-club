@@ -24,6 +24,16 @@ function parseEvent(value: unknown): UxEventInput | null {
   const num = (x: unknown): number | undefined =>
     typeof x === "number" && Number.isFinite(x) ? x : undefined;
   const entryPoint = v.entryPoint === "tap" || v.entryPoint === "button" ? v.entryPoint : undefined;
+  /**
+   * 슬롯 구성 라벨 (WO-SUB-04 사후 비교).
+   *
+   * ⚠️ 이 파서는 **필드 화이트리스트**다. 여기 추가하지 않으면 프론트가 보내도 입구에서 버려진다 —
+   * 실제로 그렇게 배포했고, 프로덕션에서 `hasChart: true` 를 보냈는데 집계가 `라벨없음` 군으로
+   * 세는 것을 실측으로 잡았다. 라벨을 늘릴 때 이 함수를 같이 고쳐야 한다.
+   *
+   * `undefined` 는 넘기지 않는다 — 서버가 미부착(`?`)과 `false` 를 구분해 센다.
+   */
+  const bool = (x: unknown): boolean | undefined => (typeof x === "boolean" ? x : undefined);
   return {
     event: v.event as UxEventInput["event"],
     ...(num(v.position) !== undefined ? { position: num(v.position)! } : {}),
@@ -31,6 +41,9 @@ function parseEvent(value: unknown): UxEventInput | null {
     ...(num(v.maxRatio) !== undefined ? { maxRatio: num(v.maxRatio)! } : {}),
     ...(num(v.cardsConsumed) !== undefined ? { cardsConsumed: num(v.cardsConsumed)! } : {}),
     ...(entryPoint ? { entryPoint } : {}),
+    ...(bool(v.hasChart) !== undefined ? { hasChart: bool(v.hasChart)! } : {}),
+    ...(bool(v.hasSubstance) !== undefined ? { hasSubstance: bool(v.hasSubstance)! } : {}),
+    ...(bool(v.hasRisk) !== undefined ? { hasRisk: bool(v.hasRisk)! } : {}),
   };
 }
 
