@@ -35,7 +35,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/invariant-retro-scan.ts --out docs/quality
+      # 스캔은 위반이 있으면 실패로 끝난다(PART C-1). 실패할 때야말로 리포트가 필요하므로
+      # 업로드는 always() 다 — 없으면 위반이 있는 실행에서 증거가 사라진다.
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: retro-invariant-scan
           path: |

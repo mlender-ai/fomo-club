@@ -1,5 +1,5 @@
 import type { SymbolRisk } from "@fomo/core";
-import { readFeedContent, writeFeedContent } from "../feed-content-store";
+import { readFeedContent, readFeedContentByPrefix, writeFeedContent } from "../feed-content-store";
 
 /**
  * 종목 고유 리스크 저장소 (WO-SUB-06.5).
@@ -50,4 +50,10 @@ export async function readSymbolRisk(market: string, canonical: string): Promise
 
 export async function writeSymbolRisk(record: SymbolRiskRecord): Promise<void> {
   await writeFeedContent(symbolRiskKey(record.market, record.canonical), record);
+}
+
+/** 소급 스캔용 — 저장된 종목 리스크 전량. 필드가 깨진 행은 버린다(스캔이 그걸 위반으로 세면 잡음이 된다). */
+export async function readAllSymbolRisks(limit = 2_000): Promise<SymbolRiskRecord[]> {
+  const rows = await readFeedContentByPrefix<SymbolRiskRecord>(PREFIX, limit).catch(() => []);
+  return rows.map((entry) => entry.row).filter((row): row is SymbolRiskRecord => Boolean(row?.canonical));
 }

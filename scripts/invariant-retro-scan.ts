@@ -11,7 +11,7 @@
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   activeInvariants,
   bannedWordHits,
@@ -22,6 +22,7 @@ import {
 } from "@fomo/core";
 import { readAllFactSheets } from "../apps/web/lib/fundamentals/repository";
 import { readAllBusinessContexts } from "../apps/web/lib/business-context/repository";
+import { readAllSymbolRisks, type SymbolRiskRecord } from "../apps/web/lib/risk/repository";
 
 /** 위반 1건. 샘플은 불변식별 최대 10건까지 기록한다(지시서 A-2). */
 interface Violation {
@@ -39,7 +40,7 @@ const SAMPLE_LIMIT = 10;
  * `missing_fields` 에 있는 경로가 값으로 통과하면 INV-12 위반이다. 투영이 구조적으로
  * 막고 있으므로 **정상이라면 0건이어야 한다** — 0 이 아니면 투영에 구멍이 있다는 뜻이다.
  */
-function scanFactSheet(sheet: FactSheet): Violation[] {
+export function scanFactSheet(sheet: FactSheet): Violation[] {
   const out: Violation[] = [];
   const paths = [
     ...Object.keys(sheet.field_sources ?? {}),
@@ -76,8 +77,43 @@ function scanFactSheet(sheet: FactSheet): Violation[] {
   return out;
 }
 
+/**
+ * 종목 고유 리스크 — INV-09 와 **소스 종류 정직성** (WO-SUB-CLOSE PART C-1).
+ *
+ * 종전 스캔은 이 산출물을 아예 읽지 않았다. 그래서 위험 문안의 금칙어와 소스 라벨 오류가
+ * 소급 스캔의 사각지대였다 — "위반 0건" 이 "위반이 없다" 가 아니라 "보지 않았다" 였다.
+ *
+ * 소스 종류 오라벨을 여기서 보는 이유: 합성기가 번들 레벨 종류를 모든 항목에 찍던 구조였고,
+ * 화면은 그 라벨로 "공시에서 확인했어요" 를 말한다. 라벨이 틀리면 사용자에게 거짓이 된다.
+ * 지금은 합성기가 인용 청크에서 도출하지만, **저장된 과거 레코드에는 옛 방식으로 찍힌 값이 남아 있다.**
+ */
+export function scanSymbolRisk(record: SymbolRiskRecord): Violation[] {
+  const out: Violation[] = [];
+  const subject = `${record.market}:${record.canonical}`;
+  for (const item of record.items) {
+    for (const hit of bannedWordHits(item.text)) {
+      out.push({ invariant: "INV-09", subject: `${subject}/${item.id}`, detail: `${hit.rule}: "${hit.matched}" — ${item.text}` });
+    }
+    // 출처 없는 항목은 애초에 만들어지지 않아야 한다(WO-SUB-06 완료 조건 2).
+    if (item.source_ids.length === 0) {
+      out.push({ invariant: "출처", subject: `${subject}/${item.id}`, detail: "source_ids 가 빈 항목이 저장돼 있다" });
+    }
+    if (item.source_kind !== "filing" && item.source_kind !== "market_data") {
+      out.push({ invariant: "소스종류", subject: `${subject}/${item.id}`, detail: `알 수 없는 source_kind: ${String(item.source_kind)}` });
+    }
+  }
+  // 항목이 없으면 사유가 있어야 하고, 있으면 사유가 없어야 한다 — 둘 다 차거나 둘 다 비면 화면이 거짓말을 한다.
+  if (record.items.length === 0 && !record.unavailable_reason) {
+    out.push({ invariant: "결측정직성", subject, detail: "항목 0건인데 unavailable_reason 이 비어 있다" });
+  }
+  if (record.items.length > 0 && record.unavailable_reason) {
+    out.push({ invariant: "결측정직성", subject, detail: "항목이 있는데 unavailable_reason 도 차 있다" });
+  }
+  return out;
+}
+
 /** INV-09 — 생성 문장 전량. 배치가 만든 텍스트만 본다(기존 피드 카피는 대상이 아니다). */
-function scanBusinessContext(context: BusinessContext): Violation[] {
+export function scanBusinessContext(context: BusinessContext): Violation[] {
   const out: Violation[] = [];
   const sentences: Array<[string, string | null | undefined]> = [
     ["slot1", context.slot1_revenue_source?.text],
@@ -102,7 +138,7 @@ function scanBusinessContext(context: BusinessContext): Violation[] {
  * 경고문은 독트린에서 오므로 레지스트리 테스트가 이미 잠갔고, 여기서는 **분류가 재현되는지**를 본다
  * (저장된 팩트시트로 다시 돌려 같은 코드가 나오는지 — 결정론).
  */
-function scanArchetype(sheet: FactSheet): Violation[] {
+export function scanArchetype(sheet: FactSheet): Violation[] {
   const first = classifyArchetype(sheet).code;
   const second = classifyArchetype(sheet).code;
   if (first !== second) {
@@ -114,6 +150,7 @@ function scanArchetype(sheet: FactSheet): Violation[] {
 function render(input: {
   factsheets: number;
   contexts: number;
+  symbolRisks: number;
   violations: Violation[];
   archetypeCounts: Record<string, number>;
 }): string {
@@ -138,6 +175,7 @@ function render(input: {
   lines.push("|---|---|");
   lines.push(`| 팩트시트 | ${factsheets} |`);
   lines.push(`| 사업 실체 | ${contexts} |`);
+  lines.push(`| 종목 고유 리스크 | ${input.symbolRisks} |`);
   lines.push(`| 아키타입 분류(팩트시트에서 재계산) | ${factsheets} |`);
   lines.push("");
   lines.push("## 2. 불변식별 위반 건수");
@@ -147,8 +185,14 @@ function render(input: {
   for (const entry of activeInvariants()) {
     lines.push(`| \`${entry.id}\` | ${entry.title} | ${byInvariant.get(entry.id)?.length ?? 0} |`);
   }
-  const determinism = byInvariant.get("결정론")?.length ?? 0;
-  lines.push(`| (결정론) | 같은 입력 → 같은 분류 | ${determinism} |`);
+  for (const [id, title] of [
+    ["결정론", "같은 입력 → 같은 분류"],
+    ["출처", "출처 없는 리스크 항목이 저장되지 않았다"],
+    ["소스종류", "리스크 소스 라벨이 정의된 값이다"],
+    ["결측정직성", "항목 0건 ↔ 사유 있음이 짝을 이룬다"],
+  ] as const) {
+    lines.push(`| (${id}) | ${title} | ${byInvariant.get(id)?.length ?? 0} |`);
+  }
   lines.push("");
   lines.push("### INV-14 는 파일 스캔이라 여기서 세지 않는다");
   lines.push("");
@@ -200,6 +244,9 @@ async function main(): Promise<void> {
   console.log("[retro] 사업 실체 읽는 중…");
   const contexts = await readAllBusinessContexts();
   console.log(`  ${contexts.length}건`);
+  console.log("[retro] 종목 고유 리스크 읽는 중…");
+  const symbolRisks = await readAllSymbolRisks();
+  console.log(`  ${symbolRisks.length}건`);
 
   const violations: Violation[] = [];
   const archetypeCounts: Record<string, number> = {};
@@ -209,6 +256,7 @@ async function main(): Promise<void> {
     archetypeCounts[code] = (archetypeCounts[code] ?? 0) + 1;
   }
   for (const context of contexts) violations.push(...scanBusinessContext(context));
+  for (const record of symbolRisks) violations.push(...scanSymbolRisk(record));
 
   console.log(`\n=== 위반 ${violations.length}건 ===`);
   for (const entry of activeInvariants()) {
@@ -219,17 +267,40 @@ async function main(): Promise<void> {
 
   if (outDir) {
     mkdirSync(outDir, { recursive: true });
-    const report = render({ factsheets: factsheets.length, contexts: contexts.length, violations, archetypeCounts });
+    const report = render({ factsheets: factsheets.length, contexts: contexts.length, symbolRisks: symbolRisks.length, violations, archetypeCounts });
     writeFileSync(join(outDir, "RETRO_invariant_scan.md"), report);
     writeFileSync(
       join(outDir, "retro_invariant_scan_raw.json"),
-      JSON.stringify({ factsheets: factsheets.length, contexts: contexts.length, violations, archetypeCounts }, null, 2)
+      JSON.stringify({ factsheets: factsheets.length, contexts: contexts.length, symbolRisks: symbolRisks.length, violations, archetypeCounts }, null, 2)
     );
     console.log(`\n[retro] 저장 — ${join(outDir, "RETRO_invariant_scan.md")}`);
   }
+
+  /**
+   * **위반이 있으면 실패로 끝낸다** (WO-SUB-CLOSE PART C-1).
+   *
+   * 종전에는 위반을 몇 건 찾아도 종료 코드가 0 이었다 — 예외가 났을 때만 1 이었다. 즉
+   * "스캔이 통과했다" 가 "위반이 없다" 를 뜻하지 않았고, 의도적 위반을 주입해도 워크플로가
+   * 초록색이었다. 리포트 저장은 **이 검사보다 먼저** 해서, 실패할 때에도 무엇이 위반인지 남는다
+   * (워크플로의 아티팩트 업로드 스텝은 `if: always()` 여야 한다).
+   */
+  if (violations.length > 0) {
+    console.error(`\n[retro] 활성 불변식 위반 ${violations.length}건 — 실패로 종료한다`);
+    process.exitCode = 1;
+  }
 }
 
-main().catch((error) => {
-  console.error("[retro] 실패", error);
-  process.exit(1);
-});
+/**
+ * **직접 실행일 때만 돌린다.**
+ *
+ * 역검증 테스트가 이 모듈의 검사 함수를 임포트한다. 무조건 실행하면 임포트만으로 스캔이 돌아
+ * DB 를 때리고, 테스트가 스캔의 부작용에 얽힌다. 검사 함수는 순수하므로 임포트는 안전해야 한다.
+ */
+const invokedDirectly = process.argv[1] ? import.meta.url.endsWith(basename(process.argv[1])) : false;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error("[retro] 실패", error);
+    process.exit(1);
+  });
+}
