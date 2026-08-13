@@ -51,13 +51,22 @@ export interface QuarterRecord {
   operating_income: number | null;
   net_income: number | null;
   eps_diluted: number | null;
+  /**
+   * 대손충당금 전입액(BANK 계열 전용). **필드 자체가 없으면 "수집되지 않았다"**는 뜻이고,
+   * `null` 은 "수집했으나 그 분기 값이 없다"는 뜻이다 — 둘을 구분해야 WO-SUB-07 채점이
+   * `insufficient_data` 와 `holding` 을 섞지 않는다.
+   *
+   * 비은행에는 이 개념이 애초에 없으므로 필드가 없는 것이 정상이다.
+   * 0 이나 추정치로 채우지 않는다(§4 규칙 3).
+   */
+  credit_loss_provision?: number | null;
   /** 이 레코드를 만든 소스. "sec_xbrl" | "dart" | "naver_finance_quarter" */
   source: string;
   /**
    * 어떤 원본 개념/행에서 왔는지(감사용). US=XBRL concept, KR=재무제표 계정명.
    * 은행처럼 `Revenues` 가 없는 종목에서 무엇을 매출로 봤는지 추적하려면 이게 필수다.
    */
-  concepts?: Partial<Record<"revenue" | "operating_income" | "net_income" | "eps_diluted", string>>;
+  concepts?: Partial<Record<"revenue" | "operating_income" | "net_income" | "eps_diluted" | "credit_loss_provision", string>>;
 }
 
 /** 5년 밴드 통계. `sufficient: false` 면 `current_percentile` 은 반드시 `null`. */

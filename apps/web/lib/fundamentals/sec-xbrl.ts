@@ -41,7 +41,7 @@ interface XbrlEntry {
   accn?: string;
 }
 
-interface CompanyFacts {
+export interface CompanyFacts {
   facts?: Record<string, Record<string, { units?: Record<string, XbrlEntry[]> }>>;
 }
 
@@ -103,6 +103,35 @@ const CONCEPTS = {
     "WeightedAverageNumberOfDilutedSharesOutstanding",
   ],
 } as const;
+
+/**
+ * 대손충당금 전입액 — **CONCEPTS 와 분리해서 합집합으로 모은다**(WO-SUB-CLOSE PART A).
+ *
+ * ## 왜 CONCEPTS 에 넣지 않는가
+ *
+ * 이 개념은 은행 계열에만 있다. CONCEPTS 에 넣으면 나머지 500여 종목 전부가
+ * `USD 계열 개념 부재` 오류를 달게 되고, 진짜 결손이 그 소음에 묻힌다.
+ *
+ * ## 왜 최다 관측 선택이 아니라 합집합인가
+ *
+ * `findSeries` 는 최근 7년 관측이 가장 많은 개념 **하나**를 고른다. 그런데 이 항목은
+ * 2020년 CECL 전환으로 개념명이 갈렸다 — 전환 전은 `ProvisionForLoanAndLeaseLosses` 계열,
+ * 후는 `FinancingReceivable...CreditLossExpenseReversal`. 하나만 고르면 반대쪽 시대가
+ * 통째로 사라져 전년동기 비교가 불가능해진다(06 프로브 v2 가 실제로 이 함정에 빠졌다).
+ * 시대가 겹치지 않으므로 합집합이 안전하다 — 겹치면 리스트 앞쪽을 쓴다(같은 사실의 개명이라 값이 일치한다).
+ *
+ * ## 일부러 뺀 개념 2종
+ *
+ * - `InterestIncomeExpenseAfterProvisionForLoanLoss` — **전입 후** 순이자이익이다. 관측 수가
+ *   많아서 프로브 v1 이 이걸 골랐는데, 전입액이 아니라 전입을 차감한 결과값이다.
+ * - `OffBalanceSheetCredit...` — 약정(off-balance) 대상이라 대차대조표상 대손과 모집단이 다르다.
+ */
+const CREDIT_LOSS_CONCEPTS = [
+  "ProvisionForLoanLeaseAndOtherLosses",
+  "ProvisionForLoanAndLeaseLosses",
+  "ProvisionForLoanLossesExpensed",
+  "FinancingReceivableExcludingAccruedInterestCreditLossExpenseReversal",
+] as const;
 
 type ConceptKey = keyof typeof CONCEPTS;
 
@@ -360,6 +389,34 @@ function buildRecords(
   return records;
 }
 
+/**
+ * 대손충당금 전입액을 별칭 4종 합집합으로 모은다 → `period_end` → `{값, 별칭}`.
+ *
+ * 분기 창과 연간 창을 각각 모으고 Q4 를 구성한다(은행은 4분기를 10-K 에만 싣는 경우가 흔하다).
+ * **개념이 하나도 없으면 빈 Map** 을 돌려준다 — 비은행의 정상 상태이므로 오류가 아니다.
+ * 값이 없는 분기는 키를 만들지 않는다(0 으로 채우지 않는다).
+ */
+export function collectCreditLossProvision(facts: CompanyFacts): Map<string, { val: number; concept: string }> {
+  const out = new Map<string, { val: number; concept: string }>();
+  for (const concept of CREDIT_LOSS_CONCEPTS) {
+    for (const namespace of Object.values(facts.facts ?? {})) {
+      const entries = namespace?.[concept]?.units?.USD;
+      if (!entries || entries.length === 0) continue;
+      const quarterly = firstDisclosureByEnd(entries, MIN_QUARTER_DAYS, MAX_QUARTER_DAYS);
+      const annual = firstDisclosureByEnd(entries, MIN_ANNUAL_DAYS, MAX_ANNUAL_DAYS);
+      const merged = new Map(quarterly);
+      for (const [end, value] of composeQ4(quarterly, annual)) if (!merged.has(end)) merged.set(end, value);
+      for (const [end, value] of merged) {
+        // 리스트 앞쪽 별칭이 이미 채운 기간은 덮지 않는다.
+        if (out.has(end)) continue;
+        if (!Number.isFinite(value.val)) continue;
+        out.set(end, { val: value.val, concept });
+      }
+    }
+  }
+  return out;
+}
+
 /** 심볼의 SEC 재무 일체. CIK 를 못 찾으면 errors 에 사유를 남기고 빈 결과를 준다. */
 export async function fetchSecFundamentals(symbol: string): Promise<SecFundamentals> {
   const fetchedAt = new Date().toISOString();
@@ -437,6 +494,7 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
   for (const key of flowKeys) for (const end of annualMaps[key]!.keys()) annualEnds.add(end);
 
   const q4Ends = new Set(Object.values(q4Composed).flatMap((m) => [...m.keys()]));
+  const creditLoss = collectCreditLossProvision(facts);
   const quarters = buildRecords(
     [...quarterEnds],
     {
@@ -448,12 +506,31 @@ export async function fetchSecFundamentals(symbol: string): Promise<SecFundament
     concepts,
     periodLabel,
     "sec_xbrl"
-  ).map((record) =>
-    // Q4 는 구성된 값이므로 소스 문자열로 그 사실을 드러낸다(감사 가능성).
-    q4Ends.has(record.period_end) && !quarterMaps.net_income!.has(record.period_end)
-      ? { ...record, source: "sec_xbrl:q4_from_fy_minus_9m" }
-      : record
-  );
+  )
+    .map((record) =>
+      // Q4 는 구성된 값이므로 소스 문자열로 그 사실을 드러낸다(감사 가능성).
+      q4Ends.has(record.period_end) && !quarterMaps.net_income!.has(record.period_end)
+        ? { ...record, source: "sec_xbrl:q4_from_fy_minus_9m" }
+        : record
+    )
+    .map((record) => {
+      /**
+       * 대손충당금 전입액 오버레이.
+       *
+       * **레코드 집합을 늘리지 않는다** — 이 값만 있는 기간에 새 분기를 만들면 매출·순이익이
+       * 전부 null 인 레코드가 생겨 기존 커버리지 지표가 오염된다. 이미 있는 분기에만 얹는다.
+       *
+       * 값이 없으면 필드를 만들지 않는다(비은행의 정상 상태). 어느 별칭에서 왔는지는
+       * 기간마다 다를 수 있으므로(CECL 전환) 공유 `concepts` 를 건드리지 않고 레코드별로 복사한다.
+       */
+      const provision = creditLoss.get(record.period_end);
+      if (!provision) return record;
+      return {
+        ...record,
+        credit_loss_provision: provision.val,
+        concepts: { ...record.concepts, credit_loss_provision: provision.concept },
+      };
+    });
 
   const annual = buildRecords(
     [...annualEnds],

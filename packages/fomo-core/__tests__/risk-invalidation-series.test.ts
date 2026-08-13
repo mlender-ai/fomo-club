@@ -105,10 +105,10 @@ describe("스칼라 지표", () => {
  * 여기서 0 을 돌려주면 "대손이 안 늘었다" 로 채점되어 성적이 조용히 좋아진다(§12 실패 모드).
  */
 describe("뽑을 수 없는 경로", () => {
-  it("대손충당금 전입액은 팩트시트가 수집하지 않는다 — 0 으로 채우지 않는다", () => {
+  it("대손충당금 전입액이 없으면 0 으로 채우지 않는다(비은행·KR 은행의 정상 상태)", () => {
     const result = seriesForMetric("fiscal.quarters[].credit_loss_provision", sheet());
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toContain("수집");
+    if (!result.ok) expect(result.reason).toContain("관측 0건");
   });
 
   it("추세 전환은 직전 스냅샷이 없으면 판정하지 않는다", () => {
@@ -120,6 +120,101 @@ describe("뽑을 수 없는 경로", () => {
     const result = seriesForMetric("made.up.path", sheet());
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toContain("알 수 없는");
+  });
+});
+
+/**
+ * WO-SUB-CLOSE PART A — 대손충당금 전입액 수집이 배선된 뒤의 동작.
+ *
+ * BANK_FINANCIAL 조건은 `consecutive_rise`(2분기 연속 증가)다. 그래서 이 경로는 **원계열**을
+ * 줘야 하고, "연속"은 인접 분기끼리여야 한다 — 빠진 분기를 건너뛰어 비교하면 6개월 간격을
+ * 연속 2분기로 읽는다.
+ */
+describe("대손충당금 전입액 (PART A 배선)", () => {
+  /** 기간말을 실제 분기 간격으로 놓는다. `quarter()` 헬퍼는 연중 기간말이 같아 연속성 검증에 못 쓴다. */
+  function provisionQuarter(periodEnd: string, provision: number | null | undefined): QuarterRecord {
+    return {
+      period: periodEnd.slice(0, 7),
+      period_end: periodEnd,
+      filed_at: periodEnd,
+      revenue: null,
+      operating_income: null,
+      net_income: null,
+      eps_diluted: null,
+      source: "test",
+      ...(provision === undefined ? {} : { credit_loss_provision: provision }),
+    };
+  }
+
+  const provisionSheet = (quarters: QuarterRecord[]): FactSheet => sheet({ fiscal: { quarters } });
+
+  it("연속 분기의 원계열을 오래된 것부터 준다(비율이 아니다)", () => {
+    const result = seriesForMetric(
+      "fiscal.quarters[].credit_loss_provision",
+      provisionSheet([
+        provisionQuarter("2025-03-31", 100),
+        provisionQuarter("2025-06-30", 120),
+        provisionQuarter("2025-09-30", 150),
+      ])
+    );
+    expect(result).toEqual({ ok: true, series: [100, 120, 150] });
+  });
+
+  it("배선이 실제로 BANK 조건을 무효 판정까지 끌고 간다", () => {
+    const catalog = businessInvalidationCatalog().find((row) => row.code === "BANK_FINANCIAL")!;
+    const series = seriesForMetric(catalog.invalidation!.metric, provisionSheet([
+      provisionQuarter("2025-03-31", 100),
+      provisionQuarter("2025-06-30", 120),
+      provisionQuarter("2025-09-30", 150),
+    ]));
+    expect(series.ok).toBe(true);
+    if (!series.ok) return;
+    expect(judgeBusinessInvalidation(catalog.invalidation!, { series: series.series })).toBe("invalidated");
+  });
+
+  it("분기가 끊기면 건너뛰어 잇지 않는다 — 마지막 연속 구간만 본다", () => {
+    // 2024Q1·Q2 는 연속이지만 2025Q3 는 1년 뒤다. 셋을 이어 붙이면 없는 연속 증가가 생긴다.
+    const result = seriesForMetric(
+      "fiscal.quarters[].credit_loss_provision",
+      provisionSheet([
+        provisionQuarter("2024-03-31", 100),
+        provisionQuarter("2024-06-30", 120),
+        provisionQuarter("2025-09-30", 150),
+      ])
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("연속 분기 부족");
+  });
+
+  it("필드가 아예 없는 분기는 0 이 아니라 관측 없음으로 센다", () => {
+    const result = seriesForMetric(
+      "fiscal.quarters[].credit_loss_provision",
+      provisionSheet([provisionQuarter("2025-03-31", undefined), provisionQuarter("2025-06-30", undefined)])
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("관측 0건");
+  });
+
+  it("수집했으나 값이 null 인 분기도 관측으로 세지 않는다", () => {
+    // 필드 부재(비은행)와 null(수집했으나 그 분기 값 없음)은 뜻이 다르지만, 둘 다 판정 입력이 아니다.
+    const result = seriesForMetric(
+      "fiscal.quarters[].credit_loss_provision",
+      provisionSheet([provisionQuarter("2025-03-31", null), provisionQuarter("2025-06-30", 120)])
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("관측 1건");
+  });
+
+  it("환입(음수) 분기도 원계열에 그대로 남긴다 — 비율로 만들지 않으므로 부호가 뒤집히지 않는다", () => {
+    const result = seriesForMetric(
+      "fiscal.quarters[].credit_loss_provision",
+      provisionSheet([
+        provisionQuarter("2025-03-31", -20),
+        provisionQuarter("2025-06-30", 10),
+        provisionQuarter("2025-09-30", 40),
+      ])
+    );
+    expect(result).toEqual({ ok: true, series: [-20, 10, 40] });
   });
 });
 

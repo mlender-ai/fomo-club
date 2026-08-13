@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { isConsensusColumn, parseFinanceTable, parseNaverNumber, periodKeyToEnd } from "../../lib/fundamentals/naver-fundamentals";
 import { parseNasdaqDate, parseNasdaqNumber } from "../../lib/fundamentals/nasdaq-fundamentals";
-import { composeQ4, periodLabel } from "../../lib/fundamentals/sec-xbrl";
+import { collectCreditLossProvision, composeQ4, periodLabel } from "../../lib/fundamentals/sec-xbrl";
+import type { CompanyFacts } from "../../lib/fundamentals/sec-xbrl";
 
 /**
  * 어댑터 파싱 골든 픽스처 (WO-SUB-01 §11).
@@ -178,5 +179,88 @@ describe("SEC Q4 구성 (실측: 10-K 는 분기형 사실을 태깅하지 않�
 
   it("연간 값이 없으면 구성하지 않는다", () => {
     expect(composeQ4(quarters, new Map()).size).toBe(0);
+  });
+});
+
+/**
+ * WO-SUB-CLOSE PART A — 대손충당금 전입액 수집.
+ *
+ * 두 가지가 회귀하면 BANK 무효 조건이 조용히 거짓말을 한다:
+ *
+ * 1. **합집합이 아니라 최다 관측 하나만 고르면** 2020년 CECL 개명 이전/이후 한쪽 시대가
+ *    통째로 사라진다. 06 프로브 v2 가 실제로 이 함정에 빠져 최근 분기만 잡혔다.
+ * 2. **전입 후 순이자이익 개념을 잡으면** 전입액이 아닌 값으로 "대손이 늘었다"를 판정한다.
+ *    관측 수가 많아서 프로브 v1 이 실제로 이걸 골랐다.
+ */
+describe("SEC 대손충당금 전입액 (PART A)", () => {
+  const entry = (start: string, end: string, val: number, filed: string, form = "10-Q") => ({
+    start,
+    end,
+    val,
+    form,
+    filed,
+  });
+  const facts = (concepts: Record<string, ReturnType<typeof entry>[]>): CompanyFacts => ({
+    facts: {
+      "us-gaap": Object.fromEntries(Object.entries(concepts).map(([name, entries]) => [name, { units: { USD: entries } }])),
+    },
+  });
+
+  it("CECL 로 개명된 두 개념을 합집합으로 모은다 — 한쪽 시대를 버리지 않는다", () => {
+    const result = collectCreditLossProvision(
+      facts({
+        // 개명 전(관측 1건)과 개명 후(관측 2건). 최다 관측만 고르면 2019년이 사라진다.
+        ProvisionForLoanAndLeaseLosses: [entry("2019-01-01", "2019-03-31", 80, "2019-05-01")],
+        FinancingReceivableExcludingAccruedInterestCreditLossExpenseReversal: [
+          entry("2025-01-01", "2025-03-31", 100, "2025-05-01"),
+          entry("2025-04-01", "2025-06-30", 130, "2025-08-01"),
+        ],
+      })
+    );
+    expect([...result.keys()].sort()).toEqual(["2019-03-31", "2025-03-31", "2025-06-30"]);
+    expect(result.get("2019-03-31")).toEqual({ val: 80, concept: "ProvisionForLoanAndLeaseLosses" });
+    expect(result.get("2025-06-30")?.val).toBe(130);
+  });
+
+  it("전입 후 순이자이익·약정 개념은 잡지 않는다(일부러 뺀 2종)", () => {
+    const result = collectCreditLossProvision(
+      facts({
+        InterestIncomeExpenseAfterProvisionForLoanLoss: [entry("2025-01-01", "2025-03-31", 900, "2025-05-01")],
+        OffBalanceSheetCreditLossLiabilityProvisionExpenseReversal: [entry("2025-01-01", "2025-03-31", 5, "2025-05-01")],
+      })
+    );
+    expect(result.size).toBe(0);
+  });
+
+  it("개념이 없는 종목(비은행)은 빈 결과이고 오류가 아니다", () => {
+    expect(collectCreditLossProvision(facts({ Revenues: [entry("2025-01-01", "2025-03-31", 1, "2025-05-01")] })).size).toBe(0);
+    expect(collectCreditLossProvision({}).size).toBe(0);
+  });
+
+  it("Q4 는 연간에서 1~3분기를 빼서 구성한다(은행은 4분기를 10-K 에만 싣는다)", () => {
+    const result = collectCreditLossProvision(
+      facts({
+        ProvisionForLoanAndLeaseLosses: [
+          entry("2025-01-01", "2025-03-31", 100, "2025-05-01"),
+          entry("2025-04-01", "2025-06-30", 110, "2025-08-01"),
+          entry("2025-07-01", "2025-09-30", 120, "2025-11-01"),
+          entry("2025-01-01", "2025-12-31", 500, "2026-02-20", "10-K"),
+        ],
+      })
+    );
+    expect(result.get("2025-12-31")?.val).toBe(170);
+  });
+
+  it("USD 가 아닌 통화는 환산하지 않고 버린다(§4 규칙 3)", () => {
+    const result = collectCreditLossProvision({
+      facts: {
+        "us-gaap": {
+          ProvisionForLoanAndLeaseLosses: {
+            units: { KRW: [entry("2025-01-01", "2025-03-31", 100_000, "2025-05-01")] },
+          },
+        },
+      },
+    });
+    expect(result.size).toBe(0);
   });
 });
