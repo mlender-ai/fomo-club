@@ -101,6 +101,19 @@ const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? Math.max(0, Math.min(720, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 720) || 720))
   : 0;
 const TARGETED_MATERIAL_CONCURRENCY = 4;
+/**
+ * 재료 조회 시간 예산 (WO-OPS-504 PHASE 2 실측 대응).
+ *
+ * KR 전체 스코프의 후보 상한은 120이고 동시 실행은 4다 — 즉 **30라운드 순차**이고, 라운드마다
+ * 뉴스/재료 조회가 붙는다. 프리뷰 실측(2026-08-15): 이 단계 하나가 **33초를 넘겨도 안 끝났고**
+ * 그 때문에 `discovery?country=KR` 이 45초 마감에서 503 을 냈다.
+ *
+ * 예산을 넘긴 뒤의 후보는 **조회를 시작하지 않는다**(즉시 `null`). 재료는 카드마다 optional
+ * 이므로 부분 결과는 계약 위반이 아니다 — 지금은 아예 아무 카드도 못 주고 있다. 몇 종목의
+ * 재료를 못 붙인 덱이 **덱 부재보다 낫다.** 다만 **몇 건을 건너뛰었는지 로그로 남긴다**
+ * (조용한 절단 금지). 근본 수리는 PHASE 4(크론 이관·병렬도 상향)다.
+ */
+const TARGETED_MATERIAL_BUDGET_MS = 15_000;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d|회장|최고경영자|CEO|고백|회고|소회|인터뷰|기부|ESG|봉사|사회공헌|미담|창업주|오너|가문|고향|강연|도서|출간|어려울\s?때마다|찾았다/i;
@@ -2258,10 +2271,21 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     })
     .slice(0, targetedMaterialLimit);
   if (targetedMaterialLimit > 0) {
-    const targetedMaterial = await timeStage("targeted-material", () => mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
-      ticker,
-      event: await eventFromTargetedMaterial(value.row, asOf),
-    })));
+    const materialStartedAt = Date.now();
+    let materialSkipped = 0;
+    const targetedMaterial = await timeStage("targeted-material", () => mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => {
+      if (Date.now() - materialStartedAt > TARGETED_MATERIAL_BUDGET_MS) {
+        materialSkipped += 1;
+        return { ticker, event: null };
+      }
+      return { ticker, event: await eventFromTargetedMaterial(value.row, asOf) };
+    }));
+    if (materialSkipped > 0) {
+      console.warn(
+        `[discovery-supply] 재료 조회 예산 초과 — ${Date.now() - materialStartedAt}ms, ` +
+          `${targetedRows.length}건 중 ${materialSkipped}건 건너뜀 (scope=${scope})`
+      );
+    }
     for (const result of targetedMaterial) {
       if (result.status !== "fulfilled" || !result.value.event) continue;
       const current = byTicker.get(result.value.ticker);

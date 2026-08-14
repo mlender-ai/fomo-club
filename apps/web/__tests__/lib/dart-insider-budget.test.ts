@@ -68,3 +68,14 @@ describe("US 스코프는 한국 공시를 기다리지 않는다", () => {
     expect(source).toMatch(/dartScoped\s*\n?\s*\?\s*await timeStage\("dart-disclosures"/);
   });
 });
+
+describe("재료 조회 예산", () => {
+  it("예산을 넘긴 후보는 조회를 시작하지 않고, 몇 건을 건너뛰었는지 남긴다", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(new URL("../../lib/discovery-supply.ts", import.meta.url), "utf8");
+    expect(source).toContain("TARGETED_MATERIAL_BUDGET_MS");
+    expect(source).toContain("materialSkipped += 1");
+    // 조용한 절단 금지 — 건너뛴 건수가 로그에 남아야 한다.
+    expect(source).toContain("재료 조회 예산 초과");
+  });
+});
