@@ -151,9 +151,48 @@ GET https://fomo-club-backend.vercel.app/api/fomo/quiet-picks
 
 | 게이트 | 결과 |
 |---|---|
-| `npx vitest run` | 통과 (전체) |
+| `npx vitest run` | 통과 (2,001건) |
 | `typecheck` fomo-core / fomo-web / web | 통과 |
+| `next build` fomo-web / web | 통과 |
+| `e2e/quiet-card.spec.ts` | 통과 (7건) — CI `Auto QA — Web Smoke` 에서도 그린 |
 | `npm run guard:discovery` | **환경 미실행** — 이 컨테이너에는 수집 데이터·DB 가 없어 덱 0장으로 실패한다. base 커밋에서도 동일하게 실패하는 것을 확인했다(회귀 아님) |
-| `npm run spec:analyze` | 통과(경고 1: 스펙 링크 — 이 문서가 그 링크다) |
+| `npm run spec:analyze` | 통과 |
 
-완료 판정은 **프로덕션 DOM**이다. 배포 후 카드·디테일 DOM 에서 8건 해소를 확인한다.
+## 7. 배포 DOM 실측 (2026-08-14 01:24 UTC)
+
+`fomo-web-git-main-mlender-ais-projects.vercel.app/quiet-card-preview` 의 SSR HTML 을 읽었다.
+프리뷰 픽스처는 **옛 payload 훅**을 넣은 것이라, 읽는 쪽 복구까지 함께 확인된다.
+
+| 완료 조건 | DOM 근거 |
+|---|---|
+| 1·2 훅 | `data-testid="pick-hook"` → `기관이 25일째 조용히 사고 있어요` (payload 는 em-dash 3절) |
+| 3 숫자 반복 | 카드 텍스트에서 `25` 2회(훅·칩) — 3회 미만 |
+| 4 되돌아보는 선 | `<p class="mt-3 shrink-0 text-[12px] leading-5 text-muted" data-testid="recheck-line">` — 박스 없음 |
+| 5 카드 높이 | `min-height:372px / 404px / 480px / 512px` — 조합마다 다름 |
+| 6 매출 차트 | 막대 3칸이 `<rect>` 로 실제로 그려짐(3칸 미만이면 영역 부재) |
+| 10 금지어 | 화면 텍스트에 사전 낱말 없음 |
+
+### 남은 것 — 정규 도메인이 최신 배포를 안 가리킨다 (사람 조치 필요)
+
+`fomo-web-mlender-ais-projects.vercel.app` 는 **옛 빌드를 서빙한다**(빌드 ID
+`xkBrVY9DbAY2QO_bxtrzJ`, 새 라우트에 404). Git 연동은 main 머지마다 `target: production`
+배포를 만들지만 **정규 별칭을 옮기지 않는다** — 별칭은 `vercel-production-deploy.yml` 의
+`vercel alias set` 단계만 옮기고, 그 워크플로는 `workflow_dispatch` 전용이다.
+
+이 세션의 GitHub App 토큰에는 `actions:write` 가 없어 dispatch 가 403 이고, egress 정책이
+`*.vercel.app` 을 막아 CLI·브라우저 접근도 불가하다. **광혁이 워크플로를 한 번 돌려야
+사용자 화면이 새 빌드가 된다**:
+
+```
+gh workflow run vercel-production-deploy.yml -f ref=main
+```
+
+이건 이 WO 만의 문제가 아니다. #1069~#1073 도 같은 경로로 머지됐으므로, 그 사이 배포들도
+정규 도메인에 반영됐는지 같이 확인하는 편이 낫다. **자동 배포와 정규 별칭이 갈라져 있다는
+사실 자체가 등재 대상이다** — "머지했으니 배포됐다"가 성립하지 않는 구조다.
+
+### 카피의 배치 시차
+
+훅·칩은 위 shim 으로 즉시 새 문장이 되지만, **payload 자체**는 21:25 UTC 크론이 다시
+구울 때 바뀐다. 그때 shim 은 아무 일도 하지 않게 되고, 그 시점에 프로덕션 API 를 다시 읽어
+`hook` 필드가 한 문장인지 확인하면 배치 경로까지 닫힌다.
