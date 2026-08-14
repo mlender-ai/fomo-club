@@ -102,6 +102,16 @@ describe("buildQuietPickHook — H1~H6", () => {
     }
   });
 
+  /**
+   * 프론트의 옛 payload 판정(`isLegacyHook`)이 이 불변식에 기댄다 — 주체가 없는 훅은 옛 것이다.
+   * 여기가 깨지면 배포 직후 화면이 옛 문장을 새 문장으로 오인한다.
+   */
+  it("훅은 언제나 주체를 말한다 — 기관·외국인·임원 중 하나", () => {
+    for (const f of thirtyFacts()) {
+      expect(/(기관|외국인|임원)/.test(buildQuietPickHook(f)), buildQuietPickHook(f)).toBe(true);
+    }
+  });
+
   it("H2 최대 2줄 · 줄당 28자", () => {
     for (const f of thirtyFacts()) {
       expect(buildQuietPickHook(f).length).toBeLessThanOrEqual(56);

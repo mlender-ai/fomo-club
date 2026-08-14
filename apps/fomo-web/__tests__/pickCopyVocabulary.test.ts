@@ -66,7 +66,9 @@ describe("뎁스 카피 (PART 3)", () => {
   const depth = read("../components/QuietPickDepth.tsx");
 
   it("훅은 뎁스에서 한 번만 렌더된다 (완료 조건 11)", () => {
-    expect(depth.match(/\{pick\.hook\}/g) ?? []).toHaveLength(1);
+    // 훅 렌더는 `pickHook(pick)` 한 곳뿐이다(옛 payload 복구를 거친다).
+    expect(depth.match(/>\{pickHook\(pick\)\}</g) ?? []).toHaveLength(1);
+    expect(depth).not.toContain("{pick.hook}");
   });
 
   it("빈 대시 대신 '아직'과 채점 전 안내를 쓴다 (PART 3-4 · 완료 조건 9)", () => {

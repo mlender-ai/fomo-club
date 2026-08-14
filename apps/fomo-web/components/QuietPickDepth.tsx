@@ -17,6 +17,7 @@ import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { displayName } from "@/components/QuietPickCard";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
+import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { chartTokens } from "@/lib/chartTokens";
 
 /**
@@ -71,11 +72,11 @@ function ReadRow({ label, value, accent }: { label: string; value: string; accen
 
 /** "누가 샀나" — 주체·규모·기간(+내부자 수). 픽 payload 만으로 구성(가짜 없음). */
 function whoBought(pick: QuietPick): string {
-  const parts = [pick.signal.actors];
+  const parts = [repairPickCopy(pick.signal.actors)];
   if (typeof pick.signal.insiderCount === "number" && pick.signal.insiderCount > 0) {
     parts.push(`${pick.signal.insiderCount}명`);
   }
-  parts.push(pick.signal.scale);
+  parts.push(repairPickCopy(pick.signal.scale));
   const days = pick.signal.days;
   if (days > 0) parts.push(pick.signal.kind === "insider_cluster" ? `최근 ${days}일` : `${days}일째`);
   return parts.filter(Boolean).join(" · ");
@@ -88,17 +89,20 @@ function whoBought(pick: QuietPick): string {
  * 그대로 같아서 한 화면에서 같은 말을 세 번 읽게 했다. 남길 게 없으면 undefined → 행 생략.
  */
 function howUnusual(pick: QuietPick): string | undefined {
-  const hook = pick.hook ?? "";
+  const hook = pickHook(pick);
   const all = (pick.anomalies ?? [])
-    .filter((a) => a.text?.trim())
-    .filter((a) => !hook.includes(a.text.trim()) && !a.text.trim().includes(hook));
+    .map((a) => ({ ...a, text: repairPickCopy(a.text) }))
+    .filter((a) => a.text)
+    // 훅이 이미 말한 것은 뺀다. 옛 payload 는 훅이 이례성 문장 자체였으므로 여기서 많이 걸린다.
+    .filter((a) => !hook.includes(a.text) && !a.text.includes(hook))
+    .filter((a) => a.kind !== "participants" || !hook.includes(`${pick.signal.insiderCount ?? ""}명`));
   if (all.length === 0) return undefined;
   // 빈도(1년 0건→N명) → 규모(시총 %·거래량 배수) 순으로 최대 2개.
   const rank = (kind: string) => (kind === "frequency" ? 0 : kind === "scale" ? 1 : kind === "participants" ? 2 : 3);
   return [...all]
     .sort((a, b) => rank(a.kind) - rank(b.kind) || b.strength - a.strength)
     .slice(0, 2)
-    .map((a) => a.text.trim())
+    .map((a) => a.text)
     .join(" · ");
 }
 
@@ -115,13 +119,13 @@ function ReadingBlock({ pick }: { pick: QuietPick }) {
           <ReadRow
             label="이런 패턴의 성적"
             accent
-            value={`${stats.headline} · ${stats.windowDays}일 중앙값 ${stats.medianReturn > 0 ? "+" : ""}${stats.medianReturn}%`}
+            value={`${repairPickCopy(stats.headline)} · ${stats.windowDays}일 중앙값 ${stats.medianReturn > 0 ? "+" : ""}${stats.medianReturn}%`}
           />
         )}
         {stats && (
           <ReadRow
             label="단, 이건 알고"
-            value={`${stats.detail.split("·").pop()?.trim() ?? ""} — 아래 되돌아보는 선이 그 대비책이에요`}
+            value={`${repairPickCopy(stats.detail.split("·").pop() ?? "")} — 아래 되돌아보는 선이 그 대비책이에요`}
           />
         )}
       </ul>
@@ -374,7 +378,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       <div ref={scrollRef} onScroll={onDepthScroll} className={`scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 pt-1 ${BOTTOM_PAD}`}>
         {/* 카드 훅 이음 — 카드에서 본 그 문장이 뎁스 첫 줄로 이어져 맥락이 끊기지 않는다(WO-P5 §2).
             **이 화면에서 훅이 나오는 유일한 자리다**(완료 조건 11). 아래 표는 훅이 말한 것을 반복하지 않는다. */}
-        <p className="mt-4 text-[19px] font-bold leading-7 text-whiteout">{pick.hook}</p>
+        <p className="mt-4 text-[19px] font-bold leading-7 text-whiteout">{pickHook(pick)}</p>
 
         {/* ① 무슨 회사인가 — 처음 보는 회사다. 이게 먼저다(PART 3-2). 없으면 섹션 자체가 없다. */}
         {basics?.summary && (
@@ -406,7 +410,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                 ◆ 사기 시작한 시점{pick.invalidation.level ? " · 점선은 되돌아보는 선" : ""}
               </p>
             </div>
-            <p className="mt-2 text-sm leading-6 text-whiteout">{pick.invalidation.text}</p>
+            <p className="mt-2 text-sm leading-6 text-whiteout">{repairPickCopy(pick.invalidation.text)}</p>
           </Section>
         )}
 
@@ -422,7 +426,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
             archetype={riskBlock.archetype}
             invalidation={{
               // 가격 무효선은 픽의 것이 정본이다 — payload 로 두 번 내보내지 않는다.
-              priceText: pick.invalidation.text ?? null,
+              priceText: repairPickCopy(pick.invalidation.text) || null,
               businessText: riskBlock.invalidation.business_text,
               businessAbsentReason: riskBlock.invalidation.business_absent_reason,
               checkAt: riskBlock.invalidation.check_at,
