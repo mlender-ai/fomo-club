@@ -15,6 +15,7 @@ import {
   investorNetStreak,
   sectorOf,
   buildQuietPickHook,
+  buildQuietPickChips,
   computeQuietPickAnomalies,
   buildCommitteeVerdictLine,
   type StockDef,
@@ -147,7 +148,7 @@ export interface QuietPickSignal {
   kind: QuietPickSignalKind;
   /** 판단 원장/성적표 신호별 집계용 taxonomy 코드. */
   code: SignalTypeCode;
-  /** "내부자 3명" / "기관" / "외국인" / "외국인·기관" — 실주체. */
+  /** "임원 3명" / "기관" / "외국인" / "외국인·기관" — 실주체. */
   actors: string;
   /** "$4.6M" / "27만주" — 실공시 수치만. */
   scale: string;
@@ -197,8 +198,16 @@ export interface QuietPick {
   subject: QuietPickSubject;
   price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
   signal: QuietPickSignal;
+  /**
+   * 훅 — **무슨 일이 일어났나 한 문장**(WO-SUB-HOOK PART 1). 이례성은 훅이 아니라 칩이 말한다.
+   */
   hook: string;
-  /** 이례성 지표(카드 칩·훅 원료) — 최소 1개(0개면 발행 안 함). 강도 내림차순. */
+  /**
+   * 카드 칩 — 훅이 말하지 않는 근거만 서로 다른 축으로 최대 3개(WO-SUB-HOOK PART 1).
+   * 카드가 조립하지 않는다. 같은 사실이 화면에서 두 벌 만들어지는 것을 막으려면 발행 시점에 굳혀야 한다.
+   */
+  chips: string[];
+  /** 이례성 지표(칩 원료·디테일 "왜 지금인가") — 최소 1개(0개면 발행 안 함). 강도 내림차순. */
   anomalies: QuietPickAnomaly[];
   invalidation: QuietPickInvalidation;
   conviction: QuietPickConviction;
@@ -317,7 +326,22 @@ const defaultDeps: QuietPickDeps = {
 };
 
 // ── 수치 포매터(실측만) ────────────────────────────────────────────────
-function formatShares(shares: number): string {
+/**
+ * 순매수 주식수 표기 (WO-SUB-HOOK D9 · 4-3).
+ *
+ * ## 실측 확인
+ *
+ * `기관 74주`(빅텍)와 `47만주`(한미반도체)가 한 화면에 섞여 단위 규칙이 없어 보였다.
+ * 확인 결과 **데이터 오류가 아니다** — 소스(네이버 금융 일별 투자자 순매매, KRX 확정치 재공개)의
+ * 순매매 컬럼은 **주식 수**이고(`packages/fomo-core/src/supply-demand.ts`), 74주는 25거래일
+ * 누적 순매수 실값이다. 소형주에서 기관 순매수가 낱주 단위로 찍히는 것은 정상이다.
+ *
+ * 따라서 규칙만 하나로 고정한다: **1만주 이상은 `만주`로 반올림, 미만은 낱주를 그대로 쓴다.**
+ * 낱주를 억지로 `0만주`로 올리거나 만주를 낱주로 펴지 않는다 — 둘 다 없는 정밀도를 만든다.
+ *
+ * (규모가 작은 신호를 어떻게 다룰지는 별건이다. 표기 규칙이 신호 임계를 대신할 수 없다.)
+ */
+export function formatShares(shares: number): string {
   const abs = Math.abs(Math.round(shares));
   if (abs >= 10_000) return `${Math.round(abs / 10_000).toLocaleString("en-US")}만주`;
   return `${abs.toLocaleString("en-US")}주`;
@@ -486,7 +510,7 @@ interface SignalCandidate {
   subject: QuietPickSubjectSeed;
   kind: QuietPickSignalKind;
   code: SignalTypeCode;
-  /** 주체 명사(조사 붙이기 전) — "내부자"/"외국인"/"기관"/"외국인·기관". */
+  /** 주체 명사(조사 붙이기 전) — "임원"/"외국인"/"기관"/"외국인·기관". */
   actorNoun: string;
   actors: string;
   scale: string;
@@ -568,7 +592,7 @@ function detectKrSignals(
         code: "cluster_multi",
         actorNoun: "외국인·기관",
         actors: "외국인·기관",
-        scale: `${formatShares(foreign.sum + inst.sum)} 매집`,
+        scale: formatShares(foreign.sum + inst.sum),
         days: Math.min(foreign.days, inst.days),
         startedAt: foreign.startedAt < inst.startedAt ? inst.startedAt : foreign.startedAt,
         baseStrength: 300 + Math.min(foreign.days, inst.days) * 5,
@@ -644,7 +668,7 @@ function detectDartInsiderSignals(
       },
       kind: "insider_cluster",
       code: "insider_cluster",
-      actorNoun: "내부자",
+      actorNoun: "임원",
       actors: purchase.ownerRole || "임원·주요주주",
       scale: typeof value === "number" ? formatWon(value) : formatShares(shares ?? 0),
       days: Math.max(1, daysBetween(startedAt, today)),
@@ -728,8 +752,8 @@ function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], 
       },
       kind: "insider_cluster",
       code: "insider_cluster",
-      actorNoun: "내부자",
-      actors: `내부자 ${c.insiderCount}명`,
+      actorNoun: "임원",
+      actors: `임원 ${c.insiderCount}명`,
       scale: formatUsd(c.valueUsd),
       days: daysBetween(c.tradeDate, today),
       startedAt: c.tradeDate,
@@ -1109,10 +1133,11 @@ export async function buildQuietPickResponse(options: {
         ...(progress ? { progress } : {}),
       },
       hook: buildQuietPickHook(facts),
+      chips: buildQuietPickChips(facts),
       anomalies,
       invalidation: {
         level: invalidationLevel,
-        text: front.verdict.invalidation ?? "무효선 계산에 캔들이 더 필요해요",
+        text: front.verdict.invalidation ?? "되돌아보는 선을 계산하려면 캔들이 더 필요해요",
       },
       conviction: {
         whyCompany: front.score?.interpretation || front.score?.label || "",

@@ -9,6 +9,8 @@ import {
   translateTaFact,
   mergeCompanyScoreResults,
   normalizeQuietMoneyDate,
+  rewriteCompanySummary,
+  type ValuationFrameNotes,
   type DailyOhlcv,
   type KeywordCard,
   type StockCountry,
@@ -2695,7 +2697,23 @@ function StockWhyHappened({ insight }: { insight: CondensedInsight | null }) {
  * 재무 한눈에(WO 1.5 F) — "이 회사 돈 잘 버나" 최소셋. 시총·PER·실적 추세를 한 줄씩.
  * KR=네이버 금융, US=Yahoo quoteSummary(이미 연결된 소스). 없는 항목은 생략(가짜 금지).
  */
-export function FinanceGlanceBlock({ basics, maxLines = 5 }: { basics: StockBasics | null; maxLines?: number }) {
+/**
+ * 재무 한눈에 — 수치 나열 + **값을 읽는 프레임**(WO-SUB-HOOK D8 · 4-2).
+ *
+ * PER 19.55배가 숫자로만 있으면 정반대로 읽힌다. 04 가 만든 밴드 위치 캡션과 유형별 경고문은
+ * 차트 안에만 있었고, 차트가 안 그려지는 종목에서는 같이 사라져 INV-11 이 화면에서 무효였다.
+ * `frame` 은 차트와 독립으로 오는 캡션·경고문이다 — 없으면 아무 말도 붙이지 않는다(가짜 금지).
+ */
+export function FinanceGlanceBlock({
+  basics,
+  maxLines = 5,
+  frame,
+}: {
+  basics: StockBasics | null;
+  maxLines?: number;
+  /** 밴드 위치 캡션 + 유형별 경고문. `card-slots` 가 준다. */
+  frame?: ValuationFrameNotes | null;
+}) {
   if (!basics) return null;
   const lines: Array<{ label: string; value: string; note?: string }> = [];
   if (basics.marketCap) lines.push({ label: "시가총액", value: basics.marketCap });
@@ -2731,19 +2749,51 @@ export function FinanceGlanceBlock({ basics, maxLines = 5 }: { basics: StockBasi
           </li>
         ))}
       </ul>
+
+      {/* 값의 위치 — 숫자 바로 아래에 붙는다. 다른 섹션으로 떼면 숫자만 읽고 넘어간다. */}
+      {(frame?.captions.length ?? 0) > 0 && (
+        <div className="mt-2 space-y-1" data-testid="valuation-band-caption">
+          {frame!.captions.map((caption) => (
+            <p key={caption} className="text-[11px] leading-4 text-muted">{caption}</p>
+          ))}
+        </div>
+      )}
+      {frame?.warning && (
+        <p
+          className="mt-2 rounded-lg border border-hairline bg-elevated px-2.5 py-2 text-[11px] leading-4 text-whiteout"
+          data-testid="valuation-type-warning"
+        >
+          {frame.warning}
+        </p>
+      )}
     </DepthSection>
   );
 }
 
+/**
+ * 어떤 회사예요 (WO-SUB-HOOK PART 3-3) — **벤더 요약 원문을 그대로 노출하지 않는다.**
+ *
+ * 원문은 등기부 문체(`~하였음`)에 첫 문장이 설립·상장 연도다. 처음 보는 회사에서 사용자가
+ * 알아야 할 것은 "무엇을 만들어 파는가"다. 연혁을 덜어내고 해요체로 바꾼 문장을 위에 두고,
+ * **원문은 버리지 않고** "출처 보기"로 접어 둔다(정직 원칙 — 우리가 손댄 것을 숨기지 않는다).
+ */
 export function CompanyProfileBlock({ basics }: { basics: StockBasics | null }) {
   if (!basics?.summary) return null;
+  const summary = rewriteCompanySummary(cleanText(basics.summary));
+  if (!summary.text) return null;
   return (
     <DepthSection
       className="mt-4"
       title="어떤 회사예요"
       aside={basics.sector ? <span className="text-[11px] text-muted">{cleanText(basics.sector)}</span> : undefined}
     >
-      <p className="text-sm leading-6 text-whiteout">{cleanText(basics.summary)}</p>
+      <p className="text-sm leading-6 text-whiteout" data-testid="company-summary">{summary.text}</p>
+      {summary.trimmed && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-[11px] text-muted">출처 보기</summary>
+          <p className="mt-1.5 text-[12px] leading-5 text-muted">{summary.raw}</p>
+        </details>
+      )}
     </DepthSection>
   );
 }

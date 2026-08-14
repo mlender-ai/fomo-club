@@ -137,7 +137,7 @@ describe("computeCardVerdict — 결정론 판단 엔진", () => {
     expect(v).toBeDefined();
     expect(v!.phase).toBe("markdown");
     expect(v!.stance).toBe("avoid");
-    expect(v!.invalidation).toMatch(/위 마감 시|회복 시/);
+    expect(v!.invalidation).toMatch(/위에서 마감하면|회복하면/);
   });
 
   it("신호 없는 횡보 → watch(판별력 — 모든 카드가 enter가 아니다)", () => {

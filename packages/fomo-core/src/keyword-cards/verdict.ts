@@ -396,18 +396,18 @@ function invalidationOf(
   if (stance === "enter") {
     if (driver === "accumulation_inflow" || !num(s.ma20)) {
       return {
-        text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈 시 이 관점은 무효예요.`,
+        text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)} 이탈하면 이 판단은 다시 봐야 해요.`,
         level: s.windowLow,
       };
     }
-    return { text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 아래 마감 시 이 관점은 무효예요.`, level: s.ma20 };
+    return { text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 아래에서 마감하면 이 판단은 다시 봐야 해요.`, level: s.ma20 };
   }
   if (stance === "avoid") {
     if (num(s.ma20)) {
-      return { text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 위 마감 시 약세 관점은 무효예요.`, level: s.ma20 };
+      return { text: `20일선 ${formatVerdictLevel(s.ma20, currency)} 위에서 마감하면 약세 판단은 다시 봐야 해요.`, level: s.ma20 };
     }
     return {
-      text: `${s.windowText} 고점 ${formatVerdictLevel(s.windowHigh, currency)} 회복 시 약세 관점은 무효예요.`,
+      text: `${s.windowText} 고점 ${formatVerdictLevel(s.windowHigh, currency)} 회복하면 약세 판단은 다시 봐야 해요.`,
       level: s.windowHigh,
     };
   }

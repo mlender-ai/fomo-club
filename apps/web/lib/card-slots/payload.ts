@@ -1,11 +1,13 @@
 import {
   RULESET_VERSION,
   buildValuationChart,
+  buildValuationFrameNotes,
   classifyArchetype,
   composeWhereThisIsWrong,
   hasWhereThisIsWrongContent,
   toRenderable,
   type ValuationChartData,
+  type ValuationFrameNotes,
   type WhereThisIsWrongBlock,
 } from "@fomo/core";
 import { readBusinessContext } from "../business-context/repository";
@@ -56,6 +58,13 @@ export interface CardSlotPayload {
   /** 왜 ③ 이 없는지. 화면에는 안 쓰지만 운영에서 "없음"과 "못 그림"을 구분해야 한다. */
   valuation_unavailable_reason: string | null;
   /**
+   * 값을 읽는 프레임 (WO-SUB-HOOK D8 · 4-2) — 밴드 위치 캡션 + 유형별 경고문.
+   *
+   * **차트와 독립이다.** 차트를 못 그려도 디테일 재무 섹션에는 붙어야 한다 — 숫자만 주면
+   * 정반대로 읽는 것이 이 배치의 출발점이었고, 경고문이 사라지면 INV-11 이 화면에서 무효가 된다.
+   */
+  valuation_frame: ValuationFrameNotes | null;
+  /**
    * "이게 틀리는 경우" 블록 (WO-SUB-06 §6).
    *
    * 팩트시트가 없으면 아키타입을 모르므로 `null` — 그때는 섹션을 그리지 않는다. 반대로 유형
@@ -97,12 +106,16 @@ async function payloadFor(market: string, canonical: string): Promise<CardSlotPa
   let valuation: ValuationChartData | null = null;
   let reason: string | null = record ? null : "no_factsheet";
   let risk: WhereThisIsWrongBlock | null = null;
+  let frame: ValuationFrameNotes | null = null;
   if (record) {
     try {
       const archetype = classifyArchetype(record.factsheet).code;
       const chart = buildValuationChart(record.factsheet, archetype, RULESET_VERSION);
       if (chart.renderable) valuation = chart;
       else reason = chart.unavailable_reason ?? "unknown";
+
+      // 캡션·경고문은 차트가 숨겨져도 남는다(D8).
+      frame = buildValuationFrameNotes(record.factsheet, archetype);
 
       // 리스크 블록은 차트와 독립이다 — 차트를 못 그려도(막대축 부재 등) 리스크는 낼 수 있다.
       const block = composeWhereThisIsWrong({
@@ -117,7 +130,15 @@ async function payloadFor(market: string, canonical: string): Promise<CardSlotPa
     }
   }
 
-  return { canonical, market, substance, valuation, valuation_unavailable_reason: reason, risk };
+  return {
+    canonical,
+    market,
+    substance,
+    valuation,
+    valuation_unavailable_reason: reason,
+    valuation_frame: frame,
+    risk,
+  };
 }
 
 interface LiveDeckShape {

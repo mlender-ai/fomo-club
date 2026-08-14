@@ -9,6 +9,7 @@ import type {
   MoodSignal,
   ScoredArticle,
   ValuationChartData,
+  ValuationFrameNotes,
   WhereThisIsWrongBlock,
 } from "@fomo/core";
 import type { DeckContent, DeckNarrative } from "./discoveryDeck";
@@ -1036,10 +1037,18 @@ export const warmDaily30 = () => fetchDaily30();
 
 // ── 조용한 돈 픽(WO-G1A/B) ────────────────────────────────────────────────
 export type QuietPickSignalKind = "insider_cluster" | "institution_streak" | "foreign_streak" | "multi_cluster";
-export type QuietPickAnomalyKind = "frequency" | "participants" | "scale" | "silence";
+export type QuietPickAnomalyKind =
+  | "frequency"
+  | "participants"
+  | "scale"
+  | "silence"
+  | "vacuum"
+  | "near_low";
 export interface QuietPickAnomaly {
   kind: QuietPickAnomalyKind;
   text: string;
+  /** 칩 문구 — 훅이 이미 말하는 축이면 `null`(WO-SUB-HOOK H4). */
+  chip?: string | null;
   strength: number;
 }
 export interface QuietPick {
@@ -1069,7 +1078,13 @@ export interface QuietPick {
     /** 신호 강화 재등장 문구(WO-P4). */
     progress?: string;
   };
+  /** 훅 — 무슨 일이 일어났나 한 문장(WO-SUB-HOOK PART 1). */
   hook: string;
+  /**
+   * 카드 칩 — 훅이 말하지 않는 근거만, 서로 다른 축으로 최대 3개.
+   * 발행 시점에 굳는다(카드가 다시 조립하지 않는다). 구 페이로드에는 없으므로 선택 필드.
+   */
+  chips?: string[];
   anomalies: QuietPickAnomaly[];
   invalidation: { level: number | null; text: string };
   conviction: {
@@ -1365,6 +1380,11 @@ export interface CardSlotPayload {
   /** `null` 이면 차트 영역 자체가 사라진다(빈 박스 금지). 타입은 `@fomo/core` 의 계약을 따른다. */
   valuation: ValuationChartData | null;
   valuation_unavailable_reason: string | null;
+  /**
+   * 값을 읽는 프레임 (WO-SUB-HOOK D8) — 밴드 위치 캡션 + 유형별 경고문.
+   * 차트를 못 그려도 디테일 재무 섹션에 붙는다. 구 페이로드에는 없으므로 선택 필드.
+   */
+  valuation_frame?: ValuationFrameNotes | null;
   /**
    * "이게 틀리는 경우" (WO-SUB-06 §6). 팩트시트가 없으면 `null` — 섹션을 그리지 않는다.
    * 유형 리스크만 있고 종목 고유 리스크가 없는 상태는 `null` 이 아니다(설계된 정상 경로).

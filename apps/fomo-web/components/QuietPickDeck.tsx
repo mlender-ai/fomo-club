@@ -238,14 +238,22 @@ export function QuietPickDeck() {
         <p className="mt-0.5 text-xs text-muted">뉴스 나오기 전에 돈이 먼저 들어간 곳만.</p>
       </div>
 
-      <div className="relative h-[540px] select-none">
+      {/*
+        무대는 **고정 높이를 갖지 않는다** (WO-SUB-HOOK PART 2-3 · D5).
+
+        종전 `h-[540px]` + `absolute inset-0` 조합에서는 슬롯 ②③ 이 없는 카드도 540px 를
+        차지해 중앙이 빈 채로 남았다. 이제 앞 카드가 **문서 흐름 안**에 있어 무대 높이가 앞
+        카드 높이를 따라가고, 뒤 카드만 절대 배치로 겹친다(뒤 카드는 높이에 관여하지 않는다).
+        드래그는 transform 이라 레이아웃을 흔들지 않는다.
+      */}
+      <div className="relative select-none">
         {next && (
-          <div className="absolute inset-0 scale-[0.97] rounded-3xl border border-hairline bg-[#111319] p-5 opacity-60" aria-hidden>
+          <div className="pointer-events-none absolute inset-0 scale-[0.97] overflow-hidden rounded-3xl border border-hairline bg-[#111319] p-5 opacity-60" aria-hidden>
             <QuietPickCard pick={next} slots={slots[next.subject.canonical]} />
           </div>
         )}
         <div
-          className="absolute inset-0 rounded-3xl border border-hairline bg-[#14161c] p-5"
+          className="relative max-h-[76vh] overflow-hidden rounded-3xl border border-hairline bg-[#14161c] p-5"
           style={{
             transform,
             transition: exiting ? `transform ${EXIT_MS}ms ease-in` : dragging.current ? "none" : "transform 160ms ease-out",
@@ -347,7 +355,7 @@ function subjectContext(subject: QuietPick["subject"]) {
 }
 
 const WATCH_SIGNAL_LABEL: Record<string, string> = {
-  insider_cluster: "내부자 매수",
+  insider_cluster: "임원 매수",
   multi_cluster: "외국인+기관",
   institution_streak: "기관 매수",
   foreign_streak: "외국인 매수",

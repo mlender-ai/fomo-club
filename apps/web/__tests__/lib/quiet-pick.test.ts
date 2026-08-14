@@ -7,7 +7,7 @@ import type {
   CompanyScoreResult,
   DailyOhlcv,
 } from "@fomo/core";
-import { buildQuietPickResponse, type QuietPickDeps, type KrMarketRow } from "../../lib/quiet-pick";
+import { buildQuietPickResponse, formatShares, type QuietPickDeps, type KrMarketRow } from "../../lib/quiet-pick";
 import type { StockFrontData } from "../../lib/stock-front";
 import type { InsiderClusterCandidate } from "../../lib/insider-source";
 import type { StockAttentionSignal } from "../../lib/stock-signal-coverage";
@@ -214,11 +214,13 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
     expect(names).not.toContain("Tiny Inc");
     expect(names).not.toContain("Small Inc");
     const pick = res.picks.find((p) => p.subject.canonical === "BigCluster Inc")!;
-    expect(pick.signal.actors).toBe("내부자 3명");
+    expect(pick.signal.actors).toBe("임원 3명");
     expect(pick.signal.scale).toBe("$4.6M");
-    // 훅은 이례성으로 시작(실수치 포함) — 절대 규모가 아니라 "이례성"이 후킹.
+    // 훅은 **무슨 일이 일어났나 한 문장**이고, 이례성은 칩으로 내려간다(WO-SUB-HOOK PART 1).
     expect(pick.anomalies.length).toBeGreaterThanOrEqual(1);
-    expect(pick.hook.startsWith(pick.anomalies[0]!.text)).toBe(true);
+    expect(pick.hook).toContain("임원 3명");
+    expect(pick.hook).not.toContain("—");
+    expect(pick.chips.length).toBeGreaterThan(0);
     expect(/\d/.test(pick.hook)).toBe(true);
   });
 
@@ -280,12 +282,18 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
 });
 
 describe("buildQuietPickResponse — 이례성·시총 상한(WO-G1A2)", () => {
-  it("전 픽에 이례성 지표 ≥1 + 훅이 이례성으로 시작", async () => {
+  it("전 픽에 이례성 지표 ≥1 + 훅은 한 문장 · 근거는 칩으로", async () => {
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(baseScenario()) });
     expect(res.picks.length).toBeGreaterThan(0);
     for (const p of res.picks) {
       expect(p.anomalies.length).toBeGreaterThanOrEqual(1);
-      expect(p.hook.startsWith(p.anomalies[0]!.text)).toBe(true);
+      // H1 — 절을 이어 붙이지 않는다.
+      expect(p.hook).not.toContain("—");
+      expect(p.hook).not.toContain(";");
+      // 훅이 말하지 않는 근거는 칩이 받는다(서로 다른 축 최대 3개).
+      expect(p.chips.length).toBeGreaterThan(0);
+      expect(p.chips.length).toBeLessThanOrEqual(3);
+      expect(new Set(p.chips).size).toBe(p.chips.length);
     }
   });
 
@@ -475,5 +483,26 @@ describe("buildQuietPickResponse — 게이트 재교정 + 2단 구조(WO-P4)", 
     expect(res.watching.length).toBeLessThanOrEqual(10);
     expect(res.watching.map((w) => w.subject.canonical)).not.toContain("화제종목");
     expect(res.qualification.watching).toBe(res.watching.length);
+  });
+});
+
+/**
+ * WO-SUB-HOOK D9 · 4-3 — 주식수 표기 규칙 하나로 고정.
+ * 74주(빅텍)와 47만주(한미반도체)가 같은 규칙의 두 구간이라는 것을 못박는다.
+ */
+describe("formatShares — 만 단위 경계", () => {
+  it("1만주 미만은 낱주를 그대로 쓴다", () => {
+    expect(formatShares(74)).toBe("74주");
+    expect(formatShares(9_999)).toBe("9,999주");
+  });
+
+  it("1만주 이상은 만주로 반올림한다", () => {
+    expect(formatShares(10_000)).toBe("1만주");
+    expect(formatShares(470_000)).toBe("47만주");
+  });
+
+  it("부호·소수는 표기에 새지 않는다", () => {
+    expect(formatShares(-74)).toBe("74주");
+    expect(formatShares(73.6)).toBe("74주");
   });
 });

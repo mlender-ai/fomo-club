@@ -13,7 +13,7 @@ import type { ArchetypeRiskItem, SymbolRisk } from "@fomo/core";
  * 2. **종목 고유 리스크 블록을 숨기지 않는다**(완료 조건 3). 항목이 0개면 미확보 문안을
  *    표시한다(문안은 `@fomo/core` 상수 — 여기 복붙하지 않는다). 블록이 사라지면
  *    "리스크 없는 회사" 로 읽힌다 — §10 실패 모드.
- * 3. **가격 무효선과 사업 무효 조건을 나란히** 둔다(§5-3). 가격만 있으면 주가가 안 빠지면서
+ * 3. **되돌아보는 선(가격)과 사업 조건을 나란히** 둔다(§5-3). 가격만 있으면 주가가 안 빠지면서
  *    논리가 깨지는 경우를 말하지 못한다.
  *
  * 문안은 전부 데이터에서 온다. 카피를 이 파일에 하드코딩하지 않는다(독트린이 정본).
@@ -33,9 +33,9 @@ export interface WhereThisIsWrongProps {
     disclaimer: string;
   };
   invalidation: {
-    /** 기존 가격 무효선(`verdict.invalidation`). */
+    /** 되돌아보는 선 — 가격 기준(`verdict.invalidation`). */
     priceText: string | null;
-    /** 사업 무효 조건. 만들 수 없는 유형은 null 이고 사유를 짝으로 받는다. */
+    /** 사업 기준 조건. 만들 수 없는 유형은 null 이고 사유를 짝으로 받는다. */
     businessText: string | null;
     businessAbsentReason: string | null;
     /** 다음 확인 시점. null 이면 상태가 이유를 말한다(#1040 규약). */
@@ -109,7 +109,7 @@ export function WhereThisIsWrong({ symbol, archetype, invalidation, sourceHref }
 
       {hasInvalidation && (
         <div className="rounded-2xl border border-hairline bg-surface px-4 py-4">
-          <p className="font-pixel text-sm text-whiteout">무효 조건</p>
+          <p className="font-pixel text-sm text-whiteout">다시 봐야 하는 조건</p>
           {invalidation.priceText && (
             <div className="mt-2 flex gap-2">
               <span className="shrink-0 text-[12px] font-bold leading-6 text-muted">가격</span>
@@ -129,7 +129,7 @@ export function WhereThisIsWrong({ symbol, archetype, invalidation, sourceHref }
                   </p>
                 </>
               ) : (
-                <p className="text-sm leading-6 text-muted">{invalidation.businessAbsentReason ?? "사업 기준 무효 조건을 만들지 못했어요."}</p>
+                <p className="text-sm leading-6 text-muted">{invalidation.businessAbsentReason ?? "사업 기준 조건을 만들지 못했어요."}</p>
               )}
             </div>
           </div>
