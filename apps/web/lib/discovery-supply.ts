@@ -2219,14 +2219,29 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   };
 
-  const insiderDisclosureMap = await timeStage("dart-insider", () =>
-    fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})));
+  /**
+   * DART 는 **한국 공시**다. `scope === "US"` 면 `addDartDisclosure` 가
+   * `eligibleTickers`(US 종목만) 에서 전부 걸러 버리므로 **결과가 100% 버려진다.**
+   *
+   * 그런데 이 스캔은 7일 × 최대 3페이지(각 8초 타임아웃) + 항목별 문서 fetch(6초) 를
+   * **직렬**로 돈다. 프리뷰 실측(2026-08-15): `country=US` 요청이 이 단계에서
+   * **24.98초** 머물러 25초 마감을 넘겼고, 그 사이 끝난 다른 단계 합은 4ms 였다.
+   * 즉 US 덱이 죽은 이유의 거의 전부가 **쓰지도 않는 한국 공시 대기**였다.
+   * (`scope === "all"` 은 KR 을 포함하므로 그대로 돈다.)
+   */
+  const dartScoped = scope !== "US";
+  const insiderDisclosureMap = dartScoped
+    ? await timeStage("dart-insider", () =>
+      fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})))
+    : {};
   for (const [ticker, disclosure] of Object.entries(insiderDisclosureMap)) {
     addDartDisclosure(ticker, disclosure);
   }
 
-  const disclosureMap = await timeStage("dart-disclosures", () =>
-    fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})));
+  const disclosureMap = dartScoped
+    ? await timeStage("dart-disclosures", () =>
+      fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})))
+    : {};
   for (const [ticker, disclosure] of Object.entries(disclosureMap)) {
     if (insiderDisclosureMap[ticker]) continue;
     addDartDisclosure(ticker, disclosure);
