@@ -68,7 +68,8 @@ describe("리스크 블록을 페이로드에서 받아온다", () => {
  */
 describe("가격 무효선은 정본이 하나다", () => {
   it("덱 뎁스는 픽의 무효선 문구를 쓴다", () => {
-    expect(DECK_DEPTH).toMatch(/priceText:\s*pick\.invalidation\.text/);
+    // 문구는 픽의 것이 정본이고, 옛 payload 는 읽는 쪽에서 용어만 고친다(WO-SUB-HOOK 배치 시차).
+    expect(DECK_DEPTH).toMatch(/priceText:\s*repairPickCopy\(pick\.invalidation\.text\)/);
   });
 
   it("리스크 페이로드에서 가격 무효선을 읽지 않는다", () => {

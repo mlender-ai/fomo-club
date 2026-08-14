@@ -21,7 +21,7 @@ function code(source: string): string {
 describe("카드 위계 — 훅 1순위 · 되돌아보는 선 4순위", () => {
   it("훅이 화면에서 가장 큰 글자다", () => {
     // 훅 22px > 종목명 24px 은 예외(식별자) — 훅은 문장 중 가장 크다.
-    expect(card).toMatch(/text-\[22px\] font-bold leading-8 text-whiteout"[^>]*>\{pick\.hook\}/);
+    expect(card).toMatch(/text-\[22px\] font-bold leading-8 text-whiteout"[^>]*>\{hook\}/);
   });
 
   it("되돌아보는 선은 박스가 아니라 회색 한 줄이다 (D4 · 완료 조건 4)", () => {
@@ -47,7 +47,9 @@ describe("카드 위계 — 훅 1순위 · 되돌아보는 선 4순위", () => {
   });
 
   it("서브라인은 H6 게이트를 통과한 것만 그린다", () => {
-    expect(card).toContain("quietPickSubLine(pick.hook, pick.signal.progress)");
+    expect(card).toContain("quietPickSubLine(hook, pick.signal.progress)");
+    // 훅은 옛 payload 복구를 거친 값이다(배치 시차 대응).
+    expect(card).toContain("pickHook(pick)");
   });
 });
 

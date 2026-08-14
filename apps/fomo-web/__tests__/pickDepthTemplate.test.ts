@@ -67,7 +67,7 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
 describe("정보 위계(WO-P5 §2) — 눈이 갈 곳이 하나", () => {
   it("카드 훅이 뎁스 첫 줄로 이어진다(맥락 단절 방지)", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
-    const hookIdx = body.indexOf("{pick.hook}");
+    const hookIdx = body.indexOf("{pickHook(pick)}");
     const firstBlockIdx = body.indexOf("<ReadingBlock pick={pick} />");
     expect(hookIdx).toBeGreaterThan(0);
     expect(hookIdx).toBeLessThan(firstBlockIdx); // 훅이 ① 블록보다 위

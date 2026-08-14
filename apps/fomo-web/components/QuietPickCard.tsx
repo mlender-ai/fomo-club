@@ -7,6 +7,7 @@ import { chartTokens } from "@/lib/chartTokens";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { quietCardMinHeight } from "@/lib/quietCardLayout";
+import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 import { StockLogoBadge } from "@/components/StockLogoBadge";
@@ -63,11 +64,11 @@ function ticker(pick: QuietPick): string | undefined {
  * 카드가 칩 문구를 따로 조립하면 훅과 축이 겹쳐 같은 숫자가 화면에 세 번 나온다(D2).
  */
 export function cardChips(pick: QuietPick): string[] {
-  if (pick.chips && pick.chips.length > 0) return pick.chips;
+  if (pick.chips && pick.chips.length > 0) return pick.chips.map(repairPickCopy);
   return buildQuietPickChips({
     kind: pick.signal.kind,
-    actorNoun: pick.signal.actors.replace(/\s*\d+명$/, ""),
-    scale: pick.signal.scale,
+    actorNoun: repairPickCopy(pick.signal.actors).replace(/\s*\d+명$/, ""),
+    scale: repairPickCopy(pick.signal.scale),
     days: pick.signal.days,
     ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
   });
@@ -98,8 +99,10 @@ export function QuietPickCard({
   const changePct = pick.price.changePct;
   const dir: "up" | "down" | "flat" = typeof changePct === "number" ? (changePct > 0 ? "up" : changePct < 0 ? "down" : "flat") : "flat";
   const chips = cardChips(pick);
+  // payload 는 하루 한 번 구워진다 — 배치가 돌기 전까지 옛 문장이 오므로 읽는 쪽에서 고친다.
+  const hook = pickHook(pick);
   // H6 — 서브라인은 훅과 같은 숫자면 표시하지 않는다("25일째" 아래 "25일째 계속" 금지).
-  const subLine = quietPickSubLine(pick.hook, pick.signal.progress);
+  const subLine = quietPickSubLine(hook, pick.signal.progress);
   const minHeight = quietCardMinHeight({
     substance: Boolean(slots?.substance),
     valuation: Boolean(slots?.valuation),
@@ -171,7 +174,7 @@ export function QuietPickCard({
       */}
       <div className="min-h-0 flex-1 overflow-y-auto">
       {/* ★1순위 훅 — 한 문장. 화면에서 가장 큰 글자다. */}
-      <p className="mt-3 shrink-0 text-[22px] font-bold leading-8 text-whiteout" data-testid="pick-hook">{pick.hook}</p>
+      <p className="mt-3 shrink-0 text-[22px] font-bold leading-8 text-whiteout" data-testid="pick-hook">{hook}</p>
 
       {/* 서브라인 — 훅이 말하지 않는 변화만(H6). 같은 일수면 위에서 걸러져 렌더되지 않는다. */}
       {subLine && (
@@ -200,8 +203,8 @@ export function QuietPickCard({
             <span className="text-[10px] font-semibold text-muted">이런 신호, 과거엔 어땠나</span>
             <span className="text-[10px] text-muted">{pick.signalStats.sourceLabel}</span>
           </div>
-          <p className="mt-1 text-sm font-semibold leading-5 text-whiteout">{pick.signalStats.headline}</p>
-          <p className="mt-0.5 text-[12px] leading-5 text-muted">{pick.signalStats.detail}</p>
+          <p className="mt-1 text-sm font-semibold leading-5 text-whiteout">{repairPickCopy(pick.signalStats.headline)}</p>
+          <p className="mt-0.5 text-[12px] leading-5 text-muted">{repairPickCopy(pick.signalStats.detail)}</p>
         </div>
       )}
 
@@ -231,7 +234,7 @@ export function QuietPickCard({
       {/* ★4순위 되돌아보는 선 = 계약 — 스크롤 영역 **밖**이라 항상 보인다.
           박스를 뺀 회색 한 줄이다(D4). 계약이라 지우지 않지만, 발굴 카드에서 1순위처럼 보이면 안 된다. */}
       <p className="mt-3 shrink-0 text-[12px] leading-5 text-muted" data-testid="recheck-line">
-        되돌아보는 선 · {pick.invalidation.text}
+        되돌아보는 선 · {repairPickCopy(pick.invalidation.text)}
       </p>
 
       {/* 유동성 경고(WO-P4) — 얇으면 숨기지 않고 알린다. 위치는 되돌아보는 선 아래. */}
