@@ -70,11 +70,21 @@ export async function writeStaleSnapshot<T>(key: string, row: T): Promise<void> 
     });
 }
 
-/** 스테일 응답에 붙는 표식 — 소비자가 "이건 오래된 것"을 알 수 있어야 한다. */
+/**
+ * 스테일 응답에 붙는 표식 — 소비자가 "이건 오래된 것"을 알 수 있어야 한다.
+ *
+ * **`meta.staleServe` 로 감싼다.** `daily-30` 의 `meta.stale` 은 이미
+ * `"committee-yesterday" | "engine-direct"`(비상 공급 경로) 라는 다른 뜻으로 쓰인다 —
+ * 거기에 `true` 를 덮으면 원래 의미가 지워진다. 두 사실은 독립이므로 키를 분리한다.
+ */
 export interface StaleMark {
-  stale: true;
-  savedAt: string;
-  reason: "build_deadline";
+  staleServe: {
+    stale: true;
+    savedAt: string;
+    reason: "build_deadline";
+  };
 }
 
-export const staleMark = (savedAt: string): StaleMark => ({ stale: true, savedAt, reason: "build_deadline" });
+export const staleMark = (savedAt: string): StaleMark => ({
+  staleServe: { stale: true, savedAt, reason: "build_deadline" },
+});

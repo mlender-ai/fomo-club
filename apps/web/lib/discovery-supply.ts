@@ -1,4 +1,5 @@
 import { hydrateKoreanTitles, koreanTitle } from "./content-i18n";
+import { timeStage } from "./stage-timer";
 import {
   STOCK_VOCAB,
   applyAxisRarity,
@@ -2158,7 +2159,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     : 0;
   const asOf = discoveryAsOf(scope);
   // 2026-07-12: US 뉴스 제목 한글 번역 캐시를 모듈 맵에 적재(요청 경로 동기 조회용). fail-open.
-  await hydrateKoreanTitles();
+  await timeStage("kr-title-cache", () => hydrateKoreanTitles());
   const discoveryContentPromise =
     scope === "US"
       ? fetchDeckContentCards().catch((err) => {
@@ -2167,10 +2168,11 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       })
       : Promise.resolve([] as DeckContentCard[]);
   const [rows, attentionMap] = await Promise.all([
-    fetchMarketRows(scope),
+    timeStage("market-rows", () => fetchMarketRows(scope)),
     scope === "US"
       ? Promise.resolve({} as Record<string, StockAttentionSignal>)
-      : computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({})),
+      : timeStage("attention-signals", () =>
+        computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({}))),
   ]);
   const vocabByCode = new Map(STOCK_VOCAB.filter((s) => s.naverCode).map((s) => [s.naverCode!, s]));
   const scopedRows = rows.filter((row) => isDiscoveryRowAllowedForScope(row, scope));
@@ -2217,12 +2219,14 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   };
 
-  const insiderDisclosureMap = await fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  const insiderDisclosureMap = await timeStage("dart-insider", () =>
+    fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})));
   for (const [ticker, disclosure] of Object.entries(insiderDisclosureMap)) {
     addDartDisclosure(ticker, disclosure);
   }
 
-  const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  const disclosureMap = await timeStage("dart-disclosures", () =>
+    fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})));
   for (const [ticker, disclosure] of Object.entries(disclosureMap)) {
     if (insiderDisclosureMap[ticker]) continue;
     addDartDisclosure(ticker, disclosure);
@@ -2239,10 +2243,10 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     })
     .slice(0, targetedMaterialLimit);
   if (targetedMaterialLimit > 0) {
-    const targetedMaterial = await mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
+    const targetedMaterial = await timeStage("targeted-material", () => mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
       ticker,
       event: await eventFromTargetedMaterial(value.row, asOf),
-    }));
+    })));
     for (const result of targetedMaterial) {
       if (result.status !== "fulfilled" || !result.value.event) continue;
       const current = byTicker.get(result.value.ticker);
@@ -2252,14 +2256,16 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   }
 
   if (scope === "US") {
-    await hydrateUsInsiderClusterRows(byTicker, asOf);
-    await hydrateUsMarketWideMaterial(byTicker, asOf);
+    await timeStage("us-insider-cluster", () => hydrateUsInsiderClusterRows(byTicker, asOf));
+    await timeStage("us-market-wide", () => hydrateUsMarketWideMaterial(byTicker, asOf));
   }
 
   let flowHistories: Record<string, InvestorFlow[]> = {};
   if (DISCOVERY_FLOW_CACHE_ENABLED) {
     const krTickers = [...byTicker.entries()].filter(([, value]) => value.row.country === "KR").map(([ticker]) => ticker);
-    flowHistories = krTickers.length > 0 ? await readSupplyDemandHistoryByTickers(krTickers, 10) : {};
+    flowHistories = krTickers.length > 0
+      ? await timeStage("supply-demand-history", () => readSupplyDemandHistoryByTickers(krTickers, 10))
+      : {};
     for (const [ticker, history] of Object.entries(flowHistories)) {
       const event = eventFromFlowHistory(history);
       if (!event) continue;
@@ -2268,7 +2274,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       byTicker.set(ticker, { ...current, events: [...current.events, event] });
     }
   }
-  await hydrateLiveFlowEvents(byTicker);
+  await timeStage("live-flow", () => hydrateLiveFlowEvents(byTicker));
 
   for (const [ticker, current] of byTicker.entries()) {
     if (current.row.country !== "KR") continue;
@@ -2319,15 +2325,15 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     deckCardCount
   ));
   if (targetedMaterialLimit > 0 && scope !== "US") {
-    ranked = await hydrateFrontBandMaterial(ranked, rowsByTicker, asOf);
+    ranked = await timeStage("front-band-material", () => hydrateFrontBandMaterial(ranked, rowsByTicker, asOf));
   }
   if (scope !== "US") {
-    ranked = await hydrateReachedNewsHooks(ranked, rowsByTicker, asOf);
+    ranked = await timeStage("reached-news-hooks", () => hydrateReachedNewsHooks(ranked, rowsByTicker, asOf));
   }
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
 
-  const dailyRows = await mapLimit(
+  const dailyRows = await timeStage("candles", () => mapLimit(
     ranked.slice(0, deckCardCount),
     SPARKLINE_CONCURRENCY,
     async (candidate) => {
@@ -2365,14 +2371,14 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
         },
       };
     }
-  );
+  ));
   const dailyByTicker = new Map(
     dailyRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.daily] as const] : []))
   );
   // 밸류축 연료(WO-LASTMILE ①) — 덱 score 는 여기서 만들어지므로 basics(KR 재무·US Nasdaq)를 받아
   // financials 로 주입해야 valuation 이 fronts.score.axes 까지 흐른다. 없으면 밸류축 전종목 결손.
   // daily-30 은 12h 캐시+크론 프리웜이라 이 추가 fetch 는 요청 경로 상시 비용이 아니다(fail-open).
-  const basicsRows = await mapLimit(ranked.slice(0, deckCardCount), SPARKLINE_CONCURRENCY, async (candidate) => {
+  const basicsRows = await timeStage("basics", () => mapLimit(ranked.slice(0, deckCardCount), SPARKLINE_CONCURRENCY, async (candidate) => {
     const row = rowsByTicker.get(candidate.ticker);
     if (candidate.naverCode) {
       return { ticker: candidate.ticker, basics: await fetchStockBasics(candidate.ticker, candidate.naverCode).catch(() => null) };
@@ -2382,13 +2388,13 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       return { ticker: candidate.ticker, basics: await fetchUsStockBasics(row?.canonical ?? candidate.ticker, usSymbol, false).catch(() => null) };
     }
     return { ticker: candidate.ticker, basics: null as StockBasics | null };
-  });
+  }));
   const basicsByTicker = new Map(
     basicsRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.basics] as const] : []))
   );
   ranked = attachReachedVolumeEvents(ranked, rowsByTicker, dailyByTicker, asOf);
   if (scope !== "US") {
-    ranked = await hydrateReachedWhySynthesis(ranked, allowAiSynthesis);
+    ranked = await timeStage("why-synthesis", () => hydrateReachedWhySynthesis(ranked, allowAiSynthesis));
   }
   logDiscoverySignalCoverage("after-rank", ranked);
   const sparklineByTicker = new Map(
@@ -2429,7 +2435,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       ...(typeof candidateCandles.at(-1)?.close === "number" ? { currentPrice: candidateCandles.at(-1)!.close } : {}),
       asOf,
     });
-    const stock = await stockPayload(row, candidate, front, allowAiSynthesis);
+    const stock = await timeStage("stock-payload", () => stockPayload(row, candidate, front, allowAiSynthesis));
     // 2026-07-12: US 큐레이션 대형주는 뉴스 재료가 없어도(Vercel egress에서 US 뉴스 차단) verdict 맥락으로
     // 진입 — "시총 높은 아는 기업"(User Zero). 국장 발굴 정체성은 불변(KR 은 이 분기 안 탐).
     const usSeed =
@@ -2505,7 +2511,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   });
   const bundleCards = buildThemeBundleCards(ranked, rowsByTicker);
   const narrativeCards = buildNarrativeCards(ranked, rowsByTicker);
-  const rawContentCards = await discoveryContentPromise;
+  const rawContentCards = await timeStage("content-cards", () => discoveryContentPromise);
   const usContentLimit =
     scope === "US"
       ? Math.min(

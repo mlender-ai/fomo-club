@@ -148,12 +148,48 @@ jobs:
           done
           printf '%s\n' "${STALE_NOTES[@]}" | sed '/^$/d' > /tmp/stale-product.txt
 
+          # WO-OPS-504 조치 3 — **고빈도 스케줄 워크플로의 연속 실패 감지.**
+          # `US Market Prewarm` 은 2026-07-27부터 18일간 504 로 실패했고 아무도 못 봤다. 이유는
+          # 단순하다: 위 critical 목록에 이 워크플로들이 없었다. 10분마다 도는 워크플로는 단발
+          # 실패가 흔해서 "24시간 내 실패 1건"으로 잡으면 매일 오탐이 난다. 그래서 **연속 실패
+          # 횟수**로 본다 — 간헐 실패는 넘기고, 굳어버린 실패만 잡는다.
+          STREAK_THRESHOLD=5
+          declare -A STREAK_WATCH=(
+            ["us-market-prewarm.yml"]="US Market Prewarm"
+            ["feed-content.yml"]="Feed Content Prewarm"
+            ["coin-market-prewarm.yml"]="Coin Market Prewarm"
+            ["kr-candle-prewarm.yml"]="KR Candle Prewarm"
+          )
+          STREAK_NOTES=()
+          for wf in "${!STREAK_WATCH[@]}"; do
+            NAME="${STREAK_WATCH[$wf]}"
+            if ! gh run list --repo "$REPO" --workflow "$wf" --limit 25 \
+              --json conclusion,status,createdAt,url > "/tmp/streak-$wf.json" 2>/dev/null; then
+              continue
+            fi
+            STREAK=$(jq '
+              [.[] | select(.status == "completed")]
+              | sort_by(.createdAt) | reverse
+              | (map(.conclusion) | index("success")) as $i
+              | if $i == null then length else $i end
+            ' "/tmp/streak-$wf.json")
+            if [ "${STREAK:-0}" -ge "$STREAK_THRESHOLD" ]; then
+              LAST_URL=$(jq -r 'sort_by(.createdAt) | reverse | .[0].url // ""' "/tmp/streak-$wf.json")
+              STREAK_NOTES+=("$NAME: 연속 ${STREAK}회 실패 (최근 $LAST_URL)")
+            fi
+          done
+          printf '%s\n' "${STREAK_NOTES[@]}" | sed '/^$/d' > /tmp/streak-failures.txt
+
           CRITICAL_RUN_COUNT=$(jq 'length' /tmp/critical-runs.json)
           STALE_COUNT=$(wc -l < /tmp/stale-product.txt | tr -d ' ')
-          CRITICAL_COUNT=$((CRITICAL_RUN_COUNT + STALE_COUNT))
+          STREAK_COUNT=$(wc -l < /tmp/streak-failures.txt | tr -d ' ')
+          CRITICAL_COUNT=$((CRITICAL_RUN_COUNT + STALE_COUNT + STREAK_COUNT))
           echo "critical_count=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
           echo "critical_run_count=$CRITICAL_RUN_COUNT" >> "$GITHUB_OUTPUT"
           echo "stale_count=$STALE_COUNT" >> "$GITHUB_OUTPUT"
+          echo "streak_count=$STREAK_COUNT" >> "$GITHUB_OUTPUT"
+          # 연속 실패는 자동 수정 대상에 넣지 않는다 — 원인이 코드 밖(런타임·데이터)일 수 있고,
+          # 이번 사고가 그랬다. 사람이 읽을 이슈로만 올린다.
           echo "autofixable_count=$CRITICAL_RUN_COUNT" >> "$GITHUB_OUTPUT"
 
           {
@@ -183,6 +219,13 @@ jobs:
                 sed 's/^/- /' /tmp/stale-product.txt
                 echo
               fi
+              if [ "$STREAK_COUNT" != "0" ]; then
+                echo "## 연속 실패 스케줄 워크플로 (${STREAK_THRESHOLD}회 이상)"
+                sed 's/^/- /' /tmp/streak-failures.txt
+                echo
+                echo "조회 라우트가 굳어 있을 수 있다 — \`docs/ops/INCIDENT_prewarm_20260814.md\` 를 먼저 읽는다."
+                echo
+              fi
               echo
               echo "## 작업 원칙"
               echo "- 새 제품 방향/기능 제안 금지"
@@ -195,7 +238,7 @@ jobs:
           if [ "$CRITICAL_COUNT" = "0" ]; then
             SUMMARY="🟢 정상 — 실패 0건, stale 0건. 개발 스킵."
           else
-            SUMMARY="🚨 위험 — 실패 ${CRITICAL_RUN_COUNT}건, stale ${STALE_COUNT}건."
+            SUMMARY="🚨 위험 — 실패 ${CRITICAL_RUN_COUNT}건, stale ${STALE_COUNT}건, 연속실패 ${STREAK_COUNT}건."
           fi
           echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
 

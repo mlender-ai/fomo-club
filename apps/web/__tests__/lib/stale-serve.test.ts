@@ -32,7 +32,9 @@ describe("withDeadline", () => {
 describe("스테일 표식", () => {
   it("언제 만든 것인지가 반드시 실린다", () => {
     const mark = staleMark("2026-08-14T07:00:00.000Z");
-    expect(mark).toEqual({ stale: true, savedAt: "2026-08-14T07:00:00.000Z", reason: "build_deadline" });
+    expect(mark).toEqual({
+      staleServe: { stale: true, savedAt: "2026-08-14T07:00:00.000Z", reason: "build_deadline" },
+    });
   });
 
   it("스냅샷은 기존 캐시 테이블을 쓴다 — 새 테이블을 만들지 않는다", () => {

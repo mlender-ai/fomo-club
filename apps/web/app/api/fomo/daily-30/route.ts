@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withCors, kstDate } from "../../../../lib/fomo";
 import { getCachedDaily30Response, type Daily30Response } from "../../../../lib/daily-30";
 import { readStaleSnapshot, staleMark, withDeadline, writeStaleSnapshot } from "../../../../lib/stale-serve";
+import { logStageReport, runWithStageTimer } from "../../../../lib/stage-timer";
 
 export const dynamic = "force-dynamic";
 // 위원회·스냅샷 동시 부재 때 결정론 엔진 직생성까지 허용하는 최후 비상 경로.
@@ -18,11 +19,21 @@ export function OPTIONS() {
   return withCors(new NextResponse(null, { status: 204 }));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const response = await withDeadline(getCachedDaily30Response(), BUILD_DEADLINE_MS);
+    // 계측(PHASE 2) — 로그는 항상, 응답 적재는 `?debug=timings` 일 때만.
+    const wantTimings = new URL(request.url).searchParams.get("debug") === "timings";
+    const { result, report } = runWithStageTimer(getCachedDaily30Response);
+    const response = await withDeadline(result, BUILD_DEADLINE_MS);
+    const timings = logStageReport("fomo/daily-30", report());
+    const debugHeaders = { "Cache-Control": "no-store" };
     if (response) {
       await writeStaleSnapshot(SNAPSHOT_KEY, response);
+      if (wantTimings) {
+        return withCors(
+          NextResponse.json({ ...response, meta: { ...response.meta, timings } }, { headers: debugHeaders })
+        );
+      }
       const cacheControl = response.meta.stale
         ? "public, s-maxage=60, stale-while-revalidate=300"
         : "public, s-maxage=3600, stale-while-revalidate=86400";
@@ -39,8 +50,11 @@ export async function GET() {
       console.warn("[fomo/daily-30] build deadline exceeded — serving stale", snapshot.savedAt);
       return withCors(
         NextResponse.json(
-          { ...snapshot.row, meta: { ...snapshot.row.meta, ...staleMark(snapshot.savedAt) } },
-          { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400" } }
+          {
+            ...snapshot.row,
+            meta: { ...snapshot.row.meta, ...staleMark(snapshot.savedAt), ...(wantTimings ? { timings } : {}) },
+          },
+          { headers: wantTimings ? debugHeaders : { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400" } }
         )
       );
     }
