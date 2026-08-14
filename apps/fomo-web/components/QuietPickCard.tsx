@@ -1,44 +1,43 @@
 "use client";
 
 import { useState } from "react";
+import { buildQuietPickChips, quietPickSubLine } from "@fomo/core";
 import type { CardSlotPayload, QuietPick } from "@/lib/fomoApi";
 import { chartTokens } from "@/lib/chartTokens";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
+import { quietCardMinHeight } from "@/lib/quietCardLayout";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 import { StockLogoBadge } from "@/components/StockLogoBadge";
 import { ValuationChart } from "@/components/ValuationChart";
 
 /**
- * 카드 v3 (WO-G1B) → 3슬롯 (WO-SUB-08).
+ * 카드 v3 (WO-G1B) → 3슬롯 (WO-SUB-08) → 위계 재설계 (WO-SUB-HOOK PART 2).
  *
- * ① 트리거(수급) + ② 실체 + ③ 값의 위치 + 무효선. 점수·육각형 노출 없음.
+ * ## 3단 위계
  *
- * ## 슬롯이 비면 아래가 올라온다
+ * ```
+ * [1순위] 훅 한 줄       ← 가장 큼. 시선이 여기 먼저 닿는다
+ * [2순위] 칩 3개         ← 근거 숫자. 훅이 말하지 않는 축만
+ * [3순위] 스파크라인 · 맥락 한 줄(슬롯 ②③)
+ * [4순위] 되돌아보는 선  ← 회색 한 줄. 박스 없음
+ * ```
  *
- * ②③ 은 **선택 슬롯**이다. 조건부 렌더만 쓰고 자리를 비워두는 컨테이너를 두지 않는다 —
- * 빈 상자가 남는 것이 08 이 없애려는 바로 그 패턴이다(§4-1, 완료 조건 4).
+ * 실측(2026-08-14)에서는 이 순서가 없었다. 훅·서브라인·칩·차트·**박스로 감싼 무효선**이 전부
+ * 비슷한 무게였고, 발굴 카드에서 3순위인 되돌아보는 선이 회사 정보보다 무거워 보였다.
+ * 위계는 **크기·간격·무게로만** 조정한다 — 색과 폰트는 디자인 시스템 그대로다.
  *
- * ## 실측 기준선 (2026-08-04)
+ * ## 슬롯이 비면 카드가 줄어든다
  *
- * 유니버스 332장 중 **①만 128장(38.6%)** 이고 기본형은 **①③(58.7%)** 이다.
- * ①②③ 완비는 4장(1.2%)뿐이다. `UNCLASSIFIED` 95 + `BANK_FINANCIAL` 19 +
- * `MATURE_INCOME` 9 = 123장은 슬롯 ③ 축을 만들 수 없어 **지금과 동일하게 보이는 것이
- * 정상이다.** 억지로 채우지 않는다 — 비율은 `/api/fomo/card-slots/coverage` 가 낸다.
+ * ②③ 은 선택 슬롯이다. 조건부 렌더만 쓰고 자리를 비워두는 컨테이너를 두지 않으며,
+ * **카드 최소 높이도 조합에 따라 달라진다**(`quietCardMinHeight`). 조건부 렌더만으로는
+ * 고정 높이 무대 안에서 빈 공간이 그대로 남는다 — 그것이 D5 였다.
  *
  * ## 배지는 카드에 두지 않는다
  *
  * 공시 근거와 벤더 요약의 구분(`kind`·`badge`·`vendor_only`)은 **디테일에서만** 표시한다.
- * 카드 앞면은 2줄 예산이라 등급 칩이 들어가면 문장이 밀린다.
  */
-
-const SIGNAL_LABEL: Record<QuietPick["signal"]["kind"], string> = {
-  insider_cluster: "내부자 클러스터",
-  multi_cluster: "외국인+기관",
-  institution_streak: "기관 매수",
-  foreign_streak: "외국인 매수",
-};
 
 function marketTag(pick: QuietPick): string {
   if (pick.subject.market === "COIN") return "₿";
@@ -59,10 +58,19 @@ function ticker(pick: QuietPick): string | undefined {
   return subjectTicker(pick.subject);
 }
 
-function daysChip(pick: QuietPick): string {
-  const d = pick.signal.days;
-  if (pick.signal.kind === "insider_cluster") return d > 0 ? `최근 ${d}일` : "최근";
-  return `${d}일째`;
+/**
+ * 카드 칩 — **발행 시점에 굳은 것을 그대로 쓴다.** 없으면(구 페이로드) 같은 엔진으로 만든다.
+ * 카드가 칩 문구를 따로 조립하면 훅과 축이 겹쳐 같은 숫자가 화면에 세 번 나온다(D2).
+ */
+export function cardChips(pick: QuietPick): string[] {
+  if (pick.chips && pick.chips.length > 0) return pick.chips;
+  return buildQuietPickChips({
+    kind: pick.signal.kind,
+    actorNoun: pick.signal.actors.replace(/\s*\d+명$/, ""),
+    scale: pick.signal.scale,
+    days: pick.signal.days,
+    ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
+  });
 }
 
 const DIR_COLOR: Record<"up" | "down" | "flat", string> = {
@@ -89,6 +97,14 @@ export function QuietPickCard({
     : undefined;
   const changePct = pick.price.changePct;
   const dir: "up" | "down" | "flat" = typeof changePct === "number" ? (changePct > 0 ? "up" : changePct < 0 ? "down" : "flat") : "flat";
+  const chips = cardChips(pick);
+  // H6 — 서브라인은 훅과 같은 숫자면 표시하지 않는다("25일째" 아래 "25일째 계속" 금지).
+  const subLine = quietPickSubLine(pick.hook, pick.signal.progress);
+  const minHeight = quietCardMinHeight({
+    substance: Boolean(slots?.substance),
+    valuation: Boolean(slots?.valuation),
+    signalStats: Boolean(pick.signalStats),
+  });
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,7 +113,7 @@ export function QuietPickCard({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col" style={{ minHeight }} data-testid="quiet-pick-card">
       {/* 1행 — 종목명(긴 이름 말줄임) · 티커 · 시장태그 · 관심 */}
       <div className="flex shrink-0 items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
@@ -133,13 +149,13 @@ export function QuietPickCard({
         </button>
       </div>
 
-      {/* 가격 · 등락 */}
-      <div className="mt-2.5 flex shrink-0 items-baseline gap-2">
-        <span className="text-lg font-bold text-whiteout">
+      {/* 가격 · 등락 — 3순위. 훅보다 작게 둔다(위계). */}
+      <div className="mt-2 flex shrink-0 items-baseline gap-2">
+        <span className="text-base font-semibold text-whiteout">
           {pick.price.currentText ?? pick.price.current.toLocaleString("en-US")}
         </span>
         {typeof changePct === "number" && (
-          <span className="inline-flex items-center gap-1 text-sm font-medium tabular-nums" style={{ color: DIR_COLOR[dir] }}>
+          <span className="inline-flex items-center gap-1 text-[13px] font-medium tabular-nums" style={{ color: DIR_COLOR[dir] }}>
             {dir === "up" && <CaretUpIcon size={11} />}
             {dir === "down" && <CaretDownIcon size={11} />}
             {`${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}%`}
@@ -148,38 +164,36 @@ export function QuietPickCard({
       </div>
 
       {/*
-        증거 영역 — 훅 · 신호칩 · 스파크라인 · ② · ③.
-        **스크롤한다.** ③ 이 붙으면 카드 높이를 넘고, 그대로 두면 무효선과 푸터가 가려진다
-        (2026-08-05 화면 실측: 무효선 문장이 하단 버튼에 겹쳤다). WO §4-2 는 "UI 에서 자르지
-        않는다" 이므로 **강제 문안(경고문)을 떼지 않고** 영역을 스크롤한다.
-        무효선·푸터는 밖에 남겨 항상 보이게 한다 — 무효선은 계약이라 가려지면 안 된다.
+        증거 영역 — 훅 · 칩 · 스파크라인 · ② · ③.
+        **스크롤한다.** 내용이 카드보다 길어지면 그대로 두면 되돌아보는 선과 푸터가 가려진다
+        (2026-08-05 화면 실측). WO §4-2 는 "UI 에서 자르지 않는다" 이므로 강제 문안을 떼지 않고
+        영역을 스크롤한다. 되돌아보는 선·푸터는 밖에 남겨 항상 보이게 한다 — 계약이라 가려지면 안 된다.
       */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-      {/* ★훅 — 이례성 앞 */}
-      <p className="mt-3 shrink-0 text-lg font-bold leading-7 text-whiteout">{pick.hook}</p>
+      {/* ★1순위 훅 — 한 문장. 화면에서 가장 큰 글자다. */}
+      <p className="mt-3 shrink-0 text-[22px] font-bold leading-8 text-whiteout" data-testid="pick-hook">{pick.hook}</p>
 
-      {/* 신호 강화 재등장 진행 문구(WO-P4) — 재탕이 아니라 "계속되는 중"임을 밝힌다. */}
-      {pick.signal.progress && (
-        <p className="mt-1.5 shrink-0 text-[12px] font-semibold" style={{ color: chartTokens.up }}>
-          {pick.signal.progress}
+      {/* 서브라인 — 훅이 말하지 않는 변화만(H6). 같은 일수면 위에서 걸러져 렌더되지 않는다. */}
+      {subLine && (
+        <p className="mt-1 shrink-0 text-[12px] font-semibold" style={{ color: chartTokens.up }}>
+          {subLine}
         </p>
       )}
 
-      {/* 신호칩 */}
-      <div className="mt-2.5 flex shrink-0 flex-wrap gap-1.5">
-        <span className="rounded-full px-2 py-1 text-[10px] font-semibold" style={{ backgroundColor: "rgba(216,255,58,0.12)", color: chartTokens.up }}>
-          {SIGNAL_LABEL[pick.signal.kind]}
-        </span>
-        <span className="rounded-full border border-hairline-soft bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-whiteout">
-          {daysChip(pick)}
-        </span>
-        <span className="rounded-full border border-hairline-soft bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-whiteout">
-          {pick.signal.actors} {pick.signal.scale}
-        </span>
+      {/* ★2순위 칩 — 근거 숫자. 훅이 말한 축은 여기 없다(H4). */}
+      <div className="mt-2.5 flex shrink-0 flex-wrap gap-1.5" data-testid="pick-chips">
+        {chips.map((chip) => (
+          <span
+            key={chip}
+            className="rounded-full border border-hairline-soft bg-white/[0.04] px-2 py-1 text-[11px] font-semibold text-whiteout"
+          >
+            {chip}
+          </span>
+        ))}
       </div>
 
       {/* ── 이런 신호, 과거엔 어땠나 ── (WO-P2 §2)
-          승률 + 하락 확률 + 무효선 연결을 한 세트로. 통계 없으면 블록 통째 숨김(빈 껍데기 금지). */}
+          승률 + 하락 확률을 한 세트로. 통계 없으면 블록 통째 숨김(빈 껍데기 금지). */}
       {pick.signalStats && (
         <div className="mt-3 shrink-0 rounded-lg border border-hairline-soft bg-white/[0.03] px-3 py-2">
           <div className="flex items-baseline justify-between gap-2">
@@ -187,21 +201,19 @@ export function QuietPickCard({
             <span className="text-[10px] text-muted">{pick.signalStats.sourceLabel}</span>
           </div>
           <p className="mt-1 text-sm font-semibold leading-5 text-whiteout">{pick.signalStats.headline}</p>
-          <p className="mt-0.5 text-[12px] leading-5 text-muted">
-            {pick.signalStats.detail} — 그래서 아래 무효선이 있어요
-          </p>
+          <p className="mt-0.5 text-[12px] leading-5 text-muted">{pick.signalStats.detail}</p>
         </div>
       )}
 
-      {/* 스파크라인 30일 + 신호 시작점 ◆ */}
+      {/* ★3순위 스파크라인 30일 + 신호 시작점 ◆ */}
       {series.length >= 2 && (
-        <div className="mt-3 shrink-0 border-y border-hairline-soft py-1.5" aria-label="최근 30거래일 가격 흐름 · ◆ 신호 시작점">
+        <div className="mt-3 shrink-0 border-y border-hairline-soft py-1.5" aria-label="최근 30거래일 가격 흐름 · ◆ 사기 시작한 시점">
           <Sparkline series={series.slice(-30)} height={44} {...(markerIndex !== undefined ? { markerIndex } : {})} />
-          <span className="mt-1 block text-[10px] text-muted">◆ 돈이 들어오기 시작한 자리</span>
+          <span className="mt-1 block text-[10px] text-muted">◆ 사기 시작한 시점</span>
         </div>
       )}
 
-      {/* ② 실체 — 어디서 돈을 버는가. 없으면 이 블록이 사라지고 아래가 올라온다. */}
+      {/* ② 실체 — 어디서 돈을 버는가. 없으면 이 블록이 사라지고 카드가 줄어든다. */}
       {slots?.substance && (
         <p className="mt-3 shrink-0 text-[13px] leading-5 text-whiteout">{slots.substance.text}</p>
       )}
@@ -216,15 +228,15 @@ export function QuietPickCard({
 
       </div>
 
-      {/* 무효선 = 계약 — 스크롤 영역 **밖**이다. 항상 보여야 한다. */}
-      <div className="mt-3 shrink-0 rounded-lg bg-black/15 px-3 py-2">
-        <span className="block text-[10px] font-semibold text-muted">무효선</span>
-        <p className="mt-0.5 text-sm font-semibold leading-5 text-whiteout">{pick.invalidation.text}</p>
-      </div>
+      {/* ★4순위 되돌아보는 선 = 계약 — 스크롤 영역 **밖**이라 항상 보인다.
+          박스를 뺀 회색 한 줄이다(D4). 계약이라 지우지 않지만, 발굴 카드에서 1순위처럼 보이면 안 된다. */}
+      <p className="mt-3 shrink-0 text-[12px] leading-5 text-muted" data-testid="recheck-line">
+        되돌아보는 선 · {pick.invalidation.text}
+      </p>
 
-      {/* 유동성 경고(WO-P4) — 얇으면 숨기지 않고 알린다. */}
+      {/* 유동성 경고(WO-P4) — 얇으면 숨기지 않고 알린다. 위치는 되돌아보는 선 아래. */}
       {pick.liquidityNote && (
-        <p className="mt-2 shrink-0 text-[11px] text-muted">⚠ {pick.liquidityNote}</p>
+        <p className="mt-1 shrink-0 text-[11px] text-muted">⚠ {pick.liquidityNote}</p>
       )}
 
       <div className="mt-auto flex shrink-0 items-center justify-between pt-3">

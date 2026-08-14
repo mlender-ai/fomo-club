@@ -45,7 +45,8 @@ describe("리스크 블록을 페이로드에서 받아온다", () => {
   it("덱 뎁스가 card-slots 를 조회한다 — 컨텍스트로 실어오지 않는다", () => {
     // 뎁스는 덱·피드·검색 여러 경로에서 열리므로 호출 지점에서 받는다.
     expect(DECK_DEPTH).toContain("fetchCardSlots");
-    expect(DECK_DEPTH).toMatch(/slots\[stock\]\?\.risk/);
+    expect(DECK_DEPTH).toMatch(/slots\[stock\] \?\? null/);
+    expect(DECK_DEPTH).toMatch(/slotPayload\?\.risk/);
   });
 
   it("블록이 없으면 섹션을 렌더하지 않는다 — 빈 섹션 금지", () => {

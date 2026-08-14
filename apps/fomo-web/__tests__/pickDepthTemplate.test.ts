@@ -29,23 +29,28 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
     expect(deck).not.toContain("<StockInsightView\n          stock={selected.subject.canonical}");
   });
 
-  it("질문 순서 5블록이 위→아래로 고정(렌더 트리 기준)", () => {
+  /**
+   * 순서 재설계 (WO-SUB-HOOK PART 3-2). 종전 1순위였던 "이 매수 어떻게 읽나"가 2번으로 내려가고
+   * **무슨 회사인가가 최상단**이다 — 처음 보는 회사이므로 이게 먼저다.
+   */
+  it("질문 순서가 위→아래로 고정(렌더 트리 기준)", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
     const order = [
-      "<ReadingBlock pick={pick} />",
       'title="무슨 회사인가"',
+      "<ReadingBlock pick={pick} />",
       "<RecentBlock items={news}",
+      'title="값의 위치"',
       'title="차트"',
       "<RecordBlock picks={records} />",
     ].map((s) => body.indexOf(s));
-    expect(order.every((i) => i >= 0), "5블록 제목 누락").toBe(true);
+    expect(order.every((i) => i >= 0), "블록 제목 누락").toBe(true);
     for (let i = 1; i < order.length; i += 1) expect(order[i]).toBeGreaterThan(order[i - 1]!);
   });
 
-  it("① 블록은 성적(P2)·이례성(A2)·무효선을 함께 쓴다", () => {
+  it("왜 지금인가 블록은 성적(P2)·드문 정도(A2)·되돌아보는 선을 함께 쓴다", () => {
     expect(depth).toContain("pick.signalStats");
     expect(depth).toContain("pick.anomalies");
-    expect(depth).toContain("무효선이 그 대비책");
+    expect(depth).toContain("되돌아보는 선이 그 대비책");
   });
 
   it("⑤ 판단 기록은 pickType 필터로 레거시 30장 기록 혼입을 막는다", () => {

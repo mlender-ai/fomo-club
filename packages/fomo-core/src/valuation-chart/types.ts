@@ -39,7 +39,9 @@ export type ChartUnavailableReason =
   | "unclassified"
   | "no_axes"
   | "bar_series_unavailable"
-  | "no_bar_data";
+  | "no_bar_data"
+  /** 막대가 1~2칸뿐 — 추세로 읽을 수 없다. 라벨만 남은 차트가 되므로 감춘다(WO-SUB-HOOK D6). */
+  | "too_few_bars";
 
 export interface ValuationChartData {
   symbol: string;

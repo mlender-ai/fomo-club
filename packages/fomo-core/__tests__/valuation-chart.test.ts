@@ -3,7 +3,7 @@ import { emptyFactSheet } from "../src/fundamentals/assemble";
 import type { FactSheet, QuarterRecord } from "../src/fundamentals/types";
 import { DOCTRINE, frameOf } from "../src/archetype/classify";
 import type { ArchetypeCode } from "../src/archetype/types";
-import { buildValuationChart } from "../src/valuation-chart/build";
+import { buildValuationChart, buildValuationFrameNotes } from "../src/valuation-chart/build";
 import { findForbiddenWords } from "../src/valuation-chart/caption";
 
 /**
@@ -121,6 +121,7 @@ describe("UNCLASSIFIED 폴백 — 02R 전환기에 화면이 깨지지 않는다
         balance: {
           ...sheet.balance,
           equity_quarters: [
+            { period: "2023Q4", period_end: "2023-12-31", filed_at: "2024-03-31", value: 3_800, source: "dart" },
             { period: "2024Q4", period_end: "2024-12-31", filed_at: "2025-03-31", value: 4_000, source: "dart" },
             { period: "2025Q2", period_end: "2025-06-30", filed_at: "2025-08-14", value: 4_200, source: "dart" },
             { period: "2025Q4", period_end: "2025-12-31", filed_at: "2026-03-31", value: 4_500, source: "dart" },
@@ -134,7 +135,7 @@ describe("UNCLASSIFIED 폴백 — 02R 전환기에 화면이 깨지지 않는다
     expect(chart.bar_metric).toBe("annual_equity");
     expect(chart.bar_label).toBe("자기자본");
     // 연간 막대라 회계연도말만 — 분기를 섞으면 "연간"이 아니게 된다.
-    expect(chart.bars.map((bar) => bar.value)).toEqual([4_000, 4_500]);
+    expect(chart.bars.map((bar) => bar.value)).toEqual([3_800, 4_000, 4_500]);
     // 막대(분모)와 선(배수)이 같은 것을 두 각도에서 본다.
     expect(chart.line_metric).toBe("pbr");
     // 매출은 들어 있어도 쓰지 않는다.
@@ -204,6 +205,7 @@ describe("이미 수집하던 시계열을 노출한 뒤 (2026-08-03)", () => {
         balance: {
           ...sheet.balance,
           equity_quarters: [
+            point("2022-12-31", 900),
             point("2023-12-31", 1_000),
             point("2024-06-30", 1_100), // 연간 막대에 섞이면 안 된다
             point("2024-12-31", 1_200),
@@ -214,7 +216,7 @@ describe("이미 수집하던 시계열을 노출한 뒤 (2026-08-03)", () => {
       RULESET
     );
     expect(chart.renderable).toBe(true);
-    expect(chart.bars.map((bar) => bar.value)).toEqual([1_000, 1_200]);
+    expect(chart.bars.map((bar) => bar.value)).toEqual([900, 1_000, 1_200]);
     expect(chart.line_metric).toBe("pbr");
   });
 
@@ -534,5 +536,68 @@ describe("예상 막대 축 라벨 (2026-08-05 화면 실측)", () => {
   it("실적 라벨과 자릿수가 같다 — 축이 섞이지 않는다", () => {
     const chart = buildValuationChart(withConsensus(["202612"]), "QUALITY_COMPOUNDER", RULESET);
     expect(chart.bars.every((bar) => bar.label.length === 2)).toBe(true);
+  });
+});
+
+/**
+ * WO-SUB-HOOK D6 · 4-1 — **라벨만 남은 차트 금지.**
+ *
+ * 실측(2026-08-14): 빅텍 카드에 `매출` 라벨과 짧은 선 하나만 있었다. 데이터가 1점이면
+ * 추세가 없고, 그린 것도 안 그린 것도 아닌 상태가 화면에 남는다. 3칸 미만은 감춘다.
+ */
+describe("막대 최소 칸수 — 그리거나 완전히 숨기거나", () => {
+  function withYears(years: number): FactSheet {
+    const sheet = base();
+    return {
+      ...sheet,
+      fiscal: {
+        ...sheet.fiscal,
+        annual: Array.from({ length: years }, (_, i) => annual(2023 + i, 1_000 + i * 100)),
+      },
+      valuation: { ...sheet.valuation, per_ttm: 20 },
+    };
+  }
+
+  it("실적 막대가 1칸이면 숨긴다 — 라벨만 남기지 않는다", () => {
+    const chart = buildValuationChart(withYears(1), "QUALITY_COMPOUNDER", RULESET);
+    expect(chart.renderable).toBe(false);
+    expect(chart.unavailable_reason).toBe("too_few_bars");
+    expect(chart.bars).toEqual([]);
+    expect(chart.bar_label).toBeNull();
+  });
+
+  it("2칸도 숨긴다 — 두 점은 추이가 아니다", () => {
+    expect(buildValuationChart(withYears(2), "QUALITY_COMPOUNDER", RULESET).renderable).toBe(false);
+  });
+
+  it("3칸부터 그린다", () => {
+    const chart = buildValuationChart(withYears(3), "QUALITY_COMPOUNDER", RULESET);
+    expect(chart.renderable).toBe(true);
+    expect(chart.bars.length).toBe(3);
+  });
+});
+
+/**
+ * WO-SUB-HOOK D8 · 4-2 — 밴드 위치 캡션과 유형 경고문은 **차트와 독립**으로 나온다.
+ * 차트가 숨겨졌다고 경고문까지 사라지면 INV-11 이 화면에서 무효가 된다.
+ */
+describe("buildValuationFrameNotes — 차트를 못 그려도 프레임은 남는다", () => {
+  it("차트가 숨겨진 유형에서도 경고문을 돌려준다", () => {
+    const sheet = withRevenue();
+    const chart = buildValuationChart(sheet, "BANK_FINANCIAL", RULESET);
+    expect(chart.renderable).toBe(false); // 자기자본 시계열 없음
+    const notes = buildValuationFrameNotes(sheet, "BANK_FINANCIAL");
+    expect(notes.warning).toBe(frameOf("BANK_FINANCIAL").warning_full);
+  });
+
+  it("밴드가 없으면 없다고만 하고 백분위를 지어내지 않는다", () => {
+    const notes = buildValuationFrameNotes(withRevenue(), "QUALITY_COMPOUNDER");
+    for (const caption of notes.captions) expect(findForbiddenWords(caption)).toEqual([]);
+    expect(notes.captions.some((c) => /\d+% 구간/.test(c))).toBe(false);
+  });
+
+  it("UNCLASSIFIED 는 프레임 자체가 없다 — 유형을 모르면 경고문도 만들 수 없다", () => {
+    const notes = buildValuationFrameNotes(withRevenue(), "UNCLASSIFIED");
+    expect(notes).toEqual({ captions: [], warning: null, band_label: null });
   });
 });

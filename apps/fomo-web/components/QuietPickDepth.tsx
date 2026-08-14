@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DailyOhlcv, WhereThisIsWrongBlock } from "@fomo/core";
-import type { QuietPick, StockBasics } from "@/lib/fomoApi";
+import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
 import {
   fetchStockBasics,
   fetchStockFront,
@@ -22,7 +22,14 @@ import { chartTokens } from "@/lib/chartTokens";
 /**
  * 픽 전용 뎁스 문서 (WO-P3) — 백지 재작성. 레거시 30장 뎁스(KeywordDepthPage)에 섹션을 끼워 넣지 않는다.
  *
- * 질문 순서 5블록: ①이 매수 어떻게 읽나 ②무슨 회사 ③최근 무슨 일 ④차트 ⑤판단 기록.
+ * ## 순서 재설계 (WO-SUB-HOOK PART 3)
+ *
+ * 종전 순서는 "이 매수 어떻게 읽나"가 먼저였고, 그 안의 "얼마나 이례적인가"가 **훅 문장과 글자
+ * 그대로 같았다.** 헤더의 훅까지 합치면 사용자가 같은 문장을 세 번 읽었다. 그래서
+ *  1. 무슨 회사인가 ← 처음 보는 회사다. 이게 먼저다
+ *  2. 왜 지금인가   ← 훅에 없는 비교 정보만
+ *  3. 최근 무슨 일  4. 값의 위치(재무 + 밴드 캡션 + 유형 경고문)  5. 차트
+ *  6. 이게 틀리는 경우  7. 우리가 짚었던 기록
  * 절대 규칙: **빈 섹션은 렌더 자체를 하지 않는다.** 데이터 부재를 고백하는 상태 문구 금지
  *   (예외는 ③의 '침묵' 한 줄 — 데이터 부재를 픽 논리로 쓰는 의도된 문장이다).
  * 모바일: 상단 sticky 헤더 + 본문 스크롤, 하단은 GNB·safe-area 만큼 여백을 줘 마지막 블록이 안 잘린다.
@@ -74,11 +81,19 @@ function whoBought(pick: QuietPick): string {
   return parts.filter(Boolean).join(" · ");
 }
 
-/** "얼마나 이례적인가" — 이례성 지표(G1-A2) 중 강한 것부터 최대 2개. 없으면 undefined → 행 생략. */
+/**
+ * "얼마나 드문가" — 이례성 지표(G1-A2) 중 강한 것부터 최대 2개.
+ *
+ * **훅이 이미 말한 것은 뺀다**(WO-SUB-HOOK 완료 조건 11). 종전에는 이 행이 훅 문장과 글자
+ * 그대로 같아서 한 화면에서 같은 말을 세 번 읽게 했다. 남길 게 없으면 undefined → 행 생략.
+ */
 function howUnusual(pick: QuietPick): string | undefined {
-  const all = (pick.anomalies ?? []).filter((a) => a.text?.trim());
+  const hook = pick.hook ?? "";
+  const all = (pick.anomalies ?? [])
+    .filter((a) => a.text?.trim())
+    .filter((a) => !hook.includes(a.text.trim()) && !a.text.trim().includes(hook));
   if (all.length === 0) return undefined;
-  // 빈도(1년 0건→N명) → 규모(시총 %·거래량 배수) 순으로 최대 2개. 나머지는 훅이 이미 말한다.
+  // 빈도(1년 0건→N명) → 규모(시총 %·거래량 배수) 순으로 최대 2개.
   const rank = (kind: string) => (kind === "frequency" ? 0 : kind === "scale" ? 1 : kind === "participants" ? 2 : 3);
   return [...all]
     .sort((a, b) => rank(a.kind) - rank(b.kind) || b.strength - a.strength)
@@ -87,15 +102,15 @@ function howUnusual(pick: QuietPick): string | undefined {
     .join(" · ");
 }
 
-/** ① 이 매수, 어떻게 읽나 — 뎁스의 심장. 성적(P2)·이례성(A2)을 한 표로. */
+/** 왜 지금인가 — 뎁스의 심장. 성적(P2)·드문 정도(A2)를 한 표로. 훅이 말한 것은 반복하지 않는다. */
 function ReadingBlock({ pick }: { pick: QuietPick }) {
   const unusual = howUnusual(pick);
   const stats = pick.signalStats;
   return (
-    <Section title="이 매수, 어떻게 읽나">
+    <Section title="왜 지금인가">
       <ul className="rounded-xl border border-hairline-soft bg-white/[0.02] px-3">
         <ReadRow label="누가 샀나" value={whoBought(pick)} />
-        {unusual && <ReadRow label="얼마나 이례적인가" value={unusual} />}
+        {unusual && <ReadRow label="얼마나 드문가" value={unusual} />}
         {stats && (
           <ReadRow
             label="이런 패턴의 성적"
@@ -106,7 +121,7 @@ function ReadingBlock({ pick }: { pick: QuietPick }) {
         {stats && (
           <ReadRow
             label="단, 이건 알고"
-            value={`${stats.detail.split("·").pop()?.trim() ?? ""} — 아래 무효선이 그 대비책이에요`}
+            value={`${stats.detail.split("·").pop()?.trim() ?? ""} — 아래 되돌아보는 선이 그 대비책이에요`}
           />
         )}
       </ul>
@@ -144,7 +159,7 @@ function RecentBlock({ items, loaded }: { items: { title: string; source?: strin
   );
 }
 
-/** ④ 차트 — 종가 선 + 돈 들어온 자리 ◆ + 무효선. 캔들 없으면 섹션 생략(빈 신호 박스 금지). */
+/** 차트 — 종가 선 + 사기 시작한 시점 ◆ + 되돌아보는 선. 캔들 없으면 섹션 생략(빈 신호 박스 금지). */
 function PickChart({
   candles,
   signalDays,
@@ -171,7 +186,7 @@ function PickChart({
   const invY = invalidation && invalidation > 0 ? y(invalidation) : null;
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="최근 가격 흐름과 무효선">
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="최근 가격 흐름과 되돌아보는 선">
       {invY !== null && (
         <line x1={pad} x2={w - pad} y1={invY} y2={invY} stroke="#8b8f98" strokeDasharray="4 4" strokeWidth="1" />
       )}
@@ -185,8 +200,16 @@ function PickChart({
 /** ⑤ 판단 기록 — 이 종목의 **픽 이력만**(pickType 필터). 없으면 섹션 생략. */
 function RecordBlock({ picks }: { picks: ScorecardPick[] }) {
   if (picks.length === 0) return null;
+  /**
+   * 아직 채점되지 않은 지평은 **"아직"이라고 쓴다** (WO-SUB-HOOK PART 3-4).
+   * `7일 — 30일 — 90일 —` 은 고장으로 읽힌다. 값이 없는 것과 값을 못 만든 것은 다르고,
+   * 여기서는 전자다 — 발행한 지 얼마 안 돼 채점 전이다.
+   */
   const fmt = (r: { returnPct: number } | null | undefined) =>
-    r && Number.isFinite(r.returnPct) ? `${r.returnPct > 0 ? "+" : ""}${r.returnPct.toFixed(1)}%` : "—";
+    r && Number.isFinite(r.returnPct) ? `${r.returnPct > 0 ? "+" : ""}${r.returnPct.toFixed(1)}%` : "아직";
+  const ungraded = picks
+    .slice(0, 5)
+    .some((p) => !p.returns["7"] || !p.returns["30"] || !p.returns["90"]);
   return (
     <Section title="이 종목, 우리가 짚었던 기록">
       <ul className="space-y-2">
@@ -204,6 +227,11 @@ function RecordBlock({ picks }: { picks: ScorecardPick[] }) {
           </li>
         ))}
       </ul>
+      {ungraded && (
+        <p className="mt-2 text-[11px] leading-5 text-muted" data-testid="record-ungraded-note">
+          발행한 지 얼마 안 돼 아직 채점 전이에요
+        </p>
+      )}
     </Section>
   );
 }
@@ -226,19 +254,20 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * `card-slots` 는 s-maxage 900 이라 반복 조회 비용이 낮다. 실패하면 이 섹션만 빠지고
    * 나머지 뎁스는 그대로다(선택 슬롯 원칙).
    */
-  const [riskBlock, setRiskBlock] = useState<WhereThisIsWrongBlock | null>(null);
+  const [slotPayload, setSlotPayload] = useState<CardSlotPayload | null>(null);
 
   useEffect(() => {
     let alive = true;
-    setRiskBlock(null);
+    setSlotPayload(null);
     void fetchCardSlots().then((res) => {
       if (!alive) return;
-      setRiskBlock(res.slots[stock]?.risk ?? null);
+      setSlotPayload(res.slots[stock] ?? null);
     });
     return () => {
       alive = false;
     };
   }, [stock]);
+  const riskBlock: WhereThisIsWrongBlock | null = slotPayload?.risk ?? null;
 
   useEffect(() => {
     let alive = true;
@@ -344,38 +373,44 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       {/* 본문 — 단일 스크롤. 하단은 GNB·safe-area 만큼 비워 마지막 블록이 가리지 않게. */}
       <div ref={scrollRef} onScroll={onDepthScroll} className={`scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 pt-1 ${BOTTOM_PAD}`}>
         {/* 카드 훅 이음 — 카드에서 본 그 문장이 뎁스 첫 줄로 이어져 맥락이 끊기지 않는다(WO-P5 §2).
-            타이포 3단의 2단(핵심 문장: 크게·흰색). */}
+            **이 화면에서 훅이 나오는 유일한 자리다**(완료 조건 11). 아래 표는 훅이 말한 것을 반복하지 않는다. */}
         <p className="mt-4 text-[19px] font-bold leading-7 text-whiteout">{pick.hook}</p>
 
-        {/* ① */}
-        <ReadingBlock pick={pick} />
-
-        {/* ② 무슨 회사인가 — 데이터 없으면 두 블록 모두 스스로 null(빈 섹션 없음). */}
-        {(basics?.summary || basics?.marketCap || (basics?.metrics?.length ?? 0) > 0) && (
+        {/* ① 무슨 회사인가 — 처음 보는 회사다. 이게 먼저다(PART 3-2). 없으면 섹션 자체가 없다. */}
+        {basics?.summary && (
           <Section title="무슨 회사인가">
             <CompanyProfileBlock basics={basics} />
-            {/* 수치는 4줄까지 — 위계를 지키기 위해 나열을 제한한다(WO-P5 §1②). */}
-            <FinanceGlanceBlock basics={basics} maxLines={4} />
           </Section>
         )}
+
+        {/* ② 왜 지금인가 */}
+        <ReadingBlock pick={pick} />
 
         {/* ③ */}
         <RecentBlock items={news} loaded={newsLoaded} />
 
-        {/* ④ 차트 — 캔들 있을 때만. 신호 판정 미달이어도 차트는 보여준다(빈 신호 박스 금지). */}
+        {/* ④ 값의 위치 — 수치 + 밴드 위치 캡션 + 유형 경고문(D8). 수치만 주면 정반대로 읽힌다. */}
+        {(basics?.marketCap || (basics?.metrics?.length ?? 0) > 0) && (
+          <Section title="값의 위치">
+            {/* 수치는 4줄까지 — 위계를 지키기 위해 나열을 제한한다(WO-P5 §1②). */}
+            <FinanceGlanceBlock basics={basics} maxLines={4} frame={slotPayload?.valuation_frame ?? null} />
+          </Section>
+        )}
+
+        {/* ⑤ 차트 — 캔들 있을 때만. 신호 판정 미달이어도 차트는 보여준다(빈 신호 박스 금지). */}
         {candles.length >= 20 && (
           <Section title="차트">
             <div className="rounded-xl border border-hairline-soft bg-white/[0.02] px-2 py-2">
               <PickChart candles={candles} signalDays={pick.signal.days} invalidation={pick.invalidation.level} />
               <p className="mt-1 px-1 text-[11px] leading-5 text-muted">
-                ◆ 돈이 들어오기 시작한 자리{pick.invalidation.level ? " · 점선은 무효선" : ""}
+                ◆ 사기 시작한 시점{pick.invalidation.level ? " · 점선은 되돌아보는 선" : ""}
               </p>
             </div>
             <p className="mt-2 text-sm leading-6 text-whiteout">{pick.invalidation.text}</p>
           </Section>
         )}
 
-        {/* ⑤ 이게 틀리는 경우 — 차트(무효선) 바로 뒤에 둔다. 무효선을 본 직후가 "틀릴 조건" 을
+        {/* ⑥ 이게 틀리는 경우 — 차트 바로 뒤에 둔다. 되돌아보는 선을 본 직후가 "틀릴 조건" 을
             읽을 자리다. 기록 블록 뒤로 밀면 반론이 결과 뒤에 오게 된다. */}
         {riskBlock && (
           <WhereThisIsWrong
@@ -396,7 +431,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           />
         )}
 
-        {/* ⑥ */}
+        {/* ⑦ */}
         <RecordBlock picks={records} />
       </div>
     </div>

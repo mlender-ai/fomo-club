@@ -19,6 +19,12 @@ import type {
  * 못 그리면 `renderable: false` 로 **영역 자체를 감춘다**(빈 박스로 남기지 않는다).
  */
 
+/**
+ * 실적 막대 최소 칸수. 2칸 이하는 "추이"가 아니라 점이다 — 차트를 그리지 않는다.
+ * (예상 막대는 이 계산에 넣지 않는다. 컨센서스만으로 채운 3칸은 실적 추이가 아니다.)
+ */
+const MIN_ACTUAL_BARS = 3;
+
 /** 배수 선을 그릴 수 없는 사유를 캡션이 아니라 데이터로 남긴다. */
 function hidden(
   symbol: string,
@@ -214,6 +220,41 @@ function resolveLineMetric(
   return { metric: null, label: null, caption: null };
 }
 
+/**
+ * 값을 읽는 프레임(WO-SUB-HOOK D8 · 4-2) — **차트와 독립**으로 밴드 캡션·유형 경고문만 뽑는다.
+ *
+ * ## 왜 따로 필요한가
+ *
+ * 디테일 "재무 한눈에"에 PER 19.55배가 숫자로만 있었다. 이 배치의 출발점이 "숫자만 주면
+ * 정반대로 읽는다"였는데, 04 가 만든 밴드 위치 캡션과 유형별 경고문은 **차트 안에만** 있었다.
+ * 차트가 안 그려지는 종목(막대 부족·미분류)에서는 경고문까지 같이 사라져 INV-11 이 화면에서
+ * 무효가 된다. 그래서 캡션·경고문을 차트 렌더 가능 여부와 분리해 만든다.
+ */
+export interface ValuationFrameNotes {
+  /** 밴드 위치 캡션 등 — 없으면 빈 배열(없는 말을 만들지 않는다). */
+  captions: string[];
+  /** 유형별 경고문(디테일 전체 문안). 독트린에서 로드한다. */
+  warning: string | null;
+  /** 밴드 기준 지표 라벨(PER/PBR/PSR). 화면이 어떤 수치 옆에 붙일지 판단한다. */
+  band_label: string | null;
+}
+
+export function buildValuationFrameNotes(
+  factsheet: FactSheet,
+  archetype: ArchetypeCode
+): ValuationFrameNotes {
+  if (archetype === "UNCLASSIFIED") return { captions: [], warning: null, band_label: null };
+  const frame = frameOf(archetype);
+  const axes = frame.chart_axes;
+  const line = axes === null ? { metric: null, label: null, caption: null } : resolveLineMetric(factsheet, axes);
+  const band = bandOf(factsheet, line.metric);
+  const captions: string[] = [];
+  if (line.caption) captions.push(line.caption);
+  const bandText = line.label === null ? null : bandCaption(band, line.label);
+  if (bandText) captions.push(bandText);
+  return { captions, warning: frame.warning_full, band_label: line.label };
+}
+
 export function buildValuationChart(
   factsheet: FactSheet,
   archetype: ArchetypeCode,
@@ -239,6 +280,17 @@ export function buildValuationChart(
   }
   if (actualBars.length === 0) {
     return hidden(factsheet.symbol, archetype, rulesetVersion, currency, "no_bar_data");
+  }
+  /**
+   * 막대가 모자라면 숨긴다 (WO-SUB-HOOK D6 · 완료 조건 6).
+   *
+   * 실측: 빅텍 카드에 `매출` 라벨과 짧은 선 하나만 있었다. `renderable: true` 였지만 막대가
+   * 1칸이라 추세가 없었고, 화면에는 "그리다 만 차트"로 보였다. 한 칸짜리 막대는 값의 위치를
+   * 말하지 못한다 — **라벨만 남기느니 영역을 감춘다.** 예상 막대로 칸을 채워 3칸을 만들지도
+   * 않는다(컨센서스는 실적이 아니다).
+   */
+  if (actualBars.length < MIN_ACTUAL_BARS) {
+    return hidden(factsheet.symbol, archetype, rulesetVersion, currency, "too_few_bars");
   }
 
   const lastActualLabel = actualBars[actualBars.length - 1]?.label ?? null;
