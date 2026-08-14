@@ -71,7 +71,8 @@ jobs:
           set -uo pipefail
           URL="https://fomo-club-backend.vercel.app/api/fomo/discovery?country=US&debug=timings"
           started="$(date +%s)"
-          code="$(curl -sS -o /tmp/us-discovery.json -w '%{http_code}' --max-time 70 "$URL" || echo "000")"
+          # 라우트 마감 45초 + maxDuration 60 여유. 라우트보다 먼저 끊지 않는다.
+          code="$(curl -sS -o /tmp/us-discovery.json -w '%{http_code}' --max-time 75 "$URL" || echo "000")"
           elapsed="$(( $(date +%s) - started ))"
           echo "discovery http=${code} elapsed=${elapsed}s"
           if [ "$code" != "200" ]; then

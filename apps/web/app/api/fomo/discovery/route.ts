@@ -13,13 +13,17 @@ export const maxDuration = 60;
 const REVALIDATE_S = 600;
 
 /**
- * 빌드 마감 (WO-OPS-504 PHASE 3).
+ * 빌드 마감 (WO-OPS-504 PHASE 3, PHASE 2 실측으로 45초로 조정).
  *
  * `maxDuration` 이 60이라 그 안에서 잘리면 응답도 캐시도 못 남긴다 — 그래서 **그보다 먼저**
- * 포기하고 마지막 성공분을 준다. 25초는 남은 35초 동안 빌드가 끝나 캐시를 채울 여지를 남긴
- * 값이다(빌드를 취소하지 않는다).
+ * 포기하고 마지막 성공분을 준다.
+ *
+ * 처음엔 25초로 잡았다. 프리뷰 실측(2026-08-15)에서 그 값은 **틀린 것으로 드러났다** —
+ * 콜드 빌드가 US 28초 이상 / KR 25초 이상이라 25초 마감은 **빌드를 한 번도 끝내지 못하고**,
+ * 끝나지 않으니 `unstable_cache` 도 스냅샷도 영원히 안 채워진다. 즉 마감 자체가 콜드
+ * 데드락을 고착시켰다. 45초는 남은 15초에 응답·스냅샷 저장을 마칠 여지를 남긴 값이다.
  */
-const BUILD_DEADLINE_MS = 25_000;
+const BUILD_DEADLINE_MS = 45_000;
 
 function discoveryCountry(value: string | null): DiscoveryCountryScope {
   return value === "US" || value === "all" ? value : "KR";

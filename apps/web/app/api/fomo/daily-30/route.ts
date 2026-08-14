@@ -9,10 +9,19 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * 빌드 마감 (WO-OPS-504 PHASE 3). `maxDuration` 300 안에서 잘리면 응답도 캐시도 못 남기므로
- * 그보다 먼저 포기하고 마지막 성공분을 준다. 실측(`#207`)에서 이 라우트는 301초에 잘렸다.
+ * 빌드 마감 (WO-OPS-504 PHASE 3, PHASE 2 실측으로 240초로 조정).
+ *
+ * `maxDuration` 300 안에서 잘리면 응답도 캐시도 못 남기므로 그보다 먼저 포기하고 마지막
+ * 성공분을 준다. 실측(`#207`)에서 이 라우트는 301초에 잘렸다.
+ *
+ * 45초는 **너무 짧았다** — 프리뷰 실측에서 `engine-direct`(위원회·스냅샷 동시 부재 시의
+ * 최후 비상 경로)가 44.87초 시점에도 안 끝났다. 끝내지 못하면 캐시가 안 차고, 안 차면 다음
+ * 요청도 콜드다. 240초는 그 비상 경로에 실제로 끝날 시간을 주면서 300초 제한 아래에 남는다.
+ *
+ * **정상 경로는 이 값과 무관하다** — 위원회 스냅샷이 있으면 실측 15ms 에 끝난다(계측
+ * `committee-today`). 이 마감이 길어지는 것은 위원회가 없는 비상 경로에서만이다.
  */
-const BUILD_DEADLINE_MS = 45_000;
+const BUILD_DEADLINE_MS = 240_000;
 const SNAPSHOT_KEY = "daily-30";
 
 export function OPTIONS() {

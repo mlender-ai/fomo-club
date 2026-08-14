@@ -79,7 +79,8 @@ jobs:
           set -uo pipefail
           URL="https://fomo-club-backend.vercel.app/api/fomo/daily-30?debug=timings"
           started="$(date +%s)"
-          code="$(curl -sS -o /tmp/daily30.json -w '%{http_code}' --max-time 120 "$URL" || echo "000")"
+          # 라우트 마감 240초 + 여유. 우리가 라우트보다 먼저 끊으면 진단이 사라진다.
+          code="$(curl -sS -o /tmp/daily30.json -w '%{http_code}' --max-time 260 "$URL" || echo "000")"
           elapsed="$(( $(date +%s) - started ))"
           echo "daily-30 http=${code} elapsed=${elapsed}s"
           if [ "$code" != "200" ]; then

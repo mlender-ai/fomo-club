@@ -55,12 +55,24 @@ describe("라우트 배선", () => {
   });
 
   it("마감은 함수 제한보다 짧다 — 잘리기 전에 응답해야 한다", () => {
-    // discovery: maxDuration 60 > 마감 25초
+    // discovery: maxDuration 60 > 마감 45초 (응답·스냅샷 저장에 15초 여유)
     expect(discovery).toMatch(/maxDuration = 60/);
-    expect(discovery).toMatch(/BUILD_DEADLINE_MS = 25_000/);
-    // daily-30: maxDuration 300 > 마감 45초
+    expect(discovery).toMatch(/BUILD_DEADLINE_MS = 45_000/);
+    // daily-30: maxDuration 300 > 마감 240초
     expect(daily30).toMatch(/maxDuration = 300/);
-    expect(daily30).toMatch(/BUILD_DEADLINE_MS = 45_000/);
+    expect(daily30).toMatch(/BUILD_DEADLINE_MS = 240_000/);
+  });
+
+  /**
+   * 마감이 콜드 빌드보다 짧으면 **빌드를 한 번도 끝내지 못하고**, 끝나지 않으니 캐시도
+   * 스냅샷도 영원히 안 채워진다 — 마감이 콜드 데드락을 고착시킨다. 실측(2026-08-15 프리뷰):
+   * discovery 콜드 빌드는 US 28초 이상 / KR 25초 이상이었고 25초 마감으로는 매번 잘렸다.
+   */
+  it("마감은 실측 콜드 빌드보다 길다 — 짧으면 캐시가 영원히 안 찬다", () => {
+    const deadlineOf = (source: string): number =>
+      Number(/BUILD_DEADLINE_MS = ([\d_]+)/.exec(source)?.[1]?.replace(/_/g, "") ?? 0);
+    expect(deadlineOf(discovery)).toBeGreaterThan(28_000);
+    expect(deadlineOf(daily30)).toBeGreaterThan(45_000);
   });
 
   it("스냅샷이 없으면 빈 200 을 만들지 않는다 — 기존 503 계약 유지", () => {
