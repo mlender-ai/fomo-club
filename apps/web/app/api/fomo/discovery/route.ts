@@ -36,8 +36,16 @@ export function OPTIONS() {
 }
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  // 계측(PHASE 2) — 응답에 싣는 것은 `?debug=timings` 일 때만. 로그는 항상 남긴다.
+  const wantTimings = url.searchParams.get("debug") === "timings";
+  /**
+   * 계측 보고를 `try` 밖에 둔다 — **503 으로 떨어지는 순간이 가장 알아야 할 순간**이다.
+   * 마감 초과에 스냅샷도 없으면 아래 catch 로 가는데, 거기서 계측이 사라지면 이 사고 전과
+   * 똑같이 "왜 못 만들었는지" 를 모르는 상태로 돌아간다.
+   */
+  let reportTimings: (() => ReturnType<typeof logStageReport>) | null = null;
   try {
-    const url = new URL(request.url);
     const fast = url.searchParams.get("fast") === "1";
     const country = discoveryCountry(url.searchParams.get("country"));
     const targetedMaterial = shouldUseTargetedMaterial(country, fast);
@@ -53,11 +61,11 @@ export async function GET(request: Request) {
       { revalidate: REVALIDATE_S }
     );
     const snapshotKey = `discovery:${country}:${fast ? "fast" : "full"}`;
-    // 계측(PHASE 2) — 응답에 싣는 것은 `?debug=timings` 일 때만. 로그는 항상 남긴다.
-    const wantTimings = url.searchParams.get("debug") === "timings";
     const { result, report } = runWithStageTimer(load);
+    const label = `fomo/discovery country=${country}${fast ? " fast" : ""}`;
+    reportTimings = () => logStageReport(label, report());
     const built = await withDeadline(result, BUILD_DEADLINE_MS);
-    const timings = logStageReport(`fomo/discovery country=${country}${fast ? " fast" : ""}`, report());
+    const timings = reportTimings();
     // 디버그 응답은 캐시하지 않는다 — 계측값이 정규 응답에 섞이면 안 된다.
     const debugHeaders = { "Cache-Control": "no-store" };
     if (built) {
@@ -88,19 +96,22 @@ export async function GET(request: Request) {
     throw new Error("build deadline exceeded and no snapshot");
   } catch (err) {
     console.warn("[fomo/discovery] failed", (err as Error)?.message);
+    // 실패 응답에도 계측을 싣는다 — 이 경로가 곧 "무엇 때문에 못 만들었나" 의 답이다.
+    const timings = reportTimings?.() ?? null;
+    const empty = {
+      asOf: kstDate(),
+      stocks: [],
+      cards: [],
+      fronts: {},
+      confidence: "L",
+      source: "데이터 없음",
+    } satisfies DiscoveryResponse;
     // 실패는 비200으로 — 200-빈덱을 성공으로 취급하면 재시도/폴백 경로가 빈 덱에서 멈춘다.
     return withCors(
-      NextResponse.json(
-        {
-          asOf: kstDate(),
-          stocks: [],
-          cards: [],
-          fronts: {},
-          confidence: "L",
-          source: "데이터 없음",
-        } satisfies DiscoveryResponse,
-        { status: 503, headers: { "Cache-Control": "no-store" } }
-      )
+      NextResponse.json(wantTimings && timings ? withMeta(empty, { timings }) : empty, {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      })
     );
   }
 }

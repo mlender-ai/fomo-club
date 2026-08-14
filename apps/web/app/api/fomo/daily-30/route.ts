@@ -20,12 +20,15 @@ export function OPTIONS() {
 }
 
 export async function GET(request: Request) {
+  // 계측(PHASE 2) — 로그는 항상, 응답 적재는 `?debug=timings` 일 때만.
+  const wantTimings = new URL(request.url).searchParams.get("debug") === "timings";
+  // 보고를 `try` 밖에 둔다 — 503 으로 떨어지는 순간이 가장 알아야 할 순간이다(discovery 와 동일).
+  let reportTimings: (() => ReturnType<typeof logStageReport>) | null = null;
   try {
-    // 계측(PHASE 2) — 로그는 항상, 응답 적재는 `?debug=timings` 일 때만.
-    const wantTimings = new URL(request.url).searchParams.get("debug") === "timings";
     const { result, report } = runWithStageTimer(getCachedDaily30Response);
+    reportTimings = () => logStageReport("fomo/daily-30", report());
     const response = await withDeadline(result, BUILD_DEADLINE_MS);
-    const timings = logStageReport("fomo/daily-30", report());
+    const timings = reportTimings();
     const debugHeaders = { "Cache-Control": "no-store" };
     if (response) {
       await writeStaleSnapshot(SNAPSHOT_KEY, response);
@@ -61,6 +64,8 @@ export async function GET(request: Request) {
     throw new Error("build deadline exceeded and no snapshot");
   } catch (err) {
     console.warn("[fomo/daily-30] failed", (err as Error)?.message);
+    // 실패 응답에도 계측을 싣는다 — 이 경로가 "무엇 때문에 못 만들었나" 의 답이다.
+    const timings = reportTimings?.() ?? null;
     // 실패는 반드시 비200으로 — 200-빈덱을 성공으로 캐시/렌더하면 클라 재시도가 멈춘다(빈 덱 stuck).
     return withCors(
       NextResponse.json(
@@ -76,6 +81,7 @@ export async function GET(request: Request) {
             targetCount: 30,
             cards: [],
             assetCounts: { "kr-stock": 0, "us-stock": 0, coin: 0, macro: 0 },
+            ...(wantTimings && timings ? { timings } : {}),
           },
         } satisfies Daily30Response,
         { status: 503, headers: { "Cache-Control": "no-store" } }

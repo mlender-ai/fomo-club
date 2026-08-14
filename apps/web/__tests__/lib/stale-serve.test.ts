@@ -75,4 +75,13 @@ describe("라우트 배선", () => {
       expect(source).toContain("staleMark(snapshot.savedAt)");
     }
   });
+
+  it("503 경로에도 계측이 실린다 — 이 사고를 18일 끈 것이 '왜 못 만들었는지 모른다'였다", () => {
+    for (const source of [discovery, daily30]) {
+      // 보고 함수가 `try` 밖에 선언돼 catch 에서도 부를 수 있어야 한다.
+      expect(source).toMatch(/let reportTimings[\s\S]*?try \{/);
+      expect(source).toContain("reportTimings?.() ?? null");
+      expect(source).toContain("wantTimings && timings");
+    }
+  });
 });
