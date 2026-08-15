@@ -88,6 +88,20 @@ describe("라우트 배선", () => {
     }
   });
 
+  /**
+   * 빌드가 성공했지만 빈 덱일 수 있다(외부 소스 장애·예산 절단이 겹칠 때). 그것을 마지막
+   * 성공분으로 저장하면 이후 스테일 응답이 **영구히 빈 200** 이 된다 — 이 라우트가 503 을
+   * 유지하는 이유를 스테일 경로가 뒷문으로 무너뜨린다. `daily-30` 은 20장 게이트가 그 역할을
+   * 하지만 `discovery` 엔 없었다.
+   */
+  it("빈 덱은 스냅샷하지 않는다 — 빈 200 을 영구화하지 않는다", () => {
+    expect(discovery).toContain("function worthSnapshotting");
+    expect(discovery).toMatch(/worthSnapshotting\(built\)\s*\)\s*\{\s*\n\s*await writeStaleSnapshot/);
+    // daily-30 은 20장 미만이면 `resolveDaily30Response` 가 던져 저장까지 오지 않는다.
+    const engine = readFileSync(new URL("../../lib/daily-30.ts", import.meta.url), "utf8");
+    expect(engine).toContain("daily-30 fallback exhausted");
+  });
+
   it("503 경로에도 계측이 실린다 — 이 사고를 18일 끈 것이 '왜 못 만들었는지 모른다'였다", () => {
     for (const source of [discovery, daily30]) {
       // 보고 함수가 `try` 밖에 선언돼 catch 에서도 부를 수 있어야 한다.

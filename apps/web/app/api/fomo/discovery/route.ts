@@ -29,6 +29,22 @@ function discoveryCountry(value: string | null): DiscoveryCountryScope {
   return value === "US" || value === "all" ? value : "KR";
 }
 
+/**
+ * 스냅샷으로 남길 만한 응답인가.
+ *
+ * 빌드가 **성공했지만 빈 덱**일 수 있다(외부 소스 장애·예산 절단이 겹칠 때). 그것을 마지막
+ * 성공분으로 저장하면, 이후 마감을 넘긴 요청마다 **빈 덱을 200 으로** 주게 된다 — 이 라우트가
+ * 503 을 유지하는 이유(200-빈덱을 성공으로 취급하면 클라 재시도가 멈춘다)를 스테일 경로가
+ * 뒷문으로 무너뜨리는 셈이다. `daily-30` 은 20장 게이트가 이미 그 역할을 하지만 여기엔 없었다.
+ *
+ * 그리고 빈 결과는 `unstable_cache` 에도 `revalidate` 동안 그대로 남으므로, 한 번의 나쁜
+ * 빌드가 두 겹(캐시 10분 + 스냅샷 무기한)으로 굳는다. 저장은 **쓸 수 있는 덱일 때만** 한다.
+ */
+function worthSnapshotting(response: DiscoveryResponse): boolean {
+  // `cards` 는 optional 이다 — 없는 것과 빈 것을 같이 취급한다(둘 다 줄 수 없는 덱이다).
+  return response.stocks.length > 0 && (response.cards?.length ?? 0) > 0;
+}
+
 /** `meta` 를 보존하며 덧붙인다 — 스테일 표식·계측이 기존 meta 를 지우지 않게. */
 function withMeta<T>(row: T, extra: Record<string, unknown>): T {
   const meta = (row as { meta?: Record<string, unknown> }).meta ?? {};
@@ -74,7 +90,13 @@ export async function GET(request: Request) {
     const debugHeaders = { "Cache-Control": "no-store" };
     if (built) {
       // 성공분은 다음 실패 때 줄 것이므로 저장한다. 저장 실패가 응답을 막지 않는다.
-      await writeStaleSnapshot(snapshotKey, built);
+      // **빈 덱은 저장하지 않는다** — 그것을 마지막 성공분으로 삼으면 이후 스테일 응답이
+      // 영구히 빈 200 이 된다(기존 스냅샷이 있으면 그것이 더 나은 답이다).
+      if (worthSnapshotting(built)) {
+        await writeStaleSnapshot(snapshotKey, built);
+      } else {
+        console.warn(`[fomo/discovery] 빈 덱은 스냅샷하지 않는다 — ${label}`);
+      }
       if (wantTimings) {
         return withCors(NextResponse.json(withMeta(built, { timings }), { headers: debugHeaders }));
       }
