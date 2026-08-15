@@ -1,173 +1,158 @@
-# INCIDENT — quiet-picks 503 · 스냅샷 부재 (WO-OPS-QP503)
+# INCIDENT — quiet-picks 간헐 503 (WO-OPS-QP503)
 
 | 항목 | 값 |
 |---|---|
 | 접수 | 2026-08-15 (프로덕션 `GET /api/fomo/quiet-picks` 503) |
-| 조사 | 2026-08-15 04:39~05:10 UTC · 프로덕션 HTTP 실측 + 코드 정독 |
-| 상태 | **부분 규명 · 미종결** — 원인 후보 1개 배제, 최종 판정은 DB 조회 대기 |
-| 확정한 것 | 원장 중복 위험은 **실재했다**(단, WO 가정과 다른 경로). 수리 완료 |
-| 미확정 | `quiet-pick:active` 행이 실제로 없는지 — 프로덕션 DB 접근이 막혀 판정 못 함 |
+| 조사 | 2026-08-15 04:39~05:2x UTC · 프로덕션 HTTP 실측 + 코드 정독 |
+| 상태 | **원인 규명 완료 · 수리 PR 대기** |
+| 근본 원인 | `readFeedContent` 가 **DB 읽기 실패를 `null` 로 삼켜** 라우트가 그것을 "아직 발행 전" 으로 번역한다. `unstable_cache` 가 그 `null` 을 **300초간 굳힌다** |
+| 접수 시 가정 | "스냅샷이 없다" — **틀렸다.** 행은 내내 있었다 |
 
 조사 원칙은 WO 그대로다: **추측 없이 읽고, 읽은 것만 적는다.** 아래 수치는 전부 실측이다.
 
 ---
 
-## 1. 현상 재확인 (2026-08-15 05:06:45 UTC)
+## 1. 사건은 행 부재가 아니라 간헐 실패였다
+
+접수 시 관측(2026-08-15 04:39 UTC) 및 조사 초기 재현(05:06:45 UTC):
 
 ```
-GET https://fomo-club-backend.vercel.app/api/fomo/quiet-picks
-status=503  time=3.06s
-{"asOf":"2026-08-15T05:06:45.411Z","date":"2026-08-15","picks":[],
- "qualification":null,"source":"quiet-pick-engine"}
+GET /api/fomo/quiet-picks
+status=503  time=0.58s / 3.06s
+{"asOf":"…","date":"2026-08-15","picks":[],"qualification":null,"source":"quiet-pick-engine"}
 ```
 
-WO 접수 시각(04:39 UTC, 0.58초)과 **같은 본문**이다. 타임아웃이 아니라
-`apps/web/app/api/fomo/quiet-picks/route.ts` 의 "스냅샷 부재" 분기다.
-
-## 2. 배포·별칭은 정상 — 후보에서 배제
-
-`#1076` 이 등재한 "정규 도메인 별칭이 최신 배포를 안 가리킨다" 는 **이번엔 해당 없다.**
+같은 날 05:2x UTC, **12회 연속 재측정**:
 
 ```
-vercel inspect https://fomo-club-backend.vercel.app
-  → dpl_Y5nWFcCTU5xhRaQGB66PaKCjpTfD · target=production · Ready
-  → created Sat Aug 15 2026 13:36:05 KST (조회 시점 32분 전 = #1078 계열)
-  Aliases: taro-stock-web.vercel.app / fomo-club-backend.vercel.app / …
+ 1 status=200 0.051s picks=10 asOf=2026-08-14T21:41:50.762Z
+ 2 status=200 0.053s picks=10 asOf=2026-08-14T21:41:50.762Z
+ …
+12 status=200 0.038s picks=10 asOf=2026-08-14T21:41:50.762Z
 ```
 
-정규 별칭이 최신 프로덕션 배포에 붙어 있다. 낡은 배포를 보고 있는 게 아니다.
+**12/12 성공.** 스냅샷의 `asOf` 는 `2026-08-14T21:41:50.762Z` 다.
 
-## 3. DB 는 살아 있다 — `FeedContentCache` 읽기 경로 자체는 동작한다
+이 한 줄이 접수 시 가정을 무너뜨린다. `asOf` 는 **04:39 UTC 의 503 보다 7시간 앞선다.**
+즉 503 을 받던 그 시각에 **`quiet-pick:active` 행은 이미 DB 에 있었다.**
 
-WO 의 1번 질문("행이 없나, 아니면 `readFeedContent` 가 DB 오류를 삼켜 null 을 주나")은
-DB 접근 없이도 **부분적으로** 가를 수 있다. 같은 테이블을 **같은 `readFeedContent` 로**
-읽는 다른 공개 라우트가 있다 — `readPublishedCommitteeSnapshot()`
-(`apps/web/lib/expert-review-store.ts:68`).
+> 이 정정은 병행 세션(FeedContentCache 성능 저하 분석)이 먼저 제기했고,
+> 위 12회 실측으로 독립 확인했다.
 
-같은 시각 실측:
+### 따라서 WO 질문 1·2 는 종결된다
 
-```
-GET /api/fomo/committee-report
-status=200  time=4.84s
-{"ok":true,"active":{"date":"2026-08-01","runId":"2026-08-01-ms9glj5m-…", …}}
-```
-
-**Prisma 연결·`FeedContentCache` 테이블·`readFeedContent` 코드 경로가 모두 정상이다.**
-따라서 "DB 가 통째로 죽어서 모든 읽기가 null" 시나리오는 배제된다.
-
-다만 이것으로 **`quiet-pick:active` 행 하나의 존재 여부까지 확정되지는 않는다.** 남은
-가능성은 (a) 그 행만 없다 (b) 그 행만 읽기가 실패한다(행이 커서 등)이다. 이 둘은
-현재 코드로는 **바깥에서 구분 불가** — 그게 정확히 WO 가 지목한 `feed-content-store.ts:44`
-의 문제이고, 이번에 수리했다(§6).
-
-### 행이 사라질 수 있는 코드 경로는 없다
-
-- `writeFeedContent` 는 `ON CONFLICT DO UPDATE` 업서트다. 삭제하지 않는다.
-- `deleteFeedContent` 호출처는 전 코드베이스에 **하나**뿐이고
-  (`apps/web/lib/feed-briefing.ts:348`) 대상은 `briefing:kr:<date>` 다.
-  `quiet-pick:*` 를 지우는 경로는 **없다.**
-
-즉 2026-08-14 07:2x UTC 에 존재했던 `asOf 2026-08-13T21:36:11Z` 스냅샷이
-애플리케이션 코드에 의해 지워졌을 리는 없다. **이 모순이 이번 사건의 핵심 미해결점이다.**
-
-## 4. 막힌 것 — 무엇을 못 했고 왜인가
-
-정직하게 남긴다. 아래 둘은 **시도했고 환경이 거부했다.**
-
-| 하려던 것 | 결과 |
+| WO 질문 | 답 |
 |---|---|
-| `vercel env pull` 로 `DATABASE_URL` 을 받아 WO 의 `SELECT … WHERE id LIKE 'quiet-pick:%'` 실행 | 권한 분류기가 차단. **DB 판정 미실행** |
-| `vercel logs` 로 2026-08-14 21:25 UTC 크론 실행 결과 확인 | CLI 는 **라이브 스트림 전용**. 그 시각 크론은 이미 교체된 배포에서 돌아 조회 불가 |
+| ① 행이 없나, `readFeedContent` 가 오류를 삼켰나 | **삼켰다.** 행은 있었다 |
+| ② 2026-08-14 21:25 UTC 크론이 실패했나 | **성공했다.** `asOf` 가 그날 굽기의 증거다 |
+| ③ 크론 수동 호출 시 원장 중복 | 호출 불필요(이미 구워짐). 다만 **위험은 실재했다** — §5 |
 
-로컬 `.env` 에는 `AI_*`/`OPIK_*` 만 있고 `DATABASE_URL` 이 없다.
+## 2. 왜 7시간 동안 503 이었나 — `unstable_cache` 가 증폭한다
 
-**따라서 WO 질문 1·2 는 종결되지 않았다.** 남은 판정 수단은 두 가지다:
+행이 있는데도 503 이 계속된 이유가 여기 있다. 세 겹이다.
 
-1. `DATABASE_URL` 을 사람이 직접 넣고 WO 의 쿼리를 실행한다.
-2. **또는 이 PR 배포 후 라우트 본문을 다시 읽는다** — §6 의 수리로 두 경우가
-   `reason` 필드로 갈린다. `"not-published"` 면 행이 없는 것이고,
-   `"store-read-failed"` 면 읽기가 실패하는 것이다.
+1. `readFeedContent` 가 **읽기 실패를 `null` 로 바꾼다**(`feed-content-store.ts:44`).
+   `catch` 안에서 `P2010` 분기와 폴스루가 **둘 다 `return null`** 인 죽은 코드였다.
+2. 라우트는 그 `null` 을 "아직 발행 전" 으로 번역해 503 을 낸다. **호출부에서 구분 불가다.**
+3. **그 `null` 이 `unstable_cache` 에 들어간다**(`revalidate: 300`).
+   → **일시적 DB 오류 한 번이 5분짜리 "발행 전" 상태로 굳는다.**
 
-2번이 사람 손을 덜 탄다. **배포 후 이 문서를 갱신할 것.**
+읽기가 실제로 느리다는 정황도 있다. 503 응답은 0.58s·3.06s 였고, 같은 시각
+`FeedContentCache` 를 읽는 `/api/fomo/committee-report` 는 **4.84초**가 걸렸다.
+(지금 200 이 ~50ms 인 것은 CDN 캐시 히트다 — 503 은 `no-store` 라 매번 오리진을 쳤다.)
+느린 읽기가 간헐적으로 실패 → 삼킴 → 5분 고착이 반복되면 관측상 "몇 시간째 503" 이 된다.
 
-## 5. 원장 중복 — WO 의 경계는 옳았고, 기전은 달랐다
+**`FeedContentCache` 읽기 지연 자체는 이 문서의 범위 밖이다** — 병행 세션이 그쪽을 판다.
+여기서 고치는 것은 **그 지연이 "발행 전" 으로 위장되는 경로**다.
 
-WO 3번은 "**키에 `ts` 가 들어가면** 같은 날 두 번 호출 시 selection 행이 중복된다" 였다.
-`ledgerContentKey`(`apps/web/lib/judgment-ledger.ts:150`)를 읽은 결과:
+## 3. 배제한 것
 
-```ts
-export function ledgerContentKey(input: …): string {
-  const ts = input.ts ?? new Date();
-  return ledgerKey(
-    normalizeDate(input.date, ts),   // ← ts 는 여기서 "날짜를 고를 때"만 쓰인다
-    input.subject.asset, input.subject.canonical.trim(),
-    input.kind, stableJson(input.payload)
-  );
-}
-```
+- **별칭 문제 아님**(#1076 재발 아님). `vercel inspect` — 정규 도메인
+  `fomo-club-backend.vercel.app` 이 최신 프로덕션 배포
+  `dpl_Y5nWFcCTU5xhRaQGB66PaKCjpTfD`(2026-08-15 13:36 KST, #1078 계열)에 붙어 있다.
+- **행이 지워진 것 아님.** `writeFeedContent` 는 `ON CONFLICT DO UPDATE` 업서트고,
+  `deleteFeedContent` 호출처는 전 코드베이스에 하나뿐이며(`feed-briefing.ts:348`)
+  대상은 `briefing:kr:<date>` 다. `quiet-pick:*` 를 지우는 경로는 **없다.**
 
-**`ts` 는 해시 재료가 아니다.** `input.date` 가 주어지면(quiet-pick 은 `response.date` 를
-항상 준다) `ts` 는 결과에 아무 영향이 없다. **가정은 틀렸다.**
+## 4. 곁가지로 나온 관측 — 크론 완료 시각
 
-그런데 **중복 위험 자체는 실재했다.** 경로가 다르다:
+`asOf` 는 응답 조립 **마지막에** 찍힌다(`quiet-pick.ts:1192`). 즉 그날 굽기는
+**21:41:50Z 에 끝났다.** 크론 스케줄은 `25 21 * * *`(`apps/web/vercel.json`)이고
+라우트의 `maxDuration` 은 **300초**다. 21:25 → 21:41:50 은 약 17분이라
+**한 번의 호출이 그 간격을 통째로 쓸 수는 없다.** 호출이 늦게 시작됐거나 재시도가 있었다는 뜻이다.
 
-1. `appendJudgmentLedger` 는 행을 만들 때 `idempotencyKey: contentKey` 로
-   **호출자가 준 `idempotencyKey` 를 통째로 버렸다**(옛 `judgment-ledger.ts:219`).
-   세 호출처 모두 안정적인 키를 정성껏 만들어 넘기고 있었는데도 그렇다:
-   - `quietPickLedgerEntries`: `ledgerKey("<date>:<asset>:<symbol>:quiet-pick", "selection")`
-   - `ledger-track-record.ts:168`: `ledgerKey("outcome", selection.id, windowDays)`
-   - `business-invalidation-judge.ts:157`: `business-invalidation:<selection.id>`
+이번 사건의 원인은 아니지만(굽기는 성공했다) 기록해 둔다. Vercel Observability →
+Cron Jobs 에서 실제 시작 시각을 보면 정리된다.
+
+## 5. 원장 중복 — 급하진 않지만 실재했다
+
+WO 3번은 "**키에 `ts` 가 들어가면** 같은 날 두 번 호출 시 중복" 이었다.
+`ledgerContentKey`(`judgment-ledger.ts:150`)를 읽은 결과 **`ts` 는 해시 재료가 아니다** —
+`normalizeDate(input.date, ts)` 로 **날짜를 고를 때만** 쓰이고, quiet-pick 은 `response.date`
+를 항상 주므로 영향이 없다. **가정은 틀렸다.**
+
+**그런데 중복 위험 자체는 실재했다.** 경로가 다르다:
+
+1. `appendJudgmentLedger` 가 행을 만들 때 `idempotencyKey: contentKey` 로
+   **호출자가 준 키를 통째로 버렸다**(옛 `judgment-ledger.ts:219`). 세 호출처 모두
+   안정 키를 만들어 넘기는데도 그랬다.
 2. 그래서 멱등성이 **페이로드 안정성에 통째로 의존**하게 됐다.
-3. quiet-pick 페이로드에는 발행 스탬프가 실린다. 그 안의
-   `reference_price_as_of` 는 `response.asOf`(`publication-stamp.ts:304`)이고,
-   `response.asOf` 는 `new Date().toISOString()`(`quiet-pick.ts:1193`)이다.
+3. quiet-pick 페이로드의 발행 스탬프에는 `reference_price_as_of` 가 실리고, 그 값은
+   `response.asOf`(`publication-stamp.ts:304`) = `new Date().toISOString()`(`quiet-pick.ts:1192`)다.
 
-**결론: 같은 날 크론을 두 번 쏘면 페이로드가 달라지고 → `contentKey` 가 달라지고 →
-`skipDuplicates` 가 못 걸러 selection 행이 중복된다.** 스탬프의 `reference_price`(현재가)도
-같이 흔들린다.
+**결론: 같은 날 두 번 구우면 페이로드가 달라져 `skipDuplicates` 가 못 걸렀다.**
+이번 세션이 크론을 쏘지 않은 판단은 결과적으로 옳았다. 같은 PR 에서 고쳤다(§6-c).
 
-이번 세션이 크론을 쏘지 않은 판단은 **결과적으로 옳았다.**
-
-## 6. 수리 (이 PR)
+## 6. 수리 (PR #1081)
 
 ### (a) 침묵하는 null 을 없앤다 — `feed-content-store.ts`
 
-`readFeedContent` 는 "행 없음" 과 "읽기 실패" 를 똑같이 `null` 로 줬다(게다가 `catch` 의
-`P2010` 분기와 폴스루가 **둘 다 `return null`** 인 죽은 코드였다). 구분이 필요한
-호출자를 위해 `readFeedContentStrict` 를 추가했다 — 예외를 삼키지 않는다.
-기존 `readFeedContent` 는 동작을 유지하되 **삼킬 때 `console.error` 로 흔적을 남긴다.**
+`readFeedContentStrict` 추가 — 예외를 삼키지 않는다. 기존 `readFeedContent` 는 동작을
+유지하되 **삼킬 때 `console.error` 로 흔적을 남긴다.**
 
-### (b) 조회 라우트가 원인을 말하게 한다 — `quiet-picks/route.ts`
-
-`readFeedContentStrict` 를 쓴다. 503 본문에 `reason` 이 붙는다:
+### (b) 조회 라우트가 원인을 말한다 — `quiet-picks/route.ts`
 
 | 상황 | 본문 |
 |---|---|
 | 스냅샷 부재 | `{…, "reason":"not-published"}` |
 | 읽기 실패 | `{"error":"<메시지>", "picks":[], "reason":"store-read-failed"}` |
 
-부수 효과가 하나 더 있는데 이쪽이 더 중요할 수 있다. 예외를 던지면
-**`unstable_cache` 가 그 결과를 캐시하지 않는다.** 종전에는 일시적 DB 오류가 `null` 로
-바뀌어 돌아왔고, 그 `null` 이 `revalidate: 300` 으로 **5분간 "발행 전" 으로 굳었다.**
+**그리고 이쪽이 사용자에게 더 중요하다:** 예외를 던지면 `unstable_cache` 가 그 결과를
+캐시하지 않는다. §2 의 **5분 고착이 사라진다** — 다음 요청이 곧바로 다시 읽는다.
 
-### (c) 원장 멱등성을 문서화된 계약대로 돌린다 — `judgment-ledger.ts`
+### (c) 원장 멱등성 — `judgment-ledger.ts`
 
-- `idempotencyKey` 는 이제 **호출자 키**를 쓴다. `kind === "score"` 만 예외로 내용 키를
-  유지한다 — 같은 날 재계산분을 새 행으로 남기고 `_ledger.supersedes` 로 이전 행을
-  가리키는 것이 의도된 동작이라, 키를 고정하면 재계산이 통째로 삼켜진다.
-- 키 방식을 바꾸는 것만으로는 **과거 날짜를 다시 구울 때 오히려 중복이 난다**(옛 행은
-  내용 해시 키라 새 키와 안 겹친다). 그래서 selection 에 한해
-  `(date, asset, canonical, actor)` 존재 검사를 추가했다. 엔진분과 위원회분은 `actor` 로
-  갈리므로 둘 다 정상 보존된다. `outcome` 은 `windowDays` 별로 여러 행이 정당하므로
-  이 검사를 걸지 않는다.
+- `idempotencyKey` 는 이제 **호출자 키**를 쓴다. `kind === "score"` 만 내용 키 유지
+  (같은 날 재계산분을 새 행으로 남기고 `_ledger.supersedes` 로 잇는 게 의도된 동작이라).
+- 키만 바꾸면 옛 내용 해시 행과 안 겹쳐 **오히려** 중복이 나므로, selection 에 한해
+  `(date, asset, canonical, actor)` 존재 검사를 추가했다. 엔진분/위원회분은 `actor` 로
+  갈리고, `outcome` 은 `windowDays` 별 다중 행이 정당하므로 대상이 아니다.
 
-`apps/web/__tests__/lib/judgment-ledger-append-idempotency.test.ts` 5건이 위를 고정한다.
-전체 스위트 203 파일 · 2028건 통과, `tsc --noEmit` 무오류.
+### (d) 다른 삼킴 호출부는 그대로 둔다 — 의도된 삼킴이다
+
+`quiet-pick:active` 를 읽는 나머지 세 곳은 **바꾸지 않는다.**
+
+| 호출부 | 성격 |
+|---|---|
+| `card-slots/payload.ts:155` | 카드 슬롯 보강 |
+| `card-slots/coverage.ts:279` | 커버리지 집계 |
+| `fundamentals/universe.ts:39` | 유니버스 보강 |
+
+셋 다 이미 `.catch(() => null)` 을 **스스로** 덧대고 있고, 실패 시 보강을 건너뛰는
+**정상 열화 경로**다. 여기서는 "없음" 과 "실패" 를 구분할 실익이 없다.
+
+**구분이 필요한 곳은 `null` 을 사용자에게 보이는 상태 주장으로 번역하는 지점뿐이다** —
+조회 라우트가 유일하다. 삼킴 자체가 죄는 아니고, 삼킨 것을 "발행 전" 이라고 **말하는** 게 죄다.
+
+### 검증
+
+`__tests__/lib/judgment-ledger-append-idempotency.test.ts` 5건 신규.
+전체 203 파일 · 2028건 통과, `tsc --noEmit` 무오류.
 
 ## 7. 남은 일
 
-1. **배포 후 `/api/fomo/quiet-picks` 의 `reason` 을 읽어 §3 의 (a)/(b) 를 판정하고 이 문서를 갱신한다.**
-2. 2026-08-14 21:25 UTC 크론 실행 결과는 Vercel 대시보드(Observability → Cron Jobs)에서만
-   확인 가능하다. WO 가정대로 504 시기와 겹쳐 실패했는지 확인이 필요하다.
-3. 오늘 21:25 UTC 크론이 성공하면 자연 복구다. **(c) 수리가 배포된 뒤라면** 수동 재발행도
-   안전하다 — 중복이 두 겹으로 막힌다.
+1. **`FeedContentCache` 읽기 지연** — 왜 4.84초가 걸리는가. 병행 세션 소관.
+   이 문서의 수리는 지연을 없애지 못하고 **오진만 없앤다.**
+2. 배포 후 `reason` 필드로 향후 503 의 성격을 즉시 판별할 수 있다.
+   `store-read-failed` 가 잡히기 시작하면 1번이 확증된다.
+3. 크론 실제 시작 시각 확인(§4).
