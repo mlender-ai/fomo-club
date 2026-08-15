@@ -1,4 +1,6 @@
 import { hydrateKoreanTitles, koreanTitle } from "./content-i18n";
+import { timeStage } from "./stage-timer";
+import { withDeadline } from "./stale-serve";
 import {
   STOCK_VOCAB,
   applyAxisRarity,
@@ -100,6 +102,33 @@ const TARGETED_MATERIAL_CANDIDATE_LIMIT = TARGETED_MATERIAL_DEFAULT_ENABLED
   ? Math.max(0, Math.min(720, Number(process.env.DISCOVERY_TARGETED_MATERIAL_LIMIT ?? 720) || 720))
   : 0;
 const TARGETED_MATERIAL_CONCURRENCY = 4;
+/**
+ * 재료 조회 시간 예산 (WO-OPS-504 PHASE 2 실측 대응).
+ *
+ * KR 전체 스코프의 후보 상한은 120이고 동시 실행은 4다 — 즉 **30라운드 순차**이고, 라운드마다
+ * 뉴스/재료 조회가 붙는다. 프리뷰 실측(2026-08-15): 이 단계 하나가 **33초를 넘겨도 안 끝났고**
+ * 그 때문에 `discovery?country=KR` 이 45초 마감에서 503 을 냈다.
+ *
+ * 예산을 넘긴 뒤의 후보는 **조회를 시작하지 않는다**(즉시 `null`). 재료는 카드마다 optional
+ * 이므로 부분 결과는 계약 위반이 아니다 — 지금은 아예 아무 카드도 못 주고 있다. 몇 종목의
+ * 재료를 못 붙인 덱이 **덱 부재보다 낫다.** 다만 **몇 건을 건너뛰었는지 로그로 남긴다**
+ * (조용한 절단 금지). 근본 수리는 PHASE 4(크론 이관·병렬도 상향)다.
+ */
+const TARGETED_MATERIAL_BUDGET_MS = 15_000;
+/**
+ * 후보 **하나**의 재료 조회 상한.
+ *
+ * 예산(위)만으로는 안 먹었다. 실측(2026-08-15 프리뷰)에서 예산을 넣고도 이 단계가 30초를
+ * 넘겼다 — 예산은 **새로 시작하는 것**만 막고, 이미 시작한 항목은 끝날 때까지 기다리기
+ * 때문이다. 그리고 KR 항목 하나는 `fetchDartInsiderPurchasesForCode` 를 부르는데, 그것이
+ * **종목마다 7일 × 최대 3페이지 순차 루프(각 8초 타임아웃)를 다시 돈다.** 항목 하나가 분
+ * 단위로 매달릴 수 있다.
+ *
+ * 상한을 넘긴 항목은 재료 없이 간다(`null`) — 취소하지는 않으므로 남은 시간에 끝나면
+ * `next` 캐시에 남아 다음 요청이 빨라진다. 예산 15초 + 항목 상한 4초 = 이 단계는 19초 안에
+ * 끝난다. 종목별 중복 스캔 제거는 PHASE 4 다.
+ */
+const TARGETED_MATERIAL_ITEM_MS = 4_000;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d|회장|최고경영자|CEO|고백|회고|소회|인터뷰|기부|ESG|봉사|사회공헌|미담|창업주|오너|가문|고향|강연|도서|출간|어려울\s?때마다|찾았다/i;
@@ -2158,7 +2187,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     : 0;
   const asOf = discoveryAsOf(scope);
   // 2026-07-12: US 뉴스 제목 한글 번역 캐시를 모듈 맵에 적재(요청 경로 동기 조회용). fail-open.
-  await hydrateKoreanTitles();
+  await timeStage("kr-title-cache", () => hydrateKoreanTitles());
   const discoveryContentPromise =
     scope === "US"
       ? fetchDeckContentCards().catch((err) => {
@@ -2167,10 +2196,11 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       })
       : Promise.resolve([] as DeckContentCard[]);
   const [rows, attentionMap] = await Promise.all([
-    fetchMarketRows(scope),
+    timeStage("market-rows", () => fetchMarketRows(scope)),
     scope === "US"
       ? Promise.resolve({} as Record<string, StockAttentionSignal>)
-      : computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({})),
+      : timeStage("attention-signals", () =>
+        computeStockAttentionSignals().catch((): Record<string, StockAttentionSignal> => ({}))),
   ]);
   const vocabByCode = new Map(STOCK_VOCAB.filter((s) => s.naverCode).map((s) => [s.naverCode!, s]));
   const scopedRows = rows.filter((row) => isDiscoveryRowAllowedForScope(row, scope));
@@ -2217,12 +2247,29 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     byTicker.set(def.canonical, { row: { ...row, canonical: def.canonical }, events: [...(current?.events ?? []), event] });
   };
 
-  const insiderDisclosureMap = await fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  /**
+   * DART 는 **한국 공시**다. `scope === "US"` 면 `addDartDisclosure` 가
+   * `eligibleTickers`(US 종목만) 에서 전부 걸러 버리므로 **결과가 100% 버려진다.**
+   *
+   * 그런데 이 스캔은 7일 × 최대 3페이지(각 8초 타임아웃) + 항목별 문서 fetch(6초) 를
+   * **직렬**로 돈다. 프리뷰 실측(2026-08-15): `country=US` 요청이 이 단계에서
+   * **24.98초** 머물러 25초 마감을 넘겼고, 그 사이 끝난 다른 단계 합은 4ms 였다.
+   * 즉 US 덱이 죽은 이유의 거의 전부가 **쓰지도 않는 한국 공시 대기**였다.
+   * (`scope === "all"` 은 KR 을 포함하므로 그대로 돈다.)
+   */
+  const dartScoped = scope !== "US";
+  const insiderDisclosureMap = dartScoped
+    ? await timeStage("dart-insider", () =>
+      fetchDartInsiderPurchasesByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})))
+    : {};
   for (const [ticker, disclosure] of Object.entries(insiderDisclosureMap)) {
     addDartDisclosure(ticker, disclosure);
   }
 
-  const disclosureMap = await fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({}));
+  const disclosureMap = dartScoped
+    ? await timeStage("dart-disclosures", () =>
+      fetchDartDisclosuresByStock(asOf).catch((): Record<string, DartDisclosureHit> => ({})))
+    : {};
   for (const [ticker, disclosure] of Object.entries(disclosureMap)) {
     if (insiderDisclosureMap[ticker]) continue;
     addDartDisclosure(ticker, disclosure);
@@ -2239,10 +2286,21 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     })
     .slice(0, targetedMaterialLimit);
   if (targetedMaterialLimit > 0) {
-    const targetedMaterial = await mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => ({
-      ticker,
-      event: await eventFromTargetedMaterial(value.row, asOf),
+    const materialStartedAt = Date.now();
+    let materialSkipped = 0;
+    const targetedMaterial = await timeStage("targeted-material", () => mapLimit(targetedRows, TARGETED_MATERIAL_CONCURRENCY, async ([ticker, value]) => {
+      if (Date.now() - materialStartedAt > TARGETED_MATERIAL_BUDGET_MS) {
+        materialSkipped += 1;
+        return { ticker, event: null };
+      }
+      return { ticker, event: await withDeadline(eventFromTargetedMaterial(value.row, asOf), TARGETED_MATERIAL_ITEM_MS) };
     }));
+    if (materialSkipped > 0) {
+      console.warn(
+        `[discovery-supply] 재료 조회 예산 초과 — ${Date.now() - materialStartedAt}ms, ` +
+          `${targetedRows.length}건 중 ${materialSkipped}건 건너뜀 (scope=${scope})`
+      );
+    }
     for (const result of targetedMaterial) {
       if (result.status !== "fulfilled" || !result.value.event) continue;
       const current = byTicker.get(result.value.ticker);
@@ -2252,14 +2310,16 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   }
 
   if (scope === "US") {
-    await hydrateUsInsiderClusterRows(byTicker, asOf);
-    await hydrateUsMarketWideMaterial(byTicker, asOf);
+    await timeStage("us-insider-cluster", () => hydrateUsInsiderClusterRows(byTicker, asOf));
+    await timeStage("us-market-wide", () => hydrateUsMarketWideMaterial(byTicker, asOf));
   }
 
   let flowHistories: Record<string, InvestorFlow[]> = {};
   if (DISCOVERY_FLOW_CACHE_ENABLED) {
     const krTickers = [...byTicker.entries()].filter(([, value]) => value.row.country === "KR").map(([ticker]) => ticker);
-    flowHistories = krTickers.length > 0 ? await readSupplyDemandHistoryByTickers(krTickers, 10) : {};
+    flowHistories = krTickers.length > 0
+      ? await timeStage("supply-demand-history", () => readSupplyDemandHistoryByTickers(krTickers, 10))
+      : {};
     for (const [ticker, history] of Object.entries(flowHistories)) {
       const event = eventFromFlowHistory(history);
       if (!event) continue;
@@ -2268,7 +2328,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       byTicker.set(ticker, { ...current, events: [...current.events, event] });
     }
   }
-  await hydrateLiveFlowEvents(byTicker);
+  await timeStage("live-flow", () => hydrateLiveFlowEvents(byTicker));
 
   for (const [ticker, current] of byTicker.entries()) {
     if (current.row.country !== "KR") continue;
@@ -2319,15 +2379,15 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     deckCardCount
   ));
   if (targetedMaterialLimit > 0 && scope !== "US") {
-    ranked = await hydrateFrontBandMaterial(ranked, rowsByTicker, asOf);
+    ranked = await timeStage("front-band-material", () => hydrateFrontBandMaterial(ranked, rowsByTicker, asOf));
   }
   if (scope !== "US") {
-    ranked = await hydrateReachedNewsHooks(ranked, rowsByTicker, asOf);
+    ranked = await timeStage("reached-news-hooks", () => hydrateReachedNewsHooks(ranked, rowsByTicker, asOf));
   }
   const fronts: Record<string, DiscoveryFrontSeed> = {};
   const stocks: DiscoveryStockPayload[] = [];
 
-  const dailyRows = await mapLimit(
+  const dailyRows = await timeStage("candles", () => mapLimit(
     ranked.slice(0, deckCardCount),
     SPARKLINE_CONCURRENCY,
     async (candidate) => {
@@ -2365,14 +2425,14 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
         },
       };
     }
-  );
+  ));
   const dailyByTicker = new Map(
     dailyRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.daily] as const] : []))
   );
   // 밸류축 연료(WO-LASTMILE ①) — 덱 score 는 여기서 만들어지므로 basics(KR 재무·US Nasdaq)를 받아
   // financials 로 주입해야 valuation 이 fronts.score.axes 까지 흐른다. 없으면 밸류축 전종목 결손.
   // daily-30 은 12h 캐시+크론 프리웜이라 이 추가 fetch 는 요청 경로 상시 비용이 아니다(fail-open).
-  const basicsRows = await mapLimit(ranked.slice(0, deckCardCount), SPARKLINE_CONCURRENCY, async (candidate) => {
+  const basicsRows = await timeStage("basics", () => mapLimit(ranked.slice(0, deckCardCount), SPARKLINE_CONCURRENCY, async (candidate) => {
     const row = rowsByTicker.get(candidate.ticker);
     if (candidate.naverCode) {
       return { ticker: candidate.ticker, basics: await fetchStockBasics(candidate.ticker, candidate.naverCode).catch(() => null) };
@@ -2382,13 +2442,13 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       return { ticker: candidate.ticker, basics: await fetchUsStockBasics(row?.canonical ?? candidate.ticker, usSymbol, false).catch(() => null) };
     }
     return { ticker: candidate.ticker, basics: null as StockBasics | null };
-  });
+  }));
   const basicsByTicker = new Map(
     basicsRows.flatMap((row) => (row.status === "fulfilled" ? [[row.value.ticker, row.value.basics] as const] : []))
   );
   ranked = attachReachedVolumeEvents(ranked, rowsByTicker, dailyByTicker, asOf);
   if (scope !== "US") {
-    ranked = await hydrateReachedWhySynthesis(ranked, allowAiSynthesis);
+    ranked = await timeStage("why-synthesis", () => hydrateReachedWhySynthesis(ranked, allowAiSynthesis));
   }
   logDiscoverySignalCoverage("after-rank", ranked);
   const sparklineByTicker = new Map(
@@ -2429,7 +2489,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       ...(typeof candidateCandles.at(-1)?.close === "number" ? { currentPrice: candidateCandles.at(-1)!.close } : {}),
       asOf,
     });
-    const stock = await stockPayload(row, candidate, front, allowAiSynthesis);
+    const stock = await timeStage("stock-payload", () => stockPayload(row, candidate, front, allowAiSynthesis));
     // 2026-07-12: US 큐레이션 대형주는 뉴스 재료가 없어도(Vercel egress에서 US 뉴스 차단) verdict 맥락으로
     // 진입 — "시총 높은 아는 기업"(User Zero). 국장 발굴 정체성은 불변(KR 은 이 분기 안 탐).
     const usSeed =
@@ -2505,7 +2565,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
   });
   const bundleCards = buildThemeBundleCards(ranked, rowsByTicker);
   const narrativeCards = buildNarrativeCards(ranked, rowsByTicker);
-  const rawContentCards = await discoveryContentPromise;
+  const rawContentCards = await timeStage("content-cards", () => discoveryContentPromise);
   const usContentLimit =
     scope === "US"
       ? Math.min(

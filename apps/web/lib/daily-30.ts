@@ -11,6 +11,7 @@ import {
   type StockCountry,
 } from "@fomo/core";
 import { cacheVersion, kstDate as kstDateOf } from "./fomo";
+import { timeStage } from "./stage-timer";
 import { parsePriceText } from "./quote-prices";
 import {
   buildDiscoveryResponse,
@@ -802,7 +803,7 @@ export async function resolveDaily30Response(
   const buildDirect =
     dependencies.buildDirect ?? (() => buildDaily30ResponseWithOptions({ targetCount: DAILY_CARD_TARGET }));
 
-  const active = await readToday().catch((error) => {
+  const active = await timeStage("committee-today", () => readToday()).catch((error) => {
     console.warn("[daily-30] active committee snapshot unavailable", (error as Error)?.message);
     return null;
   });
@@ -815,7 +816,7 @@ export async function resolveDaily30Response(
     return normalizeDaily30Response(storedDaily30Response(active));
   }
 
-  const recent = await readRecent(today, 3).catch((error) => {
+  const recent = await timeStage("committee-recent", () => readRecent(today, 3)).catch((error) => {
     console.warn("[daily-30] recent committee snapshot unavailable", (error as Error)?.message);
     return null;
   });
@@ -828,7 +829,7 @@ export async function resolveDaily30Response(
     return withFallbackMeta(normalizeDaily30Response(storedDaily30Response(recent)), "committee-yesterday");
   }
 
-  const direct = await buildDirect();
+  const direct = await timeStage("engine-direct", () => buildDirect());
   const directCount = daily30CardCount(direct);
   if (directCount >= 20) return withFallbackMeta(normalizeDaily30Response(direct), "engine-direct");
   throw new Error(`daily-30 fallback exhausted: engine produced ${directCount}/20 cards`);

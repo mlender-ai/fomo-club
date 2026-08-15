@@ -72,10 +72,22 @@ jobs:
             curl -fsS "$URL"
           fi
 
+      # WO-OPS-504: 이 스텝도 `curl: (22) ... 504` 한 줄로 죽어 왔다(약 301초).
+      # 우리가 먼저 끊고, HTTP 코드·소요초·단계별 계측을 남긴다.
       - name: Rewarm daily-30 with fresh content
         run: |
-          set -euo pipefail
-          curl -fsS "https://fomo-club-backend.vercel.app/api/fomo/daily-30" > /tmp/daily30.json
+          set -uo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/daily-30?debug=timings"
+          started="$(date +%s)"
+          # 라우트 마감 240초 + 여유. 우리가 라우트보다 먼저 끊으면 진단이 사라진다.
+          code="$(curl -sS -o /tmp/daily30.json -w '%{http_code}' --max-time 260 "$URL" || echo "000")"
+          elapsed="$(( $(date +%s) - started ))"
+          echo "daily-30 http=${code} elapsed=${elapsed}s"
+          if [ "$code" != "200" ]; then
+            echo "::error::daily-30 조회 실패 (http=${code}, ${elapsed}s) — docs/ops/INCIDENT_prewarm_20260814.md"
+            head -c 400 /tmp/daily30.json || true
+            exit 1
+          fi
           node -e '
             const fs = require("fs");
             const json = JSON.parse(fs.readFileSync("/tmp/daily30.json", "utf8"));
@@ -83,6 +95,10 @@ jobs:
             const kinds = contents.map((c) => c.contentType);
             const cards = Math.max(json.cards?.length || 0, json.stocks?.length || 0);
             console.log(JSON.stringify({ cards, contents: contents.length, kinds, stale: json.meta?.stale || null }));
+            if (json.meta?.timings) console.log("timings " + JSON.stringify(json.meta.timings));
+            if (json.meta?.staleServe) {
+              console.log(`::warning::스테일 응답 (savedAt=${json.meta.staleServe.savedAt}) — 빌드가 마감을 넘겼다`);
+            }
             if (cards < 20) {
               console.error(`daily-30 self-check failed: ${cards}/20 cards`);
               process.exit(1);

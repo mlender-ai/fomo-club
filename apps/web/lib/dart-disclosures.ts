@@ -42,6 +42,20 @@ const DART_INSIDER_OWNERSHIP_REPORT = /임원[ㆍ·]?\s*주요주주.*특정증�
 const DART_INSIDER_PURCHASE_TEXT = /장내매수|매수|취득/i;
 const DART_INSIDER_LOOKBACK_DAYS = 7;
 
+/**
+ * 내부자 스캔 시간 예산 (WO-OPS-504 PHASE 2 실측 대응).
+ *
+ * 이 스캔은 **완전 직렬**이다 — 7일 × 최대 3페이지(목록 fetch, 각 8초 타임아웃) + 매칭된
+ * 항목마다 문서 fetch(6초 타임아웃). 최악은 분 단위이고 **상한이 없다.** 프리뷰 실측
+ * (2026-08-15): `discovery?country=KR` 이 이 단계에서 19.97초를 쓰고도 안 끝나 25초 마감을
+ * 넘겼다. 공시가 쌓일수록 이 값은 커진다 — 그래서 "왜 하필 지금 임계를 넘었나" 의 답이 여기 있다.
+ *
+ * 예산을 넘기면 **그때까지 찾은 것만 돌려준다.** 호출부는 이미 `.catch(() => ({}))` 로
+ * fail-open 이므로 부분 결과는 계약 위반이 아니다 — 다만 **잘렸다는 사실은 로그로 남긴다**
+ * (조용한 절단 금지). 근본 수리(병렬화·크론 이관)는 PHASE 4 다.
+ */
+const DART_INSIDER_BUDGET_MS = 8_000;
+
 function dartKey(): string | undefined {
   if (process.env.DISCOVERY_DART_LIVE === "0") return undefined;
   return process.env.DART_API_KEY || process.env.DART_CRTFC_KEY;
@@ -215,7 +229,12 @@ export async function fetchDartInsiderPurchasesByStock(asOf: string): Promise<Re
   const byCode = new Map(STOCK_VOCAB.filter((stock) => stock.naverCode).map((stock) => [stock.naverCode!, stock.canonical]));
   const out: Record<string, DartDisclosureHit> = {};
 
+  const startedAt = Date.now();
+  const overBudget = () => Date.now() - startedAt > DART_INSIDER_BUDGET_MS;
+  let truncatedAt: string | undefined;
+
   for (const date of recentDates(asOf, DART_INSIDER_LOOKBACK_DAYS)) {
+    if (overBudget()) { truncatedAt = date; break; }
     for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
       const data = await fetchDartPage(key, date, page).catch(() => null);
       if (!data?.list?.length || (data.status && data.status !== "000")) break;
@@ -223,11 +242,21 @@ export async function fetchDartInsiderPurchasesByStock(asOf: string): Promise<Re
         const code = item.stock_code?.trim();
         const ticker = code ? byCode.get(code) : undefined;
         if (!ticker || out[ticker] || !cleanInsiderReportName(item.report_nm)) continue;
+        // 문서 fetch 는 항목당 최대 6초다 — 예산을 넘긴 뒤에는 새로 시작하지 않는다.
+        if (overBudget()) { truncatedAt = date; break; }
         const hit = await insiderPurchaseFromDartItem(ticker, item, date);
         if (hit) out[ticker] = hit;
       }
-      if (typeof data.total_page === "number" && page >= data.total_page) break;
+      if (truncatedAt || (typeof data.total_page === "number" && page >= data.total_page)) break;
     }
+  }
+
+  if (truncatedAt) {
+    // 조용히 자르지 않는다 — 커버리지가 줄었다는 사실이 남아야 한다.
+    console.warn(
+      `[dart-disclosures] 내부자 스캔 예산 초과 — ${Date.now() - startedAt}ms, ${truncatedAt} 이전 날짜 미조회, ` +
+        `${Object.keys(out).length}종목 확보`
+    );
   }
 
   return out;
