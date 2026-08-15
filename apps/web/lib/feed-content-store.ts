@@ -41,14 +41,27 @@ export async function deleteFeedContent(id: string): Promise<void> {
   await prisma.$executeRaw`DELETE FROM "FeedContentCache" WHERE "id" = ${id}`;
 }
 
+/**
+ * 오류를 삼키지 않는 읽기.
+ *
+ * `readFeedContent` 는 "행이 없다(아직 안 구웠다)" 와 "DB 읽기가 실패했다" 를 **똑같이 null 로** 준다.
+ * 조회 라우트가 그 null 을 "발행 전" 으로 번역하면 장애가 정상 상태로 위장된다 — 2026-08-15
+ * quiet-picks 503 조사에서 바깥에서는 두 경우를 끝내 구분할 수 없었다(WO-OPS-QP503).
+ * 구분이 필요한 호출자는 이 함수를 쓰고 예외를 그대로 받는다.
+ */
+export async function readFeedContentStrict<T>(id: string): Promise<T | null> {
+  const records = await prisma.$queryRaw<Array<{ row: unknown }>>`
+    SELECT "row" FROM "FeedContentCache" WHERE "id" = ${id} LIMIT 1
+  `;
+  return (records[0]?.row as T | undefined) ?? null;
+}
+
 export async function readFeedContent<T>(id: string): Promise<T | null> {
   try {
-    const records = await prisma.$queryRaw<Array<{ row: unknown }>>`
-      SELECT "row" FROM "FeedContentCache" WHERE "id" = ${id} LIMIT 1
-    `;
-    return (records[0]?.row as T | undefined) ?? null;
+    return await readFeedContentStrict<T>(id);
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2010") return null;
+    // 삼키더라도 흔적은 남긴다 — 조용한 null 이 조사에서 가장 비쌌다.
+    console.error("[feed-content-store] read failed", id, err instanceof Error ? err.message : err);
     return null;
   }
 }
