@@ -7,9 +7,10 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "FOMO Club — 취향투자 발견",
+    // layout.tsx 의 메타 문구와 같은 근거(PRODUCT_VISION §1·§2.2·§2.4·§3.2). 둘은 같이 움직인다.
+    name: "FOMO Club — 캐주얼 투자 발견",
     short_name: "FOMO Club",
-    description: "스와이프로 투자 취향을 학습해 오늘의 테마와 종목을 쉽게 발견하는 피드.",
+    description: "종목을 스와이프하며 내 취향의 종목을 발견하고, 수급이 먼저 들어오는 순간을 사실로 확인하는 종목 카드 피드.",
     lang: "ko",
     start_url: "/",
     scope: "/",
