@@ -1,5 +1,6 @@
 import { hydrateKoreanTitles, koreanTitle } from "./content-i18n";
 import { timeStage } from "./stage-timer";
+import { withDeadline } from "./stale-serve";
 import {
   STOCK_VOCAB,
   applyAxisRarity,
@@ -114,6 +115,20 @@ const TARGETED_MATERIAL_CONCURRENCY = 4;
  * (조용한 절단 금지). 근본 수리는 PHASE 4(크론 이관·병렬도 상향)다.
  */
 const TARGETED_MATERIAL_BUDGET_MS = 15_000;
+/**
+ * 후보 **하나**의 재료 조회 상한.
+ *
+ * 예산(위)만으로는 안 먹었다. 실측(2026-08-15 프리뷰)에서 예산을 넣고도 이 단계가 30초를
+ * 넘겼다 — 예산은 **새로 시작하는 것**만 막고, 이미 시작한 항목은 끝날 때까지 기다리기
+ * 때문이다. 그리고 KR 항목 하나는 `fetchDartInsiderPurchasesForCode` 를 부르는데, 그것이
+ * **종목마다 7일 × 최대 3페이지 순차 루프(각 8초 타임아웃)를 다시 돈다.** 항목 하나가 분
+ * 단위로 매달릴 수 있다.
+ *
+ * 상한을 넘긴 항목은 재료 없이 간다(`null`) — 취소하지는 않으므로 남은 시간에 끝나면
+ * `next` 캐시에 남아 다음 요청이 빨라진다. 예산 15초 + 항목 상한 4초 = 이 단계는 19초 안에
+ * 끝난다. 종목별 중복 스캔 제거는 PHASE 4 다.
+ */
+const TARGETED_MATERIAL_ITEM_MS = 4_000;
 const NON_STOCK_NAME_PATTERN = /ETF|ETN|KODEX|TIGER|ACE|RISE|SOL\s|PLUS|KBSTAR|HANARO|히어로즈|레버리지|인버스|선물/i;
 const MATERIAL_NEWS_NOISE =
   /인기검색|검색\s?순위|주요\s?뉴스|오늘의\s?증시|마감\s?시황|장중\s?시황|특징주\s?모음|주식\s?초고수|초고수|단타|ETF|ETN|상장지수|레버리지|인버스|TOP\s?\d|상위\s?\d|회장|최고경영자|CEO|고백|회고|소회|인터뷰|기부|ESG|봉사|사회공헌|미담|창업주|오너|가문|고향|강연|도서|출간|어려울\s?때마다|찾았다/i;
@@ -2278,7 +2293,7 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
         materialSkipped += 1;
         return { ticker, event: null };
       }
-      return { ticker, event: await eventFromTargetedMaterial(value.row, asOf) };
+      return { ticker, event: await withDeadline(eventFromTargetedMaterial(value.row, asOf), TARGETED_MATERIAL_ITEM_MS) };
     }));
     if (materialSkipped > 0) {
       console.warn(
