@@ -11,7 +11,6 @@ import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
 import { StockLogoBadge } from "@/components/StockLogoBadge";
-import { ValuationChart } from "@/components/ValuationChart";
 
 /**
  * 카드 v3 (WO-G1B) → 3슬롯 (WO-SUB-08) → 위계 재설계 (WO-SUB-HOOK PART 2).
@@ -91,6 +90,18 @@ export function QuietPickCard({
   slots?: CardSlotPayload | undefined;
 }) {
   const [watched, setWatched] = useState(() => isWatched(pick.subject.canonical));
+  /**
+   * 유동성 문구를 중립 표기로 바꾼다. 괄호 안 실수치만 남기고 "얇아요" 같은 평가어를 뗀다.
+   * 형식이 달라 못 뽑으면 원문을 그대로 쓴다 — 값을 지어내지 않는다.
+   */
+  const liquidityMeta = (() => {
+    const note = pick.liquidityNote;
+    if (!note) return null;
+    const inner = note.match(/\(([^)]+)\)/)?.[1]?.trim();
+    if (!inner) return note;
+    return inner.startsWith("일") ? inner.replace(/^일\s*/, "일 거래 ") : inner;
+  })();
+
   const series = pick.price.sparkline ?? [];
   // 신호 시작점 = days 거래일 전 근처. "여기서 돈이 들어왔다".
   const markerIndex = series.length >= 2
@@ -105,7 +116,9 @@ export function QuietPickCard({
   const subLine = quietPickSubLine(hook, pick.signal.progress);
   const minHeight = quietCardMinHeight({
     substance: Boolean(slots?.substance),
-    valuation: Boolean(slots?.valuation),
+    // 값의 위치 블록을 앞면에서 뺐으므로 높이 계산에서도 뺀다 — 안 그러면 없어진 블록만큼
+    // 빈 공간이 남는다(§2-3 "빈 공간을 남기지 않는다").
+    valuation: false,
     signalStats: Boolean(pick.signalStats),
   });
 
@@ -136,6 +149,18 @@ export function QuietPickCard({
               {ticker(pick) && <span>{ticker(pick)}</span>}
               {ticker(pick) && pick.subject.identity && <span aria-hidden>·</span>}
               {pick.subject.identity && <span>{pick.subject.identity}</span>}
+              {/*
+                거래 규모 — **경고가 아니라 특징이다**(CTX-05 §3 · WO-RENDER-01 E-2).
+                시총 894억·일 거래 5.2억은 이 제품의 컨셉 그 자체다. 큰 회사는 조용할 수 없다.
+                종전에는 카드 하단에 `⚠ 거래가 얇아요` 로 붙어 약점처럼 읽혔다. 헤더의 중립
+                정보로 옮기고 경고 아이콘을 뗀다.
+              */}
+              {liquidityMeta && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span data-testid="pick-liquidity-meta">{liquidityMeta}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -221,13 +246,12 @@ export function QuietPickCard({
         <p className="mt-3 shrink-0 text-[13px] leading-5 text-whiteout">{slots.substance.text}</p>
       )}
 
-      {/* ③ 값의 위치 — 막대 + 배수 선 축소판. `renderable: false` 면 컴포넌트가 null 을 준다.
-          **감싸는 박스도 조건부다** — 컴포넌트만 null 이면 빈 상자가 남는다(실측으로 겪은 결함). */}
-      {slots?.valuation && (
-        <div className="mt-3 shrink-0">
-          <ValuationChart data={slots.valuation} compact />
-        </div>
-      )}
+      {/*
+        ③ 값의 위치(매출 막대 + 배수 선)는 **앞면에서 뺐다**(CTX-05 §2-1 · WO-RENDER-01 E-1).
+        판단 순서상 5순위 이하인데 카드에서 색이 가장 강한 요소라 위계를 뒤집고 있었다.
+        디테일 "값의 위치" 섹션에 남아 있다 — 지운 게 아니라 옮긴 것이다.
+        블록이 빠지면 아래가 올라와 카드 높이가 줄어든다(§2-3).
+      */}
 
       </div>
 
@@ -237,10 +261,6 @@ export function QuietPickCard({
         되돌아보는 선 · {repairPickCopy(pick.invalidation.text)}
       </p>
 
-      {/* 유동성 경고(WO-P4) — 얇으면 숨기지 않고 알린다. 위치는 되돌아보는 선 아래. */}
-      {pick.liquidityNote && (
-        <p className="mt-1 shrink-0 text-[11px] text-muted">⚠ {pick.liquidityNote}</p>
-      )}
 
       <div className="mt-auto flex shrink-0 items-center justify-between pt-3">
         <span className="font-pixel text-[11px] text-muted">더보기 →</span>
