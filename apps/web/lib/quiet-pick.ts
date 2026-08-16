@@ -194,6 +194,20 @@ export interface QuietPickConviction {
   };
 }
 
+/**
+ * 발행 시점 이례성 원료의 **실수치** (WO-SYNC F-2).
+ *
+ * 엔진은 `volumeVacuumRatio` · `pctAboveYearLow` · `volumePct` 를 실제로 계산하는데, 종전에는
+ * 그 값이 문장으로만 남고("거래가 평소의 30%로 말라 있었어요") **숫자가 사라졌다.**
+ * 2026-08-16 실사에서 발행 10장의 `anomalies` 수치 필드가 0개인 것이 확인됐다.
+ *
+ * 신규 수집 없이 회수 가능한 값이라 발행 시점에 그대로 박제한다. 카드가 문장을 되파싱하지
+ * 않아도 되고, 판단 원장에 같이 들어가 **사후 채점**이 가능해진다.
+ *
+ * `kind`·`actorNoun`·`scale`·`days` 는 이미 `signal` 에 있으므로 중복 저장하지 않는다.
+ */
+export type QuietPickSignalFacts = Omit<QuietPickAnomalyFacts, "kind" | "actorNoun" | "scale" | "days">;
+
 export interface QuietPick {
   subject: QuietPickSubject;
   price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
@@ -209,6 +223,8 @@ export interface QuietPick {
   chips: string[];
   /** 이례성 지표(칩 원료·디테일 "왜 지금인가") — 최소 1개(0개면 발행 안 함). 강도 내림차순. */
   anomalies: QuietPickAnomaly[];
+  /** 위 문장들의 원료 실수치(WO-SYNC F-2). 확보된 값만 실린다 — 미상 필드는 아예 없다. */
+  signalFacts?: QuietPickSignalFacts;
   invalidation: QuietPickInvalidation;
   conviction: QuietPickConviction;
   /** 종합점수(내부화 — 화면 노출 아님, 픽 근거·성적표 밴드용). */
@@ -1099,6 +1115,9 @@ export async function buildQuietPickResponse(options: {
     };
     const anomalies = computeQuietPickAnomalies(facts);
     if (anomalies.length === 0) { drop("no_anomaly"); continue; }
+    // WO-SYNC F-2 — 문장으로 녹기 전의 실수치를 그대로 남긴다. 신호 정체성(kind·actorNoun·
+    // scale·days)은 signal 이 이미 갖고 있으므로 뺀다.
+    const { kind: _factKind, actorNoun: _factActor, scale: _factScale, days: _factDays, ...signalFacts } = facts;
     const identity = companyIdentity(front, sig);
     const dataQuality: QuietPickDataQuality = {
       candles: availableCandles,
@@ -1135,6 +1154,7 @@ export async function buildQuietPickResponse(options: {
       hook: buildQuietPickHook(facts),
       chips: buildQuietPickChips(facts),
       anomalies,
+      ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {
         level: invalidationLevel,
         text: front.verdict.invalidation ?? "되돌아보는 선을 계산하려면 캔들이 더 필요해요",
@@ -1262,6 +1282,9 @@ export function quietPickLedgerEntries(
         ...(pick.companyScore != null ? { companyScore: pick.companyScore } : {}),
         order: index,
         ...(stamps?.get(pick.subject.canonical) ? { publication: stamps.get(pick.subject.canonical) } : {}),
+        // WO-SYNC F-2 — 이례성 원료의 실수치를 원장에도 남긴다. 이게 있어야 "그때 거래량이
+        // 평소의 몇 %였나" 를 나중에 문장 파싱 없이 채점할 수 있다.
+        ...(pick.signalFacts ? { signalFacts: pick.signalFacts } : {}),
         signal: {
           kind: pick.signal.kind,
           actors: pick.signal.actors,
