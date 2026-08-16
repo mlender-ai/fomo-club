@@ -20,7 +20,11 @@
 export interface QuietCardSlots {
   /** ② 실체 — 어디서 돈을 버는가 한 줄. */
   substance: boolean;
-  /** ③ 값의 위치 — 막대 차트 축소판. */
+  /**
+   * ③ 값의 위치 — **앞면에서 제거됨**(WO-RENDER-01 E-1). 디테일로 옮겼다.
+   * 필드는 호출부 호환을 위해 남기되 **높이에 기여하지 않는다** — 앞면에 없는 블록이
+   * 높이를 차지하면 그만큼 빈 공간이 남는다(CTX-05 §2-3).
+   */
   valuation: boolean;
   /** "이런 신호, 과거엔 어땠나" 블록. */
   signalStats: boolean;
@@ -33,12 +37,13 @@ const BASE_HEIGHT = 372;
 const SLOT_HEIGHT: Record<keyof QuietCardSlots, number> = {
   signalStats: 74,
   substance: 32,
-  valuation: 108,
+  // 앞면에서 뺐으므로 0. 값만 남겨 계약이 어디서 바뀌었는지 보이게 한다.
+  valuation: 0,
 };
 
 /**
  * 이 조합에서 카드가 가져야 할 최소 높이(px).
- * ①만 372 · ①② 404 · ①③ 480 · ①②③ 512 — 네 조합이 서로 다르다.
+ * ①만 372 · ①② 404. ③(값의 위치)은 앞면에서 빠져 높이를 바꾸지 않는다(E-1).
  */
 export function quietCardMinHeight(slots: QuietCardSlots): number {
   let height = BASE_HEIGHT;
@@ -58,7 +63,6 @@ export function quietCardBlocks(slots: QuietCardSlots): string[] {
     ...(slots.signalStats ? ["signalStats"] : []),
     "sparkline",
     ...(slots.substance ? ["substance"] : []),
-    ...(slots.valuation ? ["valuation"] : []),
     "recheckLine",
   ];
 }

@@ -32,8 +32,13 @@ test("완료 조건 5 — 슬롯 조합마다 카드 높이가 실제로 다르�
   expect(only1).toBeGreaterThan(0);
   // 슬롯이 붙을수록 카드가 커진다 — 빈 슬롯이 자리를 지키지 않는다.
   expect(with2).toBeGreaterThan(only1);
-  expect(with3).toBeGreaterThan(with2);
-  expect(all).toBeGreaterThan(with3);
+  /**
+   * ③ 값의 위치(매출 막대)는 **앞면에서 빠졌다**(WO-RENDER-01 E-1) — 디테일로 옮겼다.
+   * 그래서 ③ 유무는 앞면 높이를 바꾸지 않는다. 앞면에 없는 블록이 높이를 차지하면
+   * 그만큼 빈 공간이 남기 때문에, 같아야 하는 것이 맞다(CTX-05 §2-3).
+   */
+  expect(with3).toBe(only1);
+  expect(all).toBe(with2);
 });
 
 test("완료 조건 4 — 되돌아보는 선은 박스가 아니라 한 줄이다", async ({ page }) => {

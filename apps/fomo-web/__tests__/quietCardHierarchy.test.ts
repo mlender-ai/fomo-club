@@ -61,21 +61,23 @@ describe("카드 높이 — 슬롯 조합 4종 스냅샷 (D5 · 완료 조건 5)
     "①②③": { substance: true, valuation: true, signalStats: false },
   } as const;
 
-  it("조합마다 최소 높이가 실제로 다르다", () => {
-    const heights = Object.values(combos).map(quietCardMinHeight);
-    expect(new Set(heights).size).toBe(heights.length);
-    // 슬롯이 늘수록 카드가 커진다(빈 슬롯이 자리를 지키지 않는다).
+  it("앞면에 남은 슬롯이 붙으면 카드가 커진다", () => {
+    // 빈 슬롯이 자리를 지키지 않는다.
     expect(quietCardMinHeight(combos["①만"])).toBeLessThan(quietCardMinHeight(combos["①②"]));
-    expect(quietCardMinHeight(combos["①②"])).toBeLessThan(quietCardMinHeight(combos["①③"]));
-    expect(quietCardMinHeight(combos["①③"])).toBeLessThan(quietCardMinHeight(combos["①②③"]));
+  });
+
+  it("**③ 값의 위치는 앞면 높이를 바꾸지 않는다** — 앞면에서 뺐다(WO-RENDER-01 E-1)", () => {
+    // 앞면에 없는 블록이 높이를 차지하면 그만큼 빈 공간이 남는다(CTX-05 §2-3).
+    expect(quietCardMinHeight(combos["①③"])).toBe(quietCardMinHeight(combos["①만"]));
+    expect(quietCardMinHeight(combos["①②③"])).toBe(quietCardMinHeight(combos["①②"]));
   });
 
   it("높이 스냅샷 — 값이 바뀌면 의도한 변경인지 확인한다", () => {
     expect(Object.fromEntries(Object.entries(combos).map(([k, v]) => [k, quietCardMinHeight(v)]))).toEqual({
       "①만": 372,
       "①②": 404,
-      "①③": 480,
-      "①②③": 512,
+      "①③": 372,
+      "①②③": 404,
     });
   });
 
@@ -88,7 +90,8 @@ describe("카드 높이 — 슬롯 조합 4종 스냅샷 (D5 · 완료 조건 5)
       "sparkline",
       "recheckLine",
     ]);
-    expect(quietCardBlocks(combos["①②③"])).toContain("valuation");
+    // 값의 위치는 앞면 블록 목록에서 통째로 빠졌다 — 디테일로 옮겼다.
+    expect(quietCardBlocks(combos["①②③"])).not.toContain("valuation");
     expect(quietCardBlocks(combos["①만"])).not.toContain("valuation");
   });
 
