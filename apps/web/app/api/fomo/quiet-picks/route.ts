@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { withCors, corsJson, cacheVersion, kstDate } from "../../../../lib/fomo";
-import { readFeedContent } from "../../../../lib/feed-content-store";
+import { readFeedContentStrict } from "../../../../lib/feed-content-store";
 import type { QuietPickResponse } from "../../../../lib/quiet-pick";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +9,13 @@ export const maxDuration = 20;
 
 const ACTIVE_ID = "quiet-pick:active";
 
+/**
+ * 읽기 실패를 삼키지 않는다 — 예외는 GET 의 catch 로 올라가 `reason: "store-read-failed"` 가 된다.
+ * 던지면 `unstable_cache` 가 그 결과를 캐시하지 않는다는 점도 중요하다: 일시적 DB 오류를 null 로
+ * 바꿔 돌려주면 그 null 이 300초 동안 "발행 전" 으로 굳는다.
+ */
 async function resolveQuietPicks(): Promise<QuietPickResponse | null> {
-  return readFeedContent<QuietPickResponse>(ACTIVE_ID);
+  return readFeedContentStrict<QuietPickResponse>(ACTIVE_ID);
 }
 
 const getCachedQuietPicks = unstable_cache(
@@ -30,7 +35,7 @@ export async function GET() {
     if (!response) {
       return withCors(
         NextResponse.json(
-          { asOf: new Date().toISOString(), date: kstDate(), picks: [], qualification: null, source: "quiet-pick-engine" },
+          { asOf: new Date().toISOString(), date: kstDate(), picks: [], qualification: null, source: "quiet-pick-engine", reason: "not-published" },
           { status: 503, headers: { "Cache-Control": "no-store" } }
         )
       );
@@ -41,9 +46,11 @@ export async function GET() {
       : "public, s-maxage=300, stale-while-revalidate=1800";
     return corsJson(response, { headers: { "Cache-Control": cacheControl } });
   } catch (error) {
+    // 스냅샷 부재와 같은 503 이지만 원인이 다르다. 바깥에서 구분되지 않으면 장애가 "발행 전" 으로 위장된다.
+    console.error("[fomo/quiet-picks] store read failed", error instanceof Error ? error.message : error);
     return withCors(
       NextResponse.json(
-        { error: error instanceof Error ? error.message : "quiet-picks failed", picks: [] },
+        { error: error instanceof Error ? error.message : "quiet-picks failed", picks: [], reason: "store-read-failed" },
         { status: 503, headers: { "Cache-Control": "no-store" } }
       )
     );
