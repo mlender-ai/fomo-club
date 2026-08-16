@@ -483,7 +483,7 @@ describe("캡션 — 템플릿만, 금지어 없음 (§4 규칙 1)", () => {
       "QUALITY_COMPOUNDER",
       RULESET
     );
-    expect(chart.captions.some((c) => c.includes("확보되지 않았습니다"))).toBe(true);
+    expect(chart.captions.some((c) => c.includes("위치를 말할 수 없어요"))).toBe(true);
     expect(chart.captions.some((c) => c.includes("% 구간"))).toBe(false);
   });
 });
