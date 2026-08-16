@@ -216,10 +216,49 @@ export async function appendJudgmentLedger(entries: readonly LedgerAppendInput[]
       payload: jsonSafe(payload),
       priceAt: new Prisma.Decimal(entry.priceAt),
       actor: entry.actor,
-      idempotencyKey: contentKey,
+      /**
+       * 호출자가 만든 안정 키를 쓴다. 예전에는 이 자리에 `contentKey`(페이로드 해시)를 넣어
+       * **호출자 키를 통째로 버렸다** — 그래서 페이로드에 휘발성 필드가 하나라도 있으면 재시도가
+       * 멱등하지 않았다. quiet-pick 이 정확히 그 경우다: 발행 스탬프의 `reference_price_as_of` 가
+       * 매 실행 `response.asOf`(new Date()) 라 같은 날 두 번 구우면 selection 행이 중복됐다.
+       *
+       * `score` 만 예외로 내용 키를 유지한다. 같은 날 재계산분을 새 행으로 남기고 `_ledger.supersedes`
+       * 로 이전 행을 가리키는 것이 의도된 동작이라, 여기서 키가 고정되면 재계산이 통째로 삼켜진다.
+       */
+      idempotencyKey: entry.kind === "score" ? contentKey : entry.idempotencyKey,
     };
   });
-  const result = await prisma.judgmentLedger.createMany({ data: rows, skipDuplicates: true });
+  /**
+   * 이미 기록된 selection 은 키 방식이 바뀌기 전(내용 해시) 행일 수 있다. 키만 고쳐두면 그런 날을
+   * 다시 구울 때 새 키로 INSERT 되어 결국 중복이 난다. selection 은 (날짜·자산·종목·행위자) 당
+   * 한 행이므로 — 엔진분과 위원회분은 actor 로 갈린다 — 존재 검사로 한 번 더 막는다.
+   */
+  const selections = rows.filter((row) => row.kind === "selection");
+  const alreadyRecorded = new Set<string>();
+  if (selections.length > 0) {
+    const existing = await prisma.judgmentLedger.findMany({
+      where: {
+        kind: "selection",
+        OR: selections.map((row) => ({
+          date: row.date,
+          asset: row.asset,
+          canonical: row.canonical,
+          actor: row.actor,
+        })),
+      },
+      select: { date: true, asset: true, canonical: true, actor: true },
+    });
+    for (const row of existing) {
+      alreadyRecorded.add(`${row.date}\u001f${row.asset}\u001f${row.canonical}\u001f${row.actor}`);
+    }
+  }
+  const insertable = rows.filter(
+    (row) =>
+      row.kind !== "selection" ||
+      !alreadyRecorded.has(`${row.date}\u001f${row.asset}\u001f${row.canonical}\u001f${row.actor}`)
+  );
+  if (insertable.length === 0) return 0;
+  const result = await prisma.judgmentLedger.createMany({ data: insertable, skipDuplicates: true });
   return result.count;
 }
 
