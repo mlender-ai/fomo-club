@@ -252,6 +252,17 @@ export function buildValuationFrameNotes(
   if (line.caption) captions.push(line.caption);
   const bandText = line.label === null ? null : bandCaption(band, line.label);
   if (bandText) captions.push(bandText);
+  /**
+   * CTX-05 §4-2 는 "밴드가 없으면 밴드를 보라는 경고문을 띄우지 않는다" 를 요구한다.
+   * **여기서는 아직 적용하지 않았다** — 기존 불변식과 충돌하기 때문이다.
+   *
+   * WO-SUB-HOOK D8 은 정반대를 명시한다: 차트가 안 그려지는 종목에서 경고문까지 사라지면
+   * INV-11 이 화면에서 무효가 되므로, 이 함수는 **차트 렌더 가능 여부와 무관하게** 경고문을
+   * 남기도록 일부러 분리돼 있다(위 주석 참조). 실제로 `BANK_FINANCIAL` 회귀 테스트가 그것을 고정한다.
+   *
+   * 두 요구가 같은 줄에서 부딪히므로 사람 판단이 필요하다. 캡션 문구는 §4-2 대로 고쳐
+   * "못 준다" 를 분명히 했고, 경고문 억제는 판단 후에 붙인다.
+   */
   return { captions, warning: frame.warning_full, band_label: line.label };
 }
 

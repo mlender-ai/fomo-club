@@ -43,7 +43,8 @@ export function findForbiddenWords(caption: string): string[] {
 export function bandCaption(band: BandStat | null, metricLabel: string): string | null {
   if (!band) return null;
   if (!band.sufficient || band.current_percentile === null) {
-    return "5년 밴드를 계산할 만큼의 이력이 확보되지 않았습니다.";
+    // CTX-05 §4-2 — 못 준다고 해놓고 보라고 하지 않는다. 무엇을 말할 수 없는지까지 밝힌다.
+    return `5년 밴드를 계산할 만큼의 이력이 없어서 ${metricLabel}의 위치를 말할 수 없어요.`;
   }
   const pct = Math.round(band.current_percentile);
   const asOf = band.window_end;
