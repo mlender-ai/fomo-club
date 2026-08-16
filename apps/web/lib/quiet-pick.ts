@@ -195,6 +195,28 @@ export interface QuietPickConviction {
 }
 
 /**
+ * 훅과 디테일이 같은 사실에 다른 숫자를 달지 않게 맞춘다 (WO-SYNC F-1).
+ *
+ * 문제: 훅의 연속일수는 픽 엔진의 `signal.days` 인데, 디테일 문장(`front.wyckoff.summary`)은
+ * **다른 파이프라인**(verdict 의 `institutionNetStreak`)에서 자기 숫자를 따로 만든다. 그래서
+ * 2026-08-15 발행분에서 `institution_streak` 카드 2장 **모두** 어긋났다 — 26 vs 20, 6 vs 4.
+ * 같은 화면에 두 숫자가 붙으면 사용자는 둘 다 믿지 않는다.
+ *
+ * 정본은 `signal.days` 다: 빅텍은 `startedAt 2026-07-09` → 발행일까지 약 26거래일로
+ * `signal.days=26` 과 맞고, 디테일의 20 이 뒤처진 값이었다. 훅·칩·`progress`·판단 원장이
+ * 전부 이 값을 쓰므로 축도 여기로 모은다.
+ *
+ * **같은 주체의 연속일수 주장일 때만** 숫자를 맞춘다. 훅이 임원(내부자)을 말하는 카드에서
+ * 디테일이 기관 수급을 말하는 것은 서로 다른 사실이므로 건드리지 않는다.
+ */
+export function reconcileStreakClaim(summary: string, actors: string, days: number): string {
+  if (!Number.isFinite(days) || days <= 0) return summary;
+  return summary.replace(/(외국인|기관)(\s*)(\d+)(일\s*연속)/g, (whole, actor: string, gap: string, stated: string, tail: string) =>
+    actors.includes(actor) && Number(stated) !== days ? `${actor}${gap}${days}${tail}` : whole
+  );
+}
+
+/**
  * 발행 시점 이례성 원료의 **실수치** (WO-SYNC F-2).
  *
  * 엔진은 `volumeVacuumRatio` · `pctAboveYearLow` · `volumePct` 를 실제로 계산하는데, 종전에는
@@ -1163,7 +1185,9 @@ export async function buildQuietPickResponse(options: {
         whyCompany: front.score?.interpretation || front.score?.label || "",
         whyNow: {
           ...(front.verdict.phase ? { phase: front.verdict.phase } : {}),
-          ...(front.wyckoff?.summary ? { summary: front.wyckoff.summary } : {}),
+          ...(front.wyckoff?.summary
+            ? { summary: reconcileStreakClaim(front.wyckoff.summary, sig.actors, sig.days) }
+            : {}),
           ...(zone ? { keyLevels: { low: zone.low, high: zone.high } } : {}),
         },
         committee: {
