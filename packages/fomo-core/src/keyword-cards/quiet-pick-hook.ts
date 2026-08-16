@@ -162,7 +162,18 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
       strength: f.volumeVacuumRatio <= 0.4 ? 3.5 : 2.6,
       text: `거래가 평소의 ${pct}%로 말라 있었어요`,
       chip: `거래량 평소의 ${pct}%`,
-      axis: "position",
+      /**
+       * 거래량 이야기이므로 `quiet` 다. 종전에는 `position` 이었는데 그게 두 가지를 망가뜨렸다
+       * (CTX-05 §5 · 2026-08-16 발행분 실측).
+       *
+       * ① 같은 거래량 사실인 `silence`("거래량은 그대로")가 `quiet` 라 **축 중복 제거를 빠져나가**
+       *    두 칩이 함께 실렸다 — 빅텍 카드가 정확히 그랬다.
+       * ② `position` 은 `near_low`("52주 저점 +N%")의 축인데 이쪽 강도가 더 높아
+       *    **진짜 가격 위치 칩을 밀어냈다.**
+       *
+       * 이제 거래량끼리 한 축에서 겨루고(강도순으로 하나만 남는다) `position` 은 가격에 돌려준다.
+       */
+      axis: "quiet",
     });
   }
 

@@ -194,6 +194,42 @@ export interface QuietPickConviction {
   };
 }
 
+/**
+ * 훅과 디테일이 같은 사실에 다른 숫자를 달지 않게 맞춘다 (WO-SYNC F-1).
+ *
+ * 문제: 훅의 연속일수는 픽 엔진의 `signal.days` 인데, 디테일 문장(`front.wyckoff.summary`)은
+ * **다른 파이프라인**(verdict 의 `institutionNetStreak`)에서 자기 숫자를 따로 만든다. 그래서
+ * 2026-08-15 발행분에서 `institution_streak` 카드 2장 **모두** 어긋났다 — 26 vs 20, 6 vs 4.
+ * 같은 화면에 두 숫자가 붙으면 사용자는 둘 다 믿지 않는다.
+ *
+ * 정본은 `signal.days` 다: 빅텍은 `startedAt 2026-07-09` → 발행일까지 약 26거래일로
+ * `signal.days=26` 과 맞고, 디테일의 20 이 뒤처진 값이었다. 훅·칩·`progress`·판단 원장이
+ * 전부 이 값을 쓰므로 축도 여기로 모은다.
+ *
+ * **같은 주체의 연속일수 주장일 때만** 숫자를 맞춘다. 훅이 임원(내부자)을 말하는 카드에서
+ * 디테일이 기관 수급을 말하는 것은 서로 다른 사실이므로 건드리지 않는다.
+ */
+export function reconcileStreakClaim(summary: string, actors: string, days: number): string {
+  if (!Number.isFinite(days) || days <= 0) return summary;
+  return summary.replace(/(외국인|기관)(\s*)(\d+)(일\s*연속)/g, (whole, actor: string, gap: string, stated: string, tail: string) =>
+    actors.includes(actor) && Number(stated) !== days ? `${actor}${gap}${days}${tail}` : whole
+  );
+}
+
+/**
+ * 발행 시점 이례성 원료의 **실수치** (WO-SYNC F-2).
+ *
+ * 엔진은 `volumeVacuumRatio` · `pctAboveYearLow` · `volumePct` 를 실제로 계산하는데, 종전에는
+ * 그 값이 문장으로만 남고("거래가 평소의 30%로 말라 있었어요") **숫자가 사라졌다.**
+ * 2026-08-16 실사에서 발행 10장의 `anomalies` 수치 필드가 0개인 것이 확인됐다.
+ *
+ * 신규 수집 없이 회수 가능한 값이라 발행 시점에 그대로 박제한다. 카드가 문장을 되파싱하지
+ * 않아도 되고, 판단 원장에 같이 들어가 **사후 채점**이 가능해진다.
+ *
+ * `kind`·`actorNoun`·`scale`·`days` 는 이미 `signal` 에 있으므로 중복 저장하지 않는다.
+ */
+export type QuietPickSignalFacts = Omit<QuietPickAnomalyFacts, "kind" | "actorNoun" | "scale" | "days">;
+
 export interface QuietPick {
   subject: QuietPickSubject;
   price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
@@ -209,6 +245,8 @@ export interface QuietPick {
   chips: string[];
   /** 이례성 지표(칩 원료·디테일 "왜 지금인가") — 최소 1개(0개면 발행 안 함). 강도 내림차순. */
   anomalies: QuietPickAnomaly[];
+  /** 위 문장들의 원료 실수치(WO-SYNC F-2). 확보된 값만 실린다 — 미상 필드는 아예 없다. */
+  signalFacts?: QuietPickSignalFacts;
   invalidation: QuietPickInvalidation;
   conviction: QuietPickConviction;
   /** 종합점수(내부화 — 화면 노출 아님, 픽 근거·성적표 밴드용). */
@@ -1099,6 +1137,9 @@ export async function buildQuietPickResponse(options: {
     };
     const anomalies = computeQuietPickAnomalies(facts);
     if (anomalies.length === 0) { drop("no_anomaly"); continue; }
+    // WO-SYNC F-2 — 문장으로 녹기 전의 실수치를 그대로 남긴다. 신호 정체성(kind·actorNoun·
+    // scale·days)은 signal 이 이미 갖고 있으므로 뺀다.
+    const { kind: _factKind, actorNoun: _factActor, scale: _factScale, days: _factDays, ...signalFacts } = facts;
     const identity = companyIdentity(front, sig);
     const dataQuality: QuietPickDataQuality = {
       candles: availableCandles,
@@ -1135,6 +1176,7 @@ export async function buildQuietPickResponse(options: {
       hook: buildQuietPickHook(facts),
       chips: buildQuietPickChips(facts),
       anomalies,
+      ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {
         level: invalidationLevel,
         text: front.verdict.invalidation ?? "되돌아보는 선을 계산하려면 캔들이 더 필요해요",
@@ -1143,7 +1185,9 @@ export async function buildQuietPickResponse(options: {
         whyCompany: front.score?.interpretation || front.score?.label || "",
         whyNow: {
           ...(front.verdict.phase ? { phase: front.verdict.phase } : {}),
-          ...(front.wyckoff?.summary ? { summary: front.wyckoff.summary } : {}),
+          ...(front.wyckoff?.summary
+            ? { summary: reconcileStreakClaim(front.wyckoff.summary, sig.actors, sig.days) }
+            : {}),
           ...(zone ? { keyLevels: { low: zone.low, high: zone.high } } : {}),
         },
         committee: {
@@ -1262,6 +1306,9 @@ export function quietPickLedgerEntries(
         ...(pick.companyScore != null ? { companyScore: pick.companyScore } : {}),
         order: index,
         ...(stamps?.get(pick.subject.canonical) ? { publication: stamps.get(pick.subject.canonical) } : {}),
+        // WO-SYNC F-2 — 이례성 원료의 실수치를 원장에도 남긴다. 이게 있어야 "그때 거래량이
+        // 평소의 몇 %였나" 를 나중에 문장 파싱 없이 채점할 수 있다.
+        ...(pick.signalFacts ? { signalFacts: pick.signalFacts } : {}),
         signal: {
           kind: pick.signal.kind,
           actors: pick.signal.actors,

@@ -1086,6 +1086,21 @@ export interface QuietPick {
    */
   chips?: string[];
   anomalies: QuietPickAnomaly[];
+  /**
+   * 이례성 문장의 원료 **실수치**(WO-SYNC F-2). 확보된 값만 실린다 — 미상 필드는 아예 없다.
+   * 카드는 문장을 되파싱하지 말고 이 값을 쓴다.
+   */
+  signalFacts?: {
+    priorBuys12mo?: number;
+    volumePct?: number;
+    mcapPct?: number;
+    mentionCount?: number;
+    volumeElevated?: boolean;
+    isLongestStreak?: boolean;
+    streakWindowDays?: number;
+    volumeVacuumRatio?: number;
+    pctAboveYearLow?: number;
+  };
   invalidation: { level: number | null; text: string };
   conviction: {
     whyCompany: string;
