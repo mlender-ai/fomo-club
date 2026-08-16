@@ -1,0 +1,13 @@
+{
+  "name": "@fomo/materials",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "npm run typecheck",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
