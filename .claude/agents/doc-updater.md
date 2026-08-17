@@ -18,7 +18,7 @@ description: FOMO Club v5 SSOT 문서 동기화. PRODUCT_VISION을 최상위로 
 - `docs/KEYWORD_ENGINE_SPEC.md` — 종목 카드·포모 점수·💎·TA 사실층
 - `docs/AGENT_REDESIGN.md`, `AGENTS.md`, `CLAUDE.md` — 에이전트 운영/라우팅 규칙
 - `docs/AGENT_ACTIONS_COST_AND_GUARDS.md` — 에이전트 비용·가드 변경 시
-- `GSTACK.md` — 새 환경변수, 패키지 추가 시
+- `.env.example` · `package.json` — 새 환경변수·패키지 추가 시 (구 `GSTACK.md` 는 `docs/legacy/` 로 내렸다 — 타로 시대 구조를 기술해 현행 아님)
 - `packages/shared/src/index.ts` — 새 export 추가 시
 - `.env.example` — 새 환경변수 추가 시
 - `prisma/schema.prisma` 변경 시 → 관련 docs 업데이트

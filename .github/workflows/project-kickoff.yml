@@ -1,7 +1,7 @@
 name: Project Kickoff
 
 # 톱다운 워크플로 — 인간 오너가 Slack [[ACTION:select_project]] (또는 수동 실행)으로
-# 활성 프로젝트를 선택하면: ① PROJECT_ROADMAP.md status=active 갱신·커밋
+# 활성 프로젝트를 선택하면: ① docs/legacy/PROJECT_ROADMAP.md status=active 갱신·커밋
 # ② (P2에서 추가) 4축 에이전트 회의로 프로젝트를 project:<id> 이슈 세트로 분해.
 on:
   workflow_dispatch:
@@ -30,17 +30,17 @@ jobs:
         with:
           node-version: 20
 
-      - name: Select active project (PROJECT_ROADMAP.md 갱신)
+      - name: Select active project (docs/legacy/PROJECT_ROADMAP.md 갱신)
         id: select
         run: |
           set -uo pipefail
           PID="${{ github.event.inputs.project_id }}"
-          if [ ! -f PROJECT_ROADMAP.md ]; then
-            echo "msg=PROJECT_ROADMAP.md 없음 — 선택 불가" >> "$GITHUB_OUTPUT"
+          if [ ! -f docs/legacy/PROJECT_ROADMAP.md ]; then
+            echo "msg=docs/legacy/PROJECT_ROADMAP.md 없음 — 선택 불가" >> "$GITHUB_OUTPUT"
             echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           # select 는 성공 시 파일을 덮어쓰고 메시지를 stdout 으로, 실패 시 exit≠0 + stderr.
-          if MSG=$(npx -y tsx@4.19.2 scripts/project-roadmap.ts select PROJECT_ROADMAP.md "$PID" 2>/tmp/sel_err); then
+          if MSG=$(npx -y tsx@4.19.2 scripts/project-roadmap.ts select docs/legacy/PROJECT_ROADMAP.md "$PID" 2>/tmp/sel_err); then
             echo "ok=true" >> "$GITHUB_OUTPUT"
             echo "msg=$MSG" >> "$GITHUB_OUTPUT"
           else
@@ -48,7 +48,7 @@ jobs:
             echo "msg=$(cat /tmp/sel_err)" >> "$GITHUB_OUTPUT"
           fi
           # 활성 프로젝트 메타(분해 step 입력용)
-          npx -y tsx@4.19.2 scripts/project-roadmap.ts active PROJECT_ROADMAP.md > /tmp/active.json || echo "null" > /tmp/active.json
+          npx -y tsx@4.19.2 scripts/project-roadmap.ts active docs/legacy/PROJECT_ROADMAP.md > /tmp/active.json || echo "null" > /tmp/active.json
           {
             echo "### 🗺️ Project Kickoff: $PID"
             cat /tmp/sel_err 2>/dev/null || true
@@ -59,13 +59,13 @@ jobs:
         if: steps.select.outputs.ok == 'true'
         run: |
           set -uo pipefail
-          if git diff --quiet PROJECT_ROADMAP.md; then
+          if git diff --quiet docs/legacy/PROJECT_ROADMAP.md; then
             echo "변경 없음 (이미 active) — 커밋 생략"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add PROJECT_ROADMAP.md
+          git add docs/legacy/PROJECT_ROADMAP.md
           git commit -m "chore(roadmap): ${{ github.event.inputs.project_id }} 활성화 (project kickoff)"
           git push origin HEAD:main
 

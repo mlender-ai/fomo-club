@@ -30,10 +30,10 @@ jobs:
         id: active
         run: |
           set -uo pipefail
-          if [ ! -f PROJECT_ROADMAP.md ]; then
+          if [ ! -f docs/legacy/PROJECT_ROADMAP.md ]; then
             echo "has=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          npx -y tsx@4.19.2 scripts/project-roadmap.ts active PROJECT_ROADMAP.md > /tmp/active.json 2>/dev/null || echo "null" > /tmp/active.json
+          npx -y tsx@4.19.2 scripts/project-roadmap.ts active docs/legacy/PROJECT_ROADMAP.md > /tmp/active.json 2>/dev/null || echo "null" > /tmp/active.json
           ID=$(jq -r '.id // empty' /tmp/active.json 2>/dev/null || echo "")
           TITLE=$(jq -r '.title // ""' /tmp/active.json 2>/dev/null || echo "")
           if [ -n "$ID" ]; then
@@ -43,7 +43,7 @@ jobs:
           else
             echo "has=false" >> "$GITHUB_OUTPUT"
           fi
-          npx -y tsx@4.19.2 scripts/project-roadmap.ts summary PROJECT_ROADMAP.md > /tmp/summary.txt 2>/dev/null || echo "(로드맵 요약 실패)" > /tmp/summary.txt
+          npx -y tsx@4.19.2 scripts/project-roadmap.ts summary docs/legacy/PROJECT_ROADMAP.md > /tmp/summary.txt 2>/dev/null || echo "(로드맵 요약 실패)" > /tmp/summary.txt
 
       - name: Build progress report (활성 프로젝트)
         id: progress

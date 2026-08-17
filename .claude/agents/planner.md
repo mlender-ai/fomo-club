@@ -38,5 +38,5 @@ description: 새 기능 구현 시작 시 설계 청사진 작성. 기존 코드
 ## 규칙
 
 - 중복 구현 금지. 기존 코드가 있으면 반드시 import하여 확장.
-- GSTACK.md의 기술 스택 체계를 벗어나지 않는다.
+- 실재하는 기술 스택(`package.json` · `apps/*/package.json`)을 벗어나지 않는다. 구 `GSTACK.md` 는 현행 아님(`docs/legacy/`).
 - 계획만 작성. 구현은 하지 않는다.

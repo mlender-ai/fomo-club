@@ -18,7 +18,7 @@ push/PR 전 최종 품질 검사.
 
 ### 패턴 일관성
 - [ ] 기존 네이밍 컨벤션 준수
-- [ ] 폴더 구조가 GSTACK.md와 일치
+- [ ] 폴더 구조가 **실재 레포 구조**(`apps/` · `packages/` · `scripts/`)와 일치 — 구 `GSTACK.md` 는 현행 아님(`docs/legacy/`)
 - [ ] export 방식 일관성
 
 ### 테스트

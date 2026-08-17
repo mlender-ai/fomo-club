@@ -1,5 +1,5 @@
 /**
- * PROJECT_ROADMAP.md 파서/셀렉터 (톱다운 워크플로 P1).
+ * docs/legacy/PROJECT_ROADMAP.md 파서/셀렉터 (톱다운 워크플로 P1).
  *
  * 로드맵은 사람이 읽는 마크다운이자 기계가 파싱하는 단일 진실이다.
  * 형식: `## <id> · <title>` 헤딩 + 그 아래 `- **key**: value` 라인.

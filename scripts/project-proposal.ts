@@ -2,11 +2,11 @@
  * CEO 프로젝트 제안 — 후보 파서/로드맵 렌더 (톱다운 워크플로, "리스트업" 선행 단계).
  *
  * propose-project.yml 의 CEO 에이전트(LLM)가 제품(docs·OKR·현 상태)을 분석해 프로젝트 후보를
- * JSON 으로 제안하면, 이 순수 모듈이 검증 → PROJECT_ROADMAP.md 재생성 + 사람이 검토할 제안서를 렌더한다.
+ * JSON 으로 제안하면, 이 순수 모듈이 검증 → docs/legacy/PROJECT_ROADMAP.md 재생성 + 사람이 검토할 제안서를 렌더한다.
  * 사람은 "이 에이전트가 제품을 제대로 이해했나"를 검토하고 1개를 선택(select_project)한다.
  *
  * 순수 export 함수 + main() CLI.
- *   roadmap <candidates.json>   → PROJECT_ROADMAP.md 전문을 stdout
+ *   roadmap <candidates.json>   → docs/legacy/PROJECT_ROADMAP.md 전문을 stdout
  *   issue <candidates.json>     → 검토용 제안서 마크다운을 stdout
  */
 
@@ -95,7 +95,7 @@ const ROADMAP_FOOTER = `
 - 프로젝트 완료 → retro → 다음 후보 surfacing.
 `;
 
-/** 후보 배열 → PROJECT_ROADMAP.md 전문 (project-roadmap.ts 가 재파싱 가능한 형식). */
+/** 후보 배열 → docs/legacy/PROJECT_ROADMAP.md 전문 (project-roadmap.ts 가 재파싱 가능한 형식). */
 export function renderRoadmap(candidates: ProjectCandidate[]): string {
   const blocks = candidates
     .map((c) =>
