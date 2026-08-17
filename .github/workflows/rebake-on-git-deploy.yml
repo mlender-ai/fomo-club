@@ -54,8 +54,124 @@ permissions:
 
 env:
   API_BASE: https://fomo-club-backend.vercel.app
+  WEB_BASE: https://fomo-web-mlender-ais-projects.vercel.app
+  # 워크플로의 alias 대상이 정본이다(`vercel-production-deploy.yml`).
+  WEB_PROJECT_ID: prj_dfwSKviFgdUg7MocHAqiBEPmaxcV
+  VERCEL_TEAM_ID: team_wfSGvSkBTXHZXDsG26LtLT1B
 
 jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 프론트 정규 별칭을 이 커밋으로 옮긴다.
+  #
+  # ## 왜 이 잡이 필요한가 (2026-08-17 실측)
+  #
+  # 백엔드 정규 도메인 `fomo-club-backend.vercel.app` 은 **프로젝트 도메인으로 등록돼 있어**
+  # Git 자동배포가 별칭을 따라 옮긴다. 프론트 정규 도메인
+  # `fomo-web-mlender-ais-projects.vercel.app` 은 **그냥 별칭**이다 — `vercel-production-deploy.yml`
+  # 의 `alias set` 스텝이 붙여준 것뿐이다. 그래서 **Git 자동배포는 프론트 별칭을 옮기지 않는다.**
+  #
+  # 실측: 머지 직후 프론트 최신 프로덕션 배포는 READY 이면서 **별칭이 0개**였고, 정규 도메인은
+  # 1시간 반 전 빌드를 서빙했다(buildId `bd2mmusvXRD45Bco6elhc` vs 최신 `hTFMwPFrh0rn8vZBGJTwG`).
+  # **#1076 과 같은 사고가 구조적으로 재발하고 있었다** — 프론트 코드 머지는 사람이 워크플로를
+  # 수동 실행하지 않으면 화면에 닿지 않는다.
+  #
+  # ## 이 잡의 처리
+  #
+  # "가장 최신 배포" 를 붙이지 않는다 — 그건 다른 브랜치·재배포일 수 있다. **이 커밋의 SHA 와
+  # 일치하는 READY 프로덕션 배포**를 찾아서 붙인다. 못 찾으면 실패로 끝낸다(엉뚱한 빌드 금지).
+  #
+  # ## 더 튼튼한 처방 (사람 필요)
+  #
+  # 이 잡은 별칭을 매번 다시 붙이는 **보정**이다. 근본 처방은 Vercel 에서
+  # `fomo-web-mlender-ais-projects.vercel.app` 을 `fomo-web` 프로젝트의 **프로덕션 도메인으로 등록**해
+  # 백엔드와 같은 취급을 받게 하는 것이다. 그건 레포가 아니라 Vercel 설정이라 사람이 해야 한다.
+  # 등재: `docs/STATUS.md`.
+  # ───────────────────────────────────────────────────────────────────────────
+  align-web-alias:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      outcome: ${{ steps.align.outputs.outcome }}
+      deployment: ${{ steps.align.outputs.deployment }}
+    steps:
+      - name: Resolve target commit
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="${{ inputs.sha }}"
+          if [ -z "$sha" ]; then sha="${{ github.sha }}"; fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Point the canonical web domain at this commit
+        id: align
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -uo pipefail
+          target="${{ steps.target.outputs.sha }}"
+          domain="${WEB_BASE#https://}"
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN 이 없어 프론트 별칭을 옮길 수 없다. 프론트 머지는 화면에 닿지 않는다."
+            echo "outcome=no-token" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          # 이 커밋의 READY 프로덕션 배포를 찾는다. 빌드가 끝날 때까지 최대 15분 기다린다.
+          deadline=$(( $(date +%s) + 900 ))
+          url=""
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            list="$(curl -s --max-time 30 \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$WEB_PROJECT_ID&teamId=$VERCEL_TEAM_ID&target=production&limit=20" || true)"
+            url="$(printf '%s' "$list" | TARGET="$target" node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                try{
+                  const j=JSON.parse(s);
+                  const hit=(j.deployments||[]).find(d=>
+                    (d.meta?.githubCommitSha||d.meta?.gitCommitSha)===process.env.TARGET &&
+                    (d.state||d.readyState)==="READY");
+                  process.stdout.write(hit?.url??"");
+                }catch{process.stdout.write("")}
+              })' 2>/dev/null || true)"
+            if [ -n "$url" ]; then break; fi
+            echo "이 커밋($target)의 READY 프론트 프로덕션 배포를 아직 못 찾았다 — 30초 후 재시도"
+            sleep 30
+          done
+
+          if [ -z "$url" ]; then
+            echo "::error::15분 안에 커밋 $target 의 READY 프론트 프로덕션 배포를 찾지 못했다. 별칭을 옮기지 않는다(엉뚱한 빌드를 붙이지 않는다)."
+            echo "outcome=not-found" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          echo "대상 배포: https://$url"
+          echo "deployment=https://$url" >> "$GITHUB_OUTPUT"
+          npx --yes vercel@latest alias set "$url" "$domain" --token="$VERCEL_TOKEN" --scope="$VERCEL_TEAM_ID"
+
+          # 붙였다고 끝이 아니다 — 정규 도메인에 물어 확인한다.
+          ok="no"
+          for _ in 1 2 3 4 5 6; do
+            served="$(curl -s -H 'Cache-Control: no-cache' --max-time 30 \
+              "$WEB_BASE/api/ops/version?cb=$(date +%s)-$RANDOM" | node -e '
+                let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                  try{process.stdout.write(String(JSON.parse(s).commit??""))}catch{process.stdout.write("")}
+                })' 2>/dev/null || true)"
+            echo "프론트 정규 도메인 서빙 커밋: ${served:-(읽지 못함)}"
+            if [ "$served" = "$target" ]; then ok="yes"; break; fi
+            sleep 20
+          done
+
+          if [ "$ok" != "yes" ]; then
+            # 이 워크플로를 도입한 커밋 이전 빌드에는 버전 라우트가 없어 확인이 불가능할 수 있다.
+            echo "::warning::별칭은 설정했지만 정규 도메인에서 커밋을 확인하지 못했다(버전 라우트 미배포 가능). verify 단계가 다시 판정한다."
+            echo "outcome=aliased-unconfirmed" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=served" >> "$GITHUB_OUTPUT"
+          fi
+
   rebake:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -145,9 +261,46 @@ jobs:
           cat rebake.json || true
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
-      # ── 재생성이 **정규 도메인에 실제로 닿았는지** 확인한다.
-      #    "크론이 200 을 줬다" 는 증거가 아니다 — CDN 이 옛 asOf 를 계속 줄 수 있다.
-      #    `verify-production.ts` 를 그대로 쓴다. 검증 규칙을 두 곳에 복사해 두면 갈라진다.
+      - name: Report rebake
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          code="${{ steps.rebake.outputs.code }}"
+          ok=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(String(j.ok===true))}catch(e){process.stdout.write("false")}' 2>/dev/null || echo false)
+          summary=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(`published=${j.published} ledgerAppended=${j.ledgerAppended} stamped=${j.stamped} date=${j.date} ms=${j.ms}`)}catch(e){process.stdout.write("payload unreadable")}' 2>/dev/null || echo "payload unreadable")
+          {
+            echo "### 페이로드 재생성"
+            echo ""
+            echo "- 대상 커밋: \`${{ steps.target.outputs.sha }}\`"
+            echo "- 배포 대기 결과: \`${{ steps.wait.outputs.outcome }}\` (서빙 커밋 \`${{ steps.wait.outputs.served_commit }}\`)"
+            echo "- 재생성 HTTP: \`$code\` · ok: \`$ok\`"
+            echo "- $summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$code" != "200" ] || [ "$ok" != "true" ]; then
+            echo "::error::페이로드 재생성 실패 — 배포는 유지되지만 화면은 옛 페이로드다. 수동 확인 필요."
+            exit 1
+          fi
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 최종 판정 — 앞의 둘이 실패해도 **재본다**(`if: always()`). 무엇이 어긋났는지가 실패 사실보다
+  # 유용하고, 부분 성공(백엔드는 됐고 프론트는 안 됐다)을 구분해야 한다.
+  #
+  # 검증 규칙을 여기 복사하지 않고 `verify-production.ts` 를 그대로 호출한다 —
+  # 두 곳에 두면 갈라지고, 갈라지면 CI 초록과 로컬 실측이 다른 말을 한다.
+  # ───────────────────────────────────────────────────────────────────────────
+  verify:
+    runs-on: ubuntu-latest
+    needs: [align-web-alias, rebake]
+    if: always()
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Verify with verify-production.ts
         id: verify
         shell: bash
@@ -168,19 +321,13 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          code="${{ steps.rebake.outputs.code }}"
-          wait_outcome="${{ steps.wait.outputs.outcome }}"
           verify_exit="${{ steps.verify.outputs.verify_exit }}"
-          ok=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(String(j.ok===true))}catch(e){process.stdout.write("false")}' 2>/dev/null || echo false)
-          summary=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(`published=${j.published} ledgerAppended=${j.ledgerAppended} stamped=${j.stamped} date=${j.date} ms=${j.ms}`)}catch(e){process.stdout.write("payload unreadable")}' 2>/dev/null || echo "payload unreadable")
           {
-            echo "### Git 자동배포 → 페이로드 재생성"
+            echo "### 배포 → 화면 최종 판정"
             echo ""
-            echo "- 대상 커밋: \`${{ steps.target.outputs.sha }}\`"
-            echo "- 배포 대기 결과: \`$wait_outcome\` (서빙 커밋 \`${{ steps.wait.outputs.served_commit }}\`)"
-            echo "- 재생성 HTTP: \`$code\` · ok: \`$ok\`"
-            echo "- $summary"
-            echo "- verify-production exit: \`${verify_exit:-미실행}\`  (0=통과 · 1=실패 · 2=미확인)"
+            echo "- 프론트 별칭 정렬: \`${{ needs.align-web-alias.result }}\` (\`${{ needs.align-web-alias.outputs.outcome }}\`, 배포 \`${{ needs.align-web-alias.outputs.deployment }}\`)"
+            echo "- 페이로드 재생성: \`${{ needs.rebake.result }}\`"
+            echo "- verify-production exit: \`${verify_exit:-미실행}\`  (0=통과 · 1=실패 · 2=미확인 · 3=스크립트 오류)"
             echo ""
             if [ -f verify.log ]; then
               echo '```'
@@ -189,12 +336,13 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$code" != "200" ] || [ "$ok" != "true" ]; then
-            echo "::error::페이로드 재생성 실패 — 배포는 유지되지만 화면은 옛 페이로드다. 수동 확인 필요."
+          # 미확인(2)은 실패로 세지 않는다 — 버전 라우트 미배포 등 측정 제약이 섞인다.
+          # 다만 초록으로도 세지 않는다: 이 워크플로가 성공해도 exit 2 였다면 요약을 읽어야 한다.
+          if [ "${verify_exit:-3}" = "1" ]; then
+            echo "::error::verify-production 실패 — 배포가 화면에 닿지 않았다. 요약의 판정 항목을 보라."
             exit 1
           fi
-          # 미확인(2)은 실패로 세지 않는다 — 버전 라우트 미배포 등 측정 제약이 섞인다.
-          if [ "${verify_exit:-3}" = "1" ]; then
-            echo "::error::재생성은 됐지만 verify-production 이 실패했다. 화면에 닿지 않았다."
+          if [ "${verify_exit:-3}" = "3" ]; then
+            echo "::error::verify-production 자체가 실패했다(측정 불가). 스크립트를 고쳐야 한다."
             exit 1
           fi

@@ -361,9 +361,35 @@ async function main(): Promise<void> {
     log("  판정       미확인 (배포 커밋 또는 HEAD 를 못 읽었다)");
     record("정규 도메인 커밋 = origin/main HEAD", "unknown", "배포 커밋 또는 HEAD 미확인");
   }
+  // ── 프론트를 따로 판정한다. 백엔드가 초록이라고 프론트가 초록인 것이 아니다.
+  //
+  // 2026-08-17 실측: 백엔드 정규 도메인은 Git 자동배포로 별칭이 따라 움직이는데(프로젝트 도메인으로
+  // 등록돼 있다) **프론트 정규 도메인은 안 움직였다.** 최신 배포는 READY·별칭 0개였고 정규 도메인은
+  // 1시간 반 전 빌드를 서빙했다(buildId `bd2mmus…` vs 최신 `hTFMwPF…`). #1076 의 구조적 재발이다.
+  // 그래서 프론트 커밋 불일치는 경고가 아니라 **실패**다.
+  if (webCommit && head) {
+    const webRelation = await ancestry(webCommit, head);
+    if (webRelation === "same") {
+      record("프론트 정규 도메인 커밋 = origin/main HEAD", "pass", `${webCommit.slice(0, 8)} = HEAD`);
+    } else {
+      record(
+        "프론트 정규 도메인 커밋 = origin/main HEAD",
+        webRelation === "behind" ? "fail" : "unknown",
+        `web ${webCommit.slice(0, 8)} vs HEAD ${head.slice(0, 8)} → ${webRelation}`
+      );
+    }
+  } else {
+    record(
+      "프론트 정규 도메인 커밋 = origin/main HEAD",
+      "unknown",
+      webVersion?.status === 404
+        ? `버전 라우트 404 — (a) 라우트 미배포이거나 (b) **정규 별칭이 스테일**이다. ` +
+          `\`vercel inspect ${WEB_BASE.replace(/^https?:\/\//, "")}\` 로 별칭이 가리키는 배포를 확인하라`
+        : `프론트 커밋 미확인 (HTTP ${webVersion?.status ?? "실패"})`
+    );
+  }
   if (webCommit && apiCommit && webCommit !== apiCommit) {
     log(`  ⚠️  프론트(${webCommit.slice(0, 8)})와 백엔드(${apiCommit.slice(0, 8)}) 커밋이 다르다 — 한쪽만 배포됐다.`);
-    record("프론트·백엔드 커밋 일치", "unknown", `web ${webCommit.slice(0, 8)} ≠ api ${apiCommit.slice(0, 8)}`);
   }
 
   // ── 4. 마지막 배포 시각
