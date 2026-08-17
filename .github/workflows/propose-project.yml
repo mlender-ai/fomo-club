@@ -1,7 +1,7 @@
 name: Propose Projects (CEO)
 
 # 톱다운 1단계 — CEO 에이전트가 제품(정체성·OKR·현 상태)을 분석해 *프로젝트 후보*를 제안한다.
-#   → PROJECT_ROADMAP.md 재생성 + 검토용 이슈 + Slack. 사람이 "제품 이해도"를 검토하고 1개 선택.
+#   → docs/legacy/PROJECT_ROADMAP.md 재생성 + 검토용 이슈 + Slack. 사람이 "제품 이해도"를 검토하고 1개 선택.
 on:
   workflow_dispatch:
     inputs:
@@ -41,7 +41,7 @@ jobs:
           set -uo pipefail
           # 제품 비전(정체성 핵심) — PRODUCT_VISION v5 기준
           VISION=$(cat docs/PRODUCT_VISION.md 2>/dev/null | head -c 4000 || echo "")
-          [ -z "$VISION" ] && VISION=$(cat PROJECT_ROADMAP.md 2>/dev/null | head -c 3500 || echo "")
+          [ -z "$VISION" ] && VISION=$(cat docs/legacy/PROJECT_ROADMAP.md 2>/dev/null | head -c 3500 || echo "")
 
           # ★ 실제 구현 인벤토리 — 이미 만든 것 재제안(중복) 방지의 핵심 컨텍스트
           INV=$(git ls-files \
@@ -114,15 +114,15 @@ jobs:
           if [ ! -s /tmp/new_roadmap.md ] || ! grep -q "^## P1 ·" /tmp/new_roadmap.md; then
             echo "ok=false" >> "$GITHUB_OUTPUT"; echo "후보 파싱 실패 — 로드맵 미변경"; exit 0
           fi
-          mv /tmp/new_roadmap.md PROJECT_ROADMAP.md
+          mv /tmp/new_roadmap.md docs/legacy/PROJECT_ROADMAP.md
           npx -y tsx@4.19.2 scripts/project-proposal.ts issue /tmp/candidates_raw.txt > /tmp/proposal_issue.md
           npx -y tsx@4.19.2 scripts/project-proposal.ts slack /tmp/candidates_raw.txt > /tmp/proposal_slack.txt
 
           # 로드맵 커밋
-          if ! git diff --quiet PROJECT_ROADMAP.md; then
+          if ! git diff --quiet docs/legacy/PROJECT_ROADMAP.md; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add PROJECT_ROADMAP.md
+            git add docs/legacy/PROJECT_ROADMAP.md
             git commit -m "chore(roadmap): CEO 프로젝트 제안 반영 (검토 대기)"
             git push origin HEAD:main
           fi

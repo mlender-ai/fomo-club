@@ -153,7 +153,7 @@ HANDOFF
 매일 9개 직군이 바텀업으로 잔 아이디어를 던지던 방식은 **폐지**됐다. 이제 **톱다운 프로젝트 구동**이다:
 
 1. **제안(리스트업)**: CEO 에이전트가 제품 분석 → 프로젝트 후보 제안(`propose-project.yml`, Slack "프로젝트 제안해"). 사람이 검토.
-2. **선택**: 인간 오너가 Slack `[[ACTION:select_project]]`(예: "P1 시작")로 활성 프로젝트 1개 선택. `PROJECT_ROADMAP.md`가 단일 진실.
+2. **선택**: 인간 오너가 Slack `[[ACTION:select_project]]`(예: "P1 시작")로 활성 프로젝트 1개 선택. `docs/legacy/PROJECT_ROADMAP.md` 가 단일 진실이었다 — **이 노선은 2026-06-14 자율 루프 정지로 휴면**이고 그 파일은 `docs/legacy/` 로 내렸다. 현재 상태의 정본은 `docs/STATUS.md` 다.
 3. **분해**: `project-kickoff.yml` 이 **직군 회의**로 활성 프로젝트를 정렬된 `project:<id>` 하위 task 이슈로 쪼갬.
 4. **격파**: CEO 승인(슬랙 "개발해") 시에만 auto-implement → PR. 매일 cron 은 **진척 리포트**만(아이디어 생성 X).
 
@@ -436,7 +436,7 @@ model: sonnet
 - `MEMORY.md` — 의사결정 기록 추가
 - `.env.example` — 환경변수 동기화
 - `README.md` — 셋업/사용법 갱신
-- `GSTACK.md` — 기술 스택 변경 시
+- `.env.example` · `package.json` — 기술 스택·환경변수 변경 시 (구 `GSTACK.md` 는 `docs/legacy/`. 타로 시대 구조를 기술해 현행 아님)
 
 ---
 

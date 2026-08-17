@@ -37,7 +37,7 @@ jobs:
           PID="${{ github.event.inputs.project_id }}"
           echo "pid=$PID" >> "$GITHUB_OUTPUT"
           # 프로젝트 메타
-          PTITLE=$(npx -y tsx@4.19.2 scripts/project-roadmap.ts list PROJECT_ROADMAP.md 2>/dev/null \
+          PTITLE=$(npx -y tsx@4.19.2 scripts/project-roadmap.ts list docs/legacy/PROJECT_ROADMAP.md 2>/dev/null \
             | jq -r --arg id "$PID" '.[] | select(.id==$id) | .title' 2>/dev/null || echo "")
           echo "ptitle=$PTITLE" >> "$GITHUB_OUTPUT"
           # 이미 task 이슈 있으면 중단(중복 분해 방지)
