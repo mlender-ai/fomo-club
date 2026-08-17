@@ -4,6 +4,7 @@ import { inIndustrySet, industrySetsFor, BIO_REVENUE_FLOOR, RULESET_VERSION, THR
 import type {
   ArchetypeCode,
   ArchetypeDecision,
+  ArchetypeChangelogEntry,
   ArchetypeDoctrine,
   ArchetypeFrame,
   ArchetypeHistory,
@@ -22,6 +23,9 @@ import type {
  */
 
 export const DOCTRINE: ArchetypeDoctrine = doctrineJson as ArchetypeDoctrine;
+
+/** 버전 이력 — `docs/archetype/DOCTRINE_archetype_frames.md` §7 이 이걸 렌더한다. */
+export const DOCTRINE_CHANGELOG: readonly ArchetypeChangelogEntry[] = DOCTRINE.changelog;
 
 /**
  * 연간 통계를 신뢰하려면 필요한 최소 관측 연수. θ_cyclical 을 도출한 라벨셋이 5개년이므로 같은 값을 쓴다.

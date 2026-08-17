@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DOCTRINE_PATH, renderDoctrine } from "../../../scripts/archetype-doctrine-render";
+import { DOCTRINE, DOCTRINE_CHANGELOG } from "../src/archetype/classify";
+import { RULESET_VERSION } from "../src/archetype/ruleset";
 
 /**
  * 독트린 문서는 **생성물**이다 — 정본은 `doctrine.json` 하나다.
@@ -12,6 +14,43 @@ describe("독트린 문서 동기화", () => {
   it("커밋된 DOCTRINE_archetype_frames.md 가 정본 렌더와 일치한다", () => {
     const committed = readFileSync(join(process.cwd(), DOCTRINE_PATH), "utf8");
     expect(committed).toBe(renderDoctrine());
+  });
+
+  /**
+   * 2026-08-17 실사가 잡은 것: `doctrine.json` 은 `v1.4.0` 인데 §7 이력은 `v1.2.0` 에서 멈춰 있었다.
+   * 이력이 렌더 스크립트에 **하드코딩**돼 있어 버전을 올려도 등재가 강제되지 않았기 때문이다.
+   * 이력을 정본(JSON)으로 옮기고, 아래 세 단정으로 같은 자리에서 다시 어긋나지 않게 한다.
+   */
+  it("`version` 과 `changelog` 마지막 항목이 일치한다 — 등재를 잊을 수 없다", () => {
+    expect(DOCTRINE_CHANGELOG.length).toBeGreaterThan(0);
+    expect(DOCTRINE_CHANGELOG[DOCTRINE_CHANGELOG.length - 1]!.version).toBe(DOCTRINE.version);
+  });
+
+  it("changelog 가 버전 오름차순이고 중복이 없다", () => {
+    const versions = DOCTRINE_CHANGELOG.map((e) => e.version);
+    expect(new Set(versions).size).toBe(versions.length);
+    const asTuple = (v: string) => v.replace("archetype-v", "").split(".").map(Number);
+    for (let i = 1; i < versions.length; i += 1) {
+      const [pMaj, pMin, pPat] = asTuple(versions[i - 1]!);
+      const [maj, min, pat] = asTuple(versions[i]!);
+      const prev = pMaj! * 1_000_000 + pMin! * 1_000 + pPat!;
+      const curr = maj! * 1_000_000 + min! * 1_000 + pat!;
+      expect(curr).toBeGreaterThan(prev);
+    }
+  });
+
+  it("모든 changelog 항목이 변경·영향·룰셋을 채운다 — 빈 칸으로 등재 시늉하지 않는다", () => {
+    for (const entry of DOCTRINE_CHANGELOG) {
+      expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(entry.change.trim().length).toBeGreaterThan(10);
+      expect(entry.impact.trim().length).toBeGreaterThan(5);
+      expect(entry.ruleset_version).toMatch(/^archetype-v\d+\.\d+\.\d+$/);
+    }
+  });
+
+  it("현행 changelog 의 룰셋 버전이 코드의 RULESET_VERSION 과 맞다", () => {
+    // 독트린 ≠ 룰셋이지만, **현행 독트린이 함께 쓰이는 룰셋**은 코드와 같아야 한다.
+    expect(DOCTRINE_CHANGELOG[DOCTRINE_CHANGELOG.length - 1]!.ruleset_version).toBe(RULESET_VERSION);
   });
 
   it("§7 목차 항목이 전부 있다", () => {

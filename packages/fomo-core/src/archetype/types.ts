@@ -138,12 +138,33 @@ export interface ArchetypeFrame {
   unavailable_metrics: UnavailableRef[];
 }
 
+/**
+ * 독트린 버전 이력 한 줄.
+ *
+ * **정본이 `doctrine.json` 안에 있어야 하는 이유**: 종전에는 이 표가 렌더 스크립트에
+ * 하드코딩돼 있었다. 그래서 `version` 을 올려도 등재가 강제되지 않았고 **v1.3.0·v1.4.0 이
+ * 기록 없이 지나갔다**(2026-08-17 실사, 커밋 `53f29f1` 근거로 소급 등재).
+ * 경고문·금지 지표를 JSON 으로 모은 것과 같은 이유다 — 두 곳에 있으면 어긋난다.
+ */
+export interface ArchetypeChangelogEntry {
+  version: string;
+  date: string;
+  /** 마크다운 문안. `{cyclical_theta}` 는 렌더가 `ruleset.ts` 값으로 치환한다. */
+  change: string;
+  impact: string;
+  /** 이 독트린 버전과 함께 쓰인 `RULESET_VERSION`. 독트린 ≠ 룰셋임을 표에서 드러낸다. */
+  ruleset_version: string;
+}
+
 export interface ArchetypeDoctrine {
   version: string;
   as_of: string;
   note: string;
   archetypes: ArchetypeFrame[];
   chart_axes_note?: string;
+  /** 오름차순. 마지막 항목의 `version` 은 위 `version` 과 같아야 한다(테스트가 강제). */
+  changelog: ArchetypeChangelogEntry[];
+  changelog_note?: string;
 }
 
 export interface ArchetypeResult {
