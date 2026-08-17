@@ -65,8 +65,12 @@ function aggregate(picks: Array<{ date: string; pick: Pick }>) {
   let whyNowKeyLevels = 0;
   let signalStats = 0;
   let streakMismatch = 0;
+  let streakReconcilable = 0;
+  let streakDifferentActor = 0;
+  /** 날짜별 — `reconcileStreakClaim`(2026-08-16 배포) 전후를 가르기 위해. */
+  const byDate: Record<string, { picks: number; reconcilable: number }> = {};
 
-  for (const { pick } of picks) {
+  for (const { date: deckDate, pick } of picks) {
     const p = pick as unknown as Record<string, unknown>;
     for (const k of Object.keys(p)) bump(topLevelKeys, k);
 
@@ -97,10 +101,39 @@ function aggregate(picks: Array<{ date: string; pick: Pick }>) {
     if (whyNow.phase) whyNowPhase += 1;
     if (whyNow.keyLevels) whyNowKeyLevels += 1;
 
-    // 훅(signal.days)과 디테일 문장의 연속일수가 어긋나는가 — 2026-08-16 실측에서 발견된 결함.
+    // ── 훅(`signal.days`)과 디테일 문장의 연속일수가 어긋나는가.
+    //
+    // ⚠️ 이 집계는 2026-08-17 에 **한 번 틀렸다.** 초판은 `(\d+)일 연속` 을 통째로 세어
+    // 200장 중 29장(14.5%)을 「계통 결함」으로 보고했다. 그런데 정본 수정
+    // (`reconcileStreakClaim`, WO-SYNC F-1)은 **훅과 디테일이 같은 주체를 말할 때만**
+    // 숫자를 맞춘다 — 훅이 임원(내부자)을 말하는 카드에서 디테일이 기관 수급을 말하는 것은
+    // 서로 다른 사실이므로 건드리지 않는 것이 맞다. 초판 집계는 그 정상 케이스까지 결함으로 셌다.
+    //
+    // 그래서 셋으로 나눈다. **고쳐야 할 것과 고치면 안 되는 것을 한 숫자에 담지 않는다.**
+    //   reconcilable — 디테일이 훅과 **같은 주체**의 연속일수를 말하는데 숫자가 다르다. **진짜 결함.**
+    //   differentActor — 디테일이 **다른 주체**를 말한다. 다른 사실이므로 결함이 아니다.
+    //   total — 위 둘의 합. 초판이 보고한 숫자와 대응한다(회귀 비교용으로만 남긴다).
     const summary = typeof whyNow.summary === "string" ? whyNow.summary : "";
-    const stated = summary.match(/(\d+)일\s*연속/);
-    if (stated && typeof signal.days === "number" && Number(stated[1]) !== signal.days) streakMismatch += 1;
+    const actorsText = String(signal.actors ?? "");
+    // `reconcileStreakClaim` 과 같은 패턴이어야 한다 — 측정과 수정이 다른 것을 보면 안 된다.
+    const scoped = [...summary.matchAll(/(외국인|기관)(\s*)(\d+)(일\s*연속)/g)];
+    const anyClaim = summary.match(/(\d+)일\s*연속/);
+    let reconcilableHere = false;
+    if (typeof signal.days === "number") {
+      reconcilableHere = scoped.some((m) => actorsText.includes(m[1]!) && Number(m[3]) !== signal.days);
+      if (reconcilableHere) {
+        streakReconcilable += 1;
+        streakMismatch += 1;
+      } else if (anyClaim && Number(anyClaim[1]) !== signal.days) {
+        streakDifferentActor += 1;
+        streakMismatch += 1;
+      }
+    }
+    if (typeof deckDate === "string") {
+      const bucket = (byDate[deckDate] ??= { picks: 0, reconcilable: 0 });
+      bucket.picks += 1;
+      if (reconcilableHere) bucket.reconcilable += 1;
+    }
   }
 
   const n = picks.length;
@@ -121,7 +154,18 @@ function aggregate(picks: Array<{ date: string; pick: Pick }>) {
       actorsDistribution: actors,
       signalKindDistribution: kinds,
     },
-    streak: { hasScalarDays: true, perActorStreakArrays: 0, hookVsDetailMismatch: streakMismatch },
+    streak: {
+      hasScalarDays: true,
+      perActorStreakArrays: 0,
+      /** 초판과 같은 정의(회귀 비교용). 아래 둘의 합이다 — **이 숫자만 인용하지 말 것.** */
+      hookVsDetailMismatch: streakMismatch,
+      /** 훅과 **같은 주체**인데 숫자가 다르다 = 진짜 결함. `reconcileStreakClaim` 이 잡아야 할 것. */
+      reconcilableMismatch: streakReconcilable,
+      /** 디테일이 **다른 주체**를 말한다 = 결함 아님. 고치면 오히려 사실을 지운다. */
+      differentActorClaim: streakDifferentActor,
+      /** 날짜별 진짜 결함 건수 — 2026-08-16 수정 배포 전후를 가른다. */
+      reconcilableByDate: byDate,
+    },
     volume: { anomalyKindDistribution: anomalyKinds, anomalyNumericFields },
     priceStructure: { sparklineLength: quantiles(sparklines), whyNowPhase, whyNowKeyLevels },
     candlesOhlc: { ohlcSeriesPresent: ohlc, dataQualityCandles: quantiles(candles), candlesAtLeast250: candles.filter((c) => c >= 250).length },
