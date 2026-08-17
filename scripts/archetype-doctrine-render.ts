@@ -11,7 +11,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DOCTRINE } from "../packages/fomo-core/src/archetype/classify";
+import { DOCTRINE, DOCTRINE_CHANGELOG } from "../packages/fomo-core/src/archetype/classify";
 import { KNOWN_CYCLICAL_GATE_MISSES, RULESET_VERSION, THRESHOLDS, BIO_REVENUE_FLOOR } from "../packages/fomo-core/src/archetype/ruleset";
 import { STDEV_MIN_YEARS } from "../packages/fomo-core/src/archetype/classify";
 import { ARCHETYPE_RISK_DISCLAIMER, type ArchetypeFrame } from "../packages/fomo-core/src/archetype/types";
@@ -350,26 +350,33 @@ export function renderDoctrine(): string {
   lines.push("- **룰셋 버전이 바뀌면 이력을 무효화**하고 새 분류를 즉시 확정한다. 다른 규칙으로 만든 이력과 연속성을 따지는 것은 의미가 없다.");
   lines.push("");
 
+  // ── §7 은 **독트린 JSON 의 `changelog` 에서 온다.**
+  //
+  // 종전에는 이 표가 여기 하드코딩돼 있었다. 그래서 `doctrine.json` 의 `version` 을 올려도
+  // 이력 등재가 강제되지 않았고, 실제로 **v1.3.0·v1.4.0 이 기록 없이 지나갔다**(2026-08-17 실사).
+  // 정본과 그 이력이 다른 파일에 있으면 어긋난다 — 경고문을 JSON 으로 모은 것과 같은 이유다.
   lines.push("## 7. 버전 이력");
   lines.push("");
-  lines.push("| 버전 | 날짜 | 변경 | 영향 범위 |");
-  lines.push("|---|---|---|---|");
-  lines.push(
-    `| \`archetype-v1.0.0\` | 2026-07-28 | 최초 확정. 유형 10종, 시클리컬 판정 입력을 분기→연간 통계로 교체, θ=${THRESHOLDS.cyclical_operating_stdev_annual_pp} | 전 페이즈(04·05·06)의 유일한 입력 |`
-  );
-  lines.push(
-    "| `archetype-v1.1.0` | 2026-08-06 | `BANK_FINANCIAL` 막대축을 순이자이익 → **자기자본**으로 교체(WO-SUB-FINISH A-3, 선택지 A). 분류 규칙·임계값은 바뀌지 않았다 | 차트 축만. 분류 결과와 `ruleset_version` 은 불변 |"
-  );
-  lines.push(
-    "| `archetype-v1.2.0` | 2026-08-06 | **`STABLE_EARNINGS` 신설** — 성장·흑자와 성숙·배당형 사이의 빈 구간(02R 판정 카드 64건). **기존 θ 를 그대로 쓰고 새 임계값을 도출하지 않는다.** 규칙 순서 마지막(자산형 뒤)이라 기존 9유형 판정은 불변 | 분류 규칙 변경 → `RULESET_VERSION` 도 v1.2.0. 히스테리시스 이력 무효화 |"
-  );
+  lines.push("| 버전 | 날짜 | 변경 | 영향 범위 | 룰셋 |");
+  lines.push("|---|---|---|---|---|");
+  for (const entry of DOCTRINE_CHANGELOG) {
+    // θ 는 `ruleset.ts` 가 정본이라 문안에 박지 않고 치환한다 — 임계값이 바뀌면 표도 따라 바뀐다.
+    const change = entry.change.replace(
+      "{cyclical_theta}",
+      String(THRESHOLDS.cyclical_operating_stdev_annual_pp)
+    );
+    lines.push(
+      `| \`${entry.version}\` | ${entry.date} | ${change} | ${entry.impact} | \`${entry.ruleset_version}\` |`
+    );
+  }
   lines.push("");
   lines.push("> 독트린 버전과 룰셋 버전은 다른 것을 가리킨다 — 독트린은 축·문안·금지 지표의 정본이고,");
   lines.push("> `ruleset_version`(`ruleset.ts`)은 **분류 규칙**의 버전이다. v1.1.0 은 축만 바꿨으므로");
   lines.push("> 룰셋 버전을 올리지 않는다. 올리면 히스테리시스 이력이 이유 없이 전량 무효화된다.");
   lines.push("");
   lines.push("> 임계값이 바뀌면 과거 분류의 의미가 달라진다. 판단 원장에 `ruleset_version` 을 함께 기록하고,");
-  lines.push("> 버전을 올릴 때 이 표에 영향 범위를 적는다.");
+  lines.push("> 버전을 올릴 때 `doctrine.json` 의 `changelog` 에 영향 범위를 적는다.");
+  lines.push("> **`version` 과 `changelog` 마지막 항목이 어긋나면 테스트가 실패한다** — 등재를 잊을 수 없다.");
   lines.push("");
 
   return lines.join("\n");
