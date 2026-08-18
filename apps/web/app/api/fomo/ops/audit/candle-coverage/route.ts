@@ -29,10 +29,18 @@ import {
  *
  * ## 분자도 조심해야 했다 — 첫 실측(2026-08-17)이 174.7% 를 냈다
  *
- * 캐시는 정리되지 않아 한 달치가 쌓인다(KR 802행 vs 유니버스 450). 지금 유니버스에 없는
- * 종목의 옛 행도 남아 있다. 그래서 분자를 **신선분**(`asOf` 가 각 캐시의 `MAX_STALE_DAYS` 안)
- * 으로 좁혔다 — 스테일 행은 읽기 경로가 버리므로 애초에 확보가 아니다.
- * 그래도 100% 를 넘으면 `denominatorWarning` 이 **인용하지 말라고 명시**한다.
+ * 캐시는 정리되지 않아 한 달치가 쌓인다(KR 802행 vs 유니버스 450). 분자를 **신선분**
+ * (`asOf` 가 각 캐시의 `MAX_STALE_DAYS` 안)으로 좁혔더니 561행 — **그래도 450 보다 많다.**
+ *
+ * 원인은 신선도가 아니었다: `discovery-supply.ts` 도 후보 종목의 캔들을 기회적으로 캐시에 쓴다.
+ * **캐시 모집단 ≠ 프리웜 유니버스**이므로 어떤 분모를 넣어도 이 라우트로는 B-2 확보율이 안 나온다.
+ *
+ * → **B-2 의 정본 계측기는 `cron/kr-candle-prewarm` 의 `stored250`·`rate250Pct` 다.**
+ *   그 루프가 유니버스를 정확히 한 바퀴 도는 유일한 지점이라 분모가 확정된다.
+ *   이 라우트는 **캐시의 상태**(길이 분포·신선도·누적)를 보는 용도다. 둘을 바꿔 쓰지 말 것.
+ *
+ * `?universe=` 는 그래서 남겨두되, 100% 를 넘으면 `denominatorWarning` 이 **인용하지 말라고
+ * 명시**한다. 실제로 그 경고가 이 사실을 잡아냈다.
  */
 
 export const dynamic = "force-dynamic";
@@ -101,9 +109,12 @@ export async function GET(request: Request) {
       generatedAt: new Date().toISOString(),
       byMarket,
       notes: {
+        b2_정본:
+          "CTX-00 B-2(유니버스 ≥250 확보율)의 정본은 cron/kr-candle-prewarm 응답의 stored250·rate250Pct 다. " +
+          "이 라우트는 캐시 상태(길이 분포·신선도·누적)를 본다. 캐시 모집단 ≠ 프리웜 유니버스 — discovery-supply 도 캐시에 쓴다.",
         denominator:
-          "cacheRate 의 분모는 캐시 보유 종목이다. 저장 실패·이력 부족 종목은 행이 없으므로 확보율보다 좋게 나온다. " +
-          "유니버스 확보율은 ?universe=<프리웜 실행의 universe 값> 을 줘야 나온다.",
+          "cacheRate 의 분모는 캐시 신선분이다. 저장 실패·이력 부족 종목은 행이 없으므로 확보율보다 좋게 나온다. " +
+          "?universe= 를 줘도 모집단이 달라 100% 를 넘을 수 있다 — 그때 denominatorWarning 이 인용 금지를 알린다.",
         freshness:
           "buckets 는 스테일 포함 전체, freshBuckets 는 asOf 가 staleDays 안인 것만이다. " +
           "확보율의 분자는 freshBuckets 다 — 스테일 행은 읽기 경로(readKrCandleCache)가 null 로 버린다.",
