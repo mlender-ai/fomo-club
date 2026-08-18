@@ -44,6 +44,15 @@ import { writeUsCandleCache } from "./us-candle-cache";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 import { readSignalStatsForCards } from "./signal-stats";
+import {
+  rankScore as deckRankScore,
+  noveltyScore,
+  composeDeck,
+  isAgedOut,
+  isFreshSignal,
+  page1StreakFromHistory,
+  PAGE1_SIZE,
+} from "./deck-ranking";
 import type { PublicationStamp } from "./publication-stamp";
 
 /** discovery-supply 가 이름을 export 하지 않으므로 반환 타입에서 파생(구조적). */
@@ -158,8 +167,25 @@ export interface QuietPickSignal {
   priceAtSignal: number;
   /** 신호 시작일(YYYY-MM-DD). */
   startedAt: string;
-  /** 정렬용 신호 강도(다중 > 내부자 > 단일 streak). */
+  /**
+   * 신호 강도(규모·인원 기반 — 다중 > 내부자 > 단일 streak). **화면 순위가 아니다.**
+   * 순위는 `rankScore`(신규성 1차 축) 가 만든다 — `rankScore` 필드를 본다.
+   */
   strength: number;
+  /**
+   * 화면 순위 점수(WO-DECK-01) — `신규성 × 재노출 쿨다운 × 이례성`. 연속일수는 들어가지 않는다.
+   * 이 값이 곧 덱 정렬 키이므로 나중에 "왜 이 순서인가" 를 되물을 때 인용할 수 있어야 한다.
+   */
+  rankScore: number;
+  /**
+   * 경과일 시계의 기준일(YYYY-MM-DD). 기본은 `startedAt`, 재등장 사유가 생기면 그 날로 리셋된다.
+   * 26일째 신호가 새 재료로 되살아났을 때 26일 누적으로 계속 눌려 있지 않게 하는 장치다.
+   */
+  ageAnchor?: string;
+  /** 유효 경과일 — `ageAnchor` 기준. 신규성·구성 규칙이 전부 이 값을 본다(`days` 가 아니다). */
+  ageDays: number;
+  /** 어제까지 1페이지에 연속으로 있던 일수(쿨다운 입력). 0 이면 감점 없음. */
+  page1Streak?: number;
   /** 내부자 인원(US 클러스터) — 강화 재등장 판정에 쓴다. */
   insiderCount?: number;
   /**
@@ -169,9 +195,32 @@ export interface QuietPickSignal {
   amount?: number;
   /**
    * 신호 강화 재등장 문구(WO-P4) — 어제 픽과 같은 신호가 **더 강해졌을 때만** 채운다.
-   * 예 "5일째 계속 — 어제보다 2명 늘었어요". 순수 반복(변화 0)은 픽에서 제외된다.
+   * 예 "5일째 계속 — 어제보다 2명 늘었어요".
+   *
+   * ⛔ "어제보다 1일 더 이어졌어요" 는 여기 오지 않는다(WO-DECK-01 §3-2) — 그건 변화가 아니라 지속이다.
+   * 순수 반복은 이제 **제외가 아니라 강등**이다(쿨다운·감쇠가 처리한다).
    */
   progress?: string;
+  /**
+   * 재등장 사유(WO-DECK-01 §3-2) — 경과일 상한을 넘었거나 쿨다운이 걸린 종목이 **그럼에도** 다시
+   * 올라온 이유. 카드에 표시한다. 사유가 없으면 필드 자체가 없다(빈 껍데기 금지).
+   */
+  reentry?: QuietPickReentry;
+}
+
+/** 재등장 사유 코드(WO-DECK-01 §3-2). 지속(하루 더 이어짐)은 사유가 아니다. */
+export type QuietPickReentryCode =
+  | "invalidation_break"
+  | "new_material"
+  | "actor_joined"
+  | "structure_shift";
+
+export interface QuietPickReentry {
+  code: QuietPickReentryCode;
+  /** 유저어 한 줄 — 카드에 그대로 실린다. */
+  text: string;
+  /** 사유 발생일(YYYY-MM-DD) — 경과일 시계를 여기로 리셋한다. */
+  occurredAt: string;
 }
 
 export interface QuietPickInvalidation {
@@ -293,7 +342,11 @@ export type QuietWatchReasonCode =
   | "ran_30_since_signal"
   | "changed_15"
   | "mention_hot"
-  | "turnover_top20";
+  | "turnover_top20"
+  /** 경과일 상한 초과 — 신규 신호가 아니므로 픽에서 워치로(WO-DECK-01 §2-4). 영구 배제 아님. */
+  | "signal_aged"
+  /** 픽 자격은 갖췄으나 구성 규칙(동일 유형 상한·지속 상한)에 밀렸다(WO-DECK-01 §4). */
+  | "composition_overflow";
 
 /**
  * 지켜보는 중(WO-P4) — 신호는 실재하는데 픽 자격 ②에 못 미친 후보.
@@ -322,12 +375,44 @@ export interface QuietPickQualification {
   drops: Record<string, number>;
 }
 
+/**
+ * 회전율 계측(WO-DECK-01 PHASE 5) — **발행 시점에 굳힌다.**
+ * 나중에 재계산하면 그날의 1페이지 이력이 이미 바뀌어 있어 같은 값이 나오지 않는다.
+ */
+export interface QuietPickRotation {
+  /** 구성 규칙 버전(완료조건 7). 규칙이 바뀌면 값이 바뀐다. */
+  compositionVersion: string;
+  /** 실제 발행 장수(상한이 아니라 결과 — 신규 부족으로 줄었을 수 있다). */
+  deckSize: number;
+  /** 실제 덱 크기 기준 하한·상한. */
+  caps: { minFresh: number; maxSameKind: number; maxPersistent: number };
+  freshCount: number;
+  persistentCount: number;
+  promotedFromWatch: number;
+  /** 신규 하한을 못 채워 줄인 장수. 0 이면 상한대로 찼다. */
+  shrunkBy: number;
+  compositionSkipped: Record<string, number>;
+  /** 경과일 상한으로 워치로 내려간 수. */
+  agedOut: number;
+  /** 1페이지 쿨다운이 실제로 걸린 픽 수(연속 3일 이상). */
+  cooldownApplied: number;
+  /** 재등장 사유를 달고 올라온 픽 수. */
+  reentryCount: number;
+  /** 오늘 1페이지 종목(1~3위). */
+  page1: string[];
+  /** 그중 어제까지도 1페이지였던 종목과 연속일수 — 이 배열이 비어야 "매일 바뀐다". */
+  page1HeldOver: Array<{ canonical: string; consecutiveDays: number }>;
+  ageDaysMedian: number | null;
+}
+
 export interface QuietPickResponse {
   asOf: string;
   date: string;
   picks: QuietPick[];
   /** 2단 구조 하단 선반(WO-P4) — 신호 있으나 픽 기준 미달. 픽 승격 아님. */
   watching: QuietWatchItem[];
+  /** 회전율 계측(WO-DECK-01 PHASE 5). 구 페이로드에는 없으므로 선택 필드. */
+  rotation?: QuietPickRotation;
   qualification: QuietPickQualification;
   source: string;
 }
@@ -558,6 +643,13 @@ interface SignalCandidate {
   priceAtSignal?: number;
   /** 당일 등락률 힌트(US=insider quote). front.signals.changePct 결측 시 폴백. */
   changePctHint?: number;
+  /**
+   * 신호 **강도**(규모·인원 기반). 같은 종목에 여러 신호가 잡혔을 때 하나를 고르는 데 쓴다.
+   *
+   * ⛔ **연속일수를 여기에 더하지 말 것**(WO-DECK-01 완료조건 3). 예전에 `100 + 연속일 × 10` 이었고,
+   * 그것이 덱 고착의 단일 원인이었다 — 시간이 갈수록 점수가 올라 1등에서 내려올 경로가 없었다.
+   * 화면 순위는 `deck-ranking.rankScore`(신규성 1차 축)가 만든다.
+   */
   baseStrength: number;
   attentionKey: string;
   // 이례성 원료(검출 단계에서 확보).
@@ -633,7 +725,8 @@ function detectKrSignals(
         scale: formatShares(foreign.sum + inst.sum),
         days: Math.min(foreign.days, inst.days),
         startedAt: foreign.startedAt < inst.startedAt ? inst.startedAt : foreign.startedAt,
-        baseStrength: 300 + Math.min(foreign.days, inst.days) * 5,
+        // 연속일수 가점 금지(WO-DECK-01 완료조건 3) — 다중 주체라는 사실만 기저값으로 인정한다.
+        baseStrength: 300,
         attentionKey: def.canonical,
         streakSum: foreign.sum + inst.sum,
         isLongestStreak: foreignLongest && instLongest,
@@ -649,7 +742,8 @@ function detectKrSignals(
         scale: formatShares(foreign.sum),
         days: foreign.days,
         startedAt: foreign.startedAt,
-        baseStrength: 100 + foreign.days * 10,
+        baseStrength: 100, // 연속일수 가점 금지(WO-DECK-01) — 순위는 `deck-ranking.rankScore` 가 만든다
+
         attentionKey: def.canonical,
         streakSum: foreign.sum,
         isLongestStreak: foreignLongest,
@@ -665,7 +759,8 @@ function detectKrSignals(
         scale: formatShares(inst.sum),
         days: inst.days,
         startedAt: inst.startedAt,
-        baseStrength: 100 + inst.days * 10,
+        baseStrength: 100, // 연속일수 가점 금지(WO-DECK-01)
+
         attentionKey: def.canonical,
         streakSum: inst.sum,
         isLongestStreak: instLongest,
@@ -808,7 +903,7 @@ function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], 
   return out;
 }
 
-/** 어제 픽의 신호 상태(신선도·강화 판정용). */
+/** 어제 픽의 신호 상태(신선도·강화·재승격 판정용). */
 export interface QuietPickPriorState {
   startedAt: string;
   days: number;
@@ -816,6 +911,19 @@ export interface QuietPickPriorState {
   scale: string;
   /** 어제 규모의 실수치(US=매수금액 USD, KR=순매수 총량) — 문자열 scale 은 버킷이라 증가를 놓친다. */
   amount?: number;
+  /** 어제의 신호 유형·코드·주체 — 구조 전환·주체 합류를 재등장 사유로 잡는 데 필요하다. */
+  kind?: QuietPickSignalKind;
+  code?: SignalTypeCode;
+  actors?: string;
+  /** 어제 카드가 말한 무효선과 그때 가격 — 오늘 그 선을 넘었는지 판정한다. */
+  invalidationLevel?: number | null;
+  priceAt?: number;
+  /**
+   * 경과일 시계의 기준일(WO-DECK-01 §2-4). 기본은 `startedAt` 이고, 재등장 사유가 생긴 날로 리셋된다.
+   * **승계해야 한다** — 리셋한 다음 날에는 그 사유가 더 이상 '새 것'이 아니므로 여기서 읽지 않으면
+   * 시계가 원래 나이로 되돌아간다.
+   */
+  ageAnchor?: string;
 }
 
 /**
@@ -844,13 +952,11 @@ function strengthenedProgress(prior: QuietPickPriorState, sig: SignalCandidate):
   const addedPeople = typeof sig.insiderCount === "number" && typeof prior.insiderCount === "number"
     ? sig.insiderCount - prior.insiderCount
     : 0;
-  const addedDays = sig.days - prior.days;
   if (addedPeople > 0) {
     return `${sig.days}일째 계속 — 어제보다 ${addedPeople}명 늘었어요`;
   }
-  if (addedDays > 0) {
-    return `${sig.days}일째 계속 — 어제보다 ${addedDays}일 더 이어졌어요`;
-  }
+  // ⛔ "어제보다 1일 더 이어졌어요" 는 여기 없다(WO-DECK-01 §3-2) — 지속은 변화가 아니다.
+  //    연속 신호는 정의상 매일 하루씩 늘기 때문에, 이 분기가 있으면 어떤 컷에도 걸리지 않았다.
 
   // ⓑ 금액 증가 — 문자열 scale 은 버킷("$4.8M")이라 5.2M 로 늘어도 같은 값이 나온다. 실수치로 본다.
   const now = signalAmount(sig);
@@ -865,6 +971,76 @@ function strengthenedProgress(prior: QuietPickPriorState, sig: SignalCandidate):
     return `${sig.days}일째 계속 — 규모가 ${sig.scale}로 늘었어요`;
   }
   return undefined;
+}
+
+/**
+ * 재등장 사유 판정(WO-DECK-01 §3-2) — 경과일 상한을 넘었거나 쿨다운이 걸린 종목이
+ * **그럼에도** 다시 올라올 수 있는 근거. 하나라도 있으면 경과일 시계를 그 날로 리셋한다.
+ *
+ * "어제보다 1일 더 이어졌어요" 는 사유가 아니다 — 그건 변화가 아니라 지속이다.
+ *
+ * ## 무엇을 잡고 무엇을 못 잡나 (정직하게 적는다)
+ *
+ * | 사유 | 판정 근거 | 한계 |
+ * |---|---|---|
+ * | `invalidation_break` | 어제 카드의 무효선을 어제 가격은 지켰고 오늘 가격이 깼다 | 장중 이탈 후 회복은 못 본다(종가 기준) |
+ * | `new_material` | DART 내부자 장내매수 거래일이 시계 기준일보다 뒤다 | US 는 신호 자체가 공시라 `startedAt` 변화로 잡힌다 |
+ * | `actor_joined` | 어제는 단일 주체였는데 오늘 다중 주체 클러스터다 | 같은 주체 안의 인원 증가는 `progress` 쪽이다 |
+ * | `structure_shift` | 신호 taxonomy 코드가 바뀌었다(연속 ↔ 전환 등) | 거래량 진공→활성 전환은 아직 못 본다(어제 값 미보존) |
+ */
+function detectReentry(
+  prior: QuietPickPriorState,
+  sig: SignalCandidate,
+  today: string,
+  context: { currentPrice: number; dartTransactionDate?: string }
+): QuietPickReentry | null {
+  const anchor = prior.ageAnchor && prior.ageAnchor > prior.startedAt ? prior.ageAnchor : prior.startedAt;
+
+  // ① 다른 주체가 합류 — 단일 → 다중 클러스터.
+  if (sig.kind === "multi_cluster" && prior.kind && prior.kind !== "multi_cluster") {
+    // 합류한 쪽을 이름으로 말한다 — "외국인·기관" 중 어제 없던 주체.
+    const joined = prior.actors?.includes("외국인") ? "기관" : "외국인";
+    return { code: "actor_joined", text: `${joined}도 사기 시작했어요`, occurredAt: sig.startedAt || today };
+  }
+
+  // ② 구조 유형 전환 — taxonomy 코드가 바뀌었다.
+  if (prior.code && sig.code !== prior.code) {
+    return { code: "structure_shift", text: "거래가 붙기 시작했어요", occurredAt: sig.startedAt || today };
+  }
+
+  // ③ 새 재료 — 시계 기준일 이후의 DART 내부자 장내매수.
+  if (context.dartTransactionDate && context.dartTransactionDate > anchor) {
+    return { code: "new_material", text: "공시가 나왔어요", occurredAt: context.dartTransactionDate };
+  }
+
+  // ④ 무효선 이탈 — 어제는 지켰고 오늘 깼다. 되돌아보는 선을 넘은 것 자체가 볼 이유다.
+  const level = prior.invalidationLevel;
+  if (
+    typeof level === "number" && level > 0 &&
+    typeof prior.priceAt === "number" && prior.priceAt >= level &&
+    context.currentPrice < level
+  ) {
+    return { code: "invalidation_break", text: "되돌아보는 선을 넘었어요", occurredAt: today };
+  }
+
+  return null;
+}
+
+/**
+ * 경과일 시계 기준일 확정 — 재등장 사유가 있으면 그 날, 없으면 어제 기준일을 승계, 그것도 없으면 신호 시작일.
+ * 승계가 핵심이다: 리셋 다음 날 사유가 '새 것'이 아니게 되면서 시계가 원래 나이로 되돌아가는 것을 막는다.
+ */
+function resolveAgeAnchor(
+  sig: SignalCandidate,
+  prior: QuietPickPriorState | undefined,
+  reentry: QuietPickReentry | null
+): string {
+  if (reentry) return reentry.occurredAt;
+  // 신호가 새로 시작됐으면 승계하지 않는다 — 그 자체가 새 시계다.
+  if (prior?.ageAnchor && prior.startedAt === sig.startedAt && prior.ageAnchor > sig.startedAt) {
+    return prior.ageAnchor;
+  }
+  return sig.startedAt;
 }
 
 /** 같은 종목에 여러 신호가 잡히면 강도 높은 하나만 남긴다(선반 중복 노출 방지). */
@@ -894,14 +1070,20 @@ function tradingValueTopRanks(rows: readonly KrMarketRow[], topN: number): Set<s
 export async function buildQuietPickResponse(options: {
   date?: string;
   deps?: Partial<QuietPickDeps>;
-  /** 어제 픽의 신호 상태(WO-P4) — 순수 반복 제외 + 강화 시 재등장 판정에 쓴다. */
+  /** 어제 픽의 신호 상태(WO-P4) — 강화·재등장 판정에 쓴다. */
   priorPicks?: ReadonlyMap<string, QuietPickPriorState>;
+  /**
+   * canonical → 어제까지 1페이지에 연속으로 있던 일수(WO-DECK-01 §3).
+   * 오늘자를 포함하면 자기 자신 때문에 감점되므로 **오늘은 빼고** 넘겨야 한다.
+   */
+  page1Streaks?: ReadonlyMap<string, number>;
   limit?: number;
 } = {}): Promise<QuietPickResponse> {
   const deps = { ...defaultDeps, ...options.deps };
   const date = options.date ?? kstDate();
   const limit = options.limit ?? QUIET_PICK_MAX;
   const priorPicks = options.priorPicks ?? new Map<string, QuietPickPriorState>();
+  const page1Streaks = options.page1Streaks ?? new Map<string, number>();
   const drops: Record<string, number> = {};
   const drop = (reason: string) => { drops[reason] = (drops[reason] ?? 0) + 1; };
 
@@ -978,8 +1160,14 @@ export async function buildQuietPickResponse(options: {
     return { sig, near };
   });
 
-  // 프론트 조립은 비용이 크므로 강도순 상한을 둔다(잘린 수는 로그로 남긴다).
-  const ordered = [...tagged].sort((a, b) => b.sig.baseStrength - a.sig.baseStrength);
+  // 프론트 조립은 비용이 크므로 상한을 둔다(잘린 수는 로그로 남긴다).
+  //
+  // 정렬 키를 **신규성**으로 바꿨다(WO-DECK-01). 예전엔 `baseStrength` 내림차순이었고 그 안에
+  // 연속일수 가점이 있었으므로, 오래된 신호가 랭킹뿐 아니라 **조립 우선권까지** 가졌다.
+  // 지금은 후보가 60에 닿지 않아 잘림이 없지만(실측 최대 45), 유니버스를 넓히는 순간 2차 고착이 된다.
+  const ordered = [...tagged].sort(
+    (a, b) => noveltyScore(b.sig.days) - noveltyScore(a.sig.days) || b.sig.baseStrength - a.sig.baseStrength
+  );
   const considered = ordered.slice(0, MAX_FRONT_ASSEMBLIES);
   if (ordered.length > considered.length) {
     console.warn("[quiet-pick] front assembly capped", { total: ordered.length, considered: considered.length });
@@ -1082,14 +1270,44 @@ export async function buildQuietPickResponse(options: {
       continue;
     }
 
-    // 신선도(WO-P4) — 순수 반복만 제외. 신호가 강해졌으면 진행 상황 문구와 함께 재등장한다.
+    // ── 신선도·재등장(WO-P4 + WO-DECK-01 §2-4·§3) ──
+    //
+    // 예전에는 "순수 반복" 을 **제외**했다. 그런데 연속 신호는 매일 하루씩 늘어 항상 '강화'로 판정돼
+    // 이 컷에 걸리지 않았고(실측 `stale_repeat` 일평균 0.4건), 결과적으로 재노출 제어가 없는 상태였다.
+    // 이제 순수 반복은 **제외가 아니라 강등**이다 — 신규성 감쇠와 1페이지 쿨다운이 순위로 처리한다
+    // (WO 실패 모드: "쿨다운으로 강한 신호가 영원히 안 보임 → 강등이지 제외가 아님").
     const prior = priorPicks.get(sig.subject.canonical);
+    const dartTransactionDate = sig.subject.country === "KR"
+      ? dartInsiders[sig.subject.canonical]?.insiderPurchase?.transactionDate
+      : undefined;
+    const reentry = prior
+      ? detectReentry(prior, sig, date, {
+          currentPrice: current,
+          ...(dartTransactionDate ? { dartTransactionDate } : {}),
+        })
+      : null;
     let progress: string | undefined;
     if (prior && prior.startedAt === sig.startedAt) {
       progress = strengthenedProgress(prior, sig);
-      if (!progress) { drop("stale_repeat"); continue; }
-      drop("repeat_strengthened"); // 탈락이 아니라 '재등장 허용' 카운터(관측용)
+      drop(progress ? "repeat_strengthened" : "repeat_demoted"); // 둘 다 탈락 아님 — 관측용 카운터
     }
+
+    // 경과일 시계 — 재등장 사유가 있으면 그 날로 리셋하고, 없으면 어제 기준일을 승계한다.
+    const ageAnchor = resolveAgeAnchor(sig, prior, reentry);
+    const ageDays = Math.max(0, Math.min(sig.days, daysBetween(ageAnchor, date)));
+
+    // 경과일 상한(§2-4) — 신규 신호가 아니면 픽이 아니라 워치다. 재등장 사유가 있으면 시계가
+    // 리셋됐으므로 여기 걸리지 않는다(= 재승격 경로).
+    if (isAgedOut(ageDays)) {
+      sendToWatch(
+        sig,
+        { code: "signal_aged", text: `신호가 시작된 지 ${ageDays}일 지났어요 — 새로 생긴 건 아니에요` },
+        priceInfo
+      );
+      continue;
+    }
+
+    const page1Streak = page1Streaks.get(sig.subject.canonical) ?? 0;
 
     const score = front.score?.score ?? null;
     const timingGrade = timingGradeOf(front.verdict);
@@ -1166,12 +1384,22 @@ export async function buildQuietPickResponse(options: {
         priceAtSignal,
         startedAt: sig.startedAt,
         strength: sig.baseStrength,
+        // 화면 순위는 이것으로 정해진다 — 신규성 × 쿨다운 × 이례성. 연속일수 없음(WO-DECK-01).
+        rankScore: deckRankScore({
+          ageDays,
+          page1Streak,
+          ...(anomalies[0] ? { anomalyStrength: anomalies[0].strength } : {}),
+        }),
+        ageDays,
+        ...(ageAnchor !== sig.startedAt ? { ageAnchor } : {}),
+        ...(page1Streak > 0 ? { page1Streak } : {}),
         ...(typeof sig.insiderCount === "number" ? { insiderCount: sig.insiderCount } : {}),
         ...(((): { amount?: number } => {
           const amount = signalAmount(sig);
           return amount === undefined ? {} : { amount };
         })()),
         ...(progress ? { progress } : {}),
+        ...(reentry ? { reentry } : {}),
       },
       hook: buildQuietPickHook(facts),
       chips: buildQuietPickChips(facts),
@@ -1227,17 +1455,67 @@ export async function buildQuietPickResponse(options: {
     });
   }
 
-  // ── 강도순 정렬 + 상위 N(억지 충원 금지) ──
-  picks.sort((a, b) => b.signal.strength - a.signal.strength);
-  const published = picks.slice(0, limit);
+  // ── 신규성순 정렬 + 구성 규칙(WO-DECK-01 PHASE 2·4) ──
+  //
+  // 점수 상위 N 을 그대로 쓰지 않는다. 비율 하한·상한을 지키고, 신규가 부족하면 워치에서 승격하고,
+  // 그래도 부족하면 **덱을 줄인다**(지속 신호로 채우지 않는다).
+  picks.sort((a, b) => b.signal.rankScore - a.signal.rankScore);
+  //
+  // 승격 풀은 **비워 둔다.** 워치 선반의 항목은 전부 명시된 게이트에 걸려 내려온 것들이다 —
+  // `mega_cap`·`turnover_top20`·`mention_hot` 은 "이미 알려짐"(제품의 핵심 약속을 깨는 승격),
+  // `illiquid` 는 매매 불가, `ran_30`·`changed_15` 는 이미 오른 것, `signal_aged` 는 애초에 신규가 아니다.
+  // 즉 신규 하한을 메우려고 올릴 수 있는 안전한 후보가 하나도 없다 → 규정대로 **덱을 줄인다.**
+  // (`composeDeck` 의 `watchPool` 인자는 승격 가능한 소스가 생기는 날을 위해 남겨 둔다.)
+  const composed = composeDeck(
+    picks.map((pick) => ({ kind: pick.signal.kind, ageDays: pick.signal.ageDays, pick })),
+    { deckSize: limit, watchPool: [] }
+  );
+  const published = composed.deck.map((entry) => entry.pick);
   // 지켜보는 중 — 미달 사유가 '기준 미달'인 것만(품질 실패는 애초에 오지 않는다). 최대 10곳.
-  const watchShelf = watching.slice(0, QUIET_WATCH_MAX);
+  // 덱에 못 든 픽 자격자도 여기 붙인다(신규 하한·유형 상한에 밀린 것들 — 사라지면 안 된다).
+  const compositionOverflow: QuietWatchItem[] = picks
+    .filter((pick) => !published.includes(pick))
+    .map((pick) => ({
+      subject: pick.subject,
+      signal: { kind: pick.signal.kind, code: pick.signal.code, actors: pick.signal.actors, scale: pick.signal.scale, days: pick.signal.days },
+      price: { current: pick.price.current, ...(pick.price.currentText ? { currentText: pick.price.currentText } : {}), ...(typeof pick.price.changePct === "number" ? { changePct: pick.price.changePct } : {}) },
+      reasonCode: "composition_overflow",
+      reasonText: isFreshSignal(pick.signal.ageDays)
+        ? "오늘 덱은 같은 유형이 이미 찼어요"
+        : "오래된 신호라 오늘은 뒤로 밀렸어요",
+    }));
+  const watchShelf = [...watching, ...compositionOverflow].slice(0, QUIET_WATCH_MAX);
+
+  // 회전율 계측(PHASE 5) — 발행 시점에 굳힌다. 나중에 재계산하면 그날의 이력이 이미 바뀐다.
+  const rotation: QuietPickRotation = {
+    compositionVersion: composed.version,
+    deckSize: published.length,
+    caps: composed.caps,
+    freshCount: published.filter((pick) => isFreshSignal(pick.signal.ageDays)).length,
+    persistentCount: published.filter((pick) => !isFreshSignal(pick.signal.ageDays)).length,
+    promotedFromWatch: composed.promoted,
+    shrunkBy: composed.shrunkBy,
+    compositionSkipped: composed.skipped,
+    agedOut: drops.signal_aged ?? 0,
+    cooldownApplied: published.filter((pick) => (pick.signal.page1Streak ?? 0) >= 3).length,
+    reentryCount: published.filter((pick) => pick.signal.reentry).length,
+    page1: published.slice(0, PAGE1_SIZE).map((pick) => pick.subject.canonical),
+    page1HeldOver: published
+      .slice(0, PAGE1_SIZE)
+      .filter((pick) => (pick.signal.page1Streak ?? 0) > 0)
+      .map((pick) => ({ canonical: pick.subject.canonical, consecutiveDays: pick.signal.page1Streak ?? 0 })),
+    ageDaysMedian: ((): number | null => {
+      const ages = published.map((pick) => pick.signal.ageDays).sort((a, b) => a - b);
+      return ages.length === 0 ? null : ages[Math.floor(ages.length / 2)]!;
+    })(),
+  };
 
   return {
     asOf: new Date().toISOString(),
     date,
     picks: published,
     watching: watchShelf,
+    rotation,
     qualification: {
       krUniverse: krDefs.length,
       krWithSignal: krSignals.length,
@@ -1264,11 +1542,35 @@ export function quietPickPriorState(response: QuietPickResponse | null): Map<str
       startedAt: pick.signal.startedAt,
       days: pick.signal.days,
       scale: pick.signal.scale,
+      kind: pick.signal.kind,
+      code: pick.signal.code,
+      actors: pick.signal.actors,
+      invalidationLevel: pick.invalidation.level,
+      priceAt: pick.price.current,
+      ...(pick.signal.ageAnchor ? { ageAnchor: pick.signal.ageAnchor } : {}),
       ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
       ...(typeof pick.signal.amount === "number" ? { amount: pick.signal.amount } : {}),
     });
   }
   return out;
+}
+
+/**
+ * 최근 스냅샷들에서 1페이지 연속 점유일수를 뽑는다(WO-DECK-01 §3 쿨다운 입력).
+ *
+ * `snapshots` 는 **최신 날짜가 먼저**, 그리고 **오늘자는 빠져** 있어야 한다 —
+ * 오늘을 넣으면 자기 자신 때문에 감점된다.
+ */
+export function quietPickPage1Streaks(
+  snapshots: ReadonlyArray<QuietPickResponse | null | undefined>
+): Map<string, number> {
+  const rows = snapshots
+    .filter((snap): snap is QuietPickResponse => Boolean(snap?.picks?.length))
+    .map((snap) => ({
+      // 발행 시점에 굳힌 `rotation.page1` 이 있으면 그것이 정본이다(그날의 실제 1페이지).
+      page1: snap.rotation?.page1 ?? snap.picks.slice(0, PAGE1_SIZE).map((pick) => pick.subject.canonical),
+    }));
+  return page1StreakFromHistory(rows);
 }
 
 /**

@@ -97,6 +97,7 @@ export default async function QualitySloPage() {
         <nav style={{ display: "flex", gap: 16, fontSize: 12 }}>
           <Link href="/admin/committee" style={{ color: MUTED }}>위원회</Link>
           <Link href="/admin/quality" style={{ color: PASS }}>품질 SLO</Link>
+          <Link href="/admin/deck-rotation" style={{ color: MUTED }}>덱 회전율</Link>
         </nav>
       </header>
 

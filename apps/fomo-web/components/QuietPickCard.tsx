@@ -201,6 +201,17 @@ export function QuietPickCard({
       {/* ★1순위 훅 — 한 문장. 화면에서 가장 큰 글자다. */}
       <p className="mt-3 shrink-0 text-[22px] font-bold leading-8 text-whiteout" data-testid="pick-hook">{hook}</p>
 
+      {/*
+        재등장 사유(WO-DECK-01 §3-2) — 쿨다운·경과일 상한을 **그럼에도** 넘어 다시 올라온 이유.
+        "어제보다 1일 더 이어졌어요" 는 여기 오지 않는다(그건 변화가 아니라 지속이다).
+        서브라인보다 위에 둔다 — 같은 카드를 또 본 사람에게 가장 먼저 답할 질문이다.
+      */}
+      {pick.signal.reentry?.text && (
+        <p className="mt-1 shrink-0 text-[12px] font-semibold text-orange" data-testid="pick-reentry">
+          다시 올라온 이유 — {pick.signal.reentry.text}
+        </p>
+      )}
+
       {/* 서브라인 — 훅이 말하지 않는 변화만(H6). 같은 일수면 위에서 걸러져 렌더되지 않는다. */}
       {subLine && (
         <p className="mt-1 shrink-0 text-[12px] font-semibold" style={{ color: chartTokens.up }}>

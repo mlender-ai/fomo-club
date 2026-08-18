@@ -13,6 +13,20 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { prisma } from "../../apps/web/lib/prisma";
 import { readFeedContentHistoryByPrefix } from "../../apps/web/lib/feed-content-store";
+import {
+  rankScore,
+  noveltyScore,
+  composeDeck,
+  isAgedOut,
+  isFreshSignal,
+  page1CooldownFactor,
+  page1StreakFromHistory,
+  COOLDOWN_LADDER,
+  NOVELTY_HALFLIFE_DAYS,
+  SIGNAL_AGE_MAX_DAYS,
+  PAGE1_SIZE,
+  DECK_COMPOSITION_VERSION,
+} from "../../apps/web/lib/deck-ranking";
 
 function flag(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -398,6 +412,129 @@ function render(days: DeckDay[]): string {
   L.push("`MAX_FRONT_ASSEMBLIES = 60` 이 `baseStrength` 내림차순으로 후보를 자른다.");
   L.push(`관측 기간 후보 수는 최대 ${Math.max(...withQual.map((d) => d.qualification!.afterQuiet), 0)}건으로 아직 60 에 닿지 않아 **현재는 잘림이 없다.**`);
   L.push("유니버스를 넓히면 즉시 문제가 된다 — 연속일수가 긴 종목이 랭킹만이 아니라 **조립 우선권까지** 갖는다.");
+  L.push("");
+
+  // ── PHASE 2~4 리플레이 시뮬레이션 ──
+  //
+  // Q3 지시: "×0.6 이 실제로 1페이지를 바꾸는지 실측할 것. 효과가 없으면 계수를 낮추거나 전환해."
+  // 그래서 과거 14일 스냅샷을 **새 랭킹으로 다시 정렬**해 1페이지가 며칠 바뀌었는지 센다.
+  //
+  // ⚠️ 한계를 먼저 적는다 — 이건 반사실(counterfactual) 이 아니다.
+  // 스냅샷에 남은 후보는 **구 랭킹이 이미 발행한 10장**이다. 구 랭킹이 탈락시킨 후보는 없으므로
+  // 새 랭킹이 그것들을 끌어올렸을 경우를 재현할 수 없다. 즉 아래 회전율은 **하한**이다 —
+  // 실제 회전은 이보다 크다. 발행 후 프로덕션 3일 관측이 정본 판정이다(WO 완료조건 9).
+  L.push("## 1-5. 새 랭킹 리플레이 (Q3 효과 실측)");
+  L.push("");
+  L.push(`규칙: 신규성 반감기 **${NOVELTY_HALFLIFE_DAYS}일** · 경과일 상한 **${SIGNAL_AGE_MAX_DAYS}일** · 쿨다운 누진 ${COOLDOWN_LADDER.map((s2) => `${s2.minConsecutiveDays}일 ×${s2.factor}`).join(" / ")} · 구성 \`${DECK_COMPOSITION_VERSION}\``);
+  L.push("");
+  L.push("> **하한 추정이다.** 스냅샷에는 구 랭킹이 발행한 10장만 남아 있어, 새 랭킹이 끌어올렸을");
+  L.push("> 탈락 후보를 재현할 수 없다. 실제 회전은 이보다 크다.");
+  L.push("");
+
+  interface ReplayDay { date: string; page1: string[]; deckSize: number; agedOut: number; cooled: number }
+  const replay: ReplayDay[] = [];
+  const cooldownHits = new Map<string, number>();
+  for (let i = 0; i < asc.length; i++) {
+    const day = asc[i]!;
+    // 쿨다운 입력 — **리플레이 자신의** 1페이지 이력을 쓴다(구 랭킹 이력을 쓰면 효과가 왜곡된다).
+    const priorPage1 = replay.slice(0, i).reverse().map((r) => ({ page1: r.page1 }));
+    const streaks = page1StreakFromHistory(priorPage1);
+    const candidates = day.entries
+      .filter((e) => !isAgedOut(e.days))
+      .map((e) => ({
+        kind: e.kind,
+        ageDays: e.days,
+        canonical: e.canonical,
+        // 이례성 강도는 스냅샷에 남지 않았다 — 넣지 않는다(없는 값을 지어내지 않는다).
+        score: rankScore({ ageDays: e.days, page1Streak: streaks.get(e.canonical) ?? 0 }),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const composed = composeDeck(candidates, { deckSize: day.entries.length });
+    const page1 = composed.deck.slice(0, PAGE1_SIZE).map((c) => c.canonical);
+    const cooled = candidates.filter((c) => (streaks.get(c.canonical) ?? 0) >= 3).length;
+    for (const c of candidates) {
+      const st = streaks.get(c.canonical) ?? 0;
+      if (st >= 3) cooldownHits.set(c.canonical, (cooldownHits.get(c.canonical) ?? 0) + 1);
+    }
+    replay.push({
+      date: day.date,
+      page1,
+      deckSize: composed.deck.length,
+      agedOut: day.entries.filter((e) => isAgedOut(e.days)).length,
+      cooled,
+    });
+  }
+
+  L.push("| 날짜 | 새 1페이지 | 구 1페이지 | 1페이지 교체 | 상한 초과(워치행) | 쿨다운 적용 | 덱 장수 |");
+  L.push("|---|---|---|---|---|---|---|");
+  for (let i = replay.length - 1; i >= 0; i--) {
+    const r = replay[i]!;
+    const prev = replay[i - 1];
+    const swapped = prev ? r.page1.filter((n) => !prev.page1.includes(n)).length : null;
+    const oldPage1 = asc[i]!.entries.slice(0, PAGE1_SIZE).map((e) => e.canonical);
+    L.push(
+      `| ${r.date} | ${r.page1.join(", ") || "—"} | ${oldPage1.join(", ")} | ${swapped === null ? "—" : `${swapped}/${r.page1.length}`} | ${r.agedOut} | ${r.cooled} | ${r.deckSize} |`
+    );
+  }
+  L.push("");
+
+  // 판정 — 1페이지가 매일 바뀌었나(완료조건 9의 대리 지표).
+  const changedDays = replay.slice(1).filter((r, i) => {
+    const prev = replay[i]!;
+    return r.page1.some((n) => !prev.page1.includes(n));
+  }).length;
+  const comparable = Math.max(0, replay.length - 1);
+  const newRuns: Array<{ name: string; n: number }> = [];
+  for (const r of replay) {
+    const top = r.page1[0] ?? "(없음)";
+    const last = newRuns[newRuns.length - 1];
+    if (last && last.name === top) last.n += 1;
+    else newRuns.push({ name: top, n: 1 });
+  }
+  const newMaxRun = Math.max(0, ...newRuns.map((r) => r.n));
+  L.push("| 지표 | 구 랭킹 | 새 랭킹(리플레이) |");
+  L.push("|---|---|---|");
+  L.push(`| 1페이지가 전일과 달라진 날 | ${churn.filter((c) => c > 0).length}/${comparable} | **${changedDays}/${comparable}** |`);
+  L.push(`| 최장 연속 1위 | ${maxRun}일 | **${newMaxRun}일** |`);
+  const oldTop = [...expo.entries()].sort((a, b) => b[1].page1 - a[1].page1)[0];
+  const newPage1Days = new Map<string, number>();
+  for (const r of replay) for (const n of r.page1) newPage1Days.set(n, (newPage1Days.get(n) ?? 0) + 1);
+  const newTop = [...newPage1Days.entries()].sort((a, b) => b[1] - a[1])[0];
+  L.push(`| 최다 1페이지 점유 | ${oldTop ? `${oldTop[0]} ${oldTop[1].page1}일` : "—"} | **${newTop ? `${newTop[0]} ${newTop[1]}일` : "—"}** |`);
+  L.push("");
+  if (newMaxRun <= 3 && changedDays >= comparable) {
+    L.push("**판정: 계수 조정 불필요.** 리플레이에서 1페이지가 매일 바뀌고 1위 연속이 목표(3일 이하) 안이다.");
+  } else {
+    L.push(
+      `**판정: 보완 필요.** 리플레이 최장 연속 1위 ${newMaxRun}일 · 변경일 ${changedDays}/${comparable}. ` +
+        "Q3 단서대로 계수를 낮추거나(×0.4) 1페이지 밖 강제로 전환하는 것을 검토한다 — " +
+        "단 이 리플레이는 하한이므로 **프로덕션 3일 관측 전에 계수를 건드리지 않는다.**"
+    );
+  }
+  L.push("");
+  if (cooldownHits.size > 0) {
+    L.push("쿨다운이 실제로 걸린 종목(리플레이 기준):");
+    L.push("");
+    L.push("| 종목 | 쿨다운 적용일 |");
+    L.push("|---|---|");
+    for (const [name, n] of [...cooldownHits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) {
+      L.push(`| ${name} | ${n} |`);
+    }
+    L.push("");
+  }
+  L.push("계수 곡선(참고):");
+  L.push("");
+  L.push("| 1페이지 연속일 | 계수 |");
+  L.push("|---|---|");
+  for (const d of [0, 2, 3, 4, 5, 6, 7, 14]) L.push(`| ${d}일 | ×${page1CooldownFactor(d)} |`);
+  L.push("");
+  L.push("신규성 곡선(참고):");
+  L.push("");
+  L.push("| 경과일 | 신규성 | 신규 판정 |");
+  L.push("|---|---|---|");
+  for (const d of [0, 1, 3, 5, 7, 8, 10, 14, 15, 20, 26]) {
+    L.push(`| ${d}일 | ${noveltyScore(d).toFixed(1)} | ${isAgedOut(d) ? "**상한 초과 → 워치**" : isFreshSignal(d) ? "신규" : "지속" } |`);
+  }
   L.push("");
 
   // ── PHASE 2 입력: 신호 나이 분포 ──
