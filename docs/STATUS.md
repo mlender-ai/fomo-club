@@ -6,7 +6,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-08-17 17:00 UTC** · WO-RENDER-01 PART B·C 완료 · CTX-00 재실사 |
+| 최종 갱신 | **2026-08-18 11:30 UTC** · WO-DECK-01 PHASE 1(덱 고착 진단) 완료 |
 | 갱신 근거 | 로컬 full clone + `*.vercel.app` 직접 GET + Vercel CLI + GitHub API |
 | 실측 기준 커밋 | `9197fbe` (= `origin/main` HEAD = **양쪽 정규 도메인 서빙 커밋**) |
 | 검증 수단 | **`npm run verify:production`** — 이제 존재한다. 실행 결과 **exit 0** |
@@ -49,6 +49,7 @@
 | SYNC | WO-SYNC 정합성 | **진행 중** | §8 잔여 (A-4 완료) | — |
 | RENDER | WO-RENDER-01 | **진행 중** | **PART A · E-3 · E-4** | §7 |
 | SUB | WO-SUB-00~09 | **미확인** | 미확인 | AC별 대조 미수행(§8 B-2) |
+| DECK | WO-DECK-01 덱 고착 | **PHASE 1 완료(진단)** | PHASE 2~5 (랭킹 수정·쿨다운·구성 규칙·계측) | PHASE 2 파라미터 사람 판정 대기 |
 
 > ⚠️ 과거 인수인계 문서의 **"00~08 머지"** 요약은 **실측으로 확인되지 않았다.** 이 표는 그 요약을 승계하지 않는다.
 

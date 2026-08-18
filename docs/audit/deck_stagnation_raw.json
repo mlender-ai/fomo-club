@@ -1,0 +1,1412 @@
+[
+ {
+  "date": "2026-08-18",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 27,
+    "strength": 370,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 13,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 274.58345596385544,
+    "startedAt": "2026-08-13"
+   },
+   {
+    "canonical": "Chiron Real Estate",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 272.0407790630171,
+    "startedAt": "2026-08-14"
+   },
+   {
+    "canonical": "Angel Studios",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 262.23666167286433,
+    "startedAt": "2026-08-14"
+   },
+   {
+    "canonical": "Liberty Capital",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 255.87726869632,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Profrac",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 253.02031554036398,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "On",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 253.00354813459748,
+    "startedAt": "2026-08-14"
+   },
+   {
+    "canonical": "엘앤에프",
+    "kind": "institution_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "더블유씨피",
+    "kind": "institution_streak",
+    "days": 5,
+    "strength": 150,
+    "startedAt": "2026-08-11"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 10,
+    "no_verdict": 1,
+    "turnover_top20": 1,
+    "no_invalidation": 1,
+    "ran_30_since_signal": 2,
+    "insufficient_candles": 3
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 30,
+   "krUniverse": 66,
+   "afterQuality": 12,
+   "krWithSignal": 16,
+   "usInsiderRaw": 20,
+   "usWithSignal": 14
+  }
+ },
+ {
+  "date": "2026-08-17",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "Amrize",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 302.75491073769376,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 12,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 264.53041560530085,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Pfizer",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 262.3565392504051,
+    "startedAt": "2026-08-12"
+   },
+   {
+    "canonical": "Chiron Real Estate",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 262.0093357829425,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Liberty Capital",
+    "kind": "insider_cluster",
+    "days": 7,
+    "strength": 255.87726869632,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Profrac",
+    "kind": "insider_cluster",
+    "days": 7,
+    "strength": 253.02031554036398,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Hf Sinclair",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 251.91562934983227,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Angel Studios",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 250.85219019184694,
+    "startedAt": "2026-08-12"
+   },
+   {
+    "canonical": "DB하이텍",
+    "kind": "institution_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-08-07"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 13,
+    "no_verdict": 1,
+    "stale_repeat": 1,
+    "turnover_top20": 3,
+    "no_invalidation": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 9,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 38,
+   "krUniverse": 66,
+   "afterQuality": 16,
+   "krWithSignal": 25,
+   "usInsiderRaw": 20,
+   "usWithSignal": 13
+  }
+ },
+ {
+  "date": "2026-08-16",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 26,
+    "strength": 360,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Amrize",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 302.75491073769376,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 11,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 264.53041560530085,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Pfizer",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 262.3565392504051,
+    "startedAt": "2026-08-12"
+   },
+   {
+    "canonical": "Chiron Real Estate",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 262.0093357829425,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Liberty Capital",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 255.87726869632,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Profrac",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 253.02031554036398,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Hf Sinclair",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 251.91562934983227,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Angel Studios",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 250.85219019184694,
+    "startedAt": "2026-08-12"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 13,
+    "no_verdict": 1,
+    "turnover_top20": 3,
+    "no_invalidation": 1,
+    "ran_30_since_signal": 1,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 38,
+   "krUniverse": 66,
+   "afterQuality": 17,
+   "krWithSignal": 25,
+   "usInsiderRaw": 20,
+   "usWithSignal": 13
+  }
+ },
+ {
+  "date": "2026-08-15",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 26,
+    "strength": 360,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Amrize",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 302.75491073769376,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 10,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 264.53041560530085,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Chiron Real Estate",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 262.0093357829425,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Harley-Davidson",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 260.79104476961146,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Liberty Capital",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 255.87726869632,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Profrac",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 253.02031554036398,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Hf Sinclair",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 251.91562934983227,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "DB하이텍",
+    "kind": "institution_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-08-07"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 14,
+    "no_verdict": 1,
+    "turnover_top20": 3,
+    "no_invalidation": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 8,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 38,
+   "krUniverse": 66,
+   "afterQuality": 16,
+   "krWithSignal": 25,
+   "usInsiderRaw": 20,
+   "usWithSignal": 13
+  }
+ },
+ {
+  "date": "2026-08-14",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 25,
+    "strength": 350,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "한미반도체",
+    "kind": "multi_cluster",
+    "days": 4,
+    "strength": 320,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Amrize",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 302.75491073769376,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 9,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 264.53041560530085,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 14,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Harley-Davidson",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 260.79104476961146,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Liberty Capital",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 255.87726869632,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Profrac",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 253.02031554036398,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Hf Sinclair",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 251.91562934983227,
+    "startedAt": "2026-08-11"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 8,
+    "no_verdict": 1,
+    "turnover_top20": 1,
+    "no_invalidation": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 7,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 31,
+   "krUniverse": 66,
+   "afterQuality": 17,
+   "krWithSignal": 17,
+   "usInsiderRaw": 20,
+   "usWithSignal": 14
+  }
+ },
+ {
+  "date": "2026-08-13",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 24,
+    "strength": 340,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "한미반도체",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 264.53041560530085,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 13,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Chiron Real Estate",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 260.61739287645446,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Hf Sinclair",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 251.91562934983227,
+    "startedAt": "2026-08-11"
+   },
+   {
+    "canonical": "Harley-Davidson",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 250.4699802245471,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Coastal Financial",
+    "kind": "insider_cluster",
+    "days": 7,
+    "strength": 250.2123853322522,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "대웅제약",
+    "kind": "foreign_streak",
+    "days": 9,
+    "strength": 190,
+    "startedAt": "2026-07-31"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 7,
+    "no_anomaly": 1,
+    "turnover_top20": 3,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 5,
+    "insufficient_candles": 3
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 35,
+   "krUniverse": 66,
+   "afterQuality": 18,
+   "krWithSignal": 22,
+   "usInsiderRaw": 20,
+   "usWithSignal": 13
+  }
+ },
+ {
+  "date": "2026-08-12",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 23,
+    "strength": 330,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "유한양행",
+    "kind": "multi_cluster",
+    "days": 4,
+    "strength": 320,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "SK바이오팜",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-07"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 7,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 269.27489565969324,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 12,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Tractor Supply",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 259.0725531195916,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "Aptiv",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 254.3760714090343,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Harley-Davidson",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 250.4699802245471,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Coastal Financial",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 250.2123853322522,
+    "startedAt": "2026-08-06"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 3,
+    "turnover_top20": 3,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 2,
+    "repeat_strengthened": 6,
+    "insufficient_candles": 3
+   },
+   "watching": 8,
+   "published": 10,
+   "afterQuiet": 29,
+   "krUniverse": 66,
+   "afterQuality": 16,
+   "krWithSignal": 16,
+   "usInsiderRaw": 20,
+   "usWithSignal": 13
+  }
+ },
+ {
+  "date": "2026-08-11",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "일진파워",
+    "kind": "multi_cluster",
+    "days": 7,
+    "strength": 335,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "셀트리온",
+    "kind": "multi_cluster",
+    "days": 4,
+    "strength": 320,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 22,
+    "strength": 320,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "유한양행",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Millrose Properties",
+    "kind": "insider_cluster",
+    "days": 1,
+    "strength": 274.13130819386714,
+    "startedAt": "2026-08-10"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 269.27489565969324,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "Orion",
+    "kind": "insider_cluster",
+    "days": 11,
+    "strength": 267.53144930641474,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 11,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Tractor Supply",
+    "kind": "insider_cluster",
+    "days": 7,
+    "strength": 259.0725531195916,
+    "startedAt": "2026-08-04"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 11,
+    "changed_15": 1,
+    "turnover_top20": 2,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 2,
+    "repeat_strengthened": 10,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 37,
+   "krUniverse": 66,
+   "afterQuality": 17,
+   "krWithSignal": 24,
+   "usInsiderRaw": 20,
+   "usWithSignal": 13
+  }
+ },
+ {
+  "date": "2026-08-10",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "일진파워",
+    "kind": "multi_cluster",
+    "days": 6,
+    "strength": 330,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "셀트리온",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 21,
+    "strength": 310,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 269.27489565969324,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "Orion",
+    "kind": "insider_cluster",
+    "days": 10,
+    "strength": 267.53144930641474,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 10,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Tractor Supply",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 259.0725531195916,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "Coastal Financial",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 250.2123853322522,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "V F",
+    "kind": "insider_cluster",
+    "days": 10,
+    "strength": 250.01678989124653,
+    "startedAt": "2026-07-31"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 9,
+    "stale_repeat": 2,
+    "turnover_top20": 2,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 8,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 35,
+   "krUniverse": 66,
+   "afterQuality": 17,
+   "krWithSignal": 23,
+   "usInsiderRaw": 18,
+   "usWithSignal": 12
+  }
+ },
+ {
+  "date": "2026-08-09",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 269.27489565969324,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "Orion",
+    "kind": "insider_cluster",
+    "days": 9,
+    "strength": 267.53144930641474,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 9,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Tractor Supply",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 259.0725531195916,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "Coastal Financial",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 250.2123853322522,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "V F",
+    "kind": "insider_cluster",
+    "days": 9,
+    "strength": 250.01678989124653,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Bed Bath & Beyond",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 247.34169233584512,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "저스템",
+    "kind": "institution_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "대웅제약",
+    "kind": "foreign_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-07-31"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 9,
+    "stale_repeat": 3,
+    "turnover_top20": 2,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 7,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 35,
+   "krUniverse": 66,
+   "afterQuality": 16,
+   "krWithSignal": 23,
+   "usInsiderRaw": 18,
+   "usWithSignal": 12
+  }
+ },
+ {
+  "date": "2026-08-08",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "일진파워",
+    "kind": "multi_cluster",
+    "days": 6,
+    "strength": 330,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "셀트리온",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 21,
+    "strength": 310,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 3,
+    "strength": 282.036846583469,
+    "startedAt": "2026-08-05"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 269.27489565969324,
+    "startedAt": "2026-08-06"
+   },
+   {
+    "canonical": "Orion",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 267.53144930641474,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Tractor Supply",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": 259.0725531195916,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "V F",
+    "kind": "insider_cluster",
+    "days": 8,
+    "strength": 250.01678989124653,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Bed Bath & Beyond",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 247.34169233584512,
+    "startedAt": "2026-08-06"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 9,
+    "turnover_top20": 2,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 6,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 34,
+   "krUniverse": 66,
+   "afterQuality": 18,
+   "krWithSignal": 23,
+   "usInsiderRaw": 18,
+   "usWithSignal": 11
+  }
+ },
+ {
+  "date": "2026-08-07",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "일진파워",
+    "kind": "multi_cluster",
+    "days": 5,
+    "strength": 325,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "한화오션",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "한전KPS",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "한화시스템",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 20,
+    "strength": 300,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "한글과컴퓨터",
+    "kind": "foreign_streak",
+    "days": 7,
+    "strength": 170,
+    "startedAt": "2026-07-29"
+   },
+   {
+    "canonical": "저스템",
+    "kind": "institution_streak",
+    "days": 5,
+    "strength": 150,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "대웅제약",
+    "kind": "foreign_streak",
+    "days": 5,
+    "strength": 150,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "한화투자증권",
+    "kind": "institution_streak",
+    "days": 5,
+    "strength": 150,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "STX엔진",
+    "kind": "institution_streak",
+    "days": 4,
+    "strength": 140,
+    "startedAt": "2026-08-03"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 9,
+    "turnover_top20": 3,
+    "no_invalidation": 1,
+    "ran_30_since_signal": 1,
+    "repeat_strengthened": 3
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 31,
+   "krUniverse": 66,
+   "afterQuality": 17,
+   "krWithSignal": 31,
+   "usInsiderRaw": 0,
+   "usWithSignal": 0
+  }
+ },
+ {
+  "date": "2026-08-06",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "일진파워",
+    "kind": "multi_cluster",
+    "days": 4,
+    "strength": 320,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 19,
+    "strength": 290,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Gbank Financial",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 281.53662212800066,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "Orion",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 267.53144930641474,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Tractor Supply",
+    "kind": "insider_cluster",
+    "days": 2,
+    "strength": 259.0725531195916,
+    "startedAt": "2026-08-04"
+   },
+   {
+    "canonical": "V F",
+    "kind": "insider_cluster",
+    "days": 6,
+    "strength": 250.01678989124653,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "코스모신소재",
+    "kind": "foreign_streak",
+    "days": 7,
+    "strength": 170,
+    "startedAt": "2026-07-28"
+   },
+   {
+    "canonical": "한글과컴퓨터",
+    "kind": "foreign_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-07-29"
+   },
+   {
+    "canonical": "DB하이텍",
+    "kind": "institution_streak",
+    "days": 4,
+    "strength": 140,
+    "startedAt": "2026-07-31"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 13,
+    "changed_15": 1,
+    "no_anomaly": 2,
+    "turnover_top20": 1,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 5,
+    "repeat_strengthened": 5,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 40,
+   "krUniverse": 66,
+   "afterQuality": 14,
+   "krWithSignal": 30,
+   "usInsiderRaw": 16,
+   "usWithSignal": 10
+  }
+ },
+ {
+  "date": "2026-08-05",
+  "source": "snapshot",
+  "entries": [
+   {
+    "canonical": "레인보우로보틱스",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "일진파워",
+    "kind": "multi_cluster",
+    "days": 3,
+    "strength": 315,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 18,
+    "strength": 280,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp",
+    "kind": "insider_cluster",
+    "days": 14,
+    "strength": 269.0858726350889,
+    "startedAt": "2026-07-22"
+   },
+   {
+    "canonical": "Orion",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 267.53144930641474,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Albertsons Companies",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 262.00315872717806,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Baycom",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 250.5760299009518,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "V F",
+    "kind": "insider_cluster",
+    "days": 5,
+    "strength": 250.01678989124653,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "풍산",
+    "kind": "institution_streak",
+    "days": 10,
+    "strength": 200,
+    "startedAt": "2026-07-22"
+   },
+   {
+    "canonical": "우진",
+    "kind": "foreign_streak",
+    "days": 6,
+    "strength": 160,
+    "startedAt": "2026-07-28"
+   }
+  ],
+  "qualification": {
+   "drops": {
+    "mega_cap": 12,
+    "changed_15": 4,
+    "turnover_top20": 4,
+    "no_invalidation": 1,
+    "implausible_price": 1,
+    "ran_30_since_signal": 2,
+    "repeat_strengthened": 8,
+    "insufficient_candles": 2
+   },
+   "watching": 10,
+   "published": 10,
+   "afterQuiet": 45,
+   "krUniverse": 66,
+   "afterQuality": 19,
+   "krWithSignal": 36,
+   "usInsiderRaw": 14,
+   "usWithSignal": 9
+  }
+ },
+ {
+  "date": "2026-08-04",
+  "source": "ledger",
+  "entries": [
+   {
+    "canonical": "빅텍",
+    "kind": "institution_streak",
+    "days": 17,
+    "strength": null,
+    "startedAt": "2026-07-09"
+   },
+   {
+    "canonical": "Rhinebeck Bancorp, Inc.",
+    "kind": "insider_cluster",
+    "days": 13,
+    "strength": null,
+    "startedAt": "2026-07-22"
+   },
+   {
+    "canonical": "Albertsons Companies, Inc.",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": null,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "Baycom Corp",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": null,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "V F Corp",
+    "kind": "insider_cluster",
+    "days": 4,
+    "strength": null,
+    "startedAt": "2026-07-31"
+   },
+   {
+    "canonical": "풍산",
+    "kind": "institution_streak",
+    "days": 9,
+    "strength": null,
+    "startedAt": "2026-07-22"
+   },
+   {
+    "canonical": "코난테크놀로지",
+    "kind": "institution_streak",
+    "days": 8,
+    "strength": null,
+    "startedAt": "2026-07-23"
+   },
+   {
+    "canonical": "엘앤에프",
+    "kind": "foreign_streak",
+    "days": 5,
+    "strength": null,
+    "startedAt": "2026-07-28"
+   },
+   {
+    "canonical": "우진",
+    "kind": "foreign_streak",
+    "days": 5,
+    "strength": null,
+    "startedAt": "2026-07-28"
+   },
+   {
+    "canonical": "코스모신소재",
+    "kind": "foreign_streak",
+    "days": 5,
+    "strength": null,
+    "startedAt": "2026-07-28"
+   }
+  ]
+ }
+]
