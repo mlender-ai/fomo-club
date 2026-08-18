@@ -169,9 +169,20 @@ export interface DeckCandidate {
   ageDays: number;
 }
 
+/** 구성 규칙 때문에 덱에 못 든 사유. 선반 문구가 이 값을 그대로 번역한다. */
+export type DeckSkipReason = "kind_cap" | "persistent_cap" | "reserved_for_fresh" | "deck_full" | "shrunk_for_fresh_floor";
+
 export interface ComposeResult<T> {
   /** 최종 덱(입력 순서 = 점수 순서 유지). */
   deck: T[];
+  /**
+   * 항목별 탈락 사유 — 집계(`skipped`)만으로는 **어느 카드가 왜 밀렸는지** 알 수 없다.
+   *
+   * 선반은 "왜 못 넘었는지까지 그대로 보여준다" 가 존재 이유다. 실측(2026-08-19): 집계만 있어서
+   * `kind_cap` 으로 밀린 Gbank 에 「오래된 신호라 뒤로 밀렸어요」(경과일로 추측한 문구)가 붙었다 —
+   * 사실이 아닌 사유를 화면에 말한 것이다.
+   */
+  skipReasons: Map<T, DeckSkipReason>;
   /** 워치에서 승격된 수. */
   promoted: number;
   /** 구성 규칙 때문에 밀린 후보 수(사유별). */
@@ -207,7 +218,12 @@ export function composeDeck<T extends DeckCandidate>(
   const deckSize = Math.max(0, Math.floor(options.deckSize ?? DECK_SIZE));
   const caps = deckCaps(deckSize);
   const skipped: Record<string, number> = {};
-  const bump = (reason: string) => { skipped[reason] = (skipped[reason] ?? 0) + 1; };
+  const skipReasons = new Map<T, DeckSkipReason>();
+  const bump = (reason: DeckSkipReason, item?: T) => {
+    skipped[reason] = (skipped[reason] ?? 0) + 1;
+    // 첫 사유를 남긴다 — 뒤에 다른 규칙에도 걸렸다고 사유가 바뀌면 설명이 흔들린다.
+    if (item !== undefined && !skipReasons.has(item)) skipReasons.set(item, reason);
+  };
 
   const chosen: T[] = [];
   const kindCount = new Map<string, number>();
@@ -222,14 +238,14 @@ export function composeDeck<T extends DeckCandidate>(
   };
 
   for (const item of ranked) {
-    if (chosen.length >= deckSize) { bump("deck_full"); continue; }
-    if ((kindCount.get(item.kind) ?? 0) >= caps.maxSameKind) { bump("kind_cap"); continue; }
+    if (chosen.length >= deckSize) { bump("deck_full", item); continue; }
+    if ((kindCount.get(item.kind) ?? 0) >= caps.maxSameKind) { bump("kind_cap", item); continue; }
     if (!isFreshSignal(item.ageDays)) {
-      if (persistent >= caps.maxPersistent) { bump("persistent_cap"); continue; }
+      if (persistent >= caps.maxPersistent) { bump("persistent_cap", item); continue; }
       // 남은 자리가 신규 부족분과 같아지면 그 자리는 신규 몫이다 — 지속으로 선점하지 않는다.
       const remaining = deckSize - chosen.length;
       const freshNeeded = Math.max(0, caps.minFresh - fresh);
-      if (remaining <= freshNeeded) { bump("reserved_for_fresh"); continue; }
+      if (remaining <= freshNeeded) { bump("reserved_for_fresh", item); continue; }
     }
     take(item);
   }
@@ -241,7 +257,7 @@ export function composeDeck<T extends DeckCandidate>(
     for (const item of options.watchPool ?? []) {
       if (fresh >= caps.minFresh || chosen.length >= deckSize) break;
       if (seen.has(item) || !isFreshSignal(item.ageDays)) continue;
-      if ((kindCount.get(item.kind) ?? 0) >= caps.maxSameKind) { bump("kind_cap"); continue; }
+      if ((kindCount.get(item.kind) ?? 0) >= caps.maxSameKind) { bump("kind_cap", item); continue; }
       take(item);
       promoted += 1;
     }
@@ -255,11 +271,15 @@ export function composeDeck<T extends DeckCandidate>(
     chosen.splice(chosen.lastIndexOf(lastPersistent), 1);
     persistent -= 1;
     shrunkBy += 1;
-    bump("shrunk_for_fresh_floor");
+    bump("shrunk_for_fresh_floor", lastPersistent);
   }
+
+  // 덱에 든 항목은 사유가 없어야 한다 — 승격 경로에서 한 번 밀렸다가 들어온 경우가 있다.
+  for (const item of chosen) skipReasons.delete(item);
 
   return {
     deck: chosen,
+    skipReasons,
     promoted,
     skipped,
     shrunkBy,

@@ -52,6 +52,7 @@ import {
   isFreshSignal,
   page1StreakFromHistory,
   PAGE1_SIZE,
+  type DeckSkipReason,
 } from "./deck-ranking";
 import type { PublicationStamp } from "./publication-stamp";
 
@@ -1466,24 +1467,35 @@ export async function buildQuietPickResponse(options: {
   // `illiquid` 는 매매 불가, `ran_30`·`changed_15` 는 이미 오른 것, `signal_aged` 는 애초에 신규가 아니다.
   // 즉 신규 하한을 메우려고 올릴 수 있는 안전한 후보가 하나도 없다 → 규정대로 **덱을 줄인다.**
   // (`composeDeck` 의 `watchPool` 인자는 승격 가능한 소스가 생기는 날을 위해 남겨 둔다.)
-  const composed = composeDeck(
-    picks.map((pick) => ({ kind: pick.signal.kind, ageDays: pick.signal.ageDays, pick })),
-    { deckSize: limit, watchPool: [] }
-  );
+  const entries = picks.map((pick) => ({ kind: pick.signal.kind, ageDays: pick.signal.ageDays, pick }));
+  const composed = composeDeck(entries, { deckSize: limit, watchPool: [] });
   const published = composed.deck.map((entry) => entry.pick);
   // 지켜보는 중 — 미달 사유가 '기준 미달'인 것만(품질 실패는 애초에 오지 않는다). 최대 10곳.
   // 덱에 못 든 픽 자격자도 여기 붙인다(신규 하한·유형 상한에 밀린 것들 — 사라지면 안 된다).
-  const compositionOverflow: QuietWatchItem[] = picks
-    .filter((pick) => !published.includes(pick))
-    .map((pick) => ({
-      subject: pick.subject,
-      signal: { kind: pick.signal.kind, code: pick.signal.code, actors: pick.signal.actors, scale: pick.signal.scale, days: pick.signal.days },
-      price: { current: pick.price.current, ...(pick.price.currentText ? { currentText: pick.price.currentText } : {}), ...(typeof pick.price.changePct === "number" ? { changePct: pick.price.changePct } : {}) },
-      reasonCode: "composition_overflow",
-      reasonText: isFreshSignal(pick.signal.ageDays)
-        ? "오늘 덱은 같은 유형이 이미 찼어요"
-        : "오래된 신호라 오늘은 뒤로 밀렸어요",
-    }));
+  //
+  // 선반 문구는 **실제 탈락 사유**를 번역한다. 경과일로 추측하지 않는다 — 실측(2026-08-19):
+  // `kind_cap` 으로 밀린 Gbank 에 「오래된 신호라」가 붙어, 사실이 아닌 사유를 화면에 말했다.
+  const OVERFLOW_TEXT: Record<DeckSkipReason, string> = {
+    kind_cap: "같은 종류 신호가 오늘 덱에 이미 찼어요",
+    persistent_cap: "오래 이어진 신호 자리가 이미 찼어요",
+    reserved_for_fresh: "그 자리는 새로 생긴 신호 몫이에요",
+    shrunk_for_fresh_floor: "새로 생긴 신호가 적어 오늘은 덱을 줄였어요",
+    deck_full: "점수는 넘었지만 오늘 덱이 다 찼어요",
+  };
+  const compositionOverflow: QuietWatchItem[] = entries
+    .filter((entry) => !published.includes(entry.pick))
+    .map((entry) => {
+      const pick = entry.pick;
+      const reason = composed.skipReasons.get(entry);
+      return {
+        subject: pick.subject,
+        signal: { kind: pick.signal.kind, code: pick.signal.code, actors: pick.signal.actors, scale: pick.signal.scale, days: pick.signal.days },
+        price: { current: pick.price.current, ...(pick.price.currentText ? { currentText: pick.price.currentText } : {}), ...(typeof pick.price.changePct === "number" ? { changePct: pick.price.changePct } : {}) },
+        reasonCode: "composition_overflow" as const,
+        // 사유가 없으면(있을 수 없지만) 추측 대신 사실만 말한다.
+        reasonText: reason ? OVERFLOW_TEXT[reason] : "오늘 덱에는 못 들어갔어요",
+      };
+    });
   //
   // 선반 정렬 — **어제 픽이었다가 내려온 것을 먼저 보여준다.**
   // 실측(2026-08-18): 선반이 `mega_cap` 10건으로 먼저 차서, 26일째로 강등된 빅텍이 상한에 밀려
