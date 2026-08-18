@@ -1,0 +1,92 @@
+{
+  "provenance": {
+    "url": "https://fomo-club-backend.vercel.app/api/fomo/stock-front?stock=CLBK&symbol=CLBK&lite=1",
+    "status": 200,
+    "captured_at": "2026-08-18T16:12:30.025Z",
+    "commit": "0da1538c8c39638588ad0bfb9a37f05d83a7012c"
+  },
+  "case": {
+    "key": "clbk",
+    "label": "CLBK (US)",
+    "purpose": "US 신규 CIK 데이터 결손 — 캔들 이력 부족으로 품질 게이트에 걸리는 케이스"
+  },
+  "response": {
+    "signals": {},
+    "score": {
+      "score": null,
+      "status": "accumulating",
+      "label": "",
+      "interpretation": "",
+      "axes": [
+        {
+          "key": "chart",
+          "label": "차트 타이밍",
+          "score": 50,
+          "evidence": [
+            "판정 가능한 차트 구간·이벤트 없음"
+          ]
+        }
+      ],
+      "axisStates": [
+        {
+          "key": "valuation",
+          "label": "밸류에이션",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "growth",
+          "label": "성장",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "profitability",
+          "label": "수익성·체력",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "flow",
+          "label": "수급",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "chart",
+          "label": "차트 타이밍",
+          "score": 50,
+          "evidence": [
+            "판정 가능한 차트 구간·이벤트 없음"
+          ],
+          "status": "available"
+        },
+        {
+          "key": "quiet",
+          "label": "조용함",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        }
+      ],
+      "availableAxisCount": 1,
+      "omittedAxes": [
+        "valuation",
+        "growth",
+        "profitability",
+        "flow",
+        "quiet"
+      ]
+    },
+    "sparkline": []
+  }
+}

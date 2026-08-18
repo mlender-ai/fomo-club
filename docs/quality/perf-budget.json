@@ -1,0 +1,16 @@
+{
+  "note": "CTX-07 §4 성능 예산. importWeight/externalWeight = 실측 + 여유(의존성 추가 시에만 움직이므로 타이트). assemblyMs = 실측 × 10(CI 러너 편차로 인한 잡음 실패를 막는다 — 자릿수 퇴화만 잡는 게이트다). ⚠️ importWeight 는 번들 크기가 아니라 **상한**이다: @fomo/core 배럴을 값으로 임포트하면 그 뒤 모듈이 전부 그래프에 들어오지만 webpack 이 tree-shaking 한다. 절대값이 아니라 **방향**으로 읽는다. 갱신: npx tsx scripts/perf-regression-gate.ts --update",
+  "importWeight": {
+    "route:quiet-picks": 128,
+    "route:track-record-picks": 146,
+    "route:daily-30": 167
+  },
+  "externalWeight": {
+    "route:quiet-picks": 4,
+    "route:track-record-picks": 5,
+    "route:daily-30": 6
+  },
+  "assemblyMs": {
+    "deckComposition": 50
+  }
+}

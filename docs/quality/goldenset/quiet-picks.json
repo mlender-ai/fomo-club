@@ -1,0 +1,1748 @@
+{
+  "provenance": {
+    "url": "https://fomo-club-backend.vercel.app/api/fomo/quiet-picks",
+    "status": 200,
+    "captured_at": "2026-08-18T16:12:25.899Z",
+    "commit": "0da1538c8c39638588ad0bfb9a37f05d83a7012c"
+  },
+  "case": {
+    "key": "quiet-picks",
+    "label": "오늘의 조용한 픽 전량",
+    "purpose": "픽·워치 선반 전체. 경과일 상한·구성 규칙·선반 사유가 실제 응답에 어떻게 나오는지"
+  },
+  "response": {
+    "asOf": "2026-08-18T15:50:59.336Z",
+    "date": "2026-08-19",
+    "picks": [
+      {
+        "hook": "임원 3명이 최근 5일 새 같이 샀어요",
+        "chips": [
+          "하루 거래량의 51%",
+          "1년 매수 2건",
+          "거래량은 그대로"
+        ],
+        "price": {
+          "current": 4.945,
+          "changePct": 7.78032036613272,
+          "sparkline": [
+            2.83,
+            2.7,
+            2.67,
+            2.54,
+            2.49,
+            2.62,
+            2.84,
+            2.76,
+            2.79,
+            2.83,
+            2.77,
+            2.79,
+            2.86,
+            2.67,
+            3.08,
+            2.74,
+            2.79,
+            2.85,
+            2.84,
+            2.92,
+            2.9,
+            3.21,
+            3.16,
+            3.14,
+            3.2,
+            3.08,
+            3.17,
+            3.16,
+            2.93,
+            3.21,
+            3.56,
+            3.67,
+            3.54,
+            3.54,
+            3.53,
+            3.67,
+            3.88,
+            3.96,
+            4,
+            4.05,
+            4.09,
+            4.17,
+            4.15,
+            4.11,
+            4.41,
+            4.32,
+            4.19,
+            4.06,
+            4.05,
+            4.37,
+            4.09,
+            3.92,
+            4.09,
+            4.06,
+            4.21,
+            4.46,
+            4.24,
+            4.3,
+            4.29,
+            4.22,
+            3.83,
+            3.68,
+            4.32,
+            4.37,
+            4.71,
+            4.945
+          ]
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 5,
+          "kind": "insider_cluster",
+          "scale": "$2.8M",
+          "actors": "임원 3명",
+          "amount": 2801124,
+          "ageDays": 5,
+          "strength": 262.23666167286433,
+          "rankScore": 65,
+          "startedAt": "2026-08-14",
+          "page1Streak": 1,
+          "insiderCount": 3,
+          "priceAtSignal": 4
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "ANGX",
+          "ticker": "ANGX",
+          "country": "US",
+          "identity": "미디어·레저",
+          "canonical": "Angel Studios, Inc.",
+          "displayName": "Angel Studios"
+        },
+        "anomalies": [
+          {
+            "axis": "unusual",
+            "chip": "1년 매수 2건",
+            "kind": "frequency",
+            "text": "지난 1년 임원 매수는 2건뿐이었어요",
+            "strength": 4.3
+          },
+          {
+            "axis": "size",
+            "chip": "하루 거래량의 51%",
+            "kind": "scale",
+            "text": "임원이 하루 거래량의 51%를 사들였어요",
+            "strength": 3.2
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "phase": "markup",
+            "summary": "8/18 상방 임펄스 +29.1% · 거래량 1.5배. 관점 경계 $2.05."
+          },
+          "committee": {
+            "timingGrade": "B",
+            "verdict1line": "드물게 몰린 매수라 돈이 먼저 움직인 쪽이에요 규모도 받쳐줘요 — 시점은 무난해요, 값은 좀 아쉬워요",
+            "valuationGrade": "C"
+          },
+          "whyCompany": "아주 싸고 차트 자리는 좋은데, 성장이 멈춘 게 걸려요. 과거보다 싼 가격대에 있어요(가격 매력 94). 다만 매출 성장이 둔해요(성장 0). 성장이 다시 살아나는 실적이 확인되면 그때가 신호예요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 254,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 50.57835896759568,
+          "insiderCount": 3,
+          "priorBuys12mo": 2,
+          "volumeElevated": false,
+          "pctAboveYearLow": 141.80929095354526,
+          "volumeVacuumRatio": 1.0499290591906454
+        },
+        "companyScore": 41,
+        "invalidation": {
+          "text": "52주 저점 $2.05 이탈 여부가 다음 판단 기준이에요.",
+          "level": 2.045
+        }
+      },
+      {
+        "hook": "기관이 5일째 조용히 사고 있어요",
+        "chips": [
+          "40거래일 중 최장",
+          "거래량 평소의 30%",
+          "하루 거래량의 28%"
+        ],
+        "price": {
+          "current": 8890,
+          "changePct": -4.61,
+          "sparkline": [
+            16350,
+            15740,
+            14890,
+            16110,
+            15500,
+            14890,
+            15370,
+            16160,
+            16220,
+            15120,
+            17260,
+            15980,
+            15700,
+            14500,
+            14460,
+            13760,
+            12250,
+            12640,
+            12330,
+            12600,
+            13150,
+            13240,
+            13130,
+            12900,
+            11890,
+            11730,
+            11300,
+            10440,
+            10310,
+            9850,
+            9370,
+            10810,
+            10680,
+            10850,
+            9970,
+            9980,
+            9330,
+            8930,
+            8300,
+            8540,
+            8930,
+            8540,
+            8170,
+            8410,
+            8130,
+            7520,
+            7430,
+            7260,
+            7960,
+            7480,
+            7210,
+            6580,
+            5960,
+            5790,
+            6280,
+            6410,
+            7090,
+            7350,
+            7450,
+            7680,
+            8460,
+            8710,
+            9020,
+            9260,
+            9320,
+            8890
+          ],
+          "currentText": "8,890원"
+        },
+        "signal": {
+          "code": "institution_streak",
+          "days": 5,
+          "kind": "institution_streak",
+          "scale": "29만주",
+          "actors": "기관",
+          "amount": 288946,
+          "ageDays": 5,
+          "strength": 100,
+          "rankScore": 63.95348837209303,
+          "startedAt": "2026-08-11",
+          "priceAtSignal": 8710
+        },
+        "subject": {
+          "market": "KOSDAQ",
+          "symbol": "393890",
+          "ticker": "393890",
+          "country": "KR",
+          "identity": "2차전지",
+          "canonical": "더블유씨피",
+          "naverCode": "393890",
+          "displayName": "더블유씨피"
+        },
+        "anomalies": [
+          {
+            "axis": "unusual",
+            "chip": "40거래일 중 최장",
+            "kind": "frequency",
+            "text": "최근 40거래일 중 가장 긴 연속 매수예요",
+            "strength": 4
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량 평소의 30%",
+            "kind": "vacuum",
+            "text": "거래가 평소의 30%로 말라 있었어요",
+            "strength": 3.5
+          },
+          {
+            "axis": "size",
+            "chip": "하루 거래량의 28%",
+            "kind": "scale",
+            "text": "기관이 하루 거래량의 28%를 사들였어요",
+            "strength": 2.2
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "summary": "8/12 상방 임펄스 +51.3% · 거래량 1.5배. 외국인 5일 연속 순매도·기관 5일 연속 순매수 가세 — 가격 구간과 수급 방향을 함께 확인 중. 관점 경계 5,520원."
+          },
+          "committee": {
+            "timingGrade": "B",
+            "verdict1line": "드물게 몰린 매수라 돈이 먼저 움직인 쪽이에요 거래도 말라 있었고요 — 시점은 무난해요, 값은 좀 아쉬워요",
+            "valuationGrade": "C"
+          },
+          "whyCompany": "아주 싼데, 성장이 멈춘 게 걸려요. 과거보다 싼 가격대에 있어요(가격 매력 92). 다만 매출 성장이 둔해요(성장 0). 성장이 다시 살아나는 실적이 확인되면 그때가 신호예요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 27.642848874419652,
+          "volumeElevated": false,
+          "isLongestStreak": true,
+          "pctAboveYearLow": 61.050724637681164,
+          "streakWindowDays": 40,
+          "volumeVacuumRatio": 0.29584663123097416
+        },
+        "companyScore": 39,
+        "invalidation": {
+          "text": "52주 저점 5,520원 이탈 여부가 다음 판단 기준이에요.",
+          "level": 5520
+        }
+      },
+      {
+        "hook": "기관이 5일째 조용히 사고 있어요",
+        "chips": [
+          "거래량 평소의 29%",
+          "기관 12만주",
+          "5일 연속"
+        ],
+        "price": {
+          "current": 4550,
+          "changePct": -4.81,
+          "sparkline": [
+            7280,
+            7340,
+            6910,
+            6850,
+            6580,
+            6280,
+            6730,
+            6910,
+            6700,
+            6340,
+            6200,
+            6120,
+            6040,
+            5800,
+            6000,
+            5970,
+            5380,
+            5660,
+            5440,
+            5480,
+            5850,
+            5900,
+            5930,
+            5930,
+            5720,
+            5590,
+            5370,
+            5010,
+            5010,
+            5010,
+            4680,
+            5050,
+            4875,
+            4975,
+            4720,
+            4960,
+            4985,
+            4760,
+            4485,
+            4370,
+            4790,
+            4535,
+            4410,
+            4645,
+            4480,
+            4270,
+            4270,
+            4235,
+            4435,
+            4270,
+            4310,
+            3930,
+            3675,
+            3675,
+            4150,
+            4175,
+            4330,
+            4420,
+            4430,
+            4385,
+            4555,
+            4575,
+            4660,
+            4630,
+            4780,
+            4550
+          ],
+          "currentText": "4,550원"
+        },
+        "signal": {
+          "code": "institution_streak",
+          "days": 5,
+          "kind": "institution_streak",
+          "scale": "12만주",
+          "actors": "기관",
+          "amount": 116623,
+          "ageDays": 5,
+          "strength": 100,
+          "rankScore": 62.2093023255814,
+          "startedAt": "2026-08-11",
+          "priceAtSignal": 4575
+        },
+        "subject": {
+          "market": "KOSPI",
+          "symbol": "003530",
+          "ticker": "003530",
+          "country": "KR",
+          "identity": "코인",
+          "canonical": "한화투자증권",
+          "naverCode": "003530",
+          "displayName": "한화투자증권"
+        },
+        "anomalies": [
+          {
+            "axis": "quiet",
+            "chip": "거래량 평소의 29%",
+            "kind": "vacuum",
+            "text": "거래가 평소의 29%로 말라 있었어요",
+            "strength": 3.5
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "summary": "기관 5일 연속 순매수 가세 — 가격 구간과 수급 방향을 함께 확인 중. 관점 경계 3,515원."
+          },
+          "committee": {
+            "timingGrade": "C",
+            "verdict1line": "거래가 마른 곳에 들어온 매수라 눈에 띄어요 아직 화제 밖이라 더 그래요 — 시점은 지켜봐야 해요, 값은 무난해요",
+            "valuationGrade": "B"
+          },
+          "whyCompany": "폭발적으로 크고 큰손이 담고 있고, 괜찮은 구석과 걸리는 구석이 같이 있어요. 매출이 빠르게 크고 있어요(성장 94). 큰손이 담기 시작했어요(큰손 수급 66). 지금 흐름이 이어지는지, 과열 신호가 없는지 보면 돼요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 2.4981008217580656,
+          "mentionCount": 3,
+          "volumeElevated": false,
+          "isLongestStreak": false,
+          "pctAboveYearLow": 29.445234708392604,
+          "streakWindowDays": 40,
+          "volumeVacuumRatio": 0.2889464889100555
+        },
+        "companyScore": 67,
+        "invalidation": {
+          "text": "52주 저점 3,515원 이탈 여부가 다음 판단 기준이에요.",
+          "level": 3515
+        }
+      },
+      {
+        "hook": "임원 2명이 최근 5일 새 같이 샀어요",
+        "chips": [
+          "$4.0M",
+          "1년 매수 3건",
+          "거래량은 그대로"
+        ],
+        "price": {
+          "current": 31.34,
+          "changePct": -2.8243327126008695,
+          "sparkline": [
+            36.84,
+            37.26,
+            38.099998,
+            37.34,
+            37.85,
+            39.19,
+            39.81,
+            40.32,
+            39.62,
+            39.75,
+            40.82,
+            39.63,
+            38.32,
+            37.52,
+            37.47,
+            37.080002,
+            37.11,
+            38.25,
+            38,
+            39.21,
+            38.58,
+            38.69,
+            38.060001,
+            37.72,
+            38.88,
+            36.21,
+            35.14,
+            36.92,
+            36.58,
+            37.07,
+            35.42,
+            35.42,
+            35.56,
+            36.83,
+            36.87,
+            36.62,
+            36.38,
+            36.77,
+            38.54,
+            37.92,
+            37.74,
+            37.46,
+            38.2,
+            37.2,
+            37.65,
+            37.24,
+            36.65,
+            34.84,
+            35.82,
+            37.060001,
+            37.89,
+            37.91,
+            37.099998,
+            36.24,
+            37.95,
+            37.61,
+            38.19,
+            37.34,
+            37.55,
+            38.78,
+            30.91,
+            31.01,
+            31.59,
+            32.22,
+            31.31,
+            31.34
+          ]
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 5,
+          "kind": "insider_cluster",
+          "scale": "$4.0M",
+          "actors": "임원 2명",
+          "amount": 3987582,
+          "ageDays": 5,
+          "strength": 253.00354813459748,
+          "rankScore": 61.86046511627907,
+          "startedAt": "2026-08-14",
+          "page1Streak": 1,
+          "insiderCount": 2,
+          "priceAtSignal": 30.67
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "ONON",
+          "ticker": "ONON",
+          "country": "US",
+          "identity": "화학",
+          "canonical": "On Holding AG",
+          "displayName": "On"
+        },
+        "anomalies": [
+          {
+            "axis": "unusual",
+            "chip": "1년 매수 3건",
+            "kind": "frequency",
+            "text": "지난 1년 임원 매수는 3건뿐이었어요",
+            "strength": 3.4
+          },
+          {
+            "axis": "position",
+            "chip": "52주 저점 +4%",
+            "kind": "near_low",
+            "text": "52주 저점에서 4% 위예요",
+            "strength": 2.4
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "phase": "markdown",
+            "summary": "8/17 하방 임펄스 -19.3% · 거래량 4.7배. 관점 경계 $35.47."
+          },
+          "committee": {
+            "timingGrade": "C",
+            "verdict1line": "드물게 몰린 매수라 돈이 먼저 움직인 쪽이에요 위치도 저점권이에요 — 시점은 지켜봐야 해요, 값도 안 비싸요",
+            "valuationGrade": "A"
+          },
+          "whyCompany": "폭발적으로 크고 아주 싼데, 차트가 꺾인 게 걸려요. 매출이 빠르게 크고 있어요(성장 100). 다만 차트 흐름이 약해요(차트 타이밍 19). 차트가 바닥을 다지고 돌아서는 자리가 관심 구간이에요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 1.6391585010529646,
+          "insiderCount": 2,
+          "priorBuys12mo": 3,
+          "volumeElevated": false,
+          "pctAboveYearLow": 4.078108395324128,
+          "volumeVacuumRatio": 1.4441063187462582
+        },
+        "companyScore": 73,
+        "invalidation": {
+          "text": "20일선 $35.47 위에서 마감하면 약세 판단은 다시 봐야 해요.",
+          "level": 35.46549995
+        }
+      },
+      {
+        "hook": "외국인이 4일째 조용히 사고 있어요",
+        "chips": [
+          "거래량은 그대로",
+          "외국인 7만주",
+          "4일 연속"
+        ],
+        "price": {
+          "current": 80400,
+          "changePct": -1.95,
+          "sparkline": [
+            90800,
+            92800,
+            87700,
+            86000,
+            86700,
+            84500,
+            85500,
+            88000,
+            87900,
+            83800,
+            82500,
+            80200,
+            77500,
+            74600,
+            74000,
+            72300,
+            67800,
+            69100,
+            70100,
+            69900,
+            73900,
+            75500,
+            78100,
+            76100,
+            73000,
+            71000,
+            69000,
+            65900,
+            68600,
+            66100,
+            63200,
+            67800,
+            64400,
+            66100,
+            65600,
+            66800,
+            68800,
+            65900,
+            62500,
+            61500,
+            65100,
+            62800,
+            60700,
+            62400,
+            62100,
+            60000,
+            59800,
+            61400,
+            65200,
+            68300,
+            64000,
+            60100,
+            57700,
+            59900,
+            71200,
+            67900,
+            70500,
+            80700,
+            83800,
+            83600,
+            86600,
+            83500,
+            82200,
+            84000,
+            82000,
+            80400
+          ],
+          "currentText": "80,400원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 4,
+          "kind": "foreign_streak",
+          "scale": "7만주",
+          "actors": "외국인",
+          "amount": 65435,
+          "ageDays": 4,
+          "strength": 100,
+          "rankScore": 61.44200503472511,
+          "startedAt": "2026-08-12",
+          "priceAtSignal": 82200
+        },
+        "subject": {
+          "market": "KOSPI",
+          "symbol": "103140",
+          "ticker": "103140",
+          "country": "KR",
+          "identity": "방산",
+          "canonical": "풍산",
+          "naverCode": "103140",
+          "displayName": "풍산"
+        },
+        "anomalies": [
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "summary": "8/10 상방 임펄스 +50.1% · 거래량 2.2배. 외국인 4일 연속 순매수 가세 — 가격 구간과 수급 방향을 함께 확인 중. 관점 경계 55,200원."
+          },
+          "committee": {
+            "timingGrade": "B",
+            "verdict1line": "아직 조용해 초기 국면일 수 있어요 — 시점은 무난해요, 값은 무난해요",
+            "valuationGrade": "B"
+          },
+          "whyCompany": "큰손이 담고 있고, 아직은 지켜볼 자리예요. 큰손이 담기 시작했어요(큰손 수급 70). 지금 흐름이 이어지는지, 과열 신호가 없는지 보면 돼요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 9.614929670760477,
+          "volumeElevated": false,
+          "isLongestStreak": false,
+          "pctAboveYearLow": 45.65217391304348,
+          "streakWindowDays": 40,
+          "volumeVacuumRatio": 1.1192484753383287
+        },
+        "companyScore": 56,
+        "invalidation": {
+          "text": "52주 저점 55,200원 이탈 여부가 다음 판단 기준이에요.",
+          "level": 55200
+        }
+      },
+      {
+        "hook": "임원 4명이 최근 5일 새 같이 샀어요",
+        "chips": [
+          "하루 거래량의 77%",
+          "거래량은 그대로",
+          "최근 5일"
+        ],
+        "price": {
+          "current": 36.37,
+          "changePct": -1.9940716787927835,
+          "sparkline": [
+            34.32,
+            34.58,
+            33.53,
+            34.11,
+            34.34,
+            36.25,
+            37.45,
+            37.42,
+            36.87,
+            36.63,
+            36.55,
+            36.040001,
+            35.18,
+            35.59,
+            34.87,
+            35.81,
+            35.9,
+            36.0099983,
+            37.07,
+            37,
+            37.19,
+            37.080002,
+            36.31,
+            35.94,
+            34.96,
+            35.099998,
+            35.07,
+            35.77,
+            36.22,
+            36.12,
+            37.27,
+            37.56,
+            37.52,
+            38.099998,
+            37.97,
+            37.33,
+            37.56,
+            36.59,
+            36.4,
+            36.32,
+            36.74,
+            36.81,
+            36.69,
+            38.07,
+            37.9,
+            37.040001,
+            37.92,
+            37.12,
+            37.37,
+            37.57,
+            37.31,
+            37.35,
+            36.94,
+            35.67,
+            35.5,
+            35.27,
+            35.12,
+            35.060001,
+            35.46,
+            36.07,
+            35.86,
+            35.099998,
+            36.27,
+            36.58,
+            37.11,
+            36.37
+          ]
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 5,
+          "kind": "insider_cluster",
+          "scale": "$2.6M",
+          "actors": "임원 4명",
+          "amount": 2559504,
+          "ageDays": 5,
+          "strength": 272.0407790630171,
+          "rankScore": 61.16279069767442,
+          "startedAt": "2026-08-14",
+          "page1Streak": 1,
+          "insiderCount": 4,
+          "priceAtSignal": 36.06
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "XRN",
+          "ticker": "XRN",
+          "country": "US",
+          "identity": "부동산",
+          "canonical": "Chiron Real Estate Inc.",
+          "displayName": "Chiron Real Estate"
+        },
+        "anomalies": [
+          {
+            "axis": "size",
+            "chip": "하루 거래량의 77%",
+            "kind": "scale",
+            "text": "임원이 하루 거래량의 77%를 사들였어요",
+            "strength": 3.2
+          },
+          {
+            "axis": null,
+            "chip": null,
+            "kind": "participants",
+            "text": "임원 4명이 함께 샀어요",
+            "strength": 2.8
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "summary": "7/7부터 6주째 분산 추정 구간(폭 6.4%, 구간 등락 -3.2%). 관점 경계 $6.26.",
+            "keyLevels": {
+              "low": 34.5,
+              "high": 38.43
+            }
+          },
+          "committee": {
+            "timingGrade": "C",
+            "verdict1line": "매수 규모가 작지 않아요 참여 인원도 많고요 — 시점은 지켜봐야 해요, 값은 좀 아쉬워요",
+            "valuationGrade": "C"
+          },
+          "whyCompany": "돈은 잘 버는데, 값이 너무 비싼 게 걸려요. 이익을 꾸준히 내고 있어요(수익 체력 69). 다만 값이 부담스러운 수준이에요(가격 매력 7). 비싼 값을 실적이 정당화하는지가 관건이에요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 76.5658538851267,
+          "insiderCount": 4,
+          "priorBuys12mo": 13,
+          "volumeElevated": false,
+          "pctAboveYearLow": 480.99041533546324,
+          "volumeVacuumRatio": 0.6206283055499766
+        },
+        "companyScore": 37,
+        "invalidation": {
+          "text": "52주 저점 $6.26 이탈 여부가 다음 판단 기준이에요.",
+          "level": 6.26
+        }
+      },
+      {
+        "hook": "임원 4명이 최근 6일 새 같이 샀어요",
+        "chips": [
+          "$8.3M",
+          "1년 매수 2건",
+          "거래량은 그대로"
+        ],
+        "price": {
+          "current": 50.040001,
+          "changePct": 0.9685230024213012,
+          "sparkline": [
+            54.21,
+            57.56,
+            54.34,
+            53.0099983,
+            52.57,
+            54.57,
+            55.85,
+            57.36,
+            58.76,
+            61.9,
+            63.67,
+            67.94,
+            68.6,
+            73.85,
+            76.82,
+            72.92,
+            68.6,
+            69.29,
+            68.48,
+            65.2,
+            67.96,
+            68.050003,
+            66.62,
+            65.68,
+            62.87,
+            63.68,
+            63.57,
+            61.42,
+            60.42,
+            61.97,
+            60.32,
+            59.23,
+            61.38,
+            60.28,
+            58.89,
+            59.73,
+            58.85,
+            58.57,
+            59.86,
+            60.57,
+            59.23,
+            58.060001,
+            58.96,
+            59.26,
+            57.47,
+            57.31,
+            57.91,
+            58.22,
+            56.099998,
+            56.55,
+            57.45,
+            59.4,
+            57.97,
+            58.09,
+            56.47,
+            57.23,
+            47.72,
+            47.0099983,
+            46.3,
+            49.55,
+            49.81,
+            49.62,
+            48.48,
+            49.17,
+            49.56,
+            50.040001
+          ]
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 6,
+          "kind": "insider_cluster",
+          "scale": "$8.3M",
+          "actors": "임원 4명",
+          "amount": 8254508,
+          "ageDays": 6,
+          "strength": 274.58345596385544,
+          "rankScore": 56.58578661424807,
+          "startedAt": "2026-08-13",
+          "insiderCount": 4,
+          "priceAtSignal": 48.01
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "APTV",
+          "ticker": "APTV",
+          "country": "US",
+          "identity": "자동차",
+          "canonical": "Aptiv Plc",
+          "displayName": "Aptiv"
+        },
+        "anomalies": [
+          {
+            "axis": "unusual",
+            "chip": "1년 매수 2건",
+            "kind": "frequency",
+            "text": "지난 1년 임원 매수는 2건뿐이었어요",
+            "strength": 4.3
+          },
+          {
+            "axis": null,
+            "chip": null,
+            "kind": "participants",
+            "text": "임원 4명이 함께 샀어요",
+            "strength": 2.8
+          },
+          {
+            "axis": "position",
+            "chip": "52주 저점 +8%",
+            "kind": "near_low",
+            "text": "52주 저점에서 8% 위예요",
+            "strength": 2.4
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "phase": "markdown",
+            "summary": "7/29부터 3주째 하락 구간(폭 23.4%, 구간 등락 -13.7%). 8/6 하방 임펄스 -22.1% · 거래량 2.7배. 관점 경계 $53.13.",
+            "keyLevels": {
+              "low": 46.16,
+              "high": 59.74
+            }
+          },
+          "committee": {
+            "timingGrade": "C",
+            "verdict1line": "드물게 몰린 매수라 돈이 먼저 움직인 쪽이에요 참여 인원도 많고요 — 시점은 지켜봐야 해요, 값은 좀 아쉬워요",
+            "valuationGrade": "C"
+          },
+          "whyCompany": "아주 싼데, 차트가 꺾인 게 걸려요. 과거보다 싼 가격대에 있어요(가격 매력 93). 다만 차트 흐름이 약해요(차트 타이밍 19). 차트가 바닥을 다지고 돌아서는 자리가 관심 구간이에요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 4.020362014331382,
+          "insiderCount": 4,
+          "priorBuys12mo": 2,
+          "volumeElevated": false,
+          "pctAboveYearLow": 8.405548093587523,
+          "volumeVacuumRatio": 1.2384547397441168
+        },
+        "companyScore": 49,
+        "invalidation": {
+          "text": "20일선 $53.13 위에서 마감하면 약세 판단은 다시 봐야 해요.",
+          "level": 53.132499865
+        }
+      },
+      {
+        "hook": "임원 2명이 최근 9일 새 같이 샀어요",
+        "chips": [
+          "하루 거래량의 41%",
+          "1년 매수 1건",
+          "거래량은 그대로"
+        ],
+        "price": {
+          "current": 5.085,
+          "changePct": -1.675977653631282,
+          "sparkline": [
+            7.28,
+            7.28,
+            7.81,
+            8.04,
+            7.75,
+            7.4,
+            7.15,
+            7.22,
+            6.69,
+            6.07,
+            6.11,
+            6.73,
+            7.3,
+            7.32,
+            8.06,
+            6.93,
+            7.24,
+            6.86,
+            7.39,
+            7.07,
+            7.55,
+            7,
+            6.56,
+            6.4,
+            6.07,
+            6.11,
+            6.02,
+            5.35,
+            5.72,
+            5.83,
+            5.8,
+            5.81,
+            5.49,
+            5.15,
+            4.69,
+            4.71,
+            5.08,
+            4.9,
+            4.92,
+            5.2,
+            5.34,
+            5,
+            4.8,
+            4.8,
+            4.77,
+            4.87,
+            5.06,
+            4.55,
+            4.26,
+            4.01,
+            3.71,
+            3.61,
+            3.71,
+            4.04,
+            4.11,
+            4.23,
+            4.505,
+            4.465,
+            4.32,
+            5.1,
+            5.27,
+            5.14,
+            5.26,
+            5.37,
+            5.28,
+            5.085
+          ]
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 9,
+          "kind": "insider_cluster",
+          "scale": "$4.0M",
+          "actors": "임원 2명",
+          "amount": 4018492,
+          "ageDays": 9,
+          "strength": 253.02031554036398,
+          "rankScore": 37.332696537403635,
+          "startedAt": "2026-08-10",
+          "insiderCount": 2,
+          "priceAtSignal": 5.02
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "ACDC",
+          "ticker": "ACDC",
+          "country": "US",
+          "identity": "에너지",
+          "canonical": "Profrac Holding Corp.",
+          "displayName": "Profrac"
+        },
+        "anomalies": [
+          {
+            "axis": "unusual",
+            "chip": "1년 매수 1건",
+            "kind": "frequency",
+            "text": "지난 1년 임원 매수는 1건뿐이었어요",
+            "strength": 4.3
+          },
+          {
+            "axis": "size",
+            "chip": "하루 거래량의 41%",
+            "kind": "scale",
+            "text": "임원이 하루 거래량의 41%를 사들였어요",
+            "strength": 3.2
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "summary": "8/11 상방 임펄스 +46.0% · 거래량 1.7배. 관점 경계 $3.08."
+          },
+          "committee": {
+            "timingGrade": "C",
+            "verdict1line": "드물게 몰린 매수라 돈이 먼저 움직인 쪽이에요 규모도 받쳐줘요 — 시점은 지켜봐야 해요, 값은 좀 아쉬워요",
+            "valuationGrade": "C"
+          },
+          "whyCompany": "지금은 좋게 보기 어려운 자리예요. 성장이 멈춘 게 걸려요. 매출 성장이 둔해요(성장 9). 성장이 다시 살아나는 실적이 확인되면 그때가 신호예요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 41.16099697793782,
+          "insiderCount": 2,
+          "priorBuys12mo": 1,
+          "volumeElevated": false,
+          "pctAboveYearLow": 65.09740259740259,
+          "volumeVacuumRatio": 1.3717545274468197
+        },
+        "companyScore": 37,
+        "invalidation": {
+          "text": "52주 저점 $3.08 이탈 여부가 다음 판단 기준이에요.",
+          "level": 3.08
+        }
+      },
+      {
+        "hook": "임원 2명이 최근 9일 새 같이 샀어요",
+        "chips": [
+          "하루 거래량의 1배",
+          "거래량 평소의 51%",
+          "최근 9일"
+        ],
+        "price": {
+          "current": 25.57,
+          "changePct": -4.232209737827711,
+          "sparkline": [
+            27.29,
+            26.14,
+            25.26,
+            25.74,
+            25.34,
+            24.92,
+            25.8,
+            24.97,
+            23.66,
+            22.88,
+            23.29,
+            22.37,
+            22.059999,
+            21.26,
+            20.55,
+            20.71,
+            21.56,
+            20.77,
+            20.68,
+            21.38,
+            21.38,
+            22.66,
+            21.62,
+            21.23,
+            20.3,
+            20.42,
+            20.14,
+            20.29,
+            20.15,
+            19.86,
+            21.12,
+            21.31,
+            21.56,
+            21.85,
+            22.44,
+            22.4,
+            22.49,
+            22.73,
+            22.28,
+            22.44,
+            22,
+            21.54,
+            21.93,
+            22.48,
+            21.95,
+            21.65,
+            22.040001,
+            22.845,
+            22.18,
+            21.95,
+            22.55,
+            23.28,
+            23.35,
+            23.040001,
+            23.17,
+            23.68,
+            23.93,
+            23.49,
+            23.95,
+            24,
+            25.28,
+            24.93,
+            25.71,
+            26.69,
+            26.7,
+            25.57
+          ]
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 9,
+          "kind": "insider_cluster",
+          "scale": "$15.0M",
+          "actors": "임원 2명",
+          "amount": 14977997,
+          "ageDays": 9,
+          "strength": 255.87726869632,
+          "rankScore": 35.12879853072327,
+          "startedAt": "2026-08-10",
+          "insiderCount": 2,
+          "priceAtSignal": 24.56
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "GLIBK",
+          "ticker": "GLIBK",
+          "country": "US",
+          "identity": "미디어·레저",
+          "canonical": "Liberty Capital Corp/Nv",
+          "displayName": "Liberty Capital"
+        },
+        "anomalies": [
+          {
+            "axis": "size",
+            "chip": "하루 거래량의 1배",
+            "kind": "scale",
+            "text": "임원이 하루 거래량의 1배를 사들였어요",
+            "strength": 3.2
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량 평소의 51%",
+            "kind": "vacuum",
+            "text": "거래가 평소의 51%로 말라 있었어요",
+            "strength": 2.6
+          },
+          {
+            "axis": "quiet",
+            "chip": "거래량은 그대로",
+            "kind": "silence",
+            "text": "거래량은 그대로예요",
+            "strength": 1
+          }
+        ],
+        "conviction": {
+          "whyNow": {
+            "summary": "6/30부터 7주째 매집 추정 구간(폭 15.9%, 구간 등락 +18.6%). 7/31 첫 눌림목 후보 · 31.8% 되돌림 · MA20 지지 테스트. 관점 경계 $19.3.",
+            "keyLevels": {
+              "low": 20.88,
+              "high": 27.16
+            }
+          },
+          "committee": {
+            "timingGrade": "C",
+            "verdict1line": "매수 규모가 작지 않아요 거래도 말라 있었고요 — 시점은 지켜봐야 해요, 값은 좀 아쉬워요",
+            "valuationGrade": "C"
+          },
+          "whyCompany": "차트가 강하게 오르고 값이 싼데, 적자라 체력이 약해요. 차트 자리가 유리해요(차트 타이밍 83). 다만 아직 이익이 얇아요(수익 체력 0). 적자가 줄어드는 흐름이 나오는지 봐야 해요."
+        },
+        "dataQuality": {
+          "ticker": true,
+          "candles": 260,
+          "identity": true,
+          "fundamentals": true
+        },
+        "qualifiedAt": "2026-08-19",
+        "signalFacts": {
+          "volumePct": 132.1379479447558,
+          "insiderCount": 2,
+          "priorBuys12mo": 10,
+          "volumeElevated": false,
+          "pctAboveYearLow": 32.48704663212435,
+          "volumeVacuumRatio": 0.5082848757172278
+        },
+        "companyScore": 44,
+        "invalidation": {
+          "text": "52주 저점 $19.30 이탈 여부가 다음 판단 기준이에요.",
+          "level": 19.3
+        }
+      }
+    ],
+    "source": "quiet-pick-engine",
+    "rotation": {
+      "caps": {
+        "minFresh": 6,
+        "maxSameKind": 6,
+        "maxPersistent": 4
+      },
+      "page1": [
+        "Angel Studios, Inc.",
+        "더블유씨피",
+        "한화투자증권"
+      ],
+      "agedOut": 1,
+      "deckSize": 9,
+      "shrunkBy": 0,
+      "freshCount": 7,
+      "reentryCount": 0,
+      "ageDaysMedian": 5,
+      "page1HeldOver": [
+        {
+          "canonical": "Angel Studios, Inc.",
+          "consecutiveDays": 1
+        }
+      ],
+      "cooldownApplied": 0,
+      "persistentCount": 2,
+      "promotedFromWatch": 0,
+      "compositionSkipped": {
+        "kind_cap": 1
+      },
+      "compositionVersion": "deck-composition/v1"
+    },
+    "watching": [
+      {
+        "price": {
+          "current": 3075,
+          "changePct": 1.49,
+          "currentText": "3,075원"
+        },
+        "signal": {
+          "code": "institution_streak",
+          "days": 27,
+          "kind": "institution_streak",
+          "scale": "8만주",
+          "actors": "기관"
+        },
+        "subject": {
+          "market": "KOSDAQ",
+          "symbol": "065450",
+          "ticker": "065450",
+          "country": "KR",
+          "canonical": "빅텍",
+          "naverCode": "065450",
+          "displayName": "빅텍"
+        },
+        "reasonCode": "signal_aged",
+        "reasonText": "신호가 시작된 지 27일 지났어요 — 새로 생긴 건 아니에요"
+      },
+      {
+        "price": {
+          "current": 21.58,
+          "changePct": -1.1649580615097856
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 14,
+          "kind": "insider_cluster",
+          "scale": "$2.6M",
+          "actors": "임원 5명"
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "GBFH",
+          "ticker": "GBFH",
+          "country": "US",
+          "identity": "은행",
+          "canonical": "Gbank Financial Holdings Inc.",
+          "displayName": "Gbank Financial"
+        },
+        "reasonCode": "composition_overflow",
+        "reasonText": "같은 종류 신호가 오늘 덱에 이미 찼어요"
+      },
+      {
+        "price": {
+          "current": 24,
+          "changePct": 0.6410256410256502
+        },
+        "signal": {
+          "code": "insider_cluster",
+          "days": 5,
+          "kind": "insider_cluster",
+          "scale": "$8.3M",
+          "actors": "임원 3명"
+        },
+        "subject": {
+          "market": "US",
+          "symbol": "APLM",
+          "ticker": "APLM",
+          "country": "US",
+          "canonical": "Apollomics Inc.",
+          "displayName": "Apollomics"
+        },
+        "reasonCode": "ran_30_since_signal",
+        "reasonText": "신호 후 이미 70% 올랐어요"
+      },
+      {
+        "price": {
+          "current": 14150,
+          "changePct": 4.27,
+          "currentText": "14,150원"
+        },
+        "signal": {
+          "code": "institution_streak",
+          "days": 12,
+          "kind": "institution_streak",
+          "scale": "55만주",
+          "actors": "기관"
+        },
+        "subject": {
+          "market": "KOSDAQ",
+          "symbol": "417840",
+          "ticker": "417840",
+          "country": "KR",
+          "canonical": "저스템",
+          "naverCode": "417840",
+          "displayName": "저스템"
+        },
+        "reasonCode": "ran_30_since_signal",
+        "reasonText": "신호 후 이미 57% 올랐어요"
+      },
+      {
+        "price": {
+          "current": 1146000,
+          "changePct": -1.21,
+          "currentText": "1,146,000원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 3,
+          "kind": "foreign_streak",
+          "scale": "7만주",
+          "actors": "외국인"
+        },
+        "subject": {
+          "market": "KOSPI",
+          "symbol": "012450",
+          "ticker": "012450",
+          "country": "KR",
+          "canonical": "한화에어로스페이스",
+          "naverCode": "012450",
+          "displayName": "한화에어로스페이스"
+        },
+        "reasonCode": "turnover_top20",
+        "reasonText": "오늘 거래대금 상위권이라 이미 붐볐어요"
+      },
+      {
+        "price": {
+          "current": 86900,
+          "changePct": -9.1,
+          "currentText": "86,900원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 3,
+          "kind": "foreign_streak",
+          "scale": "3만주",
+          "actors": "외국인"
+        },
+        "subject": {
+          "market": "KOSDAQ",
+          "symbol": "078600",
+          "ticker": "078600",
+          "country": "KR",
+          "canonical": "대주전자재료",
+          "naverCode": "078600",
+          "displayName": "대주전자재료"
+        },
+        "reasonCode": "mega_cap",
+        "reasonText": "코스닥 시총 67위권이라 이미 알려져 있어요"
+      },
+      {
+        "price": {
+          "current": 79800,
+          "changePct": -5.11,
+          "currentText": "79,800원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 3,
+          "kind": "foreign_streak",
+          "scale": "13만주",
+          "actors": "외국인"
+        },
+        "subject": {
+          "market": "KOSDAQ",
+          "symbol": "298380",
+          "ticker": "298380",
+          "country": "KR",
+          "canonical": "에이비엘바이오",
+          "naverCode": "298380",
+          "displayName": "에이비엘바이오"
+        },
+        "reasonCode": "mega_cap",
+        "reasonText": "코스닥 시총 10위권이라 이미 알려져 있어요"
+      },
+      {
+        "price": {
+          "current": 795000,
+          "changePct": -2.45,
+          "currentText": "795,000원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 4,
+          "kind": "foreign_streak",
+          "scale": "4만주",
+          "actors": "외국인"
+        },
+        "subject": {
+          "market": "KOSPI",
+          "symbol": "079550",
+          "ticker": "079550",
+          "country": "KR",
+          "canonical": "LIG넥스원",
+          "naverCode": "079550",
+          "displayName": "LIG넥스원"
+        },
+        "reasonCode": "mega_cap",
+        "reasonText": "코스피 시총 48위권이라 이미 알려져 있어요"
+      },
+      {
+        "price": {
+          "current": 79900,
+          "changePct": -0.5,
+          "currentText": "79,900원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 4,
+          "kind": "foreign_streak",
+          "scale": "16만주",
+          "actors": "외국인"
+        },
+        "subject": {
+          "market": "KOSPI",
+          "symbol": "272210",
+          "ticker": "272210",
+          "country": "KR",
+          "canonical": "한화시스템",
+          "naverCode": "272210",
+          "displayName": "한화시스템"
+        },
+        "reasonCode": "mega_cap",
+        "reasonText": "코스피 시총 55위권이라 이미 알려져 있어요"
+      },
+      {
+        "price": {
+          "current": 105100,
+          "changePct": -7.73,
+          "currentText": "105,100원"
+        },
+        "signal": {
+          "code": "foreign_streak",
+          "days": 5,
+          "kind": "foreign_streak",
+          "scale": "43만주",
+          "actors": "외국인"
+        },
+        "subject": {
+          "market": "KOSDAQ",
+          "symbol": "141080",
+          "ticker": "141080",
+          "country": "KR",
+          "canonical": "리가켐바이오",
+          "naverCode": "141080",
+          "displayName": "리가켐바이오"
+        },
+        "reasonCode": "mega_cap",
+        "reasonText": "코스닥 시총 16위권이라 이미 알려져 있어요"
+      }
+    ],
+    "qualification": {
+      "drops": {
+        "mega_cap": 10,
+        "no_anomaly": 1,
+        "no_verdict": 1,
+        "signal_aged": 1,
+        "turnover_top20": 1,
+        "no_invalidation": 1,
+        "ran_30_since_signal": 2,
+        "insufficient_candles": 3
+      },
+      "watching": 10,
+      "published": 9,
+      "afterQuiet": 30,
+      "krUniverse": 66,
+      "afterQuality": 10,
+      "krWithSignal": 16,
+      "usInsiderRaw": 20,
+      "usWithSignal": 14
+    }
+  }
+}

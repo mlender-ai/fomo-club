@@ -31,9 +31,17 @@ describe("레지스트리 (정본 하나)", () => {
     }
   });
 
-  it("이번에 활성화한 4종이 활성이고, 02R 대기 2종이 유예다", () => {
-    expect(activeInvariants().map((entry) => entry.id).sort()).toEqual(["INV-08", "INV-09", "INV-12", "INV-14"]);
-    expect(deferredInvariants().map((entry) => entry.id).sort()).toEqual(["INV-06", "INV-11"]);
+  it("활성·유예 목록이 의도한 그대로다 — 조용히 늘거나 줄면 잡는다", () => {
+    // CTX-07 에서 INV-C1~C15 가 들어왔다. 선행 WO 산출물이 실재하는 것만 활성이다.
+    expect(activeInvariants().map((entry) => entry.id).sort()).toEqual([
+      "INV-08", "INV-09", "INV-12", "INV-14",
+      "INV-C1", "INV-C11", "INV-C12", "INV-C13", "INV-C14", "INV-C15",
+      "INV-C5", "INV-C6", "INV-C8",
+    ]);
+    expect(deferredInvariants().map((entry) => entry.id).sort()).toEqual([
+      "INV-06", "INV-11",
+      "INV-C10", "INV-C2", "INV-C3", "INV-C4", "INV-C7", "INV-C9",
+    ]);
   });
 
   it("없는 id 는 조용히 undefined 가 아니라 실패다", () => {

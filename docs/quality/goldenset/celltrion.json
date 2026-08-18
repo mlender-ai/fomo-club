@@ -1,0 +1,295 @@
+{
+  "provenance": {
+    "url": "https://fomo-club-backend.vercel.app/api/fomo/stock-front?stock=%EC%85%80%ED%8A%B8%EB%A6%AC%EC%98%A8&naverCode=068270&lite=1",
+    "status": 200,
+    "captured_at": "2026-08-18T16:12:24.836Z",
+    "commit": "0da1538c8c39638588ad0bfb9a37f05d83a7012c"
+  },
+  "case": {
+    "key": "celltrion",
+    "label": "셀트리온 (068270)",
+    "purpose": "대형주. 조용함 게이트에서 제외되는 케이스"
+  },
+  "response": {
+    "signals": {
+      "changePct": -2.74,
+      "themeLabel": "바이오",
+      "themeRelativeRank": 6,
+      "themePeerCount": 12,
+      "themeAverageChangePct": -3.8,
+      "themeRelativeChangePct": 1,
+      "foreignNetStreak": 10,
+      "institutionNetStreak": -4,
+      "volumeRatio": 0.7733202447917975
+    },
+    "score": {
+      "score": null,
+      "status": "accumulating",
+      "label": "",
+      "interpretation": "",
+      "axes": [
+        {
+          "key": "flow",
+          "label": "수급",
+          "score": 66,
+          "evidence": [
+            "외국인 10일 연속 순매수",
+            "기관 4일 연속 순매도"
+          ]
+        },
+        {
+          "key": "chart",
+          "label": "차트 타이밍",
+          "score": 75,
+          "evidence": [
+            "상승 국면",
+            "8/11 상방 임펄스 +18.7%",
+            "무효선 거리 +3.6%"
+          ]
+        }
+      ],
+      "axisStates": [
+        {
+          "key": "valuation",
+          "label": "밸류에이션",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "growth",
+          "label": "성장",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "profitability",
+          "label": "수익성·체력",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "flow",
+          "label": "수급",
+          "score": 66,
+          "evidence": [
+            "외국인 10일 연속 순매수",
+            "기관 4일 연속 순매도"
+          ],
+          "status": "available"
+        },
+        {
+          "key": "chart",
+          "label": "차트 타이밍",
+          "score": 75,
+          "evidence": [
+            "상승 국면",
+            "8/11 상방 임펄스 +18.7%",
+            "무효선 거리 +3.6%"
+          ],
+          "status": "available"
+        },
+        {
+          "key": "quiet",
+          "label": "조용함",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        }
+      ],
+      "availableAxisCount": 2,
+      "omittedAxes": [
+        "valuation",
+        "growth",
+        "profitability",
+        "quiet"
+      ]
+    },
+    "verdict": {
+      "stance": "enter",
+      "stanceText": "정배열 12일째 추세에 외국인 10일 연속 순매수 확인 — 흐름을 따라가 볼 자리예요.",
+      "phase": "markup",
+      "evidence": [
+        "정배열 12일째·20일선 위 +3.7% — 상승 국면",
+        "외국인 10일 연속 순매수",
+        "20일선 188,445원 위 +3.7% — 정배열 12일째"
+      ],
+      "invalidation": "20일선 188,445원 아래에서 마감하면 이 판단은 다시 봐야 해요.",
+      "invalidationLevel": 188445,
+      "confidence": "high"
+    },
+    "sparkline": [
+      173600,
+      170300,
+      168500,
+      160500,
+      172700,
+      173100,
+      165900,
+      179200,
+      173300,
+      174500,
+      176600,
+      183600,
+      175900,
+      178200,
+      176800,
+      173100,
+      175200,
+      175100,
+      172800,
+      175700,
+      175800,
+      172600,
+      171600,
+      170100,
+      172200,
+      177600,
+      178700,
+      177400,
+      180000,
+      190000,
+      186700,
+      182200,
+      185800,
+      190300,
+      195000,
+      199300,
+      201000,
+      210500,
+      202000,
+      202000,
+      201000,
+      195500
+    ],
+    "priceText": "195,500원",
+    "changeText": "5,500 (-2.74%)",
+    "changeDir": "down",
+    "feedBull": {
+      "text": "외국인이 10일째 사는 중이에요.",
+      "source": "수급"
+    },
+    "feedBear": {
+      "text": "기관이 4일째 파는 중이에요.",
+      "source": "수급"
+    },
+    "axisSignals": [
+      {
+        "axis": "price",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      },
+      {
+        "axis": "flow",
+        "fired": true,
+        "strength": 1,
+        "rarity": 0,
+        "hookText": "외국인이 10일째 사는 중이에요.",
+        "evidence": [
+          {
+            "text": "외국인이 10일 연속 사는",
+            "sourceKind": "official",
+            "source": "KRX 수급",
+            "asOf": "오늘 기준"
+          }
+        ]
+      },
+      {
+        "axis": "time",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      },
+      {
+        "axis": "herd",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      },
+      {
+        "axis": "affinity",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      }
+    ],
+    "axisHook": {
+      "axis": "flow",
+      "hookText": "외국인이 10일째 사는 중이에요.",
+      "strength": 1,
+      "rarity": 0,
+      "evidence": [
+        {
+          "text": "외국인이 10일 연속 사는",
+          "sourceKind": "official",
+          "source": "KRX 수급",
+          "asOf": "오늘 기준"
+        }
+      ],
+      "axisSignals": [
+        {
+          "axis": "price",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        },
+        {
+          "axis": "flow",
+          "fired": true,
+          "strength": 1,
+          "rarity": 0,
+          "hookText": "외국인이 10일째 사는 중이에요.",
+          "evidence": [
+            {
+              "text": "외국인이 10일 연속 사는",
+              "sourceKind": "official",
+              "source": "KRX 수급",
+              "asOf": "오늘 기준"
+            }
+          ]
+        },
+        {
+          "axis": "time",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        },
+        {
+          "axis": "herd",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        },
+        {
+          "axis": "affinity",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        }
+      ]
+    }
+  }
+}

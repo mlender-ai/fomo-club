@@ -55,7 +55,7 @@ spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순
 
 | 항목 | 규정 |
 |---|---|
-| **완료 기준** | 머지가 아니라 **정규 도메인 배포 후 화면(DOM) 확인**. `verify-production.ts` 선행 |
+| **완료 기준** | 머지가 아니라 **정규 도메인 배포 후 화면(DOM) 확인**. `verify-production.ts` 선행 — 절차는 아래 「완료 판정 절차」 |
 | **CI 그린 판정** | PR 체크 **+ 스케줄 워크플로 최근 실행** 둘 다. 하나만 보고 초록이라 하지 않는다 |
 | **`staleServe` 주의** | `staleServe: true` 200 은 **마지막 성공분을 준 것**이지 새로 구운 것이 아니다. 초록이 곧 빌드 완료가 아니다 |
 | **이름 인용** | 워크플로·라우트·파일·환경변수 이름은 **실재 확인 후** 쓴다. 기억으로 쓰지 않는다 |
@@ -102,6 +102,23 @@ spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순
 - **신규(약한 곳 — 데이터 엔진)**: `source-discovery`(소스 발굴·제안만), `integrity-checker`(grounding·tier·찌라시 파수꾼), `pipeline-monitor`(스크래퍼 깨짐·수집량·품질 감시).
 - **비활성(옛 정체성 — 재가동 금지, 파일 상단 DEPRECATED)**: mascot-keeper, idea-generator, lovable-reviewer.
 - **GitHub Actions 자율 조직**(`.github/agents/` 7페르소나 + idea-proposal/propose-*/project-*/autonomy-report/slack-retro): cron 전부 비활성 확인됨(2026-06-16). 정지 유지, 참고용 보존.
+
+### 완료 판정 절차 (CTX-07 §5 — 모든 WO 공통, 선행 단계)
+
+완료 보고 **전에** 이 순서로 한다. 순서를 바꾸면 판정이 아니라 주장이 된다.
+
+```
+1. npm run verify:production        ← 정규 도메인이 origin/main HEAD 를 서빙하는지
+2. 정규 도메인 DOM 에서 산출물 확인   ← API 200 이 화면 확인이 아니다
+3. 그 결과를 인용해 보고             ← 숫자·문구를 그대로 옮긴다. 요약하지 않는다
+```
+
+**종료코드**: `0` 통과 · `1` 실패 · `2` **미확인(통과가 아니다)** · `3` 스크립트 오류.
+`2` 를 통과로 읽는 것이 이 절차가 막으려는 유일한 실수다 — 못 쟀다는 말과 괜찮다는 말은 다르다.
+
+품질 게이트(불변식·역검증·성능 예산)는 `docs/quality/INVARIANTS.md` 와
+`docs/quality/perf-budget.json` 이 정본이고, CI `repo-checks` 가 매 PR 에서 강제한다.
+**"위반 0건" 은 역검증을 통과한 뒤에만 성과다** — 검사가 약한 건지 구조가 튼튼한 건지 구분되지 않으므로.
 
 ### 코드 작성 규율 — 게으름 사다리 (전 LLM 공통: Claude/Codex/Cursor/GPT)
 "가장 좋은 코드는 안 짠 코드." 새 코드 쓰기 전 위에서부터 순서대로 자문, 멈추는 첫 칸에서 멈춤 (영향 코드·실행 흐름을 먼저 읽은 **뒤** 적용):

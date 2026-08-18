@@ -84,6 +84,15 @@ jobs:
       - name: Test
         run: npm test -- --reporter=dot
 
+      # CTX-07 §4 — 성능 회귀 게이트. 오프라인·결정론(네트워크·DB 없음)이라 PR 마다 돌 수 있다.
+      # 조회 라우트의 전이 임포트 그래프가 커지면 실패한다 — 504 사고의 원인이 그것이었다.
+      - name: Perf regression gate
+        run: npx tsx scripts/perf-regression-gate.ts
+
+      # 불변식 문서가 정본(registry.json)의 생성물과 어긋나면 실패. 갈라지면 "게이트가 있다"는 착각이 남는다.
+      - name: Invariants doc in sync
+        run: npx tsx scripts/invariants-render.ts --check
+
   build-api:
     runs-on: ubuntu-latest
     needs: [resolve-ref, repo-checks]

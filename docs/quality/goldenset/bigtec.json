@@ -1,0 +1,308 @@
+{
+  "provenance": {
+    "url": "https://fomo-club-backend.vercel.app/api/fomo/stock-front?stock=%EB%B9%85%ED%85%8D&naverCode=065450&lite=1",
+    "status": 200,
+    "captured_at": "2026-08-18T16:12:24.800Z",
+    "commit": "0da1538c8c39638588ad0bfb9a37f05d83a7012c"
+  },
+  "case": {
+    "key": "bigtec",
+    "label": "빅텍 (065450)",
+    "purpose": "소형·조용·재료 없음. 오래된 신호가 픽에서 워치로 강등되는 경로(NO_VISIBLE_REASON 계열)"
+  },
+  "response": {
+    "signals": {
+      "changePct": 1.49,
+      "themeLabel": "방산",
+      "themeRelativeRank": 2,
+      "themePeerCount": 12,
+      "themeAverageChangePct": -2.4,
+      "themeRelativeChangePct": 3.8,
+      "foreignNetStreak": -3,
+      "institutionNetStreak": 20,
+      "volumeRatio": 1.5667954108851325
+    },
+    "score": {
+      "score": null,
+      "status": "accumulating",
+      "label": "",
+      "interpretation": "",
+      "axes": [
+        {
+          "key": "flow",
+          "label": "수급",
+          "score": 76,
+          "evidence": [
+            "외국인 3일 연속 순매도",
+            "기관 20일 연속 순매수",
+            "거래량 평소 1.6배 · 가격 동반 상승"
+          ]
+        },
+        {
+          "key": "chart",
+          "label": "차트 타이밍",
+          "score": 55,
+          "evidence": [
+            "7/29 하방 임펄스 -13.2%",
+            "무효선 거리 +18.7%"
+          ]
+        }
+      ],
+      "axisStates": [
+        {
+          "key": "valuation",
+          "label": "밸류에이션",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "growth",
+          "label": "성장",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "profitability",
+          "label": "수익성·체력",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        },
+        {
+          "key": "flow",
+          "label": "수급",
+          "score": 76,
+          "evidence": [
+            "외국인 3일 연속 순매도",
+            "기관 20일 연속 순매수",
+            "거래량 평소 1.6배 · 가격 동반 상승"
+          ],
+          "status": "available"
+        },
+        {
+          "key": "chart",
+          "label": "차트 타이밍",
+          "score": 55,
+          "evidence": [
+            "7/29 하방 임펄스 -13.2%",
+            "무효선 거리 +18.7%"
+          ],
+          "status": "available"
+        },
+        {
+          "key": "quiet",
+          "label": "조용함",
+          "status": "missing",
+          "score": null,
+          "evidence": [],
+          "missingReason": "데이터 없음"
+        }
+      ],
+      "availableAxisCount": 2,
+      "omittedAxes": [
+        "valuation",
+        "growth",
+        "profitability",
+        "quiet"
+      ]
+    },
+    "verdict": {
+      "stance": "watch",
+      "stanceText": "기관 20일 연속 순매수는 강세인데 외국인 3일 연속 순매도가 맞서요 — 우세가 갈릴 때까지 볼 구간이에요.",
+      "evidence": [
+        "기관 20일 연속 순매수",
+        "거래량이 20일 평균의 1.6배",
+        "외국인 3일 연속 순매도"
+      ],
+      "invalidation": "최근 3개월 저점 2,500원 이탈 여부가 다음 판단 기준이에요.",
+      "invalidationLevel": 2500,
+      "confidence": "medium"
+    },
+    "sparkline": [
+      3365,
+      3300,
+      3210,
+      3060,
+      3100,
+      3030,
+      2935,
+      3055,
+      2985,
+      3130,
+      3020,
+      3035,
+      3095,
+      2995,
+      3000,
+      3005,
+      3175,
+      3055,
+      3065,
+      3125,
+      3080,
+      2975,
+      2920,
+      2970,
+      3110,
+      3145,
+      2945,
+      2820,
+      2700,
+      2715,
+      2855,
+      2845,
+      2955,
+      2965,
+      2930,
+      2950,
+      3030,
+      3015,
+      3080,
+      3035,
+      3030,
+      3075
+    ],
+    "priceText": "3,075원",
+    "changeText": "45 (1.49%)",
+    "changeDir": "up",
+    "feedBull": {
+      "text": "기관이 20일째 사는 중이에요.",
+      "source": "수급"
+    },
+    "feedBear": {
+      "text": "외국인이 3일째 파는 중이에요.",
+      "source": "수급"
+    },
+    "axisSignals": [
+      {
+        "axis": "price",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      },
+      {
+        "axis": "flow",
+        "fired": true,
+        "strength": 1,
+        "rarity": 0,
+        "hookText": "기관이 20일째 사는 중이에요.",
+        "evidence": [
+          {
+            "text": "기관이 20일 연속 사는",
+            "sourceKind": "official",
+            "source": "KRX 수급",
+            "asOf": "오늘 기준"
+          }
+        ]
+      },
+      {
+        "axis": "time",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      },
+      {
+        "axis": "herd",
+        "fired": true,
+        "strength": 0.7311111111111112,
+        "rarity": 0,
+        "hookText": "방산가 빠지는 날, 상대적으로 덜 빠졌어요.",
+        "evidence": [
+          {
+            "text": "방산 평균 -2.4%, 차이 +3.8%",
+            "sourceKind": "market",
+            "source": "동종 흐름",
+            "asOf": "오늘 기준"
+          }
+        ]
+      },
+      {
+        "axis": "affinity",
+        "fired": false,
+        "strength": 0,
+        "rarity": 0,
+        "hookText": "",
+        "evidence": []
+      }
+    ],
+    "axisHook": {
+      "axis": "flow",
+      "hookText": "기관이 20일째 사는 중이에요.",
+      "strength": 1,
+      "rarity": 0,
+      "evidence": [
+        {
+          "text": "기관이 20일 연속 사는",
+          "sourceKind": "official",
+          "source": "KRX 수급",
+          "asOf": "오늘 기준"
+        }
+      ],
+      "axisSignals": [
+        {
+          "axis": "price",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        },
+        {
+          "axis": "flow",
+          "fired": true,
+          "strength": 1,
+          "rarity": 0,
+          "hookText": "기관이 20일째 사는 중이에요.",
+          "evidence": [
+            {
+              "text": "기관이 20일 연속 사는",
+              "sourceKind": "official",
+              "source": "KRX 수급",
+              "asOf": "오늘 기준"
+            }
+          ]
+        },
+        {
+          "axis": "time",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        },
+        {
+          "axis": "herd",
+          "fired": true,
+          "strength": 0.7311111111111112,
+          "rarity": 0,
+          "hookText": "방산가 빠지는 날, 상대적으로 덜 빠졌어요.",
+          "evidence": [
+            {
+              "text": "방산 평균 -2.4%, 차이 +3.8%",
+              "sourceKind": "market",
+              "source": "동종 흐름",
+              "asOf": "오늘 기준"
+            }
+          ]
+        },
+        {
+          "axis": "affinity",
+          "fired": false,
+          "strength": 0,
+          "rarity": 0,
+          "hookText": "",
+          "evidence": []
+        }
+      ]
+    }
+  }
+}
