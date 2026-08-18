@@ -136,6 +136,9 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
     const result = composeDeck(ranked, { deckSize: 10 });
     expect(result.deck.length).toBe(6); // 동일유형 상한 6 에서 멈춘다
     expect(result.skipped.kind_cap).toBeGreaterThan(0);
+    // 축소된 덱(6장)에도 **적용된** 상한(10장 기준 6)을 보고한다 — 실제 덱과 어긋나면 안 된다.
+    expect(result.caps.maxSameKind).toBe(6);
+    expect(result.deck.filter((d) => d.kind === "insider_cluster").length).toBeLessThanOrEqual(result.caps.maxSameKind);
   });
 
   it("신규가 부족하면 워치에서 승격한다 — 지속으로 채우지 않는다", () => {
@@ -149,6 +152,8 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
     expect(result.promoted).toBeGreaterThan(0);
     const freshCount = result.deck.filter((d) => isFreshSignal(d.ageDays)).length;
     expect(freshCount).toBeGreaterThanOrEqual(deckCaps(result.deck.length).minFresh);
+    // 보고된 상한은 **요청 덱 크기 기준**이다(최종 장수로 재계산하면 실제 덱과 어긋난다).
+    expect(result.caps).toEqual(deckCaps(10));
   });
 
   it("승격해도 부족하면 덱을 줄인다", () => {
@@ -157,6 +162,7 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
     const freshCount = result.deck.filter((d) => isFreshSignal(d.ageDays)).length;
     expect(freshCount).toBeGreaterThanOrEqual(deckCaps(result.deck.length).minFresh);
     expect(result.deck.length).toBeLessThan(10);
+    expect(result.caps).toEqual(deckCaps(10));
   });
 
   it("공급이 충분하면 상한대로 찬다", () => {

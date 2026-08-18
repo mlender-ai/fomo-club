@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withCors, kstDate } from "../../../../../lib/fomo";
-import { readFeedContent, writeFeedContent } from "../../../../../lib/feed-content-store";
+import { readFeedContent, readFeedContentMany, writeFeedContent } from "../../../../../lib/feed-content-store";
 import { appendJudgmentLedger } from "../../../../../lib/judgment-ledger";
 import {
   buildQuietPickResponse,
@@ -48,12 +48,16 @@ export async function GET(request: Request) {
     const priorPicks = prior && prior.date !== date ? quietPickPriorState(prior) : new Map();
 
     // 1페이지 재노출 쿨다운(WO-DECK-01 §3) — 최근 스냅샷에서 연속 점유일수를 센다.
-    // 스냅샷이 없는 날(크론 실패)은 자연히 연속을 끊는다. 이력 조회 실패가 발행을 막지는 않는다 —
-    // 쿨다운 없는 덱이 덱 없는 것보다 낫다.
-    const history = await Promise.all(
-      priorDates(date, PAGE1_HISTORY_DAYS).map((d) => readFeedContent<QuietPickResponse>(dateId(d)).catch(() => null))
+    //
+    // **한 쿼리로** 읽는다. `Promise.all` 로 8개를 병렬 조회하면 커넥션 풀에서 8슬롯을 동시에
+    // 잡고, 실측(2026-08-18)에서 그것이 `EMAXCONNSESSION`(pool_size 15) 을 유발해 조회 라우트가
+    // 503 으로 넘어갔다. 스냅샷이 없는 날(크론 실패)은 자연히 연속을 끊는다.
+    // 이력 조회 실패가 발행을 막지는 않는다 — 쿨다운 없는 덱이 덱 없는 것보다 낫다.
+    const wanted = priorDates(date, PAGE1_HISTORY_DAYS);
+    const snapshots = await readFeedContentMany<QuietPickResponse>(wanted.map(dateId)).catch(
+      () => new Map<string, QuietPickResponse>()
     );
-    const page1Streaks = quietPickPage1Streaks(history);
+    const page1Streaks = quietPickPage1Streaks(wanted.map((d) => snapshots.get(dateId(d)) ?? null));
 
     const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks });
 

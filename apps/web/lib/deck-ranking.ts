@@ -178,7 +178,13 @@ export interface ComposeResult<T> {
   skipped: Record<string, number>;
   /** 신규 하한을 채우지 못해 덱을 줄인 장수. 0 이면 상한대로 찼다. */
   shrunkBy: number;
-  /** 실제 덱 크기 기준 하한·상한(설명용). */
+  /**
+   * **실제로 적용된** 하한·상한 — 요청 덱 크기(`deckSize`) 기준이다.
+   *
+   * 최종 장수로 다시 계산하지 않는다. 축소가 일어난 경우 그러면 보고값이 실제 덱과 어긋난다
+   * (실측 2026-08-18: 10장 기준 동일유형 상한 6으로 골랐는데 9장으로 줄어 `floor(9×0.6)=5` 를
+   * 보고해, 덱에 6장 있는 유형을 "상한 5" 라고 말했다). 계측이 거짓말하면 계측이 아니다.
+   */
   caps: { minFresh: number; maxSameKind: number; maxPersistent: number };
   version: string;
 }
@@ -257,7 +263,7 @@ export function composeDeck<T extends DeckCandidate>(
     promoted,
     skipped,
     shrunkBy,
-    caps: deckCaps(chosen.length),
+    caps, // 적용된 상한 그대로 — 최종 장수로 재계산하지 않는다(위 주석)
     version: DECK_COMPOSITION_VERSION,
   };
 }

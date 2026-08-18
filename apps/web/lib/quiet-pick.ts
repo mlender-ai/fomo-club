@@ -1484,7 +1484,25 @@ export async function buildQuietPickResponse(options: {
         ? "오늘 덱은 같은 유형이 이미 찼어요"
         : "오래된 신호라 오늘은 뒤로 밀렸어요",
     }));
-  const watchShelf = [...watching, ...compositionOverflow].slice(0, QUIET_WATCH_MAX);
+  //
+  // 선반 정렬 — **어제 픽이었다가 내려온 것을 먼저 보여준다.**
+  // 실측(2026-08-18): 선반이 `mega_cap` 10건으로 먼저 차서, 26일째로 강등된 빅텍이 상한에 밀려
+  // 화면에서 아예 사라졌다. "강등이지 제외가 아님" 이 표시상 제외가 되면 약속을 지킨 게 아니다.
+  const SHELF_PRIORITY: Record<string, number> = {
+    signal_aged: 0,
+    composition_overflow: 1,
+    ran_30_since_signal: 2,
+    changed_15: 2,
+    turnover_top20: 3,
+    mention_hot: 3,
+    mega_cap: 4,
+    illiquid: 5,
+  };
+  const watchShelf = [...watching, ...compositionOverflow]
+    .map((item, index) => ({ item, index })) // 동순위는 입력 순서(=신규성 순서) 유지
+    .sort((a, b) => (SHELF_PRIORITY[a.item.reasonCode] ?? 9) - (SHELF_PRIORITY[b.item.reasonCode] ?? 9) || a.index - b.index)
+    .map(({ item }) => item)
+    .slice(0, QUIET_WATCH_MAX);
 
   // 회전율 계측(PHASE 5) — 발행 시점에 굳힌다. 나중에 재계산하면 그날의 이력이 이미 바뀐다.
   const rotation: QuietPickRotation = {

@@ -100,6 +100,31 @@ export async function readFeedContentByPrefix<T>(prefix: string, limit = 10): Pr
  * One-off migrations need the persisted timestamp, not a synthesized date. Keep this separate
  * from the hot-path reader so normal requests retain the small 50-row ceiling.
  */
+/**
+ * 여러 id 를 **한 쿼리로** 읽는다.
+ *
+ * 왜 이게 필요했나: `readFeedContent` 를 `Promise.all` 로 N 개 돌리면 커넥션 풀에서 N 슬롯을
+ * 동시에 잡는다. 2026-08-18 실측 — quiet-pick 크론이 최근 8일 스냅샷을 병렬로 읽자
+ * `FATAL: (EMAXCONNSESSION) max clients reached in session mode - pool_size: 15` 가 나며
+ * 조회 라우트가 503 으로 넘어갔다. 커넥션 1개면 그 위험이 없고 왕복도 1회다.
+ *
+ * 없는 id 는 결과에 없다(에러가 아니다). 반환은 Map — 호출자가 순서를 직접 정한다.
+ */
+export async function readFeedContentMany<T>(ids: readonly string[]): Promise<Map<string, T>> {
+  const unique = [...new Set(ids.filter((id) => id.length > 0))];
+  if (unique.length === 0) return new Map();
+  try {
+    const records = await prisma.$queryRaw<Array<{ id: string; row: unknown }>>`
+      SELECT "id", "row" FROM "FeedContentCache"
+      WHERE "id" IN (${Prisma.join(unique)})
+    `;
+    return new Map(records.map((record) => [record.id, record.row as T]));
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2010") return new Map();
+    return new Map();
+  }
+}
+
 export async function readFeedContentHistoryByPrefix<T>(
   prefix: string,
   limit = 5_000
