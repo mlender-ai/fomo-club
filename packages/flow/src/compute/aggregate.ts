@@ -12,10 +12,24 @@ import { PARTICIPANTS, type Coverage, type FlowSnapshot, type Participant, type 
 /** 관심 대상 주체(내부자는 일별 순매매 축이 아니라 별도 신호라 커버리지 계산에서 뺀다). */
 const DAILY_FLOW_PARTICIPANTS: readonly Participant[] = ["retail", "institution", "foreign"];
 
-function coverageOf(present: ReadonlySet<Participant>): Coverage {
-  const n = DAILY_FLOW_PARTICIPANTS.filter((p) => present.has(p)).length;
+function coverageOf(observed: ReadonlySet<Participant>): Coverage {
+  const n = DAILY_FLOW_PARTICIPANTS.filter((p) => observed.has(p)).length;
   if (n === 0) return "none";
   return n === DAILY_FLOW_PARTICIPANTS.length ? "full" : "partial";
+}
+
+/**
+ * **관측된** 주체인가 — 행이 있는 것과 값이 있는 것은 다르다(CTX-07 INV-C6).
+ *
+ * 어댑터가 조회에 실패하면 `net_value: null` 인 행을 남기기 쉽다. 행 존재만으로 확보를 세면
+ * `coverage: "full"` 이 나오고, 사용자는 **주체 3분이 모두 확인됐다고 믿는다.** 확인된 적이 없다.
+ * 0 과 null 을 구분하는 것이 이 타입의 전제인데(`net_value: number | null`), 파생이 그 구분을
+ * 무시하면 타입의 의미가 사라진다.
+ *
+ * `net_value === 0` 은 관측이다(거래 없음). null 만 미관측이다.
+ */
+function isObserved(flow: ParticipantFlow): boolean {
+  return flow.net_value != null;
 }
 
 /** 누적 금액 최대 주체. 금액을 모르는 주체는 후보에서 빠진다(수량으로 대체 비교하지 않는다 — 단위가 다르다). */
@@ -36,11 +50,12 @@ export function buildFlowSnapshot(input: {
   participants: readonly ParticipantFlow[];
 }): FlowSnapshot {
   const participants = [...input.participants];
-  const present = new Set(participants.map((p) => p.participant));
+  // 확보 = 값이 있는 것. 행만 있고 값이 null 인 주체는 미확보로 센다(INV-C6).
+  const observed = new Set(participants.filter(isObserved).map((p) => p.participant));
 
   // 방향은 연속 구간이 아니라 그날의 순매수 부호로 판단한다 — "지금 누가 사고 파는가" 이므로.
-  const buyers = participants.filter((p) => (p.net_value ?? 0) > 0).map((p) => p.participant);
-  const sellers = participants.filter((p) => (p.net_value ?? 0) < 0).map((p) => p.participant);
+  const buyers = participants.filter((p) => isObserved(p) && p.net_value! > 0).map((p) => p.participant);
+  const sellers = participants.filter((p) => isObserved(p) && p.net_value! < 0).map((p) => p.participant);
 
   return {
     symbol: input.symbol,
@@ -51,7 +66,7 @@ export function buildFlowSnapshot(input: {
     net_sellers: sellers,
     dominant_buyer: dominantBy(participants, 1),
     dominant_seller: dominantBy(participants, -1),
-    coverage: coverageOf(present),
-    missing_participants: PARTICIPANTS.filter((p) => !present.has(p)),
+    coverage: coverageOf(observed),
+    missing_participants: PARTICIPANTS.filter((p) => !observed.has(p)),
   };
 }

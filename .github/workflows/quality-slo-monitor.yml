@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: read
+  # CTX-07 §4 — SLO 초과 시 이슈를 자동 생성한다. `::warning` 은 아무도 보지 않는다.
+  issues: write
+  actions: read
 
 jobs:
   verify:
@@ -50,6 +53,7 @@ jobs:
           fi
 
       - name: Enforce fixed SLO targets
+        id: slo
         run: |
           node - <<'NODE'
           const fs = require("fs");
@@ -62,9 +66,54 @@ jobs:
           const failures = Array.isArray(latest.failures) ? latest.failures : [];
           const summary = `${latest.date}: ${latest.passed ? "PASS" : `FAIL (${failures.join(", ")})`}`;
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Quality SLO\n\n${summary}\n`);
+          // 미달 사유를 다음 스텝이 읽을 수 있게 남긴다. GITHUB_OUTPUT 은 **한 줄** 이어야 한다.
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `passed=${latest.passed ? "true" : "false"}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `summary=${summary.replace(/\r?\n/g, " ")}\n`);
           if (!latest.passed) {
             console.log(`::warning title=Quality SLO missed::${summary}`);
-            process.exit(1);
+            process.exit(0); // 이슈 생성 스텝까지 가야 한다 — 여기서 죽으면 알림이 안 뜬다
           }
           console.log(summary);
           NODE
+
+      # CTX-07 §4 — 프로덕션 감시: SLO 초과 시 이슈 자동 생성.
+      #
+      # 같은 날 같은 이슈를 또 만들지 않는다(제목에 날짜를 넣고 검색). 알림이 매일 쌓이면
+      # 알림이 아니라 배경 소음이 되고, 배경 소음은 아무도 읽지 않는다.
+      - name: Open issue on SLO miss
+        if: steps.slo.outputs.passed == 'false'
+        uses: actions/github-script@v7
+        env:
+          SLO_SUMMARY: ${{ steps.slo.outputs.summary }}
+        with:
+          script: |
+            const summary = process.env.SLO_SUMMARY || "(요약 없음)";
+            const date = summary.split(":")[0].trim();
+            const title = `[SLO] 품질 SLO 미달 — ${date}`;
+            const existing = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`,
+            });
+            if (existing.data.total_count > 0) {
+              core.info(`이미 열린 이슈가 있다 — #${existing.data.items[0].number}`);
+              return;
+            }
+            const body = [
+              "품질 SLO 가 고정 목표에 미달했습니다.",
+              "",
+              "```",
+              summary,
+              "```",
+              "",
+              `- 실행: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "- 대시보드: `/admin/quality`",
+              "- 목표 정본: `apps/web/lib/quality-slo-ledger.ts#QUALITY_SLO_TARGETS`",
+              "",
+              "> CTX-07 §4 자동 생성. 목표를 낮춰서 닫지 말 것 — 왜 미달인지 먼저 본다.",
+            ].join("\n");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ["slo", "monitor"],
+            });

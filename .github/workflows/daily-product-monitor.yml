@@ -153,14 +153,47 @@ jobs:
           # 단순하다: 위 critical 목록에 이 워크플로들이 없었다. 10분마다 도는 워크플로는 단발
           # 실패가 흔해서 "24시간 내 실패 1건"으로 잡으면 매일 오탐이 난다. 그래서 **연속 실패
           # 횟수**로 본다 — 간헐 실패는 넘기고, 굳어버린 실패만 잡는다.
+          #
+          # CTX-07 §4 는 "연속 2회 실패 시 이슈" 를 요구한다. 그런데 위 실측 근거(10분 주기는 단발
+          # 실패가 흔하다)는 그대로 유효하다. 둘을 다 지키는 방법은 **주기로 나누는 것**이다:
+          #
+          #  - 고빈도(10분~시간 단위): 임계 5. 간헐 실패를 넘기고 굳어버린 실패만 잡는다.
+          #  - **일 1회**: 임계 2. 하루 한 번 도는 것이 두 번 연속 실패하면 **이틀치 데이터가 빈다** —
+          #    그건 간헐 실패가 아니라 이미 사고다. §4 의 "2회" 가 겨냥한 것이 이 축이다.
+          #
+          # 숫자를 하나로 통일하지 않은 이유가 이것이다. 통일하면 한쪽은 오탐이고 한쪽은 늦는다.
           STREAK_THRESHOLD=5
+          DAILY_STREAK_THRESHOLD=2
           declare -A STREAK_WATCH=(
             ["us-market-prewarm.yml"]="US Market Prewarm"
             ["feed-content.yml"]="Feed Content Prewarm"
             ["coin-market-prewarm.yml"]="Coin Market Prewarm"
             ["kr-candle-prewarm.yml"]="KR Candle Prewarm"
           )
+          # 일 1회 스케줄 — 두 번 연속이면 이틀 결손이다.
+          declare -A DAILY_WATCH=(
+            ["judgment-ledger-daily.yml"]="Judgment Ledger Daily"
+            ["supply-demand-pipeline.yml"]="Supply Demand Pipeline"
+            ["keyword-cards-pipeline.yml"]="Keyword Cards Pipeline"
+            ["quality-slo-monitor.yml"]="Quality SLO Monitor"
+          )
           STREAK_NOTES=()
+          for wf in "${!DAILY_WATCH[@]}"; do
+            NAME="${DAILY_WATCH[$wf]}"
+            if ! gh run list --repo "$REPO" --workflow "$wf" --limit 10               --json conclusion,status,createdAt,url > "/tmp/dstreak-$wf.json" 2>/dev/null; then
+              continue
+            fi
+            DSTREAK=$(jq '
+              [.[] | select(.status == "completed")]
+              | sort_by(.createdAt) | reverse
+              | (map(.conclusion) | index("success")) as $i
+              | if $i == null then length else $i end
+            ' "/tmp/dstreak-$wf.json")
+            if [ "${DSTREAK:-0}" -ge "$DAILY_STREAK_THRESHOLD" ]; then
+              LAST_URL=$(jq -r 'sort_by(.createdAt) | reverse | .[0].url // ""' "/tmp/dstreak-$wf.json")
+              STREAK_NOTES+=("$NAME(일 1회): 연속 ${DSTREAK}회 실패 — 이틀치 결손 (최근 $LAST_URL)")
+            fi
+          done
           for wf in "${!STREAK_WATCH[@]}"; do
             NAME="${STREAK_WATCH[$wf]}"
             if ! gh run list --repo "$REPO" --workflow "$wf" --limit 25 \
