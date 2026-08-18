@@ -176,6 +176,29 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
     expect(result.promoted).toBe(0);
   });
 
+  it("항목별 탈락 사유를 남긴다 — 선반 문구가 추측하지 않도록", () => {
+    const ranked = [...Array(8)].map(() => fresh("insider_cluster"));
+    const result = composeDeck(ranked, { deckSize: 10 });
+    const dropped = ranked.filter((item) => !result.deck.includes(item));
+    expect(dropped.length).toBe(2);
+    for (const item of dropped) expect(result.skipReasons.get(item)).toBe("kind_cap");
+    // 덱에 든 항목에는 사유가 없어야 한다.
+    for (const item of result.deck) expect(result.skipReasons.has(item)).toBe(false);
+  });
+
+  it("지속 상한으로 밀린 것은 kind_cap 이 아니라 persistent_cap 이다", () => {
+    const ranked = [
+      ...[...Array(6)].map(() => fresh("insider_cluster")),
+      ...[...Array(6)].map((_, i) => persistent(`streak_${i}`)),
+    ];
+    const result = composeDeck(ranked, { deckSize: 10 });
+    const droppedPersistent = ranked.filter((item) => !result.deck.includes(item) && !isFreshSignal(item.ageDays));
+    expect(droppedPersistent.length).toBeGreaterThan(0);
+    for (const item of droppedPersistent) {
+      expect(["persistent_cap", "reserved_for_fresh", "deck_full"]).toContain(result.skipReasons.get(item));
+    }
+  });
+
   it("구성 규칙에 버전이 찍힌다 (WO 완료조건 7)", () => {
     expect(composeDeck([], { deckSize: 10 }).version).toBe(DECK_COMPOSITION_VERSION);
   });
