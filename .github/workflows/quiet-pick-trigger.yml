@@ -42,17 +42,42 @@ jobs:
           out.push(`- 자격 로그: KR유니버스 ${q.krUniverse ?? "?"} · KR신호 ${q.krWithSignal ?? "?"} · US내부자원천 ${q.usInsiderRaw ?? "?"} · US신호 ${q.usWithSignal ?? "?"} · 조용함통과 ${q.afterQuiet ?? "?"} · 품질통과 ${q.afterQuality ?? "?"}`);
           out.push(`- 탈락 사유: ${JSON.stringify(q.drops ?? {})}`);
           out.push("");
+          // 회전율(WO-DECK-01 PHASE 5) — 1페이지가 어제와 겹치면 여기서 바로 보인다.
+          const rot = cron.rotation ?? picksResp.rotation ?? null;
+          if (rot) {
+            out.push(`## 회전율 (${rot.compositionVersion ?? "?"})`);
+            out.push(`- 1페이지: ${(rot.page1 ?? []).join(", ") || "(없음)"}`);
+            const held = rot.page1HeldOver ?? [];
+            out.push(`- 어제까지도 1페이지였던 종목: ${held.length ? held.map(h=>`${h.canonical}(${h.consecutiveDays}일)`).join(", ") : "**없음 — 매일 바뀌고 있다**"}`);
+            out.push(`- 신규/지속 ${rot.freshCount ?? "?"}/${rot.persistentCount ?? "?"} · 경과일 중앙 ${rot.ageDaysMedian ?? "?"}일 · 쿨다운 적용 ${rot.cooldownApplied ?? 0} · 상한 초과 ${rot.agedOut ?? 0} · 재등장 ${rot.reentryCount ?? 0} · 줄인 장수 ${rot.shrunkBy ?? 0}`);
+            out.push(`- 구성 하한/상한: 신규 ≥${rot.caps?.minFresh ?? "?"} · 동일유형 ≤${rot.caps?.maxSameKind ?? "?"} · 지속 ≤${rot.caps?.maxPersistent ?? "?"} (덱 ${rot.deckSize ?? "?"}장)`);
+            out.push(`- 구성 규칙에 밀린 후보: ${JSON.stringify(rot.compositionSkipped ?? {})}`);
+            // 고착 알림 — 1페이지 최상위가 3일 이상 버티면 감쇠·쿨다운이 안 먹은 것이다.
+            const top = held.find(h => h.canonical === (rot.page1 ?? [])[0]);
+            // consecutiveDays 는 **어제까지**의 연속일이므로 오늘을 더해 판정한다(3일째 = 2 + 오늘).
+            if (top && top.consecutiveDays + 1 >= 3) {
+              out.push("");
+              out.push(`> 🚨 **고착 알림 — ${top.canonical} 이(가) ${top.consecutiveDays + 1}일째 1위다.** 목표는 3일 이하다. \`/admin/deck-rotation\` 확인.`);
+              process.exitCode = 0; // 알림이지 실패는 아니다 — 발행 자체는 성공했다
+              console.error(`[deck-rotation] STAGNATION top1=${top.canonical} days=${top.consecutiveDays + 1}`);
+            }
+            out.push("");
+          } else {
+            out.push("## 회전율 — `rotation` 없음(WO-DECK-01 배포 전 페이로드)");
+            out.push("");
+          }
           const dist = {};
           for (const p of picks) dist[p.signal?.kind] = (dist[p.signal?.kind]??0)+1;
           out.push(`## 신호 유형 분포`);
           out.push(Object.keys(dist).length ? Object.entries(dist).map(([k,v])=>`- ${k}: ${v}`).join("\n") : "- (없음)");
           out.push("");
           out.push(`## 픽 상세`);
-          out.push("| # | 종목 | 시장 | 신호 | 주체·규모·일수 | 당일% | 현재가 | 훅 | 무효선 | 위원회 |");
-          out.push("|---|---|---|---|---|---|---|---|---|---|");
+          out.push("| # | 종목 | 시장 | 신호 | 주체·규모·일수 | 경과일 | 순위점수 | 재등장 사유 | 당일% | 현재가 | 훅 |");
+          out.push("|---|---|---|---|---|---|---|---|---|---|---|");
           picks.forEach((p,i)=>{
-            const s=p.signal??{}; const pr=p.price??{}; const c=p.conviction?.committee??{};
-            out.push(`| ${i+1} | ${p.subject?.canonical??"?"} | ${p.subject?.market??"?"} | ${s.kind??"?"} | ${s.actors??"?"} ${s.scale??""} (${s.days??"?"}일) | ${pr.changePct??"?"} | ${pr.currentText??pr.current??"?"} | ${p.hook??"?"} | ${p.invalidation?.text??"?"} | ${c.verdict1line??"?"} (T${c.timingGrade??"?"}/V${c.valuationGrade??"?"}) |`);
+            const s=p.signal??{}; const pr=p.price??{};
+            const rank = typeof s.rankScore === "number" ? s.rankScore.toFixed(1) : "?";
+            out.push(`| ${i+1} | ${p.subject?.canonical??"?"} | ${p.subject?.market??"?"} | ${s.kind??"?"} | ${s.actors??"?"} ${s.scale??""} (${s.days??"?"}일) | ${s.ageDays??"?"} | ${rank} | ${s.reentry?.text ?? "—"} | ${pr.changePct??"?"} | ${pr.currentText??pr.current??"?"} | ${p.hook??"?"} |`);
           });
           out.push("");
           out.push("<details><summary>raw JSON</summary>\n\n```json\n"+JSON.stringify({cron, picks},null,2).slice(0,12000)+"\n```\n</details>");

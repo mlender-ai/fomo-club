@@ -27,6 +27,7 @@ export default async function CommitteeAuditPage() {
           <nav style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginBottom: 8 }}>
             <Link href="/admin/committee" style={{ color: "#d8ff3a" }}>위원회</Link>
             <Link href="/admin/quality" style={{ color: "#a6acb6" }}>품질 SLO</Link>
+            <Link href="/admin/deck-rotation" style={{ color: "#a6acb6" }}>덱 회전율</Link>
           </nav>
           <div>{active ? `ACTIVE ${active.runId}` : "NO ACTIVE RUN"}</div>
           <div style={{ marginTop: 5 }}>{active?.reviewedAt ?? "-"}</div>

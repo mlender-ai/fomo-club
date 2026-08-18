@@ -271,13 +271,52 @@ describe("buildQuietPickResponse — 자격 규칙(결정론)", () => {
     expect(res.qualification.drops.changed_15).toBeGreaterThanOrEqual(1);
   });
 
-  it("신선도: 어제와 같은 종목·같은 신호 시작이면 제외", async () => {
+  it("신선도: 순수 반복은 제외가 아니라 강등이다 (WO-DECK-01 §3)", async () => {
     const s = baseScenario();
-    // 어제 픽과 같은 신호(변화 0) → 순수 반복이라 제외.
+    // 어제 픽과 같은 신호(변화 0). 예전에는 `stale_repeat` 로 **제외**했지만, 연속 신호는 매일
+    // 하루씩 늘어 이 컷에 걸리지 않았고(실측 일평균 0.4건) 결과적으로 재노출 제어가 없었다.
+    // 이제 순수 반복은 남되 신규성 감쇠·1페이지 쿨다운이 순위로 누른다 — 강등이지 제외가 아니다.
     const priorPicks = new Map([["조용외인", { startedAt: "2026-07-17", days: 4, scale: "12만주" }]]);
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s), priorPicks });
+    expect(res.picks.map((p) => p.subject.canonical)).toContain("조용외인");
+    expect(res.qualification.drops.repeat_demoted).toBeGreaterThanOrEqual(1);
+    // "어제보다 1일 더 이어졌어요" 는 재등장 사유가 아니므로 진행 문구가 붙지 않는다.
+    const repeated = res.picks.find((p) => p.subject.canonical === "조용외인");
+    expect(repeated?.signal.progress).toBeUndefined();
+  });
+
+  it("1페이지 쿨다운: 연속 점유일수가 길수록 순위 점수가 낮아진다", async () => {
+    const s = baseScenario();
+    const clean = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    const penalized = await buildQuietPickResponse({
+      date: TODAY,
+      deps: depsFrom(s),
+      page1Streaks: new Map([["조용외인", 7]]),
+    });
+    const before = clean.picks.find((p) => p.subject.canonical === "조용외인")?.signal.rankScore;
+    const after = penalized.picks.find((p) => p.subject.canonical === "조용외인")?.signal.rankScore;
+    expect(before).toBeGreaterThan(0);
+    expect(after).toBeCloseTo(before! * 0.25, 6);
+  });
+
+  it("경과일 상한 초과는 픽이 아니라 워치다 (영구 배제 아님)", async () => {
+    const s = baseScenario();
+    // 창을 전부 순매수로 채워 연속일수를 상한 위로 올린다.
+    // store 는 **최신순**이므로 내림차순으로 넣어야 `startedAt` 이 가장 오래된 날이 된다.
+    const dayBefore = (offset: number): string =>
+      new Date(Date.UTC(2026, 6, 19) - offset * 86_400_000).toISOString().slice(0, 10);
+    s.histories["111111"] = Array.from({ length: 30 }, (_, i) => ({
+      date: dayBefore(i),
+      foreignNet: 1_000,
+      institutionNet: -1_000,
+      individualNet: 0,
+    })) as typeof s.histories["111111"];
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    const aged = res.watching.find((w) => w.subject.canonical === "조용외인");
+    expect(aged?.reasonCode).toBe("signal_aged");
+    expect(aged?.reasonText).toMatch(/지났어요/);
     expect(res.picks.map((p) => p.subject.canonical)).not.toContain("조용외인");
-    expect(res.qualification.drops.stale_repeat).toBeGreaterThanOrEqual(1);
+    expect(res.rotation?.agedOut).toBeGreaterThanOrEqual(1);
   });
 });
 

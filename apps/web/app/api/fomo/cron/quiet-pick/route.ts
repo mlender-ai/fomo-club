@@ -7,6 +7,7 @@ import {
   buildQuietPickResponse,
   quietPickLedgerEntries,
   quietPickPriorState,
+  quietPickPage1Streaks,
   type QuietPickResponse,
 } from "../../../../../lib/quiet-pick";
 import { buildQuietPickStamps, type PublicationStamp } from "../../../../../lib/publication-stamp";
@@ -16,6 +17,18 @@ export const maxDuration = 300;
 
 const ACTIVE_ID = "quiet-pick:active";
 const dateId = (date: string) => `quiet-pick:${date}`;
+/**
+ * 1페이지 쿨다운 이력 창(일). 최장 계단이 7일 연속이므로 그보다 하루 넉넉하게 읽는다 —
+ * 더 읽어도 계수는 안 바뀌고 DB 왕복만 늘어난다.
+ */
+const PAGE1_HISTORY_DAYS = 8;
+
+/** KST 기준 `date` 에서 하루씩 거슬러 올라간 날짜들(오늘 제외 — 자기 자신 때문에 감점되면 안 된다). */
+function priorDates(date: string, count: number): string[] {
+  const base = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(base)) return [];
+  return Array.from({ length: count }, (_, i) => new Date(base - (i + 1) * 86_400_000).toISOString().slice(0, 10));
+}
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
@@ -34,7 +47,15 @@ export async function GET(request: Request) {
     const prior = await readFeedContent<QuietPickResponse>(ACTIVE_ID).catch(() => null);
     const priorPicks = prior && prior.date !== date ? quietPickPriorState(prior) : new Map();
 
-    const response = await buildQuietPickResponse({ date, priorPicks });
+    // 1페이지 재노출 쿨다운(WO-DECK-01 §3) — 최근 스냅샷에서 연속 점유일수를 센다.
+    // 스냅샷이 없는 날(크론 실패)은 자연히 연속을 끊는다. 이력 조회 실패가 발행을 막지는 않는다 —
+    // 쿨다운 없는 덱이 덱 없는 것보다 낫다.
+    const history = await Promise.all(
+      priorDates(date, PAGE1_HISTORY_DAYS).map((d) => readFeedContent<QuietPickResponse>(dateId(d)).catch(() => null))
+    );
+    const page1Streaks = quietPickPage1Streaks(history);
+
+    const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks });
 
     // WO-P1 자가검증 — 발행 픽 전원 캔들 ≥200일. 게이트가 이미 걸렀으므로 여기서 걸리면 게이트 회귀다.
     const thin = response.picks.filter((pick) => pick.dataQuality.candles < 200);
@@ -88,6 +109,8 @@ export async function GET(request: Request) {
           }, {})
         ).map(([field, count]) => ({ field, count })),
         qualification: response.qualification,
+        // 회전율(WO-DECK-01 PHASE 5) — 1페이지가 어제와 겹치면 여기서 바로 보인다.
+        rotation: response.rotation ?? null,
         // 픽별 데이터 완결성 로그(WO-P1 수용 기준 — 하이드레이션 로그 첨부용).
         dataQuality: response.picks.map((pick) => ({
           stock: pick.subject.canonical,

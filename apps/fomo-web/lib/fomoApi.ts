@@ -1074,9 +1074,25 @@ export interface QuietPick {
     priceAtSignal: number;
     startedAt: string;
     strength: number;
+    /**
+     * 화면 순위 점수(WO-DECK-01) — 신규성 × 재노출 쿨다운 × 이례성. 연속일수는 들어가지 않는다.
+     * 구 페이로드에는 없으므로 선택 필드.
+     */
+    rankScore?: number;
+    /** 유효 경과일(재등장 시계 `ageAnchor` 반영). 신규/지속 판정의 기준. */
+    ageDays?: number;
+    ageAnchor?: string;
+    /** 어제까지 1페이지에 연속으로 있던 일수. */
+    page1Streak?: number;
     insiderCount?: number;
-    /** 신호 강화 재등장 문구(WO-P4). */
+    /** 신호 강화 재등장 문구(WO-P4). "1일 더 이어졌어요" 는 오지 않는다(WO-DECK-01 §3-2). */
     progress?: string;
+    /** 재등장 사유(WO-DECK-01 §3-2) — 쿨다운·상한을 넘어 다시 올라온 이유. 카드에 표시한다. */
+    reentry?: {
+      code: "invalidation_break" | "new_material" | "actor_joined" | "structure_shift";
+      text: string;
+      occurredAt: string;
+    };
   };
   /** 훅 — 무슨 일이 일어났나 한 문장(WO-SUB-HOOK PART 1). */
   hook: string;
