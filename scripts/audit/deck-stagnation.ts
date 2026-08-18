@@ -140,6 +140,8 @@ function render(days: DeckDay[]): string {
   const L: string[] = [];
   const asc = [...days].sort((a, b) => a.date.localeCompare(b.date));
   const desc = [...asc].reverse();
+  /** 미달 사유 코드 → 관측 기간 합계. 1-3 에서 채우고 1-4 판정에서 다시 쓴다. */
+  const agg = new Map<string, number>();
 
   L.push("# DECK_STAGNATION — 덱 고착 실측 (WO-DECK-01 PHASE 1)");
   L.push("");
@@ -315,7 +317,6 @@ function render(days: DeckDay[]): string {
       stale_repeat: "신선도(순수 반복)",
       repeat_strengthened: "(탈락 아님) 강화 재등장",
     };
-    const agg = new Map<string, number>();
     for (const d of withQual) for (const [k, v] of Object.entries(d.qualification!.drops ?? {})) agg.set(k, (agg.get(k) ?? 0) + v);
     const dayCount = withQual.length;
     L.push(`### 미달 사유별 집계 (${dayCount}일 합계 / 일평균)`);
@@ -334,6 +335,70 @@ function render(days: DeckDay[]): string {
     L.push("> 임계값을 풀어도 회전할 종목 자체가 나오지 않는다.");
     L.push("");
   }
+
+  // ── 판정 ──
+  //
+  // 실측 위에 얹는 결론. **재실행해도 남아야 하므로 코드에 둔다** — 손으로 덧붙이면 다음 실행에 지워진다.
+  // 수치는 위에서 계산한 것을 다시 쓰고, 코드 사실(공식·상수)만 문장으로 고정한다.
+  L.push("## 1-4. 판정");
+  L.push("");
+  const topStock = [...expo.entries()].sort((a, b) => b[1].page1 - a[1].page1)[0];
+  L.push("### ① 고착은 '1위 연속'이 아니라 '1페이지 점유'로 나타난다");
+  L.push("");
+  L.push(`최장 연속 1위는 **${maxRun}일**이고 1페이지 평균 변경률은 **${churn.length ? ((churn.reduce((a, b) => a + b, 0) / churn.length) * 100).toFixed(0) : "—"}%** 다 — 숫자만 보면 매일 바뀌는 것처럼 읽힌다.`);
+  if (topStock) {
+    L.push(`그러나 \`${topStock[0]}\` 는 ${asc.length}일 중 **1페이지에 ${topStock[1].page1}일**, 덱에 ${topStock[1].deck}일 있었다.`);
+    L.push("1위 자리만 잠깐씩 내주고 2·3위로 내려앉을 뿐 **1페이지에서 나가지 않는다.** 사용자가 매일 같은 카드를 보는 체감은 이것이다.");
+  }
+  L.push("");
+  L.push("> 그래서 PHASE 5 의 지표는 `1위 연속일` 하나로 부족하다. **1페이지 누적 점유일**을 같이 봐야 한다.");
+  L.push("");
+
+  L.push("### ② 원인 — 연속일수가 KR 신호를 US 신호 위로 밀어올리는 유일한 힘이다");
+  L.push("");
+  L.push("`institution_streak` 의 기저값은 100 이다. 내부자 클러스터(200~210 기저)보다 **100점 낮다.**");
+  L.push("연속일수 항(`×10`)이 없으면 KR 연속 신호는 항상 덱 바닥이다. 반대로 10일을 넘기는 순간 내부자 클러스터 전부를 앞지른다.");
+  L.push("");
+  L.push("| 연속일 | `institution_streak` 점수 | 내부자 클러스터 대비 |");
+  L.push("|---|---|---|");
+  for (const d of [3, 6, 10, 15, 20, 26]) {
+    const sc = 100 + d * 10;
+    L.push(`| ${d}일 | ${sc} | ${sc < 200 ? "아래" : sc < 300 ? "**추월 구간**" : "**전부 추월**"} |`);
+  }
+  L.push("");
+  L.push("즉 **가설 1-1·1-2 는 같은 한 줄이 만든다.** 이 한 항을 빼면 고착의 구조적 경로가 끊긴다.");
+  L.push("");
+
+  L.push("### ③ 재노출 페널티는 없다 — 있는 것은 '순수 반복' 컷뿐이다");
+  L.push("");
+  L.push("`stale_repeat` 는 신호가 **하나도 안 변했을 때만** 제외한다. 연속일이 하루 늘면");
+  L.push("`strengthenedProgress` 가 `\"어제보다 1일 더 이어졌어요\"` 를 돌려주고 그대로 재등장한다 —");
+  L.push("**연속 신호는 정의상 매일 하루씩 늘기 때문에 이 컷에 절대 걸리지 않는다.**");
+  L.push("");
+  L.push("WO PHASE 3 이 지적한 그대로다: 지속은 변화가 아니다. 순위 강등도, 노출 쿨다운도 없다.");
+  L.push("");
+
+  L.push("### ④ 풀은 임계값이 아니라 모집단에서 막힌다");
+  L.push("");
+  if (withQual.length > 0) {
+    const q = withQual[0]!.qualification!;
+    const megaAvg = (agg.get("mega_cap") ?? 0) / withQual.length;
+    L.push(`후보 ${q.afterQuiet}건 중 **${q.drops.mega_cap ?? 0}건이 \`mega_cap\`** 으로 선반행이다(14일 일평균 ${megaAvg.toFixed(1)}건) — 단일 최대 누수.`);
+    L.push(`그 앞단에서 KR 유니버스 ${q.krUniverse}종목 중 **${q.krUniverse - q.krWithSignal}종목은 신호 자체가 없다.**`);
+  }
+  L.push("");
+  L.push("WO 가 상정한 `\"466종목이 필터에 걸린다\"` 는 성립하지 않는다. 걸릴 466종목이 애초에 없다.");
+  L.push("**\`신호 없음\` 이 다수 = 신호 산출 문제**라는 WO 1-3 의 판정 기준을 그대로 적용하면, 대응은 임계값 조정이 아니라");
+  L.push("**유니버스 확대 + 신호 종류 추가**다. 다만 이는 PHASE 2~4 의 랭킹 수정과 **독립적으로 필요한 별건**이다 —");
+  L.push("랭킹을 고쳐도 66종목 안에서 도는 것은 변하지 않는다.");
+  L.push("");
+
+  L.push("### ⑤ 2차 고착 — 후보 진입 자체가 강도순이다");
+  L.push("");
+  L.push("`MAX_FRONT_ASSEMBLIES = 60` 이 `baseStrength` 내림차순으로 후보를 자른다.");
+  L.push(`관측 기간 후보 수는 최대 ${Math.max(...withQual.map((d) => d.qualification!.afterQuiet), 0)}건으로 아직 60 에 닿지 않아 **현재는 잘림이 없다.**`);
+  L.push("유니버스를 넓히면 즉시 문제가 된다 — 연속일수가 긴 종목이 랭킹만이 아니라 **조립 우선권까지** 갖는다.");
+  L.push("");
 
   // ── PHASE 2 입력: 신호 나이 분포 ──
   L.push("## 부록 A. 신호 나이 분포 (PHASE 2 감쇠 곡선 입력)");
