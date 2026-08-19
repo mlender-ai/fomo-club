@@ -76,10 +76,10 @@ describe("pickHook — 옛 훅은 신호로 다시 만든다", () => {
   });
 
   it("실측 payload 3건이 골든 케이스 문장으로 복구된다", () => {
-    expect(pickHook(빅텍)).toBe("기관이 25일째 조용히 사고 있어요");
-    expect(pickHook(amrize)).toBe("임원 7명이 사흘 새 같이 샀어요");
+    expect(pickHook(빅텍)).toBe("기관이 조용히 25일째 매수 중");
+    expect(pickHook(amrize)).toBe("임원 7명이 사흘 새 함께 매수");
     // 부정문 훅도 신호로 다시 만든다 — D3 이 화면에서 사라진다.
-    expect(pickHook(한미반도체)).toBe("외국인과 기관이 4일째 같이 사고 있어요");
+    expect(pickHook(한미반도체)).toBe("외국인과 기관이 나흘째 같이 매수");
   });
 
   it("복구된 훅에 금지어·em-dash 가 없다", () => {

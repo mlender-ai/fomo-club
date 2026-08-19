@@ -48,7 +48,8 @@ export function bandCaption(band: BandStat | null, metricLabel: string): string 
   }
   const pct = Math.round(band.current_percentile);
   const asOf = band.window_end;
-  return `현재 ${metricLabel}은 최근 5년 밴드에서 ${pct}% 구간입니다. (기준일 ${asOf})`;
+  // 해요체 통일(DS-00 §3-2) — 이 캡션만 `~입니다` 로 남아 화면에서 튀었다.
+  return `현재 ${metricLabel}은 최근 5년 밴드에서 ${pct}% 구간이에요. (기준일 ${asOf})`;
 }
 
 /** 예상 구간 캡션. 예상이 없으면 **아무 말도 하지 않는다**(없는 것을 설명하지 않는다). */
@@ -59,7 +60,7 @@ export function estimateCaption(meta: EstimateMeta, firstEstimateLabel: string |
   if (meta.analyst_count !== null) parts.push(`${meta.analyst_count}명`);
   if (meta.as_of) parts.push(`기준일 ${meta.as_of}`);
   const suffix = parts.length > 0 ? ` (${parts.join(", ")})` : "";
-  return `${firstEstimateLabel} 이후는 애널리스트 예상치입니다.${suffix}`;
+  return `${firstEstimateLabel} 이후는 애널리스트 예상치예요.${suffix}`;
 }
 
 /**
@@ -70,7 +71,7 @@ export function estimateCaption(meta: EstimateMeta, firstEstimateLabel: string |
  * 완전히 잘못 읽는다. 그래서 축 이름을 화면 문장으로 남긴다(2026-08-06 A-3 단서).
  */
 export function barSeriesCaption(barLabel: string | null): string | null {
-  return barLabel === null ? null : `막대는 ${barLabel}입니다.`;
+  return barLabel === null ? null : `막대는 ${barLabel}예요.`;
 }
 
 /** 1순위 지표가 없어 대체 지표로 내려갔다는 사실 — 조용히 바꾸지 않는다. */

@@ -69,7 +69,12 @@ test("② 근거 — 라벨-값 2열, 중복 출력 없음 (완료 기준 9)", a
 test("③ 헤더 — 56px, 뒤로 화살표 44×44, 하단 CTA 없음", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const header = page.locator('[data-testid="depth-header"]');
-  expect(Math.round((await header.boundingBox())?.height ?? 0)).toBe(56);
+  // 헤더 행은 56px, 그 아래 0.5px 헤어라인이 더해진다(측정값 56.5 → 57 로 반올림).
+  const inner = header.locator("> div");
+  expect(Math.round((await inner.boundingBox())?.height ?? 0)).toBe(56);
+  // 데스크톱에서 퍼지지 않는다 — 본문과 같은 폭으로 중앙 정렬.
+  const innerWidth = Math.round((await inner.boundingBox())?.width ?? 0);
+  expect(innerWidth).toBeLessThanOrEqual(576);
 
   const back = page.getByLabel("뒤로");
   const box = await back.boundingBox();

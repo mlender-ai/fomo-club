@@ -75,7 +75,13 @@ export function computeOurRecord(
   // 오늘 첫 발행 — 성적이라 부를 게 없다. 자리도 만들지 않는다.
   if (first.date >= todayKst) return null;
 
-  const returnPct = ((currentPrice - first.priceAt) / first.priceAt) * 100;
+  const returnPct = Math.round(((currentPrice - first.priceAt) / first.priceAt) * 100 * 10) / 10;
+  /**
+   * `0.0%` 는 성적이 아니다. 발행 당시가와 현재가가 같은 카드(오늘 갓 기록된 픽)에서
+   * `8월 19일에 짚은 뒤 0.0%` 가 accent 로 올라왔다 — 자랑할 것도 반성할 것도 없는 값이다.
+   * 움직임이 생기면 그때 나온다.
+   */
+  if (Math.abs(returnPct) < 0.1) return null;
 
   const graded: OurRecordGrade[] = [];
   for (const horizon of HORIZONS) {
@@ -86,7 +92,7 @@ export function computeOurRecord(
   return {
     firstPublishedAt: first.date,
     sinceText: sinceText(first.date),
-    returnPct: Math.round(returnPct * 10) / 10,
+    returnPct,
     // 1건뿐이면 목록이 수익률과 같은 말을 두 번 한다 — 그때는 목록을 만들지 않는다.
     history: mine.length > 1 ? [...mine].reverse().slice(0, MAX_HISTORY).map((p) => ({ date: p.date, priceAt: p.priceAt })) : [],
     graded,

@@ -36,32 +36,53 @@ describe("완료 기준 1 — 결론이 화면에서 가장 큰 텍스트다", (
   });
 });
 
-describe("완료 기준 2 — accent 가 우리 성적 한 곳에만 있다", () => {
-  it("카드의 accent 사용처는 우리 성적 블록뿐이다", () => {
-    const accents = code(card).match(/ds-accent/g) ?? [];
-    // 좌측 바(bg) + 수익률(text) = 2회, 둘 다 같은 블록 안이다.
-    expect(accents.length).toBe(2);
-    const block = code(card).slice(code(card).indexOf('data-testid="pick-our-record"'));
-    expect(block.slice(0, 600).match(/ds-accent/g)?.length).toBe(2);
+describe("프라이머리(accent) 는 결론 · 성적 · CTA 세 자리 (기획자 모킹 기준)", () => {
+  /**
+   * 1차 구현은 DS-00 문구("화면당 1회, CTA 금지")만 따라 결론·CTA 를 무채색으로 만들었고
+   * 화면이 죽었다. 모킹이 정본이다 — 결론이 가장 먼저 눈에 닿고, CTA 가 손을 부른다.
+   */
+  it("결론 · 성적 · CTA 가 accent 를 쓴다", () => {
+    const body = code(card);
+    expect(body).toMatch(/text-ds-display text-ds-accent"[^>]*data-testid="pick-hook"/s);
+    const record = body.slice(body.indexOf('data-testid="pick-our-record"'));
+    expect(record.slice(0, 700)).toContain("bg-ds-accent"); // 좌측 바
+    expect(record.slice(0, 700)).toContain("text-ds-accent"); // 수익률
+    const cta = body.slice(body.indexOf('data-testid="pick-cta"') - 400, body.indexOf('data-testid="pick-cta"'));
+    expect(cta).toContain("bg-ds-accent");
+    expect(cta).toContain("text-ds-accent-ink");
   });
 
-  it("CTA 와 스파크라인에는 accent 가 없다", () => {
-    const cta = code(card).slice(code(card).indexOf('data-testid="pick-cta"') - 400, code(card).indexOf("자세히 보기"));
-    expect(cta).not.toContain("ds-accent");
-    expect(cta).toContain("bg-ds-surface-2");
-    expect(code(card)).toMatch(/variant="ds"/);
+  it("스파크라인 · 등락 · 근거 박스에는 accent 가 없다", () => {
+    const body = code(card);
+    expect(body).toMatch(/variant="ds"/); // 스파크라인은 회색 변형
+    const evidence = body.slice(body.indexOf('data-testid="pick-evidence"'), body.indexOf("</dl>"));
+    expect(evidence).not.toContain("ds-accent");
+    expect(body).toContain("text-ds-down"); // 하락은 회색
   });
 
-  it("기록이 없으면 블록 자체가 없다 — 색을 다른 데로 옮기지 않는다", () => {
+  it("기록이 없으면 성적 블록 자체가 없다 — 색을 다른 데로 옮기지 않는다", () => {
     expect(code(card)).toMatch(/\{record && \(/);
   });
 });
 
 describe("완료 기준 3·4 — 칩이 없고 CTA 가 하나다", () => {
-  it("칩 대신 근거 한 줄을 그린다", () => {
+  it("칩 대신 근거 박스(라벨-값 3행)를 그린다 — 모킹 기준", () => {
     expect(code(card)).toContain('data-testid="pick-evidence"');
     expect(code(card)).not.toContain('data-testid="pick-chips"');
-    expect(code(card)).toContain("cardEvidenceLine(pick, hook)");
+    expect(code(card)).toContain("cardEvidenceRows(pick, hook)");
+    // 박스: surface-2 + radius 10. 라벨 좌 / 값 우측 정렬.
+    expect(code(card)).toContain("rounded-block bg-ds-surface-2");
+    expect(code(card)).toContain("justify-between");
+  });
+
+  it("가격에 통화 기호가 붙는다 — `4.945` 처럼 단위 없는 값을 내지 않는다", () => {
+    expect(code(card)).toContain("priceText(pick)");
+    expect(code(card)).toContain('`$${value.toFixed(2)}`');
+  });
+
+  it("결론 아래 신호 후 주가를 한 줄로 말한다 (모킹 `주가는 5일간 -9%`)", () => {
+    expect(code(card)).toContain("sincePriceLine(pick)");
+    expect(code(card)).toContain('data-testid="pick-since"');
   });
 
   it("카드의 CTA 는 하나다", () => {

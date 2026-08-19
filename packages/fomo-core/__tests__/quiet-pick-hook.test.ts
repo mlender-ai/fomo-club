@@ -128,7 +128,7 @@ describe("buildQuietPickHook — H1~H6", () => {
       volumeElevated: false,
     };
     const hook = buildQuietPickHook(quietOnly);
-    expect(hook).toBe("외국인과 기관이 4일째 같이 사고 있어요");
+    expect(hook).toBe("외국인과 기관이 나흘째 같이 매수");
     for (const f of [...thirtyFacts(), quietOnly]) {
       const hook = buildQuietPickHook(f);
       expect(/^(안 |못 |아직 |거래량도 안)/.test(hook)).toBe(false);
@@ -221,17 +221,17 @@ describe("골든 케이스 — 빅텍 · 한미반도체 · Amrize", () => {
   };
 
   it("빅텍 — 훅 한 문장 + 칩 3개(최장 · 진공 · 규모)", () => {
-    expect(buildQuietPickHook(빅텍)).toBe("기관이 25일째 조용히 사고 있어요");
+    expect(buildQuietPickHook(빅텍)).toBe("기관이 40거래일 중 가장 긴 25일 매수");
     expect(buildQuietPickChips(빅텍)).toEqual(["40거래일 중 최장", "거래량 평소의 25%", "기관 74주"]);
   });
 
   it("한미반도체 — 부정문 훅이 사라지고 무슨 일이 있었는지가 앞에 온다", () => {
-    expect(buildQuietPickHook(한미반도체)).toBe("외국인과 기관이 4일째 같이 사고 있어요");
+    expect(buildQuietPickHook(한미반도체)).toBe("외국인과 기관이 나흘째 같이 매수");
     expect(buildQuietPickChips(한미반도체)).toEqual(["거래량은 그대로", "47만주", "4일 연속"]);
   });
 
   it("Amrize — 임원 7명 · 사흘 새", () => {
-    expect(buildQuietPickHook(amrize)).toBe("임원 7명이 사흘 새 같이 샀어요");
+    expect(buildQuietPickHook(amrize)).toBe("임원 7명이 사흘 새 함께 매수");
     expect(buildQuietPickChips(amrize)).toEqual(["$3.6M", "52주 저점 +1%", "최근 3일"]);
   });
 

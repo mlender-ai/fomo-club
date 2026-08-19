@@ -118,7 +118,29 @@ function DepthChart({
   );
 }
 
-/** ④-2 매출 막대 (DS-03 §7-2) — 3포인트 이상일 때만. **금액 축을 반드시 표시한다.** */
+/**
+ * ④-2 매출 막대 (DS-03 §7-2) — **금액 축을 반드시 표시한다.**
+ *
+ * ## 실측에서 무엇이 깨졌나 (2026-08-20, 1280px)
+ *
+ * - 원 단위 원시 숫자를 그대로 찍고 억을 붙여 `-3,605,533,737억` 이 나왔다 → 단위 정규화.
+ * - 막대마다 값 라벨을 얹어 8개가 서로 겹쳐 뭉개졌다 → **값 라벨은 축 하나(최대값)만.**
+ * - 적자 구간이 섞이면 절대값 높이로 그려 "많이 벌었다" 처럼 보였다 → **양수 3개 미만이면
+ *   막대를 그리지 않는다.** 형태가 거짓말을 하는 것보다 없는 게 낫다.
+ */
+function formatMoney(value: number, currency: string): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  if (currency === "USD") {
+    if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(0)}M`;
+    return `${sign}$${Math.round(abs).toLocaleString()}`;
+  }
+  if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(1)}조`;
+  if (abs >= 1e8) return `${sign}${Math.round(abs / 1e8).toLocaleString()}억`;
+  return `${sign}${Math.round(abs).toLocaleString()}원`;
+}
+
 function RevenueBars({
   bars,
   label,
@@ -128,28 +150,25 @@ function RevenueBars({
   label: string;
   currency: string;
 }) {
-  // `value: null` 은 결측이다 — 0 으로 둔갑시키지 않고 막대를 만들지 않는다.
+  // `value: null` 은 결측이다 — 0 으로 둔갑시키지 않는다. 적자(음수)는 막대로 그리지 않는다.
   const usable = bars
     .map((b) => ({ label: b.label, value: b.value }))
-    .filter((b): b is { label: string; value: number } => typeof b.value === "number" && Number.isFinite(b.value));
+    .filter((b): b is { label: string; value: number } => typeof b.value === "number" && Number.isFinite(b.value) && b.value > 0);
   if (usable.length < 3) return null;
-  const max = Math.max(...usable.map((b) => Math.abs(b.value))) || 1;
-  const unit = currency === "USD" ? "$" : "억";
-  const fmt = (v: number) => (currency === "USD" ? `${unit}${Math.round(v).toLocaleString()}` : `${Math.round(v).toLocaleString()}${unit}`);
+  const max = Math.max(...usable.map((b) => b.value));
 
   return (
     <div className="mt-s4" data-testid="depth-bars">
       <div className="flex items-baseline justify-between">
         <span className="font-mono text-ds-label text-ds-text-2">{label}</span>
-        {/* 금액 축 — 최대값을 밝힌다. 숫자 없는 막대는 아무 의미가 없다(§7-2). */}
-        <span className="font-mono text-ds-caption text-ds-text-3">최대 {fmt(max)}</span>
+        {/* 금액 축 — 최대값 하나. 막대마다 숫자를 얹으면 서로 겹친다. */}
+        <span className="font-mono text-ds-caption text-ds-text-3">최대 {formatMoney(max, currency)}</span>
       </div>
       <div className="mt-s2 flex h-16 items-end gap-s2">
         {usable.map((bar) => (
           <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-s1">
-            <span className="font-mono text-ds-caption text-ds-text-3">{fmt(bar.value)}</span>
-            <div className="w-full rounded-sm bg-ds-text-2" style={{ height: `${Math.max(2, (Math.abs(bar.value) / max) * 40)}px` }} />
-            <span className="font-mono text-ds-caption text-ds-text-3">{bar.label}</span>
+            <div className="w-full rounded-sm bg-ds-text-2" style={{ height: `${Math.max(2, (bar.value / max) * 48)}px` }} />
+            <span className="truncate font-mono text-ds-caption text-ds-text-3">{bar.label}</span>
           </div>
         ))}
       </div>
@@ -278,15 +297,20 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const valueRows = useMemo(() => {
     const out: { label: string; value: string }[] = [];
     if (basics?.marketCap) out.push({ label: "시가총액", value: basics.marketCap });
-    for (const metric of basics?.metrics ?? []) {
-      if (!metric.value?.trim()) continue;
-      out.push({ label: metric.term ?? metric.label, value: metric.value });
-      if (out.length >= 5) break;
+    /**
+     * **화이트리스트로 받는다.** 종전에는 `basics.metrics` 를 순서대로 5개 집어서
+     * `EPS -565원 · 최근 1년 최고가 · 최저가` 처럼 "지금 비싼가"에 답하지 않는 값이 올라왔다.
+     * 값 섹션은 배수(PER·PBR)와 이익(EPS)까지다. 나머지는 이 화면의 질문이 아니다.
+     */
+    const WANTED = ["PER", "PBR", "EPS", "배당수익률"] as const;
+    for (const term of WANTED) {
+      const metric = (basics?.metrics ?? []).find((m) => (m.term ?? m.label) === term && m.value?.trim());
+      if (metric) out.push({ label: term, value: metric.value.trim() });
     }
     return out;
   }, [basics]);
 
-  /** 실체 한 줄 — 카드에서 내려온 "어디서 돈을 버는가"(DS-01 §4). ③ 섹션에 합류한다. */
+  /** 실체 한 줄 — 카드에서 내려온 "어디서 돈을 버는가". ③ 섹션에 합류한다. */
   const substance = slotPayload?.substance?.text ?? null;
 
   const valuation = slotPayload?.valuation ?? null;
@@ -321,10 +345,12 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     <OverlayPortal>
       <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-ds-bg pt-[env(safe-area-inset-top)]">
         {/* 고정 헤더 (DS-03 §3) — 좌측 뒤로 화살표. `닫기` 텍스트 버튼을 대체한다. */}
-        <header
-          className="flex h-14 shrink-0 items-center gap-s2 border-b-hairline border-ds-border px-gutter"
-          data-testid="depth-header"
-        >
+        {/*
+          헤더·본문 모두 `max-w-xl` 중앙 정렬이다. 이걸 안 걸어 데스크톱에서 라벨과 값이
+          화면 양끝으로 벌어졌다(실측 1280px). 모바일 스펙을 그대로 두고 웹은 중앙에 세운다.
+        */}
+        <header className="shrink-0 border-b-hairline border-ds-border" data-testid="depth-header">
+          <div className="mx-auto flex h-14 w-full max-w-xl items-center gap-s2 px-gutter">
           <button
             type="button"
             onClick={onClose}
@@ -361,15 +387,17 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           >
             <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
           </button>
+          </div>
         </header>
 
         <div
           ref={scrollRef}
           onScroll={onDepthScroll}
-          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto px-gutter ${BOTTOM_PAD}`}
+          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${BOTTOM_PAD}`}
         >
+          <div className="mx-auto w-full max-w-xl px-gutter">
           {/* ① 결론 — 카드와 같은 문장. **이 화면에서 1회만** 나온다(섹션 제목 없음). */}
-          <p className="mt-s4 text-ds-display-sm text-ds-text-1" data-testid="depth-hook">
+          <p className="mt-s4 break-keep text-ds-display-sm text-ds-text-1" data-testid="depth-hook">
             {hook}
           </p>
 
@@ -494,6 +522,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
           {/* ⑥ 우리 기록 — 오늘 첫 발행이면 섹션 자체가 없다. */}
           {record && <OurRecordBlock record={record} currency={money} />}
+          </div>
         </div>
       </div>
     </OverlayPortal>
