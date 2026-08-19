@@ -9,7 +9,7 @@ import { companyBlurb, evidenceRows } from "@/lib/depthSections";
 import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { OverlayPortal } from "@/components/OverlayPortal";
-import { displayName } from "@/components/QuietPickCard";
+import { displayName, priceText } from "@/components/QuietPickCard";
 import { StarIcon } from "@/components/icons";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
@@ -327,7 +327,8 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const archetypeRisks = (risk?.archetype.items ?? []).slice(0, 2);
   const hasWrongSection = Boolean(invalidationText || businessText || symbolRisks.length > 0 || archetypeRisks.length > 0);
 
-  const priceText = pick.price.currentText ?? pick.price.current.toLocaleString("en-US");
+  // 통화 기호 포맷은 카드와 **같은 함수**를 쓴다 — 한쪽만 고치면 화면이 갈린다(실측: 상세 `4.945`).
+  const price = priceText(pick);
   const changePct = pick.price.changePct;
   const money = (v: number) =>
     pick.subject.country === "US" ? `$${v.toFixed(2)}` : `${Math.round(v).toLocaleString("en-US")}원`;
@@ -370,7 +371,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="font-mono text-ds-data text-ds-text-1">{priceText}</p>
+            <p className="font-mono text-ds-data text-ds-text-1">{price}</p>
             {typeof changePct === "number" && (
               <p className={`font-mono text-ds-caption ${changePct < 0 ? "text-ds-down" : "text-ds-text-1"}`}>
                 {`${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}%`}

@@ -68,6 +68,8 @@ test("② 근거 — 라벨-값 2열, 중복 출력 없음 (완료 기준 9)", a
 
 test("③ 헤더 — 56px, 뒤로 화살표 44×44, 하단 CTA 없음", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  // 가격은 카드와 같은 포맷터를 쓴다 — 미국 종목이 `4.945` 로 나오면 무슨 통화인지 알 수 없다.
+  await expect(page.locator('[data-testid="depth-header"]')).toContainText("$4.945");
   const header = page.locator('[data-testid="depth-header"]');
   // 헤더 행은 56px, 그 아래 0.5px 헤어라인이 더해진다(측정값 56.5 → 57 로 반올림).
   const inner = header.locator("> div");
