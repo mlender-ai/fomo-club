@@ -62,32 +62,30 @@ describe("픽 화면 용어 사전 (PART 5)", () => {
   });
 });
 
-describe("뎁스 카피 (PART 3)", () => {
+describe("뎁스 카피 — DS-03", () => {
   const depth = read("../components/QuietPickDepth.tsx");
 
-  it("훅은 뎁스에서 한 번만 렌더된다 (완료 조건 11)", () => {
-    // 훅 렌더는 `pickHook(pick)` 한 곳뿐이다(옛 payload 복구를 거친다).
-    expect(depth.match(/>\{pickHook\(pick\)\}</g) ?? []).toHaveLength(1);
+  it("결론은 뎁스에서 한 번만 렌더된다 (DS-03 완료 기준 2)", () => {
+    expect(depth.match(/\{hook\}/g) ?? []).toHaveLength(1);
     expect(depth).not.toContain("{pick.hook}");
   });
 
-  it("빈 대시 대신 '아직'과 채점 전 안내를 쓴다 (PART 3-4 · 완료 조건 9)", () => {
-    expect(depth).toContain('"아직"');
-    expect(depth).toContain("발행한 지 얼마 안 돼 아직 채점 전이에요");
-    // 종전 폴백(빈 대시)이 남아 있지 않다.
-    expect(depth).not.toContain('.toFixed(1)}%` : "—"');
+  it("`아직` 류 채점 상태 문구가 사라졌다 (DS-03 완료 기준 7)", () => {
+    expect(depth).not.toContain('"아직"');
+    expect(depth).not.toContain("7일 아직");
+    expect(depth).not.toContain("채점 전이에요");
+    // 대신 실제 수익률을 계산한다.
+    expect(depth).toContain("computeOurRecord(");
   });
 
-  it("재무 섹션에 밴드 캡션·유형 경고문이 배선돼 있다 (D8 · 완료 조건 7)", () => {
-    expect(depth).toContain("frame={slotPayload?.valuation_frame ?? null}");
-    const glance = read("../components/KeywordDepthPage.tsx");
-    expect(glance).toContain('data-testid="valuation-band-caption"');
-    expect(glance).toContain('data-testid="valuation-type-warning"');
+  it("밴드 캡션·유형 경고문은 밴드가 있을 때만 배선된다 (DS-03 완료 기준 5)", () => {
+    expect(depth).toContain("const band = valuation?.band ?? null");
+    expect(depth).toContain('data-testid="depth-band"');
+    expect(depth).toContain('data-testid="depth-archetype-warning"');
   });
 
-  it("회사 요약은 벤더 원문을 그대로 쓰지 않는다 (PART 3-3 · 완료 조건 8)", () => {
-    const glance = read("../components/KeywordDepthPage.tsx");
-    expect(glance).toContain("rewriteCompanySummary(cleanText(basics.summary))");
-    expect(glance).toContain("출처 보기");
+  it("회사 설명은 벤더 원문을 그대로 쓰지 않고 출처를 남긴다 (DS-03 §6)", () => {
+    expect(depth).toContain("companyBlurb(basics?.summary)");
+    expect(depth).toContain("출처 보기");
   });
 });

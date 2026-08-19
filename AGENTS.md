@@ -630,7 +630,7 @@ model: sonnet
 
 > ⛔ **라우팅 금지**: `.claude/agents/mascot-keeper.md`는 기록용이다. 마스코트 중심 회귀, 감정 진정 앱 회귀, FOMO Index 표정 매핑 작업으로 호출하지 않는다.
 
-기준 기록: `docs/legacy/MASCOT.md`, `docs/legacy/FOMO_INDEX.md`, `docs/legacy/DESIGN_FOMO.md`. 현재 디자인 작업은 `docs/DESIGN.md`, `design/tokens.json`, `docs/PRODUCT_VISION.md`를 따른다. 정의 상세: `.claude/agents/mascot-keeper.md`.
+기준 기록: `docs/legacy/MASCOT.md`, `docs/legacy/FOMO_INDEX.md`, `docs/legacy/DESIGN_FOMO.md`. 현재 디자인 작업은 **`docs/design/DS-00_TOKENS.md`(기반 토큰 정본, v2)** → `docs/design/DS-0x_*.md`(화면별 스펙 — 현재 DS-01 메인 카드) → `docs/DESIGN.md`(그 외 서술) → `design/tokens.json`의 `ds` 블록(기계가독) → `docs/PRODUCT_VISION.md` 순으로 따른다. 상위가 이긴다. 정의 상세: `.claude/agents/mascot-keeper.md`.
 
 **세부 내용**: 피벗 이전 기록이므로 `.claude/agents/mascot-keeper.md`에서만 보존한다. 현재 라우팅·머지 게이트가 아니다.
 

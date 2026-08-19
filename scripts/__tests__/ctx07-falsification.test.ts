@@ -177,19 +177,17 @@ const CASES: Record<string, FalsificationCase> = {
   },
   "INV-C12": {
     clean: () =>
-      // 발행 덱 실측 최대치(2026-08-19): 훅 21자 · 칩 34자 · 되돌아보는 선 37자.
+      // 발행 덱 실측 최대치(2026-08-19): 결론 21자 · 근거 한 줄 34자. DS-01 예산(28/38) 안이다.
       checkCardFrontBudget({
         subject: "Angel Studios",
         hook: "임원 3명이 최근 5일 새 같이 샀어요",
-        chips: ["하루 거래량의 51%", "1년 매수 2건", "거래량은 그대로"],
-        invalidation: "되돌아보는 선 · 최근 11개월 저점 $2.05",
+        evidence: "하루 거래량의 51% · 1년 매수 2건 · 거래량은 그대로",
       }).length === 0,
     violating: () =>
       checkCardFrontBudget({
         subject: "예산 초과",
         hook: "가".repeat(budgetChars("hook") + 1),
-        chips: [],
-        invalidation: "",
+        evidence: "",
       }).length === 0,
   },
   "INV-C13": {

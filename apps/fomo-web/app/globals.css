@@ -86,6 +86,13 @@ body {
 }
 .fomo-match-pop { animation: fomo-match-pop 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
+/* DS-02 §9 — 스켈레톤. 스피너 대신 카드 형태를 먼저 세워 레이아웃 점프를 막는다. */
+@keyframes ds-skeleton {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+.ds-skeleton { animation: ds-skeleton 1.4s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; }
 }

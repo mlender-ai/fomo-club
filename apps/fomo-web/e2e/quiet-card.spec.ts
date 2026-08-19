@@ -1,15 +1,14 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * 픽 카드 렌더 스모크 (WO-SUB-HOOK 완료 조건 2·3·4·5·10).
+ * 메인 카드 렌더 스모크 — DS-01 완료 기준 중 **픽셀로만 확인되는 것**.
  *
- * 유닛 테스트는 **계약**을 지키고, 이 스펙은 **화면에 실제로 그렇게 나오는지**를 지킨다.
- * D5(카드 하단 공백)가 6주를 버틴 이유가 이것이다 — 조건부 렌더는 처음부터 맞았고,
- * 고정 높이 무대는 소스만 봐서는 결함으로 보이지 않았다. 재보면 바로 드러난다.
+ * 유닛 테스트는 계약을, 이 스펙은 화면을 지킨다. D5(카드 하단 96px 공백)가 6주를 버틴 이유가
+ * 이것이다 — 조건부 렌더는 처음부터 맞았고, 높이를 차지한 것은 컨테이너였다. 재보면 드러난다.
  */
 
 const PREVIEW = "/quiet-card-preview";
-const BANNED = ["무효선", "내부자", "클러스터", "이 관점은 무효", "수급", "매집", "이례적", "말라 있던 자리", "돈이 들어오기 시작한 자리"];
+const BANNED = ["무효선", "내부자", "클러스터", "이 관점은 무효", "수급", "매집", "이례적", "자리", "관점"];
 
 async function heightOf(page: import("@playwright/test").Page, id: string): Promise<number> {
   const box = await page.locator(`[data-case="${id}"] [data-testid="quiet-pick-card"]`).boundingBox();
@@ -22,54 +21,109 @@ test("페이지가 렌더된다 — 빈 화면이 아니다", async ({ page }) =
   await expect(page.locator('[data-testid="quiet-pick-card"]')).toHaveCount(4);
 });
 
-test("완료 조건 5 — 슬롯 조합마다 카드 높이가 실제로 다르다", async ({ page }) => {
+test("완료 기준 5 — 블록이 붙을수록 카드가 길어진다 (고정 높이 없음)", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
-  const only1 = await heightOf(page, "slot1");
-  const with2 = await heightOf(page, "slot12");
-  const with3 = await heightOf(page, "slot13");
-  const all = await heightOf(page, "slot123");
+  const min = await heightOf(page, "min");
+  const evidence = await heightOf(page, "evidence");
+  const spark = await heightOf(page, "spark");
+  const full = await heightOf(page, "full");
 
-  expect(only1).toBeGreaterThan(0);
-  // 슬롯이 붙을수록 카드가 커진다 — 빈 슬롯이 자리를 지키지 않는다.
-  expect(with2).toBeGreaterThan(only1);
-  /**
-   * ③ 값의 위치(매출 막대)는 **앞면에서 빠졌다**(WO-RENDER-01 E-1) — 디테일로 옮겼다.
-   * 그래서 ③ 유무는 앞면 높이를 바꾸지 않는다. 앞면에 없는 블록이 높이를 차지하면
-   * 그만큼 빈 공간이 남기 때문에, 같아야 하는 것이 맞다(CTX-05 §2-3).
-   */
-  expect(with3).toBe(only1);
-  expect(all).toBe(with2);
+  expect(min).toBeGreaterThan(0);
+  expect(evidence).toBeGreaterThan(min);
+  expect(spark).toBeGreaterThan(evidence);
+  expect(full).toBeGreaterThan(spark);
+  // 최소 구성이 최대 구성과 같아지면 어딘가 고정 높이가 남아 있다는 뜻이다.
+  expect(full - min).toBeGreaterThan(60);
 });
 
-test("완료 조건 4 — 되돌아보는 선은 박스가 아니라 한 줄이다", async ({ page }) => {
+test("완료 기준 1 — 결론이 화면에서 가장 큰 텍스트다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
-  const line = page.locator('[data-case="slot1"] [data-testid="recheck-line"]');
-  await expect(line).toHaveCount(1);
-  const box = await line.boundingBox();
-  // 한 줄(≈20px) — 박스로 감싸면 padding 때문에 두 배 이상이 된다.
-  expect(box?.height ?? 0).toBeLessThan(48);
-  // 훅이 되돌아보는 선보다 시각적으로 무겁다(글자 크기).
-  const hookSize = await page.locator('[data-case="slot1"] [data-testid="pick-hook"]').evaluate((el) =>
+  const scope = page.locator('[data-case="full"]');
+  const hookSize = await scope.locator('[data-testid="pick-hook"]').evaluate((el) =>
     Number.parseFloat(getComputedStyle(el).fontSize)
   );
-  const lineSize = await line.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
-  expect(hookSize).toBeGreaterThan(lineSize);
+  expect(hookSize).toBe(24);
+  const sizes = await scope.locator('[data-testid="quiet-pick-card"] *').evaluateAll((els) =>
+    els.filter((el) => (el.textContent ?? "").trim().length > 0).map((el) => Number.parseFloat(getComputedStyle(el).fontSize))
+  );
+  expect(Math.max(...sizes)).toBe(hookSize);
 });
 
-test("훅은 한 문장이고 칩이 근거를 받는다", async ({ page }) => {
+test("완료 기준 7 — 결론이 2줄을 넘지 않는다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
-  const hook = await page.locator('[data-case="slot1"] [data-testid="pick-hook"]').innerText();
-  // 옛 payload 가 와도 화면은 한 문장이다(배치 시차 복구).
-  expect(hook).not.toContain("—");
-  expect(hook).toBe("기관이 25일째 조용히 사고 있어요");
-  const chips = await page.locator('[data-case="slot1"] [data-testid="pick-chips"] span').allInnerTexts();
-  expect(chips.length).toBeGreaterThan(0);
-  expect(chips.length).toBeLessThanOrEqual(3);
+  const hook = page.locator('[data-case="full"] [data-testid="pick-hook"]');
+  const { height, lineHeight } = await hook.evaluate((el) => ({
+    height: el.getBoundingClientRect().height,
+    lineHeight: Number.parseFloat(getComputedStyle(el).lineHeight),
+  }));
+  expect(Math.round(height / lineHeight)).toBeLessThanOrEqual(2);
 });
 
-test("완료 조건 3 — 같은 숫자가 카드 한 장에 3회 이상 나오지 않는다", async ({ page }) => {
+test("완료 기준 2 — accent 는 우리 성적 한 곳에만 있다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
-  const text = await page.locator('[data-case="slot1"] [data-testid="quiet-pick-card"]').innerText();
+  const ACCENT = "rgb(212, 255, 63)";
+  const count = async (id: string) =>
+    page.locator(`[data-case="${id}"] [data-testid="quiet-pick-card"] *`).evaluateAll(
+      (els, accent) =>
+        els.filter((el) => {
+          const style = getComputedStyle(el);
+          return style.color === accent || style.backgroundColor === accent || style.borderColor === accent;
+        }).length,
+      ACCENT
+    );
+
+  // 성적 블록이 있는 카드: 좌측 바 + 수익률 텍스트, 둘 다 같은 블록.
+  const record = page.locator('[data-case="full"] [data-testid="pick-our-record"]');
+  await expect(record).toHaveCount(1);
+  expect(await count("full")).toBeLessThanOrEqual(2);
+  // 성적이 없는 카드에는 accent 가 아예 없다 — 그게 정상이다.
+  expect(await count("spark")).toBe(0);
+  await expect(page.locator('[data-case="spark"] [data-testid="pick-our-record"]')).toHaveCount(0);
+});
+
+test("완료 기준 3·4 — 칩이 없고 CTA 가 하나다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const card = page.locator('[data-case="full"] [data-testid="quiet-pick-card"]');
+  await expect(card.locator('[data-testid="pick-chips"]')).toHaveCount(0);
+  await expect(card.locator('[data-testid="pick-evidence"]')).toHaveCount(1);
+  await expect(card.locator("button")).toHaveCount(2); // 관심(★) + CTA
+  await expect(card.locator('[data-testid="pick-cta"]')).toHaveCount(1);
+  // CTA 는 48px pill 이고 accent 가 아니다.
+  const height = (await card.locator('[data-testid="pick-cta"]').boundingBox())?.height ?? 0;
+  expect(Math.round(height)).toBe(48);
+});
+
+test("등락에 색을 쓰지 않는다 — 하락은 회색이다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const color = await page
+    .locator('[data-case="full"] [data-testid="pick-change"]')
+    .evaluate((el) => getComputedStyle(el).color);
+  expect(color).toBe("rgb(122, 122, 118)"); // down #7A7A76
+});
+
+test("터치 타겟 — 탭 가능한 요소는 44px 이상이다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const boxes = await page.locator('[data-case="full"] [data-testid="quiet-pick-card"] button').all();
+  for (const button of boxes) {
+    const box = await button.boundingBox();
+    expect(Math.min(box?.width ?? 0, box?.height ?? 0)).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test("완료 기준 6 — 텍스트 총량이 줄었다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const text = (await page.locator('[data-case="full"] [data-testid="quiet-pick-card"]').innerText()).replace(/\s+/g, "");
+  /**
+   * 2026-08-19 DS-01 이전 카드(같은 픽스처)는 공백 제외 약 300자였다 — 훅·서브라인·칩 3개·
+   * 신호 과거 성적·스파크라인 캡션·실체 한 줄·되돌아보는 선·더보기. DS-01 은 40% 이상 감소를
+   * 요구하므로 180자 미만이어야 한다.
+   */
+  expect(text.length).toBeLessThan(180);
+});
+
+test("같은 숫자가 카드 한 장에 3회 이상 나오지 않는다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const text = await page.locator('[data-case="full"] [data-testid="quiet-pick-card"]').innerText();
   const counts = new Map<string, number>();
   for (const n of text.match(/\d+/g) ?? []) counts.set(n, (counts.get(n) ?? 0) + 1);
   for (const [number, count] of counts) {
@@ -77,7 +131,7 @@ test("완료 조건 3 — 같은 숫자가 카드 한 장에 3회 이상 나오�
   }
 });
 
-test("완료 조건 10 — 금지어가 화면 텍스트에 없다", async ({ page }) => {
+test("금지어가 화면 텍스트에 없다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const text = await page.locator("main").innerText();
   for (const banned of BANNED) {
@@ -90,7 +144,7 @@ test("콘솔 에러가 없다", async ({ page }) => {
   page.on("console", (message) => {
     if (message.type() !== "error") return;
     const text = message.text();
-    if (/favicon|stock-logo|ERR_/i.test(text)) return; // 로고 프록시는 프리뷰의 관심사가 아니다
+    if (/favicon|stock-logo|ERR_/i.test(text)) return;
     errors.push(text);
   });
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
