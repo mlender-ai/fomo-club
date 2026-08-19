@@ -2,11 +2,33 @@ import type { Config } from "tailwindcss";
 import { EMOTION_COLORS } from "@fomo/core";
 
 // 토큰: design/tokens.json(DTCG) 값과 정렬. 감정색은 @fomo/core 단일 소스(드리프트 테스트로 정합).
+//
+// 정본은 DS-00(v2) — docs/design/DS-00_TOKENS.md. 코드에서는 `ds` 네임스페이스로 노출한다.
+//   색: bg-ds-bg / bg-ds-surface-1 / text-ds-text-2 / border-ds-border / text-ds-accent ...
+//   간격: p-s4 gap-s2 px-gutter · radius: rounded-card rounded-block · 타이포: text-ds-display 등
+// 아래 legacy/DESIGN.md-v1 토큰은 화면별 스펙(DS-01~06) 도착 시 화면 단위로 ds로 교체한다.
+// 지금 값을 덮어쓰지 않는 이유: 렌더링이 조용히 바뀌는 것을 막기 위함(DS-00 §10).
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
+        // ── DS-00(v2) 정본. 신규 UI는 이것만 쓴다. docs/design/DS-00_TOKENS.md §2 ──
+        ds: {
+          bg: "#000000",
+          "surface-1": "#101010",
+          "surface-2": "#181818",
+          border: "#242422",
+          "text-1": "#FFFFFF",
+          "text-2": "#9A9A96",
+          "text-3": "#5A5A57",
+          // 화면당 1회만. 우리 성적 자리 전용 — CTA·차트에 쓰지 않는다.
+          accent: "#D4FF3F",
+          "accent-ink": "#1A1A00",
+          // 하락. 상승은 text-1(흰색). 빨강/초록 등락색 금지(§7).
+          down: "#7A7A76",
+        },
+
         // 레거시 토큰(점진 마이그레이션 — 컴포넌트는 화면별 핸드오프로 DESIGN.md 토큰으로 전환).
         ink: "#000000",
         surface: "#0E0E0E",
@@ -42,10 +64,50 @@ const config: Config = {
         "flag-amber": "#E0A82E",
       },
       borderRadius: {
-        // DESIGN.md §5
+        // DS-00 §5
+        card: "16px",
+        block: "10px",
+        pill: "999px",
+        // v1 레거시
         sm: "8px",
         md: "12px",
         lg: "16px",
+      },
+      spacing: {
+        // DS-00 §4 — 4의 배수만
+        s1: "4px",
+        s2: "8px",
+        s3: "12px",
+        s4: "16px",
+        s5: "24px",
+        s6: "32px",
+        gutter: "20px",
+      },
+      borderWidth: {
+        hairline: "0.5px",
+      },
+      height: {
+        // DS-00 §5·§6
+        "btn-primary": "48px",
+        "btn-secondary": "44px",
+        chip: "26px",
+        touch: "44px",
+      },
+      // 터치 타겟은 44×44 다 — 높이만 주면 폭이 내용에 붙어 계약이 반만 성립한다(DS-00 §6).
+      width: {
+        touch: "44px",
+      },
+      fontSize: {
+        // DS-00 §3-1. weight는 400·500 두 개만.
+        "ds-display": ["24px", { lineHeight: "1.32", letterSpacing: "-0.02em", fontWeight: "500" }],
+        // 중간 두 단 — DS-03 ① 결론(22) · DS-02 덱 타이틀(20). display(24)와 title(17) 사이.
+        "ds-display-sm": ["22px", { lineHeight: "1.32", letterSpacing: "-0.02em", fontWeight: "500" }],
+        "ds-title-lg": ["20px", { lineHeight: "1.32", letterSpacing: "-0.01em", fontWeight: "500" }],
+        "ds-title": ["17px", { lineHeight: "1.4", letterSpacing: "-0.01em", fontWeight: "500" }],
+        "ds-body": ["14px", { lineHeight: "1.65", letterSpacing: "0", fontWeight: "400" }],
+        "ds-data": ["14px", { lineHeight: "1.4", letterSpacing: "0", fontWeight: "400" }],
+        "ds-label": ["12px", { lineHeight: "1.4", letterSpacing: "0.04em", fontWeight: "400" }],
+        "ds-caption": ["11px", { lineHeight: "1.5", letterSpacing: "0.02em", fontWeight: "400" }],
       },
       fontFamily: {
         body: ["Pretendard", "system-ui", "sans-serif"],

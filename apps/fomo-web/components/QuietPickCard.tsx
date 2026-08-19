@@ -1,98 +1,98 @@
 "use client";
 
 import { useState } from "react";
-import { buildQuietPickChips, quietPickSubLine } from "@fomo/core";
-import type { CardSlotPayload, QuietPick } from "@/lib/fomoApi";
-import { chartTokens } from "@/lib/chartTokens";
+import { buildQuietPickChips, buildQuietPickEvidenceLine, type QuietPickAnomalyFacts } from "@fomo/core";
+import type { QuietPick } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
-import { quietCardMinHeight } from "@/lib/quietCardLayout";
+import { recordPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { Sparkline } from "@/components/Sparkline";
-import { StarIcon, CaretUpIcon, CaretDownIcon } from "@/components/icons";
-import { StockLogoBadge } from "@/components/StockLogoBadge";
+import { StarIcon } from "@/components/icons";
 
 /**
- * 카드 v3 (WO-G1B) → 3슬롯 (WO-SUB-08) → 위계 재설계 (WO-SUB-HOOK PART 2).
+ * 메인 카드 — DS-01(`docs/design/DS-01_MAIN_CARD.md`). 토큰은 DS-00.
  *
- * ## 3단 위계
+ * ## 원칙: 한 장면에 놀라움 하나
  *
- * ```
- * [1순위] 훅 한 줄       ← 가장 큼. 시선이 여기 먼저 닿는다
- * [2순위] 칩 3개         ← 근거 숫자. 훅이 말하지 않는 축만
- * [3순위] 스파크라인 · 맥락 한 줄(슬롯 ②③)
- * [4순위] 되돌아보는 선  ← 회색 한 줄. 박스 없음
- * ```
+ * 2초 안에 세 가지만 전한다 — ① 무슨 일이 있었나(결론) ② 얼마나 드문 일인가(근거 하나)
+ * ③ 이 앱을 믿을 만한가(우리 성적). **그 외 전부 상세로 내렸다.**
  *
- * 실측(2026-08-14)에서는 이 순서가 없었다. 훅·서브라인·칩·차트·**박스로 감싼 무효선**이 전부
- * 비슷한 무게였고, 발굴 카드에서 3순위인 되돌아보는 선이 회사 정보보다 무거워 보였다.
- * 위계는 **크기·간격·무게로만** 조정한다 — 색과 폰트는 디자인 시스템 그대로다.
+ * ## 블록 (위→아래)
  *
- * ## 슬롯이 비면 카드가 줄어든다
+ * ① 종목 아이덴티티 → ② 가격 → ③ 결론(`display`, 카드당 1회) → ④ 근거 한 줄 →
+ * ⑤ 스파크라인 → ⑥ 우리 성적(**유일한 accent**) → ⑦ CTA 하나.
  *
- * ②③ 은 선택 슬롯이다. 조건부 렌더만 쓰고 자리를 비워두는 컨테이너를 두지 않으며,
- * **카드 최소 높이도 조합에 따라 달라진다**(`quietCardMinHeight`). 조건부 렌더만으로는
- * 고정 높이 무대 안에서 빈 공간이 그대로 남는다 — 그것이 D5 였다.
+ * ## DS-01 에서 카드에서 빠진 것
  *
- * ## 배지는 카드에 두지 않는다
+ * 되돌아보는 선·매출 막대·아키타입 경고·밴드 부재 문구·회사 설명·"이런 신호, 과거엔 어땠나"·
+ * 재등장 사유는 **상세로 옮겼다**(삭제가 아니다 — `QuietPickDepth` 에 있다).
+ * 칩 3개는 ④ 한 줄로 합쳤다. 넘기기 버튼은 스와이프가, `더보기 →` 는 CTA 가 대신한다.
+ * `N/10` 카운터는 카드 밖(덱)이다.
  *
- * 공시 근거와 벤더 요약의 구분(`kind`·`badge`·`vendor_only`)은 **디테일에서만** 표시한다.
+ * ## 고정 높이가 없다
+ *
+ * 블록이 빠지면 카드가 그만큼 짧아진다(DS-01 §5). 최소 높이 계약도 두지 않는다 —
+ * 종전 `quietCardMinHeight` 가 하단 공백의 원인이었다.
  */
 
-function marketTag(pick: QuietPick): string {
-  if (pick.subject.market === "COIN") return "₿";
-  if (pick.subject.country === "US") return "🇺🇸";
-  return "🇰🇷";
+/** 시장 배지 — 국기 이모지 대신 텍스트다(DS-00 §7 이모지 금지). */
+function marketBadge(pick: QuietPick): string | null {
+  if (pick.subject.market === "COIN") return null;
+  return pick.subject.country === "US" ? "US" : "KR";
 }
 
-/**
- * 표시용 회사명(WO-P1·P6 ③) — 정규화는 전 화면 공통 창구(lib/companyDisplay)에 위임한다.
- * "Columbia Financial, Inc./Md/" → "Columbia Financial". 티커는 별도 행에 표기한다.
- */
+/** 표시용 회사명 — 정규화는 전 화면 공통 창구에 위임한다. */
 export function displayName(pick: QuietPick): string {
   return subjectName(pick.subject);
 }
 
-/** 화면에 병기할 티커 — US 는 심볼, KR 은 6자리 종목코드. 없으면 undefined. */
+/** 화면에 병기할 티커 — US 는 심볼, KR 은 6자리 종목코드. */
 function ticker(pick: QuietPick): string | undefined {
   return subjectTicker(pick.subject);
 }
 
-/**
- * 카드 칩 — **발행 시점에 굳은 것을 그대로 쓴다.** 없으면(구 페이로드) 같은 엔진으로 만든다.
- * 카드가 칩 문구를 따로 조립하면 훅과 축이 겹쳐 같은 숫자가 화면에 세 번 나온다(D2).
- */
-export function cardChips(pick: QuietPick): string[] {
-  if (pick.chips && pick.chips.length > 0) return pick.chips.map(repairPickCopy);
-  return buildQuietPickChips({
+function anomalyFacts(pick: QuietPick): QuietPickAnomalyFacts {
+  return {
     kind: pick.signal.kind,
     actorNoun: repairPickCopy(pick.signal.actors).replace(/\s*\d+명$/, ""),
     scale: repairPickCopy(pick.signal.scale),
     days: pick.signal.days,
     ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
-  });
+    ...pick.signalFacts,
+  };
 }
 
-const DIR_COLOR: Record<"up" | "down" | "flat", string> = {
-  up: chartTokens.up,
-  down: chartTokens.down,
-  flat: "#8b8f98",
-};
+/**
+ * ④ 근거 한 줄 — 실수치(`signalFacts`)에서 만든다. 문장을 되파싱하지 않는다.
+ * 구 페이로드(실수치 없음)는 발행 시점에 굳은 칩을 같은 규칙으로 이어 붙인다.
+ */
+export function cardEvidenceLine(pick: QuietPick, hook: string): string {
+  const hookNumbers = new Set(hook.match(/\d+/g) ?? []);
+  if (pick.signalFacts) return buildQuietPickEvidenceLine(anomalyFacts(pick), hook);
+  const items = (pick.chips?.length ? pick.chips : buildQuietPickChips(anomalyFacts(pick)))
+    .map(repairPickCopy)
+    .filter((item) => !(item.match(/\d+/g) ?? []).some((n) => hookNumbers.has(n)))
+    .slice(0, 3);
+  return items.join(" · ");
+}
 
 export function QuietPickCard({
   pick,
-  progress,
-  /** 3슬롯 페이로드. 없으면 ②③ 을 그리지 않는다 — 카드는 그대로 성립한다. */
-  slots,
+  /** ⑦ CTA. 없으면 버튼을 그리지 않는다 — 자리만 남기지 않는다. */
+  onDetail,
+  /** 덱에서의 위치(1-based). 관심 담기 지표를 위치별로 보기 위해 받는다. */
+  position,
 }: {
   pick: QuietPick;
-  progress?: string;
-  slots?: CardSlotPayload | undefined;
+  onDetail?: () => void;
+  position?: number;
 }) {
   const [watched, setWatched] = useState(() => isWatched(pick.subject.canonical));
+
   /**
-   * 유동성 문구를 중립 표기로 바꾼다. 괄호 안 실수치만 남기고 "얇아요" 같은 평가어를 뗀다.
-   * 형식이 달라 못 뽑으면 원문을 그대로 쓴다 — 값을 지어내지 않는다.
+   * ① 두 번째 줄 — 섹터 · 거래 규모. 거래 규모는 **경고가 아니라 특징이다**(DS-01 §4):
+   * 큰 회사는 조용할 수 없다. 평가어("얇아요")를 떼고 괄호 안 실수치만 남긴다.
    */
   const liquidityMeta = (() => {
     const note = pick.liquidityNote;
@@ -103,180 +103,134 @@ export function QuietPickCard({
   })();
 
   const series = pick.price.sparkline ?? [];
-  // 신호 시작점 = days 거래일 전 근처. "여기서 돈이 들어왔다".
-  const markerIndex = series.length >= 2
+  /** ⑤ 20포인트 미만이면 스파크라인을 통째로 숨긴다(DS-01 §3-⑤). 형태가 안 보이는 선은 장식이다. */
+  const showSparkline = series.length >= 20;
+  const markerIndex = showSparkline
     ? Math.max(0, series.length - 1 - Math.min(pick.signal.days, series.length - 1))
     : undefined;
-  const changePct = pick.price.changePct;
-  const dir: "up" | "down" | "flat" = typeof changePct === "number" ? (changePct > 0 ? "up" : changePct < 0 ? "down" : "flat") : "flat";
-  const chips = cardChips(pick);
-  // payload 는 하루 한 번 구워진다 — 배치가 돌기 전까지 옛 문장이 오므로 읽는 쪽에서 고친다.
-  const hook = pickHook(pick);
-  // H6 — 서브라인은 훅과 같은 숫자면 표시하지 않는다("25일째" 아래 "25일째 계속" 금지).
-  const subLine = quietPickSubLine(hook, pick.signal.progress);
-  const minHeight = quietCardMinHeight({
-    substance: Boolean(slots?.substance),
-    // 값의 위치 블록을 앞면에서 뺐으므로 높이 계산에서도 뺀다 — 안 그러면 없어진 블록만큼
-    // 빈 공간이 남는다(§2-3 "빈 공간을 남기지 않는다").
-    valuation: false,
-    signalStats: Boolean(pick.signalStats),
-  });
 
+  const changePct = pick.price.changePct;
+  const hook = pickHook(pick);
+  const evidence = cardEvidenceLine(pick, hook);
+  const record = pick.ourRecord;
+  const badge = marketBadge(pick);
+
+  /**
+   * 관심 — DS-02 가 스와이프를 탐색 제스처로 바꿨으므로(좌=다음/우=이전) **관심은 이 버튼만
+   * 담당한다.** 종전 우스와이프가 하던 저장(사유·섹터 포함)과 지표 기록을 여기서 이어받는다.
+   */
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const now = toggleWatch(pick.subject.canonical, Date.now(), {});
+    const now = toggleWatch(pick.subject.canonical, Date.now(), {
+      ...(pick.subject.identity ? { sector: pick.subject.identity } : {}),
+      reason: hook,
+    });
     setWatched(now);
+    if (now) recordPickTelemetry({ event: "card_watchlist_add", ...(position ? { position } : {}) });
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col" style={{ minHeight }} data-testid="quiet-pick-card">
-      {/* 1행 — 종목명(긴 이름 말줄임) · 티커 · 시장태그 · 관심 */}
-      <div className="flex shrink-0 items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {/* 로고(WO-P2 §3 복원) — KR 네이버 프록시 / US parqet, 실패 시 이니셜. */}
-          <StockLogoBadge
-            name={displayName(pick)}
-            naverCode={pick.subject.naverCode}
-            symbol={pick.subject.symbol}
-          />
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <span className="text-xl" aria-hidden>{marketTag(pick)}</span>
-              <span className="truncate text-2xl font-bold text-whiteout">{displayName(pick)}</span>
-            </div>
-            <div className="mt-0.5 flex items-center gap-1.5 font-pixel text-xs text-muted">
-              {/* 티커 병기 — US 는 심볼, KR 은 종목코드(검색·매수 이동에 필수, WO-P2 §3). */}
-              {ticker(pick) && <span>{ticker(pick)}</span>}
-              {ticker(pick) && pick.subject.identity && <span aria-hidden>·</span>}
-              {pick.subject.identity && <span>{pick.subject.identity}</span>}
-              {/*
-                거래 규모 — **경고가 아니라 특징이다**(CTX-05 §3 · WO-RENDER-01 E-2).
-                시총 894억·일 거래 5.2억은 이 제품의 컨셉 그 자체다. 큰 회사는 조용할 수 없다.
-                종전에는 카드 하단에 `⚠ 거래가 얇아요` 로 붙어 약점처럼 읽혔다. 헤더의 중립
-                정보로 옮기고 경고 아이콘을 뗀다.
-              */}
-              {liquidityMeta && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span data-testid="pick-liquidity-meta">{liquidityMeta}</span>
-                </>
-              )}
-            </div>
-          </div>
+    <div className="flex flex-col rounded-card bg-ds-surface-1 p-s4" data-testid="quiet-pick-card">
+      {/* ① 종목 아이덴티티 — 로고 이미지·국기 이모지 없음(DS-01 §3-①). */}
+      <div className="flex items-start justify-between gap-s2">
+        <div className="min-w-0">
+          <p className="truncate text-ds-title text-ds-text-1">{displayName(pick)}</p>
+          {(pick.subject.identity || liquidityMeta) && (
+            <p className="mt-s1 truncate font-mono text-ds-label text-ds-text-2" data-testid="pick-identity">
+              {/* 섹터가 확보되지 않으면 표시하지 않는다 — 틀린 섹터가 맞는 섹터보다 나쁘다. */}
+              {pick.subject.identity}
+              {pick.subject.identity && liquidityMeta && " · "}
+              {liquidityMeta}
+            </p>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-pressed={watched}
-          aria-label={watched ? "관심 해제" : "관심"}
-          className="shrink-0 rounded-full border border-hairline-soft px-2.5 py-1 text-xs font-semibold"
-          style={watched ? { color: chartTokens.up, borderColor: chartTokens.up } : { color: "#8b8f98" }}
-        >
-          <StarIcon size={12} className="mr-1 inline-block align-[-1px]" />
-          관심
-        </button>
+        <div className="flex shrink-0 items-center gap-s2">
+          <div className="text-right">
+            {ticker(pick) && <span className="font-mono text-ds-label text-ds-text-3">{ticker(pick)}</span>}
+            {badge && <span className="ml-s1 font-mono text-ds-caption text-ds-text-3">{badge}</span>}
+          </div>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-pressed={watched}
+            aria-label={watched ? "관심 해제" : "관심"}
+            className="-mr-2 -mt-2 flex h-touch w-touch items-center justify-center"
+          >
+            <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
+          </button>
+        </div>
       </div>
 
-      {/* 가격 · 등락 — 3순위. 훅보다 작게 둔다(위계). */}
-      <div className="mt-2 flex shrink-0 items-baseline gap-2">
-        <span className="text-base font-semibold text-whiteout">
+      {/* ② 가격 — 화살표 아이콘 없음. 부호로 충분하다. 등락에 색을 쓰지 않는다(DS-00 §2-1). */}
+      <div className="mt-s1 flex items-baseline gap-s2">
+        <span className="font-mono text-[16px] leading-tight text-ds-text-1">
           {pick.price.currentText ?? pick.price.current.toLocaleString("en-US")}
         </span>
         {typeof changePct === "number" && (
-          <span className="inline-flex items-center gap-1 text-[13px] font-medium tabular-nums" style={{ color: DIR_COLOR[dir] }}>
-            {dir === "up" && <CaretUpIcon size={11} />}
-            {dir === "down" && <CaretDownIcon size={11} />}
+          <span
+            className={`font-mono text-[13px] leading-tight tabular-nums ${changePct < 0 ? "text-ds-down" : "text-ds-text-1"}`}
+            data-testid="pick-change"
+          >
             {`${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}%`}
           </span>
         )}
       </div>
 
-      {/*
-        증거 영역 — 훅 · 칩 · 스파크라인 · ② · ③.
-        **스크롤한다.** 내용이 카드보다 길어지면 그대로 두면 되돌아보는 선과 푸터가 가려진다
-        (2026-08-05 화면 실측). WO §4-2 는 "UI 에서 자르지 않는다" 이므로 강제 문안을 떼지 않고
-        영역을 스크롤한다. 되돌아보는 선·푸터는 밖에 남겨 항상 보이게 한다 — 계약이라 가려지면 안 된다.
-      */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-      {/* ★1순위 훅 — 한 문장. 화면에서 가장 큰 글자다. */}
-      <p className="mt-3 shrink-0 text-[22px] font-bold leading-8 text-whiteout" data-testid="pick-hook">{hook}</p>
-
-      {/*
-        재등장 사유(WO-DECK-01 §3-2) — 쿨다운·경과일 상한을 **그럼에도** 넘어 다시 올라온 이유.
-        "어제보다 1일 더 이어졌어요" 는 여기 오지 않는다(그건 변화가 아니라 지속이다).
-        서브라인보다 위에 둔다 — 같은 카드를 또 본 사람에게 가장 먼저 답할 질문이다.
-      */}
-      {pick.signal.reentry?.text && (
-        <p className="mt-1 shrink-0 text-[12px] font-semibold text-orange" data-testid="pick-reentry">
-          다시 올라온 이유 — {pick.signal.reentry.text}
-        </p>
-      )}
-
-      {/* 서브라인 — 훅이 말하지 않는 변화만(H6). 같은 일수면 위에서 걸러져 렌더되지 않는다. */}
-      {subLine && (
-        <p className="mt-1 shrink-0 text-[12px] font-semibold" style={{ color: chartTokens.up }}>
-          {subLine}
-        </p>
-      )}
-
-      {/* ★2순위 칩 — 근거 숫자. 훅이 말한 축은 여기 없다(H4). */}
-      <div className="mt-2.5 flex shrink-0 flex-wrap gap-1.5" data-testid="pick-chips">
-        {chips.map((chip) => (
-          <span
-            key={chip}
-            className="rounded-full border border-hairline-soft bg-white/[0.04] px-2 py-1 text-[11px] font-semibold text-whiteout"
-          >
-            {chip}
-          </span>
-        ))}
-      </div>
-
-      {/* ── 이런 신호, 과거엔 어땠나 ── (WO-P2 §2)
-          승률 + 하락 확률을 한 세트로. 통계 없으면 블록 통째 숨김(빈 껍데기 금지). */}
-      {pick.signalStats && (
-        <div className="mt-3 shrink-0 rounded-lg border border-hairline-soft bg-white/[0.03] px-3 py-2">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[10px] font-semibold text-muted">이런 신호, 과거엔 어땠나</span>
-            <span className="text-[10px] text-muted">{pick.signalStats.sourceLabel}</span>
-          </div>
-          <p className="mt-1 text-sm font-semibold leading-5 text-whiteout">{repairPickCopy(pick.signalStats.headline)}</p>
-          <p className="mt-0.5 text-[12px] leading-5 text-muted">{repairPickCopy(pick.signalStats.detail)}</p>
-        </div>
-      )}
-
-      {/* ★3순위 스파크라인 30일 + 신호 시작점 ◆ */}
-      {series.length >= 2 && (
-        <div className="mt-3 shrink-0 border-y border-hairline-soft py-1.5" aria-label="최근 30거래일 가격 흐름 · ◆ 사기 시작한 시점">
-          <Sparkline series={series.slice(-30)} height={44} {...(markerIndex !== undefined ? { markerIndex } : {})} />
-          <span className="mt-1 block text-[10px] text-muted">◆ 사기 시작한 시점</span>
-        </div>
-      )}
-
-      {/* ② 실체 — 어디서 돈을 버는가. 없으면 이 블록이 사라지고 카드가 줄어든다. */}
-      {slots?.substance && (
-        <p className="mt-3 shrink-0 text-[13px] leading-5 text-whiteout">{slots.substance.text}</p>
-      )}
-
-      {/*
-        ③ 값의 위치(매출 막대 + 배수 선)는 **앞면에서 뺐다**(CTX-05 §2-1 · WO-RENDER-01 E-1).
-        판단 순서상 5순위 이하인데 카드에서 색이 가장 강한 요소라 위계를 뒤집고 있었다.
-        디테일 "값의 위치" 섹션에 남아 있다 — 지운 게 아니라 옮긴 것이다.
-        블록이 빠지면 아래가 올라와 카드 높이가 줄어든다(§2-3).
-      */}
-
-      </div>
-
-      {/* ★4순위 되돌아보는 선 = 계약 — 스크롤 영역 **밖**이라 항상 보인다.
-          박스를 뺀 회색 한 줄이다(D4). 계약이라 지우지 않지만, 발굴 카드에서 1순위처럼 보이면 안 된다. */}
-      <p className="mt-3 shrink-0 text-[12px] leading-5 text-muted" data-testid="recheck-line">
-        되돌아보는 선 · {repairPickCopy(pick.invalidation.text)}
+      {/* ③ 결론 — 이 카드의 전부. 화면에서 가장 큰 텍스트이고 카드당 한 번이다. */}
+      <p className="mt-s5 line-clamp-2 text-ds-display text-ds-text-1" data-testid="pick-hook">
+        {hook}
       </p>
 
+      {/* ④ 근거 한 줄 — 칩 폐지(DS-01 §3-④). 결론에 나온 숫자는 여기 없다. */}
+      {evidence && (
+        <p className="mt-s2 font-mono text-ds-label text-ds-text-2" data-testid="pick-evidence">
+          {evidence}
+        </p>
+      )}
 
-      <div className="mt-auto flex shrink-0 items-center justify-between pt-3">
-        <span className="font-pixel text-[11px] text-muted">더보기 →</span>
-        {progress && <span className="text-[11px] font-medium text-muted">{progress}</span>}
-      </div>
+      {/* ⑤ 스파크라인 — 회색 선 하나. 면 채우기·캡션·축 없음. */}
+      {showSparkline && (
+        <div className="mt-s4" aria-label="최근 30거래일 가격 흐름">
+          <Sparkline
+            variant="ds"
+            series={series.slice(-30)}
+            height={56}
+            {...(markerIndex !== undefined ? { markerIndex } : {})}
+          />
+        </div>
+      )}
+
+      {/*
+        ⑥ 우리 성적 — 카드에서 accent 를 쓰는 **유일한** 자리.
+        기록이 없으면(오늘 첫 발행·발행일 가격 결손) 블록 전체가 없다. 그러면 이 카드에는
+        accent 가 없다 — 그게 정상이고, 색을 다른 데로 옮기지 않는다(DS-00 §2-1).
+      */}
+      {record && (
+        <div className="mt-s4 flex gap-[10px]" data-testid="pick-our-record">
+          <span className="w-[2px] shrink-0 self-stretch bg-ds-accent" aria-hidden />
+          <div>
+            <p className="font-mono text-ds-label text-ds-text-2">{record.sinceText}</p>
+            <p className="font-mono text-[18px] font-medium leading-tight text-ds-accent">
+              {`${record.returnPct > 0 ? "+" : ""}${record.returnPct.toFixed(1)}%`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ⑦ CTA 하나. accent 를 쓰지 않는다 — 성적과 경쟁한다. */}
+      {onDetail && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDetail();
+          }}
+          className="mt-s4 h-btn-primary w-full rounded-pill border-hairline border-ds-border bg-ds-surface-2 text-[14px] font-medium text-ds-text-1"
+          data-testid="pick-cta"
+        >
+          자세히 보기
+        </button>
+      )}
     </div>
   );
 }

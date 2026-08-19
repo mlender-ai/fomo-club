@@ -1134,6 +1134,25 @@ export interface QuietPick {
   liquidityNote?: string;
   /** 이 신호의 과거 성적(WO-P2) — 없으면 카드가 블록을 숨긴다. */
   signalStats?: QuietPickSignalStats;
+  /**
+   * 우리 성적 (DS-01 §3-⑥) — **이 종목을 우리가 언제 짚었고 그 뒤 얼마인가.**
+   * 카드에서 accent 를 쓰는 유일한 자리다.
+   *
+   * 백엔드가 아직 내려주지 않는다(발행 스냅샷에서 종목별 최초 발행일·당시가를 집계하는
+   * 작업이 선행). 그래서 지금 이 필드는 항상 `undefined` 이고 카드는 블록을 그리지 않는다 —
+   * 자리표시자를 두지 않는다(DS-00 §1-1). 필드가 오면 카드가 그때부터 그린다.
+   *
+   * 사용자 개인 열람 기록(`discoveryPerformance` 의 firstSeen*)으로 채워선 안 된다.
+   * "우리가 짚은 날"과 "당신이 처음 본 날"은 다른 사실이다.
+   */
+  ourRecord?: {
+    /** 가장 오래된 발행일(ISO). */
+    firstPublishedAt: string;
+    /** 화면 문구 — "8월 17일에 짚은 뒤". 서버가 만든다(카드가 날짜를 조립하지 않는다). */
+    sinceText: string;
+    /** 발행일 당시가 대비 현재 수익률(%). 음수도 그대로 온다. */
+    returnPct: number;
+  };
   qualifiedAt: string;
 }
 

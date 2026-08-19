@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type EmotionType } from "@fomo/core";
 import { SearchIcon } from "@/components/icons";
 import { KeywordHistory } from "@/components/KeywordHistory";
@@ -46,35 +46,49 @@ export function HomeView({
   const [searchOpen, setSearchOpen] = useState(false);
   void index;
 
-  // WO-G1B — 홈 = 오늘의 조용한 픽(모바일·PC 단일 경험). 30장 덱·자산 탭 소멸.
-  // 피드는 GNB에서 숨김(FeedView 코드 보존). DesktopDashboard 도 코드 보존(홈 미사용).
+  /**
+   * 스크롤되면 헤더 하단에 0.5px 구분선이 생긴다(DS-02 §2·§8). 블러를 쓰지 않는다 —
+   * 불투명 `bg` 다. 헤더·하단 탭은 고정, 그 사이만 스크롤한다.
+   */
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <>
-      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-xl flex-col px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]">
-        <div className="flex items-center justify-between">
-          <span className="font-pixel text-base text-whiteout">FOMO CLUB</span>
+      {/* ① 헤더 (DS-02 §2) — 56px, 로고 mono 16px/0.12em, 검색 44×44. accent 없음. */}
+      <header
+        className={`fixed inset-x-0 top-0 z-50 bg-ds-bg pt-[env(safe-area-inset-top)] ${scrolled ? "border-b-hairline border-ds-border" : ""}`}
+        data-testid="deck-header"
+      >
+        <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-gutter">
+          <span className="font-mono text-[16px] tracking-[0.12em] text-ds-text-1">FOMO CLUB</span>
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex items-center rounded-full border border-hairline p-1.5 text-muted transition-colors hover:border-whiteout/20"
+            className="-mr-2 flex h-touch w-touch items-center justify-center text-ds-text-2"
             aria-label="종목 검색"
           >
-            <SearchIcon size={14} />
+            <SearchIcon size={20} />
           </button>
         </div>
+      </header>
 
-        <div className="mt-3 flex min-h-0 flex-1 flex-col">
+      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-xl flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-[calc(3.5rem+env(safe-area-inset-top))]">
+        <div className="flex min-h-0 flex-1 flex-col">
           {tab === "pick" ? <QuietPickDeck /> : <KeywordHistory />}
         </div>
       </main>
 
-      {/* GNB: 픽 / 성적표 / 내 기록 (WO-G1B — 피드 숨김) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#1E1E1E] bg-black pb-[env(safe-area-inset-bottom)]">
+      {/* ⑥ 하단 탭 (DS-02 §7) — 텍스트만. 3개뿐이고 라벨이 짧아 아이콘이 정보를 더하지 않는다. */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t-hairline border-ds-border bg-ds-bg pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-xl">
           <TabButton active={tab === "pick"} onClick={() => setTab("pick")} label="픽" />
-          <a href="/track-record" className="flex flex-1 flex-col items-center gap-1 py-3">
-            <span className="font-pixel text-xs" style={{ color: "#555" }}>성적표</span>
-          </a>
+          <TabLink href="/track-record" label="성적표" />
           <TabButton active={tab === "mine"} onClick={() => setTab("mine")} label="내 기록" />
         </div>
       </nav>
@@ -159,21 +173,27 @@ function FirstVisitNoticeSheet({
   );
 }
 
-function TabButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
+/** 하단 탭 버튼 — 활성 표시는 라벨 아래 2px × 16px 바(DS-02 §7). 탭 영역은 1/3 폭 × 56px. */
+function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
-    <button onClick={onClick} className="flex flex-1 flex-col items-center gap-1 py-3 transition-colors">
-      <span className="font-pixel text-xs transition-colors" style={{ color: active ? "#FAFAFA" : "#555" }}>
-        {label}
-      </span>
-      {active && <span className="h-0.5 w-4 rounded-full bg-whiteout" />}
+    <button
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className="flex h-14 flex-1 flex-col items-center justify-center gap-s1"
+      data-testid="bottom-tab"
+    >
+      <span className={`font-mono text-ds-label ${active ? "text-ds-text-1" : "text-ds-text-3"}`}>{label}</span>
+      <span className={`h-0.5 w-4 ${active ? "bg-ds-text-1" : "bg-transparent"}`} aria-hidden />
     </button>
+  );
+}
+
+/** 다른 라우트로 가는 탭 — 버튼과 같은 형태를 유지한다(탭이 링크라고 다르게 보이면 안 된다). */
+function TabLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} className="flex h-14 flex-1 flex-col items-center justify-center gap-s1" data-testid="bottom-tab">
+      <span className="font-mono text-ds-label text-ds-text-3">{label}</span>
+      <span className="h-0.5 w-4 bg-transparent" aria-hidden />
+    </a>
   );
 }

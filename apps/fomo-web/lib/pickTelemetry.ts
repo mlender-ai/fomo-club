@@ -30,7 +30,11 @@ export type PickTelemetryEvent =
   | ({ event: "card_dwell"; durationMs: number; position: number } & PickSlotLabel)
   | ({ event: "card_detail_open"; entryPoint: "tap" | "button"; position: number } & PickSlotLabel)
   | { event: "detail_scroll_depth"; maxRatio: number }
-  | { event: "card_watchlist_add"; position: number }
+  /**
+   * 관심 담기. DS-02 이후 관심은 카드의 ★ 버튼만 담당하므로(스와이프는 탐색) 프리뷰·상세처럼
+   * 덱 위치가 없는 자리에서도 눌릴 수 있다 → `position` 은 선택이다.
+   */
+  | { event: "card_watchlist_add"; position?: number }
   | { event: "deck_complete"; cardsConsumed: number }
   | { event: "card_skip"; position: number };
 

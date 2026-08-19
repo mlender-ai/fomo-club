@@ -352,3 +352,57 @@ export function buildCommitteeVerdictLine(
   const grade = `${TIMING_CLAUSE[timingGrade]}, ${VALUATION_CLAUSE[valuationGrade]}`;
   return lead ? `${lead}${nuance} — ${grade}` : grade;
 }
+
+/** 근거 한 줄의 항목 축 우선순위 — DS-01 §3-④ "규모 → 인원 → 희소성". */
+const EVIDENCE_MAX_ITEMS = 3;
+
+/** 항목의 숫자가 결론(훅)에 이미 나왔는가 — DS-01 §3-④ "결론에 나온 수치를 반복하지 않는다". */
+function repeatsHookNumber(item: string, hookNumbers: Set<string>): boolean {
+  const numbers = item.match(/\d+/g);
+  if (!numbers) return false;
+  return numbers.some((n) => hookNumbers.has(n));
+}
+
+/**
+ * 근거 한 줄 (DS-01 §3-④) — `$4.0M · 2명 · 1년 매수 3건뿐`.
+ *
+ * ## 칩을 왜 없앴나
+ *
+ * 칩 3개는 각각 테두리를 가져서 노이즈가 크고, 서로 다른 축인지 사용자가 알 수 없었다.
+ * 한 줄 텍스트가 더 조용하고 더 빨리 읽힌다(DS-01). 축 계산은 그대로 `computeQuietPickAnomalies`
+ * 를 쓴다 — **판정 엔진은 바뀌지 않았고 표현만 바뀌었다.**
+ *
+ * ## 순서
+ *
+ * 규모(`$4.0M`) → 인원(`2명`, 임원만) → 희소성(이례성 칩, 강도순·축당 하나). 최대 3항목.
+ * 결론에 이미 나온 숫자를 담은 항목은 건너뛴다 — 같은 숫자가 카드에 두 번 나오면 소음이다.
+ */
+export function buildQuietPickEvidenceLine(f: QuietPickAnomalyFacts, hook?: string): string {
+  const hookNumbers = new Set((hook ?? "").match(/\d+/g) ?? []);
+  const insider = f.kind === "insider_cluster";
+  const items: string[] = [];
+  const push = (item: string | null | undefined) => {
+    const text = item?.trim();
+    if (!text || items.length >= EVIDENCE_MAX_ITEMS) return;
+    if (items.includes(text)) return;
+    if (repeatsHookNumber(text, hookNumbers)) return;
+    items.push(text);
+  };
+
+  // ① 규모 — 절대 수치가 먼저 읽힌다.
+  push(f.scale);
+
+  // ② 인원 — 임원 매수에서만 의미가 있다(기관·외국인은 인원 개념이 없다).
+  if (insider && typeof f.insiderCount === "number" && f.insiderCount > 0) push(`${f.insiderCount}명`);
+
+  // ③ 희소성 — 이례성 칩을 강도순으로, 같은 축은 한 번만.
+  const usedAxes = new Set<QuietPickChipAxis>();
+  for (const anomaly of computeQuietPickAnomalies(f)) {
+    if (!anomaly.chip || !anomaly.axis) continue;
+    if (usedAxes.has(anomaly.axis)) continue;
+    usedAxes.add(anomaly.axis);
+    push(anomaly.chip);
+  }
+
+  return items.join(" · ");
+}
