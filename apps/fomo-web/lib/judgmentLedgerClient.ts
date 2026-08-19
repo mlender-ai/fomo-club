@@ -1,3 +1,4 @@
+import { cachedGet } from "./apiCache";
 import { getSessionId } from "./session";
 
 export type LedgerAsset = "kr-stock" | "us-stock" | "coin" | "macro";
@@ -168,6 +169,18 @@ export async function fetchScorecardPicks(): Promise<ScorecardPicksResponse> {
   const res = await fetch("/api/fomo/track-record/picks", { cache: "no-store" });
   if (!res.ok) throw new Error(`GET /api/fomo/track-record/picks ${res.status}`);
   return res.json() as Promise<ScorecardPicksResponse>;
+}
+
+/** 발행 원장은 하루 한 번 구워지는 값이다 — 화면 진입마다 DB 를 때릴 이유가 없다. */
+const SCORECARD_TTL_MS = 15 * 60_000;
+
+/**
+ * 성적표 원장 — **캐시본**. 카드 ⑥ 우리 성적(DS-01)이 덱 진입마다 이걸 부르므로 원본 호출을
+ * 그대로 쓰면 메인 화면이 DB 조회를 한 번 더 만든다(백엔드 커넥션 풀은 15개다).
+ * 실패는 던진다 — 호출부가 빈 배열로 흘려보내고 성적 블록만 사라진다.
+ */
+export function fetchScorecardPicksCached(): Promise<ScorecardPicksResponse> {
+  return cachedGet("scorecard-picks", fetchScorecardPicks, SCORECARD_TTL_MS);
 }
 
 export async function fetchLedgerTimeline(canonical: string): Promise<{

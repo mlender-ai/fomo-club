@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DailyOhlcv } from "@fomo/core";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontResponse } from "@/lib/fomoApi";
-import { fetchScorecardPicks, type ScorecardPick } from "@/lib/judgmentLedgerClient";
+import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
 import { companyBlurb, evidenceRows } from "@/lib/depthSections";
 import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
@@ -231,7 +231,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       .catch(() => undefined);
 
     // 발행 원장 — ⑥ 우리 기록의 원료. 실패하면 그 섹션만 없다.
-    fetchScorecardPicks()
+    fetchScorecardPicksCached()
       .then((r) => alive && setRecords(r.picks ?? []))
       .catch(() => undefined);
 

@@ -6,7 +6,7 @@ import { fetchCardSlots, fetchQuietPicks } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { staleLabel } from "@/lib/deckStale";
 import { computeOurRecord } from "@/lib/ourRecord";
-import { fetchScorecardPicks, type ScorecardPick } from "@/lib/judgmentLedgerClient";
+import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
@@ -119,7 +119,7 @@ export function QuietPickDeck() {
 
   useEffect(() => {
     let alive = true;
-    fetchScorecardPicks()
+    fetchScorecardPicksCached()
       .then((res) => { if (alive) setRecords(res.picks ?? []); })
       .catch(() => undefined);
     return () => { alive = false; };
