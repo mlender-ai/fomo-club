@@ -201,7 +201,17 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
 }
 
 /** 2~4일은 고유어가 자연스럽다("사흘 새"). 그 밖은 숫자로 센다. */
-const NATIVE_DAYS: Record<number, string> = { 2: "이틀", 3: "사흘", 4: "나흘" };
+const NATIVE_DAYS: Record<number, string> = {
+  2: "이틀",
+  3: "사흘",
+  4: "나흘",
+  5: "닷새",
+  6: "엿새",
+  7: "이레",
+  8: "여드레",
+  9: "아흐레",
+  10: "열흘",
+};
 
 /** 훅의 주체 표기 — 원료의 `actorNoun` 이 아니라 **신호 종류**에서 만든다(금지어 유입 차단). */
 const HOOK_ACTOR: Record<QuietPickSignalKind, string> = {
@@ -219,25 +229,54 @@ function insiderWindowPhrase(days: number): string {
 }
 
 /**
- * 훅 — **무슨 일이 일어났나 한 문장**(H1·H3). 이례성·규모는 칩이 말한다.
+ * 결론 — **무슨 일이 일어났나 한 마디.** 기획자 모킹(DS-01 §3-③) 기준 **명사형**이다.
  *
- * 골든 케이스(WO §1-2):
- *   기관 25일 streak  → "기관이 25일째 조용히 사고 있어요"
- *   외국인·기관 4일    → "외국인과 기관이 4일째 같이 사고 있어요"
- *   임원 7명 3일      → "임원 7명이 사흘 새 같이 샀어요"
+ * ## 왜 해요체를 버렸나
+ *
+ * 종전 `기관이 25일째 조용히 사고 있어요` 는 24px·줄당 14자에서 두 줄째가 `요` 한 글자로
+ * 떨어졌다. 명사형이 더 짧고 강하다 — `기관이 조용히 25일째 매수 중`.
+ * 결론만 예외로 명사형을 쓰고, 나머지 문장은 전부 해요체다(DS-00 §3-2).
+ *
+ * ## 유형별 (DS-01 §3-③ 표)
+ *
+ * | 신호 | 결론 |
+ * |---|---|
+ * | 임원, 1년 매수 0~1건 | `1년 만에 임원이 처음으로 대량 매수` |
+ * | 임원 N명 | `임원 3명이 닷새 새 함께 매수` |
+ * | 기관·외국인, 창 내 최장 | `기관이 40거래일 중 가장 길게 매수 중` |
+ * | 기관·외국인 | `기관이 조용히 12일째 매수 중` |
+ * | 외국인+기관 | `외국인과 기관이 나흘째 같이 매수` |
  */
 export function buildQuietPickHook(f: QuietPickAnomalyFacts): string {
   const actor = HOOK_ACTOR[f.kind];
+
   if (f.kind === "insider_cluster") {
+    // 1년간 산 적이 거의 없던 회사에서 나온 매수 — 가장 강한 결론이다.
+    const firstInYear = typeof f.priorBuys12mo === "number" && f.priorBuys12mo <= 1;
+    if (firstInYear) return "1년 만에 임원이 처음으로 대량 매수";
     const window = insiderWindowPhrase(f.days);
     const n = f.insiderCount;
-    if (typeof n !== "number" || n <= 0) return `임원이 ${window}사들였어요`;
-    if (n === 1) return `임원 한 명이 ${window}샀어요`;
-    return `임원 ${n}명이 ${window}같이 샀어요`;
+    if (typeof n !== "number" || n <= 0) return `임원이 ${window}대량 매수`;
+    if (n === 1) return `임원 한 명이 ${window}매수`;
+    return `임원 ${n}명이 ${window}함께 매수`;
   }
-  const together = f.kind === "multi_cluster" ? "같이" : "조용히";
-  if (f.days <= 0) return `${iGa(actor)} ${together} 사고 있어요`;
-  return `${iGa(actor)} ${f.days}일째 ${together} 사고 있어요`;
+
+  if (f.kind === "multi_cluster") {
+    if (f.days <= 0) return "외국인과 기관이 같이 매수";
+    return `외국인과 기관이 ${NATIVE_DAYS[f.days] ?? `${f.days}일`}째 같이 매수`;
+  }
+
+  /**
+   * 창 안에서 가장 긴 연속 매수 — "얼마나 드문가" 가 결론이 된다.
+   *
+   * 일수를 함께 쓴다. 모킹 표의 `기관이 40거래일 중 가장 길게 매수 중` 은 창(40)이 같은
+   * 종목들에서 **덱 전체가 같은 문장**이 된다 — 한 화면에 같은 말 일곱 번은 소음이다.
+   */
+  if (f.isLongestStreak && f.days >= 3) {
+    return `${iGa(actor)} ${f.streakWindowDays ?? f.days}거래일 중 가장 긴 ${f.days}일 매수`;
+  }
+  if (f.days <= 0) return `${iGa(actor)} 조용히 매수 중`;
+  return `${iGa(actor)} 조용히 ${f.days}일째 매수 중`;
 }
 
 /** 축 우선순위 — 임원 매수는 금액이 먼저 읽히고, 연속 매수는 "얼마나 드문가"가 먼저 읽힌다. */

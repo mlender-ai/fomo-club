@@ -61,13 +61,25 @@ export function isLegacyHook(hook: string): boolean {
 }
 
 /**
- * 카드·뎁스가 쓸 훅. 옛 형식이면 **payload 의 신호만으로** 한 문장을 다시 만든다
- * (H1·H3). 신호가 없으면 사전 치환만 적용한다 — 문장을 지어내지 않는다.
+ * 해요체 결론인가 — `…사고 있어요` / `…샀어요` / `…사들였어요`.
+ *
+ * 결론은 **명사형**이 정본이다(기획자 모킹 · DS-01 §3-③). payload 는 하루 한 번 구워지므로
+ * 배치가 돌기 전까지 해요체 문장이 내려온다 → 읽는 쪽에서 같은 사실로 다시 만든다.
+ * 다음 배치 이후엔 이 조건에 걸리는 훅이 없어 아무 일도 하지 않는다.
+ */
+export function isPoliteBuyHook(hook: string): boolean {
+  return /(사고 있어요|샀어요|사들였어요|사고 있습니다)\s*$/.test(hook);
+}
+
+/**
+ * 카드·뎁스가 쓸 결론. 옛 형식이거나 해요체면 **payload 의 신호·실수치만으로** 다시 만든다.
+ * 신호가 없으면 사전 치환만 적용한다 — 문장을 지어내지 않는다.
  */
 export function pickHook(pick: QuietPick): string {
   const hook = (pick.hook ?? "").trim();
   if (!hook) return "";
-  if (!isLegacyHook(hook)) return hook;
+  const stale = isLegacyHook(hook) || isPoliteBuyHook(hook);
+  if (!stale) return hook;
   const signal = pick.signal;
   if (!signal?.kind) return repairPickCopy(hook);
   return buildQuietPickHook({
@@ -76,5 +88,7 @@ export function pickHook(pick: QuietPick): string {
     scale: signal.scale ?? "",
     days: signal.days ?? 0,
     ...(typeof signal.insiderCount === "number" ? { insiderCount: signal.insiderCount } : {}),
+    // 새 결론 템플릿은 희소성(1년 매수 건수)·최장 여부로 갈린다 — 실수치를 함께 넘긴다.
+    ...pick.signalFacts,
   });
 }

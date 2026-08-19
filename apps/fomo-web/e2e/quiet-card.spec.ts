@@ -59,7 +59,7 @@ test("완료 기준 7 — 결론이 2줄을 넘지 않는다", async ({ page }) 
   expect(Math.round(height / lineHeight)).toBeLessThanOrEqual(2);
 });
 
-test("완료 기준 2 — accent 는 우리 성적 한 곳에만 있다", async ({ page }) => {
+test("accent 는 결론 · 성적 · CTA 세 자리다 (기획자 모킹 기준)", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const ACCENT = "rgb(212, 255, 63)";
   const count = async (id: string) =>
@@ -72,13 +72,20 @@ test("완료 기준 2 — accent 는 우리 성적 한 곳에만 있다", async 
       ACCENT
     );
 
-  // 성적 블록이 있는 카드: 좌측 바 + 수익률 텍스트, 둘 다 같은 블록.
   const record = page.locator('[data-case="full"] [data-testid="pick-our-record"]');
   await expect(record).toHaveCount(1);
-  expect(await count("full")).toBeLessThanOrEqual(2);
-  // 성적이 없는 카드에는 accent 가 아예 없다 — 그게 정상이다.
-  expect(await count("spark")).toBe(0);
+  // 결론(1) + 성적 좌측 바·수익률(2) + CTA(1) = 4. 그 밖에는 없다.
+  expect(await count("full")).toBe(4);
+
+  // 성적이 없는 카드는 결론 + CTA 두 곳뿐 — 성적 accent 를 다른 데로 옮기지 않는다.
+  expect(await count("spark")).toBe(2);
   await expect(page.locator('[data-case="spark"] [data-testid="pick-our-record"]')).toHaveCount(0);
+
+  const hook = page.locator('[data-case="full"] [data-testid="pick-hook"]');
+  expect(await hook.evaluate((el) => getComputedStyle(el).color)).toBe(ACCENT);
+  const cta = page.locator('[data-case="full"] [data-testid="pick-cta"]');
+  expect(await cta.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(ACCENT);
+  expect(await cta.evaluate((el) => getComputedStyle(el).color)).toBe("rgb(26, 26, 0)"); // accent-ink
 });
 
 test("완료 기준 3·4 — 칩이 없고 CTA 가 하나다", async ({ page }) => {
@@ -88,9 +95,11 @@ test("완료 기준 3·4 — 칩이 없고 CTA 가 하나다", async ({ page }) 
   await expect(card.locator('[data-testid="pick-evidence"]')).toHaveCount(1);
   await expect(card.locator("button")).toHaveCount(2); // 관심(★) + CTA
   await expect(card.locator('[data-testid="pick-cta"]')).toHaveCount(1);
-  // CTA 는 48px pill 이고 accent 가 아니다.
+  // CTA 는 48px pill 이다.
   const height = (await card.locator('[data-testid="pick-cta"]').boundingBox())?.height ?? 0;
   expect(Math.round(height)).toBe(48);
+  // 근거는 박스 안 라벨-값이다(모킹).
+  await expect(card.locator('[data-testid="pick-evidence"] dt')).not.toHaveCount(0);
 });
 
 test("등락에 색을 쓰지 않는다 — 하락은 회색이다", async ({ page }) => {
@@ -125,7 +134,11 @@ test("같은 숫자가 카드 한 장에 3회 이상 나오지 않는다", async
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const text = await page.locator('[data-case="full"] [data-testid="quiet-pick-card"]').innerText();
   const counts = new Map<string, number>();
-  for (const n of text.match(/\d+/g) ?? []) counts.set(n, (counts.get(n) ?? 0) + 1);
+  /**
+   * 소수·천단위를 **한 값으로** 센다. `\d+` 로 쪼개면 `-1.5%` 와 `+13.1%` 가 `1` 을 공유해
+   * 같은 값이 반복된 것처럼 보인다 — 이 규칙이 막는 것은 같은 **값**의 반복이다.
+   */
+  for (const n of text.match(/\d+(?:[.,]\d+)*/g) ?? []) counts.set(n, (counts.get(n) ?? 0) + 1);
   for (const [number, count] of counts) {
     expect(count, `숫자 ${number} 가 ${count}회 반복`).toBeLessThan(3);
   }

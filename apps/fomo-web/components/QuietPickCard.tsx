@@ -1,85 +1,73 @@
 "use client";
 
 import { useState } from "react";
-import { buildQuietPickChips, buildQuietPickEvidenceLine, type QuietPickAnomalyFacts } from "@fomo/core";
 import type { QuietPick } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
+import { cardEvidenceRows } from "@/lib/depthSections";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { recordPickTelemetry } from "@/lib/pickTelemetry";
-import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
+import { pickHook } from "@/lib/pickCopyRepair";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon } from "@/components/icons";
 
 /**
- * 메인 카드 — DS-01(`docs/design/DS-01_MAIN_CARD.md`). 토큰은 DS-00.
+ * 메인 카드 — **기획자 모킹이 정본이다**(`docs/design/DS-01_MAIN_CARD.md` §15에 모킹 반영 기록).
  *
- * ## 원칙: 한 장면에 놀라움 하나
+ * ## 모킹과 DS-01 문서가 어긋난 곳은 모킹을 따른다
  *
- * 2초 안에 세 가지만 전한다 — ① 무슨 일이 있었나(결론) ② 얼마나 드문 일인가(근거 하나)
- * ③ 이 앱을 믿을 만한가(우리 성적). **그 외 전부 상세로 내렸다.**
+ * | 항목 | 문서 | 모킹 = 구현 |
+ * |---|---|---|
+ * | 결론 색 | `text-1` | **`accent`** — 화면에서 가장 먼저 눈에 닿아야 하는 것이 결론이다 |
+ * | CTA | `surface-2` (accent 금지) | **`accent` pill + `accent-ink` 글씨** |
+ * | 근거 | 회색 한 줄 | **`surface-2` 박스 안 라벨-값 3행**(값 우측 정렬) |
+ * | 티커 | 우측 정렬 + US/KR 배지 | **종목명 옆에 나란히** |
+ *
+ * 1차 구현에서 문서 문구("accent 는 화면당 1회, CTA 금지")만 따라 결론·CTA 를 무채색으로
+ * 만들었더니 화면 전체가 죽었다. accent 는 **결론 → 성적 → CTA** 세 자리를 쓴다. 그 밖(스파크라인,
+ * 등락, 칩, 섹션 제목)에는 여전히 쓰지 않는다.
  *
  * ## 블록 (위→아래)
  *
- * ① 종목 아이덴티티 → ② 가격 → ③ 결론(`display`, 카드당 1회) → ④ 근거 한 줄 →
- * ⑤ 스파크라인 → ⑥ 우리 성적(**유일한 accent**) → ⑦ CTA 하나.
+ * ① 종목명+티커 / 섹터·시총·거래 → ② 가격·등락 → ③ 결론(accent) → ④ 신호 후 주가 →
+ * ⑤ 근거 박스 → ⑥ 스파크라인 → ⑦ 우리 성적(accent) → ⑧ CTA(accent)
  *
- * ## DS-01 에서 카드에서 빠진 것
- *
- * 되돌아보는 선·매출 막대·아키타입 경고·밴드 부재 문구·회사 설명·"이런 신호, 과거엔 어땠나"·
- * 재등장 사유는 **상세로 옮겼다**(삭제가 아니다 — `QuietPickDepth` 에 있다).
- * 칩 3개는 ④ 한 줄로 합쳤다. 넘기기 버튼은 스와이프가, `더보기 →` 는 CTA 가 대신한다.
- * `N/10` 카운터는 카드 밖(덱)이다.
- *
- * ## 고정 높이가 없다
- *
- * 블록이 빠지면 카드가 그만큼 짧아진다(DS-01 §5). 최소 높이 계약도 두지 않는다 —
- * 종전 `quietCardMinHeight` 가 하단 공백의 원인이었다.
+ * 고정 높이는 없다. 블록이 빠지면 카드가 그만큼 짧아진다.
  */
-
-/** 시장 배지 — 국기 이모지 대신 텍스트다(DS-00 §7 이모지 금지). */
-function marketBadge(pick: QuietPick): string | null {
-  if (pick.subject.market === "COIN") return null;
-  return pick.subject.country === "US" ? "US" : "KR";
-}
 
 /** 표시용 회사명 — 정규화는 전 화면 공통 창구에 위임한다. */
 export function displayName(pick: QuietPick): string {
   return subjectName(pick.subject);
 }
 
-/** 화면에 병기할 티커 — US 는 심볼, KR 은 6자리 종목코드. */
-function ticker(pick: QuietPick): string | undefined {
-  return subjectTicker(pick.subject);
-}
-
-function anomalyFacts(pick: QuietPick): QuietPickAnomalyFacts {
-  return {
-    kind: pick.signal.kind,
-    actorNoun: repairPickCopy(pick.signal.actors).replace(/\s*\d+명$/, ""),
-    scale: repairPickCopy(pick.signal.scale),
-    days: pick.signal.days,
-    ...(typeof pick.signal.insiderCount === "number" ? { insiderCount: pick.signal.insiderCount } : {}),
-    ...pick.signalFacts,
-  };
-}
-
 /**
- * ④ 근거 한 줄 — 실수치(`signalFacts`)에서 만든다. 문장을 되파싱하지 않는다.
- * 구 페이로드(실수치 없음)는 발행 시점에 굳은 칩을 같은 규칙으로 이어 붙인다.
+ * 가격 표기 — **통화 기호를 반드시 붙인다.** 실측에서 미국 종목이 `4.945` 로 나왔다(무슨
+ * 통화인지 알 수 없다). 서버 문구(`4,560원`)가 이미 단위를 담고 있으면 그대로 쓴다.
  */
-export function cardEvidenceLine(pick: QuietPick, hook: string): string {
-  const hookNumbers = new Set(hook.match(/\d+/g) ?? []);
-  if (pick.signalFacts) return buildQuietPickEvidenceLine(anomalyFacts(pick), hook);
-  const items = (pick.chips?.length ? pick.chips : buildQuietPickChips(anomalyFacts(pick)))
-    .map(repairPickCopy)
-    .filter((item) => !(item.match(/\d+/g) ?? []).some((n) => hookNumbers.has(n)))
-    .slice(0, 3);
-  return items.join(" · ");
+export function priceText(pick: QuietPick): string {
+  const text = pick.price.currentText?.trim();
+  const isUs = pick.subject.country === "US";
+  if (text) {
+    if (!isUs || /^[$₩]/.test(text) || /원$/.test(text)) return text;
+    return `$${text}`;
+  }
+  const value = pick.price.current;
+  return isUs ? `$${value.toFixed(2)}` : `${value.toLocaleString("en-US")}원`;
+}
+
+/** 신호가 시작된 뒤 주가가 어떻게 됐나 — 모킹의 `주가는 5일간 -9%`. 당시가가 없으면 만들지 않는다. */
+export function sincePriceLine(pick: QuietPick): string | null {
+  const at = pick.signal.priceAtSignal;
+  const now = pick.price.current;
+  const days = pick.signal.days;
+  if (!Number.isFinite(at) || !at || at <= 0 || !Number.isFinite(now) || days <= 0) return null;
+  const pct = Math.round(((now - at) / at) * 100 * 10) / 10;
+  if (Math.abs(pct) < 0.1) return `주가는 ${days}일간 그대로`;
+  return `주가는 ${days}일간 ${pct > 0 ? "+" : ""}${pct}%`;
 }
 
 export function QuietPickCard({
   pick,
-  /** ⑦ CTA. 없으면 버튼을 그리지 않는다 — 자리만 남기지 않는다. */
+  /** CTA. 없으면 버튼을 그리지 않는다 — 자리만 남기지 않는다. */
   onDetail,
   /** 덱에서의 위치(1-based). 관심 담기 지표를 위치별로 보기 위해 받는다. */
   position,
@@ -91,7 +79,7 @@ export function QuietPickCard({
   const [watched, setWatched] = useState(() => isWatched(pick.subject.canonical));
 
   /**
-   * ① 두 번째 줄 — 섹터 · 거래 규모. 거래 규모는 **경고가 아니라 특징이다**(DS-01 §4):
+   * ① 두 번째 줄 — 섹터 · 거래 규모. 거래 규모는 **경고가 아니라 특징이다**:
    * 큰 회사는 조용할 수 없다. 평가어("얇아요")를 떼고 괄호 안 실수치만 남긴다.
    */
   const liquidityMeta = (() => {
@@ -103,7 +91,7 @@ export function QuietPickCard({
   })();
 
   const series = pick.price.sparkline ?? [];
-  /** ⑤ 20포인트 미만이면 스파크라인을 통째로 숨긴다(DS-01 §3-⑤). 형태가 안 보이는 선은 장식이다. */
+  /** 20포인트 미만이면 스파크라인을 통째로 숨긴다. 형태가 안 보이는 선은 장식이다. */
   const showSparkline = series.length >= 20;
   const markerIndex = showSparkline
     ? Math.max(0, series.length - 1 - Math.min(pick.signal.days, series.length - 1))
@@ -111,13 +99,14 @@ export function QuietPickCard({
 
   const changePct = pick.price.changePct;
   const hook = pickHook(pick);
-  const evidence = cardEvidenceLine(pick, hook);
+  const rows = cardEvidenceRows(pick, hook);
+  const since = sincePriceLine(pick);
   const record = pick.ourRecord;
-  const badge = marketBadge(pick);
+  const ticker = subjectTicker(pick.subject);
 
   /**
-   * 관심 — DS-02 가 스와이프를 탐색 제스처로 바꿨으므로(좌=다음/우=이전) **관심은 이 버튼만
-   * 담당한다.** 종전 우스와이프가 하던 저장(사유·섹터 포함)과 지표 기록을 여기서 이어받는다.
+   * 관심 — 스와이프가 탐색 제스처가 됐으므로(DS-02) **관심은 이 버튼만** 담당한다.
+   * 종전 우스와이프가 하던 저장(사유·섹터 포함)과 지표 기록을 여기서 이어받는다.
    */
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -131,41 +120,34 @@ export function QuietPickCard({
 
   return (
     <div className="flex flex-col rounded-card bg-ds-surface-1 p-s4" data-testid="quiet-pick-card">
-      {/* ① 종목 아이덴티티 — 로고 이미지·국기 이모지 없음(DS-01 §3-①). */}
+      {/* ① 종목 아이덴티티 — 로고 이미지·국기 이모지 없음. 티커는 종목명 옆에 나란히. */}
       <div className="flex items-start justify-between gap-s2">
         <div className="min-w-0">
-          <p className="truncate text-ds-title text-ds-text-1">{displayName(pick)}</p>
+          <p className="flex min-w-0 items-baseline gap-s2">
+            <span className="truncate text-ds-title text-ds-text-1">{displayName(pick)}</span>
+            {ticker && <span className="shrink-0 font-mono text-ds-label text-ds-text-3">{ticker}</span>}
+          </p>
           {(pick.subject.identity || liquidityMeta) && (
             <p className="mt-s1 truncate font-mono text-ds-label text-ds-text-2" data-testid="pick-identity">
               {/* 섹터가 확보되지 않으면 표시하지 않는다 — 틀린 섹터가 맞는 섹터보다 나쁘다. */}
-              {pick.subject.identity}
-              {pick.subject.identity && liquidityMeta && " · "}
-              {liquidityMeta}
+              {[pick.subject.identity, liquidityMeta].filter(Boolean).join(" · ")}
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-s2">
-          <div className="text-right">
-            {ticker(pick) && <span className="font-mono text-ds-label text-ds-text-3">{ticker(pick)}</span>}
-            {badge && <span className="ml-s1 font-mono text-ds-caption text-ds-text-3">{badge}</span>}
-          </div>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-pressed={watched}
-            aria-label={watched ? "관심 해제" : "관심"}
-            className="-mr-2 -mt-2 flex h-touch w-touch items-center justify-center"
-          >
-            <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-pressed={watched}
+          aria-label={watched ? "관심 해제" : "관심"}
+          className="-mr-2 -mt-2 flex h-touch w-touch shrink-0 items-center justify-center"
+        >
+          <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
+        </button>
       </div>
 
-      {/* ② 가격 — 화살표 아이콘 없음. 부호로 충분하다. 등락에 색을 쓰지 않는다(DS-00 §2-1). */}
-      <div className="mt-s1 flex items-baseline gap-s2">
-        <span className="font-mono text-[16px] leading-tight text-ds-text-1">
-          {pick.price.currentText ?? pick.price.current.toLocaleString("en-US")}
-        </span>
+      {/* ② 가격 — 화살표 아이콘 없음. 등락에 색을 쓰지 않는다(상승 흰색 / 하락 회색). */}
+      <div className="mt-s2 flex items-baseline gap-s2">
+        <span className="font-mono text-[16px] leading-tight text-ds-text-1">{priceText(pick)}</span>
         {typeof changePct === "number" && (
           <span
             className={`font-mono text-[13px] leading-tight tabular-nums ${changePct < 0 ? "text-ds-down" : "text-ds-text-1"}`}
@@ -176,19 +158,32 @@ export function QuietPickCard({
         )}
       </div>
 
-      {/* ③ 결론 — 이 카드의 전부. 화면에서 가장 큰 텍스트이고 카드당 한 번이다. */}
-      <p className="mt-s5 line-clamp-2 text-ds-display text-ds-text-1" data-testid="pick-hook">
+      {/* ③ 결론 — 카드의 전부. **accent**, 최대 2줄, 카드당 1회. */}
+      <p /* break-keep: 한국어 단어 단위로 끊는다 — `5`/`일` 이 갈리지 않게. */
+        className="mt-s5 line-clamp-2 break-keep text-ds-display text-ds-accent" data-testid="pick-hook">
         {hook}
       </p>
 
-      {/* ④ 근거 한 줄 — 칩 폐지(DS-01 §3-④). 결론에 나온 숫자는 여기 없다. */}
-      {evidence && (
-        <p className="mt-s2 font-mono text-ds-label text-ds-text-2" data-testid="pick-evidence">
-          {evidence}
+      {/* ④ 신호 후 주가 — 결론이 값 얘기를 하지 않으므로 여기서 한 줄로 답한다. */}
+      {since && (
+        <p className="mt-s2 text-ds-caption text-ds-text-2" data-testid="pick-since">
+          {since}
         </p>
       )}
 
-      {/* ⑤ 스파크라인 — 회색 선 하나. 면 채우기·캡션·축 없음. */}
+      {/* ⑤ 근거 박스 — 라벨(좌·회색) / 값(우·흰색). 한 줄 나열보다 스캔이 빠르다. */}
+      {rows.length > 0 && (
+        <dl className="mt-s4 rounded-block bg-ds-surface-2 px-s4 py-s3" data-testid="pick-evidence">
+          {rows.map((row) => (
+            <div key={row.label} className="flex items-baseline justify-between gap-s3 py-[3px]">
+              <dt className="shrink-0 font-mono text-ds-label text-ds-text-2">{row.label}</dt>
+              <dd className="min-w-0 truncate font-mono text-ds-data text-ds-text-1">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {/* ⑥ 스파크라인 — 회색 선 하나. 면 채우기·캡션·축 없음. */}
       {showSparkline && (
         <div className="mt-s4" aria-label="최근 30거래일 가격 흐름">
           <Sparkline
@@ -201,23 +196,24 @@ export function QuietPickCard({
       )}
 
       {/*
-        ⑥ 우리 성적 — 카드에서 accent 를 쓰는 **유일한** 자리.
-        기록이 없으면(오늘 첫 발행·발행일 가격 결손) 블록 전체가 없다. 그러면 이 카드에는
-        accent 가 없다 — 그게 정상이고, 색을 다른 데로 옮기지 않는다(DS-00 §2-1).
+        ⑦ 우리 성적 — 위에 0.5px 구분선을 두고 accent 바를 세운다.
+        기록이 없으면(오늘 첫 발행·발행일 가격 결손·아직 0.0%) 블록 전체가 없다.
       */}
       {record && (
-        <div className="mt-s4 flex gap-[10px]" data-testid="pick-our-record">
-          <span className="w-[2px] shrink-0 self-stretch bg-ds-accent" aria-hidden />
-          <div>
-            <p className="font-mono text-ds-label text-ds-text-2">{record.sinceText}</p>
-            <p className="font-mono text-[18px] font-medium leading-tight text-ds-accent">
-              {`${record.returnPct > 0 ? "+" : ""}${record.returnPct.toFixed(1)}%`}
-            </p>
+        <div className="mt-s4 border-t-hairline border-ds-border pt-s4" data-testid="pick-our-record">
+          <div className="flex gap-[10px]">
+            <span className="w-[2px] shrink-0 self-stretch bg-ds-accent" aria-hidden />
+            <div>
+              <p className="font-mono text-ds-label text-ds-text-2">{record.sinceText}</p>
+              <p className="font-mono text-[20px] font-medium leading-tight text-ds-accent">
+                {`${record.returnPct > 0 ? "+" : ""}${record.returnPct.toFixed(1)}%`}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ⑦ CTA 하나. accent 를 쓰지 않는다 — 성적과 경쟁한다. */}
+      {/* ⑧ CTA 하나 — accent pill. 카드에서 유일한 채워진 버튼이다. */}
       {onDetail && (
         <button
           type="button"
@@ -225,7 +221,7 @@ export function QuietPickCard({
             e.stopPropagation();
             onDetail();
           }}
-          className="mt-s4 h-btn-primary w-full rounded-pill border-hairline border-ds-border bg-ds-surface-2 text-[14px] font-medium text-ds-text-1"
+          className="mt-s4 h-btn-primary w-full rounded-pill bg-ds-accent text-[15px] font-medium text-ds-accent-ink"
           data-testid="pick-cta"
         >
           자세히 보기

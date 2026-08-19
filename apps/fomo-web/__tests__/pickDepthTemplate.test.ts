@@ -99,8 +99,16 @@ describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", (
     expect(depth).toContain("mt-s5 border-t-hairline border-ds-border pt-s5");
   });
 
-  it("값 지표는 5줄까지만 나열한다", () => {
-    expect(depth).toContain("if (out.length >= 5) break");
+  it("값 지표는 화이트리스트다 — EPS·52주 고저가 나열이 아니다", () => {
+    expect(depth).toContain('const WANTED = ["PER", "PBR", "EPS", "배당수익률"]');
+    expect(depth).not.toContain("if (out.length >= 5) break");
+  });
+
+  it("상세는 데스크톱에서 퍼지지 않는다 — max-w-xl 중앙 정렬", () => {
+    // 주석의 서술을 세지 않도록 클래스 속성 안에서만 찾는다.
+    const inClasses = (depth.match(/className="[^"]*max-w-xl[^"]*"/g) ?? []).length;
+    expect(inClasses).toBe(2); // 헤더 + 본문
+    expect(depth).toContain("mx-auto");
   });
 });
 

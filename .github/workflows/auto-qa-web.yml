@@ -22,7 +22,9 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 브라우저 설치(apt + 다운로드)가 느린 날 15분을 다 먹고 잡이 취소됐다
+    # (2026-08-19 PR #1122·#1123 에서 3회). 캐시를 붙였지만 미스 시 여유를 준다.
+    timeout-minutes: 25
     env:
       # production build 안전 모드 — DB/외부 API 의존 없는 라우트만 검증
       DATABASE_URL: "postgresql://noop:noop@localhost:5432/noop"
@@ -43,8 +45,21 @@ jobs:
       - name: Install workspace deps
         run: npm ci
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        # 캐시 히트면 바이너리 다운로드를 건너뛰고 시스템 의존성만 넣는다.
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install chromium --with-deps
+          fi
         working-directory: apps/web
 
       - name: Build web (production)
@@ -96,7 +111,7 @@ jobs:
   # 완료 조건 2(빈 박스로 남지 않을 것)를 게이트로 지키려면 여기서 봐야 한다.
   fomo-web-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -109,8 +124,20 @@ jobs:
       - name: Install workspace deps
         run: npm ci
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install chromium --with-deps
+          fi
         working-directory: apps/fomo-web
 
       - name: Build fomo-web (production)

@@ -442,9 +442,9 @@ describe("캡션 — 템플릿만, 금지어 없음 (§4 규칙 1)", () => {
   it("막대가 무엇인지 캡션이 밝힌다 — 유형마다 축이 달라 매출로 오해된다", () => {
     // 2026-08-06 A-3 단서: "캡션에 막대가 무엇인지 명시할 것."
     const chart = buildValuationChart(withRevenue(), "QUALITY_COMPOUNDER", RULESET);
-    expect(chart.captions.some((c) => c === `막대는 ${chart.bar_label}입니다.`)).toBe(true);
+    expect(chart.captions.some((c) => c === `막대는 ${chart.bar_label}예요.`)).toBe(true);
     // 카드는 첫 캡션만 보여주므로 막대 캡션이 밴드 위치 문장을 밀어내면 안 된다.
-    expect(chart.captions.at(-1)).toBe(`막대는 ${chart.bar_label}입니다.`);
+    expect(chart.captions.at(-1)).toBe(`막대는 ${chart.bar_label}예요.`);
     expect(chart.captions[0]).not.toContain("막대는");
   });
 
