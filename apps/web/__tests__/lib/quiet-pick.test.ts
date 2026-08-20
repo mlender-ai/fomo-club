@@ -420,7 +420,12 @@ describe("buildQuietPickResponse — 데이터 완결성 게이트(WO-P1)", () =
     expect(pick!.dataQuality.sealedCandles).toBe(250);
   });
 
-  it("발행 픽 전원 dataQuality: 캔들 ≥200 · 티커 · 한국어 정체", async () => {
+  /**
+   * DS-05 §4 이후: 섹터는 **신뢰 소스가 있을 때만** 채운다. 매핑이 없으면 빈 문자열이고
+   * `dataQuality.identity` 가 false 다 — 발행을 막지는 않는다(화면이 섹터 줄을 안 그린다).
+   * 종전에는 `기타 업종`·`미국주식` 폴백으로 항상 true 였고, 그게 테마 라벨 오염과 같은 뿌리였다.
+   */
+  it("발행 픽 전원 dataQuality: 캔들 ≥200 · 티커 · 섹터는 있으면 한국어", async () => {
     const s = baseScenario();
     s.attention["Byrna Technologies Inc."] = quietAttention(5);
     s.insiders = [
@@ -431,10 +436,13 @@ describe("buildQuietPickResponse — 데이터 완결성 게이트(WO-P1)", () =
     expect(res.picks.length).toBeGreaterThan(0);
     for (const pick of res.picks) {
       expect(pick.dataQuality.candles).toBeGreaterThanOrEqual(200);
-      expect(pick.dataQuality.identity).toBe(true);
-      // 영문 원문 노출 금지 — 정체 한 줄은 항상 한국어(잘린 "Miscellaneous Electrical" 재발 차단).
-      expect(pick.subject.identity).toMatch(/[가-힣]/);
-      expect(pick.subject.identity).not.toMatch(/[A-Za-z]{4,}/);
+      // 섹터가 있으면 dataQuality 가 그렇다고 말한다(둘이 갈리면 감사 불가).
+      expect(pick.dataQuality.identity).toBe(Boolean(pick.subject.identity));
+      if (pick.subject.identity) {
+        // 영문 원문 노출 금지 — 있을 때는 항상 한국어(잘린 "Miscellaneous Electrical" 재발 차단).
+        expect(pick.subject.identity).toMatch(/[가-힣]/);
+        expect(pick.subject.identity).not.toMatch(/[A-Za-z]{4,}/);
+      }
       if (pick.subject.country === "US") expect(pick.dataQuality.ticker).toBe(true);
     }
   });

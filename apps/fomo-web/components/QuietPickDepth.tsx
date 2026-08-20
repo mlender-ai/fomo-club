@@ -7,6 +7,7 @@ import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontRespo
 import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
 import { companyBlurb, evidenceRows } from "@/lib/depthSections";
 import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
+import { trustedSector } from "@/lib/sectorTrust";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { displayName, priceText } from "@/components/QuietPickCard";
@@ -176,6 +177,21 @@ function RevenueBars({
   );
 }
 
+/**
+ * 본문 스켈레톤 (DS-05 §5) — **헤더는 즉시 그린다**(카드에서 넘어온 데이터라 기다릴 게 없다).
+ * 본문만 블록 4개로 채운다. 스피너를 쓰지 않는다.
+ */
+function DepthSkeleton() {
+  return (
+    <div className="mt-s4" data-testid="depth-skeleton" aria-busy>
+      <div className="ds-skeleton h-8 w-4/5 rounded-block bg-ds-surface-1" />
+      <div className="ds-skeleton mt-s5 h-24 w-full rounded-block bg-ds-surface-1" />
+      <div className="ds-skeleton mt-s5 h-16 w-full rounded-block bg-ds-surface-1" />
+      <div className="ds-skeleton mt-s5 h-16 w-full rounded-block bg-ds-surface-1" />
+    </div>
+  );
+}
+
 /** ⑥ 우리 기록 (DS-03 §9) — 화면의 **유일한 박스이자 유일한 accent**. */
 function OurRecordBlock({ record, currency }: { record: OurRecord; currency: (v: number) => string }) {
   return (
@@ -328,6 +344,8 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const hasWrongSection = Boolean(invalidationText || businessText || symbolRisks.length > 0 || archetypeRisks.length > 0);
 
   // 통화 기호 포맷은 카드와 **같은 함수**를 쓴다 — 한쪽만 고치면 화면이 갈린다(실측: 상세 `4.945`).
+  /** 섹터 신뢰 게이트 — 헤더 부제에도 같은 규칙을 쓴다(DS-05 §4). */
+  const sector = trustedSector(pick.subject.identity);
   const price = priceText(pick);
   const changePct = pick.price.changePct;
   const money = (v: number) =>
@@ -335,7 +353,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
   const toggle = () => {
     const now = toggleWatch(stock, Date.now(), {
-      ...(pick.subject.identity ? { sector: pick.subject.identity } : {}),
+      ...(sector ? { sector } : {}),
       reason: hook,
       priceAt: pick.price.current,
       ...(pick.subject.symbol ? { symbol: pick.subject.symbol } : {}),
@@ -370,7 +388,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           <div className="min-w-0 flex-1">
             <p className="truncate text-[14px] font-medium leading-tight text-ds-text-1">{displayName(pick)}</p>
             <p className="truncate font-mono text-ds-caption text-ds-text-3">
-              {[pick.subject.ticker ?? pick.subject.symbol ?? pick.subject.naverCode, pick.subject.identity]
+              {[pick.subject.ticker ?? pick.subject.symbol ?? pick.subject.naverCode, sector]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
@@ -416,6 +434,12 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               다시 올라온 이유 — {repairPickCopy(pick.signal.reentry.text)}
             </p>
           )}
+
+          {/*
+            본문이 아직 하나도 안 왔다 — 결론만 있고 나머지가 빈 순간을 스켈레톤으로 덮는다.
+            근거 행은 픽 페이로드로 즉시 만들 수 있으므로, 그것마저 없을 때만 해당한다.
+          */}
+          {rows.length === 0 && !basics && !front && !slotPayload && <DepthSkeleton />}
 
           {/* ② 근거 */}
           {rows.length > 0 && (

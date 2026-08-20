@@ -92,6 +92,20 @@ function Row({
 
 const WINDOWS = [7, 30, 90] as const;
 
+/** 지표 행 3개 스켈레톤 (DS-05 §5). 스피너 금지. */
+function ScorecardSkeleton() {
+  return (
+    <div className="mt-s5 border-t-hairline border-ds-border pt-s5" data-testid="scorecard-skeleton" aria-busy>
+      {[0, 1, 2].map((row) => (
+        <div key={row} className="flex items-baseline justify-between gap-s3 py-s3">
+          <span className="ds-skeleton h-4 w-24 rounded-block bg-ds-surface-1" />
+          <span className="ds-skeleton h-6 w-20 rounded-block bg-ds-surface-1" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TrackRecordPage() {
   const [record, setRecord] = useState<TrackRecordResponse | null>(null);
   const [picks, setPicks] = useState<ScorecardPick[]>([]);
@@ -312,10 +326,16 @@ export default function TrackRecordPage() {
                         {koreanDate(pick.date)} · 당시 {pick.priceAt.toLocaleString("en-US")}
                       </span>
                     </span>
+                    {/*
+                      값이 없으면 **값 줄을 만들지 않는다**(DS-05 §3 "값 없는 대시" 금지).
+                      `—` 는 고장으로 읽힌다 — 상태만 한 줄로 말한다.
+                    */}
                     <span className="shrink-0 text-right">
-                      <span className="block font-mono text-ds-data text-ds-text-1">
-                        {graded ? formatSignedPct(graded.returnPct) : sincePct !== null ? formatSignedPct(sincePct) : "—"}
-                      </span>
+                      {(graded || sincePct !== null) && (
+                        <span className="block font-mono text-ds-data text-ds-text-1">
+                          {graded ? formatSignedPct(graded.returnPct) : formatSignedPct(sincePct!)}
+                        </span>
+                      )}
                       <span className="mt-s1 block font-mono text-ds-caption text-ds-text-3">
                         {graded ? `${days}일 채점` : sincePct !== null ? "현재 변동" : "채점 전"}
                       </span>
@@ -328,9 +348,19 @@ export default function TrackRecordPage() {
         </Section>
       )}
 
+      {/* 로딩 — 아무것도 안 왔고 실패도 아니면 지표 행 스켈레톤(DS-05 §5). */}
+      {!failed && !record && picks.length === 0 && <ScorecardSkeleton />}
+
       {failed && picks.length === 0 && (
         <Section title="성적표">
           <p className="text-ds-body text-ds-text-1">잠시 후 다시 열어주세요.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-s4 h-btn-secondary w-full rounded-pill border-hairline border-ds-border text-[14px] font-medium text-ds-text-1"
+          >
+            다시 시도
+          </button>
         </Section>
       )}
 
