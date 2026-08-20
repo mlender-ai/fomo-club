@@ -567,11 +567,18 @@ export function sectorFromIndustry(industry: string | undefined | null): string 
   return undefined;
 }
 
+/**
+ * 섹터로 쓸 수 없는 라벨 — **자산군·테마다.** KR 사전(`sectorOf`)은 큐레이션이지만 테마 풀도
+ * 겸해서, 코인 관련 사업을 하는 증권사가 `코인` 으로 나온다(실측: 한화투자증권). 회사의 업종이
+ * 아니므로 섹터 자리에서 뺀다 — 화면은 섹터 줄을 그리지 않는다(DS-05 §4).
+ */
+const NON_SECTOR_LABELS = new Set(["코인", "비트코인", "가상자산", "환율", "금리", "유가", "지수"]);
+
 function companyIdentity(front: StockFrontData, sig: SignalCandidate): string {
   // 테마 라벨은 섹터가 아니다 — 여기서 쓰지 않는다(front 는 다른 신호에 계속 쓰인다).
   void front;
   const krSector = sig.subject.country === "KR" ? sectorOf(sig.subject.canonical) : undefined;
-  if (krSector) return krSector;
+  if (krSector && !NON_SECTOR_LABELS.has(krSector)) return krSector;
   const seedSector = sig.subject.symbol ? usDiscoverySeedForSymbol(sig.subject.symbol)?.sector?.trim() : undefined;
   if (seedSector && HANGUL.test(seedSector)) return seedSector.slice(0, 20);
   return sectorFromIndustry(sig.industry) ?? "";

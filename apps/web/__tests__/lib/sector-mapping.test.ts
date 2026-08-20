@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { INDUSTRY_KO, sectorFromIndustry } from "../../lib/quiet-pick";
 
@@ -49,6 +50,19 @@ describe("섹터 라벨 자체가 테마가 아니다", () => {
     const banned = ["코인", "환율", "금리", "유가", "비트코인", "지수"];
     for (const [, ko] of INDUSTRY_KO) {
       for (const label of banned) expect(ko.includes(label), `${ko}`).toBe(false);
+    }
+  });
+});
+
+describe("자산군 라벨은 섹터가 아니다 — KR 사전도 걸러진다", () => {
+  it("`코인` 은 회사 업종이 될 수 없다 (실측: 한화투자증권)", () => {
+    // KR 사전(`sectorOf`)은 테마 풀도 겸한다 — 코인 관련 사업을 하는 증권사가 `코인` 으로 나왔다.
+    // 섹터 자리에서 빼는 규칙이 코드에 있는지 본다(문자열 상수라 소스로 확인한다).
+    const source = readFileSync(new URL("../../lib/quiet-pick.ts", import.meta.url), "utf8");
+    expect(source).toContain("NON_SECTOR_LABELS");
+    expect(source).toMatch(/krSector && !NON_SECTOR_LABELS\.has\(krSector\)/);
+    for (const label of ["코인", "환율", "금리", "유가", "지수"]) {
+      expect(source.includes(`"${label}"`), label).toBe(true);
     }
   });
 });
