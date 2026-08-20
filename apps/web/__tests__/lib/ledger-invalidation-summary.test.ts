@@ -69,7 +69,8 @@ describe("발행 시점 조건으로 판정한다 (§4 규칙 1·5)", () => {
 
 describe("표본 수 병기 (§8 · 완료 조건 6)", () => {
   it("화면이 판단 건수를 함께 낸다", () => {
-    expect(PAGE).toMatch(/판단 \{metric\.n\.toLocaleString/);
+    // 변수명이 아니라 **사실**을 본다 — 판단 건수를 화면이 함께 낸다(DS-04 재작성 후 `Row sample`).
+    expect(PAGE).toMatch(/판단 \$\{[a-zA-Z.]*n\.toLocaleString/);
   });
 
   it("n 이 0 이면 비율을 0% 로 쓰지 않는다", () => {

@@ -13,6 +13,16 @@ export interface WatchItem {
   ts: number;
   sector?: string;
   reason?: string;
+  /**
+   * 관심을 누른 시점의 가격 — **내 기록 탭의 변동률 기준가**(DS-04 §2-1).
+   * 없으면 변동을 계산하지 않는다(지어내지 않는다). 이 필드 이전에 담긴 항목이 그렇다.
+   */
+  priceAt?: number;
+  /** 시세 조회용 식별자. 없으면 이름으로 조회한다. */
+  symbol?: string;
+  naverCode?: string;
+  market?: string;
+  country?: string;
 }
 
 function normalizeStock(value: unknown): string | null {
@@ -42,6 +52,11 @@ function read(): WatchItem[] {
           ts,
           ...(typeof row.sector === "string" ? { sector: row.sector } : {}),
           ...(typeof row.reason === "string" ? { reason: row.reason } : {}),
+          ...(typeof row.priceAt === "number" && row.priceAt > 0 ? { priceAt: row.priceAt } : {}),
+          ...(typeof row.symbol === "string" ? { symbol: row.symbol } : {}),
+          ...(typeof row.naverCode === "string" ? { naverCode: row.naverCode } : {}),
+          ...(typeof row.market === "string" ? { market: row.market } : {}),
+          ...(typeof row.country === "string" ? { country: row.country } : {}),
         };
       })
       .filter((item): item is WatchItem => item !== null);
@@ -69,11 +84,18 @@ export function getWatchlist(): WatchItem[] {
 }
 
 /** 관심 등록/갱신 — 기존 localStorage 구조와 호환되게 stock 기준으로 upsert. */
-export function upsertWatch(
-  stock: string,
-  nowMs: number,
-  meta: { sector?: string | undefined; reason?: string | undefined } = {}
-): WatchItem | null {
+export interface WatchMeta {
+  sector?: string | undefined;
+  reason?: string | undefined;
+  /** 관심을 누른 시점의 가격(DS-04 §2-1 변동률 기준가). */
+  priceAt?: number | undefined;
+  symbol?: string | undefined;
+  naverCode?: string | undefined;
+  market?: string | undefined;
+  country?: string | undefined;
+}
+
+export function upsertWatch(stock: string, nowMs: number, meta: WatchMeta = {}): WatchItem | null {
   const normalized = normalizeStock(stock);
   if (typeof window === "undefined" || !normalized) return null;
   const list = read();
@@ -81,11 +103,22 @@ export function upsertWatch(
   const existing = existingIndex >= 0 ? list[existingIndex] : null;
   const sector = existing?.sector ?? meta.sector;
   const reason = existing?.reason ?? meta.reason;
+  // 기준가는 **처음 누른 값을 지킨다** — 다시 누를 때 갱신하면 성적이 리셋된다.
+  const priceAt = existing?.priceAt ?? (typeof meta.priceAt === "number" && meta.priceAt > 0 ? meta.priceAt : undefined);
+  const symbol = existing?.symbol ?? meta.symbol;
+  const naverCode = existing?.naverCode ?? meta.naverCode;
+  const market = existing?.market ?? meta.market;
+  const country = existing?.country ?? meta.country;
   const item: WatchItem = {
     stock: normalized,
     ts: existing?.ts ?? nowMs,
     ...(sector ? { sector } : {}),
     ...(reason ? { reason } : {}),
+    ...(priceAt ? { priceAt } : {}),
+    ...(symbol ? { symbol } : {}),
+    ...(naverCode ? { naverCode } : {}),
+    ...(market ? { market } : {}),
+    ...(country ? { country } : {}),
   };
   if (existingIndex >= 0) {
     const next = [...list];
@@ -98,11 +131,7 @@ export function upsertWatch(
 }
 
 /** 관심 토글 — 새 상태(true=관심 등록됨) 반환. */
-export function toggleWatch(
-  stock: string,
-  nowMs: number,
-  meta: { sector?: string | undefined; reason?: string | undefined } = {}
-): boolean {
+export function toggleWatch(stock: string, nowMs: number, meta: WatchMeta = {}): boolean {
   if (typeof window === "undefined") return false;
   const list = read();
   const exists = list.some((w) => w.stock === stock);

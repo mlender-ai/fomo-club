@@ -1,394 +1,343 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { normalizeCompanyName } from "@fomo/core";
-import { SIGNAL_TYPE_CODES, SIGNAL_TYPE_LABELS } from "@fomo/core";
 import {
   fetchTrackRecord,
-  fetchScorecardPicks,
   fetchInvalidationSummary,
-  type InvalidationMetric,
+  fetchDiscoveryPerformancePrices,
+  type DiscoveryPerformancePriceRequestItem,
   type InvalidationSummary,
-  type TrackMetric,
-  type TrackRecordResponse,
   type TrackWindowResult,
-  type ScorecardPick,
+  type TrackRecordResponse,
 } from "@/lib/fomoApi";
+import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
+import {
+  formatSignedPct,
+  hasEnoughSample,
+  koreanDate,
+  pendingScoring,
+  rateOrSampleShort,
+  sinceMove,
+} from "@/lib/scorecard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 
-const NEON = "#D8FF3A";
-const ASSET_LABEL: Record<string, string> = {
-  "kr-stock": "국장",
-  "us-stock": "미장",
-  coin: "코인",
-  macro: "거시",
-};
-const SIGNAL_LABEL: Record<string, string> = SIGNAL_TYPE_LABELS;
-const SCORE_LABEL: Record<string, string> = {
-  "80-100": "80점 이상",
-  "60-79": "60–79점",
-  "0-59": "60점 미만",
-};
-
-function signed(value: number): string {
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
-}
-
 /**
- * 무효 조건 블록 (WO-SUB-07 §8).
+ * 성적표 — DS-04 §1(`docs/design/DS-04_RECORDS.md`). 토큰은 DS-00.
  *
- * **판정 불가를 미충족으로 세지 않는다**(§6-4). 셋을 모두 보여주고 표본 수(n)를 병기한다 —
- * 표본이 작으면 작다고 보여야 한다(§8). 비율만 내면 3건의 33% 와 300건의 33% 가 같아 보인다.
+ * ## 이 화면의 설계 과제는 **빈 상태**다
  *
- * 데이터가 없으면 블록 자체를 숨긴다(빈 상자 금지). 성적이 나빠서 숨기는 것이 아니라
- * 아직 판정할 발행분이 없다는 뜻이다 — 생기면 자동으로 나온다.
+ * 지금 채점 표본이 거의 없다(가격 무효선 30건 전부 판정 불가, T+30 표본 부족). 그대로 열면
+ * 빈 화면인데, 그게 고장으로 읽히면 안 된다. 그래서
+ *
+ * 1. 채점 결과가 없으면 **채점 대기 건수 + 첫 채점 예정일**을 말한다(다시 올 이유).
+ * 2. 채점과 별개로 **"짚은 뒤 지금까지 얼마나 움직였나"** 는 지금 계산할 수 있다 — 그걸 보여준다.
+ *    단 **채점 결과가 아니라고 명시**한다(§1-5).
+ *
+ * ## 절대 규칙 (§1-4)
+ *
+ * 표본 30 미만이면 비율 대신 `표본 부족 (N건)` · 판정 불가를 분모에서 빼지 않는다 ·
+ * 평균 금지(중앙값만) · 나쁜 성적도 그대로. 계산은 `lib/scorecard.ts` 가 한다.
+ *
+ * accent 는 **대표 지표 하나**뿐이다. 채점 결과가 있으면 중앙값, 없으면 현재 변동이 그 자리다.
  */
-function InvalidationRow({ label, metric, note }: { label: string; metric: InvalidationMetric; note: string }) {
-  if (metric.n === 0) return null;
-  return (
-    <div className="mt-3 first:mt-0">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-bold text-whiteout">{label}</span>
-        <span className="text-sm font-bold" style={{ color: NEON }}>
-          {metric.rate === null ? "—" : `${metric.rate.toFixed(1)}%`}
-          {/* 표본 수를 항상 병기한다(§8). 다만 영문 약어 표기는 내부 용어라 화면에서는 한국어로
-              쓴다 — WO §8 목업도 "판단 수 1,240" 형태이고, insufficientSampleCopyGuard 가 그 약어를 막는다. */}
-          <span className="ml-1.5 text-[11px] font-normal text-muted">판단 {metric.n.toLocaleString("ko-KR")}건</span>
-        </span>
-      </div>
-      <p className="mt-1 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">
-        도달 {metric.reached} · 미도달 {metric.notReached} · 판정 불가 {metric.undetermined}
-      </p>
-      <p className="mt-0.5 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">{note}</p>
-    </div>
-  );
+
+/** KST 오늘 `YYYY-MM-DD`. */
+function todayKst(): string {
+  const now = new Date();
+  const kst = new Date(now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60_000);
+  return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
 }
 
-function InvalidationBlock({ summary }: { summary: InvalidationSummary | null }) {
-  if (!summary) return null;
-  if (summary.price.n === 0 && summary.business.n === 0) return null;
-  const reasons = Object.entries(summary.businessUndeterminedReasons).sort((a, b) => b[1] - a[1]);
-  const versions = Object.entries(summary.rulesetVersions).sort((a, b) => b[1] - a[1]);
+/** 섹션 — 제목은 `label` mono, 위에 0.5px 구분선. */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-4 rounded-xl border border-hairline bg-white/[0.03] px-4 py-4">
-      <p className="text-sm font-bold text-whiteout">무효 조건</p>
-      <p className="mt-1 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">
-        발행할 때 &ldquo;이러면 이 관점은 틀린 겁니다&rdquo;라고 미리 적어둔 선이에요. 얼마나 도달했는지 그대로 셉니다.
-      </p>
-      <div className="mt-3">
-        <InvalidationRow label="가격 무효선 도달" metric={summary.price} note="발행 시점 무효선을 이후 관측 가격이 넘었는지" />
-        <InvalidationRow label="사업 무효 조건 도달" metric={summary.business} note="실적 데이터로 자동 판정한 결과" />
-      </div>
-      {reasons.length > 0 && (
-        <p className="mt-3 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
-          판정 불가 사유 · {reasons.map(([reason, count]) => `${reason} ${count}`).join(" · ")}
-        </p>
-      )}
-      {versions.length > 0 && (
-        <p className="mt-1 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
-          규칙 버전 분포 · {versions.map(([version, count]) => `${version} ${count}`).join(" · ")}
-        </p>
-      )}
+    <section className="mt-s5 border-t-hairline border-ds-border pt-s5">
+      <h2 className="font-mono text-ds-label tracking-[0.06em] text-ds-text-2">{title}</h2>
+      <div className="mt-s3">{children}</div>
     </section>
   );
 }
 
-function MetricBlock({ label, metric, value }: { label: string; metric: TrackMetric; value: "winRate" | "median" | "n" }) {
-  if ((value === "winRate" && metric.winRate === null) || (value === "median" && metric.medianReturn === null)) return null;
-  const display = value === "n"
-    ? metric.n.toLocaleString("ko-KR")
-    : value === "median"
-      ? signed(metric.medianReturn!)
-      : `${metric.winRate!.toFixed(1)}%`;
-  const note = value === "winRate" ? "수익률 0% 초과" : value === "median" ? "전체 수익률 중앙값" : "상승·하락 모두 포함";
-  return (
-    <div className="min-w-0 border-l border-hairline pl-3 first:border-l-0 first:pl-0">
-      <p className="break-words text-[10px] leading-4 text-muted">{label}</p>
-      <p className="mt-1 break-words font-number text-lg font-bold leading-6 text-whiteout sm:text-xl">{display}</p>
-      <p className="mt-0.5 break-words text-[10px] leading-4 text-muted">{note}</p>
-    </div>
-  );
-}
-
-function Breakdown({
-  title,
-  values,
-  labels,
-  order,
+/** 라벨-값 행 — 값은 우측 정렬. 표본 수는 값 아래 `caption` 으로 항상 병기한다(§1-3). */
+function Row({
+  label,
+  value,
+  sample,
+  accent = false,
 }: {
-  title: string;
-  values: Record<string, TrackMetric>;
-  labels: Record<string, string>;
-  order?: string[];
+  label: string;
+  value: string;
+  sample?: string;
+  accent?: boolean;
 }) {
-  const rank = new Map((order ?? []).map((key, index) => [key, index]));
-  const rows = Object.entries(values).filter(([, metric]) => metric.n > 0 && metric.winRate !== null).sort((a, b) => {
-    if (order) return (rank.get(a[0]) ?? 999) - (rank.get(b[0]) ?? 999);
-    return b[1].n - a[1].n || a[0].localeCompare(b[0]);
-  });
-  if (rows.length === 0) return null;
   return (
-    <section className="border-t border-hairline py-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-whiteout">{title}</h2>
-        <span className="text-[10px] text-muted">상승·하락 전체</span>
-      </div>
-      <div className="divide-y divide-hairline">
-          {rows.map(([key, metric]) => (
-            <div key={key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3">
-              <span className="min-w-0 truncate text-sm text-whiteout">{labels[key] ?? key}</span>
-              <div className="min-w-16 text-right">
-                <p className="font-number text-sm font-bold" style={{ color: metric.winRate !== null && metric.winRate >= 50 ? NEON : "#A3A3A0" }}>
-                  {metric.winRate!.toFixed(1)}%
-                </p>
-                <p className="mt-0.5 text-[10px] text-muted">{metric.n}건 기준</p>
-              </div>
-            </div>
-          ))}
-      </div>
-    </section>
+    <div className="flex items-baseline justify-between gap-s3 py-s2">
+      <span className="shrink-0 font-mono text-ds-label text-ds-text-2">{label}</span>
+      <span className="min-w-0 text-right">
+        <span
+          className={
+            accent
+              ? "font-mono text-[28px] font-medium leading-none text-ds-accent"
+              : "font-mono text-[16px] leading-tight text-ds-text-1"
+          }
+        >
+          {value}
+        </span>
+        {sample && <span className="mt-s1 block font-mono text-ds-caption text-ds-text-3">{sample}</span>}
+      </span>
+    </div>
   );
 }
 
-function marketTag(pick: ScorecardPick): string {
-  if (pick.market === "COIN") return "₿";
-  if (pick.country === "US") return "🇺🇸";
-  return "🇰🇷";
-}
-
-function PickRow({ pick, days, onOpen }: { pick: ScorecardPick; days: 7 | 30 | 90; onOpen: () => void }) {
-  const ret = pick.returns[String(days) as "7" | "30" | "90"];
-  const color = ret ? (ret.returnPct > 0 ? NEON : ret.returnPct < 0 ? "#F87171" : "#A3A3A0") : "#6B6B68";
-  return (
-    <button type="button" onClick={onOpen} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-4 py-3 text-left">
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span aria-hidden>{marketTag(pick)}</span>
-          <span className="truncate text-sm font-semibold text-whiteout">{normalizeCompanyName(pick.canonical)}</span>
-          <span className="shrink-0 text-[10px] text-muted">{pick.date}</span>
-        </div>
-        {pick.hook && <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">“{pick.hook}”</p>}
-      </div>
-      <div className="min-w-16 shrink-0 text-right">
-        <p className="font-number text-sm font-bold" style={{ color }}>
-          {ret ? signed(ret.returnPct) : "채점 전"}
-        </p>
-        <p className="mt-0.5 text-[10px] text-muted">당시 {pick.priceAt >= 1000 ? pick.priceAt.toLocaleString("ko-KR") : pick.priceAt.toLocaleString("en-US", { maximumFractionDigits: 2 })}</p>
-      </div>
-    </button>
-  );
-}
-
-function PickList({ picks, days, onOpen }: { picks: ScorecardPick[]; days: 7 | 30 | 90; onOpen: (pick: ScorecardPick) => void }) {
-  if (picks.length === 0) return null;
-  return (
-    <section className="border-t border-hairline py-5">
-      <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-whiteout">짚은 픽 · 최신순</h2>
-        <span className="text-[10px] text-muted">그때 뭐라 했는지 그대로</span>
-      </div>
-      <div className="divide-y divide-hairline">
-        {picks.map((pick) => (
-          <PickRow key={`${pick.date}:${pick.canonical}`} pick={pick} days={days} onOpen={() => onOpen(pick)} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/** 헤드라인 + 최근 픽을 정사각 이미지로 — 공유·저장(마케팅 1등 화면). */
-async function shareScorecard(headline: string, picks: ScorecardPick[], days: 7 | 30 | 90): Promise<void> {
-  const size = 1080;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.fillStyle = "#0A0A0A";
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = NEON;
-  ctx.font = "bold 40px sans-serif";
-  ctx.fillText("FOMO CLUB · 성적표", 72, 120);
-  ctx.fillStyle = "#FAFAFA";
-  ctx.font = "bold 52px sans-serif";
-  wrapText(ctx, headline, 72, 220, size - 144, 66);
-  ctx.font = "bold 34px sans-serif";
-  let y = 470;
-  for (const pick of picks.slice(0, 5)) {
-    const ret = pick.returns[String(days) as "7" | "30" | "90"];
-    ctx.fillStyle = "#FAFAFA";
-    ctx.fillText(`${marketTag(pick)} ${normalizeCompanyName(pick.canonical)}`.slice(0, 22), 72, y);
-    ctx.fillStyle = ret ? (ret.returnPct >= 0 ? NEON : "#F87171") : "#6B6B68";
-    ctx.textAlign = "right";
-    ctx.fillText(ret ? signed(ret.returnPct) : "채점 전", size - 72, y);
-    ctx.textAlign = "left";
-    y += 78;
-  }
-  ctx.fillStyle = "#A3A3A0";
-  ctx.font = "26px sans-serif";
-  ctx.fillText("이 기록은 수정·삭제되지 않습니다.", 72, size - 80);
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!blob) return;
-  const file = new File([blob], "fomo-scorecard.png", { type: "image/png" });
-  const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean };
-  if (nav.canShare?.({ files: [file] }) && navigator.share) {
-    await navigator.share({ files: [file], title: "FOMO CLUB 성적표" }).catch(() => undefined);
-    return;
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "fomo-scorecard.png";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number): void {
-  const words = text.split(" ");
-  let line = "";
-  let cursorY = y;
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, x, cursorY);
-      line = word;
-      cursorY += lineHeight;
-    } else {
-      line = test;
-    }
-  }
-  if (line) ctx.fillText(line, x, cursorY);
-}
+const WINDOWS = [7, 30, 90] as const;
 
 export default function TrackRecordPage() {
   const [record, setRecord] = useState<TrackRecordResponse | null>(null);
   const [picks, setPicks] = useState<ScorecardPick[]>([]);
+  const [invalidation, setInvalidation] = useState<InvalidationSummary | null>(null);
+  const [prices, setPrices] = useState<Record<string, number>>({});
   const [days, setDays] = useState<7 | 30 | 90>(30);
-  const [userPicked, setUserPicked] = useState(false);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<ScorecardPick | null>(null);
-  // 무효 조건 성적 — 실패해도 성적표 나머지는 그대로다(선택 블록).
-  const [invalidation, setInvalidation] = useState<InvalidationSummary | null>(null);
 
   useEffect(() => {
     void fetchTrackRecord().then(setRecord).catch(() => setFailed(true));
-    void fetchScorecardPicks().then((res) => setPicks(res.picks)).catch(() => undefined);
+    void fetchScorecardPicksCached().then((res) => setPicks(res.picks ?? [])).catch(() => undefined);
     void fetchInvalidationSummary().then(setInvalidation).catch(() => undefined);
   }, []);
 
-  // 아직 도래한 outcome이 특정 창에만 있을 수 있어, 첫 진입은 기록이 가장 많은 창을 고른다.
+  /**
+   * "짚은 뒤 지금까지" 의 현재가 — 종목별 1회, 최대 40건 한 번에 받는다(벌크 라우트).
+   * 실패하면 그 블록만 사라진다.
+   */
   useEffect(() => {
-    if (!record || userPicked) return;
-    const best = record.windows.reduce<{ days: 7 | 30 | 90; n: number } | null>((acc, w) => {
-      const d = w.days as 7 | 30 | 90;
-      return acc && acc.n >= w.overall.n ? acc : { days: d, n: w.overall.n };
-    }, null);
-    if (best && best.n > 0 && best.days !== days) setDays(best.days);
-  }, [record, userPicked, days]);
+    const quiet = picks.filter((p) => p.pickType === "quiet");
+    if (quiet.length === 0) return;
+    // 종목별 한 번만, 최대 40건. 원장의 market·country 는 느슨한 문자열이라 좁혀 담는다.
+    const seen = new Set<string>();
+    const items: DiscoveryPerformancePriceRequestItem[] = [];
+    for (const p of quiet) {
+      if (seen.has(p.canonical) || items.length >= 40) continue;
+      seen.add(p.canonical);
+      const item: DiscoveryPerformancePriceRequestItem = { stock: p.canonical };
+      if (p.symbol) item.symbol = p.symbol;
+      if (p.naverCode) item.naverCode = p.naverCode;
+      // 좁은 유니온으로 단정하되 undefined 는 담지 않는다(exactOptionalPropertyTypes).
+      const market = p.market as NonNullable<DiscoveryPerformancePriceRequestItem["market"]> | undefined;
+      const country = p.country as NonNullable<DiscoveryPerformancePriceRequestItem["country"]> | undefined;
+      if (market) item.market = market;
+      if (country) item.country = country;
+      items.push(item);
+    }
+    let alive = true;
+    void fetchDiscoveryPerformancePrices(items)
+      .then((res) => {
+        if (!alive) return;
+        const next: Record<string, number> = {};
+        for (const [stock, price] of Object.entries(res.prices)) {
+          if (typeof price?.currentPrice === "number") next[stock] = price.currentPrice;
+        }
+        setPrices(next);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [picks]);
 
   const windowResult = useMemo<TrackWindowResult | null>(
     () => record?.windows.find((item) => item.days === days) ?? null,
     [record, days]
   );
+  const pending = useMemo(() => pendingScoring(picks, todayKst()), [picks]);
+  const since = useMemo(() => sinceMove(picks, (canonical) => prices[canonical]), [picks, prices]);
 
-  const headline = useMemo(() => {
-    const o = windowResult?.overall;
-    if (!o || o.n === 0 || o.winRate === null || o.medianReturn === null) return null;
-    return `우리가 짚은 ${o.n}곳, ${days}일 승률 ${o.winRate.toFixed(1)}% · 중앙값 ${signed(o.medianReturn)}`;
-  }, [windowResult, days]);
+  const overall = windowResult?.overall ?? null;
+  const scored = Boolean(overall && overall.n > 0 && overall.medianReturn !== null);
+  /** accent 는 한 곳 — 채점 결과가 있으면 중앙값, 없으면 현재 변동. */
+  const accentOn: "median" | "since" | null = scored ? "median" : since.medianPct !== null ? "since" : null;
 
-  const onShare = useCallback(() => {
-    void shareScorecard(headline ?? "포모클럽의 성적표", picks, days);
-  }, [headline, picks, days]);
+  const recent = useMemo(
+    () => picks.filter((p) => p.pickType === "quiet").slice(0, 20),
+    [picks]
+  );
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-6 pb-16 pt-[calc(1.25rem+env(safe-area-inset-top))]">
-      <div className="flex items-center justify-between">
-        <a href="/" className="text-sm text-muted">← 오늘의 30장</a>
-        <span className="font-pixel text-xs text-whiteout">FOMO CLUB</span>
+    <main className="mx-auto min-h-screen w-full max-w-xl px-gutter pb-s6 pt-[calc(1rem+env(safe-area-inset-top))]">
+      <div className="flex h-14 items-center">
+        <a href="/" aria-label="뒤로" className="-ml-2 flex h-touch w-touch items-center justify-center text-ds-text-2">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <path d="M12.5 4L6.5 10l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </a>
       </div>
 
-      <header className="pb-6 pt-10">
-        <p className="font-pixel text-[10px] text-muted">JUDGMENT LEDGER</p>
-        <h1 className="mt-2 text-3xl font-bold text-whiteout">포모클럽의 성적표</h1>
-        {headline ? (
-          <p className="mt-3 max-w-xl break-words text-lg font-bold leading-7 text-whiteout [overflow-wrap:anywhere]">{headline}</p>
-        ) : (
-          <p className="mt-3 max-w-xl break-words text-sm leading-6 text-muted [overflow-wrap:anywhere]">
-            선정 당시 가격을 박제한 뒤 7·30·90일 실제 종가로 채점 중이에요. 도래한 창부터 공개됩니다.
-          </p>
-        )}
-        <p className="mt-2 max-w-xl break-words text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">
-          전체 공개(하락 포함) · 고정 창 · 소급 불변. 오른 것만 고르지 않아요.
-        </p>
-        <button
-          type="button"
-          onClick={onShare}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-black"
-          style={{ backgroundColor: NEON }}
-        >
-          성적표 공유하기
-        </button>
+      <header>
+        <h1 className="text-ds-title-lg text-ds-text-1">성적표</h1>
+        <p className="mt-s1 text-ds-caption text-ds-text-2">우리가 짚은 뒤 얼마나 움직였나</p>
       </header>
 
-      <div className="mb-6 inline-flex rounded-lg border border-hairline p-1">
-        {([7, 30, 90] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => {
-              setUserPicked(true);
-              setDays(value);
-            }}
-            className="min-w-20 rounded-md px-4 py-2 text-xs font-semibold"
-            style={days === value ? { backgroundColor: NEON, color: "#0A0A0A" } : { color: "#A3A3A0" }}
-          >
-            {value}일
-          </button>
-        ))}
-      </div>
-
-      {failed ? (
-        <p className="border-t border-hairline py-12 text-center text-sm text-muted">성과 원장을 불러오지 못했어요.</p>
-      ) : !windowResult ? (
-        <p className="border-t border-hairline py-12 text-center text-sm text-muted">성과 원장을 불러오는 중이에요.</p>
-      ) : windowResult.overall.n > 0 ? (
-        <>
-          <section className="grid grid-cols-3 gap-4 border-y border-hairline py-5">
-            <MetricBlock label={`${days}일 상승 비율`} metric={windowResult.overall} value="winRate" />
-            <MetricBlock label="중앙값 수익" metric={windowResult.overall} value="median" />
-            <MetricBlock label="전체 표본" metric={windowResult.overall} value="n" />
-          </section>
-          <Breakdown title="자산군별" values={windowResult.byAsset} labels={ASSET_LABEL} />
-          <Breakdown
-            title="신호 유형별"
-            values={windowResult.bySignal}
-            labels={SIGNAL_LABEL}
-            order={[...SIGNAL_TYPE_CODES]}
+      {/* ① 채점 결과 — 도래한 창만. 표본 30 미만이면 비율 대신 표본을 말한다. */}
+      {scored && overall && (
+        <Section title="채점 결과">
+          <div className="mb-s3 inline-flex h-9 rounded-pill bg-ds-surface-1 p-[3px]" role="tablist" aria-label="채점 기간">
+            {WINDOWS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={days === value}
+                onClick={() => setDays(value)}
+                className={`min-w-16 rounded-pill px-s3 font-mono text-ds-label ${
+                  days === value ? "bg-ds-surface-2 text-ds-text-1" : "text-ds-text-3"
+                }`}
+              >
+                {value}일
+              </button>
+            ))}
+          </div>
+          <Row
+            label={`${days}일 후 중앙값`}
+            value={formatSignedPct(overall.medianReturn!)}
+            sample={`판단 ${overall.n.toLocaleString("ko-KR")}건`}
+            accent={accentOn === "median"}
           />
-          <Breakdown
-            title="종합 점수대별"
-            values={windowResult.byScoreBand}
-            labels={SCORE_LABEL}
-            order={["80-100", "60-79", "0-59"]}
+          <Row
+            label="상승 비율"
+            value={rateOrSampleShort(overall.winRate, overall.n)}
+            sample={hasEnoughSample(overall.n) ? `판단 ${overall.n.toLocaleString("ko-KR")}건` : "30건부터 비율을 내요"}
           />
-        </>
-      ) : null}
+          <Row label="판단 수" value={`${overall.n.toLocaleString("ko-KR")}건`} sample="상승·하락 모두 포함" />
+        </Section>
+      )}
 
-      <InvalidationBlock summary={invalidation} />
+      {/* ② 아직 채점 전 — 빈 화면을 고장으로 읽히지 않게 하는 자리(§1-5). */}
+      {pending.pending > 0 && (
+        <Section title="아직 채점 전">
+          <p className="text-ds-body text-ds-text-1" data-testid="scorecard-pending-note">
+            발행 후 7일이 지나야 채점이 시작돼요.
+          </p>
+          <div className="mt-s3">
+            <Row label="채점 대기" value={`${pending.pending.toLocaleString("ko-KR")}건`} />
+            {pending.firstPublishedAt && (
+              <Row label="첫 판단" value={koreanDate(pending.firstPublishedAt)} />
+            )}
+            {pending.firstScoringAt && (
+              <Row label="첫 채점 예정" value={koreanDate(pending.firstScoringAt)} />
+            )}
+          </div>
+        </Section>
+      )}
 
-      <PickList picks={picks} days={days} onOpen={setSelected} />
+      {/* ③ 그동안 볼 수 있는 것 — **채점 결과가 아니다.** 그 구분을 문장으로 못 박는다. */}
+      {since.medianPct !== null && (
+        <Section title="그동안 이건 볼 수 있어요">
+          <p className="text-ds-body text-ds-text-1">우리가 짚은 뒤 지금까지</p>
+          <div className="mt-s3">
+            <Row
+              label="변동 중앙값"
+              value={formatSignedPct(since.medianPct)}
+              sample={`대상 ${since.n.toLocaleString("ko-KR")}곳`}
+              accent={accentOn === "since"}
+            />
+          </div>
+          <p className="mt-s3 text-ds-caption text-ds-text-3" data-testid="scorecard-since-disclaimer">
+            채점 결과가 아니라 현재 시점 변동이에요. 채점은 발행 후 7·30·90일 종가로 해요.
+          </p>
+        </Section>
+      )}
 
-      <section className="mt-4 rounded-xl border border-hairline bg-white/[0.03] px-4 py-4">
-        <p className="text-sm font-bold text-whiteout">이 기록은 수정·삭제되지 않습니다.</p>
-        <p className="mt-1 text-[12px] leading-5 text-muted [overflow-wrap:anywhere]">
-          선정 시점 가격과 그때의 훅을 append-only 원장에 봉인해요. 틀린 픽도 그대로 남습니다 — 그게 제품의 서약이에요.
-        </p>
-      </section>
+      {/* ④ 무효 조건 — **판정 불가를 분모에서 빼지 않는다.** 세 값을 그대로 센다. */}
+      {invalidation && (invalidation.price.n > 0 || invalidation.business.n > 0) && (
+        <Section title="무효 조건">
+          <p className="text-ds-body text-ds-text-2">
+            발행할 때 &ldquo;이러면 이 판단은 틀린 거예요&rdquo; 라고 미리 적어둔 선이에요.
+          </p>
+          <div className="mt-s3" data-testid="scorecard-invalidation">
+            {/*
+              **도달·미도달·판정 불가를 모두 낸다.** 판정 불가를 미도달로 합치거나 분모에서 빼면
+              성적이 조용히 좋아진다(WO-SUB-07 §6-4 — 그 회귀를 테스트가 감시한다).
+              DS-04 §1-2 목업은 3행이지만, 이 정직성 규칙이 요구하는 `미도달` 행을 더 둔다.
+            */}
+            <Row
+              label="가격 무효선 도달"
+              value={`${invalidation.price.reached.toLocaleString("ko-KR")}건`}
+              sample={`판단 ${invalidation.price.n.toLocaleString("ko-KR")}건`}
+            />
+            <Row label="미도달" value={`${invalidation.price.notReached.toLocaleString("ko-KR")}건`} />
+            <Row label="사업 조건 충족" value={`${invalidation.business.reached.toLocaleString("ko-KR")}건`} />
+            <Row
+              label="판정 불가"
+              value={`${(invalidation.price.undetermined + invalidation.business.undetermined).toLocaleString("ko-KR")}건`}
+              sample="분모에서 빼지 않아요"
+            />
+          </div>
+          {Object.keys(invalidation.rulesetVersions).length > 0 && (
+            <p className="mt-s3 font-mono text-ds-caption text-ds-text-3">
+              규칙 버전 분포 ·{" "}
+              {Object.entries(invalidation.rulesetVersions)
+                .sort((a, b) => b[1] - a[1])
+                .map(([version, count]) => `${version} ${count}`)
+                .join(" · ")}
+            </p>
+          )}
+        </Section>
+      )}
 
-      <footer className="break-words border-t border-hairline pt-5 text-[11px] leading-5 text-muted [overflow-wrap:anywhere]">
-        수익률은 선정 시점 가격 대비 목표일 당일 또는 다음 첫 거래일 종가입니다. 거래비용·세금·환율 효과는 포함하지 않습니다.
-      </footer>
+      {/* ⑤ 짚은 픽 — 그때 뭐라 했는지 그대로. 구분선 리스트(카드 아님), 이모지 없음. */}
+      {recent.length > 0 && (
+        <Section title="짚은 픽 · 최신순">
+          <ul>
+            {recent.map((pick) => {
+              const graded = pick.returns[String(days) as "7" | "30" | "90"];
+              const current = prices[pick.canonical];
+              const sincePct =
+                typeof current === "number" && pick.priceAt > 0
+                  ? ((current - pick.priceAt) / pick.priceAt) * 100
+                  : null;
+              return (
+                <li key={`${pick.date}:${pick.canonical}`} className="border-b-hairline border-ds-border">
+                  <button
+                    type="button"
+                    onClick={() => setSelected(pick)}
+                    className="flex min-h-16 w-full items-baseline justify-between gap-s3 py-s3 text-left"
+                    data-testid="scorecard-pick-row"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-[14px] font-medium leading-tight text-ds-text-1">
+                        {normalizeCompanyName(pick.canonical)}
+                      </span>
+                      <span className="mt-s1 block font-mono text-ds-caption text-ds-text-3">
+                        {koreanDate(pick.date)} · 당시 {pick.priceAt.toLocaleString("en-US")}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block font-mono text-ds-data text-ds-text-1">
+                        {graded ? formatSignedPct(graded.returnPct) : sincePct !== null ? formatSignedPct(sincePct) : "—"}
+                      </span>
+                      <span className="mt-s1 block font-mono text-ds-caption text-ds-text-3">
+                        {graded ? `${days}일 채점` : sincePct !== null ? "현재 변동" : "채점 전"}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
+
+      {failed && picks.length === 0 && (
+        <Section title="성적표">
+          <p className="text-ds-body text-ds-text-1">잠시 후 다시 열어주세요.</p>
+        </Section>
+      )}
+
+      <p className="mt-s5 border-t-hairline border-ds-border pt-s4 text-ds-caption text-ds-text-3">
+        이 기록은 수정·삭제되지 않아요. 발행 시점 가격과 그때의 문장을 그대로 남겨요.
+        수익률은 발행가 대비 목표일 종가이고, 거래비용·세금·환율은 넣지 않아요.
+      </p>
 
       {selected && (
         <StockInsightView
