@@ -1,6 +1,37 @@
-/* 본문·숫자 Pretendard / 로고성 pixel-display만 JetBrains Mono — @import는 Tailwind보다 먼저. */
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&display=swap");
+/**
+ * 폰트는 **번들에 있다** (DS-06 §6-2).
+ *
+ * 종전에는 jsDelivr·Google Fonts 를 `@import` 로 끌어와서, 첫 진입에 시스템 폰트로 한 번
+ * 그려진 뒤 폰트가 도착하면 다시 그려졌다(FOUT). 앱 출시 전제에서는 CDN 지연 로딩을 쓰지
+ * 않는다 — 파일을 `public/fonts` 에 두고 `font-display: block` 으로 교체 깜빡임을 없앤다.
+ *
+ * Departure Mono 는 DS-00 §3 이 정한 수치·라벨용 폰트다. 에셋이 없어 그동안 JetBrains Mono
+ * 폴백으로 돌았고, 이제 실물이 들어왔다(OFL — `public/fonts/DepartureMono-OFL.txt`).
+ * Pretendard 도 같은 OFL 이며 라이선스 원문을 함께 둔다.
+ */
+@font-face {
+  font-family: "Departure Mono";
+  src: url("/fonts/DepartureMono-Regular.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Pretendard";
+  src: url("/fonts/Pretendard-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Pretendard";
+  src: url("/fonts/Pretendard-Medium.woff2") format("woff2");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: block;
+}
 
 @tailwind base;
 @tailwind components;
@@ -17,9 +48,13 @@
 html,
 body {
   background-color: #000000;
-  color: #fafafa;
+  color: #ffffff;
   font-family: "Pretendard", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* 다크 전용 — 시스템이 라이트여도 강제한다(DS-06 §6-1). */
+  color-scheme: dark;
+  /* Android 오버스크롤 글로우 제거. iOS 바운스는 유지한다(§5). */
+  overscroll-behavior-y: none;
 }
 
 /* 포모 idle 플로트 — 살아있는 듯한 미세한 숨(love mark) */
@@ -93,8 +128,73 @@ body {
 }
 .ds-skeleton { animation: ds-skeleton 1.4s ease-in-out infinite; }
 
+/**
+ * 탭 피드백 (DS-06 §2) — 누르는 순간 크기로 답한다. 배경은 바뀌지 않는다(카드).
+ * `active:` 만으로도 되지만 시간·이징을 한 곳에 두려고 클래스로 뽑았다.
+ */
+.tap-card {
+  transition: transform 120ms ease-out;
+}
+.tap-card:active {
+  transform: scale(0.985);
+}
+
+.tap-button {
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+.tap-button:active {
+  transform: scale(0.97);
+}
+
+.tap-row {
+  /* 리스트 행은 즉시 배경만 — 크기가 바뀌면 리스트가 출렁인다. */
+  transition: background-color 0ms;
+}
+.tap-row:active {
+  background-color: #101010;
+}
+
+/* 관심(★) — 눌린 순간 살짝 커진 뒤 제자리로. 180ms. */
+.tap-star {
+  transition: transform 180ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.tap-star:active {
+  transform: scale(1.15);
+}
+
+/* 카드 전환·상세 진입의 공통 이징 (§3·§4). */
+:root {
+  --ds-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* 상세 진입 — 하단에서 위로 300ms (§4). 이탈은 컴포넌트가 260ms 로 되돌린다. */
+@keyframes ds-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+/**
+ * `backwards` 다 — `both` 로 두면 애니메이션이 끝난 뒤에도 transform 이 남아 이 요소가
+ * **컨테이닝 블록**이 된다. 그 안의 `position:fixed` 가 뷰포트 기준을 잃어 하단이 잘렸던
+ * 회귀(2026-07)가 그렇게 났다. 시작 상태만 미리 적용하고 끝나면 자연 상태로 돌아온다.
+ */
+.ds-sheet-up { animation: ds-sheet-up 300ms var(--ds-ease) backwards; }
+
+/* 헤더 경계선 — scrollY > 8px 에서 160ms 페이드 인 (§5). */
+.ds-header-line {
+  transition: border-color 160ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; }
+  /* 모션 감소 — 전환 시간 0, 애니메이션 없음(DS-06 §7). 페이드만 남긴다. */
+  * {
+    animation: none !important;
+    transition-duration: 0ms !important;
+  }
+  .tap-card:active,
+  .tap-button:active,
+  .tap-star:active {
+    transform: none !important;
+  }
 }
 
 /* 가로 스크롤 세그먼트(감정 탭)의 스크롤바 숨김 */

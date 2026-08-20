@@ -52,7 +52,7 @@ function todayKst(): string {
 /** 섹션 — 제목은 `label` mono, 위에 0.5px 구분선. */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-s5 border-t-hairline border-ds-border pt-s5">
+    <section className="mt-s5 border-t-hair border-ds-border pt-s5">
       <h2 className="font-mono text-ds-label tracking-[0.06em] text-ds-text-2">{title}</h2>
       <div className="mt-s3">{children}</div>
     </section>
@@ -95,7 +95,7 @@ const WINDOWS = [7, 30, 90] as const;
 /** 지표 행 3개 스켈레톤 (DS-05 §5). 스피너 금지. */
 function ScorecardSkeleton() {
   return (
-    <div className="mt-s5 border-t-hairline border-ds-border pt-s5" data-testid="scorecard-skeleton" aria-busy>
+    <div className="mt-s5 border-t-hair border-ds-border pt-s5" data-testid="scorecard-skeleton" aria-busy>
       {[0, 1, 2].map((row) => (
         <div key={row} className="flex items-baseline justify-between gap-s3 py-s3">
           <span className="ds-skeleton h-4 w-24 rounded-block bg-ds-surface-1" />
@@ -178,7 +178,7 @@ export default function TrackRecordPage() {
   );
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl px-gutter pb-s6 pt-[calc(1rem+env(safe-area-inset-top))]">
+    <main className="mx-auto min-h-screen w-full max-w-[480px] px-gutter pb-s6 pt-[calc(1rem+env(safe-area-inset-top))]">
       <div className="flex h-14 items-center">
         <a href="/" aria-label="뒤로" className="-ml-2 flex h-touch w-touch items-center justify-center text-ds-text-2">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -311,11 +311,11 @@ export default function TrackRecordPage() {
                   ? ((current - pick.priceAt) / pick.priceAt) * 100
                   : null;
               return (
-                <li key={`${pick.date}:${pick.canonical}`} className="border-b-hairline border-ds-border">
+                <li key={`${pick.date}:${pick.canonical}`} className="border-b-hair border-ds-border">
                   <button
                     type="button"
                     onClick={() => setSelected(pick)}
-                    className="flex min-h-16 w-full items-baseline justify-between gap-s3 py-s3 text-left"
+                    className="tap-row flex min-h-16 w-full items-baseline justify-between gap-s3 py-s3 text-left"
                     data-testid="scorecard-pick-row"
                   >
                     <span className="min-w-0">
@@ -357,16 +357,17 @@ export default function TrackRecordPage() {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-s4 h-btn-secondary w-full rounded-pill border-hairline border-ds-border text-[14px] font-medium text-ds-text-1"
+            className="mt-s4 h-btn-secondary w-full rounded-pill border-hair border-ds-border text-[14px] font-medium text-ds-text-1"
           >
             다시 시도
           </button>
         </Section>
       )}
 
-      <p className="mt-s5 border-t-hairline border-ds-border pt-s4 text-ds-caption text-ds-text-3">
+      <p className="mt-s5 border-t-hair border-ds-border pt-s4 text-ds-caption text-ds-text-3">
         이 기록은 수정·삭제되지 않아요. 발행 시점 가격과 그때의 문장을 그대로 남겨요.
-        수익률은 발행가 대비 목표일 종가이고, 거래비용·세금·환율은 넣지 않아요.
+        수익률은 발행가 대비 목표일 종가이고, 거래비용·세금·환율은 넣지 않아요.{" "}
+        <a href="/about" className="underline">데이터 출처와 면책 보기</a>
       </p>
 
       {selected && (

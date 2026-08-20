@@ -21,7 +21,7 @@ import { formatSignedPct, koreanDate } from "@/lib/scorecard";
 
 function Section({ title, count, children }: { title: string; count?: string; children: React.ReactNode }) {
   return (
-    <section className="mt-s5 border-t-hairline border-ds-border pt-s5">
+    <section className="mt-s5 border-t-hair border-ds-border pt-s5">
       <div className="flex items-baseline justify-between gap-s2">
         <h2 className="text-ds-title text-ds-text-1">{title}</h2>
         {count && <span className="font-mono text-ds-label text-ds-text-2">{count}</span>}
@@ -92,7 +92,7 @@ export function MyRecordTab() {
         </p>
         <a
           href="/"
-          className="mt-s5 flex h-btn-primary w-full items-center justify-center rounded-pill bg-ds-accent text-[15px] font-medium text-ds-accent-ink"
+          className="tap-button mt-s5 flex h-btn-primary w-full items-center justify-center rounded-pill bg-ds-accent text-[15px] font-medium text-ds-accent-ink"
         >
           오늘의 픽 보기
         </a>
@@ -106,7 +106,7 @@ export function MyRecordTab() {
         <Section title="관심 종목" count={`${rows.length}곳`}>
           <ul data-testid="my-record-watchlist">
             {rows.map((row) => (
-              <li key={row.stock} className="border-b-hairline border-ds-border">
+              <li key={row.stock} className="border-b-hair border-ds-border">
                 <div className="flex min-h-16 flex-col justify-center py-s3">
                   <div className="flex items-baseline justify-between gap-s2">
                     <span className="min-w-0 truncate text-[14px] font-medium leading-tight text-ds-text-1">
@@ -141,7 +141,7 @@ export function MyRecordTab() {
         <Section title="본 카드" count={`${seen.length}장`}>
           <ul data-testid="my-record-seen">
             {days.slice(0, 14).map((day) => (
-              <li key={day.date} className="flex items-baseline justify-between gap-s3 border-b-hairline border-ds-border py-s3">
+              <li key={day.date} className="flex items-baseline justify-between gap-s3 border-b-hair border-ds-border py-s3">
                 <span className="font-mono text-ds-data text-ds-text-1">{koreanDate(day.date)}</span>
                 <span className="font-mono text-ds-label text-ds-text-2">{day.count}장</span>
               </li>

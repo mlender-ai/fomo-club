@@ -61,7 +61,7 @@
 | sans | **Pretendard** (SIL OFL) | 문장 전부 | — |
 
 수치와 문장을 폰트로 분리한다. 이것이 "Living Terminal × Clean Sheet"의 실행 방식이다.
-*(Departure Mono는 CDN 부재 — `@font-face` 셋업 전까지 mono 스택은 JetBrains Mono로 폴백. DS-00 §10.)*
+*(2026-08-21 — 폰트를 `public/fonts` 에 번들했다. mono 1순위가 Departure Mono 이고 CDN 로딩은 없다. DS-06 §6-2.)*
 
 **Scale:** `display` 24/500/1.32/-0.02em (결론 문장, 카드당 1회) · `title` 17/500/1.4/-0.01em · `body` 14/400/1.65 · `data` 14/400/1.4 (mono) · `label` 12/400/1.4/0.04em (mono) · `caption` 11/400/1.5/0.02em.
 **11px 미만 금지. weight는 400·500 두 개만.**
@@ -143,4 +143,5 @@
 - ✅ **DS-03 상세:** `docs/design/DS-03_DETAIL.md` 등재 + 구현(6섹션 · 결론 1회 · 박스/accent 각 1개 · `7일 아직` 제거 → 실제 수익률). 실측은 DS-03 §12.
 - ✅ **DS-04 성적표·내 기록:** `docs/design/DS-04_RECORDS.md` 등재 + 구현(표본 30 게이트 · 판정 불가 노출 · 빈 상태에서 "짚은 뒤 변동" · 관심 종목 기준가 저장). 실측은 DS-04 §5.
 - ✅ **DS-05 결손·빈 상태:** `docs/design/DS-05_MISSING.md` 등재 + 구현. **섹터 오류 원인 두 개**(섹터 자리에 테마 라벨 / 신발→화학 매핑 순서)를 고쳤고, 종목명 축약(`On Holding` → `On`)도 함께. 경위는 DS-05 §9.
+- ✅ **DS-06 인터랙션·앱 요건:** `docs/design/DS-06_INTERACTION.md` 등재 + 구현(탭 피드백·햅틱·전환 260ms·상세 진입 300ms·엣지 스와이프 백·480px·면책 고지·출처/개인정보 화면). **Departure Mono 번들 도입으로 DS-00 §10 폰트 항목이 닫혔다.** 경위는 DS-06 §9.
 - ⏳ **하드코딩 스윕 + lint 게이트(DS-00 §8):** 카드·덱·상세·성적표·내 기록 완료. 남은 화면(검색·레거시 종목 뎁스)은 해당 DS 문서 도착 후.

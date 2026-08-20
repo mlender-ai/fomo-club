@@ -7,6 +7,7 @@ import { cardEvidenceRows } from "@/lib/depthSections";
 import { trustedSector } from "@/lib/sectorTrust";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { recordPickTelemetry } from "@/lib/pickTelemetry";
+import { haptic, hapticMedium } from "@/lib/haptics";
 import { pickHook } from "@/lib/pickCopyRepair";
 import { Sparkline } from "@/components/Sparkline";
 import { StarIcon } from "@/components/icons";
@@ -124,11 +125,28 @@ export function QuietPickCard({
       ...(pick.subject.country ? { country: pick.subject.country } : {}),
     });
     setWatched(now);
-    if (now) recordPickTelemetry({ event: "card_watchlist_add", ...(position ? { position } : {}) });
+    // 관심 등록만 medium — "기록됐다"를 몸으로 알린다(DS-06 §2).
+    if (now) {
+      hapticMedium();
+      recordPickTelemetry({ event: "card_watchlist_add", ...(position ? { position } : {}) });
+    } else {
+      haptic();
+    }
   };
 
   return (
-    <div className="flex flex-col rounded-card bg-ds-surface-1 p-s4" data-testid="quiet-pick-card">
+    <div
+      className="flex flex-col rounded-card bg-ds-surface-1 p-s4"
+      data-testid="quiet-pick-card"
+      /**
+       * 스크린리더는 카드를 **한 덩어리로** 읽는다(DS-06 §7) — 종목·결론·근거 요약까지.
+       * 개별 요소를 훑게 하면 숫자만 나열돼 무슨 카드인지 알 수 없다.
+       */
+      role="group"
+      aria-label={[displayName(pick), hook, rows.map((row) => `${row.label} ${row.value}`).join(", ")]
+        .filter(Boolean)
+        .join(". ")}
+    >
       {/* ① 종목 아이덴티티 — 로고 이미지·국기 이모지 없음. 티커는 종목명 옆에 나란히. */}
       <div className="flex items-start justify-between gap-s2">
         <div className="min-w-0">
@@ -148,7 +166,7 @@ export function QuietPickCard({
           onClick={toggle}
           aria-pressed={watched}
           aria-label={watched ? "관심 해제" : "관심"}
-          className="-mr-2 -mt-2 flex h-touch w-touch shrink-0 items-center justify-center"
+          className="tap-star -mr-2 -mt-2 flex h-touch w-touch shrink-0 items-center justify-center"
         >
           <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
         </button>
@@ -186,7 +204,11 @@ export function QuietPickCard({
           {rows.map((row) => (
             <div key={row.label} className="flex items-baseline justify-between gap-s3 py-[3px]">
               <dt className="shrink-0 font-mono text-ds-label text-ds-text-2">{row.label}</dt>
-              <dd className="min-w-0 truncate font-mono text-ds-data text-ds-text-1">{row.value}</dd>
+              {/*
+                320px 에서 `기관 · 919주` 가 `기관` 으로 잘렸다(DS-06 §6-1 실측). 값이 잘리면
+                근거가 사라진다 — 자르지 말고 줄바꿈을 허용한다(라벨은 그대로 한 줄).
+              */}
+              <dd className="min-w-0 break-keep text-right font-mono text-ds-data text-ds-text-1">{row.value}</dd>
             </div>
           ))}
         </dl>
@@ -209,7 +231,7 @@ export function QuietPickCard({
         기록이 없으면(오늘 첫 발행·발행일 가격 결손·아직 0.0%) 블록 전체가 없다.
       */}
       {record && (
-        <div className="mt-s4 border-t-hairline border-ds-border pt-s4" data-testid="pick-our-record">
+        <div className="mt-s4 border-t-hair border-ds-border pt-s4" data-testid="pick-our-record">
           <div className="flex gap-[10px]">
             <span className="w-[2px] shrink-0 self-stretch bg-ds-accent" aria-hidden />
             <div>
@@ -228,9 +250,10 @@ export function QuietPickCard({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            haptic();
             onDetail();
           }}
-          className="mt-s4 h-btn-primary w-full rounded-pill bg-ds-accent text-[15px] font-medium text-ds-accent-ink"
+          className="tap-button mt-s4 h-btn-primary w-full rounded-pill bg-ds-accent text-[15px] font-medium text-ds-accent-ink active:bg-[#c2eb2f]"
           data-testid="pick-cta"
         >
           자세히 보기

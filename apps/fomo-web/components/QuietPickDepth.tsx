@@ -14,6 +14,11 @@ import { displayName, priceText } from "@/components/QuietPickCard";
 import { StarIcon } from "@/components/icons";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
+import { haptic, hapticMedium } from "@/lib/haptics";
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
 
 /**
  * 상세 페이지 — DS-03(`docs/design/DS-03_DETAIL.md`). 토큰은 DS-00, 카드는 DS-01.
@@ -59,7 +64,7 @@ function todayKst(): string {
 /** 섹션 껍데기 — 제목은 `label` mono 12/0.06em, 아래 12px. 섹션 간 24px + 0.5px 구분선. */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-s5 border-t-hairline border-ds-border pt-s5">
+    <section className="mt-s5 border-t-hair border-ds-border pt-s5">
       <h2 className="font-mono text-ds-label tracking-[0.06em] text-ds-text-2">{title}</h2>
       <div className="mt-s3">{children}</div>
     </section>
@@ -233,6 +238,9 @@ function OurRecordBlock({ record, currency }: { record: OurRecord; currency: (v:
   );
 }
 
+/** 이탈 애니메이션 시간 (DS-06 §4) — 진입 300ms 의 역방향 260ms. */
+const CLOSE_MS = 260;
+
 export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: () => void }) {
   const stock = pick.subject.canonical;
   const [basics, setBasics] = useState<StockBasics | null>(null);
@@ -241,6 +249,13 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const [slotPayload, setSlotPayload] = useState<CardSlotPayload | null>(null);
   const [watched, setWatched] = useState(() => isWatched(stock));
   const [sourceOpen, setSourceOpen] = useState(false);
+  /** 닫히는 중 — 역방향 슬라이드가 끝난 뒤 실제로 언마운트한다. */
+  const [closing, setClosing] = useState(false);
+  /** 좌측 엣지 스와이프 백 진행량(px). iOS 표준 제스처(§4). */
+  const [backDx, setBackDx] = useState(0);
+  const backFrom = useRef<number | null>(null);
+  /** 본문이 8px 넘게 스크롤됐나 — 헤더 경계선을 켠다(§5). */
+  const [scrolled, setScrolled] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const maxRatio = useRef(0);
 
@@ -289,8 +304,33 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     };
   }, [stock]);
 
+  const dismiss = () => {
+    if (closing) return;
+    haptic();
+    setClosing(true);
+    window.setTimeout(onClose, prefersReducedMotion() ? 0 : CLOSE_MS);
+  };
+
+  /** 좌측 엣지 24px 안에서 시작한 드래그만 뒤로가기로 본다 — 본문 스크롤과 충돌하지 않게. */
+  const onBackPointerDown = (e: React.PointerEvent) => {
+    if (e.clientX <= 24) backFrom.current = e.clientX;
+  };
+  const onBackPointerMove = (e: React.PointerEvent) => {
+    if (backFrom.current === null) return;
+    setBackDx(Math.max(0, e.clientX - backFrom.current));
+  };
+  const onBackPointerUp = () => {
+    if (backFrom.current === null) return;
+    const traveled = backDx;
+    backFrom.current = null;
+    setBackDx(0);
+    // 화면 폭의 25% 를 넘겨 끌면 닫는다(카드 전환과 같은 임계).
+    if (traveled > window.innerWidth * 0.25) dismiss();
+  };
+
   const onDepthScroll = () => {
     const el = scrollRef.current;
+    if (el) setScrolled(el.scrollTop > 8);
     if (!el) return;
     const scrollable = el.scrollHeight - el.clientHeight;
     const ratio = scrollable <= 8 ? 1 : (el.scrollTop + el.clientHeight) / el.scrollHeight;
@@ -362,24 +402,50 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       ...(pick.subject.country ? { country: pick.subject.country } : {}),
     });
     setWatched(now);
-    if (now) recordPickTelemetry({ event: "card_watchlist_add" });
+    if (now) {
+      hapticMedium();
+      recordPickTelemetry({ event: "card_watchlist_add" });
+    } else {
+      haptic();
+    }
   };
 
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-ds-bg pt-[env(safe-area-inset-top)]">
+      {/*
+        진입 = 하단에서 위로 300ms, 이탈 = 역방향 260ms, 좌측 엣지 드래그를 따라 밀린다(§4).
+        모션 감소면 애니메이션이 0이 된다(globals.css).
+      */}
+      <div
+        className={`fixed inset-0 z-[70] flex h-[100dvh] flex-col bg-ds-bg pt-[env(safe-area-inset-top)] ${closing ? "" : "ds-sheet-up"}`}
+        style={{
+          transform: closing ? "translateY(100%)" : backDx > 0 ? `translateX(${backDx}px)` : undefined,
+          transition: closing
+            ? `transform ${CLOSE_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
+            : backFrom.current === null
+              ? "transform 200ms cubic-bezier(0.32, 0.72, 0, 1)"
+              : "none",
+        }}
+        onPointerDown={onBackPointerDown}
+        onPointerMove={onBackPointerMove}
+        onPointerUp={onBackPointerUp}
+        onPointerCancel={onBackPointerUp}
+      >
         {/* 고정 헤더 (DS-03 §3) — 좌측 뒤로 화살표. `닫기` 텍스트 버튼을 대체한다. */}
         {/*
           헤더·본문 모두 `max-w-xl` 중앙 정렬이다. 이걸 안 걸어 데스크톱에서 라벨과 값이
           화면 양끝으로 벌어졌다(실측 1280px). 모바일 스펙을 그대로 두고 웹은 중앙에 세운다.
         */}
-        <header className="shrink-0 border-b-hairline border-ds-border" data-testid="depth-header">
-          <div className="mx-auto flex h-14 w-full max-w-xl items-center gap-s2 px-gutter">
+        <header
+          className={`ds-header-line shrink-0 border-b-hair ${scrolled ? "border-ds-border" : "border-transparent"}`}
+          data-testid="depth-header"
+        >
+          <div className="mx-auto flex h-14 w-full max-w-[480px] items-center gap-s2 px-gutter">
           <button
             type="button"
-            onClick={onClose}
+            onClick={dismiss}
             aria-label="뒤로"
-            className="-ml-2 flex h-touch w-touch shrink-0 items-center justify-center text-ds-text-2"
+            className="tap-button -ml-2 flex h-touch w-touch shrink-0 items-center justify-center text-ds-text-2"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
               <path d="M12.5 4L6.5 10l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -407,7 +473,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
             onClick={toggle}
             aria-pressed={watched}
             aria-label={watched ? "관심 해제" : "관심"}
-            className="-mr-2 flex h-touch w-touch shrink-0 items-center justify-center"
+            className="tap-star -mr-2 flex h-touch w-touch shrink-0 items-center justify-center"
           >
             <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
           </button>
@@ -419,7 +485,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           onScroll={onDepthScroll}
           className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${BOTTOM_PAD}`}
         >
-          <div className="mx-auto w-full max-w-xl px-gutter">
+          <div className="mx-auto w-full max-w-[480px] px-gutter">
           {/* ① 결론 — 카드와 같은 문장. **이 화면에서 1회만** 나온다(섹션 제목 없음). */}
           <p className="mt-s4 break-keep text-ds-display-sm text-ds-text-1" data-testid="depth-hook">
             {hook}

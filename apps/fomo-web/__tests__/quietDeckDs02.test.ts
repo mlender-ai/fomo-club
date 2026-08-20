@@ -17,14 +17,19 @@ function code(source: string): string {
 }
 
 describe("완료 기준 1 — 헤더·덱 타이틀에 accent 가 없다", () => {
-  it("덱과 홈 셸이 accent 토큰을 쓰지 않는다", () => {
+  it("덱과 픽 탭 셸(헤더·main·하단 탭)이 accent 토큰을 쓰지 않는다", () => {
     expect(code(deck)).not.toContain("ds-accent");
-    expect(code(home)).not.toContain("ds-accent");
+    /**
+     * 셸만 본다. 최초 실행 면책 고지(DS-06 §6-5)는 모달이고 그 CTA 는 accent 를 쓴다 —
+     * DS-00 §2-1 이 CTA accent 를 허용한다. 헤더·타이틀·탭에 없는 것이 이 규칙이다.
+     */
+    const shell = code(home).slice(code(home).indexOf("return ("), code(home).indexOf("function FirstVisitNotice"));
+    expect(shell).not.toContain("ds-accent");
   });
 
   it("종전 네온 하드코딩이 덱과 픽 탭 셸에서 사라졌다 — accent 는 카드의 성적 자리에만 있다", () => {
     // 픽 탭 셸 = 헤더 + main + 하단 탭. 미사용 first-visit 고지 시트는 DS-02 범위 밖이다(DS-02 §미해결).
-    const shell = code(home).slice(code(home).indexOf("return ("), code(home).indexOf("function FirstVisitNoticeSheet"));
+    const shell = code(home).slice(code(home).indexOf("return ("), code(home).indexOf("function FirstVisitNotice"));
     for (const source of [code(deck), shell]) {
       expect(source).not.toMatch(/#d8ff3a/i);
       expect(source).not.toContain("var(--neon");
@@ -48,7 +53,7 @@ describe("완료 기준 2 — N/10·N곳 남음 폐지, 점 인디케이터", ()
 describe("완료 기준 3 — 지켜보는 중은 카드가 아니라 구분선 리스트", () => {
   it("행에 radius·로고가 없고 하단 구분선을 쓴다", () => {
     const shelf = code(deck).slice(code(deck).indexOf("function WatchShelf"));
-    expect(shelf).toContain("border-b-hairline");
+    expect(shelf).toContain("border-b-hair");
     expect(shelf).not.toMatch(/rounded-(xl|card|lg)/);
     expect(shelf).not.toContain("StockLogoBadge");
   });
@@ -108,8 +113,11 @@ describe("완료 기준 6·7 — 스켈레톤 로딩 · 스테일 기준 시각"
 
 describe("스와이프는 이동이다 (DS-02 §4-1) — 관심은 ★ 버튼이 담당한다", () => {
   it("좌 = 다음 / 우 = 이전", () => {
-    expect(code(deck)).toMatch(/dx < -THRESHOLD\) move\("next"\)/);
-    expect(code(deck)).toMatch(/dx > THRESHOLD\) move\("prev"\)/);
+    // DS-06 §3 이후 임계는 카드 폭 25% 또는 속도 0.5px/ms 다 — 방향 판정만 본다.
+    expect(code(deck)).toMatch(/if \(dx < 0\) move\("next"\);/);
+    expect(code(deck)).toMatch(/else move\("prev"\);/);
+    expect(code(deck)).toContain("THRESHOLD_RATIO");
+    expect(code(deck)).toContain("VELOCITY_THRESHOLD");
   });
 
   it("덱은 더 이상 관심 저장을 하지 않는다", () => {
