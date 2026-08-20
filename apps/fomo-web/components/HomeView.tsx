@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { type EmotionType } from "@fomo/core";
 import { SearchIcon } from "@/components/icons";
-import { KeywordHistory } from "@/components/KeywordHistory";
+import { MyRecordTab } from "@/components/MyRecordTab";
 import { QuietPickDeck } from "@/components/QuietPickDeck";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { OverlayPortal } from "@/components/OverlayPortal";
@@ -80,7 +80,7 @@ export function HomeView({
 
       <main className="fomo-phase-in mx-auto flex min-h-screen max-w-xl flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-[calc(3.5rem+env(safe-area-inset-top))]">
         <div className="flex min-h-0 flex-1 flex-col">
-          {tab === "pick" ? <QuietPickDeck /> : <KeywordHistory />}
+          {tab === "pick" ? <QuietPickDeck /> : <MyRecordTab />}
         </div>
       </main>
 

@@ -113,6 +113,12 @@ export function QuietPickCard({
     const now = toggleWatch(pick.subject.canonical, Date.now(), {
       ...(pick.subject.identity ? { sector: pick.subject.identity } : {}),
       reason: hook,
+      // 내 기록 탭의 변동률 기준가(DS-04 §2-1) — 누른 순간의 가격을 남긴다.
+      priceAt: pick.price.current,
+      ...(pick.subject.symbol ? { symbol: pick.subject.symbol } : {}),
+      ...(pick.subject.naverCode ? { naverCode: pick.subject.naverCode } : {}),
+      ...(pick.subject.market ? { market: pick.subject.market } : {}),
+      ...(pick.subject.country ? { country: pick.subject.country } : {}),
     });
     setWatched(now);
     if (now) recordPickTelemetry({ event: "card_watchlist_add", ...(position ? { position } : {}) });
