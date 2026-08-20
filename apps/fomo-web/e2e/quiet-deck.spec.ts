@@ -87,12 +87,25 @@ test("완료 기준 3 — 지켜보는 중은 구분선 리스트다 (카드 아
   await expect(rows).toHaveCount(6);
 });
 
+test("DS-05 §7 — 덱이 짧은 날 개수를 숨기지 않고 적었다고 말한다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const thin = page.locator('[data-case="thin"]');
+  await expect(thin).toContainText("2곳"); // 개수 그대로
+  await expect(thin.locator('[data-testid="deck-thin"]')).toHaveText("오늘은 조용한 곳이 적었어요");
+  // 3장 이상인 카드에는 그 문구가 없다.
+  await expect(page.locator('[data-case="title"] [data-testid="deck-thin"]')).toHaveCount(0);
+});
+
 test("완료 기준 6 — 스켈레톤 로딩. 스피너가 없다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const skeleton = page.locator('[data-case="skeleton"] [data-testid="deck-skeleton"]');
   await expect(skeleton).toHaveCount(1);
   const blocks = skeleton.locator(".ds-skeleton");
   await expect(blocks).toHaveCount(3);
+
+  // 블록 높이 20 / 60 / 40 (DS-05 §5).
+  const heights = await blocks.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+  expect(heights).toEqual([20, 60, 40]);
 
   const anim = await blocks.first().evaluate((el) => ({
     duration: getComputedStyle(el).animationDuration,

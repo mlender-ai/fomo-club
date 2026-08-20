@@ -489,7 +489,12 @@ function formatUsd(value: number): string {
  * openinsider 영문 산업명(SIC 계열) → 짧은 한국어. WO-P1: **영문 원문 축약 노출 금지**
  * ("Computer Processing & Da" 같은 잘린 영문이 카드에 뜨던 회귀). 매칭 실패 시 한국어 폴백.
  */
-const INDUSTRY_KO: ReadonlyArray<[RegExp, string]> = [
+/**
+ * 벤더 산업명(SIC 계열) → 한국어 섹터. **순서가 규칙이다** — 위에서부터 첫 일치를 쓴다.
+ * 구체적인 분류를 앞에 둔다(신발 > 화학, 방산 > 전기·전자).
+ * 매핑 정본이자 감사 대상이므로 export 한다(DS-05 §4-1).
+ */
+export const INDUSTRY_KO: ReadonlyArray<[RegExp, string]> = [
   [/bank|savings institution|credit union/i, "은행"],
   [/insurance|title insurance/i, "보험"],
   [/blank check/i, "스팩"],
@@ -514,10 +519,15 @@ const INDUSTRY_KO: ReadonlyArray<[RegExp, string]> = [
   [/electrical industrial|electric lighting|electronic component|electrical work|miscellaneous electrical/i, "전기·전자"],
   [/industrial machinery|machine tool|construction machinery|special industry machinery|engines/i, "산업기계"],
   [/general building|construction|heavy construction|water, sewer/i, "건설"],
+  /**
+   * **순서가 의미를 만든다.** SIC `Rubber & Plastics Footwear`(On Holding 등 신발 회사)가
+   * `plastics` 에 먼저 걸려 `화학` 으로 분류됐다(DS-05 §4 실측 결함). 더 구체적인 분류를
+   * 앞에 둔다 — 신발·의류가 화학보다 먼저다.
+   */
+  [/footwear|apparel|textile|leather|shoe/i, "의류·섬유"],
   [/chemical|plastics|paint|adhesive|industrial gas|fertilizer/i, "화학"],
   [/steel|metal|iron|aluminum|fabricated/i, "철강·금속"],
   [/paper|pulp|printing|publishing|newspaper/i, "제지·인쇄"],
-  [/textile|apparel|footwear|leather/i, "의류·섬유"],
   [/tobacco|cigarette/i, "담배"],
   [/hotel|amusement|recreation|motion picture|broadcast|television|cable/i, "미디어·레저"],
   [/education|school/i, "교육"],
@@ -529,27 +539,42 @@ const INDUSTRY_KO: ReadonlyArray<[RegExp, string]> = [
   [/toys|sporting goods|jewelry|musical/i, "생활용품"],
 ];
 
-const IDENTITY_FALLBACK: Record<"KR" | "US", string> = { KR: "기타 업종", US: "미국주식" };
 const HANGUL = /[가-힣]/;
 
 /**
- * 회사 정체 한 줄(8~15자) — 한국어만. 우선순위: front 섹터 라벨 → 큐레이션 시드 섹터 →
- * 영문 산업명 한국어 매핑 → 한국어 폴백. 영문 원문은 어떤 경로로도 노출되지 않는다(WO-P1).
+ * 회사 섹터 한 줄 — **신뢰할 수 있는 소스만 쓴다**(DS-05 §4).
+ *
+ * ## 왜 바뀌었나
+ *
+ * 종전 1순위는 `front.signals.themeLabel` 이었다. 그건 회사의 섹터가 아니라 **오늘 이 종목이
+ * 묶인 테마**(코인 테마·환율 테마…)다. 그래서 실측에서
+ *   한화투자증권(증권사) → `코인` · On Holding(스포츠화) → `화학`
+ * 이 나왔다. **섹터가 틀리면 나머지 전부를 못 믿는다** — "AI가 지어낸 얘기 같다"의 직접 원인이다.
+ *
+ * ## 신뢰 순서
+ *
+ * 1. KR: `sectorOf(canonical)` — 큐레이션 사전(방산·2차전지·반도체…)
+ * 2. US: 발굴 시드의 `sector` — 큐레이션 값
+ * 3. 벤더 산업분류(`industry`) → `INDUSTRY_KO` 매핑 — 소스가 분명한 산업명
+ * 4. 그 외 → **빈 문자열.** `기타 업종`·`미국주식` 같은 폴백은 섹터가 아니다.
+ *    화면은 빈 값이면 섹터를 그리지 않는다(시총만으로도 규모는 전달된다).
  */
+/** 산업명 → 섹터. 매핑이 없으면 `undefined` — 폴백 라벨을 만들지 않는다(DS-05 §4). */
+export function sectorFromIndustry(industry: string | undefined | null): string | undefined {
+  const value = industry?.trim();
+  if (!value) return undefined;
+  for (const [pattern, ko] of INDUSTRY_KO) if (pattern.test(value)) return ko;
+  return undefined;
+}
+
 function companyIdentity(front: StockFrontData, sig: SignalCandidate): string {
-  const theme = front.signals.themeLabel?.trim();
-  if (theme && HANGUL.test(theme)) return theme.slice(0, 20);
-  // KR 은 STOCK_VOCAB 섹터 사전을 쓴다(방산·AI·바이오·원자력·반도체…) — "기타 업종" 남발 방지.
-  // 사전 값은 큐레이션된 라벨이라 한글 검사를 적용하지 않는다("AI"가 영문이라 거부되던 회귀).
+  // 테마 라벨은 섹터가 아니다 — 여기서 쓰지 않는다(front 는 다른 신호에 계속 쓰인다).
+  void front;
   const krSector = sig.subject.country === "KR" ? sectorOf(sig.subject.canonical) : undefined;
   if (krSector) return krSector;
   const seedSector = sig.subject.symbol ? usDiscoverySeedForSymbol(sig.subject.symbol)?.sector?.trim() : undefined;
   if (seedSector && HANGUL.test(seedSector)) return seedSector.slice(0, 20);
-  const industry = sig.industry?.trim();
-  if (industry) {
-    for (const [pattern, ko] of INDUSTRY_KO) if (pattern.test(industry)) return ko;
-  }
-  return IDENTITY_FALLBACK[sig.subject.country];
+  return sectorFromIndustry(sig.industry) ?? "";
 }
 
 function daysBetween(fromDate: string, today: string): number {

@@ -5,10 +5,10 @@
 | 범위 | 전 화면 공통 기반 |
 | 선행 | 없음. 이 문서가 나머지 6개의 기준 |
 | 대상 | 모바일 우선 (앱 출시 전제), 웹은 동일 스펙을 중앙 정렬 |
-| 상태 | **v2 기반 정본 (2026-08-19 등재).** DS-01(메인 카드)·DS-02(덱)·DS-03(상세)·DS-04(성적표·내 기록) 등재·구현 완료 · DS-05~06 미도착 |
+| 상태 | **v2 기반 정본 (2026-08-19 등재).** DS-01(메인 카드)·DS-02(덱)·DS-03(상세)·DS-04(성적표·내 기록)·DS-05(결손·빈 상태) 등재·구현 완료 · DS-06 미도착 |
 | 권위 | 색·타이포·간격·형태·터치·금지 목록은 **이 문서가 최상위** — 단 **기획자 모킹이 이 문서보다 위다**(문구와 모킹이 어긋나면 모킹을 따르고 이 문서를 고친다). `docs/DESIGN.md`의 해당 절은 이 문서에서 파생된 미러이며, 충돌 시 DS-00이 이긴다. 모션·모티프·컴포넌트 서술은 DS-01~06 도착 전까지 `docs/DESIGN.md`가 계속 담당한다 |
 | 기계가독 소스 | `design/tokens.json` → `ds` 블록 (DTCG) |
-| 화면별 스펙 | DS-01 메인 카드 → `docs/design/DS-01_MAIN_CARD.md` · DS-02 덱 화면 → `docs/design/DS-02_DECK.md` · DS-03 상세 → `docs/design/DS-03_DETAIL.md` · DS-04 성적표·내 기록 → `docs/design/DS-04_RECORDS.md` |
+| 화면별 스펙 | DS-01 메인 카드 → `docs/design/DS-01_MAIN_CARD.md` · DS-02 덱 화면 → `docs/design/DS-02_DECK.md` · DS-03 상세 → `docs/design/DS-03_DETAIL.md` · DS-04 성적표·내 기록 → `docs/design/DS-04_RECORDS.md` · DS-05 결손·빈 상태 → `docs/design/DS-05_MISSING.md` |
 
 ---
 

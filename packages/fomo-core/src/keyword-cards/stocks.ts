@@ -613,26 +613,46 @@ export function stockMatchesText(canonical: string, text: string): boolean {
 // canonical 자체는 건드리지 않는다 — 원장·조인 키라 바꾸면 과거 기록과 끊긴다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 미국 법인 접미·주(州) 꼬리 — "…, Inc./Md/", "… Corp.", "… Holdings" 등. */
-const CORP_SUFFIX =
-  /,?\s*\b(Incorporated|Inc|Corporation|Corp|Company|Co|Limited|Ltd|LLC|L\.L\.C|PLC|N\.V|S\.A|AG|SE|Holdings?|Group|Trust|Partners|LP)\b\.?/gi;
+/**
+ * 법인 형태 접미 — 지워도 회사 인지가 흔들리지 않는다(`Angel Studios, Inc.` → `Angel Studios`).
+ */
+const LEGAL_FORM =
+  /,?\s*\b(Incorporated|Inc|Corporation|Corp|Limited|Ltd|LLC|L\.L\.C|PLC|N\.V|S\.A|AG|SE|LP)\b\.?/gi;
+
+/**
+ * 사업어 접미 — **회사명의 일부일 수 있다.** `On Holding AG` 에서 `Holding` 까지 지우면 이름이
+ * `On` 이 되어 무슨 회사인지 알 수 없다(DS-05 §4-2 실측 결함). 남는 이름이 회사를 특정할
+ * 때만 지운다.
+ */
+const BUSINESS_TAIL = /,?\s*\b(Holdings?|Group|Trust|Partners|Company|Co)\b\.?/gi;
+
 /** 이름 끝에 붙는 주(州) 약어 꼬리 — "/Md/", "/De/". */
 const STATE_TAIL = /\/[A-Za-z]{2,3}\/?\s*$/;
 
+/** 접미를 지운 이름이 회사를 특정하는가 — 두 단어 이상이거나 5자 이상. */
+function specificEnough(name: string): boolean {
+  const words = name.split(/\s+/).filter(Boolean);
+  return words.length >= 2 || name.length >= 5;
+}
+
 /**
  * 화면 표기용 회사명 — 법인 접미·주 꼬리 제거. 한글명은 그대로 둔다.
- * 결과가 너무 짧아지면(2자 미만) 원문을 유지한다(과잉 삭제로 이름이 사라지지 않게).
+ *
+ * 사업어(`Holdings`·`Group`…)는 **지운 뒤에도 이름이 회사를 특정할 때만** 지운다:
+ * `Gbank Financial Holdings Inc.` → `Gbank Financial`(O) · `On Holding AG` → `On Holding`(O —
+ * `On` 으로 줄이지 않는다). 결과가 2자 미만이면 원문을 유지한다.
  */
 export function normalizeCompanyName(raw: string): string {
   const source = (raw ?? "").trim();
   if (!source) return source;
   if (/[가-힣]/.test(source)) return source; // 한글 사명은 접미 규칙 대상 아님
-  const cleaned = source
-    .replace(STATE_TAIL, "")
-    .replace(CORP_SUFFIX, "")
-    .replace(/[,\s/]+$/, "")
-    .trim();
-  return cleaned.length >= 2 ? cleaned : source;
+
+  const tidy = (value: string) => value.replace(/[,\s/]+$/, "").replace(/\s{2,}/g, " ").trim();
+  const base = tidy(source.replace(STATE_TAIL, "").replace(LEGAL_FORM, ""));
+  const stripped = tidy(base.replace(BUSINESS_TAIL, ""));
+
+  const chosen = stripped && specificEnough(stripped) ? stripped : base;
+  return chosen.length >= 2 ? chosen : source;
 }
 
 /** 표기 세트 — displayName(정규화) + ticker(US 심볼 / KR 6자리 코드). 화면은 이 둘만 쓴다. */

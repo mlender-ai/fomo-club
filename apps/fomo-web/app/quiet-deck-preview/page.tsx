@@ -67,6 +67,13 @@ export default function QuietDeckPreview() {
         </div>
       </section>
 
+      <section data-case="thin">
+        <div className="px-gutter">
+          {/* 3장 미만 — 개수를 숨기지 않고 "적었다"고 말한다(DS-05 §7). */}
+          <DeckTitle count={2} stale={null} />
+        </div>
+      </section>
+
       <section data-case="dots">
         <p className="px-gutter font-mono text-ds-label text-ds-text-3">점 인디케이터 (9장, 3번째)</p>
         <DeckProgress total={9} index={2} />

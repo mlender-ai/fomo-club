@@ -53,7 +53,12 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 }
 
-type Status = "loading" | "ready" | "error";
+/**
+ * 오류는 두 종류다 (DS-05 §6) — 사용자가 할 수 있는 일이 다르다.
+ * `offline` 은 연결을 확인하면 되고, `server` 는 기다리면 된다. 예외 문자열·상태 코드는
+ * 절대 화면에 내지 않는다.
+ */
+type Status = "loading" | "ready" | "offline" | "server-error";
 
 export function QuietPickDeck() {
   const [picks, setPicks] = useState<QuietPick[]>([]);
@@ -104,15 +109,24 @@ export function QuietPickDeck() {
 
   const load = useCallback(() => {
     setStatus("loading");
+    const startedAt = Date.now();
+    /** 스켈레톤 최소 표시 300ms — 200ms 만에 끝나면 깜빡임으로 보인다(DS-05 §5). */
+    const settle = (next: Status) => {
+      const wait = Math.max(0, 300 - (Date.now() - startedAt));
+      window.setTimeout(() => setStatus(next), wait);
+    };
     fetchQuietPicks()
       .then((res) => {
         setPicks(res.picks ?? []);
         setWatching(res.watching ?? []);
         setAsOf(res.asOf);
         setIdx(0);
-        setStatus("ready");
+        settle("ready");
       })
-      .catch(() => setStatus("error"));
+      .catch(() => {
+        // 연결이 끊긴 것과 서버가 답을 못 준 것을 구분한다.
+        settle(typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "server-error");
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -227,12 +241,14 @@ export function QuietPickDeck() {
 
   if (status === "loading") return <DeckSkeleton />;
 
-  if (status === "error") {
+  if (status === "offline" || status === "server-error") {
     return (
       <div className="px-gutter">
         <DeckTitle count={null} stale={null} />
         <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-error">
-          <p className="text-ds-body text-ds-text-1">잠시 후 다시 열어주세요.</p>
+          <p className="text-ds-body text-ds-text-1">
+            {status === "offline" ? "연결이 끊겼어요." : "잠시 후 다시 열어주세요."}
+          </p>
           <button
             type="button"
             onClick={load}
@@ -358,6 +374,9 @@ export function QuietPickDeck() {
  * ② 덱 타이틀 (DS-02 §3) — 개수에 **accent 를 쓰지 않는다.** 그 색은 우리 성적의 것이다.
  * 개수가 매일 달라지는 것은 덱 회전의 결과이므로 숨기지 않는다.
  */
+export /** 3장 미만이면 "적었다"고 말한다 — 숨기거나 지속 신호로 채우지 않는다(DS-05 §7). */
+const THIN_DECK = 3;
+
 export function DeckTitle({ count, stale }: { count: number | null; stale: string | null }) {
   return (
     <div className="pb-gutter pt-s4">
@@ -365,6 +384,11 @@ export function DeckTitle({ count, stale }: { count: number | null; stale: strin
         오늘의 조용한 돈{count !== null && <span className="ml-s2 font-mono">{count}곳</span>}
       </h1>
       <p className="mt-s1 text-ds-caption text-ds-text-2">뉴스 나오기 전에 돈이 먼저 들어간 곳</p>
+      {count !== null && count > 0 && count < THIN_DECK && (
+        <p className="mt-s1 text-ds-caption text-ds-text-3" data-testid="deck-thin">
+          오늘은 조용한 곳이 적었어요
+        </p>
+      )}
       {/* 스테일 서빙 — 카드는 정상 표시하고 기준 시각만 밝힌다(DS-02 §9). */}
       {stale && (
         <p className="mt-s1 font-mono text-ds-caption text-ds-text-3" data-testid="deck-stale">
@@ -403,9 +427,10 @@ export function DeckSkeleton() {
     <div className="px-gutter">
       <DeckTitle count={null} stale={null} />
       <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-skeleton" aria-busy>
-        <div className="ds-skeleton h-4 w-1/3 rounded-block bg-ds-surface-2" />
-        <div className="ds-skeleton mt-s4 h-8 w-4/5 rounded-block bg-ds-surface-2" />
-        <div className="ds-skeleton mt-s4 h-14 w-full rounded-block bg-ds-surface-2" />
+        {/* 블록 높이 20 / 60 / 40 — 카드의 실제 위계(아이덴티티 · 결론 · 근거)를 닮게(DS-05 §5). */}
+        <div className="ds-skeleton h-5 w-1/3 rounded-block bg-ds-surface-2" />
+        <div className="ds-skeleton mt-s4 h-[60px] w-4/5 rounded-block bg-ds-surface-2" />
+        <div className="ds-skeleton mt-s4 h-10 w-full rounded-block bg-ds-surface-2" />
       </div>
     </div>
   );

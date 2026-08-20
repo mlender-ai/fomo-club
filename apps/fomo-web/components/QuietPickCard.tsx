@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { QuietPick } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { cardEvidenceRows } from "@/lib/depthSections";
+import { trustedSector } from "@/lib/sectorTrust";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { recordPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook } from "@/lib/pickCopyRepair";
@@ -97,6 +98,8 @@ export function QuietPickCard({
     ? Math.max(0, series.length - 1 - Math.min(pick.signal.days, series.length - 1))
     : undefined;
 
+  /** 섹터는 **신뢰할 수 있을 때만** 그린다(DS-05 §4) — 테마 라벨이 섞여 온다. */
+  const sector = trustedSector(pick.subject.identity);
   const changePct = pick.price.changePct;
   const hook = pickHook(pick);
   const rows = cardEvidenceRows(pick, hook);
@@ -111,7 +114,7 @@ export function QuietPickCard({
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const now = toggleWatch(pick.subject.canonical, Date.now(), {
-      ...(pick.subject.identity ? { sector: pick.subject.identity } : {}),
+      ...(sector ? { sector } : {}),
       reason: hook,
       // 내 기록 탭의 변동률 기준가(DS-04 §2-1) — 누른 순간의 가격을 남긴다.
       priceAt: pick.price.current,
@@ -133,10 +136,10 @@ export function QuietPickCard({
             <span className="truncate text-ds-title text-ds-text-1">{displayName(pick)}</span>
             {ticker && <span className="shrink-0 font-mono text-ds-label text-ds-text-3">{ticker}</span>}
           </p>
-          {(pick.subject.identity || liquidityMeta) && (
+          {(sector || liquidityMeta) && (
             <p className="mt-s1 truncate font-mono text-ds-label text-ds-text-2" data-testid="pick-identity">
-              {/* 섹터가 확보되지 않으면 표시하지 않는다 — 틀린 섹터가 맞는 섹터보다 나쁘다. */}
-              {[pick.subject.identity, liquidityMeta].filter(Boolean).join(" · ")}
+              {/* 신뢰 불가 섹터는 통째로 빠진다 — 틀린 섹터가 없는 섹터보다 나쁘다. */}
+              {[sector, liquidityMeta].filter(Boolean).join(" · ")}
             </p>
           )}
         </div>
