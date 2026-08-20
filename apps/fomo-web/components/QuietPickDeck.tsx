@@ -8,6 +8,7 @@ import { staleLabel } from "@/lib/deckStale";
 import { computeOurRecord } from "@/lib/ourRecord";
 import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
+import { haptic } from "@/lib/haptics";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
@@ -35,8 +36,16 @@ import { QuietPickDepth } from "@/components/QuietPickDepth";
  * 가로채 pointermove 가 오지 않는다 → 카드에 touchAction:"none" 을 준다(스와이프 불능 회귀 방지).
  */
 
-const THRESHOLD = 90;
-const EXIT_MS = 300;
+/**
+ * 카드 전환 (DS-06 §3) — **한 번 스와이프 = 한 장.** 관성 없음.
+ * 임계는 카드 폭의 25% **또는** 속도 0.5px/ms. 짧고 빠른 플릭도 넘어가야 손맛이 난다.
+ */
+const THRESHOLD_RATIO = 0.25;
+const VELOCITY_THRESHOLD = 0.5;
+const EXIT_MS = 260;
+/** 미달 시 원위치 200ms. */
+const RETURN_MS = 200;
+const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 /** 점이 안 읽히기 시작하는 장수. 넘으면 `3 / 14` mono 텍스트로 바꾼다(DS-02 §5). */
 const DOTS_MAX = 12;
 /** 지켜보는 중 기본 표시 개수. 나머지는 `더 보기`(DS-02 §6). */
@@ -104,7 +113,9 @@ export function QuietPickDeck() {
   const [watchSelected, setWatchSelected] = useState<QuietWatchItem | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
+  const startAt = useRef(0);
   const moved = useRef(false);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const watchingRef = useRef<HTMLElement | null>(null);
 
   const load = useCallback(() => {
@@ -189,6 +200,7 @@ export function QuietPickDeck() {
         watchingRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
         return;
       }
+      haptic();
       recordPickTelemetry({ event: dir === "next" ? "card_skip" : "card_view", position: idx + 1 });
       setExiting(dir === "next" ? "left" : "right");
       const after = () => {
@@ -207,6 +219,7 @@ export function QuietPickDeck() {
     dragging.current = true;
     moved.current = false;
     startX.current = e.clientX;
+    startAt.current = Date.now();
     (e.target as Element).setPointerCapture?.(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -218,9 +231,17 @@ export function QuietPickDeck() {
   const onPointerUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
-    if (dx < -THRESHOLD) move("next");
-    else if (dx > THRESHOLD) move("prev");
-    else setDx(0);
+    // 임계: 카드 폭의 25% 또는 플릭 속도 0.5px/ms (DS-06 §3).
+    const width = stageRef.current?.getBoundingClientRect().width ?? 320;
+    const elapsed = Math.max(1, Date.now() - startAt.current);
+    const velocity = Math.abs(dx) / elapsed;
+    const passed = Math.abs(dx) > width * THRESHOLD_RATIO || velocity > VELOCITY_THRESHOLD;
+    if (!passed) {
+      setDx(0);
+      return;
+    }
+    if (dx < 0) move("next");
+    else move("prev");
   };
 
   const stale = useMemo(() => staleLabel(asOf, Date.now()), [asOf]);
@@ -252,7 +273,7 @@ export function QuietPickDeck() {
           <button
             type="button"
             onClick={load}
-            className="mt-s4 h-btn-secondary w-full rounded-pill border-hairline border-ds-border text-[14px] font-medium text-ds-text-1"
+            className="tap-button mt-s4 h-btn-secondary w-full rounded-pill border-hair border-ds-border text-[14px] font-medium text-ds-text-1"
           >
             다시 시도
           </button>
@@ -276,7 +297,7 @@ export function QuietPickDeck() {
             </p>
             <a
               href="/track-record"
-              className="mt-s4 flex h-btn-primary w-full items-center justify-center rounded-pill border-hairline border-ds-border bg-ds-surface-2 text-[14px] font-medium text-ds-text-1"
+              className="mt-s4 flex h-btn-primary w-full items-center justify-center rounded-pill border-hair border-ds-border bg-ds-surface-2 text-[14px] font-medium text-ds-text-1"
             >
               성적표 보기
             </a>
@@ -314,7 +335,7 @@ export function QuietPickDeck() {
           카드 무대 — 고정 높이 없음(DS-01 §5). 앞 카드가 문서 흐름 안에 있어 무대 높이가 카드를
           따라가고, 뒤 카드는 8px 아래로 살짝 보여 "넘길 수 있다"를 전달한다(§4-1 peek).
         */}
-        <div className="relative select-none">
+        <div className="relative select-none" ref={stageRef}>
           {/*
             뒤 카드 자리 — 8px 아래로 내민 `surface-2` 시트. **정지 상태에서도 띠가 보인다.**
             다음 카드를 통째로 겹쳐 그리면 같은 `surface-1` 이라 띠가 안 보이고 ★ 같은 조작
@@ -328,10 +349,15 @@ export function QuietPickDeck() {
             />
           )}
           <div
-            className="relative overflow-hidden rounded-card"
+            className="tap-card relative overflow-hidden rounded-card"
             style={{
               transform,
-              transition: exiting ? `transform ${EXIT_MS}ms ease-in` : dragging.current ? "none" : "transform 160ms ease-out",
+              // 전환 260ms / 원위치 200ms, 같은 이징(DS-06 §3).
+              transition: exiting
+                ? `transform ${EXIT_MS}ms ${EASE}`
+                : dragging.current
+                  ? "none"
+                  : `transform ${RETURN_MS}ms ${EASE}`,
               cursor: "grab",
               touchAction: "none", // iOS PWA 가로 드래그 가로채기 방지(스와이프 불능 회귀)
             }}
@@ -476,7 +502,7 @@ export function WatchShelf({
     <section
       ref={sectionRef}
       id="watching"
-      className="mt-s5 border-t-hairline border-ds-border px-gutter pt-s5"
+      className="mt-s5 border-t-hair border-ds-border px-gutter pt-s5"
       data-testid="watch-shelf"
     >
       <div className="flex items-baseline justify-between gap-s2">
@@ -487,12 +513,12 @@ export function WatchShelf({
 
       <ul className="mt-s3">
         {shown.map((item) => (
-          <li key={`${item.subject.canonical}-${item.reasonCode}`} className="border-b-hairline border-ds-border">
+          <li key={`${item.subject.canonical}-${item.reasonCode}`} className="border-b-hair border-ds-border">
             <button
               type="button"
               onClick={() => onOpen(item)}
               /* 최소 64px — 내용이 짧아도 행이 눌리지 않는다(DS-02 §6). */
-              className="flex min-h-16 w-full flex-col justify-center py-s3 text-left"
+              className="tap-row flex min-h-16 w-full flex-col justify-center py-s3 text-left"
               data-testid="watch-row"
             >
               <div className="flex items-baseline justify-between gap-s2">
@@ -513,7 +539,7 @@ export function WatchShelf({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="mt-s3 h-btn-secondary w-full rounded-pill border-hairline border-ds-border text-[14px] font-medium text-ds-text-2"
+          className="mt-s3 h-btn-secondary w-full rounded-pill border-hair border-ds-border text-[14px] font-medium text-ds-text-2"
           data-testid="watch-more"
         >
           더 보기

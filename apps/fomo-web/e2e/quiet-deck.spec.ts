@@ -11,6 +11,20 @@ import { expect, test } from "@playwright/test";
 const PREVIEW = "/quiet-deck-preview";
 const ACCENT = "rgb(212, 255, 63)";
 
+/**
+ * 최초 실행 면책 고지(DS-06 §6-5)를 미리 통과시킨다 — 이 스펙이 보려는 것은 그 뒤 화면이다.
+ * 고지 자체는 `e2e/interaction.spec.ts` 가 따로 본다.
+ */
+async function skipFirstVisitNotice(page: import("@playwright/test").Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("fomo_notice_ack_v1", new Date().toISOString());
+    } catch {
+      /* 저장소가 막힌 환경이면 고지가 떠도 이 스펙은 탭만 본다 */
+    }
+  });
+}
+
 test("완료 기준 1 — 덱 타이틀에 accent 가 없다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const title = page.locator('[data-case="title"] h1');
@@ -125,6 +139,7 @@ test("완료 기준 7 — 스테일 서빙 시 기준 시각이 보인다", asyn
 });
 
 test("완료 기준 4 — 하단 탭은 텍스트만, 각 1/3 폭 × 56px", async ({ page }) => {
+  await skipFirstVisitNotice(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const tabs = page.locator('[data-testid="bottom-tab"]');
   await expect(tabs).toHaveCount(3);
@@ -139,6 +154,7 @@ test("완료 기준 4 — 하단 탭은 텍스트만, 각 1/3 폭 × 56px", asyn
 });
 
 test("① 헤더 — 56px 고정, 로고 mono 0.12em, 검색 44×44", async ({ page }) => {
+  await skipFirstVisitNotice(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const header = page.locator('[data-testid="deck-header"]');
   await expect(header).toHaveCount(1);

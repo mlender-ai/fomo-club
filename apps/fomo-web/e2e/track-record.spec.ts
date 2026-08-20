@@ -20,6 +20,20 @@ async function accentCount(page: import("@playwright/test").Page, scope: string)
   );
 }
 
+/**
+ * 최초 실행 면책 고지(DS-06 §6-5)를 미리 통과시킨다 — 이 스펙이 보려는 것은 그 뒤 화면이다.
+ * 고지 자체는 `e2e/interaction.spec.ts` 가 따로 본다.
+ */
+async function skipFirstVisitNotice(page: import("@playwright/test").Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("fomo_notice_ack_v1", new Date().toISOString());
+    } catch {
+      /* 저장소가 막힌 환경이면 고지가 떠도 이 스펙은 탭만 본다 */
+    }
+  });
+}
+
 test("성적표 — 제목·부제가 뜨고 데스크톱에서 퍼지지 않는다", async ({ page }) => {
   const response = await page.goto("/track-record", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
@@ -60,6 +74,7 @@ test("완료 기준 2·3·5 — 채점 결과가 있으면 표본·판정 불가
 });
 
 test("내 기록 — 빈 상태에 CTA 하나, 일러스트 없음", async ({ page }) => {
+  await skipFirstVisitNotice(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   const tabs = page.locator('[data-testid="bottom-tab"]');

@@ -84,7 +84,12 @@ const config: Config = {
         gutter: "20px",
       },
       borderWidth: {
-        hairline: "0.5px",
+        /**
+         * **`hairline` 이 아니라 `hair` 다.** 레거시 색 토큰(`colors.hairline = #2A2A2A`)과 이름이
+         * 같으면 Tailwind 가 같은 클래스로 색·폭 유틸을 둘 다 만들고, 나중에 나오는 색 규칙이
+         * `border-ds-border` 를 덮는다 — 실측에서 DS 경계선이 전부 `#2A2A2A` 로 나왔다.
+         */
+        hair: "0.5px",
       },
       height: {
         // DS-00 §5·§6
@@ -112,12 +117,12 @@ const config: Config = {
       fontFamily: {
         body: ["Pretendard", "system-ui", "sans-serif"],
         sans: ["Pretendard", "system-ui", "sans-serif"],
-        // 숫자(점수·가격·등락·온도 등)는 본문과 같은 Pretendard로 통일한다.
-        // JetBrains Mono는 로고성 pixel/display 텍스트에만 남긴다.
-        number: ["Pretendard", "system-ui", "sans-serif"],
-        mono: ["Pretendard", "system-ui", "sans-serif"],
-        pixel: ["JetBrains Mono", "Pretendard", "monospace"],
-        display: ["JetBrains Mono", "Pretendard", "monospace"],
+        // DS-00 §3 — 수치·라벨·날짜는 mono(Departure Mono, 번들 포함), 문장은 Pretendard.
+        // 에셋이 없던 동안 mono 가 Pretendard 로 폴백했고, DS-06 §6-2 에서 실물이 들어왔다.
+        number: ["Departure Mono", "Pretendard", "monospace"],
+        mono: ["Departure Mono", "Pretendard", "monospace"],
+        pixel: ["Departure Mono", "Pretendard", "monospace"],
+        display: ["Departure Mono", "Pretendard", "monospace"],
       },
     },
   },
