@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { isTrustedSector, trustedSector } from "../lib/sectorTrust";
 import { normalizeCompanyName } from "@fomo/core";
+import { subjectName } from "../lib/companyDisplay";
 
 /**
  * DS-05 결손·빈 상태 — **이 제품은 결손이 정상 상태다.**
@@ -215,5 +216,22 @@ describe("§3 금지 문구 전수 스캔 (components/app 전체)", () => {
         expect(source.includes(phrase), `${file} 에 "${phrase}"`).toBe(false);
       }
     }
+  });
+});
+
+describe("§4-2 — 구워진 과잉 축약 이름을 읽는 쪽에서 되살린다", () => {
+  it("payload 가 `On` 을 줘도 화면은 `On Holding` 을 쓴다", () => {
+    const subject = { canonical: "On Holding AG", displayName: "On", symbol: "ONON", country: "US" as const, market: "NYSE" };
+    expect(subjectName(subject as never)).toBe("On Holding");
+  });
+
+  it("구운 값이 이미 온전하면 그대로 쓴다 — 전 화면 동일 값 보장", () => {
+    const subject = { canonical: "Angel Studios, Inc.", displayName: "Angel Studios", symbol: "ANGX", country: "US" as const, market: "NASDAQ" };
+    expect(subjectName(subject as never)).toBe("Angel Studios");
+  });
+
+  it("접두가 다른 값은 건드리지 않는다 — 데이터 계층 결정을 뒤집지 않는다", () => {
+    const subject = { canonical: "Hanwha Investment & Securities", displayName: "한화투자증권", country: "KR" as const, market: "KOSPI", naverCode: "003530" };
+    expect(subjectName(subject as never)).toBe("한화투자증권");
   });
 });
