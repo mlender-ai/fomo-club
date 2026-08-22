@@ -37,7 +37,8 @@ describe("완료 기준 1 — 탭 피드백과 햅틱 (§2)", () => {
   });
 
   it("카드·버튼·별·리스트 행에 피드백이 붙어 있다", () => {
-    expect(CARD).toContain("tap-star");
+    // ★ 는 WO-HOOK-01 §2-3 으로 상세로 옮겼다(앞면에서 관심을 담을 수 없다).
+    expect(DEPTH).toContain("tap-star");
     expect(CARD).toContain("tap-button");
     expect(DECK).toContain("tap-card");
     expect(DECK).toContain("tap-row");
@@ -45,7 +46,8 @@ describe("완료 기준 1 — 탭 피드백과 햅틱 (§2)", () => {
   });
 
   it("관심 등록만 medium 햅틱, 나머지는 light", () => {
-    expect(CARD).toContain("hapticMedium()");
+    // 관심 등록이 상세로 옮겨갔으므로 medium 햅틱도 거기 있다(WO-HOOK-01 §2-3).
+    expect(DEPTH).toContain("hapticMedium()");
     expect(CARD).toContain("haptic()");
     expect(DECK).toContain("haptic()");
     // 진동은 모션 감소를 켠 사용자에게 주지 않는다.

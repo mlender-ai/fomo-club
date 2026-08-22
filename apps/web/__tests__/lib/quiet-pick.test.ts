@@ -97,6 +97,8 @@ interface Scenario {
   insiders: InsiderClusterCandidate[];
   fronts: Record<string, StockFrontData>;
   priorBuys?: number;
+  /** US A형 누적선 재료 — 날짜별 임원 매수 행. 비우면 A형이 성립하지 않는다. */
+  insiderRows?: Array<{ tradeDate: string; insider: string; valueUsd?: number }>;
   usRows?: KrMarketRow[];
   rankMap?: Record<string, { market: string; rank: number }>;
   dartInsiders?: Record<string, unknown>;
@@ -109,7 +111,7 @@ function depsFrom(s: Scenario): Partial<QuietPickDeps> {
     computeStockAttentionSignals: async () => s.attention,
     fetchKrMarketRows: async () => s.marketRows,
     fetchInsiderClusterCandidates: async () => s.insiders,
-    fetchInsiderPriorBuys: async () => s.priorBuys ?? 2,
+    fetchInsiderHistory: async () => ({ priorBuys12mo: s.priorBuys ?? 2, rows: s.insiderRows ?? [] }),
     fetchCachedUsMarketRows: async () => s.usRows ?? [],
     fetchMarketCapRankMap: async () => (s.rankMap ?? {}) as Awaited<ReturnType<QuietPickDeps["fetchMarketCapRankMap"]>>,
     assembleStockFront: async (stock: string) => s.fronts[stock] ?? frontFor("1,000원", 1),
@@ -396,7 +398,10 @@ describe("buildQuietPickResponse — 데이터 완결성 게이트(WO-P1)", () =
     s.insiders = [
       { symbol: "RLST", companyName: "Relisted Corp", insiderCount: 16, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 4_800_000, buyPrice: 11, industry: "State Commercial Banks" },
     ];
-    s.fronts["Relisted Corp"] = { ...frontFor("$11.01", -1), candles: candlesVol(100_000, 3) };
+    // 라이브 캔들은 얇고(30봉) 봉인 캐시가 긴 상황 — 자격은 봉인 길이가 정한다.
+    // 30봉인 이유: 3봉이면 카드 그림 재료(누적선 8봉·평균거래량 5봉)조차 못 만들어
+    // 이 시나리오가 봉인 규칙이 아니라 WO-HOOK-01 형 선택에서 탈락하게 된다.
+    s.fronts["Relisted Corp"] = { ...frontFor("$11.01", -1), candles: candlesVol(100_000, 30) };
     return s;
   }
 
@@ -404,6 +409,59 @@ describe("buildQuietPickResponse — 데이터 완결성 게이트(WO-P1)", () =
     const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(thinHistoryScenario()) });
     expect(res.picks.map((p) => p.subject.canonical)).not.toContain("Relisted Corp");
     expect(res.qualification.drops.insufficient_candles).toBeGreaterThanOrEqual(1);
+  });
+
+  /**
+   * WO-HOOK-01 §1-1 — 세 형 중 어느 것도 성립하지 않으면 픽에서 뺀다.
+   * 후킹 없는 카드(= 데이터 표)를 만들지 않는 것이 이 배치의 목적이다.
+   */
+  it("카드 형이 하나도 성립하지 않으면 픽에서 빠진다(no_card_type)", async () => {
+    const s = thinHistoryScenario();
+    const deps = { ...depsFrom(s), writeUsCandleCache: async () => 250 };
+    // 캔들 3봉 — 누적선(8봉)·평균거래량(5봉) 어느 쪽도 못 만든다. US 라 일별 매수 여부도 없다.
+    s.fronts["Relisted Corp"] = { ...frontFor("$11.01", -1), candles: candlesVol(100_000, 3) };
+    const res = await buildQuietPickResponse({ date: TODAY, deps });
+    expect(res.picks.map((p) => p.subject.canonical)).not.toContain("Relisted Corp");
+    expect(res.qualification.drops.no_card_type).toBeGreaterThanOrEqual(1);
+  });
+
+  it("발행된 픽은 전부 형·후킹·그림을 갖는다", async () => {
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(baseScenario()) });
+    expect(res.picks.length).toBeGreaterThan(0);
+    for (const pick of res.picks) {
+      expect(pick.cardType, pick.subject.canonical).toBeDefined();
+      expect(["A", "B", "C"]).toContain(pick.cardType!.type);
+      expect(pick.cardType!.hook.length).toBeGreaterThan(0);
+      expect(pick.cardType!.figure.kind).toBeTruthy();
+      expect(pick.cardType!.support.length).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it("임원 신호의 누적선은 임원 매수 금액으로 만든다(기관 수급을 대신 그리지 않는다)", async () => {
+    const s = baseScenario();
+    s.attention["Insider Divergence Corp"] = quietAttention(5);
+    s.insiders = [
+      { symbol: "IDC", companyName: "Insider Divergence Corp", insiderCount: 4, tradeDate: "2026-07-18", filingDate: "2026-07-19", valueUsd: 3_000_000, buyPrice: 100, industry: "State Commercial Banks" },
+    ];
+    // 신호가 시작 가격 그대로 — 역행(정체) 조건.
+    s.fronts["Insider Divergence Corp"] = frontFor("$100", 0);
+    s.insiderRows = [
+      { tradeDate: "2026-07-18", insider: "Kim", valueUsd: 1_500_000 },
+      { tradeDate: "2026-07-18", insider: "Lee", valueUsd: 1_500_000 },
+      { tradeDate: "2025-11-05", insider: "Kim", valueUsd: 900_000 },
+    ];
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(s) });
+    const pick = res.picks.find((p) => p.subject.canonical === "Insider Divergence Corp");
+    expect(pick?.cardType?.type).toBe("A");
+    const figure = pick?.cardType?.figure;
+    if (figure?.kind !== "divergence") throw new Error("A형 그림이 아니다");
+    expect(figure.buyLegend).toBe("임원 매수 누적");
+    // 누적선은 단조 증가하고 실제로 올라간다.
+    expect(figure.buySeries.at(-1)!).toBeGreaterThan(figure.buySeries[0]!);
+    for (let i = 1; i < figure.buySeries.length; i += 1) {
+      expect(figure.buySeries[i]!).toBeGreaterThanOrEqual(figure.buySeries[i - 1]!);
+    }
+    expect(figure.priceSeries).toHaveLength(figure.buySeries.length);
   });
 
   it("봉인 캐시가 긴 이력을 갖고 있으면 그 길이로 자격 판정(요청 경로가 재현 가능)", async () => {

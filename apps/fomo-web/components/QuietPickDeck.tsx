@@ -10,6 +10,7 @@ import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLed
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { haptic } from "@/lib/haptics";
 import { QuietPickCard } from "@/components/QuietPickCard";
+import { isRevealed, reveal } from "@/lib/cardReveal";
 import { StockInsightView } from "@/components/KeywordDepthPage";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
 
@@ -110,6 +111,12 @@ export function QuietPickDeck() {
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
   const [selected, setSelected] = useState<QuietPick | null>(null);
+  /**
+   * 정체가 해제된 종목(WO-HOOK-01 §2-3). 상세를 열면 즉시 공개되고 **되돌아가지 않는다.**
+   * 로컬 저장이 정본이고 이 state 는 같은 화면에서 곧바로 다시 그리기 위한 사본이다 —
+   * 상세를 닫고 덱으로 돌아왔을 때 카드가 이미 열려 있어야 한다.
+   */
+  const [revealedSet, setRevealedSet] = useState<ReadonlySet<string>>(() => new Set());
   const [watchSelected, setWatchSelected] = useState<QuietWatchItem | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
@@ -317,9 +324,14 @@ export function QuietPickDeck() {
 
   const pick = current!;
   const next = picks[idx + 1];
+  // 이 세션에서 연 것 + 이전 방문에 연 것(로컬). 둘 중 하나면 공개다.
+  const cardRevealed = revealedSet.has(pick.subject.canonical) || isRevealed(pick.subject.canonical);
   /** 카드 CTA — 탭 진입과 같은 상세를 열고 진입점만 다르게 기록한다. */
-  const openDetail = () => {
-    recordPickTelemetry({ event: "card_detail_open", entryPoint: "button", position: idx + 1, ...slotLabel(pick.subject.canonical) });
+  /** 상세 진입 = 정체 공개(§2-3). 진입점(버튼/탭)이 달라도 공개 규칙은 같다. */
+  const openDetail = (entryPoint: "button" | "tap") => {
+    recordPickTelemetry({ event: "card_detail_open", entryPoint, position: idx + 1, ...slotLabel(pick.subject.canonical) });
+    reveal(pick.subject.canonical);
+    setRevealedSet((prev) => new Set(prev).add(pick.subject.canonical));
     setSelected(pick);
   };
   const rot = dx / 18;
@@ -367,14 +379,14 @@ export function QuietPickDeck() {
             onPointerCancel={onPointerUp}
             onClick={() => {
               if (moved.current) return;
-              recordPickTelemetry({ event: "card_detail_open", entryPoint: "tap", position: idx + 1, ...slotLabel(pick.subject.canonical) });
-              setSelected(pick);
+              openDetail("tap");
             }}
             role="button"
             tabIndex={0}
-            aria-label={`${pick.subject.canonical} 자세히 보기`}
+            /* 가려진 카드의 라벨에 종목명을 쓰지 않는다 — 마스킹이 시각 사용자에게만 걸리면 안 된다. */
+            aria-label={cardRevealed ? `${pick.subject.canonical} 자세히 보기` : "어떤 회사인지 보기"}
           >
-            <QuietPickCard pick={withRecord(pick)} onDetail={openDetail} position={idx + 1} />
+            <QuietPickCard pick={withRecord(pick)} onDetail={() => openDetail("button")} revealed={cardRevealed} />
           </div>
         </div>
 

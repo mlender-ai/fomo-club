@@ -16,6 +16,9 @@ import {
   sectorOf,
   buildQuietPickHook,
   buildQuietPickChips,
+  selectCardType,
+  normalizeQuietMoneyDate,
+  type CardTypeDecision,
   computeQuietPickAnomalies,
   buildCommitteeVerdictLine,
   type StockDef,
@@ -36,7 +39,12 @@ import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { fetchKrMarketRows } from "./discovery-supply";
-import { fetchInsiderClusterCandidates, fetchInsiderPriorBuys, type InsiderClusterCandidate } from "./insider-source";
+import {
+  fetchInsiderClusterCandidates,
+  fetchInsiderHistory,
+  type InsiderClusterCandidate,
+  type InsiderPurchaseRow,
+} from "./insider-source";
 import { fetchCachedUsMarketRows } from "./us-market-source";
 import { usDiscoverySeedForSymbol } from "./us-symbols";
 import { fetchDartInsiderPurchasesByStock, type DartDisclosureHit } from "./dart-disclosures";
@@ -142,6 +150,14 @@ export interface QuietPickSubject extends QuietPickSubjectSeed {
   displayName: string;
   /** 티커(US 심볼 / KR 6자리 코드) — 이름과 분리해 병기용. */
   ticker?: string;
+  /**
+   * 시총 표기 — "시총 $13B". **마스킹된 앞면에 남기는 판단 재료다**(WO-HOOK-01 §2-2):
+   * 이름을 가리면서 규모감까지 없애면 낚시가 되고 판단 재료가 0 이 된다.
+   *
+   * 확보된 시장만 채운다. KR 은 현재 시총 **순위**만 있고 금액이 없어(`fetchMarketCapRankMap`)
+   * 비운다 — 없는 값의 자리를 만들지 않는다(DS-00 §1-1).
+   */
+  marketCapText?: string;
 }
 
 /** 픽별 데이터 완결성 로그(WO-P1) — 어드민·자가검증에서 빈 껍데기 픽을 잡는 근거. */
@@ -301,6 +317,14 @@ export interface QuietPick {
   conviction: QuietPickConviction;
   /** 종합점수(내부화 — 화면 노출 아님, 픽 근거·성적표 밴드용). */
   companyScore: number | null;
+  /**
+   * 카드 3형(WO-HOOK-01) — **신호가 고른 형**과 그 형의 후킹·그림 재료.
+   *
+   * 세 형 중 어느 것도 성립하지 않는 종목은 애초에 픽이 되지 않으므로(`no_card_type` 로 탈락)
+   * 발행된 픽에는 항상 있다. 구 페이로드에는 없으므로 선택 필드로 두고, 없으면 카드가
+   * 종전 훅으로 그린다(배치 시차 동안의 폴백).
+   */
+  cardType?: CardTypeDecision;
   /** 데이터 완결성 게이트 로그(WO-P1). */
   dataQuality: QuietPickDataQuality;
   /** 유동성 경고(WO-P4) — 하한은 넘었지만 얇은 종목. 숨기지 않고 카드에 표기한다. */
@@ -425,7 +449,8 @@ export interface QuietPickDeps {
   readSupplyDemandHistoryByTickers: typeof readSupplyDemandHistoryByTickers;
   computeStockAttentionSignals: typeof computeStockAttentionSignals;
   fetchInsiderClusterCandidates: typeof fetchInsiderClusterCandidates;
-  fetchInsiderPriorBuys: typeof fetchInsiderPriorBuys;
+  /** 12개월 내부자 매수 이력 — 건수(빈도)와 행(A형 누적선)을 한 번에. */
+  fetchInsiderHistory: typeof fetchInsiderHistory;
   fetchCachedUsMarketRows: typeof fetchCachedUsMarketRows;
   fetchMarketCapRankMap: typeof fetchMarketCapRankMap;
   assembleStockFront: typeof assembleStockFront;
@@ -441,7 +466,7 @@ const defaultDeps: QuietPickDeps = {
   readSupplyDemandHistoryByTickers,
   computeStockAttentionSignals,
   fetchInsiderClusterCandidates,
-  fetchInsiderPriorBuys,
+  fetchInsiderHistory,
   fetchCachedUsMarketRows,
   fetchMarketCapRankMap,
   assembleStockFront,
@@ -483,6 +508,15 @@ function formatUsd(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${Math.round(value / 1_000)}K`;
   return `$${Math.round(value)}`;
+}
+
+/** 시총 축약 — "$13B" / "$820M". 카드 ① 줄에 들어가야 하므로 유효숫자 2~3자리로 자른다. */
+function formatMarketCapUsd(value: number): string | undefined {
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(value >= 1e10 ? 0 : 1)}B`;
+  if (value >= 1e6) return `$${Math.round(value / 1e6)}M`;
+  return `$${Math.round(value / 1e3)}K`;
 }
 
 /**
@@ -659,6 +693,145 @@ function maxPositiveRun(nets: readonly number[]): number {
     if (net > 0) { run += 1; best = Math.max(best, run); } else run = 0;
   }
   return best;
+}
+
+// ── WO-HOOK-01 카드 3형 재료 ───────────────────────────────────────────────
+//
+// 세 형이 요구하는 데이터가 서로 다르다(WO §1). 여기서 만드는 것은 **그림의 원계열**이고,
+// 정규화·렌더는 화면이 한다. 재료가 없으면 그 형을 만들지 않고 다음 형으로 넘어간다 —
+// 억지로 채우면 "A형 누적 데이터 없이 억지 구현"(WO §11 실패 모드)이 된다.
+
+/** A·C형 창 — KR 수급 조회 창과 같은 40거래일. 막대 40개면 320px 에서 각 4~5px(WO §6-2). */
+const CARD_WINDOW_DAYS = KR_STREAK_WINDOW;
+/** 임원 A형 누적선 창(거래일) — 임원 매수는 드물어 짧게 자르면 계단이 창 밖으로 나간다. */
+const INSIDER_DIVERGENCE_WINDOW = 90;
+
+/**
+ * 신호 종류별로 누적할 순매수 축. 다중 주체는 둘을 합친다.
+ *
+ * `insider_cluster` 는 여기 오지 않는다 — 임원 매수에는 일별 수급 계열이 없고, 기관 계열을
+ * 대신 그리면 범례("임원 매수 누적")와 선이 다른 사실을 말하게 된다. 임원 신호의 누적선은
+ * `insiderDivergenceSeries` 가 공시 금액으로 만든다.
+ */
+function flowNetFor(flow: InvestorFlow, kind: Exclude<QuietPickSignalKind, "insider_cluster">): number {
+  if (kind === "foreign_streak") return flow.foreignNet;
+  if (kind === "institution_streak") return flow.institutionNet;
+  return flow.foreignNet + flow.institutionNet;
+}
+
+/** 수급 계열을 가진 신호인가 — 임원 매수만 아니다. */
+function isFlowKind(kind: QuietPickSignalKind): kind is Exclude<QuietPickSignalKind, "insider_cluster"> {
+  return kind !== "insider_cluster";
+}
+
+/** 캔들 date(YYYYMMDD 또는 YYYY-MM-DD) → YYYY-MM-DD 종가 맵. */
+function closesByDate(front: StockFrontData): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const candle of front.candles ?? []) {
+    const date = normalizeQuietMoneyDate(candle.date);
+    if (date && Number.isFinite(candle.close) && candle.close > 0) out.set(date, candle.close);
+  }
+  return out;
+}
+
+/**
+ * 수급 A형 재료 — 창 안 **누적 순매수**와 같은 날짜의 종가를 나란히 만든다.
+ *
+ * 누적은 순매수(매수-매도)를 쌓는다. 매수만 쌓으면 판 날을 지워 항상 우상향하는 선이 되고,
+ * 그건 "안에서는 사고 있다"가 아니라 "우리가 그렇게 그렸다"가 된다.
+ *
+ * `flows` 는 최신순으로 온다 — 오래된 날 → 최근 날로 뒤집어 쓴다.
+ */
+function flowDivergenceSeries(
+  front: StockFrontData,
+  flows: readonly InvestorFlow[],
+  kind: Exclude<QuietPickSignalKind, "insider_cluster">
+): { priceSeries: number[]; buySeries: number[] } | undefined {
+  const closes = closesByDate(front);
+  const ordered = [...flows].reverse().slice(-CARD_WINDOW_DAYS);
+  const priceSeries: number[] = [];
+  const buySeries: number[] = [];
+  let cumulative = 0;
+  for (const flow of ordered) {
+    const date = normalizeQuietMoneyDate(flow.date);
+    const close = date ? closes.get(date) : undefined;
+    cumulative += flowNetFor(flow, kind);
+    // 종가가 없는 날(수급은 있는데 캔들이 비는 경우)은 **두 계열 모두** 건너뛴다 —
+    // 한쪽만 넣으면 두 선의 x축이 어긋나 갭이 거짓이 된다.
+    if (typeof close !== "number") continue;
+    priceSeries.push(close);
+    buySeries.push(cumulative);
+  }
+  if (priceSeries.length === 0) return undefined;
+  return { priceSeries, buySeries };
+}
+
+/** 임원 매수 1건 — 날짜와 금액. 통화는 섞지 않는다(한 종목 안에서는 항상 같은 통화다). */
+interface InsiderBuyEvent { date: string; value: number }
+
+/**
+ * 임원 A형 재료 — 매수 **금액**을 날짜별로 누적하고 같은 거래일의 종가를 나란히 만든다.
+ * 매수가 없는 날은 직전 누적을 유지한다(계단). 금액을 못 읽은 건은 버린다 — 0 으로 세지 않는다.
+ *
+ * 계단이 하나뿐인 것은 정상이다. 미국 클러스터는 같은 날 여러 임원이 사고, KR DART 는 공시
+ * 1건이 곧 사건 1건이다. 한 계단이라도 **주가가 그 뒤로 안 오르면** 갭은 보인다.
+ */
+function insiderDivergenceSeries(
+  front: StockFrontData,
+  events: readonly InsiderBuyEvent[]
+): { priceSeries: number[]; buySeries: number[] } | undefined {
+  const byDate = new Map<string, number>();
+  for (const event of events) {
+    if (!(event.value > 0)) continue;
+    const date = normalizeQuietMoneyDate(event.date);
+    if (!date) continue;
+    byDate.set(date, (byDate.get(date) ?? 0) + event.value);
+  }
+  if (byDate.size === 0) return undefined;
+
+  const sessions: Array<{ date: string; close: number }> = [];
+  for (const candle of (front.candles ?? []).slice(-INSIDER_DIVERGENCE_WINDOW)) {
+    const date = normalizeQuietMoneyDate(candle.date);
+    if (date && Number.isFinite(candle.close) && candle.close > 0) sessions.push({ date, close: candle.close });
+  }
+  if (sessions.length === 0) return undefined;
+
+  /**
+   * 매수일을 **거래일 격자에 맞춘다.** 공시 거래일이 휴장일이거나 캔들보다 최신이면(캔들은
+   * 하루 늦게 확정된다) 그 날짜는 격자에 없다. 맞추지 않으면 누적이 0 에 머물러 선이 평평해지고,
+   * A형이 조용히 사라진다 — 실제로는 매수가 있었는데도.
+   *
+   * 규칙: 그 날짜 **이후 첫 거래일**에 얹는다. 창보다 오래된 매수는 버린다(이 그림은 최근
+   * 매집을 말한다). 창보다 최신이면 마지막 거래일에 얹는다.
+   */
+  const first = sessions[0]!.date;
+  const last = sessions.at(-1)!.date;
+  const onGrid = new Map<string, number>();
+  for (const [date, value] of byDate) {
+    if (date < first) continue;
+    const session = date > last ? last : sessions.find((s) => s.date >= date)?.date ?? last;
+    onGrid.set(session, (onGrid.get(session) ?? 0) + value);
+  }
+  if (onGrid.size === 0) return undefined;
+
+  const priceSeries: number[] = [];
+  const buySeries: number[] = [];
+  let cumulative = 0;
+  for (const session of sessions) {
+    cumulative += onGrid.get(session.date) ?? 0;
+    priceSeries.push(session.close);
+    buySeries.push(cumulative);
+  }
+  return { priceSeries, buySeries };
+}
+
+/** C형 재료 — 창 안 일별 순매수 여부(오래된 → 최근). */
+function buyDaysWindow(
+  flows: readonly InvestorFlow[],
+  kind: Exclude<QuietPickSignalKind, "insider_cluster">
+): boolean[] | undefined {
+  if (flows.length === 0) return undefined;
+  return [...flows].reverse().slice(-CARD_WINDOW_DAYS).map((flow) => flowNetFor(flow, kind) > 0);
 }
 
 // ── 후보(신호 검출 결과) ────────────────────────────────────────────────
@@ -1364,10 +1537,14 @@ export async function buildQuietPickResponse(options: {
     const vacuumRatio = volumeVacuumRatio(front);
     const aboveLow = pctAboveYearLow(front, current);
 
-    // US 빈도(지난 12개월 내부자 매수 건수) — 생존 후보만 조회(비용 큰 per-ticker fetch).
+    // US 내부자 이력 — 생존 후보만 조회(비용 큰 per-ticker fetch). 같은 페이지에서 빈도(건수)와
+    // A형 누적선 재료(날짜별 매수 금액)를 **한 번에** 받는다(요청 수 증가 0).
     let priorBuys12mo: number | undefined;
+    let insiderRows: readonly InsiderPurchaseRow[] = [];
     if (sig.subject.country === "US" && sig.subject.symbol) {
-      priorBuys12mo = await deps.fetchInsiderPriorBuys(sig.subject.symbol).catch(() => undefined);
+      const history = await deps.fetchInsiderHistory(sig.subject.symbol).catch(() => undefined);
+      priorBuys12mo = history?.priorBuys12mo;
+      insiderRows = history?.rows ?? [];
     }
     const mentionCount = attention[sig.attentionKey]?.mentionCount;
     const facts: QuietPickAnomalyFacts = {
@@ -1388,6 +1565,48 @@ export async function buildQuietPickResponse(options: {
     };
     const anomalies = computeQuietPickAnomalies(facts);
     if (anomalies.length === 0) { drop("no_anomaly"); continue; }
+
+    // ── 카드 3형(WO-HOOK-01 §1) — 신호가 형을 고른다. 어느 형도 성립 안 하면 픽에서 뺀다. ──
+    const flows = sig.subject.naverCode ? histories[sig.subject.naverCode] ?? [] : [];
+    /**
+     * 누적선의 재료는 **신호의 주체와 같아야 한다.** 임원 신호에 기관 수급을 그리면 범례가
+     * 거짓이 된다(§4-2 "임원 매수 누적"). 그래서 주체별로 계열을 나눠 만든다.
+     *
+     * 임원 신호의 매수 사건은 US 는 12개월 Form 4 행 전체, KR DART 는 이번 공시 1건이다.
+     * 행을 못 읽었으면 **이번 신호 자체**를 한 건으로 쓴다 — 그건 우리가 카드에서 말하고 있는
+     * 바로 그 매수이므로 지어낸 사실이 아니다.
+     */
+    const insiderEvents: InsiderBuyEvent[] = isFlowKind(sig.kind)
+      ? []
+      : insiderRows.flatMap((row) =>
+          typeof row.valueUsd === "number" && row.valueUsd > 0 ? [{ date: row.tradeDate, value: row.valueUsd }] : []
+        );
+    if (!isFlowKind(sig.kind) && insiderEvents.length === 0) {
+      const value = sig.valueUsd ?? sig.insiderValueKrw;
+      if (typeof value === "number" && value > 0) insiderEvents.push({ date: sig.startedAt, value });
+    }
+    const divergence = isFlowKind(sig.kind)
+      ? flowDivergenceSeries(front, flows, sig.kind)
+      : insiderDivergenceSeries(front, insiderEvents);
+    const buyDays = isFlowKind(sig.kind) ? buyDaysWindow(flows, sig.kind) : undefined;
+    const sparkline = front.sparkline ?? [];
+    const cardType = selectCardType({
+      kind: sig.kind,
+      days: sig.days,
+      priceChangeSincePct: cumulativePct,
+      ...(divergence ? { priceSeries: divergence.priceSeries, cumulativeBuySeries: divergence.buySeries } : {}),
+      ...(sparkline.length > 0 ? { sparkline } : {}),
+      ...(buyDays ? { buyDays } : {}),
+      ...(typeof volumePct === "number" ? { volumePct } : {}),
+      ...(sparkline.length > 0
+        ? { markerIndex: Math.max(0, sparkline.length - 1 - Math.min(sig.days, sparkline.length - 1)) }
+        : {}),
+      ...(typeof sig.insiderCount === "number" ? { insiderCount: sig.insiderCount } : {}),
+      scale: sig.scale,
+      ...(typeof priorBuys12mo === "number" ? { priorBuys12mo } : {}),
+      ...(typeof vacuumRatio === "number" ? { volumeVacuumRatio: vacuumRatio } : {}),
+    });
+    if (!cardType) { drop("no_card_type"); continue; }
     // WO-SYNC F-2 — 문장으로 녹기 전의 실수치를 그대로 남긴다. 신호 정체성(kind·actorNoun·
     // scale·days)은 signal 이 이미 갖고 있으므로 뺀다.
     const { kind: _factKind, actorNoun: _factActor, scale: _factScale, days: _factDays, ...signalFacts } = facts;
@@ -1401,7 +1620,18 @@ export async function buildQuietPickResponse(options: {
     };
 
     picks.push({
-      subject: { ...sig.subject, ...companyDisplay(sig.subject), identity },
+      subject: {
+        ...sig.subject,
+        ...companyDisplay(sig.subject),
+        identity,
+        ...(((): { marketCapText?: string } => {
+          const cap = sig.subject.country === "US" && sig.subject.symbol
+            ? usMcap.get(sig.subject.symbol.toUpperCase())
+            : undefined;
+          const text = typeof cap === "number" ? formatMarketCapUsd(cap) : undefined;
+          return text ? { marketCapText: text } : {};
+        })()),
+      },
       price: {
         current,
         ...(front.priceText ? { currentText: front.priceText } : {}),
@@ -1436,6 +1666,7 @@ export async function buildQuietPickResponse(options: {
       },
       hook: buildQuietPickHook(facts),
       chips: buildQuietPickChips(facts),
+      cardType,
       anomalies,
       ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {
