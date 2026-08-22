@@ -27,6 +27,11 @@ const config: Config = {
           "accent-ink": "#1A1A00",
           // 하락. 상승은 text-1(흰색). 빨강/초록 등락색 금지(§7).
           down: "#7A7A76",
+          // ── WO-HOOK-01 카드 그림 전용(§4-2·§6-2). 본문 텍스트에 쓰지 않는다. ──
+          /** A형 주가선 — 누적선(accent)보다 한 단 뒤로 물러나야 갭이 읽힌다. */
+          "chart-line": "#4A4A48",
+          /** C형 미매수·과거 매수일 막대 — 배경보다 아주 조금 밝은 정도. */
+          "chart-bar": "#252523",
         },
 
         // 레거시 토큰(점진 마이그레이션 — 컴포넌트는 화면별 핸드오프로 DESIGN.md 토큰으로 전환).
@@ -113,6 +118,17 @@ const config: Config = {
         "ds-data": ["14px", { lineHeight: "1.4", letterSpacing: "0", fontWeight: "400" }],
         "ds-label": ["12px", { lineHeight: "1.4", letterSpacing: "0.04em", fontWeight: "400" }],
         "ds-caption": ["11px", { lineHeight: "1.5", letterSpacing: "0.02em", fontWeight: "400" }],
+        // ── WO-HOOK-01 등재분(DS-00 §3-1 — 화면 스펙이 요구하면 등재하고 쓴다) ──
+        /** 카드 후킹 문장(§4-1). display(24)보다 작다 — 3형 전부 2줄에 들어가야 한다. */
+        "ds-hook": ["19px", { lineHeight: "1.35", letterSpacing: "-0.02em", fontWeight: "500" }],
+        /** B형 큰 숫자(§5-1). weight 600 은 이 한 자리 예외다 — DS-00 §3-1 에 사유와 함께 등재. */
+        "ds-ratio": ["52px", { lineHeight: "1", letterSpacing: "-0.03em", fontWeight: "600" }],
+        /** B형에서 큰 숫자를 문장으로 되읽는 줄(§5-2). */
+        "ds-ratio-line": ["16px", { lineHeight: "1.4", letterSpacing: "-0.01em", fontWeight: "500" }],
+        /** 카드 가격(§3-②). data(14)보다 한 단 크다. */
+        "ds-price": ["15px", { lineHeight: "1.3", letterSpacing: "0", fontWeight: "400" }],
+        /** 그림 범례·캡션(§4-2·§6-2). 11px 하한의 유일한 예외 — DS-00 §3-1 에 사유와 함께 등재. */
+        "ds-legend": ["10px", { lineHeight: "1.4", letterSpacing: "0.02em", fontWeight: "400" }],
       },
       fontFamily: {
         body: ["Pretendard", "system-ui", "sans-serif"],

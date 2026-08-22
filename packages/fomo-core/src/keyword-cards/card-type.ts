@@ -138,12 +138,19 @@ export interface CardTypeInput {
   volumeVacuumRatio?: number;
 }
 
-/** 문장 주어 — 신호 종류에서만 만든다(원료 문자열의 금지어 유입 차단). */
+/**
+ * 문장 주어 — 신호 종류에서만 만든다(원료 문자열의 금지어 유입 차단).
+ *
+ * 다중 주체는 `외국인과 기관`(7자)이 아니라 **`외국인·기관`(6자)** 을 쓴다. 후킹은 19px 이라
+ * 320px 카드에서 한 줄이 약 15자인데, 긴 형태를 쓰면 `외국인과 기관이 하루 거래량의` 가 16자로
+ * 넘쳐 3줄이 된다(§10 완료 기준 12). 기존 훅 빌더(`quiet-pick-hook`)는 24px 한 줄 문장이라
+ * 긴 형태를 그대로 쓴다 — 두 곳의 폭 예산이 다르다.
+ */
 const ACTOR: Record<QuietPickSignalKind, string> = {
   insider_cluster: "임원",
   institution_streak: "기관",
   foreign_streak: "외국인",
-  multi_cluster: "외국인과 기관",
+  multi_cluster: "외국인·기관",
 };
 
 /**
@@ -179,10 +186,18 @@ function usableSeries(series: readonly number[] | undefined, min: number): serie
   return series.every((v) => Number.isFinite(v));
 }
 
-/** A형 후킹 — 주가가 무엇을 하고 있는지에 따라 세 갈래(WO §4-1). */
+/**
+ * A형 후킹 — 주가가 무엇을 하고 있는지에 따라 세 갈래(WO §4-1).
+ *
+ * 소폭 상승 변형의 `계속` 은 다중 주체에서 뺀다. `외국인·기관이 계속 사고 있어요` 는 17자라
+ * 한 줄(약 15자)을 넘긴다. 뺀다고 사실이 달라지지 않는다 — 지속은 보조 줄의 `N일간` 이 말한다.
+ */
 function divergenceHook(actor: string, changePct: number): string {
   if (changePct < -FLAT_PCT) return `주가는 빠지는데\n${actor}${TOPIC} 사고 있어요`;
-  if (changePct > FLAT_PCT) return `주가는 조용한데\n${actor}이 계속 사고 있어요`;
+  if (changePct > FLAT_PCT) {
+    const keeps = actor.length <= 3 ? "계속 " : "";
+    return `주가는 조용한데\n${actor}이 ${keeps}사고 있어요`;
+  }
   return `주가는 제자리인데\n${actor}${ONLY} 사고 있어요`;
 }
 

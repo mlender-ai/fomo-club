@@ -57,7 +57,7 @@ describe("repairPickCopy — 옛 payload 문자열을 화면 카피로", () => {
   it("새 카피는 그대로 통과한다 — 다음 배치가 돌면 이 shim 은 아무 일도 하지 않는다", () => {
     for (const text of [
       "기관이 25일째 조용히 사고 있어요",
-      "임원 7명이 사흘 새 같이 샀어요",
+      "임원 7명이 3일 새 같이 샀어요",
       "52주 저점에서 1% 위예요",
       "되돌아보는 선 · 52주 저점 2,500원 이탈 여부가 다음 판단 기준이에요.",
     ]) {
@@ -77,9 +77,9 @@ describe("pickHook — 옛 훅은 신호로 다시 만든다", () => {
 
   it("실측 payload 3건이 골든 케이스 문장으로 복구된다", () => {
     expect(pickHook(빅텍)).toBe("기관이 조용히 25일째 매수 중");
-    expect(pickHook(amrize)).toBe("임원 7명이 사흘 새 함께 매수");
+    expect(pickHook(amrize)).toBe("임원 7명이 3일 새 함께 매수");
     // 부정문 훅도 신호로 다시 만든다 — D3 이 화면에서 사라진다.
-    expect(pickHook(한미반도체)).toBe("외국인과 기관이 나흘째 같이 매수");
+    expect(pickHook(한미반도체)).toBe("외국인과 기관이 4일째 같이 매수");
   });
 
   it("복구된 훅에 금지어·em-dash 가 없다", () => {

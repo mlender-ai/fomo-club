@@ -150,6 +150,14 @@ export interface QuietPickSubject extends QuietPickSubjectSeed {
   displayName: string;
   /** 티커(US 심볼 / KR 6자리 코드) — 이름과 분리해 병기용. */
   ticker?: string;
+  /**
+   * 시총 표기 — "시총 $13B". **마스킹된 앞면에 남기는 판단 재료다**(WO-HOOK-01 §2-2):
+   * 이름을 가리면서 규모감까지 없애면 낚시가 되고 판단 재료가 0 이 된다.
+   *
+   * 확보된 시장만 채운다. KR 은 현재 시총 **순위**만 있고 금액이 없어(`fetchMarketCapRankMap`)
+   * 비운다 — 없는 값의 자리를 만들지 않는다(DS-00 §1-1).
+   */
+  marketCapText?: string;
 }
 
 /** 픽별 데이터 완결성 로그(WO-P1) — 어드민·자가검증에서 빈 껍데기 픽을 잡는 근거. */
@@ -500,6 +508,15 @@ function formatUsd(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${Math.round(value / 1_000)}K`;
   return `$${Math.round(value)}`;
+}
+
+/** 시총 축약 — "$13B" / "$820M". 카드 ① 줄에 들어가야 하므로 유효숫자 2~3자리로 자른다. */
+function formatMarketCapUsd(value: number): string | undefined {
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(value >= 1e10 ? 0 : 1)}B`;
+  if (value >= 1e6) return `$${Math.round(value / 1e6)}M`;
+  return `$${Math.round(value / 1e3)}K`;
 }
 
 /**
@@ -1603,7 +1620,18 @@ export async function buildQuietPickResponse(options: {
     };
 
     picks.push({
-      subject: { ...sig.subject, ...companyDisplay(sig.subject), identity },
+      subject: {
+        ...sig.subject,
+        ...companyDisplay(sig.subject),
+        identity,
+        ...(((): { marketCapText?: string } => {
+          const cap = sig.subject.country === "US" && sig.subject.symbol
+            ? usMcap.get(sig.subject.symbol.toUpperCase())
+            : undefined;
+          const text = typeof cap === "number" ? formatMarketCapUsd(cap) : undefined;
+          return text ? { marketCapText: text } : {};
+        })()),
+      },
       price: {
         current,
         ...(front.priceText ? { currentText: front.priceText } : {}),

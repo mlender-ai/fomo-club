@@ -10,6 +10,7 @@ import { staleLabel } from "../lib/deckStale";
 const deck = readFileSync(new URL("../components/QuietPickDeck.tsx", import.meta.url), "utf8");
 const home = readFileSync(new URL("../components/HomeView.tsx", import.meta.url), "utf8");
 const card = readFileSync(new URL("../components/QuietPickCard.tsx", import.meta.url), "utf8");
+const depth = readFileSync(new URL("../components/QuietPickDepth.tsx", import.meta.url), "utf8");
 
 /** 주석은 화면에 안 나간다 — 렌더 구조를 볼 때는 지우고 본다. */
 function code(source: string): string {
@@ -75,7 +76,9 @@ describe("완료 기준 4·5 — 하단 탭에 아이콘 없음 · 카드 전체
 
   it("카드 무대 전체가 상세로 가는 탭 타겟이다", () => {
     expect(code(deck)).toMatch(/role="button"/);
-    expect(code(deck)).toContain('entryPoint: "tap"');
+    // 진입점(버튼/탭)은 openDetail 한 곳으로 모았다 — 정체 해제 규칙이 갈리면 안 되기 때문이다.
+    expect(code(deck)).toContain('openDetail("tap")');
+    expect(code(deck)).toContain("entryPoint");
   });
 });
 
@@ -125,10 +128,17 @@ describe("스와이프는 이동이다 (DS-02 §4-1) — 관심은 ★ 버튼이
     expect(code(deck)).not.toContain("recordTaste");
   });
 
-  it("카드의 ★ 가 저장과 지표를 이어받았다 — 신호가 끊기지 않았다", () => {
-    expect(code(card)).toContain("toggleWatch");
-    expect(code(card)).toContain("card_watchlist_add");
-    expect(code(card)).toContain("reason: hook");
+  /**
+   * ★ 는 WO-HOOK-01 §2-3 으로 **상세**로 옮겼다 — 가려진 카드에서 관심을 담게 하면 무엇에
+   * 관심을 뒀는지 모르는 채로 기록이 남는다. 저장·지표 신호는 끊기지 않고 그대로 따라갔다.
+   */
+  it("★ 가 상세에서 저장과 지표를 이어받았다 — 신호가 끊기지 않았다", () => {
+    const body = code(depth);
+    expect(body).toContain("toggleWatch");
+    expect(body).toContain("card_watchlist_add");
+    expect(body).toContain("reason: hook");
+    // 앞면에는 없다.
+    expect(code(card)).not.toContain("toggleWatch");
   });
 
   it("마지막 장에서 종료 화면을 만들지 않고 지켜보는 중으로 스크롤한다", () => {

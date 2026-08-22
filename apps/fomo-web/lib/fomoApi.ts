@@ -1051,6 +1051,19 @@ export interface QuietPickAnomaly {
   chip?: string | null;
   strength: number;
 }
+/** 카드 3형(WO-HOOK-01) — 서버가 고른 형·후킹·그림 재료. 화면은 그리기만 한다. */
+export interface QuietPickCardType {
+  type: "A" | "B" | "C";
+  /** 후킹 문장. `\n` 이 의도된 줄바꿈이다. */
+  hook: string;
+  figure:
+    | { kind: "divergence"; priceSeries: number[]; buySeries: number[]; buyLegend: string }
+    | { kind: "ratio"; ratioPct: number; priceSeries?: number[]; markerIndex?: number }
+    | { kind: "streak"; buyDays: boolean[]; streakFrom: number; streakTo: number; actor: string };
+  /** 보조 최대 2줄. */
+  support: string[];
+}
+
 export interface QuietPick {
   subject: {
     canonical: string;
@@ -1063,6 +1076,11 @@ export interface QuietPick {
     market: string;
     country: "KR" | "US";
     identity?: string;
+    /**
+     * 시총 표기("시총 $13B" 의 값 부분) — 마스킹된 앞면에 남기는 판단 재료(WO-HOOK-01 §2-2).
+     * KR 은 아직 금액이 없어 비어 온다. 없으면 그 항목만 빠진다(자리표시자 금지).
+     */
+    marketCapText?: string;
   };
   price: { current: number; currentText?: string; changePct?: number; sparkline: number[] };
   signal: {
@@ -1096,6 +1114,13 @@ export interface QuietPick {
   };
   /** 훅 — 무슨 일이 일어났나 한 문장(WO-SUB-HOOK PART 1). */
   hook: string;
+  /**
+   * 카드 3형(WO-HOOK-01) — 신호가 고른 형과 그 형의 후킹·그림 재료. 발행 시점에 굳는다.
+   *
+   * 구 payload 에는 없다. 픽 payload 는 하루 한 번 크론이 구우므로 배포 직후 한 배치 동안은
+   * 이 필드가 비어 온다 — 그때 카드는 종전 훅으로 그린다(폴백).
+   */
+  cardType?: QuietPickCardType;
   /**
    * 카드 칩 — 훅이 말하지 않는 근거만, 서로 다른 축으로 최대 3개.
    * 발행 시점에 굳는다(카드가 다시 조립하지 않는다). 구 페이로드에는 없으므로 선택 필드.

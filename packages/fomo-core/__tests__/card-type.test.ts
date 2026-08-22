@@ -202,3 +202,52 @@ describe("임계값이 실측 분포와 맞는가 (2026-08-22 발행 덱 10장)"
     expect(QUIET_UP_PCT).toBeLessThan(4);
   });
 });
+
+/**
+ * WO-HOOK-01 §10 완료 기준 12 — 세 형 모두 320px 폭에서 후킹이 3줄이 되지 않는다.
+ *
+ * 320px 카드의 내용폭은 288px(패딩 16 양쪽). 19px 한글은 자간 -0.02em 이라 글자당 약 18.6px,
+ * 즉 **한 줄에 약 15자**가 들어간다. 문안은 `\n` 으로 두 줄을 직접 나누므로, 각 줄이 15자를
+ * 넘지 않으면 3줄이 될 수 없다. 화면의 `line-clamp-2` 는 이 계약이 깨졌을 때의 안전망이다.
+ */
+describe("완료 기준 12 — 후킹이 320px 에서 2줄을 넘지 않는다", () => {
+  const MAX_CHARS_PER_LINE = 15;
+  const rising2 = Array.from({ length: 20 }, (_, i) => (i < 10 ? 0 : 4_000_000));
+  const price2 = Array.from({ length: 20 }, () => 100);
+  const streak = (n: number) => Array.from({ length: 40 }, (_, i) => i >= 40 - n);
+
+  const hooks = (): string[] => {
+    const out: string[] = [];
+    for (const kind of ["insider_cluster", "institution_streak", "foreign_streak", "multi_cluster"] as const) {
+      for (const change of [-12, -5.9, -2.1, -0.4, 0, 1.9, 2.7]) {
+        const d = selectCardType({ kind, days: 8, scale: "$8.3M", insiderCount: 4, priceChangeSincePct: change, priceSeries: price2, cumulativeBuySeries: rising2 });
+        if (d) out.push(d.hook);
+      }
+      for (const pct of [10, 24, 25, 44, 45, 51, 98]) {
+        const d = selectCardType({ kind, days: 8, scale: "$8.3M", volumePct: pct, sparkline: price2.map((v, i) => v + i) });
+        if (d) out.push(d.hook);
+      }
+      for (const n of [1, 2, 4, 40]) {
+        const d = selectCardType({ kind, days: 8, scale: "47만주", buyDays: streak(n) });
+        if (d) out.push(d.hook);
+      }
+    }
+    return out;
+  };
+
+  it("모든 형·모든 변형의 각 줄이 15자 이하다", () => {
+    const all = hooks();
+    expect(all.length).toBeGreaterThan(20);
+    for (const hook of all) {
+      const lines = hook.split("\n");
+      expect(lines.length, hook).toBeLessThanOrEqual(2);
+      for (const line of lines) expect(line.length, `${hook} → "${line}"`).toBeLessThanOrEqual(MAX_CHARS_PER_LINE);
+    }
+  });
+
+  it("고유어 수 표현이 어떤 형에도 없다 (§9)", () => {
+    for (const hook of hooks()) {
+      expect(/이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘/.test(hook), hook).toBe(false);
+    }
+  });
+});
