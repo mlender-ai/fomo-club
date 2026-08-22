@@ -128,7 +128,7 @@ describe("buildQuietPickHook — H1~H6", () => {
       volumeElevated: false,
     };
     const hook = buildQuietPickHook(quietOnly);
-    expect(hook).toBe("외국인과 기관이 나흘째 같이 매수");
+    expect(hook).toBe("외국인과 기관이 4일째 같이 매수");
     for (const f of [...thirtyFacts(), quietOnly]) {
       const hook = buildQuietPickHook(f);
       expect(/^(안 |못 |아직 |거래량도 안)/.test(hook)).toBe(false);
@@ -166,7 +166,7 @@ describe("buildQuietPickHook — H1~H6", () => {
     const hook = "기관이 5일째 조용히 사고 있어요";
     expect(quietPickSubLine(hook, "5일째 계속 — 어제보다 1일 더")).toBeNull();
     // 훅에 없는 변화(인원 증가)는 남긴다 — 그건 새 정보다.
-    expect(quietPickSubLine("임원 7명이 사흘 새 같이 샀어요", "9명으로 늘었어요")).toBe("9명으로 늘었어요");
+    expect(quietPickSubLine("임원 7명이 3일 새 같이 샀어요", "9명으로 늘었어요")).toBe("9명으로 늘었어요");
     expect(quietPickSubLine(hook, undefined)).toBeNull();
   });
 
@@ -226,13 +226,15 @@ describe("골든 케이스 — 빅텍 · 한미반도체 · Amrize", () => {
   });
 
   it("한미반도체 — 부정문 훅이 사라지고 무슨 일이 있었는지가 앞에 온다", () => {
-    expect(buildQuietPickHook(한미반도체)).toBe("외국인과 기관이 나흘째 같이 매수");
-    expect(buildQuietPickChips(한미반도체)).toEqual(["거래량은 그대로", "47만주", "4일 연속"]);
+    expect(buildQuietPickHook(한미반도체)).toBe("외국인과 기관이 4일째 같이 매수");
+    // 훅이 이미 `4일째` 를 말하므로 기간 칩은 나오지 않는다(H4).
+    expect(buildQuietPickChips(한미반도체)).toEqual(["거래량은 그대로", "47만주"]);
   });
 
-  it("Amrize — 임원 7명 · 사흘 새", () => {
-    expect(buildQuietPickHook(amrize)).toBe("임원 7명이 사흘 새 함께 매수");
-    expect(buildQuietPickChips(amrize)).toEqual(["$3.6M", "52주 저점 +1%", "최근 3일"]);
+  it("Amrize — 임원 7명 · 3일 새", () => {
+    expect(buildQuietPickHook(amrize)).toBe("임원 7명이 3일 새 함께 매수");
+    // 훅이 이미 `3일 새` 를 말하므로 기간 칩은 나오지 않는다(H4).
+    expect(buildQuietPickChips(amrize)).toEqual(["$3.6M", "52주 저점 +1%"]);
   });
 
   /**
@@ -305,5 +307,43 @@ describe("buildCommitteeVerdictLine — 이례성 결합 탈템플릿(WO-G1A2 §
       const line = buildCommitteeVerdictLine(computeQuietPickAnomalies(facts), timing, valuation);
       expect(findBannedTerms(line), line).toEqual([]);
     }
+  });
+});
+
+/**
+ * WO-HOOK-01 §9 — 고유어 수 표현 금지.
+ *
+ * `임원 4명이 여드레 새 함께 매수` 가 실제 카드에 나왔다. 후킹은 0.5초 안에 읽혀야 하는데
+ * 고유어는 "여드레가 며칠이지" 라는 변환 한 단계를 더 요구한다. 아라비아 숫자 + `일` 로 통일한다.
+ */
+describe("WO-HOOK-01 §9 — 고유어 수 표현이 훅에 없다", () => {
+  const NATIVE = /이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘/;
+
+  it("임원 매수 기간구는 2~10일 전 구간에서 숫자로 센다", () => {
+    for (let days = 1; days <= 12; days += 1) {
+      const hook = buildQuietPickHook({
+        kind: "insider_cluster",
+        actorNoun: "임원",
+        scale: "$8.3M",
+        days,
+        insiderCount: 4,
+        priorBuys12mo: 5,
+      });
+      expect(NATIVE.test(hook), `${days}일: ${hook}`).toBe(false);
+      if (days >= 2) expect(hook).toContain(`${days}일 새`);
+    }
+  });
+
+  it("다중 주체 훅도 숫자로 센다", () => {
+    for (let days = 1; days <= 12; days += 1) {
+      const hook = buildQuietPickHook({ kind: "multi_cluster", actorNoun: "외국인·기관", scale: "47만주", days });
+      expect(NATIVE.test(hook), `${days}일: ${hook}`).toBe(false);
+    }
+  });
+
+  it("실측 회귀 — `임원 4명이 여드레 새 함께 매수` 는 다시 나오지 않는다", () => {
+    expect(
+      buildQuietPickHook({ kind: "insider_cluster", actorNoun: "임원", scale: "$8.3M", days: 8, insiderCount: 4, priorBuys12mo: 5 })
+    ).toBe("임원 4명이 8일 새 함께 매수");
   });
 });
