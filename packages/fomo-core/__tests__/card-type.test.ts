@@ -10,7 +10,7 @@ import {
 
 /** 우상향 누적 매수선 + 같은 길이 주가선. A형 재료의 최소 형태. */
 const rising = (n = 20): number[] => Array.from({ length: n }, (_, i) => (i < n / 2 ? 0 : 4_000_000));
-const drifting = (n = 20, from = 100, to = 96): number[] =>
+const drifting = (n = 24, from = 100, to = 96): number[] =>
   Array.from({ length: n }, (_, i) => from + ((to - from) * i) / (n - 1));
 
 const base: CardTypeInput = { kind: "insider_cluster", days: 8, scale: "$8.3M", insiderCount: 4 };
@@ -40,6 +40,7 @@ describe("selectCardType — A 역행", () => {
       priceSeries: drifting(),
       cumulativeBuySeries: rising(),
       volumePct: 22.7,
+      sparkline: drifting(),
     });
     expect(d?.type).toBe("B");
   });
@@ -52,6 +53,7 @@ describe("selectCardType — A 역행", () => {
       priceSeries: drifting(),
       cumulativeBuySeries: flat,
       volumePct: 42.9,
+      sparkline: drifting(),
     });
     expect(d?.type).toBe("B");
   });
@@ -86,22 +88,30 @@ describe("selectCardType — A 역행", () => {
 
 describe("selectCardType — B 비율", () => {
   it("비율이 하한 이상이면 B, 큰 숫자는 반올림 정수", () => {
-    const d = selectCardType({ ...base, volumePct: 51.4, priceSeries: drifting() });
+    const d = selectCardType({ ...base, volumePct: 51.4, sparkline: drifting() });
     expect(d?.type).toBe("B");
     if (d?.figure.kind !== "ratio") throw new Error("B형이 아니다");
     expect(d.figure.ratioPct).toBe(51);
   });
 
   it("구간별 표현 (WO §5-2)", () => {
-    const at = (pct: number) => selectCardType({ ...base, volumePct: pct, priceSeries: drifting() })?.hook;
+    const at = (pct: number) => selectCardType({ ...base, volumePct: pct, sparkline: drifting() })?.hook;
     expect(at(51)).toBe("임원이 하루 거래량의\n절반을 사갔어요");
     expect(at(30)).toBe("임원이 하루 거래량의\n3분의 1을 사갔어요");
     expect(at(15)).toBe("임원이 하루 거래량의\n상당 부분을 사갔어요");
   });
 
   it("하한 미만이면 B 를 쓰지 않는다", () => {
-    const d = selectCardType({ ...base, volumePct: RATIO_PCT - 0.1, priceSeries: drifting() });
+    const d = selectCardType({ ...base, volumePct: RATIO_PCT - 0.1, sparkline: drifting() });
     expect(d).toBeNull(); // C 재료(일별 매수 여부)도 없으므로 픽에서 빠진다
+  });
+
+  it("스파크라인이 20포인트 미만이면 그림 없이 큰 숫자만 — 카드를 버리지 않는다", () => {
+    const d = selectCardType({ ...base, volumePct: 51.4, sparkline: [980, 990, 1000] });
+    expect(d?.type).toBe("B");
+    if (d?.figure.kind !== "ratio") throw new Error("B형이 아니다");
+    expect(d.figure.ratioPct).toBe(51);
+    expect(d.figure.priceSeries).toBeUndefined();
   });
 });
 
@@ -162,7 +172,7 @@ describe("보조 2줄 (WO §3-⑤)", () => {
 
   it("후킹에 이미 나온 숫자를 되풀이하지 않는다", () => {
     // 후킹(B형)이 '3분의 1' 로 3 을 쓰므로 `1년 매수는 3건뿐` 은 빠진다.
-    const d = selectCardType({ ...base, volumePct: 30, priceSeries: drifting(), priorBuys12mo: 3 });
+    const d = selectCardType({ ...base, volumePct: 30, sparkline: drifting(), priorBuys12mo: 3 });
     expect(d?.support).toEqual(["8일간 · 4명 · $8.3M"]);
   });
 

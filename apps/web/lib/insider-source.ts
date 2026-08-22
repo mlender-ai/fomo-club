@@ -150,12 +150,38 @@ export async function fetchInsiderPriorBuys(
   symbol: string,
   excludeRecentDays = 14
 ): Promise<number | undefined> {
+  return (await fetchInsiderHistory(symbol, excludeRecentDays))?.priorBuys12mo;
+}
+
+/** 종목별 12개월 내부자 매수 이력 — 건수(빈도 이례성)와 행(A형 누적선)을 **한 번의 fetch** 로. */
+export interface InsiderHistory {
+  /** [1년 전, 최근 excludeRecentDays일 전) 구간의 매수 건수. */
+  priorBuys12mo: number;
+  /** 지난 12개월 매수 행 전체(최근분 포함). 누적선은 이걸로 만든다. */
+  rows: InsiderPurchaseRow[];
+}
+
+/**
+ * openinsider screener 1회 조회 → 건수 + 행 목록.
+ *
+ * ## 왜 창구를 하나로 합쳤나
+ *
+ * WO-HOOK-01 A형은 **날짜별 매수 금액 누적 시계열**을 요구한다. 그 재료는 이미 매일 US 픽마다
+ * 한 번씩 긁고 있던 바로 그 screener 페이지 안에 있었다(열 [11] Value). 별도 창구를 만들면
+ * 같은 종목을 하루 두 번 긁게 된다 — **새 외부 소스 0, 요청 수 증가 0** 이 이 함수의 존재 이유다.
+ *
+ * 실패/무결과면 undefined(가짜 금지 — 지표 생략).
+ */
+export async function fetchInsiderHistory(
+  symbol: string,
+  excludeRecentDays = 14
+): Promise<InsiderHistory | undefined> {
   const sym = symbol.trim().toUpperCase();
   if (!/^[A-Z][A-Z.]{0,5}$/.test(sym)) return undefined;
   const url = `http://openinsider.com/screener?s=${encodeURIComponent(sym)}&fd=365&xp=1&xs=0&cnt=500&sortcol=0&page=1`;
   const html = await fetchText(url, UA);
   if (html === null) return undefined; // 네트워크 실패 → 지표 생략(0 으로 둔갑 금지)
-  return parseTickerPriorPurchases(html, excludeRecentDays);
+  return { priorBuys12mo: parseTickerPriorPurchases(html, excludeRecentDays), rows: parseTickerPurchaseRows(html) };
 }
 
 /**
@@ -290,17 +316,22 @@ export async function fetchInsiderClusterCandidates(): Promise<InsiderClusterCan
 // 순수 관측: 과거에 "며칠 안에 내부자 N명이 같이 샀다"는 사실만 뽑는다(판단·예측 0).
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** screener 한 행 — 매수 1건(거래일 + 내부자명). */
+/** screener 한 행 — 매수 1건(거래일 + 내부자명 + 금액). */
 export interface InsiderPurchaseRow {
   /** 거래일 YYYY-MM-DD. */
   tradeDate: string;
   /** 내부자 이름(동일인 중복 제거용). */
   insider: string;
+  /**
+   * 매수 금액($) — 열 [11] Value(`+$1,993,791`). WO-HOOK-01 A형 누적선의 재료다.
+   * 파싱 실패 시 **없다**(0 으로 둔갑시키지 않는다 — 0 은 "안 샀다"는 거짓 사실이 된다).
+   */
+  valueUsd?: number;
 }
 
 /**
  * screener HTML → 매수(P) 행 목록. 16열 규약은 parseTickerPriorPurchases 와 동일:
- * [2]Trade date, [4]Insider, [6]TradeType. 파싱 실패/테이블 부재 → 빈 배열(가짜 금지).
+ * [2]Trade date, [4]Insider, [6]TradeType, [11]Value. 파싱 실패/테이블 부재 → 빈 배열(가짜 금지).
  */
 export function parseTickerPurchaseRows(html: string): InsiderPurchaseRow[] {
   const tableMatch = html.match(/<table[^>]*class="tinytable"[^>]*>([\s\S]*?)<\/table>/i);
@@ -315,7 +346,8 @@ export function parseTickerPurchaseRows(html: string): InsiderPurchaseRow[] {
     const tradeDate = isoDate(cells[2]); // [2] Trade date
     const insider = (cells[4] ?? "").trim(); // [4] Insider
     if (!tradeDate || !insider) continue;
-    out.push({ tradeDate, insider });
+    const valueUsd = numFrom(cells[11]); // [11] Value — "+$1,993,791"
+    out.push({ tradeDate, insider, ...(typeof valueUsd === "number" && valueUsd > 0 ? { valueUsd } : {}) });
   }
   return out;
 }

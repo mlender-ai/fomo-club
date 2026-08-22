@@ -49,6 +49,8 @@ export const QUIET_UP_PCT = 3.0;
 export const RATIO_PCT = 10.0;
 /** A형 누적선 최소 표본 — 이보다 짧으면 선이 형태를 못 만든다. */
 export const MIN_SERIES_POINTS = 8;
+/** 스파크라인 최소 표본 — DS-01 §3-⑤ "20포인트 미만이면 표시하지 않는다". */
+export const MIN_SPARKLINE_POINTS = 20;
 /** C형 막대 최소 표본 — 창이 이보다 짧으면 "드물다"를 보여줄 배경이 없다. */
 export const MIN_BAR_DAYS = 10;
 
@@ -65,12 +67,18 @@ export interface DivergenceFigure {
   buyLegend: string;
 }
 
-/** B형 그림 재료 — 스파크라인 + 매수 시작 지점. */
+/**
+ * B형 그림 재료 — 큰 숫자 + (있으면) 스파크라인.
+ *
+ * 스파크라인은 **선택**이다. B형에서 후킹을 지는 것은 52px 숫자이고 스파크라인은 보조다.
+ * 포인트가 모자라 선을 못 그린다고 카드를 통째로 버리면, 비율이 명백한 픽이 사라진다.
+ */
 export interface RatioFigure {
   kind: "ratio";
   /** 큰 숫자로 쓸 비율(%). */
   ratioPct: number;
-  priceSeries: number[];
+  /** 최근 종가 계열. 20포인트 미만이면 아예 없다(DS-01 §3-⑤ — 형태가 안 보이는 선은 장식). */
+  priceSeries?: number[];
   /** 매수 시작 지점 인덱스(`priceSeries` 기준). 범위 밖이면 화면이 마커를 생략한다. */
   markerIndex?: number;
 }
@@ -105,16 +113,21 @@ export interface CardTypeInput {
   days: number;
   /** 신호 시작가 대비 현재가 변동률(%). 없으면 A 판정을 할 수 없다. */
   priceChangeSincePct?: number;
-  /** 같은 기간 종가 계열(오래된 → 최근). */
+  /**
+   * A형 전용 — 누적선과 **같은 날짜에 정렬된** 종가 계열(오래된 → 최근).
+   * B형 스파크라인과 다른 계열이다. 섞으면 두 선의 x축이 어긋나 갭이 거짓이 된다.
+   */
   priceSeries?: readonly number[];
-  /** 날짜별 매수액 누적 계열(오래된 → 최근). `priceSeries` 와 길이가 같아야 한다. */
+  /** A형 전용 — 날짜별 매수액 누적 계열(오래된 → 최근). `priceSeries` 와 길이가 맞아야 한다. */
   cumulativeBuySeries?: readonly number[];
   /** 매수 규모 ÷ 20일 평균 거래량 × 100. */
   volumePct?: number;
+  /** B형 전용 — 스파크라인용 종가 계열(최근 30거래일). */
+  sparkline?: readonly number[];
+  /** B형 스파크라인의 매수 시작 지점(`sparkline` 기준). */
+  markerIndex?: number;
   /** 창 안 일별 매수 여부(오래된 → 최근). */
   buyDays?: readonly boolean[];
-  /** B형 스파크라인의 매수 시작 지점. */
-  markerIndex?: number;
   // ── 보조 2줄 재료 ──
   insiderCount?: number;
   /** 규모 문구 — "$8.3M" / "47만주". */
@@ -154,11 +167,16 @@ function risesMeaningfully(series: readonly number[]): boolean {
   return last > first;
 }
 
-/** 계열이 그릴 수 있는 형태인가 — 길이·유한성·전부 같은 값 아님. */
+/**
+ * 계열이 그릴 수 있는 형태인가 — 길이와 유한성만 본다.
+ *
+ * **변동을 요구하지 않는다.** 한때 "전부 같은 값이면 버린다"로 짰는데, 완전히 평평한 주가선은
+ * A형이 가장 원하는 그림이다 — `주가는 제자리인데`. 값이 하나뿐인 계열을 버리면 이 제품의
+ * 최고의 카드가 조용히 사라진다. 정규화에서 0 나누기가 나지 않도록 처리하는 것은 화면 몫이다.
+ */
 function usableSeries(series: readonly number[] | undefined, min: number): series is number[] {
   if (!series || series.length < min) return false;
-  if (!series.every((v) => Number.isFinite(v))) return false;
-  return new Set(series).size > 1;
+  return series.every((v) => Number.isFinite(v));
 }
 
 /** A형 후킹 — 주가가 무엇을 하고 있는지에 따라 세 갈래(WO §4-1). */
@@ -275,17 +293,17 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
   }
 
   // ── B 비율 ──
-  if (typeof input.volumePct === "number" && input.volumePct >= RATIO_PCT && priceOk && input.priceSeries) {
-    const ratioPct = Math.round(input.volumePct);
+  if (typeof input.volumePct === "number" && input.volumePct >= RATIO_PCT) {
+    const sparkOk = usableSeries(input.sparkline, MIN_SPARKLINE_POINTS);
     const hook = ratioHook(actor, input.volumePct);
     return {
       type: "B",
       hook,
       figure: {
         kind: "ratio",
-        ratioPct,
-        priceSeries: [...input.priceSeries],
-        ...(typeof input.markerIndex === "number" ? { markerIndex: input.markerIndex } : {}),
+        ratioPct: Math.round(input.volumePct),
+        ...(sparkOk && input.sparkline ? { priceSeries: [...input.sparkline] } : {}),
+        ...(sparkOk && typeof input.markerIndex === "number" ? { markerIndex: input.markerIndex } : {}),
       },
       support: supportLines(input, "B", hook),
     };
