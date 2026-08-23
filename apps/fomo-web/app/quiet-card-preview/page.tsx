@@ -77,13 +77,16 @@ const BUY_DAYS = [
   false, true, false, false, true, true, true, true, true, true,
 ];
 
+/** A형 픽스처 — 알 수 없는 case id 의 폴백이기도 하다. */
+const A_CASE: QuietPickCardType = {
+  type: "A",
+  hook: "주가는 제자리인데\n기관만 사고 있어요",
+  figure: { kind: "divergence", priceSeries: PRICES, buySeries: CUMULATIVE, buyLegend: "기관 매수 누적" },
+  support: ["25일간 · 74주", "거래는 평소의 25%로 말라 있었어요"],
+};
+
 const CARD_TYPES: Record<string, QuietPickCardType> = {
-  a: {
-    type: "A",
-    hook: "주가는 제자리인데\n기관만 사고 있어요",
-    figure: { kind: "divergence", priceSeries: PRICES, buySeries: CUMULATIVE, buyLegend: "기관 매수 누적" },
-    support: ["25일간 · 74주", "거래는 평소의 25%로 말라 있었어요"],
-  },
+  a: A_CASE,
   b: {
     type: "B",
     hook: "기관이 하루 거래량의\n절반을 사갔어요",
@@ -106,7 +109,7 @@ const CARD_TYPES: Record<string, QuietPickCardType> = {
 
 function withCase(id: string): QuietPick {
   const pick = { ...basePick, price: { ...basePick.price }, signal: { ...basePick.signal } } as QuietPick;
-  pick.cardType = CARD_TYPES[id === "revealed" ? "a" : id] ?? CARD_TYPES.a;
+  pick.cardType = CARD_TYPES[id === "revealed" ? "a" : id] ?? A_CASE;
   if (id === "b") pick.price.sparkline = PRICES.slice(-30);
   return pick;
 }
