@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * 상세 렌더 스모크 — DS-03 완료 기준 중 **픽셀로만 확인되는 것**.
+ * 상세 렌더 스모크 — **WO-HOOK-02** 완료 기준 중 픽셀로만 확인되는 것(DS-03 을 대체).
  *
  * 픽스처(`/quiet-depth-preview`)는 API 를 태우지 않는다. 그래서 ③ 회사 · ④ 값 · ⑥ 우리 기록이
  * **없는 것이 정상**이고, 이 스펙은 그 "없음"이 빈 헤더 없이 깔끔히 사라지는지도 함께 본다.
@@ -10,12 +10,13 @@ import { expect, test } from "@playwright/test";
 const PREVIEW = "/quiet-depth-preview";
 const ACCENT = "rgb(212, 255, 63)";
 
-test("완료 기준 1·8 — 섹션은 6개 이하, 확보 안 된 섹션은 통째로 사라진다", async ({ page }) => {
+test("완료 기준 9·10 — 섹션은 7개 이하, 확보 안 된 섹션은 통째로 사라진다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-testid="depth-hook"]')).toHaveCount(1);
 
   const titles = await page.locator("h2").allInnerTexts();
-  expect(titles.length).toBeLessThanOrEqual(5); // ① 결론은 제목이 없다 → 총 6섹션 이하
+  expect(titles.length).toBeLessThanOrEqual(6); // 결론은 제목이 없다 → 총 7섹션 이하
+  expect(titles).toContain("왜 지금 사는가");
   expect(titles).toContain("근거");
   expect(titles).toContain("틀리는 경우");
 
@@ -54,16 +55,61 @@ test("완료 기준 3·4 — 박스도 accent도 ⑥ 뿐이다 (여기선 둘 �
   expect(counts.boxes).toBe(0);
 });
 
-test("② 근거 — 라벨-값 2열, 중복 출력 없음 (완료 기준 9)", async ({ page }) => {
+test("완료 기준 3 — 근거는 2줄 이하로 압축된다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const evidence = page.locator('[data-testid="depth-evidence"]');
   await expect(evidence).toHaveCount(1);
+  /**
+   * 종전 5줄(`누가/언제/얼마나 드문가/거래량/비중`)은 앞면 훅을 쪼개 다시 쓴 것이었다.
+   * 이제 `매수` 한 줄에 주체·규모·연속일수를 합치고, `비교` 는 훅이 말하지 않았을 때만 붙는다.
+   */
+  const rows = await evidence.locator("> div").count();
+  expect(rows).toBeLessThanOrEqual(2);
   const text = await evidence.innerText();
-  expect(text).toContain("임원 3명 · $2.8M");
+  expect(text).toContain("매수");
+  expect(text).toContain("임원 3명 $2.8M");
+  expect(text).toContain("5일 연속");
   expect(text).not.toContain("3명 · 3명");
   // 라벨 고정폭 88px.
   const labelWidth = await evidence.locator("span").first().evaluate((el) => Math.round(el.getBoundingClientRect().width));
   expect(labelWidth).toBe(88);
+});
+
+/**
+ * WO-HOOK-02 §2 — 상세가 답해야 하는 질문은 **왜 조용히 사고 있는가** 하나다.
+ * 픽스처는 `가격`·`이력` 두 축을 갖도록 만들어져 있다(2축 최소 조건).
+ */
+test("완료 기준 1·2 — 왜 지금 사는가가 첫 섹션이고 꼬리표가 붙는다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const why = page.locator('[data-testid="depth-why-now"]');
+  await expect(why).toHaveCount(1);
+
+  // 결론 다음, 근거보다 위.
+  const y = async (sel: string) => (await page.locator(sel).first().boundingBox())?.y ?? 0;
+  expect(await y('[data-testid="depth-why-now"]')).toBeGreaterThan(await y('[data-testid="depth-hook"]'));
+  expect(await y('[data-testid="depth-why-now"]')).toBeLessThan(await y('[data-testid="depth-evidence"]'));
+
+  // 2축 이상.
+  expect(await why.locator("> div").count()).toBeGreaterThanOrEqual(2);
+
+  // 꼬리표 — 인과가 아니라 동시 관측임을 화면이 말한다.
+  const note = page.locator('[data-testid="depth-why-now-note"]');
+  await expect(note).toContainText("함께 관측된");
+  await expect(note).toContainText("확인할 수 없어요");
+
+  // 인과 단정·평가·예측 표현이 없다.
+  const text = await why.innerText();
+  for (const banned of ["때문에", "로 인해", "호재", "악재", "저평가", "기회", "곧 오를"]) {
+    expect(text, `금지 표현 "${banned}"`).not.toContain(banned);
+  }
+
+  // 박스도 accent 도 없다(§2-4 · 완료 기준 8).
+  const styles = await why.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { bg: s.backgroundColor, color: s.color };
+  });
+  expect(styles.bg).not.toBe("rgb(24, 24, 24)");
+  expect(styles.color).not.toBe(ACCENT);
 });
 
 test("③ 헤더 — 56px, 뒤로 화살표 44×44, 하단 CTA 없음", async ({ page }) => {

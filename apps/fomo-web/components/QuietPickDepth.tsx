@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DailyOhlcv } from "@fomo/core";
+import { buildWhyNowRows, WHY_NOW_DISCLAIMER } from "@fomo/core";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontResponse } from "@/lib/fomoApi";
 import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
-import { companyBlurb, evidenceRows } from "@/lib/depthSections";
+import { companyBlurb, depthEvidenceRows } from "@/lib/depthSections";
 import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
 import { trustedSector } from "@/lib/sectorTrust";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
@@ -338,7 +339,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   };
 
   const hook = pickHook(pick);
-  const rows = useMemo(() => evidenceRows(pick), [pick]);
+  const rows = useMemo(() => depthEvidenceRows(pick, hook), [pick, hook]);
   const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
   const candles = useMemo(() => front?.candles ?? [], [front]);
   const record = useMemo(
@@ -369,11 +370,42 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   /** 실체 한 줄 — 카드에서 내려온 "어디서 돈을 버는가". ③ 섹션에 합류한다. */
   const substance = slotPayload?.substance?.text ?? null;
 
+
   const valuation = slotPayload?.valuation ?? null;
   /** 밴드가 **있을 때만** 밴드 얘기를 한다 — 없다고 말한 뒤 보라고 하지 않는다(§7 결함). */
   const band = valuation?.band ?? null;
   const bandCaptions = band ? (slotPayload?.valuation_frame?.captions ?? valuation?.captions ?? []) : [];
   const archetypeWarning = band ? (slotPayload?.valuation_frame?.warning ?? valuation?.warning ?? null) : null;
+
+  /**
+   * ① 왜 지금 사는가 (WO-HOOK-02 §2) — **이 배치의 핵심.** 새 수집이 아니라 재편성이다.
+   * 화면 곳곳에 흩어져 있던 재료(밴드·EPS·52주 위치·신호 과거 성적)를 한 질문 아래 모은다.
+   * 2축 미만이면 `buildWhyNowRows` 가 빈 배열을 주고, 그러면 섹션 자체를 그리지 않는다.
+   */
+  const bandLabel = slotPayload?.valuation_frame?.band_label ?? null;
+  const whyNowRows = useMemo(() => {
+    const eps = (basics?.metrics ?? []).find((m) => (m.term ?? m.label) === "EPS")?.value;
+    const epsNumber = eps ? Number.parseFloat(eps.replace(/[^\d.-]/g, "")) : undefined;
+    return buildWhyNowRows({
+      ...(band && bandLabel
+        ? {
+            band: {
+              label: bandLabel,
+              current: band.current,
+              percentile: band.current_percentile,
+              sufficient: band.sufficient,
+            },
+          }
+        : {}),
+      ...(typeof epsNumber === "number" && Number.isFinite(epsNumber) ? { eps: epsNumber } : {}),
+      ...(typeof pick.signalFacts?.pctAboveYearLow === "number"
+        ? { pctAboveYearLow: pick.signalFacts.pctAboveYearLow }
+        : {}),
+      ...(pick.signalStats
+        ? { signalStats: { n: pick.signalStats.n, up: pick.signalStats.up, winRate: pick.signalStats.winRate } }
+        : {}),
+    });
+  }, [band, bandLabel, basics, pick.signalFacts?.pctAboveYearLow, pick.signalStats]);
 
   const risk = slotPayload?.risk ?? null;
   const invalidationText = repairPickCopy(pick.invalidation.text) || risk?.invalidation.price_text || null;
@@ -507,7 +539,32 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           */}
           {rows.length === 0 && !basics && !front && !slotPayload && <DepthSkeleton />}
 
-          {/* ② 근거 */}
+          {/*
+            ① 왜 지금 사는가 — **상세의 첫 섹션**(§2-1). 상세가 답해야 하는 질문은 하나다:
+            왜 조용히 사고 있는가. 2축 미만이면 `whyNowRows` 가 비고 섹션이 통째로 사라진다.
+          */}
+          {whyNowRows.length > 0 && (
+            <Section title="왜 지금 사는가">
+              <div data-testid="depth-why-now">
+                {whyNowRows.map((row) => (
+                  <div key={row.axis} className="flex gap-s3 py-[6px]">
+                    {/* 라벨 고정폭 56px — 값의 왼쪽 끝이 줄마다 흔들리면 표가 아니라 목록이 된다. */}
+                    <span className="w-[56px] shrink-0 font-mono text-ds-label text-ds-text-2">{row.axis}</span>
+                    <span className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">{row.text}</span>
+                  </div>
+                ))}
+              </div>
+              {/*
+                꼬리표 — 이 섹션이 인과가 아니라 **동시 관측**임을 화면에 적는다(§2-3).
+                우리는 매수 주체의 의도를 모른다. 문안은 fomo-core 가 갖는다(화면이 카피를 짓지 않는다).
+              */}
+              <p className="mt-s3 text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
+                {WHY_NOW_DISCLAIMER}
+              </p>
+            </Section>
+          )}
+
+          {/* ② 근거 — 최대 2줄. 앞면 훅이 말한 것은 여기서 반복하지 않는다(§3). */}
           {rows.length > 0 && (
             <Section title="근거">
               <div data-testid="depth-evidence">

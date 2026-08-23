@@ -38,7 +38,25 @@ const PICK = {
   },
   hook: "임원 3명이 최근 5일 새 같이 샀어요",
   anomalies: [],
-  signalFacts: { priorBuys12mo: 2, volumePct: 51 },
+  /**
+   * `pctAboveYearLow` 와 `signalStats` 는 「왜 지금 사는가」의 `가격`·`이력` 축 재료다
+   * (WO-HOOK-02 §2-2). 두 축이면 최소 조건을 채워 섹션이 렌더된다 — 픽스처가 2축을
+   * 못 채우면 이 화면에서 그 섹션을 영영 못 본다.
+   */
+  signalFacts: { priorBuys12mo: 2, volumePct: 51, pctAboveYearLow: 27.4 },
+  signalStats: {
+    n: 50,
+    up: 26,
+    winRate: 52,
+    down: 20,
+    downRate: 40,
+    medianReturn: 1.8,
+    windowDays: 30,
+    sourceLabel: "백테스트",
+    method: "backtest",
+    headline: "비슷한 신호 50번 중 26번 올랐어요",
+    detail: "30일 기준",
+  },
   invalidation: { level: 2.05, text: "52주 저점 $2.05 이탈 여부가 다음 판단 기준이에요." },
   conviction: {
     whyCompany: "",

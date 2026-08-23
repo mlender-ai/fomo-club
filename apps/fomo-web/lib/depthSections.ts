@@ -91,6 +91,48 @@ export function evidenceRows(pick: QuietPick): EvidenceRow[] {
 }
 
 /**
+ * 상세 「근거」 — **최대 2줄** (WO-HOOK-02 §3).
+ *
+ * ## 왜 5줄에서 2줄로 줄이나
+ *
+ * 종전 `누가 / 언제 / 얼마나 드문가 / 거래량 / 비중` 다섯 줄은 **앞면 훅을 쪼개서 다시 쓴 것**
+ * 이었다. 사용자는 "진짜야?" 라고 물으며 들어왔는데 같은 말을 다섯 조각으로 다시 듣는다.
+ * 그리고 이 정보는 HTS 필터로 다 나온다 — 여기서 끝나면 우리 앱을 쓸 이유가 없다.
+ * 진짜 답은 이 위의 「왜 지금 사는가」가 한다. 이 섹션은 **수치 확인**만 맡는다.
+ *
+ * | 행 | 내용 |
+ * |---|---|
+ * | `매수` | 주체 · 규모 · 연속일수 — 한 줄로 합친다 |
+ * | `비교` | 창 안 최장 여부. **앞면 훅이 이미 말했으면 이 행이 없다** |
+ */
+export function depthEvidenceRows(pick: QuietPick, hook: string): EvidenceRow[] {
+  const rows: EvidenceRow[] = [];
+
+  const actor = actorWithCount(pick.signal.actors, pick.signal.insiderCount);
+  const scale = repairPickCopy(pick.signal.scale).trim();
+  const days = pick.signal.days;
+  const buy = [actor, scale].filter(Boolean).join(" ");
+  const withDays = days > 0 ? [buy, `${days}일 연속`].filter(Boolean).join(" · ") : buy;
+  if (withDays) rows.push({ label: "매수", value: withDays });
+
+  /**
+   * 비교 행 — 앞면 훅이 `40거래일 중 최장` 을 이미 말했으면 만들지 않는다(§3).
+   * 훅 문안이 형마다 다르므로 문자열이 아니라 **거래일 창 수치**가 겹치는지로 본다.
+   */
+  const facts = pick.signalFacts;
+  if (facts?.isLongestStreak) {
+    const window = facts.streakWindowDays ?? days;
+    const hookSaysLongest = hook.includes(`${window}거래일`) || /가장 길게|가장 긴/.test(hook);
+    if (!hookSaysLongest) rows.push({ label: "비교", value: `최근 ${window}거래일 중 가장 길어요` });
+  }
+
+  return rows.slice(0, DEPTH_EVIDENCE_MAX);
+}
+
+/** 상한 2줄 — 늘리려면 WO-HOOK-02 §3 을 먼저 고친다(실패 모드: "근거가 다시 5줄로 늘어남"). */
+const DEPTH_EVIDENCE_MAX = 2;
+
+/**
  * 카드 근거 박스 — 3행. **결론에 이미 나온 숫자를 담은 행은 뺀다**(카드는 한 장면에 놀라움
  * 하나다). 상세와 달리 같은 숫자를 두 번 보여주지 않는다.
  */

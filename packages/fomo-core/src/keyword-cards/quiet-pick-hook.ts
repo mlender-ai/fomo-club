@@ -200,19 +200,6 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
   return out.sort((a, b) => b.strength - a.strength);
 }
 
-/** 2~4일은 고유어가 자연스럽다("사흘 새"). 그 밖은 숫자로 센다. */
-const NATIVE_DAYS: Record<number, string> = {
-  2: "이틀",
-  3: "사흘",
-  4: "나흘",
-  5: "닷새",
-  6: "엿새",
-  7: "이레",
-  8: "여드레",
-  9: "아흐레",
-  10: "열흘",
-};
-
 /** 훅의 주체 표기 — 원료의 `actorNoun` 이 아니라 **신호 종류**에서 만든다(금지어 유입 차단). */
 const HOOK_ACTOR: Record<QuietPickSignalKind, string> = {
   insider_cluster: "임원",
@@ -221,11 +208,19 @@ const HOOK_ACTOR: Record<QuietPickSignalKind, string> = {
   multi_cluster: "외국인과 기관",
 };
 
-/** 임원 매수 기간구 — "사흘 새 " / "최근 7일 새 " / (하루 이하면 빈 문자열). */
+/**
+ * 임원 매수 기간구 — "8일 새 " / (하루 이하면 빈 문자열).
+ *
+ * ## 고유어 수 표현을 쓰지 않는다 (WO-HOOK-01 §9)
+ *
+ * 종전에는 2~10일을 `이틀·사흘·…·여드레·아흐레·열흘` 로 썼다. 자연스러워 보였지만 실제
+ * 카드에서 **`임원 4명이 여드레 새 함께 매수`** 가 나왔고, 읽는 사람이 며칠인지 즉시
+ * 세지 못한다. 후킹은 0.5초 안에 읽혀야 하는데 고유어는 변환 한 단계를 더 요구한다.
+ * 아라비아 숫자 + `일` 로 통일한다. 회귀는 `quiet-pick-hook.test.ts` 가 고정한다.
+ */
 function insiderWindowPhrase(days: number): string {
   if (days <= 1) return "";
-  const native = NATIVE_DAYS[days];
-  return native ? `${native} 새 ` : `최근 ${days}일 새 `;
+  return `${days}일 새 `;
 }
 
 /**
@@ -242,10 +237,10 @@ function insiderWindowPhrase(days: number): string {
  * | 신호 | 결론 |
  * |---|---|
  * | 임원, 1년 매수 0~1건 | `1년 만에 임원이 처음으로 대량 매수` |
- * | 임원 N명 | `임원 3명이 닷새 새 함께 매수` |
+ * | 임원 N명 | `임원 3명이 5일 새 함께 매수` |
  * | 기관·외국인, 창 내 최장 | `기관이 40거래일 중 가장 길게 매수 중` |
  * | 기관·외국인 | `기관이 조용히 12일째 매수 중` |
- * | 외국인+기관 | `외국인과 기관이 나흘째 같이 매수` |
+ * | 외국인+기관 | `외국인과 기관이 4일째 같이 매수` |
  */
 export function buildQuietPickHook(f: QuietPickAnomalyFacts): string {
   const actor = HOOK_ACTOR[f.kind];
@@ -263,7 +258,7 @@ export function buildQuietPickHook(f: QuietPickAnomalyFacts): string {
 
   if (f.kind === "multi_cluster") {
     if (f.days <= 0) return "외국인과 기관이 같이 매수";
-    return `외국인과 기관이 ${NATIVE_DAYS[f.days] ?? `${f.days}일`}째 같이 매수`;
+    return `외국인과 기관이 ${f.days}일째 같이 매수`;
   }
 
   /**
@@ -319,7 +314,14 @@ export function buildQuietPickChips(f: QuietPickAnomalyFacts): string[] {
     byAxis.set("size", single ? `${f.actorNoun} ${f.scale.trim()}` : f.scale.trim());
   }
 
-  if (f.days > 0) {
+  /**
+   * 기간 칩 — **훅이 이미 일수를 말하면 만들지 않는다**(H4: 훅이 가진 축은 칩으로 반복하지 않는다).
+   *
+   * 종전에는 임원 훅이 `사흘 새` 처럼 고유어라 숫자가 겹쳐 보이지 않았고, 그래서 `최근 3일` 칩이
+   * 그대로 나갔다. WO-HOOK-01 §9 로 훅이 `3일 새` 가 되자 한 화면에 `3` 이 세 번(훅·$3.6M·칩)
+   * 나왔다 — 고유어가 중복을 가리고 있었을 뿐 중복은 처음부터 있었다.
+   */
+  if (f.days > 0 && !buildQuietPickHook(f).includes(`${f.days}일`)) {
     byAxis.set("time", insider ? `최근 ${f.days}일` : `${f.days}일 연속`);
   }
 

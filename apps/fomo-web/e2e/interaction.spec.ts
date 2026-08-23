@@ -24,8 +24,9 @@ test("완료 기준 6 — 폰트가 번들에서 로드되고 FOUT 이 없다 (�
   expect(fonts.some((f) => f.startsWith("Pretendard:loaded"))).toBe(true);
 
   // 수치는 mono, 문장은 Pretendard (DS-00 §3).
+  // 근거 박스는 WO-HOOK-01 에서 사라졌다 — 카드에 남은 mono 는 ① 정체 줄과 가격이다.
   const monoFamily = await page
-    .locator('[data-case="full"] [data-testid="pick-evidence"] dt')
+    .locator('[data-case="a"] [data-testid="pick-identity"]')
     .first()
     .evaluate((el) => getComputedStyle(el).fontFamily);
   expect(monoFamily).toContain("Departure Mono");
@@ -41,8 +42,8 @@ test("완료 기준 5 — 320px 에서 결론이 2줄을 넘지 않고 가로 �
   );
   for (const count of lines) expect(count).toBeLessThanOrEqual(2);
 
-  // 값이 잘려 사라지지 않는다(근거는 줄바꿈으로 다 보인다).
-  const values = await page.locator('[data-case="full"] [data-testid="pick-evidence"] dd').allInnerTexts();
+  // 보조 줄이 잘려 사라지지 않는다(줄바꿈으로 다 보인다).
+  const values = await page.locator('[data-case="a"] [data-testid="pick-support"] p').allInnerTexts();
   for (const value of values) expect(value.endsWith("…")).toBe(false);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
@@ -52,7 +53,7 @@ test("완료 기준 5 — 320px 에서 결론이 2줄을 넘지 않고 가로 �
 test("완료 기준 1 — 탭 피드백이 실제로 적용된다 (§2)", async ({ page }) => {
   await page.goto("/quiet-card-preview", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(500);
-  const cta = page.locator('[data-case="full"] [data-testid="pick-cta"]');
+  const cta = page.locator('[data-case="a"] [data-testid="pick-cta"]');
   const style = await cta.evaluate((el) => {
     const rules = [...document.styleSheets].flatMap((sheet) => {
       try {
