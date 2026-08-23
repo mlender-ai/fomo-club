@@ -36,7 +36,7 @@ import {
 } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
-import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
+import { readSupplyDemandHistoryByTickers, readSupplyDemandHistoryByTickersStrict } from "./supply-demand-store";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { fetchKrMarketRows } from "./discovery-supply";
 import {
@@ -398,6 +398,15 @@ export interface QuietPickQualification {
   /** 지켜보는 중 선반 노출 수(WO-P4). */
   watching: number;
   drops: Record<string, number>;
+  /**
+   * 이번 빌드에서 **예외로 실패한** 입력 소스 이름(성공·정상 공백은 여기 없다).
+   *
+   * 왜 필요한가: 모든 입력이 fail-open 이라 실패해도 빈 값으로 대체되고, 그러면
+   * `krWithSignal: 0 / published: 0` 이 "조용한 날" 과 글자 하나 다르지 않다. 이 배열이
+   * 그 둘을 가른다 — 비어 있으면 진짜로 신호가 없는 날이고, 이름이 있으면 장애다.
+   * 구 페이로드에는 없으므로 읽는 쪽은 `?? []` 로 받는다.
+   */
+  inputFailures: string[];
 }
 
 /**
@@ -442,6 +451,84 @@ export interface QuietPickResponse {
   source: string;
 }
 
+// ── 발행 가드(fail-closed) ─────────────────────────────────────────────────
+/**
+ * 실패했을 때 **발행을 막아야 하는** 입력.
+ *
+ * KR 수급 이력은 KR 신호 전량의 연료다 — 이것이 실패하면 `krWithSignal` 은 구조적으로 0 이
+ * 되고, 남는 US 신호만으로 만든 덱은 그날의 덱이 아니라 반쪽이다. 나머지 입력(관심도·시총
+ * 랭킹·DART 등)은 보강이라 실패해도 덱의 의미가 유지되므로 여기 넣지 않는다.
+ */
+export const QUIET_PICK_REQUIRED_INPUTS: readonly string[] = ["readSupplyDemandHistoryByTickers"];
+
+/**
+ * 직전 발행 대비 이 비율 미만으로 줄면 붕괴로 본다(0.5 = 반토막).
+ *
+ * ## 실측으로 고른 값
+ *
+ * `docs/audit/deck_stagnation_raw.json` 의 14일(2026-08-05~18) `published` 는 **매일 10장**
+ * — 상한(`QUIET_PICK_MAX`)에 붙어 있고 한 번도 흔들리지 않았다. 즉 정상 운영에서 반토막은
+ * 관측된 적이 없으므로 이 하한이 평상 회전을 오판할 위험은 사실상 없다.
+ *
+ * 반대 방향의 비용도 고려했다: 오차단은 그날 덱이 안 바뀌고 잡이 실패하는 것으로, 사람이
+ * 보게 된다. 반쪽 덱이 조용히 나가는 것은 아무도 못 본다. 후자가 더 비싸다.
+ */
+export const QUIET_PICK_COLLAPSE_RATIO = 0.5;
+
+/**
+ * 붕괴 판정을 적용할 직전 장수 하한.
+ *
+ * 직전이 2장이었다면 1장은 정상 변동일 수 있다 — 작은 수에 비율을 적용하면 평소 회전을
+ * 사고로 오판한다. 상한(10장)의 절반인 4장부터 비율을 본다.
+ */
+export const QUIET_PICK_COLLAPSE_MIN_PRIOR = 4;
+
+/**
+ * 발행 차단 사유(없으면 null) — **쓰기 직전에** 부른다.
+ *
+ * ## 왜 쓰기 직전인가 (2026-08-23 사고, `docs/STATUS.md` §12)
+ *
+ * 종전 검증은 `vercel-production-deploy.yml` 의 **쓴 뒤** 스텝에 있었다. 그래서 커넥션 풀이
+ * 마른 날 `picks: 0` 페이로드가 먼저 정규 도메인에 발행되고, 그 다음에 워크플로가 실패를
+ * 알렸다 — 잡은 붉게 표시됐지만 사용자는 이미 2분간 빈 덱을 봤다. 검증이 쓰기보다 늦으면
+ * 그것은 가드가 아니라 사후 보고다.
+ *
+ * 직전 페이로드를 남겨두는 쪽이 항상 낫다. 하루 묵은 덱은 `asOf` 로 정직하게 표시되지만,
+ * 빈 덱은 AGENTS.md 자동 실패 목록에 오른 회귀다.
+ *
+ * ## 세 가지 차단 조건
+ *
+ * | 조건 | 왜 |
+ * |---|---|
+ * | 필수 입력 실패 | 신호가 없는 게 아니라 신호를 **읽지 못한** 것이다 |
+ * | 0장 | 빈 덱은 어떤 이유로도 발행하지 않는다 |
+ * | 직전 대비 반토막 | 0장은 아니지만 조용히 반쪽 덱을 내보내는 경로를 막는다 |
+ *
+ * `prior` 는 직전 `quiet-pick:active` 다. 같은 날 재생성이면 그것이 곧 오늘 아침의 발행분이라
+ * 기준선으로 그대로 쓴다(재생성이 장수를 반토막 내면 그것도 사고다).
+ */
+export function quietPickPublishBlockReason(
+  next: Pick<QuietPickResponse, "picks" | "qualification">,
+  prior: Pick<QuietPickResponse, "picks"> | null
+): string | null {
+  const failed = (next.qualification.inputFailures ?? []).filter((name) =>
+    QUIET_PICK_REQUIRED_INPUTS.includes(name)
+  );
+  if (failed.length > 0) {
+    return `필수 입력 실패(${failed.join(", ")}) — 신호 없음이 아니라 읽지 못함이다`;
+  }
+
+  const count = next.picks.length;
+  if (count === 0) return "재생성 결과가 0장 — 빈 덱은 발행하지 않는다";
+
+  const priorCount = prior?.picks.length ?? 0;
+  if (priorCount >= QUIET_PICK_COLLAPSE_MIN_PRIOR && count < priorCount * QUIET_PICK_COLLAPSE_RATIO) {
+    return `직전 ${priorCount}장 → ${count}장 붕괴(하한 ${QUIET_PICK_COLLAPSE_RATIO * 100}%) — 직전 페이로드를 유지한다`;
+  }
+
+  return null;
+}
+
 // ── 주입 가능한 의존성(단위 테스트용 — 기본은 실 소스) ──────────────────────
 export interface QuietPickDeps {
   vocab: readonly StockDef[];
@@ -463,7 +550,10 @@ export interface QuietPickDeps {
 const defaultDeps: QuietPickDeps = {
   vocab: STOCK_VOCAB,
   fetchKrMarketRows,
-  readSupplyDemandHistoryByTickers,
+  // **strict** 를 쓴다 — 삼킨 `{}` 는 "조용한 날" 과 구별되지 않고, 그 구별 실패가
+  // 2026-08-23 빈 덱 발행의 첫 도미노였다(`docs/STATUS.md` §12). 아래 `guardedInput` 이
+  // 예외를 잡아 `qualification.inputFailures` 에 남기고, 발행 가드가 그것을 보고 멈춘다.
+  readSupplyDemandHistoryByTickers: readSupplyDemandHistoryByTickersStrict,
   computeStockAttentionSignals,
   fetchInsiderClusterCandidates,
   fetchInsiderHistory,
@@ -1293,6 +1383,21 @@ export async function buildQuietPickResponse(options: {
   const drops: Record<string, number> = {};
   const drop = (reason: string) => { drops[reason] = (drops[reason] ?? 0) + 1; };
 
+  /**
+   * 입력 실패를 **기록하면서** 삼킨다.
+   *
+   * 종전에는 각 소스마다 `.catch(() => 빈값)` 이 붙어 있었다. 계속 삼키는 것은 맞다 —
+   * 소스 하나가 죽었다고 덱 전체를 못 굽는 것은 과잉이다. 문제는 삼킨 흔적이 어디에도
+   * 남지 않아 발행 가드가 판단할 근거가 없었다는 점이다. 이름을 남긴다.
+   */
+  const inputFailures: string[] = [];
+  const guardedInput = <T>(name: string, work: Promise<T>, fallback: T): Promise<T> =>
+    work.catch((error) => {
+      inputFailures.push(name);
+      console.error(`[quiet-pick] 입력 실패 — ${name}`, error instanceof Error ? error.message : error);
+      return fallback;
+    });
+
   // 신호 성적(WO-P2 §2) — 유형별 (원장 n≥30 ? 실전 : 백테스트). 없으면 카드가 블록을 숨긴다.
   const signalStatsMap: Partial<Record<SignalTypeCode, SignalStats>> = await readSignalStatsForCards(date).catch(
     () => ({}) as Partial<Record<SignalTypeCode, SignalStats>>
@@ -1302,13 +1407,13 @@ export async function buildQuietPickResponse(options: {
   const krDefs = deps.vocab.filter((d) => d.naverCode && !d.marquee);
   const krCodes = krDefs.map((d) => d.naverCode!);
   const [histories, insiderRaw, marketRows, attention, rankMap, usRows, dartInsiders] = await Promise.all([
-    deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW).catch(() => ({} as Record<string, InvestorFlow[]>)),
-    deps.fetchInsiderClusterCandidates().catch(() => [] as InsiderClusterCandidate[]),
-    deps.fetchKrMarketRows().catch(() => [] as KrMarketRow[]),
-    deps.computeStockAttentionSignals().catch(() => ({} as Record<string, StockAttentionSignal>)),
-    deps.fetchMarketCapRankMap().catch(() => ({} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>)),
-    deps.fetchCachedUsMarketRows().catch(() => [] as KrMarketRow[]),
-    deps.fetchDartInsiderPurchasesByStock(date).catch(() => ({} as Record<string, DartDisclosureHit>)),
+    guardedInput("readSupplyDemandHistoryByTickers", deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW), {} as Record<string, InvestorFlow[]>),
+    guardedInput("fetchInsiderClusterCandidates", deps.fetchInsiderClusterCandidates(), [] as InsiderClusterCandidate[]),
+    guardedInput("fetchKrMarketRows", deps.fetchKrMarketRows(), [] as KrMarketRow[]),
+    guardedInput("computeStockAttentionSignals", deps.computeStockAttentionSignals(), {} as Record<string, StockAttentionSignal>),
+    guardedInput("fetchMarketCapRankMap", deps.fetchMarketCapRankMap(), {} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>),
+    guardedInput("fetchCachedUsMarketRows", deps.fetchCachedUsMarketRows(), [] as KrMarketRow[]),
+    guardedInput("fetchDartInsiderPurchasesByStock", deps.fetchDartInsiderPurchasesByStock(date), {} as Record<string, DartDisclosureHit>),
   ]);
 
   const krSignals = detectKrSignals(krDefs, histories);
@@ -1423,7 +1528,7 @@ export async function buildQuietPickResponse(options: {
     const liveCandles = front.candles ?? [];
     let sealedCandles = liveCandles.length;
     if (sig.subject.country === "US" && sig.subject.symbol && liveCandles.length > 0) {
-      sealedCandles = await deps.writeUsCandleCache(sig.subject.symbol, liveCandles).catch(() => liveCandles.length);
+      sealedCandles = await guardedInput("writeUsCandleCache", deps.writeUsCandleCache(sig.subject.symbol, liveCandles), liveCandles.length);
     }
     // 자격 ③ 강제 — 하이드레이션 후에도 200일 미확보면 탈락. 예외 없음(빈 껍데기 픽 금지).
     const availableCandles = Math.max(liveCandles.length, sealedCandles);
@@ -1819,6 +1924,8 @@ export async function buildQuietPickResponse(options: {
       published: published.length,
       watching: watchShelf.length,
       drops,
+      // 같은 이름이 여러 번 실패할 수 있다(픽별 캔들 봉인 등) — 이름만 남기고 중복은 접는다.
+      inputFailures: [...new Set(inputFailures)],
     },
     source: "quiet-pick-engine",
   };

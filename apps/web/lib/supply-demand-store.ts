@@ -115,8 +115,22 @@ export async function readSupplyDemandHistory(
   }
 }
 
-/** 여러 종목의 최근 N거래일 수급을 한 번에 조회. 발견 덱에서 카드별 DB 왕복을 막기 위한 배치 경로. */
-export async function readSupplyDemandHistoryByTickers(
+/**
+ * 오류를 삼키지 않는 배치 조회.
+ *
+ * `readSupplyDemandHistoryByTickers` 는 "수급 이력이 없다" 와 "DB 조회가 실패했다" 를
+ * **똑같이 빈 객체로** 준다. 발행 파이프라인이 그 빈 객체를 "오늘은 신호가 없는 날" 로
+ * 번역하면 장애가 정상 상태로 위장된다.
+ *
+ * 2026-08-23 빈 덱 사고가 정확히 이것이었다(`docs/STATUS.md` §12): 커넥션 풀이 마르자
+ * (`FATAL: (EMAXCONNSESSION) pool_size: 15`) 이 함수가 `{}` 를 돌려주고 → `krWithSignal: 0`
+ * → `published: 0` 이 되어, `qualification` 에는 **평범한 0** 이 찍힌 채 빈 페이로드가
+ * 정규 도메인에 발행됐다. 숫자만 보면 조용한 날과 구별할 방법이 없었다.
+ *
+ * `feed-content-store.readFeedContentStrict` 와 같은 규약이다 — 삼킴 자체가 죄는 아니고,
+ * 삼킨 것을 사용자에게 "신호 없음" 이라고 **말하는** 호출자만 이 함수를 쓴다.
+ */
+export async function readSupplyDemandHistoryByTickersStrict(
   tickers: readonly string[],
   days = 10
 ): Promise<Record<string, InvestorFlow[]>> {
@@ -125,25 +139,33 @@ export async function readSupplyDemandHistoryByTickers(
   if (unique.length === 0) return {};
   const take = Math.max(1, Math.min(days, 60));
 
-  try {
-    const rows = await prisma.supplyDemandDaily.findMany({
-      where: { ticker: { in: unique } },
-      orderBy: [{ ticker: "asc" }, { date: "desc" }],
-    });
+  const rows = await prisma.supplyDemandDaily.findMany({
+    where: { ticker: { in: unique } },
+    orderBy: [{ ticker: "asc" }, { date: "desc" }],
+  });
 
-    const out: Record<string, InvestorFlow[]> = {};
-    for (const row of rows) {
-      const current = out[row.ticker] ?? [];
-      if (current.length >= take) continue;
-      current.push({
-        date: row.date,
-        foreignNet: row.foreignNet,
-        institutionNet: row.institutionNet,
-        ...(row.individualNet != null ? { individualNet: row.individualNet } : {}),
-      });
-      out[row.ticker] = current;
-    }
-    return out;
+  const out: Record<string, InvestorFlow[]> = {};
+  for (const row of rows) {
+    const current = out[row.ticker] ?? [];
+    if (current.length >= take) continue;
+    current.push({
+      date: row.date,
+      foreignNet: row.foreignNet,
+      institutionNet: row.institutionNet,
+      ...(row.individualNet != null ? { individualNet: row.individualNet } : {}),
+    });
+    out[row.ticker] = current;
+  }
+  return out;
+}
+
+/** 여러 종목의 최근 N거래일 수급을 한 번에 조회. 발견 덱에서 카드별 DB 왕복을 막기 위한 배치 경로. */
+export async function readSupplyDemandHistoryByTickers(
+  tickers: readonly string[],
+  days = 10
+): Promise<Record<string, InvestorFlow[]>> {
+  try {
+    return await readSupplyDemandHistoryByTickersStrict(tickers, days);
   } catch (err) {
     console.warn("[supply-demand-store] batch history read skipped (table missing?)", (err as Error)?.message);
     return {};
