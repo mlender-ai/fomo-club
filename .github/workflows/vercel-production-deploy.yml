@@ -169,7 +169,9 @@ jobs:
               let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
                 try{process.stdout.write(String(JSON.parse(s).commit??""))}catch{process.stdout.write("")}
               })' 2>/dev/null || true)"
-          # `reason` 은 아래 잡에서 `${{ }}` 로 셸에 보간된다. 그러므로 거기 실리는 값은
+          # `reason` 은 아래 잡에서 GitHub 식(expression)으로 셸에 보간된다. 그러므로 거기 실리는 값은
+          # (주의: 이 주석에 식 구문을 문자로 쓰면 안 된다 — GitHub 은 `run:` 블록의 주석 안까지
+          #  식으로 파싱해서, 빈 식 하나가 워크플로 파일 전체를 무효로 만든다. 실측으로 겪었다.)
           # **레포 내용(브랜치가 정하는 파일명)이나 HTTP 응답에서 오면 안 된다.** 커밋 해시는
           # 16진수만 남기고, 파일명은 로그에만 찍고 reason 에는 건수만 넣는다.
           served="$(printf '%s' "$served" | tr -cd '0-9a-f')"
@@ -310,20 +312,55 @@ jobs:
             exit 1
           fi
 
+      # ── 되읽어 확인한다. 결과를 **셋으로** 가른다.
+      #
+      # ## 왜 (2026-08-23 2차 발생, `docs/STATUS.md` §12-4)
+      #
+      # 종전에는 되읽기를 **한 번만** 했고, 실패하면 `화면에 닿지 않았다` 를 냈다. 2차 발생에서
+      # 페이로드는 정상 10장으로 잘 구워졌는데(`asOf 12:04:10`) 되읽는 순간 풀이 말라 503 이
+      # 왔고, 그래서 **읽지 못한 것을 닿지 않았다고 말했다.**
+      #
+      # 빈 덱과 읽기 실패는 대응이 정반대다(전자는 즉시 재생성, 후자는 아무것도 하지 않아야
+      # 한다). 신호가 같으면 사람은 매번 처음부터 조사한다. 그래서 되읽기도 재시도하고, 끝내
+      # 못 읽으면 `미확인` 이라고 **그대로 말한다** — AGENTS.md 종료코드 2 와 같은 정신이다.
       - name: Verify payload reached the canonical domain
         shell: bash
         run: |
           set -uo pipefail
           # CDN 캐시(s-maxage=3600) 때문에 그냥 부르면 옛 asOf 가 온다 — 반드시 우회한다.
-          curl -s -H 'Cache-Control: no-cache' --max-time 90 \
-            "https://fomo-club-backend.vercel.app/api/fomo/quiet-picks?cb=$(date +%s)" -o after.json
+          read_ok="no"
+          for attempt in 1 2 3 4; do
+            if [ "$attempt" -gt 1 ]; then
+              echo "── 30초 대기 후 되읽기 재시도 $attempt/4"
+              sleep 30
+            fi
+            code=$(curl -s -o after.json -w '%{http_code}' -H 'Cache-Control: no-cache' --max-time 90 \
+              "https://fomo-club-backend.vercel.app/api/fomo/quiet-picks?cb=$(date +%s)-$RANDOM" || echo "000")
+            echo "되읽기 시도 $attempt/4 → HTTP $code"
+            if [ "$code" = "200" ]; then read_ok="yes"; break; fi
+          done
+
+          if [ "$read_ok" != "yes" ]; then
+            # 미확인이다. 통과도 아니고, 화면이 비었다는 뜻도 아니다 — 그 둘을 섞어 말하지 않는다.
+            echo "::error::페이로드 상태를 확인하지 못했다(되읽기 4회 모두 실패). 재생성 응답은 ok:true 였으므로 화면이 비었다는 뜻은 아니다 — 조회 경로의 DB 커넥션을 확인하라."
+            exit 1
+          fi
+
           node -e '
             const j = require("./after.json");
             const asOf = new Date(j.asOf);
             const ageMin = (Date.now() - asOf.getTime()) / 60000;
             console.log("asOf:", j.asOf, "| picks:", (j.picks||[]).length, "| age(min):", Math.round(ageMin));
-            if (!Number.isFinite(ageMin) || ageMin > 60) {
+            if (!Number.isFinite(ageMin)) {
+              console.error("::error::되읽기는 200 이었지만 asOf 를 읽을 수 없다. 페이로드 형식을 확인하라.");
+              process.exit(1);
+            }
+            if (ageMin > 60) {
               console.error("::error::재생성 직후인데 페이로드가 " + Math.round(ageMin) + "분 전 것이다. 화면에 닿지 않았다.");
+              process.exit(1);
+            }
+            if ((j.picks||[]).length === 0) {
+              console.error("::error::되읽은 페이로드가 0장이다. 발행 가드를 우회한 경로가 있다 — 즉시 조사하라.");
               process.exit(1);
             }
           '
