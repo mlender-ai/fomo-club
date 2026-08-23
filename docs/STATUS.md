@@ -6,7 +6,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-08-23 02:10 UTC** · WO-HOOK-01·02 **배포 완료 · 정규 도메인 DOM 확인** |
+| 최종 갱신 | **2026-08-23 12:00 UTC** · WO-HOOK-01·02 배포 완료 · DOM 확인 · **§12 빈 덱 사고 1건(자가 복구)** |
 | 갱신 근거 | 로컬 full clone + `*.vercel.app` 직접 GET + Vercel CLI + GitHub API |
 | 실측 기준 커밋 | `9197fbe` (= `origin/main` HEAD = **양쪽 정규 도메인 서빙 커밋**) |
 | 검증 수단 | **`npm run verify:production`** — 이제 존재한다. 실행 결과 **exit 0** |
@@ -615,3 +615,65 @@ WO §2-2 의 `재료`(최근 90일 공시 유무)는 **소스가 화면까지 �
 |---|---|
 | **시총 표기 0/10** | US 3장에 `marketCapText` 가 안 붙었다. `fetchCachedUsMarketRows` 의 `marketCapUsd` 가 이 종목들에 없는 것으로 보인다. 카드는 항목을 생략하고 정상 렌더된다(선택 필드) — 기능 결함은 아니지만 §2-2 가 남기라고 한 재료 하나가 비어 있다 |
 | **US 「왜 지금 사는가」 0/3** | §10-3 참조. CTX-03 우선순위 근거 |
+
+---
+
+## 12. 사고 기록 — 빈 덱이 프로덕션에 2분간 노출됨 (2026-08-23 11:56~11:58 UTC)
+
+**AGENTS.md 자동 실패 목록의 "retry/first load 가 빈 덱에서 멈춤" 에 해당하는 사고다.**
+숨기지 않고 남긴다.
+
+### 12-1. 무슨 일이 있었나
+
+문서 커밋(`8c37bde`) 배포를 위해 `vercel-production-deploy.yml` 을 돌렸다. `deploy-backend` ·
+`deploy-fomo-web` 은 성공했으나 **`rebake-payload` 가 실패**했고, 그 재생성이
+**`picks: 0` 페이로드를 정규 도메인에 써 버렸다.**
+
+```
+rebake-payload 검증 로그
+  asOf: undefined | picks: 0 | age(min): NaN
+  ::error:: 재생성 직후인데 페이로드가 NaN분 전 것이다. 화면에 닿지 않았다.
+
+같은 시각 엔드포인트 응답 (HTTP 503)
+  Error querying the database: FATAL: (EMAXCONNSESSION)
+  max clients reached in session mode - max clients are limited to pool_size: 15
+```
+
+### 12-2. 원인 — 카드 3형 게이트가 아니다
+
+빈 덱을 보고 가장 먼저 의심한 것은 이번 배치에서 새로 넣은 `no_card_type` 탈락 경로였다.
+**아니었다.** 그때의 `qualification` 이 원인을 그대로 말한다.
+
+| 지표 | 사고 시각 | 복구 후 |
+|---|---|---|
+| `krWithSignal` | **0** | 19 |
+| `published` | **0** | 10 |
+| `drops.no_card_type` | 1 | **없음** |
+
+`readSupplyDemandHistoryByTickers` 는 DB 조회이고 `.catch(() => ({}))` 로 **fail-open** 이다.
+커넥션 풀이 마르자 KR 수급 이력이 통째로 빈 객체가 됐고 → KR 신호 0건 → 그 뒤 US 쪽도
+캔들 봉인(`writeUsCandleCache`, 역시 DB)이 실패해 `insufficient_candles` 로 떨어졌다.
+**게이트가 정상 데이터를 버린 것이 아니라, 게이트에 도달한 데이터가 없었다.**
+
+### 12-3. 복구
+
+`gh run rerun 32637825595 --failed` — DB 가 회복된 뒤 재생성만 다시 돌렸다.
+
+```
+asOf 2026-08-23T11:58:38Z · picks 10 · krWithSignal 19
+형 분포 A 5 · B 3 · C 2   (사고 전과 동일)
+```
+
+`npm run verify:production` **exit 0**, 정규 도메인 DOM 재확인(뷰포트 375px):
+카드 336px · 후킹 2줄 · 마스킹 유지 · CTA `어떤 회사인지 보기`.
+
+### 12-4. 남는 문제 — 이번 배치 범위 밖
+
+| 문제 | 왜 위험한가 |
+|---|---|
+| **`rebake-payload` 가 실패해도 빈 페이로드를 덮어쓴다** | 검증 스텝은 *쓴 뒤에* 확인한다. 재생성 결과가 비었으면 **쓰기 전에** 멈추고 직전 페이로드를 유지해야 한다. 지금 구조는 DB 가 흔들릴 때마다 사용자 화면을 비운다 |
+| **DB 커넥션 풀 15** | 프리웜 워크플로 3종과 재생성이 겹치면 마른다. 사고 시각 직전 `us-market-prewarm` 이 돌고 있었다 |
+| **수급 이력 fail-open** | 조용히 빈 객체를 주므로 "신호가 없는 날" 과 "DB 가 죽은 날" 이 구분되지 않는다 |
+
+> **문서 커밋 하나 배포하려고 전체 배포를 돌린 것이 방아쇠였다.** 재생성은 문서 변경과 무관한데도
+> 같은 워크플로에 묶여 있어 매번 함께 돈다 — 코드가 안 바뀐 배포에서 재생성을 건너뛸 수 있어야 한다.
