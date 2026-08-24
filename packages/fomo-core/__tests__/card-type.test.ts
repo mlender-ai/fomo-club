@@ -4,6 +4,7 @@ import {
   MIN_BAR_DAYS,
   QUIET_UP_PCT,
   RATIO_PCT,
+  DIVERGENCE_WINDOW,
   selectCardType,
   type CardTypeInput,
 } from "../src/keyword-cards/card-type";
@@ -12,6 +13,16 @@ import {
 const rising = (n = 20): number[] => Array.from({ length: n }, (_, i) => (i < n / 2 ? 0 : 4_000_000));
 const drifting = (n = 24, from = 100, to = 96): number[] =>
   Array.from({ length: n }, (_, i) => from + ((to - from) * i) / (n - 1));
+
+/**
+ * **그려질 창**(`DIVERGENCE_WINDOW`)에서 정확히 `netPct` 만큼 움직이는 주가 계열.
+ *
+ * 2026-08-25 이후 A형 훅은 `priceChangeSincePct`(스칼라)가 아니라 **그린 창의 순변동**으로
+ * 판정한다. 그래서 픽스처도 의도한 변동을 **계열에 담아야** 한다 — 스칼라만 바꾸면
+ * 화면과 어긋나던 옛 버그를 테스트가 그대로 재현하게 된다.
+ */
+const windowNet = (netPct: number, n: number = DIVERGENCE_WINDOW): number[] =>
+  Array.from({ length: n }, (_, i) => 100 + ((100 * netPct) / 100) * (i / (n - 1)));
 
 const base: CardTypeInput = { kind: "insider_cluster", days: 8, scale: "$8.3M", insiderCount: 4 };
 
@@ -24,20 +35,19 @@ describe("selectCardType — A 역행", () => {
   });
 
   it("주가가 하락이면 '빠지는데' 변형", () => {
-    const d = selectCardType({ ...base, priceChangeSincePct: -5.9, priceSeries: drifting(), cumulativeBuySeries: rising() });
+    const d = selectCardType({ ...base, priceSeries: windowNet(-5.9), cumulativeBuySeries: rising() });
     expect(d?.hook).toBe("주가는 빠지는데\n임원은 사고 있어요");
   });
 
   it("정체 밴드 위 · 소폭 상승 상한 이내면 '조용한데' 변형", () => {
-    const d = selectCardType({ ...base, priceChangeSincePct: 2.69, priceSeries: drifting(), cumulativeBuySeries: rising() });
+    const d = selectCardType({ ...base, priceSeries: windowNet(2.69), cumulativeBuySeries: rising() });
     expect(d?.hook).toBe("주가는 조용한데\n임원이 계속 사고 있어요");
   });
 
   it("소폭 상승 상한을 넘으면 역행이 아니다 — A 를 쓰지 않는다", () => {
     const d = selectCardType({
       ...base,
-      priceChangeSincePct: QUIET_UP_PCT + 0.1,
-      priceSeries: drifting(),
+      priceSeries: windowNet(QUIET_UP_PCT + 0.1),
       cumulativeBuySeries: rising(),
       volumePct: 22.7,
       sparkline: drifting(),
@@ -162,7 +172,7 @@ describe("selectCardType — 후킹 없는 카드를 만들지 않는다 (WO §1
 
   it("A 재료가 있어도 주가가 크게 올랐고 B·C 재료가 없으면 null", () => {
     expect(
-      selectCardType({ ...base, priceChangeSincePct: 15, priceSeries: drifting(), cumulativeBuySeries: rising() })
+      selectCardType({ ...base, priceSeries: windowNet(15), cumulativeBuySeries: rising() })
     ).toBeNull();
   });
 });
