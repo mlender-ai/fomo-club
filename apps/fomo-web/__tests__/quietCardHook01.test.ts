@@ -66,19 +66,32 @@ describe("완료 기준 2·3·4 — 마스킹", () => {
     expect(body).toContain("priceText(pick)");
   });
 
-  it("상세 진입이 정체를 영구 해제한다 — 로컬 저장(§2-3)", () => {
+  /**
+   * 2026-08-25 개정 — **덱 앞면은 언제나 가린다.**
+   *
+   * WO-HOOK-01 §2-3 의 "상세를 열면 그 카드는 영구 해제" 를 폐기했다. 그 규칙 때문에 한 번
+   * 열어본 종목이 다음 방문 덱에서 이름을 그대로 드러냈고(실측: 한글과컴퓨터 030520),
+   * 마스킹 장치가 무력해졌다. 해제 기록 자체는 남긴다 — 상세 화면이 계속 쓰고,
+   * 되돌릴 때 덱의 한 줄만 고치면 된다.
+   */
+  it("덱 앞면은 해제 상태와 무관하게 항상 가린다", () => {
     const body = code(deck);
+    expect(body).toContain("const cardRevealed = false");
+    // 덱이 해제 여부를 조회하지 않는다 — 조회하면 언젠가 다시 앞면에 새어 나온다.
+    expect(body).not.toContain("isRevealed(");
+    // 상세 진입 기록은 계속 남긴다(상세 화면이 쓴다).
     expect(body).toContain("reveal(pick.subject.canonical)");
-    expect(body).toContain("isRevealed(pick.subject.canonical)");
     const reveal = readFileSync(new URL("../lib/cardReveal.ts", import.meta.url), "utf8");
     expect(reveal).toContain("localStorage");
-    // 해제를 되돌리는 창구가 없다 — 되돌아가면 장치가 아니라 방해다.
-    expect(reveal).not.toContain("unreveal");
   });
 
   it("가려진 카드는 스크린리더에도 종목명을 읽어주지 않는다", () => {
-    expect(code(card)).toMatch(/aria-label=\{\[isOpen \? displayName\(pick\) : identityLine/);
-    expect(code(deck)).toMatch(/cardRevealed \? `\$\{pick\.subject\.canonical\}/);
+    const body = code(deck);
+    // 덱 CTA 의 aria-label 이 종목명을 담지 않는다 — 마스킹이 시각 사용자에게만 걸리면 안 된다.
+    expect(body).not.toMatch(/aria-label=\{cardRevealed \? `\$\{pick\.subject\.canonical\}/);
+    expect(body).toContain('aria-label="어떤 회사인지 보기"');
+    // 카드 자체의 aria-label 도 가려진 동안은 정체 줄만 읽는다.
+    expect(code(card)).toMatch(/isOpen \? displayName\(pick\) : identityLine/);
   });
 
   it("CTA 가 가렸다는 사실을 명시한다(§2-4)", () => {
@@ -149,10 +162,25 @@ describe("완료 기준 7·8·9 — 형별 그림", () => {
   it("A형: 두 선을 각자 정규화한다(같은 축에 두지 않는다)", () => {
     const body = code(divergence);
     expect(body).toContain("function normalize");
-    expect(body).toMatch(/pathOf\(priceSeries/);
-    expect(body).toMatch(/pathOf\(buySeries/);
+    expect(body).toMatch(/pathOf\(normalizePrice\(priceSeries\)/);
+    expect(body).toMatch(/pathOf\(normalize\(buySeries\)/);
     // y축 라벨 없음 — 비교 가능한 것은 방향뿐이다.
     expect(body).not.toContain("<text");
+  });
+
+  /**
+   * 2026-08-25 — **주가선은 크기를 지킨다.**
+   *
+   * `normalize` 는 min→0, max→1 로 늘리므로 1% 움직인 주가도 산맥처럼 보인다. 카드가
+   * `주가는 제자리인데` 라고 말하는 동안 그림이 요동치면 문장이 맞아도 거짓말로 읽힌다.
+   * 진폭이 기준(20%) 미만이면 세로를 덜 쓰고 가운데로 모은다. 누적선은 형태만 읽으므로 예외다.
+   */
+  it("A형: 작게 움직인 주가는 작게 그린다 — 누적선은 예외", () => {
+    const body = code(divergence);
+    expect(body).toContain("PRICE_FULL_HEIGHT_AMPLITUDE_PCT");
+    expect(body).toMatch(/function normalizePrice/);
+    // 누적선에는 크기 축소를 쓰지 않는다.
+    expect(body).not.toMatch(/normalizePrice\(buySeries\)/);
   });
 
   it("A형: 평평한 계열을 버리지 않는다 — 제자리 주가가 이 형의 최고 재료다", () => {

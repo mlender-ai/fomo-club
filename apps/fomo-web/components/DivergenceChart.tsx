@@ -35,8 +35,40 @@ function normalize(series: readonly number[]): number[] {
   return series.map((v) => (v - min) / range);
 }
 
-function pathOf(series: readonly number[], height: number): string {
-  const norm = normalize(series);
+/**
+ * 주가선 기준 진폭(%) — 이보다 작게 움직인 창은 **높이를 덜 쓴다.**
+ *
+ * ## 왜 필요한가 (2026-08-25)
+ *
+ * `normalize` 는 계열의 min→0, max→1 로 늘린다. 그래서 **1% 움직인 주가도 산맥처럼 보인다.**
+ * 카드가 `주가는 제자리인데` 라고 말하는 동안 그림은 요동치니, 사용자가 "딱 봐도 차트가
+ * 움직이는데 뭔 주가가 제자리냐" 고 한 것이 맞다. 훅을 그린 창에 맞춘 것과 **짝이 되는 수정**이다 —
+ * 문장이 맞아도 그림이 과장하면 여전히 거짓말로 읽힌다.
+ *
+ * 20%: 실측(2026-08-25 A형 3장)에서 창 12일 진폭이 8.0 · 11.6 · 15.0% 였다. 그 위를 기준으로
+ * 잡아 관측 범위 전체가 높이에 비례해 들어오게 한다. 진폭 2%(정체 밴드)면 높이의 10%만 쓴다.
+ *
+ * **누적선에는 쓰지 않는다.** 그 선은 단위가 없고 형태(꾸준히 오르는가)만 읽으므로 늘려도 거짓이
+ * 아니다. 주가선만 크기를 지킨다.
+ */
+const PRICE_FULL_HEIGHT_AMPLITUDE_PCT = 20;
+
+/**
+ * 주가선 정규화 — 진폭이 작으면 세로를 덜 쓰고 가운데로 모은다.
+ * 진폭이 기준 이상이면 `normalize` 와 같다(높이를 다 쓴다).
+ */
+function normalizePrice(series: readonly number[]): number[] {
+  const min = Math.min(...series);
+  const max = Math.max(...series);
+  const range = max - min;
+  if (!(range > 0) || !(min > 0)) return series.map(() => 0.5);
+  const amplitudePct = (range / min) * 100;
+  const scale = Math.min(1, amplitudePct / PRICE_FULL_HEIGHT_AMPLITUDE_PCT);
+  // 0..1 로 편 뒤 가운데(0.5) 기준으로 축소한다 — 위아래 여백이 균등해야 눌린 것으로 읽힌다.
+  return series.map((v) => 0.5 + ((v - min) / range - 0.5) * scale);
+}
+
+function pathOf(norm: readonly number[], height: number): string {
   const span = norm.length > 1 ? norm.length - 1 : 1;
   return norm
     .map((v, i) => {
@@ -85,8 +117,9 @@ export function DivergenceChart({
           aria-hidden
           className="block"
         >
-          <path d={pathOf(priceSeries, height)} fill="none" stroke={PRICE_LINE} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
-          <path d={pathOf(buySeries, height)} fill="none" stroke={BUY_LINE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+          {/* 주가선은 **크기를 지킨다**(작게 움직였으면 작게 그린다). 누적선은 형태만 읽으므로 높이를 다 쓴다. */}
+          <path d={pathOf(normalizePrice(priceSeries), height)} fill="none" stroke={PRICE_LINE} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+          <path d={pathOf(normalize(buySeries), height)} fill="none" stroke={BUY_LINE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
         </svg>
         <span
           className="absolute block rounded-full bg-ds-accent"

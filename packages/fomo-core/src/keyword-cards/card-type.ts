@@ -64,6 +64,38 @@ export const QUIET_UP_PCT = 3.0;
 export const RATIO_PCT = 20.0;
 /** A형 누적선 최소 표본 — 이보다 짧으면 선이 형태를 못 만든다. */
 export const MIN_SERIES_POINTS = 8;
+
+/**
+ * A형 그림에 그리는 거래일 수 — **훅이 판정하는 창과 같은 창이다.**
+ *
+ * ## 왜 이 상수가 생겼나 (2026-08-25)
+ *
+ * 종전에는 창 길이가 `min(priceSeries.length, cumulativeBuySeries.length)` = 사실상 **40일**
+ * 이었고, 훅은 `priceChangeSincePct`(신호 시작가 대비, 보통 **3~6일**)로 판정했다.
+ * **두 창이 달랐다.** 결과가 화면에서 이렇게 나왔다:
+ *
+ * | 종목 | 훅 | 그린 40일 구간 |
+ * |---|---|---|
+ * | 한글과컴퓨터 | `주가는 제자리인데` | 순변동 **+4.1%** · 진폭 **27.8%** |
+ * | 휴니드 | `주가는 빠지는데` | 순변동 **+4.0%** (오히려 상승) |
+ * | 퍼스텍 | `주가는 빠지는데` | 순변동 −1.9% · 진폭 **40.4%** |
+ *
+ * "딱 봐도 차트가 움직이는데 뭔 주가가 제자리냐" 는 지적이 정확했다. 모듈 문서가 이미
+ * `A 역행 | 매수 누적 시계열 + **같은 기간** 주가` 라고 적어뒀는데 코드가 그걸 안 지켰다.
+ *
+ * ## 12를 고른 근거 (실측, 2026-08-25 발행 덱 A형 3장)
+ *
+ * | 창 | 한글과컴퓨터 | 휴니드 | 퍼스텍 | 판정 |
+ * |---|---|---|---|---|
+ * | 40(현행) | +4.1 / 27.8 | +4.0 / 22.5 | −1.9 / 40.4 | 2장이 A형 자격 상실, 1장은 진폭 40%에 "제자리" |
+ * | **12** | **−7.6 / 11.6** | **+0.1 / 8.0** | **−6.3 / 15.0** | 3장 모두 훅이 그림과 일치 |
+ * | 9(=days×3) | −9.8 / 11.6 | **+13.5 / 22.5** | −6.3 / 15.0 | 휴니드가 터진다 |
+ * | 10 | −9.3 / 11.6 | −4.3 / 7.8 | −11.2 / 15.0 | 가능하나 12보다 진폭 이득 없음 |
+ *
+ * 12는 `MIN_SERIES_POINTS`(8) 위로 여유가 있고, 신호 길이(3~11일)를 덮으면서, 관측된 A형
+ * 진폭을 8~15%로 묶는다. **표본 3장이다** — 값을 바꾸려면 다시 재고 이 표를 같이 고친다.
+ */
+export const DIVERGENCE_WINDOW = 12;
 /** 스파크라인 최소 표본 — DS-01 §3-⑤ "20포인트 미만이면 표시하지 않는다". */
 export const MIN_SPARKLINE_POINTS = 20;
 /** C형 막대 최소 표본 — 창이 이보다 짧으면 "드물다"를 보여줄 배경이 없다. */
@@ -215,6 +247,14 @@ function usableSeries(series: readonly number[] | undefined, min: number): serie
  * 소폭 상승 변형의 `계속` 은 다중 주체에서 뺀다. `외국인·기관이 계속 사고 있어요` 는 17자라
  * 한 줄(약 15자)을 넘긴다. 뺀다고 사실이 달라지지 않는다 — 지속은 보조 줄의 `N일간` 이 말한다.
  */
+/** 그린 창의 첫 종가 → 마지막 종가 변동률(%). 재료가 모자라면 `null`. */
+function windowChangePct(series: readonly number[]): number | null {
+  const first = series[0];
+  const last = series.at(-1);
+  if (typeof first !== "number" || typeof last !== "number" || !(first > 0)) return null;
+  return ((last - first) / first) * 100;
+}
+
 function divergenceHook(actor: string, changePct: number): string {
   if (changePct < -FLAT_PCT) return `주가는 빠지는데\n${actor}${TOPIC} 사고 있어요`;
   if (changePct > FLAT_PCT) {
@@ -315,20 +355,32 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
   const actor = ACTOR[input.kind];
 
   // ── A 역행 ──
-  const change = input.priceChangeSincePct;
   const priceOk = usableSeries(input.priceSeries, MIN_SERIES_POINTS);
   const buyOk = input.cumulativeBuySeries !== undefined && risesMeaningfully(input.cumulativeBuySeries);
-  const diverges = typeof change === "number" && change <= QUIET_UP_PCT;
-  if (priceOk && buyOk && diverges && input.priceSeries && input.cumulativeBuySeries) {
-    // 두 계열의 길이를 맞춘다 — 짧은 쪽 기준 뒤에서 자른다(최근이 남아야 한다).
-    const n = Math.min(input.priceSeries.length, input.cumulativeBuySeries.length);
+  /**
+   * 창은 `DIVERGENCE_WINDOW` 로 자른다: **훅이 판정하는 창과 그리는 창이 같아야 한다.**
+   * 두 계열의 길이도 맞춘다 — 짧은 쪽 기준 뒤에서 자른다(최근이 남아야 한다).
+   */
+  const n =
+    priceOk && buyOk && input.priceSeries && input.cumulativeBuySeries
+      ? Math.min(input.priceSeries.length, input.cumulativeBuySeries.length, DIVERGENCE_WINDOW)
+      : 0;
+  const priceWindow = n > 0 ? input.priceSeries!.slice(-n) : [];
+  /**
+   * 판정 근거는 **그린 창의 순변동**이다. 종전에는 `priceChangeSincePct`(신호 시작가 대비)를
+   * 썼는데, 그 창(3~6일)과 그리는 창(40일)이 달라 훅이 그림과 정면으로 어긋났다.
+   *
+   * 자격 미달이면 **A 만 건너뛴다** — 아래 B·C 가 이어서 판정한다(그래서 여기서 return 하지 않는다).
+   */
+  const change = n > 0 ? windowChangePct(priceWindow) : null;
+  if (n > 0 && change !== null && change <= QUIET_UP_PCT && input.cumulativeBuySeries) {
     const hook = divergenceHook(actor, change);
     return {
       type: "A",
       hook,
       figure: {
         kind: "divergence",
-        priceSeries: input.priceSeries.slice(-n),
+        priceSeries: priceWindow,
         buySeries: input.cumulativeBuySeries.slice(-n),
         buyLegend: `${actor} 매수 누적`,
       },
