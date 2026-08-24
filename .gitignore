@@ -37,3 +37,6 @@ hardening-reports/
 docs/archetype/market_universe_raw.json
 apps/fomo-web/test-results/
 apps/fomo-web/playwright-report/
+
+# actionlint 바이너리는 CI 가 매번 내려받는다(ci.yml repo-checks). 레포에 두지 않는다 — 5.8MB.
+/actionlint

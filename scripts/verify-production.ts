@@ -18,15 +18,19 @@ import { promisify } from "node:util";
  * | #1075 옛 페이로드 | 최신 커밋 | 최신 코드 + 24h 전 페이로드 |
  * | WO-OPS-504 스테일 서빙 | 정상 | 마지막 성공분(200 인데 새것이 아니다) |
  * | 2026-08-17 asOf < 배포 | 최신 커밋 | 배포보다 **먼저** 구워진 페이로드 |
+ * | 2026-08-23 빈 덱 | 최신 커밋 | 최신 페이로드인데 **카드가 0장** (STATUS §12) |
  *
  * 넷 다 "Vercel 이 READY 라고 했다" 로는 안 잡힌다. 그래서 이 스크립트는 **배포 기록을 믿지 않고
  * 정규 도메인에 HTTP 로 직접 묻는다.**
  *
- * ## 실패(exit 1) 조건 — 셋
+ * ## 실패(exit 1) 조건 — 넷
  *
  * 1. **커밋이 `origin/main` HEAD 보다 뒤** — 머지한 코드가 아직 서빙되지 않는다.
  * 2. **페이로드 `asOf` < 마지막 배포 시각** — 새 코드가 옛 페이로드를 서빙 중이다(자동배포 경로의 틈).
  * 3. **`staleServe: true`** — 200 이지만 마지막 성공분이다. 새로 구운 것이 아니다.
+ * 4. **`picks: 0`** — 덱이 비었다. 2026-08-23 12:09 UTC 실측에서 위 셋이 **전부 통과인 채**
+ *    정규 도메인이 빈 덱을 서빙했다. 재지 않은 것이 하나 있었고 그것이 사용자가 보는 유일한
+ *    것이었다 — 덱에 카드가 있는가. 빈 덱을 통과시키는 게이트는 게이트가 아니라 알리바이다.
  *
  * 판정 불가는 **실패로 세지 않고 `미확인` 으로 남긴다**(`AGENTS.md`: 추정으로 메우지 않는다).
  * 단 그때는 종료코드 2 로 구분한다 — 통과(0)로 위장하지 않는다.
@@ -447,6 +451,32 @@ async function main(): Promise<void> {
       stale.stale === true ? "fail" : "unknown",
       `staleServe=${JSON.stringify(staleServe)} — savedAt ${stale.savedAt ?? "?"} · reason ${stale.reason ?? "?"}`
     );
+  }
+
+  // ── 실패조건 ④ 빈 덱.
+  //
+  // ## 왜 이것이 없었던 것이 문제인가 (2026-08-23 12:09 UTC 실측)
+  //
+  // 이 스크립트가 **exit 0 을 내는 동안 정규 도메인은 `picks: 0` 을 서빙하고 있었다.**
+  // 커밋도 맞고 staleServe 도 없고 asOf 도 배포보다 늦었다 — 재던 셋이 전부 통과였다.
+  // 재지 않은 것이 하나 있었고 그것이 사용자가 보는 유일한 것이었다: **덱에 카드가 있는가.**
+  //
+  // 빈 덱은 `AGENTS.md` 자동 실패 목록에 오른 회귀다. 그것을 통과시키는 게이트는 게이트가
+  // 아니라 알리바이다. `docs/STATUS.md` §12 의 세 번째 발생을 이 검사가 없어서 놓쳤다.
+  //
+  // `watching` 은 보지 않는다 — 지켜보는 중 선반은 픽이 아니고, 그것만 있는 화면은
+  // 사용자에게 여전히 "오늘은 없다" 다.
+  const picksCount = Array.isArray(payloadBody?.picks) ? payloadBody.picks.length : null;
+  if (picksCount === null) {
+    record("덱이 비어 있지 않다", "unknown", `picks 를 읽을 수 없다 — HTTP ${payload?.status ?? "실패"}`);
+  } else if (picksCount === 0) {
+    record(
+      "덱이 비어 있지 않다",
+      "fail",
+      `picks 0 — 정규 도메인이 빈 덱을 서빙한다. 재생성을 돌려라(quiet-pick-trigger.yml).`
+    );
+  } else {
+    record("덱이 비어 있지 않다", "pass", `picks ${picksCount}`);
   }
 
   // 실패조건 ② asOf < 배포 시각

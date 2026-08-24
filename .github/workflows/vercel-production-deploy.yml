@@ -127,6 +127,92 @@ jobs:
         run: npx --yes vercel@latest alias set "${{ inputs.web_deployment }}" "${{ inputs.web_alias }}" --token="${{ secrets.VERCEL_TOKEN }}"
 
   # ─────────────────────────────────────────────────────────────────────────
+  # 재생성이 필요한 배포인지 먼저 판정한다.
+  #
+  # ## 왜 (2026-08-23 사고, `docs/STATUS.md` §12)
+  #
+  # 방아쇠는 **문서 커밋 하나였다.** 문서만 바뀐 배포도 재생성을 돌리고, 그 재생성이 마침
+  # 커넥션 풀이 마른 시각에 걸려 빈 페이로드를 정규 도메인에 썼다. 재생성이 만들어낼 차이가
+  # 애초에 0 인 배포였다 — 위험만 있고 이득이 없는 실행이었다.
+  #
+  # ## 판정 규칙
+  #
+  # 정규 도메인이 **지금 서빙하는 커밋**부터 배포 대상까지의 변경 경로를 본다. 전부 문서
+  # (`docs/`·`*.md`)면 건너뛴다. **판정이 불가능하면 재생성한다** — 서빙 커밋을 못 읽거나
+  # 계보가 끊겼으면 무엇이 바뀌었는지 모르는 것이고, 모를 때는 굽는 쪽이 안전하다.
+  # (`inputs.skip_rebake` 는 그대로 사람의 명시적 우선 스위치다.)
+  # ─────────────────────────────────────────────────────────────────────────
+  rebake-scope:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.skip_rebake != true }}
+    outputs:
+      needed: ${{ steps.scope.outputs.needed }}
+      reason: ${{ steps.scope.outputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+          # 서빙 커밋과 대상 커밋 사이 diff 를 내려면 전체 이력이 필요하다.
+          fetch-depth: 0
+
+      - name: Decide whether this deploy changes anything the payload depends on
+        id: scope
+        shell: bash
+        run: |
+          set -uo pipefail
+          target="$(git rev-parse HEAD)"
+
+          served="$(curl -s -H 'Cache-Control: no-cache' --max-time 30 \
+            "https://fomo-club-backend.vercel.app/api/fomo/ops/version?cb=$(date +%s)" \
+            | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                try{process.stdout.write(String(JSON.parse(s).commit??""))}catch{process.stdout.write("")}
+              })' 2>/dev/null || true)"
+          # `reason` 은 아래 잡에서 GitHub 식(expression)으로 셸에 보간된다. 그러므로 거기 실리는 값은
+          # (주의: 이 주석에 식 구문을 문자로 쓰면 안 된다 — GitHub 은 `run:` 블록의 주석 안까지
+          #  식으로 파싱해서, 빈 식 하나가 워크플로 파일 전체를 무효로 만든다. 실측으로 겪었다.)
+          # **레포 내용(브랜치가 정하는 파일명)이나 HTTP 응답에서 오면 안 된다.** 커밋 해시는
+          # 16진수만 남기고, 파일명은 로그에만 찍고 reason 에는 건수만 넣는다.
+          served="$(printf '%s' "$served" | tr -cd '0-9a-f')"
+          echo "서빙 커밋: ${served:-(읽지 못함)} / 배포 대상: $target"
+
+          decide() {
+            echo "needed=$1" >> "$GITHUB_OUTPUT"
+            echo "reason=$2" >> "$GITHUB_OUTPUT"
+            echo "판정: $1 — $2"
+          }
+
+          if [ -z "$served" ]; then
+            decide true "정규 도메인의 서빙 커밋을 읽지 못했다 — 무엇이 바뀌었는지 모르므로 굽는다"
+            exit 0
+          fi
+          if [ "$served" = "$target" ]; then
+            decide true "서빙 커밋과 대상이 같다(재배포) — 페이로드 로직 재적용을 위해 굽는다"
+            exit 0
+          fi
+          if ! git cat-file -e "$served^{commit}" 2>/dev/null; then
+            decide true "서빙 커밋 $served 가 이 클론에 없다 — 변경 범위를 판정할 수 없으므로 굽는다"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "$served" "$target" || true)"
+          if [ -z "$changed" ]; then
+            decide false "서빙 커밋과 대상 사이에 변경 파일이 없다"
+            exit 0
+          fi
+          echo "변경 파일:"; printf '%s\n' "$changed" | sed 's/^/  /'
+
+          # 문서로 간주하는 것: docs/ 아래 전부 + 최상위 마크다운. 그 밖은 전부 코드로 본다
+          # (워크플로·스크립트·prisma 포함 — 재생성 결과를 바꿀 수 있다).
+          code="$(printf '%s\n' "$changed" | grep -vE '^docs/|\.md$' || true)"
+          if [ -z "$code" ]; then
+            decide false "문서만 바뀐 배포(docs/ · *.md) — 재생성이 만들 차이가 없다"
+          else
+            decide true "문서 아닌 변경 $(printf '%s\n' "$code" | grep -c . )건"
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────
   # 배포와 화면 사이의 틈을 닫는다 (WO-RENDER-01 PART C).
   #
   # 같은 사고가 세 번 반복됐다: 별칭 미이동 · 페이로드 옛것 · 스냅샷이 배포보다 먼저 구워짐.
@@ -135,13 +221,32 @@ jobs:
   #
   # 원장 중복 위험은 #1081 의 selection 존재 검사로 해소됐다(같은 날 재실행은 스킵된다).
   # 재생성이 실패해도 배포를 되돌리지 않되 **이 잡을 실패로 표시**해 조용히 넘어가지 않게 한다.
+  #
+  # 2026-08-23 이후: 빈 페이로드를 쓰는 것은 **라우트 안 발행 가드**가 막는다
+  # (`quietPickPublishBlockReason` — 쓰기 전에 판정하고 직전 페이로드를 유지한 채 503).
+  # 이 잡이 하는 일은 그 503 을 **재시도**하는 것이다 — 사고의 방아쇠였던 `EMAXCONNSESSION`
+  # 은 일시적이고(프리웜 워크플로와 겹칠 때 마른다) 몇십 초 뒤엔 대개 회복한다.
+  # 종전에는 사람이 `gh run rerun --failed` 를 쳐야 그 회복을 이용할 수 있었다.
   # ─────────────────────────────────────────────────────────────────────────
   rebake-payload:
     runs-on: ubuntu-latest
-    needs: deploy-backend
-    if: ${{ inputs.skip_rebake != true }}
+    needs: [deploy-backend, rebake-scope]
+    if: ${{ inputs.skip_rebake != true && needs.rebake-scope.outputs.needed == 'true' }}
     steps:
-      - name: Rebake quiet-pick payload
+      - name: Report rebake scope decision
+        shell: bash
+        run: |
+          echo "재생성 실행 사유 — ${{ needs.rebake-scope.outputs.reason }}"
+
+      # ── 재시도하며 재생성한다.
+      #
+      # 사고 당시 실패는 **일시적이었다** — 커넥션 풀(pool_size 15)이 프리웜 워크플로와 겹쳐
+      # 말랐을 뿐이고, 사람이 `gh run rerun --failed` 를 친 뒤엔 그대로 10장이 나왔다.
+      # 그 회복을 사람 손 없이 이용한다. 백오프는 프리웜 슬롯(5분 간격)을 넘기도록 잡았다.
+      #
+      # 재시도가 안전한 이유: 라우트가 **쓰기 전에** 판정하므로 실패한 시도는 아무것도 남기지
+      # 않는다(직전 페이로드 그대로). 같은 날 원장 중복은 #1081 의 selection 존재 검사가 막는다.
+      - name: Rebake quiet-pick payload (retry on transient DB exhaustion)
         id: rebake
         shell: bash
         run: |
@@ -150,9 +255,33 @@ jobs:
           auth=()
           # CRON_SECRET 이 설정돼 있으면 붙인다. 없으면 라우트가 인증을 요구하지 않는다.
           if [ -n "${CRON_SECRET:-}" ]; then auth=(-H "authorization: Bearer ${CRON_SECRET}"); fi
-          code=$(curl -s -o rebake.json -w '%{http_code}' --max-time 320 "${auth[@]}" "$url" || echo "000")
-          echo "status=$code"
-          cat rebake.json || true
+
+          backoff=(0 45 90 150)
+          code="000"
+          for attempt in 0 1 2 3; do
+            wait="${backoff[$attempt]}"
+            if [ "$wait" -gt 0 ]; then
+              echo "── ${wait}초 대기 후 재시도 $((attempt + 1))/4"
+              sleep "$wait"
+            fi
+            code=$(curl -s -o rebake.json -w '%{http_code}' --max-time 320 "${auth[@]}" "$url" || echo "000")
+            echo "시도 $((attempt + 1))/4 → HTTP $code"
+            cat rebake.json || true
+            echo ""
+
+            ok=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(String(j.ok===true))}catch(e){process.stdout.write("false")}' 2>/dev/null || echo false)
+            if [ "$code" = "200" ] && [ "$ok" = "true" ]; then break; fi
+
+            # 인증 실패는 재시도해도 같다 — 즉시 멈춘다.
+            if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+              echo "인증 실패 — 재시도하지 않는다."
+              break
+            fi
+            # 503 = 발행 가드 차단(직전 페이로드는 그대로 살아 있다). 대개 커넥션 풀 고갈이라 재시도 가치가 있다.
+            if [ "$code" = "503" ]; then
+              echo "발행 가드가 차단했다 — 직전 페이로드는 유지된 상태다. DB 회복을 기다려 재시도한다."
+            fi
+          done
           echo "code=$code" >> "$GITHUB_OUTPUT"
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -163,7 +292,8 @@ jobs:
           set -uo pipefail
           code="${{ steps.rebake.outputs.code }}"
           ok=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(String(j.ok===true))}catch(e){process.stdout.write("false")}')
-          summary=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(`published=${j.published} ledgerAppended=${j.ledgerAppended} stamped=${j.stamped} date=${j.date} ms=${j.ms}`)}catch(e){process.stdout.write("payload unreadable")}')
+          blocked=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(String(j.blocked??""))}catch(e){process.stdout.write("")}')
+          summary=$(node -e 'try{const j=require("./rebake.json");process.stdout.write(j.blocked?`blocked="${j.blocked}" attemptedPicks=${j.attemptedPicks} keptPriorPicks=${j.keptPriorPicks} inputFailures=${JSON.stringify(j.qualification?.inputFailures??[])} date=${j.date}`:`published=${j.published} ledgerAppended=${j.ledgerAppended} stamped=${j.stamped} date=${j.date} ms=${j.ms}`)}catch(e){process.stdout.write("payload unreadable")}')
           {
             echo "### 페이로드 재생성"
             echo ""
@@ -171,25 +301,66 @@ jobs:
             echo "- ok: \`$ok\`"
             echo "- $summary"
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$blocked" ]; then
+            # 이것은 사고가 아니라 **가드가 일한 것**이다. 화면에는 직전 페이로드가 그대로 있다.
+            # 그래도 잡은 실패로 남긴다 — 새 로직이 화면에 닿지 않았고 사람이 봐야 한다.
+            echo "::error::발행 가드가 재생성을 차단했다 — $blocked. **화면은 비지 않았다**(직전 페이로드 유지). DB 커넥션 풀·수급 파이프라인을 확인하고 재실행하라."
+            exit 1
+          fi
           if [ "$code" != "200" ] || [ "$ok" != "true" ]; then
             echo "::error::페이로드 재생성 실패 — 배포는 유지되지만 화면은 옛 페이로드다. 수동 확인 필요."
             exit 1
           fi
 
+      # ── 되읽어 확인한다. 결과를 **셋으로** 가른다.
+      #
+      # ## 왜 (2026-08-23 2차 발생, `docs/STATUS.md` §12-4)
+      #
+      # 종전에는 되읽기를 **한 번만** 했고, 실패하면 `화면에 닿지 않았다` 를 냈다. 2차 발생에서
+      # 페이로드는 정상 10장으로 잘 구워졌는데(`asOf 12:04:10`) 되읽는 순간 풀이 말라 503 이
+      # 왔고, 그래서 **읽지 못한 것을 닿지 않았다고 말했다.**
+      #
+      # 빈 덱과 읽기 실패는 대응이 정반대다(전자는 즉시 재생성, 후자는 아무것도 하지 않아야
+      # 한다). 신호가 같으면 사람은 매번 처음부터 조사한다. 그래서 되읽기도 재시도하고, 끝내
+      # 못 읽으면 `미확인` 이라고 **그대로 말한다** — AGENTS.md 종료코드 2 와 같은 정신이다.
       - name: Verify payload reached the canonical domain
         shell: bash
         run: |
           set -uo pipefail
           # CDN 캐시(s-maxage=3600) 때문에 그냥 부르면 옛 asOf 가 온다 — 반드시 우회한다.
-          curl -s -H 'Cache-Control: no-cache' --max-time 90 \
-            "https://fomo-club-backend.vercel.app/api/fomo/quiet-picks?cb=$(date +%s)" -o after.json
+          read_ok="no"
+          for attempt in 1 2 3 4; do
+            if [ "$attempt" -gt 1 ]; then
+              echo "── 30초 대기 후 되읽기 재시도 $attempt/4"
+              sleep 30
+            fi
+            code=$(curl -s -o after.json -w '%{http_code}' -H 'Cache-Control: no-cache' --max-time 90 \
+              "https://fomo-club-backend.vercel.app/api/fomo/quiet-picks?cb=$(date +%s)-$RANDOM" || echo "000")
+            echo "되읽기 시도 $attempt/4 → HTTP $code"
+            if [ "$code" = "200" ]; then read_ok="yes"; break; fi
+          done
+
+          if [ "$read_ok" != "yes" ]; then
+            # 미확인이다. 통과도 아니고, 화면이 비었다는 뜻도 아니다 — 그 둘을 섞어 말하지 않는다.
+            echo "::error::페이로드 상태를 확인하지 못했다(되읽기 4회 모두 실패). 재생성 응답은 ok:true 였으므로 화면이 비었다는 뜻은 아니다 — 조회 경로의 DB 커넥션을 확인하라."
+            exit 1
+          fi
+
           node -e '
             const j = require("./after.json");
             const asOf = new Date(j.asOf);
             const ageMin = (Date.now() - asOf.getTime()) / 60000;
             console.log("asOf:", j.asOf, "| picks:", (j.picks||[]).length, "| age(min):", Math.round(ageMin));
-            if (!Number.isFinite(ageMin) || ageMin > 60) {
+            if (!Number.isFinite(ageMin)) {
+              console.error("::error::되읽기는 200 이었지만 asOf 를 읽을 수 없다. 페이로드 형식을 확인하라.");
+              process.exit(1);
+            }
+            if (ageMin > 60) {
               console.error("::error::재생성 직후인데 페이로드가 " + Math.round(ageMin) + "분 전 것이다. 화면에 닿지 않았다.");
+              process.exit(1);
+            }
+            if ((j.picks||[]).length === 0) {
+              console.error("::error::되읽은 페이로드가 0장이다. 발행 가드를 우회한 경로가 있다 — 즉시 조사하라.");
               process.exit(1);
             }
           '

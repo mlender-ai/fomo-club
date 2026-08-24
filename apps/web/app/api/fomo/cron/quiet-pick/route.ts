@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { withCors, kstDate } from "../../../../../lib/fomo";
-import { readFeedContent, readFeedContentMany, writeFeedContent } from "../../../../../lib/feed-content-store";
+import { readFeedContentMany, readFeedContentStrict, writeFeedContent } from "../../../../../lib/feed-content-store";
 import { appendJudgmentLedger } from "../../../../../lib/judgment-ledger";
 import {
   buildQuietPickResponse,
   quietPickLedgerEntries,
   quietPickPriorState,
   quietPickPage1Streaks,
+  quietPickPublishBlockReason,
   type QuietPickResponse,
 } from "../../../../../lib/quiet-pick";
 import { buildQuietPickStamps, type PublicationStamp } from "../../../../../lib/publication-stamp";
@@ -44,7 +45,11 @@ export async function GET(request: Request) {
   try {
     const date = kstDate();
     // 신선도 — 어제 픽과 같은 종목·같은 신호 시작이면 제외(신호 갱신 시만 재편입).
-    const prior = await readFeedContent<QuietPickResponse>(ACTIVE_ID).catch(() => null);
+    //
+    // **strict** 로 읽는다. 삼킨 null 은 "아직 안 구웠다" 와 "DB 읽기가 실패했다" 를 같게 만들고,
+    // 후자라면 아래 발행 가드의 붕괴 기준선이 조용히 0 이 되어 가드가 무력해진다. 여기서 던지면
+    // 아래 catch 가 500 을 주고 **아무것도 쓰지 않는다** — 커넥션 풀이 마른 날 원하는 결과다.
+    const prior = await readFeedContentStrict<QuietPickResponse>(ACTIVE_ID);
     const priorPicks = prior && prior.date !== date ? quietPickPriorState(prior) : new Map();
 
     // 1페이지 재노출 쿨다운(WO-DECK-01 §3) — 최근 스냅샷에서 연속 점유일수를 센다.
@@ -70,6 +75,31 @@ export async function GET(request: Request) {
         NextResponse.json(
           { ok: false, error: `데이터 미완결 픽 발행 시도: ${detail}`, date },
           { status: 500 }
+        )
+      );
+    }
+
+    // ── 발행 가드(fail-closed) — **쓰기 전에** 판정한다.
+    //
+    // 2026-08-23 사고(`docs/STATUS.md` §12): 검증이 쓰기 뒤에 있어 `picks: 0` 이 먼저 발행되고
+    // 그 다음에 워크플로가 실패를 알렸다. 사용자는 2분간 빈 덱을 봤다. 차단 시 직전 페이로드는
+    // 손대지 않는다 — 하루 묵은 덱은 `asOf` 로 정직하게 표시되지만 빈 덱은 회귀다.
+    const blockReason = quietPickPublishBlockReason(response, prior);
+    if (blockReason) {
+      console.error(`[fomo/cron/quiet-pick] 발행 차단 — ${blockReason}`);
+      return withCors(
+        NextResponse.json(
+          {
+            ok: false,
+            blocked: blockReason,
+            date,
+            // 직전 페이로드가 그대로 살아 있다는 사실을 응답에 박아둔다 — 재실행 판단의 근거다.
+            keptPriorPicks: prior?.picks.length ?? 0,
+            attemptedPicks: response.picks.length,
+            qualification: response.qualification,
+            ms: Date.now() - startedAt,
+          },
+          { status: 503 }
         )
       );
     }
