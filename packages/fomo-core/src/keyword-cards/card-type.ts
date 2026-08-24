@@ -27,7 +27,7 @@
  * |---|---|---|
  * | `FLAT_PCT` | 2.0 | WO §4-1 이 정체 밴드를 ±2% 로 고정 |
  * | `QUIET_UP_PCT` | 3.0 | 덱의 \|신호 후 변동\| **중앙값 2.72%** 를 반올림 — "이 덱의 잡음 범위 안이면 조용한 것" |
- * | `RATIO_PCT` | 10.0 | 실측 분포가 `…2.5` / `22.7…` 로 갈리고 **그 사이가 비어 있다.** 공백 구간 안이면 값에 둔감하다. WO §5-2 카피 하한(<10% 미사용)과도 일치 |
+ * | `RATIO_PCT` | 20.0 | 08-22 표본의 공백 구간(2.5~22.7) 안이라 그때 분류는 그대로다. **08-24 에 14.4(풍산)가 그 공백에서 나왔고**, 그 값이 상세의 `VOLUME_SHARE_FLOOR`(20) 아래라 카드는 히어로로 띄우고 상세는 근거로 안 치는 모순이 드러났다. 두 임계를 20 으로 합친다 |
  *
  * `QUIET_UP_PCT` 위(+5.15·+5.99·+15.0%)는 주가가 이미 응답한 것이라 역행이 아니다 — B/C 로 간다.
  *
@@ -45,8 +45,23 @@ import type { QuietPickSignalKind } from "./quiet-pick-hook";
 export const FLAT_PCT = 2.0;
 /** 소폭 상승 상한(%) — 덱 \|변동\| 중앙값(2.72) 반올림. 이 위는 역행이 아니다. */
 export const QUIET_UP_PCT = 3.0;
-/** B형 하한(%) — 매수 규모가 일 거래량에서 차지하는 비중. WO §5-2. */
-export const RATIO_PCT = 10.0;
+/**
+ * B형 하한(%) — 매수 규모가 일 거래량에서 차지하는 비중.
+ *
+ * ## 왜 10 이 아니라 20 인가 (2026-08-24)
+ *
+ * 이 값은 **상세의 `VOLUME_SHARE_FLOOR`(`apps/fomo-web/lib/depthSections.ts`)와 같아야 한다.**
+ * 둘이 갈려 있으면 앱이 자기 숫자를 스스로 근거로 안 치는 상태가 된다 — 실제로 그랬다:
+ * 풍산 `volumePct 14.4` 가 카드에서는 52px 히어로였고, 상세에서는 `20 미만은 소음` 규칙에
+ * 걸려 **행 자체가 없었다.** 확인하러 들어간 화면에서 확인할 대상이 사라졌다.
+ *
+ * 20 을 고른 이유는 상세 쪽이 이미 실측(휴니드 0.5%)으로 그 선을 잡아뒀고, 08-22 표본의
+ * 관측 공백(2.5~22.7) **안**이라 그때 분류가 하나도 안 바뀌기 때문이다. 즉 이 변경은
+ * 과거 판정을 뒤집지 않고 모순만 걷어낸다.
+ *
+ * 공백이 비어 보였던 것은 표본이 10장이어서였다 — 14.4 가 나오면서 그 구간이 실재함이 드러났다.
+ */
+export const RATIO_PCT = 20.0;
 /** A형 누적선 최소 표본 — 이보다 짧으면 선이 형태를 못 만든다. */
 export const MIN_SERIES_POINTS = 8;
 /** 스파크라인 최소 표본 — DS-01 §3-⑤ "20포인트 미만이면 표시하지 않는다". */
@@ -77,6 +92,14 @@ export interface RatioFigure {
   kind: "ratio";
   /** 큰 숫자로 쓸 비율(%). */
   ratioPct: number;
+  /**
+   * 캡션에 쓸 주체 — "기관" / "외국인" / "임원".
+   *
+   * A 의 `buyLegend`·C 의 `actor` 와 같은 자리다. 세 형 모두 그림 아래 한 줄이 **accent 가
+   * 무엇인지** 말해야 하는데, B 만 그 줄이 없어 52px 숫자가 맨몸으로 서 있었다(실측: 바로 위
+   * `+5.7%` 옆에서 수익률로 읽힌다).
+   */
+  actor: string;
   /** 최근 종가 계열. 20포인트 미만이면 아예 없다(DS-01 §3-⑤ — 형태가 안 보이는 선은 장식). */
   priceSeries?: number[];
   /** 매수 시작 지점 인덱스(`priceSeries` 기준). 범위 밖이면 화면이 마커를 생략한다. */
@@ -203,12 +226,18 @@ function divergenceHook(actor: string, changePct: number): string {
 
 /**
  * B형 후킹 — 큰 숫자를 문장으로 **다시 읽어준다**. `51%` 만으로는 무엇의 51% 인지 모른다.
- * 구간별 표현은 WO §5-2 표.
+ *
+ * ## `상당 부분` 을 지웠다 (2026-08-24)
+ *
+ * 종전 하한(10)에서 10~25% 구간은 전부 `상당 부분을 사갔어요` 로 뭉뚱그려졌다. 그것은 후킹이
+ * 아니라 **말을 안 한 것**이다 — 14%를 상당 부분이라 부르면 사용자는 아무것도 알게 되지 않는다.
+ * 하한이 20 으로 올라간 지금 전 구간이 구체적 분수를 말할 수 있으므로 모호한 갈래를 없앤다.
+ * 20 미만은 애초에 B형이 아니다(카드에서 빠진다).
  */
 function ratioPhrase(ratioPct: number): string {
   if (ratioPct >= 45) return "하루 거래량의\n절반을 사갔어요";
   if (ratioPct >= 25) return "하루 거래량의\n3분의 1을 사갔어요";
-  return "하루 거래량의\n상당 부분을 사갔어요";
+  return "하루 거래량의\n5분의 1을 사갔어요";
 }
 
 function ratioHook(actor: string, ratioPct: number): string {
@@ -317,6 +346,7 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
       figure: {
         kind: "ratio",
         ratioPct: Math.round(input.volumePct),
+        actor,
         ...(sparkOk && input.sparkline ? { priceSeries: [...input.sparkline] } : {}),
         ...(sparkOk && typeof input.markerIndex === "number" ? { markerIndex: input.markerIndex } : {}),
       },

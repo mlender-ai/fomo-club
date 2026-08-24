@@ -1,5 +1,5 @@
 import type { QuietPick } from "./fomoApi";
-import { rewriteCompanySummary } from "@fomo/core";
+import { rewriteCompanySummary, RATIO_PCT } from "@fomo/core";
 import { repairPickCopy } from "./pickCopyRepair";
 
 /**
@@ -30,8 +30,15 @@ function actorWithCount(actors: string, insiderCount: number | undefined): strin
  *
  * `하루 거래량의 1%` 는 근거가 아니라 소음이다 — 실측(휴니드 0.5%)에서 그 행이 그대로
  * 화면에 올라왔다. 이례성 엔진이 쓰는 임계(20%)와 같은 선을 쓴다.
+ *
+ * ## 카드와 **같은 상수를 쓴다** (2026-08-24)
+ *
+ * 숫자를 여기 다시 적지 않고 `RATIO_PCT`(B형 하한)를 그대로 가져온다. 종전에는 카드가 10,
+ * 여기가 20 으로 갈려 있었고 그 결과 풍산 `volumePct 14.4` 가 **카드에서는 52px 히어로,
+ * 상세에서는 존재하지 않는 값**이 됐다. 확인하러 들어간 화면에서 확인할 대상이 사라진 것이다.
+ * 값을 복사하면 언젠가 또 갈린다 — 그래서 복사하지 않고 참조한다.
  */
-const VOLUME_SHARE_FLOOR = 20;
+const VOLUME_SHARE_FLOOR = RATIO_PCT;
 /** 20일 평균이 60일 평균의 이 값 아래면 "거래가 말라 있었다". */
 const VACUUM_CEILING = 0.6;
 

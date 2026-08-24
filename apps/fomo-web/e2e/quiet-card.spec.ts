@@ -33,8 +33,10 @@ async function accentOutsideFigure(page: import("@playwright/test").Page, id: st
           const isAccent =
             style.color === accent || style.backgroundColor === accent || style.borderColor === accent;
           if (!isAccent) return false;
-          // 그림 블록(A 차트 · B 큰 숫자 · C 막대) 안이면 규칙에 맞는 자리다.
-          return !el.closest('[data-testid="divergence-chart"], [data-testid="pick-ratio"], [data-testid="streak-bars"]');
+          // 그림 블록(A 차트 · B 비중 막대 · C 연속 막대) 안이면 규칙에 맞는 자리다.
+          return !el.closest(
+            '[data-testid="divergence-chart"], [data-testid="ratio-bar"], [data-testid="streak-bars"]'
+          );
         })
         .map((el) => (el as HTMLElement).dataset.testid || el.tagName.toLowerCase()),
     ACCENT
@@ -50,10 +52,10 @@ test("페이지가 렌더된다 — 빈 화면이 아니다", async ({ page }) =
 test("완료 기준 1 — 세 형이 각자의 그림을 그린다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-case="a"] [data-testid="divergence-chart"]')).toHaveCount(1);
-  await expect(page.locator('[data-case="b"] [data-testid="pick-ratio"]')).toHaveCount(1);
+  await expect(page.locator('[data-case="b"] [data-testid="ratio-bar"]')).toHaveCount(1);
   await expect(page.locator('[data-case="c"] [data-testid="streak-bars"]')).toHaveCount(1);
-  // 형이 섞이지 않는다 — A 카드에 큰 숫자가, B 카드에 막대가 있으면 안 된다.
-  await expect(page.locator('[data-case="a"] [data-testid="pick-ratio"]')).toHaveCount(0);
+  // 형이 섞이지 않는다 — A 카드에 비중 막대가, B 카드에 연속 막대가 있으면 안 된다.
+  await expect(page.locator('[data-case="a"] [data-testid="ratio-bar"]')).toHaveCount(0);
   await expect(page.locator('[data-case="b"] [data-testid="streak-bars"]')).toHaveCount(0);
 });
 
@@ -97,8 +99,12 @@ test("완료 기준 5 — accent 가 형별 1곳(그림)에만 있다", async ({
   }
 
   // 그 자리가 어디인지도 고정한다 — 개수만 맞고 자리가 틀리면 규칙이 지켜진 게 아니다.
-  const ratio = page.locator('[data-case="b"] [data-testid="pick-ratio"]');
-  expect(await ratio.evaluate((el) => getComputedStyle(el).color)).toBe(ACCENT);
+  // B형 accent 는 **막대의 채운 구간**이다(2026-08-24). 종전에는 52px 숫자의 글자색이었는데,
+  // 카드 상단 `+5.7%` 옆에서 수익률로 읽혀 막대로 바꿨다. 캡션은 accent 가 아니다.
+  const filled = page.locator('[data-case="b"] [data-testid="ratio-bar"] > div > span');
+  expect(await filled.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(ACCENT);
+  const caption = page.locator('[data-case="b"] [data-testid="pick-ratio"]');
+  expect(await caption.evaluate((el) => getComputedStyle(el).color)).not.toBe(ACCENT);
 
   // CTA·후킹·가격에는 없다.
   for (const id of ["a", "b", "c"]) {
@@ -145,19 +151,41 @@ test("완료 기준 7 — A형 두 선이 실제로 벌어져 있다", async ({ 
   expect(buyEndY!, "누적선 끝점이 주가선보다 위에 있어야 한다").toBeLessThan(priceEndY! - 10);
 });
 
-test("완료 기준 8 — B형 큰 숫자가 52px 이고 화면에서 가장 크다", async ({ page }) => {
+/**
+ * 완료 기준 8 개정 (2026-08-24) — B형은 52px 맨몸 숫자에서 **비중 막대**로 바뀌었다.
+ *
+ * 종전 단정은 "숫자가 화면에서 가장 크다" 였다. 그 크기가 문제였다: 카드 상단
+ * `82,200원 +5.7%` 바로 아래 라임색 `14%` 가 오면 둘 다 퍼센트라 눈이 같은 종류로 묶어
+ * **수익률로 읽힌다**(실측 화면 지적). 이제 후킹 문장이 크기를 말하고 막대가 몫을 보여준다.
+ */
+test("완료 기준 8 — B형은 비중 막대다: 채운 폭이 비율과 맞고 캡션이 무엇의 몫인지 말한다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const scope = page.locator('[data-case="b"]');
-  const ratioSize = await scope
-    .locator('[data-testid="pick-ratio"]')
+
+  // 채운 폭 / 전체 폭 ≈ 비율. 프리뷰 픽스처는 51% 다.
+  const track = scope.locator('[data-testid="ratio-bar"] > div');
+  const ratio = await track.evaluate((el) => {
+    const fill = el.querySelector("span") as HTMLElement;
+    return (fill.getBoundingClientRect().width / el.getBoundingClientRect().width) * 100;
+  });
+  expect(ratio).toBeGreaterThan(48);
+  expect(ratio).toBeLessThan(54);
+
+  // 캡션이 무엇의 몫인지 말한다 — 맨몸 숫자를 두지 않는다.
+  const caption = await scope.locator('[data-testid="pick-ratio"]').innerText();
+  expect(caption).toContain("하루 거래량");
+  expect(caption).toContain("51%");
+
+  // 화면에서 가장 큰 글자는 이제 후킹 문장이다.
+  const hookSize = await scope
+    .locator('[data-testid="pick-hook"]')
     .evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
-  expect(ratioSize).toBe(52);
   const sizes = await scope.locator('[data-testid="quiet-pick-card"] *').evaluateAll((els) =>
     els
       .filter((el) => (el.textContent ?? "").trim().length > 0)
       .map((el) => Number.parseFloat(getComputedStyle(el).fontSize))
   );
-  expect(Math.max(...sizes)).toBe(ratioSize);
+  expect(Math.max(...sizes)).toBe(hookSize);
 });
 
 test("완료 기준 9 — C형은 현재 연속 구간만 accent 다", async ({ page }) => {

@@ -39,6 +39,12 @@ export interface WhyNowRow {
 /** 최소 축 수 — 이 아래면 섹션을 만들지 않는다(§2-2). */
 export const WHY_NOW_MIN_AXES = 2;
 
+/**
+ * `이력` 축을 쓰는 최소 승률(%). 이 아래면 사는 이유가 아니라 반대 증거다.
+ * 50 은 동전 던지기 — 그보다 낮은 값을 「왜 지금 사는가」에 두지 않는다.
+ */
+export const WHY_NOW_MIN_WIN_RATE = 50;
+
 /** 섹션 하단 꼬리표(§2-3). 화면이 문안을 따로 갖지 않도록 여기서 낸다. */
 export const WHY_NOW_DISCLAIMER = "이 시점에 함께 관측된 것들이에요. 왜 샀는지는 확인할 수 없어요.";
 
@@ -121,8 +127,18 @@ export function buildWhyNowRows(input: WhyNowInput): WhyNowRow[] {
   }
 
   // ④ 이력 — 승률만 말하지 않는다. 분모(n)와 분자(up)를 같이 써야 52% 가 무엇의 52% 인지 안다.
+  //
+  // ## 50% 미만은 이 섹션에 넣지 않는다 (2026-08-24)
+  //
+  // 이 섹션이 답하는 질문은 **「왜 지금 사는가」** 다. 실측 화면(한글과컴퓨터)에서 이 행이
+  // `비슷한 신호 79번 중 37번 올랐어요 (47%)` 로 나왔다 — 동전 던지기보다 낮은 값이
+  // *사는 이유* 자리에 앉은 것이다. 그건 근거가 아니라 **반대 증거**이고, 질문 아래 두면
+  // 숫자를 못 읽는 사용자에게는 근거처럼 보인다.
+  //
+  // 숨기는 것이 아니다 — 성적은 상세의 `이런 패턴` 행(`evidenceRows`)이 승률과 무관하게
+  // 그대로 보여준다. 여기서 빼는 것은 **이 질문의 답이 아니기 때문**이다.
   const stats = input.signalStats;
-  if (stats && stats.n > 0) {
+  if (stats && stats.n > 0 && stats.winRate >= WHY_NOW_MIN_WIN_RATE) {
     rows.push({
       axis: "이력",
       text: `비슷한 신호 ${stats.n}번 중 ${stats.up}번 올랐어요 (${Math.round(stats.winRate)}%)`,

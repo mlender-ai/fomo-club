@@ -1058,7 +1058,13 @@ export interface QuietPickCardType {
   hook: string;
   figure:
     | { kind: "divergence"; priceSeries: number[]; buySeries: number[]; buyLegend: string }
-    | { kind: "ratio"; ratioPct: number; priceSeries?: number[]; markerIndex?: number }
+    /**
+     * `actor` 는 그림 아래 캡션이 accent 를 설명하는 데 쓴다(A 의 `buyLegend`·C 의 `actor` 와 같은 자리).
+     * 구 페이로드에는 없다 — 하루 한 번 굽는 배치라 한 배치 동안 비어 올 수 있어 선택 필드로 둔다.
+     * `priceSeries`/`markerIndex` 는 큰 숫자 시절 스파크라인 재료다. 화면은 더 이상 쓰지 않지만
+     * 페이로드 호환을 위해 타입에 남긴다(서버가 계속 실어 보낸다).
+     */
+    | { kind: "ratio"; ratioPct: number; actor?: string; priceSeries?: number[]; markerIndex?: number }
     | { kind: "streak"; buyDays: boolean[]; streakFrom: number; streakTo: number; actor: string };
   /** 보조 최대 2줄. */
   support: string[];

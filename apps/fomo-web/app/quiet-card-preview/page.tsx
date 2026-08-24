@@ -16,7 +16,7 @@ import { QuietPickCard } from "@/components/QuietPickCard";
  * | case | 구성 |
  * |---|---|
  * | `a` | A형 역행 — 두 선의 갭. 이 배치의 핵심 산출물 |
- * | `b` | B형 비율 — 52px accent 숫자 + 스파크라인 |
+ * | `b` | B형 비율 — 하루 거래량 중 매수분 막대 |
  * | `c` | C형 희소성 — 40거래일 막대, 연속 구간만 accent |
  * | `min` | 형은 있으나 보조 줄이 없는 가장 짧은 카드 |
  * | `revealed` | 상세를 열어 정체가 해제된 뒤(종목명·티커 표시) |
@@ -90,7 +90,7 @@ const CARD_TYPES: Record<string, QuietPickCardType> = {
   b: {
     type: "B",
     hook: "기관이 하루 거래량의\n절반을 사갔어요",
-    figure: { kind: "ratio", ratioPct: 51, priceSeries: PRICES.slice(-30), markerIndex: 4 },
+    figure: { kind: "ratio", ratioPct: 51, actor: "기관" },
     support: ["25일간 · 74주", "1년 매수는 3건뿐이었어요"],
   },
   c: {
@@ -116,7 +116,7 @@ function withCase(id: string): QuietPick {
 
 const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
   { id: "a", label: "A형 역행 — 두 선의 갭" },
-  { id: "b", label: "B형 비율 — 52px accent 숫자" },
+  { id: "b", label: "B형 비율 — 하루 거래량 중 매수분 막대" },
   { id: "c", label: "C형 희소성 — 연속 구간만 accent" },
   { id: "min", label: "보조 줄 없음 — 가장 짧은 카드" },
   { id: "revealed", label: "정체 해제 후 — 종목명·티커 표시", revealed: true },

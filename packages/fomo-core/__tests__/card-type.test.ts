@@ -94,11 +94,21 @@ describe("selectCardType — B 비율", () => {
     expect(d.figure.ratioPct).toBe(51);
   });
 
-  it("구간별 표현 (WO §5-2)", () => {
+  it("구간별 표현 — 전 구간이 구체적 분수를 말한다(모호한 '상당 부분' 없음)", () => {
     const at = (pct: number) => selectCardType({ ...base, volumePct: pct, sparkline: drifting() })?.hook;
     expect(at(51)).toBe("임원이 하루 거래량의\n절반을 사갔어요");
     expect(at(30)).toBe("임원이 하루 거래량의\n3분의 1을 사갔어요");
-    expect(at(15)).toBe("임원이 하루 거래량의\n상당 부분을 사갔어요");
+    expect(at(21)).toBe("임원이 하루 거래량의\n5분의 1을 사갔어요");
+    // 하한 위 어디에도 '상당 부분' 이 남아 있으면 안 된다 — 그것은 후킹이 아니라 말을 안 한 것이다.
+    for (const pct of [20, 24, 25, 44, 45, 80]) {
+      expect(at(pct)).not.toContain("상당 부분");
+    }
+  });
+
+  it("캡션용 주체를 실어 보낸다 — 그림 아래 한 줄이 accent 를 설명해야 한다", () => {
+    const d = selectCardType({ ...base, volumePct: 51.4, sparkline: drifting() });
+    if (d?.figure.kind !== "ratio") throw new Error("B형이 아니다");
+    expect(d.figure.actor).toBe("임원");
   });
 
   it("하한 미만이면 B 를 쓰지 않는다", () => {
@@ -192,9 +202,25 @@ describe("임계값이 실측 분포와 맞는가 (2026-08-22 발행 덱 10장)"
     expect(FLAT_PCT).toBe(2.0);
   });
 
-  it("B형 하한은 관측 공백 구간(2.5 ~ 22.7) 안에 있다", () => {
+  it("B형 하한은 08-22 관측 공백(2.5 ~ 22.7) 안에 있다 — 그때 분류를 뒤집지 않는다", () => {
     expect(RATIO_PCT).toBeGreaterThan(2.5);
     expect(RATIO_PCT).toBeLessThan(22.7);
+  });
+
+  /**
+   * 2026-08-24 실측(풍산 volumePct 14.4)이 드러낸 모순의 회귀 테스트.
+   *
+   * 카드 하한과 상세의 근거 하한이 갈리면, 카드가 화면에서 가장 크게 띄운 숫자를 상세가
+   * "소음" 이라며 안 보여준다. 사용자가 확인하러 들어간 자리에서 확인 대상이 사라진다.
+   * 상세 쪽 상수는 `apps/fomo-web/lib/depthSections.ts` 의 `VOLUME_SHARE_FLOOR` 다.
+   */
+  it("B형 하한은 상세 근거 하한(VOLUME_SHARE_FLOOR = 20)과 같다", () => {
+    expect(RATIO_PCT).toBe(20);
+  });
+
+  it("모순 구간(10~20)은 이제 B형이 아니다 — 풍산 14.4 재현", () => {
+    const d = selectCardType({ ...base, volumePct: 14.4, sparkline: drifting() });
+    expect(d).toBeNull(); // 다른 형 재료가 없으면 픽에서 빠진다
   });
 
   it("소폭 상승 상한은 덱 |변동| 중앙값 2.72% 근방이다", () => {
