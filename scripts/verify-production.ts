@@ -26,7 +26,9 @@ import { promisify } from "node:util";
  * ## 실패(exit 1) 조건 — 넷
  *
  * 1. **커밋이 `origin/main` HEAD 보다 뒤** — 머지한 코드가 아직 서빙되지 않는다.
- * 2. **페이로드 `asOf` < 마지막 배포 시각** — 새 코드가 옛 페이로드를 서빙 중이다(자동배포 경로의 틈).
+ * 2. **페이로드 `asOf` < 최신 코드 커밋 시각** — 새 코드가 옛 페이로드를 서빙 중이다(자동배포 경로의 틈).
+ *    *배포* 시각이 아니라 *코드 커밋* 시각과 잰다 — §12-5 (4) 가 문서 배포의 재생성을 건너뛰게
+ *    만들어, 배포 시각을 쓰면 문서 push 마다 거짓 실패가 난다(2026-08-24 실측).
  * 3. **`staleServe: true`** — 200 이지만 마지막 성공분이다. 새로 구운 것이 아니다.
  * 4. **`picks: 0`** — 덱이 비었다. 2026-08-23 12:09 UTC 실측에서 위 셋이 **전부 통과인 채**
  *    정규 도메인이 빈 덱을 서빙했다. 재지 않은 것이 하나 있었고 그것이 사용자가 보는 유일한
@@ -146,6 +148,32 @@ async function git(...args: string[]): Promise<string | null> {
 async function remoteHead(): Promise<string | null> {
   const out = await git("ls-remote", "origin", "refs/heads/main");
   return out?.split(/\s+/)[0] ?? null;
+}
+
+/**
+ * **페이로드에 영향을 주는** 최신 커밋의 시각(문서 커밋은 제외).
+ *
+ * ## 왜 배포 시각이 아니라 이것과 재야 하는가 (2026-08-24 실측)
+ *
+ * 실패조건 ② 는 원래 "새 코드가 옛 페이로드를 서빙한다" 를 잡으려던 것이고, 그 대리 지표로
+ * **마지막 배포 시각**을 썼다. 그런데 §12-5 (4) 가 **문서만 바뀐 배포에서는 재생성을 건너뛰게**
+ * 만들면서 이 대리 지표가 깨졌다 — 문서 커밋을 올리면 배포 시각만 새로워지고 `asOf` 는
+ * 그대로라, ② 가 매번 거짓 실패를 낸다. 실제로 §12-5b 직후 첫 문서 push 에서 그렇게 됐다.
+ *
+ * 두 규칙이 정면으로 부딪친 것이고, 틀린 쪽은 대리 지표다. **재야 할 것은 "배포가 있었나" 가
+ * 아니라 "페이로드를 바꿀 변경이 있었나" 다.** 그래서 `docs/`·`*.md` 를 뺀 최신 커밋 시각과
+ * 잰다. 문서만 바뀐 배포는 이 값이 안 움직이므로 ② 가 조용하고, 코드가 바뀌면 즉시 움직인다.
+ *
+ * 판정 불가(shallow clone 등)면 `null` — 호출자가 종전 기준으로 되돌아간다.
+ */
+async function newestPayloadRelevantCommitAt(head: string): Promise<Date | null> {
+  const out = await git(
+    "log", "-1", "--format=%cI", head,
+    "--", ".", ":(exclude)docs", ":(exclude)docs/**", ":(exclude)*.md", ":(exclude)**/*.md"
+  );
+  if (!out) return null;
+  const at = new Date(out);
+  return Number.isFinite(at.getTime()) ? at : null;
 }
 
 /** 배포 커밋이 HEAD 의 조상인가 = 뒤처졌는가. 조상도 아니면 다른 계보(경고 대상). */
@@ -479,20 +507,40 @@ async function main(): Promise<void> {
     record("덱이 비어 있지 않다", "pass", `picks ${picksCount}`);
   }
 
-  // 실패조건 ② asOf < 배포 시각
-  if (asOfValid && deployedAt) {
-    const gapMin = minutesBetween(deployedAt, asOfValid);
+  // 실패조건 ② asOf < **페이로드에 영향을 주는** 최신 커밋 시각.
+  //
+  // 배포 시각이 아니라 코드 커밋 시각과 잰다 — 이유는 `newestPayloadRelevantCommitAt` 주석에 있다
+  // (요약: §12-5 (4) 가 문서 배포의 재생성을 건너뛰게 만들어 배포 시각 대리 지표가 깨졌다).
+  const codeAt = head ? await newestPayloadRelevantCommitAt(head) : null;
+  const LABEL2 = "페이로드 asOf ≥ 최신 코드 커밋";
+  if (asOfValid && codeAt) {
+    const gapMin = minutesBetween(codeAt, asOfValid);
     if (gapMin > 0) {
       record(
-        "페이로드 asOf ≥ 마지막 배포 시각",
+        LABEL2,
         "fail",
-        `asOf ${asOfValid.toISOString()} 가 배포 ${deployedAt.toISOString()} 보다 ${gapMin}분 이르다 — 새 코드가 옛 페이로드를 서빙한다`
+        `asOf ${asOfValid.toISOString()} 가 최신 코드 커밋 ${codeAt.toISOString()} 보다 ${gapMin}분 이르다 — 새 코드가 옛 페이로드를 서빙한다`
       );
     } else {
-      record("페이로드 asOf ≥ 마지막 배포 시각", "pass", `asOf 가 배포보다 ${-gapMin}분 늦다`);
+      const deployNote =
+        deployedAt && minutesBetween(deployedAt, asOfValid) > 0
+          ? ` (마지막 배포보다는 ${minutesBetween(deployedAt, asOfValid)}분 이르지만 그 배포는 문서 변경뿐 — 재생성 생략이 맞다)`
+          : "";
+      record(LABEL2, "pass", `asOf 가 최신 코드 커밋보다 ${-gapMin}분 늦다${deployNote}`);
     }
+  } else if (asOfValid && deployedAt) {
+    // 코드 커밋 시각을 못 구했다(shallow clone 등) — 종전 기준으로 되돌아가되 **미확인**으로 남긴다.
+    // 문서 배포에서 거짓 실패를 내느니 못 쟀다고 말하는 쪽이 낫다(AGENTS.md: 종료코드 2).
+    const gapMin = minutesBetween(deployedAt, asOfValid);
+    record(
+      LABEL2,
+      gapMin > 0 ? "unknown" : "pass",
+      gapMin > 0
+        ? `코드 커밋 시각 미확인(shallow clone?) — 배포 기준으로는 ${gapMin}분 이르다. 문서 배포면 정상이다`
+        : `asOf 가 배포보다 ${-gapMin}분 늦다 (코드 커밋 시각 미확인)`
+    );
   } else {
-    record("페이로드 asOf ≥ 마지막 배포 시각", "unknown", `asOf ${asOfRaw ?? "미확인"} · 배포시각 ${iso(deployedAt)}`);
+    record(LABEL2, "unknown", `asOf ${asOfRaw ?? "미확인"} · 코드커밋 ${iso(codeAt)} · 배포 ${iso(deployedAt)}`);
   }
 
   // ── 6. 프리웜
