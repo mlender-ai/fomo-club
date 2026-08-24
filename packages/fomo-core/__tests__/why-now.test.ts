@@ -4,6 +4,7 @@ import {
   WHY_NOW_DISCLAIMER,
   WHY_NOW_FORBIDDEN,
   WHY_NOW_MIN_AXES,
+  WHY_NOW_MIN_WIN_RATE,
   type WhyNowInput,
 } from "../src/keyword-cards/why-now";
 
@@ -145,5 +146,32 @@ describe("표현 규칙 (§2-3) — 인과 단정·평가·예측 금지", () =>
     expect(WHY_NOW_DISCLAIMER).toContain("함께 관측된");
     expect(WHY_NOW_DISCLAIMER).toContain("확인할 수 없어요");
     expect(WHY_NOW_FORBIDDEN.test(WHY_NOW_DISCLAIMER)).toBe(false);
+  });
+});
+
+/**
+ * 2026-08-24 실측(한글과컴퓨터) 회귀 — 「왜 지금 사는가」에 47% 가 앉아 있었다.
+ * 동전 던지기보다 낮은 승률은 사는 이유가 아니라 반대 증거다.
+ */
+describe("이력 축 — 승률 하한", () => {
+  const twoAxes = { eps: 120, pctAboveYearLow: 16 } as const;
+  const axisOf = (rows: ReturnType<typeof buildWhyNowRows>) => rows.map((r) => r.axis);
+
+  it("승률 50% 미만이면 이력 축을 쓰지 않는다 (79번 중 37번 = 47%)", () => {
+    const rows = buildWhyNowRows({ ...twoAxes, signalStats: { n: 79, up: 37, winRate: 46.8 } });
+    expect(axisOf(rows)).not.toContain("이력");
+    // 나머지 축은 그대로 — 섹션을 통째로 죽이는 게 아니다.
+    expect(axisOf(rows)).toEqual(["손익", "가격"]);
+  });
+
+  it("승률 50% 이상이면 분모·분자와 함께 쓴다", () => {
+    const rows = buildWhyNowRows({ ...twoAxes, signalStats: { n: 79, up: 45, winRate: 57.0 } });
+    const history = rows.find((r) => r.axis === "이력");
+    expect(history?.text).toBe("비슷한 신호 79번 중 45번 올랐어요 (57%)");
+  });
+
+  it("경계 50% 는 쓴다 — 하한은 '미만'이다", () => {
+    const rows = buildWhyNowRows({ ...twoAxes, signalStats: { n: 10, up: 5, winRate: WHY_NOW_MIN_WIN_RATE } });
+    expect(axisOf(rows)).toContain("이력");
   });
 });

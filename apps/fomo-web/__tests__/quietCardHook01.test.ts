@@ -17,6 +17,7 @@ const deck = readFileSync(new URL("../components/QuietPickDeck.tsx", import.meta
 const depth = readFileSync(new URL("../components/QuietPickDepth.tsx", import.meta.url), "utf8");
 const divergence = readFileSync(new URL("../components/DivergenceChart.tsx", import.meta.url), "utf8");
 const bars = readFileSync(new URL("../components/StreakBars.tsx", import.meta.url), "utf8");
+const ratioBar = readFileSync(new URL("../components/RatioBar.tsx", import.meta.url), "utf8");
 
 /** 주석은 화면에 안 나간다 — 렌더 구조를 볼 때는 지우고 본다(주석 서술 오탐 방지). */
 function code(source: string): string {
@@ -96,10 +97,23 @@ describe("완료 기준 5 — accent 가 형별 1곳에만 있다 (§7)", () => 
     expect(change).not.toContain("ds-accent");
   });
 
-  it("카드 본문에서 accent 를 쓰는 곳은 B형 큰 숫자 하나뿐이다", () => {
-    // A 는 DivergenceChart, C 는 StreakBars 가 각자 자기 accent 를 갖는다.
-    expect(code(card).match(/ds-accent/g)?.length).toBe(1);
-    expect(code(card)).toMatch(/text-ds-ratio text-ds-accent/);
+  /**
+   * 2026-08-24 공통 골격 — 카드 본문 자체는 accent 를 **한 번도** 쓰지 않는다.
+   * 세 형 모두 자기 그림 컴포넌트가 accent 를 갖고, 그 뜻은 셋 다 "돈이 들어온 것" 이다.
+   * (종전에는 B 만 카드 본문에 `text-ds-ratio text-ds-accent` 로 직접 박혀 있었다.)
+   */
+  it("카드 본문에는 accent 가 없다 — 형별 그림 컴포넌트가 각자 하나씩 갖는다", () => {
+    expect(code(card)).not.toContain("ds-accent");
+    expect(code(divergence)).toContain("#D4FF3F");
+    expect(code(bars)).toContain("bg-ds-accent");
+    expect(code(ratioBar)).toContain("bg-ds-accent");
+  });
+
+  it("accent 의 뜻이 형마다 같다 — 셋 다 '매수' 를 가리킨다", () => {
+    // A: 매수 누적선 / B: 하루 거래량 중 매수분 / C: 매수 연속 구간
+    expect(code(divergence)).toContain("BUY_LINE");
+    expect(code(ratioBar)).toMatch(/bg-ds-accent[\s\S]{0,120}width/);
+    expect(code(bars)).toMatch(/inStreak \? "bg-ds-accent"/);
   });
 
   it("A형은 누적선만 accent — 주가선은 회색이다", () => {
@@ -153,19 +167,59 @@ describe("완료 기준 7·8·9 — 형별 그림", () => {
     expect(body).toContain("buyLegend");
   });
 
-  it("B형: 큰 숫자는 52px mono 다", () => {
-    expect(code(card)).toContain("text-ds-ratio");
-    expect(code(card)).toMatch(/font-mono text-ds-ratio/);
+  /**
+   * B형은 52px 맨몸 숫자에서 **비중 막대**로 바뀌었다(2026-08-24).
+   *
+   * 종전 `{ratioPct}%` 는 카드 상단 `+5.7%` 바로 아래 라임색으로 놓여 **수익률로 읽혔다**.
+   * 막대는 accent 를 다시 '매수분' 으로 되돌리고, 캡션이 무엇의 몫인지 말한다.
+   */
+  it("B형: 비중 막대 — accent 는 매수분, 나머지는 회색", () => {
+    const body = code(ratioBar);
+    expect(body).toContain("bg-ds-chart-bar");
+    expect(body).toMatch(/bg-ds-accent[\s\S]{0,120}\$\{filled\}%/);
   });
 
-  it("B형: 스파크라인은 20포인트 미만이면 그리지 않는다", () => {
-    expect(code(card)).toContain("series.length >= 20");
+  it("B형: 맨몸 퍼센트를 accent 로 크게 쓰지 않는다 — 수익률로 읽힌다", () => {
+    expect(code(card)).not.toContain("text-ds-ratio");
+    expect(code(ratioBar)).not.toContain("text-ds-ratio");
+    expect(code(ratioBar)).not.toContain("text-ds-accent");
   });
 
   it("C형: 막대 간격 3px, 캡션 있음", () => {
     const body = code(bars);
     expect(body).toContain("gap-[3px]");
     expect(body).toContain("거래일");
+  });
+
+  /**
+   * 공통 골격(2026-08-24) — **세 형 모두** 그림 아래 mono 한 줄이 accent 를 설명한다.
+   * 종전에는 B 만 그 줄이 없었고, 그래서 숫자가 맨몸으로 섰다.
+   */
+  it("세 형 모두 그림 아래 mono 캡션이 있다", () => {
+    for (const [name, body] of [["A", divergence], ["B", ratioBar], ["C", bars]] as const) {
+      expect(body, `${name}형에 캡션이 없다`).toMatch(/font-mono text-ds-legend/);
+    }
+  });
+});
+
+/**
+ * 상세는 카드보다 증거가 적으면 안 된다 (2026-08-24).
+ *
+ * 실측 회귀: A형 카드에서 「주가 / 외국인 매수 누적」 두 선의 갭을 보고 들어온 사용자가
+ * 상세 「근거」에서는 **회색 주가선 하나만** 만났다. 확인하러 온 자리에서 확인할 대상이
+ * 사라진 것이다. 카드와 **같은 컴포넌트**를 쓰게 해 두 화면이 갈릴 수 없게 한다.
+ */
+describe("상세 근거 — 카드가 보여준 그림을 그대로 다시 그린다", () => {
+  it("상세가 CardFigure 를 재사용한다 (형별 분기를 복제하지 않는다)", () => {
+    expect(code(depth)).toContain("<CardFigure cardType={pick.cardType} />");
+    expect(code(depth)).toContain('data-testid="depth-signal-figure"');
+    // 복제였다면 상세에도 형 분기가 있었을 것이다 — 없어야 한다.
+    expect(code(depth)).not.toMatch(/figure\.kind === "divergence"/);
+  });
+
+  it("맥락 차트는 그대로 남는다 — 증거(갭)와 맥락(260일·되돌아보는 선)은 다른 일이다", () => {
+    expect(code(depth)).toContain('data-testid="depth-chart"');
+    expect(code(depth)).toContain("되돌아보는 선");
   });
 });
 

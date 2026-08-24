@@ -28,14 +28,21 @@ describe("완료 기준 1 — 헤더·덱 타이틀에 accent 가 없다", () =>
     expect(shell).not.toContain("ds-accent");
   });
 
-  it("종전 네온 하드코딩이 덱과 픽 탭 셸에서 사라졌다 — accent 는 카드의 성적 자리에만 있다", () => {
+  it("종전 네온 하드코딩이 덱과 픽 탭 셸에서 사라졌다 — accent 는 카드 그림에만 있다", () => {
     // 픽 탭 셸 = 헤더 + main + 하단 탭. 미사용 first-visit 고지 시트는 DS-02 범위 밖이다(DS-02 §미해결).
     const shell = code(home).slice(code(home).indexOf("return ("), code(home).indexOf("function FirstVisitNotice"));
     for (const source of [code(deck), shell]) {
       expect(source).not.toMatch(/#d8ff3a/i);
       expect(source).not.toContain("var(--neon");
     }
-    expect(code(card)).toContain("ds-accent");
+    /**
+     * accent 의 거처는 **형별 그림 컴포넌트**다(2026-08-24 공통 골격). 카드 본문에는 없다 —
+     * 종전에는 B형 큰 숫자가 카드에 직접 박혀 있어 여기서 `card` 를 봤다.
+     */
+    const figures = ["DivergenceChart", "RatioBar", "StreakBars"].map((name) =>
+      readFileSync(new URL(`../components/${name}.tsx`, import.meta.url), "utf8")
+    );
+    for (const figure of figures) expect(code(figure)).toMatch(/ds-accent|#D4FF3F/);
   });
 });
 

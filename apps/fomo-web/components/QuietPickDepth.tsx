@@ -11,7 +11,7 @@ import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
 import { trustedSector } from "@/lib/sectorTrust";
 import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { OverlayPortal } from "@/components/OverlayPortal";
-import { displayName, priceText } from "@/components/QuietPickCard";
+import { CardFigure, displayName, priceText } from "@/components/QuietPickCard";
 import { StarIcon } from "@/components/icons";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
@@ -85,6 +85,13 @@ function Row({ label, value }: { label: string; value: string }) {
 /**
  * ②-1 스파크라인 (DS-03 §5-1) — 88px, 회색 선, 신호 시작 4px 원, 무효선 수평 점선.
  * 캔들이 20개 미만이면 그리지 않는다.
+ *
+ * ## 이 그림의 역할은 **맥락**이다 (2026-08-24)
+ *
+ * 신호의 증거(매수 누적선의 갭·비중·연속)는 이 위의 `근거` 그림이 맡는다 — 카드가 보여준
+ * 바로 그 그림이다. 여기는 260거래일 흐름과 되돌아보는 선, 즉 **얼마나 눌려 있고 어디서
+ * 판단이 깨지는가**를 본다. 둘을 한 그림에 합치려 해봤지만 실패했다: 신호 창이 3일이면
+ * 누적선이 260일 차트 오른쪽 끝 몇 픽셀에 뭉개져 아무것도 증명하지 못한다.
  */
 function DepthChart({
   candles,
@@ -120,7 +127,9 @@ function DepthChart({
         <path d={line} fill="none" stroke="#9A9A96" strokeWidth="1.5" />
         <circle cx={x(markerIdx)} cy={y(closes[markerIdx]!)} r="4" fill="#FFFFFF" />
       </svg>
-      {invY !== null && <p className="mt-s1 text-ds-caption text-ds-text-3">점선은 되돌아보는 선</p>}
+      <p className="mt-s1 text-ds-caption text-ds-text-3">
+        {`최근 ${closes.length}거래일${invY !== null ? " · 점선은 되돌아보는 선" : ""}`}
+      </p>
     </div>
   );
 }
@@ -572,6 +581,21 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   <Row key={row.label} label={row.label} value={row.value} />
                 ))}
               </div>
+              {/*
+                카드가 보여준 그림을 **그대로** 다시 그린다(2026-08-24).
+
+                규칙: **상세는 카드보다 증거가 적으면 안 된다.** 종전에는 A형 카드에서
+                「주가 / 외국인 매수 누적」 두 선의 갭을 보고 들어온 사용자가 여기서
+                회색 주가선 하나만 만났다 — 확인하러 온 자리에서 확인할 대상이 사라졌다.
+
+                같은 컴포넌트를 쓰므로 두 화면이 갈릴 수 없다. 형이 없는 구 페이로드면
+                그리지 않는다(지어내지 않는다).
+              */}
+              {pick.cardType && (
+                <div className="mt-s4" data-testid="depth-signal-figure">
+                  <CardFigure cardType={pick.cardType} />
+                </div>
+              )}
               <DepthChart candles={candles} signalDays={pick.signal.days} invalidation={pick.invalidation.level} />
             </Section>
           )}

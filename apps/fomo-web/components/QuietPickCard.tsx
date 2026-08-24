@@ -9,6 +9,7 @@ import { pickHook } from "@/lib/pickCopyRepair";
 import { Sparkline } from "@/components/Sparkline";
 import { DivergenceChart } from "@/components/DivergenceChart";
 import { StreakBars } from "@/components/StreakBars";
+import { RatioBar } from "@/components/RatioBar";
 
 /**
  * 메인 카드 — **정본은 `docs/wo/WO-HOOK-01-main-card-hook.md`** 다. DS-01 을 대체한다.
@@ -86,10 +87,24 @@ function liquidityMetaOf(pick: QuietPick): string | null {
 }
 
 /**
- * 형별 그림. **accent 는 여기 한 곳에만 있다**(§7) — A 는 누적선, B 는 큰 숫자, C 는 연속 구간.
- * 재료가 모자라면 그리지 않는다(자리표시자 금지, DS-00 §1-1).
+ * 형별 그림 — **세 형이 같은 문법을 쓴다**(2026-08-24 공통 골격).
+ *
+ * | | accent 가 가리키는 것 | 그림 아래 한 줄 |
+ * |---|---|---|
+ * | A 역행 | 매수 누적선 | 범례 `주가 / OO 매수 누적` |
+ * | B 비율 | 하루 거래량 중 **매수분** | 캡션 `하루 거래량 중 OO 매수 N%` |
+ * | C 희소성 | 매수 연속 구간 | 캡션 `최근 N거래일 OO 매수일` |
+ *
+ * 규칙 둘:
+ *
+ * 1. **accent 는 언제나 "돈이 들어온 것"** 이다. 형마다 뜻이 바뀌면 사용자는 스와이프할 때마다
+ *    색을 다시 배워야 한다. 종전 B 는 accent 가 *계측값(비율 숫자)* 이라 혼자 달랐다.
+ * 2. **그림 아래 한 줄이 accent 를 설명한다.** 종전 B 만 그 줄이 없어 52px 숫자가 맨몸으로
+ *    섰고, 바로 위 `+5.7%` 옆에서 수익률로 읽혔다.
+ *
+ * accent 가 카드에서 이 한 곳뿐인 것은 그대로다(§7). 재료가 모자라면 그리지 않는다(DS-00 §1-1).
  */
-function CardFigure({ cardType }: { cardType: QuietPickCardType }) {
+export function CardFigure({ cardType }: { cardType: QuietPickCardType }) {
   const figure = cardType.figure;
 
   if (figure.kind === "divergence") {
@@ -99,24 +114,8 @@ function CardFigure({ cardType }: { cardType: QuietPickCardType }) {
   }
 
   if (figure.kind === "ratio") {
-    const series = figure.priceSeries ?? [];
-    return (
-      <div>
-        <p className="font-mono text-ds-ratio text-ds-accent" data-testid="pick-ratio">
-          {`${figure.ratioPct}%`}
-        </p>
-        {series.length >= 20 && (
-          <div className="mt-s3">
-            <Sparkline
-              variant="ds"
-              series={series.slice(-30)}
-              height={54}
-              {...(typeof figure.markerIndex === "number" ? { markerIndex: figure.markerIndex } : {})}
-            />
-          </div>
-        )}
-      </div>
-    );
+    // 구 페이로드(한 배치 동안)엔 `actor` 가 없다 — 지어내지 않고 주체 없는 캡션으로 쓴다.
+    return <RatioBar ratioPct={figure.ratioPct} {...(figure.actor ? { actor: figure.actor } : {})} />;
   }
 
   return (
