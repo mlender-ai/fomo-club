@@ -266,7 +266,35 @@ export async function collectDisclosures(options: {
   const windowStart = shiftIso(today, -DISCLOSURE_WINDOW_DAYS);
 
   const fresh = new Map<string, DisclosureItem[]>();
-  const dates = Array.from({ length: lookback }, (_, i) => shiftIso(today, -i));
+  /**
+   * 훑을 날짜 — **새로 생긴 것 + 아직 못 간 과거**.
+   *
+   * 첫 구현은 언제나 `today` 부터 거슬러 올라갔다. 그래서 예산에 잘리면(첫 실행 실측:
+   * 90일 요청 → 20일만 훑고 `truncated`) **다시 돌려도 같은 최근 20일을 또 훑고** 더 과거로는
+   * 영영 못 갔다. 증분이 아니라 제자리걸음이었다.
+   *
+   * 그래서 둘로 나눈다:
+   *   1. 최근 `RECENT_ALWAYS_DAYS` 일 — 이미 덮었어도 다시 본다(그 사이 새 공시가 올라온다).
+   *   2. 이미 덮은 구간(`coveredFrom`) **바로 앞**부터 과거로 — 이어받기.
+   *
+   * 덮은 구간이 없으면 종전처럼 오늘부터 내려간다.
+   */
+  const RECENT_ALWAYS_DAYS = 2;
+  const dates = (() => {
+    const recent = Array.from({ length: Math.min(RECENT_ALWAYS_DAYS, lookback) }, (_, i) => shiftIso(today, -i));
+    const covered = previous?.coveredFrom;
+    if (!covered || covered >= today) {
+      return Array.from({ length: lookback }, (_, i) => shiftIso(today, -i));
+    }
+    const remaining = lookback - recent.length;
+    const older: string[] = [];
+    for (let i = 1; i <= remaining; i += 1) {
+      const day = shiftIso(covered, -i);
+      if (day < windowStart) break; // 90일 창 밖은 어차피 버린다
+      older.push(day);
+    }
+    return [...recent, ...older];
+  })();
   const kr = await collectKr(dates, deadline, fresh, errors);
   await collectUs(shiftIso(today, -lookback), deadline, fresh, errors);
 
@@ -285,9 +313,13 @@ export async function collectDisclosures(options: {
    * 이 값이 화면의 "최근 90일 공시가 없었어요" 를 말해도 되는지의 근거다.
    */
   const previousFrom = previous?.coveredFrom;
+  /**
+   * 이번에 실제로 끝까지 훑은 가장 오래된 날. 예산에 잘렸으면 `oldestScanned` 가 거기까지다.
+   * 이전 커버리지와 **더 오래된 쪽**을 택한다 — 구간이 이어졌을 때만 뒤로 늘어난다.
+   */
   const scannedFrom = kr.oldestScanned ?? dates.at(-1) ?? today;
-  const coveredFrom =
-    previousFrom && previousFrom <= scannedFrom ? (previousFrom < windowStart ? windowStart : previousFrom) : scannedFrom;
+  const candidate = previousFrom && previousFrom < scannedFrom ? previousFrom : scannedFrom;
+  const coveredFrom = candidate < windowStart ? windowStart : candidate;
 
   return {
     asOf: new Date().toISOString(),
