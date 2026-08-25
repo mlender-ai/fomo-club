@@ -90,16 +90,38 @@ export function DivergenceChart({
   buySeries,
   buyLegend,
   height = 76,
+  invalidation,
 }: {
   priceSeries: number[];
   buySeries: number[];
   buyLegend: string;
   height?: number;
+  /**
+   * 되돌아보는 선(무효선) 가격. 상세에서만 넘긴다 — 카드는 한 장면에 놀라움 하나다.
+   *
+   * 종전에는 상세에 차트가 둘이었다(역행 차트 + 260거래일 차트). 점선은 뒤쪽 차트에 있었다.
+   * WO-RESET-01 B-4 로 260거래일 차트를 없애면서 점선을 **이쪽으로 옮겼다.**
+   * 주가선과 **같은 축**에 있어야 의미가 있으므로 주가 정규화 규칙을 그대로 쓴다.
+   */
+  invalidation?: number | null;
 }) {
   // 두 계열의 길이가 어긋나면 x축이 어긋나 갭이 거짓이 된다 — 그릴 바에 안 그린다.
   if (priceSeries.length < 2 || priceSeries.length !== buySeries.length) return null;
 
   const end = endPoint(buySeries, height);
+
+  /**
+   * 되돌아보는 선 — **주가선과 같은 축**에 얹는다(B-4).
+   * 주가선이 `normalizePrice` 로 축소돼 있으므로 무효선도 같은 변환을 거쳐야 위치가 맞다.
+   * 그래서 무효선을 계열에 끼워 함께 정규화한 뒤 그 값만 꺼낸다 — 계산을 두 벌 두지 않는다.
+   */
+  const invY = (() => {
+    if (typeof invalidation !== "number" || !(invalidation > 0)) return null;
+    const withInv = normalizePrice([...priceSeries, invalidation]);
+    const v = withInv.at(-1);
+    if (typeof v !== "number") return null;
+    return PAD_Y + (1 - v) * (height - 2 * PAD_Y);
+  })();
 
   return (
     <div data-testid="divergence-chart">
@@ -117,6 +139,18 @@ export function DivergenceChart({
           aria-hidden
           className="block"
         >
+          {invY !== null && (
+            <line
+              x1={PAD_X}
+              x2={VIEW_W - PAD_X}
+              y1={invY}
+              y2={invY}
+              stroke="#5A5A57"
+              strokeDasharray="4 4"
+              strokeWidth={0.75}
+              data-testid="divergence-invalidation"
+            />
+          )}
           {/* 주가선은 **크기를 지킨다**(작게 움직였으면 작게 그린다). 누적선은 형태만 읽으므로 높이를 다 쓴다. */}
           <path d={pathOf(normalizePrice(priceSeries), height)} fill="none" stroke={PRICE_LINE} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
           <path d={pathOf(normalize(buySeries), height)} fill="none" stroke={BUY_LINE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
@@ -137,6 +171,7 @@ export function DivergenceChart({
           <span className="inline-block h-[2.5px] w-3 shrink-0" style={{ backgroundColor: BUY_LINE }} aria-hidden />
           {buyLegend}
         </span>
+        {invY !== null && <span className="text-ds-text-3">점선은 되돌아보는 선</span>}
       </div>
     </div>
   );

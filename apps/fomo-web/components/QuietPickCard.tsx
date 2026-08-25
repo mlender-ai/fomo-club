@@ -6,6 +6,7 @@ import { trustedSector } from "@/lib/sectorTrust";
 import { isRevealed } from "@/lib/cardReveal";
 import { haptic } from "@/lib/haptics";
 import { pickHook } from "@/lib/pickCopyRepair";
+import { displayChangePct } from "@/lib/pickChange";
 import { Sparkline } from "@/components/Sparkline";
 import { DivergenceChart } from "@/components/DivergenceChart";
 import { StreakBars } from "@/components/StreakBars";
@@ -104,12 +105,27 @@ function liquidityMetaOf(pick: QuietPick): string | null {
  *
  * accent 가 카드에서 이 한 곳뿐인 것은 그대로다(§7). 재료가 모자라면 그리지 않는다(DS-00 §1-1).
  */
-export function CardFigure({ cardType }: { cardType: QuietPickCardType }) {
+export function CardFigure({
+  cardType,
+  /**
+   * 되돌아보는 선 — **상세에서만** 넘긴다(WO-RESET-01 B-4). 카드는 한 장면에 놀라움 하나다.
+   * 종전엔 상세에 차트가 둘이었고(역행 차트 + 260거래일 차트) 점선이 뒤쪽에 있었다.
+   */
+  invalidation,
+}: {
+  cardType: QuietPickCardType;
+  invalidation?: number | null;
+}) {
   const figure = cardType.figure;
 
   if (figure.kind === "divergence") {
     return (
-      <DivergenceChart priceSeries={figure.priceSeries} buySeries={figure.buySeries} buyLegend={figure.buyLegend} />
+      <DivergenceChart
+        priceSeries={figure.priceSeries}
+        buySeries={figure.buySeries}
+        buyLegend={figure.buyLegend}
+        {...(typeof invalidation === "number" ? { invalidation } : {})}
+      />
     );
   }
 
@@ -150,7 +166,8 @@ export function QuietPickCard({
    */
   const hook = cardType?.hook ?? pickHook(pick);
   const support = cardType?.support ?? [];
-  const changePct = pick.price.changePct;
+  // 껍데기 0 은 그리지 않는다(WO-RESET-01 B-1) — 구 페이로드가 하루 남는다.
+  const changePct = displayChangePct(pick.price.changePct);
   const ticker = subjectTicker(pick.subject);
   const identityLine = maskedIdentityLine(pick);
   const fallbackSeries = pick.price.sparkline ?? [];

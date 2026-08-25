@@ -24,6 +24,22 @@ const drifting = (n = 24, from = 100, to = 96): number[] =>
 const windowNet = (netPct: number, n: number = DIVERGENCE_WINDOW): number[] =>
   Array.from({ length: n }, (_, i) => 100 + ((100 * netPct) / 100) * (i / (n - 1)));
 
+/**
+ * 같은 순변동이되 **흔들리며** 가는 주가 — 실제 주가의 모양이다.
+ *
+ * 왜 필요한가: `windowNet` 은 **단조**로 간다. 누적 매수선도 단조 증가라 둘의 상관계수가
+ * 0.87 까지 올라가고, 그러면 `DIVERGENCE_MAX_CORRELATION` 에 걸려 A형이 성립하지 않는다.
+ * 그것은 버그가 아니라 **의도**다(WO-RESET-01 B-2) — 주가가 매수와 나란히 오르면 역행이 아니다.
+ * 문안 변형을 검사하려면 역행이 성립하는 재료를 줘야 하므로 지그재그를 쓴다(상관 0.17).
+ */
+const zigzagNet = (netPct: number, n: number = DIVERGENCE_WINDOW): number[] =>
+  Array.from({ length: n }, (_, i) => {
+    const base = 100 + ((100 * netPct) / 100) * (i / (n - 1));
+    // 흔들림은 **내부 점에만** — 양 끝을 흔들면 순변동이 어긋나 문안 판정이 바뀐다.
+    const wiggle = i === 0 || i === n - 1 ? 0 : i % 2 === 0 ? -5 : 5;
+    return base + wiggle;
+  });
+
 const base: CardTypeInput = { kind: "insider_cluster", days: 8, scale: "$8.3M", insiderCount: 4 };
 
 describe("selectCardType — A 역행", () => {
@@ -35,12 +51,12 @@ describe("selectCardType — A 역행", () => {
   });
 
   it("주가가 하락이면 '빠지는데' 변형", () => {
-    const d = selectCardType({ ...base, priceSeries: windowNet(-5.9), cumulativeBuySeries: rising() });
+    const d = selectCardType({ ...base, priceSeries: zigzagNet(-5.9), cumulativeBuySeries: rising() });
     expect(d?.hook).toBe("주가는 빠지는데\n임원은 사고 있어요");
   });
 
   it("정체 밴드 위 · 소폭 상승 상한 이내면 '조용한데' 변형", () => {
-    const d = selectCardType({ ...base, priceSeries: windowNet(2.69), cumulativeBuySeries: rising() });
+    const d = selectCardType({ ...base, priceSeries: zigzagNet(2.69), cumulativeBuySeries: rising() });
     expect(d?.hook).toBe("주가는 조용한데\n임원이 계속 사고 있어요");
   });
 
@@ -53,6 +69,34 @@ describe("selectCardType — A 역행", () => {
       sparkline: drifting(),
     });
     expect(d?.type).toBe("B");
+  });
+
+  /**
+   * WO-RESET-01 B-2 — 화면 지적: "주가는 빠지는데 기관은 사고 있어요" 라고 쓰여 있는데
+   * 회색선과 라임선이 거의 나란히 움직였다. 글이 말하는 걸 그림이 반박했다.
+   */
+  it("두 선이 나란히 움직이면 역행이 아니다 — A 를 쓰지 않는다", () => {
+    // 단조 상승 주가 + 단조 증가 매수누적 = 상관 0.87. 눈으로 보면 두 선이 나란하다.
+    const d = selectCardType({
+      ...base,
+      priceSeries: windowNet(2.5),
+      cumulativeBuySeries: rising(),
+      volumePct: 42.9,
+      sparkline: drifting(),
+    });
+    expect(d?.type).toBe("B"); // A 를 건너뛰고 B 로 간다
+  });
+
+  it("같은 순변동이라도 주가가 흔들리면(상관 낮음) 역행이 성립한다", () => {
+    const d = selectCardType({ ...base, priceSeries: zigzagNet(2.5), cumulativeBuySeries: rising() });
+    expect(d?.type).toBe("A");
+  });
+
+  it("주가가 평평하면(분산 0) 상관을 못 구해도 통과한다 — A형의 최고 재료다", () => {
+    const flatPrice = Array.from({ length: DIVERGENCE_WINDOW }, () => 100);
+    const d = selectCardType({ ...base, priceSeries: flatPrice, cumulativeBuySeries: rising() });
+    expect(d?.type).toBe("A");
+    expect(d?.hook).toBe("주가는 제자리인데\n임원만 사고 있어요");
   });
 
   it("누적선이 우상향하지 않으면 A 를 쓰지 않는다 (WO §4-2)", () => {

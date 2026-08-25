@@ -11,7 +11,6 @@ import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { haptic } from "@/lib/haptics";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { reveal } from "@/lib/cardReveal";
-import { StockInsightView } from "@/components/KeywordDepthPage";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
 
 /**
@@ -97,7 +96,6 @@ export function QuietPickDeck() {
     },
     [slots]
   );
-  const [watching, setWatching] = useState<QuietWatchItem[]>([]);
   /**
    * 발행 원장 — 카드 ⑥ 우리 성적의 원료(DS-01 §3-⑥).
    *
@@ -111,13 +109,11 @@ export function QuietPickDeck() {
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
   const [selected, setSelected] = useState<QuietPick | null>(null);
-  const [watchSelected, setWatchSelected] = useState<QuietWatchItem | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
   const startAt = useRef(0);
   const moved = useRef(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const watchingRef = useRef<HTMLElement | null>(null);
 
   const load = useCallback(() => {
     setStatus("loading");
@@ -130,7 +126,6 @@ export function QuietPickDeck() {
     fetchQuietPicks()
       .then((res) => {
         setPicks(res.picks ?? []);
-        setWatching(res.watching ?? []);
         setAsOf(res.asOf);
         setIdx(0);
         settle("ready");
@@ -196,9 +191,9 @@ export function QuietPickDeck() {
     (dir: "next" | "prev") => {
       if (dir === "prev" && idx === 0) { setDx(0); return; }
       if (dir === "next" && idx >= picks.length - 1) {
+        // 마지막 장. 종전엔 '지켜보는 중' 으로 스크롤했지만 그 섹션을 없앴다(WO-RESET-01 A-1).
         setDx(0);
         recordPickTelemetry({ event: "deck_complete", cardsConsumed: picks.length });
-        watchingRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
         return;
       }
       haptic();
@@ -292,26 +287,10 @@ export function QuietPickDeck() {
           <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-empty">
             <p className="text-ds-display text-ds-text-1">오늘은 기준을 넘은 곳이 없어요</p>
             <p className="mt-s3 text-ds-body text-ds-text-2">
-              {watching.length > 0
-                ? "기준을 낮춰 채우지 않아요. 신호가 잡힌 곳은 아래에 그대로 뒀어요."
-                : "무리해서 고르지 않아요. 뉴스 전에 돈이 먼저 들어간 곳이 없는 날이에요."}
+              무리해서 고르지 않아요. 뉴스 전에 돈이 먼저 들어간 곳이 없는 날이에요.
             </p>
-            <a
-              href="/track-record"
-              className="mt-s4 flex h-btn-primary w-full items-center justify-center rounded-pill border-hair border-ds-border bg-ds-surface-2 text-[14px] font-medium text-ds-text-1"
-            >
-              성적표 보기
-            </a>
           </div>
         </div>
-        <WatchShelf items={watching} onOpen={setWatchSelected} sectionRef={watchingRef} />
-        {watchSelected && (
-          <StockInsightView
-            stock={watchSelected.subject.canonical}
-            context={subjectContext(watchSelected.subject)}
-            onClose={() => setWatchSelected(null)}
-          />
-        )}
       </div>
     );
   }
@@ -396,15 +375,7 @@ export function QuietPickDeck() {
         <DeckProgress total={picks.length} index={idx} />
       </div>
 
-      <WatchShelf items={watching} onOpen={setWatchSelected} sectionRef={watchingRef} />
 
-      {watchSelected && (
-        <StockInsightView
-          stock={watchSelected.subject.canonical}
-          context={subjectContext(watchSelected.subject)}
-          onClose={() => setWatchSelected(null)}
-        />
-      )}
 
       {selected && <QuietPickDepth pick={selected} onClose={() => setSelected(null)} />}
     </div>

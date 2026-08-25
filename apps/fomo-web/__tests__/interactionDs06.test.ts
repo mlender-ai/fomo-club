@@ -38,7 +38,8 @@ describe("완료 기준 1 — 탭 피드백과 햅틱 (§2)", () => {
 
   it("카드·버튼·별·리스트 행에 피드백이 붙어 있다", () => {
     // ★ 는 WO-HOOK-01 §2-3 으로 상세로 옮겼다(앞면에서 관심을 담을 수 없다).
-    expect(DEPTH).toContain("tap-star");
+    // WO-RESET-01 — 관심(★)·하단 탭·지켜보는 중을 화면에서 뺐다. 모듈은 남아 있다(되살릴 수 있게).
+    expect(DEPTH).not.toContain("tap-star");
     expect(CARD).toContain("tap-button");
     expect(DECK).toContain("tap-card");
     expect(DECK).toContain("tap-row");
@@ -47,7 +48,8 @@ describe("완료 기준 1 — 탭 피드백과 햅틱 (§2)", () => {
 
   it("관심 등록만 medium 햅틱, 나머지는 light", () => {
     // 관심 등록이 상세로 옮겨갔으므로 medium 햅틱도 거기 있다(WO-HOOK-01 §2-3).
-    expect(DEPTH).toContain("hapticMedium()");
+    // WO-RESET-01 — 관심(★)·하단 탭·지켜보는 중을 화면에서 뺐다. 모듈은 남아 있다(되살릴 수 있게).
+    expect(DEPTH).not.toContain("hapticMedium()");
     expect(CARD).toContain("haptic()");
     expect(DECK).toContain("haptic()");
     // 진동은 모션 감소를 켠 사용자에게 주지 않는다.
@@ -102,7 +104,8 @@ describe("완료 기준 4·5 — 세이프 에어리어 · 480px · 320px (§6-1
   it("상하 세이프 에어리어를 지키고 하단 탭은 배경을 세이프 아래까지 연장한다", () => {
     expect(HOME).toContain("pt-[env(safe-area-inset-top)]");
     expect(HOME).toContain("pb-[env(safe-area-inset-bottom)]");
-    expect(HOME).toContain("pb-[calc(3.5rem+env(safe-area-inset-bottom))]");
+    // 하단 탭이 없으므로 탭 높이만큼의 아래 여백도 없다(WO-RESET-01 A-4).
+    expect(HOME).not.toContain("pb-[calc(3.5rem+env(safe-area-inset-bottom))]");
   });
 
   it("콘텐츠 최대 폭은 480px 중앙 정렬이다", () => {

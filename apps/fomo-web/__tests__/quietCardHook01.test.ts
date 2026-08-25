@@ -239,15 +239,21 @@ describe("완료 기준 7·8·9 — 형별 그림", () => {
  */
 describe("상세 근거 — 카드가 보여준 그림을 그대로 다시 그린다", () => {
   it("상세가 CardFigure 를 재사용한다 (형별 분기를 복제하지 않는다)", () => {
-    expect(code(depth)).toContain("<CardFigure cardType={pick.cardType} />");
+    expect(code(depth)).toMatch(/<CardFigure\s+cardType=\{pick\.cardType\}/);
     expect(code(depth)).toContain('data-testid="depth-signal-figure"');
     // 복제였다면 상세에도 형 분기가 있었을 것이다 — 없어야 한다.
     expect(code(depth)).not.toMatch(/figure\.kind === "divergence"/);
   });
 
-  it("맥락 차트는 그대로 남는다 — 증거(갭)와 맥락(260일·되돌아보는 선)은 다른 일이다", () => {
-    expect(code(depth)).toContain('data-testid="depth-chart"');
-    expect(code(depth)).toContain("되돌아보는 선");
+  /**
+   * WO-RESET-01 B-4 — 상세에 차트가 둘이었다(역행 차트 + 260거래일 차트). 하나로 줄이고
+   * 되돌아보는 선(점선)을 역행 차트로 옮겼다.
+   */
+  it("상세 차트는 하나뿐이다 — 260거래일 차트는 없고 점선은 역행 차트가 갖는다", () => {
+    expect(code(depth)).not.toContain('data-testid="depth-chart"');
+    expect(code(depth)).not.toContain("function DepthChart");
+    expect(code(divergence)).toContain('data-testid="divergence-invalidation"');
+    expect(code(divergence)).toContain("되돌아보는 선");
   });
 });
 
@@ -280,11 +286,17 @@ describe("완료 기준 11 — 카드 높이가 내용에 따라 변한다", () 
 });
 
 describe("§8 삭제 목록 — 옮긴 것이지 지운 것이 아니다", () => {
-  it("앞면 ★ 관심이 사라지고 상세가 갖는다", () => {
-    expect(code(card)).not.toContain("StarIcon");
-    expect(code(card)).not.toContain("toggleWatch");
-    expect(code(depth)).toContain("toggleWatch");
-    expect(code(depth)).toContain("StarIcon");
+  /**
+   * WO-RESET-01 A-3 — 관심 등록을 화면에서 뺐다. 「내 기록」이 없어져 등록해도 볼 곳이 없다.
+   * `watchlist` 모듈 자체는 남긴다(데이터를 지우지 말 것 — 되살릴 수 있게).
+   */
+  it("★ 관심이 카드에도 상세에도 없다", () => {
+    for (const [name, body] of [["카드", card], ["상세", depth]] as const) {
+      expect(code(body), `${name}에 StarIcon 이 남아 있다`).not.toContain("StarIcon");
+      expect(code(body), `${name}에 toggleWatch 가 남아 있다`).not.toContain("toggleWatch");
+    }
+    const watchlist = readFileSync(new URL("../lib/watchlist.ts", import.meta.url), "utf8");
+    expect(watchlist).toContain("toggleWatch"); // 모듈은 지우지 않았다
   });
 
   it("되돌아보는 선·회사 설명·신호 과거 성적은 상세가 그린다", () => {

@@ -138,22 +138,17 @@ test("완료 기준 7 — 스테일 서빙 시 기준 시각이 보인다", asyn
   await expect(page.locator('[data-case="title"] [data-testid="deck-stale"]')).toHaveCount(0);
 });
 
-test("완료 기준 4 — 하단 탭은 텍스트만, 각 1/3 폭 × 56px", async ({ page }) => {
+/** WO-RESET-01 A-4 — 하단 탭 바 자체를 없앴다. 성적표·내 기록으로 가는 길이 화면에 없다. */
+test("완료 기준 4 — 하단 탭이 없다", async ({ page }) => {
   await skipFirstVisitNotice(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const tabs = page.locator('[data-testid="bottom-tab"]');
-  await expect(tabs).toHaveCount(3);
-  await expect(page.locator("nav svg")).toHaveCount(0); // 아이콘 없음
-
-  const boxes = await tabs.evaluateAll((els) =>
-    els.map((el) => ({ w: Math.round(el.getBoundingClientRect().width), h: Math.round(el.getBoundingClientRect().height) }))
-  );
-  const widths = new Set(boxes.map((b) => b.w));
-  expect(widths.size).toBe(1); // 3등분
-  for (const box of boxes) expect(box.h).toBe(56);
+  await expect(page.locator('[data-testid="bottom-tab"]')).toHaveCount(0);
+  await expect(page.locator("nav")).toHaveCount(0);
+  await expect(page.getByText("성적표", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("내 기록", { exact: true })).toHaveCount(0);
 });
 
-test("① 헤더 — 56px 고정, 로고 mono 0.12em, 검색 44×44", async ({ page }) => {
+test("① 헤더 — 56px 고정, 로고 mono 0.12em, 검색 버튼 없음", async ({ page }) => {
   await skipFirstVisitNotice(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const header = page.locator('[data-testid="deck-header"]');
@@ -166,10 +161,9 @@ test("① 헤더 — 56px 고정, 로고 mono 0.12em, 검색 44×44", async ({ p
   expect(style.size).toBe("16px");
   expect(Number.parseFloat(style.spacing)).toBeCloseTo(1.92, 1); // 0.12em × 16px
 
-  const search = header.locator("button");
-  const box = await search.boundingBox();
-  expect(Math.round(box?.width ?? 0)).toBe(44);
-  expect(Math.round(box?.height ?? 0)).toBe(44);
+  // 검색을 없앴다(WO-RESET-01 A-4) — 검색해서 무엇을 하는지 정의가 없었다. 로고만 남는다.
+  await expect(header.locator("button")).toHaveCount(0);
+  await expect(header.locator("svg")).toHaveCount(0);
   expect(await header.evaluate((el) => getComputedStyle(el).position)).toBe("fixed");
 });
 

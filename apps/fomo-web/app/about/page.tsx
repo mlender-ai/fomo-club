@@ -85,8 +85,11 @@ export default function AboutPage() {
       <section className="mt-s5 border-t-hair border-ds-border pt-s5">
         <h2 className="font-mono text-ds-label tracking-[0.06em] text-ds-text-2">기록</h2>
         <p className="mt-s3 text-ds-body text-ds-text-2">
-          우리가 짚은 판단은 발행 시점 가격과 함께 그대로 남아요. 틀린 것도 지우지 않아요 —{" "}
-          <a href="/track-record" className="underline">성적표</a>에서 전부 볼 수 있어요.
+          {/*
+            성적표 링크를 뺐다 — WO-RESET-01 A-2. 화면은 카드와 상세 둘뿐이고, 성적표는
+            제품 표면에서 내렸다. **기록은 계속 쌓인다** — 화면만 없앤 것이라 문장도 그대로 둔다.
+          */}
+          우리가 짚은 판단은 발행 시점 가격과 함께 그대로 남아요. 틀린 것도 지우지 않아요.
         </p>
       </section>
     </main>

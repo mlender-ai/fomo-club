@@ -73,26 +73,17 @@ test("완료 기준 2·3·5 — 채점 결과가 있으면 표본·판정 불가
   expect(text.replace(/\s/g, "").length).toBeGreaterThan(20);
 });
 
-test("내 기록 — 빈 상태에 CTA 하나, 일러스트 없음", async ({ page }) => {
+/**
+ * WO-RESET-01 A-3 — 「내 기록」을 하단 탭에서 뺐다. 화면 코드는 남아 있지만(되살릴 수 있게)
+ * 앱에서 도달할 길이 없다. 여기서 고정하는 것은 **도달 불가**다.
+ */
+test("내 기록으로 가는 길이 화면에 없다", async ({ page }) => {
   await skipFirstVisitNotice(page);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
-  const tabs = page.locator('[data-testid="bottom-tab"]');
-  await tabs.last().click();
-  await page.waitForTimeout(1500);
-
-  const empty = page.locator('[data-testid="my-record-empty"]');
-  if ((await empty.count()) > 0) {
-    await expect(empty).toContainText("아직 관심 종목이 없어요");
-    await expect(empty.locator("a")).toHaveCount(1); // CTA 하나
-    await expect(empty.locator("svg")).toHaveCount(0);
-  } else {
-    // 데이터가 있으면 구분선 리스트다(카드 아님).
-    const list = page.locator('[data-testid="my-record-watchlist"], [data-testid="my-record-seen"]');
-    expect(await list.count()).toBeGreaterThan(0);
-  }
-  // 탭은 3개를 넘지 않는다(§3).
-  await expect(tabs).toHaveCount(3);
+  await expect(page.locator('[data-testid="bottom-tab"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="my-record-empty"]')).toHaveCount(0);
+  await expect(page.locator('a[href="/track-record"]')).toHaveCount(0);
 });
 
 test("콘솔 에러가 없다", async ({ page }) => {

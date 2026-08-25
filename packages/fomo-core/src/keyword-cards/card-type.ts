@@ -96,6 +96,37 @@ export const MIN_SERIES_POINTS = 8;
  * 진폭을 8~15%로 묶는다. **표본 3장이다** — 값을 바꾸려면 다시 재고 이 표를 같이 고친다.
  */
 export const DIVERGENCE_WINDOW = 12;
+
+/**
+ * A형(역행) 최대 상관계수 — **두 선이 이보다 함께 움직이면 역행이 아니다.**
+ *
+ * ## 왜 생겼나 (WO-RESET-01 B-2, 2026-08-25)
+ *
+ * 카드가 `주가는 빠지는데 / 기관은 사고 있어요` 라고 쓰는데 그림에서는 회색선(주가)과
+ * 라임선(매수 누적)이 **거의 나란히** 움직였다. 글이 말하는 걸 그림이 반박했다.
+ *
+ * 종전 A형 조건은 "주가가 많이 안 올랐다"(`change <= QUIET_UP_PCT`) 뿐이었다. 그건 **주가
+ * 한 계열만** 보는 조건이라, 매수선이 주가와 같이 가든 반대로 가든 통과한다. 역행은 두 선의
+ * **관계**인데 관계를 재지 않았다.
+ *
+ * 그래서 관계를 직접 잰다 — 피어슨 상관계수. 각 계열을 따로 정규화해 그리지만 정규화는
+ * 선형변환이라 상관계수를 바꾸지 않는다. 즉 **이 수치가 화면에 보이는 모양과 정확히 일치한다.**
+ *
+ * ## 0.5 의 근거 (실측, 2026-08-25 발행 덱 A형 5장)
+ *
+ * | 종목 | 상관계수 | 눈으로 본 것 |
+ * |---|---|---|
+ * | 한글과컴퓨터 | **+0.81** | "거의 나란히 움직인다" — 지적받은 그 카드 |
+ * | 셀바스AI | **+0.56** | 절반 이상 함께 움직인다 |
+ * | 퍼스텍 | +0.06 | 무관 |
+ * | 풍산 | −0.02 | 무관 |
+ * | 휴니드 | **−0.29** | 반대로 간다 — 진짜 역행 |
+ *
+ * 0.5 는 "절반 이상 함께 움직이면 역행이라 부르지 않는다" 는 뜻이다. 지적받은 0.81 과
+ * 그 다음으로 붙어 있던 0.56 이 함께 걸리고, 무관·역행(0.06 이하)만 남는다.
+ * **표본 5장이다** — 값을 바꾸려면 다시 재고 이 표를 같이 고친다.
+ */
+export const DIVERGENCE_MAX_CORRELATION = 0.5;
 /** 스파크라인 최소 표본 — DS-01 §3-⑤ "20포인트 미만이면 표시하지 않는다". */
 export const MIN_SPARKLINE_POINTS = 20;
 /** C형 막대 최소 표본 — 창이 이보다 짧으면 "드물다"를 보여줄 배경이 없다. */
@@ -247,6 +278,31 @@ function usableSeries(series: readonly number[] | undefined, min: number): serie
  * 소폭 상승 변형의 `계속` 은 다중 주체에서 뺀다. `외국인·기관이 계속 사고 있어요` 는 17자라
  * 한 줄(약 15자)을 넘긴다. 뺀다고 사실이 달라지지 않는다 — 지속은 보조 줄의 `N일간` 이 말한다.
  */
+/**
+ * 피어슨 상관계수. 두 계열 길이가 같아야 하고, 한쪽이라도 분산이 0 이면 `null`.
+ *
+ * 정규화는 선형변환이라 이 값을 바꾸지 않는다 — 화면에 그려지는 두 선의 모양이 얼마나
+ * 닮았는지를 그대로 잰다.
+ */
+function correlation(a: readonly number[], b: readonly number[]): number | null {
+  const n = a.length;
+  if (n < 2 || b.length !== n) return null;
+  const ma = a.reduce((s, v) => s + v, 0) / n;
+  const mb = b.reduce((s, v) => s + v, 0) / n;
+  let num = 0;
+  let da = 0;
+  let db = 0;
+  for (let i = 0; i < n; i += 1) {
+    const x = a[i]! - ma;
+    const y = b[i]! - mb;
+    num += x * y;
+    da += x * x;
+    db += y * y;
+  }
+  if (!(da > 0) || !(db > 0)) return null;
+  return num / Math.sqrt(da * db);
+}
+
 /** 그린 창의 첫 종가 → 마지막 종가 변동률(%). 재료가 모자라면 `null`. */
 function windowChangePct(series: readonly number[]): number | null {
   const first = series[0];
@@ -373,7 +429,15 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
    * 자격 미달이면 **A 만 건너뛴다** — 아래 B·C 가 이어서 판정한다(그래서 여기서 return 하지 않는다).
    */
   const change = n > 0 ? windowChangePct(priceWindow) : null;
-  if (n > 0 && change !== null && change <= QUIET_UP_PCT && input.cumulativeBuySeries) {
+  /**
+   * 역행은 **두 선의 관계**다 — 주가 한 계열만 봐서는 판정할 수 없다(WO-RESET-01 B-2).
+   * 상관계수를 못 구하면(분산 0 등) 통과시킨다: 평평한 주가 옆에서 매수만 오르는 것은
+   * A형의 최고 재료이지 탈락 사유가 아니다.
+   */
+  const buyWindow = n > 0 ? input.cumulativeBuySeries!.slice(-n) : [];
+  const corr = n > 0 ? correlation(priceWindow, buyWindow) : null;
+  const movesApart = corr === null || corr < DIVERGENCE_MAX_CORRELATION;
+  if (n > 0 && change !== null && change <= QUIET_UP_PCT && movesApart && input.cumulativeBuySeries) {
     const hook = divergenceHook(actor, change);
     return {
       type: "A",
@@ -381,7 +445,7 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
       figure: {
         kind: "divergence",
         priceSeries: priceWindow,
-        buySeries: input.cumulativeBuySeries.slice(-n),
+        buySeries: buyWindow,
         buyLegend: `${actor} 매수 누적`,
       },
       support: supportLines(input, "A", hook),
