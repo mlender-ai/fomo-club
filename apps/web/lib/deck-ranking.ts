@@ -64,7 +64,14 @@ export const DECK_SIZE = 10;
 /** 신규 신호 최소 비율. 실측 72% 보다 낮게 잡아 공급 여유를 둔다. */
 export const MIN_FRESH_RATIO = 0.6;
 /** 같은 신호 유형 최대 비율. 실측 `insider_cluster` 65% 를 반영해 편중을 이 선에서 끊는다. */
-export const MAX_SAME_KIND_RATIO = 0.6;
+/**
+ * 한 유형이 덱에서 차지할 수 있는 최대 비율.
+ *
+ * WO-RESET-03 E-3 이 **절반**으로 못박았다 — "한 종류가 전체의 절반을 넘으면, 넘는 만큼은
+ * 뒤로 보낸다." 종전 0.6 은 카드 종류가 사실상 하나(누가 샀나)이던 시절의 값이라 사실상
+ * 무의미했다. 종류가 늘어난 지금은 이 값이 실제로 화면을 바꾼다.
+ */
+export const MAX_SAME_KIND_RATIO = 0.5;
 /** 지속 신호(>FRESH_AGE_DAYS) 최대 비율. 위 신규 하한에서 파생된다(1 − 0.6). */
 export const MAX_PERSISTENT_RATIO = 0.4;
 

@@ -17,6 +17,12 @@ import {
   buildQuietPickHook,
   buildQuietPickChips,
   selectCardType,
+  marketDivergenceCard,
+  volumeAwakeningCard,
+  detectMarketDivergence,
+  detectVolumeAwakening,
+  type MarketDivergence,
+  type VolumeAwakening,
   normalizeQuietMoneyDate,
   type CardTypeDecision,
   computeQuietPickAnomalies,
@@ -33,6 +39,7 @@ import {
   buildSignalStatsCopy,
   companyDisplay,
   type SignalStats,
+  type DailyOhlcv,
   buildWhyNowTimeline,
   whyNowQuietNote,
   earningsTurnEvent,
@@ -53,11 +60,12 @@ import { fetchCachedUsMarketRows } from "./us-market-source";
 import { usDiscoverySeedForSymbol } from "./us-symbols";
 import { fetchDartInsiderPurchasesByStock, type DartDisclosureHit } from "./dart-disclosures";
 import { writeUsCandleCache } from "./us-candle-cache";
-import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
+import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData, fetchStockDaily } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 import { readSignalStatsForCards } from "./signal-stats";
 import { readDisclosureCollection } from "./disclosure-store";
 import { readAllFactSheets } from "./fundamentals/repository";
+import { readKrCandleCacheMany } from "./kr-candle-cache";
 import type { DisclosureCollection } from "./disclosure-collect";
 import {
   rankScore as deckRankScore,
@@ -134,7 +142,14 @@ const MAX_FRONT_ASSEMBLIES = 60;
 /** KR 최장 streak 비교에 쓰는 조회 창(거래일). */
 const KR_STREAK_WINDOW = 40;
 /** 하루 최대 픽 수(미달이면 그 수만큼 — 억지 충원 금지). */
-export const QUIET_PICK_MAX = 10;
+/**
+ * 하루 덱 상한.
+ *
+ * WO-RESET-03 E-1 — **신호가 나오는 만큼, 15장이 넘으면 강한 순으로 15장까지.**
+ * 15장이 안 되면 되는 만큼만 낸다(억지로 채우지 않는다 — 그건 이 제품이 하지 않는 일이다).
+ * 종전 10 은 카드 종류가 하나뿐이던 시절의 값이다.
+ */
+export const QUIET_PICK_MAX = 15;
 
 // ── 스키마(카드·뎁스가 소비할 단일 페이로드) ──────────────────────────────
 /** 검출 단계의 종목 식별자(표기 정규화 전). 발행 시점에 QuietPickSubject 로 확정된다. */
@@ -571,6 +586,10 @@ export interface QuietPickDeps {
    * 여기서는 **읽기만** 한다. 한 번에 전부 읽어 종목별로 나눠 쓴다(행별 병렬 읽기 금지 — §12).
    */
   readAllFactSheets: typeof readAllFactSheets;
+  /** WO-RESET-03 — 프리웜이 채운 KR 일봉을 **한 쿼리로** 읽는다(§12: 병렬 읽기 금지). */
+  readKrCandleCacheMany: typeof readKrCandleCacheMany;
+  /** 지수 일봉 — 시장 역행 판정의 비교 대상. */
+  fetchStockDaily: typeof fetchStockDaily;
 }
 
 const defaultDeps: QuietPickDeps = {
@@ -590,6 +609,8 @@ const defaultDeps: QuietPickDeps = {
   fetchDartInsiderPurchasesByStock,
   readDisclosureCollection,
   readAllFactSheets,
+  readKrCandleCacheMany,
+  fetchStockDaily,
 };
 
 // ── 수치 포매터(실측만) ────────────────────────────────────────────────
@@ -981,6 +1002,12 @@ interface SignalCandidate {
   valueUsd?: number;
   buyPrice?: number;
   industry?: string;
+  /** WO-RESET-03 A-1 — 시장 역행 원료. 이 종류일 때만 있다. */
+  marketDivergence?: MarketDivergence;
+  /** 비교한 지수 이름 — `코스피` / `코스닥` / `나스닥`. */
+  indexLabel?: string;
+  /** WO-RESET-03 A-6 — 거래량 각성 원료. 이 종류일 때만 있다. */
+  volumeAwakening?: VolumeAwakening;
   /** KR: 창 내 순매수 총량(dominant investor). scale·규모 상대화용. */
   streakSum?: number;
   /** KR: 현재 streak 이 창 내 최장인가. */
@@ -1416,6 +1443,98 @@ export function usableChangePct(...candidates: ReadonlyArray<number | undefined>
   return undefined;
 }
 
+
+/**
+ * WO-RESET-03 PART A-1·A-6 — 가격·거래량 흔적을 신호 후보로 만든다.
+ *
+ * ## 왜 별도 함수인가
+ *
+ * 매수 검출기들은 수급 이력을 보고, 이건 **일봉만** 본다. 재료가 다르니 함수도 나눈다.
+ * 실패해도 덱이 죽지 않도록 호출부가 `guardedInput` 으로 감싼다 — 이름이 남는다.
+ *
+ * ## 지수는 한 번만 받는다
+ *
+ * 코스피·코스닥 두 계열이면 KR 전체를 덮는다. 종목마다 받으면 66번인데 그럴 이유가 없다.
+ */
+async function detectPriceSignals(
+  krDefs: readonly StockDef[],
+  deps: QuietPickDeps
+): Promise<SignalCandidate[]> {
+  const codes = krDefs.map((d) => d.naverCode!).filter(Boolean);
+  if (codes.length === 0) return [];
+
+  const [candleMap, kospi, kosdaq] = await Promise.all([
+    deps.readKrCandleCacheMany(codes),
+    deps.fetchStockDaily("KOSPI", 200).catch(() => ({ closes: [] as number[] })),
+    deps.fetchStockDaily("KOSDAQ", 200).catch(() => ({ closes: [] as number[] })),
+  ]);
+
+  const out: SignalCandidate[] = [];
+  for (const def of krDefs) {
+    const code = def.naverCode;
+    if (!code) continue;
+    const candles = candleMap.get(code);
+    if (!candles || candles.length < 20) continue;
+    const closes = candles.map((c: DailyOhlcv) => c.close).filter((v: number) => Number.isFinite(v) && v > 0);
+    const seed: QuietPickSubjectSeed = {
+      canonical: def.canonical,
+      country: "KR",
+      naverCode: code,
+      market: def.market ?? "KOSPI",
+    };
+    const lastDate = candles.at(-1)?.date ?? "";
+    const startedAt = lastDate.length === 8 ? `${lastDate.slice(0, 4)}-${lastDate.slice(4, 6)}-${lastDate.slice(6, 8)}` : kstDate();
+
+    // ── A-1 시장 역행 — 코스닥 종목은 코스닥, 그 외는 코스피와 비교한다.
+    const indexRaw = def.market === "KOSDAQ" ? kosdaq.closes : kospi.closes;
+    const indexLabel = def.market === "KOSDAQ" ? "코스닥" : "코스피";
+    if (indexRaw.length >= 10 && closes.length >= 10) {
+      // 날짜를 맞출 수 없으므로 **둘 다 뒤에서 같은 길이**로 자른다 — 최근이 남아야 한다.
+      const n = Math.min(closes.length, indexRaw.length, 40);
+      const d = detectMarketDivergence(closes.slice(-n), indexRaw.slice(-n));
+      if (d) {
+        out.push({
+          subject: seed,
+          kind: "market_divergence",
+          code: "market_divergence" as SignalTypeCode,
+          actorNoun: "",
+          actors: "시장 대비",
+          scale: `${d.days}일 연속`,
+          days: d.days,
+          startedAt,
+          baseStrength: Math.round(Math.abs(d.stockChangePct - d.indexChangePct) * 10),
+          attentionKey: def.canonical,
+          marketDivergence: d,
+          indexLabel,
+        });
+        continue; // 한 종목에 한 신호 — 중복 제거가 뒤에서 또 걸러도 여기서 아끼는 게 낫다
+      }
+    }
+
+    // ── A-6 거래량 각성
+    const points = candles
+      .map((c: DailyOhlcv) => ({ close: c.close, volume: c.volume }))
+      .filter((p) => Number.isFinite(p.close) && Number.isFinite(p.volume));
+    const a = detectVolumeAwakening(points);
+    if (a) {
+      out.push({
+        subject: seed,
+        kind: "volume_awakening",
+        code: "volume_awakening" as SignalTypeCode,
+        actorNoun: "",
+        actors: "거래량",
+        scale: `${Math.round(a.multiple)}배`,
+        days: 1,
+        startedAt,
+        baseStrength: Math.round(a.multiple * 10),
+        attentionKey: def.canonical,
+        volumeAwakening: a,
+      });
+    }
+  }
+  return out;
+}
+
 /**
  * 조용한 돈 픽 빌드. 크론에서 호출(요청 경로 무거운 fetch 금지 — 504 원칙).
  * priorPickKeys: 어제 픽의 subject#startedAt 키 — 같은 종목·같은 신호 시작이면 신선도 규칙상 제외.
@@ -1483,7 +1602,25 @@ export async function buildQuietPickResponse(options: {
   // WO-P4 신호망 확장 — KR 내부자(DART)·수급 전환. 같은 종목 중복은 강도 높은 쪽만 남긴다.
   const dartSignals = detectDartInsiderSignals(krDefs, dartInsiders, date);
   const reversalSignals = detectFlowReversalSignals(krDefs, histories, date);
-  const allSignals = dedupeSignalsByStock([...krSignals, ...usSignals, ...dartSignals, ...reversalSignals]);
+  /**
+   * WO-RESET-03 A-1·A-6 — 「누가 샀나」 말고 다른 흔적. 새 수집 없이 **이미 있는** 일봉으로 만든다.
+   *
+   * 일봉은 프리웜이 채워둔 캐시에서 **한 쿼리로** 읽는다(`readKrCandleCacheMany`) —
+   * 66종목을 `Promise.all` 로 읽으면 커넥션 풀에서 66슬롯을 잡고, 그것이 §12 의 사고였다.
+   */
+  const priceSignals = await guardedInput(
+    "detectPriceSignals",
+    detectPriceSignals(krDefs, deps),
+    [] as SignalCandidate[]
+  );
+
+  const allSignals = dedupeSignalsByStock([
+    ...krSignals,
+    ...usSignals,
+    ...dartSignals,
+    ...reversalSignals,
+    ...priceSignals,
+  ]);
 
   // ── 아직 조용함(②) — 이제 '탈락'이 아니라 '태깅'이다(WO-P4 2단 구조).
   //    신호가 실재하는 후보는 버리지 않고 미달 사유를 달아 '지켜보는 중' 선반으로 보낸다.
@@ -1757,7 +1894,19 @@ export async function buildQuietPickResponse(options: {
       : insiderDivergenceSeries(front, insiderEvents);
     const buyDays = isFlowKind(sig.kind) ? buyDaysWindow(flows, sig.kind) : undefined;
     const sparkline = front.sparkline ?? [];
-    const cardType = selectCardType({
+    /**
+     * WO-RESET-03 — 「누가 샀나」가 아닌 신호는 **자기 카드 형을 스스로 만든다.**
+     *
+     * `selectCardType` 은 매수 신호(A·B·C)를 위한 선택기라 여기 넘기면 재료가 안 맞아 `null`
+     * 이 나온다. 형이 정해진 신호는 그 형을 바로 쓴다 — 분기가 먼저 걸린다.
+     */
+    const presetCard =
+      sig.kind === "market_divergence" && sig.marketDivergence
+        ? marketDivergenceCard({ divergence: sig.marketDivergence, indexLabel: sig.indexLabel ?? "지수" })
+        : sig.kind === "volume_awakening" && sig.volumeAwakening
+          ? volumeAwakeningCard({ awakening: sig.volumeAwakening })
+          : null;
+    const cardType = presetCard ?? selectCardType({
       kind: sig.kind,
       days: sig.days,
       priceChangeSincePct: cumulativePct,

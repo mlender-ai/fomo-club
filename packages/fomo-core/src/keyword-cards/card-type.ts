@@ -38,6 +38,7 @@
  */
 
 import type { QuietPickSignalKind } from "./quiet-pick-hook";
+import type { MarketDivergence, VolumeAwakening } from "./quiet-signals";
 
 // ── 임계값(전부 결정론 상수 — 위 표의 근거를 바꾸지 않고 값만 바꾸지 말 것) ──
 
@@ -132,7 +133,12 @@ export const MIN_SPARKLINE_POINTS = 20;
 /** C형 막대 최소 표본 — 창이 이보다 짧으면 "드물다"를 보여줄 배경이 없다. */
 export const MIN_BAR_DAYS = 10;
 
-export type CardType = "A" | "B" | "C";
+/**
+ * 카드 형. **화면에 이 글자를 쓰지 않는다** — WO-RESET-03 D-1: 카드에 종류 이름을 붙이면
+ * 카드가 분류표가 된다. 결론 문장만으로 무슨 일인지 알 수 있어야 한다.
+ * 이 값은 텔레메트리·구성 규칙(같은 종류 연달아 3장 금지)이 쓰는 내부 이름이다.
+ */
+export type CardType = "A" | "B" | "C" | "D" | "E";
 
 /** A형 그림 재료 — 두 계열을 **각자** 정규화해 그린다(같은 축에 두지 않는다). */
 export interface DivergenceFigure {
@@ -142,7 +148,13 @@ export interface DivergenceFigure {
   /** 날짜별 매수액을 누적한 계열(단조 증가). 단위는 화면에 쓰지 않는다 — 형태만 쓴다. */
   buySeries: number[];
   /** 범례의 매수선 이름 — "임원 매수 누적" / "기관 매수 누적". */
+  /** D형(시장 역행)에서는 라임선이 매수가 아니라 **종목 주가**라 `"이 종목"` 이 온다. */
   buyLegend: string;
+  /**
+   * 범례의 **회색선** 이름. 없으면 화면이 `주가` 를 쓴다(A형).
+   * D형은 회색이 지수라서 `코스피` 처럼 넘긴다 — 안 넘기면 둘 다 주가로 읽힌다.
+   */
+  priceLegend?: string;
 }
 
 /**
@@ -182,7 +194,26 @@ export interface StreakFigure {
   actor: string;
 }
 
-export type CardFigure = DivergenceFigure | RatioFigure | StreakFigure;
+/**
+ * D형 그림 — 지수선 vs 종목선(WO-RESET-03 A-1).
+ *
+ * A형과 **같은 모양**이다(회색 = 비교 대상, 라임 = 주인공). WO 가 "지금 역행 차트 그대로 씀"
+ * 을 지시했으므로 새 컴포넌트를 만들지 않고 `DivergenceFigure` 를 재사용한다 —
+ * 다만 라임선이 매수 누적이 아니라 **종목 주가**라서 범례 문안이 다르다.
+ */
+
+/** E형 그림 — 거래량 막대. 급증 구간만 accent(WO-RESET-03 A-6 · D-4). */
+export interface VolumeFigure {
+  kind: "volume";
+  /** 창 구간 거래량(오래된 → 최신). 정규화는 화면이 한다. */
+  volumes: number[];
+  /** 급증 구간 시작 인덱스(포함). 여기부터 끝까지 accent. */
+  spikeFrom: number;
+  /** 캡션용 — `최근 60거래일 거래량`. */
+  baseDays: number;
+}
+
+export type CardFigure = DivergenceFigure | RatioFigure | StreakFigure | VolumeFigure;
 
 export interface CardTypeDecision {
   type: CardType;
@@ -237,6 +268,13 @@ const ACTOR: Record<QuietPickSignalKind, string> = {
   institution_streak: "기관",
   foreign_streak: "외국인",
   multi_cluster: "외국인·기관",
+  /**
+   * WO-RESET-03 의 새 신호들은 **주체가 없다** — 「누가 샀나」가 아니라 가격·거래량의 흔적이다.
+   * 그래서 주체 자리를 비운다. 이 형들의 문장은 `marketDivergenceCard` ·
+   * `volumeAwakeningCard` 가 통째로 만들고, 여기 값은 쓰이지 않는다(형 분기가 먼저 걸린다).
+   */
+  market_divergence: "",
+  volume_awakening: "",
 };
 
 /**
@@ -491,4 +529,59 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
 
   // 세 형 중 어느 것도 성립하지 않는다 — 후킹 없는 카드를 만들지 않는다.
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WO-RESET-03 — 「누가 샀나」 말고 다른 카드들.
+//
+// ## 왜 여기 두나
+//
+// A·B·C 와 같은 계약(`CardTypeDecision`)을 돌려줘야 화면·구성·텔레메트리가 형을 가리지 않고
+// 같은 코드로 다룬다. 형이 늘어도 `CardFigure` 한 곳만 보면 된다.
+//
+// ## 라벨을 붙이지 않는다 (D-1)
+//
+// `[자사주 매입]` 같은 말머리를 쓰지 않는다. 붙이는 순간 카드가 분류표가 된다.
+// **결론 문장만으로** 무슨 일인지 알 수 있어야 한다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** D형 — 시장은 빠지는데 이것만 버텨요 (A-1). */
+export function marketDivergenceCard(input: {
+  divergence: MarketDivergence;
+  /** 비교한 지수 이름 — `코스피` / `나스닥`. 범례에 쓴다. */
+  indexLabel: string;
+}): CardTypeDecision | null {
+  const d = input.divergence;
+  if (d.stockSeries.length < 2 || d.stockSeries.length !== d.indexSeries.length) return null;
+  const hook = "시장은 빠지는데\n이것만 버티고 있어요";
+  return {
+    type: "D",
+    hook,
+    figure: {
+      kind: "divergence",
+      // 회색 = 비교 대상(지수), 라임 = 주인공(종목). A형과 같은 문법이다.
+      priceSeries: [...d.indexSeries],
+      buySeries: [...d.stockSeries],
+      buyLegend: "이 종목",
+      priceLegend: input.indexLabel,
+    },
+    support: [
+      `${d.days}일 연속 시장보다 강해요`,
+      `같은 기간 ${input.indexLabel} ${d.indexChangePct.toFixed(1)}%`,
+    ],
+  };
+}
+
+/** E형 — 조용하던 거래가 붙기 시작했어요 (A-6). */
+export function volumeAwakeningCard(input: { awakening: VolumeAwakening }): CardTypeDecision | null {
+  const a = input.awakening;
+  if (a.volumeSeries.length < MIN_BAR_DAYS) return null;
+  const times = Math.round(a.multiple);
+  return {
+    type: "E",
+    hook: `석 달 만에 처음\n거래가 ${times}배로 늘었어요`,
+    figure: { kind: "volume", volumes: [...a.volumeSeries], spikeFrom: a.spikeFrom, baseDays: a.baseDays },
+    // 가격이 아직 안 움직였다는 것이 이 카드의 요점이다 — 그 사실을 보조로 말한다.
+    support: ["주가는 아직 안 움직였어요"],
+  };
 }

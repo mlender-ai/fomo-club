@@ -1053,11 +1053,11 @@ export interface QuietPickAnomaly {
 }
 /** 카드 3형(WO-HOOK-01) — 서버가 고른 형·후킹·그림 재료. 화면은 그리기만 한다. */
 export interface QuietPickCardType {
-  type: "A" | "B" | "C";
+  type: "A" | "B" | "C" | "D" | "E";
   /** 후킹 문장. `\n` 이 의도된 줄바꿈이다. */
   hook: string;
   figure:
-    | { kind: "divergence"; priceSeries: number[]; buySeries: number[]; buyLegend: string }
+    | { kind: "divergence"; priceSeries: number[]; buySeries: number[]; buyLegend: string; priceLegend?: string }
     /**
      * `actor` 는 그림 아래 캡션이 accent 를 설명하는 데 쓴다(A 의 `buyLegend`·C 의 `actor` 와 같은 자리).
      * 구 페이로드에는 없다 — 하루 한 번 굽는 배치라 한 배치 동안 비어 올 수 있어 선택 필드로 둔다.
@@ -1065,7 +1065,9 @@ export interface QuietPickCardType {
      * 페이로드 호환을 위해 타입에 남긴다(서버가 계속 실어 보낸다).
      */
     | { kind: "ratio"; ratioPct: number; actor?: string; priceSeries?: number[]; markerIndex?: number }
-    | { kind: "streak"; buyDays: boolean[]; streakFrom: number; streakTo: number; actor: string };
+    | { kind: "streak"; buyDays: boolean[]; streakFrom: number; streakTo: number; actor: string }
+    /** E형 — 거래량 막대. 급증 구간만 accent(WO-RESET-03 A-6). */
+    | { kind: "volume"; volumes: number[]; spikeFrom: number; baseDays: number };
   /** 보조 최대 2줄. */
   support: string[];
 }

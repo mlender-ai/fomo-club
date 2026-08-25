@@ -10,7 +10,8 @@ import { expect, test } from "@playwright/test";
 const PREVIEW = "/quiet-card-preview";
 const BANNED = ["무효선", "내부자", "클러스터", "이 관점은 무효", "수급", "매집", "이례적", "관점"];
 const ACCENT = "rgb(212, 255, 63)";
-const CASES = ["a", "b", "c", "min", "revealed"] as const;
+// WO-RESET-03 — d(시장역행) · e(거래량각성) 추가. 프리뷰 페이지의 CASES 와 같아야 한다.
+const CASES = ["a", "b", "c", "d", "e", "min", "revealed"] as const;
 
 async function heightOf(page: import("@playwright/test").Page, id: string): Promise<number> {
   const box = await page.locator(`[data-case="${id}"] [data-testid="quiet-pick-card"]`).boundingBox();
@@ -301,4 +302,30 @@ test("콘솔 에러가 없다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(500);
   expect(errors).toEqual([]);
+});
+
+/**
+ * WO-RESET-03 — 카드 종류가 늘어도 규칙은 하나다.
+ * D-1: 카드에 종류 라벨을 붙이지 않는다. D-4: 모든 종류에 그림이 있다.
+ */
+test("[완료 4·5] 새 형도 그림이 있고 카드에 종류 라벨이 없다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+
+  for (const [id, figure] of [["d", "divergence-chart"], ["e", "volume-bars"]] as const) {
+    const card = page.locator(`[data-case="${id}"] [data-testid="quiet-pick-card"]`);
+    await expect(card.locator(`[data-testid="${figure}"]`)).toHaveCount(1);
+    // 그림 아래 캡션/범례가 accent 의 뜻을 말한다.
+    await expect(card.locator(`[data-testid="${figure}"] .font-mono`).first()).not.toBeEmpty();
+  }
+
+  // D형 회색선 범례는 **지수 이름**이다 — `주가` 로 남으면 두 선이 다 주가로 읽힌다.
+  await expect(page.locator('[data-case="d"] [data-testid="divergence-chart"]')).toContainText("코스피");
+
+  // 카드 본문에 종류 이름이 없다(D-1).
+  for (const id of ["a", "b", "c", "d", "e"]) {
+    const text = await page.locator(`[data-case="${id}"] [data-testid="quiet-pick-card"]`).innerText();
+    for (const label of ["시장역행", "거래량각성", "자사주 매입", "공매도 축소", "실적 갭", "희소성", "비율"]) {
+      expect(text, `${id}형 카드에 라벨 "${label}"`).not.toContain(label);
+    }
+  }
 });
