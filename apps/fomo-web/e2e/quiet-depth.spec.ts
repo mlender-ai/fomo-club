@@ -10,17 +10,18 @@ import { expect, test } from "@playwright/test";
 const PREVIEW = "/quiet-depth-preview";
 const ACCENT = "rgb(212, 255, 63)";
 
-test("완료 기준 9·10 — 섹션은 7개 이하, 확보 안 된 섹션은 통째로 사라진다", async ({ page }) => {
+/** WO-RESET-02 PART D — **섹션 다섯 개. 이보다 늘리지 않는다.** */
+test("[완료 7] 섹션은 5개 이하, 확보 안 된 섹션은 통째로 사라진다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-testid="depth-hook"]')).toHaveCount(1);
 
   const titles = await page.locator("h2").allInnerTexts();
-  expect(titles.length).toBeLessThanOrEqual(6); // 결론은 제목이 없다 → 총 7섹션 이하
+  expect(titles.length).toBeLessThanOrEqual(5);
   expect(titles).toContain("왜 지금 사는가");
-  expect(titles).toContain("근거");
+  expect(titles).toContain("얼마나 샀나");
   expect(titles).toContain("틀리는 경우");
 
-  // 데이터가 없는 섹션은 헤더도 남기지 않는다.
+  // 데이터가 없는 섹션은 헤더도 남기지 않는다. 우리 기록은 아예 렌더되지 않는다(PART D).
   for (const id of ["depth-company", "depth-value", "depth-our-record"]) {
     await expect(page.locator(`[data-testid="${id}"]`)).toHaveCount(0);
   }
@@ -79,7 +80,7 @@ test("완료 기준 3 — 근거는 2줄 이하로 압축된다", async ({ page 
  * WO-HOOK-02 §2 — 상세가 답해야 하는 질문은 **왜 조용히 사고 있는가** 하나다.
  * 픽스처는 `가격`·`이력` 두 축을 갖도록 만들어져 있다(2축 최소 조건).
  */
-test("완료 기준 1·2 — 왜 지금 사는가가 첫 섹션이고 꼬리표가 붙는다", async ({ page }) => {
+test("[완료 1·6·8] 왜 지금 사는가가 첫 섹션이고 날짜 항목과 꼬리표가 붙는다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const why = page.locator('[data-testid="depth-why-now"]');
   await expect(why).toHaveCount(1);
@@ -89,12 +90,20 @@ test("완료 기준 1·2 — 왜 지금 사는가가 첫 섹션이고 꼬리표�
   expect(await y('[data-testid="depth-why-now"]')).toBeGreaterThan(await y('[data-testid="depth-hook"]'));
   expect(await y('[data-testid="depth-why-now"]')).toBeLessThan(await y('[data-testid="depth-evidence"]'));
 
-  // 2축 이상.
-  expect(await why.locator("> div").count()).toBeGreaterThanOrEqual(2);
+  // [완료 1] 날짜가 붙은 항목이 최소 1개 — `8월 4일` 같은 모양이어야 한다.
+  const lines = await why.locator("> div").allInnerTexts();
+  expect(lines.length).toBeGreaterThanOrEqual(1);
+  expect(lines.some((t) => /\d+월\s*\d+일/.test(t)), `날짜 항목 없음: ${JSON.stringify(lines)}`).toBe(true);
+
+  // [완료 3] 공시에는 원문 링크가 붙는다.
+  await expect(page.locator('[data-testid="depth-why-now-source"]').first()).toHaveAttribute("href", /dart\.fss|sec\.gov/);
+
+  // [완료 5] 애매한 위치(저점에서 27% 위)는 넣지 않는다 — 픽스처가 그 값이다.
+  expect(lines.some((t) => t.includes("52주"))).toBe(false);
 
   // 꼬리표 — 인과가 아니라 동시 관측임을 화면이 말한다.
   const note = page.locator('[data-testid="depth-why-now-note"]');
-  await expect(note).toContainText("함께 관측된");
+  await expect(note).toContainText("함께 있었던");
   await expect(note).toContainText("확인할 수 없어요");
 
   // 인과 단정·평가·예측 표현이 없다.

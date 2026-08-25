@@ -1070,6 +1070,17 @@ export interface QuietPickCardType {
   support: string[];
 }
 
+/** 「왜 지금 사는가」 한 줄(WO-RESET-02 PART C). 서버가 굽는 시점에 굳혀 보낸다. */
+export interface QuietPickWhyNowEvent {
+  /** `YYYY-MM-DD`. 없으면 상태 서술(`지금`)이다. */
+  date?: string;
+  /** 왼쪽 열 — `8월 4일` / `지금`. */
+  when: string;
+  text: string;
+  /** 공시 원문. 없으면 링크를 그리지 않는다. */
+  url?: string;
+}
+
 export interface QuietPick {
   subject: {
     canonical: string;
@@ -1127,6 +1138,13 @@ export interface QuietPick {
    * 이 필드가 비어 온다 — 그때 카드는 종전 훅으로 그린다(폴백).
    */
   cardType?: QuietPickCardType;
+  /**
+   * 「왜 지금 사는가」 날짜 항목(WO-RESET-02). **서버가 굽는 시점에 굳힌다** — 화면이 공시를
+   * 가져오지 않는다. 비었거나 없으면 상세가 섹션을 그리지 않는다(§C-3).
+   */
+  whyNow?: QuietPickWhyNowEvent[];
+  /** 공시 0건일 때의 줄(§C-4). 수집 전이면 없다 — "없었다" 와 "안 봤다" 는 다르다. */
+  whyNowQuietNote?: string;
   /**
    * 카드 칩 — 훅이 말하지 않는 근거만, 서로 다른 축으로 최대 3개.
    * 발행 시점에 굳는다(카드가 다시 조립하지 않는다). 구 페이로드에는 없으므로 선택 필드.

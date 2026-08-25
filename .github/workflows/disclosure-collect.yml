@@ -1,0 +1,68 @@
+name: Disclosure Collect
+
+# WO-RESET-02 PART A-3 — 공시를 **미리 모아둔다**. 화면을 열 때 가져오지 않는다.
+#
+# 라우트를 부르는 이유: `DART_API_KEY` 가 GitHub 시크릿에 없고 Vercel 환경변수에만 있다
+# (실측 2026-08-03). 워크플로에서 직접 DART 를 부르면 키가 빈 값이라 조용히 0건을 모은다.
+# 키가 있는 런타임(Vercel)에서 돌리고 여기서는 호출만 한다 — holding-probe 와 같은 방식.
+#
+# 시각: 08:40 KST(23:40 UTC). KR 장 시작 전이고 전일 공시가 다 올라온 뒤다.
+# 픽 재생성(quiet-pick)보다 **먼저** 돌아야 타임라인에 그날 공시가 실린다.
+
+on:
+  schedule:
+    - cron: "40 23 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "새로 훑을 날 수(기본 5). 첫 채움·구멍 메우기는 크게 준다 — 최대 90"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: disclosure-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call production disclosure collect endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          INPUT_DAYS: ${{ github.event.inputs.days }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          url="https://fomo-club-backend.vercel.app/api/fomo/cron/disclosures"
+          if [ -n "${INPUT_DAYS:-}" ]; then url="$url?days=${INPUT_DAYS}"; fi
+          auth=()
+          if [ -n "${CRON_SECRET:-}" ]; then auth=(-H "authorization: Bearer ${CRON_SECRET}"); fi
+
+          code=$(curl -s -o out.json -w '%{http_code}' --max-time 320 "${auth[@]}" "$url" || echo "000")
+          echo "HTTP $code"
+          cat out.json || true
+          echo ""
+
+          summary=$(node -e 'try{const j=require("./out.json");process.stdout.write(j.blocked?`blocked="${j.blocked}" keptPriorStocks=${j.keptPriorStocks}`:`stocks=${j.stocks} items=${j.items} coveredFrom=${j.coveredFrom} truncated=${j.truncated} errors=${j.errorCount}`)}catch(e){process.stdout.write("payload unreadable")}')
+          {
+            echo "### 공시 수집"
+            echo ""
+            echo "- HTTP: \`$code\`"
+            echo "- $summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$code" != "200" ]; then
+            echo "::error::공시 수집 실패 — 타임라인에 그날 공시가 안 실린다. out.json 을 보라."
+            exit 1
+          fi
+
+          # 잘린 수집을 성공으로 넘기지 않는다 — 부분 수집을 완전 수집으로 착각하면
+          # 화면의 "최근 90일 공시가 한 건도 없었어요" 가 거짓말이 된다.
+          truncated=$(node -e 'try{const j=require("./out.json");process.stdout.write(String(j.truncated===true))}catch(e){process.stdout.write("false")}')
+          if [ "$truncated" = "true" ]; then
+            echo "::warning::시간 예산을 넘겨 일부 날짜를 못 훑었다. 같은 워크플로를 다시 돌리면 이어서 채워진다."
+          fi
