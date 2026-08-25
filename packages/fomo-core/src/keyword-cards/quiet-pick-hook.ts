@@ -29,7 +29,11 @@ export type QuietPickSignalKind =
   | "insider_cluster"
   | "institution_streak"
   | "foreign_streak"
-  | "multi_cluster";
+  | "multi_cluster"
+  /** WO-RESET-03 A-1 — 시장은 빠지는데 이것만 버틴다. 「누가 샀나」가 아닌 첫 신호다. */
+  | "market_divergence"
+  /** WO-RESET-03 A-6 — 조용하던 거래가 붙기 시작했다. */
+  | "volume_awakening";
 
 export type QuietPickAnomalyKind = "frequency" | "participants" | "scale" | "silence" | "vacuum" | "near_low";
 
@@ -206,6 +210,13 @@ const HOOK_ACTOR: Record<QuietPickSignalKind, string> = {
   institution_streak: "기관",
   foreign_streak: "외국인",
   multi_cluster: "외국인과 기관",
+  /**
+   * WO-RESET-03 의 새 신호들은 **주체가 없다** — 「누가 샀나」가 아니라 가격·거래량의 흔적이다.
+   * 그래서 주체 자리를 비운다. 이 형들의 문장은 `marketDivergenceCard` ·
+   * `volumeAwakeningCard` 가 통째로 만들고, 여기 값은 쓰이지 않는다(형 분기가 먼저 걸린다).
+   */
+  market_divergence: "",
+  volume_awakening: "",
 };
 
 /**

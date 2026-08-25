@@ -1,5 +1,5 @@
 import type { DailyOhlcv } from "@fomo/core";
-import { readFeedContent, writeFeedContent } from "./feed-content-store";
+import { readFeedContent, readFeedContentMany, writeFeedContent } from "./feed-content-store";
 
 /**
  * KR 일봉 260거래일 캐시 (WO 카드 품질 2차 C) — 프리웜 크론이 쓰고 요청 경로는 읽기만(504 원칙).
@@ -41,4 +41,31 @@ export async function readKrCandleCache(naverCode: string): Promise<DailyOhlcv[]
   const ageDays = (Date.parse(kstDate()) - Date.parse(row.asOf)) / 86_400_000;
   if (!Number.isFinite(ageDays) || ageDays > MAX_STALE_DAYS) return null;
   return row.candles;
+}
+
+/**
+ * 여러 종목을 **한 쿼리로** 읽는다 (WO-RESET-03).
+ *
+ * 왜 필요한가: 새 카드(시장 역행·거래량 각성)는 **유니버스 전체**의 일봉을 본다. 66종목을
+ * `readKrCandleCache` 로 `Promise.all` 하면 커넥션 풀에서 66슬롯을 동시에 잡는다 —
+ * `docs/STATUS.md` §12 가 정확히 그 사고였다(pool_size 15). 커넥션 1개면 그 위험이 없다.
+ *
+ * 유효성 판정(길이·신선도)은 단건 리더와 **같은 규칙**을 쓴다 — 두 벌을 두면 갈라진다.
+ */
+export async function readKrCandleCacheMany(
+  naverCodes: readonly string[]
+): Promise<Map<string, DailyOhlcv[]>> {
+  const unique = [...new Set(naverCodes.filter(Boolean))];
+  if (unique.length === 0) return new Map();
+  const rows = await readFeedContentMany<KrCandleRow>(unique.map((code) => `${KEY_PREFIX}${code}`));
+  const today = Date.parse(kstDate());
+  const out = new Map<string, DailyOhlcv[]>();
+  for (const code of unique) {
+    const row = rows.get(`${KEY_PREFIX}${code}`);
+    if (!row?.candles || row.candles.length < MIN_USEFUL_DAYS) continue;
+    const ageDays = (today - Date.parse(row.asOf)) / 86_400_000;
+    if (!Number.isFinite(ageDays) || ageDays > MAX_STALE_DAYS) continue;
+    out.set(code, row.candles);
+  }
+  return out;
 }

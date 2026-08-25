@@ -99,6 +99,30 @@ const CARD_TYPES: Record<string, QuietPickCardType> = {
     figure: { kind: "streak", buyDays: BUY_DAYS, streakFrom: 34, streakTo: 39, actor: "기관" },
     support: ["25일간 · 74주"],
   },
+  d: {
+    type: "D",
+    hook: "시장은 빠지는데\n이것만 버티고 있어요",
+    figure: {
+      kind: "divergence",
+      // 회색 = 지수, 라임 = 이 종목. A형과 같은 문법이되 라임선의 뜻이 다르다.
+      priceSeries: PRICES.map((v, i) => v * (1 - i * 0.002)),
+      buySeries: PRICES,
+      buyLegend: "이 종목",
+      priceLegend: "코스피",
+    },
+    support: ["5일 연속 시장보다 강해요", "같은 기간 코스피 -2.4%"],
+  },
+  e: {
+    type: "E",
+    hook: "석 달 만에 처음\n거래가 4배로 늘었어요",
+    figure: {
+      kind: "volume",
+      volumes: [...Array(39).fill(0).map((_, i) => 900 + (i % 5) * 120), 4200],
+      spikeFrom: 39,
+      baseDays: 60,
+    },
+    support: ["주가는 아직 안 움직였어요"],
+  },
   min: {
     type: "C",
     hook: "40거래일 만에\n가장 길게 사고 있어요",
@@ -118,6 +142,8 @@ const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
   { id: "a", label: "A형 역행 — 두 선의 갭" },
   { id: "b", label: "B형 비율 — 하루 거래량 중 매수분 막대" },
   { id: "c", label: "C형 희소성 — 연속 구간만 accent" },
+  { id: "d", label: "D형 시장역행 — 지수선 vs 종목선" },
+  { id: "e", label: "E형 거래량각성 — 급증 구간만 accent" },
   { id: "min", label: "보조 줄 없음 — 가장 짧은 카드" },
   { id: "revealed", label: "정체 해제 후 — 종목명·티커 표시", revealed: true },
 ];

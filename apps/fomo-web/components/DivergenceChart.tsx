@@ -89,12 +89,19 @@ export function DivergenceChart({
   priceSeries,
   buySeries,
   buyLegend,
+  priceLegend = "주가",
   height = 76,
   invalidation,
 }: {
   priceSeries: number[];
   buySeries: number[];
   buyLegend: string;
+  /**
+   * 회색선 범례. 기본은 `주가`(A형: 주가 vs 매수 누적).
+   * D형(시장 역행)에서는 회색이 **지수**라서 `코스피` 처럼 바꿔 넘긴다 — 안 바꾸면
+   * 범례가 `주가 / 이 종목` 이 되어 둘 다 주가인 것처럼 읽힌다(실측).
+   */
+  priceLegend?: string;
   height?: number;
   /**
    * 되돌아보는 선(무효선) 가격. 상세에서만 넘긴다 — 카드는 한 장면에 놀라움 하나다.
@@ -165,7 +172,7 @@ export function DivergenceChart({
       <div className="mt-s2 flex items-center gap-s3 font-mono text-ds-legend text-ds-text-2">
         <span className="flex items-center gap-1">
           <span className="inline-block h-[1.5px] w-3 shrink-0" style={{ backgroundColor: PRICE_LINE }} aria-hidden />
-          주가
+          {priceLegend}
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-[2.5px] w-3 shrink-0" style={{ backgroundColor: BUY_LINE }} aria-hidden />

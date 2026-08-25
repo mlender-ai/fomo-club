@@ -1,0 +1,188 @@
+/**
+ * WO-RESET-03 — 「누가 샀나」 말고 다른 흔적들. 순수 함수(네트워크·시간·난수 0).
+ *
+ * ## 왜 필요한가
+ *
+ * 컨셉은 그대로다 — **뉴스 나오기 전에 돈이 먼저 들어간 곳.** 다만 지금까지 그것을
+ * `누가 샀나` 로만 좁게 봤다. 신호가 한 종류뿐이라 하루 8장이 늘 비슷했다.
+ *
+ * 뉴스가 되기 전에 남는 흔적은 그것 말고도 있다. 이 모듈은 **가격·거래량에만 있는 흔적**을
+ * 찾는다(새 수집이 필요 없는 것들 — WO PART B 1·2번).
+ *
+ * ## 카드가 하는 일은 하나다
+ *
+ * **궁금하게 만드는 것.** 그래서 여기서 만드는 것은 결론 한 문장과 그림 재료뿐이고,
+ * 답(무슨 회사인가·왜 그런가)은 전부 상세가 가진다.
+ */
+
+/** 거래일 종가·거래량 한 점. 오래된 → 최신 순으로 넘긴다. */
+export interface DailyPoint {
+  close: number;
+  volume: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A-1. 시장은 빠지는데 이것만 버텨요
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 시장 대비 초과 연속일 최소치. 이보다 짧으면 하루 이틀 잡음이라 "버틴다" 고 말할 수 없다.
+ *
+ * 5일: WO A-1 의 예시 문안(`5일 연속 시장보다 강해요`)이 5를 쓴다. 거래일 한 주다.
+ */
+export const MARKET_DIVERGENCE_MIN_DAYS = 5;
+
+/**
+ * 창 안에서 지수가 **내린 날**이 최소 몇 날이어야 하는가.
+ *
+ * 이 조건이 없으면 지수가 계속 오른 구간에서 조금 더 오른 종목까지 "시장은 빠지는데" 가 된다 —
+ * 문장이 거짓이 된다. WO 가 조건에 `지수가 하락한 날 포함` 을 못박은 이유다.
+ */
+export const MARKET_DIVERGENCE_MIN_DOWN_DAYS = 2;
+
+export interface MarketDivergence {
+  /** 지수 대비 연속 초과 일수. */
+  days: number;
+  /** 창 안 지수 등락률(%) — 음수여야 "시장은 빠지는데" 가 성립한다. */
+  indexChangePct: number;
+  /** 창 안 종목 등락률(%). */
+  stockChangePct: number;
+  /** 그림 재료 — 창 구간의 지수·종목 종가(각자 정규화해서 그린다). */
+  indexSeries: number[];
+  stockSeries: number[];
+}
+
+function pctChange(series: readonly number[]): number | null {
+  const first = series[0];
+  const last = series.at(-1);
+  if (typeof first !== "number" || typeof last !== "number" || !(first > 0)) return null;
+  return ((last - first) / first) * 100;
+}
+
+/**
+ * 지수보다 계속 강했는가.
+ *
+ * **일별 수익률을 비교한다** — 누적으로만 보면 첫날 한 번 크게 오른 뒤 계속 밀린 종목도
+ * 통과한다. "계속 강하다" 는 매일 강했다는 뜻이어야 한다.
+ *
+ * @param stock 종목 종가(오래된 → 최신)
+ * @param index 같은 날짜에 정렬된 지수 종가. **길이가 다르면 판정하지 않는다** —
+ *              어긋난 날짜를 비교하면 결과가 거짓이 된다.
+ */
+export function detectMarketDivergence(
+  stock: readonly number[],
+  index: readonly number[]
+): MarketDivergence | null {
+  if (stock.length !== index.length) return null;
+  if (stock.length < MARKET_DIVERGENCE_MIN_DAYS + 1) return null;
+
+  // 뒤에서부터 "종목 일간수익률 > 지수 일간수익률" 이 이어지는 만큼 센다.
+  let days = 0;
+  for (let i = stock.length - 1; i > 0; i -= 1) {
+    const s0 = stock[i - 1]!;
+    const s1 = stock[i]!;
+    const x0 = index[i - 1]!;
+    const x1 = index[i]!;
+    if (!(s0 > 0) || !(x0 > 0)) break;
+    if ((s1 - s0) / s0 <= (x1 - x0) / x0) break;
+    days += 1;
+  }
+  if (days < MARKET_DIVERGENCE_MIN_DAYS) return null;
+
+  const stockWindow = stock.slice(-(days + 1));
+  const indexWindow = index.slice(-(days + 1));
+
+  // 창 안에 지수가 내린 날이 실제로 있어야 "시장은 빠지는데" 다.
+  let downDays = 0;
+  for (let i = 1; i < indexWindow.length; i += 1) {
+    if (indexWindow[i]! < indexWindow[i - 1]!) downDays += 1;
+  }
+  if (downDays < MARKET_DIVERGENCE_MIN_DOWN_DAYS) return null;
+
+  const indexChangePct = pctChange(indexWindow);
+  const stockChangePct = pctChange(stockWindow);
+  if (indexChangePct === null || stockChangePct === null) return null;
+  // 지수가 창 전체로는 올랐다면 문장이 거짓이다.
+  if (indexChangePct >= 0) return null;
+
+  return {
+    days,
+    indexChangePct,
+    stockChangePct,
+    indexSeries: [...indexWindow],
+    stockSeries: [...stockWindow],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A-6. 조용하던 거래가 붙기 시작했어요
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 급증 판정 배수 — 최근 거래량이 기준 평균의 이 배 이상. WO 예시 문안이 `3배` 다. */
+export const VOLUME_AWAKENING_MULTIPLE = 3;
+
+/** 기준 평균을 재는 창(거래일). 석 달 ≈ 60거래일 — WO 문안 `석 달 만에 처음`. */
+export const VOLUME_AWAKENING_BASE_DAYS = 60;
+
+/**
+ * 가격이 아직 안 움직였다고 말할 수 있는 상한(%).
+ *
+ * 이 조건이 이 카드의 존재 이유다 — 거래가 붙었는데 **가격이 이미 뛰었으면** 그건 조용한
+ * 신호가 아니라 이미 일어난 뉴스다. 우리가 찾는 것은 그 전이다.
+ */
+export const VOLUME_AWAKENING_MAX_MOVE_PCT = 3;
+
+export interface VolumeAwakening {
+  /** 최근 거래량이 기준 평균의 몇 배인가. */
+  multiple: number;
+  /** 기준 평균을 잰 거래일 수. */
+  baseDays: number;
+  /** 급증일의 가격 변동률(%). */
+  movePct: number;
+  /** 그림 재료 — 창 구간 거래량(오래된 → 최신). */
+  volumeSeries: number[];
+  /** 급증 구간 시작 인덱스(`volumeSeries` 기준). 이 구간만 accent 로 칠한다. */
+  spikeFrom: number;
+}
+
+/**
+ * 오래 조용하다가 거래가 붙었는가. 그리고 **가격은 아직 안 움직였는가.**
+ *
+ * @param points 오래된 → 최신. 최소 `VOLUME_AWAKENING_BASE_DAYS + 1` 개가 필요하다 —
+ *               기준 평균을 잴 배경이 없으면 "석 달 만에 처음" 을 말할 수 없다.
+ */
+export function detectVolumeAwakening(points: readonly DailyPoint[]): VolumeAwakening | null {
+  const usable = points.filter((p) => Number.isFinite(p.close) && Number.isFinite(p.volume) && p.volume >= 0);
+  if (usable.length < VOLUME_AWAKENING_BASE_DAYS + 1) return null;
+
+  const latest = usable.at(-1)!;
+  const base = usable.slice(-(VOLUME_AWAKENING_BASE_DAYS + 1), -1);
+  const baseAvg = base.reduce((sum, p) => sum + p.volume, 0) / base.length;
+  if (!(baseAvg > 0)) return null;
+
+  const multiple = latest.volume / baseAvg;
+  if (multiple < VOLUME_AWAKENING_MULTIPLE) return null;
+
+  const prev = usable.at(-2)!;
+  if (!(prev.close > 0)) return null;
+  const movePct = ((latest.close - prev.close) / prev.close) * 100;
+  if (Math.abs(movePct) > VOLUME_AWAKENING_MAX_MOVE_PCT) return null;
+
+  /**
+   * 급증 구간 — 마지막 날부터 거슬러 올라가며 기준 평균의 배수를 넘는 날을 센다.
+   * 하루짜리 급증이 대부분이지만 이틀 이어지는 경우도 있어 그대로 칠한다.
+   */
+  const window = usable.slice(-(VOLUME_AWAKENING_BASE_DAYS + 1));
+  let spikeFrom = window.length - 1;
+  while (spikeFrom > 0 && window[spikeFrom - 1]!.volume >= baseAvg * VOLUME_AWAKENING_MULTIPLE) {
+    spikeFrom -= 1;
+  }
+
+  return {
+    multiple,
+    baseDays: base.length,
+    movePct,
+    volumeSeries: window.map((p) => p.volume),
+    spikeFrom,
+  };
+}

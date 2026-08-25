@@ -11,6 +11,7 @@ import { Sparkline } from "@/components/Sparkline";
 import { DivergenceChart } from "@/components/DivergenceChart";
 import { StreakBars } from "@/components/StreakBars";
 import { RatioBar } from "@/components/RatioBar";
+import { VolumeBars } from "@/components/VolumeBars";
 
 /**
  * 메인 카드 — **정본은 `docs/wo/WO-HOOK-01-main-card-hook.md`** 다. DS-01 을 대체한다.
@@ -95,6 +96,8 @@ function liquidityMetaOf(pick: QuietPick): string | null {
  * | A 역행 | 매수 누적선 | 범례 `주가 / OO 매수 누적` |
  * | B 비율 | 하루 거래량 중 **매수분** | 캡션 `하루 거래량 중 OO 매수 N%` |
  * | C 희소성 | 매수 연속 구간 | 캡션 `최근 N거래일 OO 매수일` |
+ * | D 시장역행 | **이 종목** 주가선(지수는 회색) | 범례 `지수 / 이 종목` |
+ * | E 거래량각성 | **급증 구간** 막대 | 캡션 `최근 N거래일 거래량` |
  *
  * 규칙 둘:
  *
@@ -124,9 +127,14 @@ export function CardFigure({
         priceSeries={figure.priceSeries}
         buySeries={figure.buySeries}
         buyLegend={figure.buyLegend}
+        {...(figure.priceLegend ? { priceLegend: figure.priceLegend } : {})}
         {...(typeof invalidation === "number" ? { invalidation } : {})}
       />
     );
+  }
+
+  if (figure.kind === "volume") {
+    return <VolumeBars volumes={figure.volumes} spikeFrom={figure.spikeFrom} baseDays={figure.baseDays} />;
   }
 
   if (figure.kind === "ratio") {

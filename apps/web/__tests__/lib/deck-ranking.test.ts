@@ -110,13 +110,16 @@ describe("경과일 상한 — 워치 강등", () => {
 });
 
 describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
-  it("10장이면 신규 최소 6 · 동일유형 최대 6 · 지속 최대 4", () => {
-    expect(deckCaps(10)).toEqual({ minFresh: 6, maxSameKind: 6, maxPersistent: 4 });
+  it("10장이면 신규 최소 6 · 동일유형 최대 5 · 지속 최대 4", () => {
+    // 동일유형 상한은 **절반**이다(WO-RESET-03 E-3).
+    expect(deckCaps(10)).toEqual({ minFresh: 6, maxSameKind: 5, maxPersistent: 4 });
   });
 
   it("덱 크기를 바꿔도 규칙이 따라간다 (장수를 박지 않았다)", () => {
-    expect(deckCaps(5)).toEqual({ minFresh: 3, maxSameKind: 3, maxPersistent: 2 });
-    expect(deckCaps(20)).toEqual({ minFresh: 12, maxSameKind: 12, maxPersistent: 8 });
+    expect(deckCaps(5)).toEqual({ minFresh: 3, maxSameKind: 2, maxPersistent: 2 });
+    expect(deckCaps(20)).toEqual({ minFresh: 12, maxSameKind: 10, maxPersistent: 8 });
+    // 실제 운영 덱 크기(WO-RESET-03 E-1 — 15장).
+    expect(deckCaps(15)).toEqual({ minFresh: 9, maxSameKind: 7, maxPersistent: 6 });
   });
 
   const fresh = (kind: string, age = 2): DeckCandidate => ({ kind, ageDays: age });
@@ -134,10 +137,11 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
   it("같은 유형이 덱을 독점하지 못한다", () => {
     const ranked = [...Array(12)].map((_, i) => fresh("insider_cluster", i % FRESH_AGE_DAYS));
     const result = composeDeck(ranked, { deckSize: 10 });
-    expect(result.deck.length).toBe(6); // 동일유형 상한 6 에서 멈춘다
+    // WO-RESET-03 E-3 — 한 종류가 **절반**을 넘지 못한다(종전 0.6 → 0.5).
+    expect(result.deck.length).toBe(5);
     expect(result.skipped.kind_cap).toBeGreaterThan(0);
-    // 축소된 덱(6장)에도 **적용된** 상한(10장 기준 6)을 보고한다 — 실제 덱과 어긋나면 안 된다.
-    expect(result.caps.maxSameKind).toBe(6);
+    // 축소된 덱에도 **적용된** 상한(10장 기준 5)을 보고한다 — 실제 덱과 어긋나면 안 된다.
+    expect(result.caps.maxSameKind).toBe(5);
     expect(result.deck.filter((d) => d.kind === "insider_cluster").length).toBeLessThanOrEqual(result.caps.maxSameKind);
   });
 
@@ -166,9 +170,10 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
   });
 
   it("공급이 충분하면 상한대로 찬다", () => {
+    // 한 종류가 절반을 넘지 못하므로 5+5 로 채운다(종전 6+4).
     const ranked = [
-      ...[...Array(6)].map(() => fresh("insider_cluster")),
-      ...[...Array(4)].map(() => persistent("institution_streak")),
+      ...[...Array(5)].map(() => fresh("insider_cluster")),
+      ...[...Array(5)].map(() => fresh("market_divergence")),
     ];
     const result = composeDeck(ranked, { deckSize: 10 });
     expect(result.deck.length).toBe(10);
@@ -180,15 +185,18 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
     const ranked = [...Array(8)].map(() => fresh("insider_cluster"));
     const result = composeDeck(ranked, { deckSize: 10 });
     const dropped = ranked.filter((item) => !result.deck.includes(item));
-    expect(dropped.length).toBe(2);
+    expect(dropped.length).toBe(3); // 상한 5 → 8장 중 3장이 밀린다
     for (const item of dropped) expect(result.skipReasons.get(item)).toBe("kind_cap");
     // 덱에 든 항목에는 사유가 없어야 한다.
     for (const item of result.deck) expect(result.skipReasons.has(item)).toBe(false);
   });
 
   it("지속 상한으로 밀린 것은 kind_cap 이 아니라 persistent_cap 이다", () => {
+    // 신규는 **두 종류로 나눈다** — 한 종류가 절반 상한(5)에 걸리면 신규 하한을 못 채워
+    // 덱이 줄고, 그러면 이 테스트가 보려는 `persistent_cap` 대신 축소 사유가 붙는다.
     const ranked = [
-      ...[...Array(6)].map(() => fresh("insider_cluster")),
+      ...[...Array(3)].map(() => fresh("insider_cluster")),
+      ...[...Array(3)].map(() => fresh("market_divergence")),
       ...[...Array(6)].map((_, i) => persistent(`streak_${i}`)),
     ];
     const result = composeDeck(ranked, { deckSize: 10 });
