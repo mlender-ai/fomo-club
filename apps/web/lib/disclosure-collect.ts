@@ -1,0 +1,299 @@
+/**
+ * WO-RESET-02 PART A — 종목별 최근 90일 공시 목록을 모은다.
+ *
+ * ## 무엇을 저장하나 (A-1)
+ *
+ * 날짜 · 제목 · 종류 · 링크. **본문은 저장하지 않는다**(WO 하지 말 것 1번).
+ * 제목은 원문 그대로 둔다 — 줄이거나 바꾸면 그건 우리가 쓴 말이 되고, 근거가 아니라 요약이 된다.
+ *
+ * ## 왜 화면에서 안 가져오나 (A-3)
+ *
+ * DART 목록 API 는 **날짜별**로만 준다(종목별 조회는 `corp_code` 가 필요하고 그 매핑은
+ * 또 다른 수집이다). 그래서 하루치를 통째로 받아 우리 유니버스만 걸러낸다. 90일이면
+ * 그 왕복이 수백 번이라 요청 경로에서 할 수 없다 — **미리 모아둔다.**
+ *
+ * ## 증분 수집
+ *
+ * 매 실행이 90일을 다시 훑지 않는다. 기본은 최근 며칠만 받아 **기존 저장분과 합치고**
+ * 90일보다 오래된 것을 떨군다. 첫 채움이나 구멍 메우기는 `lookbackDays` 를 크게 줘서 돌린다.
+ *
+ * 시간 예산을 넘기면 **거기까지 모은 것을 저장하고 잘렸다고 기록한다.** 조용히 자르지 않는다 —
+ * 부분 수집을 완전 수집으로 착각하면 "공시가 없다" 가 거짓말이 된다(그 문구가 §C-4 의 핵심이다).
+ */
+
+import { STOCK_VOCAB, classifyDisclosure, decodeHtmlEntities, type DisclosureKind } from "@fomo/core";
+import { US_DISCOVERY_SYMBOLS, secCikForSymbol } from "./us-symbols";
+import { secUserAgent } from "./sec-edgar";
+
+export interface DisclosureItem {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** 공시 제목 **원문 그대로**. */
+  title: string;
+  kind: DisclosureKind;
+  url?: string;
+}
+
+export interface DisclosureCollection {
+  /** 이 수집이 끝난 시각. */
+  asOf: string;
+  /** 실제로 훑은 가장 오래된 날짜 — `최근 90일 공시가 없었다` 를 말해도 되는지의 근거다. */
+  coveredFrom: string;
+  /** canonical → 최근 90일 공시(과거순). */
+  byStock: Record<string, DisclosureItem[]>;
+  /** 예산 초과로 훑다 만 날이 있는가. 있으면 "없었다" 를 말하지 않는다. */
+  truncated: boolean;
+  /** 소스별 실패 — 조용한 결손 금지. */
+  errors: string[];
+}
+
+/** 화면이 보는 창(일). `@fomo/core` 의 `WHY_NOW_DISCLOSURE_WINDOW_DAYS` 와 같아야 한다. */
+export const DISCLOSURE_WINDOW_DAYS = 90;
+
+/** 기본 증분 창(일). 하루 한 번 도는 전제로 여유 있게 잡았다(주말·크론 지연 흡수). */
+export const DISCLOSURE_DEFAULT_LOOKBACK_DAYS = 5;
+
+/** 한 번 실행의 시간 예산. 라우트 `maxDuration` 300초 안에서 여유를 둔다. */
+const BUDGET_MS = 240_000;
+
+const DART_LIST_URL = "https://opendart.fss.or.kr/api/list.json";
+const DART_PAGE_COUNT = 100;
+/** 하루치 전 종목 공시는 100건을 넘는다 — 우리 유니버스를 놓치지 않으려면 넉넉히 넘긴다. */
+const DART_MAX_PAGES = 12;
+const SEC_SUBMISSIONS = "https://data.sec.gov/submissions";
+
+function dartKey(): string | undefined {
+  if (process.env.DISCOVERY_DART_LIVE === "0") return undefined;
+  return process.env.DART_API_KEY || process.env.DART_CRTFC_KEY;
+}
+
+function yyyymmdd(iso: string): string {
+  return iso.replace(/-/g, "").slice(0, 8);
+}
+
+function isoFromDart(date: string | undefined): string | null {
+  if (!date || !/^\d{8}$/.test(date)) return null;
+  return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+}
+
+function shiftIso(iso: string, days: number): string {
+  const base = new Date(`${iso.slice(0, 10)}T12:00:00+09:00`);
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
+function dartUrl(rceptNo: string | undefined): string | undefined {
+  const no = rceptNo?.trim();
+  return no && /^\d+$/.test(no) ? `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${no}` : undefined;
+}
+
+/**
+ * 제목 정리 — **의미를 바꾸지 않는 것만** 한다.
+ *
+ * HTML 엔티티 복원과 공백 정규화까지다. 접두 `[정정]` 은 **남긴다** — 정정이라는 사실은
+ * 사용자가 알아야 할 정보이고, 분류기는 접두를 무시하도록 따로 만들어져 있다.
+ */
+function cleanTitle(raw: string | undefined): string | null {
+  const text = decodeHtmlEntities(raw ?? "").replace(/\s+/g, " ").trim();
+  return text.length >= 2 ? text : null;
+}
+
+interface DartListItem {
+  stock_code?: string;
+  report_nm?: string;
+  rcept_dt?: string;
+  rcept_no?: string;
+}
+
+async function fetchDartDay(key: string, iso: string, page: number): Promise<DartListItem[] | null> {
+  const url = new URL(DART_LIST_URL);
+  url.searchParams.set("crtfc_key", key);
+  url.searchParams.set("bgn_de", yyyymmdd(iso));
+  url.searchParams.set("end_de", yyyymmdd(iso));
+  url.searchParams.set("page_no", String(page));
+  url.searchParams.set("page_count", String(DART_PAGE_COUNT));
+  const res = await fetch(url.toString(), {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { status?: string; list?: DartListItem[] };
+  // `013` = 조회 결과 없음(휴일 등). 실패가 아니라 빈 날이다.
+  if (data.status && data.status !== "000") return [];
+  return data.list ?? [];
+}
+
+/** KR — 날짜별로 훑어 우리 유니버스만 남긴다. */
+async function collectKr(
+  dates: readonly string[],
+  deadline: number,
+  out: Map<string, DisclosureItem[]>,
+  errors: string[]
+): Promise<{ truncated: boolean; oldestScanned: string | null }> {
+  const key = dartKey();
+  if (!key) {
+    errors.push("dart: DART_API_KEY 미설정 — KR 공시를 모으지 못했다");
+    return { truncated: true, oldestScanned: null };
+  }
+  const byCode = new Map(
+    STOCK_VOCAB.filter((s) => s.naverCode).map((s) => [s.naverCode!, s.canonical] as const)
+  );
+  let oldestScanned: string | null = null;
+
+  for (const iso of dates) {
+    if (Date.now() > deadline) return { truncated: true, oldestScanned };
+    for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
+      if (Date.now() > deadline) return { truncated: true, oldestScanned };
+      const list = await fetchDartDay(key, iso, page).catch((error) => {
+        errors.push(`dart ${iso} p${page}: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+      });
+      if (list === null) break;
+      if (list.length === 0) break;
+      for (const item of list) {
+        const canonical = byCode.get(item.stock_code?.trim() ?? "");
+        if (!canonical) continue;
+        const date = isoFromDart(item.rcept_dt) ?? iso;
+        const title = cleanTitle(item.report_nm);
+        if (!title) continue;
+        const bucket = out.get(canonical) ?? [];
+        bucket.push({ date, title, kind: classifyDisclosure(title), ...(dartUrl(item.rcept_no) ? { url: dartUrl(item.rcept_no)! } : {}) });
+        out.set(canonical, bucket);
+      }
+      if (list.length < DART_PAGE_COUNT) break;
+    }
+    oldestScanned = iso;
+  }
+  return { truncated: false, oldestScanned };
+}
+
+/**
+ * US — 심볼별 `submissions.json` 한 번이면 최근 제출이 다 온다. 날짜 창은 여기서 자른다.
+ *
+ * 유니버스는 `US_DISCOVERY_SYMBOLS` 가 정본이다 — `STOCK_VOCAB` 에는 심볼도 CIK 도 없다.
+ */
+async function collectUs(
+  since: string,
+  deadline: number,
+  out: Map<string, DisclosureItem[]>,
+  errors: string[]
+): Promise<void> {
+  /**
+   * UA 형식은 `sec-edgar.ts` 의 실측 주석을 그대로 따른다 — 괄호 형식은 SEC WAF 가 403 을 준다.
+   * 그래서 문자열을 새로 만들지 않고 그 모듈의 창구를 쓴다.
+   */
+  const userAgent = secUserAgent();
+  if (!userAgent) {
+    errors.push("sec: SEC_EDGAR_USER_AGENT 미설정 — US 공시를 모으지 못했다");
+    return;
+  }
+  const targets = US_DISCOVERY_SYMBOLS.map((s) => ({
+    canonical: s.canonical,
+    cik: secCikForSymbol(s.symbol),
+  })).filter((s): s is { canonical: string; cik: string } => Boolean(s.cik));
+  for (const stock of targets) {
+    if (Date.now() > deadline) return;
+    const cik = stock.cik.padStart(10, "0");
+    try {
+      const res = await fetch(`${SEC_SUBMISSIONS}/CIK${cik}.json`, {
+        headers: { "user-agent": userAgent, accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        errors.push(`sec ${stock.canonical}: HTTP ${res.status}`);
+        continue;
+      }
+      const data = (await res.json()) as {
+        filings?: { recent?: { form?: string[]; filingDate?: string[]; accessionNumber?: string[]; primaryDocument?: string[] } };
+      };
+      const recent = data.filings?.recent;
+      if (!recent?.form?.length) continue;
+      const bucket = out.get(stock.canonical) ?? [];
+      for (let i = 0; i < recent.form.length; i += 1) {
+        const date = recent.filingDate?.[i];
+        if (!date || date < since) break; // 최신순이므로 창을 벗어나면 끝
+        const form = recent.form[i];
+        if (!form) continue;
+        const accession = recent.accessionNumber?.[i]?.replace(/-/g, "");
+        const doc = recent.primaryDocument?.[i];
+        bucket.push({
+          date,
+          // SEC 는 제목이 없다 — 폼 번호가 곧 제목이다. 지어내지 않고 그대로 쓴다.
+          title: form,
+          kind: classifyDisclosure(form),
+          ...(accession && doc
+            ? { url: `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession}/${doc}` }
+            : {}),
+        });
+      }
+      if (bucket.length > 0) out.set(stock.canonical, bucket);
+    } catch (error) {
+      errors.push(`sec ${stock.canonical}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+}
+
+/** 같은 공시가 두 번 들어오지 않게 — 날짜+제목이 같으면 하나로 본다. */
+function dedupe(items: readonly DisclosureItem[]): DisclosureItem[] {
+  const seen = new Set<string>();
+  const out: DisclosureItem[] = [];
+  for (const item of items) {
+    const key = `${item.date}|${item.title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * 수집 실행. `previous` 를 주면 **합쳐서** 90일 창을 유지한다(증분).
+ *
+ * @param today   KST 기준 오늘 `YYYY-MM-DD`.
+ * @param lookbackDays 이번에 새로 훑을 날 수. 첫 채움은 크게 준다.
+ */
+export async function collectDisclosures(options: {
+  today: string;
+  lookbackDays?: number;
+  previous?: DisclosureCollection | null;
+}): Promise<DisclosureCollection> {
+  const { today, previous } = options;
+  const lookback = Math.max(1, Math.min(options.lookbackDays ?? DISCLOSURE_DEFAULT_LOOKBACK_DAYS, DISCLOSURE_WINDOW_DAYS));
+  const deadline = Date.now() + BUDGET_MS;
+  const errors: string[] = [];
+  const windowStart = shiftIso(today, -DISCLOSURE_WINDOW_DAYS);
+
+  const fresh = new Map<string, DisclosureItem[]>();
+  const dates = Array.from({ length: lookback }, (_, i) => shiftIso(today, -i));
+  const kr = await collectKr(dates, deadline, fresh, errors);
+  await collectUs(shiftIso(today, -lookback), deadline, fresh, errors);
+
+  // 기존 저장분과 합치고 창 밖을 떨군다.
+  const byStock: Record<string, DisclosureItem[]> = {};
+  const names = new Set([...Object.keys(previous?.byStock ?? {}), ...fresh.keys()]);
+  for (const name of names) {
+    const merged = dedupe([...(previous?.byStock?.[name] ?? []), ...(fresh.get(name) ?? [])]).filter(
+      (item) => item.date >= windowStart
+    );
+    if (merged.length > 0) byStock[name] = merged;
+  }
+
+  /**
+   * `coveredFrom` — **실제로 훑은** 가장 오래된 날. 이전 수집이 덮은 구간과 이번 구간을 잇는다.
+   * 이 값이 화면의 "최근 90일 공시가 없었어요" 를 말해도 되는지의 근거다.
+   */
+  const previousFrom = previous?.coveredFrom;
+  const scannedFrom = kr.oldestScanned ?? dates.at(-1) ?? today;
+  const coveredFrom =
+    previousFrom && previousFrom <= scannedFrom ? (previousFrom < windowStart ? windowStart : previousFrom) : scannedFrom;
+
+  return {
+    asOf: new Date().toISOString(),
+    coveredFrom,
+    byStock,
+    truncated: kr.truncated,
+    errors,
+  };
+}

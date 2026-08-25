@@ -33,6 +33,10 @@ import {
   buildSignalStatsCopy,
   companyDisplay,
   type SignalStats,
+  buildWhyNowTimeline,
+  whyNowQuietNote,
+  earningsTurnEvent,
+  type WhyNowEvent,
 } from "@fomo/core";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
@@ -52,6 +56,9 @@ import { writeUsCandleCache } from "./us-candle-cache";
 import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData } from "./stock-front";
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 import { readSignalStatsForCards } from "./signal-stats";
+import { readDisclosureCollection } from "./disclosure-store";
+import { readAllFactSheets } from "./fundamentals/repository";
+import type { DisclosureCollection } from "./disclosure-collect";
 import {
   rankScore as deckRankScore,
   noveltyScore,
@@ -334,6 +341,15 @@ export interface QuietPick {
    * 통계가 없는 유형이면 필드 자체가 없다 → 카드는 블록을 통째로 숨긴다(빈 껍데기 금지).
    */
   signalStats?: SignalStatsCard;
+  /**
+   * 「왜 지금 사는가」 타임라인 (WO-RESET-02 PART C) — **굽는 시점에 만든다.**
+   *
+   * 화면이 열릴 때 공시를 가져오지 않는다(A-3). 여기 실려 오는 것이 화면이 그리는 전부다.
+   * 날짜 붙은 항목이 하나도 없으면 **빈 배열**이고, 그때 화면은 섹션을 통째로 안 그린다(C-3).
+   */
+  whyNow?: WhyNowEvent[];
+  /** 공시가 0건일 때 붙이는 줄(C-4). 수집 전이면 `undefined` — "없었다" 와 "안 봤다" 는 다르다. */
+  whyNowQuietNote?: string;
   qualifiedAt: string;
 }
 
@@ -545,6 +561,16 @@ export interface QuietPickDeps {
   writeUsCandleCache: typeof writeUsCandleCache;
   /** KR 내부자 장내매수 공시(WO-P4 신호망 확장). */
   fetchDartInsiderPurchasesByStock: typeof fetchDartInsiderPurchasesByStock;
+  /**
+   * 미리 모아둔 공시(WO-RESET-02 A-3). **여기서 수집하지 않는다** — 읽기만 한다.
+   * 수집은 `cron/disclosures` 가 하고, 그게 아직 안 돌았으면 `null` 이다.
+   */
+  readDisclosureCollection: typeof readDisclosureCollection;
+  /**
+   * 실적 전환 재료(WO-RESET-02 PART B). 팩트시트는 별도 파이프라인이 이미 굽는다 —
+   * 여기서는 **읽기만** 한다. 한 번에 전부 읽어 종목별로 나눠 쓴다(행별 병렬 읽기 금지 — §12).
+   */
+  readAllFactSheets: typeof readAllFactSheets;
 }
 
 const defaultDeps: QuietPickDeps = {
@@ -562,6 +588,8 @@ const defaultDeps: QuietPickDeps = {
   assembleStockFront,
   writeUsCandleCache,
   fetchDartInsiderPurchasesByStock,
+  readDisclosureCollection,
+  readAllFactSheets,
 };
 
 // ── 수치 포매터(실측만) ────────────────────────────────────────────────
@@ -1435,7 +1463,7 @@ export async function buildQuietPickResponse(options: {
   // ── 신호 검출(①) ──
   const krDefs = deps.vocab.filter((d) => d.naverCode && !d.marquee);
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, marketRows, attention, rankMap, usRows, dartInsiders] = await Promise.all([
+  const [histories, insiderRaw, marketRows, attention, rankMap, usRows, dartInsiders, disclosures, factSheets] = await Promise.all([
     guardedInput("readSupplyDemandHistoryByTickers", deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW), {} as Record<string, InvestorFlow[]>),
     guardedInput("fetchInsiderClusterCandidates", deps.fetchInsiderClusterCandidates(), [] as InsiderClusterCandidate[]),
     guardedInput("fetchKrMarketRows", deps.fetchKrMarketRows(), [] as KrMarketRow[]),
@@ -1443,7 +1471,12 @@ export async function buildQuietPickResponse(options: {
     guardedInput("fetchMarketCapRankMap", deps.fetchMarketCapRankMap(), {} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>),
     guardedInput("fetchCachedUsMarketRows", deps.fetchCachedUsMarketRows(), [] as KrMarketRow[]),
     guardedInput("fetchDartInsiderPurchasesByStock", deps.fetchDartInsiderPurchasesByStock(date), {} as Record<string, DartDisclosureHit>),
+    guardedInput("readDisclosureCollection", deps.readDisclosureCollection(), null as DisclosureCollection | null),
+    guardedInput("readAllFactSheets", deps.readAllFactSheets(), [] as Awaited<ReturnType<typeof readAllFactSheets>>),
   ]);
+
+  /** canonical → 팩트시트. 픽마다 배열을 훑지 않도록 한 번만 만든다. */
+  const factSheetByStock = new Map(factSheets.map((sheet) => [sheet.canonical, sheet]));
 
   const krSignals = detectKrSignals(krDefs, histories);
   const usSignals = detectUsInsiderSignals(insiderRaw, date);
@@ -1801,6 +1834,33 @@ export async function buildQuietPickResponse(options: {
       hook: buildQuietPickHook(facts),
       chips: buildQuietPickChips(facts),
       cardType,
+      /**
+       * 「왜 지금 사는가」 타임라인 (WO-RESET-02 PART C) — **여기서 굳힌다.**
+       *
+       * 화면이 열릴 때 공시를 가져오지 않는다(A-3). 값·가격은 이 단계에서 밴드 정보를 갖고
+       * 있지 않으므로 넘기지 않는다 — 상세가 밴드를 읽어 붙인다(특이할 때만, §C-2 4·5번).
+       * 여기서 만드는 것은 **날짜 붙은 항목**이고, 그것이 섹션의 성립 조건이다(§C-3).
+       */
+      ...(((): { whyNow?: WhyNowEvent[]; whyNowQuietNote?: string } => {
+        const list = disclosures?.byStock?.[sig.subject.canonical] ?? [];
+        // 실적 전환(PART B) — 상태가 아니라 변화만, 날짜는 그 분기의 공시일이다.
+        const quarters = factSheetByStock.get(sig.subject.canonical)?.fiscal?.quarters ?? [];
+        const earnings = earningsTurnEvent(quarters);
+        const events = buildWhyNowTimeline({
+          signalStartedAt: normalizeQuietMoneyDate(sig.startedAt) ?? sig.startedAt.slice(0, 10),
+          // 신호가 이미 주체 문자열을 들고 있다 — 카드와 같은 말을 쓴다(`외국인·기관` 포함).
+          actor: sig.actors,
+          disclosures: list,
+          ...(earnings ? { earnings } : {}),
+        });
+        // 수집이 실제로 이 종목을 덮었는가 — 덮지 않았으면 "없었다" 를 말하지 않는다.
+        const collected = disclosures !== null && disclosures !== undefined && disclosures.truncated !== true;
+        const note = whyNowQuietNote({ disclosuresCollected: collected, disclosureCount: list.length });
+        return {
+          ...(events.length > 0 ? { whyNow: events } : {}),
+          ...(note ? { whyNowQuietNote: note } : {}),
+        };
+      })()),
       anomalies,
       ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {

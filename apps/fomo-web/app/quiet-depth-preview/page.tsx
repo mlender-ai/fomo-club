@@ -39,10 +39,21 @@ const PICK = {
   hook: "임원 3명이 최근 5일 새 같이 샀어요",
   anomalies: [],
   /**
-   * `pctAboveYearLow` 와 `signalStats` 는 「왜 지금 사는가」의 `가격`·`이력` 축 재료다
-   * (WO-HOOK-02 §2-2). 두 축이면 최소 조건을 채워 섹션이 렌더된다 — 픽스처가 2축을
-   * 못 채우면 이 화면에서 그 섹션을 영영 못 본다.
+   * 「왜 지금 사는가」 타임라인(WO-RESET-02 PART C) — **서버가 굽는 시점에 굳혀 보낸다.**
+   * 픽스처가 이 필드를 안 채우면 이 화면에서 그 섹션을 영영 못 본다(날짜 항목 0개 → 미표시).
+   *
+   * `pctAboveYearLow` 는 27.4% 로 둔다 — **특이하지 않은 위치**라 `지금 52주 …` 줄이
+   * 붙지 않아야 한다(§C-2 5번). 그 규칙을 이 화면에서 눈으로 확인하기 위한 값이다.
    */
+  whyNow: [
+    {
+      date: "2026-08-11",
+      when: "8월 11일",
+      text: "단일판매·공급계약체결 · 계약금액 320억",
+      url: "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260811000001",
+    },
+    { date: "2026-08-14", when: "8월 14일", text: "그 다음부터 임원이 사기 시작했어요" },
+  ],
   signalFacts: { priorBuys12mo: 2, volumePct: 51, pctAboveYearLow: 27.4 },
   signalStats: {
     n: 50,

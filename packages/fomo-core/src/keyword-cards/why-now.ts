@@ -147,3 +147,282 @@ export function buildWhyNowRows(input: WhyNowInput): WhyNowRow[] {
 
   return rows.length >= WHY_NOW_MIN_AXES ? rows : [];
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WO-RESET-02 — 「왜 지금 사는가」를 **날짜와 사건**으로 다시 만든다.
+//
+// ## 무엇이 잘못이었나
+//
+// 위 `buildWhyNowRows` 는 회사 **상태**를 두 줄로 요약한다:
+//
+//     손익  이익이 나고 있어요
+//     가격  52주 저점에서 16% 위예요
+//
+// 이건 근거가 아니다. `이익이 나고 있어요` — 그래서? 이익 나는 회사는 널렸다.
+// `52주 저점에서 16% 위` — 그냥 위치다. **사건이 없고 날짜가 없다.**
+//
+// 근거는 이렇게 생겼다:
+//
+//     8월 4일   수주 공시 · 계약금액 320억
+//     8월 6일   그 다음 거래일부터 기관이 사기 시작했어요
+//     7월 28일  2분기 영업이익이 흑자로 돌아섰어요
+//
+// 날짜가 있고, 무슨 일이 있었고, 그게 매수 시작과 어떻게 겹치는지가 보인다.
+//
+// ## 상태 서술은 버리지 않되 **혼자 서지 못한다**
+//
+// PBR·가격 위치는 **특이할 때만** 넣고(§C-2 4·5번), 날짜 붙은 항목이 하나도 없으면
+// 섹션을 통째로 안 그린다(§C-3). `지금 PBR 0.36배` 만 있는 것은 근거가 아니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 타임라인 한 줄. `date` 가 없으면 상태 서술(`지금`)이다. */
+export interface WhyNowEvent {
+  /** `YYYY-MM-DD`. 없으면 시점이 아니라 **상태**다(화면은 `지금` 으로 쓴다). */
+  date?: string;
+  /** 왼쪽 열에 쓸 말 — `8월 4일` / `지금`. */
+  when: string;
+  /** 오른쪽에 쓸 사실 한 줄. 인과·평가·예측 금지(`WHY_NOW_FORBIDDEN`). */
+  text: string;
+  /** 원문 링크(공시만). 없으면 링크를 그리지 않는다. */
+  url?: string;
+}
+
+/** `2026-08-04` → `8월 4일`. 형식이 아니면 `null`(지어내지 않는다). */
+export function whenLabel(date: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim());
+  if (!m) return null;
+  return `${Number(m[2])}월 ${Number(m[3])}일`;
+}
+
+/** 공시 한 건 — 저장소가 주는 모양 그대로다(제목·링크만, 본문 없음). */
+export interface WhyNowDisclosure {
+  date: string;
+  title: string;
+  kind: string;
+  url?: string;
+}
+
+export interface WhyNowTimelineInput {
+  /** 신호(매수) 시작일 `YYYY-MM-DD`. **항상 있다** — 이게 날짜 항목의 바닥을 보장한다. */
+  signalStartedAt?: string;
+  /** 매수 주체 — `기관` / `외국인` / `임원`. */
+  actor?: string;
+  /** 최근 90일 공시. 최신순·과거순 무관 — 여기서 정렬한다. */
+  disclosures?: readonly WhyNowDisclosure[];
+  /** 공시를 **모으긴 했는데 0건**인가. `undefined` 면 아직 수집 전이라 아무 말도 하지 않는다. */
+  disclosuresCollected?: boolean;
+  /** 실적 변화 — 흑자/적자 전환처럼 **날짜와 변화**가 같이 있을 때만 넘긴다. */
+  earnings?: { date: string; text: string };
+  /** 값 — 밴드 상·하위 20% 일 때만 쓴다(§C-2 4번). */
+  band?: { label: string; current: number | null; percentile: number | null; sufficient: boolean };
+  /** 가격 — 52주 저점/고점 **근처(15% 이내)** 일 때만 쓴다(§C-2 5번). */
+  pctAboveYearLow?: number;
+  pctBelowYearHigh?: number;
+}
+
+/** 값·가격을 특이하다고 볼 경계. 이 밖은 애매한 위치라 넣지 않는다(§C-2 중요한 규칙). */
+export const WHY_NOW_BAND_EXTREME_PCTILE = 20;
+export const WHY_NOW_PRICE_EXTREME_PCT = 15;
+
+/** 공시를 보는 창(일). 매수 시작 **이전** 이 창 안의 공시만 근거로 본다(§C-2 1번). */
+export const WHY_NOW_DISCLOSURE_WINDOW_DAYS = 90;
+
+/** 타임라인에 올리는 공시 최대 건수. 다 올리면 목록이지 근거가 아니다. */
+const MAX_DISCLOSURES = 3;
+
+function daysBetween(fromIso: string, toIso: string): number | null {
+  const a = Date.parse(`${fromIso}T00:00:00Z`);
+  const b = Date.parse(`${toIso}T00:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * 「왜 지금 사는가」 타임라인.
+ *
+ * **날짜 붙은 항목이 하나도 없으면 빈 배열**을 돌려준다 — 호출부는 빈 배열이면 섹션을
+ * 그리지 않는다(§C-3). 상태 서술(`지금 …`)만으로는 섹션이 성립하지 않는다.
+ *
+ * 순서는 **시간순**이다(오래된 것 → 최근 → `지금`). 사건이 매수 시작보다 앞에 있다는 사실
+ * 자체가 이 섹션이 보여주려는 것이므로, 우선순위가 아니라 시간이 순서를 정한다.
+ */
+export function buildWhyNowTimeline(input: WhyNowTimelineInput): WhyNowEvent[] {
+  const dated: WhyNowEvent[] = [];
+  const start = input.signalStartedAt?.trim();
+
+  // ① 매수 시작 직전 창 안의 공시 (§C-2 1번) — 있을 때만.
+  const inWindow = (input.disclosures ?? [])
+    .filter((d) => {
+      if (!whenLabel(d.date)) return false;
+      if (!start) return true;
+      const gap = daysBetween(d.date, start);
+      // 매수 시작 **이전** 90일 안. 시작 이후 공시는 "그래서 샀다" 로 읽히므로 넣지 않는다.
+      return gap !== null && gap >= 0 && gap <= WHY_NOW_DISCLOSURE_WINDOW_DAYS;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-MAX_DISCLOSURES);
+
+  for (const d of inWindow) {
+    const when = whenLabel(d.date);
+    if (!when) continue;
+    dated.push({
+      date: d.date,
+      when,
+      text: d.title.trim(),
+      ...(d.url ? { url: d.url } : {}),
+    });
+  }
+
+  // ② 매수 시작일 (§C-2 2번) — 항상. 이 줄이 날짜 항목의 바닥을 보장한다.
+  if (start && whenLabel(start)) {
+    const actor = input.actor?.trim();
+    const followsDisclosure = inWindow.length > 0;
+    dated.push({
+      date: start,
+      when: whenLabel(start)!,
+      text: followsDisclosure
+        ? `그 다음부터 ${actor ? `${actor}이 ` : ""}사기 시작했어요`
+        : `${actor ? `${actor}이 ` : ""}사기 시작했어요`,
+    });
+  }
+
+  // ③ 실적 변화 (§C-2 3번) — 변화가 있을 때만. 날짜가 없으면 근거가 아니다.
+  if (input.earnings && whenLabel(input.earnings.date)) {
+    dated.push({
+      date: input.earnings.date,
+      when: whenLabel(input.earnings.date)!,
+      text: input.earnings.text,
+    });
+  }
+
+  dated.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+
+  /**
+   * **여기서 끊는다** — 날짜 항목이 없으면 아래 상태 서술을 붙이지 않고 빈 배열을 준다(§C-3).
+   * 상태만 남은 「왜 지금 사는가」는 답하는 시늉이다.
+   */
+  if (dated.length === 0) return [];
+
+  const out = [...dated];
+
+  // ④ 값 — 밴드 상·하위 20% 일 때만 (§C-2 4번).
+  const band = input.band;
+  if (band?.sufficient && typeof band.percentile === "number" && typeof band.current === "number") {
+    const extreme =
+      band.percentile <= WHY_NOW_BAND_EXTREME_PCTILE || band.percentile >= 100 - WHY_NOW_BAND_EXTREME_PCTILE;
+    if (extreme) {
+      out.push({
+        when: "지금",
+        text: `${band.label} ${multipleText(band.current)} · ${bandPhrase(band.percentile)}`,
+      });
+    }
+  }
+
+  // ⑤ 가격 — 52주 저점/고점 **근처**일 때만 (§C-2 5번). `저점에서 16% 위` 같은 애매한 위치는 뺀다.
+  const low = input.pctAboveYearLow;
+  const high = input.pctBelowYearHigh;
+  if (typeof low === "number" && Number.isFinite(low) && low <= WHY_NOW_PRICE_EXTREME_PCT) {
+    out.push({ when: "지금", text: `52주 저점에서 ${Math.round(low)}% 위예요` });
+  } else if (typeof high === "number" && Number.isFinite(high) && high <= WHY_NOW_PRICE_EXTREME_PCT) {
+    out.push({ when: "지금", text: `52주 고점 대비 ${Math.round(high)}% 아래예요` });
+  }
+
+  return out;
+}
+
+/**
+ * WO-RESET-02 PART B — 분기 영업이익의 **전환**을 찾는다. 날짜는 그 분기의 **공시일**이다.
+ *
+ * ## 왜 전환만 보나 (B-2)
+ *
+ * `이익이 나고 있어요` 는 근거가 안 된다 — 이익 나는 회사는 널렸고, 거기엔 날짜도 변화도 없다.
+ * `7월 28일에 2분기 영업이익이 흑자로 돌아섰어요` 는 근거가 된다. **날짜와 변화**가 있다.
+ *
+ * 그래서 계속 흑자거나 계속 적자면 `null` 이다. 상태는 이 섹션의 재료가 아니다.
+ *
+ * ## 날짜는 지어내지 않는다
+ *
+ * `filed_at`(공시일)이 없는 분기는 건너뛴다. 기간말(`period_end`)로 대신하면 "6월 30일에
+ * 흑자 전환했어요" 가 되는데, 그날 발표된 것이 아니다 — 사용자가 시점을 잘못 읽는다.
+ *
+ * @param quarters 최신이 뒤에 오도록 정렬된 분기(팩트시트 규약).
+ */
+export function earningsTurnEvent(
+  quarters: ReadonlyArray<{ period: string; filed_at?: string; operating_income: number | null }>
+): { date: string; text: string } | null {
+  const usable = quarters.filter(
+    (q) => typeof q.operating_income === "number" && Number.isFinite(q.operating_income)
+  );
+  if (usable.length < 2) return null;
+  const latest = usable.at(-1)!;
+  const prior = usable.at(-2)!;
+  const filed = latest.filed_at?.trim();
+  if (!filed || !whenLabel(filed)) return null;
+
+  const now = latest.operating_income as number;
+  const before = prior.operating_income as number;
+  // 분기 라벨 `2026Q2` → `2분기`. 형식이 아니면 분기를 말하지 않는다(지어내지 않는다).
+  const q = /Q([1-4])$/.exec(latest.period)?.[1];
+  const label = q ? `${q}분기 ` : "";
+
+  if (before <= 0 && now > 0) return { date: filed, text: `${label}영업이익이 흑자로 돌아섰어요` };
+  if (before > 0 && now <= 0) return { date: filed, text: `${label}영업이익이 적자로 돌아섰어요` };
+  return null;
+}
+
+/**
+ * `지금` 줄만 만든다 — 값·가격 상태 서술.
+ *
+ * 왜 따로인가: 날짜 항목은 **굽는 시점**(픽 페이로드)에 굳고, 밴드·52주 위치는 **상세**가
+ * 자기 데이터로 안다. 한 함수가 둘을 다 받으려면 굽는 쪽이 밴드까지 읽어야 하는데 그건
+ * 이 배치의 범위가 아니다. 그래서 상세가 이 창구로 뒤에 붙인다.
+ *
+ * **혼자 서지 못한다** — 호출부는 날짜 항목이 하나라도 있을 때만 이걸 붙여야 한다(§C-3).
+ * 특이할 때만 넣는 규칙(§C-2 4·5번)은 여기서 지킨다.
+ */
+export function whyNowStateEvents(input: {
+  band?: WhyNowTimelineInput["band"];
+  pctAboveYearLow?: number;
+  pctBelowYearHigh?: number;
+}): WhyNowEvent[] {
+  const out: WhyNowEvent[] = [];
+  const band = input.band;
+  if (band?.sufficient && typeof band.percentile === "number" && typeof band.current === "number") {
+    const extreme =
+      band.percentile <= WHY_NOW_BAND_EXTREME_PCTILE || band.percentile >= 100 - WHY_NOW_BAND_EXTREME_PCTILE;
+    if (extreme) {
+      out.push({
+        when: "지금",
+        text: `${band.label} ${multipleText(band.current)} · ${bandPhrase(band.percentile)}`,
+      });
+    }
+  }
+  const low = input.pctAboveYearLow;
+  const high = input.pctBelowYearHigh;
+  if (typeof low === "number" && Number.isFinite(low) && low <= WHY_NOW_PRICE_EXTREME_PCT) {
+    out.push({ when: "지금", text: `52주 저점에서 ${Math.round(low)}% 위예요` });
+  } else if (typeof high === "number" && Number.isFinite(high) && high <= WHY_NOW_PRICE_EXTREME_PCT) {
+    out.push({ when: "지금", text: `52주 고점 대비 ${Math.round(high)}% 아래예요` });
+  }
+  return out;
+}
+
+/**
+ * 공시가 한 건도 없을 때 붙이는 줄 (§C-4).
+ *
+ * **숨기지 않고 강조한다** — 아무 소식이 없는데 사고 있는 것이 이 제품이 찾는 것이다.
+ * 수집 자체를 아직 안 한 종목(`collected !== true`)에는 아무 말도 하지 않는다:
+ * "없었다" 와 "안 봤다" 는 다르고, 그 둘을 섞으면 없는 사실을 말하는 것이 된다.
+ */
+export function whyNowQuietNote(input: {
+  disclosuresCollected?: boolean;
+  disclosureCount: number;
+}): string | null {
+  if (input.disclosuresCollected !== true) return null;
+  if (input.disclosureCount > 0) return null;
+  return `최근 ${WHY_NOW_DISCLOSURE_WINDOW_DAYS}일 공시가 한 건도 없었어요`;
+}
+
+/** §C-1 꼬리표 — 타임라인용. 인과를 말하지 않는다는 사실을 화면에 적는다. */
+export const WHY_NOW_TIMELINE_DISCLAIMER =
+  "이 시점에 함께 있었던 일들이에요. 왜 샀는지는 저희도 확인할 수 없어요.";

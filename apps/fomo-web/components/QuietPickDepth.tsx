@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DailyOhlcv } from "@fomo/core";
-import { buildWhyNowRows, WHY_NOW_DISCLAIMER } from "@fomo/core";
+import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER } from "@fomo/core";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontResponse } from "@/lib/fomoApi";
 import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
@@ -333,15 +333,19 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const archetypeWarning = band ? (slotPayload?.valuation_frame?.warning ?? valuation?.warning ?? null) : null;
 
   /**
-   * ① 왜 지금 사는가 (WO-HOOK-02 §2) — **이 배치의 핵심.** 새 수집이 아니라 재편성이다.
-   * 화면 곳곳에 흩어져 있던 재료(밴드·EPS·52주 위치·신호 과거 성적)를 한 질문 아래 모은다.
-   * 2축 미만이면 `buildWhyNowRows` 가 빈 배열을 주고, 그러면 섹션 자체를 그리지 않는다.
+   * ① 왜 지금 사는가 (WO-RESET-02 PART C) — **날짜와 사건**이다.
+   *
+   * 날짜 붙은 항목은 **굽는 시점**에 굳어 페이로드로 온다(`pick.whyNow`) — 공시를 화면에서
+   * 가져오지 않는다(A-3). 값·가격 상태는 밴드가 이 화면에만 있으므로 여기서 뒤에 붙인다.
+   *
+   * **날짜 항목이 하나도 없으면 상태 줄도 붙이지 않는다**(§C-3) — `지금 PBR 0.36배` 만 있는
+   * 것은 근거가 아니라 답하는 시늉이다. 그때는 섹션 자체가 사라진다.
    */
   const bandLabel = slotPayload?.valuation_frame?.band_label ?? null;
-  const whyNowRows = useMemo(() => {
-    const eps = (basics?.metrics ?? []).find((m) => (m.term ?? m.label) === "EPS")?.value;
-    const epsNumber = eps ? Number.parseFloat(eps.replace(/[^\d.-]/g, "")) : undefined;
-    return buildWhyNowRows({
+  const whyNowEvents = useMemo(() => {
+    const dated = pick.whyNow ?? [];
+    if (dated.length === 0) return [];
+    const state = whyNowStateEvents({
       ...(band && bandLabel
         ? {
             band: {
@@ -352,15 +356,12 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
             },
           }
         : {}),
-      ...(typeof epsNumber === "number" && Number.isFinite(epsNumber) ? { eps: epsNumber } : {}),
       ...(typeof pick.signalFacts?.pctAboveYearLow === "number"
         ? { pctAboveYearLow: pick.signalFacts.pctAboveYearLow }
         : {}),
-      ...(pick.signalStats
-        ? { signalStats: { n: pick.signalStats.n, up: pick.signalStats.up, winRate: pick.signalStats.winRate } }
-        : {}),
     });
-  }, [band, bandLabel, basics, pick.signalFacts?.pctAboveYearLow, pick.signalStats]);
+    return [...dated, ...state];
+  }, [band, bandLabel, pick.whyNow, pick.signalFacts?.pctAboveYearLow]);
 
   const risk = slotPayload?.risk ?? null;
   const invalidationText = repairPickCopy(pick.invalidation.text) || risk?.invalidation.price_text || null;
@@ -474,54 +475,53 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
             ① 왜 지금 사는가 — **상세의 첫 섹션**(§2-1). 상세가 답해야 하는 질문은 하나다:
             왜 조용히 사고 있는가. 2축 미만이면 `whyNowRows` 가 비고 섹션이 통째로 사라진다.
           */}
-          {whyNowRows.length > 0 && (
+          {whyNowEvents.length > 0 && (
             <Section title="왜 지금 사는가">
               <div data-testid="depth-why-now">
-                {whyNowRows.map((row) => (
-                  <div key={row.axis} className="flex gap-s3 py-[6px]">
-                    {/* 라벨 고정폭 56px — 값의 왼쪽 끝이 줄마다 흔들리면 표가 아니라 목록이 된다. */}
-                    <span className="w-[56px] shrink-0 font-mono text-ds-label text-ds-text-2">{row.axis}</span>
-                    <span className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">{row.text}</span>
+                {whyNowEvents.map((event, i) => (
+                  <div key={`${event.when}-${i}`} className="flex gap-s3 py-[6px]">
+                    {/* 왼쪽은 **날짜**다 — 고정폭이라 줄마다 오른쪽 끝이 흔들리지 않는다. */}
+                    <span className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2">{event.when}</span>
+                    <span className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">
+                      {event.text}
+                      {event.url && (
+                        <>
+                          {" "}
+                          <a
+                            href={event.url}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="whitespace-nowrap font-mono text-ds-caption text-ds-text-3 underline"
+                            data-testid="depth-why-now-source"
+                          >
+                            원문
+                          </a>
+                        </>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>
               {/*
-                꼬리표 — 이 섹션이 인과가 아니라 **동시 관측**임을 화면에 적는다(§2-3).
-                우리는 매수 주체의 의도를 모른다. 문안은 fomo-core 가 갖는다(화면이 카피를 짓지 않는다).
+                공시가 0건이면 **숨기지 않고 말한다**(§C-4) — 아무 소식이 없는데 사고 있는 것이
+                이 제품이 찾는 것이다. 수집 전이면 서버가 이 값을 안 싣는다("없었다" ≠ "안 봤다").
+              */}
+              {pick.whyNowQuietNote && (
+                <p className="mt-s2 text-ds-body text-ds-text-2" data-testid="depth-why-now-quiet">
+                  {pick.whyNowQuietNote}
+                </p>
+              )}
+              {/*
+                꼬리표 — 이 섹션이 인과가 아니라 **동시 관측**임을 화면에 적는다(§C-1).
+                우리는 매수 주체의 의도를 모른다. 문안은 fomo-core 가 갖는다.
               */}
               <p className="mt-s3 text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
-                {WHY_NOW_DISCLAIMER}
+                {WHY_NOW_TIMELINE_DISCLAIMER}
               </p>
             </Section>
           )}
 
-          {/* ② 근거 — 최대 2줄. 앞면 훅이 말한 것은 여기서 반복하지 않는다(§3). */}
-          {rows.length > 0 && (
-            <Section title="근거">
-              <div data-testid="depth-evidence">
-                {rows.map((row) => (
-                  <Row key={row.label} label={row.label} value={row.value} />
-                ))}
-              </div>
-              {/*
-                카드가 보여준 그림을 **그대로** 다시 그린다(2026-08-24).
-
-                규칙: **상세는 카드보다 증거가 적으면 안 된다.** 종전에는 A형 카드에서
-                「주가 / 외국인 매수 누적」 두 선의 갭을 보고 들어온 사용자가 여기서
-                회색 주가선 하나만 만났다 — 확인하러 온 자리에서 확인할 대상이 사라졌다.
-
-                같은 컴포넌트를 쓰므로 두 화면이 갈릴 수 없다. 형이 없는 구 페이로드면
-                그리지 않는다(지어내지 않는다).
-              */}
-              {pick.cardType && (
-                <div className="mt-s4" data-testid="depth-signal-figure">
-                  <CardFigure cardType={pick.cardType} invalidation={pick.invalidation.level} />
-                </div>
-              )}
-            </Section>
-          )}
-
-          {/* ③ 무슨 회사 — 첫 문장이 무엇을 파는가. 못 만들면 섹션 전체가 없다. */}
+          {/* ② 무슨 회사 — 첫 문장이 무엇을 파는가. 못 만들면 섹션 전체가 없다. */}
           {(blurb || substance) && (
             <Section title="무슨 회사">
               {/* 벤더 요약이 등기 정보뿐이면 blurb 가 null 이다 — 그때는 실체 한 줄이 이 섹션을 채운다. */}
@@ -545,6 +545,39 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   </button>
                   {sourceOpen && <p className="mt-s2 text-ds-caption text-ds-text-2">{basics.summary}</p>}
                 </>
+              )}
+            </Section>
+          )}
+
+          {/*
+            ③ 얼마나 샀나 — 규모·기간과 그 그림(WO-RESET-02 PART D).
+
+            종전 이름은 「근거」였는데, 근거를 대는 자리는 이제 맨 위 「왜 지금 사는가」다.
+            여기는 **얼마나 샀는지**를 확인하는 자리라 이름을 사실에 맞췄다.
+            순서도 「무슨 회사」 뒤로 내렸다 — 뭘 하는 회사인지 모르는 채로 매수 규모를 봐야
+            의미가 없다.
+          */}
+          {rows.length > 0 && (
+            <Section title="얼마나 샀나">
+              <div data-testid="depth-evidence">
+                {rows.map((row) => (
+                  <Row key={row.label} label={row.label} value={row.value} />
+                ))}
+              </div>
+              {/*
+                카드가 보여준 그림을 **그대로** 다시 그린다(2026-08-24).
+
+                규칙: **상세는 카드보다 증거가 적으면 안 된다.** 종전에는 A형 카드에서
+                「주가 / 외국인 매수 누적」 두 선의 갭을 보고 들어온 사용자가 여기서
+                회색 주가선 하나만 만났다 — 확인하러 온 자리에서 확인할 대상이 사라졌다.
+
+                같은 컴포넌트를 쓰므로 두 화면이 갈릴 수 없다. 형이 없는 구 페이로드면
+                그리지 않는다(지어내지 않는다).
+              */}
+              {pick.cardType && (
+                <div className="mt-s4" data-testid="depth-signal-figure">
+                  <CardFigure cardType={pick.cardType} invalidation={pick.invalidation.level} />
+                </div>
               )}
             </Section>
           )}
@@ -618,8 +651,13 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
             </Section>
           )}
 
-          {/* ⑥ 우리 기록 — 오늘 첫 발행이면 섹션 자체가 없다. */}
-          {record && <OurRecordBlock record={record} currency={money} />}
+          {/*
+            「우리 기록」을 화면에서 뺐다 — WO-RESET-02 PART D: **섹션 다섯 개. 이보다 늘리지
+            않는다.** PART D 목록(왜사는가·무슨회사·얼마나샀나·값·틀리면)에 없고, 성적표·내
+            기록을 앱에서 내린 WO-RESET-01 A-2·A-3 과 같은 갈래다.
+
+            `OurRecordBlock` 과 원장 적재는 그대로 둔다 — 데이터를 지우지 말고 화면만 뺀다.
+          */}
           </div>
         </div>
       </div>

@@ -33,17 +33,26 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
    * WO-HOOK-02 §4 — 순서가 곧 논증이다. 결론 다음이 **왜 지금 사는가**이고, 우리 기록이 맨 아래다.
    * 섹션은 **7개를 넘지 않는다**(완료 기준 9).
    */
-  it("7섹션 순서가 위→아래로 고정(렌더 트리 기준)", () => {
+  /**
+   * WO-RESET-02 PART D — **섹션 다섯 개. 이보다 늘리지 않는다.**
+   *
+   * 「근거」는 「얼마나 샀나」로 이름이 바뀌고 「무슨 회사」 뒤로 내려갔다 — 근거를 대는 자리는
+   * 이제 맨 위 「왜 지금 사는가」이고, 여기는 규모를 확인하는 자리다.
+   * 「우리 기록」은 목록에 없어 화면에서 뺐다(컴포넌트·원장은 남는다).
+   */
+  it("[완료 7] 5섹션 순서가 위→아래로 고정(렌더 트리 기준)", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
     const order = [
       'data-testid="depth-hook"',
       'title="왜 지금 사는가"',
-      'title="근거"',
       'title="무슨 회사"',
+      'title="얼마나 샀나"',
       'title="값"',
       'title="틀리는 경우"',
-      "<OurRecordBlock record={record}",
     ].map((s) => body.indexOf(s));
+    // 섹션은 다섯 개다 — `<Section title=` 사용처를 센다(우리 기록은 렌더되지 않는다).
+    expect((body.match(/<Section title="/g) ?? []).length).toBe(5);
+    expect(body).not.toContain("<OurRecordBlock record={record}");
     expect(order.every((i) => i >= 0), "섹션 누락").toBe(true);
     for (let i = 1; i < order.length; i += 1) expect(order[i]).toBeGreaterThan(order[i - 1]!);
   });
@@ -71,11 +80,12 @@ describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", (
   it("카드 결론이 상세 첫 줄로 이어지고, 화면에서 1회만 나온다 (완료 기준 2)", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
     expect(body.match(/\{hook\}/g) ?? []).toHaveLength(1);
-    expect(body.indexOf('data-testid="depth-hook"')).toBeLessThan(body.indexOf('title="근거"'));
+    expect(body.indexOf('data-testid="depth-hook"')).toBeLessThan(body.indexOf('title="얼마나 샀나"'));
   });
 
-  it("박스는 ⑥ 우리 기록 하나뿐이다", () => {
-    // 표면을 가진 블록(surface-2 배경)은 우리 기록 박스뿐. ②④⑤ 는 라벨-값 나열이다.
+  it("박스가 화면에 없다 — 우리 기록을 뺐다(WO-RESET-02 PART D)", () => {
+    // 표면을 가진 블록(surface-2 배경)은 우리 기록 박스뿐이었고, 그 섹션은 이제 렌더되지 않는다.
+    // 컴포넌트 자체는 남아 있으므로 소스에는 여전히 한 번 나온다.
     expect(depth.match(/bg-ds-surface-2/g) ?? []).toHaveLength(1);
     const box = depth.slice(depth.indexOf("function OurRecordBlock"));
     expect(box).toContain("bg-ds-surface-2");
@@ -131,12 +141,11 @@ describe("빈 섹션·상태 문구 금지(전 컴포넌트 스캔)", () => {
   });
 
   it("확보 안 된 섹션은 조건부 렌더로 통째 사라진다 (완료 기준 8)", () => {
-    expect(depth).toContain("{whyNowRows.length > 0 && ("); // ① 왜 지금 사는가 — 2축 미만이면 없다
+    expect(depth).toContain("{whyNowEvents.length > 0 && ("); // ① 왜 지금 사는가 — 날짜 항목 0개면 없다
     expect(depth).toContain("{rows.length > 0 && ("); // ② 근거
     expect(depth).toContain("{(blurb || substance) && ("); // ③ 회사
     expect(depth).toContain("{valueRows.length >= 3 && ("); // ④ 값 — 3개 미만이면 섹션 없음
     expect(depth).toContain("{hasWrongSection && ("); // ⑤
-    expect(depth).toContain("{record && <OurRecordBlock"); // ⑥
     // 260거래일 차트를 없앴다(WO-RESET-01 B-4) — 그 컴포넌트의 조기 반환도 함께 사라졌다.
     expect(depth).not.toContain("if (closes.length < 20) return null");
     expect(depth).toContain("if (usable.length < 3) return null"); // 매출 막대
@@ -217,23 +226,40 @@ describe("모바일 — 하단 잘림 방지", () => {
  * 그 답이 없으면 상세는 HTS 필터로 다 나오는 기본 정보 나열이다.
  */
 describe("WO-HOOK-02 — 왜 지금 사는가", () => {
-  it("완료 기준 1 — 결론 바로 다음, 근거보다 위에 온다", () => {
+  it("[완료 6] 결론 바로 다음, 나머지 모든 섹션보다 위에 온다", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
     const hook = body.indexOf('data-testid="depth-hook"');
     const why = body.indexOf('title="왜 지금 사는가"');
-    const evidence = body.indexOf('title="근거"');
     expect(why).toBeGreaterThan(hook);
-    expect(why).toBeLessThan(evidence);
+    for (const title of ["무슨 회사", "얼마나 샀나", "값", "틀리는 경우"]) {
+      expect(why, title).toBeLessThan(body.indexOf(`title="${title}"`));
+    }
   });
 
-  it("완료 기준 1 — 2축 판정은 fomo-core 가 한다(화면이 임계를 다시 두지 않는다)", () => {
-    expect(depth).toContain("buildWhyNowRows");
-    expect(depth).not.toMatch(/whyNowRows\.length >= 2/);
+  /**
+   * WO-RESET-02 PART C — 판정은 전부 fomo-core 가 한다. 화면은 임계를 다시 두지 않는다:
+   * 날짜 항목은 서버가 굽고(`pick.whyNow`), 특이 여부는 `whyNowStateEvents` 가 정한다.
+   */
+  it("[완료 5] 특이 판정은 fomo-core 가 한다(화면이 임계를 다시 두지 않는다)", () => {
+    expect(depth).toContain("whyNowStateEvents");
+    expect(depth).not.toMatch(/percentile\s*<=\s*\d/);
+    expect(depth).not.toMatch(/pctAboveYearLow\s*<=\s*\d/);
   });
 
-  it("완료 기준 2 — 꼬리표가 붙고, 문안을 화면이 짓지 않는다", () => {
-    expect(depth).toContain("WHY_NOW_DISCLAIMER");
+  it("[완료 8] 꼬리표가 붙고, 문안을 화면이 짓지 않는다", () => {
+    expect(depth).toContain("WHY_NOW_TIMELINE_DISCLAIMER");
     expect(depth).toContain('data-testid="depth-why-now-note"');
+  });
+
+  it("[완료 2·3] 공시 제목과 원문 링크를 그린다", () => {
+    expect(depth).toContain('data-testid="depth-why-now-source"');
+    expect(depth).toContain('target="_blank"');
+    expect(depth).toContain('rel="noreferrer noopener"');
+  });
+
+  it("[완료 4] 공시 0건 줄을 서버가 줄 때만 그린다", () => {
+    expect(depth).toContain("pick.whyNowQuietNote");
+    expect(depth).toContain('data-testid="depth-why-now-quiet"');
   });
 
   it("완료 기준 3 — 근거는 2줄 상한이고 앞면 훅을 넘겨받아 중복을 뺀다", () => {
@@ -268,7 +294,9 @@ describe("WO-HOOK-02 — 왜 지금 사는가", () => {
     expect(why).not.toContain("ds-accent");
   });
 
-  it("§2-4 — 라벨은 고정폭 56px 이다(값의 왼쪽 끝이 흔들리지 않는다)", () => {
-    expect(depth).toContain('w-[56px] shrink-0 font-mono text-ds-label text-ds-text-2');
+  it("[완료 1] 왼쪽 열은 **날짜**이고 고정폭이다(줄마다 끝이 흔들리지 않는다)", () => {
+    expect(depth).toContain('w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2');
+    // 화면이 `8월 4일` 을 짓지 않는다 — fomo-core 의 `whenLabel` 이 만들어 페이로드로 온다.
+    expect(depth).not.toMatch(/월\s*\$\{/);
   });
 });

@@ -22,7 +22,7 @@ const SEC_INSIDER_PURCHASE_MIN_VALUE = 100_000;
 const SEC_RECENT_FORM_SCAN_LIMIT = 80;
 const SEC_FORM4_XML_SCAN_LIMIT = 8;
 
-function secUserAgent(): string | undefined {
+export function secUserAgent(): string | undefined {
   // SEC 은 연락처 포함 UA 를 요구 — env 미설정이면 기본 UA 폴백(피드 종목이슈가 env 없이도 동작).
   // ⚠️ UA 형식 주의(2026-07-15 실측): "이름/버전 email@domain" 평문만 200.
   // 괄호 "(contact: …)" 형식·users.noreply.github.com 주소는 SEC WAF가 403 — 프로덕션에서
