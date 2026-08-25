@@ -9,10 +9,9 @@ import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLed
 import { companyBlurb, depthEvidenceRows } from "@/lib/depthSections";
 import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
 import { trustedSector } from "@/lib/sectorTrust";
-import { isWatched, toggleWatch } from "@/lib/watchlist";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { CardFigure, displayName, priceText } from "@/components/QuietPickCard";
-import { StarIcon } from "@/components/icons";
+import { displayChangePct } from "@/lib/pickChange";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { haptic, hapticMedium } from "@/lib/haptics";
@@ -78,58 +77,6 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex gap-s3 py-[5px]">
       <span className="w-[88px] shrink-0 font-mono text-ds-label text-ds-text-2">{label}</span>
       <span className="min-w-0 flex-1 font-mono text-ds-data text-ds-text-1">{value}</span>
-    </div>
-  );
-}
-
-/**
- * ②-1 스파크라인 (DS-03 §5-1) — 88px, 회색 선, 신호 시작 4px 원, 무효선 수평 점선.
- * 캔들이 20개 미만이면 그리지 않는다.
- *
- * ## 이 그림의 역할은 **맥락**이다 (2026-08-24)
- *
- * 신호의 증거(매수 누적선의 갭·비중·연속)는 이 위의 `근거` 그림이 맡는다 — 카드가 보여준
- * 바로 그 그림이다. 여기는 260거래일 흐름과 되돌아보는 선, 즉 **얼마나 눌려 있고 어디서
- * 판단이 깨지는가**를 본다. 둘을 한 그림에 합치려 해봤지만 실패했다: 신호 창이 3일이면
- * 누적선이 260일 차트 오른쪽 끝 몇 픽셀에 뭉개져 아무것도 증명하지 못한다.
- */
-function DepthChart({
-  candles,
-  signalDays,
-  invalidation,
-}: {
-  candles: readonly DailyOhlcv[];
-  signalDays: number;
-  invalidation: number | null;
-}) {
-  const closes = candles.map((c) => c.close).filter((v) => Number.isFinite(v) && v > 0);
-  if (closes.length < 20) return null;
-
-  const w = 320;
-  const h = 88;
-  const pad = 6;
-  const values = invalidation && invalidation > 0 ? [...closes, invalidation] : closes;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const x = (i: number) => pad + (i / (closes.length - 1)) * (w - pad * 2);
-  const y = (v: number) => pad + (1 - (v - min) / span) * (h - pad * 2);
-  const line = closes.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const markerIdx = Math.max(0, closes.length - 1 - Math.min(signalDays, closes.length - 1));
-  const invY = invalidation && invalidation > 0 ? y(invalidation) : null;
-
-  return (
-    <div className="mt-s4" data-testid="depth-chart">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" height={h} role="img" aria-label="최근 가격 흐름과 되돌아보는 선">
-        {invY !== null && (
-          <line x1={pad} x2={w - pad} y1={invY} y2={invY} stroke="#5A5A57" strokeDasharray="4 4" strokeWidth="0.5" />
-        )}
-        <path d={line} fill="none" stroke="#9A9A96" strokeWidth="1.5" />
-        <circle cx={x(markerIdx)} cy={y(closes[markerIdx]!)} r="4" fill="#FFFFFF" />
-      </svg>
-      <p className="mt-s1 text-ds-caption text-ds-text-3">
-        {`최근 ${closes.length}거래일${invY !== null ? " · 점선은 되돌아보는 선" : ""}`}
-      </p>
     </div>
   );
 }
@@ -257,7 +204,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const [front, setFront] = useState<StockFrontResponse | null>(null);
   const [records, setRecords] = useState<ScorecardPick[]>([]);
   const [slotPayload, setSlotPayload] = useState<CardSlotPayload | null>(null);
-  const [watched, setWatched] = useState(() => isWatched(stock));
   const [sourceOpen, setSourceOpen] = useState(false);
   /** 닫히는 중 — 역방향 슬라이드가 끝난 뒤 실제로 언마운트한다. */
   const [closing, setClosing] = useState(false);
@@ -428,28 +374,10 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   /** 섹터 신뢰 게이트 — 헤더 부제에도 같은 규칙을 쓴다(DS-05 §4). */
   const sector = trustedSector(pick.subject.identity);
   const price = priceText(pick);
-  const changePct = pick.price.changePct;
+  const changePct = displayChangePct(pick.price.changePct);
   const money = (v: number) =>
     pick.subject.country === "US" ? `$${v.toFixed(2)}` : `${Math.round(v).toLocaleString("en-US")}원`;
 
-  const toggle = () => {
-    const now = toggleWatch(stock, Date.now(), {
-      ...(sector ? { sector } : {}),
-      reason: hook,
-      priceAt: pick.price.current,
-      ...(pick.subject.symbol ? { symbol: pick.subject.symbol } : {}),
-      ...(pick.subject.naverCode ? { naverCode: pick.subject.naverCode } : {}),
-      ...(pick.subject.market ? { market: pick.subject.market } : {}),
-      ...(pick.subject.country ? { country: pick.subject.country } : {}),
-    });
-    setWatched(now);
-    if (now) {
-      hapticMedium();
-      recordPickTelemetry({ event: "card_watchlist_add" });
-    } else {
-      haptic();
-    }
-  };
 
   return (
     <OverlayPortal>
@@ -508,16 +436,10 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               </p>
             )}
           </div>
-          {/* 관심은 헤더 우측 별 — 상세에 하단 CTA 를 두지 않는다(§10). */}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-pressed={watched}
-            aria-label={watched ? "관심 해제" : "관심"}
-            className="tap-star -mr-2 flex h-touch w-touch shrink-0 items-center justify-center"
-          >
-            <StarIcon size={16} className={watched ? "text-ds-text-1" : "text-ds-text-3"} />
-          </button>
+          {/*
+            관심(별)을 제거했다 — WO-RESET-01 A-3. 「내 기록」 화면이 없어졌으므로 등록해도
+            볼 곳이 없다. `watchlist` 모듈은 지우지 않는다(되살릴 수 있게).
+          */}
           </div>
         </header>
 
@@ -593,10 +515,9 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               */}
               {pick.cardType && (
                 <div className="mt-s4" data-testid="depth-signal-figure">
-                  <CardFigure cardType={pick.cardType} />
+                  <CardFigure cardType={pick.cardType} invalidation={pick.invalidation.level} />
                 </div>
               )}
-              <DepthChart candles={candles} signalDays={pick.signal.days} invalidation={pick.invalidation.level} />
             </Section>
           )}
 

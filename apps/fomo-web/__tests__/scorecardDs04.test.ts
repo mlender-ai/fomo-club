@@ -211,19 +211,22 @@ describe("DS-04 구조 — 소스 계약", () => {
     expect(code(lib)).toContain("export function medianOf");
   });
 
-  it("§3 탭을 4개로 늘리지 않는다", () => {
-    // 탭 요소는 `TabButton`/`TabLink` 로 그려진다 — nav 안에서 그 사용처를 센다.
-    const nav = code(home).slice(code(home).indexOf("<nav"), code(home).indexOf("</nav>"));
-    expect((nav.match(/<Tab(Button|Link)/g) ?? []).length).toBe(3);
-    expect(code(home)).not.toContain("검증실");
+  /**
+   * WO-RESET-01 A-2·A-3·A-4 — 하단 탭 바 자체를 없앴다. 남는 화면은 카드와 상세 둘뿐이다.
+   *
+   * `MyRecordTab`·`track-record` 페이지·`DS-04` 계산부는 **지우지 않았다** — 데이터는 계속
+   * 쌓이고 화면만 뺐다. 그래서 아래 §1-4(평균 금지) 같은 계산부 계약은 그대로 살아 있다.
+   */
+  it("하단 탭 바가 없다 — 성적표·내 기록으로 가는 길이 화면에 없다", () => {
+    const body = code(home);
+    expect(body).not.toContain("<nav");
+    expect(body).not.toContain("track-record");
+    expect(body).not.toContain("<MyRecordTab");
+    expect(body).not.toContain("검증실");
   });
 
-  it("내 기록 탭은 두 섹션뿐이다 — 레거시 블록을 얹지 않는다", () => {
+  it("내 기록 화면 자체는 남아 있다 — 되살릴 수 있게", () => {
     expect(code(tab)).toContain('title="관심 종목"');
     expect(code(tab)).toContain('title="본 카드"');
-    for (const legacy of ["RegretReceiptPanel", "JudgmentReviewPanel", "PerformanceProofPanel", "MOCK_KEYWORD_CARDS"]) {
-      expect(code(tab), legacy).not.toContain(legacy);
-    }
-    expect(code(home)).toContain("<MyRecordTab />");
   });
 });

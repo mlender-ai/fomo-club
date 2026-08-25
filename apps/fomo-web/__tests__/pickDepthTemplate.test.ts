@@ -137,7 +137,8 @@ describe("빈 섹션·상태 문구 금지(전 컴포넌트 스캔)", () => {
     expect(depth).toContain("{valueRows.length >= 3 && ("); // ④ 값 — 3개 미만이면 섹션 없음
     expect(depth).toContain("{hasWrongSection && ("); // ⑤
     expect(depth).toContain("{record && <OurRecordBlock"); // ⑥
-    expect(depth).toContain("if (closes.length < 20) return null"); // 차트
+    // 260거래일 차트를 없앴다(WO-RESET-01 B-4) — 그 컴포넌트의 조기 반환도 함께 사라졌다.
+    expect(depth).not.toContain("if (closes.length < 20) return null");
     expect(depth).toContain("if (usable.length < 3) return null"); // 매출 막대
   });
 
@@ -203,10 +204,11 @@ describe("모바일 — 하단 잘림 방지", () => {
     expect(depth).not.toContain('aria-label="닫기"');
   });
 
-  it("하단 CTA 를 두지 않는다 — 관심은 헤더 우측 별이다 (DS-03 §10)", () => {
+  /** WO-RESET-01 A-3 — 관심(★)을 화면에서 뺐다. 하단 CTA 를 두지 않는 규칙은 그대로다. */
+  it("하단 CTA 도 ★ 도 두지 않는다", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
-    expect(body).toContain('aria-label={watched ? "관심 해제" : "관심"}');
     expect(body).not.toContain("h-btn-primary");
+    expect(body).not.toContain('aria-label={watched');
   });
 });
 

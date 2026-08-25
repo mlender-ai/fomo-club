@@ -1360,6 +1360,35 @@ function tradingValueTopRanks(rows: readonly KrMarketRow[], topN: number): Set<s
 }
 
 /**
+ * 화면에 쓸 수 있는 당일 등락률(%). 못 믿으면 `undefined` — **0.0% 를 지어내지 않는다.**
+ *
+ * ## 왜 0 을 버리는가 (2026-08-25 실측)
+ *
+ * 정규 도메인 덱 7장이 **전부 `0.0%`** 였다. 원인은 굽는 시각이었다 —
+ * `asOf 2026-08-24T23:57Z` = **08:57 KST, 장 시작 3분 전**. 장전에는 네이버가 등락률
+ * `0.00%` 껍데기를 준다. 그 0 이 페이로드에 굳어 하루 종일 화면에 박힌다.
+ * (같은 날 23:39 KST 장 마감 후 구운 페이로드는 `+0.7%` 로 정상이었다.)
+ *
+ * 이 껍데기는 **이미 알려진 것**이다 — `feed-briefing.ts` 의 `krPublishBlockReason` 이
+ * `PREOPEN` 을 같은 근거로 차단한다(2026-07-14 실측). 그 가드가 브리핑에만 있고 픽에는
+ * 없어서 여기로 새어 나왔다. 종목 row 에는 `marketStatus` 가 없으므로 상태 대신 **값**으로 막는다.
+ *
+ * 진짜 0.00% 인 날도 함께 가려진다. 그 손실은 받아들인다 — `0.0%` 는 사용자에게 아무것도
+ * 알려주지 않고, 껍데기와 구별할 방법도 없다. **구별할 수 없으면 말하지 않는다.**
+ *
+ * `??` 를 쓰지 않는 이유: `0 ?? x` 는 0 을 돌려주므로 앞 소스의 껍데기 0 이 뒤 소스의 실값을
+ * 가로막는다. 그래서 후보를 순서대로 훑되 **0 이 아닌 첫 값**을 고른다.
+ */
+export function usableChangePct(...candidates: ReadonlyArray<number | undefined>): number | undefined {
+  for (const value of candidates) {
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    if (value === 0) continue; // 장전 껍데기와 진짜 보합을 구별할 수 없다
+    return value;
+  }
+  return undefined;
+}
+
+/**
  * 조용한 돈 픽 빌드. 크론에서 호출(요청 경로 무거운 fetch 금지 — 504 원칙).
  * priorPickKeys: 어제 픽의 subject#startedAt 키 — 같은 종목·같은 신호 시작이면 신선도 규칙상 제외.
  */
@@ -1545,7 +1574,7 @@ export async function buildQuietPickResponse(options: {
     const rowChangePct = sig.subject.country === "KR" && sig.subject.naverCode
       ? marketByCode.get(sig.subject.naverCode)?.changePct
       : undefined;
-    const changePct = front.signals.changePct ?? rowChangePct ?? sig.changePctHint;
+    const changePct = usableChangePct(front.signals.changePct, rowChangePct, sig.changePctHint);
     const priceInfo = {
       current,
       ...(front.priceText ? { currentText: front.priceText } : {}),

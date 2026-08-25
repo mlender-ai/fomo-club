@@ -1,0 +1,42 @@
+/**
+ * WO-RESET-01 B-3 — 회사 설명에서 연혁을 걷어낸다.
+ *
+ * 실측(2026-08-25, 한글과컴퓨터): 설립연도·상장연도·계열사 수만 있고 **뭘 파는지가 없었다.**
+ */
+import { describe, expect, it } from "vitest";
+import { companyBlurb } from "../lib/depthSections";
+
+const 한컴_실측 =
+  "1990년 소프트웨어 개발 및 공급업을 목적으로 설립되었으며, 1996년 코스닥시장에 상장되었습니다. " +
+  "보고서 기준일 현재 총 48개의 계열회사를 보유하고 있으며, 2024년 한컴밸류인베스트먼트를 인수하여 금융투자사업을 영위하기 시작하였습니다.";
+
+describe("companyBlurb — 연혁 제거", () => {
+  it("실측 문장은 통째로 걸러져 null 이 된다 (그러면 화면은 '무엇을 파는가' 한 줄로 채운다)", () => {
+    expect(companyBlurb(한컴_실측)).toBeNull();
+  });
+
+  it("설립·상장·계열사·보고서 기준일 문장은 살아남지 못한다", () => {
+    for (const sentence of [
+      "1990년 소프트웨어 개발업을 목적으로 설립되었습니다.",
+      "1996년 코스닥시장에 상장되었습니다.",
+      "보고서 기준일 현재 총 48개의 계열회사를 보유하고 있습니다.",
+      "2024년 한컴밸류인베스트먼트를 인수하였습니다.",
+      "본점 소재지는 경기도 성남시입니다.",
+    ]) {
+      expect(companyBlurb(sentence), sentence).toBeNull();
+    }
+  });
+
+  it("무엇을 파는지 말하는 문장은 남는다", () => {
+    const b = companyBlurb("한글 문서 프로그램을 만들어 판매합니다. 최근에는 AI 서비스도 제공합니다.");
+    expect(b).not.toBeNull();
+    expect(b!.text).toContain("한글 문서 프로그램");
+  });
+
+  it("최대 두 문장", () => {
+    const b = companyBlurb(
+      "반도체 검사 장비를 만듭니다. 디스플레이 장비도 만듭니다. 2차전지 장비도 만듭니다."
+    );
+    expect(b!.text.split(/(?<=[.。!?])\s+/).length).toBeLessThanOrEqual(2);
+  });
+});

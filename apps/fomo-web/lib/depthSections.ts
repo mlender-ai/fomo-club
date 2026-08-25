@@ -199,6 +199,35 @@ const MAX_UNKNOWN_ABBREVIATIONS = 1;
 /** 업종명 나열 — 사업자등록증의 업종이지 회사 설명이 아니다. 엔진은 이걸 걸러주지 않는다. */
 const REGISTRY_SENTENCE = /(투자매매업|투자중개업|집합투자업|신탁업|목적사업|영위하고)/;
 
+/**
+ * 연혁 문장 — **설립·상장·계열사·인수.** 사용자가 알 필요 없는 것들이다(WO-RESET-01 B-3).
+ *
+ * 실측(2026-08-25, 한글과컴퓨터) 화면에 이렇게 나왔다:
+ *
+ * > 1990년 소프트웨어 개발 및 공급업을 목적으로 설립되었으며, 1996년 코스닥시장에 상장돼요.
+ * > 보고서 기준일 현재 총 48개의 계열회사를 보유하고 있으며, 2024년 한컴밸류인베스트먼트를
+ * > 인수하여 금융투자사업을 영위하기 시작해요.
+ *
+ * **이 회사가 뭘 파는지가 없다.** `REGISTRY_SENTENCE` 는 `목적사업` 은 잡지만
+ * `목적으로 설립` 은 안 잡아서 그대로 통과했다.
+ *
+ * 문장을 고치지 않고 **버린다** — 단어를 오려내면 조사가 남고 뜻이 깨진다(위 §3 참조).
+ * 다 버려서 남는 문장이 없으면 `null` 이고, 그러면 화면은 `substance`(무엇을 파는가 한 줄)로
+ * 그 자리를 채운다. 그것도 없으면 섹션 자체가 사라진다.
+ */
+const HISTORY_SENTENCE = new RegExp(
+  [
+    "설립(되|하|됐|돼)",
+    "상장(되|하|됐|돼|폐지)",
+    "계열\\s*회사",
+    "종속\\s*회사",
+    "자회사를?\\s*(보유|두)",
+    "\\d{4}\\s*년.*(인수|합병|분할|출범|전환)",
+    "본점|소재지|자본금|대표이사",
+    "보고서\\s*기준일",
+  ].join("|")
+);
+
 const SENTENCE_SPLIT = /(?<=[.。!?])\s+/;
 
 export interface CompanyBlurb {
@@ -225,6 +254,8 @@ export function companyBlurb(summary: string | undefined): CompanyBlurb | null {
     })
     .filter((sentence) => sentence.length >= 8)
     .filter((sentence) => !REGISTRY_SENTENCE.test(sentence))
+    // 연혁(설립·상장·계열사·인수)은 회사 설명이 아니다 — 문장째 버린다.
+    .filter((sentence) => !HISTORY_SENTENCE.test(sentence))
     .filter((sentence) => (sentence.match(UNKNOWN_ABBREVIATION) ?? []).length <= MAX_UNKNOWN_ABBREVIATIONS);
 
   if (usable.length === 0) return null;

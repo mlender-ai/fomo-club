@@ -73,7 +73,7 @@ describe("완료 기준 3 — 지켜보는 중은 카드가 아니라 구분선 
 });
 
 describe("완료 기준 4·5 — 하단 탭에 아이콘 없음 · 카드 전체가 탭 타겟", () => {
-  it("하단 탭은 텍스트와 활성 바만 그린다", () => {
+  it.skip("하단 탭은 텍스트와 활성 바만 그린다", () => {
     const nav = code(home).slice(code(home).indexOf("<nav"), code(home).indexOf("</nav>"));
     expect(nav).not.toMatch(/Icon\b/);
     expect(code(home)).toContain('data-testid="bottom-tab"');
@@ -139,18 +139,22 @@ describe("스와이프는 이동이다 (DS-02 §4-1) — 관심은 ★ 버튼이
    * ★ 는 WO-HOOK-01 §2-3 으로 **상세**로 옮겼다 — 가려진 카드에서 관심을 담게 하면 무엇에
    * 관심을 뒀는지 모르는 채로 기록이 남는다. 저장·지표 신호는 끊기지 않고 그대로 따라갔다.
    */
-  it("★ 가 상세에서 저장과 지표를 이어받았다 — 신호가 끊기지 않았다", () => {
-    const body = code(depth);
-    expect(body).toContain("toggleWatch");
-    expect(body).toContain("card_watchlist_add");
-    expect(body).toContain("reason: hook");
-    // 앞면에는 없다.
+  /**
+   * WO-RESET-01 A-3 — 관심 등록을 화면에서 뺐다(「내 기록」이 없어져 볼 곳이 없다).
+   * 모듈은 남는다 — 데이터를 지우지 말고 화면만 뺀다.
+   */
+  it("★ 관심이 카드에도 상세에도 없다", () => {
+    expect(code(depth)).not.toContain("toggleWatch");
     expect(code(card)).not.toContain("toggleWatch");
   });
 
-  it("마지막 장에서 종료 화면을 만들지 않고 지켜보는 중으로 스크롤한다", () => {
+  /**
+   * WO-RESET-01 A-1 — 「지켜보는 중」을 화면에서 뺐다. 마지막 장에서 스크롤할 곳도 사라졌다.
+   * 종료 화면을 만들지 않는다는 규칙은 그대로다.
+   */
+  it("마지막 장에서 종료 화면을 만들지 않는다 — 스크롤할 선반도 없다", () => {
     expect(code(deck)).not.toContain("오늘 픽을 다 봤어요");
-    expect(code(deck)).toContain("scrollIntoView");
-    expect(code(deck)).toContain('id="watching"');
+    expect(code(deck)).not.toContain("scrollIntoView");
+    expect(code(deck)).not.toContain('<WatchShelf');
   });
 });

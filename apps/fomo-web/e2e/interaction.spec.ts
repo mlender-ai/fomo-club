@@ -81,13 +81,11 @@ test("완료 기준 4 — 세이프 에어리어와 480px 중앙 정렬 (§6-1)"
   const width = await page.locator("main").evaluate((el) => Math.round(el.getBoundingClientRect().width));
   expect(width).toBeLessThanOrEqual(480);
 
-  const nav = await page.locator("nav").evaluate((el) => ({
-    bottom: Math.round(el.getBoundingClientRect().bottom),
-    padding: getComputedStyle(el).paddingBottom,
-  }));
-  // 하단 탭은 화면 맨 아래에 붙고, 세이프 에어리어만큼 배경을 연장한다.
-  expect(nav.bottom).toBe(900);
-  expect(nav.padding).toBeDefined();
+  // 하단 탭 바를 없앴다(WO-RESET-01 A-4) — 남는 화면은 카드와 상세 둘뿐이다.
+  await expect(page.locator("nav")).toHaveCount(0);
+  // 아래 세이프 에어리어는 main 이 직접 지킨다(탭이 대신 밀어주던 자리다).
+  const padding = await page.locator("main").evaluate((el) => getComputedStyle(el).paddingBottom);
+  expect(padding).toBeDefined();
 });
 
 test("§6-5 — 최초 실행 면책 고지가 1회만 뜬다", async ({ page }) => {

@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { type EmotionType } from "@fomo/core";
-import { SearchIcon } from "@/components/icons";
 import { haptic } from "@/lib/haptics";
-import { MyRecordTab } from "@/components/MyRecordTab";
 import { QuietPickDeck } from "@/components/QuietPickDeck";
-import { SearchOverlay } from "@/components/SearchOverlay";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import type {
   FomoIndexResponse,
@@ -24,7 +21,6 @@ import type {
  * 열면 바로 카드(스와이프 덱). 큰 마스코트 제거, 지수는 상단 얇은 띠. 본 카드는 히스토리 탭에.
  * (감정 게이트/캘린더/한마디 props는 보존 차원에서 시그니처에 남기되 미사용 — flag로 숨김 유지.)
  */
-type Tab = "pick" | "mine";
 const NEON = "#D8FF3A";
 
 export function HomeView({
@@ -43,8 +39,6 @@ export function HomeView({
   loggedIn: boolean;
   onLoggedIn: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("pick");
-  const [searchOpen, setSearchOpen] = useState(false);
   void index;
 
   /**
@@ -77,35 +71,24 @@ export function HomeView({
         className={`ds-header-line fixed inset-x-0 top-0 z-50 border-b-hair bg-ds-bg pt-[env(safe-area-inset-top)] ${scrolled ? "border-ds-border" : "border-transparent"}`}
         data-testid="deck-header"
       >
-        <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-gutter">
+        {/*
+          로고만 남긴다(WO-RESET-01 A-4). 검색 버튼은 제거했다 — **검색해서 무엇을 하는지
+          정의가 없었다.** `SearchOverlay` 코드는 지우지 않는다(되살릴 수 있게).
+        */}
+        <div className="mx-auto flex h-14 max-w-[480px] items-center px-gutter">
           <span className="font-mono text-[16px] tracking-[0.12em] text-ds-text-1">FOMO CLUB</span>
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="tap-button -mr-2 flex h-touch w-touch items-center justify-center text-ds-text-2"
-            aria-label="종목 검색"
-          >
-            <SearchIcon size={20} />
-          </button>
         </div>
       </header>
 
-      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-[480px] flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-[calc(3.5rem+env(safe-area-inset-top))]">
+      {/*
+        남는 화면은 둘뿐이다 — 카드(덱)와 상세(WO-RESET-01 A-4).
+        하단 탭이 없으므로 아래 여백도 없앤다. 빈 자리를 다른 것으로 채우지 않는다.
+      */}
+      <main className="fomo-phase-in mx-auto flex min-h-screen max-w-[480px] flex-col pb-[env(safe-area-inset-bottom)] pt-[calc(3.5rem+env(safe-area-inset-top))]">
         <div className="flex min-h-0 flex-1 flex-col">
-          {tab === "pick" ? <QuietPickDeck /> : <MyRecordTab />}
+          <QuietPickDeck />
         </div>
       </main>
-
-      {/* ⑥ 하단 탭 (DS-02 §7) — 텍스트만. 3개뿐이고 라벨이 짧아 아이콘이 정보를 더하지 않는다. */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t-hair border-ds-border bg-ds-bg pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto flex max-w-[480px]">
-          <TabButton active={tab === "pick"} onClick={() => setTab("pick")} label="픽" />
-          <TabLink href="/track-record" label="성적표" />
-          <TabButton active={tab === "mine"} onClick={() => setTab("mine")} label="내 기록" />
-        </div>
-      </nav>
-
-      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
 
       {noticeOpen && (
         <FirstVisitNotice
@@ -184,30 +167,4 @@ function FirstVisitNotice({ onAccept }: { onAccept: () => void }) {
   );
 }
 
-/** 하단 탭 버튼 — 활성 표시는 라벨 아래 2px × 16px 바(DS-02 §7). 탭 영역은 1/3 폭 × 56px. */
-function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      onClick={() => {
-        haptic();
-        onClick();
-      }}
-      aria-current={active ? "page" : undefined}
-      className="tap-button flex h-14 flex-1 flex-col items-center justify-center gap-s1"
-      data-testid="bottom-tab"
-    >
-      <span className={`font-mono text-ds-label ${active ? "text-ds-text-1" : "text-ds-text-3"}`}>{label}</span>
-      <span className={`h-0.5 w-4 ${active ? "bg-ds-text-1" : "bg-transparent"}`} aria-hidden />
-    </button>
-  );
-}
 
-/** 다른 라우트로 가는 탭 — 버튼과 같은 형태를 유지한다(탭이 링크라고 다르게 보이면 안 된다). */
-function TabLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a href={href} className="tap-button flex h-14 flex-1 flex-col items-center justify-center gap-s1" data-testid="bottom-tab">
-      <span className="font-mono text-ds-label text-ds-text-3">{label}</span>
-      <span className="h-0.5 w-4 bg-transparent" aria-hidden />
-    </a>
-  );
-}

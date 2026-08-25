@@ -112,7 +112,7 @@ test("완료 기준 1·2 — 왜 지금 사는가가 첫 섹션이고 꼬리표�
   expect(styles.color).not.toBe(ACCENT);
 });
 
-test("③ 헤더 — 56px, 뒤로 화살표 44×44, 하단 CTA 없음", async ({ page }) => {
+test("③ 헤더 — 56px, 뒤로 화살표 44×44, ★ 도 하단 CTA 도 없음", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   // 가격은 카드와 같은 포맷터를 쓴다 — 미국 종목이 `4.945` 로 나오면 무슨 통화인지 알 수 없다.
   await expect(page.locator('[data-testid="depth-header"]')).toContainText("$4.945");
@@ -129,8 +129,9 @@ test("③ 헤더 — 56px, 뒤로 화살표 44×44, 하단 CTA 없음", async ({
   expect(Math.round(box?.width ?? 0)).toBe(44);
   expect(Math.round(box?.height ?? 0)).toBe(44);
 
-  // 관심은 헤더 우측 별. 하단 CTA 버튼은 없다(§10).
-  await expect(page.getByLabel("관심")).toHaveCount(1);
+  // 관심(★)을 없앴다(WO-RESET-01 A-3) — 「내 기록」이 사라져 등록해도 볼 곳이 없다.
+  await expect(page.getByLabel("관심")).toHaveCount(0);
+  await expect(page.getByLabel("관심 해제")).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText("자세히 보기");
 });
 
