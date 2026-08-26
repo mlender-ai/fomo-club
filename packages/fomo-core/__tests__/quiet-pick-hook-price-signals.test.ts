@@ -62,3 +62,45 @@ describe("칩도 형에 맞아야 한다", () => {
     expect(chips.join(" ")).not.toContain("매수");
   });
 });
+
+describe("같은 형이 여러 장 나와도 서로 다른 카드여야 한다", () => {
+  it("시장 역행 카드 두 장이 같은 문장을 쓰지 않는다 — 종목마다 등락률이 다르므로", async () => {
+    const { marketDivergenceCard } = await import("../src/keyword-cards/card-type");
+    const make = (stockChangePct: number) =>
+      marketDivergenceCard({
+        divergence: {
+          days: 4,
+          indexChangePct: -1.7,
+          stockChangePct,
+          indexSeries: [100, 99, 98.5, 98.3, 98.3],
+          stockSeries: [100, 101, 102, 103, 104],
+        },
+        indexLabel: "코스닥",
+      });
+    const a = make(5.2);
+    const b = make(1.4);
+    expect(a?.hook).not.toBe(b?.hook);
+    expect(a?.hook).toContain("5.2");
+    expect(b?.hook).toContain("1.4");
+  });
+
+  it("등락률을 못 재면 지어내지 않고 종전 문장을 쓴다", async () => {
+    const { marketDivergenceCard } = await import("../src/keyword-cards/card-type");
+    const card = marketDivergenceCard({
+      divergence: {
+        days: 4, indexChangePct: -1.7, stockChangePct: 0,
+        indexSeries: [100, 99], stockSeries: [100, 101],
+      },
+      indexLabel: "코스닥",
+    });
+    expect(card?.hook).toBe("시장은 빠지는데\n이것만 버티고 있어요");
+  });
+
+  it("시장 역행 칩은 지수가 아니라 **격차**를 쓴다 — 같은 시장 카드가 같은 칩을 달지 않게", () => {
+    const chips = (stockChangePct: number) =>
+      buildQuietPickChips({
+        ...base, kind: "market_divergence", indexChangePct: -1.7, indexLabel: "코스닥", stockChangePct,
+      });
+    expect(chips(5.2)).not.toEqual(chips(1.4));
+  });
+});
