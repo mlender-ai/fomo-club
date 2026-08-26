@@ -1970,6 +1970,22 @@ export async function buildQuietPickResponse(options: {
       ...(typeof sig.streakWindowDays === "number" ? { streakWindowDays: sig.streakWindowDays } : {}),
       ...(typeof vacuumRatio === "number" ? { volumeVacuumRatio: vacuumRatio } : {}),
       ...(typeof aboveLow === "number" ? { pctAboveYearLow: aboveLow } : {}),
+      /**
+       * WO-RESET-03 두 형의 재료 — 이게 없으면 훅이 「누가 샀나」 템플릿으로 떨어져
+       * `가 조용히 4일째 매수 중` 이라는 **틀린 문장**이 나간다(2026-08-26 실측).
+       */
+      ...(sig.marketDivergence
+        ? {
+            indexChangePct: sig.marketDivergence.indexChangePct,
+            indexLabel: sig.indexLabel ?? "지수",
+          }
+        : {}),
+      ...(sig.volumeAwakening
+        ? {
+            volumeMultiple: sig.volumeAwakening.multiple,
+            spikeMovePct: sig.volumeAwakening.movePct,
+          }
+        : {}),
     };
     const anomalies = computeQuietPickAnomalies(facts);
     if (anomalies.length === 0) { drop("no_anomaly"); continue; }

@@ -85,6 +85,17 @@ export interface QuietPickAnomalyFacts {
   volumeVacuumRatio?: number;
   /** 52주 저점 대비 현재가 위치(%). 15 이내면 저점권 조용한 매수. */
   pctAboveYearLow?: number;
+  /**
+   * D형(시장 역행) — 같은 기간 지수 변동률(%). 음수다(지수가 내린 구간에서만 성립).
+   * 이것이 없으면 "시장이 내렸다"를 말할 수 없어 훅이 일반 매수 문장으로 떨어진다.
+   */
+  indexChangePct?: number;
+  /** D형 — 비교한 지수 이름(`코스피`/`코스닥`). */
+  indexLabel?: string;
+  /** E형(거래량 각성) — 최근 거래량이 기준 평균의 몇 배인가. */
+  volumeMultiple?: number;
+  /** E형 — 급증 시작 직전 → 오늘 순변동률(%). 당일 변동이 아니다. */
+  spikeMovePct?: number;
 }
 
 const iGa = (word: string) => `${word}${josa(word, "이가")}`;
@@ -97,6 +108,66 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAnomaly[] {
   const out: QuietPickAnomaly[] = [];
   const insider = f.kind === "insider_cluster";
+  /**
+   * WO-RESET-03 의 두 형은 **매수가 없다.** 아래 지표 대부분(매수량 대비 거래량, 매수 빈도)은
+   * 「누가 얼마 샀나」를 전제로 하고, 그대로 쓰면 말이 어긋난다 — 특히 E형(거래량 각성)에
+   * `거래량 평소의 39%`(=거래가 말라 있다) 칩이 붙으면 훅(`거래량 3배`)과 **정면으로 모순**이다.
+   * 그래서 이 형들은 제 재료로만 칩을 만든다.
+   */
+  if (f.kind === "market_divergence" || f.kind === "volume_awakening") {
+    if (f.kind === "market_divergence") {
+      if (f.days > 0) {
+        out.push({
+          kind: "frequency",
+          strength: 4.0,
+          text: `${f.days}일 연속 시장보다 강했어요`,
+          chip: `${f.days}일 연속 시장 상회`,
+          axis: "unusual",
+        });
+      }
+      if (typeof f.indexChangePct === "number" && f.indexChangePct < 0) {
+        const label = f.indexLabel ?? "지수";
+        out.push({
+          kind: "scale",
+          strength: 3.4,
+          text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}% 였어요`,
+          chip: `${label} ${round1(f.indexChangePct)}%`,
+          axis: "size",
+        });
+      }
+    } else {
+      if (typeof f.volumeMultiple === "number" && f.volumeMultiple >= 2) {
+        out.push({
+          kind: "scale",
+          strength: 4.2,
+          text: `최근 거래량이 평소의 ${Math.round(f.volumeMultiple)}배예요`,
+          chip: `거래량 ${Math.round(f.volumeMultiple)}배`,
+          axis: "size",
+        });
+      }
+      if (typeof f.spikeMovePct === "number") {
+        const moved = round1(Math.abs(f.spikeMovePct));
+        out.push({
+          kind: "silence",
+          strength: 3.0,
+          text: `그 사이 주가는 ${moved}% 움직였어요`,
+          chip: `주가 ${moved}%`,
+          axis: "quiet",
+        });
+      }
+    }
+    if (typeof f.pctAboveYearLow === "number" && f.pctAboveYearLow <= 15) {
+      const pct = Math.max(0, Math.round(f.pctAboveYearLow));
+      out.push({
+        kind: "near_low",
+        strength: 2.8,
+        text: `52주 저점에서 ${pct}% 위예요`,
+        chip: `52주 저점 +${pct}%`,
+        axis: "position",
+      });
+    }
+    return out.sort((a, b) => b.strength - a.strength);
+  }
 
   // ② 빈도 이례성 — 가장 강력.
   if (insider && typeof f.priorBuys12mo === "number" && typeof f.insiderCount === "number") {
@@ -256,6 +327,34 @@ function insiderWindowPhrase(days: number): string {
 export function buildQuietPickHook(f: QuietPickAnomalyFacts): string {
   const actor = HOOK_ACTOR[f.kind];
 
+  /**
+   * WO-RESET-03 의 두 형은 **주체가 없다.** 「누가 샀나」가 아니라 가격·거래량의 흔적이다.
+   *
+   * 이 분기가 없으면 아래 연속매수 템플릿으로 떨어지고, `HOOK_ACTOR` 가 빈 문자열이라
+   * **`가 조용히 4일째 매수 중`** 이라는 문장이 나온다(2026-08-26 프로덕션 실측, 15장 중 8장).
+   * 주어가 없는 것보다 나쁜 것은 **틀린 말**이라는 점이다 — 시장 역행 카드는 아무도 사고 있지
+   * 않다. 지수가 내리는데 이 종목만 버틴다는 뜻이다. 형마다 제 문장을 갖는다.
+   */
+  if (f.kind === "market_divergence") {
+    const days = f.days > 0 ? `${f.days}일` : "며칠";
+    if (typeof f.indexChangePct === "number" && f.indexChangePct < 0) {
+      const label = f.indexLabel ?? "시장";
+      return `${label} ${round1(Math.abs(f.indexChangePct))}% 빠진 ${days}, 혼자 버팀`;
+    }
+    return `시장이 빠진 ${days} 내내 혼자 버팀`;
+  }
+
+  if (f.kind === "volume_awakening") {
+    const times = typeof f.volumeMultiple === "number" ? Math.round(f.volumeMultiple) : 0;
+    const head = times >= 2 ? `거래량 ${times}배` : "거래가 붙기 시작";
+    // 가격이 실제로 얼마나 안 움직였는지를 함께 말한다 — "그대로"는 우리가 쓴 말이고,
+    // 숫자는 잰 값이다. 잰 값이 없으면 형용사도 안 쓴다.
+    if (typeof f.spikeMovePct === "number") {
+      return `${head}, 주가는 ${round1(Math.abs(f.spikeMovePct))}%`;
+    }
+    return `${head}, 주가는 아직`;
+  }
+
   if (f.kind === "insider_cluster") {
     // 1년간 산 적이 거의 없던 회사에서 나온 매수 — 가장 강한 결론이다.
     const firstInYear = typeof f.priorBuys12mo === "number" && f.priorBuys12mo <= 1;
@@ -321,8 +420,10 @@ export function buildQuietPickChips(f: QuietPickAnomalyFacts): string[] {
   if (!byAxis.has("size") && f.scale.trim()) {
     // 주체는 훅이 말하지만, 낱 숫자만 있는 칩은 무엇의 수량인지 알기 어렵다.
     // 단일 주체(기관·외국인)일 때만 주체를 붙인다 — "외국인·기관 47만주" 는 칩으로 길다.
-    const single = !insider && !f.actorNoun.includes("·");
-    byAxis.set("size", single ? `${f.actorNoun} ${f.scale.trim()}` : f.scale.trim());
+    // 주체가 없는 형(D·E)은 `f.actorNoun` 이 빈 문자열이라 그대로 붙이면 칩이 ` 3배` 로
+    // 앞에 공백을 달고 나간다(2026-08-26 프로덕션 실측). 있을 때만 붙인다.
+    const single = !insider && !!f.actorNoun.trim() && !f.actorNoun.includes("·");
+    byAxis.set("size", single ? `${f.actorNoun.trim()} ${f.scale.trim()}` : f.scale.trim());
   }
 
   /**

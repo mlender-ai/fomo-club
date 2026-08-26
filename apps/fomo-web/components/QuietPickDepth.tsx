@@ -293,7 +293,13 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     if (ratio > maxRatio.current) maxRatio.current = Math.min(1, ratio);
   };
 
-  const hook = pickHook(pick);
+  /**
+   * **카드와 같은 결론을 쓴다.** 카드는 `cardType.hook` 을 먼저 보는데 상세만 `pickHook` 을
+   * 보고 있었다 — 그래서 D·E형에서 카드는 「시장은 빠지는데 이것만 버티고 있어요」, 상세는
+   * 「가 조용히 4일째 매수 중」이 떴다(2026-08-26 프로덕션, 15장 중 8장). 한 종목의 두 화면이
+   * 서로 다른 말을 하면 어느 쪽도 못 믿는다.
+   */
+  const hook = pick.cardType?.hook ?? pickHook(pick);
   const rows = useMemo(() => depthEvidenceRows(pick, hook), [pick, hook]);
   const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
   const candles = useMemo(() => front?.candles ?? [], [front]);
