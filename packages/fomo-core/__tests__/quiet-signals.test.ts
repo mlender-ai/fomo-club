@@ -136,3 +136,38 @@ describe("새 카드 형", () => {
     expect(volumeAwakeningCard({ awakening: { ...awakening, volumeSeries: [1, 2] } })).toBeNull();
   });
 });
+
+/** WO-RESET-04 §0 — 실측으로 정한 두 임계. */
+describe("WO-RESET-04 임계 조정", () => {
+  it("[완료 1] D형은 3일 임계다 — 4일 이상은 실측에서 0종목이었다", () => {
+    expect(MARKET_DIVERGENCE_MIN_DAYS).toBe(3);
+    const index = falling(6);
+    const stock = stronger(index, 1.5);
+    const d = detectMarketDivergence(stock, index);
+    expect(d).not.toBeNull();
+    expect(d!.days).toBeGreaterThanOrEqual(3);
+  });
+
+  it("[완료 2] E형은 **급증 시작일부터 오늘까지** 순변동을 본다 — 당일이 아니다", () => {
+    // 급증일에 20% 튀었다가 되돌아온 경우: 당일 기준이면 탈락, 순변동 기준이면 통과.
+    const points = [
+      ...flatSeries(VOLUME_AWAKENING_BASE_DAYS - 1, 1_000, 1000),
+      { close: 1000, volume: 1_000 }, // 급증 직전
+      { close: 1200, volume: 4_000 }, // 급증일 — 당일 +20%
+      { close: 1020, volume: 3_500 }, // 되돌아옴 — 시작 직전 대비 +2%
+    ];
+    const a = detectVolumeAwakening(points);
+    expect(a, "되돌아온 경우는 '아직 안 움직인' 것이 맞다").not.toBeNull();
+    expect(Math.abs(a!.movePct)).toBeLessThanOrEqual(5);
+  });
+
+  it("급증 뒤 계속 올라간 것은 여전히 뺀다 — 이미 일어난 뉴스다", () => {
+    const points = [
+      ...flatSeries(VOLUME_AWAKENING_BASE_DAYS - 1, 1_000, 1000),
+      { close: 1000, volume: 1_000 },
+      { close: 1200, volume: 4_000 },
+      { close: 1300, volume: 3_500 }, // 시작 직전 대비 +30%
+    ];
+    expect(detectVolumeAwakening(points)).toBeNull();
+  });
+});
