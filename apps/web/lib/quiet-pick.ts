@@ -22,11 +22,6 @@ import {
   detectMarketDivergence,
   detectVolumeAwakening,
   probeQuietSignals,
-  buildSectorStats,
-  sectorStatFor,
-  companyRead,
-  type CompanyGroup,
-  type SectorStatInput,
   MARKET_DIVERGENCE_MIN_DOWN_DAYS,
   type MarketDivergence,
   type VolumeAwakening,
@@ -52,6 +47,12 @@ import {
   earningsTurnEvent,
   type WhyNowEvent,
 } from "@fomo/core";
+/**
+ * **배럴이 아니라 경로로** 가져온다 — 이 둘은 굽는 경로에서만 쓴다. 배럴에 넣으면
+ * `@fomo/core` 를 임포트하는 조회 라우트가 전부 같이 무거워진다(성능 게이트).
+ */
+import { buildSectorStats, sectorStatFor, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+import { companyRead, type CompanyGroup } from "@fomo/core/keyword-cards/company-read";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers, readSupplyDemandHistoryByTickersStrict } from "./supply-demand-store";
