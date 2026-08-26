@@ -92,6 +92,14 @@ export interface QuietPickAnomalyFacts {
   indexChangePct?: number;
   /** D형 — 비교한 지수 이름(`코스피`/`코스닥`). */
   indexLabel?: string;
+  /**
+   * D형 — 같은 기간 **이 종목의** 등락률(%).
+   *
+   * 지수 숫자만 쓰면 같은 시장의 카드가 **전부 같은 칩**을 단다(실측: 코스닥 7장이
+   * `4일 연속 시장 상회` · `코스닥 -1.7%` 로 글자 하나 안 틀리고 같았다). 종목 숫자가
+   * 그 일곱 장을 서로 다른 카드로 만든다.
+   */
+  stockChangePct?: number;
   /** E형(거래량 각성) — 최근 거래량이 기준 평균의 몇 배인가. */
   volumeMultiple?: number;
   /** E형 — 급증 시작 직전 → 오늘 순변동률(%). 당일 변동이 아니다. */
@@ -125,15 +133,29 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
           axis: "unusual",
         });
       }
+      /**
+       * 지수 대비 **격차**를 쓴다. 지수 숫자만 쓰면 같은 시장 카드가 전부 같은 칩을 단다 —
+       * 격차는 종목마다 다르므로 일곱 장이 서로 다른 카드가 된다.
+       */
       if (typeof f.indexChangePct === "number" && f.indexChangePct < 0) {
         const label = f.indexLabel ?? "지수";
-        out.push({
-          kind: "scale",
-          strength: 3.4,
-          text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}% 였어요`,
-          chip: `${label} ${round1(f.indexChangePct)}%`,
-          axis: "size",
-        });
+        if (typeof f.stockChangePct === "number") {
+          out.push({
+            kind: "scale",
+            strength: 3.8,
+            text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}%, 이 종목은 ${round1(f.stockChangePct)}% 였어요`,
+            chip: `${label}보다 ${round1(f.stockChangePct - f.indexChangePct)}%p 위`,
+            axis: "size",
+          });
+        } else {
+          out.push({
+            kind: "scale",
+            strength: 3.4,
+            text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}% 였어요`,
+            chip: `${label} ${round1(f.indexChangePct)}%`,
+            axis: "size",
+          });
+        }
       }
     } else {
       if (typeof f.volumeMultiple === "number" && f.volumeMultiple >= 2) {

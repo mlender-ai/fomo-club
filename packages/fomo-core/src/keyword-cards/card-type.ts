@@ -553,7 +553,20 @@ export function marketDivergenceCard(input: {
 }): CardTypeDecision | null {
   const d = input.divergence;
   if (d.stockSeries.length < 2 || d.stockSeries.length !== d.indexSeries.length) return null;
-  const hook = "시장은 빠지는데\n이것만 버티고 있어요";
+  /**
+   * **종목 자신의 숫자를 넣는다.**
+   *
+   * 종전 문장은 `시장은 빠지는데\n이것만 버티고 있어요` 로 고정이었다. 유니버스를 809로
+   * 넓히자 이 형이 하루에 일곱 장 나왔고, **일곱 장의 결론이 글자 하나 안 틀리고 같았다**
+   * (2026-08-26 프로덕션 실측). 스와이프 덱에서 같은 문장 일곱 번은 카드가 아니라 소음이다.
+   *
+   * 지어내서 다르게 만들지 않는다 — 원래 종목마다 다른 값(창 안 등락률)이 있는데 안 쓰고
+   * 있었을 뿐이다. 못 재면 종전 문장으로 돌아간다.
+   */
+  const hook =
+    Number.isFinite(d.stockChangePct) && d.stockChangePct > 0
+      ? `${input.indexLabel}는 빠지는데\n혼자 ${(Math.round(d.stockChangePct * 10) / 10).toFixed(1)}%`
+      : "시장은 빠지는데\n이것만 버티고 있어요";
   return {
     type: "D",
     hook,

@@ -104,7 +104,11 @@ describe("새 카드 형", () => {
   it("D형 — 지수는 회색선, 종목은 라임선(A형과 같은 문법)", () => {
     const card = marketDivergenceCard({ divergence, indexLabel: "코스피" })!;
     expect(card.type).toBe("D");
-    expect(card.hook).toBe("시장은 빠지는데\n이것만 버티고 있어요");
+    // 결론은 **종목 자신의 등락률**을 담는다 — 같은 형이 여러 장 나와도 서로 다른 카드가 되게.
+    // (고정 문장이던 시절 하루 일곱 장이 글자 하나 안 틀리고 같았다 — STATUS §17-H)
+    expect(card.hook).toContain("코스피");
+    expect(card.hook).toContain(divergence.stockChangePct.toFixed(1));
+    expect(card.hook).not.toContain("매수");
     expect(card.figure.kind).toBe("divergence");
     if (card.figure.kind !== "divergence") throw new Error("divergence 아님");
     expect(card.figure.buyLegend).toBe("이 종목");

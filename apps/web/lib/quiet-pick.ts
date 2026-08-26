@@ -1977,6 +1977,7 @@ export async function buildQuietPickResponse(options: {
       ...(sig.marketDivergence
         ? {
             indexChangePct: sig.marketDivergence.indexChangePct,
+            stockChangePct: sig.marketDivergence.stockChangePct,
             indexLabel: sig.indexLabel ?? "지수",
           }
         : {}),
