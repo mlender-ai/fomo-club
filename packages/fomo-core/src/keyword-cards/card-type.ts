@@ -39,6 +39,7 @@
 
 import type { QuietPickSignalKind } from "./quiet-pick-hook";
 import type { MarketDivergence, VolumeAwakening } from "./quiet-signals";
+import { josa } from "./josa";
 
 // ── 임계값(전부 결정론 상수 — 위 표의 근거를 바꾸지 않고 값만 바꾸지 말 것) ──
 
@@ -565,7 +566,7 @@ export function marketDivergenceCard(input: {
    */
   const hook =
     Number.isFinite(d.stockChangePct) && d.stockChangePct > 0
-      ? `${input.indexLabel}는 빠지는데\n혼자 ${(Math.round(d.stockChangePct * 10) / 10).toFixed(1)}%`
+      ? `${input.indexLabel}${josa(input.indexLabel, "은는")} 빠지는데\n혼자 ${(Math.round(d.stockChangePct * 10) / 10).toFixed(1)}%`
       : "시장은 빠지는데\n이것만 버티고 있어요";
   return {
     type: "D",

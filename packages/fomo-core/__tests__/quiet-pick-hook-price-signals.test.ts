@@ -104,3 +104,27 @@ describe("같은 형이 여러 장 나와도 서로 다른 카드여야 한다",
     expect(chips(5.2)).not.toEqual(chips(1.4));
   });
 });
+
+describe("한국어가 맞아야 한다", () => {
+  it("지수 이름 뒤 조사가 받침을 따른다 — 「코스닥는」은 틀린 말이다", async () => {
+    const { marketDivergenceCard } = await import("../src/keyword-cards/card-type");
+    const make = (indexLabel: string) =>
+      marketDivergenceCard({
+        divergence: {
+          days: 4, indexChangePct: -1.7, stockChangePct: 5.2,
+          indexSeries: [100, 99, 98.5, 98.3, 98.3], stockSeries: [100, 101, 102, 103, 104],
+        },
+        indexLabel,
+      })?.hook ?? "";
+    expect(make("코스닥")).toContain("코스닥은"); // 받침 ㄱ
+    expect(make("코스피")).toContain("코스피는"); // 받침 없음
+    expect(make("나스닥")).toContain("나스닥은");
+  });
+
+  it("격차 칩은 소수 첫째 자리로 통일한다 — `7%p` 와 `7.6%p` 가 섞이지 않게", () => {
+    const chip = buildQuietPickChips({
+      ...base, kind: "market_divergence", indexChangePct: -1.7, indexLabel: "코스닥", stockChangePct: 5.3,
+    }).find((c) => c.includes("%p"));
+    expect(chip).toBe("코스닥보다 7.0%p 위");
+  });
+});

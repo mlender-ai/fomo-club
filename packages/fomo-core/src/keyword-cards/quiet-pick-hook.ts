@@ -144,7 +144,8 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
             kind: "scale",
             strength: 3.8,
             text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}%, 이 종목은 ${round1(f.stockChangePct)}% 였어요`,
-            chip: `${label}보다 ${round1(f.stockChangePct - f.indexChangePct)}%p 위`,
+            // 소수 첫째 자리로 통일한다 — `7%p` 와 `7.6%p` 가 한 화면에 섞이면 정밀도가 달라 보인다.
+            chip: `${label}보다 ${(f.stockChangePct - f.indexChangePct).toFixed(1)}%p 위`,
             axis: "size",
           });
         } else {
