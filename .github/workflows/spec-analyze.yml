@@ -2,6 +2,15 @@ name: Spec Analyze
 
 on:
   pull_request:
+  # PR 이벤트가 안 떨어지면 게이트가 **조용히 안 도는** 상태가 된다(2026-08-26 실측:
+  # 푸시·PR 재개 어느 쪽도 런을 만들지 않았고 `workflow_dispatch` 만 동작했다).
+  # `ci.yml` 은 이미 이 손잡이가 있다 — 나머지 게이트에도 같은 것을 둔다.
+  workflow_dispatch:
+
+# 비교 기준. PR 이면 그 PR 의 base, 손으로 돌리면 `main` — `base_ref` 는 PR 때만 채워지고
+# 비면 `origin/...HEAD` 라는 깨진 리비전이 된다(2026-08-26 실측: exit 128).
+env:
+  SPEC_BASE_REF: ${{ github.base_ref || 'main' }}
 
 permissions:
   contents: read
@@ -29,7 +38,7 @@ jobs:
         id: discovery
         shell: bash
         run: |
-          files="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          files="$(git diff --name-only "origin/${SPEC_BASE_REF}...HEAD")"
           if echo "$files" | grep -E '^(apps/web/lib/discovery-supply\.ts|apps/web/app/api/fomo/discovery/|apps/fomo-web/components/(StockSwipeDeck|KeywordDepthPage|TodayDiscoveryDeck|SectorStockDeck)\.tsx|packages/fomo-core/src/keyword-cards/|scripts/discovery-regression-gate\.ts)' >/dev/null; then
             echo "run_guard=true" >> "$GITHUB_OUTPUT"
           else
@@ -43,4 +52,4 @@ jobs:
       - name: Spec analyze
         env:
           SPEC_ANALYZE_GUARD_DISCOVERY_RAN: ${{ steps.discovery.outputs.run_guard == 'true' && 'true' || 'false' }}
-        run: npm run spec:analyze -- --base "origin/${{ github.base_ref }}...HEAD"
+        run: npm run spec:analyze -- --base "origin/${SPEC_BASE_REF}...HEAD"
