@@ -3,6 +3,8 @@ import { withCors, kstDate } from "../../../../../lib/fomo";
 import { fetchKrMarketRows } from "../../../../../lib/discovery-supply";
 import { fetchStockDaily } from "../../../../../lib/stock-front";
 import { writeKrCandleCache } from "../../../../../lib/kr-candle-cache";
+import { buildKrPickUniverse } from "../../../../../lib/pick-universe";
+import { STOCK_VOCAB } from "@fomo/core";
 
 /**
  * KR 일봉 260거래일 프리웜 (WO 카드 품질 2차 C) — 네이버 siseJson 420일력을 받아 캐시에 쓴다.
@@ -12,7 +14,7 @@ import { writeKrCandleCache } from "../../../../../lib/kr-candle-cache";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const UNIVERSE_LIMIT = 450; // 발견 유니버스(시총 상위 400) + 여유 — 덱 후보를 덮는다
+const UNIVERSE_LIMIT = 450; // 시간 예산(50초 · 동시 8)이 감당하는 한계. 늘리려면 예산부터 재야 한다.
 const CONCURRENCY = 8;
 const TIME_BUDGET_MS = 50_000; // maxDuration 60s 안에서 안전 마진
 
@@ -28,7 +30,24 @@ export async function GET(request: Request) {
   }
   const startedAt = Date.now();
   const rows = await fetchKrMarketRows().catch(() => []);
-  const codes = [...new Set(rows.map((row) => row.naverCode).filter((code): code is string => !!code))].slice(0, UNIVERSE_LIMIT);
+  /**
+   * **픽 유니버스를 먼저 채운다** (WO-RESET-04 PART D, 실측 2026-08-26).
+   *
+   * 종전에는 시세 행 순서대로 앞 450개를 잘랐다. 그런데 그 배열은 KOSPI 627 → KOSDAQ 1000
+   * 순이라 **450은 전부 KOSPI 였다 — 코스닥은 한 종목도 안 덮였다.** 그 상태로 픽 유니버스를
+   * 326(코스피 158 · 코스닥 168)으로 넓히자 168종목이 일봉 없이 스캔됐고, 진단에
+   * `tooShort: 110` 으로 그대로 찍혔다. 가격·거래량 카드(D·E형)는 일봉이 전부라
+   * 코스닥 절반이 **보이지도 않는 상태**였다.
+   *
+   * 그래서 상한을 올리는 대신 **순서를 바꾼다** — 실제로 스캔하는 종목이 먼저다.
+   * 상한은 그대로 두므로 시간 예산은 안 늘어난다.
+   */
+  const universe = buildKrPickUniverse(rows, STOCK_VOCAB);
+  const ordered = [
+    ...universe.defs.map((def) => def.naverCode).filter((code): code is string => !!code),
+    ...rows.map((row) => row.naverCode).filter((code): code is string => !!code),
+  ];
+  const codes = [...new Set(ordered)].slice(0, UNIVERSE_LIMIT);
 
   let stored = 0;
   let short = 0;
@@ -64,6 +83,9 @@ export async function GET(request: Request) {
       ok: true,
       asOf: kstDate(),
       universe: codes.length,
+      // 픽 유니버스가 이 안에 다 들어갔는지 — 안 들어간 만큼 D·E형이 못 보는 종목이다.
+      pickUniverse: universe.defs.length,
+      pickUniverseSource: universe.source,
       stored,
       short,
       failed,
