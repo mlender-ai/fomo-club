@@ -28,6 +28,9 @@
  * 답하는 시늉이고, 빈 섹션 헤더는 "여기 뭔가 있어야 하는데 없다"를 광고한다(DS-00 §1-1).
  */
 
+import { josa } from "./josa";
+import { disclosurePhrase } from "./disclosure-phrase";
+
 /** 축 라벨 — 고정폭 56px 열에 들어간다(WO-HOOK-02 §2-4). */
 export type WhyNowAxis = "값" | "손익" | "가격" | "재료" | "이력";
 
@@ -185,6 +188,11 @@ export interface WhyNowEvent {
   text: string;
   /** 원문 링크(공시만). 없으면 링크를 그리지 않는다. */
   url?: string;
+  /**
+   * 번역표에 없어서 **원문 제목이 그대로** 나간 항목인가(WO-RESET-05 §3-1).
+   * 화면 동작은 같고, 표를 얼마나 더 채워야 하는지 재는 데 쓴다(보고할 것 3번).
+   */
+  rawTitle?: boolean;
 }
 
 /** `2026-08-04` → `8월 4일`. 형식이 아니면 `null`(지어내지 않는다). */
@@ -205,8 +213,16 @@ export interface WhyNowDisclosure {
 export interface WhyNowTimelineInput {
   /** 신호(매수) 시작일 `YYYY-MM-DD`. **항상 있다** — 이게 날짜 항목의 바닥을 보장한다. */
   signalStartedAt?: string;
-  /** 매수 주체 — `기관` / `외국인` / `임원`. */
+  /** 매수 주체 — `기관` / `외국인` / `임원`. 주체가 없는 신호(D·E형)에서는 비운다. */
   actor?: string;
+  /**
+   * 신호 종류. **주체가 없는 형(D·E)을 가리기 위해 받는다.**
+   *
+   * 없이 두면 `actor` 자리에 `시장 대비`·`거래량` 같은 지표 이름이 들어와
+   * **`시장 대비이 사기 시작했어요`** 가 나간다(2026-08-26 프로덕션 실측, 33건 중 9건).
+   * 조사도 틀렸지만 더 나쁜 것은 **시장 대비는 아무것도 사지 않는다**는 점이다.
+   */
+  signalKind?: string;
   /** 최근 90일 공시. 최신순·과거순 무관 — 여기서 정렬한다. */
   disclosures?: readonly WhyNowDisclosure[];
   /** 공시를 **모으긴 했는데 0건**인가. `undefined` 면 아직 수집 전이라 아무 말도 하지 않는다. */
@@ -246,6 +262,23 @@ function daysBetween(fromIso: string, toIso: string): number | null {
  * 순서는 **시간순**이다(오래된 것 → 최근 → `지금`). 사건이 매수 시작보다 앞에 있다는 사실
  * 자체가 이 섹션이 보여주려는 것이므로, 우선순위가 아니라 시간이 순서를 정한다.
  */
+/**
+ * 신호가 **무엇을 시작했는가** — 한 마디.
+ *
+ * 「누가 샀나」 신호는 주체가 산 것이고, 가격·거래량 신호는 **아무도 사지 않았다.**
+ * 후자에 매수 어휘를 쓰면 틀린 말이 된다. 형마다 제 동사를 쓴다.
+ *
+ * 조사는 `josa()` 로 붙인다 — 주체가 `기관`(받침 ㄴ)·`외국인`(받침 ㄴ)·`외국인·기관`처럼
+ * 섞여서 고정 조사는 반드시 어딘가에서 틀린다.
+ */
+function signalStartPhrase(input: WhyNowTimelineInput): string {
+  if (input.signalKind === "market_divergence") return "시장을 앞서기 시작했어요";
+  if (input.signalKind === "volume_awakening") return "거래가 붙기 시작했어요";
+  const actor = input.actor?.trim();
+  if (!actor) return "사기 시작했어요";
+  return `${actor}${josa(actor, "이가")} 사기 시작했어요`;
+}
+
 export function buildWhyNowTimeline(input: WhyNowTimelineInput): WhyNowEvent[] {
   const dated: WhyNowEvent[] = [];
   const start = input.signalStartedAt?.trim();
@@ -265,24 +298,28 @@ export function buildWhyNowTimeline(input: WhyNowTimelineInput): WhyNowEvent[] {
   for (const d of inWindow) {
     const when = whenLabel(d.date);
     if (!when) continue;
+    /**
+     * 제목을 **사람 말로 옮긴다**(WO-RESET-05 §3-1). 표에 없으면 원문 그대로 —
+     * 억지로 비슷한 칸에 밀어 넣지 않는다. `[원문]` 링크가 옆에 있으므로
+     * 원문을 못 보게 되는 것도 아니다.
+     */
+    const phrase = disclosurePhrase(d.title);
     dated.push({
       date: d.date,
       when,
-      text: d.title.trim(),
+      text: phrase.text,
+      ...(phrase.translated ? {} : { rawTitle: true }),
       ...(d.url ? { url: d.url } : {}),
     });
   }
 
-  // ② 매수 시작일 (§C-2 2번) — 항상. 이 줄이 날짜 항목의 바닥을 보장한다.
+  // ② 신호 시작일 (§C-2 2번) — 항상. 이 줄이 날짜 항목의 바닥을 보장한다.
   if (start && whenLabel(start)) {
-    const actor = input.actor?.trim();
     const followsDisclosure = inWindow.length > 0;
     dated.push({
       date: start,
       when: whenLabel(start)!,
-      text: followsDisclosure
-        ? `그 다음부터 ${actor ? `${actor}이 ` : ""}사기 시작했어요`
-        : `${actor ? `${actor}이 ` : ""}사기 시작했어요`,
+      text: `${followsDisclosure ? "그 다음부터 " : ""}${signalStartPhrase(input)}`,
     });
   }
 

@@ -453,6 +453,11 @@ export interface QuietPickQualification {
   inputFailures: string[];
   /** WO-RESET-03 — 가격·거래량 신호 계수기(진단). 유니버스·캐시·검출 건수. */
   priceSignals?: Record<string, number>;
+  /**
+   * WO-RESET-05 §3-1 — 공시 제목 번역 커버리지. `raw` 는 번역표에 없어서 원문이 그대로
+   * 나간 건수다. 이 비율이 보고 대상이다(보고할 것 3번).
+   */
+  disclosurePhrases?: { total: number; raw: number };
 }
 
 /**
@@ -1822,6 +1827,12 @@ export async function buildQuietPickResponse(options: {
     });
   };
 
+  /**
+   * WO-RESET-05 §3-1 — 공시 제목 번역 커버리지. 화면에 나간 **공시 항목**만 센다
+   * (신호 시작·실적 줄은 번역 대상이 아니다). 비율이 보고 대상이다.
+   */
+  const phraseCensus = { total: 0, raw: 0 };
+
   for (const { sig, near, front } of assembled) {
     if (!front) { drop("front_failed"); continue; }
     if (!front.verdict) { drop("no_verdict"); continue; }
@@ -2120,12 +2131,19 @@ export async function buildQuietPickResponse(options: {
           signalStartedAt: normalizeQuietMoneyDate(sig.startedAt) ?? sig.startedAt.slice(0, 10),
           // 신호가 이미 주체 문자열을 들고 있다 — 카드와 같은 말을 쓴다(`외국인·기관` 포함).
           actor: sig.actors,
+          // 주체 없는 형(D·E)을 가리는 데 쓴다 — `시장 대비이 사기 시작했어요` 방지.
+          signalKind: sig.kind,
           disclosures: list,
           ...(earnings ? { earnings } : {}),
         });
         // 수집이 실제로 이 종목을 덮었는가 — 덮지 않았으면 "없었다" 를 말하지 않는다.
         const collected = disclosures !== null && disclosures !== undefined && disclosures.truncated !== true;
         const note = whyNowQuietNote({ disclosuresCollected: collected, disclosureCount: list.length });
+        for (const e of events) {
+          if (!e.url) continue; // 공시 항목만 센다(신호 시작·실적 줄은 번역 대상이 아니다)
+          phraseCensus.total += 1;
+          if (e.rawTitle) phraseCensus.raw += 1;
+        }
         return {
           ...(events.length > 0 ? { whyNow: events } : {}),
           ...(note ? { whyNowQuietNote: note } : {}),
@@ -2279,6 +2297,8 @@ export async function buildQuietPickResponse(options: {
       krUniverseSource: krUniverse.source,
       krUniverseFromRows: krUniverse.fromRows,
       krUniverseFromVocab: krUniverse.fromVocab,
+      // WO-RESET-05 §3-1 — 화면에 나간 공시 항목 중 번역표에 없어 원문 그대로인 비율.
+      disclosurePhrases: phraseCensus,
       krWithSignal: krSignals.length,
       usInsiderRaw: insiderRaw.length,
       usWithSignal: usSignals.length,
