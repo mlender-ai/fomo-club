@@ -186,3 +186,60 @@ export function detectVolumeAwakening(points: readonly DailyPoint[]): VolumeAwak
     spikeFrom,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 임계 조정용 계측 — **조건을 걸지 않고** 분포만 잰다.
+//
+// 배포 후 실측에서 D·E 가 0장이었고 계수기가 캐시·지수는 정상임을 보였다(candles 56/66,
+// indexKospi 133). 남은 원인은 임계뿐인데, **감으로 낮추면** 이 프로젝트가 계속 경계해온
+// "감으로 정한 값" 이 된다. 그래서 먼저 분포를 재고 그 숫자로 고른다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 조건 없이 잰 값들 — 임계를 어디 둘지 정하는 근거. */
+export interface QuietSignalProbe {
+  /** 지수 대비 일별 초과가 이어진 일수(조건 무시). */
+  divergenceDays: number;
+  /** 창 안 지수 하락일 수. */
+  indexDownDays: number;
+  /** 창 전체 지수 등락률(%). */
+  indexChangePct: number;
+  /** 최근 거래량 / 기준 평균. */
+  volumeMultiple: number;
+  /** 급증일 가격 변동률(%). */
+  movePct: number;
+}
+
+/** 조건을 걸지 않고 재기만 한다. 어느 조건이 몇 종목을 떨구는지 보려는 용도다. */
+export function probeQuietSignals(
+  stock: readonly number[],
+  index: readonly number[],
+  points: readonly DailyPoint[]
+): QuietSignalProbe | null {
+  if (stock.length !== index.length || stock.length < 2) return null;
+
+  let days = 0;
+  for (let i = stock.length - 1; i > 0; i -= 1) {
+    const s0 = stock[i - 1]!;
+    const x0 = index[i - 1]!;
+    if (!(s0 > 0) || !(x0 > 0)) break;
+    if ((stock[i]! - s0) / s0 <= (index[i]! - x0) / x0) break;
+    days += 1;
+  }
+  const win = index.slice(-(Math.max(days, 1) + 1));
+  let indexDownDays = 0;
+  for (let i = 1; i < win.length; i += 1) if (win[i]! < win[i - 1]!) indexDownDays += 1;
+  const indexChangePct = pctChange(win) ?? 0;
+
+  const usable = points.filter((p) => Number.isFinite(p.close) && Number.isFinite(p.volume));
+  let volumeMultiple = 0;
+  let movePct = 0;
+  if (usable.length >= VOLUME_AWAKENING_BASE_DAYS + 1) {
+    const latest = usable.at(-1)!;
+    const base = usable.slice(-(VOLUME_AWAKENING_BASE_DAYS + 1), -1);
+    const avg = base.reduce((sum, p) => sum + p.volume, 0) / base.length;
+    if (avg > 0) volumeMultiple = latest.volume / avg;
+    const prev = usable.at(-2)!;
+    if (prev.close > 0) movePct = ((latest.close - prev.close) / prev.close) * 100;
+  }
+  return { divergenceDays: days, indexDownDays, indexChangePct, volumeMultiple, movePct };
+}
