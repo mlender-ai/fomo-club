@@ -438,6 +438,8 @@ export interface QuietPickQualification {
    * 구 페이로드에는 없으므로 읽는 쪽은 `?? []` 로 받는다.
    */
   inputFailures: string[];
+  /** WO-RESET-03 — 가격·거래량 신호 계수기(진단). 유니버스·캐시·검출 건수. */
+  priceSignals?: Record<string, number>;
 }
 
 /**
@@ -1469,12 +1471,28 @@ async function detectPriceSignals(
     deps.fetchStockDaily("KOSDAQ", 200).catch(() => ({ closes: [] as number[] })),
   ]);
 
+  /**
+   * 어디서 0이 되는지 보이게 한다. 배포 후 실측에서 D·E 가 **0장**이었는데
+   * `inputFailures` 는 비어 있었다 — 실패가 아니라 조건 미달이라는 뜻이고,
+   * 그러면 "캐시가 비었나 / 조건이 빡빡한가" 를 화면 밖에서 가릴 방법이 없다.
+   * 계수기가 그 둘을 가른다.
+   */
+  const census = {
+    universe: krDefs.length,
+    candles: candleMap.size,
+    indexKospi: kospi.closes.length,
+    indexKosdaq: kosdaq.closes.length,
+    tooShort: 0,
+    divergence: 0,
+    awakening: 0,
+  };
+
   const out: SignalCandidate[] = [];
   for (const def of krDefs) {
     const code = def.naverCode;
     if (!code) continue;
     const candles = candleMap.get(code);
-    if (!candles || candles.length < 20) continue;
+    if (!candles || candles.length < 20) { census.tooShort += 1; continue; }
     const closes = candles.map((c: DailyOhlcv) => c.close).filter((v: number) => Number.isFinite(v) && v > 0);
     const seed: QuietPickSubjectSeed = {
       canonical: def.canonical,
@@ -1493,6 +1511,7 @@ async function detectPriceSignals(
       const n = Math.min(closes.length, indexRaw.length, 40);
       const d = detectMarketDivergence(closes.slice(-n), indexRaw.slice(-n));
       if (d) {
+        census.divergence += 1;
         out.push({
           subject: seed,
           kind: "market_divergence",
@@ -1517,6 +1536,7 @@ async function detectPriceSignals(
       .filter((p) => Number.isFinite(p.close) && Number.isFinite(p.volume));
     const a = detectVolumeAwakening(points);
     if (a) {
+      census.awakening += 1;
       out.push({
         subject: seed,
         kind: "volume_awakening",
@@ -1532,8 +1552,13 @@ async function detectPriceSignals(
       });
     }
   }
+  console.warn("[quiet-pick] price signal census", census);
+  priceSignalCensus = census;
   return out;
 }
+
+/** 마지막 실행의 계수기 — `qualification` 에 실어 화면 밖에서 원인을 가른다. */
+let priceSignalCensus: Record<string, number> | null = null;
 
 /**
  * 조용한 돈 픽 빌드. 크론에서 호출(요청 경로 무거운 fetch 금지 — 504 원칙).
@@ -2164,6 +2189,8 @@ export async function buildQuietPickResponse(options: {
       drops,
       // 같은 이름이 여러 번 실패할 수 있다(픽별 캔들 봉인 등) — 이름만 남기고 중복은 접는다.
       inputFailures: [...new Set(inputFailures)],
+      // WO-RESET-03 진단 — 새 신호가 0장일 때 캐시 결손과 조건 미달을 가른다.
+      ...(priceSignalCensus ? { priceSignals: priceSignalCensus } : {}),
     },
     source: "quiet-pick-engine",
   };
