@@ -65,8 +65,14 @@ describe("buildKrPickUniverse — 사전이 아니라 시세 행에서 유니버
     expect(u.defs).toHaveLength(1);
   });
 
-  it("기본 상한은 시장별 150 — 두 시장 합쳐 300 (WO PART D-1)", () => {
-    expect(PICK_UNIVERSE_PER_MARKET).toBe(150);
+  it("기본 상한은 시장별 400 — 두 시장 합쳐 ≈800 (WO PART D-1 2차)", () => {
+    expect(PICK_UNIVERSE_PER_MARKET).toBe(400);
+  });
+
+  it("판정선(시총 100위) 아래가 유니버스의 대부분이어야 한다 — 조용한 종목을 찾는 앱이므로", () => {
+    // 시장별 400 이면 시장별 300종목이 100위 밖이다. 이 비율이 뒤집히면 확대가 헛돈다.
+    const beyondKnownBand = PICK_UNIVERSE_PER_MARKET - 100;
+    expect(beyondKnownBand).toBeGreaterThan(100);
   });
 });
 
