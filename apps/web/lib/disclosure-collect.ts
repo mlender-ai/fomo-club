@@ -12,6 +12,13 @@
  * 또 다른 수집이다). 그래서 하루치를 통째로 받아 우리 유니버스만 걸러낸다. 90일이면
  * 그 왕복이 수백 번이라 요청 경로에서 할 수 없다 — **미리 모아둔다.**
  *
+ * ## 유니버스는 밖에서 받는다 (WO-RESET-04 PART D)
+ *
+ * 종전에는 `STOCK_VOCAB`(80종목)으로 걸렀다. 픽 엔진 유니버스가 326으로 넓어졌는데 여기가
+ * 그대로면 **새로 들어온 260종목은 「왜 지금」에 쓸 날짜·사건이 영영 없다** — 카드는 나오는데
+ * 근거 칸이 빈다. 그래서 유니버스를 인자로 받고, 라우트가 픽 엔진과 **같은 함수**로 만들어 넘긴다.
+ * 넘기지 않으면 종전대로 사전을 쓴다(호환).
+ *
  * ## 증분 수집
  *
  * 매 실행이 90일을 다시 훑지 않는다. 기본은 최근 며칠만 받아 **기존 저장분과 합치고**
@@ -21,7 +28,7 @@
  * 부분 수집을 완전 수집으로 착각하면 "공시가 없다" 가 거짓말이 된다(그 문구가 §C-4 의 핵심이다).
  */
 
-import { STOCK_VOCAB, classifyDisclosure, decodeHtmlEntities, type DisclosureKind } from "@fomo/core";
+import { STOCK_VOCAB, classifyDisclosure, decodeHtmlEntities, type DisclosureKind, type StockDef } from "@fomo/core";
 import { US_DISCOVERY_SYMBOLS, secCikForSymbol } from "./us-symbols";
 import { secUserAgent } from "./sec-edgar";
 
@@ -129,7 +136,8 @@ async function collectKr(
   dates: readonly string[],
   deadline: number,
   out: Map<string, DisclosureItem[]>,
-  errors: string[]
+  errors: string[],
+  universe: readonly StockDef[]
 ): Promise<{ truncated: boolean; oldestScanned: string | null }> {
   const key = dartKey();
   if (!key) {
@@ -137,7 +145,7 @@ async function collectKr(
     return { truncated: true, oldestScanned: null };
   }
   const byCode = new Map(
-    STOCK_VOCAB.filter((s) => s.naverCode).map((s) => [s.naverCode!, s.canonical] as const)
+    universe.filter((s) => s.naverCode).map((s) => [s.naverCode!, s.canonical] as const)
   );
   let oldestScanned: string | null = null;
 
@@ -258,8 +266,11 @@ export async function collectDisclosures(options: {
   today: string;
   lookbackDays?: number;
   previous?: DisclosureCollection | null;
+  /** 훑을 국내 유니버스. 안 주면 사전(종전 동작). 라우트는 픽 엔진과 같은 것을 넘긴다. */
+  universe?: readonly StockDef[];
 }): Promise<DisclosureCollection> {
   const { today, previous } = options;
+  const universe = options.universe ?? STOCK_VOCAB;
   const lookback = Math.max(1, Math.min(options.lookbackDays ?? DISCLOSURE_DEFAULT_LOOKBACK_DAYS, DISCLOSURE_WINDOW_DAYS));
   const deadline = Date.now() + BUDGET_MS;
   const errors: string[] = [];
@@ -295,7 +306,7 @@ export async function collectDisclosures(options: {
     }
     return [...recent, ...older];
   })();
-  const kr = await collectKr(dates, deadline, fresh, errors);
+  const kr = await collectKr(dates, deadline, fresh, errors, universe);
   await collectUs(shiftIso(today, -lookback), deadline, fresh, errors);
 
   // 기존 저장분과 합치고 창 밖을 떨군다.

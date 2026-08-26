@@ -6,6 +6,9 @@ import {
   DISCLOSURE_WINDOW_DAYS,
 } from "../../../../../lib/disclosure-collect";
 import { readDisclosureCollection, writeDisclosureCollection } from "../../../../../lib/disclosure-store";
+import { fetchKrMarketRows } from "../../../../../lib/discovery-supply";
+import { buildKrPickUniverse } from "../../../../../lib/pick-universe";
+import { STOCK_VOCAB } from "@fomo/core";
 
 /**
  * WO-RESET-02 PART A — 공시 수집 크론.
@@ -49,7 +52,14 @@ export async function GET(request: Request) {
       : DISCLOSURE_DEFAULT_LOOKBACK_DAYS;
 
     const previous = await readDisclosureCollection();
-    const collection = await collectDisclosures({ today: kstDate(), lookbackDays, previous });
+    /**
+     * 픽 엔진과 **같은 유니버스**를 훑는다(WO-RESET-04 PART D). 여기가 좁으면 새로 들어온
+     * 종목은 카드가 나와도 「왜 지금」의 날짜·사건 칸이 빈다 — 근거 없는 카드가 된다.
+     * 시세 조회가 실패하면 `buildKrPickUniverse` 가 사전으로 후퇴하므로 종전 동작이 최악이다.
+     */
+    const rows = await fetchKrMarketRows().catch(() => []);
+    const universe = buildKrPickUniverse(rows, STOCK_VOCAB);
+    const collection = await collectDisclosures({ today: kstDate(), lookbackDays, previous, universe: universe.defs });
 
     /**
      * 빈 수집으로 **기존 저장분을 덮지 않는다**(`docs/STATUS.md` §12 의 교훈).
@@ -79,6 +89,9 @@ export async function GET(request: Request) {
       NextResponse.json({
         ok: true,
         lookbackDays,
+        // 유니버스가 사전으로 후퇴했는지 보이게 — 조용한 축소 금지.
+        universe: universe.defs.length,
+        universeSource: universe.source,
         stocks,
         items,
         coveredFrom: collection.coveredFrom,

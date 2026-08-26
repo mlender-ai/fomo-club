@@ -69,3 +69,20 @@ describe("buildKrPickUniverse — 사전이 아니라 시세 행에서 유니버
     expect(PICK_UNIVERSE_PER_MARKET).toBe(150);
   });
 });
+
+describe("유니버스 게이트는 한 곳이 아니었다 — 흩어진 곳을 같은 함수로 모은다", () => {
+  it("픽 엔진·수급 수집·공시 수집·DART 내부자가 모두 유니버스를 밖에서 받는다", async () => {
+    const [pick, supply, disclosure, dart] = await Promise.all([
+      import("node:fs/promises").then((fs) => fs.readFile("apps/web/lib/quiet-pick.ts", "utf8")),
+      import("node:fs/promises").then((fs) => fs.readFile("scripts/supply-demand-collect.ts", "utf8")),
+      import("node:fs/promises").then((fs) => fs.readFile("apps/web/lib/disclosure-collect.ts", "utf8")),
+      import("node:fs/promises").then((fs) => fs.readFile("apps/web/lib/dart-disclosures.ts", "utf8")),
+    ]);
+    // 픽 엔진과 수급 수집은 같은 함수를 부른다 — 어긋나면 새 종목의 신호가 영원히 안 뜬다.
+    expect(pick).toContain("buildKrPickUniverse(");
+    expect(supply).toContain("buildKrPickUniverse(");
+    // 공시·DART 는 유니버스를 인자로 받는다(사전 하드코딩이 남아 있으면 안 된다).
+    expect(disclosure).not.toMatch(/const byCode = new Map\(\s*STOCK_VOCAB/);
+    expect(dart).not.toMatch(/const byCode = new Map\(STOCK_VOCAB/);
+  });
+});

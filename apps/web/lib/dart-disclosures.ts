@@ -1,4 +1,4 @@
-import { STOCK_VOCAB, decodeHtmlEntities } from "@fomo/core";
+import { STOCK_VOCAB, decodeHtmlEntities, type StockDef } from "@fomo/core";
 
 export interface DartDisclosureHit {
   ticker: string;
@@ -190,11 +190,26 @@ async function fetchDartPage(key: string, date: string, page: number): Promise<D
   return (await res.json()) as DartListResponse;
 }
 
-export async function fetchDartDisclosuresByStock(asOf: string): Promise<Record<string, DartDisclosureHit>> {
+
+/**
+ * 종목코드 → 정식명. **유니버스는 밖에서 받는다**(WO-RESET-04 PART D).
+ *
+ * DART 목록은 하루치를 통째로 주고 우리는 여기서 우리 종목만 걸러낸다. 그래서 이 맵이
+ * 곧 스캔 유니버스다 — 좁으면 나머지 종목의 내부자 매수 공시는 **본 적도 없는 것이 된다.**
+ * 안 넘기면 종전대로 사전을 쓴다(호환).
+ */
+function codeToName(universe: readonly StockDef[] | undefined): Map<string, string> {
+  return new Map((universe ?? STOCK_VOCAB).filter((s) => s.naverCode).map((s) => [s.naverCode!, s.canonical]));
+}
+
+export async function fetchDartDisclosuresByStock(
+  asOf: string,
+  universe?: readonly StockDef[]
+): Promise<Record<string, DartDisclosureHit>> {
   const key = dartKey();
   if (!key) return {};
 
-  const byCode = new Map(STOCK_VOCAB.filter((stock) => stock.naverCode).map((stock) => [stock.naverCode!, stock.canonical]));
+  const byCode = codeToName(universe);
   const out: Record<string, DartDisclosureHit> = {};
 
   for (let page = 1; page <= DART_MAX_PAGES; page += 1) {
@@ -222,11 +237,14 @@ export async function fetchDartDisclosuresByStock(asOf: string): Promise<Record<
   return out;
 }
 
-export async function fetchDartInsiderPurchasesByStock(asOf: string): Promise<Record<string, DartDisclosureHit>> {
+export async function fetchDartInsiderPurchasesByStock(
+  asOf: string,
+  universe?: readonly StockDef[]
+): Promise<Record<string, DartDisclosureHit>> {
   const key = dartKey();
   if (!key) return {};
 
-  const byCode = new Map(STOCK_VOCAB.filter((stock) => stock.naverCode).map((stock) => [stock.naverCode!, stock.canonical]));
+  const byCode = codeToName(universe);
   const out: Record<string, DartDisclosureHit> = {};
 
   const startedAt = Date.now();

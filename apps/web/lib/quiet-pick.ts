@@ -1693,7 +1693,7 @@ export async function buildQuietPickResponse(options: {
     guardedInput("computeStockAttentionSignals", deps.computeStockAttentionSignals(), {} as Record<string, StockAttentionSignal>),
     guardedInput("fetchMarketCapRankMap", deps.fetchMarketCapRankMap(), {} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>),
     guardedInput("fetchCachedUsMarketRows", deps.fetchCachedUsMarketRows(), [] as KrMarketRow[]),
-    guardedInput("fetchDartInsiderPurchasesByStock", deps.fetchDartInsiderPurchasesByStock(date), {} as Record<string, DartDisclosureHit>),
+    guardedInput("fetchDartInsiderPurchasesByStock", deps.fetchDartInsiderPurchasesByStock(date, krDefs), {} as Record<string, DartDisclosureHit>),
     guardedInput("readDisclosureCollection", deps.readDisclosureCollection(), null as DisclosureCollection | null),
     guardedInput("readAllFactSheets", deps.readAllFactSheets(), [] as Awaited<ReturnType<typeof readAllFactSheets>>),
   ]);
