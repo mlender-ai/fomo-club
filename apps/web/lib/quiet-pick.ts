@@ -22,6 +22,7 @@ import {
   detectMarketDivergence,
   detectVolumeAwakening,
   probeQuietSignals,
+  MARKET_DIVERGENCE_MIN_DOWN_DAYS,
   type MarketDivergence,
   type VolumeAwakening,
   normalizeQuietMoneyDate,
@@ -51,6 +52,7 @@ import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers, readSupplyDemandHistoryByTickersStrict } from "./supply-demand-store";
 import { computeStockAttentionSignals, type StockAttentionSignal } from "./stock-signal-coverage";
 import { fetchKrMarketRows } from "./discovery-supply";
+import { buildKrPickUniverse } from "./pick-universe";
 import {
   fetchInsiderClusterCandidates,
   fetchInsiderHistory,
@@ -421,6 +423,16 @@ export interface QuietWatchItem {
 /** 자격 통과·탈락 근거 로그(억지 충원 없음 검증용). */
 export interface QuietPickQualification {
   krUniverse: number;
+  /**
+   * WO-RESET-04 PART D — 유니버스를 무엇으로 만들었나.
+   * `market` = 시세 행(정상) · `vocab` = 시세가 비어 사전으로 후퇴(장애 신호).
+   * 구 페이로드에는 없다.
+   */
+  krUniverseSource?: "market" | "vocab";
+  /** 사전 밖에서 새로 들어온 종목 수 — 확대가 실제로 먹었는지 보는 값. */
+  krUniverseFromRows?: number;
+  /** 사전에 이미 있던 종목 수. */
+  krUniverseFromVocab?: number;
   krWithSignal: number;
   usInsiderRaw: number;
   usWithSignal: number;
@@ -1496,11 +1508,15 @@ async function detectPriceSignals(
     /** 분포 — 임계를 감이 아니라 숫자로 고르기 위한 값(상위 몇 개). */
     maxDivergenceDays: 0,
     stocksWith3PlusDays: 0,
+    /** 연속 3일 + 창 안 지수 하락일 조건까지 통과한 종목. */
+    streak3AndIndexDown: 0,
+    /** 위에 더해 창 전체 지수도 하락한 종목 = D형 게이트를 전부 통과. */
+    streak3AndIndexFell: 0,
     stocksWith4PlusDays: 0,
     maxVolumeMultiple: 0,
     stocksWith2xVolume: 0,
     stocksWith15xVolume: 0,
-    /** 순변동 분포 — E형 상한(잠정 5%)을 확정할 근거. 배수 2배 이상인 종목만 센다. */
+    /** 순변동 분포 — E형 상한을 고른 근거(실측: ≤3% 0종목 · ≤5% 0종목 · ≤7% 2종목). */
     spikeNetUnder3: 0,
     spikeNetUnder5: 0,
     spikeNetUnder7: 0,
@@ -1531,7 +1547,18 @@ async function detectPriceSignals(
         const probe = probeQuietSignals(closes.slice(-n0), idx.slice(-n0), points0(candles));
         if (probe) {
           census.maxDivergenceDays = Math.max(census.maxDivergenceDays, probe.divergenceDays);
-          if (probe.divergenceDays >= 3) census.stocksWith3PlusDays += 1;
+          if (probe.divergenceDays >= 3) {
+            census.stocksWith3PlusDays += 1;
+            /**
+             * D형은 게이트가 셋이다(연속일수 · 창 안 지수 하락일 · 창 전체 지수 변동).
+             * 첫 실측에서 `stocksWith3PlusDays: 4` 인데 카드는 0장이었다 — 나머지 둘 중
+             * 어디서 죽는지 이 두 계수기가 가른다. 합치면 "왜 0장인가"를 감으로 답하게 된다.
+             */
+            if (probe.indexDownDays >= MARKET_DIVERGENCE_MIN_DOWN_DAYS) census.streak3AndIndexDown += 1;
+            if (probe.indexDownDays >= MARKET_DIVERGENCE_MIN_DOWN_DAYS && probe.indexChangePct < 0) {
+              census.streak3AndIndexFell += 1;
+            }
+          }
           if (probe.divergenceDays >= 4) census.stocksWith4PlusDays += 1;
           census.maxVolumeMultiple = Math.max(census.maxVolumeMultiple, Math.round(probe.volumeMultiple * 10) / 10);
           if (probe.volumeMultiple >= 2) {
@@ -1649,12 +1676,20 @@ export async function buildQuietPickResponse(options: {
   );
 
   // ── 신호 검출(①) ──
-  const krDefs = deps.vocab.filter((d) => d.naverCode && !d.marquee);
+  /**
+   * WO-RESET-04 PART D — 유니버스는 **사전이 아니라 시세 행**에서 만든다(`docs/STATUS.md` §17-A).
+   *
+   * 그래서 시세를 먼저 받는다. 나머지 입력은 이 유니버스의 종목코드가 있어야 조회할 수 있어서
+   * (`readSupplyDemandHistoryByTickers(krCodes, …)`) 한 번은 직렬이 된다 — 실측 279ms 이고,
+   * 뒤따르는 배치 조회는 그대로 병렬이다.
+   */
+  const marketRows = await guardedInput("fetchKrMarketRows", deps.fetchKrMarketRows(), [] as KrMarketRow[]);
+  const krUniverse = buildKrPickUniverse(marketRows, deps.vocab);
+  const krDefs = krUniverse.defs;
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, marketRows, attention, rankMap, usRows, dartInsiders, disclosures, factSheets] = await Promise.all([
+  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets] = await Promise.all([
     guardedInput("readSupplyDemandHistoryByTickers", deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW), {} as Record<string, InvestorFlow[]>),
     guardedInput("fetchInsiderClusterCandidates", deps.fetchInsiderClusterCandidates(), [] as InsiderClusterCandidate[]),
-    guardedInput("fetchKrMarketRows", deps.fetchKrMarketRows(), [] as KrMarketRow[]),
     guardedInput("computeStockAttentionSignals", deps.computeStockAttentionSignals(), {} as Record<string, StockAttentionSignal>),
     guardedInput("fetchMarketCapRankMap", deps.fetchMarketCapRankMap(), {} as Awaited<ReturnType<typeof fetchMarketCapRankMap>>),
     guardedInput("fetchCachedUsMarketRows", deps.fetchCachedUsMarketRows(), [] as KrMarketRow[]),
@@ -2223,6 +2258,10 @@ export async function buildQuietPickResponse(options: {
     rotation,
     qualification: {
       krUniverse: krDefs.length,
+      // PART D 확대가 실제로 먹었는지 — 사전 밖에서 몇 개가 새로 들어왔나. 후퇴하면 source 가 말한다.
+      krUniverseSource: krUniverse.source,
+      krUniverseFromRows: krUniverse.fromRows,
+      krUniverseFromVocab: krUniverse.fromVocab,
       krWithSignal: krSignals.length,
       usInsiderRaw: insiderRaw.length,
       usWithSignal: usSignals.length,
