@@ -21,6 +21,7 @@ import {
   volumeAwakeningCard,
   detectMarketDivergence,
   detectVolumeAwakening,
+  probeQuietSignals,
   type MarketDivergence,
   type VolumeAwakening,
   normalizeQuietMoneyDate,
@@ -1458,6 +1459,13 @@ export function usableChangePct(...candidates: ReadonlyArray<number | undefined>
  *
  * 코스피·코스닥 두 계열이면 KR 전체를 덮는다. 종목마다 받으면 66번인데 그럴 이유가 없다.
  */
+/** 캔들 → 검출기 입력(종가·거래량). 분포 계측과 본 검출이 같은 재료를 보게 한다. */
+function points0(candles: readonly DailyOhlcv[]): Array<{ close: number; volume: number }> {
+  return candles
+    .map((c) => ({ close: c.close, volume: c.volume }))
+    .filter((p) => Number.isFinite(p.close) && Number.isFinite(p.volume));
+}
+
 async function detectPriceSignals(
   krDefs: readonly StockDef[],
   deps: QuietPickDeps
@@ -1485,6 +1493,14 @@ async function detectPriceSignals(
     tooShort: 0,
     divergence: 0,
     awakening: 0,
+    /** 분포 — 임계를 감이 아니라 숫자로 고르기 위한 값(상위 몇 개). */
+    maxDivergenceDays: 0,
+    stocksWith3PlusDays: 0,
+    stocksWith4PlusDays: 0,
+    maxVolumeMultiple: 0,
+    stocksWith2xVolume: 0,
+    stocksWith15xVolume: 0,
+    indexFellToday: 0,
   };
 
   const out: SignalCandidate[] = [];
@@ -1502,6 +1518,24 @@ async function detectPriceSignals(
     };
     const lastDate = candles.at(-1)?.date ?? "";
     const startedAt = lastDate.length === 8 ? `${lastDate.slice(0, 4)}-${lastDate.slice(4, 6)}-${lastDate.slice(6, 8)}` : kstDate();
+
+    // ── 분포 계측(조건 없음) — 어느 조건이 몇 종목을 떨구는지 본다.
+    {
+      const idx = def.market === "KOSDAQ" ? kosdaq.closes : kospi.closes;
+      const n0 = Math.min(closes.length, idx.length, 40);
+      if (n0 >= 2) {
+        const probe = probeQuietSignals(closes.slice(-n0), idx.slice(-n0), points0(candles));
+        if (probe) {
+          census.maxDivergenceDays = Math.max(census.maxDivergenceDays, probe.divergenceDays);
+          if (probe.divergenceDays >= 3) census.stocksWith3PlusDays += 1;
+          if (probe.divergenceDays >= 4) census.stocksWith4PlusDays += 1;
+          census.maxVolumeMultiple = Math.max(census.maxVolumeMultiple, Math.round(probe.volumeMultiple * 10) / 10);
+          if (probe.volumeMultiple >= 2) census.stocksWith2xVolume += 1;
+          if (probe.volumeMultiple >= 1.5) census.stocksWith15xVolume += 1;
+          if (probe.indexChangePct < 0) census.indexFellToday += 1;
+        }
+      }
+    }
 
     // ── A-1 시장 역행 — 코스닥 종목은 코스닥, 그 외는 코스피와 비교한다.
     const indexRaw = def.market === "KOSDAQ" ? kosdaq.closes : kospi.closes;
