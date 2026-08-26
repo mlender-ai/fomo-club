@@ -28,9 +28,21 @@ export interface DailyPoint {
 /**
  * 시장 대비 초과 연속일 최소치. 이보다 짧으면 하루 이틀 잡음이라 "버틴다" 고 말할 수 없다.
  *
- * 5일: WO A-1 의 예시 문안(`5일 연속 시장보다 강해요`)이 5를 쓴다. 거래일 한 주다.
+ * ## 5 → 3 (WO-RESET-04 §0-2, 실측 근거)
+ *
+ * 5는 WO-RESET-03 A-1 의 예시 문안(`5일 연속 시장보다 강해요`)에서 왔다. 그런데 배포 후
+ * 실측에서 **한 종목도 넘지 못했다.** 조건을 걸지 않고 잰 분포가 이랬다:
+ *
+ * | 값 | 실측(56종목) |
+ * |---|---|
+ * | 최대 연속일수 | **3일** |
+ * | 3일 이상 종목 | 3 |
+ * | 4일 이상 종목 | **0** |
+ *
+ * **5일 연속 매일 지수를 이기는 종목은 실제로 없다.** 3으로 낮춘다.
+ * 그래도 3장 안팎인데, 그건 임계가 아니라 **유니버스(66종목)** 문제다(WO-RESET-04 PART D).
  */
-export const MARKET_DIVERGENCE_MIN_DAYS = 5;
+export const MARKET_DIVERGENCE_MIN_DAYS = 3;
 
 /**
  * 창 안에서 지수가 **내린 날**이 최소 몇 날이어야 하는가.
@@ -125,19 +137,29 @@ export const VOLUME_AWAKENING_MULTIPLE = 3;
 export const VOLUME_AWAKENING_BASE_DAYS = 60;
 
 /**
- * 가격이 아직 안 움직였다고 말할 수 있는 상한(%).
+ * 가격이 아직 안 움직였다고 말할 수 있는 상한(%) — **급증 시작일부터 오늘까지의 순변동**.
  *
- * 이 조건이 이 카드의 존재 이유다 — 거래가 붙었는데 **가격이 이미 뛰었으면** 그건 조용한
- * 신호가 아니라 이미 일어난 뉴스다. 우리가 찾는 것은 그 전이다.
+ * ## 창을 바꿨다 (WO-RESET-04 §0-1, 실측 근거)
+ *
+ * 종전에는 **급증 당일** 가격 변동을 봤다. 배포 후 실측에서 거래량 배수는 최대 **53.8배**
+ * (2배 이상 8종목)로 넉넉했는데 카드는 0장이었다 — 전부 이 가격 조건에서 걸렸다.
+ * 당연하다: **거래가 53배 터진 날 가격이 3% 안에 머물 리 없다.**
+ *
+ * 이 카드가 말하려는 것은 "거래는 붙기 시작했는데 **아직** 안 움직였다" 이고, 그건 하루가
+ * 아니라 **급증 이후 지금까지**의 이야기다. 그래서 창을 급증 시작일 → 오늘로 바꾼다.
+ * 급증일 당일 튀었다가 되돌아왔으면 여전히 "아직 안 움직인" 것이 맞다.
+ *
+ * 상한 5%: WO 가 준 범위(3~7%)의 가운데다. **잠정값이고**, 순변동 분포를 계측해
+ * (`probeQuietSignals.spikeNetMovePct`) 근거가 모이면 확정한다.
  */
-export const VOLUME_AWAKENING_MAX_MOVE_PCT = 3;
+export const VOLUME_AWAKENING_MAX_MOVE_PCT = 5;
 
 export interface VolumeAwakening {
   /** 최근 거래량이 기준 평균의 몇 배인가. */
   multiple: number;
   /** 기준 평균을 잰 거래일 수. */
   baseDays: number;
-  /** 급증일의 가격 변동률(%). */
+  /** 급증 시작 직전 → 오늘 순변동률(%). 당일 변동이 아니다(WO-RESET-04 §0-1). */
   movePct: number;
   /** 그림 재료 — 창 구간 거래량(오래된 → 최신). */
   volumeSeries: number[];
@@ -163,11 +185,6 @@ export function detectVolumeAwakening(points: readonly DailyPoint[]): VolumeAwak
   const multiple = latest.volume / baseAvg;
   if (multiple < VOLUME_AWAKENING_MULTIPLE) return null;
 
-  const prev = usable.at(-2)!;
-  if (!(prev.close > 0)) return null;
-  const movePct = ((latest.close - prev.close) / prev.close) * 100;
-  if (Math.abs(movePct) > VOLUME_AWAKENING_MAX_MOVE_PCT) return null;
-
   /**
    * 급증 구간 — 마지막 날부터 거슬러 올라가며 기준 평균의 배수를 넘는 날을 센다.
    * 하루짜리 급증이 대부분이지만 이틀 이어지는 경우도 있어 그대로 칠한다.
@@ -177,6 +194,15 @@ export function detectVolumeAwakening(points: readonly DailyPoint[]): VolumeAwak
   while (spikeFrom > 0 && window[spikeFrom - 1]!.volume >= baseAvg * VOLUME_AWAKENING_MULTIPLE) {
     spikeFrom -= 1;
   }
+
+  /**
+   * **급증 시작 직전** 종가 → 오늘 종가의 순변동. 당일 변동이 아니다(§0-1).
+   * 시작 직전이 창 밖이면 시작일 자체를 기준으로 삼는다(그때는 창 첫날이 급증일이다).
+   */
+  const beforeSpike = window[Math.max(0, spikeFrom - 1)]!;
+  if (!(beforeSpike.close > 0)) return null;
+  const movePct = ((latest.close - beforeSpike.close) / beforeSpike.close) * 100;
+  if (Math.abs(movePct) > VOLUME_AWAKENING_MAX_MOVE_PCT) return null;
 
   return {
     multiple,
@@ -238,8 +264,15 @@ export function probeQuietSignals(
     const base = usable.slice(-(VOLUME_AWAKENING_BASE_DAYS + 1), -1);
     const avg = base.reduce((sum, p) => sum + p.volume, 0) / base.length;
     if (avg > 0) volumeMultiple = latest.volume / avg;
-    const prev = usable.at(-2)!;
-    if (prev.close > 0) movePct = ((latest.close - prev.close) / prev.close) * 100;
+    /**
+     * 본 검출과 **같은 창**으로 잰다(급증 시작 직전 → 오늘). 다른 값을 재면 이 숫자로
+     * 임계를 고를 수 없다 — 근거가 되려면 같은 것을 재야 한다.
+     */
+    const win = usable.slice(-(VOLUME_AWAKENING_BASE_DAYS + 1));
+    let from = win.length - 1;
+    while (from > 0 && win[from - 1]!.volume >= avg * VOLUME_AWAKENING_MULTIPLE) from -= 1;
+    const before = win[Math.max(0, from - 1)]!;
+    if (before.close > 0) movePct = ((latest.close - before.close) / before.close) * 100;
   }
   return { divergenceDays: days, indexDownDays, indexChangePct, volumeMultiple, movePct };
 }

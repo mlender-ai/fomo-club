@@ -1500,6 +1500,10 @@ async function detectPriceSignals(
     maxVolumeMultiple: 0,
     stocksWith2xVolume: 0,
     stocksWith15xVolume: 0,
+    /** 순변동 분포 — E형 상한(잠정 5%)을 확정할 근거. 배수 2배 이상인 종목만 센다. */
+    spikeNetUnder3: 0,
+    spikeNetUnder5: 0,
+    spikeNetUnder7: 0,
     indexFellToday: 0,
   };
 
@@ -1530,7 +1534,13 @@ async function detectPriceSignals(
           if (probe.divergenceDays >= 3) census.stocksWith3PlusDays += 1;
           if (probe.divergenceDays >= 4) census.stocksWith4PlusDays += 1;
           census.maxVolumeMultiple = Math.max(census.maxVolumeMultiple, Math.round(probe.volumeMultiple * 10) / 10);
-          if (probe.volumeMultiple >= 2) census.stocksWith2xVolume += 1;
+          if (probe.volumeMultiple >= 2) {
+            census.stocksWith2xVolume += 1;
+            const m = Math.abs(probe.movePct);
+            if (m <= 3) census.spikeNetUnder3 += 1;
+            if (m <= 5) census.spikeNetUnder5 += 1;
+            if (m <= 7) census.spikeNetUnder7 += 1;
+          }
           if (probe.volumeMultiple >= 1.5) census.stocksWith15xVolume += 1;
           if (probe.indexChangePct < 0) census.indexFellToday += 1;
         }
