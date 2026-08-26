@@ -27,13 +27,22 @@ import type { DiscoveryMarketRow } from "./market-source-types";
  */
 
 /**
- * 시장별 상한. KOSPI 150 + KOSDAQ 150 = **300** (WO PART D-1 의 1차 목표).
+ * 시장별 상한. KOSPI 400 + KOSDAQ 400 ≈ **800** (WO PART D-1 의 2차 목표).
  *
- * 왜 시장별로 나누나 — 시총 순위는 **시장 안에서만** 비교 가능하다. 두 시장을 섞어 상위 300을
+ * 왜 시장별로 나누나 — 시총 순위는 **시장 안에서만** 비교 가능하다. 두 시장을 섞어 상위 N을
  * 자르면 KOSPI 가 거의 다 먹고 KOSDAQ 은 몇 개 안 남는다. 코스닥이 오히려 "아직 조용한"
  * 종목이 많은 곳이라 그렇게 자르면 이 앱이 찾으려는 것을 스스로 버린다.
+ *
+ * ## 왜 150에서 400으로 갔나 — 실측이 시켰다
+ *
+ * 150(총 326)으로 배포하고 재보니 **`mega_cap` 으로만 14후보가 떨어졌다.** 당연하다:
+ * 시장별 상위 150을 보는데 "이미 알려진" 판정선이 시총 **100위**(`KR_MEGA_CAP_RANK`)라
+ * 유니버스의 3분의 2가 그 선 안이다. 조용한 종목을 찾겠다면서 시끄러운 구간만 훑고 있었다.
+ *
+ * **판정선을 밀지 않는다** — 그러면 "이미 오른 종목"이 섞인다(WO 하지 말 것). 대신 선 **아래**를
+ * 늘린다. 400이면 시장별 300종목이 100위 밖에 놓인다.
  */
-export const PICK_UNIVERSE_PER_MARKET = 150;
+export const PICK_UNIVERSE_PER_MARKET = 400;
 
 export interface KrPickUniverse {
   defs: StockDef[];

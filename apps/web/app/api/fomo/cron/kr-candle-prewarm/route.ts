@@ -12,11 +12,16 @@ import { STOCK_VOCAB } from "@fomo/core";
  * 새벽(04:40 KST) 실행 — 05:00 index 크론·06:00 daily-30 빌드 전에 캐시가 차 있게.
  */
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+/**
+ * 유니버스가 800으로 늘면서 60초로는 못 끝낸다(450종목 실측 30.9초 → 800종목이면 ~55초).
+ * 다른 수집 크론(`disclosures`)과 같은 300초로 맞춘다. 동시 실행 수는 **안 올린다** —
+ * 네이버를 더 세게 때리는 대신 시간을 준다.
+ */
+export const maxDuration = 300;
 
-const UNIVERSE_LIMIT = 450; // 시간 예산(50초 · 동시 8)이 감당하는 한계. 늘리려면 예산부터 재야 한다.
+const UNIVERSE_LIMIT = 900; // 픽 유니버스(≈800) + 여유. 시간 예산은 위에서 함께 늘렸다.
 const CONCURRENCY = 8;
-const TIME_BUDGET_MS = 50_000; // maxDuration 60s 안에서 안전 마진
+const TIME_BUDGET_MS = 240_000; // maxDuration 300s 안에서 안전 마진
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
