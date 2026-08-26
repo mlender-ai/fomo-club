@@ -22,6 +22,11 @@ import {
   detectMarketDivergence,
   detectVolumeAwakening,
   probeQuietSignals,
+  buildSectorStats,
+  sectorStatFor,
+  companyRead,
+  type CompanyGroup,
+  type SectorStatInput,
   MARKET_DIVERGENCE_MIN_DOWN_DAYS,
   type MarketDivergence,
   type VolumeAwakening,
@@ -368,6 +373,13 @@ export interface QuietPick {
   whyNow?: WhyNowEvent[];
   /** 공시가 0건일 때 붙이는 줄(C-4). 수집 전이면 `undefined` — "없었다" 와 "안 봤다" 는 다르다. */
   whyNowQuietNote?: string;
+  /**
+   * WO-RESET-05 §4 — 3걸음 「어떤 회사인가」. 세 덩어리(돈·값·빚).
+   *
+   * **굽는 시점에 굳는다** — 업종 중간값은 유니버스 전체를 봐야 나오므로 화면에서 만들 수
+   * 없다. 비교 기준이 없는 지표는 줄 자체가 없다(맨숫자 금지). 없으면 필드가 없다.
+   */
+  companyRead?: CompanyGroup[];
   qualifiedAt: string;
 }
 
@@ -458,6 +470,8 @@ export interface QuietPickQualification {
    * 나간 건수다. 이 비율이 보고 대상이다(보고할 것 3번).
    */
   disclosurePhrases?: { total: number; raw: number };
+  /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
+  companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
 }
 
 /**
@@ -1706,6 +1720,23 @@ export async function buildQuietPickResponse(options: {
   /** canonical → 팩트시트. 픽마다 배열을 훑지 않도록 한 번만 만든다. */
   const factSheetByStock = new Map(factSheets.map((sheet) => [sheet.canonical, sheet]));
 
+  /**
+   * WO-RESET-05 §4-6 — 업종 중간값. **새로 모으는 것이 없다.**
+   *
+   * 팩트시트를 이미 전부 읽고 있고 거기 분류·PER·PBR·부채비율이 다 들어 있다. 묶어서
+   * 중앙값을 내면 끝이다(유니버스 때와 같다 — 데이터는 와 있었고 안 쓰고 있었을 뿐).
+   * 픽마다 다시 계산하지 않도록 여기서 한 번만 만든다.
+   */
+  const sectorStatRows: SectorStatInput[] = factSheets.map((sheet) => ({
+    industry: sheet.classification?.industry ?? null,
+    sector: sheet.classification?.sector ?? null,
+    per: sheet.valuation?.per_ttm ?? null,
+    pbr: sheet.valuation?.pbr ?? null,
+    debtToEquity: sheet.balance?.debt_to_equity ?? null,
+    dividendYield: sheet.valuation?.dividend_yield ?? null,
+  }));
+  const sectorStats = buildSectorStats(sectorStatRows);
+
   const krSignals = detectKrSignals(krDefs, histories);
   const usSignals = detectUsInsiderSignals(insiderRaw, date);
   // WO-P4 신호망 확장 — KR 내부자(DART)·수급 전환. 같은 종목 중복은 강도 높은 쪽만 남긴다.
@@ -1832,6 +1863,13 @@ export async function buildQuietPickResponse(options: {
    * (신호 시작·실적 줄은 번역 대상이 아니다). 비율이 보고 대상이다.
    */
   const phraseCensus = { total: 0, raw: 0 };
+
+  /**
+   * WO-RESET-05 보고할 것 1·2번 — 업종 비교를 붙일 수 있는 종목 비율과, 비교 문장이 붙어
+   * 실제로 화면에 나간 지표 수. `rows` 는 **비교 문장이 있는 줄만** 세므로 곧 커버리지다
+   * (문장이 없으면 줄이 안 만들어진다).
+   */
+  const companyCensus = { stocks: 0, withSector: 0, rows: 0, scored: 0 };
 
   for (const { sig, near, front } of assembled) {
     if (!front) { drop("front_failed"); continue; }
@@ -2149,6 +2187,45 @@ export async function buildQuietPickResponse(options: {
           ...(note ? { whyNowQuietNote: note } : {}),
         };
       })()),
+      /**
+       * WO-RESET-05 §4 — 3걸음 「어떤 회사인가」. **여기서 굳힌다.**
+       *
+       * 업종 중간값은 유니버스 전체를 봐야 나오므로 화면에서 만들 수 없다. 굽는 시점에
+       * 만들어 실어 보낸다. 비교 기준이 없으면 그 줄이 아예 없다 — 맨숫자를 남기지 않는다.
+       */
+      ...(((): { companyRead?: CompanyGroup[] } => {
+        const sheet = factSheetByStock.get(sig.subject.canonical);
+        if (!sheet) return {};
+        const classification = { industry: sheet.classification?.industry ?? null, sector: sheet.classification?.sector ?? null };
+        const groups = companyRead({
+          growth: {
+            revenueYoy: sheet.growth?.revenue_yoy ?? null,
+            revenueCagr3y: sheet.growth?.revenue_cagr_3y ?? null,
+            operatingIncomeYoy: sheet.growth?.operating_income_yoy ?? null,
+          },
+          margin: { operatingTtm: sheet.margin?.operating_ttm ?? null },
+          valuation: {
+            per: sheet.valuation?.per_ttm ?? null,
+            pbr: sheet.valuation?.pbr ?? null,
+            perBand: sheet.valuation?.band_5y?.per
+              ? { percentile: sheet.valuation.band_5y.per.current_percentile, sufficient: sheet.valuation.band_5y.per.sufficient }
+              : null,
+            pbrBand: sheet.valuation?.band_5y?.pbr
+              ? { percentile: sheet.valuation.band_5y.pbr.current_percentile, sufficient: sheet.valuation.band_5y.pbr.sufficient }
+              : null,
+          },
+          balance: { debtToEquity: sheet.balance?.debt_to_equity ?? null },
+          sector: sectorStatFor(sectorStats, classification),
+        });
+        // 커버리지 계측(보고할 것 1·2번) — 업종 비교가 붙은 종목 / 비교 문장이 붙은 지표.
+        companyCensus.stocks += 1;
+        if (sectorStatFor(sectorStats, classification)) companyCensus.withSector += 1;
+        for (const g of groups) {
+          companyCensus.rows += g.rows.length;
+          if (g.score !== null) companyCensus.scored += 1;
+        }
+        return groups.length > 0 ? { companyRead: groups } : {};
+      })()),
       anomalies,
       ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {
@@ -2299,6 +2376,8 @@ export async function buildQuietPickResponse(options: {
       krUniverseFromVocab: krUniverse.fromVocab,
       // WO-RESET-05 §3-1 — 화면에 나간 공시 항목 중 번역표에 없어 원문 그대로인 비율.
       disclosurePhrases: phraseCensus,
+      // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
+      companyRead: companyCensus,
       krWithSignal: krSignals.length,
       usInsiderRaw: insiderRaw.length,
       usWithSignal: usSignals.length,

@@ -66,7 +66,8 @@ describe("뎁스 카피 — DS-03", () => {
   const depth = read("../components/QuietPickDepth.tsx");
 
   it("결론은 뎁스에서 한 번만 렌더된다 (DS-03 완료 기준 2)", () => {
-    expect(depth.match(/\{hook\}/g) ?? []).toHaveLength(1);
+    // `{hook}` 은 1걸음에서 한 번만 그려진다. (요약은 문자열을 가공해 쓰므로 이 패턴이 아니다.)
+    expect(depth.match(/^\s*\{hook\}$/gm) ?? []).toHaveLength(1);
     expect(depth).not.toContain("{pick.hook}");
   });
 
@@ -74,14 +75,18 @@ describe("뎁스 카피 — DS-03", () => {
     expect(depth).not.toContain('"아직"');
     expect(depth).not.toContain("7일 아직");
     expect(depth).not.toContain("채점 전이에요");
-    // 대신 실제 수익률을 계산한다.
-    expect(depth).toContain("computeOurRecord(");
+    // 「우리 기록」은 화면에서 뺐다(WO-RESET-02 PART D) — 계산 모듈은 남고 상세가 안 부른다.
+    expect(depth).not.toContain("computeOurRecord(");
   });
 
-  it("밴드 캡션·유형 경고문은 밴드가 있을 때만 배선된다 (DS-03 완료 기준 5)", () => {
+  it("밴드는 「왜 지금」 상태줄에만 남았다 — 「값」 섹션은 3걸음이 대체했다 (WO-RESET-05 §4)", () => {
+    // 밴드 자체는 계속 읽는다 — `whyNowStateEvents` 가 특이할 때만 한 줄을 붙인다.
     expect(depth).toContain("const band = valuation?.band ?? null");
-    expect(depth).toContain('data-testid="depth-band"');
-    expect(depth).toContain('data-testid="depth-archetype-warning"');
+    expect(depth).toContain("whyNowStateEvents");
+    // 맨숫자를 늘어놓던 자리는 사라졌다.
+    expect(depth).not.toContain('data-testid="depth-band"');
+    expect(depth).not.toContain('data-testid="depth-archetype-warning"');
+    expect(depth).not.toContain('data-testid="depth-value"');
   });
 
   it("회사 설명은 벤더 원문을 그대로 쓰지 않고 출처를 남긴다 (DS-03 §6)", () => {

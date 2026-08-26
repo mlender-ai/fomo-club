@@ -1083,6 +1083,27 @@ export interface QuietPickWhyNowEvent {
   url?: string;
 }
 
+/** WO-RESET-05 §4 — 3걸음의 한 줄. 숫자와 **그 숫자를 읽는 문장**. */
+export interface CompanyMetricRow {
+  label: string;
+  value: string;
+  /** 비교 문장. **이게 없으면 줄이 없다.** */
+  comparison: string;
+}
+
+/** WO-RESET-05 §4-4 — 세 덩어리(돈·값·빚) 중 하나. 합친 점수는 없다. */
+export interface CompanyGroup {
+  /** `돈은 잘 버나요` 처럼 **질문**. */
+  title: string;
+  rows: CompanyMetricRow[];
+  /** 5점 만점. 잴 수 없으면 `null`. */
+  score: number | null;
+  /** 점 옆 문장. `score` 가 있으면 반드시 있다. */
+  scoreText: string | null;
+  /** `어떻게 계산했나요` 가 그대로 쓴다. */
+  method: string;
+}
+
 export interface QuietPick {
   subject: {
     canonical: string;
@@ -1147,6 +1168,11 @@ export interface QuietPick {
   whyNow?: QuietPickWhyNowEvent[];
   /** 공시 0건일 때의 줄(§C-4). 수집 전이면 없다 — "없었다" 와 "안 봤다" 는 다르다. */
   whyNowQuietNote?: string;
+  /**
+   * WO-RESET-05 §4 — 3걸음 「어떤 회사인가」. 굽는 시점에 굳는다.
+   * 비교 기준이 없는 지표는 **줄 자체가 없다**(맨숫자 금지). 없으면 필드가 없다.
+   */
+  companyRead?: CompanyGroup[];
   /**
    * 카드 칩 — 훅이 말하지 않는 근거만, 서로 다른 축으로 최대 3개.
    * 발행 시점에 굳는다(카드가 다시 조립하지 않는다). 구 페이로드에는 없으므로 선택 필드.

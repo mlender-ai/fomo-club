@@ -22,6 +22,8 @@ export * from "./quiet-pick-hook";
 export * from "./card-type";
 export * from "./disclosure-kind";
 export * from "./disclosure-phrase";
+export * from "./sector-stats";
+export * from "./company-read";
 export * from "./quiet-signals";
 export * from "./why-now";
 export * from "./pick-vocabulary";
