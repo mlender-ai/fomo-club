@@ -105,3 +105,26 @@ describe("문서와 코드가 어긋나지 않는다 — 문서가 정본이다"
     expect(phrases.filter((p) => banned.test(p))).toEqual([]);
   });
 });
+
+describe("프로덕션에서 원문으로 나가던 것들을 채웠다 (2026-08-27 실측 5건)", () => {
+  it("자기주식취득**결과보고서**는 취득 결정과 다른 사건이다", () => {
+    const done = disclosurePhrase("자기주식취득결과보고서");
+    const plan = disclosurePhrase("자기주식취득결정");
+    expect(done.translated).toBe(true);
+    expect(done.text).not.toBe(plan.text);
+    expect(done.text).toContain("얼마나 샀는지");
+  });
+
+  it("나머지 넷도 사람 말로 나간다", () => {
+    for (const [title, needle] of [
+      ["주주명부폐쇄기간또는기준일설정", "주주 명단"],
+      ["기업설명회(IR)개최(안내공시)", "투자자 설명회"],
+      ["기업가치제고계획예고", "주주가치"],
+      ["주주총회소집결의", "주주총회"],
+    ] as const) {
+      const p = disclosurePhrase(title);
+      expect(p.translated, title).toBe(true);
+      expect(p.text, title).toContain(needle);
+    }
+  });
+});

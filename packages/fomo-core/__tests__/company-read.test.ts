@@ -139,3 +139,23 @@ describe("쓰지 않는 말 — WO 하지 말 것", () => {
     expect(valueGroup(same).rows[0]!.comparison).toContain("비슷해요");
   });
 });
+
+describe("부채비율 단위 — 배수를 퍼센트로 옮긴다", () => {
+  it("팩트시트의 배수(1.0)를 100%로 쓴다 — 1% 가 아니다", () => {
+    const g = debtGroup({ ...base, balance: { debtToEquity: 1.0 }, sector: { ...sector, debtToEquity: 1.71 } });
+    expect(g.rows[0]!.value).toBe("100.0%");
+    expect(g.rows[0]!.comparison).toContain("171.0%");
+  });
+
+  it("소수 한 자리를 남긴다 — 반올림하면 서로 다른 값이 같은 글자가 된다", () => {
+    const a = debtGroup({ ...base, balance: { debtToEquity: 0.004 }, sector: { ...sector, debtToEquity: 0.012 } });
+    expect(a.rows[0]!.value).toBe("0.4%");
+    expect(a.rows[0]!.comparison).toContain("1.2%");
+    // 종전에는 둘 다 `0%` · `1%` 로 찍혀 "1%보다 낮아요" 옆에 "1%" 가 서 있었다.
+    expect(a.rows[0]!.value).not.toBe(a.rows[0]!.comparison.match(/[\d.]+%/)?.[0]);
+  });
+
+  it("점수는 그대로 비율로 낸다 — 단위 표기와 판정은 다른 층이다", () => {
+    expect(debtGroup({ ...base, balance: { debtToEquity: 0.3 }, sector: { ...sector, debtToEquity: 0.8 } }).score).toBe(5);
+  });
+});

@@ -64,6 +64,13 @@ export interface CompanyReadInput {
     perBand: { percentile: number | null; sufficient: boolean } | null;
     pbrBand: { percentile: number | null; sufficient: boolean } | null;
   };
+  /**
+   * `debtToEquity` 는 **배수**다(부채 ÷ 자기자본). 팩트시트가 그렇게 저장한다
+   * (`derive.ts`: `liabilities / equity`). 화면의 「부채비율 %」는 여기에 100을 곱한 값이다.
+   *
+   * 이걸 헷갈려 `1.0` 을 그대로 `1%` 로 찍고 있었다(2026-08-27 프로덕션 실측) — 실제로는
+   * **100%** 다. 100배 틀린 숫자를 확신 있게 보여주는 것이 없는 것보다 나쁘다.
+   */
   balance: { debtToEquity: number | null };
   sector: SectorStat | null;
 }
@@ -213,10 +220,12 @@ export function debtGroup(input: CompanyReadInput): CompanyGroup {
   if (d === null || !(d >= 0) || !sector?.debtToEquity) {
     return { title, rows, score: null, scoreText: null, method };
   }
+  // 배수 → 퍼센트. 소수 한 자리까지 남긴다 — 반올림하면 `1%` 와 `1%` 가 되어 비교가 거짓말이 된다.
+  const asPct = (v: number) => `${(Math.round(v * 1000) / 10).toFixed(1)}%`;
   rows.push({
     label: "부채비율",
-    value: `${Math.round(d)}%`,
-    comparison: versusSector(d, sector.debtToEquity, (v) => `${Math.round(v)}%`, `${sector.label} 업종`),
+    value: asPct(d),
+    comparison: versusSector(d, sector.debtToEquity, asPct, `${sector.label} 업종`),
   });
   const ratio = d / sector.debtToEquity;
   const score = ratio <= 0.5 ? 5 : ratio <= 0.8 ? 4 : ratio <= 1.2 ? 3 : ratio <= 2 ? 2 : 1;
