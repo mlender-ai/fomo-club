@@ -289,7 +289,15 @@ export function parseThirteenF(
 ): { holdings: InvestorHolding[]; unresolved: number } {
   const byTicker = new Map<string, InvestorHolding>();
   let unresolved = 0;
-  for (const match of xml.matchAll(/<infoTable>([\s\S]*?)<\/infoTable>/g)) {
+  /**
+   * **네임스페이스 접두를 받아야 한다.**
+   *
+   * 제출자마다 XML 모양이 다르다. 버크셔는 기본 네임스페이스라 `<infoTable>` 이고,
+   * 서드포인트는 `<ns1:infoTable>` 이다. 안쪽 태그는 접두를 받고 있었는데 **바깥 반복만
+   * 안 받아서**, 접두를 쓰는 제출자는 보유가 0건으로 읽히고 「13F 없음」으로 실패했다
+   * (2026-08-27 실측: 서드포인트·바우포스트). 목록에는 멀쩡히 있었다.
+   */
+  for (const match of xml.matchAll(/<(?:\w+:)?infoTable>([\s\S]*?)<\/(?:\w+:)?infoTable>/g)) {
     const body = match[1]!;
     const tag = (name: string) => new RegExp(`<(?:\\w+:)?${name}>([^<]*)</(?:\\w+:)?${name}>`).exec(body)?.[1]?.trim();
     const cusip = (tag("cusip") ?? "").toUpperCase();
@@ -361,7 +369,7 @@ export async function fetchThirteenF(
     for (const file of candidates) {
       await sleep(SEC_GAP_MS);
       const xml = await fetchText(`${dir}/${file}`, headers);
-      if (!xml || !xml.includes("infoTable")) continue;
+      if (!xml || !/<(?:\w+:)?infoTable>/.test(xml)) continue;
       const parsed = parseThirteenF(xml, resolve);
       if (parsed.holdings.length === 0 && parsed.unresolved === 0) continue;
       out.push({
