@@ -23,6 +23,10 @@ export * from "./card-type";
 export * from "./disclosure-kind";
 export * from "./disclosure-phrase";
 /**
+ * `exposure-history` 도 배럴에서 뺐다 — 굽는 경로 전용이다(성능 게이트, 2026-08-27).
+ *   import { buildExposureHistory } from "@fomo/core/keyword-cards/exposure-history";
+ */
+/**
  * `sector-stats` · `company-read` 는 **배럴에서 뺐다** (2026-08-27 성능 게이트).
  *
  * 이 둘은 **굽는 경로에서만** 쓴다(`apps/web/lib/quiet-pick.ts`). 배럴에 넣자 `@fomo/core`

@@ -1174,6 +1174,18 @@ export interface QuietPick {
    */
   companyRead?: CompanyGroup[];
   /**
+   * WO-RESET-06 — 노출 이력. **처음 나온 종목이면 이 필드가 없다**.
+   * 카드는 `다시 나왔어요` 라벨과 처음 가격을, 상세 1걸음은 이력 줄을 읽는다.
+   */
+  exposure?: {
+    count: number;
+    firstDate: string;
+    /** 화면 표기 — `8월 24일`. **코어가 만든다**(화면이 날짜를 조립하지 않는다). */
+    firstWhen: string;
+    firstPrice?: number;
+    recent: Array<{ date: string; when: string; reason: string; price?: number; code?: string }>;
+  };
+  /**
    * 카드 칩 — 훅이 말하지 않는 근거만, 서로 다른 축으로 최대 3개.
    * 발행 시점에 굳는다(카드가 다시 조립하지 않는다). 구 페이로드에는 없으므로 선택 필드.
    */

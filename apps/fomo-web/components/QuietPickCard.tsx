@@ -59,6 +59,16 @@ export function priceText(pick: QuietPick): string {
   return isUs ? `$${value.toFixed(2)}` : `${value.toLocaleString("en-US")}원`;
 }
 
+/**
+ * 임의 가격 한 개를 카드와 **같은 규칙**으로 찍는다(WO-RESET-06 §B-4).
+ *
+ * `priceText` 는 페이로드의 `currentText` 를 우선하므로 과거 가격에는 쓸 수 없다.
+ * 원/달러가 섞이면 무슨 돈인지 모르게 되므로 통화 판정만 같이 간다.
+ */
+function formatPrice(pick: QuietPick, value: number): string {
+  return pick.subject.country === "US" ? `$${value.toFixed(2)}` : `${Math.round(value).toLocaleString("en-US")}원`;
+}
+
 const COUNTRY_LABEL: Record<string, string> = { KR: "한국", US: "미국" };
 
 /**
@@ -166,19 +176,53 @@ export function QuietPickCard({
   onDetail?: () => void;
   revealed?: boolean;
 }) {
-  const isOpen = revealed ?? isRevealed(pick.subject.canonical);
+  /**
+   * WO-RESET-06 §B — **다시 나온 카드는 종목명을 가리지 않는다.**
+   *
+   * 마스킹은 "처음 보는 종목의 이름을 먼저 알려주지 않는다" 는 장치다. 이미 본 종목에는
+   * 걸 이유가 없고, 걸어두면 "다시 나왔어요" 라고 말해놓고 무엇이 다시 나왔는지는 가리는
+   * 앞뒤가 안 맞는 카드가 된다.
+   */
+  const returning = Boolean(pick.exposure);
+  const isOpen = returning || (revealed ?? isRevealed(pick.subject.canonical));
   const cardType = pick.cardType;
   /**
    * 폴백 — 새 payload 가 오기 전(하루 한 번 굽는 배치) 한 배치 동안은 형이 없다.
    * 그때는 종전 훅을 그대로 쓰고 그림은 스파크라인 하나로 둔다. 지어내지 않는다.
    */
-  const hook = cardType?.hook ?? pickHook(pick);
+  /**
+   * WO-RESET-06 §B-3 — 다시 나온 카드의 결론은 **무엇이 새로 생겼나**다.
+   *
+   * `기관이 4일째 사고 있어요` 처럼 이어짐을 말하지 않는다. 그건 어제와 같은 말이고,
+   * 같은 말을 다시 들으려고 앱을 열지는 않는다. 재등장 사유가 곧 새로 생긴 일이다.
+   */
+  const reentryText = pick.signal.reentry?.text?.trim();
+  const hook = returning && reentryText ? `이번엔 ${reentryText}` : (cardType?.hook ?? pickHook(pick));
   const support = cardType?.support ?? [];
   // 껍데기 0 은 그리지 않는다(WO-RESET-01 B-1) — 구 페이로드가 하루 남는다.
   const changePct = displayChangePct(pick.price.changePct);
   const ticker = subjectTicker(pick.subject);
   const identityLine = maskedIdentityLine(pick);
   const fallbackSeries = pick.price.sparkline ?? [];
+
+  /**
+   * 처음 나왔을 때 가격 → 지금 (§B-4). 가격을 못 잰 날은 `null` — 지어내지 않는다.
+   * 통화 표기는 카드의 가격과 **같은 포맷터**를 쓴다(원/달러가 섞이면 무슨 돈인지 모른다).
+   */
+  const firstToNow = (() => {
+    const e = pick.exposure;
+    if (!e || typeof e.firstPrice !== "number" || !(e.firstPrice > 0)) return null;
+    const now = pick.price.current;
+    if (typeof now !== "number" || !(now > 0)) return null;
+    // 날짜 표기는 **코어가 만들어 페이로드로 온다** — 화면이 `8월 24일` 을 조립하지 않는다.
+    if (!e.firstWhen) return null;
+    return {
+      when: `${e.firstWhen} 처음 나왔을 때`,
+      from: formatPrice(pick, e.firstPrice),
+      to: formatPrice(pick, now),
+      pct: ((now - e.firstPrice) / e.firstPrice) * 100,
+    };
+  })();
 
   return (
     <div
@@ -196,6 +240,12 @@ export function QuietPickCard({
         .join(". ")}
     >
       {/* ① 정체 — 가려진 동안은 국가·섹터·시총 한 줄. 열고 나면 종목명·티커가 그 위에 온다. */}
+      {/* WO-RESET-06 §B-2 — 다시 나온 카드임을 **맨 위에서** 밝힌다. 작게, 회색. */}
+      {returning && (
+        <p className="mb-s2 font-mono text-ds-label text-ds-text-3" data-testid="pick-returning">
+          {pick.exposure!.count >= 3 ? `${pick.exposure!.count}번째 나왔어요` : "다시 나왔어요"}
+        </p>
+      )}
       {isOpen && (
         <p className="flex min-w-0 items-baseline gap-s2" data-testid="pick-name">
           <span className="truncate text-ds-title text-ds-text-1">{displayName(pick)}</span>
@@ -247,6 +297,24 @@ export function QuietPickCard({
           )
         )}
       </div>
+
+      {/*
+        ⑤-a 처음 나왔을 때 → 지금 (WO-RESET-06 §B-4).
+
+        **이 앱이 언제 짚었고 그 뒤로 어떻게 됐는지**가 보인다. 음수여도 그대로 보여준다 —
+        가리면 성적이 아니라 광고가 된다. 가격을 못 잰 날은 이 줄을 만들지 않는다.
+      */}
+      {returning && firstToNow && (
+        <div className="mt-[18px]" data-testid="pick-since-first">
+          <p className="font-mono text-ds-label text-ds-text-3">{firstToNow.when}</p>
+          <p className="mt-[2px] font-mono text-ds-label text-ds-text-2">
+            {firstToNow.from} → 지금 {firstToNow.to}
+            <span className={firstToNow.pct < 0 ? " text-ds-down" : " text-ds-text-1"}>
+              {`  (${firstToNow.pct > 0 ? "+" : ""}${firstToNow.pct.toFixed(1)}%)`}
+            </span>
+          </p>
+        </div>
+      )}
 
       {/* ⑤ 보조 — 최대 2줄. 칩 없음(§3-⑤·§8). */}
       {support.length > 0 && (

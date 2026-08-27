@@ -197,15 +197,17 @@ describe("완료 기준 7 — `아직 못 찾았어요`(미확보)와 `없어요
   });
 
   it("픽 0장은 부재로 말한다", () => {
-    expect(read("../components/QuietPickDeck.tsx")).toContain("오늘은 기준을 넘은 곳이 없어요");
+    // WO-RESET-06 §D — 3일 규칙으로 덱이 빌 수 있고, 그때도 **부재**로 말한다.
+    expect(read("../components/QuietPickDeck.tsx")).toContain("오늘은 조용한 곳을 찾지 못했어요");
   });
 });
 
 describe("완료 기준 8 — 덱이 짧은 날 개수를 그대로 표시한다 (§7)", () => {
-  it("개수를 숨기지 않고, 3장 미만이면 적었다고 말한다", () => {
+  it("개수를 숨기지 않고, 5장 미만이면 적었다고 말한다 (WO-RESET-06 §D)", () => {
     const deck = read("../components/QuietPickDeck.tsx");
     expect(deck).toContain("{count}곳");
-    expect(deck).toContain("오늘은 조용한 곳이 적었어요");
+    // 임계가 3 → 5 로 올랐다(WO-RESET-06 §D) — 제외 규칙이 덱을 줄이므로 더 일찍 밝힌다.
+    expect(deck).toContain("오늘은 새로 나온 곳이 적어요");
     expect(deck).toContain("count < THIN_DECK");
   });
 });

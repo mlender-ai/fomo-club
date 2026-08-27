@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
+import { buildExposureHistory } from "@fomo/core/keyword-cards/exposure-history";
 import { withCors, kstDate } from "../../../../../lib/fomo";
 import { readFeedContentMany, readFeedContentStrict, writeFeedContent } from "../../../../../lib/feed-content-store";
 import { appendJudgmentLedger } from "../../../../../lib/judgment-ledger";
@@ -64,7 +65,14 @@ export async function GET(request: Request) {
     );
     const page1Streaks = quietPickPage1Streaks(wanted.map((d) => snapshots.get(dateId(d)) ?? null));
 
-    const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks });
+    /**
+     * WO-RESET-06 §A — 3일 규칙의 입력. **위에서 이미 읽은 스냅샷을 다시 쓴다** — 커넥션을
+     * 더 잡지 않는다(§12 의 교훈). 오늘자는 `wanted` 에 애초에 없다(자기 자신 때문에
+     * 제외되면 안 된다).
+     */
+    const exposureHistory = buildExposureHistory(wanted.map((d) => snapshots.get(dateId(d)) ?? null));
+
+    const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks, exposureHistory });
 
     // WO-P1 자가검증 — 발행 픽 전원 캔들 ≥200일. 게이트가 이미 걸렀으므로 여기서 걸리면 게이트 회귀다.
     const thin = response.picks.filter((pick) => pick.dataQuality.candles < 200);
