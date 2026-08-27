@@ -610,8 +610,29 @@ export function quietPickPublishBlockReason(
   if (count === 0) return "재생성 결과가 0장 — 빈 덱은 발행하지 않는다";
 
   const priorCount = prior?.picks.length ?? 0;
-  if (priorCount >= QUIET_PICK_COLLAPSE_MIN_PRIOR && count < priorCount * QUIET_PICK_COLLAPSE_RATIO) {
-    return `직전 ${priorCount}장 → ${count}장 붕괴(하한 ${QUIET_PICK_COLLAPSE_RATIO * 100}%) — 직전 페이로드를 유지한다`;
+  /**
+   * **설명된 축소는 붕괴가 아니다** (WO-RESET-06 §D · 2026-08-27 실측).
+   *
+   * 이 가드(§12)가 잡으려는 것은 **까닭 모를 붕괴** — 입력이 조용히 실패해서 덱이 반토막
+   * 나는 상황이다. 그런데 3일 규칙을 켜자마자 이 가드가 발행을 막았다:
+   *
+   * ```
+   * 직전 15장 → 5장 붕괴 — 직전 페이로드를 유지한다
+   * exposure: { blocked: 14 }
+   * ```
+   *
+   * 14장이 **왜 빠졌는지 우리가 정확히 안다.** 최근 3일 안에 나왔고 새로 생긴 일이 없어서
+   * 뺐다 — 규칙이 의도대로 동작한 것이지 장애가 아니다. WO 가 못박은 대로
+   * **"덱이 빈다고 규칙을 풀지 않는다"** 이고, 그렇다면 가드도 그 축소를 붕괴로 읽으면 안 된다.
+   *
+   * 그래서 **제외한 만큼을 되더해서** 본다. 그러고도 반토막이면 그건 설명되지 않은 축소이므로
+   * 종전대로 막는다 — 가드를 끄는 것이 아니라 **가드가 세는 대상을 바로잡는 것**이다.
+   */
+  const explained = next.qualification.exposure?.blocked ?? 0;
+  const accounted = count + explained;
+  if (priorCount >= QUIET_PICK_COLLAPSE_MIN_PRIOR && accounted < priorCount * QUIET_PICK_COLLAPSE_RATIO) {
+    const note = explained > 0 ? ` (3일 규칙 제외 ${explained}장 되더한 뒤에도)` : "";
+    return `직전 ${priorCount}장 → ${count}장 붕괴(하한 ${QUIET_PICK_COLLAPSE_RATIO * 100}%)${note} — 직전 페이로드를 유지한다`;
   }
 
   return null;
