@@ -70,9 +70,25 @@ export async function readFactSheet(market: string, canonical: string): Promise<
  * 소급 스캔은 "저장된 산출물 전량" 이 대상이라 유니버스에서 빠진 레코드도 봐야 한다.
  * 불변식 위반이 유니버스 밖에 숨는 것을 막는다.
  */
-export async function readAllFactSheets(limit = 2_000): Promise<FactSheet[]> {
-  const rows = await readFeedContentByPrefix<FactSheetRecord>(LATEST_PREFIX, limit).catch(() => []);
+/**
+ * 전량 조회 — **실패하면 던진다.**
+ *
+ * 종전에는 여기서 `.catch(() => [])` 로 삼켰다. 그러면 DB 가 죽어도 호출부에는
+ * **"팩트시트가 하나도 없는 날"** 과 글자 하나 다르지 않게 보인다. `docs/STATUS.md` §12 가
+ * 바로 그 사고였고(같은 fail-open 이 빈 덱을 2분 노출시켰다), 같은 실수를 여기서 반복했다 —
+ * 3걸음이 0종목으로 나갔는데 `inputFailures` 는 비어 있었다(2026-08-27 실측).
+ *
+ * 삼키는 쪽이 필요하면 `readAllFactSheetsOrEmpty` 를 쓴다. **어느 쪽을 쓰는지 부르는 쪽이
+ * 고르게 한다** — 조용히 정해주지 않는다.
+ */
+export async function readAllFactSheetsStrict(limit = 2_000): Promise<FactSheet[]> {
+  const rows = await readFeedContentByPrefix<FactSheetRecord>(LATEST_PREFIX, limit);
   return rows.map((entry) => entry.row?.factsheet).filter((factsheet): factsheet is FactSheet => Boolean(factsheet));
+}
+
+/** 실패를 빈 배열로 덮는다. **"없다" 와 "못 읽었다" 를 구분할 필요가 없는 곳에서만** 쓴다. */
+export async function readAllFactSheets(limit = 2_000): Promise<FactSheet[]> {
+  return readAllFactSheetsStrict(limit).catch(() => []);
 }
 
 export async function readFactSheetSnapshot(market: string, canonical: string, hash: string): Promise<FactSheetRecord | null> {

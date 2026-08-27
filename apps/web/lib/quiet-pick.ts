@@ -73,7 +73,7 @@ import { assembleStockFront, fetchMarketCapRankMap, type StockFrontData, fetchSt
 import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./judgment-ledger";
 import { readSignalStatsForCards } from "./signal-stats";
 import { readDisclosureCollection } from "./disclosure-store";
-import { readAllFactSheets } from "./fundamentals/repository";
+import { readAllFactSheets, readAllFactSheetsStrict } from "./fundamentals/repository";
 import { readKrCandleCacheMany } from "./kr-candle-cache";
 import type { DisclosureCollection } from "./disclosure-collect";
 import {
@@ -473,6 +473,8 @@ export interface QuietPickQualification {
   disclosurePhrases?: { total: number; raw: number };
   /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
   companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
+  /** 이번 빌드가 읽어온 팩트시트 수. 0 이면 3걸음·실적 줄이 통째로 빈다. */
+  factSheets?: number;
 }
 
 /**
@@ -643,7 +645,7 @@ const defaultDeps: QuietPickDeps = {
   writeUsCandleCache,
   fetchDartInsiderPurchasesByStock,
   readDisclosureCollection,
-  readAllFactSheets,
+  readAllFactSheets: readAllFactSheetsStrict,
   readKrCandleCacheMany,
   fetchStockDaily,
 };
@@ -2379,6 +2381,11 @@ export async function buildQuietPickResponse(options: {
       disclosurePhrases: phraseCensus,
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
+      /**
+       * 읽어온 팩트시트 수. 0 이면 3걸음이 통째로 빈다 — 그게 **장애인지 그날의 사실인지**
+       * `inputFailures` 와 함께 봐야 갈린다(그래서 strict 로 읽는다).
+       */
+      factSheets: factSheets.length,
       krWithSignal: krSignals.length,
       usInsiderRaw: insiderRaw.length,
       usWithSignal: usSignals.length,
