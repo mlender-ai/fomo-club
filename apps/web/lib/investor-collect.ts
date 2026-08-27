@@ -55,13 +55,28 @@ export const INVESTORS: ReadonlyArray<InvestorProfile & { cik?: string; arkFunds
   { id: "michael-burry", name: "마이클 버리", firm: "사이언 애셋", source: "13f", cik: "0001649339" },
   { id: "david-tepper", name: "데이비드 테퍼", firm: "아팔루사", source: "13f", cik: "0001656456" },
   { id: "chase-coleman", name: "체이스 콜먼", firm: "타이거 글로벌", source: "13f", cik: "0001167483" },
-  { id: "philippe-laffont", name: "필립 라퐁", firm: "코투", source: "13f", cik: "0001165408" },
+    /**
+   * 코투는 `0001135730` 이다. 처음에 적은 `0001165408` 은 **ADAGE CAPITAL** 이었다
+   * (2026-08-27 실측 — 638종목 중 322종목이 티커 미해석이라 이상해서 확인했다).
+   * 인물 카드에서 **누가 샀는지 틀리는 것**은 이 기능 전체를 무의미하게 만든다.
+   */
+  { id: "philippe-laffont", name: "필립 라퐁", firm: "코투", source: "13f", cik: "0001135730" },
   { id: "daniel-loeb", name: "대니얼 로브", firm: "서드포인트", source: "13f", cik: "0001040273" },
   { id: "seth-klarman", name: "세스 클라먼", firm: "바우포스트", source: "13f", cik: "0001061768" },
   { id: "david-einhorn", name: "데이비드 아인혼", firm: "그린라이트", source: "13f", cik: "0001079114" },
   { id: "carl-icahn", name: "칼 아이칸", firm: "아이칸 엔터프라이즈", source: "13f", cik: "0000921669" },
   { id: "stanley-druckenmiller", name: "스탠리 드러켄밀러", firm: "듀케인", source: "13f", cik: "0001536411" },
 ];
+
+/**
+ * SEC 요청 사이 간격(ms).
+ *
+ * SEC 는 초당 10건을 넘기면 403 을 준다. 인물 11명 × (제출목록 + 디렉터리 + 보유표) 를
+ * 쉬지 않고 쏘면 뒤쪽 인물이 통째로 실패한다 — 실측(2026-08-27): 서드포인트·바우포스트가
+ * 목록에는 13F 가 멀쩡히 있는데 조회에 실패했다. **없는 게 아니라 막힌 것**이었다.
+ */
+const SEC_GAP_MS = 150;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchText(url: string, headers: Record<string, string>): Promise<string | null> {
   try {
@@ -313,6 +328,7 @@ export async function fetchThirteenF(
   limit = 2
 ): Promise<ThirteenFResult[]> {
   const headers = { "User-Agent": secUa() };
+  await sleep(SEC_GAP_MS);
   const raw = await fetchText(`${SEC_SUBMISSIONS}/CIK${cik}.json`, headers);
   if (!raw) return [];
   let recent: { form?: string[]; filingDate?: string[]; reportDate?: string[]; accessionNumber?: string[] };
@@ -332,6 +348,7 @@ export async function fetchThirteenF(
     const accession = (recent.accessionNumber ?? [])[i];
     if (!accession) continue;
     const dir = `${SEC_ARCHIVES}/${String(Number(cik))}/${accession.replace(/-/g, "")}`;
+    await sleep(SEC_GAP_MS);
     const index = await fetchText(`${dir}/`, headers);
     if (!index) continue;
     /**
@@ -342,6 +359,7 @@ export async function fetchThirteenF(
       .map((m) => m[1]!)
       .filter((n) => !/primary_doc/i.test(n));
     for (const file of candidates) {
+      await sleep(SEC_GAP_MS);
       const xml = await fetchText(`${dir}/${file}`, headers);
       if (!xml || !xml.includes("infoTable")) continue;
       const parsed = parseThirteenF(xml, resolve);
