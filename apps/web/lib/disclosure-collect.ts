@@ -46,6 +46,20 @@ export interface DisclosureCollection {
   asOf: string;
   /** 실제로 훑은 가장 오래된 날짜 — `최근 90일 공시가 없었다` 를 말해도 되는지의 근거다. */
   coveredFrom: string;
+  /**
+   * 그 날짜 범위를 **몇 종목짜리 유니버스로** 훑었나.
+   *
+   * `coveredFrom` 만으로는 부족하다. DART 목록은 하루치를 통째로 주고 우리가 유니버스로
+   * 걸러내므로, **유니버스가 커지면 이미 훑은 날에도 새로 걸릴 종목이 생긴다.** 그런데
+   * `coveredFrom` 은 "이 날짜까지 봤다" 만 말하므로 재개 로직이 과거를 다시 안 본다.
+   *
+   * 실제로 그랬다: 유니버스를 66 → 809 로 늘렸는데 공시가 붙은 종목은 155에 머물렀고,
+   * 덱 15장 중 **공시 항목이 붙은 것이 0장**이었다(2026-08-27 실측). 새 종목의 90일 과거를
+   * 영영 안 보는 상태였다.
+   *
+   * 구 저장분에는 이 필드가 없다 — 없으면 `0` 으로 보아 다시 훑는다(안전한 쪽).
+   */
+  coveredUniverse?: number;
   /** canonical → 최근 90일 공시(과거순). */
   byStock: Record<string, DisclosureItem[]>;
   /** 예산 초과로 훑다 만 날이 있는가. 있으면 "없었다" 를 말하지 않는다. */
@@ -290,10 +304,18 @@ export async function collectDisclosures(options: {
    *
    * 덮은 구간이 없으면 종전처럼 오늘부터 내려간다.
    */
+  /**
+   * **유니버스가 커졌으면 과거를 다시 훑는다.** DART 목록은 하루치를 통째로 주고 우리가
+   * 유니버스로 걸러내므로, 유니버스가 커지면 **이미 본 날에도 새 종목이 걸린다.**
+   * 10% 넘게 커졌을 때만 되돌아간다 — 한두 종목 차이로 90일을 다시 훑으면 예산만 태운다.
+   */
+  const krUniverseSize = universe.filter((d) => d.naverCode).length;
+  const universeGrew = krUniverseSize > (previous?.coveredUniverse ?? 0) * 1.1;
+
   const RECENT_ALWAYS_DAYS = 2;
   const dates = (() => {
     const recent = Array.from({ length: Math.min(RECENT_ALWAYS_DAYS, lookback) }, (_, i) => shiftIso(today, -i));
-    const covered = previous?.coveredFrom;
+    const covered = universeGrew ? undefined : previous?.coveredFrom;
     if (!covered || covered >= today) {
       return Array.from({ length: lookback }, (_, i) => shiftIso(today, -i));
     }
@@ -323,7 +345,12 @@ export async function collectDisclosures(options: {
    * `coveredFrom` — **실제로 훑은** 가장 오래된 날. 이전 수집이 덮은 구간과 이번 구간을 잇는다.
    * 이 값이 화면의 "최근 90일 공시가 없었어요" 를 말해도 되는지의 근거다.
    */
-  const previousFrom = previous?.coveredFrom;
+  /**
+   * 유니버스가 커졌으면 **이전 커버리지를 물려받지 않는다.** 넓어진 유니버스로는 그 과거를
+   * 아직 안 봤으므로, 물려받으면 "90일 다 봤다" 가 거짓말이 되고 "공시가 없었어요" 도
+   * 따라서 거짓이 된다.
+   */
+  const previousFrom = universeGrew ? undefined : previous?.coveredFrom;
   /**
    * 이번에 실제로 끝까지 훑은 가장 오래된 날. 예산에 잘렸으면 `oldestScanned` 가 거기까지다.
    * 이전 커버리지와 **더 오래된 쪽**을 택한다 — 구간이 이어졌을 때만 뒤로 늘어난다.
@@ -335,6 +362,11 @@ export async function collectDisclosures(options: {
   return {
     asOf: new Date().toISOString(),
     coveredFrom,
+    /**
+     * **이번에 실제로 훑은 유니버스 크기.** 잘렸으면(`truncated`) 다음 실행이 다시 보게
+     * 종전 값을 유지한다 — 부분 수집을 완전 수집으로 기록하면 그 구간이 영영 안 채워진다.
+     */
+    coveredUniverse: kr.truncated ? (previous?.coveredUniverse ?? 0) : krUniverseSize,
     byStock,
     truncated: kr.truncated,
     errors,

@@ -36,7 +36,9 @@ describe("collectDisclosures — 이어받기", () => {
     await collectDisclosures({
       today: "2026-08-25",
       lookbackDays: 5,
-      previous: { asOf: "", coveredFrom: "2026-08-20", byStock: {}, truncated: true, errors: [] },
+      // `coveredUniverse` 를 크게 둬 **유니버스가 안 커졌다**는 전제를 못 박는다 —
+      // 커졌으면 과거를 다시 훑는 것이 맞고, 그건 아래 별도 케이스가 본다.
+      previous: { asOf: "", coveredFrom: "2026-08-20", coveredUniverse: 9_999, byStock: {}, truncated: true, errors: [] },
     });
     // 최근 2일은 새 공시 때문에 다시 본다. 그 다음은 08-20 **앞**부터다 — 같은 구간을 또 훑지 않는다.
     expect(requested).toEqual(["2026-08-25", "2026-08-24", "2026-08-19", "2026-08-18", "2026-08-17"]);
@@ -46,7 +48,7 @@ describe("collectDisclosures — 이어받기", () => {
     await collectDisclosures({
       today: "2026-08-25",
       lookbackDays: 90,
-      previous: { asOf: "", coveredFrom: "2026-05-29", byStock: {}, truncated: true, errors: [] },
+      previous: { asOf: "", coveredFrom: "2026-05-29", coveredUniverse: 9_999, byStock: {}, truncated: true, errors: [] },
     });
     const oldest = requested.at(-1)!;
     expect(oldest >= "2026-05-27").toBe(true);
@@ -56,8 +58,46 @@ describe("collectDisclosures — 이어받기", () => {
     const out = await collectDisclosures({
       today: "2026-08-25",
       lookbackDays: 5,
-      previous: { asOf: "", coveredFrom: "2026-08-20", byStock: {}, truncated: true, errors: [] },
+      // `coveredUniverse` 를 크게 둬 **유니버스가 안 커졌다**는 전제를 못 박는다 —
+      // 커졌으면 과거를 다시 훑는 것이 맞고, 그건 아래 별도 케이스가 본다.
+      previous: { asOf: "", coveredFrom: "2026-08-20", coveredUniverse: 9_999, byStock: {}, truncated: true, errors: [] },
     });
     expect(out.coveredFrom <= "2026-08-20").toBe(true);
+  });
+});
+
+describe("유니버스가 커지면 과거를 다시 훑는다 (2026-08-27)", () => {
+  beforeEach(() => {
+    requested.length = 0;
+    process.env.DART_API_KEY = "test-key";
+  });
+  afterEach(() => {
+    delete process.env.DART_API_KEY;
+  });
+
+  it("종전 커버리지가 좁은 유니버스로 만들어졌으면 이어받지 않는다", async () => {
+    await collectDisclosures({
+      today: "2026-08-25",
+      lookbackDays: 4,
+      // 5종목으로 훑어둔 커버리지 — 지금 유니버스(사전 기본)는 그보다 훨씬 크다.
+      previous: { asOf: "", coveredFrom: "2026-08-20", coveredUniverse: 5, byStock: {}, truncated: true, errors: [] },
+    });
+    // 08-20 앞으로 건너뛰지 않고 **오늘부터** 다시 본다 — 그 날들에 새 종목이 걸린다.
+    expect(requested).toEqual(["2026-08-25", "2026-08-24", "2026-08-23", "2026-08-22"]);
+  });
+
+  it("커졌으면 `coveredFrom` 도 물려받지 않는다 — 안 본 과거를 봤다고 하면 거짓말이다", async () => {
+    const out = await collectDisclosures({
+      today: "2026-08-25",
+      lookbackDays: 3,
+      previous: { asOf: "", coveredFrom: "2026-05-29", coveredUniverse: 5, byStock: {}, truncated: false, errors: [] },
+    });
+    expect(out.coveredFrom).toBe("2026-08-23");
+    expect(out.coveredFrom).not.toBe("2026-05-29");
+  });
+
+  it("훑은 유니버스 크기를 남긴다 — 다음 실행이 이걸 보고 판단한다", async () => {
+    const out = await collectDisclosures({ today: "2026-08-25", lookbackDays: 2 });
+    expect(out.coveredUniverse).toBeGreaterThan(0);
   });
 });
