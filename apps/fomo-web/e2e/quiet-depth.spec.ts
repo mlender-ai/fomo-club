@@ -229,3 +229,21 @@ test("콘솔 에러가 없다", async ({ page }) => {
   await page.waitForTimeout(600);
   expect(errors).toEqual([]);
 });
+
+/** WO-RESET-06 §C-1 — 왜 또 나왔는지가 화면에 있어야 한다. */
+test("[완료 8] 재노출이면 1걸음에 노출 이력이 나온다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const history = page.locator('[data-testid="depth-exposure"]');
+  await expect(history).toHaveCount(1);
+  await expect(history).toContainText("이 종목, 3번째 나왔어요");
+
+  // 나온 날 · 그때 무엇 때문이었나 · 그때 가격.
+  const text = await history.innerText();
+  expect(text).toContain("8월 25일");
+  expect(text).toContain("기관이 사기 시작했어요");
+  expect(text).toContain("4.37");
+
+  // 1걸음에만 있다 — 다음 걸음으로 넘어가면 사라진다.
+  await page.locator('[data-testid="depth-next"]').click();
+  await expect(page.locator('[data-testid="depth-exposure"]')).toHaveCount(0);
+});

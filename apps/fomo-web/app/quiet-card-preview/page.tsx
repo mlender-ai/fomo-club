@@ -135,6 +135,21 @@ function withCase(id: string): QuietPick {
   const pick = { ...basePick, price: { ...basePick.price }, signal: { ...basePick.signal } } as QuietPick;
   pick.cardType = CARD_TYPES[id === "revealed" ? "a" : id] ?? A_CASE;
   if (id === "b") pick.price.sparkline = PRICES.slice(-30);
+  /**
+   * WO-RESET-06 §B — 다시 나온 카드. 라벨·훅·이름 공개·처음 가격이 한꺼번에 달라진다.
+   * 이 케이스가 없으면 그 네 가지를 화면에서 볼 방법이 없다.
+   */
+  if (id === "returning") {
+    pick.signal = { ...pick.signal, reentry: { code: "actor_joined", text: "외국인도 사기 시작했어요", occurredAt: "2026-08-26" } } as QuietPick["signal"];
+    pick.exposure = {
+      count: 2,
+      firstDate: "2026-08-24",
+      firstWhen: "8월 24일",
+      // 기준 픽(빅텍 3,035원)과 같은 자릿수여야 한다 — 안 그러면 미리보기가 -91% 로 보인다.
+      firstPrice: 2_890,
+      recent: [{ date: "2026-08-24", when: "8월 24일", reason: "기관이 사기 시작했어요", price: 2_890 }],
+    };
+  }
   return pick;
 }
 
@@ -146,6 +161,7 @@ const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
   { id: "e", label: "E형 거래량각성 — 급증 구간만 accent" },
   { id: "min", label: "보조 줄 없음 — 가장 짧은 카드" },
   { id: "revealed", label: "정체 해제 후 — 종목명·티커 표시", revealed: true },
+  { id: "returning", label: "다시 나옴 — 라벨·새 훅·이름 공개·처음 가격 (WO-RESET-06 §B)" },
 ];
 
 export default function QuietCardPreview() {

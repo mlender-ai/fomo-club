@@ -52,6 +52,12 @@ import {
  * `@fomo/core` 를 임포트하는 조회 라우트가 전부 같이 무거워진다(성능 게이트).
  */
 import { buildSectorStats, sectorStatFor, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+import {
+  recentExposure,
+  exposureSummary,
+  type ExposureEntry,
+  type ExposureSummary,
+} from "@fomo/core/keyword-cards/exposure-history";
 import { companyRead, type CompanyGroup } from "@fomo/core/keyword-cards/company-read";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
@@ -261,7 +267,9 @@ export type QuietPickReentryCode =
   | "invalidation_break"
   | "new_material"
   | "actor_joined"
-  | "structure_shift";
+  | "structure_shift"
+  /** WO-RESET-06 §A-2 — 사는 규모가 직전 대비 크게 늘었다. 연속일수 증가와 다르다. */
+  | "amount_surge";
 
 export interface QuietPickReentry {
   code: QuietPickReentryCode;
@@ -381,6 +389,11 @@ export interface QuietPick {
    * 없다. 비교 기준이 없는 지표는 줄 자체가 없다(맨숫자 금지). 없으면 필드가 없다.
    */
   companyRead?: CompanyGroup[];
+  /**
+   * WO-RESET-06 — 노출 이력. **처음 나온 종목이면 이 필드가 없다**(§C-2).
+   * 카드는 `다시 나왔어요` 라벨과 처음 가격을, 상세 1걸음은 이력 줄을 읽는다.
+   */
+  exposure?: ExposureSummary;
   qualifiedAt: string;
 }
 
@@ -418,7 +431,12 @@ export type QuietWatchReasonCode =
   /** 경과일 상한 초과 — 신규 신호가 아니므로 픽에서 워치로(WO-DECK-01 §2-4). 영구 배제 아님. */
   | "signal_aged"
   /** 픽 자격은 갖췄으나 구성 규칙(동일 유형 상한·지속 상한)에 밀렸다(WO-DECK-01 §4). */
-  | "composition_overflow";
+  | "composition_overflow"
+  /**
+   * 최근 3일 안에 이미 덱에 나왔고 **새로 생긴 일이 없다**(WO-RESET-06 §A-1).
+   * 영구 배제가 아니다 — 3일이 지나거나 새 사유가 생기면 다시 후보다.
+   */
+  | "seen_recently";
 
 /**
  * 지켜보는 중(WO-P4) — 신호는 실재하는데 픽 자격 ②에 못 미친 후보.
@@ -473,6 +491,8 @@ export interface QuietPickQualification {
   disclosurePhrases?: { total: number; raw: number };
   /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
   companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
+  /** WO-RESET-06 §E — 3일 규칙 계측. */
+  exposure?: { blocked: number; readmitted: number; byReason: Record<string, number> };
   /** 이번 빌드가 읽어온 팩트시트 수. 0 이면 3걸음·실적 줄이 통째로 빈다. */
   factSheets?: number;
 }
@@ -1331,6 +1351,15 @@ export function signalAmount(sig: {
 /** 금액이 "의미 있게" 늘었다고 볼 최소 증가율 — 반올림 노이즈로 매일 재등장하지 않게. */
 const AMOUNT_GROWTH_MIN = 0.05;
 
+/**
+ * 재등장 사유로 인정하는 **규모 급증** 하한(WO-RESET-06 §A-2).
+ *
+ * `AMOUNT_GROWTH_MIN`(진행 문구용 5%)보다 훨씬 높다. 누적 순매수는 매일 조금씩 늘기
+ * 마련이라 5% 로 두면 **모든 연속 신호가 매일 이 사유로 부활**하고, 그러면 3일 규칙이
+ * 있으나 마나다. 「갑자기 커졌다」고 말하려면 실제로 갑자기여야 한다.
+ */
+const REENTRY_AMOUNT_SURGE = 0.5;
+
 function strengthenedProgress(prior: QuietPickPriorState, sig: SignalCandidate): string | undefined {
   // ⓐ 신호가 새로 시작됐으면 '반복'이 아니다 — 같은 종목이어도 별개 사건(이전엔 이걸 stale 로 죽였다).
   if (sig.startedAt && prior.startedAt && sig.startedAt !== prior.startedAt) {
@@ -1399,6 +1428,22 @@ function detectReentry(
   // ③ 새 재료 — 시계 기준일 이후의 DART 내부자 장내매수.
   if (context.dartTransactionDate && context.dartTransactionDate > anchor) {
     return { code: "new_material", text: "공시가 나왔어요", occurredAt: context.dartTransactionDate };
+  }
+
+  /**
+   * ⑤ 규모 급증(WO-RESET-06 §A-2) — 사는 규모가 직전 대비 크게 늘었다.
+   *
+   * **연속일수가 하루 는 것과 다르다.** 그건 어제 사건이 이어진 것이고, 이건 어제와 다른
+   * 크기의 일이 벌어진 것이다. 임계를 `AMOUNT_GROWTH_MIN`(5%)보다 훨씬 높게 잡는다 —
+   * 매일 조금씩 늘어나는 누적 신호가 이 사유로 매일 재등장하면 3일 규칙이 무의미해진다.
+   */
+  const priorAmount = prior.amount;
+  const nowAmount = signalAmount(sig);
+  if (
+    typeof priorAmount === "number" && priorAmount > 0 &&
+    typeof nowAmount === "number" && nowAmount >= priorAmount * (1 + REENTRY_AMOUNT_SURGE)
+  ) {
+    return { code: "amount_surge", text: "사는 규모가 갑자기 커졌어요", occurredAt: today };
   }
 
   // ④ 무효선 이탈 — 어제는 지켰고 오늘 깼다. 되돌아보는 선을 넘은 것 자체가 볼 이유다.
@@ -1663,6 +1708,11 @@ export async function buildQuietPickResponse(options: {
   /** 어제 픽의 신호 상태(WO-P4) — 강화·재등장 판정에 쓴다. */
   priorPicks?: ReadonlyMap<string, QuietPickPriorState>;
   /**
+   * WO-RESET-06 §A — 종목별 최근 노출 이력(최신 먼저, **오늘자는 제외**).
+   * 크론이 이미 읽는 스냅샷에서 만든다 — 새로 읽는 것이 없다.
+   */
+  exposureHistory?: ReadonlyMap<string, ExposureEntry[]>;
+  /**
    * canonical → 어제까지 1페이지에 연속으로 있던 일수(WO-DECK-01 §3).
    * 오늘자를 포함하면 자기 자신 때문에 감점되므로 **오늘은 빼고** 넘겨야 한다.
    */
@@ -1673,6 +1723,7 @@ export async function buildQuietPickResponse(options: {
   const date = options.date ?? kstDate();
   const limit = options.limit ?? QUIET_PICK_MAX;
   const priorPicks = options.priorPicks ?? new Map<string, QuietPickPriorState>();
+  const exposureHistory = options.exposureHistory ?? new Map<string, ExposureEntry[]>();
   const page1Streaks = options.page1Streaks ?? new Map<string, number>();
   const drops: Record<string, number> = {};
   const drop = (reason: string) => { drops[reason] = (drops[reason] ?? 0) + 1; };
@@ -1874,6 +1925,12 @@ export async function buildQuietPickResponse(options: {
    */
   const companyCensus = { stocks: 0, withSector: 0, rows: 0, scored: 0 };
 
+  /**
+   * WO-RESET-06 §E — 3일 규칙이 무엇을 막고 무엇을 통과시켰나.
+   * `blocked` 는 제외된 건수, `readmitted` 는 예외로 다시 나온 건수, `byReason` 은 그 사유별 분포.
+   */
+  const exposureCensus = { blocked: 0, readmitted: 0, byReason: {} as Record<string, number> };
+
   for (const { sig, near, front } of assembled) {
     if (!front) { drop("front_failed"); continue; }
     if (!front.verdict) { drop("no_verdict"); continue; }
@@ -1952,6 +2009,33 @@ export async function buildQuietPickResponse(options: {
           ...(dartTransactionDate ? { dartTransactionDate } : {}),
         })
       : null;
+    /**
+     * ── 3일 규칙 (WO-RESET-06 §A-1) — **강등이 아니라 제외** ──
+     *
+     * 재노출 강등(점수 ×0.6)만으로는 부족했다. 강등은 순위를 낮출 뿐이라 그 종목보다 강한
+     * 후보가 없으면 **여전히 1등으로 나온다.** 천보가 그랬다.
+     *
+     * 그래서 최근 3일 안에 나온 종목은 뺀다. 다만 **새로운 일이 생겼으면** 통과시킨다 —
+     * 그 판정은 위에서 이미 끝났다(`reentry`). 「연속일수가 하루 늘었다」는 `reentry` 사유가
+     * 아니므로 여기서 걸린다. 그게 이 규칙의 핵심이다.
+     *
+     * 덱이 짧아지는 것은 정상이다(§D). 채우려고 규칙을 풀지 않는다.
+     */
+    const seenRecently = recentExposure(exposureHistory.get(sig.subject.canonical), date);
+    if (seenRecently && !reentry) {
+      exposureCensus.blocked += 1;
+      sendToWatch(
+        sig,
+        { code: "seen_recently", text: `${seenRecently.date}에 이미 나왔어요 — 새로 생긴 일은 아직 없어요` },
+        priceInfo
+      );
+      continue;
+    }
+    if (seenRecently && reentry) {
+      exposureCensus.readmitted += 1;
+      exposureCensus.byReason[reentry.code] = (exposureCensus.byReason[reentry.code] ?? 0) + 1;
+    }
+
     let progress: string | undefined;
     if (prior && prior.startedAt === sig.startedAt) {
       progress = strengthenedProgress(prior, sig);
@@ -2229,6 +2313,14 @@ export async function buildQuietPickResponse(options: {
         }
         return groups.length > 0 ? { companyRead: groups } : {};
       })()),
+      /**
+       * WO-RESET-06 §B-4·§C-1 — 노출 이력. **처음 나온 종목이면 필드가 없다**(§C-2).
+       * 카드는 `다시 나왔어요` 라벨과 처음 가격을, 상세 1걸음은 이력 줄을 여기서 읽는다.
+       */
+      ...(((): { exposure?: ExposureSummary } => {
+        const summary = exposureSummary(exposureHistory.get(sig.subject.canonical), date);
+        return summary ? { exposure: summary } : {};
+      })()),
       anomalies,
       ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {
@@ -2381,6 +2473,8 @@ export async function buildQuietPickResponse(options: {
       disclosurePhrases: phraseCensus,
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
+      // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.
+      exposure: exposureCensus,
       /**
        * 읽어온 팩트시트 수. 0 이면 3걸음이 통째로 빈다 — 그게 **장애인지 그날의 사실인지**
        * `inputFailures` 와 함께 봐야 갈린다(그래서 strict 로 읽는다).

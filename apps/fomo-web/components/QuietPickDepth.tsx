@@ -19,6 +19,11 @@ import { StepDots, StepNext, CompanyGroupBlock } from "@/components/DepthSteps";
 /** 걸음 식별자. 순서가 곧 이야기 순서다 — 놀라움 → 이유 → 실체 → 결정. */
 type StepId = "signal" | "why" | "company" | "decide";
 
+/** 이력 줄의 가격 — 카드와 같은 통화 규칙. */
+function exposurePrice(pick: QuietPick, value: number): string {
+  return pick.subject.country === "US" ? `$${value.toFixed(2)}` : `${Math.round(value).toLocaleString("en-US")}원`;
+}
+
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
 }
@@ -500,6 +505,34 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   ))}
                 </div>
               )}
+              {/*
+                노출 이력 (WO-RESET-06 §C-1) — **왜 또 나왔는지**를 화면이 답한다.
+
+                지금까지는 천보가 계속 나오는데 사용자가 이유를 알 수 없었다. 나온 날과
+                그때 무엇 때문이었는지, 그리고 그때 가격을 그대로 늘어놓는다.
+                처음 나온 종목이면 이 블록이 없다(§C-2).
+              */}
+              {pick.exposure && (
+                <div className="mt-s5" data-testid="depth-exposure">
+                  <p className="text-[15px] font-medium text-ds-text-1">
+                    {`이 종목, ${pick.exposure.count}번째 나왔어요`}
+                  </p>
+                  {pick.exposure.recent.map((entry) => (
+                    <div key={entry.date} className="mt-s3 flex items-baseline gap-s3">
+                      <p className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-3">
+                        {entry.when}
+                      </p>
+                      <p className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-2">{entry.reason}</p>
+                      {typeof entry.price === "number" && (
+                        <p className="shrink-0 font-mono text-ds-label text-ds-text-3">
+                          {exposurePrice(pick, entry.price)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* 이 걸음이 더하는 **새 정보 한 줄** — 얼마나 이례적인가(§2). */}
               {rarityLine && (
                 <p className="mt-s4 break-keep text-ds-body text-ds-text-2" data-testid="depth-rarity">

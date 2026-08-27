@@ -11,7 +11,7 @@ const PREVIEW = "/quiet-card-preview";
 const BANNED = ["무효선", "내부자", "클러스터", "이 관점은 무효", "수급", "매집", "이례적", "관점"];
 const ACCENT = "rgb(212, 255, 63)";
 // WO-RESET-03 — d(시장역행) · e(거래량각성) 추가. 프리뷰 페이지의 CASES 와 같아야 한다.
-const CASES = ["a", "b", "c", "d", "e", "min", "revealed"] as const;
+const CASES = ["a", "b", "c", "d", "e", "min", "revealed", "returning"] as const;
 
 async function heightOf(page: import("@playwright/test").Page, id: string): Promise<number> {
   const box = await page.locator(`[data-case="${id}"] [data-testid="quiet-pick-card"]`).boundingBox();
@@ -328,4 +328,43 @@ test("[완료 4·5] 새 형도 그림이 있고 카드에 종류 라벨이 없�
       expect(text, `${id}형 카드에 라벨 "${label}"`).not.toContain(label);
     }
   }
+});
+
+/**
+ * WO-RESET-06 §B — 다시 나온 카드는 **처음 보는 카드와 똑같이 생기면 안 된다.**
+ * 완료 확인 4·5·6·7.
+ */
+test("[완료 4·5·6·7] 다시 나온 카드는 라벨·새 훅·이름 공개·처음 가격을 갖는다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const card = page.locator('[data-case="returning"]');
+
+  // [완료 4] 상단 라벨 — 작게, 회색.
+  const label = card.locator('[data-testid="pick-returning"]');
+  await expect(label).toHaveText("다시 나왔어요");
+  const color = await label.evaluate((el) => getComputedStyle(el).color);
+  expect(color).toBe("rgb(90, 90, 87)"); // text-3
+
+  // [완료 5] 훅이 **무엇이 새로운가**를 말한다. 이어짐(N일째)을 말하지 않는다.
+  const hook = await card.locator('[data-testid="pick-hook"]').innerText();
+  expect(hook).toContain("외국인도 사기 시작했어요");
+  expect(hook).not.toMatch(/일째/);
+
+  // [완료 6] 종목명을 가리지 않는다 — 이미 본 종목이다.
+  await expect(card.locator('[data-testid="pick-name"]')).toHaveCount(1);
+  await expect(card).toHaveAttribute("data-case", "returning");
+
+  // [완료 7] 처음 가격 → 지금 가격. 음수여도 그대로 나온다.
+  const since = card.locator('[data-testid="pick-since-first"]');
+  await expect(since).toContainText("8월 24일 처음 나왔을 때");
+  await expect(since).toContainText("2,890원");
+  await expect(since).toContainText("지금");
+});
+
+test("처음 나온 카드에는 그 어느 것도 없다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  const first = page.locator('[data-case="a"]');
+  await expect(first.locator('[data-testid="pick-returning"]')).toHaveCount(0);
+  await expect(first.locator('[data-testid="pick-since-first"]')).toHaveCount(0);
+  // 처음 보는 종목은 이름을 가린다 — 그 규칙은 그대로다.
+  await expect(first.locator('[data-testid="pick-name"]')).toHaveCount(0);
 });

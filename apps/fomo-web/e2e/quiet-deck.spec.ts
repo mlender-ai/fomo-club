@@ -101,12 +101,12 @@ test("완료 기준 3 — 지켜보는 중은 구분선 리스트다 (카드 아
   await expect(rows).toHaveCount(6);
 });
 
-test("DS-05 §7 — 덱이 짧은 날 개수를 숨기지 않고 적었다고 말한다", async ({ page }) => {
+test("덱이 짧은 날 개수를 숨기지 않고 적다고 말한다 (WO-RESET-06 §D — 임계 5)", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const thin = page.locator('[data-case="thin"]');
-  await expect(thin).toContainText("2곳"); // 개수 그대로
-  await expect(thin.locator('[data-testid="deck-thin"]')).toHaveText("오늘은 조용한 곳이 적었어요");
-  // 3장 이상인 카드에는 그 문구가 없다.
+  await expect(thin).toContainText("4곳"); // 개수 그대로
+  await expect(thin.locator('[data-testid="deck-thin"]')).toHaveText("오늘은 새로 나온 곳이 적어요");
+  // 5장 이상인 카드에는 그 문구가 없다.
   await expect(page.locator('[data-case="title"] [data-testid="deck-thin"]')).toHaveCount(0);
 });
 

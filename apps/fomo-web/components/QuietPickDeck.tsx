@@ -285,9 +285,10 @@ export function QuietPickDeck() {
         <div className="px-gutter">
           <DeckTitle count={0} stale={stale} />
           <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-empty">
-            <p className="text-ds-display text-ds-text-1">오늘은 기준을 넘은 곳이 없어요</p>
+            <p className="text-ds-display text-ds-text-1">오늘은 조용한 곳을 찾지 못했어요</p>
             <p className="mt-s3 text-ds-body text-ds-text-2">
-              무리해서 고르지 않아요. 뉴스 전에 돈이 먼저 들어간 곳이 없는 날이에요.
+              무리해서 고르지 않아요. 최근에 나온 종목은 새로 생긴 일이 없으면 다시 넣지 않아서,
+              찾은 곳이 없는 날도 있어요.
             </p>
           </div>
         </div>
@@ -386,8 +387,13 @@ export function QuietPickDeck() {
  * ② 덱 타이틀 (DS-02 §3) — 개수에 **accent 를 쓰지 않는다.** 그 색은 우리 성적의 것이다.
  * 개수가 매일 달라지는 것은 덱 회전의 결과이므로 숨기지 않는다.
  */
-export /** 3장 미만이면 "적었다"고 말한다 — 숨기거나 지속 신호로 채우지 않는다(DS-05 §7). */
-const THIN_DECK = 3;
+/**
+ * 이보다 적으면 "적었다"고 말한다 — 숨기거나 지속 신호로 채우지 않는다(DS-05 §7).
+ *
+ * 3 → **5** (WO-RESET-06 §D). 3일 규칙이 최근에 나온 종목을 제외하므로 덱이 짧아지는 날이
+ * 생긴다. **그건 정상이고, 채우려고 규칙을 풀지 않는다.** 짧으면 짧다고 말하는 편이 낫다.
+ */
+export const THIN_DECK = 5;
 
 export function DeckTitle({ count, stale }: { count: number | null; stale: string | null }) {
   return (
@@ -398,7 +404,7 @@ export function DeckTitle({ count, stale }: { count: number | null; stale: strin
       <p className="mt-s1 text-ds-caption text-ds-text-2">뉴스 나오기 전에 돈이 먼저 들어간 곳</p>
       {count !== null && count > 0 && count < THIN_DECK && (
         <p className="mt-s1 text-ds-caption text-ds-text-3" data-testid="deck-thin">
-          오늘은 조용한 곳이 적었어요
+          오늘은 새로 나온 곳이 적어요
         </p>
       )}
       {/* 스테일 서빙 — 카드는 정상 표시하고 기준 시각만 밝힌다(DS-02 §9). */}

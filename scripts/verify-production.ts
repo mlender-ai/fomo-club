@@ -463,6 +463,30 @@ async function main(): Promise<void> {
   log(`  asOf        ${asOfRaw ?? "미확인"}${ago(asOfValid, now)}`);
   log(`  date        ${payloadBody?.date ?? "미확인"}`);
   log(`  picks       ${Array.isArray(payloadBody?.picks) ? payloadBody.picks.length : "미확인"}`);
+
+  /**
+   * WO-RESET-06 §E-1 — 3일 규칙이 무엇을 했나.
+   *
+   * **새 화면을 만들지 않는다**(WO-RESET-01·03 이 금한 것). 운영 지표는 이미 이 검증기가
+   * 배포마다 찍고 있으므로 여기에 붙인다 — 매 배포에서 눈에 들어오는 자리다.
+   */
+  const q = (payloadBody as { qualification?: Record<string, unknown> } | null)?.qualification;
+  const exposure = q?.exposure as { blocked?: number; readmitted?: number; byReason?: Record<string, number> } | undefined;
+  if (exposure) {
+    log(`  3일 규칙    제외 ${exposure.blocked ?? 0}건 · 예외 재노출 ${exposure.readmitted ?? 0}건`);
+    const reasons = Object.entries(exposure.byReason ?? {});
+    if (reasons.length > 0) {
+      log(`              사유별 ${reasons.map(([code, n]) => `${code} ${n}`).join(" · ")}`);
+    }
+    // 종목별 최대 연속 노출 — 같은 종목이 며칠째 나오고 있나(§E-1).
+    const picks = (payloadBody as { picks?: Array<{ subject?: { canonical?: string }; exposure?: { count?: number } }> } | null)?.picks ?? [];
+    const worst = picks.reduce<{ name: string; count: number } | null>((acc, pick) => {
+      const count = pick.exposure?.count ?? 1;
+      const name = pick.subject?.canonical ?? "?";
+      return !acc || count > acc.count ? { name, count } : acc;
+    }, null);
+    if (worst) log(`              최다 노출 ${worst.name} ${worst.count}회`);
+  }
   log(`  staleServe  ${staleServe === null ? "없음 (= 새로 구운 것)" : JSON.stringify(staleServe)}`);
 
   if (payload?.cache === "HIT") {
