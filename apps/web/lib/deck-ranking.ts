@@ -76,6 +76,38 @@ export const MAX_SAME_KIND_RATIO = 0.5;
 export const MAX_PERSISTENT_RATIO = 0.4;
 
 /**
+ * 인물 카드(유명 투자자) 최대 비율 — WO-RESET-07 §E-2.
+ *
+ * 인물 카드는 **같은 덱에 섞는다**(별도 섹션을 만들지 않는다 — §E-1). 다만 이름값이
+ * 강해서 상한이 없으면 덱이 통째로 인물 카드가 된다. 그러면 이 앱은 「조용한 돈」이
+ * 아니라 유명인 추종 앱이 된다.
+ */
+export const MAX_INVESTOR_RATIO = 0.4;
+
+/**
+ * 13F 시즌에는 상한을 푼다(§E-2).
+ *
+ * 분기 공시가 몰리는 2·5·8·11월 중순에는 인물 카드가 한꺼번에 쏟아진다. 그때 40%로 막으면
+ * **가장 재미있는 날에 가장 많이 버린다.** 그 시즌은 원래 그런 시즌이다.
+ */
+export const MAX_INVESTOR_RATIO_13F_SEASON = 0.6;
+
+/** 한 인물이 덱에서 연달아 차지할 수 있는 최대 장수(§E-2). */
+export const MAX_SAME_INVESTOR = 2;
+
+/**
+ * 13F 시즌인가 — 분기 종료 45일 뒤가 마감이라 **2·5·8·11월 중순**에 몰린다.
+ * 날짜 형식이 아니면 시즌이 아닌 것으로 본다(넓히는 쪽이 아니라 좁히는 쪽으로 틀린다).
+ */
+export function is13fSeason(date: string): boolean {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(date.trim());
+  if (!m) return false;
+  const month = Number(m[1]);
+  const day = Number(m[2]);
+  return [2, 5, 8, 11].includes(month) && day >= 10 && day <= 25;
+}
+
+/**
  * 재노출 쿨다운 — **누진 계수**. 오래 버틸수록 더 강하게 누른다.
  *
  * 완전 제외가 아니라 점수 강등이다: 신호 강도가 여전히 이길 수 있어야 한다.
@@ -174,10 +206,24 @@ export interface DeckCandidate {
   kind: string;
   /** 유효 경과일. */
   ageDays: number;
+  /**
+   * 인물 카드면 그 인물의 id(WO-RESET-07 §E-2). 아니면 없다.
+   * 전체 상한과 **같은 인물 연속 상한**을 이 값으로 건다.
+   */
+  investorId?: string;
 }
 
 /** 구성 규칙 때문에 덱에 못 든 사유. 선반 문구가 이 값을 그대로 번역한다. */
-export type DeckSkipReason = "kind_cap" | "persistent_cap" | "reserved_for_fresh" | "deck_full" | "shrunk_for_fresh_floor";
+export type DeckSkipReason =
+  | "kind_cap"
+  | "persistent_cap"
+  | "reserved_for_fresh"
+  | "deck_full"
+  | "shrunk_for_fresh_floor"
+  /** 인물 카드가 덱 상한을 채웠다(WO-RESET-07 §E-2). */
+  | "investor_cap"
+  /** 같은 인물이 이미 상한만큼 들어갔다. */
+  | "same_investor_cap";
 
 export interface ComposeResult<T> {
   /** 최종 덱(입력 순서 = 점수 순서 유지). */
@@ -220,7 +266,7 @@ export interface ComposeResult<T> {
  */
 export function composeDeck<T extends DeckCandidate>(
   ranked: readonly T[],
-  options: { deckSize?: number; watchPool?: readonly T[] } = {}
+  options: { deckSize?: number; watchPool?: readonly T[]; today?: string } = {}
 ): ComposeResult<T> {
   const deckSize = Math.max(0, Math.floor(options.deckSize ?? DECK_SIZE));
   const caps = deckCaps(deckSize);
@@ -237,9 +283,24 @@ export function composeDeck<T extends DeckCandidate>(
   let persistent = 0;
   let fresh = 0;
 
+  /**
+   * 인물 카드 상한(WO-RESET-07 §E-2) — 13F 시즌엔 60%, 평소엔 40%.
+   * 날짜를 안 주면 평소 상한을 쓴다(넓히는 쪽이 아니라 좁히는 쪽으로 틀린다).
+   */
+  const investorRatio = options.today && is13fSeason(options.today)
+    ? MAX_INVESTOR_RATIO_13F_SEASON
+    : MAX_INVESTOR_RATIO;
+  const maxInvestor = Math.max(1, Math.floor(deckSize * investorRatio));
+  const investorCount = new Map<string, number>();
+  let investorTotal = 0;
+
   const take = (item: T): void => {
     chosen.push(item);
     kindCount.set(item.kind, (kindCount.get(item.kind) ?? 0) + 1);
+    if (item.investorId) {
+      investorTotal += 1;
+      investorCount.set(item.investorId, (investorCount.get(item.investorId) ?? 0) + 1);
+    }
     if (isFreshSignal(item.ageDays)) fresh += 1;
     else persistent += 1;
   };
@@ -247,6 +308,10 @@ export function composeDeck<T extends DeckCandidate>(
   for (const item of ranked) {
     if (chosen.length >= deckSize) { bump("deck_full", item); continue; }
     if ((kindCount.get(item.kind) ?? 0) >= caps.maxSameKind) { bump("kind_cap", item); continue; }
+    if (item.investorId) {
+      if (investorTotal >= maxInvestor) { bump("investor_cap", item); continue; }
+      if ((investorCount.get(item.investorId) ?? 0) >= MAX_SAME_INVESTOR) { bump("same_investor_cap", item); continue; }
+    }
     if (!isFreshSignal(item.ageDays)) {
       if (persistent >= caps.maxPersistent) { bump("persistent_cap", item); continue; }
       // 남은 자리가 신규 부족분과 같아지면 그 자리는 신규 몫이다 — 지속으로 선점하지 않는다.

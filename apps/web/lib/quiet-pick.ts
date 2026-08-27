@@ -2406,7 +2406,7 @@ export async function buildQuietPickResponse(options: {
   // 즉 신규 하한을 메우려고 올릴 수 있는 안전한 후보가 하나도 없다 → 규정대로 **덱을 줄인다.**
   // (`composeDeck` 의 `watchPool` 인자는 승격 가능한 소스가 생기는 날을 위해 남겨 둔다.)
   const entries = picks.map((pick) => ({ kind: pick.signal.kind, ageDays: pick.signal.ageDays, pick }));
-  const composed = composeDeck(entries, { deckSize: limit, watchPool: [] });
+  const composed = composeDeck(entries, { deckSize: limit, watchPool: [], today: date });
   const published = composed.deck.map((entry) => entry.pick);
   // 지켜보는 중 — 미달 사유가 '기준 미달'인 것만(품질 실패는 애초에 오지 않는다). 최대 10곳.
   // 덱에 못 든 픽 자격자도 여기 붙인다(신규 하한·유형 상한에 밀린 것들 — 사라지면 안 된다).
@@ -2419,6 +2419,8 @@ export async function buildQuietPickResponse(options: {
     reserved_for_fresh: "그 자리는 새로 생긴 신호 몫이에요",
     shrunk_for_fresh_floor: "새로 생긴 신호가 적어 오늘은 덱을 줄였어요",
     deck_full: "점수는 넘었지만 오늘 덱이 다 찼어요",
+    investor_cap: "오늘은 유명 투자자 카드가 이미 충분해요",
+    same_investor_cap: "같은 사람의 카드가 이미 두 장이에요",
   };
   const compositionOverflow: QuietWatchItem[] = entries
     .filter((entry) => !published.includes(entry.pick))
