@@ -49,7 +49,8 @@ describe("완료 기준 1 — 탭 피드백과 햅틱 (§2)", () => {
   it("관심 등록만 medium 햅틱, 나머지는 light", () => {
     // 관심 등록이 상세로 옮겨갔으므로 medium 햅틱도 거기 있다(WO-HOOK-01 §2-3).
     // WO-RESET-01 — 관심(★)·하단 탭·지켜보는 중을 화면에서 뺐다. 모듈은 남아 있다(되살릴 수 있게).
-    expect(DEPTH).not.toContain("hapticMedium()");
+    // 즐겨찾기 담기가 상세 4걸음으로 돌아왔다(WO-RESET-05 §5) — 등록만 medium 이다.
+    expect(DEPTH).toContain("hapticMedium()");
     expect(CARD).toContain("haptic()");
     expect(DECK).toContain("haptic()");
     // 진동은 모션 감소를 켠 사용자에게 주지 않는다.

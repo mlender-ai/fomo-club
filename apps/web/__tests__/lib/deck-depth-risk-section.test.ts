@@ -17,9 +17,15 @@ import { describe, expect, it } from "vitest";
  * 그 환경을 단위 테스트로 세우는 비용이 검사하려는 사실보다 크다. 여기서 막는 것은
  * "**두 뎁스 중 하나에서 섹션이 빠지는 회귀**" 이고 그건 사용 여부로 충분히 잡힌다.
  *
- * DS-03 이후 덱 뎁스는 `WhereThisIsWrong` 컴포넌트를 쓰지 않는다 — ⑤ 틀리는 경우를 라벨-값
- * 형식으로 **인라인**으로 그린다(박스는 ⑥ 하나뿐이라는 규칙). 지키는 사실은 그대로다:
- * 리스크 데이터가 이 화면에 닿고, 없으면 섹션이 사라지고, 가격 무효선의 정본은 하나다.
+ * ## WO-RESET-05 §0-2 로 방향이 **뒤집혔다**
+ *
+ * 덱 뎁스에서 「틀리는 경우」를 **뺐다.** 이유는 채워지지 않아서가 아니라, 채워진 뒤 실제
+ * 화면을 보니 `52주 저점 63,000원 이탈 여부가 다음 판단 기준이에요` 가 **모든 종목에
+ * 똑같이** 나왔고 그걸 보고 사용자가 할 수 있는 것이 없었기 때문이다.
+ *
+ * 그래서 이 파일이 지키는 사실도 뒤집힌다 — 이제 막는 회귀는 **"뺀 섹션이 슬그머니
+ * 돌아오는 것"** 이다. 레거시 뎁스(관심목록·검색이 여는 화면)에는 그대로 있고,
+ * 데이터(`/risk` 응답·`pick.invalidation`)도 그대로 둔다. **화면만 뺐다.**
  */
 
 const DECK_DEPTH = readFileSync(new URL("../../../fomo-web/components/QuietPickDepth.tsx", import.meta.url), "utf8");
@@ -29,61 +35,35 @@ const DECK = readFileSync(new URL("../../../fomo-web/components/QuietPickDeck.ts
 /** JSX 사용처. `<WhereThisIsWrong` 뒤에 공백·개행·`/`·`>` 가 와야 한다(제네릭 인자 오탐 방지). */
 const USAGE = /<WhereThisIsWrong[\s/>]/;
 
-describe("두 뎁스 모두 이게 틀리는 경우를 렌더한다", () => {
-  it("덱 뎁스(QuietPickDepth) — 픽 카드의 자세히가 여는 화면 (DS-03 ⑤ 인라인)", () => {
-    expect(DECK_DEPTH).toContain('title="틀리는 경우"');
-    expect(DECK_DEPTH).toContain('data-testid="depth-archetype-risk"');
-    expect(DECK_DEPTH).toContain('data-testid="depth-symbol-risk"');
+describe("덱 뎁스에서 「틀리는 경우」를 뺐다 (WO-RESET-05 §0-2)", () => {
+  /** 주석은 화면에 안 나간다 — 왜 뺐는지 적어둔 글이 위반으로 잡히면 안 된다. */
+  const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  it("덱 뎁스에 섹션도, 그 재료를 읽는 코드도 없다", () => {
+    const body = strip(DECK_DEPTH.slice(DECK_DEPTH.indexOf("export function QuietPickDepth")));
+    expect(USAGE.test(body)).toBe(false);
+    expect(body).not.toContain("틀리는 경우");
+    expect(body).not.toContain('data-testid="depth-wrong"');
+    expect(body).not.toContain("archetype");
+    expect(body).not.toContain("unavailable");
   });
 
-  it("종목 뎁스(StockInsightView) — 관심목록·검색·피드가 여는 화면", () => {
-    expect(INSIGHT_DEPTH).toMatch(USAGE);
+  it("모든 종목에 똑같이 나오던 그 문장을 안 그린다", () => {
+    const body = strip(DECK_DEPTH.slice(DECK_DEPTH.indexOf("export function QuietPickDepth")));
+    expect(body).not.toContain("invalidation.text");
+    expect(body).not.toMatch(/이탈 여부/);
+  });
+
+  it("레거시 뎁스에는 그대로 있다 — 화면만 뺀 것이지 기능을 지운 것이 아니다", () => {
+    expect(USAGE.test(INSIGHT_DEPTH)).toBe(true);
+  });
+
+  it("데이터는 남는다 — 픽 페이로드의 무효선은 카드가 계속 쓴다", () => {
+    // 카드 그림의 무효선(점선)이 이 값을 쓴다. 지우면 그림이 거짓이 된다.
+    expect(DECK_DEPTH).toContain("pick.invalidation.level");
   });
 
   it("덱의 자세히가 여는 것이 QuietPickDepth 라는 전제가 유지된다", () => {
-    // 이 전제가 깨지면 위 첫 단정이 엉뚱한 파일을 지키게 된다.
-    expect(DECK).toContain("QuietPickDepth");
-  });
-});
-
-describe("리스크 블록을 페이로드에서 받아온다", () => {
-  it("덱 뎁스가 card-slots 를 조회한다 — 컨텍스트로 실어오지 않는다", () => {
-    // 뎁스는 덱·피드·검색 여러 경로에서 열리므로 호출 지점에서 받는다.
-    expect(DECK_DEPTH).toContain("fetchCardSlots");
-    expect(DECK_DEPTH).toMatch(/slots\[stock\] \?\? null/);
-    expect(DECK_DEPTH).toMatch(/slotPayload\?\.risk/);
-  });
-
-  it("블록이 없으면 섹션을 렌더하지 않는다 — 빈 섹션 금지", () => {
-    expect(DECK_DEPTH).toMatch(/\{hasWrongSection && \(/);
-    expect(DECK_DEPTH).toContain("const hasWrongSection = Boolean(");
-  });
-
-  it("유형 리스크는 2개까지만 — 3개면 종목과 무관한 템플릿 노이즈로 읽힌다 (DS-03 §8)", () => {
-    expect(DECK_DEPTH).toMatch(/archetype\.items \?\? \[\]\)\.slice\(0, 2\)/);
-    expect(DECK_DEPTH).toContain("archetype.disclaimer");
-  });
-
-  it("미확보 사유와 문구를 그대로 쓴다 — 화면이 '확보하지 못함' 을 말할 수 있어야 한다", () => {
-    for (const field of ["unavailable_reason", "unavailable_text"]) {
-      expect(DECK_DEPTH, field).toContain(field);
-    }
-  });
-});
-
-/**
- * 가격 무효선을 **두 번 내보내지 않는다.**
- *
- * 픽에는 이미 `pick.invalidation.text` 가 있고 카드·차트가 그것을 쓴다. 리스크 페이로드에도
- * 가격 무효선을 실어 두 경로가 생기면, 한쪽만 갱신될 때 화면 두 곳이 다른 무효선을 말한다.
- */
-describe("가격 무효선은 정본이 하나다", () => {
-  it("덱 뎁스는 픽의 무효선 문구를 쓴다", () => {
-    // 문구는 픽의 것이 정본이고, 옛 payload 는 읽는 쪽에서 용어만 고친다(WO-SUB-HOOK 배치 시차).
-    expect(DECK_DEPTH).toMatch(/repairPickCopy\(pick\.invalidation\.text\)/);
-  });
-
-  it("리스크 페이로드의 가격 무효선은 픽에 값이 없을 때만 쓴다", () => {
-    expect(DECK_DEPTH).toMatch(/repairPickCopy\(pick\.invalidation\.text\) \|\| risk\?\.invalidation\.price_text/);
+    expect(DECK).toContain("<QuietPickDepth pick={selected}");
   });
 });

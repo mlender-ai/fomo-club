@@ -12,6 +12,14 @@ import { describe, expect, it } from "vitest";
  * ④ 모바일 하단 잘림 방지(safe-area + dvh)
  */
 
+/**
+ * 주석은 화면에 안 나간다. 이 파일의 봉인 검사는 **렌더되는 코드**에만 걸어야 한다 —
+ * 안 그러면 "왜 이걸 안 쓰는가"를 적어둔 주석이 위반으로 잡힌다.
+ */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
 const depth = readFileSync(new URL("../components/QuietPickDepth.tsx", import.meta.url), "utf8");
 const deck = readFileSync(new URL("../components/QuietPickDeck.tsx", import.meta.url), "utf8");
 
@@ -40,33 +48,47 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
    * 이제 맨 위 「왜 지금 사는가」이고, 여기는 규모를 확인하는 자리다.
    * 「우리 기록」은 목록에 없어 화면에서 뺐다(컴포넌트·원장은 남는다).
    */
-  it("[완료 7] 5섹션 순서가 위→아래로 고정(렌더 트리 기준)", () => {
+  /**
+   * WO-RESET-05 §1 — 상세는 한 장이 아니라 **네 걸음**이다. 순서가 곧 이야기다:
+   * 놀라움(신호) → 이유(왜 지금) → 실체(어떤 회사) → 결정(즐겨찾기).
+   */
+  it("[완료 1] 네 걸음이 이야기 순서로 고정된다", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
-    const order = [
-      'data-testid="depth-hook"',
-      'title="왜 지금 사는가"',
-      'title="무슨 회사"',
-      'title="얼마나 샀나"',
-      'title="값"',
-      'title="틀리는 경우"',
-    ].map((s) => body.indexOf(s));
-    // 섹션은 다섯 개다 — `<Section title=` 사용처를 센다(우리 기록은 렌더되지 않는다).
-    expect((body.match(/<Section title="/g) ?? []).length).toBe(5);
-    expect(body).not.toContain("<OurRecordBlock record={record}");
-    expect(order.every((i) => i >= 0), "섹션 누락").toBe(true);
-    for (let i = 1; i < order.length; i += 1) expect(order[i]).toBeGreaterThan(order[i - 1]!);
+    const order = ['step === "signal"', 'step === "why"', 'step === "company"', 'step === "decide"'];
+    const positions = order.map((needle) => {
+      const at = body.indexOf(needle);
+      expect(at, `없는 걸음: ${needle}`).toBeGreaterThan(-1);
+      return at;
+    });
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it("섹션은 7개를 넘지 않는다 (완료 기준 9)", () => {
-    const titles = depth.match(/<Section title="/g) ?? [];
-    // 결론은 제목이 없으므로 Section 은 6개 = 총 7섹션.
-    expect(titles.length).toBe(6);
+  it("[완료 12] 데이터 없는 걸음은 목록에서 빠진다 — 빈 걸음을 만들지 않는다", () => {
+    // 1·4걸음은 항상, 2·3걸음은 재료가 있을 때만.
+    expect(depth).toContain('const out: StepId[] = ["signal"];');
+    expect(depth).toContain('if ((pick.whyNow?.length ?? 0) > 0) out.push("why");');
+    expect(depth).toContain('if ((pick.companyRead?.length ?? 0) > 0) out.push("company");');
+    expect(depth).toContain('out.push("decide");');
+  });
+
+  it("[완료 2] 진행 점은 실제 걸음 수를 받는다 — 4로 고정하지 않는다", () => {
+    expect(depth).toContain("<StepDots total={steps.length} index={index} />");
+  });
+
+  /** WO-RESET-05 §0-2 — 「틀리는 경우」는 상세에서 뺀다. 데이터는 두고 화면만. */
+  it("[완료 3] 「틀리는 경우」가 화면에 없다", () => {
+    const body = stripComments(depth.slice(depth.indexOf("export function QuietPickDepth")));
+    expect(body).not.toContain("틀리는 경우");
+    expect(body).not.toContain('data-testid="depth-wrong"');
+    expect(body).not.toContain("symbolRisks");
+    expect(body).not.toContain("archetypeRisks");
+    // 모든 종목에 똑같이 나오던 그 문장의 재료도 화면에서 안 읽는다.
+    expect(body).not.toContain("invalidation.text");
   });
 
   it("근거는 실수치에서 조립한다 — 화면이 문장을 되파싱하지 않는다", () => {
     expect(depth).toContain("depthEvidenceRows(pick, hook)");
-    expect(depth).toContain("companyBlurb(basics?.summary)");
-    expect(depth).toContain("computeOurRecord(records");
+    expect(depth).not.toMatch(/signal\.scale\s*\.split/);
   });
 
   it("레거시 섹션 제목이 새 템플릿에 없다", () => {
@@ -77,42 +99,46 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
 });
 
 describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", () => {
-  it("카드 결론이 상세 첫 줄로 이어지고, 화면에서 1회만 나온다 (완료 기준 2)", () => {
+  it("카드 결론이 1걸음 첫 줄로 이어지고, 그 걸음에서 1회만 나온다", () => {
+    // 카드와 **같은 것**을 쓴다 — 두 화면이 다른 말을 하면 어느 쪽도 못 믿는다.
+    expect(depth).toContain("const hook = pick.cardType?.hook ?? pickHook(pick);");
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
-    expect(body.match(/\{hook\}/g) ?? []).toHaveLength(1);
-    expect(body.indexOf('data-testid="depth-hook"')).toBeLessThan(body.indexOf('title="얼마나 샀나"'));
+    expect(body.match(/data-testid="depth-hook"/g)?.length ?? 0).toBe(1);
   });
 
-  it("박스가 화면에 없다 — 우리 기록을 뺐다(WO-RESET-02 PART D)", () => {
-    // 표면을 가진 블록(surface-2 배경)은 우리 기록 박스뿐이었고, 그 섹션은 이제 렌더되지 않는다.
-    // 컴포넌트 자체는 남아 있으므로 소스에는 여전히 한 번 나온다.
-    expect(depth.match(/bg-ds-surface-2/g) ?? []).toHaveLength(1);
-    const box = depth.slice(depth.indexOf("function OurRecordBlock"));
-    expect(box).toContain("bg-ds-surface-2");
-    expect(box).toContain("rounded-block");
+  it("surface-2 박스가 화면에 없다 — 우리 기록을 뺀 뒤로 쓰는 곳이 없다", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    expect(body).not.toContain("bg-ds-surface-2");
   });
 
-  it("accent 는 ⑥ 의 수익률 한 곳뿐이다", () => {
-    const accents = depth.match(/ds-accent/g) ?? [];
-    // 좌측 바(bg) + 수익률(text) = 2개, 둘 다 우리 기록 박스 안이다.
-    expect(accents).toHaveLength(2);
-    const chart = depth.slice(depth.indexOf("function DepthChart"), depth.indexOf("function RevenueBars"));
-    expect(chart).not.toContain("ds-accent");
+  it("accent 는 **행동 버튼**에만 쓴다 — 강조가 여럿이면 강조가 아니다", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    // 걸음 본문에는 accent 가 없다. 다음 버튼·즐겨찾기 버튼만 accent 배경을 쓴다.
+    const accents = body.match(/bg-ds-accent/g)?.length ?? 0;
+    expect(accents).toBe(1); // 즐겨찾기 버튼(다음 버튼은 DepthSteps 에 있다)
+    expect(body).not.toContain("text-ds-accent");
   });
 
-  it("타이포 3단 — 섹션 제목(label mono) / 결론(display-sm) / 라벨-값", () => {
-    expect(depth).toContain('font-mono text-ds-label tracking-[0.06em] text-ds-text-2'); // 섹션 제목
-    expect(depth).toContain("text-ds-display-sm text-ds-text-1"); // 결론
-    expect(depth).toContain('w-[88px] shrink-0 font-mono text-ds-label text-ds-text-2'); // 라벨 고정폭
+  it("타이포 — 걸음 제목과 결론이 같은 급(display-sm)이고, 그 아래는 본문·캡션뿐이다", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    expect(body).toContain("text-ds-display-sm");
+    // 섹션 라벨(mono)이 사라졌다 — 걸음마다 제목이 하나라 라벨 층이 필요 없다.
+    expect(body).not.toContain("text-ds-label tracking-[0.06em]");
   });
 
-  it("섹션 사이 24px + 0.5px 구분선", () => {
-    expect(depth).toContain("mt-s5 border-t-hair border-ds-border pt-s5");
+  it("걸음 안에서 덩어리 간격은 24px 단위다", () => {
+    expect(readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8")).toContain("mt-s6");
   });
 
-  it("값 지표는 화이트리스트다 — EPS·52주 고저가 나열이 아니다", () => {
-    expect(depth).toContain('const WANTED = ["PER", "PBR", "EPS", "배당수익률"]');
-    expect(depth).not.toContain("if (out.length >= 5) break");
+  /** WO-RESET-05 §4-1 — 맨숫자 나열을 지웠다. 이제 비교 문장이 붙은 것만 나간다. */
+  it("[완료 7] 화면이 맨숫자를 직접 나열하지 않는다 — 3걸음은 서버가 굳힌 것만 그린다", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    expect(body).not.toContain('WANTED = ["PER", "PBR", "EPS", "배당수익률"]');
+    expect(body).toContain("const companyGroups = pick.companyRead ?? [];");
+    // 비교 문장은 `companyRead` 가 만들고 화면은 그리기만 한다.
+    const steps = readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8");
+    expect(steps).toContain('data-testid="depth-comparison"');
+    expect(steps).toContain("{row.comparison}");
   });
 
   it("상세는 데스크톱에서 퍼지지 않는다 — 480px 중앙 정렬 (DS-06 §6-1)", () => {
@@ -140,22 +166,20 @@ describe("빈 섹션·상태 문구 금지(전 컴포넌트 스캔)", () => {
     }
   });
 
-  it("확보 안 된 섹션은 조건부 렌더로 통째 사라진다 (완료 기준 8)", () => {
-    expect(depth).toContain("{whyNowEvents.length > 0 && ("); // ① 왜 지금 사는가 — 날짜 항목 0개면 없다
-    expect(depth).toContain("{rows.length > 0 && ("); // ② 근거
-    expect(depth).toContain("{(blurb || substance) && ("); // ③ 회사
-    expect(depth).toContain("{valueRows.length >= 3 && ("); // ④ 값 — 3개 미만이면 섹션 없음
-    expect(depth).toContain("{hasWrongSection && ("); // ⑤
-    // 260거래일 차트를 없앴다(WO-RESET-01 B-4) — 그 컴포넌트의 조기 반환도 함께 사라졌다.
-    expect(depth).not.toContain("if (closes.length < 20) return null");
-    expect(depth).toContain("if (usable.length < 3) return null"); // 매출 막대
+  it("[완료 12] 확보 안 된 걸음은 목록에서 빠져 통째로 사라진다", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    // 걸음 자체가 `steps` 에 없으면 렌더 분기에 도달하지 않는다.
+    expect(body).toContain('{step === "why" && (');
+    expect(body).toContain('{step === "company" && (');
   });
 
-  it("밴드가 없으면 밴드 얘기를 하지 않는다 (완료 기준 5)", () => {
-    // 캡션·유형 경고문은 band 가 있을 때만 값이 채워진다.
-    expect(depth).toContain("const band = valuation?.band ?? null");
-    expect(depth).toMatch(/bandCaptions = band \?/);
-    expect(depth).toMatch(/archetypeWarning = band \?/);
+  it("비교 기준이 없으면 그 숫자를 아예 안 보여준다 — 규칙은 fomo-core 가 지킨다", () => {
+    // 화면은 판단하지 않는다. `companyRead` 가 비교 문장 없는 줄을 애초에 안 만든다.
+    const core = readFileSync(
+      new URL("../../../packages/fomo-core/src/keyword-cards/company-read.ts", import.meta.url), "utf8"
+    );
+    expect(core).toContain("comparison: string;");
+    expect(core).toContain("비교 기준이 없으면 그 숫자를 안 보여준다");
   });
 });
 
@@ -208,9 +232,11 @@ describe("모바일 — 하단 잘림 방지", () => {
     expect(depth).toContain('truncate text-[14px] font-medium leading-tight text-ds-text-1');
   });
 
-  it("헤더는 `닫기` 텍스트가 아니라 뒤로 화살표다 (DS-03 §3)", () => {
-    expect(depth).toContain('aria-label="뒤로"');
-    expect(depth).not.toContain('aria-label="닫기"');
+  it("헤더는 `닫기` 텍스트가 아니라 뒤로 화살표이고, 이전 **걸음**으로 간다", () => {
+    expect(depth).toContain('aria-label={index > 0 ? "이전 걸음" : "뒤로"}');
+    expect(depth).toContain("onClick={back}");
+    // 1걸음에서만 카드로 돌아간다.
+    expect(depth).toContain("const back = () => (index > 0 ? goPrev() : dismiss());");
   });
 
   /** WO-RESET-01 A-3 — 관심(★)을 화면에서 뺐다. 하단 CTA 를 두지 않는 규칙은 그대로다. */
@@ -226,14 +252,15 @@ describe("모바일 — 하단 잘림 방지", () => {
  * 그 답이 없으면 상세는 HTS 필터로 다 나오는 기본 정보 나열이다.
  */
 describe("WO-HOOK-02 — 왜 지금 사는가", () => {
-  it("[완료 6] 결론 바로 다음, 나머지 모든 섹션보다 위에 온다", () => {
+  it("[완료 6] 왜 지금 사는가는 **2걸음**이다 — 신호 다음, 회사보다 앞", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
-    const hook = body.indexOf('data-testid="depth-hook"');
-    const why = body.indexOf('title="왜 지금 사는가"');
-    expect(why).toBeGreaterThan(hook);
-    for (const title of ["무슨 회사", "얼마나 샀나", "값", "틀리는 경우"]) {
-      expect(why, title).toBeLessThan(body.indexOf(`title="${title}"`));
-    }
+    const at = (needle: string) => {
+      const i = body.indexOf(needle);
+      expect(i, `없음: ${needle}`).toBeGreaterThan(-1);
+      return i;
+    };
+    expect(at('step === "why"')).toBeGreaterThan(at('step === "signal"'));
+    expect(at('step === "why"')).toBeLessThan(at('step === "company"'));
   });
 
   /**
@@ -251,10 +278,15 @@ describe("WO-HOOK-02 — 왜 지금 사는가", () => {
     expect(depth).toContain('data-testid="depth-why-now-note"');
   });
 
-  it("[완료 2·3] 공시 제목과 원문 링크를 그린다", () => {
+  it("[완료 4] 공시 제목은 **사람 말**로 오고 원문 링크가 함께 붙는다", () => {
     expect(depth).toContain('data-testid="depth-why-now-source"');
     expect(depth).toContain('target="_blank"');
     expect(depth).toContain('rel="noreferrer noopener"');
+    // 번역은 fomo-core 가 한다 — 화면이 제목을 손대지 않는다.
+    const core = readFileSync(
+      new URL("../../../packages/fomo-core/src/keyword-cards/why-now.ts", import.meta.url), "utf8"
+    );
+    expect(core).toContain("disclosurePhrase(d.title)");
   });
 
   it("[완료 4] 공시 0건 줄을 서버가 줄 때만 그린다", () => {
@@ -270,21 +302,12 @@ describe("WO-HOOK-02 — 왜 지금 사는가", () => {
     expect(depth).toContain("depthEvidenceRows(pick, hook)");
   });
 
-  it("완료 기준 7 — `7일 아직` 류가 없고 실제 수익률을 쓴다", () => {
-    /**
-     * 주석은 화면에 안 나간다. 두 파일 다 "왜 이걸 안 쓰는가"를 주석으로 설명하고 있으므로,
-     * 주석을 지우고 **렌더되는 코드**에만 건다 — 안 그러면 규칙을 적어둔 것이 위반으로 잡힌다.
-     */
-    const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-    const record = strip(readFileSync(new URL("../lib/ourRecord.ts", import.meta.url), "utf8"));
-    const box = strip(depth.slice(depth.indexOf("function OurRecordBlock"), depth.indexOf("const CLOSE_MS")));
+  it("완료 기준 7 — `7일 아직` 류 채점 상태 문구가 원장 계산에도 없다", () => {
+    const record = stripComments(readFileSync(new URL("../lib/ourRecord.ts", import.meta.url), "utf8"));
     for (const legacy of ["7일 아직", "30일 아직", "90일 아직"]) {
-      expect(box, `채점 상태 문구 잔존: ${legacy}`).not.toContain(legacy);
       expect(record, `채점 상태 문구 잔존: ${legacy}`).not.toContain(legacy);
     }
-    // 도래한 지평만 별도 행으로 나간다.
     expect(record).toContain("graded");
-    expect(box).toContain("record.returnPct");
   });
 
   it("완료 기준 8 — 박스와 accent 가 우리 기록 하나뿐이다", () => {

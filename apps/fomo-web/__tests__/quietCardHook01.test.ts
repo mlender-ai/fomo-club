@@ -302,8 +302,14 @@ describe("§8 삭제 목록 — 옮긴 것이지 지운 것이 아니다", () =>
   it("되돌아보는 선·회사 설명·신호 과거 성적은 상세가 그린다", () => {
     expect(code(card)).not.toContain("되돌아보는 선");
     expect(code(card)).not.toContain("signalStats");
-    expect(code(depth)).toContain("pick.invalidation.text");
-    expect(code(depth)).toContain('title="무슨 회사"');
+    /**
+     * 회사 설명은 **3걸음**이 그린다(WO-RESET-05 §4) — 섹션 제목이 아니라 걸음 제목이 됐다.
+     * 무효선 문구(「틀리는 경우」)는 §0-2 로 뺐다. 무효선 **값**은 카드 그림이 계속 쓴다.
+     */
+    expect(code(depth)).toContain('step === "company"');
+    expect(code(depth)).toContain("어떤 회사인가");
+    expect(code(depth)).toContain('data-testid="depth-company"');
+    expect(code(depth)).toContain("pick.invalidation.level");
   });
 
   it("넘기기 버튼·더보기 링크가 없고 CTA 는 하나다", () => {

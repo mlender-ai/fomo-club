@@ -115,10 +115,16 @@ describe("완료 기준 1·2 — 빈 헤더·자기모순·값 없는 대시가 
     }
   });
 
+  /**
+   * 리스크 섹션(「틀리는 경우」)은 WO-RESET-05 §0-2 로 상세에서 뺐다. 미확보 구분 규칙은
+   * **그 화면이 남아 있는 곳**(레거시 뎁스)에서 계속 지킨다.
+   */
   it("미확보를 0 으로 표시하지 않는다 — 리스크 0건 ≠ 리스크 없음", () => {
-    const depth = read("../components/QuietPickDepth.tsx");
-    expect(depth).toContain("unavailable_text");
-    expect(depth).not.toMatch(/리스크 0건/);
+    const legacy = read("../components/KeywordDepthPage.tsx");
+    expect(legacy).toContain("unavailable_text");
+    expect(legacy).not.toMatch(/리스크 0건/);
+    // 상세에서는 섹션 자체가 없다 — 없는 섹션에 미확보 문구를 둘 수 없다.
+    expect(read("../components/QuietPickDepth.tsx")).not.toContain("unavailable_text");
   });
 });
 
@@ -175,8 +181,19 @@ describe("완료 기준 5 — 스켈레톤이 있고 스피너가 없다 (§5)",
 });
 
 describe("완료 기준 7 — `아직 못 찾았어요`(미확보)와 `없어요`(부재)를 구분한다", () => {
-  it("종목 고유 리스크는 미확보로 말한다", () => {
-    expect(read("../components/QuietPickDepth.tsx")).toContain("아직 못 찾았어요");
+  /**
+   * 종목 고유 리스크(「틀리는 경우」)는 WO-RESET-05 §0-2 로 상세에서 통째로 뺐다 —
+   * 모든 종목에 같은 문장이 나왔고 그걸 보고 할 수 있는 게 없었다. **미확보 문안이
+   * 화면에서 사라진 것이지 규칙이 뒤집힌 것은 아니다.** 이 자리의 검사는 규칙이 여전히
+   * 데이터 계약으로 남아 있는지로 바꾼다.
+   */
+  it("리스크 미확보 문안은 **데이터에서 온다** — 화면이 카피를 짓지 않는다", () => {
+    const legacy = read("../components/KeywordDepthPage.tsx");
+    expect(legacy).toContain("unavailable_text");
+    // 상세에는 섹션이 없으므로 하드코딩된 미확보 문구도 없다.
+    const depth = read("../components/QuietPickDepth.tsx");
+    expect(depth).not.toContain("아직 못 찾았어요");
+    expect(depth).not.toContain("unavailable");
   });
 
   it("픽 0장은 부재로 말한다", () => {

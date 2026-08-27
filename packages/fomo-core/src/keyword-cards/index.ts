@@ -22,6 +22,16 @@ export * from "./quiet-pick-hook";
 export * from "./card-type";
 export * from "./disclosure-kind";
 export * from "./disclosure-phrase";
+/**
+ * `sector-stats` · `company-read` 는 **배럴에서 뺐다** (2026-08-27 성능 게이트).
+ *
+ * 이 둘은 **굽는 경로에서만** 쓴다(`apps/web/lib/quiet-pick.ts`). 배럴에 넣자 `@fomo/core`
+ * 를 값으로 임포트하는 **조회 라우트 세 개**의 전이 모듈이 각각 +2 됐다 — 콜드스타트가
+ * 나빠지고, 그게 504 사고의 원인이었다. 예산을 올리는 대신 원인을 없앴다.
+ *
+ * 쓰는 쪽은 경로로 직접 가져온다:
+ *   import { companyRead } from "@fomo/core/keyword-cards/company-read";
+ */
 export * from "./quiet-signals";
 export * from "./why-now";
 export * from "./pick-vocabulary";

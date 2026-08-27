@@ -5,9 +5,7 @@ import type { DailyOhlcv } from "@fomo/core";
 import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER } from "@fomo/core";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontResponse } from "@/lib/fomoApi";
-import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
 import { companyBlurb, depthEvidenceRows } from "@/lib/depthSections";
-import { computeOurRecord, type OurRecord } from "@/lib/ourRecord";
 import { trustedSector } from "@/lib/sectorTrust";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { CardFigure, displayName, priceText } from "@/components/QuietPickCard";
@@ -15,6 +13,11 @@ import { displayChangePct } from "@/lib/pickChange";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { haptic, hapticMedium } from "@/lib/haptics";
+import { upsertWatch } from "@/lib/watchlist";
+import { StepDots, StepNext, CompanyGroupBlock } from "@/components/DepthSteps";
+
+/** 걸음 식별자. 순서가 곧 이야기 순서다 — 놀라움 → 이유 → 실체 → 결정. */
+type StepId = "signal" | "why" | "company" | "decide";
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
@@ -62,14 +65,6 @@ function todayKst(): string {
 }
 
 /** 섹션 껍데기 — 제목은 `label` mono 12/0.06em, 아래 12px. 섹션 간 24px + 0.5px 구분선. */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-s5 border-t-hair border-ds-border pt-s5">
-      <h2 className="font-mono text-ds-label tracking-[0.06em] text-ds-text-2">{title}</h2>
-      <div className="mt-s3">{children}</div>
-    </section>
-  );
-}
 
 /** 라벨-값 2열 — 라벨 고정폭 88px. 박스를 쓰지 않는다(DS-03 §5). */
 function Row({ label, value }: { label: string; value: string }) {
@@ -91,53 +86,7 @@ function Row({ label, value }: { label: string; value: string }) {
  * - 적자 구간이 섞이면 절대값 높이로 그려 "많이 벌었다" 처럼 보였다 → **양수 3개 미만이면
  *   막대를 그리지 않는다.** 형태가 거짓말을 하는 것보다 없는 게 낫다.
  */
-function formatMoney(value: number, currency: string): string {
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "-" : "";
-  if (currency === "USD") {
-    if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`;
-    if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(0)}M`;
-    return `${sign}$${Math.round(abs).toLocaleString()}`;
-  }
-  if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(1)}조`;
-  if (abs >= 1e8) return `${sign}${Math.round(abs / 1e8).toLocaleString()}억`;
-  return `${sign}${Math.round(abs).toLocaleString()}원`;
-}
 
-function RevenueBars({
-  bars,
-  label,
-  currency,
-}: {
-  bars: NonNullable<CardSlotPayload["valuation"]>["bars"];
-  label: string;
-  currency: string;
-}) {
-  // `value: null` 은 결측이다 — 0 으로 둔갑시키지 않는다. 적자(음수)는 막대로 그리지 않는다.
-  const usable = bars
-    .map((b) => ({ label: b.label, value: b.value }))
-    .filter((b): b is { label: string; value: number } => typeof b.value === "number" && Number.isFinite(b.value) && b.value > 0);
-  if (usable.length < 3) return null;
-  const max = Math.max(...usable.map((b) => b.value));
-
-  return (
-    <div className="mt-s4" data-testid="depth-bars">
-      <div className="flex items-baseline justify-between">
-        <span className="font-mono text-ds-label text-ds-text-2">{label}</span>
-        {/* 금액 축 — 최대값 하나. 막대마다 숫자를 얹으면 서로 겹친다. */}
-        <span className="font-mono text-ds-caption text-ds-text-3">최대 {formatMoney(max, currency)}</span>
-      </div>
-      <div className="mt-s2 flex h-16 items-end gap-s2">
-        {usable.map((bar) => (
-          <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-s1">
-            <div className="w-full rounded-sm bg-ds-text-2" style={{ height: `${Math.max(2, (bar.value / max) * 48)}px` }} />
-            <span className="truncate font-mono text-ds-caption text-ds-text-3">{bar.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * 본문 스켈레톤 (DS-05 §5) — **헤더는 즉시 그린다**(카드에서 넘어온 데이터라 기다릴 게 없다).
@@ -155,45 +104,6 @@ function DepthSkeleton() {
 }
 
 /** ⑥ 우리 기록 (DS-03 §9) — 화면의 **유일한 박스이자 유일한 accent**. */
-function OurRecordBlock({ record, currency }: { record: OurRecord; currency: (v: number) => string }) {
-  return (
-    <Section title="우리 기록">
-      <div className="flex gap-[10px] rounded-block bg-ds-surface-2 p-[14px]" data-testid="depth-our-record">
-        <span className="w-[2px] shrink-0 self-stretch bg-ds-accent" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="font-mono text-ds-label text-ds-text-2">{record.sinceText}</p>
-          <p className="font-mono text-[20px] font-medium leading-tight text-ds-accent">
-            {`${record.returnPct > 0 ? "+" : ""}${record.returnPct.toFixed(1)}%`}
-          </p>
-
-          {/* 이력 — 발행일과 당시가만. `7일 아직` 류는 채점 상태이지 성적이 아니라 넣지 않는다. */}
-          {record.history.length > 0 && (
-            <ul className="mt-s3 space-y-s2">
-              {record.history.map((h) => (
-                <li key={h.date} className="flex gap-s3 font-mono text-ds-caption">
-                  <span className="text-ds-text-3">{h.date.slice(5).replace("-", "/")}</span>
-                  <span className="text-ds-text-1">{currency(h.priceAt)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* 채점이 **도래한** 지평만. 도래 전 지평은 행 자체가 없다. */}
-          {record.graded.length > 0 && (
-            <ul className="mt-s3 space-y-s2">
-              {record.graded.map((g) => (
-                <li key={g.horizon} className="flex gap-s3 font-mono text-ds-caption">
-                  <span className="text-ds-text-3">{g.horizon}일</span>
-                  <span className="text-ds-text-1">{`${g.returnPct > 0 ? "+" : ""}${g.returnPct.toFixed(1)}%`}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </Section>
-  );
-}
 
 /** 이탈 애니메이션 시간 (DS-06 §4) — 진입 300ms 의 역방향 260ms. */
 const CLOSE_MS = 260;
@@ -202,7 +112,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const stock = pick.subject.canonical;
   const [basics, setBasics] = useState<StockBasics | null>(null);
   const [front, setFront] = useState<StockFrontResponse | null>(null);
-  const [records, setRecords] = useState<ScorecardPick[]>([]);
   const [slotPayload, setSlotPayload] = useState<CardSlotPayload | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
   /** 닫히는 중 — 역방향 슬라이드가 끝난 뒤 실제로 언마운트한다. */
@@ -219,7 +128,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     let alive = true;
     setBasics(null);
     setFront(null);
-    setRecords([]);
     setSlotPayload(null);
 
     fetchStockBasics(stock, {
@@ -237,9 +145,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       .catch(() => undefined);
 
     // 발행 원장 — ⑥ 우리 기록의 원료. 실패하면 그 섹션만 없다.
-    fetchScorecardPicksCached()
-      .then((r) => alive && setRecords(r.picks ?? []))
-      .catch(() => undefined);
 
     // 슬롯(값·리스크) — 실패하면 ④⑤ 만 빠지고 나머지는 그대로다.
     fetchCardSlots()
@@ -300,33 +205,143 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * 서로 다른 말을 하면 어느 쪽도 못 믿는다.
    */
   const hook = pick.cardType?.hook ?? pickHook(pick);
+
+  /**
+   * WO-RESET-05 §1 — **네 걸음**. 이야기 순서다: 놀라움 → 이유 → 실체 → 결정.
+   *
+   * ## 빈 걸음을 만들지 않는다 (§6)
+   *
+   * 2·3걸음은 데이터가 있을 때만 존재한다. 없으면 목록에서 빠지고 **진행 점도 그만큼 줄어든다.**
+   * "왜 지금인가" 제목만 있고 아래가 비어 있는 화면은 답하는 시늉이라 아예 만들지 않는다.
+   */
+  const steps = useMemo<StepId[]>(() => {
+    const out: StepId[] = ["signal"];
+    if ((pick.whyNow?.length ?? 0) > 0) out.push("why");
+    if ((pick.companyRead?.length ?? 0) > 0) out.push("company");
+    out.push("decide");
+    return out;
+  }, [pick.whyNow, pick.companyRead]);
+
+  const [stepIndex, setStepIndex] = useState(0);
+  const [openMethod, setOpenMethod] = useState<string | null>(null);
+  const [watched, setWatched] = useState(false);
+  /** 걸음이 줄어드는 페이로드로 바뀌었을 때 범위를 벗어나지 않게. */
+  const index = Math.min(stepIndex, steps.length - 1);
+  const step = steps[index]!;
+
+  const goNext = () => {
+    if (index >= steps.length - 1) return;
+    haptic();
+    setOpenMethod(null);
+    setStepIndex(index + 1);
+    scrollRef.current?.scrollTo({ top: 0 });
+  };
+  const goPrev = () => {
+    if (index <= 0) return;
+    haptic();
+    setOpenMethod(null);
+    setStepIndex(index - 1);
+    scrollRef.current?.scrollTo({ top: 0 });
+  };
+  const toggleMethod = (title: string) => setOpenMethod((v) => (v === title ? null : title));
+
+  /**
+   * 뒤로 — **이전 걸음**이다. 1걸음에서만 카드로 돌아간다(§1-1).
+   * 헤더 화살표와 가장자리 스와이프가 같은 것을 한다.
+   */
+  const back = () => (index > 0 ? goPrev() : dismiss());
+
+  /**
+   * 좌우 스와이프로 걸음을 넘긴다(§1-1). 세로 스크롤과 겨루지 않도록 **가로 이동이
+   * 세로보다 확실히 클 때만** 걸음으로 친다.
+   */
+  const stepFrom = useRef<{ x: number; y: number } | null>(null);
+  const onStepPointerDown = (e: React.PointerEvent) => {
+    stepFrom.current = { x: e.clientX, y: e.clientY };
+  };
+  const onStepPointerUp = (e: React.PointerEvent) => {
+    const from = stepFrom.current;
+    stepFrom.current = null;
+    if (!from) return;
+    const dx = e.clientX - from.x;
+    const dy = e.clientY - from.y;
+    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) goNext();
+    else goPrev();
+  };
+
+  /** 3걸음 재료 — 굽는 시점에 굳은 세 덩어리. 없으면 걸음 자체가 없다. */
+  const companyGroups = pick.companyRead ?? [];
+
+  /**
+   * 1걸음이 더하는 **새 정보 한 줄** — 얼마나 이례적인가(§2).
+   *
+   * 카드가 이미 말한 것을 다시 쓰지 않는다. 이례성 문장 중 훅·칩에 없는 것 하나만 고른다.
+   * 없으면 줄이 없다 — 채우려고 아무 말이나 넣지 않는다.
+   */
+  const rarityLine = useMemo(() => {
+    const said = `${hook} ${(pick.chips ?? []).join(" ")}`;
+    const fresh = (pick.anomalies ?? []).find((a) => a.text?.trim() && !said.includes(a.text.trim()));
+    return fresh?.text?.trim() ?? null;
+  }, [pick.anomalies, pick.chips, hook]);
+
+  /**
+   * 4걸음 요약 — 앞 걸음들의 **핵심만** 두세 줄(§5).
+   *
+   * 지어내지 않는다. 각 줄은 앞 걸음이 실제로 보여준 것에서만 온다 —
+   * 그 걸음을 건너뛰었으면 그 줄도 없다.
+   */
+  const summaryLines = useMemo(() => {
+    const out: string[] = [hook.replace(/\n/g, " ")];
+    const disclosureCount = (pick.whyNow ?? []).filter((e) => e.url).length;
+    if (disclosureCount > 0) out.push(`공시가 ${disclosureCount}건 있었어요`);
+    else if (pick.whyNowQuietNote) out.push(pick.whyNowQuietNote);
+    for (const g of companyGroups) if (g.scoreText) out.push(g.scoreText);
+    return out.slice(0, 4);
+  }, [hook, pick.whyNow, pick.whyNowQuietNote, companyGroups]);
+
+  /**
+   * 즐겨찾기 — **담는 것까지만**이다(WO 하지 말 것: 목록 화면 만들지 않는다).
+   * 기준가를 함께 저장한다 — 나중에 "얼마나 움직였는지" 를 재려면 누른 순간의 값이 있어야 한다.
+   */
+  const onWatch = () => {
+    hapticMedium();
+    upsertWatch(pick.subject.canonical, Date.now(), {
+      sector,
+      priceAt: pick.price.current,
+      symbol: pick.subject.symbol,
+      naverCode: pick.subject.naverCode,
+      market: pick.subject.market,
+      country: pick.subject.country,
+    });
+    setWatched(true);
+  };
+
+  /** 다음 걸음이 **무엇인지** 말한다 — `다음`이 아니라 그 걸음의 이름이다(§2·§3·§4). */
+  const nextLabel = (() => {
+    const next = steps[index + 1];
+    if (next === "why") return "왜 사는지 보기";
+    if (next === "company") return "어떤 회사인지 보기";
+    if (next === "decide") return "계속 지켜볼까요";
+    return "계속";
+  })();
   const rows = useMemo(() => depthEvidenceRows(pick, hook), [pick, hook]);
   const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
   const candles = useMemo(() => front?.candles ?? [], [front]);
-  const record = useMemo(
-    () => computeOurRecord(records, stock, pick.price.current, todayKst()),
-    [records, stock, pick.price.current]
-  );
+  /**
+   * 「우리 기록」 블록을 화면에서 뺀 지 오래다(WO-RESET-02 PART D). 여기서 계산도 안 한다 —
+   * **원장 적재와 `computeOurRecord` 는 그대로 둔다.** 화면만 뺀 것이라 되살릴 수 있다.
+   */
 
   /**
    * ④ 값 — 지표가 3개 이상일 때만 섹션이 있다(DS-03 §7). 2개 이하면 "지금 비싼가"에 답할 수
    * 없고, 답할 수 없는 섹션은 만들지 않는다.
    */
-  const valueRows = useMemo(() => {
-    const out: { label: string; value: string }[] = [];
-    if (basics?.marketCap) out.push({ label: "시가총액", value: basics.marketCap });
-    /**
-     * **화이트리스트로 받는다.** 종전에는 `basics.metrics` 를 순서대로 5개 집어서
-     * `EPS -565원 · 최근 1년 최고가 · 최저가` 처럼 "지금 비싼가"에 답하지 않는 값이 올라왔다.
-     * 값 섹션은 배수(PER·PBR)와 이익(EPS)까지다. 나머지는 이 화면의 질문이 아니다.
-     */
-    const WANTED = ["PER", "PBR", "EPS", "배당수익률"] as const;
-    for (const term of WANTED) {
-      const metric = (basics?.metrics ?? []).find((m) => (m.term ?? m.label) === term && m.value?.trim());
-      if (metric) out.push({ label: term, value: metric.value.trim() });
-    }
-    return out;
-  }, [basics]);
+  /**
+   * 종전 「값」 섹션(`시가총액 / PER / PBR / EPS`)을 지웠다 — WO-RESET-05 §4-1.
+   * **숫자만 있고 좋은지 나쁜지가 없었다.** 이제 3걸음이 비교 문장과 함께 낸다
+   * (`pick.companyRead`, 굽는 시점에 굳는다).
+   */
 
   /** 실체 한 줄 — 카드에서 내려온 "어디서 돈을 버는가". ③ 섹션에 합류한다. */
   const substance = slotPayload?.substance?.text ?? null;
@@ -335,8 +350,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const valuation = slotPayload?.valuation ?? null;
   /** 밴드가 **있을 때만** 밴드 얘기를 한다 — 없다고 말한 뒤 보라고 하지 않는다(§7 결함). */
   const band = valuation?.band ?? null;
-  const bandCaptions = band ? (slotPayload?.valuation_frame?.captions ?? valuation?.captions ?? []) : [];
-  const archetypeWarning = band ? (slotPayload?.valuation_frame?.warning ?? valuation?.warning ?? null) : null;
 
   /**
    * ① 왜 지금 사는가 (WO-RESET-02 PART C) — **날짜와 사건**이다.
@@ -370,12 +383,13 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   }, [band, bandLabel, pick.whyNow, pick.signalFacts?.pctAboveYearLow]);
 
   const risk = slotPayload?.risk ?? null;
-  const invalidationText = repairPickCopy(pick.invalidation.text) || risk?.invalidation.price_text || null;
-  const businessText = risk?.invalidation.business_text ?? null;
-  const symbolRisks = risk?.symbol.items ?? [];
-  /** 유형 리스크는 최대 2개 — 3개면 종목과 무관한 템플릿 노이즈로 읽힌다(§8). */
-  const archetypeRisks = (risk?.archetype.items ?? []).slice(0, 2);
-  const hasWrongSection = Boolean(invalidationText || businessText || symbolRisks.length > 0 || archetypeRisks.length > 0);
+  /**
+   * WO-RESET-05 §0-2 — 「틀리는 경우」를 상세에서 뺐다.
+   *
+   * `52주 저점 63,000원 이탈 여부가 다음 판단 기준이에요` 가 **모든 종목에 똑같이** 나왔고,
+   * 그걸 보고 사용자가 할 수 있는 것이 없었다. 계산도 렌더도 지운다 —
+   * **데이터(`/risk` 응답·`pick.invalidation`)는 그대로 둔다.** 화면만 뺀다.
+   */
 
   // 통화 기호 포맷은 카드와 **같은 함수**를 쓴다 — 한쪽만 고치면 화면이 갈린다(실측: 상세 `4.945`).
   /** 섹터 신뢰 게이트 — 헤더 부제에도 같은 규칙을 쓴다(DS-05 §4). */
@@ -419,8 +433,8 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           <div className="mx-auto flex h-14 w-full max-w-[480px] items-center gap-s2 px-gutter">
           <button
             type="button"
-            onClick={dismiss}
-            aria-label="뒤로"
+            onClick={back}
+            aria-label={index > 0 ? "이전 걸음" : "뒤로"}
             className="tap-button -ml-2 flex h-touch w-touch shrink-0 items-center justify-center text-ds-text-2"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -443,6 +457,8 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               </p>
             )}
           </div>
+          {/* 진행 점 (§1-1) — 걸음 수는 종목마다 다르다(빈 걸음을 만들지 않으므로). */}
+          <StepDots total={steps.length} index={index} />
           {/*
             관심(별)을 제거했다 — WO-RESET-01 A-3. 「내 기록」 화면이 없어졌으므로 등록해도
             볼 곳이 없다. `watchlist` 모듈은 지우지 않는다(되살릴 수 있게).
@@ -454,41 +470,55 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           ref={scrollRef}
           onScroll={onDepthScroll}
           className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${BOTTOM_PAD}`}
+          onPointerDown={onStepPointerDown}
+          onPointerUp={onStepPointerUp}
         >
-          <div className="mx-auto w-full max-w-[480px] px-gutter">
-          {/* ① 결론 — 카드와 같은 문장. **이 화면에서 1회만** 나온다(섹션 제목 없음). */}
-          <p className="mt-s4 break-keep text-ds-display-sm text-ds-text-1" data-testid="depth-hook">
-            {hook}
-          </p>
+          <div className="mx-auto w-full max-w-[480px] px-gutter" data-testid={`depth-step-${step}`}>
 
-          {/*
-            재등장 사유 — 섹션이 아니라 결론에 붙는 한 줄이다(6섹션 규칙을 지키면서 DS-01 §8
-            의 이관 판정을 유지한다). 같은 카드를 또 본 사람에게 가장 먼저 답할 질문이다.
-          */}
-          {pick.signal.reentry?.text && (
-            <p className="mt-s2 text-ds-caption text-ds-text-2" data-testid="depth-reentry">
-              다시 올라온 이유 — {repairPickCopy(pick.signal.reentry.text)}
-            </p>
+          {/* ── 1걸음 — 누가 쓸어담고 있나 (§2) ── */}
+          {step === "signal" && (
+            <>
+              {/* 카드에서 본 것을 **확인시켜준다.** 같은 결론, 같은 그림. */}
+              <p className="mt-s4 break-keep text-ds-display-sm text-ds-text-1" data-testid="depth-hook">
+                {hook}
+              </p>
+              {pick.signal.reentry?.text && (
+                <p className="mt-s2 text-ds-caption text-ds-text-2" data-testid="depth-reentry">
+                  다시 올라온 이유 — {repairPickCopy(pick.signal.reentry.text)}
+                </p>
+              )}
+              {/* 그림은 카드와 **같은 컴포넌트**다 — 두 화면이 갈릴 수 없다. */}
+              {pick.cardType && (
+                <div className="mt-s5" data-testid="depth-signal-figure">
+                  <CardFigure cardType={pick.cardType} invalidation={pick.invalidation.level} />
+                </div>
+              )}
+              {rows.length > 0 && (
+                <div className="mt-s5" data-testid="depth-evidence">
+                  {rows.map((row) => (
+                    <Row key={row.label} label={row.label} value={row.value} />
+                  ))}
+                </div>
+              )}
+              {/* 이 걸음이 더하는 **새 정보 한 줄** — 얼마나 이례적인가(§2). */}
+              {rarityLine && (
+                <p className="mt-s4 break-keep text-ds-body text-ds-text-2" data-testid="depth-rarity">
+                  {rarityLine}
+                </p>
+              )}
+              <StepNext label={nextLabel} onClick={goNext} />
+            </>
           )}
 
-          {/*
-            본문이 아직 하나도 안 왔다 — 결론만 있고 나머지가 빈 순간을 스켈레톤으로 덮는다.
-            근거 행은 픽 페이로드로 즉시 만들 수 있으므로, 그것마저 없을 때만 해당한다.
-          */}
-          {rows.length === 0 && !basics && !front && !slotPayload && <DepthSkeleton />}
-
-          {/*
-            ① 왜 지금 사는가 — **상세의 첫 섹션**(§2-1). 상세가 답해야 하는 질문은 하나다:
-            왜 조용히 사고 있는가. 2축 미만이면 `whyNowRows` 가 비고 섹션이 통째로 사라진다.
-          */}
-          {whyNowEvents.length > 0 && (
-            <Section title="왜 지금 사는가">
-              <div data-testid="depth-why-now">
+          {/* ── 2걸음 — 왜 지금인가 (§3) ── */}
+          {step === "why" && (
+            <>
+              <h2 className="mt-s4 text-ds-display-sm text-ds-text-1">왜 지금 사는가</h2>
+              <div className="mt-s5" data-testid="depth-why-now">
                 {whyNowEvents.map((event, i) => (
-                  <div key={`${event.when}-${i}`} className="flex gap-s3 py-[6px]">
-                    {/* 왼쪽은 **날짜**다 — 고정폭이라 줄마다 오른쪽 끝이 흔들리지 않는다. */}
-                    <span className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2">{event.when}</span>
-                    <span className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">
+                  <div key={`${event.when}-${i}`} className="flex gap-s3 border-b-hair border-ds-border py-s3 last:border-0">
+                    <p className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2">{event.when}</p>
+                    <p className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">
                       {event.text}
                       {event.url && (
                         <>
@@ -497,48 +527,57 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                             href={event.url}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="whitespace-nowrap font-mono text-ds-caption text-ds-text-3 underline"
+                            className="whitespace-nowrap text-ds-caption text-ds-text-3 underline"
                             data-testid="depth-why-now-source"
                           >
                             원문
                           </a>
                         </>
                       )}
-                    </span>
+                    </p>
                   </div>
                 ))}
               </div>
               {/*
-                공시가 0건이면 **숨기지 않고 말한다**(§C-4) — 아무 소식이 없는데 사고 있는 것이
-                이 제품이 찾는 것이다. 수집 전이면 서버가 이 값을 안 싣는다("없었다" ≠ "안 봤다").
+                공시가 한 건도 없었다 — **이게 오히려 이 앱이 찾는 것이다**(§3-2).
+                그래서 작게 흘리지 않고 본문 크기로 쓴다.
               */}
               {pick.whyNowQuietNote && (
-                <p className="mt-s2 text-ds-body text-ds-text-2" data-testid="depth-why-now-quiet">
+                <p className="mt-s4 break-keep text-ds-body text-ds-text-1" data-testid="depth-why-now-quiet">
                   {pick.whyNowQuietNote}
                 </p>
               )}
-              {/*
-                꼬리표 — 이 섹션이 인과가 아니라 **동시 관측**임을 화면에 적는다(§C-1).
-                우리는 매수 주체의 의도를 모른다. 문안은 fomo-core 가 갖는다.
-              */}
-              <p className="mt-s3 text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
+              <p className="mt-s3 break-keep text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
                 {WHY_NOW_TIMELINE_DISCLAIMER}
               </p>
-            </Section>
+              <StepNext label={nextLabel} onClick={goNext} />
+            </>
           )}
 
-          {/* ② 무슨 회사 — 첫 문장이 무엇을 파는가. 못 만들면 섹션 전체가 없다. */}
-          {(blurb || substance) && (
-            <Section title="무슨 회사">
-              {/* 벤더 요약이 등기 정보뿐이면 blurb 가 null 이다 — 그때는 실체 한 줄이 이 섹션을 채운다. */}
-              <p className="text-ds-body text-ds-text-1" data-testid="depth-company">
-                {blurb?.text ?? substance}
-              </p>
+          {/* ── 3걸음 — 어떤 회사인가 (§4) ── */}
+          {step === "company" && (
+            <>
+              <h2 className="mt-s4 text-ds-display-sm text-ds-text-1">어떤 회사인가</h2>
+              {/*
+                회사 설명 한 줄은 벤더 요약이라 늦게 온다. **헤더와 숫자는 이미 있으므로**
+                이 줄만 스켈레톤으로 기다린다 — 화면 전체를 비우지 않는다(DS-06 §4).
+              */}
+              {!basics && <DepthSkeleton />}
+              {/* 무엇을 파는 회사인가 — 이게 없으면 아래 숫자가 누구 것인지 모른다. */}
+              {(blurb || substance) && (
+                <p className="mt-s4 break-keep text-ds-body text-ds-text-1" data-testid="depth-company">
+                  {blurb?.text ?? substance}
+                </p>
+              )}
               {blurb && substance && (
-                <p className="mt-s2 text-ds-body text-ds-text-2" data-testid="depth-substance">
+                <p className="mt-s2 break-keep text-ds-body text-ds-text-2" data-testid="depth-substance">
                   {substance}
                 </p>
               )}
+              {/*
+                줄인 설명이면 **원문을 볼 길**을 남긴다 — 벤더 요약을 그대로 쓰지 않되
+                우리가 줄였다는 사실을 숨기지도 않는다(DS-03 §6).
+              */}
               {blurb?.truncated && basics?.summary && (
                 <>
                   <button
@@ -549,121 +588,72 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   >
                     출처 보기
                   </button>
-                  {sourceOpen && <p className="mt-s2 text-ds-caption text-ds-text-2">{basics.summary}</p>}
+                  {sourceOpen && <p className="mt-s2 break-keep text-ds-caption text-ds-text-2">{basics.summary}</p>}
                 </>
               )}
-            </Section>
+              {companyGroups.map((group) => (
+                <CompanyGroupBlock key={group.title} group={group} onMethod={() => toggleMethod(group.title)} />
+              ))}
+              {openMethod && (
+                <p className="mt-s3 break-keep text-ds-caption text-ds-text-2" data-testid="depth-method">
+                  {companyGroups.find((g) => g.title === openMethod)?.method}
+                </p>
+              )}
+              <StepNext label={nextLabel} onClick={goNext} />
+            </>
           )}
 
-          {/*
-            ③ 얼마나 샀나 — 규모·기간과 그 그림(WO-RESET-02 PART D).
-
-            종전 이름은 「근거」였는데, 근거를 대는 자리는 이제 맨 위 「왜 지금 사는가」다.
-            여기는 **얼마나 샀는지**를 확인하는 자리라 이름을 사실에 맞췄다.
-            순서도 「무슨 회사」 뒤로 내렸다 — 뭘 하는 회사인지 모르는 채로 매수 규모를 봐야
-            의미가 없다.
-          */}
-          {rows.length > 0 && (
-            <Section title="얼마나 샀나">
-              <div data-testid="depth-evidence">
-                {rows.map((row) => (
-                  <Row key={row.label} label={row.label} value={row.value} />
+          {/* ── 4걸음 — 계속 지켜볼까요 (§5) ── */}
+          {step === "decide" && (
+            <>
+              <div className="mt-s6" data-testid="depth-summary">
+                {summaryLines.map((line) => (
+                  <p key={line} className="break-keep text-ds-body text-ds-text-1">
+                    {line}
+                  </p>
                 ))}
               </div>
-              {/*
-                카드가 보여준 그림을 **그대로** 다시 그린다(2026-08-24).
-
-                규칙: **상세는 카드보다 증거가 적으면 안 된다.** 종전에는 A형 카드에서
-                「주가 / 외국인 매수 누적」 두 선의 갭을 보고 들어온 사용자가 여기서
-                회색 주가선 하나만 만났다 — 확인하러 온 자리에서 확인할 대상이 사라졌다.
-
-                같은 컴포넌트를 쓰므로 두 화면이 갈릴 수 없다. 형이 없는 구 페이로드면
-                그리지 않는다(지어내지 않는다).
-              */}
-              {pick.cardType && (
-                <div className="mt-s4" data-testid="depth-signal-figure">
-                  <CardFigure cardType={pick.cardType} invalidation={pick.invalidation.level} />
+              <p className="mt-s5 break-keep text-ds-body text-ds-text-2">
+                계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요
+              </p>
+              {watched ? (
+                <div className="mt-s6" data-testid="depth-watch-done">
+                  <p className="text-ds-display-sm text-ds-text-1">담았어요</p>
+                  <p className="mt-s2 break-keep text-ds-body text-ds-text-2">
+                    앞으로 이 종목이 얼마나 움직이는지 기록해서 보여드릴게요
+                  </p>
+                  <button
+                    type="button"
+                    onClick={dismiss}
+                    className="tap-button mt-s5 h-touch text-ds-caption text-ds-text-3 underline"
+                  >
+                    닫기
+                  </button>
                 </div>
-              )}
-            </Section>
-          )}
-
-          {/* ④ 값 — 지표 3개 이상일 때만. 밴드가 없으면 밴드 얘기를 하지 않는다. */}
-          {valueRows.length >= 3 && (
-            <Section title="값">
-              <div data-testid="depth-value">
-                {valueRows.map((row) => (
-                  <Row key={row.label} label={row.label} value={row.value} />
-                ))}
-              </div>
-              {bandCaptions.length > 0 && (
-                <p className="mt-s2 text-ds-caption text-ds-text-2" data-testid="depth-band">
-                  {bandCaptions[0]}
-                </p>
-              )}
-              {archetypeWarning && (
-                <p className="mt-s3 text-ds-caption text-ds-text-2" data-testid="depth-archetype-warning">
-                  {archetypeWarning}
-                </p>
-              )}
-              {valuation?.bars && (
-                <RevenueBars bars={valuation.bars} label={valuation.bar_label ?? "매출"} currency={valuation.currency} />
-              )}
-            </Section>
-          )}
-
-          {/* ⑤ 틀리는 경우 */}
-          {hasWrongSection && (
-            <Section title="틀리는 경우">
-              <div data-testid="depth-wrong">
-                {invalidationText && <Row label="가격" value={invalidationText} />}
-                {businessText && <Row label="사업" value={businessText} />}
-                {risk?.invalidation.check_at && <Row label="확인 예정" value={risk.invalidation.check_at} />}
-              </div>
-
-              {/* 종목 고유 리스크가 있으면 유형 리스크 **위**에 온다(§8). */}
-              {symbolRisks.length > 0 && (
-                <ul className="mt-s3 space-y-s2" data-testid="depth-symbol-risk">
-                  {symbolRisks.slice(0, 2).map((item) => (
-                    <li key={item.id} className="text-ds-body text-ds-text-1">
-                      · {item.text}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {/*
-                미확보 문안은 **데이터에서 온다**(`unavailable_text`) — 화면이 카피를 하드코딩하면
-                사유별 문안이 하나로 뭉개진다. 값이 없을 때만 DS-03 §8 의 기본 문장을 쓴다.
-              */}
-              {symbolRisks.length === 0 && risk?.symbol.unavailable_reason && (
-                <p className="mt-s3 text-ds-caption text-ds-text-3" data-testid="depth-symbol-risk-unavailable">
-                  {risk.symbol.unavailable_text || "이 종목만의 리스크는 아직 못 찾았어요"}
-                </p>
-              )}
-
-              {archetypeRisks.length > 0 && (
+              ) : (
                 <>
-                  <p className="mt-s4 font-mono text-ds-label tracking-[0.06em] text-ds-text-2">이 유형에 흔한 것</p>
-                  <ul className="mt-s2 space-y-s2" data-testid="depth-archetype-risk">
-                    {archetypeRisks.map((item) => (
-                      <li key={item.id} className="text-ds-body text-ds-text-2">
-                        · {item.text}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-s2 text-ds-caption text-ds-text-3">{risk?.archetype.disclaimer}</p>
+                  <button
+                    type="button"
+                    onClick={onWatch}
+                    data-testid="depth-watch"
+                    className="tap-button mt-s6 flex h-touch w-full items-center justify-center gap-s2 rounded-block bg-ds-accent px-gutter text-[15px] font-medium text-ds-bg"
+                  >
+                    ★ 즐겨찾기에 담기
+                  </button>
+                  {/* 보조는 **텍스트 링크**다 — 이 화면에서 강조는 하나뿐이다(§5). */}
+                  <button
+                    type="button"
+                    onClick={dismiss}
+                    data-testid="depth-leave"
+                    className="tap-button mx-auto mt-s3 flex h-touch items-center justify-center text-ds-caption text-ds-text-3 underline"
+                  >
+                    그냥 나가기
+                  </button>
                 </>
               )}
-            </Section>
+            </>
           )}
 
-          {/*
-            「우리 기록」을 화면에서 뺐다 — WO-RESET-02 PART D: **섹션 다섯 개. 이보다 늘리지
-            않는다.** PART D 목록(왜사는가·무슨회사·얼마나샀나·값·틀리면)에 없고, 성적표·내
-            기록을 앱에서 내린 WO-RESET-01 A-2·A-3 과 같은 갈래다.
-
-            `OurRecordBlock` 과 원장 적재는 그대로 둔다 — 데이터를 지우지 말고 화면만 뺀다.
-          */}
           </div>
         </div>
       </div>
