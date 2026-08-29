@@ -10,6 +10,7 @@ import {
   type InvestorCollection,
 } from "../../../../../lib/investor-collect";
 import { readInvestorCollection, writeInvestorCollection } from "../../../../../lib/investor-store";
+import { diffHoldings, isFreshDisclosure } from "@fomo/core/keyword-cards/investor-holdings";
 
 /**
  * WO-RESET-07 PART A — 유명 투자자 보유 내역 수집 크론.
@@ -112,16 +113,40 @@ export async function GET(request: Request) {
         investors: collected,
         // 인물별 확보 현황 — WO 보고할 것 1번의 재료다.
         detail: Object.fromEntries(
-          Object.entries(byInvestor).map(([id, entry]) => [
-            id,
-            {
-              asOf: entry.latest.asOf,
-              holdings: entry.latest.holdings.length,
-              hasPrior: Boolean(entry.prior),
-              ...(entry.unresolved ? { unresolved: entry.unresolved } : {}),
-            },
-          ])
+          Object.entries(byInvestor).map(([id, entry]) => {
+            const profile = INVESTORS.find((i) => i.id === id);
+            /**
+             * **카드가 몇 장 나올지 여기서 밝힌다.**
+             *
+             * 「인물 카드 0장」이 나왔을 때 원인이 셋인데(공시가 낡음 · 직전이 없음 ·
+             * 변화가 없음) 응답만 보고는 구분이 안 됐다. 세 가지를 갈라서 남긴다 —
+             * WO 보고할 것 2번(하루 평균 인물 카드 발생 수)의 재료이기도 하다.
+             */
+            const fresh = profile ? isFreshDisclosure(profile.source, entry.latest.asOf, today) : false;
+            const changes = entry.prior ? diffHoldings(entry.latest, entry.prior) : [];
+            const byKind: Record<string, number> = {};
+            for (const c of changes) byKind[c.kind] = (byKind[c.kind] ?? 0) + 1;
+            return [
+              id,
+              {
+                asOf: entry.latest.asOf,
+                holdings: entry.latest.holdings.length,
+                hasPrior: Boolean(entry.prior),
+                /** 노출 기간(§E-3) 안인가 — 아니면 카드가 안 나온다. */
+                fresh,
+                changes: changes.length,
+                ...(changes.length > 0 ? { byKind } : {}),
+                ...(entry.unresolved ? { unresolved: entry.unresolved } : {}),
+              },
+            ];
+          })
         ),
+        /** 오늘 카드가 될 수 있는 변화 총수 — 0 이면 왜 0인지 `detail` 이 답한다. */
+        cardCandidates: Object.entries(byInvestor).reduce((sum, [id, entry]) => {
+          const profile = INVESTORS.find((i) => i.id === id);
+          if (!profile || !isFreshDisclosure(profile.source, entry.latest.asOf, today)) return sum;
+          return sum + (entry.prior ? diffHoldings(entry.latest, entry.prior).length : 0);
+        }, 0),
         errorCount: errors.length,
         errors: errors.slice(0, 5),
         ms: Date.now() - startedAt,

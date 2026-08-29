@@ -103,3 +103,26 @@ describe("문장 — **인과로 말하지 않는다** (§E-1 · 완료 확인 7
     expect(formatKrwShort(-820_000_000_000)).toBe("-8,200억");
   });
 });
+
+describe("조사 — 받침 따라 붙인다 (2026-08-29 실측: `전자장비와기기으로`)", () => {
+  const pair = (toSector: string) => ({
+    from: { sector: "반도체와반도체장비", net: -9e11, stocks: 20, positiveDays: 0, days: 3 },
+    to: { sector: toSector, net: 6e11, stocks: 12, positiveDays: 3, days: 3 },
+    windowDays: 3,
+  });
+
+  it("받침 없으면 `로`", () => {
+    expect(flowHook(pair("전자장비와기기"))).toContain("전자장비와기기로 들어오고");
+    expect(flowHook(pair("전자장비와기기"))).not.toContain("기기으로");
+  });
+
+  it("받침 있으면 `으로`", () => {
+    expect(flowHook(pair("건설"))).toContain("건설로 들어오고"); // ㄹ 예외
+    expect(flowHook(pair("은행"))).toContain("은행으로 들어오고");
+  });
+
+  it("ㄹ 받침은 예외다 — `서울로` 이지 `서울으로` 가 아니다", () => {
+    expect(flowHook(pair("철강"))).toContain("철강으로");
+    expect(flowHook(pair("생명보험"))).toContain("생명보험으로");
+  });
+});

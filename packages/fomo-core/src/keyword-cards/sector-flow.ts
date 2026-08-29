@@ -1,3 +1,5 @@
+import { josa } from "./josa";
+
 /**
  * WO-RESET-08 §A-1 — **업종 간 자금 이동.** 순수 함수(네트워크·시간·난수 0).
  *
@@ -139,7 +141,13 @@ export function formatKrwShort(value: number): string {
  * `이동했어요` 를 쓰지 않는다. 같은 돈인지 모르기 때문이다.
  */
 export function flowHook(pair: FlowPair): string {
-  return `${pair.from.sector}에서 돈이 빠지고\n${pair.to.sector}으로 들어오고 있어요`;
+  /**
+   * **조사를 받침 따라 붙인다.** 고정 `으로` 를 쓰면 `전자장비와기기으로` 가 나온다
+   * (2026-08-29 프로덕션 실측). 업종 이름은 받침이 있는 것과 없는 것이 섞여 있어
+   * 고정 조사는 **반드시** 어딘가에서 틀린다 — 이 레포에서 세 번째다.
+   */
+  const to = `${pair.to.sector}${josa(pair.to.sector, "으로")}`;
+  return `${pair.from.sector}에서 돈이 빠지고\n${to} 들어오고 있어요`;
 }
 
 /** 보조 줄 — 창·주체·양쪽 금액. 숫자를 숨기지 않는다. */
