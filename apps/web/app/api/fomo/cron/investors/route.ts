@@ -6,10 +6,14 @@ import {
   fetchThirteenF,
   fetchSecNameIndex,
   curatedCusipMap,
+  pickComparisonSnapshot,
+  ARK_COMPARE_DAYS,
+  ARK_HISTORY_MAX,
   normalizeCompanyName,
   type InvestorCollection,
 } from "../../../../../lib/investor-collect";
 import { readInvestorCollection, writeInvestorCollection } from "../../../../../lib/investor-store";
+import { diffHoldings, isFreshDisclosure } from "@fomo/core/keyword-cards/investor-holdings";
 
 /**
  * WO-RESET-07 PART A — 유명 투자자 보유 내역 수집 크론.
@@ -64,11 +68,17 @@ export async function GET(request: Request) {
       const snap = await fetchArkSnapshot(investor.arkFunds);
       if (!snap || !snap.asOf) { errors.push(`${investor.id}: ARK CSV 조회 실패`); continue; }
       for (const [cusip, ticker] of snap.cusipToTicker) if (!cusipMap.has(cusip)) cusipMap.set(cusip, ticker);
-      const priorEntry = previous?.byInvestor?.[investor.id]?.latest ?? null;
+      const latest = { asOf: snap.asOf, holdings: snap.holdings };
+      /**
+       * 스냅샷 이력 — **최신 먼저**, 같은 날짜는 한 번만. 하루 전이 아니라 며칠 전과
+       * 비교해야 실제 매매가 자금 유출입 노이즈 위로 올라온다(실측: 하루 최대 4.1%).
+       */
+      const kept = (previous?.byInvestor?.[investor.id]?.history ?? []).filter((s) => s.asOf !== latest.asOf);
+      const history = [latest, ...kept].slice(0, ARK_HISTORY_MAX);
       byInvestor[investor.id] = {
-        latest: { asOf: snap.asOf, holdings: snap.holdings },
-        // 같은 날 다시 돌면 직전을 그대로 물려받는다 — 오늘과 오늘을 비교하면 변화가 0 이 된다.
-        prior: priorEntry && priorEntry.asOf !== snap.asOf ? priorEntry : (previous?.byInvestor?.[investor.id]?.prior ?? null),
+        latest,
+        prior: pickComparisonSnapshot(history, today, ARK_COMPARE_DAYS),
+        history,
       };
     }
 
@@ -112,16 +122,73 @@ export async function GET(request: Request) {
         investors: collected,
         // 인물별 확보 현황 — WO 보고할 것 1번의 재료다.
         detail: Object.fromEntries(
-          Object.entries(byInvestor).map(([id, entry]) => [
-            id,
-            {
-              asOf: entry.latest.asOf,
-              holdings: entry.latest.holdings.length,
-              hasPrior: Boolean(entry.prior),
-              ...(entry.unresolved ? { unresolved: entry.unresolved } : {}),
-            },
-          ])
+          Object.entries(byInvestor).map(([id, entry]) => {
+            const profile = INVESTORS.find((i) => i.id === id);
+            /**
+             * **카드가 몇 장 나올지 여기서 밝힌다.**
+             *
+             * 「인물 카드 0장」이 나왔을 때 원인이 셋인데(공시가 낡음 · 직전이 없음 ·
+             * 변화가 없음) 응답만 보고는 구분이 안 됐다. 세 가지를 갈라서 남긴다 —
+             * WO 보고할 것 2번(하루 평균 인물 카드 발생 수)의 재료이기도 하다.
+             */
+            const fresh = profile ? isFreshDisclosure(profile.source, entry.latest.asOf, today) : false;
+            const changes = entry.prior ? diffHoldings(entry.latest, entry.prior) : [];
+            const byKind: Record<string, number> = {};
+            for (const c of changes) byKind[c.kind] = (byKind[c.kind] ?? 0) + 1;
+            return [
+              id,
+              {
+                asOf: entry.latest.asOf,
+                holdings: entry.latest.holdings.length,
+                hasPrior: Boolean(entry.prior),
+                /** 노출 기간(§E-3) 안인가 — 아니면 카드가 안 나온다. */
+                fresh,
+                changes: changes.length,
+                ...(changes.length > 0 ? { byKind } : {}),
+                ...(entry.unresolved ? { unresolved: entry.unresolved } : {}),
+              },
+            ];
+          })
         ),
+        /**
+         * **주식 수 변화율 분포**(WO-RESET-04 에서 배운 방식 — 임계를 감으로 정하지 않는다).
+         *
+         * `HOLDING_CHANGE_MIN`(20%)이 일별 ARK 데이터에 맞는 값인지 모른다. 실측하려면
+         * **조건을 걸지 않은 분포**가 있어야 한다. 여기 숫자가 모이면 임계를 확정한다.
+         *
+         * `new`·`exited` 는 임계와 무관하므로 따로 센다 — 그 둘이 충분하면 임계를 낮출
+         * 이유가 없다.
+         */
+        changeDistribution: Object.entries(byInvestor).reduce(
+          (acc, [id, entry]) => {
+            const profile = INVESTORS.find((i) => i.id === id);
+            if (!profile || profile.source !== "ark" || !entry.prior) return acc;
+            const before = new Map(entry.prior.holdings.map((h) => [h.ticker.toUpperCase(), h]));
+            for (const now of entry.latest.holdings) {
+              const was = before.get(now.ticker.toUpperCase());
+              before.delete(now.ticker.toUpperCase());
+              if (!was) { acc.new += 1; continue; }
+              if (!(was.shares > 0) || !(now.shares > 0)) continue;
+              const change = Math.abs((now.shares - was.shares) / was.shares);
+              acc.total += 1;
+              acc.max = Math.max(acc.max, Math.round(change * 1000) / 10);
+              if (change >= 0.02) acc.over2 += 1;
+              if (change >= 0.05) acc.over5 += 1;
+              if (change >= 0.10) acc.over10 += 1;
+              if (change >= 0.20) acc.over20 += 1;
+              if (change >= 0.50) acc.over50 += 1;
+            }
+            acc.exited += [...before.values()].filter((h) => h.shares > 0).length;
+            return acc;
+          },
+          { total: 0, over2: 0, over5: 0, over10: 0, over20: 0, over50: 0, max: 0, new: 0, exited: 0 }
+        ),
+        /** 오늘 카드가 될 수 있는 변화 총수 — 0 이면 왜 0인지 `detail` 이 답한다. */
+        cardCandidates: Object.entries(byInvestor).reduce((sum, [id, entry]) => {
+          const profile = INVESTORS.find((i) => i.id === id);
+          if (!profile || !isFreshDisclosure(profile.source, entry.latest.asOf, today)) return sum;
+          return sum + (entry.prior ? diffHoldings(entry.latest, entry.prior).length : 0);
+        }, 0),
         errorCount: errors.length,
         errors: errors.slice(0, 5),
         ms: Date.now() - startedAt,

@@ -11,6 +11,7 @@ import { Sparkline } from "@/components/Sparkline";
 import { DivergenceChart } from "@/components/DivergenceChart";
 import { StreakBars } from "@/components/StreakBars";
 import { RatioBar } from "@/components/RatioBar";
+import { WeightGauge } from "@/components/WeightGauge";
 import { VolumeBars } from "@/components/VolumeBars";
 
 /**
@@ -139,6 +140,17 @@ export function CardFigure({
         buyLegend={figure.buyLegend}
         {...(figure.priceLegend ? { priceLegend: figure.priceLegend } : {})}
         {...(typeof invalidation === "number" ? { invalidation } : {})}
+      />
+    );
+  }
+
+  if (figure.kind === "weight") {
+    return (
+      <WeightGauge
+        weightPct={figure.weightPct}
+        priorWeightPct={figure.priorWeightPct}
+        {...(typeof figure.maxPct === "number" ? { maxPct: figure.maxPct } : {})}
+        caption={figure.caption}
       />
     );
   }
