@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CardSlotPayload, QuietPick, QuietWatchItem } from "@/lib/fomoApi";
+import type { CardSlotPayload, QuietPick, QuietPickFlowCard, QuietWatchItem } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchQuietPicks } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { staleLabel } from "@/lib/deckStale";
@@ -9,6 +9,7 @@ import { computeOurRecord } from "@/lib/ourRecord";
 import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLedgerClient";
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { haptic } from "@/lib/haptics";
+import { FlowCard } from "@/components/FlowCard";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { reveal } from "@/lib/cardReveal";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
@@ -71,6 +72,7 @@ type Status = "loading" | "ready" | "offline" | "server-error";
 
 export function QuietPickDeck() {
   const [picks, setPicks] = useState<QuietPick[]>([]);
+  const [flowCards, setFlowCards] = useState<QuietPickFlowCard[]>([]);
   /**
    * WO-SUB-08 3슬롯 — canonical → 상세용 페이로드.
    *
@@ -126,6 +128,7 @@ export function QuietPickDeck() {
     fetchQuietPicks()
       .then((res) => {
         setPicks(res.picks ?? []);
+        setFlowCards(res.flowCards ?? []);
         setAsOf(res.asOf);
         setIdx(0);
         settle("ready");
@@ -159,29 +162,51 @@ export function QuietPickDeck() {
   const exitTimer = useRef<number | null>(null);
   useEffect(() => () => { if (exitTimer.current) window.clearTimeout(exitTimer.current); }, []);
 
-  const current = picks[idx];
+  /**
+   * WO-RESET-08 §D-1 — 자금 흐름 카드를 **같은 덱에 끼워 넣는다.** 별도 섹션이 아니다.
+   *
+   * 위치는 앞쪽이다: 시장 전체 이야기라 먼저 보면 뒤따르는 종목 카드의 맥락이 잡힌다.
+   * 다만 맨 앞은 아니다 — 첫 카드는 종목이어야 이 앱이 무엇인지가 먼저 전해진다.
+   * 두 번째 장이 있으면 조금 뒤(5번째)에 둔다. 하루 최대 2장은 서버가 이미 지킨다.
+   */
+  const deckSlots = useMemo(() => {
+    const out: Array<{ kind: "pick"; pick: QuietPick } | { kind: "flow"; card: QuietPickFlowCard }> =
+      picks.map((pick) => ({ kind: "pick" as const, pick }));
+    const positions = [1, 4];
+    flowCards.slice(0, positions.length).forEach((card, i) => {
+      const at = Math.min(positions[i]!, out.length);
+      out.splice(at, 0, { kind: "flow", card });
+    });
+    return out;
+  }, [picks, flowCards]);
+
+  const current = deckSlots[idx];
 
   // WO-SUB-00 §4-2 — 카드 노출·체류시간. 카드가 바뀌는 순간 이전 카드의 체류를 확정한다.
   useEffect(() => {
     if (status !== "ready" || !current) return;
-    recordPickTelemetry({ event: "card_view", position: idx + 1, ...slotLabel(current.subject.canonical) });
+    recordPickTelemetry({
+      event: "card_view",
+      position: idx + 1,
+      ...(current.kind === "pick" ? slotLabel(current.pick.subject.canonical) : { slot: "flow" }),
+    });
     const shownAt = Date.now();
     return () => {
       recordPickTelemetry({ event: "card_dwell", durationMs: Date.now() - shownAt, position: idx + 1 });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, status, picks.length]);
+  }, [idx, status, deckSlots.length]);
 
   // 덱 완주 — 마지막 카드까지 본 시점 1회. 종료 화면은 없으므로 마지막 인덱스 도달로 센다.
   const completedRef = useRef(false);
   useEffect(() => {
-    if (status !== "ready" || picks.length === 0) return;
-    if (idx >= picks.length - 1 && !completedRef.current) {
+    if (status !== "ready" || deckSlots.length === 0) return;
+    if (idx >= deckSlots.length - 1 && !completedRef.current) {
       completedRef.current = true;
-      recordPickTelemetry({ event: "deck_complete", cardsConsumed: picks.length });
+      recordPickTelemetry({ event: "deck_complete", cardsConsumed: deckSlots.length });
       flushPickTelemetry();
     }
-  }, [idx, status, picks.length]);
+  }, [idx, status, deckSlots.length]);
 
   /**
    * 카드 이동 — DS-02 §4-1. **관성 없음: 한 번 스와이프 = 한 장.**
@@ -190,10 +215,10 @@ export function QuietPickDeck() {
   const move = useCallback(
     (dir: "next" | "prev") => {
       if (dir === "prev" && idx === 0) { setDx(0); return; }
-      if (dir === "next" && idx >= picks.length - 1) {
+      if (dir === "next" && idx >= deckSlots.length - 1) {
         // 마지막 장. 종전엔 '지켜보는 중' 으로 스크롤했지만 그 섹션을 없앴다(WO-RESET-01 A-1).
         setDx(0);
-        recordPickTelemetry({ event: "deck_complete", cardsConsumed: picks.length });
+        recordPickTelemetry({ event: "deck_complete", cardsConsumed: deckSlots.length });
         return;
       }
       haptic();
@@ -207,7 +232,7 @@ export function QuietPickDeck() {
       if (prefersReducedMotion()) after();
       else exitTimer.current = window.setTimeout(after, EXIT_MS);
     },
-    [idx, picks.length]
+    [idx, deckSlots.length]
   );
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -296,8 +321,9 @@ export function QuietPickDeck() {
     );
   }
 
-  const pick = current!;
-  const next = picks[idx + 1];
+  const slot = current!;
+  const pick = slot.kind === "pick" ? slot.pick : null;
+  const next = deckSlots[idx + 1];
   // 이 세션에서 연 것 + 이전 방문에 연 것(로컬). 둘 중 하나면 공개다.
   /**
    * 덱 앞면은 **항상 가린다** (2026-08-25 지시).
@@ -313,6 +339,7 @@ export function QuietPickDeck() {
   /** 카드 CTA — 탭 진입과 같은 상세를 열고 진입점만 다르게 기록한다. */
   /** 상세 진입 = 정체 공개(§2-3). 진입점(버튼/탭)이 달라도 공개 규칙은 같다. */
   const openDetail = (entryPoint: "button" | "tap") => {
+    if (!pick) return; // 흐름 카드는 아직 상세가 없다 — 다음 조각에서 붙인다(§C)
     recordPickTelemetry({ event: "card_detail_open", entryPoint, position: idx + 1, ...slotLabel(pick.subject.canonical) });
     reveal(pick.subject.canonical);
     setSelected(pick);
@@ -367,13 +394,17 @@ export function QuietPickDeck() {
             role="button"
             tabIndex={0}
             /* 가려진 카드의 라벨에 종목명을 쓰지 않는다 — 마스킹이 시각 사용자에게만 걸리면 안 된다. */
-            aria-label="어떤 회사인지 보기"
+            aria-label={slot.kind === "flow" ? "자금 흐름" : "어떤 회사인지 보기"}
           >
-            <QuietPickCard pick={withRecord(pick)} onDetail={() => openDetail("button")} revealed={cardRevealed} />
+            {slot.kind === "flow" ? (
+              <FlowCard card={slot.card} />
+            ) : (
+              <QuietPickCard pick={withRecord(slot.pick)} onDetail={() => openDetail("button")} revealed={cardRevealed} />
+            )}
           </div>
         </div>
 
-        <DeckProgress total={picks.length} index={idx} />
+        <DeckProgress total={deckSlots.length} index={idx} />
       </div>
 
 

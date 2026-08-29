@@ -1109,6 +1109,23 @@ export interface CompanyGroup {
   method: string;
 }
 
+/**
+ * WO-RESET-08 §B — 자금 흐름 카드. **종목 카드가 아니라 시장 카드**라 픽과 나눠서 온다.
+ * 화면이 같은 덱 앞쪽에 끼워 넣는다(§D-1) — 별도 섹션이 아니다.
+ */
+export interface QuietPickFlowCard {
+  fromSector: string;
+  toSector: string;
+  fromNet: number;
+  toNet: number;
+  fromStocks: number;
+  toStocks: number;
+  windowDays: number;
+  /** 결론 두 줄 — 인과로 말하지 않는다. 서버가 만든 것을 그대로 쓴다. */
+  hook: string;
+  support: string[];
+}
+
 export interface QuietPick {
   subject: {
     canonical: string;
@@ -1279,6 +1296,8 @@ export interface QuietPicksResponse {
   asOf: string;
   date: string;
   picks: QuietPick[];
+  /** WO-RESET-08 — 자금 흐름 카드(하루 최대 2장). 없는 날이 정상이다. */
+  flowCards?: QuietPickFlowCard[];
   watching?: QuietWatchItem[];
   qualification?: unknown;
   source: string;

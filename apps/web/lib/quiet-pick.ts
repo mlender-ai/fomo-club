@@ -62,7 +62,17 @@ import {
   formatShares as formatInvestorShares,
   type HoldingChange,
 } from "@fomo/core/keyword-cards/investor-holdings";
+import {
+  aggregateSectorFlow,
+  pickFlowPair,
+  flowHook,
+  flowSupport,
+  formatKrwShort,
+  type FlowRow,
+  type FlowPair,
+} from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
+import { readSectorMap } from "./sector-map-store";
 import { readInvestorCollection } from "./investor-store";
 import {
   recentExposure,
@@ -168,6 +178,30 @@ export const QUIET_WATCH_MAX = 10;
 const MAX_FRONT_ASSEMBLIES = 60;
 /** KR 최장 streak 비교에 쓰는 조회 창(거래일). */
 const KR_STREAK_WINDOW = 40;
+
+/**
+ * 자금 흐름 창(거래일) — 짧은 것부터 본다(§A-1). 3일 흐름이 성립하면 그게 가장 새 소식이다.
+ */
+const SECTOR_FLOW_WINDOWS: readonly number[] = [3, 5, 20];
+/** 거래일 창을 달력일로 늘릴 여유 — 주말·공휴일 때문에 달력일이 더 길다. */
+const SECTOR_FLOW_WINDOW_SLACK = 4;
+/**
+ * 카드가 되려면 넘어야 할 금액(원) — 한쪽 업종 기준.
+ *
+ * **잠정값이다.** WO §D-2 가 "임계는 실측 분포로 정한다" 고 했고, 실측을 하려면 먼저
+ * 배포해서 분포를 봐야 한다. 같은 배포에 업종별 순매수 분포 계수기를 넣었다.
+ * 1,000억은 "뉴스가 될 만한 크기" 의 어림이고, 숫자가 모이면 확정한다.
+ */
+const SECTOR_FLOW_MIN_NET = 100_000_000_000;
+/** 하루 최대 흐름 카드 수(§D-1). 많으면 종목 카드를 밀어낸다. */
+const SECTOR_FLOW_MAX_CARDS = 2;
+
+/** `YYYY-MM-DD` 에서 며칠 옮긴다. 형식이 아니면 원본을 돌려준다. */
+function shiftIsoDays(date: string, days: number): string {
+  const base = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(base)) return date;
+  return new Date(base + days * 86_400_000).toISOString().slice(0, 10);
+}
 /** 하루 최대 픽 수(미달이면 그 수만큼 — 억지 충원 금지). */
 /**
  * 하루 덱 상한.
@@ -503,6 +537,8 @@ export interface QuietPickQualification {
    * 나간 건수다. 이 비율이 보고 대상이다(보고할 것 3번).
    */
   disclosurePhrases?: { total: number; raw: number };
+  /** WO-RESET-08 §A-1 — 업종 흐름 계측(분류 못 찾은 행 수 포함). */
+  sectorFlow?: { rows: number; unclassified: number; sectors: number; cards: number };
   /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
   companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
   /** WO-RESET-06 §E — 3일 규칙 계측. */
@@ -541,12 +577,39 @@ export interface QuietPickRotation {
   ageDaysMedian: number | null;
 }
 
+/** WO-RESET-08 §B — 자금 흐름 카드 한 장. 화면이 그대로 그린다. */
+export interface FlowCard {
+  /** 빠진 업종 · 들어온 업종. */
+  fromSector: string;
+  toSector: string;
+  /** 창 안 순매수 합(원). `from` 은 음수, `to` 는 양수다. */
+  fromNet: number;
+  toNet: number;
+  /** 집계에 들어간 종목 수 — 화면이 밝힌다. */
+  fromStocks: number;
+  toStocks: number;
+  windowDays: number;
+  /** 결론 두 줄 — **인과로 말하지 않는다**(§E-1). */
+  hook: string;
+  support: string[];
+}
+
 export interface QuietPickResponse {
   asOf: string;
   date: string;
   picks: QuietPick[];
   /** 2단 구조 하단 선반(WO-P4) — 신호 있으나 픽 기준 미달. 픽 승격 아님. */
   watching: QuietWatchItem[];
+  /**
+   * WO-RESET-08 — 자금 흐름 카드. **종목 카드가 아니라 시장 카드**라 픽과 나눠 싣는다.
+   *
+   * 픽 파이프라인은 종목 하나를 전제로 돈다(가격·캔들·무효선). 업종을 그 틀에 억지로
+   * 밀어 넣으면 모든 게이트에서 걸린다. 대신 화면이 **같은 덱 앞쪽에 끼워 넣는다**(§D-1) —
+   * 별도 섹션이 아니다.
+   *
+   * 하루 최대 2장. 없는 날이 정상이다(§D-2: 아무 날에나 만들지 않는다).
+   */
+  flowCards?: FlowCard[];
   /** 회전율 계측(WO-DECK-01 PHASE 5). 구 페이로드에는 없으므로 선택 필드. */
   rotation?: QuietPickRotation;
   qualification: QuietPickQualification;
@@ -680,6 +743,8 @@ export interface QuietPickDeps {
   readAllFactSheets: typeof readAllFactSheets;
   /** WO-RESET-07 — 유명 투자자 보유 내역. 크론이 모아둔 것을 **읽기만** 한다. */
   readInvestorCollection: typeof readInvestorCollection;
+  /** WO-RESET-08 §E-3 — 업종 분류표. 크론이 모아둔 것을 **읽기만** 한다. */
+  readSectorMap: typeof readSectorMap;
   /** WO-RESET-03 — 프리웜이 채운 KR 일봉을 **한 쿼리로** 읽는다(§12: 병렬 읽기 금지). */
   readKrCandleCacheMany: typeof readKrCandleCacheMany;
   /** 지수 일봉 — 시장 역행 판정의 비교 대상. */
@@ -704,6 +769,7 @@ const defaultDeps: QuietPickDeps = {
   readDisclosureCollection,
   readAllFactSheets: readAllFactSheetsStrict,
   readInvestorCollection,
+  readSectorMap,
   readKrCandleCacheMany,
   fetchStockDaily,
 };
@@ -1399,6 +1465,77 @@ function detectInvestorSignals(
   return out;
 }
 
+/**
+ * WO-RESET-08 §A-1 — **업종 간 자금 흐름.** 종목 카드가 아니라 시장 카드다.
+ *
+ * ## 금액을 어떻게 내나
+ *
+ * 수급 데이터는 **주식 수**로 온다(`foreignNet`·`institutionNet`). 주식 수는 종목 간에
+ * 비교가 안 된다 — 삼성전자 1주와 동전주 1주가 같은 무게일 리 없다. 그래서 **그날 종가를
+ * 곱해** 금액으로 바꾼다.
+ *
+ * 이건 **추정치다.** 실제 체결가가 아니라 종가를 쓰기 때문이다. 그래도 종목 간 비교를
+ * 가능하게 하는 유일한 방법이고, 업종 합계 수준에서는 방향과 크기를 충분히 보여준다.
+ * 화면에는 「외국인·기관 기준」이라고 밝힌다.
+ *
+ * ## 분류를 못 찾은 종목은 버린다 (§E-3)
+ *
+ * 「기타」로 묶지 않는다. 업종 흐름 카드는 분류가 틀리면 통째로 거짓이 되므로,
+ * 모르는 것을 아는 척하지 않는다. 버린 수는 진단에 남긴다.
+ */
+function detectSectorFlows(
+  histories: Record<string, InvestorFlow[]>,
+  candleMap: ReadonlyMap<string, DailyOhlcv[]>,
+  sectorByCode: Readonly<Record<string, string>>,
+  today: string
+): { pairs: FlowPair[]; census: { rows: number; unclassified: number; sectors: number } } {
+  const census = { rows: 0, unclassified: 0, sectors: 0 };
+  if (Object.keys(sectorByCode).length === 0) return { pairs: [], census };
+
+  /** 종목코드 → 날짜 → 종가. 캔들은 `YYYYMMDD` 라 ISO 로 맞춘다. */
+  const closeByCodeDate = new Map<string, Map<string, number>>();
+  for (const [code, candles] of candleMap) {
+    const byDate = new Map<string, number>();
+    for (const c of candles) {
+      const raw = String(c.date ?? "");
+      const iso = raw.length === 8 ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}` : raw.slice(0, 10);
+      if (iso && Number.isFinite(c.close) && c.close > 0) byDate.set(iso, c.close);
+    }
+    closeByCodeDate.set(code, byDate);
+  }
+
+  const rows: FlowRow[] = [];
+  for (const [code, flows] of Object.entries(histories)) {
+    const closes = closeByCodeDate.get(code);
+    for (const flow of flows) {
+      const shares = (flow.foreignNet ?? 0) + (flow.institutionNet ?? 0);
+      if (!Number.isFinite(shares) || shares === 0) continue;
+      const close = closes?.get(flow.date);
+      // 종가를 모르면 금액을 만들 수 없다 — 지어내지 않고 그 행을 버린다.
+      if (!close) continue;
+      rows.push({ date: flow.date, code, net: shares * close });
+    }
+  }
+  census.rows = rows.length;
+
+  const pairs: FlowPair[] = [];
+  /**
+   * 창 셋(§A-1) — 짧은 창부터 본다. 3일 흐름이 성립하면 그게 가장 새 소식이다.
+   * 한 창에서 카드가 나오면 나머지 창은 보지 않는다 — 같은 이야기를 두 번 하지 않는다.
+   */
+  for (const windowDays of SECTOR_FLOW_WINDOWS) {
+    const from = shiftIsoDays(today, -(windowDays + SECTOR_FLOW_WINDOW_SLACK));
+    const inWindow = rows.filter((r) => r.date >= from && r.date <= today);
+    if (inWindow.length === 0) continue;
+    const { flows, unclassified } = aggregateSectorFlow(inWindow, sectorByCode);
+    census.unclassified = unclassified;
+    census.sectors = Math.max(census.sectors, flows.length);
+    const pair = pickFlowPair(flows, windowDays, SECTOR_FLOW_MIN_NET);
+    if (pair) { pairs.push(pair); break; }
+  }
+  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), census };
+}
+
 /** ① 조용한 돈 신호 — US 내부자 클러스터(Form4). */
 function detectUsInsiderSignals(candidates: readonly InsiderClusterCandidate[], today: string): SignalCandidate[] {
   const out: SignalCandidate[] = [];
@@ -1884,7 +2021,7 @@ export async function buildQuietPickResponse(options: {
   const krUniverse = buildKrPickUniverse(marketRows, deps.vocab);
   const krDefs = krUniverse.defs;
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets, investorCollection] = await Promise.all([
+  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets, investorCollection, sectorMap] = await Promise.all([
     guardedInput("readSupplyDemandHistoryByTickers", deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW), {} as Record<string, InvestorFlow[]>),
     guardedInput("fetchInsiderClusterCandidates", deps.fetchInsiderClusterCandidates(), [] as InsiderClusterCandidate[]),
     guardedInput("computeStockAttentionSignals", deps.computeStockAttentionSignals(), {} as Record<string, StockAttentionSignal>),
@@ -1894,6 +2031,7 @@ export async function buildQuietPickResponse(options: {
     guardedInput("readDisclosureCollection", deps.readDisclosureCollection(), null as DisclosureCollection | null),
     guardedInput("readAllFactSheets", deps.readAllFactSheets(), [] as Awaited<ReturnType<typeof readAllFactSheets>>),
     guardedInput("readInvestorCollection", deps.readInvestorCollection(), null as InvestorCollection | null),
+    guardedInput("readSectorMap", deps.readSectorMap(), null as Awaited<ReturnType<typeof readSectorMap>>),
   ]);
 
   /** canonical → 팩트시트. 픽마다 배열을 훑지 않도록 한 번만 만든다. */
@@ -1935,6 +2073,28 @@ export async function buildQuietPickResponse(options: {
 
   /** WO-RESET-07 — 인물 카드. 수집은 크론이 했고 여기서는 두 시점을 비교만 한다. */
   const investorSignals = detectInvestorSignals(investorCollection, date);
+
+  /**
+   * WO-RESET-08 §A-1 — 업종 간 자금 흐름. **새로 읽는 것이 없다** — 수급 이력과 일봉은
+   * 이미 위에서 읽었고, 업종 분류표는 크론이 모아둔 것을 읽기만 한다.
+   */
+  const flowCandles = await guardedInput(
+    "readKrCandleCacheMany(flow)",
+    deps.readKrCandleCacheMany(krCodes),
+    new Map() as Map<string, DailyOhlcv[]>
+  );
+  const sectorFlow = detectSectorFlows(histories, flowCandles, sectorMap?.byCode ?? {}, date);
+  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair) => ({
+    fromSector: pair.from.sector,
+    toSector: pair.to.sector,
+    fromNet: pair.from.net,
+    toNet: pair.to.net,
+    fromStocks: pair.from.stocks,
+    toStocks: pair.to.stocks,
+    windowDays: pair.windowDays,
+    hook: flowHook(pair),
+    support: flowSupport(pair),
+  }));
 
   const allSignals = dedupeSignalsByStock([
     ...investorSignals,
@@ -2656,6 +2816,8 @@ export async function buildQuietPickResponse(options: {
       companyRead: companyCensus,
       // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.
       exposure: exposureCensus,
+      // WO-RESET-08 — 흐름 집계 계측. `unclassified` 가 크면 분류표가 낡은 것이다.
+      sectorFlow: { ...sectorFlow.census, cards: flowCards.length },
       /**
        * 읽어온 팩트시트 수. 0 이면 3걸음이 통째로 빈다 — 그게 **장애인지 그날의 사실인지**
        * `inputFailures` 와 함께 봐야 갈린다(그래서 strict 로 읽는다).
@@ -2674,6 +2836,7 @@ export async function buildQuietPickResponse(options: {
       // WO-RESET-03 진단 — 새 신호가 0장일 때 캐시 결손과 조건 미달을 가른다.
       ...(priceSignalCensus ? { priceSignals: priceSignalCensus } : {}),
     },
+    ...(flowCards.length > 0 ? { flowCards } : {}),
     source: "quiet-pick-engine",
   };
 }

@@ -23,6 +23,10 @@ export * from "./card-type";
 export * from "./disclosure-kind";
 export * from "./disclosure-phrase";
 /**
+ * `sector-flow` 도 배럴에서 뺐다 — 굽는 경로 전용이다(성능 게이트가 또 잡았다, 2026-08-28).
+ *   import { aggregateSectorFlow } from "@fomo/core/keyword-cards/sector-flow";
+ */
+/**
  * `exposure-history` 도 배럴에서 뺐다 — 굽는 경로 전용이다(성능 게이트, 2026-08-27).
  *   import { buildExposureHistory } from "@fomo/core/keyword-cards/exposure-history";
  */
