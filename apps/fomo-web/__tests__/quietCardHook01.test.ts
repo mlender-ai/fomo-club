@@ -89,7 +89,10 @@ describe("완료 기준 2·3·4 — 마스킹", () => {
     const body = code(deck);
     // 덱 CTA 의 aria-label 이 종목명을 담지 않는다 — 마스킹이 시각 사용자에게만 걸리면 안 된다.
     expect(body).not.toMatch(/aria-label=\{cardRevealed \? `\$\{pick\.subject\.canonical\}/);
-    expect(body).toContain('aria-label="어떤 회사인지 보기"');
+    // 흐름 카드가 덱에 섞이면서 라벨이 슬롯 종류로 갈린다(WO-RESET-08 §D-1) —
+    // 어느 쪽이든 **종목명을 읽지 않는다**는 규칙은 그대로다.
+    expect(body).toContain('aria-label={slot.kind === "flow" ? "자금 흐름" : "어떤 회사인지 보기"}');
+    expect(body).not.toMatch(/aria-label=\{[^}]*subject\.canonical/);
     // 카드 자체의 aria-label 도 가려진 동안은 정체 줄만 읽는다.
     expect(code(card)).toMatch(/isOpen \? displayName\(pick\) : identityLine/);
   });
