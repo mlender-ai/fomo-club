@@ -384,9 +384,61 @@ export async function fetchThirteenF(
   return out;
 }
 
-/** 저장 형태 — 인물별 최신·직전 두 시점. 변화는 읽을 때 계산한다. */
+/**
+ * 저장 형태 — 인물별 최신·비교 시점. 변화는 읽을 때 계산한다.
+ *
+ * ## ARK 는 **하루 전과 비교하면 안 된다** (2026-08-29 실측)
+ *
+ * 조건 없이 잰 ARK 일별 변화율 분포가 이랬다(보유 90종목):
+ *
+ * ```
+ * ≥2%  2종목 · ≥5%  0 · ≥10% 0 · ≥20% 0 · 최대 4.1%
+ * 신규 편입 0 · 전량 매도 0
+ * ```
+ *
+ * **하루 사이의 움직임은 매매가 아니라 자금 유출입이다.** ARKK 의 순자산이 바뀌면 전 종목
+ * 주식 수가 비례해서 함께 움직인다 — 그걸 「캐시 우드가 더 샀어요」로 부르면 거짓말이다.
+ *
+ * 임계(20%)는 **틀리지 않았다.** 그 노이즈를 정확히 걸러낸다. 틀린 것은 **창**이었다 —
+ * 실제 매매는 며칠에 걸쳐 쌓이므로 하루만 보면 영영 임계를 못 넘는다.
+ *
+ * 그래서 최신과 **`ARK_COMPARE_DAYS` 일 전**을 비교한다. 그 사이 스냅샷을 몇 장 들고 있는다.
+ */
 export interface InvestorCollection {
   asOf: string;
-  byInvestor: Record<string, { latest: InvestorSnapshot; prior: InvestorSnapshot | null; unresolved?: number }>;
+  byInvestor: Record<string, {
+    latest: InvestorSnapshot;
+    prior: InvestorSnapshot | null;
+    /** ARK 전용 — 최근 스냅샷 몇 장(최신 먼저). 비교 시점을 여기서 고른다. */
+    history?: InvestorSnapshot[];
+    unresolved?: number;
+  }>;
   errors: string[];
+}
+
+/**
+ * ARK 비교 창(일). 실제 매매가 노이즈 위로 올라오려면 며칠이 쌓여야 한다.
+ *
+ * 5일: 한 주 치다. 더 길면 「최근」이라 부르기 어렵고, 짧으면 자금 유출입에 묻힌다.
+ */
+export const ARK_COMPARE_DAYS = 5;
+
+/** 들고 있을 스냅샷 수 — 비교 창보다 넉넉해야 주말·휴장으로 구멍이 나도 비교할 것이 남는다. */
+export const ARK_HISTORY_MAX = 8;
+
+/** `history` 에서 비교 시점을 고른다 — **`days` 일 이상 지난 것 중 가장 최근**. 없으면 가장 오래된 것. */
+export function pickComparisonSnapshot(
+  history: readonly InvestorSnapshot[],
+  today: string,
+  days: number
+): InvestorSnapshot | null {
+  const cutoff = Date.parse(`${today}T00:00:00.000Z`) - days * 86_400_000;
+  if (!Number.isFinite(cutoff)) return null;
+  const older = history.filter((s) => {
+    const t = Date.parse(`${s.asOf}T00:00:00.000Z`);
+    return Number.isFinite(t) && t <= cutoff;
+  });
+  if (older.length > 0) return older[0]!; // history 는 최신 먼저라 첫 항목이 가장 최근
+  // 아직 창을 못 채웠으면 비교하지 않는다 — 하루 차이로 「더 샀어요」를 말하지 않는다.
+  return null;
 }
