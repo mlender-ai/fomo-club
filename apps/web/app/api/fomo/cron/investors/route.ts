@@ -6,6 +6,9 @@ import {
   fetchThirteenF,
   fetchSecNameIndex,
   curatedCusipMap,
+  pickComparisonSnapshot,
+  ARK_COMPARE_DAYS,
+  ARK_HISTORY_MAX,
   normalizeCompanyName,
   type InvestorCollection,
 } from "../../../../../lib/investor-collect";
@@ -65,11 +68,17 @@ export async function GET(request: Request) {
       const snap = await fetchArkSnapshot(investor.arkFunds);
       if (!snap || !snap.asOf) { errors.push(`${investor.id}: ARK CSV 조회 실패`); continue; }
       for (const [cusip, ticker] of snap.cusipToTicker) if (!cusipMap.has(cusip)) cusipMap.set(cusip, ticker);
-      const priorEntry = previous?.byInvestor?.[investor.id]?.latest ?? null;
+      const latest = { asOf: snap.asOf, holdings: snap.holdings };
+      /**
+       * 스냅샷 이력 — **최신 먼저**, 같은 날짜는 한 번만. 하루 전이 아니라 며칠 전과
+       * 비교해야 실제 매매가 자금 유출입 노이즈 위로 올라온다(실측: 하루 최대 4.1%).
+       */
+      const kept = (previous?.byInvestor?.[investor.id]?.history ?? []).filter((s) => s.asOf !== latest.asOf);
+      const history = [latest, ...kept].slice(0, ARK_HISTORY_MAX);
       byInvestor[investor.id] = {
-        latest: { asOf: snap.asOf, holdings: snap.holdings },
-        // 같은 날 다시 돌면 직전을 그대로 물려받는다 — 오늘과 오늘을 비교하면 변화가 0 이 된다.
-        prior: priorEntry && priorEntry.asOf !== snap.asOf ? priorEntry : (previous?.byInvestor?.[investor.id]?.prior ?? null),
+        latest,
+        prior: pickComparisonSnapshot(history, today, ARK_COMPARE_DAYS),
+        history,
       };
     }
 
