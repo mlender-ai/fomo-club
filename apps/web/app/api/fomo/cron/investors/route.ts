@@ -141,6 +141,39 @@ export async function GET(request: Request) {
             ];
           })
         ),
+        /**
+         * **주식 수 변화율 분포**(WO-RESET-04 에서 배운 방식 — 임계를 감으로 정하지 않는다).
+         *
+         * `HOLDING_CHANGE_MIN`(20%)이 일별 ARK 데이터에 맞는 값인지 모른다. 실측하려면
+         * **조건을 걸지 않은 분포**가 있어야 한다. 여기 숫자가 모이면 임계를 확정한다.
+         *
+         * `new`·`exited` 는 임계와 무관하므로 따로 센다 — 그 둘이 충분하면 임계를 낮출
+         * 이유가 없다.
+         */
+        changeDistribution: Object.entries(byInvestor).reduce(
+          (acc, [id, entry]) => {
+            const profile = INVESTORS.find((i) => i.id === id);
+            if (!profile || profile.source !== "ark" || !entry.prior) return acc;
+            const before = new Map(entry.prior.holdings.map((h) => [h.ticker.toUpperCase(), h]));
+            for (const now of entry.latest.holdings) {
+              const was = before.get(now.ticker.toUpperCase());
+              before.delete(now.ticker.toUpperCase());
+              if (!was) { acc.new += 1; continue; }
+              if (!(was.shares > 0) || !(now.shares > 0)) continue;
+              const change = Math.abs((now.shares - was.shares) / was.shares);
+              acc.total += 1;
+              acc.max = Math.max(acc.max, Math.round(change * 1000) / 10);
+              if (change >= 0.02) acc.over2 += 1;
+              if (change >= 0.05) acc.over5 += 1;
+              if (change >= 0.10) acc.over10 += 1;
+              if (change >= 0.20) acc.over20 += 1;
+              if (change >= 0.50) acc.over50 += 1;
+            }
+            acc.exited += [...before.values()].filter((h) => h.shares > 0).length;
+            return acc;
+          },
+          { total: 0, over2: 0, over5: 0, over10: 0, over20: 0, over50: 0, max: 0, new: 0, exited: 0 }
+        ),
         /** 오늘 카드가 될 수 있는 변화 총수 — 0 이면 왜 0인지 `detail` 이 답한다. */
         cardCandidates: Object.entries(byInvestor).reduce((sum, [id, entry]) => {
           const profile = INVESTORS.find((i) => i.id === id);
