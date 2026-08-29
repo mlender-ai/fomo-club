@@ -139,7 +139,7 @@ export const MIN_BAR_DAYS = 10;
  * 카드가 분류표가 된다. 결론 문장만으로 무슨 일인지 알 수 있어야 한다.
  * 이 값은 텔레메트리·구성 규칙(같은 종류 연달아 3장 금지)이 쓰는 내부 이름이다.
  */
-export type CardType = "A" | "B" | "C" | "D" | "E";
+export type CardType = "A" | "B" | "C" | "D" | "E" | "F";
 
 /** A형 그림 재료 — 두 계열을 **각자** 정규화해 그린다(같은 축에 두지 않는다). */
 export interface DivergenceFigure {
@@ -214,7 +214,26 @@ export interface VolumeFigure {
   baseDays: number;
 }
 
-export type CardFigure = DivergenceFigure | RatioFigure | StreakFigure | VolumeFigure;
+/**
+ * F형 그림 재료 — **보유 비중 하나짜리 게이지**(WO-RESET-07 §B-4).
+ *
+ * 인물 카드가 말하는 것은 "그 사람 포트폴리오에서 이 종목이 얼마나 되나" 다. 선도 막대
+ * 여러 개도 필요 없다 — 0에서 지금 비중까지 채워진 게이지 하나면 그 사실이 전부 보인다.
+ * 신규 매수면 0 → N%, 전량 매도면 직전 비중 → 0 이다.
+ */
+export interface WeightGaugeFigure {
+  kind: "weight";
+  /** 지금 비중(%). 전량 매도면 0. */
+  weightPct: number;
+  /** 직전 비중(%). 신규면 0. */
+  priorWeightPct: number;
+  /** 게이지 끝 눈금(%) — 이 사람 포트폴리오의 최대 비중. 없으면 화면이 정한다. */
+  maxPct?: number;
+  /** 게이지 아래 한 줄 — `ARK 전체의 1.2%`. */
+  caption: string;
+}
+
+export type CardFigure = DivergenceFigure | RatioFigure | StreakFigure | VolumeFigure | WeightGaugeFigure;
 
 export interface CardTypeDecision {
   type: CardType;
@@ -276,6 +295,8 @@ const ACTOR: Record<QuietPickSignalKind, string> = {
    */
   market_divergence: "",
   volume_awakening: "",
+  /** 인물 카드는 주체가 사람 이름이라 여기 고정값을 둘 수 없다 — `investorCard` 가 통째로 만든다. */
+  investor_move: "",
 };
 
 /**
@@ -597,5 +618,42 @@ export function volumeAwakeningCard(input: { awakening: VolumeAwakening }): Card
     figure: { kind: "volume", volumes: [...a.volumeSeries], spikeFrom: a.spikeFrom, baseDays: a.baseDays },
     // 가격이 아직 안 움직였다는 것이 이 카드의 요점이다 — 그 사실을 보조로 말한다.
     support: ["주가는 아직 안 움직였어요"],
+  };
+}
+
+/**
+ * F형 — **유명 투자자가 움직였어요** (WO-RESET-07 §B).
+ *
+ * 다른 형과 다른 점: 문장을 이 함수가 만들지 않는다. `investorHook`·`investorSupport` 가
+ * 만든 것을 그대로 받는다 — 인물 이름·공시일 같은 재료가 이 파일에 없기 때문이다.
+ * 여기서 하는 일은 **그림을 정하고 형을 붙이는 것**이다.
+ *
+ * 사진·로고를 쓰지 않는다(§B-3) — 초상권 문제이고 카드 톤이 무너진다. 이름만 텍스트다.
+ */
+export function investorCard(input: {
+  hook: string;
+  support: readonly string[];
+  weightPct: number;
+  priorWeightPct: number;
+  maxPct?: number;
+  caption: string;
+}): CardTypeDecision | null {
+  const hook = input.hook.trim();
+  if (!hook) return null;
+  // 비중을 못 재면 게이지가 거짓이 된다 — 그때는 카드를 만들지 않는다(지어내지 않는다).
+  const now = Number.isFinite(input.weightPct) ? Math.max(0, input.weightPct) : 0;
+  const prior = Number.isFinite(input.priorWeightPct) ? Math.max(0, input.priorWeightPct) : 0;
+  if (now <= 0 && prior <= 0) return null;
+  return {
+    type: "F",
+    hook,
+    figure: {
+      kind: "weight",
+      weightPct: now,
+      priorWeightPct: prior,
+      ...(typeof input.maxPct === "number" && input.maxPct > 0 ? { maxPct: input.maxPct } : {}),
+      caption: input.caption,
+    },
+    support: [...input.support].slice(0, 2),
   };
 }

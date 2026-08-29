@@ -19,6 +19,8 @@ import {
   selectCardType,
   marketDivergenceCard,
   volumeAwakeningCard,
+  investorCard,
+  whenLabel,
   detectMarketDivergence,
   detectVolumeAwakening,
   probeQuietSignals,
@@ -52,6 +54,16 @@ import {
  * `@fomo/core` 를 임포트하는 조회 라우트가 전부 같이 무거워진다(성능 게이트).
  */
 import { buildSectorStats, sectorStatFor, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+import {
+  diffHoldings,
+  isFreshDisclosure,
+  investorHook,
+  investorSupport,
+  formatShares as formatInvestorShares,
+  type HoldingChange,
+} from "@fomo/core/keyword-cards/investor-holdings";
+import { INVESTORS, type InvestorCollection } from "./investor-collect";
+import { readInvestorCollection } from "./investor-store";
 import {
   recentExposure,
   exposureSummary,
@@ -394,6 +406,8 @@ export interface QuietPick {
    * 카드는 `다시 나왔어요` 라벨과 처음 가격을, 상세 1걸음은 이력 줄을 읽는다.
    */
   exposure?: ExposureSummary;
+  /** WO-RESET-07 — 인물 카드일 때만. 이름·기관·공시일·무슨 변화였나. */
+  investor?: { id: string; name: string; firm: string; asOf: string; changeKind: string };
   qualifiedAt: string;
 }
 
@@ -664,6 +678,8 @@ export interface QuietPickDeps {
    * 여기서는 **읽기만** 한다. 한 번에 전부 읽어 종목별로 나눠 쓴다(행별 병렬 읽기 금지 — §12).
    */
   readAllFactSheets: typeof readAllFactSheets;
+  /** WO-RESET-07 — 유명 투자자 보유 내역. 크론이 모아둔 것을 **읽기만** 한다. */
+  readInvestorCollection: typeof readInvestorCollection;
   /** WO-RESET-03 — 프리웜이 채운 KR 일봉을 **한 쿼리로** 읽는다(§12: 병렬 읽기 금지). */
   readKrCandleCacheMany: typeof readKrCandleCacheMany;
   /** 지수 일봉 — 시장 역행 판정의 비교 대상. */
@@ -687,6 +703,7 @@ const defaultDeps: QuietPickDeps = {
   fetchDartInsiderPurchasesByStock,
   readDisclosureCollection,
   readAllFactSheets: readAllFactSheetsStrict,
+  readInvestorCollection,
   readKrCandleCacheMany,
   fetchStockDaily,
 };
@@ -1096,6 +1113,18 @@ interface SignalCandidate {
   insiderValueKrw?: number;
   /** 수급 전환 신호인가(streak 이 아니라 방향 전환). */
   isReversal?: boolean;
+  /** WO-RESET-07 — 인물 카드 원료. 이 종류일 때만 있다. */
+  investor?: {
+    id: string;
+    /** 사람 이름 — 카드 문장이 쓴다. */
+    name: string;
+    firm: string;
+    /** 공시일 `YYYY-MM-DD`. **화면에 그대로 쓴다** — 지연을 숨기지 않는다. */
+    asOf: string;
+    change: HoldingChange;
+    /** 이 사람 포트폴리오의 최대 비중 — 게이지 끝 눈금. */
+    maxWeightPct?: number;
+  };
 }
 
 // ── 위원회 등급(등급 기반 결정론 — 소견 문장은 fomo-core buildCommitteeVerdictLine) ──
@@ -1290,6 +1319,80 @@ function detectFlowReversalSignals(
         streakSum: recentSum,
         isReversal: true,
         streakWindowDays: flows.length,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * ① 조용한 돈 신호 — **유명 투자자 보유 변화**(WO-RESET-07 §B).
+ *
+ * 수집은 크론이 이미 해뒀다(`investors:active`). 여기서는 **두 시점을 비교해** 무슨 일이
+ * 있었는지만 뽑는다 — 네트워크를 타지 않는다.
+ *
+ * ## 노출 기간이 지난 공시는 안 낸다 (§E-3)
+ *
+ * ARK 는 3일, 13F 는 14일. 「늦은 공시」인 것과 「낡은 공시」인 것은 다르다 — 13F 는 원래
+ * 45일 늦게 나오는 물건이고 그게 이 카드의 재미다. 다만 두 주가 지나면 그것도 옛일이다.
+ *
+ * ## 우리가 아는 종목만
+ *
+ * 티커가 우리 US 유니버스에 없으면 카드를 만들지 않는다 — 가격·캔들·회사 정보가 없으면
+ * 카드가 반쪽이 된다. 몇 장 줄어드는 게 빈 칸이 있는 카드보다 낫다.
+ */
+function detectInvestorSignals(
+  collection: InvestorCollection | null,
+  today: string
+): SignalCandidate[] {
+  if (!collection?.byInvestor) return [];
+  const out: SignalCandidate[] = [];
+
+  for (const profile of INVESTORS) {
+    const entry = collection.byInvestor[profile.id];
+    if (!entry?.latest) continue;
+    if (!isFreshDisclosure(profile.source, entry.latest.asOf, today)) continue;
+
+    const changes = diffHoldings(entry.latest, entry.prior);
+    if (changes.length === 0) continue;
+    const maxWeightPct = entry.latest.holdings.reduce((max, h) => Math.max(max, h.weightPct ?? 0), 0);
+
+    for (const change of changes) {
+      const seed = usDiscoverySeedForSymbol(change.ticker);
+      if (!seed) continue; // 모르는 종목은 안 낸다
+
+      /**
+       * 강도 — **규모(비중)** 로 잰다. 「처음 샀다」와 「전부 팔았다」가 가장 강하고,
+       * 늘림·줄임은 그다음이다. 연속일수를 여기 넣지 않는다(WO-DECK-01 완료조건 3).
+       */
+      const weight = Math.max(change.weightPct ?? 0, Math.abs(change.weightDeltaPct ?? 0));
+      const kindBonus = change.kind === "new" || change.kind === "exited" ? 60 : 20;
+      out.push({
+        subject: {
+          canonical: seed.canonical,
+          symbol: change.ticker,
+          market: seed.market === "NYSE" ? "NYSE" : "NASDAQ",
+          country: "US",
+        },
+        kind: "investor_move",
+        code: "investor_move" as SignalTypeCode,
+        actorNoun: profile.name,
+        actors: profile.name,
+        scale: formatInvestorShares(change.kind === "exited" ? change.priorShares : change.shares),
+        // 공시일 기준 경과일 — 신선도 시계가 이 값을 쓴다.
+        days: Math.max(0, daysBetween(entry.latest.asOf, today)),
+        startedAt: entry.latest.asOf,
+        baseStrength: 150 + kindBonus + Math.min(40, weight * 4),
+        attentionKey: seed.canonical,
+        ...(typeof change.valueUsd === "number" ? { valueUsd: change.valueUsd } : {}),
+        investor: {
+          id: profile.id,
+          name: profile.name,
+          firm: profile.firm,
+          asOf: entry.latest.asOf,
+          change,
+          ...(maxWeightPct > 0 ? { maxWeightPct } : {}),
+        },
       });
     }
   }
@@ -1781,7 +1884,7 @@ export async function buildQuietPickResponse(options: {
   const krUniverse = buildKrPickUniverse(marketRows, deps.vocab);
   const krDefs = krUniverse.defs;
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets] = await Promise.all([
+  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets, investorCollection] = await Promise.all([
     guardedInput("readSupplyDemandHistoryByTickers", deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW), {} as Record<string, InvestorFlow[]>),
     guardedInput("fetchInsiderClusterCandidates", deps.fetchInsiderClusterCandidates(), [] as InsiderClusterCandidate[]),
     guardedInput("computeStockAttentionSignals", deps.computeStockAttentionSignals(), {} as Record<string, StockAttentionSignal>),
@@ -1790,6 +1893,7 @@ export async function buildQuietPickResponse(options: {
     guardedInput("fetchDartInsiderPurchasesByStock", deps.fetchDartInsiderPurchasesByStock(date, krDefs), {} as Record<string, DartDisclosureHit>),
     guardedInput("readDisclosureCollection", deps.readDisclosureCollection(), null as DisclosureCollection | null),
     guardedInput("readAllFactSheets", deps.readAllFactSheets(), [] as Awaited<ReturnType<typeof readAllFactSheets>>),
+    guardedInput("readInvestorCollection", deps.readInvestorCollection(), null as InvestorCollection | null),
   ]);
 
   /** canonical → 팩트시트. 픽마다 배열을 훑지 않도록 한 번만 만든다. */
@@ -1829,7 +1933,11 @@ export async function buildQuietPickResponse(options: {
     [] as SignalCandidate[]
   );
 
+  /** WO-RESET-07 — 인물 카드. 수집은 크론이 했고 여기서는 두 시점을 비교만 한다. */
+  const investorSignals = detectInvestorSignals(investorCollection, date);
+
   const allSignals = dedupeSignalsByStock([
+    ...investorSignals,
     ...krSignals,
     ...usSignals,
     ...dartSignals,
@@ -2178,12 +2286,38 @@ export async function buildQuietPickResponse(options: {
      * `selectCardType` 은 매수 신호(A·B·C)를 위한 선택기라 여기 넘기면 재료가 안 맞아 `null`
      * 이 나온다. 형이 정해진 신호는 그 형을 바로 쓴다 — 분기가 먼저 걸린다.
      */
-    const presetCard =
-      sig.kind === "market_divergence" && sig.marketDivergence
+    /**
+     * WO-RESET-07 §B — 인물 카드. 문장은 `investorHook`·`investorSupport` 가 만든 것을
+     * 그대로 쓴다(인물 이름·공시일 같은 재료가 카드 형 파일에 없다).
+     * **공시일을 반드시 쓴다** — 지연을 숨기지 않는다.
+     */
+    const investorPreset = sig.investor
+      ? investorCard({
+          hook: investorHook(
+            { id: sig.investor.id, name: sig.investor.name, firm: sig.investor.firm, source: "13f" },
+            sig.investor.change
+          ),
+          support: investorSupport(
+            { id: sig.investor.id, name: sig.investor.name, firm: sig.investor.firm, source: "13f" },
+            sig.investor.change,
+            whenLabel(sig.investor.asOf) ?? sig.investor.asOf
+          ),
+          weightPct: sig.investor.change.weightPct ?? 0,
+          priorWeightPct: Math.max(
+            0,
+            (sig.investor.change.weightPct ?? 0) - (sig.investor.change.weightDeltaPct ?? 0)
+          ),
+          ...(sig.investor.maxWeightPct ? { maxPct: sig.investor.maxWeightPct } : {}),
+          caption: `${sig.investor.firm} 전체에서 차지하는 비중`,
+        })
+      : null;
+
+    const presetCard = investorPreset ??
+      (sig.kind === "market_divergence" && sig.marketDivergence
         ? marketDivergenceCard({ divergence: sig.marketDivergence, indexLabel: sig.indexLabel ?? "지수" })
         : sig.kind === "volume_awakening" && sig.volumeAwakening
           ? volumeAwakeningCard({ awakening: sig.volumeAwakening })
-          : null;
+          : null);
     const cardType = presetCard ?? selectCardType({
       kind: sig.kind,
       days: sig.days,
@@ -2342,6 +2476,21 @@ export async function buildQuietPickResponse(options: {
         const summary = exposureSummary(exposureHistory.get(sig.subject.canonical), date);
         return summary ? { exposure: summary } : {};
       })()),
+      /**
+       * WO-RESET-07 — 인물 카드 정보. 화면이 이름·기관·공시일을 쓰고, 덱 구성이
+       * `id` 로 상한을 건다. 인물 카드가 아니면 이 필드가 없다.
+       */
+      ...(sig.investor
+        ? {
+            investor: {
+              id: sig.investor.id,
+              name: sig.investor.name,
+              firm: sig.investor.firm,
+              asOf: sig.investor.asOf,
+              changeKind: sig.investor.change.kind,
+            },
+          }
+        : {}),
       anomalies,
       ...(Object.keys(signalFacts).length > 0 ? { signalFacts } : {}),
       invalidation: {
@@ -2405,7 +2554,16 @@ export async function buildQuietPickResponse(options: {
   // `illiquid` 는 매매 불가, `ran_30`·`changed_15` 는 이미 오른 것, `signal_aged` 는 애초에 신규가 아니다.
   // 즉 신규 하한을 메우려고 올릴 수 있는 안전한 후보가 하나도 없다 → 규정대로 **덱을 줄인다.**
   // (`composeDeck` 의 `watchPool` 인자는 승격 가능한 소스가 생기는 날을 위해 남겨 둔다.)
-  const entries = picks.map((pick) => ({ kind: pick.signal.kind, ageDays: pick.signal.ageDays, pick }));
+  /**
+   * 덱 구성 후보 — 인물 카드면 `investorId` 를 붙인다. 그 값으로 40% 상한과
+   * 「같은 인물 2장」 상한이 걸린다(WO-RESET-07 §E-2).
+   */
+  const entries = picks.map((pick) => ({
+    kind: pick.signal.kind,
+    ageDays: pick.signal.ageDays,
+    ...(pick.investor?.id ? { investorId: pick.investor.id } : {}),
+    pick,
+  }));
   const composed = composeDeck(entries, { deckSize: limit, watchPool: [], today: date });
   const published = composed.deck.map((entry) => entry.pick);
   // 지켜보는 중 — 미달 사유가 '기준 미달'인 것만(품질 실패는 애초에 오지 않는다). 최대 10곳.

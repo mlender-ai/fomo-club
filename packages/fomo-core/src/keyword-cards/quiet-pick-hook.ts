@@ -33,7 +33,9 @@ export type QuietPickSignalKind =
   /** WO-RESET-03 A-1 — 시장은 빠지는데 이것만 버틴다. 「누가 샀나」가 아닌 첫 신호다. */
   | "market_divergence"
   /** WO-RESET-03 A-6 — 조용하던 거래가 붙기 시작했다. */
-  | "volume_awakening";
+  | "volume_awakening"
+  /** WO-RESET-07 — 유명 투자자 보유 변화. 주체가 **사람 이름**이다. */
+  | "investor_move";
 
 export type QuietPickAnomalyKind = "frequency" | "participants" | "scale" | "silence" | "vacuum" | "near_low";
 
@@ -123,7 +125,7 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
    * 그래서 이 형들은 제 재료로만 칩을 만든다.
    */
   if (f.kind === "market_divergence" || f.kind === "volume_awakening") {
-    if (f.kind === "market_divergence") {
+  if (f.kind === "market_divergence") {
       if (f.days > 0) {
         out.push({
           kind: "frequency",
@@ -311,6 +313,11 @@ const HOOK_ACTOR: Record<QuietPickSignalKind, string> = {
    */
   market_divergence: "",
   volume_awakening: "",
+  /**
+   * 인물 카드의 주체는 **사람 이름**이라 여기 고정값을 둘 수 없다(캐시 우드·워런 버핏…).
+   * 문장은 `investorHook` 이 통째로 만들고 카드 형이 그걸 쓴다 — 형 분기가 먼저 걸린다.
+   */
+  investor_move: "",
 };
 
 /**
@@ -358,6 +365,14 @@ export function buildQuietPickHook(f: QuietPickAnomalyFacts): string {
    * 주어가 없는 것보다 나쁜 것은 **틀린 말**이라는 점이다 — 시장 역행 카드는 아무도 사고 있지
    * 않다. 지수가 내리는데 이 종목만 버틴다는 뜻이다. 형마다 제 문장을 갖는다.
    */
+  /**
+   * 인물 카드는 **주체가 사람**이라 문장을 통째로 다른 곳(`investorHook`)이 만들고 카드 형이
+   * 그것을 쓴다. 여기까지 왔다는 건 형이 없다는 뜻이므로 매수 어휘를 붙이지 않고 사실만 남긴다.
+   */
+  if (f.kind === "investor_move") {
+    return f.actorNoun ? `${f.actorNoun}가 움직였어요` : "유명 투자자가 움직였어요";
+  }
+
   if (f.kind === "market_divergence") {
     const days = f.days > 0 ? `${f.days}일` : "며칠";
     if (typeof f.indexChangePct === "number" && f.indexChangePct < 0) {
