@@ -12,6 +12,11 @@ const PAIRS: Record<string, readonly [string, string]> = {
   이가: ["이", "가"],
   을를: ["을", "를"],
   와과: ["과", "와"],
+  /**
+   * `으로`/`로` — 방향 조사. **ㄹ 받침은 예외**다: `서울로`(`서울으로` 아님).
+   * 그 예외를 무시하면 업종·지명에서 바로 틀린다.
+   */
+  으로: ["으로", "로"],
 };
 
 /**
@@ -38,5 +43,20 @@ export function hasBatchim(word: string): boolean {
 /** word 뒤에 붙일 조사를 반환(조사만). 예: josa("코인","은는")="은". */
 export function josa(word: string, pair: keyof typeof PAIRS): string {
   const [withB, withoutB] = PAIRS[pair]!;
+  /**
+   * `으로` 는 **ㄹ 받침을 받침 없는 것처럼** 다룬다 — `서울로` 이지 `서울으로` 가 아니다.
+   * 다른 조사에는 이 예외가 없다(`서울은` 은 맞다).
+   */
+  if (pair === "으로" && endsWithRieul(word)) return withoutB;
   return hasBatchim(word) ? withB : withoutB;
+}
+
+/** 마지막 글자가 ㄹ 받침인가. 한글 음절의 종성 코드 8이 ㄹ이다. */
+function endsWithRieul(word: string): boolean {
+  const w = word.trim();
+  const ch = w[w.length - 1];
+  if (!ch) return false;
+  const code = ch.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return false;
+  return (code - 0xac00) % 28 === 8;
 }
