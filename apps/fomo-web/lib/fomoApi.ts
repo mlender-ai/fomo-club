@@ -1067,7 +1067,12 @@ export interface QuietPickCardType {
     | { kind: "ratio"; ratioPct: number; actor?: string; priceSeries?: number[]; markerIndex?: number }
     | { kind: "streak"; buyDays: boolean[]; streakFrom: number; streakTo: number; actor: string }
     /** E형 — 거래량 막대. 급증 구간만 accent(WO-RESET-03 A-6). */
-    | { kind: "volume"; volumes: number[]; spikeFrom: number; baseDays: number };
+    | { kind: "volume"; volumes: number[]; spikeFrom: number; baseDays: number }
+    /**
+     * F형 — 보유 비중 게이지(WO-RESET-07 §B-4). 인물 카드가 쓴다.
+     * 회색 = 직전까지 있던 것, 라임 = 이번에 늘어난 것. 전량 매도면 전부 회색이다.
+     */
+    | { kind: "weight"; weightPct: number; priorWeightPct: number; maxPct?: number; caption: string };
   /** 보조 최대 2줄. */
   support: string[];
 }
@@ -1177,6 +1182,8 @@ export interface QuietPick {
    * WO-RESET-06 — 노출 이력. **처음 나온 종목이면 이 필드가 없다**.
    * 카드는 `다시 나왔어요` 라벨과 처음 가격을, 상세 1걸음은 이력 줄을 읽는다.
    */
+  /** WO-RESET-07 — 인물 카드일 때만. 이름·기관·공시일. */
+  investor?: { id: string; name: string; firm: string; asOf: string; changeKind: string };
   exposure?: {
     count: number;
     firstDate: string;
