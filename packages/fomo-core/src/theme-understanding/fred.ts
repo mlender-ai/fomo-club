@@ -1,3 +1,4 @@
+import { josa } from "../keyword-cards/josa";
 import type { SourceDoc } from "./types";
 
 /**
@@ -65,7 +66,7 @@ export function buildFredDoc(id: string, seriesId: string, obs: FredObservation)
     id,
     kind: "official",
     title: `${def.name} ${valueText}`,
-    body: `${obs.date} 기준, ${def.name}는 ${valueText}다. (미 연준 공식 데이터 · FRED ${seriesId})`,
+    body: `${obs.date} 기준, ${def.name}${josa(def.name, "은는")} ${valueText}다. (미 연준 공식 데이터 · FRED ${seriesId})`,
     source: "FRED(미 연준)",
     url: `https://fred.stlouisfed.org/series/${seriesId}`,
     publishedAt: `${obs.date}T00:00:00Z`,

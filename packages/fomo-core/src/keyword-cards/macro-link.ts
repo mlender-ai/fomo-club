@@ -1,3 +1,5 @@
+import { josa } from "./josa";
+
 /**
  * WO-RESET-09 — **거시 지표와 우리 종목의 연결.** 순수 함수(네트워크·시간·난수 0).
  *
@@ -229,7 +231,9 @@ export function formatMacroValue(indicator: MacroIndicator, value: number): stri
 /** 카드 결론 — **무슨 일이 벌어지고 있나**. 예측하지 않는다. */
 export function macroHook(move: MacroMove): string {
   const dir = move.direction === "up" ? "오르고" : "내리고";
-  return `${move.indicator.name}이\n${move.streakDays}일째 ${dir} 있어요`;
+  // 조사는 받침 따라. 고정 `이` 를 쓰면 `국제 유가이` 가 나온다(2026-08-30 실측).
+  const name = move.indicator.name;
+  return `${name}${josa(name, "이가")}\n${move.streakDays}일째 ${dir} 있어요`;
 }
 
 /** 보조 줄 — 값 변화와 연결된 종목 수. 마지막 줄이 이 카드의 존재 이유다. */

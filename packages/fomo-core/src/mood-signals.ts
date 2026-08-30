@@ -1,3 +1,4 @@
+import { josa } from "./keyword-cards/josa";
 import type { BannerItem } from "./banner";
 
 /**
@@ -64,7 +65,7 @@ export function moodifyBannerItem(item: BannerItem): MoodSignal | null {
     return {
       id: item.id,
       emoji: item.emoji,
-      text: `${label}는 오늘 잠잠해요. 같이 쉬어가는 날이에요.`,
+      text: `${label}${josa(label, "은는")} 오늘 잠잠해요. 같이 쉬어가는 날이에요.`,
     };
   }
 

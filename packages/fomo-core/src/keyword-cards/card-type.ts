@@ -375,7 +375,7 @@ function divergenceHook(actor: string, changePct: number): string {
   if (changePct < -FLAT_PCT) return `주가는 빠지는데\n${actor}${TOPIC} 사고 있어요`;
   if (changePct > FLAT_PCT) {
     const keeps = actor.length <= 3 ? "계속 " : "";
-    return `주가는 조용한데\n${actor}이 ${keeps}사고 있어요`;
+    return `주가는 조용한데\n${actor}${josa(actor, "이가")} ${keeps}사고 있어요`;
   }
   return `주가는 제자리인데\n${actor}${ONLY} 사고 있어요`;
 }
@@ -397,7 +397,7 @@ function ratioPhrase(ratioPct: number): string {
 }
 
 function ratioHook(actor: string, ratioPct: number): string {
-  return `${actor}이 ${ratioPhrase(ratioPct)}`;
+  return `${actor}${josa(actor, "이가")} ${ratioPhrase(ratioPct)}`;
 }
 
 /** 현재(가장 최근) 연속 매수 구간. 없으면 `null`. */
@@ -539,7 +539,7 @@ export function selectCardType(input: CardTypeInput): CardTypeDecision | null {
       const isLongest = runLength >= longestRun(buyDays);
       const hook = isLongest
         ? `${buyDays.length}거래일 만에\n가장 길게 사고 있어요`
-        : `${actor}이 ${runLength}일째\n조용히 사고 있어요`;
+        : `${actor}${josa(actor, "이가")} ${runLength}일째\n조용히 사고 있어요`;
       return {
         type: "C",
         hook,

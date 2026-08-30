@@ -1,3 +1,4 @@
+import { josa } from "./josa";
 import { isFrontHookSafe, type CardFrontSignals } from "./card-front-hook";
 
 export type HookAxis = "price" | "flow" | "time" | "herd" | "affinity";
@@ -156,7 +157,7 @@ function flowAxis(signals: CardFrontSignals, asOf: string): AxisSignal {
 function timeAxis(signals: CardFrontSignals, asOf: string): AxisSignal {
   const schedule = (signals.catalysts ?? []).find((c) => c.kind === "schedule" && c.label.trim());
   if (schedule) {
-    const text = schedule.when ? `${schedule.when} ${schedule.label}가 있어요.` : `${schedule.label} 일정이 있어요.`;
+    const text = schedule.when ? `${schedule.when} ${schedule.label}${josa(schedule.label, "이가")} 있어요.` : `${schedule.label} 일정이 있어요.`;
     return signal("time", true, 0.86, text, [
       { text: schedule.when ? `${schedule.when} ${schedule.label}` : schedule.label, sourceKind: "official", source: "일정", asOf },
     ]);
@@ -185,7 +186,7 @@ function herdAxis(signals: CardFrontSignals, asOf: string): AxisSignal {
     ]);
   }
   if (typeof avg === "number" && typeof delta === "number" && avg <= -2 && delta >= 3) {
-    return signal("herd", true, Math.min(0.82, 0.52 + delta / 18), `${theme}가 빠지는 날, 상대적으로 덜 빠졌어요.`, [
+    return signal("herd", true, Math.min(0.82, 0.52 + delta / 18), `${theme}${josa(theme, "이가")} 빠지는 날, 상대적으로 덜 빠졌어요.`, [
       { text: `${theme} 평균 ${pctText(avg)}, 차이 ${pctText(delta)}`, sourceKind: "market", source: "동종 흐름", asOf },
     ]);
   }
