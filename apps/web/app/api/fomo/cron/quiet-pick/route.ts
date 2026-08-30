@@ -24,6 +24,8 @@ const dateId = (date: string) => `quiet-pick:${date}`;
  * 더 읽어도 계수는 안 바뀌고 DB 왕복만 늘어난다.
  */
 const PAGE1_HISTORY_DAYS = 8;
+/** 거시 카드가 「최근 짚은 종목」으로 볼 창(일) — WO-RESET-09 §B-3. */
+const RECENT_PICK_DAYS = 30;
 
 /** KST 기준 `date` 에서 하루씩 거슬러 올라간 날짜들(오늘 제외 — 자기 자신 때문에 감점되면 안 된다). */
 function priorDates(date: string, count: number): string[] {
@@ -72,7 +74,25 @@ export async function GET(request: Request) {
      */
     const exposureHistory = buildExposureHistory(wanted.map((d) => snapshots.get(dateId(d)) ?? null));
 
-    const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks, exposureHistory });
+    /**
+     * WO-RESET-09 §B-3 — 거시 카드는 **우리가 최근 30일 안에 짚은 종목**과 연결될 때만 만든다.
+     *
+     * 위 스냅샷은 8일치라 모자란다. **한 쿼리로** 30일치를 더 읽는다 — 날짜마다 따로 읽으면
+     * 커넥션 풀에서 30슬롯을 잡고, 그것이 §12 의 사고였다.
+     */
+    const recentDates = priorDates(date, RECENT_PICK_DAYS);
+    const recentSnaps = await readFeedContentMany<QuietPickResponse>(recentDates.map(dateId)).catch(
+      () => new Map<string, QuietPickResponse>()
+    );
+    const recentPicks = new Map<string, string>();
+    for (const d of recentDates) {
+      for (const pick of recentSnaps.get(dateId(d))?.picks ?? []) {
+        // 가장 **최근에** 짚은 날을 남긴다 — 화면이 「8월 20일에 짚었어요」로 쓴다.
+        if (!recentPicks.has(pick.subject.canonical)) recentPicks.set(pick.subject.canonical, d);
+      }
+    }
+
+    const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks, exposureHistory, recentPicks });
 
     // WO-P1 자가검증 — 발행 픽 전원 캔들 ≥200일. 게이트가 이미 걸렀으므로 여기서 걸리면 게이트 회귀다.
     const thin = response.picks.filter((pick) => pick.dataQuality.candles < 200);

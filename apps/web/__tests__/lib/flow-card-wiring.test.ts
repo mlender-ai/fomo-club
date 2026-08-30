@@ -29,12 +29,13 @@ describe("흐름 카드 배선 (완료 확인 2)", () => {
 
   it("덱이 같은 화면에 끼워 넣는다 — 별도 섹션이 아니다 (§D-1·§E-1)", () => {
     expect(deck).toContain("res.flowCards ?? []");
-    expect(deck).toContain('out.splice(at, 0, { kind: "flow", card });');
+    expect(deck).toContain('out.splice(Math.min(at, out.length), 0, { kind: "flow", card });');
     expect(deck).toContain("<FlowCard card={slot.card} />");
   });
 
   it("앞쪽에 둔다 — 맨 앞은 아니다(첫 카드는 종목이어야 앱이 무엇인지 전해진다)", () => {
-    expect(deck).toContain("const positions = [1, 4];");
+    expect(deck).toContain("[1, 4].forEach((at, i) => {");
+    expect(deck).toContain("[3, 6].forEach((at, i) => {");
   });
 
   it("하루 최대 2장 (§D-1)", () => {
