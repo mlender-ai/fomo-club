@@ -1,3 +1,4 @@
+import { josa } from "../keyword-cards/josa";
 import type { BandStat } from "../fundamentals/types";
 import type { EstimateMeta } from "./types";
 
@@ -49,7 +50,7 @@ export function bandCaption(band: BandStat | null, metricLabel: string): string 
   const pct = Math.round(band.current_percentile);
   const asOf = band.window_end;
   // 해요체 통일(DS-00 §3-2) — 이 캡션만 `~입니다` 로 남아 화면에서 튀었다.
-  return `현재 ${metricLabel}은 최근 5년 밴드에서 ${pct}% 구간이에요. (기준일 ${asOf})`;
+  return `현재 ${metricLabel}${josa(metricLabel, "은는")} 최근 5년 밴드에서 ${pct}% 구간이에요. (기준일 ${asOf})`;
 }
 
 /** 예상 구간 캡션. 예상이 없으면 **아무 말도 하지 않는다**(없는 것을 설명하지 않는다). */
@@ -76,5 +77,5 @@ export function barSeriesCaption(barLabel: string | null): string | null {
 
 /** 1순위 지표가 없어 대체 지표로 내려갔다는 사실 — 조용히 바꾸지 않는다. */
 export function fallbackCaption(fromLabel: string, toLabel: string): string {
-  return `${fromLabel}이 확보되지 않아 ${toLabel} 기준으로 표시합니다.`;
+  return `${fromLabel}${josa(fromLabel, "이가")} 확보되지 않아 ${toLabel} 기준으로 표시합니다.`;
 }

@@ -1,3 +1,4 @@
+import { josa } from "../keyword-cards/josa";
 import type {
   Evidence,
   InsightSourceRef,
@@ -159,7 +160,7 @@ function buildWhyHot(
     return `오늘 ${theme} 쪽은 약세·리스크 얘기가 우세해요. ${join(bear)} ${stanceNote}`.trim();
   }
   // balanced
-  const parts = [`오늘 ${theme}는 강세와 약세가 엇갈려요.`];
+  const parts = [`오늘 ${theme}${josa(theme, "은는")} 강세와 약세가 엇갈려요.`];
   if (bull.length) parts.push(`강세 쪽은 — ${join(bull)}`);
   if (bear.length) parts.push(`약세 쪽은 — ${join(bear)}`);
   return parts.join(" ");

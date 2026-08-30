@@ -1,3 +1,4 @@
+import { josa } from "./josa";
 import type { DailyOhlcv } from "./technical-analysis";
 
 export type WyckoffZoneKind = "accumulation" | "distribution" | "markup" | "markdown";
@@ -268,7 +269,7 @@ function boundaryEvents(
           price: current.low,
           volumeRatio,
           label: `${shortDate(current.date)} 스프링 후보`,
-          explanation: `구간 하단 ${price(support, currency)}을 이탈한 뒤 ${recovery.indexOf(recovered) + 1}봉 안에 회복 · 거래량 ${volumeRatio.toFixed(1)}배`,
+          explanation: `구간 하단 ${price(support, currency)}${josa(price(support, currency), "을를")} 이탈한 뒤 ${recovery.indexOf(recovered) + 1}봉 안에 회복 · 거래량 ${volumeRatio.toFixed(1)}배`,
         });
       }
     } else {
@@ -282,7 +283,7 @@ function boundaryEvents(
           price: current.high,
           volumeRatio,
           label: `${shortDate(current.date)} 업스러스트 후보`,
-          explanation: `구간 상단 ${price(resistance, currency)}을 돌파한 뒤 ${recovery.indexOf(returned) + 1}봉 안에 복귀 · 거래량 ${volumeRatio.toFixed(1)}배`,
+          explanation: `구간 상단 ${price(resistance, currency)}${josa(price(resistance, currency), "을를")} 돌파한 뒤 ${recovery.indexOf(returned) + 1}봉 안에 복귀 · 거래량 ${volumeRatio.toFixed(1)}배`,
         });
       }
     }

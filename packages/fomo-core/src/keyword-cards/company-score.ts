@@ -1,3 +1,4 @@
+import { josa } from "./josa";
 import type { StockBasics } from "../stock-basics";
 import type { CardFrontSignals } from "./card-front-hook";
 import type { CardVerdict } from "./verdict";
@@ -384,7 +385,7 @@ function buildEvaluation(axes: readonly CompanyScoreAxis[], score: number): Eval
     conclusion = `${bandTone(score)}. ${weaknessTail(w1)}`;
   } else {
     const top = [...axes].sort((a, b) => b.score - a.score)[0]!;
-    conclusion = `${bandTone(score)} — 그나마 ${PAREN_LABEL[top.key]}이 버텨주는 자리예요`;
+    conclusion = `${bandTone(score)} — 그나마 ${PAREN_LABEL[top.key]}${josa(PAREN_LABEL[top.key], "이가")} 버텨주는 자리예요`;
   }
 
   // [2] 근거 (수치는 괄호 보조로만)

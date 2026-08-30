@@ -145,7 +145,7 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
           out.push({
             kind: "scale",
             strength: 3.8,
-            text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}%, 이 종목은 ${round1(f.stockChangePct)}% 였어요`,
+            text: `같은 기간 ${label}${josa(label, "은는")} ${round1(f.indexChangePct)}%, 이 종목은 ${round1(f.stockChangePct)}% 였어요`,
             // 소수 첫째 자리로 통일한다 — `7%p` 와 `7.6%p` 가 한 화면에 섞이면 정밀도가 달라 보인다.
             chip: `${label}보다 ${(f.stockChangePct - f.indexChangePct).toFixed(1)}%p 위`,
             axis: "size",
@@ -154,7 +154,7 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
           out.push({
             kind: "scale",
             strength: 3.4,
-            text: `같은 기간 ${label}는 ${round1(f.indexChangePct)}% 였어요`,
+            text: `같은 기간 ${label}${josa(label, "은는")} ${round1(f.indexChangePct)}% 였어요`,
             chip: `${label} ${round1(f.indexChangePct)}%`,
             axis: "size",
           });
@@ -239,7 +239,7 @@ export function computeQuietPickAnomalies(f: QuietPickAnomalyFacts): QuietPickAn
     out.push({
       kind: "scale",
       strength: f.volumePct >= 40 ? 3.2 : 2.2,
-      text: `${iGa(f.actorNoun)} ${magnitude}를 사들였어요`,
+      text: `${iGa(f.actorNoun)} ${magnitude}${josa(magnitude, "을를")} 사들였어요`,
       chip: magnitude,
       axis: "size",
     });
@@ -370,7 +370,7 @@ export function buildQuietPickHook(f: QuietPickAnomalyFacts): string {
    * 그것을 쓴다. 여기까지 왔다는 건 형이 없다는 뜻이므로 매수 어휘를 붙이지 않고 사실만 남긴다.
    */
   if (f.kind === "investor_move") {
-    return f.actorNoun ? `${f.actorNoun}가 움직였어요` : "유명 투자자가 움직였어요";
+    return f.actorNoun ? `${f.actorNoun}${josa(f.actorNoun, "이가")} 움직였어요` : "유명 투자자가 움직였어요";
   }
 
   if (f.kind === "market_divergence") {

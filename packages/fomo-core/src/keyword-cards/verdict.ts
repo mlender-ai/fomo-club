@@ -261,7 +261,7 @@ function assembleStanceText(
   // watch
   if (driver === "overheat" && num(rsi)) {
     const trendClause = bullLead ? bullLead.short : num(s.alignStreak) && s.alignStreak > 0 ? `정배열 ${s.alignStreak}일째` : "추세";
-    return `${trendClause}로 추세는 살아 있는데 RSI ${Math.round(rsi)} 과열이 맞서요 — 식는지 볼 구간이에요.`;
+    return `${trendClause}${josa(trendClause, "으로", "로")} 추세는 살아 있는데 RSI ${Math.round(rsi)} 과열이 맞서요 — 식는지 볼 구간이에요.`;
   }
   if (driver === "mixed" && bullLead && bearLead) {
     return `${bullLead.short}${josa(bullLead.short, "은", "는")} 강세인데 ${bearLead.short}${josa(bearLead.short, "이", "가")} 맞서요 — 우세가 갈릴 때까지 볼 구간이에요.`;
@@ -345,7 +345,7 @@ function bearFactors(input: VerdictInput, s: PriceStructure, rsi: number | undef
   if (s.recentNewLow) {
     out.push({
       kind: "newlow",
-      text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)}을 최근 10일 내 갱신`,
+      text: `${s.windowText} 저점 ${formatVerdictLevel(s.windowLow, currency)}${josa(formatVerdictLevel(s.windowLow, currency), "을", "를")} 최근 10일 내 갱신`,
       short: `${s.windowText} 저점 갱신`,
     });
   }

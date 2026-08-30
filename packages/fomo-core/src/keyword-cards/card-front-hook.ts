@@ -13,6 +13,7 @@
 // 절대 원칙(§3·§6): 강도에 비례한 톤(전 카드 "지금 핫!" 금지). 예측("오를 것/사라") 금지 —
 //   누가 이미 움직였나(사실) + 뭐가 임박했나(일정)로만. 점수·등급·판정 금지. 같은 입력=같은 출력.
 
+import { josa } from "./josa";
 import { isCommentSafe } from "./comment";
 import type { StockBasics } from "../stock-basics";
 import type { FomoScoreResult } from "./fomo-score";
@@ -475,7 +476,7 @@ function ddayCandidate(signals: CardFrontSignals): HookCandidate | null {
     kind: "dday",
     tier: "material",
     score: 0.88,
-    headline: when ? `${when} ${label}가 있어요.` : `${label} 일정이 있어요.`,
+    headline: when ? `${when} ${label}${josa(label, "이가")} 있어요.` : `${label} 일정이 있어요.`,
   };
 }
 
