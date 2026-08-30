@@ -1126,6 +1126,26 @@ export interface QuietPickFlowCard {
   support: string[];
 }
 
+/** WO-RESET-09 §B-1 — 거시 카드. 종목 카드가 아니라 시장 카드다. */
+export interface QuietPickMacroCard {
+  indicatorId: string;
+  indicatorName: string;
+  /** 최신 관측일 — 지표는 하루이틀 늦게 나온다. 화면이 그대로 쓴다. */
+  asOf: string;
+  streakDays: number;
+  direction: "up" | "down";
+  fromText: string;
+  toText: string;
+  changePct: number;
+  series: number[];
+  hook: string;
+  support: string[];
+  /** 일반 원리 — **예측이 아니다**. */
+  principle: string;
+  favored: Array<{ canonical: string; pickedAt: string }>;
+  hurt: Array<{ canonical: string; pickedAt: string }>;
+}
+
 export interface QuietPick {
   subject: {
     canonical: string;
@@ -1298,6 +1318,8 @@ export interface QuietPicksResponse {
   picks: QuietPick[];
   /** WO-RESET-08 — 자금 흐름 카드(하루 최대 2장). 없는 날이 정상이다. */
   flowCards?: QuietPickFlowCard[];
+  /** WO-RESET-09 — 거시 카드(하루 최대 2장). 없는 날이 정상이다. */
+  macroCards?: QuietPickMacroCard[];
   watching?: QuietWatchItem[];
   qualification?: unknown;
   source: string;
