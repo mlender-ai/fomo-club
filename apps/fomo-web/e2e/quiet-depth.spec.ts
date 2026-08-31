@@ -247,3 +247,71 @@ test("[완료 8] 재노출이면 1걸음에 노출 이력이 나온다", async (
   await page.locator('[data-testid="depth-next"]').click();
   await expect(page.locator('[data-testid="depth-exposure"]')).toHaveCount(0);
 });
+
+/**
+ * **DS-07 §3 — 하단 고정 바.**
+ *
+ * 진행 버튼이 본문 끝에 있던 종전 구조는 걸음마다 버튼 높이가 달라지고, 긴 걸음에서는
+ * 스크롤을 끝까지 내려야 넘어갈 수 있었다. 바를 화면 아래에 고정하고 걸음에 따라 내용만
+ * 바꾼다. 재는 것 셋: **아래끝에 붙어 있는가**, **넘김 버튼 자리가 같은가**, **본문
+ * 마지막 줄을 가리지 않는가.**
+ */
+test("[DS-07 §3] 하단 바가 아래끝에 붙어 있고 본문을 가리지 않는다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+
+  /**
+   * 진입 애니메이션(`ds-sheet-up`, 300ms)이 끝나기를 기다린다. 시트가 밀려 올라오는 동안은
+   * `transform` 이 걸려 있어 `fixed` 인 바도 시트를 따라 올라온다 — **그게 맞다.** 바는
+   * 시트의 일부로 같이 들어와야 한다. 재는 것은 들어온 뒤의 자리다.
+   */
+  const sheet = page.locator('[data-testid="depth-header"]').locator("xpath=..");
+  await sheet.waitFor();
+  await sheet.evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((a) => a.finished));
+  });
+
+  const bar = page.locator('[data-testid="depth-bar"]');
+  const viewport = page.viewportSize()!;
+  /** 바 아래끝이 화면 아래끝인가. 세이프 에어리어를 더해도 바 밑에 빈틈이 없어야 한다. */
+  const pinned = async () => {
+    const box = (await bar.boundingBox())!;
+    return Math.round(box.y + box.height);
+  };
+  const barTop = async () => Math.round((await bar.boundingBox())!.y);
+  /** 본문 마지막 줄이 바 위에 있는가 — `BOTTOM_PAD` 가 바 높이를 못 따라가면 여기서 걸린다. */
+  const lastLineClears = async () => {
+    const body = page.locator('[data-testid="depth-scroll"]');
+    await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    const bottom = await body.evaluate((el) => {
+      const last = el.lastElementChild?.getBoundingClientRect();
+      return last ? Math.round(last.bottom) : 0;
+    });
+    return bottom <= (await barTop());
+  };
+
+  expect(await pinned()).toBe(viewport.height);
+  const nextTop = await barTop();
+  expect(await lastLineClears()).toBe(true);
+
+  // 넘김 버튼만 담은 세 걸음에서는 바 높이도 자리도 완전히 같다.
+  for (const label of ["왜 사는지 보기", "어떤 회사인지 보기"]) {
+    await expect(page.locator('[data-testid="depth-next"]')).toContainText(label);
+    await page.locator('[data-testid="depth-next"]').click();
+    expect(await barTop()).toBe(nextTop);
+    expect(await pinned()).toBe(viewport.height);
+    expect(await lastLineClears()).toBe(true);
+  }
+
+  /**
+   * 마지막 걸음은 즐겨찾기(44px) + 나가기 링크(36px)를 쌓으므로 **바가 더 높다.** 위끝이
+   * 올라가는 것은 정상이고, 지켜야 하는 것은 두 가지다 — 아래끝이 그대로 붙어 있는가,
+   * 그리고 높아진 바가 본문 마지막 줄을 먹지 않는가.
+   */
+  await expect(page.locator('[data-testid="depth-next"]')).toContainText("계속 지켜볼까요");
+  await page.locator('[data-testid="depth-next"]').click();
+  await expect(page.locator('[data-testid="depth-next"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-watch"]')).toHaveCount(1);
+  expect(await pinned()).toBe(viewport.height);
+  expect(await barTop()).toBeLessThan(nextTop);
+  expect(await lastLineClears()).toBe(true);
+});

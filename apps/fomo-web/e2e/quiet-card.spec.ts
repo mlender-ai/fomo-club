@@ -200,13 +200,51 @@ test("완료 기준 9 — C형은 현재 연속 구간만 accent 다", async ({ 
   expect(accentIdx).toEqual([34, 35, 36, 37, 38, 39]);
 });
 
-test("완료 기준 11 — 카드 높이가 내용에 따라 변한다 (고정 높이 없음)", async ({ page }) => {
+/**
+ * **카드 크기를 통일한다** (2026-08-31 지시 — "카드 크기가 제각각").
+ *
+ * 종전 규칙은 "내용대로 늘어난다" 였다. 그런데 종목·흐름·거시 세 종류가 덱에 섞이면서
+ * 넘길 때마다 무대가 출렁였다. 최소 높이를 주고 CTA 를 맨 아래로 밀어 **어느 카드든
+ * 버튼이 같은 자리**에 오게 한다.
+ */
+test("카드 크기가 통일된다 — 세 종류가 같은 높이·같은 CTA 자리를 쓴다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+
+  /**
+   * **종목 카드끼리만 재면 안 된다.** 지적의 원인은 종목·흐름·거시 세 종류가 섞이면서
+   * 무대가 출렁인 것이었다. 세 종류를 한 번에 잰다(DS-07 §6).
+   */
+  const measured = await page.locator("[data-card-type]").evaluateAll((els) =>
+    els.map((el) => {
+      const rect = el.getBoundingClientRect();
+      const cta = el.querySelector('[data-testid$="-cta"]')?.getBoundingClientRect();
+      return {
+        kind: (el as HTMLElement).dataset.cardType!,
+        height: Math.round(rect.height),
+        ctaHeight: cta ? Math.round(cta.height) : null,
+        gapBelowCta: cta ? Math.round(rect.bottom - cta.bottom) : null,
+      };
+    })
+  );
+
+  // 세 종류가 다 무대에 있어야 잰 값에 의미가 있다.
+  const kinds = new Set(measured.map((m) => m.kind));
+  expect(kinds.has("flow")).toBe(true);
+  expect(kinds.has("macro")).toBe(true);
+  expect(measured.length).toBeGreaterThan(5);
+  const first = measured[0]!;
+
+  for (const m of measured) {
+    // 내용이 넘치면 늘어난다(상한 없음). 짧다고 줄지는 않는다 — 그게 최소 높이의 일이다.
+    expect(m.height, `${m.kind} 카드가 최소 높이보다 짧다`).toBeGreaterThanOrEqual(460);
+    expect(m.ctaHeight, `${m.kind} CTA 높이`).toBe(44);
+    // **CTA 가 카드 아래끝에서 같은 거리에 있다** — 손가락이 자리를 기억할 수 있는 조건.
+    expect(m.gapBelowCta, `${m.kind} CTA 아래 여백`).toBe(first.gapBelowCta);
+  }
+
+  // 내용이 짧은 카드가 넘치는 카드보다 짧지 않다.
   const min = await heightOf(page, "min");
-  const c = await heightOf(page, "c");
-  expect(min).toBeGreaterThan(0);
-  // 같은 C형인데 보조 줄이 하나 붙으면 그만큼 길어진다 — 최소 높이가 남아 있으면 같아진다.
-  expect(c).toBeGreaterThan(min);
+  expect(min).toBe(460);
 });
 
 test("완료 기준 12 — 세 형 모두 320px 에서 후킹이 3줄이 되지 않는다", async ({ page }) => {
@@ -222,14 +260,15 @@ test("완료 기준 12 — 세 형 모두 320px 에서 후킹이 3줄이 되지 
   }
 });
 
-test("CTA 는 하나이고 48px pill 이다", async ({ page }) => {
+test("CTA 는 하나이고 세 카드가 같은 높이를 쓴다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const card = page.locator('[data-case="a"] [data-testid="quiet-pick-card"]');
   // 앞면 ★ 가 상세로 갔으므로 버튼은 CTA 하나뿐이다(§8).
   await expect(card.locator("button")).toHaveCount(1);
   await expect(card.locator('[data-testid="pick-cta"]')).toHaveCount(1);
+  /** 44px — 흐름·거시 카드의 `CardCta` 와 같은 `h-touch` 다(2026-08-31 통일). */
   const height = (await card.locator('[data-testid="pick-cta"]').boundingBox())?.height ?? 0;
-  expect(Math.round(height)).toBe(48);
+  expect(Math.round(height)).toBe(44);
 });
 
 test("등락에 색을 쓰지 않는다 — 하락은 회색이다", async ({ page }) => {

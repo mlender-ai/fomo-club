@@ -49,7 +49,6 @@ const EXIT_MS = 260;
 const RETURN_MS = 200;
 const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 /** 점이 안 읽히기 시작하는 장수. 넘으면 `3 / 14` mono 텍스트로 바꾼다(DS-02 §5). */
-const DOTS_MAX = 12;
 /** 지켜보는 중 기본 표시 개수. 나머지는 `더 보기`(DS-02 §6). */
 const WATCH_PREVIEW = 5;
 
@@ -235,12 +234,19 @@ export function QuietPickDeck() {
    */
   const move = useCallback(
     (dir: "next" | "prev") => {
-      if (dir === "prev" && idx === 0) { setDx(0); return; }
-      if (dir === "next" && idx >= deckSlots.length - 1) {
-        // 마지막 장. 종전엔 '지켜보는 중' 으로 스크롤했지만 그 섹션을 없앴다(WO-RESET-01 A-1).
-        setDx(0);
+      /**
+       * **끝까지 보면 처음으로 돌아간다** (2026-08-31 지시).
+       *
+       * 종전에는 마지막 장에서 멈췄다 — 더 넘길 수 없다는 신호가 없어 "고장났나" 로 읽혔다.
+       * 앞뒤로 순환시키면 덱이 끝나도 손이 멈추지 않는다. 한 바퀴를 다 돈 순간은
+       * `deck_complete` 로 한 번만 기록한다(회전마다 세면 완주 지표가 부풀어 오른다).
+       */
+      if (deckSlots.length === 0) { setDx(0); return; }
+      const last = deckSlots.length - 1;
+      const wrapping = (dir === "next" && idx >= last) || (dir === "prev" && idx === 0);
+      if (dir === "next" && idx >= last && !completedRef.current) {
+        completedRef.current = true;
         recordPickTelemetry({ event: "deck_complete", cardsConsumed: deckSlots.length });
-        return;
       }
       haptic();
       recordPickTelemetry({ event: dir === "next" ? "card_skip" : "card_view", position: idx + 1 });
@@ -248,7 +254,10 @@ export function QuietPickDeck() {
       const after = () => {
         setExiting(null);
         setDx(0);
-        setIdx((i) => (dir === "next" ? i + 1 : i - 1));
+        setIdx((i) => {
+          if (!wrapping) return dir === "next" ? i + 1 : i - 1;
+          return dir === "next" ? 0 : last;
+        });
       };
       if (prefersReducedMotion()) after();
       else exitTimer.current = window.setTimeout(after, EXIT_MS);
@@ -307,7 +316,7 @@ export function QuietPickDeck() {
   if (status === "offline" || status === "server-error") {
     return (
       <div className="px-gutter">
-        <DeckTitle count={null} stale={null} />
+        <DeckTitle stale={null} />
         <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-error">
           <p className="text-ds-body text-ds-text-1">
             {status === "offline" ? "연결이 끊겼어요." : "잠시 후 다시 열어주세요."}
@@ -329,7 +338,7 @@ export function QuietPickDeck() {
     return (
       <div>
         <div className="px-gutter">
-          <DeckTitle count={0} stale={stale} />
+          <DeckTitle stale={stale} />
           <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-empty">
             <p className="text-ds-display text-ds-text-1">오늘은 조용한 곳을 찾지 못했어요</p>
             <p className="mt-s3 text-ds-body text-ds-text-2">
@@ -347,16 +356,15 @@ export function QuietPickDeck() {
   const next = deckSlots[idx + 1];
   // 이 세션에서 연 것 + 이전 방문에 연 것(로컬). 둘 중 하나면 공개다.
   /**
-   * 덱 앞면은 **항상 가린다** (2026-08-25 지시).
+   * **상세를 본 카드는 다음에 이름이 보인다** (2026-08-31 지시 — 2026-08-25 의 "항상 가린다" 를 되돌린다).
    *
-   * WO-HOOK-01 §2-3 은 "상세를 열면 그 카드는 영구 해제" 였다. 그 규칙을 폐기한다 —
-   * 앞면에 종목명이 보이면 마스킹 장치가 무력해지고, 실제로 한 번 열어본 종목이
-   * 다음 방문 덱에서 이름을 그대로 드러냈다(실측: 한글과컴퓨터).
+   * 마스킹은 "처음 보는 종목의 이름을 먼저 알려주지 않는다" 는 장치다. 이미 열어본 종목에는
+   * 걸 이유가 없다 — 오히려 내가 뭘 봤는지 못 알아보게 만든다.
    *
-   * 해제 기록(`cardReveal`)은 지우지 않는다 — 상세 화면은 계속 이름을 보여주고,
-   * 되돌릴 때 이 한 줄만 고치면 된다.
+   * 해제 기록은 로컬(`cardReveal`)에 남으므로 다음 방문에도 유지된다.
+   * 재노출 카드(`exposure`)는 카드 쪽에서 따로 항상 공개한다(WO-RESET-06 §B-2).
    */
-  const cardRevealed = false;
+
   /** 카드 CTA — 탭 진입과 같은 상세를 열고 진입점만 다르게 기록한다. */
   /** 상세 진입 = 정체 공개(§2-3). 진입점(버튼/탭)이 달라도 공개 규칙은 같다. */
   const openDetail = (entryPoint: "button" | "tap") => {
@@ -372,7 +380,7 @@ export function QuietPickDeck() {
   return (
     <div>
       <div className="px-gutter">
-        <DeckTitle count={picks.length} stale={stale} />
+        <DeckTitle stale={stale} />
 
         {/*
           카드 무대 — 고정 높이 없음(DS-01 §5). 앞 카드가 문서 흐름 안에 있어 무대 높이가 카드를
@@ -422,17 +430,30 @@ export function QuietPickDeck() {
             ) : slot.kind === "macro" ? (
               <MacroCard card={slot.card} />
             ) : (
-              <QuietPickCard pick={withRecord(slot.pick)} onDetail={() => openDetail("button")} revealed={cardRevealed} />
+              <QuietPickCard pick={withRecord(slot.pick)} onDetail={() => openDetail("button")} />
             )}
           </div>
         </div>
 
-        <DeckProgress total={deckSlots.length} index={idx} />
       </div>
 
 
 
-      {selected && <QuietPickDepth pick={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <QuietPickDepth
+          pick={selected}
+          /**
+           * **상세를 닫으면 다음 카드로 넘긴다** (2026-08-31 지시).
+           *
+           * 종전에는 방금 본 카드로 돌아왔다 — 이미 읽은 것을 다시 마주하니 손이 멈춘다.
+           * 본 카드는 끝난 카드다. 닫는 순간 다음 장을 준다.
+           */
+          onClose={() => {
+            setSelected(null);
+            move("next");
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -449,18 +470,20 @@ export function QuietPickDeck() {
  */
 export const THIN_DECK = 5;
 
-export function DeckTitle({ count, stale }: { count: number | null; stale: string | null }) {
+/**
+ * 덱 타이틀 — **개수를 말하지 않는다** (2026-08-31 지시).
+ *
+ * 종전엔 `오늘의 조용한 돈 9곳` 이었다. 개수를 말하면 그 수가 곧 기대치가 되고,
+ * 9곳인 날은 적어 보인다. 이 앱이 파는 것은 **개수가 아니라 한 장 한 장**이다.
+ * 「적어요」 안내도 같은 이유로 뺐다 — 안 세면 적다고 사과할 일도 없다.
+ */
+export function DeckTitle({ stale }: { stale: string | null }) {
   return (
     <div className="pb-gutter pt-s4">
       <h1 className="text-[20px] font-medium leading-tight tracking-[-0.01em] text-ds-text-1">
-        오늘의 조용한 돈{count !== null && <span className="ml-s2 font-mono">{count}곳</span>}
+        오늘의 조용한 돈
       </h1>
       <p className="mt-s1 text-ds-caption text-ds-text-2">뉴스 나오기 전에 돈이 먼저 들어간 곳</p>
-      {count !== null && count > 0 && count < THIN_DECK && (
-        <p className="mt-s1 text-ds-caption text-ds-text-3" data-testid="deck-thin">
-          오늘은 새로 나온 곳이 적어요
-        </p>
-      )}
       {/* 스테일 서빙 — 카드는 정상 표시하고 기준 시각만 밝힌다(DS-02 §9). */}
       {stale && (
         <p className="mt-s1 font-mono text-ds-caption text-ds-text-3" data-testid="deck-stale">
@@ -471,33 +494,19 @@ export function DeckTitle({ count, stale }: { count: number | null; stale: strin
   );
 }
 
-/** ④ 진행 인디케이터 (DS-02 §5) — 점. 12장 초과면 mono 텍스트. */
-export function DeckProgress({ total, index }: { total: number; index: number }) {
-  if (total <= 1) return null;
-  if (total > DOTS_MAX) {
-    return (
-      <p className="mt-s4 text-center font-mono text-ds-label text-ds-text-2" data-testid="deck-progress">
-        {`${index + 1} / ${total}`}
-      </p>
-    );
-  }
-  return (
-    <div className="mt-s4 flex items-center justify-center gap-s2" data-testid="deck-progress" aria-hidden>
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={i}
-          className={`rounded-pill ${i === index ? "h-1.5 w-1.5 bg-ds-text-1" : "h-1 w-1 bg-ds-text-3"}`}
-        />
-      ))}
-    </div>
-  );
-}
+/*
+ * ④ 진행 인디케이터 — **폐지** (2026-08-31, DS-02 §5 · DS-07 §4-1).
+ *
+ * 점은 텍스트보다 조용하지만 하는 말은 같다 — 전체가 몇 장이고 내가 몇 번째인지. 개수를
+ * 안 말하기로 한 이유가 여기에도 그대로 적용된다. 덱이 순환하게 된 뒤로는 점이 말하는
+ * "끝까지 왔다"가 사실도 아니다. `DeckProgress` 와 `DOTS_MAX` 를 지운다.
+ */
 
 /** ③ 로딩 (DS-02 §9) — 카드 형태 스켈레톤 1장. **스피너를 쓰지 않는다**(레이아웃 점프). */
 export function DeckSkeleton() {
   return (
     <div className="px-gutter">
-      <DeckTitle count={null} stale={null} />
+      <DeckTitle stale={null} />
       <div className="rounded-card bg-ds-surface-1 p-s4" data-testid="deck-skeleton" aria-busy>
         {/* 블록 높이 20 / 60 / 40 — 카드의 실제 위계(아이덴티티 · 결론 · 근거)를 닮게(DS-05 §5). */}
         <div className="ds-skeleton h-5 w-1/3 rounded-block bg-ds-surface-2" />

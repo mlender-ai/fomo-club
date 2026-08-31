@@ -47,26 +47,6 @@ test("완료 기준 1 — 덱 타이틀에 accent 가 없다", async ({ page }) 
   expect(accents).toBe(0);
 });
 
-test("완료 기준 2 — 점 인디케이터. 12장 초과면 mono 텍스트", async ({ page }) => {
-  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
-  const dots = page.locator('[data-case="dots"] [data-testid="deck-progress"] span');
-  await expect(dots).toHaveCount(9);
-
-  const sizes = await dots.evaluateAll((els) =>
-    els.map((el) => ({
-      w: Math.round(el.getBoundingClientRect().width),
-      bg: getComputedStyle(el).backgroundColor,
-    }))
-  );
-  // 활성 6px 흰색 / 비활성 4px text-3
-  expect(sizes[2]).toEqual({ w: 6, bg: "rgb(255, 255, 255)" });
-  expect(sizes[0]).toEqual({ w: 4, bg: "rgb(90, 90, 87)" });
-
-  const counter = page.locator('[data-case="counter"] [data-testid="deck-progress"]');
-  await expect(counter).toHaveText("3 / 14");
-  await expect(counter.locator("span")).toHaveCount(0);
-});
-
 test("완료 기준 3 — 지켜보는 중은 구분선 리스트다 (카드 아님)", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   const shelf = page.locator('[data-case="watching"]');
@@ -101,13 +81,20 @@ test("완료 기준 3 — 지켜보는 중은 구분선 리스트다 (카드 아
   await expect(rows).toHaveCount(6);
 });
 
-test("덱이 짧은 날 개수를 숨기지 않고 적다고 말한다 (WO-RESET-06 §D — 임계 5)", async ({ page }) => {
+/**
+ * **개수를 말하지 않는다** (2026-08-31 지시).
+ *
+ * 개수를 말하면 그 수가 곧 기대치가 되고 9곳인 날은 적어 보인다. 이 앱이 파는 것은
+ * 개수가 아니라 한 장이다. 「적어요」 안내도 같은 이유로 뺐다.
+ */
+test("덱 타이틀이 개수를 말하지 않는다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
-  const thin = page.locator('[data-case="thin"]');
-  await expect(thin).toContainText("4곳"); // 개수 그대로
-  await expect(thin.locator('[data-testid="deck-thin"]')).toHaveText("오늘은 새로 나온 곳이 적어요");
-  // 5장 이상인 카드에는 그 문구가 없다.
-  await expect(page.locator('[data-case="title"] [data-testid="deck-thin"]')).toHaveCount(0);
+  const title = page.locator('[data-case="title"]');
+  await expect(title).toContainText("오늘의 조용한 돈");
+  // 부제(`돈이 먼저 들어간 곳`)에는 「곳」이 있다 — 막을 것은 **숫자 + 곳**이다.
+  expect(await title.locator("h1").innerText()).toBe("오늘의 조용한 돈");
+  expect(await title.innerText()).not.toMatch(/\d+\s*곳/);
+  await expect(page.locator('[data-testid="deck-thin"]')).toHaveCount(0);
 });
 
 test("완료 기준 6 — 스켈레톤 로딩. 스피너가 없다", async ({ page }) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { QuietWatchItem } from "@/lib/fomoApi";
-import { DeckProgress, DeckSkeleton, DeckTitle, WatchShelf } from "@/components/QuietPickDeck";
+import { DeckSkeleton, DeckTitle, WatchShelf } from "@/components/QuietPickDeck";
 
 /**
  * 덱 화면 조각 프리뷰 — DS-02 검증용 픽스처(`e2e/quiet-deck.spec.ts` 가 잰다).
@@ -57,34 +57,24 @@ export default function QuietDeckPreview() {
     <main className="mx-auto w-full max-w-md bg-ds-bg pb-s6">
       <section data-case="title">
         <div className="px-gutter">
-          <DeckTitle count={9} stale={null} />
+          <DeckTitle stale={null} />
         </div>
       </section>
 
       <section data-case="stale">
         <div className="px-gutter">
-          <DeckTitle count={9} stale="3시간 전 기준" />
+          <DeckTitle stale="3시간 전 기준" />
         </div>
       </section>
 
       <section data-case="thin">
         <div className="px-gutter">
           {/*
-            5장 미만 — 개수를 숨기지 않고 "적어요"라고 말한다(WO-RESET-06 §D).
-            임계가 3 → 5 로 올랐다: 3일 규칙이 최근 나온 종목을 빼므로 덱이 더 자주 짧아진다.
+            개수 표시를 없앴다(2026-08-31 지시) — 개수를 말하면 그 수가 곧 기대치가 되고,
+            9곳인 날은 적어 보인다. 이 앱이 파는 것은 개수가 아니라 한 장 한 장이다.
           */}
-          <DeckTitle count={4} stale={null} />
+          <DeckTitle stale={null} />
         </div>
-      </section>
-
-      <section data-case="dots">
-        <p className="px-gutter font-mono text-ds-label text-ds-text-3">점 인디케이터 (9장, 3번째)</p>
-        <DeckProgress total={9} index={2} />
-      </section>
-
-      <section data-case="counter">
-        <p className="mt-s5 px-gutter font-mono text-ds-label text-ds-text-3">12장 초과 → mono 텍스트</p>
-        <DeckProgress total={14} index={2} />
       </section>
 
       <section data-case="skeleton" className="mt-s5">

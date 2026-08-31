@@ -1,0 +1,116 @@
+name: Daily Bake
+
+# **덱을 매일 굽는다.** 이게 없었다(2026-08-31 실측).
+#
+# 종전에는 배포하거나 사람이 손으로 돌릴 때만 구워졌다:
+#   8/18 · 8/23 · 8/25 · 8/26 · 8/27(실패)  ← 8/28~8/30 은 아예 없음
+#
+# 그래서 세 가지가 한꺼번에 망가져 있었다:
+#   ① 같은 덱이 며칠씩 그대로 — "종근당이 계속 나온다"
+#   ② 3일 규칙이 볼 스냅샷에 구멍 — 규칙은 맞는데 볼 과거가 없었다
+#   ③ 인물 카드의 ARK 5일 비교 창이 영영 안 참
+#
+# 수집 크론들이 끝난 뒤에 돈다(07:40 거시 → 08:00 업종 → 08:20 인물 → 08:40 공시 → 09:10 굽기).
+# 순서가 어긋나면 그날 모은 것이 그날 덱에 안 실린다.
+
+on:
+  schedule:
+    # 09:10 KST = 00:10 UTC
+    - cron: "10 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-bake
+  cancel-in-progress: false
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rebake quiet-pick payload
+        id: bake
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          url="https://fomo-club-backend.vercel.app/api/fomo/cron/quiet-pick"
+          auth=()
+          if [ -n "${CRON_SECRET:-}" ]; then auth=(-H "authorization: Bearer ${CRON_SECRET}"); fi
+
+          # 커넥션 풀이 마른 순간에 걸릴 수 있다 — 몇 번 기다렸다 다시 본다.
+          # (2026-08-30 에 람다당 커넥션을 1로 낮춰 크게 줄었지만, 재시도는 남겨둔다.)
+          backoff=(0 45 90 150)
+          code="000"
+          for attempt in 0 1 2 3; do
+            if [ "${backoff[$attempt]}" -gt 0 ]; then
+              echo "── ${backoff[$attempt]}초 대기 후 재시도"
+              sleep "${backoff[$attempt]}"
+            fi
+            code=$(curl -s -o out.json -w '%{http_code}' --max-time 320 "${auth[@]}" "$url" || echo "000")
+            echo "시도 $((attempt + 1))/4 → HTTP $code"
+            [ "$code" = "200" ] && break
+          done
+
+          cat out.json || true
+          echo ""
+
+          summary=$(node -e 'try{const j=require("./out.json");const q=j.qualification||{};process.stdout.write(j.blocked?`blocked="${j.blocked}"`:`published=${j.published} 흐름=${(q.sectorFlow||{}).cards??0} 거시=${(q.macro||{}).cards??0} 3일제외=${(q.exposure||{}).blocked??0}`)}catch(e){process.stdout.write("payload unreadable")}')
+          {
+            echo "### 덱 굽기"
+            echo ""
+            echo "- HTTP: \`$code\`"
+            echo "- $summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$code" != "200" ]; then
+            echo "::error::덱 굽기 실패 — 오늘 덱이 어제 것 그대로다. out.json 을 보라."
+            exit 1
+          fi
+
+          # 발행 가드가 막았으면 성공으로 넘기지 않는다 — 조용히 어제 덱이 남는다.
+          blocked=$(node -e 'try{const j=require("./out.json");process.stdout.write(j.blocked?"yes":"no")}catch(e){process.stdout.write("no")}')
+          if [ "$blocked" = "yes" ]; then
+            echo "::warning::발행 가드가 막았다. 어제 페이로드가 유지된다 — 사유를 확인하라."
+          fi
+
+          # 다음 스텝이 읽을 장수(HOTFIX-DECK §C-2). 못 읽으면 빈 값 — 스텝이 건너뛴다.
+          node -e 'try{const j=require("./out.json");if(typeof j.published==="number")process.stdout.write(`deck_size=${j.published}\n`)}catch(e){}' >> "$GITHUB_OUTPUT"
+          node -e 'try{const j=require("./out.json");const f=(j.qualification||{}).funnel||{};process.stdout.write(`relaxations=${(f.relaxations||[]).join(",")}\n`)}catch(e){}' >> "$GITHUB_OUTPUT"
+
+      # ── 덱 5장 미만이면 알린다 (HOTFIX-DECK §C-2) ──
+      #
+      # 2026-08-28 에 덱이 1장인 것을 **사용자가 화면을 보고** 알았다. 굽기가 성공해도
+      # 덱이 사고 수준으로 짧을 수 있다 — 위 스텝은 HTTP 200 만 보므로 그건 못 잡는다.
+      # 런타임에도 웹훅 알림이 있지만(`SLACK_WEBHOOK_URL`, Vercel 쪽 설정) 여기서 확인할 수
+      # 없다. 이 스텝은 **레포 변수만으로** 도는 두 번째 경로다 — 한쪽이 꺼져 있어도 알림은 간다.
+      - name: Alert on a short deck
+        if: always() && steps.bake.outputs.deck_size != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          DECK_SIZE: ${{ steps.bake.outputs.deck_size }}
+          RELAXATIONS: ${{ steps.bake.outputs.relaxations }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 기준은 `DECK_ALERT_MIN`(apps/web/lib/deck-ranking.ts) 과 같은 5장이다.
+          if [ "${DECK_SIZE}" -ge 5 ]; then
+            echo "deck=${DECK_SIZE} — 기준(5장) 이상. 알림 없음."
+            exit 0
+          fi
+          MSG="🚨 조용한 돈 덱이 ${DECK_SIZE}장입니다 (기준 5장). 푼 규칙: ${RELAXATIONS:-없음}. ${RUN_URL}"
+          echo "$MSG"
+          if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            jq -n --arg text "$MSG" '{"text": $text}' \
+              | curl -sf -X POST "$(printf '%s' "$SLACK_WEBHOOK_URL" | tr -d '[:space:]')" \
+                  -H "Content-Type: application/json" -d @- >/dev/null \
+              && echo "슬랙 전송 완료" || echo "슬랙 전송 실패 — 아래 실패로 알린다"
+          else
+            echo "SLACK_WEBHOOK_URL 미설정 — 워크플로 실패로만 알린다"
+          fi
+          # 알림 채널이 없거나 죽어도 **런이 빨갛게 남는다.** 조용히 지나가는 경로를 만들지 않는다.
+          exit 1
