@@ -41,7 +41,9 @@ describe("완료 기준 1 — 카드 3형이 신호 유형에 따라 자동 선�
   });
 
   it("형이 data 속성으로 드러난다(회귀 관측용)", () => {
-    expect(code(card)).toContain("data-card-type");
+    // 속성을 붙이는 곳은 껍데기다 — 카드는 `kind` 로 넘긴다(DS-07 §1).
+    expect(code(readFileSync(new URL("../components/CardShell.tsx", import.meta.url), "utf8"))).toContain("data-card-type");
+    expect(code(card)).toMatch(/kind=\{cardType\?\.type/);
   });
 });
 
@@ -74,15 +76,13 @@ describe("완료 기준 2·3·4 — 마스킹", () => {
    * 마스킹 장치가 무력해졌다. 해제 기록 자체는 남긴다 — 상세 화면이 계속 쓰고,
    * 되돌릴 때 덱의 한 줄만 고치면 된다.
    */
-  it("덱 앞면은 해제 상태와 무관하게 항상 가린다", () => {
+  it("**상세를 본 카드는 다음에 이름이 보인다** (2026-08-31 지시 — 항상 가리기를 되돌렸다)", () => {
     const body = code(deck);
-    expect(body).toContain("const cardRevealed = false");
-    // 덱이 해제 여부를 조회하지 않는다 — 조회하면 언젠가 다시 앞면에 새어 나온다.
-    expect(body).not.toContain("isRevealed(");
-    // 상세 진입 기록은 계속 남긴다(상세 화면이 쓴다).
-    expect(body).toContain("reveal(pick.subject.canonical)");
-    const reveal = readFileSync(new URL("../lib/cardReveal.ts", import.meta.url), "utf8");
-    expect(reveal).toContain("localStorage");
+    // 덱이 해제 여부를 강제하지 않는다 — 카드가 로컬 기록(`isRevealed`)을 스스로 읽는다.
+    expect(body).not.toContain("const cardRevealed = false;");
+    expect(body).not.toContain("revealed={cardRevealed}");
+    // 마스킹 자체는 살아 있다 — 처음 보는 종목은 여전히 가린다.
+    expect(code(card)).toContain("isRevealed(pick.subject.canonical)");
   });
 
   it("가려진 카드는 스크린리더에도 종목명을 읽어주지 않는다", () => {
@@ -283,9 +283,20 @@ describe("완료 기준 11 — 카드 높이가 내용에 따라 변한다", () 
     }
   });
 
-  it("카드에 고정 높이·최소 높이가 없다", () => {
-    expect(code(card)).not.toContain("minHeight");
-    expect(code(card)).not.toMatch(/\bh-\[\d+px\]/);
+  it("**카드 크기를 통일한다** (2026-08-31 지시 — 제각각이던 것을 맞췄다)", () => {
+    /**
+     * 종전 규칙은 "내용대로 늘어난다" 였다. 그런데 세 종류(종목·흐름·거시)가 섞이면서
+     * 넘길 때마다 무대가 출렁였다. 최소 높이를 주고 CTA 를 맨 아래로 밀어 **어느 카드든
+     * 버튼이 같은 자리**에 오게 한다.
+     */
+    const shell = code(readFileSync(new URL("../components/CardShell.tsx", import.meta.url), "utf8"));
+    expect(shell).toContain("export const CARD_MIN_HEIGHT");
+    expect(shell).toContain("minHeight: CARD_MIN_HEIGHT");
+    // 카드가 껍데기를 거친다 — 자기 높이를 따로 정하면 다시 제각각이 된다(DS-07 §1).
+    expect(code(card)).toContain("<CardShell");
+    expect(code(card)).not.toMatch(/minHeight|min-h-\[/);
+    // 고정 높이는 여전히 안 쓴다 — 내용이 넘치면 늘어나야 한다.
+    expect(shell).not.toMatch(/\bh-\[\d+px\]/);
   });
 });
 
@@ -317,10 +328,11 @@ describe("§8 삭제 목록 — 옮긴 것이지 지운 것이 아니다", () =>
   });
 
   it("넘기기 버튼·더보기 링크가 없고 CTA 는 하나다", () => {
-    expect(code(card).match(/data-testid="pick-cta"/g)?.length).toBe(1);
+    // CTA 는 껍데기의 `CardCta` 하나뿐이다 — 카드가 <button> 을 직접 세우면 모양이 갈린다(DS-07 §2).
+    expect(code(card).match(/<CardCta\b/g)?.length).toBe(1);
+    expect(code(card)).toContain('testId="pick-cta"');
     expect(code(card)).not.toContain("더보기");
     expect(code(deck)).not.toContain("넘기기<");
-    expect(code(deck)).toContain('data-testid="deck-progress"');
   });
 
   it("이모지·국기가 카드에 없다", () => {

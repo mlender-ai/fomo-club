@@ -14,7 +14,7 @@ import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { haptic, hapticMedium } from "@/lib/haptics";
 import { upsertWatch } from "@/lib/watchlist";
-import { StepDots, StepNext, CompanyGroupBlock } from "@/components/DepthSteps";
+import { StepDots, StepNext, StepBar, CompanyGroupBlock } from "@/components/DepthSteps";
 
 /** 걸음 식별자. 순서가 곧 이야기 순서다 — 놀라움 → 이유 → 실체 → 결정. */
 type StepId = "signal" | "why" | "company" | "decide";
@@ -60,7 +60,8 @@ function prefersReducedMotion(): boolean {
  */
 
 /** 하단 여백 — DS-03 §2 (40px) + 세이프 에어리어. */
-const BOTTOM_PAD = "pb-[calc(40px+env(safe-area-inset-bottom))]";
+/** 하단 고정 바(버튼 44 + 위아래 여백)만큼 본문 끝을 비운다 — 마지막 줄이 바에 가리면 안 된다. */
+const BOTTOM_PAD = "pb-[calc(112px+env(safe-area-inset-bottom))]";
 
 /** KST 오늘 `YYYY-MM-DD` — "오늘 첫 발행" 판정용. */
 function todayKst(): string {
@@ -475,6 +476,7 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           ref={scrollRef}
           onScroll={onDepthScroll}
           className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${BOTTOM_PAD}`}
+          data-testid="depth-scroll"
           onPointerDown={onStepPointerDown}
           onPointerUp={onStepPointerUp}
         >
@@ -539,7 +541,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   {rarityLine}
                 </p>
               )}
-              <StepNext label={nextLabel} onClick={goNext} />
             </>
           )}
 
@@ -583,7 +584,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               <p className="mt-s3 break-keep text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
                 {WHY_NOW_TIMELINE_DISCLAIMER}
               </p>
-              <StepNext label={nextLabel} onClick={goNext} />
             </>
           )}
 
@@ -632,7 +632,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   {companyGroups.find((g) => g.title === openMethod)?.method}
                 </p>
               )}
-              <StepNext label={nextLabel} onClick={goNext} />
             </>
           )}
 
@@ -649,46 +648,60 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               <p className="mt-s5 break-keep text-ds-body text-ds-text-2">
                 계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요
               </p>
-              {watched ? (
+              {watched && (
                 <div className="mt-s6" data-testid="depth-watch-done">
                   <p className="text-ds-display-sm text-ds-text-1">담았어요</p>
                   <p className="mt-s2 break-keep text-ds-body text-ds-text-2">
                     앞으로 이 종목이 얼마나 움직이는지 기록해서 보여드릴게요
                   </p>
-                  <button
-                    type="button"
-                    onClick={dismiss}
-                    className="tap-button mt-s5 h-touch text-ds-caption text-ds-text-3 underline"
-                  >
-                    닫기
-                  </button>
                 </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={onWatch}
-                    data-testid="depth-watch"
-                    className="tap-button mt-s6 flex h-touch w-full items-center justify-center gap-s2 rounded-block bg-ds-accent px-gutter text-[15px] font-medium text-ds-bg"
-                  >
-                    ★ 즐겨찾기에 담기
-                  </button>
-                  {/* 보조는 **텍스트 링크**다 — 이 화면에서 강조는 하나뿐이다(§5). */}
-                  <button
-                    type="button"
-                    onClick={dismiss}
-                    data-testid="depth-leave"
-                    className="tap-button mx-auto mt-s3 flex h-touch items-center justify-center text-ds-caption text-ds-text-3 underline"
-                  >
-                    그냥 나가기
-                  </button>
-                </>
               )}
             </>
           )}
 
           </div>
         </div>
+
+        {/*
+          하단 고정 바 — **어느 걸음에서든 같은 자리**다(2026-08-31 지시).
+          마지막 걸음에서는 즐겨찾기가, 그 전에는 다음 걸음 버튼이 온다.
+        */}
+        <StepBar>
+          {step === "decide" ? (
+            watched ? (
+              <button
+                type="button"
+                onClick={dismiss}
+                data-testid="depth-close"
+                className="tap-button flex h-touch w-full items-center justify-center rounded-block border-hair border-ds-border bg-ds-surface-2 text-[15px] text-ds-text-1"
+              >
+                닫기
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onWatch}
+                  data-testid="depth-watch"
+                  className="tap-button flex h-touch w-full items-center justify-center gap-s2 rounded-block bg-ds-accent px-gutter text-[15px] font-medium text-ds-bg"
+                >
+                  ★ 즐겨찾기에 담기
+                </button>
+                {/* 보조는 텍스트 링크다 — 이 화면에서 강조는 하나뿐이다(§5). */}
+                <button
+                  type="button"
+                  onClick={dismiss}
+                  data-testid="depth-leave"
+                  className="tap-button mx-auto mt-s2 flex h-[36px] items-center justify-center text-ds-caption text-ds-text-3 underline"
+                >
+                  그냥 나가기
+                </button>
+              </>
+            )
+          ) : (
+            <StepNext label={nextLabel} onClick={goNext} />
+          )}
+        </StepBar>
       </div>
     </OverlayPortal>
   );

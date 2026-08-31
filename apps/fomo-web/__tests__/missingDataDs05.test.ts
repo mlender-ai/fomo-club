@@ -203,12 +203,16 @@ describe("완료 기준 7 — `아직 못 찾았어요`(미확보)와 `없어요
 });
 
 describe("완료 기준 8 — 덱이 짧은 날 개수를 그대로 표시한다 (§7)", () => {
-  it("개수를 숨기지 않고, 5장 미만이면 적었다고 말한다 (WO-RESET-06 §D)", () => {
+  it("**개수를 말하지 않는다** (2026-08-31 지시 — 「9곳」 표시를 없앴다)", () => {
+    /**
+     * 종전 규칙은 "짧은 날에도 개수를 숨기지 않는다" 였다. 그런데 개수를 말하면 **그 수가
+     * 곧 기대치**가 되고 9곳인 날은 적어 보인다. 이 앱이 파는 것은 개수가 아니라 한 장이다.
+     * 「적어요」 안내도 같은 이유로 뺐다 — 안 세면 적다고 사과할 일도 없다.
+     */
     const deck = read("../components/QuietPickDeck.tsx");
-    expect(deck).toContain("{count}곳");
-    // 임계가 3 → 5 로 올랐다(WO-RESET-06 §D) — 제외 규칙이 덱을 줄이므로 더 일찍 밝힌다.
-    expect(deck).toContain("오늘은 새로 나온 곳이 적어요");
-    expect(deck).toContain("count < THIN_DECK");
+    expect(deck).not.toContain("{count}곳");
+    expect(deck).not.toContain("deck-thin");
+    expect(deck).toContain("오늘의 조용한 돈");
   });
 });
 

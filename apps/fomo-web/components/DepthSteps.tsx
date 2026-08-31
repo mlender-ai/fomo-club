@@ -34,13 +34,36 @@ export function StepDots({ total, index }: { total: number; index: number }) {
  * 다음 걸음으로 가는 버튼. 이 화면에서 **유일하게 강조된 것**이라 다른 것과 겨루지 않는다.
  * 문구는 걸음마다 다르다 — `왜 사는지 보기` 처럼 **다음에 무엇이 나오는지** 말한다.
  */
+/**
+ * 상세 하단 고정 바 (2026-08-31 지시 — "CTA 위치 맨 하단으로 플로팅으로 고정").
+ *
+ * ## 왜 고정인가
+ *
+ * 종전에는 버튼이 본문 끝에 붙어 있었다. 걸음마다 내용 길이가 달라 **버튼이 화면
+ * 중간에도 오고 스크롤 밖에도 갔다** — 다음으로 가려면 매번 눈으로 찾아야 했다.
+ * 아래에 붙박아두면 어느 걸음에서든 엄지가 닿는 자리에 있다.
+ *
+ * 바탕을 깔아 본문이 버튼 뒤로 비쳐 지나가지 않게 한다. 홈 인디케이터를 피해
+ * `safe-area` 만큼 더 띄운다.
+ */
+export function StepBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 z-[80] border-t-hair border-ds-border bg-ds-bg pb-[env(safe-area-inset-bottom)]"
+      data-testid="depth-bar"
+    >
+      <div className="mx-auto w-full max-w-[480px] px-gutter py-s3">{children}</div>
+    </div>
+  );
+}
+
 export function StepNext({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       data-testid="depth-next"
-      className="tap-button mt-s6 flex h-touch w-full items-center justify-center gap-s2 rounded-block bg-ds-accent px-gutter text-[15px] font-medium text-ds-bg"
+      className="tap-button flex h-touch w-full items-center justify-center gap-s2 rounded-block bg-ds-accent px-gutter text-[15px] font-medium text-ds-bg"
     >
       {label}
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>

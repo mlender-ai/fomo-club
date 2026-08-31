@@ -11,7 +11,12 @@ const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace
 
 const CSS = read("../app/globals.css");
 const DECK = code(read("../components/QuietPickDeck.tsx"));
-const CARD = code(read("../components/QuietPickCard.tsx"));
+const SHELL = code(read("../components/CardShell.tsx"));
+/**
+ * 카드 앞면은 **껍데기 + 안쪽** 두 파일로 나뉜다(DS-07 §1). 탭 피드백·햅틱은 껍데기가
+ * 주므로, 한 파일만 훑으면 옮겨간 계약을 놓친다.
+ */
+const CARD = code(read("../components/QuietPickCard.tsx")) + SHELL;
 const DEPTH = code(read("../components/QuietPickDepth.tsx"));
 const HOME = code(read("../components/HomeView.tsx"));
 const DS_SCREENS = [
@@ -72,7 +77,12 @@ describe("완료 기준 2 — 카드 전환 (§3)", () => {
   });
 
   it("관성 없음 — 한 번 스와이프에 한 장만 움직인다", () => {
-    expect(DECK).toMatch(/setIdx\(\(i\) => \(dir === "next" \? i \+ 1 : i - 1\)\)/);
+    /**
+     * 순환(2026-08-31 지시)이 붙어 표현이 바뀌었다 — 규칙은 그대로다: **한 번에 한 장.**
+     * 마지막·첫 장에서만 반대쪽 끝으로 감고, 그 외에는 ±1 이다.
+     */
+    expect(DECK).toContain('if (!wrapping) return dir === "next" ? i + 1 : i - 1;');
+    expect(DECK).toContain('return dir === "next" ? 0 : last;');
   });
 });
 

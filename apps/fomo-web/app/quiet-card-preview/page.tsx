@@ -2,6 +2,8 @@
 
 import type { QuietPick, QuietPickCardType } from "@/lib/fomoApi";
 import { QuietPickCard } from "@/components/QuietPickCard";
+import { FlowCard } from "@/components/FlowCard";
+import { MacroCard } from "@/components/MacroCard";
 
 /**
  * 픽 카드 렌더 프리뷰 — WO-HOOK-01 검증용 픽스처(`e2e/quiet-card.spec.ts` 가 boundingBox 로 잰다).
@@ -164,6 +166,40 @@ const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
   { id: "returning", label: "다시 나옴 — 라벨·새 훅·이름 공개·처음 가격 (WO-RESET-06 §B)" },
 ];
 
+/**
+ * 덱에는 종목 카드만 서는 게 아니다 — **흐름·거시 카드도 같은 무대에 선다**(DS-07 §0).
+ * 세 종류의 높이와 CTA 자리를 한 화면에서 재려면 여기 같이 있어야 한다. 종목 카드만
+ * 재고 「카드 크기를 통일했다」고 말한 것이 2026-08-31 지적의 시작이었다.
+ */
+const FLOW = {
+  fromSector: "반도체와반도체장비",
+  toSector: "전자장비와기기",
+  fromNet: -1840,
+  toNet: 1210,
+  fromStocks: 12,
+  toStocks: 9,
+  windowDays: 5,
+  hook: "반도체에서 돈이 빠지고\n전자장비로 들어오고 있어요",
+  support: ["최근 5일 · 기관 순매수 기준", "같은 돈인지는 알 수 없어요"],
+};
+
+const MACRO = {
+  indicatorId: "wti",
+  indicatorName: "국제 유가",
+  asOf: "8월 29일",
+  streakDays: 3,
+  direction: "down" as const,
+  fromText: "$71.20",
+  toText: "$67.80",
+  changePct: -4.8,
+  series: [71.2, 70.4, 69.1, 68.6, 67.8],
+  hook: "국제 유가가 3일째\n내리고 있어요",
+  support: ["최근 짚은 곳 중 4곳이 여기 닿아요"],
+  principle: "유가가 내리면 기름을 많이 쓰는 회사에 유리해요",
+  favored: [],
+  hurt: [],
+};
+
 export default function QuietCardPreview() {
   return (
     <main className="mx-auto w-full max-w-md space-y-s5 bg-ds-bg p-gutter">
@@ -177,6 +213,21 @@ export default function QuietCardPreview() {
           </div>
         </section>
       ))}
+
+      {/* 같은 무대에 서는 다른 두 종류 — 높이와 CTA 자리가 위 카드들과 같아야 한다. */}
+      <section data-testid="card-case" data-case="flow">
+        <p className="mb-s2 font-mono text-ds-label text-ds-text-3">업종 흐름 카드 (DS-07 §1)</p>
+        <div className="rounded-card">
+          <FlowCard card={FLOW} onDetail={() => {}} />
+        </div>
+      </section>
+
+      <section data-testid="card-case" data-case="macro">
+        <p className="mb-s2 font-mono text-ds-label text-ds-text-3">거시 뉴스 카드 (DS-07 §1)</p>
+        <div className="rounded-card">
+          <MacroCard card={MACRO} onDetail={() => {}} />
+        </div>
+      </section>
     </main>
   );
 }
