@@ -73,6 +73,16 @@ import {
 } from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
 import { readSectorMap } from "./sector-map-store";
+import { readMacroCollection } from "./macro-store";
+import {
+  MACRO_INDICATORS,
+  detectMacroMove,
+  linkMacroToPicks,
+  macroHook,
+  macroSupport,
+  formatMacroValue,
+  type RecentPick,
+} from "@fomo/core/keyword-cards/macro-link";
 import { readInvestorCollection } from "./investor-store";
 import {
   recentExposure,
@@ -197,6 +207,8 @@ const SECTOR_FLOW_WINDOW_SLACK = 4;
 const SECTOR_FLOW_MIN_NET = 100_000_000_000;
 /** 하루 최대 흐름 카드 수(§D-1). 많으면 종목 카드를 밀어낸다. */
 const SECTOR_FLOW_MAX_CARDS = 2;
+/** 하루 최대 거시 카드 수(§E). 거시+정책 합쳐 2장이고, 지금은 거시만 있다. */
+const MACRO_MAX_CARDS = 2;
 
 /** `YYYY-MM-DD` 에서 며칠 옮긴다. 형식이 아니면 원본을 돌려준다. */
 function shiftIsoDays(date: string, days: number): string {
@@ -541,6 +553,8 @@ export interface QuietPickQualification {
   disclosurePhrases?: { total: number; raw: number };
   /** WO-RESET-08 §A-1 — 업종 흐름 계측(분류 못 찾은 행 수 포함). */
   sectorFlow?: { rows: number; unclassified: number; sectors: number; cards: number };
+  /** WO-RESET-09 — 거시 카드 계측. `recentPicks` 0 이면 연결할 대상이 없다. */
+  macro?: { recentPicks: number; cards: number };
   /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
   companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
   /** WO-RESET-06 §E — 재노출 규칙 계측. `readmittedByFloor` 는 덱 최소 장수 안전장치가 되살린 수. */
@@ -646,6 +660,28 @@ export interface FlowCard {
   support: string[];
 }
 
+/** WO-RESET-09 §B-1 — 거시 카드 한 장. 화면이 그대로 그린다. */
+export interface MacroCard {
+  indicatorId: string;
+  indicatorName: string;
+  /** 최신 관측일. **화면에 그대로 쓴다** — 지표는 하루이틀 늦게 나온다. */
+  asOf: string;
+  streakDays: number;
+  direction: "up" | "down";
+  fromText: string;
+  toText: string;
+  changePct: number;
+  /** 추이선 재료. */
+  series: number[];
+  hook: string;
+  support: string[];
+  /** 일반 원리 한 줄 — **예측이 아니다**(§F-1). */
+  principle: string;
+  /** 우리가 최근 짚은 종목 중 유리·불리 쪽. 상세 2걸음이 그대로 그린다. */
+  favored: Array<{ canonical: string; pickedAt: string }>;
+  hurt: Array<{ canonical: string; pickedAt: string }>;
+}
+
 export interface QuietPickResponse {
   asOf: string;
   date: string;
@@ -662,6 +698,11 @@ export interface QuietPickResponse {
    * 하루 최대 2장. 없는 날이 정상이다(§D-2: 아무 날에나 만들지 않는다).
    */
   flowCards?: FlowCard[];
+  /**
+   * WO-RESET-09 — 거시 카드. 흐름 카드와 같은 이유로 픽과 나눠 싣는다(종목이 아니다).
+   * 하루 최대 2장, 화면이 덱 **중간**(3~7번째)에 끼워 넣는다(§E).
+   */
+  macroCards?: MacroCard[];
   /** 회전율 계측(WO-DECK-01 PHASE 5). 구 페이로드에는 없으므로 선택 필드. */
   rotation?: QuietPickRotation;
   qualification: QuietPickQualification;
@@ -811,6 +852,8 @@ export interface QuietPickDeps {
   readInvestorCollection: typeof readInvestorCollection;
   /** WO-RESET-08 §E-3 — 업종 분류표. 크론이 모아둔 것을 **읽기만** 한다. */
   readSectorMap: typeof readSectorMap;
+  /** WO-RESET-09 §A-3 — 거시 지표. 크론이 모아둔 것을 **읽기만** 한다. */
+  readMacroCollection: typeof readMacroCollection;
   /** WO-RESET-03 — 프리웜이 채운 KR 일봉을 **한 쿼리로** 읽는다(§12: 병렬 읽기 금지). */
   readKrCandleCacheMany: typeof readKrCandleCacheMany;
   /** 지수 일봉 — 시장 역행 판정의 비교 대상. */
@@ -836,6 +879,7 @@ const defaultDeps: QuietPickDeps = {
   readAllFactSheets: readAllFactSheetsStrict,
   readInvestorCollection,
   readSectorMap,
+  readMacroCollection,
   readKrCandleCacheMany,
   fetchStockDaily,
 };
@@ -2040,6 +2084,11 @@ export async function buildQuietPickResponse(options: {
    */
   exposureHistory?: ReadonlyMap<string, ExposureEntry[]>;
   /**
+   * WO-RESET-09 §B-3 — 최근 30일 안에 짚은 종목 → 가장 최근에 짚은 날.
+   * 거시 카드가 **연결될 종목이 2곳 미만이면 만들어지지 않는다.**
+   */
+  recentPicks?: ReadonlyMap<string, string>;
+  /**
    * canonical → 어제까지 1페이지에 연속으로 있던 일수(WO-DECK-01 §3).
    * 오늘자를 포함하면 자기 자신 때문에 감점되므로 **오늘은 빼고** 넘겨야 한다.
    */
@@ -2051,6 +2100,7 @@ export async function buildQuietPickResponse(options: {
   const limit = options.limit ?? QUIET_PICK_MAX;
   const priorPicks = options.priorPicks ?? new Map<string, QuietPickPriorState>();
   const exposureHistory = options.exposureHistory ?? new Map<string, ExposureEntry[]>();
+  const recentPicks = options.recentPicks ?? new Map<string, string>();
   const page1Streaks = options.page1Streaks ?? new Map<string, number>();
   const drops: Record<string, number> = {};
   const drop = (reason: string) => { drops[reason] = (drops[reason] ?? 0) + 1; };
@@ -2087,7 +2137,7 @@ export async function buildQuietPickResponse(options: {
   const krUniverse = buildKrPickUniverse(marketRows, deps.vocab);
   const krDefs = krUniverse.defs;
   const krCodes = krDefs.map((d) => d.naverCode!);
-  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets, investorCollection, sectorMap] = await Promise.all([
+  const [histories, insiderRaw, attention, rankMap, usRows, dartInsiders, disclosures, factSheets, investorCollection, sectorMap, macroCollection] = await Promise.all([
     guardedInput("readSupplyDemandHistoryByTickers", deps.readSupplyDemandHistoryByTickers(krCodes, KR_STREAK_WINDOW), {} as Record<string, InvestorFlow[]>),
     guardedInput("fetchInsiderClusterCandidates", deps.fetchInsiderClusterCandidates(), [] as InsiderClusterCandidate[]),
     guardedInput("computeStockAttentionSignals", deps.computeStockAttentionSignals(), {} as Record<string, StockAttentionSignal>),
@@ -2098,6 +2148,7 @@ export async function buildQuietPickResponse(options: {
     guardedInput("readAllFactSheets", deps.readAllFactSheets(), [] as Awaited<ReturnType<typeof readAllFactSheets>>),
     guardedInput("readInvestorCollection", deps.readInvestorCollection(), null as InvestorCollection | null),
     guardedInput("readSectorMap", deps.readSectorMap(), null as Awaited<ReturnType<typeof readSectorMap>>),
+    guardedInput("readMacroCollection", deps.readMacroCollection(), null as Awaited<ReturnType<typeof readMacroCollection>>),
   ]);
 
   /** canonical → 팩트시트. 픽마다 배열을 훑지 않도록 한 번만 만든다. */
@@ -2150,6 +2201,52 @@ export async function buildQuietPickResponse(options: {
     new Map() as Map<string, DailyOhlcv[]>
   );
   const sectorFlow = detectSectorFlows(histories, flowCandles, sectorMap?.byCode ?? {}, date);
+  /**
+   * WO-RESET-09 — 거시 카드. **연결이 카드의 존재 이유다**(§B-3).
+   *
+   * 지표가 움직인 것만으로는 카드가 안 된다 — 그건 그냥 뉴스이고, 뉴스 앱과 경쟁하지
+   * 않는다(§F-3). **우리가 최근 30일 안에 짚은 종목 2곳 이상**과 닿을 때만 만든다.
+   */
+  const macroCards: MacroCard[] = (() => {
+    if (!macroCollection?.series) return [];
+    const sectorByCode = sectorMap?.byCode ?? {};
+    /** canonical → 업종. 최근 픽의 업종을 알아야 연결할 수 있다. */
+    const codeByCanonical = new Map(krDefs.filter((d) => d.naverCode).map((d) => [d.canonical, d.naverCode!]));
+    const linkPicks: RecentPick[] = [...recentPicks.entries()].map(([canonical, pickedAt]) => {
+      const code = codeByCanonical.get(canonical);
+      const sector = code ? sectorByCode[code] : undefined;
+      return { canonical, pickedAt, ...(sector ? { sector } : {}) };
+    });
+
+    const out: MacroCard[] = [];
+    for (const indicator of MACRO_INDICATORS) {
+      if (out.length >= MACRO_MAX_CARDS) break;
+      const points = macroCollection.series[indicator.id];
+      if (!points || points.length === 0) continue;
+      const move = detectMacroMove({ id: indicator.id, points });
+      if (!move) continue;
+      const link = linkMacroToPicks(move, linkPicks);
+      if (!link) continue; // 연결 없는 뉴스는 만들지 않는다
+      out.push({
+        indicatorId: indicator.id,
+        indicatorName: indicator.name,
+        asOf: move.asOf,
+        streakDays: move.streakDays,
+        direction: move.direction,
+        fromText: formatMacroValue(indicator, move.from),
+        toText: formatMacroValue(indicator, move.to),
+        changePct: Math.round(move.changePct * 100) / 100,
+        series: move.series,
+        hook: macroHook(move),
+        support: macroSupport(link),
+        principle: link.principle,
+        favored: link.favored.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
+        hurt: link.hurt.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
+      });
+    }
+    return out;
+  })();
+
   const flowCards: FlowCard[] = sectorFlow.pairs.map((pair) => ({
     fromSector: pair.from.sector,
     toSector: pair.to.sector,
@@ -2939,6 +3036,8 @@ export async function buildQuietPickResponse(options: {
       exposure: exposureCensus,
       // WO-RESET-08 — 흐름 집계 계측. `unclassified` 가 크면 분류표가 낡은 것이다.
       sectorFlow: { ...sectorFlow.census, cards: flowCards.length },
+      // WO-RESET-09 — 거시 카드 계측. `recentPicks` 가 0 이면 연결할 대상이 없다는 뜻이다.
+      macro: { recentPicks: recentPicks.size, cards: macroCards.length },
       /**
        * 읽어온 팩트시트 수. 0 이면 3걸음이 통째로 빈다 — 그게 **장애인지 그날의 사실인지**
        * `inputFailures` 와 함께 봐야 갈린다(그래서 strict 로 읽는다).
@@ -2980,6 +3079,7 @@ export async function buildQuietPickResponse(options: {
       ...(priceSignalCensus ? { priceSignals: priceSignalCensus } : {}),
     },
     ...(flowCards.length > 0 ? { flowCards } : {}),
+    ...(macroCards.length > 0 ? { macroCards } : {}),
     source: "quiet-pick-engine",
   };
 }

@@ -31,6 +31,7 @@
  * `업종 중간값 18배보다 낮아요` 는 사실이고, `저평가예요` 는 판단이다.
  */
 
+import { josa } from "./josa";
 import type { SectorStat } from "./sector-stats";
 
 /** 한 줄 — 숫자와 **그 숫자를 읽는 문장**. 문장이 없으면 이 줄은 만들어지지 않는다. */
@@ -91,7 +92,7 @@ function bandPhrase(percentile: number): string {
 function versusSector(mine: number, theirs: number, unit: (v: number) => string, label: string): string {
   const gap = (mine - theirs) / theirs;
   const base = `${label} 중간값 ${unit(theirs)}`;
-  if (Math.abs(gap) < 0.05) return `${base}과 비슷해요`;
+  if (Math.abs(gap) < 0.05) return `${base}${josa(base, "와과")} 비슷해요`;
   return `${base}보다 ${mine < theirs ? "낮아요" : "높아요"}`;
 }
 

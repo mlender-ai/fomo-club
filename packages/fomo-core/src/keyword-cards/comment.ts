@@ -153,7 +153,7 @@ function buildWhy(kw: ScoredKeyword): string {
   }
   return (
     `오늘 ${kw.keyword} 관련 소식이 여기저기서 돌았어요. ` +
-    `${phrase}이 같이 묶여 오르내리니까 '나도 봐야 하나' 하는 사람이 늘어난 거예요. 아래 실제 뉴스가 그 근거예요.`
+    `${phrase}${josa(phrase, "이가")} 같이 묶여 오르내리니까 '나도 봐야 하나' 하는 사람이 늘어난 거예요. 아래 실제 뉴스가 그 근거예요.`
   );
 }
 

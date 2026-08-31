@@ -14,6 +14,8 @@
  * 두 시점의 보유 내역을 **비교해서 무슨 일이 있었는지** 말한다. 수집·파싱은 밖에서 한다.
  */
 
+
+import { josa } from "./josa";
 /** 한 종목 보유. 소스가 무엇이든 이 모양으로 정규화해서 넣는다. */
 export interface InvestorHolding {
   /** 티커. **이게 없으면 넣지 않는다** — 어느 종목인지 모르면 카드를 만들 수 없다. */
@@ -180,14 +182,18 @@ export function isFreshDisclosure(
  * `따라 사세요` 류를 절대 쓰지 않는다(WO 하지 말 것). 벌어진 일만 말한다.
  */
 export function investorHook(investor: InvestorProfile, change: HoldingChange): string {
-  const who = investor.name;
-  if (change.kind === "new") return `${who}가\n이 종목을 처음 샀어요`;
-  if (change.kind === "exited") return `${who}가\n이 종목을 전부 팔았어요`;
+  /**
+   * 조사는 받침 따라. **`캐시 우드가`는 맞고 `워런 버핏가`는 틀린다** — 사람 이름은
+   * 받침이 섞여 있어 고정 조사가 반드시 어딘가에서 틀린다.
+   */
+  const who = `${investor.name}${josa(investor.name, "이가")}`;
+  if (change.kind === "new") return `${who}\n이 종목을 처음 샀어요`;
+  if (change.kind === "exited") return `${who}\n이 종목을 전부 팔았어요`;
   if (change.kind === "added") {
-    if ((change.multiple ?? 1) >= HOLDING_DOUBLED) return `${who}가\n보유량을 두 배로 늘렸어요`;
-    return `${who}가\n이 종목을 더 샀어요`;
+    if ((change.multiple ?? 1) >= HOLDING_DOUBLED) return `${who}\n보유량을 두 배로 늘렸어요`;
+    return `${who}\n이 종목을 더 샀어요`;
   }
-  return `${who}가\n이 종목을 줄였어요`;
+  return `${who}\n이 종목을 줄였어요`;
 }
 
 /** 여러 명이 같은 종목을 샀을 때 (§B-2). 두 명 이상일 때만 쓴다. */

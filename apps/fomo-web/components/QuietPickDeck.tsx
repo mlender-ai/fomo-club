@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CardSlotPayload, QuietPick, QuietPickFlowCard, QuietWatchItem } from "@/lib/fomoApi";
+import type { CardSlotPayload, QuietPick, QuietPickFlowCard, QuietPickMacroCard, QuietWatchItem } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchQuietPicks } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { staleLabel } from "@/lib/deckStale";
@@ -10,6 +10,7 @@ import { fetchScorecardPicksCached, type ScorecardPick } from "@/lib/judgmentLed
 import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { haptic } from "@/lib/haptics";
 import { FlowCard } from "@/components/FlowCard";
+import { MacroCard } from "@/components/MacroCard";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { reveal } from "@/lib/cardReveal";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
@@ -73,6 +74,7 @@ type Status = "loading" | "ready" | "offline" | "server-error";
 export function QuietPickDeck() {
   const [picks, setPicks] = useState<QuietPick[]>([]);
   const [flowCards, setFlowCards] = useState<QuietPickFlowCard[]>([]);
+  const [macroCards, setMacroCards] = useState<QuietPickMacroCard[]>([]);
   /**
    * WO-SUB-08 3슬롯 — canonical → 상세용 페이로드.
    *
@@ -129,6 +131,7 @@ export function QuietPickDeck() {
       .then((res) => {
         setPicks(res.picks ?? []);
         setFlowCards(res.flowCards ?? []);
+        setMacroCards(res.macroCards ?? []);
         setAsOf(res.asOf);
         setIdx(0);
         settle("ready");
@@ -170,15 +173,33 @@ export function QuietPickDeck() {
    * 두 번째 장이 있으면 조금 뒤(5번째)에 둔다. 하루 최대 2장은 서버가 이미 지킨다.
    */
   const deckSlots = useMemo(() => {
-    const out: Array<{ kind: "pick"; pick: QuietPick } | { kind: "flow"; card: QuietPickFlowCard }> =
-      picks.map((pick) => ({ kind: "pick" as const, pick }));
-    const positions = [1, 4];
-    flowCards.slice(0, positions.length).forEach((card, i) => {
-      const at = Math.min(positions[i]!, out.length);
-      out.splice(at, 0, { kind: "flow", card });
+    type Slot =
+      | { kind: "pick"; pick: QuietPick }
+      | { kind: "flow"; card: QuietPickFlowCard }
+      | { kind: "macro"; card: QuietPickMacroCard };
+    const out: Slot[] = picks.map((pick) => ({ kind: "pick" as const, pick }));
+
+    /**
+     * 흐름 카드는 **앞쪽**(2·5번째) — 시장 전체 이야기라 먼저 보면 맥락이 잡힌다.
+     * 다만 맨 앞은 아니다: 첫 카드는 종목이어야 이 앱이 무엇인지가 먼저 전해진다.
+     */
+    [1, 4].forEach((at, i) => {
+      const card = flowCards[i];
+      if (card) out.splice(Math.min(at, out.length), 0, { kind: "flow", card });
+    });
+
+    /**
+     * 거시 카드는 **중간**(3~7번째, WO-RESET-09 §E).
+     *
+     * *"앞쪽 3장은 종목 카드로 둔다. 뉴스가 먼저 나오면 이 앱이 뉴스 앱처럼 보인다."*
+     * 흐름 카드를 끼운 **뒤** 자리를 잡아야 실제 위치가 3번째 아래로 안 내려간다.
+     */
+    [3, 6].forEach((at, i) => {
+      const card = macroCards[i];
+      if (card) out.splice(Math.min(at, out.length), 0, { kind: "macro", card });
     });
     return out;
-  }, [picks, flowCards]);
+  }, [picks, flowCards, macroCards]);
 
   const current = deckSlots[idx];
 
@@ -188,7 +209,7 @@ export function QuietPickDeck() {
     recordPickTelemetry({
       event: "card_view",
       position: idx + 1,
-      ...(current.kind === "pick" ? slotLabel(current.pick.subject.canonical) : { slot: "flow" }),
+      ...(current.kind === "pick" ? slotLabel(current.pick.subject.canonical) : { slot: current.kind }),
     });
     const shownAt = Date.now();
     return () => {
@@ -394,10 +415,12 @@ export function QuietPickDeck() {
             role="button"
             tabIndex={0}
             /* 가려진 카드의 라벨에 종목명을 쓰지 않는다 — 마스킹이 시각 사용자에게만 걸리면 안 된다. */
-            aria-label={slot.kind === "flow" ? "자금 흐름" : "어떤 회사인지 보기"}
+            aria-label={slot.kind === "flow" ? "자금 흐름" : slot.kind === "macro" ? "거시 지표" : "어떤 회사인지 보기"}
           >
             {slot.kind === "flow" ? (
               <FlowCard card={slot.card} />
+            ) : slot.kind === "macro" ? (
+              <MacroCard card={slot.card} />
             ) : (
               <QuietPickCard pick={withRecord(slot.pick)} onDetail={() => openDetail("button")} revealed={cardRevealed} />
             )}
