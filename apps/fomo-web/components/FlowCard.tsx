@@ -1,5 +1,6 @@
 "use client";
 
+import { CardShell, CardCta } from "@/components/CardShell";
 import type { QuietPickFlowCard } from "@/lib/fomoApi";
 
 /**
@@ -24,9 +25,13 @@ export function FlowCard({ card, onDetail }: { card: QuietPickFlowCard; onDetail
   const width = (v: number) => (scale > 0 ? `${Math.max(6, (Math.abs(v) / scale) * 100)}%` : "0%");
 
   return (
-    <div className="flex flex-col rounded-card bg-ds-surface-1 p-s4" data-testid="flow-card" data-card-type="flow">
-      {/* 종목 카드가 아니라는 것을 맨 위에서 밝힌다 — 가릴 종목명도 없다(§B-4). */}
-      <p className="font-mono text-ds-label text-ds-text-3">돈이 옮겨가고 있어요</p>
+    <CardShell
+      kind="flow"
+      testId="flow-card"
+      /* 종목 카드가 아니라는 것을 맨 위에서 밝힌다 — 가릴 종목명도 없다(§B-4). */
+      eyebrow={<p className="font-mono text-ds-label text-ds-text-3">돈이 옮겨가고 있어요</p>}
+      cta={onDetail ? <CardCta label="어떤 종목들인지 보기" onClick={onDetail} testId="flow-cta" /> : undefined}
+    >
 
       <p
         className="mt-[20px] whitespace-pre-line break-keep text-ds-hook text-ds-text-1"
@@ -71,16 +76,6 @@ export function FlowCard({ card, onDetail }: { card: QuietPickFlowCard; onDetail
         </div>
       )}
 
-      {onDetail && (
-        <button
-          type="button"
-          onClick={onDetail}
-          data-testid="flow-cta"
-          className="tap-button mt-[18px] flex h-touch w-full items-center justify-center rounded-block border-hair border-ds-border bg-ds-surface-2 text-[14px] text-ds-text-1"
-        >
-          어떤 종목들인지 보기
-        </button>
-      )}
-    </div>
+    </CardShell>
   );
 }

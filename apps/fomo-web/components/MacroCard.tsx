@@ -1,5 +1,6 @@
 "use client";
 
+import { CardShell, CardCta } from "@/components/CardShell";
 import { Sparkline } from "@/components/Sparkline";
 import type { QuietPickMacroCard } from "@/lib/fomoApi";
 
@@ -23,9 +24,13 @@ import type { QuietPickMacroCard } from "@/lib/fomoApi";
  */
 export function MacroCard({ card, onDetail }: { card: QuietPickMacroCard; onDetail?: () => void }) {
   return (
-    <div className="flex flex-col rounded-card bg-ds-surface-1 p-s4" data-testid="macro-card" data-card-type="macro">
-      {/* 종목 카드가 아니라는 것을 맨 위에서 밝힌다 — 가릴 종목명이 없다. */}
-      <p className="font-mono text-ds-label text-ds-text-3">{`${card.indicatorName} · ${card.asOf} 기준`}</p>
+    <CardShell
+      kind="macro"
+      testId="macro-card"
+      /* 종목 카드가 아니라는 것을 맨 위에서 밝힌다 — 가릴 종목명이 없다. */
+      eyebrow={<p className="font-mono text-ds-label text-ds-text-3">{`${card.indicatorName} · ${card.asOf} 기준`}</p>}
+      cta={onDetail ? <CardCta label="어떤 종목인지 보기" onClick={onDetail} testId="macro-cta" /> : undefined}
+    >
 
       <p
         className="mt-[20px] whitespace-pre-line break-keep text-ds-hook text-ds-text-1"
@@ -63,16 +68,6 @@ export function MacroCard({ card, onDetail }: { card: QuietPickMacroCard; onDeta
         </div>
       )}
 
-      {onDetail && (
-        <button
-          type="button"
-          onClick={onDetail}
-          data-testid="macro-cta"
-          className="tap-button mt-[18px] flex h-touch w-full items-center justify-center rounded-block border-hair border-ds-border bg-ds-surface-2 text-[14px] text-ds-text-1"
-        >
-          어떤 종목인지 보기
-        </button>
-      )}
-    </div>
+    </CardShell>
   );
 }

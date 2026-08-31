@@ -46,15 +46,21 @@ describe("완료 기준 1 — 헤더·덱 타이틀에 accent 가 없다", () =>
   });
 });
 
-describe("완료 기준 2 — N/10·N곳 남음 폐지, 점 인디케이터", () => {
+describe("완료 기준 2 — 진행 표시 전부 폐지 (2026-08-31 개정)", () => {
   it("덱에 카운터 텍스트가 없다", () => {
     expect(code(deck)).not.toContain("곳 남음");
     expect(code(deck)).not.toMatch(/\$\{idx \+ 1\}\/\$\{picks\.length\}/);
   });
 
-  it("12장을 넘으면 점 대신 mono 텍스트로 바꾼다", () => {
-    expect(code(deck)).toContain("DOTS_MAX");
-    expect(code(deck)).toMatch(/total > DOTS_MAX/);
+  /**
+   * 종전 기준은 "12장을 넘으면 점 대신 mono 텍스트"였다. 점 자체를 폐지하면서 그 분기도
+   * 같이 사라졌다 — 점은 텍스트보다 조용할 뿐 하는 말이 같고, 순환 덱에서는 점이 말하는
+   * 「끝」이 사실도 아니다(DS-02 §5 · DS-07 §4-1).
+   */
+  it("점 인디케이터도 mono 카운터도 남아 있지 않다", () => {
+    expect(code(deck)).not.toContain("DOTS_MAX");
+    expect(code(deck)).not.toContain("DeckProgress");
+    expect(code(deck)).not.toContain('data-testid="deck-progress"');
   });
 });
 

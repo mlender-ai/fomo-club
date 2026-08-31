@@ -4,13 +4,13 @@ import type { QuietPick, QuietPickCardType } from "@/lib/fomoApi";
 import { subjectName, subjectTicker } from "@/lib/companyDisplay";
 import { trustedSector } from "@/lib/sectorTrust";
 import { isRevealed } from "@/lib/cardReveal";
-import { haptic } from "@/lib/haptics";
 import { pickHook } from "@/lib/pickCopyRepair";
 import { displayChangePct } from "@/lib/pickChange";
 import { Sparkline } from "@/components/Sparkline";
 import { DivergenceChart } from "@/components/DivergenceChart";
 import { StreakBars } from "@/components/StreakBars";
 import { RatioBar } from "@/components/RatioBar";
+import { CardShell, CardCta } from "@/components/CardShell";
 import { WeightGauge } from "@/components/WeightGauge";
 import { VolumeBars } from "@/components/VolumeBars";
 
@@ -237,19 +237,28 @@ export function QuietPickCard({
   })();
 
   return (
-    <div
-      className="flex flex-col rounded-card bg-ds-surface-1 p-s4"
-      data-testid="quiet-pick-card"
-      data-card-type={cardType?.type ?? "legacy"}
-      data-revealed={isOpen ? "true" : "false"}
+    <CardShell
+      kind={cardType?.type ?? "legacy"}
+      testId="quiet-pick-card"
+      marks={{ "data-revealed": isOpen ? "true" : "false" }}
       /**
        * 스크린리더는 카드를 **한 덩어리로** 읽는다(DS-06 §7). 가려진 카드에서는 종목명을
        * 읽어주지 않는다 — 그러면 마스킹이 시각 사용자에게만 걸리는 장치가 된다.
        */
-      role="group"
-      aria-label={[isOpen ? displayName(pick) : identityLine, hook.replace(/\n/g, " "), support.join(". ")]
+      ariaLabel={[isOpen ? displayName(pick) : identityLine, hook.replace(/\n/g, " "), support.join(". ")]
         .filter(Boolean)
         .join(". ")}
+      /* ⑥ CTA 하나 — 세 카드가 같은 `CardCta` 를 쓴다(DS-07 §2). */
+      cta={
+        onDetail ? (
+          <CardCta
+            /* 가렸다는 사실을 CTA 가 명시한다 — 안 그러면 낚시로 읽힌다(§2-4). */
+            label={isOpen ? "자세히 보기" : "어떤 회사인지 보기"}
+            onClick={onDetail}
+            testId="pick-cta"
+          />
+        ) : undefined
+      }
     >
       {/* ① 정체 — 가려진 동안은 국가·섹터·시총 한 줄. 열고 나면 종목명·티커가 그 위에 온다. */}
       {/* WO-RESET-06 §B-2 — 다시 나온 카드임을 **맨 위에서** 밝힌다. 작게, 회색. */}
@@ -339,22 +348,6 @@ export function QuietPickCard({
         </div>
       )}
 
-      {/* ⑥ CTA 하나 — surface-2 + 0.5px border. accent 를 쓰지 않는다(§3-⑥·§7). */}
-      {onDetail && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            haptic();
-            onDetail();
-          }}
-          className="tap-button mt-[18px] h-btn-primary w-full rounded-pill border-hair border-ds-border bg-ds-surface-2 text-ds-body font-medium text-ds-text-1 active:bg-[#202020]"
-          data-testid="pick-cta"
-        >
-          {/* 가렸다는 사실을 CTA 가 명시한다 — 안 그러면 낚시로 읽힌다(§2-4). */}
-          {isOpen ? "자세히 보기" : "어떤 회사인지 보기"}
-        </button>
-      )}
-    </div>
+    </CardShell>
   );
 }

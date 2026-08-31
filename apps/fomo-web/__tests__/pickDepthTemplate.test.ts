@@ -32,7 +32,8 @@ function tsxFiles(root: string): string[] {
 
 describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
   it("픽은 전용 뎁스로 열고, 레거시 StockInsightView 로 열지 않는다", () => {
-    expect(deck).toContain("<QuietPickDepth pick={selected}");
+    expect(deck).toContain("<QuietPickDepth");
+    expect(deck).toContain("pick={selected}");
     // selected(픽)를 레거시 뎁스로 여는 경로가 없어야 한다.
     expect(deck).not.toContain("<StockInsightView\n          stock={selected.subject.canonical}");
   });
@@ -106,9 +107,15 @@ describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", (
     expect(body.match(/data-testid="depth-hook"/g)?.length ?? 0).toBe(1);
   });
 
-  it("surface-2 박스가 화면에 없다 — 우리 기록을 뺀 뒤로 쓰는 곳이 없다", () => {
+  it("surface-2 는 **버튼에만** 쓴다 — 본문에 박스를 두지 않는다", () => {
     const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
-    expect(body).not.toContain("bg-ds-surface-2");
+    /**
+     * 하단 고정 바의 보조 버튼(닫기)이 surface-2 를 쓴다(2026-08-31). 그건 버튼이지
+     * 「우리 기록」 같은 정보 박스가 아니다 — 규칙이 금한 것은 본문 박스다.
+     */
+    for (const m of body.match(/bg-ds-surface-2[^"]*"/g) ?? []) {
+      expect(body.slice(Math.max(0, body.indexOf(m) - 400), body.indexOf(m))).toMatch(/<button/);
+    }
   });
 
   it("accent 는 **행동 버튼**에만 쓴다 — 강조가 여럿이면 강조가 아니다", () => {
@@ -214,8 +221,9 @@ describe("로고 — KR·US 모두 서버 프록시로 채운다", () => {
 });
 
 describe("모바일 — 하단 잘림 방지", () => {
-  it("본문 스크롤 영역에 하단 여백이 있다 (DS-03 §2 — 40px + safe-area)", () => {
-    expect(depth).toContain("pb-[calc(40px+env(safe-area-inset-bottom))]");
+  it("본문 스크롤 영역에 하단 여백이 있다 — **고정 바 높이만큼**(2026-08-31)", () => {
+    // 40px → 112px: 하단 고정 바(버튼 44 + 여백)에 마지막 줄이 가리면 안 된다.
+    expect(depth).toContain("pb-[calc(112px+env(safe-area-inset-bottom))]");
   });
 
   it("iOS 주소창 대응 — 100vh 대신 dvh 로 실제 뷰포트에 맞춘다(잘림 근본 원인)", () => {

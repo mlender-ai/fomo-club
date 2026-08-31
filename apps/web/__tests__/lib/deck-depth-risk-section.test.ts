@@ -64,6 +64,8 @@ describe("덱 뎁스에서 「틀리는 경우」를 뺐다 (WO-RESET-05 §0-2)"
   });
 
   it("덱의 자세히가 여는 것이 QuietPickDepth 라는 전제가 유지된다", () => {
-    expect(DECK).toContain("<QuietPickDepth pick={selected}");
+    // 상세를 닫으면 다음 카드로 넘기는 핸들러가 붙어 여러 줄로 갈렸다(2026-08-31).
+    expect(DECK).toContain("<QuietPickDepth");
+    expect(DECK).toContain("pick={selected}");
   });
 });
