@@ -32,9 +32,20 @@ describe("지표 움직임 — 아무 날에나 카드를 만들지 않는다", 
     expect(byId["usdkrw"]).toBeLessThan(byId["vix"]!);
   });
 
-  it("관측이 모자라면 판정하지 않는다", () => {
-    expect(detectMacroMove(series("usdkrw", [1380, 1400]))).toBeNull();
+  it("관측이 모자라면 연속으로는 판정하지 않는다", () => {
+    /**
+     * 두 점은 연속 3일이 못 된다. 다만 **급변으로는 잡힐 수 있다**(MACRO-01) — 하루에
+     * 임계를 넘게 움직이면 연속이 아니어도 사건이다. 그래서 연속 판정이 안 된다는 것을
+     * 보려면 급변에도 안 걸리는 폭을 써야 한다.
+     */
+    expect(detectMacroMove(series("usdkrw", [1380, 1381]))).toBeNull();
     expect(MACRO_MIN_STREAK).toBe(3);
+
+    // 같은 두 점이라도 하루 변동이 크면 급변으로 잡힌다 — 연속이 아니라 급변이다.
+    // 1,400·1,450 같은 기준선을 **넘지 않는** 구간을 고른다. 넘으면 `level` 이 먼저 이긴다.
+    const spike = detectMacroMove(series("usdkrw", [1420, 1445]))!;
+    expect(spike.kind).toBe("spike");
+    expect(spike.streakDays).toBe(1);
   });
 
   it("최신 관측일을 남긴다 — 지표는 하루이틀 늦게 나온다", () => {
@@ -95,8 +106,17 @@ describe("예측하지 않는다 (§F-1 · 완료 확인 8)", () => {
     }
   });
 
-  it("마지막 보조 줄이 **우리 종목과의 연결**이다 — 그게 우리만 말할 수 있는 것이다", () => {
-    expect(macroSupport(link)[1]).toBe("우리가 최근 짚은 종목 중 2곳이 여기 닿아요");
+  it("보조 줄이 **우리 종목과의 연결 한 줄뿐**이다 — 그게 우리만 말할 수 있는 것이다", () => {
+    /**
+     * 종전에는 `[값 변화, 연결]` 두 줄이었다. 그런데 카드가 값 변화를 이미 위에 그리고
+     * 있어서 **같은 숫자가 한 카드에 두 번** 나왔다(MACRO-01 §D-2). 값은 카드가 그리고
+     * 이 줄은 존재 이유 하나만 말한다.
+     */
+    const support = macroSupport(link);
+    expect(support).toHaveLength(1);
+    expect(support[0]).toBe("우리가 최근 짚은 종목 중 2곳이 여기 닿아요");
+    // 값이 여기 섞여 들어오면 카드에서 중복된다.
+    expect(support[0]).not.toMatch(/→/);
   });
 });
 

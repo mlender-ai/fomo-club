@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 import {
   formatSignalResumeBadge,
   inferStandardSignalTypes,
@@ -81,12 +82,6 @@ type UndoEntry = {
   card: DeckCard;
 };
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
-  );
-}
 
 const MARKET_LABEL: Record<string, string> = {
   KOSPI: "코스피",

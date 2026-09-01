@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 import type { DailyOhlcv } from "@fomo/core";
 import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER } from "@fomo/core";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
@@ -24,9 +25,6 @@ function exposurePrice(pick: QuietPick, value: number): string {
   return pick.subject.country === "US" ? `$${value.toFixed(2)}` : `${Math.round(value).toLocaleString("en-US")}원`;
 }
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-}
 
 /**
  * 상세 페이지 — DS-03(`docs/design/DS-03_DETAIL.md`). 토큰은 DS-00, 카드는 DS-01.

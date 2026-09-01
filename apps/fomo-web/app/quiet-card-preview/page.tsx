@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
+
 import type { QuietPick, QuietPickCardType } from "@/lib/fomoApi";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { FlowCard } from "@/components/FlowCard";
 import { MacroCard } from "@/components/MacroCard";
+import { MacroDepth } from "@/components/MacroDepth";
 
 /**
  * 픽 카드 렌더 프리뷰 — WO-HOOK-01 검증용 픽스처(`e2e/quiet-card.spec.ts` 가 boundingBox 로 잰다).
@@ -186,7 +189,10 @@ const FLOW = {
 const MACRO = {
   indicatorId: "wti",
   indicatorName: "국제 유가",
-  asOf: "8월 29일",
+  asOf: "2026-08-31",
+  asOfLabel: "어제 기준",
+  kind: "streak",
+  category: "commodity",
   streakDays: 3,
   direction: "down" as const,
   fromText: "$71.20",
@@ -196,11 +202,16 @@ const MACRO = {
   hook: "국제 유가가 3일째\n내리고 있어요",
   support: ["최근 짚은 곳 중 4곳이 여기 닿아요"],
   principle: "유가가 내리면 기름을 많이 쓰는 회사에 유리해요",
-  favored: [],
-  hurt: [],
+  favored: [
+    { canonical: "대한항공", pickedAt: "2026-08-24" },
+    { canonical: "제주항공", pickedAt: "2026-08-26" },
+  ],
+  hurt: [{ canonical: "S-Oil", pickedAt: "2026-08-22" }],
 };
 
 export default function QuietCardPreview() {
+  /** 거시 상세를 이 화면에서 열어 본다(MACRO-01 §D-2) — 상세가 없으면 CTA 가 거짓말이다. */
+  const [macroOpen, setMacroOpen] = useState(false);
   return (
     <main className="mx-auto w-full max-w-md space-y-s5 bg-ds-bg p-gutter">
       <h1 className="text-ds-title text-ds-text-1">메인 카드 — WO-HOOK-01 3형</h1>
@@ -225,9 +236,11 @@ export default function QuietCardPreview() {
       <section data-testid="card-case" data-case="macro">
         <p className="mb-s2 font-mono text-ds-label text-ds-text-3">거시 뉴스 카드 (DS-07 §1)</p>
         <div className="rounded-card">
-          <MacroCard card={MACRO} onDetail={() => {}} />
+          <MacroCard card={MACRO} onDetail={() => setMacroOpen(true)} />
         </div>
       </section>
+
+      {macroOpen && <MacroDepth card={MACRO} onClose={() => setMacroOpen(false)} />}
     </main>
   );
 }
