@@ -61,6 +61,32 @@ jobs:
             curl -fsS "$URL"
           fi
 
+      # 거래량 이력 부트스트랩 (US-02 B-2) — **별도 엔드포인트**.
+      #
+      # 이 작업을 위 프리웜 안에 넣었다가 `maxDuration` 60초를 넘겨 504 로 죽였다
+      # (2026-09-01). 시세 캐시를 살려두는 일과 있으면 좋은 일을 같은 함수에 두면,
+      # 있으면 좋은 일이 살아 있어야 하는 일을 죽인다. 그래서 스텝도 분리하고
+      # **실패해도 워크플로를 죽이지 않는다**(`continue-on-error`) — 시세는 이미 채워졌다.
+      - name: Bootstrap US volume history
+        if: steps.slot.outputs.slot == '1'
+        continue-on-error: true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -uo pipefail
+          URL="https://fomo-club-backend.vercel.app/api/fomo/cron/us-volume-bootstrap"
+          if [ -n "${CRON_SECRET:-}" ]; then
+            code="$(curl -sS -o /tmp/us-volume.json -w '%{http_code}' --max-time 70 -H "Authorization: Bearer ${CRON_SECRET}" "$URL" || echo "000")"
+          else
+            code="$(curl -sS -o /tmp/us-volume.json -w '%{http_code}' --max-time 70 "$URL" || echo "000")"
+          fi
+          echo "volume-bootstrap http=${code}"
+          head -c 400 /tmp/us-volume.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::warning title=거래량 부트스트랩 실패::http=${code} — 시세 캐시는 무관하다. 다음 판이 재시도한다"
+          fi
+
       # WO-OPS-504: 이 스텝이 07-27부터 18일간 `curl: (22) ... 504` 한 줄만 남기고 죽었다.
       # 그 한 줄로는 몇 초에 끊겼는지도, 무엇이 오래됐는지도 알 수 없었다. 이제
       # ① `--max-time` 으로 우리가 먼저 끊고 ② HTTP 코드·소요초를 남기고 ③ `meta.stale` 을 본다.

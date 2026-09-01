@@ -43,11 +43,6 @@ function passesUsCapCuration(row: DiscoveryMarketRow): boolean {
 export interface UsMarketQuoteCacheWriteOptions {
   sessionDate: string;
   slot: number;
-  /**
-   * 일봉에서 한 번에 받아온 과거 거래량(심볼 → 세션일 → 거래량).
-   * 세션 누적을 기다리지 않고 첫날부터 각성을 판정할 수 있게 하는 부트스트랩.
-   */
-  volumeHistorySeed?: Map<string, Record<string, number>>;
 }
 
 export interface UsMarketQuoteCacheReadOptions {
@@ -178,14 +173,9 @@ export async function writeUsMarketQuoteRows(
   await ensureUsMarketQuoteCacheTable();
   const quoteRows = rows.filter((row) => row.country === "US" && hasUsQuote(row));
   const previousHistories = await readVolumeHistories(quoteRows.map((row) => row.symbol.toUpperCase()));
-  const seeded = options.volumeHistorySeed;
   const stored: StoredUsMarketRow[] = quoteRows.map((row) => {
     const symbol = row.symbol.toUpperCase();
-    const history: Record<string, number> = {
-      ...(previousHistories.get(symbol) ?? {}),
-      // 일봉 부트스트랩이 있으면 그것이 정본이다(과거 세션까지 한 번에 채운다).
-      ...(seeded?.get(symbol) ?? {}),
-    };
+    const history: Record<string, number> = { ...(previousHistories.get(symbol) ?? {}) };
     if (typeof row.tradingValue === "number" && row.tradingValue > 0) {
       history[options.sessionDate] = row.tradingValue;
     }
@@ -222,7 +212,62 @@ export async function writeUsMarketQuoteRows(
   };
 }
 
-/** 거래량 이력이 아직 없는 심볼 — 프리웜이 일봉으로 메울 대상을 고른다. */
+/**
+ * 일봉에서 받아온 과거 거래량을 **기존 행에 병합**한다 (US-02 B-2 · `cron/us-volume-bootstrap`).
+ *
+ * 시세는 건드리지 않는다 — `"row"` 안의 `volumeHistory` · `volumeRatio20d` · `avgVolume20d`
+ * 세 키만 갱신한다. 그래서 이 크론이 실패하거나 늦어도 시세 캐시는 멀쩡하다
+ * (부가 작업이 필수 작업을 죽이지 않게 나눈 이유 — 라우트 주석 참조).
+ *
+ * 기존 이력과 **합집합**으로 병합한다. 세션 누적분(프리웜이 매일 눌러 담은 오늘 거래량)을
+ * 일봉이 덮어쓰지 않게 하기 위해서다 — 둘은 같은 값을 다른 경로로 본 것이고, 이미 있는 쪽이
+ * 더 최신일 수 있다.
+ */
+export async function seedUsVolumeHistories(
+  seed: ReadonlyMap<string, Record<string, number>>,
+  sessionDate: string
+): Promise<{ written: number; rowsWithVolumeRatio: number }> {
+  if (seed.size === 0) return { written: 0, rowsWithVolumeRatio: 0 };
+  await ensureUsMarketQuoteCacheTable();
+  const symbols = [...seed.keys()];
+  const previous = await readVolumeHistories(symbols);
+  const payloads: string[] = [];
+  const keys: string[] = [];
+  let withRatio = 0;
+  for (const symbol of symbols) {
+    // 이미 있는 값이 이긴다 — 프리웜이 눌러 담은 오늘치를 일봉 스냅샷이 되돌리지 않게.
+    const merged = trimVolumeHistory({ ...(seed.get(symbol) ?? {}), ...(previous.get(symbol) ?? {}) });
+    if (Object.keys(merged).length === 0) continue;
+    const computed = volumeRatioFromHistory(merged, sessionDate);
+    if (computed) withRatio += 1;
+    keys.push(symbol);
+    payloads.push(
+      JSON.stringify({
+        volumeHistory: merged,
+        ...(computed
+          ? { volumeRatio20d: Math.round(computed.ratio * 100) / 100, avgVolume20d: Math.round(computed.avg) }
+          : {}),
+      })
+    );
+  }
+  if (keys.length === 0) return { written: 0, rowsWithVolumeRatio: 0 };
+  const CHUNK = 200;
+  for (let i = 0; i < keys.length; i += CHUNK) {
+    const symbolChunk = keys.slice(i, i + CHUNK);
+    const payloadChunk = payloads.slice(i, i + CHUNK);
+    // `||` 는 얕은 병합이다 — `row` 의 나머지 키(시세)는 그대로 두고 위 세 키만 덮는다.
+    // 캐시에 없는 심볼은 `WHERE` 가 걸러 새 행을 만들지 않는다(시세 없는 껍데기 금지).
+    await prisma.$executeRaw`
+      UPDATE "UsMarketQuoteCache" AS c
+      SET "row" = c."row" || t.p::jsonb
+      FROM unnest(${symbolChunk}::text[], ${payloadChunk}::text[]) AS t(s, p)
+      WHERE c."symbol" = t.s
+    `;
+  }
+  return { written: keys.length, rowsWithVolumeRatio: withRatio };
+}
+
+/** 거래량 이력이 아직 없는 심볼 — 부트스트랩 크론이 일봉으로 메울 대상을 고른다. */
 export async function symbolsMissingVolumeHistory(
   symbols: readonly string[],
   minSessions = VOLUME_HISTORY_MIN_SESSIONS
