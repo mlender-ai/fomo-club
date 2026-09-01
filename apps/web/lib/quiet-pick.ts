@@ -77,10 +77,14 @@ import { readMacroCollection } from "./macro-store";
 import {
   MACRO_INDICATORS,
   detectMacroMove,
+  isMacroFresh,
   linkMacroToPicks,
+  macroFreshnessLabel,
   macroHook,
   macroSupport,
+  selectMacroMoves,
   formatMacroValue,
+  type MacroLink,
   type RecentPick,
 } from "@fomo/core/keyword-cards/macro-link";
 import { readInvestorCollection } from "./investor-store";
@@ -205,8 +209,10 @@ const SECTOR_FLOW_WINDOW_SLACK = 4;
 const SECTOR_FLOW_MIN_NET = 100_000_000_000;
 /** 하루 최대 흐름 카드 수(§D-1). 많으면 종목 카드를 밀어낸다. */
 const SECTOR_FLOW_MAX_CARDS = 2;
-/** 하루 최대 거시 카드 수(§E). 거시+정책 합쳐 2장이고, 지금은 거시만 있다. */
-const MACRO_MAX_CARDS = 2;
+/**
+ * 하루 최대 거시 카드 수는 **`@fomo/core` 의 `MACRO_MAX_CARDS`(3장)** 가 정한다(MACRO-01 §C-2).
+ * 여기 있던 `2` 를 지운다 — 상한이 두 곳에 있으면 한쪽만 고치게 되고, 실제로 그렇게 됐다.
+ */
 
 /** `YYYY-MM-DD` 에서 며칠 옮긴다. 형식이 아니면 원본을 돌려준다. */
 function shiftIsoDays(date: string, days: number): string {
@@ -612,8 +618,19 @@ export interface FlowCard {
 export interface MacroCard {
   indicatorId: string;
   indicatorName: string;
-  /** 최신 관측일. **화면에 그대로 쓴다** — 지표는 하루이틀 늦게 나온다. */
+  /** 최신 관측일 `YYYY-MM-DD`. 화면은 이걸 직접 쓰지 않는다 — `asOfLabel` 을 쓴다. */
   asOf: string;
+  /**
+   * 화면에 그대로 쓰는 **상대 시간** — `어제 기준` · `3일 전 기준`(§B-3).
+   *
+   * 절대 날짜를 쓰면 사용자가 오늘 날짜와 빼봐야 오래됐다는 걸 안다. 굽는 시점에 문장으로
+   * 굳혀 보낸다 — 화면이 날짜 계산을 하면 캐시된 페이지에서 어제 것이 오늘로 읽힌다.
+   */
+  asOfLabel: string;
+  /** 어떤 사건이라 카드가 됐나 — `streak` · `spike` · `level` · `inversion`. */
+  kind: string;
+  /** 분류 — 하루 상한을 분류별로 걸었다는 사실을 회귀 테스트가 본다. */
+  category: string;
   streakDays: number;
   direction: "up" | "down";
   fromText: string;
@@ -2144,41 +2161,53 @@ export async function buildQuietPickResponse(options: {
   const macroCards: MacroCard[] = (() => {
     if (!macroCollection?.series) return [];
     const sectorByCode = sectorMap?.byCode ?? {};
-    /** canonical → 업종. 최근 픽의 업종을 알아야 연결할 수 있다. */
-    const codeByCanonical = new Map(krDefs.filter((d) => d.naverCode).map((d) => [d.canonical, d.naverCode!]));
+    /** canonical → 업종·시장. 둘 다 있어야 지표별로 알맞게 이을 수 있다. */
+    const defByCanonical = new Map(krDefs.map((d) => [d.canonical, d]));
     const linkPicks: RecentPick[] = [...recentPicks.entries()].map(([canonical, pickedAt]) => {
-      const code = codeByCanonical.get(canonical);
+      const def = defByCanonical.get(canonical);
+      const code = def?.naverCode;
       const sector = code ? sectorByCode[code] : undefined;
-      return { canonical, pickedAt, ...(sector ? { sector } : {}) };
+      const market = def?.market;
+      return { canonical, pickedAt, ...(sector ? { sector } : {}), ...(market ? { market } : {}) };
     });
 
-    const out: MacroCard[] = [];
+    /**
+     * **후보를 다 모은 뒤에 고른다.** 종전에는 목록 순서대로 돌다 상한에 닿으면 멈췄는데,
+     * 그러면 목록 위쪽 지표가 언제나 이긴다 — 더 크게 움직인 지표가 아래에 있어도 진다.
+     * 강한 순 정렬과 분류별 상한은 `selectMacroMoves` 가 한다(§C-2).
+     */
+    const candidates: Array<{ move: MacroLink["move"]; link: MacroLink }> = [];
     for (const indicator of MACRO_INDICATORS) {
-      if (out.length >= MACRO_MAX_CARDS) break;
       const points = macroCollection.series[indicator.id];
       if (!points || points.length === 0) continue;
       const move = detectMacroMove({ id: indicator.id, points });
       if (!move) continue;
+      // **오래된 지표로 카드를 만들지 않는다**(§B-3). 6일 전 유가로 오늘 이야기를 못 한다.
+      if (!isMacroFresh(move.asOf, date)) continue;
       const link = linkMacroToPicks(move, linkPicks);
       if (!link) continue; // 연결 없는 뉴스는 만들지 않는다
-      out.push({
-        indicatorId: indicator.id,
-        indicatorName: indicator.name,
-        asOf: move.asOf,
-        streakDays: move.streakDays,
-        direction: move.direction,
-        fromText: formatMacroValue(indicator, move.from),
-        toText: formatMacroValue(indicator, move.to),
-        changePct: Math.round(move.changePct * 100) / 100,
-        series: move.series,
-        hook: macroHook(move),
-        support: macroSupport(link),
-        principle: link.principle,
-        favored: link.favored.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
-        hurt: link.hurt.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
-      });
+      candidates.push({ move, link });
     }
-    return out;
+
+    return selectMacroMoves(candidates).map(({ move, link }) => ({
+      indicatorId: move.indicator.id,
+      indicatorName: move.indicator.name,
+      asOf: move.asOf,
+      asOfLabel: macroFreshnessLabel(move.asOf, date),
+      kind: move.kind,
+      category: move.indicator.category,
+      streakDays: move.streakDays,
+      direction: move.direction,
+      fromText: formatMacroValue(move.indicator, move.from),
+      toText: formatMacroValue(move.indicator, move.to),
+      changePct: Math.round(move.changePct * 100) / 100,
+      series: move.series,
+      hook: macroHook(move),
+      support: macroSupport(link),
+      principle: link.principle,
+      favored: link.favored.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
+      hurt: link.hurt.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
+    }));
   })();
 
   const flowCards: FlowCard[] = sectorFlow.pairs.map((pair) => ({

@@ -407,3 +407,47 @@ test("처음 나온 카드에는 그 어느 것도 없다", async ({ page }) => 
   // 처음 보는 종목은 이름을 가린다 — 그 규칙은 그대로다.
   await expect(first.locator('[data-testid="pick-name"]')).toHaveCount(0);
 });
+
+/**
+ * **MACRO-01 §D-2** — 거시 카드가 상세를 갖는다.
+ *
+ * 종전에는 흐름·거시 카드가 덱에서 `onDetail` 없이 그려져 **CTA 가 아예 렌더되지 않았다.**
+ * DS-07 은 「어느 카드든 버튼이 같은 자리」라고 적어 놨는데 실제로는 두 종류에 버튼이 없었다.
+ *
+ * 그리고 영향 설명(`유가가 내리면 …`)이 카드에서 상세로 내려갔다 — 긴 카드는 눌리지 않는다.
+ */
+test("[MACRO-01 §D-2] 거시 카드는 숫자를 한 번만 쓰고, 설명은 상세에 있다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+
+  const card = page.locator('[data-testid="macro-card"]');
+  await expect(card).toHaveCount(1);
+
+  // 관측일이 **상대 시간**이다 — 절대 날짜는 오늘과 빼봐야 오래된 줄 안다(§B-3).
+  await expect(card).toContainText("어제 기준");
+  await expect(card).not.toContainText("2026-");
+
+  // **같은 숫자가 두 번 나오지 않는다.** 값 줄에만 있고 보조 줄에는 없다.
+  const cardText = await card.innerText();
+  expect(cardText.match(/\$67\.80/g) ?? []).toHaveLength(1);
+
+  // 영향 설명은 카드에 없다.
+  await expect(card).not.toContainText("유리해요");
+
+  // CTA 를 누르면 상세가 뜨고, 거기 설명이 있다.
+  await card.locator('[data-testid="macro-cta"]').click();
+  const depth = page.locator('[data-testid="macro-depth"]');
+  await expect(depth).toBeVisible();
+  await expect(depth.locator('[data-testid="macro-depth-principle"]')).toContainText("유리해요");
+
+  // 연결된 종목이 언제 짚혔는지 같이 나온다 — 날짜가 있어야 「우리가 짚었다」가 사실이 된다.
+  await expect(depth.locator('[data-testid="macro-depth-favored"]')).toContainText("대한항공");
+  await expect(depth.locator('[data-testid="macro-depth-favored"]')).toContainText("짚음");
+
+  // 하단 바는 DS-07 §3 대로 화면 아래끝에 붙어 있다.
+  const bar = depth.locator('[data-testid="depth-bar"]');
+  await depth.evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((a) => a.finished));
+  });
+  const box = (await bar.boundingBox())!;
+  expect(Math.round(box.y + box.height)).toBe(page.viewportSize()!.height);
+});

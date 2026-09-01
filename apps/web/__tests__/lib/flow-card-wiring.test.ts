@@ -35,7 +35,8 @@ describe("흐름 카드 배선 (완료 확인 2)", () => {
 
   it("앞쪽에 둔다 — 맨 앞은 아니다(첫 카드는 종목이어야 앱이 무엇인지 전해진다)", () => {
     expect(deck).toContain("[1, 4].forEach((at, i) => {");
-    expect(deck).toContain("[3, 6].forEach((at, i) => {");
+    // 거시 자리는 MACRO-01 에서 셋으로 늘었다 — 흐름 자리보다 **뒤**라는 것만 여기서 본다.
+    expect(deck).toContain("[3, 6, 9].forEach((at, i) => {");
   });
 
   it("하루 최대 2장 (§D-1)", () => {

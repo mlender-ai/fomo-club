@@ -1130,8 +1130,17 @@ export interface QuietPickFlowCard {
 export interface QuietPickMacroCard {
   indicatorId: string;
   indicatorName: string;
-  /** 최신 관측일 — 지표는 하루이틀 늦게 나온다. 화면이 그대로 쓴다. */
+  /** 최신 관측일 `YYYY-MM-DD`. 화면은 이걸 직접 쓰지 않는다 — `asOfLabel` 을 쓴다. */
   asOf: string;
+  /**
+   * 화면에 그대로 쓰는 상대 시간 — `어제 기준` · `3일 전 기준`(MACRO-01 §B-3).
+   * **굽는 시점에 굳혀 보낸다.** 화면이 계산하면 캐시된 페이지에서 어제 것이 오늘로 읽힌다.
+   */
+  asOfLabel: string;
+  /** `streak` · `spike` · `level` · `inversion`. */
+  kind: string;
+  /** `fx` · `rate` · `credit` · `index` · `commodity`. */
+  category: string;
   streakDays: number;
   direction: "up" | "down";
   fromText: string;
@@ -1140,7 +1149,10 @@ export interface QuietPickMacroCard {
   series: number[];
   hook: string;
   support: string[];
-  /** 일반 원리 — **예측이 아니다**. */
+  /**
+   * 일반 원리 — **예측이 아니다**. **상세에만 쓴다**(MACRO-01 §D-2).
+   * 카드에 넣으면 카드가 길어지고, 길어진 카드는 눌리지 않는다.
+   */
   principle: string;
   favored: Array<{ canonical: string; pickedAt: string }>;
   hurt: Array<{ canonical: string; pickedAt: string }>;
