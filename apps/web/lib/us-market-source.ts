@@ -1,6 +1,6 @@
 import type { DiscoveryMarket, DailyOhlcv } from "@fomo/core";
 import type { DiscoveryMarketRow } from "./market-source-types";
-import { readUsMarketQuoteRows, US_DYNAMIC_MIN_MARKET_CAP_USD } from "./us-market-cache";
+import { readUsMarketQuoteRows, US_DYNAMIC_MIN_MARKET_CAP_USD, US_SIGNAL_MIN_MARKET_CAP_USD } from "./us-market-cache";
 import { usDiscoverySeedForSymbol, usDiscoveryUniverse, type UsDiscoverySymbol } from "./us-symbols";
 
 const TWELVE_DATA_URL = "https://api.twelvedata.com/quote";
@@ -83,6 +83,17 @@ export interface UsMarketRowsSourceOptions {
   slot?: number;
   slotCount?: number;
   hydrateSparklineFallback?: boolean;
+  /**
+   * 시총 하한을 우회시킬 "신호 보유" 심볼 (US-02 C · B-1).
+   *
+   * **호출자가 넘긴다** — 이 모듈이 직접 `insider-source` 를 import 하면 그 의존성이
+   * `us-market-source` 를 거치는 **조회 라우트 전부**의 콜드스타트에 실린다
+   * (성능 회귀 게이트가 `route:track-record-picks` 147 > 예산 146 으로 잡았다).
+   * 신호 목록은 프리웜(크론)에만 필요하므로 비용도 거기에 둔다.
+   *
+   * 비어 있으면 종전대로 기본 하한만 적용된다(fail-open).
+   */
+  signalBypassSymbols?: ReadonlySet<string>;
 }
 
 function tdKey(): string | undefined {
@@ -351,7 +362,7 @@ function nasdaqMoverScore(row: DiscoveryMarketRow): number {
   return pct * 10 + volume;
 }
 
-async function fetchNasdaqScreenerRows(): Promise<DiscoveryMarketRow[]> {
+async function fetchNasdaqScreenerRows(bypassSymbols: ReadonlySet<string> = new Set()): Promise<DiscoveryMarketRow[]> {
   const url = new URL(NASDAQ_SCREENER_URL);
   url.searchParams.set("tableonly", "true");
   url.searchParams.set("limit", String(US_NASDAQ_SCREENER_LIMIT));
@@ -374,9 +385,16 @@ async function fetchNasdaqScreenerRows(): Promise<DiscoveryMarketRow[]> {
     // 다이내믹 행 시총 하한(2026-07-11) — 큐레이션 시드는 우회, 시총 미상은 보수적으로 제외.
     const cap = num(row.marketCap);
     const symbol = String(row.symbol ?? "").toUpperCase();
-    if (!seedSymbols.has(symbol) && (typeof cap !== "number" || cap < US_DYNAMIC_MIN_MARKET_CAP_USD)) continue;
+    const curated = seedSymbols.has(symbol);
+    // 신호 보유 종목은 낮은 하한을 쓴다 (US-02 C) — "미장은 시총 높은 걸로"는 유지하되,
+    // 내부자가 실제로 사고 있는 종목까지 $20B 으로 버리면 임원 매수 신호의 91%가 사라진다
+    // (실측: 클러스터 매수 100종목 중 $20B 통과 9 · $2B 통과 38 — docs/audit/US_COVERAGE.md C-2).
+    const floor = bypassSymbols.has(symbol) ? US_SIGNAL_MIN_MARKET_CAP_USD : US_DYNAMIC_MIN_MARKET_CAP_USD;
+    if (!curated && (typeof cap !== "number" || cap < floor)) continue;
     const parsed = parseNasdaqScreenerRow(row);
-    if (parsed) deduped.set(parsed.symbol.toUpperCase(), parsed);
+    if (!parsed) continue;
+    // 읽기 경로가 하한을 재검증하므로(구 캐시 행 방어) 우회 사실을 행에 남긴다.
+    deduped.set(parsed.symbol.toUpperCase(), bypassSymbols.has(symbol) ? { ...parsed, capBypass: "signal" } : parsed);
   }
   return [...deduped.values()]
     .sort((a, b) => {
@@ -848,7 +866,8 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
 
   // 스크리너(무료·전종목·1콜)를 키 유무와 무관하게 1차 소스로(WO 미장·코인 확충) —
   // TwelveData 키가 있으면 keyed 경로(쿼터 60개 안팎)를 타서 유니버스가 말랐다(프리웜 실측 fetched 48).
-  const rawScreenerRows = await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []);
+  const bypassSymbols = options.signalBypassSymbols ?? new Set<string>();
+  const rawScreenerRows = await fetchNasdaqScreenerRows(bypassSymbols).catch((): DiscoveryMarketRow[] => []);
   // 큐레이션 교집합(시드 메타 병합) + **비큐레이션 다이내믹 행**(WO 미장·코인 확충) —
   // curatedScreenerRows 만 쓰면 전종목 스크리너가 큐레이션 ~125로 다시 말라붙는다(프리웜 실측 48의 실체).
   const curated = curatedScreenerRows(rawScreenerRows, seeds);
@@ -926,7 +945,7 @@ async function fetchUsMarketRowsInternal(options: UsMarketRowsSourceOptions = {}
     };
   } catch (err) {
     console.warn("[us-market-source] Twelve Data quote failed", (err as Error)?.message);
-    const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows().catch((): DiscoveryMarketRow[] => []), seeds);
+    const screenerRows = curatedScreenerRows(await fetchNasdaqScreenerRows(bypassSymbols).catch((): DiscoveryMarketRow[] => []), seeds);
     if (screenerRows.length > 0) {
       const nasdaqRows = await fetchNasdaqRows(seeds).catch((): DiscoveryMarketRow[] => []);
       const rows = mergePreferredRows(screenerRows, nasdaqRows);
