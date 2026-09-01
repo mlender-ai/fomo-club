@@ -1,0 +1,134 @@
+name: US Coverage Monitor
+
+# US-02 D-2·D-3 — 국가별 덱 커버리지 감시.
+#
+# 왜 필요했나: US-02 의 현상은 "며칠째 국내 종목만 나온다"였는데, **며칠째인지 셀 수단이
+# 없어서** 사고를 며칠 지나 화면을 보고 알았다. 이제 판단 원장을 매일 읽고 미국 카드가
+# 이틀 연속 0장이면 이슈를 만든다. `::warning` 은 아무도 보지 않는다.
+#
+# 판정 기준은 워크플로가 아니라 라우트가 갖는다
+# (`apps/web/app/api/fomo/ops/audit/country-coverage/route.ts` — US_ZERO_ALERT_STREAK).
+# 기준이 두 곳에 흩어지면 갈라진다.
+
+on:
+  schedule:
+    - cron: "45 21 * * *" # 06:45 KST — daily-30 editor(06:20) 이후, 원장이 채워진 뒤
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "조회 일수 (기본 14)"
+        required: false
+        default: "14"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: us-coverage-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read country coverage
+        id: coverage
+        env:
+          AUDIT_TOKEN: ${{ secrets.AUDIT_TOKEN }}
+          DAYS: ${{ github.event.inputs.days || '14' }}
+        run: |
+          set -uo pipefail
+          if [ -z "${AUDIT_TOKEN:-}" ]; then
+            echo "::error title=AUDIT_TOKEN 미설정::감사 라우트는 토큰 없이는 거부한다. 리포지토리 시크릿에 AUDIT_TOKEN 을 넣어라"
+            exit 1
+          fi
+          URL="https://fomo-club-backend.vercel.app/api/fomo/ops/audit/country-coverage?days=${DAYS}"
+          code="$(curl -sS -o /tmp/country-coverage.json -w '%{http_code}' --max-time 40 \
+            -H "Authorization: Bearer ${AUDIT_TOKEN}" "$URL" || echo "000")"
+          echo "coverage http=${code}"
+          if [ "$code" != "200" ]; then
+            echo "::error title=커버리지 조회 실패::http=${code}"
+            head -c 400 /tmp/country-coverage.json || true
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs = require("fs");
+          const result = JSON.parse(fs.readFileSync("/tmp/country-coverage.json", "utf8"));
+          const days = result.days ?? [];
+          const rows = days.map((d) => `| ${d.date} | ${d.kr} | ${d.us} | ${d.coin} | ${d.macro} | ${d.usSharePct ?? "—"} |`);
+          const signals = (result.signals ?? [])
+            .map((s) => `| ${s.signalType} | ${s.kr} | ${s.us} |`);
+          const summary = [
+            "## 국가별 카드 수 (일별)",
+            "",
+            "| 날짜 | 국내 | 미국 | 코인 | 거시 | 미국 비중(%) |",
+            "|---|---|---|---|---|---|",
+            ...rows,
+            "",
+            "## 국가별 신호 종류별 발생 수",
+            "",
+            "| 신호 | 국내 | 미국 |",
+            "|---|---|---|",
+            ...signals,
+            "",
+            `미국 0장 연속: **${result.usZeroStreak}일** (경보 기준 ${result.alertThresholdDays}일)`,
+            result.missingDates?.length ? `원장 공백일(판정 제외): ${result.missingDates.join(", ")}` : "",
+          ].join("\n");
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+          const latest = days[days.length - 1];
+          const alerted = (result.alerts ?? []).length > 0;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `alerted=${alerted ? "true" : "false"}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `streak=${result.usZeroStreak}\n`);
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `latest=${latest ? `${latest.date} 국내 ${latest.kr} / 미국 ${latest.us}` : "(데이터 없음)"}\n`
+          );
+          if (alerted) {
+            console.log(`::warning title=미국 카드 0장::${result.usZeroStreak}일 연속`);
+          }
+          NODE
+
+      - name: Open issue on US zero streak
+        if: steps.coverage.outputs.alerted == 'true'
+        uses: actions/github-script@v7
+        env:
+          STREAK: ${{ steps.coverage.outputs.streak }}
+          LATEST: ${{ steps.coverage.outputs.latest }}
+        with:
+          script: |
+            const streak = process.env.STREAK || "?";
+            const latest = process.env.LATEST || "(요약 없음)";
+            const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+            const title = `[US-02] 미국 카드 0장 ${streak}일 연속 — ${today}`;
+            const existing = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "미국 카드 0장"`,
+            });
+            if (existing.data.total_count > 0) {
+              core.info(`이미 열린 이슈가 있다 — #${existing.data.items[0].number}`);
+              return;
+            }
+            const body = [
+              `덱에 미국 카드가 **${streak}일 연속 0장**입니다.`,
+              "",
+              "```",
+              latest,
+              "```",
+              "",
+              "먼저 볼 곳 (US_COVERAGE A-3 의 절단 지점 순서):",
+              "1. `us-market-prewarm` 워크플로가 돌고 있나 — `rowsWithVolumeRatio` 가 0이면 거래량 각성이 죽어 있다",
+              "2. `/api/fomo/daily-30` 의 `meta.debug.usDiscoveryCards → usStockCandidates → usDeck`",
+              "3. `/api/fomo/ops/audit/country-coverage` 의 신호별 국가 분포",
+              "",
+              `- 실행: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "- 진단 정본: `docs/audit/US_COVERAGE.md`",
+              "",
+              "> US-02 D-2 자동 생성. 국가 균형을 맞추려고 약한 신호를 앞에 두지 말 것 — 왜 0장인지 먼저 본다.",
+            ].join("\n");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ["monitor"],
+            });
