@@ -25,6 +25,14 @@ on:
         description: "커서를 버리고 처음부터"
         type: boolean
         default: false
+      only:
+        description: "특정 종목만 (콤마 구분, 예: 네패스,E1). 비우면 전 유니버스"
+        # 크론 라우트가 `only=` 를 이미 받는데 이 워크플로가 그것을 못 넘겼다.
+        # 전수 갱신은 라운드가 290초에 걸려 자주 죽는다(실측: 6라운드 중 5회 타임아웃,
+        # universe=760 · processed=12). 한두 종목을 확인·복구하려고 전수를 돌리는 것은
+        # 낭비이고, 그 낭비가 "확인을 안 하는" 쪽으로 사람을 밀어낸다.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -44,6 +52,7 @@ jobs:
           LIMIT: ${{ github.event.inputs.limit || '24' }}
           ROUNDS: ${{ github.event.inputs.rounds || '20' }}
           RESET: ${{ github.event.inputs.reset }}
+          ONLY: ${{ github.event.inputs.only }}
         run: |
           set -euo pipefail
           BASE="https://fomo-club-backend.vercel.app"
@@ -51,19 +60,23 @@ jobs:
           if [ -n "${CRON_SECRET:-}" ]; then AUTH=(-H "Authorization: Bearer ${CRON_SECRET}"); fi
           reset_param=""
           if [ "${RESET:-false}" = "true" ]; then reset_param="&reset=1"; fi
+          # `only` 는 매 라운드 붙인다 — 커서가 아니라 대상 자체를 좁히는 인자다.
+          only_param=""
+          if [ -n "${ONLY:-}" ]; then only_param="&only=$(printf '%s' "$ONLY" | jq -sRr @uri)"; fi
 
           fails=0
+          aborted=0
           for i in $(seq 1 "$ROUNDS"); do
             echo "== round $i =="
             # 첫 라운드만 reset 을 붙인다 — 매 라운드 reset 하면 커서가 초기화돼 영원히 안 끝난다.
-            q="limit=${LIMIT}"
+            q="limit=${LIMIT}${only_param}"
             if [ "$i" = "1" ]; then q="${q}${reset_param}"; fi
             # 한 라운드 실패로 전체를 포기하지 않는다 — 커서는 서버에 있으므로 다음 라운드가
             # 이어서 처리한다. 연속 실패일 때만 중단한다(항구적 장애와 일시적 실패를 구분).
             if ! resp=$(curl -fsS --max-time 290 "${AUTH[@]}" "$BASE/api/fomo/cron/fundamentals?${q}"); then
               fails=$((fails + 1))
               echo "round $i failed (연속 $fails)"
-              if [ "$fails" -ge 3 ]; then echo "연속 3회 실패 — 중단"; break; fi
+              if [ "$fails" -ge 3 ]; then echo "연속 3회 실패 — 중단"; aborted=1; break; fi
               sleep 20
               continue
             fi
@@ -80,6 +93,15 @@ jobs:
             fi
             sleep 5
           done
+
+          # **초록이 곧 갱신 완료가 아니다.** 종전에는 연속 실패로 중단해도 스텝이 0 으로 끝나서
+          # 워크플로가 success 였다 — 실측(run 33654861032)에서 6라운드 중 5회 타임아웃,
+          # `processed=12 remaining=748` 인데 결론이 success 였다. 그 초록을 믿고 다음 단계로
+          # 넘어가면 낡은 데이터 위에서 판정한다. 중단으로 끝났으면 실패로 낸다.
+          if [ "$aborted" = "1" ]; then
+            echo "::error::연속 실패로 중단됐다 — 팩트시트가 갱신되지 않았다. 초록으로 넘기지 않는다"
+            exit 1
+          fi
 
       - name: Coverage summary (저장된 팩트시트만 읽는다)
         if: always()
