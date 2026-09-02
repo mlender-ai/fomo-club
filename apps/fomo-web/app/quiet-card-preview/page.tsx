@@ -202,6 +202,11 @@ const MACRO = {
   hook: "국제 유가가 3일째\n내리고 있어요",
   support: ["최근 짚은 곳 중 4곳이 여기 닿아요"],
   principle: "유가가 내리면 기름을 많이 쓰는 회사에 유리해요",
+  // DETAIL-01 §A-2 — 상세 2걸음이 업종 **이름**으로 말한다. 원리 문장만으로는 어느 업종이냐에 답하지 못한다.
+  favorSectors: ["항공", "해운", "육상운송"],
+  hurtSectors: ["정유·가스"],
+  // §A-1 — 값 하나만 보면 높은지 낮은지 알 수 없다.
+  band: { low: 61.4, high: 89.2, percentile: 23, label: "최근 1년 중 낮은 편이에요", points: 244 },
   favored: [
     { canonical: "대한항공", pickedAt: "2026-08-24" },
     { canonical: "제주항공", pickedAt: "2026-08-26" },
