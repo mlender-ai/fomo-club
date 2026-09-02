@@ -111,9 +111,21 @@ describe("조사 — 받침 따라 붙인다 (2026-08-29 실측: `전자장비�
     windowDays: 3,
   });
 
+  /**
+   * 조사는 **표시명 기준**으로 붙는다(DETAIL-01/FLOW-01 §A-1 이후).
+   * `전자장비와기기` 는 이제 `전자부품` 으로 나가므로 받침 없는 예로 쓸 수 없다 —
+   * 표시명이 받침 없이 끝나는 업종으로 바꾼다. 검사하는 것은 여전히 조사 규칙이다.
+   */
   it("받침 없으면 `로`", () => {
-    expect(flowHook(pair("전자장비와기기"))).toContain("전자장비와기기로 들어오고");
-    expect(flowHook(pair("전자장비와기기"))).not.toContain("기기으로");
+    expect(flowHook(pair("가스유틸리티"))).toContain("가스로 들어오고"); // 표시명 `가스`
+    expect(flowHook(pair("가스유틸리티"))).not.toContain("가스으로");
+  });
+
+  it("표시명으로 나간다 — 분류 원문을 화면에 그대로 쓰지 않는다 (FLOW-01 §A-1)", () => {
+    const hook = flowHook(pair("전자장비와기기"));
+    expect(hook).toContain("전자부품으로 들어오고");
+    expect(hook).toContain("반도체에서 돈이 빠지고");
+    expect(hook).not.toContain("반도체와반도체장비");
   });
 
   it("받침 있으면 `으로`", () => {

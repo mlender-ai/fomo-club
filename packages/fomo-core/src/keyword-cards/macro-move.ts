@@ -320,3 +320,45 @@ export function macroHook(move: MacroMove): string {
   const dir = move.direction === "up" ? "오르고" : "내리고";
   return `${subject}\n${move.streakDays}일째 ${dir} 있어요`;
 }
+
+/**
+ * 1년 밴드 안에서 지금이 어디쯤인가 (DETAIL-01 §A-1).
+ *
+ * 값 하나만 보면 `$83.9` 가 높은지 낮은지 알 수 없다. **밴드가 있어야 숫자가 뜻을 가진다.**
+ *
+ * 표본이 모자라면 `null` — 20일치로 "최근 1년 중" 이라고 말하면 거짓이다.
+ * 고저가 같으면(움직이지 않은 지표) 위치를 만들지 않는다 — 0으로 나눈 값은 위치가 아니다.
+ */
+export interface MacroBand {
+  low: number;
+  high: number;
+  /** 0~100. 낮을수록 밴드 바닥에 가깝다. */
+  percentile: number;
+  /** 화면 문장 — `최근 1년 중 낮은 편이에요`. */
+  label: string;
+  /** 실제로 쓴 표본 수. "1년" 이라 말할 자격이 있는지 화면이 판단할 근거. */
+  points: number;
+}
+
+/** 밴드 문장을 만들 최소 표본. 반년치는 있어야 "1년 중" 이 거짓말이 아니다. */
+export const MACRO_BAND_MIN_POINTS = 120;
+
+export function macroBand(points: ReadonlyArray<{ value: number }>): MacroBand | null {
+  const values = points.map((p) => p.value).filter((v) => Number.isFinite(v));
+  if (values.length < MACRO_BAND_MIN_POINTS) return null;
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  if (!(high > low)) return null;
+  const current = values[values.length - 1]!;
+  const percentile = Math.round(((current - low) / (high - low)) * 100);
+  const label =
+    percentile <= 25
+      ? "최근 1년 중 낮은 편이에요"
+      : percentile >= 75
+        ? "최근 1년 중 높은 편이에요"
+        : "최근 1년 중 중간쯤이에요";
+  return { low, high, percentile, label, points: values.length };
+}
+
+/** 상세 차트용 창 — 카드의 20점보다 길게 본다(§A-1). */
+export const MACRO_DETAIL_SERIES_POINTS = 60;

@@ -132,3 +132,150 @@ export function CompanyGroupBlock({ group, onMethod }: { group: CompanyGroup; on
     </section>
   );
 }
+
+/**
+ * 마지막 걸음 — **모든 카드 종류가 여기서 끝난다**(DETAIL-01 §D-1).
+ *
+ * 종목·지표·업종·인물, 무엇을 봤든 여정은 같은 곳에서 끝나야 한다. 끝이 매번 다르면
+ * 사용자는 매번 「이제 뭘 하지」를 다시 판단해야 한다.
+ *
+ * 이 컴포넌트는 **본문만** 그린다. 버튼은 `StepBar` 안에 있어야 어느 걸음에서든 같은
+ * 자리에 오므로, 부르는 쪽이 `WatchAction` 을 바에 넣는다.
+ */
+export function WatchStep({
+  title,
+  subject,
+  done,
+  doneText,
+}: {
+  /** `국제 유가를 계속 지켜볼까요` — 대상 이름이 들어간 물음. */
+  title: string;
+  /** 담으면 무엇을 알려주는지. 지키지 못할 약속은 쓰지 않는다. */
+  subject: string;
+  done: boolean;
+  doneText: string;
+}) {
+  return (
+    <div className="mt-s6" data-testid="depth-watch-step">
+      <p className="break-keep text-ds-display-sm text-ds-text-1">{title}</p>
+      <p className="mt-s2 break-keep text-ds-body text-ds-text-2">{subject}</p>
+      {done && (
+        <div className="mt-s6" data-testid="depth-watch-done">
+          <p className="text-ds-display-sm text-ds-text-1">담았어요</p>
+          <p className="mt-s2 break-keep text-ds-body text-ds-text-2">{doneText}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 마지막 걸음의 바 — 담기 전엔 담기, 담은 뒤엔 닫기. 자리는 그대로다. */
+export function WatchAction({
+  done,
+  label,
+  onWatch,
+  onClose,
+}: {
+  done: boolean;
+  label: string;
+  onWatch: () => void;
+  onClose: () => void;
+}) {
+  if (done) {
+    return (
+      <button
+        type="button"
+        onClick={onClose}
+        data-testid="depth-close"
+        className="tap-button flex h-touch w-full items-center justify-center rounded-block border-hair border-ds-border bg-ds-surface-2 text-[15px] text-ds-text-1"
+      >
+        닫기
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onWatch}
+      data-testid="depth-watch"
+      className="tap-button flex h-touch w-full items-center justify-center gap-s2 rounded-block bg-ds-accent px-gutter text-[15px] font-medium text-ds-bg"
+    >
+      ★ {label}
+    </button>
+  );
+}
+
+/**
+ * 한 줄 = 이름 + 금액. 누를 수 있으면 버튼이 된다(§D-3 상세 → 상세).
+ *
+ * **이름이 없으면 그리지 않는다** — 종목코드를 이름 자리에 쓰면 읽는 사람에게는 빈 줄이다.
+ */
+export function AmountRow({
+  name,
+  amount,
+  onTap,
+  testId,
+}: {
+  name: string;
+  amount: string;
+  onTap?: (() => void) | undefined;
+  testId?: string;
+}) {
+  const body = (
+    <>
+      <span className="min-w-0 truncate text-ds-body text-ds-text-1">{name}</span>
+      <span className="shrink-0 font-mono text-ds-label text-ds-text-2">{amount}</span>
+    </>
+  );
+  if (!onTap) {
+    return (
+      <div className="flex items-baseline justify-between gap-s3 py-[3px]" data-testid={testId}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      data-testid={testId}
+      className="tap-button flex w-full items-baseline justify-between gap-s3 py-[3px] text-left"
+    >
+      {body}
+    </button>
+  );
+}
+
+/**
+ * 금액 막대 — **두 막대가 같은 축을 쓴다**(FLOW-01 §B-2).
+ *
+ * 가장 큰 절대값이 100% 폭이다. 라벨과 금액은 막대 **위에** 양 끝으로 둔다 —
+ * 왼쪽에 두면 이름 길이가 제각각이라 정렬이 깨진다(§A-2).
+ */
+export function FlowBar({
+  label,
+  amount,
+  ratio,
+  tone,
+}: {
+  label: string;
+  amount: string;
+  /** 0~1. 최대 절대값 대비. */
+  ratio: number;
+  tone: "out" | "in";
+}) {
+  const width = `${Math.max(2, Math.min(100, Math.round(ratio * 100)))}%`;
+  return (
+    <div className="mt-s3" data-testid={`flow-bar-${tone}`}>
+      <div className="flex items-baseline justify-between gap-s3">
+        <span className="min-w-0 truncate text-ds-body text-ds-text-1">{label}</span>
+        <span className={`shrink-0 font-mono text-ds-label ${tone === "in" ? "text-ds-accent" : "text-ds-text-2"}`}>
+          {amount}
+        </span>
+      </div>
+      <div className="mt-[6px] h-[6px] w-full overflow-hidden rounded-full bg-ds-surface-2">
+        <div className={`h-full rounded-full ${tone === "in" ? "bg-ds-accent" : "bg-ds-text-3"}`} style={{ width }} />
+      </div>
+    </div>
+  );
+}

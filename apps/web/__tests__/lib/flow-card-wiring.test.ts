@@ -30,7 +30,12 @@ describe("흐름 카드 배선 (완료 확인 2)", () => {
   it("덱이 같은 화면에 끼워 넣는다 — 별도 섹션이 아니다 (§D-1·§E-1)", () => {
     expect(deck).toContain("res.flowCards ?? []");
     expect(deck).toContain('out.splice(Math.min(at, out.length), 0, { kind: "flow", card });');
-    expect(deck).toContain("<FlowCard card={slot.card} />");
+    /*
+      이 줄의 뜻은 「흐름 카드가 덱 슬롯 자리에서 그대로 그려진다」이지 소품 목록이 아니다.
+      전체 JSX 를 못 박아 뒀더니 상세 CTA 를 붙이는 것만으로 깨졌다(DETAIL-01) —
+      배선을 지키는 테스트가 배선 개선을 막으면 안 된다. 슬롯에서 그린다는 사실만 본다.
+    */
+    expect(deck).toContain("<FlowCard card={slot.card}");
   });
 
   it("앞쪽에 둔다 — 맨 앞은 아니다(첫 카드는 종목이어야 앱이 무엇인지 전해진다)", () => {
