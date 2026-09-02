@@ -1,6 +1,9 @@
 "use client";
 
 import { CardShell, CardCta } from "@/components/CardShell";
+import { FlowBar } from "@/components/DepthSteps";
+import { sectorDisplayName } from "@fomo/core/keyword-cards/sector-display";
+import { formatKrwShort } from "@fomo/core/keyword-cards/sector-flow";
 import type { QuietPickFlowCard } from "@/lib/fomoApi";
 
 /**
@@ -12,8 +15,21 @@ import type { QuietPickFlowCard } from "@/lib/fomoApi";
  * 그리면 그림이 주인공이 되고 숫자가 장식이 된다. 여기서 보여줄 것은 **어디서 빠져
  * 어디로 들어왔나** 하나다.
  *
- * 왼쪽(빠진 곳)은 회색, 오른쪽(들어간 곳)은 라임 — 다른 카드와 같은 문법이다.
+ * 위(빠진 곳)는 회색, 아래(들어간 곳)는 라임 — 다른 카드와 같은 문법이다.
  * accent 는 언제나 "지금 무슨 일이 벌어지고 있는가" 를 가리킨다.
+ *
+ * ## 이름을 자르지 않는다 (FLOW-01 §A-1·§A-2)
+ *
+ * 종전에는 라벨을 막대 **왼쪽 72px 칸**에 두고 `truncate` 했다. 프로덕션 실측에서
+ * `반도체와반...` `전자장비와...` 로 잘렸다 — 무슨 업종인지 읽을 수 없는 카드였다.
+ *
+ * 두 가지를 바꿨다.
+ *  ① 분류 원문 대신 **표시명**(`반도체` · `전자부품`)을 쓴다.
+ *  ② 라벨을 막대 **위**에 두고 금액과 양 끝에 놓는다. 왼쪽 고정폭 칸은 이름 길이가
+ *     제각각이라 반드시 어딘가에서 잘린다 — 칸을 없애면 자를 일도 없다.
+ *
+ * 그림은 상세 1걸음과 **같은 조각**(`FlowBar`)을 쓴다. 카드와 상세가 다르게 생기면
+ * 눌러 들어간 사람이 같은 것을 보고 있는지 확신하지 못한다.
  *
  * ## 인과로 말하지 않는다 (§E-1)
  *
@@ -22,7 +38,6 @@ import type { QuietPickFlowCard } from "@/lib/fomoApi";
  */
 export function FlowCard({ card, onDetail }: { card: QuietPickFlowCard; onDetail?: () => void }) {
   const scale = Math.max(Math.abs(card.fromNet), Math.abs(card.toNet));
-  const width = (v: number) => (scale > 0 ? `${Math.max(6, (Math.abs(v) / scale) * 100)}%` : "0%");
 
   return (
     <CardShell
@@ -40,30 +55,24 @@ export function FlowCard({ card, onDetail }: { card: QuietPickFlowCard; onDetail
         {card.hook}
       </p>
 
-      {/* ── 그림: 막대 둘 + 화살표 하나 ── */}
-      <div className="mt-[20px]" data-testid="flow-figure">
-        <div className="flex items-center gap-s3">
-          <span className="w-[72px] shrink-0 truncate text-right font-mono text-ds-label text-ds-text-2">
-            {card.fromSector}
-          </span>
-          <span className="h-[10px] flex-1 overflow-hidden rounded-[2px] bg-ds-chart-bar/30" aria-hidden>
-            <span className="block h-full bg-ds-chart-bar" style={{ width: width(card.fromNet) }} />
-          </span>
-        </div>
-
-        {/* 화살표 하나로 방향을 표시한다. 애니메이션 없음. */}
-        <p className="my-s2 text-center font-mono text-ds-label text-ds-text-3" aria-hidden>
+      {/* ── 그림: 막대 둘. 두 막대가 같은 축을 쓴다(§B-2) ── */}
+      <div className="mt-[14px]" data-testid="flow-figure">
+        <FlowBar
+          label={sectorDisplayName(card.fromSector)}
+          amount={formatKrwShort(card.fromNet)}
+          ratio={scale > 0 ? Math.abs(card.fromNet) / scale : 0}
+          tone="out"
+        />
+        {/* 방향은 화살표 하나로. 애니메이션 없음(§B-2). */}
+        <p className="mt-s2 text-center font-mono text-ds-label text-ds-text-3" aria-hidden>
           ↓
         </p>
-
-        <div className="flex items-center gap-s3">
-          <span className="w-[72px] shrink-0 truncate text-right font-mono text-ds-label text-ds-text-1">
-            {card.toSector}
-          </span>
-          <span className="h-[10px] flex-1 overflow-hidden rounded-[2px] bg-ds-chart-bar/30" aria-hidden>
-            <span className="block h-full bg-ds-accent" style={{ width: width(card.toNet) }} />
-          </span>
-        </div>
+        <FlowBar
+          label={sectorDisplayName(card.toSector)}
+          amount={formatKrwShort(card.toNet)}
+          ratio={scale > 0 ? Math.abs(card.toNet) / scale : 0}
+          tone="in"
+        />
       </div>
 
       {card.support.length > 0 && (

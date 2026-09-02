@@ -159,12 +159,19 @@ export function flowHook(pair: FlowPair): string {
   return `${fromName}에서 돈이 빠지고\n${to} 들어오고 있어요`;
 }
 
-/** 보조 줄 — 창·주체·양쪽 금액. 숫자를 숨기지 않는다. */
+/**
+ * 보조 줄 — **창과 주체 한 줄뿐이다.**
+ *
+ * 종전에는 여기서 양쪽 금액도 같이 냈다. 그런데 카드의 막대가 **이미 그 숫자를 옆에
+ * 적고 있다**(FLOW-01 §B-2 이후) — 같은 금액이 한 카드에 두 번 나왔다.
+ * `macroSupport` 가 같은 이유로 값 줄을 내려놓은 것과 같은 판단이다:
+ * **값은 그림이 그리고, 이 줄은 무엇을 기준으로 잰 것인지만 말한다.**
+ *
+ * 숫자를 숨기는 것이 아니다 — 자리를 옮긴 것이다. 상세 1걸음은 여섯 업종의 금액을
+ * 전부 보여준다.
+ */
 export function flowSupport(pair: FlowPair): string[] {
-  return [
-    `최근 ${pair.windowDays}거래일 · 외국인·기관 기준`,
-    `${sectorDisplayName(pair.from.sector)} ${formatKrwShort(pair.from.net)} · ${sectorDisplayName(pair.to.sector)} ${formatKrwShort(pair.to.net)}`,
-  ];
+  return [`최근 ${pair.windowDays}거래일 · 외국인·기관 기준`];
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

@@ -58,9 +58,23 @@ describe("그림·문장 규칙 (완료 확인 3·7)", () => {
     }
   });
 
-  it("왼쪽은 회색, 오른쪽은 라임 — 다른 카드와 같은 문법", () => {
-    expect(card).toContain("bg-ds-chart-bar");
-    expect(card).toContain("bg-ds-accent");
+  /**
+   * 막대는 이제 상세와 **같은 조각**(`FlowBar`)이 그린다(DETAIL-01) — 카드와 상세가 다르게
+   * 생기면 눌러 들어간 사람이 같은 것을 보고 있는지 확신하지 못한다.
+   * 그래서 색 문법은 그 조각에서 확인한다. 지키는 것은 같다: 빠진 쪽 회색, 들어온 쪽 라임.
+   */
+  it("빠진 쪽은 회색, 들어온 쪽은 라임 — 다른 카드와 같은 문법", () => {
+    const steps = readFileSync(new URL("../../../fomo-web/components/DepthSteps.tsx", import.meta.url), "utf8");
+    expect(steps).toContain("bg-ds-chart-bar");
+    expect(steps).toContain("bg-ds-accent");
+    expect(card).toContain("<FlowBar");
+  });
+
+  it("업종 이름을 자르지 않는다 — 표시명을 쓰고 라벨은 막대 위에 둔다 (FLOW-01 §A-1·§A-2)", () => {
+    // 프로덕션 실측(2026-09-02): 왼쪽 72px 칸 + truncate 가 `반도체와반...` 을 만들었다.
+    expect(card).not.toContain("w-[72px]");
+    expect(card).toContain("sectorDisplayName(card.fromSector)");
+    expect(card).toContain("sectorDisplayName(card.toSector)");
   });
 
   it("화면이 인과를 덧붙이지 않는다 — 문장은 서버가 만든 것을 그대로 쓴다", () => {

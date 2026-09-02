@@ -273,8 +273,9 @@ export function FlowBar({
           {amount}
         </span>
       </div>
-      <div className="mt-[6px] h-[6px] w-full overflow-hidden rounded-full bg-ds-surface-2">
-        <div className={`h-full rounded-full ${tone === "in" ? "bg-ds-accent" : "bg-ds-text-3"}`} style={{ width }} />
+      {/* 색 문법은 카드와 같다 — 빠진 쪽 `chart-bar`(회색), 들어온 쪽 `accent`(라임). */}
+      <div className="mt-[6px] h-[8px] w-full overflow-hidden rounded-[2px] bg-ds-chart-bar/30">
+        <div className={`h-full rounded-[2px] ${tone === "in" ? "bg-ds-accent" : "bg-ds-chart-bar"}`} style={{ width }} />
       </div>
     </div>
   );

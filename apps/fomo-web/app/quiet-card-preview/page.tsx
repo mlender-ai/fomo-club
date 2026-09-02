@@ -177,13 +177,16 @@ const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
 const FLOW = {
   fromSector: "반도체와반도체장비",
   toSector: "전자장비와기기",
-  fromNet: -1840,
-  toNet: 1210,
+  // 원 단위다 — 종전 픽스처는 `-1840` 이라 화면에 `-0만` 이 찍혔다(실측 2026-09-02).
+  // 픽스처가 실제와 자릿수가 다르면 그 화면으로는 아무것도 검증하지 못한다.
+  fromNet: -401_907_251_110,
+  toNet: 328_767_101_510,
   fromStocks: 12,
   toStocks: 9,
   windowDays: 5,
-  hook: "반도체에서 돈이 빠지고\n전자장비로 들어오고 있어요",
-  support: ["최근 5일 · 기관 순매수 기준", "같은 돈인지는 알 수 없어요"],
+  hook: "반도체에서 돈이 빠지고\n전자부품으로 들어오고 있어요",
+  // 금액은 막대가 그린다 — 보조 줄은 무엇을 기준으로 잰 것인지만 말한다(§B-2).
+  support: ["최근 5거래일 · 외국인·기관 기준"],
 };
 
 const MACRO = {
