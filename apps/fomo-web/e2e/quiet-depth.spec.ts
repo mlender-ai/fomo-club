@@ -194,6 +194,70 @@ test("[완료 4] 2걸음의 공시 제목이 사람 말로 나오고 원문 링�
   }
 });
 
+test("[DETAIL-02] 실적 공시가 실제 숫자·전년 동기 대비·한 줄 해석을 들고 온다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  const why = page.locator('[data-testid="depth-why-now"]');
+  const text = await why.innerText();
+
+  // 완료 1 — 매출·영업이익·순이익 숫자가 나온다.
+  for (const label of ["매출", "영업이익", "순이익"]) {
+    expect(text, `${label} 줄 없음`).toContain(label);
+  }
+  expect(text).toContain("1,240억");
+
+  // 완료 2·3 — 전년 동기 대비 증감률과 흑자 전환 문장.
+  expect(text).toContain("작년 2분기보다 +18%");
+  expect(text).toContain("흑자로");
+
+  // 완료 4 — 한 줄 해석. 완료 5 — 평가 표현이 없다.
+  await expect(page.locator('[data-testid="depth-why-now-headline"]').first())
+    .toContainText("매출 늘고 영업이익 흑자로 돌아섰어요");
+  for (const banned of ["좋았어요", "호실적", "실적이 개선"]) {
+    expect(text, `평가 표현 "${banned}"`).not.toContain(banned);
+  }
+
+  // 완료 6 — 금액이 규모 대비로 환산되고, 분자가 계약 총액임을 문장이 말한다.
+  await expect(page.locator('[data-testid="depth-why-now-scale"]').first())
+    .toContainText("계약금액이 최근 1년 매출의 26%");
+
+  // 기간 라벨이 해석보다 **먼저** 온다 — 반기 제목 아래 분기 숫자를 놓기 때문이다.
+  const periodBox = await page.locator('[data-testid="depth-why-now-period"]').first().boundingBox();
+  const headlineBox = await page.locator('[data-testid="depth-why-now-headline"]').first().boundingBox();
+  expect(periodBox!.y).toBeLessThan(headlineBox!.y);
+
+  // 완료 8 — 원문 링크는 제목 옆이 아니라 **같은 항목의 맨 아래**로 밀린다.
+  await expect(page.locator('[data-testid="depth-why-now-source"]').first()).toContainText("공시 원문");
+  const figures = page.locator('[data-testid="depth-why-now-figures"]').first();
+  // 같은 항목 안에서 비교해야 한다 — 다른 항목의 링크와 견주면 좌표 비교가 뜻을 잃는다.
+  const row = figures.locator("xpath=..");
+  const figuresBox = await figures.boundingBox();
+  const sourceBox = await row.locator('[data-testid="depth-why-now-source"]').boundingBox();
+  expect(sourceBox!.y).toBeGreaterThan(figuresBox!.y + figuresBox!.height - 1);
+});
+
+test("[DETAIL-02] 투자조언 면책이 **네 걸음 전부**에 있다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+
+  /**
+   * 인과 면책(`왜 샀는지는 확인할 수 없어요`)만으로는 부족하다 — 그건 다른 말이다.
+   * 그리고 걸음은 **상호 배타 렌더**라, 마지막 걸음에만 두면 재무 수치를 읽고 나가는
+   * 경로에 면책이 한 번도 걸리지 않는다(오버레이는 어느 걸음에서든 닫을 수 있다).
+   */
+  const disclaimer = page.locator('[data-testid="depth-disclaimer"]');
+  for (let step = 0; step < 4; step += 1) {
+    // `toHaveCount(1)` 은 양방향이다 — 걸음 안으로 되돌리면 2, 지우면 0 이라 둘 다 터진다.
+    await expect(disclaimer, `${step + 1}걸음에 면책 없음`).toHaveCount(1);
+    await expect(disclaimer).toBeVisible();
+    await expect(disclaimer).toContainText("투자 조언이 아니에요");
+    if (step === 1) {
+      // 수치가 실제로 나오는 걸음 — 면책이 같은 화면에 있어야 한다.
+      await expect(page.locator('[data-testid="depth-why-now-figures"]').first()).toBeVisible();
+    }
+    if (step < 3) await page.locator('[data-testid="depth-next"]').click();
+  }
+});
+
 test("③ 헤더 — 56px, 뒤로 화살표 44×44, ★ 도 하단 CTA 도 없음", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   // 가격은 카드와 같은 포맷터를 쓴다 — 미국 종목이 `4.945` 로 나오면 무슨 통화인지 알 수 없다.

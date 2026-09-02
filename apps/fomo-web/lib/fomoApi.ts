@@ -1078,6 +1078,15 @@ export interface QuietPickCardType {
 }
 
 /** 「왜 지금 사는가」 한 줄(WO-RESET-02 PART C). 서버가 굽는 시점에 굳혀 보낸다. */
+/** DETAIL-02 — 실적 공시에서 뽑은 한 항목. `change` 가 없으면 줄 자체가 없다. */
+export interface QuietPickEarningsRow {
+  label: string;
+  /** `1,240억`. */
+  value: string;
+  /** `작년 2분기보다 +18%` / `작년 2분기 -14억에서 흑자로`. */
+  change: string;
+}
+
 export interface QuietPickWhyNowEvent {
   /** `YYYY-MM-DD`. 없으면 상태 서술(`지금`)이다. */
   date?: string;
@@ -1086,6 +1095,19 @@ export interface QuietPickWhyNowEvent {
   text: string;
   /** 공시 원문. 없으면 링크를 그리지 않는다. */
   url?: string;
+  /**
+   * DETAIL-02 — 실적 공시의 **실제 숫자**. 없으면 제목만 그린다.
+   * `실적을 냈어요` 만 남기지 않기 위한 필드다.
+   */
+  figures?: {
+    /** `2026년 2분기` — 어느 기간의 숫자인가. 이게 없으면 서버가 블록을 만들지 않는다. */
+    periodLabel: string;
+    /** 한 줄 해석 — 사실 요약. 평가어는 서버에서 막는다. */
+    headline?: string;
+    rows: QuietPickEarningsRow[];
+  };
+  /** DETAIL-02 §C — 금액의 규모 대비 비율(`연매출의 26%`). */
+  scaleNote?: string;
 }
 
 /** WO-RESET-05 §4 — 3걸음의 한 줄. 숫자와 **그 숫자를 읽는 문장**. */
