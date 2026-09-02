@@ -433,12 +433,24 @@ test("[MACRO-01 §D-2] 거시 카드는 숫자를 한 번만 쓰고, 설명은 �
   // 영향 설명은 카드에 없다.
   await expect(card).not.toContainText("유리해요");
 
-  // CTA 를 누르면 상세가 뜨고, 거기 설명이 있다.
+  // CTA 를 누르면 상세가 뜬다.
   await card.locator('[data-testid="macro-cta"]').click();
   const depth = page.locator('[data-testid="macro-depth"]');
   await expect(depth).toBeVisible();
-  await expect(depth.locator('[data-testid="macro-depth-principle"]')).toContainText("유리해요");
 
+  /*
+    DETAIL-01 §A — 이 상세는 이제 **네 걸음**이다. 설명과 연결 종목이 한 장에 같이 있던 것을
+    2걸음(영향) · 3걸음(우리 종목)으로 나눴다. 이 테스트가 지키는 것은 여전히 같다 —
+    **설명이 카드가 아니라 상세에 있다.** 어느 걸음인지는 걸어가서 확인한다.
+  */
+  await expect(depth.locator('[data-testid="depth-dots"]')).toHaveAttribute("aria-label", /4걸음 중 1번째/);
+
+  await depth.locator('[data-testid="depth-next"]').click();
+  await expect(depth.locator('[data-testid="macro-depth-principle"]')).toContainText("유리해요");
+  // 유리·불리를 **업종 이름으로** 말한다(§A-2) — 원리 문장만으로는 어느 업종이냐에 답하지 못한다.
+  await expect(depth.locator('[data-testid="macro-depth-favor-sectors"]')).toBeVisible();
+
+  await depth.locator('[data-testid="depth-next"]').click();
   // 연결된 종목이 언제 짚혔는지 같이 나온다 — 날짜가 있어야 「우리가 짚었다」가 사실이 된다.
   await expect(depth.locator('[data-testid="macro-depth-favored"]')).toContainText("대한항공");
   await expect(depth.locator('[data-testid="macro-depth-favored"]')).toContainText("짚음");

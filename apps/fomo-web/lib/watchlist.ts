@@ -8,8 +8,30 @@
 const KEY = "fomo_watchlist";
 const CAP = 200;
 
+/**
+ * 담을 수 있는 대상 (DETAIL-01 §D-2).
+ *
+ * 종전엔 종목뿐이었다. 카드 종류가 늘면서 **모든 상세의 마지막 걸음이 즐겨찾기**가 됐고
+ * (§D-1), 그러려면 지표·업종도 같은 목록에 들어가야 한다.
+ *
+ * `stock` 필드 이름은 그대로 둔다 — 사용자 로컬에 이미 쌓인 항목의 키다. 이름을 바꾸면
+ * 담아 둔 목록이 통째로 사라진다. 이 필드는 이제 **대상 식별자**로 읽는다.
+ */
+export type WatchKind = "stock" | "indicator" | "sector";
+
 export interface WatchItem {
+  /** 대상 식별자 — 종목은 canonical, 지표는 indicatorId, 업종은 업종 **원문**. */
   stock: string;
+  /**
+   * 없으면 `stock` — 이 필드 이전에 담긴 항목이 전부 종목이기 때문이다.
+   * **없는 것과 "stock"을 같게 다룬다**(마이그레이션 없이 호환).
+   */
+  kind?: WatchKind;
+  /**
+   * 화면에 쓸 이름. 업종은 표시명(`sectorDisplayName`), 지표는 지표명.
+   * 종목은 비워 둔다 — `canonicalName` 이 단일 창구라 여기서 굳히면 갈라진다.
+   */
+  label?: string;
   ts: number;
   sector?: string;
   reason?: string;
@@ -23,6 +45,16 @@ export interface WatchItem {
   naverCode?: string;
   market?: string;
   country?: string;
+}
+
+/** 모르는 값은 전부 `stock` — 이 필드 이전 항목과 손상된 값을 같은 자리로 모은다. */
+function normalizeKind(value: unknown): WatchKind {
+  return value === "indicator" || value === "sector" ? value : "stock";
+}
+
+/** 같은 이름의 종목과 업종이 서로를 지우지 않게 — 목록 안의 신원은 (종류, 식별자)다. */
+function sameSubject(item: WatchItem, kind: WatchKind, id: string): boolean {
+  return item.stock === id && normalizeKind(item.kind) === kind;
 }
 
 function normalizeStock(value: unknown): string | null {
@@ -47,9 +79,12 @@ function read(): WatchItem[] {
         const stock = normalizeStock(row.stock);
         if (!stock) return null;
         const ts = typeof row.ts === "number" && Number.isFinite(row.ts) ? row.ts : index + 1;
+        const kind = normalizeKind(row.kind);
         return {
           stock,
           ts,
+          ...(kind !== "stock" ? { kind } : {}),
+          ...(typeof row.label === "string" && row.label.trim() ? { label: row.label.trim() } : {}),
           ...(typeof row.sector === "string" ? { sector: row.sector } : {}),
           ...(typeof row.reason === "string" ? { reason: row.reason } : {}),
           ...(typeof row.priceAt === "number" && row.priceAt > 0 ? { priceAt: row.priceAt } : {}),
@@ -73,9 +108,14 @@ function write(list: WatchItem[]): void {
   }
 }
 
-/** 관심 등록 여부. */
-export function isWatched(stock: string): boolean {
-  return read().some((w) => w.stock === stock);
+/** 관심 등록 여부. 종류를 안 주면 종목으로 본다(기존 호출부 그대로). */
+export function isWatched(stock: string, kind: WatchKind = "stock"): boolean {
+  return read().some((w) => sameSubject(w, kind, stock));
+}
+
+/** 한 종류만 골라 본다 — 「담은 업종」 목록처럼. */
+export function getWatchlistOf(kind: WatchKind): WatchItem[] {
+  return getWatchlist().filter((w) => normalizeKind(w.kind) === kind);
 }
 
 /** 최근 관심 순(내림차순). */
@@ -93,13 +133,18 @@ export interface WatchMeta {
   naverCode?: string | undefined;
   market?: string | undefined;
   country?: string | undefined;
+  /** 담는 대상 종류. 없으면 종목(§D-2). */
+  kind?: WatchKind | undefined;
+  /** 지표·업종의 화면 이름. 종목은 넣지 않는다. */
+  label?: string | undefined;
 }
 
 export function upsertWatch(stock: string, nowMs: number, meta: WatchMeta = {}): WatchItem | null {
   const normalized = normalizeStock(stock);
   if (typeof window === "undefined" || !normalized) return null;
+  const kind = normalizeKind(meta.kind);
   const list = read();
-  const existingIndex = list.findIndex((w) => w.stock === normalized);
+  const existingIndex = list.findIndex((w) => sameSubject(w, kind, normalized));
   const existing = existingIndex >= 0 ? list[existingIndex] : null;
   const sector = existing?.sector ?? meta.sector;
   const reason = existing?.reason ?? meta.reason;
@@ -109,9 +154,12 @@ export function upsertWatch(stock: string, nowMs: number, meta: WatchMeta = {}):
   const naverCode = existing?.naverCode ?? meta.naverCode;
   const market = existing?.market ?? meta.market;
   const country = existing?.country ?? meta.country;
+  const label = existing?.label ?? (meta.label?.trim() || undefined);
   const item: WatchItem = {
     stock: normalized,
     ts: existing?.ts ?? nowMs,
+    ...(kind !== "stock" ? { kind } : {}),
+    ...(label ? { label } : {}),
     ...(sector ? { sector } : {}),
     ...(reason ? { reason } : {}),
     ...(priceAt ? { priceAt } : {}),
@@ -133,10 +181,11 @@ export function upsertWatch(stock: string, nowMs: number, meta: WatchMeta = {}):
 /** 관심 토글 — 새 상태(true=관심 등록됨) 반환. */
 export function toggleWatch(stock: string, nowMs: number, meta: WatchMeta = {}): boolean {
   if (typeof window === "undefined") return false;
+  const kind = normalizeKind(meta.kind);
   const list = read();
-  const exists = list.some((w) => w.stock === stock);
+  const exists = list.some((w) => sameSubject(w, kind, stock));
   if (exists) {
-    write(list.filter((w) => w.stock !== stock));
+    write(list.filter((w) => !sameSubject(w, kind, stock)));
     return false;
   }
   upsertWatch(stock, nowMs, meta);
@@ -147,7 +196,8 @@ export function toggleWatch(stock: string, nowMs: number, meta: WatchMeta = {}):
 export function mergeWatchlist(stocks: string[], nowMs: number): void {
   if (typeof window === "undefined" || stocks.length === 0) return;
   const list = read();
-  const have = new Set(list.map((w) => w.stock));
+  // 서버 워치리스트는 아직 종목만 준다 — 종목끼리만 맞춰 본다(지표·업종을 지우지 않는다).
+  const have = new Set(list.filter((w) => normalizeKind(w.kind) === "stock").map((w) => w.stock));
   const merged = [...list];
   for (const s of stocks) if (!have.has(s)) merged.push({ stock: s, ts: nowMs });
   write(merged);

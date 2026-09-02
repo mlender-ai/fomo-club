@@ -1113,6 +1113,42 @@ export interface CompanyGroup {
  * WO-RESET-08 §B — 자금 흐름 카드. **종목 카드가 아니라 시장 카드**라 픽과 나눠서 온다.
  * 화면이 같은 덱 앞쪽에 끼워 넣는다(§D-1) — 별도 섹션이 아니다.
  */
+/** 상세 1걸음 — 업종 한 줄(DETAIL-01 §B). */
+export interface FlowSectorRow {
+  /** 집계 원문 — 조인 키다. 화면은 표시명으로 바꿔 그린다. */
+  sector: string;
+  net: number;
+  stocks: number;
+}
+
+/** 상세 2·3걸음 — 종목 한 줄. */
+export interface FlowStockRow {
+  code: string;
+  /** 없으면 그 줄을 그리지 않는다 — 코드를 이름 자리에 쓰지 않는다. */
+  name?: string;
+  net: number;
+  /** 20일 평균 거래량 대비 배수. 이력이 모자라면 없다. */
+  volumeRatio?: number;
+}
+
+/** 상세 4걸음 — 하루치. */
+export interface FlowDayRow {
+  date: string;
+  net: number;
+}
+
+/** 자금 흐름 상세 다섯 걸음 재료 (DETAIL-01 §B). */
+export interface QuietPickFlowDepth {
+  outflows: FlowSectorRow[];
+  inflows: FlowSectorRow[];
+  fromStocks: FlowStockRow[];
+  toStocks: FlowStockRow[];
+  /** 비어 있는 것도 정보다 — 돈은 들어오는데 거래는 평소와 비슷하다는 뜻(§D-4). */
+  toVolumeStocks: FlowStockRow[];
+  toDaily: FlowDayRow[];
+  toPositiveDays: number;
+}
+
 export interface QuietPickFlowCard {
   fromSector: string;
   toSector: string;
@@ -1124,6 +1160,8 @@ export interface QuietPickFlowCard {
   /** 결론 두 줄 — 인과로 말하지 않는다. 서버가 만든 것을 그대로 쓴다. */
   hook: string;
   support: string[];
+  /** 없으면 상세를 열지 않는다 — 상세 없는 카드는 덱에 넣지 않는다(§「하지 말 것」). */
+  depth?: QuietPickFlowDepth;
 }
 
 /** WO-RESET-09 §B-1 — 거시 카드. 종목 카드가 아니라 시장 카드다. */
@@ -1154,8 +1192,15 @@ export interface QuietPickMacroCard {
    * 카드에 넣으면 카드가 길어지고, 길어진 카드는 눌리지 않는다.
    */
   principle: string;
-  favored: Array<{ canonical: string; pickedAt: string }>;
-  hurt: Array<{ canonical: string; pickedAt: string }>;
+  favored: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  hurt: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  /** 상세 2걸음 — 유리·불리 업종 이름(표시명, DETAIL-01 §A-2). */
+  favorSectors?: string[];
+  hurtSectors?: string[];
+  /** 상세 1걸음 — 60일 추이. */
+  detailSeries?: number[];
+  /** 상세 1걸음 — 1년 밴드 위치. 표본이 모자라면 없다. */
+  band?: { low: number; high: number; percentile: number; label: string; points: number };
 }
 
 export interface QuietPick {

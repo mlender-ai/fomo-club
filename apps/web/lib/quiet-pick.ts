@@ -64,6 +64,9 @@ import {
 } from "@fomo/core/keyword-cards/investor-holdings";
 import {
   aggregateSectorFlow,
+  buildFlowDepth,
+  FLOW_DEPTH_DAYS,
+  type FlowDepth,
   pickFlowPair,
   flowHook,
   flowSupport,
@@ -72,6 +75,7 @@ import {
   type FlowPair,
 } from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
+import { sectorDisplayName } from "@fomo/core/keyword-cards/sector-display";
 import { readSectorMap } from "./sector-map-store";
 import { readMacroCollection } from "./macro-store";
 import {
@@ -79,11 +83,15 @@ import {
   detectMacroMove,
   isMacroFresh,
   linkMacroToPicks,
+  macroBand,
+  MACRO_DETAIL_SERIES_POINTS,
+  MACRO_SENSITIVITY,
   macroFreshnessLabel,
   macroHook,
   macroSupport,
   selectMacroMoves,
   formatMacroValue,
+  type MacroBand,
   type MacroLink,
   type RecentPick,
 } from "@fomo/core/keyword-cards/macro-link";
@@ -612,6 +620,11 @@ export interface FlowCard {
   /** 결론 두 줄 — **인과로 말하지 않는다**(§E-1). */
   hook: string;
   support: string[];
+  /**
+   * 상세 다섯 걸음 재료 (DETAIL-01 §B). 없으면 상세를 열지 않는다 —
+   * **상세를 만들지 않은 카드는 덱에 넣지 않는다**(§「하지 말 것」).
+   */
+  depth?: FlowDepth;
 }
 
 /** WO-RESET-09 §B-1 — 거시 카드 한 장. 화면이 그대로 그린다. */
@@ -642,9 +655,19 @@ export interface MacroCard {
   support: string[];
   /** 일반 원리 한 줄 — **예측이 아니다**(§F-1). */
   principle: string;
-  /** 우리가 최근 짚은 종목 중 유리·불리 쪽. 상세 2걸음이 그대로 그린다. */
-  favored: Array<{ canonical: string; pickedAt: string }>;
-  hurt: Array<{ canonical: string; pickedAt: string }>;
+  /** 우리가 최근 짚은 종목 중 유리·불리 쪽. 상세 3걸음이 그대로 그린다. */
+  favored: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  hurt: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  /**
+   * 상세 2걸음 — 유리·불리 **업종 이름**(DETAIL-01 §A-2). 표시명으로 굳혀 보낸다.
+   * 원리 문장만으로는 「어느 업종이냐」에 답하지 못한다.
+   */
+  favorSectors: string[];
+  hurtSectors: string[];
+  /** 상세 1걸음 — 60일 추이. 카드의 20점보다 길게 본다(§A-1). */
+  detailSeries: number[];
+  /** 상세 1걸음 — 1년 밴드에서 어디쯤인가. 표본이 모자라면 없다(지어내지 않는다). */
+  band?: MacroBand;
 }
 
 export interface QuietPickResponse {
@@ -1544,14 +1567,37 @@ function detectInvestorSignals(
  * 「기타」로 묶지 않는다. 업종 흐름 카드는 분류가 틀리면 통째로 거짓이 되므로,
  * 모르는 것을 아는 척하지 않는다. 버린 수는 진단에 남긴다.
  */
+/**
+ * 20거래일 평균 대비 오늘 거래량 배수 (DETAIL-01 §B 3걸음).
+ *
+ * 오늘을 분모에서 뺀다 — 급증분이 스스로를 희석하면 "거래가 붙었다"를 못 잡는다
+ * (`us-market-cache.volumeRatioFromHistory` 와 같은 규약).
+ * 표본이 모자라면 **아무 값도 내지 않는다** — 거짓 배수는 없는 것보다 나쁘다.
+ */
+function volumeRatiosFromCandles(candleMap: ReadonlyMap<string, DailyOhlcv[]>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [code, candles] of candleMap) {
+    const volumes = candles.map((c) => c.volume).filter((v): v is number => typeof v === "number" && v > 0);
+    if (volumes.length < 6) continue;
+    const today = volumes[volumes.length - 1]!;
+    const past = volumes.slice(-21, -1);
+    if (past.length < 5) continue;
+    const avg = past.reduce((sum, v) => sum + v, 0) / past.length;
+    if (!(avg > 0)) continue;
+    out[code] = Math.round((today / avg) * 100) / 100;
+  }
+  return out;
+}
+
 function detectSectorFlows(
   histories: Record<string, InvestorFlow[]>,
   candleMap: ReadonlyMap<string, DailyOhlcv[]>,
   sectorByCode: Readonly<Record<string, string>>,
-  today: string
-): { pairs: FlowPair[]; census: { rows: number; unclassified: number; sectors: number } } {
+  today: string,
+  nameByCode: Readonly<Record<string, string>> = {}
+): { pairs: FlowPair[]; depths: FlowDepth[]; census: { rows: number; unclassified: number; sectors: number } } {
   const census = { rows: 0, unclassified: 0, sectors: 0 };
-  if (Object.keys(sectorByCode).length === 0) return { pairs: [], census };
+  if (Object.keys(sectorByCode).length === 0) return { pairs: [], depths: [], census };
 
   /** 종목코드 → 날짜 → 종가. 캔들은 `YYYYMMDD` 라 ISO 로 맞춘다. */
   const closeByCodeDate = new Map<string, Map<string, number>>();
@@ -1580,6 +1626,14 @@ function detectSectorFlows(
   census.rows = rows.length;
 
   const pairs: FlowPair[] = [];
+  const depths: FlowDepth[] = [];
+  const volumeRatioByCode = volumeRatiosFromCandles(candleMap);
+  /**
+   * 4걸음 전용 창 — **카드 창과 별개로 항상 20거래일**이다(DETAIL-01 §B 4걸음).
+   * 카드가 3일 흐름으로 만들어졌어도 "얼마나 오래됐나" 는 20일로 봐야 답이 된다.
+   */
+  const dailyFrom = shiftIsoDays(today, -(FLOW_DEPTH_DAYS + SECTOR_FLOW_WINDOW_SLACK + 10));
+  const dailyRows = rows.filter((r) => r.date >= dailyFrom && r.date <= today);
   /**
    * 창 셋(§A-1) — 짧은 창부터 본다. 3일 흐름이 성립하면 그게 가장 새 소식이다.
    * 한 창에서 카드가 나오면 나머지 창은 보지 않는다 — 같은 이야기를 두 번 하지 않는다.
@@ -1592,9 +1646,13 @@ function detectSectorFlows(
     census.unclassified = unclassified;
     census.sectors = Math.max(census.sectors, flows.length);
     const pair = pickFlowPair(flows, windowDays, SECTOR_FLOW_MIN_NET);
-    if (pair) { pairs.push(pair); break; }
+    if (pair) {
+      pairs.push(pair);
+      depths.push(buildFlowDepth(pair, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode));
+      break;
+    }
   }
-  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), census };
+  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), depths: depths.slice(0, SECTOR_FLOW_MAX_CARDS), census };
 }
 
 /** ① 조용한 돈 신호 — US 내부자 클러스터(Form4). */
@@ -2151,7 +2209,15 @@ export async function buildQuietPickResponse(options: {
     deps.readKrCandleCacheMany(krCodes),
     new Map() as Map<string, DailyOhlcv[]>
   );
-  const sectorFlow = detectSectorFlows(histories, flowCandles, sectorMap?.byCode ?? {}, date);
+  /**
+   * 종목코드 → 이름 (DETAIL-01 §B 2걸음). 이름이 없으면 상세가 `005930 -4,210억` 이 되고,
+   * 그건 업종 이름만 두고 비운 것과 다르지 않다. 시세 목록이 이미 코드와 이름을 함께 갖고 있다.
+   */
+  const flowNameByCode: Record<string, string> = {};
+  for (const row of marketRows) {
+    if (row.naverCode && row.canonical) flowNameByCode[row.naverCode] = row.canonical;
+  }
+  const sectorFlow = detectSectorFlows(histories, flowCandles, sectorMap?.byCode ?? {}, date, flowNameByCode);
   /**
    * WO-RESET-09 — 거시 카드. **연결이 카드의 존재 이유다**(§B-3).
    *
@@ -2170,6 +2236,18 @@ export async function buildQuietPickResponse(options: {
       const market = def?.market;
       return { canonical, pickedAt, ...(sector ? { sector } : {}), ...(market ? { market } : {}) };
     });
+
+    /**
+     * 상세에서 종목을 누르면 그 종목 상세로 간다(§D-3) — 그러려면 **조회 키가 필요하다.**
+     * canonical 만 보내면 화면이 이름으로 되짚어야 하고 동명이인에서 어긋난다.
+     */
+    const linkedPick = (p: RecentPick) => {
+      const code = defByCanonical.get(p.canonical)?.naverCode;
+      return { canonical: p.canonical, pickedAt: p.pickedAt, ...(code ? { naverCode: code } : {}) };
+    };
+    /** 업종 이름은 화면용 표시명으로 굳혀 보낸다 — 집계 키(원문)와 섞지 않는다. */
+    const displaySectors = (sectors: readonly string[]): string[] =>
+      [...new Set(sectors.map((sector) => sectorDisplayName(sector)))].filter(Boolean);
 
     /**
      * **후보를 다 모은 뒤에 고른다.** 종전에는 목록 순서대로 돌다 상한에 닿으면 멈췄는데,
@@ -2205,22 +2283,44 @@ export async function buildQuietPickResponse(options: {
       hook: macroHook(move),
       support: macroSupport(link),
       principle: link.principle,
-      favored: link.favored.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
-      hurt: link.hurt.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
+      favored: link.favored.map(linkedPick),
+      hurt: link.hurt.map(linkedPick),
+      // 방향에 맞춰 뒤집는다 — 내릴 때는 「오를 때 불리」가 유리한 쪽이다.
+      favorSectors: displaySectors(
+        move.direction === "up"
+          ? MACRO_SENSITIVITY[move.indicator.id].upFavors
+          : MACRO_SENSITIVITY[move.indicator.id].upHurts
+      ),
+      hurtSectors: displaySectors(
+        move.direction === "up"
+          ? MACRO_SENSITIVITY[move.indicator.id].upHurts
+          : MACRO_SENSITIVITY[move.indicator.id].upFavors
+      ),
+      detailSeries: (macroCollection.series[move.indicator.id] ?? [])
+        .slice(-MACRO_DETAIL_SERIES_POINTS)
+        .map((p) => p.value),
+      ...(() => {
+        const band = macroBand(macroCollection.series[move.indicator.id] ?? []);
+        return band ? { band } : {};
+      })(),
     }));
   })();
 
-  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair) => ({
-    fromSector: pair.from.sector,
-    toSector: pair.to.sector,
-    fromNet: pair.from.net,
-    toNet: pair.to.net,
-    fromStocks: pair.from.stocks,
-    toStocks: pair.to.stocks,
-    windowDays: pair.windowDays,
-    hook: flowHook(pair),
-    support: flowSupport(pair),
-  }));
+  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair, index) => {
+    const depth = sectorFlow.depths[index];
+    return {
+      fromSector: pair.from.sector,
+      toSector: pair.to.sector,
+      fromNet: pair.from.net,
+      toNet: pair.to.net,
+      fromStocks: pair.from.stocks,
+      toStocks: pair.to.stocks,
+      windowDays: pair.windowDays,
+      hook: flowHook(pair),
+      support: flowSupport(pair),
+      ...(depth ? { depth } : {}),
+    };
+  });
 
   const allSignals = dedupeSignalsByStock([
     ...investorSignals,
