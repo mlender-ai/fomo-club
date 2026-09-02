@@ -550,23 +550,66 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                 {whyNowEvents.map((event, i) => (
                   <div key={`${event.when}-${i}`} className="flex gap-s3 border-b-hair border-ds-border py-s3 last:border-0">
                     <p className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2">{event.when}</p>
-                    <p className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">
-                      {event.text}
-                      {event.url && (
-                        <>
-                          {" "}
-                          <a
-                            href={event.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="whitespace-nowrap text-ds-caption text-ds-text-3 underline"
-                            data-testid="depth-why-now-source"
-                          >
-                            원문
-                          </a>
-                        </>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-keep text-ds-body text-ds-text-1">{event.text}</p>
+                      {/*
+                        DETAIL-02 — `실적을 냈어요` 로 끝내지 않는다. **한 줄 해석 + 실제 숫자**.
+                        서버가 못 뽑았으면 이 블록이 없고 제목만 남는다(§E-1 — 지어내지 않는다).
+                      */}
+                      {event.figures && (
+                        <div className="mt-s2" data-testid="depth-why-now-figures">
+                          {/*
+                            기간이 **해석보다 먼저** 온다. 왼쪽 열은 공시일이라 기간 앵커가 아니고,
+                            반기 제목 아래에 분기 숫자를 놓기 때문이다 — 오독에 가장 약한 문장
+                            (`흑자로 돌아섰어요`)이 라벨보다 앞서면 라벨이 하는 일이 없다.
+                          */}
+                          <p className="text-ds-caption text-ds-text-3" data-testid="depth-why-now-period">
+                            {event.figures.periodLabel}
+                          </p>
+                          {event.figures.headline && (
+                            <p
+                              className="mt-s2 break-keep text-ds-body text-ds-text-2"
+                              data-testid="depth-why-now-headline"
+                            >
+                              {event.figures.headline}
+                            </p>
+                          )}
+                          {event.figures.rows.map((row) => (
+                            <div key={row.label} className="mt-s2 flex items-baseline gap-s3">
+                              <p className="w-[56px] shrink-0 text-ds-label text-ds-text-3">{row.label}</p>
+                              <p className="shrink-0 font-mono text-ds-body text-ds-text-1">{row.value}</p>
+                              <p className="min-w-0 flex-1 break-keep text-right text-ds-caption text-ds-text-2">
+                                {row.change}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    </p>
+                      {/* DETAIL-02 §C-1 — 금액은 규모 대비로. `320억` 은 감이 안 오고 `연매출의 26%` 는 온다. */}
+                      {event.scaleNote && (
+                        <p
+                          className="mt-s2 break-keep text-ds-caption text-ds-text-2"
+                          data-testid="depth-why-now-scale"
+                        >
+                          {event.scaleNote}
+                        </p>
+                      )}
+                      {/*
+                        DETAIL-02 PART D — 원문 링크는 **보조**다. 제목 옆이 아니라 맨 아래,
+                        작고 회색으로 둔다. 내용을 먼저 보여주고 링크로 때우지 않는다.
+                      */}
+                      {event.url && (
+                        <a
+                          href={event.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="mt-s2 inline-block whitespace-nowrap text-ds-caption text-ds-text-3 underline"
+                          data-testid="depth-why-now-source"
+                        >
+                          공시 원문 →
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -656,6 +699,28 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               )}
             </>
           )}
+
+          {/*
+            투자조언 면책 — **이 화면에 없었다.** 있던 것은 인과 면책 하나뿐이고
+            (`WHY_NOW_TIMELINE_DISCLAIMER` — "왜 샀는지는 확인할 수 없어요"),
+            그건 "투자 조언이 아니다" 와 다른 말이다.
+
+            DETAIL-02 로 이 화면이 「공시 제목 목록」에서 **분기 실적 수치·증감률·규모 환산을
+            제시하는 화면**으로 바뀌어 노출도가 달라졌다. 문안은 새로 정하지 않았다 —
+            `StockCardFeed.tsx` · `VoiceFeed.tsx` 가 쓰는 **기존 승인 문장 그대로**다.
+            앞 절(`지난 흐름을 친구처럼…`)은 한마디 코멘트용이라 가져오지 않는다.
+
+            **걸음 밖에 둔다.** 네 걸음은 상호 배타 렌더이고 재무 수치가 나오는 것은
+            2걸음(`why`)이다. 4걸음 안에 두면 **수치를 읽고 나가는 경로에 면책이 한 번도
+            걸리지 않는다** — 오버레이는 어느 걸음에서든 닫을 수 있다. 스크롤 본문 끝이라
+            `StepBar` 높이는 건드리지 않는다(DS-07 §3).
+          */}
+          <p
+            className="mt-s6 text-center text-ds-caption text-ds-text-3"
+            data-testid="depth-disclaimer"
+          >
+            투자 조언이 아니에요.
+          </p>
 
           </div>
         </div>

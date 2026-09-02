@@ -53,9 +53,30 @@ const PICK = {
       // **번역된 형태**로 둔다(WO-RESET-05 §3-1). 서버가 굽는 시점에 옮기므로 화면에
       // 도착하는 것은 이 모양이다 — 픽스처에 서식 이름을 두면 없어진 동작을 그리게 된다.
       text: "큰 계약을 따냈어요 · 계약금액 320억",
+      // DETAIL-02 §C-1 — 금액은 규모 대비로. `320억` 만으로는 크기가 오지 않는다.
+      scaleNote: "계약금액이 최근 1년 매출의 26%",
       url: "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260811000001",
     },
-    { date: "2026-08-14", when: "8월 14일", text: "그 다음부터 임원이 사기 시작했어요" },
+    {
+      date: "2026-08-14",
+      when: "8월 14일",
+      /**
+       * DETAIL-02 — `실적을 냈어요` 로 끝나지 않는다. 서버가 공시일과 맞는 분기를 찾아
+       * 숫자를 실어 보내므로, 화면에 도착하는 것은 이 모양이다.
+       */
+      text: "반년 치 실적을 냈어요",
+      figures: {
+        periodLabel: "2026년 2분기",
+        headline: "매출 늘고 영업이익 흑자로 돌아섰어요",
+        rows: [
+          { label: "매출", value: "1,240억", change: "작년 2분기보다 +18%" },
+          { label: "영업이익", value: "92억", change: "작년 2분기 -14억에서 흑자로" },
+          { label: "순이익", value: "71억", change: "작년 2분기보다 +230%" },
+        ],
+      },
+      url: "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260814000001",
+    },
+    { date: "2026-08-18", when: "8월 18일", text: "그 다음부터 임원이 사기 시작했어요" },
   ],
   signalFacts: { priorBuys12mo: 2, volumePct: 51, pctAboveYearLow: 27.4 },
   signalStats: {

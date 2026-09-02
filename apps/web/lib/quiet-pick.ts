@@ -103,6 +103,15 @@ import {
   type ExposureSummary,
 } from "@fomo/core/keyword-cards/exposure-history";
 import { companyRead, type CompanyGroup } from "@fomo/core/keyword-cards/company-read";
+/**
+ * DETAIL-02 — 공시 줄에 붙일 숫자. **배럴이 아니라 경로로** 가져온다 — 배럴에 넣으면
+ * 조회 라우트 번들에 딸려 들어간다(성능 게이트, 2026-09-03).
+ */
+import {
+  disclosureScaleNote,
+  earningsFigures,
+  type EarningsFigures,
+} from "@fomo/core/keyword-cards/disclosure-figures";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers, readSupplyDemandHistoryByTickersStrict } from "./supply-demand-store";
@@ -563,6 +572,17 @@ export interface QuietPickQualification {
    * 나간 건수다. 이 비율이 보고 대상이다(보고할 것 3번).
    */
   disclosurePhrases?: { total: number; raw: number };
+  /**
+   * DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. `total` 은 화면에 나간 공시 건수,
+   * `figures` 는 실적 수치가 붙은 건수, `scale` 은 금액이 규모 대비로 환산된 건수.
+   * **확보율이 낮은 종류가 다음 작업 대상이다** — 그래서 종류별로 나눠 싣는다.
+   */
+  disclosureFigures?: {
+    total: number;
+    figures: number;
+    scale: number;
+    byKind: Record<string, { total: number; figures: number; scale: number }>;
+  };
   /** WO-RESET-08 §A-1 — 업종 흐름 계측(분류 못 찾은 행 수 포함). */
   sectorFlow?: { rows: number; unclassified: number; sectors: number; cards: number };
   /** WO-RESET-09 — 거시 카드 계측. `recentPicks` 0 이면 연결할 대상이 없다. */
@@ -2432,6 +2452,16 @@ export async function buildQuietPickResponse(options: {
    * (신호 시작·실적 줄은 번역 대상이 아니다). 비율이 보고 대상이다.
    */
   const phraseCensus = { total: 0, raw: 0 };
+  /**
+   * DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. `total` 은 화면에 나간 공시 건수,
+   * `figures` 는 실적 수치가 붙은 건수, `scale` 은 금액이 규모 대비로 환산된 건수다.
+   */
+  const figureCensus: {
+    total: number;
+    figures: number;
+    scale: number;
+    byKind: Record<string, { total: number; figures: number; scale: number }>;
+  } = { total: 0, figures: 0, scale: 0, byKind: {} };
 
   /**
    * WO-RESET-05 보고할 것 1·2번 — 업종 비교를 붙일 수 있는 종목 비율과, 비교 문장이 붙어
@@ -2791,8 +2821,24 @@ export async function buildQuietPickResponse(options: {
       ...(((): { whyNow?: WhyNowEvent[]; whyNowQuietNote?: string } => {
         const list = disclosures?.byStock?.[sig.subject.canonical] ?? [];
         // 실적 전환(PART B) — 상태가 아니라 변화만, 날짜는 그 분기의 공시일이다.
-        const quarters = factSheetByStock.get(sig.subject.canonical)?.fiscal?.quarters ?? [];
+        const sheetForWhy = factSheetByStock.get(sig.subject.canonical);
+        const quarters = sheetForWhy?.fiscal?.quarters ?? [];
         const earnings = earningsTurnEvent(quarters);
+        /**
+         * DETAIL-02 §C — 금액을 규모 대비로 환산할 분모. **없는 것은 넘기지 않는다** —
+         * 0 으로 메우면 `연매출의 26%` 가 아무 근거 없이 나온다.
+         */
+        const scale = {
+          ...(typeof sheetForWhy?.fiscal?.ttm?.revenue === "number"
+            ? { revenueTtm: sheetForWhy.fiscal.ttm.revenue }
+            : {}),
+          ...(typeof sheetForWhy?.market_data?.market_cap === "number"
+            ? { marketCap: sheetForWhy.market_data.market_cap }
+            : {}),
+          ...(typeof sheetForWhy?.balance?.total_equity === "number"
+            ? { totalEquity: sheetForWhy.balance.total_equity }
+            : {}),
+        };
         const events = buildWhyNowTimeline({
           signalStartedAt: normalizeQuietMoneyDate(sig.startedAt) ?? sig.startedAt.slice(0, 10),
           // 신호가 이미 주체 문자열을 들고 있다 — 카드와 같은 말을 쓴다(`외국인·기관` 포함).
@@ -2801,6 +2847,24 @@ export async function buildQuietPickResponse(options: {
           signalKind: sig.kind,
           disclosures: list,
           ...(earnings ? { earnings } : {}),
+          /**
+           * DETAIL-02 — 공시 줄에 숫자를 붙인다. **이미 읽어둔 팩트시트**를 쓰는 것이라
+           * 새 수집·새 왕복이 없다. 공시 감지와 재무 수치가 여태 따로 놀았던 것을 여기서 잇는다.
+           *
+           * `@fomo/core` 배럴이 아니라 **경로로 직접** 가져온다 — 배럴에 넣으면 조회 라우트
+           * 번들에 딸려 들어간다(성능 게이트).
+           */
+          figuresFor: (d) => ({
+            ...(((): { figures?: EarningsFigures } => {
+              const f = quarters.length ? earningsFigures({ date: d.date, title: d.title, quarters }) : null;
+              return f ? { figures: f } : {};
+            })()),
+            ...(((): { scaleNote?: string } => {
+              if (Object.keys(scale).length === 0) return {};
+              const note = disclosureScaleNote({ title: d.title, scale });
+              return note ? { scaleNote: note } : {};
+            })()),
+          }),
         });
         // 수집이 실제로 이 종목을 덮었는가 — 덮지 않았으면 "없었다" 를 말하지 않는다.
         const collected = disclosures !== null && disclosures !== undefined && disclosures.truncated !== true;
@@ -2809,6 +2873,39 @@ export async function buildQuietPickResponse(options: {
           if (!e.url) continue; // 공시 항목만 센다(신호 시작·실적 줄은 번역 대상이 아니다)
           phraseCensus.total += 1;
           if (e.rawTitle) phraseCensus.raw += 1;
+        }
+        /**
+         * DETAIL-02 §E-2 — **공시 종류별 숫자 확보율.** 화면에 나간 공시 중 몇 건에
+         * 숫자(실적 수치 또는 규모 환산)가 붙었나. **확보율이 낮은 종류가 다음 작업 대상이다** —
+         * 그래서 전체 비율 하나가 아니라 종류별로 나눠 센다.
+         */
+        /**
+         * **화면에 나간 항목(events)을 센다.** 수집 목록(list)을 돌면서 날짜로 되찾으면
+         * 같은 날 공시가 둘일 때 같은 항목을 두 번 세게 된다 — 확보율이 부풀려진다.
+         *
+         * 종류는 날짜별 큐에서 순서대로 꺼낸다. 타임라인이 `inWindow` 를 날짜순으로
+         * 안정 정렬해 올리므로 같은 날 항목의 순서가 수집 목록 순서와 같다.
+         */
+        const kindsByDate = new Map<string, string[]>();
+        for (const d of list) {
+          const queue = kindsByDate.get(d.date) ?? [];
+          queue.push(d.kind ?? "기타");
+          kindsByDate.set(d.date, queue);
+        }
+        for (const e of events) {
+          if (!e.url || !e.date) continue;
+          const kind = kindsByDate.get(e.date)?.shift() ?? "기타";
+          const bucket = (figureCensus.byKind[kind] ??= { total: 0, figures: 0, scale: 0 });
+          bucket.total += 1;
+          figureCensus.total += 1;
+          if (e.figures) {
+            bucket.figures += 1;
+            figureCensus.figures += 1;
+          }
+          if (e.scaleNote) {
+            bucket.scale += 1;
+            figureCensus.scale += 1;
+          }
         }
         return {
           ...(events.length > 0 ? { whyNow: events } : {}),
@@ -3038,6 +3135,8 @@ export async function buildQuietPickResponse(options: {
       krUniverseFromVocab: krUniverse.fromVocab,
       // WO-RESET-05 §3-1 — 화면에 나간 공시 항목 중 번역표에 없어 원문 그대로인 비율.
       disclosurePhrases: phraseCensus,
+      // DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. 낮은 종류가 다음 작업 대상이다.
+      disclosureFigures: figureCensus,
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
       // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.

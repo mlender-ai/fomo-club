@@ -30,6 +30,12 @@
 
 import { josa } from "./josa";
 import { disclosurePhrase } from "./disclosure-phrase";
+/**
+ * **타입만** 가져온다. `disclosure-figures` 를 값으로 임포트하면 이 파일이 배럴에 있으므로
+ * 조회 라우트 번들에 딸려 들어간다(성능 게이트가 +1 을 잡았다, 2026-09-03). 숫자를 만드는
+ * 일은 **굽는 경로가 콜백으로 넣어준다**(`WhyNowTimelineInput.figuresFor`).
+ */
+import type { EarningsFigures } from "./disclosure-figures";
 
 /** 축 라벨 — 고정폭 56px 열에 들어간다(WO-HOOK-02 §2-4). */
 export type WhyNowAxis = "값" | "손익" | "가격" | "재료" | "이력";
@@ -193,6 +199,16 @@ export interface WhyNowEvent {
    * 화면 동작은 같고, 표를 얼마나 더 채워야 하는지 재는 데 쓴다(보고할 것 3번).
    */
   rawTitle?: boolean;
+  /**
+   * DETAIL-02 — 실적 공시에서 뽑은 **실제 숫자**. 못 뽑으면 이 필드가 없다.
+   * 있으면 화면은 제목 아래에 한 줄 해석과 매출·영업이익·순이익을 펼친다.
+   */
+  figures?: EarningsFigures;
+  /**
+   * DETAIL-02 §C-1 — 제목이 들고 온 금액을 **규모 대비**로 환산한 비율(`연매출의 26%`).
+   * 금액이 없거나 분모가 없으면 이 필드가 없다.
+   */
+  scaleNote?: string;
 }
 
 /** `2026-08-04` → `8월 4일`. 형식이 아니면 `null`(지어내지 않는다). */
@@ -229,6 +245,14 @@ export interface WhyNowTimelineInput {
   disclosuresCollected?: boolean;
   /** 실적 변화 — 흑자/적자 전환처럼 **날짜와 변화**가 같이 있을 때만 넘긴다. */
   earnings?: { date: string; text: string };
+  /**
+   * DETAIL-02 — 공시 한 건에 붙일 **숫자를 만드는 창구.**
+   *
+   * 왜 콜백인가: 숫자를 만드는 `disclosure-figures` 를 이 파일이 값으로 임포트하면 배럴을 타고
+   * **조회 라우트 번들**에 들어간다(성능 게이트). 그래서 이 파일은 자리만 만들고, 재료를 가진
+   * 굽는 경로가 채운다. 넘기지 않으면 종전대로 제목만 나간다(회귀 없음).
+   */
+  figuresFor?: (disclosure: WhyNowDisclosure) => { figures?: EarningsFigures; scaleNote?: string };
   /** 값 — 밴드 상·하위 20% 일 때만 쓴다(§C-2 4번). */
   band?: { label: string; current: number | null; percentile: number | null; sufficient: boolean };
   /** 가격 — 52주 저점/고점 **근처(15% 이내)** 일 때만 쓴다(§C-2 5번). */
@@ -304,11 +328,18 @@ export function buildWhyNowTimeline(input: WhyNowTimelineInput): WhyNowEvent[] {
      * 원문을 못 보게 되는 것도 아니다.
      */
     const phrase = disclosurePhrase(d.title);
+    /**
+     * DETAIL-02 — 제목만으로는 `실적을 냈어요` 에서 끝난다. **숫자를 붙인다.**
+     * 못 뽑으면 필드가 없고 제목만 남는다 — 지어내지 않는다(§E-1).
+     */
+    const extra = input.figuresFor?.(d);
     dated.push({
       date: d.date,
       when,
       text: phrase.text,
       ...(phrase.translated ? {} : { rawTitle: true }),
+      ...(extra?.figures ? { figures: extra.figures } : {}),
+      ...(extra?.scaleNote ? { scaleNote: extra.scaleNote } : {}),
       ...(d.url ? { url: d.url } : {}),
     });
   }
