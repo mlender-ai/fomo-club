@@ -45,23 +45,32 @@ describe("노출 이력 — 스냅샷에서 뽑는다(새로 저장할 것 없�
   });
 });
 
-describe("3일 규칙 — 강등이 아니라 제외 (§A-1)", () => {
+describe("재노출 규칙 — 강등이 아니라 보류 (§A-1 · HOTFIX-DECK §B-1)", () => {
   const h = [{ date: "2026-08-25", reason: "기관 매수" }];
 
-  it("어제 나왔으면 오늘 제외 대상이다", () => {
+  it("어제 나왔으면 오늘 보류 대상이다", () => {
     expect(recentExposure(h, "2026-08-26")).not.toBeNull();
   });
 
-  it("3일째 되는 날에도 아직 제외 대상이다", () => {
-    expect(recentExposure(h, "2026-08-27")).not.toBeNull();
+  it("창이 지나면 다시 후보가 된다", () => {
+    expect(recentExposure(h, "2026-08-27")).toBeNull();
   });
 
-  it("3일이 지나면 다시 후보가 된다", () => {
-    expect(recentExposure(h, "2026-08-28")).toBeNull();
-  });
-
+  /**
+   * HOTFIX-DECK §B-1 — 3일에서 2일로 낮췄다. 이 규칙이 성립하려면
+   * **하루 후보 수 ≥ 덱 크기 × 창(일)** 이어야 하는데, 2026-08-28 실측에서
+   * 덱 15장 × 3일 = 45장이 필요한 자리에 통과 후보가 19개였고 덱이 1장이 나갔다.
+   */
   it("경계는 상수로 고정한다 — 감으로 바꾸지 않게", () => {
-    expect(RECENT_EXPOSURE_DAYS).toBe(3);
+    expect(RECENT_EXPOSURE_DAYS).toBe(2);
+  });
+
+  it("창은 공급보다 넓으면 안 된다 — 덱 크기 × 창이 하루 후보 수를 넘지 않아야 한다", () => {
+    // 2026-08-28 실측 공급(품질 게이트 통과 19개)과 덱 상한 15장 기준.
+    const dailySupply = 19;
+    const deckSize = 15;
+    expect(deckSize * RECENT_EXPOSURE_DAYS).toBeGreaterThan(dailySupply);
+    // 넘는다 → 그래서 안전장치(`composeDeckWithFloor`)가 반드시 있어야 한다. 창만으로는 못 막는다.
   });
 
   it("이력이 없으면 제외하지 않는다", () => {

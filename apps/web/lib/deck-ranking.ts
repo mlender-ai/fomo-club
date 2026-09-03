@@ -61,6 +61,22 @@ export const PAGE1_SIZE = 3;
  */
 export const DECK_SIZE = 10;
 
+/**
+ * **덱 최소 장수 — 안전장치의 기준선** (HOTFIX-DECK §C-1).
+ *
+ * 2026-08-28 사고: 덱이 **1장**이 나갔다. 후보가 없어서가 아니다 — 품질 게이트를 통과한
+ * 후보 19개 중 **18개를 3일 재노출 규칙이 잘라냈다**(실측 `exposure.blocked: 18`).
+ * 규칙은 의도대로 동작했고, 그래서 더 나빴다: **규칙이 덱을 비우는 것을 막을 장치가 없었다.**
+ *
+ * 8장으로 잡은 이유는 하나다 — 8장이면 스와이프가 한 세션으로 성립한다. 그보다 적으면
+ * 「오늘은 새로 나온 곳이 적어요」 문구가 뜨고 앱을 여는 이유가 사라진다.
+ * **이 값은 목표가 아니라 하한이다.** 평소에는 규칙이 이 선 위에서 자유롭게 걸린다.
+ */
+export const DECK_MIN_SIZE = 8;
+
+/** 이보다 적으면 사고다 — 즉시 알린다(§C-2). 화면을 보고 알게 되는 일은 다시 없어야 한다. */
+export const DECK_ALERT_MIN = 5;
+
 /** 신규 신호 최소 비율. 실측 72% 보다 낮게 잡아 공급 여유를 둔다. */
 export const MIN_FRESH_RATIO = 0.6;
 /** 같은 신호 유형 최대 비율. 실측 `insider_cluster` 65% 를 반영해 편중을 이 선에서 끊는다. */
@@ -128,7 +144,7 @@ export const ANOMALY_WEIGHT_MAX = 0.3;
 const ANOMALY_STRENGTH_FULL = 4.3;
 
 /** 구성 규칙 버전 — 규칙이 바뀌면 이 값을 올린다(WO 완료조건 7). */
-export const DECK_COMPOSITION_VERSION = "deck-composition/v1";
+export const DECK_COMPOSITION_VERSION = "deck-composition/v2";
 
 /**
  * 신규성 점수 — 신호가 처음 나타난 날 최대, 경과일에 따라 지수 감쇠.
@@ -213,6 +229,12 @@ export interface DeckCandidate {
   investorId?: string;
 }
 
+/**
+ * 덱 최소 장수를 지키려고 **푼 규칙**(§C-1). 순서가 곧 해제 순서다 —
+ * 재노출 → 신규 하한 → 유형 상한. 품질 게이트(대형주·이미 오른 종목)는 **절대 풀지 않는다.**
+ */
+export type DeckRelaxation = "recent_exposure" | "fresh_floor" | "kind_cap";
+
 /** 구성 규칙 때문에 덱에 못 든 사유. 선반 문구가 이 값을 그대로 번역한다. */
 export type DeckSkipReason =
   | "kind_cap"
@@ -243,6 +265,13 @@ export interface ComposeResult<T> {
   /** 신규 하한을 채우지 못해 덱을 줄인 장수. 0 이면 상한대로 찼다. */
   shrunkBy: number;
   /**
+   * 이 구성에서 **푼 규칙**(§C-1). 빈 배열이면 규칙을 하나도 안 풀고 채웠다는 뜻이다.
+   *
+   * 로그에 남기는 것이 WO 요구사항이다 — 다음에 덱이 짧으면 "규칙이 잘랐나, 후보가 없었나"를
+   * 이 배열만 보고 가른다. 사후에 재구성할 수 없는 값이므로 발행 시점에 굳힌다.
+   */
+  relaxations: DeckRelaxation[];
+  /**
    * **실제로 적용된** 하한·상한 — 요청 덱 크기(`deckSize`) 기준이다.
    *
    * 최종 장수로 다시 계산하지 않는다. 축소가 일어난 경우 그러면 보고값이 실제 덱과 어긋난다
@@ -266,10 +295,47 @@ export interface ComposeResult<T> {
  */
 export function composeDeck<T extends DeckCandidate>(
   ranked: readonly T[],
-  options: { deckSize?: number; watchPool?: readonly T[]; today?: string } = {}
+  options: {
+    deckSize?: number;
+    watchPool?: readonly T[];
+    today?: string;
+    /**
+     * 이 장수 아래로는 **줄이지 않는다**(§C-1·§B-2). 신규 하한 미달로 덱을 깎던 루프가
+     * 여기서 멈춘다 — 하한을 지키려다 덱을 비우는 것이 이 사고의 설계적 원인이었다.
+     */
+    minDeckSize?: number;
+    /** 위에서 이미 판단해 **의도적으로** 푼 규칙. 여기서 스스로 풀지 않는다. */
+    relax?: { freshFloor?: boolean; kindCap?: boolean };
+  } = {}
 ): ComposeResult<T> {
   const deckSize = Math.max(0, Math.floor(options.deckSize ?? DECK_SIZE));
-  const caps = deckCaps(deckSize);
+  const minDeckSize = Math.min(deckSize, Math.max(0, Math.floor(options.minDeckSize ?? 0)));
+  const relax = options.relax ?? {};
+  const relaxations: DeckRelaxation[] = [];
+  if (relax.freshFloor) relaxations.push("fresh_floor");
+  if (relax.kindCap) relaxations.push("kind_cap");
+
+  /**
+   * **유형이 한 종류뿐이면 유형 상한은 의미가 없다** (§B-3).
+   *
+   * "한 종류가 절반을 넘으면 뒤로 보낸다"는 **다른 종류에 자리를 내주기 위한** 규칙이다.
+   * 내줄 상대가 없는 날 이 규칙은 덱을 절반으로 자르기만 한다. 두 종류 이상일 때만 건다.
+   */
+  const base = deckCaps(deckSize);
+  const kindsPresent = new Set(ranked.map((item) => item.kind)).size;
+  /**
+   * **상한이 실제로 물 때만** 푼다. 유형이 하나뿐이어도 후보가 상한보다 적으면 상한은
+   * 애초에 아무것도 안 자른다 — 그런 날까지 「유형 상한을 풀었다」고 적으면 로그가
+   * 다음 사람에게 거짓 원인을 가리킨다.
+   */
+  const singleKind = kindsPresent === 1 && ranked.length > base.maxSameKind;
+  if (singleKind && !relax.kindCap) relaxations.push("kind_cap");
+
+  const caps = {
+    minFresh: relax.freshFloor ? 0 : base.minFresh,
+    maxSameKind: relax.kindCap || singleKind ? deckSize : base.maxSameKind,
+    maxPersistent: relax.freshFloor ? deckSize : base.maxPersistent,
+  };
   const skipped: Record<string, number> = {};
   const skipReasons = new Map<T, DeckSkipReason>();
   const bump = (reason: DeckSkipReason, item?: T) => {
@@ -335,9 +401,15 @@ export function composeDeck<T extends DeckCandidate>(
     }
   }
 
-  // 그래도 부족하면 덱을 줄인다 — 점수 최하위 지속 신호를 뒤에서 뺀다.
+  /**
+   * 그래도 부족하면 덱을 줄인다 — 점수 최하위 지속 신호를 뒤에서 뺀다.
+   *
+   * **단 `minDeckSize` 아래로는 줄이지 않는다**(§B-2·§C-1). 종전에는 하한이 없어서
+   * "신규가 부족하다"는 이유 하나로 덱이 얼마든지 짧아질 수 있었다. 빈 덱보다는
+   * 지속 신호라도 보이는 게 낫고, 그 카드에는 이미 「다시 나왔어요」 표시가 붙는다.
+   */
   let shrunkBy = 0;
-  while (chosen.length > 0 && fresh < Math.ceil(chosen.length * MIN_FRESH_RATIO)) {
+  while (!relax.freshFloor && chosen.length > minDeckSize && fresh < Math.ceil(chosen.length * MIN_FRESH_RATIO)) {
     const lastPersistent = [...chosen].reverse().find((item) => !isFreshSignal(item.ageDays));
     if (!lastPersistent) break; // 지속이 없는데도 미달이면 더 줄일 이유가 없다(전부 신규).
     chosen.splice(chosen.lastIndexOf(lastPersistent), 1);
@@ -355,6 +427,7 @@ export function composeDeck<T extends DeckCandidate>(
     promoted,
     skipped,
     shrunkBy,
+    relaxations,
     caps, // 적용된 상한 그대로 — 최종 장수로 재계산하지 않는다(위 주석)
     version: DECK_COMPOSITION_VERSION,
   };
@@ -388,4 +461,101 @@ export function page1StreakFromHistory(
     alive = next;
   }
   return streak;
+}
+
+// ── 덱 최소 장수 안전장치 (HOTFIX-DECK §C-1) ──────────────────────────────
+/**
+ * 3일 재노출 규칙에 걸려 **보류된** 후보까지 포함해, 덱이 최소 장수에 닿을 때까지
+ * 규칙을 **정해진 순서로 하나씩** 푼다.
+ *
+ * ```
+ * 덱이 8장 미만이면:
+ *   1  3일 재노출 규칙을 완화한다      ← 보류분을 점수 순서 뒤에 붙인다
+ *   2  그래도 부족하면 신규 비율 하한을 푼다
+ *   3  그래도 부족하면 유형 상한을 푼다
+ *   4  그래도 부족하면 그대로 둔다      ← 진짜 후보가 없는 것이다
+ * ```
+ *
+ * ## 왜 이 순서인가
+ *
+ * 잃는 것이 적은 순서다. ①은 "어제 봤던 걸 또 본다"(카드에 「다시 나왔어요」가 붙어 정직하다),
+ * ②는 "오래 이어진 신호가 섞인다", ③은 "한 종류로 쏠린다". 셋 다 품질 문제가 아니라
+ * **다양성 문제**다. 반대로 대형주 제외·이미 오른 종목 제외 같은 **품질 게이트는 이 사다리에
+ * 없다** — 덱을 채우려고 이미 오른 종목을 섞으면 제품의 약속 자체가 깨진다.
+ *
+ * ## 보류분을 왜 뒤에 붙이나
+ *
+ * 입력 순서가 곧 선택 순서다. 보류분을 뒤에 두면 **처음 나오는 카드가 항상 먼저** 자리를
+ * 잡고, 재노출 카드는 남는 자리만 채운다. 규칙을 "푼" 것이지 "없앤" 것이 아니다.
+ *
+ * ## 한 단계라도 덱이 안 늘면 그 해제는 되돌린다
+ *
+ * 효과 없는 해제를 로그에 적으면 다음 사람이 원인을 잘못 읽는다. 실제로 장수를 늘린
+ * 해제만 `relaxations` 에 남는다.
+ */
+export function composeDeckWithFloor<T extends DeckCandidate>(
+  ranked: readonly T[],
+  options: {
+    deckSize?: number;
+    /** 3일 규칙에 걸려 보류된 후보(점수 내림차순). 품질 게이트는 이미 통과한 것들이다. */
+    held?: readonly T[];
+    minDeckSize?: number;
+    watchPool?: readonly T[];
+    today?: string;
+  } = {}
+): ComposeResult<T> & { readmitted: number } {
+  const deckSize = Math.max(0, Math.floor(options.deckSize ?? DECK_SIZE));
+  const minDeckSize = Math.min(deckSize, Math.max(0, Math.floor(options.minDeckSize ?? DECK_MIN_SIZE)));
+  const held = options.held ?? [];
+  const heldSet = new Set(held);
+  const shared = {
+    deckSize,
+    minDeckSize,
+    ...(options.watchPool ? { watchPool: options.watchPool } : {}),
+    ...(options.today ? { today: options.today } : {}),
+  };
+
+  let result = composeDeck(ranked, shared);
+  const relaxed: DeckRelaxation[] = [];
+  // 재노출 완화 이후로는 보류분까지 함께 본다.
+  let pool: readonly T[] = ranked;
+
+  // ① 3일 재노출 규칙 완화 — 보류분을 뒤에 붙인다.
+  if (result.deck.length < minDeckSize && held.length > 0) {
+    const merged = [...ranked, ...held];
+    const next = composeDeck(merged, shared);
+    if (next.deck.length > result.deck.length) {
+      result = next;
+      pool = merged;
+      relaxed.push("recent_exposure");
+    }
+  }
+
+  // ② 신규 비율 하한 해제.
+  if (result.deck.length < minDeckSize) {
+    const next = composeDeck(pool, { ...shared, relax: { freshFloor: true } });
+    if (next.deck.length > result.deck.length) {
+      result = next;
+      relaxed.push("fresh_floor");
+    }
+  }
+
+  // ③ 유형 상한 해제. ②를 이미 풀었다면 함께 푼 상태로 다시 짠다(되돌리면 ②의 효과가 사라진다).
+  if (result.deck.length < minDeckSize) {
+    const freshFloor = relaxed.includes("fresh_floor");
+    const next = composeDeck(pool, { ...shared, relax: { kindCap: true, ...(freshFloor ? { freshFloor } : {}) } });
+    if (next.deck.length > result.deck.length) {
+      result = next;
+      relaxed.push("kind_cap");
+    }
+  }
+
+  // ④ 그래도 부족하면 그대로 둔다 — 진짜 후보가 없는 것이다. 채우려고 품질을 풀지 않는다.
+
+  return {
+    ...result,
+    // `composeDeck` 이 스스로 판단한 해제(유형이 한 종류뿐인 날)와 사다리가 푼 것을 합친다.
+    relaxations: [...new Set([...relaxed, ...result.relaxations])],
+    readmitted: result.deck.filter((item) => heldSet.has(item)).length,
+  };
 }

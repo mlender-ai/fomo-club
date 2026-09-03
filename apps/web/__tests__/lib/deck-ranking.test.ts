@@ -134,15 +134,35 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
     expect(result.shrunkBy).toBeGreaterThan(0);
   });
 
-  it("같은 유형이 덱을 독점하지 못한다", () => {
-    const ranked = [...Array(12)].map((_, i) => fresh("insider_cluster", i % FRESH_AGE_DAYS));
+  it("같은 유형이 덱을 독점하지 못한다 — 내줄 상대가 있을 때", () => {
+    const ranked = [
+      ...[...Array(12)].map((_, i) => fresh("insider_cluster", i % FRESH_AGE_DAYS)),
+      ...[...Array(4)].map(() => fresh("market_divergence")),
+    ];
     const result = composeDeck(ranked, { deckSize: 10 });
     // WO-RESET-03 E-3 — 한 종류가 **절반**을 넘지 못한다(종전 0.6 → 0.5).
-    expect(result.deck.length).toBe(5);
+    expect(result.deck.filter((d) => d.kind === "insider_cluster").length).toBe(5);
     expect(result.skipped.kind_cap).toBeGreaterThan(0);
     // 축소된 덱에도 **적용된** 상한(10장 기준 5)을 보고한다 — 실제 덱과 어긋나면 안 된다.
     expect(result.caps.maxSameKind).toBe(5);
-    expect(result.deck.filter((d) => d.kind === "insider_cluster").length).toBeLessThanOrEqual(result.caps.maxSameKind);
+    // 밀린 자리는 다른 유형이 채운다 — 그게 이 상한의 존재 이유다.
+    expect(result.deck.filter((d) => d.kind === "market_divergence").length).toBe(4);
+  });
+
+  /**
+   * HOTFIX-DECK §B-3 — 유형이 한 종류뿐이면 상한을 적용하지 않는다.
+   *
+   * "절반을 넘으면 뒤로 보낸다"는 **다른 종류에 자리를 내주기 위한** 규칙이다. 내줄 상대가
+   * 없는 날 이 규칙은 덱을 절반으로 자르기만 한다 — 다양성은 그대로인데 장수만 잃는다.
+   */
+  it("유형이 한 종류뿐이면 유형 상한을 걸지 않는다", () => {
+    const ranked = [...Array(12)].map((_, i) => fresh("insider_cluster", i % FRESH_AGE_DAYS));
+    const result = composeDeck(ranked, { deckSize: 10 });
+    expect(result.deck.length).toBe(10);
+    expect(result.skipped.kind_cap ?? 0).toBe(0);
+    expect(result.relaxations).toContain("kind_cap");
+    // 상한을 푼 사실은 `caps` 에도 그대로 보인다 — 계측이 거짓말하면 계측이 아니다.
+    expect(result.caps.maxSameKind).toBe(10);
   });
 
   it("신규가 부족하면 워치에서 승격한다 — 지속으로 채우지 않는다", () => {
@@ -182,10 +202,14 @@ describe("덱 구성 — 비율이 정본이고 장수는 파생이다", () => {
   });
 
   it("항목별 탈락 사유를 남긴다 — 선반 문구가 추측하지 않도록", () => {
-    const ranked = [...Array(8)].map(() => fresh("insider_cluster"));
+    // 유형이 둘이어야 유형 상한이 걸린다(§B-3 — 한 종류뿐이면 상한을 안 건다).
+    const ranked = [
+      ...[...Array(8)].map(() => fresh("insider_cluster")),
+      ...[...Array(2)].map(() => fresh("market_divergence")),
+    ];
     const result = composeDeck(ranked, { deckSize: 10 });
     const dropped = ranked.filter((item) => !result.deck.includes(item));
-    expect(dropped.length).toBe(3); // 상한 5 → 8장 중 3장이 밀린다
+    expect(dropped.length).toBe(3); // 상한 5 → insider 8장 중 3장이 밀린다
     for (const item of dropped) expect(result.skipReasons.get(item)).toBe("kind_cap");
     // 덱에 든 항목에는 사유가 없어야 한다.
     for (const item of result.deck) expect(result.skipReasons.has(item)).toBe(false);
