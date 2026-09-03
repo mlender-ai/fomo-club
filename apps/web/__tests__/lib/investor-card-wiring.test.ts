@@ -25,7 +25,13 @@ describe("인물 카드 배선 (완료 확인 3)", () => {
 
   it("그 신호가 덱 후보에 합류한다 — 이게 끊기면 카드가 안 나온다", () => {
     expect(engine).toContain("const investorSignals = detectInvestorSignals(investorCollection, date);");
-    expect(engine).toMatch(/dedupeSignalsByStock\(\[\s*\n\s*\.\.\.investorSignals,/);
+    /**
+     * CARDS-02 D-3 로 검출 목록이 `detectedSignals` 변수로 한 번 묶였다(형별 퍼널을 세려면
+     * 중복 제거 **전** 목록이 필요하다). 합류 지점은 그대로다 — 그 목록에 들어가고,
+     * 그 목록이 `dedupeSignalsByStock` 을 지난다.
+     */
+    expect(engine).toMatch(/const detectedSignals = \[\s*\n\s*\.\.\.investorSignals,/);
+    expect(engine).toContain("dedupeSignalsByStock(detectedSignals)");
   });
 
   it("카드 형이 붙는다 — 형이 없으면 그림도 문장도 없다", () => {
