@@ -294,15 +294,29 @@ describe("WO-HOOK-02 — 왜 지금 사는가", () => {
     expect(depth).toContain('data-testid="depth-why-now-note"');
   });
 
-  it("[완료 4] 공시 제목은 **사람 말**로 오고 원문 링크가 함께 붙는다", () => {
-    expect(depth).toContain('data-testid="depth-why-now-source"');
-    expect(depth).toContain('target="_blank"');
-    expect(depth).toContain('rel="noreferrer noopener"');
-    // 번역은 fomo-core 가 한다 — 화면이 제목을 손대지 않는다.
+  /**
+   * DETAIL-04 — 원문 링크를 **뺐다.** DETAIL-02 는 링크를 항목 맨 아래로 밀어 "보조" 로
+   * 뒀지만, 아무도 누르지 않는 링크가 설명의 자리를 차지하고 있었다. 그 자리를 뜻풀이가
+   * 대신한다. 이 검사가 링크의 부활을 막는다.
+   */
+  it("[DETAIL-04] 공시 원문 링크를 화면에 그리지 않는다", () => {
+    expect(depth).not.toContain('data-testid="depth-why-now-source"');
+    expect(depth).not.toContain("공시 원문");
+    // 「왜 지금 사는가」에는 외부 링크 자체가 없다.
+    expect(depth).not.toContain('target="_blank"');
+  });
+
+  it("[DETAIL-04] 공시 제목은 **사람 말**로 오고 뜻풀이가 함께 붙는다", () => {
+    expect(depth).toContain('data-testid="depth-why-now-meaning"');
+    // 숫자가 붙은 항목에는 제도 설명을 끼우지 않는다 — 숫자가 설명이다.
+    expect(depth).toContain("event.meaning && !event.figures");
+    // 번역·뜻풀이는 fomo-core 가 한다 — 화면이 문안을 짓지 않는다.
     const core = readFileSync(
       new URL("../../../packages/fomo-core/src/keyword-cards/why-now.ts", import.meta.url), "utf8"
     );
     expect(core).toContain("disclosurePhrase(d.title)");
+    expect(core).toContain("phrase.meaning");
+    expect(depth).not.toMatch(/meaning\s*=\s*"/);
   });
 
   it("[완료 4] 공시 0건 줄을 서버가 줄 때만 그린다", () => {
