@@ -68,8 +68,15 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
     // 1·4걸음은 항상, 2·3걸음은 재료가 있을 때만.
     expect(depth).toContain('const out: StepId[] = ["signal"];');
     expect(depth).toContain('if ((pick.whyNow?.length ?? 0) > 0) out.push("why");');
-    expect(depth).toContain('if ((pick.companyRead?.length ?? 0) > 0) out.push("company");');
     expect(depth).toContain('out.push("decide");');
+    /**
+     * 3걸음 조건은 **`companyRead` 하나가 아니다**(DETAIL-03 PART A).
+     * 종전 조건(`companyRead.length > 0`)은 팩트시트가 없는 종목에서 회사 설명이 있어도
+     * 걸음을 통째로 지웠다 — 프로덕션 15장 중 7장. A-4 는 "하나라도 있으면 만든다" 다.
+     * 빈 걸음을 만들지 않는다는 이 테스트의 취지는 `hasCompanyMaterial` 이 그대로 지킨다.
+     */
+    expect(depth).toContain('if (hasCompanyMaterial) out.push("company");');
+    expect(depth).toMatch(/hasCompanyMaterial\s*=[\s\S]{0,200}pick\.companyRead/);
   });
 
   it("[완료 2] 진행 점은 실제 걸음 수를 받는다 — 4로 고정하지 않는다", () => {
@@ -232,7 +239,8 @@ describe("모바일 — 하단 잘림 방지", () => {
 
   it("상단 안전영역 + sticky 헤더/스크롤 분리 구조", () => {
     expect(depth).toContain("pt-[env(safe-area-inset-top)]");
-    expect(depth).toContain("min-h-0 flex-1 overflow-y-auto");
+    // DETAIL-03 PART E 로 `flex … flex-col` 이 끼어들었다 — 스크롤 분리 자체는 그대로다.
+    expect(depth).toMatch(/min-h-0 flex-1 flex-col overflow-y-auto/);
     expect(depth).toContain("shrink-0"); // 헤더는 스크롤에 밀리지 않는다
   });
 
@@ -286,15 +294,29 @@ describe("WO-HOOK-02 — 왜 지금 사는가", () => {
     expect(depth).toContain('data-testid="depth-why-now-note"');
   });
 
-  it("[완료 4] 공시 제목은 **사람 말**로 오고 원문 링크가 함께 붙는다", () => {
-    expect(depth).toContain('data-testid="depth-why-now-source"');
-    expect(depth).toContain('target="_blank"');
-    expect(depth).toContain('rel="noreferrer noopener"');
-    // 번역은 fomo-core 가 한다 — 화면이 제목을 손대지 않는다.
+  /**
+   * DETAIL-04 — 원문 링크를 **뺐다.** DETAIL-02 는 링크를 항목 맨 아래로 밀어 "보조" 로
+   * 뒀지만, 아무도 누르지 않는 링크가 설명의 자리를 차지하고 있었다. 그 자리를 뜻풀이가
+   * 대신한다. 이 검사가 링크의 부활을 막는다.
+   */
+  it("[DETAIL-04] 공시 원문 링크를 화면에 그리지 않는다", () => {
+    expect(depth).not.toContain('data-testid="depth-why-now-source"');
+    expect(depth).not.toContain("공시 원문");
+    // 「왜 지금 사는가」에는 외부 링크 자체가 없다.
+    expect(depth).not.toContain('target="_blank"');
+  });
+
+  it("[DETAIL-04] 공시 제목은 **사람 말**로 오고 뜻풀이가 함께 붙는다", () => {
+    expect(depth).toContain('data-testid="depth-why-now-meaning"');
+    // 숫자가 붙은 항목에는 제도 설명을 끼우지 않는다 — 숫자가 설명이다.
+    expect(depth).toContain("event.meaning && !event.figures");
+    // 번역·뜻풀이는 fomo-core 가 한다 — 화면이 문안을 짓지 않는다.
     const core = readFileSync(
       new URL("../../../packages/fomo-core/src/keyword-cards/why-now.ts", import.meta.url), "utf8"
     );
     expect(core).toContain("disclosurePhrase(d.title)");
+    expect(core).toContain("phrase.meaning");
+    expect(depth).not.toMatch(/meaning\s*=\s*"/);
   });
 
   it("[완료 4] 공시 0건 줄을 서버가 줄 때만 그린다", () => {
@@ -329,5 +351,63 @@ describe("WO-HOOK-02 — 왜 지금 사는가", () => {
     expect(depth).toContain('w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2');
     // 화면이 `8월 4일` 을 짓지 않는다 — fomo-core 의 `whenLabel` 이 만들어 페이로드로 온다.
     expect(depth).not.toMatch(/월\s*\$\{/);
+  });
+});
+
+/**
+ * DETAIL-03 — 사라진 걸음 되살리기 + 중복 지우기.
+ *
+ * 이 블록은 **컴포넌트 소스**를 읽어 규칙이 코드에 남아 있는지 본다. 걸음 조건과 정렬은
+ * 렌더 트리 전체를 세워야 하는 것들이라 여기서는 조립 규칙만 고정하고, 화면 확인은
+ * e2e·프로덕션 DOM 이 맡는다.
+ */
+describe("DETAIL-03 — 걸음 복구·중복 제거", () => {
+  const depthSrc = readFileSync(new URL("../components/QuietPickDepth.tsx", import.meta.url), "utf8");
+
+  it("PART A — 3걸음 조건이 `companyRead` 하나가 아니다", () => {
+    expect(depthSrc).toContain("hasCompanyMaterial");
+    // 회사 설명·실체 중 하나만 있어도 걸음을 만든다(A-4).
+    expect(depthSrc).toMatch(/hasCompanyMaterial\s*=[\s\S]{0,200}blurb/);
+    expect(depthSrc).toMatch(/hasCompanyMaterial\s*=[\s\S]{0,200}substance/);
+    expect(depthSrc).toContain("if (hasCompanyMaterial) out.push(\"company\")");
+  });
+
+  it("PART A — 걸음을 번호가 아니라 **id** 로 들고 있는다", () => {
+    /**
+     * 회사 설명이 늦게 도착해 걸음이 3→4 로 늘어나면, 번호로 들고 있던 사용자는
+     * 4걸음(결정)에서 3걸음(회사)으로 **뒤로 밀린다.**
+     */
+    expect(depthSrc).toContain("const [stepId, setStepId]");
+    expect(depthSrc).toContain("steps.indexOf(stepId)");
+    expect(depthSrc).not.toContain("setStepIndex");
+  });
+
+  it("PART D — 헤더 등락률에 기간이 붙는다", () => {
+    expect(depthSrc).toContain("오늘 ");
+  });
+
+  it("PART E — 내용이 적으면 세로 중앙 (min-h-full + my-auto)", () => {
+    // 스크롤 컨테이너가 flex column, 본문이 `my-auto` — 래퍼를 끼우면 `lastElementChild` 가
+    // 본문이 아니게 되어 DS-07 §3(마지막 줄이 하단 바를 비켜간다) 측정이 깨진다.
+    expect(depthSrc).toMatch(/scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto/);
+    expect(depthSrc).toMatch(/mx-auto my-auto/);
+    // `justify-center` 는 내용이 화면보다 크면 위가 잘린다 — 쓰지 않는다.
+    expect(depthSrc).not.toMatch(/flex-col justify-center/);
+  });
+
+  it("PART B — 근거 조립이 같은 숫자를 두 번 쓰지 않는다", () => {
+    const sections = readFileSync(new URL("../lib/depthSections.ts", import.meta.url), "utf8");
+    // `scale` 이 이미 기간을 담고 있으면 연속일수를 다시 붙이지 않는다(§B-3).
+    expect(sections).toContain("scaleSaysDays");
+    /**
+     * 훅과 겹치는 숫자까지 지우지는 **않는다.** 한 번 그렇게 했더니
+     * `임원 3명 $2.8M · 5일 연속` 이 규모만 남아 무너졌다(e2e 가 잡았다) —
+     * 이 줄의 일은 「수치 확인」이다(WO-HOOK-02 §3).
+     */
+    expect(sections).not.toMatch(/!hook\.includes\(scaleRaw\)/);
+    // D·E형은 `매수` 라벨을 쓰지 않는다 — `시장 대비` 는 아무것도 사지 않는다.
+    expect(sections).toContain("metricSignal");
+    // 시장 역행은 훅에 없는 지수 수치를 낸다.
+    expect(sections).toContain("DEPTH_DIVERGENCE_MAX");
   });
 });

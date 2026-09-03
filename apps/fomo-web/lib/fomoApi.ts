@@ -1036,7 +1036,18 @@ export async function fetchDaily30(): Promise<Daily30Response> {
 export const warmDaily30 = () => fetchDaily30();
 
 // ── 조용한 돈 픽(WO-G1A/B) ────────────────────────────────────────────────
-export type QuietPickSignalKind = "insider_cluster" | "institution_streak" | "foreign_streak" | "multi_cluster";
+/**
+ * 신호 형 — **`@fomo/core` 것을 그대로 쓴다.**
+ *
+ * 종전에는 여기서 따로 선언했고, 그래서 WO-RESET-03 이 core 에 추가한
+ * `market_divergence`·`volume_awakening` 이 이 타입에 없었다. 서버는 두 형을 내려주는데
+ * 화면 타입이 몰라서 형을 구분할 수 없었고, 지표 신호가 「매수」 줄로 떨어져
+ * `시장 대비 3일 연속 · 3일 연속` 이 나갔다(DETAIL-03 §B).
+ *
+ * **베끼면 또 갈라진다.** 타입 전용 임포트·재수출이라 번들에는 들어오지 않는다.
+ */
+import type { QuietPickSignalKind } from "@fomo/core";
+export type { QuietPickSignalKind };
 export type QuietPickAnomalyKind =
   | "frequency"
   | "participants"
@@ -1078,14 +1089,44 @@ export interface QuietPickCardType {
 }
 
 /** 「왜 지금 사는가」 한 줄(WO-RESET-02 PART C). 서버가 굽는 시점에 굳혀 보낸다. */
+/** DETAIL-02 — 실적 공시에서 뽑은 한 항목. `change` 가 없으면 줄 자체가 없다. */
+export interface QuietPickEarningsRow {
+  label: string;
+  /** `1,240억`. */
+  value: string;
+  /** `작년 2분기보다 +18%` / `작년 2분기 -14억에서 흑자로`. */
+  change: string;
+}
+
 export interface QuietPickWhyNowEvent {
   /** `YYYY-MM-DD`. 없으면 상태 서술(`지금`)이다. */
   date?: string;
   /** 왼쪽 열 — `8월 4일` / `지금`. */
   when: string;
   text: string;
-  /** 공시 원문. 없으면 링크를 그리지 않는다. */
+  /**
+   * 공시 원문 주소. **화면은 이걸 링크로 그리지 않는다**(DETAIL-04) — 아무도 누르지 않는
+   * 링크가 설명을 대신하고 있었다. 지금은 "이 항목이 공시인가" 를 가리는 표식으로만 쓴다.
+   */
   url?: string;
+  /**
+   * DETAIL-04 — 그 서식이 **제도적으로 무엇인가** 한 줄. 번역표에 있는 공시만 갖는다.
+   * 이 회사 사실이 아니라 제도 설명이라 종목마다 달라지지 않는다.
+   */
+  meaning?: string;
+  /**
+   * DETAIL-02 — 실적 공시의 **실제 숫자**. 없으면 제목만 그린다.
+   * `실적을 냈어요` 만 남기지 않기 위한 필드다.
+   */
+  figures?: {
+    /** `2026년 2분기` — 어느 기간의 숫자인가. 이게 없으면 서버가 블록을 만들지 않는다. */
+    periodLabel: string;
+    /** 한 줄 해석 — 사실 요약. 평가어는 서버에서 막는다. */
+    headline?: string;
+    rows: QuietPickEarningsRow[];
+  };
+  /** DETAIL-02 §C — 금액의 규모 대비 비율(`연매출의 26%`). */
+  scaleNote?: string;
 }
 
 /** WO-RESET-05 §4 — 3걸음의 한 줄. 숫자와 **그 숫자를 읽는 문장**. */
@@ -1113,6 +1154,42 @@ export interface CompanyGroup {
  * WO-RESET-08 §B — 자금 흐름 카드. **종목 카드가 아니라 시장 카드**라 픽과 나눠서 온다.
  * 화면이 같은 덱 앞쪽에 끼워 넣는다(§D-1) — 별도 섹션이 아니다.
  */
+/** 상세 1걸음 — 업종 한 줄(DETAIL-01 §B). */
+export interface FlowSectorRow {
+  /** 집계 원문 — 조인 키다. 화면은 표시명으로 바꿔 그린다. */
+  sector: string;
+  net: number;
+  stocks: number;
+}
+
+/** 상세 2·3걸음 — 종목 한 줄. */
+export interface FlowStockRow {
+  code: string;
+  /** 없으면 그 줄을 그리지 않는다 — 코드를 이름 자리에 쓰지 않는다. */
+  name?: string;
+  net: number;
+  /** 20일 평균 거래량 대비 배수. 이력이 모자라면 없다. */
+  volumeRatio?: number;
+}
+
+/** 상세 4걸음 — 하루치. */
+export interface FlowDayRow {
+  date: string;
+  net: number;
+}
+
+/** 자금 흐름 상세 다섯 걸음 재료 (DETAIL-01 §B). */
+export interface QuietPickFlowDepth {
+  outflows: FlowSectorRow[];
+  inflows: FlowSectorRow[];
+  fromStocks: FlowStockRow[];
+  toStocks: FlowStockRow[];
+  /** 비어 있는 것도 정보다 — 돈은 들어오는데 거래는 평소와 비슷하다는 뜻(§D-4). */
+  toVolumeStocks: FlowStockRow[];
+  toDaily: FlowDayRow[];
+  toPositiveDays: number;
+}
+
 export interface QuietPickFlowCard {
   fromSector: string;
   toSector: string;
@@ -1124,14 +1201,25 @@ export interface QuietPickFlowCard {
   /** 결론 두 줄 — 인과로 말하지 않는다. 서버가 만든 것을 그대로 쓴다. */
   hook: string;
   support: string[];
+  /** 없으면 상세를 열지 않는다 — 상세 없는 카드는 덱에 넣지 않는다(§「하지 말 것」). */
+  depth?: QuietPickFlowDepth;
 }
 
 /** WO-RESET-09 §B-1 — 거시 카드. 종목 카드가 아니라 시장 카드다. */
 export interface QuietPickMacroCard {
   indicatorId: string;
   indicatorName: string;
-  /** 최신 관측일 — 지표는 하루이틀 늦게 나온다. 화면이 그대로 쓴다. */
+  /** 최신 관측일 `YYYY-MM-DD`. 화면은 이걸 직접 쓰지 않는다 — `asOfLabel` 을 쓴다. */
   asOf: string;
+  /**
+   * 화면에 그대로 쓰는 상대 시간 — `어제 기준` · `3일 전 기준`(MACRO-01 §B-3).
+   * **굽는 시점에 굳혀 보낸다.** 화면이 계산하면 캐시된 페이지에서 어제 것이 오늘로 읽힌다.
+   */
+  asOfLabel: string;
+  /** `streak` · `spike` · `level` · `inversion`. */
+  kind: string;
+  /** `fx` · `rate` · `credit` · `index` · `commodity`. */
+  category: string;
   streakDays: number;
   direction: "up" | "down";
   fromText: string;
@@ -1140,10 +1228,20 @@ export interface QuietPickMacroCard {
   series: number[];
   hook: string;
   support: string[];
-  /** 일반 원리 — **예측이 아니다**. */
+  /**
+   * 일반 원리 — **예측이 아니다**. **상세에만 쓴다**(MACRO-01 §D-2).
+   * 카드에 넣으면 카드가 길어지고, 길어진 카드는 눌리지 않는다.
+   */
   principle: string;
-  favored: Array<{ canonical: string; pickedAt: string }>;
-  hurt: Array<{ canonical: string; pickedAt: string }>;
+  favored: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  hurt: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  /** 상세 2걸음 — 유리·불리 업종 이름(표시명, DETAIL-01 §A-2). */
+  favorSectors?: string[];
+  hurtSectors?: string[];
+  /** 상세 1걸음 — 60일 추이. */
+  detailSeries?: number[];
+  /** 상세 1걸음 — 1년 밴드 위치. 표본이 모자라면 없다. */
+  band?: { low: number; high: number; percentile: number; label: string; points: number };
 }
 
 export interface QuietPick {
@@ -1249,6 +1347,16 @@ export interface QuietPick {
     streakWindowDays?: number;
     volumeVacuumRatio?: number;
     pctAboveYearLow?: number;
+    /**
+     * 시장 역행(D형)의 실수치. **서버는 이미 내려주는데 이 타입에 없어서 화면이 못 썼다** —
+     * 그래서 근거 줄이 `시장 대비 3일 연속 · 3일 연속` 으로 떨어졌다(DETAIL-03 §B).
+     */
+    indexChangePct?: number;
+    stockChangePct?: number;
+    indexLabel?: string;
+    /** 거래량 각성(E형)의 실수치. */
+    volumeMultiple?: number;
+    spikeMovePct?: number;
   };
   invalidation: { level: number | null; text: string };
   conviction: {

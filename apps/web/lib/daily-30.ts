@@ -53,6 +53,21 @@ export interface Daily30Response extends DiscoveryResponse {
     targetCount: number;
     cards: Daily30MetaCard[];
     assetCounts: Record<Daily30AssetClass, number>;
+    /**
+     * 국가 구성 (US-02 D-1·D-3). 종목 카드만 센다 — 콘텐츠·거시·코인은 무국적이다.
+     * `overLimit` 는 국가 상한(70%)을 넘겨서라도 30장을 채운 날을 드러낸다(조용한 절단 금지).
+     *
+     * optional 인 이유: 위원회 스냅샷·원장에서 되살린 **이 변경 이전의 응답**에는 없다.
+     * 없는 것과 0 을 구별해야 한다 — 없는 것은 "안 쟀다"이고 0 은 "재봤더니 0장"이다.
+     */
+    countryMix?: {
+      KR: number;
+      US: number;
+      stockCards: number;
+      /** 상한(= floor(target × 0.7))과 그것을 넘긴 국가. */
+      limit: number;
+      overLimit: Array<"KR" | "US">;
+    };
     /** 어제 30장 대비 종목 중복률(0~1) — 신선도 수용 지표(≤0.5). */
     repeatRatio?: number;
     /** 2026-07-12 US 파이프라인 진단(임시) + 원인 설명률(WO 뎁스 재건 E) causeCoverage. */
@@ -126,6 +141,11 @@ const ASSET_FLOORS: Partial<Record<Daily30AssetClass, number>> = {
   "us-stock": 8,
   coin: 5,
 };
+
+/** 로그 전용 — 미국 후보가 아예 없었는지(공급 문제) 순위에서 밀린 것인지 구분한다. */
+function debugUsCandidateCount(candidates: readonly Daily30Candidate[]): number {
+  return candidates.filter((candidate) => candidate.assetClass === "us-stock").length;
+}
 
 function isStockCard(card: DiscoveryDeckCardPayload): card is { kind: "stock" } & DiscoveryStockPayload {
   return !("kind" in card) || card.kind === "stock";
@@ -407,20 +427,59 @@ function addContentCandidates(
   }
 }
 
+/**
+ * 한 국가가 덱에서 차지할 수 있는 최대 비중 (US-02 D-1).
+ *
+ * 자산군 캡(`ASSET_CAPS`)은 이미 있지만 마지막 무제한 패스가 그것을 넘긴다 — 그래서
+ * 실측 덱이 KR 16 / US 13 처럼 한쪽으로 기울 수 있었다. 국가 상한은 그 무제한 패스에서도
+ * 지켜지는 마지막 선이다.
+ *
+ * **억지로 섞지 않는다** — 상한을 넘긴 국가의 후보는 *뒤로 보내기만* 하고, 다른 국가 후보가
+ * 없으면 그냥 채운다(WO D-1). 약한 신호를 국가 균형 때문에 앞에 두는 일은 없다:
+ * 순서는 언제나 `quietScore` 순이고, 이 상한은 "넘치는 쪽을 미루는" 규칙일 뿐이다.
+ */
+const COUNTRY_DECK_MAX_RATIO = 0.7;
+
+/** 국가 상한의 적용 대상 — 종목 카드만. 콘텐츠·거시·코인은 무국적으로 센다. */
+function candidateCountry(candidate: Daily30Candidate): "KR" | "US" | null {
+  if (candidate.assetClass === "kr-stock") return "KR";
+  if (candidate.assetClass === "us-stock") return "US";
+  return null;
+}
+
 export function selectDaily30Candidates(candidates: readonly Daily30Candidate[], targetCount = DAILY_CARD_TARGET): Daily30Candidate[] {
   const ranked = [...candidates].sort((a, b) => b.quietScore - a.quietScore || a.id.localeCompare(b.id));
   const selected: Daily30Candidate[] = [];
   const seen = new Set<string>();
   const assetCounts: Record<Daily30AssetClass, number> = { "kr-stock": 0, "us-stock": 0, coin: 0, macro: 0 };
+  const countryCounts: Record<"KR" | "US", number> = { KR: 0, US: 0 };
   const sectorCounts = new Map<string, number>();
+  const countryLimit = Math.floor(targetCount * COUNTRY_DECK_MAX_RATIO);
 
-  const tryTake = (candidate: Daily30Candidate, enforceCaps: boolean): boolean => {
+  /**
+   * 이 후보를 넣으면 국가 상한을 넘는가 — 넘더라도 **다른 국가 후보가 남아 있을 때만** 미룬다.
+   * 남은 후보가 전부 같은 국가면 미루는 것은 덱을 비우는 것과 같다(WO D-1 예외).
+   */
+  const deferForCountryCap = (candidate: Daily30Candidate): boolean => {
+    const country = candidateCountry(candidate);
+    if (!country) return false;
+    if (countryCounts[country] < countryLimit) return false;
+    return ranked.some(
+      (other) => !seen.has(other.id) && other.id !== candidate.id && candidateCountry(other) !== country
+    );
+  };
+
+  const tryTake = (candidate: Daily30Candidate, enforceCaps: boolean, enforceCountryCap = true): boolean => {
     if (seen.has(candidate.id)) return false;
     if (enforceCaps && assetCounts[candidate.assetClass] >= ASSET_CAPS[candidate.assetClass]) return false;
     if (enforceCaps && candidate.sector && (sectorCounts.get(candidate.sector) ?? 0) >= 5) return false;
+    // 국가 상한은 무제한 패스에서도 지킨다 — 여기가 기울기를 만들던 지점이다.
+    if (enforceCountryCap && deferForCountryCap(candidate)) return false;
     selected.push(candidate);
     seen.add(candidate.id);
     assetCounts[candidate.assetClass] += 1;
+    const country = candidateCountry(candidate);
+    if (country) countryCounts[country] += 1;
     if (candidate.sector) sectorCounts.set(candidate.sector, (sectorCounts.get(candidate.sector) ?? 0) + 1);
     return selected.length >= targetCount;
   };
@@ -443,6 +502,17 @@ export function selectDaily30Candidates(candidates: readonly Daily30Candidate[],
   }
   for (const candidate of ranked) {
     if (tryTake(candidate, false)) return selected;
+  }
+  /**
+   * 마지막 채움 — 국가 상한까지 내려놓는다 (US-02 D-1).
+   *
+   * 국가 상한은 **순서를 미루는 규칙이지 덱을 줄이는 규칙이 아니다.** 이 패스가 없으면
+   * 한쪽 국가 후보만 남은 날 덱이 30장 미달로 끝난다 — 이 저장소가 반복해서 다친 실패 모드다
+   * (`STALE_REPEAT_FLOOR` 주석: "30장 유지가 신선도보다 우선").
+   * 상한을 넘겨서라도 채우고, 넘겼다는 사실은 `meta.countryMix` 로 드러낸다(조용한 절단 금지).
+   */
+  for (const candidate of ranked) {
+    if (tryTake(candidate, false, false)) return selected;
   }
   return selected;
 }
@@ -665,6 +735,31 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
   if (causeCoverage.ratio < 0.9) {
     console.warn("[daily-30] 원인 설명률 미달", JSON.stringify({ ...causeCoverage, unexplained: movers.filter((c) => !explainedMovers.includes(c)).map((c) => c.stock!.canonical) }));
   }
+  const countryOf = (candidate: Daily30Candidate): "KR" | "US" | null =>
+    candidate.assetClass === "kr-stock" ? "KR" : candidate.assetClass === "us-stock" ? "US" : null;
+  const countryMixCounts = { KR: 0, US: 0 };
+  let stockCardCount = 0;
+  for (const candidate of deck) {
+    const country = countryOf(candidate);
+    if (!country) continue;
+    countryMixCounts[country] += 1;
+    stockCardCount += 1;
+  }
+  const countryLimit = Math.floor(targetCount * COUNTRY_DECK_MAX_RATIO);
+  const countryMix = {
+    ...countryMixCounts,
+    stockCards: stockCardCount,
+    limit: countryLimit,
+    overLimit: (["KR", "US"] as const).filter((country) => countryMixCounts[country] > countryLimit),
+  };
+  if (countryMix.overLimit.length > 0) {
+    console.warn(`[daily-30] 국가 상한 초과 — ${JSON.stringify(countryMix)} (다른 국가 후보 소진)`);
+  }
+  // 미국 0장 경보의 원천 (US-02 D-2) — 알림은 원장을 읽는 감사 라우트가 판정하지만,
+  // 그 판정을 기다리지 않고 빌드 로그에서도 즉시 보이게 남긴다.
+  if (countryMixCounts.US === 0) {
+    console.warn("[daily-30] 미국 카드 0장 — us 후보 " + debugUsCandidateCount(stockCandidates) + "건");
+  }
   const debug = {
     usDiscoveryCards: (us.cards?.length ?? us.stocks.length),
     usStockCandidates: stockCandidates.filter((c) => c.assetClass === "us-stock").length,
@@ -678,7 +773,7 @@ export async function buildDaily30ResponseWithOptions(options: Daily30BuildOptio
   if (debug.krStockCandidates === 0) {
     throw new Error("daily-30 build aborted: KR 후보 0 — 시세 소스 장애 의심, 캐시 오염 방지");
   }
-  const finalized = { ...response, meta: { ...response.meta, repeatRatio, debug } };
+  const finalized = { ...response, meta: { ...response.meta, countryMix, repeatRatio, debug } };
   // WO-M1: daily30-picks 업서트는 폐기했다. 선정·신호·판단·점수를 append-only 원장에 한 번만 남긴다.
   if (persistPicks) {
     await writeDaily30Ledger(finalized, "engine");

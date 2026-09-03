@@ -23,6 +23,13 @@ export * from "./card-type";
 export * from "./disclosure-kind";
 export * from "./disclosure-phrase";
 /**
+ * `disclosure-figures` 는 **배럴에서 뺐다** (성능 게이트, 2026-09-03).
+ *
+ * 배럴에 넣자 조회 라우트 세 개의 전이 모듈이 각각 +1 됐다 — 콜드스타트가 나빠지고,
+ * 그게 504 사고의 원인이었다. 이 모듈은 굽는 경로에서만 쓴다:
+ *   import { earningsFigures } from "@fomo/core/keyword-cards/disclosure-figures";
+ */
+/**
  * `sector-flow` 도 배럴에서 뺐다 — 굽는 경로 전용이다(성능 게이트가 또 잡았다, 2026-08-28).
  *   import { aggregateSectorFlow } from "@fomo/core/keyword-cards/sector-flow";
  */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 import type { DailyOhlcv } from "@fomo/core";
 import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER } from "@fomo/core";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
@@ -24,9 +25,6 @@ function exposurePrice(pick: QuietPick, value: number): string {
   return pick.subject.country === "US" ? `$${value.toFixed(2)}` : `${Math.round(value).toLocaleString("en-US")}원`;
 }
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-}
 
 /**
  * 상세 페이지 — DS-03(`docs/design/DS-03_DETAIL.md`). 토큰은 DS-00, 카드는 DS-01.
@@ -220,33 +218,63 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * 2·3걸음은 데이터가 있을 때만 존재한다. 없으면 목록에서 빠지고 **진행 점도 그만큼 줄어든다.**
    * "왜 지금인가" 제목만 있고 아래가 비어 있는 화면은 답하는 시늉이라 아예 만들지 않는다.
    */
+  const [openMethod, setOpenMethod] = useState<string | null>(null);
+  const [watched, setWatched] = useState(false);
+
+  /**
+   * 회사 설명 두 갈래. **걸음 조건이 이 둘을 보므로 걸음 계산보다 먼저 선언한다.**
+   *  · `blurb`     — 벤더 요약에서 연혁을 걷어내고 「무엇을 파는가」만 남긴 것
+   *  · `substance` — 카드에서 내려온 "어디서 돈을 버는가"
+   */
+  const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
+  const substance = slotPayload?.substance?.text ?? null;
+
+  /**
+   * DETAIL-03 PART A — 3걸음이 **통째로 사라져 있었다**(프로덕션 실측 15장 중 7장).
+   *
+   * 조건이 `companyRead.length > 0` **하나**뿐이었다. `companyRead` 는 팩트시트에서만 오고
+   * 팩트시트 보유율이 452/760 이라, 팩트시트가 없으면 회사 설명이 있어도 걸음이 없었다.
+   * WO-RESET-05 §4-4(=DETAIL-03 A-4)는 **"하나라도 있으면 걸음을 만든다"** 고 정해 뒀다 —
+   * 규칙은 있었고 조건이 그것을 안 봤다.
+   *
+   * 실측: 팩트시트 없는 7종목 중 6종목이 회사 설명 문자열을 갖고 있고, `companyBlurb` 가
+   * 연혁 문장을 걷어내고 「무엇을 파는가」를 남긴다(`신성이엔지` → "클린룸 장비와 태양광
+   * 사업을 영위해요"). 그 걸음을 버릴 이유가 없다.
+   *
+   * 회사 설명은 벤더 요약이라 **늦게 온다**(`basics` 는 열릴 때 받는다). 그래서 걸음 목록이
+   * 도중에 늘어난다 — 아래에서 걸음을 **번호가 아니라 id 로** 들고 있는 이유다.
+   */
+  const hasCompanyMaterial = (pick.companyRead?.length ?? 0) > 0 || Boolean(blurb?.text) || Boolean(substance);
+
   const steps = useMemo<StepId[]>(() => {
     const out: StepId[] = ["signal"];
     if ((pick.whyNow?.length ?? 0) > 0) out.push("why");
-    if ((pick.companyRead?.length ?? 0) > 0) out.push("company");
+    if (hasCompanyMaterial) out.push("company");
     out.push("decide");
     return out;
-  }, [pick.whyNow, pick.companyRead]);
+  }, [pick.whyNow, hasCompanyMaterial]);
 
-  const [stepIndex, setStepIndex] = useState(0);
-  const [openMethod, setOpenMethod] = useState<string | null>(null);
-  const [watched, setWatched] = useState(false);
-  /** 걸음이 줄어드는 페이로드로 바뀌었을 때 범위를 벗어나지 않게. */
-  const index = Math.min(stepIndex, steps.length - 1);
-  const step = steps[index]!;
+  /**
+   * **번호가 아니라 id 로 들고 있는다.** 번호로 들고 있으면 회사 설명이 늦게 도착해 걸음이
+   * 3→4 로 늘어나는 순간 같은 번호가 다른 걸음을 가리킨다 — 4걸음(결정)을 보던 사용자가
+   * 3걸음(회사)으로 **뒤로 밀린다.** id 는 목록이 바뀌어도 같은 걸음을 가리킨다.
+   */
+  const [stepId, setStepId] = useState<StepId>("signal");
+  const index = Math.max(0, steps.indexOf(stepId));
+  const step = steps[index] ?? "signal";
 
   const goNext = () => {
     if (index >= steps.length - 1) return;
     haptic();
     setOpenMethod(null);
-    setStepIndex(index + 1);
+    setStepId(steps[index + 1]!);
     scrollRef.current?.scrollTo({ top: 0 });
   };
   const goPrev = () => {
     if (index <= 0) return;
     haptic();
     setOpenMethod(null);
-    setStepIndex(index - 1);
+    setStepId(steps[index - 1]!);
     scrollRef.current?.scrollTo({ top: 0 });
   };
   const toggleMethod = (title: string) => setOpenMethod((v) => (v === title ? null : title));
@@ -332,7 +360,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     return "계속";
   })();
   const rows = useMemo(() => depthEvidenceRows(pick, hook), [pick, hook]);
-  const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
   const candles = useMemo(() => front?.candles ?? [], [front]);
   /**
    * 「우리 기록」 블록을 화면에서 뺀 지 오래다(WO-RESET-02 PART D). 여기서 계산도 안 한다 —
@@ -349,8 +376,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * (`pick.companyRead`, 굽는 시점에 굳는다).
    */
 
-  /** 실체 한 줄 — 카드에서 내려온 "어디서 돈을 버는가". ③ 섹션에 합류한다. */
-  const substance = slotPayload?.substance?.text ?? null;
 
 
   const valuation = slotPayload?.valuation ?? null;
@@ -458,7 +483,14 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           <div className="shrink-0 text-right">
             <p className="font-mono text-ds-data text-ds-text-1">{price}</p>
             {typeof changePct === "number" && (
+              /*
+                DETAIL-03 PART D — **기간을 쓴다.** 이 등락률은 오늘치인데 훅은 여러 날치를
+                말한다(`혼자 36.3%`). 둘이 나란히 있는데 기간 표시가 없으면 사용자가
+                `오늘 -10.4% 인데 36.3%?` 로 읽는다 — 실제 지적이 그것이었다.
+                훅 쪽 기간은 근거 줄(`기간 | 최근 3거래일`)이 맡는다(§B-2).
+              */
               <p className={`font-mono text-ds-caption ${changePct < 0 ? "text-ds-down" : "text-ds-text-1"}`}>
+                <span className="text-ds-text-3">오늘 </span>
                 {`${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}%`}
               </p>
             )}
@@ -475,12 +507,22 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
         <div
           ref={scrollRef}
           onScroll={onDepthScroll}
-          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${BOTTOM_PAD}`}
+          className={`scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto ${BOTTOM_PAD}`}
           data-testid="depth-scroll"
           onPointerDown={onStepPointerDown}
           onPointerUp={onStepPointerUp}
         >
-          <div className="mx-auto w-full max-w-[480px] px-gutter" data-testid={`depth-step-${step}`}>
+          {/*
+            DETAIL-03 PART E — **내용이 적으면 세로 중앙**(§E-3).
+
+            2·3걸음이 화면 위 1/4만 쓰고 아래가 통째로 검게 남아 "성의 없다" 로 읽혔다.
+            내용을 억지로 만들지 않는다(WO 「하지 말 것」) — 배치로 푼다.
+
+            `min-h-full` + 자식의 `my-auto` 조합이다. 여유 공간이 있으면 auto 마진이
+            나눠 가져 중앙에 오고, 내용이 화면보다 크면 auto 가 0 으로 풀려 위에서 시작하고
+            스크롤된다. `justify-center` 는 이 두 번째 경우에 위쪽이 잘려서 쓰지 않는다.
+          */}
+          <div className="mx-auto my-auto w-full max-w-[480px] px-gutter" data-testid={`depth-step-${step}`}>
 
           {/* ── 1걸음 — 누가 쓸어담고 있나 (§2) ── */}
           {step === "signal" && (
@@ -552,23 +594,75 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                 {whyNowEvents.map((event, i) => (
                   <div key={`${event.when}-${i}`} className="flex gap-s3 border-b-hair border-ds-border py-s3 last:border-0">
                     <p className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-2">{event.when}</p>
-                    <p className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">
-                      {event.text}
-                      {event.url && (
-                        <>
-                          {" "}
-                          <a
-                            href={event.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="whitespace-nowrap text-ds-caption text-ds-text-3 underline"
-                            data-testid="depth-why-now-source"
-                          >
-                            원문
-                          </a>
-                        </>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-keep text-ds-body text-ds-text-1">{event.text}</p>
+                      {/*
+                        DETAIL-04 — 서식 이름을 옮긴 한 줄로는 여전히 단어 나열이다.
+                        `지분 5% 이상을 신고했어요` 가 무슨 뜻인지 **우리가 풀어 쓴다.**
+
+                        숫자가 붙은 항목에는 넣지 않는다 — 그 줄은 아래 실제 숫자가 이미
+                        설명하고 있고, 제도 설명을 그 위에 끼우면 숫자를 밀어낸다(DETAIL-03
+                        중복 제거와 같은 판단).
+                      */}
+                      {event.meaning && !event.figures && (
+                        <p
+                          className="mt-s2 break-keep text-ds-caption text-ds-text-2"
+                          data-testid="depth-why-now-meaning"
+                        >
+                          {event.meaning}
+                        </p>
                       )}
-                    </p>
+                      {/*
+                        DETAIL-02 — `실적을 냈어요` 로 끝내지 않는다. **한 줄 해석 + 실제 숫자**.
+                        서버가 못 뽑았으면 이 블록이 없고 제목만 남는다(§E-1 — 지어내지 않는다).
+                      */}
+                      {event.figures && (
+                        <div className="mt-s2" data-testid="depth-why-now-figures">
+                          {/*
+                            기간이 **해석보다 먼저** 온다. 왼쪽 열은 공시일이라 기간 앵커가 아니고,
+                            반기 제목 아래에 분기 숫자를 놓기 때문이다 — 오독에 가장 약한 문장
+                            (`흑자로 돌아섰어요`)이 라벨보다 앞서면 라벨이 하는 일이 없다.
+                          */}
+                          <p className="text-ds-caption text-ds-text-3" data-testid="depth-why-now-period">
+                            {event.figures.periodLabel}
+                          </p>
+                          {event.figures.headline && (
+                            <p
+                              className="mt-s2 break-keep text-ds-body text-ds-text-2"
+                              data-testid="depth-why-now-headline"
+                            >
+                              {event.figures.headline}
+                            </p>
+                          )}
+                          {event.figures.rows.map((row) => (
+                            <div key={row.label} className="mt-s2 flex items-baseline gap-s3">
+                              <p className="w-[56px] shrink-0 text-ds-label text-ds-text-3">{row.label}</p>
+                              <p className="shrink-0 font-mono text-ds-body text-ds-text-1">{row.value}</p>
+                              <p className="min-w-0 flex-1 break-keep text-right text-ds-caption text-ds-text-2">
+                                {row.change}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* DETAIL-02 §C-1 — 금액은 규모 대비로. `320억` 은 감이 안 오고 `연매출의 26%` 는 온다. */}
+                      {event.scaleNote && (
+                        <p
+                          className="mt-s2 break-keep text-ds-caption text-ds-text-2"
+                          data-testid="depth-why-now-scale"
+                        >
+                          {event.scaleNote}
+                        </p>
+                      )}
+                      {/*
+                        DETAIL-04 — **원문 링크를 뺐다.** DETAIL-02 는 링크를 맨 아래로
+                        밀어 "보조"로 뒀지만, 보조로 둔 링크도 여전히 설명의 자리를 차지한다.
+                        아무도 누르지 않고(누르면 DART 서식 원문이라 읽히지도 않는다), 그
+                        링크가 있다는 사실이 "뜻은 원문에 있다" 는 변명이 됐다.
+                        이제 뜻은 위의 `meaning` 이 화면에서 말한다(`event.url` 은 남지만
+                        공시 항목을 가리는 표식으로만 쓴다).
+                      */}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -658,6 +752,28 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
               )}
             </>
           )}
+
+          {/*
+            투자조언 면책 — **이 화면에 없었다.** 있던 것은 인과 면책 하나뿐이고
+            (`WHY_NOW_TIMELINE_DISCLAIMER` — "왜 샀는지는 확인할 수 없어요"),
+            그건 "투자 조언이 아니다" 와 다른 말이다.
+
+            DETAIL-02 로 이 화면이 「공시 제목 목록」에서 **분기 실적 수치·증감률·규모 환산을
+            제시하는 화면**으로 바뀌어 노출도가 달라졌다. 문안은 새로 정하지 않았다 —
+            `StockCardFeed.tsx` · `VoiceFeed.tsx` 가 쓰는 **기존 승인 문장 그대로**다.
+            앞 절(`지난 흐름을 친구처럼…`)은 한마디 코멘트용이라 가져오지 않는다.
+
+            **걸음 밖에 둔다.** 네 걸음은 상호 배타 렌더이고 재무 수치가 나오는 것은
+            2걸음(`why`)이다. 4걸음 안에 두면 **수치를 읽고 나가는 경로에 면책이 한 번도
+            걸리지 않는다** — 오버레이는 어느 걸음에서든 닫을 수 있다. 스크롤 본문 끝이라
+            `StepBar` 높이는 건드리지 않는다(DS-07 §3).
+          */}
+          <p
+            className="mt-s6 text-center text-ds-caption text-ds-text-3"
+            data-testid="depth-disclaimer"
+          >
+            투자 조언이 아니에요.
+          </p>
 
           </div>
         </div>

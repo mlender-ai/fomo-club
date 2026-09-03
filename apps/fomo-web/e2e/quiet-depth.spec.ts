@@ -162,7 +162,7 @@ test("완료 기준 3 — 근거는 2줄 이하로 압축된다", async ({ page 
  * 2걸음 — 왜 지금인가(§3). **날짜와 사건**이다.
  * 픽스처는 공시 1건 + 매수 시작 1건을 갖는다.
  */
-test("[완료 4] 2걸음의 공시 제목이 사람 말로 나오고 원문 링크가 붙는다", async ({ page }) => {
+test("[완료 4] 2걸음의 공시 제목이 사람 말로 나온다 (원문 링크는 DETAIL-04 에서 빼냈다)", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="depth-next"]').click();
   const why = page.locator('[data-testid="depth-why-now"]');
@@ -179,8 +179,12 @@ test("[완료 4] 2걸음의 공시 제목이 사람 말로 나오고 원문 링�
   // 제목이 들고 있던 수치는 그대로 남는다 — 번역이 손실이 되면 안 된다.
   expect(why2).toContain("계약금액 320억");
 
-  // 원문 링크는 그대로 — 사람 말로 옮겨도 원문을 못 보게 되지 않는다.
-  await expect(page.locator('[data-testid="depth-why-now-source"]').first()).toHaveAttribute("href", /dart\.fss|sec\.gov/);
+  /**
+   * 종전에는 "원문 링크는 그대로" 를 여기서 고정했다. DETAIL-04 가 그 링크를 뺐다 —
+   * 아무도 누르지 않는 링크가 설명의 자리를 차지하고 있었고, 그 자리를 뜻풀이가 대신한다.
+   */
+  await expect(page.locator('[data-testid="depth-why-now-source"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-why-now-meaning"]').first()).toBeVisible();
 
   // 꼬리표 — 인과가 아니라 동시 관측임을 화면이 말한다.
   const note = page.locator('[data-testid="depth-why-now-note"]');
@@ -191,6 +195,93 @@ test("[완료 4] 2걸음의 공시 제목이 사람 말로 나오고 원문 링�
   const text = await why.innerText();
   for (const banned of ["때문에", "로 인해", "호재", "악재", "저평가", "기회", "곧 오를"]) {
     expect(text, `금지 표현 "${banned}"`).not.toContain(banned);
+  }
+});
+
+test("[DETAIL-02] 실적 공시가 실제 숫자·전년 동기 대비·한 줄 해석을 들고 온다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  const why = page.locator('[data-testid="depth-why-now"]');
+  const text = await why.innerText();
+
+  // 완료 1 — 매출·영업이익·순이익 숫자가 나온다.
+  for (const label of ["매출", "영업이익", "순이익"]) {
+    expect(text, `${label} 줄 없음`).toContain(label);
+  }
+  expect(text).toContain("1,240억");
+
+  // 완료 2·3 — 전년 동기 대비 증감률과 흑자 전환 문장.
+  expect(text).toContain("작년 2분기보다 +18%");
+  expect(text).toContain("흑자로");
+
+  // 완료 4 — 한 줄 해석. 완료 5 — 평가 표현이 없다.
+  await expect(page.locator('[data-testid="depth-why-now-headline"]').first())
+    .toContainText("매출 늘고 영업이익 흑자로 돌아섰어요");
+  for (const banned of ["좋았어요", "호실적", "실적이 개선"]) {
+    expect(text, `평가 표현 "${banned}"`).not.toContain(banned);
+  }
+
+  // 완료 6 — 금액이 규모 대비로 환산되고, 분자가 계약 총액임을 문장이 말한다.
+  await expect(page.locator('[data-testid="depth-why-now-scale"]').first())
+    .toContainText("계약금액이 최근 1년 매출의 26%");
+
+  // 기간 라벨이 해석보다 **먼저** 온다 — 반기 제목 아래 분기 숫자를 놓기 때문이다.
+  const periodBox = await page.locator('[data-testid="depth-why-now-period"]').first().boundingBox();
+  const headlineBox = await page.locator('[data-testid="depth-why-now-headline"]').first().boundingBox();
+  expect(periodBox!.y).toBeLessThan(headlineBox!.y);
+
+  /**
+   * DETAIL-04 — 종전 완료 8 은 "원문 링크가 항목 맨 아래로 밀린다" 였다. 지금은
+   * **링크가 아예 없다** — 아무도 누르지 않는 링크가 설명의 자리를 차지하고 있었다.
+   */
+  expect(text).not.toContain("공시 원문");
+  await expect(page.locator('[data-testid="depth-why-now-source"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-why-now"] a')).toHaveCount(0);
+});
+
+test("[DETAIL-04] 공시 한 줄 아래에 서식 뜻풀이가 붙고, 숫자가 있는 줄에는 붙지 않는다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  const why = page.locator('[data-testid="depth-why-now"]');
+
+  // 완료 1 — `큰 계약을 따냈어요` 가 무슨 뜻인지 화면이 말한다(원문을 누르게 하지 않는다).
+  const meaning = page.locator('[data-testid="depth-why-now-meaning"]');
+  await expect(meaning).toHaveCount(1);
+  await expect(meaning.first()).toContainText("최근 1년 매출의 5%");
+
+  // 완료 2 — 뜻풀이는 제목 **바로 아래**다. 규모 환산(`26%`)보다 먼저 온다.
+  const meaningBox = await meaning.first().boundingBox();
+  const scaleBox = await page.locator('[data-testid="depth-why-now-scale"]').first().boundingBox();
+  expect(meaningBox!.y).toBeLessThan(scaleBox!.y);
+
+  /**
+   * 완료 3 — **숫자가 붙은 항목에는 뜻풀이가 없다.** 픽스처는 반기보고서 줄에도 뜻풀이를
+   * 실어 보내지만(서버는 서식대로 준다) 화면이 그리지 않는다 — 숫자가 설명이다.
+   */
+  const figuresRow = page.locator('[data-testid="depth-why-now-figures"]').first().locator("xpath=..");
+  await expect(figuresRow.locator('[data-testid="depth-why-now-meaning"]')).toHaveCount(0);
+  await expect(why).not.toContainText("감사가 아닌 검토를 받아요");
+});
+
+test("[DETAIL-02] 투자조언 면책이 **네 걸음 전부**에 있다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+
+  /**
+   * 인과 면책(`왜 샀는지는 확인할 수 없어요`)만으로는 부족하다 — 그건 다른 말이다.
+   * 그리고 걸음은 **상호 배타 렌더**라, 마지막 걸음에만 두면 재무 수치를 읽고 나가는
+   * 경로에 면책이 한 번도 걸리지 않는다(오버레이는 어느 걸음에서든 닫을 수 있다).
+   */
+  const disclaimer = page.locator('[data-testid="depth-disclaimer"]');
+  for (let step = 0; step < 4; step += 1) {
+    // `toHaveCount(1)` 은 양방향이다 — 걸음 안으로 되돌리면 2, 지우면 0 이라 둘 다 터진다.
+    await expect(disclaimer, `${step + 1}걸음에 면책 없음`).toHaveCount(1);
+    await expect(disclaimer).toBeVisible();
+    await expect(disclaimer).toContainText("투자 조언이 아니에요");
+    if (step === 1) {
+      // 수치가 실제로 나오는 걸음 — 면책이 같은 화면에 있어야 한다.
+      await expect(page.locator('[data-testid="depth-why-now-figures"]').first()).toBeVisible();
+    }
+    if (step < 3) await page.locator('[data-testid="depth-next"]').click();
   }
 });
 

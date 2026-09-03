@@ -1,4 +1,5 @@
 import { josa } from "./josa";
+import { sectorDisplayName } from "./sector-display";
 
 /**
  * WO-RESET-08 §A-1 — **업종 간 자금 이동.** 순수 함수(네트워크·시간·난수 0).
@@ -142,18 +143,171 @@ export function formatKrwShort(value: number): string {
  */
 export function flowHook(pair: FlowPair): string {
   /**
+   * **화면에 나가는 이름은 표시명이다**(FLOW-01 §A-1). 분류 원문(`반도체와반도체장비`)은
+   * 카드 폭을 넘겨 `반도체와반...` 으로 잘렸다. 자르는 대신 짧은 이름을 쓴다.
+   * 집계·조인은 여전히 `pair.*.sector` 원문으로 한다 — 표시만 바꾼다.
+   */
+  const fromName = sectorDisplayName(pair.from.sector);
+  const toName = sectorDisplayName(pair.to.sector);
+  /**
    * **조사를 받침 따라 붙인다.** 고정 `으로` 를 쓰면 `전자장비와기기으로` 가 나온다
    * (2026-08-29 프로덕션 실측). 업종 이름은 받침이 있는 것과 없는 것이 섞여 있어
    * 고정 조사는 **반드시** 어딘가에서 틀린다 — 이 레포에서 세 번째다.
+   * 표시명으로 바꾼 뒤에도 같다: 조사는 **표시명 기준**으로 붙여야 맞다.
    */
-  const to = `${pair.to.sector}${josa(pair.to.sector, "으로")}`;
-  return `${pair.from.sector}에서 돈이 빠지고\n${to} 들어오고 있어요`;
+  const to = `${toName}${josa(toName, "으로")}`;
+  return `${fromName}에서 돈이 빠지고\n${to} 들어오고 있어요`;
 }
 
-/** 보조 줄 — 창·주체·양쪽 금액. 숫자를 숨기지 않는다. */
+/**
+ * 보조 줄 — **창과 주체 한 줄뿐이다.**
+ *
+ * 종전에는 여기서 양쪽 금액도 같이 냈다. 그런데 카드의 막대가 **이미 그 숫자를 옆에
+ * 적고 있다**(FLOW-01 §B-2 이후) — 같은 금액이 한 카드에 두 번 나왔다.
+ * `macroSupport` 가 같은 이유로 값 줄을 내려놓은 것과 같은 판단이다:
+ * **값은 그림이 그리고, 이 줄은 무엇을 기준으로 잰 것인지만 말한다.**
+ *
+ * 숫자를 숨기는 것이 아니다 — 자리를 옮긴 것이다. 상세 1걸음은 여섯 업종의 금액을
+ * 전부 보여준다.
+ */
 export function flowSupport(pair: FlowPair): string[] {
-  return [
-    `최근 ${pair.windowDays}거래일 · 외국인·기관 기준`,
-    `${pair.from.sector} ${formatKrwShort(pair.from.net)} · ${pair.to.sector} ${formatKrwShort(pair.to.net)}`,
-  ];
+  return [`최근 ${pair.windowDays}거래일 · 외국인·기관 기준`];
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   상세 다섯 걸음 (DETAIL-01 PART B)
+
+   카드는 한 쌍만 말한다. 상세는 **그 한 쌍이 전부가 아님을 보여주는 자리**다 —
+   빠진 곳 셋 · 들어온 곳 셋, 그리고 어떤 종목이었는지까지.
+
+   업종 이름만 보고 나가면 이 카드는 쓸모없다(§B). 2걸음이 이 화면의 존재 이유다.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/** 상세 1걸음 — 업종 한 줄. */
+export interface FlowSectorRow {
+  /** 집계 원문 — 조인 키다. 화면은 `displayName` 을 쓴다. */
+  sector: string;
+  net: number;
+  stocks: number;
+}
+
+/** 상세 2·3걸음 — 종목 한 줄. */
+export interface FlowStockRow {
+  code: string;
+  /** 사람이 읽는 이름. 못 찾으면 비운다 — 코드를 이름 자리에 쓰지 않는다. */
+  name?: string;
+  /** 창 안 순매수 합(원). */
+  net: number;
+  /** 20일 평균 거래량 대비 배수. 이력이 모자라면 없다(지어내지 않는다). */
+  volumeRatio?: number;
+}
+
+/** 상세 4걸음 — 하루치. */
+export interface FlowDayRow {
+  date: string;
+  net: number;
+}
+
+export interface FlowDepth {
+  /** 많이 빠진 순 — 최대 3. */
+  outflows: FlowSectorRow[];
+  /** 많이 들어온 순 — 최대 3. */
+  inflows: FlowSectorRow[];
+  /** 빠진 업종에서 가장 많이 판 종목 — 최대 5. */
+  fromStocks: FlowStockRow[];
+  /** 들어온 업종에서 가장 많이 산 종목 — 최대 5. */
+  toStocks: FlowStockRow[];
+  /**
+   * 들어온 업종에서 거래가 실제로 붙은 종목 — 최대 5.
+   * **비어 있는 것도 정보다**(§D-4): 돈은 들어오는데 거래는 평소와 비슷하다는 뜻이다.
+   */
+  toVolumeStocks: FlowStockRow[];
+  /** 들어온 업종의 일별 순매수 — 최대 20거래일, 오래된 것부터. */
+  toDaily: FlowDayRow[];
+  /** 위 창에서 순매수였던 날 수 — "20일 중 14일" 문장의 근거. */
+  toPositiveDays: number;
+}
+
+/** 상세 목록 상한. 더 보여줘도 읽히지 않는다. */
+export const FLOW_DEPTH_SECTORS = 3;
+export const FLOW_DEPTH_STOCKS = 5;
+export const FLOW_DEPTH_DAYS = 20;
+/** 거래가 "붙었다"고 볼 배수 — 평소의 1.5배. 이 아래는 조용히 산 것이다(§D-4). */
+export const FLOW_VOLUME_ATTACHED_RATIO = 1.5;
+
+function topByNet(rows: readonly FlowStockRow[], count: number, direction: "buy" | "sell"): FlowStockRow[] {
+  const filtered = rows.filter((row) => (direction === "buy" ? row.net > 0 : row.net < 0));
+  filtered.sort((a, b) => (direction === "buy" ? b.net - a.net : a.net - b.net));
+  return filtered.slice(0, count);
+}
+
+/**
+ * 다섯 걸음 재료를 한 번에 만든다. 순수 함수 — 부르는 쪽이 창을 잘라서 넘긴다.
+ *
+ * @param windowRows  카드 창(3·5·20일) 안의 행. 1~3걸음이 쓴다.
+ * @param dailyRows   20거래일 창의 행. 4걸음 전용 — 카드 창이 3일이어도 추세는 20일로 본다.
+ * @param nameByCode  종목코드 → 이름. 없는 코드는 이름 없이 간다.
+ * @param volumeRatioByCode 종목코드 → 20일 평균 대비 거래량 배수.
+ */
+export function buildFlowDepth(
+  pair: FlowPair,
+  windowRows: readonly FlowRow[],
+  dailyRows: readonly FlowRow[],
+  flows: readonly SectorFlow[],
+  sectorByCode: Readonly<Record<string, string>>,
+  nameByCode: Readonly<Record<string, string>> = {},
+  volumeRatioByCode: Readonly<Record<string, number>> = {}
+): FlowDepth {
+  // 얇은 업종은 상세에서도 뺀다 — 카드와 같은 기준이어야 표가 서로를 배신하지 않는다.
+  const usable = flows.filter((f) => f.stocks >= FLOW_MIN_STOCKS && f.days > 0);
+  const sorted = [...usable].sort((a, b) => b.net - a.net);
+  const inflows = sorted.filter((f) => f.net > 0).slice(0, FLOW_DEPTH_SECTORS);
+  const outflows = sorted
+    .filter((f) => f.net < 0)
+    .sort((a, b) => a.net - b.net)
+    .slice(0, FLOW_DEPTH_SECTORS);
+  const row = (f: SectorFlow): FlowSectorRow => ({ sector: f.sector, net: f.net, stocks: f.stocks });
+
+  /** 업종 하나의 종목별 합. */
+  const byStock = (sector: string): FlowStockRow[] => {
+    const net = new Map<string, number>();
+    for (const r of windowRows) {
+      if (sectorByCode[r.code] !== sector || !Number.isFinite(r.net)) continue;
+      net.set(r.code, (net.get(r.code) ?? 0) + r.net);
+    }
+    return [...net.entries()].map(([code, value]) => ({
+      code,
+      net: value,
+      ...(nameByCode[code] ? { name: nameByCode[code]! } : {}),
+      ...(typeof volumeRatioByCode[code] === "number" ? { volumeRatio: volumeRatioByCode[code]! } : {}),
+    }));
+  };
+
+  const fromAll = byStock(pair.from.sector);
+  const toAll = byStock(pair.to.sector);
+
+  /** 4걸음 — 들어온 업종의 일별 합. 20거래일 창을 쓴다(카드 창이 3일이어도). */
+  const byDate = new Map<string, number>();
+  for (const r of dailyRows) {
+    if (sectorByCode[r.code] !== pair.to.sector || !Number.isFinite(r.net)) continue;
+    byDate.set(r.date, (byDate.get(r.date) ?? 0) + r.net);
+  }
+  const toDaily = [...byDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-FLOW_DEPTH_DAYS)
+    .map(([date, net]) => ({ date, net }));
+
+  return {
+    outflows: outflows.map(row),
+    inflows: inflows.map(row),
+    fromStocks: topByNet(fromAll, FLOW_DEPTH_STOCKS, "sell"),
+    toStocks: topByNet(toAll, FLOW_DEPTH_STOCKS, "buy"),
+    // 산 종목 중 거래도 붙은 것만. 배수 순 — 금액 순으로 정렬하면 3걸음이 2걸음과 같아진다.
+    toVolumeStocks: toAll
+      .filter((s) => s.net > 0 && typeof s.volumeRatio === "number" && s.volumeRatio >= FLOW_VOLUME_ATTACHED_RATIO)
+      .sort((a, b) => (b.volumeRatio ?? 0) - (a.volumeRatio ?? 0))
+      .slice(0, FLOW_DEPTH_STOCKS),
+    toDaily,
+    toPositiveDays: toDaily.filter((d) => d.net > 0).length,
+  };
 }

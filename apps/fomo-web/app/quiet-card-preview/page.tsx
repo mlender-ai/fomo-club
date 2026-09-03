@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
+
 import type { QuietPick, QuietPickCardType } from "@/lib/fomoApi";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { FlowCard } from "@/components/FlowCard";
 import { MacroCard } from "@/components/MacroCard";
+import { MacroDepth } from "@/components/MacroDepth";
 
 /**
  * 픽 카드 렌더 프리뷰 — WO-HOOK-01 검증용 픽스처(`e2e/quiet-card.spec.ts` 가 boundingBox 로 잰다).
@@ -174,19 +177,25 @@ const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
 const FLOW = {
   fromSector: "반도체와반도체장비",
   toSector: "전자장비와기기",
-  fromNet: -1840,
-  toNet: 1210,
+  // 원 단위다 — 종전 픽스처는 `-1840` 이라 화면에 `-0만` 이 찍혔다(실측 2026-09-02).
+  // 픽스처가 실제와 자릿수가 다르면 그 화면으로는 아무것도 검증하지 못한다.
+  fromNet: -401_907_251_110,
+  toNet: 328_767_101_510,
   fromStocks: 12,
   toStocks: 9,
   windowDays: 5,
-  hook: "반도체에서 돈이 빠지고\n전자장비로 들어오고 있어요",
-  support: ["최근 5일 · 기관 순매수 기준", "같은 돈인지는 알 수 없어요"],
+  hook: "반도체에서 돈이 빠지고\n전자부품으로 들어오고 있어요",
+  // 금액은 막대가 그린다 — 보조 줄은 무엇을 기준으로 잰 것인지만 말한다(§B-2).
+  support: ["최근 5거래일 · 외국인·기관 기준"],
 };
 
 const MACRO = {
   indicatorId: "wti",
   indicatorName: "국제 유가",
-  asOf: "8월 29일",
+  asOf: "2026-08-31",
+  asOfLabel: "어제 기준",
+  kind: "streak",
+  category: "commodity",
   streakDays: 3,
   direction: "down" as const,
   fromText: "$71.20",
@@ -196,11 +205,21 @@ const MACRO = {
   hook: "국제 유가가 3일째\n내리고 있어요",
   support: ["최근 짚은 곳 중 4곳이 여기 닿아요"],
   principle: "유가가 내리면 기름을 많이 쓰는 회사에 유리해요",
-  favored: [],
-  hurt: [],
+  // DETAIL-01 §A-2 — 상세 2걸음이 업종 **이름**으로 말한다. 원리 문장만으로는 어느 업종이냐에 답하지 못한다.
+  favorSectors: ["항공", "해운", "육상운송"],
+  hurtSectors: ["정유·가스"],
+  // §A-1 — 값 하나만 보면 높은지 낮은지 알 수 없다.
+  band: { low: 61.4, high: 89.2, percentile: 23, label: "최근 1년 중 낮은 편이에요", points: 244 },
+  favored: [
+    { canonical: "대한항공", pickedAt: "2026-08-24" },
+    { canonical: "제주항공", pickedAt: "2026-08-26" },
+  ],
+  hurt: [{ canonical: "S-Oil", pickedAt: "2026-08-22" }],
 };
 
 export default function QuietCardPreview() {
+  /** 거시 상세를 이 화면에서 열어 본다(MACRO-01 §D-2) — 상세가 없으면 CTA 가 거짓말이다. */
+  const [macroOpen, setMacroOpen] = useState(false);
   return (
     <main className="mx-auto w-full max-w-md space-y-s5 bg-ds-bg p-gutter">
       <h1 className="text-ds-title text-ds-text-1">메인 카드 — WO-HOOK-01 3형</h1>
@@ -225,9 +244,11 @@ export default function QuietCardPreview() {
       <section data-testid="card-case" data-case="macro">
         <p className="mb-s2 font-mono text-ds-label text-ds-text-3">거시 뉴스 카드 (DS-07 §1)</p>
         <div className="rounded-card">
-          <MacroCard card={MACRO} onDetail={() => {}} />
+          <MacroCard card={MACRO} onDetail={() => setMacroOpen(true)} />
         </div>
       </section>
+
+      {macroOpen && <MacroDepth card={MACRO} onClose={() => setMacroOpen(false)} />}
     </main>
   );
 }

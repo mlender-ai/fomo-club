@@ -89,7 +89,12 @@ export function analyzeSpecDiff(diffText: string, options: SpecAnalyzeOptions = 
     (line) => !isGovernanceFile(line.file) && !isTestFile(line.file) && !isPatternOrAssertionLine(line.text) && CONCRETE_DISCOVERY_COPY.test(line.text),
   );
   const addedGeneric = parsed.added.filter(
-    (line) => !isGovernanceFile(line.file) && !isTestFile(line.file) && !isPatternOrAssertionLine(line.text) && GENERIC_DISCOVERY_COPY.test(line.text),
+    (line) =>
+      !isGovernanceFile(line.file) &&
+      !isTestFile(line.file) &&
+      !isPatternOrAssertionLine(line.text) &&
+      !isCommentLine(line.text) &&
+      GENERIC_DISCOVERY_COPY.test(line.text),
   );
   const genericOverwrite = removedConcrete
     .map((removed) => ({ removed, added: addedGeneric.find((added) => added.file === removed.file) }))
@@ -163,12 +168,39 @@ function implementationChanged(files: readonly string[]): boolean {
   return files.some((file) => /^(?:apps|packages)\//.test(file) && !/(__tests__|\.test\.)/.test(file));
 }
 
+/**
+ * 스펙·작업지시가 같이 바뀌었나.
+ *
+ * `docs/wo/` 를 넣는다 — 이 저장소의 작업지시는 **거기** 산다(`docs/wo/WO-HOOK-01-*.md` 등).
+ * 종전 정규식은 `docs/WO-` 만 봐서 **한 번도 만족된 적이 없었고**, 그래서 이 경고가 모든
+ * PR 에 떴다. 늘 뜨는 경고는 아무도 안 읽는다.
+ */
 function specOrChecklistChanged(files: readonly string[]): boolean {
-  return files.some((file) => /^docs\/(?:WO-|templates\/SPEC_CHECKLIST|templates\/SPEC_TEMPLATE|PRODUCT_VISION|DATA_ENGINE_STRATEGY|DEVELOPMENT_QUALITY_GUARDRAILS)/.test(file));
+  return files.some((file) =>
+    /^docs\/(?:wo\/|WO-|templates\/SPEC_CHECKLIST|templates\/SPEC_TEMPLATE|PRODUCT_VISION|DATA_ENGINE_STRATEGY|DEVELOPMENT_QUALITY_GUARDRAILS)/.test(file)
+  );
 }
 
 function isPatternOrAssertionLine(text: string): boolean {
   return /(?:PATTERN|RegExp|toMatch|not\.toMatch|toContain|not\.toContain)/.test(text);
+}
+
+/**
+ * 주석 줄인가 — **주석은 사용자에게 안 나간다.**
+ *
+ * 이 규칙이 잡으려는 것은 「구체적인 발견 훅이 제네릭 문구로 바뀌는 것」이고, 그건 화면에
+ * 나가는 문구 얘기다. 주석은 그 문구가 아니라 **왜 그렇게 했는지 적은 글**이다.
+ * 정규식 정의 줄을 빼는 것(`isPatternOrAssertionLine`)과 같은 이유다.
+ *
+ * 실제로 걸린 사례(2026-09-01, MACRO-01): 업종 목록이 **자리만 옮겼는데** 제거로 잡히고,
+ * 같은 파일에 새로 쓴 JSDoc 의 「움직임」이 제네릭으로 잡혀 둘이 짝지어졌다. 목록에서
+ * 빠진 값은 하나도 없었다.
+ *
+ * 코드 뒤에 붙은 꼬리 주석은 빼지 않는다 — 줄 **맨 앞**이 주석 기호일 때만이다.
+ * 안 그러면 `const x = "…"; // 움직임` 같은 줄로 규칙을 피해갈 수 있다.
+ */
+function isCommentLine(text: string): boolean {
+  return /^\s*(?:\/\/|\/\*|\*)/.test(text);
 }
 
 async function diffFromArgs(args: readonly string[]): Promise<string> {

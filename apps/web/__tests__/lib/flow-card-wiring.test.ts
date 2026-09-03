@@ -30,12 +30,18 @@ describe("흐름 카드 배선 (완료 확인 2)", () => {
   it("덱이 같은 화면에 끼워 넣는다 — 별도 섹션이 아니다 (§D-1·§E-1)", () => {
     expect(deck).toContain("res.flowCards ?? []");
     expect(deck).toContain('out.splice(Math.min(at, out.length), 0, { kind: "flow", card });');
-    expect(deck).toContain("<FlowCard card={slot.card} />");
+    /*
+      이 줄의 뜻은 「흐름 카드가 덱 슬롯 자리에서 그대로 그려진다」이지 소품 목록이 아니다.
+      전체 JSX 를 못 박아 뒀더니 상세 CTA 를 붙이는 것만으로 깨졌다(DETAIL-01) —
+      배선을 지키는 테스트가 배선 개선을 막으면 안 된다. 슬롯에서 그린다는 사실만 본다.
+    */
+    expect(deck).toContain("<FlowCard card={slot.card}");
   });
 
   it("앞쪽에 둔다 — 맨 앞은 아니다(첫 카드는 종목이어야 앱이 무엇인지 전해진다)", () => {
     expect(deck).toContain("[1, 4].forEach((at, i) => {");
-    expect(deck).toContain("[3, 6].forEach((at, i) => {");
+    // 거시 자리는 MACRO-01 에서 셋으로 늘었다 — 흐름 자리보다 **뒤**라는 것만 여기서 본다.
+    expect(deck).toContain("[3, 6, 9].forEach((at, i) => {");
   });
 
   it("하루 최대 2장 (§D-1)", () => {
@@ -52,9 +58,23 @@ describe("그림·문장 규칙 (완료 확인 3·7)", () => {
     }
   });
 
-  it("왼쪽은 회색, 오른쪽은 라임 — 다른 카드와 같은 문법", () => {
-    expect(card).toContain("bg-ds-chart-bar");
-    expect(card).toContain("bg-ds-accent");
+  /**
+   * 막대는 이제 상세와 **같은 조각**(`FlowBar`)이 그린다(DETAIL-01) — 카드와 상세가 다르게
+   * 생기면 눌러 들어간 사람이 같은 것을 보고 있는지 확신하지 못한다.
+   * 그래서 색 문법은 그 조각에서 확인한다. 지키는 것은 같다: 빠진 쪽 회색, 들어온 쪽 라임.
+   */
+  it("빠진 쪽은 회색, 들어온 쪽은 라임 — 다른 카드와 같은 문법", () => {
+    const steps = readFileSync(new URL("../../../fomo-web/components/DepthSteps.tsx", import.meta.url), "utf8");
+    expect(steps).toContain("bg-ds-chart-bar");
+    expect(steps).toContain("bg-ds-accent");
+    expect(card).toContain("<FlowBar");
+  });
+
+  it("업종 이름을 자르지 않는다 — 표시명을 쓰고 라벨은 막대 위에 둔다 (FLOW-01 §A-1·§A-2)", () => {
+    // 프로덕션 실측(2026-09-02): 왼쪽 72px 칸 + truncate 가 `반도체와반...` 을 만들었다.
+    expect(card).not.toContain("w-[72px]");
+    expect(card).toContain("sectorDisplayName(card.fromSector)");
+    expect(card).toContain("sectorDisplayName(card.toSector)");
   });
 
   it("화면이 인과를 덧붙이지 않는다 — 문장은 서버가 만든 것을 그대로 쓴다", () => {

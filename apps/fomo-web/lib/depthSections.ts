@@ -112,21 +112,93 @@ export function evidenceRows(pick: QuietPick): EvidenceRow[] {
  * | `매수` | 주체 · 규모 · 연속일수 — 한 줄로 합친다 |
  * | `비교` | 창 안 최장 여부. **앞면 훅이 이미 말했으면 이 행이 없다** |
  */
+/** `36.3` → `+36.3%`. 부호를 남긴다 — 방향이 이 줄의 내용이다. */
+function signedPct(value: number): string {
+  const r = Math.round(value * 10) / 10;
+  return `${r > 0 ? "+" : ""}${r}%`;
+}
+
+/**
+ * 훅이 이 수치를 **이미 말했나.** 소수 한 자리로 반올림한 표기가 훅에 들어 있는지로 본다 —
+ * 화면에 나가는 형태가 그것이고, 사용자가 "같은 숫자"로 읽는 것도 그것이다.
+ */
+function hookSaysPct(hook: string, value: number): boolean {
+  const r = Math.round(Math.abs(value) * 10) / 10;
+  return hook.includes(String(r)) || hook.includes(String(Math.round(r)));
+}
+
+/**
+ * 시장 역행 근거 상한 — `기간 · 이 종목 · 지수 · 차이` 네 줄.
+ *
+ * 아래 `DEPTH_EVIDENCE_MAX = 2` 는 **훅을 쪼개 다시 쓰던 다섯 줄**을 막으려고 둔 값이다
+ * (§3). 이 네 줄은 그 반대다 — **훅에 없는 지수 수치**를 들고 온다. `혼자 36.3%` 만으로는
+ * 코스닥이 얼마나 빠졌는지, 차이가 얼마인지 알 수 없다. 그래서 같은 상한을 쓰지 않는다.
+ */
+const DEPTH_DIVERGENCE_MAX = 4;
+
 export function depthEvidenceRows(pick: QuietPick, hook: string): EvidenceRow[] {
   const rows: EvidenceRow[] = [];
+  const facts = pick.signalFacts;
+  const days = pick.signal.days;
+
+  /**
+   * 시장 역행 — **훅에 없는 것만** 낸다 (DETAIL-03 §B-2).
+   *
+   * 종전에는 이 형도 `매수` 줄로 떨어져 `시장 대비 3일 연속 · 3일 연속` 이 나갔다
+   * (프로덕션 실측). `시장 대비` 는 아무것도 사지 않으므로 `매수` 라는 라벨 자체가 틀렸고,
+   * 정작 사용자가 알아야 할 **지수가 얼마나 빠졌는지**는 어디에도 없었다.
+   */
+  if (typeof facts?.indexChangePct === "number" && typeof facts?.stockChangePct === "number") {
+    const indexLabel = facts.indexLabel?.trim() || "지수";
+    const window = facts.streakWindowDays ?? days;
+    const stock = facts.stockChangePct;
+    const index = facts.indexChangePct;
+    // 기간 — 훅의 수익률이 어느 기간의 것인지 말한다(§D).
+    if (window > 0) rows.push({ label: "기간", value: `최근 ${window}거래일` });
+    // 훅이 이미 종목 수익률을 말했으면 반복하지 않는다(§B-1).
+    if (!hookSaysPct(hook, stock)) rows.push({ label: "이 종목", value: signedPct(stock) });
+    rows.push({ label: indexLabel, value: signedPct(index) });
+    rows.push({ label: "차이", value: `${Math.round(Math.abs(stock - index) * 10) / 10}%p` });
+    return rows.slice(0, DEPTH_DIVERGENCE_MAX);
+  }
+
+  /**
+   * **`매수` 줄은 주체가 있는 형에만 쓴다.**
+   *
+   * D·E형(`market_divergence`·`volume_awakening`)은 `actors` 가 주체가 아니라 지표 이름이고
+   * (`시장 대비`·`거래량`) `scale` 도 규모가 아니라 그 지표의 값이다 — 규모가 없는 형이라
+   * 그 자리를 기간·배수로 채웠다. 그런데도 `매수` 라벨을 붙여서 **`시장 대비` 가 무언가를
+   * 산 것처럼** 읽혔고, `scale` 에 든 `3일 연속` 뒤에 `days` 로 같은 말을 또 붙여
+   * `시장 대비 3일 연속 · 3일 연속` 이 나갔다(프로덕션 실측).
+   *
+   * 이 형의 실수치는 위 역행 블록이 낸다. 실수치가 없으면 기간만 말하고 끝낸다 —
+   * 틀린 라벨로 채우지 않는다.
+   */
+  const metricSignal = pick.signal.kind === "market_divergence" || pick.signal.kind === "volume_awakening";
+  if (metricSignal) {
+    if (days >= 2) rows.push({ label: "기간", value: `최근 ${days}거래일` });
+    return rows.slice(0, DEPTH_EVIDENCE_MAX);
+  }
 
   const actor = actorWithCount(pick.signal.actors, pick.signal.insiderCount);
-  const scale = repairPickCopy(pick.signal.scale).trim();
-  const days = pick.signal.days;
-  const buy = [actor, scale].filter(Boolean).join(" ");
-  const withDays = days > 0 ? [buy, `${days}일 연속`].filter(Boolean).join(" · ") : buy;
-  if (withDays) rows.push({ label: "매수", value: withDays });
+  const scaleRaw = repairPickCopy(pick.signal.scale).trim();
+  /**
+   * `scale` 이 **이미 기간을 담고 있으면** 연속일수를 다시 붙이지 않는다(§B-3).
+   *
+   * 훅과 겹치는 숫자까지 지우지는 **않는다** — 이 줄의 일은 「수치 확인」이고(WO-HOOK-02 §3),
+   * 훅의 `임원 3명이 5일 새` 옆에서 `임원 3명 $2.8M · 5일 연속` 은 같은 값을 다시
+   * **확인해 주는** 것이다. 지웠더니 규모만 남아 줄이 무너졌다(e2e 가 잡았다).
+   */
+  const scaleSaysDays = days > 0 && new RegExp(`${days}\\s*일`).test(scaleRaw);
+  /** 1일은 `1일 연속` 이라 쓸 것이 아니다 — 연속이 아니다. */
+  const daysChip = days >= 2 && !scaleSaysDays ? `${days}일 연속` : "";
+  const buy = [[actor, scaleRaw].filter(Boolean).join(" "), daysChip].filter(Boolean).join(" · ");
+  if (buy) rows.push({ label: "매수", value: buy });
 
   /**
    * 비교 행 — 앞면 훅이 `40거래일 중 최장` 을 이미 말했으면 만들지 않는다(§3).
    * 훅 문안이 형마다 다르므로 문자열이 아니라 **거래일 창 수치**가 겹치는지로 본다.
    */
-  const facts = pick.signalFacts;
   if (facts?.isLongestStreak) {
     const window = facts.streakWindowDays ?? days;
     const hookSaysLongest = hook.includes(`${window}거래일`) || /가장 길게|가장 긴/.test(hook);

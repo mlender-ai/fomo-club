@@ -46,11 +46,35 @@ describe("buildWhyNowTimeline — 날짜와 사건", () => {
     expect(rows[0]!.text).toBe("외국인이 사기 시작했어요");
   });
 
-  it("[완료 3] 공시에는 원문 링크가 붙는다", () => {
+  it("[완료 3] 공시 항목은 `url` 을 들고 온다 — 화면은 링크로 그리지 않고 표식으로만 쓴다(DETAIL-04)", () => {
     const rows = buildWhyNowTimeline({ signalStartedAt: "2026-08-06", disclosures: [수주공시] });
     expect(rows.find((r) => r.url)?.url).toBe(수주공시.url);
-    // 매수 시작·상태 서술에는 링크가 없다.
+    // 매수 시작·상태 서술에는 없다 — 그래서 이 필드로 공시 항목을 셀 수 있다(계수기).
     expect(rows.filter((r) => r.url)).toHaveLength(1);
+  });
+
+  /**
+   * DETAIL-04 — 원문 링크를 화면에서 뺐으므로, **뜻풀이가 그 자리를 대신한다.**
+   * 굽는 경로가 이 필드를 실어 보내지 않으면 화면엔 서식 이름 한 줄만 남는다.
+   */
+  it("[DETAIL-04] 공시 항목에 서식 뜻풀이가 함께 실린다", () => {
+    const rows = buildWhyNowTimeline({ signalStartedAt: "2026-08-06", disclosures: [수주공시] });
+    const 공시 = rows.find((r) => r.url)!;
+    expect(공시.meaning).toContain("5%");
+    // 뜻풀이도 인과·평가·예측 금지 게이트를 통과한다.
+    expect(WHY_NOW_FORBIDDEN.test(공시.meaning!)).toBe(false);
+    // 신호 시작 줄은 공시가 아니라 뜻풀이가 없다 — 없는 설명을 지어내지 않는다.
+    expect(rows.find((r) => !r.url)?.meaning).toBeUndefined();
+  });
+
+  it("[DETAIL-04] 번역표에 없는 서식은 뜻풀이 없이 원문 제목만 나간다", () => {
+    const rows = buildWhyNowTimeline({
+      signalStartedAt: "2026-08-06",
+      disclosures: [{ date: "2026-08-04", title: "투자판단관련주요경영사항", kind: "기타" }],
+    });
+    const 공시 = rows.find((r) => r.rawTitle)!;
+    expect(공시.text).toBe("투자판단관련주요경영사항");
+    expect(공시.meaning).toBeUndefined();
   });
 
   it("[완료 5] 값은 밴드 상·하위 20% 일 때만 — 평균 근처는 안 넣는다", () => {

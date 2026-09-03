@@ -66,7 +66,7 @@ import { selectDominantAxis } from "./card-axis";
 import { fetchSupplyDemand } from "./supply-demand";
 import { readSupplyDemandHistoryByTickers } from "./supply-demand-store";
 import { fetchCachedUsMarketRows, fetchNasdaqDailyCandles, latestUsSessionAsOf } from "./us-market-source";
-import { fetchInsiderClusterCandidates, type InsiderClusterCandidate } from "./insider-source";
+import { fetchInsiderClusterSymbols, type InsiderClusterBuy, type InsiderClusterCandidate } from "./insider-source";
 import { US_DISCOVERY_SYMBOLS, usDiscoverySeedForSymbol } from "./us-symbols";
 import { reprocessNewsHook, ruleReprocessNewsHook, type NewsHookInput } from "./news-reprocess";
 import { synthesizeWhyDrivenInsight } from "./insight-synthesis";
@@ -883,7 +883,7 @@ function insiderMoney(price: number | undefined): string | undefined {
 }
 
 /** 내부자 클러스터 매수 → 관측 서술 카피(사실만·판단/예측 없음). "클러스터" 키워드로 재료성 확보. */
-function insiderClusterLabel(candidate: InsiderClusterCandidate): string {
+function insiderClusterLabel(candidate: InsiderClusterCandidate, changePct?: number): string {
   const valueText = insiderValueText(candidate.valueUsd);
   const delta = candidate.ownershipDeltaPct;
   const base =
@@ -893,12 +893,16 @@ function insiderClusterLabel(candidate: InsiderClusterCandidate): string {
   // 현재가 소스 부재(Yahoo egress 차단·TwelveData 쿼터) → 공시된 내부자 취득가를 진입 기준선으로 노출(현재가 아님).
   const priceText = insiderMoney(candidate.buyPrice);
   const withPrice = priceText ? `${base} · 취득가 ${priceText}` : base;
-  const quiet = typeof candidate.quote?.changePct === "number" && Math.abs(candidate.quote.changePct) < 2;
+  // 등락률은 **이미 유니버스 행에 있는 값**을 쓴다 (US-02 C). 전에는 종목마다 시세를 따로
+  // 받았는데(`fetchInsiderClusterCandidates`), 그 조회가 이 단계에 12초를 쓰고도 대부분은
+  // 유니버스 밖이라 그대로 버려졌다 — 스크리너가 준 등락률로 같은 판정을 공짜로 한다.
+  const live = changePct ?? candidate.quote?.changePct;
+  const quiet = typeof live === "number" && Math.abs(live) < 2;
   return quiet ? `${withPrice} · 아직 조용한 구간` : withPrice;
 }
 
-function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): DiscoveryEvent {
-  const label = insiderClusterLabel(candidate);
+function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string, changePct?: number): DiscoveryEvent {
+  const label = insiderClusterLabel(candidate, changePct);
   // 발굴(오늘 노출) 시점 기준 — addStaticRecoveryRows 와 동일 패턴. 실제 공시일은 summary 로 명시(정직).
   const filingText = /^\d{4}-\d{2}-\d{2}$/.test(candidate.filingDate)
     ? `${candidate.filingDate} 공시`
@@ -934,26 +938,41 @@ function insiderClusterEvent(candidate: InsiderClusterCandidate, asOf: string): 
 }
 
 /**
- * US 내부자 클러스터 매수 — 유니버스(시총 큐레이션 통과) 종목에 이벤트를 보강한다(attach-only).
+ * US 내부자 클러스터 매수 — 유니버스 종목에 이벤트를 보강한다(attach-only).
+ *
  * 2026-07-11 User Zero: 합성 row 직접 주입(eligible 게이트 우회) 폐기 — openinsider 클러스터는
  * 마이크로캡이 대부분이라 "아무도 모르는 잡주"(CREX·FCBM·DPC·SWZ 실측)가 미장 덱을 지배했다.
- * 내부자 신호는 시총 하한(US_DYNAMIC_MIN_MARKET_CAP_USD·큐레이션 시드)을 통과한 종목의
- * 보강 재료로만 쓴다. openinsider 실패 시 조용히 no-op(fail-open).
+ * **그 결정은 유지한다** — 여기서는 여전히 유니버스에 있는 행에만 붙인다.
+ *
+ * 달라진 것은 유니버스 쪽이다 (US-02 C). 시총 하한 $20B 은 클러스터 매수 종목의 91%를 버렸고
+ * (실측: 100종목 중 통과 9), 그래서 임원 매수 카드가 하루 3장에 그쳤다. 이제 프리웜이
+ * **내부자 신호가 붙은 종목은 신호 하한($2B)까지 낮춰 유니버스에 넣는다**
+ * (`us-market-source.ts` `US_SIGNAL_MIN_MARKET_CAP_USD`). 잡주 방지선은 유지하되
+ * 신호가 있는 종목은 살린다.
+ *
+ * 시세는 따로 받지 않는다 — 유니버스 행이 이미 갖고 있다(값싼 심볼 전용 경로 사용).
+ * openinsider 실패 시 조용히 no-op(fail-open).
  */
 async function hydrateUsInsiderClusterRows(
   byTicker: Map<string, { row: DiscoveryMarketRow; events: DiscoveryEvent[] }>,
   asOf: string
 ): Promise<void> {
-  const candidates = await fetchInsiderClusterCandidates().catch((): InsiderClusterCandidate[] => []);
+  const candidates = await fetchInsiderClusterSymbols().catch((): InsiderClusterBuy[] => []);
   if (candidates.length === 0) return;
+  const bySymbol = new Map<string, string>();
+  for (const [ticker, value] of byTicker.entries()) {
+    if (value.row.country !== "US" || !value.row.symbol) continue;
+    bySymbol.set(value.row.symbol.toUpperCase(), ticker);
+  }
   for (const candidate of candidates) {
-    const existing = [...byTicker.entries()].find(
-      ([, value]) => value.row.country === "US" && value.row.symbol?.toUpperCase() === candidate.symbol
-    );
-    if (!existing) continue; // 유니버스 밖(시총 미달 마이크로캡) — 주입하지 않는다.
-    const [ticker, current] = existing;
-    if (current.events.some((e) => e.insiderPurchase)) continue;
-    byTicker.set(ticker, { ...current, events: [...current.events, insiderClusterEvent(candidate, asOf)] });
+    const ticker = bySymbol.get(candidate.symbol);
+    if (!ticker) continue; // 유니버스 밖 — 주입하지 않는다(잡주 방지선).
+    const current = byTicker.get(ticker);
+    if (!current || current.events.some((e) => e.insiderPurchase)) continue;
+    byTicker.set(ticker, {
+      ...current,
+      events: [...current.events, insiderClusterEvent(candidate, asOf, current.row.changePct)],
+    });
   }
 }
 
@@ -2223,9 +2242,19 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
     const ticker = row.canonical;
     if (!eligibleTickers.has(ticker)) continue;
     const theme = themeSignals.get(ticker);
-    const events = [eventFromPrice(row, asOf), eventFromTheme(row, theme, asOf), eventFromMarketContext(row, theme, asOf)].filter(
-      (event): event is DiscoveryEvent => event !== null
-    );
+    const events = [
+      eventFromPrice(row, asOf),
+      eventFromTheme(row, theme, asOf),
+      // 거래량 각성을 **후보 검출 시점에** 판정한다 (US-02 B-2).
+      // 전에는 `attachReachedVolumeEvents` 가 랭킹 **뒤**에서만 붙었다 — 20일 거래량이 일봉에서
+      // 나오고 일봉은 상위 50에만 받았기 때문이다. 그래서 각성은 발굴 사유가 못 되고 선정된
+      // 종목에 붙는 라벨이었다(실측: 덱 30장 중 국내 0 · 미국 0). 프리웜이 미리 계산해 행에
+      // 실어둔 비율을 쓰면 여기서 판정할 수 있고, 거래량만으로 종목이 덱에 올라온다.
+      // 비율이 없는 행(이력 미확보)은 종전대로 랭킹 뒤 경로가 맡는다 — 이중 부착은
+      // `attachReachedVolumeEvents` 가 `volume_spike` 중복을 걸러 막는다.
+      eventFromVolume(row, row.volumeRatio20d, asOf),
+      eventFromMarketContext(row, theme, asOf),
+    ].filter((event): event is DiscoveryEvent => event !== null);
     if (events.length > 0) byTicker.set(ticker, { row: { ...row, canonical: ticker }, events });
   }
 
@@ -2526,7 +2555,18 @@ export async function buildDiscoveryResponse(options: BuildDiscoveryResponseOpti
       const hasGroundedMaterial = Boolean(stock.sourceLabel && (stock.sourceUrl || headlineEvent?.url));
       // 시세 사실 신호(WO 미장·코인 확충) — Nasdaq OHLCV 실측(거래량 이상·신고가)은 그 자체가 근거라
       // 재료(뉴스·공시) 없이도 카드 진입 허용. 카피 가드·verdict 표준은 그대로(품질 게이트 유지).
-      const hasMarketFactSignal = headlineEventKind === "volume_spike" || headlineEventKind === "new_high";
+      //
+      // **헤드라인 이벤트만 보던 것을 후보의 이벤트 전체로 넓힌다 (US-02 B-1).**
+      // 전에는 `headlineEventKind` 하나만 봤다. 그런데 헤드라인은 여러 이벤트 중 하나가 뽑히는
+      // 것이라, 거래량 각성이나 내부자 매수를 **가지고 있어도** 다른 이벤트가 헤드라인이 되면
+      // 그 종목은 "근거 없음"으로 탈락했다. 그 결과 비큐레이션 451종목이 사실상 전멸하고
+      // 미국 카드가 큐레이션 95개 안에서만 나왔다(실측: 랭킹 50 → 진입 15 — US_COVERAGE A-3 ③).
+      //
+      // 넓히는 대상은 **우리가 직접 잰 사실**뿐이다 — 거래량 이상·신고가(Nasdaq OHLCV 실측)와
+      // 내부자 매수(SEC Form 4). 출처 없는 서술을 통과시키는 것이 아니다.
+      const hasMarketFactSignal = candidate.events.some(
+        (event) => event.kind === "volume_spike" || event.kind === "new_high" || event.insiderPurchase === true
+      );
       // 큐레이션 대형주는 curation 자체가 품질 근거 — verdict 맥락으로 진입(2026-07-12, US 뉴스 egress 차단 대응).
       if (hasMarketFactSignal || (usSeed && front.verdict)) {
         stocks.push(stock);

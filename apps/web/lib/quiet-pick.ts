@@ -64,6 +64,9 @@ import {
 } from "@fomo/core/keyword-cards/investor-holdings";
 import {
   aggregateSectorFlow,
+  buildFlowDepth,
+  FLOW_DEPTH_DAYS,
+  type FlowDepth,
   pickFlowPair,
   flowHook,
   flowSupport,
@@ -72,15 +75,24 @@ import {
   type FlowPair,
 } from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
+import { sectorDisplayName } from "@fomo/core/keyword-cards/sector-display";
 import { readSectorMap } from "./sector-map-store";
 import { readMacroCollection } from "./macro-store";
 import {
   MACRO_INDICATORS,
   detectMacroMove,
+  isMacroFresh,
   linkMacroToPicks,
+  macroBand,
+  MACRO_DETAIL_SERIES_POINTS,
+  MACRO_SENSITIVITY,
+  macroFreshnessLabel,
   macroHook,
   macroSupport,
+  selectMacroMoves,
   formatMacroValue,
+  type MacroBand,
+  type MacroLink,
   type RecentPick,
 } from "@fomo/core/keyword-cards/macro-link";
 import { readInvestorCollection } from "./investor-store";
@@ -91,6 +103,15 @@ import {
   type ExposureSummary,
 } from "@fomo/core/keyword-cards/exposure-history";
 import { companyRead, type CompanyGroup } from "@fomo/core/keyword-cards/company-read";
+/**
+ * DETAIL-02 — 공시 줄에 붙일 숫자. **배럴이 아니라 경로로** 가져온다 — 배럴에 넣으면
+ * 조회 라우트 번들에 딸려 들어간다(성능 게이트, 2026-09-03).
+ */
+import {
+  disclosureScaleNote,
+  earningsFigures,
+  type EarningsFigures,
+} from "@fomo/core/keyword-cards/disclosure-figures";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers, readSupplyDemandHistoryByTickersStrict } from "./supply-demand-store";
@@ -112,6 +133,8 @@ import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./j
 import { readSignalStatsForCards } from "./signal-stats";
 import { readDisclosureCollection } from "./disclosure-store";
 import { readAllFactSheets, readAllFactSheetsStrict } from "./fundamentals/repository";
+/** 섹터 폴백이 `classification` 만 읽는다 — 타입 전용 임포트라 번들에 안 들어온다. */
+import type { FactSheet } from "@fomo/core/fundamentals/types";
 import { readKrCandleCacheMany } from "./kr-candle-cache";
 import type { DisclosureCollection } from "./disclosure-collect";
 import {
@@ -207,8 +230,10 @@ const SECTOR_FLOW_WINDOW_SLACK = 4;
 const SECTOR_FLOW_MIN_NET = 100_000_000_000;
 /** 하루 최대 흐름 카드 수(§D-1). 많으면 종목 카드를 밀어낸다. */
 const SECTOR_FLOW_MAX_CARDS = 2;
-/** 하루 최대 거시 카드 수(§E). 거시+정책 합쳐 2장이고, 지금은 거시만 있다. */
-const MACRO_MAX_CARDS = 2;
+/**
+ * 하루 최대 거시 카드 수는 **`@fomo/core` 의 `MACRO_MAX_CARDS`(3장)** 가 정한다(MACRO-01 §C-2).
+ * 여기 있던 `2` 를 지운다 — 상한이 두 곳에 있으면 한쪽만 고치게 되고, 실제로 그렇게 됐다.
+ */
 
 /** `YYYY-MM-DD` 에서 며칠 옮긴다. 형식이 아니면 원본을 돌려준다. */
 function shiftIsoDays(date: string, days: number): string {
@@ -551,6 +576,17 @@ export interface QuietPickQualification {
    * 나간 건수다. 이 비율이 보고 대상이다(보고할 것 3번).
    */
   disclosurePhrases?: { total: number; raw: number };
+  /**
+   * DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. `total` 은 화면에 나간 공시 건수,
+   * `figures` 는 실적 수치가 붙은 건수, `scale` 은 금액이 규모 대비로 환산된 건수.
+   * **확보율이 낮은 종류가 다음 작업 대상이다** — 그래서 종류별로 나눠 싣는다.
+   */
+  disclosureFigures?: {
+    total: number;
+    figures: number;
+    scale: number;
+    byKind: Record<string, { total: number; figures: number; scale: number }>;
+  };
   /** WO-RESET-08 §A-1 — 업종 흐름 계측(분류 못 찾은 행 수 포함). */
   sectorFlow?: { rows: number; unclassified: number; sectors: number; cards: number };
   /** WO-RESET-09 — 거시 카드 계측. `recentPicks` 0 이면 연결할 대상이 없다. */
@@ -569,6 +605,30 @@ export interface QuietPickQualification {
   funnel?: QuietPickFunnel;
   /** 이번 빌드가 읽어온 팩트시트 수. 0 이면 3걸음·실적 줄이 통째로 빈다. */
   factSheets?: number;
+  /**
+   * CARDS-02 D-1·D-3 — **검출기별 퍼널.** 신호 형마다 각 단계에서 몇 개가 남았나.
+   *
+   * ## 왜 필요한가
+   *
+   * 종전 계수기는 단계별 **총합**만 줬다(`krWithSignal 256 → afterQuiet 60 → published 15`).
+   * 그러면 "역행 178건이 검출됐는데 덱에 0장" 을 **총합만 보고는 알 수 없다** — 어느 형이
+   * 어디서 사라졌는지 물어볼 창구가 없었다. 실제로 그것이 CARDS-02 의 첫 질문이었고,
+   * 답하려고 소스를 읽어 내려가야 했다.
+   *
+   * 단계 정의(위 총합 계수기와 같은 지점):
+   *  · `detected`   — 검출기가 만든 후보 (`dedupeSignalsByStock` **전**)
+   *  · `deduped`    — 종목당 한 신호로 줄인 뒤 (`baseStrength` 최대값 승리)
+   *  · `considered` — 조립 상한(`MAX_FRONT_ASSEMBLIES`) 안에 든 수
+   *  · `published`  — 덱에 실제로 나간 수
+   *  · `watching`   — 「지켜보는 중」 선반으로 간 수
+   *
+   * `detected` 는 큰데 `considered` 가 0 이면 **정렬·상한이 그 형을 밀어낸 것**이고,
+   * `considered` 는 있는데 `published` 가 0 이면 품질 게이트·덱 구성이 잘라낸 것이다.
+   * 두 원인은 조치가 다르므로 계수기가 갈라 줘야 한다.
+   */
+  detectorFunnel?: Record<string, { detected: number; deduped: number; considered: number; published: number; watching: number }>;
+  /** CARDS-02 완료조건 9 — 하루에 나간 **카드 종류 수**(픽 형 + 자금 흐름 + 거시). */
+  cardKinds?: { total: number; byKind: Record<string, number> };
 }
 
 /**
@@ -658,14 +718,30 @@ export interface FlowCard {
   /** 결론 두 줄 — **인과로 말하지 않는다**(§E-1). */
   hook: string;
   support: string[];
+  /**
+   * 상세 다섯 걸음 재료 (DETAIL-01 §B). 없으면 상세를 열지 않는다 —
+   * **상세를 만들지 않은 카드는 덱에 넣지 않는다**(§「하지 말 것」).
+   */
+  depth?: FlowDepth;
 }
 
 /** WO-RESET-09 §B-1 — 거시 카드 한 장. 화면이 그대로 그린다. */
 export interface MacroCard {
   indicatorId: string;
   indicatorName: string;
-  /** 최신 관측일. **화면에 그대로 쓴다** — 지표는 하루이틀 늦게 나온다. */
+  /** 최신 관측일 `YYYY-MM-DD`. 화면은 이걸 직접 쓰지 않는다 — `asOfLabel` 을 쓴다. */
   asOf: string;
+  /**
+   * 화면에 그대로 쓰는 **상대 시간** — `어제 기준` · `3일 전 기준`(§B-3).
+   *
+   * 절대 날짜를 쓰면 사용자가 오늘 날짜와 빼봐야 오래됐다는 걸 안다. 굽는 시점에 문장으로
+   * 굳혀 보낸다 — 화면이 날짜 계산을 하면 캐시된 페이지에서 어제 것이 오늘로 읽힌다.
+   */
+  asOfLabel: string;
+  /** 어떤 사건이라 카드가 됐나 — `streak` · `spike` · `level` · `inversion`. */
+  kind: string;
+  /** 분류 — 하루 상한을 분류별로 걸었다는 사실을 회귀 테스트가 본다. */
+  category: string;
   streakDays: number;
   direction: "up" | "down";
   fromText: string;
@@ -677,9 +753,19 @@ export interface MacroCard {
   support: string[];
   /** 일반 원리 한 줄 — **예측이 아니다**(§F-1). */
   principle: string;
-  /** 우리가 최근 짚은 종목 중 유리·불리 쪽. 상세 2걸음이 그대로 그린다. */
-  favored: Array<{ canonical: string; pickedAt: string }>;
-  hurt: Array<{ canonical: string; pickedAt: string }>;
+  /** 우리가 최근 짚은 종목 중 유리·불리 쪽. 상세 3걸음이 그대로 그린다. */
+  favored: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  hurt: Array<{ canonical: string; pickedAt: string; naverCode?: string }>;
+  /**
+   * 상세 2걸음 — 유리·불리 **업종 이름**(DETAIL-01 §A-2). 표시명으로 굳혀 보낸다.
+   * 원리 문장만으로는 「어느 업종이냐」에 답하지 못한다.
+   */
+  favorSectors: string[];
+  hurtSectors: string[];
+  /** 상세 1걸음 — 60일 추이. 카드의 20점보다 길게 본다(§A-1). */
+  detailSeries: number[];
+  /** 상세 1걸음 — 1년 밴드에서 어디쯤인가. 표본이 모자라면 없다(지어내지 않는다). */
+  band?: MacroBand;
 }
 
 export interface QuietPickResponse {
@@ -1018,14 +1104,41 @@ export function sectorFromIndustry(industry: string | undefined | null): string 
  */
 const NON_SECTOR_LABELS = new Set(["코인", "비트코인", "가상자산", "환율", "금리", "유가", "지수"]);
 
-function companyIdentity(front: StockFrontData, sig: SignalCandidate): string {
+/**
+ * 섹터 한 줄.
+ *
+ * ## 왜 대부분 비어 있었나 (DETAIL-03 PART C)
+ *
+ * 국내 섹터를 `sectorOf()` **하나로만** 찾았다. 그건 손으로 관리하는 사전이고
+ * **80종목**뿐인데 픽 유니버스는 **760종목**이다 — 그래서 프로덕션 15장 중 13장이 섹터 없이
+ * 나갔다(실측 2026-09-03). 신뢰도 게이트가 거른 것도, 표시 로직이 빠뜨린 것도 아니었다.
+ * **찾을 곳이 하나뿐이었다.**
+ *
+ * 팩트시트는 `classification.industry` 를 종목별로 들고 있고(네이버 산업분류 원문) 452종목을
+ * 덮는다 — **이미 읽어둔 데이터다.** 사전이 못 찾으면 거기서 받는다.
+ *
+ * 원문은 분류용 이름이라 화면에 그대로 쓰면 넘치거나 안 읽힌다(`반도체와반도체장비`).
+ * `sectorDisplayName` 이 표시명으로 옮기고, **표에 없으면 원문을 그대로 쓴다** —
+ * 모르면 지어내지 않는다(`sector-display.ts` 규약).
+ */
+export function companyIdentity(front: StockFrontData, sig: SignalCandidate, sheet?: FactSheet): string {
   // 테마 라벨은 섹터가 아니다 — 여기서 쓰지 않는다(front 는 다른 신호에 계속 쓰인다).
   void front;
   const krSector = sig.subject.country === "KR" ? sectorOf(sig.subject.canonical) : undefined;
   if (krSector && !NON_SECTOR_LABELS.has(krSector)) return krSector;
   const seedSector = sig.subject.symbol ? usDiscoverySeedForSymbol(sig.subject.symbol)?.sector?.trim() : undefined;
   if (seedSector && HANGUL.test(seedSector)) return seedSector.slice(0, 20);
-  return sectorFromIndustry(sig.industry) ?? "";
+  const fromIndustry = sectorFromIndustry(sig.industry);
+  if (fromIndustry) return fromIndustry;
+  /**
+   * 팩트시트 분류 — 사전 밖 종목의 유일한 실측 업종이다. `industry` 를 먼저 본다
+   * (`sector` 는 `경기관련소비재` 처럼 대분류라 업종으로 읽히지 않는다).
+   */
+  for (const raw of [sheet?.classification?.industry, sheet?.classification?.sector]) {
+    const label = sectorDisplayName(raw).trim();
+    if (label && !NON_SECTOR_LABELS.has(label) && label.length <= 20) return label;
+  }
+  return "";
 }
 
 function daysBetween(fromDate: string, today: string): number {
@@ -1593,14 +1706,37 @@ function detectInvestorSignals(
  * 「기타」로 묶지 않는다. 업종 흐름 카드는 분류가 틀리면 통째로 거짓이 되므로,
  * 모르는 것을 아는 척하지 않는다. 버린 수는 진단에 남긴다.
  */
+/**
+ * 20거래일 평균 대비 오늘 거래량 배수 (DETAIL-01 §B 3걸음).
+ *
+ * 오늘을 분모에서 뺀다 — 급증분이 스스로를 희석하면 "거래가 붙었다"를 못 잡는다
+ * (`us-market-cache.volumeRatioFromHistory` 와 같은 규약).
+ * 표본이 모자라면 **아무 값도 내지 않는다** — 거짓 배수는 없는 것보다 나쁘다.
+ */
+function volumeRatiosFromCandles(candleMap: ReadonlyMap<string, DailyOhlcv[]>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [code, candles] of candleMap) {
+    const volumes = candles.map((c) => c.volume).filter((v): v is number => typeof v === "number" && v > 0);
+    if (volumes.length < 6) continue;
+    const today = volumes[volumes.length - 1]!;
+    const past = volumes.slice(-21, -1);
+    if (past.length < 5) continue;
+    const avg = past.reduce((sum, v) => sum + v, 0) / past.length;
+    if (!(avg > 0)) continue;
+    out[code] = Math.round((today / avg) * 100) / 100;
+  }
+  return out;
+}
+
 function detectSectorFlows(
   histories: Record<string, InvestorFlow[]>,
   candleMap: ReadonlyMap<string, DailyOhlcv[]>,
   sectorByCode: Readonly<Record<string, string>>,
-  today: string
-): { pairs: FlowPair[]; census: { rows: number; unclassified: number; sectors: number } } {
+  today: string,
+  nameByCode: Readonly<Record<string, string>> = {}
+): { pairs: FlowPair[]; depths: FlowDepth[]; census: { rows: number; unclassified: number; sectors: number } } {
   const census = { rows: 0, unclassified: 0, sectors: 0 };
-  if (Object.keys(sectorByCode).length === 0) return { pairs: [], census };
+  if (Object.keys(sectorByCode).length === 0) return { pairs: [], depths: [], census };
 
   /** 종목코드 → 날짜 → 종가. 캔들은 `YYYYMMDD` 라 ISO 로 맞춘다. */
   const closeByCodeDate = new Map<string, Map<string, number>>();
@@ -1629,6 +1765,14 @@ function detectSectorFlows(
   census.rows = rows.length;
 
   const pairs: FlowPair[] = [];
+  const depths: FlowDepth[] = [];
+  const volumeRatioByCode = volumeRatiosFromCandles(candleMap);
+  /**
+   * 4걸음 전용 창 — **카드 창과 별개로 항상 20거래일**이다(DETAIL-01 §B 4걸음).
+   * 카드가 3일 흐름으로 만들어졌어도 "얼마나 오래됐나" 는 20일로 봐야 답이 된다.
+   */
+  const dailyFrom = shiftIsoDays(today, -(FLOW_DEPTH_DAYS + SECTOR_FLOW_WINDOW_SLACK + 10));
+  const dailyRows = rows.filter((r) => r.date >= dailyFrom && r.date <= today);
   /**
    * 창 셋(§A-1) — 짧은 창부터 본다. 3일 흐름이 성립하면 그게 가장 새 소식이다.
    * 한 창에서 카드가 나오면 나머지 창은 보지 않는다 — 같은 이야기를 두 번 하지 않는다.
@@ -1641,9 +1785,13 @@ function detectSectorFlows(
     census.unclassified = unclassified;
     census.sectors = Math.max(census.sectors, flows.length);
     const pair = pickFlowPair(flows, windowDays, SECTOR_FLOW_MIN_NET);
-    if (pair) { pairs.push(pair); break; }
+    if (pair) {
+      pairs.push(pair);
+      depths.push(buildFlowDepth(pair, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode));
+      break;
+    }
   }
-  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), census };
+  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), depths: depths.slice(0, SECTOR_FLOW_MAX_CARDS), census };
 }
 
 /** ① 조용한 돈 신호 — US 내부자 클러스터(Form4). */
@@ -2200,7 +2348,15 @@ export async function buildQuietPickResponse(options: {
     deps.readKrCandleCacheMany(krCodes),
     new Map() as Map<string, DailyOhlcv[]>
   );
-  const sectorFlow = detectSectorFlows(histories, flowCandles, sectorMap?.byCode ?? {}, date);
+  /**
+   * 종목코드 → 이름 (DETAIL-01 §B 2걸음). 이름이 없으면 상세가 `005930 -4,210억` 이 되고,
+   * 그건 업종 이름만 두고 비운 것과 다르지 않다. 시세 목록이 이미 코드와 이름을 함께 갖고 있다.
+   */
+  const flowNameByCode: Record<string, string> = {};
+  for (const row of marketRows) {
+    if (row.naverCode && row.canonical) flowNameByCode[row.naverCode] = row.canonical;
+  }
+  const sectorFlow = detectSectorFlows(histories, flowCandles, sectorMap?.byCode ?? {}, date, flowNameByCode);
   /**
    * WO-RESET-09 — 거시 카드. **연결이 카드의 존재 이유다**(§B-3).
    *
@@ -2210,63 +2366,121 @@ export async function buildQuietPickResponse(options: {
   const macroCards: MacroCard[] = (() => {
     if (!macroCollection?.series) return [];
     const sectorByCode = sectorMap?.byCode ?? {};
-    /** canonical → 업종. 최근 픽의 업종을 알아야 연결할 수 있다. */
-    const codeByCanonical = new Map(krDefs.filter((d) => d.naverCode).map((d) => [d.canonical, d.naverCode!]));
+    /** canonical → 업종·시장. 둘 다 있어야 지표별로 알맞게 이을 수 있다. */
+    const defByCanonical = new Map(krDefs.map((d) => [d.canonical, d]));
     const linkPicks: RecentPick[] = [...recentPicks.entries()].map(([canonical, pickedAt]) => {
-      const code = codeByCanonical.get(canonical);
+      const def = defByCanonical.get(canonical);
+      const code = def?.naverCode;
       const sector = code ? sectorByCode[code] : undefined;
-      return { canonical, pickedAt, ...(sector ? { sector } : {}) };
+      const market = def?.market;
+      return { canonical, pickedAt, ...(sector ? { sector } : {}), ...(market ? { market } : {}) };
     });
 
-    const out: MacroCard[] = [];
+    /**
+     * 상세에서 종목을 누르면 그 종목 상세로 간다(§D-3) — 그러려면 **조회 키가 필요하다.**
+     * canonical 만 보내면 화면이 이름으로 되짚어야 하고 동명이인에서 어긋난다.
+     */
+    const linkedPick = (p: RecentPick) => {
+      const code = defByCanonical.get(p.canonical)?.naverCode;
+      return { canonical: p.canonical, pickedAt: p.pickedAt, ...(code ? { naverCode: code } : {}) };
+    };
+    /** 업종 이름은 화면용 표시명으로 굳혀 보낸다 — 집계 키(원문)와 섞지 않는다. */
+    const displaySectors = (sectors: readonly string[]): string[] =>
+      [...new Set(sectors.map((sector) => sectorDisplayName(sector)))].filter(Boolean);
+
+    /**
+     * **후보를 다 모은 뒤에 고른다.** 종전에는 목록 순서대로 돌다 상한에 닿으면 멈췄는데,
+     * 그러면 목록 위쪽 지표가 언제나 이긴다 — 더 크게 움직인 지표가 아래에 있어도 진다.
+     * 강한 순 정렬과 분류별 상한은 `selectMacroMoves` 가 한다(§C-2).
+     */
+    const candidates: Array<{ move: MacroLink["move"]; link: MacroLink }> = [];
     for (const indicator of MACRO_INDICATORS) {
-      if (out.length >= MACRO_MAX_CARDS) break;
       const points = macroCollection.series[indicator.id];
       if (!points || points.length === 0) continue;
       const move = detectMacroMove({ id: indicator.id, points });
       if (!move) continue;
+      // **오래된 지표로 카드를 만들지 않는다**(§B-3). 6일 전 유가로 오늘 이야기를 못 한다.
+      if (!isMacroFresh(move.asOf, date)) continue;
       const link = linkMacroToPicks(move, linkPicks);
       if (!link) continue; // 연결 없는 뉴스는 만들지 않는다
-      out.push({
-        indicatorId: indicator.id,
-        indicatorName: indicator.name,
-        asOf: move.asOf,
-        streakDays: move.streakDays,
-        direction: move.direction,
-        fromText: formatMacroValue(indicator, move.from),
-        toText: formatMacroValue(indicator, move.to),
-        changePct: Math.round(move.changePct * 100) / 100,
-        series: move.series,
-        hook: macroHook(move),
-        support: macroSupport(link),
-        principle: link.principle,
-        favored: link.favored.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
-        hurt: link.hurt.map((p) => ({ canonical: p.canonical, pickedAt: p.pickedAt })),
-      });
+      candidates.push({ move, link });
     }
-    return out;
+
+    return selectMacroMoves(candidates).map(({ move, link }) => ({
+      indicatorId: move.indicator.id,
+      indicatorName: move.indicator.name,
+      asOf: move.asOf,
+      asOfLabel: macroFreshnessLabel(move.asOf, date),
+      kind: move.kind,
+      category: move.indicator.category,
+      streakDays: move.streakDays,
+      direction: move.direction,
+      fromText: formatMacroValue(move.indicator, move.from),
+      toText: formatMacroValue(move.indicator, move.to),
+      changePct: Math.round(move.changePct * 100) / 100,
+      series: move.series,
+      hook: macroHook(move),
+      support: macroSupport(link),
+      principle: link.principle,
+      favored: link.favored.map(linkedPick),
+      hurt: link.hurt.map(linkedPick),
+      // 방향에 맞춰 뒤집는다 — 내릴 때는 「오를 때 불리」가 유리한 쪽이다.
+      favorSectors: displaySectors(
+        move.direction === "up"
+          ? MACRO_SENSITIVITY[move.indicator.id].upFavors
+          : MACRO_SENSITIVITY[move.indicator.id].upHurts
+      ),
+      hurtSectors: displaySectors(
+        move.direction === "up"
+          ? MACRO_SENSITIVITY[move.indicator.id].upHurts
+          : MACRO_SENSITIVITY[move.indicator.id].upFavors
+      ),
+      detailSeries: (macroCollection.series[move.indicator.id] ?? [])
+        .slice(-MACRO_DETAIL_SERIES_POINTS)
+        .map((p) => p.value),
+      ...(() => {
+        const band = macroBand(macroCollection.series[move.indicator.id] ?? []);
+        return band ? { band } : {};
+      })(),
+    }));
   })();
 
-  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair) => ({
-    fromSector: pair.from.sector,
-    toSector: pair.to.sector,
-    fromNet: pair.from.net,
-    toNet: pair.to.net,
-    fromStocks: pair.from.stocks,
-    toStocks: pair.to.stocks,
-    windowDays: pair.windowDays,
-    hook: flowHook(pair),
-    support: flowSupport(pair),
-  }));
+  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair, index) => {
+    const depth = sectorFlow.depths[index];
+    return {
+      fromSector: pair.from.sector,
+      toSector: pair.to.sector,
+      fromNet: pair.from.net,
+      toNet: pair.to.net,
+      fromStocks: pair.from.stocks,
+      toStocks: pair.to.stocks,
+      windowDays: pair.windowDays,
+      hook: flowHook(pair),
+      support: flowSupport(pair),
+      ...(depth ? { depth } : {}),
+    };
+  });
 
-  const allSignals = dedupeSignalsByStock([
+  /**
+   * CARDS-02 D-1·D-3 — **검출기별 퍼널.** 형마다 각 단계에서 몇 개가 남았나.
+   * 총합만 보면 "역행 178 검출 → 덱 0장" 을 알 수 없다(그게 이 WO 의 첫 질문이었다).
+   */
+  const detectorFunnel: Record<string, { detected: number; deduped: number; considered: number; published: number; watching: number }> = {};
+  const funnelOf = (kind: string) =>
+    (detectorFunnel[kind] ??= { detected: 0, deduped: 0, considered: 0, published: 0, watching: 0 });
+
+  const detectedSignals = [
     ...investorSignals,
     ...krSignals,
     ...usSignals,
     ...dartSignals,
     ...reversalSignals,
     ...priceSignals,
-  ]);
+  ];
+  for (const sig of detectedSignals) funnelOf(sig.kind).detected += 1;
+
+  const allSignals = dedupeSignalsByStock(detectedSignals);
+  for (const sig of allSignals) funnelOf(sig.kind).deduped += 1;
 
   // ── 아직 조용함(②) — 이제 '탈락'이 아니라 '태깅'이다(WO-P4 2단 구조).
   //    신호가 실재하는 후보는 버리지 않고 미달 사유를 달아 '지켜보는 중' 선반으로 보낸다.
@@ -2329,6 +2543,7 @@ export async function buildQuietPickResponse(options: {
     console.warn("[quiet-pick] front assembly capped", { total: ordered.length, considered: considered.length });
   }
   const quietCandidates = considered;
+  for (const { sig } of quietCandidates) funnelOf(sig.kind).considered += 1;
 
   // ── 품질 게이트(③) + 프론트 조립(생존 후보만 — 비용 큰 단계) ──
   const assembled = await Promise.all(
@@ -2376,6 +2591,16 @@ export async function buildQuietPickResponse(options: {
    * (신호 시작·실적 줄은 번역 대상이 아니다). 비율이 보고 대상이다.
    */
   const phraseCensus = { total: 0, raw: 0 };
+  /**
+   * DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. `total` 은 화면에 나간 공시 건수,
+   * `figures` 는 실적 수치가 붙은 건수, `scale` 은 금액이 규모 대비로 환산된 건수다.
+   */
+  const figureCensus: {
+    total: number;
+    figures: number;
+    scale: number;
+    byKind: Record<string, { total: number; figures: number; scale: number }>;
+  } = { total: 0, figures: 0, scale: 0, byKind: {} };
 
   /**
    * WO-RESET-05 보고할 것 1·2번 — 업종 비교를 붙일 수 있는 종목 비율과, 비교 문장이 붙어
@@ -2674,7 +2899,7 @@ export async function buildQuietPickResponse(options: {
     // WO-SYNC F-2 — 문장으로 녹기 전의 실수치를 그대로 남긴다. 신호 정체성(kind·actorNoun·
     // scale·days)은 signal 이 이미 갖고 있으므로 뺀다.
     const { kind: _factKind, actorNoun: _factActor, scale: _factScale, days: _factDays, ...signalFacts } = facts;
-    const identity = companyIdentity(front, sig);
+    const identity = companyIdentity(front, sig, factSheetByStock.get(sig.subject.canonical));
     const dataQuality: QuietPickDataQuality = {
       candles: availableCandles,
       ...(sealedCandles !== liveCandles.length ? { sealedCandles } : {}),
@@ -2741,8 +2966,24 @@ export async function buildQuietPickResponse(options: {
       ...(((): { whyNow?: WhyNowEvent[]; whyNowQuietNote?: string } => {
         const list = disclosures?.byStock?.[sig.subject.canonical] ?? [];
         // 실적 전환(PART B) — 상태가 아니라 변화만, 날짜는 그 분기의 공시일이다.
-        const quarters = factSheetByStock.get(sig.subject.canonical)?.fiscal?.quarters ?? [];
+        const sheetForWhy = factSheetByStock.get(sig.subject.canonical);
+        const quarters = sheetForWhy?.fiscal?.quarters ?? [];
         const earnings = earningsTurnEvent(quarters);
+        /**
+         * DETAIL-02 §C — 금액을 규모 대비로 환산할 분모. **없는 것은 넘기지 않는다** —
+         * 0 으로 메우면 `연매출의 26%` 가 아무 근거 없이 나온다.
+         */
+        const scale = {
+          ...(typeof sheetForWhy?.fiscal?.ttm?.revenue === "number"
+            ? { revenueTtm: sheetForWhy.fiscal.ttm.revenue }
+            : {}),
+          ...(typeof sheetForWhy?.market_data?.market_cap === "number"
+            ? { marketCap: sheetForWhy.market_data.market_cap }
+            : {}),
+          ...(typeof sheetForWhy?.balance?.total_equity === "number"
+            ? { totalEquity: sheetForWhy.balance.total_equity }
+            : {}),
+        };
         const events = buildWhyNowTimeline({
           signalStartedAt: normalizeQuietMoneyDate(sig.startedAt) ?? sig.startedAt.slice(0, 10),
           // 신호가 이미 주체 문자열을 들고 있다 — 카드와 같은 말을 쓴다(`외국인·기관` 포함).
@@ -2751,6 +2992,24 @@ export async function buildQuietPickResponse(options: {
           signalKind: sig.kind,
           disclosures: list,
           ...(earnings ? { earnings } : {}),
+          /**
+           * DETAIL-02 — 공시 줄에 숫자를 붙인다. **이미 읽어둔 팩트시트**를 쓰는 것이라
+           * 새 수집·새 왕복이 없다. 공시 감지와 재무 수치가 여태 따로 놀았던 것을 여기서 잇는다.
+           *
+           * `@fomo/core` 배럴이 아니라 **경로로 직접** 가져온다 — 배럴에 넣으면 조회 라우트
+           * 번들에 딸려 들어간다(성능 게이트).
+           */
+          figuresFor: (d) => ({
+            ...(((): { figures?: EarningsFigures } => {
+              const f = quarters.length ? earningsFigures({ date: d.date, title: d.title, quarters }) : null;
+              return f ? { figures: f } : {};
+            })()),
+            ...(((): { scaleNote?: string } => {
+              if (Object.keys(scale).length === 0) return {};
+              const note = disclosureScaleNote({ title: d.title, scale });
+              return note ? { scaleNote: note } : {};
+            })()),
+          }),
         });
         // 수집이 실제로 이 종목을 덮었는가 — 덮지 않았으면 "없었다" 를 말하지 않는다.
         const collected = disclosures !== null && disclosures !== undefined && disclosures.truncated !== true;
@@ -2759,6 +3018,39 @@ export async function buildQuietPickResponse(options: {
           if (!e.url) continue; // 공시 항목만 센다(신호 시작·실적 줄은 번역 대상이 아니다)
           phraseCensus.total += 1;
           if (e.rawTitle) phraseCensus.raw += 1;
+        }
+        /**
+         * DETAIL-02 §E-2 — **공시 종류별 숫자 확보율.** 화면에 나간 공시 중 몇 건에
+         * 숫자(실적 수치 또는 규모 환산)가 붙었나. **확보율이 낮은 종류가 다음 작업 대상이다** —
+         * 그래서 전체 비율 하나가 아니라 종류별로 나눠 센다.
+         */
+        /**
+         * **화면에 나간 항목(events)을 센다.** 수집 목록(list)을 돌면서 날짜로 되찾으면
+         * 같은 날 공시가 둘일 때 같은 항목을 두 번 세게 된다 — 확보율이 부풀려진다.
+         *
+         * 종류는 날짜별 큐에서 순서대로 꺼낸다. 타임라인이 `inWindow` 를 날짜순으로
+         * 안정 정렬해 올리므로 같은 날 항목의 순서가 수집 목록 순서와 같다.
+         */
+        const kindsByDate = new Map<string, string[]>();
+        for (const d of list) {
+          const queue = kindsByDate.get(d.date) ?? [];
+          queue.push(d.kind ?? "기타");
+          kindsByDate.set(d.date, queue);
+        }
+        for (const e of events) {
+          if (!e.url || !e.date) continue;
+          const kind = kindsByDate.get(e.date)?.shift() ?? "기타";
+          const bucket = (figureCensus.byKind[kind] ??= { total: 0, figures: 0, scale: 0 });
+          bucket.total += 1;
+          figureCensus.total += 1;
+          if (e.figures) {
+            bucket.figures += 1;
+            figureCensus.figures += 1;
+          }
+          if (e.scaleNote) {
+            bucket.scale += 1;
+            figureCensus.scale += 1;
+          }
         }
         return {
           ...(events.length > 0 ? { whyNow: events } : {}),
@@ -2991,6 +3283,20 @@ export async function buildQuietPickResponse(options: {
     .map(({ item }) => item)
     .slice(0, QUIET_WATCH_MAX);
 
+  // CARDS-02 D-3 — 마지막 두 단계. `published` 는 덱, `watching` 은 선반이다.
+  for (const pick of published) funnelOf(pick.signal.kind).published += 1;
+  for (const item of watchShelf) funnelOf(item.signal.kind).watching += 1;
+
+  /**
+   * 완료조건 9 — **하루에 나간 카드 종류 수.** 픽 형은 종류마다 다른 카드이고, 자금 흐름과
+   * 거시는 픽이 아닌 별도 카드다(덱에 섞여 나간다). 셋을 한자리에서 센다 —
+   * "종류가 세 개뿐" 인지 아닌지를 다음에는 **묻지 않고 읽을 수 있게.**
+   */
+  const cardKindCounts: Record<string, number> = {};
+  for (const pick of published) cardKindCounts[pick.signal.kind] = (cardKindCounts[pick.signal.kind] ?? 0) + 1;
+  if (flowCards.length > 0) cardKindCounts["sector_flow"] = flowCards.length;
+  if (macroCards.length > 0) cardKindCounts["macro"] = macroCards.length;
+
   // 회전율 계측(PHASE 5) — 발행 시점에 굳힌다. 나중에 재계산하면 그날의 이력이 이미 바뀐다.
   const rotation: QuietPickRotation = {
     compositionVersion: composed.version,
@@ -3030,6 +3336,8 @@ export async function buildQuietPickResponse(options: {
       krUniverseFromVocab: krUniverse.fromVocab,
       // WO-RESET-05 §3-1 — 화면에 나간 공시 항목 중 번역표에 없어 원문 그대로인 비율.
       disclosurePhrases: phraseCensus,
+      // DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. 낮은 종류가 다음 작업 대상이다.
+      disclosureFigures: figureCensus,
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
       // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.
@@ -3072,6 +3380,9 @@ export async function buildQuietPickResponse(options: {
         relaxations: composed.relaxations,
       } satisfies QuietPickFunnel,
       watching: watchShelf.length,
+      // CARDS-02 D-1·D-3 — 검출기별 퍼널과 카드 종류 수. 총합만으로는 답할 수 없던 질문들이다.
+      detectorFunnel,
+      cardKinds: { total: Object.keys(cardKindCounts).length, byKind: cardKindCounts },
       drops,
       // 같은 이름이 여러 번 실패할 수 있다(픽별 캔들 봉인 등) — 이름만 남기고 중복은 접는다.
       inputFailures: [...new Set(inputFailures)],

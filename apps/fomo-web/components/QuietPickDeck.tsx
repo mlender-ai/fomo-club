@@ -14,6 +14,8 @@ import { MacroCard } from "@/components/MacroCard";
 import { QuietPickCard } from "@/components/QuietPickCard";
 import { reveal } from "@/lib/cardReveal";
 import { QuietPickDepth } from "@/components/QuietPickDepth";
+import { MacroDepth } from "@/components/MacroDepth";
+import { FlowDepth } from "@/components/FlowDepth";
 
 /**
  * 덱 화면 — DS-02(`docs/design/DS-02_DECK.md`). 카드는 DS-01, 토큰은 DS-00.
@@ -112,6 +114,9 @@ export function QuietPickDeck() {
   const [dx, setDx] = useState(0);
   const [exiting, setExiting] = useState<null | "left" | "right">(null);
   const [selected, setSelected] = useState<QuietPick | null>(null);
+  /** 거시 카드의 상세 — 종목 상세와 별개다(MACRO-01 §D-2). */
+  const [selectedMacro, setSelectedMacro] = useState<QuietPickMacroCard | null>(null);
+  const [selectedFlow, setSelectedFlow] = useState<QuietPickFlowCard | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
   const startAt = useRef(0);
@@ -188,12 +193,16 @@ export function QuietPickDeck() {
     });
 
     /**
-     * 거시 카드는 **중간**(3~7번째, WO-RESET-09 §E).
+     * 거시 카드는 **중간**(3~10번째, WO-RESET-09 §E).
      *
      * *"앞쪽 3장은 종목 카드로 둔다. 뉴스가 먼저 나오면 이 앱이 뉴스 앱처럼 보인다."*
      * 흐름 카드를 끼운 **뒤** 자리를 잡아야 실제 위치가 3번째 아래로 안 내려간다.
+     *
+     * 자리가 **셋**이다. 종전엔 둘이었는데 MACRO-01 이 상한을 3장으로 올렸다 — 자리를 안
+     * 늘렸으면 세 번째 카드가 조용히 사라졌을 것이고, 그건 상한을 2로 둔 것과 같다.
+     * 자리 수는 `MACRO_MAX_CARDS` 와 같아야 한다.
      */
-    [3, 6].forEach((at, i) => {
+    [3, 6, 9].forEach((at, i) => {
       const card = macroCards[i];
       if (card) out.splice(Math.min(at, out.length), 0, { kind: "macro", card });
     });
@@ -365,10 +374,52 @@ export function QuietPickDeck() {
    * 재노출 카드(`exposure`)는 카드 쪽에서 따로 항상 공개한다(WO-RESET-06 §B-2).
    */
 
+  /**
+   * 상세 → 상세 이동 (DETAIL-01 §D-3).
+   *
+   * **열 수 있는 종목만 버튼이 된다.** 이 앱에는 종목 전용 라우트가 없고 상세는 오늘 픽에
+   * 대해서만 만들어진다 — 오늘 픽에 없는 종목을 버튼으로 그리면 눌러도 아무 일이 없다.
+   * 그래서 여는 함수를 돌려주거나 `undefined` 를 돌려주고, 화면은 그 결과로 버튼 여부를
+   * 정한다.
+   *
+   * 이동 깊이는 **2단계**다(흐름/거시 상세 → 종목 상세). 종목 상세에서 더 들어가지 않으므로
+   * §D-3 의 「3단계를 넘지 않게」를 자연히 지킨다.
+   */
+  const resolveStockDetail = (canonical: string): (() => void) | undefined => {
+    const target = picks.find((p) => p.subject.canonical === canonical);
+    if (!target) return undefined;
+    return () => {
+      reveal(target.subject.canonical);
+      setSelected(target);
+    };
+  };
+
   /** 카드 CTA — 탭 진입과 같은 상세를 열고 진입점만 다르게 기록한다. */
   /** 상세 진입 = 정체 공개(§2-3). 진입점(버튼/탭)이 달라도 공개 규칙은 같다. */
   const openDetail = (entryPoint: "button" | "tap") => {
-    if (!pick) return; // 흐름 카드는 아직 상세가 없다 — 다음 조각에서 붙인다(§C)
+    /**
+     * 거시 카드는 **자기 상세**로 간다(MACRO-01 §D-2). 종전에는 여기서 그냥 `return` 했고,
+     * 그래서 흐름·거시 카드에는 CTA 가 아예 렌더되지 않았다 — DS-07 이 「어느 카드든 버튼이
+     * 같은 자리」라고 적어 둔 것과 어긋나 있었다.
+     */
+    if (slot.kind === "macro") {
+      recordPickTelemetry({ event: "card_detail_open", entryPoint, position: idx + 1 });
+      setSelectedMacro(slot.card);
+      return;
+    }
+    if (slot.kind === "flow") {
+      /**
+       * 흐름 카드도 **자기 상세**로 간다(DETAIL-01 §B).
+       *
+       * `depth` 가 없으면 열지 않는다 — 상세를 열었는데 볼 게 없으면 카드를 만든 의미가
+       * 없다는 것이 이 WO 의 출발점이다. 서버가 재료를 못 만든 날은 조용히 넘긴다.
+       */
+      if (!slot.card.depth) return;
+      recordPickTelemetry({ event: "card_detail_open", entryPoint, position: idx + 1 });
+      setSelectedFlow(slot.card);
+      return;
+    }
+    if (!pick) return;
     recordPickTelemetry({ event: "card_detail_open", entryPoint, position: idx + 1, ...slotLabel(pick.subject.canonical) });
     reveal(pick.subject.canonical);
     setSelected(pick);
@@ -426,9 +477,10 @@ export function QuietPickDeck() {
             aria-label={slot.kind === "flow" ? "자금 흐름" : slot.kind === "macro" ? "거시 지표" : "어떤 회사인지 보기"}
           >
             {slot.kind === "flow" ? (
-              <FlowCard card={slot.card} />
+              /* 상세가 생겼으니 CTA 도 붙는다 — 「어느 카드든 버튼이 같은 자리」(DS-07). */
+              <FlowCard card={slot.card} {...(slot.card.depth ? { onDetail: () => openDetail("button") } : {})} />
             ) : slot.kind === "macro" ? (
-              <MacroCard card={slot.card} />
+              <MacroCard card={slot.card} onDetail={() => openDetail("button")} />
             ) : (
               <QuietPickCard pick={withRecord(slot.pick)} onDetail={() => openDetail("button")} />
             )}
@@ -438,6 +490,30 @@ export function QuietPickDeck() {
       </div>
 
 
+
+      {selectedFlow && (
+        <FlowDepth
+          card={selectedFlow}
+          resolveStock={resolveStockDetail}
+          /** 흐름 상세도 닫으면 다음 장이다 — 종목·거시 상세와 같은 규칙(DS-07 §4-2). */
+          onClose={() => {
+            setSelectedFlow(null);
+            move("next");
+          }}
+        />
+      )}
+
+      {selectedMacro && (
+        <MacroDepth
+          card={selectedMacro}
+          resolveStock={resolveStockDetail}
+          /** 거시 상세도 닫으면 다음 장이다 — 종목 상세와 같은 규칙(DS-07 §4-2). */
+          onClose={() => {
+            setSelectedMacro(null);
+            move("next");
+          }}
+        />
+      )}
 
       {selected && (
         <QuietPickDepth

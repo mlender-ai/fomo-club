@@ -25,7 +25,19 @@ const YAHOO_UA =
 const MIN_INSIDER_COUNT = 2;
 const MIN_TOTAL_VALUE_USD = 100_000;
 /** 상위 N개만(비용·집중). 총액 큰 순. */
-const MAX_CLUSTER_ROWS = 20;
+/**
+ * 클러스터 매수 결과 상한 (US-02 C).
+ *
+ * 20이었다. 임계값(≥2명 · ≥$100k)이 병목이라고 생각했지만 **분포를 재보니 아니었다** —
+ * 2026-09-01 실측에서 최신 클러스터 매수 100종목 중 **99종목이 임계값을 통과**한다
+ * (인원 중앙값 3명 · 금액 중앙값 $1.00M). 실제로 자르던 것은 이 상한과 시총 유니버스 교차였다
+ * (`docs/audit/US_COVERAGE.md` C-2).
+ *
+ * 그래서 **임계값은 그대로 두고 상한만 올린다.** 감으로 조건을 푸는 것이 아니라,
+ * 이미 조건을 통과한 종목을 버리지 않는 것이다. 소스 페이지가 한 번에 주는 양(~100)을
+ * 넘기지 않으므로 그 이상은 의미가 없다.
+ */
+const MAX_CLUSTER_ROWS = 60;
 /** 접수(공개) 후 N일 이내 공시만 — 오래된 매집은 발굴 대상에서 제외(최근 누적만). */
 const MAX_FILING_AGE_DAYS = 21;
 const YAHOO_CONCURRENCY = 4;
@@ -298,10 +310,21 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
  * 오늘자 내부자 클러스터 매수 후보(현재가 보강 포함).
  * 실데이터만 — 소스 실패 시 빈 배열(fail-open).
  */
-export async function fetchInsiderClusterCandidates(): Promise<InsiderClusterCandidate[]> {
+/**
+ * 시세 보강 없이 클러스터 매수 종목만 (US-02 C) — HTML 1콜.
+ *
+ * 시세는 종목당 1콜이라 상한을 20→60으로 올리면 그만큼 비싸진다. 그런데 이 목록의 용도 중
+ * **하나는 "이 심볼을 유니버스에 넣을지" 판정**이고, 거기엔 시세가 필요 없다.
+ * 프리웜은 이 값싼 경로를 쓰고, 시세가 필요한 발굴 경로만 아래 `fetchInsiderClusterCandidates` 를 쓴다.
+ */
+export async function fetchInsiderClusterSymbols(): Promise<InsiderClusterBuy[]> {
   const html = await fetchText(OPENINSIDER_CLUSTER_URL, UA);
   if (!html) return [];
-  const ranked = dedupeAndRank(parseOpenInsiderClusterBuys(html));
+  return dedupeAndRank(parseOpenInsiderClusterBuys(html));
+}
+
+export async function fetchInsiderClusterCandidates(): Promise<InsiderClusterCandidate[]> {
+  const ranked = await fetchInsiderClusterSymbols();
   if (ranked.length === 0) return [];
   const quotes = await mapLimit(ranked, YAHOO_CONCURRENCY, (row) => fetchSymbolQuote(row.symbol).catch(() => undefined));
   return ranked.map((row, i) => ({ ...row, ...(quotes[i] ? { quote: quotes[i] } : {}) }));
