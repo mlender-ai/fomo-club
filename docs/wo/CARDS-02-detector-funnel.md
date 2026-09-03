@@ -194,6 +194,65 @@ PART E 순서 1·2·3(검출기 확인 · 자금 흐름 위치 · 각성 조건)
    정렬을 건드리므로 그 3일 관측 결과를 되돌릴 위험이 있다.
 2. **거래량 각성 임계 3% → 5%** — 카드 수와 「아직 안 움직였다」의 참·거짓을 맞바꾸는 선택.
 
-## 실측
+## 실측 (2026-09-03 02:41 KST · `d81bbe87` · `verify:production` exit 0)
 
-`detectorFunnel`·`cardKinds` 프로덕션 값은 배포 후 채운다.
+### 카드 종류 — **8가지** (완료조건 9: 6가지 이상)
+
+```
+foreign_streak      5      market_divergence   1     ← 앞 판에서 0장이던 형
+institution_streak  3      volume_awakening    2     ← 앞 판에서 0건이던 형
+multi_cluster       2      sector_flow         1
+insider_cluster     2      macro               3
+─────────────────────────────────────────────────
+cardKinds.total = 8 · 카드 19장
+```
+
+### 검출기별 퍼널 (완료조건 1·10)
+
+| kind | detected | deduped | considered | published | watching | **deduped→considered** |
+|---|---|---|---|---|---|---|
+| foreign_streak | 171 | 111 | 28 | 5 | 5 | 25.2% |
+| institution_streak | 170 | 134 | 19 | 3 | 4 | 14.2% |
+| market_divergence | 46 | 30 | **1** | 1 | 0 | **3.3%** |
+| insider_cluster | 20 | 20 | 6 | 2 | 1 | 30.0% |
+| multi_cluster | 8 | 8 | 3 | 2 | 0 | 37.5% |
+| volume_awakening | 5 | 3 | **3** | 2 | 0 | **100%** |
+| **합계** | **420** | **306** | **60** | **15** | **10** | |
+
+총합 계수기와 정확히 일치한다 — `afterQuiet 60` · `published 15` · `watching 10`.
+
+### ⚠️ 앞 절의 「역행 178 → 덱 0장」을 정정한다
+
+그 값은 **2026-09-02 21:53 페이로드 한 판**이었다. 오늘 02:41 판은 역행 46 검출 → **1장 발행**,
+각성 5 검출 → **2장 발행**이다. **"역행·각성이 아예 안 나온다" 는 영구 상태가 아니었다.**
+
+그러나 **구조적 편향은 그대로이고, 이제 정확히 계량됐다.** `deduped → considered` 생존율을
+`days` 순으로 늘어놓으면 완전한 단조 관계가 나온다:
+
+```
+volume_awakening   days 1     100%   (3/3)
+multi_cluster      days 3    37.5%   (3/8)
+insider_cluster    days 2~3  30.0%   (6/20)
+foreign_streak     days 3+   25.2%   (28/111)
+institution_streak days 3+   14.2%   (19/134)
+market_divergence  days 3~9   3.3%   (1/30)   ← 가장 긴 형이 가장 심하게 밀린다
+```
+
+`noveltyScore(sig.days)` 가 `days` 가 작은 형에 유리하다는 가설을 이 표가 그대로 확증한다 —
+`days=1` 인 각성은 후보 전원이 통과하고, `days` 가 가장 큰 역행은 30건 중 1건만 통과한다.
+**후보 306건에 조립 상한 60이라 이 편향이 곧 탈락이 된다.**
+
+**조치는 여전히 고르지 않았다** — 세 후보 모두 덱 고착(WO-DECK-01, 3일 관측 통과)의 정렬을
+건드린다. 다만 이제 근거가 가설이 아니라 **계량된 표**다.
+
+### 자금 흐름 카드 — 정규 도메인 DOM
+
+```
+돈이 옮겨가고 있어요
+반도체에서 돈이 빠지고
+전자부품으로 들어오고 있어요
+반도체 -5,465억  ↓  전자부품 +3,979억
+최근 3거래일 · 외국인·기관 기준
+```
+
+**WO 의 「지금은 안 나온다」가 DOM 으로 반증됐다.**
