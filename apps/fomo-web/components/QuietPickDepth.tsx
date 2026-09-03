@@ -218,33 +218,63 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * 2·3걸음은 데이터가 있을 때만 존재한다. 없으면 목록에서 빠지고 **진행 점도 그만큼 줄어든다.**
    * "왜 지금인가" 제목만 있고 아래가 비어 있는 화면은 답하는 시늉이라 아예 만들지 않는다.
    */
+  const [openMethod, setOpenMethod] = useState<string | null>(null);
+  const [watched, setWatched] = useState(false);
+
+  /**
+   * 회사 설명 두 갈래. **걸음 조건이 이 둘을 보므로 걸음 계산보다 먼저 선언한다.**
+   *  · `blurb`     — 벤더 요약에서 연혁을 걷어내고 「무엇을 파는가」만 남긴 것
+   *  · `substance` — 카드에서 내려온 "어디서 돈을 버는가"
+   */
+  const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
+  const substance = slotPayload?.substance?.text ?? null;
+
+  /**
+   * DETAIL-03 PART A — 3걸음이 **통째로 사라져 있었다**(프로덕션 실측 15장 중 7장).
+   *
+   * 조건이 `companyRead.length > 0` **하나**뿐이었다. `companyRead` 는 팩트시트에서만 오고
+   * 팩트시트 보유율이 452/760 이라, 팩트시트가 없으면 회사 설명이 있어도 걸음이 없었다.
+   * WO-RESET-05 §4-4(=DETAIL-03 A-4)는 **"하나라도 있으면 걸음을 만든다"** 고 정해 뒀다 —
+   * 규칙은 있었고 조건이 그것을 안 봤다.
+   *
+   * 실측: 팩트시트 없는 7종목 중 6종목이 회사 설명 문자열을 갖고 있고, `companyBlurb` 가
+   * 연혁 문장을 걷어내고 「무엇을 파는가」를 남긴다(`신성이엔지` → "클린룸 장비와 태양광
+   * 사업을 영위해요"). 그 걸음을 버릴 이유가 없다.
+   *
+   * 회사 설명은 벤더 요약이라 **늦게 온다**(`basics` 는 열릴 때 받는다). 그래서 걸음 목록이
+   * 도중에 늘어난다 — 아래에서 걸음을 **번호가 아니라 id 로** 들고 있는 이유다.
+   */
+  const hasCompanyMaterial = (pick.companyRead?.length ?? 0) > 0 || Boolean(blurb?.text) || Boolean(substance);
+
   const steps = useMemo<StepId[]>(() => {
     const out: StepId[] = ["signal"];
     if ((pick.whyNow?.length ?? 0) > 0) out.push("why");
-    if ((pick.companyRead?.length ?? 0) > 0) out.push("company");
+    if (hasCompanyMaterial) out.push("company");
     out.push("decide");
     return out;
-  }, [pick.whyNow, pick.companyRead]);
+  }, [pick.whyNow, hasCompanyMaterial]);
 
-  const [stepIndex, setStepIndex] = useState(0);
-  const [openMethod, setOpenMethod] = useState<string | null>(null);
-  const [watched, setWatched] = useState(false);
-  /** 걸음이 줄어드는 페이로드로 바뀌었을 때 범위를 벗어나지 않게. */
-  const index = Math.min(stepIndex, steps.length - 1);
-  const step = steps[index]!;
+  /**
+   * **번호가 아니라 id 로 들고 있는다.** 번호로 들고 있으면 회사 설명이 늦게 도착해 걸음이
+   * 3→4 로 늘어나는 순간 같은 번호가 다른 걸음을 가리킨다 — 4걸음(결정)을 보던 사용자가
+   * 3걸음(회사)으로 **뒤로 밀린다.** id 는 목록이 바뀌어도 같은 걸음을 가리킨다.
+   */
+  const [stepId, setStepId] = useState<StepId>("signal");
+  const index = Math.max(0, steps.indexOf(stepId));
+  const step = steps[index] ?? "signal";
 
   const goNext = () => {
     if (index >= steps.length - 1) return;
     haptic();
     setOpenMethod(null);
-    setStepIndex(index + 1);
+    setStepId(steps[index + 1]!);
     scrollRef.current?.scrollTo({ top: 0 });
   };
   const goPrev = () => {
     if (index <= 0) return;
     haptic();
     setOpenMethod(null);
-    setStepIndex(index - 1);
+    setStepId(steps[index - 1]!);
     scrollRef.current?.scrollTo({ top: 0 });
   };
   const toggleMethod = (title: string) => setOpenMethod((v) => (v === title ? null : title));
@@ -330,7 +360,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     return "계속";
   })();
   const rows = useMemo(() => depthEvidenceRows(pick, hook), [pick, hook]);
-  const blurb = useMemo(() => companyBlurb(basics?.summary), [basics?.summary]);
   const candles = useMemo(() => front?.candles ?? [], [front]);
   /**
    * 「우리 기록」 블록을 화면에서 뺀 지 오래다(WO-RESET-02 PART D). 여기서 계산도 안 한다 —
@@ -347,8 +376,6 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * (`pick.companyRead`, 굽는 시점에 굳는다).
    */
 
-  /** 실체 한 줄 — 카드에서 내려온 "어디서 돈을 버는가". ③ 섹션에 합류한다. */
-  const substance = slotPayload?.substance?.text ?? null;
 
 
   const valuation = slotPayload?.valuation ?? null;
@@ -456,7 +483,14 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           <div className="shrink-0 text-right">
             <p className="font-mono text-ds-data text-ds-text-1">{price}</p>
             {typeof changePct === "number" && (
+              /*
+                DETAIL-03 PART D — **기간을 쓴다.** 이 등락률은 오늘치인데 훅은 여러 날치를
+                말한다(`혼자 36.3%`). 둘이 나란히 있는데 기간 표시가 없으면 사용자가
+                `오늘 -10.4% 인데 36.3%?` 로 읽는다 — 실제 지적이 그것이었다.
+                훅 쪽 기간은 근거 줄(`기간 | 최근 3거래일`)이 맡는다(§B-2).
+              */
               <p className={`font-mono text-ds-caption ${changePct < 0 ? "text-ds-down" : "text-ds-text-1"}`}>
+                <span className="text-ds-text-3">오늘 </span>
                 {`${changePct > 0 ? "+" : ""}${changePct.toFixed(1)}%`}
               </p>
             )}
@@ -473,12 +507,22 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
         <div
           ref={scrollRef}
           onScroll={onDepthScroll}
-          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${BOTTOM_PAD}`}
+          className={`scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto ${BOTTOM_PAD}`}
           data-testid="depth-scroll"
           onPointerDown={onStepPointerDown}
           onPointerUp={onStepPointerUp}
         >
-          <div className="mx-auto w-full max-w-[480px] px-gutter" data-testid={`depth-step-${step}`}>
+          {/*
+            DETAIL-03 PART E — **내용이 적으면 세로 중앙**(§E-3).
+
+            2·3걸음이 화면 위 1/4만 쓰고 아래가 통째로 검게 남아 "성의 없다" 로 읽혔다.
+            내용을 억지로 만들지 않는다(WO 「하지 말 것」) — 배치로 푼다.
+
+            `min-h-full` + 자식의 `my-auto` 조합이다. 여유 공간이 있으면 auto 마진이
+            나눠 가져 중앙에 오고, 내용이 화면보다 크면 auto 가 0 으로 풀려 위에서 시작하고
+            스크롤된다. `justify-center` 는 이 두 번째 경우에 위쪽이 잘려서 쓰지 않는다.
+          */}
+          <div className="mx-auto my-auto w-full max-w-[480px] px-gutter" data-testid={`depth-step-${step}`}>
 
           {/* ── 1걸음 — 누가 쓸어담고 있나 (§2) ── */}
           {step === "signal" && (

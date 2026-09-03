@@ -12,7 +12,11 @@ import { QuietPickDepth } from "@/components/QuietPickDepth";
  * 1걸음(신호) · 2걸음(`whyNow`) · 3걸음(`companyRead`) · 4걸음(결정).
  *
  * 회사 설명 한 줄은 벤더 요약이 필요해서 이 페이지엔 없다. **그건 3걸음이 사라지는 것이
- * 아니라 그 줄만 없는 것**이다 — 걸음의 성립 조건은 `companyRead` 다.
+ * 아니라 그 줄만 없는 것**이다.
+ *
+ * 걸음 성립 조건은 `companyRead` **하나가 아니다**(DETAIL-03 PART A) — 회사 설명·실체 중
+ * 하나만 있어도 걸음을 만든다. 종전에는 `companyRead` 만 봐서 팩트시트가 없는 종목은
+ * 설명이 있어도 3걸음이 통째로 사라졌다(프로덕션 15장 중 7장).
  */
 
 const PICK = {
