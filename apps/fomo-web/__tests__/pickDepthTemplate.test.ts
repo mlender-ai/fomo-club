@@ -155,6 +155,53 @@ describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", (
     expect(steps).toContain("{row.comparison}");
   });
 
+  /**
+   * FIX-01 PART D — 계산 방법은 **한 걸음에 하나, 접힌 채로, 맨 아래**.
+   *
+   * 실측 화면에는 `어떻게 계산했나요` 가 지표마다 붙어 두 번 나오고, 그중 하나는 이미
+   * 펼쳐진 상태로 본문 사이에 끼어 있었다. 사용자는 계산 방법을 먼저 궁금해하지 않는다.
+   */
+  it("[FIX-01 D] 계산 방법 링크가 덩어리마다 붙지 않는다 — 걸음에 하나, 기본 닫힘", () => {
+    /**
+     * **주석을 지우고 본다.** 이 파일들은 「종전에는 이랬다」를 주석으로 남기므로
+     * 옛 문구가 글자로는 남아 있다. 세야 하는 것은 화면에 그려지는 코드다.
+     */
+    const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const steps = code(readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8"));
+    // 덩어리 컴포넌트는 방법 링크를 더 이상 갖지 않는다.
+    const block = steps.slice(steps.indexOf("export function CompanyGroupBlock"), steps.indexOf("export function MethodDisclosure"));
+    expect(block).not.toContain("depth-method-toggle");
+    expect(block).not.toContain("어떻게 계산했나요");
+    // 링크는 걸음 맨 아래 하나뿐이고 문구가 바뀌었다.
+    expect(steps).toContain("점수는 이렇게 매겼어요");
+    expect(steps).not.toContain("어떻게 계산했나요");
+    expect(depth).toContain("<MethodDisclosure groups={companyGroups}");
+    // 기본은 닫힘 — 상태 초기값이 false 다.
+    expect(code(depth)).toContain("useState(false)");
+    expect((code(depth).match(/MethodDisclosure/g) ?? []).length).toBe(2); // import + 렌더 한 번
+  });
+
+  it("[FIX-01 B] 점 옆 설명을 화면이 짓지 않고, 방향은 범례 한 줄이 말한다", () => {
+    const steps = readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8");
+    // 점은 문장이 없어도 그려진다 — 겹치는 설명은 서버가 `null` 로 준다.
+    expect(steps).toContain("{group.score !== null && (");
+    expect(steps).toContain("{group.scoreText && <p");
+    expect(steps).toContain('data-testid="depth-score-legend"');
+    // 범례는 점이 하나라도 있을 때만.
+    expect(depth).toContain("companyGroups.some((g) => g.score !== null) && <ScoreLegend />");
+  });
+
+  it("[FIX-01 A] 기간이 다른 둘째 사실은 별도 줄로 그린다", () => {
+    const steps = readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8");
+    expect(steps).toContain('data-testid="depth-trend"');
+    expect(steps).toContain("{row.trend}");
+  });
+
+  it("[FIX-01 C] 4걸음 요약은 주어가 있는 문장(`summaryText`)만 쓴다", () => {
+    expect(depth).toContain("if (g.summaryText) out.push(g.summaryText)");
+    expect(depth).not.toContain("if (g.scoreText) out.push(g.scoreText)");
+  });
+
   it("상세는 데스크톱에서 퍼지지 않는다 — 480px 중앙 정렬 (DS-06 §6-1)", () => {
     // 주석의 서술을 세지 않도록 클래스 속성 안에서만 찾는다.
     const inClasses = (depth.match(/className="[^"]*max-w-\[480px\][^"]*"/g) ?? []).length;

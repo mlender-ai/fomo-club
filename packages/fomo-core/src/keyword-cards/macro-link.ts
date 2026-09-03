@@ -245,6 +245,10 @@ export function macroSupport(link: MacroLink): string[] {
     const market = link.move.indicator.name;
     return [`우리가 짚은 곳 중 ${market} 종목이 ${link.favored.length}곳이에요`];
   }
+  /**
+   * FIX-01 PART F — 종전 문구는 `… ${linked}곳이 여기 닿아요` 였다. **「닿는다」가 무슨
+   * 뜻인지 전달되지 않는다** — 하려던 말은 「영향받는다」다. 에두르지 않고 그대로 쓴다.
+   */
   const linked = link.favored.length + link.hurt.length;
-  return [`우리가 최근 짚은 종목 중 ${linked}곳이 여기 닿아요`];
+  return [`우리가 최근 짚은 종목 중 ${linked}곳이 영향받아요`];
 }

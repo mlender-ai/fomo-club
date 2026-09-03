@@ -33,7 +33,8 @@ const MACRO: QuietPickMacroCard = {
   series: [89.8, 88.4, 87.1, 85.2, 84.0, 83.9],
   detailSeries: Array.from({ length: 60 }, (_, i) => 90 - i * 0.1 + Math.sin(i / 4) * 0.8),
   hook: "국제 유가가 3일째 내리고 있어요",
-  support: ["우리가 최근 짚은 종목 중 5곳이 여기 닿아요"],
+  // FIX-01 F — `여기 닿아요` → `영향받아요`(서버가 보내는 모양).
+  support: ["우리가 최근 짚은 종목 중 5곳이 영향받아요"],
   principle: "유가가 내리면 연료를 많이 쓰는 회사에 유리하고, 에너지를 파는 회사에 불리해요",
   band: { low: 71.2, high: 96.4, percentile: 18, label: "최근 1년 중 낮은 편이에요", points: 248 },
   favorSectors: ["항공", "해운", "육상운송", "화학"],

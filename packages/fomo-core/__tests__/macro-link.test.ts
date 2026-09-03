@@ -114,7 +114,9 @@ describe("예측하지 않는다 (§F-1 · 완료 확인 8)", () => {
      */
     const support = macroSupport(link);
     expect(support).toHaveLength(1);
-    expect(support[0]).toBe("우리가 최근 짚은 종목 중 2곳이 여기 닿아요");
+    // FIX-01 PART F — `여기 닿아요` 는 무슨 뜻인지 전달되지 않았다. `영향받아요` 로 바꿨다.
+    expect(support[0]).toBe("우리가 최근 짚은 종목 중 2곳이 영향받아요");
+    expect(support[0]).not.toContain("닿");
     // 값이 여기 섞여 들어오면 카드에서 중복된다.
     expect(support[0]).not.toMatch(/→/);
   });

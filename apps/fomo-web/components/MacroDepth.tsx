@@ -22,7 +22,7 @@ import { prefersReducedMotion } from "@/lib/motion";
  * ```
  * 1  무슨 일인가       값 · 변화 · 60일 추이 · 1년 밴드에서 어디쯤
  * 2  무슨 영향이 있나   유리한 업종 · 불리한 업종      ← 이 카드의 존재 이유
- * 3  우리 중 어디가 닿나  우리가 짚은 종목 + 짚은 날짜
+ * 3  영향받는 우리 종목   우리가 짚은 종목 + 짚은 날짜
  * 4  즐겨찾기          지표 담기
  * ```
  *
@@ -33,6 +33,12 @@ import { prefersReducedMotion } from "@/lib/motion";
  *
  * `principle` 과 업종 목록은 전부 **일반 원리**다. 화면이 「그래서 오를 거예요」를 덧붙이지
  * 않는다. 연결된 종목도 그냥 나열한다 — 순위를 매기면 추천이 된다.
+ *
+ * ## 「닿는다」를 쓰지 않는다 (FIX-01 PART F)
+ *
+ * 3걸음 제목이 `우리가 짚은 종목 중 여기 닿는 곳` 이었다. **「닿는다」가 무슨 뜻인지
+ * 전달되지 않는다** — 하려던 말은 「영향받는다」인데, 에두른 표현이 뜻을 흐렸다.
+ * 지표 이름을 넣어 `회사채 3년 금리에 영향받는 종목` 이라고 쓴다.
  */
 
 const CLOSE_MS = 260;
@@ -42,7 +48,7 @@ type StepId = "what" | "effect" | "ours" | "watch";
 
 const STEP_NEXT_LABEL: Record<StepId, string> = {
   what: "무슨 영향이 있는지 보기",
-  effect: "우리 종목 중 어디가 닿는지 보기",
+  effect: "영향받는 우리 종목 보기",
   ours: "계속 지켜보기",
   watch: "",
 };
@@ -246,13 +252,21 @@ export function MacroDepth({
 
             {step === "ours" && (
               <>
-                <p className="mt-s5 break-keep text-ds-hook text-ds-text-1">우리가 짚은 종목 중 여기 닿는 곳</p>
-                <p className="mt-s2 font-mono text-ds-label text-ds-text-3">{`최근 30일 · ${linked}곳`}</p>
+                {/*
+                  FIX-01 F — `여기 닿는 곳` → `영향받는 종목`. 지표 이름을 문장에 넣어
+                  무엇에 영향받는다는 말인지 화면에서 끝낸다.
+                */}
+                <p className="mt-s5 break-keep text-ds-hook text-ds-text-1" data-testid="macro-depth-ours-title">
+                  {`${card.indicatorName}에 영향받는 종목`}
+                </p>
+                <p className="mt-s2 break-keep text-ds-label text-ds-text-3">
+                  {`우리가 최근 30일에 짚은 ${linked}곳`}
+                </p>
 
                 {card.favored.length > 0 && (
                   <section className="mt-s5">
                     <p className="text-ds-label text-ds-text-2" data-testid="macro-depth-favored-label">
-                      {card.hurt.length > 0 ? "유리한 쪽" : "여기 닿는 곳"}
+                      {card.hurt.length > 0 ? "유리한 쪽" : "영향받는 종목"}
                     </p>
                     <PickList items={card.favored} testId="macro-depth-favored" resolveStock={resolveStock} />
                   </section>
