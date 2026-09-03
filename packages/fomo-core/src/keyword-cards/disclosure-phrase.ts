@@ -200,7 +200,7 @@ export const DISCLOSURE_RULES: readonly DisclosureRule[] = [
   {
     pattern: /유상증자결정/,
     text: "새 주식을 발행해 돈을 모아요",
-    meaning: "주식을 새로 찍어 팔아 회사에 현금을 넣는 거예요. 주식 수가 늘어나 기존 주주의 지분율은 그만큼 옅어져요.",
+    meaning: "주식을 새로 찍어 팔아 회사에 현금을 넣는 거예요. 주식 수가 늘어나므로 새 주식을 받지 않는 주주의 지분율은 그만큼 낮아져요.",
   },
   {
     pattern: /무상증자결정/,

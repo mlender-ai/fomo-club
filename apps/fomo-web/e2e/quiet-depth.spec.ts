@@ -162,7 +162,7 @@ test("완료 기준 3 — 근거는 2줄 이하로 압축된다", async ({ page 
  * 2걸음 — 왜 지금인가(§3). **날짜와 사건**이다.
  * 픽스처는 공시 1건 + 매수 시작 1건을 갖는다.
  */
-test("[완료 4] 2걸음의 공시 제목이 사람 말로 나오고 원문 링크가 붙는다", async ({ page }) => {
+test("[완료 4] 2걸음의 공시 제목이 사람 말로 나온다 (원문 링크는 DETAIL-04 에서 빼냈다)", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="depth-next"]').click();
   const why = page.locator('[data-testid="depth-why-now"]');
@@ -179,8 +179,12 @@ test("[완료 4] 2걸음의 공시 제목이 사람 말로 나오고 원문 링�
   // 제목이 들고 있던 수치는 그대로 남는다 — 번역이 손실이 되면 안 된다.
   expect(why2).toContain("계약금액 320억");
 
-  // 원문 링크는 그대로 — 사람 말로 옮겨도 원문을 못 보게 되지 않는다.
-  await expect(page.locator('[data-testid="depth-why-now-source"]').first()).toHaveAttribute("href", /dart\.fss|sec\.gov/);
+  /**
+   * 종전에는 "원문 링크는 그대로" 를 여기서 고정했다. DETAIL-04 가 그 링크를 뺐다 —
+   * 아무도 누르지 않는 링크가 설명의 자리를 차지하고 있었고, 그 자리를 뜻풀이가 대신한다.
+   */
+  await expect(page.locator('[data-testid="depth-why-now-source"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-why-now-meaning"]').first()).toBeVisible();
 
   // 꼬리표 — 인과가 아니라 동시 관측임을 화면이 말한다.
   const note = page.locator('[data-testid="depth-why-now-note"]');
