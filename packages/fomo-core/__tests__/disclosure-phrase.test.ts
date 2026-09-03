@@ -203,3 +203,50 @@ describe("프로덕션에서 원문으로 나가던 것들을 채웠다 (2026-08
     }
   });
 });
+
+/**
+ * 2026-09-04 프로덕션 실측(DETAIL-04 배포 후) — 화면에 원문 서식 이름으로 나간 9건.
+ * 여섯은 표를 채워서, 둘은 **맞추는 방식**을 고쳐서 잡았다.
+ */
+describe("괄호 안에 든 사건을 놓치지 않는다", () => {
+  it("`주요사항보고서(유상증자결정)` — 표에 규칙이 있는데도 원문으로 나가고 있었다", () => {
+    const p = disclosurePhrase("주요사항보고서(유상증자결정)");
+    expect(p.translated).toBe(true);
+    expect(p.text).toBe("새 주식을 발행해 돈을 모아요");
+    // 상위 묶음 이름만 있는 제목은 여전히 원문이다 — 사건이 없으면 옮길 것도 없다.
+    expect(disclosurePhrase("주요사항보고서").translated).toBe(false);
+  });
+
+  it("`조회공시요구(현저한시황변동)` — 전용 문구가 있는데 일반 문구로 나가고 있었다", () => {
+    expect(disclosurePhrase("조회공시요구(현저한시황변동)").text).toBe("주가가 크게 움직여 거래소가 이유를 물었어요");
+    // 사유가 없는 조회공시는 일반 문구가 맞다.
+    expect(disclosurePhrase("조회공시요구").text).toBe("거래소가 회사에 사실 확인을 요구했어요");
+  });
+
+  it("부기 괄호는 여전히 종류를 바꾸지 않는다 — 괄호를 먼저 보는 것이 부작용을 내지 않는다", () => {
+    for (const [a, b] of [
+      ["주식등의대량보유상황보고서(일반)", "주식등의대량보유상황보고서(약식)"],
+      ["기업설명회(IR)개최(안내공시)", "기업설명회(IR)개최"],
+    ] as const) {
+      expect(disclosurePhrase(a).text, `${a} vs ${b}`).toBe(disclosurePhrase(b).text);
+    }
+  });
+
+  it("실측에서 원문으로 나간 나머지 넷을 표에 채웠다", () => {
+    for (const [title, needle] of [
+      ["대규모기업집단현황공시[분기별공시(개별회사용)]", "대기업집단"],
+      ["동일인등출자계열회사와의상품ㆍ용역거래", "계열사와 주고받은"],
+      ["지급수단별ㆍ지급기간별지급금액및분쟁조정기구에관한사항", "하도급 대금"],
+      ["주권매매거래정지해제 (액면병합 주권 변경상장)", "다시 열렸어요"],
+    ] as const) {
+      const p = disclosurePhrase(title);
+      expect(p.translated, title).toBe(true);
+      expect(p.text, title).toContain(needle);
+      expect(p.meaning, title).toBeTruthy();
+    }
+  });
+
+  it("`기타경영사항` 은 그대로 원문이다 — 이름 그대로 기타라서 옮기면 틀린다", () => {
+    expect(disclosurePhrase("기타경영사항(자율공시)").translated).toBe(false);
+  });
+});
