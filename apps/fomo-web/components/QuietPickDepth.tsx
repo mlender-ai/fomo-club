@@ -597,6 +597,22 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                     <div className="min-w-0 flex-1">
                       <p className="break-keep text-ds-body text-ds-text-1">{event.text}</p>
                       {/*
+                        DETAIL-04 — 서식 이름을 옮긴 한 줄로는 여전히 단어 나열이다.
+                        `지분 5% 이상을 신고했어요` 가 무슨 뜻인지 **우리가 풀어 쓴다.**
+
+                        숫자가 붙은 항목에는 넣지 않는다 — 그 줄은 아래 실제 숫자가 이미
+                        설명하고 있고, 제도 설명을 그 위에 끼우면 숫자를 밀어낸다(DETAIL-03
+                        중복 제거와 같은 판단).
+                      */}
+                      {event.meaning && !event.figures && (
+                        <p
+                          className="mt-s2 break-keep text-ds-caption text-ds-text-2"
+                          data-testid="depth-why-now-meaning"
+                        >
+                          {event.meaning}
+                        </p>
+                      )}
+                      {/*
                         DETAIL-02 — `실적을 냈어요` 로 끝내지 않는다. **한 줄 해석 + 실제 숫자**.
                         서버가 못 뽑았으면 이 블록이 없고 제목만 남는다(§E-1 — 지어내지 않는다).
                       */}
@@ -639,20 +655,13 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                         </p>
                       )}
                       {/*
-                        DETAIL-02 PART D — 원문 링크는 **보조**다. 제목 옆이 아니라 맨 아래,
-                        작고 회색으로 둔다. 내용을 먼저 보여주고 링크로 때우지 않는다.
+                        DETAIL-04 — **원문 링크를 뺐다.** DETAIL-02 는 링크를 맨 아래로
+                        밀어 "보조"로 뒀지만, 보조로 둔 링크도 여전히 설명의 자리를 차지한다.
+                        아무도 누르지 않고(누르면 DART 서식 원문이라 읽히지도 않는다), 그
+                        링크가 있다는 사실이 "뜻은 원문에 있다" 는 변명이 됐다.
+                        이제 뜻은 위의 `meaning` 이 화면에서 말한다(`event.url` 은 남지만
+                        공시 항목을 가리는 표식으로만 쓴다).
                       */}
-                      {event.url && (
-                        <a
-                          href={event.url}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="mt-s2 inline-block whitespace-nowrap text-ds-caption text-ds-text-3 underline"
-                          data-testid="depth-why-now-source"
-                        >
-                          공시 원문 →
-                        </a>
-                      )}
                     </div>
                   </div>
                 ))}

@@ -200,6 +200,14 @@ export interface WhyNowEvent {
    */
   rawTitle?: boolean;
   /**
+   * DETAIL-04 — 그 서식이 **제도적으로 무엇인가** 한 줄. 번역표에 있는 공시만 갖는다.
+   *
+   * `text` 가 이 회사에 무슨 일이 있었나라면 이건 그 서식의 뜻이다 — 종목마다 달라지지
+   * 않는 상수이므로 지어내는 것이 아니다(`disclosure-phrase` 머리말의 표). 이 줄이 있어서
+   * **원문 링크로 떠넘기지 않는다.**
+   */
+  meaning?: string;
+  /**
    * DETAIL-02 — 실적 공시에서 뽑은 **실제 숫자**. 못 뽑으면 이 필드가 없다.
    * 있으면 화면은 제목 아래에 한 줄 해석과 매출·영업이익·순이익을 펼친다.
    */
@@ -323,9 +331,12 @@ export function buildWhyNowTimeline(input: WhyNowTimelineInput): WhyNowEvent[] {
     const when = whenLabel(d.date);
     if (!when) continue;
     /**
-     * 제목을 **사람 말로 옮긴다**(WO-RESET-05 §3-1). 표에 없으면 원문 그대로 —
-     * 억지로 비슷한 칸에 밀어 넣지 않는다. `[원문]` 링크가 옆에 있으므로
-     * 원문을 못 보게 되는 것도 아니다.
+     * 제목을 **사람 말로 옮기고 뜻을 붙인다**(WO-RESET-05 §3-1 · DETAIL-04). 표에 없으면
+     * 원문 그대로 — 억지로 비슷한 칸에 밀어 넣지 않는다.
+     *
+     * 종전 주석은 "`[원문]` 링크가 옆에 있으므로 원문을 못 보게 되는 것도 아니다" 였다.
+     * **그 변명이 링크를 살려뒀다** — 아무도 누르지 않는 링크는 설명을 대신하지 못한다.
+     * 그래서 링크를 화면에서 빼고(DETAIL-04) 뜻풀이를 우리가 쓴다.
      */
     const phrase = disclosurePhrase(d.title);
     /**
@@ -337,6 +348,8 @@ export function buildWhyNowTimeline(input: WhyNowTimelineInput): WhyNowEvent[] {
       date: d.date,
       when,
       text: phrase.text,
+      // DETAIL-04 — 뜻풀이는 표에 있는 서식만 갖는다. 모르는 서식은 제목만 나간다.
+      ...(phrase.meaning ? { meaning: phrase.meaning } : {}),
       ...(phrase.translated ? {} : { rawTitle: true }),
       ...(extra?.figures ? { figures: extra.figures } : {}),
       ...(extra?.scaleNote ? { scaleNote: extra.scaleNote } : {}),
