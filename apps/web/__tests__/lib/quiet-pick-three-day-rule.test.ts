@@ -15,16 +15,33 @@ const core = readFileSync(
   new URL("../../../../packages/fomo-core/src/keyword-cards/exposure-history.ts", import.meta.url), "utf8"
 );
 
-describe("완료 확인 1 — 최근 3일 내 나온 종목이 기본적으로 제외된다", () => {
-  it("제외다 — 점수를 깎는 것이 아니다", () => {
+describe("완료 확인 1 — 최근 창 안에 나온 종목은 기본적으로 덱에서 빠진다", () => {
+  it("판정은 그대로다 — 점수를 깎는 것이 아니다", () => {
     expect(engine).toContain("const seenRecently = recentExposure(exposureHistory.get(sig.subject.canonical), date);");
-    // `continue` 로 루프를 빠져나간다 = 픽에서 빠진다. 가중치 곱이 아니다.
-    expect(engine).toMatch(/if \(seenRecently && !reentry\) \{[\s\S]*?continue;\n\s*\}/);
+    // 걸리면 `heldByExposure` 로 표시된다. 가중치 곱이 아니다.
+    expect(engine).toContain("const heldByExposure = Boolean(seenRecently && !reentry);");
   });
 
-  it("영구 배제가 아니다 — 「지켜보는 중」으로 보내고 사유를 남긴다", () => {
-    expect(engine).toContain('code: "seen_recently"');
+  /**
+   * HOTFIX-DECK §B-1 — **제외에서 보류로.**
+   *
+   * 종전에는 여기서 `continue` 로 후보를 버렸다. 2026-08-28 에 그 한 줄이 품질 통과 후보
+   * 19개 중 18개를 지웠고 덱은 1장이 나갔다. 이제는 픽을 끝까지 만들어 보류분으로 들고
+   * 있다가, 덱이 최소 장수에 못 미칠 때만 뒤에서 꺼내 쓴다.
+   */
+  it("버리지 않는다 — 보류분으로 들고 있다가 덱이 모자라면 뒤에서 채운다", () => {
+    expect(engine).toContain("const heldByExposurePicks = new Set<QuietPick>();");
+    expect(engine).toContain("heldByExposurePicks.add(pick);");
+    expect(engine).toMatch(/composeDeckWithFloor\(entries, \{[\s\S]*?held: heldEntries,[\s\S]*?minDeckSize: DECK_MIN_SIZE,/);
+    // 규칙에 걸렸다고 루프를 빠져나가지 않는다 — 그 한 줄이 이 사고의 원인이었다.
+    expect(engine).not.toMatch(/if \(seenRecently && !reentry\) \{[\s\S]{0,400}?continue;/);
+  });
+
+  it("영구 배제가 아니다 — 못 들면 「지켜보는 중」으로 보내고 사유를 남긴다", () => {
+    expect(engine).toContain('reasonCode: "seen_recently" as const');
     expect(engine).toContain("이미 나왔어요 — 새로 생긴 일은 아직 없어요");
+    // 덱에 든 것은 선반에 없어야 한다 — 같은 종목이 양쪽에 있으면 화면이 서로 다른 말을 한다.
+    expect(engine).toContain("heldByExposurePicks.has(pick) && !publishedSet.has(pick)");
   });
 
   it("이력은 크론이 **이미 읽은 스냅샷**에서 만든다 — 커넥션을 더 잡지 않는다", () => {
@@ -79,15 +96,48 @@ describe("완료 확인 3 — 「연속일수가 하루 늘었다」는 예외�
   });
 });
 
-describe("완료 확인 9 — 덱이 짧아져도 억지로 채우지 않는다", () => {
-  it("제외된 자리를 메우는 보충 로직이 없다", () => {
-    expect(engine).not.toMatch(/backfill|refill|fillDeck|보충/);
+/**
+ * 완료 확인 9 는 HOTFIX-DECK 이 **뒤집었다.**
+ *
+ * 원문은 "덱이 짧아져도 억지로 채우지 않는다" 였고, 그래서 보충 로직이 하나도 없는지를
+ * 소스로 확인했다. 그 규칙이 2026-08-28 에 덱을 1장으로 만들었다.
+ *
+ * 지금 지켜야 할 것은 "채우지 않는다" 가 아니라 **"무엇으로 채우는가"** 다. 채우는 재료는
+ * 품질 게이트를 전부 통과한 보류분뿐이고, 「지켜보는 중」 선반(대형주·이미 오른 종목)은
+ * 절대 승격 대상이 아니다. 그 선을 여기서 지킨다.
+ */
+describe("덱을 채우되 품질로 채우지 않는다 (HOTFIX-DECK §C-1)", () => {
+  it("채우는 재료는 보류분뿐이다 — 선반은 승격 풀로 쓰지 않는다", () => {
+    expect(engine).toContain("watchPool: [],");
+    // 선반 항목(`watching`)이 구성 입력으로 들어가는 경로가 없어야 한다.
+    expect(engine).not.toMatch(/watchPool: watching/);
+    expect(engine).not.toMatch(/held: watching/);
+  });
+
+  it("보충은 최소 장수까지만이다 — 상한까지 억지로 채우지 않는다", () => {
+    expect(engine).toContain("minDeckSize: DECK_MIN_SIZE,");
+    // 사다리는 세 칸뿐이고 마지막 칸은 "그대로 둔다" 이다(deck-ranking).
+    const ranking = readFileSync(new URL("../../lib/deck-ranking.ts", import.meta.url), "utf8");
+    expect(ranking).toContain('export type DeckRelaxation = "recent_exposure" | "fresh_floor" | "kind_cap";');
   });
 });
 
 describe("완료 확인 10 — 계측", () => {
   it("막은 건수·통과 건수·사유별 분포를 남긴다", () => {
-    expect(engine).toContain("const exposureCensus = { blocked: 0, readmitted: 0, byReason: {} as Record<string, number> };");
+    expect(engine).toContain("const exposureCensus = { blocked: 0, readmitted: 0, byReason: {} as Record<string, number>, readmittedByFloor: 0 };");
     expect(engine).toContain("exposure: exposureCensus,");
+  });
+
+  /** HOTFIX-DECK §C-3 — 단계별 통과 수를 매일 굳힌다. 다음엔 이 객체 하나만 보면 된다. */
+  it("단계별 통과 수를 페이로드에 남긴다", () => {
+    expect(engine).toContain("} satisfies QuietPickFunnel,");
+    for (const stage of ["universeKr", "withCandles", "withSignal", "qualified", "freeOfRecentExposure", "deck"]) {
+      expect(engine, stage).toContain(`${stage}:`);
+    }
+  });
+
+  /** 푼 규칙을 남기지 않으면 다음 사람이 그날의 덱을 잘못 읽는다. */
+  it("푼 규칙을 회전율 계측에 남긴다", () => {
+    expect(engine).toContain("relaxations: composed.relaxations,");
   });
 });

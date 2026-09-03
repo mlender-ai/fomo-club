@@ -13,12 +13,67 @@ import {
   type QuietPickResponse,
 } from "../../../../../lib/quiet-pick";
 import { buildQuietPickStamps, type PublicationStamp } from "../../../../../lib/publication-stamp";
+import { DECK_ALERT_MIN } from "../../../../../lib/deck-ranking";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const ACTIVE_ID = "quiet-pick:active";
 const dateId = (date: string) => `quiet-pick:${date}`;
+/**
+ * 단계별 통과 수의 **일별 보관함**(HOTFIX-DECK §C-3).
+ *
+ * 페이로드 안에도 `qualification.funnel` 이 있지만 그것은 발행분과 함께 덮어써진다 —
+ * **차단된 굽기의 숫자는 남지 않는다.** 원인을 찾을 때 정작 필요한 게 그 숫자다.
+ * 그래서 성공·차단 양쪽에서 별도 키로 굳힌다. 가볍고(수십 바이트) 매일 한 줄이다.
+ */
+const funnelId = (date: string) => `deck-funnel:${date}`;
+
+/**
+ * 덱이 사고 수준으로 짧으면 **즉시 알린다**(§C-2).
+ *
+ * 2026-08-28 에 덱이 1장인 것을 **사용자가 화면을 보고** 알았다. 알림이 없으면 다음에도
+ * 그렇게 안다. 웹훅이 없는 환경(로컬·프리뷰)에서는 콘솔만 남기고 조용히 넘어간다 —
+ * 알림 실패가 발행을 막으면 그게 더 큰 사고다.
+ */
+async function alertSmallDeck(text: string): Promise<"sent" | "skipped" | "failed"> {
+  console.error(`[fomo/cron/quiet-pick] ${text}`);
+  const webhook = process.env.SLACK_WEBHOOK_URL?.trim();
+  if (!webhook) return "skipped";
+  try {
+    const res = await fetch(webhook, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: `🚨 ${text}` }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    return res.ok ? "sent" : "failed";
+  } catch {
+    return "failed";
+  }
+}
+
+/** 단계별 숫자 한 줄 — 성공이든 차단이든 남긴다. 쓰기 실패가 발행을 막지 않는다. */
+async function recordFunnel(
+  date: string,
+  row: { published: number; blocked: string | null; qualification: QuietPickResponse["qualification"]; rotation?: QuietPickResponse["rotation"] }
+): Promise<void> {
+  try {
+    await writeFeedContent(funnelId(date), {
+      date,
+      recordedAt: new Date().toISOString(),
+      published: row.published,
+      blocked: row.blocked,
+      funnel: row.qualification.funnel ?? null,
+      exposure: row.qualification.exposure ?? null,
+      drops: row.qualification.drops ?? null,
+      relaxations: row.rotation?.relaxations ?? [],
+      compositionSkipped: row.rotation?.compositionSkipped ?? null,
+    });
+  } catch (error) {
+    console.warn("[fomo/cron/quiet-pick] funnel record skipped", error instanceof Error ? error.message : error);
+  }
+}
 /**
  * 1페이지 쿨다운 이력 창(일). 최장 계단이 7일 연속이므로 그보다 하루 넉넉하게 읽는다 —
  * 더 읽어도 계수는 안 바뀌고 DB 왕복만 늘어난다.
@@ -115,6 +170,9 @@ export async function GET(request: Request) {
     const blockReason = quietPickPublishBlockReason(response, prior);
     if (blockReason) {
       console.error(`[fomo/cron/quiet-pick] 발행 차단 — ${blockReason}`);
+      // 차단된 굽기의 숫자야말로 원인 추적에 필요하다 — 페이로드에 안 남으므로 여기서 남긴다.
+      await recordFunnel(date, { published: 0, blocked: blockReason, qualification: response.qualification, ...(response.rotation ? { rotation: response.rotation } : {}) });
+      await alertSmallDeck(`덱 발행이 차단됐어요 (${date}) — ${blockReason}. 직전 ${prior?.picks.length ?? 0}장을 유지합니다.`);
       return withCors(
         NextResponse.json(
           {
@@ -134,6 +192,20 @@ export async function GET(request: Request) {
 
     await writeFeedContent(dateId(date), response);
     await writeFeedContent(ACTIVE_ID, response);
+
+    // ── 단계별 숫자 기록 + 짧은 덱 알림(§C-2·§C-3) ──
+    //
+    // 발행 **뒤에** 한다. 알림이나 기록이 실패해도 덱은 이미 나가 있어야 한다 —
+    // 관측 때문에 제품이 멈추면 관측이 제품을 망친 것이다.
+    await recordFunnel(date, { published: response.picks.length, blocked: null, qualification: response.qualification, ...(response.rotation ? { rotation: response.rotation } : {}) });
+    const deckAlert = response.picks.length < DECK_ALERT_MIN
+      ? await alertSmallDeck(
+          `오늘 덱이 ${response.picks.length}장이에요 (${date}, 기준 ${DECK_ALERT_MIN}장). ` +
+          `푼 규칙: ${response.rotation?.relaxations.join(", ") || "없음"} · ` +
+          `재노출 보류 ${response.qualification.exposure?.blocked ?? 0}장 · ` +
+          `품질 통과 ${response.qualification.funnel?.qualified ?? 0}장`
+        )
+      : null;
 
     // 발행 즉시 원장 append(성적표 채점 원료 — G1-C). 원장 실패가 픽 발행을 막지 않는다.
     //
@@ -160,6 +232,9 @@ export async function GET(request: Request) {
         ok: true,
         date,
         published: response.picks.length,
+        // 짧은 덱 알림 결과 — `skipped` 는 웹훅 미설정(로컬·프리뷰), `failed` 는 전송 실패다.
+        // 응답에 박아둬야 "알림이 안 왔다" 와 "알림 채널이 죽었다" 가 갈린다.
+        ...(deckAlert ? { deckAlert } : {}),
         ledgerAppended,
         // 스탬프 확보 현황(WO-SUB-07 [F]) — 몇 장이 발행 시점 기록을 갖췄고 무엇이 비었는지.
         // 소급 불가라 여기서 0 이 보이면 그날 기록은 영구 결손이다. 크론 응답에 그대로 노출한다.

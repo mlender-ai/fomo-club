@@ -140,12 +140,14 @@ import type { DisclosureCollection } from "./disclosure-collect";
 import {
   rankScore as deckRankScore,
   noveltyScore,
-  composeDeck,
+  composeDeckWithFloor,
   isAgedOut,
   isFreshSignal,
   page1StreakFromHistory,
   PAGE1_SIZE,
+  DECK_MIN_SIZE,
   type DeckSkipReason,
+  type DeckRelaxation,
 } from "./deck-ranking";
 import type { PublicationStamp } from "./publication-stamp";
 
@@ -591,8 +593,16 @@ export interface QuietPickQualification {
   macro?: { recentPicks: number; cards: number };
   /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
   companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
-  /** WO-RESET-06 §E — 3일 규칙 계측. */
-  exposure?: { blocked: number; readmitted: number; byReason: Record<string, number> };
+  /** WO-RESET-06 §E — 재노출 규칙 계측. `readmittedByFloor` 는 덱 최소 장수 안전장치가 되살린 수. */
+  exposure?: { blocked: number; readmitted: number; byReason: Record<string, number>; readmittedByFloor?: number };
+  /**
+   * **단계별 통과 수**(HOTFIX-DECK §A-1·§C-3) — 매일 굳혀 남긴다.
+   *
+   * 2026-08-28 사고에서 덱이 1장이 된 원인을 찾는 데 페이로드를 뒤져야 했다. 어느 단계에서
+   * 몇 개가 남았는지가 한 곳에 없었기 때문이다. 다음에 같은 일이 생기면 이 객체 하나만 보면 된다.
+   * 위에서 아래로 단조 감소해야 하며, 급감한 칸이 곧 원인이다.
+   */
+  funnel?: QuietPickFunnel;
   /** 이번 빌드가 읽어온 팩트시트 수. 0 이면 3걸음·실적 줄이 통째로 빈다. */
   factSheets?: number;
   /**
@@ -622,6 +632,43 @@ export interface QuietPickQualification {
 }
 
 /**
+ * 파이프라인 단계별 잔존 수(HOTFIX-DECK §A-1). **이 순서가 곧 코드의 실행 순서다.**
+ *
+ * 값 하나하나가 "여기서 몇 개가 살아남았나" 이고, 앞 칸과의 차이가 그 단계가 잘라낸 수다.
+ * 계측이 실행 순서와 어긋나면 계측이 아니라 소설이므로, 단계를 추가할 때는 코드 순서대로 끼운다.
+ */
+export interface QuietPickFunnel {
+  /** ① 유니버스 — KR 종목 수와 US 내부자 원시 건수. */
+  universeKr: number;
+  universeUs: number;
+  /** ② 일봉을 확보한 KR 종목 수. */
+  withCandles: number;
+  /** ③ 신호 검출기를 통과한 후보 수(KR + US 합산 = `afterQuiet`). */
+  withSignal: number;
+  withSignalKr: number;
+  withSignalUs: number;
+  /** ③-1 유형별 — 시장 역행(D형)·거래량 각성(E형). 0 이면 임계가 세다는 뜻이다. */
+  divergence: number;
+  awakening: number;
+  /** ④ 기존 필터(대형주 제외·이미 오른 종목 제외·유동성·데이터 완결성)를 통과한 수. */
+  qualified: number;
+  /** ⑤ 그중 재노출 규칙에 걸리지 않은 수. `qualified` 와의 차이가 곧 규칙이 잡은 수다. */
+  freeOfRecentExposure: number;
+  /** ⑥ 덱 구성 규칙까지 통과한 수 = 최종 덱. */
+  deck: number;
+  /**
+   * 참고 — 규칙이 **끝까지 붙잡고 있는** 수와, 안전장치가 되살린 수, 그때 푼 규칙.
+   *
+   * `exposure.blocked` 와 다를 수 있다. 저쪽은 규칙이 잡은 **전체**라 뒤 게이트(경과일 상한 등)에서
+   * 또 떨어진 것까지 세고, 이쪽은 "잡히지만 않았으면 발행 후보였던" 수다. 발행 가드는 이 값을 쓴다 —
+   * 같은 카드를 두 사유로 두 번 설명하면 가드가 봐야 할 축소를 못 본다.
+   */
+  heldByRecentExposure: number;
+  readmittedByFloor: number;
+  relaxations: DeckRelaxation[];
+}
+
+/**
  * 회전율 계측(WO-DECK-01 PHASE 5) — **발행 시점에 굳힌다.**
  * 나중에 재계산하면 그날의 1페이지 이력이 이미 바뀌어 있어 같은 값이 나오지 않는다.
  */
@@ -637,6 +684,11 @@ export interface QuietPickRotation {
   promotedFromWatch: number;
   /** 신규 하한을 못 채워 줄인 장수. 0 이면 상한대로 찼다. */
   shrunkBy: number;
+  /**
+   * 덱 최소 장수를 지키려고 **푼 규칙**(§C-1). 비어 있으면 규칙을 하나도 안 풀고 채웠다는 뜻이다.
+   * 무엇을 풀었는지 남기지 않으면 다음 사람이 그날의 덱을 잘못 읽는다.
+   */
+  relaxations: DeckRelaxation[];
   compositionSkipped: Record<string, number>;
   /** 경과일 상한으로 워치로 내려간 수. */
   agedOut: number;
@@ -832,7 +884,21 @@ export function quietPickPublishBlockReason(
    * 그래서 **제외한 만큼을 되더해서** 본다. 그러고도 반토막이면 그건 설명되지 않은 축소이므로
    * 종전대로 막는다 — 가드를 끄는 것이 아니라 **가드가 세는 대상을 바로잡는 것**이다.
    */
-  const explained = next.qualification.exposure?.blocked ?? 0;
+  /**
+   * **되살린 것은 되더하지 않는다** (HOTFIX-DECK §C-1).
+   *
+   * `blocked` 는 규칙에 걸린 전체 수이고, 그중 `readmittedByFloor` 는 안전장치가 덱으로
+   * 되돌린 수다. 그것들은 이미 `count` 에 들어 있으므로 여기서 또 더하면 같은 카드를 두 번
+   * 세게 되고, 가드가 봐야 할 축소를 못 보게 된다. 실제로 빠진 것만 되더한다.
+   */
+  const exposure = next.qualification.exposure;
+  const funnel = next.qualification.funnel;
+  const explained = funnel
+    // 규칙이 **끝까지 붙잡고 있는** 수. `blocked` 는 규칙이 잡은 전체라 뒤 게이트(경과일 등)에서
+    // 또 떨어진 것까지 세므로, 그 값을 쓰면 같은 카드가 두 사유로 두 번 설명된다.
+    ? Math.max(0, funnel.heldByRecentExposure - funnel.readmittedByFloor)
+    // 구 페이로드 폴백 — `funnel` 이 없던 시절의 값.
+    : Math.max(0, (exposure?.blocked ?? 0) - (exposure?.readmittedByFloor ?? 0));
   const accounted = count + explained;
   if (priorCount >= QUIET_PICK_COLLAPSE_MIN_PRIOR && accounted < priorCount * QUIET_PICK_COLLAPSE_RATIO) {
     const note = explained > 0 ? ` (3일 규칙 제외 ${explained}장 되더한 뒤에도)` : "";
@@ -2496,6 +2562,13 @@ export async function buildQuietPickResponse(options: {
   );
 
   const picks: QuietPick[] = [];
+  /**
+   * 재노출 규칙에 걸려 **보류된** 픽(§B-1). 버리지 않고 들고 있다가 덱이 최소 장수에
+   * 못 미치면 뒤에서 채운다. 끝내 못 들면 「지켜보는 중」 선반으로 간다.
+   */
+  const heldByExposurePicks = new Set<QuietPick>();
+  /** 보류 사유 문구 — 선반에 올릴 때 그대로 쓴다(사유를 추측하지 않는다). */
+  const heldExposureText = new Map<QuietPick, string>();
   const watching: QuietWatchItem[] = [];
   /** 신호는 실재하는데 ② 미달 — 지켜보는 중 선반으로. 품질(③) 실패는 여기 오지 않는다. */
   const sendToWatch = (
@@ -2537,10 +2610,11 @@ export async function buildQuietPickResponse(options: {
   const companyCensus = { stocks: 0, withSector: 0, rows: 0, scored: 0 };
 
   /**
-   * WO-RESET-06 §E — 3일 규칙이 무엇을 막고 무엇을 통과시켰나.
-   * `blocked` 는 제외된 건수, `readmitted` 는 예외로 다시 나온 건수, `byReason` 은 그 사유별 분포.
+   * WO-RESET-06 §E · HOTFIX-DECK §C-3 — 재노출 규칙이 무엇을 막고 무엇을 통과시켰나.
+   * `blocked` 는 보류된 건수, `readmitted` 는 재등장 사유로 통과한 건수, `byReason` 은 그 분포,
+   * `readmittedByFloor` 는 덱 최소 장수 안전장치가 보류분에서 되살린 건수다.
    */
-  const exposureCensus = { blocked: 0, readmitted: 0, byReason: {} as Record<string, number> };
+  const exposureCensus = { blocked: 0, readmitted: 0, byReason: {} as Record<string, number>, readmittedByFloor: 0 };
 
   for (const { sig, near, front } of assembled) {
     if (!front) { drop("front_failed"); continue; }
@@ -2621,26 +2695,31 @@ export async function buildQuietPickResponse(options: {
         })
       : null;
     /**
-     * ── 3일 규칙 (WO-RESET-06 §A-1) — **강등이 아니라 제외** ──
+     * ── 재노출 규칙 (WO-RESET-06 §A-1 · HOTFIX-DECK §B-1) — **제외가 아니라 보류** ──
      *
      * 재노출 강등(점수 ×0.6)만으로는 부족했다. 강등은 순위를 낮출 뿐이라 그 종목보다 강한
-     * 후보가 없으면 **여전히 1등으로 나온다.** 천보가 그랬다.
+     * 후보가 없으면 **여전히 1등으로 나온다.** 천보가 그랬다. 그래서 최근
+     * `RECENT_EXPOSURE_DAYS` 일 안에 나온 종목은 덱에서 뺀다 — 다만 **새로운 일이 생겼으면**
+     * 통과시킨다(위에서 끝난 `reentry` 판정). 「연속일수가 하루 늘었다」는 사유가 아니다.
      *
-     * 그래서 최근 3일 안에 나온 종목은 뺀다. 다만 **새로운 일이 생겼으면** 통과시킨다 —
-     * 그 판정은 위에서 이미 끝났다(`reentry`). 「연속일수가 하루 늘었다」는 `reentry` 사유가
-     * 아니므로 여기서 걸린다. 그게 이 규칙의 핵심이다.
+     * ## 여기서 `continue` 하지 않는 이유 (2026-08-28 사고)
      *
-     * 덱이 짧아지는 것은 정상이다(§D). 채우려고 규칙을 풀지 않는다.
+     * 종전에는 여기서 후보를 **버렸다.** 그날 품질 게이트를 통과한 19개 중 18개가 이 줄에서
+     * 사라졌고 덱은 **1장**이 나갔다. 규칙은 의도대로 동작했다 — 규칙이 덱을 비우는 것을
+     * 막을 장치가 없었을 뿐이다.
+     *
+     * 그래서 지금은 **보류**한다. 픽은 끝까지 만들어 두고 `heldByExposure` 로 표시만 해서,
+     * 덱이 최소 장수에 못 미칠 때 `composeDeckWithFloor` 가 점수 순서 **뒤에서** 꺼내 쓴다.
+     * 끝내 덱에 못 들면 종전과 똑같이 「지켜보는 중」 선반으로 간다(아래 발행 직후).
+     *
+     * **채우려고 품질을 풀지는 않는다.** 보류분은 이미 품질 게이트를 전부 통과한 후보다 —
+     * 대형주·이미 오른 종목은 애초에 이 자리까지 오지 못한다.
      */
     const seenRecently = recentExposure(exposureHistory.get(sig.subject.canonical), date);
-    if (seenRecently && !reentry) {
+    const heldByExposure = Boolean(seenRecently && !reentry);
+    if (heldByExposure) {
       exposureCensus.blocked += 1;
-      sendToWatch(
-        sig,
-        { code: "seen_recently", text: `${seenRecently.date}에 이미 나왔어요 — 새로 생긴 일은 아직 없어요` },
-        priceInfo
-      );
-      continue;
+      drop("seen_recently"); // 관측 카운터 — 선반 등재는 덱 구성이 끝난 뒤에 판단한다
     }
     if (seenRecently && reentry) {
       exposureCensus.readmitted += 1;
@@ -2829,7 +2908,7 @@ export async function buildQuietPickResponse(options: {
       identity: identity.length > 0,
     };
 
-    picks.push({
+    const pick: QuietPick = {
       subject: {
         ...sig.subject,
         ...companyDisplay(sig.subject),
@@ -3089,32 +3168,68 @@ export async function buildQuietPickResponse(options: {
         };
       })(),
       qualifiedAt: date,
-    });
+    };
+    picks.push(pick);
+    if (heldByExposure && seenRecently) {
+      heldByExposurePicks.add(pick);
+      heldExposureText.set(pick, `${seenRecently.date}에 이미 나왔어요 — 새로 생긴 일은 아직 없어요`);
+    }
   }
 
-  // ── 신규성순 정렬 + 구성 규칙(WO-DECK-01 PHASE 2·4) ──
+  // ── 신규성순 정렬 + 구성 규칙(WO-DECK-01 PHASE 2·4 · HOTFIX-DECK §C-1) ──
   //
-  // 점수 상위 N 을 그대로 쓰지 않는다. 비율 하한·상한을 지키고, 신규가 부족하면 워치에서 승격하고,
-  // 그래도 부족하면 **덱을 줄인다**(지속 신호로 채우지 않는다).
+  // 점수 상위 N 을 그대로 쓰지 않는다. 비율 하한·상한을 지키되, **덱이 최소 장수에 못 미치면
+  // 규칙을 정해진 순서로 하나씩 푼다**(재노출 → 신규 하한 → 유형 상한). 푼 규칙은 `relaxations`
+  // 로 남는다 — 다음에 덱이 짧으면 "규칙이 잘랐나, 후보가 없었나" 를 그 배열로 가른다.
   picks.sort((a, b) => b.signal.rankScore - a.signal.rankScore);
   //
   // 승격 풀은 **비워 둔다.** 워치 선반의 항목은 전부 명시된 게이트에 걸려 내려온 것들이다 —
   // `mega_cap`·`turnover_top20`·`mention_hot` 은 "이미 알려짐"(제품의 핵심 약속을 깨는 승격),
   // `illiquid` 는 매매 불가, `ran_30`·`changed_15` 는 이미 오른 것, `signal_aged` 는 애초에 신규가 아니다.
-  // 즉 신규 하한을 메우려고 올릴 수 있는 안전한 후보가 하나도 없다 → 규정대로 **덱을 줄인다.**
-  // (`composeDeck` 의 `watchPool` 인자는 승격 가능한 소스가 생기는 날을 위해 남겨 둔다.)
+  // 즉 안전하게 올릴 수 있는 후보가 하나도 없다. 안전장치가 꺼내 쓰는 것은 **선반이 아니라
+  // 보류분** — 품질 게이트를 전부 통과했는데 재노출 규칙에만 걸린 픽들이다.
   /**
    * 덱 구성 후보 — 인물 카드면 `investorId` 를 붙인다. 그 값으로 40% 상한과
    * 「같은 인물 2장」 상한이 걸린다(WO-RESET-07 §E-2).
    */
-  const entries = picks.map((pick) => ({
+  const toEntry = (pick: QuietPick) => ({
     kind: pick.signal.kind,
     ageDays: pick.signal.ageDays,
     ...(pick.investor?.id ? { investorId: pick.investor.id } : {}),
     pick,
-  }));
-  const composed = composeDeck(entries, { deckSize: limit, watchPool: [], today: date });
+  });
+  const entries = picks.filter((pick) => !heldByExposurePicks.has(pick)).map(toEntry);
+  const heldEntries = picks.filter((pick) => heldByExposurePicks.has(pick)).map(toEntry);
+  const composed = composeDeckWithFloor(entries, {
+    deckSize: limit,
+    held: heldEntries,
+    minDeckSize: DECK_MIN_SIZE,
+    watchPool: [],
+    today: date,
+  });
   const published = composed.deck.map((entry) => entry.pick);
+  const publishedSet = new Set(published);
+  // 안전장치가 실제로 되살린 장수 — 「규칙을 풀었다」를 숫자로 남긴다.
+  exposureCensus.readmittedByFloor = composed.readmitted;
+
+  /**
+   * 보류분 중 **끝내 덱에 못 든 것**만 선반으로. 종전과 같은 문구를 쓴다 — 규칙이 잡았다는
+   * 사실은 그대로 보여주되, 덱에 들어간 것은 선반에서 빠져야 한다(같은 종목이 양쪽에 있으면
+   * 화면이 서로 다른 말을 한다).
+   */
+  const exposureShelf: QuietWatchItem[] = picks
+    .filter((pick) => heldByExposurePicks.has(pick) && !publishedSet.has(pick))
+    .map((pick) => ({
+      subject: pick.subject,
+      signal: { kind: pick.signal.kind, code: pick.signal.code, actors: pick.signal.actors, scale: pick.signal.scale, days: pick.signal.days },
+      price: {
+        current: pick.price.current,
+        ...(pick.price.currentText ? { currentText: pick.price.currentText } : {}),
+        ...(typeof pick.price.changePct === "number" ? { changePct: pick.price.changePct } : {}),
+      },
+      reasonCode: "seen_recently" as const,
+      reasonText: heldExposureText.get(pick) ?? "최근에 이미 나왔어요",
+    }));
   // 지켜보는 중 — 미달 사유가 '기준 미달'인 것만(품질 실패는 애초에 오지 않는다). 최대 10곳.
   // 덱에 못 든 픽 자격자도 여기 붙인다(신규 하한·유형 상한에 밀린 것들 — 사라지면 안 된다).
   //
@@ -3130,7 +3245,7 @@ export async function buildQuietPickResponse(options: {
     same_investor_cap: "같은 사람의 카드가 이미 두 장이에요",
   };
   const compositionOverflow: QuietWatchItem[] = entries
-    .filter((entry) => !published.includes(entry.pick))
+    .filter((entry) => !publishedSet.has(entry.pick))
     .map((entry) => {
       const pick = entry.pick;
       const reason = composed.skipReasons.get(entry);
@@ -3150,14 +3265,19 @@ export async function buildQuietPickResponse(options: {
   const SHELF_PRIORITY: Record<string, number> = {
     signal_aged: 0,
     composition_overflow: 1,
-    ran_30_since_signal: 2,
-    changed_15: 2,
-    turnover_top20: 3,
-    mention_hot: 3,
-    mega_cap: 4,
-    illiquid: 5,
+    /**
+     * 재노출 보류분은 **품질 게이트를 전부 통과한** 후보다 — 「이미 올랐다」·「이미 알려졌다」로
+     * 내려온 것들보다 덱에 가깝다. 선반에서도 그 순서로 보여야 화면이 사실과 같아진다.
+     */
+    seen_recently: 2,
+    ran_30_since_signal: 3,
+    changed_15: 3,
+    turnover_top20: 4,
+    mention_hot: 4,
+    mega_cap: 5,
+    illiquid: 6,
   };
-  const watchShelf = [...watching, ...compositionOverflow]
+  const watchShelf = [...watching, ...compositionOverflow, ...exposureShelf]
     .map((item, index) => ({ item, index })) // 동순위는 입력 순서(=신규성 순서) 유지
     .sort((a, b) => (SHELF_PRIORITY[a.item.reasonCode] ?? 9) - (SHELF_PRIORITY[b.item.reasonCode] ?? 9) || a.index - b.index)
     .map(({ item }) => item)
@@ -3186,6 +3306,7 @@ export async function buildQuietPickResponse(options: {
     persistentCount: published.filter((pick) => !isFreshSignal(pick.signal.ageDays)).length,
     promotedFromWatch: composed.promoted,
     shrunkBy: composed.shrunkBy,
+    relaxations: composed.relaxations,
     compositionSkipped: composed.skipped,
     agedOut: drops.signal_aged ?? 0,
     cooldownApplied: published.filter((pick) => (pick.signal.page1Streak ?? 0) >= 3).length,
@@ -3236,6 +3357,28 @@ export async function buildQuietPickResponse(options: {
       afterQuiet: quietCandidates.length,
       afterQuality: picks.length,
       published: published.length,
+      /**
+       * HOTFIX-DECK §A-1·§C-3 — 단계별 통과 수를 **한 곳에** 굳힌다.
+       *
+       * 위 개별 필드들은 그때그때 필요해서 하나씩 붙은 것이라, 어느 단계에서 몇이 잘렸는지
+       * 읽으려면 코드를 같이 읽어야 했다. 이 객체는 실행 순서대로 정렬돼 있어 그 자체로 읽힌다.
+       */
+      funnel: {
+        universeKr: krDefs.length,
+        universeUs: insiderRaw.length,
+        withCandles: priceSignalCensus?.candles ?? 0,
+        withSignal: quietCandidates.length,
+        withSignalKr: krSignals.length,
+        withSignalUs: usSignals.length,
+        divergence: priceSignalCensus?.divergence ?? 0,
+        awakening: priceSignalCensus?.awakening ?? 0,
+        qualified: picks.length,
+        freeOfRecentExposure: picks.length - heldByExposurePicks.size,
+        deck: published.length,
+        heldByRecentExposure: heldByExposurePicks.size,
+        readmittedByFloor: composed.readmitted,
+        relaxations: composed.relaxations,
+      } satisfies QuietPickFunnel,
       watching: watchShelf.length,
       // CARDS-02 D-1·D-3 — 검출기별 퍼널과 카드 종류 수. 총합만으로는 답할 수 없던 질문들이다.
       detectorFunnel,
