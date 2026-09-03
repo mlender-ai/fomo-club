@@ -15,7 +15,7 @@ import { recordPickTelemetry, flushPickTelemetry } from "@/lib/pickTelemetry";
 import { pickHook, repairPickCopy } from "@/lib/pickCopyRepair";
 import { haptic, hapticMedium } from "@/lib/haptics";
 import { upsertWatch } from "@/lib/watchlist";
-import { StepDots, StepNext, StepBar, CompanyGroupBlock } from "@/components/DepthSteps";
+import { StepDots, StepNext, StepBar, CompanyGroupBlock, MethodDisclosure, ScoreLegend } from "@/components/DepthSteps";
 
 /** 걸음 식별자. 순서가 곧 이야기 순서다 — 놀라움 → 이유 → 실체 → 결정. */
 type StepId = "signal" | "why" | "company" | "decide";
@@ -218,7 +218,11 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * 2·3걸음은 데이터가 있을 때만 존재한다. 없으면 목록에서 빠지고 **진행 점도 그만큼 줄어든다.**
    * "왜 지금인가" 제목만 있고 아래가 비어 있는 화면은 답하는 시늉이라 아예 만들지 않는다.
    */
-  const [openMethod, setOpenMethod] = useState<string | null>(null);
+  /**
+   * 계산 방법 — **한 걸음에 하나, 기본은 닫힘**(FIX-01 PART D). 종전에는 덩어리별로
+   * 어느 것이 열렸는지(`string | null`)를 들고 있었고, 그래서 링크가 덩어리마다 붙었다.
+   */
+  const [methodOpen, setMethodOpen] = useState(false);
   const [watched, setWatched] = useState(false);
 
   /**
@@ -266,18 +270,18 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const goNext = () => {
     if (index >= steps.length - 1) return;
     haptic();
-    setOpenMethod(null);
+    setMethodOpen(false);
     setStepId(steps[index + 1]!);
     scrollRef.current?.scrollTo({ top: 0 });
   };
   const goPrev = () => {
     if (index <= 0) return;
     haptic();
-    setOpenMethod(null);
+    setMethodOpen(false);
     setStepId(steps[index - 1]!);
     scrollRef.current?.scrollTo({ top: 0 });
   };
-  const toggleMethod = (title: string) => setOpenMethod((v) => (v === title ? null : title));
+  const toggleMethod = () => setMethodOpen((v) => !v);
 
   /**
    * 뒤로 — **이전 걸음**이다. 1걸음에서만 카드로 돌아간다(§1-1).
@@ -330,7 +334,12 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
     const disclosureCount = (pick.whyNow ?? []).filter((e) => e.url).length;
     if (disclosureCount > 0) out.push(`공시가 ${disclosureCount}건 있었어요`);
     else if (pick.whyNowQuietNote) out.push(pick.whyNowQuietNote);
-    for (const g of companyGroups) if (g.scoreText) out.push(g.scoreText);
+    /**
+     * FIX-01 C-2 — 요약은 **주어가 있는 문장**만 쓴다(`summaryText`). 종전에는 점 옆
+     * 문장(`scoreText`)을 그대로 가져와 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이
+     * 낮은지 없는 줄**이 마지막 걸음에 앉았다 — 그 걸음에는 섹션 제목도 줄 라벨도 없다.
+     */
+    for (const g of companyGroups) if (g.summaryText) out.push(g.summaryText);
     return out.slice(0, 4);
   }, [hook, pick.whyNow, pick.whyNowQuietNote, companyGroups]);
 
@@ -719,13 +728,15 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                 </>
               )}
               {companyGroups.map((group) => (
-                <CompanyGroupBlock key={group.title} group={group} onMethod={() => toggleMethod(group.title)} />
+                <CompanyGroupBlock key={group.title} group={group} />
               ))}
-              {openMethod && (
-                <p className="mt-s3 break-keep text-ds-caption text-ds-text-2" data-testid="depth-method">
-                  {companyGroups.find((g) => g.title === openMethod)?.method}
-                </p>
-              )}
+              {/*
+                FIX-01 B-3 — 점의 방향을 말하는 줄은 **화면에 한 번만.** 점이 하나도 없으면
+                설명할 그림이 없으니 범례도 없다.
+              */}
+              {companyGroups.some((g) => g.score !== null) && <ScoreLegend />}
+              {/* FIX-01 PART D — 계산 방법은 맨 아래 하나, 접힌 채로. */}
+              <MethodDisclosure groups={companyGroups} open={methodOpen} onToggle={toggleMethod} />
             </>
           )}
 

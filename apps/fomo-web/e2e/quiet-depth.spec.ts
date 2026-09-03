@@ -80,14 +80,16 @@ test("[완료 7·8·9·10] 모든 숫자 옆에 비교 문장이 있고, 세 덩
 
   // [완료 7] **숫자마다 비교 문장.** 값 줄 수와 비교 문장 수가 같아야 한다.
   const comparisons = await page.locator('[data-testid="depth-comparison"]').allInnerTexts();
-  expect(comparisons.length).toBe(5);
+  // FIX-01 G — `영업이익률` 줄이 늘어 6줄이다(점수 재료를 화면에 다 보인다).
+  expect(comparisons.length).toBe(6);
   for (const c of comparisons) expect(c.trim().length).toBeGreaterThan(0);
-  expect(comparisons.some((c) => c.includes("중간값"))).toBe(true);
+  // FIX-01 E-2 — 표시는 `평균`. `중간값` 은 통계 용어라 화면에서 뺐다.
+  expect(comparisons.some((c) => c.includes("업종 평균"))).toBe(true);
+  expect(comparisons.some((c) => c.includes("중간값"))).toBe(false);
 
-  // [완료 9] 점 표시와 계산 방법.
+  // [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
   await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(3);
-  await page.locator('[data-testid="depth-method-toggle"]').first().click();
-  await expect(page.locator('[data-testid="depth-method"]')).toContainText("5점으로 옮겼어요");
+  await expect(page.locator('[data-testid="depth-score-legend"]')).toHaveCount(1);
 
   // [완료 10] 종합 점수 없음 — `종합`·`총점`·`X점` 한 덩이 점수가 화면에 없다.
   const body = await page.locator('[data-testid="depth-step-company"]').innerText();
@@ -97,6 +99,73 @@ test("[완료 7·8·9·10] 모든 숫자 옆에 비교 문장이 있고, 세 덩
   // 하지 말 것 — 평가어 금지.
   for (const banned of ["저평가", "유망", "좋은 종목", "추천", "매력적"]) {
     expect(body, `금지 표현 "${banned}"`).not.toContain(banned);
+  }
+});
+
+/**
+ * FIX-01 — 「말이 안 되는 문장」 넷을 화면에서 확인한다.
+ * 픽스처는 PS일렉트로닉스 실측(매출 -1.0% · 영업이익 -97.1% · 흑자)을 쓴다.
+ */
+test("[FIX-01 A·B] 한 줄에 반대 말이 없고, 점 옆에 줄 설명을 되풀이하지 않는다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  await page.locator('[data-testid="depth-next"]').click();
+
+  // A — 한 줄에 `늘`과 `줄`이 같이 있는 줄이 없다.
+  const lines = await page.locator('[data-testid="depth-comparison"], [data-testid="depth-trend"]').allInnerTexts();
+  for (const line of lines) {
+    expect(/늘/.test(line) && /줄/.test(line), `모순: "${line}"`).toBe(false);
+  }
+  // 기간이 다른 둘째 사실은 **자기 줄**을 갖는다.
+  await expect(page.locator('[data-testid="depth-trend"]')).toContainText("다만 3년으로 보면");
+
+  // B — 점 옆에 문장이 붙지 않는다(줄이 이미 말했다). 뭉갠 말도 없다.
+  const company = await page.locator('[data-testid="depth-step-company"]').innerText();
+  expect(company).not.toContain("섞여 있어요");
+  const dotRow = page.locator('[data-testid="depth-score-dots"]').first().locator("xpath=..");
+  expect((await dotRow.innerText()).replace(/[●○\s]/g, "")).toBe("");
+
+  // G — 점수 재료 셋이 전부 줄로 보인다.
+  expect(company).toContain("영업이익률");
+  expect(company).toContain("지금은 영업에서 흑자예요");
+});
+
+test("[FIX-01 D] 계산 방법은 걸음에 하나, 기본은 접혀 있다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  await page.locator('[data-testid="depth-next"]').click();
+
+  // 한 화면에 하나뿐이고 문구가 바뀌었다.
+  const toggle = page.locator('[data-testid="depth-method-toggle"]');
+  await expect(toggle).toHaveCount(1);
+  await expect(toggle).toContainText("점수는 이렇게 매겼어요");
+  // 기본 닫힘 — 펼친 내용이 화면에 없다.
+  await expect(page.locator('[data-testid="depth-method"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-step-company"]')).not.toContainText("5점으로 옮겼어요");
+
+  // 열면 세 덩어리 방법을 한자리에서 보여준다.
+  await toggle.click();
+  const method = page.locator('[data-testid="depth-method"]');
+  await expect(method).toContainText("5점으로 옮겼어요");
+  await expect(method).toContainText("돈은 잘 버나요");
+  await expect(method).toContainText("빚은 괜찮나요");
+});
+
+test("[FIX-01 C] 4걸음 요약에 주어 없는 문장이 없다", async ({ page }) => {
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  for (let i = 0; i < 3; i += 1) await page.locator('[data-testid="depth-next"]').click();
+  const lines = (await page.locator('[data-testid="depth-summary"]').innerText())
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  expect(lines.length).toBeGreaterThan(1);
+  /**
+   * 종전 마지막 걸음에는 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이 낮은지 없는 줄**이
+   * 앉아 있었다. 이 걸음에는 섹션 제목도 줄 라벨도 없어서 되찾을 방법이 없다.
+   */
+  for (const line of lines) {
+    if (!/(낮은|높은|가운데쯤|적어요|많아요|비슷해요)/.test(line)) continue;
+    expect(line, `주어 없는 줄: "${line}"`).toMatch(/^(매출|영업이익|PER|PBR|값|빚|지금은)/);
   }
 });
 

@@ -75,7 +75,7 @@ import {
   type FlowPair,
 } from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
-import { sectorDisplayName } from "@fomo/core/keyword-cards/sector-display";
+import { sectorDisplayName, untranslatedIndustryNames } from "@fomo/core/keyword-cards/sector-display";
 import { readSectorMap } from "./sector-map-store";
 import { readMacroCollection } from "./macro-store";
 import {
@@ -593,6 +593,11 @@ export interface QuietPickQualification {
   macro?: { recentPicks: number; cards: number };
   /** WO-RESET-05 §4 — 3걸음 커버리지(보고할 것 1·2번). */
   companyRead?: { stocks: number; withSector: number; rows: number; scored: number };
+  /**
+   * FIX-01 E-1 — 표시명 표에 없어 이름 없이(`같은 업종`) 나간 **영문 업종명**.
+   * 화면은 깨지지 않지만 이름이 있는 편이 낫고, **이 목록이 다음 표 확장 대상**이다.
+   */
+  untranslatedIndustries?: string[];
   /** WO-RESET-06 §E — 재노출 규칙 계측. `readmittedByFloor` 는 덱 최소 장수 안전장치가 되살린 수. */
   exposure?: { blocked: number; readmitted: number; byReason: Record<string, number>; readmittedByFloor?: number };
   /**
@@ -2610,6 +2615,15 @@ export async function buildQuietPickResponse(options: {
   const companyCensus = { stocks: 0, withSector: 0, rows: 0, scored: 0 };
 
   /**
+   * FIX-01 E-1 — **표시명 표에 없어 이름을 못 쓴 영문 업종.**
+   *
+   * 표에 없으면 화면은 `같은 업종` 으로 나가므로 깨지지 않는다. 다만 이름이 있는 편이
+   * 낫고, 무엇을 채워야 하는지는 **실제로 나간 것**이 알려준다(공시 번역표를
+   * `disclosurePhrases` 로 재는 것과 같은 취지). 이 목록이 다음 배치의 표 확장 대상이다.
+   */
+  const untranslatedIndustries = new Set<string>();
+
+  /**
    * WO-RESET-06 §E · HOTFIX-DECK §C-3 — 재노출 규칙이 무엇을 막고 무엇을 통과시켰나.
    * `blocked` 는 보류된 건수, `readmitted` 는 재등장 사유로 통과한 건수, `byReason` 은 그 분포,
    * `readmittedByFloor` 는 덱 최소 장수 안전장치가 보류분에서 되살린 건수다.
@@ -3094,6 +3108,10 @@ export async function buildQuietPickResponse(options: {
           companyCensus.rows += g.rows.length;
           if (g.score !== null) companyCensus.scored += 1;
         }
+        // FIX-01 E-1 — 이 종목의 업종명이 표시명 표에 없었나(영문만 센다).
+        for (const name of untranslatedIndustryNames([classification.industry])) {
+          untranslatedIndustries.add(name);
+        }
         return groups.length > 0 ? { companyRead: groups } : {};
       })()),
       /**
@@ -3338,6 +3356,8 @@ export async function buildQuietPickResponse(options: {
       disclosurePhrases: phraseCensus,
       // DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. 낮은 종류가 다음 작업 대상이다.
       disclosureFigures: figureCensus,
+      // FIX-01 E-1 — 표시명 표에 없어 `같은 업종` 으로 나간 영문 업종. 다음 표 확장 대상.
+      untranslatedIndustries: [...untranslatedIndustries].sort(),
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
       // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.

@@ -27,6 +27,28 @@ const NON_HANGUL_BATCHIM: Record<string, boolean> = {
   AI: false, // 에이아이
 };
 
+/**
+ * 알파벳 **한 글자를 한국어로 읽었을 때** 받침으로 끝나는 것들 (FIX-01).
+ *
+ * 왜 필요한가: `PBR` 은 「피비알」이라 `PBR이` 가 맞는데, 마지막 글자가 한글이 아니라는
+ * 이유로 전부 받침 없음(→ `PBR가`)이 됐다. 실측 화면에 **`PBR가 최근 5년 중…`** 이
+ * 나갔다. 약어를 예외맵에 하나씩 등록하는 방식으로는 `PER·PBR` 같은 조합을 못 잡는다 —
+ * **마지막 글자의 읽는 소리**로 판정해야 일반적으로 맞다.
+ *
+ * | 글자 | 읽기 | 받침 |
+ * |---|---|---|
+ * | F | 에프 | ㅍ |
+ * | L | 엘 | ㄹ |
+ * | M | 엠 | ㅁ |
+ * | N | 엔 | ㄴ |
+ * | R | 알 | ㄹ |
+ * | S | 에스 | ㅅ |
+ * | X | 엑스 | ㅅ |
+ *
+ * 나머지 알파벳은 모음으로 끝난다(비·씨·디·이·지·아이·제이·케이·오·피·큐·티·유·브이·와이·지).
+ */
+const LATIN_FINAL_WITH_BATCHIM = new Set(["F", "L", "M", "N", "R", "S", "X"]);
+
 /** 마지막 글자의 받침 유무. 한글 음절은 (code-0xAC00)%28, 비한글은 예외맵(없으면 모음끝=false). */
 export function hasBatchim(word: string): boolean {
   const w = word.trim();
@@ -36,7 +58,9 @@ export function hasBatchim(word: string): boolean {
   const code = ch.charCodeAt(0);
   // 한글 음절 영역
   if (code >= 0xac00 && code <= 0xd7a3) return (code - 0xac00) % 28 !== 0;
-  // 숫자/영문 등 비한글: 한국어 발음 끝소리는 대개 모음 → 받침 없음으로 본다.
+  // 영문: 마지막 글자를 한국어로 읽은 끝소리로 판정한다(`PBR` → 「알」 → 받침 있음).
+  if (/[A-Za-z]/.test(ch)) return LATIN_FINAL_WITH_BATCHIM.has(ch.toUpperCase());
+  // 그 밖의 비한글(숫자·기호): 끝소리를 단정할 수 없어 받침 없음으로 둔다.
   return false;
 }
 

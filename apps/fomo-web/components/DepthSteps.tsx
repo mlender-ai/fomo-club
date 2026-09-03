@@ -73,7 +73,24 @@ export function StepNext({ label, onClick }: { label: string; onClick: () => voi
   );
 }
 
-/** 5점 만점 점. **점만 두지 않는다** — 옆 문장이 없으면 이 컴포넌트를 그리지 않는다(§4-5). */
+/**
+ * 5점 만점 점.
+ *
+ * ## 옆 문장 없이 혼자 선다 (FIX-01 B-3)
+ *
+ * 종전 규약은 「점만 두지 않는다 — 옆 문장이 없으면 그리지 않는다」였다. 그 규약이 실측 화면에
+ * 같은 말을 두 번 쓰게 만들었다:
+ *
+ * ```
+ * PBR  2.79배
+ * 최근 5년 중 높은 쪽이에요          ← 줄 설명
+ * ●○○○○  최근 5년 중 높은 편이에요   ← 점 설명(거의 같은 말)
+ * ```
+ *
+ * **점은 그림이다.** 왼쪽에 몰리면 낮고 오른쪽으로 갈수록 높다는 것은 화면 하단 범례
+ * (`ScoreLegend`)가 한 번만 말한다. 줄이 이미 말한 것을 점 옆에 되풀이하지 않는다 —
+ * 그러면 점을 넣은 이유가 없어진다.
+ */
 export function ScoreDots({ score }: { score: number }) {
   return (
     <span className="font-mono text-[13px] tracking-[0.15em] text-ds-accent" data-testid="depth-score-dots" aria-label={`5점 중 ${score}점`}>
@@ -84,12 +101,26 @@ export function ScoreDots({ score }: { score: number }) {
 }
 
 /**
+ * 점의 방향을 말하는 **한 줄 범례** (FIX-01 B-3).
+ *
+ * 점마다 설명을 붙이는 대신 화면에 한 번만 둔다. 점이 하나도 없는 종목에서는 부르는 쪽이
+ * 그리지 않는다 — 설명할 그림이 없으면 범례도 없다.
+ */
+export function ScoreLegend() {
+  return (
+    <p className="mt-s4 text-ds-caption text-ds-text-3" data-testid="depth-score-legend">
+      ● 이 많을수록 좋은 쪽이에요
+    </p>
+  );
+}
+
+/**
  * 3걸음의 한 덩어리 — `돈은 잘 버나요` 처럼 **질문**이 제목이다.
  *
  * 라벨(`수익성`)이 아니라 질문이어야 답이 읽힌다. 줄마다 숫자와 **그 숫자를 읽는 문장**이
  * 같이 있다 — 문장 없는 줄은 애초에 만들어지지 않는다(`companyRead` 가 거른다).
  */
-export function CompanyGroupBlock({ group, onMethod }: { group: CompanyGroup; onMethod: () => void }) {
+export function CompanyGroupBlock({ group }: { group: CompanyGroup }) {
   return (
     <section className="mt-s6" data-testid="depth-company-group">
       <h3 className="text-[15px] font-medium text-ds-text-1">{group.title}</h3>
@@ -104,32 +135,80 @@ export function CompanyGroupBlock({ group, onMethod }: { group: CompanyGroup; on
             <p className="mt-[2px] break-keep text-ds-caption text-ds-text-2" data-testid="depth-comparison">
               {row.comparison}
             </p>
+            {/*
+              FIX-01 A-2 — 기간이 다른 둘째 사실은 **줄을 나눠** 쓴다. 한 줄에 붙이면
+              `작년보다 줄었어요 · 3년째 늘고 있어요` 가 되어 정반대 말이 한 줄에 선다.
+            */}
+            {row.trend && (
+              <p className="mt-[2px] break-keep text-ds-caption text-ds-text-3" data-testid="depth-trend">
+                {row.trend}
+              </p>
+            )}
           </div>
         </div>
       ))}
 
-      {group.score !== null && group.scoreText && (
+      {/*
+        FIX-01 B — 점은 **혼자 선다.** 옆 문장은 줄이 말하지 않은 사실이 있을 때만 오고
+        (적자처럼), 그런 사실이 없으면 서버가 `scoreText: null` 로 준다.
+      */}
+      {group.score !== null && (
         <div className="mt-s3 flex items-center gap-s3">
           <ScoreDots score={group.score} />
-          <p className="min-w-0 break-keep text-ds-caption text-ds-text-2">{group.scoreText}</p>
+          {group.scoreText && <p className="min-w-0 break-keep text-ds-caption text-ds-text-2">{group.scoreText}</p>}
         </div>
       )}
       {/* 점이 없어도 할 말이 있으면 한다 — 적자라서 못 잰 것은 데이터가 없는 것과 다르다. */}
       {group.score === null && group.scoreText && (
         <p className="mt-s3 break-keep text-ds-caption text-ds-text-2">{group.scoreText}</p>
       )}
-
-      {group.score !== null && (
-        <button
-          type="button"
-          onClick={onMethod}
-          className="mt-s2 text-ds-caption text-ds-text-3 underline"
-          data-testid="depth-method-toggle"
-        >
-          어떻게 계산했나요
-        </button>
-      )}
     </section>
+  );
+}
+
+/**
+ * 점수 계산 방법 — **화면 맨 아래 한 번, 접힌 채로** (FIX-01 PART D).
+ *
+ * 종전에는 덩어리마다 `어떻게 계산했나요` 링크가 붙고, 하나를 누르면 그 문장이 덩어리 사이에
+ * 끼어들었다. 실측 화면에는 링크가 **두 번** 나오고 그중 하나는 이미 펼쳐진 상태였다 —
+ * 계산 방법이 본문을 밀어내고 있었다.
+ *
+ * 사용자는 계산 방법을 먼저 궁금해하지 않는다. 그래서 **기본은 닫힘**이고, 한 걸음에
+ * 하나이며, 열면 세 덩어리 방법을 한자리에서 보여준다.
+ */
+export function MethodDisclosure({
+  groups,
+  open,
+  onToggle,
+}: {
+  groups: readonly CompanyGroup[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const withMethod = groups.filter((g) => g.method.trim().length > 0);
+  if (withMethod.length === 0) return null;
+  return (
+    <div className="mt-s5">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="text-ds-caption text-ds-text-3 underline"
+        data-testid="depth-method-toggle"
+      >
+        점수는 이렇게 매겼어요
+      </button>
+      {open && (
+        <div className="mt-s3" data-testid="depth-method">
+          {withMethod.map((g) => (
+            <div key={g.title} className="mt-s2">
+              <p className="text-ds-caption text-ds-text-2">{g.title}</p>
+              <p className="mt-[2px] break-keep text-ds-caption text-ds-text-3">{g.method}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

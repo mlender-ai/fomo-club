@@ -1133,8 +1133,13 @@ export interface QuietPickWhyNowEvent {
 export interface CompanyMetricRow {
   label: string;
   value: string;
-  /** 비교 문장. **이게 없으면 줄이 없다.** */
+  /** 비교 문장. **이게 없으면 줄이 없다.** 한 방향만 말한다(FIX-01 A). */
   comparison: string;
+  /**
+   * FIX-01 A-2 — 기간이 다른 둘째 사실(`다만 3년으로 보면 늘어왔어요`).
+   * **한 줄에 붙이지 않고 줄을 나눈다** — 붙이면 정반대 말이 한 줄에 선다.
+   */
+  trend?: string;
 }
 
 /** WO-RESET-05 §4-4 — 세 덩어리(돈·값·빚) 중 하나. 합친 점수는 없다. */
@@ -1144,9 +1149,14 @@ export interface CompanyGroup {
   rows: CompanyMetricRow[];
   /** 5점 만점. 잴 수 없으면 `null`. */
   score: number | null;
-  /** 점 옆 문장. `score` 가 있으면 반드시 있다. */
+  /**
+   * 점 옆 문장 — **줄이 말하지 않은 사실만**(FIX-01 B). 겹치면 서버가 `null` 로 준다.
+   * 점은 그림으로 혼자 서고, 방향은 화면 하단 범례가 한 번만 말한다.
+   */
   scoreText: string | null;
-  /** `어떻게 계산했나요` 가 그대로 쓴다. */
+  /** FIX-01 C-2 — 4걸음 요약에 쓰는 **주어가 있는** 한 문장. */
+  summaryText: string | null;
+  /** `점수는 이렇게 매겼어요` 가 모아서 쓴다. */
   method: string;
 }
 
