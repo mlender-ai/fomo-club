@@ -595,6 +595,30 @@ export interface QuietPickQualification {
   exposure?: { blocked: number; readmitted: number; byReason: Record<string, number> };
   /** 이번 빌드가 읽어온 팩트시트 수. 0 이면 3걸음·실적 줄이 통째로 빈다. */
   factSheets?: number;
+  /**
+   * CARDS-02 D-1·D-3 — **검출기별 퍼널.** 신호 형마다 각 단계에서 몇 개가 남았나.
+   *
+   * ## 왜 필요한가
+   *
+   * 종전 계수기는 단계별 **총합**만 줬다(`krWithSignal 256 → afterQuiet 60 → published 15`).
+   * 그러면 "역행 178건이 검출됐는데 덱에 0장" 을 **총합만 보고는 알 수 없다** — 어느 형이
+   * 어디서 사라졌는지 물어볼 창구가 없었다. 실제로 그것이 CARDS-02 의 첫 질문이었고,
+   * 답하려고 소스를 읽어 내려가야 했다.
+   *
+   * 단계 정의(위 총합 계수기와 같은 지점):
+   *  · `detected`   — 검출기가 만든 후보 (`dedupeSignalsByStock` **전**)
+   *  · `deduped`    — 종목당 한 신호로 줄인 뒤 (`baseStrength` 최대값 승리)
+   *  · `considered` — 조립 상한(`MAX_FRONT_ASSEMBLIES`) 안에 든 수
+   *  · `published`  — 덱에 실제로 나간 수
+   *  · `watching`   — 「지켜보는 중」 선반으로 간 수
+   *
+   * `detected` 는 큰데 `considered` 가 0 이면 **정렬·상한이 그 형을 밀어낸 것**이고,
+   * `considered` 는 있는데 `published` 가 0 이면 품질 게이트·덱 구성이 잘라낸 것이다.
+   * 두 원인은 조치가 다르므로 계수기가 갈라 줘야 한다.
+   */
+  detectorFunnel?: Record<string, { detected: number; deduped: number; considered: number; published: number; watching: number }>;
+  /** CARDS-02 완료조건 9 — 하루에 나간 **카드 종류 수**(픽 형 + 자금 흐름 + 거시). */
+  cardKinds?: { total: number; byKind: Record<string, number> };
 }
 
 /**
@@ -2371,14 +2395,26 @@ export async function buildQuietPickResponse(options: {
     };
   });
 
-  const allSignals = dedupeSignalsByStock([
+  /**
+   * CARDS-02 D-1·D-3 — **검출기별 퍼널.** 형마다 각 단계에서 몇 개가 남았나.
+   * 총합만 보면 "역행 178 검출 → 덱 0장" 을 알 수 없다(그게 이 WO 의 첫 질문이었다).
+   */
+  const detectorFunnel: Record<string, { detected: number; deduped: number; considered: number; published: number; watching: number }> = {};
+  const funnelOf = (kind: string) =>
+    (detectorFunnel[kind] ??= { detected: 0, deduped: 0, considered: 0, published: 0, watching: 0 });
+
+  const detectedSignals = [
     ...investorSignals,
     ...krSignals,
     ...usSignals,
     ...dartSignals,
     ...reversalSignals,
     ...priceSignals,
-  ]);
+  ];
+  for (const sig of detectedSignals) funnelOf(sig.kind).detected += 1;
+
+  const allSignals = dedupeSignalsByStock(detectedSignals);
+  for (const sig of allSignals) funnelOf(sig.kind).deduped += 1;
 
   // ── 아직 조용함(②) — 이제 '탈락'이 아니라 '태깅'이다(WO-P4 2단 구조).
   //    신호가 실재하는 후보는 버리지 않고 미달 사유를 달아 '지켜보는 중' 선반으로 보낸다.
@@ -2441,6 +2477,7 @@ export async function buildQuietPickResponse(options: {
     console.warn("[quiet-pick] front assembly capped", { total: ordered.length, considered: considered.length });
   }
   const quietCandidates = considered;
+  for (const { sig } of quietCandidates) funnelOf(sig.kind).considered += 1;
 
   // ── 품질 게이트(③) + 프론트 조립(생존 후보만 — 비용 큰 단계) ──
   const assembled = await Promise.all(
@@ -3126,6 +3163,20 @@ export async function buildQuietPickResponse(options: {
     .map(({ item }) => item)
     .slice(0, QUIET_WATCH_MAX);
 
+  // CARDS-02 D-3 — 마지막 두 단계. `published` 는 덱, `watching` 은 선반이다.
+  for (const pick of published) funnelOf(pick.signal.kind).published += 1;
+  for (const item of watchShelf) funnelOf(item.signal.kind).watching += 1;
+
+  /**
+   * 완료조건 9 — **하루에 나간 카드 종류 수.** 픽 형은 종류마다 다른 카드이고, 자금 흐름과
+   * 거시는 픽이 아닌 별도 카드다(덱에 섞여 나간다). 셋을 한자리에서 센다 —
+   * "종류가 세 개뿐" 인지 아닌지를 다음에는 **묻지 않고 읽을 수 있게.**
+   */
+  const cardKindCounts: Record<string, number> = {};
+  for (const pick of published) cardKindCounts[pick.signal.kind] = (cardKindCounts[pick.signal.kind] ?? 0) + 1;
+  if (flowCards.length > 0) cardKindCounts["sector_flow"] = flowCards.length;
+  if (macroCards.length > 0) cardKindCounts["macro"] = macroCards.length;
+
   // 회전율 계측(PHASE 5) — 발행 시점에 굳힌다. 나중에 재계산하면 그날의 이력이 이미 바뀐다.
   const rotation: QuietPickRotation = {
     compositionVersion: composed.version,
@@ -3186,6 +3237,9 @@ export async function buildQuietPickResponse(options: {
       afterQuality: picks.length,
       published: published.length,
       watching: watchShelf.length,
+      // CARDS-02 D-1·D-3 — 검출기별 퍼널과 카드 종류 수. 총합만으로는 답할 수 없던 질문들이다.
+      detectorFunnel,
+      cardKinds: { total: Object.keys(cardKindCounts).length, byKind: cardKindCounts },
       drops,
       // 같은 이름이 여러 번 실패할 수 있다(픽별 캔들 봉인 등) — 이름만 남기고 중복은 접는다.
       inputFailures: [...new Set(inputFailures)],

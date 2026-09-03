@@ -611,3 +611,59 @@ describe("formatShares — 만 단위 경계", () => {
     expect(formatShares(73.6)).toBe("74주");
   });
 });
+
+/**
+ * CARDS-02 D-1·D-3 — **검출기별 퍼널.**
+ *
+ * 종전 계수기는 단계별 총합만 줬다(`krWithSignal → afterQuiet → published`). 그래서
+ * "역행 178건이 검출됐는데 덱에 0장" 을 총합만 보고는 알 수 없었고, 답하려고 소스를 읽어
+ * 내려가야 했다. 이 계수기가 그 질문의 창구다.
+ */
+describe("buildQuietPickResponse — 검출기별 퍼널 계측", () => {
+  it("형마다 단계별 수를 남긴다", async () => {
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(baseScenario()) });
+    const funnel = res.qualification.detectorFunnel;
+    expect(funnel, "detectorFunnel 이 없다").toBeDefined();
+    // 시나리오가 만드는 형이 최소 하나는 잡혀야 한다.
+    const kinds = Object.keys(funnel!);
+    expect(kinds.length).toBeGreaterThan(0);
+    for (const kind of kinds) {
+      const f = funnel![kind]!;
+      for (const stage of ["detected", "deduped", "considered", "published", "watching"] as const) {
+        expect(typeof f[stage], `${kind}.${stage}`).toBe("number");
+        expect(f[stage], `${kind}.${stage} 가 음수`).toBeGreaterThanOrEqual(0);
+      }
+      /**
+       * 단계는 **줄어들기만** 한다. `deduped > detected` 면 종목당 한 신호 규칙이 깨진 것이고,
+       * `considered > deduped` 면 조립 상한 계산이 어긋난 것이다.
+       */
+      expect(f.deduped, `${kind}: deduped > detected`).toBeLessThanOrEqual(f.detected);
+      expect(f.considered, `${kind}: considered > deduped`).toBeLessThanOrEqual(f.deduped);
+      expect(f.published + f.watching, `${kind}: published+watching > considered`).toBeLessThanOrEqual(f.considered);
+    }
+  });
+
+  it("단계 합이 총합 계수기와 어긋나지 않는다", async () => {
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(baseScenario()) });
+    const q = res.qualification;
+    const funnel = q.detectorFunnel!;
+    const sum = (stage: "deduped" | "considered" | "published" | "watching") =>
+      Object.values(funnel).reduce((n, f) => n + f[stage], 0);
+    // 같은 지점을 세므로 총합과 같아야 한다 — 다르면 한쪽이 거짓말이다.
+    expect(sum("considered")).toBe(q.afterQuiet);
+    expect(sum("published")).toBe(q.published);
+    expect(sum("watching")).toBe(q.watching);
+  });
+
+  it("카드 종류 수를 센다 — 「종류가 세 개뿐」인지 묻지 않고 읽는다 (완료조건 9)", async () => {
+    const res = await buildQuietPickResponse({ date: TODAY, deps: depsFrom(baseScenario()) });
+    const kinds = res.qualification.cardKinds;
+    expect(kinds, "cardKinds 가 없다").toBeDefined();
+    expect(kinds!.total).toBe(Object.keys(kinds!.byKind).length);
+    // 픽 형은 발행된 픽에서 온다 — 합이 발행 수와 같아야 한다(자금흐름·거시는 별도 카드).
+    const pickKindSum = Object.entries(kinds!.byKind)
+      .filter(([k]) => k !== "sector_flow" && k !== "macro")
+      .reduce((n, [, v]) => n + v, 0);
+    expect(pickKindSum).toBe(res.picks.length);
+  });
+});
