@@ -133,6 +133,8 @@ import { assetForStock, ledgerKey, scoreBand, type LedgerAppendInput } from "./j
 import { readSignalStatsForCards } from "./signal-stats";
 import { readDisclosureCollection } from "./disclosure-store";
 import { readAllFactSheets, readAllFactSheetsStrict } from "./fundamentals/repository";
+/** 섹터 폴백이 `classification` 만 읽는다 — 타입 전용 임포트라 번들에 안 들어온다. */
+import type { FactSheet } from "@fomo/core/fundamentals/types";
 import { readKrCandleCacheMany } from "./kr-candle-cache";
 import type { DisclosureCollection } from "./disclosure-collect";
 import {
@@ -1012,14 +1014,41 @@ export function sectorFromIndustry(industry: string | undefined | null): string 
  */
 const NON_SECTOR_LABELS = new Set(["코인", "비트코인", "가상자산", "환율", "금리", "유가", "지수"]);
 
-function companyIdentity(front: StockFrontData, sig: SignalCandidate): string {
+/**
+ * 섹터 한 줄.
+ *
+ * ## 왜 대부분 비어 있었나 (DETAIL-03 PART C)
+ *
+ * 국내 섹터를 `sectorOf()` **하나로만** 찾았다. 그건 손으로 관리하는 사전이고
+ * **80종목**뿐인데 픽 유니버스는 **760종목**이다 — 그래서 프로덕션 15장 중 13장이 섹터 없이
+ * 나갔다(실측 2026-09-03). 신뢰도 게이트가 거른 것도, 표시 로직이 빠뜨린 것도 아니었다.
+ * **찾을 곳이 하나뿐이었다.**
+ *
+ * 팩트시트는 `classification.industry` 를 종목별로 들고 있고(네이버 산업분류 원문) 452종목을
+ * 덮는다 — **이미 읽어둔 데이터다.** 사전이 못 찾으면 거기서 받는다.
+ *
+ * 원문은 분류용 이름이라 화면에 그대로 쓰면 넘치거나 안 읽힌다(`반도체와반도체장비`).
+ * `sectorDisplayName` 이 표시명으로 옮기고, **표에 없으면 원문을 그대로 쓴다** —
+ * 모르면 지어내지 않는다(`sector-display.ts` 규약).
+ */
+export function companyIdentity(front: StockFrontData, sig: SignalCandidate, sheet?: FactSheet): string {
   // 테마 라벨은 섹터가 아니다 — 여기서 쓰지 않는다(front 는 다른 신호에 계속 쓰인다).
   void front;
   const krSector = sig.subject.country === "KR" ? sectorOf(sig.subject.canonical) : undefined;
   if (krSector && !NON_SECTOR_LABELS.has(krSector)) return krSector;
   const seedSector = sig.subject.symbol ? usDiscoverySeedForSymbol(sig.subject.symbol)?.sector?.trim() : undefined;
   if (seedSector && HANGUL.test(seedSector)) return seedSector.slice(0, 20);
-  return sectorFromIndustry(sig.industry) ?? "";
+  const fromIndustry = sectorFromIndustry(sig.industry);
+  if (fromIndustry) return fromIndustry;
+  /**
+   * 팩트시트 분류 — 사전 밖 종목의 유일한 실측 업종이다. `industry` 를 먼저 본다
+   * (`sector` 는 `경기관련소비재` 처럼 대분류라 업종으로 읽히지 않는다).
+   */
+  for (const raw of [sheet?.classification?.industry, sheet?.classification?.sector]) {
+    const label = sectorDisplayName(raw).trim();
+    if (label && !NON_SECTOR_LABELS.has(label) && label.length <= 20) return label;
+  }
+  return "";
 }
 
 function daysBetween(fromDate: string, today: string): number {
@@ -2754,7 +2783,7 @@ export async function buildQuietPickResponse(options: {
     // WO-SYNC F-2 — 문장으로 녹기 전의 실수치를 그대로 남긴다. 신호 정체성(kind·actorNoun·
     // scale·days)은 signal 이 이미 갖고 있으므로 뺀다.
     const { kind: _factKind, actorNoun: _factActor, scale: _factScale, days: _factDays, ...signalFacts } = facts;
-    const identity = companyIdentity(front, sig);
+    const identity = companyIdentity(front, sig, factSheetByStock.get(sig.subject.canonical));
     const dataQuality: QuietPickDataQuality = {
       candles: availableCandles,
       ...(sealedCandles !== liveCandles.length ? { sealedCandles } : {}),

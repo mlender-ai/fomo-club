@@ -1036,7 +1036,18 @@ export async function fetchDaily30(): Promise<Daily30Response> {
 export const warmDaily30 = () => fetchDaily30();
 
 // ── 조용한 돈 픽(WO-G1A/B) ────────────────────────────────────────────────
-export type QuietPickSignalKind = "insider_cluster" | "institution_streak" | "foreign_streak" | "multi_cluster";
+/**
+ * 신호 형 — **`@fomo/core` 것을 그대로 쓴다.**
+ *
+ * 종전에는 여기서 따로 선언했고, 그래서 WO-RESET-03 이 core 에 추가한
+ * `market_divergence`·`volume_awakening` 이 이 타입에 없었다. 서버는 두 형을 내려주는데
+ * 화면 타입이 몰라서 형을 구분할 수 없었고, 지표 신호가 「매수」 줄로 떨어져
+ * `시장 대비 3일 연속 · 3일 연속` 이 나갔다(DETAIL-03 §B).
+ *
+ * **베끼면 또 갈라진다.** 타입 전용 임포트·재수출이라 번들에는 들어오지 않는다.
+ */
+import type { QuietPickSignalKind } from "@fomo/core";
+export type { QuietPickSignalKind };
 export type QuietPickAnomalyKind =
   | "frequency"
   | "participants"
@@ -1328,6 +1339,16 @@ export interface QuietPick {
     streakWindowDays?: number;
     volumeVacuumRatio?: number;
     pctAboveYearLow?: number;
+    /**
+     * 시장 역행(D형)의 실수치. **서버는 이미 내려주는데 이 타입에 없어서 화면이 못 썼다** —
+     * 그래서 근거 줄이 `시장 대비 3일 연속 · 3일 연속` 으로 떨어졌다(DETAIL-03 §B).
+     */
+    indexChangePct?: number;
+    stockChangePct?: number;
+    indexLabel?: string;
+    /** 거래량 각성(E형)의 실수치. */
+    volumeMultiple?: number;
+    spikeMovePct?: number;
   };
   invalidation: { level: number | null; text: string };
   conviction: {
