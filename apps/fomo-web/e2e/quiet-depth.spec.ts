@@ -76,19 +76,27 @@ test("[완료 7·8·9·10] 모든 숫자 옆에 비교 문장이 있고, 세 덩
 
   // [완료 8] 세 덩어리 — 질문이 제목이다.
   const titles = await page.locator('[data-testid="depth-company-group"] h3').allInnerTexts();
+  // FIX-02 D-1 — 빈 덩어리도 **제목은 남는다.** 섹션 구성이 종목마다 달라지지 않는다.
   expect(titles).toEqual(["돈은 잘 버나요", "값은 어떤가요", "빚은 괜찮나요"]);
 
   // [완료 7] **숫자마다 비교 문장.** 값 줄 수와 비교 문장 수가 같아야 한다.
   const comparisons = await page.locator('[data-testid="depth-comparison"]').allInnerTexts();
-  // FIX-01 G — `영업이익률` 줄이 늘어 6줄이다(점수 재료를 화면에 다 보인다).
-  expect(comparisons.length).toBe(6);
+  // FIX-01 G — `영업이익률` 줄이 늘어 5줄(매출·영업이익·영업이익률·PER·PBR)이다.
+  // FIX-02 D-1 — `빚은 괜찮나요` 는 사유만 있고 줄이 없다.
+  expect(comparisons.length).toBe(5);
   for (const c of comparisons) expect(c.trim().length).toBeGreaterThan(0);
   // FIX-01 E-2 — 표시는 `평균`. `중간값` 은 통계 용어라 화면에서 뺐다.
-  expect(comparisons.some((c) => c.includes("업종 평균"))).toBe(true);
+  // FIX-02 B-4 — 그리고 **몇 곳과 견줬는지**가 붙는다(`다른 미디어 12곳 평균 …`).
+  expect(comparisons.some((c) => /다른 .+ \d+곳 평균/.test(c))).toBe(true);
   expect(comparisons.some((c) => c.includes("중간값"))).toBe(false);
 
-  // [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
-  await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(3);
+  /**
+   * [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
+   * FIX-02 D-1 — 픽스처의 `빚은 괜찮나요` 는 **비어 있고 사유를 달고 있다**(점이 없다).
+   */
+  await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(2);
+  await expect(page.locator('[data-testid="depth-group-missing"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid="depth-group-missing"]')).toContainText("비교할 회사가");
   await expect(page.locator('[data-testid="depth-score-legend"]')).toHaveCount(1);
 
   // [완료 10] 종합 점수 없음 — `종합`·`총점`·`X점` 한 덩이 점수가 화면에 없다.

@@ -197,6 +197,28 @@ describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", (
     expect(steps).toContain("{row.trend}");
   });
 
+  /**
+   * FIX-02 PART A·D — 「어떤 회사인가」 걸음의 두 가지.
+   *  · 회사 설명이 **맨 위**에 온다(그게 이 걸음의 제목이 약속한 것이다)
+   *  · 빈 섹션은 **사유를 달고** 나온다(말없이 사라지지 않는다)
+   */
+  it("[FIX-02 A-2] 회사 설명이 재무 덩어리보다 위에 있다", () => {
+    const body = depth.slice(depth.indexOf('{step === "company" && ('));
+    const company = body.indexOf('data-testid="depth-company"');
+    const groups = body.indexOf("<CompanyGroupBlock");
+    expect(company).toBeGreaterThan(-1);
+    expect(groups).toBeGreaterThan(-1);
+    expect(company, "회사 설명이 재무 아래로 내려갔다").toBeLessThan(groups);
+  });
+
+  it("[FIX-02 D-1] 빈 섹션의 사유를 화면이 그린다", () => {
+    const steps = readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8");
+    expect(steps).toContain('data-testid="depth-group-missing"');
+    expect(steps).toContain("{group.missingReason}");
+    // 사유 문안은 서버가 만든다 — 화면이 짓지 않는다.
+    expect(steps).not.toContain("못 가져왔어요");
+  });
+
   it("[FIX-01 C] 4걸음 요약은 주어가 있는 문장(`summaryText`)만 쓴다", () => {
     expect(depth).toContain("if (g.summaryText) out.push(g.summaryText)");
     expect(depth).not.toContain("if (g.scoreText) out.push(g.scoreText)");
