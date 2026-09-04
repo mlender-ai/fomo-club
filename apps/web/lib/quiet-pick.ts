@@ -53,7 +53,7 @@ import {
  * **배럴이 아니라 경로로** 가져온다 — 이 둘은 굽는 경로에서만 쓴다. 배럴에 넣으면
  * `@fomo/core` 를 임포트하는 조회 라우트가 전부 같이 무거워진다(성능 게이트).
  */
-import { buildSectorStats, sectorStatFor, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+import { buildSectorStats, sectorCandidates, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
 import {
   diffHoldings,
   isFreshDisclosure,
@@ -598,6 +598,13 @@ export interface QuietPickQualification {
    * 화면은 깨지지 않지만 이름이 있는 편이 낫고, **이 목록이 다음 표 확장 대상**이다.
    */
   untranslatedIndustries?: string[];
+  /** FIX-02 D-3 — 3걸음 섹션별 확보율. 제목별 `shown`(내용 있음) / `missing`(사유 표시). */
+  companySections?: Record<string, { shown: number; missing: number }>;
+  /**
+   * FIX-02 B-1 — 업종 비교가 붙은 줄 수와 **견준 곳 수**(자기 제외) 분포.
+   * `min` 이 5 미만이면 지표별 게이트가 새는 것이다.
+   */
+  companyPeers?: { rows: number; min?: number; max?: number; median?: number };
   /** WO-RESET-06 §E — 재노출 규칙 계측. `readmittedByFloor` 는 덱 최소 장수 안전장치가 되살린 수. */
   exposure?: { blocked: number; readmitted: number; byReason: Record<string, number>; readmittedByFloor?: number };
   /**
@@ -2624,6 +2631,18 @@ export async function buildQuietPickResponse(options: {
   const untranslatedIndustries = new Set<string>();
 
   /**
+   * FIX-02 D-3 — 섹션별 확보율. `shown` 은 줄·점이 있는 덩어리, `missing` 은 사유를 달고
+   * 나간 덩어리다. **어느 섹션이 자주 비는지가 다음 작업을 정한다.**
+   */
+  const sectionCensus: Record<string, { shown: number; missing: number }> = {};
+
+  /**
+   * FIX-02 B-1 — 업종 비교가 붙은 줄 수와, 그때 **몇 곳과 견줬나**(자기 제외).
+   * 실측 화면의 `업종 중간값 = 자기 값` 이 사라졌는지 보는 계측이다.
+   */
+  const peerCensus = { rows: 0, counts: [] as number[] };
+
+  /**
    * WO-RESET-06 §E · HOTFIX-DECK §C-3 — 재노출 규칙이 무엇을 막고 무엇을 통과시켰나.
    * `blocked` 는 보류된 건수, `readmitted` 는 재등장 사유로 통과한 건수, `byReason` 은 그 분포,
    * `readmittedByFloor` 는 덱 최소 장수 안전장치가 보류분에서 되살린 건수다.
@@ -3081,6 +3100,8 @@ export async function buildQuietPickResponse(options: {
         const sheet = factSheetByStock.get(sig.subject.canonical);
         if (!sheet) return {};
         const classification = { industry: sheet.classification?.industry ?? null, sector: sheet.classification?.sector ?? null };
+        // FIX-02 B-2 — 좁은 분류부터 상위 분류까지. 지표별 게이트는 `company-read` 가 건다.
+        const candidates = sectorCandidates(sectorStats, classification);
         const groups = companyRead({
           growth: {
             revenueYoy: sheet.growth?.revenue_yoy ?? null,
@@ -3099,14 +3120,37 @@ export async function buildQuietPickResponse(options: {
               : null,
           },
           balance: { debtToEquity: sheet.balance?.debt_to_equity ?? null },
-          sector: sectorStatFor(sectorStats, classification),
+          /**
+           * FIX-02 B-2 — 후보를 **좁은 분류 → 상위 분류** 순으로 넘긴다. 어느 것을 쓸지는
+           * 지표별 표본 수를 보고 `company-read` 가 고른다(자기 자신을 뺀 뒤 센다).
+           */
+          sectorCandidates: candidates,
         });
         // 커버리지 계측(보고할 것 1·2번) — 업종 비교가 붙은 종목 / 비교 문장이 붙은 지표.
         companyCensus.stocks += 1;
-        if (sectorStatFor(sectorStats, classification)) companyCensus.withSector += 1;
+        if (candidates.length > 0) companyCensus.withSector += 1;
+        /**
+         * FIX-02 PART D-3 — **섹션별 확보율.** 어느 섹션이 자주 비는지 알아야 다음 작업이
+         * 정해진다. `missing` 은 사유를 달고 나간 덩어리 수다(말없이 사라지지 않는다).
+         */
         for (const g of groups) {
           companyCensus.rows += g.rows.length;
           if (g.score !== null) companyCensus.scored += 1;
+          const box = sectionCensus[g.title] ?? (sectionCensus[g.title] = { shown: 0, missing: 0 });
+          if (g.missingReason) box.missing += 1;
+          else box.shown += 1;
+        }
+        /**
+         * FIX-02 B-1 — **업종 비교가 실제로 붙은 지표 수와 견준 곳 수.** 문장에서 되읽는다
+         * (`다른 은행 12곳 평균 …`): 굽는 쪽이 고른 결과가 곧 화면이라 이게 정직한 계측이다.
+         */
+        for (const g of groups) {
+          for (const r of g.rows) {
+            const hit = /다른 [^ ]+ (\d+)곳|같은 업종 다른 (\d+)곳/.exec(r.comparison);
+            if (!hit) continue;
+            peerCensus.rows += 1;
+            peerCensus.counts.push(Number(hit[1] ?? hit[2]));
+          }
         }
         // FIX-01 E-1 — 이 종목의 업종명이 표시명 표에 없었나(영문만 센다).
         for (const name of untranslatedIndustryNames([classification.industry])) {
@@ -3358,6 +3402,22 @@ export async function buildQuietPickResponse(options: {
       disclosureFigures: figureCensus,
       // FIX-01 E-1 — 표시명 표에 없어 `같은 업종` 으로 나간 영문 업종. 다음 표 확장 대상.
       untranslatedIndustries: [...untranslatedIndustries].sort(),
+      // FIX-02 D-3 — 섹션별 확보율(제목별 `shown`/`missing`).
+      companySections: sectionCensus,
+      /**
+       * FIX-02 B-1 — 업종 비교가 붙은 줄 수 · 견준 곳 수 분포.
+       * `min` 이 `SECTOR_MIN_MEMBERS` 미만이면 게이트가 새는 것이다.
+       */
+      companyPeers: {
+        rows: peerCensus.rows,
+        ...(peerCensus.counts.length > 0
+          ? {
+              min: Math.min(...peerCensus.counts),
+              max: Math.max(...peerCensus.counts),
+              median: [...peerCensus.counts].sort((a, b) => a - b)[Math.floor(peerCensus.counts.length / 2)]!,
+            }
+          : {}),
+      },
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
       // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.

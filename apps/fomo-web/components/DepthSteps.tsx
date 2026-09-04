@@ -125,6 +125,17 @@ export function CompanyGroupBlock({ group }: { group: CompanyGroup }) {
     <section className="mt-s6" data-testid="depth-company-group">
       <h3 className="text-[15px] font-medium text-ds-text-1">{group.title}</h3>
 
+      {/*
+        FIX-02 D-1 — **말없이 사라지지 않는다.** 줄도 점도 못 만든 덩어리는 제목 아래에
+        이유를 한 줄 쓴다. 종전에는 빈 덩어리를 서버가 빼서 종목마다 섹션 구성이 달라졌고
+        (PS일렉트로닉스 `돈·값` / Pinnacle `값·빚`) 사용자에게는 고장으로 보였다.
+      */}
+      {group.missingReason && (
+        <p className="mt-s3 break-keep text-ds-caption text-ds-text-3" data-testid="depth-group-missing">
+          {group.missingReason}
+        </p>
+      )}
+
       {group.rows.map((row) => (
         <div key={row.label} className="mt-s3 flex items-baseline justify-between gap-s3">
           <div className="min-w-0">

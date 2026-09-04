@@ -76,19 +76,27 @@ test("[완료 7·8·9·10] 모든 숫자 옆에 비교 문장이 있고, 세 덩
 
   // [완료 8] 세 덩어리 — 질문이 제목이다.
   const titles = await page.locator('[data-testid="depth-company-group"] h3').allInnerTexts();
+  // FIX-02 D-1 — 빈 덩어리도 **제목은 남는다.** 섹션 구성이 종목마다 달라지지 않는다.
   expect(titles).toEqual(["돈은 잘 버나요", "값은 어떤가요", "빚은 괜찮나요"]);
 
   // [완료 7] **숫자마다 비교 문장.** 값 줄 수와 비교 문장 수가 같아야 한다.
   const comparisons = await page.locator('[data-testid="depth-comparison"]').allInnerTexts();
-  // FIX-01 G — `영업이익률` 줄이 늘어 6줄이다(점수 재료를 화면에 다 보인다).
-  expect(comparisons.length).toBe(6);
+  // FIX-01 G — `영업이익률` 줄이 늘어 5줄(매출·영업이익·영업이익률·PER·PBR)이다.
+  // FIX-02 D-1 — `빚은 괜찮나요` 는 사유만 있고 줄이 없다.
+  expect(comparisons.length).toBe(5);
   for (const c of comparisons) expect(c.trim().length).toBeGreaterThan(0);
   // FIX-01 E-2 — 표시는 `평균`. `중간값` 은 통계 용어라 화면에서 뺐다.
-  expect(comparisons.some((c) => c.includes("업종 평균"))).toBe(true);
+  // FIX-02 B-4 — 그리고 **몇 곳과 견줬는지**가 붙는다(`다른 미디어 12곳 평균 …`).
+  expect(comparisons.some((c) => /다른 .+ \d+곳 평균/.test(c))).toBe(true);
   expect(comparisons.some((c) => c.includes("중간값"))).toBe(false);
 
-  // [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
-  await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(3);
+  /**
+   * [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
+   * FIX-02 D-1 — 픽스처의 `빚은 괜찮나요` 는 **비어 있고 사유를 달고 있다**(점이 없다).
+   */
+  await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(2);
+  await expect(page.locator('[data-testid="depth-group-missing"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid="depth-group-missing"]')).toContainText("비교할 회사가");
   await expect(page.locator('[data-testid="depth-score-legend"]')).toHaveCount(1);
 
   // [완료 10] 종합 점수 없음 — `종합`·`총점`·`X점` 한 덩이 점수가 화면에 없다.
@@ -151,22 +159,41 @@ test("[FIX-01 D] 계산 방법은 걸음에 하나, 기본은 접혀 있다", as
   await expect(method).toContainText("빚은 괜찮나요");
 });
 
-test("[FIX-01 C] 4걸음 요약에 주어 없는 문장이 없다", async ({ page }) => {
+/**
+ * FIX-03 PART B — 마지막 걸음이 **한 문장 요약 + 라벨-값 표 + 우리 기록**으로 바뀌었다.
+ * FIX-01 C 의 「주어 없는 문장 금지」는 표의 값에도 그대로 걸린다.
+ */
+test("[FIX-03 B] 마지막 걸음이 한 문장 요약 · 라벨-값 표 · 우리 기록이다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   for (let i = 0; i < 3; i += 1) await page.locator('[data-testid="depth-next"]').click();
-  const lines = (await page.locator('[data-testid="depth-summary"]').innerText())
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-  expect(lines.length).toBeGreaterThan(1);
-  /**
-   * 종전 마지막 걸음에는 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이 낮은지 없는 줄**이
-   * 앉아 있었다. 이 걸음에는 섹션 제목도 줄 라벨도 없어서 되찾을 방법이 없다.
-   */
-  for (const line of lines) {
+
+  // ① 한 문장 요약 — 나열이 아니다(줄바꿈으로 쪼개진 네 줄이 아니다).
+  const headline = (await page.locator('[data-testid="depth-summary"]').innerText()).trim();
+  expect(headline.split("\n").filter((l) => l.trim()).length).toBe(1);
+  expect(headline).toContain("임원 3명이 사고 있고");
+
+  // ② 라벨-값 표
+  const rows = page.locator('[data-testid="depth-decide-rows"] > div');
+  expect(await rows.count()).toBeGreaterThan(1);
+  const table = await page.locator('[data-testid="depth-decide-rows"]').innerText();
+  expect(table).toContain("공시");
+  expect(table).toContain("실적");
+
+  // ③ 우리 기록 — 부호를 그대로 쓴다(마이너스를 숨기지 않는다).
+  const record = await page.locator('[data-testid="depth-our-record"]').innerText();
+  expect(record).toContain("8월 24일");
+  expect(record).toMatch(/[+-]\d+\.\d%/);
+
+  // 주어 없는 값이 없다(FIX-01 C 를 이 자리에도 건다).
+  for (const line of table.split("\n").map((l) => l.trim()).filter(Boolean)) {
     if (!/(낮은|높은|가운데쯤|적어요|많아요|비슷해요)/.test(line)) continue;
     expect(line, `주어 없는 줄: "${line}"`).toMatch(/^(매출|영업이익|PER|PBR|값|빚|지금은)/);
   }
+
+  // 종전처럼 앞 걸음 문장을 그대로 늘어놓지 않는다.
+  const body = await page.locator('[data-testid="depth-step-decide"]').innerText();
+  expect(body).not.toContain("계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요");
+  expect(body).toContain("지금 담아두면");
 });
 
 /** 완료 확인 11 — 마지막 걸음은 즐겨찾기로 끝난다. */

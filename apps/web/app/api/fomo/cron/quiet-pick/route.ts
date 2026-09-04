@@ -123,13 +123,6 @@ export async function GET(request: Request) {
     const page1Streaks = quietPickPage1Streaks(wanted.map((d) => snapshots.get(dateId(d)) ?? null));
 
     /**
-     * WO-RESET-06 §A — 3일 규칙의 입력. **위에서 이미 읽은 스냅샷을 다시 쓴다** — 커넥션을
-     * 더 잡지 않는다(§12 의 교훈). 오늘자는 `wanted` 에 애초에 없다(자기 자신 때문에
-     * 제외되면 안 된다).
-     */
-    const exposureHistory = buildExposureHistory(wanted.map((d) => snapshots.get(dateId(d)) ?? null));
-
-    /**
      * WO-RESET-09 §B-3 — 거시 카드는 **우리가 최근 30일 안에 짚은 종목**과 연결될 때만 만든다.
      *
      * 위 스냅샷은 8일치라 모자란다. **한 쿼리로** 30일치를 더 읽는다 — 날짜마다 따로 읽으면
@@ -146,6 +139,24 @@ export async function GET(request: Request) {
         if (!recentPicks.has(pick.subject.canonical)) recentPicks.set(pick.subject.canonical, d);
       }
     }
+
+    /**
+     * WO-RESET-06 §A — 재노출 규칙과 노출 이력의 입력.
+     *
+     * ## 8일 → 30일 (FIX-03 PART A)
+     *
+     * 종전에는 위 `snapshots`(8일치)로 만들었다. 그래서 **「우리가 8월 26일에도 짚었어요」가
+     * 8일 안쪽만 기억했다** — 실측(2026-09-04)에서 종근당의 8월 26일 노출은 창 밖이라
+     * `exposure` 가 아예 없었고, 카드의 「다시 나왔어요」·처음 가격·상세 이력이 전부 꺼졌다.
+     * 그 표시들은 **구현돼 있었고 재료가 없었을 뿐이다.**
+     *
+     * 30일치(`recentSnaps`)는 거시 카드용으로 **이미 한 쿼리로 읽어둔 것**이라 커넥션을 더
+     * 잡지 않는다(§12 의 교훈). 오늘자는 두 목록 모두에 애초에 없다.
+     *
+     * **덱 반복 규칙은 그대로다** — 보류 판정은 `RECENT_EXPOSURE_DAYS`(2일) 안의 항목만
+     * 보므로 이력이 길어져도 오늘 덱 구성은 달라지지 않는다.
+     */
+    const exposureHistory = buildExposureHistory(recentDates.map((d) => recentSnaps.get(dateId(d)) ?? null));
 
     const response = await buildQuietPickResponse({ date, priorPicks, page1Streaks, exposureHistory, recentPicks });
 

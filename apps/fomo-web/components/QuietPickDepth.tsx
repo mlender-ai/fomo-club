@@ -4,6 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/lib/motion";
 import type { DailyOhlcv } from "@fomo/core";
 import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER } from "@fomo/core";
+/**
+ * FIX-03 — **경로로 직접** 가져온다. 배럴(`@fomo/core`)에 넣으면 `@fomo/core` 를 값으로
+ * 임포트하는 조회 라우트들의 전이 모듈이 함께 늘어난다(성능 게이트가 그것 때문에 배럴에서
+ * `company-read`·`sector-stats` 를 뺀 이력이 있다 — `keyword-cards/index.ts` 머리말).
+ */
+import { decideStep } from "@fomo/core/keyword-cards/decide-step";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
 import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontResponse } from "@/lib/fomoApi";
 import { companyBlurb, depthEvidenceRows } from "@/lib/depthSections";
@@ -267,19 +273,28 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const index = Math.max(0, steps.indexOf(stepId));
   const step = steps[index] ?? "signal";
 
+  /**
+   * FIX-03 C-2 — **걸음이 바뀌면 스크롤을 맨 위로.**
+   *
+   * 종전에는 `goNext`·`goPrev` 가 각자 `scrollTo` 를 불렀다. 동작은 했지만 초기화 지점이
+   * 흩어져 있어서 **새 진입 경로가 생기면 조용히 빠진다**(스와이프·딥링크·픽 교체).
+   * `stepId` 와 `stock` 을 보고 한 곳에서 처리한다 — 렌더 뒤에 걸어야 새 걸음 높이로 잡힌다.
+   */
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [stepId, stock]);
+
   const goNext = () => {
     if (index >= steps.length - 1) return;
     haptic();
     setMethodOpen(false);
     setStepId(steps[index + 1]!);
-    scrollRef.current?.scrollTo({ top: 0 });
   };
   const goPrev = () => {
     if (index <= 0) return;
     haptic();
     setMethodOpen(false);
     setStepId(steps[index - 1]!);
-    scrollRef.current?.scrollTo({ top: 0 });
   };
   const toggleMethod = () => setMethodOpen((v) => !v);
 
@@ -329,19 +344,36 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * 지어내지 않는다. 각 줄은 앞 걸음이 실제로 보여준 것에서만 온다 —
    * 그 걸음을 건너뛰었으면 그 줄도 없다.
    */
-  const summaryLines = useMemo(() => {
-    const out: string[] = [hook.replace(/\n/g, " ")];
-    const disclosureCount = (pick.whyNow ?? []).filter((e) => e.url).length;
-    if (disclosureCount > 0) out.push(`공시가 ${disclosureCount}건 있었어요`);
-    else if (pick.whyNowQuietNote) out.push(pick.whyNowQuietNote);
-    /**
-     * FIX-01 C-2 — 요약은 **주어가 있는 문장**만 쓴다(`summaryText`). 종전에는 점 옆
-     * 문장(`scoreText`)을 그대로 가져와 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이
-     * 낮은지 없는 줄**이 마지막 걸음에 앉았다 — 그 걸음에는 섹션 제목도 줄 라벨도 없다.
-     */
-    for (const g of companyGroups) if (g.summaryText) out.push(g.summaryText);
-    return out.slice(0, 4);
-  }, [hook, pick.whyNow, pick.whyNowQuietNote, companyGroups]);
+  /**
+   * 4걸음 — **요약이 아니라 결정을 돕는 자리**다(FIX-03 PART B).
+   *
+   * 종전에는 앞 걸음 문장을 그대로 네 줄로 늘어놓았다. 새로 알게 되는 것이 없어 누를 이유가
+   * 없었다. 지금은 한 문장 요약 + 라벨-값 표 + **우리가 전에 짚은 기록**이다.
+   *
+   * 문안은 `decideStep`(fomo-core)이 만든다 — 화면이 문장을 조립하지 않는다.
+   */
+  const decide = useMemo(
+    () =>
+      decideStep({
+        signal: {
+          kind: pick.signal.kind,
+          scale: pick.signal.scale ?? null,
+          days: pick.signal.days ?? null,
+          actors: pick.signal.actors ?? null,
+        },
+        /**
+         * 공시 건수는 「왜 지금 사는가」가 **실제로 보여준 것**만 센다(`url` 이 있는 항목).
+         * 수집 자체를 안 한 종목은 `whyNow` 가 없으므로 이 줄을 만들지 않는다.
+         */
+        ...(pick.whyNow
+          ? { disclosures: { count: pick.whyNow.filter((e) => e.url).length, windowDays: 90 } }
+          : {}),
+        company: companyGroups.map((g) => ({ title: g.title, summaryText: g.summaryText ?? null })),
+        ...(pick.exposure ? { exposure: pick.exposure } : {}),
+        currentPrice: pick.price.current ?? null,
+      }),
+    [pick.signal, pick.whyNow, companyGroups, pick.exposure, pick.price.current]
+  );
 
   /**
    * 즐겨찾기 — **담는 것까지만**이다(WO 하지 말 것: 목록 화면 만들지 않는다).
@@ -743,16 +775,34 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           {/* ── 4걸음 — 계속 지켜볼까요 (§5) ── */}
           {step === "decide" && (
             <>
-              <div className="mt-s6" data-testid="depth-summary">
-                {summaryLines.map((line) => (
-                  <p key={line} className="break-keep text-ds-body text-ds-text-1">
-                    {line}
-                  </p>
-                ))}
-              </div>
-              <p className="mt-s5 break-keep text-ds-body text-ds-text-2">
-                계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요
+              {/* ① 한 문장 요약 — 앞 걸음의 결론을 묶은 것(§B-4). 나열하지 않는다. */}
+              <p className="mt-s6 break-keep text-ds-display-sm text-ds-text-1" data-testid="depth-summary">
+                {decide.headline}
               </p>
+
+              {/* ② 라벨-값 표 — 훑어보는 자리다(§B-2). 문장 나열이 아니다. */}
+              {decide.rows.length > 0 && (
+                <div className="mt-s5" data-testid="depth-decide-rows">
+                  {decide.rows.map((row) => (
+                    <div key={row.label} className="mt-s3 flex items-baseline gap-s3">
+                      <p className="w-[56px] shrink-0 text-ds-label text-ds-text-3">{row.label}</p>
+                      <p className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">{row.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/*
+                ③ 우리 기록 — **이게 이 앱을 믿을 유일한 근거다**(§B-5).
+                플러스든 마이너스든 그대로 쓴다. 처음 짚는 종목이면 서버가 `null` 을 준다.
+              */}
+              {decide.ourRecord && (
+                <p className="mt-s5 break-keep text-ds-body text-ds-text-2" data-testid="depth-our-record">
+                  {decide.ourRecord}
+                </p>
+              )}
+
+              <p className="mt-s5 break-keep text-ds-body text-ds-text-2">{decide.watchNote}</p>
               {watched && (
                 <div className="mt-s6" data-testid="depth-watch-done">
                   <p className="text-ds-display-sm text-ds-text-1">담았어요</p>

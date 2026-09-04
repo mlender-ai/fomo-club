@@ -166,21 +166,27 @@ const PICK = {
     {
       title: "값은 어떤가요",
       rows: [
-        { label: "PER", value: "12.25배", comparison: "미디어 업종 평균 18.00배보다 낮아요" },
-        { label: "PBR", value: "0.88배", comparison: "미디어 업종 평균 1.40배보다 낮아요" },
+        { label: "PER", value: "12.25배", comparison: "다른 미디어 12곳 평균 18.00배보다 낮아요" },
+        { label: "PBR", value: "0.88배", comparison: "다른 미디어 12곳 평균 1.40배보다 낮아요" },
       ],
       score: 4,
       scoreText: null,
-      summaryText: "PER·PBR이 미디어 업종 안에서 낮은 편이에요",
-      method: "같은 업종(미디어) 12종목의 가운데 값과 견줘 5점으로 옮겼어요.",
+      summaryText: "PER·PBR이 다른 미디어 12곳 가운데 낮은 편이에요",
+      method: "같은 업종(미디어) 다른 12곳의 가운데 값과 견줘 5점으로 옮겼어요. 자기 자신은 빼고 셌어요.",
     },
+    /**
+     * FIX-02 D-1 — **빈 섹션을 일부러 하나 둔다.** 종전에는 서버가 이 덩어리를 빼서
+     * 종목마다 섹션 구성이 달라졌다(PS일렉트로닉스 `돈·값` / Pinnacle `값·빚`).
+     * 이제는 제목과 함께 **왜 없는지**가 화면에 남는다 — 그 모양을 이 화면에서 확인한다.
+     */
     {
       title: "빚은 괜찮나요",
-      rows: [{ label: "부채비율", value: "42.0%", comparison: "미디어 업종 평균 80.0%보다 낮아요" }],
-      score: 5,
+      rows: [],
+      score: null,
       scoreText: null,
-      summaryText: "빚은 같은 업종보다 적어요",
-      method: "같은 업종(미디어) 12종목의 부채비율 가운데 값과 견줬어요.",
+      summaryText: null,
+      method: "업종 비교 대상이 모자라 점을 내지 않았어요.",
+      missingReason: "같은 업종에 비교할 회사가 5곳이 안 돼요",
     },
   ],
   qualifiedAt: "2026-08-19",

@@ -197,9 +197,68 @@ describe("위계 — 박스 하나, accent 하나 (DS-03 완료 기준 3·4)", (
     expect(steps).toContain("{row.trend}");
   });
 
-  it("[FIX-01 C] 4걸음 요약은 주어가 있는 문장(`summaryText`)만 쓴다", () => {
-    expect(depth).toContain("if (g.summaryText) out.push(g.summaryText)");
-    expect(depth).not.toContain("if (g.scoreText) out.push(g.scoreText)");
+  /**
+   * FIX-02 PART A·D — 「어떤 회사인가」 걸음의 두 가지.
+   *  · 회사 설명이 **맨 위**에 온다(그게 이 걸음의 제목이 약속한 것이다)
+   *  · 빈 섹션은 **사유를 달고** 나온다(말없이 사라지지 않는다)
+   */
+  it("[FIX-02 A-2] 회사 설명이 재무 덩어리보다 위에 있다", () => {
+    const body = depth.slice(depth.indexOf('{step === "company" && ('));
+    const company = body.indexOf('data-testid="depth-company"');
+    const groups = body.indexOf("<CompanyGroupBlock");
+    expect(company).toBeGreaterThan(-1);
+    expect(groups).toBeGreaterThan(-1);
+    expect(company, "회사 설명이 재무 아래로 내려갔다").toBeLessThan(groups);
+  });
+
+  it("[FIX-02 D-1] 빈 섹션의 사유를 화면이 그린다", () => {
+    const steps = readFileSync(new URL("../components/DepthSteps.tsx", import.meta.url), "utf8");
+    expect(steps).toContain('data-testid="depth-group-missing"');
+    expect(steps).toContain("{group.missingReason}");
+    // 사유 문안은 서버가 만든다 — 화면이 짓지 않는다.
+    expect(steps).not.toContain("못 가져왔어요");
+  });
+
+  /**
+   * FIX-01 C 는 요약이 `summaryText`(주어 있는 문장)만 쓰게 했고, FIX-03 B 가 그 요약을
+   * **`decideStep` 이 만드는 한 문장 + 라벨-값 표**로 바꿨다. 두 규칙이 같이 산다:
+   * 표의 값이 `summaryText` 이고, 그 문장은 여전히 주어를 갖는다.
+   */
+  it("[FIX-01 C · FIX-03 B] 마지막 걸음 문안을 화면이 짓지 않는다", () => {
+    expect(depth).toContain("decideStep({");
+    expect(depth).toContain("summaryText: g.summaryText ?? null");
+    // 종전처럼 화면이 줄을 모아 나열하지 않는다.
+    expect(depth).not.toContain("out.push(g.scoreText)");
+    expect(depth).not.toContain("const summaryLines");
+    // 문안은 fomo-core 가 만든다.
+    const core = readFileSync(
+      new URL("../../../packages/fomo-core/src/keyword-cards/decide-step.ts", import.meta.url), "utf8"
+    );
+    expect(core).toContain("export function decideStep");
+    expect(core).toContain("ourRecord");
+  });
+
+  it("[FIX-03 B] 마지막 걸음이 한 문장 요약·라벨-값 표·우리 기록을 그린다", () => {
+    expect(depth).toContain('data-testid="depth-summary"');
+    expect(depth).toContain('data-testid="depth-decide-rows"');
+    expect(depth).toContain('data-testid="depth-our-record"');
+    expect(depth).toContain("{decide.headline}");
+    expect(depth).toContain("{decide.watchNote}");
+  });
+
+  it("[FIX-03 C] 스크롤 초기화가 한 곳에 있다 — 핸들러마다 흩어놓지 않는다", () => {
+    const body = depth.slice(depth.indexOf("export function QuietPickDepth"));
+    expect(body).toContain("}, [stepId, stock]);");
+    // 걸음 이동 핸들러는 스크롤을 직접 만지지 않는다.
+    const goNext = body.slice(body.indexOf("const goNext"), body.indexOf("const goPrev"));
+    expect(goNext).not.toContain("scrollTo");
+  });
+
+  it("[FIX-03 C] 종목 상세를 열 때 먼저 열린 상세를 내린다 — 오버레이가 겹치지 않는다", () => {
+    const deck = readFileSync(new URL("../components/QuietPickDeck.tsx", import.meta.url), "utf8");
+    const resolver = deck.slice(deck.indexOf("const resolveStockDetail"), deck.indexOf("/** 카드 CTA"));
+    expect(resolver).toContain("setSelectedFlow(null)");
+    expect(resolver).toContain("setSelectedMacro(null)");
   });
 
   it("상세는 데스크톱에서 퍼지지 않는다 — 480px 중앙 정렬 (DS-06 §6-1)", () => {

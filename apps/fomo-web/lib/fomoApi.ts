@@ -1158,6 +1158,11 @@ export interface CompanyGroup {
   summaryText: string | null;
   /** `점수는 이렇게 매겼어요` 가 모아서 쓴다. */
   method: string;
+  /**
+   * FIX-02 D-1 — 줄도 점도 못 만든 이유(`실적 자료를 아직 못 가져왔어요`).
+   * 있으면 화면이 제목 아래 한 줄로 쓴다. **섹션을 말없이 빼지 않는다.**
+   */
+  missingReason?: string;
 }
 
 /**
