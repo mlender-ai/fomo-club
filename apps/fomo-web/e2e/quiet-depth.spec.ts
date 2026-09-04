@@ -159,22 +159,41 @@ test("[FIX-01 D] 계산 방법은 걸음에 하나, 기본은 접혀 있다", as
   await expect(method).toContainText("빚은 괜찮나요");
 });
 
-test("[FIX-01 C] 4걸음 요약에 주어 없는 문장이 없다", async ({ page }) => {
+/**
+ * FIX-03 PART B — 마지막 걸음이 **한 문장 요약 + 라벨-값 표 + 우리 기록**으로 바뀌었다.
+ * FIX-01 C 의 「주어 없는 문장 금지」는 표의 값에도 그대로 걸린다.
+ */
+test("[FIX-03 B] 마지막 걸음이 한 문장 요약 · 라벨-값 표 · 우리 기록이다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   for (let i = 0; i < 3; i += 1) await page.locator('[data-testid="depth-next"]').click();
-  const lines = (await page.locator('[data-testid="depth-summary"]').innerText())
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-  expect(lines.length).toBeGreaterThan(1);
-  /**
-   * 종전 마지막 걸음에는 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이 낮은지 없는 줄**이
-   * 앉아 있었다. 이 걸음에는 섹션 제목도 줄 라벨도 없어서 되찾을 방법이 없다.
-   */
-  for (const line of lines) {
+
+  // ① 한 문장 요약 — 나열이 아니다(줄바꿈으로 쪼개진 네 줄이 아니다).
+  const headline = (await page.locator('[data-testid="depth-summary"]').innerText()).trim();
+  expect(headline.split("\n").filter((l) => l.trim()).length).toBe(1);
+  expect(headline).toContain("임원 3명이 사고 있고");
+
+  // ② 라벨-값 표
+  const rows = page.locator('[data-testid="depth-decide-rows"] > div');
+  expect(await rows.count()).toBeGreaterThan(1);
+  const table = await page.locator('[data-testid="depth-decide-rows"]').innerText();
+  expect(table).toContain("공시");
+  expect(table).toContain("실적");
+
+  // ③ 우리 기록 — 부호를 그대로 쓴다(마이너스를 숨기지 않는다).
+  const record = await page.locator('[data-testid="depth-our-record"]').innerText();
+  expect(record).toContain("8월 24일");
+  expect(record).toMatch(/[+-]\d+\.\d%/);
+
+  // 주어 없는 값이 없다(FIX-01 C 를 이 자리에도 건다).
+  for (const line of table.split("\n").map((l) => l.trim()).filter(Boolean)) {
     if (!/(낮은|높은|가운데쯤|적어요|많아요|비슷해요)/.test(line)) continue;
     expect(line, `주어 없는 줄: "${line}"`).toMatch(/^(매출|영업이익|PER|PBR|값|빚|지금은)/);
   }
+
+  // 종전처럼 앞 걸음 문장을 그대로 늘어놓지 않는다.
+  const body = await page.locator('[data-testid="depth-step-decide"]').innerText();
+  expect(body).not.toContain("계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요");
+  expect(body).toContain("지금 담아두면");
 });
 
 /** 완료 확인 11 — 마지막 걸음은 즐겨찾기로 끝난다. */

@@ -390,6 +390,20 @@ export function QuietPickDeck() {
     if (!target) return undefined;
     return () => {
       reveal(target.subject.canonical);
+      /**
+       * FIX-03 PART C — **먼저 열려 있던 상세를 내린다.**
+       *
+       * 종전에는 `selected` 만 세웠다. 그러면 거시·흐름 상세가 **그대로 마운트된 채**
+       * 종목 상세가 위에 얹혀 오버레이가 둘이 된다. 둘 다 하단 바를 `fixed` 로 깔고,
+       * 상세는 닫기 애니메이션용 `transform` 을 갖는다 — **변형된 조상 아래의 `fixed` 는
+       * 화면이 아니라 그 조상을 기준으로 잡히므로**, 아래 상세의 버튼이 엉뚱한 자리에
+       * (실측 증상: 화면 위쪽에 잘린 채로) 그려진다.
+       *
+       * 이동 깊이는 그대로 2단계다(거시·흐름 상세 → 종목 상세). 닫으면 종전과 같이
+       * 다음 카드로 간다 — 그 동작은 건드리지 않았다.
+       */
+      setSelectedFlow(null);
+      setSelectedMacro(null);
       setSelected(target);
     };
   };

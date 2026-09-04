@@ -13,6 +13,8 @@ import { RatioBar } from "@/components/RatioBar";
 import { CardShell, CardCta } from "@/components/CardShell";
 import { WeightGauge } from "@/components/WeightGauge";
 import { VolumeBars } from "@/components/VolumeBars";
+/** FIX-03 A-3 — 경로로 직접(배럴에 넣으면 조회 라우트 전이 모듈이 늘어난다). */
+import { reexposureHook } from "@fomo/core/keyword-cards/reexposure";
 
 /**
  * 메인 카드 — **정본은 `docs/wo/WO-HOOK-01-main-card-hook.md`** 다. DS-01 을 대체한다.
@@ -209,7 +211,25 @@ export function QuietPickCard({
    * 같은 말을 다시 들으려고 앱을 열지는 않는다. 재등장 사유가 곧 새로 생긴 일이다.
    */
   const reentryText = pick.signal.reentry?.text?.trim();
-  const hook = returning && reentryText ? `이번엔 ${reentryText}` : (cardType?.hook ?? pickHook(pick));
+  /**
+   * FIX-03 A-3 — **`reentry` 는 어제 덱에 있던 종목만 갖는다.**
+   *
+   * `detectReentry` 의 재료는 어제 발행한 픽이다. 재노출은 보통 며칠 건너 일어나서
+   * (실측: 8월 29일 → 9월 3일) 어제 덱에 없던 종목은 `reentry` 가 없다. 그래서 실측
+   * 재노출 5장 **전부** 이 장치가 꺼진 채 종전 훅이 나갔다.
+   *
+   * 노출 이력은 며칠 전이든 지난번 사유를 들고 있으므로, 그것과 이번 신호의 **종류가
+   * 바뀐 경우에만** 「이번엔 …」을 만든다(`reexposureHook`). 같은 종류면 `null` —
+   * 없는 신규성을 지어내지 않는다.
+   */
+  const reexposureText = reexposureHook({
+    previousReason: pick.exposure?.recent?.[0]?.reason ?? null,
+    signalKind: pick.signal.kind,
+    actors: pick.signal.actors ?? null,
+  });
+  const hook = returning
+    ? (reentryText ? `이번엔 ${reentryText}` : (reexposureText ?? cardType?.hook ?? pickHook(pick)))
+    : (cardType?.hook ?? pickHook(pick));
   const support = cardType?.support ?? [];
   // 껍데기 0 은 그리지 않는다(WO-RESET-01 B-1) — 구 페이로드가 하루 남는다.
   const changePct = displayChangePct(pick.price.changePct);
