@@ -137,12 +137,25 @@ describe("그림·문장 규칙 (완료 확인 3·7)", () => {
 });
 
 describe("집계 규칙", () => {
-  it("분류를 못 찾은 종목은 「기타」로 묶지 않고 센다 (§E-3)", () => {
+  /**
+   * 「기타」에 대한 규칙이 **두 개**가 됐다(LAUNCH-P1 §D 실측).
+   *
+   * ① 우리가 기타 바구니를 **만들지 않는다**(원래 규칙 §E-3).
+   * ② 벤더가 보낸 `기타` 를 **업종으로 쓰지 않는다** — 실측에서 79개 업종 중 `기타` 가
+   *    389종목으로 가장 컸다. 그대로 두면 어느 날 「기타에서 돈이 빠지고」 카드가 나온다.
+   *
+   * 그래서 `"기타"` 문자열은 이제 코어에 **있어야 한다**(자리표 목록으로). 없어야 할 것은
+   * 「모르는 종목에 기타를 붙이는 코드」다 — 할당을 본다.
+   */
+  it("모르는 종목은 묶지 않고 세고, 벤더의 「기타」도 업종으로 쓰지 않는다 (§E-3 · LAUNCH-P1 §D)", () => {
     const core = readFileSync(
       new URL("../../../../packages/fomo-core/src/keyword-cards/sector-flow.ts", import.meta.url), "utf8"
     );
     expect(core).toContain("unclassified += 1; continue;");
-    expect(core).not.toContain('"기타"');
+    expect(core).toContain('PLACEHOLDER_SECTORS: readonly string[] = ["기타"');
+    expect(core).toContain("isPlaceholderSector(sector)");
+    // 모르는 종목에 자리표를 **붙이는** 코드는 없다.
+    expect(core).not.toMatch(/sector\s*=\s*"기타"|\?\?\s*"기타"/);
   });
 
   it("임계가 잠정값임을 코드에 밝힌다 — 실측으로 확정할 자리다 (§D-2)", () => {

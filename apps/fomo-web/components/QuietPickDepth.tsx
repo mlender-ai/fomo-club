@@ -1010,13 +1010,23 @@ export function QuietPickDepth({
               )}
 
               {/*
-                ③ 우리 기록 — **이게 이 앱을 믿을 유일한 근거다**(§B-5).
-                플러스든 마이너스든 그대로 쓴다. 처음 짚는 종목이면 서버가 `null` 을 준다.
+                ③ 우리 기록 — **이게 이 앱을 믿을 유일한 근거다**(§B-5 · LAUNCH-P1 §C-2).
+
+                플러스든 마이너스든 **그대로** 쓴다:
+                  · 위로 문구를 붙이지 않는다
+                  · **색을 바꾸지 않는다** — 마이너스를 빨갛게 칠하면 그건 판정이고,
+                    accent 는 "지금 무슨 일이 벌어지는가" 만 가리킨다(DS-05 §3)
+                  · `아쉽게도` · `하지만` 같은 완충어를 넣지 않는다
+
+                처음 짚는 종목이면 서버가 `null` 을 준다 — 없는 기록을 그리지 않는다.
               */}
               {decide.ourRecord && (
-                <p className="mt-s5 break-keep text-ds-body text-ds-text-2" data-testid="depth-our-record">
-                  {decide.ourRecord}
-                </p>
+                <div className="mt-s5" data-testid="depth-our-record">
+                  <p className="break-keep text-ds-label text-ds-text-3">{decide.ourRecord.since}</p>
+                  <p className="mt-s1 font-mono text-ds-display-sm text-ds-text-1 tabular-nums">
+                    {decide.ourRecord.changeText}
+                  </p>
+                </div>
               )}
 
               <p className="mt-s5 break-keep text-ds-body text-ds-text-2">{decide.watchNote}</p>

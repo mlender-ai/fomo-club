@@ -67,6 +67,25 @@ export const FLOW_MIN_STOCKS = 5;
 export const FLOW_DIRECTION_RATIO = 0.6;
 
 /**
+ * 벤더가 「분류 못 함」을 담아 보내는 이름들 — **업종이 아니다**(LAUNCH-P1 §D 실측).
+ *
+ * 우리가 「기타」 바구니를 만들지 않는다는 규칙은 지키고 있었는데(§E-3), **거래소 벤더가
+ * 이미 `기타` 라는 업종을 보내고 있었다.** 2026-09-08 실측: 79개 업종 중 `기타` 가
+ * **389종목** 으로 가장 크다. 얇은 업종 기준을 가볍게 넘으므로 어느 날 카드가
+ * 「기타에서 돈이 빠지고」 라고 말할 수 있었다 — 아무 뜻도 없는 카드다.
+ *
+ * `기타금융` · `기타제조` 는 **실제 업종**이라 여기 넣지 않는다(표시명도 따로 있다).
+ * 정확히 이 이름들만 미분류로 세고 버린다.
+ */
+export const PLACEHOLDER_SECTORS: readonly string[] = ["기타", "기타업종", "미분류", "분류없음"];
+
+/** 그 이름이 「분류 못 함」 자리표인가. 앞뒤 공백만 털고 정확히 비교한다. */
+export function isPlaceholderSector(sector: string | null | undefined): boolean {
+  const name = (sector ?? "").trim();
+  return name.length === 0 || PLACEHOLDER_SECTORS.includes(name);
+}
+
+/**
  * 창별 집계. `rows` 는 **창 안의 날짜만** 들어 있어야 한다(자르는 것은 부르는 쪽 몫).
  *
  * 업종을 못 찾은 종목은 **버리고 센다**(§E-3) — 분류가 틀리면 카드가 통째로 거짓이 되므로,
@@ -81,7 +100,8 @@ export function aggregateSectorFlow(
 
   for (const row of rows) {
     const sector = sectorByCode[row.code];
-    if (!sector) { unclassified += 1; continue; }
+    // 자리표(`기타`)는 **모르는 것과 같다** — 버리고 센다. 묶으면 카드가 통째로 거짓이 된다.
+    if (!sector || isPlaceholderSector(sector)) { unclassified += 1; continue; }
     if (!Number.isFinite(row.net)) continue;
     const bucket = bySector.get(sector) ?? { net: 0, codes: new Set<string>(), byDate: new Map<string, number>() };
     bucket.net += row.net;
@@ -218,7 +238,8 @@ export function sectorDailyFlows(
   const bySector = new Map<string, { byDate: Map<string, number>; codes: Set<string> }>();
   for (const row of rows) {
     const sector = sectorByCode[row.code];
-    if (!sector || !Number.isFinite(row.net)) continue;
+    // 카드와 같은 기준이어야 한다 — 한쪽만 자리표를 걸러내면 두 화면이 서로를 배신한다.
+    if (!sector || isPlaceholderSector(sector) || !Number.isFinite(row.net)) continue;
     const bucket = bySector.get(sector) ?? { byDate: new Map<string, number>(), codes: new Set<string>() };
     bucket.byDate.set(row.date, (bucket.byDate.get(row.date) ?? 0) + row.net);
     bucket.codes.add(row.code);

@@ -33,9 +33,17 @@ describe("개발 단계 제약 해제 토글 (DEV_CONSTRAINTS_LIFTED)", () => {
     expect(hasForbiddenCopy(decision, { liftDevConstraints: false })).toBe(true);
   });
 
-  it("현재 기본 플래그가 해제 상태이므로 옵션 없이도 통과한다", () => {
-    expect(DEV_CONSTRAINTS_LIFTED).toBe(true);
-    expect(hasForbiddenCopy(advice)).toBe(false);
+  /**
+   * LAUNCH-P1 §C-1 — **출시 전 복원했다.** 문서가 처음부터 못을 박아 뒀고(`출시 전 반드시
+   * false`), override 가 실제로 필요했던 사례가 없다는 것을 실측으로 확인했다:
+   * 2026-09-08 discovery 46장에서 진짜 조언 표현 0건(잡힌 36건은 전부 `순매수` 사실 용어).
+   *
+   * 이 단정이 이 저장소에서 **출시 게이트**다 — 누가 플래그를 다시 켜면 여기서 걸린다.
+   */
+  it("기본 플래그가 복원 상태다 — 옵션 없이도 투자조언 표현을 막는다", () => {
+    expect(DEV_CONSTRAINTS_LIFTED).toBe(false);
+    expect(hasForbiddenCopy(advice)).toBe(true);
+    expect(hasForbiddenCopy(decision)).toBe(true);
   });
 
   it("사실 정확성·품질 가드는 플래그와 무관하게 항상 막는다", () => {

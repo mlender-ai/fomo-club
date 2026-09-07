@@ -54,7 +54,21 @@ export interface DecideStep {
   headline: string;
   rows: DecideRow[];
   /** `우리가 8월 26일에도 짚었고 그 뒤로 -0.4% 움직였어요`. 처음이면 `null`. */
-  ourRecord: string | null;
+  /**
+   * 우리 기록 — **라벨과 값 두 조각**이다(LAUNCH-P1 §C-2).
+   *
+   * 종전에는 한 문장(`우리가 8월 26일에도 짚었고 그 뒤로 -4.2% 움직였어요`)이었다.
+   * 문장으로 쓰면 숫자가 말 속에 묻히고, 묻힌 숫자는 **완충어를 넣고 싶어진다.**
+   * 두 줄로 쪼개면 넣을 자리가 없다:
+   *
+   * ```
+   * 8월 26일에 짚은 뒤
+   * -4.2%
+   * ```
+   *
+   * 처음 짚는 종목이면 `null` — 없는 기록을 만들지 않는다.
+   */
+  ourRecord: { since: string; changeText: string } | null;
   /** 담으면 무엇을 해주는지 — 종전 문구보다 구체적으로(§B-3). */
   watchNote: string;
 }
@@ -210,19 +224,26 @@ export function decideStep(input: DecideStepInput): DecideStep {
   }
 
   /**
-   * §B-5 — 우리 기록. **처음 짚는 종목이면 `null`** 이고, 마이너스도 그대로 쓴다.
+   * §B-5 · LAUNCH-P1 §C-2 — 우리 기록. **처음 짚는 종목이면 `null`.**
+   *
+   * 마이너스를 그대로 쓴다. 위로하는 말(`아쉽게도` · `하지만` · `괜찮아요`)을 붙이지 않고,
+   * 색도 바꾸지 않는다(화면이 accent 를 그대로 쓴다). **정직한 채점이 이 제품의 유일한
+   * 차별점이므로** 거기서 물러서면 남는 게 없다.
+   *
    * 날짜 표기(`8월 26일`)는 페이로드가 들고 온 것을 쓴다 — 여기서 조립하지 않는다.
    */
-  const ourRecord = ((): string | null => {
+  const ourRecord = ((): { since: string; changeText: string } | null => {
     const e = input.exposure;
     const when = e?.firstWhen?.trim();
     const first = e?.firstPrice;
     const now = input.currentPrice;
     if (!when || typeof first !== "number" || !(first > 0)) return null;
     const count = typeof e?.count === "number" ? e.count : 0;
-    const times = count >= 3 ? `${when}부터 ${count}번 짚었고` : `${when}에도 짚었고`;
-    if (typeof now !== "number" || !(now > 0)) return `우리가 ${times} 그 뒤 가격은 아직 못 쟀어요`;
-    return `우리가 ${times} 그 뒤로 ${signedPct(((now - first) / first) * 100)} 움직였어요`;
+    /** 여러 번 짚은 종목은 횟수도 밝힌다 — 한 번 맞춘 것과 세 번 짚은 것은 다른 기록이다. */
+    const since = count >= 3 ? `${when}부터 ${count}번 짚은 뒤` : `${when}에 짚은 뒤`;
+    // 가격을 못 쟀으면 숫자 자리에 그 사실을 쓴다 — 0% 로 채우지 않는다.
+    if (typeof now !== "number" || !(now > 0)) return { since, changeText: "그 뒤 가격은 아직 못 쟀어요" };
+    return { since, changeText: signedPct(((now - first) / first) * 100) };
   })();
 
   return {

@@ -237,10 +237,27 @@ test("[FIX-03 B] 마지막 걸음이 한 문장 요약 · 라벨-값 표 · 우�
   expect(table).toContain("공시");
   expect(table).toContain("실적");
 
-  // ③ 우리 기록 — 부호를 그대로 쓴다(마이너스를 숨기지 않는다).
-  const record = await page.locator('[data-testid="depth-our-record"]').innerText();
+  /*
+    ③ 우리 기록 — 부호를 그대로 쓴다(마이너스를 숨기지 않는다).
+
+    LAUNCH-P1 §C-2: **위로 문구도, 색 변경도 없다.** 정직한 채점이 이 제품의 유일한
+    차별점이므로 여기서 물러서면 남는 게 없다 — 그래서 완충어와 색을 함께 잰다.
+  */
+  const recordBlock = page.locator('[data-testid="depth-our-record"]');
+  const record = await recordBlock.innerText();
   expect(record).toContain("8월 24일");
   expect(record).toMatch(/[+-]\d+\.\d%/);
+  for (const cushion of ["아쉽", "하지만", "괜찮", "그래도", "다만"]) {
+    expect(record, cushion).not.toContain(cushion);
+  }
+  // 마이너스를 빨갛게 칠하지 않는다 — 색은 판정이 아니라 "지금 무슨 일인가" 만 가리킨다.
+  const recordColors = await recordBlock.locator("p").evaluateAll((els) =>
+    els.map((el) => getComputedStyle(el).color)
+  );
+  for (const color of recordColors) {
+    const [r, g, b] = color.match(/\d+/g)!.map(Number) as [number, number, number];
+    expect(r - Math.max(g, b), `빨간색 계열이 쓰였다: ${color}`).toBeLessThan(40);
+  }
 
   // 주어 없는 값이 없다(FIX-01 C 를 이 자리에도 건다).
   for (const line of table.split("\n").map((l) => l.trim()).filter(Boolean)) {

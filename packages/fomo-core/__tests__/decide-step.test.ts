@@ -94,28 +94,40 @@ describe("라벨-값 표 — 문장 나열이 아니다 (B-2)", () => {
   });
 });
 
-describe("우리 기록 — 이 앱을 믿을 유일한 근거 (B-5)", () => {
-  it("전에 짚은 날과 **그 뒤 변동**을 쓴다", () => {
-    expect(decideStep(종근당).ourRecord).toBe("우리가 8월 26일에도 짚었고 그 뒤로 -0.4% 움직였어요");
+describe("우리 기록 — 이 앱을 믿을 유일한 근거 (B-5 · LAUNCH-P1 §C-2)", () => {
+  /**
+   * **두 조각**으로 나온다. 한 문장이었을 때는 숫자가 말 속에 묻혔고, 묻힌 숫자 옆에는
+   * 완충어를 넣고 싶어진다 — 쪼개면 넣을 자리가 없다.
+   */
+  it("짚은 날과 그 뒤 변동을 라벨·값으로 나눠 낸다", () => {
+    expect(decideStep(종근당).ourRecord).toEqual({ since: "8월 26일에 짚은 뒤", changeText: "-0.4%" });
   });
 
   it("마이너스를 숨기지 않고, 플러스에도 부호를 붙인다", () => {
     const up = decideStep({ ...종근당, currentPrice: 72000 });
-    expect(up.ourRecord).toContain("+4.7%");
+    expect(up.ourRecord?.changeText).toBe("+4.7%");
+  });
+
+  it("위로하는 말을 붙이지 않는다 — 정직한 채점이 이 제품의 유일한 차별점이다", () => {
+    const record = decideStep(종근당).ourRecord!;
+    const text = `${record.since} ${record.changeText}`;
+    for (const banned of ["아쉽", "하지만", "괜찮", "그래도", "다만", "unfortunately"]) {
+      expect(text, banned).not.toContain(banned);
+    }
   });
 
   it("세 번 이상이면 몇 번인지 말한다", () => {
     const g = decideStep({ ...종근당, exposure: { firstWhen: "8월 26일", firstPrice: 68800, count: 3 } });
-    expect(g.ourRecord).toBe("우리가 8월 26일부터 3번 짚었고 그 뒤로 -0.4% 움직였어요");
+    expect(g.ourRecord).toEqual({ since: "8월 26일부터 3번 짚은 뒤", changeText: "-0.4%" });
   });
 
   it("처음 짚는 종목이면 이 줄이 없다", () => {
     expect(decideStep({ signal: 종근당.signal }).ourRecord).toBeNull();
   });
 
-  it("가격을 못 쟀으면 지어내지 않는다", () => {
+  it("가격을 못 쟀으면 지어내지 않는다 — 0% 로 채우지 않는다", () => {
     const g = decideStep({ ...종근당, currentPrice: null });
-    expect(g.ourRecord).toBe("우리가 8월 26일에도 짚었고 그 뒤 가격은 아직 못 쟀어요");
+    expect(g.ourRecord).toEqual({ since: "8월 26일에 짚은 뒤", changeText: "그 뒤 가격은 아직 못 쟀어요" });
   });
 });
 

@@ -1,11 +1,23 @@
 export const metadata = { title: "개인정보 처리방침 · FOMO Club" };
 
+/**
+ * LAUNCH-P1 §A-4 — **피봇 이전 문구를 지운다.**
+ *
+ * v1.2 는 「투자 취향 카드 피드」·「온보딩 취향 선택」·「스와이프(관심/비관심)」를 적고 있었다.
+ * 지금 살아 있는 화면(`오늘의 조용한 돈`)에는 온보딩 취향 선택 단계가 없고, 스와이프는
+ * 탐색 동작이라 관심/비관심으로 저장되지 않는다 — 실제로 서버로 가는 것은
+ * `pickTelemetry` 의 열람·머문 시간·상세 열기·관심 담기다.
+ *
+ * **수집 항목은 화면이 하는 일과 같아야 한다.** 하지 않는 수집을 적어 두면 그것도 거짓이다.
+ * 항목을 줄이는 변경이므로(수집 확대가 아니다) 시행일을 앞당겨 적었다 — v1.3.
+ */
+
 const rows = [
   ["소셜 로그인 프로필(이메일, 닉네임), 소셜 계정 식별자", "계정 생성 및 인증", "회원 탈퇴 시까지"],
   ["이메일·비밀번호(이메일 가입 시)", "계정 생성 및 인증", "회원 탈퇴 시까지"],
   ["익명 기기 식별자·세션 ID", "비로그인 이용, 방문/재방문 구분, 기본 보안", "생성 후 최대 1년"],
-  ["관심 시장·테마 등 온보딩 취향 선택", "취향 기반 개인화, 서비스 제공", "회원 탈퇴 또는 삭제 요청 시까지"],
-  ["열람·스와이프(관심/비관심)·검색 요청 등 서비스 이용 기록", "취향 기반 피드 개선, 서비스 제공·품질 개선", "회원 탈퇴 또는 삭제 요청 시까지"],
+  ["관심 담기(★)한 종목·업종 목록", "관심 목록 제공, 서비스 제공", "관심 해제 또는 회원 탈퇴 시까지"],
+  ["카드 열람·머문 시간·상세 열기·관심 담기 등 서비스 이용 기록", "화면 개선, 서비스 제공·품질 개선", "회원 탈퇴 또는 삭제 요청 시까지"],
   ["접속 로그(IP, User-Agent, 요청 시각 등)", "장애 대응, 보안 감사, 부정 이용 방지", "관련 법령 및 내부 보안 기준에 따른 기간"],
   ["푸시 알림 토큰(동의 시)", "관심 종목·서비스 알림 발송", "알림 해제 또는 회원 탈퇴 시까지"],
 ];
@@ -14,12 +26,12 @@ export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-10 text-whiteout">
       <h1 className="font-pixel text-lg">개인정보 처리방침</h1>
-      <p className="mt-2 text-[12px] text-muted">시행일: 2026년 7월 19일 · 버전 1.2</p>
+      <p className="mt-2 text-[12px] text-muted">시행일: 2026년 9월 9일 · 버전 1.3</p>
 
       <section className="mt-6 space-y-4 text-sm leading-6 text-muted">
         <div>
           <p className="font-pixel text-whiteout">수집하는 개인정보</p>
-          <p>FOMO Club은 투자 취향 카드 피드, 관심 신호 저장, 계정 인증 및 서비스 개선을 위해 필요한 최소한의 개인정보만 수집합니다.</p>
+          <p>FOMO Club은 종목 카드 피드 제공, 관심 종목 저장, 계정 인증 및 서비스 개선을 위해 필요한 최소한의 개인정보만 수집합니다.</p>
           <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
             {rows.map(([item, purpose, retention]) => (
               <div key={item} className="grid gap-1 border-b border-white/10 p-3 last:border-b-0 sm:grid-cols-3">

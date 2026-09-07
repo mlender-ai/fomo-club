@@ -7,10 +7,11 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    // layout.tsx 의 메타 문구와 같은 근거(PRODUCT_VISION §1·§2.2·§2.4·§3.2). 둘은 같이 움직인다.
-    name: "FOMO Club — 캐주얼 투자 발견",
+    // layout.tsx 의 메타 문구와 **같이 움직인다**(LAUNCH-P1 §A-4). 한쪽만 고치면 설치 앱과
+    // 웹이 다른 제품을 말하고, 앱스토어 심사에서 그게 불일치로 잡힌다.
+    name: "FOMO Club — 오늘의 조용한 돈",
     short_name: "FOMO Club",
-    description: "종목을 스와이프하며 내 취향의 종목을 발견하고, 수급이 먼저 들어오는 순간을 사실로 확인하는 종목 카드 피드.",
+    description: "뉴스가 나기 전에 돈이 먼저 들어간 종목을 찾아 보여드려요. 기관·외국인·임원이 조용히 사고 있는 곳, 그때 무슨 공시가 있었는지까지 함께 봅니다.",
     lang: "ko",
     start_url: "/",
     scope: "/",

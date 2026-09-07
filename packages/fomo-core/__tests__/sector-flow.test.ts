@@ -4,7 +4,7 @@ import {
   FLOW_MIN_STOCKS, FLOW_DIRECTION_RATIO, type FlowRow, type SectorFlow, type FlowStory, type FlowDepth,
   sectorDailyFlows, pickConcentration, pickPersistentOutflow, pickReversal,
   FLOW_STREAK_MIN_DAYS, FLOW_REVERSAL_LOOKBACK_DAYS, FLOW_REVERSAL_MAX_DAYS,
-  flowStockLine, flowEyebrow, buildFlowDepth,
+  flowStockLine, flowEyebrow, buildFlowDepth, isPlaceholderSector,
   flowDepthHeader, flowSinceTitle, flowSinceLine, flowVolumeTitle, flowVolumeNote, flowWatchTitle, flowWatchSubject,
 } from "../src/keyword-cards/sector-flow";
 
@@ -375,5 +375,38 @@ describe("상세 문장은 코어가 만든다 (FLOW-02 §B — 실측 `반도�
     expect(flowWatchSubject(depth())).toBe("돈이 계속 들어오는지, 빠지기 시작하는지 알려드려요");
     expect(flowWatchSubject(depth({ focusDirection: "out" })))
       .toBe("돈이 계속 빠지는지, 들어오기 시작하는지 알려드려요");
+  });
+});
+
+describe("벤더의 「기타」는 업종이 아니다 (LAUNCH-P1 §D 실측)", () => {
+  /**
+   * 2026-09-08 실측: 거래소 벤더 업종 79개 중 `기타` 가 **389종목** 으로 가장 크다.
+   * 얇은 업종 기준(5종목)을 가볍게 넘으므로, 걸러내지 않으면 어느 날 카드가
+   * 「기타에서 돈이 빠지고」 라고 말한다 — 아무 뜻도 없는 카드다.
+   */
+  const MAP3 = { X1: "기타", X2: "기타", X3: "기타", X4: "기타", X5: "기타", X6: "기타", Y1: "조선", Y2: "조선" };
+  const rows3 = (code: string, net: number): FlowRow[] =>
+    [0, 1, 2].map((i) => ({ date: `2026-09-0${i + 1}`, code, net }));
+
+  it("자리표 업종은 미분류로 세고 버린다", () => {
+    const { flows, unclassified } = aggregateSectorFlow(
+      [...Object.keys(MAP3).filter((c) => c.startsWith("X")).flatMap((c) => rows3(c, 1e9)), ...rows3("Y1", 1e9)],
+      MAP3
+    );
+    expect(flows.map((f) => f.sector)).toEqual(["조선"]);
+    expect(unclassified).toBe(18); // X1~X6 × 3일
+  });
+
+  it("일별 원장에서도 같은 기준으로 뺀다 — 한쪽만 빼면 두 화면이 어긋난다", () => {
+    const dailies = sectorDailyFlows([...rows3("X1", 1e9), ...rows3("Y1", 1e9)], MAP3);
+    expect(dailies.map((d) => d.sector)).toEqual(["조선"]);
+  });
+
+  it("`기타금융`·`기타제조` 는 실제 업종이라 살린다 — 이름이 비슷하다고 버리지 않는다", () => {
+    expect(isPlaceholderSector("기타금융")).toBe(false);
+    expect(isPlaceholderSector("기타제조")).toBe(false);
+    expect(isPlaceholderSector("기타")).toBe(true);
+    expect(isPlaceholderSector(" 미분류 ")).toBe(true);
+    expect(isPlaceholderSector("")).toBe(true);
   });
 });
