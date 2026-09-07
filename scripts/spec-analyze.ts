@@ -52,6 +52,17 @@ const GOVERNANCE_FILES = [
   /^\.cursor\/rules\//,
   /^docs\/templates\//,
   /^docs\/CONSTRAINT_OVERRIDE_DEV\.md$/, // 제약 오버라이드 정책 문서(거버넌스) — 예시 단어 스캔 제외
+  /**
+   * 실측 기록·지시서는 **바뀐 문구를 양쪽 다 인용한다**(`종전 … / 지금 …`). 그게 이 문서들의
+   * 일이다. 그런데 이 검사는 「구체적 문구가 사라지고 제네릭 문구가 들어왔다」를 한 파일
+   * 안에서 짝지어 보므로, 기록 문서에서는 **반드시 오탐이 난다** —
+   * LAUNCH-P1 에서 STATUS 표 한 줄을 갱신한 것이 「과잉 삭제」로 잡혔다.
+   *
+   * 검사 대상은 **제품 문구**다(컴포넌트·코어·페이로드). 제품 문구 교체를 여기서 빼는 것이
+   * 아니라, 제품 문구를 **기록한 문서**를 빼는 것이다 — 게이트 강도는 그대로다.
+   */
+  /^docs\/STATUS\.md$/,
+  /^docs\/wo\//,
   /^\.github\/workflows\/spec-analyze\.yml$/,
   /^scripts\/spec-analyze\.ts$/,
   /^scripts\/__tests__\/spec-analyze\.test\.ts$/,
