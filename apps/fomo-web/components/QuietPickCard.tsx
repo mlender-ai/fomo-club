@@ -357,6 +357,18 @@ export function QuietPickCard({
         </div>
       )}
 
+      {/*
+        THESIS-01 PART E — **「볼 게 더 있다」 한 줄.**
+        훅은 신호를 말한다. 눈에 띄는 것이 둘 이상이면 그 사실을 카드에서 알린다 —
+        서버가 둘 미만이면 필드를 안 보내므로 이 줄도 없다. 수급은 훅이 이미 말했으니
+        이 줄에 넣지 않는다(같은 말을 두 번 하지 않는다).
+      */}
+      {pick.thesisLine && (
+        <p className="mt-s3 break-keep text-ds-caption text-ds-text-2" data-testid="pick-thesis-line">
+          {pick.thesisLine}
+        </p>
+      )}
+
       {/* ⑤ 보조 — 최대 2줄. 칩 없음(§3-⑤·§8). */}
       {support.length > 0 && (
         <div className="mt-[18px] space-y-[2px]" data-testid="pick-support">

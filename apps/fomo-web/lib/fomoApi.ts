@@ -1129,6 +1129,30 @@ export interface QuietPickWhyNowEvent {
   scaleNote?: string;
 }
 
+/**
+ * THESIS-01 — 「지금 눈에 띄는 것」의 숫자 하나.
+ * **`compare` 는 필수다** — 비교 대상 없는 숫자를 화면에 두지 않는다(PART D-1).
+ */
+export interface ThesisNumber {
+  label?: string;
+  value: string;
+  compare: string;
+  /** 둘째 비교 대상(업종 평균 + 5년 위치처럼). 있을 때만. */
+  also?: string;
+}
+
+/** THESIS-01 — 상세 2걸음의 항목 하나. 숫자가 없으면 서버가 만들지 않는다. */
+export interface ThesisItem {
+  kind: "earnings" | "disclosure" | "valuation" | "supply" | "volume" | "price";
+  /** 무슨 일인가 — 한 줄. */
+  title: string;
+  /** 날짜 + 사건(`8월 14일 2026년 2분기 실적`). 시점이 없는 항목은 없다. */
+  when?: string;
+  numbers: ThesisNumber[];
+  /** 다음 확인 지점 — 예측이 아니라 **일정·조건**이다(PART C). */
+  nextCheck?: string;
+}
+
 /** WO-RESET-05 §4 — 3걸음의 한 줄. 숫자와 **그 숫자를 읽는 문장**. */
 export interface CompanyMetricRow {
   label: string;
@@ -1320,6 +1344,13 @@ export interface QuietPick {
    * 「왜 지금 사는가」 날짜 항목(WO-RESET-02). **서버가 굽는 시점에 굳힌다** — 화면이 공시를
    * 가져오지 않는다. 비었거나 없으면 상세가 섹션을 그리지 않는다(§C-3).
    */
+  /**
+   * THESIS-01 — 「지금 눈에 띄는 것」 2~3개. **2개도 못 채우면 이 필드가 없고**,
+   * 그러면 2걸음은 종전 타임라인(`whyNow`)으로 그린다.
+   */
+  thesis?: ThesisItem[];
+  /** THESIS-01 PART E — 카드에 붙일 한 줄(`실적 흑자 전환 · 값은 5년 중 낮은 편`). */
+  thesisLine?: string;
   whyNow?: QuietPickWhyNowEvent[];
   /** 공시 0건일 때의 줄(§C-4). 수집 전이면 없다 — "없었다" 와 "안 봤다" 는 다르다. */
   whyNowQuietNote?: string;

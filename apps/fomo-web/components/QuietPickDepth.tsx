@@ -116,6 +116,9 @@ function DepthSkeleton() {
 /** ⑥ 우리 기록 (DS-03 §9) — 화면의 **유일한 박스이자 유일한 accent**. */
 
 /** 이탈 애니메이션 시간 (DS-06 §4) — 진입 300ms 의 역방향 260ms. */
+/** 항목 번호. 지시서 A-1 목업이 쓴 기호를 그대로 쓴다(①②③). */
+const THESIS_MARKS = ["①", "②", "③"] as const;
+
 const CLOSE_MS = 260;
 
 export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: () => void }) {
@@ -325,6 +328,11 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
   /** 3걸음 재료 — 굽는 시점에 굳은 세 덩어리. 없으면 걸음 자체가 없다. */
   const companyGroups = pick.companyRead ?? [];
+  /**
+   * THESIS-01 — 2걸음 재료. **굽는 시점에 굳어 온다**(숫자·비교 대상·확인 지점까지).
+   * 2개도 못 채우면 서버가 필드를 안 보내고, 그러면 종전 타임라인으로 그린다.
+   */
+  const thesis = pick.thesis ?? [];
 
   /**
    * 1걸음이 더하는 **새 정보 한 줄** — 얼마나 이례적인가(§2).
@@ -630,7 +638,73 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           {/* ── 2걸음 — 왜 지금인가 (§3) ── */}
           {step === "why" && (
             <>
-              <h2 className="mt-s4 text-ds-display-sm text-ds-text-1">왜 지금 사는가</h2>
+              {/*
+                THESIS-01 — 이 걸음의 제목이 **무엇을 보여주는지에 따라 갈린다.**
+                항목이 2개 이상이면 「지금 눈에 띄는 것」(숫자·시점·확인 지점), 아니면
+                종전 타임라인(날짜와 사건). 억지로 채우지 않되 있는 것을 버리지도 않는다.
+              */}
+              <h2 className="mt-s4 text-ds-display-sm text-ds-text-1">
+                {thesis.length > 0 ? "지금 눈에 띄는 것" : "왜 지금 사는가"}
+              </h2>
+
+              {thesis.length > 0 && (
+                <div className="mt-s5" data-testid="depth-thesis">
+                  {thesis.map((item, i) => (
+                    <section key={`${item.kind}-${i}`} className="mt-s5 first:mt-0" data-testid="depth-thesis-item">
+                      {/* ① 무슨 일인가 — 번호는 읽는 순서를 만든다(우선순위 순이다). */}
+                      <p className="break-keep text-[15px] font-medium text-ds-text-1">
+                        <span className="mr-s2 font-mono text-ds-text-3">{THESIS_MARKS[i] ?? `${i + 1}.`}</span>
+                        {item.title}
+                      </p>
+                      {/* 날짜 + 사건 */}
+                      {item.when && (
+                        <p className="mt-s2 font-mono text-ds-label text-ds-text-3" data-testid="depth-thesis-when">
+                          {item.when}
+                        </p>
+                      )}
+                      {/*
+                        숫자 — **모든 숫자에 비교 대상이 붙어 있다**(PART D-1). 서버가
+                        비교 대상 없는 숫자를 애초에 만들지 않으므로 화면은 그냥 그린다.
+                      */}
+                      {item.numbers.map((num, n) => (
+                        <div key={`${num.value}-${n}`} className="mt-s2">
+                          <p className="break-keep text-ds-body text-ds-text-1" data-testid="depth-thesis-number">
+                            {num.label && <span className="mr-s2 text-ds-label text-ds-text-3">{num.label}</span>}
+                            <span className="font-mono">{num.value}</span>
+                            <span className="ml-s2 text-ds-caption text-ds-text-2">{num.compare}</span>
+                          </p>
+                          {num.also && (
+                            <p className="mt-[2px] break-keep text-ds-caption text-ds-text-2">{num.also}</p>
+                          )}
+                        </div>
+                      ))}
+                      {/*
+                        다음 확인 지점 — **예측이 아니라 일정·조건**이다(PART C-3).
+                        `오를`·`재평가` 는 서버 쪽 게이트가 막는다(`THESIS_FORBIDDEN`).
+                      */}
+                      {item.nextCheck && (
+                        <p className="mt-s2 break-keep text-ds-caption text-ds-text-1" data-testid="depth-thesis-next">
+                          {/*
+                            accent 를 쓰지 않는다 — 이 화면의 강조는 다음 버튼 하나다(DS-07 §2).
+                            비교 대상(`text-2`)보다 한 단계 밝게 두어 **줄의 종류**만 구분한다.
+                          */}
+                          <span className="mr-s2 font-mono text-ds-text-3">→</span>
+                          {item.nextCheck}
+                        </p>
+                      )}
+                    </section>
+                  ))}
+                </div>
+              )}
+
+              {/*
+                항목이 2개도 안 되면 **종전 타임라인으로 되돌아간다.** 지시서 완료 확인 8은
+                「2개 미만이면 이 걸음을 생략」인데, 그대로 하면 날짜 붙은 사건이 하나뿐인
+                종목에서 **이미 있던 정보까지 사라진다.** 억지로 채우지 않는다는 규칙은
+                「지금 눈에 띄는 것」 블록에 걸고, 그 자리는 타임라인이 지킨다.
+              */}
+              {thesis.length === 0 && (
+                <>
               <div className="mt-s5" data-testid="depth-why-now">
                 {whyNowEvents.map((event, i) => (
                   <div key={`${event.when}-${i}`} className="flex gap-s3 border-b-hair border-ds-border py-s3 last:border-0">
@@ -716,6 +790,9 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   {pick.whyNowQuietNote}
                 </p>
               )}
+                </>
+              )}
+              {/* 꼬리표는 **두 모양 모두**에 붙는다 — 인과를 말하지 않는다는 사실은 그대로다. */}
               <p className="mt-s3 break-keep text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
                 {WHY_NOW_TIMELINE_DISCLAIMER}
               </p>

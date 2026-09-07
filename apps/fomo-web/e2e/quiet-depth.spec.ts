@@ -8,6 +8,8 @@ import { expect, test } from "@playwright/test";
  */
 
 const PREVIEW = "/quiet-depth-preview";
+/** THESIS-01 — 항목 2개 이상인 모양. 기본 프리뷰는 타임라인 모양을 지킨다. */
+const THESIS_PREVIEW = "/quiet-thesis-preview";
 const ACCENT = "rgb(212, 255, 63)";
 
 /** WO-RESET-05 완료 확인 1·2 — 네 걸음, 좌우로 넘어가고, 상단에 진행 점. */
@@ -163,6 +165,62 @@ test("[FIX-01 D] 계산 방법은 걸음에 하나, 기본은 접혀 있다", as
  * FIX-03 PART B — 마지막 걸음이 **한 문장 요약 + 라벨-값 표 + 우리 기록**으로 바뀌었다.
  * FIX-01 C 의 「주어 없는 문장 금지」는 표의 값에도 그대로 걸린다.
  */
+/**
+ * THESIS-01 — 2걸음이 **숫자·시점·확인 지점**을 갖춘 항목 2~3개로 바뀌었다.
+ * 픽스처는 지시서 A-1 목업 그대로다.
+ */
+test("[THESIS-01] 2걸음이 「지금 눈에 띄는 것」이고 항목마다 숫자·비교 대상이 붙는다", async ({ page }) => {
+  // 항목 모양은 전용 화면이 지킨다 — 기본 프리뷰는 타임라인 모양(둘 다 살아 있는 동작이다).
+  await page.goto(THESIS_PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+
+  // 제목이 갈린다 — 항목이 있으면 「지금 눈에 띄는 것」.
+  await expect(page.locator('[data-testid="depth-step-why"] h2')).toContainText("지금 눈에 띄는 것");
+  // 항목이 2~3개.
+  const items = page.locator('[data-testid="depth-thesis-item"]');
+  const count = await items.count();
+  expect(count).toBeGreaterThanOrEqual(2);
+  expect(count).toBeLessThanOrEqual(3);
+
+  // **모든 숫자에 비교 대상이 붙어 있다** — 숫자 줄에 비교 문구가 같이 있다.
+  const numbers = await page.locator('[data-testid="depth-thesis-number"]').allInnerTexts();
+  expect(numbers.length).toBeGreaterThan(2);
+  for (const line of numbers) {
+    expect(line.trim().length, line).toBeGreaterThan(0);
+    // 값만 있는 줄이 없다 — 비교 대상(`보다`·`평균`·`대비`·`중`·`%`)이 함께 있다.
+    expect(/보다|평균|대비|중 가장|%|에서/.test(line), `비교 대상 없는 숫자: "${line}"`).toBe(true);
+  }
+
+  // 금액이 규모 대비로 환산돼 있다(D-2) · 절대값과 비율이 함께 있다(D-3).
+  const body = await page.locator('[data-testid="depth-thesis"]').innerText();
+  expect(body).toContain("1,240억");
+  expect(body).toContain("작년 2분기보다 +18%");
+
+  // 다음 확인 지점이 나온다(PART C) — 그리고 예측 표현이 없다.
+  await expect(page.locator('[data-testid="depth-thesis-next"]').first()).toContainText("다음 실적 발표는");
+  for (const banned of ["오를", "재평가", "기대", "전망", "목표가"]) {
+    expect(body, `예측 표현 "${banned}"`).not.toContain(banned);
+  }
+
+  // 항목이 있으면 종전 타임라인은 그리지 않는다(같은 것을 두 번 보여주지 않는다).
+  await expect(page.locator('[data-testid="depth-why-now"]')).toHaveCount(0);
+  // 꼬리표는 그대로 붙는다 — 인과를 말하지 않는다는 사실은 변하지 않는다.
+  await expect(page.locator('[data-testid="depth-why-now-note"]')).toContainText("왜 샀는지는");
+});
+
+test("[THESIS-01] 항목이 2개 미만이면 종전 타임라인으로 되돌아간다", async ({ page }) => {
+  /**
+   * 지시서 완료 확인 8은 「2개 미만이면 이 걸음을 생략」이다. 그대로 하면 날짜 붙은 사건이
+   * 하나뿐인 종목에서 **이미 있던 정보까지 사라진다.** 억지로 채우지 않는다는 규칙은
+   * 항목 블록에 걸고, 그 자리는 타임라인이 지킨다 — 그 결정을 이 검사로 고정한다.
+   */
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  await expect(page.locator('[data-testid="depth-step-why"] h2')).toContainText("왜 지금 사는가");
+  await expect(page.locator('[data-testid="depth-thesis"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-why-now"]')).toHaveCount(1);
+});
+
 test("[FIX-03 B] 마지막 걸음이 한 문장 요약 · 라벨-값 표 · 우리 기록이다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   for (let i = 0; i < 3; i += 1) await page.locator('[data-testid="depth-next"]').click();

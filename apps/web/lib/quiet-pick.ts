@@ -53,7 +53,12 @@ import {
  * **배럴이 아니라 경로로** 가져온다 — 이 둘은 굽는 경로에서만 쓴다. 배럴에 넣으면
  * `@fomo/core` 를 임포트하는 조회 라우트가 전부 같이 무거워진다(성능 게이트).
  */
-import { buildSectorStats, sectorCandidates, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+import { buildSectorStats, sectorCandidates, sectorComparison, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+/**
+ * THESIS-01 — 「지금 눈에 띄는 것」. **굽는 경로 전용**이라 배럴이 아니라 경로로 가져온다
+ * (`keyword-cards/index.ts` 머리말: 배럴에 넣으면 조회 라우트 전이 모듈이 늘어난다).
+ */
+import { thesisItems, thesisCardLine, type ThesisItem } from "@fomo/core/keyword-cards/thesis";
 import {
   diffHoldings,
   isFreshDisclosure,
@@ -600,6 +605,19 @@ export interface QuietPickQualification {
   untranslatedIndustries?: string[];
   /** FIX-02 D-3 — 3걸음 섹션별 확보율. 제목별 `shown`(내용 있음) / `missing`(사유 표시). */
   companySections?: Record<string, { shown: number; missing: number }>;
+  /**
+   * THESIS-01 PART F — 「지금 눈에 띄는 것」 확보율.
+   * `byCount[n]` = 항목이 n개 나온 종목 수(3은 3개 이상), `byKind` = 항목별 건수,
+   * `withoutNextCheck` = **다음 확인 지점을 못 만든** 항목 종류(다음 작업 대상).
+   */
+  thesis?: {
+    stocks: number;
+    byCount: number[];
+    byKind: Record<string, number>;
+    withNextCheck: number;
+    withoutNextCheck: Record<string, number>;
+    cardLines: number;
+  };
   /**
    * FIX-02 B-1 — 업종 비교가 붙은 줄 수와 **견준 곳 수**(자기 제외) 분포.
    * `min` 이 5 미만이면 지표별 게이트가 새는 것이다.
@@ -2643,6 +2661,20 @@ export async function buildQuietPickResponse(options: {
   const peerCensus = { rows: 0, counts: [] as number[] };
 
   /**
+   * THESIS-01 PART F — 「지금 눈에 띄는 것」 확보율.
+   * `byCount` 는 항목 수 분포(0/1/2/3), `byKind` 는 항목별 확보 건수,
+   * `withoutNextCheck` 는 **다음 확인 지점을 못 만든** 항목 종류다(보고할 것 3번).
+   */
+  const thesisCensus = {
+    stocks: 0,
+    byCount: [0, 0, 0, 0],
+    byKind: {} as Record<string, number>,
+    withNextCheck: 0,
+    withoutNextCheck: {} as Record<string, number>,
+    cardLines: 0,
+  };
+
+  /**
    * WO-RESET-06 §E · HOTFIX-DECK §C-3 — 재노출 규칙이 무엇을 막고 무엇을 통과시켰나.
    * `blocked` 는 보류된 건수, `readmitted` 는 재등장 사유로 통과한 건수, `byReason` 은 그 분포,
    * `readmittedByFloor` 는 덱 최소 장수 안전장치가 보류분에서 되살린 건수다.
@@ -2783,6 +2815,14 @@ export async function buildQuietPickResponse(options: {
     const page1Streak = page1Streaks.get(sig.subject.canonical) ?? 0;
 
     const score = front.score?.score ?? null;
+    /**
+     * THESIS-01 — 「지금 눈에 띄는 것」이 **「왜 지금」 타임라인의 산출물을 다시 쓴다**
+     * (실적 숫자·금액 규모 환산이 거기 이미 붙어 있다). 리터럴 안에서 만들어지는 값이라
+     * 그 자리에서 붙잡아 두고, 뒤 항목이 읽는다 — 객체 리터럴은 **소스 순서대로** 평가되므로
+     * `thesis` 가 읽을 때는 이미 채워져 있다.
+     */
+    let whyNowEvents: WhyNowEvent[] = [];
+
     const timingGrade = timingGradeOf(front.verdict);
     const valuationGrade = valuationGradeOf(score);
     const zone = front.wyckoff?.currentZone;
@@ -3085,6 +3125,7 @@ export async function buildQuietPickResponse(options: {
             figureCensus.scale += 1;
           }
         }
+        whyNowEvents = events; // THESIS-01 이 같은 항목을 다시 쓴다(위 선언 주석)
         return {
           ...(events.length > 0 ? { whyNow: events } : {}),
           ...(note ? { whyNowQuietNote: note } : {}),
@@ -3157,6 +3198,75 @@ export async function buildQuietPickResponse(options: {
           untranslatedIndustries.add(name);
         }
         return groups.length > 0 ? { companyRead: groups } : {};
+      })()),
+      /**
+       * THESIS-01 — 「지금 눈에 띄는 것」. **여기서 굳힌다.**
+       *
+       * 재료는 전부 이미 있다: 실적 숫자는 「왜 지금」 타임라인(`whyNowEvents`)이,
+       * 업종 비교는 `sectorComparison`(자기 제외)이, 수급·거래·가격 위치는 신호 팩트가
+       * 만든다. **이 블록은 고르고 줄 세우는 일만 한다** — 새 수집이 없다.
+       *
+       * 2개도 못 채우면 필드가 아예 없고, 화면은 종전 타임라인으로 되돌아간다.
+       */
+      ...(((): { thesis?: ThesisItem[]; thesisLine?: string } => {
+        const sheet = factSheetByStock.get(sig.subject.canonical);
+        const candidates = sheet
+          ? sectorCandidates(sectorStats, {
+              industry: sheet.classification?.industry ?? null,
+              sector: sheet.classification?.sector ?? null,
+            })
+          : [];
+        const per = sheet?.valuation?.per_ttm ?? null;
+        const pbr = sheet?.valuation?.pbr ?? null;
+        const band = sheet?.valuation?.band_5y;
+        const items = thesisItems({
+          events: whyNowEvents,
+          valuation: {
+            per,
+            pbr,
+            // 자기 자신을 뺀 업종 비교(FIX-02 B-3). 표본이 모자라면 `null` 이라 밴드로 간다.
+            perPeer: sectorComparison(candidates, "per", per),
+            pbrPeer: sectorComparison(candidates, "pbr", pbr),
+            // 밴드는 **표본이 충분할 때만** 쓴다 — 불충분한 밴드로 위치를 말하지 않는다.
+            perPercentile: band?.per?.sufficient ? band.per.current_percentile : null,
+            pbrPercentile: band?.pbr?.sufficient ? band.pbr.current_percentile : null,
+          },
+          supply: {
+            actor: sig.actors,
+            days: sig.days,
+            scale: sig.scale,
+            ...(typeof volumePct === "number" ? { volumePct } : {}),
+            // 「가장 길다」가 아니면 연속일수에 비교 대상이 없다 — 그러면 숫자로 쓰지 않는다.
+            ...(sig.isLongestStreak && typeof sig.streakWindowDays === "number"
+              ? { longestWindowDays: sig.streakWindowDays }
+              : {}),
+            ...(whenLabel(sig.startedAt.slice(0, 10)) ? { startedWhen: whenLabel(sig.startedAt.slice(0, 10)) } : {}),
+          },
+          ...(typeof front.signals.volumeRatio === "number" ? { volume: { ratio: front.signals.volumeRatio } } : {}),
+          ...(typeof aboveLow === "number" ? { price: { pctAboveYearLow: aboveLow } } : {}),
+        });
+
+        /**
+         * THESIS-01 PART F — **확보율.** 종목별 항목 수 분포와 항목별 확보율을 센다.
+         * 0~1개가 많으면 그건 데이터가 부족하다는 뜻이고, **어느 항목이 자주 비는지가
+         * 다음 작업**이다. 그래서 전체 비율 하나가 아니라 종류별로 나눠 센다.
+         */
+        thesisCensus.stocks += 1;
+        // 항목 수 분포 — 3은 「3개 이상」 칸이다(상한이 3이라 실제로는 3개).
+        const bucket = Math.min(items.length, 3);
+        thesisCensus.byCount[bucket] = (thesisCensus.byCount[bucket] ?? 0) + 1;
+        for (const item of items) {
+          thesisCensus.byKind[item.kind] = (thesisCensus.byKind[item.kind] ?? 0) + 1;
+          if (item.nextCheck) thesisCensus.withNextCheck += 1;
+          else thesisCensus.withoutNextCheck[item.kind] = (thesisCensus.withoutNextCheck[item.kind] ?? 0) + 1;
+        }
+
+        const line = thesisCardLine(items);
+        if (line) thesisCensus.cardLines += 1;
+        return {
+          ...(items.length > 0 ? { thesis: items } : {}),
+          ...(line ? { thesisLine: line } : {}),
+        };
       })()),
       /**
        * WO-RESET-06 §B-4·§C-1 — 노출 이력. **처음 나온 종목이면 필드가 없다**(§C-2).
@@ -3404,6 +3514,8 @@ export async function buildQuietPickResponse(options: {
       untranslatedIndustries: [...untranslatedIndustries].sort(),
       // FIX-02 D-3 — 섹션별 확보율(제목별 `shown`/`missing`).
       companySections: sectionCensus,
+      // THESIS-01 PART F — 「지금 눈에 띄는 것」 항목 수 분포·항목별 확보율·확인 지점 결측.
+      thesis: thesisCensus,
       /**
        * FIX-02 B-1 — 업종 비교가 붙은 줄 수 · 견준 곳 수 분포.
        * `min` 이 `SECTOR_MIN_MEMBERS` 미만이면 게이트가 새는 것이다.
