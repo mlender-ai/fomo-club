@@ -74,11 +74,17 @@ import {
   FLOW_DEPTH_DAYS,
   type FlowDepth,
   pickFlowPair,
+  pickConcentration,
+  pickPersistentOutflow,
+  pickReversal,
+  sectorDailyFlows,
+  storySectors,
   flowHook,
   flowSupport,
   formatKrwShort,
   type FlowRow,
-  type FlowPair,
+  type FlowStory,
+  type FlowCardKind,
 } from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
 import { sectorDisplayName, untranslatedIndustryNames } from "@fomo/core/keyword-cards/sector-display";
@@ -234,8 +240,14 @@ const SECTOR_FLOW_WINDOW_SLACK = 4;
  * 1,000억은 "뉴스가 될 만한 크기" 의 어림이고, 숫자가 모이면 확정한다.
  */
 const SECTOR_FLOW_MIN_NET = 100_000_000_000;
-/** 하루 최대 흐름 카드 수(§D-1). 많으면 종목 카드를 밀어낸다. */
-const SECTOR_FLOW_MAX_CARDS = 2;
+/**
+ * 하루 최대 흐름 카드 수(FLOW-02 §E-2). 많으면 종목 카드를 밀어낸다.
+ *
+ * WO-RESET-08 의 2장에서 셋으로 올린다 — **종류가 넷이 됐다.** 같은 종류는 두 장 이상
+ * 만들지 않고(각 검출기가 하나만 돌려준다), 같은 업종도 두 번 짚지 않으므로
+ * 셋이라도 서로 다른 이야기 셋이다.
+ */
+const SECTOR_FLOW_MAX_CARDS = 3;
 /**
  * 하루 최대 거시 카드 수는 **`@fomo/core` 의 `MACRO_MAX_CARDS`(3장)** 가 정한다(MACRO-01 §C-2).
  * 여기 있던 `2` 를 지운다 — 상한이 두 곳에 있으면 한쪽만 고치게 되고, 실제로 그렇게 됐다.
@@ -736,15 +748,23 @@ export interface QuietPickRotation {
 
 /** WO-RESET-08 §B — 자금 흐름 카드 한 장. 화면이 그대로 그린다. */
 export interface FlowCard {
-  /** 빠진 업종 · 들어온 업종. */
-  fromSector: string;
-  toSector: string;
+  /**
+   * 카드 종류(FLOW-02 §E) — `rotation` 만 두 업종이고 나머지는 한 업종이다.
+   * 종류가 하나였을 때 카드는 "저기서 저기로만 갔다" 는 인상을 줬다.
+   */
+  kind: FlowCardKind;
+  /**
+   * 빠진 업종 · 들어온 업종. **한 업종 이야기에서는 한쪽이 없다** — 없는 쪽을
+   * 지어내지 않는다(집중 카드에 「빠진 업종」을 억지로 붙이면 그건 다른 카드다).
+   */
+  fromSector?: string;
+  toSector?: string;
   /** 창 안 순매수 합(원). `from` 은 음수, `to` 는 양수다. */
-  fromNet: number;
-  toNet: number;
+  fromNet?: number;
+  toNet?: number;
   /** 집계에 들어간 종목 수 — 화면이 밝힌다. */
-  fromStocks: number;
-  toStocks: number;
+  fromStocks?: number;
+  toStocks?: number;
   windowDays: number;
   /** 결론 두 줄 — **인과로 말하지 않는다**(§E-1). */
   hook: string;
@@ -1783,9 +1803,24 @@ function detectSectorFlows(
   sectorByCode: Readonly<Record<string, string>>,
   today: string,
   nameByCode: Readonly<Record<string, string>> = {}
-): { pairs: FlowPair[]; depths: FlowDepth[]; census: { rows: number; unclassified: number; sectors: number } } {
-  const census = { rows: 0, unclassified: 0, sectors: 0 };
-  if (Object.keys(sectorByCode).length === 0) return { pairs: [], depths: [], census };
+): {
+  stories: FlowStory[];
+  depths: FlowDepth[];
+  census: {
+    rows: number;
+    unclassified: number;
+    sectors: number;
+    /** **종류별 후보 수**(FLOW-02 보고할 것 4번). 카드가 한 장이면 여기가 답한다. */
+    candidatesByKind: Record<FlowCardKind, number>;
+  };
+} {
+  const census = {
+    rows: 0,
+    unclassified: 0,
+    sectors: 0,
+    candidatesByKind: { rotation: 0, concentration: 0, persistent: 0, reversal: 0 } as Record<FlowCardKind, number>,
+  };
+  if (Object.keys(sectorByCode).length === 0) return { stories: [], depths: [], census };
 
   /** 종목코드 → 날짜 → 종가. 캔들은 `YYYYMMDD` 라 ISO 로 맞춘다. */
   const closeByCodeDate = new Map<string, Map<string, number>>();
@@ -1813,18 +1848,20 @@ function detectSectorFlows(
   }
   census.rows = rows.length;
 
-  const pairs: FlowPair[] = [];
-  const depths: FlowDepth[] = [];
   const volumeRatioByCode = volumeRatiosFromCandles(candleMap);
   /**
    * 4걸음 전용 창 — **카드 창과 별개로 항상 20거래일**이다(DETAIL-01 §B 4걸음).
    * 카드가 3일 흐름으로 만들어졌어도 "얼마나 오래됐나" 는 20일로 봐야 답이 된다.
+   * 한 업종 이야기(집중·지속·전환)의 연속 판정도 이 원장에서 한다.
    */
   const dailyFrom = shiftIsoDays(today, -(FLOW_DEPTH_DAYS + SECTOR_FLOW_WINDOW_SLACK + 10));
   const dailyRows = rows.filter((r) => r.date >= dailyFrom && r.date <= today);
+
+  const candidates: FlowStory[] = [];
   /**
    * 창 셋(§A-1) — 짧은 창부터 본다. 3일 흐름이 성립하면 그게 가장 새 소식이다.
-   * 한 창에서 카드가 나오면 나머지 창은 보지 않는다 — 같은 이야기를 두 번 하지 않는다.
+   * 업종 간 이동은 **한 창에서만** 만든다 — 3일과 5일이 같은 두 업종을 짚으면
+   * 같은 이야기를 두 번 하는 것이다.
    */
   for (const windowDays of SECTOR_FLOW_WINDOWS) {
     const from = shiftIsoDays(today, -(windowDays + SECTOR_FLOW_WINDOW_SLACK));
@@ -1835,12 +1872,50 @@ function detectSectorFlows(
     census.sectors = Math.max(census.sectors, flows.length);
     const pair = pickFlowPair(flows, windowDays, SECTOR_FLOW_MIN_NET);
     if (pair) {
-      pairs.push(pair);
-      depths.push(buildFlowDepth(pair, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode));
+      candidates.push({ kind: "rotation", ...pair });
       break;
     }
   }
-  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), depths: depths.slice(0, SECTOR_FLOW_MAX_CARDS), census };
+
+  /**
+   * **한 업종 이야기 셋**(FLOW-02 §E). 같은 원장에서 나온다 — 새 소스를 들이지 않았다.
+   * 종류마다 최대 한 장이므로 여기서 고르는 것으로 「같은 종류 2장 금지」(§E-2)가 지켜진다.
+   */
+  const dailies = sectorDailyFlows(dailyRows, sectorByCode);
+  census.sectors = Math.max(census.sectors, dailies.length);
+  for (const made of [
+    pickConcentration(dailies, SECTOR_FLOW_MIN_NET),
+    pickPersistentOutflow(dailies, SECTOR_FLOW_MIN_NET),
+    pickReversal(dailies, SECTOR_FLOW_MIN_NET),
+  ]) {
+    if (made) candidates.push(made);
+  }
+  for (const story of candidates) census.candidatesByKind[story.kind] += 1;
+
+  const stories: FlowStory[] = [];
+  const depths: FlowDepth[] = [];
+  /**
+   * **같은 업종을 두 번 짚지 않는다.** 「반도체에서 빠지고」 카드와 「반도체에서 12일째
+   * 빠지고」 카드가 나란히 서면 두 장이 아니라 한 장을 두 번 읽는 것이다.
+   */
+  const used = new Set<string>();
+  for (const story of candidates) {
+    if (stories.length >= SECTOR_FLOW_MAX_CARDS) break;
+    const sectors = storySectors(story);
+    if (sectors.some((sector) => used.has(sector))) continue;
+    /**
+     * 상세 창 — 업종 간 이동은 고정 창, 한 업종 이야기는 **연속이 시작된 날부터**다.
+     * 카드가 「5거래일째」라고 말했으면 상세의 종목 금액도 그 5일 합이어야 한다.
+     */
+    const windowFrom =
+      story.kind === "rotation" ? shiftIsoDays(today, -(story.windowDays + SECTOR_FLOW_WINDOW_SLACK)) : story.since;
+    const inWindow = rows.filter((r) => r.date >= windowFrom && r.date <= today);
+    const { flows } = aggregateSectorFlow(inWindow, sectorByCode);
+    stories.push(story);
+    depths.push(buildFlowDepth(story, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode));
+    for (const sector of sectors) used.add(sector);
+  }
+  return { stories, depths, census };
 }
 
 /** ① 조용한 돈 신호 — US 내부자 클러스터(Form4). */
@@ -2494,18 +2569,22 @@ export async function buildQuietPickResponse(options: {
     }));
   })();
 
-  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair, index) => {
+  const flowCards: FlowCard[] = sectorFlow.stories.map((story, index) => {
     const depth = sectorFlow.depths[index];
+    /**
+     * **없는 쪽을 지어내지 않는다.** 업종 간 이동만 양쪽이 있고, 한 업종 이야기는
+     * 방향에 맞는 한쪽만 싣는다 — 집중 카드에 「빠진 업종」을 붙이면 그건 다른 카드다.
+     */
+    const from = story.kind === "rotation" ? story.from : story.direction === "out" ? story.flow : null;
+    const to = story.kind === "rotation" ? story.to : story.direction === "in" ? story.flow : null;
     return {
-      fromSector: pair.from.sector,
-      toSector: pair.to.sector,
-      fromNet: pair.from.net,
-      toNet: pair.to.net,
-      fromStocks: pair.from.stocks,
-      toStocks: pair.to.stocks,
-      windowDays: pair.windowDays,
-      hook: flowHook(pair),
-      support: flowSupport(pair),
+      kind: story.kind,
+      ...(from ? { fromSector: from.sector, fromNet: from.net, fromStocks: from.stocks } : {}),
+      ...(to ? { toSector: to.sector, toNet: to.net, toStocks: to.stocks } : {}),
+      windowDays: story.windowDays,
+      hook: flowHook(story),
+      /** 대표 종목 줄은 상세 재료에서 나온다(§C-1) — 그래서 `depth` 를 함께 넘긴다. */
+      support: flowSupport(story, depth),
       ...(depth ? { depth } : {}),
     };
   });

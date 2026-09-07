@@ -358,7 +358,8 @@ export function FlowBar({
   return (
     <div className="mt-s3" data-testid={`flow-bar-${tone}`}>
       <div className="flex items-baseline justify-between gap-s3">
-        <span className="min-w-0 truncate text-ds-body text-ds-text-1">{label}</span>
+        {/* FLOW-02 완료 확인 4 — 잘림을 e2e 가 `scrollWidth > clientWidth` 로 잰다. */}
+        <span data-testid="flow-bar-label" className="min-w-0 truncate text-ds-body text-ds-text-1">{label}</span>
         <span className={`shrink-0 font-mono text-ds-label ${tone === "in" ? "text-ds-accent" : "text-ds-text-2"}`}>
           {amount}
         </span>

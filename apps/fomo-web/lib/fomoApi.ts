@@ -1259,21 +1259,33 @@ export interface FlowDayRow {
 export interface QuietPickFlowDepth {
   outflows: FlowSectorRow[];
   inflows: FlowSectorRow[];
+  /** 한 업종 이야기에서는 상대편이 빈다 — 없는 쪽을 지어내지 않는다(FLOW-02 §E). */
   fromStocks: FlowStockRow[];
   toStocks: FlowStockRow[];
-  /** 비어 있는 것도 정보다 — 돈은 들어오는데 거래는 평소와 비슷하다는 뜻(§D-4). */
-  toVolumeStocks: FlowStockRow[];
-  toDaily: FlowDayRow[];
-  toPositiveDays: number;
+  /** 이 카드의 초점 업종(집계 원문) — 일별 막대·즐겨찾기가 쓴다. */
+  focusSector?: string;
+  focusDirection?: "in" | "out";
+  /** 비어 있는 것도 정보다 — 돈은 오가는데 거래는 평소와 비슷하다는 뜻(§D-4). */
+  focusVolumeStocks?: FlowStockRow[];
+  focusDaily?: FlowDayRow[];
+  focusPositiveDays?: number;
 }
 
+/**
+ * FLOW-02 §E — 카드 종류. `rotation` 만 두 업종이고 나머지는 한 업종이다.
+ * 오래된 응답에는 없을 수 있어 화면은 `rotation` 으로 읽는다.
+ */
+export type QuietPickFlowKind = "rotation" | "concentration" | "persistent" | "reversal";
+
 export interface QuietPickFlowCard {
-  fromSector: string;
-  toSector: string;
-  fromNet: number;
-  toNet: number;
-  fromStocks: number;
-  toStocks: number;
+  kind?: QuietPickFlowKind;
+  /** 한 업종 이야기에서는 한쪽이 없다. */
+  fromSector?: string;
+  toSector?: string;
+  fromNet?: number;
+  toNet?: number;
+  fromStocks?: number;
+  toStocks?: number;
   windowDays: number;
   /** 결론 두 줄 — 인과로 말하지 않는다. 서버가 만든 것을 그대로 쓴다. */
   hook: string;

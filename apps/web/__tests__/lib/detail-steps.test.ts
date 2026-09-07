@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildFlowDepth, type FlowRow, type SectorFlow, type FlowPair } from "@fomo/core/keyword-cards/sector-flow";
+import { buildFlowDepth, type FlowRow, type SectorFlow, type FlowStory } from "@fomo/core/keyword-cards/sector-flow";
 import { macroBand, MACRO_BAND_MIN_POINTS } from "@fomo/core/keyword-cards/macro-move";
 import {
   sectorDisplayName,
@@ -58,7 +58,9 @@ describe("자금 흐름 상세 재료 (DETAIL-01 §B)", () => {
     { sector: "얇은업종", net: 900, stocks: 2, positiveDays: 3, days: 3 },
     { sector: "반도체와반도체장비", net: -900, stocks: 9, positiveDays: 0, days: 3 },
   ];
-  const pair: FlowPair = {
+  /** 업종 간 이동 이야기 — FLOW-02 이후 카드 종류가 넷이라 종류를 밝혀서 넘긴다. */
+  const pair: FlowStory = {
+    kind: "rotation",
     from: flows[3]!,
     to: flows[0]!,
     windowDays: 3,
@@ -96,12 +98,12 @@ describe("자금 흐름 상세 재료 (DETAIL-01 §B)", () => {
 
   it("3걸음 — 거래가 붙은 종목만, 배수 순", () => {
     const depth = buildFlowDepth(pair, windowRows, windowRows, flows, sectorByCode, names, { B1: 2.4, B2: 1.2 });
-    expect(depth.toVolumeStocks.map((s) => s.name)).toEqual(["LG이노텍"]);
+    expect(depth.focusVolumeStocks.map((s) => s.name)).toEqual(["LG이노텍"]);
   });
 
   it("거래가 안 붙으면 빈 목록 — 그것도 정보다(§D-4)", () => {
     const depth = buildFlowDepth(pair, windowRows, windowRows, flows, sectorByCode, names, { B1: 1.1, B2: 1.0 });
-    expect(depth.toVolumeStocks).toEqual([]);
+    expect(depth.focusVolumeStocks).toEqual([]);
   });
 
   it("4걸음 — 일별은 오래된 것부터, 순매수 날 수를 함께 낸다", () => {
@@ -112,9 +114,12 @@ describe("자금 흐름 상세 재료 (DETAIL-01 §B)", () => {
       { date: "2026-09-01", code: "B2", net: 200 },
     ];
     const depth = buildFlowDepth(pair, windowRows, daily, flows, sectorByCode, names);
-    expect(depth.toDaily.map((d) => d.date)).toEqual(["2026-08-28", "2026-08-31", "2026-09-01"]);
-    expect(depth.toDaily.at(-1)!.net).toBe(600);
-    expect(depth.toPositiveDays).toBe(2);
+    expect(depth.focusDaily.map((d) => d.date)).toEqual(["2026-08-28", "2026-08-31", "2026-09-01"]);
+    expect(depth.focusDaily.at(-1)!.net).toBe(600);
+    expect(depth.focusPositiveDays).toBe(2);
+    /** 초점은 들어온 쪽이다 — 일별 막대와 즐겨찾기가 이걸 쓴다. */
+    expect(depth.focusSector).toBe("전자장비와기기");
+    expect(depth.focusDirection).toBe("in");
   });
 });
 
@@ -156,7 +161,7 @@ describe("상세 배선 (완료 확인 1·4·7·8)", () => {
   const quietPick = read("../../lib/quiet-pick.ts");
 
   it("서버가 흐름 상세 재료를 응답에 싣는다", () => {
-    expect(quietPick).toContain("buildFlowDepth(pair, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode)");
+    expect(quietPick).toContain("buildFlowDepth(story, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode)");
     expect(quietPick).toContain("...(depth ? { depth } : {}),");
   });
 

@@ -51,6 +51,7 @@ const MACRO: QuietPickMacroCard = {
 };
 
 const FLOW: QuietPickFlowCard = {
+  kind: "rotation",
   fromSector: "반도체와반도체장비",
   toSector: "전자장비와기기",
   fromNet: -934_600_000_000,
@@ -83,24 +84,62 @@ const FLOW: QuietPickFlowCard = {
       { code: "090460", name: "비에이치", net: 49_000_000_000, volumeRatio: 1.8 },
       { code: "222800", name: "심텍", net: 22_000_000_000, volumeRatio: 1.5 },
     ],
-    toVolumeStocks: [
+    focusSector: "전자장비와기기",
+    focusDirection: "in",
+    focusVolumeStocks: [
       { code: "011070", name: "LG이노텍", net: 214_000_000_000, volumeRatio: 2.4 },
       { code: "090460", name: "비에이치", net: 49_000_000_000, volumeRatio: 1.8 },
       { code: "222800", name: "심텍", net: 22_000_000_000, volumeRatio: 1.5 },
     ],
-    toDaily: Array.from({ length: 20 }, (_, i) => ({
+    focusDaily: Array.from({ length: 20 }, (_, i) => ({
       date: `2026-08-${String(i + 5).padStart(2, "0")}`,
       net: (i % 6 === 0 ? -1 : 1) * (40 + i * 7) * 1_000_000_000,
     })),
-    toPositiveDays: 14,
+    focusPositiveDays: 14,
+  },
+};
+
+/**
+ * FLOW-02 §E — **한 업종 이야기.** 초점이 「빠지는 쪽」인 카드는 rotation 과 다른 화면이다:
+ * 상대편 종목 목록이 없고, 3·4·5걸음이 빠지는 업종을 따라간다. 그 모양을 봐야 고칠 수 있다.
+ */
+const FLOW_PERSISTENT: QuietPickFlowCard = {
+  kind: "persistent",
+  fromSector: "반도체와반도체장비",
+  fromNet: -1_284_000_000_000,
+  fromStocks: 90,
+  windowDays: 12,
+  hook: "반도체에서 12거래일째\n돈이 빠지고 있어요",
+  support: ["삼성전자 · SK하이닉스 등을 팔고 있어요", "최근 12거래일 · 외국인·기관 기준"],
+  depth: {
+    outflows: [
+      { sector: "반도체와반도체장비", net: -1_284_000_000_000, stocks: 90 },
+      { sector: "2차전지", net: -312_000_000_000, stocks: 14 },
+    ],
+    inflows: [{ sector: "우주항공과국방", net: 284_000_000_000, stocks: 12 }],
+    fromStocks: [
+      { code: "005930", name: "삼성전자", net: -812_000_000_000, volumeRatio: 1.9 },
+      { code: "000660", name: "SK하이닉스", net: -301_000_000_000, volumeRatio: 1.2 },
+      { code: "042700", name: "한미반도체", net: -94_000_000_000 },
+    ],
+    toStocks: [],
+    focusSector: "반도체와반도체장비",
+    focusDirection: "out",
+    focusVolumeStocks: [{ code: "005930", name: "삼성전자", net: -812_000_000_000, volumeRatio: 1.9 }],
+    focusDaily: Array.from({ length: 20 }, (_, i) => ({
+      date: `2026-08-${String(i + 5).padStart(2, "0")}`,
+      net: (i % 7 === 0 ? 1 : -1) * (30 + i * 5) * 1_000_000_000,
+    })),
+    focusPositiveDays: 3,
   },
 };
 
 export default function DetailPreview() {
-  const [open, setOpen] = useState<"macro" | "flow" | null>(null);
+  const [open, setOpen] = useState<"macro" | "flow" | "flow-persistent" | null>(null);
 
   if (open === "macro") return <MacroDepth card={MACRO} onClose={() => setOpen(null)} />;
   if (open === "flow") return <FlowDepth card={FLOW} onClose={() => setOpen(null)} />;
+  if (open === "flow-persistent") return <FlowDepth card={FLOW_PERSISTENT} onClose={() => setOpen(null)} />;
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col justify-center gap-s3 px-gutter">
@@ -120,6 +159,14 @@ export default function DetailPreview() {
         className="tap-button h-touch rounded-block border-hair border-ds-border bg-ds-surface-2 text-[15px] text-ds-text-1"
       >
         자금 흐름 상세 — 다섯 걸음
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen("flow-persistent")}
+        data-testid="open-flow-depth-persistent"
+        className="tap-button h-touch rounded-block border-hair border-ds-border bg-ds-surface-2 text-[15px] text-ds-text-1"
+      >
+        한 업종 이야기 — 빠지는 쪽이 초점
       </button>
     </main>
   );
