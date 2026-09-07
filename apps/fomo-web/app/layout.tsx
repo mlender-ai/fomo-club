@@ -22,6 +22,18 @@ export const metadata: Metadata = {
    */
   description:
     "뉴스가 나기 전에 돈이 먼저 들어간 종목을 찾아 보여드려요. 기관·외국인·임원이 조용히 사고 있는 곳, 그때 무슨 공시가 있었는지까지 함께 봅니다.",
+  /**
+   * LAUNCH-P1 §A-5 — **og:image 는 절대 주소여야 한다.**
+   *
+   * `metadataBase` 가 없으면 Next 가 `/og.png` 를 **그 배포의 호스트**로 해석한다
+   * (Vercel 은 배포마다 호스트가 다르다). 그러면 카카오톡·슬랙이 캐시한 카드가 지난 배포를
+   * 가리키고, 공유 주소에 정규 도메인이 아닌 이름이 찍힌다.
+   *
+   * 정규 별칭을 기본값으로 박고(배포 워크플로가 이 별칭을 붙인다), 프리뷰에서는
+   * `NEXT_PUBLIC_SITE_ORIGIN` 으로 덮어쓸 수 있게 둔다 — 프리뷰가 프로덕션 그림을
+   * 가리키면 「무엇을 보고 있는지」가 헷갈린다.
+   */
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim() || "https://fomo-web-mlender-ais-projects.vercel.app"),
   applicationName: "FOMO Club",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

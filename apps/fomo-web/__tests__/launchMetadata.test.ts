@@ -60,6 +60,12 @@ describe("출시 메타데이터 (LAUNCH-P1 완료 확인 1·2·3)", () => {
     const layout = read("../app/layout.tsx");
     expect(layout).toContain('url: "/og.png", width: 1200, height: 630');
     expect(layout).toContain('card: "summary_large_image"');
+    /**
+     * 절대 주소로 나가야 한다 — `metadataBase` 가 없으면 배포마다 호스트가 바뀌고,
+     * 공유 카드가 지난 배포의 그림을 가리킨다.
+     */
+    expect(layout).toContain("metadataBase: new URL(");
+    expect(layout).toContain("fomo-web-mlender-ais-projects.vercel.app");
     // 그림 파일이 실제로 레포에 있어야 한다 — 선언만 하고 파일이 없으면 깨진 카드가 뜬다.
     const png = readFileSync(new URL("../public/og.png", import.meta.url));
     expect(png.length).toBeGreaterThan(1000);
