@@ -77,7 +77,18 @@ export async function GET(request: Request) {
       const history = [latest, ...kept].slice(0, ARK_HISTORY_MAX);
       byInvestor[investor.id] = {
         latest,
-        prior: pickComparisonSnapshot(history, today, ARK_COMPARE_DAYS),
+        /**
+         * INFLUENCER-01 PART A — 비교 창을 **데이터 날짜 기준**으로 잡는다.
+         *
+         * 종전에는 `today`(수집 실행일)에서 5일을 셌다. ARK 파일은 미국 장 마감 뒤 나오므로
+         * 주말·휴일에는 최신 데이터가 며칠 묵는다 — 월요일 아침 실행에서 최신이 금요일자면
+         * 창이 `금요일 ~ (오늘-5일)` 로 **2거래일로 쪼그라들었다.** 그 창에서는 실제 매매가
+         * 자금 유출입 노이즈 위로 올라오지 못한다(실측 2026-09-07: 90종목 중 2% 이상 변한
+         * 것 0개).
+         *
+         * 최신 데이터 날짜에서 세면 창이 언제나 같은 폭이다.
+         */
+        prior: pickComparisonSnapshot(history, latest.asOf, ARK_COMPARE_DAYS),
         history,
       };
     }

@@ -45,7 +45,14 @@ describe("완료 확인 1 — 최근 창 안에 나온 종목은 기본적으로
   });
 
   it("이력은 크론이 **이미 읽은 스냅샷**에서 만든다 — 커넥션을 더 잡지 않는다", () => {
-    expect(cron).toContain("buildExposureHistory(wanted.map((d) => snapshots.get(dateId(d)) ?? null))");
+    /**
+     * FIX-03 PART A — 이력의 재료를 **8일치 → 30일치**로 넓혔다. 실측에서 종근당의
+     * 8월 26일 노출이 8일 창 밖이라 `exposure` 가 없었고, 그래서 「다시 나왔어요」가
+     * 꺼졌다. 30일치는 거시 카드용으로 이미 읽어둔 스냅샷이라 커넥션을 더 잡지 않는다.
+     */
+    expect(cron).toContain("buildExposureHistory(recentDates.map((d) => recentSnaps.get(dateId(d)) ?? null))");
+    // 덱 반복 규칙(보류)은 여전히 2일 창이다 — 이력이 길어져도 오늘 덱은 달라지지 않는다.
+    expect(cron).toContain("page1Streaks = quietPickPage1Streaks(wanted.map");
     // `wanted` 는 오늘을 뺀 과거 날짜다 — 자기 자신 때문에 제외되면 안 된다.
     expect(cron).toContain("const wanted = priorDates(date, PAGE1_HISTORY_DAYS);");
   });

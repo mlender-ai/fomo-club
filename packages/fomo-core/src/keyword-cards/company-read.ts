@@ -65,7 +65,7 @@
 
 import { josa } from "./josa";
 import { industryDisplayLabel } from "./sector-display";
-import type { SectorStat } from "./sector-stats";
+import { sectorComparison, SECTOR_MIN_MEMBERS, type SectorComparison, type SectorStat } from "./sector-stats";
 
 /** 한 줄 — 숫자와 **그 숫자를 읽는 문장**. 문장이 없으면 이 줄은 만들어지지 않는다. */
 export interface CompanyMetricRow {
@@ -109,6 +109,14 @@ export interface CompanyGroup {
   summaryText: string | null;
   /** 이 덩어리를 어떻게 냈는지 — 화면 맨 아래 `점수는 이렇게 매겼어요` 가 모아서 쓴다. */
   method: string;
+  /**
+   * FIX-02 PART D — **줄도 점도 못 만든 이유.** 있으면 화면은 제목 아래 이 한 줄을 쓴다.
+   *
+   * 종전에는 빈 덩어리를 **말없이 뺐다.** 그래서 종목마다 섹션이 들쭉날쭉했고
+   * (PS일렉트로닉스 `돈·값` / Pinnacle `값·빚`) 사용자에게는 앱이 고장 난 것처럼 보였다.
+   * 데이터가 없는 것과 고장 난 것은 다르고, 그 차이를 화면이 말해야 한다.
+   */
+  missingReason?: string;
 }
 
 export interface CompanyReadInput {
@@ -128,7 +136,14 @@ export interface CompanyReadInput {
    * **100%** 다. 100배 틀린 숫자를 확신 있게 보여주는 것이 없는 것보다 나쁘다.
    */
   balance: { debtToEquity: number | null };
-  sector: SectorStat | null;
+  /**
+   * 업종 비교 후보 — **좁은 분류부터, 그다음 상위 분류**(`sectorCandidates`).
+   *
+   * 종전에는 분류 하나(`sector: SectorStat | null`)를 받았다. 지표마다 표본 수가 다르므로
+   * 「PBR 은 좁은 분류로, 부채비율은 상위 분류로」가 정상 결과다(FIX-02 B-2 사다리).
+   * 그리고 중앙값은 **자기 자신을 뺀 뒤** 이 자리에서 낸다(B-3).
+   */
+  sectorCandidates: readonly SectorStat[];
 }
 
 const pct = (v: number) => `${v >= 0 ? "+" : ""}${(Math.round(v * 10) / 10).toFixed(1)}%`;
@@ -146,22 +161,23 @@ function bandPhrase(percentile: number): string {
 /**
  * 업종 이름 — 화면용. **영어를 그대로 쓰지 않는다**(FIX-01 E-1).
  *
- * 표에 없는 영문 분류는 `null` 이라 `같은 업종` 으로 쓴다. 상위 이름(`금융`)으로 바꿔
- * 부르지 않는다 — 통계 모수는 좁은 분류의 구성원이고, 다른 이름을 붙이면 없는 모수를
- * 말하는 것이 된다(`sector-display.ts` 머리말).
+ * 표에 없는 영문 분류는 `null` 이라 이름 없이 쓴다. 상위 이름(`금융`)으로 바꿔 부르지
+ * 않는다 — 통계 모수는 좁은 분류의 구성원이고, 다른 이름을 붙이면 없는 모수를 말하는 것이
+ * 된다(`sector-display.ts` 머리말).
  */
-function sectorPhrase(sector: SectorStat): string {
-  const label = industryDisplayLabel(sector.label);
-  return label ? `${label} 업종` : "같은 업종";
+function peerName(cmp: SectorComparison): string | null {
+  return industryDisplayLabel(cmp.label);
 }
 
 /**
- * 계산 방법에 쓸 모수 표기. `같은 업종(은행 업종) 31종목` 처럼 **`업종` 이 두 번 나오지
- * 않게** 이름만 넣는다. 이름을 모르면 괄호를 아예 쓰지 않는다.
+ * 누구와 견줬는지 — **자기를 뺀 곳 수를 밝힌다**(FIX-02 B-4).
+ *
+ * `다른 은행 12곳` 이라고 쓰는 이유: 종전 문구(`Major Banks 업종 중간값`)는 그 모수에
+ * 자기가 들어 있었는지, 몇 곳인지 알려주지 않았다. 실측에서는 그 모수가 **자기 하나**였다.
  */
-function sectorNote(sector: SectorStat): string {
-  const label = industryDisplayLabel(sector.label);
-  return label ? `같은 업종(${label})` : "같은 업종";
+function peerPhrase(cmp: SectorComparison): string {
+  const label = peerName(cmp);
+  return label ? `다른 ${label} ${cmp.count}곳` : `같은 업종 다른 ${cmp.count}곳`;
 }
 
 /**
@@ -170,15 +186,49 @@ function sectorNote(sector: SectorStat): string {
  * ## `중간값` 이 아니라 `평균` 이라고 쓴다 (FIX-01 E-2)
  *
  * 계산은 **여전히 중앙값**이다(`sector-stats.ts`: PER 은 적자 직전 종목에서 수백 배로
- * 튀어 평균을 망가뜨린다). 바뀐 것은 표시뿐이다 — `중간값` 은 통계 용어이고, 이 화면을
- * 보는 사람에게 그 구분은 정보가 아니라 장벽이다. 계산 방법은
- * `점수는 이렇게 매겼어요`(`method`)가 밝힌다.
+ * 튀어 평균을 망가뜨린다). 바뀐 것은 표시뿐이고, 계산 방법은 `점수는 이렇게 매겼어요`가
+ * 밝힌다.
  */
-function versusSector(mine: number, theirs: number, unit: (v: number) => string, label: string): string {
+function versusPeers(mine: number, theirs: number, unit: (v: number) => string, cmp: SectorComparison): string {
   const gap = (mine - theirs) / theirs;
-  const base = `${label} 평균 ${unit(theirs)}`;
+  const base = `${peerPhrase(cmp)} 평균 ${unit(theirs)}`;
   if (Math.abs(gap) < 0.05) return `${base}${josa(base, "와과")} 비슷해요`;
   return `${base}보다 ${mine < theirs ? "낮아요" : "높아요"}`;
+}
+
+/**
+ * 계산 방법에 쓸 모수 표기. **몇 곳과 견줬는지**를 여기서도 밝힌다.
+ * 이름을 모르면 이름 없이 쓴다.
+ */
+function peerNote(cmp: SectorComparison): string {
+  const label = peerName(cmp);
+  return label ? `같은 업종(${label}) 다른 ${cmp.count}곳` : `같은 업종 다른 ${cmp.count}곳`;
+}
+
+/**
+ * FIX-02 PART C-3 — **금융 업종에는 부채비율을 쓰지 않는다.**
+ *
+ * 은행은 예금이 부채로 잡혀 부채비율이 원래 수백 %다. 실측 화면의 `부채비율 770.3%` 는
+ * 은행에서 정상인데 **사용자는 그걸 모른다** — 그 숫자만 보면 망하기 직전으로 읽힌다.
+ *
+ * 대신 **자기자본비율**(자기자본 ÷ 총자산)을 쓴다. 팩트시트에 총자산 항목은 없지만
+ * `debt_to_equity` 하나로 나온다: 자산 = 자기자본 + 부채이므로 `1 / (1 + 부채/자기자본)`.
+ * 새 수집이 없다.
+ */
+const FINANCIAL_LABELS: ReadonlySet<string> = new Set([
+  // 표시명(국내 원문이 이미 짧아 표시명이 원문과 같은 것 포함)
+  "은행", "저축은행", "증권", "자산운용", "손해보험", "생명보험", "건강보험", "특종보험",
+  "종합금융", "여신금융", "소비자금융", "리츠", "금융", "벤처투자", "카드", "부동산", "보험",
+]);
+
+function isFinancialPeer(cmp: SectorComparison): boolean {
+  const label = peerName(cmp) ?? cmp.label;
+  return FINANCIAL_LABELS.has(label.trim());
+}
+
+/** 부채/자기자본 배수 → 자기자본비율(0~1). 자산 = 자기자본 + 부채. */
+function equityRatio(debtToEquity: number): number {
+  return 1 / (1 + debtToEquity);
 }
 
 /**
@@ -258,7 +308,16 @@ export function earningsGroup(input: CompanyReadInput): CompanyGroup {
 
   const method = "매출 증가·영업이익 증가·흑자 여부 셋을 세어 5점으로 옮겼어요.";
   if (marks.length === 0) {
-    return { title, rows, score: null, scoreText: null, summaryText: null, method };
+    // FIX-02 D-1 — 말없이 사라지지 않는다. 없는 이유를 화면에 적는다.
+    return {
+      title,
+      rows,
+      score: null,
+      scoreText: null,
+      summaryText: null,
+      method,
+      missingReason: "실적 자료를 아직 못 가져왔어요",
+    };
   }
 
   const hit = marks.reduce((a, b) => a + b, 0);
@@ -308,59 +367,81 @@ export function earningsGroup(input: CompanyReadInput): CompanyGroup {
  * 비교 기준 우선순위는 WO §4-3 이 정했다: **① 업종 대푯값 → ② 이 회사 5년 밴드.**
  * 둘 다 없으면 그 줄을 안 만든다.
  *
+ * 업종 비교는 **지표별로** 자기를 뺀 표본이 `SECTOR_MIN_MEMBERS` 이상일 때만 붙는다
+ * (FIX-02 B-2·B-3) — PER 은 업종으로, PBR 은 5년 밴드로 나가는 것이 정상 결과다.
+ *
  * **적자면 PER 을 안 쓴다** — 이익이 없으면 이익 배수는 값이 아니라 잡음이다(WO §4-4).
  */
 export function valueGroup(input: CompanyReadInput): CompanyGroup {
   const rows: CompanyMetricRow[] = [];
   const v = input.valuation;
-  const sector = input.sector;
+  const cands = input.sectorCandidates;
   const loss = input.margin.operatingTtm !== null && input.margin.operatingTtm <= 0;
   /** 어느 지표로 쟀는지 — 요약 문장의 **주어**가 된다(FIX-01 C-1). */
   const measured: string[] = [];
+  /** 백분위가 낮을수록(= 쌀수록) 점이 높다. 「싸다」는 판단이 아니라 위치다. */
+  const percentiles: number[] = [];
+  /** 업종으로 잰 지표가 하나라도 있나 — 계산 방법·요약 문구가 갈린다. */
+  let peer: SectorComparison | null = null;
 
-  if (!loss && v.per !== null && v.per > 0) {
-    if (sector?.per) {
-      rows.push({ label: "PER", value: times(v.per), comparison: versusSector(v.per, sector.per, times, sectorPhrase(sector)) });
+  const perUsable = !loss && v.per !== null && v.per > 0;
+  if (perUsable) {
+    const cmp = sectorComparison(cands, "per", v.per);
+    if (cmp) {
+      rows.push({ label: "PER", value: times(v.per!), comparison: versusPeers(v.per!, cmp.median, times, cmp) });
       measured.push("PER");
+      percentiles.push(Math.min(100, (v.per! / cmp.median) * 50));
+      peer = cmp;
     } else if (v.perBand?.sufficient && v.perBand.percentile !== null) {
-      rows.push({ label: "PER", value: times(v.per), comparison: bandPhrase(v.perBand.percentile) });
+      rows.push({ label: "PER", value: times(v.per!), comparison: bandPhrase(v.perBand.percentile) });
       measured.push("PER");
+      percentiles.push(v.perBand.percentile);
     }
   }
   if (v.pbr !== null && v.pbr > 0) {
-    if (sector?.pbr) {
-      rows.push({ label: "PBR", value: times(v.pbr), comparison: versusSector(v.pbr, sector.pbr, times, sectorPhrase(sector)) });
+    const cmp = sectorComparison(cands, "pbr", v.pbr);
+    if (cmp) {
+      rows.push({ label: "PBR", value: times(v.pbr), comparison: versusPeers(v.pbr, cmp.median, times, cmp) });
       measured.push("PBR");
+      percentiles.push(Math.min(100, (v.pbr / cmp.median) * 50));
+      peer = peer ?? cmp;
     } else if (v.pbrBand?.sufficient && v.pbrBand.percentile !== null) {
       rows.push({ label: "PBR", value: times(v.pbr), comparison: bandPhrase(v.pbrBand.percentile) });
       measured.push("PBR");
+      percentiles.push(v.pbrBand.percentile);
     }
   }
 
-  const method = sector
-    ? `${sectorNote(sector)} ${sector.members}종목의 가운데 값과 견줘 5점으로 옮겼어요.`
+  const method = peer
+    ? `${peerNote(peer)}의 가운데 값과 견줘 5점으로 옮겼어요. 자기 자신은 빼고 셌어요.`
     : "이 회사의 최근 5년 값 분포에서 지금이 어디인지로 5점을 냈어요.";
-
-  /** 백분위가 낮을수록(= 쌀수록) 점이 높다. 「싸다」는 판단이 아니라 위치다. */
-  const percentiles: number[] = [];
-  if (sector) {
-    if (!loss && v.per !== null && v.per > 0 && sector.per) percentiles.push(Math.min(100, (v.per / sector.per) * 50));
-    if (v.pbr !== null && v.pbr > 0 && sector.pbr) percentiles.push(Math.min(100, (v.pbr / sector.pbr) * 50));
-  } else {
-    if (!loss && v.perBand?.sufficient && v.perBand.percentile !== null) percentiles.push(v.perBand.percentile);
-    if (v.pbrBand?.sufficient && v.pbrBand.percentile !== null) percentiles.push(v.pbrBand.percentile);
-  }
 
   const title = "값은 어떤가요";
   if (percentiles.length === 0) {
-    // 적자라서 못 잰 것과 데이터가 없어서 못 잰 것은 다르다. 다른 말을 쓴다.
+    /**
+     * 적자라서 못 잰 것 · 비교 대상이 모자라 못 잰 것 · 자료가 없어서 못 잰 것은 **다르다.**
+     * FIX-02 D-1 — 어느 쪽인지 화면에 적는다.
+     */
     const cannot = loss && rows.length === 0 ? "적자라서 이익으로는 값을 잴 수 없어요" : null;
-    return { title, rows, score: null, scoreText: cannot, summaryText: cannot, method };
+    const missingReason = cannot
+      ? undefined
+      : v.per === null && v.pbr === null
+        ? "값 지표를 아직 못 가져왔어요"
+        : `같은 업종에 비교할 회사가 ${SECTOR_MIN_MEMBERS}곳이 안 되고, 5년 범위도 아직 짧아요`;
+    return {
+      title,
+      rows,
+      score: null,
+      scoreText: cannot,
+      summaryText: cannot,
+      method,
+      ...(missingReason ? { missingReason } : {}),
+    };
   }
   const avg = percentiles.reduce((a, b) => a + b, 0) / percentiles.length;
   const score = Math.max(1, Math.min(5, Math.round(((100 - avg) / 100) * 5)));
   const where = avg <= 40 ? "낮은 편이에요" : avg >= 60 ? "높은 편이에요" : "가운데쯤이에요";
-  const basis = sector ? `${sectorPhrase(sector)} 안에서` : "최근 5년 중";
+  const basis = peer ? `${peerPhrase(peer)} 가운데` : "최근 5년 중";
   /** C-1 — **무엇이** 낮은지 앞에 둔다. 주어 없이 형용사만 남기지 않는다. */
   const subject = measured.join("·");
   const summaryText = subject
@@ -377,33 +458,68 @@ export function valueGroup(input: CompanyReadInput): CompanyGroup {
 /**
  * ③ 빚은 괜찮나요 — 위험한가.
  *
- * 부채비율은 업종에 따라 정상 범위가 완전히 다르다(은행 1,000% 대 소프트웨어 10%대).
- * 그래서 **업종 대푯값이 없으면 점을 안 준다.** 절대 기준을 만들어 쓰면 반드시 틀린다.
+ * 부채비율은 업종에 따라 정상 범위가 완전히 다르다(은행 수백 % 대 소프트웨어 10%대).
+ * 그래서 **업종 비교 대상이 없으면 점을 안 준다.** 절대 기준을 만들어 쓰면 반드시 틀린다.
+ *
+ * ## 금융 업종에는 **자기자본비율**을 쓴다 (FIX-02 PART C-3)
+ *
+ * 은행은 예금이 부채로 잡혀 부채비율이 원래 수백 %다. `부채비율 770.3%` 는 은행에서
+ * 정상인데 사용자는 그걸 모른다. 같은 정보를 자기자본비율(자기자본 ÷ 총자산)로 옮기면
+ * `11.5%` 가 되고, 그 숫자는 그 자체로 읽힌다. **새 수집이 없다** — `debt_to_equity`
+ * 하나에서 나온다(자산 = 자기자본 + 부채).
  */
 export function debtGroup(input: CompanyReadInput): CompanyGroup {
   const rows: CompanyMetricRow[] = [];
   const d = input.balance.debtToEquity;
-  const sector = input.sector;
-  const method = sector
-    ? `${sectorNote(sector)} ${sector.members}종목의 부채비율 가운데 값과 견줬어요.`
-    : "업종 비교 대상이 모자라 점을 내지 않았어요.";
   const title = "빚은 괜찮나요";
+  const cmp = sectorComparison(input.sectorCandidates, "debtToEquity", d);
 
-  if (d === null || !(d >= 0) || !sector?.debtToEquity) {
-    return { title, rows, score: null, scoreText: null, summaryText: null, method };
+  if (d === null || !(d >= 0) || !cmp) {
+    // FIX-02 D-1 — 자료가 없는 것과 비교 대상이 모자란 것은 다르다.
+    const missingReason =
+      d === null || !(d >= 0)
+        ? "부채 자료를 아직 못 가져왔어요"
+        : `같은 업종에 비교할 회사가 ${SECTOR_MIN_MEMBERS}곳이 안 돼요`;
+    return {
+      title,
+      rows,
+      score: null,
+      scoreText: null,
+      summaryText: null,
+      method: "업종 비교 대상이 모자라 점을 내지 않았어요.",
+      missingReason,
+    };
   }
+
+  const financial = isFinancialPeer(cmp);
   // 배수 → 퍼센트. 소수 한 자리까지 남긴다 — 반올림하면 `1%` 와 `1%` 가 되어 비교가 거짓말이 된다.
   const asPct = (v: number) => `${(Math.round(v * 1000) / 10).toFixed(1)}%`;
-  rows.push({
-    label: "부채비율",
-    value: asPct(d),
-    comparison: versusSector(d, sector.debtToEquity, asPct, sectorPhrase(sector)),
-  });
-  const ratio = d / sector.debtToEquity;
+  const ratioPct = (v: number) => `${(Math.round(v * 1000) / 10).toFixed(1)}%`;
+
+  if (financial) {
+    /**
+     * 자기자본비율은 부채비율의 **단조 감소 변환**이라 비교 방향이 그대로 뒤집힌다
+     * (부채가 적으면 자기자본비율이 높다). 중앙값도 같은 변환을 거친 값을 쓴다.
+     */
+    const mine = equityRatio(d);
+    const theirs = equityRatio(cmp.median);
+    rows.push({
+      label: "자기자본비율",
+      value: ratioPct(mine),
+      comparison: versusPeers(mine, theirs, ratioPct, cmp),
+    });
+  } else {
+    rows.push({ label: "부채비율", value: asPct(d), comparison: versusPeers(d, cmp.median, asPct, cmp) });
+  }
+
+  const ratio = d / cmp.median;
   const score = ratio <= 0.5 ? 5 : ratio <= 0.8 ? 4 : ratio <= 1.2 ? 3 : ratio <= 2 ? 2 : 1;
   /** C-2 — 요약에는 주어(`빚은`)를 둔다. B — 점 옆에는 되풀이하지 않는다(줄이 이미 말했다). */
   const summaryText =
     ratio <= 0.8 ? "빚은 같은 업종보다 적어요" : ratio <= 1.2 ? "빚은 같은 업종과 비슷해요" : "빚은 같은 업종보다 많아요";
+  const method = financial
+    ? `${peerNote(cmp)}의 자기자본비율 가운데 값과 견줬어요. 은행·보험은 예금이 부채로 잡혀 부채비율 대신 자기자본비율을 봐요.`
+    : `${peerNote(cmp)}의 부채비율 가운데 값과 견줬어요. 자기 자신은 빼고 셌어요.`;
   return { title, rows, score, scoreText: null, summaryText, method };
 }
 
@@ -413,7 +529,15 @@ export function debtGroup(input: CompanyReadInput): CompanyGroup {
  * 줄도 점도 없는 덩어리는 **빼고 내보낸다** — 빈 제목만 있는 칸을 만들지 않는다.
  */
 export function companyRead(input: CompanyReadInput): CompanyGroup[] {
-  return [earningsGroup(input), valueGroup(input), debtGroup(input)].filter(
-    (g) => g.rows.length > 0 || g.score !== null || g.scoreText !== null || g.summaryText !== null
-  );
+  const groups = [earningsGroup(input), valueGroup(input), debtGroup(input)];
+  const hasContent = (g: CompanyGroup) =>
+    g.rows.length > 0 || g.score !== null || g.scoreText !== null || g.summaryText !== null;
+  /**
+   * FIX-02 D-2 — **하나라도 내용이 있으면 세 덩어리를 다 보낸다.** 빈 덩어리는 사유를 들고
+   * 나가고(D-1), 셋 다 비면 빈 배열이라 걸음 자체가 사라진다.
+   *
+   * 종전에는 빈 덩어리만 조용히 뺐다. 그래서 종목마다 섹션 구성이 달라졌고, 사용자는
+   * 「왜 이 종목만 없지」를 알 수 없었다.
+   */
+  return groups.some(hasContent) ? groups : [];
 }

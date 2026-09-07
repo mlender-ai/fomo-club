@@ -23,7 +23,7 @@ describe("흐름 카드 배선 (완료 확인 2)", () => {
   });
 
   it("응답에 실린다 — 이게 끊기면 카드가 안 나온다", () => {
-    expect(engine).toContain("const flowCards: FlowCard[] = sectorFlow.pairs.map(");
+    expect(engine).toContain("const flowCards: FlowCard[] = sectorFlow.stories.map(");
     expect(engine).toContain("...(flowCards.length > 0 ? { flowCards } : {}),");
   });
 
@@ -44,14 +44,29 @@ describe("흐름 카드 배선 (완료 확인 2)", () => {
     expect(deck).toContain("[3, 6, 9].forEach((at, i) => {");
   });
 
-  it("하루 최대 2장 (§D-1)", () => {
-    expect(engine).toContain("const SECTOR_FLOW_MAX_CARDS = 2;");
-    expect(engine).toContain("pairs.slice(0, SECTOR_FLOW_MAX_CARDS)");
+  /**
+   * FLOW-02 §E-2 로 상한이 셋이 됐다 — **종류가 넷이 됐기 때문**이다.
+   * 상한만 올리고 종류를 안 늘리면 같은 이야기가 세 번 나온다. 그래서 여기서
+   * ① 상한 ② 종류별 한 장(각 검출기가 하나만 돌려준다) ③ 같은 업종 두 번 금지를 함께 본다.
+   */
+  it("하루 최대 3장 · 종류마다 한 장 · 같은 업종 두 번 금지 (FLOW-02 §E-2)", () => {
+    expect(engine).toContain("const SECTOR_FLOW_MAX_CARDS = 3;");
+    expect(engine).toContain("if (stories.length >= SECTOR_FLOW_MAX_CARDS) break;");
+    expect(engine).toContain("if (sectors.some((sector) => used.has(sector))) continue;");
+    for (const picker of ["pickConcentration(dailies, SECTOR_FLOW_MIN_NET)", "pickPersistentOutflow(dailies, SECTOR_FLOW_MIN_NET)", "pickReversal(dailies, SECTOR_FLOW_MIN_NET)"]) {
+      expect(engine, picker).toContain(picker);
+    }
+  });
+
+  /** 보고할 것 4번 — 「카드 종류별 하루 발생 수」를 응답이 답한다. */
+  it("종류별 후보 수를 남긴다 — 카드가 한 장인 날 원인을 응답이 답해야 한다", () => {
+    expect(engine).toContain("candidatesByKind: { rotation: 0, concentration: 0, persistent: 0, reversal: 0 }");
+    expect(engine).toContain("census.candidatesByKind[story.kind] += 1;");
   });
 });
 
 describe("그림·문장 규칙 (완료 확인 3·7)", () => {
-  it("막대 둘 + 화살표 하나. 산키·애니메이션 없음", () => {
+  it("막대 + 화살표 하나. 산키·애니메이션 없음", () => {
     expect(card).toContain("↓");
     for (const banned of ["sankey", "Sankey", "animate", "transition:", "@keyframes", "svg"]) {
       expect(card, banned).not.toContain(banned);
@@ -73,8 +88,31 @@ describe("그림·문장 규칙 (완료 확인 3·7)", () => {
   it("업종 이름을 자르지 않는다 — 표시명을 쓰고 라벨은 막대 위에 둔다 (FLOW-01 §A-1·§A-2)", () => {
     // 프로덕션 실측(2026-09-02): 왼쪽 72px 칸 + truncate 가 `반도체와반...` 을 만들었다.
     expect(card).not.toContain("w-[72px]");
-    expect(card).toContain("sectorDisplayName(card.fromSector)");
-    expect(card).toContain("sectorDisplayName(card.toSector)");
+    // 막대가 셋씩이 된 뒤(FLOW-02 §D-2) 라벨은 줄마다 붙는다 — 원문이 아니라 표시명이다.
+    expect(card).toContain("sectorDisplayName(row.sector)");
+    expect(card).not.toMatch(/label=\{card\.(from|to)Sector\}/);
+  });
+
+  /**
+   * FLOW-02 §D-2 · 완료 확인 8 — **한 쌍만 보여주지 않는다.**
+   * 한 쌍만 그리면 그 업종만 움직인 것처럼 보인다. 상세와 같은 재료로 셋씩 그린다.
+   */
+  it("카드에 빠진 곳 셋 · 들어온 곳 셋이 나온다", () => {
+    expect(card).toContain("card.depth?.outflows ?? []");
+    expect(card).toContain("card.depth?.inflows ?? []");
+    expect(card).toContain('title="돈이 빠진 곳"');
+    expect(card).toContain('title="돈이 들어온 곳"');
+  });
+
+  /** §C-1 — 카드에 대표 종목 둘. 서버가 만든 줄을 그대로 그린다. */
+  it("대표 종목 줄이 카드에 그려진다 — 서버가 만든 보조 줄을 그대로 쓴다", () => {
+    expect(card).toContain("card.support.map((line)");
+    expect(engine).toContain("support: flowSupport(story, depth)");
+    const core = readFileSync(
+      new URL("../../../../packages/fomo-core/src/keyword-cards/sector-flow.ts", import.meta.url), "utf8"
+    );
+    expect(core).toContain("export function flowStockLine(");
+    expect(core).toContain("등을 ${direction === \"in\" ? \"사고\" : \"팔고\"} 있어요");
   });
 
   it("화면이 인과를 덧붙이지 않는다 — 문장은 서버가 만든 것을 그대로 쓴다", () => {
@@ -99,12 +137,25 @@ describe("그림·문장 규칙 (완료 확인 3·7)", () => {
 });
 
 describe("집계 규칙", () => {
-  it("분류를 못 찾은 종목은 「기타」로 묶지 않고 센다 (§E-3)", () => {
+  /**
+   * 「기타」에 대한 규칙이 **두 개**가 됐다(LAUNCH-P1 §D 실측).
+   *
+   * ① 우리가 기타 바구니를 **만들지 않는다**(원래 규칙 §E-3).
+   * ② 벤더가 보낸 `기타` 를 **업종으로 쓰지 않는다** — 실측에서 79개 업종 중 `기타` 가
+   *    389종목으로 가장 컸다. 그대로 두면 어느 날 「기타에서 돈이 빠지고」 카드가 나온다.
+   *
+   * 그래서 `"기타"` 문자열은 이제 코어에 **있어야 한다**(자리표 목록으로). 없어야 할 것은
+   * 「모르는 종목에 기타를 붙이는 코드」다 — 할당을 본다.
+   */
+  it("모르는 종목은 묶지 않고 세고, 벤더의 「기타」도 업종으로 쓰지 않는다 (§E-3 · LAUNCH-P1 §D)", () => {
     const core = readFileSync(
       new URL("../../../../packages/fomo-core/src/keyword-cards/sector-flow.ts", import.meta.url), "utf8"
     );
     expect(core).toContain("unclassified += 1; continue;");
-    expect(core).not.toContain('"기타"');
+    expect(core).toContain('PLACEHOLDER_SECTORS: readonly string[] = ["기타"');
+    expect(core).toContain("isPlaceholderSector(sector)");
+    // 모르는 종목에 자리표를 **붙이는** 코드는 없다.
+    expect(core).not.toMatch(/sector\s*=\s*"기타"|\?\?\s*"기타"/);
   });
 
   it("임계가 잠정값임을 코드에 밝힌다 — 실측으로 확정할 자리다 (§D-2)", () => {

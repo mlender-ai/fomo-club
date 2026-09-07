@@ -463,3 +463,65 @@ test("[MACRO-01 §D-2] 거시 카드는 숫자를 한 번만 쓰고, 설명은 �
   const box = (await bar.boundingBox())!;
   expect(Math.round(box.y + box.height)).toBe(page.viewportSize()!.height);
 });
+
+/**
+ * FLOW-02 §C-1·§D-2 — **업종 이름만 보고 나가면 이 카드는 쓸모없다.**
+ *
+ * 유닛 테스트는 문장 함수를, 이 스펙은 **카드에 실제로 그려졌는지**를 지킨다.
+ * 2026-08-31 화면의 문제 넷(잘린 업종명 · 종목 없음 · 한 쌍 · 기준 불명)을 그대로 잰다.
+ */
+test("[FLOW-02 §C-1·§D-2] 흐름 카드에 대표 종목 둘과 빠진 곳·들어온 곳 셋씩이 나온다", async ({ page }) => {
+  await page.goto(PREVIEW);
+  const card = page.locator('[data-case="flow"] [data-testid="flow-card"]');
+  await expect(card).toBeVisible();
+
+  // 셋씩 — 한 쌍만 보여주면 그 업종만 움직인 것처럼 보인다(완료 확인 8).
+  await expect(card.locator('[data-testid="flow-figure-out"] [data-testid="flow-bar-out"]')).toHaveCount(3);
+  await expect(card.locator('[data-testid="flow-figure-in"] [data-testid="flow-bar-in"]')).toHaveCount(3);
+
+  // 대표 종목 둘(완료 확인 5). 기준 줄보다 **위**에 있어야 한다.
+  const support = card.locator('[data-testid="flow-support"]');
+  await expect(support).toContainText("LG이노텍 · 삼성전기 등을 사고 있어요");
+  const lines = (await support.innerText()).split("\n").filter((l) => l.trim().length > 0);
+  expect(lines[0]).toContain("LG이노텍");
+  expect(lines[1]).toContain("외국인·기관 기준");
+
+  // 업종명이 안 잘린다(완료 확인 4) — 표시명을 쓰고 `…` 를 만들지 않는다.
+  const figure = await card.locator('[data-testid="flow-figure"]').innerText();
+  expect(figure).not.toContain("…");
+  expect(figure).not.toContain("반도체와반");
+  const clipped = await card.locator('[data-testid="flow-figure"] [data-testid="flow-bar-label"]').evaluateAll(
+    (els) => els.filter((el) => el.scrollWidth > el.clientWidth + 1).map((el) => el.textContent)
+  );
+  expect(clipped, `잘린 라벨: ${clipped.join(", ")}`).toEqual([]);
+});
+
+/**
+ * FLOW-02 §E·§F — **한 업종 이야기**는 rotation 과 다른 화면이다.
+ * 초점이 빠지는 쪽이면 3·4·5걸음이 그 업종을 따라가야 하고, 없는 쪽 목록을 만들지 않는다.
+ */
+test("[FLOW-02 §E] 빠지는 쪽이 초점인 카드의 상세가 방향을 따라간다", async ({ page }) => {
+  await page.goto("/detail-preview");
+  await page.locator('[data-testid="open-flow-depth-persistent"]').click();
+  const depth = page.locator('[data-testid="flow-depth"]');
+  await expect(depth).toBeVisible();
+  // 헤더에 조사가 틀리지 않는다 — 종전 화면은 `반도체으로` 를 냈다.
+  await expect(depth).toContainText("반도체에서 빠진 돈");
+  await expect(depth).not.toContainText("반도체으로");
+
+  await depth.locator('[data-testid="depth-next"]').click();
+  // 판 종목만 나온다 — 산 종목 목록을 억지로 채우지 않는다.
+  await expect(depth.locator('[data-testid="flow-depth-from-stock"]').first()).toContainText("삼성전자");
+  await expect(depth.locator('[data-testid="flow-depth-to-stock"]')).toHaveCount(0);
+
+  await depth.locator('[data-testid="depth-next"]').click();
+  await expect(depth).toContainText("돈이 빠지면서 거래도 함께 붙고 있어요");
+
+  await depth.locator('[data-testid="depth-next"]').click();
+  await expect(depth).toContainText("반도체에서 돈이 빠진 지 얼마나 됐나요");
+  await expect(depth).toContainText("순매도였어요");
+
+  await depth.locator('[data-testid="depth-next"]').click();
+  await expect(depth).toContainText("반도체 업종을 계속 지켜볼까요");
+  await expect(depth).toContainText("돈이 계속 빠지는지");
+});

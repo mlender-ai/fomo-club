@@ -385,11 +385,34 @@ export function QuietPickDeck() {
    * 이동 깊이는 **2단계**다(흐름/거시 상세 → 종목 상세). 종목 상세에서 더 들어가지 않으므로
    * §D-3 의 「3단계를 넘지 않게」를 자연히 지킨다.
    */
-  const resolveStockDetail = (canonical: string): (() => void) | undefined => {
-    const target = picks.find((p) => p.subject.canonical === canonical);
+  const resolveStockDetail = (canonicalOrTicker: string): (() => void) | undefined => {
+    /**
+     * INFLUENCER-01 PART E — 인물 페이지는 **티커**로 찾는다(포트폴리오가 티커로 온다).
+     * 거시·흐름 상세는 종목명(canonical)으로 찾는다. 둘 다 받는다 — 창구를 둘로 만들면
+     * 한쪽만 고쳐지는 날이 온다.
+     */
+    const key = canonicalOrTicker.trim();
+    const upper = key.toUpperCase();
+    const target =
+      picks.find((p) => p.subject.canonical === key) ??
+      picks.find((p) => (p.subject.symbol ?? p.subject.ticker ?? "").toUpperCase() === upper);
     if (!target) return undefined;
     return () => {
       reveal(target.subject.canonical);
+      /**
+       * FIX-03 PART C — **먼저 열려 있던 상세를 내린다.**
+       *
+       * 종전에는 `selected` 만 세웠다. 그러면 거시·흐름 상세가 **그대로 마운트된 채**
+       * 종목 상세가 위에 얹혀 오버레이가 둘이 된다. 둘 다 하단 바를 `fixed` 로 깔고,
+       * 상세는 닫기 애니메이션용 `transform` 을 갖는다 — **변형된 조상 아래의 `fixed` 는
+       * 화면이 아니라 그 조상을 기준으로 잡히므로**, 아래 상세의 버튼이 엉뚱한 자리에
+       * (실측 증상: 화면 위쪽에 잘린 채로) 그려진다.
+       *
+       * 이동 깊이는 그대로 2단계다(거시·흐름 상세 → 종목 상세). 닫으면 종전과 같이
+       * 다음 카드로 간다 — 그 동작은 건드리지 않았다.
+       */
+      setSelectedFlow(null);
+      setSelectedMacro(null);
       setSelected(target);
     };
   };
@@ -518,6 +541,8 @@ export function QuietPickDeck() {
       {selected && (
         <QuietPickDepth
           pick={selected}
+          /* INFLUENCER-01 PART E — 인물 페이지에서 종목 줄을 누르면 그 종목 상세로 간다. */
+          resolveStock={resolveStockDetail}
           /**
            * **상세를 닫으면 다음 카드로 넘긴다** (2026-08-31 지시).
            *

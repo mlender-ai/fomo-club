@@ -52,6 +52,37 @@ describe("spec analyze", () => {
   });
 
   /**
+   * 2026-09-08 실제 오검출(LAUNCH-P1) — **실측 기록 문서**에서 났다.
+   *
+   * `docs/STATUS.md` 는 표 한 줄을 갱신하면 옛 줄이 제거로 잡히고, 같은 파일에 적은
+   * 「종전 … / 지금 …」 인용이 제네릭 추가로 잡혀 둘이 짝지어졌다. **제품 문구는 하나도
+   * 안 바뀌었다.** 이 검사의 대상은 제품 문구(컴포넌트·코어·페이로드)이고,
+   * 제품 문구를 **기록한 문서**는 대상이 아니다.
+   */
+  it("does not scan the measurement log and work orders as product copy", () => {
+    const lines = [
+      "-| DETAIL | DETAIL-04 공시 뜻풀이 | **머지 완료(#1213)** | 배포 후 DOM 확인 | — |",
+      "+종전   우리가 8월 26일에도 짚었고 그 뒤로 -4.2% 움직였어요",
+    ];
+    for (const file of ["docs/STATUS.md", "docs/wo/LAUNCH-P1-prelaunch.md"]) {
+      const result = analyzeSpecDiff(diffFor(file, lines), { guardDiscoveryRan: true });
+      expect(result.findings.map((finding) => finding.code), file).not.toContain("diff.generic_overwrite");
+    }
+  });
+
+  /** 같은 줄이 **제품 파일**에 있으면 여전히 잡힌다 — 게이트를 느슨하게 한 것이 아니다. */
+  it("still flags the same pattern in product files", () => {
+    const result = analyzeSpecDiff(
+      diffFor("apps/fomo-web/components/QuietPickCard.tsx", [
+        "-        기관이 하루 거래량의 절반을 사갔어요",
+        "+        가격이 움직였어요",
+      ]),
+      { guardDiscoveryRan: true },
+    );
+    expect(result.findings.map((finding) => finding.code)).toContain("diff.generic_overwrite");
+  });
+
+  /**
    * 2026-09-01 실제 오검출(MACRO-01) — 업종 목록이 **자리만 옮겼는데** 제거로 잡히고,
    * 같은 파일에 새로 쓴 JSDoc 의 「움직임」이 제네릭으로 잡혀 둘이 짝지어졌다.
    * 목록에서 빠진 값은 하나도 없었다. 주석은 화면에 안 나간다.

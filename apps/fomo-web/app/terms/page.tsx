@@ -4,16 +4,16 @@ export default function TermsPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-10 text-whiteout">
       <h1 className="font-pixel text-lg">이용약관</h1>
-      <p className="mt-2 text-[12px] text-muted">시행일: 2026년 7월 19일 · 버전 1.2</p>
+      <p className="mt-2 text-[12px] text-muted">시행일: 2026년 9월 9일 · 버전 1.3</p>
 
       <section className="mt-6 space-y-5 text-sm leading-6 text-muted">
         <div>
           <p className="font-pixel text-whiteout">목적</p>
-          <p>본 약관은 FOMO Club이 제공하는 투자 취향 카드 피드, 종목·테마 정보 요약, 관심 신호 저장 및 관련 기능의 이용 조건과 절차를 규정합니다.</p>
+          <p>본 약관은 FOMO Club이 제공하는 종목 카드 피드, 공시·수급 사실 요약, 관심 종목 저장 및 관련 기능의 이용 조건과 절차를 규정합니다.</p>
         </div>
         <div>
           <p className="font-pixel text-whiteout">서비스의 성격 및 면책</p>
-          <p>FOMO Club은 공개 시장 데이터와 내부 기준을 바탕으로 종목·테마 정보를 쉽게 탐색하도록 돕는 정보 제공 및 취향 매칭 서비스입니다.</p>
+          <p>FOMO Club은 공개 시장 데이터와 공시를 바탕으로 종목별 사실을 정리해 보여주는 정보 제공 서비스입니다.</p>
           <p className="mt-2">모든 콘텐츠, 점수, 라벨, 기술적 지표, 요약 문장은 투자 추천, 매수·매도 지시, 종목 추천, 수익 보장, 투자자문이 아닙니다. 투자 판단과 결과에 대한 책임은 사용자 본인에게 있습니다.</p>
         </div>
         <div>

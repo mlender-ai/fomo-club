@@ -508,6 +508,44 @@ export const fetchStockBasics = (stock: string, opts: { naverCode?: string; symb
     CACHE_TTL.stockBasics
   );
 
+/**
+ * INFLUENCER-01 PART D-2·E — 한 인물의 포트폴리오. **상세를 열 때 받는다**(90종목을
+ * 픽 페이로드에 복제하지 않는다). 수집 전이거나 실패면 404 라 화면이 섹션을 안 그린다.
+ */
+export interface InvestorPortfolioRow {
+  ticker: string;
+  name: string;
+  weightPct?: number;
+  shares: number;
+  sharesText: string;
+  valueText?: string;
+  /** 직전 스냅샷 대비 비중 증감(%p). 직전이 없으면 없다. */
+  deltaWeightPct?: number;
+}
+
+export interface InvestorPortfolio {
+  ok: true;
+  investor: { id: string; name: string; firm: string; source: string };
+  /** 공시일 — 화면에 그대로 쓴다(지연을 숨기지 않는다). */
+  asOf: string;
+  asOfLabel: string;
+  priorAsOf?: string;
+  priorAsOfLabel?: string;
+  totals: { holdings: number; valueText?: string; bought: number; sold: number };
+  top: Array<{ ticker: string; weightPct: number }>;
+  recent: { bought: Array<{ ticker: string; name: string; text: string }>; sold: Array<{ ticker: string; name: string; text: string }> };
+  holdings: InvestorPortfolioRow[];
+  truncated: boolean;
+}
+
+/** 인물 포트폴리오 — 상세 2걸음과 인물 페이지가 함께 쓴다. 실패는 `null`(섹션이 사라진다). */
+export const fetchInvestorPortfolio = (id: string) =>
+  cachedGet(
+    `investor:${id}`,
+    () => get<InvestorPortfolio>(`/api/fomo/investors/${encodeURIComponent(id)}`),
+    CACHE_TTL.stockBasics
+  ).catch(() => null);
+
 /** 카드 앞면 FOMO 신호(rev2 후속) — baseline·라이브 수급 streak·시총순위·3개월 스파크라인. 도달 종목 lazy. */
 export type { CardFrontSignals } from "@fomo/core";
 export type { FomoScoreResult } from "@fomo/core";
@@ -1129,6 +1167,30 @@ export interface QuietPickWhyNowEvent {
   scaleNote?: string;
 }
 
+/**
+ * THESIS-01 — 「지금 눈에 띄는 것」의 숫자 하나.
+ * **`compare` 는 필수다** — 비교 대상 없는 숫자를 화면에 두지 않는다(PART D-1).
+ */
+export interface ThesisNumber {
+  label?: string;
+  value: string;
+  compare: string;
+  /** 둘째 비교 대상(업종 평균 + 5년 위치처럼). 있을 때만. */
+  also?: string;
+}
+
+/** THESIS-01 — 상세 2걸음의 항목 하나. 숫자가 없으면 서버가 만들지 않는다. */
+export interface ThesisItem {
+  kind: "earnings" | "disclosure" | "valuation" | "supply" | "volume" | "price";
+  /** 무슨 일인가 — 한 줄. */
+  title: string;
+  /** 날짜 + 사건(`8월 14일 2026년 2분기 실적`). 시점이 없는 항목은 없다. */
+  when?: string;
+  numbers: ThesisNumber[];
+  /** 다음 확인 지점 — 예측이 아니라 **일정·조건**이다(PART C). */
+  nextCheck?: string;
+}
+
 /** WO-RESET-05 §4 — 3걸음의 한 줄. 숫자와 **그 숫자를 읽는 문장**. */
 export interface CompanyMetricRow {
   label: string;
@@ -1158,6 +1220,11 @@ export interface CompanyGroup {
   summaryText: string | null;
   /** `점수는 이렇게 매겼어요` 가 모아서 쓴다. */
   method: string;
+  /**
+   * FIX-02 D-1 — 줄도 점도 못 만든 이유(`실적 자료를 아직 못 가져왔어요`).
+   * 있으면 화면이 제목 아래 한 줄로 쓴다. **섹션을 말없이 빼지 않는다.**
+   */
+  missingReason?: string;
 }
 
 /**
@@ -1192,21 +1259,33 @@ export interface FlowDayRow {
 export interface QuietPickFlowDepth {
   outflows: FlowSectorRow[];
   inflows: FlowSectorRow[];
+  /** 한 업종 이야기에서는 상대편이 빈다 — 없는 쪽을 지어내지 않는다(FLOW-02 §E). */
   fromStocks: FlowStockRow[];
   toStocks: FlowStockRow[];
-  /** 비어 있는 것도 정보다 — 돈은 들어오는데 거래는 평소와 비슷하다는 뜻(§D-4). */
-  toVolumeStocks: FlowStockRow[];
-  toDaily: FlowDayRow[];
-  toPositiveDays: number;
+  /** 이 카드의 초점 업종(집계 원문) — 일별 막대·즐겨찾기가 쓴다. */
+  focusSector?: string;
+  focusDirection?: "in" | "out";
+  /** 비어 있는 것도 정보다 — 돈은 오가는데 거래는 평소와 비슷하다는 뜻(§D-4). */
+  focusVolumeStocks?: FlowStockRow[];
+  focusDaily?: FlowDayRow[];
+  focusPositiveDays?: number;
 }
 
+/**
+ * FLOW-02 §E — 카드 종류. `rotation` 만 두 업종이고 나머지는 한 업종이다.
+ * 오래된 응답에는 없을 수 있어 화면은 `rotation` 으로 읽는다.
+ */
+export type QuietPickFlowKind = "rotation" | "concentration" | "persistent" | "reversal";
+
 export interface QuietPickFlowCard {
-  fromSector: string;
-  toSector: string;
-  fromNet: number;
-  toNet: number;
-  fromStocks: number;
-  toStocks: number;
+  kind?: QuietPickFlowKind;
+  /** 한 업종 이야기에서는 한쪽이 없다. */
+  fromSector?: string;
+  toSector?: string;
+  fromNet?: number;
+  toNet?: number;
+  fromStocks?: number;
+  toStocks?: number;
   windowDays: number;
   /** 결론 두 줄 — 인과로 말하지 않는다. 서버가 만든 것을 그대로 쓴다. */
   hook: string;
@@ -1315,6 +1394,13 @@ export interface QuietPick {
    * 「왜 지금 사는가」 날짜 항목(WO-RESET-02). **서버가 굽는 시점에 굳힌다** — 화면이 공시를
    * 가져오지 않는다. 비었거나 없으면 상세가 섹션을 그리지 않는다(§C-3).
    */
+  /**
+   * THESIS-01 — 「지금 눈에 띄는 것」 2~3개. **2개도 못 채우면 이 필드가 없고**,
+   * 그러면 2걸음은 종전 타임라인(`whyNow`)으로 그린다.
+   */
+  thesis?: ThesisItem[];
+  /** THESIS-01 PART E — 카드에 붙일 한 줄(`실적 흑자 전환 · 값은 5년 중 낮은 편`). */
+  thesisLine?: string;
   whyNow?: QuietPickWhyNowEvent[];
   /** 공시 0건일 때의 줄(§C-4). 수집 전이면 없다 — "없었다" 와 "안 봤다" 는 다르다. */
   whyNowQuietNote?: string;

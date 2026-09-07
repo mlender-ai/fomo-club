@@ -175,6 +175,7 @@ const CASES: Array<{ id: string; label: string; revealed?: boolean }> = [
  * 재고 「카드 크기를 통일했다」고 말한 것이 2026-08-31 지적의 시작이었다.
  */
 const FLOW = {
+  kind: "rotation" as const,
   fromSector: "반도체와반도체장비",
   toSector: "전자장비와기기",
   // 원 단위다 — 종전 픽스처는 `-1840` 이라 화면에 `-0만` 이 찍혔다(실측 2026-09-02).
@@ -185,8 +186,34 @@ const FLOW = {
   toStocks: 9,
   windowDays: 5,
   hook: "반도체에서 돈이 빠지고\n전자부품으로 들어오고 있어요",
-  // 금액은 막대가 그린다 — 보조 줄은 무엇을 기준으로 잰 것인지만 말한다(§B-2).
-  support: ["최근 5거래일 · 외국인·기관 기준"],
+  /**
+   * 대표 종목 줄이 먼저 온다(FLOW-02 §C-1) — 업종 이름만 보고 나가면 이 카드는 쓸모없다.
+   * 금액은 막대가 그린다 — 기준 줄은 무엇으로 잰 것인지만 말한다(§B-2).
+   */
+  support: ["LG이노텍 · 삼성전기 등을 사고 있어요", "최근 5거래일 · 외국인·기관 기준"],
+  /** 카드도 셋씩 그린다(§D-2) — 그림 재료는 상세 1걸음과 같은 것을 쓴다. */
+  depth: {
+    outflows: [
+      { sector: "반도체와반도체장비", net: -401_907_251_110, stocks: 12 },
+      { sector: "2차전지", net: -131_200_000_000, stocks: 8 },
+      { sector: "화학", net: -84_100_000_000, stocks: 21 },
+    ],
+    inflows: [
+      { sector: "전자장비와기기", net: 328_767_101_510, stocks: 9 },
+      { sector: "우주항공과국방", net: 128_400_000_000, stocks: 11 },
+      { sector: "조선", net: 61_200_000_000, stocks: 7 },
+    ],
+    fromStocks: [{ code: "005930", name: "삼성전자", net: -211_000_000_000 }],
+    toStocks: [
+      { code: "011070", name: "LG이노텍", net: 214_000_000_000 },
+      { code: "009150", name: "삼성전기", net: 168_000_000_000 },
+    ],
+    focusSector: "전자장비와기기",
+    focusDirection: "in" as const,
+    focusVolumeStocks: [],
+    focusDaily: [],
+    focusPositiveDays: 0,
+  },
 };
 
 const MACRO = {

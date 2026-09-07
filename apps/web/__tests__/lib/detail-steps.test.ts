@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildFlowDepth, type FlowRow, type SectorFlow, type FlowPair } from "@fomo/core/keyword-cards/sector-flow";
+import { buildFlowDepth, type FlowRow, type SectorFlow, type FlowStory } from "@fomo/core/keyword-cards/sector-flow";
 import { macroBand, MACRO_BAND_MIN_POINTS } from "@fomo/core/keyword-cards/macro-move";
 import {
   sectorDisplayName,
@@ -58,7 +58,9 @@ describe("자금 흐름 상세 재료 (DETAIL-01 §B)", () => {
     { sector: "얇은업종", net: 900, stocks: 2, positiveDays: 3, days: 3 },
     { sector: "반도체와반도체장비", net: -900, stocks: 9, positiveDays: 0, days: 3 },
   ];
-  const pair: FlowPair = {
+  /** 업종 간 이동 이야기 — FLOW-02 이후 카드 종류가 넷이라 종류를 밝혀서 넘긴다. */
+  const pair: FlowStory = {
+    kind: "rotation",
     from: flows[3]!,
     to: flows[0]!,
     windowDays: 3,
@@ -96,12 +98,12 @@ describe("자금 흐름 상세 재료 (DETAIL-01 §B)", () => {
 
   it("3걸음 — 거래가 붙은 종목만, 배수 순", () => {
     const depth = buildFlowDepth(pair, windowRows, windowRows, flows, sectorByCode, names, { B1: 2.4, B2: 1.2 });
-    expect(depth.toVolumeStocks.map((s) => s.name)).toEqual(["LG이노텍"]);
+    expect(depth.focusVolumeStocks.map((s) => s.name)).toEqual(["LG이노텍"]);
   });
 
   it("거래가 안 붙으면 빈 목록 — 그것도 정보다(§D-4)", () => {
     const depth = buildFlowDepth(pair, windowRows, windowRows, flows, sectorByCode, names, { B1: 1.1, B2: 1.0 });
-    expect(depth.toVolumeStocks).toEqual([]);
+    expect(depth.focusVolumeStocks).toEqual([]);
   });
 
   it("4걸음 — 일별은 오래된 것부터, 순매수 날 수를 함께 낸다", () => {
@@ -112,9 +114,12 @@ describe("자금 흐름 상세 재료 (DETAIL-01 §B)", () => {
       { date: "2026-09-01", code: "B2", net: 200 },
     ];
     const depth = buildFlowDepth(pair, windowRows, daily, flows, sectorByCode, names);
-    expect(depth.toDaily.map((d) => d.date)).toEqual(["2026-08-28", "2026-08-31", "2026-09-01"]);
-    expect(depth.toDaily.at(-1)!.net).toBe(600);
-    expect(depth.toPositiveDays).toBe(2);
+    expect(depth.focusDaily.map((d) => d.date)).toEqual(["2026-08-28", "2026-08-31", "2026-09-01"]);
+    expect(depth.focusDaily.at(-1)!.net).toBe(600);
+    expect(depth.focusPositiveDays).toBe(2);
+    /** 초점은 들어온 쪽이다 — 일별 막대와 즐겨찾기가 이걸 쓴다. */
+    expect(depth.focusSector).toBe("전자장비와기기");
+    expect(depth.focusDirection).toBe("in");
   });
 });
 
@@ -156,7 +161,7 @@ describe("상세 배선 (완료 확인 1·4·7·8)", () => {
   const quietPick = read("../../lib/quiet-pick.ts");
 
   it("서버가 흐름 상세 재료를 응답에 싣는다", () => {
-    expect(quietPick).toContain("buildFlowDepth(pair, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode)");
+    expect(quietPick).toContain("buildFlowDepth(story, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode)");
     expect(quietPick).toContain("...(depth ? { depth } : {}),");
   });
 
@@ -191,7 +196,15 @@ describe("상세 배선 (완료 확인 1·4·7·8)", () => {
   });
 
   it("상세에서 종목을 누르면 그 종목 상세로 간다 (완료 확인 7)", () => {
-    expect(deck).toContain("const resolveStockDetail = (canonical: string): (() => void) | undefined =>");
+    /**
+     * INFLUENCER-01 PART E — 이 창구가 **티커도 받는다.** 인물 페이지의 포트폴리오는
+     * 티커로 오고(거시·흐름 상세는 종목명으로 온다), 창구를 둘로 만들면 한쪽만 고쳐지는
+     * 날이 온다. 그래서 인자 이름이 `canonicalOrTicker` 로 바뀌었다.
+     */
+    expect(deck).toContain("const resolveStockDetail = (canonicalOrTicker: string): (() => void) | undefined =>");
+    // 종목명·티커 두 갈래를 다 본다.
+    expect(deck).toContain("p.subject.canonical === key");
+    expect(deck).toContain('(p.subject.symbol ?? p.subject.ticker ?? "").toUpperCase() === upper');
     expect(deck).toContain("resolveStock={resolveStockDetail}");
     expect(macro).toContain("resolveStock?.(item.canonical)");
     expect(flow).toContain("resolveStock?.(row.name!)");

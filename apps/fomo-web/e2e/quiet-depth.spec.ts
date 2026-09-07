@@ -8,6 +8,8 @@ import { expect, test } from "@playwright/test";
  */
 
 const PREVIEW = "/quiet-depth-preview";
+/** THESIS-01 — 항목 2개 이상인 모양. 기본 프리뷰는 타임라인 모양을 지킨다. */
+const THESIS_PREVIEW = "/quiet-thesis-preview";
 const ACCENT = "rgb(212, 255, 63)";
 
 /** WO-RESET-05 완료 확인 1·2 — 네 걸음, 좌우로 넘어가고, 상단에 진행 점. */
@@ -76,19 +78,27 @@ test("[완료 7·8·9·10] 모든 숫자 옆에 비교 문장이 있고, 세 덩
 
   // [완료 8] 세 덩어리 — 질문이 제목이다.
   const titles = await page.locator('[data-testid="depth-company-group"] h3').allInnerTexts();
+  // FIX-02 D-1 — 빈 덩어리도 **제목은 남는다.** 섹션 구성이 종목마다 달라지지 않는다.
   expect(titles).toEqual(["돈은 잘 버나요", "값은 어떤가요", "빚은 괜찮나요"]);
 
   // [완료 7] **숫자마다 비교 문장.** 값 줄 수와 비교 문장 수가 같아야 한다.
   const comparisons = await page.locator('[data-testid="depth-comparison"]').allInnerTexts();
-  // FIX-01 G — `영업이익률` 줄이 늘어 6줄이다(점수 재료를 화면에 다 보인다).
-  expect(comparisons.length).toBe(6);
+  // FIX-01 G — `영업이익률` 줄이 늘어 5줄(매출·영업이익·영업이익률·PER·PBR)이다.
+  // FIX-02 D-1 — `빚은 괜찮나요` 는 사유만 있고 줄이 없다.
+  expect(comparisons.length).toBe(5);
   for (const c of comparisons) expect(c.trim().length).toBeGreaterThan(0);
   // FIX-01 E-2 — 표시는 `평균`. `중간값` 은 통계 용어라 화면에서 뺐다.
-  expect(comparisons.some((c) => c.includes("업종 평균"))).toBe(true);
+  // FIX-02 B-4 — 그리고 **몇 곳과 견줬는지**가 붙는다(`다른 미디어 12곳 평균 …`).
+  expect(comparisons.some((c) => /다른 .+ \d+곳 평균/.test(c))).toBe(true);
   expect(comparisons.some((c) => c.includes("중간값"))).toBe(false);
 
-  // [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
-  await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(3);
+  /**
+   * [완료 9] 점 표시. FIX-01 B — 점 옆에 줄 설명을 되풀이하지 않고, 방향은 범례가 한 번 말한다.
+   * FIX-02 D-1 — 픽스처의 `빚은 괜찮나요` 는 **비어 있고 사유를 달고 있다**(점이 없다).
+   */
+  await expect(page.locator('[data-testid="depth-score-dots"]')).toHaveCount(2);
+  await expect(page.locator('[data-testid="depth-group-missing"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid="depth-group-missing"]')).toContainText("비교할 회사가");
   await expect(page.locator('[data-testid="depth-score-legend"]')).toHaveCount(1);
 
   // [완료 10] 종합 점수 없음 — `종합`·`총점`·`X점` 한 덩이 점수가 화면에 없다.
@@ -151,22 +161,114 @@ test("[FIX-01 D] 계산 방법은 걸음에 하나, 기본은 접혀 있다", as
   await expect(method).toContainText("빚은 괜찮나요");
 });
 
-test("[FIX-01 C] 4걸음 요약에 주어 없는 문장이 없다", async ({ page }) => {
+/**
+ * FIX-03 PART B — 마지막 걸음이 **한 문장 요약 + 라벨-값 표 + 우리 기록**으로 바뀌었다.
+ * FIX-01 C 의 「주어 없는 문장 금지」는 표의 값에도 그대로 걸린다.
+ */
+/**
+ * THESIS-01 — 2걸음이 **숫자·시점·확인 지점**을 갖춘 항목 2~3개로 바뀌었다.
+ * 픽스처는 지시서 A-1 목업 그대로다.
+ */
+test("[THESIS-01] 2걸음이 「지금 눈에 띄는 것」이고 항목마다 숫자·비교 대상이 붙는다", async ({ page }) => {
+  // 항목 모양은 전용 화면이 지킨다 — 기본 프리뷰는 타임라인 모양(둘 다 살아 있는 동작이다).
+  await page.goto(THESIS_PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+
+  // 제목이 갈린다 — 항목이 있으면 「지금 눈에 띄는 것」.
+  await expect(page.locator('[data-testid="depth-step-why"] h2')).toContainText("지금 눈에 띄는 것");
+  // 항목이 2~3개.
+  const items = page.locator('[data-testid="depth-thesis-item"]');
+  const count = await items.count();
+  expect(count).toBeGreaterThanOrEqual(2);
+  expect(count).toBeLessThanOrEqual(3);
+
+  // **모든 숫자에 비교 대상이 붙어 있다** — 숫자 줄에 비교 문구가 같이 있다.
+  const numbers = await page.locator('[data-testid="depth-thesis-number"]').allInnerTexts();
+  expect(numbers.length).toBeGreaterThan(2);
+  for (const line of numbers) {
+    expect(line.trim().length, line).toBeGreaterThan(0);
+    // 값만 있는 줄이 없다 — 비교 대상(`보다`·`평균`·`대비`·`중`·`%`)이 함께 있다.
+    expect(/보다|평균|대비|중 가장|%|에서/.test(line), `비교 대상 없는 숫자: "${line}"`).toBe(true);
+  }
+
+  // 금액이 규모 대비로 환산돼 있다(D-2) · 절대값과 비율이 함께 있다(D-3).
+  const body = await page.locator('[data-testid="depth-thesis"]').innerText();
+  expect(body).toContain("1,240억");
+  expect(body).toContain("작년 2분기보다 +18%");
+
+  // 다음 확인 지점이 나온다(PART C) — 그리고 예측 표현이 없다.
+  await expect(page.locator('[data-testid="depth-thesis-next"]').first()).toContainText("다음 실적 발표는");
+  for (const banned of ["오를", "재평가", "기대", "전망", "목표가"]) {
+    expect(body, `예측 표현 "${banned}"`).not.toContain(banned);
+  }
+
+  // 항목이 있으면 종전 타임라인은 그리지 않는다(같은 것을 두 번 보여주지 않는다).
+  await expect(page.locator('[data-testid="depth-why-now"]')).toHaveCount(0);
+  // 꼬리표는 그대로 붙는다 — 인과를 말하지 않는다는 사실은 변하지 않는다.
+  await expect(page.locator('[data-testid="depth-why-now-note"]')).toContainText("왜 샀는지는");
+});
+
+test("[THESIS-01] 항목이 2개 미만이면 종전 타임라인으로 되돌아간다", async ({ page }) => {
+  /**
+   * 지시서 완료 확인 8은 「2개 미만이면 이 걸음을 생략」이다. 그대로 하면 날짜 붙은 사건이
+   * 하나뿐인 종목에서 **이미 있던 정보까지 사라진다.** 억지로 채우지 않는다는 규칙은
+   * 항목 블록에 걸고, 그 자리는 타임라인이 지킨다 — 그 결정을 이 검사로 고정한다.
+   */
+  await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-testid="depth-next"]').click();
+  await expect(page.locator('[data-testid="depth-step-why"] h2')).toContainText("왜 지금 사는가");
+  await expect(page.locator('[data-testid="depth-thesis"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="depth-why-now"]')).toHaveCount(1);
+});
+
+test("[FIX-03 B] 마지막 걸음이 한 문장 요약 · 라벨-값 표 · 우리 기록이다", async ({ page }) => {
   await page.goto(PREVIEW, { waitUntil: "domcontentloaded" });
   for (let i = 0; i < 3; i += 1) await page.locator('[data-testid="depth-next"]').click();
-  const lines = (await page.locator('[data-testid="depth-summary"]').innerText())
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-  expect(lines.length).toBeGreaterThan(1);
-  /**
-   * 종전 마지막 걸음에는 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이 낮은지 없는 줄**이
-   * 앉아 있었다. 이 걸음에는 섹션 제목도 줄 라벨도 없어서 되찾을 방법이 없다.
-   */
-  for (const line of lines) {
+
+  // ① 한 문장 요약 — 나열이 아니다(줄바꿈으로 쪼개진 네 줄이 아니다).
+  const headline = (await page.locator('[data-testid="depth-summary"]').innerText()).trim();
+  expect(headline.split("\n").filter((l) => l.trim()).length).toBe(1);
+  expect(headline).toContain("임원 3명이 사고 있고");
+
+  // ② 라벨-값 표
+  const rows = page.locator('[data-testid="depth-decide-rows"] > div');
+  expect(await rows.count()).toBeGreaterThan(1);
+  const table = await page.locator('[data-testid="depth-decide-rows"]').innerText();
+  expect(table).toContain("공시");
+  expect(table).toContain("실적");
+
+  /*
+    ③ 우리 기록 — 부호를 그대로 쓴다(마이너스를 숨기지 않는다).
+
+    LAUNCH-P1 §C-2: **위로 문구도, 색 변경도 없다.** 정직한 채점이 이 제품의 유일한
+    차별점이므로 여기서 물러서면 남는 게 없다 — 그래서 완충어와 색을 함께 잰다.
+  */
+  const recordBlock = page.locator('[data-testid="depth-our-record"]');
+  const record = await recordBlock.innerText();
+  expect(record).toContain("8월 24일");
+  expect(record).toMatch(/[+-]\d+\.\d%/);
+  for (const cushion of ["아쉽", "하지만", "괜찮", "그래도", "다만"]) {
+    expect(record, cushion).not.toContain(cushion);
+  }
+  // 마이너스를 빨갛게 칠하지 않는다 — 색은 판정이 아니라 "지금 무슨 일인가" 만 가리킨다.
+  const recordColors = await recordBlock.locator("p").evaluateAll((els) =>
+    els.map((el) => getComputedStyle(el).color)
+  );
+  for (const color of recordColors) {
+    const [r, g, b] = color.match(/\d+/g)!.map(Number) as [number, number, number];
+    expect(r - Math.max(g, b), `빨간색 계열이 쓰였다: ${color}`).toBeLessThan(40);
+  }
+
+  // 주어 없는 값이 없다(FIX-01 C 를 이 자리에도 건다).
+  for (const line of table.split("\n").map((l) => l.trim()).filter(Boolean)) {
     if (!/(낮은|높은|가운데쯤|적어요|많아요|비슷해요)/.test(line)) continue;
     expect(line, `주어 없는 줄: "${line}"`).toMatch(/^(매출|영업이익|PER|PBR|값|빚|지금은)/);
   }
+
+  // 종전처럼 앞 걸음 문장을 그대로 늘어놓지 않는다.
+  const body = await page.locator('[data-testid="depth-step-decide"]').innerText();
+  expect(body).not.toContain("계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요");
+  expect(body).toContain("지금 담아두면");
 });
 
 /** 완료 확인 11 — 마지막 걸음은 즐겨찾기로 끝난다. */

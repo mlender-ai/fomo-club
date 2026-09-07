@@ -53,12 +53,18 @@ import {
  * **배럴이 아니라 경로로** 가져온다 — 이 둘은 굽는 경로에서만 쓴다. 배럴에 넣으면
  * `@fomo/core` 를 임포트하는 조회 라우트가 전부 같이 무거워진다(성능 게이트).
  */
-import { buildSectorStats, sectorStatFor, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+import { buildSectorStats, sectorCandidates, sectorComparison, type SectorStatInput } from "@fomo/core/keyword-cards/sector-stats";
+/**
+ * THESIS-01 — 「지금 눈에 띄는 것」. **굽는 경로 전용**이라 배럴이 아니라 경로로 가져온다
+ * (`keyword-cards/index.ts` 머리말: 배럴에 넣으면 조회 라우트 전이 모듈이 늘어난다).
+ */
+import { thesisItems, thesisCardLine, type ThesisItem } from "@fomo/core/keyword-cards/thesis";
 import {
   diffHoldings,
   isFreshDisclosure,
   investorHook,
   investorSupport,
+  topWeightHoldings,
   formatShares as formatInvestorShares,
   type HoldingChange,
 } from "@fomo/core/keyword-cards/investor-holdings";
@@ -68,11 +74,17 @@ import {
   FLOW_DEPTH_DAYS,
   type FlowDepth,
   pickFlowPair,
+  pickConcentration,
+  pickPersistentOutflow,
+  pickReversal,
+  sectorDailyFlows,
+  storySectors,
   flowHook,
   flowSupport,
   formatKrwShort,
   type FlowRow,
-  type FlowPair,
+  type FlowStory,
+  type FlowCardKind,
 } from "@fomo/core/keyword-cards/sector-flow";
 import { INVESTORS, type InvestorCollection } from "./investor-collect";
 import { sectorDisplayName, untranslatedIndustryNames } from "@fomo/core/keyword-cards/sector-display";
@@ -228,8 +240,14 @@ const SECTOR_FLOW_WINDOW_SLACK = 4;
  * 1,000억은 "뉴스가 될 만한 크기" 의 어림이고, 숫자가 모이면 확정한다.
  */
 const SECTOR_FLOW_MIN_NET = 100_000_000_000;
-/** 하루 최대 흐름 카드 수(§D-1). 많으면 종목 카드를 밀어낸다. */
-const SECTOR_FLOW_MAX_CARDS = 2;
+/**
+ * 하루 최대 흐름 카드 수(FLOW-02 §E-2). 많으면 종목 카드를 밀어낸다.
+ *
+ * WO-RESET-08 의 2장에서 셋으로 올린다 — **종류가 넷이 됐다.** 같은 종류는 두 장 이상
+ * 만들지 않고(각 검출기가 하나만 돌려준다), 같은 업종도 두 번 짚지 않으므로
+ * 셋이라도 서로 다른 이야기 셋이다.
+ */
+const SECTOR_FLOW_MAX_CARDS = 3;
 /**
  * 하루 최대 거시 카드 수는 **`@fomo/core` 의 `MACRO_MAX_CARDS`(3장)** 가 정한다(MACRO-01 §C-2).
  * 여기 있던 `2` 를 지운다 — 상한이 두 곳에 있으면 한쪽만 고치게 되고, 실제로 그렇게 됐다.
@@ -598,6 +616,26 @@ export interface QuietPickQualification {
    * 화면은 깨지지 않지만 이름이 있는 편이 낫고, **이 목록이 다음 표 확장 대상**이다.
    */
   untranslatedIndustries?: string[];
+  /** FIX-02 D-3 — 3걸음 섹션별 확보율. 제목별 `shown`(내용 있음) / `missing`(사유 표시). */
+  companySections?: Record<string, { shown: number; missing: number }>;
+  /**
+   * THESIS-01 PART F — 「지금 눈에 띄는 것」 확보율.
+   * `byCount[n]` = 항목이 n개 나온 종목 수(3은 3개 이상), `byKind` = 항목별 건수,
+   * `withoutNextCheck` = **다음 확인 지점을 못 만든** 항목 종류(다음 작업 대상).
+   */
+  thesis?: {
+    stocks: number;
+    byCount: number[];
+    byKind: Record<string, number>;
+    withNextCheck: number;
+    withoutNextCheck: Record<string, number>;
+    cardLines: number;
+  };
+  /**
+   * FIX-02 B-1 — 업종 비교가 붙은 줄 수와 **견준 곳 수**(자기 제외) 분포.
+   * `min` 이 5 미만이면 지표별 게이트가 새는 것이다.
+   */
+  companyPeers?: { rows: number; min?: number; max?: number; median?: number };
   /** WO-RESET-06 §E — 재노출 규칙 계측. `readmittedByFloor` 는 덱 최소 장수 안전장치가 되살린 수. */
   exposure?: { blocked: number; readmitted: number; byReason: Record<string, number>; readmittedByFloor?: number };
   /**
@@ -710,15 +748,23 @@ export interface QuietPickRotation {
 
 /** WO-RESET-08 §B — 자금 흐름 카드 한 장. 화면이 그대로 그린다. */
 export interface FlowCard {
-  /** 빠진 업종 · 들어온 업종. */
-  fromSector: string;
-  toSector: string;
+  /**
+   * 카드 종류(FLOW-02 §E) — `rotation` 만 두 업종이고 나머지는 한 업종이다.
+   * 종류가 하나였을 때 카드는 "저기서 저기로만 갔다" 는 인상을 줬다.
+   */
+  kind: FlowCardKind;
+  /**
+   * 빠진 업종 · 들어온 업종. **한 업종 이야기에서는 한쪽이 없다** — 없는 쪽을
+   * 지어내지 않는다(집중 카드에 「빠진 업종」을 억지로 붙이면 그건 다른 카드다).
+   */
+  fromSector?: string;
+  toSector?: string;
   /** 창 안 순매수 합(원). `from` 은 음수, `to` 는 양수다. */
-  fromNet: number;
-  toNet: number;
+  fromNet?: number;
+  toNet?: number;
   /** 집계에 들어간 종목 수 — 화면이 밝힌다. */
-  fromStocks: number;
-  toStocks: number;
+  fromStocks?: number;
+  toStocks?: number;
   windowDays: number;
   /** 결론 두 줄 — **인과로 말하지 않는다**(§E-1). */
   hook: string;
@@ -1648,10 +1694,23 @@ function detectInvestorSignals(
     if (!isFreshDisclosure(profile.source, entry.latest.asOf, today)) continue;
 
     const changes = diffHoldings(entry.latest, entry.prior);
-    if (changes.length === 0) continue;
+    /**
+     * INFLUENCER-01 PART A·C-2 — **변화가 없는 날에도 카드를 만든다.**
+     *
+     * 실측(2026-09-07): ARK 90종목 중 주식 수가 2% 이상 변한 것이 **0개**(최대 1.6%)라
+     * 변화 기반 후보가 매일 0이었다. 임계를 낮추는 것은 답이 아니다 — ETF 는 자금
+     * 유출입만으로 전 종목이 조금씩 움직이고, `0.5% 늘렸어요` 는 카드가 아니다.
+     *
+     * 레퍼런스가 후킹으로 쓴 것도 변화가 아니라 **비중 그 자체**였다(`$SNDK 28.1%`).
+     * 그래서 변화가 있으면 그것을, 없으면 **큰 비중**을 카드로 낸다. 같은 종목으로 두 장을
+     * 만들지 않는다(변화가 더 새로운 소식이므로 그쪽이 이긴다).
+     */
+    const changed = new Set(changes.map((c) => c.ticker.toUpperCase()));
+    const candidates = [...changes, ...topWeightHoldings(entry.latest, { exclude: changed })];
+    if (candidates.length === 0) continue;
     const maxWeightPct = entry.latest.holdings.reduce((max, h) => Math.max(max, h.weightPct ?? 0), 0);
 
-    for (const change of changes) {
+    for (const change of candidates) {
       const seed = usDiscoverySeedForSymbol(change.ticker);
       if (!seed) continue; // 모르는 종목은 안 낸다
 
@@ -1660,7 +1719,12 @@ function detectInvestorSignals(
        * 늘림·줄임은 그다음이다. 연속일수를 여기 넣지 않는다(WO-DECK-01 완료조건 3).
        */
       const weight = Math.max(change.weightPct ?? 0, Math.abs(change.weightDeltaPct ?? 0));
-      const kindBonus = change.kind === "new" || change.kind === "exited" ? 60 : 20;
+      /**
+       * 큰 비중은 **새 소식이 아니라 상태**라 가산점이 없다 — 같은 인물의 변화 카드가
+       * 있으면 그쪽이 먼저 덱에 든다. 비중이 클수록 강해지는 것은 그대로다.
+       */
+      const kindBonus =
+        change.kind === "new" || change.kind === "exited" ? 60 : change.kind === "holding" ? 0 : 20;
       out.push({
         subject: {
           canonical: seed.canonical,
@@ -1739,9 +1803,24 @@ function detectSectorFlows(
   sectorByCode: Readonly<Record<string, string>>,
   today: string,
   nameByCode: Readonly<Record<string, string>> = {}
-): { pairs: FlowPair[]; depths: FlowDepth[]; census: { rows: number; unclassified: number; sectors: number } } {
-  const census = { rows: 0, unclassified: 0, sectors: 0 };
-  if (Object.keys(sectorByCode).length === 0) return { pairs: [], depths: [], census };
+): {
+  stories: FlowStory[];
+  depths: FlowDepth[];
+  census: {
+    rows: number;
+    unclassified: number;
+    sectors: number;
+    /** **종류별 후보 수**(FLOW-02 보고할 것 4번). 카드가 한 장이면 여기가 답한다. */
+    candidatesByKind: Record<FlowCardKind, number>;
+  };
+} {
+  const census = {
+    rows: 0,
+    unclassified: 0,
+    sectors: 0,
+    candidatesByKind: { rotation: 0, concentration: 0, persistent: 0, reversal: 0 } as Record<FlowCardKind, number>,
+  };
+  if (Object.keys(sectorByCode).length === 0) return { stories: [], depths: [], census };
 
   /** 종목코드 → 날짜 → 종가. 캔들은 `YYYYMMDD` 라 ISO 로 맞춘다. */
   const closeByCodeDate = new Map<string, Map<string, number>>();
@@ -1769,18 +1848,20 @@ function detectSectorFlows(
   }
   census.rows = rows.length;
 
-  const pairs: FlowPair[] = [];
-  const depths: FlowDepth[] = [];
   const volumeRatioByCode = volumeRatiosFromCandles(candleMap);
   /**
    * 4걸음 전용 창 — **카드 창과 별개로 항상 20거래일**이다(DETAIL-01 §B 4걸음).
    * 카드가 3일 흐름으로 만들어졌어도 "얼마나 오래됐나" 는 20일로 봐야 답이 된다.
+   * 한 업종 이야기(집중·지속·전환)의 연속 판정도 이 원장에서 한다.
    */
   const dailyFrom = shiftIsoDays(today, -(FLOW_DEPTH_DAYS + SECTOR_FLOW_WINDOW_SLACK + 10));
   const dailyRows = rows.filter((r) => r.date >= dailyFrom && r.date <= today);
+
+  const candidates: FlowStory[] = [];
   /**
    * 창 셋(§A-1) — 짧은 창부터 본다. 3일 흐름이 성립하면 그게 가장 새 소식이다.
-   * 한 창에서 카드가 나오면 나머지 창은 보지 않는다 — 같은 이야기를 두 번 하지 않는다.
+   * 업종 간 이동은 **한 창에서만** 만든다 — 3일과 5일이 같은 두 업종을 짚으면
+   * 같은 이야기를 두 번 하는 것이다.
    */
   for (const windowDays of SECTOR_FLOW_WINDOWS) {
     const from = shiftIsoDays(today, -(windowDays + SECTOR_FLOW_WINDOW_SLACK));
@@ -1791,12 +1872,50 @@ function detectSectorFlows(
     census.sectors = Math.max(census.sectors, flows.length);
     const pair = pickFlowPair(flows, windowDays, SECTOR_FLOW_MIN_NET);
     if (pair) {
-      pairs.push(pair);
-      depths.push(buildFlowDepth(pair, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode));
+      candidates.push({ kind: "rotation", ...pair });
       break;
     }
   }
-  return { pairs: pairs.slice(0, SECTOR_FLOW_MAX_CARDS), depths: depths.slice(0, SECTOR_FLOW_MAX_CARDS), census };
+
+  /**
+   * **한 업종 이야기 셋**(FLOW-02 §E). 같은 원장에서 나온다 — 새 소스를 들이지 않았다.
+   * 종류마다 최대 한 장이므로 여기서 고르는 것으로 「같은 종류 2장 금지」(§E-2)가 지켜진다.
+   */
+  const dailies = sectorDailyFlows(dailyRows, sectorByCode);
+  census.sectors = Math.max(census.sectors, dailies.length);
+  for (const made of [
+    pickConcentration(dailies, SECTOR_FLOW_MIN_NET),
+    pickPersistentOutflow(dailies, SECTOR_FLOW_MIN_NET),
+    pickReversal(dailies, SECTOR_FLOW_MIN_NET),
+  ]) {
+    if (made) candidates.push(made);
+  }
+  for (const story of candidates) census.candidatesByKind[story.kind] += 1;
+
+  const stories: FlowStory[] = [];
+  const depths: FlowDepth[] = [];
+  /**
+   * **같은 업종을 두 번 짚지 않는다.** 「반도체에서 빠지고」 카드와 「반도체에서 12일째
+   * 빠지고」 카드가 나란히 서면 두 장이 아니라 한 장을 두 번 읽는 것이다.
+   */
+  const used = new Set<string>();
+  for (const story of candidates) {
+    if (stories.length >= SECTOR_FLOW_MAX_CARDS) break;
+    const sectors = storySectors(story);
+    if (sectors.some((sector) => used.has(sector))) continue;
+    /**
+     * 상세 창 — 업종 간 이동은 고정 창, 한 업종 이야기는 **연속이 시작된 날부터**다.
+     * 카드가 「5거래일째」라고 말했으면 상세의 종목 금액도 그 5일 합이어야 한다.
+     */
+    const windowFrom =
+      story.kind === "rotation" ? shiftIsoDays(today, -(story.windowDays + SECTOR_FLOW_WINDOW_SLACK)) : story.since;
+    const inWindow = rows.filter((r) => r.date >= windowFrom && r.date <= today);
+    const { flows } = aggregateSectorFlow(inWindow, sectorByCode);
+    stories.push(story);
+    depths.push(buildFlowDepth(story, inWindow, dailyRows, flows, sectorByCode, nameByCode, volumeRatioByCode));
+    for (const sector of sectors) used.add(sector);
+  }
+  return { stories, depths, census };
 }
 
 /** ① 조용한 돈 신호 — US 내부자 클러스터(Form4). */
@@ -2450,18 +2569,22 @@ export async function buildQuietPickResponse(options: {
     }));
   })();
 
-  const flowCards: FlowCard[] = sectorFlow.pairs.map((pair, index) => {
+  const flowCards: FlowCard[] = sectorFlow.stories.map((story, index) => {
     const depth = sectorFlow.depths[index];
+    /**
+     * **없는 쪽을 지어내지 않는다.** 업종 간 이동만 양쪽이 있고, 한 업종 이야기는
+     * 방향에 맞는 한쪽만 싣는다 — 집중 카드에 「빠진 업종」을 붙이면 그건 다른 카드다.
+     */
+    const from = story.kind === "rotation" ? story.from : story.direction === "out" ? story.flow : null;
+    const to = story.kind === "rotation" ? story.to : story.direction === "in" ? story.flow : null;
     return {
-      fromSector: pair.from.sector,
-      toSector: pair.to.sector,
-      fromNet: pair.from.net,
-      toNet: pair.to.net,
-      fromStocks: pair.from.stocks,
-      toStocks: pair.to.stocks,
-      windowDays: pair.windowDays,
-      hook: flowHook(pair),
-      support: flowSupport(pair),
+      kind: story.kind,
+      ...(from ? { fromSector: from.sector, fromNet: from.net, fromStocks: from.stocks } : {}),
+      ...(to ? { toSector: to.sector, toNet: to.net, toStocks: to.stocks } : {}),
+      windowDays: story.windowDays,
+      hook: flowHook(story),
+      /** 대표 종목 줄은 상세 재료에서 나온다(§C-1) — 그래서 `depth` 를 함께 넘긴다. */
+      support: flowSupport(story, depth),
       ...(depth ? { depth } : {}),
     };
   });
@@ -2624,6 +2747,32 @@ export async function buildQuietPickResponse(options: {
   const untranslatedIndustries = new Set<string>();
 
   /**
+   * FIX-02 D-3 — 섹션별 확보율. `shown` 은 줄·점이 있는 덩어리, `missing` 은 사유를 달고
+   * 나간 덩어리다. **어느 섹션이 자주 비는지가 다음 작업을 정한다.**
+   */
+  const sectionCensus: Record<string, { shown: number; missing: number }> = {};
+
+  /**
+   * FIX-02 B-1 — 업종 비교가 붙은 줄 수와, 그때 **몇 곳과 견줬나**(자기 제외).
+   * 실측 화면의 `업종 중간값 = 자기 값` 이 사라졌는지 보는 계측이다.
+   */
+  const peerCensus = { rows: 0, counts: [] as number[] };
+
+  /**
+   * THESIS-01 PART F — 「지금 눈에 띄는 것」 확보율.
+   * `byCount` 는 항목 수 분포(0/1/2/3), `byKind` 는 항목별 확보 건수,
+   * `withoutNextCheck` 는 **다음 확인 지점을 못 만든** 항목 종류다(보고할 것 3번).
+   */
+  const thesisCensus = {
+    stocks: 0,
+    byCount: [0, 0, 0, 0],
+    byKind: {} as Record<string, number>,
+    withNextCheck: 0,
+    withoutNextCheck: {} as Record<string, number>,
+    cardLines: 0,
+  };
+
+  /**
    * WO-RESET-06 §E · HOTFIX-DECK §C-3 — 재노출 규칙이 무엇을 막고 무엇을 통과시켰나.
    * `blocked` 는 보류된 건수, `readmitted` 는 재등장 사유로 통과한 건수, `byReason` 은 그 분포,
    * `readmittedByFloor` 는 덱 최소 장수 안전장치가 보류분에서 되살린 건수다.
@@ -2764,6 +2913,14 @@ export async function buildQuietPickResponse(options: {
     const page1Streak = page1Streaks.get(sig.subject.canonical) ?? 0;
 
     const score = front.score?.score ?? null;
+    /**
+     * THESIS-01 — 「지금 눈에 띄는 것」이 **「왜 지금」 타임라인의 산출물을 다시 쓴다**
+     * (실적 숫자·금액 규모 환산이 거기 이미 붙어 있다). 리터럴 안에서 만들어지는 값이라
+     * 그 자리에서 붙잡아 두고, 뒤 항목이 읽는다 — 객체 리터럴은 **소스 순서대로** 평가되므로
+     * `thesis` 가 읽을 때는 이미 채워져 있다.
+     */
+    let whyNowEvents: WhyNowEvent[] = [];
+
     const timingGrade = timingGradeOf(front.verdict);
     const valuationGrade = valuationGradeOf(score);
     const zone = front.wyckoff?.currentZone;
@@ -3066,6 +3223,7 @@ export async function buildQuietPickResponse(options: {
             figureCensus.scale += 1;
           }
         }
+        whyNowEvents = events; // THESIS-01 이 같은 항목을 다시 쓴다(위 선언 주석)
         return {
           ...(events.length > 0 ? { whyNow: events } : {}),
           ...(note ? { whyNowQuietNote: note } : {}),
@@ -3081,6 +3239,8 @@ export async function buildQuietPickResponse(options: {
         const sheet = factSheetByStock.get(sig.subject.canonical);
         if (!sheet) return {};
         const classification = { industry: sheet.classification?.industry ?? null, sector: sheet.classification?.sector ?? null };
+        // FIX-02 B-2 — 좁은 분류부터 상위 분류까지. 지표별 게이트는 `company-read` 가 건다.
+        const candidates = sectorCandidates(sectorStats, classification);
         const groups = companyRead({
           growth: {
             revenueYoy: sheet.growth?.revenue_yoy ?? null,
@@ -3099,20 +3259,112 @@ export async function buildQuietPickResponse(options: {
               : null,
           },
           balance: { debtToEquity: sheet.balance?.debt_to_equity ?? null },
-          sector: sectorStatFor(sectorStats, classification),
+          /**
+           * FIX-02 B-2 — 후보를 **좁은 분류 → 상위 분류** 순으로 넘긴다. 어느 것을 쓸지는
+           * 지표별 표본 수를 보고 `company-read` 가 고른다(자기 자신을 뺀 뒤 센다).
+           */
+          sectorCandidates: candidates,
         });
         // 커버리지 계측(보고할 것 1·2번) — 업종 비교가 붙은 종목 / 비교 문장이 붙은 지표.
         companyCensus.stocks += 1;
-        if (sectorStatFor(sectorStats, classification)) companyCensus.withSector += 1;
+        if (candidates.length > 0) companyCensus.withSector += 1;
+        /**
+         * FIX-02 PART D-3 — **섹션별 확보율.** 어느 섹션이 자주 비는지 알아야 다음 작업이
+         * 정해진다. `missing` 은 사유를 달고 나간 덩어리 수다(말없이 사라지지 않는다).
+         */
         for (const g of groups) {
           companyCensus.rows += g.rows.length;
           if (g.score !== null) companyCensus.scored += 1;
+          const box = sectionCensus[g.title] ?? (sectionCensus[g.title] = { shown: 0, missing: 0 });
+          if (g.missingReason) box.missing += 1;
+          else box.shown += 1;
+        }
+        /**
+         * FIX-02 B-1 — **업종 비교가 실제로 붙은 지표 수와 견준 곳 수.** 문장에서 되읽는다
+         * (`다른 은행 12곳 평균 …`): 굽는 쪽이 고른 결과가 곧 화면이라 이게 정직한 계측이다.
+         */
+        for (const g of groups) {
+          for (const r of g.rows) {
+            const hit = /다른 [^ ]+ (\d+)곳|같은 업종 다른 (\d+)곳/.exec(r.comparison);
+            if (!hit) continue;
+            peerCensus.rows += 1;
+            peerCensus.counts.push(Number(hit[1] ?? hit[2]));
+          }
         }
         // FIX-01 E-1 — 이 종목의 업종명이 표시명 표에 없었나(영문만 센다).
         for (const name of untranslatedIndustryNames([classification.industry])) {
           untranslatedIndustries.add(name);
         }
         return groups.length > 0 ? { companyRead: groups } : {};
+      })()),
+      /**
+       * THESIS-01 — 「지금 눈에 띄는 것」. **여기서 굳힌다.**
+       *
+       * 재료는 전부 이미 있다: 실적 숫자는 「왜 지금」 타임라인(`whyNowEvents`)이,
+       * 업종 비교는 `sectorComparison`(자기 제외)이, 수급·거래·가격 위치는 신호 팩트가
+       * 만든다. **이 블록은 고르고 줄 세우는 일만 한다** — 새 수집이 없다.
+       *
+       * 2개도 못 채우면 필드가 아예 없고, 화면은 종전 타임라인으로 되돌아간다.
+       */
+      ...(((): { thesis?: ThesisItem[]; thesisLine?: string } => {
+        const sheet = factSheetByStock.get(sig.subject.canonical);
+        const candidates = sheet
+          ? sectorCandidates(sectorStats, {
+              industry: sheet.classification?.industry ?? null,
+              sector: sheet.classification?.sector ?? null,
+            })
+          : [];
+        const per = sheet?.valuation?.per_ttm ?? null;
+        const pbr = sheet?.valuation?.pbr ?? null;
+        const band = sheet?.valuation?.band_5y;
+        const items = thesisItems({
+          events: whyNowEvents,
+          valuation: {
+            per,
+            pbr,
+            // 자기 자신을 뺀 업종 비교(FIX-02 B-3). 표본이 모자라면 `null` 이라 밴드로 간다.
+            perPeer: sectorComparison(candidates, "per", per),
+            pbrPeer: sectorComparison(candidates, "pbr", pbr),
+            // 밴드는 **표본이 충분할 때만** 쓴다 — 불충분한 밴드로 위치를 말하지 않는다.
+            perPercentile: band?.per?.sufficient ? band.per.current_percentile : null,
+            pbrPercentile: band?.pbr?.sufficient ? band.pbr.current_percentile : null,
+          },
+          supply: {
+            actor: sig.actors,
+            days: sig.days,
+            scale: sig.scale,
+            ...(typeof volumePct === "number" ? { volumePct } : {}),
+            // 「가장 길다」가 아니면 연속일수에 비교 대상이 없다 — 그러면 숫자로 쓰지 않는다.
+            ...(sig.isLongestStreak && typeof sig.streakWindowDays === "number"
+              ? { longestWindowDays: sig.streakWindowDays }
+              : {}),
+            ...(whenLabel(sig.startedAt.slice(0, 10)) ? { startedWhen: whenLabel(sig.startedAt.slice(0, 10)) } : {}),
+          },
+          ...(typeof front.signals.volumeRatio === "number" ? { volume: { ratio: front.signals.volumeRatio } } : {}),
+          ...(typeof aboveLow === "number" ? { price: { pctAboveYearLow: aboveLow } } : {}),
+        });
+
+        /**
+         * THESIS-01 PART F — **확보율.** 종목별 항목 수 분포와 항목별 확보율을 센다.
+         * 0~1개가 많으면 그건 데이터가 부족하다는 뜻이고, **어느 항목이 자주 비는지가
+         * 다음 작업**이다. 그래서 전체 비율 하나가 아니라 종류별로 나눠 센다.
+         */
+        thesisCensus.stocks += 1;
+        // 항목 수 분포 — 3은 「3개 이상」 칸이다(상한이 3이라 실제로는 3개).
+        const bucket = Math.min(items.length, 3);
+        thesisCensus.byCount[bucket] = (thesisCensus.byCount[bucket] ?? 0) + 1;
+        for (const item of items) {
+          thesisCensus.byKind[item.kind] = (thesisCensus.byKind[item.kind] ?? 0) + 1;
+          if (item.nextCheck) thesisCensus.withNextCheck += 1;
+          else thesisCensus.withoutNextCheck[item.kind] = (thesisCensus.withoutNextCheck[item.kind] ?? 0) + 1;
+        }
+
+        const line = thesisCardLine(items);
+        if (line) thesisCensus.cardLines += 1;
+        return {
+          ...(items.length > 0 ? { thesis: items } : {}),
+          ...(line ? { thesisLine: line } : {}),
+        };
       })()),
       /**
        * WO-RESET-06 §B-4·§C-1 — 노출 이력. **처음 나온 종목이면 필드가 없다**(§C-2).
@@ -3358,6 +3610,24 @@ export async function buildQuietPickResponse(options: {
       disclosureFigures: figureCensus,
       // FIX-01 E-1 — 표시명 표에 없어 `같은 업종` 으로 나간 영문 업종. 다음 표 확장 대상.
       untranslatedIndustries: [...untranslatedIndustries].sort(),
+      // FIX-02 D-3 — 섹션별 확보율(제목별 `shown`/`missing`).
+      companySections: sectionCensus,
+      // THESIS-01 PART F — 「지금 눈에 띄는 것」 항목 수 분포·항목별 확보율·확인 지점 결측.
+      thesis: thesisCensus,
+      /**
+       * FIX-02 B-1 — 업종 비교가 붙은 줄 수 · 견준 곳 수 분포.
+       * `min` 이 `SECTOR_MIN_MEMBERS` 미만이면 게이트가 새는 것이다.
+       */
+      companyPeers: {
+        rows: peerCensus.rows,
+        ...(peerCensus.counts.length > 0
+          ? {
+              min: Math.min(...peerCensus.counts),
+              max: Math.max(...peerCensus.counts),
+              median: [...peerCensus.counts].sort((a, b) => a - b)[Math.floor(peerCensus.counts.length / 2)]!,
+            }
+          : {}),
+      },
       // 3걸음 커버리지 — 업종 비교가 붙은 종목 / 비교 문장이 붙은 줄 / 점이 나온 덩어리.
       companyRead: companyCensus,
       // WO-RESET-06 §E — 3일 규칙이 막은 건수 · 예외로 통과한 건수 · 사유별 분포.

@@ -3,9 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/lib/motion";
 import type { DailyOhlcv } from "@fomo/core";
-import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER } from "@fomo/core";
+import { whyNowStateEvents, WHY_NOW_TIMELINE_DISCLAIMER, josa } from "@fomo/core";
+/**
+ * FIX-03 — **경로로 직접** 가져온다. 배럴(`@fomo/core`)에 넣으면 `@fomo/core` 를 값으로
+ * 임포트하는 조회 라우트들의 전이 모듈이 함께 늘어난다(성능 게이트가 그것 때문에 배럴에서
+ * `company-read`·`sector-stats` 를 뺀 이력이 있다 — `keyword-cards/index.ts` 머리말).
+ */
+import { decideStep } from "@fomo/core/keyword-cards/decide-step";
 import type { CardSlotPayload, QuietPick, StockBasics } from "@/lib/fomoApi";
-import { fetchCardSlots, fetchStockBasics, fetchStockFront, type StockFrontResponse } from "@/lib/fomoApi";
+import {
+  fetchCardSlots,
+  fetchStockBasics,
+  fetchStockFront,
+  fetchInvestorPortfolio,
+  type StockFrontResponse,
+  type InvestorPortfolio,
+} from "@/lib/fomoApi";
 import { companyBlurb, depthEvidenceRows } from "@/lib/depthSections";
 import { trustedSector } from "@/lib/sectorTrust";
 import { OverlayPortal } from "@/components/OverlayPortal";
@@ -18,7 +31,8 @@ import { upsertWatch } from "@/lib/watchlist";
 import { StepDots, StepNext, StepBar, CompanyGroupBlock, MethodDisclosure, ScoreLegend } from "@/components/DepthSteps";
 
 /** 걸음 식별자. 순서가 곧 이야기 순서다 — 놀라움 → 이유 → 실체 → 결정. */
-type StepId = "signal" | "why" | "company" | "decide";
+/** INFLUENCER-01 D-2 — `investor` 는 인물 카드에만 있는 걸음이다. */
+type StepId = "signal" | "why" | "investor" | "company" | "decide";
 
 /** 이력 줄의 가격 — 카드와 같은 통화 규칙. */
 function exposurePrice(pick: QuietPick, value: number): string {
@@ -110,11 +124,45 @@ function DepthSkeleton() {
 /** ⑥ 우리 기록 (DS-03 §9) — 화면의 **유일한 박스이자 유일한 accent**. */
 
 /** 이탈 애니메이션 시간 (DS-06 §4) — 진입 300ms 의 역방향 260ms. */
+/** 항목 번호. 지시서 A-1 목업이 쓴 기호를 그대로 쓴다(①②③). */
+const THESIS_MARKS = ["①", "②", "③"] as const;
+
 const CLOSE_MS = 260;
 
-export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: () => void }) {
+export function QuietPickDepth({
+  pick,
+  onClose,
+  resolveStock,
+  investorPortfolio,
+}: {
+  pick: QuietPick;
+  onClose: () => void;
+  /**
+   * INFLUENCER-01 PART E — 인물 페이지에서 **종목을 누르면 그 종목 상세로.**
+   *
+   * 덱이 오늘 덱에 있는 종목만 열어 줄 수 있다(가격·캔들·회사 정보가 그 픽에 실려 있다).
+   * 못 여는 티커는 `undefined` 라 그 줄이 눌리지 않는다 — 눌러도 아무 일 없는 줄을
+   * 만들지 않는다. 거시·흐름 상세가 쓰는 창구(`resolveStockDetail`)와 같은 것이다.
+   */
+  resolveStock?: (ticker: string) => (() => void) | undefined;
+  /**
+   * 프리뷰·회귀 검사용 주입 창구. 주면 **받아오지 않고 이걸 쓴다.**
+   *
+   * 인물 포트폴리오는 API 로 온다(90종목을 픽 페이로드에 복제하지 않으므로). 프리뷰 화면은
+   * 배포된 백엔드를 보기 때문에 새 라우트가 나가기 전에는 이 걸음을 눈으로 확인할 수 없다 —
+   * 그래서 픽스처를 넣을 자리를 둔다. 제품 경로는 이 값을 주지 않는다.
+   */
+  investorPortfolio?: InvestorPortfolio | null;
+}) {
   const stock = pick.subject.canonical;
   const [basics, setBasics] = useState<StockBasics | null>(null);
+  /**
+   * INFLUENCER-01 D-2 — 인물 포트폴리오. **인물 카드일 때만** 받는다(90종목을 픽 페이로드에
+   * 복제하지 않는다). 실패·미수집이면 `null` 이라 그 걸음이 사라진다.
+   */
+  const [portfolio, setPortfolio] = useState<InvestorPortfolio | null>(null);
+  /** PART E — 전체 포트폴리오 화면. **상세 안에서 열린다**(별도 탭이 아니다). */
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
   const [front, setFront] = useState<StockFrontResponse | null>(null);
   const [slotPayload, setSlotPayload] = useState<CardSlotPayload | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -155,10 +203,19 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
       .then((r) => alive && setSlotPayload(r.slots[stock] ?? null))
       .catch(() => undefined);
 
+    // 인물 카드만 — 그 사람이 요즘 무엇을 사고 파는지(D-2)와 전체 포트폴리오(E)의 재료다.
+    setPortfolio(investorPortfolio ?? null);
+    setPortfolioOpen(false);
+    if (!investorPortfolio && pick.investor?.id) {
+      fetchInvestorPortfolio(pick.investor.id)
+        .then((r) => alive && setPortfolio(r && r.ok ? r : null))
+        .catch(() => undefined);
+    }
+
     return () => {
       alive = false;
     };
-  }, [stock, pick.subject.naverCode, pick.subject.symbol]);
+  }, [stock, pick.subject.naverCode, pick.subject.symbol, pick.investor?.id, investorPortfolio]);
 
   // 스크롤 깊이 — 설득이 어디까지 읽히는지가 이 화면의 핵심 지표다.
   useEffect(() => {
@@ -252,11 +309,17 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
   const steps = useMemo<StepId[]>(() => {
     const out: StepId[] = ["signal"];
-    if ((pick.whyNow?.length ?? 0) > 0) out.push("why");
+    if ((pick.whyNow?.length ?? 0) > 0 || (pick.thesis?.length ?? 0) > 0) out.push("why");
+    /**
+     * INFLUENCER-01 D-2 — 인물 카드는 「이 사람은 요즘 뭘 사나」 걸음을 갖는다.
+     * **이 걸음이 이 카드만의 가치다.** 포트폴리오가 안 왔으면(미수집·실패) 걸음이 없다 —
+     * 빈 걸음을 만들지 않는다는 규칙은 그대로다(§6).
+     */
+    if (portfolio) out.push("investor");
     if (hasCompanyMaterial) out.push("company");
     out.push("decide");
     return out;
-  }, [pick.whyNow, hasCompanyMaterial]);
+  }, [pick.whyNow, pick.thesis, portfolio, hasCompanyMaterial]);
 
   /**
    * **번호가 아니라 id 로 들고 있는다.** 번호로 들고 있으면 회사 설명이 늦게 도착해 걸음이
@@ -267,19 +330,28 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const index = Math.max(0, steps.indexOf(stepId));
   const step = steps[index] ?? "signal";
 
+  /**
+   * FIX-03 C-2 — **걸음이 바뀌면 스크롤을 맨 위로.**
+   *
+   * 종전에는 `goNext`·`goPrev` 가 각자 `scrollTo` 를 불렀다. 동작은 했지만 초기화 지점이
+   * 흩어져 있어서 **새 진입 경로가 생기면 조용히 빠진다**(스와이프·딥링크·픽 교체).
+   * `stepId` 와 `stock` 을 보고 한 곳에서 처리한다 — 렌더 뒤에 걸어야 새 걸음 높이로 잡힌다.
+   */
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [stepId, stock]);
+
   const goNext = () => {
     if (index >= steps.length - 1) return;
     haptic();
     setMethodOpen(false);
     setStepId(steps[index + 1]!);
-    scrollRef.current?.scrollTo({ top: 0 });
   };
   const goPrev = () => {
     if (index <= 0) return;
     haptic();
     setMethodOpen(false);
     setStepId(steps[index - 1]!);
-    scrollRef.current?.scrollTo({ top: 0 });
   };
   const toggleMethod = () => setMethodOpen((v) => !v);
 
@@ -310,6 +382,11 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
   /** 3걸음 재료 — 굽는 시점에 굳은 세 덩어리. 없으면 걸음 자체가 없다. */
   const companyGroups = pick.companyRead ?? [];
+  /**
+   * THESIS-01 — 2걸음 재료. **굽는 시점에 굳어 온다**(숫자·비교 대상·확인 지점까지).
+   * 2개도 못 채우면 서버가 필드를 안 보내고, 그러면 종전 타임라인으로 그린다.
+   */
+  const thesis = pick.thesis ?? [];
 
   /**
    * 1걸음이 더하는 **새 정보 한 줄** — 얼마나 이례적인가(§2).
@@ -329,19 +406,36 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
    * 지어내지 않는다. 각 줄은 앞 걸음이 실제로 보여준 것에서만 온다 —
    * 그 걸음을 건너뛰었으면 그 줄도 없다.
    */
-  const summaryLines = useMemo(() => {
-    const out: string[] = [hook.replace(/\n/g, " ")];
-    const disclosureCount = (pick.whyNow ?? []).filter((e) => e.url).length;
-    if (disclosureCount > 0) out.push(`공시가 ${disclosureCount}건 있었어요`);
-    else if (pick.whyNowQuietNote) out.push(pick.whyNowQuietNote);
-    /**
-     * FIX-01 C-2 — 요약은 **주어가 있는 문장**만 쓴다(`summaryText`). 종전에는 점 옆
-     * 문장(`scoreText`)을 그대로 가져와 `제약 업종 안에서 낮은 편이에요` 처럼 **무엇이
-     * 낮은지 없는 줄**이 마지막 걸음에 앉았다 — 그 걸음에는 섹션 제목도 줄 라벨도 없다.
-     */
-    for (const g of companyGroups) if (g.summaryText) out.push(g.summaryText);
-    return out.slice(0, 4);
-  }, [hook, pick.whyNow, pick.whyNowQuietNote, companyGroups]);
+  /**
+   * 4걸음 — **요약이 아니라 결정을 돕는 자리**다(FIX-03 PART B).
+   *
+   * 종전에는 앞 걸음 문장을 그대로 네 줄로 늘어놓았다. 새로 알게 되는 것이 없어 누를 이유가
+   * 없었다. 지금은 한 문장 요약 + 라벨-값 표 + **우리가 전에 짚은 기록**이다.
+   *
+   * 문안은 `decideStep`(fomo-core)이 만든다 — 화면이 문장을 조립하지 않는다.
+   */
+  const decide = useMemo(
+    () =>
+      decideStep({
+        signal: {
+          kind: pick.signal.kind,
+          scale: pick.signal.scale ?? null,
+          days: pick.signal.days ?? null,
+          actors: pick.signal.actors ?? null,
+        },
+        /**
+         * 공시 건수는 「왜 지금 사는가」가 **실제로 보여준 것**만 센다(`url` 이 있는 항목).
+         * 수집 자체를 안 한 종목은 `whyNow` 가 없으므로 이 줄을 만들지 않는다.
+         */
+        ...(pick.whyNow
+          ? { disclosures: { count: pick.whyNow.filter((e) => e.url).length, windowDays: 90 } }
+          : {}),
+        company: companyGroups.map((g) => ({ title: g.title, summaryText: g.summaryText ?? null })),
+        ...(pick.exposure ? { exposure: pick.exposure } : {}),
+        currentPrice: pick.price.current ?? null,
+      }),
+    [pick.signal, pick.whyNow, companyGroups, pick.exposure, pick.price.current]
+  );
 
   /**
    * 즐겨찾기 — **담는 것까지만**이다(WO 하지 말 것: 목록 화면 만들지 않는다).
@@ -364,6 +458,12 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
   const nextLabel = (() => {
     const next = steps[index + 1];
     if (next === "why") return "왜 사는지 보기";
+    // INFLUENCER-01 D-2 — 다음에 무엇이 나오는지 말한다(이름을 쓰면 그게 후킹이다).
+    if (next === "investor") {
+      // 사람 이름은 받침이 섞여 있다 — `캐시 우드는` · `워런 버핏은`. 고정 조사는 반드시 틀린다.
+      const who = pick.investor?.name ?? "이 사람";
+      return `${who}${josa(who, "은는")} 요즘 뭘 사나`;
+    }
     if (next === "company") return "어떤 회사인지 보기";
     if (next === "decide") return "계속 지켜볼까요";
     return "계속";
@@ -598,7 +698,73 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           {/* ── 2걸음 — 왜 지금인가 (§3) ── */}
           {step === "why" && (
             <>
-              <h2 className="mt-s4 text-ds-display-sm text-ds-text-1">왜 지금 사는가</h2>
+              {/*
+                THESIS-01 — 이 걸음의 제목이 **무엇을 보여주는지에 따라 갈린다.**
+                항목이 2개 이상이면 「지금 눈에 띄는 것」(숫자·시점·확인 지점), 아니면
+                종전 타임라인(날짜와 사건). 억지로 채우지 않되 있는 것을 버리지도 않는다.
+              */}
+              <h2 className="mt-s4 text-ds-display-sm text-ds-text-1">
+                {thesis.length > 0 ? "지금 눈에 띄는 것" : "왜 지금 사는가"}
+              </h2>
+
+              {thesis.length > 0 && (
+                <div className="mt-s5" data-testid="depth-thesis">
+                  {thesis.map((item, i) => (
+                    <section key={`${item.kind}-${i}`} className="mt-s5 first:mt-0" data-testid="depth-thesis-item">
+                      {/* ① 무슨 일인가 — 번호는 읽는 순서를 만든다(우선순위 순이다). */}
+                      <p className="break-keep text-[15px] font-medium text-ds-text-1">
+                        <span className="mr-s2 font-mono text-ds-text-3">{THESIS_MARKS[i] ?? `${i + 1}.`}</span>
+                        {item.title}
+                      </p>
+                      {/* 날짜 + 사건 */}
+                      {item.when && (
+                        <p className="mt-s2 font-mono text-ds-label text-ds-text-3" data-testid="depth-thesis-when">
+                          {item.when}
+                        </p>
+                      )}
+                      {/*
+                        숫자 — **모든 숫자에 비교 대상이 붙어 있다**(PART D-1). 서버가
+                        비교 대상 없는 숫자를 애초에 만들지 않으므로 화면은 그냥 그린다.
+                      */}
+                      {item.numbers.map((num, n) => (
+                        <div key={`${num.value}-${n}`} className="mt-s2">
+                          <p className="break-keep text-ds-body text-ds-text-1" data-testid="depth-thesis-number">
+                            {num.label && <span className="mr-s2 text-ds-label text-ds-text-3">{num.label}</span>}
+                            <span className="font-mono">{num.value}</span>
+                            <span className="ml-s2 text-ds-caption text-ds-text-2">{num.compare}</span>
+                          </p>
+                          {num.also && (
+                            <p className="mt-[2px] break-keep text-ds-caption text-ds-text-2">{num.also}</p>
+                          )}
+                        </div>
+                      ))}
+                      {/*
+                        다음 확인 지점 — **예측이 아니라 일정·조건**이다(PART C-3).
+                        `오를`·`재평가` 는 서버 쪽 게이트가 막는다(`THESIS_FORBIDDEN`).
+                      */}
+                      {item.nextCheck && (
+                        <p className="mt-s2 break-keep text-ds-caption text-ds-text-1" data-testid="depth-thesis-next">
+                          {/*
+                            accent 를 쓰지 않는다 — 이 화면의 강조는 다음 버튼 하나다(DS-07 §2).
+                            비교 대상(`text-2`)보다 한 단계 밝게 두어 **줄의 종류**만 구분한다.
+                          */}
+                          <span className="mr-s2 font-mono text-ds-text-3">→</span>
+                          {item.nextCheck}
+                        </p>
+                      )}
+                    </section>
+                  ))}
+                </div>
+              )}
+
+              {/*
+                항목이 2개도 안 되면 **종전 타임라인으로 되돌아간다.** 지시서 완료 확인 8은
+                「2개 미만이면 이 걸음을 생략」인데, 그대로 하면 날짜 붙은 사건이 하나뿐인
+                종목에서 **이미 있던 정보까지 사라진다.** 억지로 채우지 않는다는 규칙은
+                「지금 눈에 띄는 것」 블록에 걸고, 그 자리는 타임라인이 지킨다.
+              */}
+              {thesis.length === 0 && (
+                <>
               <div className="mt-s5" data-testid="depth-why-now">
                 {whyNowEvents.map((event, i) => (
                   <div key={`${event.when}-${i}`} className="flex gap-s3 border-b-hair border-ds-border py-s3 last:border-0">
@@ -684,9 +850,92 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
                   {pick.whyNowQuietNote}
                 </p>
               )}
+                </>
+              )}
+              {/* 꼬리표는 **두 모양 모두**에 붙는다 — 인과를 말하지 않는다는 사실은 그대로다. */}
               <p className="mt-s3 break-keep text-ds-caption text-ds-text-3" data-testid="depth-why-now-note">
                 {WHY_NOW_TIMELINE_DISCLAIMER}
               </p>
+            </>
+          )}
+
+          {/*
+            ── 인물 걸음 — 이 사람은 요즘 뭘 사나 (INFLUENCER-01 D-2) ──
+
+            **이 걸음이 인물 카드만의 가치다.** 종목 하나가 아니라 그 사람의 최근 행동과
+            대표 보유를 보여준다. 문장·숫자 표기는 서버가 만든 것을 그대로 쓴다.
+          */}
+          {step === "investor" && portfolio && (
+            <>
+              <h2 className="mt-s4 break-keep text-ds-display-sm text-ds-text-1">
+                {`${portfolio.investor.name}${josa(portfolio.investor.name, "은는")} 요즘`}
+              </h2>
+              {/* 공시일을 숨기지 않는다 — 13F 는 원래 늦게 나오는 물건이다. */}
+              <p className="mt-s2 font-mono text-ds-label text-ds-text-3" data-testid="depth-investor-asof">
+                {`${portfolio.investor.firm} · ${portfolio.asOfLabel} 기준`}
+                {portfolio.priorAsOfLabel ? ` · ${portfolio.priorAsOfLabel}과 비교` : ""}
+              </p>
+
+              {portfolio.recent.bought.length > 0 && (
+                <div className="mt-s5" data-testid="depth-investor-bought">
+                  <p className="font-mono text-ds-label uppercase tracking-[0.06em] text-ds-text-2">최근 산 것</p>
+                  {portfolio.recent.bought.map((row) => (
+                    <div key={`b-${row.ticker}`} className="mt-s3 flex items-baseline gap-s3">
+                      <p className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-3">{row.ticker}</p>
+                      <p className="min-w-0 flex-1 truncate text-ds-body text-ds-text-1">{row.name}</p>
+                      <p className="shrink-0 text-ds-caption text-ds-text-2">{row.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {portfolio.recent.sold.length > 0 && (
+                <div className="mt-s5" data-testid="depth-investor-sold">
+                  <p className="font-mono text-ds-label uppercase tracking-[0.06em] text-ds-text-2">최근 판 것</p>
+                  {portfolio.recent.sold.map((row) => (
+                    <div key={`s-${row.ticker}`} className="mt-s3 flex items-baseline gap-s3">
+                      <p className="w-[64px] shrink-0 font-mono text-ds-label text-ds-text-3">{row.ticker}</p>
+                      <p className="min-w-0 flex-1 truncate text-ds-body text-ds-text-1">{row.name}</p>
+                      <p className="shrink-0 text-ds-caption text-ds-text-2">{row.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/*
+                최근 매매가 하나도 없는 날도 있다(ARK 실측: 90종목 중 변화 0건).
+                그때 **빈 섹션을 만들지 않고** 그 사실을 쓴다 — 고장이 아니라는 것을 말해야 한다.
+              */}
+              {portfolio.recent.bought.length === 0 && portfolio.recent.sold.length === 0 && (
+                <p className="mt-s5 break-keep text-ds-body text-ds-text-2" data-testid="depth-investor-quiet">
+                  {/*
+                    DS-05 §3 — `아직 없어요` 류 상태 문구를 쓰지 않는다. 비교 대상이 없는
+                    것은 **첫 공시**라는 사실이므로 그렇게 쓴다.
+                  */}
+                  {portfolio.priorAsOfLabel
+                    ? `${portfolio.priorAsOfLabel} 이후로는 사고판 게 없어요`
+                    : `${portfolio.asOfLabel}이 우리가 받은 첫 공시예요`}
+                </p>
+              )}
+
+              {portfolio.top.length > 0 && (
+                <div className="mt-s5" data-testid="depth-investor-top">
+                  <p className="font-mono text-ds-label uppercase tracking-[0.06em] text-ds-text-2">상위 보유</p>
+                  <p className="mt-s3 break-keep text-ds-body text-ds-text-1">
+                    {portfolio.top.map((t) => `${t.ticker} ${t.weightPct.toFixed(1)}%`).join("  ·  ")}
+                  </p>
+                </div>
+              )}
+
+              {/* PART E — 전체 포트폴리오는 **상세 안에서** 열린다(별도 탭이 아니다). */}
+              <button
+                type="button"
+                onClick={() => setPortfolioOpen(true)}
+                className="mt-s5 text-ds-caption text-ds-text-3 underline"
+                data-testid="depth-investor-portfolio-open"
+              >
+                {`전체 포트폴리오 보기 (${portfolio.totals.holdings}종목)`}
+              </button>
             </>
           )}
 
@@ -743,16 +992,44 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
           {/* ── 4걸음 — 계속 지켜볼까요 (§5) ── */}
           {step === "decide" && (
             <>
-              <div className="mt-s6" data-testid="depth-summary">
-                {summaryLines.map((line) => (
-                  <p key={line} className="break-keep text-ds-body text-ds-text-1">
-                    {line}
-                  </p>
-                ))}
-              </div>
-              <p className="mt-s5 break-keep text-ds-body text-ds-text-2">
-                계속 지켜보면 앞으로 얼마나 움직이는지 알려드려요
+              {/* ① 한 문장 요약 — 앞 걸음의 결론을 묶은 것(§B-4). 나열하지 않는다. */}
+              <p className="mt-s6 break-keep text-ds-display-sm text-ds-text-1" data-testid="depth-summary">
+                {decide.headline}
               </p>
+
+              {/* ② 라벨-값 표 — 훑어보는 자리다(§B-2). 문장 나열이 아니다. */}
+              {decide.rows.length > 0 && (
+                <div className="mt-s5" data-testid="depth-decide-rows">
+                  {decide.rows.map((row) => (
+                    <div key={row.label} className="mt-s3 flex items-baseline gap-s3">
+                      <p className="w-[56px] shrink-0 text-ds-label text-ds-text-3">{row.label}</p>
+                      <p className="min-w-0 flex-1 break-keep text-ds-body text-ds-text-1">{row.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/*
+                ③ 우리 기록 — **이게 이 앱을 믿을 유일한 근거다**(§B-5 · LAUNCH-P1 §C-2).
+
+                플러스든 마이너스든 **그대로** 쓴다:
+                  · 위로 문구를 붙이지 않는다
+                  · **색을 바꾸지 않는다** — 마이너스를 빨갛게 칠하면 그건 판정이고,
+                    accent 는 "지금 무슨 일이 벌어지는가" 만 가리킨다(DS-05 §3)
+                  · `아쉽게도` · `하지만` 같은 완충어를 넣지 않는다
+
+                처음 짚는 종목이면 서버가 `null` 을 준다 — 없는 기록을 그리지 않는다.
+              */}
+              {decide.ourRecord && (
+                <div className="mt-s5" data-testid="depth-our-record">
+                  <p className="break-keep text-ds-label text-ds-text-3">{decide.ourRecord.since}</p>
+                  <p className="mt-s1 font-mono text-ds-display-sm text-ds-text-1 tabular-nums">
+                    {decide.ourRecord.changeText}
+                  </p>
+                </div>
+              )}
+
+              <p className="mt-s5 break-keep text-ds-body text-ds-text-2">{decide.watchNote}</p>
               {watched && (
                 <div className="mt-s6" data-testid="depth-watch-done">
                   <p className="text-ds-display-sm text-ds-text-1">담았어요</p>
@@ -788,6 +1065,124 @@ export function QuietPickDepth({ pick, onClose }: { pick: QuietPick; onClose: ()
 
           </div>
         </div>
+
+        {/*
+          ── 인물 페이지 (INFLUENCER-01 PART E) ──
+
+          **상세 안에서 열린다.** 별도 탭을 만들지 않는다(WO 하지 말 것) — 상세를 덮는
+          한 겹이고, 닫으면 있던 걸음으로 돌아온다. 이 화면이 재방문 이유가 된다
+          (「캐시 우드가 뭐 샀나」 보러 온다).
+
+          오버레이가 겹치는 문제는 FIX-03 PART C 에서 겪었다 — 여기서는 하단 바를 **두지
+          않고** 헤더의 닫기 하나만 둔다(변형된 조상 아래의 `fixed` 가 어긋나는 그 문제를
+          애초에 만들지 않는다).
+        */}
+        {portfolioOpen && portfolio && (
+          <div
+            /**
+             * 하단 바(`StepBar`)가 `z-80` 이라 그보다 위여야 한다. 아래로 두면 인물 페이지
+             * 위로 상세의 CTA 가 뚫고 나온다 — FIX-03 PART C 에서 겪은 것과 같은 종류
+             * (다른 층의 버튼이 이 화면 것처럼 보이는 문제)라 z 를 명시적으로 올린다.
+             */
+            className="absolute inset-0 z-[90] flex flex-col bg-ds-bg"
+            data-testid="investor-portfolio"
+            role="dialog"
+            aria-label={`${portfolio.investor.name} 포트폴리오`}
+          >
+            <header className="flex h-[56px] shrink-0 items-center gap-s3 border-b-hair border-ds-border px-gutter">
+              <button
+                type="button"
+                onClick={() => setPortfolioOpen(false)}
+                aria-label="닫기"
+                data-testid="investor-portfolio-close"
+                className="tap-button -ml-s2 flex h-[44px] w-[44px] items-center justify-center text-ds-text-2"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path d="M12 4.5L6.5 10L12 15.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <div className="min-w-0">
+                <p className="truncate text-ds-title text-ds-text-1">{portfolio.investor.name}</p>
+                <p className="truncate font-mono text-ds-label text-ds-text-3">
+                  {`${portfolio.investor.firm} · ${portfolio.asOfLabel} 기준`}
+                </p>
+              </div>
+            </header>
+
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-gutter pb-s6">
+              {/* 머리 숫자 — 보유 종목 수·총 자산·이번 변화. 없는 값은 줄에서 빠진다. */}
+              <div className="mt-s5 space-y-s2">
+                <div className="flex items-baseline gap-s3">
+                  <p className="w-[84px] shrink-0 text-ds-label text-ds-text-3">보유 종목</p>
+                  <p className="font-mono text-ds-body text-ds-text-1">{`${portfolio.totals.holdings}개`}</p>
+                </div>
+                {portfolio.totals.valueText && (
+                  <div className="flex items-baseline gap-s3">
+                    <p className="w-[84px] shrink-0 text-ds-label text-ds-text-3">총 자산</p>
+                    <p className="font-mono text-ds-body text-ds-text-1">{portfolio.totals.valueText}</p>
+                  </div>
+                )}
+                {portfolio.priorAsOfLabel && (
+                  <div className="flex items-baseline gap-s3">
+                    <p className="w-[84px] shrink-0 text-ds-label text-ds-text-3">그 사이</p>
+                    <p className="break-keep text-ds-body text-ds-text-1">
+                      {`샀어요 ${portfolio.totals.bought}종목 · 팔았어요 ${portfolio.totals.sold}종목`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 비중 순. 변화 열은 직전 공시가 있을 때만 값이 있다. */}
+              <div className="mt-s5 border-t-hair border-ds-border" data-testid="investor-portfolio-rows">
+                {portfolio.holdings.map((row) => {
+                  const open = resolveStock?.(row.ticker);
+                  return (
+                    <div
+                      key={row.ticker}
+                      className="flex items-baseline gap-s3 border-b-hair border-ds-border py-s3"
+                      {...(open
+                        ? {
+                            role: "button" as const,
+                            tabIndex: 0,
+                            onClick: open,
+                            "data-tappable": "true",
+                          }
+                        : {})}
+                    >
+                      <p className="w-[72px] shrink-0 font-mono text-ds-label text-ds-text-2">{row.ticker}</p>
+                      <p className="min-w-0 flex-1 truncate text-ds-body text-ds-text-1">{row.name}</p>
+                      {/* 소수 한 자리로 고정한다 — `4%` 와 `4.9%` 가 섞이면 열이 흔들린다. */}
+                      <p className="w-[56px] shrink-0 text-right font-mono text-ds-body text-ds-text-1">
+                        {`${(row.weightPct ?? 0).toFixed(1)}%`}
+                      </p>
+                      {/*
+                        증감 — 부호를 그대로 쓴다. **없으면 칸을 비운다**(DS-05 §3: 값 없는
+                        대시를 쓰지 않는다). 변화가 없는 것과 비교 대상이 없는 것은 둘 다
+                        「쓸 값이 없다」이고, 그때 `—` 를 넣으면 값처럼 읽힌다.
+                      */}
+                      <p
+                        className={`w-[64px] shrink-0 text-right font-mono text-ds-label ${
+                          (row.deltaWeightPct ?? 0) < 0 ? "text-ds-down" : "text-ds-text-3"
+                        }`}
+                      >
+                        {typeof row.deltaWeightPct === "number" && Math.abs(row.deltaWeightPct) >= 0.05
+                          ? `${row.deltaWeightPct > 0 ? "+" : ""}${row.deltaWeightPct.toFixed(1)}%p`
+                          : ""}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {portfolio.truncated && (
+                <p className="mt-s3 break-keep text-ds-caption text-ds-text-3">
+                  {`비중 상위 ${portfolio.holdings.length}종목만 보여줘요`}
+                </p>
+              )}
+              <p className="mt-s5 text-center text-ds-caption text-ds-text-3">투자 조언이 아니에요.</p>
+            </div>
+          </div>
+        )}
 
         {/*
           하단 고정 바 — **어느 걸음에서든 같은 자리**다(2026-08-31 지시).

@@ -1,11 +1,26 @@
 /**
- * 개발 단계 한시 제약 해제 플래그 — `docs/CONSTRAINT_OVERRIDE_DEV.md`(ACTIVE) 와 동기화한다.
+ * 개발 단계 한시 제약 해제 플래그 — `docs/CONSTRAINT_OVERRIDE_DEV.md` 와 동기화한다.
  *  - true:  매수·매도 추천, 목표가, 손절선, TA/수급/매크로 판단, 예측·인과 표현 차단 해제.
  *  - false: 전체 복원(원래 표현·판단 제약 재발효).
  * ⚠️ 사실 정확성 가드(가짜 숫자·종목 오매칭·한영혼용·복붙·트리밍)는 이 플래그와 **무관하게 항상** 켜져 있다.
- * ⚠️ 공개 출시 전 반드시 false 로 되돌릴 것. 이 한 줄(또는 CONSTRAINT_OVERRIDE_DEV.md ACTIVE:false)이 단일 토글.
+ *
+ * ## 2026-09-08 복원됨 (LAUNCH-P1 §C-1)
+ *
+ * 이 문서가 처음부터 못을 박아 뒀다 — *"공개 출시 전 반드시 false 로 되돌릴 것."*
+ * 출시 작업(LAUNCH-P1)이 「게이트를 느슨하게 하지 않는다」로 결정됐고, override 가
+ * **실제로 필요했던 사례가 없다**는 것을 실측으로 확인한 뒤 되돌렸다:
+ *
+ * ```
+ * 2026-09-08 discovery 46장 실측 — 진짜 조언 표현 0건
+ *   금칙어로 잡힌 36건은 전부 `순매수`(사실 용어)이고 게이트가 이미 중성화한다
+ *   과거 사례(`목표가 3만3000원 유지`)는 수집 기사 제목이고, 그 피드는
+ *   지금 사용자 화면에 렌더되지 않는다(HomeView 는 QuietPickDeck 만 그린다)
+ * ```
+ *
+ * 되돌리려면 이 한 줄과 그 문서의 `ACTIVE` 를 **같이** 바꿔야 한다 — 한쪽만 바꾸면
+ * 게이트 둘이 서로 다른 규칙으로 돈다(그게 STATUS §31 의 그 버그였다).
  */
-export const DEV_CONSTRAINTS_LIFTED = true;
+export const DEV_CONSTRAINTS_LIFTED = false;
 
 export const FORBIDDEN_COPY = new RegExp(
   [
