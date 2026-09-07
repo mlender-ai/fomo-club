@@ -508,6 +508,44 @@ export const fetchStockBasics = (stock: string, opts: { naverCode?: string; symb
     CACHE_TTL.stockBasics
   );
 
+/**
+ * INFLUENCER-01 PART D-2·E — 한 인물의 포트폴리오. **상세를 열 때 받는다**(90종목을
+ * 픽 페이로드에 복제하지 않는다). 수집 전이거나 실패면 404 라 화면이 섹션을 안 그린다.
+ */
+export interface InvestorPortfolioRow {
+  ticker: string;
+  name: string;
+  weightPct?: number;
+  shares: number;
+  sharesText: string;
+  valueText?: string;
+  /** 직전 스냅샷 대비 비중 증감(%p). 직전이 없으면 없다. */
+  deltaWeightPct?: number;
+}
+
+export interface InvestorPortfolio {
+  ok: true;
+  investor: { id: string; name: string; firm: string; source: string };
+  /** 공시일 — 화면에 그대로 쓴다(지연을 숨기지 않는다). */
+  asOf: string;
+  asOfLabel: string;
+  priorAsOf?: string;
+  priorAsOfLabel?: string;
+  totals: { holdings: number; valueText?: string; bought: number; sold: number };
+  top: Array<{ ticker: string; weightPct: number }>;
+  recent: { bought: Array<{ ticker: string; name: string; text: string }>; sold: Array<{ ticker: string; name: string; text: string }> };
+  holdings: InvestorPortfolioRow[];
+  truncated: boolean;
+}
+
+/** 인물 포트폴리오 — 상세 2걸음과 인물 페이지가 함께 쓴다. 실패는 `null`(섹션이 사라진다). */
+export const fetchInvestorPortfolio = (id: string) =>
+  cachedGet(
+    `investor:${id}`,
+    () => get<InvestorPortfolio>(`/api/fomo/investors/${encodeURIComponent(id)}`),
+    CACHE_TTL.stockBasics
+  ).catch(() => null);
+
 /** 카드 앞면 FOMO 신호(rev2 후속) — baseline·라이브 수급 streak·시총순위·3개월 스파크라인. 도달 종목 lazy. */
 export type { CardFrontSignals } from "@fomo/core";
 export type { FomoScoreResult } from "@fomo/core";

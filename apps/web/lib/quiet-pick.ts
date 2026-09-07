@@ -64,6 +64,7 @@ import {
   isFreshDisclosure,
   investorHook,
   investorSupport,
+  topWeightHoldings,
   formatShares as formatInvestorShares,
   type HoldingChange,
 } from "@fomo/core/keyword-cards/investor-holdings";
@@ -1673,10 +1674,23 @@ function detectInvestorSignals(
     if (!isFreshDisclosure(profile.source, entry.latest.asOf, today)) continue;
 
     const changes = diffHoldings(entry.latest, entry.prior);
-    if (changes.length === 0) continue;
+    /**
+     * INFLUENCER-01 PART A·C-2 — **변화가 없는 날에도 카드를 만든다.**
+     *
+     * 실측(2026-09-07): ARK 90종목 중 주식 수가 2% 이상 변한 것이 **0개**(최대 1.6%)라
+     * 변화 기반 후보가 매일 0이었다. 임계를 낮추는 것은 답이 아니다 — ETF 는 자금
+     * 유출입만으로 전 종목이 조금씩 움직이고, `0.5% 늘렸어요` 는 카드가 아니다.
+     *
+     * 레퍼런스가 후킹으로 쓴 것도 변화가 아니라 **비중 그 자체**였다(`$SNDK 28.1%`).
+     * 그래서 변화가 있으면 그것을, 없으면 **큰 비중**을 카드로 낸다. 같은 종목으로 두 장을
+     * 만들지 않는다(변화가 더 새로운 소식이므로 그쪽이 이긴다).
+     */
+    const changed = new Set(changes.map((c) => c.ticker.toUpperCase()));
+    const candidates = [...changes, ...topWeightHoldings(entry.latest, { exclude: changed })];
+    if (candidates.length === 0) continue;
     const maxWeightPct = entry.latest.holdings.reduce((max, h) => Math.max(max, h.weightPct ?? 0), 0);
 
-    for (const change of changes) {
+    for (const change of candidates) {
       const seed = usDiscoverySeedForSymbol(change.ticker);
       if (!seed) continue; // 모르는 종목은 안 낸다
 
@@ -1685,7 +1699,12 @@ function detectInvestorSignals(
        * 늘림·줄임은 그다음이다. 연속일수를 여기 넣지 않는다(WO-DECK-01 완료조건 3).
        */
       const weight = Math.max(change.weightPct ?? 0, Math.abs(change.weightDeltaPct ?? 0));
-      const kindBonus = change.kind === "new" || change.kind === "exited" ? 60 : 20;
+      /**
+       * 큰 비중은 **새 소식이 아니라 상태**라 가산점이 없다 — 같은 인물의 변화 카드가
+       * 있으면 그쪽이 먼저 덱에 든다. 비중이 클수록 강해지는 것은 그대로다.
+       */
+      const kindBonus =
+        change.kind === "new" || change.kind === "exited" ? 60 : change.kind === "holding" ? 0 : 20;
       out.push({
         subject: {
           canonical: seed.canonical,

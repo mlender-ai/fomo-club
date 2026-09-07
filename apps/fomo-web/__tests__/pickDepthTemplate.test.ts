@@ -67,7 +67,13 @@ describe("픽 뎁스 = 전용 템플릿(QuietPickDepth)", () => {
   it("[완료 12] 데이터 없는 걸음은 목록에서 빠진다 — 빈 걸음을 만들지 않는다", () => {
     // 1·4걸음은 항상, 2·3걸음은 재료가 있을 때만.
     expect(depth).toContain('const out: StepId[] = ["signal"];');
-    expect(depth).toContain('if ((pick.whyNow?.length ?? 0) > 0) out.push("why");');
+    /**
+     * THESIS-01 이 2걸음 조건에 `thesis` 를 더했고(항목이 있으면 그 모양으로 그린다),
+     * INFLUENCER-01 이 인물 걸음을 더했다(포트폴리오가 안 왔으면 걸음이 없다).
+     * **빈 걸음을 만들지 않는다**는 규칙은 그대로다 — 조건이 늘어난 것이다.
+     */
+    expect(depth).toContain('if ((pick.whyNow?.length ?? 0) > 0 || (pick.thesis?.length ?? 0) > 0) out.push("why");');
+    expect(depth).toContain('if (portfolio) out.push("investor");');
     expect(depth).toContain('out.push("decide");');
     /**
      * 3걸음 조건은 **`companyRead` 하나가 아니다**(DETAIL-03 PART A).
@@ -278,8 +284,15 @@ describe("빈 섹션·상태 문구 금지(전 컴포넌트 스캔)", () => {
       fileURLToPath(new URL("../components", import.meta.url)),
       fileURLToPath(new URL("../app", import.meta.url)),
     ];
+    /**
+     * **주석은 지우고 본다** — 형제 검사(`missingDataDs05`)와 같은 규칙이다.
+     * 이 저장소는 「이 문구를 쓰지 않는다」를 주석으로 적어 두므로, 원문을 그대로 스캔하면
+     * **규칙을 적어 둔 주석이 규칙 위반으로 잡힌다.** 화면에 그려지는 것만 센다.
+     */
+    const strip = (source: string) =>
+      source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     for (const file of roots.flatMap(tsxFiles)) {
-      const source = readFileSync(file, "utf8");
+      const source = strip(readFileSync(file, "utf8"));
       for (const phrase of FORBIDDEN) {
         expect(source.includes(phrase), `${file} 에 금칙 문구 "${phrase}"`).toBe(false);
       }

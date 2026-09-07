@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   diffHoldings, investorHook, multiInvestorHook, investorSupport, isFreshDisclosure,
   formatShares, formatUsd, HOLDING_CHANGE_MIN, INVESTOR_FRESH_DAYS,
+  topWeightHoldings, HOLDING_TOP_WEIGHT_MIN,
   type InvestorSnapshot, type InvestorProfile,
 } from "../src/keyword-cards/investor-holdings";
 
@@ -136,5 +137,67 @@ describe("숫자 표기", () => {
   it("금액은 $M·$B 로 줄인다", () => {
     expect(formatUsd(47_000_000)).toBe("$47M");
     expect(formatUsd(6_200_000_000)).toBe("$6.2B");
+  });
+});
+
+/**
+ * INFLUENCER-01 — **변화가 없는 날에도 카드가 나와야 한다.**
+ *
+ * 실측(2026-09-07 프로덕션 수집 로그): ARK 90종목 중 주식 수가 2% 이상 변한 것이 **0개**,
+ * 최대 1.6%, 신규·전량매도 0건 → 변화 기반 후보가 매일 0이었다. 레퍼런스가 후킹으로 쓴 것도
+ * 변화가 아니라 **비중 그 자체**였다(`$SNDK 28.1%`).
+ */
+describe("큰 비중 — 변화가 아니라 상태 (C-2)", () => {
+  const snapshot = {
+    asOf: "2026-09-04",
+    holdings: [
+      { ticker: "TSLA", name: "TESLA INC", shares: 2_070_000, valueUsd: 780_000_000, weightPct: 7.1 },
+      { ticker: "CRCL", name: "CIRCLE", shares: 500_000, valueUsd: 300_000_000, weightPct: 4.9 },
+      { ticker: "COIN", name: "COINBASE", shares: 400_000, valueUsd: 250_000_000, weightPct: 4.1 },
+      { ticker: "CRSP", name: "CRISPR", shares: 900_000, valueUsd: 120_000_000, weightPct: 3.8 },
+      { ticker: "TINY", name: "TINY CO", shares: 100, valueUsd: 1_000, weightPct: 0.1 },
+    ],
+  };
+
+  it("비중 4% 이상만 후보다 — 3.8% 는 「크게 담았다」로 읽히지 않는다", () => {
+    const top = topWeightHoldings(snapshot);
+    expect(top.map((t) => t.ticker)).toEqual(["TSLA", "CRCL", "COIN"]);
+    expect(top.every((t) => t.kind === "holding")).toBe(true);
+  });
+
+  it("비중 순으로 준다", () => {
+    expect(topWeightHoldings(snapshot).map((t) => t.weightPct)).toEqual([7.1, 4.9, 4.1]);
+  });
+
+  it("변화 카드가 이미 있는 종목은 건너뛴다 — 같은 종목으로 두 장을 만들지 않는다", () => {
+    const top = topWeightHoldings(snapshot, { exclude: new Set(["TSLA"]) });
+    expect(top.map((t) => t.ticker)).toEqual(["CRCL", "COIN"]);
+  });
+
+  it("**신규로 읽히지 않는다** — `priorShares` 를 0 으로 두지 않는다", () => {
+    // 0 으로 두면 「처음 샀어요」와 구분이 안 된다(diff 결과와 섞여 흐르므로).
+    for (const t of topWeightHoldings(snapshot)) expect(t.priorShares).toBe(t.shares);
+  });
+
+  it("스냅샷이 없으면 빈 배열 — 지어내지 않는다", () => {
+    expect(topWeightHoldings(null)).toEqual([]);
+    expect(topWeightHoldings({ asOf: "2026-09-04", holdings: [] })).toEqual([]);
+  });
+
+  it("훅은 **상태**로 말한다 — 「샀어요」로 쓰지 않는다", () => {
+    const ark = { id: "cathie-wood", name: "캐시 우드", firm: "ARK", source: "ark" as const };
+    const hook = investorHook(ark, topWeightHoldings(snapshot)[0]!);
+    expect(hook).toBe("캐시 우드가\n포트폴리오의 7.1%를 이 종목에 담고 있어요");
+    expect(hook).not.toContain("샀어요");
+    // `따라 사세요` 류는 어디에도 없다(WO 하지 말 것).
+    expect(hook).not.toMatch(/따라|사세요|추천|매수/);
+  });
+
+  it("보조 줄이 **기준일 보유**라고 밝힌다 — 그날의 매매가 아니다", () => {
+    const ark = { id: "cathie-wood", name: "캐시 우드", firm: "ARK", source: "ark" as const };
+    const support = investorSupport(ark, topWeightHoldings(snapshot)[0]!, "9월 4일");
+    expect(support[0]).toContain("9월 4일 기준 보유");
+    expect(support[0]).not.toContain("공시");
+    expect(support[1]).toBe("ARK 전체의 7.1%");
   });
 });

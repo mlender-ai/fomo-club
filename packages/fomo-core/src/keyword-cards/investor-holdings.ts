@@ -36,8 +36,13 @@ export interface InvestorSnapshot {
   holdings: InvestorHolding[];
 }
 
-/** 무슨 일이 있었나. */
-export type HoldingChangeKind = "new" | "added" | "reduced" | "exited";
+/**
+ * 무슨 일이 있었나.
+ *
+ * `holding` 은 **변화가 아니라 상태**다(INFLUENCER-01 C-2 마지막 줄: 「이 사람 포트폴리오의
+ * 28%가 이 종목이에요」). 나머지 넷은 두 시점을 비교해 나온다.
+ */
+export type HoldingChangeKind = "new" | "added" | "reduced" | "exited" | "holding";
 
 export interface HoldingChange {
   kind: HoldingChangeKind;
@@ -67,6 +72,72 @@ export const HOLDING_CHANGE_MIN = 0.2;
 
 /** 「두 배로 늘렸다」고 말할 하한. */
 export const HOLDING_DOUBLED = 2;
+
+/**
+ * 「이 사람의 대표 보유」라고 말할 **비중 하한**(%) — INFLUENCER-01 C-2.
+ *
+ * ## 왜 상태 카드가 필요한가 (2026-09-07 실측)
+ *
+ * 변화 기반 카드만으로는 **카드가 안 나온다.** 프로덕션 수집 로그:
+ *
+ * ```
+ * cathie-wood: holdings 90 · hasPrior true · changes 0
+ * changeDistribution: total 90 · over2 0 · over5 0 · over20 0 · max 1.6 · new 0 · exited 0
+ * ```
+ *
+ * 90종목 중 주식 수가 **2% 이상 변한 것이 하나도 없었다.** 임계(20%)를 낮추는 것은 답이
+ * 아니다 — `0.5% 늘렸어요` 는 카드가 아니고, ETF 는 자금 유출입만으로 전 종목이 매일
+ * 조금씩 움직인다(그래서 이 임계가 있다).
+ *
+ * 레퍼런스가 후킹으로 쓴 것도 변화가 아니라 **비중 그 자체**였다(`$SNDK 28.1%`).
+ * 그래서 변화가 없는 날에도 「이 사람이 무엇을 크게 들고 있나」는 말할 수 있다.
+ *
+ * ## 4% 는 실측에서 골랐다 (2026-09-07 ARK 4펀드 합산 90종목)
+ *
+ * ```
+ * TSLA 7.1 · CRCL 4.9 · TEM 4.6 · SPCX 4.5 · COIN 4.1 · HOOD 4.0 · CRSP 3.8 · SHOP 3.7
+ *   10% 이상 0종목 · 7% 이상 1 · 5% 이상 1 · 4% 이상 6 · 3% 이상 10 · 2% 이상 17
+ * ```
+ *
+ * 레퍼런스의 `28%` 같은 집중 포지션은 ARK 에 **없다**(ETF 라 분산돼 있다). 5% 로 두면
+ * 후보가 TSLA 하나뿐이고, 유니버스에 없는 티커(SPCX 같은 비상장 비히클) 하나만 걸러도
+ * 카드가 0장이 된다. 4% 는 후보 6종목을 남기고, 같은 인물 상한(2장)이 그중 둘을 고른다 —
+ * **상한이 이미 있으므로 후보를 넉넉히 두는 쪽이 맞다.**
+ *
+ * 3% 로 더 내리면 `포트폴리오의 3.0%를 담고 있어요` 가 나가는데, 그건 「크게 담았다」로
+ * 읽히지 않는다.
+ */
+export const HOLDING_TOP_WEIGHT_MIN = 4;
+
+/**
+ * 비중이 큰 보유 — **변화 없이도 카드가 되는 것**(C-2 「큰 비중」).
+ *
+ * `exclude` 에 있는 티커는 건너뛴다: 같은 종목에 변화 카드가 이미 있으면 그게 더 새로운
+ * 소식이다(같은 종목으로 두 장을 만들지 않는다).
+ */
+export function topWeightHoldings(
+  snapshot: InvestorSnapshot | null | undefined,
+  options: { exclude?: ReadonlySet<string>; limit?: number; minWeightPct?: number } = {}
+): HoldingChange[] {
+  if (!snapshot?.holdings?.length) return [];
+  const exclude = options.exclude ?? new Set<string>();
+  const min = options.minWeightPct ?? HOLDING_TOP_WEIGHT_MIN;
+  return snapshot.holdings
+    .filter((h) => typeof h.weightPct === "number" && h.weightPct >= min && h.shares > 0)
+    .filter((h) => !exclude.has(h.ticker.toUpperCase()))
+    .sort((a, b) => (b.weightPct ?? 0) - (a.weightPct ?? 0))
+    .slice(0, options.limit ?? 5)
+    .map((h) => ({
+      kind: "holding" as const,
+      ticker: h.ticker.toUpperCase(),
+      name: h.name,
+      shares: h.shares,
+      priorShares: h.shares, // 변화가 아니므로 직전과 같다고 둔다(0 으로 두면 신규로 읽힌다)
+      // 위 필터가 숫자임을 보장하지만 타입은 그걸 모른다 — 조건부로 넣어 `undefined` 를 막는다.
+      ...(typeof h.weightPct === "number" ? { weightPct: h.weightPct } : {}),
+      ...(typeof h.valueUsd === "number" ? { valueUsd: h.valueUsd } : {}),
+    }));
+}
 
 /**
  * 두 시점을 비교해 변화를 낸다. **최신이 `next`.**
@@ -193,6 +264,14 @@ export function investorHook(investor: InvestorProfile, change: HoldingChange): 
     if ((change.multiple ?? 1) >= HOLDING_DOUBLED) return `${who}\n보유량을 두 배로 늘렸어요`;
     return `${who}\n이 종목을 더 샀어요`;
   }
+  /**
+   * 큰 비중 — **변화가 아니라 상태**다(C-2). 「샀어요」로 쓰지 않는다: 오늘 산 것이
+   * 아니라 크게 들고 있는 것이고, 그 둘을 섞으면 없는 매매를 말하는 것이 된다.
+   */
+  if (change.kind === "holding") {
+    const weight = typeof change.weightPct === "number" ? round1(change.weightPct) : null;
+    return weight ? `${who}\n포트폴리오의 ${weight}%를 이 종목에 담고 있어요` : `${who}\n이 종목을 크게 담고 있어요`;
+  }
   return `${who}\n이 종목을 줄였어요`;
 }
 
@@ -213,7 +292,8 @@ export function investorSupport(
 ): string[] {
   const out: string[] = [];
   const shares = change.kind === "exited" ? change.priorShares : change.shares;
-  const parts = [`${asOfLabel} 공시`];
+  // 큰 비중은 그날 벌어진 일이 아니라 **기준일의 상태**다 — 그 사실을 라벨이 말한다.
+  const parts = [change.kind === "holding" ? `${asOfLabel} 기준 보유` : `${asOfLabel} 공시`];
   if (shares > 0) parts.push(formatShares(shares));
   if (typeof change.valueUsd === "number" && change.valueUsd > 0) parts.push(formatUsd(change.valueUsd));
   out.push(parts.join(" · "));

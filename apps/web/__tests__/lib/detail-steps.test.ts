@@ -191,7 +191,15 @@ describe("상세 배선 (완료 확인 1·4·7·8)", () => {
   });
 
   it("상세에서 종목을 누르면 그 종목 상세로 간다 (완료 확인 7)", () => {
-    expect(deck).toContain("const resolveStockDetail = (canonical: string): (() => void) | undefined =>");
+    /**
+     * INFLUENCER-01 PART E — 이 창구가 **티커도 받는다.** 인물 페이지의 포트폴리오는
+     * 티커로 오고(거시·흐름 상세는 종목명으로 온다), 창구를 둘로 만들면 한쪽만 고쳐지는
+     * 날이 온다. 그래서 인자 이름이 `canonicalOrTicker` 로 바뀌었다.
+     */
+    expect(deck).toContain("const resolveStockDetail = (canonicalOrTicker: string): (() => void) | undefined =>");
+    // 종목명·티커 두 갈래를 다 본다.
+    expect(deck).toContain("p.subject.canonical === key");
+    expect(deck).toContain('(p.subject.symbol ?? p.subject.ticker ?? "").toUpperCase() === upper');
     expect(deck).toContain("resolveStock={resolveStockDetail}");
     expect(macro).toContain("resolveStock?.(item.canonical)");
     expect(flow).toContain("resolveStock?.(row.name!)");

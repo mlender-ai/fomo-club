@@ -385,8 +385,17 @@ export function QuietPickDeck() {
    * 이동 깊이는 **2단계**다(흐름/거시 상세 → 종목 상세). 종목 상세에서 더 들어가지 않으므로
    * §D-3 의 「3단계를 넘지 않게」를 자연히 지킨다.
    */
-  const resolveStockDetail = (canonical: string): (() => void) | undefined => {
-    const target = picks.find((p) => p.subject.canonical === canonical);
+  const resolveStockDetail = (canonicalOrTicker: string): (() => void) | undefined => {
+    /**
+     * INFLUENCER-01 PART E — 인물 페이지는 **티커**로 찾는다(포트폴리오가 티커로 온다).
+     * 거시·흐름 상세는 종목명(canonical)으로 찾는다. 둘 다 받는다 — 창구를 둘로 만들면
+     * 한쪽만 고쳐지는 날이 온다.
+     */
+    const key = canonicalOrTicker.trim();
+    const upper = key.toUpperCase();
+    const target =
+      picks.find((p) => p.subject.canonical === key) ??
+      picks.find((p) => (p.subject.symbol ?? p.subject.ticker ?? "").toUpperCase() === upper);
     if (!target) return undefined;
     return () => {
       reveal(target.subject.canonical);
@@ -532,6 +541,8 @@ export function QuietPickDeck() {
       {selected && (
         <QuietPickDepth
           pick={selected}
+          /* INFLUENCER-01 PART E — 인물 페이지에서 종목 줄을 누르면 그 종목 상세로 간다. */
+          resolveStock={resolveStockDetail}
           /**
            * **상세를 닫으면 다음 카드로 넘긴다** (2026-08-31 지시).
            *
