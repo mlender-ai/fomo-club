@@ -29,6 +29,8 @@
  */
 
 import { STOCK_VOCAB, classifyDisclosure, decodeHtmlEntities, type DisclosureKind, type StockDef } from "@fomo/core";
+import { amountLabelsFor, EARNINGS_BODY_FORM, type BodyEarnings } from "@fomo/core/keyword-cards/disclosure-body";
+import { readDartBodyFacts } from "./dart-body";
 import { US_DISCOVERY_SYMBOLS, secCikForSymbol } from "./us-symbols";
 import { secUserAgent } from "./sec-edgar";
 
@@ -39,6 +41,22 @@ export interface DisclosureItem {
   title: string;
   kind: DisclosureKind;
   url?: string;
+  /**
+   * LAUNCH-P2 §B — **본문에서 읽은 금액(원).**
+   *
+   * 제목에는 금액이 없다(실측 2026-09-08: 프로덕션 공시 27건 중 0건). 금액은 본문에 있고,
+   * 본문은 수집 때 한 번만 읽는다 — 굽는 경로에서 27번 왕복하면 예산을 태운다.
+   */
+  amountWon?: number;
+  /** 그 금액의 본문 라벨 — `계약금액` · `취득금액`. 화면이 무엇을 보여주는지 밝힌다. */
+  amountLabel?: string;
+  /**
+   * LAUNCH-P2 §A-2 경로 A — **본문의 당기·전년동기 실적.**
+   * 잠정실적 공시는 본문 한 표에 둘 다 있어서 팩트시트 조인이 실패해도 숫자를 낼 수 있다.
+   */
+  bodyEarnings?: BodyEarnings;
+  /** 본문을 읽어봤다는 표식 — 다음 수집이 같은 공시를 다시 읽지 않는다. */
+  bodyRead?: true;
 }
 
 export interface DisclosureCollection {
@@ -64,6 +82,24 @@ export interface DisclosureCollection {
   byStock: Record<string, DisclosureItem[]>;
   /** 예산 초과로 훑다 만 날이 있는가. 있으면 "없었다" 를 말하지 않는다. */
   truncated: boolean;
+  /**
+   * LAUNCH-P2 §D — 본문 읽기 계측. **왜 숫자가 없는지 이 숫자가 답한다.**
+   * `pending` 이 남아 있으면 다음 실행이 이어서 읽는다(한 번에 다 읽지 않는다).
+   */
+  bodyCensus?: {
+    /** 이번 실행에서 본문을 읽어본 건수. */
+    read: number;
+    /** 본문을 못 읽은 건수(두 홉 중 실패). */
+    failed: number;
+    /** 금액 서식인데 금액을 못 뽑은 건수 — **다음 작업 대상**이다. */
+    amountMissed: number;
+    /** 금액을 뽑은 건수. */
+    amountFound: number;
+    /** 잠정실적 서식에서 실적표를 뽑은 건수. */
+    earningsFound: number;
+    /** 아직 안 읽은 대상 건수. */
+    pending: number;
+  };
   /** 소스별 실패 — 조용한 결손 금지. */
   errors: string[];
 }
@@ -328,8 +364,19 @@ export async function collectDisclosures(options: {
     }
     return [...recent, ...older];
   })();
-  const kr = await collectKr(dates, deadline, fresh, errors, universe);
-  await collectUs(shiftIso(today, -lookback), deadline, fresh, errors);
+  /**
+   * LAUNCH-P2 — **본문 읽기 몫을 미리 떼어 둔다.**
+   *
+   * 종전처럼 목록 훑기에 예산을 다 주면, 수집이 예산을 채우는 날에는 본문 읽기가 아예
+   * 안 돈다(`Date.now() > deadline - floor` 에서 즉시 빠진다). 그러면 금액 확보율이
+   * **0% 로 남는다** — 코드는 있고 한 번도 실행되지 않는 상태다.
+   *
+   * 목록은 하루 덜 훑어도 다음 실행이 이어받는다(증분 재개). 본문은 그렇게 못 미룬다 —
+   * 화면에 나갈 숫자가 그거다. 그래서 목록에서 45초를 떼어 본문에 준다.
+   */
+  const listDeadline = deadline - BODY_RESERVE_MS;
+  const kr = await collectKr(dates, listDeadline, fresh, errors, universe);
+  await collectUs(shiftIso(today, -lookback), listDeadline, fresh, errors);
 
   // 기존 저장분과 합치고 창 밖을 떨군다.
   const byStock: Record<string, DisclosureItem[]> = {};
@@ -359,8 +406,22 @@ export async function collectDisclosures(options: {
   const candidate = previousFrom && previousFrom < scannedFrom ? previousFrom : scannedFrom;
   const coveredFrom = candidate < windowStart ? windowStart : candidate;
 
+  /**
+   * LAUNCH-P2 §A-2·§B — **본문을 읽어 숫자를 채운다.**
+   *
+   * 여기서 하는 이유: 굽는 경로(`quiet-pick`)는 공시 27건마다 두 번 왕복할 여유가 없고,
+   * 공시 본문은 **확정된 문서**라 한 번 읽으면 다시 읽을 이유가 없다.
+   *
+   * 세 가지로 예산을 지킨다.
+   *  ① 숫자가 있을 서식만 읽는다(금액 서식 · 잠정실적 서식)
+   *  ② 이미 읽어본 것은 건너뛴다(`bodyRead`)
+   *  ③ 한 번에 `BODY_READ_MAX` 건까지만, 남은 예산 안에서만
+   */
+  const bodyCensus = await enrichBodies(byStock, deadline);
+
   return {
     asOf: new Date().toISOString(),
+    bodyCensus,
     coveredFrom,
     /**
      * **이번에 실제로 훑은 유니버스 크기.** 잘렸으면(`truncated`) 다음 실행이 다시 보게
@@ -371,4 +432,66 @@ export async function collectDisclosures(options: {
     truncated: kr.truncated,
     errors,
   };
+}
+
+
+/** 목록 훑기에서 떼어 본문 읽기에 주는 예산(ms). */
+const BODY_RESERVE_MS = 45_000;
+/** 한 번의 수집에서 본문을 읽을 최대 건수 — 두 홉이라 건당 두 번 왕복한다. */
+const BODY_READ_MAX = 40;
+/** 본문 읽기에 남겨둘 최소 예산(ms). 이 아래로 떨어지면 다음 실행에 넘긴다. */
+const BODY_BUDGET_FLOOR_MS = 20_000;
+
+/** 공시 URL 에서 접수번호. 저장된 것은 URL 뿐이라 여기서 되짚는다. */
+function rceptNoFromUrl(url: string | undefined): string | null {
+  const m = /rcpNo=(\d{8,})/.exec(url ?? "");
+  return m?.[1] ?? null;
+}
+
+/** 본문을 읽어볼 대상인가 — **숫자가 있을 서식만.** 나머지는 왕복할 이유가 없다. */
+function wantsBody(item: DisclosureItem): boolean {
+  if (item.bodyRead) return false;
+  if (!rceptNoFromUrl(item.url)) return false;
+  return amountLabelsFor(item.title) !== null || EARNINGS_BODY_FORM.test(item.title.replace(/\s+/g, ""));
+}
+
+/**
+ * 본문을 읽어 `amountWon` · `bodyEarnings` 를 채운다(제자리 수정).
+ *
+ * 실패를 삼키지 않고 센다 — 「금액 서식인데 못 뽑음」이 다음 작업 목록이다(§D).
+ */
+async function enrichBodies(
+  byStock: Record<string, DisclosureItem[]>,
+  deadline: number
+): Promise<NonNullable<DisclosureCollection["bodyCensus"]>> {
+  const census = { read: 0, failed: 0, amountMissed: 0, amountFound: 0, earningsFound: 0, pending: 0 };
+  const targets: DisclosureItem[] = [];
+  for (const items of Object.values(byStock)) for (const item of items) if (wantsBody(item)) targets.push(item);
+
+  // 최근 것부터 — 오래된 공시는 화면에서도 뒤에 있다.
+  targets.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  census.pending = targets.length;
+
+  for (const item of targets.slice(0, BODY_READ_MAX)) {
+    if (Date.now() > deadline - BODY_BUDGET_FLOOR_MS) break;
+    const rceptNo = rceptNoFromUrl(item.url)!;
+    const facts = await readDartBodyFacts(rceptNo, item.title);
+    census.read += 1;
+    census.pending -= 1;
+    if (!facts) { census.failed += 1; continue; }
+    // 읽어본 것은 표시한다 — 숫자가 없다는 사실도 결과다(다시 읽지 않는다).
+    item.bodyRead = true;
+    if (facts.amount) {
+      item.amountWon = facts.amount.won;
+      item.amountLabel = facts.amount.label;
+      census.amountFound += 1;
+    } else if (amountLabelsFor(item.title) !== null) {
+      census.amountMissed += 1;
+    }
+    if (facts.earnings) {
+      item.bodyEarnings = facts.earnings;
+      census.earningsFound += 1;
+    }
+  }
+  return census;
 }

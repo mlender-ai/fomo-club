@@ -1,0 +1,51 @@
+name: US About Backfill
+
+# LAUNCH-P2 §C — **미국 회사 설명을 요청 경로 밖에서 채운다.**
+#
+# 상세를 열 때 번역하면 9초 예산과 레이트리밋(429)에 막혀 확보율이 0% 였다.
+# 여기서는 시간이 넉넉하고 429 를 기다릴 수 있다. 심볼당 한 번 성공하면 영구 캐시라
+# 다시 하지 않는다 — 심볼 212개가 며칠에 걸쳐 채워진다.
+#
+# 시각: 매일 04:00 KST(19:00 UTC). 사람이 안 쓰는 시간에 LLM 을 쓴다.
+
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "이번 실행에서 채울 심볼 수(최대 60)"
+        required: false
+        default: "25"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: us-about-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call backfill endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          LIMIT: ${{ inputs.limit || '25' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          url="https://fomo-club-backend.vercel.app/api/fomo/cron/us-about-backfill?limit=${LIMIT}"
+          auth=()
+          if [ -n "${CRON_SECRET:-}" ]; then auth=(-H "authorization: Bearer ${CRON_SECRET}"); fi
+          code=$(curl -s -o out.json -w '%{http_code}' --max-time 300 "${auth[@]}" "$url" || echo "000")
+          echo "HTTP $code"; cat out.json; echo ""
+          summary=$(node -e 'try{const j=require("./out.json");process.stdout.write(`확보율 ${j.coverage}% · 이번에 채움 ${j.filled} · 이미 있음 ${j.cached} · 소스 없음 ${j.noSource} · 검증 탈락 ${j.rejected} · 남음 ${j.pending}`)}catch(e){process.stdout.write("payload unreadable")}')
+          {
+            echo "### 미국 회사 설명 백필"
+            echo ""
+            echo "- HTTP: \`$code\`"
+            echo "- $summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "200" ]; then echo "::error::백필 실패 — out.json 을 보라."; exit 1; fi
