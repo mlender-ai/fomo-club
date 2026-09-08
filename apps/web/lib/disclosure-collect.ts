@@ -450,12 +450,22 @@ const BODY_RESERVE_MS = 45_000;
  * 첫 실측(2026-09-08)에서 **40건을 45초에 읽고 실패 0건**이었다. 그런데 대상이 1,418건이라
  * 하루 40건이면 **한 달이 걸린다** — 그동안 덱에 올라온 공시는 금액이 없다.
  *
- * 라우트 예산은 300초이고 목록 훑기가 13초였다. 병렬 4로 읽으면 150건이 60초 안에 들어간다.
- * 시간 가드가 따로 있으므로 이 값은 **상한**이고, 예산이 모자라면 거기서 멈춘다.
+ * 라우트 예산은 300초이고 목록 훑기가 13초였다. 상한을 150 으로 두고, 동시성은 실측이
+ * 정한 값을 쓴다(아래). 시간 가드가 따로 있으므로 이 값은 **상한**이고, 예산이 모자라면 멈춘다.
  */
 const BODY_READ_MAX = 150;
-/** 동시에 읽을 수 — DART 에 예의를 지키는 선. 순차로는 처리량이 안 난다. */
-const BODY_CONCURRENCY = 4;
+/**
+ * 동시에 읽을 수.
+ *
+ * 실측이 값을 정했다 — 순차(1)에서는 **40건 · 실패 0**, 동시 4에서는 **150건 · 실패 54(36%)**
+ * 였다. DART 가 동시 요청을 좋아하지 않는다. 실패한 건은 `bodyRead` 가 안 찍혀 다음 실행이
+ * 다시 시도하므로 손실은 아니지만, **왕복 54번을 버린 것**이다.
+ *
+ * 2로 낮추고 실패 시 한 번 재시도한다 — 처리량은 순차의 두 배로 남기고 낭비를 줄인다.
+ */
+const BODY_CONCURRENCY = 2;
+/** 실패한 건을 한 번 더 — 첫 실패는 대개 일시적이다(동시 요청 억제). */
+const BODY_RETRY_DELAY_MS = 700;
 /** 본문 읽기에 남겨둘 최소 예산(ms). 이 아래로 떨어지면 다음 실행에 넘긴다. */
 const BODY_BUDGET_FLOOR_MS = 20_000;
 
@@ -497,7 +507,12 @@ async function enrichBodies(
   /** 한 건 처리 — 결과를 그 자리에서 항목에 적고 센다. */
   const readOne = async (item: DisclosureItem): Promise<void> => {
     const rceptNo = rceptNoFromUrl(item.url)!;
-    const facts = await readDartBodyFacts(rceptNo, item.title);
+    let facts = await readDartBodyFacts(rceptNo, item.title);
+    if (!facts) {
+      // 한 번 더. 첫 실패의 대부분은 동시 요청 억제라 잠깐 기다리면 된다.
+      await new Promise((resolve) => setTimeout(resolve, BODY_RETRY_DELAY_MS));
+      facts = await readDartBodyFacts(rceptNo, item.title);
+    }
     census.read += 1;
     census.pending -= 1;
     if (!facts) {

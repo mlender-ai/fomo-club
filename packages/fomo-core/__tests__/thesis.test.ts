@@ -264,3 +264,27 @@ describe("공시 항목 — 금액과 비교 대상을 가른다 (LAUNCH-P2 §B)
     }
   });
 });
+
+/** LAUNCH-P2 실측 — 새로 생긴 두 항목(공시·거래량)에 다음 확인 지점이 없었다. */
+describe("모든 항목에 다음 확인 지점이 있다 (THESIS-01 · LAUNCH-P2 실측)", () => {
+  it("공시 항목은 언제 매출이 될지 말하지 않고 어디서 확인되는지만 말한다", () => {
+    const items = thesisItems({
+      supply: { actor: "기관", days: 3, scale: "1,563주", volumePct: 33, longestWindowDays: 22, startedWhen: "8월 24일" },
+      events: [{ date: "2026-09-02", when: "9월 2일", text: "큰 계약을 따냈어요", scaleNote: "계약금액 5,014억 · 최근 1년 매출의 100%" }],
+    });
+    const item = items.find((i) => i.kind === "disclosure")!;
+    expect(item.nextCheck).toBe("이 금액이 얼마나 반영됐는지는 다음 실적에서 확인돼요");
+    // 계약 기간을 모르므로 시점을 단정하지 않는다.
+    for (const banned of ["부터 반영", "내년", "다음 달", "예상", "전망"]) {
+      expect(item.nextCheck ?? "", banned).not.toContain(banned);
+    }
+  });
+
+  it("거래량 항목의 다음 확인 지점은 그 신호의 정의다", () => {
+    const items = thesisItems({
+      supply: { actor: "기관", days: 3, scale: "1,563주", volumePct: 33, longestWindowDays: 22, startedWhen: "8월 24일" },
+      volume: { ratio: 4.2 },
+    });
+    expect(items.find((i) => i.kind === "volume")?.nextCheck).toBe("거래량이 평소로 돌아오면 이 신호는 끝나요");
+  });
+});

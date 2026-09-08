@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withCors } from "../../../../../lib/fomo";
 import { backfillUsCompanyAbout } from "../../../../../lib/us-company-about";
 import { US_DISCOVERY_SYMBOLS } from "../../../../../lib/us-symbols";
+import { isAiConfigured } from "@fomo/shared";
 
 /**
  * LAUNCH-P2 §C — **미국 회사 설명 백필.**
@@ -44,6 +45,12 @@ export async function GET(request: Request) {
     return withCors(
       NextResponse.json({
         ok: true,
+        /**
+         * LAUNCH-P2 §C — **모델이 이 런타임에서 도는가.**
+         * 실측에서 탈락 20건이 전부 `llm-failed` 였다. 「키가 없다」와 「호출이 실패했다」는
+         * 다른 작업이므로 여기서 가른다 — 로컬에서는 같은 코드가 5/5 통과한다.
+         */
+        aiConfigured: isAiConfigured(),
         universe: total,
         /** 확보율 — 이 숫자가 §E 목표(70%)의 근거다. */
         coverage: total > 0 ? Math.round((have / total) * 1000) / 10 : 0,
