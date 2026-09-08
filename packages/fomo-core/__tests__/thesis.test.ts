@@ -226,3 +226,41 @@ describe("카드 한 줄 (PART E)", () => {
     expect(line).toContain("값은 5년 중 높은 편");
   });
 });
+
+/**
+ * LAUNCH-P2 §B — 공시 항목은 `scaleNote` 가 있어야 만들어지는데 **그게 항상 null 이었다**
+ * (금액 확보율 0%). 본문에서 금액을 읽기 시작하면서 이 항목이 처음으로 생긴다.
+ */
+describe("공시 항목 — 금액과 비교 대상을 가른다 (LAUNCH-P2 §B)", () => {
+  /** 항목이 둘 이상이어야 블록이 만들어지므로(A-3) 수급을 함께 넣는다 — 실측 화면과 같다. */
+  const base: ThesisInput = {
+    supply: { actor: "기관", days: 3, scale: "1,563주", volumePct: 33, longestWindowDays: 22, startedWhen: "8월 24일" },
+  };
+
+  it("금액+비율 한 줄에서 값과 비교 대상을 가른다", () => {
+    const items = thesisItems({
+      ...base,
+      events: [{ date: "2026-08-21", when: "8월 21일", text: "큰 계약을 따냈어요", scaleNote: "계약금액 405억 · 최근 1년 매출의 26%" }],
+    });
+    const item = items.find((i) => i.kind === "disclosure");
+    expect(item?.numbers[0]).toEqual({ value: "계약금액 405억", compare: "최근 1년 매출의 26%" });
+  });
+
+  it("비율만 오면 제목 뒤 금액을 값으로 쓴다 — 종전 모양도 계속 지원한다", () => {
+    const items = thesisItems({
+      ...base,
+      events: [{ date: "2026-08-24", when: "8월 24일", text: "자기주식을 사들여요 · 100억", scaleNote: "시가총액의 1.2%" }],
+    });
+    const item = items.find((i) => i.kind === "disclosure");
+    expect(item?.numbers[0]).toEqual({ value: "100억", compare: "시가총액의 1.2%" });
+  });
+
+  it("가격 항목에도 다음 확인 지점이 붙는다 — 예측이 아니라 사실을 쓴다", () => {
+    const items = thesisItems({ ...base, price: { pctAboveYearLow: 8 } });
+    const item = items.find((i) => i.kind === "price");
+    expect(item?.nextCheck).toBe("52주 저점·고점은 매일 다시 계산돼요");
+    for (const banned of ["깨면", "돌파", "예상", "전망"]) {
+      expect(item?.nextCheck ?? "", banned).not.toContain(banned);
+    }
+  });
+});

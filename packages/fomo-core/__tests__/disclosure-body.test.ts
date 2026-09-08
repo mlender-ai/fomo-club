@@ -5,6 +5,7 @@ import {
   parseBodyUnit,
   parseBodyPeriod,
   amountLabelsFor,
+  parseRightsIssueAmount,
 } from "../src/keyword-cards/disclosure-body";
 import {
   disclosureAmountLine,
@@ -209,5 +210,30 @@ describe("본문 표를 화면 형태로 — 조인 경로와 같은 말투 (§A
 
   it("기간 라벨을 못 읽으면 만들지 않는다", () => {
     expect(earningsFiguresFromBody({ periodLabel: "최근", rows: [{ label: "매출", now: 1e9, prior: 1e8 }] })).toBeNull();
+  });
+});
+
+/** 유상증자결정 · rcpNo 20260821800396 — 금액이 한 필드에 없다 */
+const 유상증자_본문 = `주요사항보고서(유상증자결정) 1. 신주의 종류와 수 보통주식(주) 274,683
+ 2. 1주당 액면가액(원) 5,000 3. 증자전 발행주식총수(주) 보통주식(주) 236,974
+ 4. 자금조달의 목적 영업양수자금(원) 401,114,915,289
+ 5. 신주 발행가액 확정발행가 보통주식(원) 1,460,283`;
+
+describe("유상증자 — 금액은 두 필드의 곱이다 (§B-2)", () => {
+  it("신주수 × 발행가액으로 모집총액을 만든다", () => {
+    const amount = parseBodyAmount("주요사항보고서(유상증자결정)", 유상증자_본문)!;
+    expect(amount.label).toBe("모집총액");
+    // 274,683 × 1,460,283 — 본문의 `영업양수자금 401,114,915,289` 와 일치한다.
+    expect(amount.won).toBe(274_683 * 1_460_283);
+    expect(Math.abs(amount.won - 401_114_915_289) / amount.won).toBeLessThan(0.001);
+  });
+
+  it("둘 중 하나라도 못 읽으면 만들지 않는다", () => {
+    expect(parseRightsIssueAmount("신주의 종류와 수 보통주식(주) 274,683")).toBeNull();
+    expect(parseRightsIssueAmount("신주 발행가액 확정발행가 보통주식(원) 1,460,283")).toBeNull();
+  });
+
+  it("자리 수를 잘못 읽었으면 버린다 — 한 주에 1억을 넘길 수 없다", () => {
+    expect(parseRightsIssueAmount("신주의 종류와 수 보통주식(주) 274,683 신주 발행가액 보통주식(원) 999,999,999")).toBeNull();
   });
 });

@@ -99,6 +99,13 @@ export interface DisclosureCollection {
     earningsFound: number;
     /** 아직 안 읽은 대상 건수. */
     pending: number;
+    /**
+     * 못 읽은 첫 몇 건의 접수번호·제목. **왜 못 읽었는지 알아야 고친다** —
+     * 프로덕션 첫 실행에서 본문 경로가 0건이었는데 이 표본이 없어 원인을 못 갈랐다.
+     */
+    failedSample?: string[];
+    /** 예산이 모자라 아예 시작도 못 했나. */
+    skippedForBudget?: true;
   };
   /** 소스별 실패 — 조용한 결손 금지. */
   errors: string[];
@@ -464,7 +471,10 @@ async function enrichBodies(
   byStock: Record<string, DisclosureItem[]>,
   deadline: number
 ): Promise<NonNullable<DisclosureCollection["bodyCensus"]>> {
-  const census = { read: 0, failed: 0, amountMissed: 0, amountFound: 0, earningsFound: 0, pending: 0 };
+  const census: NonNullable<DisclosureCollection["bodyCensus"]> = {
+    read: 0, failed: 0, amountMissed: 0, amountFound: 0, earningsFound: 0, pending: 0,
+  };
+  const failedSample: string[] = [];
   const targets: DisclosureItem[] = [];
   for (const items of Object.values(byStock)) for (const item of items) if (wantsBody(item)) targets.push(item);
 
@@ -472,13 +482,18 @@ async function enrichBodies(
   targets.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   census.pending = targets.length;
 
+  if (targets.length > 0 && Date.now() > deadline - BODY_BUDGET_FLOOR_MS) census.skippedForBudget = true;
   for (const item of targets.slice(0, BODY_READ_MAX)) {
     if (Date.now() > deadline - BODY_BUDGET_FLOOR_MS) break;
     const rceptNo = rceptNoFromUrl(item.url)!;
     const facts = await readDartBodyFacts(rceptNo, item.title);
     census.read += 1;
     census.pending -= 1;
-    if (!facts) { census.failed += 1; continue; }
+    if (!facts) {
+      census.failed += 1;
+      if (failedSample.length < 5) failedSample.push(`${rceptNo} ${item.title.slice(0, 40)}`);
+      continue;
+    }
     // 읽어본 것은 표시한다 — 숫자가 없다는 사실도 결과다(다시 읽지 않는다).
     item.bodyRead = true;
     if (facts.amount) {
@@ -493,5 +508,6 @@ async function enrichBodies(
       census.earningsFound += 1;
     }
   }
+  if (failedSample.length > 0) census.failedSample = failedSample;
   return census;
 }

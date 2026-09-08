@@ -19,7 +19,7 @@ interface AboutRow {
   asOf: string;
 }
 
-async function fetchCompanyDescription(symbol: string): Promise<string | undefined> {
+export async function fetchCompanyDescription(symbol: string): Promise<string | undefined> {
   try {
     const res = await fetch(`https://api.nasdaq.com/api/company/${encodeURIComponent(symbol)}/company-profile`, {
       headers: { "User-Agent": NASDAQ_UA, Accept: "application/json" },
@@ -57,12 +57,24 @@ export function groundedInSource(summary: string, source: string): boolean {
   return true;
 }
 
+/**
+ * 영문 단위어를 한국어 문장에 남기지 않는다 — **한영혼용은 이 레포가 따로 금지하는 것**이다.
+ *
+ * 실측에서 나왔다: 「숫자는 원문 형태 그대로」라고 지시하니 LLM 이
+ * `15.8 million 명의 회원` 을 냈다. 근거 검증은 통과한다(원문에 그 숫자가 있다) —
+ * **다른 규칙이 필요하다.** 이걸 만나면 숫자 없이 다시 쓴다.
+ */
+export function hasLatinUnitWord(text: string): boolean {
+  return /\b(?:million|billion|trillion|thousand|mn|bn)\b/i.test(text);
+}
+
 /** 문장 수 — `~해요.` 로 끝나는 문장을 센다. §C-3 은 **최대 2문장**이다. */
 function sentenceCount(text: string): number {
   return text.split(/(?<=[.!?])\s+|(?<=요\.)\s*/).filter((part) => part.trim().length > 0).length;
 }
 
-async function translateAbout(name: string, description: string): Promise<string | undefined> {
+/** 내보내는 이유: 진단 스크립트가 **사본이 아니라 이 함수를** 재야 한다(사본을 재다 한 번 헛짚었다). */
+export async function translateAbout(name: string, description: string): Promise<string | undefined> {
   if (!isAiConfigured()) return undefined;
   const res = await callAI({
     messages: [
@@ -71,7 +83,17 @@ async function translateAbout(name: string, description: string): Promise<string
         content:
           "아래 영문 회사 소개를 근거로 이 회사가 무엇을 하는 회사인지 한국어로 설명하라. " +
           "**첫 문장은 이 회사가 무엇을 파는지(또는 무슨 서비스를 하는지)로 시작한다.** " +
-          "최대 2문장. 입력에 없는 사실·수치·고유명사 추가 금지, 과장·투자 권유 금지, 존댓말(~해요체). 문장만 출력.",
+          "최대 2문장. 입력에 없는 사실·수치·고유명사 추가 금지, 과장·투자 권유 금지, 존댓말(~해요체). " +
+          /**
+           * LAUNCH-P2 §C 실측 — 백필 첫 실행에서 **40건이 전부 근거 검증에서 떨어졌다.**
+           * 원인은 날조가 아니라 **단위 환산**이었다: 원문 `1.6 million members` 를
+           * `1,580만 명` 으로 옮기면 그 숫자가 원문에 문자로 없어서 검증이 막는다.
+           *
+           * 검증을 느슨하게 하지 않는다 — **환산을 금지한다.** 숫자는 회사 소개에 없어도 되고,
+           * 있다면 원문 형태 그대로여야 확인할 수 있다.
+           */
+          "숫자는 원문에 적힌 형태 그대로만 쓰고 단위를 바꾸지 마라(1.6 million → 160만 금지). 숫자가 꼭 필요하지 않으면 쓰지 마라. " +
+          "문장만 출력.",
       },
       { role: "user", content: JSON.stringify({ company: name, description: description.slice(0, 1200) }) },
     ],
@@ -87,6 +109,44 @@ async function translateAbout(name: string, description: string): Promise<string
   if (!hasKorean || latinRatio > 0.3 || clean.length < 30 || clean.length > 400 || FORBIDDEN.test(clean)) return undefined;
   // §C-3 최대 2문장 · 근거 검증 패스. 어느 하나라도 어기면 **버린다**(섹션 생략이 정직하다).
   if (sentenceCount(clean) > 2) return undefined;
+  if (hasLatinUnitWord(clean)) return undefined;
+  if (!groundedInSource(clean, description)) return undefined;
+  return clean;
+}
+
+/**
+ * 한 번 더 — **숫자를 아예 쓰지 말고** 다시 쓴다.
+ *
+ * 첫 시도가 근거 검증에서 떨어지는 이유는 대개 단위 환산이다(실측: 40건 전부).
+ * 그때 심볼을 버리면 확보율이 0 인데, **숫자 없는 회사 소개는 여전히 유효한 소개**다 —
+ * 「무엇을 파는 회사인가」에 숫자가 필요하지 않다. 그래서 한 번만 다시 시도한다.
+ */
+export async function translateAboutNoNumbers(name: string, description: string): Promise<string | undefined> {
+  if (!isAiConfigured()) return undefined;
+  const res = await callAI({
+    messages: [
+      {
+        role: "system",
+        content:
+          "아래 영문 회사 소개를 근거로 이 회사가 무엇을 하는 회사인지 한국어로 설명하라. " +
+          "**첫 문장은 이 회사가 무엇을 파는지로 시작한다.** 최대 2문장. " +
+          "**숫자를 하나도 쓰지 마라**(연도·금액·개수·비율 전부). 입력에 없는 사실·고유명사 추가 금지, " +
+          "과장·투자 권유 금지, 존댓말(~해요체). 문장만 출력.",
+      },
+      { role: "user", content: JSON.stringify({ company: name, description: description.slice(0, 1200) }) },
+    ],
+    temperature: 0,
+    timeoutMs: LLM_TIMEOUT_MS,
+    trace: "us-company-about-retry",
+  }).catch(() => ({ ok: false as const, content: "" }));
+  if (!res.ok || !res.content) return undefined;
+  const clean = res.content.replace(/\s+/g, " ").trim();
+  const hasKorean = /[가-힣]/.test(clean);
+  const latinRatio = (clean.match(/[A-Za-z]/g)?.length ?? 0) / Math.max(1, clean.length);
+  if (!hasKorean || latinRatio > 0.3 || clean.length < 30 || clean.length > 400 || FORBIDDEN.test(clean)) return undefined;
+  if (sentenceCount(clean) > 2) return undefined;
+  if (hasLatinUnitWord(clean)) return undefined;
+  // 숫자를 쓰지 말라고 했는데 썼으면 그건 지시를 어긴 것이다 — 검증도 그대로 돌린다.
   if (!groundedInSource(clean, description)) return undefined;
   return clean;
 }
@@ -98,7 +158,7 @@ export async function getUsCompanyAbout(name: string, symbol: string): Promise<s
 
   const description = await fetchCompanyDescription(symbol);
   if (!description) return undefined;
-  const about = await translateAbout(name, description);
+  const about = (await translateAbout(name, description)) ?? (await translateAboutNoNumbers(name, description));
   if (!about) return undefined;
   await writeFeedContent(KEY(symbol), { about, asOf: new Date().toISOString().slice(0, 10) } satisfies AboutRow).catch(
     () => undefined
@@ -162,7 +222,8 @@ export async function backfillUsCompanyAbout(
     if (Date.now() > deadline) break;
     const description = await fetchCompanyDescription(entry.symbol);
     if (!description) { out.noSource += 1; out.pending -= 1; continue; }
-    const about = await translateAbout(entry.name, description);
+    // 첫 시도가 단위 환산으로 떨어지면 **숫자 없이** 한 번 더 — 심볼을 버리지 않는다.
+    const about = (await translateAbout(entry.name, description)) ?? (await translateAboutNoNumbers(entry.name, description));
     out.pending -= 1;
     if (!about) { out.rejected += 1; continue; }
     await writeFeedContent(KEY(entry.symbol), { about, asOf: new Date().toISOString().slice(0, 10) } satisfies AboutRow)

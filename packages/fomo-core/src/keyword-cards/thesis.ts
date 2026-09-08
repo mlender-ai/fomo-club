@@ -253,13 +253,28 @@ function disclosureItem(input: ThesisInput): ThesisItem | null {
   const event = (input.events ?? []).find((e) => e.scaleNote && !e.figures);
   if (!event?.scaleNote) return null;
   /**
-   * 제목이 들고 온 금액(`계약금액 320억`)은 `text` 뒤에 붙어 있다. 그 조각을 값으로,
-   * 규모 환산을 비교 대상으로 쓴다 — 둘 다 이미 만들어진 사실이다.
+   * 금액과 비교 대상을 가른다.
+   *
+   * LAUNCH-P2 §B 이후 `scaleNote` 는 **금액과 비율을 함께** 들고 온다
+   * (`계약금액 405억 · 최근 1년 매출의 26%`) — 공시 본문에서 금액을 읽기 시작했기 때문이다.
+   * 그 전에는 비율뿐이었고 금액은 제목(`text`) 뒤에 붙어 있었다. **둘 다 지원한다**:
+   *
+   * ```
+   * scaleNote = "계약금액 405억 · 최근 1년 매출의 26%"  → 값 405억 · 비교 최근 1년 매출의 26%
+   * scaleNote = "시가총액의 1.2%" · text = "… · 100억"   → 값 100억 · 비교 시가총액의 1.2%
+   * ```
+   *
+   * **비교 대상 없는 숫자는 항목이 아니다**(THESIS-01 「비교 대상 없이 숫자만 두지 말 것」).
+   * 그래서 어느 쪽으로도 못 가르면 비율 자체를 값으로 쓰고 비교 대상을 명시한다.
    */
-  const amount = event.text.split(" · ").slice(1).join(" · ").trim();
-  const numbers: ThesisNumber[] = amount
-    ? [{ value: amount, compare: event.scaleNote }]
-    : [{ value: event.scaleNote, compare: "회사 규모 대비" }];
+  const parts = event.scaleNote.split(" · ").map((part) => part.trim()).filter(Boolean);
+  const fromNote = parts.length >= 2 ? { value: parts[0]!, compare: parts.slice(1).join(" · ") } : null;
+  const fromText = event.text.split(" · ").slice(1).join(" · ").trim();
+  const numbers: ThesisNumber[] = fromNote
+    ? [fromNote]
+    : fromText
+      ? [{ value: fromText, compare: event.scaleNote }]
+      : [{ value: event.scaleNote, compare: "회사 규모 대비" }];
   return {
     kind: "disclosure",
     title: event.text.split(" · ")[0]!.trim(),
@@ -358,6 +373,12 @@ function priceItem(input: ThesisInput): ThesisItem | null {
       kind: "price",
       title: "52주 저점 근처예요",
       numbers: [{ value: `저점에서 ${Math.round(low)}% 위`, compare: "최근 1년 가격 범위 기준" }],
+      /**
+       * LAUNCH-P2 §D 실측에서 `withoutNextCheck: {price: 9}` 가 나왔다 — 가격 항목만
+       * 다음 확인 지점이 없었다. **예측을 쓰지 않고** 사실을 쓴다: 52주 범위는 매일 다시
+       * 계산된다(`저점을 깨면 …` 류는 예측이라 쓰지 않는다).
+       */
+      nextCheck: "52주 저점·고점은 매일 다시 계산돼요",
     };
   }
   if (typeof high === "number" && Number.isFinite(high) && high <= 15) {
@@ -365,6 +386,7 @@ function priceItem(input: ThesisInput): ThesisItem | null {
       kind: "price",
       title: "52주 고점 근처예요",
       numbers: [{ value: `고점 대비 ${Math.round(high)}% 아래`, compare: "최근 1년 가격 범위 기준" }],
+      nextCheck: "52주 저점·고점은 매일 다시 계산돼요",
     };
   }
   return null;

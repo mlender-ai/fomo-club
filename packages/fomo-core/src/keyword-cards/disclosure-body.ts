@@ -188,6 +188,35 @@ export const AMOUNT_FORMS: ReadonlyArray<{ title: RegExp; labels: readonly strin
   { title: /현금[·ㆍ]?현물배당|배당결정/, labels: ["배당금액", "총배당금액"] },
 ];
 
+/**
+ * 유상증자는 금액이 **한 필드에 없다** — `신주수 × 발행가액` 이다(§B-2 는 「발행금액·주식수」로 적었다).
+ *
+ * 실측(20260821800396)에서 두 필드가 다 라벨을 갖고 있었고, 그 곱이 본문의 다른 라벨
+ * (`영업양수자금(원) 401,114,915,289`)과 **일치**했다:
+ *
+ * ```
+ * 신주의 종류와 수 보통주식(주)      274,683
+ * 신주 발행가액 확정발행가 보통주식(원) 1,460,283
+ * 274,683 × 1,460,283 = 401,114,915,... 
+ * ```
+ *
+ * 이것은 추정이 아니라 **공시된 두 값 사이의 항등식**이다(SEC 4분기를 연간−1~3분기로
+ * 구성하는 것과 같은 성격). 둘 중 하나라도 못 읽으면 만들지 않는다.
+ */
+const RIGHTS_SHARES = /신주의\s*종류와\s*수[^0-9]{0,40}?([0-9][0-9,]{2,})/;
+const RIGHTS_PRICE = /신주\s*발행가액[^0-9]{0,40}?([0-9][0-9,]{2,})/;
+
+/** 유상증자의 모집총액 = 신주수 × 발행가액. 못 만들면 `null`. */
+export function parseRightsIssueAmount(text: string): BodyAmount | null {
+  const shares = num(RIGHTS_SHARES.exec(text)?.[1]);
+  const price = num(RIGHTS_PRICE.exec(text)?.[1]);
+  if (shares === null || price === null || shares <= 0 || price <= 0) return null;
+  const won = shares * price;
+  // 한 주 값이 수천만 원을 넘거나 총액이 조를 넘으면 자리 수를 잘못 읽은 것이다 — 버린다.
+  if (price > 100_000_000 || won > 500_000_000_000_000) return null;
+  return { label: "모집총액", won };
+}
+
 /** 그 제목이 금액을 주제로 하는 서식인가. 아니면 본문을 뒤지지 않는다. */
 export function amountLabelsFor(title: string | null | undefined): readonly string[] | null {
   const compact = (title ?? "").replace(/\s+/g, "");
@@ -205,6 +234,14 @@ export function amountLabelsFor(title: string | null | undefined): readonly stri
 export function parseBodyAmount(title: string | null | undefined, text: string): BodyAmount | null {
   const labels = amountLabelsFor(title);
   if (!labels) return null;
+  /**
+   * 유상증자는 라벨 하나로 안 된다 — 곱으로 만든다. 라벨 탐색보다 **먼저** 시도한다
+   * (본문에 `영업양수자금` 처럼 그 증자의 용처를 적은 다른 금액이 섞여 있을 수 있다).
+   */
+  if (/유상증자|주주배정|일반공모/.test((title ?? "").replace(/\s+/g, ""))) {
+    const derived = parseRightsIssueAmount(text);
+    if (derived) return derived;
+  }
   for (const label of labels) {
     /**
      * `계약금액(원) 40,480,580,000` · `1. 계약금액(?��) 10,000,000,000` 둘 다 읽는다.

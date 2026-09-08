@@ -88,6 +88,12 @@ export async function GET(request: Request) {
     return withCors(
       NextResponse.json({
         ok: true,
+        /**
+         * LAUNCH-P2 §D — **본문 읽기 계측을 응답에 싣는다.**
+         * 처음 배포에서 본문 경로가 0건이었는데 계측이 응답에 없어 **원인을 알 수 없었다.**
+         * 실패를 세는 것과 그 숫자를 볼 수 있게 하는 것은 다른 일이다.
+         */
+        bodyCensus: collection.bodyCensus,
         lookbackDays,
         // 유니버스가 사전으로 후퇴했는지 보이게 — 조용한 축소 금지.
         universe: universe.defs.length,
