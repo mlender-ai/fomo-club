@@ -280,6 +280,14 @@ function disclosureItem(input: ThesisInput): ThesisItem | null {
     title: event.text.split(" · ")[0]!.trim(),
     when: `${event.when} 공시`,
     numbers,
+    /**
+     * LAUNCH-P2 실측에서 `withoutNextCheck: {disclosure: 3}` 가 나왔다 —
+     * 금액이 흐르기 시작하며 처음 생긴 항목이라 다음 확인 지점이 비어 있었다.
+     *
+     * **계약 기간을 모른다.** 그건 공시 본문에 있고 우리는 아직 안 읽는다. 그래서 언제
+     * 매출이 될지 말하지 않고 **어디서 확인되는지**만 말한다 — 예측이 아니라 확인 방법이다.
+     */
+    nextCheck: "이 금액이 얼마나 반영됐는지는 다음 실적에서 확인돼요",
   };
 }
 
@@ -361,6 +369,12 @@ function volumeItem(input: ThesisInput): ThesisItem | null {
     title: "거래가 갑자기 붙었어요",
     ...(input.volume?.when ? { when: input.volume.when } : {}),
     numbers: [{ label: "거래량", value: `평소의 ${times1}배`, compare: "최근 20거래일 평균 대비" }],
+    /**
+     * LAUNCH-P2 실측에서 `withoutNextCheck: {volume: 2}` 가 나왔다. **예측을 쓰지 않는다** —
+     * 「거래량이 평소로 돌아오면 끝난다」는 이 신호의 정의이고, 수급 항목의
+     * `연속이 끊기면 이 신호는 끝나요` 와 같은 형태다.
+     */
+    nextCheck: "거래량이 평소로 돌아오면 이 신호는 끝나요",
   };
 }
 
