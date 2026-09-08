@@ -364,8 +364,19 @@ export async function collectDisclosures(options: {
     }
     return [...recent, ...older];
   })();
-  const kr = await collectKr(dates, deadline, fresh, errors, universe);
-  await collectUs(shiftIso(today, -lookback), deadline, fresh, errors);
+  /**
+   * LAUNCH-P2 — **본문 읽기 몫을 미리 떼어 둔다.**
+   *
+   * 종전처럼 목록 훑기에 예산을 다 주면, 수집이 예산을 채우는 날에는 본문 읽기가 아예
+   * 안 돈다(`Date.now() > deadline - floor` 에서 즉시 빠진다). 그러면 금액 확보율이
+   * **0% 로 남는다** — 코드는 있고 한 번도 실행되지 않는 상태다.
+   *
+   * 목록은 하루 덜 훑어도 다음 실행이 이어받는다(증분 재개). 본문은 그렇게 못 미룬다 —
+   * 화면에 나갈 숫자가 그거다. 그래서 목록에서 45초를 떼어 본문에 준다.
+   */
+  const listDeadline = deadline - BODY_RESERVE_MS;
+  const kr = await collectKr(dates, listDeadline, fresh, errors, universe);
+  await collectUs(shiftIso(today, -lookback), listDeadline, fresh, errors);
 
   // 기존 저장분과 합치고 창 밖을 떨군다.
   const byStock: Record<string, DisclosureItem[]> = {};
@@ -424,6 +435,8 @@ export async function collectDisclosures(options: {
 }
 
 
+/** 목록 훑기에서 떼어 본문 읽기에 주는 예산(ms). */
+const BODY_RESERVE_MS = 45_000;
 /** 한 번의 수집에서 본문을 읽을 최대 건수 — 두 홉이라 건당 두 번 왕복한다. */
 const BODY_READ_MAX = 40;
 /** 본문 읽기에 남겨둘 최소 예산(ms). 이 아래로 떨어지면 다음 실행에 넘긴다. */

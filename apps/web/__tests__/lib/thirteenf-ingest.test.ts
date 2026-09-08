@@ -166,3 +166,28 @@ describe("쓰기 창구의 인증 (LAUNCH-P1 완료 확인 11)", () => {
     expect(script).toContain("authorization: `Bearer ${secret!}`");
   });
 });
+
+/**
+ * LAUNCH-P2 — **본문 읽기가 예산을 못 받으면 코드가 있어도 0% 로 남는다.**
+ * 목록 훑기에서 몫을 미리 떼어 두는 배선을 코드 모양으로 지킨다.
+ */
+describe("공시 본문 읽기 예산 (LAUNCH-P2 §B)", () => {
+  const collect = readFileSync(new URL("../../lib/disclosure-collect.ts", import.meta.url), "utf8");
+
+  it("목록 훑기에 예산을 다 주지 않는다 — 본문 몫을 미리 뗀다", () => {
+    expect(collect).toContain("const listDeadline = deadline - BODY_RESERVE_MS;");
+    expect(collect).toContain("collectKr(dates, listDeadline");
+    expect(collect).toContain("collectUs(shiftIso(today, -lookback), listDeadline");
+  });
+
+  it("숫자가 있을 서식만 읽는다 — 나머지는 왕복할 이유가 없다", () => {
+    expect(collect).toContain("amountLabelsFor(item.title) !== null || EARNINGS_BODY_FORM.test");
+    // 읽어본 것은 다시 읽지 않는다(본문은 확정된 문서다).
+    expect(collect).toContain("if (item.bodyRead) return false;");
+  });
+
+  it("실패를 삼키지 않고 센다 — 「금액 서식인데 못 뽑음」이 다음 작업 목록이다", () => {
+    expect(collect).toContain("census.amountMissed += 1;");
+    expect(collect).toContain("census.failed += 1;");
+  });
+});
