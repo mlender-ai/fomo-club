@@ -12,7 +12,17 @@ import { readFeedContent, writeFeedContent } from "./feed-content-store";
 const KEY = (symbol: string) => `about:us:${symbol.toUpperCase()}`;
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+/** 요청 경로(상세 열기) 예산 — 사용자를 기다리게 할 수 없다. */
 const LLM_TIMEOUT_MS = 9_000;
+/**
+ * 백필 예산 — **요청 경로가 아니므로 9초를 쓸 이유가 없다.**
+ *
+ * 실측(2026-09-08): 백필 탈락이 전부 `llm-failed` 였고 `aiConfigured: true` 였다 —
+ * 키는 있고 호출이 실패한다. 요청 경로용 9초를 백필이 그대로 물려받고 있었다.
+ */
+const BACKFILL_LLM_TIMEOUT_MS = 30_000;
+/** 429 를 만나면 제공자가 알려준 만큼 기다린다. 상한은 둔다(라우트 예산 안에서). */
+const MAX_RETRY_AFTER_MS = 20_000;
 
 interface AboutRow {
   about: string;
@@ -76,7 +86,12 @@ function sentenceCount(text: string): number {
 /** 내보내는 이유: 진단 스크립트가 **사본이 아니라 이 함수를** 재야 한다(사본을 재다 한 번 헛짚었다). */
 /** 요약이 떨어진 사유 — **세는 것과 사유를 아는 것은 다른 일이다**(같은 실수를 두 번 했다). */
 export type AboutRejectReason =
+  /** 호출 자체가 실패 — 아래 셋으로 갈린다. */
   | "llm-failed"
+  /** 레이트리밋. 페이싱을 늦추거나 기다리면 풀린다. */
+  | "llm-429"
+  /** 예산 안에 응답이 안 왔다. */
+  | "llm-timeout"
   | "no-korean"
   | "too-latin"
   | "too-short"
@@ -135,19 +150,40 @@ export function attemptOf(content: string, description: string): AboutAttempt {
   return reason ? { reason, sample: clean.slice(0, 90) } : { summary: clean };
 }
 
-/** LLM 한 번 — 온도 0(§C-3). 회사 소개는 매번 달라질 이유가 없고, 달라지면 캐시가 거짓말이 된다. */
-async function callTranslate(name: string, description: string, noNumbers: boolean): Promise<AboutAttempt> {
-  if (!isAiConfigured()) return { reason: "llm-failed" };
-  const res = await callAI({
-    messages: [
-      { role: "system", content: noNumbers ? PROMPT_NO_NUMBERS : PROMPT_LITERAL },
-      { role: "user", content: JSON.stringify({ company: name, description: description.slice(0, 1200) }) },
-    ],
-    temperature: 0,
-    timeoutMs: LLM_TIMEOUT_MS,
-    trace: noNumbers ? "us-company-about-retry" : "us-company-about",
-  }).catch(() => ({ ok: false as const, content: "" }));
-  if (!res.ok || !res.content) return { reason: "llm-failed" };
+/**
+ * LLM 한 번 — 온도 0(§C-3). 회사 소개는 매번 달라질 이유가 없고, 달라지면 캐시가 거짓말이 된다.
+ *
+ * **429 는 기다렸다 한 번 더** 한다(제공자가 `retry-after` 를 준다). 실패 사유를 셋으로
+ * 갈라 돌려준다 — 「레이트리밋」과 「타임아웃」은 다른 처방이다.
+ */
+async function callTranslate(
+  name: string,
+  description: string,
+  noNumbers: boolean,
+  timeoutMs: number
+): Promise<AboutAttempt> {
+  if (!isAiConfigured()) return { reason: "llm-failed", sample: "AI 미설정" };
+  const ask = () =>
+    callAI({
+      messages: [
+        { role: "system", content: noNumbers ? PROMPT_NO_NUMBERS : PROMPT_LITERAL },
+        { role: "user", content: JSON.stringify({ company: name, description: description.slice(0, 1200) }) },
+      ],
+      temperature: 0,
+      timeoutMs,
+      trace: noNumbers ? "us-company-about-retry" : "us-company-about",
+    }).catch(() => ({ ok: false as const, content: "", status: 0 as number, retryAfterMs: undefined, errorBody: "" }));
+
+  let res = await ask();
+  if (!res.ok && res.status === 429) {
+    const wait = Math.min(res.retryAfterMs ?? 5_000, MAX_RETRY_AFTER_MS);
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    res = await ask();
+  }
+  if (!res.ok || !res.content) {
+    const reason: AboutRejectReason = res.status === 429 ? "llm-429" : res.status === 0 ? "llm-timeout" : "llm-failed";
+    return { reason, sample: `HTTP ${res.status} ${(res.errorBody ?? "").slice(0, 60)}` };
+  }
   return attemptOf(res.content, description);
 }
 
@@ -157,11 +193,16 @@ async function callTranslate(name: string, description: string, noNumbers: boole
  * 실패를 세는 것과 사유를 아는 것은 다른 일이고, 이 배치에서 그 실수를 두 번 했다
  * (본문 계측을 응답에 안 실었고, 백필 탈락 사유를 안 셌다).
  */
-export async function translateAboutWithReason(name: string, description: string): Promise<AboutAttempt> {
-  const first = await callTranslate(name, description, false);
+export async function translateAboutWithReason(
+  name: string,
+  description: string,
+  timeoutMs: number = LLM_TIMEOUT_MS
+): Promise<AboutAttempt> {
+  const first = await callTranslate(name, description, false, timeoutMs);
   if (first.summary) return first;
-  if (first.reason === "llm-failed") return first; // 모델이 안 도는 것은 재시도로 안 풀린다
-  const second = await callTranslate(name, description, true);
+  // 호출 자체가 안 되는 것은 프롬프트를 바꿔도 안 풀린다.
+  if (first.reason === "llm-failed" || first.reason === "llm-429" || first.reason === "llm-timeout") return first;
+  const second = await callTranslate(name, description, true, timeoutMs);
   // 두 번 다 떨어지면 **1차 사유**를 남긴다 — 그게 고칠 지점이다.
   return second.summary ? second : first;
 }
@@ -249,7 +290,8 @@ export async function backfillUsCompanyAbout(
     const description = await fetchCompanyDescription(entry.symbol);
     if (!description) { out.noSource += 1; out.pending -= 1; continue; }
     // 첫 시도가 단위 환산으로 떨어지면 **숫자 없이** 한 번 더 — 심볼을 버리지 않는다.
-    const attempt = await translateAboutWithReason(entry.name, description);
+    // 백필은 요청 경로가 아니다 — 넉넉한 예산을 쓴다.
+    const attempt = await translateAboutWithReason(entry.name, description, BACKFILL_LLM_TIMEOUT_MS);
     out.pending -= 1;
     if (!attempt.summary) {
       out.rejected += 1;
