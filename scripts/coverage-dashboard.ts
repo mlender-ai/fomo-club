@@ -74,7 +74,22 @@ async function main(): Promise<void> {
   console.log(`- 금액 서식 ${amounts.forms}건 중 ${amounts.withLine}건에 금액+비율 줄`);
   console.log(`- 회사 설명·섹션: ${JSON.stringify(q.companySections ?? {})}`);
   console.log(`- 업종 비교 표본: min ${q.companyPeers?.min ?? "-"} · median ${q.companyPeers?.median ?? "-"}`);
-  console.log(`- 미국 회사 설명은 백필 라우트가 답한다: GET /api/fomo/cron/us-about-backfill?limit=1`);
+  /**
+   * 미국 회사 설명은 페이로드에 없다 — 상세를 열 때 캐시에서 읽는다. 그래서 백필 라우트에
+   * **한 건짜리 실행**을 물어 확보율만 받아 온다(`limit=1` 이라 새로 채우는 비용이 거의 없다).
+   */
+  const about = await fetch(`${API}/api/fomo/cron/us-about-backfill?limit=1`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(60_000),
+  })
+    .then((r) => (r.ok ? (r.json() as Promise<{ coverage?: number; universe?: number; pending?: number }>) : null))
+    .catch(() => null);
+  if (about && typeof about.coverage === "number") {
+    console.log(line("미국 회사 설명", about.coverage, TARGETS.usAbout).replace("| 미국 회사 설명 |", "| 미국 회사 설명 |"));
+    console.log(`- 미국 심볼 ${about.universe ?? "-"}개 · 남은 대상 ${about.pending ?? "-"}개`);
+  } else {
+    console.log("- 미국 회사 설명: 백필 라우트를 못 읽었다(인증·배포 확인 필요)");
+  }
 
   if (thesisPct !== null && thesisPct < THESIS_ALERT_FLOOR_PCT) {
     // §D-1 — 상세가 절반도 안 채워지면 그게 가장 큰 문제다.
