@@ -292,16 +292,39 @@ function figure(q: FigureQuarter, key: keyof FigureQuarter): number | null {
  * @param input.title DART `report_nm` 원문. 실적 서식이 아니면 곧바로 `null`.
  * @param input.quarters 팩트시트 분기(정렬 무관 — 여기서 찾는다).
  */
-export function earningsFigures(input: {
+/**
+ * LAUNCH-P2 §A-1 — **왜 숫자가 없나.** 실패를 사유별로 말한다.
+ *
+ * 지시서가 「추측하지 말고 실패 사유별로 집계한다」고 했다. `earningsFigures` 가 `null` 만
+ * 돌려주면 확보율 13% 를 보고도 **무엇을 고쳐야 하는지 알 수 없다** — 서식이 아닌 것과
+ * 팩트시트에 그 분기가 없는 것은 완전히 다른 작업이다.
+ */
+export type EarningsFigureFailure =
+  /** 실적을 담는 서식이 아니다 — 애초에 숫자가 없다(분모에서 빼야 하는 건). */
+  | "not-earnings-form"
+  /** 팩트시트에 분기 재무가 하나도 없다. */
+  | "no-quarters"
+  /** 분기는 있는데 공시일과 이어지는 기간(10~100일)이 없다. */
+  | "no-join"
+  /** 그 분기는 찾았는데 **작년 같은 분기**가 없다 — 비교 대상이 없으면 쓰지 않는다. */
+  | "no-prior-year"
+  /** 두 분기 다 있는데 매출·이익 값이 전부 비어 있다. */
+  | "no-fields";
+
+export type EarningsFigureResult = { figures: EarningsFigures } | { failure: EarningsFigureFailure };
+
+/** 사유를 함께 돌려주는 판. 계측은 이걸 쓰고, 화면은 아래 `earningsFigures` 를 쓴다. */
+export function earningsFiguresDetail(input: {
   date: string;
   title: string | undefined | null;
   quarters: readonly FigureQuarter[];
-}): EarningsFigures | null {
+}): EarningsFigureResult {
   const title = input.title?.trim() ?? "";
-  if (!title || !EARNINGS_REPORT_TITLE.test(title.replace(/\s+/g, ""))) return null;
+  if (!title || !EARNINGS_REPORT_TITLE.test(title.replace(/\s+/g, ""))) return { failure: "not-earnings-form" };
+  if (input.quarters.length === 0) return { failure: "no-quarters" };
 
   const current = joinQuarter(input.date, input.quarters);
-  if (!current) return null;
+  if (!current) return { failure: "no-join" };
   const period = parsePeriod(current.period)!;
 
   // 전년 **동기**. 다른 분기와 비교하면 계절성이 증감으로 둔갑한다.
@@ -309,7 +332,7 @@ export function earningsFigures(input: {
     const p = parsePeriod(q.period);
     return p !== null && p.year === period.year - 1 && p.quarter === period.quarter;
   });
-  if (!prior) return null;
+  if (!prior) return { failure: "no-prior-year" };
 
   const when = `작년 ${period.quarter}분기`;
   const rows: EarningsFigureRow[] = [];
@@ -324,17 +347,58 @@ export function earningsFigures(input: {
     rows.push({ label, value: formatWonShort(now), change });
     dirs.set(label, direction(now, before, label !== "매출"));
   }
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return { failure: "no-fields" };
 
   const rev = dirs.get("매출");
   const op = dirs.get("영업이익");
   const headline = rev && op ? headlineFor(rev, op) : undefined;
 
   return {
-    periodLabel: `${period.year}년 ${period.quarter}분기`,
-    ...(headline ? { headline } : {}),
-    rows,
+    figures: {
+      periodLabel: `${period.year}년 ${period.quarter}분기`,
+      ...(headline ? { headline } : {}),
+      rows,
+    },
   };
+}
+
+/** 화면용 — 실패 사유는 버린다(종전 시그니처 그대로). */
+export function earningsFigures(input: {
+  date: string;
+  title: string | undefined | null;
+  quarters: readonly FigureQuarter[];
+}): EarningsFigures | null {
+  const result = earningsFiguresDetail(input);
+  return "figures" in result ? result.figures : null;
+}
+
+/**
+ * LAUNCH-P2 §A-2 경로 A — **본문 표를 화면 형태로.**
+ *
+ * 잠정실적 공시 본문에는 당기와 전년동기가 같은 표에 있다. 팩트시트 조인이 실패하는 날에도
+ * 이 경로가 숫자를 낸다. **문장은 조인 경로와 같은 함수가 만든다** — 두 경로가 다른 말투를
+ * 쓰면 사용자는 같은 화면에서 다른 제품을 보게 된다.
+ */
+export function earningsFiguresFromBody(body: {
+  periodLabel: string;
+  rows: ReadonlyArray<{ label: EarningsFigureLabel; now: number; prior: number }>;
+}): EarningsFigures | null {
+  const quarter = /(\d)분기/.exec(body.periodLabel)?.[1];
+  if (!quarter) return null;
+  const when = `작년 ${quarter}분기`;
+  const rows: EarningsFigureRow[] = [];
+  const dirs = new Map<EarningsFigureLabel, Direction>();
+  for (const row of body.rows) {
+    const change = changeText(row.label, row.now, row.prior, when);
+    if (!change) continue;
+    rows.push({ label: row.label, value: formatWonShort(row.now), change });
+    dirs.set(row.label, direction(row.now, row.prior, row.label !== "매출"));
+  }
+  if (rows.length === 0) return null;
+  const rev = dirs.get("매출");
+  const op = dirs.get("영업이익");
+  const headline = rev && op ? headlineFor(rev, op) : undefined;
+  return { periodLabel: body.periodLabel, ...(headline ? { headline } : {}), rows };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -419,10 +483,20 @@ const SCALE_MIN_PCT = 0.1;
 export function disclosureScaleNote(input: {
   title: string | undefined | null;
   scale: DisclosureScale;
+  /**
+   * LAUNCH-P2 §B-1 — **본문에서 읽은 금액.** 있으면 제목 파싱보다 우선한다.
+   *
+   * 실측(2026-09-08, 프로덕션 공시 27건): **제목에 금액 표기가 있는 건이 0건**이었다.
+   * 이 함수는 제목만 읽고 있었고, 그래서 규모 환산이 0% 였다 — 기계는 다 있었고 분자가 없었다.
+   */
+  amountWon?: number | null;
 }): string | null {
   const title = input.title?.replace(/\s+/g, "") ?? "";
   if (!title || SCALE_EXCLUDED.test(title)) return null;
-  const amount = parseKoreanAmountWon(input.title);
+  const amount =
+    typeof input.amountWon === "number" && Number.isFinite(input.amountWon) && input.amountWon > 0
+      ? input.amountWon
+      : parseKoreanAmountWon(input.title);
   if (amount === null || amount <= 0) return null;
 
   for (const [pattern, key, label, subject] of SCALE_RULES) {
@@ -435,4 +509,37 @@ export function disclosureScaleNote(input: {
     return `${subject}${label}의 ${text}%`;
   }
   return null;
+}
+
+/**
+ * LAUNCH-P2 §B-3 — **금액과 비율을 한 줄로.**
+ *
+ * ```
+ * 8월 4일   큰 계약을 따냈어요
+ *           405억 · 최근 1년 매출의 26%
+ * ```
+ *
+ * **비율이 없으면 금액도 쓰지 않는다**(지시서 「금액만 쓰고 비율 안 붙이지 말 것」).
+ * `320억` 만 보면 큰지 작은지 알 수 없고, 모르는 숫자는 안 쓴 것과 같다.
+ *
+ * 분모 이름은 우리가 나눈 것을 그대로 말한다 — `최근 1년 매출`(TTM)을 `연매출` 이라고
+ * 부르지 않는다. 사용자는 그걸 「작년 연매출」로 읽고 그건 다른 숫자다.
+ */
+export function disclosureAmountLine(input: {
+  title: string | undefined | null;
+  scale: DisclosureScale;
+  amountWon: number | null | undefined;
+}): string | null {
+  const amount = input.amountWon;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) return null;
+  const ratio = disclosureScaleNote({ title: input.title, scale: input.scale, amountWon: amount });
+  if (!ratio) return null;
+  /**
+   * 비율 문장이 분자를 스스로 밝히는 경우(`계약금액이 최근 1년 매출의 26%`)에는 그 접두를
+   * 떼고 금액 앞으로 옮긴다 — `405억 · 계약금액이 최근 1년 매출의 26%` 는 겹말이다.
+   */
+  const numerator = /^계약금액이\s*/.exec(ratio);
+  const tail = numerator ? ratio.slice(numerator[0].length) : ratio;
+  const head = numerator ? `계약금액 ${formatWonShort(amount)}` : formatWonShort(amount);
+  return `${head} · ${tail}`;
 }

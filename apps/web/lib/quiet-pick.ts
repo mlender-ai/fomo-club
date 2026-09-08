@@ -121,9 +121,16 @@ import { companyRead, type CompanyGroup } from "@fomo/core/keyword-cards/company
  */
 import {
   disclosureScaleNote,
-  earningsFigures,
+  earningsFiguresDetail,
+  earningsFiguresFromBody,
+  disclosureAmountLine,
   type EarningsFigures,
 } from "@fomo/core/keyword-cards/disclosure-figures";
+/**
+ * LAUNCH-P2 §B — 금액이 **주제인 서식**인지 판정한다. 이것도 경로로 직접 가져온다
+ * (배럴에 넣으면 조회 라우트 번들에 딸려 들어간다 — 성능 게이트).
+ */
+import { amountLabelsFor } from "@fomo/core/keyword-cards/disclosure-body";
 import { kstDate } from "./fomo";
 import { parsePriceText } from "./quote-prices";
 import { readSupplyDemandHistoryByTickers, readSupplyDemandHistoryByTickersStrict } from "./supply-demand-store";
@@ -605,6 +612,13 @@ export interface QuietPickQualification {
     scale: number;
     byKind: Record<string, { total: number; figures: number; scale: number }>;
   };
+  /**
+   * LAUNCH-P2 §A-1 — 실적 숫자 실패 사유별 건수.
+   * `body`·`join` 은 성공 경로(본문 · 팩트시트 조인), 나머지는 사유다.
+   */
+  earningsFigureReasons?: Record<string, number>;
+  /** LAUNCH-P2 §B — 금액이 주제인 서식 건수와 금액+비율 줄이 붙은 건수. */
+  disclosureAmounts?: { forms: number; withLine: number };
   /** WO-RESET-08 §A-1 — 업종 흐름 계측(분류 못 찾은 행 수 포함). */
   sectorFlow?: { rows: number; unclassified: number; sectors: number; cards: number };
   /** WO-RESET-09 — 거시 카드 계측. `recentPicks` 0 이면 연결할 대상이 없다. */
@@ -2731,6 +2745,16 @@ export async function buildQuietPickResponse(options: {
   } = { total: 0, figures: 0, scale: 0, byKind: {} };
 
   /**
+   * LAUNCH-P2 §A-1 — **실적 숫자 실패 사유별 집계.** 지시서가 「추측하지 말고 사유별로
+   * 집계한다」고 했다. 확보율만 보면 무엇을 고칠지 알 수 없다 —
+   * `not-earnings-form`(분모에서 빼야 함)과 `no-prior-year`(수집 확장)는 다른 작업이다.
+   */
+  const figureReasons: Record<string, number> = {};
+  /** §B — 금액이 주제인 서식 건수와, 그중 금액+비율 줄이 실제로 붙은 건수. */
+  let amountForms = 0;
+  let amountLines = 0;
+
+  /**
    * WO-RESET-05 보고할 것 1·2번 — 업종 비교를 붙일 수 있는 종목 비율과, 비교 문장이 붙어
    * 실제로 화면에 나간 지표 수. `rows` 는 **비교 문장이 있는 줄만** 세므로 곧 커버리지다
    * (문장이 없으면 줄이 안 만들어진다).
@@ -3137,6 +3161,11 @@ export async function buildQuietPickResponse(options: {
       ...(((): { whyNow?: WhyNowEvent[]; whyNowQuietNote?: string } => {
         const list = disclosures?.byStock?.[sig.subject.canonical] ?? [];
         // 실적 전환(PART B) — 상태가 아니라 변화만, 날짜는 그 분기의 공시일이다.
+        /**
+         * LAUNCH-P2 — 수집이 본문에서 읽어둔 것을 **날짜|제목**으로 되짚는다.
+         * `WhyNowDisclosure` 는 코어 타입이라 우리 확장 필드를 들고 다니지 않는다.
+         */
+        const bodyByKey = new Map((list ?? []).map((item) => [`${item.date}|${item.title}`, item]));
         const sheetForWhy = factSheetByStock.get(sig.subject.canonical);
         const quarters = sheetForWhy?.fiscal?.quarters ?? [];
         const earnings = earningsTurnEvent(quarters);
@@ -3170,17 +3199,46 @@ export async function buildQuietPickResponse(options: {
            * `@fomo/core` 배럴이 아니라 **경로로 직접** 가져온다 — 배럴에 넣으면 조회 라우트
            * 번들에 딸려 들어간다(성능 게이트).
            */
-          figuresFor: (d) => ({
-            ...(((): { figures?: EarningsFigures } => {
-              const f = quarters.length ? earningsFigures({ date: d.date, title: d.title, quarters }) : null;
-              return f ? { figures: f } : {};
-            })()),
-            ...(((): { scaleNote?: string } => {
-              if (Object.keys(scale).length === 0) return {};
-              const note = disclosureScaleNote({ title: d.title, scale });
-              return note ? { scaleNote: note } : {};
-            })()),
-          }),
+          figuresFor: (d) => {
+            /**
+             * LAUNCH-P2 §A-2 — **두 경로.** 수집이 본문에서 읽어둔 표가 있으면 그걸 쓰고,
+             * 없으면 팩트시트 분기와 조인한다.
+             *
+             * 본문을 먼저 쓰는 이유: 그건 **이 공시가 스스로 낸 숫자**다. 조인은 기간말과
+             * 공시일 사이 창으로 추정해 잇는 것이라, 같은 공시에 대해 본문이 있으면 본문이 낫다.
+             */
+            const stored = bodyByKey.get(`${d.date}|${d.title}`);
+            const bodyFigures = stored?.bodyEarnings ? earningsFiguresFromBody(stored.bodyEarnings) : null;
+            const joined = bodyFigures ? null : earningsFiguresDetail({ date: d.date, title: d.title, quarters });
+            const figures = bodyFigures ?? (joined && "figures" in joined ? joined.figures : null);
+
+            /** §A-1 실패 사유 집계 — 「추측하지 말고 사유별로 센다」. */
+            if (bodyFigures) {
+              figureReasons.body = (figureReasons.body ?? 0) + 1;
+            } else if (joined && "failure" in joined) {
+              figureReasons[joined.failure] = (figureReasons[joined.failure] ?? 0) + 1;
+            } else if (figures) {
+              figureReasons.join = (figureReasons.join ?? 0) + 1;
+            }
+
+            /**
+             * §B — 금액은 **본문에서 읽은 것**을 쓴다. 제목에는 금액이 없다(실측 27/27).
+             * 비율을 못 만들면 금액도 쓰지 않는다(§B-3).
+             */
+            const amountLine =
+              Object.keys(scale).length > 0
+                ? disclosureAmountLine({ title: d.title, scale, amountWon: stored?.amountWon ?? null })
+                : null;
+            if (amountLabelsFor(d.title) !== null) {
+              amountForms += 1;
+              if (amountLine) amountLines += 1;
+            }
+
+            return {
+              ...(figures ? { figures } : {}),
+              ...(amountLine ? { scaleNote: amountLine } : {}),
+            };
+          },
         });
         // 수집이 실제로 이 종목을 덮었는가 — 덮지 않았으면 "없었다" 를 말하지 않는다.
         const collected = disclosures !== null && disclosures !== undefined && disclosures.truncated !== true;
@@ -3608,6 +3666,13 @@ export async function buildQuietPickResponse(options: {
       disclosurePhrases: phraseCensus,
       // DETAIL-02 §E-2 — 공시 종류별 숫자 확보율. 낮은 종류가 다음 작업 대상이다.
       disclosureFigures: figureCensus,
+      /**
+       * LAUNCH-P2 §A-1·§B·§D — **왜 숫자가 없는지**와 **금액 서식 기준 확보율**.
+       * 전체 공시를 분모로 쓰면 지분 5% 보고처럼 금액이 없는 서식이 분모를 채워
+       * 「40%」 같은 목표가 원리적으로 도달 불가가 된다 — 그래서 서식 기준으로도 낸다.
+       */
+      earningsFigureReasons: figureReasons,
+      disclosureAmounts: { forms: amountForms, withLine: amountLines },
       // FIX-01 E-1 — 표시명 표에 없어 `같은 업종` 으로 나간 영문 업종. 다음 표 확장 대상.
       untranslatedIndustries: [...untranslatedIndustries].sort(),
       // FIX-02 D-3 — 섹션별 확보율(제목별 `shown`/`missing`).

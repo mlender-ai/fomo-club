@@ -1,0 +1,36 @@
+name: Coverage Dashboard
+
+# LAUNCH-P2 §D — **확보율을 매일 같은 자리에 적는다.**
+#
+# 계측은 이미 페이로드에 있다. 이 잡은 그걸 뽑아 실행 요약에 남기고,
+# 「눈에 띄는 것」 2개 이상 비율이 50% 아래면 **실패로 알린다**(§D-1) —
+# 그 비율이 상세가 채워지는 비율이고, 절반도 안 되면 상세가 비어 나간다.
+#
+# 시각: 09:30 KST(00:30 UTC). 픽 재생성(08:40)이 끝난 뒤여야 그날 숫자가 나온다.
+
+on:
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Read coverage
+        shell: bash
+        run: |
+          set -uo pipefail
+          npx tsx scripts/coverage-dashboard.ts 2>&1 | tee coverage.md
+          code=${PIPESTATUS[0]}
+          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
