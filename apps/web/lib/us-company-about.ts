@@ -74,81 +74,101 @@ function sentenceCount(text: string): number {
 }
 
 /** 내보내는 이유: 진단 스크립트가 **사본이 아니라 이 함수를** 재야 한다(사본을 재다 한 번 헛짚었다). */
-export async function translateAbout(name: string, description: string): Promise<string | undefined> {
-  if (!isAiConfigured()) return undefined;
+/** 요약이 떨어진 사유 — **세는 것과 사유를 아는 것은 다른 일이다**(같은 실수를 두 번 했다). */
+export type AboutRejectReason =
+  | "llm-failed"
+  | "no-korean"
+  | "too-latin"
+  | "too-short"
+  | "too-long"
+  | "too-many-sentences"
+  | "latin-unit-word"
+  | "forbidden-phrase"
+  | "not-grounded";
+
+export interface AboutAttempt {
+  summary?: string;
+  reason?: AboutRejectReason;
+  /** 떨어진 문장 앞부분 — 무엇이 문제였는지 사람이 봐야 고친다. */
+  sample?: string;
+}
+
+/** 한 곳에서 검증한다 — 두 경로(1차·재시도)가 같은 규칙을 쓰도록. */
+export function validateSummary(clean: string, description: string): AboutRejectReason | null {
+  if (!/[가-힣]/.test(clean)) return "no-korean";
+  const latinRatio = (clean.match(/[A-Za-z]/g)?.length ?? 0) / Math.max(1, clean.length);
+  if (latinRatio > 0.3) return "too-latin";
+  if (clean.length < 30) return "too-short";
+  if (clean.length > 400) return "too-long";
+  if (sentenceCount(clean) > 2) return "too-many-sentences";
+  if (hasLatinUnitWord(clean)) return "latin-unit-word";
+  if (FORBIDDEN.test(clean)) return "forbidden-phrase";
+  if (!groundedInSource(clean, description)) return "not-grounded";
+  return null;
+}
+
+/** 1차 프롬프트 — 숫자는 원문 형태 그대로, 단위 변환 금지. */
+const PROMPT_LITERAL =
+  "아래 영문 회사 소개를 근거로 이 회사가 무엇을 하는 회사인지 한국어로 설명하라. " +
+  "**첫 문장은 이 회사가 무엇을 파는지(또는 무슨 서비스를 하는지)로 시작한다.** " +
+  "최대 2문장. 입력에 없는 사실·수치·고유명사 추가 금지, 과장·투자 권유 금지, 존댓말(~해요체). " +
+  "숫자는 원문에 적힌 형태 그대로만 쓰고 단위를 바꾸지 마라(1.6 million → 160만 금지). " +
+  "숫자가 꼭 필요하지 않으면 쓰지 마라. 문장만 출력.";
+
+/**
+ * 2차 프롬프트 — **숫자를 아예 쓰지 말고** 다시.
+ *
+ * 1차가 떨어지는 이유는 대개 단위 환산이다(실측: 첫 백필 40건 전부). 그때 심볼을 버리면
+ * 확보율이 0 인데, **숫자 없는 회사 소개는 여전히 유효한 소개**다 —
+ * 「무엇을 파는 회사인가」에 숫자가 필요하지 않다.
+ */
+const PROMPT_NO_NUMBERS =
+  "아래 영문 회사 소개를 근거로 이 회사가 무엇을 하는 회사인지 한국어로 설명하라. " +
+  "**첫 문장은 이 회사가 무엇을 파는지로 시작한다.** 최대 2문장. " +
+  "**숫자를 하나도 쓰지 마라**(연도·금액·개수·비율 전부). 입력에 없는 사실·고유명사 추가 금지, " +
+  "과장·투자 권유 금지, 존댓말(~해요체). 문장만 출력.";
+
+/** 응답 한 건을 검증해 통과분 또는 사유를 돌려준다. */
+export function attemptOf(content: string, description: string): AboutAttempt {
+  const clean = content.replace(/\s+/g, " ").trim();
+  const reason = validateSummary(clean, description);
+  return reason ? { reason, sample: clean.slice(0, 90) } : { summary: clean };
+}
+
+/** LLM 한 번 — 온도 0(§C-3). 회사 소개는 매번 달라질 이유가 없고, 달라지면 캐시가 거짓말이 된다. */
+async function callTranslate(name: string, description: string, noNumbers: boolean): Promise<AboutAttempt> {
+  if (!isAiConfigured()) return { reason: "llm-failed" };
   const res = await callAI({
     messages: [
-      {
-        role: "system",
-        content:
-          "아래 영문 회사 소개를 근거로 이 회사가 무엇을 하는 회사인지 한국어로 설명하라. " +
-          "**첫 문장은 이 회사가 무엇을 파는지(또는 무슨 서비스를 하는지)로 시작한다.** " +
-          "최대 2문장. 입력에 없는 사실·수치·고유명사 추가 금지, 과장·투자 권유 금지, 존댓말(~해요체). " +
-          /**
-           * LAUNCH-P2 §C 실측 — 백필 첫 실행에서 **40건이 전부 근거 검증에서 떨어졌다.**
-           * 원인은 날조가 아니라 **단위 환산**이었다: 원문 `1.6 million members` 를
-           * `1,580만 명` 으로 옮기면 그 숫자가 원문에 문자로 없어서 검증이 막는다.
-           *
-           * 검증을 느슨하게 하지 않는다 — **환산을 금지한다.** 숫자는 회사 소개에 없어도 되고,
-           * 있다면 원문 형태 그대로여야 확인할 수 있다.
-           */
-          "숫자는 원문에 적힌 형태 그대로만 쓰고 단위를 바꾸지 마라(1.6 million → 160만 금지). 숫자가 꼭 필요하지 않으면 쓰지 마라. " +
-          "문장만 출력.",
-      },
+      { role: "system", content: noNumbers ? PROMPT_NO_NUMBERS : PROMPT_LITERAL },
       { role: "user", content: JSON.stringify({ company: name, description: description.slice(0, 1200) }) },
     ],
-    // §C-3 — 온도 0. 회사 소개는 매번 달라질 이유가 없고, 달라지면 캐시가 거짓말이 된다.
     temperature: 0,
     timeoutMs: LLM_TIMEOUT_MS,
-    trace: "us-company-about",
+    trace: noNumbers ? "us-company-about-retry" : "us-company-about",
   }).catch(() => ({ ok: false as const, content: "" }));
-  if (!res.ok || !res.content) return undefined;
-  const clean = res.content.replace(/\s+/g, " ").trim();
-  const hasKorean = /[가-힣]/.test(clean);
-  const latinRatio = (clean.match(/[A-Za-z]/g)?.length ?? 0) / Math.max(1, clean.length);
-  if (!hasKorean || latinRatio > 0.3 || clean.length < 30 || clean.length > 400 || FORBIDDEN.test(clean)) return undefined;
-  // §C-3 최대 2문장 · 근거 검증 패스. 어느 하나라도 어기면 **버린다**(섹션 생략이 정직하다).
-  if (sentenceCount(clean) > 2) return undefined;
-  if (hasLatinUnitWord(clean)) return undefined;
-  if (!groundedInSource(clean, description)) return undefined;
-  return clean;
+  if (!res.ok || !res.content) return { reason: "llm-failed" };
+  return attemptOf(res.content, description);
 }
 
 /**
- * 한 번 더 — **숫자를 아예 쓰지 말고** 다시 쓴다.
+ * 사유까지 돌려주는 판 — **백필이 「왜 떨어졌나」를 센다.**
  *
- * 첫 시도가 근거 검증에서 떨어지는 이유는 대개 단위 환산이다(실측: 40건 전부).
- * 그때 심볼을 버리면 확보율이 0 인데, **숫자 없는 회사 소개는 여전히 유효한 소개**다 —
- * 「무엇을 파는 회사인가」에 숫자가 필요하지 않다. 그래서 한 번만 다시 시도한다.
+ * 실패를 세는 것과 사유를 아는 것은 다른 일이고, 이 배치에서 그 실수를 두 번 했다
+ * (본문 계측을 응답에 안 실었고, 백필 탈락 사유를 안 셌다).
  */
-export async function translateAboutNoNumbers(name: string, description: string): Promise<string | undefined> {
-  if (!isAiConfigured()) return undefined;
-  const res = await callAI({
-    messages: [
-      {
-        role: "system",
-        content:
-          "아래 영문 회사 소개를 근거로 이 회사가 무엇을 하는 회사인지 한국어로 설명하라. " +
-          "**첫 문장은 이 회사가 무엇을 파는지로 시작한다.** 최대 2문장. " +
-          "**숫자를 하나도 쓰지 마라**(연도·금액·개수·비율 전부). 입력에 없는 사실·고유명사 추가 금지, " +
-          "과장·투자 권유 금지, 존댓말(~해요체). 문장만 출력.",
-      },
-      { role: "user", content: JSON.stringify({ company: name, description: description.slice(0, 1200) }) },
-    ],
-    temperature: 0,
-    timeoutMs: LLM_TIMEOUT_MS,
-    trace: "us-company-about-retry",
-  }).catch(() => ({ ok: false as const, content: "" }));
-  if (!res.ok || !res.content) return undefined;
-  const clean = res.content.replace(/\s+/g, " ").trim();
-  const hasKorean = /[가-힣]/.test(clean);
-  const latinRatio = (clean.match(/[A-Za-z]/g)?.length ?? 0) / Math.max(1, clean.length);
-  if (!hasKorean || latinRatio > 0.3 || clean.length < 30 || clean.length > 400 || FORBIDDEN.test(clean)) return undefined;
-  if (sentenceCount(clean) > 2) return undefined;
-  if (hasLatinUnitWord(clean)) return undefined;
-  // 숫자를 쓰지 말라고 했는데 썼으면 그건 지시를 어긴 것이다 — 검증도 그대로 돌린다.
-  if (!groundedInSource(clean, description)) return undefined;
-  return clean;
+export async function translateAboutWithReason(name: string, description: string): Promise<AboutAttempt> {
+  const first = await callTranslate(name, description, false);
+  if (first.summary) return first;
+  if (first.reason === "llm-failed") return first; // 모델이 안 도는 것은 재시도로 안 풀린다
+  const second = await callTranslate(name, description, true);
+  // 두 번 다 떨어지면 **1차 사유**를 남긴다 — 그게 고칠 지점이다.
+  return second.summary ? second : first;
+}
+
+/** 화면·캐시 경로 — 사유는 버리고 통과분만. */
+export async function translateAbout(name: string, description: string): Promise<string | undefined> {
+  return (await translateAboutWithReason(name, description)).summary;
 }
 
 /** 심볼의 한국어 회사 소개 — 영구 캐시 우선, 미스 시 fetch+번역+저장. 실패는 undefined(fail-open). */
@@ -158,7 +178,7 @@ export async function getUsCompanyAbout(name: string, symbol: string): Promise<s
 
   const description = await fetchCompanyDescription(symbol);
   if (!description) return undefined;
-  const about = (await translateAbout(name, description)) ?? (await translateAboutNoNumbers(name, description));
+  const about = await translateAbout(name, description);
   if (!about) return undefined;
   await writeFeedContent(KEY(symbol), { about, asOf: new Date().toISOString().slice(0, 10) } satisfies AboutRow).catch(
     () => undefined
@@ -197,6 +217,10 @@ export interface AboutBackfillResult {
   pending: number;
   /** 채운 심볼 목록(보고용, 최대 20). */
   sample: string[];
+  /** **왜 떨어졌나** — 사유별 건수. 이게 없으면 확보율만 보고 무엇을 고칠지 알 수 없다. */
+  rejectedBy: Record<string, number>;
+  /** 떨어진 문장 표본(최대 3) — 사람이 봐야 고친다. */
+  rejectedSample: string[];
 }
 
 /** LLM 콜 사이 간격(ms) — 429 를 만들지 않는 쪽이 빠르다. */
@@ -208,7 +232,9 @@ export async function backfillUsCompanyAbout(
 ): Promise<AboutBackfillResult> {
   const limit = Math.max(1, options.limit ?? 25);
   const deadline = options.deadline ?? Date.now() + 240_000;
-  const out: AboutBackfillResult = { filled: 0, cached: 0, noSource: 0, rejected: 0, pending: 0, sample: [] };
+  const out: AboutBackfillResult = {
+    filled: 0, cached: 0, noSource: 0, rejected: 0, pending: 0, sample: [], rejectedBy: {}, rejectedSample: [],
+  };
 
   const todo: Array<{ symbol: string; name: string }> = [];
   for (const entry of symbols) {
@@ -223,9 +249,16 @@ export async function backfillUsCompanyAbout(
     const description = await fetchCompanyDescription(entry.symbol);
     if (!description) { out.noSource += 1; out.pending -= 1; continue; }
     // 첫 시도가 단위 환산으로 떨어지면 **숫자 없이** 한 번 더 — 심볼을 버리지 않는다.
-    const about = (await translateAbout(entry.name, description)) ?? (await translateAboutNoNumbers(entry.name, description));
+    const attempt = await translateAboutWithReason(entry.name, description);
     out.pending -= 1;
-    if (!about) { out.rejected += 1; continue; }
+    if (!attempt.summary) {
+      out.rejected += 1;
+      const reason = attempt.reason ?? "unknown";
+      out.rejectedBy[reason] = (out.rejectedBy[reason] ?? 0) + 1;
+      if (out.rejectedSample.length < 3) out.rejectedSample.push(`${entry.symbol} ${reason}: ${attempt.sample ?? ""}`);
+      continue;
+    }
+    const about = attempt.summary;
     await writeFeedContent(KEY(entry.symbol), { about, asOf: new Date().toISOString().slice(0, 10) } satisfies AboutRow)
       .catch(() => undefined);
     out.filled += 1;
