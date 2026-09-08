@@ -444,8 +444,18 @@ export async function collectDisclosures(options: {
 
 /** 목록 훑기에서 떼어 본문 읽기에 주는 예산(ms). */
 const BODY_RESERVE_MS = 45_000;
-/** 한 번의 수집에서 본문을 읽을 최대 건수 — 두 홉이라 건당 두 번 왕복한다. */
-const BODY_READ_MAX = 40;
+/**
+ * 한 번의 수집에서 본문을 읽을 최대 건수.
+ *
+ * 첫 실측(2026-09-08)에서 **40건을 45초에 읽고 실패 0건**이었다. 그런데 대상이 1,418건이라
+ * 하루 40건이면 **한 달이 걸린다** — 그동안 덱에 올라온 공시는 금액이 없다.
+ *
+ * 라우트 예산은 300초이고 목록 훑기가 13초였다. 병렬 4로 읽으면 150건이 60초 안에 들어간다.
+ * 시간 가드가 따로 있으므로 이 값은 **상한**이고, 예산이 모자라면 거기서 멈춘다.
+ */
+const BODY_READ_MAX = 150;
+/** 동시에 읽을 수 — DART 에 예의를 지키는 선. 순차로는 처리량이 안 난다. */
+const BODY_CONCURRENCY = 4;
 /** 본문 읽기에 남겨둘 최소 예산(ms). 이 아래로 떨어지면 다음 실행에 넘긴다. */
 const BODY_BUDGET_FLOOR_MS = 20_000;
 
@@ -483,8 +493,9 @@ async function enrichBodies(
   census.pending = targets.length;
 
   if (targets.length > 0 && Date.now() > deadline - BODY_BUDGET_FLOOR_MS) census.skippedForBudget = true;
-  for (const item of targets.slice(0, BODY_READ_MAX)) {
-    if (Date.now() > deadline - BODY_BUDGET_FLOOR_MS) break;
+
+  /** 한 건 처리 — 결과를 그 자리에서 항목에 적고 센다. */
+  const readOne = async (item: DisclosureItem): Promise<void> => {
     const rceptNo = rceptNoFromUrl(item.url)!;
     const facts = await readDartBodyFacts(rceptNo, item.title);
     census.read += 1;
@@ -492,7 +503,7 @@ async function enrichBodies(
     if (!facts) {
       census.failed += 1;
       if (failedSample.length < 5) failedSample.push(`${rceptNo} ${item.title.slice(0, 40)}`);
-      continue;
+      return;
     }
     // 읽어본 것은 표시한다 — 숫자가 없다는 사실도 결과다(다시 읽지 않는다).
     item.bodyRead = true;
@@ -507,6 +518,13 @@ async function enrichBodies(
       item.bodyEarnings = facts.earnings;
       census.earningsFound += 1;
     }
+  };
+
+  const queue = targets.slice(0, BODY_READ_MAX);
+  for (let i = 0; i < queue.length; i += BODY_CONCURRENCY) {
+    if (Date.now() > deadline - BODY_BUDGET_FLOOR_MS) break;
+    // 한 건이 실패해도 나머지가 죽지 않는다 — `readOne` 이 자기 실패를 삼키고 센다.
+    await Promise.all(queue.slice(i, i + BODY_CONCURRENCY).map(readOne));
   }
   if (failedSample.length > 0) census.failedSample = failedSample;
   return census;
