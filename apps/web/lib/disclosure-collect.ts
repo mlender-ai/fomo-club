@@ -466,6 +466,14 @@ const BODY_READ_MAX = 150;
 const BODY_CONCURRENCY = 2;
 /** 실패한 건을 한 번 더 — 첫 실패는 대개 일시적이다(동시 요청 억제). */
 const BODY_RETRY_DELAY_MS = 700;
+/**
+ * 묶음 사이 간격(ms) — **DART 는 한 IP 의 몰아치기를 싫어한다.**
+ *
+ * 실측: 동시 4 에서 실패 54/150, 동시 2 + 재시도에서도 49/150 이었다. 동시성만으로는
+ * 안 풀린다 — 2분에 300 왕복(150건 × 2홉)이 문제다. 실패한 건은 다음 실행이 다시
+ * 시도하므로 손실은 아니지만 왕복을 버리는 것이라, **속도를 낮춰 성공률을 올린다.**
+ */
+const BODY_BATCH_GAP_MS = 250;
 /** 본문 읽기에 남겨둘 최소 예산(ms). 이 아래로 떨어지면 다음 실행에 넘긴다. */
 const BODY_BUDGET_FLOOR_MS = 20_000;
 
@@ -540,6 +548,9 @@ async function enrichBodies(
     if (Date.now() > deadline - BODY_BUDGET_FLOOR_MS) break;
     // 한 건이 실패해도 나머지가 죽지 않는다 — `readOne` 이 자기 실패를 삼키고 센다.
     await Promise.all(queue.slice(i, i + BODY_CONCURRENCY).map(readOne));
+    if (i + BODY_CONCURRENCY < queue.length) {
+      await new Promise((resolve) => setTimeout(resolve, BODY_BATCH_GAP_MS));
+    }
   }
   if (failedSample.length > 0) census.failedSample = failedSample;
   return census;
