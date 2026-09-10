@@ -3,46 +3,5 @@
   "installCommand": "cd ../.. && npm ci",
   "buildCommand": "cd ../.. && npx prisma generate && npm run build:web",
   "outputDirectory": ".next-build",
-  "crons": [
-    {
-      "path": "/api/fomo/cron/daily-30/trading",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/daily-30/financial",
-      "schedule": "10 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/daily-30/editor",
-      "schedule": "20 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/quiet-pick",
-      "schedule": "25 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/quality-slo",
-      "schedule": "30 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/ledger-outcomes",
-      "schedule": "40 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/business-invalidation",
-      "schedule": "50 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/signal-stats",
-      "schedule": "0 21 1 * *"
-    },
-    {
-      "path": "/api/fomo/cron/fundamentals",
-      "schedule": "45 21 * * *"
-    },
-    {
-      "path": "/api/fomo/cron/business-context",
-      "schedule": "55 21 * * *"
-    }
-  ]
+  "_lab01": "LAB-01 A-3 — 카드용 크론 10건 중단. 라우트 파일은 packages/dormant/web/app/api/fomo/cron/ 에 있다."
 }

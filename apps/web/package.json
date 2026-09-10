@@ -13,7 +13,6 @@
     "e2e:install": "playwright install chromium --with-deps"
   },
   "dependencies": {
-    "@fomo/core": "*",
     "@fomo/shared": "*",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.3",

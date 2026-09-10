@@ -84,14 +84,9 @@ jobs:
       - name: Test
         run: npm test -- --reporter=dot
 
-      # CTX-07 §4 — 성능 회귀 게이트. 오프라인·결정론(네트워크·DB 없음)이라 PR 마다 돌 수 있다.
-      # 조회 라우트의 전이 임포트 그래프가 커지면 실패한다 — 504 사고의 원인이 그것이었다.
-      - name: Perf regression gate
-        run: npx tsx scripts/perf-regression-gate.ts
-
-      # 불변식 문서가 정본(registry.json)의 생성물과 어긋나면 실패. 갈라지면 "게이트가 있다"는 착각이 남는다.
-      - name: Invariants doc in sync
-        run: npx tsx scripts/invariants-render.ts --check
+      # LAB-01 — 카드 게이트 두 개(perf-regression-gate · invariants-render)를 뺐다.
+      # 둘 다 소비자 카드 렌더 경로를 재던 것이고, 스크립트는
+      # packages/dormant/scripts/ 에 있다. 랩용 게이트는 LAB-05 에서 정한다.
 
       # ── 워크플로 파일 자체를 검사한다.
       #
@@ -166,37 +161,15 @@ jobs:
       - name: Build web workspace
         run: npm --workspace @fomo/backend run build
 
-  build-fomo-web:
-    runs-on: ubuntu-latest
-    needs: [resolve-ref, repo-checks]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve-ref.outputs.ref || '' }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build FOMO web workspace
-        run: npm run build:fomo-web
-
   # ── Phase 3: CI 성공 시 auto-merge 트리거 ──────────────────────
   # workflow_run 이벤트는 2단계 전파 불가 → 명시적 dispatch
   dispatch-auto-merge:
-    needs: [resolve-ref, repo-checks, build-api, build-web, build-fomo-web]
+    needs: [resolve-ref, repo-checks, build-api, build-web]
     if: |
       always() &&
       needs.repo-checks.result == 'success' &&
       needs.build-api.result == 'success' &&
       needs.build-web.result == 'success' &&
-      needs.build-fomo-web.result == 'success' &&
       needs.resolve-ref.outputs.ref != '' &&
       (startsWith(needs.resolve-ref.outputs.ref, 'agent/ceo-brief-') ||
        startsWith(needs.resolve-ref.outputs.ref, 'agent/task-') ||

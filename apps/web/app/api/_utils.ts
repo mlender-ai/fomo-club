@@ -12,7 +12,10 @@ function secureEqual(left: string, right: string): boolean {
 }
 
 export function authorizeLegacyOperation(request: NextRequest): NextResponse | null {
-  // FOMO Club 제품과 무관한 과거 페이퍼트레이딩 제어면은 기본적으로 닫는다.
+  // 페이퍼트레이딩 제어면. **LAB-00 부터 이것이 제품이다** — 옛 주석은
+  // "FOMO Club 제품과 무관한 과거 제어면" 이라고 했지만 그 제품은 대체됐다.
+  // 게이트는 그대로 닫아둔다: 여는 것은 LAB-07(페이퍼 실행기)의 일이고,
+  // 그때 `apps/api` 의 체결 가정을 감사한 뒤에 연다(LAB-00 §5).
   if (process.env.ENABLE_LEGACY_TRADING_API !== "true") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
