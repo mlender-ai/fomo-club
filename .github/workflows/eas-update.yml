@@ -8,13 +8,14 @@ name: EAS Update (Mobile OTA)
 #
 # 설정 미완료 시(EXPO_TOKEN 또는 EAS_PROJECT_ID 없음) 워크플로우는 자동 skip.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/tarot-mobile/**"
-      - "packages/shared/**"
-      - "packages/tarot-core/**"
-      - ".github/workflows/eas-update.yml"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # push:
+  # branches: [main]
+  # paths:
+  # - "apps/tarot-mobile/**"
+  # - "packages/shared/**"
+  # - "packages/tarot-core/**"
+  # - ".github/workflows/eas-update.yml"
   workflow_dispatch:
     inputs:
       message:

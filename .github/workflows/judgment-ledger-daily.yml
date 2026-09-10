@@ -4,8 +4,9 @@ name: Judgment Ledger Daily
 # 선정(selection)은 daily-30 이 이미 스냅샷하지만, 원장 append + outcome 산출은 여기서 관철한다.
 # append 는 idempotencyKey+skipDuplicates 로 멱등 → 매일 전체 재적재해도 중복 0. 프로덕션 DB 대상.
 on:
-  schedule:
-    - cron: "30 22 * * *" # 07:30 KST — 전 거래일 마감·시세 반영 후
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "30 22 * * *" # 07:30 KST — 전 거래일 마감·시세 반영 후
   workflow_dispatch:
 
 permissions:

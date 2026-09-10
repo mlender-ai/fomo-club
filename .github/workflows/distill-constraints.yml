@@ -5,6 +5,7 @@ name: Distill Standing Constraints
 # 자동 머지 비대상(needs-ceo-review). Slack [[ADD_CONSTRAINT]] 는 manual_constraint 로 위임됨.
 
 on:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
   workflow_dispatch:
     inputs:
       manual_constraint:
@@ -17,9 +18,9 @@ on:
         default: ""
   # 고리1 (Phase 2.5): Daily Agent Council(=CEO Brief 생성) 성공 후 자동 distill.
   # 후보 0건이면 PR 미생성(조용히 종료), 중복 후보는 add dedup 가 거름(멱등).
-  workflow_run:
-    workflows: ["Daily Agent Council"]
-    types: [completed]
+  # workflow_run:
+  # workflows: ["Daily Agent Council"]
+  # types: [completed]
 
 permissions:
   contents: write

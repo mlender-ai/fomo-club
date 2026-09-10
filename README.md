@@ -1,68 +1,96 @@
-# FOMO Club
+# STRATEGY LAB
 
-> **현재 최우선 제품: FOMO Club** — 뉴스가 나기 전에 돈이 먼저 들어간 종목을 찾아 보여주고, 당시 판단과 사후 성과를 함께 축적하는 카드 피드.
-> 해자는 **판단 원장(Judgment Ledger)**이다. 신호·판단·당시 가격·사용자 행동·사후 성과가 날짜별로 쌓인다.
-> 해자 정본은 [`docs/FOMO_MOAT_DOCTRINE.md`](docs/FOMO_MOAT_DOCTRINE.md), 제품 정본은 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md), 에이전트 규칙은 [`CLAUDE.md`](CLAUDE.md).
+> **여러 전략이 각자 독립 자본으로 페이퍼 매매를 하고, 그 성과를 같은 기준으로 비교하는 랩.**
+>
+> 핵심 질문 하나 — **이 전략에 실제 돈을 넣어도 되나?**
+> 이 질문에 답하는 데 필요 없는 건 만들지 않는다.
 
----
+| | |
+|---|---|
+| **최상위 정본** | [`docs/LAB-00_MASTER.md`](docs/LAB-00_MASTER.md) — 충돌 시 이 문서가 이긴다 |
+| 에이전트 규칙 | [`CLAUDE.md`](CLAUDE.md) → [`AGENTS.md`](AGENTS.md) |
+| 격리 목록 | [`docs/lab/DORMANT.md`](docs/lab/DORMANT.md) |
+| 현재 상태 | [`docs/STATUS.md`](docs/STATUS.md) |
+| 사용자 | 본인 1명 · BM 설계 없음 |
+| 최종 목표 | 실제 자금 자동매매 |
 
-## 모노레포 지도 (현재 살아있는 구조)
-
-| 앱/패키지 | 목적 | 스택 | 상태 | 진입점 |
-|---|---|---|---|---|
-| **`apps/fomo-web`** | FOMO Club 종목 카드 피드(`오늘의 조용한 돈`) — **주력** | Next.js 14, Tailwind | 라이브 (Vercel) | `app/page.tsx` → 카드/상세 다섯 걸음 |
-| **`apps/web`** | FOMO API 백엔드 + 운영·리서치 API | Next.js 14 | 라이브 | `app/api/fomo/*`, `app/api/research/*` |
-| **`packages/fomo-core`** | 키워드·종목 카드, 이해·응축, 점수 도메인 로직 | TS (순수함수) | 활성 | `src/index.ts` |
-| **`apps/fomo-club`** | FOMO Club 네이티브 앱 | Expo / RN, NativeWind | 보류 (토큰 절약) | `app/` |
-| `packages/shared` | 공용 타입·유틸 | TS | 활성 | `src/index.ts` |
-| `apps/api` | 레거시 페이퍼트레이딩(Fastify+worker) | Fastify | **레거시(처분 검토)** | `src/` |
-
-> 워크스페이스: `apps/*`, `packages/*` (npm workspaces).
-
----
-
-## FOMO Club 한눈에
-
-- **핵심 경험**: 오늘의 30장을 넘기고, 당시 카드 판단과 내 선택이 실제 결과로 어떻게 이어졌는지 되짚는다.
-- **데이터 원칙**: 실제 출처와 confidence를 함께 제공하고, 근거가 없으면 임의로 채우지 않는다.
-- **제품 단계**: 판단 원장 통합(M1)을 먼저 완성하고 신호 이력서·품질 SLO·개인 복기 레이어를 그 위에 얹는다.
-- **역할 경계**: 제품의 해자는 기능 수가 아니라 날짜가 박힌 판단과 정직한 사후 채점이다.
+옛 소비자 제품(**FOMO Club** — "주식시장의 틴더", 종목 카드 피드)은 `LAB-00` 이 대체했다.
+그 제품 정본 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md) 와 해자 정본
+[`docs/FOMO_MOAT_DOCTRINE.md`](docs/FOMO_MOAT_DOCTRINE.md) 는 `LAB-09` 참조용으로만 남는다.
 
 ---
 
-## 개발
+## 모노레포 지도
+
+| 워크스페이스 | 목적 | 스택 | 진입점 |
+|---|---|---|---|
+| **`apps/web`** (`@fomo/backend`) | 랩 대시보드 + 페이퍼·인증 API | Next.js | `app/(lab)/` · `app/api/` |
+| **`apps/api`** (`@fomo/legacy-paper-api`) | 페이퍼 체결 엔진 — `paperBroker` · `tradeExecutor` · `feeModel` · `strategyWorker` | Fastify + worker | `src/server.ts` · `src/worker.ts` |
+| `packages/shared` | 공용 타입·유틸 | TS | `src/index.ts` |
+| `packages/lab` | 성적 집계 원시 — 표본 30 하한, 백테스트·실적 합산 차단 | TS (순수함수) | `src/stats.ts` |
+
+`packages/dormant/` 는 **워크스페이스가 아니다.** `LAB-09` 용으로 격리한 644 파일이 들어 있고
+빌드·타입체크·테스트 어디에도 들어가지 않는다. 상세는 [`docs/lab/DORMANT.md`](docs/lab/DORMANT.md).
+
+`apps/web` 은 `apps/api`(`:4000`)로 프록시한다 — `lib/backend-api.ts`.
+**실행기는 하나다**(`LAB-00` §4-1). 백테스트와 페이퍼가 같은 엔진을 쓰고 데이터 소스만 갈아 끼운다.
+
+---
+
+## 화면
+
+`LAB-01` PART D-1 — **셋뿐이다.**
+
+| 경로 | 무엇 | 언제 채워지나 |
+|---|---|---|
+| `/` | 백테스트 (기본) | `LAB-05` |
+| `/live` | 전광판 | `LAB-08` |
+| `/strategy/[id]` | 전략 상세 | `LAB-08` |
+
+지금은 셋 다 `아직 데이터가 없습니다.` 를 낸다. **`LAB-05` 까지 이 상태로 둔다.**
+스타일도 최소만이다 — 제대로 만드는 것은 `LAB-05` 다.
+
+---
+
+## 돌리기
 
 ```bash
-npm install                 # 루트에서 1회
-
-# 개발 서버
-npm run dev:fomo-web        # FOMO 웹 (포트 3300)
-npm run dev:web             # FOMO API 백엔드 (포트 3200)
-npm run dev:fomo-club       # FOMO 네이티브 (expo)
-
-# 검증 (push 전 필수 — CLAUDE.md)
-npm run lint                # = typecheck
-npm run typecheck           # 전 워크스페이스
-npm run build:web           # API 빌드
-npm run test                # vitest (전 패키지)
-npx prisma validate         # 스키마 변경 시
+npm ci
+npm run prisma:generate
+npm run dev          # api(:4000) + worker + web(:3200) 동시
 ```
 
-배포: `main` push → Vercel 자동 배포(`apps/fomo-web`, `apps/web`). DB는 Supabase(`db-push.yml` 수동 dispatch, ADR-003: migrate 대신 db push).
-
-**필수 prod 시크릿**(미설정 시 해당 라우트 fail-closed): `DATABASE_URL`, `GROQ_API_KEY`. 전체 목록은 `.env.example`.
+| 명령 | 무엇 |
+|---|---|
+| `npm run dev:web` | 랩 대시보드만 (`:3200`) |
+| `npm run dev:api` | 페이퍼 엔진 API 만 (`:4000`) |
+| `npm run dev:worker` | 전략 워커만 |
+| `npm run ci` | lint → typecheck → build |
+| `npm test` | vitest (격리분 제외) |
+| `npm run paper:status` | 페이퍼 상태 조회 |
 
 ---
 
-## 문서 위계
+## 절대 규칙 (`LAB-00` §7)
+
+| 규칙 | 이유 |
+|---|---|
+| 레버리지 기본 1배 | 수익률 부풀림 방지 |
+| 종료 전략도 표에 남긴다 | 진 걸 지우면 전부 거짓이 됨 |
+| 벤치마크를 항상 옆에 둔다 | +30%가 좋은지 모름 |
+| 순위는 수익/낙폭으로 | 수익률 순위는 레버리지가 이김 |
+| 표본 30 미만은 순위 없음 | `packages/lab/src/stats.ts` 가 타입으로 막는다 |
+| 전략 5개 이하 | 많으면 하나는 운으로 좋아 보임 |
+| 페이퍼 한계를 화면에 쓴다 | |
+| 데이터 구멍을 메우지 않는다 | |
+
+---
+
+## 진행
 
 ```
-CLAUDE.md                          ← 에이전트 진입점·행동 규칙 (최상위)
-docs/FOMO_MOAT_DOCTRINE.md         ← 해자·우선순위·BM 정본
-docs/PRODUCT_VISION.md             ← 제품 정체성·화면 문법
-docs/DATA_ENGINE_STRATEGY.md       ← 카드 공급·이해 엔진 전략
-docs/AGENT_REDESIGN.md             ← 에이전트 운영 모델
-AGENTS.md                          ← 에이전트 역할·라우팅
+LAB-01 ✅ → LAB-02 → LAB-03 → LAB-04 ─┬→ LAB-05
+                                      └→ LAB-06 → LAB-07 → LAB-08 → LAB-09
 ```
 
-과거 Trading Taro 문서는 `docs/legacy/`에서 기록으로만 보존한다. FOMO Club이 유일한 신규 개발 대상이다.
+**`LAB-05` 까지가 1차 목표다.** 거기서 알파가 안 나오면 그 뒤는 의미가 없다.

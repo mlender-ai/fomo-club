@@ -8,8 +8,9 @@ name: Sector Map
 # 시각: 08:00 KST(23:00 UTC). 인물 수집(08:20)·공시 수집(08:40)보다 먼저.
 
 on:
-  schedule:
-    - cron: "0 23 * * *"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "0 23 * * *"
   workflow_dispatch:
 
 permissions:

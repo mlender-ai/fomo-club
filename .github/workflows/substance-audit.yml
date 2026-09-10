@@ -9,11 +9,12 @@ name: Substance Audit (WO-SUB-00)
 # (signal-stats.yml 주석의 "GH Actions tsx 직접 실행은 시세 egress 미확보"와 동일 계열).
 # 막히면 막혔다고 결과에 남긴다 — 우회해서 추정치를 만들지 않는다.
 on:
-  push:
-    branches: ["claude/**"]
-    paths:
-      - "scripts/audit/**"
-      - ".github/workflows/substance-audit.yml"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # push:
+  # branches: ["claude/**"]
+  # paths:
+  # - "scripts/audit/**"
+  # - ".github/workflows/substance-audit.yml"
   workflow_dispatch:
     inputs:
       limit:

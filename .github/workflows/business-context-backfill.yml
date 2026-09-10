@@ -13,9 +13,10 @@ name: Business Context Backfill (daily until done)
 # 커서는 서버(`bizctx-cursor`)에 있어서 매일 이어서 처리한다 — `reset` 을 주지 않는다.
 # 08 을 막지 않는다: 이 배치가 도는 동안 08 은 ①③ 기본 레이아웃으로 진행한다.
 on:
-  schedule:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
     # KST 04:00 — 프로덕션 크론(일 1회)과 겹치지 않는 시간대.
-    - cron: "0 19 * * *"
+  # - cron: "0 19 * * *"
   workflow_dispatch:
     inputs:
       limit:

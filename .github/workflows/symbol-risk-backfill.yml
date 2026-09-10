@@ -26,8 +26,9 @@ name: Symbol Risk Backfill
 #    상태는 프로세스 안에서만 공유된다 — 별개 실행 사이에는 공유되지 않으므로, 시간으로
 #    떨어뜨리는 것이 유일한 분리 수단이다.
 on:
-  schedule:
-    - cron: "30 0 * * *"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "30 0 * * *"
   workflow_dispatch:
     inputs:
       limit:

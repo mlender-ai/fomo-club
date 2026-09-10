@@ -5,14 +5,15 @@ name: Auto QA — Web Smoke
 # 빌드 통과 ≠ 작동 — Playwright로 실제 렌더링 검증.
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "apps/web/**"
-      - "apps/fomo-web/**"
-      - "packages/fomo-core/**"
-      - "packages/shared/**"
-      - ".github/workflows/auto-qa-web.yml"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # pull_request:
+  # branches: [main]
+  # paths:
+  # - "apps/web/**"
+  # - "apps/fomo-web/**"
+  # - "packages/fomo-core/**"
+  # - "packages/shared/**"
+  # - ".github/workflows/auto-qa-web.yml"
   workflow_dispatch:
 
 permissions:

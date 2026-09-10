@@ -1,7 +1,8 @@
 # FOMO Club AI Agent Constitution
 
 > **이 파일이 모든 AI 에이전트의 헌법이다.** Claude Code, Codex, Cursor, Gemini, Antigravity, OpenCode 등 어떤 도구를 쓰더라도 이 문서를 먼저 따른다.
-> 정본 권한은 영역별로 나눈다. 제품 정체성·틴더 UX는 `docs/PRODUCT_VISION.md`, 해자·투자 우선순위·BM은 `docs/FOMO_MOAT_DOCTRINE.md`, 에이전트 행동은 `AGENTS.md`, 데이터 구현은 `docs/DATA_ENGINE_STRATEGY.md`가 지배한다.
+> **최상위 정본은 `docs/LAB-00_MASTER.md` 다(2026-09-10 승격). 충돌하면 LAB-00 이 이긴다.** 그 아래에서 에이전트 행동은 `AGENTS.md`, 데이터 구현은 `docs/DATA_ENGINE_STRATEGY.md` 가 지배한다.
+> `docs/PRODUCT_VISION.md`(틴더) 와 `docs/FOMO_MOAT_DOCTRINE.md`(BM·해자) 는 LAB-00 이 대체했다 — `LAB-09` 참조용으로만 남는다. LAB-00 §0 은 **BM 을 설계하지 않는다**고 정한다.
 > 에이전트별 진입 파일(`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*`, `.rules`, `ANTIGRAVITY.md`)은 이 파일을 가리키는 포인터일 뿐이며, 규약 본문은 여기 한 곳에만 둔다.
 
 ## Spec-Driven 작업 규약
@@ -9,7 +10,7 @@
 spec-kit 전체 도구를 설치하지 않는다. 대신 모든 AI는 아래 순서를 따른다.
 
 0. **Graph**: 코드 통독(grep/Read 반복) 전 `codegraph_explore` 로 대상 기능의 구조를 한 번에 받는다. 변경 대상 심볼이 정해지면 `codegraph impact <symbol>` 로 영향반경을 확인한다. 상세는 아래 "코드 그래프 우선 규약".
-1. **Constitution**: `docs/PRODUCT_VISION.md`, `docs/FOMO_MOAT_DOCTRINE.md`, `AGENTS.md`, `docs/DATA_ENGINE_STRATEGY.md`의 절대 제약을 먼저 확인한다.
+1. **Constitution**: `docs/LAB-00_MASTER.md`(최상위) → `AGENTS.md` → `docs/DATA_ENGINE_STRATEGY.md` 의 절대 제약을 먼저 확인한다. LAB-00 §7 절대 규칙은 협상 대상이 아니다.
 2. **Spec**: 새 작업은 `docs/templates/SPEC_TEMPLATE.md` 형식으로 무엇/왜/성공지표/비범위/절대제약을 고정한다.
 3. **Plan**: 구현 전 `docs/templates/PLAN_TEMPLATE.md` 형식으로 파일, 데이터 흐름, 리스크, 검증을 정한다.
 4. **Tasks**: 실제 작업은 `docs/templates/TASKS_TEMPLATE.md` 형식으로 파일별 태스크와 병렬 가능 작업을 나눈다.

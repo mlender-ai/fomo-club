@@ -4,8 +4,9 @@ name: Coin Market Prewarm
 # 요청 경로는 캐시만 읽는다(504 원칙). Vercel native cron 미지원 플랜이라 GH Actions 로 트리거.
 
 on:
-  schedule:
-    - cron: "20 * * * *"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "20 * * * *"
   workflow_dispatch: {}
 
 permissions:

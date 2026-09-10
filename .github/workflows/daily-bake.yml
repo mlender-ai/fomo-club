@@ -14,9 +14,10 @@ name: Daily Bake
 # 순서가 어긋나면 그날 모은 것이 그날 덱에 안 실린다.
 
 on:
-  schedule:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
     # 09:10 KST = 00:10 UTC
-    - cron: "10 0 * * *"
+  # - cron: "10 0 * * *"
   workflow_dispatch:
 
 permissions:

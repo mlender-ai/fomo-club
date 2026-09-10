@@ -1,15 +1,16 @@
 name: Slack Notify
 
 on:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
   # Auto-implement PR 생성 알림
-  pull_request:
-    types: [opened, closed]
-    branches: [main]
+  # pull_request:
+  # types: [opened, closed]
+  # branches: [main]
 
   # CI + Daily Agent Council + Auto Implement 완료 알림
-  workflow_run:
-    workflows: ["CI", "Daily Agent Council", "Auto Implement CEO Brief"]
-    types: [completed]
+  # workflow_run:
+  # workflows: ["CI", "Daily Agent Council", "Auto Implement CEO Brief"]
+  # types: [completed]
 
   workflow_dispatch:
     inputs:
