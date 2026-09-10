@@ -141,7 +141,7 @@ export async function registerPaperRoutes(app: FastifyInstance) {
     const bot = await resolveBot(body.botId);
 
     await prisma.$transaction([
-      prisma.trade.deleteMany({
+      prisma.legacyTrade.deleteMany({
         where: {
           botId: bot.id
         }

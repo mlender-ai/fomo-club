@@ -20,7 +20,7 @@ export class AccountStateManager {
           ...sessionWhere
         }
       }),
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId: bot.id,
           ...sessionWhere

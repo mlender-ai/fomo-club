@@ -107,7 +107,7 @@ export class PaperBroker implements BrokerPort {
         }
       });
 
-      await tx.trade.create({
+      await tx.legacyTrade.create({
         data: {
           botId: input.bot.id,
           strategyId: input.strategyId,
@@ -213,7 +213,7 @@ export class PaperBroker implements BrokerPort {
         }
       });
 
-      await tx.trade.create({
+      await tx.legacyTrade.create({
         data: {
           botId: input.bot.id,
           strategyId: input.strategyId,

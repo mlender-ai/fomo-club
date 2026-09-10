@@ -199,11 +199,11 @@ model Bot {
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   user                   User?             @relation(fields: [userId], references: [id])
-  strategies             Strategy[]
+  strategies             LegacyStrategy[]
   sessions               StrategySession[]
   strategyRuns           StrategyRun[]
   positions              Position[]
-  trades                 Trade[]
+  trades                 LegacyTrade[]
   alerts                 Alert[]
   dailySummaries         DailySummary[]
   systemLogs             SystemLog[]
@@ -211,7 +211,7 @@ model Bot {
   @@index([userId])
 }
 
-model Strategy {
+model LegacyStrategy {
   id              String         @id @default(cuid())
   botId           String
   key             String
@@ -227,7 +227,7 @@ model Strategy {
   bot             Bot            @relation(fields: [botId], references: [id])
   runs            StrategyRun[]
   positions       Position[]
-  trades          Trade[]
+  trades          LegacyTrade[]
   alerts          Alert[]
 
   @@unique([botId, key])
@@ -248,7 +248,7 @@ model StrategySession {
   bot            Bot                   @relation(fields: [botId], references: [id])
   strategyRuns   StrategyRun[]
   positions      Position[]
-  trades         Trade[]
+  trades         LegacyTrade[]
   alerts         Alert[]
   dailySummaries DailySummary[]
 
@@ -306,7 +306,7 @@ model StrategyRun {
   errorMessage      String?
   executedAt        DateTime          @default(now())
   bot               Bot               @relation(fields: [botId], references: [id])
-  strategy          Strategy          @relation(fields: [strategyId], references: [id])
+  strategy          LegacyStrategy    @relation(fields: [strategyId], references: [id])
   session           StrategySession?  @relation(fields: [sessionId], references: [id])
 
   @@index([botId])
@@ -339,16 +339,16 @@ model Position {
   exitReasonText  String?
   exitReasonMeta  Json?
   bot             Bot              @relation(fields: [botId], references: [id])
-  strategy        Strategy?        @relation(fields: [strategyId], references: [id])
+  strategy        LegacyStrategy?  @relation(fields: [strategyId], references: [id])
   session         StrategySession? @relation(fields: [sessionId], references: [id])
-  trades          Trade[]
+  trades          LegacyTrade[]
 
   @@index([botId, symbol, status])
   @@index([strategyId])
   @@index([sessionId, status])
 }
 
-model Trade {
+model LegacyTrade {
   id              String           @id @default(cuid())
   botId           String
   strategyId      String?
@@ -372,7 +372,7 @@ model Trade {
   executedAt      DateTime         @default(now())
   externalOrderId String?
   bot             Bot              @relation(fields: [botId], references: [id])
-  strategy        Strategy?        @relation(fields: [strategyId], references: [id])
+  strategy        LegacyStrategy?  @relation(fields: [strategyId], references: [id])
   position        Position?        @relation(fields: [positionId], references: [id])
   session         StrategySession? @relation(fields: [sessionId], references: [id])
 
@@ -395,7 +395,7 @@ model Alert {
   sentAt     DateTime?
   createdAt  DateTime         @default(now())
   bot        Bot              @relation(fields: [botId], references: [id])
-  strategy   Strategy?        @relation(fields: [strategyId], references: [id])
+  strategy   LegacyStrategy?  @relation(fields: [strategyId], references: [id])
   session    StrategySession? @relation(fields: [sessionId], references: [id])
 
   @@index([botId])
@@ -894,4 +894,198 @@ model SupplyDemandDaily {
 
   @@unique([ticker, date])
   @@index([ticker, date])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STRATEGY LAB — LAB-02 데이터 모델
+//
+// §0 원칙: **백테스트와 페이퍼가 같은 테이블에 쌓인다.** 따로 두면 비교할 수 없다.
+// `Run.kind` 하나로 갈라진다.
+//
+// 필드 이름은 지시서의 snake_case(`strategy_id`·`entry_at`)를 이 레포 규약인
+// camelCase 로 적었다. 컬럼도 camelCase 다 — 나머지 38개 모델이 전부 그렇고,
+// 한 스키마에 두 규약을 섞으면 그게 더 나쁘다.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// 시장. 크립토 먼저 → 주식 → 폴리마켓 (LAB-00 §0).
+enum Market {
+  CRYPTO
+  STOCK
+  POLYMARKET
+}
+
+/// 전략 수명. **종료 전략도 표에 남긴다**(LAB-00 §7) — 지우는 상태가 없다.
+enum StrategyState {
+  DRAFT
+  RUNNING
+  PAUSED
+  STOPPED
+}
+
+/// 실행 종류. `LEGACY` 는 판단 원장 이전분(LAB-02 PART C) — **순위에서 제외한다.**
+enum RunKind {
+  BACKTEST
+  PAPER
+  LIVE
+  LEGACY
+}
+
+enum TradeSide {
+  LONG
+  SHORT
+}
+
+/// 청산 사유. 없으면 나중에 못 고친다(PART A-3).
+enum ExitReason {
+  STOP
+  TARGET
+  TIME
+  SIGNAL
+  MANUAL
+}
+
+/// 전략 정의. **규칙이 바뀌면 새 행을 만든다** — 기존 행을 수정하지 않는다.
+/// 같은 `name` 의 `version` 이 올라간 새 행이 된다.
+model Strategy {
+  id         String        @id @default(cuid())
+  name       String
+  version    Int           @default(1)
+  market     Market
+  /// 규칙 JSON. 스키마는 `@fomo/lab` 의 `parseStrategyDefinition` 이 검증한다.
+  /// **코드가 없다** — 함수·표현식 문자열 금지(PART B-1).
+  definition Json
+  status     StrategyState @default(DRAFT)
+
+  createdAt  DateTime  @default(now())
+  stoppedAt  DateTime?
+  /// 왜 껐나. 종료 전략이 표에 남을 때 이 칸이 비어 있으면 기록이 거짓이 된다.
+  stopReason String?
+
+  runs Run[]
+
+  /// 같은 이름의 같은 버전은 하나뿐이다. 규칙 변경은 버전을 올린다.
+  @@unique([name, version])
+  @@index([status, market])
+}
+
+/// 실행 인스턴스. **같은 전략을 백테스트와 페이퍼로 각각 돌리면 Run 이 둘 생긴다.**
+model Run {
+  id         String  @id @default(cuid())
+  strategyId String
+  kind       RunKind
+
+  periodStart DateTime
+  /// 페이퍼·라이브는 진행중이라 null 이다.
+  periodEnd   DateTime?
+
+  initialCapital Decimal @db.Decimal(30, 10)
+
+  /// 어느 데이터로 돌렸나. 데이터가 바뀌면 결과가 바뀌므로 결과와 같이 박아둔다.
+  dataVersion   String
+  /// 엔진 버전. 같은 정의라도 엔진이 바뀌면 결과가 다르다.
+  paramsVersion String
+
+  createdAt DateTime @default(now())
+
+  strategy Strategy @relation(fields: [strategyId], references: [id])
+  trades   Trade[]
+  equity   Equity[]
+  metric   Metric?
+
+  @@index([strategyId, kind])
+  @@index([kind, createdAt])
+}
+
+/// 체결 한 건 = **포지션 하나의 생애**(진입 → 청산). 낱개 주문이 아니다.
+/// 레거시 `LegacyTrade` 는 낱개 주문이라 알갱이가 다르다 — 그래서 합치지 않았다.
+model Trade {
+  id     String    @id @default(cuid())
+  runId  String
+  symbol String
+  side   TradeSide
+
+  entryAt     DateTime
+  entryPrice  Decimal  @db.Decimal(30, 10)
+  /// 왜 들어갔나. **필수다.** 없으면 나중에 못 고친다(PART A-3).
+  entryReason String
+
+  /// null 이면 보유중.
+  exitAt     DateTime?
+  exitPrice  Decimal?    @db.Decimal(30, 10)
+  exitReason ExitReason?
+
+  qty      Decimal @db.Decimal(30, 10)
+  fee      Decimal @default(0) @db.Decimal(30, 10)
+  slippage Decimal @default(0) @db.Decimal(30, 10)
+  /// 누적 펀딩비. 무기한 선물에서 이걸 빼면 수익률이 부풀려진다.
+  funding  Decimal @default(0) @db.Decimal(30, 10)
+
+  /// 실현 손익. 보유중이면 null — 0 으로 채우지 않는다.
+  pnl    Decimal? @db.Decimal(30, 10)
+  pnlPct Float?
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, entryAt])
+  @@index([runId, exitAt])
+  @@index([symbol, entryAt])
+}
+
+/// 자산 스냅샷. 백테스트는 봉마다, 페이퍼는 일정 주기.
+model Equity {
+  id    String   @id @default(cuid())
+  runId String
+  at    DateTime
+
+  /// 현금 + 평가액.
+  equity     Decimal @db.Decimal(30, 10)
+  cash       Decimal @db.Decimal(30, 10)
+  unrealized Decimal @default(0) @db.Decimal(30, 10)
+  /// 고점 대비 낙폭(음수 또는 0). 순위가 수익/낙폭이라 이 칸이 순위를 만든다.
+  drawdown   Float   @default(0)
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  /// 같은 Run 의 같은 시각은 한 점뿐이다.
+  @@unique([runId, at])
+  @@index([runId, at])
+}
+
+/// 집계. **매번 계산하지 않고 저장한다** — 화면이 빨라야 한다.
+/// Run 당 하나. 다시 계산하면 덮어쓴다.
+model Metric {
+  runId      String   @id
+  computedAt DateTime @default(now())
+
+  cagr        Float?
+  totalReturn Float?
+  /// 최대 낙폭. 음수 또는 0.
+  mdd         Float?
+  /// 수익/낙폭. **순위는 이걸로 낸다**(LAB-00 §7) — 수익률 순위는 레버리지가 이긴다.
+  cagrMdd     Float?
+
+  sharpe  Float?
+  sortino Float?
+
+  trades       Int    @default(0)
+  winRate      Float?
+  profitFactor Float?
+
+  avgHoldHours Float?
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([cagrMdd])
+}
+
+/// 벤치마크 시세. **모든 화면에서 같은 기간 벤치마크를 옆에 둔다**(LAB-00 §7)
+/// — +30% 가 좋은지 나쁜지 이것 없이는 모른다.
+model Benchmark {
+  id     String   @id @default(cuid())
+  symbol String
+  at     DateTime
+  price  Decimal  @db.Decimal(30, 10)
+
+  @@unique([symbol, at])
+  @@index([symbol, at])
 }

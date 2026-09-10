@@ -56,7 +56,7 @@ export async function registerStrategyRoutes(app: FastifyInstance) {
       return updateDemoStrategyToggle(params.id);
     }
 
-    const strategy = await prisma.strategy.findUniqueOrThrow({
+    const strategy = await prisma.legacyStrategy.findUniqueOrThrow({
       where: {
         id: params.id
       }
@@ -64,7 +64,7 @@ export async function registerStrategyRoutes(app: FastifyInstance) {
 
     const nextStatus = strategy.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
 
-    await prisma.strategy.update({
+    await prisma.legacyStrategy.update({
       where: {
         id: strategy.id
       },
