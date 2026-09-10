@@ -89,3 +89,28 @@
 4. `web/__tests__/` 의 해당 테스트를 같이 되살려 **이식 전후 결과가 같은지** 확인한다.
 
 `LAB-00` §5 실측 주의와 같은 이야기다 — 옮기는 것 자체가 결함이 들어오는 경로다.
+
+---
+
+## 중단한 Vercel 크론 (A-3)
+
+`apps/web/vercel.json` 의 `crons` 배열 10건을 제거했다. **라우트 파일은 위 `web/app/api/fomo/cron/` 에 그대로 있다** —
+되살릴 때 이 스케줄을 그대로 다시 넣으면 된다.
+
+| 경로 | 스케줄 (UTC) |
+|---|---|
+| `/api/fomo/cron/daily-30/trading` | `0 21 * * *` |
+| `/api/fomo/cron/daily-30/financial` | `10 21 * * *` |
+| `/api/fomo/cron/daily-30/editor` | `20 21 * * *` |
+| `/api/fomo/cron/quiet-pick` | `25 21 * * *` |
+| `/api/fomo/cron/quality-slo` | `30 21 * * *` |
+| `/api/fomo/cron/ledger-outcomes` | `40 21 * * *` |
+| `/api/fomo/cron/business-invalidation` | `50 21 * * *` |
+| `/api/fomo/cron/fundamentals` | `45 21 * * *` |
+| `/api/fomo/cron/business-context` | `55 21 * * *` |
+| `/api/fomo/cron/signal-stats` | `0 21 1 * *` |
+
+> **`vercel.json` 에 메모를 남기지 말 것.** 처음엔 `_lab01` 키로 이 설명을 그 파일에 적었는데
+> Vercel 스키마가 알 수 없는 속성을 거부해 배포가 통째로 실패했다
+> (`should NOT have additional property '_lab01'`). JSON 이라 주석도 못 넣는다.
+> 그래서 설명은 여기 둔다.

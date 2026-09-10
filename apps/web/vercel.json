@@ -2,6 +2,5 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && npm ci",
   "buildCommand": "cd ../.. && npx prisma generate && npm run build:web",
-  "outputDirectory": ".next-build",
-  "_lab01": "LAB-01 A-3 — 카드용 크론 10건 중단. 라우트 파일은 packages/dormant/web/app/api/fomo/cron/ 에 있다."
+  "outputDirectory": ".next-build"
 }
