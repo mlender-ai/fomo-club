@@ -4,11 +4,12 @@ name: FOMO Index Pipeline
 # 장 마감 후 + 주요 시간대에 감정 집계 + 지수 산출 → FomoIndexSnapshot 저장
 
 on:
-  schedule:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
     # KST = UTC+9. 미국장 마감 후(06:30 KST = 21:30 UTC) + 한국장 마감 후(15:40 KST = 06:40 UTC) + 정오(03:00 UTC)
-    - cron: "30 21 * * 1-5" # 미국장 마감 후
-    - cron: "40 6 * * 1-5"  # 한국장 마감 후
-    - cron: "0 3 * * *"     # 정오 스냅샷
+  # - cron: "30 21 * * 1-5" # 미국장 마감 후
+  # - cron: "40 6 * * 1-5"  # 한국장 마감 후
+  # - cron: "0 3 * * *"     # 정오 스냅샷
   workflow_dispatch:
 
 permissions:

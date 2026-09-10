@@ -6,8 +6,10 @@ name: Pause Agent PRs
 # 사람/세션 PR(claude/*, feat/*, fix/* 등)은 영향 없음. 제품(키워드 엔진) 개발 완료 후 재개 시 이 파일 삭제.
 
 on:
-  pull_request_target:
-    types: [opened, reopened]
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  workflow_dispatch:
+  # pull_request_target:
+  # types: [opened, reopened]
 
 permissions:
   pull-requests: write

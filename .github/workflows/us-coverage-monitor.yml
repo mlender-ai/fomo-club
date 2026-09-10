@@ -11,8 +11,9 @@ name: US Coverage Monitor
 # 기준이 두 곳에 흩어지면 갈라진다.
 
 on:
-  schedule:
-    - cron: "45 21 * * *" # 06:45 KST — daily-30 editor(06:20) 이후, 원장이 채워진 뒤
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "45 21 * * *" # 06:45 KST — daily-30 editor(06:20) 이후, 원장이 채워진 뒤
   workflow_dispatch:
     inputs:
       days:

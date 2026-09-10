@@ -4,14 +4,15 @@ name: Hardening Scout
 # ISO 주차로 영역 로테이션 → 매주 다른 축. 자동 구현 없이 검토 이슈까지만.
 
 on:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
   workflow_dispatch:
     inputs:
       area:
         description: "강제 영역(security|infra|api|db|perf). 비우면 주차 로테이션"
         required: false
         default: ""
-  schedule:
-    - cron: "0 0 * * 2" # 매주 화 09:00 KST
+  # schedule:
+  # - cron: "0 0 * * 2" # 매주 화 09:00 KST
 
 permissions:
   contents: read

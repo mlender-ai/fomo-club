@@ -8,9 +8,10 @@ name: Supply Demand Pipeline
 # 테이블 전이라도 수집 로그까지는 돌고, store 가 폴백(0건 누적)으로 누락을 가시화한다.
 
 on:
-  schedule:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
     # KST = UTC+9. 한국장 마감(15:30) 후 확정치 안정화 시점 — 18:30 KST(09:30 UTC) 평일.
-    - cron: "30 9 * * 1-5"
+  # - cron: "30 9 * * 1-5"
   workflow_dispatch:
 
 permissions:

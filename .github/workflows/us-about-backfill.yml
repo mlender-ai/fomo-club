@@ -9,8 +9,9 @@ name: US About Backfill
 # 시각: 매일 04:00 KST(19:00 UTC). 사람이 안 쓰는 시간에 LLM 을 쓴다.
 
 on:
-  schedule:
-    - cron: "0 19 * * *"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "0 19 * * *"
   workflow_dispatch:
     inputs:
       limit:

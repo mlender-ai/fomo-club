@@ -8,8 +8,9 @@ name: Signal Stats Backtest (monthly)
 # (judgment-ledger-backfill.yml 주석의 "GH Actions tsx 직접 실행은 시세 egress 미확보" 와 동일 제약).
 # 한 번 호출당 유니버스 일부(청크)만 처리하므로 done 이 나올 때까지 반복 호출한다.
 on:
-  schedule:
-    - cron: "0 21 1 * *" # 매월 1일 06:00 KST
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "0 21 1 * *" # 매월 1일 06:00 KST
   workflow_dispatch:
     inputs:
       reset:

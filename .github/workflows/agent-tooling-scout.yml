@@ -4,6 +4,7 @@ name: Agent Tooling Scout
 # Product ideas, trading signals, and autonomous product planning stay out of scope.
 
 on:
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
   workflow_dispatch:
     inputs:
       seed_repos:
@@ -18,8 +19,8 @@ on:
         description: "Require repos to be updated within this many days"
         required: false
         default: "60"
-  schedule:
-    - cron: "0 0 * * 1" # 매주 월 09:00 KST (주간 카테고리 로테이션)
+  # schedule:
+  # - cron: "0 0 * * 1" # 매주 월 09:00 KST (주간 카테고리 로테이션)
 
 permissions:
   contents: read

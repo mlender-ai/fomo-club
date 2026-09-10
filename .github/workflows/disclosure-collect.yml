@@ -10,8 +10,9 @@ name: Disclosure Collect
 # 픽 재생성(quiet-pick)보다 **먼저** 돌아야 타임라인에 그날 공시가 실린다.
 
 on:
-  schedule:
-    - cron: "40 23 * * *"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "40 23 * * *"
   workflow_dispatch:
     inputs:
       days:

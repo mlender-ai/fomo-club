@@ -2,7 +2,8 @@
 
 > **현재 최우선 제품: FOMO Club** — 뉴스가 나기 전에 돈이 먼저 들어간 종목을 찾아 보여주고, 당시 판단과 사후 성과를 함께 축적하는 카드 피드.
 > 해자는 **판단 원장(Judgment Ledger)**이다. 신호·판단·당시 가격·사용자 행동·사후 성과가 날짜별로 쌓인다.
-> 해자 정본은 [`docs/FOMO_MOAT_DOCTRINE.md`](docs/FOMO_MOAT_DOCTRINE.md), 제품 정본은 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md), 에이전트 규칙은 [`CLAUDE.md`](CLAUDE.md).
+> **최상위 정본은 [`docs/LAB-00_MASTER.md`](docs/LAB-00_MASTER.md)** (2026-09-10 승격 — 전략 경쟁 랩). 에이전트 규칙은 [`CLAUDE.md`](CLAUDE.md).
+> 옛 제품 정본 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md)(틴더) 와 해자 정본 [`docs/FOMO_MOAT_DOCTRINE.md`](docs/FOMO_MOAT_DOCTRINE.md) 는 LAB-00 이 대체했다 — `LAB-09` 참조용.
 
 ---
 
@@ -59,7 +60,8 @@ npx prisma validate         # 스키마 변경 시
 ```
 CLAUDE.md                          ← 에이전트 진입점·행동 규칙 (최상위)
 docs/FOMO_MOAT_DOCTRINE.md         ← 해자·우선순위·BM 정본
-docs/PRODUCT_VISION.md             ← 제품 정체성·화면 문법
+docs/LAB-00_MASTER.md              ← 최상위 정본 — 전략 경쟁 랩
+docs/PRODUCT_VISION.md             ← (대체됨) 옛 틴더 제품 정체성 · LAB-09 참조용
 docs/DATA_ENGINE_STRATEGY.md       ← 카드 공급·이해 엔진 전략
 docs/AGENT_REDESIGN.md             ← 에이전트 운영 모델
 AGENTS.md                          ← 에이전트 역할·라우팅

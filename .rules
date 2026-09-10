@@ -1,6 +1,7 @@
 Read `AGENTS.md` first.
 
 This repo uses an agent-neutral constitution:
-`docs/PRODUCT_VISION.md` > `AGENTS.md` > `docs/DATA_ENGINE_STRATEGY.md`.
+`docs/LAB-00_MASTER.md` > `AGENTS.md` > `docs/DATA_ENGINE_STRATEGY.md`.
+`docs/PRODUCT_VISION.md`(틴더)는 LAB-00 이 대체했다 — `LAB-09` 참조용.
 
 Do not duplicate policy text in tool-specific files.

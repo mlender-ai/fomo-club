@@ -5,8 +5,9 @@ name: Daily Product Monitor
 # 평소 Claude/LLM 비용 없음. critical 발견 후 implement-task 를 호출할 때만 Claude Code 비용 발생.
 
 on:
-  schedule:
-    - cron: "0 0 * * *" # 09:00 KST
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "0 0 * * *" # 09:00 KST
   workflow_dispatch:
     inputs:
       auto_fix:

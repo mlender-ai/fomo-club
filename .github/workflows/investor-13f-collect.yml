@@ -12,8 +12,9 @@ name: Investor 13F Collect
 # 모르기** 때문이다 — 하루 한 번 확인이 가장 단순한 방법이고 SEC 요청도 11건뿐이다.
 
 on:
-  schedule:
-    - cron: "0 23 * * *"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "0 23 * * *"
   workflow_dispatch:
 
 permissions:

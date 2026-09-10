@@ -5,8 +5,9 @@ name: KR Candle Prewarm
 # 요청 경로는 캐시만 읽는다(504 원칙). GH cron 지연은 상수 — 몇 시간 늦어도 같은 날 데이터라 무해.
 
 on:
-  schedule:
-    - cron: "40 19 * * 1-5"
+  # LAB-01 비활성화 — 자동 트리거 제거, 수동 실행만 남김
+  # schedule:
+  # - cron: "40 19 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
