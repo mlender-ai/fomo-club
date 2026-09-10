@@ -46,7 +46,7 @@ export class StrategyControlService {
     const bot = await resolveBot(botId);
     const metadata = normalizeRuntimeMetadata(bot.metadata);
     const [strategies, trades, account] = await Promise.all([
-      prisma.strategy.findMany({
+      prisma.legacyStrategy.findMany({
         where: {
           botId: bot.id
         },
@@ -54,7 +54,7 @@ export class StrategyControlService {
           createdAt: "asc"
         }
       }),
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId: bot.id
         },

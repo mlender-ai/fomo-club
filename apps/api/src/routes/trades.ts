@@ -15,7 +15,7 @@ export async function registerTradeRoutes(app: FastifyInstance) {
 
     const bot = await resolveBot(query.botId);
 
-    const trades = await prisma.trade.findMany({
+    const trades = await prisma.legacyTrade.findMany({
       where: {
         botId: bot.id
       },

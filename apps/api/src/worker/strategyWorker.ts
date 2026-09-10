@@ -248,7 +248,7 @@ export class StrategyWorker {
             status: signal.type === "HOLD" ? "NO_SIGNAL" : "SIGNAL"
           });
 
-          await prisma.strategy.update({
+          await prisma.legacyStrategy.update({
             where: {
               id: strategy.id
             },

@@ -24,7 +24,7 @@ export class PaperStatusService {
           status: "OPEN"
         }
       }),
-      prisma.strategy.findMany({
+      prisma.legacyStrategy.findMany({
         where: {
           botId: bot.id,
           status: {
@@ -138,7 +138,7 @@ export class PaperStatusService {
   async listPaperTrades(botId?: string, limit = 50): Promise<TradeView[]> {
     const bot = await resolveBot(botId);
     const [trades, strategyControl] = await Promise.all([
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId: bot.id
         },

@@ -31,8 +31,8 @@ import {
 
 type BotRecord = Awaited<ReturnType<typeof prisma.bot.findFirstOrThrow>>;
 type SessionRecord = Awaited<ReturnType<typeof prisma.strategySession.findMany>>[number];
-type StrategyRecord = Awaited<ReturnType<typeof prisma.strategy.findMany>>[number];
-type TradeRecord = Awaited<ReturnType<typeof prisma.trade.findMany>>[number];
+type StrategyRecord = Awaited<ReturnType<typeof prisma.legacyStrategy.findMany>>[number];
+type TradeRecord = Awaited<ReturnType<typeof prisma.legacyTrade.findMany>>[number];
 type PositionRecord = Awaited<ReturnType<typeof prisma.position.findMany>>[number];
 
 interface DailySummarySnapshot {
@@ -133,7 +133,7 @@ export class ReportingService {
     const metadata = normalizeRuntimeMetadata(bot.metadata);
 
     const [trades, positions, recentLogs, account, strategyControl] = await Promise.all([
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId: bot.id,
           executedAt: {
@@ -434,7 +434,7 @@ export class ReportingService {
     const scopeWhere = currentSession ? { sessionId: currentSession.id } : {};
     const horizonStart = recentWindowStart(120);
     const [trades, positions] = await Promise.all([
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId: bot.id,
           executedAt: {
@@ -539,7 +539,7 @@ export class ReportingService {
     }
 
     const [trades, positions] = await Promise.all([
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId,
           sessionId: {
@@ -591,7 +591,7 @@ export class ReportingService {
     }
 
     const [trades, positions] = await Promise.all([
-      prisma.trade.findMany({
+      prisma.legacyTrade.findMany({
         where: {
           botId,
           sessionId: {
