@@ -166,6 +166,20 @@ export function pctFromLow(window: Window, period = 20): IndicatorValue {
   return ((current.close - low) / low) * 100;
 }
 
+/**
+ * 이동평균 대비 현재 종가 위치(%). 평균 위면 양수, 아래면 음수.
+ *
+ * `pct_from_high` 는 최근 고점 기준이라 상승장에서 늘 음수다. 평균 대비가
+ * **평균회귀 전략의 진입 조건**으로 맞다 — "평소보다 얼마나 싼가" 를 재기 때문이다.
+ * (LAB-06 PART C 가 `pct_from_ma` 를 쓴다.)
+ */
+export function pctFromMa(window: Window, period = 20): IndicatorValue {
+  const average = ma(window, period);
+  const current = window[window.length - 1];
+  if (average === null || !current || !(average > 0)) return null;
+  return ((current.close - average) / average) * 100;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // consecutive — 연속 조건
 // ─────────────────────────────────────────────────────────────────────────────
@@ -197,16 +211,19 @@ export function consecutive(window: Window): IndicatorValue {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 고래 순포지션 변화율(%). 값은 실행기가 `DataSource.whaleNet` 으로 넣어준다 —
- * 이 함수는 **그 값을 받아 변화율로 바꾸기만** 한다.
+ * 고래 순포지션 **변화량(USD)**. 양수면 롱이 늘어난 것이다.
  *
- * 고래 데이터는 봉이 아니라 스냅샷이라 창에서 뽑을 수 없다. 그래서 실행기가
- * 주입하는 구조로 갈랐다. 데이터가 없으면 null 이고, **null 인 조건은 통과하지 않는다**
- * — 모르는 것을 "참" 으로 만들지 않는다.
+ * 처음엔 변화율(%)을 냈는데 지시서(LAB-06 PART D)가 `min_usd` 로 임계를 건다.
+ * 비율은 기준이 작을 때 폭발한다 — 순포지션이 1만 달러에서 2만 달러가 되면
+ * +100% 지만 **고래가 움직인 게 아니다.** 금액으로 재야 임계가 뜻을 갖는다.
+ *
+ * 값은 실행기가 `DataSource.whaleNet` 으로 넣어준다. 고래 데이터는 봉이 아니라
+ * 스냅샷이라 창에서 뽑을 수 없다. 데이터가 없으면 null 이고,
+ * **null 인 조건은 통과하지 않는다** — 모르는 것을 "참" 으로 만들지 않는다.
  */
-export function whaleFlow(current: number | null, previous: number | null): IndicatorValue {
-  if (current === null || previous === null || previous === 0) return null;
-  return ((current - previous) / Math.abs(previous)) * 100;
+export function whaleFlow(current: number | null, past: number | null): IndicatorValue {
+  if (current === null || past === null) return null;
+  return current - past;
 }
 
 /** 지표 이름 → 구현. 전략 정의는 **이름으로만** 참조한다(LAB-02 PART B-1). */
@@ -218,6 +235,7 @@ export const INDICATOR_NAMES = [
   "volume_ratio",
   "pct_from_high",
   "pct_from_low",
+  "pct_from_ma",
   "consecutive",
   "whale_flow",
 ] as const;

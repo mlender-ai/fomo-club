@@ -23,6 +23,7 @@ import {
   execute,
   ma,
   type Bar,
+  type SourceBar,
   type StrategyDefinition,
 } from "../src";
 
@@ -129,14 +130,17 @@ describe("G-2 — 검사가 실제로 잡는지 확인한다", () => {
     constructor(private readonly all: readonly Bar[]) {
       super({ symbol: "BTC", bars: all });
     }
-    override next(): Bar | null {
+    override next(): SourceBar | null {
       const bar = this.all[this.i];
       if (!bar) return null;
       const ahead = this.all.slice(this.i + 1, this.i + 1 + LEAK_DEPTH);
       this.i += 1;
-      if (ahead.length === 0) return bar;
+      if (ahead.length === 0) return { symbol: "BTC", bar };
       // 미래를 본다.
-      return { ...bar, close: Math.max(...ahead.map((future) => future.close)) };
+      return {
+        symbol: "BTC",
+        bar: { ...bar, close: Math.max(...ahead.map((future) => future.close)) },
+      };
     }
   }
 

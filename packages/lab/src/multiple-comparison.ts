@@ -107,11 +107,13 @@ export function multipleComparison(
 /** 화면에 그대로 나가는 문장(PART D). 값이 없으면 **없다고 말한다.** */
 export function describeMultipleComparison(result: MultipleComparison): string {
   if (result.tested === 0) {
-    return "검정할 전략이 없다. 표본 30건을 채운 전략이 생기면 여기에 확률이 나온다.";
+    return "검정할 후보가 없다. 표본 30건을 채운 전략이 생기면 여기에 확률이 나온다.";
   }
   const pct = ((result.familyP ?? 0) * 100).toFixed(0);
+  // "전략" 이 아니라 "후보" 다. 파라미터 조합도 한 번의 시도라서 여기 들어간다
+  // (LAB-06 PART E-2). 전략 2개를 6조합씩 돌렸으면 후보는 12개다.
   return (
-    `전략 ${result.tested}개를 함께 검증했다. ` +
+    `후보 ${result.tested}개를 함께 검증했다(전략 + 파라미터 조합). ` +
     `여럿을 검증하면 그중 하나는 우연히 좋아 보인다. ` +
     `1위가 우연일 확률 약 ${pct}%.`
   );

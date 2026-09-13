@@ -1,0 +1,22 @@
+{
+  "name": "추세 스윙",
+  "definition": {
+    "market": "crypto",
+    "universe": { "type": "list", "symbols": ["BTC", "ETH", "SOL"] },
+    "entry": {
+      "all": [
+        { "indicator": "ma_cross", "fast": 20, "slow": 60, "dir": "up" },
+        { "indicator": "volume_ratio", "window": 20, "min": 2 }
+      ]
+    },
+    "exit": {
+      "stop_pct": -12,
+      "target_pct": null,
+      "max_hold_days": 30,
+      "any": [{ "indicator": "ma_cross", "fast": 20, "slow": 60, "dir": "down" }]
+    },
+    "sizing": { "type": "risk_pct", "risk_pct": 2 },
+    "leverage": 1,
+    "max_positions": 3
+  }
+}

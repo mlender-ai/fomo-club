@@ -13,6 +13,16 @@ describe("PART D — 1위가 우연일 확률", () => {
     expect(r.familyP).toBeCloseTo(r.singleP ?? 0, 10);
   });
 
+  it("파라미터 조합도 한 번의 시도다 — 조합을 늘리면 확률이 오른다 (E-2)", () => {
+    // 전략 하나를 6조합 돌려 최고를 골랐다면 후보는 6개다.
+    const single = multipleComparison([candidate("a", 1.0)]);
+    const swept = multipleComparison([
+      candidate("a", 1.0),
+      ...Array.from({ length: 5 }, (_, i) => candidate(`a#${i}`, 0)),
+    ]);
+    expect(swept.familyP).toBeGreaterThan(single.familyP ?? 0);
+  });
+
   it("**전략을 많이 돌릴수록 1위를 믿기 어려워진다**", () => {
     const one = multipleComparison([candidate("a", 1.0)]);
     const five = multipleComparison([
@@ -78,14 +88,14 @@ describe("표본 규칙 (LAB-00 §7)", () => {
 describe("문장", () => {
   it("지시서 문구 그대로 낸다", () => {
     const text = describeMultipleComparison(multipleComparison([candidate("a", 1.0), candidate("b", 0.5)]));
-    expect(text).toContain("전략 2개를 함께 검증했다");
+    expect(text).toContain("후보 2개를 함께 검증했다");
     expect(text).toContain("우연히 좋아 보인다");
     expect(text).toMatch(/1위가 우연일 확률 약 \d+%/);
   });
 
   it("검정할 게 없으면 **없다고 말한다**", () => {
     const text = describeMultipleComparison(multipleComparison([]));
-    expect(text).toContain("검정할 전략이 없다");
+    expect(text).toContain("검정할 후보가 없다");
     expect(text).not.toMatch(/\d+%/);
   });
 });

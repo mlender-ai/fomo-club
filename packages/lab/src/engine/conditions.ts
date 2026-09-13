@@ -17,6 +17,7 @@ import {
   maCross,
   pctFromHigh,
   pctFromLow,
+  pctFromMa,
   rsi,
   volumeRatio,
   whaleFlow,
@@ -27,14 +28,28 @@ import {
 /** 지표가 쓸 수 있는, 봉 밖에서 오는 값. */
 export interface ExternalContext {
   whaleNetNow: number | null;
-  whaleNetPrev: number | null;
+  /** `window_hours` 전의 순포지션. 실행기가 채운다. */
+  whaleNetPast: number | null;
 }
 
-const EMPTY_CONTEXT: ExternalContext = { whaleNetNow: null, whaleNetPrev: null };
+const EMPTY_CONTEXT: ExternalContext = { whaleNetNow: null, whaleNetPast: null };
 
 function numberParam(node: Record<string, unknown>, key: string, fallback: number): number {
   const value = node[key];
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * 기간 인자. `period` 와 `window` 를 **둘 다 받는다.**
+ *
+ * 지시서(LAB-06)는 `"window": 20` 으로 쓰고 이 엔진은 `period` 로 읽고 있었다.
+ * 한쪽만 받으면 다른 쪽 이름으로 쓴 정의가 **조용히 기본값으로 돈다** —
+ * 정의에 20 이라고 적혀 있는데 엔진은 다른 값을 쓰는 상태가 되고, 아무도 모른다.
+ */
+function periodParam(node: Record<string, unknown>, fallback: number): number {
+  const period = node.period;
+  if (typeof period === "number" && Number.isFinite(period)) return period;
+  return numberParam(node, "window", fallback);
 }
 
 /** 지표 이름 → 값. 모르는 이름은 `null` 이고, 그 조건은 거짓이 된다. */
@@ -46,23 +61,25 @@ export function indicatorValue(
 ): IndicatorValue {
   switch (name) {
     case "ma":
-      return ma(window, numberParam(node, "period", 20));
+      return ma(window, periodParam(node, 20));
     case "ma_cross":
       return maCross(window, numberParam(node, "fast", 20), numberParam(node, "slow", 60));
     case "rsi":
-      return rsi(window, numberParam(node, "period", 14));
+      return rsi(window, periodParam(node, 14));
     case "atr":
-      return atr(window, numberParam(node, "period", 14));
+      return atr(window, periodParam(node, 14));
     case "volume_ratio":
-      return volumeRatio(window, numberParam(node, "period", 20));
+      return volumeRatio(window, periodParam(node, 20));
     case "pct_from_high":
-      return pctFromHigh(window, numberParam(node, "period", 20));
+      return pctFromHigh(window, periodParam(node, 20));
     case "pct_from_low":
-      return pctFromLow(window, numberParam(node, "period", 20));
+      return pctFromLow(window, periodParam(node, 20));
+    case "pct_from_ma":
+      return pctFromMa(window, periodParam(node, 20));
     case "consecutive":
       return consecutive(window);
     case "whale_flow":
-      return whaleFlow(context.whaleNetNow, context.whaleNetPrev);
+      return whaleFlow(context.whaleNetNow, context.whaleNetPast);
     default:
       return null;
   }
@@ -90,12 +107,25 @@ function compare(value: number, node: Record<string, unknown>): boolean {
     checked = true;
     if (value !== eq) return false;
   }
-  // `ma_cross` 전용 표기. up = 골든(1), down = 데드(-1).
+  // 방향 표기. `ma_cross` 는 up/down(1/−1), `whale_flow` 는 long/short(부호).
   const dir = node.dir;
   if (typeof dir === "string") {
     checked = true;
-    const want = dir === "up" ? 1 : dir === "down" ? -1 : 0;
-    if (value !== want) return false;
+    if (dir === "long") {
+      if (!(value > 0)) return false;
+    } else if (dir === "short") {
+      if (!(value < 0)) return false;
+    } else {
+      const want = dir === "up" ? 1 : dir === "down" ? -1 : 0;
+      if (value !== want) return false;
+    }
+  }
+
+  // `min_usd` — 금액 임계. **절대값**으로 본다. 방향은 `dir` 이 진다.
+  const minUsd = node.min_usd;
+  if (typeof minUsd === "number") {
+    checked = true;
+    if (Math.abs(value) < minUsd) return false;
   }
 
   // 비교 조건이 하나도 없으면 "값이 있으면 참" 이다 — 지표가 null 이 아닌 것 자체가 조건이다.
