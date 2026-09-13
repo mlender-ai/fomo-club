@@ -6,7 +6,9 @@
  */
 
 export * from "./candle-quality";
+export * from "./curve";
 export * from "./engine";
 export * from "./freshness";
+export * from "./multiple-comparison";
 export * from "./stats";
 export * from "./strategy-definition";
