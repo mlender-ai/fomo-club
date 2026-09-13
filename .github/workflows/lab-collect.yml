@@ -9,6 +9,12 @@ name: LAB 수집
 # 이 계정은 Vercel Hobby 다. Hobby 의 크론은 **하루 1회**만 돈다 —
 # 1시간봉 갱신도 실시간 시세도 불가능하다. 그래서 Actions 로 돌린다.
 #
+# ## 페이퍼 실행 (LAB-07)
+#
+# 매시 **15분**에 돈다 — 봉 갱신(매시 5분)이 끝난 뒤다. 같은 분에 돌리면
+# 방금 닫힌 봉이 아직 안 들어와 있어 한 시간씩 늦게 반영된다.
+# 중복 실행은 `JobLock` 이 막는다(PART B-2).
+#
 # ## 1분 주기를 못 지킨다 (PART B-1)
 #
 # GitHub Actions 의 schedule 최소 간격은 **5분**이고, 실제로는 더 늦게 뜬다.
@@ -23,13 +29,14 @@ on:
     - cron: "5 * * * *"     # 봉 갱신 (매시 5분)
     - cron: "10 */8 * * *"  # 펀딩비 (8시간)
     - cron: "*/15 * * * *"  # 고래 (15분 — 지갑 30개 스캔에 ~8초)
+    - cron: "15 * * * *"    # 페이퍼 실행 (매시 15분 — 봉 갱신 10분 뒤)
   workflow_dispatch:
     inputs:
       job:
         description: "돌릴 잡"
         required: true
         type: choice
-        options: [latest, candles, funding, whale, benchmark, backfill]
+        options: [latest, candles, funding, whale, benchmark, backfill, paper]
 
 concurrency:
   group: lab-collect-${{ github.event.schedule || inputs.job }}
@@ -52,6 +59,7 @@ jobs:
             "5 * * * *")     echo "job=candles" >> "$GITHUB_OUTPUT" ;;
             "10 */8 * * *")  echo "job=funding" >> "$GITHUB_OUTPUT" ;;
             "*/15 * * * *")  echo "job=whale"   >> "$GITHUB_OUTPUT" ;;
+            "15 * * * *")    echo "job=paper"   >> "$GITHUB_OUTPUT" ;;
             *)               echo "job=${{ inputs.job }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -79,6 +87,7 @@ jobs:
             candles)   npm run lab:candles ;;
             funding)   npm run lab:funding ;;
             whale)     npm run lab:whale ;;
+            paper)     npm run lab:paper ;;
             benchmark) npm run lab:benchmark -- --symbol BTC --days 1200 ;;
             backfill)  npm run lab:candles -- --backfill && npm run lab:funding -- --backfill ;;
             *) echo "::error::모르는 잡: ${{ steps.pick.outputs.job }}"; exit 1 ;;

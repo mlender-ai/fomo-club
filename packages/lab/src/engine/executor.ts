@@ -38,7 +38,7 @@ import type {
 const MIN_WARMUP_BARS = 2;
 
 
-interface WhalePoint {
+export interface WhalePoint {
   at: Date;
   net: number;
 }
@@ -89,7 +89,7 @@ function whaleNetAt(history: readonly WhalePoint[], targetMs: number): number | 
   return found;
 }
 
-interface PendingSignal {
+export interface PendingSignal {
   symbol: string;
   side: Side;
   reason: string;
@@ -97,7 +97,7 @@ interface PendingSignal {
   signalAt: Date;
 }
 
-interface LastExit {
+export interface LastExit {
   at: Date;
   side: Side;
 }
@@ -129,12 +129,60 @@ function reentryLocked(
   return now.getTime() - last.at.getTime() < config.reentryLockBars * barMs;
 }
 
+
+/**
+ * 실행기 상태. **재시작해도 이어지려면 이것만 있으면 된다**(LAB-07 PART B-1).
+ *
+ * 백테스트는 이걸 쓰지 않는다(한 번에 끝까지 돈다). 페이퍼는 매 실행마다
+ * DB 에서 읽어 넣고 결과를 다시 저장한다 — **그래서 실행기가 하나다.**
+ * 따로 만들면 백테스트와 페이퍼 결과를 비교할 수 없다(하지 말 것 1).
+ *
+ * `Date` 는 JSON 을 오가며 문자열이 되므로 `reviveState` 로 되살린다.
+ */
+export interface ExecutorState {
+  cash: number;
+  peakEquity: number;
+  open: OpenPosition[];
+  pending: PendingSignal[];
+  lastExit: Record<string, LastExit>;
+  /** 지표 워밍업용 최근 봉. `maxWindowBars` 만큼만 들고 있는다. */
+  windows: Record<string, Bar[]>;
+  whaleHistory: Record<string, WhalePoint[]>;
+  lastPrice: Record<string, number>;
+  /** 실측한 봉 간격. 재진입 잠금·시간 청산이 쓴다. */
+  barMs: number;
+}
+
+/**
+ * 창을 이만큼만 들고 있는다.
+ *
+ * 지표가 보는 최대 기간보다 넉넉해야 한다 — 지금 가장 긴 것이 `ma_cross` 의
+ * `slow`(기본 60)다. **이 값보다 긴 기간을 쓰는 정의는 조용히 틀린 값을 받는다.**
+ * 그래서 넉넉히 잡고, `execute` 가 넘치면 알려준다(`blocked.window_truncated`).
+ */
+export const DEFAULT_MAX_WINDOW_BARS = 500;
+
 export interface ExecuteInput {
   definition: StrategyDefinition;
   source: DataSource;
   config: ExecutorConfig;
   /** 데이터 구멍. 이 구간에서는 **진입하지 않는다**(PART D). */
   gaps?: Record<string, readonly Gap[]>;
+  /** 이어서 돌 상태. 없으면 처음부터다(백테스트). */
+  state?: ExecutorState;
+  /**
+   * **신규 진입을 막는다**(LAB-07 PART C — 시세 stale).
+   *
+   * 보유는 유지된다. 청산 조건은 그대로 평가받는다 — 끊긴 동안 손절선을 넘었으면
+   * 나와야 한다. 막는 것은 **새로 들어가는 것**뿐이다.
+   *
+   * `config.maxPositions` 를 0 으로 만드는 꼼수를 쓰지 않는다. 실행기는 동시 보유
+   * 상한을 **정의에서** 읽으므로(LAB-04) config 를 고쳐도 아무 일도 일어나지 않는다 —
+   * 실제로 그렇게 짰다가 stale 인데 진입이 되는 것을 실행 로그에서 봤다.
+   */
+  blockNewEntries?: boolean;
+  /** 창 상한. 기본 `DEFAULT_MAX_WINDOW_BARS`. */
+  maxWindowBars?: number;
 }
 
 /**
@@ -142,18 +190,28 @@ export interface ExecuteInput {
  *
  * 백테스트는 `source.next()` 가 null 을 줄 때까지, 페이퍼는 호출자가 멈출 때까지.
  */
-export function execute(input: ExecuteInput): RunResult {
-  const { definition, source, config, gaps = {} } = input;
+export function execute(input: ExecuteInput): RunResult & { state: ExecutorState } {
+  const { definition, source, config, gaps = {}, state } = input;
+  const blockNewEntries = input.blockNewEntries === true;
+  const maxWindowBars = input.maxWindowBars ?? DEFAULT_MAX_WINDOW_BARS;
 
-  let cash = config.initialCapital;
-  let peakEquity = config.initialCapital;
+  let cash = state?.cash ?? config.initialCapital;
+  let peakEquity = state?.peakEquity ?? config.initialCapital;
 
-  const open = new Map<string, OpenPosition>();
-  const pending = new Map<string, PendingSignal>();
-  const lastExit = new Map<string, LastExit>();
-  const windows = new Map<string, Bar[]>();
-  const whaleHistory = new Map<string, WhalePoint[]>();
-  const whaleWindowMs = whaleWindowFrom(definition) ;
+  const open = new Map<string, OpenPosition>(
+    (state?.open ?? []).map((position) => [position.symbol, position])
+  );
+  const pending = new Map<string, PendingSignal>(
+    (state?.pending ?? []).map((signal) => [signal.symbol, signal])
+  );
+  const lastExit = new Map<string, LastExit>(Object.entries(state?.lastExit ?? {}));
+  const windows = new Map<string, Bar[]>(
+    Object.entries(state?.windows ?? {}).map(([symbol, bars]) => [symbol, [...bars]])
+  );
+  const whaleHistory = new Map<string, WhalePoint[]>(
+    Object.entries(state?.whaleHistory ?? {}).map(([symbol, points]) => [symbol, [...points]])
+  );
+  const whaleWindowMs = whaleWindowFrom(definition);
 
   const trades: ClosedTrade[] = [];
   const equity: EquityPoint[] = [];
@@ -174,10 +232,10 @@ export function execute(input: ExecuteInput): RunResult {
   const maxPositions = definition.max_positions;
 
   let bars = 0;
-  let barMs = 0;
+  let barMs = state?.barMs ?? 0;
 
   /** 종목별 마지막 종가. **다종목 자산 평가가 이걸 쓴다.** */
-  const lastPrice = new Map<string, number>();
+  const lastPrice = new Map<string, number>(Object.entries(state?.lastPrice ?? {}));
 
   for (;;) {
     const item = source.next();
@@ -243,6 +301,7 @@ export function execute(input: ExecuteInput): RunResult {
     pending.delete(symbol);
     if (signal && !open.has(symbol)) {
       const reasons: string[] = [];
+      if (blockNewEntries) reasons.push("feed_stale");
       if (open.size >= maxPositions) reasons.push("max_positions");
       if (isInGap(signal.signalAt, gaps[symbol] ?? [])) reasons.push("data_gap");
       if (source.inGap(symbol, bar.at)) reasons.push("data_gap");
@@ -362,6 +421,8 @@ export function execute(input: ExecuteInput): RunResult {
 
     // ── 5. 이번 봉으로 다음 봉의 신호를 만든다 ──────────────────────────────
     window.push(bar);
+    // 창을 무한히 들고 있지 않는다. 페이퍼는 상태를 DB 에 쓰므로 크기가 곧 비용이다.
+    if (window.length > maxWindowBars) window.splice(0, window.length - maxWindowBars);
     windows.set(symbol, window);
 
     if (window.length >= MIN_WARMUP_BARS) {
@@ -412,7 +473,83 @@ export function execute(input: ExecuteInput): RunResult {
     }
   }
 
-  return { trades, equity, blocked, bars };
+  return {
+    trades,
+    equity,
+    blocked,
+    bars,
+    state: {
+      cash,
+      peakEquity,
+      open: [...open.values()],
+      pending: [...pending.values()],
+      lastExit: Object.fromEntries(lastExit),
+      windows: Object.fromEntries(windows),
+      whaleHistory: Object.fromEntries(whaleHistory),
+      lastPrice: Object.fromEntries(lastPrice),
+      barMs,
+    },
+  };
+}
+
+/**
+ * JSON 을 오간 상태를 되살린다. `Date` 가 문자열이 되어 돌아온다.
+ *
+ * **직접 `JSON.parse` 한 것을 그대로 넘기면 안 된다** — `at.getTime()` 이 터지거나,
+ * 더 나쁘게는 문자열 비교가 조용히 틀린 답을 낸다.
+ */
+export function reviveState(raw: unknown): ExecutorState | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const s = raw as Record<string, unknown>;
+  if (typeof s.cash !== "number") return null;
+
+  const bar = (b: unknown): Bar => {
+    const r = b as Record<string, unknown>;
+    return {
+      at: new Date(r.at as string),
+      open: r.open as number,
+      high: r.high as number,
+      low: r.low as number,
+      close: r.close as number,
+      volume: r.volume as number,
+    };
+  };
+
+  return {
+    cash: s.cash,
+    peakEquity: typeof s.peakEquity === "number" ? s.peakEquity : s.cash,
+    open: ((s.open as unknown[]) ?? []).map((p) => {
+      const r = p as Record<string, unknown>;
+      return { ...(r as unknown as OpenPosition), entryAt: new Date(r.entryAt as string) };
+    }),
+    pending: ((s.pending as unknown[]) ?? []).map((p) => {
+      const r = p as Record<string, unknown>;
+      return { ...(r as unknown as PendingSignal), signalAt: new Date(r.signalAt as string) };
+    }),
+    lastExit: Object.fromEntries(
+      Object.entries((s.lastExit as Record<string, LastExit>) ?? {}).map(([k, v]) => [
+        k,
+        { at: new Date(v.at as unknown as string), side: v.side },
+      ])
+    ),
+    windows: Object.fromEntries(
+      Object.entries((s.windows as Record<string, unknown[]>) ?? {}).map(([k, v]) => [
+        k,
+        v.map(bar),
+      ])
+    ),
+    whaleHistory: Object.fromEntries(
+      Object.entries((s.whaleHistory as Record<string, unknown[]>) ?? {}).map(([k, v]) => [
+        k,
+        v.map((point) => {
+          const r = point as Record<string, unknown>;
+          return { at: new Date(r.at as string), net: r.net as number };
+        }),
+      ])
+    ),
+    lastPrice: (s.lastPrice as Record<string, number>) ?? {},
+    barMs: typeof s.barMs === "number" ? s.barMs : 0,
+  };
 }
 
 
