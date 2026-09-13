@@ -1,0 +1,85 @@
+name: LAB 수집
+
+# LAB-03 PART E — 수집 잡을 크론에 붙인다.
+#
+# **만들고 안 붙이는 게 이 프로젝트의 반복 실패다.**
+#
+# ## 왜 Vercel 크론이 아니라 Actions 인가
+#
+# 이 계정은 Vercel Hobby 다. Hobby 의 크론은 **하루 1회**만 돈다 —
+# 1시간봉 갱신도 실시간 시세도 불가능하다. 그래서 Actions 로 돌린다.
+#
+# ## 1분 주기를 못 지킨다 (PART B-1)
+#
+# GitHub Actions 의 schedule 최소 간격은 **5분**이고, 실제로는 더 늦게 뜬다.
+# 그래서 실시간 시세는 `*/5` 다. 진짜 1분 주기는 상주 워커가 필요하고,
+# 그건 `LAB-07`(페이퍼 실행기)에서 `apps/api` 워커에 붙인다.
+# `STALE_AFTER_MS` 를 3분으로 잡아둔 이유도 이것이다 — 5분 주기에서는
+# 한 번만 늦어도 stale 로 잡히고, 그게 맞다.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # 실시간 시세 (5분 — Actions 최소 간격)
+    - cron: "5 * * * *"     # 봉 갱신 (매시 5분)
+    - cron: "10 */8 * * *"  # 펀딩비 (8시간)
+    - cron: "*/15 * * * *"  # 고래 (15분 — 지갑 30개 스캔에 ~8초)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "돌릴 잡"
+        required: true
+        type: choice
+        options: [latest, candles, funding, whale, benchmark, backfill]
+
+concurrency:
+  group: lab-collect-${{ github.event.schedule || inputs.job }}
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LAB_ALERT_WEBHOOK: ${{ secrets.LAB_ALERT_WEBHOOK }}
+    steps:
+      - name: 어느 잡인가
+        id: pick
+        run: |
+          set -euo pipefail
+          case "${{ github.event.schedule }}" in
+            "*/5 * * * *")   echo "job=latest"  >> "$GITHUB_OUTPUT" ;;
+            "5 * * * *")     echo "job=candles" >> "$GITHUB_OUTPUT" ;;
+            "10 */8 * * *")  echo "job=funding" >> "$GITHUB_OUTPUT" ;;
+            "*/15 * * * *")  echo "job=whale"   >> "$GITHUB_OUTPUT" ;;
+            *)               echo "job=${{ inputs.job }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: DATABASE_URL 확인
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::DATABASE_URL 시크릿이 없다. 수집이 돌 수 없다."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run prisma:generate
+
+      - name: 수집 — ${{ steps.pick.outputs.job }}
+        run: |
+          set -euo pipefail
+          case "${{ steps.pick.outputs.job }}" in
+            latest)    npm run lab:latest ;;
+            candles)   npm run lab:candles ;;
+            funding)   npm run lab:funding ;;
+            whale)     npm run lab:whale ;;
+            benchmark) npm run lab:benchmark -- --symbol BTC --days 1200 ;;
+            backfill)  npm run lab:candles -- --backfill && npm run lab:funding -- --backfill ;;
+            *) echo "::error::모르는 잡: ${{ steps.pick.outputs.job }}"; exit 1 ;;
+          esac

@@ -19,7 +19,7 @@ function parseArgs(argv: string[]): CliArgs {
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
 
-    if (!token.startsWith("--")) {
+    if (!token || !token.startsWith("--")) {
       continue;
     }
 

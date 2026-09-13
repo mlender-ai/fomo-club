@@ -111,7 +111,8 @@ jobs:
           ./actionlint -shellcheck= -pyflakes= \
             .github/workflows/ci.yml \
             .github/workflows/vercel-production-deploy.yml \
-            .github/workflows/rebake-on-git-deploy.yml
+            .github/workflows/rebake-on-git-deploy.yml \
+            .github/workflows/lab-collect.yml
 
   build-api:
     runs-on: ubuntu-latest
