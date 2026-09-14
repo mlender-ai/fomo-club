@@ -37,6 +37,7 @@
     "lab:verify-alert": "tsx scripts/lab/verify-alert.ts",
     "lab:verify-collect": "tsx scripts/lab/verify-collect.ts",
     "lab:verify-engine": "tsx scripts/lab/verify-engine.ts",
+    "lab:verify-live": "tsx scripts/lab/verify-live.ts",
     "lab:verify-paper": "tsx scripts/lab/verify-paper.ts",
     "lab:verify-store": "tsx scripts/lab/verify-strategy-store.ts",
     "lab:whale": "tsx scripts/lab/collect-whale.ts",
