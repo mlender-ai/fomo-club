@@ -181,6 +181,8 @@ async function main(): Promise<void> {
   const whaleNet: Record<string, Map<number, number>> = {};
   /** 참조 계열(LAB-09) — 종목이 속한 시장의 지수. 크립토는 없다. */
   const reference: Record<string, Bar[]> = {};
+  /** 수급(외국인·기관). 국내 상장만 있다. */
+  const flows: Record<string, { at: Date; foreignNet: number; institutionNet: number }[]> = {};
   const indexCache = new Map<string, Bar[]>();
 
   for (const symbol of symbols) {
@@ -199,6 +201,27 @@ async function main(): Promise<void> {
       // **지수가 없으면 붙이지 않는다.** 빈 배열을 넣으면 `market_divergence` 가
       // null 이 아니라 "판정했는데 아니다" 가 되고, 지수를 못 받은 사실이 사라진다.
       if (series.length > 0) reference[symbol] = series;
+    }
+
+    // 수급. **`sweep-exits` 와 같은 것을 읽어야 한다** — 한쪽만 붙이면 조합을 고른
+    // 근거와 표에 오르는 숫자가 다른 자료에서 나온다. 실제로 그렇게 짰다가
+    // 스윕은 거래 108건인데 백테스트는 **0건**이 나왔다.
+    const def = STOCK_UNIVERSE.find((d) => d.yahoo === symbol);
+    if (def?.naverCode) {
+      const rows = await prisma.supplyDemandDaily.findMany({
+        where: { ticker: def.naverCode },
+        orderBy: { date: "asc" },
+        select: { date: true, foreignNet: true, institutionNet: true },
+      });
+      // **없으면 넣지 않는다.** 빈 배열은 연속일 0("안 샀다")이 되어
+      // "자료가 없다" 와 구분이 사라진다.
+      if (rows.length > 0) {
+        flows[symbol] = rows.map((r) => ({
+          at: new Date(`${r.date}T00:00:00Z`),
+          foreignNet: r.foreignNet,
+          institutionNet: r.institutionNet,
+        }));
+      }
     }
   }
   // 워크포워드 분할 기준은 첫 종목의 봉이다. 종목마다 기간이 조금씩 다를 수 있는데
@@ -242,7 +265,7 @@ async function main(): Promise<void> {
     }
     const result = execute({
       definition,
-      source: new MultiSymbolSource({ bySymbol: slice, gaps, funding, whaleNet, reference }),
+      source: new MultiSymbolSource({ bySymbol: slice, gaps, funding, whaleNet, reference, flows }),
       config: { ...DEFAULT_EXECUTOR, initialCapital },
       gaps,
       ...(Number.isFinite(window.from) ? { warmupUntil: new Date(window.from) } : {}),

@@ -106,9 +106,9 @@
       ]
     },
     "exit": {
-      "stop_pct": -99,
-      "target_pct": null,
-      "max_hold_days": 30
+      "stop_pct": -8,
+      "target_pct": 30,
+      "max_hold_days": 90
     },
     "sizing": {
       "type": "risk_pct",
@@ -116,5 +116,6 @@
     },
     "leverage": 1,
     "max_positions": 3
-  }
+  },
+  "exit_chosen_by": "lab:sweep-exits (10조합) — C/M 최상(0.03·119건). 기준선 −0.00 → 0.03. 10개 중 최고를 고른 것이라 그 자체가 다중 비교다."
 }
