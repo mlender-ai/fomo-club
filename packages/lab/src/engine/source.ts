@@ -6,7 +6,40 @@
  */
 import type { Gap } from "../candle-quality";
 import { isInGap } from "../candle-quality";
+import type { FlowPoint } from "../signals";
 import type { Bar, DataSource, SourceBar } from "./types";
+
+/**
+ * 참조 계열·수급을 **`at` 이하로 잘라서** 준다(LAB-09).
+ *
+ * 자르는 코드를 여기 한 곳에만 둔다. 실행기나 지표에서 자르면 자르는 규칙이 여럿이 되고,
+ * 한 군데만 고쳐질 때 look-ahead 가 난다 — 그 거짓은 **성적이 좋아지는 쪽으로만** 생겨서
+ * 눈으로는 안 보인다.
+ *
+ * 이진 탐색이 아니라 선형인 이유: 계열이 시각 오름차순이고 호출이 시각 순서로 들어오므로
+ * 커서를 들고 가면 전체가 O(n) 이다. 커서는 **뒤로도 간다**(같은 시각 재조회).
+ */
+class TruncatedSeries<T extends { at: Date }> {
+  private cursor = 0;
+
+  constructor(private readonly items: readonly T[]) {}
+
+  upTo(at: Date): readonly T[] {
+    const limit = at.getTime();
+    while (this.cursor < this.items.length && (this.items[this.cursor] as T).at.getTime() <= limit) {
+      this.cursor += 1;
+    }
+    while (this.cursor > 0 && (this.items[this.cursor - 1] as T).at.getTime() > limit) {
+      this.cursor -= 1;
+    }
+    return this.cursor === 0 ? [] : this.items.slice(0, this.cursor);
+  }
+}
+
+/** 수급 한 점 — 시각이 붙은 `FlowPoint`. */
+export interface DatedFlow extends FlowPoint {
+  at: Date;
+}
 
 export interface HistoricalSourceInput {
   symbol: string;
@@ -16,13 +49,32 @@ export interface HistoricalSourceInput {
   funding?: ReadonlyMap<number, number>;
   /** 시각 → 고래 순포지션(USD). */
   whaleNet?: ReadonlyMap<number, number>;
+  /** 참조 계열(지수). 시각 오름차순. */
+  reference?: readonly Bar[];
+  /** 수급. 시각 오름차순. */
+  flows?: readonly DatedFlow[];
 }
 
 export class HistoricalSource implements DataSource {
   private index = 0;
   private current: Bar | null = null;
+  private readonly referenceSeries: TruncatedSeries<Bar>;
+  private readonly flowSeries: TruncatedSeries<DatedFlow>;
 
-  constructor(private readonly input: HistoricalSourceInput) {}
+  constructor(private readonly input: HistoricalSourceInput) {
+    this.referenceSeries = new TruncatedSeries(input.reference ?? []);
+    this.flowSeries = new TruncatedSeries(input.flows ?? []);
+  }
+
+  reference(_symbol: string, at: Date): readonly Bar[] | null {
+    if (!this.input.reference) return null;
+    return this.referenceSeries.upTo(at);
+  }
+
+  flows(_symbol: string, at: Date): readonly FlowPoint[] | null {
+    if (!this.input.flows) return null;
+    return this.flowSeries.upTo(at);
+  }
 
   next(): SourceBar | null {
     const bar = this.input.bars[this.index];
@@ -69,6 +121,13 @@ export interface MultiSymbolInput {
   funding?: Record<string, ReadonlyMap<number, number>>;
   /** `종목 → (시각ms → 고래 순포지션 USD)`. */
   whaleNet?: Record<string, ReadonlyMap<number, number>>;
+  /**
+   * `종목 → 참조 계열`(LAB-09). 종목마다 다른 지수를 볼 수 있다 —
+   * 코스피 종목은 코스피, 나스닥 종목은 S&P.
+   */
+  reference?: Record<string, readonly Bar[]>;
+  /** `종목 → 수급`. */
+  flows?: Record<string, readonly DatedFlow[]>;
 }
 
 /**
@@ -82,6 +141,8 @@ export class MultiSymbolSource implements DataSource {
   private readonly order: SourceBar[];
   private index = 0;
   private readonly last = new Map<string, number>();
+  private readonly referenceSeries = new Map<string, TruncatedSeries<Bar>>();
+  private readonly flowSeries = new Map<string, TruncatedSeries<DatedFlow>>();
 
   constructor(private readonly input: MultiSymbolInput) {
     const merged: SourceBar[] = [];
@@ -124,5 +185,27 @@ export class MultiSymbolSource implements DataSource {
 
   whaleNet(symbol: string, at: Date): number | null {
     return this.input.whaleNet?.[symbol]?.get(at.getTime()) ?? null;
+  }
+
+  reference(symbol: string, at: Date): readonly Bar[] | null {
+    const series = this.input.reference?.[symbol];
+    if (!series) return null;
+    let cursor = this.referenceSeries.get(symbol);
+    if (!cursor) {
+      cursor = new TruncatedSeries(series);
+      this.referenceSeries.set(symbol, cursor);
+    }
+    return cursor.upTo(at);
+  }
+
+  flows(symbol: string, at: Date): readonly FlowPoint[] | null {
+    const series = this.input.flows?.[symbol];
+    if (!series) return null;
+    let cursor = this.flowSeries.get(symbol);
+    if (!cursor) {
+      cursor = new TruncatedSeries(series);
+      this.flowSeries.set(symbol, cursor);
+    }
+    return cursor.upTo(at);
   }
 }

@@ -17,6 +17,8 @@ export interface Bar {
   volume: number;
 }
 
+import type { FlowPoint } from "../signals";
+
 /** 어느 종목의 봉인가. 다종목 소스는 시각 순서로 섞어서 내놓는다. */
 export interface SourceBar {
   symbol: string;
@@ -50,6 +52,25 @@ export interface DataSource {
   fundingRate(symbol: string, at: Date): number;
   /** 고래 순포지션(USD). `whale_flow` 지표가 읽는다. 모르면 null. */
   whaleNet?(symbol: string, at: Date): number | null;
+  /**
+   * **참조 계열**(LAB-09) — 매매하지 않지만 판단에 쓰는 봉. 지금은 지수다.
+   *
+   * `at` **이하**의 봉만 돌려준다. 여기서 한 봉이라도 앞을 주면 `market_divergence`
+   * 가 내일 지수를 보고 오늘 진입하게 된다 — look-ahead 는 성적이 좋아지는 쪽으로만
+   * 생기므로 눈으로는 절대 안 보인다. **자르는 책임은 소스에 있고**,
+   * `engine-lookahead.test.ts` 의 절단 불변성이 그것까지 검사한다.
+   *
+   * 어느 계열인지는 종목이 정한다 — 코스피 종목은 코스피, 나스닥 종목은 S&P.
+   */
+  reference?(symbol: string, at: Date): readonly Bar[] | null;
+  /**
+   * 수급(외국인·기관 일별). `at` **이하**만 돌려준다 — `reference` 와 같은 규칙이다.
+   *
+   * 수급은 **장 마감 뒤 확정된다.** 그래서 같은 날 봉에서 그날 수급을 보는 것은
+   * 그날 종가로 진입하는 한 look-ahead 가 아니다(둘 다 마감 후에 안다). 다만 이 엔진은
+   * **다음 봉 시가**에 체결하므로 실제로는 하루 뒤에 산다 — 그게 현실이다.
+   */
+  flows?(symbol: string, at: Date): readonly FlowPoint[] | null;
 }
 
 export type Side = "LONG" | "SHORT";

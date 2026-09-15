@@ -183,6 +183,22 @@ export interface ExecuteInput {
   blockNewEntries?: boolean;
   /** 창 상한. 기본 `DEFAULT_MAX_WINDOW_BARS`. */
   maxWindowBars?: number;
+  /**
+   * **워밍업 경계**(LAB-09). 이 시각 **전**의 봉은 지표 창만 채우고,
+   * 진입도 자산 기록도 하지 않는다.
+   *
+   * ## 왜 필요했나
+   *
+   * 워크포워드는 검증 구간만 돌린다(LAB-04). 그런데 검증 구간 **안에서만** 봉을 주면
+   * 지표가 그 구간 앞부분에서 값을 못 낸다. 1시간봉 검증 3개월은 2,160봉이라
+   * `ma(60)` 이 넉넉해 안 보였는데, **일봉 검증 3개월은 63봉**이고
+   * `volume_awakening` 은 61봉을 요구한다 — 실측에서 89종목 21년에 거래가 **3건**
+   * 나왔다. 신호가 드문 게 아니라 **지표가 돌지 못한 것**이었다.
+   *
+   * 검증 구간 **이전**의 봉을 워밍업으로 주는 것은 look-ahead 가 아니다 —
+   * 과거 데이터다. 앞을 보는 것이 아니라 뒤를 보는 것이다.
+   */
+  warmupUntil?: Date;
 }
 
 /**
@@ -233,6 +249,7 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
 
   let bars = 0;
   let barMs = state?.barMs ?? 0;
+  const warmupUntilMs = input.warmupUntil?.getTime() ?? -Infinity;
 
   /** 종목별 마지막 종가. **다종목 자산 평가가 이걸 쓴다.** */
   const lastPrice = new Map<string, number>(Object.entries(state?.lastPrice ?? {}));
@@ -297,9 +314,15 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
     }
 
     // ── 3. 진입 — **직전 봉의 신호로 이번 봉 시가에** ────────────────────────
+    //
+    // 워밍업 구간에서는 진입하지 않는다. 신호는 지워서 경계를 넘어 살아남지 않게 한다 —
+    // 남기면 워밍업 마지막 봉의 신호로 검증 구간 첫 봉에 들어가게 되고, 그건
+    // 검증 구간 밖의 판단으로 안에서 매매하는 것이다.
+    const warmingUp = bar.at.getTime() < warmupUntilMs;
     const signal = pending.get(symbol);
     pending.delete(symbol);
-    if (signal && !open.has(symbol)) {
+    if (signal && warmingUp) bump(blocked, "warmup");
+    if (signal && !warmingUp && !open.has(symbol)) {
       const reasons: string[] = [];
       if (blockNewEntries) reasons.push("feed_stale");
       if (open.size >= maxPositions) reasons.push("max_positions");
@@ -329,7 +352,22 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
             ? provisionalEntry * (1 + stopPct)
             : provisionalEntry * (1 - stopPct);
 
-        const plan = planSize(equityNow, provisionalEntry, stopPrice, sizing, leverage);
+        // 유동성 상한(LAB-09 PART C-1). **진입 봉의 거래대금**으로 잰다 —
+        // 신호 봉이 아니라 실제로 사는 봉이다. 거래량이 0 이면(지수·거래정지) 넘기지
+        // 않는다. 0 을 넘기면 아무것도 못 사게 되고 그건 유동성 제약이 아니라 버그다.
+        const tradedValue = bar.volume > 0 ? bar.open * bar.volume : undefined;
+        const plan = planSize(
+          equityNow,
+          provisionalEntry,
+          stopPrice,
+          sizing,
+          leverage,
+          tradedValue
+        );
+
+        if (!isRejected(plan) && plan.constraint === "liquidity") {
+          bump(blocked, "size_reduced:liquidity");
+        }
 
         if (isRejected(plan)) {
           bump(blocked, plan.reason);
@@ -412,11 +450,15 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
     // 그때마다 점을 찍으면 시계열이 3배가 되고 이웃 간격이 0 이 된다 —
     // 샤프 연율화가 `봉 간격` 으로 연 환산하므로 통째로 null 이 된다(실측: 샤프 전부 —).
     // 같은 시각이면 마지막 값으로 덮는다. 그 시각 모든 종목을 처리한 뒤의 값이다.
-    const lastPoint = equity[equity.length - 1];
-    if (lastPoint && lastPoint.at.getTime() === bar.at.getTime()) {
-      equity[equity.length - 1] = point;
-    } else {
-      equity.push(point);
+    // 워밍업 구간은 자산곡선에 남기지 않는다. 포지션이 없어 값이 초기자본 그대로인데,
+    // 그 평평한 구간이 앞에 붙으면 낙폭·샤프가 실제보다 좋아 보인다.
+    if (!warmingUp) {
+      const lastPoint = equity[equity.length - 1];
+      if (lastPoint && lastPoint.at.getTime() === bar.at.getTime()) {
+        equity[equity.length - 1] = point;
+      } else {
+        equity.push(point);
+      }
     }
 
     // ── 5. 이번 봉으로 다음 봉의 신호를 만든다 ──────────────────────────────
@@ -442,6 +484,10 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
       const context: ExternalContext = {
         whaleNetNow: whaleNow,
         whaleNetPast: whaleNetAt(history, bar.at.getTime() - whaleWindowMs),
+        // 참조 계열·수급은 **소스가 잘라서** 준다(LAB-09). 여기서 전체를 받아 자르면
+        // 자르는 코드가 실행기와 소스 둘로 갈라지고, 한쪽만 고쳐질 때 look-ahead 가 난다.
+        reference: source.reference?.(symbol, bar.at) ?? null,
+        flows: source.flows?.(symbol, bar.at) ?? null,
       };
 
       const current = open.get(symbol);

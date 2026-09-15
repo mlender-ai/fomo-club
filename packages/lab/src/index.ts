@@ -11,5 +11,6 @@ export * from "./engine";
 export * from "./freshness";
 export * from "./live-view";
 export * from "./multiple-comparison";
+export * from "./signals";
 export * from "./stats";
 export * from "./strategy-definition";
