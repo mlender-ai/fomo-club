@@ -64,21 +64,35 @@ jobs:
       - name: 현재 상태 (읽기만)
         run: npx prisma migrate status || true
 
+      # `--eval` 은 CJS 로 묶여서 최상위 await 를 못 쓴다. 파일로 쓴다.
       - name: 적용 전 표 목록 (읽기만)
         run: |
-          npx tsx --eval '
-            import { PrismaClient } from "@prisma/client";
-            const p = new PrismaClient();
-            const rows: { table_name: string }[] = await p.$queryRawUnsafe(
-              `select table_name from information_schema.tables where table_schema = current_schema() order by table_name`
-            );
-            const names = rows.map((r) => r.table_name);
-            console.log("표", names.length, "개");
-            for (const want of ["Strategy","Trade","LegacyStrategy","LegacyTrade","Candle","Run","Equity","Metric","_prisma_migrations"]) {
-              console.log(`  ${names.includes(want) ? "있음" : "없음"}  ${want}`);
+          cat > /tmp/tables.ts <<'TS'
+          import { PrismaClient } from "@prisma/client";
+
+          async function main(): Promise<void> {
+            const prisma = new PrismaClient();
+            try {
+              const rows = await prisma.$queryRawUnsafe<{ table_name: string }[]>(
+                "select table_name from information_schema.tables where table_schema = current_schema() order by table_name"
+              );
+              const names = rows.map((r) => r.table_name);
+              console.log(`표 ${names.length}개`);
+              for (const want of ["Strategy","Trade","LegacyStrategy","LegacyTrade","Candle","Run","Equity","Metric","_prisma_migrations"]) {
+                console.log(`  ${names.includes(want) ? "있음" : "없음"}  ${want}`);
+              }
+            } finally {
+              await prisma.$disconnect();
             }
-            await p.$disconnect();
-          '
+          }
+
+          main().catch((error) => {
+            // **연결 실패와 표 없음을 구분해서 찍는다.** 둘은 고치는 사람이 다르다.
+            console.error("표 목록 실패:", error instanceof Error ? error.message : String(error));
+            process.exit(1);
+          });
+          TS
+          npx tsx /tmp/tables.ts
 
       - name: 베이스라인 — 0_init 을 적용됨으로 표시
         if: inputs.mode == 'apply'

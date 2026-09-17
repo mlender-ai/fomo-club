@@ -6,7 +6,9 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-09-15** · `LAB-08` 전광판·상세 완료 — 화면에서 확인했다 |
+| 최종 갱신 | **2026-09-17** · `LAB-FIX` — LAB-03~08 머지·배포. **프로덕션 DB 가 사라졌다** |
+| **정규 도메인** | **https://fomo-web-mlender-ais-projects.vercel.app** ← 모든 완료 확인은 이 주소로 |
+| 보조 도메인 | `fomo-club-backend.vercel.app` · `taro-stock-web.vercel.app` (같은 배포를 가리킨다) |
 | 제품 | **STRATEGY LAB** — 전략 경쟁 랩. 사용자 1명 · BM 없음 · 최종 목표 실제 자금 자동매매 |
 | 정본 | `docs/LAB-00_MASTER.md` |
 | 옛 상태 문서 | `docs/wo/archive/STATUS_pre-LAB.md` (틴더 제품 기준 3,499줄) |
@@ -586,6 +588,64 @@ Vercel 은 Hobby 라 크론이 하루 1회다 — 1시간 주기가 불가능하
 | `npm run lab:verify-paper` | ✅ 16/16 |
 | `npm test` | ✅ 18파일 · **236건** (청산 조건 비노출 9건 신규) |
 | `npm run lint` · `build` | ✅ |
+
+---
+
+## `LAB-FIX` 실측 (2026-09-17)
+
+### 도메인 (PART A)
+
+| | |
+|---|---|
+| 문제 | `fomo-web` 프로젝트가 **9일 전 카드 UI 빌드**를 계속 서빙. 빌드는 `Missing script: "build:fomo-web"` 로 계속 실패 |
+| 조치 | `fomo-web` **Git 연결 해제**(프로젝트는 남김) → 정규 도메인을 `fomo-club-backend` 프로젝트 도메인으로 **등록** |
+| 결과 | 정규 도메인이 최신 프로덕션 배포를 **자동으로 따라간다** |
+
+> ⚠️ `vercel alias set` 은 특정 배포에 **고정**된다. 처음에 그렇게 했더니 다음 머지를
+> 안 따라왔다. `vercel domains add` 로 프로젝트에 붙여야 프로덕션을 추종한다.
+
+`mlender.app` · `mlender.io` 는 Vercel 에 등록돼 있으나 **DNS 레코드가 없어 안 뜬다.** 손대지 않았다.
+
+### CI (PART B)
+
+`npm run typecheck` 는 `typecheck:scripts` 를 포함하는데 그걸 안 돌리고 "통과" 라고 보고했다.
+`scripts/lab/verify-live.ts` 의 `exactOptionalPropertyTypes` 오류였다.
+**tsconfig 를 풀지 않고 코드를 고쳤다.**
+
+### 머지 (PART C)
+
+`#1242`(LAB-03) → `#1247`(LAB-08) 을 **하나씩** 머지·배포·확인했다. `#1248`(LAB-09)은 보류.
+
+> PR 번호와 LAB 번호는 **어긋나 있지 않다** — `#1242=LAB-03` … `#1248=LAB-09` 다.
+> 지시서 C-1 의 매핑이 한 칸 밀려 있었다.
+
+스택 브랜치를 스쿼시로 머지하면 **머지 베이스가 되돌아가** 뒤 PR 이 전부 충돌한다.
+매번 `main` 을 브랜치에 머지해 해소했다(충돌 3→12→7→5건).
+
+### 프로덕션 DB 가 사라졌다 (PART D 차단)
+
+```
+FATAL: (ENOTFOUND) tenant/user postgres.axpkkufhkughmnfjuyla not found
+        aws-1-ap-northeast-2.pooler.supabase.com:5432
+```
+
+두 번 확인했다. `DATABASE_URL` 시크릿은 **있다**(길이 112). Supabase 프로젝트 쪽이
+없어졌거나 일시정지됐다. **화면의 500 · 수집 실패의 단일 원인이다.**
+
+DB 가 돌아오기 전에는 PART D·E 를 할 수 없다.
+
+### 마이그레이션은 `db push` 로 하면 안 된다
+
+`db-push.yml` 은 `prisma db push` 를 쓰는데, 그 엔진은 개명을 인식하지 못해 DROP + CREATE 를 낸다.
+LAB-02 가 손으로 마이그레이션을 쓴 이유가 그것이다 — `ALTER TABLE "Strategy" RENAME TO "LegacyStrategy"`.
+**push 로 밀면 레거시 페이퍼 매매 기록이 지워진다.**
+
+`lab-migrate.yml` 을 따로 만들었다. 마이그레이션 넷 다 **DROP 0** 이라 앞으로만 간다.
+
+### 크론 (PART F·G)
+
+**고장이 아니었다.** `LAB-01`(#1240)이 34개 워크플로의 크론 줄을 주석 처리했다.
+살아 있는 크론은 `lab-collect` 하나뿐이다. 상세는 `docs/lab/CRON.md`.
 
 ---
 
