@@ -41,10 +41,11 @@ on:
 "schedule 이벤트가 배달되지 않는다" 판정은 **2026-09-17 당시 관측 기록**이고 현재
 상태가 아니다.
 
-다만 GitHub-hosted runner에서 Binance가 HTTP 451(지역 제한)을 반환한다. 크론 전달은
-복구됐지만 `latest`·`candles`·`funding`·`benchmark`는 같은 러너에서 정상 수집할 수 없다.
-로컬에서는 같은 코드로 봉 82,119행과 펀딩비 9,855행을 정상 적재했다. 상주 워커나
-Binance 허용 리전의 실행기로 옮기기 전까지 GitHub-hosted 수집 성공을 기대하면 안 된다.
+처음에는 GitHub-hosted runner에서 Binance 거래 API 호스트가 HTTP 451을 반환했다.
+공식 공개 시장데이터 전용 호스트로 옮긴 뒤 `latest`·`candles`·`benchmark`·`paper`는
+같은 러너에서 성공했다. **`funding`만** Futures 호스트의 HTTP 451이 남아 있다.
+현물 값으로 대체하면 다른 데이터를 섞는 것이므로 우회하지 않았다. 상세 실측은
+`docs/lab/DATA_SOURCES.md`에 남겼다.
 
 ### 2026-09-17 관측 기록
 

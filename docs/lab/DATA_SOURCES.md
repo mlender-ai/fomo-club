@@ -12,13 +12,32 @@
 
 | 항목 | 결정 | §0 기본값 |
 |---|---|---|
-| 봉 · 실시간 · 펀딩비 | **Binance 공개 API** | ~~Hyperliquid~~ — 아래 |
+| 봉 · 실시간 | **Binance market-data-only API** (`data-api.binance.vision`) | ~~Hyperliquid~~ — 아래 |
+| 펀딩비 | **Binance USD-M Futures API** (`fapi.binance.com`) | GitHub 러너에서 HTTP 451 — 아래 |
 | 고래 | **Hyperliquid** (FCE 이식) | Hyperliquid ✅ |
 | 대상 종목 | **BTC · ETH · SOL** | 그대로 ✅ |
 | 봉 주기 | **1시간 + 일봉** | 그대로 ✅ |
 | 과거 기간 | **3년** | 그대로 ✅ |
 
 코드에서는 `scripts/lab/collect/config.ts` 한 곳에만 있다.
+
+### 실행 호스트 실측 (2026-09-18)
+
+GitHub-hosted runner에서 거래 API 호스트 `api.binance.com`은 HTTP 451을 냈다. Binance
+공식 문서가 공개 시장데이터 전용으로 권장하는 `data-api.binance.vision`으로 현물 현재가,
+봉, 벤치마크를 옮겼다. 같은 러너에서 다음을 확인했다.
+
+| 잡 | 결과 |
+|---|---|
+| `latest` | ✅ BTC·ETH·SOL 3행 갱신 |
+| `candles` | ✅ 전 구간 품질 검사, 82,119행·구멍 0 유지 |
+| `benchmark` | ✅ BTC 1,200일 유지 |
+| `paper` | ✅ 새 현재가를 읽고 실행 |
+| `funding` | ❌ `fapi.binance.com` HTTP 451 |
+
+현물 시세와 선물 펀딩은 서로 다른 데이터다. 펀딩을 현물 호스트로 우회하지 않았다.
+펀딩 지속 수집은 Binance Futures가 허용되는 실행 위치로 옮기거나, 다른 공급자의 값이
+같은 의미인지 별도 결정한 뒤 바꿔야 한다.
 
 ### 거래소만 바꾼 이유 — 실측
 
