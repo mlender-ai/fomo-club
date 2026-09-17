@@ -73,6 +73,19 @@ export interface Board {
   comparison: MultipleComparison;
 }
 
+
+/**
+ * `paramsVersion` 에 박힌 시도 조합 수(LAB-06 PART E-2).
+ *
+ * 없으면 1 이다 — 옛 Run 은 이 정보가 없고, **모르면 1 로 보는 쪽이 보수적이지 않다.**
+ * 그래도 없는 값을 지어내는 것보다는 낫다. 새 Run 은 전부 이 값을 단다.
+ */
+function combosTried(paramsVersion: string): number {
+  const match = /:combos(\d+)/.exec(paramsVersion);
+  const value = match?.[1] ? Number(match[1]) : 1;
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
 /** 연 단위 기간. 지표의 t 통계량이 이걸 쓴다. */
 function yearsBetween(from: Date | null, to: Date | null): number {
   if (!from || !to) return 0;
@@ -262,18 +275,24 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
   const to = runs[0]?.periodEnd ?? null;
   const benchmark = await readBenchmark(from, null);
 
-  const comparison = multipleComparison(
-    ranked.map((row) => {
-      const run = latest.get(row.strategyId);
-      return {
-        id: row.runId,
-        label: row.label,
-        sharpe: row.sharpe,
-        years: yearsBetween(run?.periodStart ?? null, run?.periodEnd ?? null),
-        trades: row.trades,
-      };
-    })
-  );
+  // **시도한 조합 수를 N 으로 쓴다**(PART E-2). 최종 전략만 세면
+  // 6조합 중 최고를 고른 것이 "전략 하나" 로 계산돼 1위를 실제보다 믿게 된다.
+  const candidates = ranked.flatMap((row) => {
+    const run = latest.get(row.strategyId);
+    if (!run) return [];
+    const years = yearsBetween(run.periodStart, run.periodEnd);
+    const tried = combosTried(run.paramsVersion);
+    // 고른 조합은 실제 성적으로, 나머지는 **같은 검정 대상이었다는 사실만** 넣는다.
+    // 그 조합들의 샤프는 여기서 알 수 없지만, 무능 가설에서 세는 것은 개수다.
+    return Array.from({ length: tried }, (_, i) => ({
+      id: `${row.runId}#${i}`,
+      label: row.label,
+      sharpe: i === 0 ? row.sharpe : 0,
+      years,
+      trades: row.trades,
+    }));
+  });
+  const comparison = multipleComparison(candidates);
 
   return { period, from, to, ranked, unranked, stopped, benchmark, comparison };
 }

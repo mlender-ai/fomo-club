@@ -1,0 +1,21 @@
+{
+  "name": "고래 추종",
+  "definition": {
+    "market": "crypto",
+    "universe": { "type": "list", "symbols": ["BTC", "ETH", "SOL"] },
+    "entry": {
+      "all": [
+        { "indicator": "whale_flow", "window_hours": 24, "min_usd": 5000000, "dir": "long" }
+      ]
+    },
+    "exit": {
+      "stop_pct": -8,
+      "target_pct": null,
+      "max_hold_days": 14,
+      "any": [{ "indicator": "whale_flow", "window_hours": 24, "dir": "short" }]
+    },
+    "sizing": { "type": "risk_pct", "risk_pct": 2 },
+    "leverage": 1,
+    "max_positions": 3
+  }
+}

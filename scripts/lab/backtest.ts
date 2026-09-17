@@ -16,7 +16,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   DEFAULT_EXECUTOR,
-  HistoricalSource,
+  MultiSymbolSource,
   assertStrategyDefinition,
   computeMetrics,
   execute,
@@ -30,13 +30,22 @@ import {
 const prisma = new PrismaClient();
 
 /** 엔진 버전. 같은 정의라도 엔진이 바뀌면 결과가 다르다 — `Run.paramsVersion` 에 박힌다. */
-const ENGINE_VERSION = "lab04-1";
+const ENGINE_VERSION = "lab06-1";
 
 function arg(name: string): string | null {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? (process.argv[i + 1] ?? null) : null;
 }
 const WALKFORWARD = !process.argv.includes("--no-walkforward");
+
+/**
+ * 이 전략의 파라미터를 고르며 **시도한 조합 수**(LAB-06 PART E-2).
+ *
+ * `paramsVersion` 에 박아둔다. 화면의 다중 비교 계산이 이 수를 읽는다 —
+ * **조합을 돌린 사실을 반영하지 않으면 1위를 실제보다 믿게 된다.**
+ * 최종 전략 수만 세면 6조합 중 최고를 고른 것이 "전략 하나" 로 계산된다.
+ */
+const COMBOS = Math.max(1, Number(arg("combos") ?? "1") || 1);
 
 /** 1시간봉 기준 기본 구간 — 학습 1년, 검증 3개월. */
 const IN_SAMPLE_BARS = 365 * 24;
@@ -74,6 +83,21 @@ async function loadFunding(symbol: string): Promise<Map<number, number>> {
   return new Map(rows.map((r) => [r.at.getTime(), r.rate.toNumber()]));
 }
 
+/** 고래 순포지션 = 롱 − 숏, 스냅샷 시각별 합계. */
+async function loadWhaleNet(symbol: string): Promise<Map<number, number>> {
+  const rows = await prisma.whalePosition.findMany({
+    where: { symbol },
+    select: { at: true, side: true, size: true },
+  });
+  const net = new Map<number, number>();
+  for (const row of rows) {
+    const key = row.at.getTime();
+    const signed = (row.side === "LONG" ? 1 : -1) * row.size.toNumber();
+    net.set(key, (net.get(key) ?? 0) + signed);
+  }
+  return net;
+}
+
 export interface BacktestOutcome {
   runId: string;
   trades: number;
@@ -99,16 +123,24 @@ async function main(): Promise<void> {
   // 저장된 정의라도 다시 검증한다. 스키마가 바뀌었을 수 있고,
   // **검증을 안 지난 정의로 돈 백테스트는 무엇을 잰 것인지 알 수 없다.**
   const definition = assertStrategyDefinition(strategy.definition);
-  const symbol = definition.universe.symbols[0];
-  if (!symbol) throw new Error("유니버스가 비었다");
+  const symbols = definition.universe.symbols;
+  if (symbols.length === 0) throw new Error("유니버스가 비었다");
 
-  const [bars, gaps, funding] = await Promise.all([
-    loadBars(symbol),
-    loadGaps(symbol),
-    loadFunding(symbol),
-  ]);
+  const bySymbol: Record<string, Bar[]> = {};
+  const gaps: Record<string, Gap[]> = {};
+  const funding: Record<string, Map<number, number>> = {};
+  const whaleNet: Record<string, Map<number, number>> = {};
+  for (const symbol of symbols) {
+    bySymbol[symbol] = await loadBars(symbol);
+    gaps[symbol] = await loadGaps(symbol);
+    funding[symbol] = await loadFunding(symbol);
+    whaleNet[symbol] = await loadWhaleNet(symbol);
+  }
+  // 워크포워드 분할 기준은 첫 종목의 봉이다. 종목마다 기간이 조금씩 다를 수 있는데
+  // **구간을 종목별로 다르게 자르면 폴드가 어긋나** 비교가 안 된다.
+  const bars = bySymbol[symbols[0] as string] ?? [];
   if (bars.length === 0) {
-    console.error(`${symbol} 봉이 없다. 먼저 npm run lab:candles -- --backfill`);
+    console.error(`${symbols[0]} 봉이 없다. 먼저 npm run lab:candles -- --backfill`);
     process.exit(1);
   }
 
@@ -125,20 +157,23 @@ async function main(): Promise<void> {
   const blocked: Record<string, number> = {};
 
   /** 검증 구간만 돌린다. 학습 구간은 **돌리지도 저장하지도 않는다.** */
-  const segments =
-    folds.length > 0 ? folds.map((f) => f.outOfSample.bars) : [bars];
+  const windows =
+    folds.length > 0
+      ? folds.map((f) => ({ from: f.outOfSample.from.getTime(), to: f.outOfSample.to.getTime() }))
+      : [{ from: -Infinity, to: Infinity }];
 
-  for (const segment of segments) {
+  for (const window of windows) {
+    const slice: Record<string, Bar[]> = {};
+    for (const symbol of symbols) {
+      slice[symbol] = (bySymbol[symbol] ?? []).filter(
+        (bar) => bar.at.getTime() >= window.from && bar.at.getTime() <= window.to
+      );
+    }
     const result = execute({
       definition,
-      source: new HistoricalSource({
-        symbol,
-        bars: segment,
-        gaps,
-        funding,
-      }),
-      config: { ...DEFAULT_EXECUTOR, initialCapital, maxPositions: definition.max_positions },
-      gaps: { [symbol]: gaps },
+      source: new MultiSymbolSource({ bySymbol: slice, gaps, funding, whaleNet }),
+      config: { ...DEFAULT_EXECUTOR, initialCapital },
+      gaps,
     });
     allTrades.push(...result.trades);
     allEquity.push(...result.equity);
@@ -161,8 +196,10 @@ async function main(): Promise<void> {
       periodStart,
       periodEnd,
       initialCapital: new Prisma.Decimal(initialCapital),
-      dataVersion: `candles:${symbol}:H1:${bars.length}`,
-      paramsVersion: WALKFORWARD ? `${ENGINE_VERSION}:wf${folds.length}` : `${ENGINE_VERSION}:single`,
+      dataVersion: `candles:${symbols.join("+")}:H1:${bars.length}`,
+      paramsVersion:
+        (WALKFORWARD ? `${ENGINE_VERSION}:wf${folds.length}` : `${ENGINE_VERSION}:single`) +
+        `:combos${COMBOS}`,
     },
   });
 
@@ -222,6 +259,7 @@ async function main(): Promise<void> {
   console.log(`Run ${run.id}`);
   console.log(`  전략      ${strategy.name} v${strategy.version}`);
   console.log(`  구간      ${WALKFORWARD ? `워크포워드 ${folds.length}폴드 (검증 구간만)` : "단일"}`);
+  console.log(`  시도 조합  ${COMBOS}`);
   console.log(`  봉        ${totalBars.toLocaleString()}`);
   console.log(`  소요      ${(ms / 1000).toFixed(2)}초`);
   console.log(`  거래      ${metrics.trades}`);

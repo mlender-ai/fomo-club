@@ -6,7 +6,7 @@
  */
 import type { Gap } from "../candle-quality";
 import { isInGap } from "../candle-quality";
-import type { Bar, DataSource } from "./types";
+import type { Bar, DataSource, SourceBar } from "./types";
 
 export interface HistoricalSourceInput {
   symbol: string;
@@ -24,12 +24,12 @@ export class HistoricalSource implements DataSource {
 
   constructor(private readonly input: HistoricalSourceInput) {}
 
-  next(): Bar | null {
+  next(): SourceBar | null {
     const bar = this.input.bars[this.index];
     if (!bar) return null;
     this.index += 1;
     this.current = bar;
-    return bar;
+    return { symbol: this.input.symbol, bar };
   }
 
   price(): number {
@@ -58,5 +58,71 @@ export class HistoricalSource implements DataSource {
 
   whaleNet(_symbol: string, at: Date): number | null {
     return this.input.whaleNet?.get(at.getTime()) ?? null;
+  }
+}
+
+export interface MultiSymbolInput {
+  /** 종목별 봉. 각 배열은 시각 오름차순이어야 한다. */
+  bySymbol: Record<string, readonly Bar[]>;
+  gaps?: Record<string, readonly Gap[]>;
+  /** `종목 → (시각ms → 요율)`. */
+  funding?: Record<string, ReadonlyMap<number, number>>;
+  /** `종목 → (시각ms → 고래 순포지션 USD)`. */
+  whaleNet?: Record<string, ReadonlyMap<number, number>>;
+}
+
+/**
+ * 여러 종목을 **시각 순서로 섞어** 내놓는 소스.
+ *
+ * 섞는 순서가 규칙이다. 같은 시각이면 종목 이름 순으로 낸다 —
+ * **순서가 정해져 있지 않으면 같은 입력이 다른 결과를 낸다.**
+ * 동시 보유 상한(`max_positions`)에 걸리는 종목이 실행 순서에 따라 달라지기 때문이다.
+ */
+export class MultiSymbolSource implements DataSource {
+  private readonly order: SourceBar[];
+  private index = 0;
+  private readonly last = new Map<string, number>();
+
+  constructor(private readonly input: MultiSymbolInput) {
+    const merged: SourceBar[] = [];
+    for (const [symbol, bars] of Object.entries(input.bySymbol)) {
+      for (const bar of bars) merged.push({ symbol, bar });
+    }
+    merged.sort(
+      (a, b) => a.bar.at.getTime() - b.bar.at.getTime() || a.symbol.localeCompare(b.symbol)
+    );
+    this.order = merged;
+  }
+
+  next(): SourceBar | null {
+    const item = this.order[this.index];
+    if (!item) return null;
+    this.index += 1;
+    this.last.set(item.symbol, item.bar.close);
+    return item;
+  }
+
+  price(symbol: string): number {
+    return this.last.get(symbol) ?? 0;
+  }
+
+  now(): Date {
+    return this.order[Math.max(0, this.index - 1)]?.bar.at ?? new Date(0);
+  }
+
+  symbols(): readonly string[] {
+    return Object.keys(this.input.bySymbol).sort();
+  }
+
+  inGap(symbol: string, at: Date): boolean {
+    return isInGap(at, this.input.gaps?.[symbol] ?? []);
+  }
+
+  fundingRate(symbol: string, at: Date): number {
+    return this.input.funding?.[symbol]?.get(at.getTime()) ?? 0;
+  }
+
+  whaleNet(symbol: string, at: Date): number | null {
+    return this.input.whaleNet?.[symbol]?.get(at.getTime()) ?? null;
   }
 }

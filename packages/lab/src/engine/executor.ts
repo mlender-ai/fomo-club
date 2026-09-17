@@ -37,6 +37,58 @@ import type {
 /** 지표가 값을 내려면 최소 이만큼의 봉이 쌓여야 한다. 그 전에는 진입하지 않는다. */
 const MIN_WARMUP_BARS = 2;
 
+
+interface WhalePoint {
+  at: Date;
+  net: number;
+}
+
+/** 고래 이력을 이보다 오래 들고 있지 않는다. */
+const MAX_WHALE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** 기본 창. 정의가 `window_hours` 를 안 주면 이걸 쓴다. */
+const DEFAULT_WHALE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 정의에서 `whale_flow` 의 `window_hours` 를 찾는다.
+ *
+ * 진입·청산 조건 어디에 있든 같은 창을 쓴다 — 한 전략 안에서 창이 둘이면
+ * 들어갈 때와 나올 때가 다른 것을 보게 된다.
+ */
+function whaleWindowFrom(definition: StrategyDefinition): number {
+  const nodes = [
+    ...(definition.entry.all ?? []),
+    ...(definition.entry.any ?? []),
+    ...(definition.exit.all ?? []),
+    ...(definition.exit.any ?? []),
+  ];
+  for (const node of nodes) {
+    if (typeof node !== "object" || node === null || !("indicator" in node)) continue;
+    const record = node as Record<string, unknown>;
+    if (record.indicator !== "whale_flow") continue;
+    const hours = record.window_hours;
+    if (typeof hours === "number" && Number.isFinite(hours) && hours > 0) {
+      return Math.min(hours * 60 * 60 * 1000, MAX_WHALE_WINDOW_MS);
+    }
+  }
+  return DEFAULT_WHALE_WINDOW_MS;
+}
+
+/**
+ * `targetMs` 시점 **이하**의 가장 최근 값. 없으면 null.
+ *
+ * 없는 것을 가장 오래된 값으로 대신하지 않는다 — 그러면 시계열 앞머리에서
+ * 창 길이와 무관한 차이가 나온다.
+ */
+function whaleNetAt(history: readonly WhalePoint[], targetMs: number): number | null {
+  let found: number | null = null;
+  for (const point of history) {
+    if (point.at.getTime() <= targetMs) found = point.net;
+    else break;
+  }
+  return found;
+}
+
 interface PendingSignal {
   symbol: string;
   side: Side;
@@ -100,7 +152,8 @@ export function execute(input: ExecuteInput): RunResult {
   const pending = new Map<string, PendingSignal>();
   const lastExit = new Map<string, LastExit>();
   const windows = new Map<string, Bar[]>();
-  const whalePrev = new Map<string, number | null>();
+  const whaleHistory = new Map<string, WhalePoint[]>();
+  const whaleWindowMs = whaleWindowFrom(definition) ;
 
   const trades: ClosedTrade[] = [];
   const equity: EquityPoint[] = [];
@@ -123,22 +176,25 @@ export function execute(input: ExecuteInput): RunResult {
   let bars = 0;
   let barMs = 0;
 
-  for (;;) {
-    const bar = source.next();
-    if (!bar) break;
-    bars += 1;
+  /** 종목별 마지막 종가. **다종목 자산 평가가 이걸 쓴다.** */
+  const lastPrice = new Map<string, number>();
 
-    // 한 소스가 여러 종목을 섞어 줄 수 있다. 어느 종목의 봉인지는 소스가 안다.
-    const symbols = source.symbols();
-    const symbol = symbols.length === 1 ? symbols[0] : undefined;
-    if (!symbol || !universe.has(symbol)) {
+  for (;;) {
+    const item = source.next();
+    if (!item) break;
+    const { symbol, bar } = item;
+    bars += 1;
+    lastPrice.set(symbol, bar.close);
+
+    if (!universe.has(symbol)) {
       bump(blocked, "symbol_not_in_universe");
       continue;
     }
 
     const window = windows.get(symbol) ?? [];
 
-    // 봉 간격을 실측한다 — 재진입 잠금이 이걸 쓴다.
+    // 봉 간격을 실측한다 — 재진입 잠금과 시간 청산이 이걸 쓴다.
+    // **같은 종목 안에서** 잰다. 종목을 섞어 재면 간격이 0 이 나온다.
     const prevBar = window[window.length - 1];
     if (prevBar && barMs === 0) barMs = bar.at.getTime() - prevBar.at.getTime();
 
@@ -197,7 +253,17 @@ export function execute(input: ExecuteInput): RunResult {
       if (reasons.length > 0) {
         for (const reason of reasons) bump(blocked, reason);
       } else {
-        const equityNow = cash;
+        // 사이징 기준은 **현금이 아니라 자산 전체**다. 다종목에서 현금만 보면
+        // 이미 들어간 포지션만큼 배분이 줄어 뒤에 오는 종목이 계속 작아진다.
+        let markedEquity = cash;
+        for (const position of open.values()) {
+          const mark = lastPrice.get(position.symbol) ?? position.entryPrice;
+          markedEquity +=
+            position.entryPrice * position.qty +
+            grossPnl(position.side, position.entryPrice, mark, position.qty) -
+            position.funding;
+        }
+        const equityNow = markedEquity;
         const provisionalEntry = bar.open;
         const stopPrice =
           signal.side === "LONG"
@@ -263,32 +329,59 @@ export function execute(input: ExecuteInput): RunResult {
     }
 
     // ── 4. 자산 기록 ───────────────────────────────────────────────────────
-    const held = open.get(symbol);
-    const unrealized = held
-      ? grossPnl(held.side, held.entryPrice, bar.close, held.qty) - held.funding
-      : 0;
-    const holdings = held ? held.entryPrice * held.qty : 0;
+    //
+    // **보유 중인 전부**를 각자의 마지막 종가로 평가한다. 이번 봉의 종목만 보면
+    // 다른 종목 포지션이 자산에서 사라져 자산곡선과 낙폭이 거짓이 된다.
+    let holdings = 0;
+    let unrealized = 0;
+    for (const position of open.values()) {
+      const mark = lastPrice.get(position.symbol) ?? position.entryPrice;
+      holdings += position.entryPrice * position.qty;
+      unrealized += grossPnl(position.side, position.entryPrice, mark, position.qty) - position.funding;
+    }
     const equityNow = cash + holdings + unrealized;
     peakEquity = Math.max(peakEquity, equityNow);
-    equity.push({
+    const point: EquityPoint = {
       at: bar.at,
       equity: equityNow,
       cash,
       unrealized,
       drawdown: peakEquity > 0 ? ((equityNow - peakEquity) / peakEquity) * 100 : 0,
-    });
+    };
+
+    // **자산은 시각당 한 점이다.** 다종목이면 같은 시각에 종목 수만큼 봉이 오는데,
+    // 그때마다 점을 찍으면 시계열이 3배가 되고 이웃 간격이 0 이 된다 —
+    // 샤프 연율화가 `봉 간격` 으로 연 환산하므로 통째로 null 이 된다(실측: 샤프 전부 —).
+    // 같은 시각이면 마지막 값으로 덮는다. 그 시각 모든 종목을 처리한 뒤의 값이다.
+    const lastPoint = equity[equity.length - 1];
+    if (lastPoint && lastPoint.at.getTime() === bar.at.getTime()) {
+      equity[equity.length - 1] = point;
+    } else {
+      equity.push(point);
+    }
 
     // ── 5. 이번 봉으로 다음 봉의 신호를 만든다 ──────────────────────────────
     window.push(bar);
     windows.set(symbol, window);
 
     if (window.length >= MIN_WARMUP_BARS) {
+      // 고래 순포지션을 시각과 함께 쌓아두고, 정의가 요구하는 `window_hours` 전 값을 찾는다.
+      // **직전 봉 값을 쓰면 안 된다** — 봉 주기가 1시간이면 24시간 창이 1시간 창이 된다.
       const whaleNow = source.whaleNet?.(symbol, bar.at) ?? null;
+      const history = whaleHistory.get(symbol) ?? [];
+      if (whaleNow !== null) {
+        history.push({ at: bar.at, net: whaleNow });
+        // 창보다 훨씬 오래된 것은 버린다. 안 버리면 메모리가 계속 는다.
+        const keepFrom = bar.at.getTime() - MAX_WHALE_WINDOW_MS;
+        while (history.length > 0 && (history[0] as WhalePoint).at.getTime() < keepFrom) {
+          history.shift();
+        }
+        whaleHistory.set(symbol, history);
+      }
       const context: ExternalContext = {
         whaleNetNow: whaleNow,
-        whaleNetPrev: whalePrev.get(symbol) ?? null,
+        whaleNetPast: whaleNetAt(history, bar.at.getTime() - whaleWindowMs),
       };
-      whalePrev.set(symbol, whaleNow);
 
       const current = open.get(symbol);
       if (current) {

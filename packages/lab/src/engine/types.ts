@@ -17,15 +17,25 @@ export interface Bar {
   volume: number;
 }
 
+/** 어느 종목의 봉인가. 다종목 소스는 시각 순서로 섞어서 내놓는다. */
+export interface SourceBar {
+  symbol: string;
+  bar: Bar;
+}
+
 /**
  * PART B-1 — **이 인터페이스 하나로 백테스트와 페이퍼가 갈린다.**
  *
  * `next()` 가 null 을 주면 끝이다. 백테스트는 과거 배열이 떨어지면 끝나고,
  * 페이퍼는 끝나지 않는다(다음 봉을 기다린다).
+ *
+ * **봉이 자기 종목을 달고 온다.** 처음엔 `symbols()` 가 하나일 때만 돌게 해뒀는데
+ * 그러면 유니버스가 여럿인 전략(LAB-06 은 셋 다 BTC·ETH·SOL 이다)이 통째로
+ * 막힌다 — 실행기가 어느 종목의 봉인지 알 길이 없었다.
  */
 export interface DataSource {
   /** 다음 봉. 없으면 null. */
-  next(): Bar | null;
+  next(): SourceBar | null;
   /** 지금 값. 실행기가 평가액을 매길 때 쓴다. */
   price(symbol: string): number;
   now(): Date;

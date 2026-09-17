@@ -1,0 +1,22 @@
+{
+  "name": "평균회귀",
+  "definition": {
+    "market": "crypto",
+    "universe": { "type": "list", "symbols": ["BTC", "ETH", "SOL"] },
+    "entry": {
+      "all": [
+        { "indicator": "rsi", "window": 14, "max": 35 },
+        { "indicator": "pct_from_ma", "window": 20, "max": -3 }
+      ]
+    },
+    "exit": {
+      "stop_pct": -6,
+      "target_pct": 8,
+      "max_hold_days": 10,
+      "any": [{ "indicator": "rsi", "window": 14, "min": 55 }]
+    },
+    "sizing": { "type": "risk_pct", "risk_pct": 2 },
+    "leverage": 1,
+    "max_positions": 3
+  }
+}
