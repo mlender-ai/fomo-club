@@ -108,6 +108,36 @@ jobs:
         if: inputs.mode == 'apply'
         run: npx prisma migrate deploy
 
-      - name: 검증
+      - name: 검증 (읽기만)
         if: inputs.mode == 'apply'
-        run: npm run lab:migrate:verify
+        run: |
+          npx prisma migrate status
+          node <<'JS'
+          const { PrismaClient } = require("@prisma/client");
+
+          async function main() {
+            const prisma = new PrismaClient();
+            try {
+              const rows = await prisma.$queryRawUnsafe(
+                "select table_name from information_schema.tables where table_schema = current_schema()"
+              );
+              const names = new Set(rows.map((row) => row.table_name));
+              const required = [
+                "LegacyStrategy", "LegacyTrade", "Strategy", "Run", "Trade", "Equity", "Metric", "Benchmark",
+                "Candle", "Funding", "LatestPrice", "WhalePosition", "DataGap", "CollectionRun",
+                "PaperState", "JobLock",
+                "_prisma_migrations",
+              ];
+              const missing = required.filter((name) => !names.has(name));
+              console.log(`필수 표 ${required.length - missing.length}/${required.length}개 확인`);
+              if (missing.length > 0) throw new Error(`빠진 표: ${missing.join(", ")}`);
+            } finally {
+              await prisma.$disconnect();
+            }
+          }
+
+          main().catch((error) => {
+            console.error("마이그레이션 검증 실패:", error instanceof Error ? error.message : String(error));
+            process.exit(1);
+          });
+          JS
