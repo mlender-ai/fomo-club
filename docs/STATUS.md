@@ -655,7 +655,36 @@ LAB-02 가 손으로 마이그레이션을 쓴 이유가 그것이다 — `ALTER
 |---|---|
 | GitHub 레포 description 수정 | `LAB-01` PART E — 에이전트가 못 바꾼다 |
 | `fomo-web-mlender-ais-projects.vercel.app` 처분 | `apps/fomo-web` 을 제거했으므로 이 배포는 더 이상 갱신되지 않는다. 랩은 `fomo-club-backend.vercel.app` 이다 |
-| **`DATABASE_URL` 을 GitHub 시크릿에 등록** | `LAB-02` 마이그레이션 · `LAB-03` 수집 크론이 전부 여기서 막혀 있다. 등록하면 `lab-collect.yml` 이 바로 돈다 |
+| ~~`DATABASE_URL` 을 GitHub 시크릿에 등록~~ | **완료(2026-09-18).** 새 Supabase Free DB와 GitHub Actions·Vercel 연결 완료 |
 | `LAB_ALERT_WEBHOOK` 시크릿 (선택) | 없으면 알림이 stderr 로만 간다 |
 | **`LAB-06` G-1 판정** | 전략 셋 다 BTC 보유에 못 미친다. 다시 짤지 방향을 바꿀지는 광혁이 정한다(`LAB-00` §3) |
-| **페이퍼가 실제로 쌓이려면 `DATABASE_URL` 이 필요하다** | 지금은 로컬 DB 에서만 돈다. 시크릿을 넣으면 `lab-collect.yml` 이 매시 15분에 돈다 |
+| 페이퍼 지속 실행 위치 결정 | DB 복구와 첫 실행은 완료. GitHub-hosted runner의 Binance HTTP 451 때문에 지속 수집 실행기는 별도로 정해야 한다 |
+
+## DB 복구 실측 (2026-09-18)
+
+삭제된 Supabase 프로젝트를 Vercel Marketplace의 **Supabase Free · 서울 리전** 새
+프로젝트로 교체했다. Vercel 프로덕션에는 서버리스용 풀러를, GitHub Actions에는
+마이그레이션·수집용 비풀링 연결을 각각 `DATABASE_URL`로 넣었다.
+
+| 항목 | 결과 |
+|---|---|
+| 마이그레이션 | **4/4 적용** · public 표 53개 · LAB 필수 표 17/17 확인 |
+| 봉 백필 | **82,119행** · BTC/ETH/SOL H1+D1 · 구멍 0 |
+| 펀딩비 | **9,855행** · 종목별 3,285행 |
+| 벤치마크 | BTC·ETH 각 **1,200일** · 빠진 날 0 |
+| 고래 | 30지갑 스캔 성공 30 · 포지션 13행 |
+| 백테스트 | 추세 80건 C/M 0.301 · 평균회귀 388건 C/M 0.148 · 고래 0건 |
+| 페이퍼 첫 실행 | 추세 0건 · 평균회귀 2건 · 실행 1/1 성공 |
+
+복구하면서 `lab-migrate.yml`의 결함 둘도 고쳤다.
+
+1. `/tmp/tables.ts`에서 실행해 `@prisma/client`를 못 찾던 표 점검을 저장소 루트의
+   읽기 전용 Node 검사로 바꿨다.
+2. 기존 DB만 가정하고 `0_init`을 무조건 적용됨 처리하던 경로를
+   `fresh / existing / managed`로 나눴다. 새 DB는 `0_init`부터 실제 적용한다.
+3. 원격 DB에서 파괴적 `lab:migrate:verify`를 부르던 마지막 단계를 제거하고,
+   `migrate status`와 필수 표 존재만 확인한다. 로컬 롤백 검사는 로컬 전용으로 남긴다.
+
+GitHub-hosted runner의 Binance 호출은 지역 제한(HTTP 451)으로 실패했다. 같은 코드의
+로컬 실행은 위 수량으로 성공했다. 따라서 DB 장애는 해소됐지만, `lab-collect`의 Binance
+잡을 GitHub-hosted runner에 그대로 두는 것은 아직 운영 가능한 수집 경로가 아니다.
