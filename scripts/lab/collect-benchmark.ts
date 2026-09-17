@@ -23,6 +23,8 @@ const SOURCE: Record<string, { kind: "binance"; pair: string }> = {
   ETH: { kind: "binance", pair: "ETHUSDT" },
 };
 
+const BINANCE_MARKET_DATA = "https://data-api.binance.vision";
+
 /** Binance klines 한 번 호출 상한. */
 const PAGE = 1000;
 
@@ -48,7 +50,7 @@ async function fetchBinanceDaily(pair: string, days: number): Promise<Point[]> {
   while (points.length < days) {
     const limit = Math.min(PAGE, days - points.length);
     const url =
-      `https://api.binance.com/api/v3/klines?symbol=${pair}` +
+      `${BINANCE_MARKET_DATA}/api/v3/klines?symbol=${pair}` +
       `&interval=1d&limit=${limit}&endTime=${endTime}`;
     const response = await fetch(url);
     if (!response.ok) {

@@ -8,7 +8,9 @@
  */
 import { BINANCE_INTERVAL, type IntervalKey } from "./config";
 
-const BINANCE_SPOT = "https://api.binance.com";
+// Binance가 공개 시세 전용으로 권장하는 호스트다. 거래 API 호스트는 일부
+// GitHub-hosted runner 리전에서 451을 반환한다.
+const BINANCE_SPOT = "https://data-api.binance.vision";
 const BINANCE_FAPI = "https://fapi.binance.com";
 const HYPERLIQUID_INFO = "https://api.hyperliquid.xyz/info";
 const HYPERLIQUID_LEADERBOARD = "https://stats-data.hyperliquid.xyz/Mainnet/leaderboard";
