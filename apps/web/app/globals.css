@@ -537,3 +537,79 @@ tbody tr:hover td {
   font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── 전광판 (LAB-08) ──────────────────────────────────────────────────────── */
+
+/* PART A-2 — 상태등. 돌고 있으면 강조색, 멈췄으면 회색. **깜빡이지 않는다.** */
+.lab-dot {
+  font-size: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.lab-dot.is-on {
+  color: var(--accent);
+}
+
+.lab-dot.is-off {
+  color: var(--text-faint);
+}
+
+/*
+ * PART D — **바뀐 값만** 0.3초 밝아졌다 돌아온다.
+ *
+ * 애니메이션은 이것 하나뿐이다. 전광판에서 움직이는 것이 여럿이면 어느 것이
+ * 방금 바뀐 것인지 알 수 없다 — 그러면 깜빡임은 정보가 아니라 소음이 된다.
+ *
+ * 색을 바꾸지 않고 **밝기만** 올린다. 색을 바꾸면 손익 부호와 섞여서 읽힌다.
+ */
+.is-flash {
+  animation: lab-flash 0.3s ease-out;
+}
+
+@keyframes lab-flash {
+  from {
+    filter: brightness(2.2);
+  }
+  to {
+    filter: brightness(1);
+  }
+}
+
+/* 움직임을 원치 않는 사람에게는 안 움직인다. 값은 그대로 바뀐다. */
+@media (prefers-reduced-motion: reduce) {
+  .is-flash {
+    animation: none;
+  }
+}
+
+.lab-headline {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 20px;
+}
+
+.lab-muted {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* 정지 사유 — 표 아래 한 줄씩. **비워두지 않는다**(LAB-00 §7). */
+.lab-stop-reason {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+/*
+ * 하지 말 것 4 — **페이퍼 한계를 화면에 적는다.**
+ * 문서에만 적으면 화면을 보는 순간에는 잊는다.
+ */
+.lab-caveat {
+  margin: 24px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: 12px;
+}
