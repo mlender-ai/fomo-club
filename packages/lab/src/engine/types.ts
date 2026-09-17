@@ -188,4 +188,10 @@ export interface RunResult {
   /** 진입을 막은 사유별 횟수. **왜 안 샀는지 모르면 못 고친다.** */
   blocked: Record<string, number>;
   bars: number;
+  /**
+   * 이어서 돌 상태(LAB-07 PART B-1). 백테스트는 안 쓰고 페이퍼가 DB 에 저장한다.
+   * 타입은 `executor.ts` 의 `ExecutorState` 다 — 순환 import 를 피하려고 여기서는
+   * 구조만 받는다.
+   */
+  state: unknown;
 }

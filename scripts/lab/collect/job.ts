@@ -33,8 +33,11 @@ export interface JobOutcome extends JobResult {
  * 알림 한 줄. 웹훅이 설정돼 있으면 보내고, 없으면 **stderr 에 찍는다.**
  *
  * 조용히 넘어가지 않는다 — 알림 경로가 없다는 사실 자체가 로그에 남아야 한다.
+ *
+ * **구현이 하나여야 한다.** 수집기와 페이퍼가 각자 알림을 들고 있으면
+ * 한쪽만 고쳐지고 다른 쪽은 조용히 안 보내는 상태가 된다.
  */
-async function alert(text: string): Promise<boolean> {
+export async function alert(text: string): Promise<boolean> {
   const url = process.env.LAB_ALERT_WEBHOOK;
   if (!url) {
     console.error(`[ALERT · 웹훅 없음] ${text}`);
