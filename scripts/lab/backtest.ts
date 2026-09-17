@@ -27,7 +27,22 @@ import {
   type Gap,
 } from "@fomo/lab";
 
+import { STOCK_BENCHMARKS, STOCK_UNIVERSE } from "./collect/stock-universe";
+
 const prisma = new PrismaClient();
+
+/**
+ * 이 종목과 비교할 지수. 유니버스에 없는 심볼(크립토)은 null 이다.
+ *
+ * 시장마다 다른 지수를 쓴다(PART C-2) — 코스닥 종목을 코스피와 비교하면
+ * "시장 역행" 이 다른 시장을 가리키게 된다.
+ */
+function indexSymbolFor(symbol: string): string | null {
+  const def = STOCK_UNIVERSE.find((d) => d.yahoo === symbol);
+  if (!def) return null;
+  const benchmark = STOCK_BENCHMARKS.find((b) => (b.markets as readonly string[]).includes(def.market));
+  return benchmark?.symbol ?? null;
+}
 
 /** 엔진 버전. 같은 정의라도 엔진이 바뀌면 결과가 다르다 — `Run.paramsVersion` 에 박힌다. */
 const ENGINE_VERSION = "lab06-1";
@@ -47,13 +62,45 @@ const WALKFORWARD = !process.argv.includes("--no-walkforward");
  */
 const COMBOS = Math.max(1, Number(arg("combos") ?? "1") || 1);
 
-/** 1시간봉 기준 기본 구간 — 학습 1년, 검증 3개월. */
-const IN_SAMPLE_BARS = 365 * 24;
-const OUT_OF_SAMPLE_BARS = 90 * 24;
+/**
+ * 워크포워드 구간 — **학습 1년 · 검증 3개월**. 봉 수는 주기마다 다르다.
+ *
+ * 주식은 일봉이고 장중만 열리므로 1년이 약 252거래일이다. 달력일(365)로 자르면
+ * 학습 구간이 **실제로는 1년 5개월**이 된다 — 구간이 길어지면 폴드 수가 줄고,
+ * 검증 표본이 조용히 적어진다.
+ */
+const FOLD_BARS = {
+  H1: { inSampleBars: 365 * 24, outOfSampleBars: 90 * 24 },
+  D1: { inSampleBars: 252, outOfSampleBars: 63 },
+} as const;
 
-async function loadBars(symbol: string): Promise<Bar[]> {
+/**
+ * 검증 구간 **앞에서** 지표를 데우는 봉 수 (LAB-09).
+ *
+ * 종전에는 워밍업이 없었다 — 검증 구간 안의 봉만 실행기에 넣었다. 1시간봉은 검증
+ * 3개월이 2,160봉이라 `ma(60)` 이 넉넉해 안 보였는데, **일봉은 63봉**이라
+ * 61봉짜리 지표가 통째로 죽었다(89종목 21년에 거래 3건).
+ *
+ * 검증 구간 이전의 봉을 주는 것은 과거를 보는 것이라 look-ahead 가 아니다.
+ * ⚠️ 이 변경으로 **크립토 백테스트 숫자도 조금 달라진다** — 각 폴드 앞머리에서
+ * 예전에는 못 하던 진입이 생긴다. 예전 숫자가 틀렸던 것이다.
+ */
+const WARMUP_BARS = { H1: 500, D1: 252 } as const;
+
+/**
+ * 시장이 봉 주기를 정한다. 크립토는 1시간봉, 주식은 일봉(LAB-09 PART C-1).
+ *
+ * 전략 정의가 아니라 **시장**에서 끌어오는 이유: 정의에 적게 하면 주식 전략에
+ * `H1` 이라고 적는 실수를 막을 방법이 없고, 그러면 **봉이 0개**라 거래 0건으로
+ * 조용히 끝난다.
+ */
+function intervalFor(market: string): "H1" | "D1" {
+  return market === "CRYPTO" ? "H1" : "D1";
+}
+
+async function loadBars(symbol: string, interval: "H1" | "D1"): Promise<Bar[]> {
   const rows = await prisma.candle.findMany({
-    where: { symbol, interval: "H1" },
+    where: { symbol, interval },
     orderBy: { at: "asc" },
     select: { at: true, open: true, high: true, low: true, close: true, volume: true },
   });
@@ -67,9 +114,9 @@ async function loadBars(symbol: string): Promise<Bar[]> {
   }));
 }
 
-async function loadGaps(symbol: string): Promise<Gap[]> {
+async function loadGaps(symbol: string, interval: "H1" | "D1"): Promise<Gap[]> {
   const rows = await prisma.dataGap.findMany({
-    where: { symbol, interval: "H1" },
+    where: { symbol, interval },
     select: { fromAt: true, toAt: true, missing: true },
   });
   return rows.map((r) => ({ fromAt: r.fromAt, toAt: r.toAt, missing: r.missing }));
@@ -126,30 +173,72 @@ async function main(): Promise<void> {
   const symbols = definition.universe.symbols;
   if (symbols.length === 0) throw new Error("유니버스가 비었다");
 
+  const interval = intervalFor(strategy.market);
+
   const bySymbol: Record<string, Bar[]> = {};
   const gaps: Record<string, Gap[]> = {};
   const funding: Record<string, Map<number, number>> = {};
   const whaleNet: Record<string, Map<number, number>> = {};
+  /** 참조 계열(LAB-09) — 종목이 속한 시장의 지수. 크립토는 없다. */
+  const reference: Record<string, Bar[]> = {};
+  /** 수급(외국인·기관). 국내 상장만 있다. */
+  const flows: Record<string, { at: Date; foreignNet: number; institutionNet: number }[]> = {};
+  const indexCache = new Map<string, Bar[]>();
+
   for (const symbol of symbols) {
-    bySymbol[symbol] = await loadBars(symbol);
-    gaps[symbol] = await loadGaps(symbol);
+    bySymbol[symbol] = await loadBars(symbol, interval);
+    gaps[symbol] = await loadGaps(symbol, interval);
     funding[symbol] = await loadFunding(symbol);
     whaleNet[symbol] = await loadWhaleNet(symbol);
+
+    const indexSymbol = indexSymbolFor(symbol);
+    if (indexSymbol) {
+      let series = indexCache.get(indexSymbol);
+      if (!series) {
+        series = await loadBars(indexSymbol, interval);
+        indexCache.set(indexSymbol, series);
+      }
+      // **지수가 없으면 붙이지 않는다.** 빈 배열을 넣으면 `market_divergence` 가
+      // null 이 아니라 "판정했는데 아니다" 가 되고, 지수를 못 받은 사실이 사라진다.
+      if (series.length > 0) reference[symbol] = series;
+    }
+
+    // 수급. **`sweep-exits` 와 같은 것을 읽어야 한다** — 한쪽만 붙이면 조합을 고른
+    // 근거와 표에 오르는 숫자가 다른 자료에서 나온다. 실제로 그렇게 짰다가
+    // 스윕은 거래 108건인데 백테스트는 **0건**이 나왔다.
+    const def = STOCK_UNIVERSE.find((d) => d.yahoo === symbol);
+    if (def?.naverCode) {
+      const rows = await prisma.supplyDemandDaily.findMany({
+        where: { ticker: def.naverCode },
+        orderBy: { date: "asc" },
+        select: { date: true, foreignNet: true, institutionNet: true },
+      });
+      // **없으면 넣지 않는다.** 빈 배열은 연속일 0("안 샀다")이 되어
+      // "자료가 없다" 와 구분이 사라진다.
+      if (rows.length > 0) {
+        flows[symbol] = rows.map((r) => ({
+          at: new Date(`${r.date}T00:00:00Z`),
+          foreignNet: r.foreignNet,
+          institutionNet: r.institutionNet,
+        }));
+      }
+    }
   }
   // 워크포워드 분할 기준은 첫 종목의 봉이다. 종목마다 기간이 조금씩 다를 수 있는데
   // **구간을 종목별로 다르게 자르면 폴드가 어긋나** 비교가 안 된다.
   const bars = bySymbol[symbols[0] as string] ?? [];
   if (bars.length === 0) {
-    console.error(`${symbols[0]} 봉이 없다. 먼저 npm run lab:candles -- --backfill`);
+    console.error(
+      `${symbols[0]} 의 ${interval} 봉이 없다. 먼저 ` +
+        (interval === "D1" ? "npm run lab:stock-candles -- --backfill" : "npm run lab:candles -- --backfill")
+    );
     process.exit(1);
   }
 
   const initialCapital = 10_000;
   const started = Date.now();
 
-  const folds = WALKFORWARD
-    ? splitFolds(bars, { inSampleBars: IN_SAMPLE_BARS, outOfSampleBars: OUT_OF_SAMPLE_BARS })
-    : [];
+  const folds = WALKFORWARD ? splitFolds(bars, FOLD_BARS[interval]) : [];
 
   const allTrades: ClosedTrade[] = [];
   const allEquity: EquityPoint[] = [];
@@ -165,15 +254,21 @@ async function main(): Promise<void> {
   for (const window of windows) {
     const slice: Record<string, Bar[]> = {};
     for (const symbol of symbols) {
-      slice[symbol] = (bySymbol[symbol] ?? []).filter(
+      const bars = bySymbol[symbol] ?? [];
+      const inWindow = bars.filter(
         (bar) => bar.at.getTime() >= window.from && bar.at.getTime() <= window.to
       );
+      const before = bars
+        .filter((bar) => bar.at.getTime() < window.from)
+        .slice(-WARMUP_BARS[interval]);
+      slice[symbol] = [...before, ...inWindow];
     }
     const result = execute({
       definition,
-      source: new MultiSymbolSource({ bySymbol: slice, gaps, funding, whaleNet }),
+      source: new MultiSymbolSource({ bySymbol: slice, gaps, funding, whaleNet, reference, flows }),
       config: { ...DEFAULT_EXECUTOR, initialCapital },
       gaps,
+      ...(Number.isFinite(window.from) ? { warmupUntil: new Date(window.from) } : {}),
     });
     allTrades.push(...result.trades);
     allEquity.push(...result.equity);
@@ -196,7 +291,7 @@ async function main(): Promise<void> {
       periodStart,
       periodEnd,
       initialCapital: new Prisma.Decimal(initialCapital),
-      dataVersion: `candles:${symbols.join("+")}:H1:${bars.length}`,
+      dataVersion: `candles:${symbols.length}종목:${interval}:${bars.length}`,
       paramsVersion:
         (WALKFORWARD ? `${ENGINE_VERSION}:wf${folds.length}` : `${ENGINE_VERSION}:single`) +
         `:combos${COMBOS}`,

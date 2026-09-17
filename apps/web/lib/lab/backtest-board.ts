@@ -32,10 +32,23 @@ export function periodStart(period: PeriodKey, now = new Date()): Date | null {
   return new Date(now.getTime() - years * 365 * 24 * 60 * 60 * 1000);
 }
 
+/** PART E-1 — 시장 필터. `all` 이면 전부 한 표에 선다. */
+export type MarketKey = "all" | "CRYPTO" | "STOCK";
+
+export const MARKET_LABEL: Record<MarketKey, string> = {
+  all: "전체",
+  CRYPTO: "크립토",
+  STOCK: "주식",
+};
+
+export const MARKETS: MarketKey[] = ["all", "CRYPTO", "STOCK"];
+
 export interface BoardRow {
   runId: string;
   strategyId: string;
   label: string;
+  /** PART E — 크립토와 주식이 **같은 표에 선다.** 어느 쪽인지는 칸으로 구분한다. */
+  market: "CRYPTO" | "STOCK" | "POLYMARKET";
   cagr: number | null;
   mdd: number | null;
   /** CAGR ÷ |MDD|. **순위 기준.** */
@@ -69,8 +82,15 @@ export interface Board {
   unranked: BoardRow[];
   /** 종료된 전략. 회색, 순위 없이, 맨 아래(PART B-3). */
   stopped: BoardRow[];
-  benchmark: BenchmarkRow;
+  /**
+   * PART E — **벤치마크가 시장별로 여럿이다.**
+   *
+   * 코스피 종목을 BTC 와 비교하면 비교가 아니다. 표에 선 전략들의 시장을 보고
+   * 필요한 지수만 싣는다 — 주식 전략이 없으면 KOSPI 줄도 없다.
+   */
+  benchmarks: BenchmarkRow[];
   comparison: MultipleComparison;
+  market: MarketKey;
 }
 
 
@@ -98,10 +118,15 @@ function yearsBetween(from: Date | null, to: Date | null): number {
  * 가짜 `Strategy` 행을 만들지 않는다. 벤치마크는 전략이 아니고,
  * 전략 표에 섞이면 언젠가 순위에 낀다.
  */
-async function readBenchmark(from: Date | null, to: Date | null): Promise<BenchmarkRow> {
+async function readBenchmark(
+  symbol: string,
+  label: string,
+  from: Date | null,
+  to: Date | null
+): Promise<BenchmarkRow> {
   const rows = await prisma.benchmark.findMany({
     where: {
-      symbol: "BTC",
+      symbol,
       ...(from || to ? { at: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
     },
     orderBy: { at: "asc" },
@@ -109,7 +134,7 @@ async function readBenchmark(from: Date | null, to: Date | null): Promise<Benchm
   });
 
   if (rows.length < 2) {
-    return { label: "BTC 보유", cagr: null, mdd: null, cagrMdd: null, from: null, to: null };
+    return { label, cagr: null, mdd: null, cagrMdd: null, from: null, to: null };
   }
 
   const first = rows[0] as { at: Date; price: { toNumber(): number } };
@@ -128,7 +153,7 @@ async function readBenchmark(from: Date | null, to: Date | null): Promise<Benchm
 
   const cagr = years > 0 && start > 0 && end > 0 ? ((end / start) ** (1 / years) - 1) * 100 : null;
   return {
-    label: "BTC 보유",
+    label,
     cagr,
     mdd,
     cagrMdd: cagr !== null && mdd < 0 ? cagr / Math.abs(mdd) : null,
@@ -216,13 +241,33 @@ async function computeWindowMetrics(
  * 전략 하나에 `Run` 이 여럿일 수 있다(다시 돌렸을 때). **가장 최근 것만** 쓴다 —
  * 여러 개를 다 보여주면 같은 전략이 표에 여러 줄이 되고 순위가 무의미해진다.
  */
-export async function readBoard(period: PeriodKey = "all", now = new Date()): Promise<Board> {
+/**
+ * 시장별 벤치마크. **표에 실제로 선 전략의 시장만** 싣는다.
+ *
+ * 코스닥과 미국을 따로 두지 않고 하나로 묶은 이유: 지금 유니버스는 코스피 44 ·
+ * 코스닥 36 · 미국 9 라 셋을 다 실으면 표 아래가 벤치마크로 채워진다.
+ * 종목이 늘어 시장별 전략이 갈라지면 그때 나눈다.
+ */
+const BENCHMARKS: Record<"CRYPTO" | "STOCK", { symbol: string; label: string }[]> = {
+  CRYPTO: [{ symbol: "BTC", label: "BTC 보유" }],
+  STOCK: [
+    { symbol: "KOSPI", label: "KOSPI 보유" },
+    { symbol: "SP500", label: "S&P 500 보유" },
+  ],
+};
+
+export async function readBoard(
+  period: PeriodKey = "all",
+  market: MarketKey = "all",
+  now = new Date()
+): Promise<Board> {
   const from = periodStart(period, now);
 
   const runs = await prisma.run.findMany({
     where: {
       kind: "BACKTEST",
       ...(from ? { periodEnd: { gte: from } } : {}),
+      ...(market === "all" ? {} : { strategy: { market } }),
     },
     orderBy: { createdAt: "desc" },
     include: {
@@ -252,6 +297,7 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
         runId: run.id,
         strategyId: run.strategyId,
         label: `${run.strategy.name} v${run.strategy.version}`,
+        market: run.strategy.market,
         cagr: metric?.cagr ?? computed?.cagr ?? null,
         mdd: metric?.mdd ?? computed?.mdd ?? null,
         cagrMdd: metric?.cagrMdd ?? computed?.cagrMdd ?? null,
@@ -273,7 +319,15 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
   const stopped = rows.filter((r) => r.stopped);
 
   const to = runs[0]?.periodEnd ?? null;
-  const benchmark = await readBenchmark(from, null);
+
+  // 표에 선 전략들의 시장만 벤치마크를 싣는다.
+  const shown = new Set(rows.map((row) => row.market));
+  const wanted = (["CRYPTO", "STOCK"] as const).filter((key) => shown.has(key));
+  const benchmarks = await Promise.all(
+    wanted
+      .flatMap((key) => BENCHMARKS[key])
+      .map((benchmark) => readBenchmark(benchmark.symbol, benchmark.label, from, null))
+  );
 
   // **시도한 조합 수를 N 으로 쓴다**(PART E-2). 최종 전략만 세면
   // 6조합 중 최고를 고른 것이 "전략 하나" 로 계산돼 1위를 실제보다 믿게 된다.
@@ -294,7 +348,7 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
   });
   const comparison = multipleComparison(candidates);
 
-  return { period, from, to, ranked, unranked, stopped, benchmark, comparison };
+  return { period, market, from, to, ranked, unranked, stopped, benchmarks, comparison };
 }
 
 export type { CurvePoint };

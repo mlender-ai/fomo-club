@@ -227,3 +227,88 @@ export async function fetchHyperliquidPositions(address: string): Promise<WhaleS
   }
   return out;
 }
+
+// ── 주식 (LAB-09 PART C) ────────────────────────────────────────────────────
+
+const YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart";
+
+/**
+ * 야후 일봉. **액면분할은 이미 반영돼 있다** — 2018-05-04 삼성전자 50:1 을 실측으로 확인했다
+ * (분할 전 종가가 52,140 으로 돌아온다. 당시 실제 호가는 260만원대였다).
+ *
+ * ## 배당은 반영하지 않는다
+ *
+ * `adjclose`(배당까지 반영)가 같이 오지만 **쓰지 않는다.** 손절선과 갭은 **실제로 거래된
+ * 가격**에서 판정해야 한다 — 배당 보정가는 그 시점에 아무도 못 본 가격이다.
+ *
+ * 대신 수익률이 배당수익률만큼 **낮게** 나온다(코스피 약 2%/년). 틀리는 방향이 보수적이라
+ * 이쪽을 골랐다. 지수 벤치마크도 배당이 빠진 가격지수라 **같은 기준**이다.
+ *
+ * 시각은 거래일 00:00 UTC 로 정규화한다 — 야후가 주는 타임스탬프는 장 시작 시각(KST 09:00)
+ * 이라 그대로 두면 한국 거래일이 UTC 로 하루 당겨지거나 밀린다.
+ */
+export async function fetchYahooDaily(symbol: string, from: Date, to: Date): Promise<RawCandle[]> {
+  const url =
+    `${YAHOO_CHART}/${encodeURIComponent(symbol)}` +
+    `?interval=1d&period1=${Math.floor(from.getTime() / 1000)}&period2=${Math.floor(to.getTime() / 1000)}`;
+  const body = (await getJson(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; strategy-lab/1.0)" },
+  })) as {
+    chart?: { result?: unknown[]; error?: { description?: string } | null };
+  };
+
+  if (body.chart?.error) {
+    throw new Error(`yahoo ${symbol}: ${body.chart.error.description ?? "error"}`);
+  }
+  const result = body.chart?.result?.[0] as
+    | {
+        timestamp?: number[];
+        meta?: { exchangeTimezoneName?: string };
+        indicators?: { quote?: { open?: (number | null)[]; high?: (number | null)[]; low?: (number | null)[]; close?: (number | null)[]; volume?: (number | null)[] }[] };
+      }
+    | undefined;
+  if (!result) throw new Error(`yahoo ${symbol}: result 가 없다 — 응답 모양이 바뀌었다`);
+
+  const stamps = result.timestamp ?? [];
+  const quote = result.indicators?.quote?.[0];
+  if (!quote) {
+    // 상장 전 구간을 요청하면 timestamp 자체가 없다. 그건 오류가 아니라 **없는 것**이다.
+    if (stamps.length === 0) return [];
+    throw new Error(`yahoo ${symbol}: quote 가 없다`);
+  }
+
+  const out: RawCandle[] = [];
+  for (let i = 0; i < stamps.length; i += 1) {
+    const o = quote.open?.[i];
+    const h = quote.high?.[i];
+    const l = quote.low?.[i];
+    const c = quote.close?.[i];
+    const stamp = stamps[i];
+    // **빠진 봉을 앞 값으로 메우지 않는다.** 야후는 거래정지일에 null 을 준다 —
+    // 그 자리는 봉이 없는 것이고, 없는 채로 둬야 `DataGap` 이 보인다.
+    if (stamp === undefined || o == null || h == null || l == null || c == null) continue;
+    out.push({
+      at: tradingDayUtc(stamp),
+      open: o,
+      high: h,
+      low: l,
+      close: c,
+      volume: quote.volume?.[i] ?? 0,
+    });
+  }
+  return out;
+}
+
+/**
+ * 거래일을 **그 거래소의 달력 날짜 00:00 UTC** 로 만든다.
+ *
+ * 야후 타임스탬프는 장 시작 시각이다(한국 09:00 KST = 00:00 UTC, 미국 09:30 ET = 13:30/14:30 UTC).
+ * UTC 로 그냥 자르면 미국 장은 같은 날로 떨어지지만 한국 장은 **경계에 걸린다** —
+ * 서머타임·거래일 변경 때 하루가 밀린다. 그래서 정오를 기준으로 반올림한다.
+ */
+function tradingDayUtc(epochSeconds: number): Date {
+  const ms = epochSeconds * 1000;
+  // 장 시작 이후 12시간 안쪽은 같은 거래일이다. 그 시각을 UTC 날짜로 잘라낸다.
+  const shifted = new Date(ms + 6 * 60 * 60 * 1000);
+  return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
+}

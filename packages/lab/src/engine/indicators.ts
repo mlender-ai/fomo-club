@@ -16,6 +16,7 @@
  *
  * 전부 순수 함수다. 같은 입력 → 같은 출력.
  */
+import { detectMarketDivergence, detectVolumeAwakening } from "../signals";
 import type { Bar } from "./types";
 
 /** 계산할 수 없으면 `null` 이다. **0 으로 채우지 않는다** — 0 은 값이다. */
@@ -226,6 +227,53 @@ export function whaleFlow(current: number | null, past: number | null): Indicato
   return current - past;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 주식 신호 (LAB-09) — 규칙은 `../signals.ts` 에 있다
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 시장 역행을 재는 꼬리 길이(봉). 실측 최대 연속이 3일이라 넉넉하다. */
+const MARKET_DIVERGENCE_TAIL = 60;
+
+/**
+ * 시장 역행 — 지수 대비 연속 초과 **일수**를 낸다(조건은 `min` 으로 건다).
+ *
+ * 두 계열을 **날짜로 맞춘다.** 지수에는 있는데 종목에는 없는 날(거래정지)이 있고,
+ * 그대로 붙이면 다른 날끼리 비교하게 된다 — 그게 이 지표에서 가장 쉽게 나는 거짓이다.
+ * 맞춘 뒤 길이가 모자라면 `null` 이고, null 인 조건은 통과하지 않는다.
+ */
+export function marketDivergence(window: Window, reference: readonly Bar[] | null): IndicatorValue {
+  if (!reference || reference.length === 0) return null;
+
+  // **꼬리만 본다.** 연속 초과 일수는 마지막 봉부터 거슬러 세므로 앞쪽은 쓰이지 않는다.
+  // 전체 계열로 맵을 만들면 봉마다 지수 21년치를 훑게 된다 — 89종목 36만봉에서
+  // 10분이 넘어갔다. 60봉은 실측 최대 연속(3일)의 스무 배다.
+  const tail = window.slice(-MARKET_DIVERGENCE_TAIL);
+  const from = tail[0]?.at.getTime() ?? 0;
+  const byTime = new Map<number, number>();
+  for (let i = reference.length - 1; i >= 0; i -= 1) {
+    const bar = reference[i] as Bar;
+    if (bar.at.getTime() < from) break;
+    byTime.set(bar.at.getTime(), bar.close);
+  }
+
+  const stock: number[] = [];
+  const index: number[] = [];
+  for (const bar of tail) {
+    const close = byTime.get(bar.at.getTime());
+    if (close === undefined) continue;
+    stock.push(bar.close);
+    index.push(close);
+  }
+  const found = detectMarketDivergence(stock, index);
+  return found ? found.days : null;
+}
+
+/** 거래량 각성 — 기준 평균 대비 **배수**를 낸다. 가격이 이미 움직였으면 null 이다. */
+export function volumeAwakening(window: Window): IndicatorValue {
+  const found = detectVolumeAwakening(window.map((bar) => ({ close: bar.close, volume: bar.volume })));
+  return found ? found.multiple : null;
+}
+
 /** 지표 이름 → 구현. 전략 정의는 **이름으로만** 참조한다(LAB-02 PART B-1). */
 export const INDICATOR_NAMES = [
   "ma",
@@ -238,6 +286,10 @@ export const INDICATOR_NAMES = [
   "pct_from_ma",
   "consecutive",
   "whale_flow",
+  "market_divergence",
+  "volume_awakening",
+  "foreign_streak",
+  "institution_streak",
 ] as const;
 
 export type IndicatorName = (typeof INDICATOR_NAMES)[number];

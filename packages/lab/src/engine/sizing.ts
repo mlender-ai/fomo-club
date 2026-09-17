@@ -50,12 +50,30 @@ export function isRejected(result: SizeResult): result is SizeRejected {
  * `fixed_pct`: 명목 = 자본 × 비율. 손절 거리와 무관하다.
  * `fixed_notional`: 명목 고정.
  */
+/**
+ * LAB-09 PART C-1 — **유동성 상한.** 그날 거래대금의 이 비율까지만 산다.
+ *
+ * 크립토는 거래소 유동성이 두꺼워 $10,000 짜리 주문이 시장을 안 건드린다. 주식은
+ * **종목별 편차가 크다** — 코스닥 소형주는 하루 거래대금이 몇 억이라 같은 주문이
+ * 그날 거래의 몇 %가 된다.
+ *
+ * 10%는 일반적인 시장충격 가정에서 보수적인 쪽이다. 이 상한에 실제로 걸리는지는
+ * 백테스트가 세어서 보고한다(`blocked["size_reduced:liquidity"]`) — 안 걸리면
+ * 이 값이 결과를 바꾸지 않았다는 뜻이고, 그 사실도 숫자로 남는다.
+ */
+export const DEFAULT_PARTICIPATION_PCT = 10;
+
 export function planSize(
   equity: number,
   entryPrice: number,
   stopPrice: number,
   config: SizingConfig,
-  leverage: number
+  leverage: number,
+  /**
+   * 그 봉의 거래대금. 주면 유동성 상한이 걸린다. 모르면(크립토·지수) 생략한다 —
+   * **0 을 넘기지 말 것.** 0 은 "거래가 없었다" 라서 아무것도 못 사게 된다.
+   */
+  tradedValue?: number
 ): SizeResult {
   if (!(equity > 0)) return { qty: 0, reason: "rejected:no_equity" };
   if (!(entryPrice > 0)) return { qty: 0, reason: "rejected:bad_price" };
@@ -83,6 +101,15 @@ export function planSize(
   if (notional > maxNotional) {
     notional = maxNotional;
     constraint = "max_notional";
+  }
+
+  // 유동성. **줄이기만 한다** — 거래대금이 커도 주문이 늘지는 않는다.
+  if (typeof tradedValue === "number" && Number.isFinite(tradedValue) && tradedValue > 0) {
+    const cap = tradedValue * (DEFAULT_PARTICIPATION_PCT / 100);
+    if (notional > cap) {
+      notional = cap;
+      constraint = "liquidity";
+    }
   }
 
   const qty = notional / entryPrice;

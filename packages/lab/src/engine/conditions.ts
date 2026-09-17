@@ -10,9 +10,12 @@
  * "모르니까 통과" 로 두면 시계열 앞머리에서 조건 없이 진입한다.
  */
 import type { ConditionGroup, ConditionNode } from "../strategy-definition";
+import { buyStreak, type FlowPoint } from "../signals";
 import {
   atr,
   consecutive,
+  marketDivergence,
+  volumeAwakening,
   ma,
   maCross,
   pctFromHigh,
@@ -24,15 +27,28 @@ import {
   type IndicatorValue,
   type Window,
 } from "./indicators";
+import type { Bar } from "./types";
 
 /** 지표가 쓸 수 있는, 봉 밖에서 오는 값. */
 export interface ExternalContext {
   whaleNetNow: number | null;
   /** `window_hours` 전의 순포지션. 실행기가 채운다. */
   whaleNetPast: number | null;
+  /**
+   * 참조 계열(LAB-09) — 지수 봉. **지금 봉 시각 이하**만 들어 있다.
+   * 자르는 책임은 `DataSource.reference` 에 있다.
+   */
+  reference?: readonly Bar[] | null;
+  /** 수급(외국인·기관) — 오래된 → 최신, **지금 봉 시각 이하**. 모르면 null. */
+  flows?: readonly FlowPoint[] | null;
 }
 
-const EMPTY_CONTEXT: ExternalContext = { whaleNetNow: null, whaleNetPast: null };
+const EMPTY_CONTEXT: ExternalContext = {
+  whaleNetNow: null,
+  whaleNetPast: null,
+  reference: null,
+  flows: null,
+};
 
 function numberParam(node: Record<string, unknown>, key: string, fallback: number): number {
   const value = node[key];
@@ -80,6 +96,14 @@ export function indicatorValue(
       return consecutive(window);
     case "whale_flow":
       return whaleFlow(context.whaleNetNow, context.whaleNetPast);
+    case "market_divergence":
+      return marketDivergence(window, context.reference ?? null);
+    case "volume_awakening":
+      return volumeAwakening(window);
+    case "foreign_streak":
+      return context.flows ? buyStreak(context.flows, "foreign") : null;
+    case "institution_streak":
+      return context.flows ? buyStreak(context.flows, "institution") : null;
     default:
       return null;
   }

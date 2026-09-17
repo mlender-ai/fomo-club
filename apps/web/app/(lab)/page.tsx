@@ -12,11 +12,14 @@ import Link from "next/link";
 
 import { EquityCurve } from "../../components/lab/EquityCurve";
 import {
+  MARKETS,
+  MARKET_LABEL,
   PERIOD_LABEL,
   readBenchmarkCurve,
   readBoard,
   readCurve,
   type BoardRow,
+  type MarketKey,
   type PeriodKey,
 } from "../../lib/lab/backtest-board";
 import { describeMultipleComparison } from "@fomo/lab";
@@ -40,20 +43,29 @@ function sign(value: number | null): string {
   return value > 0 ? "up" : "down";
 }
 
+/** PART E — 시장 칸. 같은 표에 서므로 어느 쪽인지 한 글자로 보여야 한다. */
+const MARKET_TAG: Record<string, string> = {
+  CRYPTO: "크립토",
+  STOCK: "주식",
+  POLYMARKET: "예측",
+};
+
 function Row({
   row,
   rank,
   selected,
   period,
+  market,
   best,
 }: {
   row: BoardRow;
   rank: number | null;
   selected: boolean;
   period: PeriodKey;
+  market: MarketKey;
   best: boolean;
 }) {
-  const href = `/?period=${period}&run=${row.runId}`;
+  const href = `/?period=${period}&market=${market}&run=${row.runId}`;
   return (
     <tr className={[selected ? "is-selected" : "", row.stopped ? "is-stopped" : ""].join(" ")}>
       <td className="num rank">{rank ?? ""}</td>
@@ -64,6 +76,7 @@ function Row({
         {row.stopped ? <span className="lab-tag">종료</span> : null}
         {!row.ranked && !row.stopped ? <span className="lab-tag">표본 부족</span> : null}
       </td>
+      <td className="market">{MARKET_TAG[row.market] ?? row.market}</td>
       <td className={`num ${sign(row.cagr)}`}>{pct(row.cagr)}</td>
       <td className={`num ${sign(row.mdd)}`}>{pct(row.mdd)}</td>
       <td className={`num ${best ? "accent" : sign(row.cagrMdd)}`}>{num(row.cagrMdd)}</td>
@@ -77,14 +90,17 @@ function Row({
 export default async function BacktestPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; run?: string }>;
+  searchParams: Promise<{ period?: string; run?: string; market?: string }>;
 }) {
   const params = await searchParams;
   const period: PeriodKey = PERIODS.includes(params.period as PeriodKey)
     ? (params.period as PeriodKey)
     : "all";
+  const market: MarketKey = MARKETS.includes(params.market as MarketKey)
+    ? (params.market as MarketKey)
+    : "all";
 
-  const board = await readBoard(period);
+  const board = await readBoard(period, market);
   const all = [...board.ranked, ...board.unranked, ...board.stopped];
 
   if (all.length === 0) {
@@ -117,10 +133,21 @@ export default async function BacktestPage({
       <div className="lab-head">
         <h1 className="lab-title">백테스트</h1>
         <nav className="lab-periods">
+          {MARKETS.map((key) => (
+            <Link
+              key={key}
+              href={`/?period=${period}&market=${key}`}
+              className={`lab-period ${key === market ? "is-on" : ""}`}
+              scroll={false}
+            >
+              {MARKET_LABEL[key]}
+            </Link>
+          ))}
+          <span className="lab-period-sep" aria-hidden />
           {PERIODS.map((key) => (
             <Link
               key={key}
-              href={`/?period=${key}`}
+              href={`/?period=${key}&market=${market}`}
               className={`lab-period ${key === period ? "is-on" : ""}`}
               scroll={false}
             >
@@ -141,6 +168,7 @@ export default async function BacktestPage({
           <tr>
             <th className="rank">순위</th>
             <th>전략</th>
+            <th>시장</th>
             <th>CAGR</th>
             <th>MDD</th>
             <th>C/M</th>
@@ -157,6 +185,7 @@ export default async function BacktestPage({
               rank={i + 1}
               selected={row.runId === selectedId}
               period={period}
+              market={market}
               best={row.runId === bestRunId}
             />
           ))}
@@ -167,6 +196,7 @@ export default async function BacktestPage({
               rank={null}
               selected={row.runId === selectedId}
               period={period}
+              market={market}
               best={false}
             />
           ))}
@@ -174,16 +204,19 @@ export default async function BacktestPage({
 
         {/* 벤치마크는 **항상 표 맨 아래**, 구분선으로 나눈다(PART B-2). */}
         <tbody className="lab-benchmark">
-          <tr>
-            <td className="num rank" />
-            <td>{board.benchmark.label}</td>
-            <td className={`num ${sign(board.benchmark.cagr)}`}>{pct(board.benchmark.cagr)}</td>
-            <td className={`num ${sign(board.benchmark.mdd)}`}>{pct(board.benchmark.mdd)}</td>
-            <td className={`num ${sign(board.benchmark.cagrMdd)}`}>{num(board.benchmark.cagrMdd)}</td>
-            <td className="num">—</td>
-            <td className="num">—</td>
-            <td className="num">—</td>
-          </tr>
+          {board.benchmarks.map((benchmark) => (
+            <tr key={benchmark.label}>
+              <td className="num rank" />
+              <td>{benchmark.label}</td>
+              <td className="market">—</td>
+              <td className={`num ${sign(benchmark.cagr)}`}>{pct(benchmark.cagr)}</td>
+              <td className={`num ${sign(benchmark.mdd)}`}>{pct(benchmark.mdd)}</td>
+              <td className={`num ${sign(benchmark.cagrMdd)}`}>{num(benchmark.cagrMdd)}</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+            </tr>
+          ))}
         </tbody>
 
         {/* 종료된 전략 — 회색, 순위 없이, 맨 아래. **진 걸 지우면 전부 거짓이 된다.** */}
@@ -196,6 +229,7 @@ export default async function BacktestPage({
                 rank={null}
                 selected={row.runId === selectedId}
                 period={period}
+                market={market}
                 best={false}
               />
             ))}
@@ -209,7 +243,7 @@ export default async function BacktestPage({
           strategy={curve}
           strategyLabel={selected.label}
           benchmark={benchmarkCurve}
-          benchmarkLabel={board.benchmark.label}
+          benchmarkLabel={board.benchmarks[0]?.label ?? "벤치마크"}
         />
       </section>
 
