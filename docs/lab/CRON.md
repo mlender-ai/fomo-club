@@ -35,6 +35,67 @@ on:
 
 ---
 
+## 0-2. 그런데 **되살린 크론도 안 돈다** — 원인 미상
+
+`LAB-01` 의 주석 처리는 **09-10~09-17 공백만** 설명한다. `lab-collect` 는 2026-09-17
+12:22 UTC 에 main 에 올라가며 `*/5` 크론이 살아났는데, **2시간 40분 동안 0회 발화했다.**
+
+> 런이 실패한 게 아니라 **만들어지지도 않았다.** 워크플로 런 총 1건, 그것도 수동 실행이다.
+
+### 대조 실험
+
+크론과 `echo` 뿐인 워크플로(`cron-probe.yml`)를 main 에 넣고 47분을 봤다 — **0건.**
+`lab-collect.yml` 의 문제가 아니라 **레포/계정 차원**이다. 실험 파일은 판정 후 지웠다.
+
+<details><summary>다시 재현하려면</summary>
+
+```yaml
+name: Cron Probe
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "발화 $(date -u +%FT%TZ) · event=${{ github.event_name }}"
+```
+</details>
+
+### 배제된 것 (전부 실측)
+
+| 가설 | 실측 | 판정 |
+|---|---|---|
+| Actions 분 소진 | `private=false` — 공개 레포는 무제한 | 배제 |
+| 결제 문제 | 위와 같은 이유 | 배제 |
+| 기본 브랜치 아님 | `default_branch=main`, 파일도 main 에 있음 | 배제 |
+| Actions 제한 설정 | `{"enabled":true,"allowed_actions":"all"}` | 배제 |
+| 워크플로 비활성 | `state=active` (`disabled_inactivity` 아님) | 배제 |
+| YAML 깨짐 | 69개 전부 파싱 통과 | 배제 |
+| GitHub 장애 | Actions `operational`, 미해결 인시던트 0 | 배제 |
+| 워크플로 파일 고유 문제 | 대조 실험도 0건 | 배제 |
+
+`workflow_dispatch` 는 **정상 동작한다.** schedule 이벤트만 배달되지 않는다.
+
+### 남은 것 — API 로 안 보인다
+
+레포 소유자만 볼 수 있는 자리가 있다: **Actions 탭 상단 배너.** 스케줄 비활성 안내나
+계정 제한 안내가 거기 뜬다. 그걸로도 안 나오면 GitHub 지원 문의 건이다.
+
+### 대안은 Vercel Cron 이 아니다
+
+`LAB-FIX` G-2 는 "못 찾으면 Vercel Cron 으로 옮긴다" 고 했는데, **이 계정은 Hobby 라
+크론이 하루 1회**다(`LAB-07` §0 실측). 5분·매시 주기를 대신 못 한다. 실제 선택지는:
+
+| 대안 | 비고 |
+|---|---|
+| 외부 핑거(cron-job.org 등) → 인증된 엔드포인트 | 가장 빠름. 시크릿 헤더 필요 |
+| `apps/api` 상주 워커 | `LAB-07` §0 이 이미 "진짜 1분 주기는 상주 워커" 라고 적어둠 |
+| GitHub 지원 문의 | 원인 규명 |
+
+---
+
 ## 1. 지금 크론이 살아 있는 워크플로
 
 | 워크플로 | 크론 | 무엇 |
