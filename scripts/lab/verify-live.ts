@@ -109,7 +109,18 @@ async function seed(options: SeedOptions, now: Date): Promise<string> {
 
   // 청산된 거래.
   const trades: Prisma.TradeCreateManyInput[] = [];
+  /**
+   * 청산 사유를 돌려가며 붙인다.
+   *
+   * `reasons[i % reasons.length]` 는 사람 눈에는 항상 값이 있지만, 이 레포는
+   * `noUncheckedIndexedAccess` 라 타입이 `... | undefined` 다. 그리고
+   * `exactOptionalPropertyTypes` 때문에 그 `undefined` 를 선택적 칸에 넣을 수 없다.
+   * **둘 다 켜둔 채로 코드를 맞춘다** — 설정을 풀면 진짜 실수도 같이 통과한다.
+   */
   const reasons = ["STOP", "TARGET", "TIME", "SIGNAL"] as const;
+  const reasonAt = (index: number): (typeof reasons)[number] =>
+    reasons[index % reasons.length] ?? "TIME";
+
   for (let i = 0; i < options.trades; i += 1) {
     const entryAt = new Date(now.getTime() - (options.trades - i) * 4 * HOUR);
     const exitAt = new Date(entryAt.getTime() + 3 * HOUR);
@@ -123,7 +134,7 @@ async function seed(options: SeedOptions, now: Date): Promise<string> {
       entryReason: "ma_cross up",
       exitAt,
       exitPrice: new Prisma.Decimal(100_000 + i + (win ? 900 : -600)),
-      exitReason: reasons[i % reasons.length],
+      exitReason: reasonAt(i),
       qty: new Prisma.Decimal(0.01),
       fee: new Prisma.Decimal(1),
       slippage: new Prisma.Decimal(0.2),
