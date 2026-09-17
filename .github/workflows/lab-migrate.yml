@@ -1,0 +1,93 @@
+name: Lab Migrate
+
+# LAB-FIX — 프로덕션 DB 에 랩 마이그레이션을 적용한다.
+#
+# ## 왜 `db-push.yml` 을 쓰면 안 되나
+#
+# `prisma db push` 는 `migrate diff` 와 같은 엔진을 쓰고, **그 엔진은 개명을 인식하지
+# 못해 DROP + CREATE 를 낸다.** LAB-02 마이그레이션이 손으로 쓰인 이유가 그것이다:
+#
+#     ALTER TABLE "Strategy" RENAME TO "LegacyStrategy";
+#
+# push 로 밀면 이 표(레거시 페이퍼 매매 기록)가 **지워진다.** 그래서 이 워크플로가 따로 있다.
+#
+# ## 안전한가
+#
+# 마이그레이션 넷 전부 DROP 문이 **0개**다. `migrate deploy` 는 앞으로만 간다.
+# 실패하면 Postgres 가 그 마이그레이션을 통째로 롤백한다.
+#
+# ## 베이스라인
+#
+# 이 DB 는 `db push` 로 관리돼 `_prisma_migrations` 이력이 없다. `0_init` 은 이미
+# 적용된 상태이므로 **적용됨으로 표시만** 하고(데이터를 건드리지 않는다), 나머지를 배포한다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "status = 읽기만 · apply = 베이스라인 후 배포"
+        required: true
+        type: choice
+        options: [status, apply]
+        default: status
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lab-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: DATABASE_URL 확인
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::DATABASE_URL 시크릿이 없다."
+            exit 1
+          fi
+          echo "DATABASE_URL 있음 (길이 ${#DATABASE_URL})"
+
+      - run: npm ci
+      - run: npm run prisma:generate
+
+      - name: 현재 상태 (읽기만)
+        run: npx prisma migrate status || true
+
+      - name: 적용 전 표 목록 (읽기만)
+        run: |
+          npx tsx --eval '
+            import { PrismaClient } from "@prisma/client";
+            const p = new PrismaClient();
+            const rows: { table_name: string }[] = await p.$queryRawUnsafe(
+              `select table_name from information_schema.tables where table_schema = current_schema() order by table_name`
+            );
+            const names = rows.map((r) => r.table_name);
+            console.log("표", names.length, "개");
+            for (const want of ["Strategy","Trade","LegacyStrategy","LegacyTrade","Candle","Run","Equity","Metric","_prisma_migrations"]) {
+              console.log(`  ${names.includes(want) ? "있음" : "없음"}  ${want}`);
+            }
+            await p.$disconnect();
+          '
+
+      - name: 베이스라인 — 0_init 을 적용됨으로 표시
+        if: inputs.mode == 'apply'
+        run: npx prisma migrate resolve --applied 0_init || echo "이미 표시돼 있다 (무시)"
+
+      - name: 배포
+        if: inputs.mode == 'apply'
+        run: npx prisma migrate deploy
+
+      - name: 검증
+        if: inputs.mode == 'apply'
+        run: npm run lab:migrate:verify
