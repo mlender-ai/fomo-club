@@ -1089,3 +1089,130 @@ model Benchmark {
   @@unique([symbol, at])
   @@index([symbol, at])
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LAB-03 — 크립토 데이터 수집
+//
+// §0 결정 (2026-09-13):
+//   봉·실시간·펀딩비  Binance 공개 API
+//   고래              Hyperliquid (FCE 이식)
+//   종목              BTC · ETH · SOL
+//   주기              1시간 + 일봉
+//   기간              3년
+//
+// 거래소가 §0 기본값(Hyperliquid)과 다른 이유는 실측이다 — Hyperliquid 의
+// `candleSnapshot` 은 **최근 5,000봉(≈208일)만** 주고 과거 구간 요청에는 0봉을
+// 돌려준다. 1시간봉 3년(26,280봉)이 물리적으로 불가능하다. §0 이 근거로 든
+// "FCE에 이미 있음" 은 확인 결과 `onchain/hyperliquid/`(고래 수집기)였고
+// FCE 의 봉·체결 어댑터는 `exchange/bitget/` 이다.
+// 상세는 `docs/lab/DATA_SOURCES.md`.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// 봉 주기. 문자열로 두지 않는다 — 오타가 조용히 다른 시계열을 만든다.
+enum CandleInterval {
+  H1
+  D1
+}
+
+/// OHLCV. **시각은 봉의 여는 시각이고 UTC 다**(하지 말 것 4 — 로컬 기준 저장 금지).
+model Candle {
+  id       String         @id @default(cuid())
+  symbol   String
+  interval CandleInterval
+  /// 봉이 열리는 시각(UTC). 닫는 시각이 아니다.
+  at       DateTime
+
+  open   Decimal @db.Decimal(30, 10)
+  high   Decimal @db.Decimal(30, 10)
+  low    Decimal @db.Decimal(30, 10)
+  close  Decimal @db.Decimal(30, 10)
+  volume Decimal @db.Decimal(30, 10)
+
+  /// 어디서 받았나. 소스를 갈아 끼울 때 섞이지 않게 한다.
+  source String
+
+  @@unique([symbol, interval, at])
+  @@index([symbol, interval, at])
+}
+
+/// 펀딩비. 무기한 선물이면 필수 — 빼면 수익률이 부풀려진다. 8시간 주기.
+model Funding {
+  id     String   @id @default(cuid())
+  symbol String
+  at     DateTime
+  /// 해당 구간 요율(비율). 0.0001 = 0.01%.
+  rate   Decimal  @db.Decimal(20, 12)
+  source String
+
+  @@unique([symbol, at])
+  @@index([symbol, at])
+}
+
+/// 최신 가격 한 점. **시계열은 `Candle` 이 진다**(PART B-1 "최신 가격만").
+/// 심볼당 한 행이라 갱신만 일어난다.
+model LatestPrice {
+  symbol    String   @id
+  price     Decimal  @db.Decimal(30, 10)
+  /// 소스가 말한 시각.
+  at        DateTime
+  /// 우리가 받은 시각. `at` 과 벌어지면 소스가 늦는 것이다.
+  fetchedAt DateTime @default(now())
+  source    String
+
+  @@index([fetchedAt])
+}
+
+/// 고래 포지션 변화 (PART C — Hyperliquid).
+model WhalePosition {
+  id      String   @id @default(cuid())
+  address String
+  symbol  String
+  /// LONG | SHORT. 스냅샷 시점의 방향.
+  side    String
+  /// 명목 규모(USD).
+  size    Decimal  @db.Decimal(30, 10)
+  at      DateTime
+  source  String
+
+  /// 같은 주소·종목의 같은 스냅샷 시각은 한 행이다.
+  @@unique([address, symbol, at])
+  @@index([symbol, at])
+  @@index([at])
+}
+
+/// 데이터 구멍. **메우지 않는다**(LAB-00 §7 · PART A-2).
+/// 백테스트가 이 구간을 읽고 진입하지 않는다(LAB-04 PART D).
+model DataGap {
+  id         String         @id @default(cuid())
+  symbol     String
+  interval   CandleInterval
+  /// 빠진 첫 봉의 시각.
+  fromAt     DateTime
+  /// 빠진 마지막 봉의 시각.
+  toAt       DateTime
+  /// 빠진 봉 개수.
+  missing    Int
+  detectedAt DateTime       @default(now())
+
+  @@unique([symbol, interval, fromAt])
+  @@index([symbol, interval, fromAt])
+}
+
+/// 수집 실행 기록. **2회 연속 실패하면 알린다**(PART E-1).
+/// 알림 판정을 사람 기억이 아니라 이 표에서 한다.
+model CollectionRun {
+  id         String   @id @default(cuid())
+  /// 잡 이름 — `candles` · `latest-price` · `funding` · `whale` · `benchmark`.
+  job        String
+  ok         Boolean
+  startedAt  DateTime
+  finishedAt DateTime @default(now())
+  /// 넣거나 갱신한 행 수.
+  rows       Int      @default(0)
+  /// 실패 사유. 성공이면 null.
+  error      String?
+  /// 잡이 남긴 수치(종목별 건수·구멍 등). 화면·알림이 읽는다.
+  detail     Json?
+
+  @@index([job, finishedAt])
+}

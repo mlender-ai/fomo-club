@@ -18,6 +18,9 @@ export default function LabLayout({ children }: { children: ReactNode }) {
         <Link className="lab-nav-link" href="/live">
           전광판
         </Link>
+        <Link className="lab-nav-link" href="/data">
+          데이터
+        </Link>
       </nav>
       <main className="lab-main">{children}</main>
     </div>
