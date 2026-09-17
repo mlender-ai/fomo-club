@@ -59,10 +59,17 @@ td {
   font-variant-numeric: tabular-nums;
 }
 
-/* 식별자·수치는 대문자 변환을 받지 않는다 — 전략 id 가 다른 값으로 보이면 안 된다 */
-.lab-title .num {
+/* 식별자·이름은 대문자 변환을 받지 않는다 — 전략 이름이 다른 값으로 보이면 안 된다
+ * (`눌림 매수 v1` 이 `눌림 매수 V1` 이 된다) */
+.lab-title .num,
+.lab-title.is-name {
   text-transform: none;
   color: var(--text);
+}
+
+.lab-title.is-name {
+  font-size: 15px;
+  letter-spacing: 0.04em;
 }
 
 .up {
@@ -285,4 +292,248 @@ td {
 
 tbody tr:hover td {
   background: var(--surface);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LAB-05 — 백테스트 화면 (PART G)
+ *
+ * 기준 화면 데스크톱 1280px. 기본 12~13px.
+ * 금지(G-1): 애니메이션 · 그림자 · 그라데이션 · 채우기 · 아이콘 · 둥근 모서리 4px 초과.
+ * **강조색은 최적값·1위·선택된 선에만.**
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.lab-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lab-subline {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 12px;
+  margin: -8px 0 16px;
+}
+
+/* PART E — 기간 선택. 기간을 바꾸면 순위가 바뀐다. 그게 정보다. */
+.lab-periods {
+  display: flex;
+  gap: 4px;
+}
+
+.lab-period {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+}
+
+.lab-period:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.lab-period.is-on {
+  color: var(--bg);
+  background: var(--text-dim);
+  border-color: var(--text-dim);
+}
+
+/* ── 표 (PART B) ──────────────────────────────────────────────────────────
+ * 열은 8개다. **더 늘리지 않는다** — 나머지는 상세에서. */
+
+.lab-board {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.lab-board th {
+  text-align: right;
+  color: var(--text-faint);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+}
+
+.lab-board th:nth-child(2),
+.lab-board td:nth-child(2) {
+  text-align: left;
+}
+
+.lab-board th.rank,
+.lab-board td.rank {
+  text-align: right;
+  width: 48px;
+  white-space: nowrap;
+  color: var(--text-faint);
+}
+
+/* 데스크톱 1280px 기준(PART G). 좁은 화면에서는 표가 가로로 스크롤된다 —
+ * 열을 줄이거나 접지 않는다. 여덟 개가 같이 보여야 비교가 된다. */
+.lab-board-scroll {
+  overflow-x: auto;
+}
+
+.lab-board td {
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  padding: 7px 10px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-board tbody tr:hover td {
+  background: var(--surface);
+}
+
+.lab-board tr.is-selected td {
+  background: var(--surface);
+}
+
+/* 선택된 행은 왼쪽 선으로 표시한다. 배경만으로는 hover 와 구분이 안 된다. */
+.lab-board tr.is-selected td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.lab-row-link {
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+.lab-row-link:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.lab-tag {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  border: 1px solid var(--line);
+  padding: 1px 5px;
+}
+
+/* 벤치마크 — **항상 표 맨 아래.** 구분선으로 나눈다(PART B-2). */
+.lab-benchmark td {
+  border-top: 2px solid var(--line);
+  color: var(--text-dim);
+}
+
+.lab-benchmark td:nth-child(2) {
+  font-family: var(--sans);
+}
+
+/* 종료된 전략 — 회색으로, 순위 없이, 맨 아래(PART B-3).
+ * **진 걸 지우면 전부 거짓이 된다**(LAB-00 §7). */
+.lab-stopped-group td {
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+}
+
+.lab-stopped-group .lab-row-link {
+  color: var(--text-faint);
+}
+
+/* 강조색은 **최적값·1위·선택된 선에만**(PART G). */
+.lab-board td.accent {
+  color: var(--accent);
+}
+
+/* ── 자산곡선 (PART C) ──────────────────────────────────────────────────── */
+
+.lab-curve-block {
+  margin: 24px 0 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 8px 12px 4px;
+}
+
+.lab-curve {
+  margin: 0;
+}
+
+.lab-curve-tick {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.lab-curve-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 0 6px;
+}
+
+.lab-curve-key {
+  font-family: var(--mono);
+}
+
+.lab-curve-key.accent {
+  color: var(--accent);
+}
+
+.lab-curve-key.dim {
+  color: var(--text-faint);
+  margin-left: 12px;
+}
+
+.lab-curve-note {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+/* ── 다중 비교 경고 (PART D) ─────────────────────────────────────────────
+ * 표 아래 고정. **없으면 스스로를 속인다.** */
+
+.lab-warning {
+  border-left: 2px solid var(--text-faint);
+  padding: 8px 0 8px 12px;
+  margin: 16px 0 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* ── 전략 상세 (PART F) ──────────────────────────────────────────────────── */
+
+.lab-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin: 0 0 24px;
+}
+
+.lab-stats > div {
+  background: var(--bg);
+  padding: 10px 12px;
+}
+
+.lab-stats dt {
+  color: var(--text-faint);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.lab-stats dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
 }
