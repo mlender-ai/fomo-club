@@ -70,9 +70,49 @@ export function EquityCurve({
   const max = Math.max(...curves.map((c) => c.max));
   const scale = buildScale(from, to, min, max);
 
-  // 0% 기준선 + 위아래 하나씩. **격자선 최소**(PART C).
-  const ticks = [max, 0, min].filter((v, i, arr) => arr.indexOf(v) === i);
+  /**
+   * 눈금 (LAB-FIX2 PART F-4).
+   *
+   * 종전에는 `최대 · 0 · 최소` 셋뿐이라 **가운데 값을 읽을 수 없었다** —
+   * 곡선이 +40% 인지 +60% 인지 눈으로 재야 했다. 이제 고른 간격으로 단다.
+   *
+   * 간격은 범위에 맞춰 고르고, **데이터가 실제로 닿는 값에만** 라벨을 단다 —
+   * 닿지도 않는 눈금은 스케일을 넓어 보이게 한다.
+   */
+  const span = max - min;
+  const step = span > 200 ? 50 : span > 100 ? 25 : span > 40 ? 10 : span > 16 ? 5 : 2;
+  const ticks: number[] = [];
+  for (let v = Math.ceil(min / step) * step; v <= max; v += step) ticks.push(v);
+  if (!ticks.includes(0) && min <= 0 && max >= 0) ticks.push(0);
+  ticks.sort((a, b) => a - b);
+
   const zeroY = scale.y(0);
+
+  /**
+   * 낙폭 구간 음영 (PART F-4).
+   *
+   * 전략이 **고점 아래에 있던 동안**을 옅게 칠한다. 곡선만 보면 낙폭이 얼마나
+   * 오래갔는지 안 보이는데, MDD 숫자 하나로는 "얼마나 깊었나" 만 알고
+   * **"얼마나 오래 물려 있었나" 는 모른다.**
+   */
+  const underwater: { x1: number; x2: number }[] = [];
+  for (const segment of strategy.segments) {
+    let peak = -Infinity;
+    let start: number | null = null;
+    for (const point of segment) {
+      if (point.pct >= peak) {
+        peak = point.pct;
+        if (start !== null) {
+          underwater.push({ x1: start, x2: scale.x(point.at) });
+          start = null;
+        }
+      } else if (start === null) {
+        start = scale.x(point.at);
+      }
+    }
+    const last = segment[segment.length - 1];
+    if (start !== null && last) underwater.push({ x1: start, x2: scale.x(last.at) });
+  }
 
   const segmentCount = strategy.segments.length;
 
@@ -81,10 +121,26 @@ export function EquityCurve({
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         width="100%"
-        height={HEIGHT}
+        // 높이를 px 로 박으면 폭이 줄 때 비율이 깨져 폰에서 선이 납작해진다.
+        // viewBox 가 비율을 갖고 있으니 높이는 CSS 가 정하게 둔다.
+        height="auto"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label={`${strategyLabel} 자산곡선과 ${benchmarkLabel} 벤치마크`}
       >
+        {/* 낙폭 구간 — 선보다 **먼저** 그린다. 위에 그리면 곡선을 덮는다 */}
+        {underwater.map((band, i) => (
+          <rect
+            key={`uw-${i}`}
+            x={band.x1}
+            y={PAD.top}
+            width={Math.max(0.5, band.x2 - band.x1)}
+            height={HEIGHT - PAD.top - PAD.bottom}
+            fill="var(--down)"
+            opacity={0.07}
+          />
+        ))}
+
         {ticks.map((value) => (
           <g key={value}>
             <line

@@ -6,6 +6,7 @@
  */
 import {
   MIN_SAMPLE,
+  assertStrategyDefinition,
   computeMetrics,
   multipleComparison,
   splitCurveSegments,
@@ -32,6 +33,22 @@ export function periodStart(period: PeriodKey, now = new Date()): Date | null {
   return new Date(now.getTime() - years * 365 * 24 * 60 * 60 * 1000);
 }
 
+/**
+ * 거래가 0인 이유. **셋을 구분한다**(LAB-FIX2 PART B-3).
+ *
+ * 종전에는 셋이 전부 `종료` 로 나왔다. `종료` 는 **사람이 끈 것**이고, 안 돈 것과는
+ * 다른 사실이다 — 하나로 뭉치면 "왜 거래가 0인가" 를 화면에서 물을 수 없다.
+ */
+export type HaltKind =
+  /** 정상. 거래가 있다. */
+  | "none"
+  /** 사람이 껐다. 사유가 같이 온다. */
+  | "stopped"
+  /** 지표가 요구하는 자료가 그 구간에 없다. 전략 탓이 아니다. */
+  | "no_data"
+  /** 자료는 있는데 조건이 한 번도 맞지 않았다. */
+  | "no_signal";
+
 export interface BoardRow {
   runId: string;
   strategyId: string;
@@ -42,9 +59,26 @@ export interface BoardRow {
   cagrMdd: number | null;
   sharpe: number | null;
   winRate: number | null;
+  profitFactor: number | null;
+  avgHoldHours: number | null;
+  maxConsecutiveLoss: number;
   trades: number;
   /** 표본이 `MIN_SAMPLE` 미만이면 순위가 없다. */
   ranked: boolean;
+  /**
+   * **벤치마크 C/M 을 넘었나**(PART A-1).
+   *
+   * 못 넘었으면 순위 번호 대신 `기준 미달` 이 붙는다. 벤치마크에 지는 전략에
+   * 1위를 주면 화면이 "이게 제일 낫다" 고 말하는 셈인데, 실제로는
+   * **아무것도 안 하는 편이 낫다.**
+   */
+  beatsBenchmark: boolean;
+  /** 순위 번호. 못 받으면 null 이고 `note` 가 이유를 말한다. */
+  rank: number | null;
+  /** 순위를 못 받은 이유 — `기준 미달` · `표본 부족` · `데이터 없음` 등. */
+  note: string | null;
+  halt: HaltKind;
+  haltDetail: string | null;
   /** 종료된 전략은 회색으로 남는다(PART B-3). **지우지 않는다.** */
   stopped: boolean;
   stopReason: string | null;
@@ -59,18 +93,47 @@ export interface BenchmarkRow {
   to: Date | null;
 }
 
+/** 이 확률 이상이면 **순위를 아예 매기지 않는다**(PART A-2). */
+export const CHANCE_LIMIT = 0.5;
+
+export interface DataSpan {
+  from: Date | null;
+  to: Date | null;
+  /** 가장 긴 종목의 봉 수. */
+  bars: number;
+  years: number;
+}
+
 export interface Board {
   period: PeriodKey;
   from: Date | null;
   to: Date | null;
-  /** 순위가 매겨진 전략. `cagrMdd` 내림차순. */
-  ranked: BoardRow[];
-  /** 표본 부족. 순위 없이 표시한다. */
-  unranked: BoardRow[];
-  /** 종료된 전략. 회색, 순위 없이, 맨 아래(PART B-3). */
-  stopped: BoardRow[];
+  /**
+   * 표에 설 전략 전부. **순위 유무와 무관하게 한 배열**이다 —
+   * 셋으로 나눠 두면 화면이 "순위권" 을 따로 강조하게 된다.
+   * `rank` 가 번호를, `note` 가 번호를 못 받은 이유를 갖는다.
+   */
+  rows: BoardRow[];
   benchmark: BenchmarkRow;
   comparison: MultipleComparison;
+  /**
+   * 순위를 매길 수 있는가. 우연 확률이 `CHANCE_LIMIT` 이상이면 false 고,
+   * 그러면 **번호를 아무에게도 주지 않는다**(PART A-2).
+   */
+  rankable: boolean;
+  /** 벤치마크를 이긴 전략 수. **0 이면 강조색을 쓰지 않는다**(PART A-3). */
+  beatCount: number;
+  /** DB 에 실제로 있는 데이터 기간 — 검증 구간과 다르다(PART G). */
+  dataSpan: DataSpan;
+  /**
+   * **실제로 채점한 구간.** 자산곡선 점이 있는 범위다.
+   *
+   * 데이터 기간과 다르다 — 워크포워드가 앞 1년을 학습에 쓰고, 학습 구간은
+   * 애초에 저장하지 않는다. 둘을 같이 적어야 "3년 받았는데 왜 2년이냐" 가 풀린다.
+   */
+  testSpan: { from: Date | null; to: Date | null };
+  /** 다중 비교에 들어간 후보 수(전략 + 파라미터 조합). */
+  candidateCount: number;
 }
 
 
@@ -210,6 +273,114 @@ async function computeWindowMetrics(
   return computeMetrics(trades, equity, base);
 }
 
+
+/**
+ * 지표별로 **봉 말고 따로 필요한 자료**. 여기 없는 지표는 봉만으로 돈다.
+ *
+ * 거래가 0일 때 "자료가 없어서" 인지 "조건이 안 맞아서" 인지 가르는 데 쓴다.
+ * 둘은 고치는 사람이 다르다 — 전자는 수집, 후자는 전략이다.
+ */
+const EXTERNAL_DATA: Record<string, { label: string; count: (from: Date, to: Date) => Promise<number> }> = {
+  whale_flow: {
+    label: "고래 스냅샷",
+    count: (from, to) => prisma.whalePosition.count({ where: { at: { gte: from, lte: to } } }),
+  },
+};
+
+/** 정의가 참조하는 지표 이름 전부. */
+function indicatorsOf(definition: unknown): string[] {
+  const names = new Set<string>();
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+    if (typeof node !== "object" || node === null) return;
+    const record = node as Record<string, unknown>;
+    if (typeof record.indicator === "string") names.add(record.indicator);
+    for (const value of Object.values(record)) walk(value);
+  };
+  walk(definition);
+  return [...names];
+}
+
+/**
+ * 거래가 0인 이유를 가른다 (PART B-3).
+ *
+ * **`종료` 를 기본값으로 쓰지 않는다.** 사람이 끈 것만 `종료` 다.
+ */
+async function explainHalt(
+  strategy: { status: string; stopReason: string | null; definition: unknown },
+  run: { periodStart: Date; periodEnd: Date | null },
+  trades: number
+): Promise<{ halt: HaltKind; detail: string | null }> {
+  if (trades > 0) return { halt: "none", detail: null };
+
+  const to = run.periodEnd ?? new Date();
+  for (const name of indicatorsOf(strategy.definition)) {
+    const need = EXTERNAL_DATA[name];
+    if (!need) continue;
+    const have = await need.count(run.periodStart, to);
+    // 표본 하한보다 적으면 "자료가 없다" 고 본다. 몇 건 있는 것과 쓸 만큼
+    // 있는 것은 다르고, **몇 건으로 낸 0거래를 전략 탓으로 돌리면 안 된다.**
+    if (have < MIN_SAMPLE) {
+      return {
+        halt: "no_data",
+        detail: `${need.label}이 이 구간에 ${have}건뿐이다 (필요 ${MIN_SAMPLE}건)`,
+      };
+    }
+  }
+
+  if (strategy.status === "STOPPED" && strategy.stopReason) {
+    return { halt: "stopped", detail: strategy.stopReason };
+  }
+  return { halt: "no_signal", detail: "진입 조건이 한 번도 맞지 않았다" };
+}
+
+/** 연속 손실 최대 횟수. `Metric` 에 없는 값이라 거래에서 센다. */
+async function maxConsecutiveLoss(runId: string): Promise<number> {
+  const rows = await prisma.trade.findMany({
+    where: { runId },
+    orderBy: { entryAt: "asc" },
+    select: { pnl: true },
+  });
+  let streak = 0;
+  let worst = 0;
+  for (const row of rows) {
+    if ((row.pnl?.toNumber() ?? 0) < 0) {
+      streak += 1;
+      worst = Math.max(worst, streak);
+    } else {
+      streak = 0;
+    }
+  }
+  return worst;
+}
+
+/**
+ * DB 에 실제로 있는 데이터 기간 (PART G).
+ *
+ * **검증 구간과 다르다.** 워크포워드가 앞 1년을 학습에 쓰므로 화면의 곡선은
+ * 데이터보다 1년 짧다. 그 차이를 화면에 적지 않으면 "2년치밖에 없다" 로 읽힌다.
+ */
+async function readDataSpan(): Promise<DataSpan> {
+  const grouped = await prisma.candle.groupBy({
+    by: ["symbol", "interval"],
+    _count: { _all: true },
+    _min: { at: true },
+    _max: { at: true },
+  });
+  let best: { bars: number; from: Date | null; to: Date | null } = { bars: 0, from: null, to: null };
+  for (const row of grouped) {
+    if (row._count._all > best.bars) {
+      best = { bars: row._count._all, from: row._min.at, to: row._max.at };
+    }
+  }
+  const years =
+    best.from && best.to ? (best.to.getTime() - best.from.getTime()) / (365 * 24 * 60 * 60 * 1000) : 0;
+  return { ...best, years };
+}
+
 /**
  * 전광판을 만든다.
  *
@@ -237,16 +408,31 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
     if (!latest.has(run.strategyId)) latest.set(run.strategyId, run);
   }
 
+  const benchmark = await readBenchmark(from, null);
+  const dataSpan = await readDataSpan();
+
   const rows: BoardRow[] = await Promise.all(
     [...latest.values()].map(async (run) => {
-      // **기간을 바꾸면 결과가 바뀐다**(완료확인 10).
+      // **기간을 바꾸면 결과가 바뀐다**(LAB-05 완료확인 10).
       //
       // 저장된 `Metric` 은 Run 전체 구간의 값이다. 그걸 그대로 보여주면 기간 단추를
-      // 눌러도 숫자가 안 바뀌어 "기간을 바꾸면 순위가 바뀐다"(PART E)가 거짓이 된다.
-      // 전체 기간일 때만 저장값을 쓰고, 구간을 좁히면 그 구간의 거래·자산으로 다시 잰다.
+      // 눌러도 숫자가 안 바뀌어 "기간을 바꾸면 순위가 바뀐다"가 거짓이 된다.
       const metric = from === null ? run.metric : null;
       const computed = metric ? null : await computeWindowMetrics(run.id, from, null);
       const trades = metric?.trades ?? computed?.trades ?? 0;
+      const cagrMdd = metric?.cagrMdd ?? computed?.cagrMdd ?? null;
+
+      let definition: unknown = run.strategy.definition;
+      try {
+        definition = assertStrategyDefinition(run.strategy.definition);
+      } catch {
+        // 정의가 스키마를 못 지나도 **표에서 지우지 않는다.** 지표 이름만 훑는 용도다.
+      }
+      const { halt, detail } = await explainHalt(
+        { status: run.strategy.status, stopReason: run.strategy.stopReason, definition },
+        run,
+        trades
+      );
 
       return {
         runId: run.id,
@@ -254,47 +440,110 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
         label: `${run.strategy.name} v${run.strategy.version}`,
         cagr: metric?.cagr ?? computed?.cagr ?? null,
         mdd: metric?.mdd ?? computed?.mdd ?? null,
-        cagrMdd: metric?.cagrMdd ?? computed?.cagrMdd ?? null,
+        cagrMdd,
         sharpe: metric?.sharpe ?? computed?.sharpe ?? null,
         winRate: metric?.winRate ?? computed?.winRate ?? null,
+        profitFactor: metric?.profitFactor ?? computed?.profitFactor ?? null,
+        avgHoldHours: metric?.avgHoldHours ?? computed?.avgHoldHours ?? null,
+        maxConsecutiveLoss: trades > 0 ? await maxConsecutiveLoss(run.id) : 0,
         trades,
         ranked: trades >= MIN_SAMPLE,
+        // 벤치마크가 없으면(시세 미수집) 이긴 것으로 치지 않는다 —
+        // **모르는 것을 통과로 만들지 않는다.**
+        beatsBenchmark:
+          cagrMdd !== null && benchmark.cagrMdd !== null && cagrMdd > benchmark.cagrMdd,
+        rank: null as number | null,
+        note: null as string | null,
+        halt,
+        haltDetail: detail,
         stopped: run.strategy.status === "STOPPED",
         stopReason: run.strategy.stopReason,
       };
     })
   );
 
-  const live = rows.filter((r) => !r.stopped);
-  const ranked = live
-    .filter((r) => r.ranked)
-    .sort((a, b) => (b.cagrMdd ?? -Infinity) - (a.cagrMdd ?? -Infinity));
-  const unranked = live.filter((r) => !r.ranked);
-  const stopped = rows.filter((r) => r.stopped);
+  // ── 다중 비교 — **순위를 매기기 전에** 먼저 판정한다 ──────────────────────
+  //
+  // 순위를 매겨 놓고 "그런데 우연일 수 있다" 를 덧붙이면 사람은 순위를 먼저 읽는다.
+  // 우연 확률이 높으면 **번호 자체를 주지 않는다**(PART A-2).
+  const candidates = rows
+    .filter((row) => row.ranked)
+    .flatMap((row) => {
+      const run = latest.get(row.strategyId);
+      if (!run) return [];
+      const years = yearsBetween(run.periodStart, run.periodEnd);
+      const tried = combosTried(run.paramsVersion);
+      // 고른 조합은 실제 성적으로, 나머지는 **같은 검정 대상이었다는 사실만** 넣는다.
+      return Array.from({ length: tried }, (_, i) => ({
+        id: `${row.runId}#${i}`,
+        label: row.label,
+        sharpe: i === 0 ? row.sharpe : 0,
+        years,
+        trades: row.trades,
+      }));
+    });
+  const comparison = multipleComparison(candidates);
+  const rankable = comparison.familyP === null || comparison.familyP < CHANCE_LIMIT;
+  const beatCount = rows.filter((row) => row.beatsBenchmark).length;
+
+  // ── 줄 세우기 ────────────────────────────────────────────────────────────
+  //
+  // 순서는 C/M 내림차순 하나다. **번호는 따로 준다** — 벤치마크를 넘고,
+  // 표본이 차고, 우연 확률이 낮을 때만.
+  rows.sort((a, b) => (b.cagrMdd ?? -Infinity) - (a.cagrMdd ?? -Infinity));
+
+  let next = 1;
+  for (const row of rows) {
+    if (row.halt === "no_data") {
+      row.note = "데이터 없음";
+    } else if (row.halt === "no_signal") {
+      row.note = "신호 없음";
+    } else if (row.halt === "stopped") {
+      row.note = "종료";
+    } else if (!row.ranked) {
+      row.note = `표본 부족 (${row.trades}건)`;
+    } else if (!row.beatsBenchmark) {
+      // **이 줄이 이 배치의 핵심이다.** 벤치마크에 지면 번호가 없다.
+      row.note = "기준 미달";
+    } else if (!rankable) {
+      row.note = "판단 불가";
+    } else {
+      row.rank = next;
+      next += 1;
+    }
+  }
 
   const to = runs[0]?.periodEnd ?? null;
-  const benchmark = await readBenchmark(from, null);
 
-  // **시도한 조합 수를 N 으로 쓴다**(PART E-2). 최종 전략만 세면
-  // 6조합 중 최고를 고른 것이 "전략 하나" 로 계산돼 1위를 실제보다 믿게 된다.
-  const candidates = ranked.flatMap((row) => {
-    const run = latest.get(row.strategyId);
-    if (!run) return [];
-    const years = yearsBetween(run.periodStart, run.periodEnd);
-    const tried = combosTried(run.paramsVersion);
-    // 고른 조합은 실제 성적으로, 나머지는 **같은 검정 대상이었다는 사실만** 넣는다.
-    // 그 조합들의 샤프는 여기서 알 수 없지만, 무능 가설에서 세는 것은 개수다.
-    return Array.from({ length: tried }, (_, i) => ({
-      id: `${row.runId}#${i}`,
-      label: row.label,
-      sharpe: i === 0 ? row.sharpe : 0,
-      years,
-      trades: row.trades,
-    }));
-  });
-  const comparison = multipleComparison(candidates);
+  const runIds = rows.map((row) => row.runId);
+  const [firstPoint, lastPoint] = runIds.length
+    ? await Promise.all([
+        prisma.equity.findFirst({
+          where: { runId: { in: runIds }, ...(from ? { at: { gte: from } } : {}) },
+          orderBy: { at: "asc" },
+          select: { at: true },
+        }),
+        prisma.equity.findFirst({
+          where: { runId: { in: runIds } },
+          orderBy: { at: "desc" },
+          select: { at: true },
+        }),
+      ])
+    : [null, null];
 
-  return { period, from, to, ranked, unranked, stopped, benchmark, comparison };
+  return {
+    period,
+    from,
+    to,
+    testSpan: { from: firstPoint?.at ?? null, to: lastPoint?.at ?? null },
+    rows,
+    benchmark,
+    comparison,
+    rankable,
+    beatCount,
+    dataSpan,
+    candidateCount: candidates.length,
+  };
 }
 
 export type { CurvePoint };
