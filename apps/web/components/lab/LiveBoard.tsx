@@ -322,19 +322,18 @@ export function LiveBoard({ initial }: { initial: LiveBoardData }): React.JSX.El
               <th>보유</th>
             </tr>
           </thead>
-          <tbody>
-            {board.ranked.map((row, i) => (
-              <Row key={row.strategyId} row={row} rank={i + 1} store={store} />
-            ))}
-            {board.unranked.map((row) => (
-              <Row key={row.strategyId} row={row} rank={null} store={store} />
-            ))}
-          </tbody>
+          {/*
+            벤치마크가 **맨 위**다 (LAB-FIX2 PART A-1).
 
-          {/* 벤치마크는 **항상** 표 맨 아래에 있다(LAB-00 §7). */}
-          <tbody className="lab-benchmark">
+            종전에는 맨 아래였다. 그랬더니 표본 2건짜리 C/M 25.53 이 BTC 0.13 위에
+            앉아 "평균회귀가 압도한다" 로 읽혔다 — `표본 부족` 표를 달아도
+            **사람은 위에 있는 숫자를 먼저 읽는다.** 기준이 먼저 보여야 미달이 미달이다.
+          */}
+          <tbody className="lab-benchmark is-top">
             <tr>
-              <td className="num rank" />
+              <td className="num rank">
+                <span className="lab-nonrank">기준</span>
+              </td>
               <td>{board.benchmark.label}</td>
               <td className="num">
                 <Cell store={store} cellKey="bench.equity" base="num" />
@@ -351,6 +350,15 @@ export function LiveBoard({ initial }: { initial: LiveBoardData }): React.JSX.El
               <td className="num">—</td>
               <td className="num">—</td>
             </tr>
+          </tbody>
+
+          <tbody>
+            {board.ranked.map((row, i) => (
+              <Row key={row.strategyId} row={row} rank={i + 1} store={store} />
+            ))}
+            {board.unranked.map((row) => (
+              <Row key={row.strategyId} row={row} rank={null} store={store} />
+            ))}
           </tbody>
 
           {/* 정지된 전략 — 회색으로 **남는다.** 지우면 나머지가 전부 거짓이 된다. */}
