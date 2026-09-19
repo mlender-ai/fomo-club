@@ -613,3 +613,136 @@ tbody tr:hover td {
   color: var(--text-faint);
   font-size: 12px;
 }
+
+/* ── LAB-FIX2 ────────────────────────────────────────────────────────────── */
+
+/*
+ * PART C — 열 정렬 버그.
+ *
+ * 폰 폭에서 전략명이 `추세 / 스윙 / v1` 로 세 줄이 되고, 행이 높아지면서 마지막
+ * `거래` 열이 잘려 **다른 행의 숫자가 이름 옆에 있는 것처럼 보였다.**
+ * 표에 `min-width` 가 없어서 칸이 서로를 밀어낸 것이다.
+ *
+ * 표는 줄이지 않고 **가로로 스크롤시킨다** — 숫자 표는 좁혀서 읽는 물건이 아니다.
+ */
+.lab-board {
+  min-width: 760px;
+}
+
+.lab-board th,
+.lab-board td {
+  white-space: nowrap;
+}
+
+.lab-board td.name {
+  text-align: left;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 스크롤 영역이 바깥 여백을 먹고 나가야 표가 화면 끝까지 쓴다 */
+.lab-board-scroll {
+  overflow-x: auto;
+  margin-inline: -20px;
+  padding-inline: 20px;
+}
+
+/* PART A-1 — 벤치마크가 표 맨 위. 아래 전략들과 굵은 선으로 가른다 */
+.lab-benchmark.is-top td {
+  border-bottom: 2px solid var(--line);
+  color: var(--text);
+}
+
+/* 순위 자리에 들어가는 말(`기준 미달`·`데이터 없음`) — 숫자가 아니므로 작게 */
+.lab-nonrank {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.lab-board th.rank,
+.lab-board td.rank {
+  width: 84px;
+}
+
+/* PART F-3 — 표 위 요약 한 줄 */
+.lab-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+
+.lab-summary strong {
+  font-weight: 500;
+}
+
+/* PART A-2 — 순위를 못 매긴다는 안내는 표 **위**에, 다른 경고보다 세게 */
+.lab-warning.is-loud {
+  border-left-color: var(--down);
+  color: var(--text);
+}
+
+/* PART B-3 — 거래 0 의 이유. 행마다 한 줄 */
+.lab-halt {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 6px 0 0;
+}
+
+/* ── 헤더 페이퍼 상태 (PART E-3) ─────────────────────────────────────────── */
+
+.lab-paper-state {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.lab-paper-state .dot {
+  font-size: 10px;
+}
+
+.lab-paper-state.is-on .dot {
+  color: var(--accent);
+}
+
+.lab-paper-state.is-off .dot {
+  color: var(--text-faint);
+}
+
+@media (max-width: 560px) {
+  .lab-paper-state {
+    font-size: 11px;
+  }
+}
+
+/* 내비가 폰에서 `백테 / 스트` 로 쪼개졌다 — 링크는 줄바꿈하지 않는다 */
+.lab-nav-link,
+.lab-brand,
+.lab-paper-state {
+  white-space: nowrap;
+}
+
+.lab-nav {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+/* 곡선은 viewBox 비율대로. px 높이를 박으면 폰에서 납작해진다 */
+.lab-curve svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}

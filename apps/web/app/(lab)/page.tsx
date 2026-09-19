@@ -1,12 +1,24 @@
 /**
- * LAB-05 PART A — 백테스트 화면. `/` 기본 라우트.
+ * `/` — 백테스트 화면.
  *
  * > **표 하나와 선 하나면 된다.**
  *
- * 지금 필요한 건 보기 좋은 화면이 아니라 **판단할 수 있는 화면**이다.
+ * ## 이 화면의 일은 미화하지 않는 것이다 (LAB-FIX2)
  *
- * 서버 컴포넌트다. 행 선택·기간 선택은 **URL 쿼리**로 한다 — 클라이언트 상태를
- * 두지 않으면 새로고침해도 보던 것이 그대로 있고, 링크로 남길 수 있다.
+ * 처음 판은 C/M 내림차순으로 1·2위를 매기고 1위를 강조색으로 칠했다. 그런데 실측은
+ * 두 전략 다 **BTC 그냥 보유보다 못했고**, 다중 비교 확률은 **99%** 였다.
+ * 그 상태로 1위를 칠하면 화면이 "이게 제일 낫다" 고 말하는 셈인데, 사실은
+ * **아무것도 안 하는 편이 낫다.**
+ *
+ * 그래서 규칙이 셋이다:
+ *
+ *  1. **벤치마크가 표 맨 위에 선다.** 기준이 먼저 보여야 미달이 미달로 읽힌다
+ *  2. 벤치마크보다 C/M 이 낮으면 **번호 대신 `기준 미달`**
+ *  3. 우연 확률이 `CHANCE_LIMIT` 이상이면 **아무에게도 번호를 주지 않는다**
+ *
+ * 강조색은 **벤치마크를 이긴 전략이 실제로 있을 때만** 쓴다.
+ *
+ * 서버 컴포넌트다. 행 선택·기간 선택은 **URL 쿼리**로 한다.
  */
 import Link from "next/link";
 
@@ -16,6 +28,7 @@ import {
   readBenchmarkCurve,
   readBoard,
   readCurve,
+  type Board,
   type BoardRow,
   type PeriodKey,
 } from "../../lib/lab/backtest-board";
@@ -34,43 +47,79 @@ function num(value: number | null, digits = 2): string {
   return value === null ? "—" : value.toFixed(digits);
 }
 
-/** 음수는 하락색(PART B-2). 0 은 중립이다. */
+/** 음수는 하락색. 0 은 중립이다. */
 function sign(value: number | null): string {
   if (value === null || value === 0) return "";
   return value > 0 ? "up" : "down";
 }
 
+function hold(hours: number | null): string {
+  if (hours === null) return "—";
+  if (hours < 48) return `${hours.toFixed(0)}시간`;
+  return `${(hours / 24).toFixed(0)}일`;
+}
+
 function Row({
   row,
-  rank,
   selected,
   period,
-  best,
+  highlight,
 }: {
   row: BoardRow;
-  rank: number | null;
   selected: boolean;
   period: PeriodKey;
-  best: boolean;
+  /** 강조색을 써도 되는 행인가. 벤치마크를 이긴 전략이 없으면 아무도 못 받는다. */
+  highlight: boolean;
 }) {
   const href = `/?period=${period}&run=${row.runId}`;
+  const dim = row.halt !== "none";
   return (
-    <tr className={[selected ? "is-selected" : "", row.stopped ? "is-stopped" : ""].join(" ")}>
-      <td className="num rank">{rank ?? ""}</td>
-      <td>
+    <tr
+      className={[selected ? "is-selected" : "", dim ? "is-stopped" : ""].join(" ").trim()}
+    >
+      <td className="num rank">
+        {row.rank ?? <span className="lab-nonrank">{row.note}</span>}
+      </td>
+      <td className="name">
         <Link href={href} className="lab-row-link" scroll={false}>
           {row.label}
         </Link>
-        {row.stopped ? <span className="lab-tag">종료</span> : null}
-        {!row.ranked && !row.stopped ? <span className="lab-tag">표본 부족</span> : null}
       </td>
       <td className={`num ${sign(row.cagr)}`}>{pct(row.cagr)}</td>
       <td className={`num ${sign(row.mdd)}`}>{pct(row.mdd)}</td>
-      <td className={`num ${best ? "accent" : sign(row.cagrMdd)}`}>{num(row.cagrMdd)}</td>
+      <td className={`num ${highlight ? "accent" : ""}`}>{num(row.cagrMdd)}</td>
       <td className="num">{num(row.sharpe)}</td>
       <td className="num">{row.winRate === null ? "—" : `${row.winRate.toFixed(0)}%`}</td>
+      <td className="num">{num(row.profitFactor)}</td>
+      <td className="num">{hold(row.avgHoldHours)}</td>
+      <td className="num">{row.maxConsecutiveLoss || "—"}</td>
       <td className="num">{row.trades}</td>
     </tr>
+  );
+}
+
+/** 표 위 한 줄 — 무엇을 몇 개로 쟀고 **몇 개가 기준을 넘었나**(PART F-3). */
+function Summary({ board }: { board: Board }) {
+  const span = board.dataSpan;
+  const dataLine =
+    span.from && span.to
+      ? `${span.from.toISOString().slice(0, 7)} ~ ${span.to.toISOString().slice(0, 7)} (${span.years.toFixed(1)}년 · ${span.bars.toLocaleString("ko-KR")}봉)`
+      : "데이터 없음";
+  // **채점한 구간은 데이터 기간보다 짧다.** 워크포워드가 앞 1년을 학습에 쓴다.
+  const test = board.testSpan;
+  const testLine =
+    test.from && test.to
+      ? `검증 ${test.from.toISOString().slice(0, 7)} ~ ${test.to.toISOString().slice(0, 7)} (학습 구간 제외)`
+      : "검증 구간 없음";
+  return (
+    <p className="lab-summary">
+      <span>데이터 {dataLine}</span>
+      <span>{testLine}</span>
+      <span>후보 {board.candidateCount}개</span>
+      <strong className={board.beatCount === 0 ? "down" : "up"}>
+        벤치마크를 이긴 전략 {board.beatCount}개
+      </strong>
+    </p>
   );
 }
 
@@ -85,9 +134,8 @@ export default async function BacktestPage({
     : "all";
 
   const board = await readBoard(period);
-  const all = [...board.ranked, ...board.unranked, ...board.stopped];
 
-  if (all.length === 0) {
+  if (board.rows.length === 0) {
     return (
       <>
         <h1 className="lab-title">백테스트</h1>
@@ -100,17 +148,17 @@ export default async function BacktestPage({
     );
   }
 
-  // 기본 선택은 1위. 없으면 첫 행.
-  const selectedId = params.run && all.some((r) => r.runId === params.run)
-    ? params.run
-    : (board.ranked[0]?.runId ?? all[0]?.runId ?? "");
-  const selected = all.find((r) => r.runId === selectedId) ?? (all[0] as BoardRow);
+  // 기본 선택은 거래가 있는 첫 행. 없으면 첫 행.
+  const withTrades = board.rows.filter((r) => r.trades > 0);
+  const selectedId =
+    params.run && board.rows.some((r) => r.runId === params.run)
+      ? params.run
+      : (withTrades[0]?.runId ?? board.rows[0]?.runId ?? "");
+  const selected = board.rows.find((r) => r.runId === selectedId) ?? (board.rows[0] as BoardRow);
 
   const curve = await readCurve(selected.runId, board.from);
   // 벤치마크는 **전략 곡선과 같은 구간**으로 자른다. 구간이 다르면 비교가 아니다.
   const benchmarkCurve = await readBenchmarkCurve(curve.from ?? board.from, curve.to);
-
-  const bestRunId = board.ranked[0]?.runId ?? null;
 
   return (
     <>
@@ -130,79 +178,82 @@ export default async function BacktestPage({
         </nav>
       </div>
 
-      <p className="lab-subline">
-        {board.from ? board.from.toISOString().slice(0, 7) : "전체"} ~{" "}
-        {board.to ? board.to.toISOString().slice(0, 7) : "—"} · 워크포워드 검증 구간 · 무레버리지
-      </p>
+      <Summary board={board} />
+
+      {/* PART A-2 — 우연 확률이 높으면 **표 위에서 먼저** 말한다. 순위를 매겨 놓고
+          밑에 덧붙이면 사람은 순위를 먼저 읽는다. */}
+      {!board.rankable ? (
+        <p className="lab-warning is-loud">
+          이 검증으로는 어느 전략이 나은지 판단할 수 없다 — 후보{" "}
+          {board.comparison.tested}개 중 하나가 우연히 좋아 보일 확률이{" "}
+          {board.comparison.familyP === null
+            ? "—"
+            : `약 ${Math.round(board.comparison.familyP * 100)}%`}
+          다. 순위를 매기지 않는다.
+        </p>
+      ) : null}
 
       <div className="lab-board-scroll">
-      <table className="lab-board">
-        <thead>
-          <tr>
-            <th className="rank">순위</th>
-            <th>전략</th>
-            <th>CAGR</th>
-            <th>MDD</th>
-            <th>C/M</th>
-            <th>샤프</th>
-            <th>승률</th>
-            <th>거래</th>
-          </tr>
-        </thead>
-        <tbody>
-          {board.ranked.map((row, i) => (
-            <Row
-              key={row.runId}
-              row={row}
-              rank={i + 1}
-              selected={row.runId === selectedId}
-              period={period}
-              best={row.runId === bestRunId}
-            />
-          ))}
-          {board.unranked.map((row) => (
-            <Row
-              key={row.runId}
-              row={row}
-              rank={null}
-              selected={row.runId === selectedId}
-              period={period}
-              best={false}
-            />
-          ))}
-        </tbody>
+        <table className="lab-board">
+          <thead>
+            <tr>
+              <th className="rank">순위</th>
+              <th>전략</th>
+              <th>CAGR</th>
+              <th>MDD</th>
+              <th>C/M</th>
+              <th>샤프</th>
+              <th>승률</th>
+              <th>손익비</th>
+              <th>평균보유</th>
+              <th>연속손실</th>
+              <th>거래</th>
+            </tr>
+          </thead>
 
-        {/* 벤치마크는 **항상 표 맨 아래**, 구분선으로 나눈다(PART B-2). */}
-        <tbody className="lab-benchmark">
-          <tr>
-            <td className="num rank" />
-            <td>{board.benchmark.label}</td>
-            <td className={`num ${sign(board.benchmark.cagr)}`}>{pct(board.benchmark.cagr)}</td>
-            <td className={`num ${sign(board.benchmark.mdd)}`}>{pct(board.benchmark.mdd)}</td>
-            <td className={`num ${sign(board.benchmark.cagrMdd)}`}>{num(board.benchmark.cagrMdd)}</td>
-            <td className="num">—</td>
-            <td className="num">—</td>
-            <td className="num">—</td>
-          </tr>
-        </tbody>
+          {/* PART A-1 — **벤치마크가 맨 위다.** 기준이 먼저 보여야 미달이 미달로 읽힌다. */}
+          <tbody className="lab-benchmark is-top">
+            <tr>
+              <td className="num rank">
+                <span className="lab-nonrank">기준</span>
+              </td>
+              <td className="name">{board.benchmark.label}</td>
+              <td className={`num ${sign(board.benchmark.cagr)}`}>{pct(board.benchmark.cagr)}</td>
+              <td className={`num ${sign(board.benchmark.mdd)}`}>{pct(board.benchmark.mdd)}</td>
+              <td className="num">{num(board.benchmark.cagrMdd)}</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+              <td className="num">—</td>
+            </tr>
+          </tbody>
 
-        {/* 종료된 전략 — 회색, 순위 없이, 맨 아래. **진 걸 지우면 전부 거짓이 된다.** */}
-        {board.stopped.length > 0 ? (
-          <tbody className="lab-stopped-group">
-            {board.stopped.map((row) => (
+          <tbody>
+            {board.rows.map((row) => (
               <Row
                 key={row.runId}
                 row={row}
-                rank={null}
                 selected={row.runId === selectedId}
                 period={period}
-                best={false}
+                // **벤치마크를 이긴 전략이 없으면 강조색을 아무도 못 받는다**(PART A-3).
+                highlight={board.beatCount > 0 && board.rankable && row.rank === 1}
               />
             ))}
           </tbody>
-        ) : null}
-      </table>
+        </table>
       </div>
+
+      {/* 거래가 0인 행은 이유를 한 줄씩 적는다 — `종료`·`데이터 없음`·`신호 없음`은
+          다른 사실이고, 뭉치면 왜 안 돌았는지 물을 수 없다(PART B-3). */}
+      {board.rows
+        .filter((row) => row.haltDetail)
+        .map((row) => (
+          <p key={row.runId} className="lab-halt">
+            <span className="lab-nonrank">{row.note}</span> {row.label} — {row.haltDetail}
+          </p>
+        ))}
 
       <section className="lab-curve-block">
         <EquityCurve
@@ -214,12 +265,6 @@ export default async function BacktestPage({
       </section>
 
       <p className="lab-warning">{describeMultipleComparison(board.comparison)}</p>
-      {board.comparison.excludedForSample > 0 ? (
-        <p className="lab-empty-note">
-          표본 30건 미만 {board.comparison.excludedForSample}개는 순위와 검정에서 뺐다.
-        </p>
-      ) : null}
-
       <p className="lab-empty-note">
         행을 누르면 자산곡선이 바뀐다. 전략 이름을 다시 누르면{" "}
         <Link href={`/strategy/${selected.strategyId}`}>상세</Link>로 간다.
