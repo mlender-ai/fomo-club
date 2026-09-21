@@ -41,6 +41,15 @@ const TOKEN = process.env.LAB_INGEST_TOKEN ?? "";
 const INTERVAL_MS = 15 * 60 * 1000;
 
 const DRY = process.argv.includes("--dry");
+
+/**
+ * 올릴 페이로드를 **그대로 찍는다**. 올리지는 않는다.
+ *
+ * 인제스트가 느리거나 죽을 때 "무엇을 보냈길래" 를 손에 쥐고 좁히려면 이게 있어야
+ * 한다. 실제로 거래 이력을 붙이자마자 라우트가 타임아웃났는데, 페이로드를 못 꺼내서
+ * 어디가 느린지 이등분을 못 했다.
+ */
+const EMIT = process.argv.includes("--emit");
 const WATCH = process.argv.includes("--watch");
 
 async function fce(path: string): Promise<unknown> {
@@ -375,6 +384,12 @@ async function once(): Promise<boolean> {
         ` · 닫힌 거래 ${payload.trades.length} (순손익 ${net.toFixed(2)} · 비용 ${costs.toFixed(2)} USDT)`
     );
 
+    if (EMIT) {
+      // stdout 으로 페이로드 자체를 흘린다. 파일로 받아 이등분하면 된다:
+      //   npm run lab:fce-upload -- --emit > /tmp/payload.json
+      process.stdout.write(`${JSON.stringify(payload)}\n`);
+      return true;
+    }
     if (DRY) {
       console.log("  (--dry — 올리지 않았다)");
       return true;
