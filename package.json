@@ -33,6 +33,7 @@
     "lab:migrate": "prisma migrate deploy",
     "lab:migrate:verify": "tsx scripts/lab/migrate-verify.ts",
     "lab:paper": "tsx scripts/lab/paper-tick.ts",
+    "lab:runner": "tsx scripts/lab/runner.ts",
     "lab:seed-strategy": "tsx scripts/lab/seed-strategy.ts",
     "lab:sweep": "tsx scripts/lab/sweep-parameters.ts",
     "lab:verify-alert": "tsx scripts/lab/verify-alert.ts",
