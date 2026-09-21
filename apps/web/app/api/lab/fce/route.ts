@@ -22,6 +22,12 @@ import { prisma } from "../../../../lib/prisma";
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * 거래 이력까지 받으면서 기본 한도로는 모자랐다. 한 바퀴 실측이 ~20초다.
+ * 여유를 두되 무한정 늘리지 않는다 — 오래 걸리면 그건 고칠 신호다.
+ */
+export const maxDuration = 60;
+
 /** 업로더만 부를 수 있다. 토큰이 없으면 **아예 열지 않는다.** */
 function authorized(request: Request): boolean {
   const expected = process.env.LAB_INGEST_TOKEN;
@@ -121,7 +127,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     // 닫힌 거래는 **지우지 않는다.** 포지션과 정반대다 — 닫힌 거래는 사실이고,
     // FCE 가 보관 기간을 줄이거나 리셋해도 랩에는 남아야 한다. 같은 id 로 다시
     // 오면 값만 갱신한다(FCE 가 사후에 비용을 정정하는 일이 있다).
-    for (const t of payload.trades) {
+    //
+    // **한 건씩 await 하지 않는다.** 처음에 그렇게 짰다가 146건에서 업로드가
+    // 통째로 타임아웃났다 — 서버리스에서 원격 DB 로 146번 왕복이다. 묶어서
+    // 보내면 왕복이 묶음 수만큼으로 준다.
+    const upserts = payload.trades.map((t) => {
       const row = {
         trackKey: t.trackKey,
         symbol: t.symbol,
@@ -143,7 +153,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         holdingBars: t.holdingBars,
         asOf,
       };
-      await prisma.fceTrade.upsert({ where: { id: t.id }, create: { id: t.id, ...row }, update: row });
+      return prisma.fceTrade.upsert({ where: { id: t.id }, create: { id: t.id, ...row }, update: row });
+    });
+    // 한 트랜잭션이 너무 커지면 그것대로 시간이 걸린다. 50건씩 끊는다.
+    for (let i = 0; i < upserts.length; i += 50) {
+      await prisma.$transaction(upserts.slice(i, i + 50));
     }
 
     if (payload.whale) {

@@ -351,7 +351,8 @@ async function push(payload: FcePayload): Promise<void> {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(60_000),
+    // 거래 이력까지 올리므로 60초로는 모자랐다. 실측 한 바퀴가 ~20초다.
+    signal: AbortSignal.timeout(120_000),
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`LAB ${response.status}: ${text.slice(0, 300)}`);
