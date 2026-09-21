@@ -108,6 +108,23 @@ export default async function TradesPage() {
         </span>
       </p>
 
+      {/*
+        전광판 N 과 이 표의 건수가 다를 수 있다. **어느 한쪽이 틀린 게 아니다** —
+        FCE 채점판은 검증 창 안에서 닫힌 거래만 센다(`all_closed_in_window`).
+        화면이 이걸 말하지 않으면 두 화면이 서로를 부정하는 것처럼 보이고,
+        그러면 둘 다 못 믿게 된다.
+      */}
+      {ledger.boardCount !== null && ledger.boardCount !== t.count ? (
+        <p className="lab-warning">
+          전광판은 <strong>{ledger.boardCount}건</strong>, 이 표는{" "}
+          <strong>{t.count}건</strong>이다. 어느 한쪽이 틀린 게 아니라{" "}
+          <strong>세는 모집단이 다르다</strong> — 전광판은 FCE 검증 창 안에서 닫힌 거래만
+          세고(<code>all_closed_in_window</code>), 이 표는 랩이 받아 쌓은 전부다. 차이{" "}
+          {Math.abs(t.count - ledger.boardCount)}건은 창 밖에서 닫힌 것이다.{" "}
+          <strong>두 수를 빼서 쓰지 않는다.</strong>
+        </p>
+      ) : null}
+
       <section>
         <p className="section-kicker">전부 합쳐서 — 표에 보이는 줄이 아니라 {t.count}건 전부</p>
         <dl className="lab-stats">

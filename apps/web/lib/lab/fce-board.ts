@@ -245,6 +245,15 @@ export interface FceLedger {
   };
   /** 가장 이른 · 가장 늦은 청산 시각. 표가 어느 기간의 것인지 화면이 말해야 한다. */
   span: { from: Date | null; to: Date | null };
+  /**
+   * 전광판이 말하는 거래 수. **이 표의 수와 다를 수 있다.**
+   *
+   * FCE 의 채점판은 `population: all_closed_in_window` — **검증 창 안에서 닫힌
+   * 거래만** 센다. 이 표는 랩이 받아 쌓은 전부다. 두 수가 다른 것은 어느 한쪽이
+   * 틀려서가 아니라 **세는 모집단이 다르기 때문**이고, 화면이 그걸 말하지 않으면
+   * 두 화면이 서로를 부정하는 것처럼 보인다.
+   */
+  boardCount: number | null;
 }
 
 /** 표에 몇 줄까지 보일 것인가. 합계는 이것과 무관하게 전부를 센다. */
@@ -269,6 +278,12 @@ export async function readFceLedger(): Promise<FceLedger> {
     ]),
     prisma.fceTrade.aggregate({ _min: { exitAt: true }, _max: { exitAt: true } }),
   ]);
+
+  // 전광판이 말하는 수. 없으면 null — **0 으로 채우면 "전부 창 밖" 으로 읽힌다.**
+  const cryptoTrack = await prisma.fceTrack.findUnique({
+    where: { key: "crypto" },
+    select: { trades: true },
+  });
 
   const [wins, losses] = counts;
   const count = agg._count.id;
@@ -307,5 +322,6 @@ export async function readFceLedger(): Promise<FceLedger> {
       costSharePct: Math.abs(grossUsdt) > 0 ? (costsUsdt / Math.abs(grossUsdt)) * 100 : null,
     },
     span: { from: bounds._min.exitAt, to: bounds._max.exitAt },
+    boardCount: cryptoTrack?.trades ?? null,
   };
 }
