@@ -13,7 +13,7 @@
     launchctl bootout gui/$(id -u)/com.fomo.lab.runner
     rm ~/Library/LaunchAgents/com.fomo.lab.runner.plist
 
-  로그: /tmp/lab-runner.log · /tmp/lab-runner.err
+  로그: /tmp/lab-runner.log (성공·실패 한 파일)
 -->
 <plist version="1.0">
 <dict>
@@ -49,9 +49,14 @@
   <key>ThrottleInterval</key>
   <integer>30</integer>
 
+  <!--
+    성공과 실패를 **같은 파일**에 쓴다. 갈라두면 `tail -f lab-runner.log` 를 보는
+    사람에게 실패가 안 보인다 — 실제로 `fce ❌ timeout` 이 .err 에만 있어서
+    로그가 멀쩡해 보였다. 실패를 조용히 넘기지 않으려고 만든 러너다.
+  -->
   <key>StandardOutPath</key>
   <string>/tmp/lab-runner.log</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/lab-runner.err</string>
+  <string>/tmp/lab-runner.log</string>
 </dict>
 </plist>
