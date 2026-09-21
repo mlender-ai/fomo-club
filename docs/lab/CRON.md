@@ -154,7 +154,10 @@ scripts/lab/launchd/install.sh
 | `RunAtLoad` | 로그인 직후부터 돈다 |
 | `KeepAlive` | 죽으면 다시 띄운다 |
 | `ThrottleInterval 30` | 즉시 재시작을 반복하지 않는다 — 소스에 무례하다 |
-| 로그 | `/tmp/lab-runner.log` · `/tmp/lab-runner.err` |
+| 로그 | `/tmp/lab-runner.log` — **성공과 실패가 같은 파일**이다 |
+
+> 로그를 갈라두면 `tail -f lab-runner.log` 를 보는 사람에게 실패가 안 보인다.
+> 실제로 `fce ❌ timeout` 이 `.err` 에만 있어서 로그가 멀쩡해 보였다.
 
 토큰이 plist 안에 들어가므로 `~/Library/LaunchAgents/com.fomo.lab.runner.plist` 는
 `600` 으로 둔다. 제거는:
