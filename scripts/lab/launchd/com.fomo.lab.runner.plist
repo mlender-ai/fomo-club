@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  로컬 수집 러너를 상시화한다.
+
+  이게 없으면 러너는 터미널을 닫거나 맥을 재시작하는 순간 죽고, 화면은 그때부터
+  조용히 낡아간다. `KeepAlive` 가 죽은 러너를 다시 띄우고, `RunAtLoad` 가 로그인
+  직후부터 돌린다.
+
+  설치:
+    scripts/lab/launchd/install.sh
+
+  제거:
+    launchctl bootout gui/$(id -u)/com.fomo.lab.runner
+    rm ~/Library/LaunchAgents/com.fomo.lab.runner.plist
+
+  로그: /tmp/lab-runner.log · /tmp/lab-runner.err
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fomo.lab.runner</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE__</string>
+    <string>__TSX__</string>
+    <string>scripts/lab/runner.ts</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LAB_INGEST_TOKEN</key>
+    <string>__TOKEN__</string>
+    <key>PATH</key>
+    <string>__PATH__</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- 죽으면 다시 띄운다. 러너가 멈춘 것을 화면으로만 알게 되면 이미 늦다. -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- 즉시 재시작을 반복하면 소스에 무례하다. 30초 쉬고 다시 붙는다. -->
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/lab-runner.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/lab-runner.err</string>
+</dict>
+</plist>
