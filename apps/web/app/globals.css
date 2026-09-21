@@ -882,3 +882,21 @@ tbody tr:hover td {
   text-overflow: ellipsis;
   font-size: 11px;
 }
+
+/*
+ * `/data` 의 표 셋.
+ *
+ * `.lab-board` 를 안 쓴다 — 그건 `min-width: 760px` 이라 3열짜리 표까지 폰에서
+ * 강제로 옆으로 밀린다. 여기서 필요한 것은 **머리글이 `주/기` 로 쪼개지지 않는 것**
+ * 하나다. 그래서 줄바꿈만 막고, 그래도 넘치면 그때 스크롤시킨다.
+ */
+.lab-scroll {
+  overflow-x: auto;
+  margin-inline: -20px;
+  padding-inline: 20px;
+}
+
+.lab-scroll th,
+.lab-scroll td {
+  white-space: nowrap;
+}
