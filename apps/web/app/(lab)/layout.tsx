@@ -23,14 +23,21 @@ export default async function LabLayout({ children }: { children: ReactNode }) {
     <div className="lab-shell">
       <nav className="lab-nav">
         <span className="lab-brand">Strategy Lab</span>
-        <Link className="lab-nav-link" href="/">
-          백테스트
-        </Link>
+        {/*
+          LAB-BRIDGE — 전광판이 첫 화면이다. 랩은 이제 FCE 를 비추는 창구이고,
+          백테스트는 **끝난 실험의 보관함**이다(PART C-4). 순서가 곧 우선순위다.
+        */}
         <Link className="lab-nav-link" href="/live">
           전광판
         </Link>
+        <Link className="lab-nav-link" href="/whale">
+          고래
+        </Link>
         <Link className="lab-nav-link" href="/data">
           데이터
+        </Link>
+        <Link className="lab-nav-link is-archive" href="/">
+          백테스트
         </Link>
         <Link
           className={`lab-paper-state ${pulse.running ? "is-on" : "is-off"}`}

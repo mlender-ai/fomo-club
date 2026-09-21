@@ -1252,3 +1252,122 @@ model JobLock {
 
   @@index([expiresAt])
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LAB-BRIDGE — FCE 거울
+//
+// **랩은 엔진을 갖지 않는다.** 여기 있는 표는 전부 FCE 가 계산한 것을 받아 적는
+// 자리다. 랩이 이 숫자로 무엇을 다시 계산하면 두 화면이 서로 다른 말을 하게 된다.
+//
+// 그래서 원칙이 하나다 — **계산하지 않는다. 조립한다.**
+// (FCE 의 일일 리포트가 스스로에게 건 규칙과 같다.)
+//
+// 업로더는 `scripts/lab/fce-upload.ts` 이고 FCE API(127.0.0.1:8875)를 읽는다.
+// FCE 레포는 건드리지 않는다.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// 업로드 한 번. **끊김 구간을 이 표로 잰다**(LAB-BRIDGE PART B-4).
+/// 호스트가 자면 업로드가 멈추고, 그 공백이 화면에 그대로 보여야 한다.
+model FceUpload {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+  ok        Boolean
+  /// 이번에 받아 적은 트랙·포지션 수.
+  tracks    Int      @default(0)
+  positions Int      @default(0)
+  /// 실패 사유. 성공이면 null.
+  error     String?
+  ms        Int      @default(0)
+
+  @@index([at])
+}
+
+/// 트랙 하나의 현재 상태. **키로 덮어쓴다** — 이력은 FCE 가 갖는다.
+model FceTrack {
+  /// crypto · whale · stock_us · stock_kr · polymarket
+  key      String @id
+  label    String
+  currency String
+
+  startingCapital Decimal  @db.Decimal(30, 10)
+  /// 평가액. 산출 불가면 null — **0 으로 채우지 않는다**(폴리마켓이 그렇다).
+  currentCapital  Decimal? @db.Decimal(30, 10)
+  realized        Decimal? @db.Decimal(30, 10)
+  unrealized      Decimal? @db.Decimal(30, 10)
+  /// **실현 기준 수익률**(PART C-1). 미실현은 따로 둔다.
+  returnPct       Float?
+
+  trades       Int?
+  winRatePct   Float?
+  profitFactor Float?
+  mddPct       Float?
+  /// 표본이 모자라다는 FCE 의 판정. 순위·강조에 쓰면 안 된다.
+  sampleNote   String?
+
+  /// running · stopped · held · excluded
+  status       String
+  /// 정지·보류 사유. **비어 있으면 화면이 거짓이 된다**(LAB-00 §7).
+  statusReason String?
+
+  /// **레버리지를 숨기지 않는다**(PART D-2). MDD 가 배수에서 나온 숫자이기 때문이다.
+  leverage Float?
+
+  benchmarkLabel     String?
+  benchmarkStart     Float?
+  benchmarkCurrent   Float?
+  /// FCE 가 낸 벤치마크 수익률. 시작·현재로 랩이 다시 계산하지 않는다.
+  benchmarkReturnPct Float?
+  /// 정지 근거 메모 — "왜 멈췄는지" 를 화면이 그대로 옮긴다.
+  evidenceNote       String?
+
+  /// FCE 가 이 숫자를 낸 시각. 업로드 시각과 다르다.
+  asOf      DateTime
+  updatedAt DateTime @updatedAt
+}
+
+/// 보유 포지션. 업로드마다 **트랙 단위로 지우고 다시 넣는다** — 닫힌 것이 남으면 안 된다.
+model FcePosition {
+  /// FCE 의 거래 id.
+  id        String @id
+  trackKey  String
+  symbol    String
+  /// long · short
+  direction String
+
+  leverage     Float?
+  marginUsdt   Float?
+  /// 증거금 대비 손익률. **−100% 아래로 갈 수 있다** — FCE 에 청산 모델이 없다(PART D-1).
+  netReturnPct Float?
+  healthScore  Int?
+
+  entryAt    DateTime?
+  entryPrice Float?
+
+  asOf DateTime
+
+  @@index([trackKey, asOf])
+}
+
+/// 고래 분석. 단일 행으로 덮어쓴다.
+model FceWhale {
+  id Int @id @default(1)
+
+  walletsTotal Int
+  eligible     Int
+  /// 탈락 사유 분포 — MM · 표본 미달 · 승률 미달.
+  rejected     Json
+  /// 통과한 지갑 주소.
+  passers      Json
+
+  /// 추종 트랙 성적. **고래 자신의 승률과 다른 모집단이다**(docs/lab/WHALE_GAP.md).
+  followWinPct  Float?
+  followTrades  Int?
+  followPf      Float?
+  followNetUsdt Float?
+
+  /// 진입 지연(분)·드리프트(손절폭 대비 %) 분포. FCE 가 이미 재고 있다.
+  latency Json?
+  drift   Json?
+
+  asOf DateTime
+}

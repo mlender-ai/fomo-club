@@ -25,6 +25,7 @@
     "lab:benchmark": "tsx scripts/lab/collect-benchmark.ts",
     "lab:candles": "tsx scripts/lab/collect-candles.ts",
     "lab:compare": "tsx scripts/lab/compare-paper.ts",
+    "lab:fce-upload": "tsx scripts/lab/fce-upload.ts",
     "lab:funding": "tsx scripts/lab/collect-funding.ts",
     "lab:import-ledger": "tsx scripts/lab/import-judgment-ledger.ts",
     "lab:latest": "tsx scripts/lab/collect-latest.ts",

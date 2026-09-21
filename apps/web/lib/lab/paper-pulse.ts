@@ -1,16 +1,18 @@
 /**
- * LAB-FIX2 PART E-3 — 헤더에 다는 페이퍼 한 줄.
+ * 헤더에 다는 한 줄.
  *
- * **"운용중" 을 전략 상태로 판단하지 않는다.** `Strategy.status = RUNNING` 은
- * 사람이 끄지 않았다는 뜻일 뿐, 실행기가 실제로 돌고 있다는 뜻이 아니다.
- * 크론이 멈춰도 상태는 계속 RUNNING 이다 — 그게 이 배치 직전에 실제로 일어난 일이다.
+ * ## LAB-BRIDGE 로 기준이 바뀌었다
  *
- * 그래서 **마지막으로 처리한 봉 시각**으로 판정한다. 그건 실행기가 실제로 돈 흔적이다.
+ * 전에는 랩 자체 페이퍼 실행기의 마지막 봉을 봤다. 이제 랩은 엔진이 아니고
+ * **FCE 를 비추는 창구**라, 헤더가 말해야 하는 것은 "랩이 FCE 를 언제 읽었나" 다.
+ *
+ * 그래서 `FceUpload` 를 본다 — 업로더가 이 맥에서 돌지 않으면 화면 전체가
+ * 과거를 보여주고 있는 것이고, **그 사실이 어느 탭에서든 보여야 한다.**
  */
 import { prisma } from "../prisma";
 
-/** 이 시간 넘게 새 봉을 못 받았으면 멈춘 것으로 본다. 봉이 1시간이라 두 배다. */
-const STALE_MS = 2 * 60 * 60 * 1000;
+/** 업로더 주기가 15분이라 두 번 거른 값. `fce-board.ts` 와 같은 상수를 쓴다. */
+const STALE_MS = 35 * 60 * 1000;
 
 export interface PaperPulse {
   running: boolean;
@@ -23,54 +25,42 @@ export interface PaperPulse {
 
 function ageText(ms: number): string {
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}분`;
-  if (minutes < 60 * 24) return `${Math.floor(minutes / 60)}시간`;
-  return `${Math.floor(minutes / (60 * 24))}일`;
+  if (minutes < 1) return "방금";
+  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 60 * 24) return `${Math.floor(minutes / 60)}시간 전`;
+  return `${Math.floor(minutes / (60 * 24))}일 전`;
 }
 
 export async function readPaperPulse(now: Date = new Date()): Promise<PaperPulse> {
-  const runs = await prisma.run.findMany({
-    where: { kind: "PAPER" },
-    select: { paper: { select: { lastBarAt: true } } },
+  const last = await prisma.fceUpload.findFirst({
+    where: { ok: true },
+    orderBy: { at: "desc" },
+    select: { at: true },
   });
 
-  if (runs.length === 0) {
+  if (!last) {
     return {
       running: false,
-      label: "페이퍼 없음",
-      detail: "페이퍼 Run 이 아직 만들어지지 않았다",
+      label: "FCE 미연결",
+      detail: "FCE 스냅샷이 한 번도 올라오지 않았다 — npm run lab:fce-upload",
       lastBarAt: null,
     };
   }
 
-  const lastBarAt = runs.reduce<Date | null>((latest, run) => {
-    const at = run.paper?.lastBarAt ?? null;
-    return at && (!latest || at > latest) ? at : latest;
-  }, null);
-
-  if (!lastBarAt) {
-    return {
-      running: false,
-      label: "페이퍼 정지",
-      detail: "실행기가 아직 봉을 한 번도 처리하지 않았다",
-      lastBarAt: null,
-    };
-  }
-
-  const age = now.getTime() - lastBarAt.getTime();
-  const stamp = lastBarAt.toISOString().slice(0, 16).replace("T", " ");
+  const age = now.getTime() - last.at.getTime();
+  const stamp = last.at.toISOString().slice(0, 16).replace("T", " ");
   if (age > STALE_MS) {
     return {
       running: false,
-      label: "페이퍼 정지",
-      detail: `마지막 처리 봉 ${stamp} — ${ageText(age)}째 멈춰 있다`,
-      lastBarAt,
+      label: "FCE 끊김",
+      detail: `마지막 스냅샷 ${stamp} — ${ageText(age)}째 안 들어온다`,
+      lastBarAt: last.at,
     };
   }
   return {
     running: true,
-    label: "페이퍼 운용중",
-    detail: `마지막 처리 봉 ${stamp}`,
-    lastBarAt,
+    label: `FCE ${ageText(age)}`,
+    detail: `마지막 스냅샷 ${stamp}`,
+    lastBarAt: last.at,
   };
 }
