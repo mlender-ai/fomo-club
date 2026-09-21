@@ -746,3 +746,124 @@ tbody tr:hover td {
   width: 100%;
   height: auto;
 }
+
+/* ── LAB-BRIDGE — FCE 거울 ───────────────────────────────────────────────── */
+
+/* 백테스트는 끝난 실험의 보관함이다. 내비에서도 한 단계 뒤로 */
+.lab-nav-link.is-archive {
+  color: var(--text-faint);
+}
+
+/* 갱신 상태 — 헤더 오른쪽 */
+.lab-fresh {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.lab-fresh.is-live {
+  color: var(--accent);
+}
+
+.lab-fresh.is-stale {
+  color: var(--down);
+}
+
+/* 트랙 표 — 자본 칸의 통화는 숫자보다 작게 */
+.lab-board .cur {
+  color: var(--text-faint);
+  font-size: 11px;
+  margin-left: 5px;
+}
+
+.lab-board td.state,
+.lab-board th.l {
+  text-align: left;
+}
+
+.lab-board td.state {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.lab-board td.state.ok {
+  color: var(--accent);
+}
+
+.lab-board td.state.warn {
+  color: #fbbf24;
+}
+
+.lab-board td.state.bad {
+  color: var(--down);
+}
+
+.lab-board td.state.off {
+  color: var(--text-faint);
+}
+
+/*
+ * 청산 수준 포지션.
+ *
+ * FCE 에 청산 모델이 없어 손익이 −100% 아래로 갈 수 있다. 실제 거래소였으면
+ * 증거금이 이미 없어진 자리라, **행 전체가 눈에 걸려야 한다.**
+ */
+.lab-board tr.is-danger td {
+  background: color-mix(in srgb, var(--down) 9%, transparent);
+}
+
+.lab-board td.warn-cell {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* 두 승률을 나란히 — **빼지 않는다**는 것이 이 배치의 요점이다 */
+.lab-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.lab-two-item {
+  background: var(--bg);
+  padding: 18px 20px;
+}
+
+.lab-two-value {
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 2px;
+}
+
+.lab-two-label {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.lab-two-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.lab-note-line {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 12px 0 0;
+  line-height: 1.7;
+}
+
+.addr {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-right: 10px;
+}
