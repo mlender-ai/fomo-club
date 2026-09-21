@@ -366,7 +366,13 @@ async function once(): Promise<boolean> {
       .map((t) => `${t.label} ${t.status}${t.trades ? ` N=${t.trades}` : ""}`)
       .join(" · ");
     console.log(`[${new Date().toISOString().slice(11, 19)}] ${line}`);
-    console.log(`  포지션 ${payload.positions.length} · 지갑 ${payload.whale?.walletsTotal ?? 0}`);
+    // 닫힌 거래는 **비용까지** 적는다. 건수만 적으면 무엇이 올라가는지 안 보인다.
+    const costs = payload.trades.reduce((sum, t) => sum + (t.costsUsdt ?? 0), 0);
+    const net = payload.trades.reduce((sum, t) => sum + (t.netPnlUsdt ?? 0), 0);
+    console.log(
+      `  포지션 ${payload.positions.length} · 지갑 ${payload.whale?.walletsTotal ?? 0}` +
+        ` · 닫힌 거래 ${payload.trades.length} (순손익 ${net.toFixed(2)} · 비용 ${costs.toFixed(2)} USDT)`
+    );
 
     if (DRY) {
       console.log("  (--dry — 올리지 않았다)");
