@@ -45,6 +45,9 @@ function authorized(request: Request): boolean {
 export async function POST(request: Request): Promise<NextResponse> {
   const started = Date.now();
 
+  // 이번에 실제로 쓴 거래 수. 받은 수와 다르다 — 안 바뀐 것은 안 쓴다.
+  let tradesWritten = 0;
+
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -125,39 +128,105 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 닫힌 거래는 **지우지 않는다.** 포지션과 정반대다 — 닫힌 거래는 사실이고,
-    // FCE 가 보관 기간을 줄이거나 리셋해도 랩에는 남아야 한다. 같은 id 로 다시
-    // 오면 값만 갱신한다(FCE 가 사후에 비용을 정정하는 일이 있다).
+    // FCE 가 보관 기간을 줄이거나 리셋해도 랩에는 남아야 한다.
     //
-    // **한 건씩 await 하지 않는다.** 처음에 그렇게 짰다가 146건에서 업로드가
-    // 통째로 타임아웃났다 — 서버리스에서 원격 DB 로 146번 왕복이다. 묶어서
-    // 보내면 왕복이 묶음 수만큼으로 준다.
-    const upserts = payload.trades.map((t) => {
-      const row = {
-        trackKey: t.trackKey,
-        symbol: t.symbol,
-        direction: t.direction,
-        assetClass: t.assetClass,
-        timeframe: t.timeframe,
-        leverage: t.leverage,
-        marginUsdt: t.marginUsdt,
-        entryAt: t.entryAt ? new Date(t.entryAt) : null,
-        entryPrice: t.entryPrice,
-        exitAt: t.exitAt ? new Date(t.exitAt) : null,
-        exitPrice: t.exitPrice,
-        grossPnlUsdt: t.grossPnlUsdt,
-        costsUsdt: t.costsUsdt,
-        netPnlUsdt: t.netPnlUsdt,
-        netReturnPct: t.netReturnPct,
-        exitReason: t.exitReason,
-        lossTags: t.lossTags.length > 0 ? (t.lossTags as Prisma.InputJsonValue) : Prisma.DbNull,
-        holdingBars: t.holdingBars,
-        asOf,
-      };
-      return prisma.fceTrade.upsert({ where: { id: t.id }, create: { id: t.id, ...row }, update: row });
-    });
-    // 한 트랜잭션이 너무 커지면 그것대로 시간이 걸린다. 50건씩 끊는다.
-    for (let i = 0; i < upserts.length; i += 50) {
-      await prisma.$transaction(upserts.slice(i, i + 50));
+    // ## 쓰기를 세 번으로 줄인다
+    //
+    // 처음에는 146건을 한 건씩 `upsert` 했다 → 업로드가 통째로 타임아웃.
+    // 다음에는 50건씩 `$transaction` → **그래도 타임아웃**(FUNCTION_INVOCATION_TIMEOUT).
+    // 서버리스에서 원격 DB 로 수백 번 왕복하는 것 자체가 안 되는 일이다.
+    //
+    // 그래서 **이미 있는 것을 먼저 읽고, 정말 바뀐 것만 쓴다.** 닫힌 거래는 원래
+    // 안 바뀌므로 정상 상태에서 쓰기가 **0번**이다.
+    //
+    //   1. 가진 것 읽기        — 1회
+    //   2. 새 거래 `createMany` — 1회 (첫 실행에 146건이 한 문장으로 들어간다)
+    //   3. 바뀐 거래만 갱신     — 보통 0회
+    const rows = payload.trades.map((t) => ({
+      id: t.id,
+      trackKey: t.trackKey,
+      symbol: t.symbol,
+      direction: t.direction,
+      assetClass: t.assetClass,
+      timeframe: t.timeframe,
+      leverage: t.leverage,
+      marginUsdt: t.marginUsdt,
+      entryAt: t.entryAt ? new Date(t.entryAt) : null,
+      entryPrice: t.entryPrice,
+      exitAt: t.exitAt ? new Date(t.exitAt) : null,
+      exitPrice: t.exitPrice,
+      grossPnlUsdt: t.grossPnlUsdt,
+      costsUsdt: t.costsUsdt,
+      netPnlUsdt: t.netPnlUsdt,
+      netReturnPct: t.netReturnPct,
+      exitReason: t.exitReason,
+      lossTags: t.lossTags,
+      holdingBars: t.holdingBars,
+    }));
+
+    if (rows.length > 0) {
+      const known = await prisma.fceTrade.findMany({
+        where: { id: { in: rows.map((r) => r.id) } },
+        select: {
+          id: true,
+          exitAt: true,
+          exitPrice: true,
+          grossPnlUsdt: true,
+          costsUsdt: true,
+          netPnlUsdt: true,
+          netReturnPct: true,
+          exitReason: true,
+          holdingBars: true,
+        },
+      });
+      const byId = new Map(known.map((k) => [k.id, k]));
+
+      const fresh = rows.filter((r) => !byId.has(r.id));
+      if (fresh.length > 0) {
+        await prisma.fceTrade.createMany({
+          data: fresh.map((r) => ({
+            ...r,
+            lossTags: r.lossTags.length > 0 ? (r.lossTags as Prisma.InputJsonValue) : Prisma.DbNull,
+            asOf,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // **무엇이 바뀌면 다시 쓰는가.** 결과 칸만 본다 — 진입 정보는 안 바뀌고,
+      // FCE 가 사후에 고치는 것은 비용·손익·청산이다.
+      const changed = rows.filter((r) => {
+        const old = byId.get(r.id);
+        if (!old) return false;
+        return (
+          old.exitAt?.getTime() !== (r.exitAt?.getTime() ?? undefined) ||
+          old.exitPrice !== r.exitPrice ||
+          old.grossPnlUsdt !== r.grossPnlUsdt ||
+          old.costsUsdt !== r.costsUsdt ||
+          old.netPnlUsdt !== r.netPnlUsdt ||
+          old.netReturnPct !== r.netReturnPct ||
+          old.exitReason !== r.exitReason ||
+          old.holdingBars !== r.holdingBars
+        );
+      });
+      for (const r of changed) {
+        await prisma.fceTrade.update({
+          where: { id: r.id },
+          data: {
+            exitAt: r.exitAt,
+            exitPrice: r.exitPrice,
+            grossPnlUsdt: r.grossPnlUsdt,
+            costsUsdt: r.costsUsdt,
+            netPnlUsdt: r.netPnlUsdt,
+            netReturnPct: r.netReturnPct,
+            exitReason: r.exitReason,
+            lossTags: r.lossTags.length > 0 ? (r.lossTags as Prisma.InputJsonValue) : Prisma.DbNull,
+            holdingBars: r.holdingBars,
+            asOf,
+          },
+        });
+      }
+      tradesWritten = fresh.length + changed.length;
     }
 
     if (payload.whale) {
@@ -194,6 +263,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       tracks: payload.tracks.length,
       positions: payload.positions.length,
       trades: payload.trades.length,
+      // 받은 수가 아니라 **실제로 쓴 수.** 0 이면 바뀐 게 없다는 뜻이고 그게 정상이다.
+      tradesWritten,
       whale: payload.whale !== null,
     });
   } catch (error) {
