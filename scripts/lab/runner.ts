@@ -300,8 +300,22 @@ interface Job {
   fails: number;
 }
 
-const jobs: Job[] = [
+/**
+ * 시세는 **혼자 도는 레인**이다.
+ *
+ * 처음에는 전부 한 줄로 세웠다. 그런데 FCE 업로드가 길어지자 시세가 그 뒤에서
+ * 94초까지 밀렸고(실측), 업로드가 타임아웃(120초)까지 가면 시세 간격이
+ * `STALE_AFTER_MS`(3분)를 넘긴다. 그러면 **수집은 멀쩡한데 화면에 끊김이 뜬다** —
+ * 이 러너가 없애려고 만들어진 바로 그 화면이다.
+ *
+ * 시세는 3심볼 한 번 GET 에 upsert 3행이다. 커넥션을 잡아먹는 쪽이 아니다.
+ */
+const fastJobs: Job[] = [
   { name: "latest-price", everyMs: 1 * MINUTE, run: latestPrice, lastAt: 0, fails: 0 },
+];
+
+/** 나머지는 한 줄로 선다. 병렬로 돌리면 어느 잡이 느린지 안 보인다. */
+const slowJobs: Job[] = [
   { name: "candles", everyMs: 5 * MINUTE, run: candles, lastAt: 0, fails: 0 },
   { name: "whale", everyMs: 15 * MINUTE, run: whale, lastAt: 0, fails: 0 },
   { name: "fce", everyMs: 15 * MINUTE, run: fceSnapshot, lastAt: 0, fails: 0 },
@@ -309,24 +323,24 @@ const jobs: Job[] = [
   { name: "funding", everyMs: 8 * HOUR, run: funding, lastAt: 0, fails: 0 },
 ];
 
+const jobs: Job[] = [...fastJobs, ...slowJobs];
+
 function stamp(): string {
   return new Date().toISOString().slice(11, 19);
 }
 
 /**
- * 한 번에 하나만 돈다.
+ * 레인 하나를 한 바퀴 돌린다. **레인 안에서는 한 번에 하나만 돈다** — 병렬이면
+ * DB 커넥션이 몰리고(서버리스는 람다당 1개다) 어느 잡이 느린지도 안 보인다.
  *
- * 병렬로 돌리면 DB 커넥션이 몰리고(서버리스는 람다당 1개다), 어느 잡이 느린지도
- * 안 보인다. 순서대로 도는 쪽이 느리지만 읽을 수 있다.
+ * 레인이 둘인 이유는 위 `fastJobs` 주석에 있다.
  */
-let busy = false;
-
-async function tick(): Promise<void> {
-  if (busy) return;
-  busy = true;
+async function runLane(lane: Job[], busy: { value: boolean }): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
   try {
     const now = Date.now();
-    for (const job of jobs) {
+    for (const job of lane) {
       if (now - job.lastAt < job.everyMs) continue;
       const startedAt = new Date();
       try {
@@ -354,8 +368,16 @@ async function tick(): Promise<void> {
       }
     }
   } finally {
-    busy = false;
+    busy.value = false;
   }
+}
+
+const fastBusy = { value: false };
+const slowBusy = { value: false };
+
+async function tick(): Promise<void> {
+  // 두 레인을 같이 깨운다. 서로를 기다리지 않는 것이 요점이다.
+  await Promise.all([runLane(fastJobs, fastBusy), runLane(slowJobs, slowBusy)]);
 }
 
 async function main(): Promise<void> {
