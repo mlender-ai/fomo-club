@@ -20,17 +20,37 @@ import { LEDGER_ROWS, readFceLedger, type FceTradeRow } from "../../../lib/lab/f
 
 export const dynamic = "force-dynamic";
 
-/** FCE 의 청산 사유 → 사람이 읽는 말. 모르는 값은 원문 그대로 둔다. */
+/**
+ * FCE 의 청산 사유 → 사람이 읽는 말.
+ *
+ * 값은 지어내지 않고 **실제로 오는 것**을 적었다(147건 분포). 처음에는
+ * `stop_loss` · `invalidation` 같은 일반명으로 지도를 짰다가 하나도 안 맞아서
+ * 화면에 원문이 그대로 나왔다. 모르는 값은 원문 그대로 둔다 — 그게 맞다.
+ */
 const EXIT_LABEL: Record<string, string> = {
-  take_profit: "목표 도달",
+  invalidation_breach: "전제 무효",
   take_profit_1: "목표 1",
   take_profit_2: "목표 2",
-  stop_loss: "손절",
-  invalidation: "전제 무효",
+  take_profit_pressure: "목표 부근 압력",
+  time_decay: "시간 소모",
   time_stop: "시간 만료",
-  manual: "수동",
-  partial: "부분 청산",
+  breakeven_stop: "본전 정지",
+  opposite_stance_flip: "반대 전환",
+  duplicate_bootstrap_suppressed: "중복 억제",
 };
+
+/**
+ * 화면에 낼 FCE 태그를 고른다.
+ *
+ * `exit:invalidation_breach` 처럼 **청산 사유를 그대로 되풀이하는 태그**는 뺀다 —
+ * 옆 칸에 이미 있고, 남겨두면 표가 같은 말을 두 번 한다.
+ */
+function usefulTags(tags: string[], exitReason: string | null): string[] {
+  return tags.filter((tag) => {
+    if (tag.startsWith("exit:")) return false;
+    return tag !== exitReason;
+  });
+}
 
 function usd(value: number | null, digits = 2): string {
   if (value === null) return "—";
@@ -69,9 +89,13 @@ function TradeRow({ trade }: { trade: FceTradeRow }) {
       <td className="num">{trade.costsUsdt === null ? "—" : trade.costsUsdt.toFixed(2)}</td>
       <td className="l">
         {trade.exitReason ? (EXIT_LABEL[trade.exitReason] ?? trade.exitReason) : "—"}
-        {trade.lossTags.length > 0 ? (
-          <span className="lab-nonrank"> {trade.lossTags.join(" · ")}</span>
-        ) : null}
+      </td>
+      {/* FCE 내부 태그. 길어서 칸을 넘기므로 잘라 보여준다 — 전문은 FCE 에 있다. */}
+      <td className="tags">
+        {(() => {
+          const tags = usefulTags(trade.lossTags, trade.exitReason);
+          return tags.length > 0 ? <span className="lab-nonrank">{tags.join(" · ")}</span> : null;
+        })()}
       </td>
       <td className="num">{stamp(trade.exitAt)}</td>
     </tr>
@@ -183,6 +207,7 @@ export default async function TradesPage() {
                 <th>손익</th>
                 <th>비용</th>
                 <th className="l">왜 나왔나</th>
+                <th className="l">FCE 태그</th>
                 <th>청산</th>
               </tr>
             </thead>
