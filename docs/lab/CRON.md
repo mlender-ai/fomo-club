@@ -129,10 +129,34 @@ npm run lab:runner -- --once  # 전부 한 번씩만
 다시 뽑으면 순위에서 밀린 지갑의 관측이 끊긴다 — 표본이 남되 **자라지 않는다**
 (FCE `c0e4805` 가 고친 결함). 처음 한 번만, 그것도 성과가 아니라 **계좌 규모**로 뽑는다.
 
+### 상시화 — 터미널을 닫아도 돈다
+
+러너가 터미널 세션에 매여 있으면 창을 닫거나 재부팅하는 순간 죽고, **화면은 그때부터
+조용히 낡아간다.** 그래서 launchd 에 올린다:
+
+```bash
+scripts/lab/launchd/install.sh
+```
+
+| | |
+|---|---|
+| `RunAtLoad` | 로그인 직후부터 돈다 |
+| `KeepAlive` | 죽으면 다시 띄운다 |
+| `ThrottleInterval 30` | 즉시 재시작을 반복하지 않는다 — 소스에 무례하다 |
+| 로그 | `/tmp/lab-runner.log` · `/tmp/lab-runner.err` |
+
+토큰이 plist 안에 들어가므로 `~/Library/LaunchAgents/com.fomo.lab.runner.plist` 는
+`600` 으로 둔다. 제거는:
+
+```bash
+launchctl bootout gui/$(id -u)/com.fomo.lab.runner && rm ~/Library/LaunchAgents/com.fomo.lab.runner.plist
+```
+
 ### 남은 약점
 
 맥이 자면 멈춘다. `caffeinate -dimsu &` 로 막고, 그래도 끊기면 **화면이 먼저 말한다**
-(`/data` 의 `끊김`, 전광판의 끊김 구간). 상시화(launchd)는 별건이다.
+(`/data` 의 `끊김`, 전광판의 끊김 구간). 맥이 꺼져 있는 동안은 `lab-collect` 크론이
+느리게나마 백스톱을 한다.
 
 ---
 
