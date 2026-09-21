@@ -279,14 +279,32 @@ async function paperTick(startedAt: Date): Promise<Result> {
   return { rows: 0, detail: { dispatched: "lab-collect job=paper" } };
 }
 
-/** FCE 스냅샷. 업로더를 그대로 부른다 — 계약이 한 곳에만 있어야 한다. */
-async function fceSnapshot(): Promise<Result> {
+/**
+ * FCE 스냅샷. 업로더를 그대로 부른다 — 계약이 한 곳에만 있어야 한다.
+ *
+ * ## 성공도 `CollectionRun` 에 적는다
+ *
+ * 업로더의 성공은 `FceUpload` 에 적히고 `CollectionRun` 에는 안 남는다. 반면
+ * 실패는 러너가 `CollectionRun` 에 적는다. 그래서 한 번 실패하면 `/data` 의
+ * 수집 잡 표에 **`fce ❌` 가 영영 남는다** — 그 뒤로 몇 번을 성공해도 그 표를
+ * 갱신할 것이 없기 때문이다. 실제로 14:54 실패가 15:10 성공 뒤에도 빨갛게 있었다.
+ *
+ * 다른 잡들은 데이터를 밀어 올리는 그 요청이 `CollectionRun` 을 같이 쓴다.
+ * fce 만 경로가 달라서 여기서 따로 적는다.
+ */
+async function fceSnapshot(startedAt: Date): Promise<Result> {
   const { stdout } = await execFileAsync("npx", ["tsx", "scripts/lab/fce-upload.ts"], {
     encoding: "utf8",
     env: process.env,
     timeout: 5 * MINUTE,
   });
   const line = stdout.split("\n").find((l) => l.includes("tracks")) ?? "";
+  await post("/api/lab/market", {
+    job: "fce",
+    source: "local-runner",
+    startedAt: startedAt.toISOString(),
+    detail: { line: line.trim().slice(0, 300) },
+  });
   return { rows: 1, detail: { line: line.trim().slice(0, 140) } };
 }
 
