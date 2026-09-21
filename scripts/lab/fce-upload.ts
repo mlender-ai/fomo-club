@@ -27,6 +27,7 @@
 import type {
   FcePayload,
   PositionPayload,
+  TradePayload,
   TrackPayload,
   TrackStatus,
   WhalePayload,
@@ -268,16 +269,66 @@ function whale(
   };
 }
 
+/**
+ * 닫힌 거래 이력 — `/api/paper/trades`.
+ *
+ * ## 칸을 하나씩 옮긴다. 펼치지 않는다
+ *
+ * FCE 응답에는 `take_profit_price` · `stop_price` · `invalidation_price` ·
+ * `target_plan` 이 들어 있다. `...t` 로 펼치면 그게 전부 랩 DB 로 넘어오고,
+ * 한 번 들어온 값은 언젠가 화면에 샌다 — `LAB-08` 이 막은 것이 정확히 그것이다.
+ * 그래서 **여기서 이름을 하나씩 적는다.** 빠뜨리는 것은 안전한 실패다.
+ *
+ * `exit_reason` 은 가져온다. 닫힌 거래가 왜 끝났는지는 **과거의 사실**이고,
+ * 그게 없으면 이력이 "얼마 벌었다" 뿐인 표가 된다.
+ */
+function trades(payload: Record<string, unknown>): TradePayload[] {
+  const rows = Array.isArray(payload.trades) ? payload.trades : [];
+  return rows.flatMap((raw) => {
+    const t = record(raw);
+    // 열린 거래는 여기 담지 않는다 — 그건 `positions()` 가 본다.
+    if (t.status === "open") return [];
+    if (typeof t.id !== "string" && typeof t.id !== "number") return [];
+    const tags = Array.isArray(t.loss_tags) ? t.loss_tags.map(String) : [];
+    return [
+      {
+        id: String(t.id),
+        trackKey: "crypto" as const,
+        symbol: String(t.symbol ?? ""),
+        direction: String(t.direction ?? ""),
+        assetClass: typeof t.asset_class === "string" ? t.asset_class : null,
+        timeframe: typeof t.timeframe === "string" ? t.timeframe : null,
+        leverage: num(t.leverage),
+        marginUsdt: num(t.margin_usdt),
+        entryAt: typeof t.entry_at === "string" ? t.entry_at : null,
+        entryPrice: num(t.entry_price),
+        exitAt: typeof t.exit_at === "string" ? t.exit_at : null,
+        exitPrice: num(t.exit_price),
+        grossPnlUsdt: num(t.gross_pnl_usdt),
+        costsUsdt: num(t.costs_usdt),
+        netPnlUsdt: num(t.net_pnl_usdt),
+        netReturnPct: num(t.net_return_pct),
+        exitReason: typeof t.exit_reason === "string" ? t.exit_reason : null,
+        lossTags: tags,
+        holdingBars: num(t.holding_bars),
+      },
+    ];
+  });
+}
+
 // ── 한 바퀴 ──────────────────────────────────────────────────────────────────
 
 async function collect(): Promise<FcePayload> {
   const at = new Date().toISOString();
-  const [paper, follow, eligibility, stock, poly] = await Promise.all([
+  const [paper, follow, eligibility, stock, poly, ledger] = await Promise.all([
     fce("/api/paper/dashboard").then(record),
     fce("/api/onchain/follow/trades").then(record),
     fce("/api/onchain/follow/eligibility").then(record),
     fce("/api/stock-paper/dashboard").then(record),
     fce("/api/poly-paper/dashboard").then(record),
+    // 매번 전부 받는다. 148건이라 싸고, **증분으로 받으면 FCE 가 사후 정정한
+    // 비용이 랩에 반영되지 않는다.** 늘어나면 그때 자르면 된다.
+    fce("/api/paper/trades?limit=1000").then(record),
   ]);
 
   return {
@@ -289,6 +340,7 @@ async function collect(): Promise<FcePayload> {
       polyTrack(poly, at),
     ],
     positions: positions(paper),
+    trades: trades(ledger),
     whale: whale(eligibility, follow, at),
   };
 }

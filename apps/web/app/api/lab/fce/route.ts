@@ -118,6 +118,34 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
+    // 닫힌 거래는 **지우지 않는다.** 포지션과 정반대다 — 닫힌 거래는 사실이고,
+    // FCE 가 보관 기간을 줄이거나 리셋해도 랩에는 남아야 한다. 같은 id 로 다시
+    // 오면 값만 갱신한다(FCE 가 사후에 비용을 정정하는 일이 있다).
+    for (const t of payload.trades) {
+      const row = {
+        trackKey: t.trackKey,
+        symbol: t.symbol,
+        direction: t.direction,
+        assetClass: t.assetClass,
+        timeframe: t.timeframe,
+        leverage: t.leverage,
+        marginUsdt: t.marginUsdt,
+        entryAt: t.entryAt ? new Date(t.entryAt) : null,
+        entryPrice: t.entryPrice,
+        exitAt: t.exitAt ? new Date(t.exitAt) : null,
+        exitPrice: t.exitPrice,
+        grossPnlUsdt: t.grossPnlUsdt,
+        costsUsdt: t.costsUsdt,
+        netPnlUsdt: t.netPnlUsdt,
+        netReturnPct: t.netReturnPct,
+        exitReason: t.exitReason,
+        lossTags: t.lossTags.length > 0 ? (t.lossTags as Prisma.InputJsonValue) : Prisma.DbNull,
+        holdingBars: t.holdingBars,
+        asOf,
+      };
+      await prisma.fceTrade.upsert({ where: { id: t.id }, create: { id: t.id, ...row }, update: row });
+    }
+
     if (payload.whale) {
       const w = payload.whale;
       const row = {
@@ -151,6 +179,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       ok: true,
       tracks: payload.tracks.length,
       positions: payload.positions.length,
+      trades: payload.trades.length,
       whale: payload.whale !== null,
     });
   } catch (error) {

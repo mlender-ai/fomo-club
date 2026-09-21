@@ -33,6 +33,9 @@ export default async function LabLayout({ children }: { children: ReactNode }) {
         <Link className="lab-nav-link" href="/whale">
           고래
         </Link>
+        <Link className="lab-nav-link" href="/trades">
+          거래
+        </Link>
         <Link className="lab-nav-link" href="/data">
           데이터
         </Link>

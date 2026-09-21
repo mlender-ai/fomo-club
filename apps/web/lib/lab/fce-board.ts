@@ -207,3 +207,105 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
     freshness,
   };
 }
+
+// ── 거래 이력 ────────────────────────────────────────────────────────────────
+
+export interface FceTradeRow {
+  id: string;
+  trackKey: string;
+  symbol: string;
+  direction: string;
+  leverage: number | null;
+  entryAt: Date | null;
+  exitAt: Date | null;
+  entryPrice: number | null;
+  exitPrice: number | null;
+  grossPnlUsdt: number | null;
+  costsUsdt: number | null;
+  netPnlUsdt: number | null;
+  netReturnPct: number | null;
+  exitReason: string | null;
+  lossTags: string[];
+  holdingBars: number | null;
+}
+
+export interface FceLedger {
+  trades: FceTradeRow[];
+  /** 표에 보이는 것 말고 **전부**에 대한 합계. 보이는 것만 더하면 화면이 거짓말한다. */
+  total: {
+    count: number;
+    wins: number;
+    losses: number;
+    flat: number;
+    grossUsdt: number;
+    costsUsdt: number;
+    netUsdt: number;
+    /** 비용이 총손익을 얼마나 먹었나. 분모가 0이면 null. */
+    costSharePct: number | null;
+  };
+  /** 가장 이른 · 가장 늦은 청산 시각. 표가 어느 기간의 것인지 화면이 말해야 한다. */
+  span: { from: Date | null; to: Date | null };
+}
+
+/** 표에 몇 줄까지 보일 것인가. 합계는 이것과 무관하게 전부를 센다. */
+export const LEDGER_ROWS = 60;
+
+/**
+ * 거래 이력.
+ *
+ * **비용을 따로 보여준다.** `net = gross − costs` 인데 `net` 만 보이면 수수료·펀딩비가
+ * 성과를 얼마나 먹었는지 안 보인다. 크립토 무기한 선물에서 이건 작은 항이 아니다.
+ */
+export async function readFceLedger(): Promise<FceLedger> {
+  const [rows, agg, counts, bounds] = await Promise.all([
+    prisma.fceTrade.findMany({ orderBy: [{ exitAt: "desc" }], take: LEDGER_ROWS }),
+    prisma.fceTrade.aggregate({
+      _sum: { grossPnlUsdt: true, costsUsdt: true, netPnlUsdt: true },
+      _count: { id: true },
+    }),
+    Promise.all([
+      prisma.fceTrade.count({ where: { netPnlUsdt: { gt: 0 } } }),
+      prisma.fceTrade.count({ where: { netPnlUsdt: { lt: 0 } } }),
+    ]),
+    prisma.fceTrade.aggregate({ _min: { exitAt: true }, _max: { exitAt: true } }),
+  ]);
+
+  const [wins, losses] = counts;
+  const count = agg._count.id;
+  const grossUsdt = agg._sum.grossPnlUsdt ?? 0;
+  const costsUsdt = agg._sum.costsUsdt ?? 0;
+  const netUsdt = agg._sum.netPnlUsdt ?? 0;
+
+  return {
+    trades: rows.map((t) => ({
+      id: t.id,
+      trackKey: t.trackKey,
+      symbol: t.symbol,
+      direction: t.direction,
+      leverage: t.leverage,
+      entryAt: t.entryAt,
+      exitAt: t.exitAt,
+      entryPrice: t.entryPrice,
+      exitPrice: t.exitPrice,
+      grossPnlUsdt: t.grossPnlUsdt,
+      costsUsdt: t.costsUsdt,
+      netPnlUsdt: t.netPnlUsdt,
+      netReturnPct: t.netReturnPct,
+      exitReason: t.exitReason,
+      lossTags: Array.isArray(t.lossTags) ? (t.lossTags as unknown[]).map(String) : [],
+      holdingBars: t.holdingBars,
+    })),
+    total: {
+      count,
+      wins,
+      losses,
+      // 정확히 0 이거나 값이 없는 거래. **승·패로 나누지 않는다.**
+      flat: count - wins - losses,
+      grossUsdt,
+      costsUsdt,
+      netUsdt,
+      costSharePct: Math.abs(grossUsdt) > 0 ? (costsUsdt / Math.abs(grossUsdt)) * 100 : null,
+    },
+    span: { from: bounds._min.exitAt, to: bounds._max.exitAt },
+  };
+}

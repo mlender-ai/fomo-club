@@ -60,6 +60,41 @@ export interface PositionPayload {
   entryPrice: number | null;
 }
 
+/**
+ * 닫힌 거래 한 건.
+ *
+ * ## 목표가·손절선 칸이 없는 것은 실수가 아니다
+ *
+ * FCE 응답에는 `take_profit_price` · `stop_price` · `invalidation_price` ·
+ * `target_plan` 이 있다. **여기에 칸을 만들지 않는다** — `LAB-08` 이 화면에서 막은
+ * 값이고, 받아둔 값은 언젠가 화면에 샌다. 여기 있는 것은 **결과**뿐이다.
+ *
+ * `exitReason` 은 다르다. 닫힌 거래가 **왜 끝났는지는 과거의 사실**이고, 그게
+ * 없으면 이력이 "얼마 벌었다" 뿐인 표가 된다.
+ */
+export interface TradePayload {
+  id: string;
+  trackKey: TrackKey;
+  symbol: string;
+  direction: string;
+  assetClass: string | null;
+  timeframe: string | null;
+  leverage: number | null;
+  marginUsdt: number | null;
+  entryAt: string | null;
+  entryPrice: number | null;
+  exitAt: string | null;
+  exitPrice: number | null;
+  grossPnlUsdt: number | null;
+  /** 수수료·펀딩비. **빼지 않으면 성과가 부풀려진다.** */
+  costsUsdt: number | null;
+  netPnlUsdt: number | null;
+  netReturnPct: number | null;
+  exitReason: string | null;
+  lossTags: string[];
+  holdingBars: number | null;
+}
+
 export interface WhalePayload {
   walletsTotal: number;
   eligible: number;
@@ -81,6 +116,8 @@ export interface FcePayload {
   at: string;
   tracks: TrackPayload[];
   positions: PositionPayload[];
+  /** 닫힌 거래. 없으면 빈 배열 — **없다고 지우지 않는다.** */
+  trades: TradePayload[];
   whale: WhalePayload | null;
 }
 
@@ -182,6 +219,37 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
     });
   }
 
+  // 닫힌 거래. **id · trackKey 만 필수다** — 나머지는 FCE 가 모르면 null 로 온다.
+  const trades: TradePayload[] = [];
+  for (const [index, raw] of (Array.isArray(body.trades) ? body.trades : []).entries()) {
+    const t = raw as Record<string, unknown>;
+    if (typeof t.id !== "string" || !KEYS.includes(t.trackKey as TrackKey)) {
+      problems.push({ path: `trades[${index}]`, message: "id · trackKey 가 필요하다" });
+      continue;
+    }
+    trades.push({
+      id: t.id,
+      trackKey: t.trackKey as TrackKey,
+      symbol: String(t.symbol ?? ""),
+      direction: String(t.direction ?? ""),
+      assetClass: typeof t.assetClass === "string" ? t.assetClass : null,
+      timeframe: typeof t.timeframe === "string" ? t.timeframe : null,
+      leverage: num(t.leverage),
+      marginUsdt: num(t.marginUsdt),
+      entryAt: typeof t.entryAt === "string" ? t.entryAt : null,
+      entryPrice: num(t.entryPrice),
+      exitAt: typeof t.exitAt === "string" ? t.exitAt : null,
+      exitPrice: num(t.exitPrice),
+      grossPnlUsdt: num(t.grossPnlUsdt),
+      costsUsdt: num(t.costsUsdt),
+      netPnlUsdt: num(t.netPnlUsdt),
+      netReturnPct: num(t.netReturnPct),
+      exitReason: typeof t.exitReason === "string" ? t.exitReason : null,
+      lossTags: Array.isArray(t.lossTags) ? t.lossTags.map(String) : [],
+      holdingBars: num(t.holdingBars),
+    });
+  }
+
   let whale: WhalePayload | null = null;
   if (body.whale && typeof body.whale === "object") {
     const w = body.whale as Record<string, unknown>;
@@ -205,5 +273,5 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
   }
 
   if (problems.length > 0) return { payload: null, problems };
-  return { payload: { at: body.at as string, tracks, positions, whale }, problems: [] };
+  return { payload: { at: body.at as string, tracks, positions, trades, whale }, problems: [] };
 }
