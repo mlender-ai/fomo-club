@@ -29,6 +29,26 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /** 업로더만 부를 수 있다. 토큰이 없으면 **아예 열지 않는다.** */
+/**
+ * 두 실수를 **같다고 볼 것인가.**
+ *
+ * `===` 로 비교했다가 같은 페이로드를 다시 보내도 20건 중 18건이 "바뀜" 으로 잡혔다.
+ * `DOUBLE PRECISION` 왕복에서 마지막 자리가 흔들리기 때문이다:
+ *
+ * ```
+ * 보낸 값   2.5423573804689172
+ * 읽은 값   2.542357380468917
+ * ```
+ *
+ * 그래서 매 업로드마다 146건을 전부 다시 썼고, 그게 타임아웃의 진짜 원인이었다.
+ *
+ * 1e-9 USDT 는 10억분의 1달러다. **그건 정정이 아니다.** 실제 정정은 이보다 훨씬 크다.
+ */
+function sameNumber(a: number | null, b: number | null): boolean {
+  if (a === null || b === null) return a === b;
+  return Math.abs(a - b) < 1e-9;
+}
+
 function authorized(request: Request): boolean {
   const expected = process.env.LAB_INGEST_TOKEN;
   // 토큰이 설정돼 있지 않으면 거부한다 — "설정 안 됐으니 통과" 는 문을 열어두는 것이다.
@@ -200,11 +220,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         if (!old) return false;
         return (
           old.exitAt?.getTime() !== (r.exitAt?.getTime() ?? undefined) ||
-          old.exitPrice !== r.exitPrice ||
-          old.grossPnlUsdt !== r.grossPnlUsdt ||
-          old.costsUsdt !== r.costsUsdt ||
-          old.netPnlUsdt !== r.netPnlUsdt ||
-          old.netReturnPct !== r.netReturnPct ||
+          !sameNumber(old.exitPrice, r.exitPrice) ||
+          !sameNumber(old.grossPnlUsdt, r.grossPnlUsdt) ||
+          !sameNumber(old.costsUsdt, r.costsUsdt) ||
+          !sameNumber(old.netPnlUsdt, r.netPnlUsdt) ||
+          !sameNumber(old.netReturnPct, r.netReturnPct) ||
           old.exitReason !== r.exitReason ||
           old.holdingBars !== r.holdingBars
         );
