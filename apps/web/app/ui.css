@@ -1,0 +1,633 @@
+/*
+ * 부품 스타일 (UI-01 PART D · E · F · G).
+ *
+ * **색·크기를 하드코딩하지 않는다.** 전부 `globals.css` 의 토큰을 참조한다 —
+ * 어두운 테마는 나중에 그 토큰 값만 바꿔서 만든다(UI-01 A-3).
+ * `npm run lint:tokens` 가 이 파일에 `#` 색이 들어오면 잡는다.
+ */
+
+/* ── 알약 ──────────────────────────────────────────────────────────────── */
+
+.ui-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--t-caption);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-snug);
+  white-space: nowrap;
+}
+
+.ui-pill.is-up {
+  background: var(--up-soft);
+  color: var(--up);
+}
+.ui-pill.is-dn {
+  background: var(--dn-soft);
+  color: var(--dn);
+}
+.ui-pill.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.ui-pill.is-blue {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.ui-pill.is-mute {
+  background: var(--bg-2);
+  color: var(--ink-2);
+}
+
+.ui-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: currentcolor;
+}
+
+/* ── 히어로 ────────────────────────────────────────────────────────────── */
+
+.ui-hero {
+  margin: 0 0 var(--s9);
+}
+
+.ui-hero-label {
+  margin: 0 0 var(--s3);
+  color: var(--ink-2);
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+}
+
+.ui-hero-value {
+  margin: 0;
+  font-size: var(--t-hero);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-hero);
+  line-height: 1.05;
+}
+
+.ui-hero-meta {
+  margin: var(--s3) 0 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+/* ── 변동 ──────────────────────────────────────────────────────────────── */
+
+.ui-delta {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: var(--s3) 0 0;
+  flex-wrap: wrap;
+}
+
+.ui-delta-amount {
+  font-size: var(--t-h3);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-snug);
+}
+.ui-delta-amount.is-up {
+  color: var(--up);
+}
+.ui-delta-amount.is-dn {
+  color: var(--dn);
+}
+.ui-delta-amount.is-mute {
+  color: var(--ink-2);
+}
+
+.ui-delta-period {
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+/* ── 카드 ──────────────────────────────────────────────────────────────── */
+
+.ui-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: var(--card-pad);
+  background: var(--bg);
+  /* 그림자 없음 — 드롭다운·모달에만 쓴다(UI-01 A-2). */
+}
+
+.ui-card.is-flush {
+  padding: var(--card-pad) 0 0;
+}
+
+.ui-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-bottom: var(--s5);
+}
+
+.ui-card.is-flush .ui-card-head {
+  padding: 0 var(--card-pad);
+}
+
+.ui-card-title {
+  margin: 0;
+  font-size: var(--t-h3);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-snug);
+}
+
+.ui-card-desc {
+  margin: var(--s1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-caption);
+}
+
+/* ── 통계 묶음 ─────────────────────────────────────────────────────────── */
+
+.ui-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-stat);
+  overflow: hidden;
+}
+
+.ui-stat {
+  background: var(--bg);
+  padding: var(--s5) var(--s5);
+}
+
+.ui-stat-label {
+  margin: 0 0 var(--s2);
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+  font-weight: var(--w-medium);
+}
+
+.ui-stat-value {
+  margin: 0;
+  font-size: var(--t-stat);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-tight);
+}
+.ui-stat-value.is-up {
+  color: var(--up);
+}
+.ui-stat-value.is-dn {
+  color: var(--dn);
+}
+
+.ui-stat-note {
+  margin: var(--s1) 0 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+/* ── 자산 행 ───────────────────────────────────────────────────────────── */
+
+.ui-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ui-row + .ui-row {
+  border-top: 1px solid var(--line);
+}
+
+.ui-row-link {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 92px minmax(0, 150px) 96px auto;
+  align-items: center;
+  gap: var(--s4);
+  min-height: var(--row-h);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-row);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--m-hover) ease;
+}
+
+a.ui-row-link:hover {
+  background: var(--bg-2);
+  text-decoration: none;
+}
+
+.ui-row-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: var(--t-caption);
+  font-weight: var(--w-bold);
+}
+
+.ui-row-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ui-row-title {
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-snug);
+}
+
+.ui-row-sub {
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+.ui-row-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.ui-row-amount {
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
+}
+
+.ui-row-subamount {
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+.ui-row-change,
+.ui-row-status {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ui-spark {
+  display: block;
+}
+.ui-spark.is-empty {
+  display: block;
+}
+
+/* ── 비교 막대 ─────────────────────────────────────────────────────────── */
+
+.ui-compare {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.ui-compare-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 168px) minmax(0, 1fr) minmax(88px, auto);
+  align-items: center;
+  gap: var(--s4);
+}
+
+.ui-compare-label {
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+}
+
+.ui-compare-track {
+  position: relative;
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+}
+
+.ui-compare-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: var(--r-pill);
+  min-width: 2px;
+}
+
+/* 기준을 넘은 것만 파랗다. 넘지 못한 것은 강조하지 않는다. */
+.ui-compare-fill.is-beat {
+  background: var(--blue);
+}
+.ui-compare-fill.is-under {
+  background: var(--line-2);
+}
+.ui-compare-fill.is-baseline {
+  background: var(--ink-3);
+}
+
+.ui-compare-baseline {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--ink);
+  border-radius: var(--r-pill);
+}
+
+.ui-compare-value {
+  text-align: right;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
+}
+.ui-compare-value.is-up {
+  color: var(--up);
+}
+.ui-compare-value.is-dn {
+  color: var(--dn);
+}
+
+/* ── 연구 항목 ─────────────────────────────────────────────────────────── */
+
+.ui-research {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ui-research-item + .ui-research-item {
+  border-top: 1px solid var(--line);
+}
+
+.ui-research-link {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: baseline;
+  padding: var(--s5) var(--s3);
+  border-radius: var(--r-row);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--m-hover) ease;
+}
+
+a.ui-research-link:hover {
+  background: var(--bg-2);
+  text-decoration: none;
+}
+
+.ui-research-no {
+  font-size: var(--t-research-no);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-display);
+  color: var(--ink-3);
+}
+
+.ui-research-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.ui-research-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.ui-research-title {
+  font-size: var(--t-h3);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-snug);
+}
+
+.ui-research-summary {
+  color: var(--ink-2);
+  font-size: var(--t-caption);
+}
+
+/* ── 차트 ──────────────────────────────────────────────────────────────── */
+
+.ui-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.ui-ranges {
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.ui-range {
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: var(--t-caption);
+  font-weight: var(--w-medium);
+  cursor: pointer;
+  transition: background var(--m-hover) ease, color var(--m-hover) ease;
+}
+
+.ui-range.is-on {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.ui-chart-legend {
+  display: flex;
+  gap: var(--s4);
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+  flex-wrap: wrap;
+}
+
+.ui-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.ui-legend-item.is-missing {
+  color: var(--warn);
+}
+
+.ui-legend-swatch {
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--blue);
+}
+
+.ui-legend-swatch.is-dash {
+  border-top: 2px dashed var(--ink-3);
+}
+
+/* ── 빈 상태 · 스켈레톤 ────────────────────────────────────────────────── */
+
+.ui-empty {
+  padding: var(--s10) var(--s5);
+  text-align: center;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-card);
+}
+
+.ui-empty-title {
+  margin: 0;
+  font-size: var(--t-h3);
+  font-weight: var(--w-semibold);
+}
+
+.ui-empty-reason {
+  margin: var(--s2) 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-body);
+}
+
+.ui-empty-action {
+  margin: var(--s4) 0 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+.ui-skeleton {
+  display: block;
+  background: var(--bg-2);
+  animation: ui-pulse var(--m-skeleton) ease-in-out infinite;
+}
+
+.ui-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+@keyframes ui-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 값이 바뀌면 0.4초간 배경 살짝 강조 (UI-01 F). */
+.ui-flash {
+  animation: ui-flash var(--m-flash) ease-out;
+}
+
+@keyframes ui-flash {
+  from {
+    background: var(--blue-soft);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/* ── 반응형 (UI-01 G) ──────────────────────────────────────────────────── */
+
+@media (max-width: 1199px) {
+  .ui-row-link {
+    grid-template-columns: 36px minmax(0, 1fr) minmax(0, 140px) 92px auto;
+  }
+  /* 추이선부터 숨는다. 값과 변동은 끝까지 남는다. */
+  .ui-row-spark {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .ui-hero-value {
+    font-size: 44px;
+  }
+  .ui-row-link {
+    grid-template-columns: 32px minmax(0, 1fr) minmax(0, auto);
+    gap: var(--s3);
+  }
+  .ui-row-change,
+  .ui-row-status {
+    display: none;
+  }
+  .ui-row-sub {
+    display: none;
+  }
+  .ui-compare-row {
+    grid-template-columns: minmax(80px, 1fr) minmax(0, 1.4fr) minmax(72px, auto);
+    gap: var(--s2);
+  }
+  .ui-research-link {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: var(--s3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton,
+  .ui-flash {
+    animation: none;
+  }
+  .ui-range,
+  .ui-row-link,
+  .ui-research-link {
+    transition: none;
+  }
+}
+
+/* ── 부품 견본 페이지 ──────────────────────────────────────────────────── */
+
+.ui-sample {
+  max-width: var(--content-max);
+}
+
+.ui-sample-warning {
+  margin: 0 0 var(--s9);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-row);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: var(--t-caption);
+}
+
+.ui-sample-block {
+  margin-bottom: var(--section-gap);
+}
+
+.ui-sample-h {
+  margin: 0 0 var(--s4);
+  font-size: var(--t-h2);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-tight);
+}
+
+.ui-sample-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+.ui-sample-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--s5);
+}
+
+.ui-sample-list {
+  margin: 0;
+  padding-left: var(--s5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  font-size: var(--t-body);
+}

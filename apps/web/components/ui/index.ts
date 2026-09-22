@@ -1,0 +1,19 @@
+/**
+ * 부품 한 곳 (UI-01 E).
+ *
+ * **여기 있는 것만 쓴다.** 화면마다 부품을 새로 만들지 않는다 — 그렇게 하면
+ * 같은 알약이 화면마다 조금씩 다르게 생기고, 나중에 색 하나 바꾸려면 전부 뒤져야 한다.
+ */
+export { AreaChartCard, type RangeOption, type SeriesPoint } from "./AreaChart";
+export { AssetRow } from "./AssetRow";
+export { Card } from "./Card";
+export { CompareBar, type CompareItem } from "./CompareBar";
+export { Delta } from "./Delta";
+export { Empty } from "./Empty";
+export { Hero } from "./Hero";
+export { Pill, type PillTone } from "./Pill";
+export { ResearchItem, type ResearchStatus } from "./ResearchItem";
+export { Skeleton, SkeletonRows } from "./Skeleton";
+export { Sparkline } from "./Sparkline";
+export { StatGroup, type Stat } from "./StatGroup";
+export { MINUS, ago, money, num, pct, tone } from "./format";
