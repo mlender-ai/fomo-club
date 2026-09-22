@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { checkPayload } from "../../../../lib/lab/fce-payload";
 import { rebuildCapitalSeries } from "../../../../lib/lab/capital";
+import { buildSnapshots } from "../../../../lib/lab/snapshot";
 import { prisma } from "../../../../lib/prisma";
 
 /**
@@ -283,6 +284,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       await prisma.fceWhale.upsert({ where: { id: 1 }, create: { id: 1, ...row }, update: row });
     }
 
+    // **여섯 탭을 통째로 조립해 둔다**(UI-02 F-1). 화면 요청은 이걸 한 줄 읽는다 —
+    // 원격 DB 왕복이 ~900ms 라서 쿼리 수가 곧 응답 시간이다.
+    const built = await buildSnapshots();
+
     await prisma.fceUpload.create({
       data: {
         ok: true,
@@ -300,6 +305,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // 받은 수가 아니라 **실제로 쓴 수.** 0 이면 바뀐 게 없다는 뜻이고 그게 정상이다.
       tradesWritten,
       capitalWritten,
+      snapshots: built.length,
       whale: payload.whale !== null,
     });
   } catch (error) {
