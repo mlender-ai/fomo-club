@@ -178,8 +178,11 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       status: t.status,
       statusReason: t.statusReason,
       evidenceNote: t.evidenceNote,
-      elapsedDays: t.elapsedDays,
-      calendarDays: t.calendarDays,
+      // **`?? null` 로 눕힌다.** 마이그레이션 전에 만들어진 행이나 오래된 클라이언트에서
+      // 이 칸이 `undefined` 로 온다. 화면이 `=== null` 만 보고 있어서 `undefined/?` 가
+      // 그대로 표에 찍혔다 — 실제로 그렇게 나갔다.
+      elapsedDays: t.elapsedDays ?? null,
+      calendarDays: t.calendarDays ?? null,
       leverage: t.leverage,
       benchmarkLabel: t.benchmarkLabel,
       benchmarkReturnPct: t.benchmarkReturnPct,

@@ -53,9 +53,14 @@ function stamp(at: Date): string {
   return at.toISOString().slice(5, 16).replace("T", " ");
 }
 
-/** 달력에서 검증에 안 들어간 날. 호스트가 자면 여기가 늘어난다. */
+/**
+ * 달력에서 검증에 안 들어간 날. 호스트가 자면 여기가 늘어난다.
+ *
+ * `== null` 로 본다 — `undefined` 도 같이 잡으려는 것이다. `=== null` 로 짰다가
+ * 화면에 `undefined/?` 가 찍혔다.
+ */
 function lostDays(track: FceTrackRow): number {
-  if (track.elapsedDays === null || track.calendarDays === null) return 0;
+  if (track.elapsedDays == null || track.calendarDays == null) return 0;
   return Math.max(0, track.calendarDays - track.elapsedDays);
 }
 
@@ -85,8 +90,8 @@ function TrackRow({ track }: { track: FceTrackRow }) {
         유효일 3일이면 표본은 3일치다 — 이 칸이 없으면 위 숫자들이 두 달치
         성과로 읽힌다. FCE 가 안 내는 트랙은 `—` 다.
       */}
-      <td className={`num ${track.elapsedDays !== null && lostDays(track) > 0 ? "down" : ""}`}>
-        {track.elapsedDays === null
+      <td className={`num ${track.elapsedDays != null && lostDays(track) > 0 ? "down" : ""}`}>
+        {track.elapsedDays == null
           ? "—"
           : `${track.elapsedDays}/${track.calendarDays ?? "?"}`}
       </td>

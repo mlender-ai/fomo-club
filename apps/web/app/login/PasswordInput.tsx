@@ -20,9 +20,9 @@ export default function PasswordInput() {
         style={{ 
           flexShrink: 0,
           width: "50px",
-          background: "rgba(255, 255, 255, 0.05)", 
-          border: "1px solid rgba(255, 255, 255, 0.1)", 
-          borderRadius: "8px",
+          background: "var(--bg-2)",
+          border: "1px solid var(--line-2)",
+          borderRadius: "var(--r-row)",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
