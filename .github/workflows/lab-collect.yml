@@ -45,7 +45,7 @@ on:
         description: "돌릴 잡"
         required: true
         type: choice
-        options: [latest, candles, funding, whale, benchmark, backfill, paper, discard]
+        options: [latest, candles, funding, whale, benchmark, backfill, paper, discard, research]
 
 concurrency:
   group: lab-collect-${{ github.event.schedule || inputs.job }}
@@ -100,6 +100,9 @@ jobs:
             # LAB-BRIDGE 0-3 — 랩 전략 폐기. 상태만 바꾸고 결과는 안 지운다.
             # 수집이 아니라 일회성 관리 작업이라 크론에 없다. 손으로만 돈다.
             discard)   npm run lab:discard -- --confirm ;;
+            # UI-02 PART E-3 — docs/lab/research/*.md 를 DB 로. 파일이 정본이라
+            # 노트를 고칠 때마다 손으로 돌린다. 크론에 없다.
+            research)  npm run lab:research-seed ;;
             benchmark) npm run lab:benchmark -- --symbol BTC --days 1200 ;;
             backfill)  npm run lab:candles -- --backfill && npm run lab:funding -- --backfill ;;
             *) echo "::error::모르는 잡: ${{ steps.pick.outputs.job }}"; exit 1 ;;
