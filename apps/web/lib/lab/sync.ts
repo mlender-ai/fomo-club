@@ -29,6 +29,46 @@ export interface SyncStatus {
   label: string;
 }
 
+/**
+ * 조립본에 실린 시각으로 상태를 만든다. **쿼리를 하지 않는다.**
+ *
+ * 경과 시간은 요청 시점에 센다 — 조립본에 굳혀두면 화면이 항상 "2분 전" 이라고
+ * 말하게 된다.
+ */
+export function syncFromSeed(
+  seed: { lastAt: string | null; lastError: { at: string; error: string } | null },
+  now: Date = new Date()
+): SyncStatus {
+  const lastAt = seed.lastAt ? new Date(seed.lastAt) : null;
+  const ageMs = lastAt ? now.getTime() - lastAt.getTime() : null;
+  return {
+    ...describe(ageMs, lastAt),
+    lastAt,
+    ageMs,
+    lastError: seed.lastError ? { at: new Date(seed.lastError.at), error: seed.lastError.error } : null,
+  };
+}
+
+/** 나이 → 단계와 문구. 두 경로(조립본·직접 조회)가 같은 말을 하게 한 곳에 둔다. */
+function describe(ageMs: number | null, lastAt: Date | null): { level: SyncLevel; label: string } {
+  const level: SyncLevel =
+    ageMs === null || ageMs > BROKEN_MS ? "broken" : ageMs > FRESH_MS ? "lagging" : "live";
+  const minutes = ageMs === null ? null : Math.floor(ageMs / 60_000);
+  const label =
+    level === "broken"
+      ? lastAt
+        ? "동기화 끊김 · 호스트 확인"
+        : "동기화 없음 · 호스트 확인"
+      : minutes !== null && minutes < 1
+        ? "실시간 · 방금 동기화"
+        : level === "live"
+          ? `실시간 · ${minutes}분 전 동기화`
+          : minutes !== null && minutes < 60
+            ? `${minutes}분 전 동기화`
+            : `${Math.floor((minutes ?? 0) / 60)}시간 전 동기화`;
+  return { level, label };
+}
+
 export async function readSyncStatus(now: Date = new Date()): Promise<SyncStatus> {
   // **한 문장으로 받는다.** 원격 DB 왕복 한 번이 ~900ms 라서, 쿼리 수가 곧
   // 응답 시간이다. `Promise.all` 로 두 번 부르면 두 배가 된다 — 실측 1.8초였다.
@@ -48,28 +88,10 @@ export async function readSyncStatus(now: Date = new Date()): Promise<SyncStatus
   const ageMs = lastAt ? now.getTime() - lastAt.getTime() : null;
 
   // 한 번도 안 올라온 것과 오래된 것은 다르지만, **둘 다 지금 숫자가 아니다.**
-  const level: SyncLevel =
-    ageMs === null || ageMs > BROKEN_MS ? "broken" : ageMs > FRESH_MS ? "lagging" : "live";
-
-  const minutes = ageMs === null ? null : Math.floor(ageMs / 60_000);
-  const label =
-    level === "broken"
-      ? lastAt
-        ? "동기화 끊김 · 호스트 확인"
-        : "동기화 없음 · 호스트 확인"
-      : minutes !== null && minutes < 1
-        ? "실시간 · 방금 동기화"
-        : level === "live"
-          ? `실시간 · ${minutes}분 전 동기화`
-          : minutes !== null && minutes < 60
-            ? `${minutes}분 전 동기화`
-            : `${Math.floor((minutes ?? 0) / 60)}시간 전 동기화`;
-
   return {
-    level,
+    ...describe(ageMs, lastAt),
     lastAt,
     ageMs,
     lastError: failed && failed.error ? { at: failed.at, error: failed.error } : null,
-    label,
   };
 }
