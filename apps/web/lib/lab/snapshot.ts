@@ -25,6 +25,8 @@
 import { readCapitalSeries } from "./capital";
 import { readFceBoard, readFceLedger } from "./fce-board";
 import { buildPortfolio } from "./portfolio";
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "../prisma";
 
 export type SnapshotKey =
@@ -209,14 +211,20 @@ export async function buildSnapshots(): Promise<SnapshotKey[]> {
   };
 
   const keys = Object.keys(payloads) as SnapshotKey[];
-  for (const key of keys) {
-    const body = { payload: payloads[key], sync } as unknown as object;
-    await prisma.labSnapshot.upsert({
-      where: { key },
-      create: { key, payload: body as never },
-      update: { payload: body as never },
-    });
-  }
+
+  // **여섯 개를 한 문장으로 쓴다.** `upsert` 여섯 번이면 왕복이 여섯 번이고,
+  // 이 쓰기 경로는 이미 60초 한도에 붙어 있었다(실측 60.9초).
+  const now = new Date();
+  const values = keys.map(
+    (key) =>
+      Prisma.sql`(${key}, ${JSON.stringify({ payload: payloads[key], sync })}::jsonb, ${now})`
+  );
+  await prisma.$executeRaw`
+    INSERT INTO "LabSnapshot" ("key", "payload", "builtAt")
+    VALUES ${Prisma.join(values)}
+    ON CONFLICT ("key") DO UPDATE
+      SET "payload" = EXCLUDED."payload", "builtAt" = EXCLUDED."builtAt"
+  `;
   return keys;
 }
 
