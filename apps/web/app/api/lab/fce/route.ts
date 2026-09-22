@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { checkPayload } from "../../../../lib/lab/fce-payload";
+import { rebuildCapitalSeries } from "../../../../lib/lab/capital";
 import { prisma } from "../../../../lib/prisma";
 
 /**
@@ -67,6 +68,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // 이번에 실제로 쓴 거래 수. 받은 수와 다르다 — 안 바뀐 것은 안 쓴다.
   let tradesWritten = 0;
+  /** 이번에 새로 만든 자본 곡선 점 수. */
+  let capitalWritten = 0;
 
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -249,6 +252,15 @@ export async function POST(request: Request): Promise<NextResponse> {
         });
       }
       tradesWritten = fresh.length + changed.length;
+
+      // **거래가 바뀐 때만 자본 곡선을 다시 만든다.** 매번 돌리면 아무것도 안
+      // 바뀐 날에도 왕복이 늘고, 이 라우트는 왕복 한 번이 ~1초다.
+      // 집계를 미리 해두는 자리이기도 하다(UI-02 F-1 — 요청 시점에 계산하지 않는다).
+      if (tradesWritten > 0) {
+        for (const key of new Set(rows.map((r) => r.trackKey))) {
+          capitalWritten += await rebuildCapitalSeries(key);
+        }
+      }
     }
 
     if (payload.whale) {
@@ -287,6 +299,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       trades: payload.trades.length,
       // 받은 수가 아니라 **실제로 쓴 수.** 0 이면 바뀐 게 없다는 뜻이고 그게 정상이다.
       tradesWritten,
+      capitalWritten,
       whale: payload.whale !== null,
     });
   } catch (error) {
