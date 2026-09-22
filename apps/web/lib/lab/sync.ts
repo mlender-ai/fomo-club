@@ -30,14 +30,19 @@ export interface SyncStatus {
 }
 
 export async function readSyncStatus(now: Date = new Date()): Promise<SyncStatus> {
-  const [ok, failed] = await Promise.all([
-    prisma.fceUpload.findFirst({ where: { ok: true }, orderBy: { at: "desc" }, select: { at: true } }),
-    prisma.fceUpload.findFirst({
-      where: { ok: false },
-      orderBy: { at: "desc" },
-      select: { at: true, error: true },
-    }),
-  ]);
+  // **한 문장으로 받는다.** 원격 DB 왕복 한 번이 ~900ms 라서, 쿼리 수가 곧
+  // 응답 시간이다. `Promise.all` 로 두 번 부르면 두 배가 된다 — 실측 1.8초였다.
+  const rows = await prisma.$queryRaw<
+    { last_ok: Date | null; fail_at: Date | null; fail_error: string | null }[]
+  >`
+    SELECT
+      (SELECT "at" FROM "FceUpload" WHERE "ok" = true ORDER BY "at" DESC LIMIT 1) AS last_ok,
+      (SELECT "at" FROM "FceUpload" WHERE "ok" = false ORDER BY "at" DESC LIMIT 1) AS fail_at,
+      (SELECT "error" FROM "FceUpload" WHERE "ok" = false ORDER BY "at" DESC LIMIT 1) AS fail_error
+  `;
+  const row = rows[0];
+  const ok = row?.last_ok ? { at: row.last_ok } : null;
+  const failed = row?.fail_at ? { at: row.fail_at, error: row.fail_error } : null;
 
   const lastAt = ok?.at ?? null;
   const ageMs = lastAt ? now.getTime() - lastAt.getTime() : null;
