@@ -45,10 +45,19 @@ interface OpenPosition {
   side: string;
 }
 
-/** 페이퍼 상태에 열린 포지션이 있나. 상태 모양은 실행기가 정하므로 방어적으로 읽는다. */
+/**
+ * 페이퍼 상태에 열린 포지션이 있나.
+ *
+ * 열쇠는 `open` 이다 — 처음에 `positions` 로 읽었더니 아무것도 안 잡혀서, 폐기
+ * 로그에 "보유 없음" 으로 남을 뻔했다. 실제로는 SOL 롱을 들고 있었다.
+ * 같은 상태를 읽는 `live-board.ts` 의 `positionsOf` 가 정본이다.
+ *
+ * **심볼과 방향만 꺼낸다.** 이 상태에는 저장된 진짜 손절선·목표가가 같이 들어
+ * 있는데, `LAB-08` 이 그걸 밖으로 내보내지 못하게 막았다. 로그도 밖이다.
+ */
 function openPositions(state: unknown): OpenPosition[] {
   if (typeof state !== "object" || state === null) return [];
-  const raw = (state as Record<string, unknown>).positions;
+  const raw = (state as Record<string, unknown>).open;
   if (!Array.isArray(raw)) return [];
   const out: OpenPosition[] = [];
   for (const entry of raw) {
