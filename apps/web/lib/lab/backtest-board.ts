@@ -314,6 +314,13 @@ async function explainHalt(
   run: { periodStart: Date; periodEnd: Date | null },
   trades: number
 ): Promise<{ halt: HaltKind; detail: string | null }> {
+  // **폐기가 거래 수보다 먼저다.** 전에는 `trades > 0` 이면 바로 빠져나갔는데,
+  // 그러면 80거래·388거래짜리를 폐기해도 화면에 아무 표시가 안 난다 — 아직
+  // 후보인 것처럼 보인다. 끝난 것은 거래가 몇 건이든 끝났다고 말해야 한다.
+  if (strategy.status === "STOPPED" && strategy.stopReason) {
+    return { halt: "stopped", detail: strategy.stopReason };
+  }
+
   if (trades > 0) return { halt: "none", detail: null };
 
   const to = run.periodEnd ?? new Date();
@@ -331,9 +338,6 @@ async function explainHalt(
     }
   }
 
-  if (strategy.status === "STOPPED" && strategy.stopReason) {
-    return { halt: "stopped", detail: strategy.stopReason };
-  }
   return { halt: "no_signal", detail: "진입 조건이 한 번도 맞지 않았다" };
 }
 
@@ -499,7 +503,9 @@ export async function readBoard(period: PeriodKey = "all", now = new Date()): Pr
     } else if (row.halt === "no_signal") {
       row.note = "신호 없음";
     } else if (row.halt === "stopped") {
-      row.note = "종료";
+      // `LAB-BRIDGE 0-3` 으로 랩 전략을 접었다. **결과는 지우지 않고 표에 남긴다** —
+      // 이긴 것만 남기면 그게 생존 편향이다. 다만 후보가 아니라는 것은 말한다.
+      row.note = "폐기";
     } else if (!row.ranked) {
       row.note = `표본 부족 (${row.trades}건)`;
     } else if (!row.beatsBenchmark) {

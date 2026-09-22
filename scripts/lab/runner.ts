@@ -25,8 +25,11 @@
  * ## 한 프로세스만 살려두면 된다
  *
  * 시세·봉·펀딩비·고래·FCE 스냅샷을 전부 이 하나가 챈다. 여러 개를 띄우면
- * 어느 게 죽었는지 모르게 된다. 페이퍼만은 DB 를 직접 만져야 해서 여기서
- * **돌리지 않고 Actions 를 깨운다** — 실행기를 둘로 만들지 않으려는 것이다.
+ * 어느 게 죽었는지 모르게 된다.
+ *
+ * 페이퍼는 **여기 없다.** 한동안 시간당 Actions 를 깨워 돌렸는데, `LAB-BRIDGE 0-3`
+ * 으로 랩 전략 3종을 폐기하면서 페이퍼가 돌릴 것이 없어졌다. 아무것도 안 하는 잡을
+ * 시간당 깨우면 `/data` 에 초록 줄만 쌓이고 그게 일하는 것처럼 보인다.
  *
  *   npm run lab:runner              # 계속 돈다
  *   npm run lab:runner -- --once    # 전부 한 번씩만
@@ -250,36 +253,6 @@ async function whale(startedAt: Date): Promise<Result> {
 }
 
 /**
- * 페이퍼 실행. **여기서 돌리지 않고 Actions 를 깨운다.**
- *
- * 페이퍼는 DB 를 직접 읽고 쓴다(전략 상태·거래·자산). 이 맥에는 프로덕션
- * `DATABASE_URL` 이 없다. 그렇다고 실행기를 API 쪽에 다시 짜면 **실행기가 둘이
- * 된다** — `LAB-07 PART A` 가 하지 말라고 못박은 바로 그것이고, 백테스트와
- * 페이퍼가 같은 `execute()` 를 쓴다는 보장이 깨진다.
- *
- * 그래서 역할을 나눈다:
- *
- *  - **주기는 로컬이 준다** — GitHub `schedule` 이 못 지키는 것이 이것이다
- *  - **DB 자격은 Actions 가 준다** — `workflow_dispatch` 는 정상 동작한다(§CRON 0-2)
- *
- * `gh` 가 이 맥에 로그인돼 있어야 한다. 없으면 이 잡만 실패하고 나머지는 돈다.
- */
-async function paperTick(startedAt: Date): Promise<Result> {
-  await execFileAsync(
-    "gh",
-    ["workflow", "run", "lab-collect.yml", "-f", "job=paper", "--ref", "main"],
-    { encoding: "utf8", env: process.env, timeout: 2 * MINUTE }
-  );
-  await post("/api/lab/market", {
-    job: "paper-dispatch",
-    source: "local-runner",
-    startedAt: startedAt.toISOString(),
-    detail: { note: "lab-collect.yml job=paper 를 깨웠다. 실제 실행은 Actions 가 한다" },
-  });
-  return { rows: 0, detail: { dispatched: "lab-collect job=paper" } };
-}
-
-/**
  * FCE 스냅샷. 업로더를 그대로 부른다 — 계약이 한 곳에만 있어야 한다.
  *
  * ## 성공도 `CollectionRun` 에 적는다
@@ -337,7 +310,6 @@ const slowJobs: Job[] = [
   { name: "candles", everyMs: 5 * MINUTE, run: candles, lastAt: 0, fails: 0 },
   { name: "whale", everyMs: 15 * MINUTE, run: whale, lastAt: 0, fails: 0 },
   { name: "fce", everyMs: 15 * MINUTE, run: fceSnapshot, lastAt: 0, fails: 0 },
-  { name: "paper", everyMs: 1 * HOUR, run: paperTick, lastAt: 0, fails: 0 },
   { name: "funding", everyMs: 8 * HOUR, run: funding, lastAt: 0, fails: 0 },
 ];
 

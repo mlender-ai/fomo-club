@@ -56,7 +56,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:scripts",
     "typecheck:api": "npm --workspace @fomo/legacy-paper-api run typecheck",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
-    "typecheck:web": "npm --workspace @fomo/backend run typecheck"
+    "typecheck:web": "npm --workspace @fomo/backend run typecheck",
+    "lab:discard": "tsx scripts/lab/discard-strategies.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
