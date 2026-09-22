@@ -254,13 +254,23 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
       tradesWritten = fresh.length + changed.length;
 
-      // **거래가 바뀐 때만 자본 곡선을 다시 만든다.** 매번 돌리면 아무것도 안
-      // 바뀐 날에도 왕복이 늘고, 이 라우트는 왕복 한 번이 ~1초다.
-      // 집계를 미리 해두는 자리이기도 하다(UI-02 F-1 — 요청 시점에 계산하지 않는다).
-      if (tradesWritten > 0) {
-        for (const key of new Set(rows.map((r) => r.trackKey))) {
-          capitalWritten += await rebuildCapitalSeries(key);
-        }
+      // 자본 곡선을 언제 다시 만드나.
+      //
+      // 처음에는 `tradesWritten > 0` 일 때만 돌렸다. **한 번도 안 돌았다** —
+      // 거래가 이미 전부 들어와 있어서 그 조건이 영영 안 걸렸고, 곡선이 빈 채로
+      // 남았다. `UI-02 B-2` 가 "과거분 백필 필수" 라고 한 것이 이 경우다.
+      //
+      // 그래서 **점이 하나도 없는 트랙**도 같이 만든다. 한 번 채워지면 그 뒤로는
+      // 거래가 바뀔 때만 돈다.
+      const have = await prisma.fceCapitalPoint.groupBy({
+        by: ["trackKey"],
+        _count: { _all: true },
+      });
+      const filled = new Set(have.filter((g) => g._count._all > 0).map((g) => g.trackKey));
+      const candidates = new Set(rows.map((r) => r.trackKey));
+      for (const key of candidates) {
+        if (tradesWritten === 0 && filled.has(key)) continue;
+        capitalWritten += await rebuildCapitalSeries(key);
       }
     }
 
