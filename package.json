@@ -58,7 +58,8 @@
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
     "typecheck:web": "npm --workspace @fomo/backend run typecheck",
     "lab:discard": "tsx scripts/lab/discard-strategies.ts",
-    "lint:tokens": "node scripts/lint-tokens.mjs"
+    "lint:tokens": "node scripts/lint-tokens.mjs",
+    "lab:research-seed": "tsx scripts/lab/research-seed.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

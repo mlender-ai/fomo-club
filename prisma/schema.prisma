@@ -1403,6 +1403,74 @@ model FceTrade {
   @@index([exitAt])
 }
 
+/// 트랙 자본 한 점. **Overview 차트의 재료** (UI-02 B-2).
+///
+/// ## FCE 에는 이 이력이 없다
+///
+/// 트랙 테이블은 `cash` 를 덮어쓴다 — 어제 얼마였는지가 아무 데도 없다
+/// (`docs/ui/DATA_SOURCES.md` §3). 그래서 거래 이력의 **실현 손익을 누적**해
+/// 되만든다. 되만든 점은 `source = "reconstructed"` 이고 **화면이 그 사실을 띄운다.**
+///
+/// 재구성한 곡선은 실측과 다르다: 미실현이 빠지고, 거래가 닫히는 순간에만 값이
+/// 변해 계단이 된다. 그걸 실측인 것처럼 그리면 화면이 거짓말한다.
+model FceCapitalPoint {
+  id       String @id @default(cuid())
+  trackKey String
+  at       DateTime
+
+  /// 트랙 **원래 통화** 기준. $10,000 환산은 화면이 한다(UI-02 C).
+  capital Float
+  /// 같은 시각 벤치마크. 없으면 null — **0 으로 채우지 않는다.**
+  benchmark Float?
+
+  /// `fce` = FCE 가 낸 값 · `reconstructed` = 거래 이력으로 되만든 값.
+  source String
+
+  /// 같은 트랙의 같은 시각은 한 점이다.
+  @@unique([trackKey, at])
+  @@index([trackKey, at])
+}
+
+/// 연구 항목 — **랩이 새로 갖는 유일한 데이터** (UI-02 PART E).
+///
+/// FCE 에 없다. 무엇을 확인하고 있고 무엇을 알아냈는지는 엔진이 아니라 사람이
+/// 갖는 기록이다.
+///
+/// 편집은 지금 파일로 한다 — `docs/lab/research/*.md` 를 시드가 읽어 넣는다.
+/// 편집 UI 는 나중이다.
+model Research {
+  /// `01` · `02` — 화면에 그대로 나가는 번호.
+  no    String @id
+  title String
+
+  /// open · testing · blocked · closed
+  status String
+  /// 닫혔을 때의 답. yes · no · inconclusive.
+  verdict String?
+
+  /// 한 줄 요약. 목록에서 제목 밑에 뜬다.
+  summary String
+
+  hypothesis String?
+  /// 어떻게 확인하나.
+  method     String?
+  /// 근거 수치와 출처. `[{ label, value, source }]`.
+  evidence   Json?
+  /// 그래서 무엇을 하기로 했나.
+  decision   String?
+  /// 이것 때문에 막혀 있는 것. 예: 실매매.
+  blocks     String?
+
+  openedAt DateTime
+  closedAt DateTime?
+  /// 관련 트랙 키 배열.
+  trackKeys Json?
+
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
 /// 고래 분석. 단일 행으로 덮어쓴다.
 model FceWhale {
   id Int @id @default(1)
