@@ -117,6 +117,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         benchmarkCurrent: track.benchmarkCurrent,
         benchmarkReturnPct: track.benchmarkReturnPct,
         evidenceNote: track.evidenceNote,
+        elapsedDays: track.elapsedDays,
+        calendarDays: track.calendarDays,
         asOf: new Date(track.asOf),
       };
       await prisma.fceTrack.upsert({

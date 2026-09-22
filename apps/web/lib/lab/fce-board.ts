@@ -30,6 +30,15 @@ export interface FceTrackRow {
   status: string;
   statusReason: string | null;
   evidenceNote: string | null;
+  /**
+   * **유효일 / 달력일.** FCE 가 재는 값이다.
+   *
+   * 호스트가 자면 그 하루는 검증에 안 들어간다. 달력으로 48일이 지났어도 유효일이
+   * 3일이면 **표본은 3일치다.** 나란히 놓지 않으면 화면이 두 달치 성과처럼 보인다.
+   * FCE 가 이 값을 내지 않는 트랙은 null — 0 으로 채우면 "전부 유실" 로 읽힌다.
+   */
+  elapsedDays: number | null;
+  calendarDays: number | null;
   leverage: number | null;
   benchmarkLabel: string | null;
   benchmarkReturnPct: number | null;
@@ -169,6 +178,8 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       status: t.status,
       statusReason: t.statusReason,
       evidenceNote: t.evidenceNote,
+      elapsedDays: t.elapsedDays,
+      calendarDays: t.calendarDays,
       leverage: t.leverage,
       benchmarkLabel: t.benchmarkLabel,
       benchmarkReturnPct: t.benchmarkReturnPct,
