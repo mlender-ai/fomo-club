@@ -1320,6 +1320,11 @@ model FceTrack {
   /// 정지 근거 메모 — "왜 멈췄는지" 를 화면이 그대로 옮긴다.
   evidenceNote       String?
 
+  /// **유효일.** 호스트가 자면 그 하루는 검증에 안 들어간다. FCE 가 재는 값이다.
+  elapsedDays  Int?
+  /// 달력일. 유효일과 나란히 놔야 "두 달치 성과" 로 안 읽힌다.
+  calendarDays Int?
+
   /// FCE 가 이 숫자를 낸 시각. 업로드 시각과 다르다.
   asOf      DateTime
   updatedAt DateTime @updatedAt

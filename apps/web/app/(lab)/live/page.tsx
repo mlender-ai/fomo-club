@@ -53,6 +53,12 @@ function stamp(at: Date): string {
   return at.toISOString().slice(5, 16).replace("T", " ");
 }
 
+/** 달력에서 검증에 안 들어간 날. 호스트가 자면 여기가 늘어난다. */
+function lostDays(track: FceTrackRow): number {
+  if (track.elapsedDays === null || track.calendarDays === null) return 0;
+  return Math.max(0, track.calendarDays - track.elapsedDays);
+}
+
 function TrackRow({ track }: { track: FceTrackRow }) {
   const state = STATUS[track.status] ?? STATUS.running;
   return (
@@ -73,6 +79,16 @@ function TrackRow({ track }: { track: FceTrackRow }) {
       <td className="num">{track.profitFactor === null ? "—" : track.profitFactor.toFixed(2)}</td>
       <td className={`num ${track.mddPct !== null && track.mddPct > 30 ? "down" : ""}`}>
         {track.mddPct === null ? "—" : `${track.mddPct.toFixed(2)}%`}
+      </td>
+      {/*
+        **유효일.** 호스트가 자면 그 하루는 검증에 안 들어간다. 달력 48일에
+        유효일 3일이면 표본은 3일치다 — 이 칸이 없으면 위 숫자들이 두 달치
+        성과로 읽힌다. FCE 가 안 내는 트랙은 `—` 다.
+      */}
+      <td className={`num ${track.elapsedDays !== null && lostDays(track) > 0 ? "down" : ""}`}>
+        {track.elapsedDays === null
+          ? "—"
+          : `${track.elapsedDays}/${track.calendarDays ?? "?"}`}
       </td>
       <td className={`state ${state?.tone ?? ""}`}>
         <span aria-hidden>{state?.mark}</span> {state?.label}
@@ -169,6 +185,7 @@ export default async function LivePage() {
               <th>승률</th>
               <th>PF</th>
               <th>MDD</th>
+              <th>유효일</th>
               <th className="l">상태</th>
             </tr>
           </thead>
@@ -179,6 +196,25 @@ export default async function LivePage() {
           </tbody>
         </table>
       </div>
+
+      {/*
+        유효일이 달력보다 크게 모자라면 **표 위에서 먼저 말한다.**
+        칸 하나로는 "48일 중 3일" 의 무게가 안 전달된다 — 위 수익률·MDD·승률이
+        전부 그 3일치라는 뜻이다.
+      */}
+      {(() => {
+        const thin = board.tracks.filter((t) => lostDays(t) > 0);
+        if (thin.length === 0) return null;
+        return (
+          <p className="lab-warning is-loud">
+            호스트가 잠든 날은 검증에 안 들어간다.{" "}
+            {thin
+              .map((t) => `${t.label} 달력 ${t.calendarDays}일 중 유효 ${t.elapsedDays}일`)
+              .join(" · ")}
+            . <strong>위 숫자는 그 유효일치다</strong> — 달력 기간의 성과가 아니다.
+          </p>
+        );
+      })()}
 
       {/* 정지·보류·표본 사유를 트랙마다 한 줄씩. **비워두지 않는다.** */}
       {board.tracks

@@ -102,6 +102,9 @@ function cryptoTrack(dashboard: Record<string, unknown>, asOf: string): TrackPay
     benchmarkCurrent: null,
     benchmarkReturnPct: null,
     evidenceNote: null,
+    // FCE 가 이 트랙에는 유효일을 내지 않는다. **0 으로 채우지 않는다.**
+    elapsedDays: null,
+    calendarDays: null,
     asOf,
   };
 }
@@ -132,6 +135,9 @@ function whaleTrack(follow: Record<string, unknown>, asOf: string): TrackPayload
     benchmarkCurrent: null,
     benchmarkReturnPct: null,
     evidenceNote: null,
+    // FCE 가 이 트랙에는 유효일을 내지 않는다. **0 으로 채우지 않는다.**
+    elapsedDays: null,
+    calendarDays: null,
     asOf,
   };
 }
@@ -182,6 +188,9 @@ function stockTracks(dashboard: Record<string, unknown>, asOf: string): TrackPay
       benchmarkCurrent: num(t.benchmark_current),
       benchmarkReturnPct: num(t.benchmark_return_pct),
       evidenceNote: typeof halt.evidence_note === "string" ? halt.evidence_note : null,
+      // 호스트가 자면 그 하루는 검증에 안 들어간다. FCE 가 이미 재고 있다.
+      elapsedDays: num(t.elapsed_days),
+      calendarDays: num(t.calendar_days),
       asOf,
     });
   }
@@ -219,6 +228,9 @@ function polyTrack(dashboard: Record<string, unknown>, asOf: string): TrackPaylo
     benchmarkCurrent: null,
     benchmarkReturnPct: null,
     evidenceNote: null,
+    // FCE 가 이 트랙에는 유효일을 내지 않는다. **0 으로 채우지 않는다.**
+    elapsedDays: null,
+    calendarDays: null,
     asOf,
   };
 }

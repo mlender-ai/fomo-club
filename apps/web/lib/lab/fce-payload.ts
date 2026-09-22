@@ -43,6 +43,15 @@ export interface TrackPayload {
   benchmarkReturnPct: number | null;
   /** 정지 근거 메모. */
   evidenceNote: string | null;
+  /**
+   * **유효일 / 달력일.** FCE 가 재는 값이다.
+   *
+   * 호스트가 자면 수집이 멈추고 그 하루는 검증에 안 들어간다. 달력으로 48일이
+   * 지났어도 유효일이 3일이면 **표본은 3일치다.** 이걸 안 적으면 화면이 두 달치
+   * 성과처럼 보인다.
+   */
+  elapsedDays: number | null;
+  calendarDays: number | null;
   asOf: string;
 }
 
@@ -194,6 +203,8 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
       benchmarkCurrent: num(t.benchmarkCurrent),
       benchmarkReturnPct: num(t.benchmarkReturnPct),
       evidenceNote: typeof t.evidenceNote === "string" ? t.evidenceNote : null,
+      elapsedDays: num(t.elapsedDays),
+      calendarDays: num(t.calendarDays),
       asOf: typeof t.asOf === "string" ? t.asOf : (body.at as string),
     });
   }
