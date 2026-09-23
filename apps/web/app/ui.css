@@ -1256,3 +1256,13 @@ a.ui-research-link:hover {
   color: var(--ink-3);
   font-size: var(--t-caption);
 }
+
+/* 트랙 아이콘 — 🐋 ₿ 같은 글자가 캡션 크기로는 뭉개진다 (UI-04 E) */
+.ui-row-icon {
+  font-size: var(--t-body);
+}
+
+/* 화면 본문 안의 Hero 는 아래 여백을 틀(gap)에 맡긴다 — 52px 를 또 얹으면 차트가 한참 밀린다 */
+.sh-body > .ui-hero {
+  margin-bottom: 0;
+}
