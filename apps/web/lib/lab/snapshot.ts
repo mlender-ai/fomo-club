@@ -50,6 +50,26 @@ export interface Snapshot<T = unknown> {
   builtAt: Date;
 }
 
+
+/**
+ * 지연·드리프트 분포를 한 줄로. FCE 가 `{ median, p90, max }` 로 준다.
+ * 값이 없으면 null — **지어내지 않는다.**
+ */
+function describeDist(box: Record<string, unknown> | null, unit: string): string | null {
+  if (!box) return null;
+  const pick = (k: string) => (typeof box[k] === "number" ? Math.round((box[k] as number) * 100) / 100 : null);
+  const med = pick("median");
+  const p90 = pick("p90");
+  const max = pick("max");
+  if (med === null && p90 === null && max === null) return null;
+  const parts = [
+    med !== null ? `중앙값 ${med}${unit}` : null,
+    p90 !== null ? `p90 ${p90}${unit}` : null,
+    max !== null ? `최대 ${max}${unit}` : null,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
 /** `LAB-00 §7` — 표본 30 미만은 순위 없음. */
 const MIN_SAMPLE = 30;
 
@@ -57,12 +77,12 @@ const MIN_SAMPLE = 30;
 const WHALE_OWN_WIN_PCT = 65.8;
 
 /**
- * 여섯 탭을 통째로 만든다. **업로드가 끝난 뒤 한 번** 부른다.
+ * 여섯 탭의 조립본을 **읽어서 만든다.** 쓰지는 않는다.
  *
- * 읽기는 여기서 실컷 한다 — 이 함수는 15분에 한 번 도는 쓰기 경로에 있고,
- * 화면 요청 경로에 있지 않다.
+ * 쓰기와 가른 이유는 타입이다 — 화면이 같은 모양을 보게 `Payloads` 를 여기서
+ * 뽑아 내보낸다. 서버가 한 칸을 바꾸면 화면 쪽 타입이 같이 깨진다.
  */
-export async function buildSnapshots(): Promise<SnapshotKey[]> {
+export async function assemblePayloads() {
   const [board, ledger, research, lastOk, lastFail] = await Promise.all([
     readFceBoard(),
     readFceLedger(),
@@ -134,82 +154,112 @@ export async function buildSnapshots(): Promise<SnapshotKey[]> {
     0
   );
 
-  const payloads: Record<SnapshotKey, unknown> = {
-    overview: {
-      portfolio,
-      series: series.filter((s) => s.points.length > 0),
-      research: { open: openResearch.length, items: openResearch.slice(0, 5) },
-      positions: board.positions.length,
-      freshness: board.freshness,
-    },
-    strategies: {
-      rows: strategyRows,
-      beatCount: strategyRows.filter((r) => r.beatsBenchmark === true).length,
-      rankableCount: strategyRows.filter((r) => r.ranked).length,
-      minSample: MIN_SAMPLE,
-      portfolio,
-    },
-    positions: {
-      positions: board.positions,
-      unrealizedUsdt: measurable.length > 0 ? unrealized : null,
-      measurable: measurable.length,
-      total: board.positions.length,
-      liquidationLevel: board.positions.filter((p) => p.liquidationLevel).length,
-      caveat:
-        "손익은 증거금 대비다. FCE 에 청산 모델이 없어 −100% 아래로 갈 수 있다 — 실제 거래소였으면 그 전에 증거금이 없어진다.",
-    },
-    whales: board.whale
-      ? {
-          whale: board.whale,
-          winRates: {
-            whaleOwn: {
-              value: WHALE_OWN_WIN_PCT,
-              measures: "그 지갑의 온체인 체결 전부 — 고래의 자본·판단·출구",
-            },
-            ourFollow: {
-              value: board.whale.followWinPct,
-              trades: board.whale.followTrades,
-              measures: "우리가 따라 들어간 거래 — 우리 사이징·우리 출구",
-            },
-            /** **빼면 안 된다.** 화면이 이 값을 보고 뺄셈을 막는다. */
-            subtractable: false,
-            note: "다른 모집단이다. 33.4%p 는 갭이 아니라 서로 다른 질문의 답 두 개다.",
-          },
-          causes: [
-            {
-              axis: "청산 규칙",
-              measured: "고래 청산을 그대로 따랐다면 −49.58 (75건)",
-              verdict: "원인 아님 — 따라가면 더 나빴다",
-            },
-            { axis: "진입 지연", measured: board.whale.latency, verdict: "중앙값이 1분 안 — 약한 후보" },
-            {
-              axis: "진입 가격 드리프트",
-              measured: board.whale.drift,
-              verdict: "손절폭 대비. p90 구간을 따로 볼 것",
-            },
-            { axis: "사이징", measured: null, verdict: "미측정" },
-            { axis: "지갑 선정", measured: null, verdict: "미측정 — 리더보드에 재료 있음" },
-          ],
-        }
-      : { whale: null },
-    research: {
-      items: research,
-      open: openResearch.length,
-      blocked: research.filter((r) => r.status === "blocked").length,
-      closed: research.filter((r) => r.status === "closed").length,
-      blockers: research
-        .filter((r) => r.status === "blocked" && r.blocks)
-        .map((r) => ({ no: r.no, title: r.title, blocks: r.blocks })),
-    },
-    journal: {
-      ...ledger,
-      countNote:
-        ledger.boardCount !== null && ledger.boardCount !== ledger.total.count
-          ? "전광판은 검증 창 안에서 닫힌 거래만 센다. 이 표는 랩이 받아 쌓은 전부다. 두 수를 빼서 쓰지 않는다."
-          : null,
-    },
+  const overview = {
+    portfolio,
+    series: series.filter((s) => s.points.length > 0),
+    research: { open: openResearch.length, items: openResearch.slice(0, 5) },
+    positions: board.positions.length,
+    freshness: board.freshness,
   };
 
+  const strategies = {
+    rows: strategyRows,
+    beatCount: strategyRows.filter((r) => r.beatsBenchmark === true).length,
+    rankableCount: strategyRows.filter((r) => r.ranked).length,
+    minSample: MIN_SAMPLE,
+    portfolio,
+    // 전략 상세(`/strategies/[id]`)가 자본 곡선을 그린다. **API 를 두 번 부르지 않게**
+    // 여기 같이 싣는다(UI-02 F — 화면 하나에 필요한 걸 한 번에).
+    series: series.filter((s) => s.points.length > 0),
+  };
+
+  const positions = {
+    positions: board.positions,
+    unrealizedUsdt: measurable.length > 0 ? unrealized : null,
+    measurable: measurable.length,
+    total: board.positions.length,
+    liquidationLevel: board.positions.filter((p) => p.liquidationLevel).length,
+    caveat:
+      "손익은 증거금 대비다. FCE 에 청산 모델이 없어 −100% 아래로 갈 수 있다 — 실제 거래소였으면 그 전에 증거금이 없어진다.",
+  };
+
+  const whales = board.whale
+    ? {
+        whale: board.whale,
+        winRates: {
+          whaleOwn: {
+            value: WHALE_OWN_WIN_PCT,
+            measures: "그 지갑의 온체인 체결 전부 — 고래의 자본·판단·출구",
+          },
+          ourFollow: {
+            value: board.whale.followWinPct,
+            trades: board.whale.followTrades,
+            measures: "우리가 따라 들어간 거래 — 우리 사이징·우리 출구",
+          },
+          /** **빼면 안 된다.** 화면이 이 값을 보고 뺄셈을 막는다. */
+          subtractable: false as const,
+          note: "다른 모집단이다. 33.4%p 는 갭이 아니라 서로 다른 질문의 답 두 개다.",
+        },
+        causes: [
+          {
+            axis: "청산 규칙",
+            measured: "고래 청산을 그대로 따랐다면 −49.58 (75건)" as string | null,
+            verdict: "원인 아님 — 따라가면 더 나빴다",
+          },
+          { axis: "진입 지연", measured: describeDist(board.whale.latency, "분"), verdict: "중앙값이 1분 안 — 약한 후보" },
+          {
+            axis: "진입 가격 드리프트",
+            measured: describeDist(board.whale.drift, "%"),
+            verdict: "손절폭 대비. p90 구간을 따로 볼 것",
+          },
+          { axis: "사이징", measured: null, verdict: "미측정" },
+          { axis: "지갑 선정", measured: null, verdict: "미측정 — 리더보드에 재료 있음" },
+        ],
+      }
+    : { whale: null, winRates: null, causes: [] };
+
+  const researchPayload = {
+    items: research,
+    open: openResearch.length,
+    blocked: research.filter((r) => r.status === "blocked").length,
+    closed: research.filter((r) => r.status === "closed").length,
+    blockers: research
+      .filter((r) => r.status === "blocked" && r.blocks)
+      .map((r) => ({ no: r.no, title: r.title, blocks: r.blocks })),
+  };
+
+  const journal = {
+    ...ledger,
+    countNote:
+      ledger.boardCount !== null && ledger.boardCount !== ledger.total.count
+        ? "전광판은 검증 창 안에서 닫힌 거래만 센다. 이 표는 랩이 받아 쌓은 전부다. 두 수를 빼서 쓰지 않는다."
+        : null,
+  };
+
+  return {
+    payloads: {
+      overview,
+      strategies,
+      positions,
+      whales,
+      research: researchPayload,
+      journal,
+    },
+    sync,
+  };
+}
+
+/** 화면 쪽이 받는 조립본 모양. **서버와 같은 정의에서 나온다.** */
+export type Payloads = Awaited<ReturnType<typeof assemblePayloads>>["payloads"];
+
+/**
+ * 여섯 탭을 통째로 만들어 쓴다. **업로드가 끝난 뒤 한 번** 부른다.
+ *
+ * 읽기는 여기서 실컷 한다 — 이 함수는 15분에 한 번 도는 쓰기 경로에 있고,
+ * 화면 요청 경로에 있지 않다.
+ */
+export async function buildSnapshots(): Promise<SnapshotKey[]> {
+  const { payloads, sync } = await assemblePayloads();
   const keys = Object.keys(payloads) as SnapshotKey[];
 
   // **여섯 개를 한 문장으로 쓴다.** `upsert` 여섯 번이면 왕복이 여섯 번이고,
