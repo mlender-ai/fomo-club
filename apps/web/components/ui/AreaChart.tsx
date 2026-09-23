@@ -23,7 +23,7 @@
  * x 는 **밀리초 숫자**다. 문자열 범주로 두면 점 간격이 시간 간격과 무관해져서, 1시간 간격과
  * 4시간 간격이 섞인 곡선이 한쪽으로 쏠린다. 띠(`ReferenceArea`)도 숫자 축이어야 제자리에 선다.
  */
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { kstStamp } from "./format";
 import {
@@ -104,7 +104,6 @@ export function AreaChartCard({
   /** 계단으로 그린다. 실현 기준 곡선은 거래가 닫히는 순간에만 변한다 — 사이를 매끈하게 이으면 없던 값이 생긴다. */
   step?: boolean;
 }) {
-  const [hover, setHover] = useState<Row | null>(null);
   const fmt = format ?? ((v: number) => String(v));
   // **같은 데이터면 같은 배열을 준다.** 매 렌더 새 배열을 만들면 Recharts 가 "데이터가 바뀌었다"
   // 고 보고 선 애니메이션을 처음부터 다시 돌린다. 호버할 때마다 렌더가 일어나니, 정규 도메인에서
@@ -157,11 +156,6 @@ export function AreaChartCard({
           <ComposedChart
             data={rows}
             margin={{ top: 8, right: compact ? 10 : 8, bottom: 0, left: compact ? 0 : 0 }}
-            onMouseMove={(s) => {
-              const i = typeof s?.activeTooltipIndex === "number" ? s.activeTooltipIndex : null;
-              setHover(i === null ? null : (rows[i] ?? null));
-            }}
-            onMouseLeave={() => setHover(null)}
           >
             <defs>
               {/* 그라데이션은 차트 영역 채우기에만. 파랑 14% → 0% (UI-01 A-2). */}
@@ -215,8 +209,12 @@ export function AreaChartCard({
 
             <Tooltip
               cursor={{ stroke: "var(--ink-3)", strokeWidth: 1 }}
-              content={({ active }) =>
-                active && hover ? (
+              // 호버한 점은 Recharts 가 `payload` 로 넘겨준다. 처음엔 `onMouseMove` 의
+              // `activeTooltipIndex` 를 숫자로 가정해 직접 찾았는데, Recharts 3 에선 문자열이라
+              // 늘 못 찾았고 툴팁이 한 번도 안 떴다. 넘겨주는 걸 그대로 쓴다.
+              content={({ active, payload }) => {
+                const hover = (payload?.[0]?.payload as Row | undefined) ?? null;
+                return active && hover ? (
                   <div className="ui-tip">
                     <p className="ui-tip-when">{stamp(hover.t)}</p>
                     <p className="ui-tip-row">
@@ -232,8 +230,8 @@ export function AreaChartCard({
                       </p>
                     ) : null}
                   </div>
-                ) : null
-              }
+                ) : null;
+              }}
             />
 
             <Area
