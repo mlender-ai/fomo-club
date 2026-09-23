@@ -274,6 +274,25 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
+    // FCE 관측 유실일(UI-04 C-2). **FCE 의 판정이라 트랙 단위로 통째로 바꾼다** — 커버리지가
+    // 뒤늦게 채워지면 FCE 가 그날을 유실일에서 빼기 때문에, 덧붙이기만 하면 이미 회복된 날이
+    // 차트에 회색으로 남는다. 받은 트랙만 바꾼다 — 진단 호출이 실패해 빈 배열이 오면 건드리지 않는다.
+    const lostTracks = [...new Set(payload.lostDays.map((d) => d.trackKey))];
+    if (lostTracks.length > 0) {
+      await prisma.$transaction([
+        prisma.fceLostDay.deleteMany({ where: { trackKey: { in: lostTracks } } }),
+        prisma.fceLostDay.createMany({
+          data: payload.lostDays.map((d) => ({
+            trackKey: d.trackKey,
+            day: d.day,
+            coveragePct: d.coveragePct,
+            reason: d.reason.slice(0, 300),
+          })),
+          skipDuplicates: true,
+        }),
+      ]);
+    }
+
     if (payload.whale) {
       const w = payload.whale;
       const row = {

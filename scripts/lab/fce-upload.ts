@@ -24,8 +24,12 @@
  *   npm run lab:fce-upload -- --watch         # 15분마다
  *   npm run lab:fce-upload -- --dry           # 올리지 않고 무엇을 올릴지만
  */
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+
 import type {
   FcePayload,
+  LostDayPayload,
   PositionPayload,
   TradePayload,
   TrackPayload,
@@ -49,7 +53,9 @@ const DRY = process.argv.includes("--dry");
  * 한다. 실제로 거래 이력을 붙이자마자 라우트가 타임아웃났는데, 페이로드를 못 꺼내서
  * 어디가 느린지 이등분을 못 했다.
  */
-const EMIT = process.argv.includes("--emit");
+const EMIT = process.argv.find((a) => a.startsWith("--emit"));
+/** `--emit=/tmp/payload.json` — 파일 경로. 없으면 `/tmp/fce-payload.json`. */
+const EMIT_PATH = EMIT?.includes("=") ? EMIT.slice(EMIT.indexOf("=") + 1) : "/tmp/fce-payload.json";
 const WATCH = process.argv.includes("--watch");
 
 async function fce(path: string): Promise<unknown> {
@@ -88,7 +94,10 @@ function cryptoTrack(dashboard: Record<string, unknown>, asOf: string): TrackPay
     currentCapital: num(capital.current_capital),
     realized: num(engine.net_pnl_usdt),
     unrealized: num(capital.unrealized),
-    returnPct: num(engine.return_on_capital_pct),
+    // **자본과 같은 기준의 수익률**을 쓴다. `engine.return_on_capital_pct` 는 검증 창(07-18~)
+    // 안의 거래만 센 값이라, 자본(전체 거래) 옆에 두면 한 행이 두 모집단을 말한다 —
+    // 실측 −29.50% 자리에 −28.79% 가 나갈 뻔했다.
+    returnPct: num(capital.return_on_capital_pct) ?? num(engine.return_on_capital_pct),
     trades: num(engine.trade_count),
     winRatePct: num(engine.win_rate_pct),
     profitFactor: num(engine.profit_factor),
@@ -109,6 +118,9 @@ function cryptoTrack(dashboard: Record<string, unknown>, asOf: string): TrackPay
   };
 }
 
+/** 고래 추종 시작 자본. FCE 트랙 설정값이다. */
+const WHALE_START = 500;
+
 /** 고래 추종 — `/api/onchain/follow/trades` 의 `performance.buckets.follow`. */
 function whaleTrack(follow: Record<string, unknown>, asOf: string): TrackPayload {
   const bucket = record(record(record(follow.performance).buckets).follow);
@@ -116,11 +128,14 @@ function whaleTrack(follow: Record<string, unknown>, asOf: string): TrackPayload
     key: "whale",
     label: "고래 추종",
     currency: "USDT",
-    startingCapital: 500,
-    currentCapital: null,
+    startingCapital: WHALE_START,
+    // FCE 는 고래 트랙에 `capital` 블록을 안 준다. 다른 네 트랙의 FCE 자본이 전부
+    // **"시작 자본 + 실현 손익"**(`current_capital_basis: realized`)이라, 같은 정의를 FCE 가
+    // 낸 실현 손익(`net_usdt`)에 그대로 적용한다. 새로 계산하는 게 아니라 같은 기준으로 맞춘다.
+    currentCapital: num(bucket.net_usdt) === null ? null : WHALE_START + (num(bucket.net_usdt) ?? 0),
     realized: num(bucket.net_usdt),
     unrealized: null,
-    returnPct: null,
+    returnPct: num(bucket.net_usdt) === null ? null : ((num(bucket.net_usdt) ?? 0) / WHALE_START) * 100,
     trades: num(bucket.closed) ?? num(bucket.entries),
     winRatePct: num(bucket.win_pct),
     profitFactor: num(bucket.profit_factor),
@@ -151,6 +166,7 @@ function whaleTrack(follow: Record<string, unknown>, asOf: string): TrackPayload
  */
 function stockTracks(dashboard: Record<string, unknown>, asOf: string): TrackPayload[] {
   const rows = Array.isArray(dashboard.tracks) ? dashboard.tracks : [];
+  const capitalOf = record(record(dashboard.capital).tracks);
   const out: TrackPayload[] = [];
   for (const raw of rows) {
     const t = record(raw);
@@ -162,16 +178,21 @@ function stockTracks(dashboard: Record<string, unknown>, asOf: string): TrackPay
     const sample = record(t.sample_breakdown);
     const navComplete = t.nav_complete === true;
 
+    const key = market === "US" ? "stock_us" : "stock_kr";
+    // **FCE 의 `capital` 블록을 쓴다** — 다섯 트랙이 같은 기준("시작 자본 + 실현 손익")이다.
+    // 전에는 NAV(평가액)를 썼는데, 그러면 이 트랙만 미실현이 섞여 합산이 두 기준이 된다.
+    const cap = record(capitalOf[key]);
+    void navComplete;
+    const held = stopped ? 0 : (queuedOrders(market) ?? 0);
     out.push({
-      key: market === "US" ? "stock_us" : "stock_kr",
+      key,
       label: market === "US" ? "주식 US" : "주식 KR",
       currency: String(t.currency ?? ""),
-      startingCapital: num(t.initial_cash) ?? 0,
-      // NAV 가 불완전하면 **평가액을 내지 않는다** — 반쯤 센 자본은 틀린 자본이다.
-      currentCapital: navComplete ? num(t.nav) : null,
+      startingCapital: num(cap.starting_capital) ?? num(t.initial_cash) ?? 0,
+      currentCapital: num(cap.current_capital),
       realized: null,
       unrealized: null,
-      returnPct: num(t.engine_return_pct),
+      returnPct: num(cap.return_on_capital_pct),
       trades: num(sample.strategy_fills),
       winRatePct: null,
       profitFactor: null,
@@ -180,14 +201,20 @@ function stockTracks(dashboard: Record<string, unknown>, asOf: string): TrackPay
         sample.strategy_sample_zero === true
           ? "전략 체결 0건 — 트랙 수익률은 탐색분을 포함한 계정 전체다"
           : (typeof sample.headline_note === "string" ? sample.headline_note : null),
-      status: stopped ? "stopped" : "running",
-      statusReason: stopped ? `체결 invariant — ${String(halt.reason ?? "unknown")}` : null,
+      // FCE 리포트와 같은 순서다 — 정지가 먼저, 그다음 큐 보류.
+      status: stopped ? "stopped" : held ? "held" : "running",
+      statusReason: stopped
+        ? `체결 invariant — ${String(halt.reason ?? "unknown")}`
+        : held
+          ? `봉 불일치 정지 예방 · 대기 주문 ${held.toLocaleString("en-US")}건`
+          : null,
       leverage: null,
       benchmarkLabel: t.benchmark_index ? String(t.benchmark_index) : null,
       benchmarkStart: num(t.benchmark_start),
       benchmarkCurrent: num(t.benchmark_current),
       benchmarkReturnPct: num(t.benchmark_return_pct),
-      evidenceNote: typeof halt.evidence_note === "string" ? halt.evidence_note : null,
+      evidenceNote:
+        typeof halt.evidence_note === "string" ? halt.evidence_note : held ? QUEUE_HOLD_REASON : null,
       // 호스트가 자면 그 하루는 검증에 안 들어간다. FCE 가 이미 재고 있다.
       elapsedDays: num(t.elapsed_days),
       calendarDays: num(t.calendar_days),
@@ -197,22 +224,61 @@ function stockTracks(dashboard: Record<string, unknown>, asOf: string): TrackPay
   return out;
 }
 
+/**
+ * 주식 트랙의 **큐 보류** 건수 (UI-04 D · E).
+ *
+ * FCE 는 트랙 상태를 `running` 으로 주지만, 설정(`stock_paper_hold_queued_orders`, 기본 켜짐)
+ * 때문에 대기 주문을 **내보내지 않는다.** KR 은 마지막 체결이 08-05 이고 대기 주문이 1만 건을
+ * 넘는다. 이걸 `운용중` 으로 세면 "운용중 트랙" 이 부풀려진다.
+ *
+ * 이 판정은 FCE 가 **자기 일일 리포트**에서 이미 한다(`notify/daily_report_source.py`) — 설정이
+ * 켜져 있고 대기 주문이 있으면 `held · 봉 불일치 정지 예방 (N건)`. API 로는 안 나와서 같은
+ * 쿼리로 DB 를 **읽기 전용**으로 본다. FCE 를 고치지 않는다.
+ *
+ * DB 를 못 읽으면 `null` — 그러면 FCE 가 준 상태를 그대로 둔다.
+ */
+function queuedOrders(market: "KR" | "US"): number | null {
+  const path = process.env.FCE_DB_PATH ?? "/Users/cocteau/Documents/Fomo club engine/backend/fomo_control_engine.db";
+  try {
+    const out = execFileSync(
+      "sqlite3",
+      [
+        "-readonly",
+        path,
+        `SELECT COUNT(*) FROM stock_paper_orders WHERE status='queued' AND json_extract(payload,'$.market')='${market}';`,
+      ],
+      { encoding: "utf8", timeout: 30_000 }
+    );
+    const n = Number(out.trim());
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+/** FCE 가 보류 사유로 쓰는 문장(`stock_paper/service.py`). 바꾸면 거기도 바꾼다. */
+const QUEUE_HOLD_REASON =
+  "체결가는 세션 시가에서 만들고 invariant 는 현재 분봉으로 검사한다 — 봉 불일치로 US 가 정지했다. 임시 방어이며 근본 수리는 별건이다.";
+
 /** 폴리마켓 — `/api/poly-paper/dashboard`. */
 function polyTrack(dashboard: Record<string, unknown>, asOf: string): TrackPayload {
   const track = record(dashboard.track);
   const unrealized = record(dashboard.unrealized);
-  const initial = num(track.initial_cash) ?? 0;
+  const cap = record(record(record(dashboard.capital).tracks).poly);
+  const initial = num(cap.starting_capital) ?? num(track.initial_cash) ?? 0;
   const cash = num(track.cash);
   return {
     key: "polymarket",
     label: "폴리마켓",
     currency: String(track.currency ?? "USDC"),
     startingCapital: initial,
-    // **평가액을 만들어내지 않는다.** 451 로 막혀 NAV 가 안 나온다.
-    currentCapital: null,
+    // NAV(평가액)는 451 로 막혀 안 나온다. 그래도 FCE 가 **실현 기준 자본**은 낸다 —
+    // 다른 네 트랙과 같은 기준이다. 전에는 `null` 로 올려 합산에서 빠졌는데, UI-02 C-4 가
+    // "제외 트랙도 합산에 넣는다. 빼면 수익률이 좋아 보인다" 고 했다.
+    currentCapital: num(cap.current_capital),
     realized: cash !== null ? cash - initial : null,
     unrealized: num(unrealized.pnl),
-    returnPct: null,
+    returnPct: num(cap.return_on_capital_pct),
     // `resolution_count`(12,774)는 **시장 정산 건수**지 우리 거래 수가 아니다.
     // 처음에 그걸 N 으로 올렸다가 폴리마켓이 표본 1만 건짜리 트랙으로 보였다.
     trades: null,
@@ -303,18 +369,23 @@ function whale(
  * `exit_reason` 은 가져온다. 닫힌 거래가 왜 끝났는지는 **과거의 사실**이고,
  * 그게 없으면 이력이 "얼마 벌었다" 뿐인 표가 된다.
  */
-function trades(payload: Record<string, unknown>): TradePayload[] {
+function trades(
+  payload: Record<string, unknown>,
+  trackKey: "crypto" | "whale" = "crypto",
+  keep: (t: Record<string, unknown>) => boolean = () => true
+): TradePayload[] {
   const rows = Array.isArray(payload.trades) ? payload.trades : [];
   return rows.flatMap((raw) => {
     const t = record(raw);
     // 열린 거래는 여기 담지 않는다 — 그건 `positions()` 가 본다.
     if (t.status === "open") return [];
+    if (!keep(t)) return [];
     if (typeof t.id !== "string" && typeof t.id !== "number") return [];
     const tags = Array.isArray(t.loss_tags) ? t.loss_tags.map(String) : [];
     return [
       {
         id: String(t.id),
-        trackKey: "crypto" as const,
+        trackKey,
         symbol: String(t.symbol ?? ""),
         direction: String(t.direction ?? ""),
         assetClass: typeof t.asset_class === "string" ? t.asset_class : null,
@@ -337,11 +408,34 @@ function trades(payload: Record<string, unknown>): TradePayload[] {
   });
 }
 
+/** FCE 관측 유실일 — `observation_integrity.tracks.*.lost_day_details` (UI-04 C-2). */
+function lostDays(diagnosis: Record<string, unknown>): LostDayPayload[] {
+  const tracks = record(record(diagnosis.observation_integrity).tracks);
+  // FCE 키 → 랩 트랙 키. 고래 추종은 FCE 가 관측률을 따로 안 잰다.
+  const map: Record<string, LostDayPayload["trackKey"]> = {
+    crypto: "crypto",
+    stock_us: "stock_us",
+    stock_kr: "stock_kr",
+    poly: "polymarket",
+  };
+  const out: LostDayPayload[] = [];
+  for (const [fceKey, trackKey] of Object.entries(map)) {
+    const details = record(tracks[fceKey]).lost_day_details;
+    for (const raw of Array.isArray(details) ? details : []) {
+      const d = record(raw);
+      const coverage = num(d.coverage_pct);
+      if (typeof d.day !== "string" || coverage === null) continue;
+      out.push({ trackKey, day: d.day, coveragePct: coverage, reason: String(d.reason ?? "") });
+    }
+  }
+  return out;
+}
+
 // ── 한 바퀴 ──────────────────────────────────────────────────────────────────
 
 async function collect(): Promise<FcePayload> {
   const at = new Date().toISOString();
-  const [paper, follow, eligibility, stock, poly, ledger] = await Promise.all([
+  const [paper, follow, eligibility, stock, poly, ledger, diagnosis] = await Promise.all([
     fce("/api/paper/dashboard").then(record),
     fce("/api/onchain/follow/trades").then(record),
     fce("/api/onchain/follow/eligibility").then(record),
@@ -350,6 +444,9 @@ async function collect(): Promise<FcePayload> {
     // 매번 전부 받는다. 148건이라 싸고, **증분으로 받으면 FCE 가 사후 정정한
     // 비용이 랩에 반영되지 않는다.** 늘어나면 그때 자르면 된다.
     fce("/api/paper/trades?limit=1000").then(record),
+    // 관측 유실일. 무거운 진단이라 실패해도 나머지는 올린다 — 띠가 없는 차트가
+    // 차트가 없는 것보다 낫다.
+    fce("/api/system/paper/diagnosis").then(record).catch(() => ({}) as Record<string, unknown>),
   ]);
 
   return {
@@ -361,7 +458,13 @@ async function collect(): Promise<FcePayload> {
       polyTrack(poly, at),
     ],
     positions: positions(paper),
-    trades: trades(ledger),
+    trades: [
+      ...trades(ledger, "crypto"),
+      // 고래는 **추종 자격(follow)만** 싣는다. FCE 성적 버킷이 그 83건으로 계산되고,
+      // 관찰 자격(observation) 7건까지 섞으면 곡선 끝이 트랙 자본과 어긋난다.
+      ...trades(follow, "whale", (t) => record(t.entry_evidence).qualification === "follow"),
+    ],
+    lostDays: lostDays(diagnosis),
     whale: whale(eligibility, follow, at),
   };
 }
@@ -397,9 +500,11 @@ async function once(): Promise<boolean> {
     );
 
     if (EMIT) {
-      // stdout 으로 페이로드 자체를 흘린다. 파일로 받아 이등분하면 된다:
-      //   npm run lab:fce-upload -- --emit > /tmp/payload.json
-      process.stdout.write(`${JSON.stringify(payload)}\n`);
+      // **파일로 쓴다.** 처음엔 stdout 으로 흘렸는데, 80KB 가 넘으니 파이프가 다 비기
+      // 전에 `process.exit` 가 먼저 불려 JSON 이 중간에 잘렸다.
+      //   npm run lab:fce-upload -- --emit=/tmp/payload.json
+      writeFileSync(EMIT_PATH, JSON.stringify(payload));
+      console.log(`  → ${EMIT_PATH} (${Math.round(JSON.stringify(payload).length / 1024)}KB)`);
       return true;
     }
     if (DRY) {

@@ -203,7 +203,7 @@
 
 .ui-row-link {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 92px minmax(0, 150px) 96px auto;
+  grid-template-columns: 36px minmax(0, 1fr) 120px minmax(0, 150px) 96px auto;
   align-items: center;
   gap: var(--s4);
   min-height: var(--row-h);
@@ -667,7 +667,7 @@ a.ui-research-link:hover {
   gap: var(--s2);
   flex-shrink: 0;
   color: var(--ink);
-  font-size: 17px;
+  font-size: var(--t-brand);
   font-weight: var(--w-bold);
   letter-spacing: var(--ls-snug);
   text-decoration: none;
@@ -1097,4 +1097,162 @@ a.ui-research-link:hover {
 .sh-fallback-text {
   margin: 0 0 var(--s3);
   color: var(--ink-2);
+}
+
+/* ── 차트 보강 (UI-04 C) ───────────────────────────────────────────────── */
+
+.ui-chart.is-compact .ui-ranges {
+  justify-content: flex-start;
+}
+
+.ui-legend-swatch.is-dot {
+  border-top: 1px dashed var(--line-2);
+}
+
+.ui-legend-swatch.is-band {
+  height: 10px;
+  border-top: 0;
+  border-radius: 3px;
+  background: var(--bg-2);
+  outline: 1px solid var(--line);
+}
+
+/* 호버 툴팁 — 그림자는 떠 있는 것에만(UI-01 A-2). */
+.ui-tip {
+  min-width: 220px;
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-row);
+  background: var(--bg);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--t-caption);
+}
+
+.ui-tip-when {
+  margin: 0 0 var(--s2);
+  color: var(--ink-3);
+}
+
+.ui-tip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s3);
+  align-items: baseline;
+  margin: 0;
+}
+
+.ui-tip-row + .ui-tip-row {
+  margin-top: var(--s1);
+}
+
+.ui-tip-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--ink-2);
+}
+
+.ui-tip-key::before {
+  content: "";
+  width: 12px;
+  height: 0;
+}
+
+.ui-tip-key.is-line::before {
+  border-top: 2px solid var(--blue);
+}
+
+.ui-tip-key.is-dash::before {
+  border-top: 2px dashed var(--ink-3);
+}
+
+.ui-tip-val {
+  font-weight: var(--w-semibold);
+}
+
+.ui-tip-pct {
+  color: var(--ink-3);
+  min-width: 56px;
+  text-align: right;
+}
+
+/* 진 전략 — 빨강 (UI-04 H) */
+.ui-compare-fill.is-lost {
+  background: var(--dn);
+}
+
+/* 연구 번호 — 열린 건 파랑, 닫힌 건 회색 (UI-04 G) */
+.ui-research-no {
+  color: var(--blue);
+}
+.ui-research-no.is-closed {
+  color: var(--ink-3);
+}
+.ui-research-item.is-closed .ui-research-title {
+  color: var(--ink-2);
+}
+.ui-research-title {
+  font-size: var(--t-research-title);
+}
+
+/* 제목을 눈에서만 숨긴다 — 스크린 리더는 읽는다 */
+.sh-page-head.is-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ══ Overview (UI-04) ═════════════════════════════════════════════════════ */
+
+.ov-chart {
+  padding: var(--s2) var(--card-pad) var(--card-pad);
+}
+
+.ov-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line);
+}
+
+.ov-conclusion {
+  margin: var(--s5) 0 var(--s2);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+
+.ov-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--s2);
+}
+
+.ov-activity li + li {
+  border-top: 1px solid var(--line);
+}
+
+.ov-activity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) var(--card-pad);
+  color: var(--ink);
+  font-size: var(--t-label);
+  text-decoration: none;
+  transition: background var(--m-hover) ease;
+}
+
+.ov-activity-row:hover {
+  background: var(--bg-2);
+  text-decoration: none;
+}
+
+.ov-activity-when {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
 }

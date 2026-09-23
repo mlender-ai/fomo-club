@@ -24,6 +24,7 @@
  */
 import { readCapitalSeries } from "./capital";
 import { readFceBoard, readFceLedger } from "./fce-board";
+import { buildOverview } from "./overview";
 import { buildPortfolio } from "./portfolio";
 import { Prisma } from "@prisma/client";
 
@@ -48,7 +49,8 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
+// 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 
 /** 조립본에 같이 실리는 동기화 재료. 경과 시간은 읽는 쪽이 센다. */
 export interface SyncSeed {
@@ -124,6 +126,28 @@ export async function assemblePayloads() {
   const portfolio = buildPortfolio(board.tracks);
   const series = await Promise.all(portfolio.tracks.map((t) => readCapitalSeries(t.key)));
 
+  // Overview 재료 — 쓰기 경로라 여기서 실컷 읽는다. 화면 요청은 조립본 한 줄만 본다.
+  const [tradeLite, lostDays] = await Promise.all([
+    prisma.fceTrade.findMany({
+      where: { exitAt: { not: null } },
+      select: { trackKey: true, symbol: true, direction: true, exitAt: true, netPnlUsdt: true, netReturnPct: true },
+    }),
+    prisma.fceLostDay.findMany(),
+  ]);
+  const firstExit = tradeLite.reduce<Date | null>(
+    (min, t) => (t.exitAt && (!min || t.exitAt < min) ? t.exitAt : min),
+    null
+  );
+  const btc = await prisma.candle.findMany({
+    where: {
+      symbol: "BTC",
+      interval: "H1",
+      at: { gte: new Date((firstExit?.getTime() ?? Date.now() - 30 * 86_400_000) - 2 * 86_400_000) },
+    },
+    orderBy: { at: "asc" },
+    select: { at: true, close: true },
+  });
+
   const sync: SyncSeed = {
     lastAt: lastOk?.at.toISOString() ?? null,
     lastError: lastFail?.error ? { at: lastFail.at.toISOString(), error: lastFail.error } : null,
@@ -168,12 +192,25 @@ export async function assemblePayloads() {
   );
 
   const overview = {
-    portfolio,
-    series: series.filter((s) => s.points.length > 0),
-    research: { open: openResearch.length, items: openResearch.slice(0, 5) },
+    ...buildOverview({
+      tracks: board.tracks,
+      trades: tradeLite,
+      positions: board.positions,
+      btc: btc.map((b) => ({ at: b.at, close: b.close.toNumber() })),
+      lostDays,
+      research: research.map((r) => ({
+        no: r.no,
+        title: r.title,
+        status: r.status,
+        verdict: r.verdict,
+        summary: r.summary,
+        blocks: r.blocks,
+      })),
+      now: new Date(),
+    }),
     positions: board.positions.length,
-    freshness: board.freshness,
   };
+  void openResearch;
 
   const strategies = {
     rows: strategyRows,

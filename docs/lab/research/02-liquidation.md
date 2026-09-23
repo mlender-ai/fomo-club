@@ -2,7 +2,7 @@
 no: "02"
 title: 강제청산을 넣으면 성과가 얼마나 바뀌나
 status: blocked
-summary: FCE 페이퍼 체결기에 청산 분기가 없다 — 이게 실매매를 막고 있다
+summary: 3배라 −100% 아래 거래 0건 — 배수를 올리면 드러난다
 opened_at: 2026-09-21
 tracks: [crypto, whale]
 blocks: 실매매

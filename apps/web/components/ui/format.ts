@@ -68,3 +68,50 @@ export function ago(ms: number | null | undefined): string {
   if (m < 60 * 24) return `${Math.floor(m / 60)}시간 전`;
   return `${Math.floor(m / (60 * 24))}일 전`;
 }
+
+/**
+ * 원래 금액 — 통화 코드를 뒤에 (UI-04 E). `348.68 USDT` · `100,003.82 USD` · `₩99,999,340`.
+ *
+ * 환산값(`$6,974`)과 나란히 놓이므로 **같은 `$` 로 쓰지 않는다.** 둘 다 `$` 면 어느 쪽이 진짜
+ * 잔고인지 구분이 안 된다. 원화만 기호를 앞에 둔다(UI-01 B-3).
+ */
+export function native(value: number | null | undefined, currency: string): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "\u2014";
+  if (currency === "KRW") return money(value, "KRW");
+  return `${num(value, 2)} ${currency}`;
+}
+
+const KST = "Asia/Seoul";
+
+/**
+ * 한국 시간 — `9월 18일 14:00`. 보는 사람이 한국에 있다. 브라우저 시간대에 맡기면 같은 점이
+ * 사람마다 다른 날짜가 되므로 **시간대를 박는다.**
+ */
+export function kstStamp(at: string | number | Date): string {
+  const d = new Date(at);
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: KST,
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("month")}월 ${get("day")}일 ${get("hour")}:${get("minute")}`;
+}
+
+/** 최근 활동의 시각 — 오늘이면 `14:33`, 어제면 `어제`, 그 전은 `9월 18일`. 한국 시간. */
+export function kstWhen(at: string | number | Date, now: Date = new Date()): string {
+  const fmt = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: KST }).format(d); // YYYY-MM-DD
+  const d = new Date(at);
+  const today = fmt(now);
+  const yesterday = fmt(new Date(now.getTime() - 86_400_000));
+  const day = fmt(d);
+  if (day === today) {
+    return new Intl.DateTimeFormat("ko-KR", { timeZone: KST, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  }
+  if (day === yesterday) return "어제";
+  const [, m, dd] = day.split("-");
+  return `${Number(m)}월 ${Number(dd)}일`;
+}

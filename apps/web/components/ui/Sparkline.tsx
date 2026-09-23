@@ -11,8 +11,8 @@ import { Line, LineChart, ResponsiveContainer } from "recharts";
 export function Sparkline({
   data,
   tone = "mute",
-  width = 92,
-  height = 32,
+  width = 120,
+  height = 30,
 }: {
   data: { value: number | null }[];
   tone?: "up" | "dn" | "mute";

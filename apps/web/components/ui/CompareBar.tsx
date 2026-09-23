@@ -28,10 +28,16 @@ export interface CompareItem {
 export function CompareBar({
   items,
   baseline,
+  underTone = "mute",
 }: {
   items: CompareItem[];
   /** 기준값. 이 선을 넘은 막대만 파랗다. */
   baseline?: number | null;
+  /**
+   * 기준을 넘지 못한 막대의 색. 기본은 회색(강조하지 않는다). Overview 전략 경쟁은 **빨강**이다 —
+   * UI-04 H 가 "진 전략 빨강" 으로 정했다. 여기서 빨강은 손익(진 것)을 뜻한다.
+   */
+  underTone?: "mute" | "dn";
 }) {
   // 음수도 오므로 0 이 아니라 **최소·최대**로 축을 잡는다. 0 기준으로 그리면
   // 전부 음수일 때 막대가 하나도 안 보인다.
@@ -57,7 +63,7 @@ export function CompareBar({
                 <span className="ui-compare-baseline" style={{ left: `${at(baseline)}%` }} aria-hidden />
               ) : null}
               <span
-                className={`ui-compare-fill${item.isBaseline ? " is-baseline" : beats ? " is-beat" : " is-under"}`}
+                className={`ui-compare-fill${item.isBaseline ? " is-baseline" : beats ? " is-beat" : underTone === "dn" ? " is-lost" : " is-under"}`}
                 style={{ left: `${left}%`, width: `${width}%` }}
               />
             </span>

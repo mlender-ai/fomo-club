@@ -104,6 +104,14 @@ export interface TradePayload {
   holdingBars: number | null;
 }
 
+/** FCE 가 관측 부족으로 판정한 날 (UI-04 C-2). */
+export interface LostDayPayload {
+  trackKey: TrackKey;
+  day: string;
+  coveragePct: number;
+  reason: string;
+}
+
 export interface WhalePayload {
   walletsTotal: number;
   eligible: number;
@@ -127,6 +135,8 @@ export interface FcePayload {
   positions: PositionPayload[];
   /** 닫힌 거래. 없으면 빈 배열 — **없다고 지우지 않는다.** */
   trades: TradePayload[];
+  /** FCE 관측 유실일. 트랙 단위로 통째로 바뀐다. */
+  lostDays: LostDayPayload[];
   whale: WhalePayload | null;
 }
 
@@ -261,6 +271,22 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
     });
   }
 
+  const lostDays: LostDayPayload[] = [];
+  for (const [index, raw] of (Array.isArray(body.lostDays) ? body.lostDays : []).entries()) {
+    const d = raw as Record<string, unknown>;
+    const coverage = num(d.coveragePct);
+    if (!KEYS.includes(d.trackKey as TrackKey) || typeof d.day !== "string" || coverage === null) {
+      problems.push({ path: `lostDays[${index}]`, message: "trackKey · day · coveragePct 가 필요하다" });
+      continue;
+    }
+    lostDays.push({
+      trackKey: d.trackKey as TrackKey,
+      day: d.day,
+      coveragePct: coverage,
+      reason: typeof d.reason === "string" ? d.reason : "",
+    });
+  }
+
   let whale: WhalePayload | null = null;
   if (body.whale && typeof body.whale === "object") {
     const w = body.whale as Record<string, unknown>;
@@ -284,5 +310,5 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
   }
 
   if (problems.length > 0) return { payload: null, problems };
-  return { payload: { at: body.at as string, tracks, positions, trades, whale }, problems: [] };
+  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale }, problems: [] };
 }
