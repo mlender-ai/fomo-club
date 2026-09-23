@@ -281,6 +281,22 @@ async function fceSnapshot(startedAt: Date): Promise<Result> {
   return { rows: 1, detail: { line: line.trim().slice(0, 140) } };
 }
 
+/**
+ * 조립본을 **랩 DB 만으로** 다시 만든다 (UI-03).
+ *
+ * 평소엔 FCE 업로드가 끝날 때 만들어진다. 그런데 FCE 가 죽어 있으면 업로드가 안 돌고,
+ * 그 사이 배포로 조립본 형식(`SNAPSHOT_VERSION`)이 바뀌면 **모든 화면이 "다시 만드는 중"
+ * 에 갇힌다.** 실제로 UI-03 배포 직후 옛 형식 조립본 때문에 `/whales` 가 터졌다.
+ *
+ * 30분에 한 번이면 충분하다. FCE 가 살아 있으면 업로드가 15분마다 먼저 만든다.
+ */
+async function snapshot(startedAt: Date): Promise<Result> {
+  const text = await post("/api/lab/snapshot", {});
+  const body = JSON.parse(text) as { keys?: string[]; ms?: number; version?: number };
+  void startedAt;
+  return { rows: body.keys?.length ?? 0, detail: { v: body.version, ms: body.ms } };
+}
+
 // ── 스케줄 ──────────────────────────────────────────────────────────────────
 
 interface Job {
@@ -311,6 +327,7 @@ const slowJobs: Job[] = [
   { name: "whale", everyMs: 15 * MINUTE, run: whale, lastAt: 0, fails: 0 },
   { name: "fce", everyMs: 15 * MINUTE, run: fceSnapshot, lastAt: 0, fails: 0 },
   { name: "funding", everyMs: 8 * HOUR, run: funding, lastAt: 0, fails: 0 },
+  { name: "snapshot", everyMs: 30 * MINUTE, run: snapshot, lastAt: 0, fails: 0 },
 ];
 
 const jobs: Job[] = [...fastJobs, ...slowJobs];

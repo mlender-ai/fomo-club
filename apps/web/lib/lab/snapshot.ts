@@ -37,6 +37,19 @@ export type SnapshotKey =
   | "research"
   | "journal";
 
+/**
+ * 조립본 **형식 번호**. 조립본의 모양을 바꾸면 **반드시 올린다.**
+ *
+ * ## 왜 있나 — 조립본은 배포보다 오래 산다
+ *
+ * UI-03 을 배포했더니 `/whales` 가 통째로 터졌다. DB 에 남아 있던 조립본은 **이전 배포의
+ * 코드**가 만든 것이라 `causes[].measured` 가 문자열이 아니라 객체였고, 새 화면이 그걸
+ * 글자로 그리려다 React 가 멈췄다. 전략 조립본에는 새 화면이 찾는 `series` 도 없었다.
+ *
+ * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
+ */
+export const SNAPSHOT_VERSION = 2;
+
 /** 조립본에 같이 실리는 동기화 재료. 경과 시간은 읽는 쪽이 센다. */
 export interface SyncSeed {
   lastAt: string | null;
@@ -267,7 +280,7 @@ export async function buildSnapshots(): Promise<SnapshotKey[]> {
   const now = new Date();
   const values = keys.map(
     (key) =>
-      Prisma.sql`(${key}, ${JSON.stringify({ payload: payloads[key], sync })}::jsonb, ${now})`
+      Prisma.sql`(${key}, ${JSON.stringify({ v: SNAPSHOT_VERSION, payload: payloads[key], sync })}::jsonb, ${now})`
   );
   await prisma.$executeRaw`
     INSERT INTO "LabSnapshot" ("key", "payload", "builtAt")
@@ -278,10 +291,16 @@ export async function buildSnapshots(): Promise<SnapshotKey[]> {
   return keys;
 }
 
-/** 조립본 하나. **쿼리 한 번이다.** */
-export async function readSnapshot<T>(key: SnapshotKey): Promise<Snapshot<T> | null> {
+/**
+ * 조립본 하나. **쿼리 한 번이다.**
+ *
+ * 없으면 `null`, 형식 번호가 다르면 `"outdated"` 를 낸다. 둘을 가르는 이유는 할 일이 달라서다 —
+ * 없으면 러너를 켜야 하고, 옛 형식이면 다음 업로드(또는 `POST /api/lab/snapshot`)가 고친다.
+ */
+export async function readSnapshot<T>(key: SnapshotKey): Promise<Snapshot<T> | null | "outdated"> {
   const row = await prisma.labSnapshot.findUnique({ where: { key } });
   if (!row) return null;
-  const body = row.payload as unknown as { payload: T; sync: SyncSeed };
+  const body = row.payload as unknown as { v?: number; payload: T; sync: SyncSeed };
+  if (body.v !== SNAPSHOT_VERSION) return "outdated";
   return { key, payload: body.payload, sync: body.sync, builtAt: row.builtAt };
 }

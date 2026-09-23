@@ -26,7 +26,12 @@ export async function GET(
   const started = Date.now();
   const { id } = await context.params;
   const snap = await readSnapshot<PositionsPayload>("positions");
-  if (!snap) return NextResponse.json({ error: "not_built" }, { status: 503 });
+  if (!snap || snap === "outdated") {
+    return NextResponse.json(
+      { error: "not_built", hint: snap === "outdated" ? "조립본이 옛 형식이라 다시 만드는 중이다" : undefined },
+      { status: 503 }
+    );
+  }
 
   const position = snap.payload.positions.find((p) => p.id === id);
   if (!position) return NextResponse.json({ error: "not_found", id }, { status: 404 });

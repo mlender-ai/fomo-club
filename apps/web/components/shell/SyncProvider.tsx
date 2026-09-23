@@ -10,29 +10,34 @@
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import type { WireSync } from "../../lib/lab/wire";
+import type { WireCollect, WireSync } from "../../lib/lab/wire";
 
 /** 60초. 헤더의 "N분 전" 이 분 단위라 이보다 촘촘할 이유가 없다. */
 const POLL_MS = 60_000;
 
 interface SyncValue {
   sync: WireSync | null;
+  /** 시세·수집 잡. `/data` 가 헤더로 왔다(UI-03 PART B). */
+  collect: WireCollect | null;
   /** 상태 API 자체에 닿지 못했나. **그것도 끊김이다.** */
   unreachable: boolean;
 }
 
-const SyncContext = createContext<SyncValue>({ sync: null, unreachable: false });
+const SyncContext = createContext<SyncValue>({ sync: null, collect: null, unreachable: false });
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const [value, setValue] = useState<SyncValue>({ sync: null, unreachable: false });
+  const [value, setValue] = useState<SyncValue>({ sync: null, collect: null, unreachable: false });
 
   useEffect(() => {
     let alive = true;
     const load = () =>
       fetch("/api/lab/status", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-        .then((body: { sync: WireSync }) => alive && setValue({ sync: body.sync, unreachable: false }))
-        .catch(() => alive && setValue((v) => ({ sync: v.sync, unreachable: true })));
+        .then(
+          (body: { sync: WireSync; collect: WireCollect }) =>
+            alive && setValue({ sync: body.sync, collect: body.collect, unreachable: false })
+        )
+        .catch(() => alive && setValue((v) => ({ ...v, unreachable: true })));
     void load();
     const timer = setInterval(() => void load(), POLL_MS);
     return () => {

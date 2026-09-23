@@ -8,7 +8,7 @@
  * `import type` 이라 prisma 가 브라우저 번들에 들어가지 않는다.
  */
 import type { Payloads } from "./snapshot";
-import type { SyncStatus } from "./sync";
+import type { CollectStatus, SyncStatus } from "./sync";
 
 /** `JSON.stringify` 를 한 번 지난 모양. `Date` 는 문자열이 된다. */
 export type Jsonify<T> = T extends Date
@@ -22,6 +22,7 @@ export type Jsonify<T> = T extends Date
 export type WireKey = keyof Payloads;
 export type Wire<K extends WireKey> = Jsonify<Payloads[K]>;
 export type WireSync = Jsonify<SyncStatus>;
+export type WireCollect = Jsonify<CollectStatus>;
 
 export interface WireEnvelope<T> {
   data: T;

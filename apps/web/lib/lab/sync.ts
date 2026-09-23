@@ -95,3 +95,51 @@ export async function readSyncStatus(now: Date = new Date()): Promise<SyncStatus
     lastError: failed && failed.error ? { at: failed.at, error: failed.error } : null,
   };
 }
+
+// ── 데이터 수집 상태 (UI-03 PART B — `/data` 가 헤더로 왔다) ──────────────────
+
+/**
+ * 시세가 이보다 오래되면 끊긴 것으로 본다. 수집 쪽(`scripts/lab/collect/config.ts`)의
+ * `STALE_AFTER_MS` 와 **같은 값**이어야 한다 — 다르면 헤더와 수집기가 서로 다른 말을 한다.
+ */
+export const FEED_STALE_MS = 3 * 60 * 1000;
+
+export interface CollectStatus {
+  /** 시세가 끊긴 종목. 비어 있으면 정상. */
+  staleSymbols: string[];
+  /** 가장 오래된 시세의 나이. 시세가 하나도 없으면 null. */
+  feedAgeMs: number | null;
+  /** 마지막 실행이 실패한 잡과 연속 실패 수. */
+  failing: { job: string; since: Date; error: string | null }[];
+}
+
+/**
+ * 시세·수집 잡 상태를 **한 문장**으로 읽는다. 헤더가 1분마다 부르는 경로라, 왕복을
+ * 하나라도 늘리면 모든 화면의 머리가 그만큼 늦게 말한다.
+ */
+export async function readCollectStatus(now: Date = new Date()): Promise<CollectStatus> {
+  const rows = await prisma.$queryRaw<
+    { kind: string; name: string; at: Date | null; ok: boolean | null; error: string | null }[]
+  >`
+    SELECT 'price' AS kind, "symbol" AS name, "fetchedAt" AS at, NULL::boolean AS ok, NULL AS error
+      FROM "LatestPrice"
+    UNION ALL
+    SELECT 'job' AS kind, j."job" AS name, j."finishedAt" AS at, j."ok" AS ok, j."error" AS error
+      FROM (
+        SELECT DISTINCT ON ("job") "job", "finishedAt", "ok", "error"
+          FROM "CollectionRun"
+         ORDER BY "job", "finishedAt" DESC
+      ) j
+  `;
+
+  const prices = rows.filter((r) => r.kind === "price");
+  const ages = prices.map((r) => (r.at ? now.getTime() - r.at.getTime() : Number.POSITIVE_INFINITY));
+  return {
+    staleSymbols: prices.filter((_, i) => (ages[i] ?? 0) > FEED_STALE_MS).map((r) => r.name),
+    feedAgeMs: ages.length === 0 ? null : Math.max(...ages.filter(Number.isFinite), 0) || null,
+    failing: rows
+      .filter((r) => r.kind === "job" && r.ok === false && r.at)
+      .map((r) => ({ job: r.name, since: r.at as Date, error: r.error })),
+  };
+}
+

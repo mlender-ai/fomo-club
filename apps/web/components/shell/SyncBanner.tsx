@@ -11,7 +11,7 @@
 import { useSync } from "./SyncProvider";
 
 export function SyncBanner() {
-  const { sync, unreachable } = useSync();
+  const { sync, collect, unreachable } = useSync();
 
   if (unreachable) {
     return (
@@ -20,6 +20,18 @@ export function SyncBanner() {
       </div>
     );
   }
+  // 시세 끊김 — FCE 와 따로 본다. 시세는 **이 맥의 러너**가 넣는다(docs/lab/CRON.md §0-3).
+  const stale = collect?.staleSymbols ?? [];
+  if (stale.length > 0 && (!sync || sync.level !== "broken")) {
+    const minutes = collect?.feedAgeMs ? Math.floor(collect.feedAgeMs / 60_000) : null;
+    return (
+      <div className="sh-banner" role="alert">
+        <strong>시세가 {minutes ? `${minutes}분째 ` : ""}안 들어와요</strong> ({stale.join(", ")}). 로컬 수집 러너를
+        확인하세요 — <code>npm run lab:runner</code>
+      </div>
+    );
+  }
+
   if (!sync || sync.level !== "broken") return null;
 
   const hours = sync.ageMs === null ? null : Math.floor(sync.ageMs / 3_600_000);
