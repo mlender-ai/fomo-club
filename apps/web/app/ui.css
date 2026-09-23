@@ -551,15 +551,42 @@ a.ui-research-link:hover {
   .ui-hero-value {
     font-size: 44px;
   }
+  /*
+   * 폰 — 두 줄로 접는다. **부제·상태·수익률을 숨기지 않는다.**
+   *
+   * 전에는 폰에서 이 셋을 숨겼다. 그러면 정지·보류 트랙의 사유와 상태 알약이 폰에서만
+   * 사라진다 — "정지 트랙을 숨기지 말 것"(UI-04)을 폰에서 어긴다. 숨기는 건 추이선뿐이다(J).
+   *
+   *   아이콘 | 이름·부제   | 자산·원래 금액
+   *   아이콘 | 상태        | 수익률
+   */
   .ui-row-link {
-    grid-template-columns: 32px minmax(0, 1fr) minmax(0, auto);
-    gap: var(--s3);
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon name value"
+      "icon status change";
+    gap: var(--s1) var(--s3);
+    align-items: start;
   }
-  .ui-row-change,
+  .ui-row-icon {
+    grid-area: icon;
+    width: 32px;
+    height: 32px;
+  }
+  .ui-row-name {
+    grid-area: name;
+  }
+  .ui-row-value {
+    grid-area: value;
+  }
   .ui-row-status {
-    display: none;
+    grid-area: status;
+    justify-content: flex-start;
   }
-  .ui-row-sub {
+  .ui-row-change {
+    grid-area: change;
+  }
+  .ui-row-spark {
     display: none;
   }
   .ui-compare-row {
