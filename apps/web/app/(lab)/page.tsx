@@ -1,274 +1,186 @@
+"use client";
+
 /**
- * `/` — 백테스트 화면.
+ * `/` — Overview (UI-00 §2 · UI-03 PART B).
  *
- * > **표 하나와 선 하나면 된다.**
+ * 가장 큰 숫자는 **총 자산**이다 — 트랙당 $10,000 환산(UI-02 C).
  *
- * ## 이 화면의 일은 미화하지 않는 것이다 (LAB-FIX2)
+ * **UI-03 의 몫은 "이 탭이 눌리고, 받은 것을 정직하게 보여준다" 까지다.** 목표 화면
+ * (`UI-target-overview.html`) 수준으로 다듬는 것은 `UI-04` 다.
  *
- * 처음 판은 C/M 내림차순으로 1·2위를 매기고 1위를 강조색으로 칠했다. 그런데 실측은
- * 두 전략 다 **BTC 그냥 보유보다 못했고**, 다중 비교 확률은 **99%** 였다.
- * 그 상태로 1위를 칠하면 화면이 "이게 제일 낫다" 고 말하는 셈인데, 사실은
- * **아무것도 안 하는 편이 낫다.**
- *
- * 그래서 규칙이 셋이다:
- *
- *  1. **벤치마크가 표 맨 위에 선다.** 기준이 먼저 보여야 미달이 미달로 읽힌다
- *  2. 벤치마크보다 C/M 이 낮으면 **번호 대신 `기준 미달`**
- *  3. 우연 확률이 `CHANCE_LIMIT` 이상이면 **아무에게도 번호를 주지 않는다**
- *
- * 강조색은 **벤치마크를 이긴 전략이 실제로 있을 때만** 쓴다.
- *
- * 서버 컴포넌트다. 행 선택·기간 선택은 **URL 쿼리**로 한다.
+ * 1차 백테스트 보관함은 여기 있었다. 전략 3종을 폐기하면서(LAB-BRIDGE 0-3) 판정은
+ * 연구 04 로 옮겼다 — `/backtest` 가 그쪽으로 간다.
  */
 import Link from "next/link";
 
-import { EquityCurve } from "../../components/lab/EquityCurve";
+import { LabView } from "../../components/shell/LabView";
+import { PageFrame } from "../../components/shell/PageFrame";
+import { useLab } from "../../components/shell/useLab";
 import {
-  PERIOD_LABEL,
-  readBenchmarkCurve,
-  readBoard,
-  readCurve,
-  type Board,
-  type BoardRow,
-  type PeriodKey,
-} from "../../lib/lab/backtest-board";
-import { describeMultipleComparison } from "@fomo/lab";
+  AreaChartCard,
+  AssetRow,
+  Card,
+  Delta,
+  Hero,
+  Pill,
+  ResearchItem,
+  Skeleton,
+  SkeletonRows,
+  StatGroup,
+  money,
+  pct,
+  tone,
+} from "../../components/ui";
+import type { ResearchStatus } from "../../components/ui";
+import { trackStatus } from "../../lib/lab/labels";
+import { TRACK_BASE_USD } from "../../lib/lab/portfolio";
+import type { Wire } from "../../lib/lab/wire";
 
-export const dynamic = "force-dynamic";
+type Overview = Wire<"overview">;
 
-const PERIODS: PeriodKey[] = ["all", "3y", "1y"];
-
-function pct(value: number | null, digits = 1): string {
-  if (value === null) return "—";
-  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
-}
-
-function num(value: number | null, digits = 2): string {
-  return value === null ? "—" : value.toFixed(digits);
-}
-
-/** 음수는 하락색. 0 은 중립이다. */
-function sign(value: number | null): string {
-  if (value === null || value === 0) return "";
-  return value > 0 ? "up" : "down";
-}
-
-function hold(hours: number | null): string {
-  if (hours === null) return "—";
-  if (hours < 48) return `${hours.toFixed(0)}시간`;
-  return `${(hours / 24).toFixed(0)}일`;
-}
-
-function Row({
-  row,
-  selected,
-  period,
-  highlight,
-}: {
-  row: BoardRow;
-  selected: boolean;
-  period: PeriodKey;
-  /** 강조색을 써도 되는 행인가. 벤치마크를 이긴 전략이 없으면 아무도 못 받는다. */
-  highlight: boolean;
-}) {
-  const href = `/?period=${period}&run=${row.runId}`;
-  const dim = row.halt !== "none";
+function OverviewLoading() {
   return (
-    <tr
-      className={[selected ? "is-selected" : "", dim ? "is-stopped" : ""].join(" ").trim()}
+    <PageFrame title="Overview" side={<Skeleton height={320} radius="var(--r-card)" />}>
+      <Skeleton width={200} height={16} />
+      <Skeleton width={360} height={60} />
+      <Skeleton height={300} radius="var(--r-card)" />
+      <SkeletonRows rows={5} />
+    </PageFrame>
+  );
+}
+
+export default function OverviewPage() {
+  const { state, retry } = useLab<Overview>("/api/lab/overview");
+
+  return (
+    <LabView state={state} retry={retry} loading={<OverviewLoading />}>
+      {(data) => <OverviewBody data={data} />}
+    </LabView>
+  );
+}
+
+function OverviewBody({ data }: { data: Overview }) {
+  const p = data.portfolio;
+  // 자본 곡선은 **되만든 값**이다. 지금은 크립토만 거래 이력이 올라온다.
+  const curve = data.series[0] ?? null;
+  const curveTrack = curve ? p.tracks.find((t) => t.key === curve.trackKey) : null;
+  const start = curveTrack?.nativeStart ?? null;
+
+  const chart =
+    curve && start && start > 0
+      ? curve.points.map((pt) => ({
+          at: pt.at.slice(5, 10),
+          // 트랙당 $10,000 으로 맞춰 그린다 — hero 와 같은 단위여야 읽힌다.
+          value: (TRACK_BASE_USD * pt.capital) / start,
+          benchmark: pt.benchmark === null ? null : (TRACK_BASE_USD * pt.benchmark) / start,
+        }))
+      : [];
+
+  return (
+    <PageFrame
+      title="Overview"
+      side={
+        <>
+          <Card
+            title="열린 질문"
+            description="무엇을 확인하고 있나"
+            aside={<Link href="/research">전부 보기</Link>}
+            flush
+          >
+            {data.research.items.length === 0 ? (
+              <p className="sh-note" style={{ padding: "0 var(--card-pad) var(--card-pad)" }}>
+                열린 질문이 없어요.
+              </p>
+            ) : (
+              <ul className="ui-research">
+                {data.research.items.map((r) => (
+                  <ResearchItem
+                    key={r.no}
+                    no={r.no}
+                    title={r.title}
+                    status={r.status as ResearchStatus}
+                    summary={r.summary}
+                    href={`/research/${r.no}`}
+                  />
+                ))}
+              </ul>
+            )}
+          </Card>
+          <StatGroup
+            stats={[
+              { label: "보유 포지션", value: String(data.positions), note: <Link href="/positions">포지션</Link> },
+              {
+                label: "합산에서 빠진 트랙",
+                value: String(p.excluded.length),
+                note: "평가액을 몰라 0 으로 채우지 않았다",
+              },
+            ]}
+          />
+        </>
+      }
     >
-      <td className="num rank">
-        {row.rank ?? <span className="lab-nonrank">{row.note}</span>}
-      </td>
-      <td className="name">
-        <Link href={href} className="lab-row-link" scroll={false}>
-          {row.label}
-        </Link>
-      </td>
-      <td className={`num ${sign(row.cagr)}`}>{pct(row.cagr)}</td>
-      <td className={`num ${sign(row.mdd)}`}>{pct(row.mdd)}</td>
-      <td className={`num ${highlight ? "accent" : ""}`}>{num(row.cagrMdd)}</td>
-      <td className="num">{num(row.sharpe)}</td>
-      <td className="num">{row.winRate === null ? "—" : `${row.winRate.toFixed(0)}%`}</td>
-      <td className="num">{num(row.profitFactor)}</td>
-      <td className="num">{hold(row.avgHoldHours)}</td>
-      <td className="num">{row.maxConsecutiveLoss || "—"}</td>
-      <td className="num">{row.trades}</td>
-    </tr>
-  );
-}
+      <Hero
+        label={`트랙당 $${TRACK_BASE_USD.toLocaleString("en-US")} 환산 · 전부 페이퍼`}
+        value={money(p.total)}
+        delta={<Delta amount={p.changeUsd} percent={p.changePct} period="시작 대비" />}
+        meta={
+          p.excluded.length > 0
+            ? `${p.excluded.map((e) => e.label).join(" · ")} 은(는) 평가액이 없어 합산에서 뺐다 — 분모도 ${money(p.base)} 다.`
+            : `시작 ${money(p.base)}`
+        }
+      />
 
-/** 표 위 한 줄 — 무엇을 몇 개로 쟀고 **몇 개가 기준을 넘었나**(PART F-3). */
-function Summary({ board }: { board: Board }) {
-  const span = board.dataSpan;
-  const dataLine =
-    span.from && span.to
-      ? `${span.from.toISOString().slice(0, 7)} ~ ${span.to.toISOString().slice(0, 7)} (${span.years.toFixed(1)}년 · ${span.bars.toLocaleString("ko-KR")}봉)`
-      : "데이터 없음";
-  // **채점한 구간은 데이터 기간보다 짧다.** 워크포워드가 앞 1년을 학습에 쓴다.
-  const test = board.testSpan;
-  const testLine =
-    test.from && test.to
-      ? `검증 ${test.from.toISOString().slice(0, 7)} ~ ${test.to.toISOString().slice(0, 7)} (학습 구간 제외)`
-      : "검증 구간 없음";
-  return (
-    <p className="lab-summary">
-      <span>데이터 {dataLine}</span>
-      <span>{testLine}</span>
-      <span>후보 {board.candidateCount}개</span>
-      <strong className={board.beatCount === 0 ? "down" : "up"}>
-        벤치마크를 이긴 전략 {board.beatCount}개
-      </strong>
-    </p>
-  );
-}
-
-export default async function BacktestPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ period?: string; run?: string }>;
-}) {
-  const params = await searchParams;
-  const period: PeriodKey = PERIODS.includes(params.period as PeriodKey)
-    ? (params.period as PeriodKey)
-    : "all";
-
-  const board = await readBoard(period);
-
-  if (board.rows.length === 0) {
-    return (
-      <>
-        <h1 className="lab-title">백테스트</h1>
-        <div className="lab-empty">
-          <p className="lab-empty-brand">STRATEGY LAB</p>
-          <p className="lab-empty-msg">아직 백테스트 결과가 없습니다.</p>
-          <p className="lab-empty-note">npm run lab:backtest -- --strategy &lt;id&gt;</p>
-        </div>
-      </>
-    );
-  }
-
-  // 기본 선택은 거래가 있는 첫 행. 없으면 첫 행.
-  const withTrades = board.rows.filter((r) => r.trades > 0);
-  const selectedId =
-    params.run && board.rows.some((r) => r.runId === params.run)
-      ? params.run
-      : (withTrades[0]?.runId ?? board.rows[0]?.runId ?? "");
-  const selected = board.rows.find((r) => r.runId === selectedId) ?? (board.rows[0] as BoardRow);
-
-  const curve = await readCurve(selected.runId, board.from);
-  // 벤치마크는 **전략 곡선과 같은 구간**으로 자른다. 구간이 다르면 비교가 아니다.
-  const benchmarkCurve = await readBenchmarkCurve(curve.from ?? board.from, curve.to);
-
-  return (
-    <>
-      <div className="lab-head">
-        <h1 className="lab-title">백테스트</h1>
-        <nav className="lab-periods">
-          {PERIODS.map((key) => (
-            <Link
-              key={key}
-              href={`/?period=${key}`}
-              className={`lab-period ${key === period ? "is-on" : ""}`}
-              scroll={false}
-            >
-              {PERIOD_LABEL[key]}
-            </Link>
-          ))}
-        </nav>
-      </div>
-
-      <Summary board={board} />
-
-      {/* PART A-2 — 우연 확률이 높으면 **표 위에서 먼저** 말한다. 순위를 매겨 놓고
-          밑에 덧붙이면 사람은 순위를 먼저 읽는다. */}
-      {!board.rankable ? (
-        <p className="lab-warning is-loud">
-          이 검증으로는 어느 전략이 나은지 판단할 수 없다 — 후보{" "}
-          {board.comparison.tested}개 중 하나가 우연히 좋아 보일 확률이{" "}
-          {board.comparison.familyP === null
-            ? "—"
-            : `약 ${Math.round(board.comparison.familyP * 100)}%`}
-          다. 순위를 매기지 않는다.
-        </p>
-      ) : null}
-
-      <div className="lab-board-scroll">
-        <table className="lab-board">
-          <thead>
-            <tr>
-              <th className="rank">순위</th>
-              <th>전략</th>
-              <th>CAGR</th>
-              <th>MDD</th>
-              <th>C/M</th>
-              <th>샤프</th>
-              <th>승률</th>
-              <th>손익비</th>
-              <th>평균보유</th>
-              <th>연속손실</th>
-              <th>거래</th>
-            </tr>
-          </thead>
-
-          {/* PART A-1 — **벤치마크가 맨 위다.** 기준이 먼저 보여야 미달이 미달로 읽힌다. */}
-          <tbody className="lab-benchmark is-top">
-            <tr>
-              <td className="num rank">
-                <span className="lab-nonrank">기준</span>
-              </td>
-              <td className="name">{board.benchmark.label}</td>
-              <td className={`num ${sign(board.benchmark.cagr)}`}>{pct(board.benchmark.cagr)}</td>
-              <td className={`num ${sign(board.benchmark.mdd)}`}>{pct(board.benchmark.mdd)}</td>
-              <td className="num">{num(board.benchmark.cagrMdd)}</td>
-              <td className="num">—</td>
-              <td className="num">—</td>
-              <td className="num">—</td>
-              <td className="num">—</td>
-              <td className="num">—</td>
-              <td className="num">—</td>
-            </tr>
-          </tbody>
-
-          <tbody>
-            {board.rows.map((row) => (
-              <Row
-                key={row.runId}
-                row={row}
-                selected={row.runId === selectedId}
-                period={period}
-                // **벤치마크를 이긴 전략이 없으면 강조색을 아무도 못 받는다**(PART A-3).
-                highlight={board.beatCount > 0 && board.rankable && row.rank === 1}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* 거래가 0인 행은 이유를 한 줄씩 적는다 — `종료`·`데이터 없음`·`신호 없음`은
-          다른 사실이고, 뭉치면 왜 안 돌았는지 물을 수 없다(PART B-3). */}
-      {board.rows
-        .filter((row) => row.haltDetail)
-        .map((row) => (
-          <p key={row.runId} className="lab-halt">
-            <span className="lab-nonrank">{row.note}</span> {row.label} — {row.haltDetail}
+      <Card
+        title={curveTrack ? `${curveTrack.label} 자본` : "자본"}
+        description={
+          curve
+            ? "거래 이력의 실현 손익을 누적해 되만든 곡선이다 — 미실현이 빠지고 계단이 된다"
+            : undefined
+        }
+      >
+        {chart.length > 1 ? (
+          <AreaChartCard
+            data={chart}
+            baseline={TRACK_BASE_USD}
+            benchmarkLabel="BTC 보유"
+            format={(v) => money(v)}
+          />
+        ) : (
+          <p className="sh-note">
+            자본 이력이 아직 없어요. FCE 에는 자본 기록이 없어서 거래 이력으로 되만드는데, 거래가 올라온
+            트랙이 없습니다.
           </p>
-        ))}
+        )}
+      </Card>
 
-      <section className="lab-curve-block">
-        <EquityCurve
-          strategy={curve}
-          strategyLabel={selected.label}
-          benchmark={benchmarkCurve}
-          benchmarkLabel={board.benchmark.label}
-        />
-      </section>
+      <Card title="트랙" description="원래 금액은 오른쪽에 작게 — 큰 숫자는 환산값이다" flush>
+        <ul className="ui-rows">
+          {p.tracks.map((t) => {
+            const st = trackStatus(t.status);
+            return (
+              <AssetRow
+                key={t.key}
+                name={t.label}
+                subtitle={t.statusReason ?? t.currency}
+                value={t.normalized === null ? "—" : money(t.normalized)}
+                subValue={t.nativeCurrent === null ? "평가액 없음" : money(t.nativeCurrent, t.currency)}
+                change={<Pill tone={tone(t.returnPct)}>{pct(t.returnPct)}</Pill>}
+                status={
+                  <Pill tone={st.tone} dot={st.dot ?? false}>
+                    {st.label}
+                  </Pill>
+                }
+                href={`/strategies/${t.key}`}
+              />
+            );
+          })}
+        </ul>
+      </Card>
 
-      <p className="lab-warning">{describeMultipleComparison(board.comparison)}</p>
-      <p className="lab-empty-note">
-        행을 누르면 자산곡선이 바뀐다. 전략 이름을 다시 누르면{" "}
-        <Link href={`/strategy/${selected.strategyId}`}>상세</Link>로 간다.
+      <p className="sh-note">
+        <strong>왜 환산하나.</strong> 그대로 더하면 주식 KR 1억 원이 크립토 500 USDT 를 덮어, 크립토가 −30% 나도 총합은
+        거의 안 움직인다. 트랙마다 같은 무게($10,000)로 맞췄다. 정지한 트랙도 빼지 않는다 — 빼면 수익률이 좋아 보인다.
       </p>
-    </>
+    </PageFrame>
   );
 }

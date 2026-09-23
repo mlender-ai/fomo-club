@@ -9,10 +9,9 @@
  * 옛 값(`--bg: #0b0d0e` · `--accent: #d4ff3f` · 모노스페이스)은 **이 파일에 더
  * 이상 없다.** 터미널 인상을 버리고 밝은 금융앱으로 간다(UI-00 §5-2).
  *
- * 옛 **이름**은 아래 §호환 별칭에 잠시 남는다 — 값은 전부 새 팔레트를 가리킨다.
- * 이름까지 한 번에 지우면 아직 안 고친 화면 다섯이 같이 깨지고, 그건
- * `UI-00 §6` 이 금지한 "반쯤 만든 상태" 다. 화면을 하나씩 다시 만들면서
- * (`UI-03`~`UI-09`) 별칭도 같이 사라진다.
+ * UI-01 때는 옛 **이름**(`--surface` · `--accent` · `--mono` …)을 별칭으로 잠시 남겼다.
+ * 옛 화면 다섯이 그 이름을 쓰고 있었기 때문이다. UI-03 에서 여섯 탭을 새로 만들면서
+ * 옛 화면과 `.lab-*` 규칙 ~780줄을 같이 걷어냈고, **별칭도 지웠다.**
  *
  * ## 색을 하드코딩하지 않는다
  *
@@ -99,6 +98,10 @@
   --r-pill: 999px;
   --btn-h: 44px;
 
+  /** 헤더 배경 — 흰색 92% (UI-03 C). 뒤로 스크롤되는 내용이 흐리게 비친다. */
+  --header-bg: rgb(255 255 255 / 92%);
+  --header-h: 68px;
+
   /** 그림자는 드롭다운·모달에만. 카드에는 쓰지 않는다. */
   --shadow-pop: 0 8px 28px rgb(10 11 13 / 12%), 0 2px 6px rgb(10 11 13 / 6%);
 
@@ -109,24 +112,6 @@
   --m-skeleton: 1400ms;
 
   color-scheme: light;
-
-  /* ── 호환 별칭 — UI-03~09 가 화면을 다시 만들면서 사라진다 ───────────── */
-  /*
-   * 아직 옛 이름을 쓰는 화면:
-   *   (lab)/page.tsx · (lab)/live · (lab)/whale · (lab)/trades · (lab)/data
-   *   components/lab/EquityCurve.tsx · components/lab/LiveBoard.tsx
-   *
-   * **값은 전부 위 팔레트를 가리킨다.** 어두운 값은 하나도 남아 있지 않다.
-   */
-  --surface: var(--bg-2);
-  --text: var(--ink);
-  --text-dim: var(--ink-2);
-  --text-faint: var(--ink-3);
-  --down: var(--dn);
-  --accent: var(--blue);
-  --sans: var(--font);
-  /** 모노스페이스를 없앴다(UI-01 완료확인 7). 이름만 남기고 비례 폰트를 준다. */
-  --mono: var(--font);
 }
 
 * {
@@ -173,844 +158,76 @@ pre {
   font-size: 0.92em;
 }
 
-/* 식별자·이름은 대문자 변환을 받지 않는다 — 전략 이름이 다른 값으로 보이면 안 된다
- * (`눌림 매수 v1` 이 `눌림 매수 V1` 이 된다) */
-.lab-title .num,
-.lab-title.is-name {
-  text-transform: none;
-  color: var(--text);
-}
 
-.lab-title.is-name {
-  font-size: 15px;
-  letter-spacing: 0.04em;
-}
 
-.up {
-  color: var(--up);
-}
-
-.down {
-  color: var(--down);
-}
-
-/* ── 랩 골격 ─────────────────────────────────────────────────────────── */
-
-.lab-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.lab-nav {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.lab-brand {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  color: var(--accent);
-  text-transform: uppercase;
-}
-
-.lab-nav-link {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--text-dim);
-  text-transform: uppercase;
-}
-
-.lab-nav-link:hover {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.lab-main {
-  flex: 1;
-  padding: 24px 20px;
-}
-
-.lab-title {
-  font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin: 0 0 16px;
-  font-weight: 500;
-}
-
-/* D-2 임시 화면 — LAB-05 까지 이 상태로 둔다 */
-.lab-empty {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 48px 24px;
-  text-align: center;
-}
-
-.lab-empty-brand {
-  font-family: var(--mono);
-  font-size: 15px;
-  letter-spacing: 0.22em;
-  color: var(--accent);
-  margin: 0 0 12px;
-  font-weight: 500;
-}
-
-.lab-empty-msg {
-  color: var(--text-dim);
-  margin: 0;
-}
-
-.lab-empty-note {
-  color: var(--text-faint);
-  font-family: var(--mono);
-  font-size: 12px;
-  margin: 16px 0 0;
-}
-
-/* ── 인증 (PART C — 그대로 남긴다) ───────────────────────────────────── */
+/* ── 로그인 ────────────────────────────────────────────────────────────── */
+/*
+ * 랩 바깥 화면이라 쉘(헤더·탭)이 없다. 그래도 **같은 토큰**을 쓴다 — 옛 어두운 별칭
+ * (`--surface` · `--accent` · `--mono`)으로 짜여 있던 것을 UI-03 에서 옮겼다.
+ */
 
 .login-shell {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--s6);
+  background: var(--bg-2);
 }
 
 .login-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
+  padding: var(--s7) var(--s6);
   border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 28px 24px;
+  border-radius: var(--r-card);
+  background: var(--bg);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
+  gap: var(--s3);
+  margin-top: var(--s5);
 }
 
 .login-form input {
+  height: var(--btn-h);
+  padding: 0 var(--s4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-row);
   background: var(--bg);
-  border: 1px solid var(--line);
-  color: var(--text);
-  font-family: var(--mono);
-  padding: 9px 10px;
-  font-size: 13px;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-body);
 }
 
 .login-form input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--blue);
 }
 
 .login-form button {
-  background: var(--accent);
-  border: none;
+  height: var(--btn-h);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--blue);
   color: var(--bg);
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  padding: 10px;
-  text-transform: uppercase;
+  font: inherit;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
   cursor: pointer;
 }
 
-.eyebrow,
-.section-kicker {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-faint);
+.eyebrow {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
 }
 
 .error-text {
-  color: var(--down);
-  font-size: 13px;
   margin: 0;
-}
-
-/* ── error · loading · 404 ───────────────────────────────────────────── */
-
-.lab-fallback {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  text-align: center;
-}
-
-.lab-fallback-card {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 32px 24px;
-  max-width: 420px;
-}
-
-.lab-button {
-  display: inline-block;
-  margin-top: 16px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  padding: 8px 14px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.lab-button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  text-decoration: none;
-}
-
-/* 표 — LAB-05 가 쓴다. §4-4 "표와 선 하나면 된다." */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-th {
-  text-align: left;
-  color: var(--text-faint);
-  font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--line);
-  padding: 8px 10px;
-}
-
-td {
-  border-bottom: 1px solid var(--line);
-  padding: 8px 10px;
-  color: var(--text);
-}
-
-tbody tr:hover td {
-  background: var(--surface);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * LAB-05 — 백테스트 화면 (PART G)
- *
- * 기준 화면 데스크톱 1280px. 기본 12~13px.
- * 금지(G-1): 애니메이션 · 그림자 · 그라데이션 · 채우기 · 아이콘 · 둥근 모서리 4px 초과.
- * **강조색은 최적값·1위·선택된 선에만.**
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-.lab-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.lab-subline {
-  color: var(--text-faint);
-  font-family: var(--mono);
-  font-size: 12px;
-  margin: -8px 0 16px;
-}
-
-/* PART E — 기간 선택. 기간을 바꾸면 순위가 바뀐다. 그게 정보다. */
-.lab-periods {
-  display: flex;
-  gap: 4px;
-}
-
-.lab-period {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--text-dim);
-  border: 1px solid var(--line);
-  padding: 4px 10px;
-}
-
-.lab-period:hover {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.lab-period.is-on {
-  color: var(--bg);
-  background: var(--text-dim);
-  border-color: var(--text-dim);
-}
-
-/* ── 표 (PART B) ──────────────────────────────────────────────────────────
- * 열은 8개다. **더 늘리지 않는다** — 나머지는 상세에서. */
-
-.lab-board {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.lab-board th {
-  text-align: right;
-  color: var(--text-faint);
-  font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--line);
-  padding: 8px 10px;
-}
-
-.lab-board th:nth-child(2),
-.lab-board td:nth-child(2) {
-  text-align: left;
-}
-
-.lab-board th.rank,
-.lab-board td.rank {
-  text-align: right;
-  width: 48px;
-  white-space: nowrap;
-  color: var(--text-faint);
-}
-
-/* 데스크톱 1280px 기준(PART G). 좁은 화면에서는 표가 가로로 스크롤된다 —
- * 열을 줄이거나 접지 않는다. 여덟 개가 같이 보여야 비교가 된다. */
-.lab-board-scroll {
-  overflow-x: auto;
-}
-
-.lab-board td {
-  text-align: right;
-  border-bottom: 1px solid var(--line);
-  padding: 7px 10px;
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.lab-board tbody tr:hover td {
-  background: var(--surface);
-}
-
-.lab-board tr.is-selected td {
-  background: var(--surface);
-}
-
-/* 선택된 행은 왼쪽 선으로 표시한다. 배경만으로는 hover 와 구분이 안 된다. */
-.lab-board tr.is-selected td:first-child {
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.lab-row-link {
-  color: var(--text);
-  font-family: var(--sans);
-}
-
-.lab-row-link:hover {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.lab-tag {
-  margin-left: 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--text-faint);
-  border: 1px solid var(--line);
-  padding: 1px 5px;
-}
-
-/* 벤치마크 — **항상 표 맨 아래.** 구분선으로 나눈다(PART B-2). */
-.lab-benchmark td {
-  border-top: 2px solid var(--line);
-  color: var(--text-dim);
-}
-
-.lab-benchmark td:nth-child(2) {
-  font-family: var(--sans);
-}
-
-/* 종료된 전략 — 회색으로, 순위 없이, 맨 아래(PART B-3).
- * **진 걸 지우면 전부 거짓이 된다**(LAB-00 §7). */
-.lab-stopped-group td {
-  border-top: 1px solid var(--line);
-  color: var(--text-faint);
-}
-
-.lab-stopped-group .lab-row-link {
-  color: var(--text-faint);
-}
-
-/* 강조색은 **최적값·1위·선택된 선에만**(PART G). */
-.lab-board td.accent {
-  color: var(--accent);
-}
-
-/* ── 자산곡선 (PART C) ──────────────────────────────────────────────────── */
-
-.lab-curve-block {
-  margin: 24px 0 16px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 8px 12px 4px;
-}
-
-.lab-curve {
-  margin: 0;
-}
-
-.lab-curve-tick {
-  fill: var(--text-faint);
-  font-family: var(--mono);
-  font-size: 10px;
-}
-
-.lab-curve-legend {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-dim);
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 4px 0 6px;
-}
-
-.lab-curve-key {
-  font-family: var(--mono);
-}
-
-.lab-curve-key.accent {
-  color: var(--accent);
-}
-
-.lab-curve-key.dim {
-  color: var(--text-faint);
-  margin-left: 12px;
-}
-
-.lab-curve-note {
-  margin-left: auto;
-  color: var(--text-faint);
-}
-
-/* ── 다중 비교 경고 (PART D) ─────────────────────────────────────────────
- * 표 아래 고정. **없으면 스스로를 속인다.** */
-
-.lab-warning {
-  border-left: 2px solid var(--text-faint);
-  padding: 8px 0 8px 12px;
-  margin: 16px 0 8px;
-  color: var(--text-dim);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-/* ── 전략 상세 (PART F) ──────────────────────────────────────────────────── */
-
-.lab-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  margin: 0 0 24px;
-}
-
-.lab-stats > div {
-  background: var(--bg);
-  padding: 10px 12px;
-}
-
-.lab-stats dt {
-  color: var(--text-faint);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.lab-stats dd {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── 전광판 (LAB-08) ──────────────────────────────────────────────────────── */
-
-/* PART A-2 — 상태등. 돌고 있으면 강조색, 멈췄으면 회색. **깜빡이지 않는다.** */
-.lab-dot {
-  font-size: 10px;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-.lab-dot.is-on {
-  color: var(--accent);
-}
-
-.lab-dot.is-off {
-  color: var(--text-faint);
-}
-
-/*
- * PART D — **바뀐 값만** 0.3초 밝아졌다 돌아온다.
- *
- * 애니메이션은 이것 하나뿐이다. 전광판에서 움직이는 것이 여럿이면 어느 것이
- * 방금 바뀐 것인지 알 수 없다 — 그러면 깜빡임은 정보가 아니라 소음이 된다.
- *
- * 색을 바꾸지 않고 **밝기만** 올린다. 색을 바꾸면 손익 부호와 섞여서 읽힌다.
- */
-.is-flash {
-  animation: lab-flash 0.3s ease-out;
-}
-
-@keyframes lab-flash {
-  from {
-    filter: brightness(2.2);
-  }
-  to {
-    filter: brightness(1);
-  }
-}
-
-/* 움직임을 원치 않는 사람에게는 안 움직인다. 값은 그대로 바뀐다. */
-@media (prefers-reduced-motion: reduce) {
-  .is-flash {
-    animation: none;
-  }
-}
-
-.lab-headline {
-  font-family: var(--mono);
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-  margin: 4px 0 20px;
-}
-
-.lab-muted {
-  color: var(--text-dim);
-  font-size: 13px;
-}
-
-/* 정지 사유 — 표 아래 한 줄씩. **비워두지 않는다**(LAB-00 §7). */
-.lab-stop-reason {
-  color: var(--text-dim);
-  font-size: 12px;
-  margin: 8px 0 0;
-}
-
-/*
- * 하지 말 것 4 — **페이퍼 한계를 화면에 적는다.**
- * 문서에만 적으면 화면을 보는 순간에는 잊는다.
- */
-.lab-caveat {
-  margin: 24px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  color: var(--text-faint);
-  font-size: 12px;
-}
-
-/* ── LAB-FIX2 ────────────────────────────────────────────────────────────── */
-
-/*
- * PART C — 열 정렬 버그.
- *
- * 폰 폭에서 전략명이 `추세 / 스윙 / v1` 로 세 줄이 되고, 행이 높아지면서 마지막
- * `거래` 열이 잘려 **다른 행의 숫자가 이름 옆에 있는 것처럼 보였다.**
- * 표에 `min-width` 가 없어서 칸이 서로를 밀어낸 것이다.
- *
- * 표는 줄이지 않고 **가로로 스크롤시킨다** — 숫자 표는 좁혀서 읽는 물건이 아니다.
- */
-.lab-board {
-  min-width: 760px;
-}
-
-.lab-board th,
-.lab-board td {
-  white-space: nowrap;
-}
-
-.lab-board td.name {
-  text-align: left;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 스크롤 영역이 바깥 여백을 먹고 나가야 표가 화면 끝까지 쓴다 */
-.lab-board-scroll {
-  overflow-x: auto;
-  margin-inline: -20px;
-  padding-inline: 20px;
-}
-
-/* PART A-1 — 벤치마크가 표 맨 위. 아래 전략들과 굵은 선으로 가른다 */
-.lab-benchmark.is-top td {
-  border-bottom: 2px solid var(--line);
-  color: var(--text);
-}
-
-/* 순위 자리에 들어가는 말(`기준 미달`·`데이터 없음`) — 숫자가 아니므로 작게 */
-.lab-nonrank {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: var(--text-faint);
-  white-space: nowrap;
-}
-
-.lab-board th.rank,
-.lab-board td.rank {
-  width: 84px;
-}
-
-/* PART F-3 — 표 위 요약 한 줄 */
-.lab-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 18px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  margin: 0 0 16px;
-}
-
-.lab-summary strong {
-  font-weight: 500;
-}
-
-/* PART A-2 — 순위를 못 매긴다는 안내는 표 **위**에, 다른 경고보다 세게 */
-.lab-warning.is-loud {
-  border-left-color: var(--down);
-  color: var(--text);
-}
-
-/* PART B-3 — 거래 0 의 이유. 행마다 한 줄 */
-.lab-halt {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  margin: 6px 0 0;
-}
-
-/* ── 헤더 페이퍼 상태 (PART E-3) ─────────────────────────────────────────── */
-
-.lab-paper-state {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.lab-paper-state .dot {
-  font-size: 10px;
-}
-
-.lab-paper-state.is-on .dot {
-  color: var(--accent);
-}
-
-.lab-paper-state.is-off .dot {
-  color: var(--text-faint);
-}
-
-@media (max-width: 560px) {
-  .lab-paper-state {
-    font-size: 11px;
-  }
-}
-
-/* 내비가 폰에서 `백테 / 스트` 로 쪼개졌다 — 링크는 줄바꿈하지 않는다 */
-.lab-nav-link,
-.lab-brand,
-.lab-paper-state {
-  white-space: nowrap;
-}
-
-.lab-nav {
-  flex-wrap: wrap;
-  row-gap: 6px;
-}
-
-/* 곡선은 viewBox 비율대로. px 높이를 박으면 폰에서 납작해진다 */
-.lab-curve svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-/* ── LAB-BRIDGE — FCE 거울 ───────────────────────────────────────────────── */
-
-/* 백테스트는 끝난 실험의 보관함이다. 내비에서도 한 단계 뒤로 */
-.lab-nav-link.is-archive {
-  color: var(--text-faint);
-}
-
-/* 갱신 상태 — 헤더 오른쪽 */
-.lab-fresh {
-  font-family: var(--mono);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.lab-fresh.is-live {
-  color: var(--accent);
-}
-
-.lab-fresh.is-stale {
-  color: var(--down);
-}
-
-/* 트랙 표 — 자본 칸의 통화는 숫자보다 작게 */
-.lab-board .cur {
-  color: var(--text-faint);
-  font-size: 11px;
-  margin-left: 5px;
-}
-
-.lab-board td.state,
-.lab-board th.l {
-  text-align: left;
-}
-
-.lab-board td.state {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.lab-board td.state.ok {
-  color: var(--accent);
-}
-
-.lab-board td.state.warn {
-  color: var(--warn);
-}
-
-.lab-board td.state.bad {
-  color: var(--down);
-}
-
-.lab-board td.state.off {
-  color: var(--text-faint);
-}
-
-/*
- * 청산 수준 포지션.
- *
- * FCE 에 청산 모델이 없어 손익이 −100% 아래로 갈 수 있다. 실제 거래소였으면
- * 증거금이 이미 없어진 자리라, **행 전체가 눈에 걸려야 한다.**
- */
-.lab-board tr.is-danger td {
-  background: color-mix(in srgb, var(--down) 9%, transparent);
-}
-
-.lab-board td.warn-cell {
-  font-family: var(--mono);
-  font-size: 11px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-/* 두 승률을 나란히 — **빼지 않는다**는 것이 이 배치의 요점이다 */
-.lab-two {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  margin-bottom: 4px;
-}
-
-.lab-two-item {
-  background: var(--bg);
-  padding: 18px 20px;
-}
-
-.lab-two-value {
-  font-size: 34px;
-  font-variant-numeric: tabular-nums;
-  margin: 0 0 2px;
-}
-
-.lab-two-label {
-  margin: 0 0 6px;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.lab-two-note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-dim);
-  line-height: 1.6;
-}
-
-.lab-note-line {
-  font-size: 13px;
-  color: var(--text-dim);
-  margin: 12px 0 0;
-  line-height: 1.7;
-}
-
-.addr {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-right: 10px;
-}
-
-/*
- * FCE 내부 태그 칸.
- *
- * `candidate_bootstrap_signature_failed:harmonic:prz_touch:conf>=80:long:crypto:4h`
- * 같은 값이 온다. 그대로 두면 표가 옆으로 한없이 늘어나 읽을 수 없다.
- * **지우지는 않는다** — 잘라서 보여주고 전문은 FCE 가 갖는다.
- */
-.lab-board td.tags {
-  text-align: left;
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-}
-
-/*
- * `/data` 의 표 셋.
- *
- * `.lab-board` 를 안 쓴다 — 그건 `min-width: 760px` 이라 3열짜리 표까지 폰에서
- * 강제로 옆으로 밀린다. 여기서 필요한 것은 **머리글이 `주/기` 로 쪼개지지 않는 것**
- * 하나다. 그래서 줄바꿈만 막고, 그래도 넘치면 그때 스크롤시킨다.
- */
-.lab-scroll {
-  overflow-x: auto;
-  margin-inline: -20px;
-  padding-inline: 20px;
-}
-
-.lab-scroll th,
-.lab-scroll td {
-  white-space: nowrap;
+  color: var(--dn);
+  font-size: var(--t-caption);
 }

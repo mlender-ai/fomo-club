@@ -631,3 +631,470 @@ a.ui-research-link:hover {
   gap: var(--s2);
   font-size: var(--t-body);
 }
+
+/* ══ 쉘 (UI-03) ═══════════════════════════════════════════════════════════ */
+
+.sh-shell {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* ── 헤더: 높이 68 · 흰색 92% + blur 12 · 상단 고정 (C) ─────────────────── */
+
+.sh-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--header-bg);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.sh-header-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--s6);
+  max-width: var(--content-max);
+  height: var(--header-h);
+  margin: 0 auto;
+  padding: 0 var(--page-x);
+}
+
+.sh-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-shrink: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-snug);
+  text-decoration: none;
+}
+
+.sh-brand:hover {
+  text-decoration: none;
+}
+
+.sh-brand-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--blue);
+}
+
+.sh-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.sh-tab {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background var(--m-hover) ease, color var(--m-hover) ease;
+}
+
+.sh-tab:hover {
+  background: var(--bg-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* 선택 — 검정 배경 흰 글자 (C). 파랑이 아니다: 파랑은 "내 것·주요 행동" 이다. */
+.sh-tab.is-on {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.sh-tab:focus-visible,
+.sh-brand:focus-visible,
+.sh-btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.sh-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0 0 0 auto;
+  flex-shrink: 0;
+  color: var(--ink-2);
+  font-size: var(--t-caption);
+  font-weight: var(--w-medium);
+  white-space: nowrap;
+}
+
+.sh-sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--ink-3);
+}
+
+/* 동기화 상태는 손익이 아니다. 그래도 "살아 있다" 점 하나만은 초록을 쓴다(UI-01 A-2 예외). */
+.sh-sync.is-live .sh-sync-dot {
+  background: var(--up);
+}
+.sh-sync.is-lagging {
+  color: var(--warn);
+}
+.sh-sync.is-lagging .sh-sync-dot {
+  background: var(--warn);
+}
+.sh-sync.is-broken {
+  color: var(--dn);
+}
+.sh-sync.is-broken .sh-sync-dot {
+  background: transparent;
+  border: 2px solid var(--dn);
+}
+
+/* ── 끊김 띠 ───────────────────────────────────────────────────────────── */
+
+.sh-banner {
+  padding: var(--s3) var(--page-x);
+  background: var(--dn-soft);
+  color: var(--dn);
+  font-size: var(--t-caption);
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.sh-banner code {
+  background: var(--bg);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.sh-banner-err {
+  color: var(--ink-2);
+}
+
+/* ── 페이지 틀: max 1240 · padding 44 40 90 (D) ──────────────────────────── */
+
+.sh-main {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--page-top) var(--page-x) var(--s10);
+}
+
+.sh-page-head {
+  margin-bottom: var(--s7);
+}
+
+.sh-title {
+  margin: 0;
+  font-size: var(--t-h1);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-tight);
+}
+
+.sh-desc {
+  margin: var(--s2) 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-body);
+}
+
+.sh-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side-col);
+  gap: var(--s7);
+  align-items: start;
+}
+
+.sh-body,
+.sh-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s6);
+  min-width: 0;
+}
+
+.sh-section-title {
+  margin: 0 0 var(--s4);
+  font-size: var(--t-h2);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-tight);
+}
+
+/* ── 오류 · 버튼 ───────────────────────────────────────────────────────── */
+
+.sh-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s5) var(--card-pad);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-card);
+  flex-wrap: wrap;
+}
+
+.sh-error-text {
+  margin: 0;
+  font-size: var(--t-body);
+}
+
+.sh-error-reason {
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+.sh-btn {
+  height: var(--btn-h);
+  padding: 0 var(--s5);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  color: var(--bg);
+  font: inherit;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  cursor: pointer;
+}
+
+.sh-btn.is-secondary {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+}
+
+.sh-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+.sh-note strong {
+  color: var(--ink-2);
+}
+
+/* ── 반응형 (UI-01 G · UI-03 C-1) ──────────────────────────────────────── */
+
+@media (max-width: 1199px) {
+  /* 사이드는 본문 아래로 */
+  .sh-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  /* 폰 — 로고·상태가 한 줄, 탭은 아래 줄에서 가로 스크롤 (C-1) */
+  .sh-header-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: var(--s3) var(--s4) 0;
+    gap: var(--s2) var(--s3);
+  }
+  .sh-sync {
+    order: 2;
+  }
+  .sh-sync-label {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sh-tabs {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: var(--s3);
+    margin: 0 calc(var(--s4) * -1);
+    padding-left: var(--s4);
+    padding-right: var(--s4);
+    width: calc(100% + var(--s4) * 2);
+  }
+  .sh-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .sh-main {
+    padding: var(--s7) var(--s4) var(--s10);
+  }
+  .sh-banner {
+    padding: var(--s3) var(--s4);
+    text-align: left;
+  }
+}
+
+/* ── 화면 공통 (UI-03) ─────────────────────────────────────────────────── */
+
+/* 손익 숫자에만 색을 준다(UI-01 A-2). */
+.ui-num.is-up {
+  color: var(--up);
+}
+.ui-num.is-dn {
+  color: var(--dn);
+}
+
+.sh-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+/* 경고 한 줄 — 청산 수준·비용 역전·뺄셈 금지 */
+.sh-alert {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-row);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: var(--t-caption);
+  line-height: 1.6;
+}
+
+.sh-alert strong {
+  color: var(--ink);
+}
+
+.sh-hero-sep {
+  color: var(--ink-3);
+  font-weight: var(--w-regular);
+}
+
+.sh-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4);
+}
+
+.sh-big {
+  margin: 0;
+  font-size: var(--t-display);
+  font-weight: var(--w-semibold);
+  letter-spacing: var(--ls-display);
+}
+
+/* 행 모양을 빌리되 칸 배치가 다른 목록 — 원인 축 · 근거 */
+.sh-cause,
+.sh-evidence {
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr) auto;
+}
+
+.sh-evidence-value {
+  font-weight: var(--w-semibold);
+}
+
+.sh-list {
+  margin: 0;
+  padding-left: var(--s5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  font-size: var(--t-label);
+}
+
+.sh-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s2) var(--s4);
+  margin: var(--s5) 0 0;
+  font-size: var(--t-label);
+}
+
+.sh-meta dt {
+  color: var(--ink-3);
+}
+
+.sh-meta dd {
+  margin: 0;
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+/* 연구 노트 본문 */
+.sh-note-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  font-size: var(--t-body);
+  line-height: 1.7;
+}
+
+.sh-note-p,
+.sh-note-list {
+  margin: 0;
+}
+
+.sh-note-list {
+  padding-left: var(--s5);
+}
+
+.sh-note-quote {
+  margin: 0;
+  padding: var(--s2) var(--s4);
+  border-left: 3px solid var(--line-2);
+  color: var(--ink-2);
+}
+
+.sh-note-pre {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-row);
+  background: var(--bg-2);
+  font-size: var(--t-caption);
+  overflow-x: auto;
+}
+
+@media (max-width: 767px) {
+  .sh-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sh-cause,
+  .sh-evidence {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s1);
+  }
+}
+
+/* ── 대체 화면: 404 · 오류 · 로딩 ─────────────────────────────────────── */
+
+.sh-fallback {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+  padding: var(--s8) var(--s4);
+}
+
+.sh-fallback-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  max-width: 520px;
+  text-align: center;
+}
+
+.sh-fallback-code {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-display);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-display);
+}
+
+.sh-fallback-title {
+  margin: 0;
+  font-size: var(--t-h2);
+  font-weight: var(--w-bold);
+}
+
+.sh-fallback-text {
+  margin: 0 0 var(--s3);
+  color: var(--ink-2);
+}

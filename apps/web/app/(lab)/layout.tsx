@@ -1,59 +1,33 @@
-import type { ReactNode } from "react";
-import Link from "next/link";
-
-import { readPaperPulse } from "../../lib/lab/paper-pulse";
-
 /**
- * 랩 골격 — LAB-01 PART D-1 의 라우트 셋만 감싼다.
+ * 랩 골격 (UI-03 PART C · D).
  *
- * 라우트 그룹(`(lab)`)이라 URL 에는 나타나지 않는다. `/login` 은 이 그룹 밖이므로
- * 내비 없이 자기 화면을 쓴다.
+ * ```
+ * <Header />
+ * <SyncBanner />      끊겼을 때만
+ * <main>
+ * ```
  *
- * ## 헤더에 페이퍼 상태를 단다 (LAB-FIX2 PART E-3)
+ * ## 이 레이아웃은 DB 를 부르지 않는다
  *
- * **살아 있는지는 어느 탭에서든 보여야 한다.** 전광판에 들어가야만 알 수 있으면,
- * 백테스트 화면을 보는 동안 페이퍼가 며칠 멈춰 있어도 모른다.
+ * 전에는 여기서 `readPaperPulse()` 를 기다렸다. 레이아웃이 DB 를 기다리면 **모든 탭이
+ * 그만큼 늦게 뜬다.** 동기화 상태는 이제 브라우저가 `/api/lab/status` 로 부른다.
+ *
+ * 탭이 "안 눌리던" 원인과 고친 방법은 `docs/ui/SHELL.md` 에 있다.
  */
-export const dynamic = "force-dynamic";
+import type { ReactNode } from "react";
 
-export default async function LabLayout({ children }: { children: ReactNode }) {
-  const pulse = await readPaperPulse();
+import { Header } from "../../components/shell/Header";
+import { SyncBanner } from "../../components/shell/SyncBanner";
+import { SyncProvider } from "../../components/shell/SyncProvider";
 
+export default function LabLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="lab-shell">
-      <nav className="lab-nav">
-        <span className="lab-brand">Strategy Lab</span>
-        {/*
-          LAB-BRIDGE — 전광판이 첫 화면이다. 랩은 이제 FCE 를 비추는 창구이고,
-          백테스트는 **끝난 실험의 보관함**이다(PART C-4). 순서가 곧 우선순위다.
-        */}
-        <Link className="lab-nav-link" href="/live">
-          전광판
-        </Link>
-        <Link className="lab-nav-link" href="/whale">
-          고래
-        </Link>
-        <Link className="lab-nav-link" href="/trades">
-          거래
-        </Link>
-        <Link className="lab-nav-link" href="/data">
-          데이터
-        </Link>
-        <Link className="lab-nav-link is-archive" href="/">
-          백테스트
-        </Link>
-        <Link
-          className={`lab-paper-state ${pulse.running ? "is-on" : "is-off"}`}
-          href="/live"
-          title={pulse.detail}
-        >
-          <span className="dot" aria-hidden>
-            {pulse.running ? "●" : "○"}
-          </span>
-          {pulse.label}
-        </Link>
-      </nav>
-      <main className="lab-main">{children}</main>
-    </div>
+    <SyncProvider>
+      <div className="sh-shell">
+        <Header />
+        <SyncBanner />
+        <main className="sh-main">{children}</main>
+      </div>
+    </SyncProvider>
   );
 }
