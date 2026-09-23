@@ -26,6 +26,17 @@ export interface Envelope<T> {
 export async function fromSnapshot(key: SnapshotKey): Promise<NextResponse> {
   const started = Date.now();
   const snap = await readSnapshot<unknown>(key);
+  if (snap === "outdated") {
+    // 옛 모양을 새 화면에 넘기지 않는다 — 넘겼더니 `/whales` 가 통째로 터졌다.
+    return NextResponse.json(
+      {
+        error: "not_built",
+        key,
+        hint: "조립본이 옛 형식이라 다시 만드는 중이다 — 다음 업로드(15분 안)에 채워진다",
+      },
+      { status: 503 }
+    );
+  }
   if (!snap) {
     // **빈 화면과 고장을 구분해준다.** 업로드가 한 번도 안 돌면 조립본이 없다.
     return NextResponse.json(

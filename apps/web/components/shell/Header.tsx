@@ -37,14 +37,24 @@ function isActive(pathname: string, href: string): boolean {
 
 export function Header() {
   const pathname = usePathname() ?? "/";
-  const { sync, unreachable } = useSync();
+  const { sync, collect, unreachable } = useSync();
 
-  const level = unreachable ? "broken" : (sync?.level ?? "loading");
+  // 헤더 점은 **더 나쁜 쪽**을 따른다. FCE 는 살아 있는데 시세가 끊겼으면 끊김이다.
+  const feedBroken = (collect?.staleSymbols.length ?? 0) > 0;
+  const level = unreachable ? "broken" : feedBroken ? "broken" : (sync?.level ?? "loading");
   const label = unreachable
     ? "랩 서버에 닿지 못함"
     : sync
-      ? sync.label
+      ? `${sync.label}${feedBroken ? " · 시세 끊김" : ""}`
       : "동기화 확인 중";
+  // 마우스를 올리면 무엇이 실패 중인지 보인다. 헤더 한 줄에 다 넣으면 폰에서 넘친다.
+  const detail = [
+    sync?.lastError ? `FCE 마지막 실패: ${sync.lastError.error.slice(0, 120)}` : null,
+    feedBroken ? `시세 끊김: ${collect?.staleSymbols.join(", ")}` : null,
+    ...(collect?.failing ?? []).map((f) => `${f.job} 실패: ${(f.error ?? "").slice(0, 80)}`),
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return (
     <header className="sh-header">
@@ -70,7 +80,7 @@ export function Header() {
           })}
         </nav>
 
-        <p className={`sh-sync is-${level}`} role="status" title={sync?.lastError?.error ?? undefined}>
+        <p className={`sh-sync is-${level}`} role="status" title={detail || undefined}>
           <span className="sh-sync-dot" aria-hidden />
           <span className="sh-sync-label">{label}</span>
         </p>
