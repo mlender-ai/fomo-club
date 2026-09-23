@@ -242,8 +242,11 @@ export function AreaChartCard({
               fill="url(#ui-area-fill)"
               dot={false}
               activeDot={{ r: 4, fill: "var(--blue)", stroke: "var(--bg)", strokeWidth: 2 }}
-              isAnimationActive
-              animationDuration={600}
+              // **그리기 애니메이션을 쓰지 않는다.** UI-01 F 는 "선이 왼쪽에서 그려짐 600ms" 였다.
+              // 그런데 Recharts 는 창이 가려지면 프레임을 멈추고, 다시 그려지거나 크기가 바뀌면
+              // 처음부터 다시 그린다. 정규 도메인에서 세 번(가려진 창 · 호버 · 폰 전체 캡처)
+              // 파란 선이 빈 채로 찍혔다. 가끔 선이 없는 차트는 장식 없는 차트보다 나쁘다.
+              isAnimationActive={false}
             />
 
             {hasBenchmark ? (
