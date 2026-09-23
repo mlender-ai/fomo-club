@@ -23,7 +23,7 @@
  * x 는 **밀리초 숫자**다. 문자열 범주로 두면 점 간격이 시간 간격과 무관해져서, 1시간 간격과
  * 4시간 간격이 섞인 곡선이 한쪽으로 쏠린다. 띠(`ReferenceArea`)도 숫자 축이어야 제자리에 선다.
  */
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { kstStamp } from "./format";
 import {
@@ -106,11 +106,18 @@ export function AreaChartCard({
 }) {
   const [hover, setHover] = useState<Row | null>(null);
   const fmt = format ?? ((v: number) => String(v));
-  const rows: Row[] = data.map((d) => ({
-    t: Date.parse(d.at),
-    value: d.value,
-    benchmark: d.benchmark ?? null,
-  }));
+  // **같은 데이터면 같은 배열을 준다.** 매 렌더 새 배열을 만들면 Recharts 가 "데이터가 바뀌었다"
+  // 고 보고 선 애니메이션을 처음부터 다시 돌린다. 호버할 때마다 렌더가 일어나니, 정규 도메인에서
+  // 파란 선이 왼쪽 끝만 그려진 채로 멈춰 보였다.
+  const rows: Row[] = useMemo(
+    () =>
+      data.map((d) => ({
+        t: Date.parse(d.at),
+        value: d.value,
+        benchmark: d.benchmark ?? null,
+      })),
+    [data]
+  );
   const hasBenchmark = rows.some((d) => d.benchmark !== null);
   const last = [...rows].reverse().find((r) => r.value !== null) ?? null;
   const base = baseline ?? rows.find((r) => r.value !== null)?.value ?? null;
