@@ -2,7 +2,7 @@
 no: "06"
 title: 주식 US 체결 가격 이상은 왜 생기나
 status: open
-summary: 봉 불일치 — 체결가는 세션 시가로 만들고 invariant 는 현재 분봉으로 검사한다
+summary: 봉 불일치 하나가 US 정지·KR 보류를 같이 만든다
 opened_at: 2026-09-21
 tracks: [stock_us, stock_kr]
 ---

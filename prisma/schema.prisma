@@ -1431,6 +1431,27 @@ model FceCapitalPoint {
   @@index([trackKey, at])
 }
 
+/// FCE 가 "관측이 부족했다" 고 판정한 날 (UI-04 C-2).
+///
+/// ## 왜 따로 받나 — 평평한 선은 두 가지 뜻이다
+///
+/// 자본 곡선은 실현 손익 기준이라 거래가 없으면 평평하다. 그런데 평평한 구간에는
+/// **"아무 일도 없었다"** 와 **"안 보고 있었다"** 가 섞여 있다. 크립토는 78일 중 49일이
+/// 관측 임계(90%)에 못 미쳤다 — 호스트가 자고 있었다.
+///
+/// FCE 가 이미 잰다(`/api/system/paper/diagnosis` → `observation_integrity`). 랩은 받아서
+/// 차트에 회색 띠로 그린다. **FCE 의 판정이라 업로드마다 트랙 단위로 통째로 바꾼다.**
+model FceLostDay {
+  trackKey    String
+  /// `2026-07-09` — FCE 가 일 단위로 판정한다.
+  day         String
+  coveragePct Float
+  /// FCE 가 적은 사유. "커버리지 58.33% < 임계 90.0% · 최장 공백 209분".
+  reason      String
+
+  @@id([trackKey, day])
+}
+
 /// 화면 하나가 통째로 들어 있는 조립본 (UI-02 F-1).
 ///
 /// ## 왜 있나 — 왕복 한 번이 ~900ms 다

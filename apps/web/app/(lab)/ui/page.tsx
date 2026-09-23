@@ -35,7 +35,7 @@ import {
 const SERIES = Array.from({ length: 48 }, (_, i) => {
   const t = i / 47;
   return {
-    at: `09-${String(((i % 28) + 1)).padStart(2, "0")}`,
+    at: new Date(Date.UTC(2026, 7, 10) + i * 86_400_000).toISOString(),
     // 중간에 구멍을 하나 넣어 **선이 끊기는지** 본다. 이어 그리면 안 된다.
     value: i === 22 || i === 23 ? null : 50000 - 6000 * t + Math.sin(i / 3) * 1400,
     benchmark: 50000 + 3000 * t + Math.cos(i / 4) * 800,

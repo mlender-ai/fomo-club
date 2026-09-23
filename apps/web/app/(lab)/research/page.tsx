@@ -19,8 +19,6 @@ import type { Wire } from "../../../lib/lab/wire";
 
 type Research = Wire<"research">;
 
-const VERDICT_LABEL: Record<string, string> = { yes: "예", no: "아니오", inconclusive: "판단 불가" };
-
 export default function ResearchPage() {
   const { state, retry } = useLab<Research>("/api/lab/research");
   return (
@@ -78,7 +76,8 @@ export default function ResearchPage() {
                     title={r.title}
                     status={r.status as ResearchStatus}
                     summary={r.summary}
-                    verdict={r.verdict ? (VERDICT_LABEL[r.verdict] ?? r.verdict) : null}
+                    verdict={r.verdict}
+                    blocks={r.blocks}
                     href={`/research/${r.no}`}
                   />
                 ))}

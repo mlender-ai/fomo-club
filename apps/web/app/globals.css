@@ -60,6 +60,10 @@
   --t-label: 13px;
   --t-caption: 12.5px;
   --t-research-no: 28px;
+  /** 연구 제목 — 질문형 한 줄 (UI-04 G). */
+  --t-research-title: 14.5px;
+  /** 헤더 로고 글자 (UI-03 C). */
+  --t-brand: 17px;
 
   --w-regular: 400;
   --w-medium: 500;

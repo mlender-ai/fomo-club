@@ -3,7 +3,7 @@ no: "04"
 title: 추세·평균회귀 진입에 우위가 있나
 status: closed
 verdict: "no"
-summary: 후보 12개 중 1위가 우연일 확률 약 99% — 벤치마크를 이긴 전략 0개
+summary: 우연 확률 99% · 기준선 넘은 전략 0개
 opened_at: 2026-09-19
 closed_at: 2026-09-22
 tracks: []

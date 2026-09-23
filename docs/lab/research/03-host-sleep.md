@@ -2,9 +2,9 @@
 no: "03"
 title: 호스트가 자는 동안 잃은 날은 며칠인가
 status: open
-summary: 달력 48일 중 유효 3일 — 94%를 잃고 있다
+summary: 크립토 78일 중 29일만 유효 · 49일 유실
 opened_at: 2026-09-22
-tracks: [stock_us, stock_kr]
+tracks: [crypto, stock_us, stock_kr]
 ---
 
 ## 가설
@@ -17,6 +17,7 @@ FCE 가 트랙마다 `elapsed_days` · `calendar_days` 를 이미 재고 있다.
 
 ## 근거
 
+- 크립토 | 유효 29일 / 78일 (유실 49) · 평균 커버리지 73.3% | `/api/system/paper/diagnosis`
 - 주식 US | 유효 2일 / 달력 49일 (유실 47) | `/api/stock-paper/dashboard`
 - 주식 KR | 유효 3일 / 달력 48일 (유실 45) | 같음
 - `caffeinate -dimsu` | 실행중 | `pmset`

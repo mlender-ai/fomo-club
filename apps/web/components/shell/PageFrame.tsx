@@ -15,15 +15,21 @@ export function PageFrame({
   description,
   side,
   children,
+  hideTitle = false,
 }: {
   title: string;
+  /**
+   * 제목을 **눈에서만** 숨긴다(스크린 리더는 읽는다). Overview 는 Hero 가 화면의 머리라
+   * 그 위에 "Overview" 를 또 얹으면 가장 큰 숫자가 두 번째로 밀린다(UI-00 §4-2).
+   */
+  hideTitle?: boolean;
   description?: ReactNode;
   side?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className={`sh-page${side ? " has-side" : ""}`}>
-      <div className="sh-page-head">
+      <div className={`sh-page-head${hideTitle ? " is-hidden" : ""}`}>
         <h1 className="sh-title">{title}</h1>
         {description ? <p className="sh-desc">{description}</p> : null}
       </div>

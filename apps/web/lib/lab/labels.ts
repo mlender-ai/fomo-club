@@ -28,13 +28,25 @@ export function exitLabel(reason: string | null): string {
 }
 
 /**
- * 트랙 상태 → 알약. **초록·빨강을 쓰지 않는다** — 손익이 아니라 상태다(UI-01 A-2).
- * 운용중만 점 하나로 표시한다.
+ * 트랙 상태 → 알약 (UI-04 E-2).
+ *
+ * | 상태 | 알약 |
+ * |---|---|
+ * | 운용중 | `up` · 점 |
+ * | 보류 | `warn` |
+ * | 정지 | `dn` |
+ * | 제외 | `mute` |
+ *
+ * UI-01 A-2 는 "초록·빨강은 손익에만" 이었다. UI-04 E-2 가 트랙 상태에 초록·빨강을 명시했고,
+ * 더 뒤에 나온 구체적인 지시라 그쪽을 따른다. 여기서 초록은 "돌고 있다", 빨강은 "멈췄다" 다.
+ *
+ * `MDD 초과` 는 없다 — FCE 에 MDD 한도가 설정돼 있지 않다(`mdd_guard.configured: false`).
+ * 한도 없이 "초과" 를 띄우면 랩이 기준을 지어내는 것이다.
  */
 export const TRACK_STATUS: Record<string, { label: string; tone: PillTone; dot?: boolean }> = {
-  running: { label: "운용중", tone: "mute", dot: true },
+  running: { label: "운용중", tone: "up", dot: true },
   held: { label: "보류", tone: "warn" },
-  stopped: { label: "정지", tone: "mute" },
+  stopped: { label: "정지", tone: "dn" },
   excluded: { label: "제외", tone: "mute" },
 };
 

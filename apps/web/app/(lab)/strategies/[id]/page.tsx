@@ -118,7 +118,7 @@ export default function StrategyDetailPage() {
               {series && series.points.length > 1 ? (
                 <AreaChartCard
                   data={series.points.map((pt) => ({
-                    at: pt.at.slice(5, 10),
+                    at: pt.at,
                     value: pt.capital,
                     benchmark: pt.benchmark,
                   }))}

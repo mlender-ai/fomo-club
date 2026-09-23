@@ -2,7 +2,7 @@
 no: "07"
 title: FOMO Club 신호 8종에 청산 규칙을 붙이면 알파가 있나
 status: open
-summary: 신호는 포팅했고 청산 조합도 쓸어봤다 — 남은 건 주식 표본이다
+summary: 주식 유효일 2~3일 — 판정할 표본이 없다
 opened_at: 2026-09-20
 tracks: []
 ---

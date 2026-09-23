@@ -3,7 +3,7 @@ no: "05"
 title: 1배와 3배는 무엇이 다른가
 status: closed
 verdict: inconclusive
-summary: 청산 모델이 없는 한 순수한 배율이다 — 승률·PF 가 소수점까지 같다
+summary: 147건 — 1배·3배 승률·PF 가 소수점까지 같다
 opened_at: 2026-09-22
 closed_at: 2026-09-22
 tracks: [crypto]
