@@ -23,6 +23,11 @@ export interface CompareItem {
    */
   tone?: "up" | "dn";
   note?: string;
+  /**
+   * 이 막대가 자기 기준선을 넘었나. 주면 공통 `baseline` 대신 이걸 쓴다 — 트랙마다 기간이 달라
+   * 기준선도 다를 때(UI-FIX B-4). `null` 은 잴 수 없다는 뜻이다.
+   */
+  beats?: boolean | null;
 }
 
 export function CompareBar({
@@ -50,7 +55,10 @@ export function CompareBar({
   return (
     <ul className="ui-compare">
       {items.map((item) => {
-        const beats = baseline === null || baseline === undefined || item.value > baseline;
+        const beats =
+          item.beats !== undefined
+            ? item.beats === true
+            : baseline === null || baseline === undefined || item.value > baseline;
         const zero = at(0);
         const here = at(item.value);
         const left = Math.min(zero, here);

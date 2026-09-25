@@ -6,12 +6,15 @@
  */
 import type { ReactNode } from "react";
 
+import { Info } from "./Info";
+
 export function Card({
   title,
   description,
   aside,
   children,
   flush = false,
+  info,
 }: {
   title?: ReactNode;
   description?: ReactNode;
@@ -20,13 +23,18 @@ export function Card({
   children: ReactNode;
   /** 표처럼 카드 끝까지 채워야 할 때 안쪽 여백을 뺀다. */
   flush?: boolean;
+  /** 제목 옆 `ⓘ` 가 여는 설명(UI-FIX A-3). 문단은 여기에만 쓴다. */
+  info?: ReactNode;
 }) {
   return (
     <section className={`ui-card${flush ? " is-flush" : ""}`}>
       {title || aside ? (
         <div className="ui-card-head">
           <div>
-            <h3 className="ui-card-title">{title}</h3>
+            <h3 className="ui-card-title">
+              {title}
+              {info ? <Info title={typeof title === "string" ? title : "설명"}>{info}</Info> : null}
+            </h3>
             {description ? <p className="ui-card-desc">{description}</p> : null}
           </div>
           {aside ? <div className="ui-card-aside">{aside}</div> : null}

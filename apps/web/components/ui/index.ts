@@ -11,6 +11,7 @@ export { CompareBar, type CompareItem } from "./CompareBar";
 export { Delta } from "./Delta";
 export { Empty } from "./Empty";
 export { Hero } from "./Hero";
+export { Info } from "./Info";
 export { Pill, type PillTone } from "./Pill";
 export { ResearchItem, type ResearchStatus } from "./ResearchItem";
 export { Skeleton, SkeletonRows } from "./Skeleton";

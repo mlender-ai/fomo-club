@@ -6,12 +6,27 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-09-21** · `LAB-BRIDGE` — 랩이 FCE 를 비춘다. 엔진을 갖지 않는다 |
+| 최종 갱신 | **2026-09-25** · `UI-FIX` — 설명 문단을 ⓘ 로 접고, 포지션 손익·기준선·거래 수를 고쳤다 (`docs/ui/UI_FIX.md`) · **정규 도메인 미확인** |
 | **정규 도메인** | **https://fomo-web-mlender-ais-projects.vercel.app** ← 모든 완료 확인은 이 주소로 |
 | 보조 도메인 | `fomo-club-backend.vercel.app` · `taro-stock-web.vercel.app` (같은 배포를 가리킨다) |
 | 제품 | **STRATEGY LAB** — 전략 경쟁 랩. 사용자 1명 · BM 없음 · 최종 목표 실제 자금 자동매매 |
 | 정본 | `docs/LAB-00_MASTER.md` |
 | 옛 상태 문서 | `docs/wo/archive/STATUS_pre-LAB.md` (틴더 제품 기준 3,499줄) |
+
+---
+
+## `UI-FIX` (2026-09-25) — 요약
+
+| | |
+|---|---|
+| 포지션 손익 −0.27% 반복 | 업로더가 진입 비용 칸(`net_return_pct`)을 읽었다 → `exit_monitor.mark_net_return_pct`. **Mac 업로드 한 바퀴 뒤 반영** |
+| 건강도 `—` | FCE 페이퍼 거래에 건강도가 없다 → 칸을 숨긴다 |
+| 기준선 | `overview.ts` 한 곳 · 트랙마다 시작일부터 · 전략 탭이 같은 값을 읽는다 |
+| 거래 수 246 vs 248 | 원장 하나를 센다. 차이 = 크립토 검증 창 이전 5건 − 주식 US 체결 3건 |
+| 텍스트 예산 | `apps/web/__tests__/text-budget.test.ts` — CI `npm test` |
+| 폰 390px | `scripts/ui/capture-phone.ts` · 견본 조립본 기준 통과. **정규 도메인 재캡처는 배포 후** |
+| 조립본 | `SNAPSHOT_VERSION` 4 |
+| 남은 것 | **UI-06 미완료**(가격 레일·지금 볼 것·패턴 시간봉·30초 갱신) |
 
 ---
 

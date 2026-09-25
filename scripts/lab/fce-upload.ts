@@ -27,6 +27,7 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
+import { positionFromOpenTrade } from "../../apps/web/lib/lab/fce-payload";
 import type {
   FcePayload,
   LostDayPayload,
@@ -301,26 +302,12 @@ function polyTrack(dashboard: Record<string, unknown>, asOf: string): TrackPaylo
   };
 }
 
-/** 보유 포지션 — 크립토 페이퍼. */
+/** 보유 포지션 — 크립토 페이퍼. 칸 옮기기는 `positionFromOpenTrade`(손익 필드 사유가 거기 있다). */
 function positions(dashboard: Record<string, unknown>): PositionPayload[] {
   const open = Array.isArray(dashboard.open_trades) ? dashboard.open_trades : [];
   return open.flatMap((raw) => {
-    const t = record(raw);
-    if (typeof t.id !== "string" && typeof t.id !== "number") return [];
-    return [
-      {
-        id: String(t.id),
-        trackKey: "crypto" as const,
-        symbol: String(t.symbol ?? ""),
-        direction: String(t.direction ?? ""),
-        leverage: num(t.leverage),
-        marginUsdt: num(t.margin_usdt),
-        netReturnPct: num(t.net_return_pct),
-        healthScore: num(t.health_score),
-        entryAt: typeof t.entry_at === "string" ? t.entry_at : null,
-        entryPrice: num(t.entry_price),
-      },
-    ];
+    const p = positionFromOpenTrade(record(raw));
+    return p ? [p] : [];
   });
 }
 

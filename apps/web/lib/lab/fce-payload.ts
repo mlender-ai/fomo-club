@@ -69,6 +69,46 @@ export interface PositionPayload {
   entryPrice: number | null;
 }
 
+function finite(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * FCE `/api/paper/dashboard` 의 `open_trades[]` 한 건 → 포지션.
+ *
+ * ## 손익은 `exit_monitor.mark_net_return_pct` 다 (UI-FIX B-2)
+ *
+ * 보유 중인 거래의 `net_return_pct` 는 **진입할 때 한 번 적히고 부분 청산 때만 바뀐다**
+ * (FCE `paper/policy.py` — `net_return_pct = −entry_cost / margin`). 증거금 100 · 3배면
+ * 진입 비용 비율이 전부 같아서, 부분 청산 안 한 포지션은 모두 −0.27% 로 올라왔다.
+ * 현재가 기준 손익은 FCE 가 `exit_monitor` 에 따로 싣는다(`paper_exit_monitor`).
+ *
+ * 현재가를 모르면 `exit_monitor` 가 없다 — 그때는 **null**. 진입 비용을 손익인 척 올리지 않는다.
+ *
+ * ## 건강도는 FCE 페이퍼 거래에 없다 (B-3)
+ *
+ * FCE 로컬 UI 의 건강도 게이지는 **계좌 포지션**(`/api/live/positions`)의 것이다. 페이퍼 거래
+ * (`PaperTrade`)에는 그 칸이 없다. 계좌 포지션 값을 심볼로 붙이면 다른 포지션의 판정이 된다 —
+ * 붙이지 않는다. FCE 가 페이퍼에 `health_score` 를 싣는 날 그대로 들어온다.
+ */
+export function positionFromOpenTrade(t: Record<string, unknown>): PositionPayload | null {
+  if (typeof t.id !== "string" && typeof t.id !== "number") return null;
+  const monitor =
+    typeof t.exit_monitor === "object" && t.exit_monitor !== null ? (t.exit_monitor as Record<string, unknown>) : {};
+  return {
+    id: String(t.id),
+    trackKey: "crypto",
+    symbol: String(t.symbol ?? ""),
+    direction: String(t.direction ?? ""),
+    leverage: finite(t.leverage),
+    marginUsdt: finite(t.margin_usdt),
+    netReturnPct: finite(monitor.mark_net_return_pct),
+    healthScore: finite(t.health_score),
+    entryAt: typeof t.entry_at === "string" ? t.entry_at : null,
+    entryPrice: finite(t.entry_price),
+  };
+}
+
 /**
  * 닫힌 거래 한 건.
  *

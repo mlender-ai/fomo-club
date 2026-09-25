@@ -74,7 +74,8 @@ export default function PositionDetailPage() {
               stats={[
                 { label: "증거금", value: money(p.marginUsdt, "USDT") },
                 { label: "레버리지", value: p.leverage ? `${p.leverage}x` : "—" },
-                { label: "건강도", value: p.healthScore === null ? "—" : String(p.healthScore), note: "0~100 · FCE 판정" },
+                // 값이 없으면 칸째 뺀다(UI-FIX B-3).
+                ...(p.healthScore === null ? [] : [{ label: "건강도", value: String(p.healthScore), note: "0~100" }]),
               ]}
             />
             <Card title="아직 안 올라온 것" description="없는 걸 있는 척 그리지 않는다">

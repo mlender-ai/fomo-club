@@ -197,7 +197,8 @@ export function AreaChartCard({
                 x1={Date.parse(b.from)}
                 x2={Date.parse(b.to)}
                 fill="var(--ink-3)"
-                fillOpacity={0.08}
+                // UI-FIX C-1 — 0.08 이면 49일이 띠로 덮여 선보다 띠가 먼저 보였다. 있다는 것만 알 정도로.
+                fillOpacity={0.035}
                 strokeOpacity={0}
                 ifOverflow="hidden"
               />
@@ -282,7 +283,7 @@ export function AreaChartCard({
           </span>
         ) : (
           // **벤치마크가 없으면 없다고 말한다.** 조용히 빼면 화면이 좋아 보인다.
-          <span className="ui-legend-item is-missing">벤치마크 없음 — 이 수익률이 좋은지 알 수 없다</span>
+          <span className="ui-legend-item is-missing">벤치마크 없음</span>
         )}
         {baselineLabel ? (
           <span className="ui-legend-item">

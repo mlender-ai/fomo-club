@@ -25,6 +25,7 @@
  * 포트폴리오 선은 끊지 않는다. 실현 기준이라 호스트가 자는 동안에도 값은 확정돼 있다
  * (그날 닫힌 거래가 없으니 그대로다). 거기서 선을 끊으면 "데이터가 없다" 는 거짓말이 된다.
  */
+import { reasonLabel, trackGlyph } from "./labels";
 import { buildPortfolio, TRACK_BASE_USD, type Portfolio } from "./portfolio";
 import type { FcePositionRow, FceTrackRow } from "./fce-board";
 
@@ -81,15 +82,6 @@ export interface OverviewInput {
   research: ResearchLite[];
   now: Date;
 }
-
-/** 트랙 한 글자 — 이미지 없이도 행이 선다. 강조색을 새로 만들지 않는다(UI-01 A-2). */
-const GLYPH: Record<string, string> = {
-  crypto: "₿",
-  whale: "🐋",
-  stock_us: "US",
-  stock_kr: "KR",
-  polymarket: "P",
-};
 
 /** 운용중 먼저, 나머지는 이 순서로 아래(E-1). */
 const REST_ORDER: Record<string, number> = { held: 0, stopped: 1, excluded: 2 };
@@ -212,6 +204,66 @@ function curveMdd(trades: TradeLite[], trackKey: string, start: number): number 
   return worst;
 }
 
+/** 트랙 하나의 원장 성적. FCE 엔진 지표와 **같은 공식**(`paper/service.py` — 승 ÷ 전체, 이익 합 ÷ 손실 합). */
+export interface LedgerStat {
+  count: number;
+  wins: number;
+  winRatePct: number | null;
+  profitFactor: number | null;
+}
+
+/**
+ * 트랙별 닫힌 거래 성적 — **거래 수의 유일한 출처** (UI-FIX B-5).
+ *
+ * 전에는 Overview 가 FCE 채점판의 N(검증 창 07-18~ 안에서 닫힌 것만)을 더했고, 복기는 랩이 받아
+ * 쌓은 거래 전부를 셌다. 크립토 창 밖 거래 5건 · 주식 US 체결 3건만큼 두 화면이 달랐다(246 vs 248).
+ * 자본·곡선·낙폭은 이미 원장 전부로 잰다 — 거래 수·승률·손익비도 같은 모집단에서 잰다.
+ */
+export function ledgerStats(trades: TradeLite[]): Map<string, LedgerStat> {
+  const acc = new Map<string, { count: number; wins: number; profit: number; loss: number }>();
+  for (const t of trades) {
+    if (!t.exitAt) continue;
+    const a = acc.get(t.trackKey) ?? { count: 0, wins: 0, profit: 0, loss: 0 };
+    const pnl = t.netPnlUsdt ?? 0;
+    a.count += 1;
+    if (pnl > 0) {
+      a.wins += 1;
+      a.profit += pnl;
+    } else if (pnl < 0) a.loss += -pnl;
+    acc.set(t.trackKey, a);
+  }
+  const out = new Map<string, LedgerStat>();
+  for (const [key, a] of acc) {
+    out.set(key, {
+      count: a.count,
+      wins: a.wins,
+      winRatePct: a.count > 0 ? (a.wins / a.count) * 100 : null,
+      profitFactor: a.loss > 0 ? a.profit / a.loss : null,
+    });
+  }
+  return out;
+}
+
+/** 첫 청산일 하루 전 자정 — 곡선과 기준선이 같이 쓰는 "시작". */
+function startOf(firstExit: number): number {
+  return Math.floor(firstExit / DAY) * DAY - DAY;
+}
+
+/** BTC 보유의 수익·낙폭(%) — `from` 부터 `to` 까지 H1 종가로. */
+function btcHold(bars: Bar[], from: number, to: number): { ret: number; mdd: number } | null {
+  const span = bars.filter((b) => b.at.getTime() >= from && b.at.getTime() <= to);
+  if (span.length < 2) return null;
+  const first = (span[0] as Bar).close;
+  const last = (span[span.length - 1] as Bar).close;
+  let peak = first;
+  let worst = 0;
+  for (const b of span) {
+    peak = Math.max(peak, b.close);
+    worst = Math.min(worst, ((b.close - peak) / peak) * 100);
+  }
+  return { ret: (last / first - 1) * 100, mdd: worst };
+}
+
 // ── 조립 ──────────────────────────────────────────────────────────────────
 
 export function buildOverview(input: OverviewInput) {
@@ -222,7 +274,7 @@ export function buildOverview(input: OverviewInput) {
 
   // 시작: 첫 청산일 하루 전 자정. 거래가 없으면 30일 전.
   const firstExit = step.first();
-  const t0 = firstExit === null ? nowMs - 30 * DAY : Math.floor(firstExit / DAY) * DAY - DAY;
+  const t0 = firstExit === null ? nowMs - 30 * DAY : startOf(firstExit);
   const bars = [...btc].sort((a, b) => a.at.getTime() - b.at.getTime());
   const bench0 = barAt(bars, t0) ?? bars.find((b) => b.at.getTime() >= t0)?.close ?? null;
 
@@ -270,16 +322,15 @@ export function buildOverview(input: OverviewInput) {
     nowMs
   );
 
-  // ── 통계 4칸 (D) ────────────────────────────────────────────────────────
+  // ── 통계 4칸 (D) — 거래 수·승률은 원장 하나에서 (B-5) ──────────────────────
+  const ledger = ledgerStats(trades);
   const running = tracks.filter((t) => t.status === "running");
-  const counted = tracks.filter((t) => (t.trades ?? 0) > 0);
-  const totalTrades = counted.reduce((s, t) => s + (t.trades ?? 0), 0);
-  const weighted = counted.filter((t) => t.winRatePct !== null);
-  const weightN = weighted.reduce((s, t) => s + (t.trades ?? 0), 0);
-  const winRate =
-    weightN > 0
-      ? weighted.reduce((s, t) => s + (t.trades ?? 0) * (t.winRatePct ?? 0), 0) / weightN
-      : null;
+  const counted = tracks
+    .map((t) => ({ t, stat: ledger.get(t.key) }))
+    .filter((x): x is { t: FceTrackRow; stat: LedgerStat } => x.stat !== undefined);
+  const totalTrades = counted.reduce((s, x) => s + x.stat.count, 0);
+  const totalWins = counted.reduce((s, x) => s + x.stat.wins, 0);
+  const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : null;
 
   const mdds = tracks
     .map((t) => ({ t, mdd: curveMdd(trades, t.key, t.startingCapital) }))
@@ -303,18 +354,20 @@ export function buildOverview(input: OverviewInput) {
       return {
         key: pt.key,
         label: pt.label,
-        glyph: GLYPH[pt.key] ?? pt.label.slice(0, 1),
+        glyph: trackGlyph(pt.key, pt.label),
         status: pt.status,
         statusReason: pt.statusReason,
         subtitle:
           pt.status === "running"
             ? [
-                tr.trades === null ? null : `N ${tr.trades}`,
-                tr.winRatePct === null ? null : `승률 ${tr.winRatePct.toFixed(1)}%`,
+                ledger.get(pt.key) ? `N ${ledger.get(pt.key)?.count}` : null,
+                ledger.get(pt.key)?.winRatePct == null
+                  ? null
+                  : `승률 ${(ledger.get(pt.key)?.winRatePct as number).toFixed(1)}%`,
               ]
                 .filter(Boolean)
                 .join(" · ") || "지표 없음"
-            : (pt.statusReason ?? "사유 없음"),
+            : reasonLabel(pt.status, pt.statusReason),
         normalized: pt.normalized,
         nativeCurrent: pt.nativeCurrent,
         currency: pt.currency,
@@ -330,32 +383,41 @@ export function buildOverview(input: OverviewInput) {
       return (REST_ORDER[a.status] ?? 9) - (REST_ORDER[b.status] ?? 9);
     });
 
-  // ── 전략 경쟁 (H) — 같은 기간 BTC 보유가 기준선 ────────────────────────
-  const btcSeries = bars.filter((b) => b.at.getTime() >= t0 && b.at.getTime() <= nowMs);
-  let btcRet: number | null = null;
-  let btcMdd: number | null = null;
-  if (btcSeries.length > 1) {
-    const first = (btcSeries[0] as Bar).close;
-    const last = (btcSeries[btcSeries.length - 1] as Bar).close;
-    btcRet = (last / first - 1) * 100;
-    let peak = first;
-    let worstDd = 0;
-    for (const b of btcSeries) {
-      peak = Math.max(peak, b.close);
-      worstDd = Math.min(worstDd, ((b.close - peak) / peak) * 100);
-    }
-    btcMdd = worstDd;
-  }
+  // ── 전략 경쟁 (H · UI-FIX B-4) — 기준선은 **여기 한 곳**에서 잰다 ────────────
+  //
+  // 트랙마다 **그 트랙이 시작한 날부터** 같은 기간 BTC 보유의 수익 ÷ 낙폭이 기준선이다. 고래 추종은
+  // 08-24 에 시작했는데 07-12 부터 잰 BTC 와 비교하면 기간이 다른 두 수를 견준다. 전략 탭도 이 값을
+  // 그대로 읽는다 — 전에는 전략 탭이 따로 "기준선 없음" 을 냈다.
   const ratio = (ret: number | null, mdd: number | null) =>
     ret === null || mdd === null || Math.abs(mdd) < 1e-9 ? null : ret / Math.abs(mdd);
-  const baseline = ratio(btcRet, btcMdd);
+  const firstExitOf = (key: string) =>
+    trades.reduce<number | null>((min, t) => {
+      if (t.trackKey !== key || !t.exitAt) return min;
+      const at = t.exitAt.getTime();
+      return min === null || at < min ? at : min;
+    }, null);
   const contenders = tracks
     .map((t) => {
+      const first = firstExitOf(t.key);
       const mdd = curveMdd(trades, t.key, t.startingCapital);
-      return { key: t.key, label: t.label, value: ratio(t.returnPct, mdd), returnPct: t.returnPct, mddPct: mdd };
+      const value = ratio(t.returnPct, mdd);
+      if (first === null || value === null) return null;
+      const from = startOf(first);
+      const btc = btcHold(bars, from, nowMs);
+      const baseline = btc ? ratio(btc.ret, btc.mdd) : null;
+      return {
+        key: t.key,
+        label: t.label,
+        value,
+        returnPct: t.returnPct,
+        mddPct: mdd,
+        from: new Date(from).toISOString(),
+        baseline: baseline === null ? null : { label: "BTC 보유", value: baseline, returnPct: btc?.ret ?? null, mddPct: btc?.mdd ?? null },
+        beats: baseline === null ? null : value > baseline,
+      };
     })
-    .filter((c): c is typeof c & { value: number } => c.value !== null);
-  const beaten = baseline === null ? 0 : contenders.filter((c) => c.value > baseline).length;
+    .filter((c): c is NonNullable<typeof c> => c !== null);
+  const beaten = contenders.filter((c) => c.beats === true).length;
   const outOfRace = tracks.filter((t) => !contenders.some((c) => c.key === t.key)).map((t) => t.label);
 
   // ── 최근 활동 (I) — 실제 거래와 진입만. 시각을 모르는 사건은 넣지 않는다 ──────
@@ -382,9 +444,9 @@ export function buildOverview(input: OverviewInput) {
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 6);
 
-  // ── 연구 (G) — 열린 것 먼저 최대 4개 ─────────────────────────────────────
+  // ── 연구 (G · UI-FIX C-1) — 열린 것 먼저 3개 ─────────────────────────────
   const rank = (s: string) => (s === "closed" ? 1 : 0);
-  const items = [...research].sort((a, b) => rank(a.status) - rank(b.status) || a.no.localeCompare(b.no)).slice(0, 4);
+  const items = [...research].sort((a, b) => rank(a.status) - rank(b.status) || a.no.localeCompare(b.no)).slice(0, 3);
 
   return {
     hero: {
@@ -403,11 +465,7 @@ export function buildOverview(input: OverviewInput) {
       total: tracks.length,
       notRunning: tracks.filter((t) => t.status !== "running").map((t) => t.label),
       trades: totalTrades,
-      tradesBy: counted.map((t) => ({ label: t.label, n: t.trades ?? 0 })),
       winRatePct: winRate,
-      pfBy: counted
-        .filter((t) => t.profitFactor !== null)
-        .map((t) => ({ label: t.label, pf: t.profitFactor as number })),
       worstMdd: worst ? { pct: worst.mdd, label: worst.t.label } : null,
     },
     tracks: rows,
@@ -417,15 +475,61 @@ export function buildOverview(input: OverviewInput) {
       items,
     },
     competition: {
-      baseline: baseline === null ? null : { label: "BTC 보유", value: baseline, returnPct: btcRet, mddPct: btcMdd },
-      from: new Date(t0).toISOString(),
-      rows: contenders.map((c) => ({ ...c, beats: baseline === null ? null : c.value > baseline })),
+      rows: contenders,
       beaten,
+      measured: contenders.length,
       outOfRace,
     },
+    /** 트랙별 원장 성적 — 전략 탭이 같은 값을 읽는다(B-5). */
+    ledger: Object.fromEntries(ledger),
     activity: events,
     portfolio,
   };
 }
 
 export type OverviewPayload = ReturnType<typeof buildOverview>;
+
+/** `LAB-00 §7` — 표본 30 미만은 순위 없음. */
+export const MIN_SAMPLE_RANK = 30;
+
+/**
+ * 전략 탭의 행 — 기준선·거래 수를 Overview 와 **같은 값**에서 읽는다 (UI-FIX B-4 · B-5).
+ *
+ * 전에는 전략 탭이 FCE 트랙 행에서 따로 기준선을 찾았다. 크립토에는 FCE 가 벤치마크 값을 안 주니
+ * "기준선 없음 — 비교 불가" 가 떴고, 같은 순간 Overview 는 BTC 기준선 4.15 를 말했다.
+ */
+export function buildStrategyRows(tracks: FceTrackRow[], overview: OverviewPayload) {
+  const race = new Map(overview.competition.rows.map((c) => [c.key, c]));
+  return tracks.map((t) => {
+    const stat = overview.ledger[t.key];
+    const c = race.get(t.key);
+    // 원장이 있는 트랙(크립토·고래)은 원장에서, 없는 트랙(주식)은 FCE 값 그대로.
+    const trades = stat ? stat.count : t.trades;
+    return {
+      key: t.key,
+      label: t.label,
+      returnPct: t.returnPct,
+      mddPct: c?.mddPct ?? t.mddPct,
+      returnOverMdd: c?.value ?? null,
+      trades,
+      winRatePct: stat ? stat.winRatePct : t.winRatePct,
+      profitFactor: stat ? stat.profitFactor : t.profitFactor,
+      leverage: t.leverage,
+      status: t.status,
+      /** 사람 말(`체결 가격 이상`). 원문은 `statusReason` 에 남는다 — 상세의 ⓘ 가 연다. */
+      reason: reasonLabel(t.status, t.statusReason),
+      statusReason: t.statusReason,
+      evidenceNote: t.evidenceNote,
+      sampleNote: t.sampleNote,
+      elapsedDays: t.elapsedDays,
+      calendarDays: t.calendarDays,
+      ranked: (trades ?? 0) >= MIN_SAMPLE_RANK,
+      benchmarkLabel: t.benchmarkLabel,
+      benchmarkReturnPct: t.benchmarkReturnPct,
+      /** Overview 전략 경쟁과 같은 기준선. 잴 수 없으면 null. */
+      baseline: c?.baseline ?? null,
+      baselineFrom: c?.from ?? null,
+      beatsBenchmark: c ? c.beats : null,
+    };
+  });
+}

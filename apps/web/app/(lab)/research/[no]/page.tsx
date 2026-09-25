@@ -99,21 +99,23 @@ export default function ResearchDetailPage() {
               </Card>
             }
           >
+            {/* UI-FIX C-5 — 에디토리얼이라 문단이 허용되는 유일한 곳. 카드 테두리 없이 섹션 제목 + 본문. */}
             {it.hypothesis ? (
-              <Card title="가설">
+              <section className="sh-section">
+                <h2 className="sh-section-title">가설</h2>
                 <Note text={it.hypothesis} />
-              </Card>
+              </section>
             ) : null}
             {it.method ? (
-              <Card title="어떻게 확인하나">
+              <section className="sh-section">
+                <h2 className="sh-section-title">어떻게 확인하나</h2>
                 <Note text={it.method} />
-              </Card>
+              </section>
             ) : null}
-            <Card title="근거" description="출처가 없는 수치는 넣지 않는다" flush>
+            <section className="sh-section">
+              <h2 className="sh-section-title">근거</h2>
               {evidence.length === 0 ? (
-                <p className="sh-note" style={{ padding: "0 var(--card-pad) var(--card-pad)" }}>
-                  근거가 아직 없어요.
-                </p>
+                <p className="sh-note">근거가 아직 없어요.</p>
               ) : (
                 <ul className="ui-rows">
                   {evidence.map((e, i) => (
@@ -127,14 +129,11 @@ export default function ResearchDetailPage() {
                   ))}
                 </ul>
               )}
-            </Card>
-            {it.decision ? (
-              <Card title="결정">
-                <Note text={it.decision} />
-              </Card>
-            ) : (
-              <p className="sh-note">아직 결정이 없다.</p>
-            )}
+            </section>
+            <section className="sh-section">
+              <h2 className="sh-section-title">결정</h2>
+              {it.decision ? <Note text={it.decision} /> : <p className="sh-note">아직 결정이 없다.</p>}
+            </section>
           </PageFrame>
         );
       }}
