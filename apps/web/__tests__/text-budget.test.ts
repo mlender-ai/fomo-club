@@ -28,6 +28,7 @@ import { OverviewBody } from "../components/tabs/OverviewBody";
 import { PositionsBody } from "../components/tabs/PositionsBody";
 import { ResearchBody } from "../components/tabs/ResearchBody";
 import { StrategiesBody } from "../components/tabs/StrategiesBody";
+import { StrategyDetailBody } from "../components/tabs/StrategyDetailBody";
 import { WhalesBody } from "../components/tabs/WhalesBody";
 import { fixtures } from "./fixtures/lab";
 
@@ -40,6 +41,12 @@ const SUBTITLE = 24;
 
 const data = fixtures();
 
+/** 전략 상세(UI-05 B) — 돌고 있는 트랙 하나 · 멈춘 트랙 하나. */
+const detail = (id: string) =>
+  function Detail({ data: d }: { data: never }) {
+    return createElement(StrategyDetailBody, { data: d, id });
+  };
+
 const TABS: [string, ComponentType<{ data: never }>, unknown][] = [
   ["Overview", OverviewBody as ComponentType<{ data: never }>, data.overview],
   ["전략", StrategiesBody as ComponentType<{ data: never }>, data.strategies],
@@ -47,6 +54,8 @@ const TABS: [string, ComponentType<{ data: never }>, unknown][] = [
   ["고래", WhalesBody as ComponentType<{ data: never }>, data.whales],
   ["연구", ResearchBody as ComponentType<{ data: never }>, data.research],
   ["복기", JournalBody as ComponentType<{ data: never }>, data.journal],
+  ["전략 상세 · 크립토", detail("crypto"), data.strategies],
+  ["전략 상세 · 주식 US", detail("stock_us"), data.strategies],
 ];
 
 // ── HTML 에서 글자 꺼내기 ─────────────────────────────────────────────────
@@ -154,8 +163,9 @@ describe("전략 탭 (C-2 · B-6)", () => {
   });
 
   it("상태는 사람 말이다 — 체결 가격 이상 · 데이터 불일치 · 지역 차단", () => {
-    const subs = inner(html, "span", "ui-row-sub").map(text);
-    expect(subs).toEqual(expect.arrayContaining(["체결 가격 이상", "데이터 불일치", "지역 차단"]));
+    // UI-05 A-2 — 막대 없는 줄의 이름 아래 한 줄.
+    const notes = inner(html, "span", "ui-compare-note").map(text);
+    expect(notes).toEqual(expect.arrayContaining(["체결 가격 이상", "데이터 불일치", "지역 차단"]));
   });
 });
 

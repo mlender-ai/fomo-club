@@ -49,13 +49,20 @@ export function money(value: number | null | undefined, currency = "USD"): strin
 /** 퍼센트. 항상 소수점 둘째까지, 양수에는 `+`. */
 export function pct(value: number | null | undefined, digits = 2): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
-  const sign = value > 0 ? "+" : value < 0 ? MINUS : "";
-  return `${sign}${Math.abs(value).toFixed(digits)}%`;
+  const body = Math.abs(value).toFixed(digits);
+  // **반올림해 0 이면 부호도 없다.** 주식 KR −0.0007% 가 빨간 `−0.00%` 로 나갔다 — 잃은 게 없는데 손실로 읽힌다.
+  if (Number(body) === 0) return `${(0).toFixed(digits)}%`;
+  const sign = value > 0 ? "+" : MINUS;
+  return `${sign}${body}%`;
 }
 
-/** 부호 → 손익 색 이름. 0 은 색이 없다 — 이익도 손실도 아니다. */
+/**
+ * 부호 → 손익 색 이름. 0 은 색이 없다 — 이익도 손실도 아니다.
+ *
+ * 화면이 소수 둘째 자리까지 쓰므로 **그 아래는 0 으로 본다** — `0.00%` 가 빨갛게 칠해지지 않게.
+ */
 export function tone(value: number | null | undefined): "up" | "dn" | "mute" {
-  if (value === null || value === undefined || !Number.isFinite(value) || value === 0) return "mute";
+  if (value === null || value === undefined || !Number.isFinite(value) || Math.abs(value) < 0.005) return "mute";
   return value > 0 ? "up" : "dn";
 }
 

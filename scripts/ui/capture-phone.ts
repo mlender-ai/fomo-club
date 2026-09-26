@@ -28,6 +28,9 @@ const TABS = [
   { path: "/whales", key: "whales", name: "whales" },
   { path: "/research", key: "research", name: "research" },
   { path: "/journal", key: "journal", name: "journal" },
+  // UI-05 B — 전략 상세. 돌고 있는 것 하나 · 멈춘 것 하나.
+  { path: "/strategies/crypto", key: "strategies", name: "strategy-crypto" },
+  { path: "/strategies/stock_us", key: "strategies", name: "strategy-stock_us" },
 ] as const;
 
 async function main(): Promise<void> {
@@ -65,8 +68,12 @@ async function main(): Promise<void> {
       return {
         hScroll: doc.scrollWidth > doc.clientWidth,
         // 오른쪽이 화면 밖으로 나간 요소
+        // 표는 가로로 **민다**(UI-05 A-3) — 스크롤 칸 안의 셀은 잘린 게 아니다.
         clipped: [...document.querySelectorAll<HTMLElement>(".sh-main *")].filter(
-          (el) => el.getBoundingClientRect().right > window.innerWidth + 0.5 && el.getClientRects().length > 0
+          (el) =>
+            el.getBoundingClientRect().right > window.innerWidth + 0.5 &&
+            el.getClientRects().length > 0 &&
+            !el.closest(".ui-table-scroll")
         ).length,
         // 행 이름이 두 줄 이상 = 세로로 쪼개졌다
         brokenNames: rows.filter((r) => {

@@ -24,7 +24,8 @@ export function Delta({
   return (
     <p className="ui-delta">
       <span className={`ui-delta-amount is-${t}`}>{money(amount, currency)}</span>
-      <Pill tone={t}>{pct(percent)}</Pill>
+      {/* 알약은 6자(UI-FIX A-2) — 두 자릿수 퍼센트는 소수 한 자리. `−28.67%` 가 7자였다. */}
+      <Pill tone={t}>{pct(percent, percent !== null && Math.abs(percent) >= 10 ? 1 : 2)}</Pill>
       {period ? <span className="ui-delta-period">{period}</span> : null}
     </p>
   );
