@@ -5,6 +5,7 @@
  * 그 둘은 랩만 알 수 있다(FCE 는 자기가 언제 안 읽혔는지 모른다).
  * 나머지 숫자는 전부 FCE 가 낸 값을 그대로 낸다.
  */
+import type { EvidenceItem } from "./fce-payload";
 import { prisma } from "../prisma";
 
 /** 이 시간 넘게 업로드가 없으면 끊긴 것으로 본다. 주기가 15분이라 두 번 거른 값이다. */
@@ -71,6 +72,7 @@ export interface FcePositionRow {
   takeProfit2Price: number | null;
   invalidationDistancePct: number | null;
   takeProfitDistancePct: number | null;
+  evidence: EvidenceItem[];
   /**
    * **청산 수준 경고**(PART D-1).
    *
@@ -235,6 +237,7 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       takeProfit2Price: p.takeProfit2Price,
       invalidationDistancePct: p.invalidationDistancePct,
       takeProfitDistancePct: p.takeProfitDistancePct,
+      evidence: Array.isArray(p.evidence) ? (p.evidence as unknown as EvidenceItem[]) : [],
       liquidationLevel: p.netReturnPct !== null && p.netReturnPct <= LIQUIDATION_PCT,
     })),
     whale: whale

@@ -16,7 +16,7 @@
  * 내는 것 중 가장 가까운 것 — **무효화·익절까지 남은 거리** — 를 레일 바로 아래 둔다. 지어내지 않는다.
  */
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { PageFrame } from "../shell/PageFrame";
 import { ModeToggle, useViewMode } from "../shell/useViewMode";
@@ -24,6 +24,7 @@ import {
   CandleChart,
   Card,
   Empty,
+  Glossed,
   HealthRing,
   Hero,
   Pill,
@@ -33,11 +34,12 @@ import {
   money,
   pct,
   price,
+  termsIn,
   tone,
   type PriceLine,
   type ResearchStatus,
 } from "../ui";
-import { sideLabel, stanceLabel } from "../../lib/lab/labels";
+import { claimText, engineLabel, sideLabel, stanceLabel } from "../../lib/lab/labels";
 import type { PositionDetail } from "../../lib/lab/positions";
 import type { Jsonify } from "../../lib/lab/wire";
 import { LiveOnlyCard } from "./PositionsBody";
@@ -117,6 +119,9 @@ export function PositionDetailBody({ data }: { data: Detail }) {
         <>
           {/* ③ 차트 */}
           <ChartCard data={data} />
+
+          {/* 진입 근거 — FCE 페이퍼 화면에 있는 것 */}
+          <EvidenceCard p={p} />
 
           {/* ④⑤ 라이브 전용 */}
           <LiveOnlyCard names={data.liveOnly} />
@@ -201,6 +206,45 @@ function ChartCard({ data }: { data: Detail }) {
       ) : (
         <Empty title="캔들이 아직 없어요" reason="다음 업로드에 올라옵니다." />
       )}
+    </Card>
+  );
+}
+
+function EvidenceCard({ p }: { p: Detail["position"] }) {
+  if (p.evidence.length === 0) return null;
+  const claims = p.evidence.map((e) => claimText(e.claim));
+  const terms = termsIn(claims);
+  return (
+    <Card
+      title="진입 근거"
+      description="FCE 가 진입할 때 적은 것"
+      flush
+      info={
+        terms.length > 0 ? (
+          <dl>
+            {terms.map(([k, v]) => (
+              <Fragment key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </Fragment>
+            ))}
+          </dl>
+        ) : undefined
+      }
+    >
+      <ul className="ps-why">
+        {p.evidence.map((e, i) => (
+          <li key={i}>
+            <span className="ps-why-claim">
+              <Glossed text={claims[i] as string} />
+            </span>
+            <span className="ps-why-meta">
+              {engineLabel(e.engine)}
+              {e.confidence !== null ? ` · 확신 ${Math.round(e.confidence)}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

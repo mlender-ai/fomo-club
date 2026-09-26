@@ -16,6 +16,7 @@ import { PositionsBody } from "../components/tabs/PositionsBody";
 import { HealthRing, healthTone, price } from "../components/ui";
 import { LIQUIDATION_PCT, type FcePositionRow } from "../lib/lab/fce-board";
 import { positionFromOpenTrade } from "../lib/lab/fce-payload";
+import { claimText, withGlossary } from "../lib/lab/labels";
 import { LIVE_ONLY, buildPositions, railOf, riskOrder } from "../lib/lab/positions";
 import { POSITIONS, POSITIONS_AT, fixtures } from "./fixtures/lab";
 
@@ -167,6 +168,29 @@ describe("지어내지 않는다", () => {
     expect(Object.keys(p ?? {})).not.toContain("planned_stop_price");
     expect(p?.invalidationPrice).toBe(9);
     expect(p?.markPrice).toBe(10);
+  });
+});
+
+describe("진입 근거 — FCE 페이퍼 화면에 있는 것", () => {
+  const html = renderToStaticMarkup(createElement(PositionDetailBody, { data: data.positionDetail }));
+
+  it("상세에 FCE 근거가 FCE 순서대로 전부 있다", () => {
+    const p = data.positionDetail.position;
+    expect(p.evidence.length).toBeGreaterThan(0);
+    for (const e of p.evidence) expect(text(html)).toContain(claimText(e.claim).split(" ")[0] as string);
+  });
+
+  it("긴 가격은 5자리 · 코드는 한국어 — 뜻은 그대로", () => {
+    expect(claimText("구조 지지 2.12154456 · 터치 5")).toBe("구조 지지 2.1215 · 터치 5");
+    expect(claimText("구조 저항 113.7920499 · 터치 9")).toBe("구조 저항 113.79 · 터치 9");
+    expect(claimText("상위 TF neutral_to_bullish 추세 (기준선)")).toBe("상위 TF 중립→강세 추세 (기준선)");
+    expect(claimText("상위 TF bullish 추세")).toBe("상위 TF 강세 추세");
+  });
+
+  it("패턴 용어에 설명이 붙는다 (완료 9 — 화면에 나오는 용어만)", () => {
+    const parts = withGlossary("Spring 93 + Weak 스윕 확인");
+    expect(parts.filter(([, tip]) => tip).map(([t]) => t)).toEqual(["Spring", "스윕"]);
+    expect(html).toMatch(/<abbr class="ui-term" title="[^"]+">/);
   });
 });
 

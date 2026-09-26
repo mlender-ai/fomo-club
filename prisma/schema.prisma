@@ -1370,6 +1370,8 @@ model FcePosition {
   /// 현재가에서 각 선까지(%). FCE `exit_monitor.*_distance_pct`.
   invalidationDistancePct Float?
   takeProfitDistancePct   Float?
+  /// 진입 근거 — FCE `entry_evidence.items[]` 의 `{ engine, claim, confidence, direction }`. FCE 순서 그대로.
+  evidence Json?
 
   asOf DateTime
 
