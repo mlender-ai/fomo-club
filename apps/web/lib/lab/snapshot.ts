@@ -24,8 +24,9 @@
  */
 import { readCapitalSeries } from "./capital";
 import { readFceBoard, readFceLedger } from "./fce-board";
-import { MIN_SAMPLE_RANK, buildOverview, buildStrategyRows } from "./overview";
+import { buildOverview } from "./overview";
 import { buildPortfolio } from "./portfolio";
+import { buildStrategies } from "./strategies";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../prisma";
@@ -49,10 +50,11 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
+// 5 — UI-05: 전략 행에 순위·샤프·평균 보유·분포·최근 거래·연구 · 우연 확률 · 폐기 보관함(`strategies.ts`).
 
 /** 조립본에 같이 실리는 동기화 재료. 경과 시간은 읽는 쪽이 센다. */
 export interface SyncSeed {
@@ -127,12 +129,38 @@ export async function assemblePayloads() {
   const series = await Promise.all(portfolio.tracks.map((t) => readCapitalSeries(t.key)));
 
   // Overview 재료 — 쓰기 경로라 여기서 실컷 읽는다. 화면 요청은 조립본 한 줄만 본다.
-  const [tradeLite, lostDays] = await Promise.all([
+  const [tradeLite, lostDays, archive] = await Promise.all([
     prisma.fceTrade.findMany({
       where: { exitAt: { not: null } },
-      select: { trackKey: true, symbol: true, direction: true, exitAt: true, netPnlUsdt: true, netReturnPct: true },
+      select: {
+        trackKey: true,
+        symbol: true,
+        direction: true,
+        entryAt: true,
+        exitAt: true,
+        netPnlUsdt: true,
+        netReturnPct: true,
+        leverage: true,
+        exitReason: true,
+      },
     }),
     prisma.fceLostDay.findMany(),
+    // 폐기한 랩 전략(UI-05 A-5) — **지우지 않았다.** 마지막 백테스트의 성적을 같이 싣는다.
+    prisma.strategy.findMany({
+      where: { status: "STOPPED" },
+      orderBy: [{ stoppedAt: "asc" }, { name: "asc" }],
+      select: {
+        name: true,
+        version: true,
+        stoppedAt: true,
+        runs: {
+          where: { kind: "BACKTEST" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { metric: { select: { trades: true, cagrMdd: true } } },
+        },
+      },
+    }),
   ]);
   const firstExit = tradeLite.reduce<Date | null>(
     (min, t) => (t.exitAt && (!min || t.exitAt < min) ? t.exitAt : min),
@@ -184,14 +212,22 @@ export async function assemblePayloads() {
   };
   void openResearch;
 
-  const strategyRows = buildStrategyRows(board.tracks, overview);
-
   const strategies = {
-    rows: strategyRows,
-    beatCount: overview.competition.beaten,
-    measuredCount: overview.competition.measured,
-    rankableCount: strategyRows.filter((r) => r.ranked).length,
-    minSample: MIN_SAMPLE_RANK,
+    ...buildStrategies({
+      tracks: board.tracks,
+      overview,
+      trades: tradeLite,
+      research,
+      archive: archive.map((a) => ({
+        name: a.name,
+        version: a.version,
+        stoppedAt: a.stoppedAt,
+        trades: a.runs[0]?.metric?.trades ?? null,
+        cagrMdd: a.runs[0]?.metric?.cagrMdd ?? null,
+      })),
+      wallets: board.whale?.eligible ?? null,
+      now: new Date(),
+    }),
     portfolio,
     // 전략 상세(`/strategies/[id]`)가 자본 곡선을 그린다. **API 를 두 번 부르지 않게**
     // 여기 같이 싣는다(UI-02 F — 화면 하나에 필요한 걸 한 번에).

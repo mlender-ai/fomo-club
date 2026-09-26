@@ -11,19 +11,18 @@
  * | 거래 원장 | 조립본에는 일별 자본만 있다. 그날 자본 변화를 거래 N 건으로 나눠 되만든다 — 곡선 끝은 실측과 같다 |
  * | 포지션 손익 | 실측은 B-2 버그 값(−0.27% 반복)이다. 고친 업로더가 올릴 현재가 손익은 Mac 러너가 돌아야 생긴다 |
  *
- * 조립은 **실제 빌더**(`buildOverview` · `buildStrategyRows` · `buildPortfolio`)를 지난다.
+ * 조립은 **실제 빌더**(`buildOverview` · `buildStrategies` · `buildPortfolio`)를 지난다.
  * 화면이 받는 모양이 서버와 어긋나면 여기서 타입이 깨진다.
  */
 import type { FcePositionRow, FceTrackRow } from "../../lib/lab/fce-board";
 import {
-  MIN_SAMPLE_RANK,
   buildOverview,
-  buildStrategyRows,
   type Bar,
   type LostDay,
   type TradeLite,
 } from "../../lib/lab/overview";
 import { buildPortfolio } from "../../lib/lab/portfolio";
+import { buildStrategies } from "../../lib/lab/strategies";
 import type { Wire } from "../../lib/lab/wire";
 
 export const NOW = new Date("2026-09-25T04:06:46Z");
@@ -167,13 +166,18 @@ function tradesFrom(key: string, start: string, daily: number[], total: number):
     for (let j = 0; j < k; j += 1) {
       const pnl = j === k - 1 ? d.delta - sum : j % 2 === 0 ? swing : -swing;
       sum += pnl;
+      const exitAt = new Date(t0 + d.i * DAY - (k - j) * 3_600_000);
       out.push({
         trackKey: key,
         symbol: SYMBOLS[(n + j) % SYMBOLS.length] as string,
         direction: j % 3 === 0 ? "short" : "long",
-        exitAt: new Date(t0 + d.i * DAY - (k - j) * 3_600_000),
+        // 보유 시간 · 청산 사유도 만든 값이다 — 실측 원장 배수(전부 3배)만 사실이다.
+        entryAt: new Date(exitAt.getTime() - (8 + (j % 5) * 4) * 3_600_000),
+        exitAt,
         netPnlUsdt: pnl,
         netReturnPct: pnl,
+        leverage: 3,
+        exitReason: ["take_profit_2", "invalidation_breach", "time_decay"][j % 3] ?? null,
       });
     }
   });
@@ -222,13 +226,13 @@ export const POSITIONS: FcePositionRow[] = [
 
 /** `/api/lab/research` 실측(01 요약은 이번에 고친 문구). */
 export const RESEARCH = [
-  { no: "01", title: "고래는 65.8% 맞히는데 우리는 왜 32.4%인가", blocks: null, status: "open", summary: "두 승률은 서로 다른 질문의 답 — 빼는 수가 아니다", verdict: null },
-  { no: "02", title: "강제청산을 넣으면 성과가 얼마나 바뀌나", blocks: "실매매", status: "blocked", summary: "3배라 −100% 아래 거래 0건 — 배수를 올리면 드러난다", verdict: null },
-  { no: "03", title: "호스트가 자는 동안 잃은 날은 며칠인가", blocks: null, status: "open", summary: "크립토 78일 중 29일만 유효 · 49일 유실", verdict: null },
-  { no: "04", title: "추세·평균회귀 진입에 우위가 있나", blocks: null, status: "closed", summary: "우연 확률 99% · 기준선 넘은 전략 0개", verdict: "no" },
-  { no: "05", title: "1배와 3배는 무엇이 다른가", blocks: null, status: "closed", summary: "147건 — 1배·3배 승률·PF 가 소수점까지 같다", verdict: "inconclusive" },
-  { no: "06", title: "주식 US 체결 가격 이상은 왜 생기나", blocks: null, status: "open", summary: "봉 불일치 하나가 US 정지·KR 보류를 같이 만든다", verdict: null },
-  { no: "07", title: "FOMO Club 신호 8종에 청산 규칙을 붙이면 알파가 있나", blocks: null, status: "open", summary: "주식 유효일 2~3일 — 판정할 표본이 없다", verdict: null },
+  { no: "01", trackKeys: ["whale"], title: "고래는 65.8% 맞히는데 우리는 왜 32.4%인가", blocks: null, status: "open", summary: "두 승률은 서로 다른 질문의 답 — 빼는 수가 아니다", verdict: null },
+  { no: "02", trackKeys: ["crypto", "whale"], title: "강제청산을 넣으면 성과가 얼마나 바뀌나", blocks: "실매매", status: "blocked", summary: "3배라 −100% 아래 거래 0건 — 배수를 올리면 드러난다", verdict: null },
+  { no: "03", trackKeys: ["crypto", "stock_us", "stock_kr"], title: "호스트가 자는 동안 잃은 날은 며칠인가", blocks: null, status: "open", summary: "크립토 78일 중 29일만 유효 · 49일 유실", verdict: null },
+  { no: "04", trackKeys: [], title: "추세·평균회귀 진입에 우위가 있나", blocks: null, status: "closed", summary: "우연 확률 99% · 기준선 넘은 전략 0개", verdict: "no" },
+  { no: "05", trackKeys: ["crypto"], title: "1배와 3배는 무엇이 다른가", blocks: null, status: "closed", summary: "147건 — 1배·3배 승률·PF 가 소수점까지 같다", verdict: "inconclusive" },
+  { no: "06", trackKeys: ["stock_us", "stock_kr"], title: "주식 US 체결 가격 이상은 왜 생기나", blocks: null, status: "open", summary: "봉 불일치 하나가 US 정지·KR 보류를 같이 만든다", verdict: null },
+  { no: "07", trackKeys: [], title: "FOMO Club 신호 8종에 청산 규칙을 붙이면 알파가 있나", blocks: null, status: "open", summary: "주식 유효일 2~3일 — 판정할 표본이 없다", verdict: null },
 ];
 
 /** JSON 을 한 번 지난 모양 — 화면이 받는 그대로. */
@@ -245,7 +249,20 @@ export function fixtures() {
     now: NOW,
   });
   const overview = { ...overviewCore, positions: POSITIONS.length };
-  const rows = buildStrategyRows(TRACKS, overviewCore);
+  const core = buildStrategies({
+    tracks: TRACKS,
+    overview: overviewCore,
+    trades: TRADES,
+    research: RESEARCH,
+    // `Strategy` 실측(2026-09-22 폐기) · 마지막 백테스트 성적은 BACKTEST_LOG 09-19.
+    archive: [
+      { name: "추세 스윙", version: 1, stoppedAt: new Date("2026-09-22T03:00:00Z"), trades: 80, cagrMdd: 0.3 },
+      { name: "평균회귀", version: 1, stoppedAt: new Date("2026-09-22T03:00:00Z"), trades: 388, cagrMdd: 0.15 },
+      { name: "고래 추종", version: 1, stoppedAt: new Date("2026-09-22T03:00:00Z"), trades: 0, cagrMdd: null },
+    ],
+    wallets: 2,
+    now: NOW,
+  });
 
   const closed = TRADES.filter((t) => t.exitAt);
   const net = closed.reduce((s, t) => s + (t.netPnlUsdt ?? 0), 0);
@@ -260,11 +277,7 @@ export function fixtures() {
   return {
     overview: wire<Wire<"overview">>(overview),
     strategies: wire<Wire<"strategies">>({
-      rows,
-      beatCount: overviewCore.competition.beaten,
-      measuredCount: overviewCore.competition.measured,
-      rankableCount: rows.filter((r) => r.ranked).length,
-      minSample: MIN_SAMPLE_RANK,
+      ...core,
       portfolio: buildPortfolio(TRACKS),
       series: [],
     }),

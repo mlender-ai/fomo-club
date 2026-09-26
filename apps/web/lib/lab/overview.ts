@@ -50,6 +50,10 @@ export interface TradeLite {
   exitAt: Date | null;
   netPnlUsdt: number | null;
   netReturnPct: number | null;
+  /** 전략 상세(UI-05 B)만 쓴다 — 평균 보유 · 최근 거래 · 실측 배수. */
+  entryAt?: Date | null;
+  leverage?: number | null;
+  exitReason?: string | null;
 }
 
 export interface Bar {
@@ -245,7 +249,7 @@ export function ledgerStats(trades: TradeLite[]): Map<string, LedgerStat> {
 }
 
 /** 첫 청산일 하루 전 자정 — 곡선과 기준선이 같이 쓰는 "시작". */
-function startOf(firstExit: number): number {
+export function startOf(firstExit: number): number {
   return Math.floor(firstExit / DAY) * DAY - DAY;
 }
 

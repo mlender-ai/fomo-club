@@ -9,7 +9,11 @@
  */
 export interface CompareItem {
   label: string;
-  value: number;
+  /**
+   * `null` 은 **막대를 긋지 않는다** — 정지·보류·제외처럼 잴 수 없는 줄(UI-05 A-2).
+   * 줄은 남긴다. 멈춘 전략을 목록에서 빼면 잘 돈 것만 남는다.
+   */
+  value: number | null;
   /** 화면에 그대로 나갈 문자열. 포맷은 부르는 쪽이 정한다. */
   display: string;
   /** 기준선 자신인가. 그러면 회색으로 깔린다. */
@@ -22,7 +26,10 @@ export interface CompareItem {
    * 정하게 짰다가 C/M `0.70` 이 초록으로 나왔다 — 그건 이익이 아니다.
    */
   tone?: "up" | "dn";
+  /** 이름 아래 한 줄 — `기준 미달` · 정지 사유 같은 것. */
   note?: string;
+  /** 순위. **기준선을 넘은 줄에만** 준다(UI-05 하지 말 것: 기준 미달에 순위 금지). */
+  rank?: number | null;
   /**
    * 이 막대가 자기 기준선을 넘었나. 주면 공통 `baseline` 대신 이걸 쓴다 — 트랙마다 기간이 달라
    * 기준선도 다를 때(UI-FIX B-4). `null` 은 잴 수 없다는 뜻이다.
@@ -46,7 +53,7 @@ export function CompareBar({
 }) {
   // 음수도 오므로 0 이 아니라 **최소·최대**로 축을 잡는다. 0 기준으로 그리면
   // 전부 음수일 때 막대가 하나도 안 보인다.
-  const values = items.map((i) => i.value);
+  const values = items.map((i) => i.value).filter((v): v is number => v !== null);
   const lo = Math.min(0, ...values, baseline ?? 0);
   const hi = Math.max(0, ...values, baseline ?? 0);
   const span = hi - lo || 1;
@@ -55,25 +62,34 @@ export function CompareBar({
   return (
     <ul className="ui-compare">
       {items.map((item) => {
+        const value = item.value;
         const beats =
           item.beats !== undefined
             ? item.beats === true
-            : baseline === null || baseline === undefined || item.value > baseline;
+            : baseline === null || baseline === undefined || (value !== null && value > baseline);
         const zero = at(0);
-        const here = at(item.value);
+        const here = value === null ? zero : at(value);
         const left = Math.min(zero, here);
         const width = Math.abs(here - zero);
         return (
-          <li key={item.label} className="ui-compare-row">
-            <span className="ui-compare-label">{item.label}</span>
+          <li key={item.label} className={`ui-compare-row${value === null ? " is-empty" : ""}`}>
+            <span className="ui-compare-label">
+              <span className="ui-compare-name">
+                {item.rank ? <span className="ui-compare-rank">{item.rank}</span> : null}
+                {item.label}
+              </span>
+              {item.note ? <span className="ui-compare-note">{item.note}</span> : null}
+            </span>
             <span className="ui-compare-track">
               {baseline !== null && baseline !== undefined ? (
                 <span className="ui-compare-baseline" style={{ left: `${at(baseline)}%` }} aria-hidden />
               ) : null}
-              <span
-                className={`ui-compare-fill${item.isBaseline ? " is-baseline" : beats ? " is-beat" : underTone === "dn" ? " is-lost" : " is-under"}`}
-                style={{ left: `${left}%`, width: `${width}%` }}
-              />
+              {value !== null ? (
+                <span
+                  className={`ui-compare-fill${item.isBaseline ? " is-baseline" : beats ? " is-beat" : underTone === "dn" ? " is-lost" : " is-under"}`}
+                  style={{ left: `${left}%`, width: `${width}%` }}
+                />
+              ) : null}
             </span>
             <span className={`ui-compare-value${item.tone ? ` is-${item.tone}` : ""}`}>
               {item.display}
