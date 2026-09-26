@@ -2015,7 +2015,9 @@ a.ui-research-link:hover {
   background: var(--blue-soft);
 }
 .wh-funnel li:last-child .wh-funnel-bar {
-  background: var(--blue);
+  /* 통과는 3/82 — 막대가 좁아 숫자가 막대 위에 얹힌다. 진한 파랑이면 파랑 숫자가 안 보였다. */
+  background: var(--blue-soft);
+  box-shadow: inset 4px 0 0 var(--blue);
 }
 .wh-funnel-n,
 .wh-funnel-label {
