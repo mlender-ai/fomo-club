@@ -89,6 +89,37 @@ export interface PositionPayload {
   takeProfit2Price: number | null;
   invalidationDistancePct: number | null;
   takeProfitDistancePct: number | null;
+  /** 진입 근거 — FCE 가 진입할 때 적은 주장들. FCE 순서 그대로, 칸은 이름으로 옮긴다. */
+  evidence: EvidenceItem[];
+}
+
+export interface EvidenceItem {
+  /** `level` · `mtf` · `wyckoff` · `liquidity` · `volume` · `structure` … */
+  engine: string;
+  claim: string;
+  confidence: number | null;
+  direction: string | null;
+}
+
+function evidenceOf(raw: unknown): EvidenceItem[] {
+  const items =
+    typeof raw === "object" && raw !== null && Array.isArray((raw as Record<string, unknown>).items)
+      ? ((raw as Record<string, unknown>).items as unknown[])
+      : Array.isArray(raw)
+        ? raw
+        : [];
+  return items.flatMap((it) => {
+    const r = typeof it === "object" && it !== null ? (it as Record<string, unknown>) : {};
+    if (typeof r.claim !== "string" || r.claim.length === 0) return [];
+    return [
+      {
+        engine: typeof r.engine === "string" ? r.engine : "",
+        claim: r.claim,
+        confidence: finite(r.confidence),
+        direction: typeof r.direction === "string" ? r.direction : null,
+      },
+    ];
+  });
 }
 
 /** UI-06 캔들 — `[t(초), o, h, l, c]`. 시세라 계좌 정보가 없다. */
@@ -160,6 +191,7 @@ export function positionFromOpenTrade(t: Record<string, unknown>): PositionPaylo
     takeProfit2Price: finite(t.take_profit_2_price),
     invalidationDistancePct: finite(monitor.invalidation_distance_pct),
     takeProfitDistancePct: finite(monitor.take_profit_distance_pct),
+    evidence: evidenceOf(t.entry_evidence),
   };
 }
 
@@ -346,6 +378,8 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
       takeProfit2Price: num(p.takeProfit2Price),
       invalidationDistancePct: num(p.invalidationDistancePct),
       takeProfitDistancePct: num(p.takeProfitDistancePct),
+      // 옛 업로더는 `evidence` 를 안 보낸다 — 빈 배열. 들어온 것은 같은 검사를 한 번 더 지난다.
+      evidence: evidenceOf(p.evidence),
     });
   }
 

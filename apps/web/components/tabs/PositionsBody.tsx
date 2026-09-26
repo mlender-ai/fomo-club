@@ -23,8 +23,8 @@ import Link from "next/link";
 import { PageFrame } from "../shell/PageFrame";
 import { useSyncHint } from "../shell/SyncProvider";
 import { ModeToggle, useViewMode } from "../shell/useViewMode";
-import { Card, Empty, HealthRing, Hero, Pill, PriceRail, kstStamp, money, pct, tone } from "../ui";
-import { sideLabel, stanceLabel } from "../../lib/lab/labels";
+import { Card, Empty, Glossed, HealthRing, Hero, Pill, PriceRail, kstStamp, money, pct, tone } from "../ui";
+import { claimText, sideLabel, stanceLabel } from "../../lib/lab/labels";
 import type { Wire } from "../../lib/lab/wire";
 
 type Positions = Wire<"positions">;
@@ -108,6 +108,11 @@ function PositionCard({ p, mode }: { p: PositionRow; mode: "minimal" | "pro" }) 
           {p.liquidationLevel ? <Pill tone="dn">청산 위험</Pill> : null}
           {mode === "pro" && stance ? <Pill tone={stance.tone}>{stance.label}</Pill> : null}
         </div>
+      ) : null}
+      {mode === "pro" && p.evidence[0] ? (
+        <p className="ps-card-why">
+          <Glossed text={claimText(p.evidence[0].claim)} />
+        </p>
       ) : null}
       {p.rail ? (
         <PriceRail

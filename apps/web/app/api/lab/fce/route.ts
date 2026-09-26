@@ -160,6 +160,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           takeProfit2Price: p.takeProfit2Price,
           invalidationDistancePct: p.invalidationDistancePct,
           takeProfitDistancePct: p.takeProfitDistancePct,
+          evidence: p.evidence as unknown as Prisma.InputJsonValue,
           asOf,
         })),
         skipDuplicates: true,

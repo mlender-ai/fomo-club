@@ -1912,3 +1912,41 @@ a.ui-research-link:hover {
 .ps-tf {
   margin-bottom: var(--s3);
 }
+
+/* 진입 근거 (UI-06) — 용어는 점선 밑줄 + 호버 설명 */
+.ui-term {
+  text-decoration: underline dotted var(--ink-3);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.ps-why {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ps-why > li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s3) var(--card-pad);
+  border-top: 1px solid var(--line);
+}
+.ps-why-claim {
+  font-size: var(--t-body);
+  min-width: 0;
+}
+.ps-why-meta {
+  flex: none;
+  font-size: var(--t-caption);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.ps-card-why {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

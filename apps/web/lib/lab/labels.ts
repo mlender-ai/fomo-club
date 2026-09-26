@@ -120,3 +120,74 @@ export function stanceLabel(stance: string | null, direction: string): { label: 
     (side === "long" && stance === "short_leaning") || (side === "short" && stance === "long_leaning");
   return { label, tone: against ? "warn" : stance === "conflicted" ? "warn" : "mute" };
 }
+
+// ── 진입 근거 (UI-06) ─────────────────────────────────────────────────────
+
+/** FCE 근거 엔진 → 사람 말. */
+const ENGINE: Record<string, string> = {
+  level: "가격대",
+  mtf: "상위 시간봉",
+  wyckoff: "와이코프",
+  liquidity: "유동성",
+  volume: "거래량",
+  structure: "구조",
+  harmonic: "하모닉",
+};
+
+export function engineLabel(engine: string): string {
+  return ENGINE[engine] ?? engine;
+}
+
+const TREND: Record<string, string> = {
+  bullish: "강세",
+  bearish: "약세",
+  neutral: "중립",
+  neutral_to_bullish: "중립→강세",
+  bearish_to_neutral: "약세→중립",
+  neutral_to_bearish: "중립→약세",
+  bullish_to_neutral: "강세→중립",
+};
+
+/**
+ * FCE 근거 문장을 화면 말로 — **뜻은 바꾸지 않는다.**
+ *
+ * - `2.12154456` 같은 긴 가격은 유효 숫자 5자리(가격 표기와 같다)
+ * - `neutral_to_bullish` 같은 코드는 한국어(UI-FIX A-4 — 코드는 화면에 안 나온다)
+ */
+export function claimText(claim: string): string {
+  return claim
+    .replace(/\b[a-z]+(?:_[a-z]+)+\b|\b(?:bullish|bearish|neutral)\b/g, (code) => TREND[code] ?? code.replace(/_/g, " "))
+    .replace(/\d+\.\d{5,}/g, (n) => {
+      const v = Number(n);
+      const digits = Math.max(0, 4 - Math.floor(Math.log10(Math.abs(v) || 1)));
+      return v.toFixed(Math.min(digits, 8)).replace(/\.?0+$/, "");
+    });
+}
+
+/**
+ * 패턴 용어 한 줄 설명 (UI-06 B-5 — "UTAD·Crab 같은 용어에 호버 설명을 붙인다").
+ *
+ * 근거 문장에 나오는 용어에만 붙는다. 판정이 아니라 **말뜻**이다.
+ */
+export const GLOSSARY: Record<string, string> = {
+  Spring: "와이코프 — 지지선을 잠깐 깨고 바로 되돌아오는 움직임. 매집 끝의 신호로 본다",
+  UTAD: "와이코프 — 저항선을 잠깐 뚫고 바로 되밀리는 움직임. 분산 끝의 신호로 본다",
+  "매집 국면": "와이코프 — 큰손이 조용히 사 모으는 구간으로 읽힌다",
+  "분산 국면": "와이코프 — 큰손이 조용히 파는 구간으로 읽힌다",
+  POC: "거래량이 가장 많이 쌓인 가격. 그 위에 있으면 상방, 아래면 하방으로 본다",
+  스윕: "직전 고점·저점을 살짝 넘겨 손절 물량을 쓸고 되돌아오는 움직임",
+  Crab: "하모닉 패턴 하나 — 되돌림 비율이 극단적인 반전 패턴",
+  하모닉: "피보나치 비율로 그리는 반전 패턴 묶음",
+  "체결 델타": "매수 체결량 − 매도 체결량",
+  "상위 TF": "상위 시간봉 — 이 포지션보다 긴 봉에서 본 추세",
+};
+
+/** 문장에서 용어를 찾아 `[글, 설명|null][]` 로 쪼갠다 — 화면이 설명 달린 조각만 `<abbr>` 로 감싼다. */
+export function withGlossary(text: string): [string, string | null][] {
+  const terms = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+  const re = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+  return text
+    .split(re)
+    .filter((part) => part.length > 0)
+    .map((part) => [part, GLOSSARY[part] ?? null]);
+}

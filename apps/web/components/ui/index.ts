@@ -12,6 +12,7 @@ export { CompareBar, type CompareItem } from "./CompareBar";
 export { DataTable, type Column } from "./DataTable";
 export { Delta } from "./Delta";
 export { Empty } from "./Empty";
+export { Glossed, termsIn } from "./Glossed";
 export { HealthRing, healthTone } from "./HealthRing";
 export { Hero } from "./Hero";
 export { Histogram, type Bin } from "./Histogram";
