@@ -25,7 +25,7 @@
  *   npm run lab:fce-upload -- --dry           # 올리지 않고 무엇을 올릴지만
  */
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { positionFromOpenTrade } from "../../apps/web/lib/lab/fce-payload";
 import type {
@@ -59,8 +59,17 @@ const EMIT = process.argv.find((a) => a.startsWith("--emit"));
 const EMIT_PATH = EMIT?.includes("=") ? EMIT.slice(EMIT.indexOf("=") + 1) : "/tmp/fce-payload.json";
 const WATCH = process.argv.includes("--watch");
 
+/**
+ * FCE 호출 하나의 제한. 60초였다.
+ *
+ * 2026-09-26 FCE 가 CPU 468% 로 과부하였을 때 `follow/eligibility` 하나가 **40초**, `paper/dashboard`
+ * 가 **20초** 걸렸다. 60초 제한에 일곱 개를 동시에 부르니 서로 CPU 를 뺏어 제한을 넘기고 업로드가
+ * 통째로 죽었다 — 06:07 부터 한 시간 넘게.
+ */
+const FCE_TIMEOUT_MS = 150_000;
+
 async function fce(path: string): Promise<unknown> {
-  const response = await fetch(`${FCE}${path}`, { signal: AbortSignal.timeout(60_000) });
+  const response = await fetch(`${FCE}${path}`, { signal: AbortSignal.timeout(FCE_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`${path} → ${response.status}`);
   return response.json();
 }
@@ -420,21 +429,58 @@ function lostDays(diagnosis: Record<string, unknown>): LostDayPayload[] {
 
 // ── 한 바퀴 ──────────────────────────────────────────────────────────────────
 
+/**
+ * 느리고 자주 안 바뀌는 보조 호출 — **1시간 캐시, 실패하면 직전 값** (UI-02 B-1).
+ *
+ * 지갑 자격(40초)과 관측 진단은 UI-02 B-1 이 "1시간" 주기로 정한 것들이다. 15분마다 부를 이유가
+ * 없고, 이 둘 중 하나가 늦는다고 트랙 자본·포지션까지 못 올라가면 안 된다. 업로더는 매번 새
+ * 프로세스로 뜨므로(러너가 부른다) 캐시는 파일에 둔다.
+ *
+ * 캐시도 없고 호출도 실패하면 빈 객체다 — 그 칸만 비고 나머지는 올라간다.
+ */
+const CACHE_DIR = process.env.FCE_CACHE_DIR ?? "/tmp/fce-upload-cache";
+const HOUR_MS = 60 * 60 * 1000;
+
+async function cachedFce(path: string, name: string): Promise<{ body: Record<string, unknown>; source: string }> {
+  const file = `${CACHE_DIR}/${name}.json`;
+  let cached: { at: number; body: Record<string, unknown> } | null = null;
+  try {
+    cached = JSON.parse(readFileSync(file, "utf8")) as { at: number; body: Record<string, unknown> };
+  } catch {
+    cached = null;
+  }
+  if (cached && Date.now() - cached.at < HOUR_MS) return { body: cached.body, source: "캐시" };
+  try {
+    const body = record(await fce(path));
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(file, JSON.stringify({ at: Date.now(), body }));
+    return { body, source: "새로" };
+  } catch (error) {
+    if (cached) return { body: cached.body, source: `캐시(${Math.round((Date.now() - cached.at) / 60_000)}분 전 · 새로 부르기 실패)` };
+    console.error(`  ⚠ ${path} 실패 — 이 칸만 비운다: ${error instanceof Error ? error.message : String(error)}`);
+    return { body: {}, source: "없음" };
+  }
+}
+
 async function collect(): Promise<FcePayload> {
   const at = new Date().toISOString();
-  const [paper, follow, eligibility, stock, poly, ledger, diagnosis] = await Promise.all([
-    fce("/api/paper/dashboard").then(record),
-    fce("/api/onchain/follow/trades").then(record),
-    fce("/api/onchain/follow/eligibility").then(record),
-    fce("/api/stock-paper/dashboard").then(record),
-    fce("/api/poly-paper/dashboard").then(record),
-    // 매번 전부 받는다. 148건이라 싸고, **증분으로 받으면 FCE 가 사후 정정한
-    // 비용이 랩에 반영되지 않는다.** 늘어나면 그때 자르면 된다.
-    fce("/api/paper/trades?limit=1000").then(record),
-    // 관측 유실일. 무거운 진단이라 실패해도 나머지는 올린다 — 띠가 없는 차트가
-    // 차트가 없는 것보다 낫다.
-    fce("/api/system/paper/diagnosis").then(record).catch(() => ({}) as Record<string, unknown>),
-  ]);
+  // **순서대로 부른다.** 전에는 일곱 개를 동시에 불렀다. FCE 가 과부하일 때 동시 호출은 서로
+  // CPU 를 뺏어 모두 늦어진다 — 하나씩 부르면 합이 ~70초이고 각각 제한 안에 들어온다.
+  // 핵심(자본·포지션·거래)을 먼저, 느린 보조(자격·진단)를 나중에.
+  const paper = record(await fce("/api/paper/dashboard"));
+  const stock = record(await fce("/api/stock-paper/dashboard"));
+  const poly = record(await fce("/api/poly-paper/dashboard"));
+  const follow = record(await fce("/api/onchain/follow/trades"));
+  // 매번 전부 받는다. 거래가 수백 건이라 싸고, **증분으로 받으면 FCE 가 사후 정정한
+  // 비용이 랩에 반영되지 않는다.** 늘어나면 그때 자르면 된다.
+  const ledger = record(await fce("/api/paper/trades?limit=1000"));
+  const eligibilityHit = await cachedFce("/api/onchain/follow/eligibility", "eligibility");
+  // 관측 유실일. 무거운 진단이라 실패해도 나머지는 올린다 — 띠가 없는 차트가
+  // 차트가 없는 것보다 낫다.
+  const diagnosisHit = await cachedFce("/api/system/paper/diagnosis", "diagnosis");
+  const eligibility = eligibilityHit.body;
+  const diagnosis = diagnosisHit.body;
+  console.log(`  지갑 자격 ${eligibilityHit.source} · 관측 진단 ${diagnosisHit.source}`);
 
   return {
     at,
