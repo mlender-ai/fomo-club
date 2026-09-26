@@ -28,6 +28,7 @@ import { buildOverview } from "./overview";
 import { buildPortfolio } from "./portfolio";
 import { buildCharts, buildPositions } from "./positions";
 import { buildStrategies } from "./strategies";
+import { buildWhales } from "./whales";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../prisma";
@@ -53,10 +54,11 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 7;
+export const SNAPSHOT_VERSION = 8;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
+// 8 — UI-07: 고래 조립본을 FCE 보드로(갭 · 반사실 · 지갑 · 깔때기 · 리더보드 · 24시간). 박아 둔 65.8% · 원인 표를 뺐다.
 // 7 — UI-06: 포지션 행에 `evidence`(진입 근거). v6 조립본에는 없어서 화면이 `evidence[0]` 에서 멈춘다.
 // 6 — UI-06: 포지션에 가격선·현재가·수량·비용 · 위험순 정렬 · 연구 · `charts` 조립본(캔들).
 // 5 — UI-05: 전략 행에 순위·샤프·평균 보유·분포·최근 거래·연구 · 우연 확률 · 폐기 보관함(`strategies.ts`).
@@ -75,28 +77,7 @@ export interface Snapshot<T = unknown> {
 }
 
 
-/**
- * 지연·드리프트 분포를 한 줄로. FCE 가 `{ median, p90, max }` 로 준다.
- * 값이 없으면 null — **지어내지 않는다.**
- */
-function describeDist(box: Record<string, unknown> | null, unit: string, short = false): string | null {
-  if (!box) return null;
-  const pick = (k: string) => (typeof box[k] === "number" ? Math.round((box[k] as number) * 100) / 100 : null);
-  const med = pick("median");
-  const p90 = pick("p90");
-  const max = pick("max");
-  if (med === null && p90 === null && max === null) return null;
-  const parts = [
-    med !== null ? `중앙값 ${med}${unit}` : null,
-    p90 !== null ? `p90 ${p90}${unit}` : null,
-    // 행 부제는 한 줄이다(UI-FIX A-2) — 최대값은 ⓘ 쪽(`detail`)에만.
-    max !== null && !short ? `최대 ${max}${unit}` : null,
-  ].filter(Boolean);
-  return parts.join(" · ");
-}
 
-/** FCE 온체인 리포트가 낸 값. 랩이 계산하지 않는다. */
-const WHALE_OWN_WIN_PCT = 65.8;
 
 /**
  * 여섯 탭의 조립본을 **읽어서 만든다.** 쓰지는 않는다.
@@ -247,58 +228,11 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
   });
   const charts = buildCharts(chartRows);
 
-  const whales = board.whale
-    ? {
-        whale: board.whale,
-        winRates: {
-          whaleOwn: {
-            value: WHALE_OWN_WIN_PCT,
-            measures: "그 지갑의 온체인 체결 전부 — 고래의 자본·판단·출구",
-          },
-          ourFollow: {
-            value: board.whale.followWinPct,
-            trades: board.whale.followTrades,
-            measures: "우리가 따라 들어간 거래 — 우리 사이징·우리 출구",
-          },
-          /** **빼면 안 된다.** 화면이 이 값을 보고 뺄셈을 막는다. */
-          subtractable: false as const,
-          // 숫자를 박아두지 않는다 — 박아둔 33.4%p 가 추종 승률이 바뀐 뒤에도 남아 있었다.
-          note: "다른 모집단이다. 이 차이는 한 축의 갭이 아니라 서로 다른 질문의 답 두 개다.",
-        },
-        // `short` 는 행 오른쪽 한 단어(UI-FIX C-6). 긴 판정은 ⓘ 가 연다.
-        causes: [
-          {
-            axis: "청산 규칙",
-            measured: "고래 청산 따랐다면 −49.58 (75건)" as string | null,
-            detail: "고래 청산을 그대로 따랐다면 −49.58 USDT (75건)" as string | null,
-            verdict: "원인 아님 — 따라가면 더 나빴다",
-            short: "원인 아님",
-          },
-          {
-            axis: "진입 지연",
-            measured: describeDist(board.whale.latency, "분", true),
-            detail: describeDist(board.whale.latency, "분"),
-            verdict: "중앙값이 1분 안 — 약한 후보",
-            short: "약한 후보",
-          },
-          {
-            axis: "진입 가격 드리프트",
-            measured: describeDist(board.whale.drift, "%", true),
-            detail: describeDist(board.whale.drift, "%"),
-            verdict: "손절폭 대비. p90 구간을 따로 볼 것",
-            short: "p90 확인",
-          },
-          { axis: "사이징", measured: null, detail: null, verdict: "미측정", short: "미측정" },
-          {
-            axis: "지갑 선정",
-            measured: null,
-            detail: null,
-            verdict: "미측정 — 리더보드에 재료 있음",
-            short: "미측정",
-          },
-        ],
-      }
-    : { whale: null, winRates: null, causes: [] };
+  const whales = buildWhales({
+    whale: board.whale,
+    research,
+    followAvgHoldHours: strategies.rows.find((r) => r.key === "whale")?.avgHoldHours ?? null,
+  });
 
   const researchPayload = {
     items: research,

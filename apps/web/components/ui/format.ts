@@ -133,3 +133,14 @@ export function price(value: number | null | undefined): string {
   const digits = abs >= 1000 ? 2 : Math.max(0, 4 - Math.floor(Math.log10(abs || 1)));
   return swapMinus(value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: Math.min(digits, 8) }));
 }
+
+/** 큰 달러 — `$671,918` → `$672K` · `$89,354,480` → `$89.4M`. 고래 명목가처럼 자릿수가 의미 없는 곳에. */
+export function usdCompact(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  const sign = value < 0 ? MINUS : "";
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
+  if (abs >= 1e3) return `${sign}$${Math.round(abs / 1e3)}K`;
+  return `${sign}$${Math.round(abs)}`;
+}

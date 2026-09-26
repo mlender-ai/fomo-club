@@ -35,6 +35,8 @@ const TABS = [
   { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail" },
   // 폰 기본은 미니멀이다(UI-06 D) — 차트·정보까지 보려면 프로로 한 장 더.
   { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail-pro", mode: "pro" },
+  // UI-07 D — 추적 지갑 상세. 열쇠는 주소 앞 6 · 뒤 4.
+  { path: `/whales/${fixtures().whales.board?.wallets[0]?.key ?? ""}`, key: "whales", name: "whale-wallet" },
 ] as const;
 
 async function main(): Promise<void> {
@@ -54,7 +56,11 @@ async function main(): Promise<void> {
       return route.fulfill({ json: { sync, collect: { staleSymbols: [], feedAgeMs: 60_000, failing: [] }, ms: 1 } });
     }
     // 포지션 상세(UI-06) — `positions/{id}` 는 상세 견본으로.
-    const payload = key.startsWith("positions/") ? data.positionDetail : (data as Record<string, unknown>)[key];
+    const payload = key.startsWith("positions/")
+      ? data.positionDetail
+      : key.startsWith("whales/")
+        ? data.whales
+        : (data as Record<string, unknown>)[key];
     if (payload === undefined) return route.fulfill({ status: 404, json: { error: "not_found" } });
     return route.fulfill({ json: { data: payload, sync, builtAt: new Date().toISOString(), ms: 1 } });
   });

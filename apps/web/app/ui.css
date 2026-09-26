@@ -1950,3 +1950,114 @@ a.ui-research-link:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ══ 고래 (UI-07) ═════════════════════════════════════════════════════════ */
+
+/* 반사실 */
+.wh-counter {
+  padding: var(--card-pad);
+  border-top: 1px solid var(--line);
+}
+.wh-counter-title {
+  margin: 0 0 var(--s2);
+  font-size: var(--t-label);
+  color: var(--ink-3);
+}
+.wh-counter-body {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s4);
+  font-size: var(--t-h2);
+  font-weight: var(--w-semibold);
+}
+.wh-counter-vs {
+  font-size: var(--t-label);
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+}
+.wh-counter-vs .is-dn {
+  color: var(--dn);
+}
+.wh-counter-vs .is-up {
+  color: var(--up);
+}
+
+/* 깔때기 — 가로 막대가 줄어든다 (PART E) */
+.wh-funnel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.wh-funnel-cut {
+  display: block;
+  margin: 0 0 var(--s1) var(--s2);
+  font-size: var(--t-caption);
+  color: var(--dn);
+}
+.wh-funnel-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 32px;
+}
+.wh-funnel-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--r-row);
+  background: var(--blue-soft);
+}
+.wh-funnel li:last-child .wh-funnel-bar {
+  background: var(--blue);
+}
+.wh-funnel-n,
+.wh-funnel-label {
+  position: relative;
+  padding-left: var(--s3);
+  font-variant-numeric: tabular-nums;
+}
+.wh-funnel-n {
+  font-size: var(--t-h3);
+  font-weight: var(--w-semibold);
+  min-width: 36px;
+}
+.wh-funnel-label {
+  font-size: var(--t-label);
+  color: var(--ink-2);
+}
+.wh-funnel li:last-child .wh-funnel-n {
+  color: var(--blue);
+}
+
+/* 확인 중인 가설 */
+.wh-hyps {
+  padding: var(--s3) var(--card-pad) var(--card-pad);
+  border-top: 1px solid var(--line);
+}
+.wh-hyps-title {
+  margin: 0 0 var(--s2);
+  font-size: var(--t-caption);
+  color: var(--ink-3);
+}
+.wh-hyps ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.wh-hyps li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-label);
+}

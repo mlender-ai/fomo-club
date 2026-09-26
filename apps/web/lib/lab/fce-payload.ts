@@ -252,6 +252,91 @@ export interface WhalePayload {
   latency: Record<string, unknown> | null;
   drift: Record<string, unknown> | null;
   asOf: string;
+  /** UI-07 — 갭 · 반사실 · 추적 지갑 · 깔때기 · 리더보드 · 24시간 관측. 전부 FCE 값. */
+  board?: WhaleBoard | null;
+}
+
+/** 지갑 주소 **전체**. 이게 들어오면 업로드를 거절한다(UI-07 하지 말 것 — 앞뒤만). */
+export const FULL_ADDRESS = /0x[0-9a-fA-F]{40}/;
+
+/** `0x020ca66c…a35872` → `0x020c…5872`. 화면·DB 어디에도 전체 주소를 두지 않는다. */
+export function shortAddress(address: string): string {
+  return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+}
+
+/** 지갑 상세 경로의 열쇠 — 앞 6 · 뒤 4 를 붙인 것(`0x020c5872`). 전체 주소가 URL 에 서지 않는다. */
+export function walletKey(address: string): string {
+  return address.length > 12 ? `${address.slice(0, 6)}${address.slice(-4)}`.toLowerCase() : address.toLowerCase();
+}
+
+export interface WhaleBoard {
+  /** FCE `follow_track.exit_comparison.gap` — 고래 승률 · 추종 승률 · 가설. */
+  gap: {
+    whaleWinPct: number | null;
+    followWinPct: number | null;
+    gapPp: number | null;
+    sampleNote: string | null;
+    notCausal: string | null;
+    hypotheses: { id: string; label: string; consistent: boolean | null; note: string }[];
+  } | null;
+  /** FCE `exit_comparison.overall` · `verdict` — 출구 A(우리 규칙) 대 출구 B(고래 청산, 반사실). */
+  exit: {
+    count: number | null;
+    oursNet: number | null;
+    whaleNet: number | null;
+    oursWinPct: number | null;
+    whaleWinPct: number | null;
+    oursPf: number | null;
+    whalePf: number | null;
+    verdict: string | null;
+    reason: string | null;
+    caveat: string | null;
+    holdOursMedianH: number | null;
+    holdWhaleMedianH: number | null;
+    oursFirst: number | null;
+    whaleFirst: number | null;
+  } | null;
+  wallets: {
+    key: string;
+    short: string;
+    label: string;
+    type: string | null;
+    sampleSize: number | null;
+    winPct: number | null;
+    ciLow: number | null;
+    follow: { entries: number | null; closed: number | null; wins: number | null; winPct: number | null; pf: number | null; netUsdt: number | null } | null;
+    positions: { coin: string; side: string; sizeUsd: number | null; leverage: number | null; entryPx: number | null; markPx: number | null; unrealizedUsd: number | null }[];
+    events: { coin: string; side: string; event: string; sizeUsd: number | null; at: string | null }[];
+    lastFillAt: string | null;
+  }[];
+  funnel: {
+    population: number;
+    populationNote: string | null;
+    excludedType: number;
+    excludedByType: Record<string, number>;
+    sampleBelow: number;
+    winBelow: number;
+    eligible: number;
+    minSample: number | null;
+    minWinPct: number | null;
+  } | null;
+  leaderboard: {
+    tracked: number;
+    minSample: number;
+    scoredWallets: number;
+    closedSamples: number;
+    overallWinPct: number | null;
+    walletMedianWinPct: number | null;
+  } | null;
+  observation: {
+    hours: number;
+    bursts: number;
+    wallets: number;
+    fills: number;
+    maxNotionalUsd: number;
+    maxSample: number | null;
+    demoted: boolean;
+  } | null;
 }
 
 export interface FcePayload {
@@ -455,7 +540,8 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
         walletsTotal: w.walletsTotal,
         eligible: w.eligible,
         rejected: (w.rejected as Record<string, number>) ?? {},
-        passers: Array.isArray(w.passers) ? (w.passers as string[]) : [],
+        // 옛 업로더는 전체 주소를 보냈다 — 여기서 줄인다.
+        passers: Array.isArray(w.passers) ? (w.passers as string[]).map((a) => shortAddress(String(a))) : [],
         followWinPct: num(w.followWinPct),
         followTrades: num(w.followTrades),
         followPf: num(w.followPf),
@@ -463,7 +549,12 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
         latency: (w.latency as Record<string, unknown>) ?? null,
         drift: (w.drift as Record<string, unknown>) ?? null,
         asOf: typeof w.asOf === "string" ? w.asOf : (body.at as string),
+        board: w.board && typeof w.board === "object" ? (w.board as WhaleBoard) : null,
       };
+      // **전체 주소가 하나라도 있으면 받지 않는다.** 조용히 지우지 않는다 — 지우면 다음에 또 온다.
+      if (FULL_ADDRESS.test(JSON.stringify(whale.board ?? {}))) {
+        problems.push({ path: "whale.board", message: "지갑 주소 전체가 들어 있다 — 앞 6 · 뒤 4 만 보낸다" });
+      }
     } else {
       problems.push({ path: "whale", message: "walletsTotal · eligible 이 필요하다" });
     }

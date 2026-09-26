@@ -26,8 +26,9 @@
  */
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-import { CHART_TIMEFRAMES, positionFromOpenTrade } from "../../apps/web/lib/lab/fce-payload";
+import { CHART_TIMEFRAMES, positionFromOpenTrade, shortAddress, walletKey } from "../../apps/web/lib/lab/fce-payload";
 import type {
   ChartPayload,
   ChartTimeframe,
@@ -37,6 +38,7 @@ import type {
   TradePayload,
   TrackPayload,
   TrackStatus,
+  WhaleBoard,
   WhalePayload,
 } from "../../apps/web/lib/lab/fce-payload";
 
@@ -359,11 +361,166 @@ async function charts(symbols: string[]): Promise<ChartPayload[]> {
   return out;
 }
 
+// ── 고래 보드 (UI-07) ───────────────────────────────────────────────────────
+//
+// **주소는 여기서 줄인다.** FCE 는 전체 주소를 준다 — 이 함수 밖으로는 `0x020c…5872` 만 나간다.
+// 받는 쪽(`checkPayload`)도 전체 주소가 보이면 업로드를 거절한다.
+
+const FCE_BACKEND = process.env.FCE_BACKEND_DIR ?? "/Users/cocteau/Documents/Fomo club engine/backend";
+const FCE_PYTHON = process.env.FCE_PYTHON ?? "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3";
+// 러너는 레포 루트에서 이 업로더를 띄운다.
+const WHALE_REPORT = process.env.FCE_WHALE_REPORT ?? join(process.cwd(), "scripts/lab/fce-whale-report.py");
+
+/** 리더보드 · 24시간 관측 — FCE 자신의 함수를 읽기 전용으로(`fce-whale-report.py`). */
+function whaleReport(): { leaderboard: WhaleBoard["leaderboard"]; observation: WhaleBoard["observation"] } {
+  try {
+    const out = execFileSync(FCE_PYTHON, [WHALE_REPORT], {
+      cwd: FCE_BACKEND,
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    const body = record(JSON.parse(out));
+    return {
+      leaderboard: body.leaderboard ? (body.leaderboard as WhaleBoard["leaderboard"]) : null,
+      observation: body.observation ? (body.observation as WhaleBoard["observation"]) : null,
+    };
+  } catch (error) {
+    console.log(`  고래 리포트 못 읽음 — ${error instanceof Error ? error.message.slice(0, 120) : error}`);
+    return { leaderboard: null, observation: null };
+  }
+}
+
+function whaleBoard(whales: Record<string, unknown>, eligibility: Record<string, unknown>): WhaleBoard {
+  const track = record(whales.follow_track);
+  const cmp = record(track.exit_comparison);
+  const overall = record(cmp.overall);
+  const verdict = record(cmp.verdict);
+  const hold = record(cmp.hold_hours);
+  const lead = record(cmp.lead_breakdown);
+  const gap = record(cmp.gap);
+  const funnel = record(eligibility.funnel);
+  const rejected = record(funnel.rejected);
+  const criteria = record(funnel.criteria);
+
+  const followBy = new Map(
+    (Array.isArray(track.whales) ? track.whales : []).map((w) => [String(record(w).address ?? "").toLowerCase(), record(w)])
+  );
+  const tracked = new Map(
+    (Array.isArray(whales.wallets) ? whales.wallets : []).map((w) => [String(record(w).address ?? "").toLowerCase(), record(w)])
+  );
+  const events = Array.isArray(whales.recent_events) ? whales.recent_events.map(record) : [];
+  const passers = Array.isArray(eligibility.passers) ? eligibility.passers.map(record) : [];
+
+  const wallets: WhaleBoard["wallets"] = passers.map((p) => {
+    const address = String(p.address ?? "");
+    const lower = address.toLowerCase();
+    const t = tracked.get(lower) ?? {};
+    const f = followBy.get(lower);
+    const rank = num(record(record(t.payload).discovery).leaderboard_rank);
+    return {
+      key: walletKey(address),
+      short: shortAddress(address),
+      // 표시 이름 대신 리더보드 순위 — 이름은 FCE 도 "별칭" 이라고 적는다(`alias_disclaimer`).
+      label: rank !== null ? `리더보드 #${rank}` : "리더보드 밖",
+      type: typeof p.participant_type === "string" ? p.participant_type : null,
+      sampleSize: num(p.sample_size),
+      winPct: num(p.win_pct),
+      ciLow: num(p.ci_low),
+      follow: f
+        ? {
+            entries: num(f.entries),
+            closed: num(f.closed),
+            wins: num(f.wins),
+            winPct: num(f.follow_win_pct),
+            pf: num(f.profit_factor),
+            netUsdt: num(f.net_usdt),
+          }
+        : null,
+      positions: (Array.isArray(t.positions) ? t.positions : []).map(record).map((x) => ({
+        coin: String(x.coin ?? ""),
+        side: String(x.side ?? ""),
+        sizeUsd: num(x.size_usd),
+        leverage: num(record(x.leverage).value),
+        entryPx: num(x.entry_px),
+        markPx: num(x.mark_px),
+        unrealizedUsd: num(x.unrealized_pnl),
+      })),
+      events: events
+        .filter((e) => String(e.wallet_address ?? "").toLowerCase() === lower)
+        .map((e) => ({
+          coin: String(e.coin ?? ""),
+          side: String(e.side ?? ""),
+          event: String(e.event ?? ""),
+          sizeUsd: num(e.size_usd),
+          at: typeof e.event_at === "string" ? e.event_at : null,
+        })),
+      lastFillAt: typeof t.last_fill_at === "string" ? t.last_fill_at : null,
+    };
+  });
+
+  const report = whaleReport();
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+  return {
+    gap: Object.keys(gap).length
+      ? {
+          whaleWinPct: num(gap.whale_win_pct),
+          followWinPct: num(gap.follow_win_pct),
+          gapPp: num(gap.gap_pp),
+          sampleNote: str(gap.sample_note),
+          notCausal: str(gap.not_causal),
+          hypotheses: (Array.isArray(gap.hypotheses) ? gap.hypotheses : []).map(record).map((h) => ({
+            id: String(h.id ?? ""),
+            label: String(h.label ?? ""),
+            consistent: typeof h.consistent === "boolean" ? h.consistent : null,
+            note: String(h.note ?? ""),
+          })),
+        }
+      : null,
+    exit: Object.keys(overall).length
+      ? {
+          count: num(overall.count),
+          oursNet: num(overall.a_net),
+          whaleNet: num(overall.b_net),
+          oursWinPct: num(overall.a_win_pct),
+          whaleWinPct: num(overall.b_win_pct),
+          oursPf: num(overall.a_profit_factor),
+          whalePf: num(overall.b_profit_factor),
+          verdict: str(verdict.verdict),
+          reason: str(verdict.reason),
+          caveat: str(verdict.caveat),
+          holdOursMedianH: num(hold.a_median),
+          holdWhaleMedianH: num(hold.b_median),
+          oursFirst: num(lead.ours_first),
+          whaleFirst: num(lead.whale_first),
+        }
+      : null,
+    wallets,
+    funnel: Object.keys(funnel).length
+      ? {
+          population: num(funnel.population) ?? 0,
+          populationNote: str(funnel.population_note),
+          excludedType: num(rejected.excluded_type) ?? 0,
+          excludedByType: Object.fromEntries(
+            Object.entries(record(funnel.excluded_by_type)).filter(([, v]) => typeof v === "number")
+          ) as Record<string, number>,
+          sampleBelow: num(rejected.sample_below_min) ?? 0,
+          winBelow: num(rejected.win_rate_below_min) ?? 0,
+          eligible: num(funnel.eligible) ?? 0,
+          minSample: num(criteria.min_sample),
+          minWinPct: num(criteria.min_win_pct),
+        }
+      : null,
+    leaderboard: report.leaderboard,
+    observation: report.observation,
+  };
+}
+
 /** 고래 분석 — 자격 심사 + 추종 성적 + 지연·드리프트. */
 function whale(
   eligibility: Record<string, unknown>,
   follow: Record<string, unknown>,
-  asOf: string
+  asOf: string,
+  whales: Record<string, unknown> = {}
 ): WhalePayload {
   const bucket = record(record(record(follow.performance).buckets).follow);
   // 탈락 사유는 `funnel.rejected` 안에만 있다. 퍼널 전체를 훑으면
@@ -378,8 +535,9 @@ function whale(
     walletsTotal: num(eligibility.wallets) ?? 0,
     eligible: num(eligibility.eligible) ?? 0,
     rejected,
+    // 전체 주소를 내보내지 않는다(UI-07) — 앞 6 · 뒤 4.
     passers: Array.isArray(eligibility.eligible_addresses)
-      ? (eligibility.eligible_addresses as unknown[]).map(String)
+      ? (eligibility.eligible_addresses as unknown[]).map((a) => shortAddress(String(a)))
       : [],
     followWinPct: num(bucket.win_pct),
     followTrades: num(bucket.closed),
@@ -388,6 +546,7 @@ function whale(
     latency: record(bucket.latency),
     drift: record(bucket.drift),
     asOf,
+    board: Object.keys(whales).length > 0 ? whaleBoard(whales, eligibility) : null,
   };
 }
 
@@ -518,6 +677,8 @@ async function collect(): Promise<FcePayload> {
   // 차트가 없는 것보다 낫다.
   const diagnosisHit = await cachedFce("/api/system/paper/diagnosis", "diagnosis");
   const eligibility = eligibilityHit.body;
+  // 추적군 · 추종 대조(UI-07). 7초 남짓 — 무거운 둘처럼 캐시하지는 않는다(지갑 포지션이 30초마다 바뀐다).
+  const whalesBody = record(await fce("/api/onchain/whales").catch(() => ({})));
   const diagnosis = diagnosisHit.body;
   console.log(`  지갑 자격 ${eligibilityHit.source} · 관측 진단 ${diagnosisHit.source}`);
 
@@ -539,7 +700,7 @@ async function collect(): Promise<FcePayload> {
       ...trades(follow, "whale", (t) => record(t.entry_evidence).qualification === "follow"),
     ],
     lostDays: lostDays(diagnosis),
-    whale: whale(eligibility, follow, at),
+    whale: whale(eligibility, follow, at, whalesBody),
   };
 }
 
