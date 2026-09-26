@@ -118,7 +118,9 @@ function RaceCard({ data }: { data: Strategies }) {
     })),
     ...rest.map((r) => {
       const note = r.reason || (r.status === "running" ? "잴 거래 없음" : "");
-      return { label: r.label, value: null, display: trackStatus(r.status).label, ...(note ? { note } : {}) };
+      // 돌고 있는데 잴 거래가 없으면 `—`. `운용중` 은 띄우지 않는다(UI-FIX C-2 — 비정상만 글자로).
+      const display = r.status === "running" ? "—" : trackStatus(r.status).label;
+      return { label: r.label, value: null, display, ...(note ? { note } : {}) };
     }),
   ];
 
