@@ -371,8 +371,14 @@ const FCE_PYTHON = process.env.FCE_PYTHON ?? "/Library/Frameworks/Python.framewo
 // 러너는 레포 루트에서 이 업로더를 띄운다.
 const WHALE_REPORT = process.env.FCE_WHALE_REPORT ?? join(process.cwd(), "scripts/lab/fce-whale-report.py");
 
-/** 리더보드 · 24시간 관측 — FCE 자신의 함수를 읽기 전용으로(`fce-whale-report.py`). */
+/**
+ * 리더보드 · 24시간 관측 — FCE 자신의 함수를 읽기 전용으로(`fce-whale-report.py`).
+ *
+ * 실패하면 **마지막 성공(2시간 안)** 을 쓴다 — 다른 느린 FCE 읽기와 같다. 러너 로그는 업로더의 마지막
+ * 줄만 남겨서, 첫 배포 때 이 칸이 왜 비었는지 안 보였다. 그래서 이유를 파일에도 적는다(`whale-report.err`).
+ */
 function whaleReport(): { leaderboard: WhaleBoard["leaderboard"]; observation: WhaleBoard["observation"] } {
+  const cache = join(CACHE_DIR, "whale-report.json");
   try {
     const out = execFileSync(FCE_PYTHON, [WHALE_REPORT], {
       cwd: FCE_BACKEND,
@@ -380,12 +386,32 @@ function whaleReport(): { leaderboard: WhaleBoard["leaderboard"]; observation: W
       timeout: 120_000,
     });
     const body = record(JSON.parse(out));
-    return {
+    const hit = {
       leaderboard: body.leaderboard ? (body.leaderboard as WhaleBoard["leaderboard"]) : null,
       observation: body.observation ? (body.observation as WhaleBoard["observation"]) : null,
     };
+    if (hit.leaderboard || hit.observation) {
+      mkdirSync(CACHE_DIR, { recursive: true });
+      writeFileSync(cache, JSON.stringify({ at: Date.now(), ...hit }));
+    }
+    const partial = [body.leaderboardError, body.observationError].filter(Boolean).join(" | ");
+    if (partial) writeFileSync(join(CACHE_DIR, "whale-report.err"), `${new Date().toISOString()} ${partial}\n`);
+    return hit;
   } catch (error) {
-    console.log(`  고래 리포트 못 읽음 — ${error instanceof Error ? error.message.slice(0, 120) : error}`);
+    const message = error instanceof Error ? error.message.slice(0, 600) : String(error);
+    try {
+      mkdirSync(CACHE_DIR, { recursive: true });
+      writeFileSync(join(CACHE_DIR, "whale-report.err"), `${new Date().toISOString()} ${message}\n`);
+    } catch {
+      // 적을 곳도 없다 — 콘솔만.
+    }
+    console.log(`  고래 리포트 못 읽음 — ${message.slice(0, 120)}`);
+    try {
+      const saved = JSON.parse(readFileSync(cache, "utf8")) as { at: number } & ReturnType<typeof whaleReport>;
+      if (Date.now() - saved.at < 2 * HOUR_MS) return { leaderboard: saved.leaderboard, observation: saved.observation };
+    } catch {
+      // 캐시 없음.
+    }
     return { leaderboard: null, observation: null };
   }
 }
