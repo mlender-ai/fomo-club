@@ -58,3 +58,16 @@ UI-FIX A-4 가 `모집단` 을 내부 용어로 막았지만 UI-07 이 두 문�
 | 8 | 리더보드 모집단 주석 | ✅ |
 | 9 | 실제 FCE 데이터 | ✅ |
 | 10 | 30초 갱신 | ⚠️ 화면은 30초마다 다시 읽는다 · 값은 업로드(15분)마다 |
+
+## 러너에서 리더보드 · 24시간이 비는 이유 (2026-09-26 15:05 UTC 확인)
+
+러너 안에서 FCE 파이썬이 `PermissionError: [Errno 1] Operation not permitted` 로 멈춘다(`/tmp/fce-upload-cache/whale-report.err`).
+같은 명령이 셸에서는 된다. 지금 러너는 Claude 세션 안에서 띄운 프로세스라 **샌드박스가 `~/Documents` 아래 FCE 파일 읽기를 막는다.**
+
+| | |
+|---|---|
+| 지금 | 마지막 성공(2시간 안) 캐시로 채운다 — 정규 도메인에 나와 있다 |
+| 2시간 뒤 | 캐시가 낡으면 두 칸이 다시 빈다 |
+| 고치는 법 | 러너를 세션 밖에서 다시 띄운다 — `scripts/lab/launchd/install.sh` (광혁 Mac) |
+
+캡처: `docs/ui/screenshots/ui07-prod-*.png`.
