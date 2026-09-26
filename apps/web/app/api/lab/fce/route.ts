@@ -343,7 +343,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // **여섯 탭을 통째로 조립해 둔다**(UI-02 F-1). 화면 요청은 이걸 한 줄 읽는다 —
     // 원격 DB 왕복이 ~900ms 라서 쿼리 수가 곧 응답 시간이다.
-    const built = await buildSnapshots();
+    // 이 업로드의 시각을 넘긴다 — 업로드 기록은 아래에서 남기므로 DB 는 아직 한 번 전 것을 안다.
+    const built = await buildSnapshots({ justUploadedAt: new Date() });
 
     await prisma.fceUpload.create({
       data: {

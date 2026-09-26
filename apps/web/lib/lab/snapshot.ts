@@ -104,7 +104,12 @@ const WHALE_OWN_WIN_PCT = 65.8;
  * 쓰기와 가른 이유는 타입이다 — 화면이 같은 모양을 보게 `Payloads` 를 여기서
  * 뽑아 내보낸다. 서버가 한 칸을 바꾸면 화면 쪽 타입이 같이 깨진다.
  */
-export async function assemblePayloads() {
+/**
+ * `justUploadedAt` — 지금 막 끝난 업로드의 시각. 업로드 경로는 조립본을 만든 **뒤에** 업로드 기록을 남겨서
+ * (조립이 실패하면 실패로 적으려고), DB 의 마지막 성공은 한 번 전 것이다. 넘기지 않으면 조립본이 말하는
+ * "마지막 동기화" 가 15분씩 늦었다 — 헤더는 `1분 전`, 포지션 부제는 `20:48`(실제 21:05).
+ */
+export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) {
   const [board, ledger, research, lastOk, lastFail] = await Promise.all([
     readFceBoard(),
     readFceLedger(),
@@ -182,8 +187,10 @@ export async function assemblePayloads() {
     select: { at: true, close: true },
   });
 
+  const lastAt =
+    options.justUploadedAt && (!lastOk || options.justUploadedAt > lastOk.at) ? options.justUploadedAt : (lastOk?.at ?? null);
   const sync: SyncSeed = {
-    lastAt: lastOk?.at.toISOString() ?? null,
+    lastAt: lastAt?.toISOString() ?? null,
     lastError: lastFail?.error ? { at: lastFail.at.toISOString(), error: lastFail.error } : null,
   };
 
@@ -236,7 +243,7 @@ export async function assemblePayloads() {
     positions: board.positions,
     trackLabels: Object.fromEntries(board.tracks.map((t) => [t.key, t.label])),
     research,
-    lastAt: lastOk?.at ?? null,
+    lastAt,
   });
   const charts = buildCharts(chartRows);
 
@@ -329,8 +336,8 @@ export type Payloads = Awaited<ReturnType<typeof assemblePayloads>>["payloads"];
  * 읽기는 여기서 실컷 한다 — 이 함수는 15분에 한 번 도는 쓰기 경로에 있고,
  * 화면 요청 경로에 있지 않다.
  */
-export async function buildSnapshots(): Promise<SnapshotKey[]> {
-  const { payloads, sync } = await assemblePayloads();
+export async function buildSnapshots(options: { justUploadedAt?: Date } = {}): Promise<SnapshotKey[]> {
+  const { payloads, sync } = await assemblePayloads(options);
   const keys = Object.keys(payloads) as SnapshotKey[];
 
   // **여섯 개를 한 문장으로 쓴다.** `upsert` 여섯 번이면 왕복이 여섯 번이고,
