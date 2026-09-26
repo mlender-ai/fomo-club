@@ -20,7 +20,7 @@ import type { Wire } from "../../../lib/lab/wire";
 type Positions = Wire<"positions">;
 
 export default function PositionsPage() {
-  const { state, retry } = useLab<Positions>("/api/lab/positions");
+  const { state, retry } = useLab<Positions>("/api/lab/positions", 30_000);
   return (
     <LabView
       state={state}

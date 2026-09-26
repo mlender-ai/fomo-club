@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 
 import { JournalBody } from "../components/tabs/JournalBody";
 import { OverviewBody } from "../components/tabs/OverviewBody";
+import { PositionDetailBody } from "../components/tabs/PositionDetailBody";
 import { PositionsBody } from "../components/tabs/PositionsBody";
 import { ResearchBody } from "../components/tabs/ResearchBody";
 import { StrategiesBody } from "../components/tabs/StrategiesBody";
@@ -56,6 +57,7 @@ const TABS: [string, ComponentType<{ data: never }>, unknown][] = [
   ["복기", JournalBody as ComponentType<{ data: never }>, data.journal],
   ["전략 상세 · 크립토", detail("crypto"), data.strategies],
   ["전략 상세 · 주식 US", detail("stock_us"), data.strategies],
+  ["포지션 상세", PositionDetailBody as ComponentType<{ data: never }>, data.positionDetail],
 ];
 
 // ── HTML 에서 글자 꺼내기 ─────────────────────────────────────────────────

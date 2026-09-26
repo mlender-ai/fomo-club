@@ -147,9 +147,36 @@ export async function POST(request: Request): Promise<NextResponse> {
           healthScore: p.healthScore,
           entryAt: p.entryAt ? new Date(p.entryAt) : null,
           entryPrice: p.entryPrice,
+          markPrice: p.markPrice,
+          quantity: p.quantity,
+          notionalUsdt: p.notionalUsdt,
+          costsUsdt: p.costsUsdt,
+          unrealizedUsdt: p.unrealizedUsdt,
+          timeframe: p.timeframe,
+          stance: p.stance,
+          invalidationPrice: p.invalidationPrice,
+          stopPrice: p.stopPrice,
+          takeProfitPrice: p.takeProfitPrice,
+          takeProfit2Price: p.takeProfit2Price,
+          invalidationDistancePct: p.invalidationDistancePct,
+          takeProfitDistancePct: p.takeProfitDistancePct,
           asOf,
         })),
         skipDuplicates: true,
+      });
+    }
+
+    // 캔들(UI-06) — 통째로 갈아 끼운다. **옛 업로더는 `charts` 를 안 보낸다** — 그때 지우면 차트가
+    // 업로드마다 사라진다. 보낸 것이 있을 때만 바꾼다.
+    if (payload.charts.length > 0) {
+      await prisma.fcePositionChart.deleteMany({});
+      await prisma.fcePositionChart.createMany({
+        data: payload.charts.map((c) => ({
+          symbol: c.symbol,
+          timeframe: c.timeframe,
+          candles: c.candles as unknown as Prisma.InputJsonValue,
+          asOf,
+        })),
       });
     }
 

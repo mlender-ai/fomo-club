@@ -34,9 +34,40 @@ export type LabState<T> =
   | { kind: "error"; message: string }
   | { kind: "ready"; data: T; builtAt: string; sync: WireSync; ms: number };
 
-export function useLab<T>(path: string): { state: LabState<T>; retry: () => void } {
+/**
+ * `refreshMs` — 이 간격으로 **조용히** 다시 부른다(UI-06 — 포지션 30초 갱신). 다시 부르는 동안
+ * 스켈레톤을 띄우지 않고 지금 화면을 둔다. 실패해도 지금 화면을 지우지 않는다 — 다음 차례에 또 부른다.
+ */
+export function useLab<T>(path: string, refreshMs?: number): { state: LabState<T>; retry: () => void } {
   const [state, setState] = useState<LabState<T>>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!refreshMs) return;
+    const timer = setInterval(() => {
+      // 탭이 숨겨져 있으면 부르지 않는다 — 폰 배터리와 서버 왕복을 아낀다.
+      if (typeof document === "undefined" || document.visibilityState === "visible") setTick((n) => n + 1);
+    }, refreshMs);
+    return () => clearInterval(timer);
+  }, [refreshMs]);
+
+  useEffect(() => {
+    if (tick === 0) return;
+    const controller = new AbortController();
+    fetch(path, { cache: "no-store", signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const env = (await res.json().catch(() => null)) as WireEnvelope<T> | null;
+        if (env && "data" in env) {
+          setState({ kind: "ready", data: env.data, builtAt: env.builtAt, sync: env.sync, ms: env.ms });
+        }
+      })
+      .catch(() => {
+        // 조용한 갱신은 실패를 화면에 올리지 않는다. 헤더의 동기화 표시가 낡음을 말한다.
+      });
+    return () => controller.abort();
+  }, [path, tick]);
 
   useEffect(() => {
     const controller = new AbortController();

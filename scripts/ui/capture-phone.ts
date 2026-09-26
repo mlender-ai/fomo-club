@@ -31,6 +31,10 @@ const TABS = [
   // UI-05 B — 전략 상세. 돌고 있는 것 하나 · 멈춘 것 하나.
   { path: "/strategies/crypto", key: "strategies", name: "strategy-crypto" },
   { path: "/strategies/stock_us", key: "strategies", name: "strategy-stock_us" },
+  // UI-06 B — 위험 순 첫 포지션(견본 상세와 같은 것).
+  { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail" },
+  // 폰 기본은 미니멀이다(UI-06 D) — 차트·정보까지 보려면 프로로 한 장 더.
+  { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail-pro", mode: "pro" },
 ] as const;
 
 async function main(): Promise<void> {
@@ -49,15 +53,24 @@ async function main(): Promise<void> {
     if (key === "status") {
       return route.fulfill({ json: { sync, collect: { staleSymbols: [], feedAgeMs: 60_000, failing: [] }, ms: 1 } });
     }
-    const payload = (data as Record<string, unknown>)[key];
+    // 포지션 상세(UI-06) — `positions/{id}` 는 상세 견본으로.
+    const payload = key.startsWith("positions/") ? data.positionDetail : (data as Record<string, unknown>)[key];
     if (payload === undefined) return route.fulfill({ status: 404, json: { error: "not_found" } });
     return route.fulfill({ json: { data: payload, sync, builtAt: new Date().toISOString(), ms: 1 } });
   });
 
   const report: string[] = [];
   for (const tab of TABS) {
+    const mode = "mode" in tab ? tab.mode : null;
     await page.goto(`${BASE}${tab.path}`, { waitUntil: "networkidle" });
+    await page.evaluate((m) => {
+      if (m) window.localStorage.setItem("lab.positions.mode", m);
+      else window.localStorage.removeItem("lab.positions.mode");
+    }, mode);
+    if (mode) await page.reload({ waitUntil: "networkidle" });
     await page.waitForSelector(".ui-hero-value", { timeout: 30_000 });
+    // 캔들 차트는 브라우저에서 라이브러리를 불러 그린다 — 캔버스가 뜰 때까지.
+    if (mode === "pro") await page.waitForSelector(".ui-candles canvas", { timeout: 15_000 }).catch(() => {});
     // `next dev` 의 N 배지가 통계 칸을 가린다 — 배포 화면에는 없는 것.
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
 

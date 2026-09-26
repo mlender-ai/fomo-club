@@ -1,41 +1,26 @@
 "use client";
 
 /**
- * `/positions/[id]` — 포지션 상세 (UI-03 PART B).
+ * `/positions/[id]` — 포지션 상세 (UI-03 PART B · UI-06 PART B).
  *
- * 지금 랩이 가진 것만 그린다. 건강도 상세·지금 볼 것·패턴 시간봉은 **아직 안 올라온다** —
- * API 가 `missing` 으로 알려주고, 화면은 그걸 빈칸으로 지어내지 않고 그대로 말한다.
- * 채우는 것은 `UI-06` 이다.
+ * 30초마다 조용히 다시 읽는다(UI-06 완료 확인 10). 본문은 `components/tabs/PositionDetailBody.tsx`.
+ * 닫힌 포지션은 404 다 — 고장이 아니라 "닫혔다" 로 말하고 복기로 보낸다.
  */
-import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { LabView } from "../../../../components/shell/LabView";
 import { PageFrame } from "../../../../components/shell/PageFrame";
 import { useLab } from "../../../../components/shell/useLab";
-import { Card, Hero, Pill, Skeleton, StatGroup, money, pct, tone } from "../../../../components/ui";
-import { shortStamp, sideLabel } from "../../../../lib/lab/labels";
+import { PositionDetailBody, PositionMissing } from "../../../../components/tabs/PositionDetailBody";
+import { Skeleton } from "../../../../components/ui";
+import type { PositionDetail } from "../../../../lib/lab/positions";
 import type { Jsonify } from "../../../../lib/lab/wire";
-import type { FcePositionRow } from "../../../../lib/lab/fce-board";
-
-interface Detail {
-  position: Jsonify<FcePositionRow>;
-  caveat: string;
-  missing: string[];
-}
-
-/** API 가 아직 없다고 알려주는 칸 → 사람이 읽는 말. */
-const MISSING_LABEL: Record<string, string> = {
-  healthDetail: "건강도 상세",
-  invalidation: "무효화 조건",
-  takeProfit: "익절 조건",
-  watchNow: "지금 볼 것",
-  patternTimeframes: "패턴 시간봉",
-};
 
 export default function PositionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { state, retry } = useLab<Detail>(`/api/lab/positions/${encodeURIComponent(id)}`);
+  const { state, retry } = useLab<Jsonify<PositionDetail>>(`/api/lab/positions/${id}`, 30_000);
+
+  if (state.kind === "error" && state.message === "not_found") return <PositionMissing id={id} />;
 
   return (
     <LabView
@@ -43,54 +28,13 @@ export default function PositionDetailPage() {
       retry={retry}
       loading={
         <PageFrame title="포지션">
-          <Skeleton width={260} height={60} />
-          <Skeleton height={120} radius="var(--r-stat)" />
+          <Skeleton width={280} height={60} />
+          <Skeleton height={96} radius="var(--r-card)" />
+          <Skeleton height={360} radius="var(--r-card)" />
         </PageFrame>
       }
     >
-      {(data) => {
-        const p = data.position;
-        return (
-          <PageFrame
-            title={p.symbol}
-            description={
-              <>
-                <Link href="/positions">포지션</Link> · {sideLabel(p.direction)}
-                {p.leverage ? ` · ${p.leverage}x` : ""}
-              </>
-            }
-          >
-            <Hero
-              label="손익 · 증거금 대비"
-              value={<span className={`ui-num is-${tone(p.netReturnPct)}`}>{pct(p.netReturnPct)}</span>}
-              meta={`진입 ${shortStamp(p.entryAt)}`}
-            />
-            {p.liquidationLevel ? (
-              <p className="sh-alert">
-                <strong>⚠ 청산 수준.</strong> 실제 거래소였으면 이미 증거금이 없어진 자리다.
-              </p>
-            ) : null}
-            <StatGroup
-              stats={[
-                { label: "증거금", value: money(p.marginUsdt, "USDT") },
-                { label: "레버리지", value: p.leverage ? `${p.leverage}x` : "—" },
-                // 값이 없으면 칸째 뺀다(UI-FIX B-3).
-                ...(p.healthScore === null ? [] : [{ label: "건강도", value: String(p.healthScore), note: "0~100" }]),
-              ]}
-            />
-            <Card title="아직 안 올라온 것" description="없는 걸 있는 척 그리지 않는다">
-              <div className="sh-inline">
-                {data.missing.map((m) => (
-                  <Pill key={m} tone="mute">
-                    {MISSING_LABEL[m] ?? m}
-                  </Pill>
-                ))}
-              </div>
-            </Card>
-            <p className="sh-note">{data.caveat}</p>
-          </PageFrame>
-        );
-      }}
+      {(data) => <PositionDetailBody data={data} />}
     </LabView>
   );
 }

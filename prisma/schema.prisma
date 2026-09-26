@@ -1348,9 +1348,45 @@ model FcePosition {
   entryAt    DateTime?
   entryPrice Float?
 
+  /// UI-06 — 페이퍼 거래의 현재가·수량·비용. FCE `exit_monitor` · `open_trades[]` 값 그대로.
+  markPrice      Float?
+  quantity       Float?
+  notionalUsdt   Float?
+  /// 진입 이후 누적 수수료 + 펀딩. FCE 가 둘을 나누지 않고 한 칸(`costs_usdt`)으로 준다.
+  costsUsdt      Float?
+  unrealizedUsdt Float?
+  timeframe      String?
+  /// FCE 스탠스(`long_leaning` · `conflicted` …).
+  stance         String?
+
+  /// UI-06 가격 레일 — **FCE 페이퍼 포지션만**(광혁 결정 2026-09-26). LAB-08 의 목표가·손절선 금지는
+  /// 랩 자체 엔진 포지션(`toLivePosition`)에 그대로 남는다. 라이브(Bitget 계좌) 포지션은 받지 않는다.
+  invalidationPrice Float?
+  /// 지금 걸린 손절선. 진입 땐 무효화와 같고, **부분 익절 뒤 본전으로 올라간다**(ADA 0.24599 → 0.2541).
+  /// FCE 의 `invalidation_distance_pct` 가 이 선까지의 거리다 — 레일 왼쪽 끝은 이것이다.
+  stopPrice         Float?
+  takeProfitPrice   Float?
+  takeProfit2Price  Float?
+  /// 현재가에서 각 선까지(%). FCE `exit_monitor.*_distance_pct`.
+  invalidationDistancePct Float?
+  takeProfitDistancePct   Float?
+
   asOf DateTime
 
   @@index([trackKey, asOf])
+}
+
+/// UI-06 캔들 차트 — 열린 페이퍼 포지션 심볼의 시간봉별 캔들. Mac 업로더가 Bitget 공개 시세에서 받아 통째로 갈아 끼운다.
+/// 시세(시장 데이터)라 계좌 정보가 없다.
+model FcePositionChart {
+  symbol    String
+  /// `15m` · `1h` · `4h` · `1d`
+  timeframe String
+  /// `[t(초), o, h, l, c][]` — 오래된 것부터.
+  candles   Json
+  asOf      DateTime
+
+  @@id([symbol, timeframe])
 }
 
 /// 닫힌 거래 한 건.

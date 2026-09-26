@@ -26,6 +26,7 @@ import { readCapitalSeries } from "./capital";
 import { readFceBoard, readFceLedger } from "./fce-board";
 import { buildOverview } from "./overview";
 import { buildPortfolio } from "./portfolio";
+import { buildCharts, buildPositions } from "./positions";
 import { buildStrategies } from "./strategies";
 import { Prisma } from "@prisma/client";
 
@@ -37,7 +38,9 @@ export type SnapshotKey =
   | "positions"
   | "whales"
   | "research"
-  | "journal";
+  | "journal"
+  /** UI-06 — 포지션 심볼의 캔들. 포지션 상세만 읽는다. */
+  | "charts";
 
 /**
  * 조립본 **형식 번호**. 조립본의 모양을 바꾸면 **반드시 올린다.**
@@ -50,10 +53,11 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 5;
+export const SNAPSHOT_VERSION = 6;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
+// 6 — UI-06: 포지션에 가격선·현재가·수량·비용 · 위험순 정렬 · 연구 · `charts` 조립본(캔들).
 // 5 — UI-05: 전략 행에 순위·샤프·평균 보유·분포·최근 거래·연구 · 우연 확률 · 폐기 보관함(`strategies.ts`).
 
 /** 조립본에 같이 실리는 동기화 재료. 경과 시간은 읽는 쪽이 센다. */
@@ -129,7 +133,7 @@ export async function assemblePayloads() {
   const series = await Promise.all(portfolio.tracks.map((t) => readCapitalSeries(t.key)));
 
   // Overview 재료 — 쓰기 경로라 여기서 실컷 읽는다. 화면 요청은 조립본 한 줄만 본다.
-  const [tradeLite, lostDays, archive] = await Promise.all([
+  const [tradeLite, lostDays, archive, chartRows] = await Promise.all([
     prisma.fceTrade.findMany({
       where: { exitAt: { not: null } },
       select: {
@@ -161,6 +165,7 @@ export async function assemblePayloads() {
         },
       },
     }),
+    prisma.fcePositionChart.findMany(),
   ]);
   const firstExit = tradeLite.reduce<Date | null>(
     (min, t) => (t.exitAt && (!min || t.exitAt < min) ? t.exitAt : min),
@@ -182,14 +187,6 @@ export async function assemblePayloads() {
   };
 
   const openResearch = research.filter((r) => r.status === "open" || r.status === "testing");
-
-  const measurable = board.positions.filter(
-    (p) => p.netReturnPct !== null && p.marginUsdt !== null
-  );
-  const unrealized = measurable.reduce(
-    (sum, p) => sum + ((p.marginUsdt ?? 0) * (p.netReturnPct ?? 0)) / 100,
-    0
-  );
 
   const overview = {
     ...buildOverview({
@@ -234,15 +231,13 @@ export async function assemblePayloads() {
     series: series.filter((s) => s.points.length > 0),
   };
 
-  const positions = {
+  const positions = buildPositions({
     positions: board.positions,
-    unrealizedUsdt: measurable.length > 0 ? unrealized : null,
-    measurable: measurable.length,
-    total: board.positions.length,
-    liquidationLevel: board.positions.filter((p) => p.liquidationLevel).length,
-    caveat:
-      "손익은 증거금 대비다. FCE 에 청산 모델이 없어 −100% 아래로 갈 수 있다 — 실제 거래소였으면 그 전에 증거금이 없어진다.",
-  };
+    trackLabels: Object.fromEntries(board.tracks.map((t) => [t.key, t.label])),
+    research,
+    lastAt: lastOk?.at ?? null,
+  });
+  const charts = buildCharts(chartRows);
 
   const whales = board.whale
     ? {
@@ -318,6 +313,7 @@ export async function assemblePayloads() {
       whales,
       research: researchPayload,
       journal,
+      charts,
     },
     sync,
   };
@@ -364,4 +360,26 @@ export async function readSnapshot<T>(key: SnapshotKey): Promise<Snapshot<T> | n
   const body = row.payload as unknown as { v?: number; payload: T; sync: SyncSeed };
   if (body.v !== SNAPSHOT_VERSION) return "outdated";
   return { key, payload: body.payload, sync: body.sync, builtAt: row.builtAt };
+}
+
+/**
+ * 조립본 여럿을 **쿼리 한 번에.** 포지션 상세가 목록(`positions`)과 캔들(`charts`)을 같이 본다 —
+ * 두 번 부르면 왕복이 두 번(~1.8초)이다. 하나라도 없거나 옛 형식이면 그 자리가 null · "outdated".
+ */
+export async function readSnapshots<T extends Partial<Record<SnapshotKey, unknown>>>(
+  keys: (keyof T & SnapshotKey)[]
+): Promise<{ [K in keyof T]: Snapshot<T[K]> | null | "outdated" }> {
+  const rows = await prisma.labSnapshot.findMany({ where: { key: { in: keys } } });
+  const out = {} as { [K in keyof T]: Snapshot<T[K]> | null | "outdated" };
+  for (const key of keys) {
+    const row = rows.find((r) => r.key === key);
+    if (!row) {
+      out[key] = null;
+      continue;
+    }
+    const body = row.payload as unknown as { v?: number; payload: T[typeof key]; sync: SyncSeed };
+    out[key] =
+      body.v !== SNAPSHOT_VERSION ? "outdated" : { key, payload: body.payload, sync: body.sync, builtAt: row.builtAt };
+  }
+  return out;
 }

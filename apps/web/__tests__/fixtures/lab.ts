@@ -4,17 +4,17 @@
  * **정규 도메인 실측(2026-09-25 04:06 조립본)에서 옮겼다.** 텍스트 예산 테스트와 390px 캡처가
  * 같이 쓴다. 숫자를 지어내지 않으려고 트랙 값·자본 곡선·고래·연구는 API 응답 그대로다.
  *
- * 예외 둘 — 실측에 없는 것이라 **만든 값**이다:
+ * 예외 하나 — 실측에 없는 것이라 **만든 값**이다(포지션은 UI-06 에서 실측으로 바꿨다 — `positions.json`):
  *
  * | | 왜 |
  * |---|---|
  * | 거래 원장 | 조립본에는 일별 자본만 있다. 그날 자본 변화를 거래 N 건으로 나눠 되만든다 — 곡선 끝은 실측과 같다 |
- * | 포지션 손익 | 실측은 B-2 버그 값(−0.27% 반복)이다. 고친 업로더가 올릴 현재가 손익은 Mac 러너가 돌아야 생긴다 |
  *
  * 조립은 **실제 빌더**(`buildOverview` · `buildStrategies` · `buildPortfolio`)를 지난다.
  * 화면이 받는 모양이 서버와 어긋나면 여기서 타입이 깨진다.
  */
-import type { FcePositionRow, FceTrackRow } from "../../lib/lab/fce-board";
+import { LIQUIDATION_PCT, type FcePositionRow, type FceTrackRow } from "../../lib/lab/fce-board";
+import positionsFixture from "./positions.json";
 import {
   buildOverview,
   type Bar,
@@ -22,8 +22,9 @@ import {
   type TradeLite,
 } from "../../lib/lab/overview";
 import { buildPortfolio } from "../../lib/lab/portfolio";
+import { buildCharts, buildPositions, type PositionDetail } from "../../lib/lab/positions";
 import { buildStrategies } from "../../lib/lab/strategies";
-import type { Wire } from "../../lib/lab/wire";
+import type { Jsonify, Wire } from "../../lib/lab/wire";
 
 export const NOW = new Date("2026-09-25T04:06:46Z");
 const DAY = 86_400_000;
@@ -216,13 +217,17 @@ export const LOST_DAYS: LostDay[] = Array.from({ length: 75 }, (_, i) => i)
     reason: "host_sleep",
   }));
 
-/** 실측 보유 넷 — **손익은 예시다**(위 머리말). 실측은 −0.27 · −0.27 · +1.71 · +2.52 였다. */
-export const POSITIONS: FcePositionRow[] = [
-  { id: "044bd33f", symbol: "XRPUSDT", direction: "long", leverage: 3, marginUsdt: 25.08, netReturnPct: -1.93, healthScore: null, entryAt: new Date("2026-09-24T16:00:00Z"), liquidationLevel: false },
-  { id: "9ba6f713", symbol: "MRVLUSDT", direction: "long", leverage: 3, marginUsdt: 42.06, netReturnPct: 1.14, healthScore: null, entryAt: new Date("2026-09-23T04:00:00Z"), liquidationLevel: false },
-  { id: "9166083a", symbol: "BNBUSDT", direction: "long", leverage: 3, marginUsdt: 59.11, netReturnPct: 1.71, healthScore: null, entryAt: new Date("2026-09-23T20:00:00Z"), liquidationLevel: false },
-  { id: "e6931e94", symbol: "BABAUSDT", direction: "short", leverage: 3, marginUsdt: 65.09, netReturnPct: 2.52, healthScore: null, entryAt: new Date("2026-09-23T08:00:00Z"), liquidationLevel: false },
-];
+/**
+ * 열린 페이퍼 포지션 다섯 — **FCE `/api/paper/dashboard` 실측(2026-09-26 11:30 UTC)을 실제 매퍼
+ * (`positionFromOpenTrade`)로 옮긴 것**과 Bitget 공개 캔들(시간봉마다 60개). `positions.json`.
+ */
+export const POSITIONS_AT = new Date(positionsFixture.at);
+export const POSITIONS: FcePositionRow[] = positionsFixture.positions.map((p) => ({
+  ...(p as unknown as Omit<FcePositionRow, "entryAt" | "liquidationLevel">),
+  entryAt: p.entryAt ? new Date(p.entryAt) : null,
+  liquidationLevel: p.netReturnPct !== null && p.netReturnPct <= LIQUIDATION_PCT,
+}));
+export const CHARTS = positionsFixture.charts as { symbol: string; timeframe: "15m" | "1h" | "4h" | "1d"; candles: [number, number, number, number, number][] }[];
 
 /** `/api/lab/research` 실측(01 요약은 이번에 고친 문구). */
 export const RESEARCH = [
@@ -272,7 +277,24 @@ export function fixtures() {
   const costs = 80.37;
   const gross = net + costs;
 
-  const measurable = POSITIONS.filter((p) => p.netReturnPct !== null && p.marginUsdt !== null);
+  const positionsCore = buildPositions({
+    positions: POSITIONS,
+    trackLabels: Object.fromEntries(TRACKS.map((t) => [t.key, t.label])),
+    research: RESEARCH.map((r) => ({ ...r, blocks: r.blocks })),
+    lastAt: POSITIONS_AT,
+  });
+  const charts = buildCharts(CHARTS.map((c) => ({ ...c, asOf: POSITIONS_AT })));
+  const detailOf = (id: string): PositionDetail => {
+    const position = positionsCore.positions.find((x) => x.id === id) as PositionDetail["position"];
+    return {
+      position,
+      chart: charts.bySymbol[position.symbol] ?? {},
+      chartAsOf: charts.asOf,
+      caveat: positionsCore.caveat,
+      liveOnly: positionsCore.liveOnly,
+      lastAt: POSITIONS_AT,
+    };
+  };
 
   return {
     overview: wire<Wire<"overview">>(overview),
@@ -281,15 +303,10 @@ export function fixtures() {
       portfolio: buildPortfolio(TRACKS),
       series: [],
     }),
-    positions: wire<Wire<"positions">>({
-      positions: POSITIONS,
-      unrealizedUsdt: measurable.reduce((s, p) => s + ((p.marginUsdt ?? 0) * (p.netReturnPct ?? 0)) / 100, 0),
-      measurable: measurable.length,
-      total: POSITIONS.length,
-      liquidationLevel: 0,
-      caveat:
-        "손익은 증거금 대비다. FCE 에 청산 모델이 없어 −100% 아래로 갈 수 있다 — 실제 거래소였으면 그 전에 증거금이 없어진다.",
-    }),
+    positions: wire<Wire<"positions">>(positionsCore),
+    /** `GET /api/lab/positions/{id}` — 위험 순 첫 포지션. */
+    positionDetail: wire<Jsonify<PositionDetail>>(detailOf(positionsCore.positions[0]?.id ?? "")),
+    charts: wire<Wire<"charts">>(charts),
     journal: wire<Wire<"journal">>({
       trades: [...closed]
         .sort((a, b) => (b.exitAt as Date).getTime() - (a.exitAt as Date).getTime())

@@ -27,8 +27,10 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-import { positionFromOpenTrade } from "../../apps/web/lib/lab/fce-payload";
+import { CHART_TIMEFRAMES, positionFromOpenTrade } from "../../apps/web/lib/lab/fce-payload";
 import type {
+  ChartPayload,
+  ChartTimeframe,
   FcePayload,
   LostDayPayload,
   PositionPayload,
@@ -320,6 +322,43 @@ function positions(dashboard: Record<string, unknown>): PositionPayload[] {
   });
 }
 
+// ── 캔들 (UI-06 B-4) ───────────────────────────────────────────────────────
+//
+// FCE 는 페이퍼 포지션의 캔들을 내지 않는다(차트 분석은 라이브 계좌 포지션 id 에만 붙는다).
+// **시세는 시장 데이터다** — Bitget 공개 시세에서 바로 받는다. 계좌·키가 필요 없다.
+// Vercel 에서 부르지 않는 이유: 거래소가 지역을 막을 수 있다(LAB-FIX-BINANCE-HOST 가 겪었다).
+
+const BITGET = "https://api.bitget.com/api/v2/mix/market/candles";
+const GRANULARITY: Record<ChartTimeframe, string> = { "15m": "15m", "1h": "1H", "4h": "4H", "1d": "1D" };
+/** 시간봉마다 몇 개. 15분봉 200개 = 이틀 남짓, 일봉 200개 = 반년 남짓. */
+const CANDLES = 200;
+
+async function charts(symbols: string[]): Promise<ChartPayload[]> {
+  const out: ChartPayload[] = [];
+  const failed: string[] = [];
+  for (const symbol of [...new Set(symbols)]) {
+    for (const timeframe of CHART_TIMEFRAMES) {
+      const url = `${BITGET}?symbol=${encodeURIComponent(symbol)}&productType=USDT-FUTURES&granularity=${GRANULARITY[timeframe]}&limit=${CANDLES}`;
+      try {
+        const body = record(await (await fetch(url, { signal: AbortSignal.timeout(15_000) })).json());
+        const rows = Array.isArray(body.data) ? (body.data as unknown[][]) : [];
+        const candles = rows
+          .map((r) => r.slice(0, 5).map(Number) as [number, number, number, number, number])
+          .filter((k) => k.every(Number.isFinite))
+          .map(([t, o, h, l, c]) => [Math.floor(t / 1000), o, h, l, c] as [number, number, number, number, number])
+          .sort((a, b) => a[0] - b[0]);
+        if (candles.length > 0) out.push({ symbol, timeframe, candles });
+        else failed.push(`${symbol} ${timeframe}`);
+      } catch {
+        // 차트 하나가 안 와도 업로드는 간다. 화면이 그 시간봉을 "없다" 고 말한다.
+        failed.push(`${symbol} ${timeframe}`);
+      }
+    }
+  }
+  console.log(`  캔들 ${out.length}개${failed.length > 0 ? ` · 못 받음 ${failed.join(", ")}` : ""}`);
+  return out;
+}
+
 /** 고래 분석 — 자격 심사 + 추종 성적 + 지연·드리프트. */
 function whale(
   eligibility: Record<string, unknown>,
@@ -482,6 +521,7 @@ async function collect(): Promise<FcePayload> {
   const diagnosis = diagnosisHit.body;
   console.log(`  지갑 자격 ${eligibilityHit.source} · 관측 진단 ${diagnosisHit.source}`);
 
+  const openPositions = positions(paper);
   return {
     at,
     tracks: [
@@ -490,7 +530,8 @@ async function collect(): Promise<FcePayload> {
       ...stockTracks(stock, at),
       polyTrack(poly, at),
     ],
-    positions: positions(paper),
+    positions: openPositions,
+    charts: await charts(openPositions.map((p) => p.symbol)),
     trades: [
       ...trades(ledger, "crypto"),
       // 고래는 **추종 자격(follow)만** 싣는다. FCE 성적 버킷이 그 83건으로 계산되고,
