@@ -67,6 +67,40 @@ export interface PositionPayload {
   healthScore: number | null;
   entryAt: string | null;
   entryPrice: number | null;
+  /** UI-06 — 현재가·수량·명목·누적 비용·미실현(USDT). FCE 값 그대로. */
+  markPrice: number | null;
+  quantity: number | null;
+  notionalUsdt: number | null;
+  costsUsdt: number | null;
+  unrealizedUsdt: number | null;
+  timeframe: string | null;
+  stance: string | null;
+  /**
+   * UI-06 가격 레일 — **FCE 페이퍼 포지션만**(광혁 결정 2026-09-26).
+   *
+   * LAB-08 은 목표가·손절선이 화면 밖으로 나가지 않게 막았다. 그 규칙은 **랩 자체 엔진**의
+   * 포지션(`@fomo/lab` `toLivePosition`)에 그대로 남는다. FCE 페이퍼의 무효화·익절은 UI-06 이
+   * 화면의 핵심으로 요구했고, 공개해도 된다고 정했다. **라이브(Bitget 계좌) 포지션은 받지 않는다.**
+   */
+  invalidationPrice: number | null;
+  /** 지금 걸린 손절선 — 부분 익절 뒤 본전으로 올라간다. `invalidationDistancePct` 는 이 선까지다. */
+  stopPrice: number | null;
+  takeProfitPrice: number | null;
+  takeProfit2Price: number | null;
+  invalidationDistancePct: number | null;
+  takeProfitDistancePct: number | null;
+}
+
+/** UI-06 캔들 — `[t(초), o, h, l, c]`. 시세라 계좌 정보가 없다. */
+export type Candle = [number, number, number, number, number];
+
+export const CHART_TIMEFRAMES = ["15m", "1h", "4h", "1d"] as const;
+export type ChartTimeframe = (typeof CHART_TIMEFRAMES)[number];
+
+export interface ChartPayload {
+  symbol: string;
+  timeframe: ChartTimeframe;
+  candles: Candle[];
 }
 
 function finite(value: unknown): number | null {
@@ -95,6 +129,12 @@ export function positionFromOpenTrade(t: Record<string, unknown>): PositionPaylo
   if (typeof t.id !== "string" && typeof t.id !== "number") return null;
   const monitor =
     typeof t.exit_monitor === "object" && t.exit_monitor !== null ? (t.exit_monitor as Record<string, unknown>) : {};
+  const stance =
+    typeof t.current_stance === "object" && t.current_stance !== null
+      ? (t.current_stance as Record<string, unknown>).stance
+      : null;
+  const plan = typeof t.target_plan === "object" && t.target_plan !== null ? (t.target_plan as Record<string, unknown>) : {};
+  const sizing = typeof plan.sizing === "object" && plan.sizing !== null ? (plan.sizing as Record<string, unknown>) : {};
   return {
     id: String(t.id),
     trackKey: "crypto",
@@ -106,6 +146,20 @@ export function positionFromOpenTrade(t: Record<string, unknown>): PositionPaylo
     healthScore: finite(t.health_score),
     entryAt: typeof t.entry_at === "string" ? t.entry_at : null,
     entryPrice: finite(t.entry_price),
+    markPrice: finite(monitor.mark_price),
+    // 부분 익절 뒤에는 남은 수량이 보유분이다.
+    quantity: finite(t.remaining_quantity) ?? finite(t.quantity),
+    notionalUsdt: finite(sizing.notional_usdt),
+    costsUsdt: finite(t.costs_usdt),
+    unrealizedUsdt: finite(monitor.mark_net_pnl_usdt),
+    timeframe: typeof t.timeframe === "string" ? t.timeframe : null,
+    stance: typeof stance === "string" ? stance : null,
+    invalidationPrice: finite(t.invalidation_price),
+    stopPrice: finite(t.stop_price),
+    takeProfitPrice: finite(t.take_profit_price),
+    takeProfit2Price: finite(t.take_profit_2_price),
+    invalidationDistancePct: finite(monitor.invalidation_distance_pct),
+    takeProfitDistancePct: finite(monitor.take_profit_distance_pct),
   };
 }
 
@@ -178,6 +232,8 @@ export interface FcePayload {
   /** FCE 관측 유실일. 트랙 단위로 통째로 바뀐다. */
   lostDays: LostDayPayload[];
   whale: WhalePayload | null;
+  /** UI-06 — 열린 포지션 심볼의 캔들. 없으면 빈 배열(옛 업로더) — 차트 자리가 "없다" 고 말한다. */
+  charts: ChartPayload[];
 }
 
 const STATUSES: readonly TrackStatus[] = ["running", "stopped", "held", "excluded"];
@@ -277,7 +333,37 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
       healthScore: num(p.healthScore),
       entryAt: typeof p.entryAt === "string" ? p.entryAt : null,
       entryPrice: num(p.entryPrice),
+      markPrice: num(p.markPrice),
+      quantity: num(p.quantity),
+      notionalUsdt: num(p.notionalUsdt),
+      costsUsdt: num(p.costsUsdt),
+      unrealizedUsdt: num(p.unrealizedUsdt),
+      timeframe: typeof p.timeframe === "string" ? p.timeframe : null,
+      stance: typeof p.stance === "string" ? p.stance : null,
+      invalidationPrice: num(p.invalidationPrice),
+      stopPrice: num(p.stopPrice),
+      takeProfitPrice: num(p.takeProfitPrice),
+      takeProfit2Price: num(p.takeProfit2Price),
+      invalidationDistancePct: num(p.invalidationDistancePct),
+      takeProfitDistancePct: num(p.takeProfitDistancePct),
     });
+  }
+
+  const charts: ChartPayload[] = [];
+  for (const [index, raw] of (Array.isArray(body.charts) ? body.charts : []).entries()) {
+    const c = raw as Record<string, unknown>;
+    const ok =
+      typeof c.symbol === "string" &&
+      CHART_TIMEFRAMES.includes(c.timeframe as ChartTimeframe) &&
+      Array.isArray(c.candles) &&
+      (c.candles as unknown[]).every(
+        (k) => Array.isArray(k) && k.length === 5 && (k as unknown[]).every((v) => typeof v === "number" && Number.isFinite(v))
+      );
+    if (!ok) {
+      problems.push({ path: `charts[${index}]`, message: "symbol · timeframe(15m|1h|4h|1d) · candles[t,o,h,l,c][] 가 필요하다" });
+      continue;
+    }
+    charts.push({ symbol: c.symbol as string, timeframe: c.timeframe as ChartTimeframe, candles: c.candles as Candle[] });
   }
 
   // 닫힌 거래. **id · trackKey 만 필수다** — 나머지는 FCE 가 모르면 null 로 온다.
@@ -350,5 +436,5 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
   }
 
   if (problems.length > 0) return { payload: null, problems };
-  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale }, problems: [] };
+  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale, charts }, problems: [] };
 }

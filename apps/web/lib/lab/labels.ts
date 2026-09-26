@@ -100,3 +100,23 @@ export function shortStamp(at: string | null): string {
   if (!at) return "—";
   return at.slice(5, 16).replace("T", " ");
 }
+
+/**
+ * FCE 스탠스 → 사람 말 (UI-06 상태 알약). FCE 가 트랙 전체 시장을 보는 방향이다.
+ * 포지션 방향과 **엇갈리면** 주의 색 — 롱을 들고 있는데 FCE 가 숏 쪽으로 기울었다.
+ */
+const STANCE: Record<string, string> = {
+  long_leaning: "롱 우세",
+  short_leaning: "숏 우세",
+  conflicted: "엇갈림",
+  neutral: "중립",
+};
+
+export function stanceLabel(stance: string | null, direction: string): { label: string; tone: PillTone } | null {
+  if (!stance) return null;
+  const label = STANCE[stance] ?? stance;
+  const side = direction === "short" || direction === "SHORT" ? "short" : "long";
+  const against =
+    (side === "long" && stance === "short_leaning") || (side === "short" && stance === "long_leaning");
+  return { label, tone: against ? "warn" : stance === "conflicted" ? "warn" : "mute" };
+}

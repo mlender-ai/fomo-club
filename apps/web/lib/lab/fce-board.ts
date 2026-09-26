@@ -47,6 +47,8 @@ export interface FceTrackRow {
 
 export interface FcePositionRow {
   id: string;
+  /** 어느 트랙(전략)의 포지션인가 — UI-06 C "어느 전략의 포지션인지". */
+  trackKey: string;
   symbol: string;
   direction: string;
   leverage: number | null;
@@ -54,6 +56,21 @@ export interface FcePositionRow {
   netReturnPct: number | null;
   healthScore: number | null;
   entryAt: Date | null;
+  entryPrice: number | null;
+  /** UI-06 — FCE 값 그대로(`fce-payload.ts` `PositionPayload`). */
+  markPrice: number | null;
+  quantity: number | null;
+  notionalUsdt: number | null;
+  costsUsdt: number | null;
+  unrealizedUsdt: number | null;
+  timeframe: string | null;
+  stance: string | null;
+  invalidationPrice: number | null;
+  stopPrice: number | null;
+  takeProfitPrice: number | null;
+  takeProfit2Price: number | null;
+  invalidationDistancePct: number | null;
+  takeProfitDistancePct: number | null;
   /**
    * **청산 수준 경고**(PART D-1).
    *
@@ -97,13 +114,15 @@ export interface FceBoard {
 }
 
 /**
- * 청산 수준 판정.
+ * 청산 위험 판정 (UI-06 A-4).
  *
- * 증거금 대비 −90% 를 넘으면 실거래소에서는 사실상 끝난 자리다(유지증거금이 남아
- * 있을 수 없다). **−100% 를 기준으로 삼지 않는다** — 거기까지 가면 이미 늦었고,
- * 그 전에 청산된다는 것이 요점이다.
+ * > 레버리지 × 손실률이 증거금의 80% 를 넘으면 — 카드 테두리 빨강 + "청산 위험"
+ *
+ * 손익률이 이미 **증거금 대비**(= 레버리지 × 가격 손실률 + 비용)라 그 값이 −80% 이하인지만 본다.
+ * 실거래소는 유지증거금 때문에 −100% 보다 한참 전에 청산한다. FCE 에 청산 모델이 없어도 화면은
+ * 경고한다(연구 02). 처음엔 −90% 였다 — UI-06 이 80% 로 정했다.
  */
-const LIQUIDATION_PCT = -90;
+export const LIQUIDATION_PCT = -80;
 
 function toNumber(value: { toNumber(): number } | null): number | null {
   return value === null ? null : value.toNumber();
@@ -194,6 +213,7 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
     tracks: rows,
     positions: positions.map((p) => ({
       id: p.id,
+      trackKey: p.trackKey,
       symbol: p.symbol,
       direction: p.direction,
       leverage: p.leverage,
@@ -201,6 +221,20 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       netReturnPct: p.netReturnPct,
       healthScore: p.healthScore,
       entryAt: p.entryAt,
+      entryPrice: p.entryPrice,
+      markPrice: p.markPrice,
+      quantity: p.quantity,
+      notionalUsdt: p.notionalUsdt,
+      costsUsdt: p.costsUsdt,
+      unrealizedUsdt: p.unrealizedUsdt,
+      timeframe: p.timeframe,
+      stance: p.stance,
+      invalidationPrice: p.invalidationPrice,
+      stopPrice: p.stopPrice,
+      takeProfitPrice: p.takeProfitPrice,
+      takeProfit2Price: p.takeProfit2Price,
+      invalidationDistancePct: p.invalidationDistancePct,
+      takeProfitDistancePct: p.takeProfitDistancePct,
       liquidationLevel: p.netReturnPct !== null && p.netReturnPct <= LIQUIDATION_PCT,
     })),
     whale: whale

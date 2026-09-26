@@ -122,3 +122,14 @@ export function kstWhen(at: string | number | Date, now: Date = new Date()): str
   const [, m, dd] = day.split("-");
   return `${Number(m)}월 ${Number(dd)}일`;
 }
+
+/**
+ * 가격 — **유효 숫자 5자리.** 0.11568 과 110.69 가 한 화면에 같이 선다(UI-06). 소수 자릿수를 고정하면
+ * 싼 코인은 `0.12` 로 뭉개지고 비싼 종목은 `110.69000` 이 된다.
+ */
+export function price(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  const digits = abs >= 1000 ? 2 : Math.max(0, 4 - Math.floor(Math.log10(abs || 1)));
+  return swapMinus(value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: Math.min(digits, 8) }));
+}
