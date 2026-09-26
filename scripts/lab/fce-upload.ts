@@ -72,10 +72,20 @@ const WATCH = process.argv.includes("--watch");
  */
 const FCE_TIMEOUT_MS = 150_000;
 
+/**
+ * FCE 한 번. **실패하면 어느 경로였는지를 붙인다** — 러너 로그에는 "The operation was aborted due to timeout"
+ * 한 줄만 남아서, 과부하 때 어느 요청이 한도를 넘었는지 알 수 없었다.
+ */
 async function fce(path: string): Promise<unknown> {
-  const response = await fetch(`${FCE}${path}`, { signal: AbortSignal.timeout(FCE_TIMEOUT_MS) });
-  if (!response.ok) throw new Error(`${path} → ${response.status}`);
-  return response.json();
+  const started = Date.now();
+  try {
+    const response = await fetch(`${FCE}${path}`, { signal: AbortSignal.timeout(FCE_TIMEOUT_MS) });
+    if (!response.ok) throw new Error(`${response.status}`);
+    return await response.json();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`FCE ${path} — ${message} (${Math.round((Date.now() - started) / 1000)}초)`);
+  }
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -732,15 +742,19 @@ async function collect(): Promise<FcePayload> {
 
 async function push(payload: FcePayload): Promise<void> {
   if (!TOKEN) throw new Error("LAB_INGEST_TOKEN 이 없다 — 올릴 수 없다");
+  const started = Date.now();
   const response = await fetch(`${LAB}/api/lab/fce`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
     body: JSON.stringify(payload),
     // 거래 이력까지 올리므로 60초로는 모자랐다. 실측 한 바퀴가 ~20초다.
     signal: AbortSignal.timeout(120_000),
+  }).catch((error: unknown) => {
+    // FCE 요청과 가른다 — 둘 다 같은 '타임아웃' 한 줄이었다.
+    throw new Error(`LAB 업로드 — ${error instanceof Error ? error.message : error} (${Math.round((Date.now() - started) / 1000)}초)`);
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(`LAB ${response.status}: ${text.slice(0, 300)}`);
+  if (!response.ok) throw new Error(`LAB 업로드 ${response.status}: ${text.slice(0, 300)}`);
   console.log(`  → ${text.slice(0, 200)}`);
 }
 
