@@ -5,7 +5,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"],
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    // UI-FIX — `scripts/ui/capture-phone.ts` 가 화면 견본(→ 부품 타입)을 import 한다.
+    "jsx": "react-jsx"
   },
   "include": ["**/*.ts"]
 }

@@ -11,6 +11,11 @@
  * ## 좁아지면 무엇부터 숨나
  *
  * 추이선 → 부제 순으로 숨는다. **값과 변동은 끝까지 남는다** — 그게 이 행의 답이다.
+ *
+ * ## 한 행 = 이름 1줄 + 부제 1줄 (UI-FIX A-2 · B-1)
+ *
+ * 이름·부제는 말줄임으로 한 줄을 지킨다. 오른쪽은 **숫자 하나**(수익률 또는 상태)가 원칙이다 —
+ * 긴 알약을 오른쪽에 두면 이름 칸이 밀려 한 글자씩 세로로 쪼개진다(전략 탭에서 실제로 그랬다).
  */
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -61,8 +66,9 @@ export function AssetRow({
         <span className="ui-row-amount">{value}</span>
         {subValue ? <span className="ui-row-subamount">{subValue}</span> : null}
       </span>
-      <span className="ui-row-change">{change}</span>
-      <span className="ui-row-status">{status}</span>
+      {/* 비었으면 칸을 만들지 않는다 — 폰에서 빈 줄이 하나 더 생긴다(UI-FIX B-1). */}
+      {change ? <span className="ui-row-change">{change}</span> : null}
+      {status ? <span className="ui-row-status">{status}</span> : null}
     </>
   );
 

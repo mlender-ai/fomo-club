@@ -10,12 +10,15 @@
  */
 import type { ReactNode } from "react";
 
+import { Info } from "../ui/Info";
+
 export function PageFrame({
   title,
   description,
   side,
   children,
   hideTitle = false,
+  info,
 }: {
   title: string;
   /**
@@ -26,11 +29,16 @@ export function PageFrame({
   description?: ReactNode;
   side?: ReactNode;
   children: ReactNode;
+  /** 제목 옆 `ⓘ` 가 여는 설명(UI-FIX A-3). */
+  info?: ReactNode;
 }) {
   return (
     <div className={`sh-page${side ? " has-side" : ""}`}>
       <div className={`sh-page-head${hideTitle ? " is-hidden" : ""}`}>
-        <h1 className="sh-title">{title}</h1>
+        <h1 className="sh-title">
+          {title}
+          {info ? <Info title={title}>{info}</Info> : null}
+        </h1>
         {description ? <p className="sh-desc">{description}</p> : null}
       </div>
       {side ? (

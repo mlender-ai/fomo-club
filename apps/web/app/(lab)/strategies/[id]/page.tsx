@@ -17,6 +17,7 @@ import {
   Card,
   Empty,
   Hero,
+  Info,
   Pill,
   Skeleton,
   StatGroup,
@@ -79,40 +80,49 @@ export default function StrategyDetailPage() {
               meta={
                 track?.nativeCurrent != null
                   ? `${money(track.nativeStart, track.currency)} → ${money(track.nativeCurrent, track.currency)}`
-                  : "평가액이 없다 — 자본을 0 으로 채우지 않았다"
+                  : "평가액 없음"
               }
             />
 
-            <div className="sh-inline">
-              <Pill tone={st.tone} dot={st.dot ?? false}>
-                {st.label}
-              </Pill>
-              {row.leverage ? <Pill tone="mute">{`${row.leverage}x 레버리지`}</Pill> : null}
-              {row.statusReason ? <span className="sh-note">{row.statusReason}</span> : null}
-            </div>
+            {row.status !== "running" || row.leverage ? (
+              <div className="sh-inline">
+                {row.status !== "running" ? <Pill tone={st.tone}>{row.reason || st.label}</Pill> : null}
+                {row.leverage ? <Pill tone="mute">{`${row.leverage}배`}</Pill> : null}
+                {row.statusReason || row.evidenceNote ? (
+                  <Info title={`${row.label} · ${st.label}`}>
+                    {row.statusReason ? <p>{row.statusReason}</p> : null}
+                    {row.evidenceNote ? <p>{row.evidenceNote}</p> : null}
+                  </Info>
+                ) : null}
+              </div>
+            ) : null}
 
             <StatGroup
               stats={[
-                { label: "거래", value: row.trades === null ? "—" : String(row.trades), note: row.sampleNote ?? undefined },
+                { label: "거래", value: row.trades === null ? "—" : String(row.trades) },
                 { label: "승률", value: row.winRatePct === null ? "—" : `${row.winRatePct.toFixed(1)}%` },
                 { label: "손익비", value: num(row.profitFactor) },
                 { label: "최대 낙폭", value: pct(mdd), tone: mdd === null ? "mute" : "dn" },
                 { label: "수익/낙폭", value: num(row.returnOverMdd) },
+                // Overview 전략 경쟁과 **같은 값**(UI-FIX B-4).
+                { label: "기준선", value: num(row.baseline?.value ?? null), note: row.baseline ? "BTC 보유" : undefined },
                 {
                   label: "유효일",
                   value:
                     row.elapsedDays == null ? "—" : `${row.elapsedDays}/${row.calendarDays ?? "?"}`,
-                  note: row.elapsedDays == null ? "FCE 가 이 트랙에는 안 낸다" : "호스트가 잔 날은 빠진다",
+                  note: row.elapsedDays == null ? undefined : "유효 / 달력",
                 },
               ]}
             />
 
             <Card
               title="자본"
-              description={
-                series
-                  ? "거래 이력의 실현 손익을 누적해 되만든 곡선이다 — 미실현이 빠진다"
-                  : undefined
+              info={
+                <>
+                  <p>거래 이력의 실현 손익을 누적해 되만든 곡선이다 — 미실현이 빠진다.</p>
+                  {row.sampleNote ? <p>{row.sampleNote}</p> : null}
+                  {row.elapsedDays != null ? <p>유효일은 호스트가 잔 날을 뺀 날수다.</p> : null}
+                </>
               }
             >
               {series && series.points.length > 1 ? (
@@ -127,17 +137,10 @@ export default function StrategyDetailPage() {
                   format={(v) => money(v, track?.currency ?? "USD")}
                 />
               ) : (
-                <p className="sh-note">
-                  이 트랙은 자본 이력이 아직 없어요. FCE 에 자본 기록이 없어 거래 이력으로 되만드는데, 이 트랙의 거래
-                  이력은 아직 올라오지 않습니다.
-                </p>
+                <p className="sh-note">거래 이력이 아직 안 올라와 곡선이 없어요.</p>
               )}
             </Card>
 
-            <p className="sh-note">
-              기준선 {row.benchmarkLabel ?? "없음"}
-              {row.benchmarkReturnPct === null ? " — 이 수익률이 좋은지 알 수 없다" : ` ${pct(row.benchmarkReturnPct)}`}
-            </p>
           </PageFrame>
         );
       }}

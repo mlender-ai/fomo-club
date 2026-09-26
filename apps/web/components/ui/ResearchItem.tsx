@@ -45,7 +45,10 @@ export function ResearchItem({
     status === "blocked" && blocks
       ? `${blocks} 차단`
       : status === "closed" && verdict
-        ? `닫힘 · ${VERDICT[verdict] ?? verdict}`
+        ? // 알약은 6자 안(UI-FIX A-2). "판단 불가" 는 그 자체로 닫힌 답이라 "닫힘" 을 붙이지 않는다.
+          verdict === "inconclusive"
+          ? "판단 불가"
+          : `닫힘 · ${VERDICT[verdict] ?? verdict}`
         : s.label;
   const body = (
     <>

@@ -1293,3 +1293,238 @@ a.ui-research-link:hover {
 .sh-body > .ui-hero {
   margin-bottom: 0;
 }
+
+/* ══ UI-FIX — 줄이고, 깨진 것 고친다 ══════════════════════════════════════ */
+
+/*
+ * B-1 — 이름이 세로로 쪼개졌다.
+ *
+ * 오른쪽 알약이 `nowrap` 이라 칸이 글자 수만큼 넓어졌고, 이름 칸(`minmax(0, 1fr)`)이 0 까지
+ * 밀려 한 글자씩 떨어졌다. 이름은 **한 줄 · 말줄임**, 칸은 최소 폭을 갖는다. 오른쪽은 숫자 하나다.
+ */
+.ui-row-title,
+.ui-row-sub {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-row-amount,
+.ui-row-subamount {
+  white-space: nowrap;
+}
+
+.ui-row-state {
+  color: var(--ink-2);
+  font-weight: var(--w-semibold);
+}
+
+@media (max-width: 767px) {
+  /* 폰 — 한 줄에 아이콘 · 이름/부제 · 값. 행 하나가 두 줄(이름·부제)을 넘지 않는다. */
+  .ui-row-link {
+    grid-template-columns: 32px minmax(96px, 1fr) auto;
+    grid-template-areas: "icon name value";
+    align-items: center;
+  }
+  .ui-row-change,
+  .ui-row-status {
+    grid-area: auto;
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+}
+
+/* 게이지 — 포지션 건강도 (C-3). 값이 없으면 칸째 없다(B-3). */
+.ui-gauge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  color: var(--ink-2);
+  font-size: var(--t-caption);
+  font-weight: var(--w-semibold);
+  white-space: nowrap;
+}
+
+/* ── ⓘ · 바텀시트 (A-3) ────────────────────────────────────────────────── */
+
+.ui-info {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: var(--s1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: var(--t-label);
+  font-weight: var(--w-regular);
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.ui-info:hover,
+.ui-info:focus-visible {
+  background: var(--bg-2);
+  color: var(--ink);
+}
+
+.ui-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+}
+
+.ui-sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--s5) var(--s5) var(--s8);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  background: var(--bg);
+  box-shadow: var(--shadow-pop);
+  animation: ui-sheet-up var(--m-hover) ease-out;
+}
+
+@keyframes ui-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.ui-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+}
+
+.ui-sheet-title {
+  margin: 0;
+  font-size: var(--t-h3);
+  font-weight: var(--w-bold);
+}
+
+.ui-sheet-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  color: var(--ink-2);
+  font-size: var(--t-label);
+  line-height: 1.7;
+}
+
+.ui-sheet-body p {
+  margin: 0;
+}
+
+.ui-sheet-body strong {
+  color: var(--ink);
+}
+
+.ui-sheet-body dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s1) var(--s4);
+  margin: 0;
+}
+
+.ui-sheet-body dt {
+  color: var(--ink-3);
+}
+
+.ui-sheet-body dd {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-sheet {
+    animation: none;
+  }
+}
+
+/* 한 줄 주석 — Overview 하단 (C-1) */
+.sh-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
+/* 최근 활동도 한 줄 */
+.ov-activity-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 연구 한 줄 요약 — 넘치면 말줄임 (C-1 · C-5) */
+.ui-research-head {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.ui-research-summary {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 전략 hero — 문장이 아니라 숫자 (C-2 · B-6) */
+.ui-hero-value {
+  white-space: nowrap;
+}
+
+/* C-5 — 연구 상세: 섹션 카드 대신 제목 + 본문 */
+.sh-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.sh-section + .sh-section {
+  padding-top: var(--s6);
+  border-top: 1px solid var(--line);
+}
+.sh-section-title {
+  margin: 0;
+  font-size: var(--t-h3);
+  font-weight: var(--w-bold);
+}
+.sh-note-quote strong {
+  font-weight: inherit;
+}
+
+/* 연구 상세 근거 — 에디토리얼이라 줄바꿈을 허용한다(C-5) */
+.sh-evidence .ui-row-title,
+.sh-evidence .ui-row-sub {
+  white-space: normal;
+}

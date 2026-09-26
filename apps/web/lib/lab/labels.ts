@@ -54,6 +54,42 @@ export function trackStatus(status: string): { label: string; tone: PillTone; do
   return TRACK_STATUS[status] ?? { label: status, tone: "mute" };
 }
 
+/**
+ * 정지·보류·제외 사유 → 사람 말 (UI-FIX A-4).
+ *
+ * 에러 코드(`fill_price_outside_observed_range`)·내부 용어(`invariant` · `NAV`)는 화면에 내지 않는다.
+ * 원문은 API 에 그대로 남는다 — 전략 상세의 ⓘ 가 연다. **사유를 지우는 게 아니라 접는다.**
+ *
+ * | 원문 | 화면 |
+ * |---|---|
+ * | `체결 invariant — fill_price_outside_observed_range` | 체결 가격 이상 |
+ * | `봉 불일치 정지 예방 · 대기 주문 13,940건` | 데이터 불일치 |
+ * | `451 지역 차단 · … NAV 미산출` | 지역 차단 |
+ */
+export function reasonLabel(status: string, reason: string | null): string {
+  const r = reason ?? "";
+  if (r.includes("fill_price_outside_observed_range")) return "체결 가격 이상";
+  if (r.includes("봉 불일치")) return "데이터 불일치";
+  if (r.includes("451")) return "지역 차단";
+  if (status === "stopped") return "정지";
+  if (status === "held") return "보류";
+  if (status === "excluded") return "제외";
+  return "";
+}
+
+/** 트랙 한 글자 — 이미지 없이도 행이 선다. 강조색을 새로 만들지 않는다(UI-01 A-2). */
+const GLYPH: Record<string, string> = {
+  crypto: "₿",
+  whale: "🐋",
+  stock_us: "US",
+  stock_kr: "KR",
+  polymarket: "P",
+};
+
+export function trackGlyph(key: string, label: string): string {
+  return GLYPH[key] ?? label.slice(0, 1);
+}
+
 /** 롱·숏. */
 export function sideLabel(direction: string): string {
   return direction === "short" || direction === "SHORT" ? "숏" : "롱";

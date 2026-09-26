@@ -2,7 +2,7 @@
 no: "01"
 title: 고래는 65.8% 맞히는데 우리는 왜 32.4%인가
 status: open
-summary: 두 승률은 다른 모집단 — 33.4%p 는 빼는 수가 아니다
+summary: 두 승률은 서로 다른 질문의 답 — 빼는 수가 아니다
 opened_at: 2026-09-19
 tracks: [whale]
 ---

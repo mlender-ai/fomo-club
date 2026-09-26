@@ -24,7 +24,7 @@
  */
 import { readCapitalSeries } from "./capital";
 import { readFceBoard, readFceLedger } from "./fce-board";
-import { buildOverview } from "./overview";
+import { MIN_SAMPLE_RANK, buildOverview, buildStrategyRows } from "./overview";
 import { buildPortfolio } from "./portfolio";
 import { Prisma } from "@prisma/client";
 
@@ -49,8 +49,10 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
+// 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
+//     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
 
 /** 조립본에 같이 실리는 동기화 재료. 경과 시간은 읽는 쪽이 센다. */
 export interface SyncSeed {
@@ -70,7 +72,7 @@ export interface Snapshot<T = unknown> {
  * 지연·드리프트 분포를 한 줄로. FCE 가 `{ median, p90, max }` 로 준다.
  * 값이 없으면 null — **지어내지 않는다.**
  */
-function describeDist(box: Record<string, unknown> | null, unit: string): string | null {
+function describeDist(box: Record<string, unknown> | null, unit: string, short = false): string | null {
   if (!box) return null;
   const pick = (k: string) => (typeof box[k] === "number" ? Math.round((box[k] as number) * 100) / 100 : null);
   const med = pick("median");
@@ -80,13 +82,11 @@ function describeDist(box: Record<string, unknown> | null, unit: string): string
   const parts = [
     med !== null ? `중앙값 ${med}${unit}` : null,
     p90 !== null ? `p90 ${p90}${unit}` : null,
-    max !== null ? `최대 ${max}${unit}` : null,
+    // 행 부제는 한 줄이다(UI-FIX A-2) — 최대값은 ⓘ 쪽(`detail`)에만.
+    max !== null && !short ? `최대 ${max}${unit}` : null,
   ].filter(Boolean);
   return parts.join(" · ");
 }
-
-/** `LAB-00 §7` — 표본 30 미만은 순위 없음. */
-const MIN_SAMPLE = 30;
 
 /** FCE 온체인 리포트가 낸 값. 랩이 계산하지 않는다. */
 const WHALE_OWN_WIN_PCT = 65.8;
@@ -155,34 +155,6 @@ export async function assemblePayloads() {
 
   const openResearch = research.filter((r) => r.status === "open" || r.status === "testing");
 
-  const strategyRows = board.tracks.map((t) => ({
-    key: t.key,
-    label: t.label,
-    returnPct: t.returnPct,
-    mddPct: t.mddPct,
-    // 낙폭이 0 이면 나눌 수 없다 — **`Infinity` 를 만들지 않는다.**
-    returnOverMdd:
-      t.returnPct !== null && t.mddPct !== null && Math.abs(t.mddPct) > 1e-9
-        ? t.returnPct / Math.abs(t.mddPct)
-        : null,
-    trades: t.trades,
-    winRatePct: t.winRatePct,
-    profitFactor: t.profitFactor,
-    leverage: t.leverage,
-    status: t.status,
-    statusReason: t.statusReason,
-    sampleNote: t.sampleNote,
-    benchmarkLabel: t.benchmarkLabel,
-    benchmarkReturnPct: t.benchmarkReturnPct,
-    elapsedDays: t.elapsedDays,
-    calendarDays: t.calendarDays,
-    ranked: (t.trades ?? 0) >= MIN_SAMPLE,
-    beatsBenchmark:
-      t.returnPct !== null && t.benchmarkReturnPct !== null
-        ? t.returnPct > t.benchmarkReturnPct
-        : null,
-  }));
-
   const measurable = board.positions.filter(
     (p) => p.netReturnPct !== null && p.marginUsdt !== null
   );
@@ -212,11 +184,14 @@ export async function assemblePayloads() {
   };
   void openResearch;
 
+  const strategyRows = buildStrategyRows(board.tracks, overview);
+
   const strategies = {
     rows: strategyRows,
-    beatCount: strategyRows.filter((r) => r.beatsBenchmark === true).length,
+    beatCount: overview.competition.beaten,
+    measuredCount: overview.competition.measured,
     rankableCount: strategyRows.filter((r) => r.ranked).length,
-    minSample: MIN_SAMPLE,
+    minSample: MIN_SAMPLE_RANK,
     portfolio,
     // 전략 상세(`/strategies/[id]`)가 자본 곡선을 그린다. **API 를 두 번 부르지 않게**
     // 여기 같이 싣는다(UI-02 F — 화면 하나에 필요한 걸 한 번에).
@@ -248,22 +223,40 @@ export async function assemblePayloads() {
           },
           /** **빼면 안 된다.** 화면이 이 값을 보고 뺄셈을 막는다. */
           subtractable: false as const,
-          note: "다른 모집단이다. 33.4%p 는 갭이 아니라 서로 다른 질문의 답 두 개다.",
+          // 숫자를 박아두지 않는다 — 박아둔 33.4%p 가 추종 승률이 바뀐 뒤에도 남아 있었다.
+          note: "다른 모집단이다. 이 차이는 한 축의 갭이 아니라 서로 다른 질문의 답 두 개다.",
         },
+        // `short` 는 행 오른쪽 한 단어(UI-FIX C-6). 긴 판정은 ⓘ 가 연다.
         causes: [
           {
             axis: "청산 규칙",
-            measured: "고래 청산을 그대로 따랐다면 −49.58 (75건)" as string | null,
+            measured: "고래 청산 따랐다면 −49.58 (75건)" as string | null,
+            detail: "고래 청산을 그대로 따랐다면 −49.58 USDT (75건)" as string | null,
             verdict: "원인 아님 — 따라가면 더 나빴다",
+            short: "원인 아님",
           },
-          { axis: "진입 지연", measured: describeDist(board.whale.latency, "분"), verdict: "중앙값이 1분 안 — 약한 후보" },
+          {
+            axis: "진입 지연",
+            measured: describeDist(board.whale.latency, "분", true),
+            detail: describeDist(board.whale.latency, "분"),
+            verdict: "중앙값이 1분 안 — 약한 후보",
+            short: "약한 후보",
+          },
           {
             axis: "진입 가격 드리프트",
-            measured: describeDist(board.whale.drift, "%"),
+            measured: describeDist(board.whale.drift, "%", true),
+            detail: describeDist(board.whale.drift, "%"),
             verdict: "손절폭 대비. p90 구간을 따로 볼 것",
+            short: "p90 확인",
           },
-          { axis: "사이징", measured: null, verdict: "미측정" },
-          { axis: "지갑 선정", measured: null, verdict: "미측정 — 리더보드에 재료 있음" },
+          { axis: "사이징", measured: null, detail: null, verdict: "미측정", short: "미측정" },
+          {
+            axis: "지갑 선정",
+            measured: null,
+            detail: null,
+            verdict: "미측정 — 리더보드에 재료 있음",
+            short: "미측정",
+          },
         ],
       }
     : { whale: null, winRates: null, causes: [] };
@@ -278,13 +271,8 @@ export async function assemblePayloads() {
       .map((r) => ({ no: r.no, title: r.title, blocks: r.blocks })),
   };
 
-  const journal = {
-    ...ledger,
-    countNote:
-      ledger.boardCount !== null && ledger.boardCount !== ledger.total.count
-        ? "전광판은 검증 창 안에서 닫힌 거래만 센다. 이 표는 랩이 받아 쌓은 전부다. 두 수를 빼서 쓰지 않는다."
-        : null,
-  };
+  // 복기의 거래 수는 Overview `stats.trades` 와 **같은 행들**(FceTrade · exitAt 있음)을 센다(B-5).
+  const journal = ledger;
 
   return {
     payloads: {
