@@ -336,6 +336,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         // `Prisma.DbNull` 이 "값이 없다" 를 DB 에 명시적으로 적는 방법이다.
         latency: (w.latency ?? Prisma.DbNull) as Prisma.InputJsonValue,
         drift: (w.drift ?? Prisma.DbNull) as Prisma.InputJsonValue,
+        // 옛 업로더는 `board` 를 안 보낸다 — 그때 null 로 덮지 않는다(화면이 한 업로드 동안 비지 않게).
+        ...(w.board ? { board: w.board as unknown as Prisma.InputJsonValue } : {}),
         asOf: new Date(w.asOf),
       };
       await prisma.fceWhale.upsert({ where: { id: 1 }, create: { id: 1, ...row }, update: row });

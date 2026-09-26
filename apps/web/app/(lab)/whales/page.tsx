@@ -20,7 +20,7 @@ import type { Wire } from "../../../lib/lab/wire";
 type Whales = Wire<"whales">;
 
 export default function WhalesPage() {
-  const { state, retry } = useLab<Whales>("/api/lab/whales");
+  const { state, retry } = useLab<Whales>("/api/lab/whales", 30_000);
   return (
     <LabView
       state={state}

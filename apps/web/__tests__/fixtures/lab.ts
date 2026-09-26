@@ -13,8 +13,11 @@
  * 조립은 **실제 빌더**(`buildOverview` · `buildStrategies` · `buildPortfolio`)를 지난다.
  * 화면이 받는 모양이 서버와 어긋나면 여기서 타입이 깨진다.
  */
-import { LIQUIDATION_PCT, type FcePositionRow, type FceTrackRow } from "../../lib/lab/fce-board";
+import { LIQUIDATION_PCT, type FcePositionRow, type FceTrackRow, type FceWhaleView } from "../../lib/lab/fce-board";
+import type { WhaleBoard } from "../../lib/lab/fce-payload";
+import { buildWhales } from "../../lib/lab/whales";
 import positionsFixture from "./positions.json";
+import whaleFixture from "./whale.json";
 import {
   buildOverview,
   type Bar,
@@ -341,34 +344,17 @@ export function fixtures() {
       },
       span: { from: closed[0]?.exitAt ?? null, to: NOW },
     }),
-    whales: wire<Wire<"whales">>({
-      whale: {
-        walletsTotal: 82,
-        eligible: 2,
-        rejected: { excluded_type: 9, sample_below_min: 63, win_rate_below_min: 8 },
-        passers: ["0x020ca66c30bec2c4fe3861a94e4db4a498a35872", "0x9546b9d4103be41ce13483a8f299d0df0eeb181c"],
-        followWinPct: 36.8,
-        followTrades: 87,
-        followPf: 0.652,
-        followNetUsdt: -28.63,
-        latency: { median: 0.58, p90: 21.06, max: 29.9 },
-        drift: { median: 0, p90: 7.14, max: 18.13 },
-        asOf: NOW,
-      },
-      winRates: {
-        whaleOwn: { value: 65.8, measures: "그 지갑의 온체인 체결 전부 — 고래의 자본·판단·출구" },
-        ourFollow: { value: 36.8, trades: 87, measures: "우리가 따라 들어간 거래 — 우리 사이징·우리 출구" },
-        subtractable: false,
-        note: "다른 모집단이다. 이 차이는 한 축의 갭이 아니라 서로 다른 질문의 답 두 개다.",
-      },
-      causes: [
-        { axis: "청산 규칙", measured: "고래 청산 따랐다면 −49.58 (75건)", detail: "고래 청산을 그대로 따랐다면 −49.58 USDT (75건)", verdict: "원인 아님 — 따라가면 더 나빴다", short: "원인 아님" },
-        { axis: "진입 지연", measured: "중앙값 0.58분 · p90 21.06분", detail: "중앙값 0.58분 · p90 21.06분 · 최대 29.9분", verdict: "중앙값이 1분 안 — 약한 후보", short: "약한 후보" },
-        { axis: "진입 가격 드리프트", measured: "중앙값 0% · p90 7.14%", detail: "중앙값 0% · p90 7.14% · 최대 18.13%", verdict: "손절폭 대비. p90 구간을 따로 볼 것", short: "p90 확인" },
-        { axis: "사이징", measured: null, detail: null, verdict: "미측정", short: "미측정" },
-        { axis: "지갑 선정", measured: null, detail: null, verdict: "미측정 — 리더보드에 재료 있음", short: "미측정" },
-      ],
-    }),
+    whales: wire<Wire<"whales">>(
+      buildWhales({
+        whale: {
+          ...(whaleFixture as unknown as Omit<FceWhaleView, "asOf" | "board">),
+          board: whaleFixture.board as unknown as WhaleBoard,
+          asOf: new Date(whaleFixture.asOf),
+        },
+        research: RESEARCH.map((r) => ({ ...r })),
+        followAvgHoldHours: core.rows.find((r) => r.key === "whale")?.avgHoldHours ?? null,
+      })
+    ),
     research: wire<Wire<"research">>({
       items: RESEARCH.map((r) => ({
         ...r,

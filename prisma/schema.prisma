@@ -1580,5 +1580,9 @@ model FceWhale {
   latency Json?
   drift   Json?
 
+  /// UI-07 — 갭 · 반사실 · 추적 지갑 · 깔때기 · 리더보드 · 24시간 관측(`fce-payload.ts` `WhaleBoard`).
+  /// **지갑 주소는 앞 6 · 뒤 4 만** — 전체 주소가 들어오면 업로드가 거절된다.
+  board Json?
+
   asOf DateTime
 }

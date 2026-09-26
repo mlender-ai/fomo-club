@@ -30,7 +30,8 @@ import { PositionsBody } from "../components/tabs/PositionsBody";
 import { ResearchBody } from "../components/tabs/ResearchBody";
 import { StrategiesBody } from "../components/tabs/StrategiesBody";
 import { StrategyDetailBody } from "../components/tabs/StrategyDetailBody";
-import { WhalesBody } from "../components/tabs/WhalesBody";
+import { WhaleWalletBody } from "../components/tabs/WhaleWalletBody";
+import { LEADERBOARD_NOTE, POPULATION_WARNING, WhalesBody } from "../components/tabs/WhalesBody";
 import { fixtures } from "./fixtures/lab";
 
 /** 이보다 긴 `<p>` 는 폰에서 두 줄을 넘는다 — 설명 문단으로 본다. */
@@ -58,6 +59,13 @@ const TABS: [string, ComponentType<{ data: never }>, unknown][] = [
   ["전략 상세 · 크립토", detail("crypto"), data.strategies],
   ["전략 상세 · 주식 US", detail("stock_us"), data.strategies],
   ["포지션 상세", PositionDetailBody as ComponentType<{ data: never }>, data.positionDetail],
+  [
+    "고래 지갑",
+    function Wallet({ data: d }: { data: never }) {
+      return createElement(WhaleWalletBody, { data: d, walletKey: data.whales.board?.wallets[0]?.key ?? "" });
+    },
+    data.whales,
+  ],
 ];
 
 // ── HTML 에서 글자 꺼내기 ─────────────────────────────────────────────────
@@ -142,7 +150,10 @@ describe.each(TABS)("텍스트 예산 — %s", (name, Body, payload) => {
   it("에러 코드·문서 번호·내부 용어가 없다 (A-4)", () => {
     const body = withoutLinks(html)
       // C-6 이 이 알약 하나만 허용했다.
-      .replace("모집단 다름", "");
+      .replace("모집단 다름", "")
+      // UI-07 B · H 가 이 두 문장을 **필수**로 정했다 — 모집단 경고를 빼지 말 것.
+      .replace(POPULATION_WARNING, "")
+      .replace(LEADERBOARD_NOTE, "");
     expect(body).not.toMatch(/\b[a-z]+(?:_[a-z]+)+\b/); // fill_price_outside_observed_range
     expect(body).not.toMatch(/LAB-\d|§|연구 \d{2}/);
     expect(body).not.toMatch(/invariant|\bNAV\b|커버리지|모집단/);
