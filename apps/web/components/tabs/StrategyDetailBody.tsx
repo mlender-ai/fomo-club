@@ -227,16 +227,18 @@ function DistributionCard({ row }: { row: Row }) {
   return (
     <Card
       title="거래별 손익률"
-      description={`${d.count}건 · 점선 = 중앙값`}
+      // 중앙값은 점선과 같이 읽히게 부제에 — 칸에 넣으면 다섯 칸이 돼 한 칸이 빈다.
+      description={`${d.count}건 · 점선 중앙값 ${pct(d.median)}`}
       info={<p>거래 하나하나의 증거금 대비 손익률이다. 막대 하나가 {d.width}%p 폭이고, 0 보다 아래는 빨강이다.</p>}
     >
       <Histogram bins={d.bins} median={d.median} />
       <StatGroup
         stats={[
-          { label: "중앙값", value: pct(d.median), tone: tone(d.median) },
           { label: "최대 손실", value: pct(d.worst), tone: tone(d.worst) },
           { label: "최대 이익", value: pct(d.best), tone: tone(d.best) },
-          { label: "평균 이익 · 손실", value: `${pct(d.avgWin, 1)} · ${pct(d.avgLoss, 1)}` },
+          // 한 칸에 둘을 넣었더니 폰에서 두 줄로 접혔다.
+          { label: "이긴 거래 평균", value: pct(d.avgWin), tone: tone(d.avgWin) },
+          { label: "진 거래 평균", value: pct(d.avgLoss), tone: tone(d.avgLoss) },
         ]}
       />
       {d.reading ? <p className="st-line">{d.reading}</p> : null}

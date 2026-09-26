@@ -49,6 +49,17 @@ describe("A-2 순위", () => {
   });
 });
 
+describe("UI-FIX C-2 — 정상이면 상태 글자가 없다", () => {
+  it("돌고 있는데 거래가 없는 트랙도 `운용중` 을 띄우지 않는다", () => {
+    const tracks = data.strategies.rows.map((r) =>
+      r.key === "stock_kr" ? { ...r, status: "running", verdict: "unmeasured" as const, reason: "" } : r
+    );
+    const html = renderToStaticMarkup(createElement(StrategiesBody, { data: { ...s, rows: tracks } }));
+    expect(text(html)).not.toMatch(/운용중/);
+    expect(text(html)).toMatch(/잴 거래 없음/);
+  });
+});
+
 describe("A-3 표 · 레버리지를 숨기지 않는다", () => {
   it("열 12개 — 레버리지 열이 있다", () => {
     const heads = [...list.matchAll(/<th scope="col"[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
@@ -108,7 +119,7 @@ describe("B 상세 — 숫자만 두고 해석을 빼지 않는다", () => {
   });
 
   it("분포 — 중앙값 · 최대 손실 · 최대 이익", () => {
-    expect(text(html)).toMatch(/중앙값.*최대 손실.*최대 이익/);
+    expect(text(html)).toMatch(/중앙값.*최대 손실.*최대 이익.*이긴 거래 평균.*진 거래 평균/);
     expect(text(html)).toMatch(/이긴 거래가 진 거래보다 (작|크)다/);
   });
 
