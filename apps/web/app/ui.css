@@ -2063,3 +2063,318 @@ a.ui-research-link:hover {
   gap: var(--s3);
   font-size: var(--t-label);
 }
+
+/* ══ 연구 (UI-08) ═════════════════════════════════════════════════════════ */
+
+.rs-filters {
+  margin: var(--s2) 0 0;
+}
+
+/* 목록 — SuperHi 번호 섹션 (A-3) */
+.rs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.rs-entry {
+  border-bottom: 1px solid var(--line);
+}
+.rs-entry-link {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--s5);
+  padding: var(--s6) 0;
+  color: inherit;
+  text-decoration: none;
+}
+.rs-entry-link:hover .rs-title {
+  color: var(--blue);
+}
+.rs-no {
+  font-size: var(--t-research-list-no);
+  font-weight: var(--w-bold);
+  line-height: 1;
+  letter-spacing: var(--ls-display);
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+}
+.rs-entry.is-closed .rs-no {
+  color: var(--ink-3);
+}
+.rs-entry-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+.rs-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+.rs-title {
+  margin: 0;
+  /* 한글 제목이 음절 하나를 다음 줄로 떨어뜨렸다(`…32.4%인` / `가`) — 단어 단위로 접는다. */
+  word-break: keep-all;
+  font-size: var(--t-h2);
+  font-weight: var(--w-bold);
+  line-height: 1.35;
+  letter-spacing: var(--ls-snug);
+  color: var(--ink);
+  transition: color var(--m-hover);
+}
+.rs-entry-head .ui-pill {
+  flex: none;
+  margin-top: 4px;
+}
+.rs-line {
+  margin: 0;
+  font-size: var(--t-body);
+  color: var(--ink-2);
+}
+.rs-days {
+  color: var(--ink-3);
+}
+.rs-decision {
+  margin: 0;
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  color: var(--ink);
+}
+@media (max-width: 767px) {
+  .rs-entry-link {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s2);
+    padding: var(--s5) 0;
+  }
+  .rs-no {
+    font-size: var(--t-research-no);
+  }
+  .rs-title {
+    font-size: var(--t-h3);
+  }
+}
+
+/* 실제 돈을 넣으려면 (PART E) */
+.rs-gates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rs-gate {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--card-pad);
+  border-top: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+  font-size: var(--t-label);
+}
+.rs-gate-no {
+  font-weight: var(--w-bold);
+  color: var(--blue);
+}
+.rs-gate-no.is-done {
+  color: var(--ink-3);
+}
+.rs-gate-label {
+  min-width: 0;
+  font-weight: var(--w-medium);
+}
+
+/* 상세 — 에디토리얼 (B-3) · 본문 폭 680 */
+.rd {
+  max-width: var(--research-max);
+  padding: var(--s4) 0 var(--s10);
+}
+.rd-head {
+  padding-bottom: var(--s7);
+  border-bottom: 1px solid var(--line);
+}
+.rd-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rd-no {
+  font-size: var(--t-hero);
+  font-weight: var(--w-bold);
+  line-height: 1;
+  letter-spacing: var(--ls-hero);
+  color: var(--blue);
+}
+.rd-no.is-closed {
+  color: var(--ink-3);
+}
+.rd-title {
+  margin: var(--s5) 0 var(--s3);
+  word-break: keep-all;
+  font-size: var(--t-display);
+  font-weight: var(--w-bold);
+  line-height: 1.25;
+  letter-spacing: var(--ls-tight);
+  /* 두 줄까지 — 넘으면 말줄임. 질문은 짧아야 한다. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rd-meta {
+  margin: 0;
+  font-size: var(--t-label);
+  color: var(--ink-3);
+}
+.rd-meta a {
+  color: inherit;
+}
+.rd-summary {
+  margin: var(--s4) 0 0;
+  font-size: var(--t-body);
+  font-weight: var(--w-semibold);
+  color: var(--ink-2);
+}
+.rd-section {
+  padding-top: var(--s8);
+}
+.rd-section-title {
+  margin: 0 0 var(--s4);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.rd-section p,
+.rd-ol li {
+  font-size: var(--t-body);
+  line-height: 1.75;
+  color: var(--ink);
+}
+.rd-ol {
+  margin: 0;
+  padding-left: var(--s5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.rd-ol li::marker {
+  color: var(--blue);
+  font-weight: var(--w-bold);
+}
+
+/* 알아낸 것 — ✓ 확인 · ✗ 기각 · · 진행중 */
+.rd-findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.rd-finding {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: var(--s3);
+}
+.rd-mark {
+  font-size: var(--t-h3);
+  font-weight: var(--w-bold);
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.rd-finding.is-up .rd-mark {
+  color: var(--up);
+}
+.rd-finding.is-dn .rd-mark {
+  color: var(--dn);
+}
+.rd-finding-body p {
+  margin: 0;
+}
+.rd-finding-text {
+  font-weight: var(--w-medium);
+}
+.rd-finding-note {
+  margin-top: var(--s1) !important;
+  color: var(--ink-2) !important;
+}
+.rd-source {
+  margin-top: var(--s1) !important;
+  font-size: var(--t-caption) !important;
+  color: var(--ink-3) !important;
+}
+
+/* 결정 — 강조 카드 · 파랑 왼쪽 바 */
+.rd-decision {
+  padding: var(--s5) var(--s6);
+  border-left: 4px solid var(--blue);
+  border-radius: 0 var(--r-row) var(--r-row) 0;
+  background: var(--blue-soft);
+}
+.rd-decision p {
+  margin: 0 0 var(--s2);
+}
+.rd-decision p:last-child {
+  margin-bottom: 0;
+}
+
+.rd-related {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.rd-related > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--s3);
+  font-size: var(--t-label);
+}
+.rd-related dt {
+  color: var(--ink-3);
+}
+.rd-related dd {
+  margin: 0;
+}
+
+.rd-evidence {
+  margin-top: var(--s8);
+  font-size: var(--t-label);
+}
+.rd-evidence summary {
+  cursor: pointer;
+  color: var(--ink-3);
+}
+.rd-evidence ul {
+  list-style: none;
+  margin: var(--s3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.rd-evidence li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--s1) var(--s3);
+}
+.rd-ev-label {
+  color: var(--ink-2);
+}
+.rd-evidence .rd-source {
+  grid-column: 2;
+  margin: 0 !important;
+}
+@media (max-width: 767px) {
+  .rd-no {
+    font-size: var(--t-research-list-no);
+  }
+  .rd-title {
+    font-size: var(--t-h1);
+  }
+}

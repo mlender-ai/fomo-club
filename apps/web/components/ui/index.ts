@@ -19,7 +19,7 @@ export { Histogram, type Bin } from "./Histogram";
 export { Info } from "./Info";
 export { Pill, type PillTone } from "./Pill";
 export { PriceRail } from "./PriceRail";
-export { ResearchItem, type ResearchStatus } from "./ResearchItem";
+export { ResearchItem, researchPill, type ResearchStatus } from "./ResearchItem";
 export { Skeleton, SkeletonRows } from "./Skeleton";
 export { Sparkline } from "./Sparkline";
 export { StatGroup, type Stat } from "./StatGroup";

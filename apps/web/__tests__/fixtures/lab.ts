@@ -16,6 +16,11 @@
 import { LIQUIDATION_PCT, type FcePositionRow, type FceTrackRow, type FceWhaleView } from "../../lib/lab/fce-board";
 import type { WhaleBoard } from "../../lib/lab/fce-payload";
 import { buildWhales } from "../../lib/lab/whales";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { parseNote } from "../../lib/lab/research-note";
+import { buildResearch } from "../../lib/lab/research";
 import positionsFixture from "./positions.json";
 import whaleFixture from "./whale.json";
 import {
@@ -232,16 +237,35 @@ export const POSITIONS: FcePositionRow[] = positionsFixture.positions.map((p) =>
 }));
 export const CHARTS = positionsFixture.charts as { symbol: string; timeframe: "15m" | "1h" | "4h" | "1d"; candles: [number, number, number, number, number][] }[];
 
-/** `/api/lab/research` 실측(01 요약은 이번에 고친 문구). */
-export const RESEARCH = [
-  { no: "01", trackKeys: ["whale"], title: "고래는 65.8% 맞히는데 우리는 왜 32.4%인가", blocks: null, status: "open", summary: "두 승률은 서로 다른 질문의 답 — 빼는 수가 아니다", verdict: null },
-  { no: "02", trackKeys: ["crypto", "whale"], title: "강제청산을 넣으면 성과가 얼마나 바뀌나", blocks: "실매매", status: "blocked", summary: "3배라 −100% 아래 거래 0건 — 배수를 올리면 드러난다", verdict: null },
-  { no: "03", trackKeys: ["crypto", "stock_us", "stock_kr"], title: "호스트가 자는 동안 잃은 날은 며칠인가", blocks: null, status: "open", summary: "크립토 78일 중 29일만 유효 · 49일 유실", verdict: null },
-  { no: "04", trackKeys: [], title: "추세·평균회귀 진입에 우위가 있나", blocks: null, status: "closed", summary: "우연 확률 99% · 기준선 넘은 전략 0개", verdict: "no" },
-  { no: "05", trackKeys: ["crypto"], title: "1배와 3배는 무엇이 다른가", blocks: null, status: "closed", summary: "147건 — 1배·3배 승률·PF 가 소수점까지 같다", verdict: "inconclusive" },
-  { no: "06", trackKeys: ["stock_us", "stock_kr"], title: "주식 US 체결 가격 이상은 왜 생기나", blocks: null, status: "open", summary: "봉 불일치 하나가 US 정지·KR 보류를 같이 만든다", verdict: null },
-  { no: "07", trackKeys: [], title: "FOMO Club 신호 8종에 청산 규칙을 붙이면 알파가 있나", blocks: null, status: "open", summary: "주식 유효일 2~3일 — 판정할 표본이 없다", verdict: null },
-];
+/**
+ * 연구 노트 일곱 — **레포의 실제 파일**(`docs/lab/research/*.md`)을 시드와 같은 파서로 읽는다.
+ * 파일을 고치면 견본도 같이 바뀐다 — 화면 테스트가 옛 문구를 붙들고 있지 않게.
+ */
+const RESEARCH_DIR = join(__dirname, "../../../../docs/lab/research");
+export const NOTES = readdirSync(RESEARCH_DIR)
+  .filter((f) => f.endsWith(".md") && f !== "README.md")
+  .sort()
+  .map((f) => parseNote(readFileSync(join(RESEARCH_DIR, f), "utf8"), f));
+export const RESEARCH = NOTES.map((n) => ({
+  no: n.no,
+  trackKeys: n.trackKeys,
+  title: n.title,
+  blocks: n.blocks,
+  status: n.status,
+  summary: n.summary,
+  verdict: n.verdict,
+}));
+
+/** 연구 상세 한 건 — DB `Research` 행 모양(시드가 쓰는 그대로). */
+function detailItem(no: string) {
+  const n = NOTES.find((x) => x.no === no) as (typeof NOTES)[number];
+  return {
+    no: n.no, title: n.title, status: n.status, verdict: n.verdict, summary: n.summary,
+    hypothesis: n.hypothesis, method: n.method, why: n.why, hypotheses: n.hypotheses, methods: n.methods,
+    findings: n.findings, related: n.related, liveGate: n.liveGate, evidence: n.evidence, decision: n.decision,
+    blocks: n.blocks, openedAt: n.openedAt, closedAt: n.closedAt, trackKeys: n.trackKeys, updatedAt: NOW,
+  };
+}
 
 /** JSON 을 한 번 지난 모양 — 화면이 받는 그대로. */
 const wire = <T>(v: unknown): T => JSON.parse(JSON.stringify(v)) as T;
@@ -355,17 +379,26 @@ export function fixtures() {
         followAvgHoldHours: core.rows.find((r) => r.key === "whale")?.avgHoldHours ?? null,
       })
     ),
-    research: wire<Wire<"research">>({
-      items: RESEARCH.map((r) => ({
-        ...r,
-        openedAt: "2026-09-19T00:00:00.000Z",
-        closedAt: r.status === "closed" ? "2026-09-22T00:00:00.000Z" : null,
-        trackKeys: null,
-      })),
-      open: 4,
-      blocked: 1,
-      closed: 2,
-      blockers: [{ no: "02", title: "강제청산을 넣으면 성과가 얼마나 바뀌나", blocks: "실매매" }],
-    }),
+    research: wire<Wire<"research">>(
+      buildResearch({
+        items: NOTES.map((n) => ({
+          no: n.no,
+          title: n.title,
+          status: n.status,
+          verdict: n.verdict,
+          summary: n.summary,
+          decision: n.decision,
+          blocks: n.blocks,
+          liveGate: n.liveGate,
+          openedAt: n.openedAt,
+          closedAt: n.closedAt,
+          trackKeys: n.trackKeys,
+        })),
+        strategies: { beatCount: core.beatCount, measuredCount: core.measuredCount },
+        now: NOW,
+      })
+    ),
+    /** `GET /api/lab/research/01` 의 `item` — 상세 견본. */
+    researchDetail: wire<Record<string, unknown>>(detailItem("01")),
   };
 }

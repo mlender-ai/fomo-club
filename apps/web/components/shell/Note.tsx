@@ -117,3 +117,8 @@ export function Note({ text }: { text: string | null }) {
 
   return <div className="sh-note-body">{blocks}</div>;
 }
+
+/** 한 줄짜리 — 가설 · 방법 · 알아낸 것(UI-08). 굵게 · 코드 · `[[02]]` 링크를 `Note` 와 같게. */
+export function NoteInline({ text }: { text: string }) {
+  return <>{inline(text, "i")}</>;
+}
