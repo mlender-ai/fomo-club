@@ -27,6 +27,7 @@ import { readFceBoard, readFceLedger } from "./fce-board";
 import { buildOverview } from "./overview";
 import { buildPortfolio } from "./portfolio";
 import { buildCharts, buildPositions } from "./positions";
+import { buildResearch } from "./research";
 import { buildStrategies } from "./strategies";
 import { buildWhales } from "./whales";
 import { Prisma } from "@prisma/client";
@@ -54,10 +55,11 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 8;
+export const SNAPSHOT_VERSION = 9;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
+// 9 — UI-08: 연구 목록에 상태 열쇠 · 경과일 · 결정 한 줄 · 실매매 관문(`research.ts`).
 // 8 — UI-07: 고래 조립본을 FCE 보드로(갭 · 반사실 · 지갑 · 깔때기 · 리더보드 · 24시간). 박아 둔 65.8% · 원인 표를 뺐다.
 // 7 — UI-06: 포지션 행에 `evidence`(진입 근거). v6 조립본에는 없어서 화면이 `evidence[0]` 에서 멈춘다.
 // 6 — UI-06: 포지션에 가격선·현재가·수량·비용 · 위험순 정렬 · 연구 · `charts` 조립본(캔들).
@@ -103,6 +105,8 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
         verdict: true,
         summary: true,
         blocks: true,
+        decision: true,
+        liveGate: true,
         openedAt: true,
         closedAt: true,
         trackKeys: true,
@@ -175,7 +179,6 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
     lastError: lastFail?.error ? { at: lastFail.at.toISOString(), error: lastFail.error } : null,
   };
 
-  const openResearch = research.filter((r) => r.status === "open" || r.status === "testing");
 
   const overview = {
     ...buildOverview({
@@ -196,7 +199,6 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
     }),
     positions: board.positions.length,
   };
-  void openResearch;
 
   const strategies = {
     ...buildStrategies({
@@ -234,15 +236,11 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
     followAvgHoldHours: strategies.rows.find((r) => r.key === "whale")?.avgHoldHours ?? null,
   });
 
-  const researchPayload = {
+  const researchPayload = buildResearch({
     items: research,
-    open: openResearch.length,
-    blocked: research.filter((r) => r.status === "blocked").length,
-    closed: research.filter((r) => r.status === "closed").length,
-    blockers: research
-      .filter((r) => r.status === "blocked" && r.blocks)
-      .map((r) => ({ no: r.no, title: r.title, blocks: r.blocks })),
-  };
+    strategies: { beatCount: strategies.beatCount, measuredCount: strategies.measuredCount },
+    now: new Date(),
+  });
 
   // 복기의 거래 수는 Overview `stats.trades` 와 **같은 행들**(FceTrade · exitAt 있음)을 센다(B-5).
   const journal = ledger;

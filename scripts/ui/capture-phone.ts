@@ -35,6 +35,9 @@ const TABS = [
   { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail" },
   // 폰 기본은 미니멀이다(UI-06 D) — 차트·정보까지 보려면 프로로 한 장 더.
   { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail-pro", mode: "pro" },
+  // UI-08 B — 연구 상세(에디토리얼). 01 이 가장 길다.
+  // 상세는 문단이 허용되는 곳이라 ⓘ 가 없다(UI-FIX C-5) — `noInfo`.
+  { path: "/research/01", key: "research", name: "research-01", noInfo: true },
   // UI-07 D — 추적 지갑 상세. 열쇠는 주소 앞 6 · 뒤 4.
   { path: `/whales/${fixtures().whales.board?.wallets[0]?.key ?? ""}`, key: "whales", name: "whale-wallet" },
 ] as const;
@@ -60,7 +63,9 @@ async function main(): Promise<void> {
       ? data.positionDetail
       : key.startsWith("whales/")
         ? data.whales
-        : (data as Record<string, unknown>)[key];
+        : key.startsWith("research/")
+          ? { item: data.researchDetail }
+          : (data as Record<string, unknown>)[key];
     if (payload === undefined) return route.fulfill({ status: 404, json: { error: "not_found" } });
     return route.fulfill({ json: { data: payload, sync, builtAt: new Date().toISOString(), ms: 1 } });
   });
@@ -74,7 +79,7 @@ async function main(): Promise<void> {
       else window.localStorage.removeItem("lab.positions.mode");
     }, mode);
     if (mode) await page.reload({ waitUntil: "networkidle" });
-    await page.waitForSelector(".ui-hero-value", { timeout: 30_000 });
+    await page.waitForSelector(".ui-hero-value, .rd-title", { timeout: 30_000 });
     // 캔들 차트는 브라우저에서 라이브러리를 불러 그린다 — 캔버스가 뜰 때까지.
     if (mode === "pro") await page.waitForSelector(".ui-candles canvas", { timeout: 15_000 }).catch(() => {});
     // `next dev` 의 N 배지가 통계 칸을 가린다 — 배포 화면에는 없는 것.
@@ -136,7 +141,11 @@ async function main(): Promise<void> {
   }
   await browser.close();
 
-  const bad = report.filter((l) => /있음 ❌|잘림 [1-9]|쪼개짐 [1-9]|넘는 행 [1-9]|시트 "없음"/.test(l));
+  const bad = report.filter(
+    (l, i) =>
+      /있음 ❌|잘림 [1-9]|쪼개짐 [1-9]|넘는 행 [1-9]/.test(l) ||
+      (/시트 "없음"/.test(l) && !("noInfo" in (TABS[i] ?? {})))
+  );
   process.exit(bad.length > 0 ? 1 : 0);
 }
 

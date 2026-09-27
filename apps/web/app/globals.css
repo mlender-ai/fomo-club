@@ -60,6 +60,9 @@
   --t-label: 13px;
   --t-caption: 12.5px;
   --t-research-no: 28px;
+  /* UI-08 — 연구 목록 번호(44/700) · 상세 본문 폭 680 */
+  --t-research-list-no: 44px;
+  --research-max: 680px;
   /** 연구 제목 — 질문형 한 줄 (UI-04 G). */
   --t-research-title: 14.5px;
   /** 헤더 로고 글자 (UI-03 C). */

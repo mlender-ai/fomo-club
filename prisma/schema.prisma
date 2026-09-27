@@ -1542,6 +1542,18 @@ model Research {
   hypothesis String?
   /// 어떻게 확인하나.
   method     String?
+  /// UI-08 — 왜 궁금한가.
+  why        String?
+  /// UI-08 — 번호 목록. `string[]`. `hypothesis` · `method` 는 같은 내용을 문단으로 남긴 것이다(옛 화면).
+  hypotheses Json?
+  methods    Json?
+  /// UI-08 — 지금까지 알아낸 것. `[{ mark: confirmed|rejected|pending, text, note, source }]`.
+  /// **출처 없는 줄은 시드가 거절한다**(하지 말 것: 근거 없이 알아낸 것을 쓰지 말 것).
+  findings   Json?
+  /// UI-08 — 관련. `[{ label, value }]` — 트랙 · 문서 · 화면.
+  related    Json?
+  /// UI-08 PART E — 실매매 전에 풀려야 하는 것이면 그 이름(`강제청산 모델링`). 아니면 null.
+  liveGate   String?
   /// 근거 수치와 출처. `[{ label, value, source }]`.
   evidence   Json?
   /// 그래서 무엇을 하기로 했나.
