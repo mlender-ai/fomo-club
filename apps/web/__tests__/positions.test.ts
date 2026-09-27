@@ -11,13 +11,13 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { PositionDetailBody } from "../components/tabs/PositionDetailBody";
+import { PositionDetailBody, validityLabel } from "../components/tabs/PositionDetailBody";
 import { PositionsBody } from "../components/tabs/PositionsBody";
 import { HealthRing, healthTone, price } from "../components/ui";
 import { LIQUIDATION_PCT, type FcePositionRow } from "../lib/lab/fce-board";
 import { positionFromOpenTrade } from "../lib/lab/fce-payload";
 import { claimText, withGlossary } from "../lib/lab/labels";
-import { LIVE_ONLY, buildPositions, railOf, riskOrder } from "../lib/lab/positions";
+import { LIVE_ONLY, buildPositions, missingOf, railOf, riskOrder } from "../lib/lab/positions";
 import { POSITIONS, POSITIONS_AT, fixtures } from "./fixtures/lab";
 
 const data = fixtures();
@@ -66,9 +66,10 @@ describe("A-3 위험한 것 먼저", () => {
     expect([far, near].sort(riskOrder).map((p) => p.id)).toEqual(["near", "far"]);
   });
 
-  it("실측 다섯도 그 순서다", () => {
-    const d = data.positions.positions.map((p) => Math.abs(p.invalidationDistancePct ?? Infinity));
-    expect(d).toEqual([...d].sort((x, y) => x - y));
+  it("실측 다섯은 건강도 낮은 순이다 — FCE 분석이 건강도를 낸다(UI-10)", () => {
+    const h = data.positions.positions.map((p) => p.healthScore as number);
+    expect(h.every((x) => typeof x === "number")).toBe(true);
+    expect(h).toEqual([...h].sort((x, y) => x - y));
   });
 });
 
@@ -125,11 +126,17 @@ describe("B 상세", () => {
     expect(text(html)).toMatch(/(무효화|손절)까지 .*% · 익절1까지 .*%/);
   });
 
-  it("프로 기본(서버 렌더) — 차트 · 라이브 전용 · 정보 · 연구가 있다", () => {
-    expect(text(html)).toMatch(/차트/);
-    expect(text(html)).toMatch(/포지션 정보/);
-    expect(text(html)).toMatch(/연결된 연구/);
-    for (const name of LIVE_ONLY) expect(text(html)).toContain(name);
+  it("프로 기본(서버 렌더) — 지금 볼 것 · 차트 · 패턴 시간봉 · 고래 추적군 · 정보 · 연구", () => {
+    for (const s of ["지금 볼 것", "차트", "패턴 시간봉", "고래 추적군", "포지션 정보", "연결된 연구"]) expect(text(html)).toContain(s);
+    expect(html).not.toMatch(/FCE 라이브 전용/);
+  });
+
+  it("지금 볼 것이 가격 레일보다 먼저 — 가장 먼저 눈에 들어온다(UI-06 완료 7)", () => {
+    expect(html.indexOf("지금 볼 것")).toBeLessThan(html.indexOf("가격 레일"));
+  });
+
+  it("패턴 시간봉 다섯 — FCE build_pattern_matrix", () => {
+    expect((html.match(/class="ps-pattern[ "]/g) ?? []).length).toBe(5);
   });
 
   it("차트에 네 시간봉 캔들이 실려 온다", () => {
@@ -150,8 +157,19 @@ describe("지어내지 않는다", () => {
     expect(healthTone(12)).toBe("dn");
   });
 
-  it("실측 페이퍼 포지션에 건강도가 없다 — FCE 가 안 싣는다", () => {
-    expect(POSITIONS.every((x) => x.healthScore === null)).toBe(true);
+  it("페이퍼 거래에는 건강도 칸이 없어서 FCE 포지션 분석의 값을 쓴다 — 지어내지 않는다", () => {
+    for (const x of POSITIONS) expect(x.healthScore).toBe(x.analysis?.healthScore ?? null);
+  });
+
+  it("분석이 없는 포지션에만 '없다' 가 남는다", () => {
+    expect(missingOf({ analysis: null })).toEqual([...LIVE_ONLY]);
+    expect(missingOf({ analysis: {} })).toEqual([]);
+  });
+
+  it("유효 시간 — FCE 와 같은 30분 창", () => {
+    const now = Date.parse("2026-09-27T00:30:00Z");
+    expect(validityLabel("2026-09-27T00:10:00Z", now)).toEqual({ label: "유효 10분", expired: false });
+    expect(validityLabel("2026-09-26T23:50:00Z", now)).toEqual({ label: "10분 지남", expired: true });
   });
 
   it("매퍼는 칸을 이름으로 옮긴다 — 라이브 계좌 칸(planned_stop_price 등)은 받지 않는다", () => {

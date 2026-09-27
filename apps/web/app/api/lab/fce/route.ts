@@ -145,7 +145,8 @@ export async function POST(request: Request): Promise<NextResponse> {
           leverage: p.leverage,
           marginUsdt: p.marginUsdt,
           netReturnPct: p.netReturnPct,
-          healthScore: p.healthScore,
+          // FCE 페이퍼에는 건강도 칸이 없다 — FCE 포지션 분석을 돌린 값(UI-10 B)이 있으면 그것.
+          healthScore: p.healthScore ?? p.analysis?.healthScore ?? null,
           entryAt: p.entryAt ? new Date(p.entryAt) : null,
           entryPrice: p.entryPrice,
           markPrice: p.markPrice,
@@ -162,6 +163,8 @@ export async function POST(request: Request): Promise<NextResponse> {
           invalidationDistancePct: p.invalidationDistancePct,
           takeProfitDistancePct: p.takeProfitDistancePct,
           evidence: p.evidence as unknown as Prisma.InputJsonValue,
+          analysis: p.analysis ? (p.analysis as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+          cohort: p.cohort ? (p.cohort as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
           asOf,
         })),
         skipDuplicates: true,

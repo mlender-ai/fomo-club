@@ -14,7 +14,11 @@
  */
 import { prisma } from "../prisma";
 
-export const FRESH_MS = 5 * 60 * 1000;
+/**
+ * 업로드가 15분마다다(러너 `fce` 잡). 5분으로 두었더니 업로드 사이 10분 동안 헤더가 늘 주황이었다 —
+ * 늦은 게 아니라 다음 차례를 기다리는 중인데. **한 주기 + 여유 5분** 을 넘어야 늦은 것이다(UI-10).
+ */
+export const FRESH_MS = 20 * 60 * 1000;
 export const BROKEN_MS = 60 * 60 * 1000;
 
 export type SyncLevel = "live" | "lagging" | "broken";
@@ -61,9 +65,8 @@ function describe(ageMs: number | null, lastAt: Date | null): { level: SyncLevel
         : "동기화 없음 · 호스트 확인"
       : minutes !== null && minutes < 1
         ? "실시간 · 방금 동기화"
-        : level === "live"
-          ? `실시간 · ${minutes}분 전 동기화`
-          : minutes !== null && minutes < 60
+        : // 초록이어도 14분 전을 "실시간" 이라 부르지 않는다 — 점 색이 정상을 말하고 글자는 나이를 말한다.
+          minutes !== null && minutes < 60
             ? `${minutes}분 전 동기화`
             : `${Math.floor((minutes ?? 0) / 60)}시간 전 동기화`;
   return { level, label };

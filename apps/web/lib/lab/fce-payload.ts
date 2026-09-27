@@ -94,6 +94,44 @@ export interface PositionPayload {
   takeProfitDistancePct: number | null;
   /** 진입 근거 — FCE 가 진입할 때 적은 주장들. FCE 순서 그대로, 칸은 이름으로 옮긴다. */
   evidence: EvidenceItem[];
+  /**
+   * UI-10 B — FCE 포지션 분석을 **페이퍼 포지션에** 돌린 결과(`fce-paper-analysis.py`). FCE 가 라이브 계좌에만 붙이던
+   * 건강도 · 지금 볼 것 · 패턴 시간봉을 FCE 자신의 함수로 낸다. 못 돌렸으면 null.
+   */
+  analysis?: PositionAnalysis | null;
+  /** UI-10 B — 고래 추적군이 이 심볼에 든 것(FCE `/api/onchain/whales` `symbol_activity`). 안 들면 null. */
+  cohort?: PositionCohort | null;
+}
+
+export interface PositionAnalysis {
+  asOf: string;
+  healthScore: number | null;
+  statusLabel: string | null;
+  verdictState: string | null;
+  headline: string | null;
+  watch: { condition: string | null; meaning: string | null }[];
+  patterns: {
+    timeframe: string;
+    status: string;
+    wyckoffPhase: string | null;
+    wyckoffDetected: boolean;
+    wyckoffEvents: string[];
+    rangeDetected: boolean;
+    harmonic: string | null;
+    harmonicScore: number | null;
+    harmonicCount: number;
+  }[];
+}
+
+export interface PositionCohort {
+  longUsd: number;
+  shortUsd: number;
+  longWallets: number;
+  shortWallets: number;
+  /** 추적군 전체 지갑 수. */
+  tracked: number | null;
+  /** 앞 6 · 뒤 4 만. */
+  wallets: { short: string; side: string; sizeUsd: number | null }[];
 }
 
 export interface EvidenceItem {
@@ -476,7 +514,12 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
       takeProfitDistancePct: num(p.takeProfitDistancePct),
       // 옛 업로더는 `evidence` 를 안 보낸다 — 빈 배열. 들어온 것은 같은 검사를 한 번 더 지난다.
       evidence: evidenceOf(p.evidence),
+      analysis: p.analysis && typeof p.analysis === "object" ? (p.analysis as PositionAnalysis) : null,
+      cohort: p.cohort && typeof p.cohort === "object" ? (p.cohort as PositionCohort) : null,
     });
+    if (FULL_ADDRESS.test(JSON.stringify(p.cohort ?? {}))) {
+      problems.push({ path: `positions[${index}].cohort`, message: "지갑 주소 전체가 들어 있다 — 앞 6 · 뒤 4 만 보낸다" });
+    }
   }
 
   const charts: ChartPayload[] = [];

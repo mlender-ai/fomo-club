@@ -83,7 +83,7 @@ export function PositionsBody({ data }: { data: Positions }) {
         ))}
       </ul>
 
-      {mode === "pro" ? <LiveOnlyCard names={data.liveOnly} /> : null}
+      {mode === "pro" && data.liveOnly.length > 0 ? <LiveOnlyCard names={data.liveOnly} /> : null}
     </PageFrame>
   );
 }
@@ -103,9 +103,11 @@ function PositionCard({ p, mode }: { p: PositionRow; mode: "minimal" | "pro" }) 
         <HealthRing score={p.healthScore} />
       </div>
       <p className={`ps-card-pnl is-${tone(p.netReturnPct)}`}>{pct(p.netReturnPct)}</p>
-      {mode === "pro" || p.liquidationLevel ? (
+      {mode === "pro" || p.liquidationLevel || p.analysis?.statusLabel ? (
         <div className="sh-inline">
           {p.liquidationLevel ? <Pill tone="dn">청산 위험</Pill> : null}
+          {/* FCE 상태 배지(라이브 화면과 같은 함수로 낸 것) — `관찰 필요` 등 */}
+          {p.analysis?.statusLabel ? <Pill tone="warn">{p.analysis.statusLabel}</Pill> : null}
           {mode === "pro" && stance ? <Pill tone={stance.tone}>{stance.label}</Pill> : null}
         </div>
       ) : null}

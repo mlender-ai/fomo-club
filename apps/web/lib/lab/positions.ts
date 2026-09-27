@@ -14,8 +14,16 @@
 import type { FcePositionRow } from "./fce-board";
 import type { ChartTimeframe, Candle } from "./fce-payload";
 
-/** FCE 라이브 계좌에만 있고 페이퍼에는 없는 것. 화면이 이름을 그대로 쓴다. */
-export const LIVE_ONLY = ["건강도", "지금 볼 것", "유효 시간", "패턴 시간봉", "고래 추적군"] as const;
+/**
+ * FCE 가 라이브 계좌에만 붙이던 것. UI-10 부터 **FCE 자신의 함수를 페이퍼 포지션에 돌려** 채운다
+ * (`scripts/lab/fce-paper-analysis.py`). 분석을 못 돌린 포지션에만 이 이름들이 "없다" 로 남는다.
+ */
+export const LIVE_ONLY = ["건강도", "지금 볼 것", "유효 시간", "패턴 시간봉"] as const;
+
+/** 이 포지션에 없는 것 — 분석이 없으면 넷, 있으면 없음. */
+export function missingOf(p: { analysis: unknown }): string[] {
+  return p.analysis ? [] : [...LIVE_ONLY];
+}
 
 export interface ResearchLink {
   no: string;
@@ -91,6 +99,7 @@ export function buildPositions(input: {
     ...p,
     strategy: trackLabels[p.trackKey] ?? p.trackKey,
     rail: railOf(p),
+    missing: missingOf(p),
     research: research
       .filter((r) => Array.isArray(r.trackKeys) && (r.trackKeys as unknown[]).includes(p.trackKey))
       .map((r) => ({ no: r.no, title: r.title, status: r.status, blocks: r.blocks })),
@@ -104,7 +113,8 @@ export function buildPositions(input: {
     total: rows.length,
     liquidationLevel: rows.filter((p) => p.liquidationLevel).length,
     lastAt,
-    liveOnly: [...LIVE_ONLY],
+    /** 분석을 못 돌린 포지션이 하나라도 있을 때만 이름이 남는다. */
+    liveOnly: rows.some((r) => r.missing.length > 0) ? [...LIVE_ONLY] : [],
     caveat:
       "손익은 증거금 대비다. FCE 에 청산 모델이 없어 −100% 아래로 갈 수 있다 — 실제 거래소였으면 그 전에 증거금이 없어진다.",
   };

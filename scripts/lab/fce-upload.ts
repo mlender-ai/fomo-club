@@ -36,6 +36,7 @@ import type {
   FcePayload,
   JournalPayload,
   LostDayPayload,
+  PositionAnalysis,
   PositionPayload,
   TradePayload,
   TrackPayload,
@@ -723,7 +724,7 @@ async function collect(): Promise<FcePayload> {
   const diagnosis = diagnosisHit.body;
   console.log(`  지갑 자격 ${eligibilityHit.source} · 관측 진단 ${diagnosisHit.source}`);
 
-  const openPositions = positions(paper);
+  const openPositions = withCohort(await withAnalysis(positions(paper)), whalesBody);
   return {
     at,
     tracks: [
@@ -747,6 +748,85 @@ async function collect(): Promise<FcePayload> {
       ...rawTrades(follow).filter((t) => record(t.entry_evidence).qualification === "follow"),
     ]),
   };
+}
+
+// ── 페이퍼 포지션의 FCE 분석 · 고래 추적군 (UI-10 B) ─────────────────────────
+//
+// FCE 는 건강도 · 지금 볼 것 · 패턴 시간봉을 라이브 계좌 포지션에만 낸다. **FCE 자신의 함수**를 페이퍼 포지션에 돌린다
+// (`fce-paper-analysis.py` — DB 를 열지 않는다). 실패하면 포지션마다 마지막 성공(2시간 안)을 쓴다 — 분석 시각(`asOf`)이
+// 같이 가므로 화면이 "유효 N분" 으로 낡음을 말한다.
+
+const PAPER_ANALYSIS = process.env.FCE_PAPER_ANALYSIS ?? join(process.cwd(), "scripts/lab/fce-paper-analysis.py");
+
+async function withAnalysis(open: PositionPayload[]): Promise<PositionPayload[]> {
+  if (open.length === 0) return open;
+  const cacheFile = join(CACHE_DIR, "paper-analysis.json");
+  let saved: Record<string, { at: number; analysis: PositionAnalysis }> = {};
+  try {
+    saved = JSON.parse(readFileSync(cacheFile, "utf8"));
+  } catch {
+    // 캐시 없음.
+  }
+  let fresh: Record<string, PositionAnalysis & { error?: string }> = {};
+  try {
+    const input = JSON.stringify(
+      open.map((p) => ({ id: p.id, symbol: p.symbol, direction: p.direction, entryPrice: p.entryPrice, quantity: p.quantity, leverage: p.leverage, markPrice: p.markPrice }))
+    );
+    fresh = JSON.parse(execFileSync(FCE_PYTHON, [PAPER_ANALYSIS], { cwd: FCE_BACKEND, input, encoding: "utf8", timeout: 180_000 }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 400) : String(error);
+    try {
+      mkdirSync(CACHE_DIR, { recursive: true });
+      writeFileSync(join(CACHE_DIR, "paper-analysis.err"), `${new Date().toISOString()} ${message}\n`);
+    } catch {
+      // 적을 곳이 없다.
+    }
+    console.log(`  포지션 분석 못 돌림 — ${message.slice(0, 120)}`);
+  }
+  const now = Date.now();
+  const out = open.map((p) => {
+    const hit = fresh[p.id];
+    if (hit && !hit.error) {
+      saved[p.id] = { at: now, analysis: hit };
+      return { ...p, analysis: hit, healthScore: p.healthScore ?? hit.healthScore };
+    }
+    const old = saved[p.id];
+    if (old && now - old.at < 2 * HOUR_MS) return { ...p, analysis: old.analysis, healthScore: p.healthScore ?? old.analysis.healthScore };
+    return { ...p, analysis: null };
+  });
+  try {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(cacheFile, JSON.stringify(saved));
+  } catch {
+    // 캐시만 못 남긴다.
+  }
+  console.log(`  포지션 분석 ${out.filter((p) => p.analysis).length}/${out.length}`);
+  return out;
+}
+
+/** 고래 추적군이 이 심볼에 든 것 — FCE `symbol_activity`. 주소는 여기서 줄인다. */
+function withCohort(open: PositionPayload[], whales: Record<string, unknown>): PositionPayload[] {
+  const activity = record(whales.symbol_activity);
+  const tracked = num(whales.wallet_count);
+  return open.map((p) => {
+    const a = record(activity[p.symbol]);
+    if (Object.keys(a).length === 0 || !((num(a.wallet_count) ?? 0) > 0)) return { ...p, cohort: null };
+    return {
+      ...p,
+      cohort: {
+        longUsd: num(a.long_usd) ?? 0,
+        shortUsd: num(a.short_usd) ?? 0,
+        longWallets: num(a.long_wallet_count) ?? 0,
+        shortWallets: num(a.short_wallet_count) ?? 0,
+        tracked,
+        wallets: (Array.isArray(a.positions) ? a.positions : []).map(record).map((w) => ({
+          short: shortAddress(String(w.wallet_address ?? w.address_short ?? "")),
+          side: String(w.side ?? ""),
+          sizeUsd: num(w.size_usd),
+        })),
+      },
+    };
+  });
 }
 
 // ── 복기 (UI-09) ────────────────────────────────────────────────────────────

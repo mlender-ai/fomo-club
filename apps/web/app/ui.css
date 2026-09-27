@@ -2614,3 +2614,75 @@ a.ui-research-link:hover {
   color: var(--ink-3);
   font-size: var(--t-label);
 }
+
+/* ══ FCE 포지션 분석 (UI-10 B) ════════════════════════════════════════════ */
+
+.ps-patterns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s2);
+}
+@media (max-width: 767px) {
+  .ps-patterns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ps-pattern > button,
+.ps-pattern > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  width: 100%;
+  min-height: 84px;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.ps-pattern > button {
+  cursor: pointer;
+}
+.ps-pattern.is-found > button,
+.ps-pattern.is-found > div {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+.ps-pattern.is-on > button {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+.ps-pattern.is-off > button,
+.ps-pattern.is-off > div {
+  color: var(--ink-3);
+  background: var(--bg-2);
+}
+.ps-pattern-tf {
+  font-size: var(--t-caption);
+  font-weight: var(--w-semibold);
+  color: var(--ink-3);
+}
+.ps-pattern-phase {
+  font-size: var(--t-label);
+  font-weight: var(--w-semibold);
+}
+.ps-pattern-sub {
+  font-size: var(--t-caption);
+  color: var(--ink-3);
+}
+.ps-cohort-bar {
+  height: 8px;
+  margin-top: var(--s4);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--dn) 38%, transparent);
+  overflow: hidden;
+}
+.ps-cohort-bar > span {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--up) 60%, transparent);
+}

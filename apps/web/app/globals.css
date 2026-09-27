@@ -123,6 +123,56 @@
   color-scheme: light;
 }
 
+/*
+ * 어두운 테마 (UI-10 PART I) — **변수 값만 바꾼다.** 색은 전부 토큰이라(`lint:tokens`) 이 두 블록이면 된다.
+ * 기본은 OS 설정을 따른다. `<html data-theme="light|dark">` 가 있으면 그게 이긴다.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0b0d;
+    --bg-2: #15171b;
+    --line: #1f2227;
+    --line-2: #2c3037;
+    --ink: #f4f6f9;
+    --ink-2: #aab0bb;
+    --ink-3: #7d8592;
+    --blue: #5b8cff;
+    --blue-soft: #142140;
+    --up: #2fb67c;
+    --up-soft: #0f2a1f;
+    --dn: #f2636f;
+    --dn-soft: #341519;
+    --warn: #f0a33a;
+    --warn-soft: #2f2210;
+    --header-bg: rgb(10 11 13 / 88%);
+    --shadow-pop: 0 8px 28px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
+    --scrim: rgb(0 0 0 / 60%);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0a0b0d;
+  --bg-2: #15171b;
+  --line: #1f2227;
+  --line-2: #2c3037;
+  --ink: #f4f6f9;
+  --ink-2: #aab0bb;
+  --ink-3: #7d8592;
+  --blue: #5b8cff;
+  --blue-soft: #142140;
+  --up: #2fb67c;
+  --up-soft: #0f2a1f;
+  --dn: #f2636f;
+  --dn-soft: #341519;
+  --warn: #f0a33a;
+  --warn-soft: #2f2210;
+  --header-bg: rgb(10 11 13 / 88%);
+  --shadow-pop: 0 8px 28px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
+  --scrim: rgb(0 0 0 / 60%);
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }

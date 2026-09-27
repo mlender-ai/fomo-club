@@ -5,7 +5,7 @@
  * 그 둘은 랩만 알 수 있다(FCE 는 자기가 언제 안 읽혔는지 모른다).
  * 나머지 숫자는 전부 FCE 가 낸 값을 그대로 낸다.
  */
-import { shortAddress, type EvidenceItem, type WhaleBoard } from "./fce-payload";
+import { shortAddress, type EvidenceItem, type PositionAnalysis, type PositionCohort, type WhaleBoard } from "./fce-payload";
 import { prisma } from "../prisma";
 
 /** 이 시간 넘게 업로드가 없으면 끊긴 것으로 본다. 주기가 15분이라 두 번 거른 값이다. */
@@ -75,6 +75,8 @@ export interface FcePositionRow {
   invalidationDistancePct: number | null;
   takeProfitDistancePct: number | null;
   evidence: EvidenceItem[];
+  analysis: PositionAnalysis | null;
+  cohort: PositionCohort | null;
   /**
    * **청산 수준 경고**(PART D-1).
    *
@@ -242,6 +244,8 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       invalidationDistancePct: p.invalidationDistancePct,
       takeProfitDistancePct: p.takeProfitDistancePct,
       evidence: Array.isArray(p.evidence) ? (p.evidence as unknown as EvidenceItem[]) : [],
+      analysis: (p.analysis as unknown as PositionAnalysis | null) ?? null,
+      cohort: (p.cohort as unknown as PositionCohort | null) ?? null,
       liquidationLevel: p.netReturnPct !== null && p.netReturnPct <= LIQUIDATION_PCT,
     })),
     whale: whale

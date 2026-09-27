@@ -181,6 +181,10 @@ export const GLOSSARY: Record<string, string> = {
   하모닉: "피보나치 비율로 그리는 반전 패턴 묶음",
   "체결 델타": "매수 체결량 − 매도 체결량",
   "상위 TF": "상위 시간봉 — 이 포지션보다 긴 봉에서 본 추세",
+  매집: "와이코프 — 큰손이 조용히 사 모으는 구간. A(하락 멈춤) → B(횡보) → C(스프링 시험) → D(상승 시작) → E(상승 추세)",
+  분산: "와이코프 — 큰손이 조용히 파는 구간. A(상승 멈춤) → B(횡보) → C(UTAD 시험) → D(하락 시작) → E(하락 추세)",
+  레인지: "위아래가 막힌 횡보 구간",
+  추세: "한쪽으로 이어지는 움직임 — 매집·분산 국면이 아니다",
 };
 
 /** 문장에서 용어를 찾아 `[글, 설명|null][]` 로 쪼갠다 — 화면이 설명 달린 조각만 `<abbr>` 로 감싼다. */
@@ -191,4 +195,35 @@ export function withGlossary(text: string): [string, string | null][] {
     .split(re)
     .filter((part) => part.length > 0)
     .map((part) => [part, GLOSSARY[part] ?? null]);
+}
+
+// ── FCE 포지션 분석 (UI-10 B) ────────────────────────────────────────────
+
+/** 와이코프 국면 코드 → 사람 말. `accumulation_phase_c` → `매집 C`. */
+export function phaseLabel(phase: string | null): string {
+  if (!phase) return "—";
+  const m = /^(accumulation|distribution)_phase_([a-e])$/.exec(phase);
+  if (m) return `${m[1] === "accumulation" ? "매집" : "분산"} ${(m[2] as string).toUpperCase()}`;
+  const plain: Record<string, string> = {
+    trending: "추세",
+    undetermined: "판정 없음",
+    unavailable: "데이터 없음",
+    ranging: "레인지",
+    markup: "상승 국면",
+    markdown: "하락 국면",
+  };
+  return plain[phase] ?? phase.replace(/_/g, " ");
+}
+
+/** FCE 판정 상태 → 사람 말(FCE 라이브 목록과 같은 말). */
+export function verdictLabel(v: string | null): string | null {
+  if (!v) return null;
+  const m: Record<string, string> = {
+    holding: "진입 논리 유지",
+    weakening: "진입 논리 약화",
+    strengthening: "진입 논리 강화",
+    invalidated: "진입 논리 무효",
+    risk_rising: "리스크 상승",
+  };
+  return m[v] ?? v.replace(/_/g, " ");
 }

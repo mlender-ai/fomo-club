@@ -61,7 +61,8 @@
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "ui:capture": "tsx scripts/ui/capture-phone.ts",
     "lab:research-seed": "tsx scripts/lab/research-seed.ts",
-    "lab:snapshot": "tsx scripts/lab/snapshot-build.ts"
+    "lab:snapshot": "tsx scripts/lab/snapshot-build.ts",
+    "lab:fce-sidecar": "tsx scripts/lab/fce-sidecar.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

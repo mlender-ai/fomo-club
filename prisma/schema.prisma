@@ -1375,6 +1375,10 @@ model FcePosition {
   takeProfitDistancePct   Float?
   /// 진입 근거 — FCE `entry_evidence.items[]` 의 `{ engine, claim, confidence, direction }`. FCE 순서 그대로.
   evidence Json?
+  /// UI-10 B — FCE 포지션 분석(건강도 · 지금 볼 것 · 패턴 시간봉)을 페이퍼 포지션에 돌린 결과. `fce-payload.ts` `PositionAnalysis`.
+  analysis Json?
+  /// UI-10 B — 고래 추적군이 이 심볼에 든 것. 지갑 주소는 앞 6 · 뒤 4 만.
+  cohort   Json?
 
   asOf DateTime
 
