@@ -2517,3 +2517,100 @@ a.ui-research-link:hover {
 .jd-list .is-mute {
   color: var(--ink-3);
 }
+
+/* ══ 검색 ⌘K (UI-10 B) ════════════════════════════════════════════════════ */
+
+.sh-search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  height: 32px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--t-caption);
+  cursor: pointer;
+}
+.sh-search:hover {
+  border-color: var(--line-2);
+  color: var(--ink);
+}
+@media (max-width: 767px) {
+  .sh-search-key {
+    display: none;
+  }
+}
+.sh-cmd {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh var(--page-x) 0;
+  background: var(--scrim);
+}
+.sh-cmd-box {
+  width: min(640px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-card);
+  background: var(--bg);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+.sh-cmd-input {
+  width: 100%;
+  padding: var(--s5);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-h3);
+  outline: none;
+}
+.sh-cmd-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--s2);
+  overflow-y: auto;
+}
+.sh-cmd-item {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--r-row);
+  cursor: pointer;
+  font-size: var(--t-label);
+}
+.sh-cmd-item.is-on {
+  background: var(--blue-soft);
+}
+.sh-cmd-kind {
+  font-size: var(--t-caption);
+  color: var(--ink-3);
+}
+.sh-cmd-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--w-medium);
+}
+.sh-cmd-sub {
+  font-size: var(--t-caption);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.sh-cmd-empty {
+  padding: var(--s4);
+  color: var(--ink-3);
+  font-size: var(--t-label);
+}
