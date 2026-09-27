@@ -284,7 +284,8 @@ function ActivityCard({ activity }: { activity: Overview["activity"] }) {
         <ul className="ov-activity">
           {activity.map((e, i) => (
             <li key={`${e.at}-${i}`}>
-              <Link href="/journal" className="ov-activity-row">
+              {/* 청산 → 그 거래의 상세 · 진입 → 그 포지션의 상세 (UI-10 C-2 — 전에는 전부 복기 목록으로 갔다). */}
+              <Link href={e.href} className="ov-activity-row">
                 <span className="ov-activity-text">
                   {e.text}
                   {e.pct !== null ? <span className={`ui-num is-${tone(e.pct)}`}> {pct(e.pct, 1)}</span> : null}

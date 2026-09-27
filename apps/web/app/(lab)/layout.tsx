@@ -16,6 +16,7 @@
  */
 import type { ReactNode } from "react";
 
+import { CommandPalette } from "../../components/shell/CommandPalette";
 import { Header } from "../../components/shell/Header";
 import { SyncBanner } from "../../components/shell/SyncBanner";
 import { SyncProvider } from "../../components/shell/SyncProvider";
@@ -28,6 +29,7 @@ export default function LabLayout({ children }: { children: ReactNode }) {
         <SyncBanner />
         <main className="sh-main">{children}</main>
       </div>
+      <CommandPalette />
     </SyncProvider>
   );
 }

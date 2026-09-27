@@ -80,6 +80,20 @@ export function Header() {
           })}
         </nav>
 
+        {/* 검색 ⌘K (UI-10 B) — 창은 레이아웃의 `CommandPalette`. 폰은 이 단추. */}
+        <button
+          type="button"
+          className="sh-search"
+          onClick={() => window.dispatchEvent(new Event("lab:search"))}
+          aria-label="검색 (⌘K)"
+        >
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden>
+            <circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M13.5 13.5 18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <span className="sh-search-key">⌘K</span>
+        </button>
+
         <p className={`sh-sync is-${level}`} role="status" title={detail || undefined}>
           <span className="sh-sync-dot" aria-hidden />
           <span className="sh-sync-label">{label}</span>

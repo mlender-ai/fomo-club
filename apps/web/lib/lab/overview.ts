@@ -44,6 +44,8 @@ const BENCH_STALE = 3 * HOUR;
 export const COVERAGE_MIN_PCT = 90;
 
 export interface TradeLite {
+  /** FCE 거래 id — 최근 활동이 거래 상세로 간다(UI-10 C-2). 견본 · 옛 테스트에는 없을 수 있다. */
+  id?: string;
   trackKey: string;
   symbol: string;
   direction: string;
@@ -454,6 +456,7 @@ export function buildOverview(input: OverviewInput) {
       .map((t) => ({
         at: (t.exitAt as Date).toISOString(),
         kind: "exit" as const,
+        href: t.id ? `/journal/${t.id}` : "/journal",
         text: `${labelOf.get(t.trackKey) ?? t.trackKey} · ${t.symbol} ${side(t.direction)} 청산`,
         pct: t.netReturnPct,
       })),
@@ -462,6 +465,7 @@ export function buildOverview(input: OverviewInput) {
       .map((p) => ({
         at: (p.entryAt as Date).toISOString(),
         kind: "entry" as const,
+        href: `/positions/${p.id}`,
         text: `크립토 · ${p.symbol} ${side(p.direction)} 진입`,
         pct: null as number | null,
       })),
