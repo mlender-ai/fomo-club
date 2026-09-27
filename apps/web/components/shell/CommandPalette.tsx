@@ -72,6 +72,8 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const [items, setItems] = useState<SearchItem[] | null>(null);
+  /** 자료가 오기 전에 누른 Enter — 도착하면 그때 간다. 빨리 치는 사람이 아무 일도 안 일어난다고 느끼지 않게. */
+  const [pending, setPending] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -96,6 +98,7 @@ export function CommandPalette() {
     if (!open) return;
     setQuery("");
     setCursor(0);
+    setPending(false);
     setTimeout(() => input.current?.focus(), 0);
   }, [open]);
 
@@ -122,10 +125,15 @@ export function CommandPalette() {
     (item: SearchItem | undefined) => {
       if (!item) return;
       setOpen(false);
+      setPending(false);
       router.push(item.href);
     },
     [router]
   );
+
+  useEffect(() => {
+    if (pending && items) go(shown[cursor]);
+  }, [pending, items, shown, cursor, go]);
 
   if (!open) return null;
   return (
@@ -154,7 +162,10 @@ export function CommandPalette() {
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
               setCursor((c) => Math.max(0, c - 1));
-            } else if (e.key === "Enter") go(shown[cursor]);
+            } else if (e.key === "Enter") {
+              if (items === null && query.trim()) setPending(true);
+              else go(shown[cursor]);
+            }
           }}
           aria-controls="sh-cmd-list"
         />
