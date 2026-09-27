@@ -123,6 +123,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         evidenceNote: track.evidenceNote,
         elapsedDays: track.elapsedDays,
         calendarDays: track.calendarDays,
+        validationFrom: track.validationFrom ? new Date(track.validationFrom) : null,
         asOf: new Date(track.asOf),
       };
       await prisma.fceTrack.upsert({

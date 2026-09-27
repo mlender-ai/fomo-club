@@ -28,6 +28,7 @@ import journalFixture from "./journal.json";
 import whaleFixture from "./whale.json";
 import {
   buildOverview,
+  populationOf,
   type Bar,
   type LostDay,
   type TradeLite,
@@ -58,6 +59,7 @@ function track(over: Partial<FceTrackRow> & Pick<FceTrackRow, "key" | "label">):
     evidenceNote: null,
     elapsedDays: null,
     calendarDays: null,
+    validationFrom: null,
     leverage: null,
     benchmarkLabel: null,
     benchmarkReturnPct: null,
@@ -71,23 +73,26 @@ export const TRACKS: FceTrackRow[] = [
   track({
     key: "crypto",
     label: "크립토",
-    currentCapital: 356.6397,
-    returnPct: -28.6721,
-    trades: 157,
-    winRatePct: 52.87,
-    profitFactor: 0.6328,
+    // FCE `/api/paper/dashboard` 2026-09-27 02:52 — 원장(`journal.json`)과 같은 시각.
+    currentCapital: 364.9352,
+    returnPct: -27.013,
+    trades: 165,
+    winRatePct: 53.33,
+    profitFactor: 0.6585,
     mddPct: 36.8944,
     leverage: 3,
     benchmarkLabel: "BTC 보유",
+    validationFrom: new Date("2026-07-17T05:46:20.457Z"),
   }),
   track({
     key: "whale",
     label: "고래 추종",
-    currentCapital: 471.37,
-    returnPct: -5.726,
-    trades: 87,
-    winRatePct: 36.8,
-    profitFactor: 0.652,
+    // FCE 추종 버킷 2026-09-27 — 94건 · 승률 36.2% · PF 0.647. FCE 가 MDD 를 내지 않는다.
+    currentCapital: 470.2184,
+    returnPct: -5.95632,
+    trades: 94,
+    winRatePct: 36.2,
+    profitFactor: 0.647,
     sampleNote: "추종 트랙 성적 — 고래 자신의 승률과 다른 모집단",
   }),
   track({
@@ -321,6 +326,7 @@ export function fixtures() {
     open: POSITIONS.map((p) => ({ id: p.id, trackKey: p.trackKey, symbol: p.symbol, direction: p.direction, leverage: p.leverage, entryAt: p.entryAt, netReturnPct: p.netReturnPct })),
     extra: journalExtra,
     trackLabels: Object.fromEntries(TRACKS.map((t) => [t.key, t.label])),
+    population: populationOf(TRACKS),
   });
   const charts = buildCharts(CHARTS.map((c) => ({ ...c, asOf: POSITIONS_AT })));
   const detailOf = (id: string): PositionDetail => {

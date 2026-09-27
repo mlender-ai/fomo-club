@@ -140,6 +140,9 @@ function cryptoTrack(dashboard: Record<string, unknown>, asOf: string): TrackPay
     // FCE 가 이 트랙에는 유효일을 내지 않는다. **0 으로 채우지 않는다.**
     elapsedDays: null,
     calendarDays: null,
+    // FCE 성적(N · 승률 · PF · MDD)은 이 시각 뒤에 닫힌 거래만 센다(`population: all_closed_in_window`).
+    // 랩도 같은 거래를 세야 FCE 와 숫자가 같다(UI-10 D) — 실측 165건 · 승 88 · PF 0.6585 · −131.5227 이 그대로 나왔다.
+    validationFrom: typeof scoreboard.started_at === "string" ? scoreboard.started_at : null,
     asOf,
   };
 }
