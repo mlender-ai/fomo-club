@@ -129,6 +129,12 @@ export function JournalBody({ data, initialFilters = DEFAULT_FILTERS }: { data: 
             고래 추종의 시간 감쇠는 FCE 출구 결함(보유 봉 수를 잡 실행 횟수로 센다)의 영향을 받는다 — 연구 01.
           </p>
           {t.flat > 0 ? <p>손익이 정확히 0 인 거래 {t.flat}건은 승·패 어디에도 넣지 않았다.</p> : null}
+          {data.outside > 0 ? (
+            <p>
+              `창 밖` {data.outside}건은 FCE 검증 앵커(크립토 07-17) 전에 닫힌 거래다. FCE 가 성적에 세지 않아서 합계 · 막대 ·
+              청산 품질에 넣지 않았다 — 목록에는 남긴다. 그래서 거래 수가 FCE 의 N 과 같다.
+            </p>
+          ) : null}
         </>
       }
       side={<QualityCard q={data.quality} />}
@@ -213,7 +219,17 @@ export function JournalBody({ data, initialFilters = DEFAULT_FILTERS }: { data: 
                 key: r.id,
                 at: <Link href={`/journal/${r.id}`}>{kstShort(r.exitAt)}</Link>,
                 track: r.trackLabel,
-                symbol: <Link href={`/journal/${r.id}`}>{r.symbol}</Link>,
+                symbol: (
+                  <>
+                    <Link href={`/journal/${r.id}`}>{r.symbol}</Link>
+                    {r.inPopulation ? null : (
+                      <>
+                        {" "}
+                        <Pill tone="mute">창 밖</Pill>
+                      </>
+                    )}
+                  </>
+                ),
                 side: sideLabel(r.direction),
                 lev: r.leverage ? `${r.leverage}배` : "—",
                 hold: holdLabel(r.holdHours),

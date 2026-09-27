@@ -24,7 +24,7 @@
  */
 import { readCapitalSeries } from "./capital";
 import { readFceBoard } from "./fce-board";
-import { buildOverview } from "./overview";
+import { buildOverview, populationOf } from "./overview";
 import { buildPortfolio } from "./portfolio";
 import { buildCharts, buildPositions } from "./positions";
 import type { PostExit, TradeDetail } from "./journal-extra";
@@ -59,10 +59,11 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 10;
+export const SNAPSHOT_VERSION = 11;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
+// 11 — UI-10 D: 성적 · 거래 수를 FCE 모집단(검증 앵커 뒤)으로 · MDD 는 FCE 값 · 복기 행에 `inPopulation`.
 // 10 — UI-09: 복기를 원장 전부 + 청산 사유별 · 청산 품질 · `journalExtra`(거래별 왜 · 사후 채점)로.
 // 9 — UI-08: 연구 목록에 상태 열쇠 · 경과일 · 결정 한 줄 · 실매매 관문(`research.ts`).
 // 8 — UI-07: 고래 조립본을 FCE 보드로(갭 · 반사실 · 지갑 · 깔때기 · 리더보드 · 24시간). 박아 둔 65.8% · 원인 표를 뺐다.
@@ -276,6 +277,7 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
     })),
     extra: journalRow ? journalExtra : null,
     trackLabels: Object.fromEntries(board.tracks.map((t) => [t.key, t.label])),
+    population: populationOf(board.tracks),
   });
 
   return {

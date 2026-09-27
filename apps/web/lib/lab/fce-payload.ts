@@ -53,6 +53,8 @@ export interface TrackPayload {
    */
   elapsedDays: number | null;
   calendarDays: number | null;
+  /** FCE 성적(N · 승률 · PF · MDD)의 모집단 시작. 크립토 = `scoreboard.started_at`. 없으면 null — 원장 전부. */
+  validationFrom?: string | null;
   asOf: string;
 }
 
@@ -436,6 +438,7 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
       evidenceNote: typeof t.evidenceNote === "string" ? t.evidenceNote : null,
       elapsedDays: num(t.elapsedDays),
       calendarDays: num(t.calendarDays),
+      validationFrom: typeof t.validationFrom === "string" ? t.validationFrom : null,
       asOf: typeof t.asOf === "string" ? t.asOf : (body.at as string),
     });
   }

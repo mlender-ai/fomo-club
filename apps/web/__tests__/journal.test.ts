@@ -21,14 +21,17 @@ const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 const list = renderToStaticMarkup(createElement(JournalBody, { data: j }));
 
 describe("A 목록", () => {
-  it("hero 가 누적 실현 손익 — 원장 전부의 합 (완료 1)", () => {
-    const net = TRADES.reduce((s, t) => s + (t.netPnlUsdt ?? 0), 0);
-    expect(j.total.netUsdt).toBeCloseTo(net, 6);
-    expect(j.total.count).toBe(264);
-    expect(text(list)).toMatch(/거래 264건/);
+  it("hero 가 누적 실현 손익 — FCE 가 세는 거래의 합 (완료 1 · UI-10 D)", () => {
+    const anchor = Date.parse("2026-07-17T05:46:20.457Z");
+    const counted = TRADES.filter((t) => t.trackKey !== "crypto" || (t.exitAt as Date).getTime() >= anchor);
+    expect(j.total.count).toBe(counted.length);
+    expect(j.total.count).toBe(165 + 94);
+    expect(j.total.netUsdt).toBeCloseTo(counted.reduce((s, t) => s + (t.netPnlUsdt ?? 0), 0), 6);
+    expect(j.outside).toBe(5);
+    expect(text(list)).toMatch(/거래 259건/);
   });
 
-  it("거래가 전부 나온다 — 손실 거래 포함 (완료 3 · 하지 말 것)", () => {
+  it("거래가 전부 나온다 — 손실 거래 · 창 밖 거래 포함 (완료 3 · 하지 말 것)", () => {
     const links = new Set([...list.matchAll(/href="\/journal\/([^"]+)"/g)].map((m) => m[1]));
     expect(links.size).toBe(264);
     expect(j.rows.filter((r) => (r.netPnlUsdt ?? 0) < 0).length).toBeGreaterThan(0);

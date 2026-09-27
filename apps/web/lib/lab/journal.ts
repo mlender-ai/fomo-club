@@ -15,6 +15,7 @@ import {
   type PostExit,
   type TradeDetail,
 } from "./journal-extra";
+import { inPopulation } from "./overview";
 
 const HOUR = 3_600_000;
 
@@ -53,9 +54,13 @@ export function buildJournal(input: {
   open: JournalOpen[];
   extra: { details: Record<string, TradeDetail>; postExit: Record<string, PostExit | null> } | null;
   trackLabels: Record<string, string>;
+  /** 트랙별 FCE 모집단 시작(`FceTrack.validationFrom`). 합계는 이 뒤에 닫힌 거래만 센다(UI-10 D). */
+  population?: Map<string, Date | null>;
 }) {
-  const { trades, open, extra, trackLabels } = input;
-  const closed = trades.filter((t) => t.exitAt).sort((a, b) => (b.exitAt as Date).getTime() - (a.exitAt as Date).getTime());
+  const { trades, open, extra, trackLabels, population = new Map() } = input;
+  const all = trades.filter((t) => t.exitAt).sort((a, b) => (b.exitAt as Date).getTime() - (a.exitAt as Date).getTime());
+  // **합계는 FCE 가 세는 거래만.** 목록에는 전부 남긴다 — 창 밖 거래도 숨기지 않고 `창 밖` 으로 표시한다.
+  const closed = all.filter((t) => inPopulation(t, population));
 
   // ── 합계 (A-1) ─────────────────────────────────────────────────────────
   let wins = 0;
@@ -80,24 +85,27 @@ export function buildJournal(input: {
   }
   const count = closed.length;
 
-  const rows = closed.map((t) => {
+  const rows = all.map((t) => {
     const category = exitCategory(t.exitReason);
     const post = extra?.postExit[t.id] ?? null;
     return {
       ...t,
       trackLabel: trackLabels[t.trackKey] ?? t.trackKey,
       category,
+      /** FCE 성적 모집단 안인가. 밖이면 합계 · 막대 · 청산 품질에 안 들어간다. */
+      inPopulation: inPopulation(t, population),
       holdHours: t.entryAt && t.exitAt ? Math.max(0, ((t.exitAt as Date).getTime() - t.entryAt.getTime()) / HOUR) : null,
       post: post ? { verdict: post.verdict, movePct: post.movePct, matured: post.matured } : null,
     };
   });
 
   // ── 청산 사유별 (A-4) ──────────────────────────────────────────────────
-  const byExit = exitSummary(rows);
+  const counted = rows.filter((r) => r.inPopulation);
+  const byExit = exitSummary(counted);
 
   // ── 청산 품질 (PART C) — 7일이 지난 것만 ────────────────────────────────
   const ratio = (c: ExitCategory) => {
-    const matured = rows.filter((r) => r.category === c && r.post?.matured);
+    const matured = counted.filter((r) => r.category === c && r.post?.matured);
     const favorable = matured.filter((r) => r.post?.verdict === "favorable").length;
     return { pct: matured.length ? (favorable / matured.length) * 100 : null, n: favorable, of: matured.length };
   };
@@ -116,6 +124,8 @@ export function buildJournal(input: {
       costSharePct: Math.abs(gross) > 0 ? (costs / Math.abs(gross)) * 100 : null,
     },
     span: { from: closed[closed.length - 1]?.exitAt ?? null, to: closed[0]?.exitAt ?? null },
+    /** FCE 모집단 밖(크립토 검증 앵커 전) — 목록에만 있다. */
+    outside: rows.length - counted.length,
     rows,
     open: open.map((p) => ({ ...p, trackLabel: trackLabels[p.trackKey] ?? p.trackKey })),
     byExit,

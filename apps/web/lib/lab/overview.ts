@@ -223,10 +223,10 @@ export interface LedgerStat {
  * 쌓은 거래 전부를 셌다. 크립토 창 밖 거래 5건 · 주식 US 체결 3건만큼 두 화면이 달랐다(246 vs 248).
  * 자본·곡선·낙폭은 이미 원장 전부로 잰다 — 거래 수·승률·손익비도 같은 모집단에서 잰다.
  */
-export function ledgerStats(trades: TradeLite[]): Map<string, LedgerStat> {
+export function ledgerStats(trades: TradeLite[], from: Map<string, Date | null> = new Map()): Map<string, LedgerStat> {
   const acc = new Map<string, { count: number; wins: number; profit: number; loss: number }>();
   for (const t of trades) {
-    if (!t.exitAt) continue;
+    if (!inPopulation(t, from)) continue;
     const a = acc.get(t.trackKey) ?? { count: 0, wins: 0, profit: 0, loss: 0 };
     const pnl = t.netPnlUsdt ?? 0;
     a.count += 1;
@@ -246,6 +246,25 @@ export function ledgerStats(trades: TradeLite[]): Map<string, LedgerStat> {
     });
   }
   return out;
+}
+
+/**
+ * **FCE 가 세는 거래인가** (UI-10 D — 숫자가 FCE 와 달라서는 안 된다).
+ *
+ * FCE 크립토 성적은 검증 앵커(`scoreboard.started_at`, 07-17 05:46) 뒤에 닫힌 거래만 센다. 원장에는 그 전
+ * 부트스트랩 거래 5건이 더 있다 — 전부 세면 170건 · 승률 52.94% 가 되고 FCE 는 165건 · 53.33% 라고 말한다.
+ * 같은 거래를 세면 FCE 와 소수점까지 같다(165 · 승 88 · PF 0.6585 · −131.5227 실측).
+ * 앵커가 없는 트랙(고래 · 주식)은 원장 전부가 FCE 의 모집단이다.
+ */
+export function inPopulation(t: { trackKey: string; exitAt: Date | null }, from: Map<string, Date | null>): boolean {
+  if (!t.exitAt) return false;
+  const anchor = from.get(t.trackKey);
+  return !anchor || t.exitAt.getTime() >= anchor.getTime();
+}
+
+/** 트랙별 모집단 시작 — `FceTrack.validationFrom`. */
+export function populationOf(tracks: { key: string; validationFrom: Date | null }[]): Map<string, Date | null> {
+  return new Map(tracks.map((t) => [t.key, t.validationFrom]));
 }
 
 /** 첫 청산일 하루 전 자정 — 곡선과 기준선이 같이 쓰는 "시작". */
@@ -327,7 +346,7 @@ export function buildOverview(input: OverviewInput) {
   );
 
   // ── 통계 4칸 (D) — 거래 수·승률은 원장 하나에서 (B-5) ──────────────────────
-  const ledger = ledgerStats(trades);
+  const ledger = ledgerStats(trades, populationOf(tracks));
   const running = tracks.filter((t) => t.status === "running");
   const counted = tracks
     .map((t) => ({ t, stat: ledger.get(t.key) }))
@@ -337,7 +356,8 @@ export function buildOverview(input: OverviewInput) {
   const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : null;
 
   const mdds = tracks
-    .map((t) => ({ t, mdd: curveMdd(trades, t.key, t.startingCapital) }))
+    // FCE 가 MDD 를 내면 그 값(크립토 36.89%). 안 내는 트랙(고래)만 랩이 원장 곡선으로 잰다.
+    .map((t) => ({ t, mdd: t.mddPct !== null ? -Math.abs(t.mddPct) : curveMdd(trades, t.key, t.startingCapital) }))
     .filter((x): x is { t: FceTrackRow; mdd: number } => x.mdd !== null);
   const worst = mdds.sort((a, b) => a.mdd - b.mdd)[0] ?? null;
 
@@ -403,7 +423,8 @@ export function buildOverview(input: OverviewInput) {
   const contenders = tracks
     .map((t) => {
       const first = firstExitOf(t.key);
-      const mdd = curveMdd(trades, t.key, t.startingCapital);
+      // 전략 경쟁의 낙폭도 FCE 값이 먼저다 — 전략 탭 · Overview 가 같은 낙폭으로 나눈다.
+      const mdd = t.mddPct !== null ? -Math.abs(t.mddPct) : curveMdd(trades, t.key, t.startingCapital);
       const value = ratio(t.returnPct, mdd);
       if (first === null || value === null) return null;
       const from = startOf(first);

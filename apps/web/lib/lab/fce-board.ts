@@ -40,6 +40,8 @@ export interface FceTrackRow {
    */
   elapsedDays: number | null;
   calendarDays: number | null;
+  /** FCE 성적의 모집단 시작 — 이 뒤에 닫힌 거래만 센다. null 이면 원장 전부. */
+  validationFrom: Date | null;
   leverage: number | null;
   benchmarkLabel: string | null;
   benchmarkReturnPct: number | null;
@@ -205,6 +207,7 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       // 그대로 표에 찍혔다 — 실제로 그렇게 나갔다.
       elapsedDays: t.elapsedDays ?? null,
       calendarDays: t.calendarDays ?? null,
+      validationFrom: t.validationFrom ?? null,
       leverage: t.leverage,
       benchmarkLabel: t.benchmarkLabel,
       benchmarkReturnPct: t.benchmarkReturnPct,

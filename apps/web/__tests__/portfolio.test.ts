@@ -28,6 +28,7 @@ function track(over: Partial<FceTrackRow>): FceTrackRow {
     evidenceNote: null,
     elapsedDays: null,
     calendarDays: null,
+    validationFrom: null,
     leverage: null,
     benchmarkLabel: null,
     benchmarkReturnPct: null,

@@ -1324,6 +1324,9 @@ model FceTrack {
   elapsedDays  Int?
   /// 달력일. 유효일과 나란히 놔야 "두 달치 성과" 로 안 읽힌다.
   calendarDays Int?
+  /// UI-10 D — FCE 성적의 모집단 시작(`scoreboard.started_at`). 이 뒤에 닫힌 거래만 FCE 가 센다 — 랩도 같은 거래를 센다.
+  /// 없으면(고래 · 주식) 원장 전부가 FCE 의 모집단이다.
+  validationFrom DateTime?
 
   /// FCE 가 이 숫자를 낸 시각. 업로드 시각과 다르다.
   asOf      DateTime
