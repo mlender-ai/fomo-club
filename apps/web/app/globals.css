@@ -200,8 +200,14 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  text-decoration: underline;
+/*
+ * 호버는 **진짜 호버가 있는 기기에서만**(UI-10 F — 아이폰 실측). iOS Safari 는 :hover 로 모양이 바뀌는 링크의 첫 탭을
+ * 호버로 써서, 포지션 카드를 한 번 눌러도 안 넘어가고 카드 안 글자에 밑줄만 그어졌다.
+ */
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    text-decoration: underline;
+  }
 }
 
 /*

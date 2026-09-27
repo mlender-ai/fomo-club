@@ -213,10 +213,11 @@
   text-decoration: none;
   transition: background var(--m-hover) ease;
 }
-
-a.ui-row-link:hover {
+@media (hover: hover) and (pointer: fine) {
+  a.ui-row-link:hover {
   background: var(--bg-2);
   text-decoration: none;
+}
 }
 
 .ui-row-icon {
@@ -373,10 +374,11 @@ a.ui-row-link:hover {
   text-decoration: none;
   transition: background var(--m-hover) ease;
 }
-
-a.ui-research-link:hover {
+@media (hover: hover) and (pointer: fine) {
+  a.ui-research-link:hover {
   background: var(--bg-2);
   text-decoration: none;
+}
 }
 
 .ui-research-no {
@@ -699,9 +701,10 @@ a.ui-research-link:hover {
   letter-spacing: var(--ls-snug);
   text-decoration: none;
 }
-
-.sh-brand:hover {
+@media (hover: hover) and (pointer: fine) {
+  .sh-brand:hover {
   text-decoration: none;
+}
 }
 
 .sh-brand-mark {
@@ -731,11 +734,12 @@ a.ui-research-link:hover {
   text-decoration: none;
   transition: background var(--m-hover) ease, color var(--m-hover) ease;
 }
-
-.sh-tab:hover {
+@media (hover: hover) and (pointer: fine) {
+  .sh-tab:hover {
   background: var(--bg-2);
   color: var(--ink);
   text-decoration: none;
+}
 }
 
 /* 선택 — 검정 배경 흰 글자 (C). 파랑이 아니다: 파랑은 "내 것·주요 행동" 이다. */
@@ -1272,10 +1276,11 @@ a.ui-research-link:hover {
   text-decoration: none;
   transition: background var(--m-hover) ease;
 }
-
-.ov-activity-row:hover {
+@media (hover: hover) and (pointer: fine) {
+  .ov-activity-row:hover {
   background: var(--bg-2);
   text-decoration: none;
+}
 }
 
 .ov-activity-when {
@@ -1366,11 +1371,12 @@ a.ui-research-link:hover {
   vertical-align: middle;
   cursor: pointer;
 }
-
-.ui-info:hover,
+@media (hover: hover) and (pointer: fine) {
+  .ui-info:hover,
 .ui-info:focus-visible {
   background: var(--bg-2);
   color: var(--ink);
+}
 }
 
 .ui-sheet-backdrop {
@@ -1627,8 +1633,10 @@ a.ui-research-link:hover {
   color: inherit;
   text-decoration: none;
 }
-.ui-table a:hover {
+@media (hover: hover) and (pointer: fine) {
+  .ui-table a:hover {
   color: var(--blue);
+}
 }
 .ui-table .is-up {
   color: var(--up);
@@ -1717,8 +1725,10 @@ a.ui-research-link:hover {
   text-decoration: none;
   transition: border-color var(--m-hover);
 }
-.ps-card:hover {
+@media (hover: hover) and (pointer: fine) {
+  .ps-card:hover {
   border-color: var(--line-2);
+}
 }
 .ps-card.is-risk {
   border: 2px solid var(--dn);
@@ -2088,8 +2098,10 @@ a.ui-research-link:hover {
   color: inherit;
   text-decoration: none;
 }
-.rs-entry-link:hover .rs-title {
+@media (hover: hover) and (pointer: fine) {
+  .rs-entry-link:hover .rs-title {
   color: var(--blue);
+}
 }
 .rs-no {
   font-size: var(--t-research-list-no);
@@ -2534,9 +2546,11 @@ a.ui-research-link:hover {
   font-size: var(--t-caption);
   cursor: pointer;
 }
-.sh-search:hover {
+@media (hover: hover) and (pointer: fine) {
+  .sh-search:hover {
   border-color: var(--line-2);
   color: var(--ink);
+}
 }
 @media (max-width: 767px) {
   .sh-search-key {
@@ -2685,4 +2699,17 @@ a.ui-research-link:hover {
   display: block;
   height: 100%;
   background: color-mix(in srgb, var(--up) 60%, transparent);
+}
+
+/* 덩어리 링크(카드 · 행)는 밑줄을 긋지 않는다 — 전역 `a:hover` 밑줄이 카드 안 모든 글자에 그어졌다(아이폰 실측). */
+.ps-card,
+.ps-card:hover,
+.ui-row-link:hover,
+.ui-research-link:hover,
+.rs-entry-link:hover,
+.rs-gate:hover,
+.ov-activity-row:hover,
+.sh-tab:hover,
+.sh-brand:hover {
+  text-decoration: none;
 }
