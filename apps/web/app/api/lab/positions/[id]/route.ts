@@ -46,7 +46,7 @@ export async function GET(
     chart: charts?.bySymbol[position.symbol] ?? {},
     chartAsOf: charts?.asOf ?? null,
     caveat: list.payload.caveat,
-    liveOnly: list.payload.liveOnly,
+    liveOnly: position.missing,
     lastAt: list.payload.lastAt,
   };
   return NextResponse.json(

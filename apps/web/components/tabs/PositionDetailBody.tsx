@@ -36,10 +36,11 @@ import {
   price,
   termsIn,
   tone,
+  usdCompact,
   type PriceLine,
   type ResearchStatus,
 } from "../ui";
-import { claimText, engineLabel, sideLabel, stanceLabel } from "../../lib/lab/labels";
+import { claimText, engineLabel, phaseLabel, sideLabel, stanceLabel, verdictLabel } from "../../lib/lab/labels";
 import type { PositionDetail } from "../../lib/lab/positions";
 import type { Jsonify } from "../../lib/lab/wire";
 import { LiveOnlyCard } from "./PositionsBody";
@@ -58,6 +59,8 @@ export function PositionDetailBody({ data }: { data: Detail }) {
   const [mode, setMode] = useViewMode();
   const stance = stanceLabel(p.stance, p.direction);
   const title = `${p.symbol} · ${sideLabel(p.direction)}${p.leverage ? ` · ${p.leverage}배` : ""}`;
+  const [tf, setTf] = useState<Tf>(() => firstTimeframe(data));
+  const a = p.analysis;
 
   return (
     <PageFrame
@@ -85,6 +88,7 @@ export function PositionDetailBody({ data }: { data: Detail }) {
       />
       <div className="sh-inline">
         <HealthRing score={p.healthScore} size={36} />
+        {a?.statusLabel ? <Pill tone={a.statusLabel.includes("위험") ? "dn" : "warn"}>{a.statusLabel}</Pill> : null}
         {p.liquidationLevel ? <Pill tone="dn">청산 위험</Pill> : null}
         {stance ? <Pill tone={stance.tone}>{stance.label}</Pill> : null}
       </div>
@@ -93,7 +97,10 @@ export function PositionDetailBody({ data }: { data: Detail }) {
         {data.lastAt ? ` · ${kstStamp(data.lastAt).slice(-5)} 기준` : ""}
       </p>
 
-      {/* ② 가격 레일 + (지금 볼 것 자리) */}
+      {/* ② 지금 볼 것 — FCE 포지션 분석(라이브 화면과 같은 함수). **가장 먼저 눈에 들어와야 한다**(UI-06 B-3). */}
+      {a?.headline ? <WatchCard a={a} /> : null}
+
+      {/* 가격 레일 */}
       <Card title="가격 레일">
         {p.rail ? (
           <>
@@ -118,13 +125,19 @@ export function PositionDetailBody({ data }: { data: Detail }) {
       {mode === "pro" ? (
         <>
           {/* ③ 차트 */}
-          <ChartCard data={data} />
+          <ChartCard data={data} tf={tf} setTf={setTf} />
+
+          {/* ④ 패턴 시간봉 — 누르면 차트 시간봉이 바뀐다 */}
+          {a ? <PatternCard a={a} tf={tf} setTf={setTf} available={TIMEFRAMES.filter((t) => (data.chart[t.key]?.length ?? 0) > 0).map((t) => t.key)} /> : null}
+
+          {/* ⑤ 고래 추적군 */}
+          <CohortCard p={p} />
 
           {/* 진입 근거 — FCE 페이퍼 화면에 있는 것 */}
           <EvidenceCard p={p} />
 
-          {/* ④⑤ 라이브 전용 */}
-          <LiveOnlyCard names={data.liveOnly} />
+          {/* 분석을 못 돌린 포지션만 — 무엇이 없는지 이름으로 */}
+          {data.liveOnly.length > 0 ? <LiveOnlyCard names={data.liveOnly} /> : null}
 
           {/* ⑥ 정보 */}
           <InfoCard p={p} />
@@ -152,12 +165,15 @@ export function PositionDetailBody({ data }: { data: Detail }) {
   );
 }
 
-function ChartCard({ data }: { data: Detail }) {
+/** 이 포지션을 처음 열 시간봉 — FCE 페이퍼가 판정한 시간봉, 없으면 캔들이 있는 첫 시간봉. */
+function firstTimeframe(data: Detail): Tf {
+  const available = TIMEFRAMES.filter((t) => (data.chart[t.key]?.length ?? 0) > 0);
+  return (available.find((t) => t.key === data.position.timeframe) ?? available[0])?.key ?? "4h";
+}
+
+function ChartCard({ data, tf, setTf }: { data: Detail; tf: Tf; setTf: (t: Tf) => void }) {
   const p = data.position;
   const available = TIMEFRAMES.filter((t) => (data.chart[t.key]?.length ?? 0) > 0);
-  // FCE 페이퍼가 이 포지션을 판정한 시간봉에서 연다.
-  const first = (available.find((t) => t.key === p.timeframe) ?? available[0])?.key ?? "4h";
-  const [tf, setTf] = useState<Tf>(first);
   const candles = data.chart[tf] ?? [];
   const lines = useMemo<PriceLine[]>(() => {
     const out: PriceLine[] = [];
@@ -246,6 +262,160 @@ function EvidenceCard({ p }: { p: Detail["position"] }) {
         ))}
       </ul>
     </Card>
+  );
+}
+
+/** FCE 가 이 분석을 한 지 몇 분 — 30분이 유효 창이다(FCE 라이브 화면 `freshnessCountdownLabel` 과 같은 규칙). */
+export function validityLabel(asOf: string, now = Date.now()): { label: string; expired: boolean } {
+  const age = (now - Date.parse(asOf)) / 60_000;
+  const remaining = Math.ceil(30 - age);
+  // 알약은 6자 — FCE 의 "유효 N분 남음" 을 "유효 N분" 으로.
+  return remaining > 0 ? { label: `유효 ${remaining}분`, expired: false } : { label: `${Math.abs(remaining)}분 지남`, expired: true };
+}
+
+function WatchCard({ a }: { a: NonNullable<Detail["position"]["analysis"]> }) {
+  const v = validityLabel(a.asOf);
+  const text = (a.headline ?? "").replace(/^지금 볼 것:\s*/, "");
+  return (
+    <Card
+      title="지금 볼 것"
+      aside={<Pill tone={v.expired ? "mute" : "blue"}>{v.label}</Pill>}
+      info={
+        <>
+          <p>
+            FCE 가 라이브 계좌 포지션에 쓰는 분석 함수를 이 페이퍼 포지션에 돌린 결과다(`build_action_plan` · 건강도 · 판정). 랩이
+            만든 문장이 아니다. 분석은 30분 동안 유효하다 — FCE 라이브 화면과 같은 규칙.
+          </p>
+          <p>분석의 무효화 · 익절 후보는 FCE 의 구조 레벨이다. 아래 가격 레일은 FCE 페이퍼 전략이 진입 때 정한 선이다.</p>
+        </>
+      }
+    >
+      <p className="ps-watch">{text}</p>
+      {a.verdictState ? <p className="st-line">{verdictLabel(a.verdictState)}</p> : null}
+      {a.watch.length ? (
+        <ul className="jd-list st-line">
+          {a.watch.map((w, i) => (
+            <li key={i}>
+              <span>{w.condition}</span>
+              <span className="rs-days">{w.meaning}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Card>
+  );
+}
+
+const PATTERN_TF: Record<string, string> = { "1d": "1D", "12h": "12H", "4h": "4H", "1h": "1H", "15m": "15M" };
+
+function PatternCard({
+  a,
+  tf,
+  setTf,
+  available,
+}: {
+  a: NonNullable<Detail["position"]["analysis"]>;
+  tf: Tf;
+  setTf: (t: Tf) => void;
+  available: string[];
+}) {
+  return (
+    <Card
+      title="패턴 시간봉"
+      description="시간봉마다 확정 캔들을 따로 검사"
+      info={<p>FCE `build_pattern_matrix` 의 결과다 — 와이코프 국면 · 하모닉 패턴. 누르면 차트가 그 시간봉으로 바뀐다(12H 는 차트 캔들이 없다).</p>}
+    >
+      <ul className="ps-patterns">
+        {a.patterns.map((r) => {
+          const found = r.status === "ok" && (r.wyckoffDetected || r.harmonicCount > 0);
+          const clickable = available.includes(r.timeframe);
+          const phase = phaseLabel(r.status === "ok" ? r.wyckoffPhase : "unavailable");
+          const body = (
+            <>
+              <span className="ps-pattern-tf">{PATTERN_TF[r.timeframe] ?? r.timeframe}</span>
+              <span className="ps-pattern-phase">
+                <Glossed text={phase} />
+              </span>
+              <span className="ps-pattern-sub">
+                {r.harmonic ? (
+                  <>
+                    <Glossed text={r.harmonic} /> {r.harmonicScore ?? ""}
+                  </>
+                ) : r.rangeDetected ? (
+                  "레인지 확인"
+                ) : r.status === "ok" ? (
+                  `하모닉 ${r.harmonicCount}`
+                ) : (
+                  "데이터 없음"
+                )}
+              </span>
+            </>
+          );
+          return (
+            <li key={r.timeframe} className={`ps-pattern${found ? " is-found" : ""}${r.status !== "ok" ? " is-off" : ""}${tf === r.timeframe ? " is-on" : ""}`}>
+              {clickable ? (
+                <button type="button" onClick={() => setTf(r.timeframe as Tf)} aria-pressed={tf === r.timeframe}>
+                  {body}
+                </button>
+              ) : (
+                <div>{body}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+function CohortCard({ p }: { p: Detail["position"] }) {
+  const c = p.cohort;
+  const long = !(p.direction === "short" || p.direction === "SHORT");
+  if (!c) {
+    return (
+      <Card title="고래 추적군" description="FCE 추적군 · 지금 미결제">
+        <p className="sh-note">추적군이 이 심볼을 들고 있지 않다.</p>
+      </Card>
+    );
+  }
+  const total = c.longUsd + c.shortUsd;
+  const longPct = total > 0 ? (c.longUsd / total) * 100 : 0;
+  const net = c.longUsd === c.shortUsd ? null : c.longUsd > c.shortUsd ? "long" : "short";
+  const aligned = net === null ? null : (net === "long") === long;
+  return (
+    <Card
+      title="고래 추적군"
+      description={`${c.longWallets + c.shortWallets}지갑 · 추적군 ${c.tracked ?? "—"}개 중`}
+      info={<p>FCE 추적군(리더보드 상위 지갑)이 이 심볼에 지금 든 미결제다. 관측 정보이며 방향 판정이 아니다 — FCE 도 그렇게 적는다.</p>}
+    >
+      <StatGroupLite
+        items={[
+          ["추적군 롱", usdCompact(c.longUsd), `${c.longWallets}지갑`],
+          ["추적군 숏", usdCompact(c.shortUsd), `${c.shortWallets}지갑`],
+          ["분포", `롱 ${Math.round(longPct)}%`, ""],
+          ["내 포지션 대비", aligned === null ? "—" : aligned ? "정렬" : "역행", "관측 · 판정 아님"],
+        ]}
+      />
+      <div className="ps-cohort-bar" aria-hidden>
+        <span style={{ width: `${longPct}%` }} />
+      </div>
+    </Card>
+  );
+}
+
+function StatGroupLite({ items }: { items: [string, string, string][] }) {
+  return (
+    <dl className="ps-info">
+      {items.map(([k, v, n]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd>
+            {v}
+            {n ? <span className="rs-days"> · {n}</span> : null}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
