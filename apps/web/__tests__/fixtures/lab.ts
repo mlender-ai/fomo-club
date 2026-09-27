@@ -20,8 +20,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseNote } from "../../lib/lab/research-note";
+import { buildJournal, journalDetail, type JournalTrade } from "../../lib/lab/journal";
+import type { PostExit, TradeDetail } from "../../lib/lab/journal-extra";
 import { buildResearch } from "../../lib/lab/research";
 import positionsFixture from "./positions.json";
+import journalFixture from "./journal.json";
 import whaleFixture from "./whale.json";
 import {
   buildOverview,
@@ -193,10 +196,16 @@ function tradesFrom(key: string, start: string, daily: number[], total: number):
   return out;
 }
 
-export const TRADES: TradeLite[] = [
-  ...tradesFrom("crypto", "2026-07-12", CRYPTO_DAILY, 162),
-  ...tradesFrom("whale", "2026-08-24", WHALE_DAILY, 87),
-];
+/**
+ * 닫힌 거래 — **FCE 원장 실측**(2026-09-27 업로드 페이로드 · 264건, `journal.json`). 전에는 일별 자본에서
+ * 되만든 거래였다(`tradesFrom`) — 복기가 거래 한 건 한 건을 보게 되면서(UI-09) 실측으로 바꿨다.
+ */
+export const TRADES: (TradeLite & JournalTrade)[] = journalFixture.trades.map((t) => ({
+  ...(t as unknown as Omit<JournalTrade, "entryAt" | "exitAt">),
+  entryAt: t.entryAt ? new Date(t.entryAt) : null,
+  exitAt: t.exitAt ? new Date(t.exitAt) : null,
+}));
+void tradesFrom;
 
 /** BTC H1 — 일별 실측을 시간 단위로 잇는다. */
 export const BTC: Bar[] = (() => {
@@ -296,19 +305,22 @@ export function fixtures() {
     now: NOW,
   });
 
-  const closed = TRADES.filter((t) => t.exitAt);
-  const net = closed.reduce((s, t) => s + (t.netPnlUsdt ?? 0), 0);
-  const wins = closed.filter((t) => (t.netPnlUsdt ?? 0) > 0).length;
-  const losses = closed.filter((t) => (t.netPnlUsdt ?? 0) < 0).length;
-  // 비용 비율은 실측(87.7%)을 따른다 — 되만든 원장에는 비용 칸이 없다.
-  const costs = 80.37;
-  const gross = net + costs;
 
   const positionsCore = buildPositions({
     positions: POSITIONS,
     trackLabels: Object.fromEntries(TRACKS.map((t) => [t.key, t.label])),
     research: RESEARCH.map((r) => ({ ...r, blocks: r.blocks })),
     lastAt: POSITIONS_AT,
+  });
+  const journalExtra = {
+    details: journalFixture.details as unknown as Record<string, TradeDetail>,
+    postExit: journalFixture.postExit as unknown as Record<string, PostExit | null>,
+  };
+  const journalCore = buildJournal({
+    trades: TRADES,
+    open: POSITIONS.map((p) => ({ id: p.id, trackKey: p.trackKey, symbol: p.symbol, direction: p.direction, leverage: p.leverage, entryAt: p.entryAt, netReturnPct: p.netReturnPct })),
+    extra: journalExtra,
+    trackLabels: Object.fromEntries(TRACKS.map((t) => [t.key, t.label])),
   });
   const charts = buildCharts(CHARTS.map((c) => ({ ...c, asOf: POSITIONS_AT })));
   const detailOf = (id: string): PositionDetail => {
@@ -334,40 +346,13 @@ export function fixtures() {
     /** `GET /api/lab/positions/{id}` — 위험 순 첫 포지션. */
     positionDetail: wire<Jsonify<PositionDetail>>(detailOf(positionsCore.positions[0]?.id ?? "")),
     charts: wire<Wire<"charts">>(charts),
-    journal: wire<Wire<"journal">>({
-      trades: [...closed]
-        .sort((a, b) => (b.exitAt as Date).getTime() - (a.exitAt as Date).getTime())
-        .slice(0, 60)
-        .map((t, i) => ({
-          id: `t${i}`,
-          trackKey: t.trackKey,
-          symbol: t.symbol,
-          direction: t.direction,
-          leverage: 3,
-          entryAt: null,
-          exitAt: t.exitAt,
-          entryPrice: null,
-          exitPrice: null,
-          grossPnlUsdt: null,
-          costsUsdt: 0.3,
-          netPnlUsdt: t.netPnlUsdt,
-          netReturnPct: t.netReturnPct,
-          exitReason: (["take_profit_2", "invalidation_breach", "time_decay", "take_profit_pressure"] as const)[i % 4],
-          lossTags: [],
-          holdingBars: 30,
-        })),
-      total: {
-        count: closed.length,
-        wins,
-        losses,
-        flat: closed.length - wins - losses,
-        grossUsdt: gross,
-        costsUsdt: costs,
-        netUsdt: net,
-        costSharePct: (costs / Math.abs(gross)) * 100,
-      },
-      span: { from: closed[0]?.exitAt ?? null, to: NOW },
-    }),
+    journal: wire<Wire<"journal">>(journalCore),
+    /** `GET /api/lab/journal/{id}` — 크립토 손절 · 크립토 익절 · 고래 한 건씩(실측). */
+    journalDetails: journalFixture.detailIds.map((id) =>
+      wire<Jsonify<ReturnType<typeof journalDetail>>>(
+        journalDetail(journalCore.rows.find((r) => r.id === id) as (typeof journalCore.rows)[number], journalExtra)
+      )
+    ),
     whales: wire<Wire<"whales">>(
       buildWhales({
         whale: {

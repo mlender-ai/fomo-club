@@ -132,6 +132,7 @@ const ENGINE: Record<string, string> = {
   volume: "거래량",
   structure: "구조",
   harmonic: "하모닉",
+  derivatives: "파생",
 };
 
 export function engineLabel(engine: string): string {

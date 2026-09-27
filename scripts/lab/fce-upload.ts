@@ -29,10 +29,12 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { CHART_TIMEFRAMES, positionFromOpenTrade, shortAddress, walletKey } from "../../apps/web/lib/lab/fce-payload";
+import { postExitOf, tradeDetail, type DailyCandle } from "../../apps/web/lib/lab/journal-extra";
 import type {
   ChartPayload,
   ChartTimeframe,
   FcePayload,
+  JournalPayload,
   LostDayPayload,
   PositionPayload,
   TradePayload,
@@ -737,7 +739,67 @@ async function collect(): Promise<FcePayload> {
     ],
     lostDays: lostDays(diagnosis),
     whale: whale(eligibility, follow, at, whalesBody),
+    journal: await journal([
+      ...rawTrades(ledger),
+      ...rawTrades(follow).filter((t) => record(t.entry_evidence).qualification === "follow"),
+    ]),
   };
+}
+
+// ── 복기 (UI-09) ────────────────────────────────────────────────────────────
+//
+// 거래마다 "왜" 를 옮긴다(`tradeDetail` — 이름으로 칸을 옮기고 주소는 줄인다) · 청산 7일 뒤 가격을
+// Bitget 공개 일봉으로 잰다(`postExitOf`). FCE 는 페이퍼 거래의 사후 가격을 재지 않는다.
+
+function rawTrades(body: Record<string, unknown>): Record<string, unknown>[] {
+  return (Array.isArray(body.trades) ? body.trades : []).map(record);
+}
+
+/** 심볼 하나의 일봉 — 6시간 파일 캐시. 36심볼을 15분마다 부르지 않는다. */
+async function daily(symbol: string): Promise<DailyCandle[]> {
+  const file = join(CACHE_DIR, `daily-${symbol}.json`);
+  try {
+    const saved = JSON.parse(readFileSync(file, "utf8")) as { at: number; candles: DailyCandle[] };
+    if (Date.now() - saved.at < 6 * HOUR_MS) return saved.candles;
+  } catch {
+    // 캐시 없음.
+  }
+  try {
+    const url = `${BITGET}?symbol=${encodeURIComponent(symbol)}&productType=USDT-FUTURES&granularity=1D&limit=200`;
+    const body = record(await (await fetch(url, { signal: AbortSignal.timeout(15_000) })).json());
+    const candles = (Array.isArray(body.data) ? (body.data as unknown[][]) : [])
+      .map((r) => r.slice(0, 5).map(Number) as DailyCandle)
+      .filter((k) => k.every(Number.isFinite))
+      .map(([t, o, h, l, c]) => [Math.floor(t / 1000), o, h, l, c] as DailyCandle)
+      .sort((a, b) => a[0] - b[0]);
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(file, JSON.stringify({ at: Date.now(), candles }));
+    return candles;
+  } catch {
+    return [];
+  }
+}
+
+async function journal(raw: Record<string, unknown>[]): Promise<JournalPayload> {
+  const closed = raw.filter((t) => typeof t.id === "string" && typeof t.exit_at === "string");
+  const details: JournalPayload["details"] = {};
+  for (const t of closed) details[String(t.id)] = tradeDetail(t);
+  const bySymbol = new Map<string, DailyCandle[]>();
+  for (const symbol of [...new Set(closed.map((t) => String(t.symbol ?? "")))].filter(Boolean)) {
+    bySymbol.set(symbol, await daily(symbol));
+  }
+  const now = new Date();
+  const postExit: JournalPayload["postExit"] = {};
+  for (const t of closed) {
+    postExit[String(t.id)] = postExitOf(
+      { direction: String(t.direction ?? ""), exitAt: String(t.exit_at), exitPrice: num(t.exit_price) },
+      bySymbol.get(String(t.symbol ?? "")) ?? [],
+      now
+    );
+  }
+  const scored = Object.values(postExit).filter(Boolean).length;
+  console.log(`  복기 ${closed.length}건 · 사후 채점 ${scored}건 (일봉 ${bySymbol.size}심볼)`);
+  return { details, postExit };
 }
 
 async function push(payload: FcePayload): Promise<void> {

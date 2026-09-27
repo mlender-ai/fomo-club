@@ -26,7 +26,26 @@ export interface PriceLine {
 
 const TOKEN: Record<PriceLine["tone"], string> = { blue: "--blue", dn: "--dn", up: "--up" };
 
-export function CandleChart({ candles, lines, height = 360 }: { candles: Candle[]; lines: PriceLine[]; height?: number }) {
+/** 봉 위 표시 (UI-09 — 진입 · 청산). 시각은 초. 그 시각을 담은 봉에 붙는다. */
+export interface ChartMarker {
+  at: number;
+  label: string;
+  tone: PriceLine["tone"];
+  /** 봉 아래(진입 롱 · 청산 숏) · 위. */
+  place: "below" | "above";
+}
+
+export function CandleChart({
+  candles,
+  lines,
+  markers = [],
+  height = 360,
+}: {
+  candles: Candle[];
+  lines: PriceLine[];
+  markers?: ChartMarker[];
+  height?: number;
+}) {
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +54,7 @@ export function CandleChart({ candles, lines, height = 360 }: { candles: Candle[
     let disposed = false;
     let cleanup = () => {};
     // 브라우저에서만 불러온다 — 서버 렌더에는 `window` 가 없다.
-    void import("lightweight-charts").then(({ createChart, CandlestickSeries, LineStyle, ColorType }) => {
+    void import("lightweight-charts").then(({ createChart, createSeriesMarkers, CandlestickSeries, LineStyle, ColorType }) => {
       if (disposed) return;
       const css = getComputedStyle(document.documentElement);
       const v = (name: string) => css.getPropertyValue(name).trim();
@@ -75,6 +94,23 @@ export function CandleChart({ candles, lines, height = 360 }: { candles: Candle[
           title: line.label,
         });
       }
+      if (markers.length > 0) {
+        // 표시는 **그 시각을 담은 봉**에 붙인다 — 봉 시각과 정확히 같지 않으면 라이브러리가 그리지 않는다.
+        const times = candles.map((k) => k[0]);
+        const snap = (at: number) => [...times].reverse().find((t) => t <= at) ?? times[0] ?? at;
+        createSeriesMarkers(
+          series,
+          markers
+            .map((m) => ({
+              time: snap(m.at) as import("lightweight-charts").UTCTimestamp,
+              position: m.place === "below" ? ("belowBar" as const) : ("aboveBar" as const),
+              color: v(TOKEN[m.tone]),
+              shape: m.place === "below" ? ("arrowUp" as const) : ("arrowDown" as const),
+              text: m.label,
+            }))
+            .sort((a, b) => a.time - b.time)
+        );
+      }
       chart.timeScale().fitContent();
       cleanup = () => chart.remove();
     });
@@ -82,7 +118,7 @@ export function CandleChart({ candles, lines, height = 360 }: { candles: Candle[
       disposed = true;
       cleanup();
     };
-  }, [candles, lines, height]);
+  }, [candles, lines, markers, height]);
 
   return <div ref={box} className="ui-candles" style={{ height }} />;
 }

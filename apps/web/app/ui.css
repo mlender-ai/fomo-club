@@ -2378,3 +2378,142 @@ a.ui-research-link:hover {
     font-size: var(--t-h1);
   }
 }
+
+/* ══ 복기 (UI-09) ═════════════════════════════════════════════════════════ */
+
+.jr-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3) var(--s6);
+}
+.jr-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+.jr-filter-label {
+  flex: none;
+  width: 32px;
+  font-size: var(--t-caption);
+  color: var(--ink-3);
+}
+.jr-filter .ui-ranges {
+  overflow-x: auto;
+}
+
+/* 청산 사유별 막대 (A-4) */
+.jr-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.jr-bars li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 48px 96px;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-label);
+  font-variant-numeric: tabular-nums;
+}
+.jr-bar-label {
+  font-weight: var(--w-semibold);
+}
+.jr-bar-track {
+  height: 12px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.jr-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--line-2);
+}
+.jr-bar-fill.is-stop {
+  background: var(--dn);
+}
+.jr-bar-fill.is-take {
+  background: var(--up);
+}
+.jr-bar-fill.is-signal {
+  background: var(--blue);
+}
+.jr-bar-n {
+  text-align: right;
+}
+.jr-bar-avg {
+  text-align: right;
+  color: var(--ink-3);
+}
+.jr-bar-avg.is-up {
+  color: var(--up);
+}
+.jr-bar-avg.is-dn {
+  color: var(--dn);
+}
+@media (max-width: 767px) {
+  .jr-bars li {
+    grid-template-columns: 36px minmax(0, 1fr) 40px 80px;
+    gap: var(--s2);
+  }
+}
+
+/* 거래 상세 (B) */
+.jd-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4);
+}
+@media (max-width: 767px) {
+  .jd-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.jd-kv {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.jd-kv > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--s3);
+  font-size: var(--t-label);
+}
+.jd-kv dt {
+  color: var(--ink-3);
+}
+.jd-kv dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.jd-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  font-size: var(--t-label);
+}
+.jd-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.jd-list .is-fail {
+  color: var(--dn);
+}
+.jd-post {
+  font-size: var(--t-h2);
+  font-weight: var(--w-semibold);
+}
+.jd-list .is-mute {
+  color: var(--ink-3);
+}

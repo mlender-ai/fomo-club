@@ -24,6 +24,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { JournalBody } from "../components/tabs/JournalBody";
+import { JournalDetailBody } from "../components/tabs/JournalDetailBody";
 import { OverviewBody } from "../components/tabs/OverviewBody";
 import { PositionDetailBody } from "../components/tabs/PositionDetailBody";
 import { PositionsBody } from "../components/tabs/PositionsBody";
@@ -59,6 +60,8 @@ const TABS: [string, ComponentType<{ data: never }>, unknown][] = [
   ["전략 상세 · 크립토", detail("crypto"), data.strategies],
   ["전략 상세 · 주식 US", detail("stock_us"), data.strategies],
   ["포지션 상세", PositionDetailBody as ComponentType<{ data: never }>, data.positionDetail],
+  ["거래 상세 · 크립토 손절", JournalDetailBody as ComponentType<{ data: never }>, data.journalDetails[0]],
+  ["거래 상세 · 고래", JournalDetailBody as ComponentType<{ data: never }>, data.journalDetails[2]],
   [
     "고래 지갑",
     function Wallet({ data: d }: { data: never }) {

@@ -1378,6 +1378,18 @@ model FcePosition {
   @@index([trackKey, asOf])
 }
 
+/// UI-09 복기 — 거래별 "왜"(진입 근거 · 조건 · 가격선 · 고래 체결)와 사후 채점. **한 줄**이다.
+/// 거래마다 칸을 두면 업로드마다 수백 번 갱신해야 한다(사후 채점은 7일 동안 매일 바뀐다) — 그게 타임아웃을 불렀다.
+/// 지갑 주소는 앞 6 · 뒤 4 만.
+model FceJournal {
+  id       Int      @id @default(1)
+  /// `{ [tradeId]: TradeDetail }` — `lib/lab/journal-extra.ts`
+  details  Json
+  /// `{ [tradeId]: PostExit | null }`
+  postExit Json
+  asOf     DateTime
+}
+
 /// UI-06 캔들 차트 — 열린 페이퍼 포지션 심볼의 시간봉별 캔들. Mac 업로더가 Bitget 공개 시세에서 받아 통째로 갈아 끼운다.
 /// 시세(시장 데이터)라 계좌 정보가 없다.
 model FcePositionChart {
