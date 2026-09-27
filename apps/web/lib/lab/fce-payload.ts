@@ -9,6 +9,7 @@
  * 말을 하게 된다. **모르는 값은 null 로 온다 — 0 으로 채우지 않는다.**
  * 폴리마켓의 평가액이 그렇다(451 차단으로 산출 불가).
  */
+import type { PostExit, TradeDetail } from "./journal-extra";
 
 export type TrackKey = "crypto" | "whale" | "stock_us" | "stock_kr" | "polymarket";
 
@@ -351,6 +352,13 @@ export interface FcePayload {
   whale: WhalePayload | null;
   /** UI-06 — 열린 포지션 심볼의 캔들. 없으면 빈 배열(옛 업로더) — 차트 자리가 "없다" 고 말한다. */
   charts: ChartPayload[];
+  /** UI-09 — 거래별 "왜" · 사후 채점. 옛 업로더는 안 보낸다(null). */
+  journal: JournalPayload | null;
+}
+
+export interface JournalPayload {
+  details: Record<string, TradeDetail>;
+  postExit: Record<string, PostExit | null>;
 }
 
 const STATUSES: readonly TrackStatus[] = ["running", "stopped", "held", "excluded"];
@@ -560,6 +568,19 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
     }
   }
 
+  let journal: JournalPayload | null = null;
+  if (body.journal && typeof body.journal === "object") {
+    const j = body.journal as Record<string, unknown>;
+    if (typeof j.details === "object" && j.details !== null && typeof j.postExit === "object" && j.postExit !== null) {
+      journal = { details: j.details as JournalPayload["details"], postExit: j.postExit as JournalPayload["postExit"] };
+      if (FULL_ADDRESS.test(JSON.stringify(journal))) {
+        problems.push({ path: "journal", message: "지갑 주소 전체가 들어 있다 — 앞 6 · 뒤 4 만 보낸다" });
+      }
+    } else {
+      problems.push({ path: "journal", message: "details · postExit 객체가 필요하다" });
+    }
+  }
+
   if (problems.length > 0) return { payload: null, problems };
-  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale, charts }, problems: [] };
+  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale, charts, journal }, problems: [] };
 }

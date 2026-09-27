@@ -23,10 +23,12 @@
  * "2분 전" 이라고 말하게 된다.
  */
 import { readCapitalSeries } from "./capital";
-import { readFceBoard, readFceLedger } from "./fce-board";
+import { readFceBoard } from "./fce-board";
 import { buildOverview } from "./overview";
 import { buildPortfolio } from "./portfolio";
 import { buildCharts, buildPositions } from "./positions";
+import type { PostExit, TradeDetail } from "./journal-extra";
+import { buildJournal } from "./journal";
 import { buildResearch } from "./research";
 import { buildStrategies } from "./strategies";
 import { buildWhales } from "./whales";
@@ -42,7 +44,9 @@ export type SnapshotKey =
   | "research"
   | "journal"
   /** UI-06 — 포지션 심볼의 캔들. 포지션 상세만 읽는다. */
-  | "charts";
+  | "charts"
+  /** UI-09 — 거래별 "왜" · 사후 채점. 복기 상세만 읽는다. */
+  | "journalExtra";
 
 /**
  * 조립본 **형식 번호**. 조립본의 모양을 바꾸면 **반드시 올린다.**
@@ -55,10 +59,11 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 9;
+export const SNAPSHOT_VERSION = 10;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
+// 10 — UI-09: 복기를 원장 전부 + 청산 사유별 · 청산 품질 · `journalExtra`(거래별 왜 · 사후 채점)로.
 // 9 — UI-08: 연구 목록에 상태 열쇠 · 경과일 · 결정 한 줄 · 실매매 관문(`research.ts`).
 // 8 — UI-07: 고래 조립본을 FCE 보드로(갭 · 반사실 · 지갑 · 깔때기 · 리더보드 · 24시간). 박아 둔 65.8% · 원인 표를 뺐다.
 // 7 — UI-06: 포지션 행에 `evidence`(진입 근거). v6 조립본에는 없어서 화면이 `evidence[0]` 에서 멈춘다.
@@ -93,9 +98,8 @@ export interface Snapshot<T = unknown> {
  * "마지막 동기화" 가 15분씩 늦었다 — 헤더는 `1분 전`, 포지션 부제는 `20:48`(실제 21:05).
  */
 export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) {
-  const [board, ledger, research, lastOk, lastFail] = await Promise.all([
+  const [board, research, lastOk, lastFail] = await Promise.all([
     readFceBoard(),
-    readFceLedger(),
     prisma.research.findMany({
       orderBy: { no: "asc" },
       select: {
@@ -124,19 +128,27 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
   const series = await Promise.all(portfolio.tracks.map((t) => readCapitalSeries(t.key)));
 
   // Overview 재료 — 쓰기 경로라 여기서 실컷 읽는다. 화면 요청은 조립본 한 줄만 본다.
-  const [tradeLite, lostDays, archive, chartRows] = await Promise.all([
+  const [tradeLite, lostDays, archive, chartRows, journalRow] = await Promise.all([
     prisma.fceTrade.findMany({
       where: { exitAt: { not: null } },
       select: {
+        id: true,
         trackKey: true,
         symbol: true,
         direction: true,
         entryAt: true,
+        entryPrice: true,
         exitAt: true,
+        exitPrice: true,
+        grossPnlUsdt: true,
+        costsUsdt: true,
         netPnlUsdt: true,
         netReturnPct: true,
         leverage: true,
+        marginUsdt: true,
         exitReason: true,
+        holdingBars: true,
+        timeframe: true,
       },
     }),
     prisma.fceLostDay.findMany(),
@@ -157,6 +169,7 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
       },
     }),
     prisma.fcePositionChart.findMany(),
+    prisma.fceJournal.findUnique({ where: { id: 1 } }),
   ]);
   const firstExit = tradeLite.reduce<Date | null>(
     (min, t) => (t.exitAt && (!min || t.exitAt < min) ? t.exitAt : min),
@@ -243,7 +256,27 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
   });
 
   // 복기의 거래 수는 Overview `stats.trades` 와 **같은 행들**(FceTrade · exitAt 있음)을 센다(B-5).
-  const journal = ledger;
+  const journalExtra = journalRow
+    ? {
+        details: journalRow.details as unknown as Record<string, TradeDetail>,
+        postExit: journalRow.postExit as unknown as Record<string, PostExit | null>,
+        asOf: journalRow.asOf,
+      }
+    : { details: {}, postExit: {}, asOf: null };
+  const journal = buildJournal({
+    trades: tradeLite,
+    open: board.positions.map((p) => ({
+      id: p.id,
+      trackKey: p.trackKey,
+      symbol: p.symbol,
+      direction: p.direction,
+      leverage: p.leverage,
+      entryAt: p.entryAt,
+      netReturnPct: p.netReturnPct,
+    })),
+    extra: journalRow ? journalExtra : null,
+    trackLabels: Object.fromEntries(board.tracks.map((t) => [t.key, t.label])),
+  });
 
   return {
     payloads: {
@@ -254,6 +287,7 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
       research: researchPayload,
       journal,
       charts,
+      journalExtra,
     },
     sync,
   };

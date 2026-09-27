@@ -6,7 +6,7 @@
  */
 export { AreaChartCard, type RangeOption, type SeriesPoint } from "./AreaChart";
 export { AssetRow } from "./AssetRow";
-export { CandleChart, type Candle, type PriceLine } from "./CandleChart";
+export { CandleChart, type Candle, type ChartMarker, type PriceLine } from "./CandleChart";
 export { Card } from "./Card";
 export { CompareBar, type CompareItem } from "./CompareBar";
 export { DataTable, type Column } from "./DataTable";
@@ -24,3 +24,4 @@ export { Skeleton, SkeletonRows } from "./Skeleton";
 export { Sparkline } from "./Sparkline";
 export { StatGroup, type Stat } from "./StatGroup";
 export { MINUS, ago, kstStamp, kstWhen, money, native, num, pct, price, tone, usdCompact } from "./format";
+export { useBitgetCandles } from "./useBitgetCandles";

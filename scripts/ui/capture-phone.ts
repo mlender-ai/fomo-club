@@ -35,6 +35,9 @@ const TABS = [
   { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail" },
   // 폰 기본은 미니멀이다(UI-06 D) — 차트·정보까지 보려면 프로로 한 장 더.
   { path: `/positions/${fixtures().positionDetail.position.id}`, key: "positions", name: "position-detail-pro", mode: "pro" },
+  // UI-09 B — 거래 상세. 크립토 손절 · 고래.
+  { path: `/journal/${fixtures().journalDetails[0]?.trade.id ?? ""}`, key: "journal", name: "journal-stop" },
+  { path: `/journal/${fixtures().journalDetails[2]?.trade.id ?? ""}`, key: "journal", name: "journal-whale" },
   // UI-08 B — 연구 상세(에디토리얼). 01 이 가장 길다.
   // 상세는 문단이 허용되는 곳이라 ⓘ 가 없다(UI-FIX C-5) — `noInfo`.
   { path: "/research/01", key: "research", name: "research-01", noInfo: true },
@@ -63,6 +66,8 @@ async function main(): Promise<void> {
       ? data.positionDetail
       : key.startsWith("whales/")
         ? data.whales
+        : key.startsWith("journal/")
+          ? data.journalDetails.find((d) => key.endsWith(d.trade.id)) ?? data.journalDetails[0]
         : key.startsWith("research/")
           ? { item: data.researchDetail }
           : (data as Record<string, unknown>)[key];
