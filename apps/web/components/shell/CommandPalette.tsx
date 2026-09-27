@@ -90,12 +90,18 @@ export function CommandPalette() {
     };
   }, []);
 
+  // 열 때만 비운다. **자료 도착과 묶지 않는다** — 묶었더니 정규 도메인에서 자료가 오는 순간 쳐 둔 글자가 지워지고
+  // Enter 가 첫 항목(Overview)으로 갔다(UI-10 점검에서 발견).
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setCursor(0);
     setTimeout(() => input.current?.focus(), 0);
-    if (items) return;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || items) return;
+    let alive = true;
     void Promise.all(
       SOURCES.map((k) =>
         fetch(`/api/lab/${k}`, { cache: "no-store" })
@@ -103,9 +109,12 @@ export function CommandPalette() {
           .then((b) => b.data ?? null)
           .catch(() => null)
       )
-    ).then(([strategies, positions, research, journal, whales]) =>
-      setItems(searchItems({ strategies, positions, research, journal, whales } as Parameters<typeof searchItems>[0]))
-    );
+    ).then(([strategies, positions, research, journal, whales]) => {
+      if (alive) setItems(searchItems({ strategies, positions, research, journal, whales } as Parameters<typeof searchItems>[0]));
+    });
+    return () => {
+      alive = false;
+    };
   }, [open, items]);
 
   const shown = useMemo(() => searchFilter(items ?? searchItems({}), query), [items, query]);
