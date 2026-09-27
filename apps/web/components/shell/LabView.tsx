@@ -48,11 +48,25 @@ export function LabView<T>({
 }
 
 /** 오류 — 한 줄 + 다시 시도(E). 원인을 숨기지 않는다. */
+/**
+ * 오류 이유 → 사람 말 (UI-FIX A-4 — 코드는 화면에 안 나온다). 원문은 `title` 로 남긴다(마우스를 올리면 보인다).
+ * UI-10 E 점검에서 `(internal)` 이 그대로 떴다.
+ */
+export function errorReason(message: string): string {
+  if (/^HTTP 5\d\d$|internal|write_failed/.test(message)) return "서버가 답하지 않았다";
+  if (/^HTTP 4\d\d$|not_found/.test(message)) return "찾는 것이 없다";
+  if (/network|fetch|Failed to fetch|네트워크/i.test(message)) return "연결이 끊겼다";
+  if (/timeout|abort/i.test(message)) return "너무 오래 걸렸다";
+  return "알 수 없는 오류";
+}
+
 export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="sh-error" role="alert">
       <p className="sh-error-text">
-        화면을 불러오지 못했어요. <span className="sh-error-reason">({message})</span>
+        화면을 불러오지 못했어요. <span className="sh-error-reason" title={message}>
+          ({errorReason(message)})
+        </span>
       </p>
       <button type="button" className="sh-btn" onClick={onRetry}>
         다시 시도
