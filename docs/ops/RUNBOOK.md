@@ -1,6 +1,8 @@
 # RUNBOOK — 24시간 가동
 
 지시서: `docs/wo/OPS-01-24h.md` · 기준 2026-09-29.
+
+**지금(09-29 01:00 KST):** FCE `~/fce` · launchd 감시 루프 · launchd 러너 하나 · 사이드카 없음 · 전원 연결 · 절전 끔. **재부팅 시험만 남았다**(개발 중이라 미룸).
 **완료는 가동으로 판정한다** — 재부팅 뒤에도 알아서 살아나야 완료다.
 
 ## 한눈에
@@ -68,6 +70,8 @@ pmset -g custom                                            # 절전 설정 풀�
 | `LAB 업로드 401` | 토큰이 틀렸다 → `install.sh` 를 진짜 토큰으로 다시 |
 | `ByteString … 8230` | 토큰 자리에 `…` 이 들어갔다(09-27) → 같음 |
 | 러너 번호가 둘 | launchd 밖 러너가 또 떴다 → `check-24h.sh` 가 번호를 준다 · 그것만 끈다 |
+| FCE 운영 값 바꾸기 | `scripts/ops/launchd/fce.env` 에 `KEY=VALUE` → `install-fce.sh` (launchd 환경변수 · FCE `.env` 보다 우선 · 비밀 금지) |
+| 주식 시세가 안 들어온다 · `authentication_failed` | `curl -s localhost:8875/api/system/toss/auth-diagnosis` — `403 IP address not allowed` 면 토스 OpenAPI 허용 IP 에 지금 공인 IP 추가 |
 | FCE 를 잠깐 멈춰야 할 때 | `launchctl bootout gui/$(id -u)/com.fomo.fce.supervisor` (다시: `install-fce.sh`). **`stop-supervisor.sh` 만 쓰면 launchd 가 30초 뒤 다시 띄운다** |
 
 ## 하지 말 것

@@ -2,7 +2,7 @@
 no: "06"
 title: 주식 US 체결 가격 이상은 왜 생기나
 status: open
-summary: 지금 막는 건 토스 시세 IP 차단이다
+summary: 재개했다 — US 첫 체결이 검사를 통과했다
 opened_at: 2026-09-21
 tracks: [stock_us, stock_kr]
 ---
@@ -37,8 +37,10 @@ tracks: [stock_us, stock_kr]
   → 이게 풀리기 전에는 US 를 재개해도 · KR 이 running 이어도 체결이 없다.
 - ✓ KR 대기 13,940건은 **2종목(035420 · 009150) 시간 청산 매도가 틱마다 새 주문으로 쌓인 것**. US 1,971건은 NVDA 하나 | FCE `stock_paper_orders` (09-29)
   → 과거 신호다 — 체결하지 않고 폐기한다(`cancelled` · 사유 `cancelled_stale` · 스냅샷 보존). 중복 생성은 `de609317` 이 막았다.
+- ✓ **재개 (09-29 00:49 KST)** — 토스 IP 허용 · 대기 15,911건 폐기 · US `running`. 재개 직후 US NVDA 매도 229.56 이 invariant 통과 · 정지 없음 | FCE `stock_paper_fills` · `stock_paper_tracks`
+  → US 정지의 원인(봉 불일치)은 수리로 풀렸다. KR 은 09-29 09:00 개장 첫 체결로 확인한다.
 - ✓ 휴장 달력은 FCE 에 있다. 추석(09-24·25) · 개천절 대체(10-05) 등은 `확인 필요` 로 남아 유효일 분모에 섞인다 | FCE `worker/market_calendar.py`
-  → 사람이 확인해 확정으로 옮긴다(FCE 규칙).
+  → 09-29 확정으로 옮겼다 — KRX 2026 목록 두 곳과 대조 · 9일. 6/3 은 확인 필요 유지(FCE #37).
 
 ## 결정
 
@@ -60,4 +62,5 @@ tracks: [stock_us, stock_kr]
 - 수리 커밋 | 08-31 | FCE `de609317`
 - 재검사 (지금 모형) | 14건 중 위반 1 (KR 005930 · 틱 격자) | LAB `stock-fill-audit.py`
 - 시세 차단 | 403 IP address not allowed | FCE auth-diagnosis
-- 대기 주문 | KR 13,940 · US 1,971 (3종목 청산 매도) | FCE `stock_paper_orders`
+- 대기 주문 | KR 13,940 · US 1,971 (3종목 청산 매도) → cancelled_stale | FCE `stock_paper_orders`
+- 재개 뒤 첫 체결 | US NVDA 매도 229.56 · 통과 | FCE `stock_paper_fills` 09-28 15:49 UTC
