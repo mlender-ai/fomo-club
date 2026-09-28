@@ -17,6 +17,9 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+import type { TrackDot } from "../../lib/lab/watch";
 
 import { useSync } from "./SyncProvider";
 
@@ -37,7 +40,7 @@ function isActive(pathname: string, href: string): boolean {
 
 export function Header() {
   const pathname = usePathname() ?? "/";
-  const { sync, collect, unreachable } = useSync();
+  const { sync, collect, tracks, unreachable } = useSync();
 
   // 헤더 점은 **더 나쁜 쪽**을 따른다. FCE 는 살아 있는데 시세가 끊겼으면 끊김이다.
   const feedBroken = (collect?.staleSymbols.length ?? 0) > 0;
@@ -94,11 +97,79 @@ export function Header() {
           <span className="sh-search-key">⌘K</span>
         </button>
 
-        <p className={`sh-sync is-${level}`} role="status" title={detail || undefined}>
-          <span className="sh-sync-dot" aria-hidden />
-          <span className="sh-sync-label">{label}</span>
-        </p>
+        {tracks && !unreachable ? (
+          <TrackDots tracks={tracks} level={level} label={label} detail={detail} />
+        ) : (
+          <p className={`sh-sync is-${level}`} role="status" title={detail || undefined}>
+            <span className="sh-sync-dot" aria-hidden />
+            <span className="sh-sync-label">{label}</span>
+          </p>
+        )}
       </div>
     </header>
+  );
+}
+
+const DOT_WORD: Record<TrackDot["level"], string> = { live: "운용중", off: "장외", lagging: "지연", stopped: "멈춤" };
+
+function kstTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(Date.parse(iso) + 9 * 3_600_000).toISOString().slice(5, 16).replace("T", " ");
+}
+
+/**
+ * 트랙별 점 (OPS-03 E) — `● ● ● ●` 크립토 · 고래 · KR · US. 초록 운용중 · 회색 장외 · 주황 지연 · 빨강 멈춤.
+ * 누르면 트랙별 마지막 틱. 폴리마켓은 뺀다(지역 차단 — 늘 제외다).
+ */
+function TrackDots({ tracks, level, label, detail }: { tracks: TrackDot[]; level: string; label: string; detail: string }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  const summary = tracks.map((t) => `${t.label} ${DOT_WORD[t.level]}`).join(" · ");
+  return (
+    <div className="sh-sync-wrap" ref={box}>
+      <button
+        type="button"
+        className={`sh-sync is-${level}`}
+        aria-expanded={open}
+        aria-label={`${label} — ${summary}`}
+        title={detail || undefined}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="sh-dots" aria-hidden>
+          {tracks.map((t) => (
+            <span key={t.key} className={`sh-dot is-${t.level}`} />
+          ))}
+        </span>
+        <span className="sh-sync-label">{label}</span>
+      </button>
+      {open ? (
+        <div className="sh-dots-pop" role="dialog" aria-label="트랙별 상태">
+          <ul>
+            {tracks.map((t) => (
+              <li key={t.key}>
+                <span className={`sh-dot is-${t.level}`} aria-hidden />
+                <span className="sh-dots-name">{t.label}</span>
+                <span className="sh-dots-note">{t.note}</span>
+                <span className="sh-dots-at">{kstTime(t.lastAt)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="sh-dots-foot">마지막 틱 · KST</p>
+        </div>
+      ) : null}
+    </div>
   );
 }

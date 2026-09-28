@@ -792,6 +792,95 @@
   border: 2px solid var(--dn);
 }
 
+/* ── 트랙별 점 (OPS-03 E) ─────────────────────────────────────────────── */
+
+.sh-sync-wrap {
+  position: relative;
+  margin: 0 0 0 auto;
+  flex-shrink: 0;
+}
+.sh-sync-wrap .sh-sync {
+  margin: 0;
+  padding: var(--s1) var(--s2);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--t-caption);
+  font-weight: var(--w-medium);
+}
+.sh-sync-wrap .sh-sync:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.sh-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.sh-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--ink-3);
+  flex-shrink: 0;
+}
+.sh-dot.is-live {
+  background: var(--up);
+}
+.sh-dot.is-off {
+  background: var(--line-2);
+}
+.sh-dot.is-lagging {
+  background: var(--warn);
+}
+.sh-dot.is-stopped {
+  background: var(--dn);
+}
+.sh-dots-pop {
+  position: absolute;
+  top: calc(100% + var(--s2));
+  right: 0;
+  z-index: 40;
+  min-width: 260px;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  background: var(--bg);
+  box-shadow: var(--shadow-pop);
+}
+.sh-dots-pop ul {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sh-dots-pop li {
+  display: grid;
+  grid-template-columns: 8px 64px 1fr auto;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-caption);
+  color: var(--ink);
+}
+.sh-dots-note {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh-dots-at {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.sh-dots-foot {
+  margin: var(--s2) 0 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+}
+
 /* ── 끊김 띠 ───────────────────────────────────────────────────────────── */
 
 .sh-banner {
@@ -1195,6 +1284,35 @@
 
 .ui-tip-key.is-dash::before {
   border-top: 2px dashed var(--ink-3);
+}
+
+/* 평가 선 (OPS-03 D) — 옅고 얇은 파랑 */
+.ui-tip-key.is-soft::before {
+  border-top: 1px solid color-mix(in srgb, var(--blue) 45%, transparent);
+}
+.ui-legend-swatch.is-soft {
+  height: 0;
+  border-top: 1.5px solid color-mix(in srgb, var(--blue) 45%, transparent);
+  background: none;
+}
+
+.ps-today {
+  margin: 0;
+  font-size: var(--t-body);
+  font-weight: var(--w-medium);
+}
+.ps-today.is-up {
+  color: var(--up);
+}
+.ps-today.is-dn {
+  color: var(--dn);
+}
+
+.ov-marked {
+  margin: calc(-1 * var(--s2)) 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-tip-val {

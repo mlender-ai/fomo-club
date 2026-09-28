@@ -39,6 +39,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+import { collectHeartbeat } from "./heartbeat";
+
 import {
   BINANCE_PAIR,
   BINANCE_PERP,
@@ -82,6 +84,16 @@ async function post(path: string, body: unknown): Promise<string> {
 }
 
 // ── 잡 ──────────────────────────────────────────────────────────────────────
+
+/**
+ * 심장박동 (OPS-03 A). **1분 주기** — 맥 밖 감시가 "맥 · 러너" 를 10분 기준으로 본다.
+ * FCE 에 못 닿아도 올린다(`reachable: false`) — 그래야 밖에서 "FCE 가 죽었다" 가 갈린다.
+ */
+async function heartbeat(): Promise<Result> {
+  const payload = await collectHeartbeat();
+  await post("/api/lab/heartbeat", payload);
+  return payload.fce.reachable ? { rows: 1 } : { rows: 1, detail: { fce: payload.fce.error } };
+}
 
 /** 실시간 시세. **1분 주기** — `STALE_AFTER_MS`(3분)를 지키려면 이보다 느릴 수 없다. */
 async function latestPrice(startedAt: Date): Promise<Result> {
@@ -319,6 +331,7 @@ interface Job {
  */
 const fastJobs: Job[] = [
   { name: "latest-price", everyMs: 1 * MINUTE, run: latestPrice, lastAt: 0, fails: 0 },
+  { name: "heartbeat", everyMs: 1 * MINUTE, run: heartbeat, lastAt: 0, fails: 0 },
 ];
 
 /** 나머지는 한 줄로 선다. 병렬로 돌리면 어느 잡이 느린지 안 보인다. */

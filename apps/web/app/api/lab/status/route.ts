@@ -16,14 +16,18 @@
 import { NextResponse } from "next/server";
 
 import { readCollectStatus, readSyncStatus } from "../../../../lib/lab/sync";
+import { trackDots } from "../../../../lib/lab/watch";
+import { readHeartbeat } from "../../../../lib/lab/watch-run";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<NextResponse> {
   const started = Date.now();
-  const [sync, collect] = await Promise.all([readSyncStatus(), readCollectStatus()]);
+  const [sync, collect, heartbeat] = await Promise.all([readSyncStatus(), readCollectStatus(), readHeartbeat()]);
+  // OPS-03 E — 트랙별 점(크립토 · 고래 · KR · US). 심장박동이 한 번도 없으면 null — 옛 점 하나로 둔다.
+  const tracks = heartbeat ? trackDots(new Date(), heartbeat) : null;
   return NextResponse.json(
-    { sync, collect, ms: Date.now() - started },
+    { sync, collect, tracks, heartbeatAt: heartbeat?.at.toISOString() ?? null, ms: Date.now() - started },
     { headers: { "cache-control": "no-store" } }
   );
 }

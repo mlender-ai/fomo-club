@@ -44,6 +44,8 @@ export interface SeriesPoint {
   at: string;
   value: number | null;
   benchmark?: number | null;
+  /** 평가(미실현 포함 · OPS-03 D). 옅고 얇은 파랑 — 실현 선과 섞지 않는다. */
+  marked?: number | null;
 }
 
 export interface RangeOption {
@@ -60,6 +62,7 @@ interface Row {
   t: number;
   value: number | null;
   benchmark: number | null;
+  marked: number | null;
 }
 
 /** 툴팁 시각 — 한국 시간(`format.ts` 의 `kstStamp`). */
@@ -80,6 +83,7 @@ export function AreaChartCard({
   format,
   compact = false,
   step = false,
+  markedLabel = "평가 (미실현 포함)",
 }: {
   data: SeriesPoint[];
   ranges?: RangeOption[];
@@ -103,6 +107,7 @@ export function AreaChartCard({
   compact?: boolean;
   /** 계단으로 그린다. 실현 기준 곡선은 거래가 닫히는 순간에만 변한다 — 사이를 매끈하게 이으면 없던 값이 생긴다. */
   step?: boolean;
+  markedLabel?: string;
 }) {
   const fmt = format ?? ((v: number) => String(v));
   // **같은 데이터면 같은 배열을 준다.** 매 렌더 새 배열을 만들면 Recharts 가 "데이터가 바뀌었다"
@@ -114,10 +119,12 @@ export function AreaChartCard({
         t: Date.parse(d.at),
         value: d.value,
         benchmark: d.benchmark ?? null,
+        marked: d.marked ?? null,
       })),
     [data]
   );
   const hasBenchmark = rows.some((d) => d.benchmark !== null);
+  const hasMarked = rows.some((d) => d.marked !== null);
   const last = [...rows].reverse().find((r) => r.value !== null) ?? null;
   const base = baseline ?? rows.find((r) => r.value !== null)?.value ?? null;
   const pctOf = (v: number | null) => (v === null || !base ? null : ((v - base) / base) * 100);
@@ -223,6 +230,13 @@ export function AreaChartCard({
                       <span className="ui-tip-val">{hover.value === null ? "—" : fmt(hover.value)}</span>
                       <span className="ui-tip-pct">{pct(hover.value)}</span>
                     </p>
+                    {hasMarked && hover.marked !== null ? (
+                      <p className="ui-tip-row">
+                        <span className="ui-tip-key is-soft">{markedLabel}</span>
+                        <span className="ui-tip-val">{fmt(hover.marked)}</span>
+                        <span className="ui-tip-pct">{pct(hover.marked)}</span>
+                      </p>
+                    ) : null}
                     {hasBenchmark ? (
                       <p className="ui-tip-row">
                         <span className="ui-tip-key is-dash">{benchmarkLabel ?? "벤치마크"}</span>
@@ -249,6 +263,20 @@ export function AreaChartCard({
               // 파란 선이 빈 채로 찍혔다. 가끔 선이 없는 차트는 장식 없는 차트보다 나쁘다.
               isAnimationActive={false}
             />
+
+            {/* 평가 선 — 옅고 얇게. 실현(굵은 파랑)과 섞지 않는다(OPS-03 D-2). 매끈하게 잇는다 — 시세는 연속이다. */}
+            {hasMarked ? (
+              <Line
+                type="monotone"
+                dataKey="marked"
+                stroke="var(--blue)"
+                strokeOpacity={0.4}
+                strokeWidth={1.2}
+                dot={false}
+                activeDot={{ r: 3, fill: "var(--blue)", stroke: "var(--bg)", strokeWidth: 2 }}
+                isAnimationActive={false}
+              />
+            ) : null}
 
             {hasBenchmark ? (
               <Line
@@ -277,6 +305,11 @@ export function AreaChartCard({
         <span className="ui-legend-item">
           <span className="ui-legend-swatch is-line" aria-hidden /> {seriesLabel}
         </span>
+        {hasMarked ? (
+          <span className="ui-legend-item">
+            <span className="ui-legend-swatch is-soft" aria-hidden /> {markedLabel}
+          </span>
+        ) : null}
         {hasBenchmark ? (
           <span className="ui-legend-item">
             <span className="ui-legend-swatch is-dash" aria-hidden /> {benchmarkLabel ?? "벤치마크"}
