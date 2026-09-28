@@ -15,10 +15,11 @@ import { FCE_DB } from "./fce-home";
 const execFileAsync = promisify(execFile);
 const FCE = process.env.FCE_BASE_URL ?? "http://127.0.0.1:8875";
 
-type WorkerJob = { last_effective_run_at?: string | null; last_success_at?: string | null };
+type WorkerJob = { last_effective_run_at?: string | null; last_success_at?: string | null; current_interval_seconds?: number | null };
 
 export async function collectHeartbeat(now: Date = new Date()): Promise<HeartbeatPayload> {
   const jobs: Record<string, string | null> = {};
+  const every: Record<string, number | null> = {};
   let reachable = false;
   let error: string | null = null;
   try {
@@ -28,6 +29,7 @@ export async function collectHeartbeat(now: Date = new Date()): Promise<Heartbea
     for (const name of WATCHED_JOBS) {
       const j = body.jobs?.[name];
       jobs[name] = j?.last_effective_run_at ?? j?.last_success_at ?? null;
+      every[name] = typeof j?.current_interval_seconds === "number" ? j.current_interval_seconds : null;
     }
     reachable = true;
   } catch (e) {
@@ -48,5 +50,5 @@ export async function collectHeartbeat(now: Date = new Date()): Promise<Heartbea
   } catch {
     // 못 읽으면 빈 배열 — 주식 판정은 "모름" 으로 남는다(알림을 지어내지 않는다).
   }
-  return { at: now.toISOString(), fce: { reachable, error, jobs }, stock };
+  return { at: now.toISOString(), fce: { reachable, error, jobs, every }, stock };
 }
