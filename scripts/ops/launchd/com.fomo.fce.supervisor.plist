@@ -40,6 +40,21 @@
 __EXTRA_ENV__
   </dict>
 
+  <!--
+    파일 한도. launchd 기본은 256 이다 — FCE 백엔드가 200개를 열고 있어서 순간 부하에 새 연결을 못 받았다
+    (09-29 /health 24번 중 21번 연결 리셋). nohup 으로 띄울 때는 부모 셸의 큰 한도를 물려받아 드러나지 않았다.
+  -->
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>65536</integer>
+  </dict>
+  <key>HardResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>65536</integer>
+  </dict>
+
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

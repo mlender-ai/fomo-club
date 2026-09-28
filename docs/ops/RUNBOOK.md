@@ -50,6 +50,22 @@ FCE 자신도 그래서 launchd 대신 nohup 감시 루프를 썼다(`supervisor
 worktree 경로 → launchd 등록 → 8875 `/health` 를 90초 기다린다. 하나라도 실패하면 거기서 멈춘다.
 8876 이 안 뜨면 `cd ~/fce/dashboard && npm run build`.
 
+## 감시 (OPS-03) — 맥 밖에서
+
+| 무엇 | 어디 | 주기 |
+|---|---|---|
+| 심장박동 | 러너 → `POST /api/lab/heartbeat` | 1분 |
+| 판정 · 알림 · 유효일 · 평가 점 | Supabase `pg_cron` `lab-watch` → `GET /api/lab/cron/watch` | 5분 |
+| 아침 리포트 | `pg_cron` `lab-morning` → `GET /api/lab/cron/morning` | 07:30 KST |
+
+```bash
+curl -s https://fomo-web-mlender-ais-projects.vercel.app/api/lab/watch | python3 -m json.tool | head -60   # 울리는 것 · 최근 알림 · 유효일
+```
+
+- 알림이 안 온다 → `/api/lab/watch` 의 `notices[].sent` · `error`. `telegram: false` 면 Vercel 에 `TELEGRAM_BOT_TOKEN` · `TELEGRAM_CHAT_ID` 가 없다
+- 판정이 안 돈다(`notices` · 평가 점이 5분마다 안 늘어난다) → Supabase SQL: `select * from cron.job_run_details order by start_time desc limit 5;`
+- 기준 · 문구 · 시험 기록: `docs/ops/OPS-03.md`
+
 ## 멈췄을 때
 
 ```bash
@@ -66,6 +82,7 @@ pmset -g custom                                            # 절전 설정 풀�
 |---|---|
 | 헤더 점이 주황 · 빨강 | 러너가 20분 넘게 못 올렸다 → 러너 로그의 ❌ 줄 |
 | `fce ❌ … timeout (수천 초)` | 맥이 잤다(시각이 건너뛴다) → 절전 · 전원 |
+| FCE `/health` 가 자주 `Empty reply` · `Connection reset` | launchd 파일 한도(기본 256) — 등록 파일에 `NumberOfFiles 65536` 이 있나(`install-fce.sh` 다시). 09-29 에 24번 중 21번 리셋이었다 |
 | `fce ❌ … Operation not permitted` | FCE 가 아직 `~/Documents` → `fce-relocate.sh` |
 | `LAB 업로드 401` | 토큰이 틀렸다 → `install.sh` 를 진짜 토큰으로 다시 |
 | `ByteString … 8230` | 토큰 자리에 `…` 이 들어갔다(09-27) → 같음 |
