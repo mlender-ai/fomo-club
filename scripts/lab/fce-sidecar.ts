@@ -17,9 +17,9 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { FCE_BACKEND, FCE_PYTHON } from "./fce-home";
+
 const LAB = process.env.LAB_BASE_URL ?? "https://fomo-web-mlender-ais-projects.vercel.app";
-const FCE_BACKEND = process.env.FCE_BACKEND_DIR ?? "/Users/cocteau/Documents/Fomo club engine/backend";
-const FCE_PYTHON = process.env.FCE_PYTHON ?? "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3";
 const CACHE_DIR = process.env.FCE_CACHE_DIR ?? "/tmp/fce-upload-cache";
 const REPO = process.cwd();
 const EVERY_MS = 10 * 60 * 1000;

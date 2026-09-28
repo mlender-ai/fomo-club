@@ -270,7 +270,11 @@ export function validityLabel(asOf: string, now = Date.now()): { label: string; 
   const age = (now - Date.parse(asOf)) / 60_000;
   const remaining = Math.ceil(30 - age);
   // 알약은 6자 — FCE 의 "유효 N분 남음" 을 "유효 N분" 으로.
-  return remaining > 0 ? { label: `유효 ${remaining}분`, expired: false } : { label: `${Math.abs(remaining)}분 지남`, expired: true };
+  if (remaining > 0) return { label: `유효 ${remaining}분`, expired: false };
+  // 지난 것은 **분석한 지 얼마나 됐나**로 — "1810분 지남" 은 7자였다(분석이 30시간 묵었을 때).
+  const m = Math.floor(age);
+  const label = m < 60 ? `${m}분 전` : m < 24 * 60 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`;
+  return { label, expired: true };
 }
 
 function WatchCard({ a }: { a: NonNullable<Detail["position"]["analysis"]> }) {

@@ -332,8 +332,12 @@ const slowJobs: Job[] = [
 
 const jobs: Job[] = [...fastJobs, ...slowJobs];
 
+/**
+ * 시각 · 프로세스 번호. 러너 둘이 같은 로그에 쓰면(launchd 러너 + 옛 세션 러너) 어느 줄이 누구 것인지 몰랐다 —
+ * `fce ✅` 가 새 러너 것인지 확인해야 옛 것을 끌 수 있다(OPS-01 STEP 5).
+ */
 function stamp(): string {
-  return new Date().toISOString().slice(11, 19);
+  return `${new Date().toISOString().slice(11, 19)} p${process.pid}`;
 }
 
 /**
@@ -392,7 +396,7 @@ async function main(): Promise<void> {
     console.error("LAB_INGEST_TOKEN 이 없다. 러너를 시작하지 않는다.");
     process.exit(1);
   }
-  console.log(`로컬 수집 러너 → ${LAB}`);
+  console.log(`로컬 수집 러너 p${process.pid} → ${LAB}`);
   console.log(jobs.map((j) => `${j.name} ${j.everyMs / MINUTE}분`).join(" · "));
   console.log("");
 
