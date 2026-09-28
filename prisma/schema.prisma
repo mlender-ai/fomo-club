@@ -1321,9 +1321,9 @@ model FceTrack {
   evidenceNote       String?
 
   /// **유효일.** 호스트가 자면 그 하루는 검증에 안 들어간다. FCE 가 재는 값이다.
-  elapsedDays  Int?
+  elapsedDays    Int?
   /// 달력일. 유효일과 나란히 놔야 "두 달치 성과" 로 안 읽힌다.
-  calendarDays Int?
+  calendarDays   Int?
   /// UI-10 D — FCE 성적의 모집단 시작(`scoreboard.started_at`). 이 뒤에 닫힌 거래만 FCE 가 센다 — 랩도 같은 거래를 센다.
   /// 없으면(고래 · 주식) 원장 전부가 FCE 의 모집단이다.
   validationFrom DateTime?
@@ -1364,21 +1364,21 @@ model FcePosition {
 
   /// UI-06 가격 레일 — **FCE 페이퍼 포지션만**(광혁 결정 2026-09-26). LAB-08 의 목표가·손절선 금지는
   /// 랩 자체 엔진 포지션(`toLivePosition`)에 그대로 남는다. 라이브(Bitget 계좌) 포지션은 받지 않는다.
-  invalidationPrice Float?
+  invalidationPrice       Float?
   /// 지금 걸린 손절선. 진입 땐 무효화와 같고, **부분 익절 뒤 본전으로 올라간다**(ADA 0.24599 → 0.2541).
   /// FCE 의 `invalidation_distance_pct` 가 이 선까지의 거리다 — 레일 왼쪽 끝은 이것이다.
-  stopPrice         Float?
-  takeProfitPrice   Float?
-  takeProfit2Price  Float?
+  stopPrice               Float?
+  takeProfitPrice         Float?
+  takeProfit2Price        Float?
   /// 현재가에서 각 선까지(%). FCE `exit_monitor.*_distance_pct`.
   invalidationDistancePct Float?
   takeProfitDistancePct   Float?
   /// 진입 근거 — FCE `entry_evidence.items[]` 의 `{ engine, claim, confidence, direction }`. FCE 순서 그대로.
-  evidence Json?
+  evidence                Json?
   /// UI-10 B — FCE 포지션 분석(건강도 · 지금 볼 것 · 패턴 시간봉)을 페이퍼 포지션에 돌린 결과. `fce-payload.ts` `PositionAnalysis`.
-  analysis Json?
+  analysis                Json?
   /// UI-10 B — 고래 추적군이 이 심볼에 든 것. 지갑 주소는 앞 6 · 뒤 4 만.
-  cohort   Json?
+  cohort                  Json?
 
   asOf DateTime
 
@@ -1471,12 +1471,12 @@ model FceTrade {
 /// 재구성한 곡선은 실측과 다르다: 미실현이 빠지고, 거래가 닫히는 순간에만 값이
 /// 변해 계단이 된다. 그걸 실측인 것처럼 그리면 화면이 거짓말한다.
 model FceCapitalPoint {
-  id       String @id @default(cuid())
+  id       String   @id @default(cuid())
   trackKey String
   at       DateTime
 
   /// 트랙 **원래 통화** 기준. $10,000 환산은 화면이 한다(UI-02 C).
-  capital Float
+  capital   Float
   /// 같은 시각 벤치마크. 없으면 null — **0 으로 채우지 않는다.**
   benchmark Float?
 
@@ -1551,7 +1551,7 @@ model Research {
   title String
 
   /// open · testing · blocked · closed
-  status String
+  status  String
   /// 닫혔을 때의 답. yes · no · inconclusive.
   verdict String?
 
@@ -1580,8 +1580,8 @@ model Research {
   /// 이것 때문에 막혀 있는 것. 예: 실매매.
   blocks     String?
 
-  openedAt DateTime
-  closedAt DateTime?
+  openedAt  DateTime
+  closedAt  DateTime?
   /// 관련 트랙 키 배열.
   trackKeys Json?
 
@@ -1616,4 +1616,52 @@ model FceWhale {
   board Json?
 
   asOf DateTime
+}
+
+// ── OPS-03 가동 감시 ─────────────────────────────────────────────────────────
+
+/// 러너 심장박동(1분) — FCE 워커 잡 시각 · 주식 트랙 관측 시각. **맥 밖 감시**(pg_cron → /api/lab/cron/watch)가 이걸 본다.
+model LabHeartbeat {
+  key     String   @id
+  at      DateTime
+  payload Json
+}
+
+/// 유효일 5분 칸 — 감시가 칸마다 "그 트랙에 틱이 있었나" 를 적는다. 있어야 하는 칸만(주식은 정규장만).
+model LabTickSlot {
+  track String
+  slot  DateTime
+  live  Boolean
+
+  @@id([track, slot])
+  @@index([slot])
+}
+
+/// 알림 상태 — 멈춤을 한 번만 알리고 복구를 알린다.
+model LabAlert {
+  key       String   @id
+  status    String
+  since     DateTime
+  checkedAt DateTime
+}
+
+/// 보낸 알림 · 리포트 기록 — 보냈든 못 보냈든 남긴다(시험 증거).
+model LabNotice {
+  id    String   @id @default(cuid())
+  at    DateTime @default(now())
+  kind  String
+  key   String?
+  text  String
+  sent  Boolean
+  error String?
+
+  @@index([kind, at])
+}
+
+/// 평가 자산 점(5분) — 실현 · 평가(미실현 포함), 트랙당 $10,000 환산 합.
+model LabEquityPoint {
+  at       DateTime @id
+  realized Float
+  marked   Float
+  tracks   Json
 }

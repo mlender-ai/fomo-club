@@ -22,6 +22,7 @@ import Link from "next/link";
 
 import { PageFrame } from "../shell/PageFrame";
 import { useSyncHint } from "../shell/SyncProvider";
+import { useEquity } from "../shell/useEquity";
 import { ModeToggle, useViewMode } from "../shell/useViewMode";
 import { Card, Empty, Glossed, HealthRing, Hero, Pill, PriceRail, kstStamp, money, pct, tone } from "../ui";
 import { claimText, sideLabel, stanceLabel } from "../../lib/lab/labels";
@@ -33,6 +34,8 @@ export type PositionRow = Positions["positions"][number];
 export function PositionsBody({ data }: { data: Positions }) {
   const hint = useSyncHint();
   const [mode, setMode] = useViewMode();
+  // OPS-03 D-3 — 오늘 하루 평가 변화(크립토 · 고래 USDT). 30초마다.
+  const equity = useEquity();
 
   if (data.total === 0) {
     return (
@@ -66,6 +69,14 @@ export function PositionsBody({ data }: { data: Positions }) {
       <Hero
         label="미실현 손익"
         value={<span className={`ui-num is-${tone(data.unrealizedUsdt)}`}>{money(data.unrealizedUsdt, "USDT")}</span>}
+        delta={
+          equity?.todayChangeUsdt != null ? (
+            <p className={`ps-today ui-num is-${tone(equity.todayChangeUsdt)}`}>
+              오늘 {equity.todayChangeUsdt >= 0 ? "+" : ""}
+              {money(equity.todayChangeUsdt, "USDT")}
+            </p>
+          ) : null
+        }
         meta={`열린 포지션 ${data.total}개`}
       />
 

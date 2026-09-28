@@ -10,6 +10,7 @@
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
+import type { TrackDot } from "../../lib/lab/watch";
 import type { WireCollect, WireSync } from "../../lib/lab/wire";
 
 /** 60초. 헤더의 "N분 전" 이 분 단위라 이보다 촘촘할 이유가 없다. */
@@ -19,14 +20,16 @@ interface SyncValue {
   sync: WireSync | null;
   /** 시세·수집 잡. `/data` 가 헤더로 왔다(UI-03 PART B). */
   collect: WireCollect | null;
+  /** 트랙별 점(OPS-03 E) — 크립토 · 고래 · KR · US. 심장박동이 없으면 null. */
+  tracks: TrackDot[] | null;
   /** 상태 API 자체에 닿지 못했나. **그것도 끊김이다.** */
   unreachable: boolean;
 }
 
-const SyncContext = createContext<SyncValue>({ sync: null, collect: null, unreachable: false });
+const SyncContext = createContext<SyncValue>({ sync: null, collect: null, tracks: null, unreachable: false });
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const [value, setValue] = useState<SyncValue>({ sync: null, collect: null, unreachable: false });
+  const [value, setValue] = useState<SyncValue>({ sync: null, collect: null, tracks: null, unreachable: false });
 
   useEffect(() => {
     let alive = true;
@@ -34,8 +37,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       fetch("/api/lab/status", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
         .then(
-          (body: { sync: WireSync; collect: WireCollect }) =>
-            alive && setValue({ sync: body.sync, collect: body.collect, unreachable: false })
+          (body: { sync: WireSync; collect: WireCollect; tracks?: TrackDot[] | null }) =>
+            alive && setValue({ sync: body.sync, collect: body.collect, tracks: body.tracks ?? null, unreachable: false })
         )
         .catch(() => alive && setValue((v) => ({ ...v, unreachable: true })));
     void load();

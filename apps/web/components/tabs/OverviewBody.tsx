@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { PageFrame } from "../shell/PageFrame";
+import { useEquity, withMarked } from "../shell/useEquity";
 import {
   AreaChartCard,
   AssetRow,
@@ -61,6 +62,8 @@ export function OverviewBody({ data }: { data: Overview }) {
   const [range, setRange] = useState<RangeKey>("ALL");
   const r = RANGES.find((x) => x.key === range) ?? RANGES[3];
   const { hero, series, stats } = data;
+  // OPS-03 D — 평가(미실현 포함). Hero 는 실현 그대로 — 이건 그 아래 한 줄과 차트의 옅은 선에만.
+  const equity = useEquity();
 
   // ── 기간을 자르고 그 기간의 처음과 끝을 뺀다 (UI-04 B-1) ─────────────────────
   const window = useMemo(() => {
@@ -81,6 +84,7 @@ export function OverviewBody({ data }: { data: Overview }) {
     };
   }, [series.points, r.ms, hero.base]);
 
+  const chartPoints = useMemo(() => withMarked(window.points, equity), [window.points, equity]);
   const bands = series.bands.filter((b) => window.from === null || Date.parse(b.to) > window.from);
   const lostDays = series.bands.reduce((s, b) => s + b.days, 0);
 
@@ -102,6 +106,12 @@ export function OverviewBody({ data }: { data: Overview }) {
         delta={<Delta amount={window.change} percent={window.changePct} period={r.period} />}
         meta={`${money(hero.base, "USD").replace(".00", "")}에서 ${hero.days}일째`}
       />
+      {equity ? (
+        <p className="ov-marked">
+          지금 평가 {money(equity.marked)} (미실현 {equity.unrealized >= 0 ? "+" : ""}
+          {money(equity.unrealized)})
+        </p>
+      ) : null}
 
       <Card
         title="자산 추이"
@@ -110,6 +120,10 @@ export function OverviewBody({ data }: { data: Overview }) {
             <p>
               실선은 내 포트폴리오, 점선은 같은 돈을 첫날 BTC 에 넣었을 때다. 가는 가로 점선은{" "}
               {r.ms === null ? "시작 금액" : "기간 시작"}이다.
+            </p>
+            <p>
+              옅은 가는 선은 평가 자산이다 — 지금 청산하면(미실현 포함 · 30초마다). 굵은 선과 Hero 는 FCE 와 같은
+              실현 기준이다. 평가 점은 감시가 시작된 09-29 부터 있다.
             </p>
             <p>
               회색 띠는 FCE 가 제대로 지켜보지 못한 날이다(관측률 {series.coverageMinPct}% 미만 · 크립토 {lostDays}
@@ -122,7 +136,7 @@ export function OverviewBody({ data }: { data: Overview }) {
           compact
           step
           height={240}
-          data={window.points}
+          data={chartPoints}
           ranges={RANGES.map((x) => ({ key: x.key, label: x.label }))}
           activeRange={range}
           onRange={(k) => setRange(k as RangeKey)}
