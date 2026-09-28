@@ -10,7 +10,8 @@ FCE 는 체결 순간 그 분봉(`MarketObservation.minute_*`)으로 검사한�
 
 두 번 잰다:
 
-- **기록된 체결가** — 그때 FCE 가 낸 값. 수리(8/31 `de609317`) 전 체결이면 위반이 나올 수 있다
+- **기록된 체결가** — 그때 FCE 가 낸 값. 그 분봉 또는 직전 분봉(FCE 가 그 순간 본 최신 봉일 수 있다) 안인가.
+  수리(8/31 `de609317`) 전 체결이면 위반이 나올 수 있다
 - **지금 모형으로 다시** — 같은 봉 · 그 시각 호가(`toss_quotes` orderbook)로 FCE 자신의 `execute_order` 를
   부른다. invariant 는 FCE 코드 그대로다 — 완화하지 않는다. 이 칸이 0 이어야 재개한다
 """
@@ -103,13 +104,17 @@ def main() -> int:
              (at + timedelta(minutes=2)).astimezone(timezone(timedelta(hours=9))).isoformat()[:16] + "~"),
         ).fetchall()
         bar = next((b for b in near if ts(b[0]) <= at < ts(b[0]) + timedelta(minutes=1)), None)
+        # FCE 는 체결 순간 **저장돼 있던 최신 분봉**으로 값을 만들고 검사한다(`latest_execution_observation`).
+        # 체결 시각이 분 초반이면 그 분봉은 아직 없고 직전 분봉이 쓰인다 — 그래서 직전 분봉도 본다.
+        prev = next((b for b in reversed(near) if ts(b[0]) + timedelta(minutes=1) <= at), None)
         if bar is None:
             missing += 1
             verdict = "봉 없음"
         else:
-            ok = float(bar[3]) <= price <= float(bar[2])
-            bad += 0 if ok else 1
-            verdict = "통과" if ok else "❌ 위반"
+            inside = float(bar[3]) <= price <= float(bar[2])
+            inside_prev = prev is not None and float(prev[3]) <= price <= float(prev[2])
+            bad += 0 if (inside or inside_prev) else 1
+            verdict = "통과" if inside else "통과(직전 분봉)" if inside_prev else "❌ 위반"
         quantity = int(json.loads(payload).get("quantity") or 1)
         re_price, re_verdict = replay(engine, db, market, symbol, side, quantity, at, bar)
         rebad += 1 if re_verdict == "❌ 위반" else 0
@@ -119,7 +124,7 @@ def main() -> int:
     print("|---|---|---|---|---|---|---|---|---|---|---|")
     for r in rows:
         print("| " + " | ".join("—" if v is None else str(v) for v in r) + " |")
-    print(f"\n체결 {len(rows)} · 봉 없음 {missing} · 기록 체결가 위반 {bad} · **지금 모형 위반 {rebad}**")
+    print(f"\n체결 {len(rows)} · 봉 없음 {missing} · 기록 체결가 위반 {bad}(그 분봉 · 직전 분봉 둘 다 밖) · **지금 모형 위반 {rebad}**")
     return 1 if rebad else 0
 
 
