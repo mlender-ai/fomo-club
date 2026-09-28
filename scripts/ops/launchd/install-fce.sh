@@ -28,7 +28,19 @@ if pgrep -f "scripts/local/supervisor.sh" >/dev/null && ! launchctl print "$DOMA
 fi
 
 mkdir -p "$HOME/Library/LaunchAgents" "$FCE/logs"
-sed -e "s#__FCE__#$FCE#g" "$REPO/scripts/ops/launchd/$LABEL.plist" > "$TARGET"
+
+# FCE 설정 덮어쓰기 — `fce.env` 의 KEY=VALUE 를 launchd 환경변수로 넣는다(FCE `.env` 보다 우선).
+# FCE 코드 · `.env`(비밀이 들어 있다)를 건드리지 않고 운영 값만 바꾸는 자리다. 비밀은 넣지 않는다.
+EXTRA=""
+if [ -f "$REPO/scripts/ops/launchd/fce.env" ]; then
+  while IFS= read -r line; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key="${line%%=*}"; value="${line#*=}"
+    EXTRA="$EXTRA    <key>$key</key>\n    <string>$value</string>\n"
+    echo "환경: $key=$value"
+  done < "$REPO/scripts/ops/launchd/fce.env"
+fi
+sed -e "s#__FCE__#$FCE#g" "$REPO/scripts/ops/launchd/$LABEL.plist" | awk -v extra="$EXTRA" '{ if ($0 == "__EXTRA_ENV__") printf "%s", extra; else print }' > "$TARGET"
 plutil -lint "$TARGET" >/dev/null
 
 launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
