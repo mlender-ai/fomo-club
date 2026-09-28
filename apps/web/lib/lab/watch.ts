@@ -21,6 +21,9 @@
  * | 고래 추종 | FCE `whale_follow_engine`(15분) | 30분 |
  * | 주식 KR · US | 트랙 관측 시각 — **장중에만** | 30분 · 정지면 바로 |
  * | 시세 수집 | FCE `refresh_market_data`(5분) | 10분 · 🟠 |
+ *
+ * FCE 잡은 **자기 주기 + 기준 시간** 을 넘어야 멈춤이다. `refresh_market_data` 는 주기가 5분이라지만 실측 10분마다
+ * 돈다(FCE 가 부하에 맞춰 늘린다) — 마지막 틱에서 10분만 재면 거의 매번 울렸다(09-29 첫 가동).
  */
 import { inSession, localDay, sessionOf, type StockMarket } from "./market-hours";
 
@@ -38,6 +41,8 @@ export interface HeartbeatPayload {
     error: string | null;
     /** FCE `/api/system/worker` 의 잡 → 마지막 실제 실행(`last_effective_run_at` 없으면 `last_success_at`). */
     jobs: Record<string, string | null>;
+    /** 잡의 지금 주기(초 · `current_interval_seconds`). 기준은 **자기 주기 + 기준 시간** 이다. 옛 러너는 안 보낸다. */
+    every?: Record<string, number | null>;
   };
   /** FCE `stock_paper_tracks` (읽기 전용). 못 읽으면 빈 배열. */
   stock: { market: StockMarket; status: string; stopReason: string | null; observedAt: string | null }[];
@@ -113,7 +118,13 @@ export function evaluate(
     context,
     reason,
   });
-  const within = (key: CheckKey, at: Date | null) => ageMin(now, at) <= CHECKS[key].limitMin;
+  const every = heartbeat?.payload.fce.every ?? {};
+  const periodMin = (key: CheckKey) => {
+    const job = JOB_OF[key];
+    const sec = job ? every[job] : null;
+    return typeof sec === "number" && sec > 0 ? sec / 60 : 0;
+  };
+  const within = (key: CheckKey, at: Date | null) => ageMin(now, at) <= CHECKS[key].limitMin + periodMin(key);
 
   const hbAt = heartbeat?.at ?? null;
   const hostOk = within("host", hbAt);
@@ -242,7 +253,13 @@ export function slotsNow(now: Date, heartbeat: { at: Date; payload: HeartbeatPay
   const slot = slotOf(now);
   const hostOk = heartbeat !== null && ageMin(now, heartbeat.at) <= CHECKS.host.limitMin;
   const p = heartbeat?.payload ?? null;
-  const fresh = (track: CoverageTrack, iso: string | null | undefined) => ageMin(now, date(iso)) <= SLOT_TOLERANCE_MIN[track];
+  const every = p?.fce.every ?? {};
+  const job: Partial<Record<CoverageTrack, string>> = { crypto: "paper_engine", whale: "whale_follow_engine" };
+  const tolerance = (track: CoverageTrack) => {
+    const sec = job[track] ? every[job[track] as string] : null;
+    return Math.max(SLOT_TOLERANCE_MIN[track], typeof sec === "number" ? (2 * sec) / 60 : 0);
+  };
+  const fresh = (track: CoverageTrack, iso: string | null | undefined) => ageMin(now, date(iso)) <= tolerance(track);
   return COVERAGE_TRACKS.filter((t) => expectedAt(t, slot)).map((track) => {
     let live = false;
     if (hostOk && p && p.fce.reachable) {
@@ -325,9 +342,12 @@ export function trackDots(now: Date, heartbeat: { at: Date; payload: HeartbeatPa
       return { ...base, level: "off" as const, note: today ? "장외" : "휴장 · 주말" };
     }
     const age = ageMin(now, at);
-    const limit = key === "crypto" || key === "whale" ? CHECKS[key].limitMin : CHECKS.stock_kr.limitMin;
+    const jobName = key === "crypto" ? "paper_engine" : key === "whale" ? "whale_follow_engine" : null;
+    const sec = jobName ? p.fce.every?.[jobName] : null;
+    const period = typeof sec === "number" && sec > 0 ? sec / 60 : 0;
+    const limit = (key === "crypto" || key === "whale" ? CHECKS[key].limitMin : CHECKS.stock_kr.limitMin) + period;
     if (age > limit) return { ...base, level: "stopped" as const, note: at ? `${Math.round(age)}분째 틱 없음` : "틱 없음" };
-    if (age > SLOT_TOLERANCE_MIN[key]) return { ...base, level: "lagging" as const, note: `${Math.round(age)}분 전 틱` };
+    if (age > Math.max(SLOT_TOLERANCE_MIN[key], 2 * period)) return { ...base, level: "lagging" as const, note: `${Math.round(age)}분 전 틱` };
     return { ...base, level: "live" as const, note: "운용중" };
   });
 }

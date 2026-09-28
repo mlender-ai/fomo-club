@@ -21,7 +21,10 @@ import {
 
 const iso = (s: string) => new Date(s).toISOString();
 
-function hb(now: string, over: Partial<{ jobs: Record<string, string | null>; reachable: boolean; stock: HeartbeatPayload["stock"] }> = {}) {
+function hb(
+  now: string,
+  over: Partial<{ jobs: Record<string, string | null>; reachable: boolean; stock: HeartbeatPayload["stock"] }> = {}
+): { at: Date; payload: HeartbeatPayload } {
   const at = new Date(now);
   const fresh = iso(now);
   return {
@@ -98,6 +101,20 @@ describe("심장박동 판정 (A-1 · A-2)", () => {
     expect(crypto && alertText(crypto, new Date(now))).toBe(
       "🔴 크립토 트랙 42분째 멈춤\n마지막 틱 10:18 · FCE 는 살아 있음\n→ FCE 워커 확인: curl -s localhost:8875/api/system/worker"
     );
+  });
+});
+
+describe("자기 주기 + 기준 (09-29 첫 가동)", () => {
+  it("시세 수집이 10분마다 도는데 12분 전 틱이면 멈춤이 아니다 · 21분이면 멈춤", () => {
+    const now = "2026-09-29T02:00:00Z";
+    const at = (m: number) => new Date(Date.parse(now) - m * 60_000).toISOString();
+    const beat = (m: number) => {
+      const h = hb(now, { jobs: { heartbeat: iso(now), paper_engine: iso(now), whale_follow_engine: iso(now), refresh_market_data: at(m) } });
+      h.payload.fce.every = { refresh_market_data: 600 };
+      return h;
+    };
+    expect(evaluate(new Date(now), beat(12), new Date(now)).find((x) => x.key === "market")?.ok).toBe(true);
+    expect(evaluate(new Date(now), beat(21), new Date(now)).find((x) => x.key === "market")?.ok).toBe(false);
   });
 });
 
