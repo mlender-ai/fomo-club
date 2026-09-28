@@ -151,7 +151,7 @@ export async function watchStart(): Promise<Date | null> {
   return first?.slot ?? null;
 }
 
-export async function coverageOfDays(days: string[]): Promise<DayCoverage[]> {
+export async function coverageOfDays(days: string[], now: Date = new Date()): Promise<DayCoverage[]> {
   const from = await watchStart();
   if (!from || days.length === 0) return [];
   const ranges = days.map(kstDayRange);
@@ -163,7 +163,7 @@ export async function coverageOfDays(days: string[]): Promise<DayCoverage[]> {
     const r = kstDayRange(day);
     for (const track of COVERAGE_TRACKS) {
       const live = rows.filter((x) => x.track === track && x.slot >= r.from && x.slot < r.to).length;
-      out.push(dayCoverage(track as CoverageTrack, day, live, from));
+      out.push(dayCoverage(track as CoverageTrack, day, live, from, now));
     }
   }
   return out;

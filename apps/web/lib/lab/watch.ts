@@ -283,12 +283,16 @@ export function kstDayRange(day: string): { from: Date; to: Date } {
 
 export const kstDay = (at: Date) => new Date(at.getTime() + 9 * 60 * MINUTE).toISOString().slice(0, 10);
 
-/** 그날 있어야 했던 칸 수 — 감시가 시작된 뒤(`watchFrom`)만 센다. 그 전은 잴 수 없었다. */
-export function expectedSlots(track: CoverageTrack, day: string, watchFrom: Date): number {
+/**
+ * 그날 있어야 했던 칸 수 — 감시가 시작된 뒤(`watchFrom`)부터 `until`(지금) 전까지만 센다.
+ * 그 전은 잴 수 없었고, 그 뒤는 아직 오지 않았다 — 오늘 분모에 앞으로 올 칸을 넣었더니 1.4% 가 나왔다.
+ */
+export function expectedSlots(track: CoverageTrack, day: string, watchFrom: Date, until: Date = new Date(8.64e15)): number {
   const { from, to } = kstDayRange(day);
   let n = 0;
   const start = Math.max(from.getTime(), slotOf(watchFrom).getTime());
-  for (let t = start; t < to.getTime(); t += SLOT_MS) if (expectedAt(track, new Date(t))) n += 1;
+  const end = Math.min(to.getTime(), slotOf(until).getTime() + SLOT_MS);
+  for (let t = start; t < end; t += SLOT_MS) if (expectedAt(track, new Date(t))) n += 1;
   return n;
 }
 
@@ -302,8 +306,8 @@ export interface DayCoverage {
   valid: boolean | null;
 }
 
-export function dayCoverage(track: CoverageTrack, day: string, liveSlots: number, watchFrom: Date): DayCoverage {
-  const expected = expectedSlots(track, day, watchFrom);
+export function dayCoverage(track: CoverageTrack, day: string, liveSlots: number, watchFrom: Date, until?: Date): DayCoverage {
+  const expected = expectedSlots(track, day, watchFrom, until);
   const pct = expected > 0 ? Math.min(100, (liveSlots / expected) * 100) : null;
   return { track, day, expected, live: liveSlots, pct, valid: pct === null ? null : pct >= VALID_DAY_PCT };
 }

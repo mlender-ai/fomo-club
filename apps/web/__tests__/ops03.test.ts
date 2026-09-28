@@ -152,6 +152,8 @@ describe("유효일 (PART C)", () => {
     expect(expectedSlots("stock_kr", "2026-09-25", from)).toBe(0);
     expect(expectedSlots("crypto", "2026-09-29", new Date("2026-09-29T03:00:00Z"))).toBe(288 - 144);
     expect(dayCoverage("stock_kr", "2026-09-25", 0, from).pct).toBeNull();
+    // 오늘은 지금까지만 — 01:55 KST(16:55 UTC 전날)면 00:00 ~ 01:55 의 24칸
+    expect(expectedSlots("crypto", "2026-09-29", from, new Date("2026-09-28T16:57:00Z"))).toBe(24);
     expect(dayCoverage("crypto", "2026-09-29", 260, from).valid).toBe(true); // 90.3%
     expect(dayCoverage("crypto", "2026-09-29", 259, from).valid).toBe(false); // 89.9%
   });
