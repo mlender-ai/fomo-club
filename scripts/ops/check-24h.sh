@@ -30,7 +30,7 @@ RPID="$(launchctl print "$DOMAIN/com.fomo.lab.runner" 2>/dev/null | awk '$1=="pi
 if [ -n "$RPID" ]; then
   ok "러너 launchd (pid $RPID)"
   PIDS="$RPID $(pgrep -P "$RPID" | tr '\n' ' ')"
-  PAT="$(echo $PIDS | sed 's/ /|p/g')"
+  PAT="$(echo $PIDS | tr ' ' '|')"
   LAST="$(grep -aE "p($PAT)\] fce " /tmp/lab-runner.log 2>/dev/null | tail -3)"
   if [ -n "$LAST" ]; then echo "$LAST" | sed 's/^/   /'; else no "이 러너의 fce 줄이 아직 없다(15분 주기)"; fi
 else
