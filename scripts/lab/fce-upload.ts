@@ -28,6 +28,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { FCE_BACKEND, FCE_DB, FCE_PYTHON } from "./fce-home";
 import { CHART_TIMEFRAMES, positionFromOpenTrade, shortAddress, walletKey } from "../../apps/web/lib/lab/fce-payload";
 import { postExitOf, tradeDetail, type DailyCandle } from "../../apps/web/lib/lab/journal-extra";
 import type {
@@ -268,7 +269,7 @@ function stockTracks(dashboard: Record<string, unknown>, asOf: string): TrackPay
  * DB 를 못 읽으면 `null` — 그러면 FCE 가 준 상태를 그대로 둔다.
  */
 function queuedOrders(market: "KR" | "US"): number | null {
-  const path = process.env.FCE_DB_PATH ?? "/Users/cocteau/Documents/Fomo club engine/backend/fomo_control_engine.db";
+  const path = FCE_DB;
   try {
     const out = execFileSync(
       "sqlite3",
@@ -382,8 +383,6 @@ async function charts(symbols: string[]): Promise<ChartPayload[]> {
 // **주소는 여기서 줄인다.** FCE 는 전체 주소를 준다 — 이 함수 밖으로는 `0x020c…5872` 만 나간다.
 // 받는 쪽(`checkPayload`)도 전체 주소가 보이면 업로드를 거절한다.
 
-const FCE_BACKEND = process.env.FCE_BACKEND_DIR ?? "/Users/cocteau/Documents/Fomo club engine/backend";
-const FCE_PYTHON = process.env.FCE_PYTHON ?? "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3";
 // 러너는 레포 루트에서 이 업로더를 띄운다.
 const WHALE_REPORT = process.env.FCE_WHALE_REPORT ?? join(process.cwd(), "scripts/lab/fce-whale-report.py");
 

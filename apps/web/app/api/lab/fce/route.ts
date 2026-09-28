@@ -173,16 +173,22 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // 캔들(UI-06) — 통째로 갈아 끼운다. **옛 업로더는 `charts` 를 안 보낸다** — 그때 지우면 차트가
     // 업로드마다 사라진다. 보낸 것이 있을 때만 바꾼다.
+    //
+    // 지우기 · 쓰기를 한 트랜잭션으로 · 겹치면 건너뛴다 — 업로드 둘이 겹쳤을 때(러너 두 개가 돈 09-28)
+    // 한쪽이 지우고 다른 쪽이 쓴 사이에 `Unique constraint (symbol, timeframe)` 로 업로드 전체가 500 이었다.
     if (payload.charts.length > 0) {
-      await prisma.fcePositionChart.deleteMany({});
-      await prisma.fcePositionChart.createMany({
-        data: payload.charts.map((c) => ({
-          symbol: c.symbol,
-          timeframe: c.timeframe,
-          candles: c.candles as unknown as Prisma.InputJsonValue,
-          asOf,
-        })),
-      });
+      await prisma.$transaction([
+        prisma.fcePositionChart.deleteMany({}),
+        prisma.fcePositionChart.createMany({
+          data: payload.charts.map((c) => ({
+            symbol: c.symbol,
+            timeframe: c.timeframe,
+            candles: c.candles as unknown as Prisma.InputJsonValue,
+            asOf,
+          })),
+          skipDuplicates: true,
+        }),
+      ]);
     }
 
     // 닫힌 거래는 **지우지 않는다.** 포지션과 정반대다 — 닫힌 거래는 사실이고,

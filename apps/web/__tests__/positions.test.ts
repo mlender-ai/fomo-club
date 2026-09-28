@@ -169,7 +169,13 @@ describe("지어내지 않는다", () => {
   it("유효 시간 — FCE 와 같은 30분 창", () => {
     const now = Date.parse("2026-09-27T00:30:00Z");
     expect(validityLabel("2026-09-27T00:10:00Z", now)).toEqual({ label: "유효 10분", expired: false });
-    expect(validityLabel("2026-09-26T23:50:00Z", now)).toEqual({ label: "10분 지남", expired: true });
+    expect(validityLabel("2026-09-26T23:50:00Z", now)).toEqual({ label: "40분 전", expired: true });
+    // 오래 묵어도 알약 6자 안 — "1810분 지남" 은 7자였다
+    expect(validityLabel("2026-09-26T00:30:00Z", now)).toEqual({ label: "1일 전", expired: true });
+    expect(validityLabel("2026-09-26T01:00:00Z", now)).toEqual({ label: "23시간 전", expired: true });
+    for (const asOf of ["2026-09-27T00:29:00Z", "2026-09-26T23:01:00Z", "2026-09-20T00:00:00Z", "2025-01-01T00:00:00Z"]) {
+      expect(validityLabel(asOf, now).label.length).toBeLessThanOrEqual(6);
+    }
   });
 
   it("매퍼는 칸을 이름으로 옮긴다 — 라이브 계좌 칸(planned_stop_price 등)은 받지 않는다", () => {
