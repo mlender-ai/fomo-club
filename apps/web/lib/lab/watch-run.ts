@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../prisma";
 import { bitgetPrices, equityOf } from "./equity";
+import { readSnapshot } from "./snapshot";
 import { notify } from "./telegram";
 import {
   CHECKS,
@@ -203,13 +204,19 @@ export async function buildMorning(now: Date = new Date()): Promise<string> {
   });
   lines.push(`어제 유효일  ${cov.join(" · ")}`, "");
 
-  // 자산 — 실현 기준(Hero 와 같다) 24시간 전 → 지금 · 평가 한 줄
-  const first = points[0] ?? null;
+  // 자산 — 실현 기준(Hero 와 같다) 24시간 전 → 지금 · 평가 한 줄.
+  // 평가 점이 24시간을 못 덮으면(감시 첫날) 24시간 전 값은 Overview 실현 곡선에서 — 같은 환산이다.
   const last = points[points.length - 1] ?? null;
+  let from = points[0] && points[0].at.getTime() <= since.getTime() + HOUR ? points[0].realized : null;
+  if (from === null) {
+    const overview = await readSnapshot<{ series: { points: { at: string; value: number }[] } }>("overview");
+    const series = overview && overview !== "outdated" ? overview.payload.series.points : [];
+    from = [...series].reverse().find((p) => Date.parse(p.at) <= since.getTime())?.value ?? null;
+  }
   lines.push("자산 (트랙당 $10,000 환산)");
-  if (first && last) {
-    const d = last.realized - first.realized;
-    lines.push(`  ${usd(first.realized)} → ${usd(last.realized)}   ${signedUsd(d)} (${signedPct((d / first.realized) * 100)})`);
+  if (from !== null && last) {
+    const d = last.realized - from;
+    lines.push(`  ${usd(from)} → ${usd(last.realized)}   ${signedUsd(d)} (${signedPct((d / from) * 100)})`);
     lines.push(`  지금 평가 ${usd(last.marked)} (미실현 ${signedUsd(last.marked - last.realized)})`);
   } else {
     lines.push("  평가 점이 아직 없다 — 감시가 막 시작됐다");
