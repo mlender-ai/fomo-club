@@ -1342,11 +1342,13 @@ model FcePosition {
   /// long · short
   direction String
 
-  leverage     Float?
-  marginUsdt   Float?
+  leverage         Float?
+  marginUsdt       Float?
   /// 증거금 대비 손익률. **−100% 아래로 갈 수 있다** — FCE 에 청산 모델이 없다(PART D-1).
-  netReturnPct Float?
-  healthScore  Int?
+  netReturnPct     Float?
+  healthScore      Int?
+  /// ENG-01 — FCE 가 봉마다 거래소 단계 · 펀딩으로 잰 청산가. 옛 FCE 는 안 낸다(null).
+  liquidationPrice Float?
 
   entryAt    DateTime?
   entryPrice Float?
@@ -1664,4 +1666,11 @@ model LabEquityPoint {
   realized Float
   marked   Float
   tracks   Json
+}
+
+/// ENG-01 D — 청산 재채점(`rescored_with_liquidation`). **기록(FceTrade)은 그대로 두고** 따로 한 줄로 산다.
+model FceRescore {
+  id      Int      @id @default(1)
+  payload Json
+  asOf    DateTime
 }

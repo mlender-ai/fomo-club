@@ -29,7 +29,7 @@ const note = (front: string, body = "## 결정\n정했다.\n") => `---\n${front}
 describe("시드 7개 — 실제 파일 (완료 9 · 11)", () => {
   it("일곱 개가 다 있고 닫힌 것도 남아 있다", () => {
     expect(NOTES.map((n) => n.no)).toEqual(["01", "02", "03", "04", "05", "06", "07"]);
-    expect(NOTES.filter((n) => n.status === "closed").map((n) => n.no)).toEqual(["04", "05", "06"]);
+    expect(NOTES.filter((n) => n.status === "closed").map((n) => n.no)).toEqual(["02", "04", "05", "06"]);
   });
 
   it("제목이 전부 질문형이다 (완료 3)", () => {
@@ -101,28 +101,36 @@ describe("A 목록", () => {
   });
 
   it("필터 4개 — 전체 · 진행중 · 실매매 차단 · 닫힘 (완료 2)", () => {
-    expect(text(list)).toMatch(/전체 7 진행중 3 실매매 차단 1 닫힘 3/);
+    // 09-29 연구 02(강제청산)를 닫아 실매매 차단 노트가 0 이 됐다(ENG-01).
+    expect(text(list)).toMatch(/전체 7 진행중 3 실매매 차단 0 닫힘 4/);
     const closedOnly = renderToStaticMarkup(createElement(ResearchBody, { data: r, initialFilter: "closed" }));
-    expect((closedOnly.match(/class="rs-entry is-closed"/g) ?? []).length).toBe(3);
+    expect((closedOnly.match(/class="rs-entry is-closed"/g) ?? []).length).toBe(4);
     expect(closedOnly).not.toMatch(/class="rs-entry"/);
     const blocked = renderToStaticMarkup(createElement(ResearchBody, { data: r, initialFilter: "blocked" }));
-    expect((blocked.match(/class="rs-entry(?: is-closed)?"/g) ?? []).length).toBe(1);
+    expect((blocked.match(/class="rs-entry(?: is-closed)?"/g) ?? []).length).toBe(0);
   });
 
   it("실매매 차단이 따로 · 빨강 (완료 5)", () => {
-    expect(list).toMatch(/class="ui-pill is-dn[^"]*"[^>]*>(?:<span[^>]*><\/span>)?실매매 차단/);
+    // 실제 노트에 차단이 남지 않아서 하나를 차단으로 바꾼 조립본으로 본다 — 알약 모양은 그대로여야 한다.
+    const withBlocked = {
+      ...r,
+      items: r.items.map((it, i) => (i === 0 ? { ...it, status: "blocked", statusKey: "blocked" as const, blocks: "실매매" } : it)),
+    };
+    const html = renderToStaticMarkup(createElement(ResearchBody, { data: withBlocked as typeof r }));
+    expect(html).toMatch(/class="ui-pill is-dn[^"]*"[^>]*>(?:<span[^>]*><\/span>)?실매매 차단/);
   });
 
   it("닫힌 것에 결정 한 줄 · 열린 것에 경과일 (완료 6)", () => {
     expect(text(list)).toContain("결정 → 전략 3종을 폐기했다");
-    expect(text(list)).toContain("결정 → 지금 1배 트랙을 만들지 않는다");
+    expect(text(list)).toContain("결정 → 1배 트랙을 만들지 않는다");
     expect(text(list)).toMatch(/\d+일째/);
   });
 
   it("실제 돈을 넣으려면 — 관문 셋 · 해결 수 (완료 10)", () => {
     expect(text(list)).toMatch(/실제 돈을 넣으려면/);
     expect(r.gates.map((g) => g.label)).toEqual(["강제청산 모델링", "호스트 상시화", "기준선을 넘은 전략"]);
-    expect(text(list)).toMatch(/3개 중 0개 해결/);
+    // 강제청산 모델링 — 연구 02 가 닫혀 해결(ENG-01).
+    expect(text(list)).toMatch(/3개 중 1개 해결/);
   });
 
   it("결정 한 줄은 노트의 첫 굵은 글씨", () => {

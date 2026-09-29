@@ -150,6 +150,9 @@ export function StrategyDetailBody({ data, id }: { data: Strategies; id: string 
       {/* B-4 */}
       <BenchmarkCard row={row} />
 
+      {/* ENG-01 D — 강제청산 재채점 */}
+      <LiquidationCard row={row} />
+
       {/* B-5 */}
       <DistributionCard row={row} />
 
@@ -215,6 +218,81 @@ function BenchmarkCard({ row }: { row: Row }) {
         ]}
       />
       {row.interpretation ? <p className="st-line st-body">{row.interpretation}</p> : null}
+    </Card>
+  );
+}
+
+// ── ENG-01 강제청산 재채점 ──────────────────────────────────────────────────────
+
+/**
+ * 청산 반영(기본) · 기록을 나란히 — **기록은 덮어쓰지 않았다.** 같은 모집단(화면 성적과 같은 거래)으로 센다.
+ * 배수 표는 원장 전부 · 같은 증거금으로 배수만 바꿨을 때(1 · 3 은 D-2, 5 · 10 은 배수를 올리면 드러나나).
+ */
+function LiquidationCard({ row }: { row: Row }) {
+  const r = row.rescore;
+  if (!r) return null;
+  const f = (v: number | null, d = 1) => (v === null ? "—" : v.toFixed(d));
+  const pctOf = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)}%`);
+  const lev = r.byLeverage;
+  return (
+    <Card
+      title="강제청산 재채점"
+      description="청산 반영 · 기록"
+      flush
+      info={
+        <>
+          <p>
+            Bitget 격리 청산가 공식으로 닫힌 거래를 다시 돌렸다. 유지증거금률은 Bitget 명목 단계, 테이커 수수료 0.06%,
+            펀딩은 격리 증거금에서 뺐다. 기록(FCE)은 그대로 두고 결과를 따로 저장한다.
+          </p>
+          <p>
+            같은 봉에서 손절선이 청산가보다 진입가에 가까우면 손절이 먼저다. 갭으로 청산가 너머에서 열리면 시가로
+            청산한다. {r.rescored.mddSource === "lab" ? "바뀐 거래가 있어 낙폭은 랩이 다시 쟀다." : "바뀐 거래가 없어 낙폭은 FCE 값이다."}
+          </p>
+        </>
+      }
+    >
+      <DataTable
+        caption="청산 반영과 기록 비교"
+        columns={[
+          { key: "what", label: "" },
+          { key: "re", label: "청산 반영", numeric: true },
+          { key: "rec", label: "기록", numeric: true },
+        ]}
+        rows={[
+          { key: "n", what: "거래", re: String(r.rescored.n), rec: String(r.recorded.n) },
+          { key: "w", what: "승률", re: pctOf(r.rescored.winRatePct), rec: pctOf(r.recorded.winRatePct) },
+          { key: "pf", what: "PF", re: f(r.rescored.profitFactor, 2), rec: f(r.recorded.profitFactor, 2) },
+          {
+            key: "mdd",
+            what: "최대 낙폭",
+            re: <span className="is-dn">{pct(r.rescored.mddPct === null ? null : -Math.abs(r.rescored.mddPct))}</span>,
+            rec: <span className="is-dn">{pct(r.recorded.mddPct === null ? null : -Math.abs(r.recorded.mddPct))}</span>,
+          },
+        ]}
+      />
+      <p className="st-line st-body">
+        {r.changed === 0 ? "청산됐어야 할 거래 0건" : `청산으로 바뀐 거래 ${r.changed}건`}
+        {r.closest ? ` · 최근접 ${r.closest.pct.toFixed(1)}%` : ""}
+      </p>
+      {lev.length > 0 ? (
+        <DataTable
+          caption="배수별 재채점"
+          columns={[
+            { key: "lev", label: "배수" },
+            { key: "liq", label: "청산", numeric: true },
+            { key: "pf", label: "PF", numeric: true },
+            { key: "mdd", label: "최대 낙폭", numeric: true },
+          ]}
+          rows={lev.map((b) => ({
+            key: String(b.leverage),
+            lev: `${b.leverage}배`,
+            liq: String(b.liquidated + b.stopBeforeLiquidation),
+            pf: f(b.rescored.profitFactor, 2),
+            mdd: <span className="is-dn">{pct(b.rescored.mddPct)}</span>,
+          }))}
+        />
+      ) : null}
     </Card>
   );
 }

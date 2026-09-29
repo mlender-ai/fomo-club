@@ -157,6 +157,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           timeframe: p.timeframe,
           stance: p.stance,
           invalidationPrice: p.invalidationPrice,
+          liquidationPrice: p.liquidationPrice ?? null,
           stopPrice: p.stopPrice,
           takeProfitPrice: p.takeProfitPrice,
           takeProfit2Price: p.takeProfit2Price,
@@ -361,6 +362,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         asOf,
       };
       await prisma.fceJournal.upsert({ where: { id: 1 }, create: { id: 1, ...row }, update: row });
+    }
+
+    // 청산 재채점(ENG-01 D) — 기록(FceTrade)과 **따로** 한 줄. 기록을 덮어쓰지 않는다.
+    if (payload.rescore) {
+      const row = { payload: payload.rescore as unknown as Prisma.InputJsonValue, asOf: new Date(payload.rescore.asOf) };
+      await prisma.fceRescore.upsert({ where: { id: 1 }, create: { id: 1, ...row }, update: row });
     }
 
     // **여섯 탭을 통째로 조립해 둔다**(UI-02 F-1). 화면 요청은 이걸 한 줄 읽는다 —

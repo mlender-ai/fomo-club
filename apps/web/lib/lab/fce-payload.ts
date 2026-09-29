@@ -10,6 +10,7 @@
  * 폴리마켓의 평가액이 그렇다(451 차단으로 산출 불가).
  */
 import type { PostExit, TradeDetail } from "./journal-extra";
+import type { RescorePayload } from "./liquidation";
 
 export type TrackKey = "crypto" | "whale" | "stock_us" | "stock_kr" | "polymarket";
 
@@ -101,6 +102,8 @@ export interface PositionPayload {
   analysis?: PositionAnalysis | null;
   /** UI-10 B — 고래 추적군이 이 심볼에 든 것(FCE `/api/onchain/whales` `symbol_activity`). 안 들면 null. */
   cohort?: PositionCohort | null;
+  /** ENG-01 — FCE 가 봉마다 거래소 단계 · 펀딩으로 잰 청산가(`liquidation_price`). 옛 FCE 는 안 낸다(null). */
+  liquidationPrice?: number | null;
 }
 
 export interface PositionAnalysis {
@@ -227,6 +230,7 @@ export function positionFromOpenTrade(t: Record<string, unknown>): PositionPaylo
     timeframe: typeof t.timeframe === "string" ? t.timeframe : null,
     stance: typeof stance === "string" ? stance : null,
     invalidationPrice: finite(t.invalidation_price),
+    liquidationPrice: finite(t.liquidation_price),
     stopPrice: finite(t.stop_price),
     takeProfitPrice: finite(t.take_profit_price),
     takeProfit2Price: finite(t.take_profit_2_price),
@@ -394,6 +398,8 @@ export interface FcePayload {
   charts: ChartPayload[];
   /** UI-09 — 거래별 "왜" · 사후 채점. 옛 업로더는 안 보낸다(null). */
   journal: JournalPayload | null;
+  /** ENG-01 D — 청산 재채점. 기록과 따로 산다(`rescored_with_liquidation`). 옛 업로더는 안 보낸다. */
+  rescore?: RescorePayload | null;
 }
 
 export interface JournalPayload {
@@ -507,6 +513,7 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
       timeframe: typeof p.timeframe === "string" ? p.timeframe : null,
       stance: typeof p.stance === "string" ? p.stance : null,
       invalidationPrice: num(p.invalidationPrice),
+      liquidationPrice: num(p.liquidationPrice),
       stopPrice: num(p.stopPrice),
       takeProfitPrice: num(p.takeProfitPrice),
       takeProfit2Price: num(p.takeProfit2Price),
@@ -628,5 +635,11 @@ export function checkPayload(value: unknown): { payload: FcePayload | null; prob
   }
 
   if (problems.length > 0) return { payload: null, problems };
-  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale, charts, journal }, problems: [] };
+  let rescore: RescorePayload | null = null;
+  if (body.rescore && typeof body.rescore === "object") {
+    const r = body.rescore as Record<string, unknown>;
+    // 모양이 틀리면 재채점만 버린다 — 나머지 업로드까지 막지 않는다(재채점은 부가 정보다).
+    if (Array.isArray(r.tracks) && r.trades && typeof r.trades === "object" && typeof r.asOf === "string") rescore = r as unknown as RescorePayload;
+  }
+  return { payload: { at: body.at as string, tracks, positions, trades, lostDays, whale, charts, journal, rescore }, problems: [] };
 }

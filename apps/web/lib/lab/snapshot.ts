@@ -30,6 +30,17 @@ import { buildCharts, buildPositions } from "./positions";
 import type { PostExit, TradeDetail } from "./journal-extra";
 import { buildJournal } from "./journal";
 import { buildResearch } from "./research";
+import type { RescorePayload } from "./liquidation";
+import { strategyRescore, tradeLiquidation, type TradeLiquidation } from "./rescore-view";
+
+function liquidationOf(payload: RescorePayload | null): Record<string, TradeLiquidation> {
+  const out: Record<string, TradeLiquidation> = {};
+  for (const id of Object.keys(payload?.trades ?? {})) {
+    const v = tradeLiquidation(payload, id);
+    if (v) out[id] = v;
+  }
+  return out;
+}
 import { buildStrategies } from "./strategies";
 import { buildWhales } from "./whales";
 import { Prisma } from "@prisma/client";
@@ -59,7 +70,8 @@ export type SnapshotKey =
  *
  * 번호가 다르면 읽는 쪽이 **"다시 만드는 중"** 으로 받는다. 옛 모양을 새 화면에 넘기지 않는다.
  */
-export const SNAPSHOT_VERSION = 12;
+// 13 — ENG-01: 전략 행 `rescore` · 복기 `journalExtra.liquidation`(청산 재채점).
+export const SNAPSHOT_VERSION = 13;
 // 3 — UI-04: Overview 가 곡선·띠·통계·전략 경쟁·최근 활동을 통째로 갖는다(`overview.ts`).
 // 4 — UI-FIX: 기준선은 트랙별 한 곳(`competition.rows[].baseline`) · 거래 수는 원장 하나(`ledger`) ·
 //     복기의 `countNote`/`boardCount` 삭제 · 전략 행에 `reason`.
@@ -130,7 +142,7 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
   const series = await Promise.all(portfolio.tracks.map((t) => readCapitalSeries(t.key)));
 
   // Overview 재료 — 쓰기 경로라 여기서 실컷 읽는다. 화면 요청은 조립본 한 줄만 본다.
-  const [tradeLite, lostDays, archive, chartRows, journalRow] = await Promise.all([
+  const [tradeLite, lostDays, archive, chartRows, journalRow, rescoreRow] = await Promise.all([
     prisma.fceTrade.findMany({
       where: { exitAt: { not: null } },
       select: {
@@ -172,7 +184,10 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
     }),
     prisma.fcePositionChart.findMany(),
     prisma.fceJournal.findUnique({ where: { id: 1 } }),
+    prisma.fceRescore.findUnique({ where: { id: 1 } }),
   ]);
+  // ENG-01 D — 청산 재채점. 기록(FceTrade)과 따로 산다 — 화면은 둘 다, 재채점을 기본으로.
+  const rescore = (rescoreRow?.payload as unknown as RescorePayload | undefined) ?? null;
   const firstExit = tradeLite.reduce<Date | null>(
     (min, t) => (t.exitAt && (!min || t.exitAt < min) ? t.exitAt : min),
     null
@@ -215,8 +230,7 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
     positions: board.positions.length,
   };
 
-  const strategies = {
-    ...buildStrategies({
+  const built = buildStrategies({
       tracks: board.tracks,
       overview,
       trades: tradeLite,
@@ -230,6 +244,18 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
       })),
       wallets: board.whale?.eligible ?? null,
       now: new Date(),
+    });
+  const population = populationOf(board.tracks);
+  const strategies = {
+    ...built,
+    rows: built.rows.map((r) => {
+      const track = board.tracks.find((t) => t.key === r.key);
+      return {
+        ...r,
+        rescore: track
+          ? strategyRescore(rescore, r.key, tradeLite, population, { mddPct: track.mddPct, startingCapital: track.startingCapital })
+          : null,
+      };
     }),
     portfolio,
     // 전략 상세(`/strategies/[id]`)가 자본 곡선을 그린다. **API 를 두 번 부르지 않게**
@@ -263,8 +289,9 @@ export async function assemblePayloads(options: { justUploadedAt?: Date } = {}) 
         details: journalRow.details as unknown as Record<string, TradeDetail>,
         postExit: journalRow.postExit as unknown as Record<string, PostExit | null>,
         asOf: journalRow.asOf,
+        liquidation: liquidationOf(rescore),
       }
-    : { details: {}, postExit: {}, asOf: null };
+    : { details: {}, postExit: {}, asOf: null, liquidation: liquidationOf(rescore) };
   const journal = buildJournal({
     trades: tradeLite,
     open: board.positions.map((p) => ({
