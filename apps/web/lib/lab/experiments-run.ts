@@ -57,7 +57,9 @@ export async function observe(): Promise<Observations | null> {
     prisma.labSnapshot.findUnique({ where: { key: "journal" } }),
   ]);
   if (!inp) return null;
-  const gross = trades.reduce((s, t) => s + Math.abs(t.grossPnlUsdt ?? 0), 0);
+  // 비용 비중 = 비용 합 ÷ **비용 전 총손익의 크기**(|Σ gross|) — 지시서의 "비용이 총손익의 85%" 와 같은 정의.
+  // 처음엔 거래별 |gross| 합으로 나눠 8.6% 가 나왔다 — 그건 "거래 하나가 흔들리는 폭" 대비라 다른 질문이다.
+  const gross = Math.abs(trades.reduce((s, t) => s + (t.grossPnlUsdt ?? 0), 0));
   const costs = trades.reduce((s, t) => s + Math.abs(t.costsUsdt ?? 0), 0);
   const quality = ((journal?.payload as { payload?: { quality?: { stopRebound?: { n: number; of: number; pct: number } } } } | null)?.payload?.quality ?? null);
   return {
