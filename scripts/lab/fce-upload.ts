@@ -30,6 +30,8 @@ import { join } from "node:path";
 
 import { FCE_BACKEND, FCE_DB, FCE_PYTHON } from "./fce-home";
 import { rescoreAll } from "./liquidation-rescore";
+import { fundingHistory, marginTiers } from "./liquidation-data";
+import { fundingPaid, liquidationPrice, mmrFor } from "../../apps/web/lib/lab/liquidation";
 import type { RescorePayload } from "../../apps/web/lib/lab/liquidation";
 import { CHART_TIMEFRAMES, positionFromOpenTrade, shortAddress, walletKey } from "../../apps/web/lib/lab/fce-payload";
 import { postExitOf, tradeDetail, type DailyCandle } from "../../apps/web/lib/lab/journal-extra";
@@ -725,7 +727,7 @@ async function collect(): Promise<FcePayload> {
   const diagnosis = diagnosisHit.body;
   console.log(`  지갑 자격 ${eligibilityHit.source} · 관측 진단 ${diagnosisHit.source}`);
 
-  const openPositions = withCohort(await withAnalysis(positions(paper)), whalesBody);
+  const openPositions = await withLiquidation(withCohort(await withAnalysis(positions(paper)), whalesBody));
   // ENG-01 C — invariant(손실 > 증거금) 위반으로 FCE 가 멈춘 트랙. FCE 대시보드 `track_halts`.
   const halts = record(paper.track_halts);
   const halted = (t: TrackPayload): TrackPayload => {
@@ -760,6 +762,36 @@ async function collect(): Promise<FcePayload> {
       [cryptoTrack(paper, at), whaleTrack(follow, at)]
     ),
   };
+}
+
+// ── 포지션 청산가 (ENG-01 E) ──────────────────────────────────────────────────
+//
+// FCE 는 새 봉을 평가할 때 청산가를 거래에 적는다(`liquidation_price`) — 4시간봉이면 배포 뒤 첫 봉까지 비어 있다.
+// 비어 있는 동안은 **같은 공식**(Bitget 격리 · 명목 단계 · 펀딩 차감)으로 랩이 채운다. FCE 값이 오면 그걸 쓴다.
+
+async function withLiquidation(open: PositionPayload[]): Promise<PositionPayload[]> {
+  const out: PositionPayload[] = [];
+  for (const p of open) {
+    if (p.liquidationPrice != null || p.entryPrice === null || p.quantity === null || p.marginUsdt === null) {
+      out.push(p);
+      continue;
+    }
+    try {
+      const tiers = await marginTiers(p.symbol);
+      const mmr = mmrFor(tiers, p.entryPrice * p.quantity);
+      const since = p.entryAt ? Date.parse(p.entryAt) : Date.now();
+      const funding = await fundingHistory(p.symbol, since);
+      const paid = fundingPaid(p.direction, p.quantity, funding, since, Date.now(), () => p.markPrice ?? p.entryPrice ?? 0);
+      const lp =
+        mmr === null
+          ? null
+          : liquidationPrice({ direction: p.direction, entry: p.entryPrice, quantity: p.quantity, margin: p.marginUsdt - paid, mmr });
+      out.push({ ...p, liquidationPrice: lp });
+    } catch {
+      out.push(p);
+    }
+  }
+  return out;
 }
 
 // ── 청산 재채점 (ENG-01 D) ────────────────────────────────────────────────────
