@@ -276,6 +276,9 @@ function LiquidationCard({ row }: { row: Row }) {
         {r.closest ? ` · 최근접 ${r.closest.pct.toFixed(1)}%` : ""}
       </p>
       {lev.length > 0 ? (
+        <p className="st-line">배수 표 · 원장 전부 {lev[0]?.rescored.n ?? 0}건</p>
+      ) : null}
+      {lev.length > 0 ? (
         <DataTable
           caption="배수별 재채점"
           columns={[
