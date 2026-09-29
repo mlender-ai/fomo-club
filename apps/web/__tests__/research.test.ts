@@ -29,7 +29,7 @@ const note = (front: string, body = "## 결정\n정했다.\n") => `---\n${front}
 describe("시드 7개 — 실제 파일 (완료 9 · 11)", () => {
   it("일곱 개가 다 있고 닫힌 것도 남아 있다", () => {
     expect(NOTES.map((n) => n.no)).toEqual(["01", "02", "03", "04", "05", "06", "07"]);
-    expect(NOTES.filter((n) => n.status === "closed").map((n) => n.no)).toEqual(["04", "05"]);
+    expect(NOTES.filter((n) => n.status === "closed").map((n) => n.no)).toEqual(["04", "05", "06"]);
   });
 
   it("제목이 전부 질문형이다 (완료 3)", () => {
@@ -101,9 +101,9 @@ describe("A 목록", () => {
   });
 
   it("필터 4개 — 전체 · 진행중 · 실매매 차단 · 닫힘 (완료 2)", () => {
-    expect(text(list)).toMatch(/전체 7 진행중 4 실매매 차단 1 닫힘 2/);
+    expect(text(list)).toMatch(/전체 7 진행중 3 실매매 차단 1 닫힘 3/);
     const closedOnly = renderToStaticMarkup(createElement(ResearchBody, { data: r, initialFilter: "closed" }));
-    expect((closedOnly.match(/class="rs-entry is-closed"/g) ?? []).length).toBe(2);
+    expect((closedOnly.match(/class="rs-entry is-closed"/g) ?? []).length).toBe(3);
     expect(closedOnly).not.toMatch(/class="rs-entry"/);
     const blocked = renderToStaticMarkup(createElement(ResearchBody, { data: r, initialFilter: "blocked" }));
     expect((blocked.match(/class="rs-entry(?: is-closed)?"/g) ?? []).length).toBe(1);
