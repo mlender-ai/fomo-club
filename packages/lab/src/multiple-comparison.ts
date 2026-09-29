@@ -35,7 +35,7 @@
 import { MIN_SAMPLE } from "./stats";
 
 /** 표준정규 누적분포. Abramowitz–Stegun 7.1.26 기반 오차함수 근사. */
-function normalCdf(x: number): number {
+export function normalCdf(x: number): number {
   const t = 1 / (1 + 0.2316419 * Math.abs(x));
   const d = 0.3989422804014327 * Math.exp((-x * x) / 2);
   const p =

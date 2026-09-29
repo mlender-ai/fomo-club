@@ -1674,3 +1674,37 @@ model FceRescore {
   payload Json
   asOf    DateTime
 }
+
+/// ENG-02 — 실험 대장. **번호는 되돌리지 않고 행은 지우지 않는다**(DB 트리거가 막는다).
+/// 시작하면(fingerprint) 바꿀 것 · 값 · 기준 · 시작 시각이 잠긴다 — 트리거가 수정을 거절한다.
+model LabExperiment {
+  number         Int       @id
+  /// `param:value` — 같은 시도를 두 번 하지 않는다.
+  key            String    @unique
+  param          String
+  baseline       Json
+  value          Json
+  track          String
+  status         String
+  reportOnly     Boolean   @default(false)
+  question       String
+  observation    String
+  hypothesis     String
+  criteria       Json
+  fingerprint    String?
+  /// 재판정(FCE sweep)으로 거른 결과.
+  filter         Json?
+  startedAt      DateTime?
+  extended       Boolean   @default(false)
+  judgedAt       DateTime?
+  judgment       Json?
+  /// 그림자 거래 전부(업로더가 FCE `paper_shadow_trades` 에서 통째로).
+  shadowTrades   Json?
+  noteNo         String?
+  decidedAt      DateTime?
+  decisionNote   String?
+  appliedVersion String?
+  appliedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}

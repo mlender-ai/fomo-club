@@ -22,6 +22,7 @@
  *
  * 닫힌 항목도 같이 보인다 — **지우지 않는다.** 진 질문이 남아 있어야 같은 걸 다시 묻지 않는다.
  */
+import { ExperimentsCard } from "./ExperimentsCard";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -67,6 +68,9 @@ export function ResearchBody({ data, initialFilter = "all" }: { data: Research; 
           {data.oldestOpen.days}일째
         </p>
       ) : null}
+
+      {/* ENG-02 H — 자체 연구 루프 */}
+      <ExperimentsCard />
 
       <div className="ui-ranges rs-filters" role="tablist" aria-label="상태">
         {FILTERS.map((f) => {
