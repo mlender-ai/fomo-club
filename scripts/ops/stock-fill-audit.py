@@ -1,6 +1,7 @@
 """FCE 주식 페이퍼 체결 전부에 invariant 를 다시 돌린다 (OPS-02 B-1) — **읽기 전용**.
 
 invariant(`stock_paper/execution.py`): 체결가는 그 시각 분봉의 저가~고가 안이어야 한다.
+토스 1분봉 `opened_at` 은 **끝 시각**이다 — 체결 시각 t 가 든 봉은 `opened_at ∈ (t, t+1분]`.
 FCE 는 체결 순간 그 분봉(`MarketObservation.minute_*`)으로 검사한다. 여기서는 저장된 1분봉
 (`toss_candles`, timeframe=1m)에서 체결 시각이 든 봉을 찾아 같은 검사를 한다.
 
@@ -103,10 +104,12 @@ def main() -> int:
             (market, symbol, (at - timedelta(minutes=2)).astimezone(timezone(timedelta(hours=9))).isoformat()[:16],
              (at + timedelta(minutes=2)).astimezone(timezone(timedelta(hours=9))).isoformat()[:16] + "~"),
         ).fetchall()
-        bar = next((b for b in near if ts(b[0]) <= at < ts(b[0]) + timedelta(minutes=1)), None)
+        # **토스 1분봉의 `opened_at` 은 봉이 끝나는 시각이다** — 09:00:09 KR 체결이 든 봉은 `09:01` 로 찍힌다(09:00 은
+        # 거래량 0 자리표시). 시작 시각으로 맞췄더니 개장 체결이 전부 "위반" 으로 나왔다(09-29).
+        bar = next((b for b in near if ts(b[0]) - timedelta(minutes=1) <= at < ts(b[0])), None)
         # FCE 는 체결 순간 **저장돼 있던 최신 분봉**으로 값을 만들고 검사한다(`latest_execution_observation`).
         # 체결 시각이 분 초반이면 그 분봉은 아직 없고 직전 분봉이 쓰인다 — 그래서 직전 분봉도 본다.
-        prev = next((b for b in reversed(near) if ts(b[0]) + timedelta(minutes=1) <= at), None)
+        prev = next((b for b in reversed(near) if ts(b[0]) <= at), None)
         if bar is None:
             missing += 1
             verdict = "봉 없음"
