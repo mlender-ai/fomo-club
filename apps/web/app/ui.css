@@ -1296,6 +1296,75 @@
   background: none;
 }
 
+/* 실험 중 (ENG-02 H) */
+.rs-exp {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rs-exp.is-past {
+  border-top: 1px solid var(--line);
+}
+.rs-exp-row {
+  padding: var(--s3) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+.rs-exp-row:last-child {
+  border-bottom: 0;
+}
+.rs-exp-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rs-exp-no {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.rs-exp-what {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rs-exp-progress {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s2);
+}
+.rs-exp-meta {
+  margin: var(--s1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+}
+.rs-exp-progress .rs-exp-meta {
+  margin: 0;
+}
+.rs-exp-bar {
+  position: relative;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+.rs-exp-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--blue);
+  border-radius: var(--r-pill);
+}
+
 /* 청산가 (ENG-01 E) — 무효화선 바깥 · 레일 아래 한 줄 */
 .ui-rail-liq {
   margin: var(--s1) 0 0;

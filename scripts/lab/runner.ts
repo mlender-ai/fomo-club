@@ -39,6 +39,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+import { experimentsJob } from "./experiments-sync";
 import { collectHeartbeat } from "./heartbeat";
 
 import {
@@ -341,6 +342,8 @@ const slowJobs: Job[] = [
   { name: "fce", everyMs: 15 * MINUTE, run: fceSnapshot, lastAt: 0, fails: 0 },
   { name: "funding", everyMs: 8 * HOUR, run: funding, lastAt: 0, fails: 0 },
   { name: "snapshot", everyMs: 30 * MINUTE, run: snapshot, lastAt: 0, fails: 0 },
+  // ENG-02 — 자체 연구 루프의 맥 쪽(재판정 거르기 · 그림자 거래 · 승인 기록 · 새 정책 버전). 규칙은 LAB 이 정한다.
+  { name: "experiments", everyMs: 15 * MINUTE, run: () => experimentsJob(post), lastAt: 0, fails: 0 },
 ];
 
 const jobs: Job[] = [...fastJobs, ...slowJobs];

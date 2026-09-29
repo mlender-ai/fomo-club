@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 
 import { authorized } from "../../../../../lib/lab/auth";
+import { runResearchLoop } from "../../../../../lib/lab/experiments-run";
 import { buildMorning, runMorning } from "../../../../../lib/lab/watch-run";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,9 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ text: await buildMorning(new Date()) });
     }
     const force = url.searchParams.get("force") === "1" && privileged;
-    return NextResponse.json(await runMorning(new Date(), force), { headers: { "cache-control": "no-store" } });
+    // ENG-02 B — 매일 한 번 관측 → 가설 → 등록(규칙을 지키는 것만). 아침 리포트와 같은 시각 · 같은 호출.
+    const loop = await runResearchLoop(new Date()).catch((e: unknown) => ({ error: e instanceof Error ? e.message : String(e) }));
+    return NextResponse.json({ ...(await runMorning(new Date(), force)), researchLoop: loop }, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message.slice(0, 300) : "morning failed" }, { status: 500 });
   }
