@@ -69,7 +69,7 @@ export function criteriaFingerprint(e: { param: string; baseline: unknown; value
 // ── 관측 · 가설 (B) ────────────────────────────────────────────────────────
 
 export interface Observations {
-  /** 복기 — 비용 합 ÷ 비용 전 손익 절댓값 합. */
+  /** 복기 — 비용 합 ÷ 비용 전 총손익의 크기(|Σ gross|). */
   costShare: { pct: number; trades: number } | null;
   /** 복기 청산 품질 — 손절 뒤 7일 안에 되돌아온 비율. */
   stopRebound: { pct: number; of: number } | null;
@@ -119,7 +119,7 @@ export function hypothesesFrom(o: Observations): Hypothesis[] {
       param: "max_entry_cost_r",
       baseline: o.policy.max_entry_cost_r,
       value,
-      observation: `비용이 비용 전 손익 규모의 ${Math.round(cost.pct)}%다 (복기 · ${cost.trades}건)`,
+      observation: `비용이 비용 전 총손익 크기의 ${Math.round(cost.pct)}%다 (크립토 · ${cost.trades}건)`,
       hypothesis: `진입 비용 상한을 비용R ${o.policy.max_entry_cost_r} → ${value}(최근 진입 중앙값)로 죄면 비용 후 손익이 나아진다`,
       question: "진입 비용 문턱을 죄면 비용 후 손익이 나아지나",
       reportOnly: false,
