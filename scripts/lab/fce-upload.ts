@@ -29,6 +29,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { FCE_BACKEND, FCE_DB, FCE_PYTHON } from "./fce-home";
+import { rescoreAll } from "./liquidation-rescore";
+import type { RescorePayload } from "../../apps/web/lib/lab/liquidation";
 import { CHART_TIMEFRAMES, positionFromOpenTrade, shortAddress, walletKey } from "../../apps/web/lib/lab/fce-payload";
 import { postExitOf, tradeDetail, type DailyCandle } from "../../apps/web/lib/lab/journal-extra";
 import type {
@@ -724,11 +726,17 @@ async function collect(): Promise<FcePayload> {
   console.log(`  지갑 자격 ${eligibilityHit.source} · 관측 진단 ${diagnosisHit.source}`);
 
   const openPositions = withCohort(await withAnalysis(positions(paper)), whalesBody);
+  // ENG-01 C — invariant(손실 > 증거금) 위반으로 FCE 가 멈춘 트랙. FCE 대시보드 `track_halts`.
+  const halts = record(paper.track_halts);
+  const halted = (t: TrackPayload): TrackPayload => {
+    const h = record(halts[t.key]);
+    return h.halted ? { ...t, status: "stopped", statusReason: `청산 모델 invariant 위반 — ${String(h.detail ?? h.reason ?? "")}`.slice(0, 200) } : t;
+  };
   return {
     at,
     tracks: [
-      cryptoTrack(paper, at),
-      whaleTrack(follow, at),
+      halted(cryptoTrack(paper, at)),
+      halted(whaleTrack(follow, at)),
       ...stockTracks(stock, at),
       polyTrack(poly, at),
     ],
@@ -746,7 +754,46 @@ async function collect(): Promise<FcePayload> {
       ...rawTrades(ledger),
       ...rawTrades(follow).filter((t) => record(t.entry_evidence).qualification === "follow"),
     ]),
+    rescore: await rescoreCached(
+      rawTrades(ledger),
+      rawTrades(follow).filter((t) => record(t.entry_evidence).qualification === "follow"),
+      [cryptoTrack(paper, at), whaleTrack(follow, at)]
+    ),
   };
+}
+
+// ── 청산 재채점 (ENG-01 D) ────────────────────────────────────────────────────
+//
+// 닫힌 거래를 Bitget 청산 규칙으로 다시 돌린다 — **기록은 그대로 · 결과는 따로.** 봉은 거래마다 영구 캐시라 두 번째부터는
+// 새로 닫힌 거래만 받는다. 결과는 한 시간 · 닫힌 거래 수가 같으면 그대로 쓴다.
+
+async function rescoreCached(
+  crypto: Record<string, unknown>[],
+  whale: Record<string, unknown>[],
+  tracks: TrackPayload[]
+): Promise<RescorePayload | null> {
+  const closed = (rows: Record<string, unknown>[]) => rows.filter((t) => typeof t.exit_at === "string");
+  const key = `${closed(crypto).length}:${closed(whale).length}`;
+  const file = join(CACHE_DIR, "rescore-result.json");
+  try {
+    const saved = JSON.parse(readFileSync(file, "utf8")) as { at: number; key: string; payload: RescorePayload };
+    if (saved.key === key && Date.now() - saved.at < HOUR_MS) return saved.payload;
+  } catch {
+    // 없음
+  }
+  try {
+    const start = (k: string) => tracks.find((t) => t.key === k)?.startingCapital ?? 500;
+    const payload = await rescoreAll([
+      { trackKey: "crypto", startingCapital: start("crypto"), raw: closed(crypto) },
+      { trackKey: "whale", startingCapital: start("whale"), raw: closed(whale) },
+    ]);
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(file, JSON.stringify({ at: Date.now(), key, payload }));
+    return payload;
+  } catch (e) {
+    console.error(`  청산 재채점 실패 — ${e instanceof Error ? e.message : e}`);
+    return null;
+  }
 }
 
 // ── 페이퍼 포지션의 FCE 분석 · 고래 추적군 (UI-10 B) ─────────────────────────

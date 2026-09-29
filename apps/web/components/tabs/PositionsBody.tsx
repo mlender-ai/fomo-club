@@ -82,7 +82,7 @@ export function PositionsBody({ data }: { data: Positions }) {
 
       {data.liquidationLevel > 0 ? (
         <p className="sh-alert">
-          <strong>청산 위험 {data.liquidationLevel}개</strong> · 증거금 대비 −80% 아래
+          <strong>청산 위험 {data.liquidationLevel}개</strong> · −80% 아래 · 청산가 8% 안
         </p>
       ) : null}
 
@@ -133,6 +133,11 @@ function PositionCard({ p, mode }: { p: PositionRow; mode: "minimal" | "pro" }) 
           mark={p.markPrice}
           takeProfit={p.takeProfitPrice}
           size="card"
+          liquidation={
+            p.liquidationPrice != null
+              ? { price: p.liquidationPrice, distancePct: p.liquidationDistancePct ?? null, near: p.liquidationLevel }
+              : null
+          }
         />
       ) : (
         <p className="sh-note">가격선 없음</p>

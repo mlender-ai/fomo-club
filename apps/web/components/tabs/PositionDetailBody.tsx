@@ -104,7 +104,16 @@ export function PositionDetailBody({ data }: { data: Detail }) {
       <Card title="가격 레일">
         {p.rail ? (
           <>
-            <PriceRail rail={p.rail} mark={p.markPrice} takeProfit={p.takeProfitPrice} />
+            <PriceRail
+              rail={p.rail}
+              mark={p.markPrice}
+              takeProfit={p.takeProfitPrice}
+              liquidation={
+            p.liquidationPrice != null
+              ? { price: p.liquidationPrice, distancePct: p.liquidationDistancePct ?? null, near: p.liquidationLevel }
+              : null
+          }
+            />
             <p className="ps-watch">
               {p.rail.beyond === "invalidation"
                 ? "무효화선을 넘었다"

@@ -17,12 +17,18 @@ export function PriceRail({
   mark,
   takeProfit,
   size = "full",
+  liquidation = null,
 }: {
   rail: { mark: number; entry: number | null; beyond: "invalidation" | "take_profit" | null; left: number; moved: boolean };
   mark: number | null;
   takeProfit: number | null;
   /** `card` — 목록 카드 안의 작은 레일(A-2). `full` — 상세(B-3), 높이 8. */
   size?: "card" | "full";
+  /**
+   * ENG-01 E — 청산가. **무효화선보다 바깥**이라 레일 안에 두지 않고 왼쪽 끝 너머에 적는다(레일을 늘리면 무효화 · 익절
+   * 사이가 납작해진다). 카드에서는 가까울 때만.
+   */
+  liquidation?: { price: number; distancePct: number | null; near: boolean } | null;
 }) {
   const split = rail.entry ?? rail.mark;
   // 부분 익절 뒤 FCE 가 손절을 본전으로 올리면 왼쪽 끝은 무효화가 아니라 **손절**이다.
@@ -50,6 +56,12 @@ export function PriceRail({
           <span className="ui-rail-key">익절</span> {price(takeProfit)}
         </span>
       </div>
+      {liquidation && (size === "full" || liquidation.near) ? (
+        <p className={`ui-rail-liq${liquidation.near ? " is-near" : ""}`}>
+          <span className="ui-rail-key">청산</span> {price(liquidation.price)}
+          {liquidation.distancePct !== null ? ` · ${liquidation.distancePct.toFixed(1)}% 남음` : ""}
+        </p>
+      ) : null}
     </div>
   );
 }

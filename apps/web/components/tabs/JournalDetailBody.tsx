@@ -166,6 +166,8 @@ export function JournalDetailBody({ data }: { data: Detail }) {
         </Card>
       </div>
 
+      {data.liquidation ? <LiquidationCard l={data.liquidation} /> : null}
+
       <Card title="사후 채점" description="청산 7일 뒤 가격 · 포지션 방향 기준">
         {p ? (
           <>
@@ -228,6 +230,35 @@ function ChartCard({ data }: { data: Detail }) {
       ) : (
         <Empty title="시세를 못 받았어요" reason="Bitget 이 이 심볼 · 기간의 캔들을 주지 않았습니다." />
       )}
+    </Card>
+  );
+}
+
+const OUTCOME: Record<string, string> = {
+  unchanged: "그대로",
+  liquidation: "청산됐다",
+  stop_before_liquidation: "손절이 먼저",
+};
+
+/** ENG-01 — 이 거래를 Bitget 청산 규칙으로 다시 돌린 결과. 기록(위 손익)은 그대로다. */
+function LiquidationCard({ l }: { l: NonNullable<Detail["liquidation"]> }) {
+  return (
+    <Card
+      title="청산 모델"
+      description="Bitget 격리 · 기록과 따로"
+      info={
+        <p>
+          진입 때 청산가는 Bitget 격리 공식(명목 단계 유지증거금률 · 테이커 0.06%)이다. 보유 중에는 펀딩을 증거금에서 빼며
+          봉마다 다시 쟀다. 최근접은 봉 저가(숏은 고가)가 청산가에 가장 가까이 간 가격 거리다.
+        </p>
+      }
+    >
+      <dl className="jd-kv">
+        <Pair k="진입 때 청산가" v={price(l.entryLiquidationPrice)} />
+        <Pair k="최근접 거리" v={l.closestLiquidationPct === null ? "—" : `${l.closestLiquidationPct.toFixed(1)}%`} />
+        <Pair k="청산 반영" v={`${OUTCOME[l.outcome] ?? l.outcome} · ${money(l.rescoredNetUsdt, "USDT")}`} />
+        <Pair k="1배였으면" v={`${OUTCOME[l.at1x.outcome] ?? l.at1x.outcome} · ${money(l.at1x.rescoredNetUsdt, "USDT")}`} />
+      </dl>
     </Card>
   );
 }

@@ -77,8 +77,12 @@ export interface FcePositionRow {
   evidence: EvidenceItem[];
   analysis: PositionAnalysis | null;
   cohort: PositionCohort | null;
+  /** ENG-01 — FCE 가 거래소 단계 · 펀딩으로 잰 청산가. 옛 FCE 는 null. */
+  liquidationPrice: number | null;
+  /** 지금가에서 청산가까지 남은 가격 거리(%) — 양수면 아직 멀다. */
+  liquidationDistancePct: number | null;
   /**
-   * **청산 수준 경고**(PART D-1).
+   * **청산 수준 경고**(PART D-1 · ENG-01 E). 증거금 대비 −80% 아래이거나, 청산가까지 {@link LIQUIDATION_NEAR_PCT}% 안.
    *
    * FCE 에 청산 모델이 없어 손익률이 −100% 아래로 갈 수 있다. 실제 거래소였으면
    * 증거금이 이미 없어진 자리다. 화면이 그 사실을 말하지 않으면 페이퍼 성과가
@@ -130,6 +134,15 @@ export interface FceBoard {
  * 경고한다(연구 02). 처음엔 −90% 였다 — UI-06 이 80% 로 정했다.
  */
 export const LIQUIDATION_PCT = -80;
+/** ENG-01 E — 청산가까지 남은 가격 거리가 이 안이면 경고. 3배에서 −80%(가격 −26.7%)일 때 청산가(−32.9%)까지 ~6% 남는다. */
+export const LIQUIDATION_NEAR_PCT = 8;
+
+/** 지금가 → 청산가 남은 거리(%). 롱은 아래 · 숏은 위. */
+export function liquidationDistance(direction: string, mark: number | null, liq: number | null): number | null {
+  if (mark === null || liq === null || !(mark > 0)) return null;
+  const d = direction === "short" || direction === "SHORT" ? -1 : 1;
+  return ((mark - liq) / mark) * 100 * d;
+}
 
 function toNumber(value: { toNumber(): number } | null): number | null {
   return value === null ? null : value.toNumber();
@@ -246,7 +259,11 @@ export async function readFceBoard(now: Date = new Date()): Promise<FceBoard> {
       evidence: Array.isArray(p.evidence) ? (p.evidence as unknown as EvidenceItem[]) : [],
       analysis: (p.analysis as unknown as PositionAnalysis | null) ?? null,
       cohort: (p.cohort as unknown as PositionCohort | null) ?? null,
-      liquidationLevel: p.netReturnPct !== null && p.netReturnPct <= LIQUIDATION_PCT,
+      liquidationPrice: p.liquidationPrice,
+      liquidationDistancePct: liquidationDistance(p.direction, p.markPrice, p.liquidationPrice),
+      liquidationLevel:
+        (p.netReturnPct !== null && p.netReturnPct <= LIQUIDATION_PCT) ||
+        ((liquidationDistance(p.direction, p.markPrice, p.liquidationPrice) ?? Infinity) < LIQUIDATION_NEAR_PCT),
     })),
     whale: whale
       ? {

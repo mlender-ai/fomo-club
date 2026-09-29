@@ -7,6 +7,7 @@
  * (`journal-extra.ts`). 합계는 **Overview 누적 거래와 같은 행들**을 같은 식으로 센다(UI-FIX B-5) —
  * 승 = 순손익 > 0, 패 = < 0, 손익비 = 이익 합 ÷ 손실 합.
  */
+import type { TradeLiquidation } from "./rescore-view";
 import {
   CATEGORY_LABEL,
   exitCategory,
@@ -163,7 +164,11 @@ export function exitSummary(rows: { category: ExitCategory; netReturnPct: number
 /** 상세 한 건 — 조립본 행 + "왜" + 사후 채점 + 해석 한 줄. */
 export function journalDetail(
   row: JournalCore["rows"][number],
-  extra: { details: Record<string, TradeDetail>; postExit: Record<string, PostExit | null> } | null
+  extra: {
+    details: Record<string, TradeDetail>;
+    postExit: Record<string, PostExit | null>;
+    liquidation?: Record<string, TradeLiquidation>;
+  } | null
 ) {
   const post = extra?.postExit[row.id] ?? null;
   return {
@@ -171,6 +176,8 @@ export function journalDetail(
     detail: extra?.details[row.id] ?? null,
     postExit: post,
     postExitLine: postExitLine(row.category, post),
+    /** ENG-01 — 이 거래의 청산 재채점(없으면 null · 열린 거래 · 재채점 전). */
+    liquidation: extra?.liquidation?.[row.id] ?? null,
   };
 }
 

@@ -1296,6 +1296,18 @@
   background: none;
 }
 
+/* 청산가 (ENG-01 E) — 무효화선 바깥 · 레일 아래 한 줄 */
+.ui-rail-liq {
+  margin: var(--s1) 0 0;
+  color: var(--ink-3);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+}
+.ui-rail-liq.is-near {
+  color: var(--dn);
+  font-weight: var(--w-medium);
+}
+
 .ps-today {
   margin: 0;
   font-size: var(--t-body);
