@@ -5,6 +5,7 @@ import { checkPayload } from "../../../../lib/lab/fce-payload";
 import { rebuildCapitalSeries } from "../../../../lib/lab/capital";
 import { buildSnapshots } from "../../../../lib/lab/snapshot";
 import { prisma } from "../../../../lib/prisma";
+import { writerRejection } from "../../../../lib/lab/writer";
 
 /**
  * LAB-BRIDGE PART B — FCE 스냅샷을 받는 자리.
@@ -75,6 +76,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  // OPS-04 — 쓰는 쪽은 하나다. 운영이 아닌 기계의 쓰기는 409.
+  const notWriter = writerRejection(request);
+  if (notWriter) return notWriter;
 
   let body: unknown;
   try {

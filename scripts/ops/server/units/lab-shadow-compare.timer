@@ -1,0 +1,9 @@
+[Unit]
+Description=병행 대조 매일 07:15 KST (22:15 UTC) — 아침 리포트(07:30) 전에
+
+[Timer]
+OnCalendar=*-*-* 22:15:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

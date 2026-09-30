@@ -1,0 +1,10 @@
+# FCE 매달림 감시 — 떠 있는데 응답이 없으면 다시 띄운다 (OPS-04 E)
+#
+# 프로세스가 살아 있으면 systemd 는 모른다. 맥 감시 루프(supervisor.sh)가 하던 "매달림 재시작" 자리다.
+[Unit]
+Description=FCE /health 감시 (3번 연속 실패면 재시작)
+After=fce.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fomo-club/scripts/ops/server/bin/fce-health.sh

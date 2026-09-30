@@ -1,0 +1,10 @@
+[Unit]
+Description=FCE 백업 매일 04:40 KST (19:40 UTC) — 미국장 끝 · 한국장 전
+
+[Timer]
+OnCalendar=*-*-* 19:40:00 UTC
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

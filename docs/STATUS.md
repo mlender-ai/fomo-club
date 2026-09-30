@@ -6,12 +6,24 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-09-25** · `UI-FIX` — 설명 문단을 ⓘ 로 접고, 포지션 손익·기준선·거래 수를 고쳤다 (`docs/ui/UI_FIX.md`) · **정규 도메인 미확인** |
+| 최종 갱신 | **2026-09-30** · `OPS-04` — 서버 이전 준비물(스크립트 · systemd · 병행 대조 · 단일 업로더 문). **서버는 아직 없다** — 🧑 서울 서버 선택 대기 (`docs/ops/OPS-04.md`) |
 | **정규 도메인** | **https://fomo-web-mlender-ais-projects.vercel.app** ← 모든 완료 확인은 이 주소로 |
 | 보조 도메인 | `fomo-club-backend.vercel.app` · `taro-stock-web.vercel.app` (같은 배포를 가리킨다) |
 | 제품 | **STRATEGY LAB** — 전략 경쟁 랩. 사용자 1명 · BM 없음 · 최종 목표 실제 자금 자동매매 |
 | 정본 | `docs/LAB-00_MASTER.md` |
 | 옛 상태 문서 | `docs/wo/archive/STATUS_pre-LAB.md` (틴더 제품 기준 3,499줄) |
+
+---
+
+## `OPS-04` (2026-09-30) — 서버 이전 · 준비 단계
+
+| | |
+|---|---|
+| 상태 | **준비물만.** 서버 없음 → 완료 확인 9개 전부 ⬜. 🧑 서울 리전 Ubuntu 24.04 서버를 만들면 `docs/ops/OPS-04.md` 순서대로 |
+| 레포에 들어간 것 | `scripts/ops/server/` — API 확인 · 준비 · systemd 유닛 11 · 백업/복원 시험 · 재부팅 점검 · 맥→서버 상태 복사 · 매일 대조 |
+| 단일 업로더 | 쓰기 7곳에 `x-lab-writer` 문 — Vercel `LAB_WRITER` 가 없으면 지금과 같다(맥 운영 그대로) |
+| 대조 | `GET /api/lab/ledger`(읽기) + `lib/lab/shadow-diff.ts` — 진입 · 시각 · 가격 · 트랙 N |
+| 찾은 위험 | 토스 토큰은 새로 받으면 앞 것이 무효 · FCE 텔레그램 봇 두 곳 폴링 충돌 → 그림자 서버에 맥과 같은 값을 넣지 않는다. 전환 때 맥 DB 를 한 번 더 옮긴다(그림자 주 거래 id 가 달라 원장 중복) |
 
 ---
 

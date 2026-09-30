@@ -1,0 +1,16 @@
+# 병행 대조 — 맥(랩 원장) vs 서버(그림자 기록) · 하루 한 번 (OPS-04 PART D)
+# 불일치면 실패로 끝난다 → fomo-alert@ 이 알린다. 보고서: /var/lib/fomo/shadow/reports/YYYY-MM-DD.md
+[Unit]
+Description=FOMO shadow vs Mac daily comparison
+OnFailure=fomo-alert@%n.service
+
+[Service]
+Type=oneshot
+User=fomo
+Group=fomo
+WorkingDirectory=/opt/fomo-club
+EnvironmentFile=/etc/fomo/runner.env
+EnvironmentFile=/etc/fomo/runner-secrets.env
+ExecStart=/usr/bin/node /opt/fomo-club/node_modules/tsx/dist/cli.mjs scripts/ops/server/shadow-compare.ts
+StandardOutput=append:/var/log/fomo/lab-shadow.log
+StandardError=append:/var/log/fomo/lab-shadow.log

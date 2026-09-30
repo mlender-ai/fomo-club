@@ -1,0 +1,16 @@
+# 그림자 기록 — FCE 를 읽어 업로드할 것을 **로컬 파일로만** 남긴다 (OPS-04 PART D)
+#
+# `fce-upload.ts --emit` 은 랩에 아무것도 보내지 않는다(push 전에 돌아온다).
+[Unit]
+Description=FOMO shadow capture (local only, no upload)
+After=fce.service
+
+[Service]
+Type=oneshot
+User=fomo
+Group=fomo
+WorkingDirectory=/opt/fomo-club
+EnvironmentFile=/etc/fomo/runner.env
+ExecStart=/opt/fomo-club/scripts/ops/server/bin/shadow-capture.sh
+StandardOutput=append:/var/log/fomo/lab-shadow.log
+StandardError=append:/var/log/fomo/lab-shadow.log
