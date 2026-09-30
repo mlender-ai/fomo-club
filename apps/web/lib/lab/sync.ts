@@ -95,7 +95,8 @@ export async function readSyncStatus(now: Date = new Date()): Promise<SyncStatus
     ...describe(ageMs, lastAt),
     lastAt,
     ageMs,
-    lastError: failed && failed.error ? { at: failed.at, error: failed.error } : null,
+    // **그 뒤에 성공했으면 지난 일이다.** 09-28 차트 저장 오류가 성공한 업로드 수백 번 뒤에도 헤더에 남아 있었다.
+    lastError: failed && failed.error && (!ok || failed.at > ok.at) ? { at: failed.at, error: failed.error } : null,
   };
 }
 
@@ -133,7 +134,19 @@ export async function readCollectStatus(now: Date = new Date()): Promise<Collect
           FROM "CollectionRun"
          ORDER BY "job", "finishedAt" DESC
       ) j
+    UNION ALL
+    -- 러너는 이 잡들의 **성공**을 CollectionRun 에 적지 않는다(실패만 적는다). 성공은 각자 자리에 남는다 —
+    -- 같이 읽지 않으면 한 번 실패한 잡이 영원히 "실패 중" 이다(09-29 심장박동 404 가 그랬다).
+    SELECT 'ok', 'heartbeat', (SELECT "at" FROM "LabHeartbeat" WHERE "key" = 'runner'), NULL, NULL
+    UNION ALL
+    SELECT 'ok', 'fce', (SELECT MAX("at") FROM "FceUpload" WHERE "ok" = true), NULL, NULL
+    UNION ALL
+    SELECT 'ok', 'snapshot', (SELECT MAX("builtAt") FROM "LabSnapshot"), NULL, NULL
+    UNION ALL
+    SELECT 'ok', 'experiments', (SELECT "at" FROM "LabHeartbeat" WHERE "key" = 'research-input'), NULL, NULL
   `;
+  const okAt = new Map(rows.filter((r) => r.kind === "ok" && r.at).map((r) => [r.name, r.at as Date]));
+  const resolved = (r: { name: string; at: Date | null }) => (okAt.get(r.name)?.getTime() ?? 0) > (r.at?.getTime() ?? 0);
 
   const prices = rows.filter((r) => r.kind === "price");
   const ages = prices.map((r) => (r.at ? now.getTime() - r.at.getTime() : Number.POSITIVE_INFINITY));
@@ -141,7 +154,7 @@ export async function readCollectStatus(now: Date = new Date()): Promise<Collect
     staleSymbols: prices.filter((_, i) => (ages[i] ?? 0) > FEED_STALE_MS).map((r) => r.name),
     feedAgeMs: ages.length === 0 ? null : Math.max(...ages.filter(Number.isFinite), 0) || null,
     failing: rows
-      .filter((r) => r.kind === "job" && r.ok === false && r.at)
+      .filter((r) => r.kind === "job" && r.ok === false && r.at && !resolved(r))
       .map((r) => ({ job: r.name, since: r.at as Date, error: r.error })),
   };
 }
