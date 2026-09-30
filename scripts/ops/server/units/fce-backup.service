@@ -1,0 +1,10 @@
+# FCE DB 백업 — 매일 · 7일 보존 (OPS-04 E)
+[Unit]
+Description=FCE SQLite daily backup
+OnFailure=fomo-alert@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fomo-club/scripts/ops/server/bin/fce-backup.sh
+Nice=10
+IOSchedulingClass=idle

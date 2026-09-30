@@ -36,6 +36,8 @@ export const SLOT_MS = 5 * MINUTE;
 export interface HeartbeatPayload {
   /** 러너가 보낸 시각. */
   at: string;
+  /** 보낸 기계(`x-lab-writer`). 랩이 받을 때 채운다 — 맥 · 서버 중 누가 돌고 있는지(OPS-04). */
+  writer?: string | null;
   fce: {
     reachable: boolean;
     error: string | null;

@@ -40,6 +40,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 import { experimentsJob } from "./experiments-sync";
+import { WRITER_ID, writeHeaders } from "./writer";
 import { collectHeartbeat } from "./heartbeat";
 
 import {
@@ -75,11 +76,15 @@ interface Result {
 async function post(path: string, body: unknown): Promise<string> {
   const response = await fetch(`${LAB}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+    headers: writeHeaders(TOKEN),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90_000),
   });
   const text = await response.text();
+  if (response.status === 409 && text.includes("not_primary_writer")) {
+    // OPS-04 — 랩이 다른 기계를 쓰는 쪽으로 정했다. 이 러너는 꺼야 한다(둘이 같이 올리면 원장이 오염된다).
+    throw new Error(`${path} 409: 이 기계(${WRITER_ID})는 쓰는 쪽이 아니다 — ${text.slice(0, 120)}`);
+  }
   if (!response.ok) throw new Error(`${path} ${response.status}: ${text.slice(0, 200)}`);
   return text;
 }
@@ -209,7 +214,7 @@ async function funding(startedAt: Date): Promise<Result> {
  */
 async function whale(startedAt: Date): Promise<Result> {
   const known = (await fetch(`${LAB}/api/lab/market?cohort=1`, {
-    headers: { authorization: `Bearer ${TOKEN}` },
+    headers: writeHeaders(TOKEN, false),
     signal: AbortSignal.timeout(60_000),
   }).then((r) => r.json())) as { addresses?: string[] };
 
@@ -412,7 +417,7 @@ async function main(): Promise<void> {
     console.error("LAB_INGEST_TOKEN 이 없다. 러너를 시작하지 않는다.");
     process.exit(1);
   }
-  console.log(`로컬 수집 러너 p${process.pid} → ${LAB}`);
+  console.log(`로컬 수집 러너 p${process.pid} · 쓰는 이름 ${WRITER_ID} → ${LAB}`);
   console.log(jobs.map((j) => `${j.name} ${j.everyMs / MINUTE}분`).join(" · "));
   console.log("");
 

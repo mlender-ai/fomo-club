@@ -1,0 +1,12 @@
+# /etc/logrotate.d/fomo — 매일 · 14일 보존 (OPS-04 PART B)
+# systemd 가 append 로 열고 있어서 copytruncate 로 자른다(서비스를 다시 띄우지 않는다).
+/var/log/fomo/*.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    su fomo fomo
+}

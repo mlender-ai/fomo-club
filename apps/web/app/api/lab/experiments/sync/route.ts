@@ -6,12 +6,16 @@ import { NextResponse } from "next/server";
 
 import { authorized } from "../../../../../lib/lab/auth";
 import { syncExperiments, type SyncBody } from "../../../../../lib/lab/experiments-run";
+import { writerRejection } from "../../../../../lib/lab/writer";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(request: Request): Promise<NextResponse> {
   if (!authorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // OPS-04 — 쓰는 쪽은 하나다. 운영이 아닌 기계의 쓰기는 409.
+  const notWriter = writerRejection(request);
+  if (notWriter) return notWriter;
   const body = (await request.json().catch(() => null)) as SyncBody | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "bad_payload" }, { status: 400 });
   try {

@@ -1,0 +1,10 @@
+# 유닛이 실패하면 텔레그램 한 줄 (OPS-04 E)
+# 재시작 한도(5분 5번)를 넘겨 멈춘 FCE · 러너, 실패한 백업 · 대조가 여기로 온다.
+# OPS-03 심장박동 감시(맥 밖 · pg_cron)는 이것과 별개로 그대로 돈다.
+[Unit]
+Description=FOMO alert for %i
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/fomo/alert-secrets.env
+ExecStart=/opt/fomo-club/scripts/ops/server/bin/alert.sh %i

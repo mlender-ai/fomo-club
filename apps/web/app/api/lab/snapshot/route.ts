@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 
 import { SNAPSHOT_VERSION, buildSnapshots } from "../../../../lib/lab/snapshot";
+import { writerRejection } from "../../../../lib/lab/writer";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,6 +31,9 @@ function authorized(request: Request): boolean {
 
 export async function POST(request: Request): Promise<NextResponse> {
   if (!authorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // OPS-04 — 쓰는 쪽은 하나다. 운영이 아닌 기계의 쓰기는 409.
+  const notWriter = writerRejection(request);
+  if (notWriter) return notWriter;
   const started = Date.now();
   const keys = await buildSnapshots();
   return NextResponse.json({ ok: true, version: SNAPSHOT_VERSION, keys, ms: Date.now() - started });

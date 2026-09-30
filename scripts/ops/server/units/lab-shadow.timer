@@ -1,0 +1,10 @@
+[Unit]
+Description=그림자 기록 15분마다 (맥 업로드 주기와 같다)
+
+[Timer]
+OnBootSec=5min
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

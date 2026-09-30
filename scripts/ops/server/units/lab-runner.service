@@ -1,0 +1,32 @@
+# 랩 러너 — 시세 · 봉 · 펀딩비 · 고래 · FCE 업로드 · 심장박동 (OPS-04 PART B)
+#
+# 맥의 com.fomo.lab.runner 자리다. **운영 전환 뒤에만 켠다**(install.sh --mode primary).
+# 그림자 주에는 꺼져 있고 lab-shadow.timer 가 로컬에만 적는다 — 맥과 동시에 올리지 않는다(D).
+[Unit]
+Description=FOMO lab runner (uploads to the lab)
+After=network-online.target fce.service
+Wants=network-online.target fce.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+OnFailure=fomo-alert@%n.service
+
+[Service]
+Type=simple
+User=fomo
+Group=fomo
+WorkingDirectory=/opt/fomo-club
+EnvironmentFile=/etc/fomo/runner.env
+EnvironmentFile=/etc/fomo/runner-secrets.env
+ExecStart=/usr/bin/node /opt/fomo-club/node_modules/tsx/dist/cli.mjs scripts/lab/runner.ts
+Restart=always
+RestartSec=10
+LimitNOFILE=65536
+StandardOutput=append:/var/log/fomo/lab-runner.log
+StandardError=append:/var/log/fomo/lab-runner.log
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

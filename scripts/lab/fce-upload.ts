@@ -34,6 +34,7 @@ import { fundingHistory, marginTiers } from "./liquidation-data";
 import { fundingPaid, liquidationPrice, mmrFor } from "../../apps/web/lib/lab/liquidation";
 import type { RescorePayload } from "../../apps/web/lib/lab/liquidation";
 import { CHART_TIMEFRAMES, positionFromOpenTrade, shortAddress, walletKey } from "../../apps/web/lib/lab/fce-payload";
+import { writeHeaders } from "./writer";
 import { postExitOf, tradeDetail, type DailyCandle } from "../../apps/web/lib/lab/journal-extra";
 import type {
   ChartPayload,
@@ -968,7 +969,7 @@ async function push(payload: FcePayload): Promise<void> {
   const started = Date.now();
   const response = await fetch(`${LAB}/api/lab/fce`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+    headers: writeHeaders(TOKEN),
     body: JSON.stringify(payload),
     // 거래 이력까지 올리므로 60초로는 모자랐다. 실측 한 바퀴가 ~20초다.
     signal: AbortSignal.timeout(120_000),
