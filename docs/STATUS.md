@@ -6,12 +6,25 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-10-01** · `TRADER-00` — 광혁 vs 엔진 마스터 접수 · 실매매 조건 8번 추가. **TRADER-01 지시서 대기** (`docs/wo/TRADER-00-master.md`) |
+| 최종 갱신 | **2026-10-01** · `TRADER-01` — 실계좌 거래 수집 코드(`scripts/trader/`). **🧑 광혁 맥에서 실행 대기** (`docs/trader/TRADER-01.md`) |
 | **정규 도메인** | **https://fomo-web-mlender-ais-projects.vercel.app** ← 모든 완료 확인은 이 주소로 |
 | 보조 도메인 | `fomo-club-backend.vercel.app` · `taro-stock-web.vercel.app` (같은 배포를 가리킨다) |
 | 제품 | **STRATEGY LAB** — 전략 경쟁 랩. 사용자 1명 · BM 없음 · 최종 목표 실제 자금 자동매매 |
 | 정본 | `docs/LAB-00_MASTER.md` |
 | 옛 상태 문서 | `docs/wo/archive/STATUS_pre-LAB.md` (틴더 제품 기준 3,499줄) |
+
+---
+
+## `TRADER-01` (2026-10-01) — 실계좌 거래 수집 · 코드만, 실행 대기
+
+| | |
+|---|---|
+| 상태 | **코드 · 시험만.** 실계좌 실행 전이라 완료 확인 7개 ⬜. 🧑 맥에서 `python3 scripts/trader/trader01.py all --env-file ~/fce/backend/.env --app-30d-pnl <앱 30D>` |
+| 저장 | 맥 `~/.fomo/trader/` (레포 밖 · 700/600). git 작업 트리 안이면 **멈춘다**. 레포엔 코드 · 합성 시험만 |
+| 출처 | FCE `user_account_fills`(쌓인 만큼) 먼저 · 모자란 건 Bitget 조회(체결 · 주문 · 포지션 · 장부, 90일) · 봉 Bitget(예비 Binance) · 고래/패턴/OI 는 FCE DB **읽기 전용** |
+| 산출 | 거래(분할 다리 · 청산 방식 · 레버리지 · 펀딩) · 거래별 진입/보유(MFE·MAE)/청산/청산 후 · 시간가중수익률 · D-2 지표 · E-1/2/3 대조 · 월별 |
+| 찾은 위험 | **Bitget 계좌 조회 90일** → 180일은 FCE 사본이 그만큼 있을 때만(보고서 3번이 말한다). 모자라면 🧑 결정: 웹 내보내기 파일 or 세무 조회(1년 · 체결가 없음). E-1 은 장부 있는 구간만 — 그 전 거래는 "대조 불가" 로 센다 |
+| 시험 | `python3 -m unittest discover -s scripts/trader/tests` 26개 — CI repo-checks 에 넣었다 |
 
 ---
 

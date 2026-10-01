@@ -40,3 +40,8 @@ apps/fomo-web/playwright-report/
 
 # actionlint 바이너리는 CI 가 매번 내려받는다(ci.yml repo-checks). 레포에 두지 않는다 — 5.8MB.
 /actionlint
+
+# TRADER-01 — 실계좌 데이터 · 보고서는 레포 밖(~/.fomo/trader)에만 쓴다. 실수로 들어와도 안 잡히게 한 번 더.
+trader.db
+TRADER-01-report*.md
+__pycache__/

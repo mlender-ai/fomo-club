@@ -84,6 +84,10 @@ jobs:
       - name: Test
         run: npm test -- --reporter=dot
 
+      # TRADER-01 — 실계좌 수집 스크립트(표준 라이브러리 파이썬). 합성 데이터만 쓴다.
+      - name: Test trader scripts
+        run: python3 -m unittest discover -s scripts/trader/tests
+
       # LAB-01 — 카드 게이트 두 개(perf-regression-gate · invariants-render)를 뺐다.
       # 둘 다 소비자 카드 렌더 경로를 재던 것이고, 스크립트는
       # packages/dormant/scripts/ 에 있다. 랩용 게이트는 LAB-05 에서 정한다.
