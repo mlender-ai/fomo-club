@@ -13,6 +13,14 @@
  *            실수로 만들지 않는다. 이건 경고가 아니라 거부다.
  *  LAB-00 §7 레버리지 기본 1배 — 명시하지 않으면 1이 된다. 수익률 부풀림 방지.
  *
+ * ## TRADER-02 D-1 에서 더한 것 (전부 **선택**이다 — 없으면 예전과 똑같이 돈다)
+ *
+ *  `side`            "long"(기본) · "short" · "both". both 면 `entry` 가 롱, `entry_short` 가 숏
+ *  `exit.scale_out`  분할 청산. 다리마다 `size`(비율, 합 1) 와 `at_pct`(목표) 또는 `trail`(추적 손절)
+ *  `exit.breakeven_after_first`  첫 분할 청산 뒤 손절을 진입가로 올린다
+ *  `pause`           연속 손실 N 번이면 M 분 쉰다
+ *  조건의 `tf`        "1h" · "4h" · "1d" … — 그 시간봉으로 묶어서 지표를 본다(engine/conditions.ts)
+ *
  * 순수 함수다. 네트워크·시각·난수 의존이 없다.
  */
 
@@ -44,6 +52,34 @@ export interface ConditionGroup {
 
 export type ConditionNode = Condition | ConditionGroup;
 
+/** 분할 청산 한 다리 — 목표가에서 판다. `at_pct` 는 진입가 대비 유리한 방향 %. */
+export interface ScaleOutTarget {
+  at_pct: number;
+  /** 처음 수량 대비 비율(0~1]. 다리들의 합은 1 이다. */
+  size: number;
+}
+
+/** 분할 청산 한 다리 — 추적 손절. 진입 뒤 최고가(숏은 최저가)에서 `pct` 만큼 밀리면 판다. */
+export interface ScaleOutTrail {
+  trail: {
+    pct: number;
+    /** 이만큼 유리해진 뒤부터 추적한다. 없으면 진입 즉시. */
+    activate_pct?: number | null;
+  };
+  size: number;
+}
+
+export type ScaleOutLeg = ScaleOutTarget | ScaleOutTrail;
+
+export interface PauseRule {
+  /** 연속 손실 거래(포지션 단위) 몇 번이면 쉬나. */
+  after_consecutive_losses: number;
+  /** 몇 분 쉬나. 마지막 손실 청산 시각부터. */
+  minutes: number;
+}
+
+export type DefinitionSide = "long" | "short" | "both";
+
 export interface ExitRules {
   /**
    * 손절 퍼센트. **음수여야 한다.** 없으면 정의 자체가 거부된다.
@@ -56,6 +92,10 @@ export interface ExitRules {
   max_hold_days?: number | null;
   all?: ConditionNode[];
   any?: ConditionNode[];
+  /** 분할 청산. 있으면 `target_pct` 는 null 이어야 한다(목표가 두 곳에 있으면 어느 쪽인지 모른다). */
+  scale_out?: ScaleOutLeg[];
+  /** 첫 분할 청산 뒤 손절을 진입가로. */
+  breakeven_after_first?: boolean;
 }
 
 export type Sizing =
@@ -66,12 +106,17 @@ export type Sizing =
 export interface StrategyDefinition {
   market: DefinitionMarket;
   universe: Universe;
+  /** 기본 "long". 예전 정의는 이 키가 없고 롱으로 돈다. */
+  side?: DefinitionSide;
   entry: ConditionGroup;
+  /** `side: "both"` 일 때 숏 진입 조건. */
+  entry_short?: ConditionGroup;
   exit: ExitRules;
   sizing: Sizing;
   /** LAB-00 §7 — 기본 1배. */
   leverage: number;
   max_positions: number;
+  pause?: PauseRule | null;
 }
 
 /** 검증 실패. `path` 는 정의 안의 위치다 — 어디가 틀렸는지 말해주지 않으면 못 고친다. */
@@ -265,7 +310,100 @@ function checkExit(value: unknown, errors: DefinitionError[]): void {
   if ("all" in value && "any" in value) {
     errors.push({ path: "exit", message: "all 이나 any 중 하나만 갖는다" });
   }
+
+  if ("scale_out" in value && value.scale_out !== undefined) {
+    checkScaleOut(value.scale_out, value.target_pct, errors);
+  }
+  const breakeven = value.breakeven_after_first;
+  if (breakeven !== undefined && typeof breakeven !== "boolean") {
+    errors.push({ path: "exit.breakeven_after_first", message: "true 나 false 여야 한다" });
+  }
 }
+
+const SIZE_SUM_TOLERANCE = 1e-6;
+
+function positiveNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * 분할 청산 검증. 다리 합이 1 이 아니면 **남는 물량이 영원히 안 팔리거나 없는 물량을 판다.**
+ * 목표 다리는 가까운 것부터, 추적 다리는 하나만 · 맨 끝에 — 그래야 다리 순서가 곧 체결 순서다.
+ */
+function checkScaleOut(legs: unknown, target: unknown, errors: DefinitionError[]): void {
+  if (!Array.isArray(legs) || legs.length === 0) {
+    errors.push({ path: "exit.scale_out", message: "비어 있지 않은 배열이어야 한다" });
+    return;
+  }
+  if (target !== null && target !== undefined) {
+    errors.push({
+      path: "exit.target_pct",
+      message: "scale_out 이 있으면 target_pct 는 null 이다 — 목표가 두 곳에 있으면 어느 쪽인지 모른다",
+    });
+  }
+  let sum = 0;
+  let lastAt = 0;
+  legs.forEach((leg, index) => {
+    const at = `exit.scale_out[${index}]`;
+    if (!isPlainObject(leg)) {
+      errors.push({ path: at, message: "객체여야 한다" });
+      return;
+    }
+    if (!positiveNumber(leg.size) || leg.size > 1) {
+      errors.push({ path: `${at}.size`, message: "0 보다 크고 1 이하인 비율이어야 한다" });
+    } else {
+      sum += leg.size;
+    }
+    const hasAt = "at_pct" in leg;
+    const hasTrail = "trail" in leg;
+    if (hasAt === hasTrail) {
+      errors.push({ path: at, message: "at_pct 나 trail 중 하나만 갖는다" });
+      return;
+    }
+    if (hasAt) {
+      if (!positiveNumber(leg.at_pct)) {
+        errors.push({ path: `${at}.at_pct`, message: "양수여야 한다(진입가 대비 유리한 방향 %)" });
+      } else if (leg.at_pct <= lastAt) {
+        errors.push({ path: `${at}.at_pct`, message: "목표 다리는 가까운 것부터 커지는 순서다" });
+      } else {
+        lastAt = leg.at_pct;
+      }
+      return;
+    }
+    if (index !== legs.length - 1) {
+      errors.push({ path: at, message: "추적 다리는 하나만, 맨 끝에 둔다" });
+    }
+    const trail = leg.trail;
+    if (!isPlainObject(trail) || !positiveNumber(trail.pct)) {
+      errors.push({ path: `${at}.trail.pct`, message: "양수여야 한다" });
+      return;
+    }
+    const activate = trail.activate_pct;
+    if (activate !== undefined && activate !== null && (typeof activate !== "number" || !Number.isFinite(activate) || activate < 0)) {
+      errors.push({ path: `${at}.trail.activate_pct`, message: "0 이상이어야 한다" });
+    }
+  });
+  if (Math.abs(sum - 1) > SIZE_SUM_TOLERANCE) {
+    errors.push({ path: "exit.scale_out", message: `다리 size 합이 1 이어야 한다(지금 ${sum})` });
+  }
+}
+
+function checkPause(value: unknown, errors: DefinitionError[]): void {
+  if (value === undefined || value === null) return;
+  if (!isPlainObject(value)) {
+    errors.push({ path: "pause", message: "객체여야 한다" });
+    return;
+  }
+  const n = value.after_consecutive_losses;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1) {
+    errors.push({ path: "pause.after_consecutive_losses", message: "1 이상의 정수여야 한다" });
+  }
+  if (!positiveNumber(value.minutes)) {
+    errors.push({ path: "pause.minutes", message: "양수여야 한다" });
+  }
+}
+
+const SIDES: readonly DefinitionSide[] = ["long", "short", "both"];
 
 function checkSizing(value: unknown, errors: DefinitionError[]): void {
   if (!isPlainObject(value)) {
@@ -308,7 +446,17 @@ export function parseStrategyDefinition(input: unknown): ParseResult {
   }
 
   checkUniverse(input.universe, errors);
+  const side = input.side === undefined ? "long" : input.side;
+  if (typeof side !== "string" || !SIDES.includes(side as DefinitionSide)) {
+    errors.push({ path: "side", message: `${SIDES.join(" | ")} 중 하나여야 한다` });
+  }
   checkGroup(input.entry, "entry", errors);
+  if (side === "both") {
+    checkGroup(input.entry_short, "entry_short", errors);
+  } else if (input.entry_short !== undefined) {
+    errors.push({ path: "entry_short", message: 'side 가 "both" 일 때만 쓴다' });
+  }
+  checkPause(input.pause, errors);
   checkExit(input.exit, errors);
   checkSizing(input.sizing, errors);
 
@@ -329,18 +477,20 @@ export function parseStrategyDefinition(input: unknown): ParseResult {
 
   if (errors.length > 0) return { ok: false, errors };
 
-  return {
-    ok: true,
-    definition: {
-      market: input.market as DefinitionMarket,
-      universe: input.universe as Universe,
-      entry: input.entry as ConditionGroup,
-      exit: input.exit as ExitRules,
-      sizing: input.sizing as Sizing,
-      leverage: leverage as number,
-      max_positions: maxPositions as number,
-    },
+  const definition: StrategyDefinition = {
+    market: input.market as DefinitionMarket,
+    universe: input.universe as Universe,
+    entry: input.entry as ConditionGroup,
+    exit: input.exit as ExitRules,
+    sizing: input.sizing as Sizing,
+    leverage: leverage as number,
+    max_positions: maxPositions as number,
   };
+  // 새 키는 **있을 때만** 싣는다 — 예전 정의를 다시 저장해도 모양이 바뀌지 않는다.
+  if (input.side !== undefined) definition.side = side as DefinitionSide;
+  if (input.entry_short !== undefined) definition.entry_short = input.entry_short as ConditionGroup;
+  if (input.pause !== undefined) definition.pause = input.pause as PauseRule | null;
+  return { ok: true, definition };
 }
 
 /**

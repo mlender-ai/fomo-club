@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TRADER-02 PART F — 광혁 복제 페이퍼. **매시 7분**에 한 번:
+    실계좌 새 거래 수집(TRADER-01, FCE 읽기 전용 + Bitget 조회 키) → 새 1시간봉 → 복제 규칙 한 바퀴 → 나란히 기록
+
+  전부 비공개 자리(~/.fomo/trader/)에 쓴다. 랩 DB · 공개 사이트에 쓰지 않는다.
+
+  설치: scripts/ops/launchd/install-trader-paper.sh
+  제거: launchctl bootout gui/$(id -u)/com.fomo.trader.paper
+        rm ~/Library/LaunchAgents/com.fomo.trader.paper.plist
+  로그: ~/.fomo/trader/trader02/paper.log
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fomo.trader.paper</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-c</string>
+    <string>mkdir -p "$HOME/.fomo/trader/trader02" &amp;&amp; python3 scripts/trader/trader02.py paper-tick --env-file "__ENV_FILE__" &gt;&gt; "$HOME/.fomo/trader/trader02/paper.log" 2&gt;&amp;1</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Library/Frameworks/Python.framework/Versions/3.13/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Minute</key>
+    <integer>7</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

@@ -79,6 +79,33 @@ export interface OpenPosition {
    * 시간 청산으로 닫는 것과 구분해야 `exitReason` 이 거짓말을 안 한다.
    */
   exitSignalPending: boolean;
+
+  // ── 분할 청산(TRADER-02). 정의에 `exit.scale_out` 이 있을 때만 쓴다. 전부 JSON 으로 오간다(Date 없음). ──
+  /** 처음 수량. 다리 수량 = 처음 수량 × size. */
+  initialQty?: number;
+  /** 다리별로 팔았나. */
+  legDone?: boolean[];
+  /** 추적 기준 고점(숏은 저점). 진입가에서 시작. */
+  peak?: number;
+  /** 이미 판 다리들. */
+  legFills?: LegFill[];
+}
+
+/** 분할로 판 한 번. `atMs` 는 봉 여는 시각(ms). */
+export interface LegFill {
+  atMs: number;
+  price: number;
+  qty: number;
+  /** SCALE_OUT · TRAIL · STOP · SIGNAL · TIME */
+  kind: string;
+  /** 청산 수수료. */
+  fee: number;
+  slippage: number;
+  /** 이 다리 몫으로 나눈 진입 비용 · 펀딩. 합치면 포지션 전체가 된다. */
+  entryCost: number;
+  funding: number;
+  /** 이 다리 손익(비용 뺀 뒤). */
+  pnl: number;
 }
 
 /** 닫힌 거래 한 건 = 포지션 하나의 생애. `Trade` 테이블과 1:1. */
@@ -98,6 +125,8 @@ export interface ClosedTrade {
   pnl: number;
   pnlPct: number;
   barsHeld: number;
+  /** 분할 청산이면 다리들. `exitPrice` 는 수량 가중 평균이다. */
+  legs?: LegFill[];
 }
 
 /** 자산 스냅샷 한 점. */

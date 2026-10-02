@@ -22,11 +22,13 @@ import { isInGap, type Gap } from "../candle-quality";
 import type { StrategyDefinition } from "../strategy-definition";
 import { evaluateGroup, type ExternalContext } from "./conditions";
 import { entryFill, exitDecision, exitFill, fundingCost, grossPnl } from "./fills";
+import { nextPeak, scaleOutEvents } from "./scale-out";
 import { isRejected, planSize } from "./sizing";
 import type {
   Bar,
   ClosedTrade,
   DataSource,
+  LegFill,
   EquityPoint,
   ExecutorConfig,
   OpenPosition,
@@ -55,7 +57,7 @@ const DEFAULT_WHALE_WINDOW_MS = 24 * 60 * 60 * 1000;
  * 진입·청산 조건 어디에 있든 같은 창을 쓴다 — 한 전략 안에서 창이 둘이면
  * 들어갈 때와 나올 때가 다른 것을 보게 된다.
  */
-function whaleWindowFrom(definition: StrategyDefinition): number {
+export function whaleWindowFrom(definition: StrategyDefinition): number {
   const nodes = [
     ...(definition.entry.all ?? []),
     ...(definition.entry.any ?? []),
@@ -80,7 +82,7 @@ function whaleWindowFrom(definition: StrategyDefinition): number {
  * 없는 것을 가장 오래된 값으로 대신하지 않는다 — 그러면 시계열 앞머리에서
  * 창 길이와 무관한 차이가 나온다.
  */
-function whaleNetAt(history: readonly WhalePoint[], targetMs: number): number | null {
+export function whaleNetAt(history: readonly WhalePoint[], targetMs: number): number | null {
   let found: number | null = null;
   for (const point of history) {
     if (point.at.getTime() <= targetMs) found = point.net;
@@ -151,6 +153,10 @@ export interface ExecutorState {
   lastPrice: Record<string, number>;
   /** 실측한 봉 간격. 재진입 잠금·시간 청산이 쓴다. */
   barMs: number;
+  /** 연속 손실 거래 수(포지션 단위). `pause` 가 쓴다. 예전 상태엔 없다 → 0. */
+  consecutiveLosses?: number;
+  /** 이 시각(ms) 전에는 새로 들어가지 않는다. `pause` 가 쓴다. */
+  pausedUntilMs?: number | null;
 }
 
 /**
@@ -233,6 +239,21 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
 
   let bars = 0;
   let barMs = state?.barMs ?? 0;
+  let consecutiveLosses = state?.consecutiveLosses ?? 0;
+  let pausedUntilMs: number | null = state?.pausedUntilMs ?? null;
+  const scaleOut = definition.exit.scale_out && definition.exit.scale_out.length > 0 ? definition.exit.scale_out : null;
+  const side = definition.side ?? "long";
+
+  /** 포지션 하나가 끝났다 — 연속 손실을 세고, 정의에 `pause` 가 있으면 쉬는 시간을 건다. */
+  const afterClose = (pnl: number, at: Date): void => {
+    consecutiveLosses = pnl < 0 ? consecutiveLosses + 1 : 0;
+    const pause = definition.pause;
+    if (pause && consecutiveLosses >= pause.after_consecutive_losses) {
+      // 청산은 봉 안 어딘가에서 났다. 봉이 닫힌 시각부터 센다(이르게 풀리지 않게).
+      pausedUntilMs = at.getTime() + barMs + pause.minutes * 60_000;
+      consecutiveLosses = 0;
+    }
+  };
 
   /** 종목별 마지막 종가. **다종목 자산 평가가 이걸 쓴다.** */
   const lastPrice = new Map<string, number>(Object.entries(state?.lastPrice ?? {}));
@@ -258,7 +279,79 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
 
     // ── 1. 청산 ────────────────────────────────────────────────────────────
     const position = open.get(symbol);
-    if (position) {
+    if (position && scaleOut) {
+      // ── 1'. 분할 청산(TRADER-02) ─────────────────────────────────────────
+      const events = scaleOutEvents(position, bar, definition.exit);
+      const legFills: LegFill[] = position.legFills ?? [];
+      const legDone = position.legDone ?? scaleOut.map(() => false);
+      for (const event of events) {
+        const before = position.qty;
+        const share = before > 0 ? Math.min(1, event.qty / before) : 1;
+        const fill = exitFill(position.side, { reason: event.reason, price: event.price }, bar, event.qty, config.fill);
+        const gross = grossPnl(position.side, position.entryPrice, fill.price, event.qty);
+        const costShare = position.entryCost * share;
+        const fundShare = position.funding * share;
+        const legPnl = gross - costShare - fill.fee - fundShare;
+        cash += position.entryPrice * event.qty + legPnl;
+        position.entryCost -= costShare;
+        position.funding -= fundShare;
+        position.qty = before - event.qty;
+        if (event.leg !== null) legDone[event.leg] = true;
+        legFills.push({
+          atMs: bar.at.getTime(),
+          price: fill.price,
+          qty: event.qty,
+          kind: event.kind,
+          fee: fill.fee,
+          slippage: fill.slippage,
+          entryCost: costShare,
+          funding: fundShare,
+          pnl: legPnl,
+        });
+      }
+      position.legFills = legFills;
+      position.legDone = legDone;
+      if (events.length > 0 && definition.exit.breakeven_after_first && legDone.some(Boolean)) {
+        // 첫 분할 뒤 손절을 진입가로. 이미 더 위면 내리지 않는다.
+        position.stopPrice =
+          position.side === "LONG"
+            ? Math.max(position.stopPrice, position.entryPrice)
+            : Math.min(position.stopPrice, position.entryPrice);
+      }
+      if (position.qty <= 1e-12) {
+        const qty = legFills.reduce((sum, leg) => sum + leg.qty, 0);
+        const pnl = legFills.reduce((sum, leg) => sum + leg.pnl, 0);
+        const last = events[events.length - 1];
+        trades.push({
+          symbol,
+          side: position.side,
+          entryAt: position.entryAt,
+          entryPrice: position.entryPrice,
+          entryReason: position.entryReason,
+          exitAt: bar.at,
+          exitPrice: legFills.reduce((sum, leg) => sum + leg.price * leg.qty, 0) / qty,
+          exitReason: last ? last.reason : "MANUAL",
+          qty,
+          fee: legFills.reduce((sum, leg) => sum + leg.fee, 0),
+          slippage: legFills.reduce((sum, leg) => sum + leg.slippage, 0),
+          funding: legFills.reduce((sum, leg) => sum + leg.funding, 0),
+          pnl,
+          pnlPct: (pnl / (position.entryPrice * qty)) * 100,
+          barsHeld: position.barsHeld + 1,
+          legs: legFills.map((leg) => ({ ...leg })),
+        });
+        open.delete(symbol);
+        lastExit.set(symbol, { at: bar.at, side: position.side });
+        afterClose(pnl, bar.at);
+      } else {
+        const rate = source.fundingRate(symbol, bar.at);
+        if (rate !== 0) {
+          position.funding += fundingCost(position.side, rate, bar.close * position.qty);
+        }
+        position.barsHeld += 1;
+        position.peak = nextPeak(position, bar);
+      }
+    } else if (position) {
       const decision = exitDecision(position, bar);
       if (decision) {
         const fill = exitFill(position.side, decision, bar, position.qty, config.fill);
@@ -286,6 +379,7 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
 
         open.delete(symbol);
         lastExit.set(symbol, { at: bar.at, side: position.side });
+        afterClose(pnl, bar.at);
       } else {
         // ── 2. 펀딩비 ──────────────────────────────────────────────────────
         const rate = source.fundingRate(symbol, bar.at);
@@ -302,6 +396,7 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
     if (signal && !open.has(symbol)) {
       const reasons: string[] = [];
       if (blockNewEntries) reasons.push("feed_stale");
+      if (pausedUntilMs !== null && bar.at.getTime() < pausedUntilMs) reasons.push("pause");
       if (open.size >= maxPositions) reasons.push("max_positions");
       if (isInGap(signal.signalAt, gaps[symbol] ?? [])) reasons.push("data_gap");
       if (source.inGap(symbol, bar.at)) reasons.push("data_gap");
@@ -381,6 +476,9 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
               maxHoldBars: holdBars(definition.exit.max_hold_days ?? null, barMs),
               barsHeld: 0,
               exitSignalPending: false,
+              ...(scaleOut
+                ? { initialQty: qty, legDone: scaleOut.map(() => false), peak: fill.price, legFills: [] }
+                : {}),
             });
           }
         }
@@ -462,13 +560,22 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
           // 왜 닫혔는지 아는 것인데 그걸 틀리게 적고 있었다.
           current.exitSignalPending = true;
         }
-      } else if (evaluateGroup(definition.entry, window, context)) {
-        pending.set(symbol, {
-          symbol,
-          side: "LONG",
-          reason: describeEntry(definition),
-          signalAt: bar.at,
-        });
+      } else {
+        // 방향: 기본 롱. "short" 면 `entry` 가 숏 조건, "both" 면 `entry` 롱 · `entry_short` 숏(롱 먼저 본다).
+        let signalSide: Side | null = null;
+        if (evaluateGroup(definition.entry, window, context)) {
+          signalSide = side === "short" ? "SHORT" : "LONG";
+        } else if (side === "both" && definition.entry_short && evaluateGroup(definition.entry_short, window, context)) {
+          signalSide = "SHORT";
+        }
+        if (signalSide) {
+          pending.set(symbol, {
+            symbol,
+            side: signalSide,
+            reason: describeEntry(definition, signalSide),
+            signalAt: bar.at,
+          });
+        }
       }
     }
   }
@@ -488,6 +595,8 @@ export function execute(input: ExecuteInput): RunResult & { state: ExecutorState
       whaleHistory: Object.fromEntries(whaleHistory),
       lastPrice: Object.fromEntries(lastPrice),
       barMs,
+      consecutiveLosses,
+      pausedUntilMs,
     },
   };
 }
@@ -549,6 +658,8 @@ export function reviveState(raw: unknown): ExecutorState | null {
     ),
     lastPrice: (s.lastPrice as Record<string, number>) ?? {},
     barMs: typeof s.barMs === "number" ? s.barMs : 0,
+    consecutiveLosses: typeof s.consecutiveLosses === "number" ? s.consecutiveLosses : 0,
+    pausedUntilMs: typeof s.pausedUntilMs === "number" ? s.pausedUntilMs : null,
   };
 }
 
@@ -586,8 +697,9 @@ function sizingFromDefinition(
 }
 
 /** 진입 사유 한 줄. **`entry_reason` 은 필수다**(LAB-02 PART A-3). */
-function describeEntry(definition: StrategyDefinition): string {
-  const nodes = definition.entry.all ?? definition.entry.any ?? [];
+function describeEntry(definition: StrategyDefinition, signalSide: Side = "LONG"): string {
+  const group = signalSide === "SHORT" && definition.side === "both" && definition.entry_short ? definition.entry_short : definition.entry;
+  const nodes = group.all ?? group.any ?? [];
   const names = nodes
     .map((node) =>
       typeof node === "object" && node !== null && "indicator" in node
@@ -595,6 +707,7 @@ function describeEntry(definition: StrategyDefinition): string {
         : "group"
     )
     .join("+");
-  const mode = definition.entry.all ? "all" : "any";
-  return `${mode}:${names}`;
+  const mode = group.all ? "all" : "any";
+  // 롱만 도는 예전 정의는 사유 문자열이 예전과 같다(페이퍼 DB 기록 호환).
+  return definition.side && definition.side !== "long" ? `${signalSide.toLowerCase()}:${mode}:${names}` : `${mode}:${names}`;
 }

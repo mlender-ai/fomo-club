@@ -6,12 +6,27 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-10-01** · `TRADER-01` — 실계좌 거래 수집 코드(`scripts/trader/`). **🧑 광혁 맥에서 실행 대기** (`docs/trader/TRADER-01.md`) |
+| 최종 갱신 | **2026-10-02** · `TRADER-02` — 매매법 객관화 코드 · 엔진 스키마 확장(분할 청산 · 쉬기 · 숏 · 시간봉 조건). **🧑 광혁 진술(데이터 보기 전) → TRADER-01 실행 대기** (`docs/trader/TRADER-02.md`) |
 | **정규 도메인** | **https://fomo-web-mlender-ais-projects.vercel.app** ← 모든 완료 확인은 이 주소로 |
 | 보조 도메인 | `fomo-club-backend.vercel.app` · `taro-stock-web.vercel.app` (같은 배포를 가리킨다) |
 | 제품 | **STRATEGY LAB** — 전략 경쟁 랩. 사용자 1명 · BM 없음 · 최종 목표 실제 자금 자동매매 |
 | 정본 | `docs/LAB-00_MASTER.md` |
 | 옛 상태 문서 | `docs/wo/archive/STATUS_pre-LAB.md` (틴더 제품 기준 3,499줄) |
+
+---
+
+## `TRADER-02` (2026-10-02) — 매매법 객관화 · 코드만, 실행 대기
+
+| | |
+|---|---|
+| 상태 | **코드 · 시험만.** 완료 확인 11개 ⬜. 🧑 첫 단계는 **진술**(`trader02.py init-stated` → 작성 → `seal-stated`) — TRADER-01 보고서를 열기 전이 가장 깨끗하다 |
+| 순서 장치 | 진술 봉인(시각 · 지문) 전엔 분할 · 분석 거부 · 70/30 한 번 고정 · 분석은 앞 70% 만 받음 · 뒤 30% 는 규칙 동결 뒤에만 · 검증 뒤 수정은 모든 보고서에 찍힘 |
+| 엔진 확장 | `packages/lab` 정의에 `side`(숏 · 양방향) · `exit.scale_out`(목표 · 추적) · `breakeven_after_first` · `pause` · 조건 `tf` · 지표 `hour_utc` `whale_net` · `featureSeries`. **새 키 없으면 예전과 같다**(기존 165개 그대로 통과 · 새 21개). DB 스키마 변경 없음 |
+| 규칙 추출 | 후보 점수는 엔진과 같은 지표(`featureSeries`)로 · 재현율 · 정밀도 · 올림 · F1 · 단순한 쪽 우선. LLM 안 씀 |
+| 검증 · 페이퍼 | 뒤 30% 엔진 재생(증거금 → 명목 맞춤) · 손익 구조 표 · 따라가나 4기준 · 재량 거래 표시(안 지움) · 비공개 페이퍼 launchd(`install-trader-paper.sh`) |
+| 비공개 | 진술 · 분석 · 규칙 JSON · 검증 · 페이퍼 전부 `~/.fomo/trader/trader02/`. 지시서 원문의 `docs/trader/stated-rules.md` 자리는 공개 레포라 **질문 틀만** 둠 |
+| TRADER-01 수정 | 보고서에서 매매 습관(분할 · MFE · 청산 방식) 섹션을 뺐다 — 진술 전에 보면 오염 |
+| 시험 | 파이썬 30개(합성 '광혁' 이 쓰는 규칙을 체결만 보고 다시 찾아냄: 재현율 98% · 정밀도 93%) · vitest 536개 |
 
 ---
 

@@ -126,13 +126,8 @@ def render(r: dict) -> str:
     add(f"거래 합 기준 플러스인 달 {len(pos)}/{len(r['monthly'])}. 장부 칸이 — 인 달은 거래소 장부 보관 기간 밖이다.")
     add("")
 
-    add("## TRADER-02 로 넘기는 재료 (판단 없음)")
-    add("")
-    add(f"- 분할 진입 {s['split_entry']}건 · 분할 청산 {s['split_exit']}건 · 레버리지 확인 {s['leverage_known']}/{r['trades']}")
-    add(f"- 청산 방식: {', '.join(f'{k} {v}' for k, v in s['exit_methods'].items()) or '—'}")
-    add(f"- 보유 시간 중앙값 {_n(s['hold_median_min'], 0, '분')} · MFE 중앙 {_n(s['mfe_median'], 2, '%')} · MAE 중앙 {_n(s['mae_median'], 2, '%')} · 잡은 몫(실현÷MFE) 중앙 {_n(s['capture_median'])}")
-    add("")
-    add("거래별 상세(진입·보유·청산·청산 후)는 비공개 DB `trade_context` 에 있다.")
+    # 매매 습관(분할 · MFE · 청산 방식)은 **여기에 싣지 않는다.** TRADER-02 PART A — 광혁이 매매법을
+    # 먼저 말로 쓰기 전에 이걸 보면 말한 매매법이 데이터에 끌려간다. 진술 봉인 뒤 TRADER-02 분석에서 본다.
     return "\n".join(lines) + "\n"
 
 

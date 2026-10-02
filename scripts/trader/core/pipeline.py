@@ -384,7 +384,7 @@ def completion(key, store: Store, span_days: float, trades, contexts, metrics, r
         {"no": 1, "item": "조회 전용 키 · 출금 권한 없음", "ok": bool(key and key.get("read_only")), "detail": _key_detail(key)},
         {"no": 2, "item": "거래 데이터가 레포에 없다", "ok": not in_repo, "detail": f"저장 위치 {store.dir} (git 밖)" + (f" · 레포에 의심 파일: {in_repo}" if in_repo else "")},
         {"no": 3, "item": "180일 이상 거래가 거래 단위로 묶였다", "ok": span_days >= TARGET_DAYS and n > 0, "detail": f"{span_days:.0f}일 · {n}건"},
-        {"no": 4, "item": "분할 진입·청산이 살아 있다", "ok": n > 0 and all(t["legs"]["exits"] for t in trades), "detail": f"분할 진입 {s['split_entry']} · 분할 청산 {s['split_exit']}"},
+        {"no": 4, "item": "분할 진입·청산이 살아 있다", "ok": n > 0 and all(t["legs"]["exits"] for t in trades), "detail": f"주문 단위 다리 기록 {sum(1 for t in trades if t['legs']['exits'])}/{n}건 (분할 횟수는 TRADER-02 진술 봉인 뒤에 본다)"},
         {
             "no": 5,
             "item": "진입·보유(MFE·MAE)·청산·청산 후 상태",

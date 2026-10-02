@@ -226,6 +226,68 @@ export function whaleFlow(current: number | null, past: number | null): Indicato
   return current - past;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// hour_utc — 시간대 (TRADER-02)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 지금 봉이 **닫힌** 시각의 UTC 시(0~23). 봉 간격은 창의 마지막 두 봉으로 잰다.
+ * 신호는 봉이 닫힌 뒤에 나므로 여는 시각이 아니라 닫는 시각이 맞다.
+ */
+export function hourUtc(window: Window): IndicatorValue {
+  const current = window[window.length - 1];
+  const prev = window[window.length - 2];
+  if (!current || !prev) return null;
+  const step = current.at.getTime() - prev.at.getTime();
+  if (!(step > 0)) return null;
+  return new Date(current.at.getTime() + step).getUTCHours();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 시간봉 묶기 — 조건의 `tf` (TRADER-02)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TF_MS: Record<string, number> = {
+  "5m": 5 * 60_000,
+  "15m": 15 * 60_000,
+  "30m": 30 * 60_000,
+  "1h": 60 * 60_000,
+  "2h": 2 * 60 * 60_000,
+  "4h": 4 * 60 * 60_000,
+  "12h": 12 * 60 * 60_000,
+  "1d": 24 * 60 * 60_000,
+};
+
+export function timeframeMs(tf: string): number | null {
+  return TF_MS[tf] ?? null;
+}
+
+/**
+ * 창을 더 큰 시간봉으로 묶는다. 묶음 경계는 UTC 정각(`floor(at / tf)`)이다.
+ *
+ * **마지막 묶음은 아직 안 닫혔다** — 지금 봉까지만 들어 있다. 지금 봉이 닫힌 시점에 아는 것만
+ * 쓰므로 미래를 보지 않는다. 4시간봉 20선이 "지금 값까지 반영한 20선" 이 되는 것이다.
+ * 창보다 큰 묶음을 요구하면 묶음 수가 모자라 지표가 null 이 된다(모르는 것은 참이 아니다).
+ */
+export function resample(window: Window, tfMs: number): Bar[] {
+  const out: Bar[] = [];
+  let bucket = -1;
+  for (const bar of window) {
+    const key = Math.floor(bar.at.getTime() / tfMs);
+    const last = out[out.length - 1];
+    if (key !== bucket || !last) {
+      bucket = key;
+      out.push({ ...bar, at: new Date(key * tfMs) });
+      continue;
+    }
+    last.high = Math.max(last.high, bar.high);
+    last.low = Math.min(last.low, bar.low);
+    last.close = bar.close;
+    last.volume += bar.volume;
+  }
+  return out;
+}
+
 /** 지표 이름 → 구현. 전략 정의는 **이름으로만** 참조한다(LAB-02 PART B-1). */
 export const INDICATOR_NAMES = [
   "ma",
@@ -238,6 +300,8 @@ export const INDICATOR_NAMES = [
   "pct_from_ma",
   "consecutive",
   "whale_flow",
+  "whale_net",
+  "hour_utc",
 ] as const;
 
 export type IndicatorName = (typeof INDICATOR_NAMES)[number];
