@@ -6,12 +6,25 @@
 
 | 항목 | 값 |
 |---|---|
-| 최종 갱신 | **2026-10-02** · `TRADER-02` — 매매법 객관화 코드 · 엔진 스키마 확장(분할 청산 · 쉬기 · 숏 · 시간봉 조건). **🧑 광혁 진술(데이터 보기 전) → TRADER-01 실행 대기** (`docs/trader/TRADER-02.md`) |
+| 최종 갱신 | **2026-10-02** · `TRADER-03` — 광혁 vs 엔진 비교 화면(`/me/*`, 로그인 뒤). **🧑 마이그레이션 승인(표 하나) · ME_PASSWORD · ME_INGEST_TOKEN · 업로더 설치 대기** (`docs/trader/TRADER-03.md`) |
 | **정규 도메인** | **https://fomo-web-mlender-ais-projects.vercel.app** ← 모든 완료 확인은 이 주소로 |
 | 보조 도메인 | `fomo-club-backend.vercel.app` · `taro-stock-web.vercel.app` (같은 배포를 가리킨다) |
 | 제품 | **STRATEGY LAB** — 전략 경쟁 랩. 사용자 1명 · BM 없음 · 최종 목표 실제 자금 자동매매 |
 | 정본 | `docs/LAB-00_MASTER.md` |
 | 옛 상태 문서 | `docs/wo/archive/STATUS_pre-LAB.md` (틴더 제품 기준 3,499줄) |
+
+---
+
+## `TRADER-03` (2026-10-02) — 광혁 vs 엔진 비교 화면 · 코드만, 승인 · 설정 대기
+
+| | |
+|---|---|
+| 상태 | 화면 · API · 업로더 · 시험 · 폰 캡처(합성)까지. 실계좌 화면은 🧑 ① 마이그레이션 승인 ② Vercel `ME_PASSWORD` · `ME_INGEST_TOKEN` ③ 맥 `install-trader-me.sh` 뒤에 열린다 |
+| 화면 | `/me/compare`(결론 · 비교표 · 가장 큰 차이 · 1,000 출발 곡선 · 일별 나란히 · 손익 분포 꼬리 · 같은 순간) · `/me/rules`(말한 것 vs 데이터 · 재량 · 버전) · 헤더 `\| 나` |
+| 잠금 | HMAC 쿠키 30일(비밀번호를 쿠키에 안 넣음) · IP 별 5회 15분(서버가 셈) · `/api/me/*` 쿠키 없으면 401 · noindex 메타 + 헤더 |
+| 비공개 | 새 표 `MeSnapshot`(공개 랩 표와 따로 — 공개 sync 의 `MAX(builtAt)` 에 안 섞이게). 업로드는 `/api/me/ingest` 전용 토큰. `me-isolation.test.ts` 가 공개 경로 · 로그 · 업로더 주소를 소스로 강제 |
+| DB | 마이그레이션 `20261002000000_trader03_me` — CREATE TABLE 하나 · DROP 없음. **적용 전에도 화면은 '준비 중' 으로 뜬다**(터지지 않음) |
+| 시험 | vitest 565(새 29) · 파이썬 32 · typecheck · lint · next build |
 
 ---
 

@@ -748,6 +748,13 @@
   color: var(--bg);
 }
 
+/* TRADER-03 0-2 — 로그인 뒤 `| 나` */
+.sh-tab-sep {
+  color: var(--line-2);
+  padding: 0 2px;
+  user-select: none;
+}
+
 .sh-tab:focus-visible,
 .sh-brand:focus-visible,
 .sh-btn:focus-visible {
