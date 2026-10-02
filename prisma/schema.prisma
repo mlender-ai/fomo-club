@@ -1708,3 +1708,21 @@ model LabExperiment {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+/// TRADER-03 — 광혁 실계좌 · 복제 · 매매법. **로그인 뒤(`/me/*` · `/api/me/*`)에서만 읽는다.**
+///
+/// 공개 랩 표(`LabSnapshot` 등)와 **따로 둔다.** 같은 표에 두면 공개 상태 표시(`sync.ts` 의
+/// `MAX(builtAt)`)가 실계좌 갱신 시각을 따라 움직인다 — 그것도 새는 것이다.
+/// 쓰는 곳: `apps/web/lib/me/*` · `app/api/me/*` 뿐. 공개 경로가 이 표를 읽지 않는 것은 시험이 지킨다.
+///
+/// | key | 내용 |
+/// |---|---|
+/// | `account` | 실계좌 거래 · 일별 손익 · 시간가중 지수(맥 업로더, 15분) |
+/// | `replica` | 광혁 복제 페이퍼 거래(TRADER-02 F) |
+/// | `rules`   | 매매법 — 규칙 두 벌 · 말 vs 실제 · 검증 · 재량 · 버전 |
+/// | `auth`    | 로그인 실패 · 잠금(IP 별) |
+model MeSnapshot {
+  key       String   @id
+  payload   Json
+  updatedAt DateTime @updatedAt
+}

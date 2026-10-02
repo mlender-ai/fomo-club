@@ -13,12 +13,15 @@ import type { ConditionGroup, ConditionNode } from "../strategy-definition";
 import {
   atr,
   consecutive,
+  hourUtc,
   ma,
   maCross,
   pctFromHigh,
   pctFromLow,
   pctFromMa,
+  resample,
   rsi,
+  timeframeMs,
   volumeRatio,
   whaleFlow,
   type IndicatorValue,
@@ -56,9 +59,18 @@ function periodParam(node: Record<string, unknown>, fallback: number): number {
 export function indicatorValue(
   name: string,
   node: Record<string, unknown>,
-  window: Window,
+  base: Window,
   context: ExternalContext
 ): IndicatorValue {
+  // `tf` — 더 큰 시간봉으로 묶어서 본다. 모르는 시간봉 이름은 **null**(조건 거짓) —
+  // 조용히 기본 봉으로 돌면 정의에 적힌 것과 다른 것을 보게 된다.
+  let window = base;
+  const tf = node.tf;
+  if (tf !== undefined && tf !== null) {
+    const tfMs = typeof tf === "string" ? timeframeMs(tf) : null;
+    if (tfMs === null) return null;
+    window = resample(base, tfMs);
+  }
   switch (name) {
     case "ma":
       return ma(window, periodParam(node, 20));
@@ -80,6 +92,10 @@ export function indicatorValue(
       return consecutive(window);
     case "whale_flow":
       return whaleFlow(context.whaleNetNow, context.whaleNetPast);
+    case "whale_net":
+      return context.whaleNetNow;
+    case "hour_utc":
+      return hourUtc(base);
     default:
       return null;
   }

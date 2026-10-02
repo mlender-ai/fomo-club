@@ -38,9 +38,22 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/**
+ * TRADER-03 0-2 — 로그인하면 탭 끝에 `나`. 로그인 쿠키(httpOnly)는 화면이 못 읽으므로 표시용 쿠키
+ * (`fomo_me_ui`)만 본다 — **이건 인증이 아니다.** 지워지면 탭이 숨을 뿐, `/me` 는 서버가 따로 잠근다.
+ */
+function useMeTab(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    setOn(document.cookie.split(";").some((c) => c.trim() === "fomo_me_ui=1"));
+  }, []);
+  return on;
+}
+
 export function Header() {
   const pathname = usePathname() ?? "/";
   const { sync, collect, tracks, unreachable } = useSync();
+  const meTab = useMeTab() || pathname.startsWith("/me/");
 
   // 헤더 점은 **더 나쁜 쪽**을 따른다. FCE 는 살아 있는데 시세가 끊겼으면 끊김이다.
   const feedBroken = (collect?.staleSymbols.length ?? 0) > 0;
@@ -81,6 +94,20 @@ export function Header() {
               </Link>
             );
           })}
+          {meTab ? (
+            <>
+              <span className="sh-tab-sep" aria-hidden>
+                |
+              </span>
+              <Link
+                href="/me/compare"
+                className={`sh-tab${pathname.startsWith("/me") ? " is-on" : ""}`}
+                aria-current={pathname.startsWith("/me") ? "page" : undefined}
+              >
+                나
+              </Link>
+            </>
+          ) : null}
         </nav>
 
         {/* 검색 ⌘K (UI-10 B) — 창은 레이아웃의 `CommandPalette`. 폰은 이 단추. */}

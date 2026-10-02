@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TRADER-03 F — 광혁 실계좌 비교 업로더. **15분마다**:
+    TRADER-01 수집(최근 7일, FCE 읽기 전용 + Bitget 조회 키) → 실계좌 · 복제 · 매매법 → 랩 /api/me/ingest(비공개)
+
+  공개 /api/lab/* 에는 아무것도 보내지 않는다. 값은 로그에 찍지 않는다(건수 · 바이트만).
+
+  설치: scripts/ops/launchd/install-trader-me.sh
+  제거: launchctl bootout gui/$(id -u)/com.fomo.trader.me
+        rm ~/Library/LaunchAgents/com.fomo.trader.me.plist
+  로그: ~/.fomo/trader/me-upload.log
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fomo.trader.me</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-c</string>
+    <string>mkdir -p "$HOME/.fomo/trader" &amp;&amp; python3 scripts/trader/me_upload.py --env-file "__ENV_FILE__" &gt;&gt; "$HOME/.fomo/trader/me-upload.log" 2&gt;&amp;1</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Library/Frameworks/Python.framework/Versions/3.13/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>900</integer>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

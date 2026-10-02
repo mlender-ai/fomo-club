@@ -8,3 +8,5 @@ export * from "./sizing";
 export * from "./source";
 export * from "./types";
 export * from "./walkforward";
+export * from "./features";
+export * from "./scale-out";

@@ -50,6 +50,18 @@ export default function nextConfig(phase) {
     async redirects() {
       return LEGACY_REDIRECTS;
     },
+    // TRADER-03 — `/me/*` · `/api/me/*` 는 검색엔진에 싣지 않고 캐시하지 않는다(메타 태그와 별개로 헤더로도).
+    async headers() {
+      const privateHeaders = [
+        { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        { key: "Cache-Control", value: "private, no-store" },
+      ];
+      return [
+        { source: "/me", headers: privateHeaders },
+        { source: "/me/:path*", headers: privateHeaders },
+        { source: "/api/me/:path*", headers: privateHeaders },
+      ];
+    },
     // Keep dev and production build artifacts separate.
     distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next-build",
   };
